@@ -14,16 +14,18 @@ import { dedupeModulesByName } from "./dedupe-modules";
 import { getEntryPointFromMetafile } from "./entry-point-from-metafile";
 import { cloudflareInternalPlugin } from "./esbuild-plugins/cloudflare-internal";
 import { configProviderPlugin } from "./esbuild-plugins/config-provider";
+import { nodejsHybridPlugin } from "./esbuild-plugins/hybrid-nodejs-compat";
 import { nodejsCompatPlugin } from "./esbuild-plugins/nodejs-compat";
+import { standardURLPlugin } from "./esbuild-plugins/standard-url";
 import { writeAdditionalModules } from "./find-additional-modules";
 import { noopModuleCollector } from "./module-collection";
 import type { Config } from "../config";
 import type { DurableObjectBindings } from "../config/environment";
-import type { WorkerRegistry } from "../dev-registry";
 import type { MiddlewareLoader } from "./apply-middleware";
 import type { Entry } from "./entry";
 import type { ModuleCollector } from "./module-collection";
-import type { CfModule } from "./worker";
+import type { NodeJSCompatMode } from "./node-compat";
+import type { CfModule, CfModuleType } from "./worker";
 
 export const COMMON_ESBUILD_OPTIONS = {
 	// Our workerd runtime uses the same V8 version as recent Chrome, which is highly ES2022 compliant: https://kangax.github.io/compat-table/es2016plus/
@@ -47,7 +49,7 @@ export type BundleResult = {
 	modules: CfModule[];
 	dependencies: esbuild.Metafile["outputs"][string]["inputs"];
 	resolvedEntryPointPath: string;
-	bundleType: "esm" | "commonjs";
+	bundleType: CfModuleType;
 	stop: (() => Promise<void>) | undefined;
 	sourceMapPath?: string | undefined;
 	sourceMapMetadata?: SourceMapMetadata | undefined;
@@ -70,12 +72,10 @@ export type BundleOptions = {
 	watch?: boolean;
 	tsconfig?: string;
 	minify?: boolean;
-	legacyNodeCompat?: boolean;
-	nodejsCompat?: boolean;
+	nodejsCompatMode?: NodeJSCompatMode;
 	define: Config["define"];
+	alias: Config["alias"];
 	checkFetch: boolean;
-	services?: Config["services"];
-	workerDefinitions?: WorkerRegistry;
 	targetConsumer: "dev" | "deploy";
 	testScheduled?: boolean;
 	inject?: string[];
@@ -87,6 +87,7 @@ export type BundleOptions = {
 	local: boolean;
 	projectRoot: string | undefined;
 	defineNavigatorUserAgent: boolean;
+	external?: string[];
 };
 
 /**
@@ -107,14 +108,12 @@ export async function bundleWorker(
 		watch,
 		tsconfig,
 		minify,
-		legacyNodeCompat,
-		nodejsCompat,
+		nodejsCompatMode,
+		alias,
 		define,
 		checkFetch,
 		assets,
 		bypassAssetCache,
-		workerDefinitions,
-		services,
 		targetConsumer,
 		testScheduled,
 		inject: injectOption,
@@ -126,6 +125,7 @@ export async function bundleWorker(
 		local,
 		projectRoot,
 		defineNavigatorUserAgent,
+		external,
 	}: BundleOptions
 ): Promise<BundleResult> {
 	// We create a temporary directory for any one-off files we
@@ -193,34 +193,10 @@ export async function bundleWorker(
 								browserTTL:
 									assets.browser_TTL || 172800 /* 2 days: 2* 60 * 60 * 24 */,
 								bypassCache: bypassAssetCache,
-						  }
+							}
 						: {},
 			},
 			supports: ["modules", "service-worker"],
-		});
-	}
-
-	if (
-		targetConsumer === "dev" &&
-		!!(
-			workerDefinitions &&
-			Object.keys(workerDefinitions).length > 0 &&
-			services &&
-			services.length > 0
-		)
-	) {
-		middlewareToLoad.push({
-			name: "multiworker-dev",
-			path: "templates/middleware/middleware-multiworker-dev.ts",
-			config: {
-				workers: Object.fromEntries(
-					(services || []).map((serviceBinding) => [
-						serviceBinding.binding,
-						workerDefinitions?.[serviceBinding.service] || null,
-					])
-				),
-			},
-			supports: ["modules"],
 		});
 	}
 
@@ -274,8 +250,7 @@ export async function bundleWorker(
 		const result = await applyMiddlewareLoaderFacade(
 			entry,
 			tmpDir.path,
-			middlewareToLoad,
-			doBindings
+			middlewareToLoad
 		);
 		entry = result.entry;
 
@@ -293,10 +268,12 @@ export async function bundleWorker(
 		inject.push(...(result.inject ?? []));
 	}
 
-	// `esbuild` doesn't support returning `watch*` options from `onStart()`
-	// plugin callbacks. Instead, we define an empty virtual module that is
-	// imported in this injected module. Importing that module registers watchers.
-	inject.push(path.resolve(getBasePath(), "templates/modules-watch-stub.js"));
+	if (watch) {
+		// `esbuild` doesn't support returning `watch*` options from `onStart()`
+		// plugin callbacks. Instead, we define an empty virtual module that is
+		// imported in this injected module. Importing that module registers watchers.
+		inject.push(path.resolve(getBasePath(), "templates/modules-watch-stub.js"));
+	}
 
 	const buildOptions: esbuild.BuildOptions & { metafile: true } = {
 		// Don't use entryFile here as the file may have been changed when applying the middleware
@@ -310,10 +287,12 @@ export async function bundleWorker(
 					outdir: undefined,
 					outfile: destination,
 					entryNames: undefined,
-			  }
+				}
 			: {}),
 		inject,
-		external: bundle ? ["__STATIC_CONTENT_MANIFEST"] : undefined,
+		external: bundle
+			? ["__STATIC_CONTENT_MANIFEST", ...(external ? external : [])]
+			: undefined,
 		format: entry.format === "modules" ? "esm" : "iife",
 		target: COMMON_ESBUILD_OPTIONS.target,
 		sourcemap: sourcemap ?? true,
@@ -331,20 +310,30 @@ export async function bundleWorker(
 				// use process.env["NODE_ENV" + ""] so that esbuild doesn't replace it
 				// when we do a build of wrangler. (re: https://github.com/cloudflare/workers-sdk/issues/1477)
 				"process.env.NODE_ENV": `"${process.env["NODE_ENV" + ""]}"`,
-				...(legacyNodeCompat ? { global: "globalThis" } : {}),
+				...(nodejsCompatMode === "legacy" ? { global: "globalThis" } : {}),
 				...define,
 			},
 		}),
+		alias,
 		loader: {
 			...COMMON_ESBUILD_OPTIONS.loader,
 			...(loader || {}),
 		},
 		plugins: [
 			moduleCollector.plugin,
-			...(legacyNodeCompat
-				? [NodeGlobalsPolyfills({ buffer: true }), NodeModulesPolyfills()]
+			...(nodejsCompatMode === "legacy"
+				? [
+						NodeGlobalsPolyfills({ buffer: true }),
+						standardURLPlugin(),
+						NodeModulesPolyfills(),
+					]
 				: []),
-			nodejsCompatPlugin(!!nodejsCompat),
+			// Runtime Node.js compatibility (will warn if not using nodejs compat flag and are trying to import from a Node.js builtin).
+			...(nodejsCompatMode === "v1" || nodejsCompatMode !== "v2"
+				? [nodejsCompatPlugin(nodejsCompatMode === "v1")]
+				: []),
+			// Hybrid Node.js compatibility
+			...(nodejsCompatMode === "v2" ? [nodejsHybridPlugin()] : []),
 			cloudflareInternalPlugin,
 			buildResultPlugin,
 			...(plugins || []),
@@ -389,8 +378,9 @@ export async function bundleWorker(
 			};
 		}
 	} catch (e) {
-		if (!legacyNodeCompat && isBuildFailure(e))
+		if (nodejsCompatMode !== "legacy" && isBuildFailure(e)) {
 			rewriteNodeCompatBuildFailure(e.errors, forPages);
+		}
 		throw e;
 	}
 

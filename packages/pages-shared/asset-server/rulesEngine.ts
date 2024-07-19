@@ -28,7 +28,9 @@ export const generateRulesMatcher = <T>(
 	rules?: Record<string, T>,
 	replacerFn: (match: T, replacements: Replacements) => T = (match) => match
 ) => {
-	if (!rules) return () => [];
+	if (!rules) {
+		return () => [];
+	}
 
 	const compiledRules = Object.entries(rules)
 		.map(([rule, match]) => {
@@ -64,7 +66,7 @@ export const generateRulesMatcher = <T>(
 		})
 		.filter((value) => value !== undefined) as [
 		{ crossHost: boolean; regExp: RegExp },
-		T
+		T,
 	][];
 
 	return ({ request }: { request: Request }) => {

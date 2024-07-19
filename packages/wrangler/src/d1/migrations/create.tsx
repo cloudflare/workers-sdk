@@ -1,7 +1,6 @@
 import fs from "node:fs";
 import path from "path";
 import { Box, Text } from "ink";
-import React from "react";
 import { printWranglerBanner } from "../..";
 import { withConfig } from "../../config";
 import { UserError } from "../../errors";
@@ -75,6 +74,8 @@ export const CreateHandler = withConfig<CreateHandlerOptions>(
 
 function pad(num: number, size: number): string {
 	let newNum = num.toString();
-	while (newNum.length < size) newNum = "0" + newNum;
+	while (newNum.length < size) {
+		newNum = "0" + newNum;
+	}
 	return newNum;
 }

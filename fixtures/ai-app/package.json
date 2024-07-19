@@ -7,14 +7,16 @@
 	"main": "src/index.js",
 	"scripts": {
 		"check:type": "tsc",
-		"test": "vitest run",
+		"test:ci": "vitest run",
 		"test:watch": "vitest",
 		"type:tests": "tsc -p ./tests/tsconfig.json"
 	},
 	"devDependencies": {
-		"undici": "^5.28.3",
-		"wrangler": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:^",
-		"@cloudflare/ai": "^1.0.35"
+		"undici": "^5.28.4",
+		"wrangler": "workspace:*"
+	},
+	"volta": {
+		"extends": "../../package.json"
 	}
 }

@@ -15,6 +15,9 @@ export type EventNames =
 	| "create encrypted variable"
 	| "delete encrypted variable"
 	| "list encrypted variables"
+	| "create pages encrypted variable"
+	| "delete pages encrypted variable"
+	| "list pages encrypted variables"
 	| "create kv namespace"
 	| "list kv namespaces"
 	| "delete kv namespace"
@@ -71,7 +74,9 @@ export type EventNames =
 	| "list worker versions"
 	| "view versioned deployment"
 	| "view latest versioned deployment"
-	| "list versioned deployments";
+	| "list versioned deployments"
+	| "download pages config"
+	| "deploy worker triggers";
 
 /**
  * Send a metrics event, with no extra properties, to Cloudflare, if usage tracking is enabled.

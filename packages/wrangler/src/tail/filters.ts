@@ -25,6 +25,7 @@ export type TailCLIFilters = {
 	search?: string;
 	samplingRate?: number;
 	clientIp?: string[];
+	versionId?: string;
 };
 
 /**
@@ -40,7 +41,8 @@ export type TailAPIFilter =
 	| MethodFilter
 	| HeaderFilter
 	| ClientIPFilter
-	| QueryFilter;
+	| QueryFilter
+	| ScriptVersionFilter;
 
 /**
  * Filters logs based on a given sampling rate.
@@ -119,6 +121,14 @@ type QueryFilter = {
 };
 
 /**
+ * Filters logs by a version id. All logs must originate from a
+ * worker with a matching version id.
+ */
+type ScriptVersionFilter = {
+	scriptVersion: string;
+};
+
+/**
  * The full message we send to the tail worker includes our
  * filters and a debug flag.
  */
@@ -160,6 +170,10 @@ export function translateCLICommandToFilterMessage(
 
 	if (cliFilters.search) {
 		apiFilters.push(parseQuery(cliFilters.search));
+	}
+
+	if (cliFilters.versionId) {
+		apiFilters.push(parseScriptVersion(cliFilters.versionId));
 	}
 
 	return {
@@ -276,4 +290,16 @@ function parseIP(client_ip: string[]): ClientIPFilter {
  */
 function parseQuery(query: string): QueryFilter {
 	return { query };
+}
+
+/**
+ * Users can filter for logs that were emitted from a Worker with a
+ * specific version. This is especially useful when debugging an issue
+ * that only happens in one branch of a gradual rollout.
+ *
+ * @param scriptVersion the id of the version that a log must match.
+ * @returns a ScriptVersionFilter for use with the API
+ */
+function parseScriptVersion(scriptVersion: string): ScriptVersionFilter {
+	return { scriptVersion };
 }

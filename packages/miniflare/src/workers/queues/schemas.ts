@@ -1,5 +1,26 @@
 import { Base64DataSchema, z } from "miniflare:zod";
 
+export const QueueMessageDelaySchema = z
+	.number()
+	.int()
+	.min(0)
+	.max(43200)
+	.optional();
+
+export const QueueProducerOptionsSchema = /* @__PURE__ */ z.object({
+	// https://developers.cloudflare.com/queues/platform/configuration/#producer
+	queueName: z.string(),
+	deliveryDelay: QueueMessageDelaySchema,
+});
+
+export const QueueProducerSchema = /* @__PURE__ */ z.intersection(
+	QueueProducerOptionsSchema,
+	z.object({ workerName: z.string() })
+);
+export type QueueProducer = z.infer<typeof QueueProducerSchema>;
+export const QueueProducersSchema =
+	/* @__PURE__ */ z.record(QueueProducerSchema);
+
 export const QueueConsumerOptionsSchema = /* @__PURE__ */ z.object({
 	// https://developers.cloudflare.com/queues/platform/configuration/#consumer
 	// https://developers.cloudflare.com/queues/platform/limits/
@@ -7,6 +28,7 @@ export const QueueConsumerOptionsSchema = /* @__PURE__ */ z.object({
 	maxBatchTimeout: z.number().min(0).max(30).optional(), // seconds
 	maxRetires: z.number().min(0).max(100).optional(),
 	deadLetterQueue: z.ostring(),
+	retryDelay: QueueMessageDelaySchema,
 });
 export const QueueConsumerSchema = /* @__PURE__ */ z.intersection(
 	QueueConsumerOptionsSchema,
@@ -25,8 +47,11 @@ export const QueueContentTypeSchema = /* @__PURE__ */ z
 	.default("v8");
 export type QueueContentType = z.infer<typeof QueueContentTypeSchema>;
 
+export type QueueMessageDelay = z.infer<typeof QueueMessageDelaySchema>;
+
 export const QueueIncomingMessageSchema = /* @__PURE__ */ z.object({
 	contentType: QueueContentTypeSchema,
+	delaySecs: QueueMessageDelaySchema,
 	body: Base64DataSchema,
 	// When enqueuing messages on dead-letter queues, we want to reuse the same ID
 	// and timestamp

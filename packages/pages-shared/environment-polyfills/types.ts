@@ -27,6 +27,7 @@ export type PolyfilledRuntimeEnvironment = {
 	Headers: typeof Headers;
 	Request: typeof Request;
 	Response: typeof Response;
+	HTMLRewriter: typeof HTMLRewriter;
 };
 
 export {

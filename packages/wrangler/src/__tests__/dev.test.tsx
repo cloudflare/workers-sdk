@@ -1,9 +1,10 @@
 import * as fs from "node:fs";
 import module from "node:module";
 import getPort from "get-port";
-import { rest } from "msw";
+import { http, HttpResponse } from "msw";
 import patchConsole from "patch-console";
 import dedent from "ts-dedent";
+import { vi } from "vitest";
 import Dev from "../dev/dev";
 import { getWorkerAccountAndContext } from "../dev/remote";
 import { CI } from "../is-ci";
@@ -18,12 +19,13 @@ import {
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import writeWranglerToml from "./helpers/write-wrangler-toml";
+import type { Mock } from "vitest";
 
 async function expectedHostAndZone(
 	host: string,
 	zone: string
 ): Promise<unknown> {
-	const config = (Dev as jest.Mock).mock.calls[0][0];
+	const config = (Dev as Mock).mock.calls[0][0];
 	expect(config).toEqual(
 		expect.objectContaining({
 			localUpstream: host,
@@ -45,7 +47,7 @@ async function expectedHostAndZone(
 		})
 	);
 
-	(Dev as jest.Mock).mockClear();
+	(Dev as Mock).mockClear();
 	return config;
 }
 
@@ -63,21 +65,21 @@ describe("wrangler dev", () => {
 	mockApiToken();
 	const std = mockConsoleMethods();
 	afterEach(() => {
-		(Dev as jest.Mock).mockClear();
+		(Dev as Mock).mockClear();
 		patchConsole(() => {});
 		msw.resetHandlers();
 	});
 
 	describe("authorization", () => {
 		mockApiToken({ apiToken: null });
-		const isCISpy = jest.spyOn(CI, "isCI").mockReturnValue(true);
+		const isCISpy = vi.spyOn(CI, "isCI").mockReturnValue(true);
 
 		it("should kick you to the login flow when running wrangler dev in remote mode without authorization", async () => {
 			fs.writeFileSync("index.js", `export default {};`);
 			await expect(
 				runWrangler("dev --remote index.js")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`"You must be logged in to use wrangler dev in remote mode. Try logging in, or run wrangler dev --local."`
+				`[Error: You must be logged in to use wrangler dev in remote mode. Try logging in, or run wrangler dev --local.]`
 			);
 		});
 
@@ -111,20 +113,15 @@ describe("wrangler dev", () => {
 			expect(std.out).toMatchInlineSnapshot(`""`);
 			expect(std.warn.replaceAll(currentDate, "<current-date>"))
 				.toMatchInlineSnapshot(`
-			        "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mNo compatibility_date was specified. Using the installed Workers runtime's latest supported date: <current-date>.[0m
+"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mNo compatibility_date was specified. Using the installed Workers runtime's latest supported date: <current-date>.[0m
 
-			          Add one to your wrangler.toml file:
-			          \`\`\`
-			          compatibility_date = \\"<current-date>\\"
-			          \`\`\`
-			          or pass it in your terminal:
-			          \`\`\`
-			          --compatibility-date=<current-date>
-			          \`\`\`
-			          See [4mhttps://developers.cloudflare.com/workers/platform/compatibility-dates/[0m for more information.
+  ❯❯ Add one to your wrangler.toml file: compatibility_date = \\"<current-date>\\", or
+  ❯❯ Pass it in your terminal: wrangler dev [<SCRIPT>] --compatibility-date=<current-date>
 
-			        "
-		      `);
+  See [4mhttps://developers.cloudflare.com/workers/platform/compatibility-dates/[0m for more information.
+
+"
+`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
@@ -149,7 +146,7 @@ describe("wrangler dev", () => {
 			});
 			fs.writeFileSync("index.js", `export default {};`);
 			await runWrangler("dev");
-			expect((Dev as jest.Mock).mock.calls[0][0].usageModel).toEqual("unbound");
+			expect((Dev as Mock).mock.calls[0][0].usageModel).toEqual("unbound");
 		});
 
 		it("should read wrangler.toml's usage_model in local mode", async () => {
@@ -159,7 +156,7 @@ describe("wrangler dev", () => {
 			});
 			fs.writeFileSync("index.js", `export default {};`);
 			await runWrangler("dev");
-			expect((Dev as jest.Mock).mock.calls[0][0].usageModel).toEqual("unbound");
+			expect((Dev as Mock).mock.calls[0][0].usageModel).toEqual("unbound");
 		});
 	});
 
@@ -170,7 +167,7 @@ describe("wrangler dev", () => {
 			await expect(
 				runWrangler("dev")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`"Missing entry-point: The entry-point should be specified via the command line (e.g. \`wrangler dev path/to/script\`) or the \`main\` config field."`
+				`[Error: Missing entry-point: The entry-point should be specified via the command line (e.g. \`wrangler dev path/to/script\`) or the \`main\` config field.]`
 			);
 
 			expect(std.out).toMatchInlineSnapshot(`""`);
@@ -187,9 +184,7 @@ describe("wrangler dev", () => {
 			});
 			fs.writeFileSync("index.js", `export default {};`);
 			await runWrangler("dev");
-			expect((Dev as jest.Mock).mock.calls[0][0].entry.file).toMatch(
-				/index\.js$/
-			);
+			expect((Dev as Mock).mock.calls[0][0].entry.file).toMatch(/index\.js$/);
 			expect(std.out).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
@@ -205,9 +200,7 @@ describe("wrangler dev", () => {
 			});
 			fs.writeFileSync("index.js", `export default {};`);
 			await runWrangler("dev --env=ENV1");
-			expect((Dev as jest.Mock).mock.calls[0][0].entry.file).toMatch(
-				/index\.js$/
-			);
+			expect((Dev as Mock).mock.calls[0][0].entry.file).toMatch(/index\.js$/);
 			expect(std.out).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
@@ -224,9 +217,7 @@ describe("wrangler dev", () => {
 			});
 			fs.writeFileSync("index.js", `export default {};`);
 			await runWrangler("dev --env=ENV1");
-			expect((Dev as jest.Mock).mock.calls[0][0].entry.file).toMatch(
-				/index\.js$/
-			);
+			expect((Dev as Mock).mock.calls[0][0].entry.file).toMatch(/index\.js$/);
 			expect(std.out).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
@@ -279,7 +270,7 @@ describe("wrangler dev", () => {
 			fs.writeFileSync("index.js", `export default {};`);
 			mockGetZones("some-host.com", [{ id: "some-zone-id" }]);
 			await runWrangler("dev");
-			expect((Dev as jest.Mock).mock.calls[0][0].host).toEqual("some-host.com");
+			expect((Dev as Mock).mock.calls[0][0].host).toEqual("some-host.com");
 		});
 
 		it("should read --route", async () => {
@@ -409,9 +400,9 @@ describe("wrangler dev", () => {
 			await fs.promises.writeFile("index.js", `export default {};`);
 			await expect(runWrangler("dev --remote")).rejects
 				.toThrowErrorMatchingInlineSnapshot(`
-			"Could not find zone for \`does-not-exist.com\`. Make sure the domain is set up to be proxied by Cloudflare.
-			For more details, refer to https://developers.cloudflare.com/workers/configuration/routing/routes/#set-up-a-route"
-		`);
+				[Error: Could not find zone for \`does-not-exist.com\`. Make sure the domain is set up to be proxied by Cloudflare.
+				For more details, refer to https://developers.cloudflare.com/workers/configuration/routing/routes/#set-up-a-route]
+			`);
 		});
 
 		it("should fallback to zone_name when given the pattern */*", async () => {
@@ -460,28 +451,25 @@ describe("wrangler dev", () => {
 			fs.writeFileSync("index.js", `export default {};`);
 
 			msw.use(
-				rest.get("*/zones", (req, res, ctx) => {
+				http.get("*/zones", ({ request }) => {
+					const url = new URL(request.url);
 					let zone: [] | [{ id: "some-zone-id" }] = [];
-					if (
-						req.url.searchParams.get("name") === "111.222.333.some-host.com"
-					) {
+					if (url.searchParams.get("name") === "111.222.333.some-host.com") {
 						zone = [];
-					} else if (
-						req.url.searchParams.get("name") === "222.333.some-host.com"
-					) {
+					} else if (url.searchParams.get("name") === "222.333.some-host.com") {
 						zone = [];
-					} else if (req.url.searchParams.get("name") === "333.some-host.com") {
+					} else if (url.searchParams.get("name") === "333.some-host.com") {
 						zone = [{ id: "some-zone-id" }];
 					}
 
-					return res(
-						ctx.status(200),
-						ctx.json({
+					return HttpResponse.json(
+						{
 							success: true,
 							errors: [],
 							messages: [],
 							result: zone,
-						})
+						},
+						{ status: 200 }
 					);
 				})
 			);
@@ -565,9 +553,9 @@ describe("wrangler dev", () => {
 			mockGetZones("some-host.com", []);
 			await expect(runWrangler("dev --remote --host some-host.com")).rejects
 				.toThrowErrorMatchingInlineSnapshot(`
-			"Could not find zone for \`some-host.com\`. Make sure the domain is set up to be proxied by Cloudflare.
-			For more details, refer to https://developers.cloudflare.com/workers/configuration/routing/routes/#set-up-a-route"
-		`);
+				[Error: Could not find zone for \`some-host.com\`. Make sure the domain is set up to be proxied by Cloudflare.
+				For more details, refer to https://developers.cloudflare.com/workers/configuration/routing/routes/#set-up-a-route]
+			`);
 		});
 
 		it("should not try to resolve a zone when starting in local mode", async () => {
@@ -576,7 +564,7 @@ describe("wrangler dev", () => {
 			});
 			fs.writeFileSync("index.js", `export default {};`);
 			await runWrangler("dev --host some-host.com");
-			expect((Dev as jest.Mock).mock.calls[0][0].zone).toEqual(undefined);
+			expect((Dev as Mock).mock.calls[0][0].zone).toEqual(undefined);
 		});
 	});
 
@@ -590,7 +578,7 @@ describe("wrangler dev", () => {
 			});
 			fs.writeFileSync("index.js", `export default {};`);
 			await runWrangler("dev");
-			expect((Dev as jest.Mock).mock.calls[0][0].localUpstream).toEqual(
+			expect((Dev as Mock).mock.calls[0][0].localUpstream).toEqual(
 				"2.some-host.com"
 			);
 		});
@@ -602,7 +590,7 @@ describe("wrangler dev", () => {
 			});
 			fs.writeFileSync("index.js", `export default {};`);
 			await runWrangler("dev");
-			expect((Dev as jest.Mock).mock.calls[0][0].localUpstream).toEqual(
+			expect((Dev as Mock).mock.calls[0][0].localUpstream).toEqual(
 				"4.some-host.com"
 			);
 		});
@@ -614,7 +602,7 @@ describe("wrangler dev", () => {
 			});
 			fs.writeFileSync("index.js", `export default {};`);
 			await runWrangler("dev --local-upstream some-host.com");
-			expect((Dev as jest.Mock).mock.calls[0][0].localUpstream).toEqual(
+			expect((Dev as Mock).mock.calls[0][0].localUpstream).toEqual(
 				"some-host.com"
 			);
 		});
@@ -635,7 +623,7 @@ describe("wrangler dev", () => {
 			);
 
 			// and the command would pass through
-			expect((Dev as jest.Mock).mock.calls[0][0].build).toEqual({
+			expect((Dev as Mock).mock.calls[0][0].build).toEqual({
 				command:
 					"node -e \"4+4; require('fs').writeFileSync('index.js', 'export default { fetch(){ return new Response(123) } }')\"",
 				cwd: undefined,
@@ -681,9 +669,9 @@ describe("wrangler dev", () => {
 
 			await expect(runWrangler("dev")).rejects
 				.toThrowErrorMatchingInlineSnapshot(`
-			"The expected output file at \\"index.js\\" was not found after running custom build: node -e \\"4+4;\\".
-			The \`main\` property in wrangler.toml should point to the file generated by the custom build."
-		`);
+				[Error: The expected output file at "index.js" was not found after running custom build: node -e "4+4;".
+				The \`main\` property in wrangler.toml should point to the file generated by the custom build.]
+			`);
 			expect(std.out).toMatchInlineSnapshot(`
 			"Running custom build: node -e \\"4+4;\\"
 			"
@@ -740,9 +728,7 @@ describe("wrangler dev", () => {
 			});
 			fs.writeFileSync("index.js", `export default {};`);
 			await runWrangler("dev --remote");
-			expect((Dev as jest.Mock).mock.calls[0][0].upstreamProtocol).toEqual(
-				"https"
-			);
+			expect((Dev as Mock).mock.calls[0][0].upstreamProtocol).toEqual("https");
 			expect(std.out).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
@@ -754,9 +740,7 @@ describe("wrangler dev", () => {
 			});
 			fs.writeFileSync("index.js", `export default {};`);
 			await runWrangler("dev --upstream-protocol=http --remote");
-			expect((Dev as jest.Mock).mock.calls[0][0].upstreamProtocol).toEqual(
-				"http"
-			);
+			expect((Dev as Mock).mock.calls[0][0].upstreamProtocol).toEqual("http");
 			expect(std.out).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`
 			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mSetting upstream-protocol to http is not currently supported for remote mode.[0m
@@ -775,9 +759,7 @@ describe("wrangler dev", () => {
 			});
 			fs.writeFileSync("index.js", `export default {};`);
 			await runWrangler("dev --local-protocol=https");
-			expect((Dev as jest.Mock).mock.calls[0][0].upstreamProtocol).toEqual(
-				"https"
-			);
+			expect((Dev as Mock).mock.calls[0][0].upstreamProtocol).toEqual("https");
 			expect(std.out).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
@@ -789,9 +771,7 @@ describe("wrangler dev", () => {
 			});
 			fs.writeFileSync("index.js", `export default {};`);
 			await runWrangler("dev");
-			expect((Dev as jest.Mock).mock.calls[0][0].upstreamProtocol).toEqual(
-				"http"
-			);
+			expect((Dev as Mock).mock.calls[0][0].upstreamProtocol).toEqual("http");
 			expect(std.out).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
@@ -805,7 +785,7 @@ describe("wrangler dev", () => {
 			});
 			fs.writeFileSync("index.js", `export default {};`);
 			await runWrangler("dev");
-			expect((Dev as jest.Mock).mock.calls[0][0].localProtocol).toEqual("http");
+			expect((Dev as Mock).mock.calls[0][0].localProtocol).toEqual("http");
 			expect(std.out).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
@@ -820,9 +800,7 @@ describe("wrangler dev", () => {
 			});
 			fs.writeFileSync("index.js", `export default {};`);
 			await runWrangler("dev");
-			expect((Dev as jest.Mock).mock.calls[0][0].localProtocol).toEqual(
-				"https"
-			);
+			expect((Dev as Mock).mock.calls[0][0].localProtocol).toEqual("https");
 			expect(std.out).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
@@ -839,7 +817,7 @@ describe("wrangler dev", () => {
 			});
 			fs.writeFileSync("index.js", `export default {};`);
 			await runWrangler("dev --local-protocol=http");
-			expect((Dev as jest.Mock).mock.calls[0][0].localProtocol).toEqual("http");
+			expect((Dev as Mock).mock.calls[0][0].localProtocol).toEqual("http");
 			expect(std.out).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
@@ -853,7 +831,7 @@ describe("wrangler dev", () => {
 			});
 			fs.writeFileSync("index.js", `export default {};`);
 			await runWrangler("dev");
-			expect((Dev as jest.Mock).mock.calls[0][0].initialIp).toEqual(
+			expect((Dev as Mock).mock.calls[0][0].initialIp).toEqual(
 				process.platform === "win32" ? "127.0.0.1" : "localhost"
 			);
 			expect(std.out).toMatchInlineSnapshot(`""`);
@@ -870,7 +848,7 @@ describe("wrangler dev", () => {
 			});
 			fs.writeFileSync("index.js", `export default {};`);
 			await runWrangler("dev");
-			expect((Dev as jest.Mock).mock.calls[0][0].initialIp).toEqual("::1");
+			expect((Dev as Mock).mock.calls[0][0].initialIp).toEqual("::1");
 			expect(std.out).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
@@ -885,9 +863,7 @@ describe("wrangler dev", () => {
 			});
 			fs.writeFileSync("index.js", `export default {};`);
 			await runWrangler("dev --ip=127.0.0.1");
-			expect((Dev as jest.Mock).mock.calls[0][0].initialIp).toEqual(
-				"127.0.0.1"
-			);
+			expect((Dev as Mock).mock.calls[0][0].initialIp).toEqual("127.0.0.1");
 			expect(std.out).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
@@ -896,13 +872,13 @@ describe("wrangler dev", () => {
 
 	describe("inspector port", () => {
 		it("should use 9229 as the default port", async () => {
-			(getPort as jest.Mock).mockImplementation((options) => options.port);
+			(getPort as Mock).mockImplementation((options) => options.port);
 			writeWranglerToml({
 				main: "index.js",
 			});
 			fs.writeFileSync("index.js", `export default {};`);
 			await runWrangler("dev");
-			expect((Dev as jest.Mock).mock.calls[0][0].inspectorPort).toEqual(9229);
+			expect((Dev as Mock).mock.calls[0][0].inspectorPort).toEqual(9229);
 			expect(std).toMatchInlineSnapshot(`
 			Object {
 			  "debug": "",
@@ -915,13 +891,13 @@ describe("wrangler dev", () => {
 		});
 
 		it("should read --inspector-port", async () => {
-			(getPort as jest.Mock).mockImplementation((options) => options.port);
+			(getPort as Mock).mockImplementation((options) => options.port);
 			writeWranglerToml({
 				main: "index.js",
 			});
 			fs.writeFileSync("index.js", `export default {};`);
 			await runWrangler("dev --inspector-port=9999");
-			expect((Dev as jest.Mock).mock.calls[0][0].inspectorPort).toEqual(9999);
+			expect((Dev as Mock).mock.calls[0][0].inspectorPort).toEqual(9999);
 			expect(std).toMatchInlineSnapshot(`
 			Object {
 			  "debug": "",
@@ -942,7 +918,7 @@ describe("wrangler dev", () => {
 			});
 			fs.writeFileSync("index.js", `export default {};`);
 			await runWrangler("dev");
-			expect((Dev as jest.Mock).mock.calls[0][0].inspectorPort).toEqual(9999);
+			expect((Dev as Mock).mock.calls[0][0].inspectorPort).toEqual(9999);
 			expect(std).toMatchInlineSnapshot(`
 			Object {
 			  "debug": "",
@@ -965,9 +941,9 @@ describe("wrangler dev", () => {
 			fs.writeFileSync("index.js", `export default {};`);
 			await expect(runWrangler("dev")).rejects
 				.toThrowErrorMatchingInlineSnapshot(`
-						"Processing wrangler.toml configuration:
-						  - Expected \\"dev.inspector_port\\" to be of type number but got \\"some string\\"."
-					`);
+				[Error: Processing wrangler.toml configuration:
+				  - Expected "dev.inspector_port" to be of type number but got "some string".]
+			`);
 		});
 	});
 
@@ -978,7 +954,7 @@ describe("wrangler dev", () => {
 			});
 			fs.writeFileSync("index.js", `export default {};`);
 			await runWrangler("dev");
-			expect((Dev as jest.Mock).mock.calls[0][0].initialPort).toEqual(8787);
+			expect((Dev as Mock).mock.calls[0][0].initialPort).toEqual(8787);
 			expect(std.out).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
@@ -993,10 +969,10 @@ describe("wrangler dev", () => {
 			});
 			fs.writeFileSync("index.js", `export default {};`);
 			// Mock `getPort()` to resolve to a completely different port.
-			(getPort as jest.Mock).mockResolvedValue(98765);
+			(getPort as Mock).mockResolvedValue(98765);
 
 			await runWrangler("dev");
-			expect((Dev as jest.Mock).mock.calls[0][0].initialPort).toEqual(8888);
+			expect((Dev as Mock).mock.calls[0][0].initialPort).toEqual(8888);
 			expect(std.out).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
@@ -1013,9 +989,9 @@ describe("wrangler dev", () => {
 			fs.writeFileSync("index.js", `export default {};`);
 			await expect(runWrangler("dev")).rejects
 				.toThrowErrorMatchingInlineSnapshot(`
-						"Processing wrangler.toml configuration:
-						  - Expected \\"dev.port\\" to be of type number but got \\"some string\\"."
-					`);
+				[Error: Processing wrangler.toml configuration:
+				  - Expected "dev.port" to be of type number but got "some string".]
+			`);
 		});
 
 		it("should use --port command line arg, if provided", async () => {
@@ -1027,10 +1003,10 @@ describe("wrangler dev", () => {
 			});
 			fs.writeFileSync("index.js", `export default {};`);
 			// Mock `getPort()` to resolve to a completely different port.
-			(getPort as jest.Mock).mockResolvedValue(98765);
+			(getPort as Mock).mockResolvedValue(98765);
 
 			await runWrangler("dev --port=9999");
-			expect((Dev as jest.Mock).mock.calls[0][0].initialPort).toEqual(9999);
+			expect((Dev as Mock).mock.calls[0][0].initialPort).toEqual(9999);
 			expect(std.out).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
@@ -1042,10 +1018,10 @@ describe("wrangler dev", () => {
 			});
 			fs.writeFileSync("index.js", `export default {};`);
 			// Mock `getPort()` to resolve to a completely different port.
-			(getPort as jest.Mock).mockResolvedValue(98765);
+			(getPort as Mock).mockResolvedValue(98765);
 
 			await runWrangler("dev");
-			expect((Dev as jest.Mock).mock.calls[0][0].initialPort).toEqual(98765);
+			expect((Dev as Mock).mock.calls[0][0].initialPort).toEqual(98765);
 			expect(std.out).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
@@ -1075,7 +1051,7 @@ describe("wrangler dev", () => {
 			});
 			fs.writeFileSync("index.js", `export default {};`);
 			await runWrangler("dev");
-			expect((Dev as jest.Mock).mock.calls[0][0].initialIp).toEqual(
+			expect((Dev as Mock).mock.calls[0][0].initialIp).toEqual(
 				process.platform === "win32" ? "127.0.0.1" : "localhost"
 			);
 			expect(std.out).toMatchInlineSnapshot(`
@@ -1087,33 +1063,33 @@ describe("wrangler dev", () => {
 			          - NAME_4: CLASS_4 (defined in SCRIPT_B)"
 		      `);
 			expect(std.warn).toMatchInlineSnapshot(`
-			        "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
+			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
 
-			            - In wrangler.toml, you have configured [durable_objects] exported by this Worker (CLASS_1,
-			          CLASS_3), but no [migrations] for them. This may not work as expected until you add a [migrations]
-			          section to your wrangler.toml. Add this configuration to your wrangler.toml:
+			    - In wrangler.toml, you have configured [durable_objects] exported by this Worker (CLASS_1,
+			  CLASS_3), but no [migrations] for them. This may not work as expected until you add a [migrations]
+			  section to your wrangler.toml. Add this configuration to your wrangler.toml:
 
-			                \`\`\`
-			                [[migrations]]
-			                tag = \\"v1\\" # Should be unique for each entry
-			                new_classes = [\\"CLASS_1\\", \\"CLASS_3\\"]
-			                \`\`\`
+			        \`\`\`
+			        [[migrations]]
+			        tag = \\"v1\\" # Should be unique for each entry
+			        new_classes = [\\"CLASS_1\\", \\"CLASS_3\\"]
+			        \`\`\`
 
-			              Refer to
-			          [4mhttps://developers.cloudflare.com/workers/learning/using-durable-objects/#durable-object-migrations-in-wranglertoml[0m
-			          for more details.
+			      Refer to
+			  [4mhttps://developers.cloudflare.com/durable-objects/reference/durable-objects-migrations/[0m for more
+			  details.
 
 
-			        [33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mWARNING: You have Durable Object bindings that are not defined locally in the worker being developed.[0m
+			[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mWARNING: You have Durable Object bindings that are not defined locally in the worker being developed.[0m
 
-			          Be aware that changes to the data stored in these Durable Objects will be permanent and affect the
-			          live instances.
-			          Remote Durable Objects that are affected:
-			          - {\\"name\\":\\"NAME_2\\",\\"class_name\\":\\"CLASS_2\\",\\"script_name\\":\\"SCRIPT_A\\"}
-			          - {\\"name\\":\\"NAME_4\\",\\"class_name\\":\\"CLASS_4\\",\\"script_name\\":\\"SCRIPT_B\\"}
+			  Be aware that changes to the data stored in these Durable Objects will be permanent and affect the
+			  live instances.
+			  Remote Durable Objects that are affected:
+			  - {\\"name\\":\\"NAME_2\\",\\"class_name\\":\\"CLASS_2\\",\\"script_name\\":\\"SCRIPT_A\\"}
+			  - {\\"name\\":\\"NAME_4\\",\\"class_name\\":\\"CLASS_4\\",\\"script_name\\":\\"SCRIPT_B\\"}
 
-			        "
-		      `);
+			"
+		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 	});
@@ -1147,7 +1123,7 @@ describe("wrangler dev", () => {
 				},
 			});
 			await runWrangler("dev");
-			const varBindings: Record<string, unknown> = (Dev as jest.Mock).mock
+			const varBindings: Record<string, unknown> = (Dev as Mock).mock
 				.calls[0][0].bindings.vars;
 
 			expect(varBindings).toEqual({
@@ -1182,7 +1158,7 @@ describe("wrangler dev", () => {
 
 			writeWranglerToml({ main: "index.js", env: { custom: {} } });
 			await runWrangler("dev --env custom");
-			const varBindings: Record<string, unknown> = (Dev as jest.Mock).mock
+			const varBindings: Record<string, unknown> = (Dev as Mock).mock
 				.calls[0][0].bindings.vars;
 
 			expect(varBindings).toEqual({ CUSTOM_VAR: "custom" });
@@ -1202,66 +1178,70 @@ describe("wrangler dev", () => {
 			await expect(
 				runWrangler("dev --site")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`"Not enough arguments following: site"`
+				`[Error: Not enough arguments following: site]`
 			);
 
 			expect(std).toMatchInlineSnapshot(`
-			Object {
-			  "debug": "",
-			  "err": "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNot enough arguments following: site[0m
+				Object {
+				  "debug": "",
+				  "err": "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNot enough arguments following: site[0m
 
-			",
-			  "info": "",
-			  "out": "
-			wrangler dev [script]
+				",
+				  "info": "",
+				  "out": "
+				wrangler dev [script]
 
-			👂 Start a local server for developing your worker
+				👂 Start a local server for developing your Worker
 
-			Positionals:
-			  script  The path to an entry point for your worker  [string]
+				POSITIONALS
+				  script  The path to an entry point for your worker  [string]
 
-			Flags:
-			  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
-			  -c, --config                    Path to .toml configuration file  [string]
-			  -e, --env                       Environment to use for operations and .env files  [string]
-			  -h, --help                      Show help  [boolean]
-			  -v, --version                   Show version number  [boolean]
+				GLOBAL FLAGS
+				  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
+				  -c, --config                    Path to .toml configuration file  [string]
+				  -e, --env                       Environment to use for operations and .env files  [string]
+				  -h, --help                      Show help  [boolean]
+				  -v, --version                   Show version number  [boolean]
 
-			Options:
-			      --name                                       Name of the worker  [string]
-			      --no-bundle                                  Skip internal build steps and directly deploy script  [boolean] [default: false]
-			      --compatibility-date                         Date to use for compatibility checks  [string]
-			      --compatibility-flags, --compatibility-flag  Flags to use for compatibility checks  [array]
-			      --latest                                     Use the latest version of the worker runtime  [boolean] [default: true]
-			      --ip                                         IP address to listen on  [string]
-			      --port                                       Port to listen on  [number]
-			      --inspector-port                             Port for devtools to connect to  [number]
-			      --routes, --route                            Routes to upload  [array]
-			      --host                                       Host to forward requests to, defaults to the zone of project  [string]
-			      --local-protocol                             Protocol to listen to requests on, defaults to http.  [choices: \\"http\\", \\"https\\"]
-			      --https-key-path                             Path to a custom certificate key  [string]
-			      --https-cert-path                            Path to a custom certificate  [string]
-			      --local-upstream                             Host to act as origin in local mode, defaults to dev.host or route  [string]
-			      --assets                                     Static assets to be served  [string]
-			      --site                                       Root folder of static assets for Workers Sites  [string]
-			      --site-include                               Array of .gitignore-style patterns that match file or directory names from the sites directory. Only matched items will be uploaded.  [array]
-			      --site-exclude                               Array of .gitignore-style patterns that match file or directory names from the sites directory. Matched items will not be uploaded.  [array]
-			      --upstream-protocol                          Protocol to forward requests to host on, defaults to https.  [choices: \\"http\\", \\"https\\"]
-			      --var                                        A key-value pair to be injected into the script as a variable  [array]
-			      --define                                     A key-value pair to be substituted in the script  [array]
-			      --jsx-factory                                The function that is called for each JSX element  [string]
-			      --jsx-fragment                               The function that is called for each JSX fragment  [string]
-			      --tsconfig                                   Path to a custom tsconfig.json file  [string]
-			  -r, --remote                                     Run on the global Cloudflare network with access to production resources  [boolean] [default: false]
-			      --minify                                     Minify the script  [boolean]
-			      --node-compat                                Enable Node.js compatibility  [boolean]
-			      --persist-to                                 Specify directory to use for local persistence (defaults to .wrangler/state)  [string]
-			      --live-reload                                Auto reload HTML pages when change is detected in local mode  [boolean]
-			      --test-scheduled                             Test scheduled events by visiting /__scheduled in browser  [boolean] [default: false]
-			      --log-level                                  Specify logging level  [choices: \\"debug\\", \\"info\\", \\"log\\", \\"warn\\", \\"error\\", \\"none\\"] [default: \\"log\\"]",
-			  "warn": "",
-			}
-		`);
+				OPTIONS
+				      --name                                       Name of the worker  [string]
+				      --no-bundle                                  Skip internal build steps and directly deploy script  [boolean] [default: false]
+				      --compatibility-date                         Date to use for compatibility checks  [string]
+				      --compatibility-flags, --compatibility-flag  Flags to use for compatibility checks  [array]
+				      --latest                                     Use the latest version of the worker runtime  [boolean] [default: true]
+				      --ip                                         IP address to listen on  [string]
+				      --port                                       Port to listen on  [number]
+				      --inspector-port                             Port for devtools to connect to  [number]
+				      --routes, --route                            Routes to upload  [array]
+				      --host                                       Host to forward requests to, defaults to the zone of project  [string]
+				      --local-protocol                             Protocol to listen to requests on, defaults to http.  [choices: \\"http\\", \\"https\\"]
+				      --https-key-path                             Path to a custom certificate key  [string]
+				      --https-cert-path                            Path to a custom certificate  [string]
+				      --local-upstream                             Host to act as origin in local mode, defaults to dev.host or route  [string]
+				      --assets                                     Static assets to be served  [string]
+				      --site                                       Root folder of static assets for Workers Sites  [string]
+				      --site-include                               Array of .gitignore-style patterns that match file or directory names from the sites directory. Only matched items will be uploaded.  [array]
+				      --site-exclude                               Array of .gitignore-style patterns that match file or directory names from the sites directory. Matched items will not be uploaded.  [array]
+				      --upstream-protocol                          Protocol to forward requests to host on, defaults to https.  [choices: \\"http\\", \\"https\\"]
+				      --var                                        A key-value pair to be injected into the script as a variable  [array]
+				      --define                                     A key-value pair to be substituted in the script  [array]
+				      --alias                                      A module pair to be substituted in the script  [array]
+				      --jsx-factory                                The function that is called for each JSX element  [string]
+				      --jsx-fragment                               The function that is called for each JSX fragment  [string]
+				      --tsconfig                                   Path to a custom tsconfig.json file  [string]
+				  -r, --remote                                     Run on the global Cloudflare network with access to production resources  [boolean] [default: false]
+				      --minify                                     Minify the script  [boolean]
+				      --node-compat                                Enable Node.js compatibility  [boolean]
+				      --persist-to                                 Specify directory to use for local persistence (defaults to .wrangler/state)  [string]
+				      --live-reload                                Auto reload HTML pages when change is detected in local mode  [boolean]
+				      --test-scheduled                             Test scheduled events by visiting /__scheduled in browser  [boolean] [default: false]
+				      --log-level                                  Specify logging level  [choices: \\"debug\\", \\"info\\", \\"log\\", \\"warn\\", \\"error\\", \\"none\\"] [default: \\"log\\"]
+				      --show-interactive-dev-session               Show interactive dev session  (defaults to true if the terminal supports interactivity)  [boolean]
+				      --experimental-dev-env, --x-dev-env          Use the experimental DevEnv instantiation (unified across wrangler dev and unstable_dev)  [boolean] [default: false]
+				      --experimental-registry, --x-registry        Use the experimental file based dev registry for multi-worker development  [boolean] [default: false]",
+				  "warn": "",
+				}
+			`);
 		});
 
 		it("should error if --assets and --site are used together", async () => {
@@ -1272,7 +1252,7 @@ describe("wrangler dev", () => {
 			await expect(
 				runWrangler("dev --assets abc --site xyz")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`"Cannot use Assets and Workers Sites in the same Worker."`
+				`[Error: Cannot use Assets and Workers Sites in the same Worker.]`
 			);
 		});
 
@@ -1287,28 +1267,26 @@ describe("wrangler dev", () => {
 			await expect(
 				runWrangler("dev --assets abc")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`"Cannot use Assets and Workers Sites in the same Worker."`
+				`[Error: Cannot use Assets and Workers Sites in the same Worker.]`
 			);
 		});
 
 		it("should error if config.assets and --site are used together", async () => {
 			writeWranglerToml({
 				main: "./index.js",
-				// @ts-expect-error we allow string inputs here
 				assets: "abc",
 			});
 			fs.writeFileSync("index.js", `export default {};`);
 			await expect(
 				runWrangler("dev --site xyz")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`"Cannot use Assets and Workers Sites in the same Worker."`
+				`[Error: Cannot use Assets and Workers Sites in the same Worker.]`
 			);
 		});
 
 		it("should error if config.assets and config.site are used together", async () => {
 			writeWranglerToml({
 				main: "./index.js",
-				// @ts-expect-error we allow string inputs here
 				assets: "abc",
 				site: {
 					bucket: "xyz",
@@ -1318,7 +1296,7 @@ describe("wrangler dev", () => {
 			await expect(
 				runWrangler("dev --assets abc")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`"Cannot use Assets and Workers Sites in the same Worker."`
+				`[Error: Cannot use Assets and Workers Sites in the same Worker.]`
 			);
 		});
 
@@ -1329,13 +1307,13 @@ describe("wrangler dev", () => {
 			fs.writeFileSync("index.js", `export default {};`);
 
 			await runWrangler("dev");
-			expect((Dev as jest.Mock).mock.calls[0][0].isWorkersSite).toEqual(false);
+			expect((Dev as Mock).mock.calls[0][0].isWorkersSite).toEqual(false);
 
 			await runWrangler("dev --site abc");
-			expect((Dev as jest.Mock).mock.calls[1][0].isWorkersSite).toEqual(true);
+			expect((Dev as Mock).mock.calls[1][0].isWorkersSite).toEqual(true);
 
 			await runWrangler("dev --assets abc");
-			expect((Dev as jest.Mock).mock.calls[2][0].isWorkersSite).toEqual(false);
+			expect((Dev as Mock).mock.calls[2][0].isWorkersSite).toEqual(false);
 		});
 		it("should warn if --assets is used", async () => {
 			writeWranglerToml({
@@ -1360,7 +1338,6 @@ describe("wrangler dev", () => {
 		it("should warn if config.assets is used", async () => {
 			writeWranglerToml({
 				main: "./index.js",
-				// @ts-expect-error we allow string inputs here
 				assets: "./assets",
 			});
 			fs.writeFileSync("index.js", `export default {};`);
@@ -1402,7 +1379,7 @@ describe("wrangler dev", () => {
 		it("should default to true, without a warning", async () => {
 			fs.writeFileSync("index.js", `export default {};`);
 			await runWrangler("dev index.js");
-			expect((Dev as jest.Mock).mock.calls[0][0].inspect).toEqual(true);
+			expect((Dev as Mock).mock.calls[0][0].inspect).toEqual(true);
 			expect(std).toMatchInlineSnapshot(`
 			Object {
 			  "debug": "",
@@ -1417,7 +1394,7 @@ describe("wrangler dev", () => {
 		it("should pass true, with a warning", async () => {
 			fs.writeFileSync("index.js", `export default {};`);
 			await runWrangler("dev index.js --inspect");
-			expect((Dev as jest.Mock).mock.calls[0][0].inspect).toEqual(true);
+			expect((Dev as Mock).mock.calls[0][0].inspect).toEqual(true);
 			expect(std).toMatchInlineSnapshot(`
 			Object {
 			  "debug": "",
@@ -1434,7 +1411,7 @@ describe("wrangler dev", () => {
 		it("should pass false, without a warning", async () => {
 			fs.writeFileSync("index.js", `export default {};`);
 			await runWrangler("dev index.js --inspect false");
-			expect((Dev as jest.Mock).mock.calls[0][0].inspect).toEqual(false);
+			expect((Dev as Mock).mock.calls[0][0].inspect).toEqual(false);
 			expect(std).toMatchInlineSnapshot(`
 			Object {
 			  "debug": "",
@@ -1476,6 +1453,23 @@ describe("wrangler dev", () => {
 			",
 			}
 		`);
+		});
+	});
+
+	describe("--show-interactive-dev-session", () => {
+		it("should show interactive dev session with --show-interactive-dev-session", async () => {
+			fs.writeFileSync("index.js", `export default { }`);
+			await runWrangler("dev index.js --show-interactive-dev-session");
+			expect(
+				(Dev as Mock).mock.calls[0][0].showInteractiveDevSession
+			).toBeTruthy();
+		});
+		it("should not show interactive dev session with --show-interactive-dev-session=false", async () => {
+			fs.writeFileSync("index.js", `export default { }`);
+			await runWrangler("dev index.js --show-interactive-dev-session=false");
+			expect(
+				(Dev as Mock).mock.calls[0][0].showInteractiveDevSession
+			).toBeFalsy();
 		});
 	});
 
@@ -1573,7 +1567,7 @@ describe("wrangler dev", () => {
 					"dev index.js --compatibility-flag=nodejs_compat --node-compat"
 				)
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`"The \`nodejs_compat\` compatibility flag cannot be used in conjunction with the legacy \`--node-compat\` flag. If you want to use the Workers runtime Node.js compatibility features, please remove the \`--node-compat\` argument from your CLI command or \`node_compat = true\` from your config file."`
+				`[Error: The \`nodejs_compat\` compatibility flag cannot be used in conjunction with the legacy \`--node-compat\` flag. If you want to use the Workers \`nodejs_compat\` compatibility flag, please remove the \`--node-compat\` argument from your CLI command or \`node_compat = true\` from your config file.]`
 			);
 		});
 	});
@@ -1581,17 +1575,19 @@ describe("wrangler dev", () => {
 
 function mockGetZones(domain: string, zones: { id: string }[] = []) {
 	msw.use(
-		rest.get("*/zones", (req, res, ctx) => {
-			expect([...req.url.searchParams.entries()]).toEqual([["name", domain]]);
+		http.get("*/zones", ({ request }) => {
+			const url = new URL(request.url);
 
-			return res(
-				ctx.status(200),
-				ctx.json({
+			expect(url.searchParams.get("name")).toEqual(domain);
+
+			return HttpResponse.json(
+				{
 					success: true,
 					errors: [],
 					messages: [],
 					result: zones,
-				})
+				},
+				{ status: 200 }
 			);
 		})
 	);

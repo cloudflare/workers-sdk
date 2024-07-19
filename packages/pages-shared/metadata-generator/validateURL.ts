@@ -3,7 +3,9 @@ export const extractPathname = (
 	includeSearch: boolean,
 	includeHash: boolean
 ): string => {
-	if (!path.startsWith("/")) path = `/${path}`;
+	if (!path.startsWith("/")) {
+		path = `/${path}`;
+	}
 	const url = new URL(`//${path}`, "relative://");
 	return `${url.pathname}${includeSearch ? url.search : ""}${
 		includeHash ? url.hash : ""
@@ -23,11 +25,12 @@ export const validateUrl = (
 ): [undefined, string] | [string, undefined] => {
 	const host = URL_REGEX.exec(token);
 	if (host && host.groups && host.groups.host) {
-		if (onlyRelative)
+		if (onlyRelative) {
 			return [
 				undefined,
 				`Only relative URLs are allowed. Skipping absolute URL ${token}.`,
 			];
+		}
 
 		if (disallowPorts && host.groups.host.match(HOST_WITH_PORT_REGEX)) {
 			return [
@@ -45,7 +48,9 @@ export const validateUrl = (
 			undefined,
 		];
 	} else {
-		if (!token.startsWith("/") && onlyRelative) token = `/${token}`;
+		if (!token.startsWith("/") && onlyRelative) {
+			token = `/${token}`;
+		}
 
 		const path = PATH_REGEX.exec(token);
 		if (path) {

@@ -1,6 +1,6 @@
 import assert from "node:assert";
 import { Buffer } from "node:buffer";
-import { Colorize, bold, green, grey, red, reset, yellow } from "kleur/colors";
+import { bold, Colorize, green, grey, red, reset, yellow } from "kleur/colors";
 import {
 	HttpError,
 	LogLevel,
@@ -20,7 +20,11 @@ import {
 	QueueContentType,
 	QueueContentTypeSchema,
 	QueueIncomingMessage,
+	QueueMessageDelay,
+	QueueMessageDelaySchema,
 	QueueOutgoingMessage,
+	QueueProducer,
+	QueueProducersSchema,
 	QueuesBatchRequestSchema,
 	QueuesOutgoingBatchRequest,
 } from "./schemas";
@@ -35,9 +39,9 @@ const DEFAULT_RETRIES = 2;
 
 const exceptionQueueResponse: FetcherQueueResult = {
 	outcome: "exception",
-	retryAll: false,
+	retryBatch: { retry: false },
 	ackAll: false,
-	explicitRetries: [],
+	retryMessages: [],
 	explicitAcks: [],
 };
 
@@ -63,6 +67,19 @@ function validateContentType(headers: Headers): QueueContentType {
 		throw new HttpError(
 			400,
 			`message content type ${format} is invalid; if specified, must be one of 'text', 'json', 'bytes', or 'v8'`
+		);
+	}
+	return result.data;
+}
+
+function validateMessageDelay(headers: Headers): QueueMessageDelay {
+	const format = headers.get("X-Msg-Delay-Secs");
+	if (!format) return undefined;
+	const result = QueueMessageDelaySchema.safeParse(Number(format));
+	if (!result.success) {
+		throw new HttpError(
+			400,
+			`message delay ${format} is invalid: ${result.error}`
 		);
 	}
 	return result.data;
@@ -120,7 +137,7 @@ function serialise(msg: QueueMessage): QueueOutgoingMessage {
 	}
 	return {
 		id: msg.id,
-		timestamp: msg.timestamp,
+		timestamp: msg.timestamp.getTime(),
 		contentType: msg.body.contentType,
 		body: body.toString("base64"),
 	};
@@ -131,12 +148,16 @@ class QueueMessage {
 
 	constructor(
 		readonly id: string,
-		readonly timestamp: number,
+		readonly timestamp: Date,
 		readonly body: QueueBody
 	) {}
 
 	incrementFailedAttempts(): number {
 		return ++this.#failedAttempts;
+	}
+
+	get failedAttempts() {
+		return this.#failedAttempts;
 	}
 }
 
@@ -164,6 +185,7 @@ interface PendingFlush {
 type QueueBrokerObjectEnv = MiniflareDurableObjectEnv & {
 	// Reference to own Durable Object namespace for sending to dead-letter queues
 	[SharedBindings.DURABLE_OBJECT_NAMESPACE_OBJECT]: DurableObjectNamespace;
+	[QueueBindings.MAYBE_JSON_QUEUE_PRODUCERS]?: unknown;
 	[QueueBindings.MAYBE_JSON_QUEUE_CONSUMERS]?: unknown;
 } & {
 	[K in `${typeof QueueBindings.SERVICE_WORKER_PREFIX}${string}`]:
@@ -172,15 +194,25 @@ type QueueBrokerObjectEnv = MiniflareDurableObjectEnv & {
 };
 
 export class QueueBrokerObject extends MiniflareDurableObject<QueueBrokerObjectEnv> {
+	readonly #producers: Record<string, QueueProducer | undefined>;
 	readonly #consumers: Record<string, QueueConsumer | undefined>;
 	readonly #messages: QueueMessage[] = [];
 	#pendingFlush?: PendingFlush;
 
 	constructor(state: DurableObjectState, env: QueueBrokerObjectEnv) {
 		super(state, env);
+
+		const maybeProducers = env[QueueBindings.MAYBE_JSON_QUEUE_PRODUCERS];
+		if (maybeProducers === undefined) this.#producers = {};
+		else this.#producers = QueueProducersSchema.parse(maybeProducers);
+
 		const maybeConsumers = env[QueueBindings.MAYBE_JSON_QUEUE_CONSUMERS];
 		if (maybeConsumers === undefined) this.#consumers = {};
 		else this.#consumers = QueueConsumersSchema.parse(maybeConsumers);
+	}
+
+	get #maybeProducer() {
+		return this.#producers[this.name];
 	}
 
 	get #maybeConsumer() {
@@ -195,16 +227,14 @@ export class QueueBrokerObject extends MiniflareDurableObject<QueueBrokerObjectE
 			maybeService !== undefined,
 			`Expected ${bindingName} service binding`
 		);
-		const messages = batch.map(({ id, timestamp, body }) => {
+		const messages = batch.map(({ id, timestamp, body, failedAttempts }) => {
+			const attempts = failedAttempts + 1;
 			if (body.contentType === "v8") {
-				return { id, timestamp, serializedBody: body.body };
+				return { id, timestamp, serializedBody: body.body, attempts };
 			} else {
-				return { id, timestamp, body: body.body };
+				return { id, timestamp, body: body.body, attempts };
 			}
 		});
-		// @ts-expect-error `Fetcher#queue()` types haven't been updated for
-		//  `serializedBody` yet, and don't allow `number` for `timestamp`, even
-		//  though that's permitted at runtime
 		return maybeService.queue(this.name, messages);
 	}
 
@@ -232,14 +262,17 @@ export class QueueBrokerObject extends MiniflareDurableObject<QueueBrokerObjectE
 
 		// Get messages to retry. If dispatching the batch failed for any reason,
 		// retry all messages.
-		const retryAll = response.retryAll || response.outcome !== "ok";
-		const explicitRetries = new Set(response.explicitRetries);
+		const retryAll = response.retryBatch.retry || response.outcome !== "ok";
+		const retryMessages = new Map(
+			response.retryMessages?.map((r) => [r.msgId, r.delaySeconds])
+		);
+		const globalDelay =
+			response.retryBatch.delaySeconds ?? consumer.retryDelay ?? 0;
 
 		let failedMessages = 0;
-		const toRetry: QueueMessage[] = [];
 		const toDeadLetterQueue: QueueMessage[] = [];
 		for (const message of batch) {
-			if (retryAll || explicitRetries.has(message.id)) {
+			if (retryAll || retryMessages.has(message.id)) {
 				failedMessages++;
 				const failedAttempts = message.incrementFailedAttempts();
 				if (failedAttempts < maxAttempts) {
@@ -247,7 +280,13 @@ export class QueueBrokerObject extends MiniflareDurableObject<QueueBrokerObjectE
 						LogLevel.DEBUG,
 						`Retrying message "${message.id}" on queue "${this.name}"...`
 					);
-					toRetry.push(message);
+
+					const fn = () => {
+						this.#messages.push(message);
+						this.#ensurePendingFlush();
+					};
+					const delay = retryMessages.get(message.id) ?? globalDelay;
+					this.timers.setTimeout(fn, delay * 1000);
 				} else if (consumer.deadLetterQueue !== undefined) {
 					await this.logWithLevel(
 						LogLevel.WARN,
@@ -268,9 +307,7 @@ export class QueueBrokerObject extends MiniflareDurableObject<QueueBrokerObjectE
 			formatQueueResponse(this.name, acked, batch.length, endTime - startTime)
 		);
 
-		// Add messages for retry back to the queue, and ensure we flush again if
-		// we still have messages
-		this.#messages.push(...toRetry);
+		// Ensure we flush again if we still have messages.
 		this.#pendingFlush = undefined;
 		if (this.#messages.length > 0) this.#ensurePendingFlush();
 
@@ -318,28 +355,39 @@ export class QueueBrokerObject extends MiniflareDurableObject<QueueBrokerObjectE
 		this.#pendingFlush = { immediate: delay === 0, timeout };
 	}
 
-	#enqueue(messages: QueueIncomingMessage[]) {
+	#enqueue(messages: QueueIncomingMessage[], globalDelay: number = 0) {
 		for (const message of messages) {
 			const randomness = crypto.getRandomValues(new Uint8Array(16));
 			const id = message.id ?? Buffer.from(randomness).toString("hex");
-			const timestamp = message.timestamp ?? this.timers.now();
+			const timestamp = new Date(message.timestamp ?? this.timers.now());
 			const body = deserialise(message);
-			this.#messages.push(new QueueMessage(id, timestamp, body));
+			const msg = new QueueMessage(id, timestamp, body);
+
+			const fn = () => {
+				this.#messages.push(msg);
+				this.#ensurePendingFlush();
+			};
+
+			const delay = message.delaySecs ?? globalDelay;
+			this.timers.setTimeout(fn, delay * 1000);
 		}
-		this.#ensurePendingFlush();
 	}
 
 	@POST("/message")
 	message: RouteHandler = async (req) => {
 		validateMessageSize(req.headers);
 		const contentType = validateContentType(req.headers);
+		const delay = validateMessageDelay(req.headers);
 		const body = Buffer.from(await req.arrayBuffer());
 
 		// If we don't have a consumer, drop the message
 		const consumer = this.#maybeConsumer;
 		if (consumer === undefined) return new Response();
 
-		this.#enqueue([{ contentType, body }]);
+		this.#enqueue(
+			[{ contentType, delaySecs: delay, body }],
+			this.#maybeProducer?.deliveryDelay
+		);
 		return new Response();
 	};
 
@@ -350,13 +398,15 @@ export class QueueBrokerObject extends MiniflareDurableObject<QueueBrokerObjectE
 		// a no-op. This allows us to enqueue a maximum size batch with additional
 		// ID and timestamp information.
 		validateBatchSize(req.headers);
+		const delay =
+			validateMessageDelay(req.headers) ?? this.#maybeProducer?.deliveryDelay;
 		const body = QueuesBatchRequestSchema.parse(await req.json());
 
 		// If we don't have a consumer, drop the message
 		const consumer = this.#maybeConsumer;
 		if (consumer === undefined) return new Response();
 
-		this.#enqueue(body.messages);
+		this.#enqueue(body.messages, delay);
 		return new Response();
 	};
 }

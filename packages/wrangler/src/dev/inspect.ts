@@ -105,7 +105,7 @@ export function logConsoleMessage(
 												.join(",\n") +
 											(ro.preview.overflow ? "\n  ..." : "") +
 											"\n}"
-								  );
+									);
 
 							break;
 						case "weakset":
@@ -121,7 +121,7 @@ export function logConsoleMessage(
 												.join(", ") +
 											(ro.preview.overflow ? ", ..." : "") +
 											" }"
-								  );
+									);
 							break;
 						case "regexp":
 							break;
@@ -175,14 +175,17 @@ export function logConsoleMessage(
 	if (method in console) {
 		switch (method) {
 			case "dir":
-				console.dir(args);
+				logger.console(
+					"dir",
+					// @ts-expect-error A spread argument must either have a tuple type or be passed to a rest parameter.
+					...args
+				);
 				break;
 			case "table":
-				console.table(args);
+				logger.table(args.map((value) => ({ value })));
 				break;
 			default:
-				// eslint-disable-next-line prefer-spread
-				console[method].apply(console, args);
+				logger.console(method, ...args);
 				break;
 		}
 	} else {
@@ -196,8 +199,12 @@ export function maybeHandleNetworkLoadResource(
 	bundle: EsbuildBundle,
 	tmpDir?: string
 ): string | undefined {
-	if (typeof url === "string") url = new URL(url);
-	if (url.protocol !== "file:") return;
+	if (typeof url === "string") {
+		url = new URL(url);
+	}
+	if (url.protocol !== "file:") {
+		return;
+	}
 	const filePath = fileURLToPath(url);
 
 	if (isAllowedSourceMapPath(bundle, filePath)) {
@@ -215,12 +222,15 @@ export function maybeHandleNetworkLoadResource(
 			// templates. This should cover facades and middleware, but intentionally
 			// doesn't include all non-user code e.g. `node_modules`.
 			.map((source, i) => {
-				if (source.includes("wrangler/templates")) return i;
+				if (source.includes("wrangler/templates")) {
+					return i;
+				}
 				if (
 					tmpDir !== undefined &&
 					path.resolve(sourceMap?.sourceRoot ?? "", source).includes(tmpDir)
-				)
+				) {
 					return i;
+				}
 			})
 			.filter((i): i is number => i !== undefined);
 
@@ -242,7 +252,9 @@ export const openInspector = async (
 	const query = new URLSearchParams();
 	query.set("theme", "systemPreferred");
 	query.set("ws", `127.0.0.1:${inspectorPort}/ws`);
-	if (worker) query.set("domain", worker);
+	if (worker) {
+		query.set("domain", worker);
+	}
 	query.set("debugger", "true");
 	const url = `https://devtools.devprod.cloudflare.dev/js_app?${query.toString()}`;
 	const errorMessage =

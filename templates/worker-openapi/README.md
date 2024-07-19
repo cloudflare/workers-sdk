@@ -1,33 +1,25 @@
-## Template: worker-openapi
+# Cloudflare Workers OpenAPI 3.1
 
-[![Deploy with Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/cloudflare/workers-sdk/tree/main/templates/worker-openapi)
+This is a Cloudflare Worker with OpenAPI 3.1 using [chanfana](https://github.com/cloudflare/chanfana) and [Hono](https://github.com/honojs/hono).
 
-This template demonstrates using the [`itty-router-openapi`](https://github.com/cloudflare/itty-router-openapi) package to add openapi 3 schema generation and validation.
+This is an example project made to be used as a quick start into building OpenAPI compliant Workers that generates the
+`openapi.json` schema automatically from code and validates the incoming request to the defined parameters or request body.
 
-You can try this template in your browser [here](https://worker-openapi-example.radar.cloudflare.com/docs)!
+## Get started
 
-## Setup
+1. Sign up for [Cloudflare Workers](https://workers.dev). The free tier is more than enough for most use cases.
+2. Clone this project and install dependencies with `npm install`
+3. Run `wrangler login` to login to your Cloudflare account in wrangler
+4. Run `wrangler deploy` to publish the API to Cloudflare Workers
 
-To create a `my-project` directory using this template, run:
+## Project structure
 
-```sh
-$ npx wrangler generate my-project worker-openapi
-# or
-$ yarn wrangler generate my-project worker-openapi
-# or
-$ pnpm wrangler generate my-project worker-openapi
-```
+1. Your main router is defined in `src/index.ts`.
+2. Each endpoint has its own file in `src/endpoints/`.
+3. For more information read the [chanfana documentation](https://chanfana.pages.dev/) and [Hono documentation](https://hono.dev/docs).
 
-## Local development
+## Development
 
-Run `wrangler dev` and head to `/docs` our `/redocs` with your browser.
-
-You'll be greeted with an OpenAPI page that you can use to test and call your endpoints.
-
-## Deploy
-
-Once you are ready, you can publish your code by running the following command:
-
-```sh
-$ wrangler deploy
-```
+1. Run `wrangler dev` to start a local instance of the API.
+2. Open `http://localhost:8787/` in your browser to see the Swagger interface where you can try the endpoints.
+3. Changes made in the `src/` folder will automatically trigger the server to reload, you only need to refresh the Swagger interface.

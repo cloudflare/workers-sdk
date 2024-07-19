@@ -119,7 +119,7 @@ export function TopBar() {
 				<Button
 					type="primary"
 					inverted={true}
-					disabled={!Boolean(previewHash?.serialised)}
+					disabled={!previewHash?.serialised}
 					onClick={() => {
 						void navigator.clipboard.writeText(location.href);
 						setHasCopied(!hasCopied);
@@ -137,7 +137,7 @@ export function TopBar() {
 			>
 				<Button
 					type="primary"
-					disabled={!Boolean(previewHash?.serialised)}
+					disabled={!previewHash?.serialised}
 					tabIndex={-1}
 				>
 					Deploy

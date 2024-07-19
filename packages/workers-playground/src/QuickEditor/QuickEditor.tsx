@@ -1,5 +1,9 @@
 import { Div } from "@cloudflare/elements";
-import { isDarkMode, observeDarkMode, theme } from "@cloudflare/style-const";
+import {
+	isDarkMode,
+	observeDarkMode,
+	theme as styleTheme,
+} from "@cloudflare/style-const";
 import { createComponent } from "@cloudflare/style-container";
 import React, { createContext, useEffect, useState } from "react";
 import { BACKGROUND_GRAY } from "./constants";
@@ -92,7 +96,7 @@ export default function QuickEditor() {
 						minSize={50}
 						maxSize={-50}
 						style={{ backgroundColor: BACKGROUND_GRAY }}
-						paneStyle={{ backgroundColor: theme.colors.background }}
+						paneStyle={{ backgroundColor: styleTheme.colors.background }}
 					>
 						<EditorPane />
 						<ToolsPane />

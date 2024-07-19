@@ -22,10 +22,11 @@ import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
 } from "../yargs-types";
-import type { Deployment, PagesConfigCache } from "./types";
+import type { PagesConfigCache } from "./types";
+import type { Deployment } from "@cloudflare/types";
 
 const statusChoices = ["ok", "error", "canceled"] as const;
-type StatusChoice = typeof statusChoices[number];
+type StatusChoice = (typeof statusChoices)[number];
 const isStatusChoiceList = (
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	data?: any[]
@@ -233,7 +234,9 @@ export async function Handler({
 		let didTerminate = false;
 
 		return async () => {
-			if (didTerminate) return;
+			if (didTerminate) {
+				return;
+			}
 
 			tail.terminate();
 			await deleteTail();

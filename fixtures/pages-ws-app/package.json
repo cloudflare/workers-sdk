@@ -8,7 +8,7 @@
 		"check:type": "tsc",
 		"dev": "npx wrangler pages dev --port 8790 --proxy 8791 -- pnpm run server",
 		"server": "node dist/index.js",
-		"test": "vitest run",
+		"test:ci": "vitest run",
 		"test:watch": "vitest",
 		"type:tests": "tsc -p ./tests/tsconfig.json"
 	},
@@ -16,9 +16,12 @@
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"miniflare": "workspace:*",
 		"wrangler": "workspace:*",
-		"ws": "^8.8.0"
+		"ws": "^8.17.1"
 	},
 	"engines": {
 		"node": ">=14"
+	},
+	"volta": {
+		"extends": "../../package.json"
 	}
 }

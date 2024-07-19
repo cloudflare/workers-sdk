@@ -12,13 +12,13 @@ import { z } from "zod";
 import { fetch } from "../../http";
 import {
 	Extension,
+	kVoid,
 	Service,
 	ServiceDesignator,
+	supportedCompatibilityDate,
 	Worker_Binding,
 	Worker_DurableObjectNamespace,
 	Worker_Module,
-	kVoid,
-	supportedCompatibilityDate,
 } from "../../runtime";
 import {
 	Json,
@@ -36,34 +36,34 @@ import {
 import { getCacheServiceName } from "../cache";
 import { DURABLE_OBJECTS_STORAGE_SERVICE_NAME } from "../do";
 import {
-	Plugin,
-	SERVICE_LOOPBACK,
-	WORKER_BINDING_SERVICE_LOOPBACK,
 	kProxyNodeBinding,
 	kUnsafeEphemeralUniqueKey,
 	parseRoutes,
+	Plugin,
+	SERVICE_LOOPBACK,
+	WORKER_BINDING_SERVICE_LOOPBACK,
 } from "../shared";
 import {
 	CUSTOM_SERVICE_KNOWN_OUTBOUND,
 	CustomServiceKind,
-	SERVICE_ENTRY,
 	getBuiltinServiceName,
 	getCustomServiceName,
 	getUserServiceName,
+	SERVICE_ENTRY,
 } from "./constants";
 import {
+	buildStringScriptPath,
+	convertModuleDefinition,
 	ModuleLocator,
 	SourceOptions,
 	SourceOptionsSchema,
-	buildStringScriptPath,
-	convertModuleDefinition,
 	withSourceURL,
 } from "./modules";
 import { PROXY_SECRET } from "./proxy";
 import {
+	kCurrentWorker,
 	ServiceDesignatorSchema,
 	ServiceFetchSchema,
-	kCurrentWorker,
 } from "./services";
 
 // `workerd`'s `trustBrowserCas` should probably be named `trustSystemCas`.
@@ -106,6 +106,13 @@ const WrappedBindingSchema = z.object({
 // Validate as string, but don't include in parsed output
 const UnusableStringSchema = z.string().transform(() => undefined);
 
+export const UnsafeDirectSocketSchema = z.object({
+	host: z.ostring(),
+	port: z.onumber(),
+	entrypoint: z.ostring(),
+	proxy: z.oboolean(),
+});
+
 const CoreOptionsSchemaInput = z.intersection(
 	SourceOptionsSchema,
 	z.object({
@@ -118,9 +125,13 @@ const CoreOptionsSchemaInput = z.intersection(
 		routes: z.string().array().optional(),
 
 		bindings: z.record(JsonSchema).optional(),
-		wasmBindings: z.record(PathSchema).optional(),
+		wasmBindings: z
+			.record(z.union([PathSchema, z.instanceof(Uint8Array)]))
+			.optional(),
 		textBlobBindings: z.record(PathSchema).optional(),
-		dataBlobBindings: z.record(PathSchema).optional(),
+		dataBlobBindings: z
+			.record(z.union([PathSchema, z.instanceof(Uint8Array)]))
+			.optional(),
 		serviceBindings: z.record(ServiceDesignatorSchema).optional(),
 		wrappedBindings: z
 			.record(z.union([z.string(), WrappedBindingSchema]))
@@ -131,8 +142,7 @@ const CoreOptionsSchemaInput = z.intersection(
 
 		// TODO(soon): remove this in favour of per-object `unsafeUniqueKey: kEphemeralUniqueKey`
 		unsafeEphemeralDurableObjects: z.boolean().optional(),
-		unsafeDirectHost: z.string().optional(),
-		unsafeDirectPort: z.number().optional(),
+		unsafeDirectSockets: UnsafeDirectSocketSchema.array().optional(),
 
 		unsafeEvalBinding: z.string().optional(),
 		unsafeUseModuleFallbackService: z.boolean().optional(),
@@ -224,19 +234,29 @@ function getCustomServiceDesignator(
 	service: z.infer<typeof ServiceDesignatorSchema>
 ): ServiceDesignator {
 	let serviceName: string;
+	let entrypoint: string | undefined;
 	if (typeof service === "function") {
 		// Custom `fetch` function
 		serviceName = getCustomServiceName(workerIndex, kind, name);
 	} else if (typeof service === "object") {
-		// Builtin workerd service: network, external, disk
-		serviceName = getBuiltinServiceName(workerIndex, kind, name);
+		if ("name" in service) {
+			if (service.name === kCurrentWorker) {
+				serviceName = getUserServiceName(refererName);
+			} else {
+				serviceName = getUserServiceName(service.name);
+			}
+			entrypoint = service.entrypoint;
+		} else {
+			// Builtin workerd service: network, external, disk
+			serviceName = getBuiltinServiceName(workerIndex, kind, name);
+		}
 	} else if (service === kCurrentWorker) {
 		serviceName = getUserServiceName(refererName);
 	} else {
 		// Regular user worker
 		serviceName = getUserServiceName(service);
 	}
-	return { name: serviceName };
+	return { name: serviceName, entrypoint };
 }
 
 function maybeGetCustomServiceService(
@@ -261,7 +281,7 @@ function maybeGetCustomServiceService(
 				],
 			},
 		};
-	} else if (typeof service === "object") {
+	} else if (typeof service === "object" && !("name" in service)) {
 		// Builtin workerd service: network, external, disk
 		return {
 			name: getBuiltinServiceName(workerIndex, kind, name),
@@ -340,8 +360,10 @@ export const CORE_PLUGIN: Plugin<
 		}
 		if (options.wasmBindings !== undefined) {
 			bindings.push(
-				...Object.entries(options.wasmBindings).map(([name, path]) =>
-					fs.readFile(path).then((wasmModule) => ({ name, wasmModule }))
+				...Object.entries(options.wasmBindings).map(([name, value]) =>
+					typeof value === "string"
+						? fs.readFile(value).then((wasmModule) => ({ name, wasmModule }))
+						: { name, wasmModule: value }
 				)
 			);
 		}
@@ -354,8 +376,10 @@ export const CORE_PLUGIN: Plugin<
 		}
 		if (options.dataBlobBindings !== undefined) {
 			bindings.push(
-				...Object.entries(options.dataBlobBindings).map(([name, path]) =>
-					fs.readFile(path).then((data) => ({ name, data }))
+				...Object.entries(options.dataBlobBindings).map(([name, value]) =>
+					typeof value === "string"
+						? fs.readFile(value).then((data) => ({ name, data }))
+						: { name, data: value }
 				)
 			);
 		}
@@ -420,10 +444,12 @@ export const CORE_PLUGIN: Plugin<
 		}
 		if (options.wasmBindings !== undefined) {
 			bindingEntries.push(
-				...Object.entries(options.wasmBindings).map(([name, path]) =>
-					fs
-						.readFile(path)
-						.then((buffer) => [name, new WebAssembly.Module(buffer)])
+				...Object.entries(options.wasmBindings).map(([name, value]) =>
+					typeof value === "string"
+						? fs
+								.readFile(value)
+								.then((buffer) => [name, new WebAssembly.Module(buffer)])
+						: [name, new WebAssembly.Module(value)]
 				)
 			);
 		}
@@ -436,14 +462,24 @@ export const CORE_PLUGIN: Plugin<
 		}
 		if (options.dataBlobBindings !== undefined) {
 			bindingEntries.push(
-				...Object.entries(options.dataBlobBindings).map(([name, path]) =>
-					fs.readFile(path).then((buffer) => [name, viewToBuffer(buffer)])
+				...Object.entries(options.dataBlobBindings).map(([name, value]) =>
+					typeof value === "string"
+						? fs.readFile(value).then((buffer) => [name, viewToBuffer(buffer)])
+						: [name, viewToBuffer(value)]
 				)
 			);
 		}
 		if (options.serviceBindings !== undefined) {
 			bindingEntries.push(
 				...Object.keys(options.serviceBindings).map((name) => [
+					name,
+					kProxyNodeBinding,
+				])
+			);
+		}
+		if (options.wrappedBindings !== undefined) {
+			bindingEntries.push(
+				...Object.keys(options.wrappedBindings).map((name) => [
 					name,
 					kProxyNodeBinding,
 				])
@@ -600,8 +636,8 @@ export const CORE_PLUGIN: Plugin<
 						classNamesEntries.length === 0
 							? undefined
 							: options.unsafeEphemeralDurableObjects
-							? { inMemory: kVoid }
-							: { localDisk: DURABLE_OBJECTS_STORAGE_SERVICE_NAME },
+								? { inMemory: kVoid }
+								: { localDisk: DURABLE_OBJECTS_STORAGE_SERVICE_NAME },
 					globalOutbound:
 						options.outboundService === undefined
 							? undefined
@@ -611,7 +647,7 @@ export const CORE_PLUGIN: Plugin<
 									CustomServiceKind.KNOWN,
 									CUSTOM_SERVICE_KNOWN_OUTBOUND,
 									options.outboundService
-							  ),
+								),
 					cacheApiOutbound: { name: getCacheServiceName(workerIndex) },
 					moduleFallback:
 						options.unsafeUseModuleFallbackService &&
@@ -722,7 +758,12 @@ export function getGlobalServices({
 			worker: {
 				modules: [{ name: "entry.worker.js", esModule: SCRIPT_ENTRY() }],
 				compatibilityDate: "2023-04-04",
-				compatibilityFlags: ["nodejs_compat", "service_binding_extra_handlers"],
+				compatibilityFlags: [
+					"nodejs_compat",
+					"service_binding_extra_handlers",
+					"brotli_content_encoding",
+					"rpc",
+				],
 				bindings: serviceEntryBindings,
 				durableObjectNamespaces: [
 					{

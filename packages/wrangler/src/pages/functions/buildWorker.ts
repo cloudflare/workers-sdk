@@ -9,11 +9,12 @@ import {
 	noopModuleCollector,
 } from "../../deployment-bundle/module-collection";
 import { FatalError } from "../../errors";
-import { logger } from "../../logger";
+import { logBuildFailure, logger } from "../../logger";
 import { getBasePath } from "../../paths";
 import { getPagesProjectRoot, getPagesTmpDir } from "../utils";
 import type { BundleResult } from "../../deployment-bundle/bundle";
 import type { Entry } from "../../deployment-bundle/entry";
+import type { NodeJSCompatMode } from "../../deployment-bundle/node-compat";
 import type { CfModule } from "../../deployment-bundle/worker";
 import type { Plugin } from "esbuild";
 
@@ -27,11 +28,11 @@ export type Options = {
 	watch?: boolean;
 	onEnd?: () => void;
 	buildOutputDirectory?: string;
-	legacyNodeCompat?: boolean;
-	nodejsCompat?: boolean;
+	nodejsCompatMode?: NodeJSCompatMode;
 	functionsDirectory: string;
 	local: boolean;
 	defineNavigatorUserAgent: boolean;
+	external?: string[];
 };
 
 export function buildWorkerFromFunctions({
@@ -44,11 +45,11 @@ export function buildWorkerFromFunctions({
 	watch = false,
 	onEnd = () => {},
 	buildOutputDirectory,
-	legacyNodeCompat,
-	nodejsCompat,
+	nodejsCompatMode,
 	functionsDirectory,
 	local,
 	defineNavigatorUserAgent,
+	external,
 }: Options) {
 	const entry: Entry = {
 		file: resolve(getBasePath(), "templates/pages-template-worker.ts"),
@@ -70,12 +71,13 @@ export function buildWorkerFromFunctions({
 		minify,
 		sourcemap,
 		watch,
-		legacyNodeCompat,
-		nodejsCompat,
+		nodejsCompatMode,
 		define: {
 			__FALLBACK_SERVICE__: JSON.stringify(fallbackService),
 		},
+		alias: {},
 		doBindings: [], // Pages functions don't support internal Durable Objects
+		external,
 		plugins: [
 			buildNotifierPlugin(onEnd),
 			{
@@ -170,18 +172,18 @@ export type RawOptions = {
 	outdir?: string;
 	directory: string;
 	bundle?: boolean;
-	external?: string[];
+	externalModules?: string[];
 	minify?: boolean;
 	sourcemap?: boolean;
 	watch?: boolean;
 	plugins?: Plugin[];
 	onEnd?: () => void;
 	buildOutputDirectory?: string;
-	legacyNodeCompat?: boolean;
-	nodejsCompat?: boolean;
+	nodejsCompatMode: NodeJSCompatMode;
 	local: boolean;
 	additionalModules?: CfModule[];
 	defineNavigatorUserAgent: boolean;
+	external?: string[];
 };
 
 /**
@@ -197,17 +199,17 @@ export function buildRawWorker({
 	outdir,
 	directory,
 	bundle = true,
-	external,
+	externalModules,
 	minify = false,
 	sourcemap = false,
 	watch = false,
 	plugins = [],
 	onEnd = () => {},
-	legacyNodeCompat,
-	nodejsCompat,
+	nodejsCompatMode,
 	local,
 	additionalModules = [],
 	defineNavigatorUserAgent,
+	external,
 }: RawOptions) {
 	const entry: Entry = {
 		file: workerScriptPath,
@@ -215,7 +217,7 @@ export function buildRawWorker({
 		format: "modules",
 		moduleRoot: resolve(directory),
 	};
-	const moduleCollector = external
+	const moduleCollector = externalModules
 		? noopModuleCollector
 		: createModuleCollector({ entry, findAdditionalModules: false });
 
@@ -226,14 +228,15 @@ export function buildRawWorker({
 		minify,
 		sourcemap,
 		watch,
-		legacyNodeCompat,
-		nodejsCompat,
+		nodejsCompatMode,
 		define: {},
+		alias: {},
 		doBindings: [], // Pages functions don't support internal Durable Objects
+		external,
 		plugins: [
 			...plugins,
 			buildNotifierPlugin(onEnd),
-			...(external
+			...(externalModules
 				? [
 						// In some cases, we want to enable bundling in esbuild so that we can flatten a shim around the entrypoint, but we still don't want to actually bundle in all the chunks that a Worker references.
 						// This plugin allows us to mark those chunks as external so they are not inlined.
@@ -241,13 +244,17 @@ export function buildRawWorker({
 							name: "external-fixer",
 							setup(pluginBuild) {
 								pluginBuild.onResolve({ filter: /.*/ }, async (args) => {
-									if (external.includes(resolve(args.resolveDir, args.path))) {
+									if (
+										externalModules.includes(
+											resolve(args.resolveDir, args.path)
+										)
+									) {
 										return { path: args.path, external: true };
 									}
 								});
 							},
 						} as Plugin,
-				  ]
+					]
 				: []),
 		],
 		isOutfile: !outdir,
@@ -261,16 +268,20 @@ export function buildRawWorker({
 	});
 }
 
-export async function traverseAndBuildWorkerJSDirectory({
+export async function produceWorkerBundleForWorkerJSDirectory({
 	workerJSDirectory,
+	bundle,
 	buildOutputDirectory,
-	nodejsCompat,
+	nodejsCompatMode,
 	defineNavigatorUserAgent,
+	sourceMaps,
 }: {
 	workerJSDirectory: string;
+	bundle: boolean;
 	buildOutputDirectory: string;
-	nodejsCompat?: boolean;
+	nodejsCompatMode: NodeJSCompatMode;
 	defineNavigatorUserAgent: boolean;
+	sourceMaps: boolean;
 }): Promise<BundleResult> {
 	const entrypoint = resolve(join(workerJSDirectory, "index.js"));
 
@@ -286,8 +297,20 @@ export async function traverseAndBuildWorkerJSDirectory({
 				type: "ESModule",
 				globs: ["**/*.js", "**/*.mjs"],
 			},
-		]
+		],
+		sourceMaps
 	);
+
+	if (!bundle) {
+		return {
+			modules: additionalModules,
+			dependencies: {},
+			resolvedEntryPointPath: entrypoint,
+			bundleType: "esm",
+			stop: async () => {},
+			sourceMapPath: undefined,
+		};
+	}
 
 	const outfile = join(
 		getPagesTmpDir(),
@@ -296,18 +319,19 @@ export async function traverseAndBuildWorkerJSDirectory({
 	const bundleResult = await buildRawWorker({
 		workerScriptPath: entrypoint,
 		bundle: true,
-		external: additionalModules.map((m) => join(workerJSDirectory, m.name)),
+		externalModules: additionalModules.map((m) =>
+			join(workerJSDirectory, m.name)
+		),
 		outfile,
 		directory: buildOutputDirectory,
 		local: false,
 		sourcemap: true,
 		watch: false,
 		onEnd: () => {},
-		nodejsCompat,
+		nodejsCompatMode,
 		additionalModules,
 		defineNavigatorUserAgent,
 	});
-
 	return {
 		modules: bundleResult.modules,
 		dependencies: bundleResult.dependencies,
@@ -327,19 +351,13 @@ export function buildNotifierPlugin(onEnd: () => void): Plugin {
 		name: "wrangler notifier and monitor",
 		setup(pluginBuild) {
 			pluginBuild.onEnd((result) => {
-				if (result.errors.length > 0) {
-					logger.error(
-						`${result.errors.length} error(s) and ${result.warnings.length} warning(s) when compiling Worker.`
-					);
-				} else if (result.warnings.length > 0) {
-					logger.warn(
-						`${result.warnings.length} warning(s) when compiling Worker.`
-					);
-					onEnd();
+				if (result.errors.length > 0 || result.warnings.length > 0) {
+					logBuildFailure(result.errors, result.warnings);
 				} else {
 					logger.log("✨ Compiled Worker successfully");
-					onEnd();
 				}
+
+				onEnd();
 			});
 		},
 	};
@@ -353,7 +371,7 @@ export function buildNotifierPlugin(onEnd: () => void): Plugin {
  */
 export async function checkRawWorker(
 	scriptPath: string,
-	nodejsCompat: boolean,
+	nodejsCompatMode: NodeJSCompatMode,
 	onEnd: () => void
 ) {
 	await esBuild({
@@ -361,12 +379,15 @@ export async function checkRawWorker(
 		write: false,
 		// we need it to be bundled so that any imports that are used are affected by the blocker plugin
 		bundle: true,
-		plugins: [blockWorkerJsImports(nodejsCompat), buildNotifierPlugin(onEnd)],
+		plugins: [
+			blockWorkerJsImports(nodejsCompatMode),
+			buildNotifierPlugin(onEnd),
+		],
 		logLevel: "silent",
 	});
 }
 
-function blockWorkerJsImports(nodejsCompat: boolean): Plugin {
+function blockWorkerJsImports(nodejsCompatMode: NodeJSCompatMode): Plugin {
 	return {
 		name: "block-worker-js-imports",
 		setup(build) {
@@ -379,7 +400,8 @@ function blockWorkerJsImports(nodejsCompat: boolean): Plugin {
 				}
 				// If it's a node or cf built-in, mark it as external
 				if (
-					(nodejsCompat && args.path.startsWith("node:")) ||
+					((nodejsCompatMode === "v1" || nodejsCompatMode === "v2") &&
+						args.path.startsWith("node:")) ||
 					args.path.startsWith("cloudflare:")
 				) {
 					return {

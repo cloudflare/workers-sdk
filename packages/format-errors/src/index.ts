@@ -77,7 +77,9 @@ export function reviveError(jsonError: JsonError): Error {
 	// construction, we override the stack trace to the one from the Worker in the
 	// JSON-serialised error.
 	const error = new ctor(jsonError.message, { cause });
-	if (jsonError.name !== undefined) error.name = jsonError.name;
+	if (jsonError.name !== undefined) {
+		error.name = jsonError.name;
+	}
 	error.stack = jsonError.stack;
 
 	return error;
@@ -111,7 +113,7 @@ export async function handlePrettyErrorRequest({
 	youch.addLink(() => {
 		return [
 			'<a href="https://developers.cloudflare.com/workers/" target="_blank" style="text-decoration:none">📚 Workers Docs</a>',
-			'<a href="https://discord.gg/cloudflaredev" target="_blank" style="text-decoration:none">💬 Workers Discord</a>',
+			'<a href="https://discord.cloudflare.com" target="_blank" style="text-decoration:none">💬 Workers Discord</a>',
 		].join("");
 	});
 	return new Response(await youch.toHTML(), {

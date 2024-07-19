@@ -2,10 +2,10 @@ import { updateStatus, warn } from "@cloudflare/cli";
 import { blue } from "@cloudflare/cli/colors";
 import { spinner, spinnerFrames } from "@cloudflare/cli/interactive";
 import Haikunator from "haikunator";
+import { getLatestPackageVersion } from "helpers/packages";
 import open from "open";
 import semver from "semver";
 import { version } from "../../package.json";
-import { getLatestPackageVersion } from "./latestPackageVersion";
 
 /**
  * An extremely simple wrapper around the open command.
@@ -47,7 +47,7 @@ export const isUpdateAvailable = async () => {
 export const C3_DEFAULTS = {
 	projectName: new Haikunator().haikunate({ tokenHex: true }),
 	type: "hello-world",
-	framework: "angular",
+	framework: "analog",
 	autoUpdate: true,
 	deploy: true,
 	git: true,
@@ -62,5 +62,3 @@ export const WRANGLER_DEFAULTS = {
 	type: "hello-world",
 	deploy: false,
 };
-
-process.stdout.columns = 300;

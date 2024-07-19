@@ -4,7 +4,11 @@
 
 	"pipeline": {
 		"build": {
-			"env": ["CLOUDFLARE_API_TOKEN", "PUBLISHED_PACKAGES"]
+			"env": [
+				"CLOUDFLARE_API_TOKEN",
+				"PUBLISHED_PACKAGES",
+				"CLOUDFLARE_ACCOUNT_ID"
+			]
 		}
 	}
 }

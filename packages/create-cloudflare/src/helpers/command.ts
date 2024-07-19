@@ -1,14 +1,6 @@
-import { existsSync, rmSync } from "fs";
-import path from "path";
-import { logRaw, stripAnsi, updateStatus } from "@cloudflare/cli";
-import { brandColor, dim } from "@cloudflare/cli/colors";
+import { stripAnsi } from "@cloudflare/cli";
 import { isInteractive, spinner } from "@cloudflare/cli/interactive";
 import { spawn } from "cross-spawn";
-import { getFrameworkCli } from "frameworks/index";
-import { quoteShellArgs } from "../common";
-import { getLatestPackageVersion } from "./latestPackageVersion";
-import { detectPackageManager } from "./packages";
-import type { C3Context } from "types";
 
 /**
  * Command is a string array, like ['git', 'commit', '-m', '"Initial commit"']
@@ -25,13 +17,6 @@ type RunOptions = {
 	cwd?: string;
 	/** If defined this function is called to all you to transform the output from the command into a new string. */
 	transformOutput?: (output: string) => string;
-	/** If defined, this function is called to return a string that is used if the `transformOutput()` fails. */
-	fallbackOutput?: (error: unknown) => string;
-};
-
-type MultiRunOptions = RunOptions & {
-	commands: Command[];
-	startText: string;
 };
 
 type PrintOptions<T> = {
@@ -41,9 +26,24 @@ type PrintOptions<T> = {
 	doneText?: string | ((output: T) => string);
 };
 
+/**
+ * An awaitable wrapper around `spawn` that optionally displays progress to user and processes/captures the command's output
+ *
+ * @param command - The command to run as an array of strings
+ * @param opts.silent - Should the command's stdout and stderr be dispalyed to the user
+ * @param opts.captureOutput - Should the output of the command the returned as a string.
+ * @param opts.env - An object of environment variables to be injected when running the command
+ * @param opts.cwd - The directory in which the command should be run
+ * @param opts.useSpinner - Should a spinner be shown when running the command
+ * @param opts.startText - Spinner start text
+ * @param opts.endText - Spinner end text
+ * @param opts.transformOutput - A transformer to be run on command output before returning
+ *
+ * @returns Output collected from the stdout of the command, if `captureOutput` was set to true. Otherwise `null`.
+ */
 export const runCommand = async (
 	command: Command,
-	opts: RunOptions = {}
+	opts: RunOptions = {},
 ): Promise<string> => {
 	return printAsyncStatus({
 		useSpinner: opts.useSpinner ?? opts.silent,
@@ -91,12 +91,7 @@ export const runCommand = async (
 					} catch (e) {
 						// Something went wrong.
 						// Perhaps the command or the transform failed.
-						// If there is a fallback use the result of calling that
-						if (opts.fallbackOutput) {
-							resolvePromise(opts.fallbackOutput(e));
-						} else {
-							reject(new Error(output, { cause: e }));
-						}
+						reject(new Error(output, { cause: e }));
 					}
 				});
 
@@ -108,23 +103,7 @@ export const runCommand = async (
 	});
 };
 
-// run multiple commands in sequence (not parallel)
-export async function runCommands({ commands, ...opts }: MultiRunOptions) {
-	return printAsyncStatus({
-		useSpinner: opts.useSpinner ?? opts.silent,
-		startText: opts.startText,
-		doneText: opts.doneText,
-		async promise() {
-			const results = [];
-			for (const command of commands) {
-				results.push(await runCommand(command, { ...opts, useSpinner: false }));
-			}
-			return results.join("\n");
-		},
-	});
-}
-
-export const printAsyncStatus = async <T>({
+const printAsyncStatus = async <T>({
 	promise,
 	...opts
 }: PrintOptions<T>): Promise<T> => {
@@ -157,266 +136,36 @@ export const printAsyncStatus = async <T>({
 	return promise;
 };
 
-export const retry = async <T>(
-	{
-		times,
-		exitCondition,
-	}: { times: number; exitCondition?: (e: unknown) => boolean },
-	fn: () => Promise<T>
-) => {
-	let error: unknown = null;
-	while (times > 0) {
-		try {
-			return await fn();
-		} catch (e) {
-			error = e;
-			times--;
-			if (exitCondition?.(e)) {
-				break;
-			}
-		}
-	}
-	throw error;
-};
-
-export const runFrameworkGenerator = async (ctx: C3Context, args: string[]) => {
-	const cli = getFrameworkCli(ctx, true);
-	const { npm, dlx } = detectPackageManager();
-	// yarn cannot `yarn create@some-version` and doesn't have an npx equivalent
-	// So to retain the ability to lock versions we run it with `npx` and spoof
-	// the user agent so scaffolding tools treat the invocation like yarn
-	const cmd = [...(npm === "yarn" ? ["npx"] : dlx), cli, ...args];
-	const env = npm === "yarn" ? { npm_config_user_agent: "yarn" } : {};
-
-	if (ctx.args.additionalArgs?.length) {
-		cmd.push(...ctx.args.additionalArgs);
-	}
-
-	updateStatus(
-		`Continue with ${ctx.template.displayName} ${dim(
-			`via \`${quoteShellArgs(cmd)}\``
-		)}`
-	);
-
-	// newline
-	logRaw("");
-
-	await runCommand(cmd, { env });
-};
-
-type InstallConfig = {
-	startText?: string;
-	doneText?: string;
-	dev?: boolean;
-};
-
-export const installPackages = async (
-	packages: string[],
-	config: InstallConfig
-) => {
-	const { npm } = detectPackageManager();
-
-	let saveFlag;
-	let cmd;
-	switch (npm) {
-		case "yarn":
-			cmd = "add";
-			saveFlag = config.dev ? "-D" : "";
-			break;
-		case "bun":
-			cmd = "add";
-			saveFlag = config.dev ? "-d" : "";
-			break;
-		case "npm":
-		case "pnpm":
-		default:
-			cmd = "install";
-			saveFlag = config.dev ? "--save-dev" : "--save";
-			break;
-	}
-
-	await runCommand([npm, cmd, saveFlag, ...packages], {
-		...config,
-		silent: true,
-	});
-};
-
 /**
- * If a mismatch is detected between the package manager being used and the lockfiles on disk,
- * reset the state by deleting the lockfile and dependencies then re-installing with the package
- * manager used by the calling process.
+ * Formats an array of command line arguments to be displayed to the user
+ * in a platform safe way. Args used in conjunction with `runCommand` are safe
+ * since we use `cross-spawn` to handle multi-platform support.
  *
- * This is needed since some scaffolding tools don't detect and use the pm of the calling process,
- * and instead always use `npm`. With a project in this state, installing additional dependencies
- * with `pnpm` or `yarn` can result in install errors.
+ * However, when we output commands to the user, we have to make sure that they
+ * are compatible with the platform they are using.
  *
+ * @param args - The arguments to format to the user
  */
-export const rectifyPmMismatch = async (ctx: C3Context) => {
-	const { npm } = detectPackageManager();
-
-	if (!detectPmMismatch(ctx)) {
-		return;
-	}
-
-	const nodeModulesPath = path.join(ctx.project.path, "node_modules");
-	if (existsSync(nodeModulesPath)) rmSync(nodeModulesPath, { recursive: true });
-
-	const lockfilePath = path.join(ctx.project.path, "package-lock.json");
-	if (existsSync(lockfilePath)) rmSync(lockfilePath);
-
-	await runCommand([npm, "install"], {
-		silent: true,
-		cwd: ctx.project.path,
-		startText: "Installing dependencies",
-		doneText: `${brandColor("installed")} ${dim(`via \`${npm} install\``)}`,
-	});
-};
-
-const detectPmMismatch = (ctx: C3Context) => {
-	const { npm } = detectPackageManager();
-	const projectPath = ctx.project.path;
-
-	switch (npm) {
-		case "npm":
-			return false;
-		case "yarn":
-			return !existsSync(path.join(projectPath, "yarn.lock"));
-		case "pnpm":
-			return !existsSync(path.join(projectPath, "pnpm-lock.yaml"));
-		case "bun":
-			return !existsSync(path.join(projectPath, "bun.lockb"));
-	}
-};
-
-export const npmInstall = async (ctx: C3Context) => {
-	// Skip this step if packages have already been installed
-	const nodeModulesPath = path.join(ctx.project.path, "node_modules");
-	if (existsSync(nodeModulesPath)) {
-		return;
-	}
-
-	const { npm } = detectPackageManager();
-
-	await runCommand([npm, "install"], {
-		silent: true,
-		startText: "Installing dependencies",
-		doneText: `${brandColor("installed")} ${dim(`via \`${npm} install\``)}`,
-	});
-};
-
-export const installWrangler = async () => {
-	const { npm } = detectPackageManager();
-
-	// Exit early if already installed
-	if (existsSync(path.resolve("node_modules", "wrangler"))) {
-		return;
-	}
-
-	await installPackages([`wrangler`], {
-		dev: true,
-		startText: `Installing wrangler ${dim(
-			"A command line tool for building Cloudflare Workers"
-		)}`,
-		doneText: `${brandColor("installed")} ${dim(
-			`via \`${npm} install wrangler --save-dev\``
-		)}`,
-	});
-};
-
-export const isLoggedIn = async () => {
-	const { npx } = detectPackageManager();
-	try {
-		const output = await runCommand([npx, "wrangler", "whoami"], {
-			silent: true,
-		});
-		return /You are logged in/.test(output);
-	} catch (error) {
-		return false;
-	}
-};
-
-export const wranglerLogin = async () => {
-	const { npx } = detectPackageManager();
-
-	const s = spinner();
-	s.start(`Logging into Cloudflare ${dim("checking authentication status")}`);
-	const alreadyLoggedIn = await isLoggedIn();
-	s.stop(brandColor(alreadyLoggedIn ? "logged in" : "not logged in"));
-	if (alreadyLoggedIn) return true;
-
-	s.start(`Logging into Cloudflare ${dim("This will open a browser window")}`);
-
-	// We're using a custom spinner since this is a little complicated.
-	// We want to vary the done status based on the output
-	const output = await runCommand([npx, "wrangler", "login"], {
-		silent: true,
-	});
-	const success = /Successfully logged in/.test(output);
-
-	const verb = success ? "allowed" : "denied";
-	s.stop(`${brandColor(verb)} ${dim("via `wrangler login`")}`);
-
-	return success;
-};
-
-export const listAccounts = async () => {
-	const { npx } = detectPackageManager();
-
-	const output = await runCommand([npx, "wrangler", "whoami"], {
-		silent: true,
-	});
-
-	const accounts: Record<string, string> = {};
-	output.split("\n").forEach((line) => {
-		const match = line.match(/│\s+(.+)\s+│\s+(\w{32})\s+│/);
-		if (match) {
-			accounts[match[1].trim()] = match[2].trim();
-		}
-	});
-
-	return accounts;
-};
-
-/**
- * Look up the latest release of workerd and use its date as the compatibility_date
- * configuration value for wrangler.toml.
- *
- * If the look up fails then we fall back to a well known date.
- *
- * The date is extracted from the version number of the workerd package tagged as `latest`.
- * The format of the version is `major.yyyymmdd.patch`.
- *
- * @returns The latest compatibility date for workerd in the form "YYYY-MM-DD"
- */
-export async function getWorkerdCompatibilityDate() {
-	const { compatDate: workerdCompatibilityDate } = await printAsyncStatus<{
-		compatDate: string;
-		isFallback: boolean;
-	}>({
-		useSpinner: true,
-		startText: "Retrieving current workerd compatibility date",
-		doneText: ({ compatDate, isFallback }) =>
-			`${brandColor("compatibility date")}${
-				isFallback ? dim(" Could not find workerd date, falling back to") : ""
-			} ${dim(compatDate)}`,
-		async promise() {
-			try {
-				const latestWorkerdVersion = await getLatestPackageVersion("workerd");
-
-				// The format of the workerd version is `major.yyyymmdd.patch`.
-				const match = latestWorkerdVersion.match(
-					/\d+\.(\d{4})(\d{2})(\d{2})\.\d+/
-				);
-
-				if (match) {
-					const [, year, month, date] = match ?? [];
-					return { compatDate: `${year}-${month}-${date}`, isFallback: false };
+export function quoteShellArgs(args: string[]): string {
+	if (process.platform === "win32") {
+		// Simple Windows command prompt quoting if there are special characters.
+		const specialCharsMatcher = /[&<>[\]|{}^=;!'+,`~\s]/;
+		return args
+			.map((arg) =>
+				arg.match(specialCharsMatcher) ? `"${arg.replaceAll(`"`, `""`)}"` : arg,
+			)
+			.join(" ");
+	} else {
+		return args
+			.map((s) => {
+				if (/["\s]/.test(s) && !/'/.test(s)) {
+					return "'" + s.replace(/(['\\])/g, "\\$1") + "'";
 				}
-			} catch {}
-
-			return { compatDate: "2023-05-18", isFallback: true };
-		},
-	});
-
-	return workerdCompatibilityDate;
+				if (/["'\s]/.test(s)) {
+					return '"' + s.replace(/(["\\$`!])/g, "\\$1") + '"';
+				}
+				return s;
+			})
+			.join(" ");
+	}
 }

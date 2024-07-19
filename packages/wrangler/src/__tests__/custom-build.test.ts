@@ -1,10 +1,12 @@
 import assert from "node:assert";
 import { runCustomBuild } from "../deployment-bundle/run-custom-build";
 import { UserError } from "../errors";
+import { mockConsoleMethods } from "./helpers/mock-console";
 import { runInTempDir } from "./helpers/run-in-tmp";
 
 describe("Custom Builds", () => {
 	runInTempDir();
+	mockConsoleMethods();
 
 	it("runCustomBuild throws UserError when a command fails", async () => {
 		try {

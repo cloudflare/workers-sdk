@@ -1,12 +1,10 @@
 import Table from "ink-table";
-import React from "react";
 import { printWranglerBanner } from "..";
 import { fetchResult } from "../cfetch";
 import { withConfig } from "../config";
 import { logger } from "../logger";
 import { requireAuth } from "../user";
 import { renderToString } from "../utils/render";
-import { d1BetaWarning } from "./utils";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
@@ -14,13 +12,11 @@ import type {
 import type { Database } from "./types";
 
 export function Options(d1ListYargs: CommonYargsArgv) {
-	return d1ListYargs
-		.option("json", {
-			describe: "return output as clean JSON",
-			type: "boolean",
-			default: false,
-		})
-		.epilogue(d1BetaWarning);
+	return d1ListYargs.option("json", {
+		describe: "return output as clean JSON",
+		type: "boolean",
+		default: false,
+	});
 }
 
 type HandlerOptions = StrictYargsOptionsToInterface<typeof Options>;

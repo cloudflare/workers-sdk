@@ -1,0 +1,13 @@
+pages_build_output_dir = "./public"
+
+name = "pages-with-config-file-app"
+compatibility_date = "2024-01-01"
+compatibility_flags = []
+
+[vars]
+VAR1 = "celebrate"
+VAR2 = "holiday"
+VAR3 = "celebration"
+
+[version_metadata]
+binding = "METADATA"

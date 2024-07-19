@@ -3,7 +3,7 @@ import { crash, updateStatus, warn } from "@cloudflare/cli";
 import { processArgument } from "@cloudflare/cli/args";
 import { brandColor, dim } from "@cloudflare/cli/colors";
 import { spinner } from "@cloudflare/cli/interactive";
-import { installPackages, runFrameworkGenerator } from "helpers/command";
+import { runFrameworkGenerator } from "frameworks/index";
 import {
 	copyFile,
 	probePaths,
@@ -14,7 +14,8 @@ import {
 	writeFile,
 	writeJSON,
 } from "helpers/files";
-import { detectPackageManager } from "helpers/packages";
+import { detectPackageManager } from "helpers/packageManagers";
+import { installPackages } from "helpers/packages";
 import { getTemplatePath } from "../../src/templates";
 import type { TemplateConfig } from "../../src/templates";
 import type { C3Args, C3Context } from "types";
@@ -26,10 +27,26 @@ const generate = async (ctx: C3Context) => {
 
 	await runFrameworkGenerator(ctx, [projectName]);
 
-	copyFile(
-		join(getTemplatePath(ctx), "wrangler.toml"),
-		join(ctx.project.path, "wrangler.toml")
+	const wranglerToml = readFile(join(getTemplatePath(ctx), "wrangler.toml"));
+
+	// Note: here we add `# KV Example:` to the toml file for the KV example, we don't actually
+	//       include the comment in the template wrangler.toml file just so to keep it identical
+	//       and consistent with that of all the other frameworks
+	//       (instead of making it a special case which needs extra care)
+	const newTomlContent = wranglerToml.replace(
+		/#\s+\[\[kv_namespaces\]\]\n#\s+binding\s+=\s+"MY_KV_NAMESPACE"\n#\s+id\s+=\s+"[a-zA-Z0-9]+?"/,
+		($1) => `# KV Example:\n${$1}`,
 	);
+
+	if (!/# KV Example/.test(newTomlContent)) {
+		// This should never happen to users, it is a check mostly so that
+		// if the toml file is changed in a way that breaks the "KV Example" addition
+		// the C3 Next.js e2e runs will fail with this
+		crash("Failed to properly generate the wrangler.toml file");
+	}
+
+	writeFile(join(ctx.project.path, "wrangler.toml"), newTomlContent);
+
 	updateStatus("Created wrangler.toml file");
 };
 
@@ -46,7 +63,7 @@ const updateNextConfig = () => {
 
 		// Here we use the @cloudflare/next-on-pages next-dev module to allow us to use bindings during local development
 		// (when running the application with \`next dev\`), for more information see:
-		// https://github.com/cloudflare/next-on-pages/blob/5712c57ea7/internal-packages/next-dev/README.md
+		// https://github.com/cloudflare/next-on-pages/blob/main/internal-packages/next-dev/README.md
 		if (process.env.NODE_ENV === 'development') {
 		  await setupDevPlatform();
 		}
@@ -80,7 +97,7 @@ const configure = async (ctx: C3Context) => {
 	if (usesTs) {
 		copyFile(
 			join(getTemplatePath(ctx), "env.d.ts"),
-			join(projectPath, "env.d.ts")
+			join(projectPath, "env.d.ts"),
 		);
 		updateStatus("Created an env.d.ts file");
 	}
@@ -95,7 +112,7 @@ const configure = async (ctx: C3Context) => {
 
 	copyFile(
 		join(getTemplatePath(ctx), "README.md"),
-		join(projectPath, "README.md")
+		join(projectPath, "README.md"),
 	);
 	updateStatus("Updated the README file");
 
@@ -103,15 +120,17 @@ const configure = async (ctx: C3Context) => {
 };
 
 export const shouldInstallNextOnPagesEslintPlugin = async (
-	ctx: C3Context
+	ctx: C3Context,
 ): Promise<boolean> => {
 	const eslintUsage = usesEslint(ctx);
 
-	if (!eslintUsage.used) return false;
+	if (!eslintUsage.used) {
+		return false;
+	}
 
 	if (eslintUsage.configType !== ".eslintrc.json") {
 		warn(
-			`Expected .eslintrc.json from Next.js scaffolding but found ${eslintUsage.configType} instead`
+			`Expected .eslintrc.json from Next.js scaffolding but found ${eslintUsage.configType} instead`,
 		);
 		return false;
 	}
@@ -191,7 +210,7 @@ export default {
 			},
 		},
 	},
-	transformPackageJson: async () => {
+	transformPackageJson: async (_, ctx) => {
 		const isNpm = npm === "npm";
 		const isBun = npm === "bun";
 		const isNpmOrBun = isNpm || isBun;
@@ -204,8 +223,11 @@ export default {
 		return {
 			scripts: {
 				"pages:build": `${pmCommand} ${nextOnPagesCommand}`,
-				preview: `${pagesBuildRunCommand} && wrangler pages dev .vercel/output/static`,
-				deploy: `${pagesBuildRunCommand} && wrangler pages deploy .vercel/output/static`,
+				preview: `${pagesBuildRunCommand} && wrangler pages dev`,
+				deploy: `${pagesBuildRunCommand} && wrangler pages deploy`,
+				...(usesTypescript(ctx) && {
+					"cf-typegen": `wrangler types --env-interface CloudflareEnv env.d.ts`,
+				}),
 			},
 		};
 	},

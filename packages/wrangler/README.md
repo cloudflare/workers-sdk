@@ -3,7 +3,7 @@
 <a href="https://www.npmjs.com/package/wrangler"><img alt="npm"  src="https://img.shields.io/npm/dw/wrangler?style=flat-square"></a>
 <img alt="GitHub contributors" src="https://img.shields.io/github/contributors/cloudflare/workers-sdk?style=flat-square">
 <img alt="GitHub commit activity (branch)" src="https://img.shields.io/github/commit-activity/w/cloudflare/workers-sdk/main?style=flat-square">
-<a href="https://discord.gg/CloudflareDev"><img alt="Discord" src="https://img.shields.io/discord/595317990191398933?color=%23F48120&style=flat-square"></a>
+<a href="https://discord.cloudflare.com"><img alt="Discord" src="https://img.shields.io/discord/595317990191398933?color=%23F48120&style=flat-square"></a>
 </section>
 
 `wrangler` is a command line tool for building [Cloudflare Workers](https://workers.cloudflare.com/).

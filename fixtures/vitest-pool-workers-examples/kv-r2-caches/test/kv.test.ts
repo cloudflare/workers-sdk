@@ -1,6 +1,5 @@
 import { SELF } from "cloudflare:test";
 import { expect, it } from "vitest";
-import "../src/"; // Currently required to automatically rerun tests when `main` changes
 
 it("stores in KV namespace", async () => {
 	let response = await SELF.fetch("https://example.com/kv/key", {

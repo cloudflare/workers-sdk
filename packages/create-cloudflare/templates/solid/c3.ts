@@ -1,9 +1,9 @@
 import { logRaw, updateStatus } from "@cloudflare/cli";
 import { blue } from "@cloudflare/cli/colors";
-import { transformFile } from "helpers/codemod";
-import { runFrameworkGenerator } from "helpers/command";
-import { compatDateFlag, usesTypescript } from "helpers/files";
-import { detectPackageManager } from "helpers/packages";
+import { runFrameworkGenerator } from "frameworks/index";
+import { mergeObjectProperties, transformFile } from "helpers/codemod";
+import { usesTypescript } from "helpers/files";
+import { detectPackageManager } from "helpers/packageManagers";
 import * as recast from "recast";
 import type { TemplateConfig } from "../../src/templates";
 import type { C3Context } from "types";
@@ -32,28 +32,30 @@ const configure = async (ctx: C3Context) => {
 			}
 
 			const b = recast.types.builders;
-			n.node.arguments = [
-				b.objectExpression([
+
+			mergeObjectProperties(
+				n.node.arguments[0] as recast.types.namedTypes.ObjectExpression,
+				[
 					b.objectProperty(
 						b.identifier("server"),
 						b.objectExpression([
 							b.objectProperty(
 								b.identifier("preset"),
-								b.stringLiteral("cloudflare-pages")
+								b.stringLiteral("cloudflare-pages"),
 							),
 							b.objectProperty(
 								b.identifier("rollupConfig"),
 								b.objectExpression([
 									b.objectProperty(
 										b.identifier("external"),
-										b.arrayExpression([b.stringLiteral("node:async_hooks")])
+										b.arrayExpression([b.stringLiteral("node:async_hooks")]),
 									),
-								])
+								]),
 							),
-						])
+						]),
 					),
-				]),
-			];
+				],
+			);
 
 			return false;
 		},
@@ -65,12 +67,15 @@ const config: TemplateConfig = {
 	id: "solid",
 	displayName: "Solid",
 	platform: "pages",
+	copyFiles: {
+		path: "./templates",
+	},
 	generate,
 	configure,
 	transformPackageJson: async () => ({
 		scripts: {
-			preview: `${npm} run build && npx wrangler pages dev dist ${await compatDateFlag()} --compatibility-flag nodejs_compat`,
-			deploy: `${npm} run build && wrangler pages deploy ./dist`,
+			preview: `${npm} run build && npx wrangler pages dev`,
+			deploy: `${npm} run build && wrangler pages deploy`,
 		},
 	}),
 	compatibilityFlags: ["nodejs_compat"],

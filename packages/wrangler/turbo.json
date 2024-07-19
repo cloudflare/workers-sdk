@@ -3,7 +3,23 @@
 	"extends": ["//"],
 	"pipeline": {
 		"build": {
-			"outputs": ["miniflare-dist/**", "emitted-types/**", "wrangler-dist/**"],
+			"inputs": [
+				"!**/__tests__/**",
+				"!**/.wrangler/**",
+				"bin/**",
+				"src/**",
+				"scripts/**",
+				"templates/**",
+				"*.json",
+				"*.js",
+				"*.ts"
+			],
+			"outputs": [
+				"miniflare-dist/**",
+				"emitted-types/**",
+				"wrangler-dist/**",
+				"config-schema.json"
+			],
 			"env": [
 				"NODE_EXTRA_CA_CERTS",
 				"CLOUDFLARE_ACCOUNT_ID",
@@ -28,20 +44,31 @@
 				"NO_D1_WARNING",
 				"NO_HYPERDRIVE_WARNING",
 				"WRANGLER",
+				"WRANGLER_IMPORT",
 				"CUSTOM_BUILD_VAR",
 				"PWD",
 				"LC_ALL",
 				"WRANGLER_SEND_METRICS",
 				"https_proxy",
 				"HTTPS_PROXY",
-				"JEST_WORKER_ID",
 				"http_proxy",
 				"HTTP_PROXY",
 				"CI_OS",
 				"SENTRY_DSN",
 				"SYSTEMROOT",
-				"WRANGLER_DISABLE_REQUEST_BODY_DRAINING"
+				"WRANGLER_DISABLE_EXPERIMENTAL_WARNING",
+				"WRANGLER_DISABLE_REQUEST_BODY_DRAINING",
+				"WRANGLER_WORKER_REGISTRY_PORT",
+				"WRANGLER_API_ENVIRONMENT"
 			]
+		},
+		"test:ci": {
+			"inputs": ["!**/.wrangler/**", "**/__tests__/**"],
+			"dependsOn": ["build"]
+		},
+		"test:e2e": {
+			"inputs": ["e2e/**"],
+			"dependsOn": ["build"]
 		}
 	}
 }

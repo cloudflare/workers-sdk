@@ -1,6 +1,7 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { URLSearchParams } from "node:url";
+import { blue, gray } from "@cloudflare/cli/colors";
 import { fetchResult } from "../cfetch";
 import { printBindings } from "../config";
 import { bundleWorker } from "../deployment-bundle/bundle";
@@ -18,6 +19,8 @@ import {
 	createModuleCollector,
 	getWrangler1xLegacyModuleReferences,
 } from "../deployment-bundle/module-collection";
+import { validateNodeCompat } from "../deployment-bundle/node-compat";
+import { loadSourceMaps } from "../deployment-bundle/source-maps";
 import { confirm } from "../dialogs";
 import { getMigrationsToUpload } from "../durable";
 import { UserError } from "../errors";
@@ -26,12 +29,11 @@ import { getMetricsUsageHeaders } from "../metrics";
 import { isNavigatorDefined } from "../navigator-user-agent";
 import { ParseError } from "../parse";
 import { getWranglerTmpDir } from "../paths";
-import { getQueue } from "../queues/client";
+import { ensureQueuesExistByConfig } from "../queues/client";
 import {
 	getSourceMappedString,
 	maybeRetrieveFileSourceMap,
 } from "../sourcemap";
-import type { FetchError } from "../cfetch";
 import type { Config } from "../config";
 import type { Rule } from "../config/environment";
 import type { Entry } from "../deployment-bundle/entry";
@@ -50,11 +52,13 @@ type Props = {
 	compatibilityFlags: string[] | undefined;
 	vars: Record<string, string> | undefined;
 	defines: Record<string, string> | undefined;
+	alias: Record<string, string> | undefined;
 	jsxFactory: string | undefined;
 	jsxFragment: string | undefined;
 	tsconfig: string | undefined;
 	isWorkersSite: boolean;
 	minify: boolean | undefined;
+	uploadSourceMaps: boolean | undefined;
 	nodeCompat: boolean | undefined;
 	outDir: string | undefined;
 	dryRun: boolean | undefined;
@@ -69,7 +73,9 @@ type Props = {
 const scriptStartupErrorRegex = /startup/i;
 
 function errIsScriptSize(err: unknown): err is { code: 10027 } {
-	if (!err) return false;
+	if (!err) {
+		return false;
+	}
 
 	// 10027 = workers.api.error.script_too_large
 	if ((err as { code: number }).code === 10027) {
@@ -80,7 +86,9 @@ function errIsScriptSize(err: unknown): err is { code: 10027 } {
 }
 
 function errIsStartupErr(err: unknown): err is ParseError & { code: 10021 } {
-	if (!err) return false;
+	if (!err) {
+		return false;
+	}
 
 	// 10021 = validation error
 	// no explicit error code for more granular errors than "invalid script"
@@ -115,14 +123,14 @@ export default async function versionsUpload(props: Props): Promise<void> {
 
 			if (default_environment.script.last_deployed_from === "dash") {
 				logger.warn(
-					`You are about to publish a Workers Service that was last published via the Cloudflare Dashboard.\nEdits that have been made via the dashboard will be overridden by your local code and config.`
+					`You are about to upload a Worker Version that was last published via the Cloudflare Dashboard.\nEdits that have been made via the dashboard will be overridden by your local code and config.`
 				);
 				if (!(await confirm("Would you like to continue?"))) {
 					return;
 				}
 			} else if (default_environment.script.last_deployed_from === "api") {
 				logger.warn(
-					`You are about to publish a Workers Service that was last updated via the script API.\nEdits that have been made via the script API will be overridden by your local code and config.`
+					`You are about to upload a Workers Version that was last updated via the API.\nEdits that have been made via the API will be overridden by your local code and config.`
 				);
 				if (!(await confirm("Would you like to continue?"))) {
 					return;
@@ -144,7 +152,7 @@ export default async function versionsUpload(props: Props): Promise<void> {
 			""
 		).padStart(2, "0")}-${(new Date().getDate() + "").padStart(2, "0")}`;
 
-		throw new UserError(`A compatibility_date is required when publishing. Add the following to your wrangler.toml file:.
+		throw new UserError(`A compatibility_date is required when uploading a Worker Version. Add the following to your wrangler.toml file:.
     \`\`\`
     compatibility_date = "${compatibilityDateStr}"
     \`\`\`
@@ -154,25 +162,17 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 	const jsxFactory = props.jsxFactory || config.jsx_factory;
 	const jsxFragment = props.jsxFragment || config.jsx_fragment;
-	const keepVars = props.keepVars || config.keep_vars;
 
 	const minify = props.minify ?? config.minify;
 
-	const legacyNodeCompat = props.nodeCompat ?? config.node_compat;
-	if (legacyNodeCompat) {
-		logger.warn(
-			"Enabling Node.js compatibility mode for built-ins and globals. This is experimental and has serious tradeoffs. Please see https://github.com/ionic-team/rollup-plugin-node-polyfills/ for more details."
-		);
-	}
+	const nodejsCompatMode = validateNodeCompat({
+		legacyNodeCompat: props.nodeCompat ?? config.node_compat ?? false,
+		compatibilityFlags: props.compatibilityFlags ?? config.compatibility_flags,
+		noBundle: props.noBundle ?? config.no_bundle ?? false,
+	});
 
 	const compatibilityFlags =
 		props.compatibilityFlags ?? config.compatibility_flags;
-	const nodejsCompat = compatibilityFlags.includes("nodejs_compat");
-	if (legacyNodeCompat && nodejsCompat) {
-		throw new UserError(
-			"The `nodejs_compat` compatibility flag cannot be used in conjunction with the legacy `--node-compat` flag. If you want to use the Workers runtime Node.js compatibility features, please remove the `--node-compat` argument from your CLI command or `node_compat = true` from your config file."
-		);
-	}
 
 	// Warn if user tries minify or node-compat with no-bundle
 	if (props.noBundle && minify) {
@@ -181,16 +181,10 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		);
 	}
 
-	if (props.noBundle && legacyNodeCompat) {
-		logger.warn(
-			"`--node-compat` and `--no-bundle` can't be used together. If you want to polyfill Node.js built-ins and disable Wrangler's bundling, please polyfill as part of your own bundling process."
-		);
-	}
-
 	const scriptName = props.name;
 	if (!scriptName) {
 		throw new UserError(
-			'You need to provide a name when publishing a worker. Either pass it as a cli arg with `--name <name>` or in your config file as `name = "<name>"`'
+			'You need to provide a name when uploading a Worker Version. Either pass it as a cli arg with `--name <name>` or in your config file as `name = "<name>"`'
 		);
 	}
 
@@ -262,46 +256,49 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			findAdditionalModules: config.find_additional_modules ?? false,
 			rules: props.rules,
 		});
+		const uploadSourceMaps =
+			props.uploadSourceMaps ?? config.upload_source_maps;
 
-		const { modules, dependencies, resolvedEntryPointPath, bundleType } =
-			props.noBundle
-				? await noBundleWorker(props.entry, props.rules, props.outDir)
-				: await bundleWorker(
-						props.entry,
-						typeof destination === "string" ? destination : destination.path,
-						{
-							bundle: true,
-							additionalModules: [],
-							moduleCollector,
-							serveAssetsFromWorker: false,
-							doBindings: config.durable_objects.bindings,
-							jsxFactory,
-							jsxFragment,
-							tsconfig: props.tsconfig ?? config.tsconfig,
-							minify,
-							legacyNodeCompat,
-							nodejsCompat,
-							define: { ...config.define, ...props.defines },
-							checkFetch: false,
-							assets: config.assets,
-							// enable the cache when publishing
-							bypassAssetCache: false,
-							services: config.services,
-							// We don't set workerDefinitions here,
-							// because we don't want to apply the dev-time
-							// facades on top of it
-							workerDefinitions: undefined,
-							// We want to know if the build is for development or publishing
-							// This could potentially cause issues as we no longer have identical behaviour between dev and deploy?
-							targetConsumer: "deploy",
-							local: false,
-							projectRoot: props.projectRoot,
-							defineNavigatorUserAgent: isNavigatorDefined(
-								props.compatibilityDate ?? config.compatibility_date,
-								props.compatibilityFlags ?? config.compatibility_flags
-							),
-						}
-				  );
+		const {
+			modules,
+			dependencies,
+			resolvedEntryPointPath,
+			bundleType,
+			...bundle
+		} = props.noBundle
+			? await noBundleWorker(props.entry, props.rules, props.outDir)
+			: await bundleWorker(
+					props.entry,
+					typeof destination === "string" ? destination : destination.path,
+					{
+						bundle: true,
+						additionalModules: [],
+						moduleCollector,
+						serveAssetsFromWorker: false,
+						doBindings: config.durable_objects.bindings,
+						jsxFactory,
+						jsxFragment,
+						tsconfig: props.tsconfig ?? config.tsconfig,
+						minify,
+						sourcemap: uploadSourceMaps,
+						nodejsCompatMode,
+						define: { ...config.define, ...props.defines },
+						alias: { ...config.alias, ...props.alias },
+						checkFetch: false,
+						assets: config.assets,
+						// enable the cache when publishing
+						bypassAssetCache: false,
+						// We want to know if the build is for development or publishing
+						// This could potentially cause issues as we no longer have identical behaviour between dev and deploy?
+						targetConsumer: "deploy",
+						local: false,
+						projectRoot: props.projectRoot,
+						defineNavigatorUserAgent: isNavigatorDefined(
+							props.compatibilityDate ?? config.compatibility_date,
+							props.compatibilityFlags ?? config.compatibility_flags
+						),
+					}
+				);
 
 		// Add modules to dependencies for size warning
 		for (const module of modules) {
@@ -327,7 +324,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 					config,
 					legacyEnv: props.legacyEnv,
 					env: props.env,
-			  })
+				})
 			: undefined;
 
 		const bindings: CfWorkerInit["bindings"] = {
@@ -337,6 +334,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			wasm_modules: config.wasm_modules,
 			browser: config.browser,
 			ai: config.ai,
+			version_metadata: config.version_metadata,
 			text_blobs: config.text_blobs,
 			data_blobs: config.data_blobs,
 			durable_objects: config.durable_objects,
@@ -365,35 +363,39 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			config.placement?.mode === "smart" ? { mode: "smart" } : undefined;
 
 		const entryPointName = path.basename(resolvedEntryPointPath);
+		const main = {
+			name: entryPointName,
+			filePath: resolvedEntryPointPath,
+			content: content,
+			type: bundleType,
+		};
 		const worker: CfWorkerInit = {
 			name: scriptName,
-			main: {
-				name: entryPointName,
-				filePath: resolvedEntryPointPath,
-				content: content,
-				type: bundleType,
-			},
+			main,
 			bindings,
 			migrations,
 			modules,
+			sourceMaps: uploadSourceMaps
+				? loadSourceMaps(main, modules, bundle)
+				: undefined,
 			compatibility_date: props.compatibilityDate ?? config.compatibility_date,
 			compatibility_flags: compatibilityFlags,
-			usage_model: config.usage_model,
-			keepVars,
+			keepVars: false, // the wrangler.toml should be the source-of-truth for vars
+			keepSecrets: true, // until wrangler.toml specifies secret bindings, we need to inherit from the previous Worker Version
 			logpush: undefined,
 			placement,
 			tail_consumers: config.tail_consumers,
 			limits: config.limits,
+			annotations: {
+				"workers/message": props.message,
+				"workers/tag": props.tag,
+			},
 		};
 
-		// As this is not deterministic for testing, we detect if in a jest environment and run asynchronously
-		// We do not care about the timing outside of testing
-		const bundleSizePromise = printBundleSize(
+		await printBundleSize(
 			{ name: path.basename(resolvedEntryPointPath), content: content },
 			modules
 		);
-		if (process.env.JEST_WORKER_ID !== undefined) await bundleSizePromise;
-		else void bundleSizePromise;
 
 		const withoutStaticAssets = {
 			...bindings,
@@ -415,21 +417,12 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		printBindings({ ...withoutStaticAssets, vars: maskedVars });
 
 		if (!props.dryRun) {
-			await ensureQueuesExist(config);
+			await ensureQueuesExistByConfig(config);
 
 			// Upload the script so it has time to propagate.
 			// We can also now tell whether available_on_subdomain is set
 			try {
 				const body = createWorkerUploadForm(worker);
-
-				body.set(
-					"annotations",
-					JSON.stringify({
-						"workers/message": props.message,
-						"workers/tag": props.tag,
-						"workers/triggered_by": "wrangler",
-					})
-				);
 
 				const result = await fetchResult<{
 					available_on_subdomain: boolean;
@@ -467,12 +460,18 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 					const maybeNameToFilePath = (moduleName: string) => {
 						// If this is a service worker, always return the entrypoint path.
 						// Service workers can't have additional JavaScript modules.
-						if (bundleType === "commonjs") return resolvedEntryPointPath;
+						if (bundleType === "commonjs") {
+							return resolvedEntryPointPath;
+						}
 						// Similarly, if the name matches the entrypoint, return its path
-						if (moduleName === entryPointName) return resolvedEntryPointPath;
+						if (moduleName === entryPointName) {
+							return resolvedEntryPointPath;
+						}
 						// Otherwise, return the file path of the matching module (if any)
 						for (const module of modules) {
-							if (moduleName === module.name) return module.filePath;
+							if (moduleName === module.name) {
+								return module.filePath;
+							}
 						}
 					};
 					const retrieveSourceMap: RetrieveSourceMapFunction = (moduleName) =>
@@ -499,11 +498,29 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		logger.log(`--dry-run: exiting now.`);
 		return;
 	}
-	if (!accountId) throw new UserError("Missing accountId");
+	if (!accountId) {
+		throw new UserError("Missing accountId");
+	}
 
 	const uploadMs = Date.now() - start;
 
 	logger.log("Uploaded", workerName, formatTime(uploadMs));
+
+	const cmdVersionsDeploy = blue(
+		"wrangler versions deploy --experimental-versions"
+	);
+	const cmdTriggersDeploy = blue(
+		"wrangler triggers deploy --experimental-versions"
+	);
+	logger.info(
+		gray(`
+To deploy this version to production traffic use the command ${cmdVersionsDeploy}
+
+Changes to non-versioned settings (config properties 'logpush' or 'tail_consumers') take effect after your next deployment using the command ${cmdVersionsDeploy}
+
+Changes to triggers (routes, custom domains, cron schedules, etc) must be applied with the command ${cmdTriggersDeploy}
+`)
+	);
 }
 
 export function helpIfErrorIsSizeOrScriptStartup(
@@ -533,31 +550,6 @@ function formatTime(duration: number) {
 
 export function isAuthenticationError(e: unknown): e is ParseError {
 	return e instanceof ParseError && (e as { code?: number }).code === 10000;
-}
-
-async function ensureQueuesExist(config: Config) {
-	const producers = (config.queues.producers || []).map(
-		(producer) => producer.queue
-	);
-	const consumers = (config.queues.consumers || []).map(
-		(consumer) => consumer.queue
-	);
-
-	const queueNames = producers.concat(consumers);
-	for (const queue of queueNames) {
-		try {
-			await getQueue(config, queue);
-		} catch (err) {
-			const queueErr = err as FetchError;
-			if (queueErr.code === 11000) {
-				// queue_not_found
-				throw new UserError(
-					`Queue "${queue}" does not exist. To create it, run: wrangler queues create ${queue}`
-				);
-			}
-			throw err;
-		}
-	}
 }
 
 async function noBundleWorker(

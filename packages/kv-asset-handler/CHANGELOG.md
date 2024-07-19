@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.3.4
+
+### Patch Changes
+
+- [#6102](https://github.com/cloudflare/workers-sdk/pull/6102) [`d4e1e9f`](https://github.com/cloudflare/workers-sdk/commit/d4e1e9fc3439c3d6bd2d1d145d3edc85b551f276) Thanks [@threepointone](https://github.com/threepointone)! - chore: pass lint/typechecks for kv-asset-handler
+
+  Followup from https://github.com/cloudflare/workers-sdk/pull/6090, this enables typechecking and linting in kv-asset-handler, and fixes any failures.
+
+## 0.3.3
+
+### Patch Changes
+
+- [#6029](https://github.com/cloudflare/workers-sdk/pull/6029) [`f5ad1d3`](https://github.com/cloudflare/workers-sdk/commit/f5ad1d3e562ce63b59f6ab136f1cdd703605bca4) Thanks [@threepointone](https://github.com/threepointone)! - chore: Normalize some dependencies in workers-sdk
+
+  This is the first of a few expected patches that normalize dependency versions, This normalizes `undici`, `concurrently`, `@types/node`, `react`, `react-dom`, `@types/react`, `@types/react-dom`, `eslint`, `typescript`. There are no functional code changes (but there are a couple of typecheck fixes).
+
+## 0.3.2
+
+### Patch Changes
+
+- [#5482](https://github.com/cloudflare/workers-sdk/pull/5482) [`1b7739e`](https://github.com/cloudflare/workers-sdk/commit/1b7739e0af99860aa063f01c0a6e7712ac072fdb) Thanks [@DaniFoldi](https://github.com/DaniFoldi)! - docs: show new Discord url everywhere for consistency. The old URL still works, but https://discord.cloudflare.com is preferred.
+
 ## 0.3.1
 
 - ## Maintenance
@@ -206,8 +228,8 @@
 
     ```js
     return getAssetFromKV(event, {
-      defaultDocument: "index.shtm"
-    })
+      defaultDocument: "index.shtm",
+    });
     ```
 
     [boemekeld]: https://github.com/boemekeld

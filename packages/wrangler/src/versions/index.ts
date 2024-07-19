@@ -13,12 +13,14 @@ import { requireAuth } from "../user";
 import { collectKeyValues } from "../utils/collectKeyValues";
 import { versionsDeployHandler, versionsDeployOptions } from "./deploy";
 import { versionsListHandler, versionsListOptions } from "./list";
+import { registerVersionsSecretsSubcommands } from "./secrets";
 import versionsUpload from "./upload";
 import { versionsViewHandler, versionsViewOptions } from "./view";
 import type { Config } from "../config";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
+	SubHelp,
 } from "../yargs-types";
 
 async function standardPricingWarning(config: Config) {
@@ -116,6 +118,12 @@ export function versionsUploadOptions(yargs: CommonYargsArgv) {
 				requiresArg: true,
 				array: true,
 			})
+			.option("alias", {
+				describe: "A module pair to be substituted in the script",
+				type: "string",
+				requiresArg: true,
+				array: true,
+			})
 			.option("jsx-factory", {
 				describe: "The function that is called for each JSX element",
 				type: "string",
@@ -135,18 +143,17 @@ export function versionsUploadOptions(yargs: CommonYargsArgv) {
 				describe: "Minify the Worker",
 				type: "boolean",
 			})
+			.option("upload-source-maps", {
+				describe:
+					"Include source maps when uploading this Worker Gradual Rollouts Version.",
+				type: "boolean",
+			})
 			.option("node-compat", {
 				describe: "Enable Node.js compatibility",
 				type: "boolean",
 			})
 			.option("dry-run", {
 				describe: "Don't actually deploy",
-				type: "boolean",
-			})
-			.option("keep-vars", {
-				describe:
-					"Stop wrangler from deleting vars that are not present in the wrangler.toml\nBy default Wrangler will remove all vars and replace them with those found in the wrangler.toml configuration.\nIf your development approach is to modify vars after deployment via the dashboard you may wish to set this flag.",
-				default: false,
 				type: "boolean",
 			})
 			// args only for `versions upload`, not `deploy`
@@ -192,6 +199,7 @@ export async function versionsUploadHandler(
 
 	const cliVars = collectKeyValues(args.var);
 	const cliDefines = collectKeyValues(args.define);
+	const cliAlias = collectKeyValues(args.alias);
 
 	const accountId = args.dryRun ? undefined : await requireAuth(config);
 
@@ -210,16 +218,18 @@ export async function versionsUploadHandler(
 		compatibilityFlags: args.compatibilityFlags,
 		vars: cliVars,
 		defines: cliDefines,
+		alias: cliAlias,
 		jsxFactory: args.jsxFactory,
 		jsxFragment: args.jsxFragment,
 		tsconfig: args.tsconfig,
 		minify: args.minify,
+		uploadSourceMaps: args.uploadSourceMaps,
 		nodeCompat: args.nodeCompat,
 		isWorkersSite: Boolean(args.site || config.site),
 		outDir: args.outdir,
 		dryRun: args.dryRun,
 		noBundle: !(args.bundle ?? !config.no_bundle),
-		keepVars: args.keepVars,
+		keepVars: false,
 		projectRoot,
 
 		tag: args.tag,
@@ -228,7 +238,8 @@ export async function versionsUploadHandler(
 }
 
 export default function registerVersionsSubcommands(
-	versionYargs: CommonYargsArgv
+	versionYargs: CommonYargsArgv,
+	subHelp: SubHelp
 ) {
 	versionYargs
 		.command(
@@ -254,5 +265,12 @@ export default function registerVersionsSubcommands(
 			"Safely roll out new Versions of your Worker by splitting traffic between multiple Versions [beta]",
 			versionsDeployOptions,
 			versionsDeployHandler
+		)
+		.command(
+			"secret",
+			"Generate a secret that can be referenced in a Worker",
+			(yargs) => {
+				return registerVersionsSecretsSubcommands(yargs.command(subHelp));
+			}
 		);
 }

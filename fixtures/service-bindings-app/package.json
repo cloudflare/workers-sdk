@@ -5,14 +5,17 @@
 	"scripts": {
 		"check:type": "tsc",
 		"dev": "concurrently -s first -k \"wrangler dev a/index.ts --port=8300 --inspector-port=0\" \"wrangler dev b/index.ts --port=8301 --inspector-port=0\"",
-		"test": "vitest run",
+		"test:ci": "vitest run",
 		"test:watch": "vitest",
 		"type:tests": "tsc -p ./tests/tsconfig.json"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"concurrently": "^8.2.2",
-		"undici": "^5.28.3",
+		"undici": "^5.28.4",
 		"wrangler": "workspace:*"
+	},
+	"volta": {
+		"extends": "../../package.json"
 	}
 }

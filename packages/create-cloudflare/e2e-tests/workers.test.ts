@@ -1,7 +1,7 @@
 import { join } from "path";
-import { retry } from "helpers/command";
-import { sleep } from "helpers/common";
 import { readToml } from "helpers/files";
+import { retry } from "helpers/retry";
+import { sleep } from "helpers/sleep";
 import { fetch } from "undici";
 import { beforeAll, beforeEach, describe, expect, test } from "vitest";
 import { deleteWorker } from "../scripts/common";
@@ -27,6 +27,14 @@ type WorkerTestConfig = RunnerConfig & {
 const workerTemplates: WorkerTestConfig[] = [
 	{
 		template: "hello-world",
+		verifyDeploy: {
+			route: "/",
+			expectedText: "Hello World!",
+		},
+	},
+	{
+		template: "hello-world-python",
+		promptHandlers: [],
 		verifyDeploy: {
 			route: "/",
 			expectedText: "Hello World!",
@@ -96,7 +104,7 @@ describe
 									},
 								],
 							},
-					  ]
+						],
 			)
 			.forEach((template) => {
 				const name = template.name ?? template.template;
@@ -110,7 +118,7 @@ describe
 							const deployedUrl = await runCli(
 								template,
 								projectPath,
-								logStream
+								logStream,
 							);
 
 							// Relevant project files should have been created
@@ -140,7 +148,7 @@ describe
 							await deleteWorker(projectName);
 						}
 					},
-					{ retry: 1, timeout: template.timeout || TEST_TIMEOUT }
+					{ retry: 1, timeout: template.timeout || TEST_TIMEOUT },
 				);
 			});
 	});
@@ -148,7 +156,7 @@ describe
 const runCli = async (
 	template: WorkerTestConfig,
 	projectPath: string,
-	logStream: WriteStream
+	logStream: WriteStream,
 ) => {
 	const { argv, promptHandlers, verifyDeploy } = template;
 
@@ -172,7 +180,7 @@ const runCli = async (
 	const deployedUrlRe =
 		/deployment is ready at: (https:\/\/.+\.(workers)\.dev)/;
 
-	const match = output.match(deployedUrlRe);
+	const match = output.replaceAll("\n", "").match(deployedUrlRe);
 	if (!match || !match[1]) {
 		expect(false, "Couldn't find deployment url in C3 output").toBe(true);
 		return;
@@ -183,7 +191,7 @@ const runCli = async (
 
 const verifyDeployment = async (
 	deploymentUrl: string,
-	expectedString: string
+	expectedString: string,
 ) => {
 	await retry({ times: 5 }, async () => {
 		await sleep(1000);
@@ -191,7 +199,7 @@ const verifyDeployment = async (
 		const body = await res.text();
 		if (!body.includes(expectedString)) {
 			throw new Error(
-				`(Deployed page (${deploymentUrl}) didn't contain expected string: "${expectedString}"`
+				`(Deployed page (${deploymentUrl}) didn't contain expected string: "${expectedString}"`,
 			);
 		}
 	});

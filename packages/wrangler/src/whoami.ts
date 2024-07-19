@@ -22,6 +22,13 @@ export async function whoami() {
 			`👋 You are logged in with an ${user.authType}. Unable to retrieve email for this user. Are you missing the \`User->User Details->Read\` permission?`
 		);
 	}
+
+	if (user.authType === "API Token") {
+		logger.log(
+			"ℹ️  The API Token is read from the CLOUDFLARE_API_TOKEN in your environment."
+		);
+	}
+
 	logger.table(
 		user.accounts.map((account) => ({
 			"Account Name": account.name,
@@ -56,7 +63,9 @@ export interface UserInfo {
 
 export async function getUserInfo(): Promise<UserInfo | undefined> {
 	const apiToken = getAPIToken();
-	if (!apiToken) return;
+	if (!apiToken) {
+		return;
+	}
 
 	const tokenPermissions = await getTokenPermissions();
 
@@ -67,8 +76,8 @@ export async function getUserInfo(): Promise<UserInfo | undefined> {
 		authType: usingGlobalAuthKey
 			? "Global API Key"
 			: usingEnvAuth
-			? "API Token"
-			: "OAuth Token",
+				? "API Token"
+				: "OAuth Token",
 		email: "authEmail" in apiToken ? apiToken.authEmail : await getEmail(),
 		accounts: await getAccounts(),
 		tokenPermissions,

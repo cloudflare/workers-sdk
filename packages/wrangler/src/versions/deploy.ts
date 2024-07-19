@@ -10,20 +10,33 @@ import {
 } from "@cloudflare/cli/interactive";
 import { findWranglerToml, readConfig } from "../config";
 import { UserError } from "../errors";
+import { CI } from "../is-ci";
+import isInteractive from "../is-interactive";
 import * as metrics from "../metrics";
+import { APIError } from "../parse";
 import { printWranglerBanner } from "../update-check";
 import { requireAuth } from "../user";
+import formatLabelledValues from "../utils/render-labelled-values";
 import {
 	createDeployment,
-	fetchLatestDeploymentVersions,
-	fetchLatestUploadedVersions,
+	fetchDeployableVersions,
+	fetchDeploymentVersions,
+	fetchLatestDeployment,
 	fetchVersions,
+	patchNonVersionedScriptSettings,
 } from "./api";
+import type { Config } from "../config";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
 } from "../yargs-types";
-import type { Percentage, VersionCache, VersionId } from "./types";
+import type {
+	ApiDeployment,
+	ApiVersion,
+	Percentage,
+	VersionCache,
+	VersionId,
+} from "./types";
 
 const EPSILON = 0.001; // used to avoid floating-point errors. Comparions to a value +/- EPSILON will mean "roughly equals the value".
 const BLANK_INPUT = "-"; // To be used where optional user-input is displayed and the value is nullish
@@ -174,6 +187,8 @@ export async function versionsDeployHandler(args: VersionsDeployArgs) {
 		},
 	});
 
+	await maybePatchSettings(accountId, workerName, config);
+
 	const elapsedMilliseconds = Date.now() - start;
 	const elapsedSeconds = elapsedMilliseconds / 1000;
 	const elapsedString = `${elapsedSeconds.toFixed(2)} sec`;
@@ -181,7 +196,9 @@ export async function versionsDeployHandler(args: VersionsDeployArgs) {
 	const trafficSummaryList = Array.from(confirmedVersionTraffic).map(
 		([versionId, percentage]) => `version ${versionId} at ${percentage}%`
 	);
-	const trafficSummaryString = new Intl.ListFormat().format(trafficSummaryList);
+	const trafficSummaryString = new Intl.ListFormat("en-US").format(
+		trafficSummaryList
+	);
 
 	cli.success(
 		`Deployed ${workerName} ${trafficSummaryString} (${elapsedString})`
@@ -198,36 +215,112 @@ function getConfig(
 	return config;
 }
 
-async function printLatestDeployment(
+/**
+ * Prompts the user for confirmation when overwriting the latest deployment, given that it's split.
+ */
+export async function confirmLatestDeploymentOverwrite(
+	accountId: string,
+	scriptName: string
+) {
+	try {
+		const latest = await fetchLatestDeployment(accountId, scriptName);
+		if (latest && latest.versions.length >= 2) {
+			const versionCache: VersionCache = new Map();
+
+			// Print message and confirmation.
+
+			cli.warn(
+				`Your last deployment has multiple versions. To progress that deployment use "wrangler versions deploy" instead.`,
+				{ shape: cli.shapes.corners.tl, newlineBefore: false }
+			);
+			cli.newline();
+			await printDeployment(
+				accountId,
+				scriptName,
+				latest,
+				"last",
+				versionCache
+			);
+
+			return inputPrompt<boolean>({
+				type: "confirm",
+				question: `"wrangler deploy" will upload a new version and deploy it globally immediately.\nAre you sure you want to continue?`,
+				label: "",
+				defaultValue: !isInteractive() || CI.isCI(), // defaults to true in CI for back-compat
+				acceptDefault: !isInteractive() || CI.isCI(),
+			});
+		}
+	} catch (e) {
+		const isNotFound = e instanceof APIError && e.code == 10007;
+		if (!isNotFound) {
+			throw e;
+		}
+	}
+	return true;
+}
+
+export async function printLatestDeployment(
 	accountId: string,
 	workerName: string,
 	versionCache: VersionCache
 ) {
-	const [versions, traffic] = await spinnerWhile({
+	const latestDeployment = await spinnerWhile({
 		startMessage: "Fetching latest deployment",
 		async promise() {
-			return fetchLatestDeploymentVersions(accountId, workerName, versionCache);
+			return fetchLatestDeployment(accountId, workerName);
 		},
 	});
-
-	cli.logRaw(
-		`${leftT} Your current deployment has ${versions.length} version(s):`
+	await printDeployment(
+		accountId,
+		workerName,
+		latestDeployment,
+		"current",
+		versionCache
 	);
+}
 
-	for (const version of versions) {
-		const trafficString = brandColor(`(${traffic.get(version.id)}%)`);
-		const versionIdString = white(version.id);
+export async function printDeployment(
+	accountId: string,
+	workerName: string,
+	deployment: ApiDeployment | undefined,
+	adjective: "current" | "last",
+	versionCache: VersionCache
+) {
+	const [versions, traffic] = await fetchDeploymentVersions(
+		accountId,
+		workerName,
+		deployment,
+		versionCache
+	);
+	cli.logRaw(
+		`${leftT} Your ${adjective} deployment has ${versions.length} version(s):`
+	);
+	printVersions(versions, traffic);
+}
 
-		cli.log(
-			gray(`
-${trafficString} ${versionIdString}
+export function printVersions(
+	versions: ApiVersion[],
+	traffic: Map<VersionId, Percentage>
+) {
+	cli.newline();
+	cli.log(formatVersions(versions, traffic));
+	cli.newline();
+}
+
+export function formatVersions(
+	versions: ApiVersion[],
+	traffic: Map<VersionId, Percentage>
+) {
+	return versions
+		.map((version) => {
+			const trafficString = brandColor(`(${traffic.get(version.id)}%)`);
+			const versionIdString = white(version.id);
+			return gray(`${trafficString} ${versionIdString}
       Created:  ${version.metadata.created_on}
           Tag:  ${version.annotations?.["workers/tag"] ?? BLANK_INPUT}
-      Message:  ${version.annotations?.["workers/message"] ?? BLANK_INPUT}`)
-		);
-	}
-
-	cli.newline();
+      Message:  ${version.annotations?.["workers/message"] ?? BLANK_INPUT}`);
+		})
+		.join("\n\n");
 }
 
 /**
@@ -255,7 +348,7 @@ async function promptVersionsToDeploy(
 	await spinnerWhile({
 		startMessage: "Fetching deployable versions",
 		async promise() {
-			await fetchLatestUploadedVersions(accountId, workerName, versionCache);
+			await fetchDeployableVersions(accountId, workerName, versionCache);
 			await fetchVersions(
 				accountId,
 				workerName,
@@ -379,8 +472,9 @@ async function promptPercentages(
 				const input = val !== "" ? val : defaultValue;
 				const percentage = parseFloat(input?.toString() ?? "");
 
-				if (isNaN(percentage) || percentage < 0 || percentage > 100)
+				if (isNaN(percentage) || percentage < 0 || percentage > 100) {
 					return "Please enter a number between 0 and 100.";
+				}
 			},
 			renderers: {
 				submit({ value }) {
@@ -415,7 +509,9 @@ async function promptPercentages(
 		if (err instanceof UserError) {
 			// if the user has indicated they'll accept all defaults (yesFlag)
 			// then rethrow to avoid an infinite loop of reprompting
-			if (yesFlag) throw err;
+			if (yesFlag) {
+				throw err;
+			}
 
 			cli.error(err.message, undefined, leftT);
 
@@ -431,6 +527,57 @@ async function promptPercentages(
 	}
 
 	return confirmedVersionTraffic;
+}
+
+async function maybePatchSettings(
+	accountId: string,
+	workerName: string,
+	config: Pick<Config, "logpush" | "tail_consumers">
+) {
+	const maybeUndefinedSettings = {
+		logpush: config.logpush,
+		tail_consumers: config.tail_consumers,
+	};
+	const definedSettings = Object.fromEntries(
+		Object.entries(maybeUndefinedSettings).filter(
+			([, value]) => value !== undefined
+		)
+	);
+
+	const hasZeroSettingsToSync = Object.keys(definedSettings).length === 0;
+	if (hasZeroSettingsToSync) {
+		cli.log("No non-versioned settings to sync. Skipping...");
+		return;
+	}
+
+	const patchedSettings = await spinnerWhile({
+		startMessage: `Syncing non-versioned settings`,
+		async promise() {
+			return await patchNonVersionedScriptSettings(
+				accountId,
+				workerName,
+				definedSettings
+			);
+		},
+	});
+
+	const formattedSettings = formatLabelledValues(
+		{
+			logpush: String(patchedSettings.logpush ?? "<skipped>"),
+			tail_consumers:
+				patchedSettings.tail_consumers
+					?.map((tc) =>
+						tc.environment ? `${tc.service} (${tc.environment})` : tc.service
+					)
+					.join("\n") ?? "<skipped>",
+		},
+		{
+			labelJustification: "right",
+			indentationCount: 4,
+		}
+	);
+
+	cli.log("Synced non-versioned settings:\n" + formattedSettings);
 }
 
 // ***********

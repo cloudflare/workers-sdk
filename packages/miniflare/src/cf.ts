@@ -1,11 +1,11 @@
 import assert from "assert";
 import { mkdir, readFile, stat, writeFile } from "fs/promises";
 import path from "path";
-import type { IncomingRequestCfProperties } from "@cloudflare/workers-types/experimental";
 import { dim } from "kleur/colors";
 import { fetch } from "undici";
 import { Plugins } from "./plugins";
 import { Log, OptionalZodTypeOf } from "./shared";
+import type { IncomingRequestCfProperties } from "@cloudflare/workers-types/experimental";
 
 const defaultCfPath = path.resolve("node_modules", ".mf", "cf.json");
 const defaultCfFetchEndpoint = "https://workers.cloudflare.com/cf.json";

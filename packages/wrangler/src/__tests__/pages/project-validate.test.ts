@@ -1,17 +1,19 @@
 // /* eslint-disable no-shadow */
 import { writeFileSync } from "node:fs";
+import { vi } from "vitest";
 import { endEventLoop } from "../helpers/end-event-loop";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 
-jest.mock("../../pages/constants", () => ({
-	...jest.requireActual("../../pages/constants"),
+vi.mock("../../pages/constants", async (importActual) => ({
+	// eslint-disable-next-line @typescript-eslint/consistent-type-imports
+	...(await importActual<typeof import("../../pages/constants")>()),
 	MAX_ASSET_SIZE: 1 * 1024 * 1024,
 	MAX_ASSET_COUNT: 10,
 }));
 
-describe("project validate", () => {
+describe("pages project validate", () => {
 	const std = mockConsoleMethods();
 
 	runInTempDir();
@@ -35,9 +37,9 @@ describe("project validate", () => {
 
 		await expect(() => runWrangler("pages project validate .")).rejects
 			.toThrowErrorMatchingInlineSnapshot(`
-		"Error: Pages only supports files up to 1 MiB in size
-		logo.png is 1 MiB in size"
-	`);
+			[Error: Error: Pages only supports files up to 1 MiB in size
+			logo.png is 1 MiB in size]
+		`);
 	});
 
 	it("should error for a large directory", async () => {
@@ -48,7 +50,7 @@ describe("project validate", () => {
 		await expect(() =>
 			runWrangler("pages project validate .")
 		).rejects.toThrowErrorMatchingInlineSnapshot(
-			`"Error: Pages only supports up to 10 files in a deployment. Ensure you have specified your build output directory correctly."`
+			`[Error: Error: Pages only supports up to 10 files in a deployment. Ensure you have specified your build output directory correctly.]`
 		);
 	});
 });

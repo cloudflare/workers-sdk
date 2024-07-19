@@ -1,8 +1,12 @@
+import { createHash } from "node:crypto";
 import { existsSync, lstatSync, readFileSync } from "node:fs";
-import { join, resolve as resolvePath } from "node:path";
+import { readFile } from "node:fs/promises";
+import path, { join, resolve as resolvePath } from "node:path";
 import { cwd } from "node:process";
 import { File, FormData } from "undici";
 import { fetchResult } from "../../cfetch";
+import { readConfig } from "../../config";
+import { validateNodeCompat } from "../../deployment-bundle/node-compat";
 import { FatalError } from "../../errors";
 import { logger } from "../../logger";
 import { isNavigatorDefined } from "../../navigator-user-agent";
@@ -10,19 +14,21 @@ import { buildFunctions } from "../../pages/buildFunctions";
 import { MAX_DEPLOYMENT_ATTEMPTS } from "../../pages/constants";
 import {
 	ApiErrorCodes,
+	EXIT_CODE_INVALID_PAGES_CONFIG,
 	FunctionsNoRoutesError,
 	getFunctionsNoRoutesWarning,
 } from "../../pages/errors";
 import {
 	buildRawWorker,
 	checkRawWorker,
-	traverseAndBuildWorkerJSDirectory,
+	produceWorkerBundleForWorkerJSDirectory,
 } from "../../pages/functions/buildWorker";
 import { validateRoutes } from "../../pages/functions/routes-validation";
 import { upload } from "../../pages/upload";
 import { getPagesTmpDir } from "../../pages/utils";
 import { validate } from "../../pages/validate";
 import { createUploadWorkerBundleContents } from "./create-worker-bundle-contents";
+import type { Config } from "../../config";
 import type { BundleResult } from "../../deployment-bundle/bundle";
 import type { Deployment, Project } from "@cloudflare/types";
 
@@ -67,12 +73,19 @@ interface PagesDeployOptions {
 	 * typically called in a CLI
 	 */
 	functionsDirectory?: string;
-
 	/**
 	 * Whether to run bundling on `_worker.js` before deploying.
 	 * Default: true
 	 */
 	bundle?: boolean;
+	/**
+	 * Whether to upload any server-side sourcemaps with this deployment
+	 */
+	sourceMaps: boolean;
+	/**
+	 * Command line args passed to the `pages deploy` cmd
+	 */
+	args?: Record<string, unknown>;
 
 	// TODO: Allow passing in the API key and plumb it through
 	// to the API calls so that the deploy function does not
@@ -95,6 +108,8 @@ export async function deploy({
 	commitDirty,
 	functionsDirectory: customFunctionsDirectory,
 	bundle,
+	sourceMaps,
+	args,
 }: PagesDeployOptions) {
 	let _headers: string | undefined,
 		_redirects: string | undefined,
@@ -139,15 +154,37 @@ export async function deploy({
 		isProduction = project.production_branch === branch;
 	}
 
-	const deploymentConfig =
-		project.deployment_configs[isProduction ? "production" : "preview"];
-	const nodejsCompat =
-		deploymentConfig.compatibility_flags?.includes("nodejs_compat") ?? false;
+	const env = isProduction ? "production" : "preview";
+	const deploymentConfig = project.deployment_configs[env];
+	let config: Config | undefined;
 
+	try {
+		config = readConfig(
+			undefined,
+			{ ...args, experimentalJsonConfig: false, env },
+			true
+		);
+	} catch (err) {
+		if (
+			!(
+				err instanceof FatalError && err.code === EXIT_CODE_INVALID_PAGES_CONFIG
+			)
+		) {
+			throw err;
+		}
+	}
+
+	const nodejsCompatMode = validateNodeCompat({
+		legacyNodeCompat: false,
+		compatibilityFlags:
+			config?.compatibility_flags ?? deploymentConfig.compatibility_flags ?? [],
+		noBundle: config?.no_bundle ?? false,
+	});
 	const defineNavigatorUserAgent = isNavigatorDefined(
-		deploymentConfig.compatibility_date,
-		deploymentConfig.compatibility_flags
+		config?.compatibility_date ?? deploymentConfig.compatibility_date,
+		config?.compatibility_flags ?? deploymentConfig.compatibility_flags
 	);
+
 	/**
 	 * Evaluate if this is an Advanced Mode or Pages Functions project. If Advanced Mode, we'll
 	 * go ahead and upload `_worker.js` as is, but if Pages Functions, we need to attempt to build
@@ -175,11 +212,12 @@ export async function deploy({
 			workerBundle = await buildFunctions({
 				outputConfigPath,
 				functionsDirectory,
+				sourcemap: sourceMaps,
 				onEnd: () => {},
 				buildOutputDirectory: directory,
 				routesOutputPath,
 				local: false,
-				nodejsCompat,
+				nodejsCompatMode,
 				defineNavigatorUserAgent,
 			});
 
@@ -248,6 +286,23 @@ export async function deploy({
 		);
 	}
 
+	if (
+		config !== undefined &&
+		config.configPath !== undefined &&
+		config.pages_build_output_dir
+	) {
+		const configHash = createHash("sha256")
+			.update(await readFile(config.configPath))
+			.digest("hex");
+		const outputDir = path.relative(
+			process.cwd(),
+			config.pages_build_output_dir
+		);
+
+		formData.append("wrangler_config_hash", configHash);
+		formData.append("pages_build_output_dir", outputDir);
+	}
+
 	/**
 	 * Advanced Mode
 	 * https://developers.cloudflare.com/pages/platform/functions/#advanced-mode
@@ -256,11 +311,13 @@ export async function deploy({
 	 * – this includes its routing and middleware characteristics.
 	 */
 	if (_workerJSIsDirectory) {
-		workerBundle = await traverseAndBuildWorkerJSDirectory({
+		workerBundle = await produceWorkerBundleForWorkerJSDirectory({
 			workerJSDirectory: _workerPath,
+			bundle,
 			buildOutputDirectory: directory,
-			nodejsCompat,
+			nodejsCompatMode,
 			defineNavigatorUserAgent,
+			sourceMaps: sourceMaps,
 		});
 	} else if (_workerJS) {
 		if (bundle) {
@@ -276,11 +333,11 @@ export async function deploy({
 				sourcemap: true,
 				watch: false,
 				onEnd: () => {},
-				nodejsCompat,
+				nodejsCompatMode,
 				defineNavigatorUserAgent,
 			});
 		} else {
-			await checkRawWorker(_workerPath, nodejsCompat, () => {});
+			await checkRawWorker(_workerPath, nodejsCompatMode, () => {});
 			// TODO: Let users configure this in the future.
 			workerBundle = {
 				modules: [],
@@ -294,7 +351,8 @@ export async function deploy({
 
 	if (_workerJS || _workerJSIsDirectory) {
 		const workerBundleContents = await createUploadWorkerBundleContents(
-			workerBundle as BundleResult
+			workerBundle as BundleResult,
+			config
 		);
 
 		formData.append(
@@ -328,7 +386,8 @@ export async function deploy({
 	 */
 	if (builtFunctions && !_workerJS && !_workerJSIsDirectory) {
 		const workerBundleContents = await createUploadWorkerBundleContents(
-			workerBundle as BundleResult
+			workerBundle as BundleResult,
+			config
 		);
 
 		formData.append(

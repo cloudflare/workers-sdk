@@ -5,11 +5,11 @@ import SCRIPT_KV_SITES from "worker:kv/sites";
 import { Service, Worker_Binding } from "../../runtime";
 import { globsToRegExps } from "../../shared";
 import {
+	encodeSitesKey,
+	serialiseSiteRegExps,
 	SharedBindings,
 	SiteBindings,
 	SiteMatcherRegExps,
-	encodeSitesKey,
-	serialiseSiteRegExps,
 	testSiteRegExps,
 } from "../../workers";
 import { kProxyNodeBinding } from "../shared";

@@ -1,10 +1,107 @@
 import * as fs from "fs";
 import * as TOML from "@iarna/toml";
+import {
+	constructType,
+	constructTypeKey,
+	generateImportSpecifier,
+	isValidIdentifier,
+} from "../type-generation";
 import { dedent } from "../utils/dedent";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import type { EnvironmentNonInheritable } from "../config/environment";
+
+describe("isValidIdentifier", () => {
+	it("should return true for valid identifiers", () => {
+		expect(isValidIdentifier("valid")).toBe(true);
+		expect(isValidIdentifier("valid123")).toBe(true);
+		expect(isValidIdentifier("valid_123")).toBe(true);
+		expect(isValidIdentifier("valid_123_")).toBe(true);
+		expect(isValidIdentifier("_valid_123_")).toBe(true);
+		expect(isValidIdentifier("_valid_123_")).toBe(true);
+		expect(isValidIdentifier("$valid")).toBe(true);
+		expect(isValidIdentifier("$valid$")).toBe(true);
+	});
+
+	it("should return false for invalid identifiers", () => {
+		expect(isValidIdentifier("123invalid")).toBe(false);
+		expect(isValidIdentifier("invalid-123")).toBe(false);
+		expect(isValidIdentifier("invalid 123")).toBe(false);
+	});
+});
+
+describe("constructTypeKey", () => {
+	it("should return a valid type key", () => {
+		expect(constructTypeKey("valid")).toBe("valid");
+		expect(constructTypeKey("valid123")).toBe("valid123");
+		expect(constructTypeKey("valid_123")).toBe("valid_123");
+		expect(constructTypeKey("valid_123_")).toBe("valid_123_");
+		expect(constructTypeKey("_valid_123_")).toBe("_valid_123_");
+		expect(constructTypeKey("_valid_123_")).toBe("_valid_123_");
+		expect(constructTypeKey("$valid")).toBe("$valid");
+		expect(constructTypeKey("$valid$")).toBe("$valid$");
+
+		expect(constructTypeKey("123invalid")).toBe('"123invalid"');
+		expect(constructTypeKey("invalid-123")).toBe('"invalid-123"');
+		expect(constructTypeKey("invalid 123")).toBe('"invalid 123"');
+	});
+});
+
+describe("constructType", () => {
+	it("should return a valid type", () => {
+		expect(constructType("valid", "string")).toBe("valid: string;");
+		expect(constructType("valid123", "string")).toBe("valid123: string;");
+		expect(constructType("valid_123", "string")).toBe("valid_123: string;");
+		expect(constructType("valid_123_", "string")).toBe("valid_123_: string;");
+		expect(constructType("_valid_123_", "string")).toBe("_valid_123_: string;");
+		expect(constructType("_valid_123_", "string")).toBe("_valid_123_: string;");
+
+		expect(constructType("123invalid", "string")).toBe('"123invalid": string;');
+		expect(constructType("invalid-123", "string")).toBe(
+			'"invalid-123": string;'
+		);
+		expect(constructType("invalid 123", "string")).toBe(
+			'"invalid 123": string;'
+		);
+
+		expect(constructType("valid", 'a"', false)).toBe('valid: "a\\"";');
+		expect(constructType("valid", "a\\", false)).toBe('valid: "a\\\\";');
+		expect(constructType("valid", "a\\b", false)).toBe('valid: "a\\\\b";');
+		expect(constructType("valid", 'a\\b"', false)).toBe('valid: "a\\\\b\\"";');
+
+		expect(constructType("valid", 1)).toBe("valid: 1;");
+		expect(constructType("valid", 12345)).toBe("valid: 12345;");
+		expect(constructType("valid", true)).toBe("valid: true;");
+		expect(constructType("valid", false)).toBe("valid: false;");
+	});
+});
+
+describe("constructType with multiline strings", () => {
+	it("should correctly escape newlines in string values", () => {
+		const multilineString = "This is a\nmulti-line\nstring";
+		const expected = `valid: "This is a\\nmulti-line\\nstring";`;
+		expect(constructType("valid", multilineString, false)).toBe(expected);
+	});
+});
+
+describe("generateImportSpecifier", () => {
+	it("should generate a relative import specifier", () => {
+		expect(generateImportSpecifier("/app/types.ts", "/app/index.ts")).toBe(
+			"./index"
+		);
+		expect(
+			generateImportSpecifier("/app/types.ts", "/app/src/deep/dir/index.ts")
+		).toBe("./src/deep/dir/index");
+		expect(
+			generateImportSpecifier("/app/deep/dir/index.ts", "/app/types.ts")
+		).toBe("../../types");
+
+		expect(generateImportSpecifier("/app/types.ts", "/app/src/index.mjs")).toBe(
+			"./src/index"
+		);
+	});
+});
 
 const bindingsConfigMock: Omit<
 	EnvironmentNonInheritable,
@@ -20,6 +117,7 @@ const bindingsConfigMock: Omit<
 			activeDuty: true,
 			captian: "Picard",
 		}, // We can assume the objects will be stringified
+		"some-other-var": "some-other-value",
 	},
 	queues: {
 		producers: [
@@ -39,8 +137,14 @@ const bindingsConfigMock: Omit<
 	},
 	durable_objects: {
 		bindings: [
-			{ name: "DURABLE_TEST1", class_name: "Durability1" },
-			{ name: "DURABLE_TEST2", class_name: "Durability2" },
+			{ name: "DURABLE_DIRECT_EXPORT", class_name: "DurableDirect" },
+			{ name: "DURABLE_RE_EXPORT", class_name: "DurableReexport" },
+			{ name: "DURABLE_NO_EXPORT", class_name: "DurableNoexport" },
+			{
+				name: "DURABLE_EXTERNAL",
+				class_name: "DurableExternal",
+				script_name: "external-worker",
+			},
 		],
 	},
 	r2_buckets: [
@@ -77,6 +181,9 @@ const bindingsConfigMock: Omit<
 	},
 	ai: {
 		binding: "AI_BINDING",
+	},
+	version_metadata: {
+		binding: "VERSION_METADATA_BINDING",
 	},
 	logfwdr: {
 		bindings: [{ name: "LOGFWDR_BINDING", destination: "LOGFWDR_DESTINATION" }],
@@ -183,7 +290,15 @@ describe("generateTypes()", () => {
 	});
 
 	it("should log the interface type generated and declare modules", async () => {
-		fs.writeFileSync("./index.ts", "export default { async fetch () {} };");
+		fs.writeFileSync(
+			"./index.ts",
+			`import { DurableObject } from 'cloudflare:workers';
+				export default { async fetch () {} };
+				export class DurableDirect extends DurableObject {}
+				export { DurableReexport } from './durable-2.js';
+				// This should not be picked up, because it's external:
+				export class DurableExternal extends DurableObject {}`
+		);
 		fs.writeFileSync(
 			"./wrangler.toml",
 			TOML.stringify({
@@ -202,9 +317,12 @@ describe("generateTypes()", () => {
 			TEST_KV_NAMESPACE: KVNamespace;
 			SOMETHING: \\"asdasdfasdf\\";
 			ANOTHER: \\"thing\\";
+			\\"some-other-var\\": \\"some-other-value\\";
 			OBJECT_VAR: {\\"enterprise\\":\\"1701-D\\",\\"activeDuty\\":true,\\"captian\\":\\"Picard\\"};
-			DURABLE_TEST1: DurableObjectNamespace;
-			DURABLE_TEST2: DurableObjectNamespace;
+			DURABLE_DIRECT_EXPORT: DurableObjectNamespace<import(\\"./index\\").DurableDirect>;
+			DURABLE_RE_EXPORT: DurableObjectNamespace<import(\\"./index\\").DurableReexport>;
+			DURABLE_NO_EXPORT: DurableObjectNamespace /* DurableNoexport */;
+			DURABLE_EXTERNAL: DurableObjectNamespace /* DurableExternal from external-worker */;
 			R2_BUCKET_BINDING: R2Bucket;
 			D1_TESTING_SOMETHING: D1Database;
 			SERVICE_BINDING: Fetcher;
@@ -222,7 +340,8 @@ describe("generateTypes()", () => {
 			HYPERDRIVE_BINDING: Hyperdrive;
 			MTLS_BINDING: Fetcher;
 			BROWSER_BINDING: Fetcher;
-			AI_BINDING: unknown;
+			AI_BINDING: Ai;
+			VERSION_METADATA_BINDING: { id: string; tag: string };
 		}
 		declare module \\"*.txt\\" {
 			const value: string;
@@ -340,7 +459,7 @@ describe("generateTypes()", () => {
 					? {
 							bindings: bindingsConfigMock.unsafe.bindings,
 							metadata: bindingsConfigMock.unsafe.metadata,
-					  }
+						}
 					: undefined,
 			} as TOML.JsonMap),
 			"utf-8"
@@ -370,6 +489,7 @@ describe("generateTypes()", () => {
 		"interface Env {
 			SOMETHING: \\"asdasdfasdf\\";
 			ANOTHER: \\"thing\\";
+			\\"some-other-var\\": \\"some-other-value\\";
 			OBJECT_VAR: {\\"enterprise\\":\\"1701-D\\",\\"activeDuty\\":true,\\"captian\\":\\"Picard\\"};
 		}
 		"
@@ -457,6 +577,7 @@ describe("generateTypes()", () => {
 			"interface CloudflareEnv {
 				SOMETHING: \\"asdasdfasdf\\";
 				ANOTHER: \\"thing\\";
+				\\"some-other-var\\": \\"some-other-value\\";
 				OBJECT_VAR: {\\"enterprise\\":\\"1701-D\\",\\"activeDuty\\":true,\\"captian\\":\\"Picard\\"};
 			}
 			"
@@ -543,7 +664,7 @@ describe("generateTypes()", () => {
 				expect(fs.existsSync("./worker-configuration.d.ts")).toBe(false);
 
 				expect(fs.readFileSync("./cloudflare-env.d.ts", "utf-8")).toMatch(
-					/interface Env \{[\s\S]*SOMETHING: "asdasdfasdf";[\s\S]*ANOTHER: "thing";[\s\S]*OBJECT_VAR: \{"enterprise":"1701-D","activeDuty":true,"captian":"Picard"\};[\s\S]*}/
+					/interface Env \{[\s\S]*SOMETHING: "asdasdfasdf";[\s\S]*ANOTHER: "thing";[\s\S]*"some-other-var": "some-other-value";[\s\S]*OBJECT_VAR: \{"enterprise":"1701-D","activeDuty":true,"captian":"Picard"\};[\s\S]*}/
 				);
 			});
 
@@ -588,7 +709,7 @@ describe("generateTypes()", () => {
 			expect(
 				fs.readFileSync("./my-cloudflare-env-interface.d.ts", "utf-8")
 			).toMatch(
-				/interface MyCloudflareEnvInterface \{[\s\S]*SOMETHING: "asdasdfasdf";[\s\S]*ANOTHER: "thing";[\s\S]*OBJECT_VAR: \{"enterprise":"1701-D","activeDuty":true,"captian":"Picard"\};[\s\S]*}/
+				/interface MyCloudflareEnvInterface \{[\s\S]*SOMETHING: "asdasdfasdf";[\s\S]*ANOTHER: "thing";[\s\S]*"some-other-var": "some-other-value";[\s\S]*OBJECT_VAR: \{"enterprise":"1701-D","activeDuty":true,"captian":"Picard"\};[\s\S]*}/
 			);
 		});
 	});

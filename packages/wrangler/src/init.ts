@@ -8,6 +8,7 @@ import { version as wranglerVersion } from "../package.json";
 import { fetchResult } from "./cfetch";
 import { fetchWorker } from "./cfetch/internal";
 import { readConfig } from "./config";
+import { getDatabaseInfoFromId } from "./d1/utils";
 import { confirm, select } from "./dialogs";
 import { getC3CommandFromEnv } from "./environment-variables/misc-variables";
 import { UserError } from "./errors";
@@ -17,6 +18,7 @@ import { getPackageManager } from "./package-manager";
 import { parsePackageJSON, parseTOML, readFileSync } from "./parse";
 import { getBasePath } from "./paths";
 import { requireAuth } from "./user";
+import { createBatches } from "./utils/create-batches";
 import * as shellquote from "./utils/shell-quote";
 import { CommandLineArgsError, printWranglerBanner } from "./index";
 import type { RawConfig } from "./config";
@@ -26,6 +28,7 @@ import type {
 	TailConsumer,
 	ZoneNameRoute,
 } from "./config/environment";
+import type { DatabaseInfo } from "./d1/types";
 import type {
 	WorkerMetadata,
 	WorkerMetadataBinding,
@@ -92,6 +95,9 @@ export type ServiceMetadataRes = {
 			created_on: string;
 			migration_tag: string;
 			usage_model: "bundled" | "unbound";
+			limits: {
+				cpu_ms: number;
+			};
 			compatibility_date: string;
 			compatibility_flags: string[];
 			last_deployed_from?: "wrangler" | "dash" | "api";
@@ -107,7 +113,7 @@ export type ServiceMetadataRes = {
 			environment: string;
 			created_on: string;
 			modified_on: string;
-		}
+		},
 	];
 };
 
@@ -137,7 +143,7 @@ type CronTriggersRes = {
 			cron: string;
 			created_on: Date;
 			modified_on: Date;
-		}
+		},
 	];
 };
 
@@ -337,7 +343,7 @@ export async function initHandler(args: InitArgs) {
 					? `✨ Initialized git repository at ${path.relative(
 							process.cwd(),
 							creationDirectory
-					  )}`
+						)}`
 					: `✨ Initialized git repository`
 			);
 		}
@@ -776,7 +782,7 @@ async function installPackages(
 	//lets install the devDeps they asked for
 	//and run their package manager's install command if needed
 	if (depsToInstall.length > 0) {
-		const formatter = new Intl.ListFormat("en", {
+		const formatter = new Intl.ListFormat("en-US", {
 			style: "long",
 			type: "conjunction",
 		});
@@ -832,7 +838,7 @@ async function getNewWorkerTestType(yesFlag?: boolean) {
 					},
 				],
 				defaultOption: 1,
-		  });
+			});
 }
 
 function getNewWorkerTemplate(
@@ -896,7 +902,6 @@ async function getWorkerConfig(
 		workersDev,
 		serviceEnvMetadata,
 		cronTriggers,
-		standard,
 	] = await Promise.all([
 		fetchResult<WorkerMetadata["bindings"]>(
 			`/accounts/${accountId}/workers/services/${workerName}/environments/${serviceEnvironment}/bindings`
@@ -918,14 +923,13 @@ async function getWorkerConfig(
 		fetchResult<CronTriggersRes>(
 			`/accounts/${accountId}/workers/scripts/${workerName}/schedules`
 		),
-		fetchResult<StandardRes>(`/accounts/${accountId}/workers/standard`),
 	]).catch((e) => {
 		throw new Error(
 			`Error Occurred ${e}: Unable to fetch bindings, routes, or services metadata from the dashboard. Please try again later.`
 		);
 	});
 
-	const mappedBindings = mapBindings(bindings);
+	const mappedBindings = await mapBindings(accountId, bindings);
 
 	const durableObjectClassNames = bindings
 		.filter((binding) => binding.type === "durable_object_namespace")
@@ -935,7 +939,7 @@ async function getWorkerConfig(
 
 	const allRoutes: Route[] = [
 		...routes.map(
-			(r) => ({ pattern: r.pattern, zone_name: r.zone_name } as ZoneNameRoute)
+			(r) => ({ pattern: r.pattern, zone_name: r.zone_name }) as ZoneNameRoute
 		),
 		...customDomains.map(
 			(c) =>
@@ -943,7 +947,7 @@ async function getWorkerConfig(
 					pattern: c.hostname,
 					zone_name: c.zone_name,
 					custom_domain: true,
-				} as CustomDomainRoute)
+				}) as CustomDomainRoute
 		),
 	];
 
@@ -956,14 +960,11 @@ async function getWorkerConfig(
 			new Date().toISOString().substring(0, 10),
 		compatibility_flags: serviceEnvMetadata.script.compatibility_flags,
 		...(allRoutes.length ? { routes: allRoutes } : {}),
-		usage_model:
-			standard?.standard == true
-				? undefined
-				: serviceEnvMetadata.script.usage_model,
 		placement:
 			serviceEnvMetadata.script.placement_mode === "smart"
 				? { mode: "smart" }
 				: undefined,
+		limits: serviceEnvMetadata.script.limits,
 		...(durableObjectClassNames.length
 			? {
 					migrations: [
@@ -972,21 +973,36 @@ async function getWorkerConfig(
 							new_classes: durableObjectClassNames,
 						},
 					],
-			  }
+				}
 			: {}),
 		...(cronTriggers.schedules.length
 			? {
 					triggers: {
 						crons: cronTriggers.schedules.map((scheduled) => scheduled.cron),
 					},
-			  }
+				}
 			: {}),
 		tail_consumers: serviceEnvMetadata.script.tail_consumers,
 		...mappedBindings,
 	};
 }
 
-export function mapBindings(bindings: WorkerMetadataBinding[]): RawConfig {
+export async function mapBindings(
+	accountId: string,
+	bindings: WorkerMetadataBinding[]
+): Promise<RawConfig> {
+	//the binding API doesn't provide us with enough information to make a friendly user experience.
+	//lets call D1's API to get more information
+	const d1BindingsWithInfo: Record<string, DatabaseInfo> = {};
+	await Promise.all(
+		bindings
+			.filter((binding) => binding.type === "d1")
+			.map(async (binding) => {
+				const dbInfo = await getDatabaseInfoFromId(accountId, binding.id);
+				d1BindingsWithInfo[binding.id] = dbInfo;
+			})
+	);
+
 	return (
 		bindings
 			.filter((binding) => (binding.type as string) !== "secret_text")
@@ -1036,6 +1052,18 @@ export function mapBindings(bindings: WorkerMetadataBinding[]): RawConfig {
 							};
 						}
 						break;
+					case "d1":
+						{
+							configObj.d1_databases = [
+								...(configObj.d1_databases ?? []),
+								{
+									binding: binding.name,
+									database_id: binding.id,
+									database_name: d1BindingsWithInfo[binding.id].name,
+								},
+							];
+						}
+						break;
 					case "browser":
 						{
 							configObj.browser = {
@@ -1070,6 +1098,7 @@ export function mapBindings(bindings: WorkerMetadataBinding[]): RawConfig {
 									binding: binding.name,
 									service: binding.service,
 									environment: binding.environment,
+									entrypoint: binding.entrypoint,
 								},
 							];
 						}
@@ -1138,7 +1167,9 @@ export function mapBindings(bindings: WorkerMetadataBinding[]): RawConfig {
 					default: {
 						// If we don't know what the type is, its an unsafe binding
 						// eslint-disable-next-line @typescript-eslint/no-explicit-any
-						if (!(binding as any)?.type) break;
+						if (!(binding as any)?.type) {
+							break;
+						}
 						configObj.unsafe = {
 							bindings: [...(configObj.unsafe?.bindings ?? []), binding],
 							metadata: configObj.unsafe?.metadata ?? undefined,
@@ -1150,12 +1181,6 @@ export function mapBindings(bindings: WorkerMetadataBinding[]): RawConfig {
 				// eslint-disable-next-line @typescript-eslint/no-explicit-any
 			}, {} as RawConfig)
 	);
-}
-
-function* createBatches<T>(array: T[], size: number): IterableIterator<T[]> {
-	for (let i = 0; i < array.length; i += size) {
-		yield array.slice(i, i + size);
-	}
 }
 
 /** Assert that there is no type argument passed. */

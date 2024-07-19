@@ -4,11 +4,14 @@
 	"scripts": {
 		"deploy": "wrangler deploy",
 		"start": "wrangler dev",
-		"test": "vitest run",
+		"test:ci": "vitest run",
 		"test:watch": "vitest"
 	},
 	"devDependencies": {
-		"get-port": "^6.1.2",
+		"get-port": "^7.0.0",
 		"wrangler": "workspace:*"
+	},
+	"volta": {
+		"extends": "../../package.json"
 	}
 }

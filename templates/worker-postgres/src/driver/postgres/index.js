@@ -542,8 +542,8 @@ function encode(data) {
 		typeof data === 'string'
 			? new TextEncoder().encode(data)
 			: data instanceof Uint8Array
-			? data
-			: new Uint8Array(data);
+				? data
+				: new Uint8Array(data);
 	let result = '',
 		i;
 	const l = uint8.length;
@@ -3606,9 +3606,7 @@ class Transaction1 {
 				throw new Error('This transaction is already open');
 			}
 			throw new Error(
-				`This client already has an ongoing transaction "${
-					this.#client.session.current_transaction
-				}"`
+				`This client already has an ongoing transaction "${this.#client.session.current_transaction}"`
 			);
 		}
 		let isolation_level;

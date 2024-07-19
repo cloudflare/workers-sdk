@@ -35,6 +35,9 @@ export async function buildHandler(buildArgs: BuildArgs) {
 		"--dry-run",
 		"--outdir=dist",
 		...(buildArgs.env ? ["--env", buildArgs.env] : []),
+		...(buildArgs.config ? ["--config", buildArgs.config] : []),
+		...(buildArgs.experimentalJsonConfig ? ["--experimental-json-config"] : []),
+		...(buildArgs.experimentalVersions ? ["--experimental-versions"] : []),
 	]).parse();
 }
 

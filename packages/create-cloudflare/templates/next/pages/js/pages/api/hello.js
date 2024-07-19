@@ -14,7 +14,7 @@ export default async function handler(req) {
   // )
   //
   // KV Example:
-  // const myKv = getRequestContext().env.MY_KV
+  // const myKv = getRequestContext().env.MY_KV_NAMESPACE
   // await myKv.put('suffix', ' from a KV store!')
   // const suffix = await myKv.get('suffix')
   // responseText += suffix

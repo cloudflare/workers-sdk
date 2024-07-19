@@ -4,9 +4,14 @@
 
 import type { AccountID } from "./AccountID";
 import type { ApplicationID } from "./ApplicationID";
+import type { Command } from "./Command";
 import type { DeploymentID } from "./DeploymentID";
 import type { DeploymentLocation } from "./DeploymentLocation";
+import type { DeploymentState } from "./DeploymentState";
+import type { DeploymentType } from "./DeploymentType";
 import type { DeploymentVersion } from "./DeploymentVersion";
+import type { DNSConfiguration } from "./DNSConfiguration";
+import type { Entrypoint } from "./Entrypoint";
 import type { EnvironmentVariable } from "./EnvironmentVariable";
 import type { Image } from "./Image";
 import type { ISO8601Timestamp } from "./ISO8601Timestamp";
@@ -27,6 +32,7 @@ export type DeploymentV2 = {
 	created_at: ISO8601Timestamp;
 	account_id: AccountID;
 	version: DeploymentVersion;
+	type: DeploymentType;
 	image: Image;
 	location: DeploymentLocation;
 	/**
@@ -60,4 +66,8 @@ export type DeploymentV2 = {
 	 * The GPU memory of this deployment. If deployment is not node_group 'gpu', this will be null
 	 */
 	gpu_memory?: MemorySizeWithUnit;
+	command?: Command;
+	entrypoint?: Entrypoint;
+	dns?: DNSConfiguration;
+	state?: DeploymentState;
 };

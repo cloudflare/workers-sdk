@@ -33,7 +33,10 @@ export default {
 } as ExportedHandler<Env, unknown, ProxyWorkerIncomingRequestBody>;
 
 export class ProxyWorker implements DurableObject {
-	constructor(readonly state: DurableObjectState, readonly env: Env) {}
+	constructor(
+		readonly state: DurableObjectState,
+		readonly env: Env
+	) {}
 
 	proxyData?: ProxyData;
 	requestQueue = new Map<Request, DeferredPromise<Response>>();
@@ -125,6 +128,11 @@ export class ProxyWorker implements DurableObject {
 			Object.assign(innerUrl, proxyData.userWorkerInnerUrlOverrides);
 			headers.set("MF-Original-URL", innerUrl.href);
 			headers.set("MF-Disable-Pretty-Error", "true"); // disables the UserWorker miniflare instance from rendering the pretty error -- instead the ProxyWorker miniflare instance will intercept the json error response and render the pretty error page
+
+			// Preserve client `Accept-Encoding`, rather than using Worker's default
+			// of `Accept-Encoding: br, gzip`
+			const encoding = request.cf?.clientAcceptEncoding;
+			if (encoding !== undefined) headers.set("Accept-Encoding", encoding);
 
 			rewriteUrlRelatedHeaders(headers, outerUrl, innerUrl);
 

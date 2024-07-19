@@ -19,5 +19,8 @@ export default defineConfig(({ mode }) => {
 
 		appType: "spa",
 		base: "/playground",
+		build: {
+			chunkSizeWarningLimit: 1000,
+		},
 	};
 });

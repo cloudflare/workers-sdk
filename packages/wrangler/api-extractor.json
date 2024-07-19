@@ -345,6 +345,10 @@
 			"default": {
 				"logLevel": "none"
 				// "addToApiReportFile": false
+			},
+			"ae-forgotten-export": {
+				"logLevel": "none",
+				"addToApiReportFile": true
 			}
 
 			// "ae-extra-release-tag": {

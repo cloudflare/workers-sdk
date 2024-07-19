@@ -1,5 +1,5 @@
-import down from './down.js';
-import up from './up.js';
+import down from './down';
+import up from './up';
 
 export default {
 	async fetch(req: Request) {

@@ -3,7 +3,7 @@
 	"compilerOptions": {
 		"module": "CommonJS",
 		"types": ["node"],
-		"jsx": "react"
+		"jsx": "react-jsx"
 	},
 	"include": ["**/*.ts", "**/*.tsx", "**/*.js"],
 	"exclude": [
@@ -13,6 +13,7 @@
 		"src/miniflare-cli",
 		"templates",
 		"**/__tests__",
-		"**/*.test.ts"
+		"**/*.test.ts",
+		"kv-asset-handler.js"
 	]
 }

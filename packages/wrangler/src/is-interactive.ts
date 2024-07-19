@@ -1,3 +1,5 @@
+import { CI } from "./is-ci";
+
 /**
  * Test whether the process is "interactive".
  * Reasons it may not be interactive: it could be running in CI,
@@ -13,4 +15,9 @@ export default function isInteractive(): boolean {
 	} catch {
 		return false;
 	}
+}
+
+// TODO: Use this function across the codebase.
+export function isNonInteractiveOrCI(): boolean {
+	return !isInteractive() || CI.isCI();
 }

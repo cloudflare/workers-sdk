@@ -1,5 +1,222 @@
 # @cloudflare/pages-shared
 
+## 0.11.47
+
+### Patch Changes
+
+- Updated dependencies [[`0d32448`](https://github.com/cloudflare/workers-sdk/commit/0d32448fc72521be691dfc87c8ad5f108ddced62)]:
+  - miniflare@3.20240712.0
+
+## 0.11.46
+
+### Patch Changes
+
+- Updated dependencies [[`42a7930`](https://github.com/cloudflare/workers-sdk/commit/42a7930c6d81610c14005503c078610f28b9bc33), [`7ed675e`](https://github.com/cloudflare/workers-sdk/commit/7ed675e3a43cfd996496bf1be2b31d34bde36664), [`1568c25`](https://github.com/cloudflare/workers-sdk/commit/1568c251112e06feb1d3d1df844eaa660bb9fbe8)]:
+  - miniflare@3.20240701.0
+
+## 0.11.45
+
+### Patch Changes
+
+- Updated dependencies [[`7d02856`](https://github.com/cloudflare/workers-sdk/commit/7d02856ae2cbd90eb94324f9f6fcb44cd2c44059)]:
+  - miniflare@3.20240620.0
+
+## 0.11.44
+
+### Patch Changes
+
+- [#6050](https://github.com/cloudflare/workers-sdk/pull/6050) [`a0c3327`](https://github.com/cloudflare/workers-sdk/commit/a0c3327dd63059d3e24085a95f48f8a98605c49f) Thanks [@threepointone](https://github.com/threepointone)! - chore: Normalize more deps
+
+  This is the last of the patches that normalize dependencies across the codebase. In this batch: `ws`, `vitest`, `zod` , `rimraf`, `@types/rimraf`, `ava`, `source-map`, `glob`, `cookie`, `@types/cookie`, `@microsoft/api-extractor`, `@types/mime`, `@types/yargs`, `devtools-protocol`, `@vitest/ui`, `execa`, `strip-ansi`
+
+  This patch also sorts dependencies in every `package.json`
+
+- [#6029](https://github.com/cloudflare/workers-sdk/pull/6029) [`f5ad1d3`](https://github.com/cloudflare/workers-sdk/commit/f5ad1d3e562ce63b59f6ab136f1cdd703605bca4) Thanks [@threepointone](https://github.com/threepointone)! - chore: Normalize some dependencies in workers-sdk
+
+  This is the first of a few expected patches that normalize dependency versions, This normalizes `undici`, `concurrently`, `@types/node`, `react`, `react-dom`, `@types/react`, `@types/react-dom`, `eslint`, `typescript`. There are no functional code changes (but there are a couple of typecheck fixes).
+
+- Updated dependencies [[`a0c3327`](https://github.com/cloudflare/workers-sdk/commit/a0c3327dd63059d3e24085a95f48f8a98605c49f), [`f5ad1d3`](https://github.com/cloudflare/workers-sdk/commit/f5ad1d3e562ce63b59f6ab136f1cdd703605bca4), [`31cd51f`](https://github.com/cloudflare/workers-sdk/commit/31cd51f251050b0d6db97857a8d1d5427c855d99)]:
+  - miniflare@3.20240610.1
+
+## 0.11.43
+
+### Patch Changes
+
+- Updated dependencies [[`c4146fc`](https://github.com/cloudflare/workers-sdk/commit/c4146fc021cbb0556cc95899184b7a44d58ad77c)]:
+  - miniflare@3.20240610.0
+
+## 0.11.42
+
+### Patch Changes
+
+- Updated dependencies [[`ab95473`](https://github.com/cloudflare/workers-sdk/commit/ab9547380fd6fbc1d20c8dd4211faedbe94e5b33)]:
+  - miniflare@3.20240605.0
+
+## 0.11.41
+
+### Patch Changes
+
+- Updated dependencies [[`bdbb7f8`](https://github.com/cloudflare/workers-sdk/commit/bdbb7f890d3fa5b6fa7ac79a3bb650ece9417fb2)]:
+  - miniflare@3.20240524.2
+
+## 0.11.40
+
+### Patch Changes
+
+- Updated dependencies [[`e0e7725`](https://github.com/cloudflare/workers-sdk/commit/e0e772575c079787f56615ec3d7a6a4af0633b5a)]:
+  - miniflare@3.20240524.1
+
+## 0.11.39
+
+### Patch Changes
+
+- Updated dependencies [[`64ccdd6`](https://github.com/cloudflare/workers-sdk/commit/64ccdd6a6777c5fd85116af0d660cb3ee2e1de4d), [`4458a9e`](https://github.com/cloudflare/workers-sdk/commit/4458a9ea1a2b7748d6066557f48f68ec430d383b)]:
+  - miniflare@3.20240524.0
+
+## 0.11.38
+
+### Patch Changes
+
+- [#5875](https://github.com/cloudflare/workers-sdk/pull/5875) [`ddfeeef`](https://github.com/cloudflare/workers-sdk/commit/ddfeeef920f0b565ed7f39da40b5b75cb234db00) Thanks [@WalshyDev](https://github.com/WalshyDev)! - fix: no longer allow zone caching for responses that returned 404. This is to prevent some files in a new deployment from returning and subsequently caching 404s while the deployment propagates across the network.
+
+## 0.11.37
+
+### Patch Changes
+
+- [#5674](https://github.com/cloudflare/workers-sdk/pull/5674) [`f461855`](https://github.com/cloudflare/workers-sdk/commit/f461855795dce7a12977bddffb238d075f827277) Thanks [@itsmatteomanf](https://github.com/itsmatteomanf)! - Add `modulepreload` to list of possible early hints links
+
+## 0.11.36
+
+### Patch Changes
+
+- Updated dependencies [[`0725f6f`](https://github.com/cloudflare/workers-sdk/commit/0725f6f73199daf7f11eec9830bc4d1f66c05d62), [`89b6d7f`](https://github.com/cloudflare/workers-sdk/commit/89b6d7f3832b350b470a981eb3b4388517612363)]:
+  - miniflare@3.20240512.0
+
+## 0.11.35
+
+### Patch Changes
+
+- [#5750](https://github.com/cloudflare/workers-sdk/pull/5750) [`f514934`](https://github.com/cloudflare/workers-sdk/commit/f514934d6be8ea3b6777435f35e236c5ad0528e2) Thanks [@aaronlisman](https://github.com/aaronlisman)! - fix: omit headers rules on internal error
+
+  The Pages asset handler will no longer apply headers rules on 5XX responses caused by some internal error.
+  This prevents transient errors from being cached when caching headers are being set by headers rules.
+
+## 0.11.34
+
+### Patch Changes
+
+- [#5785](https://github.com/cloudflare/workers-sdk/pull/5785) [`c0b057b`](https://github.com/cloudflare/workers-sdk/commit/c0b057b9d196dc46f54530f91e8c87dee88d6cfa) Thanks [@jahands](https://github.com/jahands)! - fix: Remove request method from cache key
+
+  Reverts a change that added the request method to the cache key when reading/writing to cache.
+
+- Updated dependencies [[`66bdad0`](https://github.com/cloudflare/workers-sdk/commit/66bdad08834b403100d1e4d6cd507978cc50eaba), [`9b4af8a`](https://github.com/cloudflare/workers-sdk/commit/9b4af8a59bc75ed494dd752c0a7007dbacf75e51)]:
+  - miniflare@3.20240419.1
+
+## 0.11.33
+
+### Patch Changes
+
+- [#4797](https://github.com/cloudflare/workers-sdk/pull/4797) [`007ba93`](https://github.com/cloudflare/workers-sdk/commit/007ba9397be9a2914254d0b59e0695df1a518b52) Thanks [@jahands](https://github.com/jahands)! - refactor: Store asset key instead of body in preservation cache
+
+  - Add HTTP method to cache key to prevent returning null bodies in cached GET requests that follow a HEAD request
+  - Only write unchanged assets to preservation cache every 24-36 hours instead of on every request
+
+## 0.11.32
+
+### Patch Changes
+
+- [#5733](https://github.com/cloudflare/workers-sdk/pull/5733) [`995199f`](https://github.com/cloudflare/workers-sdk/commit/995199f5901f9290e846d6477df613c26bf8ba01) Thanks [@penalosa](https://github.com/penalosa)! - fix: Build all packages before publishing
+
+## 0.11.31
+
+### Patch Changes
+
+- [#4814](https://github.com/cloudflare/workers-sdk/pull/4814) [`488c081`](https://github.com/cloudflare/workers-sdk/commit/488c0815f1f9ca12f0dfbb88b485a2f813676e28) Thanks [@jahands](https://github.com/jahands)! - fix: Only apply early hints to html assets
+
+## 0.11.30
+
+### Patch Changes
+
+- Updated dependencies [[`3a0d735`](https://github.com/cloudflare/workers-sdk/commit/3a0d7356bd8bc6fe614a3ef3f9c1278659555568), [`1b7739e`](https://github.com/cloudflare/workers-sdk/commit/1b7739e0af99860aa063f01c0a6e7712ac072fdb)]:
+  - miniflare@3.20240419.0
+
+## 0.11.29
+
+### Patch Changes
+
+- Updated dependencies [[`c9f081a`](https://github.com/cloudflare/workers-sdk/commit/c9f081ab72142060a3cf2e9a7ef4546b8014b210), [`c9f081a`](https://github.com/cloudflare/workers-sdk/commit/c9f081ab72142060a3cf2e9a7ef4546b8014b210)]:
+  - miniflare@3.20240405.2
+
+## 0.11.28
+
+### Patch Changes
+
+- Updated dependencies [[`08b4908`](https://github.com/cloudflare/workers-sdk/commit/08b490806093add445ff3d7b1969923cb4123d34)]:
+  - miniflare@3.20240405.1
+
+## 0.11.27
+
+### Patch Changes
+
+- Updated dependencies [[`9575a51`](https://github.com/cloudflare/workers-sdk/commit/9575a514cbc206fea6d08f627253ead209fd2a8d)]:
+  - miniflare@3.20240405.0
+
+## 0.11.26
+
+### Patch Changes
+
+- Updated dependencies [[`9f15ce1`](https://github.com/cloudflare/workers-sdk/commit/9f15ce1716c50dd44adf7a3df6a4101322800005)]:
+  - miniflare@3.20240404.0
+
+## 0.11.25
+
+### Patch Changes
+
+- Updated dependencies [[`cd03d1d`](https://github.com/cloudflare/workers-sdk/commit/cd03d1d3fa6e733faa42e5abb92f37637503b327), [`6c3be5b`](https://github.com/cloudflare/workers-sdk/commit/6c3be5b299b22cad050760a6015106839b5cc74e), [`cd03d1d`](https://github.com/cloudflare/workers-sdk/commit/cd03d1d3fa6e733faa42e5abb92f37637503b327), [`cd03d1d`](https://github.com/cloudflare/workers-sdk/commit/cd03d1d3fa6e733faa42e5abb92f37637503b327)]:
+  - miniflare@3.20240403.0
+
+## 0.11.24
+
+### Patch Changes
+
+- Updated dependencies [[`940ad89`](https://github.com/cloudflare/workers-sdk/commit/940ad89713fa086f23d394570c328716bfb1bd59)]:
+  - miniflare@3.20240329.1
+
+## 0.11.23
+
+### Patch Changes
+
+- Updated dependencies [[`d994066`](https://github.com/cloudflare/workers-sdk/commit/d994066f255f6851759a055eac3b52a4aa4b83c3)]:
+  - miniflare@3.20240329.0
+
+## 0.11.22
+
+### Patch Changes
+
+- Updated dependencies [[`fbdca7d`](https://github.com/cloudflare/workers-sdk/commit/fbdca7d93156f9db2a1513573e45f10fac7e57d1)]:
+  - miniflare@3.20240320.1
+
+## 0.11.21
+
+### Patch Changes
+
+- Updated dependencies [[`248a318`](https://github.com/cloudflare/workers-sdk/commit/248a318acac293615327affe35b83018a48dddc9)]:
+  - miniflare@3.20240320.0
+
+## 0.11.20
+
+### Patch Changes
+
+- Updated dependencies [[`1720f0a`](https://github.com/cloudflare/workers-sdk/commit/1720f0a12a6376093b3c5799d74f47c522ae8571)]:
+  - miniflare@3.20240314.0
+
+## 0.11.19
+
+### Patch Changes
+
+- Updated dependencies [[`2e50d51`](https://github.com/cloudflare/workers-sdk/commit/2e50d51632dfe905bd32de8176231bb256c88dab)]:
+  - miniflare@3.20240304.2
+
 ## 0.11.18
 
 ### Patch Changes

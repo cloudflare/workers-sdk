@@ -1,4 +1,4 @@
-import { rest } from "msw";
+import { http, HttpResponse } from "msw";
 import { endEventLoop } from "../helpers/end-event-loop";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { mockAccountId, mockApiToken } from "./../helpers/mock-account-id";
@@ -7,7 +7,7 @@ import { runInTempDir } from "./../helpers/run-in-tmp";
 import { runWrangler } from "./../helpers/run-wrangler";
 import type { Deployment } from "./../../pages/types";
 
-describe("deployment list", () => {
+describe("pages deployment list", () => {
 	runInTempDir();
 	mockAccountId();
 	mockApiToken();
@@ -56,24 +56,25 @@ describe("deployment list", () => {
 function mockDeploymentListRequest(deployments: unknown[]) {
 	const requests = { count: 0 };
 	msw.use(
-		rest.get(
+		http.get(
 			"*/accounts/:accountId/pages/projects/:project/deployments",
-			(req, res, ctx) => {
+			({ params }) => {
 				requests.count++;
 
-				expect(req.params.project).toEqual("images");
-				expect(req.params.accountId).toEqual("some-account-id");
+				expect(params.project).toEqual("images");
+				expect(params.accountId).toEqual("some-account-id");
 
-				return res.once(
-					ctx.status(200),
-					ctx.json({
+				return HttpResponse.json(
+					{
 						success: true,
 						errors: [],
 						messages: [],
 						result: deployments,
-					})
+					},
+					{ status: 200 }
 				);
-			}
+			},
+			{ once: true }
 		)
 	);
 	return requests;

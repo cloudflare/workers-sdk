@@ -1,4 +1,6 @@
 import * as fs from "node:fs";
+import { basename, dirname, extname, relative, resolve } from "node:path";
+import * as esmLexer from "es-module-lexer";
 import { findUpSync } from "find-up";
 import { findWranglerToml, readConfig } from "./config";
 import { getEntry } from "./deployment-bundle/entry";
@@ -101,6 +103,7 @@ export async function typesHandler(
 		mtls_certificates: config.mtls_certificates,
 		browser: config.browser,
 		ai: config.ai,
+		version_metadata: config.version_metadata,
 		secrets,
 	};
 
@@ -112,6 +115,63 @@ export async function typesHandler(
 	);
 }
 
+/**
+ * Check if a string is a valid TypeScript identifier. This is a naive check and doesn't cover all cases
+ */
+export function isValidIdentifier(key: string) {
+	return /^[a-zA-Z_$][\w$]*$/.test(key);
+}
+
+/**
+ * Construct a type key, if it's not a valid identifier, wrap it in quotes
+ */
+export function constructTypeKey(key: string) {
+	if (isValidIdentifier(key)) {
+		return `${key}`;
+	}
+	return `"${key}"`;
+}
+
+/**
+ * Generate a import specifier from one module to another
+ */
+export function generateImportSpecifier(from: string, to: string) {
+	// Use unix-style paths on Windows
+	const relativePath = relative(dirname(from), dirname(to)).replace(/\\/g, "/");
+	const filename = basename(to, extname(to));
+	if (!relativePath) {
+		return `./${filename}`;
+	} else if (relativePath.startsWith("..")) {
+		// Shallower directory
+		return `${relativePath}/${filename}`;
+	} else {
+		// Deeper directory
+		return `./${relativePath}/${filename}`;
+	}
+}
+
+/**
+ * Construct a full type definition for a key-value pair
+ * If useRawVal is true, we'll use the value as the type, otherwise we'll format it for a string definition
+ */
+export function constructType(
+	key: string,
+	value: string | number | boolean,
+	useRawVal = true
+) {
+	const typeKey = constructTypeKey(key);
+	if (typeof value === "string") {
+		if (useRawVal) {
+			return `${typeKey}: ${value};`;
+		}
+		return `${typeKey}: ${JSON.stringify(value)};`;
+	}
+	if (typeof value === "number" || typeof value === "boolean") {
+		return `${typeKey}: ${value};`;
+	}
+	return `${typeKey}: unknown;`;
+}
+
 type Secrets = Record<string, string>;
 
 async function generateTypes(
@@ -120,12 +180,15 @@ async function generateTypes(
 	envInterface: string,
 	outputPath: string
 ) {
-	const configContainsEntryPoint =
+	const configContainsEntrypoint =
 		config.main !== undefined || !!config.site?.["entry-point"];
 
-	const entrypointFormat: CfScriptFormat = configContainsEntryPoint
-		? (await getEntry({}, config, "types")).format
-		: "modules";
+	const entrypoint = configContainsEntrypoint
+		? await getEntry({}, config, "types")
+		: undefined;
+
+	const entrypointFormat = entrypoint?.format ?? "modules";
+	const fullOutputPath = resolve(outputPath);
 
 	// Note: we infer whether the user has provided an envInterface by checking
 	//       if it is different from the default `Env` value, this works well
@@ -145,7 +208,7 @@ async function generateTypes(
 
 	if (configToDTS.kv_namespaces) {
 		for (const kvNamespace of configToDTS.kv_namespaces) {
-			envTypeStructure.push(`${kvNamespace.binding}: KVNamespace;`);
+			envTypeStructure.push(constructType(kvNamespace.binding, "KVNamespace"));
 		}
 	}
 
@@ -160,113 +223,140 @@ async function generateTypes(
 				typeof varValue === "number" ||
 				typeof varValue === "boolean"
 			) {
-				envTypeStructure.push(`${varName}: "${varValue}";`);
+				envTypeStructure.push(constructType(varName, varValue, false));
 			}
 			if (typeof varValue === "object" && varValue !== null) {
-				envTypeStructure.push(`${varName}: ${JSON.stringify(varValue)};`);
+				envTypeStructure.push(
+					constructType(varName, JSON.stringify(varValue), true)
+				);
 			}
 		}
 	}
 
 	for (const secretName in configToDTS.secrets) {
-		envTypeStructure.push(`${secretName}: string;`);
+		envTypeStructure.push(constructType(secretName, "string", true));
 	}
 
 	if (configToDTS.durable_objects?.bindings) {
+		const importPath = entrypoint
+			? generateImportSpecifier(fullOutputPath, entrypoint.file)
+			: undefined;
+
+		await esmLexer.init;
+		const entrypointExports = entrypoint
+			? esmLexer.parse(fs.readFileSync(entrypoint.file, "utf-8"))[1]
+			: undefined;
+
 		for (const durableObject of configToDTS.durable_objects.bindings) {
-			envTypeStructure.push(`${durableObject.name}: DurableObjectNamespace;`);
+			const exportExists = entrypointExports?.some(
+				(e) => e.n === durableObject.class_name
+			);
+
+			let typeName: string;
+			// Import the type if it's exported and it's not an external worker
+			if (importPath && exportExists && !durableObject.script_name) {
+				typeName = `DurableObjectNamespace<import("${importPath}").${durableObject.class_name}>`;
+			} else if (durableObject.script_name) {
+				typeName = `DurableObjectNamespace /* ${durableObject.class_name} from ${durableObject.script_name} */`;
+			} else {
+				typeName = `DurableObjectNamespace /* ${durableObject.class_name} */`;
+			}
+
+			envTypeStructure.push(constructType(durableObject.name, typeName));
 		}
 	}
 
 	if (configToDTS.r2_buckets) {
 		for (const R2Bucket of configToDTS.r2_buckets) {
-			envTypeStructure.push(`${R2Bucket.binding}: R2Bucket;`);
+			envTypeStructure.push(constructType(R2Bucket.binding, "R2Bucket"));
 		}
 	}
 
 	if (configToDTS.d1_databases) {
 		for (const d1 of configToDTS.d1_databases) {
-			envTypeStructure.push(`${d1.binding}: D1Database;`);
+			envTypeStructure.push(constructType(d1.binding, "D1Database"));
 		}
 	}
 
 	if (configToDTS.services) {
 		for (const service of configToDTS.services) {
-			envTypeStructure.push(`${service.binding}: Fetcher;`);
+			envTypeStructure.push(constructType(service.binding, "Fetcher"));
 		}
 	}
 
 	if (configToDTS.constellation) {
 		for (const service of configToDTS.constellation) {
-			envTypeStructure.push(`${service.binding}: Fetcher;`);
+			envTypeStructure.push(constructType(service.binding, "Fetcher"));
 		}
 	}
 
 	if (configToDTS.analytics_engine_datasets) {
 		for (const analyticsEngine of configToDTS.analytics_engine_datasets) {
 			envTypeStructure.push(
-				`${analyticsEngine.binding}: AnalyticsEngineDataset;`
+				constructType(analyticsEngine.binding, "AnalyticsEngineDataset")
 			);
 		}
 	}
 
 	if (configToDTS.dispatch_namespaces) {
 		for (const namespace of configToDTS.dispatch_namespaces) {
-			envTypeStructure.push(`${namespace.binding}: DispatchNamespace;`);
+			envTypeStructure.push(
+				constructType(namespace.binding, "DispatchNamespace")
+			);
 		}
 	}
 
 	if (configToDTS.logfwdr?.bindings?.length) {
-		envTypeStructure.push(`LOGFWDR_SCHEMA: any;`);
+		envTypeStructure.push(constructType("LOGFWDR_SCHEMA", "any"));
 	}
 
 	if (configToDTS.data_blobs) {
 		for (const dataBlobs in configToDTS.data_blobs) {
-			envTypeStructure.push(`${dataBlobs}: ArrayBuffer;`);
+			envTypeStructure.push(constructType(dataBlobs, "ArrayBuffer"));
 		}
 	}
 
 	if (configToDTS.text_blobs) {
 		for (const textBlobs in configToDTS.text_blobs) {
-			envTypeStructure.push(`${textBlobs}: string;`);
+			envTypeStructure.push(constructType(textBlobs, "string"));
 		}
 	}
 
 	if (configToDTS.unsafe?.bindings) {
 		for (const unsafe of configToDTS.unsafe.bindings) {
-			envTypeStructure.push(`${unsafe.name}: any;`);
+			envTypeStructure.push(constructType(unsafe.name, "any"));
 		}
 	}
 
 	if (configToDTS.queues) {
 		if (configToDTS.queues.producers) {
 			for (const queue of configToDTS.queues.producers) {
-				envTypeStructure.push(`${queue.binding}: Queue;`);
+				envTypeStructure.push(constructType(queue.binding, "Queue"));
 			}
 		}
 	}
 
 	if (configToDTS.send_email) {
 		for (const sendEmail of configToDTS.send_email) {
-			envTypeStructure.push(`${sendEmail.name}: SendEmail;`);
+			envTypeStructure.push(constructType(sendEmail.name, "SendEmail"));
 		}
 	}
 
 	if (configToDTS.vectorize) {
 		for (const vectorize of configToDTS.vectorize) {
-			envTypeStructure.push(`${vectorize.binding}: VectorizeIndex;`);
+			envTypeStructure.push(constructType(vectorize.binding, "VectorizeIndex"));
 		}
 	}
 
 	if (configToDTS.hyperdrive) {
 		for (const hyperdrive of configToDTS.hyperdrive) {
-			envTypeStructure.push(`${hyperdrive.binding}: Hyperdrive;`);
+			envTypeStructure.push(constructType(hyperdrive.binding, "Hyperdrive"));
 		}
 	}
 
 	if (configToDTS.mtls_certificates) {
 		for (const mtlsCertificate of configToDTS.mtls_certificates) {
-			envTypeStructure.push(`${mtlsCertificate.binding}: Fetcher;`);
+			envTypeStructure.push(constructType(mtlsCertificate.binding, "Fetcher"));
 		}
 	}
 
@@ -274,11 +364,19 @@ async function generateTypes(
 		// The BrowserWorker type in @cloudflare/puppeteer is of type
 		// { fetch: typeof fetch }, but workers-types doesn't include it
 		// and Fetcher is valid for the purposes of handing it to puppeteer
-		envTypeStructure.push(`${configToDTS.browser.binding}: Fetcher;`);
+		envTypeStructure.push(
+			constructType(configToDTS.browser.binding, "Fetcher")
+		);
 	}
 
 	if (configToDTS.ai) {
-		envTypeStructure.push(`${configToDTS.ai.binding}: unknown;`);
+		envTypeStructure.push(constructType(configToDTS.ai.binding, "Ai"));
+	}
+
+	if (configToDTS.version_metadata) {
+		envTypeStructure.push(
+			`${configToDTS.version_metadata.binding}: { id: string; tag: string };`
+		);
 	}
 
 	const modulesTypeStructure: string[] = [];
@@ -309,7 +407,7 @@ async function generateTypes(
 		modulesTypeStructure,
 		formatType: entrypointFormat,
 		envInterface,
-		path: outputPath,
+		path: fullOutputPath,
 	});
 }
 
@@ -335,7 +433,7 @@ function writeDTSFile({
 				.includes("Generated by Wrangler")
 		) {
 			throw new UserError(
-				`A non-wrangler ${path} already exists, please rename and try again.`
+				`A non-wrangler ${basename(path)} already exists, please rename and try again.`
 			);
 		}
 	} catch (error) {

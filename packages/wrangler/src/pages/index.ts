@@ -1,16 +1,19 @@
 /* eslint-disable no-shadow */
 
 import * as Build from "./build";
+import * as BuildEnv from "./build-env";
 import * as Deploy from "./deploy";
 import * as DeploymentTails from "./deployment-tails";
 import * as Deployments from "./deployments";
 import * as Dev from "./dev";
+import * as DownloadConfig from "./download-config";
 import * as Functions from "./functions";
 import * as Projects from "./projects";
+import { secret } from "./secret";
 import * as Upload from "./upload";
 import { CLEANUP } from "./utils";
 import * as Validate from "./validate";
-import type { CommonYargsArgv } from "../yargs-types";
+import type { CommonYargsArgv, SubHelp } from "../yargs-types";
 
 process.on("SIGINT", () => {
 	CLEANUP();
@@ -21,12 +24,13 @@ process.on("SIGTERM", () => {
 	process.exit();
 });
 
-export function pages(yargs: CommonYargsArgv) {
+export function pages(yargs: CommonYargsArgv, subHelp: SubHelp) {
 	return (
 		yargs
+			.command(subHelp)
 			.command(
 				"dev [directory] [-- command..]",
-				"🧑‍💻 Develop your full-stack Pages application locally",
+				"Develop your full-stack Pages application locally",
 				Dev.Options,
 				Dev.Handler
 			)
@@ -36,11 +40,18 @@ export function pages(yargs: CommonYargsArgv) {
 			 */
 			.command("functions", false, (args) =>
 				args
+					.command(subHelp)
 					.command(
 						"build [directory]",
 						"Compile a folder of Cloudflare Pages Functions into a single Worker",
 						Build.Options,
 						Build.Handler
+					)
+					.command(
+						"build-env [projectDir]",
+						"Render a list of environment variables from the config file",
+						BuildEnv.Options,
+						BuildEnv.Handler
 					)
 					.command(
 						"optimize-routes [routesPath] [outputRoutesPath]",
@@ -49,8 +60,9 @@ export function pages(yargs: CommonYargsArgv) {
 						Functions.OptimizeRoutesHandler
 					)
 			)
-			.command("project", "⚡️ Interact with your Pages projects", (args) =>
+			.command("project", "Interact with your Pages projects", (args) =>
 				args
+					.command(subHelp)
 					.command(
 						"list",
 						"List your Cloudflare Pages projects",
@@ -79,9 +91,10 @@ export function pages(yargs: CommonYargsArgv) {
 			)
 			.command(
 				"deployment",
-				"🚀 Interact with the deployments of a project",
+				"Interact with the deployments of a project",
 				(args) =>
 					args
+						.command(subHelp)
 						.command(
 							"list",
 							"List deployments in your Cloudflare Pages project",
@@ -90,7 +103,7 @@ export function pages(yargs: CommonYargsArgv) {
 						)
 						.command(
 							"create [directory]",
-							"🆙 Publish a directory of static assets as a Pages deployment",
+							"Publish a directory of static assets as a Pages deployment",
 							Deploy.Options,
 							Deploy.Handler
 						)
@@ -104,9 +117,22 @@ export function pages(yargs: CommonYargsArgv) {
 			)
 			.command(
 				["deploy [directory]", "publish [directory]"],
-				"🆙 Deploy a directory of static assets as a Pages deployment",
+				"Deploy a directory of static assets as a Pages deployment",
 				Deploy.Options,
 				Deploy.Handler
+			)
+			.command(
+				"secret",
+				"Generate a secret that can be referenced in a Pages project",
+				(secretYargs) => secret(secretYargs, subHelp)
+			)
+			.command("download", "Download settings from your project", (args) =>
+				args.command(
+					"config [projectName]",
+					"Experimental: Download your Pages project config as a wrangler.toml file",
+					DownloadConfig.Options,
+					DownloadConfig.Handler
+				)
 			)
 	);
 }

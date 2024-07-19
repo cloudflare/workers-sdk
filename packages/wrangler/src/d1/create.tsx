@@ -1,5 +1,4 @@
 import { Box, Text } from "ink";
-import React from "react";
 import { printWranglerBanner } from "..";
 import { fetchResult } from "../cfetch";
 import { withConfig } from "../config";
@@ -8,7 +7,6 @@ import { logger } from "../logger";
 import { requireAuth } from "../user";
 import { renderToString } from "../utils/render";
 import { LOCATION_CHOICES } from "./constants";
-import { d1BetaWarning } from "./utils";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
@@ -24,10 +22,9 @@ export function Options(yargs: CommonYargsArgv) {
 		})
 		.option("location", {
 			describe:
-				"A hint for the primary location of the new DB. Options:\nweur: Western Europe\neeur: Eastern Europe\napac: Asia Pacific\nwnam: Western North America\nenam: Eastern North America \n",
+				"A hint for the primary location of the new DB. Options:\nweur: Western Europe\neeur: Eastern Europe\napac: Asia Pacific\noc: Oceania\nwnam: Western North America\nenam: Eastern North America \n",
 			type: "string",
-		})
-		.epilogue(d1BetaWarning);
+		});
 }
 
 type HandlerOptions = StrictYargsOptionsToInterface<typeof Options>;
@@ -55,7 +52,6 @@ export const Handler = withConfig<HandlerOptions>(
 				},
 				body: JSON.stringify({
 					name,
-					experimental: true,
 					...(location && { primary_location_hint: location }),
 				}),
 			});
@@ -74,14 +70,10 @@ export const Handler = withConfig<HandlerOptions>(
 						{db.created_in_region
 							? ` in region ${db.created_in_region}`
 							: location
-							? ` using primary location hint ${location}`
-							: ``}
+								? ` using primary location hint ${location}`
+								: ``}
 					</Text>
-					<Text>
-						Created your database using D1&apos;s new storage backend. The new
-						storage backend is not yet recommended for production workloads, but
-						backs up your data via point-in-time restore.
-					</Text>
+					<Text>Created your new D1 database.</Text>
 					<Text>&nbsp;</Text>
 					<Text>[[d1_databases]]</Text>
 					<Text>

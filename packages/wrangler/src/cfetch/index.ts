@@ -162,7 +162,13 @@ function throwFetchError(
 	resource: string,
 	response: FetchResult<unknown>
 ): never {
-	for (const error of response.errors) maybeThrowFriendlyError(error);
+	// This is an error from within an MSW handler
+	if (typeof vitest !== "undefined" && !("errors" in response)) {
+		throw response;
+	}
+	for (const error of response.errors) {
+		maybeThrowFriendlyError(error);
+	}
 
 	const error = new APIError({
 		text: `A request to the Cloudflare API (${resource}) failed.`,
@@ -175,7 +181,6 @@ function throwFetchError(
 	// so consumers can use it for specific behaviour
 	const code = response.errors[0]?.code;
 	if (code) {
-		//@ts-expect-error non-standard property on Error
 		error.code = code;
 	}
 	throw error;

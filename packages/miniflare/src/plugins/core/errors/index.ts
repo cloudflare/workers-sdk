@@ -1,17 +1,17 @@
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
-import type { UrlAndMap } from "@cspotcode/source-map-support";
 import { z } from "zod";
 import { Request, Response } from "../../../http";
 import { Log } from "../../../shared";
 import { maybeParseURL } from "../../shared";
 import {
-	SourceOptions,
 	contentsToString,
 	maybeGetStringScriptPathIndex,
+	SourceOptions,
 } from "../modules";
 import { getSourceMapper } from "./sourcemap";
+import type { UrlAndMap } from "@cspotcode/source-map-support";
 
 // Subset of core worker options that define Worker source code.
 // These are the possible cases, and corresponding reported source files in
@@ -266,7 +266,7 @@ export async function handlePrettyErrorRequest(
 	youch.addLink(() => {
 		return [
 			'<a href="https://developers.cloudflare.com/workers/" target="_blank" style="text-decoration:none">📚 Workers Docs</a>',
-			'<a href="https://discord.gg/cloudflaredev" target="_blank" style="text-decoration:none">💬 Workers Discord</a>',
+			'<a href="https://discord.cloudflare.com" target="_blank" style="text-decoration:none">💬 Workers Discord</a>',
 		].join("");
 	});
 	return new Response(await youch.toHTML(), {

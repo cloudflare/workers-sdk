@@ -1,12 +1,17 @@
 {
 	"compilerOptions": {
 		"noEmit": true,
-		"module": "esnext",
-		"target": "esnext",
+		"module": "ESNext",
+		"moduleResolution": "Bundler",
 		"lib": ["esnext"],
 		"strict": true,
-		"moduleResolution": "node",
-		"types": ["@cloudflare/workers-types"]
+		"types": ["@cloudflare/workers-types"],
+		"esModuleInterop": true,
+		"skipLibCheck": true,
+		"target": "es2022",
+		"allowJs": true,
+		"moduleDetection": "force",
+		"isolatedModules": true
 	},
 	"exclude": ["node_modules", "dist", "test"]
 }

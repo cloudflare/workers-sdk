@@ -1,6 +1,7 @@
 import { normalizeOutput } from "../../../e2e/helpers/normalize";
 import { collectCLIOutput } from "../helpers/collect-cli-output";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
+import { mockConsoleMethods } from "../helpers/mock-console";
 import { msw, mswListVersions } from "../helpers/msw";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
@@ -10,6 +11,7 @@ describe("versions list", () => {
 	mockAccountId();
 	mockApiToken();
 	runInTempDir();
+	mockConsoleMethods();
 	const std = collectCLIOutput();
 
 	beforeEach(() => {
@@ -19,7 +21,7 @@ describe("versions list", () => {
 	describe("without wrangler.toml", () => {
 		test("fails with no args", async () => {
 			const result = runWrangler(
-				"versions list  --experimental-gradual-rollouts"
+				"versions list --json  --experimental-versions"
 			);
 
 			await expect(result).rejects.toMatchInlineSnapshot(
@@ -33,7 +35,7 @@ describe("versions list", () => {
 
 		test("prints versions to stdout", async () => {
 			const result = runWrangler(
-				"versions list --name test-name  --experimental-gradual-rollouts"
+				"versions list --name test-name  --experimental-versions"
 			);
 
 			await expect(result).resolves.toBeUndefined();
@@ -45,24 +47,104 @@ describe("versions list", () => {
 			Source:      Upload
 			Tag:         -
 			Message:     -
+
 			Version ID:  30000000-0000-0000-0000-000000000000
 			Created:     2021-02-02T00:00:00.000Z
 			Author:      Kathryn-Janeway@federation.org
 			Source:      Rollback
 			Tag:         -
 			Message:     Rolled back for this version
+
 			Version ID:  20000000-0000-0000-0000-000000000000
 			Created:     2021-02-03T00:00:00.000Z
 			Author:      Kathryn-Janeway@federation.org
 			Source:      Wrangler 🤠
 			Tag:         -
 			Message:     -
+
 			Version ID:  10000000-0000-0000-0000-000000000000
 			Created:     2021-01-04T00:00:00.000Z
 			Author:      Jean-Luc-Picard@federation.org
 			Source:      Rollback
 			Tag:         -
 			Message:     -
+
+			"
+		`);
+
+			expect(std.err).toMatchInlineSnapshot(`""`);
+		});
+
+		test("prints versions to stdout as --json", async () => {
+			const result = runWrangler(
+				"versions list --name test-name --json  --experimental-versions"
+			);
+
+			await expect(result).resolves.toBeUndefined();
+
+			expect(std.out).toMatchInlineSnapshot(`
+			"[
+			  {
+			    \\"id\\": \\"40000000-0000-0000-0000-000000000000\\",
+			    \\"number\\": \\"1701-E\\",
+			    \\"annotations\\": {
+			      \\"workers/triggered_by\\": \\"upload\\"
+			    },
+			    \\"metadata\\": {
+			      \\"author_id\\": \\"Picard-Gamma-6-0-7-3\\",
+			      \\"author_email\\": \\"Jean-Luc-Picard@federation.org\\",
+			      \\"source\\": \\"wrangler\\",
+			      \\"created_on\\": \\"2021-01-01T00:00:00.000000Z\\",
+			      \\"modified_on\\": \\"2021-01-01T00:00:00.000000Z\\"
+			    }
+			  },
+			  {
+			    \\"id\\": \\"30000000-0000-0000-0000-000000000000\\",
+			    \\"number\\": \\"NCC-74656\\",
+			    \\"annotations\\": {
+			      \\"workers/triggered_by\\": \\"rollback\\",
+			      \\"workers/rollback_from\\": \\"MOCK-DEPLOYMENT-ID-1111\\",
+			      \\"workers/message\\": \\"Rolled back for this version\\"
+			    },
+			    \\"metadata\\": {
+			      \\"author_id\\": \\"Kathryn-Jane-Gamma-6-0-7-3\\",
+			      \\"author_email\\": \\"Kathryn-Janeway@federation.org\\",
+			      \\"source\\": \\"wrangler\\",
+			      \\"created_on\\": \\"2021-02-02T00:00:00.000000Z\\",
+			      \\"modified_on\\": \\"2021-02-02T00:00:00.000000Z\\"
+			    }
+			  },
+			  {
+			    \\"id\\": \\"20000000-0000-0000-0000-000000000000\\",
+			    \\"number\\": \\"NCC-74656\\",
+			    \\"metadata\\": {
+			      \\"author_id\\": \\"Kathryn-Jane-Gamma-6-0-7-3\\",
+			      \\"author_email\\": \\"Kathryn-Janeway@federation.org\\",
+			      \\"source\\": \\"wrangler\\",
+			      \\"created_on\\": \\"2021-02-03T00:00:00.000000Z\\",
+			      \\"modified_on\\": \\"2021-02-03T00:00:00.000000Z\\"
+			    }
+			  },
+			  {
+			    \\"id\\": \\"10000000-0000-0000-0000-000000000000\\",
+			    \\"number\\": \\"1701-E\\",
+			    \\"annotations\\": {
+			      \\"workers/triggered_by\\": \\"rollback\\",
+			      \\"workers/rollback_from\\": \\"MOCK-DEPLOYMENT-ID-2222\\"
+			    },
+			    \\"metadata\\": {
+			      \\"author_id\\": \\"Picard-Gamma-6-0-7-3\\",
+			      \\"author_email\\": \\"Jean-Luc-Picard@federation.org\\",
+			      \\"source\\": \\"wrangler\\",
+			      \\"created_on\\": \\"2021-01-04T00:00:00.000000Z\\",
+			      \\"modified_on\\": \\"2021-01-04T00:00:00.000000Z\\"
+			    },
+			    \\"resources\\": {
+			      \\"script\\": \\"test-name\\",
+			      \\"bindings\\": []
+			    }
+			  }
+			]
 			"
 		`);
 
@@ -71,12 +153,10 @@ describe("versions list", () => {
 	});
 
 	describe("with wrangler.toml", () => {
-		beforeEach(writeWranglerToml);
+		beforeEach(() => writeWranglerToml());
 
 		test("prints versions to stdout", async () => {
-			const result = runWrangler(
-				"versions list  --experimental-gradual-rollouts"
-			);
+			const result = runWrangler("versions list  --experimental-versions");
 
 			await expect(result).resolves.toBeUndefined();
 
@@ -87,24 +167,104 @@ describe("versions list", () => {
 			Source:      Upload
 			Tag:         -
 			Message:     -
+
 			Version ID:  30000000-0000-0000-0000-000000000000
 			Created:     2021-02-02T00:00:00.000Z
 			Author:      Kathryn-Janeway@federation.org
 			Source:      Rollback
 			Tag:         -
 			Message:     Rolled back for this version
+
 			Version ID:  20000000-0000-0000-0000-000000000000
 			Created:     2021-02-03T00:00:00.000Z
 			Author:      Kathryn-Janeway@federation.org
 			Source:      Wrangler 🤠
 			Tag:         -
 			Message:     -
+
 			Version ID:  10000000-0000-0000-0000-000000000000
 			Created:     2021-01-04T00:00:00.000Z
 			Author:      Jean-Luc-Picard@federation.org
 			Source:      Rollback
 			Tag:         -
 			Message:     -
+
+			"
+		`);
+
+			expect(std.err).toMatchInlineSnapshot(`""`);
+		});
+
+		test("prints versions to as --json", async () => {
+			const result = runWrangler(
+				"versions list --json  --experimental-versions"
+			);
+
+			await expect(result).resolves.toBeUndefined();
+
+			expect(std.out).toMatchInlineSnapshot(`
+			"[
+			  {
+			    \\"id\\": \\"40000000-0000-0000-0000-000000000000\\",
+			    \\"number\\": \\"1701-E\\",
+			    \\"annotations\\": {
+			      \\"workers/triggered_by\\": \\"upload\\"
+			    },
+			    \\"metadata\\": {
+			      \\"author_id\\": \\"Picard-Gamma-6-0-7-3\\",
+			      \\"author_email\\": \\"Jean-Luc-Picard@federation.org\\",
+			      \\"source\\": \\"wrangler\\",
+			      \\"created_on\\": \\"2021-01-01T00:00:00.000000Z\\",
+			      \\"modified_on\\": \\"2021-01-01T00:00:00.000000Z\\"
+			    }
+			  },
+			  {
+			    \\"id\\": \\"30000000-0000-0000-0000-000000000000\\",
+			    \\"number\\": \\"NCC-74656\\",
+			    \\"annotations\\": {
+			      \\"workers/triggered_by\\": \\"rollback\\",
+			      \\"workers/rollback_from\\": \\"MOCK-DEPLOYMENT-ID-1111\\",
+			      \\"workers/message\\": \\"Rolled back for this version\\"
+			    },
+			    \\"metadata\\": {
+			      \\"author_id\\": \\"Kathryn-Jane-Gamma-6-0-7-3\\",
+			      \\"author_email\\": \\"Kathryn-Janeway@federation.org\\",
+			      \\"source\\": \\"wrangler\\",
+			      \\"created_on\\": \\"2021-02-02T00:00:00.000000Z\\",
+			      \\"modified_on\\": \\"2021-02-02T00:00:00.000000Z\\"
+			    }
+			  },
+			  {
+			    \\"id\\": \\"20000000-0000-0000-0000-000000000000\\",
+			    \\"number\\": \\"NCC-74656\\",
+			    \\"metadata\\": {
+			      \\"author_id\\": \\"Kathryn-Jane-Gamma-6-0-7-3\\",
+			      \\"author_email\\": \\"Kathryn-Janeway@federation.org\\",
+			      \\"source\\": \\"wrangler\\",
+			      \\"created_on\\": \\"2021-02-03T00:00:00.000000Z\\",
+			      \\"modified_on\\": \\"2021-02-03T00:00:00.000000Z\\"
+			    }
+			  },
+			  {
+			    \\"id\\": \\"10000000-0000-0000-0000-000000000000\\",
+			    \\"number\\": \\"1701-E\\",
+			    \\"annotations\\": {
+			      \\"workers/triggered_by\\": \\"rollback\\",
+			      \\"workers/rollback_from\\": \\"MOCK-DEPLOYMENT-ID-2222\\"
+			    },
+			    \\"metadata\\": {
+			      \\"author_id\\": \\"Picard-Gamma-6-0-7-3\\",
+			      \\"author_email\\": \\"Jean-Luc-Picard@federation.org\\",
+			      \\"source\\": \\"wrangler\\",
+			      \\"created_on\\": \\"2021-01-04T00:00:00.000000Z\\",
+			      \\"modified_on\\": \\"2021-01-04T00:00:00.000000Z\\"
+			    },
+			    \\"resources\\": {
+			      \\"script\\": \\"test-name\\",
+			      \\"bindings\\": []
+			    }
+			  }
+			]
 			"
 		`);
 

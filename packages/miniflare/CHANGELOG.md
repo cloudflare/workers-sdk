@@ -1,5 +1,427 @@
 # miniflare
 
+## 3.20240712.0
+
+### Patch Changes
+
+- [#6265](https://github.com/cloudflare/workers-sdk/pull/6265) [`0d32448`](https://github.com/cloudflare/workers-sdk/commit/0d32448fc72521be691dfc87c8ad5f108ddced62) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | workerd                   | 1.20240701.0  | 1.20240712.0  |
+  | @cloudflare/workers-types | ^4.20240620.0 | ^4.20240712.0 |
+
+## 3.20240701.0
+
+### Minor Changes
+
+- [#6073](https://github.com/cloudflare/workers-sdk/pull/6073) [`7ed675e`](https://github.com/cloudflare/workers-sdk/commit/7ed675e3a43cfd996496bf1be2b31d34bde36664) Thanks [@geelen](https://github.com/geelen)! - Added D1 export support for local databases
+
+### Patch Changes
+
+- [#6181](https://github.com/cloudflare/workers-sdk/pull/6181) [`42a7930`](https://github.com/cloudflare/workers-sdk/commit/42a7930c6d81610c14005503c078610f28b9bc33) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20240620.1 | 1.20240701.0 |
+
+- [#6127](https://github.com/cloudflare/workers-sdk/pull/6127) [`1568c25`](https://github.com/cloudflare/workers-sdk/commit/1568c251112e06feb1d3d1df844eaa660bb9fbe8) Thanks [@DaniFoldi](https://github.com/DaniFoldi)! - fix: Bump ws dependency
+
+## 3.20240620.0
+
+### Patch Changes
+
+- [#6110](https://github.com/cloudflare/workers-sdk/pull/6110) [`7d02856`](https://github.com/cloudflare/workers-sdk/commit/7d02856ae2cbd90eb94324f9f6fcb44cd2c44059) Thanks [@CarmenPopoviciu](https://github.com/CarmenPopoviciu)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | workerd                   | 1.20240610.1  | 1.20240620.1  |
+  | @cloudflare/workers-types | ^4.20240605.0 | ^4.20240620.0 |
+
+## 3.20240610.1
+
+### Patch Changes
+
+- [#6050](https://github.com/cloudflare/workers-sdk/pull/6050) [`a0c3327`](https://github.com/cloudflare/workers-sdk/commit/a0c3327dd63059d3e24085a95f48f8a98605c49f) Thanks [@threepointone](https://github.com/threepointone)! - chore: Normalize more deps
+
+  This is the last of the patches that normalize dependencies across the codebase. In this batch: `ws`, `vitest`, `zod` , `rimraf`, `@types/rimraf`, `ava`, `source-map`, `glob`, `cookie`, `@types/cookie`, `@microsoft/api-extractor`, `@types/mime`, `@types/yargs`, `devtools-protocol`, `@vitest/ui`, `execa`, `strip-ansi`
+
+  This patch also sorts dependencies in every `package.json`
+
+- [#6029](https://github.com/cloudflare/workers-sdk/pull/6029) [`f5ad1d3`](https://github.com/cloudflare/workers-sdk/commit/f5ad1d3e562ce63b59f6ab136f1cdd703605bca4) Thanks [@threepointone](https://github.com/threepointone)! - chore: Normalize some dependencies in workers-sdk
+
+  This is the first of a few expected patches that normalize dependency versions, This normalizes `undici`, `concurrently`, `@types/node`, `react`, `react-dom`, `@types/react`, `@types/react-dom`, `eslint`, `typescript`. There are no functional code changes (but there are a couple of typecheck fixes).
+
+- [#6058](https://github.com/cloudflare/workers-sdk/pull/6058) [`31cd51f`](https://github.com/cloudflare/workers-sdk/commit/31cd51f251050b0d6db97857a8d1d5427c855d99) Thanks [@threepointone](https://github.com/threepointone)! - chore: Quieter builds
+
+  This patch cleans up warnings we were seeing when doing a full build. Specifically:
+
+  - fixtures/remix-pages-app had a bunch of warnings about impending features that it should be upgraded to, so I did that. (tbh this one needs a full upgrade of packages, but we'll get to that later when we're upgrading across the codebase)
+  - updated `@microsoft/api-extractor` so it didn't complain that it didn't match the `typescript` version (that we'd recently upgraded)
+  - it also silenced a bunch of warnings when exporting types from `wrangler`. We'll need to fix those, but we'll do that when we work on unstable_dev etc.
+  - workers-playground was complaining about the size of the bundle being generated, so I increased the limit on it
+
+## 3.20240610.0
+
+### Patch Changes
+
+- [#6024](https://github.com/cloudflare/workers-sdk/pull/6024) [`c4146fc`](https://github.com/cloudflare/workers-sdk/commit/c4146fc021cbb0556cc95899184b7a44d58ad77c) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20240605.0 | 1.20240610.1 |
+
+## 3.20240605.0
+
+### Patch Changes
+
+- [#5961](https://github.com/cloudflare/workers-sdk/pull/5961) [`ab95473`](https://github.com/cloudflare/workers-sdk/commit/ab9547380fd6fbc1d20c8dd4211faedbe94e5b33) Thanks [@CarmenPopoviciu](https://github.com/CarmenPopoviciu)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | workerd                   | 1.20240524.0  | 1.20240605.0  |
+  | @cloudflare/workers-types | ^4.20240524.0 | ^4.20240605.0 |
+
+## 3.20240524.2
+
+### Patch Changes
+
+- [#5922](https://github.com/cloudflare/workers-sdk/pull/5922) [`bdbb7f8`](https://github.com/cloudflare/workers-sdk/commit/bdbb7f890d3fa5b6fa7ac79a3bb650ece9417fb2) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - fix: Allow the magic proxy to handle functions returning functions
+
+  Previously functions returning functions would not be handled by the magic proxy,
+  the changes here enable the above, allowing for code such as the following:
+
+  ```js
+  	const mf = new Miniflare(/* ... */);
+
+  	const { functionsFactory } = await mf.getBindings<Env>();
+  	const fn = functionsFactory.getFunction();
+  	const functionResult = fn();
+  ```
+
+  This also works with the native workers RPC mechanism, allowing users to
+  return functions in their RPC code.
+
+## 3.20240524.1
+
+### Patch Changes
+
+- [#5921](https://github.com/cloudflare/workers-sdk/pull/5921) [`e0e7725`](https://github.com/cloudflare/workers-sdk/commit/e0e772575c079787f56615ec3d7a6a4af0633b5a) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - docs: add configuration section with local workerd linking to main readme
+
+## 3.20240524.0
+
+### Minor Changes
+
+- [#5917](https://github.com/cloudflare/workers-sdk/pull/5917) [`64ccdd6`](https://github.com/cloudflare/workers-sdk/commit/64ccdd6a6777c5fd85116af0d660cb3ee2e1de4d) Thanks [@kossnocorp](https://github.com/kossnocorp)! - fix: D1's JOIN behaviour when selecting columns with the same name.
+
+  Properly handle the `resultsFormat` query that `workerd` sends. This partially fixes [the JOIN bug](https://github.com/cloudflare/workers-sdk/issues/3160) and makes the behaviour of `raw` consistent with the `workerd` behaviour.
+
+### Patch Changes
+
+- [#5931](https://github.com/cloudflare/workers-sdk/pull/5931) [`4458a9e`](https://github.com/cloudflare/workers-sdk/commit/4458a9ea1a2b7748d6066557f48f68ec430d383b) Thanks [@CarmenPopoviciu](https://github.com/CarmenPopoviciu)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | workerd                   | 1.20240512.0  | 1.20240524.0  |
+  | @cloudflare/workers-types | ^4.20240512.0 | ^4.20240524.0 |
+
+## 3.20240512.0
+
+### Patch Changes
+
+- [#5827](https://github.com/cloudflare/workers-sdk/pull/5827) [`0725f6f`](https://github.com/cloudflare/workers-sdk/commit/0725f6f73199daf7f11eec9830bc4d1f66c05d62) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | workerd                   | 1.20240419.0  | 1.20240512.0  |
+  | @cloudflare/workers-types | ^4.20240419.0 | ^4.20240512.0 |
+
+- [#5798](https://github.com/cloudflare/workers-sdk/pull/5798) [`89b6d7f`](https://github.com/cloudflare/workers-sdk/commit/89b6d7f3832b350b470a981eb3b4388517612363) Thanks [@RamIdeas](https://github.com/RamIdeas)! - fix: update miniflare's response compression to act more like Cloudflare platform
+
+## 3.20240419.1
+
+### Minor Changes
+
+- [#5570](https://github.com/cloudflare/workers-sdk/pull/5570) [`66bdad0`](https://github.com/cloudflare/workers-sdk/commit/66bdad08834b403100d1e4d6cd507978cc50eaba) Thanks [@sesteves](https://github.com/sesteves)! - feature: support delayed delivery in the miniflare's queue simulator.
+
+  This change updates the miniflare's queue broker to support delayed delivery of messages, both when sending the message from a producer and when retrying the message from a consumer.
+
+### Patch Changes
+
+- [#5670](https://github.com/cloudflare/workers-sdk/pull/5670) [`9b4af8a`](https://github.com/cloudflare/workers-sdk/commit/9b4af8a59bc75ed494dd752c0a7007dbacf75e51) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - fix: Allow the magic proxy to proxy objects containing functions
+
+  This was previously prevented but this change removes that restriction.
+
+## 3.20240419.0
+
+### Patch Changes
+
+- [#5682](https://github.com/cloudflare/workers-sdk/pull/5682) [`3a0d735`](https://github.com/cloudflare/workers-sdk/commit/3a0d7356bd8bc6fe614a3ef3f9c1278659555568) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | workerd                   | 1.20240405.0  | 1.20240419.0  |
+  | @cloudflare/workers-types | ^4.20240405.0 | ^4.20240419.0 |
+
+- [#5482](https://github.com/cloudflare/workers-sdk/pull/5482) [`1b7739e`](https://github.com/cloudflare/workers-sdk/commit/1b7739e0af99860aa063f01c0a6e7712ac072fdb) Thanks [@DaniFoldi](https://github.com/DaniFoldi)! - docs: show new Discord url everywhere for consistency. The old URL still works, but https://discord.cloudflare.com is preferred.
+
+## 3.20240405.2
+
+### Patch Changes
+
+- [#5599](https://github.com/cloudflare/workers-sdk/pull/5599) [`c9f081a`](https://github.com/cloudflare/workers-sdk/commit/c9f081ab72142060a3cf2e9a7ef4546b8014b210) Thanks [@penalosa](https://github.com/penalosa)! - fix: add support for wrapped bindings in magic proxy
+
+  currently `Miniflare#getBindings()` does not return proxies to provided `wrappedBindings`, make sure that appropriate proxies are instead returned
+
+  Example:
+
+  ```ts
+  import { Miniflare } from "miniflare";
+
+  const mf = new Miniflare({
+    workers: [
+      {
+        wrappedBindings: {
+          Greeter: {
+            scriptName: "impl",
+          },
+        },
+        modules: true,
+        script: `export default { fetch(){ return new Response(''); } }`,
+      },
+      {
+        modules: true,
+        name: "impl",
+        script: `
+  				class Greeter {
+  					sayHello(name) {
+  						return "Hello " + name;
+  					}
+  				}
+  
+  				export default function (env) {
+  					return new Greeter();
+  				}
+  			`,
+      },
+    ],
+  });
+
+  const { Greeter } = await mf.getBindings();
+
+  console.log(Greeter.sayHello("world")); // <--- prints 'Hello world'
+
+  await mf.dispose();
+  ```
+
+- [#5599](https://github.com/cloudflare/workers-sdk/pull/5599) [`c9f081a`](https://github.com/cloudflare/workers-sdk/commit/c9f081ab72142060a3cf2e9a7ef4546b8014b210) Thanks [@penalosa](https://github.com/penalosa)! - fix: add support for RPC in magic proxy
+
+  currently `Miniflare#getBindings()` does not return valid proxies to provided `serviceBindings` using RPC, make sure that appropriate proxies are instead returned
+
+  Example:
+
+  ```ts
+  import { Miniflare } from "miniflare";
+
+  const mf = new Miniflare({
+    workers: [
+      {
+        modules: true,
+        script: `export default { fetch() { return new Response(''); } }`,
+        serviceBindings: {
+          SUM: {
+            name: "sum-worker",
+            entrypoint: "SumEntrypoint",
+          },
+        },
+      },
+      {
+        modules: true,
+        name: "sum-worker",
+        script: `
+  				import { WorkerEntrypoint } from 'cloudflare:workers';
+  
+  				export default { fetch() { return new Response(''); } }
+  
+  				export class SumEntrypoint extends WorkerEntrypoint {
+  					sum(args) {
+  						return args.reduce((a, b) => a + b);
+  					}
+  				}
+  			`,
+      },
+    ],
+  });
+
+  const { SUM } = await mf.getBindings();
+
+  const numbers = [1, 2, 3];
+
+  console.log(`The sum of ${numbers.join(", ")} is ${await SUM.sum(numbers)}`); // <--- prints 'The sum of 1, 2, 3 is 6'
+
+  await mf.dispose();
+  ```
+
+## 3.20240405.1
+
+### Minor Changes
+
+- [#5409](https://github.com/cloudflare/workers-sdk/pull/5409) [`08b4908`](https://github.com/cloudflare/workers-sdk/commit/08b490806093add445ff3d7b1969923cb4123d34) Thanks [@mrbbot](https://github.com/mrbbot)! - feature: respect incoming `Accept-Encoding` header and ensure `Accept-Encoding`/`request.cf.clientAcceptEncoding` set correctly
+
+  Previously, Miniflare would pass through the incoming `Accept-Encoding` header to your Worker code. This change ensures this header is always set to `Accept-Encoding: br, gzip` for incoming requests to your Worker. The original value of `Accept-Encoding` will be stored in `request.cf.clientAcceptEncoding`. This matches [deployed behaviour](https://developers.cloudflare.com/fundamentals/reference/http-request-headers/#accept-encoding).
+
+  Fixes #5246
+
+## 3.20240405.0
+
+### Patch Changes
+
+- [#5554](https://github.com/cloudflare/workers-sdk/pull/5554) [`9575a51`](https://github.com/cloudflare/workers-sdk/commit/9575a514cbc206fea6d08f627253ead209fd2a8d) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | workerd                   | 1.20240404.0  | 1.20240405.0  |
+  | @cloudflare/workers-types | ^4.20240404.0 | ^4.20240405.0 |
+
+## 3.20240404.0
+
+### Patch Changes
+
+- [#5520](https://github.com/cloudflare/workers-sdk/pull/5520) [`9f15ce1`](https://github.com/cloudflare/workers-sdk/commit/9f15ce1716c50dd44adf7a3df6a4101322800005) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | workerd                   | 1.20240403.0  | 1.20240404.0  |
+  | @cloudflare/workers-types | ^4.20240329.0 | ^4.20240404.0 |
+
+## 3.20240403.0
+
+### Minor Changes
+
+- [#5215](https://github.com/cloudflare/workers-sdk/pull/5215) [`cd03d1d`](https://github.com/cloudflare/workers-sdk/commit/cd03d1d3fa6e733faa42e5abb92f37637503b327) Thanks [@GregBrimble](https://github.com/GregBrimble)! - feature: customisable unsafe direct sockets entrypoints
+
+  Previously, Miniflare provided experimental `unsafeDirectHost` and `unsafeDirectPort` options for starting an HTTP server that pointed directly to a specific Worker. This change replaces these options with a single `unsafeDirectSockets` option that accepts an array of socket objects of the form `{ host?: string, port?: number, entrypoint?: string, proxy?: boolean }`. `host` defaults to `127.0.0.1`, `port` defaults to `0`, `entrypoint` defaults to `default`, and `proxy` defaults to `false`. This allows you to start HTTP servers for specific entrypoints of specific Workers. `proxy` controls the [`Style`](https://github.com/cloudflare/workerd/blob/af35f1e7b0f166ec4ca93a8bf7daeacda029f11d/src/workerd/server/workerd.capnp#L780-L789) of the socket.
+
+  Note these sockets set the `capnpConnectHost` `workerd` option to `"miniflare-unsafe-internal-capnp-connect"`. `external` `serviceBindings` will set their `capnpConnectHost` option to the same value allowing RPC over multiple `Miniflare` instances. Refer to https://github.com/cloudflare/workerd/pull/1757 for more information.
+
+- [#5215](https://github.com/cloudflare/workers-sdk/pull/5215) [`cd03d1d`](https://github.com/cloudflare/workers-sdk/commit/cd03d1d3fa6e733faa42e5abb92f37637503b327) Thanks [@GregBrimble](https://github.com/GregBrimble)! - feature: support named entrypoints for `serviceBindings`
+
+  This change allows service bindings to bind to a named export of another Worker using designators of the form `{ name: string | typeof kCurrentWorker, entrypoint?: string }`. Previously, you could only bind to the `default` entrypoint. With this change, you can bind to any exported entrypoint.
+
+  ```ts
+  import { kCurrentWorker, Miniflare } from "miniflare";
+
+  const mf = new Miniflare({
+    workers: [
+      {
+        name: "a",
+        serviceBindings: {
+          A_RPC_SERVICE: { name: kCurrentWorker, entrypoint: "RpcEntrypoint" },
+          A_NAMED_SERVICE: { name: "a", entrypoint: "namedEntrypoint" },
+          B_NAMED_SERVICE: { name: "b", entrypoint: "anotherNamedEntrypoint" },
+        },
+        compatibilityFlags: ["rpc"],
+        modules: true,
+        script: `
+  			import { WorkerEntrypoint } from "cloudflare:workers";
+  
+  			export class RpcEntrypoint extends WorkerEntrypoint {
+  				ping() { return "a:rpc:pong"; }
+  			}
+  
+  			export const namedEntrypoint = {
+  				fetch(request, env, ctx) { return new Response("a:named:pong"); }
+  			};
+  
+  			...
+  			`,
+      },
+      {
+        name: "b",
+        modules: true,
+        script: `
+  			export const anotherNamedEntrypoint = {
+  				fetch(request, env, ctx) { return new Response("b:named:pong"); }
+  			};
+  			`,
+      },
+    ],
+  });
+  ```
+
+### Patch Changes
+
+- [#5499](https://github.com/cloudflare/workers-sdk/pull/5499) [`6c3be5b`](https://github.com/cloudflare/workers-sdk/commit/6c3be5b299b22cad050760a6015106839b5cc74e) Thanks [@GregBrimble](https://github.com/GregBrimble)! - chore: Bump workerd@1.20240403.0
+
+- [#5215](https://github.com/cloudflare/workers-sdk/pull/5215) [`cd03d1d`](https://github.com/cloudflare/workers-sdk/commit/cd03d1d3fa6e733faa42e5abb92f37637503b327) Thanks [@GregBrimble](https://github.com/GregBrimble)! - fix: allow `script`s without `scriptPath`s to import built-in modules
+
+  Previously, if a string `script` option was specified with `modules: true` but without a corresponding `scriptPath`, all `import`s were forbidden. This change relaxes that restriction to allow imports of built-in `node:*`, `cloudflare:*` and `workerd:*` modules without a `scriptPath`.
+
+## 3.20240329.1
+
+### Patch Changes
+
+- [#5491](https://github.com/cloudflare/workers-sdk/pull/5491) [`940ad89`](https://github.com/cloudflare/workers-sdk/commit/940ad89713fa086f23d394570c328716bfb1bd59) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - fix: make sure the magic proxy can handle multiple parallel r2 stream reads
+
+  Currently trying to read multiple R2 streams in parallel (via `Promise.all` for example) leads to deadlock which prevents any of the target streams from being read. This is caused by the underlying implementation only allowing a single HTTP connection to the Workers runtime at a time. This change fixes the issue by allowing multiple parallel HTTP connections.
+
+## 3.20240329.0
+
+### Minor Changes
+
+- [#5455](https://github.com/cloudflare/workers-sdk/pull/5455) [`d994066`](https://github.com/cloudflare/workers-sdk/commit/d994066f255f6851759a055eac3b52a4aa4b83c3) Thanks [@mrbbot](https://github.com/mrbbot)! - chore: bump `workerd` to [`1.20240329.0`](https://github.com/cloudflare/workerd/releases/tag/v1.20240329.0)
+
+## 3.20240320.1
+
+### Minor Changes
+
+- [#5258](https://github.com/cloudflare/workers-sdk/pull/5258) [`fbdca7d`](https://github.com/cloudflare/workers-sdk/commit/fbdca7d93156f9db2a1513573e45f10fac7e57d1) Thanks [@OilyLime](https://github.com/OilyLime)! - feature: URL decode components of the Hyperdrive config connection string
+
+## 3.20240320.0
+
+### Patch Changes
+
+- [#5341](https://github.com/cloudflare/workers-sdk/pull/5341) [`248a318`](https://github.com/cloudflare/workers-sdk/commit/248a318acac293615327affe35b83018a48dddc9) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | workerd                   | 1.20240314.0  | 1.20240320.1  |
+  | @cloudflare/workers-types | ^4.20240314.0 | ^4.20240320.1 |
+
+## 3.20240314.0
+
+### Minor Changes
+
+- [#5240](https://github.com/cloudflare/workers-sdk/pull/5240) [`1720f0a`](https://github.com/cloudflare/workers-sdk/commit/1720f0a12a6376093b3c5799d74f47c522ae8571) Thanks [@CarmenPopoviciu](https://github.com/CarmenPopoviciu)! - chore: bump `workerd` to [`1.20240314.0`](https://github.com/cloudflare/workerd/releases/tag/v1.20240314.0)
+
+## 3.20240304.2
+
+### Patch Changes
+
+- [#5247](https://github.com/cloudflare/workers-sdk/pull/5247) [`2e50d51`](https://github.com/cloudflare/workers-sdk/commit/2e50d51632dfe905bd32de8176231bb256c88dab) Thanks [@CarmenPopoviciu](https://github.com/CarmenPopoviciu)! - fix: Add internal APIs to support the Workers Vitest integration
+
 ## 3.20240304.1
 
 ### Patch Changes
@@ -61,12 +483,12 @@
   import { Miniflare, Response } from "miniflare";
 
   const mf = new Miniflare({
-  	serviceBindings: {
-  		SERVICE(request, instance) {
-  			assert(instance === mf);
-  			return new Response();
-  		},
-  	},
+    serviceBindings: {
+      SERVICE(request, instance) {
+        assert(instance === mf);
+        return new Response();
+      },
+    },
   });
   ```
 
@@ -86,27 +508,27 @@
   import { Miniflare } from "miniflare";
 
   const mf1 = new Miniflare({
-  	scriptPath: "index.mjs",
+    scriptPath: "index.mjs",
   });
 
   const mf2 = new Miniflare({
-  	rootPath: "a/b",
-  	scriptPath: "c/index.mjs",
+    rootPath: "a/b",
+    scriptPath: "c/index.mjs",
   });
 
   const mf3 = new Miniflare({
-  	rootPath: "/a/b",
-  	workers: [
-  		{
-  			name: "1",
-  			rootPath: "c",
-  			scriptPath: "index.mjs",
-  		},
-  		{
-  			name: "2",
-  			scriptPath: "index.mjs",
-  		},
-  	],
+    rootPath: "/a/b",
+    workers: [
+      {
+        name: "1",
+        rootPath: "c",
+        scriptPath: "index.mjs",
+      },
+      {
+        name: "2",
+        scriptPath: "index.mjs",
+      },
+    ],
   });
   ```
 
@@ -122,11 +544,11 @@
   import { kCurrentWorker, Miniflare } from "miniflare";
 
   const mf = new Miniflare({
-  	serviceBindings: {
-  		SELF: kCurrentWorker,
-  	},
-  	modules: true,
-  	script: `export default {
+    serviceBindings: {
+      SELF: kCurrentWorker,
+    },
+    modules: true,
+    script: `export default {
       fetch(request, env, ctx) {
         const { pathname } = new URL(request.url);
         if (pathname === "/recurse") {
@@ -151,9 +573,9 @@
 
   ```js
   const mf = new Miniflare({
-  	modules: true,
-  	modulesRoot: "..",
-  	scriptPath: "../worker.mjs",
+    modules: true,
+    modulesRoot: "..",
+    scriptPath: "../worker.mjs",
   });
   ```
 
@@ -211,15 +633,15 @@
 
   ```js
   const mf = new Miniflare({
-  	modules: [
-  		{
-  			type: "PythonModule",
-  			path: "index",
-  			contents:
-  				"from js import Response;\ndef fetch(request):\n  return Response.new('hello')",
-  		},
-  	],
-  	compatibilityFlags: ["experimental"],
+    modules: [
+      {
+        type: "PythonModule",
+        path: "index",
+        contents:
+          "from js import Response;\ndef fetch(request):\n  return Response.new('hello')",
+      },
+    ],
+    compatibilityFlags: ["experimental"],
   });
   ```
 
@@ -356,9 +778,9 @@
 
   ```ts
   const mf = new Miniflare({
-  	log,
-  	modules: true,
-  	script: `
+    log,
+    modules: true,
+    script: `
         export default {
             fetch(req, env, ctx) {
                 const two = env.UNSAFE_EVAL.eval('1+1');
@@ -366,7 +788,7 @@
             }
         }
     `,
-  	unsafeEvalBinding: "UNSAFE_EVAL",
+    unsafeEvalBinding: "UNSAFE_EVAL",
   });
   ```
 

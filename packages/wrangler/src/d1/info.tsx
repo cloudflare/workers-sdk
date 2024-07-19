@@ -1,17 +1,12 @@
 import Table from "ink-table";
 import prettyBytes from "pretty-bytes";
-import React from "react";
 import { printWranglerBanner } from "..";
 import { fetchGraphqlResult } from "../cfetch";
 import { withConfig } from "../config";
 import { logger } from "../logger";
 import { requireAuth } from "../user";
 import { renderToString } from "../utils/render";
-import {
-	d1BetaWarning,
-	getDatabaseByNameOrBinding,
-	getDatabaseInfoFromId,
-} from "./utils";
+import { getDatabaseByNameOrBinding, getDatabaseInfoFromId } from "./utils";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
@@ -29,8 +24,7 @@ export function Options(d1ListYargs: CommonYargsArgv) {
 			describe: "return output as clean JSON",
 			type: "boolean",
 			default: false,
-		})
-		.epilogue(d1BetaWarning);
+		});
 }
 
 type HandlerOptions = StrictYargsOptionsToInterface<typeof Options>;
@@ -49,6 +43,9 @@ export const Handler = withConfig<HandlerOptions>(
 		if (output["file_size"]) {
 			output["database_size"] = output["file_size"];
 			delete output["file_size"];
+		}
+		if (output["version"] !== "alpha") {
+			delete output["version"];
 		}
 		if (result.version !== "alpha") {
 			const today = new Date();
@@ -119,7 +116,10 @@ export const Handler = withConfig<HandlerOptions>(
 			logger.log(JSON.stringify(output, null, 2));
 		} else {
 			// Snip off the "uuid" property from the response and use those as the header
-			const entries = Object.entries(output).filter(([k, _v]) => k !== "uuid");
+			const entries = Object.entries(output).filter(
+				// also remove any version that isn't "alpha"
+				([k, v]) => k !== "uuid" && !(k === "version" && v !== "alpha")
+			);
 			const data = entries.map(([k, v]) => {
 				let value;
 				if (k === "database_size") {

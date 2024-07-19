@@ -5,6 +5,7 @@ import {
 	fetchMock,
 	getSerializedOptions,
 	internalEnv,
+	registerHandlerAndGlobalWaitUntil,
 	waitForGlobalWaitUntil,
 } from "cloudflare:test-internal";
 import { VitestTestRunner } from "vitest/runners";
@@ -54,7 +55,9 @@ class WorkersSnapshotEnvironment extends NodeSnapshotEnvironment {
 
 	async readSnapshotFile(filePath: string): Promise<string | null> {
 		const res = await this.#fetch("GET", filePath);
-		if (res.status === 404) return null;
+		if (res.status === 404) {
+			return null;
+		}
 		assert.strictEqual(res.status, 200);
 		return await res.text();
 	}
@@ -85,6 +88,28 @@ interface TryState {
 }
 const tryStates = new WeakMap<Test, TryState>();
 
+// Wrap RPC calls to register all RPC promises with handler `waitUntil()`s.
+// This ensures all messages created in an `export default` request context are
+// sent, rather than being silently discarded.
+const waitUntilPatchedRpc = new WeakSet<WorkerRPC>();
+export function createWaitUntilRpc(rpc: WorkerRPC): WorkerRPC {
+	return new Proxy(rpc, {
+		get(target, key, handler) {
+			if (key === "then") {
+				return;
+			}
+			const sendCall = Reflect.get(target, key, handler);
+			const waitUntilSendCall = async (...args: unknown[]) => {
+				const promise = sendCall(...args);
+				registerHandlerAndGlobalWaitUntil(promise);
+				return promise;
+			};
+			waitUntilSendCall.asEvent = sendCall.asEvent;
+			return waitUntilSendCall;
+		},
+	});
+}
+
 export default class WorkersTestRunner extends VitestTestRunner {
 	readonly state: WorkerGlobalState;
 	readonly isolatedStorage: boolean;
@@ -103,6 +128,11 @@ export default class WorkersTestRunner extends VitestTestRunner {
 		const opts = state.config.snapshotOptions;
 		if (!(opts.snapshotEnvironment instanceof WorkersSnapshotEnvironment)) {
 			opts.snapshotEnvironment = new WorkersSnapshotEnvironment(state.rpc);
+		}
+
+		if (!waitUntilPatchedRpc.has(state.rpc)) {
+			waitUntilPatchedRpc.add(state.rpc);
+			state.rpc = createWaitUntilRpc(state.rpc);
 		}
 
 		// If this is the first run in this isolate, store a reference to the state.
@@ -143,7 +173,9 @@ export default class WorkersTestRunner extends VitestTestRunner {
 		action: "push" | "pop",
 		source: Test | Suite
 	): Promise<void> {
-		if (!this.isolatedStorage) return;
+		if (!this.isolatedStorage) {
+			return;
+		}
 
 		// Ensure all `ctx.waitUntil()` calls complete before aborting all objects.
 		// `ctx.waitUntil()`s may contain storage calls (e.g. caching responses)
@@ -197,8 +229,6 @@ export default class WorkersTestRunner extends VitestTestRunner {
 		// contain storage calls (e.g. caching responses) that could try to access
 		// aborted Durable Objects.
 		await waitForGlobalWaitUntil();
-		// @ts-expect-error `VitestTestRunner` doesn't define `onAfterRunFiles`, but
-		//  could in the future.
 		return super.onAfterRunFiles?.();
 	}
 
@@ -228,7 +258,9 @@ export default class WorkersTestRunner extends VitestTestRunner {
 		const tries = tryStates.get(test);
 		assert(tries !== undefined);
 		const active = tries.active;
-		if (newActive !== undefined) tries.active = newActive;
+		if (newActive !== undefined) {
+			tries.active = newActive;
+		}
 		if (active !== undefined && !tries.popped.has(active)) {
 			tries.popped.add(active);
 			await this.updateStackedStorage("pop", test);

@@ -5,3 +5,6 @@ root = true
 end_of_line = lf
 indent_style = tab
 
+[*.{yml,yaml}]
+indent_style = space
+indent_size = 2

@@ -1,9 +1,11 @@
 import { existsSync } from "fs";
 import { cp } from "fs/promises";
 import { join } from "path";
-import { retry } from "helpers/command";
-import { sleep } from "helpers/common";
-import { detectPackageManager } from "helpers/packages";
+import { runCommand } from "helpers/command";
+import { readFile, writeFile } from "helpers/files";
+import { detectPackageManager } from "helpers/packageManagers";
+import { retry } from "helpers/retry";
+import { sleep } from "helpers/sleep";
 import { fetch } from "undici";
 import {
 	afterEach,
@@ -18,8 +20,10 @@ import { getFrameworkMap } from "../src/templates";
 import { frameworkToTest } from "./frameworkToTest";
 import {
 	createTestLogStream,
+	getDiffsPath,
 	isQuarantineMode,
 	keys,
+	recreateDiffsFolder,
 	recreateLogFolder,
 	runC3,
 	spawnWithLogging,
@@ -48,6 +52,10 @@ type FrameworkTestConfig = RunnerConfig & {
 		route: string;
 		expectedText: string;
 	};
+	verifyBuildCfTypes?: {
+		outputFile: string;
+		envInterfaceName: string;
+	};
 	verifyBuild?: {
 		outputDir: string;
 		script: string;
@@ -63,6 +71,7 @@ const { name: pm, npx } = detectPackageManager();
 const frameworkTests: Record<string, FrameworkTestConfig> = {
 	astro: {
 		testCommitMessage: true,
+		quarantine: true,
 		unsupportedOSs: ["win32"],
 		verifyDeploy: {
 			route: "/",
@@ -98,10 +107,45 @@ const frameworkTests: Record<string, FrameworkTestConfig> = {
 			expectedText: "Dinosaurs are cool",
 		},
 		flags: [`--package-manager`, pm],
+		promptHandlers: [
+			{
+				matcher: /Which language do you want to use\?/,
+				input: [keys.enter],
+			},
+		],
+	},
+	analog: {
+		testCommitMessage: true,
+		timeout: LONG_TIMEOUT,
+		unsupportedOSs: ["win32"],
+		// The analog template works with yarn, but the build takes so long that it
+		// becomes flaky in CI
+		unsupportedPms: ["yarn"],
+		verifyDeploy: {
+			route: "/",
+			expectedText: "The fullstack meta-framework for Angular!",
+		},
+		verifyDev: {
+			route: "/api/v1/test",
+			expectedText: "C3_TEST",
+		},
+		verifyBuildCfTypes: {
+			outputFile: "worker-configuration.d.ts",
+			envInterfaceName: "Env",
+		},
+		verifyBuild: {
+			outputDir: "./dist/analog/public",
+			script: "build",
+			route: "/api/v1/test",
+			expectedText: "C3_TEST",
+		},
+		flags: ["--skipTailwind"],
+		quarantine: true,
 	},
 	angular: {
 		testCommitMessage: true,
 		timeout: LONG_TIMEOUT,
+		unsupportedOSs: ["win32"],
 		verifyDeploy: {
 			route: "/",
 			expectedText: "Congratulations! Your app is running.",
@@ -125,6 +169,7 @@ const frameworkTests: Record<string, FrameworkTestConfig> = {
 	},
 	hono: {
 		testCommitMessage: false,
+		unsupportedOSs: ["win32"],
 		verifyDeploy: {
 			route: "/",
 			expectedText: "Hello Hono!",
@@ -154,6 +199,10 @@ const frameworkTests: Record<string, FrameworkTestConfig> = {
 			route: "/test",
 			expectedText: "C3_TEST",
 		},
+		verifyBuildCfTypes: {
+			outputFile: "worker-configuration.d.ts",
+			envInterfaceName: "Env",
+		},
 		verifyBuild: {
 			outputDir: "./dist",
 			script: "build",
@@ -174,6 +223,10 @@ const frameworkTests: Record<string, FrameworkTestConfig> = {
 			route: "/test",
 			expectedText: "C3_TEST",
 		},
+		verifyBuildCfTypes: {
+			outputFile: "worker-configuration.d.ts",
+			envInterfaceName: "Env",
+		},
 		verifyBuild: {
 			outputDir: "./build/client",
 			script: "build",
@@ -191,6 +244,10 @@ const frameworkTests: Record<string, FrameworkTestConfig> = {
 		],
 		testCommitMessage: true,
 		quarantine: true,
+		verifyBuildCfTypes: {
+			outputFile: "env.d.ts",
+			envInterfaceName: "CloudflareEnv",
+		},
 		verifyDeploy: {
 			route: "/",
 			expectedText: "Create Next App",
@@ -217,6 +274,10 @@ const frameworkTests: Record<string, FrameworkTestConfig> = {
 		verifyDev: {
 			route: "/test",
 			expectedText: "C3_TEST",
+		},
+		verifyBuildCfTypes: {
+			outputFile: "worker-configuration.d.ts",
+			envInterfaceName: "Env",
 		},
 		verifyBuild: {
 			outputDir: "./dist",
@@ -305,6 +366,7 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 	beforeAll(async (ctx) => {
 		frameworkMap = await getFrameworkMap();
 		recreateLogFolder(ctx as Suite);
+		recreateDiffsFolder();
 	});
 
 	beforeEach(async (ctx) => {
@@ -347,7 +409,7 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 				if (!verifyDeploy) {
 					expect(
 						true,
-						"A `deploy` configuration must be defined for all framework tests"
+						"A `deploy` configuration must be defined for all framework tests",
 					).toBe(false);
 					return;
 				}
@@ -360,7 +422,7 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 						{
 							argv: [...(flags ? ["--", ...flags] : [])],
 							promptHandlers,
-						}
+						},
 					);
 
 					// Relevant project files should have been created
@@ -377,7 +439,7 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 						framework,
 						projectName,
 						`${deploymentUrl}${verifyDeploy.route}`,
-						verifyDeploy.expectedText
+						verifyDeploy.expectedText,
 					);
 
 					// Copy over any test fixture files
@@ -390,7 +452,14 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 					}
 
 					await verifyDevScript(framework, projectPath, logStream);
+					await verifyBuildCfTypesScript(framework, projectPath, logStream);
 					await verifyBuildScript(framework, projectPath, logStream);
+					await storeDiff(framework, projectPath);
+				} catch (e) {
+					console.error("ERROR", e);
+					expect.fail(
+						"Failed due to an exception while running C3. See logs for more details",
+					);
 				} finally {
 					clean(framework);
 					// Cleanup the project in case we need to retry it
@@ -404,26 +473,41 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 			{
 				retry: TEST_RETRIES,
 				timeout: timeout || TEST_TIMEOUT,
-			}
+			},
 		);
 	});
 });
+
+const storeDiff = async (framework: string, projectPath: string) => {
+	if (!process.env.SAVE_DIFFS) {
+		return;
+	}
+
+	const outputPath = join(getDiffsPath(), `${framework}.diff`);
+
+	const output = await runCommand(["git", "diff"], {
+		silent: true,
+		cwd: projectPath,
+	});
+
+	writeFile(outputPath, output);
+};
 
 const runCli = async (
 	framework: string,
 	projectPath: string,
 	logStream: WriteStream,
-	{ argv = [], promptHandlers = [] }: RunnerConfig
+	{ argv = [], promptHandlers = [] }: RunnerConfig,
 ) => {
 	const args = [
 		projectPath,
 		"--type",
-		"webFramework",
+		"web-framework",
 		"--framework",
 		framework,
 		NO_DEPLOY ? "--no-deploy" : "--deploy",
 		"--no-open",
-		"--no-git",
+		process.env.SAVE_DIFFS ? "--git" : "--no-git",
 	];
 
 	args.push(...argv);
@@ -436,7 +520,7 @@ const runCli = async (
 	const deployedUrlRe =
 		/deployment is ready at: (https:\/\/.+\.(pages|workers)\.dev)/;
 
-	const match = output.match(deployedUrlRe);
+	const match = output.replaceAll("\n", "").match(deployedUrlRe);
 	if (!match || !match[1]) {
 		expect(false, "Couldn't find deployment url in C3 output").toBe(true);
 		return "";
@@ -449,7 +533,7 @@ const verifyDeployment = async (
 	framework: string,
 	projectName: string,
 	deploymentUrl: string,
-	expectedText: string
+	expectedText: string,
 ) => {
 	if (NO_DEPLOY) {
 		return;
@@ -467,7 +551,7 @@ const verifyDeployment = async (
 		const body = await res.text();
 		if (!body.includes(expectedText)) {
 			throw new Error(
-				`Deployed page (${deploymentUrl}) didn't contain expected string: "${expectedText}"`
+				`Deployed page (${deploymentUrl}) didn't contain expected string: "${expectedText}"`,
 			);
 		}
 	});
@@ -476,7 +560,7 @@ const verifyDeployment = async (
 const verifyDevScript = async (
 	framework: string,
 	projectPath: string,
-	logStream: WriteStream
+	logStream: WriteStream,
 ) => {
 	const { verifyDev } = frameworkTests[framework];
 	if (!verifyDev) {
@@ -502,9 +586,10 @@ const verifyDevScript = async (
 			cwd: projectPath,
 			env: {
 				NODE_ENV: "development",
+				VITEST: undefined,
 			},
 		},
-		logStream
+		logStream,
 	);
 
 	// Retry requesting the test route from the devserver
@@ -531,10 +616,61 @@ const verifyDevScript = async (
 	expect(body).toContain(verifyDev.expectedText);
 };
 
+const verifyBuildCfTypesScript = async (
+	framework: string,
+	projectPath: string,
+	logStream: WriteStream,
+) => {
+	const { verifyBuildCfTypes } = frameworkTests[framework];
+
+	if (!verifyBuildCfTypes) {
+		return;
+	}
+
+	const { outputFile, envInterfaceName } = verifyBuildCfTypes;
+
+	const outputFileContentPre = readFile(join(projectPath, outputFile));
+	const outputFileContentPreLines = outputFileContentPre.split("\n");
+
+	// the file contains the "Generated by Wrangler" comment without a timestamp
+	expect(outputFileContentPreLines).toContain("// Generated by Wrangler");
+
+	// the file contains the env interface
+	expect(outputFileContentPreLines).toContain(
+		`interface ${envInterfaceName} {`,
+	);
+
+	// Run the `cf-typegen` script to generate types for bindings in fixture
+	const buildTypesProc = spawnWithLogging(
+		[pm, "run", "cf-typegen"],
+		{ cwd: projectPath },
+		logStream,
+	);
+	await waitForExit(buildTypesProc);
+
+	const outputFileContentPost = readFile(join(projectPath, outputFile));
+	const outputFileContentPostLines = outputFileContentPost.split("\n");
+
+	// the file still contains the env interface
+	expect(outputFileContentPostLines).toContain(
+		`interface ${envInterfaceName} {`,
+	);
+
+	// the file doesn't contain the "Generated by Wrangler" comment without a timestamp anymore
+	expect(outputFileContentPostLines).not.toContain("// Generated by Wrangler");
+
+	// but it contains the "Generated by Wrangler" comment now with a timestamp
+	expect(
+		/\/\/ Generated by Wrangler on [a-zA-Z]*? [a-zA-Z]*? \d{2} \d{4} \d{2}:\d{2}:\d{2}/.test(
+			outputFileContentPost,
+		),
+	).toBeTruthy();
+};
+
 const verifyBuildScript = async (
 	framework: string,
 	projectPath: string,
-	logStream: WriteStream
+	logStream: WriteStream,
 ) => {
 	const { verifyBuild } = frameworkTests[framework];
 
@@ -543,14 +679,6 @@ const verifyBuildScript = async (
 	}
 
 	const { outputDir, script, route, expectedText } = verifyBuild;
-
-	// Run the `build-cf-types` script to generate types for bindings in fixture
-	const buildTypesProc = spawnWithLogging(
-		[pm, "run", "build-cf-types"],
-		{ cwd: projectPath },
-		logStream
-	);
-	await waitForExit(buildTypesProc);
 
 	// Run the build scripts
 	const buildProc = spawnWithLogging(
@@ -561,7 +689,7 @@ const verifyBuildScript = async (
 				NODE_ENV: "production",
 			},
 		},
-		logStream
+		logStream,
 	);
 	await waitForExit(buildProc);
 
@@ -573,7 +701,7 @@ const verifyBuildScript = async (
 		{
 			cwd: projectPath,
 		},
-		logStream
+		logStream,
 	);
 
 	// Wait a few seconds for dev server to spin up

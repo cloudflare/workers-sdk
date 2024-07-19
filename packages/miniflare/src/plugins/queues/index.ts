@@ -1,30 +1,33 @@
 import SCRIPT_QUEUE_BROKER_OBJECT from "worker:queues/broker";
 import { z } from "zod";
 import {
+	kVoid,
 	Service,
 	Worker_Binding,
 	Worker_Binding_DurableObjectNamespaceDesignator,
-	kVoid,
 } from "../../runtime";
 import {
 	QueueBindings,
 	QueueConsumerOptionsSchema,
+	QueueProducerOptionsSchema,
 	SharedBindings,
 } from "../../workers";
 import { getUserServiceName } from "../core";
 import {
-	Plugin,
-	SERVICE_LOOPBACK,
 	getMiniflareObjectBindings,
 	kProxyNodeBinding,
-	namespaceEntries,
-	namespaceKeys,
 	objectEntryWorker,
+	Plugin,
+	SERVICE_LOOPBACK,
 } from "../shared";
 
 export const QueuesOptionsSchema = z.object({
 	queueProducers: z
-		.union([z.record(z.string()), z.string().array()])
+		.union([
+			z.record(QueueProducerOptionsSchema),
+			z.string().array(),
+			z.record(z.string()),
+		])
 		.optional(),
 	queueConsumers: z
 		.union([z.record(QueueConsumerOptionsSchema), z.string().array()])
@@ -42,23 +45,24 @@ const QUEUE_BROKER_OBJECT: Worker_Binding_DurableObjectNamespaceDesignator = {
 export const QUEUES_PLUGIN: Plugin<typeof QueuesOptionsSchema> = {
 	options: QueuesOptionsSchema,
 	getBindings(options) {
-		const queues = namespaceEntries(options.queueProducers);
+		const queues = bindingEntries(options.queueProducers);
 		return queues.map<Worker_Binding>(([name, id]) => ({
 			name,
 			queue: { name: `${SERVICE_QUEUE_PREFIX}:${id}` },
 		}));
 	},
 	getNodeBindings(options) {
-		const queues = namespaceKeys(options.queueProducers);
+		const queues = bindingKeys(options.queueProducers);
 		return Object.fromEntries(queues.map((name) => [name, kProxyNodeBinding]));
 	},
 	async getServices({
 		options,
 		workerNames,
+		queueProducers: allQueueProducers,
 		queueConsumers: allQueueConsumers,
 		unsafeStickyBlobs,
 	}) {
-		const queues = namespaceEntries(options.queueProducers);
+		const queues = bindingEntries(options.queueProducers);
 		if (queues.length === 0) return [];
 
 		const services = queues.map<Service>(([_, id]) => ({
@@ -97,6 +101,10 @@ export const QUEUES_PLUGIN: Plugin<typeof QueuesOptionsSchema> = {
 						},
 					},
 					{
+						name: QueueBindings.MAYBE_JSON_QUEUE_PRODUCERS,
+						json: JSON.stringify(Object.fromEntries(allQueueProducers)),
+					},
+					{
 						name: QueueBindings.MAYBE_JSON_QUEUE_CONSUMERS,
 						json: JSON.stringify(Object.fromEntries(allQueueConsumers)),
 					},
@@ -112,5 +120,38 @@ export const QUEUES_PLUGIN: Plugin<typeof QueuesOptionsSchema> = {
 		return services;
 	},
 };
+
+function bindingEntries(
+	namespaces?:
+		| Record<string, { queueName: string; deliveryDelay?: number }>
+		| string[]
+		| Record<string, string>
+): [bindingName: string, id: string][] {
+	if (Array.isArray(namespaces)) {
+		return namespaces.map((bindingName) => [bindingName, bindingName]);
+	} else if (namespaces !== undefined) {
+		return Object.entries(namespaces).map(([name, opts]) => [
+			name,
+			typeof opts === "string" ? opts : opts.queueName,
+		]);
+	} else {
+		return [];
+	}
+}
+
+function bindingKeys(
+	namespaces?:
+		| Record<string, { queueName: string; deliveryDelay?: number }>
+		| string[]
+		| Record<string, string>
+): string[] {
+	if (Array.isArray(namespaces)) {
+		return namespaces;
+	} else if (namespaces !== undefined) {
+		return Object.keys(namespaces);
+	} else {
+		return [];
+	}
+}
 
 export * from "./errors";

@@ -1,9 +1,10 @@
 import * as fs from "node:fs";
+import { vi } from "vitest";
 import { unstable_dev } from "../api";
 import { runInTempDir } from "./helpers/run-in-tmp";
 
-jest.unmock("child_process");
-jest.unmock("undici");
+vi.unmock("child_process");
+vi.unmock("undici");
 
 describe("run scheduled events with middleware", () => {
 	describe("module workers", () => {
@@ -29,6 +30,7 @@ describe("run scheduled events with middleware", () => {
 
 		it("should not intercept when middleware is not enabled", async () => {
 			const worker = await unstable_dev("index.js", {
+				ip: "127.0.0.1",
 				experimental: {
 					disableExperimentalWarning: true,
 					disableDevRegistry: true,
@@ -37,13 +39,16 @@ describe("run scheduled events with middleware", () => {
 
 			const resp = await worker.fetch("/__scheduled");
 			let text;
-			if (resp) text = await resp.text();
+			if (resp) {
+				text = await resp.text();
+			}
 			expect(text).toMatchInlineSnapshot(`"Fetch triggered at /__scheduled"`);
 			await worker.stop();
 		});
 
 		it("should intercept when middleware is enabled", async () => {
 			const worker = await unstable_dev("index.js", {
+				ip: "127.0.0.1",
 				experimental: {
 					disableExperimentalWarning: true,
 					disableDevRegistry: true,
@@ -53,13 +58,16 @@ describe("run scheduled events with middleware", () => {
 
 			const resp = await worker.fetch("/__scheduled");
 			let text;
-			if (resp) text = await resp.text();
+			if (resp) {
+				text = await resp.text();
+			}
 			expect(text).toMatchInlineSnapshot(`"Ran scheduled event"`);
 			await worker.stop();
 		});
 
 		it("should not trigger scheduled event on wrong route", async () => {
 			const worker = await unstable_dev("index.js", {
+				ip: "127.0.0.1",
 				experimental: {
 					disableExperimentalWarning: true,
 					disableDevRegistry: true,
@@ -69,7 +77,9 @@ describe("run scheduled events with middleware", () => {
 
 			const resp = await worker.fetch("/test");
 			let text;
-			if (resp) text = await resp.text();
+			if (resp) {
+				text = await resp.text();
+			}
 			expect(text).toMatchInlineSnapshot(`"Hello world!"`);
 			await worker.stop();
 		});
@@ -98,6 +108,7 @@ describe("run scheduled events with middleware", () => {
 
 		it("should not intercept when middleware is not enabled", async () => {
 			const worker = await unstable_dev("index.js", {
+				ip: "127.0.0.1",
 				experimental: {
 					disableExperimentalWarning: true,
 					disableDevRegistry: true,
@@ -106,13 +117,16 @@ describe("run scheduled events with middleware", () => {
 
 			const resp = await worker.fetch("/__scheduled");
 			let text;
-			if (resp) text = await resp.text();
+			if (resp) {
+				text = await resp.text();
+			}
 			expect(text).toMatchInlineSnapshot(`"Fetch triggered at /__scheduled"`);
 			await worker.stop();
 		});
 
 		it("should intercept when middleware is enabled", async () => {
 			const worker = await unstable_dev("index.js", {
+				ip: "127.0.0.1",
 				experimental: {
 					disableExperimentalWarning: true,
 					disableDevRegistry: true,
@@ -122,13 +136,16 @@ describe("run scheduled events with middleware", () => {
 
 			const resp = await worker.fetch("/__scheduled");
 			let text;
-			if (resp) text = await resp.text();
+			if (resp) {
+				text = await resp.text();
+			}
 			expect(text).toMatchInlineSnapshot(`"Ran scheduled event"`);
 			await worker.stop();
 		});
 
 		it("should not trigger scheduled event on wrong route", async () => {
 			const worker = await unstable_dev("index.js", {
+				ip: "127.0.0.1",
 				experimental: {
 					disableExperimentalWarning: true,
 					disableDevRegistry: true,
@@ -138,7 +155,9 @@ describe("run scheduled events with middleware", () => {
 
 			const resp = await worker.fetch("/test");
 			let text;
-			if (resp) text = await resp.text();
+			if (resp) {
+				text = await resp.text();
+			}
 			expect(text).toMatchInlineSnapshot(`"Hello world!"`);
 			await worker.stop();
 		});

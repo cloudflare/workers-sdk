@@ -2,9 +2,11 @@ import * as fs from "node:fs";
 import path from "node:path";
 import * as TOML from "@iarna/toml";
 import { execa, execaSync } from "execa";
-import { rest } from "msw";
+import { http, HttpResponse } from "msw";
+import dedent from "ts-dedent";
 import { parseConfigFileTextToJson } from "typescript";
-import { File, FormData, Response } from "undici";
+import { File, FormData } from "undici";
+import { vi } from "vitest";
 import { version as wranglerVersion } from "../../package.json";
 import { downloadWorker } from "../init";
 import { getPackageManager } from "../package-manager";
@@ -16,7 +18,9 @@ import { msw } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import type { RawConfig } from "../config";
+import type { UserLimits } from "../config/environment";
 import type { PackageManager } from "../package-manager";
+import type { Mock } from "vitest";
 
 /**
  * An expectation matcher for the minimal generated wrangler.toml.
@@ -39,10 +43,10 @@ describe("init", () => {
 			cwd: process.cwd(),
 			// @ts-expect-error we're making a fake package manager here
 			type: "mockpm",
-			addDevDeps: jest.fn(),
-			install: jest.fn(),
+			addDevDeps: vi.fn(),
+			install: vi.fn(),
 		};
-		(getPackageManager as jest.Mock).mockResolvedValue(mockPackageManager);
+		(getPackageManager as Mock).mockResolvedValue(mockPackageManager);
 	});
 
 	afterEach(() => {
@@ -279,7 +283,7 @@ describe("init", () => {
 				await expect(
 					runWrangler("init --type javascript")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
-					`"The --type option is no longer supported."`
+					`[Error: The --type option is no longer supported.]`
 				);
 			});
 
@@ -287,32 +291,32 @@ describe("init", () => {
 				await expect(
 					runWrangler("init --type rust")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
-					`"The --type option is no longer supported."`
+					`[Error: The --type option is no longer supported.]`
 				);
 			});
 
 			it("should error if `--type webpack` is used", async () => {
 				await expect(runWrangler("init --type webpack")).rejects
 					.toThrowErrorMatchingInlineSnapshot(`
-              "The --type option is no longer supported.
-              If you wish to use webpack then you will need to create a custom build."
-            `);
+					[Error: The --type option is no longer supported.
+					If you wish to use webpack then you will need to create a custom build.]
+				`);
 			});
 
 			it("should error if `--site` is used", async () => {
 				await expect(runWrangler("init --site")).rejects
 					.toThrowErrorMatchingInlineSnapshot(`
-              "The --site option is no longer supported.
-              If you wish to create a brand new Worker Sites project then clone the \`worker-sites-template\` starter repository:
+					[Error: The --site option is no longer supported.
+					If you wish to create a brand new Worker Sites project then clone the \`worker-sites-template\` starter repository:
 
-              \`\`\`
-              git clone --depth=1 --branch=wrangler2 https://github.com/cloudflare/worker-sites-template my-site
-              cd my-site
-              \`\`\`
+					\`\`\`
+					git clone --depth=1 --branch=wrangler2 https://github.com/cloudflare/worker-sites-template my-site
+					cd my-site
+					\`\`\`
 
-              Find out more about how to create and maintain Sites projects at https://developers.cloudflare.com/workers/platform/sites.
-              Have you considered using Cloudflare Pages instead? See https://pages.cloudflare.com/."
-            `);
+					Find out more about how to create and maintain Sites projects at https://developers.cloudflare.com/workers/platform/sites.
+					Have you considered using Cloudflare Pages instead? See https://pages.cloudflare.com/.]
+				`);
 			});
 		});
 
@@ -2467,16 +2471,17 @@ describe("init", () => {
 
 		describe("from dashboard", () => {
 			function makeWorker({
+				main = "src/index.js",
 				id = "memory-crystal",
 				usage_model = "bundled",
 				compatibility_date = "1987-09-27",
-				content = `
-		export default {
-			async fetch(request, env, ctx) {
-				return new Response("Hello World!");
-			},
-		};
-		`,
+				content = dedent/*javascript*/ `
+							export default {
+								async fetch(request, env, ctx) {
+									return new Response("Hello World!");
+								},
+							};
+						`,
 				schedules = [
 					{
 						cron: "0 0 0 * * *",
@@ -2516,6 +2521,7 @@ describe("init", () => {
 						name: "website",
 						service: "website",
 						type: "service",
+						entrypoint: "WWWHandler",
 					},
 					{
 						type: "dispatch_namespace",
@@ -2548,6 +2554,11 @@ describe("init", () => {
 						part: "./my-entire-app-depends-on-this.cfg",
 					},
 					{
+						type: "d1",
+						name: "DB",
+						id: "40160e84-9fdb-4ce7-8578-23893cecc5a3",
+					},
+					{
 						type: "text_blob",
 						name: "TEXT_BLOB_TWO",
 						part: "./the-entirety-of-human-knowledge.txt",
@@ -2574,7 +2585,9 @@ describe("init", () => {
 				],
 				customDomains = [],
 				workersDev = true,
+				limits,
 			}: {
+				main?: string;
 				id?: string;
 				usage_model?: string;
 				compatibility_date?: string | null;
@@ -2584,8 +2597,10 @@ describe("init", () => {
 				routes?: unknown[];
 				customDomains?: unknown[];
 				workersDev?: boolean;
+				limits?: UserLimits;
 			} = {}) {
 				return {
+					main,
 					schedules,
 					service: {
 						id,
@@ -2602,6 +2617,7 @@ describe("init", () => {
 								created_on: "1987-09-27",
 								migration_tag: "some-migration-tag",
 								usage_model,
+								limits,
 								compatibility_date,
 								tail_consumers: [{ service: "listener" }],
 							},
@@ -2642,7 +2658,6 @@ describe("init", () => {
 
 			const mockConfigExpected: RawConfig = {
 				workers_dev: true,
-				usage_model: "bundled",
 				main: "src/index.js",
 				compatibility_date: "1987-09-27",
 				name: "isolinear-optical-chip",
@@ -2662,6 +2677,13 @@ describe("init", () => {
 						},
 					],
 				},
+				d1_databases: [
+					{
+						binding: "DB",
+						database_id: "40160e84-9fdb-4ce7-8578-23893cecc5a3",
+						database_name: "mydb",
+					},
+				],
 				kv_namespaces: [
 					{
 						binding: "kv_testing",
@@ -2686,6 +2708,7 @@ describe("init", () => {
 						environment: "production",
 						binding: "website",
 						service: "website",
+						entrypoint: "WWWHandler",
 					},
 				],
 				triggers: {
@@ -2738,179 +2761,185 @@ describe("init", () => {
 			function mockSupportingDashRequests(expectedAccountId: string) {
 				msw.use(
 					// This is fetched twice in normal usage
-					rest.get(
+					http.get(
 						`*/accounts/:accountId/workers/services/:scriptName`,
-						(req, res, ctx) => {
-							expect(req.params.accountId).toEqual(expectedAccountId);
-							expect(req.params.scriptName).toEqual(worker.service.id);
+						({ params }) => {
+							expect(params.accountId).toEqual(expectedAccountId);
+							expect(params.scriptName).toEqual(worker.service.id);
 
-							return res.once(
-								ctx.status(200),
-								ctx.json({
+							return HttpResponse.json(
+								{
 									success: true,
 									errors: [],
 									messages: [],
 									result: worker.service,
-								})
+								},
+								{ status: 200 }
 							);
-						}
+						},
+						{ once: true }
 					),
-					rest.get(
+					http.get(
 						`*/accounts/:accountId/workers/services/:scriptName`,
-						(req, res, ctx) => {
-							expect(req.params.accountId).toEqual(expectedAccountId);
-							expect(req.params.scriptName).toEqual(worker.service.id);
+						({ params }) => {
+							expect(params.accountId).toEqual(expectedAccountId);
+							expect(params.scriptName).toEqual(worker.service.id);
 
-							return res.once(
-								ctx.status(200),
-								ctx.json({
+							return HttpResponse.json(
+								{
 									success: true,
 									errors: [],
 									messages: [],
 									result: worker.service,
-								})
+								},
+								{ status: 200 }
 							);
-						}
+						},
+						{ once: true }
 					),
-					rest.get(
+					http.get(
 						`*/accounts/:accountId/workers/services/:scriptName/environments/:environment/bindings`,
-						(req, res, ctx) => {
-							expect(req.params.accountId).toEqual(expectedAccountId);
-							expect(req.params.scriptName).toEqual(worker.service.id);
-							expect(req.params.environment).toEqual(
+						({ params }) => {
+							expect(params.accountId).toEqual(expectedAccountId);
+							expect(params.scriptName).toEqual(worker.service.id);
+							expect(params.environment).toEqual(
 								worker.service.default_environment.environment
 							);
 
-							return res(
-								ctx.status(200),
-								ctx.json({
+							return HttpResponse.json(
+								{
 									success: true,
 									errors: [],
 									messages: [],
 									result: worker.bindings,
-								})
+								},
+								{ status: 200 }
 							);
 						}
 					),
-					rest.get(
+					http.get(
 						`*/accounts/:accountId/workers/services/:scriptName/environments/:environment/routes`,
-						(req, res, ctx) => {
-							expect(req.params.accountId).toEqual(expectedAccountId);
-							expect(req.params.scriptName).toEqual(worker.service.id);
-							expect(req.params.environment).toEqual(
+						({ params }) => {
+							expect(params.accountId).toEqual(expectedAccountId);
+							expect(params.scriptName).toEqual(worker.service.id);
+							expect(params.environment).toEqual(
 								worker.service.default_environment.environment
 							);
 
-							return res.once(
-								ctx.status(200),
-								ctx.json({
+							return HttpResponse.json(
+								{
 									success: true,
 									errors: [],
 									messages: [],
 									result: worker.routes,
-								})
+								},
+								{ status: 200 }
 							);
-						}
+						},
+						{ once: true }
 					),
-					rest.get(
+					http.get(
 						`*/accounts/:accountId/workers/domains/records`,
-						(req, res, ctx) => {
-							return res.once(
-								ctx.status(200),
-								ctx.json({
+						() => {
+							return HttpResponse.json(
+								{
 									success: true,
 									errors: [],
 									messages: [],
 									result: worker.customDomains,
-								})
+								},
+								{ status: 200 }
 							);
-						}
+						},
+						{ once: true }
 					),
-					rest.get(
+					http.get(
 						`*/accounts/:accountId/workers/services/:scriptName/environments/:environment/subdomain`,
-						(req, res, ctx) => {
-							expect(req.params.accountId).toEqual(expectedAccountId);
-							expect(req.params.scriptName).toEqual(worker.service.id);
-							expect(req.params.environment).toEqual(
+						({ params }) => {
+							expect(params.accountId).toEqual(expectedAccountId);
+							expect(params.scriptName).toEqual(worker.service.id);
+							expect(params.environment).toEqual(
 								worker.service.default_environment.environment
 							);
 
-							return res.once(
-								ctx.status(200),
-								ctx.json({
+							return HttpResponse.json(
+								{
 									success: true,
 									errors: [],
 									messages: [],
 									result: { enabled: worker.workersDev },
-								})
+								},
+								{ status: 200 }
 							);
-						}
+						},
+						{ once: true }
 					),
-					rest.get(
+					http.get(
 						`*/accounts/:accountId/workers/services/:scriptName/environments/:environment`,
 
-						(req, res, ctx) => {
-							expect(req.params.accountId).toEqual(expectedAccountId);
-							expect(req.params.scriptName).toEqual(worker.service.id);
-							expect(req.params.environment).toEqual(
+						({ params }) => {
+							expect(params.accountId).toEqual(expectedAccountId);
+							expect(params.scriptName).toEqual(worker.service.id);
+							expect(params.environment).toEqual(
 								worker.service.default_environment.environment
 							);
 
-							return res.once(
-								ctx.status(200),
-								ctx.json({
+							return HttpResponse.json(
+								{
 									success: true,
 									errors: [],
 									messages: [],
 									result: worker.service.default_environment,
-								})
+								},
+								{ status: 200 }
 							);
-						}
+						},
+						{ once: true }
 					),
-					rest.get(
+					http.get(
 						`*/accounts/:accountId/workers/scripts/:scriptName/schedules`,
-						(req, res, ctx) => {
-							expect(req.params.accountId).toEqual(expectedAccountId);
-							expect(req.params.scriptName).toEqual(worker.service.id);
+						({ params }) => {
+							expect(params.accountId).toEqual(expectedAccountId);
+							expect(params.scriptName).toEqual(worker.service.id);
 
-							return res.once(
-								ctx.status(200),
-								ctx.json({
+							return HttpResponse.json(
+								{
 									success: true,
 									errors: [],
 									messages: [],
 									result: {
 										schedules: worker.schedules,
 									},
-								})
+								},
+								{ status: 200 }
 							);
-						}
+						},
+						{ once: true }
 					),
-					rest.get(
+					http.get(
 						`*/accounts/:accountId/workers/services/:fromDashScriptName/environments/:environment/content/v2`,
-						async (_, res, ctx) => {
+						async () => {
 							if (typeof worker.content === "string") {
-								return res(ctx.text(worker.content));
+								return HttpResponse.text(worker.content, {
+									headers: {
+										"cf-entrypoint": worker.main,
+									},
+								});
 							}
 
-							const response = new Response(worker.content);
-
-							return res.once(
-								ctx.set(
-									"Content-Type",
-									response.headers.get("Content-Type") ?? ""
-								),
-								ctx.set("cf-entrypoint", `index.js`),
-								ctx.body(await response.text())
-							);
-						}
+							return HttpResponse.formData(worker.content, {
+								headers: {
+									"cf-entrypoint": worker.main,
+								},
+							});
+						},
+						{ once: true }
 					),
-					rest.get(
+					http.get(
 						`*/accounts/:accountId/workers/standard`,
-						(req, res, ctx) => {
-							return res.once(
-								ctx.status(200),
-								ctx.json({
+						() => {
+							return HttpResponse.json(
+								{
 									success: true,
 									errors: [],
 									messages: [],
@@ -2919,9 +2948,29 @@ describe("init", () => {
 											worker.service.default_environment.script.usage_model ===
 											"standard",
 									},
-								})
+								},
+								{ status: 200 }
 							);
-						}
+						},
+						{ once: true }
+					),
+					http.get(
+						`*/accounts/:accountId/d1/database/:database_id`,
+						() => {
+							return HttpResponse.json(
+								{
+									success: true,
+									errors: [],
+									messages: [],
+									result: {
+										uuid: "40160e84-9fdb-4ce7-8578-23893cecc5a3",
+										name: "mydb",
+									},
+								},
+								{ status: 200 }
+							);
+						},
+						{ once: true }
 					)
 				);
 			}
@@ -3005,7 +3054,6 @@ describe("init", () => {
 			main = \\"src/index.js\\"
 			compatibility_date = \\"1987-09-27\\"
 			workers_dev = false
-			usage_model = \\"bundled\\"
 
 			[[routes]]
 			pattern = \\"delta.quadrant\\"
@@ -3059,12 +3107,11 @@ describe("init", () => {
 
 			it("should fail on init --from-dash on non-existent worker name", async () => {
 				msw.use(
-					rest.get(
+					http.get(
 						`*/accounts/:accountId/workers/services/:scriptName`,
-						(req, res, ctx) => {
-							return res.once(
-								ctx.status(404),
-								ctx.json({
+						() => {
+							return HttpResponse.json(
+								{
 									success: false,
 									errors: [
 										{
@@ -3074,9 +3121,11 @@ describe("init", () => {
 									],
 									messages: [],
 									result: worker.service,
-								})
+								},
+								{ status: 404 }
 							);
-						}
+						},
+						{ once: true }
 					)
 				);
 				await expect(
@@ -3117,86 +3166,91 @@ describe("init", () => {
 				expect(
 					fs.readFileSync("./isolinear-optical-chip/wrangler.toml", "utf8")
 				).toMatchInlineSnapshot(`
-			"name = \\"isolinear-optical-chip\\"
-			main = \\"src/index.js\\"
-			compatibility_date = \\"1987-09-27\\"
-			workers_dev = true
-			usage_model = \\"bundled\\"
+					"name = \\"isolinear-optical-chip\\"
+					main = \\"src/index.js\\"
+					compatibility_date = \\"1987-09-27\\"
+					workers_dev = true
 
-			[[routes]]
-			pattern = \\"delta.quadrant\\"
-			zone_name = \\"delta.quadrant\\"
+					[[routes]]
+					pattern = \\"delta.quadrant\\"
+					zone_name = \\"delta.quadrant\\"
 
-			[[migrations]]
-			tag = \\"some-migration-tag\\"
-			new_classes = [ \\"Durability\\" ]
+					[[migrations]]
+					tag = \\"some-migration-tag\\"
+					new_classes = [ \\"Durability\\" ]
 
-			[triggers]
-			crons = [ \\"0 0 0 * * *\\" ]
+					[triggers]
+					crons = [ \\"0 0 0 * * *\\" ]
 
-			[[tail_consumers]]
-			service = \\"listener\\"
+					[[tail_consumers]]
+					service = \\"listener\\"
 
-			[vars]
-			ANOTHER-NAME = \\"thing-TEXT\\"
+					[vars]
+					ANOTHER-NAME = \\"thing-TEXT\\"
 
-			[[durable_objects.bindings]]
-			name = \\"DURABLE_TEST\\"
-			class_name = \\"Durability\\"
-			script_name = \\"another-durable-object-worker\\"
-			environment = \\"production\\"
+					[[durable_objects.bindings]]
+					name = \\"DURABLE_TEST\\"
+					class_name = \\"Durability\\"
+					script_name = \\"another-durable-object-worker\\"
+					environment = \\"production\\"
 
-			[[kv_namespaces]]
-			id = \\"some-namespace-id\\"
-			binding = \\"kv_testing\\"
+					[[kv_namespaces]]
+					id = \\"some-namespace-id\\"
+					binding = \\"kv_testing\\"
 
-			[[r2_buckets]]
-			binding = \\"test-bucket\\"
-			bucket_name = \\"test-bucket\\"
+					[[r2_buckets]]
+					binding = \\"test-bucket\\"
+					bucket_name = \\"test-bucket\\"
 
-			[[services]]
-			binding = \\"website\\"
-			service = \\"website\\"
-			environment = \\"production\\"
+					[[services]]
+					binding = \\"website\\"
+					service = \\"website\\"
+					environment = \\"production\\"
+					entrypoint = \\"WWWHandler\\"
 
-			[[dispatch_namespaces]]
-			binding = \\"name-namespace-mock\\"
-			namespace = \\"namespace-mock\\"
+					[[dispatch_namespaces]]
+					binding = \\"name-namespace-mock\\"
+					namespace = \\"namespace-mock\\"
 
-			[[logfwdr.bindings]]
-			name = \\"httplogs\\"
-			destination = \\"httplogs\\"
+					[[logfwdr.bindings]]
+					name = \\"httplogs\\"
+					destination = \\"httplogs\\"
 
-			[[logfwdr.bindings]]
-			name = \\"trace\\"
-			destination = \\"trace\\"
+					[[logfwdr.bindings]]
+					name = \\"trace\\"
+					destination = \\"trace\\"
 
-			[wasm_modules]
-			WASM_MODULE_ONE = \\"./some_wasm.wasm\\"
-			WASM_MODULE_TWO = \\"./more_wasm.wasm\\"
+					[wasm_modules]
+					WASM_MODULE_ONE = \\"./some_wasm.wasm\\"
+					WASM_MODULE_TWO = \\"./more_wasm.wasm\\"
 
-			[text_blobs]
-			TEXT_BLOB_ONE = \\"./my-entire-app-depends-on-this.cfg\\"
-			TEXT_BLOB_TWO = \\"./the-entirety-of-human-knowledge.txt\\"
+					[text_blobs]
+					TEXT_BLOB_ONE = \\"./my-entire-app-depends-on-this.cfg\\"
+					TEXT_BLOB_TWO = \\"./the-entirety-of-human-knowledge.txt\\"
 
-			[data_blobs]
-			DATA_BLOB_ONE = \\"DATA_BLOB_ONE\\"
-			DATA_BLOB_TWO = \\"DATA_BLOB_TWO\\"
+					[[d1_databases]]
+					binding = \\"DB\\"
+					database_id = \\"40160e84-9fdb-4ce7-8578-23893cecc5a3\\"
+					database_name = \\"mydb\\"
 
-			[unsafe]
-			  [[unsafe.bindings]]
-			  type = \\"some unsafe thing\\"
-			  name = \\"UNSAFE_BINDING_ONE\\"
+					[data_blobs]
+					DATA_BLOB_ONE = \\"DATA_BLOB_ONE\\"
+					DATA_BLOB_TWO = \\"DATA_BLOB_TWO\\"
 
-			[unsafe.bindings.data.some]
-			unsafe = \\"thing\\"
+					[unsafe]
+					  [[unsafe.bindings]]
+					  type = \\"some unsafe thing\\"
+					  name = \\"UNSAFE_BINDING_ONE\\"
 
-			  [[unsafe.bindings]]
-			  type = \\"another unsafe thing\\"
-			  name = \\"UNSAFE_BINDING_TWO\\"
-			  data = 1_337
-			"
-		`);
+					[unsafe.bindings.data.some]
+					unsafe = \\"thing\\"
+
+					  [[unsafe.bindings]]
+					  type = \\"another unsafe thing\\"
+					  name = \\"UNSAFE_BINDING_TWO\\"
+					  data = 1_337
+					"
+				`);
 				expect(std.out).toContain("cd isolinear-optical-chip");
 
 				checkFiles({
@@ -3254,22 +3308,47 @@ describe("init", () => {
 					},
 				});
 			});
-			it("should ignore usage_model = standard", async () => {
+
+			it("should include user limits", async () => {
 				worker = makeWorker({
 					id: "isolinear-optical-chip",
-					usage_model: "standard",
+					limits: {
+						cpu_ms: 75,
+					},
 				});
 
-				await expect(
-					downloadWorker("LCARS", "isolinear-optical-chip")
-				).resolves.toMatchObject({
-					config: {
-						...mockConfigExpected,
-						main: "index.js",
-						usage_model: undefined,
+				const { config } = await downloadWorker(
+					"LCARS",
+					"isolinear-optical-chip"
+				);
+				expect(config).toMatchObject({
+					...mockConfigExpected,
+					main: "index.js",
+					limits: {
+						cpu_ms: 75,
 					},
 				});
 			});
+
+			it.each(["bundled", "unbound", "standard"])(
+				"should ignore usage_model = %s",
+				async (usage_model) => {
+					worker = makeWorker({
+						id: "isolinear-optical-chip",
+						usage_model,
+					});
+
+					const { config } = await downloadWorker(
+						"LCARS",
+						"isolinear-optical-chip"
+					);
+					expect(config).toMatchObject({
+						...mockConfigExpected,
+						main: "index.js",
+					});
+					expect(config.usage_model).toBeUndefined();
+				}
+			);
 
 			it("should use fallback compatibility date if none is upstream", async () => {
 				worker = makeWorker({
@@ -3278,9 +3357,9 @@ describe("init", () => {
 				});
 
 				const mockDate = "2000-01-01";
-				jest
-					.spyOn(Date.prototype, "toISOString")
-					.mockImplementation(() => `${mockDate}T00:00:00.000Z`);
+				vi.spyOn(Date.prototype, "toISOString").mockImplementation(
+					() => `${mockDate}T00:00:00.000Z`
+				);
 
 				mockConfirm(
 					{
@@ -3321,10 +3400,10 @@ describe("init", () => {
 					id: "isolinear-optical-chip",
 				});
 				msw.use(
-					rest.get(
+					http.get(
 						`*/accounts/:accountId/workers/services/:scriptName/environments/:environment/bindings`,
-						(req, res) => {
-							return res.networkError("Mock Network Error");
+						() => {
+							return HttpResponse.error();
 						}
 					)
 				);
@@ -3347,10 +3426,10 @@ describe("init", () => {
 				).rejects.toThrowError();
 
 				expect(std.err).toMatchInlineSnapshot(`
-			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mError Occurred FetchError: request to https://api.cloudflare.com/client/v4/accounts/LCARS/workers/services/isolinear-optical-chip/environments/test/bindings failed, reason: Mock Network Error: Unable to fetch bindings, routes, or services metadata from the dashboard. Please try again later.[0m
+"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mError Occurred TypeError: Failed to fetch: Unable to fetch bindings, routes, or services metadata from the dashboard. Please try again later.[0m
 
-			"
-		`);
+"
+`);
 			});
 
 			it("should not include migrations in config file when none are necessary", async () => {
@@ -3384,7 +3463,6 @@ describe("init", () => {
 							compatibility_date: "1988-08-07",
 							main: "src/index.js",
 							workers_dev: true,
-							usage_model: "bundled",
 							name: "isolinear-optical-chip",
 							tail_consumers: [{ service: "listener" }],
 						}),
@@ -3415,15 +3493,15 @@ describe("init", () => {
 					"index.js",
 					new File(
 						[
-							`
-				import handleRequest from './other.js';
+							dedent/*javascript*/ `
+								import handleRequest from './other.js';
 
-				export default {
-					async fetch(request, env, ctx) {
-						return handleRequest(request, env, ctx);
-					},
-				};
-			`,
+								export default {
+									async fetch(request, env, ctx) {
+										return handleRequest(request, env, ctx);
+									},
+								};
+							`,
 						],
 						"index.js",
 						{ type: "application/javascript+module" }
@@ -3433,17 +3511,18 @@ describe("init", () => {
 					"other.js",
 					new File(
 						[
-							`
-					export default function (request, env, ctx) {
-						return new Response("Hello World!");
-					}
-				`,
+							dedent/*javascript*/ `
+								export default function (request, env, ctx) {
+									return new Response("Hello World!");
+								}
+							`,
 						],
 						"other.js",
 						{ type: "application/javascript+module" }
 					)
 				);
 				worker = makeWorker({
+					main: "index.js",
 					id: "isolinear-optical-chip",
 					content: fd,
 				});
@@ -3482,34 +3561,6 @@ describe("init", () => {
 							...mockConfigExpected,
 							name: "isolinear-optical-chip",
 							main: "src/index.js",
-						}),
-					},
-				});
-			});
-
-			it("should have an explicit usage model for non-standard users", async () => {
-				mockConfirm(
-					{
-						text: "Would you like to use git to manage this Worker?",
-						result: false,
-					},
-					{
-						text: "No package.json found. Would you like to create one?",
-						result: true,
-					}
-				);
-
-				await runWrangler(
-					"init isolinear-optical-chip --from-dash memory-crystal --no-delegate-c3"
-				);
-
-				expect(std.out).toContain("cd isolinear-optical-chip");
-
-				checkFiles({
-					items: {
-						"isolinear-optical-chip/wrangler.toml": wranglerToml({
-							...mockConfigExpected,
-							usage_model: "bundled",
 						}),
 					},
 				});

@@ -20,7 +20,10 @@ export class DeprecationError extends UserError {
 }
 
 export class FatalError extends UserError {
-	constructor(message?: string, readonly code?: number) {
+	constructor(
+		message?: string,
+		readonly code?: number
+	) {
 		super(message);
 	}
 }
@@ -34,7 +37,33 @@ export class FatalError extends UserError {
  * ```
  */
 export class JsonFriendlyFatalError extends FatalError {
-	constructor(message?: string, readonly code?: number) {
+	constructor(
+		message?: string,
+		readonly code?: number
+	) {
 		super(message);
+	}
+}
+
+export class MissingConfigError extends Error {
+	constructor(key: string) {
+		super(`Missing config value for ${key}`);
+	}
+}
+
+/**
+ * Create either a FatalError or JsonFriendlyFatalError depending upon `isJson` parameter.
+ *
+ * If `isJson` is true, then the `message` is JSON stringified.
+ */
+export function createFatalError(
+	message: unknown,
+	isJson: boolean,
+	code?: number
+): Error {
+	if (isJson) {
+		return new JsonFriendlyFatalError(JSON.stringify(message), code);
+	} else {
+		return new FatalError(`${message}`, code);
 	}
 }

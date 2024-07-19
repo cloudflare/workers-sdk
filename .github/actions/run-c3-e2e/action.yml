@@ -1,8 +1,11 @@
 name: "Run C3 E2E Tests"
 description: "Runs the C3 E2E tests on npm, pnpm, and bun"
 inputs:
-  package-manager:
+  packageManager:
     description: "Which package manager to run the tests with"
+    required: true
+  packageManagerVersion:
+    description: "Which package manager version to run the tests with"
     required: true
   quarantine:
     description: "Whether to run the tests in quarantine mode"
@@ -16,15 +19,18 @@ inputs:
   apiToken:
     description: "The api token of the test account"
     required: true
+  saveDiffs:
+    description: "Whether to retain diffs of framework templates during run"
+    required: true
 
 runs:
   using: "composite"
   steps:
-    - if: ${{ matrix.pm == 'bun' }}
-      name: Install Bun ${{ env.bun-version }}
+    - if: ${{ inputs.packageManager == 'bun' }}
+      name: Install Bun ${{ inputs.packageManagerVersion }}
       uses: oven-sh/setup-bun@v1
       with:
-        bun-version: ${{ env.bun-version }}
+        bun-version: ${{ inputs.packageManagerVersion }}
 
     # Needed because gatsby requires git
     - name: Configure Git
@@ -33,22 +39,41 @@ runs:
         git config --global user.email wrangler@cloudflare.com
         git config --global user.name 'Wrangler automated PR updater'
 
+    - name: Build
+      shell: bash
+      run: pnpm run build
+      env:
+        NODE_ENV: "production"
+        CI_OS: ${{ runner.os }}
+
     - name: E2E Tests
       id: run-e2e
       shell: bash
-      continue-on-error: true
-      run: pnpm run --filter create-cloudflare test:e2e:${{ inputs.package-manager }}
+      run: pnpm run test:e2e --filter create-cloudflare
       env:
         CLOUDFLARE_API_TOKEN: ${{ inputs.apiToken }}
         CLOUDFLARE_ACCOUNT_ID: ${{ inputs.accountId }}
         E2E_QUARANTINE: ${{ inputs.quarantine }}
         FRAMEWORK_CLI_TO_TEST: ${{ inputs.framework }}
+        TEST_PM: ${{ inputs.packageManager }}
+        TEST_PM_VERSION: ${{ inputs.packageManagerVersion }}
+        SAVE_DIFFS: ${{ inputs.saveDiffs }}
+        CI_OS: ${{ runner.os }}
 
     - name: Upload Logs
       uses: actions/upload-artifact@v3
+      if: always()
       with:
         name: e2e-logs-${{matrix.os}}
         path: packages/create-cloudflare/.e2e-logs
+
+    - name: Upload Framework Diffs
+      if: ${{ steps.run-e2e.outcome == 'success' && inputs.saveDiffs == 'true' }}
+      uses: actions/upload-artifact@v3
+      with:
+        name: e2e-framework-diffs
+        path: packages/create-cloudflare/.e2e-diffs
+        overwrite: true
 
     - name: Fail if errors detected
       shell: bash

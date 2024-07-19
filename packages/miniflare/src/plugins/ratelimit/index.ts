@@ -1,7 +1,7 @@
 import SCRIPT_RATELIMIT_OBJECT from "worker:ratelimit/ratelimit";
 import { z } from "zod";
 import { Worker_Binding } from "../../runtime";
-import { Plugin, kProxyNodeBinding } from "../shared";
+import { kProxyNodeBinding, Plugin } from "../shared";
 
 export enum PeriodType {
 	TENSECONDS = 10,

@@ -2,7 +2,7 @@ import { blue, brandColor, dim } from "@cloudflare/cli/colors";
 import { spinner } from "@cloudflare/cli/interactive";
 import dns2 from "dns2";
 import { request } from "undici";
-import { sleep } from "./common";
+import { sleep } from "./sleep";
 import type { DnsAnswer, DnsResponse } from "dns2";
 
 const TIMEOUT = 1000 * 60 * 5;
@@ -29,12 +29,14 @@ export const poll = async (url: string): Promise<boolean> => {
 	await sleep(10 * 1000);
 
 	await pollDns(domain, start, s);
-	if (await pollHttp(url, start, s)) return true;
+	if (await pollHttp(url, start, s)) {
+		return true;
+	}
 
 	s.stop(
 		`${brandColor(
-			"timed out"
-		)} while waiting for ${url} - try accessing it in a few minutes.`
+			"timed out",
+		)} while waiting for ${url} - try accessing it in a few minutes.`,
 	);
 	return false;
 };
@@ -42,7 +44,7 @@ export const poll = async (url: string): Promise<boolean> => {
 const pollDns = async (
 	domain: string,
 	start: number,
-	s: ReturnType<typeof spinner>
+	s: ReturnType<typeof spinner>,
 ) => {
 	while (Date.now() - start < TIMEOUT) {
 		s.update(`Waiting for DNS to propagate (${secondsSince(start)}s)`);
@@ -57,12 +59,12 @@ const pollDns = async (
 const pollHttp = async (
 	url: string,
 	start: number,
-	s: ReturnType<typeof spinner>
+	s: ReturnType<typeof spinner>,
 ) => {
 	s.start("Waiting for deployment to become available");
 	while (Date.now() - start < TIMEOUT) {
 		s.update(
-			`Waiting for deployment to become available (${secondsSince(start)}s)`
+			`Waiting for deployment to become available (${secondsSince(start)}s)`,
 		);
 		try {
 			const { statusCode } = await request(url, {
@@ -71,7 +73,7 @@ const pollHttp = async (
 			});
 			if (statusCode === 200) {
 				s.stop(
-					`${brandColor("deployment")} ${dim("is ready at:")} ${blue(url)}`
+					`${brandColor("deployment")} ${dim("is ready at:")} ${blue(url)}`,
 				);
 				return true;
 			}
@@ -92,7 +94,9 @@ export const isDomainResolvable = async (domain: string) => {
 		const nameServers = await lookupSubdomainNameservers(domain);
 
 		// If the subdomain nameservers aren't resolvable yet, keep polling
-		if (nameServers.length === 0) return false;
+		if (nameServers.length === 0) {
+			return false;
+		}
 
 		// Once they are resolvable, query these nameservers for the domain's 'A' record
 		const dns = new dns2({ nameServers });

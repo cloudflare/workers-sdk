@@ -56,7 +56,7 @@ export function readableRelative(to: string) {
 
 /**
  * The __RELATIVE_PACKAGE_PATH__ is defined either in the esbuild config (for production)
- * or the jest.setup.ts (for unit testing).
+ * or the vitest.setup.ts (for unit testing).
  */
 declare const __RELATIVE_PACKAGE_PATH__: string;
 

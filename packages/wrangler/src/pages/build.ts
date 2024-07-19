@@ -1,8 +1,17 @@
+import { createHash } from "node:crypto";
 import { existsSync, lstatSync, mkdirSync, writeFileSync } from "node:fs";
-import { basename, dirname, relative, resolve as resolvePath } from "node:path";
+import { readFile } from "node:fs/promises";
+import path, {
+	basename,
+	dirname,
+	relative,
+	resolve as resolvePath,
+} from "node:path";
 import { createUploadWorkerBundleContents } from "../api/pages/create-worker-bundle-contents";
+import { readConfig } from "../config";
 import { writeAdditionalModules } from "../deployment-bundle/find-additional-modules";
-import { FatalError, UserError } from "../errors";
+import { validateNodeCompat } from "../deployment-bundle/node-compat";
+import { FatalError } from "../errors";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { isNavigatorDefined } from "../navigator-user-agent";
@@ -10,14 +19,17 @@ import { buildFunctions } from "./buildFunctions";
 import {
 	EXIT_CODE_FUNCTIONS_NO_ROUTES_ERROR,
 	EXIT_CODE_FUNCTIONS_NOTHING_TO_BUILD_ERROR,
+	EXIT_CODE_INVALID_PAGES_CONFIG,
 	FunctionsNoRoutesError,
 	getFunctionsNoRoutesWarning,
 } from "./errors";
 import {
 	buildRawWorker,
-	traverseAndBuildWorkerJSDirectory,
+	produceWorkerBundleForWorkerJSDirectory,
 } from "./functions/buildWorker";
+import type { Config } from "../config";
 import type { BundleResult } from "../deployment-bundle/bundle";
+import type { NodeJSCompatMode } from "../deployment-bundle/node-compat";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
@@ -44,6 +56,14 @@ export function Options(yargs: CommonYargsArgv) {
 			"output-config-path": {
 				type: "string",
 				description: "The location for the output config file",
+			},
+			"build-metadata-path": {
+				type: "string",
+				description: "The location for the build metadata file",
+			},
+			"project-directory": {
+				type: "string",
+				description: "The location of the Pages project",
 			},
 			"output-routes-path": {
 				type: "string",
@@ -105,11 +125,16 @@ export function Options(yargs: CommonYargsArgv) {
 				deprecated: true,
 				hidden: true,
 			},
+			external: {
+				describe: "A list of module imports to exclude from bundling",
+				type: "string",
+				array: true,
+			},
 		});
 }
 
 export const Handler = async (args: PagesBuildArgs) => {
-	const validatedArgs = validateArgs(args);
+	const validatedArgs = await validateArgs(args);
 
 	let bundle: BundleResult | undefined = undefined;
 
@@ -125,9 +150,9 @@ export const Handler = async (args: PagesBuildArgs) => {
 			fallbackService,
 			watch,
 			plugin,
-			nodejsCompat,
-			legacyNodeCompat,
+			nodejsCompatMode,
 			defineNavigatorUserAgent,
+			external,
 		} = validatedArgs;
 
 		try {
@@ -149,11 +174,11 @@ export const Handler = async (args: PagesBuildArgs) => {
 				// it will not watch new files that are added to the functions directory!
 				watch,
 				plugin,
-				legacyNodeCompat,
-				nodejsCompat,
+				nodejsCompatMode,
 				routesOutputPath,
 				local: false,
 				defineNavigatorUserAgent,
+				external,
 			});
 		} catch (e) {
 			if (e instanceof FunctionsNoRoutesError) {
@@ -177,6 +202,9 @@ export const Handler = async (args: PagesBuildArgs) => {
 		}
 	} else {
 		const {
+			config,
+			buildMetadataPath,
+			buildMetadata,
 			directory,
 			outfile,
 			outdir,
@@ -188,10 +216,10 @@ export const Handler = async (args: PagesBuildArgs) => {
 			watch,
 			plugin,
 			buildOutputDirectory,
-			nodejsCompat,
-			legacyNodeCompat,
+			nodejsCompatMode,
 			workerScriptPath,
 			defineNavigatorUserAgent,
+			external,
 		} = validatedArgs;
 
 		/**
@@ -200,11 +228,13 @@ export const Handler = async (args: PagesBuildArgs) => {
 		 */
 		if (workerScriptPath) {
 			if (lstatSync(workerScriptPath).isDirectory()) {
-				bundle = await traverseAndBuildWorkerJSDirectory({
+				bundle = await produceWorkerBundleForWorkerJSDirectory({
 					workerJSDirectory: workerScriptPath,
+					bundle: true,
 					buildOutputDirectory,
-					nodejsCompat,
+					nodejsCompatMode,
 					defineNavigatorUserAgent,
+					sourceMaps: config?.upload_source_maps ?? sourcemap,
 				});
 			} else {
 				/**
@@ -218,10 +248,11 @@ export const Handler = async (args: PagesBuildArgs) => {
 					outdir,
 					directory: buildOutputDirectory,
 					local: false,
-					sourcemap,
+					sourcemap: config?.upload_source_maps ?? sourcemap,
 					watch,
-					nodejsCompat,
+					nodejsCompatMode,
 					defineNavigatorUserAgent,
+					externalModules: external,
 				});
 			}
 		} else {
@@ -237,16 +268,16 @@ export const Handler = async (args: PagesBuildArgs) => {
 					outputConfigPath,
 					functionsDirectory: directory,
 					minify,
-					sourcemap,
+					sourcemap: config?.upload_source_maps ?? sourcemap,
 					fallbackService,
 					watch,
 					plugin,
 					buildOutputDirectory,
-					legacyNodeCompat,
-					nodejsCompat,
+					nodejsCompatMode,
 					routesOutputPath,
 					local: false,
 					defineNavigatorUserAgent,
+					external,
 				});
 			} catch (e) {
 				if (e instanceof FunctionsNoRoutesError) {
@@ -266,7 +297,8 @@ export const Handler = async (args: PagesBuildArgs) => {
 
 		if (outfile) {
 			const workerBundleContents = await createUploadWorkerBundleContents(
-				bundle as BundleResult
+				bundle as BundleResult,
+				config
 			);
 
 			mkdirSync(dirname(outfile), { recursive: true });
@@ -274,6 +306,9 @@ export const Handler = async (args: PagesBuildArgs) => {
 				outfile,
 				Buffer.from(await workerBundleContents.arrayBuffer())
 			);
+		}
+		if (buildMetadataPath && buildMetadata) {
+			writeFileSync(buildMetadataPath, JSON.stringify(buildMetadata));
 		}
 	}
 
@@ -283,10 +318,16 @@ export const Handler = async (args: PagesBuildArgs) => {
 type WorkerBundleArgs = Omit<PagesBuildArgs, "nodeCompat"> & {
 	plugin: false;
 	buildOutputDirectory: string;
-	legacyNodeCompat: boolean;
-	nodejsCompat: boolean;
+	nodejsCompatMode: NodeJSCompatMode;
 	defineNavigatorUserAgent: boolean;
 	workerScriptPath: string;
+	config: Config | undefined;
+	buildMetadata:
+		| {
+				wrangler_config_hash: string;
+				build_output_directory: string;
+		  }
+		| undefined;
 };
 type PluginArgs = Omit<
 	PagesBuildArgs,
@@ -294,14 +335,49 @@ type PluginArgs = Omit<
 > & {
 	plugin: true;
 	outdir: string;
-	legacyNodeCompat: boolean;
-	nodejsCompat: boolean;
+	nodejsCompatMode: NodeJSCompatMode;
 	defineNavigatorUserAgent: boolean;
 };
+async function maybeReadPagesConfig(
+	args: PagesBuildArgs
+): Promise<(Config & { hash: string }) | undefined> {
+	if (!args.projectDirectory || !args.buildMetadataPath) {
+		return;
+	}
+	const configPath = path.resolve(args.projectDirectory, "wrangler.toml");
+	// Fail early if the config file doesn't exist
+	if (!existsSync(configPath)) {
+		return undefined;
+	}
+	try {
+		const config = readConfig(
+			configPath,
+			{
+				...args,
+				// eslint-disable-next-line turbo/no-undeclared-env-vars
+				env: process.env.PAGES_ENVIRONMENT,
+			},
+			true
+		);
 
+		return {
+			...config,
+			hash: createHash("sha256")
+				.update(await readFile(configPath))
+				.digest("hex"),
+		};
+	} catch (e) {
+		if (e instanceof FatalError && e.code === EXIT_CODE_INVALID_PAGES_CONFIG) {
+			return undefined;
+		}
+		throw e;
+	}
+}
 type ValidatedArgs = WorkerBundleArgs | PluginArgs;
 
-const validateArgs = (args: PagesBuildArgs): ValidatedArgs => {
+const validateArgs = async (args: PagesBuildArgs): Promise<ValidatedArgs> => {
+	const config = await maybeReadPagesConfig(args);
+
 	if (args.outdir && args.outfile) {
 		throw new FatalError(
 			"Cannot specify both an `--outdir` and an `--outfile`.",
@@ -348,9 +424,12 @@ const validateArgs = (args: PagesBuildArgs): ValidatedArgs => {
 		args.buildOutputDirectory ??= args.outfile ? dirname(args.outfile) : ".";
 	}
 
-	if (args.buildOutputDirectory) {
-		args.buildOutputDirectory = resolvePath(args.buildOutputDirectory);
-	}
+	args.buildOutputDirectory =
+		config?.pages_build_output_dir ??
+		(args.buildOutputDirectory
+			? resolvePath(args.buildOutputDirectory)
+			: undefined);
+
 	if (args.outdir) {
 		args.outdir = resolvePath(args.outdir);
 	}
@@ -359,21 +438,16 @@ const validateArgs = (args: PagesBuildArgs): ValidatedArgs => {
 	}
 
 	const { nodeCompat: legacyNodeCompat, ...argsExceptNodeCompat } = args;
-	if (legacyNodeCompat) {
-		console.warn(
-			"Enabling Node.js compatibility mode for builtins and globals. This is experimental and has serious tradeoffs. Please see https://github.com/ionic-team/rollup-plugin-node-polyfills/ for more details."
-		);
-	}
-	const nodejsCompat = !!args.compatibilityFlags?.includes("nodejs_compat");
+	const nodejsCompatMode = validateNodeCompat({
+		legacyNodeCompat: legacyNodeCompat,
+		compatibilityFlags: args.compatibilityFlags ?? [],
+		noBundle: config?.no_bundle ?? false,
+	});
+
 	const defineNavigatorUserAgent = isNavigatorDefined(
 		args.compatibilityDate,
 		args.compatibilityFlags
 	);
-	if (legacyNodeCompat && nodejsCompat) {
-		throw new UserError(
-			"The `nodejs_compat` compatibility flag cannot be used in conjunction with the legacy `--node-compat` flag. If you want to use the Workers runtime Node.js compatibility features, please remove the `--node-compat` argument from your CLI command."
-		);
-	}
 
 	let workerScriptPath: string | undefined;
 
@@ -414,8 +488,18 @@ We looked for the Functions directory (${basename(
 	return {
 		...argsExceptNodeCompat,
 		workerScriptPath,
-		nodejsCompat,
-		legacyNodeCompat,
+		nodejsCompatMode,
 		defineNavigatorUserAgent,
+		config,
+		buildMetadata:
+			config && args.projectDirectory && config.pages_build_output_dir
+				? {
+						wrangler_config_hash: config.hash,
+						build_output_directory: path.relative(
+							args.projectDirectory,
+							config.pages_build_output_dir
+						),
+					}
+				: undefined,
 	} as ValidatedArgs;
 };

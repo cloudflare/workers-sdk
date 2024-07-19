@@ -1,14 +1,13 @@
 import { readConfig } from "../config";
 import { logger } from "../logger";
 import { listConfigs } from "./client";
-import { hyperdriveBetaWarning } from "./utils";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
 } from "../yargs-types";
 
 export function options(yargs: CommonYargsArgv) {
-	return yargs.epilogue(hyperdriveBetaWarning);
+	return yargs;
 }
 
 export async function handler(

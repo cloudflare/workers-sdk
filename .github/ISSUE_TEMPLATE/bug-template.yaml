@@ -15,7 +15,7 @@ body:
       label: Which Cloudflare product(s) does this pertain to?
       multiple: true
       options:
-        - C3
+        - C3 (npm create cloudflare)
         - D1
         - KV
         - Pages
@@ -23,11 +23,12 @@ body:
         - Queues
         - R2
         - Workers for Platforms
-        - Constellation
+        - Workers AI
         - Workers Runtime
-        - Wrangler core
+        - Wrangler
         - Miniflare
         - KV Asset Handler
+        - Workers Vitest Integration
         - Other
     validations:
       required: true
@@ -67,7 +68,7 @@ body:
         - Commands used to start your local dev server, including custom env and cli args
         - Steps to be performed in the browser, curl commands, or a test we can run that reliably fails (at least a percent of the time)
 
-        A git repo we can clone and run a test suit on, or which has a README with step-by-step instructions, is even better. In this case, please use the field below to provide a link to the minimal repro.
+        A git repo we can clone and run a test suite on, or which has a README with step-by-step instructions, is even better. In this case, please use the field below to provide a link to the minimal repro.
     validations:
       required: true
   - type: input

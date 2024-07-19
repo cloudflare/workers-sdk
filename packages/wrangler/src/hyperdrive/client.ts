@@ -9,31 +9,36 @@ export type HyperdriveConfig = {
 	caching: CachingOptions;
 };
 
-export type Origin = {
+export type PublicOrigin = {
 	host?: string;
 	port?: number;
-};
-
-export type PublicOrigin = Origin & {
 	scheme?: string;
 	database?: string;
 	user?: string;
+	access_client_id?: string;
 };
 
-export type OriginWithPassword = PublicOrigin & {
+export type OriginWithSecrets = PublicOrigin & {
 	password?: string;
+	access_client_secret?: string;
 };
 
 export type CachingOptions = {
 	disabled?: boolean;
-	maxAge?: number;
-	staleWhileRevalidate?: number;
+	max_age?: number;
+	stale_while_revalidate?: number;
 };
 
 export type CreateUpdateHyperdriveBody = {
-	name?: string;
-	origin: OriginWithPassword;
+	name: string;
+	origin: OriginWithSecrets;
 	caching: CachingOptions;
+};
+
+export type PatchHyperdriveBody = {
+	name?: string;
+	origin?: OriginWithSecrets;
+	caching?: CachingOptions;
 };
 
 export async function createConfig(
@@ -79,6 +84,18 @@ export async function updateConfig(
 	const accountId = await requireAuth(config);
 	return await fetchResult(`/accounts/${accountId}/hyperdrive/configs/${id}`, {
 		method: "PUT",
+		body: JSON.stringify(body),
+	});
+}
+
+export async function patchConfig(
+	config: Config,
+	id: string,
+	body: PatchHyperdriveBody
+): Promise<HyperdriveConfig> {
+	const accountId = await requireAuth(config);
+	return await fetchResult(`/accounts/${accountId}/hyperdrive/configs/${id}`, {
+		method: "PATCH",
 		body: JSON.stringify(body),
 	});
 }

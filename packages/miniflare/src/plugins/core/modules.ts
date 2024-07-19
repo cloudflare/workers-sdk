@@ -6,12 +6,12 @@ import { pathToFileURL } from "url";
 import { TextDecoder, TextEncoder } from "util";
 import { parse } from "acorn";
 import { simple } from "acorn-walk";
-import type estree from "estree";
 import { dim } from "kleur/colors";
 import { z } from "zod";
 import { Worker_Module } from "../../runtime";
-import { MiniflareCoreError, PathSchema, globsToRegExps } from "../../shared";
+import { globsToRegExps, MiniflareCoreError, PathSchema } from "../../shared";
 import { MatcherRegExps, testRegExps } from "../../workers";
+import type estree from "estree";
 
 const SUGGEST_BUNDLE =
 	"If you're trying to import an npm package, you'll need to bundle your Worker first.";
@@ -246,7 +246,7 @@ export class ModuleLocator {
 						) {
 							this.#visitModule(modulePath, name, type, argument);
 						}
-				  },
+					},
 		};
 		simple(root, visitors as Record<string, (node: any) => void>);
 	}
@@ -257,14 +257,6 @@ export class ModuleLocator {
 		referencingType: JavaScriptModuleRuleType,
 		specExpression: estree.Expression | estree.SpreadElement
 	) {
-		if (maybeGetStringScriptPathIndex(referencingName) !== undefined) {
-			const prefix = getResolveErrorPrefix(referencingPath);
-			throw new MiniflareCoreError(
-				"ERR_MODULE_STRING_SCRIPT",
-				`${prefix}: imports are unsupported in string \`script\` without defined \`scriptPath\``
-			);
-		}
-
 		// Ensure spec is a static string literal, and resolve full module identifier
 		if (
 			specExpression.type !== "Literal" ||
@@ -308,6 +300,16 @@ ${dim(modulesConfig)}`;
 			this.additionalModuleNames.includes(spec)
 		) {
 			return;
+		}
+
+		// If this isn't a built-in module, and this is a string script without
+		// a path, we won't be able to resolve it
+		if (maybeGetStringScriptPathIndex(referencingName) !== undefined) {
+			const prefix = getResolveErrorPrefix(referencingPath);
+			throw new MiniflareCoreError(
+				"ERR_MODULE_STRING_SCRIPT",
+				`${prefix}: imports are unsupported in string \`script\` without defined \`scriptPath\``
+			);
 		}
 
 		const identifier = path.resolve(path.dirname(referencingPath), spec);

@@ -1,6 +1,6 @@
 // Adapted from https://github.com/cloudflare/workers-sdk/blob/0a77990457652af36c60c52bf9c38c3a69945de4/packages/wrangler/src/module-collection.ts
 import globToRegExp from "glob-to-regexp";
-import { TypedModule } from "./useDraftWorker";
+import type { TypedModule } from "./useDraftWorker";
 
 type ConfigModuleRuleType =
 	| "ESModule"
@@ -58,7 +58,7 @@ export interface CfModule {
 
 function flipObject<
 	K extends string | number | symbol,
-	V extends string | number | symbol
+	V extends string | number | symbol,
 >(obj: Record<K, V>): Record<V, K> {
 	return Object.fromEntries(Object.entries(obj).map(([k, v]) => [v, k]));
 }

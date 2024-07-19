@@ -8,6 +8,7 @@ import serveStatic from "serve-static";
 import { getHttpsOptions } from "../https-options";
 import { logger } from "../logger";
 import { getAccessToken } from "../user/access";
+import { castAsAbortError, isAbortError } from "../utils/isAbortError";
 import type { CfPreviewToken } from "./create-worker-preview";
 import type { HttpTerminator } from "http-terminator";
 import type {
@@ -51,17 +52,16 @@ async function addCfAccessToken(
 		return;
 	}
 	if (typeof accessTokenRef.current === "string") {
-		headers[
-			"cookie"
-		] = `${headers["cookie"]};CF_Authorization=${accessTokenRef.current}`;
+		headers["cookie"] =
+			`${headers["cookie"]};CF_Authorization=${accessTokenRef.current}`;
 		return;
 	}
 	const token = await getAccessToken(domain);
 	accessTokenRef.current = token;
-	if (token)
-		headers[
-			"cookie"
-		] = `${headers["cookie"]};CF_Authorization=${accessTokenRef.current}`;
+	if (token) {
+		headers["cookie"] =
+			`${headers["cookie"]};CF_Authorization=${accessTokenRef.current}`;
+	}
 }
 /**
  * Rewrite references in request headers
@@ -98,7 +98,9 @@ function writeHead(
 	);
 	for (const [key, values] of Object.entries(res.headers)) {
 		if (Array.isArray(values)) {
-			for (const value of values) socket.write(`${key}: ${value}\r\n`);
+			for (const value of values) {
+				socket.write(`${key}: ${value}\r\n`);
+			}
 		} else {
 			socket.write(`${key}: ${values}\r\n`);
 		}
@@ -196,7 +198,7 @@ export async function startPreviewServer({
 			},
 		};
 	} catch (err) {
-		if ((err as { code: string }).code !== "ABORT_ERR") {
+		if (isAbortError(err)) {
 			logger.error(`Failed to start server: ${err}`);
 		}
 		logger.error("Failed to create proxy server:", err);
@@ -335,7 +337,7 @@ export function usePreviewServer({
 				proxy.server.listen(port, ip === "*" ? "::" : ip);
 			})
 			.catch((err) => {
-				if ((err as { code: string }).code !== "ABORT_ERR") {
+				if (isAbortError(err)) {
 					logger.error(`Failed to start server: ${err}`);
 				}
 			});
@@ -527,7 +529,9 @@ function configureProxyServer({
 		addCfPreviewTokenHeader(headers, previewToken.value);
 		headers["host"] = previewToken.host;
 
-		if (originalHead?.byteLength) originalSocket.unshift(originalHead);
+		if (originalHead?.byteLength) {
+			originalSocket.unshift(originalHead);
+		}
 
 		const runtimeRequest = https.request(
 			{
@@ -547,7 +551,9 @@ function configureProxyServer({
 		runtimeRequest.on(
 			"upgrade",
 			(runtimeResponse, runtimeSocket, runtimeHead) => {
-				if (runtimeHead?.byteLength) runtimeSocket.unshift(runtimeHead);
+				if (runtimeHead?.byteLength) {
+					runtimeSocket.unshift(runtimeHead);
+				}
 				writeHead(originalSocket, {
 					httpVersion: "1.1",
 					statusCode: 101,
@@ -599,7 +605,7 @@ async function createProxyServer(
 		localProtocol === "https"
 			? createHttpsServer(
 					await getHttpsOptions(customHttpsKeyPath, customHttpsCertPath)
-			  )
+				)
 			: createHttpServer();
 
 	return server
@@ -662,7 +668,7 @@ export async function waitForPortToBeAvailable(
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		options.abortSignal.addEventListener("abort", () => {
 			const abortError = new Error("waitForPortToBeAvailable() aborted");
-			(abortError as Error & { code: string }).code = "ABORT_ERR";
+			castAsAbortError(abortError);
 			doReject(abortError);
 		});
 

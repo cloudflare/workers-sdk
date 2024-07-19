@@ -3,7 +3,6 @@ import fs from "node:fs";
 import path from "path";
 import { Box, Text } from "ink";
 import Table from "ink-table";
-import React from "react";
 import { printWranglerBanner } from "../..";
 import { withConfig } from "../../config";
 import { confirm } from "../../dialogs";
@@ -14,11 +13,7 @@ import { logger } from "../../logger";
 import { requireAuth } from "../../user";
 import { renderToString } from "../../utils/render";
 import { createBackup } from "../backups";
-import {
-	DEFAULT_BATCH_SIZE,
-	DEFAULT_MIGRATION_PATH,
-	DEFAULT_MIGRATION_TABLE,
-} from "../constants";
+import { DEFAULT_MIGRATION_PATH, DEFAULT_MIGRATION_TABLE } from "../constants";
 import { executeSql } from "../execute";
 import { getDatabaseInfoFromConfig, getDatabaseInfoFromId } from "../utils";
 import {
@@ -37,7 +32,7 @@ export function ApplyOptions(yargs: CommonYargsArgv) {
 	return MigrationOptions(yargs).option("batch-size", {
 		describe: "Number of queries to send in a single batch",
 		type: "number",
-		default: DEFAULT_BATCH_SIZE,
+		deprecated: true,
 	});
 }
 
@@ -51,7 +46,6 @@ export const ApplyHandler = withConfig<ApplyHandlerOptions>(
 		remote,
 		persistTo,
 		preview,
-		batchSize,
 	}): Promise<void> => {
 		await printWranglerBanner();
 		const databaseInfo = getDatabaseInfoFromConfig(config, database);
@@ -133,7 +127,9 @@ export const ApplyHandler = withConfig<ApplyHandlerOptions>(
 			`About to apply ${unappliedMigrations.length} migration(s)
 Your database may not be available to serve requests during the migration, continue?`
 		);
-		if (!ok) return;
+		if (!ok) {
+			return;
+		}
 
 		// don't backup prod db when applying migrations locally, in preview, or when using the experimental backend
 		if (!(local || preview)) {
@@ -173,7 +169,6 @@ Your database may not be available to serve requests during the migration, conti
 					file: undefined,
 					json: undefined,
 					preview,
-					batchSize,
 				});
 
 				if (response === null) {

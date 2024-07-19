@@ -1,9 +1,9 @@
 import { crash } from "@cloudflare/cli";
 import { brandColor, dim } from "@cloudflare/cli/colors";
-import { retry, runCommand } from "helpers/command";
-import { debug } from "helpers/logging";
-import { detectPackageManager } from "helpers/packages";
-import { getProductionBranch, quoteShellArgs } from "./common";
+import { quoteShellArgs, runCommand } from "helpers/command";
+import { detectPackageManager } from "helpers/packageManagers";
+import { retry } from "helpers/retry";
+import { getProductionBranch } from "./git";
 import type { C3Context } from "types";
 
 /** How many times to retry the create project command before failing. */
@@ -15,7 +15,9 @@ const VERIFY_PROJECT_RETRIES = 3;
 const { npx } = detectPackageManager();
 
 export const createProject = async (ctx: C3Context) => {
-	if (ctx.template.platform === "workers") return;
+	if (ctx.template.platform === "workers") {
+		return;
+	}
 	if (!ctx.account?.id) {
 		crash("Failed to read Cloudflare account.");
 		return;
@@ -47,7 +49,7 @@ export const createProject = async (ctx: C3Context) => {
 						e instanceof Error &&
 						// if the error is regarding name duplication we can exist as retrying is not going to help
 						e.message.includes(
-							"A project with this name already exists. Choose a different project name."
+							"A project with this name already exists. Choose a different project name.",
 						)
 					);
 				},
@@ -61,9 +63,9 @@ export const createProject = async (ctx: C3Context) => {
 					env: { CLOUDFLARE_ACCOUNT_ID },
 					startText: "Creating Pages project",
 					doneText: `${brandColor("created")} ${dim(
-						`via \`${quoteShellArgs(cmd)}\``
+						`via \`${quoteShellArgs(cmd)}\``,
 					)}`,
-				})
+				}),
 		);
 	} catch (error) {
 		crash("Failed to create pages project. See output above.");
@@ -88,12 +90,10 @@ export const createProject = async (ctx: C3Context) => {
 				env: { CLOUDFLARE_ACCOUNT_ID },
 				startText: "Verifying Pages project",
 				doneText: `${brandColor("verified")} ${dim(
-					`project is ready for deployment`
+					`project is ready for deployment`,
 				)}`,
-			})
+			}),
 		);
-
-		debug(`Validated pages project ${ctx.project.name}`);
 	} catch (error) {
 		crash("Pages project isn't ready yet. Please try deploying again later.");
 	}

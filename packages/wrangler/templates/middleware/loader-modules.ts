@@ -1,22 +1,17 @@
-// // This loads all middlewares exposed on the middleware object
-// // and then starts the invocation chain.
-// // The big idea is that we can add these to the middleware export dynamically
-// // through wrangler, or we can potentially let users directly add them as a sort
-// // of "plugin" system.
+// This loads all middlewares exposed on the middleware object and then starts
+// the invocation chain. The big idea is that we can add these to the middleware
+// export dynamically through wrangler, or we can potentially let users directly
+// add them as a sort of "plugin" system.
 
-import worker from "__ENTRY_POINT__";
-import {
-	__facade_invoke__,
-	__facade_register__,
-	Dispatcher,
-	Middleware,
-} from "./common";
+import ENTRY, { __INTERNAL_WRANGLER_MIDDLEWARE__ } from "__ENTRY_POINT__";
+import { __facade_invoke__, __facade_register__, Dispatcher } from "./common";
+import type { WorkerEntrypointConstructor } from "__ENTRY_POINT__";
 
-// We need to preserve all of the exports from the worker
+// Preserve all the exports from the worker
 export * from "__ENTRY_POINT__";
 
 class __Facade_ScheduledController__ implements ScheduledController {
-	#noRetry: ScheduledController["noRetry"];
+	readonly #noRetry: ScheduledController["noRetry"];
 
 	constructor(
 		readonly scheduledTime: number,
@@ -35,71 +30,34 @@ class __Facade_ScheduledController__ implements ScheduledController {
 	}
 }
 
-const __facade_modules_fetch__: ExportedHandlerFetchHandler = function (
-	request,
-	env,
-	ctx
-) {
-	if (worker.fetch === undefined)
-		throw new Error("Handler does not export a fetch() function.");
-	return worker.fetch(request, env, ctx);
-};
-
-function getMaskedEnv(rawEnv: unknown) {
-	let env = rawEnv as Record<string, unknown>;
-	if (worker.envWrappers && worker.envWrappers.length > 0) {
-		for (const wrapFn of worker.envWrappers) {
-			env = wrapFn(env);
-		}
+function wrapExportedHandler(worker: ExportedHandler): ExportedHandler {
+	// If we don't have any middleware defined, just return the handler as is
+	if (
+		__INTERNAL_WRANGLER_MIDDLEWARE__ === undefined ||
+		__INTERNAL_WRANGLER_MIDDLEWARE__.length === 0
+	) {
+		return worker;
 	}
-	return env;
-}
+	// Otherwise, register all middleware once
+	for (const middleware of __INTERNAL_WRANGLER_MIDDLEWARE__) {
+		__facade_register__(middleware);
+	}
 
-/**
- * This type is here to cause a type error if a new export handler is added to
- * `ExportHandler` without it being included in the `facade` below.
- */
-type MissingExportHandlers = Omit<
-	Required<ExportedHandler>,
-	"tail" | "trace" | "scheduled" | "queue" | "test" | "email" | "fetch"
->;
+	const fetchDispatcher: ExportedHandlerFetchHandler = function (
+		request,
+		env,
+		ctx
+	) {
+		if (worker.fetch === undefined) {
+			throw new Error("Handler does not export a fetch() function.");
+		}
+		return worker.fetch(request, env, ctx);
+	};
 
-let registeredMiddleware = false;
-
-const facade: ExportedHandler<unknown> & MissingExportHandlers = {
-	...(worker.tail && {
-		tail: maskHandlerEnv(worker.tail),
-	}),
-	...(worker.trace && {
-		trace: maskHandlerEnv(worker.trace),
-	}),
-	...(worker.scheduled && {
-		scheduled: maskHandlerEnv(worker.scheduled),
-	}),
-	...(worker.queue && {
-		queue: maskHandlerEnv(worker.queue),
-	}),
-	...(worker.test && {
-		test: maskHandlerEnv(worker.test),
-	}),
-	...(worker.email && {
-		email: maskHandlerEnv(worker.email),
-	}),
-
-	fetch(request, rawEnv, ctx) {
-		const env = getMaskedEnv(rawEnv);
-		// Get the chain of middleware from the worker object
-		if (worker.middleware && worker.middleware.length > 0) {
-			// Make sure we only register middleware once:
-			// https://github.com/cloudflare/workers-sdk/issues/2386#issuecomment-1614715911
-			if (!registeredMiddleware) {
-				registeredMiddleware = true;
-				for (const middleware of worker.middleware) {
-					__facade_register__(middleware);
-				}
-			}
-
-			const __facade_modules_dispatch__: Dispatcher = function (type, init) {
+	return {
+		...worker,
+		fetch(request, env, ctx) {
+			const dispatcher: Dispatcher = function (type, init) {
 				if (type === "scheduled" && worker.scheduled !== undefined) {
 					const controller = new __Facade_ScheduledController__(
 						Date.now(),
@@ -109,28 +67,68 @@ const facade: ExportedHandler<unknown> & MissingExportHandlers = {
 					return worker.scheduled(controller, env, ctx);
 				}
 			};
-
-			return __facade_invoke__(
-				request,
-				env,
-				ctx,
-				__facade_modules_dispatch__,
-				__facade_modules_fetch__
-			);
-		} else {
-			// We didn't have any middleware so we can skip the invocation chain,
-			// and just call the fetch handler directly
-
-			// We "don't care" if this is undefined as we want to have the same behavior
-			// as if the worker completely bypassed middleware.
-			return __facade_modules_fetch__(request, env, ctx);
-		}
-	},
-};
-
-type HandlerFn<D, R> = (data: D, env: unknown, ctx: ExecutionContext) => R;
-function maskHandlerEnv<D, R>(handler: HandlerFn<D, R>): HandlerFn<D, R> {
-	return (data, env, ctx) => handler(data, getMaskedEnv(env), ctx);
+			return __facade_invoke__(request, env, ctx, dispatcher, fetchDispatcher);
+		},
+	};
 }
 
-export default facade;
+function wrapWorkerEntrypoint(
+	klass: WorkerEntrypointConstructor
+): WorkerEntrypointConstructor {
+	// If we don't have any middleware defined, just return the handler as is
+	if (
+		__INTERNAL_WRANGLER_MIDDLEWARE__ === undefined ||
+		__INTERNAL_WRANGLER_MIDDLEWARE__.length === 0
+	) {
+		return klass;
+	}
+	// Otherwise, register all middleware once
+	for (const middleware of __INTERNAL_WRANGLER_MIDDLEWARE__) {
+		__facade_register__(middleware);
+	}
+
+	// `extend`ing `klass` here so other RPC methods remain callable
+	return class extends klass {
+		#fetchDispatcher: ExportedHandlerFetchHandler<Record<string, unknown>> = (
+			request,
+			env,
+			ctx
+		) => {
+			this.env = env;
+			this.ctx = ctx;
+			if (super.fetch === undefined) {
+				throw new Error("Entrypoint class does not define a fetch() function.");
+			}
+			return super.fetch(request);
+		};
+
+		#dispatcher: Dispatcher = (type, init) => {
+			if (type === "scheduled" && super.scheduled !== undefined) {
+				const controller = new __Facade_ScheduledController__(
+					Date.now(),
+					init.cron ?? "",
+					() => {}
+				);
+				return super.scheduled(controller);
+			}
+		};
+
+		fetch(request: Request<unknown, IncomingRequestCfProperties>) {
+			return __facade_invoke__(
+				request,
+				this.env,
+				this.ctx,
+				this.#dispatcher,
+				this.#fetchDispatcher
+			);
+		}
+	};
+}
+
+let WRAPPED_ENTRY: ExportedHandler | WorkerEntrypointConstructor | undefined;
+if (typeof ENTRY === "object") {
+	WRAPPED_ENTRY = wrapExportedHandler(ENTRY);
+} else if (typeof ENTRY === "function") {
+	WRAPPED_ENTRY = wrapWorkerEntrypoint(ENTRY);
+}
+export default WRAPPED_ENTRY;

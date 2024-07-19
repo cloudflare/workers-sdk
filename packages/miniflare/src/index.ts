@@ -10,96 +10,91 @@ import { Duplex, Transform, Writable } from "stream";
 import { ReadableStream } from "stream/web";
 import util from "util";
 import zlib from "zlib";
-import type {
-	CacheStorage,
-	D1Database,
-	DurableObjectNamespace,
-	Fetcher,
-	KVNamespace,
-	Queue,
-	R2Bucket,
-} from "@cloudflare/workers-types/experimental";
 import exitHook from "exit-hook";
 import { $ as colors$ } from "kleur/colors";
 import stoppable from "stoppable";
-import { Dispatcher, Pool, getGlobalDispatcher } from "undici";
+import { Dispatcher, getGlobalDispatcher, Pool } from "undici";
 import SCRIPT_MINIFLARE_SHARED from "worker:shared/index";
 import SCRIPT_MINIFLARE_ZOD from "worker:shared/zod";
 import { WebSocketServer } from "ws";
 import { z } from "zod";
 import { fallbackCf, setupCf } from "./cf";
 import {
+	coupleWebSocket,
 	DispatchFetch,
 	DispatchFetchDispatcher,
 	ENTRY_SOCKET_HTTP_OPTIONS,
+	fetch,
+	getAccessibleHosts,
+	getEntrySocketHttpOptions,
 	Headers,
 	Request,
 	RequestInit,
 	Response,
-	coupleWebSocket,
-	fetch,
-	getAccessibleHosts,
-	getEntrySocketHttpOptions,
 } from "./http";
 import {
 	D1_PLUGIN_NAME,
 	DURABLE_OBJECTS_PLUGIN_NAME,
 	DurableObjectClassNames,
+	getDirectSocketName,
+	getGlobalServices,
+	HOST_CAPNP_CONNECT,
+	kProxyNodeBinding,
 	KV_PLUGIN_NAME,
+	normaliseDurableObject,
 	PLUGIN_ENTRIES,
-	PluginServicesOptions,
 	Plugins,
+	PluginServicesOptions,
 	ProxyClient,
-	QUEUES_PLUGIN_NAME,
 	QueueConsumers,
+	QueueProducers,
+	QUEUES_PLUGIN_NAME,
 	QueuesError,
 	R2_PLUGIN_NAME,
 	ReplaceWorkersTypes,
 	SERVICE_ENTRY,
+	SharedOptions,
 	SOCKET_ENTRY,
 	SOCKET_ENTRY_LOCAL,
-	SharedOptions,
 	WorkerOptions,
 	WrappedBindingNames,
-	getDirectSocketName,
-	getGlobalServices,
-	kProxyNodeBinding,
-	normaliseDurableObject,
 } from "./plugins";
 import {
 	CUSTOM_SERVICE_KNOWN_OUTBOUND,
 	CustomServiceKind,
-	JsonErrorSchema,
-	NameSourceOptions,
-	ServiceDesignatorSchema,
 	getUserServiceName,
 	handlePrettyErrorRequest,
+	JsonErrorSchema,
 	maybeWrappedModuleToWorkerName,
+	NameSourceOptions,
 	reviveError,
+	ServiceDesignatorSchema,
 } from "./plugins/core";
 import {
 	Config,
 	Extension,
+	HttpOptions_Style,
+	kInspectorSocket,
 	Runtime,
 	RuntimeOptions,
+	serializeConfig,
 	Service,
 	Socket,
 	SocketIdentifier,
 	SocketPorts,
 	Worker_Binding,
 	Worker_Module,
-	kInspectorSocket,
-	serializeConfig,
 } from "./runtime";
 import {
+	_isCyclic,
 	Log,
 	MiniflareCoreError,
 	NoOpLog,
 	OptionalZodTypeOf,
-	_isCyclic,
 	parseWithRootPath,
 	stripAnsi,
 } from "./shared";
+import { isCompressedByCloudflareFL } from "./shared/mime-types";
 import {
 	CoreBindings,
 	CoreHeaders,
@@ -109,6 +104,15 @@ import {
 	SiteBindings,
 } from "./workers";
 import { formatZodError } from "./zod-format";
+import type {
+	CacheStorage,
+	D1Database,
+	DurableObjectNamespace,
+	Fetcher,
+	KVNamespace,
+	Queue,
+	R2Bucket,
+} from "@cloudflare/workers-types/experimental";
 
 const DEFAULT_HOST = "127.0.0.1";
 function getURLSafeHost(host: string) {
@@ -386,6 +390,33 @@ function getWrappedBindingNames(
 	return wrappedBindingWorkerNames;
 }
 
+function getQueueProducers(
+	allWorkerOpts: PluginWorkerOptions[]
+): QueueProducers {
+	const queueProducers: QueueProducers = new Map();
+	for (const workerOpts of allWorkerOpts) {
+		const workerName = workerOpts.core.name ?? "";
+		let workerProducers = workerOpts.queues.queueProducers;
+
+		if (workerProducers !== undefined) {
+			// De-sugar array consumer options to record mapping to empty options
+			if (Array.isArray(workerProducers)) {
+				workerProducers = Object.fromEntries(
+					workerProducers.map((bindingName) => [
+						bindingName,
+						{ queueName: bindingName },
+					])
+				);
+			}
+
+			for (const [bindingName, opts] of Object.entries(workerProducers)) {
+				queueProducers.set(bindingName, { workerName, ...opts });
+			}
+		}
+	}
+	return queueProducers;
+}
+
 function getQueueConsumers(
 	allWorkerOpts: PluginWorkerOptions[]
 ): QueueConsumers {
@@ -521,9 +552,14 @@ const restrictedWebSocketUpgradeHeaders = [
 	"sec-websocket-accept",
 ];
 
-export function _transformsForContentEncoding(encoding?: string): Transform[] {
+export function _transformsForContentEncodingAndContentType(
+	encoding: string | undefined,
+	type: string | undefined | null
+): Transform[] {
 	const encoders: Transform[] = [];
 	if (!encoding) return encoders;
+	// if cloudflare's FL does not compress this mime-type, then don't compress locally either
+	if (!isCompressedByCloudflareFL(type)) return encoders;
 
 	// Reverse of https://github.com/nodejs/undici/blob/48d9578f431cbbd6e74f77455ba92184f57096cf/lib/fetch/index.js#L1660
 	const codings = encoding
@@ -562,7 +598,8 @@ async function writeResponse(response: Response, res: http.ServerResponse) {
 	// If a `Content-Encoding` header is set, we'll need to encode the body
 	// (likely only set by custom service bindings)
 	const encoding = headers["content-encoding"]?.toString();
-	const encoders = _transformsForContentEncoding(encoding);
+	const type = headers["content-type"]?.toString();
+	const encoders = _transformsForContentEncodingAndContentType(encoding, type);
 	if (encoders.length > 0) {
 		// `Content-Length` if set, will be wrong as it's for the decoded length
 		delete headers["content-length"];
@@ -600,32 +637,30 @@ function safeReadableStreamFrom(iterable: AsyncIterable<Uint8Array>) {
 	// rejections from aborted request body streams:
 	// https://github.com/nodejs/undici/blob/dfaec78f7a29f07bb043f9006ed0ceb0d5220b55/lib/core/util.js#L369-L392
 	let iterator: AsyncIterator<Uint8Array>;
-	return new ReadableStream<Uint8Array>(
-		{
-			async start() {
-				iterator = iterable[Symbol.asyncIterator]();
-			},
-			// @ts-expect-error `pull` may return anything
-			async pull(controller): Promise<boolean> {
-				try {
-					const { done, value } = await iterator.next();
-					if (done) {
-						queueMicrotask(() => controller.close());
-					} else {
-						const buf = Buffer.isBuffer(value) ? value : Buffer.from(value);
-						controller.enqueue(new Uint8Array(buf));
-					}
-				} catch {
+	return new ReadableStream<Uint8Array>({
+		async start() {
+			iterator = iterable[Symbol.asyncIterator]();
+		},
+		// @ts-expect-error `pull` may return anything
+		async pull(controller): Promise<boolean> {
+			try {
+				const { done, value } = await iterator.next();
+				if (done) {
 					queueMicrotask(() => controller.close());
+				} else {
+					const buf = Buffer.isBuffer(value) ? value : Buffer.from(value);
+					controller.enqueue(new Uint8Array(buf));
 				}
-				// @ts-expect-error `pull` may return anything
-				return controller.desiredSize > 0;
-			},
-			async cancel() {
-				await iterator.return?.();
-			},
-		}
-	);
+			} catch {
+				queueMicrotask(() => controller.close());
+			}
+			// @ts-expect-error `pull` may return anything
+			return controller.desiredSize > 0;
+		},
+		async cancel() {
+			await iterator.return?.();
+		},
+	});
 }
 
 // Maps `Miniflare` instances to stack traces for their construction. Used to identify un-`dispose()`d instances.
@@ -639,6 +674,7 @@ export function _initialiseInstanceRegistry() {
 
 export class Miniflare {
 	#previousSharedOpts?: PluginSharedOptions;
+	#previousWorkerOpts?: PluginWorkerOptions[];
 	#sharedOpts: PluginSharedOptions;
 	#workerOpts: PluginWorkerOptions[];
 	#log: Log;
@@ -1002,6 +1038,7 @@ export class Miniflare {
 	}
 
 	async #assembleConfig(loopbackPort: number): Promise<Config> {
+		const allPreviousWorkerOpts = this.#previousWorkerOpts;
 		const allWorkerOpts = this.#workerOpts;
 		const sharedOpts = this.#sharedOpts;
 
@@ -1013,6 +1050,7 @@ export class Miniflare {
 			allWorkerOpts,
 			durableObjectClassNames
 		);
+		const queueProducers = getQueueProducers(allWorkerOpts);
 		const queueConsumers = getQueueConsumers(allWorkerOpts);
 		const allWorkerRoutes = getWorkerRoutes(allWorkerOpts, wrappedBindingNames);
 		const workerNames = [...allWorkerRoutes.keys()];
@@ -1057,6 +1095,7 @@ export class Miniflare {
 		}[] = [];
 
 		for (let i = 0; i < allWorkerOpts.length; i++) {
+			const previousWorkerOpts = allPreviousWorkerOpts?.[i];
 			const workerOpts = allWorkerOpts[i];
 			const workerName = workerOpts.core.name ?? "";
 			const isModulesWorker = Boolean(workerOpts.core.modules);
@@ -1134,6 +1173,7 @@ export class Miniflare {
 				wrappedBindingNames,
 				durableObjectClassNames,
 				unsafeEphemeralDurableObjects,
+				queueProducers,
 				queueConsumers,
 			};
 			for (const [key, plugin] of PLUGIN_ENTRIES) {
@@ -1173,26 +1213,32 @@ export class Miniflare {
 
 			// Allow additional sockets to be opened directly to specific workers,
 			// bypassing Miniflare's entry worker.
-			const { unsafeDirectHost, unsafeDirectPort } = workerOpts.core;
-			if (unsafeDirectHost !== undefined || unsafeDirectPort !== undefined) {
-				const name = getDirectSocketName(i);
+			const previousDirectSockets =
+				previousWorkerOpts?.core.unsafeDirectSockets ?? [];
+			const directSockets = workerOpts.core.unsafeDirectSockets ?? [];
+			for (let j = 0; j < directSockets.length; j++) {
+				const previousDirectSocket = previousDirectSockets[j];
+				const directSocket = directSockets[j];
+				const entrypoint = directSocket.entrypoint ?? "default";
+				const name = getDirectSocketName(i, entrypoint);
 				const address = this.#getSocketAddress(
 					name,
-					// We don't attempt to reuse allocated ports for `unsafeDirectPort: 0`
-					// as there's not always a clear mapping between current/previous
-					// worker options. We could do it by index, names, script, etc.
-					// This is an unsafe option primarily intended for Wrangler's
-					// inspector proxy, which will usually set this value to `9229`.
-					// We could consider changing this in the future.
-					/* previousRequestedPort */ undefined,
-					unsafeDirectHost,
-					unsafeDirectPort
+					previousDirectSocket?.port,
+					directSocket.host,
+					directSocket.port
 				);
 				sockets.push({
 					name,
 					address,
-					service: { name: getUserServiceName(workerName) },
-					http: {},
+					service: {
+						name: getUserServiceName(workerName),
+						entrypoint: entrypoint === "default" ? undefined : entrypoint,
+					},
+					http: {
+						style: directSocket.proxy ? HttpOptions_Style.PROXY : undefined,
+						cfBlobHeader: CoreHeaders.CF_BLOB,
+						capnpConnectHost: HOST_CAPNP_CONNECT,
+					},
 				});
 			}
 		}
@@ -1235,13 +1281,7 @@ export class Miniflare {
 			);
 		}
 
-		const autogates = [
-			// Enables Python support in workerd.
-			// TODO(later): remove this once this gate is removed from workerd.
-			"workerd-autogate-builtin-wasm-modules",
-		];
-
-		return { services: servicesArray, sockets, extensions, autogates };
+		return { services: servicesArray, sockets, extensions };
 	}
 
 	async #assembleAndUpdateConfig() {
@@ -1433,7 +1473,10 @@ export class Miniflare {
 		return new URL(`ws://127.0.0.1:${maybePort}`);
 	}
 
-	async unsafeGetDirectURL(workerName?: string): Promise<URL> {
+	async unsafeGetDirectURL(
+		workerName?: string,
+		entrypoint = "default"
+	): Promise<URL> {
 		this.#checkDisposed();
 		await this.ready;
 
@@ -1442,7 +1485,7 @@ export class Miniflare {
 		const workerOpts = this.#workerOpts[workerIndex];
 
 		// Try to get direct access port for worker
-		const socketName = getDirectSocketName(workerIndex);
+		const socketName = getDirectSocketName(workerIndex, entrypoint);
 		// `#socketPorts` is assigned in `#assembleAndUpdateConfig()`, which is
 		// called by `#init()`, and `ready` doesn't resolve until `#init()` returns.
 		assert(this.#socketPorts !== undefined);
@@ -1450,13 +1493,20 @@ export class Miniflare {
 		if (maybePort === undefined) {
 			const friendlyWorkerName =
 				workerName === undefined ? "entrypoint" : JSON.stringify(workerName);
+			const friendlyEntrypointName =
+				entrypoint === "default" ? entrypoint : JSON.stringify(entrypoint);
 			throw new TypeError(
-				`Direct access disabled in ${friendlyWorkerName} worker`
+				`Direct access disabled in ${friendlyWorkerName} worker for ${friendlyEntrypointName} entrypoint`
 			);
 		}
 
 		// Construct accessible URL from configured host and port
-		const host = workerOpts.core.unsafeDirectHost ?? DEFAULT_HOST;
+		const directSocket = workerOpts.core.unsafeDirectSockets?.find(
+			(socket) => (socket.entrypoint ?? "default") === entrypoint
+		);
+		// Should be able to find socket with correct entrypoint if port assigned
+		assert(directSocket !== undefined);
+		const host = directSocket.host ?? DEFAULT_HOST;
 		const accessibleHost =
 			maybeGetLocallyAccessibleHost(host) ?? getURLSafeHost(host);
 		// noinspection HttpUrlsUsage
@@ -1478,6 +1528,7 @@ export class Miniflare {
 		// Split and validate options
 		const [sharedOpts, workerOpts] = validateOptions(opts);
 		this.#previousSharedOpts = this.#sharedOpts;
+		this.#previousWorkerOpts = this.#workerOpts;
 		this.#sharedOpts = sharedOpts;
 		this.#workerOpts = workerOpts;
 		this.#log = this.#sharedOpts.core.log ?? this.#log;
@@ -1540,6 +1591,17 @@ export class Miniflare {
 			const caught = JsonErrorSchema.parse(await response.json());
 			throw reviveError(this.#workerSrcOpts, caught);
 		}
+
+		// At this point, undici.fetch (used inside fetch, above)
+		// has decompressed the response body but retained the Content-Encoding header.
+		// This can cause problems for client implementations which rely
+		// on the Content-Encoding header rather than trying to infer it from the body.
+		// Technically, at this point, this a malformed response so let's remove the header
+		// Retain it as MF-Content-Encoding so we can tell the body was actually compressed.
+		const contentEncoding = response.headers.get("Content-Encoding");
+		if (contentEncoding)
+			response.headers.set("MF-Content-Encoding", contentEncoding);
+		response.headers.delete("Content-Encoding");
 
 		if (
 			process.env.MINIFLARE_ASSERT_BODIES_CONSUMED === "true" &&

@@ -1,7 +1,7 @@
 import {
-	Colorize,
 	blue,
 	bold,
+	Colorize,
 	green,
 	grey,
 	red,
@@ -9,9 +9,10 @@ import {
 	yellow,
 } from "kleur/colors";
 import { HttpError, LogLevel, SharedHeaders } from "miniflare:shared";
+import { isCompressedByCloudflareFL } from "../../shared/mime-types";
 import { CoreBindings, CoreHeaders } from "./constants";
 import { STATUS_CODES } from "./http";
-import { WorkerRoute, matchRoutes } from "./routing";
+import { matchRoutes, WorkerRoute } from "./routing";
 
 type Env = {
 	[CoreBindings.SERVICE_LOOPBACK]: Fetcher;
@@ -21,9 +22,9 @@ type Env = {
 	[CoreBindings.JSON_CF_BLOB]: IncomingRequestCfProperties;
 	[CoreBindings.JSON_ROUTES]: WorkerRoute[];
 	[CoreBindings.JSON_LOG_LEVEL]: LogLevel;
-	[CoreBindings.DATA_LIVE_RELOAD_SCRIPT]: ArrayBuffer;
+	[CoreBindings.DATA_LIVE_RELOAD_SCRIPT]?: ArrayBuffer;
 	[CoreBindings.DURABLE_OBJECT_NAMESPACE_PROXY]: DurableObjectNamespace;
-	[CoreBindings.DATA_PROXY_SHARED_SECRET]?: Uint8Array;
+	[CoreBindings.DATA_PROXY_SHARED_SECRET]?: ArrayBuffer;
 } & {
 	[K in `${typeof CoreBindings.SERVICE_USER_ROUTE_PREFIX}${string}`]:
 		| Fetcher
@@ -89,8 +90,18 @@ function getUserRequest(
 	// See https://github.com/cloudflare/workerd/issues/1122 for more details.
 	request = new Request(url, request);
 	if (request.cf === undefined) {
-		request = new Request(request, { cf: env[CoreBindings.JSON_CF_BLOB] });
+		const cf: IncomingRequestCfProperties = {
+			...env[CoreBindings.JSON_CF_BLOB],
+			// Defaulting to empty string to preserve undefined `Accept-Encoding`
+			// through Wrangler's proxy worker.
+			clientAcceptEncoding: request.headers.get("Accept-Encoding") ?? "",
+		};
+		request = new Request(request, { cf });
 	}
+
+	// `Accept-Encoding` is always set to "br, gzip" in Workers:
+	// https://developers.cloudflare.com/fundamentals/reference/http-request-headers/#accept-encoding
+	request.headers.set("Accept-Encoding", "br, gzip");
 
 	if (rewriteHeadersFromOriginalUrl) {
 		request.headers.set("Host", url.host);
@@ -175,6 +186,98 @@ function maybeInjectLiveReload(
 	});
 }
 
+const acceptEncodingElement =
+	/^(?<coding>[a-z]+|\*)(?:\s*;\s*q=(?<weight>\d+(?:.\d+)?))?$/;
+interface AcceptedEncoding {
+	coding: string;
+	weight: number;
+}
+function maybeParseAcceptEncodingElement(
+	element: string
+): AcceptedEncoding | undefined {
+	const match = acceptEncodingElement.exec(element);
+	if (match?.groups == null) return;
+	return {
+		coding: match.groups.coding,
+		weight:
+			match.groups.weight === undefined ? 1 : parseFloat(match.groups.weight),
+	};
+}
+function parseAcceptEncoding(header: string): AcceptedEncoding[] {
+	const encodings: AcceptedEncoding[] = [];
+	for (const element of header.split(",")) {
+		const maybeEncoding = maybeParseAcceptEncodingElement(element.trim());
+		if (maybeEncoding !== undefined) encodings.push(maybeEncoding);
+	}
+	// `Array#sort()` is stable, so original ordering preserved for same weights
+	return encodings.sort((a, b) => b.weight - a.weight);
+}
+function ensureAcceptableEncoding(
+	clientAcceptEncoding: string | null,
+	response: Response
+): Response {
+	// https://www.rfc-editor.org/rfc/rfc9110#section-12.5.3
+
+	// If the client hasn't specified any acceptable encodings, assume anything is
+	if (clientAcceptEncoding === null) return response;
+	const encodings = parseAcceptEncoding(clientAcceptEncoding);
+	if (encodings.length === 0) return response;
+
+	const contentEncoding = response.headers.get("Content-Encoding");
+	const contentType = response.headers.get("Content-Type");
+
+	// if cloudflare's FL does not compress this mime-type, then don't compress locally either
+	if (!isCompressedByCloudflareFL(contentType)) {
+		return response;
+	}
+
+	// If `Content-Encoding` is defined, but unknown, return the response as is
+	if (
+		contentEncoding !== null &&
+		contentEncoding !== "gzip" &&
+		contentEncoding !== "br"
+	) {
+		return response;
+	}
+
+	let desiredEncoding: "gzip" | "br" | undefined;
+	let identityDisallowed = false;
+
+	for (const encoding of encodings) {
+		if (encoding.weight === 0) {
+			// If we have an `identity;q=0` or `*;q=0` entry, disallow no encoding
+			if (encoding.coding === "identity" || encoding.coding === "*") {
+				identityDisallowed = true;
+			}
+		} else if (encoding.coding === "gzip" || encoding.coding === "br") {
+			// If the client accepts one of our supported encodings, use that
+			desiredEncoding = encoding.coding;
+			break;
+		} else if (encoding.coding === "identity") {
+			// If the client accepts no encoding, use that
+			break;
+		}
+	}
+
+	if (desiredEncoding === undefined) {
+		if (identityDisallowed) {
+			return new Response("Unsupported Media Type", {
+				status: 415 /* Unsupported Media Type */,
+				headers: { "Accept-Encoding": "br, gzip" },
+			});
+		}
+		if (contentEncoding === null) return response;
+		response = new Response(response.body, response); // Ensure mutable headers
+		response.headers.delete("Content-Encoding"); // Use identity
+		return response;
+	} else {
+		if (contentEncoding === desiredEncoding) return response;
+		response = new Response(response.body, response); // Ensure mutable headers
+		response.headers.set("Content-Encoding", desiredEncoding); // Use desired
+		return response;
+	}
+}
+
 function colourFromHTTPStatus(status: number): Colorize {
 	if (200 <= status && status < 300) return green;
 	if (400 <= status && status < 500) return yellow;
@@ -250,6 +353,8 @@ export default <ExportedHandler<Env>>{
 		const disablePrettyErrorPage =
 			request.headers.get(CoreHeaders.DISABLE_PRETTY_ERROR) !== null;
 
+		const clientAcceptEncoding = request.headers.get("Accept-Encoding");
+
 		try {
 			request = getUserRequest(request, env);
 		} catch (e) {
@@ -274,6 +379,7 @@ export default <ExportedHandler<Env>>{
 				response = await maybePrettifyError(request, response, env);
 			}
 			response = maybeInjectLiveReload(response, env, ctx);
+			response = ensureAcceptableEncoding(clientAcceptEncoding, response);
 			maybeLogRequest(request, response, env, ctx, startTime);
 			return response;
 		} catch (e: any) {

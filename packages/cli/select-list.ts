@@ -37,11 +37,15 @@ export default class SelectRefreshablePrompt extends Prompt {
 		this.cursor = this.options.findIndex(
 			({ value }) => value === opts.initialValue
 		);
-		if (this.cursor === -1) this.cursor = 0;
+		if (this.cursor === -1) {
+			this.cursor = 0;
+		}
 		this.changeValue();
 
 		this.on("key", (c) => {
-			if (c !== "r") return;
+			if (c !== "r") {
+				return;
+			}
 			void opts
 				.onRefresh()
 				.then((newOptions) => {

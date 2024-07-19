@@ -6,18 +6,24 @@
 	"scripts": {
 		"check:type": "tsc",
 		"dev": "wrangler pages dev public --binding=NAME=VALUE --binding=OTHER_NAME=THING=WITH=EQUALS --r2=BUCKET --port 8789",
-		"test": "vitest run",
+		"test:ci": "vitest run",
 		"test:watch": "vitest",
 		"type:tests": "tsc -p ./tests/tsconfig.json"
 	},
+	"dependencies": {
+		"is-odd": "^3.0.1"
+	},
 	"devDependencies": {
 		"@cloudflare/workers-tsconfig": "workspace:*",
-		"@cloudflare/workers-types": "^4.20221111.1",
+		"@cloudflare/workers-types": "^4.20240712.0",
 		"pages-plugin-example": "workspace:*",
-		"undici": "^5.28.3",
+		"undici": "^5.28.4",
 		"wrangler": "workspace:*"
 	},
 	"engines": {
 		"node": ">=16.13"
+	},
+	"volta": {
+		"extends": "../../package.json"
 	}
 }

@@ -1,15 +1,13 @@
 import assert from "assert";
-import path from "path";
 import { logRaw } from "@cloudflare/cli";
 import { brandColor, gray } from "@cloudflare/cli/colors";
-import { findWranglerToml, readConfig } from "../../config";
 import { UserError } from "../../errors";
 import * as metrics from "../../metrics";
 import { printWranglerBanner } from "../../update-check";
 import { requireAuth } from "../../user";
 import formatLabelledValues from "../../utils/render-labelled-values";
 import { fetchLatestDeployments, fetchVersions } from "../api";
-import { getVersionSource } from "../list";
+import { getConfig, getVersionSource } from "../list";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
@@ -23,22 +21,30 @@ export type VersionsDeloymentsListArgs = StrictYargsOptionsToInterface<
 >;
 
 export function versionsDeploymentsListOptions(yargs: CommonYargsArgv) {
-	return yargs.option("name", {
-		describe: "Name of the worker",
-		type: "string",
-		requiresArg: true,
-	});
+	return yargs
+		.option("name", {
+			describe: "Name of the worker",
+			type: "string",
+			requiresArg: true,
+		})
+		.option("json", {
+			describe: "Display output as clean JSON",
+			type: "boolean",
+			default: false,
+		});
 }
 
 export async function versionsDeploymentsListHandler(
 	args: VersionsDeloymentsListArgs
 ) {
-	await printWranglerBanner();
+	if (!args.json) {
+		await printWranglerBanner();
+	}
 
 	const config = getConfig(args);
 	await metrics.sendMetricsEvent(
 		"list versioned deployments",
-		{},
+		{ json: args.json },
 		{
 			sendMetrics: config.send_metrics,
 		}
@@ -54,6 +60,12 @@ export async function versionsDeploymentsListHandler(
 	}
 
 	const deployments = await fetchLatestDeployments(accountId, workerName);
+
+	if (args.json) {
+		logRaw(JSON.stringify(deployments, null, 2));
+		return;
+	}
+
 	const versionCache: VersionCache = new Map();
 	const versionIds = deployments.flatMap((d) =>
 		d.versions.map((v) => v.version_id)
@@ -94,19 +106,6 @@ export async function versionsDeploymentsListHandler(
 	});
 
 	logRaw(formattedDeployments.join("\n\n"));
-}
-
-function getConfig(
-	args: Pick<
-		VersionsDeloymentsListArgs,
-		"config" | "name" | "experimentalJsonConfig"
-	>
-) {
-	const configPath =
-		args.config || (args.name && findWranglerToml(path.dirname(args.name)));
-	const config = readConfig(configPath, args);
-
-	return config;
 }
 
 export function getDeploymentSource(deployment: ApiDeployment) {

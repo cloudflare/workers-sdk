@@ -71,7 +71,7 @@ export async function getLocation(
 					: `(${regionsToLocation[r].length} ${plural(
 							"location",
 							regionsToLocation[r].length
-					  )})`
+						)})`
 			}`,
 		})),
 	});

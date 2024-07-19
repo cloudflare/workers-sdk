@@ -26,7 +26,9 @@ export function mayContainMultipleStatements(sql: string): boolean {
  */
 export default function splitSqlQuery(sql: string): string[] {
 	const trimmedSql = trimSqlQuery(sql);
-	if (!mayContainMultipleStatements(trimmedSql)) return [trimmedSql];
+	if (!mayContainMultipleStatements(trimmedSql)) {
+		return [trimmedSql];
+	}
 	const split = splitSqlIntoStatements(trimmedSql);
 	if (split.length === 0) {
 		return [trimmedSql];
@@ -153,7 +155,7 @@ function isDollarQuoteIdentifier(str: string) {
  * Returns true if the `str` ends with a compound statement `BEGIN` or `CASE` marker.
  */
 function isCompoundStatementStart(str: string) {
-	return /\s(BEGIN|CASE)\s$/.test(str);
+	return /\s(BEGIN|CASE)\s$/i.test(str);
 }
 
 /**

@@ -2,7 +2,6 @@ import fs, { existsSync, statSync } from "fs";
 import { join } from "path";
 import { crash } from "@cloudflare/cli";
 import TOML from "@iarna/toml";
-import { getWorkerdCompatibilityDate } from "./command";
 import type { C3Context } from "types";
 
 export const copyFile = (path: string, dest: string) => {
@@ -80,7 +79,7 @@ export const usesTypescript = (ctx: C3Context) => {
 
 const eslintRcExts = ["js", "cjs", "yaml", "yml", "json"] as const;
 
-type EslintRcFileName = `.eslintrc.${typeof eslintRcExts[number]}`;
+type EslintRcFileName = `.eslintrc.${(typeof eslintRcExts)[number]}`;
 
 type EslintUsageInfo =
 	| {
@@ -126,10 +125,4 @@ export const usesEslint = (ctx: C3Context): EslintUsageInfo => {
 	} catch {}
 
 	return { used: false };
-};
-
-// Generate a compatibility date flag
-export const compatDateFlag = async () => {
-	const workerdCompatDate = await getWorkerdCompatibilityDate();
-	return `--compatibility-date=${workerdCompatDate}`;
 };

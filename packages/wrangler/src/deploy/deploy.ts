@@ -2,7 +2,7 @@ import assert from "node:assert";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { URLSearchParams } from "node:url";
-import chalk from "chalk";
+import { cancel } from "@cloudflare/cli";
 import { fetchListResult, fetchResult } from "../cfetch";
 import { printBindings } from "../config";
 import { bundleWorker } from "../deployment-bundle/bundle";
@@ -20,6 +20,8 @@ import {
 	createModuleCollector,
 	getWrangler1xLegacyModuleReferences,
 } from "../deployment-bundle/module-collection";
+import { validateNodeCompat } from "../deployment-bundle/node-compat";
+import { loadSourceMaps } from "../deployment-bundle/source-maps";
 import { addHyphens } from "../deployments";
 import { confirm } from "../dialogs";
 import { getMigrationsToUpload } from "../durable";
@@ -29,15 +31,23 @@ import { getMetricsUsageHeaders } from "../metrics";
 import { isNavigatorDefined } from "../navigator-user-agent";
 import { APIError, ParseError } from "../parse";
 import { getWranglerTmpDir } from "../paths";
-import { getQueue, putConsumer } from "../queues/client";
-import { getWorkersDevSubdomain } from "../routes";
+import {
+	ensureQueuesExistByConfig,
+	getQueue,
+	postConsumer,
+	putConsumer,
+	putConsumerById,
+	putQueue,
+} from "../queues/client";
 import { syncAssets } from "../sites";
 import {
 	getSourceMappedString,
 	maybeRetrieveFileSourceMap,
 } from "../sourcemap";
+import triggersDeploy from "../triggers/deploy";
+import { logVersionIdChange } from "../utils/deployment-id-version-id-change";
+import { confirmLatestDeploymentOverwrite } from "../versions/deploy";
 import { getZoneForRoute } from "../zones";
-import type { FetchError } from "../cfetch";
 import type { Config } from "../config";
 import type {
 	CustomDomainRoute,
@@ -47,8 +57,12 @@ import type {
 	ZoneNameRoute,
 } from "../config/environment";
 import type { Entry } from "../deployment-bundle/entry";
-import type { CfPlacement, CfWorkerInit } from "../deployment-bundle/worker";
-import type { PutConsumerBody } from "../queues/client";
+import type {
+	CfModule,
+	CfPlacement,
+	CfWorkerInit,
+} from "../deployment-bundle/worker";
+import type { PostQueueBody, PostTypedConsumerBody } from "../queues/client";
 import type { AssetPaths } from "../sites";
 import type { RetrieveSourceMapFunction } from "../sourcemap";
 
@@ -64,6 +78,7 @@ type Props = {
 	assetPaths: AssetPaths | undefined;
 	vars: Record<string, string> | undefined;
 	defines: Record<string, string> | undefined;
+	alias: Record<string, string> | undefined;
 	triggers: string[] | undefined;
 	routes: string[] | undefined;
 	legacyEnv: boolean | undefined;
@@ -78,11 +93,14 @@ type Props = {
 	noBundle: boolean | undefined;
 	keepVars: boolean | undefined;
 	logpush: boolean | undefined;
+	uploadSourceMaps: boolean | undefined;
 	oldAssetTtl: number | undefined;
 	projectRoot: string | undefined;
+	dispatchNamespace: string | undefined;
+	experimentalVersions: boolean | undefined;
 };
 
-type RouteObject = ZoneIdRoute | ZoneNameRoute | CustomDomainRoute;
+export type RouteObject = ZoneIdRoute | ZoneNameRoute | CustomDomainRoute;
 
 export type CustomDomain = {
 	id: string;
@@ -105,14 +123,16 @@ export type CustomDomainChangeset = {
 	conflicting: ConflictingCustomDomain[];
 };
 
-function sleep(ms: number) {
+export function sleep(ms: number) {
 	return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 const scriptStartupErrorRegex = /startup/i;
 
 function errIsScriptSize(err: unknown): err is { code: 10027 } {
-	if (!err) return false;
+	if (!err) {
+		return false;
+	}
 
 	// 10027 = workers.api.error.script_too_large
 	if ((err as { code: number }).code === 10027) {
@@ -123,7 +143,9 @@ function errIsScriptSize(err: unknown): err is { code: 10027 } {
 }
 
 function errIsStartupErr(err: unknown): err is ParseError & { code: 10021 } {
-	if (!err) return false;
+	if (!err) {
+		return false;
+	}
 
 	// 10021 = validation error
 	// no explicit error code for more granular errors than "invalid script"
@@ -142,7 +164,7 @@ function errIsStartupErr(err: unknown): err is ParseError & { code: 10021 } {
 	return false;
 }
 
-function renderRoute(route: Route): string {
+export function renderRoute(route: Route): string {
 	let result = "";
 	if (typeof route === "string") {
 		result = route;
@@ -184,7 +206,7 @@ function renderRoute(route: Route): string {
 // if a user does not confirm that they want to override, we skip publishing
 // to these custom domains, but continue on through the rest of the
 // deploy stage
-async function publishCustomDomains(
+export async function publishCustomDomains(
 	workerUrl: string,
 	accountId: string,
 	domains: Array<RouteObject>
@@ -251,7 +273,9 @@ async function publishCustomDomains(
 			const message = `Custom Domains already exist for these domains:
 ${existingRendered}
 Update them to point to this script instead?`;
-			if (!(await confirm(message))) return fail();
+			if (!(await confirm(message))) {
+				return fail();
+			}
 			config.override_existing_origin = true;
 		}
 
@@ -262,7 +286,9 @@ Update them to point to this script instead?`;
 			const message = `You already have DNS records that conflict for these Custom Domains:
 ${conflicitingRendered}
 Update them to point to this script instead?`;
-			if (!(await confirm(message))) return fail();
+			if (!(await confirm(message))) {
+				return fail();
+			}
 			config.override_existing_dns_record = true;
 		}
 	}
@@ -279,10 +305,12 @@ Update them to point to this script instead?`;
 	return domains.map((domain) => renderRoute(domain));
 }
 
-export default async function deploy(props: Props): Promise<void> {
+export default async function deploy(
+	props: Props
+): Promise<{ sourceMapSize?: number }> {
 	// TODO: warn if git/hg has uncommitted changes
 	const { config, accountId, name } = props;
-	if (accountId && name) {
+	if (!props.dispatchNamespace && accountId && name) {
 		try {
 			const serviceMetaData = await fetchResult(
 				`/accounts/${accountId}/workers/services/${name}`
@@ -298,14 +326,14 @@ export default async function deploy(props: Props): Promise<void> {
 					`You are about to publish a Workers Service that was last published via the Cloudflare Dashboard.\nEdits that have been made via the dashboard will be overridden by your local code and config.`
 				);
 				if (!(await confirm("Would you like to continue?"))) {
-					return;
+					return {};
 				}
 			} else if (default_environment.script.last_deployed_from === "api") {
 				logger.warn(
 					`You are about to publish a Workers Service that was last updated via the script API.\nEdits that have been made via the script API will be overridden by your local code and config.`
 				);
 				if (!(await confirm("Would you like to continue?"))) {
-					return;
+					return {};
 				}
 			}
 		} catch (e) {
@@ -332,11 +360,8 @@ export default async function deploy(props: Props): Promise<void> {
 See https://developers.cloudflare.com/workers/platform/compatibility-dates for more information.`);
 	}
 
-	const triggers = props.triggers || config.triggers?.crons;
 	const routes =
 		props.routes ?? config.routes ?? (config.route ? [config.route] : []) ?? [];
-	const routesOnly: Array<Route> = [];
-	const customDomainsOnly: Array<RouteObject> = [];
 	for (const route of routes) {
 		if (typeof route !== "string" && route.custom_domain) {
 			if (route.pattern.includes("*")) {
@@ -349,14 +374,8 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 					`Cannot use "${route.pattern}" as a Custom Domain; paths are not allowed`
 				);
 			}
-			customDomainsOnly.push(route);
-		} else {
-			routesOnly.push(route);
 		}
 	}
-
-	// deployToWorkersDev defaults to true only if there aren't any routes defined
-	const deployToWorkersDev = config.workers_dev ?? routes.length === 0;
 
 	const jsxFactory = props.jsxFactory || config.jsx_factory;
 	const jsxFragment = props.jsxFragment || config.jsx_fragment;
@@ -364,31 +383,18 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 	const minify = props.minify ?? config.minify;
 
-	const legacyNodeCompat = props.nodeCompat ?? config.node_compat;
-	if (legacyNodeCompat) {
-		logger.warn(
-			"Enabling Node.js compatibility mode for built-ins and globals. This is experimental and has serious tradeoffs. Please see https://github.com/ionic-team/rollup-plugin-node-polyfills/ for more details."
-		);
-	}
-
+	const nodejsCompatMode = validateNodeCompat({
+		legacyNodeCompat: props.nodeCompat ?? config.node_compat ?? false,
+		compatibilityFlags: props.compatibilityFlags ?? config.compatibility_flags,
+		noBundle: props.noBundle ?? config.no_bundle ?? false,
+	});
 	const compatibilityFlags =
 		props.compatibilityFlags ?? config.compatibility_flags;
-	const nodejsCompat = compatibilityFlags.includes("nodejs_compat");
-	assert(
-		!(legacyNodeCompat && nodejsCompat),
-		"The `nodejs_compat` compatibility flag cannot be used in conjunction with the legacy `--node-compat` flag. If you want to use the Workers runtime Node.js compatibility features, please remove the `--node-compat` argument from your CLI command or `node_compat = true` from your config file."
-	);
 
-	// Warn if user tries minify or node-compat with no-bundle
+	// Warn if user tries minify with no-bundle
 	if (props.noBundle && minify) {
 		logger.warn(
 			"`--minify` and `--no-bundle` can't be used together. If you want to minify your Worker and disable Wrangler's bundling, please minify as part of your own bundling process."
-		);
-	}
-
-	if (props.noBundle && legacyNodeCompat) {
-		logger.warn(
-			"`--node-compat` and `--no-bundle` can't be used together. If you want to polyfill Node.js built-ins and disable Wrangler's bundling, please polyfill as part of your own bundling process."
 		);
 	}
 
@@ -420,16 +426,26 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 	const envName = props.env ?? "production";
 
 	const start = Date.now();
-	const notProd = Boolean(!props.legacyEnv && props.env);
+	const prod = Boolean(props.legacyEnv || !props.env);
+	const notProd = !prod;
 	const workerName = notProd ? `${scriptName} (${envName})` : scriptName;
-	const workerUrl = notProd
-		? `/accounts/${accountId}/workers/services/${scriptName}/environments/${envName}`
-		: `/accounts/${accountId}/workers/scripts/${scriptName}`;
+	const workerUrl = props.dispatchNamespace
+		? `/accounts/${accountId}/workers/dispatch/namespaces/${props.dispatchNamespace}/scripts/${scriptName}`
+		: notProd
+			? `/accounts/${accountId}/workers/services/${scriptName}/environments/${envName}`
+			: `/accounts/${accountId}/workers/scripts/${scriptName}`;
 
-	let available_on_subdomain: boolean | undefined = undefined; // we'll set this later
 	let deploymentId: string | null = null;
 
 	const { format } = props.entry;
+
+	if (!props.dispatchNamespace && prod && accountId && scriptName) {
+		const yes = await confirmLatestDeploymentOverwrite(accountId, scriptName);
+		if (!yes) {
+			cancel("Aborting deploy...");
+			return {};
+		}
+	}
 
 	if (
 		!props.isWorkersSite &&
@@ -458,6 +474,9 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			"You cannot configure [data_blobs] with an ES module worker. Instead, import the file directly in your code, and optionally configure `[rules]` in your wrangler.toml"
 		);
 	}
+
+	let sourceMapSize;
+
 	try {
 		if (props.noBundle) {
 			// if we're not building, let's just copy the entry to the destination directory
@@ -483,47 +502,50 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			rules: props.rules,
 			preserveFileNames: config.preserve_file_names ?? false,
 		});
+		const uploadSourceMaps =
+			props.uploadSourceMaps ?? config.upload_source_maps;
 
-		const { modules, dependencies, resolvedEntryPointPath, bundleType } =
-			props.noBundle
-				? await noBundleWorker(props.entry, props.rules, props.outDir)
-				: await bundleWorker(
-						props.entry,
-						typeof destination === "string" ? destination : destination.path,
-						{
-							bundle: true,
-							additionalModules: [],
-							moduleCollector,
-							serveAssetsFromWorker:
-								!props.isWorkersSite && Boolean(props.assetPaths),
-							doBindings: config.durable_objects.bindings,
-							jsxFactory,
-							jsxFragment,
-							tsconfig: props.tsconfig ?? config.tsconfig,
-							minify,
-							legacyNodeCompat,
-							nodejsCompat,
-							define: { ...config.define, ...props.defines },
-							checkFetch: false,
-							assets: config.assets,
-							// enable the cache when publishing
-							bypassAssetCache: false,
-							services: config.services,
-							// We don't set workerDefinitions here,
-							// because we don't want to apply the dev-time
-							// facades on top of it
-							workerDefinitions: undefined,
-							// We want to know if the build is for development or publishing
-							// This could potentially cause issues as we no longer have identical behaviour between dev and deploy?
-							targetConsumer: "deploy",
-							local: false,
-							projectRoot: props.projectRoot,
-							defineNavigatorUserAgent: isNavigatorDefined(
-								props.compatibilityDate ?? config.compatibility_date,
-								props.compatibilityFlags ?? config.compatibility_flags
-							),
-						}
-				  );
+		const {
+			modules,
+			dependencies,
+			resolvedEntryPointPath,
+			bundleType,
+			...bundle
+		} = props.noBundle
+			? await noBundleWorker(props.entry, props.rules, props.outDir)
+			: await bundleWorker(
+					props.entry,
+					typeof destination === "string" ? destination : destination.path,
+					{
+						bundle: true,
+						additionalModules: [],
+						moduleCollector,
+						serveAssetsFromWorker:
+							!props.isWorkersSite && Boolean(props.assetPaths),
+						doBindings: config.durable_objects.bindings,
+						jsxFactory,
+						jsxFragment,
+						tsconfig: props.tsconfig ?? config.tsconfig,
+						minify,
+						sourcemap: uploadSourceMaps,
+						nodejsCompatMode,
+						define: { ...config.define, ...props.defines },
+						checkFetch: false,
+						alias: config.alias,
+						assets: config.assets,
+						// enable the cache when publishing
+						bypassAssetCache: false,
+						// We want to know if the build is for development or publishing
+						// This could potentially cause issues as we no longer have identical behaviour between dev and deploy?
+						targetConsumer: "deploy",
+						local: false,
+						projectRoot: props.projectRoot,
+						defineNavigatorUserAgent: isNavigatorDefined(
+							props.compatibilityDate ?? config.compatibility_date,
+							props.compatibilityFlags ?? config.compatibility_flags
+						),
+					}
+				);
 
 		// Add modules to dependencies for size warning
 		for (const module of modules) {
@@ -562,7 +584,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 					config,
 					legacyEnv: props.legacyEnv,
 					env: props.env,
-			  })
+				})
 			: undefined;
 
 		const assets = await syncAssets(
@@ -589,6 +611,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			wasm_modules: config.wasm_modules,
 			browser: config.browser,
 			ai: config.ai,
+			version_metadata: config.version_metadata,
 			text_blobs: {
 				...config.text_blobs,
 				...(assets.manifest &&
@@ -632,35 +655,40 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			config.placement?.mode === "smart" ? { mode: "smart" } : undefined;
 
 		const entryPointName = path.basename(resolvedEntryPointPath);
+		const main: CfModule = {
+			name: entryPointName,
+			filePath: resolvedEntryPointPath,
+			content: content,
+			type: bundleType,
+		};
 		const worker: CfWorkerInit = {
 			name: scriptName,
-			main: {
-				name: entryPointName,
-				filePath: resolvedEntryPointPath,
-				content: content,
-				type: bundleType,
-			},
+			main,
 			bindings,
 			migrations,
 			modules,
+			sourceMaps: uploadSourceMaps
+				? loadSourceMaps(main, modules, bundle)
+				: undefined,
 			compatibility_date: props.compatibilityDate ?? config.compatibility_date,
 			compatibility_flags: compatibilityFlags,
-			usage_model: config.usage_model,
 			keepVars,
+			keepSecrets: keepVars, // keepVars implies keepSecrets
 			logpush: props.logpush !== undefined ? props.logpush : config.logpush,
 			placement,
 			tail_consumers: config.tail_consumers,
 			limits: config.limits,
 		};
 
-		// As this is not deterministic for testing, we detect if in a jest environment and run asynchronously
-		// We do not care about the timing outside of testing
-		const bundleSizePromise = printBundleSize(
+		sourceMapSize = worker.sourceMaps?.reduce(
+			(acc, m) => acc + m.content.length,
+			0
+		);
+
+		await printBundleSize(
 			{ name: path.basename(resolvedEntryPointPath), content: content },
 			modules
 		);
-		if (process.env.JEST_WORKER_ID !== undefined) await bundleSizePromise;
-		else void bundleSizePromise;
 
 		const withoutStaticAssets = {
 			...bindings,
@@ -682,7 +710,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		printBindings({ ...withoutStaticAssets, vars: maskedVars });
 
 		if (!props.dryRun) {
-			await ensureQueuesExist(config);
+			await ensureQueuesExistByConfig(config);
 
 			// Upload the script so it has time to propagate.
 			// We can also now tell whether available_on_subdomain is set
@@ -709,22 +737,27 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 					})
 				);
 
-				available_on_subdomain = result.available_on_subdomain;
 				deploymentId = addHyphens(result.deployment_id) ?? result.deployment_id;
 
 				if (config.first_party_worker) {
 					// Print some useful information returned after publishing
 					// Not all fields will be populated for every worker
 					// These fields are likely to be scraped by tools, so do not rename
-					if (result.id) logger.log("Worker ID: ", result.id);
-					if (result.etag) logger.log("Worker ETag: ", result.etag);
-					if (result.pipeline_hash)
+					if (result.id) {
+						logger.log("Worker ID: ", result.id);
+					}
+					if (result.etag) {
+						logger.log("Worker ETag: ", result.etag);
+					}
+					if (result.pipeline_hash) {
 						logger.log("Worker PipelineHash: ", result.pipeline_hash);
-					if (result.mutable_pipeline_id)
+					}
+					if (result.mutable_pipeline_id) {
 						logger.log(
 							"Worker Mutable PipelineID (Development ONLY!):",
 							result.mutable_pipeline_id
 						);
+					}
 				}
 			} catch (err) {
 				helpIfErrorIsSizeOrScriptStartup(err, dependencies);
@@ -750,12 +783,18 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 					const maybeNameToFilePath = (moduleName: string) => {
 						// If this is a service worker, always return the entrypoint path.
 						// Service workers can't have additional JavaScript modules.
-						if (bundleType === "commonjs") return resolvedEntryPointPath;
+						if (bundleType === "commonjs") {
+							return resolvedEntryPointPath;
+						}
 						// Similarly, if the name matches the entrypoint, return its path
-						if (moduleName === entryPointName) return resolvedEntryPointPath;
+						if (moduleName === entryPointName) {
+							return resolvedEntryPointPath;
+						}
 						// Otherwise, return the file path of the matching module (if any)
 						for (const module of modules) {
-							if (moduleName === module.name) return module.filePath;
+							if (moduleName === module.name) {
+								return module.filePath;
+							}
 						}
 					};
 					const retrieveSourceMap: RetrieveSourceMapFunction = (moduleName) =>
@@ -780,171 +819,41 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 	if (props.dryRun) {
 		logger.log(`--dry-run: exiting now.`);
-		return;
+		return {};
 	}
 	assert(accountId, "Missing accountId");
 
 	const uploadMs = Date.now() - start;
-	const deployments: Promise<string[]>[] = [];
-
-	if (deployToWorkersDev) {
-		// Deploy to a subdomain of `workers.dev`
-		const userSubdomain = await getWorkersDevSubdomain(accountId);
-		const scriptURL =
-			props.legacyEnv || !props.env
-				? `${scriptName}.${userSubdomain}.workers.dev`
-				: `${envName}.${scriptName}.${userSubdomain}.workers.dev`;
-		if (!available_on_subdomain) {
-			// Enable the `workers.dev` subdomain.
-			deployments.push(
-				fetchResult(`${workerUrl}/subdomain`, {
-					method: "POST",
-					body: JSON.stringify({ enabled: true }),
-					headers: {
-						"Content-Type": "application/json",
-					},
-				})
-					.then(() => [scriptURL])
-					// Add a delay when the subdomain is first created.
-					// This is to prevent an issue where a negative cache-hit
-					// causes the subdomain to be unavailable for 30 seconds.
-					// This is a temporary measure until we fix this on the edge.
-					.then(async (url) => {
-						await sleep(3000);
-						return url;
-					})
-			);
-		} else {
-			deployments.push(Promise.resolve([scriptURL]));
-		}
-	} else {
-		if (available_on_subdomain) {
-			// Disable the workers.dev deployment
-			await fetchResult(`${workerUrl}/subdomain`, {
-				method: "POST",
-				body: JSON.stringify({ enabled: false }),
-				headers: {
-					"Content-Type": "application/json",
-				},
-			});
-		} else if (routes.length !== 0) {
-			// if you get to this point it's because
-			// you're trying to deploy a worker to a custom
-			// domain that's already bound to another worker.
-			// so this thing is about finding workers that have
-			// bindings to the routes you're trying to deploy to.
-			//
-			// the logic is kinda similar (read: duplicated) from publishRoutesFallback,
-			// except here we know we have a good API token or whatever so we don't need
-			// to bother with all the error handling tomfoolery.
-			const routesWithOtherBindings: Record<string, string[]> = {};
-			for (const route of routes) {
-				const zone = await getZoneForRoute(route);
-				if (!zone) {
-					continue;
-				}
-
-				const routePattern = typeof route === "string" ? route : route.pattern;
-				const routesInZone = await fetchListResult<{
-					pattern: string;
-					script: string;
-				}>(`/zones/${zone.id}/workers/routes`);
-
-				routesInZone.forEach(({ script, pattern }) => {
-					if (pattern === routePattern && script !== scriptName) {
-						if (!(script in routesWithOtherBindings)) {
-							routesWithOtherBindings[script] = [];
-						}
-
-						routesWithOtherBindings[script].push(pattern);
-					}
-				});
-			}
-
-			if (Object.keys(routesWithOtherBindings).length > 0) {
-				let errorMessage =
-					"Can't deploy a worker to routes that are assigned to another worker.\n";
-
-				for (const worker in routesWithOtherBindings) {
-					const assignedRoutes = routesWithOtherBindings[worker];
-					errorMessage += `"${worker}" is already assigned to routes:\n${assignedRoutes.map(
-						(r) => `  - ${chalk.underline(r)}\n`
-					)}`;
-				}
-
-				const resolution =
-					"Unassign other workers from the routes you want to deploy to, and then try again.";
-				const dashLink = `Visit ${chalk.blue(
-					chalk.underline(
-						`https://dash.cloudflare.com/${accountId}/workers/overview`
-					)
-				)} to unassign a worker from a route.`;
-
-				throw new UserError(`${errorMessage}\n${resolution}\n${dashLink}`);
-			}
-		}
-	}
 
 	logger.log("Uploaded", workerName, formatTime(uploadMs));
 
-	// Update routing table for the script.
-	if (routesOnly.length > 0) {
-		deployments.push(
-			publishRoutes(routesOnly, { workerUrl, scriptName, notProd }).then(() => {
-				if (routesOnly.length > 10) {
-					return routesOnly
-						.slice(0, 9)
-						.map((route) => renderRoute(route))
-						.concat([`...and ${routesOnly.length - 10} more routes`]);
-				}
-				return routesOnly.map((route) => renderRoute(route));
-			})
-		);
+	// Early exit for WfP since it doesn't need the below code
+	if (props.dispatchNamespace !== undefined) {
+		deployWfpUserWorker(props.dispatchNamespace, deploymentId);
+		return {};
 	}
 
-	// Update custom domains for the script
-	if (customDomainsOnly.length > 0) {
-		deployments.push(
-			publishCustomDomains(workerUrl, accountId, customDomainsOnly)
-		);
-	}
-
-	// Configure any schedules for the script.
-	// TODO: rename this to `schedules`?
-	if (triggers && triggers.length) {
-		deployments.push(
-			fetchResult(`${workerUrl}/schedules`, {
-				// Note: PUT will override previous schedules on this script.
-				method: "PUT",
-				body: JSON.stringify(triggers.map((cron) => ({ cron }))),
-				headers: {
-					"Content-Type": "application/json",
-				},
-			}).then(() => triggers.map((trigger) => `schedule: ${trigger}`))
-		);
-	}
-
-	if (config.queues.consumers && config.queues.consumers.length) {
-		deployments.push(...updateQueueConsumers(config));
-	}
-
-	const targets = await Promise.all(deployments);
-	const deployMs = Date.now() - start - uploadMs;
-
-	if (deployments.length > 0) {
-		logger.log("Published", workerName, formatTime(deployMs));
-		for (const target of targets.flat()) {
-			// Append protocol only on workers.dev domains
-			logger.log(
-				" ",
-				(target.endsWith("workers.dev") ? "https://" : "") + target
-			);
-		}
-	} else {
-		logger.log("No deploy targets for", workerName, formatTime(deployMs));
-	}
+	// deploy triggers
+	await triggersDeploy(props);
 
 	logger.log("Current Deployment ID:", deploymentId);
+	logger.log("Current Version ID:", deploymentId);
+
+	logVersionIdChange();
+
+	return { sourceMapSize };
+}
+
+function deployWfpUserWorker(
+	dispatchNamespace: string,
+	deploymentId: string | null
+) {
+	// Will go under the "Uploaded" text
+	logger.log("  Dispatch Namespace:", dispatchNamespace);
+	logger.log("Current Deployment ID:", deploymentId);
+	logger.log("Current Version ID:", deploymentId);
+
+	logVersionIdChange();
 }
 
 export function helpIfErrorIsSizeOrScriptStartup(
@@ -968,20 +877,26 @@ export function helpIfErrorIsSizeOrScriptStartup(
 	}
 }
 
-function formatTime(duration: number) {
+export function formatTime(duration: number) {
 	return `(${(duration / 1000).toFixed(2)} sec)`;
 }
 
 /**
  * Associate the newly deployed Worker with the given routes.
  */
-async function publishRoutes(
+export async function publishRoutes(
 	routes: Route[],
 	{
 		workerUrl,
 		scriptName,
 		notProd,
-	}: { workerUrl: string; scriptName: string; notProd: boolean }
+		accountId,
+	}: {
+		workerUrl: string;
+		scriptName: string;
+		notProd: boolean;
+		accountId: string;
+	}
 ): Promise<string[]> {
 	try {
 		return await fetchResult(`${workerUrl}/routes`, {
@@ -1000,7 +915,11 @@ async function publishRoutes(
 		if (isAuthenticationError(e)) {
 			// An authentication error is probably due to a known issue,
 			// where the user is logged in via an API token that does not have "All Zones".
-			return await publishRoutesFallback(routes, { scriptName, notProd });
+			return await publishRoutesFallback(routes, {
+				scriptName,
+				notProd,
+				accountId,
+			});
 		} else {
 			throw e;
 		}
@@ -1014,7 +933,11 @@ async function publishRoutes(
  */
 async function publishRoutesFallback(
 	routes: Route[],
-	{ scriptName, notProd }: { scriptName: string; notProd: boolean }
+	{
+		scriptName,
+		notProd,
+		accountId,
+	}: { scriptName: string; notProd: boolean; accountId: string }
 ) {
 	if (notProd) {
 		throw new UserError(
@@ -1035,7 +958,7 @@ async function publishRoutesFallback(
 	const activeZones = new Map<string, string>();
 	const routesToDeploy = new Map<string, string>();
 	for (const route of routes) {
-		const zone = await getZoneForRoute(route);
+		const zone = await getZoneForRoute({ route, accountId });
 		if (zone) {
 			activeZones.set(zone.id, zone.host);
 			routesToDeploy.set(
@@ -1118,59 +1041,117 @@ export function isAuthenticationError(e: unknown): e is ParseError {
 	return e instanceof ParseError && (e as { code?: number }).code === 10000;
 }
 
-async function ensureQueuesExist(config: Config) {
-	const producers = (config.queues.producers || []).map(
-		(producer) => producer.queue
-	);
-	const consumers = (config.queues.consumers || []).map(
-		(consumer) => consumer.queue
-	);
-
-	const queueNames = producers.concat(consumers);
-	for (const queue of queueNames) {
-		try {
-			await getQueue(config, queue);
-		} catch (err) {
-			const queueErr = err as FetchError;
-			if (queueErr.code === 11000) {
-				// queue_not_found
-				throw new UserError(
-					`Queue "${queue}" does not exist. To create it, run: wrangler queues create ${queue}`
-				);
-			}
-			throw err;
-		}
-	}
-}
-
-function updateQueueConsumers(config: Config): Promise<string[]>[] {
-	const consumers = config.queues.consumers || [];
-	return consumers.map((consumer) => {
-		const body: PutConsumerBody = {
-			dead_letter_queue: consumer.dead_letter_queue,
+export async function updateQueueProducers(
+	config: Config
+): Promise<Promise<string[]>[]> {
+	const producers = config.queues.producers || [];
+	const updateProducers: Promise<string[]>[] = [];
+	for (const producer of producers) {
+		const body: PostQueueBody = {
+			queue_name: producer.queue,
 			settings: {
-				batch_size: consumer.max_batch_size,
-				max_retries: consumer.max_retries,
-				max_wait_time_ms: consumer.max_batch_timeout
-					? 1000 * consumer.max_batch_timeout
-					: undefined,
-				max_concurrency: consumer.max_concurrency,
+				delivery_delay: producer.delivery_delay,
 			},
 		};
 
-		if (config.name === undefined) {
-			// TODO: how can we reliably get the current script name?
-			throw new UserError("Script name is required to update queue consumers");
-		}
-		const scriptName = config.name;
-		const envName = undefined; // TODO: script environment for wrangler deploy?
-		return putConsumer(config, consumer.queue, scriptName, envName, body).then(
-			() => [`Consumer for ${consumer.queue}`]
+		updateProducers.push(
+			putQueue(config, producer.queue, body).then(() => [
+				`Producer for ${producer.queue}`,
+			])
 		);
-	});
+	}
+
+	return updateProducers;
 }
 
-async function noBundleWorker(
+export async function updateQueueConsumers(
+	scriptName: string | undefined,
+	config: Config
+): Promise<Promise<string[]>[]> {
+	const consumers = config.queues.consumers || [];
+	const updateConsumers: Promise<string[]>[] = [];
+	for (const consumer of consumers) {
+		const queue = await getQueue(config, consumer.queue);
+
+		if (consumer.type === "http_pull") {
+			const body: PostTypedConsumerBody = {
+				type: consumer.type,
+				dead_letter_queue: consumer.dead_letter_queue,
+				settings: {
+					batch_size: consumer.max_batch_size,
+					max_retries: consumer.max_retries,
+					visibility_timeout_ms: consumer.visibility_timeout_ms,
+					retry_delay: consumer.retry_delay,
+				},
+			};
+
+			const existingConsumer = queue.consumers && queue.consumers[0];
+			if (existingConsumer) {
+				updateConsumers.push(
+					putConsumerById(
+						config,
+						queue.queue_id,
+						existingConsumer.consumer_id,
+						body
+					).then(() => [`Consumer for ${consumer.queue}`])
+				);
+				continue;
+			}
+			updateConsumers.push(
+				postConsumer(config, consumer.queue, body).then(() => [
+					`Consumer for ${consumer.queue}`,
+				])
+			);
+		} else {
+			if (scriptName === undefined) {
+				// TODO: how can we reliably get the current script name?
+				throw new UserError(
+					"Script name is required to update queue consumers"
+				);
+			}
+
+			const body: PostTypedConsumerBody = {
+				type: "worker",
+				dead_letter_queue: consumer.dead_letter_queue,
+				script_name: scriptName,
+				settings: {
+					batch_size: consumer.max_batch_size,
+					max_retries: consumer.max_retries,
+					max_wait_time_ms:
+						consumer.max_batch_timeout !== undefined
+							? 1000 * consumer.max_batch_timeout
+							: undefined,
+					max_concurrency: consumer.max_concurrency,
+					retry_delay: consumer.retry_delay,
+				},
+			};
+
+			// Current script already assigned to queue?
+			const existingConsumer =
+				queue.consumers.filter(
+					(c) => c.script === scriptName || c.service === scriptName
+				).length > 0;
+			const envName = undefined; // TODO: script environment for wrangler deploy?
+			if (existingConsumer) {
+				updateConsumers.push(
+					putConsumer(config, consumer.queue, scriptName, envName, body).then(
+						() => [`Consumer for ${consumer.queue}`]
+					)
+				);
+				continue;
+			}
+			updateConsumers.push(
+				postConsumer(config, consumer.queue, body).then(() => [
+					`Consumer for ${consumer.queue}`,
+				])
+			);
+		}
+	}
+
+	return updateConsumers;
+}
+
+export async function noBundleWorker(
 	entry: Entry,
 	rules: Rule[],
 	outDir: string | undefined

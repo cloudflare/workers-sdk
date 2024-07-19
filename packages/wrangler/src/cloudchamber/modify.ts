@@ -7,9 +7,11 @@ import { getLocation } from "./cli/locations";
 import { DeploymentsService } from "./client";
 import {
 	collectEnvironmentVariables,
+	collectLabels,
 	interactWithUser,
 	loadAccountSpinner,
 	promptForEnvironmentVariables,
+	promptForLabels,
 	renderDeploymentConfiguration,
 	renderDeploymentMutationError,
 } from "./common";
@@ -35,6 +37,13 @@ export function modifyCommandOptionalYargs(yargs: CommonYargsArgvJSON) {
 			type: "array",
 			demandOption: false,
 			describe: "Container environment variables",
+			coerce: (arg: unknown[]) => arg.map((a) => a?.toString() ?? ""),
+		})
+		.option("label", {
+			requiresArg: true,
+			type: "array",
+			demandOption: false,
+			describe: "Deployment labels",
 			coerce: (arg: unknown[]) => arg.map((a) => a?.toString() ?? ""),
 		})
 		.option("ssh-public-key-id", {
@@ -91,13 +100,15 @@ export async function modifyCommand(
 			config,
 			modifyArgs.var
 		);
+		const labels = collectLabels(modifyArgs.label);
 
-		const deployment = await DeploymentsService.modifyDeployment(
+		const deployment = await DeploymentsService.modifyDeploymentV2(
 			modifyArgs.deploymentId,
 			{
 				image: modifyArgs.image,
 				location: modifyArgs.location,
 				environment_variables: environmentVariables,
+				labels: labels,
 				ssh_public_key_ids: modifyArgs.sshPublicKeyId,
 				vcpu: modifyArgs.vcpu ?? config.cloudchamber.vcpu,
 				memory: modifyArgs.memory ?? config.cloudchamber.memory,
@@ -182,8 +193,12 @@ async function handleModifyCommand(
 			question: modifyImageQuestion,
 			label: "",
 			validate: (value) => {
-				if (typeof value !== "string") return "unknown error";
-				if (value.endsWith(":latest")) return "we don't allow :latest tags";
+				if (typeof value !== "string") {
+					return "unknown error";
+				}
+				if (value.endsWith(":latest")) {
+					return "we don't allow :latest tags";
+				}
 			},
 			defaultValue: args.image ?? "",
 			initialValue: args.image ?? "",
@@ -207,6 +222,13 @@ async function handleModifyCommand(
 		true
 	);
 
+	const labels = collectLabels(args.label);
+	const selectedLabels = await promptForLabels(
+		labels,
+		(deployment.labels ?? []).map((v) => v.name),
+		true
+	);
+
 	renderDeploymentConfiguration("modify", {
 		image: image ?? deployment.image,
 		location: location ?? deployment.location.name,
@@ -217,6 +239,7 @@ async function handleModifyCommand(
 			selectedEnvironmentVariables !== undefined
 				? selectedEnvironmentVariables
 				: deployment.environment_variables, // show the existing environment variables if any
+		labels: selectedLabels !== undefined ? selectedLabels : deployment.labels, // show the existing labels if any
 	});
 
 	const yesOrNo = await inputPrompt({

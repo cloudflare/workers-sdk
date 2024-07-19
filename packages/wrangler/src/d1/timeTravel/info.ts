@@ -4,10 +4,7 @@ import { logger } from "../../logger";
 import { requireAuth } from "../../user";
 import { Database } from "../options";
 import { getDatabaseByNameOrBinding } from "../utils";
-import {
-	checkIfDatabaseIsExperimental,
-	getBookmarkIdFromTimestamp,
-} from "./utils";
+import { getBookmarkIdFromTimestamp, throwIfDatabaseIsAlpha } from "./utils";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
@@ -34,7 +31,7 @@ export const InfoHandler = withConfig<HandlerOptions>(
 		// bookmark
 		const accountId = await requireAuth(config);
 		const db = await getDatabaseByNameOrBinding(config, accountId, database);
-		await checkIfDatabaseIsExperimental(accountId, db.uuid);
+		await throwIfDatabaseIsAlpha(accountId, db.uuid);
 		const result = await getBookmarkIdFromTimestamp(
 			accountId,
 			db.uuid,

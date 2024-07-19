@@ -3,7 +3,7 @@
 /* eslint-disable */
 
 /**
- * Current state of the deployment
+ * Current state of the placement
  */
 export enum State {
 	RUNNING = "running",

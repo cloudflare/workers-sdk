@@ -1,5 +1,5 @@
 export default {
-	async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+	async fetch(request, env, ctx): Promise<Response> {
 		const url = new URL(request.url);
 
 		const proxyUrl = url.searchParams.get('proxyUrl'); // get a query param value (?proxyUrl=...)
@@ -20,4 +20,4 @@ export default {
 
 		return res;
 	},
-};
+} satisfies ExportedHandler<Env>;

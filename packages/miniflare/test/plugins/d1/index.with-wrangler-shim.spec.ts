@@ -1,3 +1,4 @@
+import { setupTest } from "./test";
 import type {
 	D1Database,
 	D1ExecResult,
@@ -5,7 +6,6 @@ import type {
 	D1Result,
 } from "@cloudflare/workers-types/experimental";
 import type { Miniflare } from "miniflare";
-import { setupTest } from "./test";
 
 const kSend = Symbol("kSend");
 
@@ -71,7 +71,7 @@ class TestD1PreparedStatement implements D1PreparedStatement {
 		return this.db[kSend]("/prepare/all", this);
 	}
 
-	raw<T = unknown>(): Promise<T[]> {
+	raw<T = unknown>(): Promise<[string[], ...T[]]> {
 		return this.db[kSend]("/prepare/raw", this);
 	}
 }

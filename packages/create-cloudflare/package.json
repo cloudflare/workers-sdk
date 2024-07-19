@@ -1,6 +1,6 @@
 {
 	"name": "create-cloudflare",
-	"version": "2.14.0",
+	"version": "2.22.0",
 	"description": "A CLI for creating and deploying new applications to Cloudflare.",
 	"keywords": [
 		"cloudflare",
@@ -28,28 +28,27 @@
 	"scripts": {
 		"build": "node -r esbuild-register scripts/build.ts",
 		"dev:codemod": "node -r esbuild-register scripts/codemodDev.ts",
-		"check:lint": "eslint .",
+		"check:lint": "eslint . --max-warnings=0",
 		"check:type": "tsc",
-		"lint": "eslint",
-		"prepublishOnly": "pnpm run build",
-		"test:e2e:cleanup": "node -r esbuild-register scripts/e2eCleanup.ts",
-		"test:e2e:npm": "pnpm run build && cross-env TEST_PM=npm vitest run --config ./vitest-e2e.config.ts",
-		"test:e2e:pnpm": "pnpm run build && cross-env TEST_PM=pnpm vitest run --config ./vitest-e2e.config.ts",
-		"test:e2e:bun": "pnpm run build && cross-env TEST_PM=bun vitest run --config ./vitest-e2e.config.ts",
-		"test:e2e:yarn": "pnpm run build && cross-env TEST_PM=yarn vitest run --config ./vitest-e2e.config.ts",
-		"test:unit": "vitest run --config ./vitest.config.ts",
-		"test:unit:watch": "vitest --config ./vitest.config.ts",
+		"prepublishOnly": "pnpm -w run build",
+		"test:e2e": "vitest run --config ./vitest-e2e.config.mts",
+		"test:e2e:npm": "pnpm run build && cross-env TEST_PM=npm vitest run --config ./vitest-e2e.config.mts",
+		"test:e2e:pnpm": "pnpm run build && cross-env TEST_PM=pnpm vitest run --config ./vitest-e2e.config.mts",
+		"test:e2e:bun": "pnpm run build && cross-env TEST_PM=bun vitest run --config ./vitest-e2e.config.mts",
+		"test:e2e:yarn": "pnpm run build && cross-env TEST_PM=yarn vitest run --config ./vitest-e2e.config.mts",
+		"test:unit": "vitest run --config ./vitest.config.mts",
+		"test:unit:watch": "vitest --config ./vitest.config.mts",
 		"watch": "node -r esbuild-register scripts/build.ts --watch",
-		"test:ci": "vitest run --config ./vitest.config.ts"
+		"test:ci": "vitest run --config ./vitest.config.mts"
 	},
 	"devDependencies": {
 		"@babel/parser": "^7.21.3",
 		"@babel/types": "^7.21.4",
 		"@clack/prompts": "^0.6.3",
 		"@cloudflare/cli": "workspace:*",
-		"@cloudflare/eslint-config-worker": "*",
+		"@cloudflare/eslint-config-worker": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
-		"@cloudflare/workers-types": "^4.20230419.0",
+		"@cloudflare/workers-types": "^4.20240712.0",
 		"@iarna/toml": "^3.0.0",
 		"@types/command-exists": "^1.2.0",
 		"@types/cross-spawn": "^6.0.2",
@@ -57,12 +56,12 @@
 		"@types/degit": "^2.8.6",
 		"@types/dns2": "^2.0.3",
 		"@types/esprima": "^4.0.3",
-		"@types/node": "^18.15.3",
+		"@types/node": "20.8.3",
 		"@types/semver": "^7.5.1",
 		"@types/which-pm-runs": "^1.0.0",
 		"@types/yargs": "^17.0.22",
-		"@typescript-eslint/eslint-plugin": "^5.55.0",
-		"@typescript-eslint/parser": "^5.55.0",
+		"@typescript-eslint/eslint-plugin": "^6.9.0",
+		"@typescript-eslint/parser": "^6.9.0",
 		"chalk": "^5.2.0",
 		"command-exists": "^1.2.9",
 		"cross-spawn": "^7.0.3",
@@ -70,27 +69,29 @@
 		"degit": "^2.8.4",
 		"dns2": "^2.1.0",
 		"dotenv": "^16.0.0",
-		"esbuild": "^0.17.12",
+		"esbuild": "0.17.19",
 		"execa": "^7.1.1",
 		"glob": "^10.3.3",
 		"haikunator": "^2.1.2",
+		"indent-string": "^5.0.0",
 		"magic-string": "^0.30.5",
 		"open": "^8.4.0",
-		"pnpm": "^8.10.0",
 		"recast": "^0.22.0",
 		"semver": "^7.5.1",
-		"typescript": "^5.0.2",
-		"undici": "5.28.3",
+		"undici": "^5.28.4",
 		"vite-tsconfig-paths": "^4.0.8",
 		"which-pm-runs": "^1.1.0",
 		"wrangler": "workspace:*",
-		"yargs": "^17.7.1",
-		"yarn": "^1.22.19"
+		"wrap-ansi": "^9.0.0",
+		"yargs": "^17.7.2"
 	},
 	"engines": {
 		"node": ">=18.14.1"
 	},
 	"workers-sdk": {
 		"prerelease": true
+	},
+	"volta": {
+		"extends": "../../package.json"
 	}
 }

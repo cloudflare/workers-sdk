@@ -1,12 +1,12 @@
 import { crash, endSection } from "@cloudflare/cli";
 import { brandColor } from "@cloudflare/cli/colors";
 import { spinner } from "@cloudflare/cli/interactive";
+import { runFrameworkGenerator } from "frameworks/index";
 import { loadTemplateSnippets, transformFile } from "helpers/codemod";
-import { runCommand, runFrameworkGenerator } from "helpers/command";
+import { quoteShellArgs, runCommand } from "helpers/command";
 import { usesTypescript } from "helpers/files";
-import { detectPackageManager } from "helpers/packages";
+import { detectPackageManager } from "helpers/packageManagers";
 import * as recast from "recast";
-import { quoteShellArgs } from "../../src/common";
 import type { TemplateConfig } from "../../src/templates";
 import type { C3Context } from "types";
 
@@ -43,7 +43,7 @@ const addBindingsProxy = (ctx: C3Context) => {
 		// Insert the env declaration after the last import (but before the rest of the body)
 		visitProgram: function (n) {
 			const lastImportIndex = n.node.body.findLastIndex(
-				(t) => t.type === "ImportDeclaration"
+				(t) => t.type === "ImportDeclaration",
 			);
 			const lastImport = n.get("body", lastImportIndex);
 			lastImport.insertAfter(...snippets.getPlatformProxyTs);
@@ -109,8 +109,8 @@ const populateCloudflareEnv = () => {
 			].map(([varName, type]) =>
 				b.tsPropertySignature(
 					b.identifier(varName),
-					b.tsTypeAnnotation(b.tsTypeReference(b.identifier(type)))
-				)
+					b.tsTypeAnnotation(b.tsTypeReference(b.identifier(type))),
+				),
 			);
 
 			n.node.body.body = newBody;
@@ -134,9 +134,9 @@ const config: TemplateConfig = {
 	configure,
 	transformPackageJson: async () => ({
 		scripts: {
-			deploy: `${npm} run build && wrangler pages deploy ./dist`,
-			preview: `${npm} run build && wrangler pages dev ./dist`,
-			"build-cf-types": `wrangler types`,
+			deploy: `${npm} run build && wrangler pages deploy`,
+			preview: `${npm} run build && wrangler pages dev`,
+			"cf-typegen": `wrangler types`,
 		},
 	}),
 	devScript: "dev",

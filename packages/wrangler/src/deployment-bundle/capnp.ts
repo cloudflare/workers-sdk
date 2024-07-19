@@ -26,8 +26,11 @@ export function handleUnsafeCapnp(capnp: CfCapnp): Buffer {
 		`--src-prefix=${srcPrefix}`,
 		...capnpSchemas,
 	]);
-	if (capnpProcess.error) throw capnpProcess.error;
-	if (capnpProcess.stderr.length)
+	if (capnpProcess.error) {
+		throw capnpProcess.error;
+	}
+	if (capnpProcess.stderr.length) {
 		throw new Error(capnpProcess.stderr.toString());
+	}
 	return capnpProcess.stdout;
 }

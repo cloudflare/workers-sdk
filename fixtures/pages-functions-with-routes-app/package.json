@@ -5,17 +5,20 @@
 	"scripts": {
 		"check:type": "tsc",
 		"dev": "npx wrangler pages dev public --port 8776",
-		"test": "vitest run",
+		"test:ci": "vitest run",
 		"test:watch": "vitest",
 		"type:tests": "tsc -p ./tests/tsconfig.json"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-tsconfig": "workspace:*",
-		"@cloudflare/workers-types": "^4.20221111.1",
-		"undici": "^5.28.3",
+		"@cloudflare/workers-types": "^4.20240712.0",
+		"undici": "^5.28.4",
 		"wrangler": "workspace:*"
 	},
 	"engines": {
 		"node": ">=16.13"
+	},
+	"volta": {
+		"extends": "../../package.json"
 	}
 }

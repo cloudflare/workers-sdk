@@ -2,11 +2,11 @@
 
 See below for a summary of this repo's Actions
 
-- _⚠️ means that the check is expected to sometimes fail._
+- _Actions marked with "⚠️" are expected to sometimes fail._
 
 ## PR related actions
 
-### Pull Request (pullrequests.yml)
+### Tests + Checks (test-and-check.yml)
 
 - Triggers
   - Updates to PRs.
@@ -28,7 +28,7 @@ See below for a summary of this repo's Actions
 ## Test old Node.js version (test-old-node-error.yml)
 
 - Triggers
-  - Updates to PRs.
+  - Commits merged to the `changeset-release/main` branch.
 - Actions
   - Makes sure that Wrangler's warning for old Node.js versions works.
 
@@ -64,23 +64,23 @@ See below for a summary of this repo's Actions
 - Actions
   - Add the issue to a Github project.
 
+### Generate changesets for dependabot PRs (c3-dependabot-versioning-prs.yml and miniflare-dependabot-versioning-prs.yml)
+
+- Triggers
+  - Updates to PRs, by the dependabot user, which update one of:
+    - frameworks dependencies in C3,
+    - miniflare.
+- Actions
+  - Generates changesets for the affected package.
+
+### E2E Project Cleanup (e2e-project-cleanup.yml)
+
+- Triggers
+  - Scheduled to run at 3am each day.
+- Actions
+  - Deletes any Workers and Pages projects that were not properly cleaned up by the E2E tests.
+
 ## Main branch actions
-
-### Main branch (main.yml)
-
-- Triggers
-  - Commits merged to the `main` branch, on the Cloudflare fork.
-- Actions
-  - Builds all the packages.
-  - Runs formatting, linting and type checks.
-  - Runs fixture tests, Wrangler unit tests, C3 unit tests, Miniflare unit tests, and ESLint + Prettier checks.
-
-### CodeCov Main Context Updater (codecov-context.yml)
-
-- Triggers
-  - Commits merged to the `main` branch, on the Cloudflare fork.
-- Actions
-  - Generated a code coverage report
 
 ### Handle Changesets (changesets.yml)
 
@@ -92,12 +92,13 @@ See below for a summary of this repo's Actions
     - Public packages are deployed to npm
     - Private packages will run their `deploy` script, if they have one.
 
-### Prerelease (prereleases.yml)
+### Publish @beta pre-releases (prereleases.yml)
 
 - Triggers
   - Commits merged to the `main` branch, on the Cloudflare fork.
 - Actions
   - Publishes the `wrangler` package to npm under the `beta` dist-tag.
+  - Publishes the `create-cloudflare` package to npm under the `beta` dist-tag.
 
 ## Product-specific branch actions
 
@@ -126,30 +127,9 @@ See below for a summary of this repo's Actions
 - Actions
   - Runs the _quarantined_ E2E tests for C3. It is expected to sometimes fail.
 
-### C3: Generate changeset for dependabot PRs (c3-dependabot-versioning-prs.yml)
-
-- Triggers
-  - Updates to PRs, by the dependabot user, which update the frameworks dependencies in C3.
-- Actions
-  - Generates changesets for the updated framework.
-
 ### C3 E2E Tests (Dependabot) (c3-e2e-dependabot.yml)
 
 - Triggers
   - Updates to PRs, by the dependabot user, which touch c3-frameworks-update changesets.
 - Actions
   - Runs the all the C3 E2E (including quarantined) tests for the framework that was updated.
-
-### C3 E2E Project Cleanup (c3-e2e-project-cleanup.yml)
-
-- Triggers
-  - Scheduled to run at 3am each day.
-- Actions
-  - Deletes any Workers and Pages projects that were not properly cleaned up by the C3 E2E tests.
-
-### Prerelease create-cloudflare (prerelease-create-cloudflare.yml)
-
-- Triggers
-  - Commits merged to the `main` branch, on the Cloudflare fork.
-- Actions
-  - Publishes the `create-cloudflare` package to npm under the `beta` dist-tag.

@@ -66,7 +66,7 @@ router.put(
 				customMetadata: artifactTag
 					? {
 							artifactTag,
-					  }
+						}
 					: undefined,
 			}
 		);

@@ -6,7 +6,7 @@ Below you can find some guidance on how to be most effective when contributing t
 
 ## Before getting started
 
-We really appreciate your interest in making a contribution, and we want to make sure that the process is as smooth and transparent as possible! To this end, we note that the Workers team is actively doing development in this repository, and while we consistently strive to commnicate status and current thinking around all open issues, there may be times when context surrounding certain items is not up to date. Therefore, **for non-trivial changes, please always engage on the issue or create a discussion or feature request issue first before writing your code.** This will give us opportunity to flag any considerations you should be aware of before you spend time developing. Of course for trivial changes, please feel free to go directly to filing a PR, with the understanding that the PR itself will serve as the place to discuss details of the change.
+We really appreciate your interest in making a contribution, and we want to make sure that the process is as smooth and transparent as possible! To this end, we note that the Workers team is actively doing development in this repository, and while we consistently strive to communicate status and current thinking around all open issues, there may be times when context surrounding certain items is not up to date. Therefore, **for non-trivial changes, please always engage on the issue or create a discussion or feature request issue first before writing your code.** This will give us opportunity to flag any considerations you should be aware of before you spend time developing. Of course for trivial changes, please feel free to go directly to filing a PR, with the understanding that the PR itself will serve as the place to discuss details of the change.
 
 Thanks so much for helping us improve the [workers-sdk](https://github.com/cloudflare/workers-sdk), and we look forward to your contribution!
 
@@ -156,7 +156,7 @@ The code is checked for formatting errors by [Prettier](https://prettier.io/).
 
 ### Testing
 
-Tests in a workspace are executed, by [Jest](https://jestjs.io/), which is configured to automatically compile and bundle the TypeScript before running the tests.
+Tests in a workspace are executed, by [Vitest](https://vitest.dev/), which is configured to automatically compile and bundle the TypeScript before running the tests.
 
 - Run the tests for all the workspaces
   ```sh
@@ -209,9 +209,9 @@ As a reviewer, it's important to be thoughtful about the proposed changes and co
 
 ## PR Tests
 
-Every PR should include tests for the functionality that's being added. Most changes will be to [Wrangler](packages/wrangler/src/__tests__) (using Jest), [Miniflare](packages/miniflare/test) (using Ava), or [C3](packages/create-cloudflare/src/__tests__) (using Vitest), and should include unit tests within the testing harness of those packages.
+Every PR should include tests for the functionality that's being added. Most changes will be to [Wrangler](packages/wrangler/src/__tests__) (using Vitest), [Miniflare](packages/miniflare/test) (using Ava), or [C3](packages/create-cloudflare/src/__tests__) (using Vitest), and should include unit tests within the testing harness of those packages.
 
-If your PR includes functionality that's difficult to unit test, you can add a fixture test by creating a new package in the `fixtures/` folder. This allows for adding a test that requires a specific filesystem or worker setup (for instance, `fixtures/no-bundle-import` tests the interaction of Wrangler with a specific set of JS, WASM, text, and binary modules on the filesystem). When adding a fixture test, include a `vitest.config.ts` file within the new package, which will ensure it's run as part of the `workers-sdk` CI. You should merge your own configuration with the default config from the root of the repo.
+If your PR includes functionality that's difficult to unit test, you can add a fixture test by creating a new package in the `fixtures/` folder. This allows for adding a test that requires a specific filesystem or worker setup (for instance, `fixtures/no-bundle-import` tests the interaction of Wrangler with a specific set of JS, WASM, text, and binary modules on the filesystem). When adding a fixture test, include a `vitest.config.mts` file within the new package, which will ensure it's run as part of the `workers-sdk` CI. You should merge your own configuration with the default config from the root of the repo.
 
 A good default example is the following:
 
@@ -234,6 +234,38 @@ If you need to test the interaction of Wrangler with a real Cloudflare account, 
 When you open a PR to the `workers-sdk` repo, you should expect several checks to run in CI. For most PRs (except for those which trigger the **C3 E2E (Quarantine)** Action), every check should pass (although some will be skipped).
 
 A summary of this repositories actions can be found [here](.github/workflows/README.md)
+
+## Running e2e tests locally
+
+To run the e2e tests locally, you'll need a Cloudflare API Token and run:
+
+```sh
+$ WRANGLER="node ~/path/to/workers-sdk/packages/wrangler/wrangler-dist/cli.js" CLOUDFLARE_ACCOUNT_ID=$CLOUDFLARE_TESTING_ACCOUNT_ID CLOUDFLARE_API_TOKEN=$CLOUDFLARE_TESTING_API_TOKEN pnpm run test:e2e
+```
+
+You may optionally want to append a filename pattern to limit which e2e tests are run. Also you may want to set `--bail=n` to limit the number of fails tests to show the error before the rest of the tests finish running and to limit the noise in that output:
+
+```sh
+$ WRANGLER="node ~/path/to/workers-sdk/packages/wrangler/wrangler-dist/cli.js" CLOUDFLARE_ACCOUNT_ID=$CLOUDFLARE_TESTING_ACCOUNT_ID CLOUDFLARE_API_TOKEN=$CLOUDFLARE_TESTING_API_TOKEN pnpm run test:e2e [file-pattern] --bail=1
+```
+
+### Creating an API Token
+
+1. Go to ["My Profile" > "User API Tokens"](https://dash.cloudflare.com/profile/api-tokens)
+1. Click "Create API Token"
+1. Use the "Edit Cloudflare Workers" template
+1. Set "Account Resources" to "Include" "DevProd Testing" (you can use any account you have access to)
+1. Set "Zone Resources" to "All zones from an account" and the same account as above
+1. Click "Continue to summary"
+1. Verify your token works by running the curl command provided
+1. Set the environment variables in your terminal or in your profile file (e.g. ~/.zshrc, ~/.bashrc, ~/.profile, etc):
+
+```sh
+export CLOUDFLARE_TESTING_ACCOUNT_ID="<Account ID for the token you just created>"
+export CLOUDFLARE_TESTING_API_TOKEN="<Token you just created>"
+```
+
+Note: Workers created in the e2e tests that fail might not always be cleaned up (deleted). Internal users with access to the "DevProd Testing" account can rely on an automated job to clean up the Workers based on the format of the name. If you use another account, please be aware you may want to manually delete the Workers yourself.
 
 ## Changesets
 
@@ -293,6 +325,10 @@ We use the following guidelines to determine the kind of change for a PR:
 - Bugfixes and experimental features are considered to be 'patch' changes. Be sure to log warnings when experimental features are used.
 - New stable features and new deprecation warnings for future breaking changes are considered 'minor' changes. These changes shouldn't break existing code, but the deprecation warnings should suggest alternate solutions to not trigger the warning.
 - Breaking changes are considered to be 'major' changes. These are usually when deprecations take effect, or functional breaking behaviour is added with relevant logs (either as errors or warnings.)
+
+### Styleguide
+
+When contributing to Wrangler, please refer to the [`STYLEGUIDE.md file`](https://github.com/STYLEGUIDE.md) file where possible to help maintain consistent patterns throughout Wrangler.
 
 ## Releases
 

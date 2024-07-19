@@ -1,13 +1,17 @@
 import fs from "node:fs";
 import dotenv from "dotenv";
 import { findUpSync } from "find-up";
-import { UserError } from "../errors";
+import { FatalError, UserError } from "../errors";
+import { getFlag } from "../experimental-flags";
 import { logger } from "../logger";
+import { EXIT_CODE_INVALID_PAGES_CONFIG } from "../pages/errors";
 import { parseJSONC, parseTOML, readFileSync } from "../parse";
-import { normalizeAndValidateConfig } from "./validation";
+import { isPagesConfig, normalizeAndValidateConfig } from "./validation";
+import { validatePagesConfig } from "./validation-pages";
 import type { CfWorkerInit } from "../deployment-bundle/worker";
 import type { CommonYargsOptions } from "../yargs-types";
 import type { Config, OnlyCamelCase, RawConfig } from "./config";
+import type { NormalizeAndValidateConfigArgs } from "./validation";
 
 export type {
 	Config,
@@ -22,38 +26,122 @@ export type {
 	ConfigModuleRuleType,
 } from "./environment";
 
+type ReadConfigCommandArgs = NormalizeAndValidateConfigArgs & {
+	experimentalJsonConfig?: boolean | undefined;
+};
+
 /**
  * Get the Wrangler configuration; read it from the give `configPath` if available.
  */
-export function readConfig<CommandArgs>(
+export function readConfig(
 	configPath: string | undefined,
 	// Include command specific args as well as the wrangler global flags
-	args: CommandArgs &
-		Pick<OnlyCamelCase<CommonYargsOptions>, "experimentalJsonConfig">
+	args: ReadConfigCommandArgs,
+	requirePagesConfig: true
+): Omit<Config, "pages_build_output_dir"> & { pages_build_output_dir: string };
+export function readConfig(
+	configPath: string | undefined,
+	// Include command specific args as well as the wrangler global flags
+	args: ReadConfigCommandArgs,
+	requirePagesConfig?: boolean,
+	hideWarnings?: boolean
+): Config;
+export function readConfig(
+	configPath: string | undefined,
+	// Include command specific args as well as the wrangler global flags
+	args: ReadConfigCommandArgs,
+	requirePagesConfig?: boolean,
+	hideWarnings: boolean = false
 ): Config {
+	const isJsonConfigEnabled =
+		getFlag("JSON_CONFIG_FILE") ?? args.experimentalJsonConfig;
 	let rawConfig: RawConfig = {};
+
 	if (!configPath) {
-		configPath = findWranglerToml(process.cwd(), args.experimentalJsonConfig);
-	}
-	// Load the configuration from disk if available
-	if (configPath?.endsWith("toml")) {
-		rawConfig = parseTOML(readFileSync(configPath), configPath);
-	} else if (configPath?.endsWith("json")) {
-		rawConfig = parseJSONC(readFileSync(configPath), configPath);
+		configPath = findWranglerToml(process.cwd(), isJsonConfigEnabled);
 	}
 
-	// Process the top-level configuration.
+	try {
+		// Load the configuration from disk if available
+		if (configPath?.endsWith("toml")) {
+			rawConfig = parseTOML(readFileSync(configPath), configPath);
+		} else if (configPath?.endsWith("json")) {
+			rawConfig = parseJSONC(readFileSync(configPath), configPath);
+		}
+	} catch (e) {
+		// Swallow parsing errors if we require a pages config file.
+		// At this point, we can't tell if the user intended to provide a Pages config file (and so should see the parsing error) or not (and so shouldn't).
+		// We err on the side of swallowing the error so as to not break existing projects
+		if (requirePagesConfig) {
+			logger.error(e);
+			throw new FatalError(
+				"Your wrangler.toml is not a valid Pages config file",
+				EXIT_CODE_INVALID_PAGES_CONFIG
+			);
+		} else {
+			throw e;
+		}
+	}
+
+	/**
+	 * Check if configuration file belongs to a Pages project.
+	 *
+	 * The `pages_build_output_dir` config key is used to determine if the
+	 * configuration file belongs to a Workers or Pages project. This key
+	 * should always be set for Pages but never for Workers. Furthermore,
+	 * Pages projects currently have support for `wrangler.toml` only,
+	 * so we should error if `wrangler.json` is detected in a Pages project
+	 */
+	const isPagesConfigFile = isPagesConfig(rawConfig);
+	if (!isPagesConfigFile && requirePagesConfig) {
+		throw new FatalError(
+			"Your wrangler.toml is not a valid Pages config file",
+			EXIT_CODE_INVALID_PAGES_CONFIG
+		);
+	}
+	if (
+		isPagesConfigFile &&
+		(configPath?.endsWith("json") || isJsonConfigEnabled)
+	) {
+		throw new UserError(
+			`Pages doesn't currently support JSON formatted config \`${
+				configPath ?? "wrangler.json"
+			}\`. Please use wrangler.toml instead.`
+		);
+	}
+
+	// Process the top-level configuration. This is common for both
+	// Workers and Pages
 	const { config, diagnostics } = normalizeAndValidateConfig(
 		rawConfig,
 		configPath,
 		args
 	);
 
-	if (diagnostics.hasWarnings()) {
+	if (diagnostics.hasWarnings() && !hideWarnings) {
 		logger.warn(diagnostics.renderWarnings());
 	}
 	if (diagnostics.hasErrors()) {
 		throw new UserError(diagnostics.renderErrors());
+	}
+
+	// If we detected a Pages project, run config file validation against
+	// Pages specific validation rules
+	if (isPagesConfigFile) {
+		logger.debug(
+			`Configuration file belonging to ⚡️ Pages ⚡️ project detected.`
+		);
+
+		const envNames = rawConfig.env ? Object.keys(rawConfig.env) : [];
+		const projectName = rawConfig?.name;
+		const pagesDiagnostics = validatePagesConfig(config, envNames, projectName);
+
+		if (pagesDiagnostics.hasWarnings()) {
+			logger.warn(pagesDiagnostics.renderWarnings());
+		}
+		if (pagesDiagnostics.hasErrors()) {
+			throw new UserError(pagesDiagnostics.renderErrors());
+		}
 	}
 
 	const mainModule = "script" in args ? args.script : config.main;
@@ -101,8 +189,10 @@ export function printBindings(bindings: CfWorkerInit["bindings"]) {
 		return `${s.substring(0, maxLength - 3)}...`;
 	};
 
-	const output: { type: string; entries: { key: string; value: string }[] }[] =
-		[];
+	const output: {
+		type: string;
+		entries: { key: string; value: string | boolean }[];
+	}[] = [];
 
 	const {
 		data_blobs,
@@ -121,6 +211,7 @@ export function printBindings(bindings: CfWorkerInit["bindings"]) {
 		text_blobs,
 		browser,
 		ai,
+		version_metadata,
 		unsafe,
 		vars,
 		wasm_modules,
@@ -133,7 +224,7 @@ export function printBindings(bindings: CfWorkerInit["bindings"]) {
 			type: "Data Blobs",
 			entries: Object.entries(data_blobs).map(([key, value]) => ({
 				key,
-				value: truncate(value),
+				value: typeof value === "string" ? truncate(value) : "<Buffer>",
 			})),
 		});
 	}
@@ -289,10 +380,10 @@ export function printBindings(bindings: CfWorkerInit["bindings"]) {
 	if (services !== undefined && services.length > 0) {
 		output.push({
 			type: "Services",
-			entries: services.map(({ binding, service, environment }) => {
+			entries: services.map(({ binding, service, environment, entrypoint }) => {
 				let value = service;
 				if (environment) {
-					value += ` - ${environment}`;
+					value += ` - ${environment}${entrypoint ? ` (#${entrypoint})` : ""}`;
 				}
 
 				return {
@@ -336,9 +427,23 @@ export function printBindings(bindings: CfWorkerInit["bindings"]) {
 	}
 
 	if (ai !== undefined) {
+		const entries: [{ key: string; value: string | boolean }] = [
+			{ key: "Name", value: ai.binding },
+		];
+		if (ai.staging) {
+			entries.push({ key: "Staging", value: ai.staging });
+		}
+
 		output.push({
 			type: "AI",
-			entries: [{ key: "Name", value: ai.binding }],
+			entries: entries,
+		});
+	}
+
+	if (version_metadata !== undefined) {
+		output.push({
+			type: "Worker Version Metadata",
+			entries: [{ key: "Name", value: version_metadata.binding }],
 		});
 	}
 
@@ -377,7 +482,7 @@ export function printBindings(bindings: CfWorkerInit["bindings"]) {
 			type: "Wasm Modules",
 			entries: Object.entries(wasm_modules).map(([key, value]) => ({
 				key,
-				value: truncate(value),
+				value: typeof value === "string" ? truncate(value) : "<Wasm>",
 			})),
 		});
 	}

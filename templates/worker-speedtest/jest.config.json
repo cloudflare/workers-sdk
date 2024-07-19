@@ -11,8 +11,8 @@
 	"testRegex": "/test/.*\\.(test|spec)\\.(ts|tsx|js)$",
 	"testEnvironment": "miniflare",
 	"testEnvironmentOptions": {
-		"scriptPath": "./src/index.js",
+		"scriptPath": "./src/index.ts",
 		"modules": true
 	},
-	"collectCoverageFrom": ["src/**/*.{js,jsx}"]
+	"collectCoverageFrom": ["src/**/*.{ts,js,jsx}"]
 }

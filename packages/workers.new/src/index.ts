@@ -7,7 +7,7 @@ type Redirects = Record<
 		/* subdirectory */ string,
 		/* file */ string,
 		/* title */ string,
-		/* terminal */ string?
+		/* terminal */ string?,
 	]
 >;
 

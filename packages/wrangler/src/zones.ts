@@ -49,16 +49,20 @@ export function getHostFromRoute(route: Route): string | undefined {
  * - We try to extract a host from it
  * - We try to get a zone id from the host
  */
-export async function getZoneForRoute(route: Route): Promise<Zone | undefined> {
+export async function getZoneForRoute(from: {
+	route: Route;
+	accountId: string;
+}): Promise<Zone | undefined> {
+	const { route, accountId } = from;
 	const host = getHostFromRoute(route);
 	let id: string | undefined;
 
 	if (typeof route === "object" && "zone_id" in route) {
 		id = route.zone_id;
 	} else if (typeof route === "object" && "zone_name" in route) {
-		id = await getZoneIdFromHost(route.zone_name);
+		id = await getZoneIdFromHost({ host: route.zone_name, accountId });
 	} else if (host) {
-		id = await getZoneIdFromHost(host);
+		id = await getZoneIdFromHost({ host, accountId });
 	}
 
 	return id && host ? { id, host } : undefined;
@@ -93,17 +97,19 @@ export function getHostFromUrl(urlLike: string): string | undefined {
 		return undefined;
 	}
 }
-export async function getZoneIdForPreview(
-	host: string | undefined,
-	routes: Route[] | undefined
-) {
+export async function getZoneIdForPreview(from: {
+	host: string | undefined;
+	routes: Route[] | undefined;
+	accountId: string;
+}) {
+	const { host, routes, accountId } = from;
 	let zoneId: string | undefined;
 	if (host) {
-		zoneId = await getZoneIdFromHost(host);
+		zoneId = await getZoneIdFromHost({ host, accountId });
 	}
 	if (!zoneId && routes) {
 		const firstRoute = routes[0];
-		const zone = await getZoneForRoute(firstRoute);
+		const zone = await getZoneForRoute({ route: firstRoute, accountId });
 		if (zone) {
 			zoneId = zone.id;
 		}
@@ -117,14 +123,20 @@ export async function getZoneIdForPreview(
  * For each domain-like part of the host (e.g. w.x.y.z) try to get a zone id for it by
  * lopping off subdomains until we get a hit from the API.
  */
-export async function getZoneIdFromHost(host: string): Promise<string> {
-	const hostPieces = host.split(".");
+export async function getZoneIdFromHost(from: {
+	host: string;
+	accountId: string;
+}): Promise<string> {
+	const hostPieces = from.host.split(".");
 
 	while (hostPieces.length > 1) {
 		const zones = await fetchListResult<{ id: string }>(
 			`/zones`,
 			{},
-			new URLSearchParams({ name: hostPieces.join(".") })
+			new URLSearchParams({
+				name: hostPieces.join("."),
+				"account.id": from.accountId,
+			})
 		);
 		if (zones.length > 0) {
 			return zones[0].id;
@@ -133,7 +145,7 @@ export async function getZoneIdFromHost(host: string): Promise<string> {
 	}
 
 	throw new UserError(
-		`Could not find zone for \`${host}\`. Make sure the domain is set up to be proxied by Cloudflare.\nFor more details, refer to https://developers.cloudflare.com/workers/configuration/routing/routes/#set-up-a-route`
+		`Could not find zone for \`${from.host}\`. Make sure the domain is set up to be proxied by Cloudflare.\nFor more details, refer to https://developers.cloudflare.com/workers/configuration/routing/routes/#set-up-a-route`
 	);
 }
 
@@ -200,8 +212,12 @@ export function findClosestRoute(
 /**
  * Given a route (must be assigned and within the correct zone), return the name of the worker assigned to it
  */
-export async function getWorkerForZone(worker: string) {
-	const zone = await getZoneForRoute(worker);
+export async function getWorkerForZone(from: {
+	worker: string;
+	accountId: string;
+}) {
+	const { worker, accountId } = from;
+	const zone = await getZoneForRoute({ route: worker, accountId });
 	if (!zone) {
 		throw new UserError(
 			`The route '${worker}' is not part of one of your zones. Either add this zone from the Cloudflare dashboard, or try using a route within one of your existing zones.`

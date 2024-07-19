@@ -16,7 +16,12 @@ import {
 
 const StringArraySchema = z.string().array();
 const MessageArraySchema = z
-	.object({ queue: z.string(), id: z.string(), body: z.string() })
+	.object({
+		queue: z.string(),
+		id: z.string(),
+		body: z.string(),
+		attempts: z.number(),
+	})
 	.array();
 
 async function getControlStub(
@@ -200,11 +205,11 @@ test("sends all structured cloneable types", async (t) => {
 				path: "<script>",
 				contents: `
         import assert from "node:assert";
-        
+
         const arrayBuffer = new Uint8Array([0, 1, 2, 3, 4, 5, 6, 7]).buffer;
         const cyclic = { a: 1 };
         cyclic.b = cyclic;
-        
+
         const VALUES = {
           Object: { w: 1, x: 42n, y: true, z: "string" },
           Cyclic: cyclic,
@@ -242,7 +247,7 @@ test("sends all structured cloneable types", async (t) => {
             assert.deepStrictEqual(value.cause, VALUES.Error.cause, "Error: cause");
           }
         };
-        
+
         export default {
           async fetch(request, env, ctx) {
             await env.QUEUE.sendBatch(Object.entries(VALUES).map(
@@ -294,7 +299,10 @@ function stripTimings(entries: LogEntry[]) {
 
 test("retries messages", async (t) => {
 	let batches: z.infer<typeof MessageArraySchema>[] = [];
-	const bodies = () => batches.map((batch) => batch.map(({ body }) => body));
+	const bodiesAttempts = () =>
+		batches.map((batch) =>
+			batch.map(({ body, attempts }) => ({ body, attempts }))
+		);
 
 	let retryAll = false;
 	let errorAll = false;
@@ -303,8 +311,7 @@ test("retries messages", async (t) => {
 	const log = new TestLog(t);
 	const mf = new Miniflare({
 		log,
-
-		queueProducers: { QUEUE: "queue" },
+		queueProducers: { QUEUE: { queueName: "queue" } },
 		queueConsumers: {
 			queue: { maxBatchSize: 5, maxBatchTimeout: 1, maxRetires: 2 },
 		},
@@ -326,7 +333,7 @@ test("retries messages", async (t) => {
       async queue(batch, env, ctx) {
         const res = await env.RETRY_FILTER.fetch("http://localhost", {
           method: "POST",
-          body: JSON.stringify(batch.messages.map(({ id, body }) => ({ queue: batch.queue, id, body }))),
+          body: JSON.stringify(batch.messages.map(({ id, body, attempts }) => ({ queue: batch.queue, id, body, attempts }))),
         });
         const { retryAll, errorAll, retryMessages } = await res.json();
         if (retryAll) {
@@ -379,7 +386,14 @@ test("retries messages", async (t) => {
 	await object.advanceFakeTime(1000);
 	await object.waitForFakeTasks();
 	t.is(batches.length, 2);
-	t.deepEqual(bodies(), [["msg1", "msg2", "msg3"], ["msg2"]]);
+	t.deepEqual(bodiesAttempts(), [
+		[
+			{ body: "msg1", attempts: 1 },
+			{ body: "msg2", attempts: 1 },
+			{ body: "msg3", attempts: 1 },
+		],
+		[{ body: "msg2", attempts: 2 }],
+	]);
 	batches = [];
 
 	// Check with explicit retry all
@@ -412,9 +426,17 @@ test("retries messages", async (t) => {
 	t.deepEqual(stripTimings(log.logs), [
 		[LogLevel.INFO, "QUEUE queue 3/3 (Xms)"],
 	]);
-	t.deepEqual(bodies(), [
-		["msg1", "msg2", "msg3"],
-		["msg1", "msg2", "msg3"],
+	t.deepEqual(bodiesAttempts(), [
+		[
+			{ body: "msg1", attempts: 1 },
+			{ body: "msg2", attempts: 1 },
+			{ body: "msg3", attempts: 1 },
+		],
+		[
+			{ body: "msg1", attempts: 2 },
+			{ body: "msg2", attempts: 2 },
+			{ body: "msg3", attempts: 2 },
+		],
 	]);
 	batches = [];
 
@@ -448,9 +470,17 @@ test("retries messages", async (t) => {
 	t.deepEqual(stripTimings(log.logs), [
 		[LogLevel.INFO, "QUEUE queue 3/3 (Xms)"],
 	]);
-	t.deepEqual(bodies(), [
-		["msg1", "msg2", "msg3"],
-		["msg1", "msg2", "msg3"],
+	t.deepEqual(bodiesAttempts(), [
+		[
+			{ body: "msg1", attempts: 1 },
+			{ body: "msg2", attempts: 1 },
+			{ body: "msg3", attempts: 1 },
+		],
+		[
+			{ body: "msg1", attempts: 2 },
+			{ body: "msg2", attempts: 2 },
+			{ body: "msg3", attempts: 2 },
+		],
 	]);
 	batches = [];
 
@@ -504,10 +534,18 @@ test("retries messages", async (t) => {
 	await object.advanceFakeTime(1000);
 	await object.waitForFakeTasks();
 	t.is(batches.length, 3);
-	t.deepEqual(bodies(), [
-		["msg1", "msg2", "msg3"],
-		["msg1", "msg2", "msg3"],
-		["msg3"],
+	t.deepEqual(bodiesAttempts(), [
+		[
+			{ body: "msg1", attempts: 1 },
+			{ body: "msg2", attempts: 1 },
+			{ body: "msg3", attempts: 1 },
+		],
+		[
+			{ body: "msg1", attempts: 2 },
+			{ body: "msg2", attempts: 2 },
+			{ body: "msg3", attempts: 2 },
+		],
+		[{ body: "msg3", attempts: 3 }],
 	]);
 	batches = [];
 });
@@ -521,7 +559,7 @@ test("moves to dead letter queue", async (t) => {
 		log,
 		verbose: true,
 
-		queueProducers: { BAD_QUEUE: "bad" },
+		queueProducers: { BAD_QUEUE: { queueName: "bad" } },
 		queueConsumers: {
 			// Check single Worker consuming multiple queues
 			bad: {
@@ -555,7 +593,7 @@ test("moves to dead letter queue", async (t) => {
       async queue(batch, env, ctx) {
         const res = await env.RETRY_FILTER.fetch("http://localhost", {
           method: "POST",
-          body: JSON.stringify(batch.messages.map(({ id, body }) => ({ queue: batch.queue, id, body }))),
+          body: JSON.stringify(batch.messages.map(({ id, body, attempts }) => ({ queue: batch.queue, id, body, attempts }))),
         });
         const { retryMessages } = await res.json();
         for (const message of batch.messages) {
@@ -616,15 +654,15 @@ test("moves to dead letter queue", async (t) => {
 	log.logs = [];
 	t.deepEqual(batches, [
 		[
-			{ queue: "bad", id: batches[0][0].id, body: "msg1" },
-			{ queue: "bad", id: batches[0][1].id, body: "msg2" },
-			{ queue: "bad", id: batches[0][2].id, body: "msg3" },
+			{ queue: "bad", id: batches[0][0].id, body: "msg1", attempts: 1 },
+			{ queue: "bad", id: batches[0][1].id, body: "msg2", attempts: 1 },
+			{ queue: "bad", id: batches[0][2].id, body: "msg3", attempts: 1 },
 		],
 		[
-			{ queue: "dlq", id: batches[0][1].id, body: "msg2" },
-			{ queue: "dlq", id: batches[0][2].id, body: "msg3" },
+			{ queue: "dlq", id: batches[0][1].id, body: "msg2", attempts: 1 },
+			{ queue: "dlq", id: batches[0][2].id, body: "msg3", attempts: 1 },
 		],
-		[{ queue: "bad", id: batches[0][1].id, body: "msg2" }],
+		[{ queue: "bad", id: batches[0][1].id, body: "msg2", attempts: 1 }],
 	]);
 
 	// Check rejects queue as own dead letter queue
@@ -645,7 +683,7 @@ test("operations permit strange queue names", async (t) => {
 	const id = "my/ Queue";
 	const mf = new Miniflare({
 		verbose: true,
-		queueProducers: { QUEUE: id },
+		queueProducers: { QUEUE: { queueName: id } },
 		queueConsumers: [id],
 		serviceBindings: {
 			async REPORTER(request) {
@@ -663,7 +701,7 @@ test("operations permit strange queue names", async (t) => {
       async queue(batch, env, ctx) {
         await env.REPORTER.fetch("http://localhost", {
           method: "POST",
-          body: JSON.stringify(batch.messages.map(({ id, body }) => ({ queue: batch.queue, id, body }))),
+          body: JSON.stringify(batch.messages.map(({ id, body, attempts }) => ({ queue: batch.queue, id, body, attempts }))),
         });
       }
     }`,
@@ -676,8 +714,8 @@ test("operations permit strange queue names", async (t) => {
 	await object.waitForFakeTasks();
 	const batch = await promise;
 	t.deepEqual(batch, [
-		{ queue: id, id: batch[0].id, body: "msg1" },
-		{ queue: id, id: batch[1].id, body: "msg2" },
+		{ queue: id, id: batch[0].id, body: "msg1", attempts: 1 },
+		{ queue: id, id: batch[1].id, body: "msg2", attempts: 1 },
 	]);
 });
 
@@ -693,7 +731,7 @@ test("supports message contentTypes", async (t) => {
 	const mf = new Miniflare({
 		log,
 		verbose: true,
-		queueProducers: { QUEUE: id },
+		queueProducers: { QUEUE: { queueName: id } },
 		queueConsumers: [id],
 		serviceBindings: {
 			async REPORTER(request) {
@@ -794,4 +832,152 @@ test("validates message size", async (t) => {
 		message:
 			"Queue send failed: message length of 128001 bytes exceeds limit of 128000",
 	});
+});
+
+test("supports delivery delay", async (t) => {
+	let batches: string[][] = [];
+
+	const log = new TestLog(t);
+	const mf = new Miniflare({
+		log,
+		verbose: true,
+		queueProducers: { QUEUE: { queueName: "QUEUE", deliveryDelay: 2 } },
+		queueConsumers: {
+			QUEUE: {
+				maxBatchSize: 100,
+				maxBatchTimeout: 0,
+				maxRetires: 1,
+				retryDelay: 3,
+			},
+		},
+		serviceBindings: {
+			async REPORTER(request) {
+				const batch = StringArraySchema.parse(await request.json());
+				if (batch.length > 0) {
+					batches.push(batch);
+				}
+				return new Response();
+			},
+		},
+		modules: true,
+		script: `export default {
+      async fetch(request, env, ctx) {
+		const delay = request.headers.get("X-Msg-Delay-Secs");
+		const url = new URL(request.url);
+		const body = await request.json();
+
+		if (url.pathname === "/send") {
+			if (delay === null) {
+				await env.QUEUE.send(body);
+			} else {
+				await env.QUEUE.send(body, { delaySeconds: Number(delay) });
+			}
+		} else if (url.pathname === "/batch") {
+		  await env.QUEUE.sendBatch(body, { delaySeconds: Number(delay) });
+		}
+        return new Response(null, { status: 204 });
+      },
+      async queue(batch, env, ctx) {
+        delete Date.prototype.toJSON; // JSON.stringify calls .toJSON before the replacer
+        await env.REPORTER.fetch("http://localhost", {
+          method: "POST",
+		  body: JSON.stringify(batch.messages.map(({ id }) => id)),
+        });
+
+		let isBatch = true;
+		for (const message of batch.messages) {
+			if (message.body < 10) {
+				if (message.body % 2 == 0)  {
+					message.retry({ delaySeconds: 20 });
+				}
+				isBatch = false;
+			}
+		}
+		batch.retryAll(isBatch ? {} : { delaySeconds: 10 });
+      },
+    };`,
+	});
+	t.teardown(() => mf.dispose());
+	const object = await getControlStub(mf, "QUEUE");
+
+	// Test send.
+
+	async function send(delay: number, message: unknown) {
+		await mf.dispatchFetch("http://localhost/send", {
+			method: "POST",
+			headers: { "X-Msg-Delay-Secs": delay.toString() },
+			body: JSON.stringify(message),
+		});
+	}
+
+	// Send 10 messages.
+	for (let i = 0; i < 10; i++) {
+		send(i, i);
+	}
+
+	// Verify messages are delivered at the right times.
+	for (let i = 1; i <= 10; i++) {
+		await object.advanceFakeTime(1000);
+		await object.waitForFakeTasks();
+		t.is(batches.length, i);
+	}
+
+	batches = [];
+
+	// Verify messages are retried at the right times.
+	for (let i = 1; i <= 10; i++) {
+		await object.advanceFakeTime(2000);
+		await object.waitForFakeTasks();
+		t.is(batches.length, i);
+	}
+
+	batches = [];
+
+	// Test send batch.
+
+	async function sendBatch(delay: number, ...messages: unknown[]) {
+		await mf.dispatchFetch("http://localhost/batch", {
+			method: "POST",
+			headers: { "X-Msg-Delay-Secs": delay.toString() },
+			body: JSON.stringify(messages),
+		});
+	}
+
+	// Send batch of messages (default batch delay: 1 sec).
+	sendBatch(
+		1,
+		{ body: 10, delaySeconds: 0 },
+		{ body: 11 },
+		{ body: 12, delaySeconds: 2 }
+	);
+
+	// Verify messages are received at the right times.
+	for (let i = 1; i <= 3; i++) {
+		await object.advanceFakeTime(1000);
+		await object.waitForFakeTasks();
+		t.is(batches.length, i);
+	}
+
+	batches = [];
+
+	// Verify messages are retried at the right times.
+	for (let i = 1; i <= 3; i++) {
+		await object.advanceFakeTime(1000);
+		await object.waitForFakeTasks();
+		t.is(batches.length, i);
+	}
+
+	batches = [];
+
+	// Sending message with delivery delay set at the producer settings level.
+	await mf.dispatchFetch("http://localhost/send", {
+		method: "POST",
+		body: JSON.stringify("test"),
+	});
+	await object.advanceFakeTime(1000);
+	await object.waitForFakeTasks();
+	t.is(batches.length, 0);
+	await object.advanceFakeTime(1000);
+	await object.waitForFakeTasks();
+	t.is(batches.length, 1);
 });

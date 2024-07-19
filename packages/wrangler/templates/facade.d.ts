@@ -1,10 +1,12 @@
 declare module "__ENTRY_POINT__" {
-	import type { Middleware } from "./middleware/common";
-	const worker: ExportedHandler & {
-		middleware?: Middleware[];
-		envWrappers: ((env: Record<string, unknown>) => Record<string, unknown>)[];
-	};
+	import { Middleware } from "./middleware/common";
+	import { WorkerEntrypoint } from "cloudflare:workers";
+
+	export type WorkerEntrypointConstructor = typeof WorkerEntrypoint;
+
+	const worker: ExportedHandler | WorkerEntrypointConstructor;
 	export default worker;
+	export const __INTERNAL_WRANGLER_MIDDLEWARE__: Middleware[];
 }
 
 declare module "__KV_ASSET_HANDLER__" {

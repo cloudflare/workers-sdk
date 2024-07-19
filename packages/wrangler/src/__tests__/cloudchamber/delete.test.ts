@@ -1,4 +1,4 @@
-import { rest } from "msw";
+import { http, HttpResponse } from "msw";
 import patchConsole from "patch-console";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { MOCK_DEPLOYMENTS_COMPLEX } from "../helpers/mock-cloudchamber";
@@ -27,38 +27,42 @@ describe("cloudchamber delete", () => {
 		await runWrangler("cloudchamber delete --help");
 		expect(std.err).toMatchInlineSnapshot(`""`);
 		expect(std.out).toMatchInlineSnapshot(`
-		"wrangler cloudchamber delete [deploymentId]
+			"wrangler cloudchamber delete [deploymentId]
 
-		Delete an existing deployment that is running in the Cloudflare edge
+			Delete an existing deployment that is running in the Cloudflare edge
 
-		Positionals:
-		  deploymentId  deployment you want to delete  [string]
+			POSITIONALS
+			  deploymentId  deployment you want to delete  [string]
 
-		Flags:
-		  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
-		  -c, --config                    Path to .toml configuration file  [string]
-		  -e, --env                       Environment to use for operations and .env files  [string]
-		  -h, --help                      Show help  [boolean]
-		  -v, --version                   Show version number  [boolean]
+			GLOBAL FLAGS
+			  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
+			  -c, --config                    Path to .toml configuration file  [string]
+			  -e, --env                       Environment to use for operations and .env files  [string]
+			  -h, --help                      Show help  [boolean]
+			  -v, --version                   Show version number  [boolean]
 
-		Options:
-		      --json  Return output as clean JSON  [boolean] [default: false]"
-	`);
+			OPTIONS
+			      --json  Return output as clean JSON  [boolean] [default: false]"
+		`);
 	});
 
 	it("should delete deployment (detects no interactivity)", async () => {
 		setIsTTY(false);
 		msw.use(
-			rest.delete("*/deployments/1234", async (_request, response, context) => {
-				return response.once(context.json(MOCK_DEPLOYMENTS_COMPLEX[0]));
-			})
+			http.delete(
+				"*/deployments/1234/v2",
+				async () => {
+					return HttpResponse.json(MOCK_DEPLOYMENTS_COMPLEX[0]);
+				},
+				{ once: true }
+			)
 		);
 		await runWrangler("cloudchamber delete 1234");
 		expect(std.err).toMatchInlineSnapshot(`""`);
 		// so testing the actual UI will be harder than expected
 		// TODO: think better on how to test UI actions
 		expect(std.out).toMatchInlineSnapshot(
-			`"{\\"id\\":\\"1\\",\\"created_at\\":\\"123\\",\\"account_id\\":\\"123\\",\\"vcpu\\":4,\\"memory\\":\\"400MB\\",\\"version\\":1,\\"image\\":\\"hello\\",\\"location\\":\\"sfo06\\",\\"ipv4\\":\\"1.1.1.1\\",\\"current_placement\\":null,\\"placements_ref\\":\\"http://ref\\",\\"node_group\\":\\"metal\\"} null 4"`
+			`"{\\"id\\":\\"1\\",\\"type\\":\\"default\\",\\"created_at\\":\\"123\\",\\"account_id\\":\\"123\\",\\"vcpu\\":4,\\"memory\\":\\"400MB\\",\\"version\\":1,\\"image\\":\\"hello\\",\\"location\\":{\\"name\\":\\"sfo06\\",\\"enabled\\":true},\\"network\\":{\\"ipv4\\":\\"1.1.1.1\\"},\\"placements_ref\\":\\"http://ref\\",\\"node_group\\":\\"metal\\"} null 4"`
 		);
 	});
 
@@ -68,7 +72,7 @@ describe("cloudchamber delete", () => {
 		await expect(
 			runWrangler("cloudchamber delete")
 		).rejects.toThrowErrorMatchingInlineSnapshot(
-			`"there needs to be a deploymentId when you can't interact with the wrangler cli"`
+			`[Error: there needs to be a deploymentId when you can't interact with the wrangler cli]`
 		);
 		// so testing the actual UI will be harder than expected
 		// TODO: think better on how to test UI actions

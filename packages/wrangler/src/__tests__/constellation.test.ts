@@ -1,5 +1,6 @@
 import * as fs from "node:fs";
-import { rest } from "msw";
+import { http, HttpResponse } from "msw";
+import { vi } from "vitest";
 import { endEventLoop } from "./helpers/end-event-loop";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
@@ -18,21 +19,21 @@ describe("constellation help", () => {
 		await endEventLoop();
 
 		expect(std.out).toMatchInlineSnapshot(`
-		"wrangler constellation
+			"wrangler constellation
 
-		Commands:
-		  wrangler constellation project  Manage your projects
-		  wrangler constellation model    Manage your models
-		  wrangler constellation catalog  Check the curated model catalog
-		  wrangler constellation runtime  Check the suported runtimes
+			COMMANDS
+			  wrangler constellation project  Manage your projects
+			  wrangler constellation model    Manage your models
+			  wrangler constellation catalog  Check the curated model catalog
+			  wrangler constellation runtime  Check the suported runtimes
 
-		Flags:
-		  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
-		  -c, --config                    Path to .toml configuration file  [string]
-		  -e, --env                       Environment to use for operations and .env files  [string]
-		  -h, --help                      Show help  [boolean]
-		  -v, --version                   Show version number  [boolean]"
-	`);
+			GLOBAL FLAGS
+			  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
+			  -c, --config                    Path to .toml configuration file  [string]
+			  -e, --env                       Environment to use for operations and .env files  [string]
+			  -h, --help                      Show help  [boolean]
+			  -v, --version                   Show version number  [boolean]"
+		`);
 	});
 
 	it("should show help when an invalid argument is passed", async () => {
@@ -46,22 +47,22 @@ describe("constellation help", () => {
 		"
 	`);
 		expect(std.out).toMatchInlineSnapshot(`
-		"
-		wrangler constellation
+			"
+			wrangler constellation
 
-		Commands:
-		  wrangler constellation project  Manage your projects
-		  wrangler constellation model    Manage your models
-		  wrangler constellation catalog  Check the curated model catalog
-		  wrangler constellation runtime  Check the suported runtimes
+			COMMANDS
+			  wrangler constellation project  Manage your projects
+			  wrangler constellation model    Manage your models
+			  wrangler constellation catalog  Check the curated model catalog
+			  wrangler constellation runtime  Check the suported runtimes
 
-		Flags:
-		  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
-		  -c, --config                    Path to .toml configuration file  [string]
-		  -e, --env                       Environment to use for operations and .env files  [string]
-		  -h, --help                      Show help  [boolean]
-		  -v, --version                   Show version number  [boolean]"
-	`);
+			GLOBAL FLAGS
+			  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
+			  -c, --config                    Path to .toml configuration file  [string]
+			  -e, --env                       Environment to use for operations and .env files  [string]
+			  -h, --help                      Show help  [boolean]
+			  -v, --version                   Show version number  [boolean]"
+		`);
 	});
 });
 
@@ -75,7 +76,7 @@ describe("constellation commands", () => {
 
 	beforeEach(() => {
 		// @ts-expect-error we're using a very simple setTimeout mock here
-		jest.spyOn(global, "setTimeout").mockImplementation((fn, _period) => {
+		vi.spyOn(global, "setTimeout").mockImplementation((fn, _period) => {
 			setImmediate(fn);
 		});
 		setIsTTY(true);
@@ -92,7 +93,7 @@ describe("constellation commands", () => {
 		"--------------------
 		🚧 Constellation is currently in open alpha and is not recommended for production data and traffic
 		🚧 Please report any bugs to https://github.com/cloudflare/workers-sdk/issues/new/choose
-		🚧 To give feedback, visit https://discord.gg/cloudflaredev
+		🚧 To give feedback, visit https://discord.cloudflare.com
 		--------------------
 
 		✅ Successfully created Project \\"new_project3\\"!"
@@ -106,7 +107,7 @@ describe("constellation commands", () => {
 		"--------------------
 		🚧 Constellation is currently in open alpha and is not recommended for production data and traffic
 		🚧 Please report any bugs to https://github.com/cloudflare/workers-sdk/issues/new/choose
-		🚧 To give feedback, visit https://discord.gg/cloudflaredev
+		🚧 To give feedback, visit https://discord.cloudflare.com
 		--------------------
 
 		┌──────────────────────────────────────┬──────────────┬─────────┬─────────────────────────────┐
@@ -129,7 +130,7 @@ describe("constellation commands", () => {
 		"--------------------
 		🚧 Constellation is currently in open alpha and is not recommended for production data and traffic
 		🚧 Please report any bugs to https://github.com/cloudflare/workers-sdk/issues/new/choose
-		🚧 To give feedback, visit https://discord.gg/cloudflaredev
+		🚧 To give feedback, visit https://discord.cloudflare.com
 		--------------------
 
 		About to delete Project 'new_project3' (4806cdcf-9aa7-4fa2-b6a1-77fe9e196680).
@@ -145,7 +146,7 @@ describe("constellation commands", () => {
 		"--------------------
 		🚧 Constellation is currently in open alpha and is not recommended for production data and traffic
 		🚧 Please report any bugs to https://github.com/cloudflare/workers-sdk/issues/new/choose
-		🚧 To give feedback, visit https://discord.gg/cloudflaredev
+		🚧 To give feedback, visit https://discord.cloudflare.com
 		--------------------
 
 		┌──────────────────────────────────────┬──────────────────────┬─────────────────┬───────────────┐
@@ -163,7 +164,7 @@ describe("constellation commands", () => {
 		"--------------------
 		🚧 Constellation is currently in open alpha and is not recommended for production data and traffic
 		🚧 Please report any bugs to https://github.com/cloudflare/workers-sdk/issues/new/choose
-		🚧 To give feedback, visit https://discord.gg/cloudflaredev
+		🚧 To give feedback, visit https://discord.cloudflare.com
 		--------------------
 
 		┌─────────┐
@@ -186,7 +187,7 @@ describe("constellation commands", () => {
 		"--------------------
 		🚧 Constellation is currently in open alpha and is not recommended for production data and traffic
 		🚧 Please report any bugs to https://github.com/cloudflare/workers-sdk/issues/new/choose
-		🚧 To give feedback, visit https://discord.gg/cloudflaredev
+		🚧 To give feedback, visit https://discord.cloudflare.com
 		--------------------
 
 		✅ Successfully uploaded Model \\"model2\\"!"
@@ -200,7 +201,7 @@ describe("constellation commands", () => {
 		"--------------------
 		🚧 Constellation is currently in open alpha and is not recommended for production data and traffic
 		🚧 Please report any bugs to https://github.com/cloudflare/workers-sdk/issues/new/choose
-		🚧 To give feedback, visit https://discord.gg/cloudflaredev
+		🚧 To give feedback, visit https://discord.cloudflare.com
 		--------------------
 
 		┌──────────────────────────────────────┬──────────────────────────────────────┬────────┬─────────────┬─────────────────────────────┐
@@ -225,7 +226,7 @@ describe("constellation commands", () => {
 		"--------------------
 		🚧 Constellation is currently in open alpha and is not recommended for production data and traffic
 		🚧 Please report any bugs to https://github.com/cloudflare/workers-sdk/issues/new/choose
-		🚧 To give feedback, visit https://discord.gg/cloudflaredev
+		🚧 To give feedback, visit https://discord.cloudflare.com
 		--------------------
 
 		About to delete Model 'model2' (2dd35b4e-0c7a-4c7a-a9e2-e33c0e17bc02).
@@ -238,9 +239,10 @@ describe("constellation commands", () => {
 /** Create a mock handler for Constellation API */
 function mockConstellationRequest() {
 	msw.use(
-		rest.get("*/accounts/:accountId/constellation/project", (req, res, ctx) => {
-			return res.once(
-				ctx.json(
+		http.get(
+			"*/accounts/:accountId/constellation/project",
+			() => {
+				return HttpResponse.json(
 					createFetchResult(
 						[
 							{
@@ -252,36 +254,38 @@ function mockConstellationRequest() {
 						],
 						true
 					)
-				)
-			);
-		}),
-		rest.post(
+				);
+			},
+			{ once: true }
+		),
+		http.post(
 			"*/accounts/:accountId/constellation/project",
-			(req, res, ctx) => {
-				return res.once(
-					ctx.json(
-						createFetchResult(
-							{
-								id: "4806cdcf-9aa7-4fa2-b6a1-77fe9e196680",
-								name: "new_project3",
-								runtime: "ONNX",
-								created_at: "2023-04-28T13:25:58.513105Z",
-							},
-							true
-						)
+			() => {
+				return HttpResponse.json(
+					createFetchResult(
+						{
+							id: "4806cdcf-9aa7-4fa2-b6a1-77fe9e196680",
+							name: "new_project3",
+							runtime: "ONNX",
+							created_at: "2023-04-28T13:25:58.513105Z",
+						},
+						true
 					)
 				);
-			}
+			},
+			{ once: true }
 		),
-		rest.delete(
+		http.delete(
 			"*/accounts/:accountId/constellation/project/4806cdcf-9aa7-4fa2-b6a1-77fe9e196680",
-			(req, res, ctx) => {
-				return res.once(ctx.json(createFetchResult(null, true)));
-			}
+			() => {
+				return HttpResponse.json(createFetchResult(null, true));
+			},
+			{ once: true }
 		),
-		rest.get("*/accounts/:accountId/constellation/catalog", (req, res, ctx) => {
-			return res.once(
-				ctx.json(
+		http.get(
+			"*/accounts/:accountId/constellation/catalog",
+			() => {
+				return HttpResponse.json(
 					createFetchResult(
 						[
 							{
@@ -304,64 +308,68 @@ function mockConstellationRequest() {
 						],
 						true
 					)
-				)
-			);
-		}),
-		rest.get("*/accounts/:accountId/constellation/runtime", (req, res, ctx) => {
-			return res.once(ctx.json(createFetchResult(["ONNX", "XGBoost"], true)));
-		}),
-		rest.post(
+				);
+			},
+			{ once: true }
+		),
+		http.get(
+			"*/accounts/:accountId/constellation/runtime",
+			() => {
+				return HttpResponse.json(createFetchResult(["ONNX", "XGBoost"], true));
+			},
+			{ once: true }
+		),
+		http.post(
 			"*/accounts/:accountId/constellation/project/4806cdcf-9aa7-4fa2-b6a1-77fe9e196680/model",
-			(req, res, ctx) => {
-				return res.once(
-					ctx.json(
-						createFetchResult(
+			() => {
+				return HttpResponse.json(
+					createFetchResult(
+						{
+							id: "2dd35b4e-0c7a-4c7a-a9e2-e33c0e17bc02",
+							project_id: "4806cdcf-9aa7-4fa2-b6a1-77fe9e196680",
+							name: "model2",
+							description: null,
+							created_at: "2023-04-28T13:50:37.494090Z",
+						},
+						true
+					)
+				);
+			},
+			{ once: true }
+		),
+		http.get(
+			"*/accounts/:accountId/constellation/project/4806cdcf-9aa7-4fa2-b6a1-77fe9e196680/model",
+			() => {
+				return HttpResponse.json(
+					createFetchResult(
+						[
+							{
+								id: "450bb086-3c09-4991-a0cc-eed48c504ae0",
+								project_id: "9d478427-dea6-4988-9b16-f6f8888d974c",
+								name: "model1",
+								description: null,
+								created_at: "2023-04-28T11:15:14.806217Z",
+							},
 							{
 								id: "2dd35b4e-0c7a-4c7a-a9e2-e33c0e17bc02",
-								project_id: "4806cdcf-9aa7-4fa2-b6a1-77fe9e196680",
+								project_id: "9d478427-dea6-4988-9b16-f6f8888d974c",
 								name: "model2",
 								description: null,
 								created_at: "2023-04-28T13:50:37.494090Z",
 							},
-							true
-						)
+						],
+						true
 					)
 				);
-			}
+			},
+			{ once: true }
 		),
-		rest.get(
-			"*/accounts/:accountId/constellation/project/4806cdcf-9aa7-4fa2-b6a1-77fe9e196680/model",
-			(req, res, ctx) => {
-				return res.once(
-					ctx.json(
-						createFetchResult(
-							[
-								{
-									id: "450bb086-3c09-4991-a0cc-eed48c504ae0",
-									project_id: "9d478427-dea6-4988-9b16-f6f8888d974c",
-									name: "model1",
-									description: null,
-									created_at: "2023-04-28T11:15:14.806217Z",
-								},
-								{
-									id: "2dd35b4e-0c7a-4c7a-a9e2-e33c0e17bc02",
-									project_id: "9d478427-dea6-4988-9b16-f6f8888d974c",
-									name: "model2",
-									description: null,
-									created_at: "2023-04-28T13:50:37.494090Z",
-								},
-							],
-							true
-						)
-					)
-				);
-			}
-		),
-		rest.delete(
+		http.delete(
 			"*/accounts/:accountId/constellation/project/4806cdcf-9aa7-4fa2-b6a1-77fe9e196680/model/2dd35b4e-0c7a-4c7a-a9e2-e33c0e17bc02",
-			(req, res, ctx) => {
-				return res.once(ctx.json(createFetchResult(null, true)));
-			}
+			() => {
+				return HttpResponse.json(createFetchResult(null, true));
+			},
+			{ once: true }
 		)
 	);
 }

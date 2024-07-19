@@ -10,12 +10,16 @@ export const SOCKET_ENTRY = "entry";
 export const SOCKET_ENTRY_LOCAL = "entry:local";
 const SOCKET_DIRECT_PREFIX = "direct";
 
-export function getDirectSocketName(workerIndex: number) {
-	return `${SOCKET_DIRECT_PREFIX}:${workerIndex}`;
+export function getDirectSocketName(workerIndex: number, entrypoint: string) {
+	return `${SOCKET_DIRECT_PREFIX}:${workerIndex}:${entrypoint}`;
 }
 
 // Service looping back to Miniflare's Node.js process (for storage, etc)
 export const SERVICE_LOOPBACK = "loopback";
+
+// Special host to use for Cap'n Proto connections. This is required to use
+// JS RPC over `external` services in Wrangler's service registry.
+export const HOST_CAPNP_CONNECT = "miniflare-unsafe-internal-capnp-connect";
 
 export const WORKER_BINDING_SERVICE_LOOPBACK: Worker_Binding = {
 	name: CoreBindings.SERVICE_LOOPBACK,

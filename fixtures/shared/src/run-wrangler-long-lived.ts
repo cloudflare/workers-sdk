@@ -1,4 +1,5 @@
 import { fork } from "node:child_process";
+import events from "node:events";
 import path from "node:path";
 
 export const wranglerEntryPath = path.resolve(
@@ -17,12 +18,21 @@ export const wranglerEntryPath = path.resolve(
 export async function runWranglerPagesDev(
 	cwd: string,
 	publicPath: string | undefined,
-	options: string[]
+	options: string[],
+	env?: NodeJS.ProcessEnv
 ) {
 	if (publicPath) {
-		return runLongLivedWrangler(["pages", "dev", publicPath, ...options], cwd);
+		return runLongLivedWrangler(
+			["pages", "dev", publicPath, "--ip=127.0.0.1", ...options],
+			cwd,
+			env
+		);
 	} else {
-		return runLongLivedWrangler(["pages", "dev", ...options], cwd);
+		return runLongLivedWrangler(
+			["pages", "dev", "--ip=127.0.0.1", ...options],
+			cwd,
+			env
+		);
 	}
 }
 
@@ -34,11 +44,19 @@ export async function runWranglerPagesDev(
  * - `ip` and `port` of the http-server hosting the pages project
  * - `stop()` function that will close down the server.
  */
-export async function runWranglerDev(cwd: string, options: string[]) {
-	return runLongLivedWrangler(["dev", ...options], cwd);
+export async function runWranglerDev(
+	cwd: string,
+	options: string[],
+	env?: NodeJS.ProcessEnv
+) {
+	return runLongLivedWrangler(["dev", "--ip=127.0.0.1", ...options], cwd, env);
 }
 
-async function runLongLivedWrangler(command: string[], cwd: string) {
+async function runLongLivedWrangler(
+	command: string[],
+	cwd: string,
+	env?: NodeJS.ProcessEnv
+) {
 	let settledReadyPromise = false;
 	let resolveReadyPromise: (value: { ip: string; port: number }) => void;
 	let rejectReadyPromise: (reason: unknown) => void;
@@ -51,6 +69,7 @@ async function runLongLivedWrangler(command: string[], cwd: string) {
 	const wranglerProcess = fork(wranglerEntryPath, command, {
 		stdio: [/*stdin*/ "ignore", /*stdout*/ "pipe", /*stderr*/ "pipe", "ipc"],
 		cwd,
+		env: { ...process.env, ...env, PWD: cwd },
 	}).on("message", (message) => {
 		if (settledReadyPromise) return;
 		settledReadyPromise = true;
@@ -79,19 +98,13 @@ async function runLongLivedWrangler(command: string[], cwd: string) {
 			separator,
 		].join("\n");
 		rejectReadyPromise(new Error(message));
-	}, 20_000);
+	}, 50_000);
 
 	async function stop() {
-		return new Promise((resolve, reject) => {
-			wranglerProcess.once("exit", (code) => {
-				if (!code) {
-					resolve(code);
-				} else {
-					reject(code);
-				}
-			});
-			wranglerProcess.kill("SIGTERM");
-		});
+		const closePromise = events.once(wranglerProcess, "close");
+		wranglerProcess.kill("SIGTERM");
+		const [code] = await closePromise;
+		if (code) throw new Error(`Exited with code ${code}`);
 	}
 
 	const { ip, port } = await ready;

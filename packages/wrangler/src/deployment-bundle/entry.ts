@@ -36,7 +36,7 @@ export async function getEntry(
 	args: {
 		script?: string;
 		format?: CfScriptFormat | undefined;
-		assets?: string | undefined;
+		assets?: string | undefined | boolean;
 		moduleRoot?: string;
 	},
 	config: Config,
@@ -53,7 +53,7 @@ export async function getEntry(
 			file = path.extname(config.site?.["entry-point"])
 				? path.resolve(config.site?.["entry-point"])
 				: // site.entry-point could be a directory
-				  path.resolve(config.site?.["entry-point"], "index.js");
+					path.resolve(config.site?.["entry-point"], "index.js");
 		} else if (args.assets || config.assets) {
 			file = path.resolve(getBasePath(), "templates/no-op-worker.js");
 		} else {

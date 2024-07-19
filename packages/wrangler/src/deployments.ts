@@ -10,6 +10,7 @@ import { mapBindings } from "./init";
 import { logger } from "./logger";
 import * as metrics from "./metrics";
 import { requireAuth } from "./user";
+import { logVersionIdChange } from "./utils/deployment-id-version-id-change";
 import { getScriptName, printWranglerBanner } from ".";
 import type { Config } from "./config";
 import type { WorkerMetadataBinding } from "./deployment-bundle/create-worker-upload-form";
@@ -80,11 +81,12 @@ export async function deployments(
 		const triggerStr = versions.annotations?.["workers/triggered_by"]
 			? `${formatTrigger(
 					versions.annotations["workers/triggered_by"]
-			  )} from ${formatSource(versions.metadata.source)}`
+				)} from ${formatSource(versions.metadata.source)}`
 			: `${formatSource(versions.metadata.source)}`;
 
 		let version = `
 Deployment ID: ${versions.id}
+Version ID:    ${versions.id}
 Created on:    ${versions.metadata.created_on}
 Author:        ${versions.metadata.author_email}
 Source:        ${triggerStr}`;
@@ -102,6 +104,8 @@ Source:        ${triggerStr}`;
 
 	versionMessages[versionMessages.length - 1] += "🟩 Active";
 	logger.log(...versionMessages);
+
+	logVersionIdChange();
 }
 
 function formatSource(source: string): string {
@@ -178,7 +182,7 @@ export async function rollbackDeployment(
 					firstHash
 				)} will immediately replace the current deployment and become the active deployment across all your deployed routes and domains. However, your local development environment will not be affected by this rollback. ${chalk.blue.bold(
 					"Note:"
-				)} Rolling back to a previous deployment will not rollback any of the bound resources (Durable Object, R2, KV, etc.).`
+				)} Rolling back to a previous deployment will not rollback any of the bound resources (Durable Object, D1, R2, KV, etc).`
 			))
 		) {
 			return;
@@ -190,7 +194,7 @@ export async function rollbackDeployment(
 		);
 	}
 
-	let deployment_id = await rollbackRequest(
+	let rollbackVersion = await rollbackRequest(
 		accountId,
 		scriptName,
 		deploymentId,
@@ -206,10 +210,13 @@ export async function rollbackDeployment(
 	);
 
 	deploymentId = addHyphens(deploymentId) ?? deploymentId;
-	deployment_id = addHyphens(deployment_id) ?? deployment_id;
+	rollbackVersion = addHyphens(rollbackVersion) ?? rollbackVersion;
 
 	logger.log(`\nSuccessfully rolled back to Deployment ID: ${deploymentId}`);
-	logger.log("Current Deployment ID:", deployment_id);
+	logger.log("Current Deployment ID:", rollbackVersion);
+	logger.log("Current Version ID:", rollbackVersion);
+
+	logVersionIdChange();
 }
 
 async function rollbackRequest(
@@ -275,7 +282,7 @@ export async function viewDeployment(
 	const triggerStr = deploymentDetails.annotations?.["workers/triggered_by"]
 		? `${formatTrigger(
 				deploymentDetails.annotations["workers/triggered_by"]
-		  )} from ${formatSource(deploymentDetails.metadata.source)}`
+			)} from ${formatSource(deploymentDetails.metadata.source)}`
 		: `${formatSource(deploymentDetails.metadata.source)}`;
 
 	const rollbackStr = deploymentDetails.annotations?.["workers/rollback_from"]
@@ -299,6 +306,7 @@ export async function viewDeployment(
 
 	const version = `
 Deployment ID:       ${deploymentDetails.id}
+Version ID:          ${deploymentDetails.id}
 Created on:          ${deploymentDetails.metadata.created_on}
 Author:              ${deploymentDetails.metadata.author_email}
 Source:              ${triggerStr}${rollbackStr}${reasonStr}
@@ -311,15 +319,14 @@ Handlers:            ${
 --------------------------bindings--------------------------
 ${
 	bindings.length > 0
-		? TOML.stringify(mapBindings(bindings) as TOML.JsonMap)
+		? TOML.stringify((await mapBindings(accountId, bindings)) as TOML.JsonMap)
 		: `None`
 }
 `;
 
 	logger.log(version);
 
-	// early return to skip the deployments listings
-	return;
+	logVersionIdChange();
 }
 
 export async function commonDeploymentCMDSetup(

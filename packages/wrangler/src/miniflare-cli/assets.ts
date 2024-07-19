@@ -167,6 +167,8 @@ async function generateAssetsFetch(
 	let metadata = createMetadataObject({
 		redirects,
 		headers,
+		headersFile,
+		redirectsFile,
 		logger: log,
 	});
 
@@ -191,6 +193,8 @@ async function generateAssetsFetch(
 			metadata = createMetadataObject({
 				redirects,
 				headers,
+				redirectsFile,
+				headersFile,
 				logger: log,
 			});
 		}

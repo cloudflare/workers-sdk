@@ -12,13 +12,19 @@ import type { DeploymentV2 } from "../client/models/DeploymentV2";
 import type { Status } from "../enums";
 
 function ipv6(placement: Placement | undefined) {
-	if (!placement) return yellow("no ipv6 yet");
-	if (!placement.status["ipv6Address"]) return yellow("no ipv6 yet");
+	if (!placement) {
+		return yellow("no ipv6 yet");
+	}
+	if (!placement.status["ipv6Address"]) {
+		return yellow("no ipv6 yet");
+	}
 	return placement.status["ipv6Address"];
 }
 
 function uptime(placement?: Placement) {
-	if (!placement) return yellow("inactive");
+	if (!placement) {
+		return yellow("inactive");
+	}
 	const ms = Date.now() - new Date(placement.created_at).getTime();
 	const days = Math.floor(ms / 86400000);
 	const hours = new Date(ms).getUTCHours();
@@ -45,8 +51,12 @@ function version(deployment: DeploymentV2) {
 }
 
 function health(placement?: Placement) {
-	if (!placement) return statusToColored("placing");
-	if (!placement.status["health"]) return statusToColored("placing");
+	if (!placement) {
+		return statusToColored("placing");
+	}
+	if (!placement.status["health"]) {
+		return statusToColored("placing");
+	}
 	return statusToColored(placement.status["health"] as Status);
 }
 
@@ -68,6 +78,7 @@ export async function loadDeployments(
 	start("Loading deployments");
 	const [deploymentsResponse, err] = await wrap(
 		DeploymentsService.listDeploymentsV2(
+			undefined,
 			deploymentsParams?.location,
 			deploymentsParams?.image,
 			deploymentsParams?.state as State,

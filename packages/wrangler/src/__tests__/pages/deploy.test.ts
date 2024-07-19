@@ -1,8 +1,7 @@
-import { Blob } from "node:buffer";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { chdir } from "node:process";
-import { MockedRequest, rest } from "msw";
-import { FormData } from "undici";
+import { http, HttpResponse } from "msw";
+import dedent from "ts-dedent";
 import { version } from "../../../package.json";
 import { ROUTES_SPEC_VERSION } from "../../pages/constants";
 import { ApiErrorCodes } from "../../pages/errors";
@@ -11,18 +10,23 @@ import { endEventLoop } from "../helpers/end-event-loop";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { mockGetUploadTokenRequest } from "../helpers/mock-get-pages-upload-token";
+import { useMockIsTTY } from "../helpers/mock-istty";
 import { mockSetTimeout } from "../helpers/mock-set-timeout";
 import { msw } from "../helpers/msw";
-import { FileReaderSync } from "../helpers/msw/read-file-sync";
+import { normalizeProgressSteps } from "../helpers/normalize-progress";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
-import { normalizeProgressSteps } from "./project-upload.test";
+import { toString } from "../helpers/serialize-form-data-entry";
 import type { Project, UploadPayloadFile } from "../../pages/types";
-import type { RestRequest } from "msw";
+import type { StrictRequest } from "msw";
+import type { FormDataEntryValue } from "undici";
 
-describe("deployment create", () => {
+describe("pages deploy", () => {
 	const std = mockConsoleMethods();
-	const workerHasD1Shim = (contents: string) => contents.includes("D1_ERROR");
+	const { setIsTTY } = useMockIsTTY();
+
+	const workerHasD1Shim = async (contents: FormDataEntryValue | null) =>
+		(await toString(contents)).includes("D1_ERROR");
 	let actualProcessEnvCI: string | undefined;
 
 	runInTempDir();
@@ -34,6 +38,7 @@ describe("deployment create", () => {
 	beforeEach(() => {
 		actualProcessEnvCI = process.env.CI;
 		process.env.CI = "true";
+		setIsTTY(false);
 	});
 
 	afterEach(async () => {
@@ -50,28 +55,67 @@ describe("deployment create", () => {
 		await endEventLoop();
 
 		expect(std.out).toMatchInlineSnapshot(`
-		"wrangler pages deploy [directory]
+			"wrangler pages deploy [directory]
 
-		🆙 Deploy a directory of static assets as a Pages deployment
+			Deploy a directory of static assets as a Pages deployment
 
-		Positionals:
-		  directory  The directory of static files to upload  [string]
+			POSITIONALS
+			  directory  The directory of static files to upload  [string]
 
-		Flags:
-		  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
-		  -e, --env                       Environment to use for operations and .env files  [string]
-		  -h, --help                      Show help  [boolean]
-		  -v, --version                   Show version number  [boolean]
+			GLOBAL FLAGS
+			  -h, --help     Show help  [boolean]
+			  -v, --version  Show version number  [boolean]
 
-		Options:
-		      --project-name    The name of the project you want to deploy to  [string]
-		      --branch          The name of the branch you want to deploy to  [string]
-		      --commit-hash     The SHA to attach to this deployment  [string]
-		      --commit-message  The commit message to attach to this deployment  [string]
-		      --commit-dirty    Whether or not the workspace should be considered dirty for this deployment  [boolean]
-		      --skip-caching    Skip asset caching which speeds up builds  [boolean]
-		      --no-bundle       Whether to run bundling on \`_worker.js\` before deploying  [boolean] [default: false]"
-	`);
+			OPTIONS
+			      --project-name        The name of the project you want to deploy to  [string]
+			      --branch              The name of the branch you want to deploy to  [string]
+			      --commit-hash         The SHA to attach to this deployment  [string]
+			      --commit-message      The commit message to attach to this deployment  [string]
+			      --commit-dirty        Whether or not the workspace should be considered dirty for this deployment  [boolean]
+			      --skip-caching        Skip asset caching which speeds up builds  [boolean]
+			      --no-bundle           Whether to run bundling on \`_worker.js\` before deploying  [boolean] [default: false]
+			      --upload-source-maps  Whether to upload any server-side sourcemaps with this deployment  [boolean] [default: false]"
+		`);
+	});
+
+	it("should error if no `[<directory>]` arg is specified in the `pages deploy` command", async () => {
+		await expect(
+			runWrangler("pages deploy")
+		).rejects.toThrowErrorMatchingInlineSnapshot(
+			`[Error: Must specify a directory of assets to deploy. Please specify the [<directory>] argument in the \`pages deploy\` command, or configure \`pages_build_output_dir\` in your \`wrangler.toml\` configuration file.]`
+		);
+	});
+
+	it("should error if no `[--project-name]` is specified", async () => {
+		await expect(
+			runWrangler("pages deploy public")
+		).rejects.toThrowErrorMatchingInlineSnapshot(
+			`[Error: Must specify a project name.]`
+		);
+	});
+
+	it("should error if the [--config] command line arg was specififed", async () => {
+		await expect(
+			runWrangler("pages deploy public --config=/path/to/wrangler.toml")
+		).rejects.toThrowErrorMatchingInlineSnapshot(
+			`[Error: Pages does not support custom paths for the \`wrangler.toml\` configuration file]`
+		);
+	});
+
+	it("should error if the [--experimental-json-config] command line arg was specififed", async () => {
+		await expect(
+			runWrangler("pages deploy public --experimental-json-config")
+		).rejects.toThrowErrorMatchingInlineSnapshot(
+			`[Error: Pages does not support \`wrangler.json\`]`
+		);
+	});
+
+	it("should error if the [--env] command line arg was specififed", async () => {
+		await expect(
+			runWrangler("pages deploy public --env=production")
+		).rejects.toThrowErrorMatchingInlineSnapshot(
+			`[Error: Pages does not support targeting an environment with the --env flag. Use the --branch flag to target your production or preview branch]`
+		);
 	});
 
 	it("should upload a directory of files", async () => {
@@ -82,87 +126,123 @@ describe("deployment create", () => {
 			"foo"
 		);
 
+		let getProjectRequestCount = 0;
 		msw.use(
-			rest.post("*/pages/assets/check-missing", async (req, res, ctx) => {
-				const body = await req.json();
+			http.post(
+				"*/pages/assets/check-missing",
+				async ({ request }) => {
+					const body = (await request.json()) as { hashes: string[] };
 
-				expect(req.headers.get("Authorization")).toBe(
-					"Bearer <<funfetti-auth-jwt>>"
-				);
-				expect(body).toMatchObject({
-					hashes: ["2082190357cfd3617ccfe04f340c6247"],
-				});
+					expect(request.headers.get("Authorization")).toBe(
+						"Bearer <<funfetti-auth-jwt>>"
+					);
+					expect(body).toMatchObject({
+						hashes: ["2082190357cfd3617ccfe04f340c6247"],
+					});
 
-				return res.once(
-					ctx.status(200),
-					ctx.json({
-						success: true,
-						errors: [],
-						messages: [],
-						result: body.hashes,
-					})
-				);
-			}),
-			rest.post("*/pages/assets/upload", async (req, res, ctx) => {
-				expect(req.headers.get("Authorization")).toMatchInlineSnapshot(
-					`"Bearer <<funfetti-auth-jwt>>"`
-				);
-				expect(await req.json()).toMatchObject([
-					{
-						key: "2082190357cfd3617ccfe04f340c6247",
-						value: Buffer.from("foobar").toString("base64"),
-						metadata: {
-							contentType: "image/png",
+					return HttpResponse.json(
+						{
+							success: true,
+							errors: [],
+							messages: [],
+							result: body.hashes,
 						},
-						base64: true,
-					},
-				]);
-				return res.once(
-					ctx.status(200),
-					ctx.json({ success: true, errors: [], messages: [], result: null })
-				);
-			}),
-			rest.post(
+						{ status: 200 }
+					);
+				},
+				{ once: true }
+			),
+			http.post(
+				"*/pages/assets/upload",
+				async ({ request }) => {
+					expect(request.headers.get("Authorization")).toMatchInlineSnapshot(
+						`"Bearer <<funfetti-auth-jwt>>"`
+					);
+					expect(await request.json()).toMatchObject([
+						{
+							key: "2082190357cfd3617ccfe04f340c6247",
+							value: Buffer.from("foobar").toString("base64"),
+							metadata: {
+								contentType: "image/png",
+							},
+							base64: true,
+						},
+					]);
+					return HttpResponse.json(
+						{ success: true, errors: [], messages: [], result: null },
+						{ status: 200 }
+					);
+				},
+				{ once: true }
+			),
+			http.post(
 				"*/accounts/:accountId/pages/projects/foo/deployments",
-				async (req, res, ctx) => {
-					expect(req.params.accountId).toEqual("some-account-id");
-					expect(await (req as RestRequestWithFormData).formData())
-						.toMatchInlineSnapshot(`
-				      FormData {
-				        Symbol(state): Array [
-				          Object {
-				            "name": "manifest",
-				            "value": "{\\"/logo.png\\":\\"2082190357cfd3617ccfe04f340c6247\\"}",
-				          },
-				        ],
-				      }
-			    `);
-					return res.once(
-						ctx.status(200),
-						ctx.json({
+				async ({ request, params }) => {
+					expect(params.accountId).toEqual("some-account-id");
+					expect(await request.formData()).toMatchInlineSnapshot(`
+				FormData {
+				  Symbol(state): Array [
+				    Object {
+				      "name": "manifest",
+				      "value": "{\\"/logo.png\\":\\"2082190357cfd3617ccfe04f340c6247\\"}",
+				    },
+				  ],
+				}
+			`);
+					return HttpResponse.json(
+						{
 							success: true,
 							errors: [],
 							messages: [],
 							result: {
+								id: "123-456-789",
 								url: "https://abcxyz.foo.pages.dev/",
 							},
-						})
+						},
+						{ status: 200 }
 					);
-				}
+				},
+				{ once: true }
 			),
-			rest.get(
-				"*/accounts/:accountId/pages/projects/foo",
-				async (req, res, ctx) => {
-					expect(req.params.accountId).toEqual("some-account-id");
+			http.get(
+				"*/accounts/:accountId/pages/projects/foo/deployments/:deploymentId",
+				async ({ params }) => {
+					expect(params.accountId).toEqual("some-account-id");
+					expect(params.deploymentId).toEqual("123-456-789");
 
-					return res.once(
-						ctx.status(200),
-						ctx.json({
+					return HttpResponse.json(
+						{
+							success: true,
+							errors: [],
+							messages: [],
+							result: {
+								id: "123-456-789",
+								latest_stage: {
+									name: "deploy",
+									status: "success",
+								},
+							},
+						},
+						{ status: 200 }
+					);
+				},
+				{ once: true }
+			),
+			http.get(
+				"*/accounts/:accountId/pages/projects/foo",
+				async ({ params }) => {
+					getProjectRequestCount++;
+
+					expect(params.accountId).toEqual("some-account-id");
+
+					return HttpResponse.json(
+						{
 							success: true,
 							errors: [],
 							messages: [],
 							result: { deployment_configs: { production: {}, preview: {} } },
-						})
+						},
+						{ status: 200 }
 					);
 				}
 			)
@@ -170,9 +250,11 @@ describe("deployment create", () => {
 
 		await runWrangler("pages deploy . --project-name=foo");
 
+		expect(getProjectRequestCount).toBe(2);
 		expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
 		"✨ Success! Uploaded 1 files (TIMINGS)
 
+		🌎 Deploying...
 		✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
 	`);
 	});
@@ -187,111 +269,148 @@ describe("deployment create", () => {
 		);
 
 		// Accumulate multiple requests then assert afterwards
-		const requests: RestRequest[] = [];
+		const uploadRequests: StrictRequest<{ hashes: string[] }>[] = [];
+		let getProjectRequestCount = 0;
+
 		msw.use(
-			rest.post("*/pages/assets/check-missing", async (req, res, ctx) => {
-				const body = await req.json();
+			http.post<never, { hashes: string[] }>(
+				"*/pages/assets/check-missing",
+				async ({ request }) => {
+					const body = await request.json();
 
-				expect(req.headers.get("Authorization")).toBe(
-					"Bearer <<funfetti-auth-jwt>>"
-				);
-				expect(body).toMatchObject({
-					hashes: ["1a98fb08af91aca4a7df1764a2c4ddb0"],
-				});
+					expect(request.headers.get("Authorization")).toBe(
+						"Bearer <<funfetti-auth-jwt>>"
+					);
+					expect(body).toMatchObject({
+						hashes: ["1a98fb08af91aca4a7df1764a2c4ddb0"],
+					});
 
-				return res.once(
-					ctx.status(200),
-					ctx.json({
-						success: true,
-						errors: [],
-						messages: [],
-						result: body.hashes,
-					})
-				);
-			}),
-			rest.post("*/pages/assets/upload", async (req, res, ctx) => {
-				requests.push(req);
-				expect(req.headers.get("Authorization")).toBe(
-					"Bearer <<funfetti-auth-jwt>>"
-				);
-				expect(await req.json()).toMatchObject([
-					{
-						key: "1a98fb08af91aca4a7df1764a2c4ddb0",
-						value: Buffer.from("foobar").toString("base64"),
-						metadata: {
-							contentType: "text/plain",
+					return HttpResponse.json(
+						{
+							success: true,
+							errors: [],
+							messages: [],
+							result: body.hashes,
 						},
-						base64: true,
-					},
-				]);
+						{ status: 200 }
+					);
+				},
+				{ once: true }
+			),
+			http.post<never, { hashes: string[] }>(
+				"*/pages/assets/upload",
+				async ({ request }) => {
+					uploadRequests.push(request);
+					expect(request.headers.get("Authorization")).toBe(
+						"Bearer <<funfetti-auth-jwt>>"
+					);
+					expect(await request.json()).toMatchObject([
+						{
+							key: "1a98fb08af91aca4a7df1764a2c4ddb0",
+							value: Buffer.from("foobar").toString("base64"),
+							metadata: {
+								contentType: "text/plain",
+							},
+							base64: true,
+						},
+					]);
 
-				if (requests.length < 2) {
-					return res(
-						ctx.status(200),
-						ctx.json({
-							success: false,
-							errors: [
-								{
-									code: ApiErrorCodes.UNKNOWN_ERROR,
-									message: "Something exploded, please retry",
-								},
-							],
-							messages: [],
-							result: null,
-						})
-					);
-				} else {
-					return res(
-						ctx.status(200),
-						ctx.json({
-							success: true,
-							errors: [],
-							messages: [],
-							result: null,
-						})
-					);
-				}
-			}),
-			rest.post(
-				"*/accounts/:accountId/pages/projects/foo/deployments",
-				async (req, res, ctx) => {
-					expect(req.params.accountId).toEqual("some-account-id");
-					expect(await (req as RestRequestWithFormData).formData())
-						.toMatchInlineSnapshot(`
-				      FormData {
-				        Symbol(state): Array [
-				          Object {
-				            "name": "manifest",
-				            "value": "{\\"/logo.txt\\":\\"1a98fb08af91aca4a7df1764a2c4ddb0\\"}",
-				          },
-				        ],
-				      }
-			    `);
-
-					return res.once(
-						ctx.status(200),
-						ctx.json({
-							success: true,
-							errors: [],
-							messages: [],
-							result: { url: "https://abcxyz.foo.pages.dev/" },
-						})
-					);
+					if (uploadRequests.length < 2) {
+						return HttpResponse.json(
+							{
+								success: false,
+								errors: [
+									{
+										code: ApiErrorCodes.UNKNOWN_ERROR,
+										message: "Something exploded, please retry",
+									},
+								],
+								messages: [],
+								result: null,
+							},
+							{ status: 200 }
+						);
+					} else {
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: null,
+							},
+							{ status: 200 }
+						);
+					}
 				}
 			),
-			rest.get(
-				"*/accounts/:accountId/pages/projects/foo",
-				async (req, res, ctx) => {
-					expect(req.params.accountId).toEqual("some-account-id");
+			http.post(
+				"*/accounts/:accountId/pages/projects/foo/deployments",
+				async ({ request, params }) => {
+					expect(params.accountId).toEqual("some-account-id");
+					expect(await request.formData()).toMatchInlineSnapshot(`
+				FormData {
+				  Symbol(state): Array [
+				    Object {
+				      "name": "manifest",
+				      "value": "{\\"/logo.txt\\":\\"1a98fb08af91aca4a7df1764a2c4ddb0\\"}",
+				    },
+				  ],
+				}
+			`);
 
-					return res.once(
-						ctx.status(200),
-						ctx.json({
+					return HttpResponse.json(
+						{
+							success: true,
+							errors: [],
+							messages: [],
+							result: {
+								id: "abc-def-ghi",
+								url: "https://abcxyz.foo.pages.dev/",
+							},
+						},
+						{ status: 200 }
+					);
+				},
+				{ once: true }
+			),
+			http.get(
+				"*/accounts/:accountId/pages/projects/foo/deployments/:deploymentId",
+				async ({ params }) => {
+					expect(params.accountId).toEqual("some-account-id");
+					expect(params.deploymentId).toEqual("abc-def-ghi");
+
+					return HttpResponse.json(
+						{
+							success: true,
+							errors: [],
+							messages: [],
+							result: {
+								latest_stage: {
+									name: "deploy",
+									status: "success",
+								},
+							},
+						},
+						{ status: 200 }
+					);
+				},
+				{ once: true }
+			),
+			http.get(
+				"*/accounts/:accountId/pages/projects/foo",
+				async ({ params }) => {
+					getProjectRequestCount++;
+
+					expect(params.accountId).toEqual("some-account-id");
+
+					return HttpResponse.json(
+						{
 							success: true,
 							errors: [],
 							messages: [],
 							result: { deployment_configs: { production: {}, preview: {} } },
-						})
+						},
+						{ status: 200 }
 					);
 				}
 			)
@@ -300,11 +419,13 @@ describe("deployment create", () => {
 		await runWrangler("pages deploy . --project-name=foo");
 
 		// Should be 2 attempts to upload
-		expect(requests.length).toBe(2);
+		expect(uploadRequests.length).toBe(2);
+		expect(getProjectRequestCount).toBe(2);
 
 		expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
 		"✨ Success! Uploaded 1 files (TIMINGS)
 
+		🌎 Deploying...
 		✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
 	`);
 	});
@@ -319,33 +440,37 @@ describe("deployment create", () => {
 		);
 
 		// Accumulate multiple requests then assert afterwards
-		const requests: RestRequest[] = [];
+		const requests: StrictRequest<{ hashes: string[] }>[] = [];
 		msw.use(
-			rest.post("*/pages/assets/check-missing", async (req, res, ctx) => {
-				const body = await req.json();
+			http.post<never, { hashes: string[] }>(
+				"*/pages/assets/check-missing",
+				async ({ request }) => {
+					const body = await request.json();
 
-				expect(req.headers.get("Authorization")).toBe(
+					expect(request.headers.get("Authorization")).toBe(
+						"Bearer <<funfetti-auth-jwt>>"
+					);
+					expect(body).toMatchObject({
+						hashes: ["1a98fb08af91aca4a7df1764a2c4ddb0"],
+					});
+
+					return HttpResponse.json(
+						{
+							success: true,
+							errors: [],
+							messages: [],
+							result: body.hashes,
+						},
+						{ status: 200 }
+					);
+				},
+				{ once: true }
+			),
+			http.post("*/pages/assets/upload", async ({ request }) => {
+				expect(request.headers.get("Authorization")).toBe(
 					"Bearer <<funfetti-auth-jwt>>"
 				);
-				expect(body).toMatchObject({
-					hashes: ["1a98fb08af91aca4a7df1764a2c4ddb0"],
-				});
-
-				return res.once(
-					ctx.status(200),
-					ctx.json({
-						success: true,
-						errors: [],
-						messages: [],
-						result: body.hashes,
-					})
-				);
-			}),
-			rest.post("*/pages/assets/upload", async (req, res, ctx) => {
-				expect(req.headers.get("Authorization")).toBe(
-					"Bearer <<funfetti-auth-jwt>>"
-				);
-				expect(await req.json()).toMatchObject([
+				expect(await request.json()).toMatchObject([
 					{
 						key: "1a98fb08af91aca4a7df1764a2c4ddb0",
 						value: Buffer.from("foobar").toString("base64"),
@@ -356,23 +481,22 @@ describe("deployment create", () => {
 					},
 				]);
 
-				return res(
-					ctx.status(200),
-					ctx.json({
+				return HttpResponse.json(
+					{
 						success: true,
 						errors: [],
 						messages: [],
 						result: null,
-					})
+					},
+					{ status: 200 }
 				);
 			}),
-			rest.post(
+			http.post<{ accountId: string }, { hashes: string[] }>(
 				"*/accounts/:accountId/pages/projects/foo/deployments",
-				async (req, res, ctx) => {
-					requests.push(req);
-					expect(req.params.accountId).toEqual("some-account-id");
-					expect(await (req as RestRequestWithFormData).formData())
-						.toMatchInlineSnapshot(`
+				async ({ request, params }) => {
+					requests.push(request);
+					expect(params.accountId).toEqual("some-account-id");
+					expect(await request.formData()).toMatchInlineSnapshot(`
 				      FormData {
 				        Symbol(state): Array [
 				          Object {
@@ -384,9 +508,8 @@ describe("deployment create", () => {
 			    `);
 
 					if (requests.length < 2) {
-						return res(
-							ctx.status(500),
-							ctx.json({
+						return HttpResponse.json(
+							{
 								success: false,
 								errors: [
 									{
@@ -396,62 +519,61 @@ describe("deployment create", () => {
 								],
 								messages: [],
 								result: null,
-							})
+							},
+							{ status: 500 }
 						);
 					} else {
-						return res.once(
-							ctx.status(200),
-							ctx.json({
+						return HttpResponse.json(
+							{
 								success: true,
 								errors: [],
 								messages: [],
-								result: { url: "https://abcxyz.foo.pages.dev/" },
-							})
+								result: {
+									id: "123-456-789",
+									url: "https://abcxyz.foo.pages.dev/",
+								},
+							},
+							{ status: 200 }
 						);
 					}
 				}
 			),
-			rest.post(
-				"*/accounts/:accountId/pages/projects/foo/deployments",
-				async (req, res, ctx) => {
-					requests.push(req);
-					expect(req.params.accountId).toEqual("some-account-id");
-					expect(await (req as RestRequestWithFormData).formData())
-						.toMatchInlineSnapshot(`
-				      FormData {
-				        Symbol(state): Array [
-				          Object {
-				            "name": "manifest",
-				            "value": "{\\"/logo.txt\\":\\"1a98fb08af91aca4a7df1764a2c4ddb0\\"}",
-				          },
-				        ],
-				      }
-			    `);
+			http.get(
+				"*/accounts/:accountId/pages/projects/foo/deployments/:deploymentId",
+				async ({ params }) => {
+					expect(params.accountId).toEqual("some-account-id");
+					expect(params.deploymentId).toEqual("123-456-789");
 
-					return res.once(
-						ctx.status(200),
-						ctx.json({
+					return HttpResponse.json(
+						{
 							success: true,
 							errors: [],
 							messages: [],
-							result: { url: "https://abcxyz.foo.pages.dev/" },
-						})
+							result: {
+								latest_stage: {
+									name: "deploy",
+									status: "success",
+								},
+							},
+						},
+						{ status: 200 }
 					);
-				}
+				},
+				{ once: true }
 			),
-			rest.get(
+			http.get(
 				"*/accounts/:accountId/pages/projects/foo",
-				async (req, res, ctx) => {
-					expect(req.params.accountId).toEqual("some-account-id");
+				async ({ params }) => {
+					expect(params.accountId).toEqual("some-account-id");
 
-					return res.once(
-						ctx.status(200),
-						ctx.json({
+					return HttpResponse.json(
+						{
 							success: true,
 							errors: [],
 							messages: [],
 							result: { deployment_configs: { production: {}, preview: {} } },
-						})
+						},
+						{ status: 200 }
 					);
 				}
 			)
@@ -465,8 +587,233 @@ describe("deployment create", () => {
 		expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
 		"✨ Success! Uploaded 1 files (TIMINGS)
 
+		🌎 Deploying...
 		✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
 	`);
+	});
+
+	it("should retry GET /deployments/:deploymentId", async () => {
+		// set up the directory of static files to upload.
+		mkdirSync("public");
+		writeFileSync("public/README.md", "This is a readme");
+
+		// set up /functions
+		mkdirSync("functions");
+		writeFileSync(
+			"functions/hello.js",
+			`
+		const a = true;
+		a();
+
+		export async function onRequest() {
+			return new Response("Hello, world!");
+		}
+		`
+		);
+
+		mockGetUploadTokenRequest(
+			"<<funfetti-auth-jwt>>",
+			"some-account-id",
+			"foo"
+		);
+
+		let getProjectRequestCount = 0;
+		let getDeploymentDetailsRequestCount = 0;
+
+		msw.use(
+			http.post(
+				"*/pages/assets/check-missing",
+				async ({ request }) => {
+					const body = (await request.json()) as {
+						hashes: string[];
+					};
+
+					expect(request.headers.get("Authorization")).toBe(
+						"Bearer <<funfetti-auth-jwt>>"
+					);
+					expect(body).toMatchObject({
+						hashes: ["13a03eaf24ae98378acd36ea00f77f2f"],
+					});
+
+					return HttpResponse.json(
+						{
+							success: true,
+							errors: [],
+							messages: [],
+							result: body.hashes,
+						},
+						{ status: 200 }
+					);
+				},
+				{ once: true }
+			),
+			http.post(
+				"*/pages/assets/upload",
+				async ({ request }) => {
+					expect(request.headers.get("Authorization")).toBe(
+						"Bearer <<funfetti-auth-jwt>>"
+					);
+
+					expect(await request.json()).toMatchObject([
+						{
+							key: "13a03eaf24ae98378acd36ea00f77f2f",
+							value: Buffer.from("This is a readme").toString("base64"),
+							metadata: {
+								contentType: "text/markdown",
+							},
+							base64: true,
+						},
+					]);
+					return HttpResponse.json(
+						{
+							success: true,
+							errors: [],
+							messages: [],
+							result: true,
+						},
+						{ status: 200 }
+					);
+				},
+				{ once: true }
+			),
+			http.post(
+				`*/pages/assets/upsert-hashes`,
+				async ({ request }) => {
+					expect(request.headers.get("Authorization")).toBe(
+						"Bearer <<funfetti-auth-jwt>>"
+					);
+
+					expect(await request.json()).toMatchObject({
+						hashes: ["13a03eaf24ae98378acd36ea00f77f2f"],
+					});
+
+					return HttpResponse.json(
+						{
+							success: true,
+							errors: [],
+							messages: [],
+							result: true,
+						},
+						{ status: 200 }
+					);
+				},
+				{ once: true }
+			),
+			http.post(
+				"*/accounts/:accountId/pages/projects/foo/deployments",
+				async ({ request, params }) => {
+					expect(params.accountId).toEqual("some-account-id");
+					const body = await request.formData();
+					const manifest = JSON.parse(await toString(body.get("manifest")));
+
+					// make sure this is all we uploaded
+					expect([...body.keys()]).toEqual([
+						"manifest",
+						"functions-filepath-routing-config.json",
+						"_worker.bundle",
+						"_routes.json",
+					]);
+
+					expect(manifest).toMatchInlineSnapshot(`
+				Object {
+				  "/README.md": "13a03eaf24ae98378acd36ea00f77f2f",
+				}
+			`);
+
+					return HttpResponse.json(
+						{
+							success: true,
+							errors: [],
+							messages: [],
+							result: {
+								id: "123-456-789",
+								url: "https://abcxyz.foo.pages.dev/",
+							},
+						},
+						{ status: 200 }
+					);
+				},
+				{ once: true }
+			),
+			http.get(
+				"*/accounts/:accountId/pages/projects/foo/deployments/:deploymentId",
+				async ({ params }) => {
+					getDeploymentDetailsRequestCount++;
+
+					expect(params.accountId).toEqual("some-account-id");
+					expect(params.deploymentId).toEqual("123-456-789");
+
+					if (getDeploymentDetailsRequestCount < 3) {
+						// return a deployment stage != `deploy` for first 2 requests
+						// this will force wrangler to retry
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: {
+									latest_stage: {
+										name: "initialize",
+										status: "active",
+									},
+								},
+							},
+							{ status: 200 }
+						);
+					} else {
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: {
+									latest_stage: {
+										name: "deploy",
+										status: "success",
+									},
+								},
+							},
+							{ status: 200 }
+						);
+					}
+				}
+			),
+			http.get(
+				"*/accounts/:accountId/pages/projects/foo",
+				async ({ params }) => {
+					getProjectRequestCount++;
+
+					expect(params.accountId).toEqual("some-account-id");
+
+					return HttpResponse.json(
+						{
+							success: true,
+							errors: [],
+							messages: [],
+							result: {
+								deployment_configs: { production: {}, preview: {} },
+							},
+						},
+						{ status: 200 }
+					);
+				}
+			)
+		);
+
+		await runWrangler("pages deploy public --project-name=foo");
+
+		expect(getProjectRequestCount).toEqual(2);
+		expect(getDeploymentDetailsRequestCount).toEqual(3);
+		expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
+		"✨ Compiled Worker successfully
+		✨ Success! Uploaded 1 files (TIMINGS)
+
+		✨ Uploading Functions bundle
+		🌎 Deploying...
+		✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
+	`);
+
+		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
 
 	it("should refetch a JWT if it expires while uploading", async () => {
@@ -477,50 +824,39 @@ describe("deployment create", () => {
 			"foo"
 		);
 
-		const requests: RestRequest[] = [];
 		msw.use(
-			rest.post("*/pages/assets/check-missing", async (req, res, ctx) => {
-				const body = (await req.json()) as { hashes: string[] };
+			http.post<never, { hashes: string[] }>(
+				"*/pages/assets/check-missing",
+				async ({ request }) => {
+					const body = await request.json();
 
-				expect(req.headers.get("Authorization")).toBe(
-					"Bearer <<funfetti-auth-jwt>>"
-				);
-				expect(body).toMatchObject({
-					hashes: ["1a98fb08af91aca4a7df1764a2c4ddb0"],
-				});
-
-				return res.once(
-					ctx.status(200),
-					ctx.json({
-						success: true,
-						errors: [],
-						messages: [],
-						result: body.hashes,
-					})
-				);
-			}),
-			rest.post("*/pages/assets/upload", async (req, res, ctx) => {
-				requests.push(req);
-				expect(await req.json()).toMatchObject([
-					{
-						key: "1a98fb08af91aca4a7df1764a2c4ddb0",
-						value: Buffer.from("foobar").toString("base64"),
-						metadata: {
-							contentType: "text/plain",
-						},
-						base64: true,
-					},
-				]);
-				// Fail just the first request
-				if (requests.length < 2) {
-					mockGetUploadTokenRequest(
-						"<<funfetti-auth-jwt2>>",
-						"some-account-id",
-						"foo"
+					expect(request.headers.get("Authorization")).toBe(
+						"Bearer <<funfetti-auth-jwt>>"
 					);
-					return res(
-						ctx.status(200),
-						ctx.json({
+					expect(body).toMatchObject({
+						hashes: ["1a98fb08af91aca4a7df1764a2c4ddb0"],
+					});
+
+					return HttpResponse.json(
+						{
+							success: true,
+							errors: [],
+							messages: [],
+							result: body.hashes,
+						},
+						{ status: 200 }
+					);
+				},
+				{ once: true }
+			),
+			http.post<never, { hashes: string[] }>(
+				"*/pages/assets/upload",
+				async ({ request }) => {
+					expect(request.headers.get("Authorization")).toBe(
+						"Bearer <<funfetti-auth-jwt>>"
+					);
+					return HttpResponse.json(
+						{
 							success: false,
 							errors: [
 								{
@@ -530,26 +866,84 @@ describe("deployment create", () => {
 							],
 							messages: [],
 							result: null,
-						})
+						},
+						{ status: 200 }
 					);
-				} else {
-					return res(
-						ctx.status(200),
-						ctx.json({
+				},
+				{ once: true }
+			),
+			http.get(
+				`*/accounts/:accountId/pages/projects/foo/upload-token`,
+				() => {
+					return HttpResponse.json(
+						{
+							success: true,
+							errors: [],
+							messages: [],
+							result: { jwt: "<<funfetti-auth-jwt2>>" },
+						},
+						{ status: 200 }
+					);
+				},
+				{ once: true }
+			),
+			http.post<never, { hashes: string[] }>(
+				"*/pages/assets/check-missing",
+				async ({ request }) => {
+					const body = await request.json();
+
+					expect(request.headers.get("Authorization")).toBe(
+						"Bearer <<funfetti-auth-jwt2>>"
+					);
+					expect(body).toMatchObject({
+						hashes: ["1a98fb08af91aca4a7df1764a2c4ddb0"],
+					});
+
+					return HttpResponse.json(
+						{
+							success: true,
+							errors: [],
+							messages: [],
+							result: body.hashes,
+						},
+						{ status: 200 }
+					);
+				},
+				{ once: true }
+			),
+			http.post<never, { hashes: string[] }>(
+				"*/pages/assets/upload",
+				async ({ request }) => {
+					expect(request.headers.get("Authorization")).toBe(
+						"Bearer <<funfetti-auth-jwt2>>"
+					);
+					expect(await request.json()).toMatchObject([
+						{
+							key: "1a98fb08af91aca4a7df1764a2c4ddb0",
+							value: Buffer.from("foobar").toString("base64"),
+							metadata: {
+								contentType: "text/plain",
+							},
+							base64: true,
+						},
+					]);
+
+					return HttpResponse.json(
+						{
 							success: true,
 							errors: [],
 							messages: [],
 							result: null,
-						})
+						},
+						{ status: 200 }
 					);
 				}
-			}),
-			rest.post(
+			),
+			http.post(
 				"*/accounts/:accountId/pages/projects/foo/deployments",
-				async (req, res, ctx) => {
-					expect(req.params.accountId).toEqual("some-account-id");
-					expect(await (req as RestRequestWithFormData).formData())
-						.toMatchInlineSnapshot(`
+				async ({ request, params }) => {
+					expect(params.accountId).toEqual("some-account-id");
+					expect(await request.formData()).toMatchInlineSnapshot(`
 				      FormData {
 				        Symbol(state): Array [
 				          Object {
@@ -560,30 +954,57 @@ describe("deployment create", () => {
 				      }
 			    `);
 
-					return res.once(
-						ctx.status(200),
-						ctx.json({
+					return HttpResponse.json(
+						{
 							success: true,
 							errors: [],
 							messages: [],
-							result: { url: "https://abcxyz.foo.pages.dev/" },
-						})
+							result: {
+								id: "123-456-789",
+								url: "https://abcxyz.foo.pages.dev/",
+							},
+						},
+						{ status: 200 }
 					);
-				}
+				},
+				{ once: true }
 			),
-			rest.get(
-				"*/accounts/:accountId/pages/projects/foo",
-				async (req, res, ctx) => {
-					expect(req.params.accountId).toEqual("some-account-id");
+			http.get(
+				"*/accounts/:accountId/pages/projects/foo/deployments/:deploymentId",
+				async ({ params }) => {
+					expect(params.accountId).toEqual("some-account-id");
+					expect(params.deploymentId).toEqual("123-456-789");
 
-					return res.once(
-						ctx.status(200),
-						ctx.json({
+					return HttpResponse.json(
+						{
+							success: true,
+							errors: [],
+							messages: [],
+							result: {
+								latest_stage: {
+									name: "deploy",
+									status: "success",
+								},
+							},
+						},
+						{ status: 200 }
+					);
+				},
+				{ once: true }
+			),
+			http.get(
+				"*/accounts/:accountId/pages/projects/foo",
+				async ({ params }) => {
+					expect(params.accountId).toEqual("some-account-id");
+
+					return HttpResponse.json(
+						{
 							success: true,
 							errors: [],
 							messages: [],
 							result: { deployment_configs: { production: {}, preview: {} } },
-						})
+						},
+						{ status: 200 }
 					);
 				}
 			)
@@ -591,17 +1012,10 @@ describe("deployment create", () => {
 
 		await runWrangler("pages deploy . --project-name=foo");
 
-		expect(requests[0].headers.get("Authorization")).toBe(
-			"Bearer <<funfetti-auth-jwt>>"
-		);
-
-		expect(requests[1].headers.get("Authorization")).toBe(
-			"Bearer <<funfetti-auth-jwt2>>"
-		);
-
 		expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
 		"✨ Success! Uploaded 1 files (TIMINGS)
 
+		🌎 Deploying...
 		✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
 	`);
 	});
@@ -619,61 +1033,70 @@ describe("deployment create", () => {
 		);
 
 		// Accumulate multiple requests then assert afterwards
-		const requests: RestRequest[] = [];
+		const uploadRequests: StrictRequest<UploadPayloadFile[]>[] = [];
 		const bodies: UploadPayloadFile[][] = [];
+		let getProjectRequestCount = 0;
+
 		msw.use(
-			rest.post("*/pages/assets/check-missing", async (req, res, ctx) => {
-				const body = (await req.json()) as {
-					hashes: string[];
-				};
+			http.post(
+				"*/pages/assets/check-missing",
+				async ({ request }) => {
+					const body = (await request.json()) as {
+						hashes: string[];
+					};
 
-				expect(req.headers.get("Authorization")).toBe(
-					"Bearer <<funfetti-auth-jwt>>"
-				);
-				expect(body).toMatchObject({
-					hashes: expect.arrayContaining([
-						"d96fef225537c9f5e44a3cb27fd0b492",
-						"2082190357cfd3617ccfe04f340c6247",
-						"6be321bef99e758250dac034474ddbb8",
-						"1a98fb08af91aca4a7df1764a2c4ddb0",
-					]),
-				});
+					expect(request.headers.get("Authorization")).toBe(
+						"Bearer <<funfetti-auth-jwt>>"
+					);
+					expect(body).toMatchObject({
+						hashes: expect.arrayContaining([
+							"d96fef225537c9f5e44a3cb27fd0b492",
+							"2082190357cfd3617ccfe04f340c6247",
+							"6be321bef99e758250dac034474ddbb8",
+							"1a98fb08af91aca4a7df1764a2c4ddb0",
+						]),
+					});
 
-				return res.once(
-					ctx.status(200),
-					ctx.json({
-						success: true,
-						errors: [],
-						messages: [],
-						result: body.hashes,
-					})
-				);
-			}),
-			rest.post("*/pages/assets/upload", async (req, res, ctx) => {
-				requests.push(req);
+					return HttpResponse.json(
+						{
+							success: true,
+							errors: [],
+							messages: [],
+							result: body.hashes,
+						},
+						{ status: 200 }
+					);
+				},
+				{ once: true }
+			),
+			http.post<never, UploadPayloadFile[]>(
+				"*/pages/assets/upload",
+				async ({ request }) => {
+					uploadRequests.push(request);
 
-				expect(req.headers.get("Authorization")).toBe(
-					"Bearer <<funfetti-auth-jwt>>"
-				);
-				bodies.push((await req.json()) as UploadPayloadFile[]);
+					expect(request.headers.get("Authorization")).toBe(
+						"Bearer <<funfetti-auth-jwt>>"
+					);
+					bodies.push(await request.json());
 
-				return res(
-					ctx.status(200),
-					ctx.json({
-						success: true,
-						errors: [],
-						messages: [],
-						result: null,
-					})
-				);
-			}),
-			rest.post(
+					return HttpResponse.json(
+						{
+							success: true,
+							errors: [],
+							messages: [],
+							result: null,
+						},
+						{ status: 200 }
+					);
+				}
+			),
+			http.post(
 				"*/accounts/:accountId/pages/projects/foo/deployments",
-				async (req, res, ctx) => {
-					expect(req.params.accountId).toEqual("some-account-id");
+				async ({ request, params }) => {
+					expect(params.accountId).toEqual("some-account-id");
 
-					const body = await (req as RestRequestWithFormData).formData();
-					const manifest = JSON.parse(body.get("manifest") as string);
+					const body = await request.formData();
+					const manifest = JSON.parse(await toString(body.get("manifest")));
 
 					expect(manifest).toMatchInlineSnapshot(`
 				                                Object {
@@ -684,34 +1107,61 @@ describe("deployment create", () => {
 				                                }
 			                          `);
 
-					return res.once(
-						ctx.status(200),
-						ctx.json({
+					return HttpResponse.json(
+						{
 							success: true,
 							errors: [],
 							messages: [],
 							result: {
+								id: "123-456-789",
 								url: "https://abcxyz.foo.pages.dev/",
 							},
-						})
+						},
+						{ status: 200 }
 					);
-				}
+				},
+				{ once: true }
 			),
-			rest.get(
-				"*/accounts/:accountId/pages/projects/foo",
-				async (req, res, ctx) => {
-					expect(req.params.accountId).toEqual("some-account-id");
+			http.get(
+				"*/accounts/:accountId/pages/projects/foo/deployments/:deploymentId",
+				async ({ params }) => {
+					expect(params.accountId).toEqual("some-account-id");
+					expect(params.deploymentId).toEqual("123-456-789");
 
-					return res.once(
-						ctx.status(200),
-						ctx.json({
+					return HttpResponse.json(
+						{
+							success: true,
+							errors: [],
+							messages: [],
+							result: {
+								id: "123-456-789",
+								latest_stage: {
+									name: "deploy",
+									status: "success",
+								},
+							},
+						},
+						{ status: 200 }
+					);
+				},
+				{ once: true }
+			),
+			http.get(
+				"*/accounts/:accountId/pages/projects/foo",
+				async ({ params }) => {
+					getProjectRequestCount++;
+					expect(params.accountId).toEqual("some-account-id");
+
+					return HttpResponse.json(
+						{
 							success: true,
 							errors: [],
 							messages: [],
 							result: {
 								deployment_configs: { production: {}, preview: {} },
 							},
-						})
+						},
+						{ status: 200 }
 					);
 				}
 			)
@@ -719,8 +1169,10 @@ describe("deployment create", () => {
 
 		await runWrangler("pages deploy . --project-name=foo");
 
+		expect(getProjectRequestCount).toEqual(2);
+
 		// We have 3 buckets, so expect 3 uploads
-		expect(requests.length).toBe(3);
+		expect(uploadRequests.length).toBe(3);
 
 		// One bucket should end up with 2 files
 		expect(bodies.map((b) => b.length).sort()).toEqual([1, 1, 2]);
@@ -757,6 +1209,7 @@ describe("deployment create", () => {
 		expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
 		"✨ Success! Uploaded 4 files (TIMINGS)
 
+		🌎 Deploying...
 		✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
 	`);
 	});
@@ -776,60 +1229,69 @@ describe("deployment create", () => {
 		);
 
 		// Accumulate multiple requests then assert afterwards
-		const requests: RestRequest[] = [];
+		const uploadRequests: StrictRequest<UploadPayloadFile[]>[] = [];
 		const bodies: UploadPayloadFile[][] = [];
+		let getProjectRequestCount = 0;
+
 		msw.use(
-			rest.post("*/pages/assets/check-missing", async (req, res, ctx) => {
-				const body = (await req.json()) as {
-					hashes: string[];
-				};
+			http.post(
+				"*/pages/assets/check-missing",
+				async ({ request }) => {
+					const body = (await request.json()) as {
+						hashes: string[];
+					};
 
-				expect(req.headers.get("Authorization")).toBe(
-					"Bearer <<funfetti-auth-jwt>>"
-				);
-				expect(body).toMatchObject({
-					hashes: expect.arrayContaining([
-						"d96fef225537c9f5e44a3cb27fd0b492",
-						"2082190357cfd3617ccfe04f340c6247",
-						"6be321bef99e758250dac034474ddbb8",
-						"1a98fb08af91aca4a7df1764a2c4ddb0",
-					]),
-				});
+					expect(request.headers.get("Authorization")).toBe(
+						"Bearer <<funfetti-auth-jwt>>"
+					);
+					expect(body).toMatchObject({
+						hashes: expect.arrayContaining([
+							"d96fef225537c9f5e44a3cb27fd0b492",
+							"2082190357cfd3617ccfe04f340c6247",
+							"6be321bef99e758250dac034474ddbb8",
+							"1a98fb08af91aca4a7df1764a2c4ddb0",
+						]),
+					});
 
-				return res.once(
-					ctx.status(200),
-					ctx.json({
-						success: true,
-						errors: [],
-						messages: [],
-						result: body.hashes,
-					})
-				);
-			}),
-			rest.post("*/pages/assets/upload", async (req, res, ctx) => {
-				requests.push(req);
+					return HttpResponse.json(
+						{
+							success: true,
+							errors: [],
+							messages: [],
+							result: body.hashes,
+						},
+						{ status: 200 }
+					);
+				},
+				{ once: true }
+			),
+			http.post<never, UploadPayloadFile[]>(
+				"*/pages/assets/upload",
+				async ({ request }) => {
+					uploadRequests.push(request);
 
-				expect(req.headers.get("Authorization")).toBe(
-					"Bearer <<funfetti-auth-jwt>>"
-				);
-				bodies.push((await req.json()) as UploadPayloadFile[]);
+					expect(request.headers.get("Authorization")).toBe(
+						"Bearer <<funfetti-auth-jwt>>"
+					);
+					bodies.push(await request.json());
 
-				return res(
-					ctx.status(200),
-					ctx.json({
-						success: true,
-						errors: [],
-						messages: [],
-						result: null,
-					})
-				);
-			}),
-			rest.post(
+					return HttpResponse.json(
+						{
+							success: true,
+							errors: [],
+							messages: [],
+							result: null,
+						},
+						{ status: 200 }
+					);
+				}
+			),
+			http.post(
 				"*/accounts/:accountId/pages/projects/foo/deployments",
-				async (req, res, ctx) => {
-					expect(req.params.accountId).toEqual("some-account-id");
-					const body = await (req as RestRequestWithFormData).formData();
-					const manifest = JSON.parse(body.get("manifest") as string);
+				async ({ request, params }) => {
+					expect(params.accountId).toEqual("some-account-id");
+					const body = await request.formData();
+					const manifest = JSON.parse(await toString(body.get("manifest")));
 					expect(manifest).toMatchInlineSnapshot(`
 				                                Object {
 				                                  "/imgs/logo.png": "2082190357cfd3617ccfe04f340c6247",
@@ -839,32 +1301,61 @@ describe("deployment create", () => {
 				                                }
 			                          `);
 
-					return res.once(
-						ctx.status(200),
-						ctx.json({
+					return HttpResponse.json(
+						{
 							success: true,
 							errors: [],
 							messages: [],
-							result: { url: "https://abcxyz.foo.pages.dev/" },
-						})
+							result: {
+								id: "abc-def-ghi",
+								url: "https://abcxyz.foo.pages.dev/",
+							},
+						},
+						{ status: 200 }
 					);
-				}
+				},
+				{ once: true }
 			),
-			rest.get(
-				"*/accounts/:accountId/pages/projects/foo",
-				async (req, res, ctx) => {
-					expect(req.params.accountId).toEqual("some-account-id");
+			http.get(
+				"*/accounts/:accountId/pages/projects/foo/deployments/:deploymentId",
+				async ({ params }) => {
+					expect(params.accountId).toEqual("some-account-id");
+					expect(params.deploymentId).toEqual("abc-def-ghi");
 
-					return res.once(
-						ctx.status(200),
-						ctx.json({
+					return HttpResponse.json(
+						{
+							success: true,
+							errors: [],
+							messages: [],
+							result: {
+								latest_stage: {
+									name: "deploy",
+									status: "success",
+								},
+							},
+						},
+						{ status: 200 }
+					);
+				},
+				{ once: true }
+			),
+			http.get(
+				"*/accounts/:accountId/pages/projects/foo",
+				async ({ params }) => {
+					getProjectRequestCount++;
+
+					expect(params.accountId).toEqual("some-account-id");
+
+					return HttpResponse.json(
+						{
 							success: true,
 							errors: [],
 							messages: [],
 							result: {
 								deployment_configs: { production: {}, preview: {} },
 							},
-						})
+						},
+						{ status: 200 }
 					);
 				}
 			)
@@ -872,8 +1363,10 @@ describe("deployment create", () => {
 
 		await runWrangler(`pages publish public --project-name=foo`);
 
+		expect(getProjectRequestCount).toEqual(2);
+
 		// We have 3 buckets, so expect 3 uploads
-		expect(requests.length).toBe(3);
+		expect(uploadRequests.length).toBe(3);
 		// One bucket should end up with 2 files
 		expect(bodies.map((b) => b.length).sort()).toEqual([1, 1, 2]);
 		// But we don't know the order, so flatten and test without ordering
@@ -909,6 +1402,7 @@ describe("deployment create", () => {
 		expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
 		"✨ Success! Uploaded 4 files (TIMINGS)
 
+		🌎 Deploying...
 		✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
 	`);
 	});
@@ -928,61 +1422,70 @@ describe("deployment create", () => {
 		);
 
 		// Accumulate multiple requests then assert afterwards
-		const requests: RestRequest[] = [];
+		const uploadRequests: StrictRequest<UploadPayloadFile[]>[] = [];
 		const bodies: UploadPayloadFile[][] = [];
+		let getProjectRequestCount = 0;
+
 		msw.use(
-			rest.post("*/pages/assets/check-missing", async (req, res, ctx) => {
-				const body = (await req.json()) as {
-					hashes: string[];
-				};
+			http.post(
+				"*/pages/assets/check-missing",
+				async ({ request }) => {
+					const body = (await request.json()) as {
+						hashes: string[];
+					};
 
-				expect(req.headers.get("Authorization")).toBe(
-					"Bearer <<funfetti-auth-jwt>>"
-				);
-				expect(body).toMatchObject({
-					hashes: expect.arrayContaining([
-						"d96fef225537c9f5e44a3cb27fd0b492",
-						"2082190357cfd3617ccfe04f340c6247",
-						"6be321bef99e758250dac034474ddbb8",
-						"1a98fb08af91aca4a7df1764a2c4ddb0",
-					]),
-				});
+					expect(request.headers.get("Authorization")).toBe(
+						"Bearer <<funfetti-auth-jwt>>"
+					);
+					expect(body).toMatchObject({
+						hashes: expect.arrayContaining([
+							"d96fef225537c9f5e44a3cb27fd0b492",
+							"2082190357cfd3617ccfe04f340c6247",
+							"6be321bef99e758250dac034474ddbb8",
+							"1a98fb08af91aca4a7df1764a2c4ddb0",
+						]),
+					});
 
-				return res.once(
-					ctx.status(200),
-					ctx.json({
-						success: true,
-						errors: [],
-						messages: [],
-						result: body.hashes,
-					})
-				);
-			}),
-			rest.post("*/pages/assets/upload", async (req, res, ctx) => {
-				requests.push(req);
+					return HttpResponse.json(
+						{
+							success: true,
+							errors: [],
+							messages: [],
+							result: body.hashes,
+						},
+						{ status: 200 }
+					);
+				},
+				{ once: true }
+			),
+			http.post<never, UploadPayloadFile[]>(
+				"*/pages/assets/upload",
+				async ({ request }) => {
+					uploadRequests.push(request);
 
-				expect(req.headers.get("Authorization")).toBe(
-					"Bearer <<funfetti-auth-jwt>>"
-				);
-				bodies.push((await req.json()) as UploadPayloadFile[]);
+					expect(request.headers.get("Authorization")).toBe(
+						"Bearer <<funfetti-auth-jwt>>"
+					);
+					bodies.push((await request.json()) as UploadPayloadFile[]);
 
-				return res(
-					ctx.status(200),
-					ctx.json({
-						success: true,
-						errors: [],
-						messages: [],
-						result: null,
-					})
-				);
-			}),
-			rest.post(
+					return HttpResponse.json(
+						{
+							success: true,
+							errors: [],
+							messages: [],
+							result: null,
+						},
+						{ status: 200 }
+					);
+				}
+			),
+			http.post(
 				"*/accounts/:accountId/pages/projects/foo/deployments",
-				async (req, res, ctx) => {
-					expect(req.params.accountId).toEqual("some-account-id");
+				async ({ request, params }) => {
+					expect(params.accountId).toEqual("some-account-id");
 
-					const body = await (req as RestRequestWithFormData).formData();
-					const manifest = JSON.parse(body.get("manifest") as string);
+					const body = await request.formData();
+					const manifest = JSON.parse(await toString(body.get("manifest")));
 					expect(manifest).toMatchInlineSnapshot(`
 				                                Object {
 				                                  "/imgs/logo.png": "2082190357cfd3617ccfe04f340c6247",
@@ -992,32 +1495,61 @@ describe("deployment create", () => {
 				                                }
 			                          `);
 
-					return res.once(
-						ctx.status(200),
-						ctx.json({
+					return HttpResponse.json(
+						{
 							success: true,
 							errors: [],
 							messages: [],
-							result: { url: "https://abcxyz.foo.pages.dev/" },
-						})
+							result: {
+								id: "123-456-789",
+								url: "https://abcxyz.foo.pages.dev/",
+							},
+						},
+						{ status: 200 }
 					);
-				}
+				},
+				{ once: true }
 			),
-			rest.get(
-				"*/accounts/:accountId/pages/projects/foo",
-				async (req, res, ctx) => {
-					expect(req.params.accountId).toEqual("some-account-id");
+			http.get(
+				"*/accounts/:accountId/pages/projects/foo/deployments/:deploymentId",
+				async ({ params }) => {
+					expect(params.accountId).toEqual("some-account-id");
+					expect(params.deploymentId).toEqual("123-456-789");
 
-					return res.once(
-						ctx.status(200),
-						ctx.json({
+					return HttpResponse.json(
+						{
+							success: true,
+							errors: [],
+							messages: [],
+							result: {
+								latest_stage: {
+									name: "deploy",
+									status: "success",
+								},
+							},
+						},
+						{ status: 200 }
+					);
+				},
+				{ once: true }
+			),
+			http.get(
+				"*/accounts/:accountId/pages/projects/foo",
+				async ({ params }) => {
+					getProjectRequestCount++;
+
+					expect(params.accountId).toEqual("some-account-id");
+
+					return HttpResponse.json(
+						{
 							success: true,
 							errors: [],
 							messages: [],
 							result: {
 								deployment_configs: { production: {}, preview: {} },
 							},
-						})
+						},
+						{ status: 200 }
 					);
 				}
 			)
@@ -1025,8 +1557,11 @@ describe("deployment create", () => {
 
 		chdir("public");
 		await runWrangler(`pages publish . --project-name=foo`);
+
+		expect(getProjectRequestCount).toEqual(2);
+
 		// We have 3 buckets, so expect 3 uploads
-		expect(requests.length).toBe(3);
+		expect(uploadRequests.length).toBe(3);
 		// One bucket should end up with 2 files
 		expect(bodies.map((b) => b.length).sort()).toEqual([1, 1, 2]);
 		// But we don't know the order, so flatten and test without ordering
@@ -1062,6 +1597,7 @@ describe("deployment create", () => {
 		expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
 		"✨ Success! Uploaded 4 files (TIMINGS)
 
+		🌎 Deploying...
 		✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
 	`);
 	});
@@ -1078,86 +1614,125 @@ describe("deployment create", () => {
 			"foo"
 		);
 
+		let getProjectRequestCount = 0;
+
 		msw.use(
-			rest.post("*/pages/assets/check-missing", async (req, res, ctx) => {
-				const body = (await req.json()) as {
-					hashes: string[];
-				};
+			http.post(
+				"*/pages/assets/check-missing",
+				async ({ request }) => {
+					const body = (await request.json()) as {
+						hashes: string[];
+					};
 
-				expect(req.headers.get("Authorization")).toBe(
-					"Bearer <<funfetti-auth-jwt>>"
-				);
-				expect(body).toMatchObject({
-					hashes: ["7b764dacfd211bebd8077828a7ddefd7"],
-				});
+					expect(request.headers.get("Authorization")).toBe(
+						"Bearer <<funfetti-auth-jwt>>"
+					);
+					expect(body).toMatchObject({
+						hashes: ["7b764dacfd211bebd8077828a7ddefd7"],
+					});
 
-				return res.once(
-					ctx.status(200),
-					ctx.json({
-						success: true,
-						errors: [],
-						messages: [],
-						result: body.hashes,
-					})
-				);
-			}),
-
-			rest.post("*/pages/assets/upload", async (req, res, ctx) => {
-				expect(req.headers.get("Authorization")).toBe(
-					"Bearer <<funfetti-auth-jwt>>"
-				);
-				const body = (await req.json()) as UploadPayloadFile[];
-				expect(body).toMatchObject([
-					{
-						key: "7b764dacfd211bebd8077828a7ddefd7",
-						value: Buffer.from("foobar").toString("base64"),
-						metadata: {
-							contentType: "application/octet-stream",
-						},
-						base64: true,
-					},
-				]);
-				return res.once(
-					ctx.status(200),
-					ctx.json({
-						success: true,
-						errors: [],
-						messages: [],
-						result: null,
-					})
-				);
-			}),
-			rest.post(
-				"*/accounts/:accountId/pages/projects/foo/deployments",
-				async (req, res, ctx) => {
-					expect(req.params.accountId).toEqual("some-account-id");
-
-					return res.once(
-						ctx.status(200),
-						ctx.json({
+					return HttpResponse.json(
+						{
 							success: true,
 							errors: [],
 							messages: [],
-							result: { url: "https://abcxyz.foo.pages.dev/" },
-						})
+							result: body.hashes,
+						},
+						{ status: 200 }
 					);
-				}
+				},
+				{ once: true }
 			),
-			rest.get(
-				"*/accounts/:accountId/pages/projects/foo",
-				async (req, res, ctx) => {
-					expect(req.params.accountId).toEqual("some-account-id");
 
-					return res.once(
-						ctx.status(200),
-						ctx.json({
+			http.post(
+				"*/pages/assets/upload",
+				async ({ request }) => {
+					expect(request.headers.get("Authorization")).toBe(
+						"Bearer <<funfetti-auth-jwt>>"
+					);
+					const body = (await request.json()) as UploadPayloadFile[];
+					expect(body).toMatchObject([
+						{
+							key: "7b764dacfd211bebd8077828a7ddefd7",
+							value: Buffer.from("foobar").toString("base64"),
+							metadata: {
+								contentType: "application/octet-stream",
+							},
+							base64: true,
+						},
+					]);
+					return HttpResponse.json(
+						{
+							success: true,
+							errors: [],
+							messages: [],
+							result: null,
+						},
+						{ status: 200 }
+					);
+				},
+				{ once: true }
+			),
+			http.post(
+				"*/accounts/:accountId/pages/projects/foo/deployments",
+				async ({ params }) => {
+					expect(params.accountId).toEqual("some-account-id");
+
+					return HttpResponse.json(
+						{
+							success: true,
+							errors: [],
+							messages: [],
+							result: {
+								id: "123-456-789",
+								url: "https://abcxyz.foo.pages.dev/",
+							},
+						},
+						{ status: 200 }
+					);
+				},
+				{ once: true }
+			),
+			http.get(
+				"*/accounts/:accountId/pages/projects/foo/deployments/:deploymentId",
+				async ({ params }) => {
+					expect(params.accountId).toEqual("some-account-id");
+					expect(params.deploymentId).toEqual("123-456-789");
+
+					return HttpResponse.json(
+						{
+							success: true,
+							errors: [],
+							messages: [],
+							result: {
+								latest_stage: {
+									name: "deploy",
+									status: "success",
+								},
+							},
+						},
+						{ status: 200 }
+					);
+				},
+				{ once: true }
+			),
+			http.get(
+				"*/accounts/:accountId/pages/projects/foo",
+				async ({ params }) => {
+					getProjectRequestCount++;
+
+					expect(params.accountId).toEqual("some-account-id");
+
+					return HttpResponse.json(
+						{
 							success: true,
 							errors: [],
 							messages: [],
 							result: {
 								deployment_configs: { production: {}, preview: {} },
 							},
-						})
+						},
+						{ status: 200 }
 					);
 				}
 			)
@@ -1165,1386 +1740,415 @@ describe("deployment create", () => {
 
 		await runWrangler("pages deploy . --project-name=foo");
 
+		expect(getProjectRequestCount).toEqual(2);
 		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
 
-	it("should throw an error if user attempts to use config with pages", async () => {
-		await expect(
-			runWrangler("pages dev --config foo.toml")
-		).rejects.toThrowErrorMatchingInlineSnapshot(
-			`"Pages does not support wrangler.toml"`
-		);
-		await expect(
-			runWrangler("pages deploy --config foo.toml")
-		).rejects.toThrowErrorMatchingInlineSnapshot(
-			`"Pages does not support wrangler.toml"`
-		);
-	});
-
-	it("should upload a Functions project", async () => {
-		// set up the directory of static files to upload.
-		mkdirSync("public");
-		writeFileSync("public/README.md", "This is a readme");
-
-		// set up /functions
-		mkdirSync("functions");
-		writeFileSync(
-			"functions/hello.js",
-			`
-    export async function onRequest() {
-      return new Response("Hello, world!");
-    }
-    `
-		);
-
-		mockGetUploadTokenRequest(
-			"<<funfetti-auth-jwt>>",
-			"some-account-id",
-			"foo"
-		);
-
-		msw.use(
-			rest.post("*/pages/assets/check-missing", async (req, res, ctx) => {
-				const body = (await req.json()) as {
-					hashes: string[];
-				};
-
-				expect(req.headers.get("Authorization")).toBe(
-					"Bearer <<funfetti-auth-jwt>>"
-				);
-				expect(body).toMatchObject({
-					hashes: ["13a03eaf24ae98378acd36ea00f77f2f"],
-				});
-
-				return res.once(
-					ctx.status(200),
-					ctx.json({
-						success: true,
-						errors: [],
-						messages: [],
-						result: body.hashes,
-					})
-				);
-			}),
-			rest.post("*/pages/assets/upload", async (req, res, ctx) => {
-				expect(req.headers.get("Authorization")).toBe(
-					"Bearer <<funfetti-auth-jwt>>"
-				);
-
-				expect(await req.json()).toMatchObject([
-					{
-						key: "13a03eaf24ae98378acd36ea00f77f2f",
-						value: Buffer.from("This is a readme").toString("base64"),
-						metadata: {
-							contentType: "text/markdown",
-						},
-						base64: true,
-					},
-				]);
-				return res.once(
-					ctx.status(200),
-					ctx.json({
-						success: true,
-						errors: [],
-						messages: [],
-						result: true,
-					})
-				);
-			}),
-			rest.post(`*/pages/assets/upsert-hashes`, async (req, res, ctx) => {
-				expect(req.headers.get("Authorization")).toBe(
-					"Bearer <<funfetti-auth-jwt>>"
-				);
-
-				expect(await req.json()).toMatchObject({
-					hashes: ["13a03eaf24ae98378acd36ea00f77f2f"],
-				});
-
-				return res.once(
-					ctx.status(200),
-					ctx.json({
-						success: true,
-						errors: [],
-						messages: [],
-						result: true,
-					})
-				);
-			}),
-
-			rest.post(
-				"*/accounts/:accountId/pages/projects/foo/deployments",
-				async (req, res, ctx) => {
-					expect(req.params.accountId).toEqual("some-account-id");
-					const body = await (req as RestRequestWithFormData).formData();
-					const manifest = JSON.parse(body.get("manifest") as string);
-
-					// for Functions projects, we auto-generate a `_worker.bundle`,
-					// `functions-filepath-routing-config.json`, and `_routes.json`
-					// file, based on the contents of `/functions`
-					const generatedWorkerBundle = body.get("_worker.bundle") as string;
-					const generatedRoutesJSON = body.get("_routes.json") as string;
-					const generatedFilepathRoutingConfig = body.get(
-						"functions-filepath-routing-config.json"
-					) as string;
-
-					// make sure this is all we uploaded
-					expect([...body.keys()]).toEqual([
-						"manifest",
-						"functions-filepath-routing-config.json",
-						"_worker.bundle",
-						"_routes.json",
-					]);
-
-					expect(manifest).toMatchInlineSnapshot(`
-				                                  Object {
-				                                    "/README.md": "13a03eaf24ae98378acd36ea00f77f2f",
-				                                  }
-			                            `);
-
-					// the contents of the generated `_worker.bundle` file is pretty massive, so I don't
-					// think snapshot testing makes much sense here. Plus, calling
-					// `.toMatchInlineSnapshot()` without any arguments, in order to generate that
-					// snapshot value, doesn't generate anything in this case (probably because the
-					// file contents is too big). So for now, let's test that _worker.bundle was indeed
-					// generated and that the file size is greater than zero
-					expect(generatedWorkerBundle).not.toBeNull();
-					expect(generatedWorkerBundle.length).toBeGreaterThan(0);
-
-					const maybeRoutesJSONSpec = JSON.parse(generatedRoutesJSON);
-					expect(isRoutesJSONSpec(maybeRoutesJSONSpec)).toBe(true);
-					expect(maybeRoutesJSONSpec).toMatchObject({
-						version: ROUTES_SPEC_VERSION,
-						description: `Generated by wrangler@${version}`,
-						include: ["/hello"],
-						exclude: [],
-					});
-
-					// Make sure the routing config is valid json
-					const parsedFilepathRoutingConfig = JSON.parse(
-						generatedFilepathRoutingConfig
-					);
-					// The actual shape doesn't matter that much since this
-					// is only used for display in Dash, but it's still useful for
-					// tracking unexpected changes to this config.
-					expect(parsedFilepathRoutingConfig).toStrictEqual({
-						routes: [
-							{
-								routePath: "/hello",
-								mountPath: "/",
-								method: "",
-								module: ["hello.js:onRequest"],
-							},
-						],
-						baseURL: "/",
-					});
-
-					return res.once(
-						ctx.status(200),
-						ctx.json({
-							success: true,
-							errors: [],
-							messages: [],
-							result: {
-								url: "https://abcxyz.foo.pages.dev/",
-							},
-						})
-					);
-				}
-			),
-			rest.get(
-				"*/accounts/:accountId/pages/projects/foo",
-				async (req, res, ctx) => {
-					expect(req.params.accountId).toEqual("some-account-id");
-
-					return res.once(
-						ctx.status(200),
-						ctx.json({
-							success: true,
-							errors: [],
-							messages: [],
-							result: {
-								deployment_configs: { production: {}, preview: {} },
-							},
-						})
-					);
-				}
-			)
-		);
-
-		await runWrangler("pages deploy public --project-name=foo");
-
-		expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
-		"✨ Compiled Worker successfully
-		✨ Success! Uploaded 1 files (TIMINGS)
-
-		✨ Uploading Functions bundle
-		✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
-	`);
-
-		expect(std.err).toMatchInlineSnapshot('""');
-	});
-
-	it("should upload an Advanced Mode project", async () => {
-		// set up the directory of static files to upload.
-		mkdirSync("public");
-		writeFileSync("public/README.md", "This is a readme");
-
-		// set up _worker.js
-		writeFileSync(
-			"public/_worker.js",
-			`
-      export default {
-        async fetch(request, env) {
-          const url = new URL(request.url);
-          console.log("SOMETHING FROM WITHIN THE WORKER");
-          return url.pathname.startsWith('/api/') ? new Response('Ok') : env.ASSETS.fetch(request);
-        }
-      };
-    `
-		);
-
-		mockGetUploadTokenRequest(
-			"<<funfetti-auth-jwt>>",
-			"some-account-id",
-			"foo"
-		);
-
-		msw.use(
-			rest.post("*/pages/assets/check-missing", async (req, res, ctx) => {
-				const body = (await req.json()) as {
-					hashes: string[];
-				};
-
-				expect(req.headers.get("Authorization")).toBe(
-					"Bearer <<funfetti-auth-jwt>>"
-				);
-				expect(body).toMatchObject({
-					hashes: ["13a03eaf24ae98378acd36ea00f77f2f"],
-				});
-
-				return res.once(
-					ctx.status(200),
-					ctx.json({
-						success: true,
-						errors: [],
-						messages: [],
-						result: body.hashes,
-					})
-				);
-			}),
-			rest.post("*/pages/assets/upload", async (req, res, ctx) => {
-				expect(req.headers.get("Authorization")).toBe(
-					"Bearer <<funfetti-auth-jwt>>"
-				);
-
-				expect(await req.json()).toMatchObject([
-					{
-						key: "13a03eaf24ae98378acd36ea00f77f2f",
-						value: Buffer.from("This is a readme").toString("base64"),
-						metadata: {
-							contentType: "text/markdown",
-						},
-						base64: true,
-					},
-				]);
-				return res.once(
-					ctx.status(200),
-					ctx.json({
-						success: true,
-						errors: [],
-						messages: [],
-						result: true,
-					})
-				);
-			}),
-			rest.post(
-				"*/accounts/:accountId/pages/projects/foo/deployments",
-				async (req, res, ctx) => {
-					expect(req.params.accountId).toEqual("some-account-id");
-					const body = await (req as RestRequestWithFormData).formData();
-					const manifest = JSON.parse(body.get("manifest") as string);
-					const workerBundle = body.get("_worker.bundle");
-
-					// make sure this is all we uploaded
-					expect([...body.keys()].sort()).toEqual(
-						["manifest", "_worker.bundle"].sort()
-					);
-
-					expect(manifest).toMatchInlineSnapshot(`
-				                                      Object {
-				                                        "/README.md": "13a03eaf24ae98378acd36ea00f77f2f",
-				                                      }
-			                                `);
-
-					expect(workerHasD1Shim(workerBundle as string)).toBeFalsy();
-					expect(workerBundle).toContain(
-						`console.log("SOMETHING FROM WITHIN THE WORKER");`
-					);
-
-					return res.once(
-						ctx.status(200),
-						ctx.json({
-							success: true,
-							errors: [],
-							messages: [],
-							result: {
-								url: "https://abcxyz.foo.pages.dev/",
-							},
-						})
-					);
-				}
-			),
-			rest.get(
-				"*/accounts/:accountId/pages/projects/foo",
-				async (req, res, ctx) => {
-					expect(req.params.accountId).toEqual("some-account-id");
-
-					return res.once(
-						ctx.status(200),
-						ctx.json({
-							success: true,
-							errors: [],
-							messages: [],
-							result: {
-								deployment_configs: {
-									production: {
-										d1_databases: { MY_D1_DB: { id: "fake-db" } },
-									},
-									preview: {
-										d1_databases: { MY_D1_DB: { id: "fake-db" } },
-									},
-								},
-							} as Partial<Project>,
-						})
-					);
-				}
-			)
-		);
-
-		await runWrangler("pages deploy public --project-name=foo");
-
-		expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
-		"✨ Success! Uploaded 1 files (TIMINGS)
-
-		✨ Compiled Worker successfully
-		✨ Uploading Worker bundle
-		✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
-	`);
-
-		expect(std.err).toMatchInlineSnapshot('""');
-	});
-
-	it("should upload _routes.json for Functions projects, if provided", async () => {
-		// set up the directory of static files to upload.
-		mkdirSync("public");
-		writeFileSync("public/README.md", "This is a readme");
-
-		// set up /functions
-		mkdirSync("functions");
-		writeFileSync(
-			"functions/hello.js",
-			`
-    export async function onRequest() {
-      return new Response("Hello, world!");
-    }
-    `
-		);
-
-		writeFileSync(
-			"functions/goodbye.ts",
-			`
-    export async function onRequest() {
-      return new Response("Bye bye!");
-    }
-          `
-		);
-
-		// set up _routes.json
-		writeFileSync(
-			"public/_routes.json",
-			`
-    {
-      "version": ${ROUTES_SPEC_VERSION},
-      "description": "Custom _routes.json file",
-      "include": ["/hello"],
-      "exclude": []
-    }
-          `
-		);
-
-		mockGetUploadTokenRequest(
-			"<<funfetti-auth-jwt>>",
-			"some-account-id",
-			"foo"
-		);
-		msw.use(
-			rest.post("*/pages/assets/check-missing", async (req, res, ctx) => {
-				const body = (await req.json()) as {
-					hashes: string[];
-				};
-
-				expect(req.headers.get("Authorization")).toBe(
-					"Bearer <<funfetti-auth-jwt>>"
-				);
-				expect(body).toMatchObject({
-					hashes: ["13a03eaf24ae98378acd36ea00f77f2f"],
-				});
-
-				return res.once(
-					ctx.status(200),
-					ctx.json({
-						success: true,
-						errors: [],
-						messages: [],
-						result: body.hashes,
-					})
-				);
-			}),
-			rest.post("*/pages/assets/upload", async (req, res, ctx) => {
-				expect(req.headers.get("Authorization")).toBe(
-					"Bearer <<funfetti-auth-jwt>>"
-				);
-
-				expect(await req.json()).toMatchObject([
-					{
-						key: "13a03eaf24ae98378acd36ea00f77f2f",
-						value: Buffer.from("This is a readme").toString("base64"),
-						metadata: {
-							contentType: "text/markdown",
-						},
-						base64: true,
-					},
-				]);
-
-				return res.once(
-					ctx.status(200),
-					ctx.json({
-						success: true,
-						errors: [],
-						messages: [],
-						result: null,
-					})
-				);
-			}),
-			rest.post(`*/pages/assets/upsert-hashes`, async (req, res, ctx) => {
-				expect(req.headers.get("Authorization")).toBe(
-					"Bearer <<funfetti-auth-jwt>>"
-				);
-
-				expect(await req.json()).toMatchObject({
-					hashes: ["13a03eaf24ae98378acd36ea00f77f2f"],
-				});
-
-				return res.once(
-					ctx.status(200),
-					ctx.json({
-						success: true,
-						errors: [],
-						messages: [],
-						result: true,
-					})
-				);
-			}),
-			rest.post(
-				"*/accounts/:accountId/pages/projects/foo/deployments",
-				async (req, res, ctx) => {
-					expect(req.params.accountId).toEqual("some-account-id");
-					const body = await (req as RestRequestWithFormData).formData();
-					const manifest = JSON.parse(body.get("manifest") as string);
-					const generatedWorkerBundle = body.get("_worker.bundle") as string;
-					const customRoutesJSON = body.get("_routes.json") as string;
-					const generatedFilepathRoutingConfig = body.get(
-						"functions-filepath-routing-config.json"
-					) as string;
-
-					// make sure this is all we uploaded
-					expect([...body.keys()].sort()).toEqual(
-						[
-							"manifest",
-							"functions-filepath-routing-config.json",
-							"_worker.bundle",
-							"_routes.json",
-						].sort()
-					);
-
-					expect(manifest).toMatchInlineSnapshot(`
-				                                Object {
-				                                  "/README.md": "13a03eaf24ae98378acd36ea00f77f2f",
-				                                }
-			                          `);
-
-					// file content of generated `_worker.bundle` is too massive to snapshot test
-					expect(generatedWorkerBundle).not.toBeNull();
-					expect(generatedWorkerBundle.length).toBeGreaterThan(0);
-
-					const customRoutes = JSON.parse(customRoutesJSON);
-					expect(customRoutes).toMatchObject({
-						version: ROUTES_SPEC_VERSION,
-						description: "Custom _routes.json file",
-						include: ["/hello"],
-						exclude: [],
-					});
-
-					// Make sure the routing config is valid json
-					const parsedFilepathRoutingConfig = JSON.parse(
-						generatedFilepathRoutingConfig
-					);
-					// The actual shape doesn't matter that much since this
-					// is only used for display in Dash, but it's still useful for
-					// tracking unexpected changes to this config.
-					expect(parsedFilepathRoutingConfig).toStrictEqual({
-						routes: [
-							{
-								routePath: "/goodbye",
-								mountPath: "/",
-								method: "",
-								module: ["goodbye.ts:onRequest"],
-							},
-							{
-								routePath: "/hello",
-								mountPath: "/",
-								method: "",
-								module: ["hello.js:onRequest"],
-							},
-						],
-						baseURL: "/",
-					});
-
-					return res.once(
-						ctx.status(200),
-						ctx.json({
-							success: true,
-							errors: [],
-							messages: [],
-							result: {
-								url: "https://abcxyz.foo.pages.dev/",
-							},
-						})
-					);
-				}
-			),
-			rest.get(
-				"*/accounts/:accountId/pages/projects/foo",
-				async (req, res, ctx) => {
-					expect(req.params.accountId).toEqual("some-account-id");
-
-					return res.once(
-						ctx.status(200),
-						ctx.json({
-							success: true,
-							errors: [],
-							messages: [],
-							result: {
-								deployment_configs: { production: {}, preview: {} },
-							},
-						})
-					);
-				}
-			)
-		);
-
-		await runWrangler("pages deploy public --project-name=foo");
-
-		expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
-		"✨ Compiled Worker successfully
-		✨ Success! Uploaded 1 files (TIMINGS)
-
-		✨ Uploading Functions bundle
-		✨ Uploading _routes.json
-		✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
-	`);
-
-		expect(std.warn).toMatchInlineSnapshot(`""`);
-		expect(std.err).toMatchInlineSnapshot('""');
-	});
-
-	it("should not deploy Functions projects that provide an invalid custom _routes.json file", async () => {
-		// set up the directory of static files to upload.
-		mkdirSync("public");
-		writeFileSync("public/README.md", "This is a readme");
-
-		// set up _routes.json
-		writeFileSync(
-			"public/_routes.json",
-			`
-      {
-        "description": "Custom _routes.json file",
-        "include": [],
-        "exclude": []
-      }
-      `
-		);
-
-		// set up /functions
-		mkdirSync("functions");
-		writeFileSync(
-			"functions/hello.js",
-			`
-      export async function onRequest() {
-        return new Response("Hello, world!");
-      }
-      `
-		);
-
-		mockGetUploadTokenRequest(
-			"<<funfetti-auth-jwt>>",
-			"some-account-id",
-			"foo"
-		);
-		msw.use(
-			rest.post("*/pages/assets/check-missing", async (req, res, ctx) => {
-				const body = (await req.json()) as {
-					hashes: string[];
-				};
-
-				expect(req.headers.get("Authorization")).toBe(
-					"Bearer <<funfetti-auth-jwt>>"
-				);
-				expect(body).toMatchObject({
-					hashes: ["13a03eaf24ae98378acd36ea00f77f2f"],
-				});
-
-				return res.once(
-					ctx.status(200),
-					ctx.json({
-						success: true,
-						errors: [],
-						messages: [],
-						result: body.hashes,
-					})
-				);
-			}),
-			rest.post("*/pages/assets/upload", async (req, res, ctx) => {
-				expect(req.headers.get("Authorization")).toBe(
-					"Bearer <<funfetti-auth-jwt>>"
-				);
-
-				expect(await req.json()).toMatchObject([
-					{
-						key: "13a03eaf24ae98378acd36ea00f77f2f",
-						value: Buffer.from("This is a readme").toString("base64"),
-						metadata: {
-							contentType: "text/markdown",
-						},
-						base64: true,
-					},
-				]);
-
-				return res.once(
-					ctx.status(200),
-					ctx.json({
-						success: true,
-						errors: [],
-						messages: [],
-						result: null,
-					})
-				);
-			}),
-			rest.get(
-				"*/accounts/:accountId/pages/projects/foo",
-				async (req, res, ctx) => {
-					expect(req.params.accountId).toEqual("some-account-id");
-
-					return res.once(
-						ctx.status(200),
-						ctx.json({
-							success: true,
-							errors: [],
-							messages: [],
-							result: {
-								deployment_configs: { production: {}, preview: {} },
-							},
-						})
-					);
-				}
-			)
-		);
-
-		await expect(runWrangler("pages deploy public --project-name=foo")).rejects
-			.toThrow(`Invalid _routes.json file found at: public/_routes.json
-Please make sure the JSON object has the following format:
-{
-	version: ${ROUTES_SPEC_VERSION};
-	include: string[];
-	exclude: string[];
-}
-and that at least one include rule is provided.
-		`);
-	});
-
-	it("should upload _routes.json for Advanced Mode projects, if provided", async () => {
-		// set up the directory of static files to upload.
-		mkdirSync("public");
-		writeFileSync("public/README.md", "This is a readme");
-
-		// set up _routes.json
-		writeFileSync(
-			"public/_routes.json",
-			`
-      {
-        "version": ${ROUTES_SPEC_VERSION},
-        "description": "Custom _routes.json file",
-        "include": ["/api/*"],
-        "exclude": []
-      }
-      `
-		);
-
-		// set up _worker.js
-		writeFileSync(
-			"public/_worker.js",
-			`
-      export default {
-        async fetch(request, env) {
-          const url = new URL(request.url);
-          return url.pathname.startsWith('/api/') ? new Response('Ok') : env.ASSETS.fetch(request);
-        }
-      };
-    `
-		);
-
-		mockGetUploadTokenRequest(
-			"<<funfetti-auth-jwt>>",
-			"some-account-id",
-			"foo"
-		);
-
-		msw.use(
-			rest.post("*/pages/assets/check-missing", async (req, res, ctx) => {
-				const body = (await req.json()) as {
-					hashes: string[];
-				};
-
-				expect(req.headers.get("Authorization")).toBe(
-					"Bearer <<funfetti-auth-jwt>>"
-				);
-				expect(body).toMatchObject({
-					hashes: ["13a03eaf24ae98378acd36ea00f77f2f"],
-				});
-
-				return res.once(
-					ctx.status(200),
-					ctx.json({
-						success: true,
-						errors: [],
-						messages: [],
-						result: body.hashes,
-					})
-				);
-			}),
-			rest.post("*/pages/assets/upload", async (req, res, ctx) => {
-				expect(req.headers.get("Authorization")).toBe(
-					"Bearer <<funfetti-auth-jwt>>"
-				);
-
-				expect(await req.json()).toMatchObject([
-					{
-						key: "13a03eaf24ae98378acd36ea00f77f2f",
-						value: Buffer.from("This is a readme").toString("base64"),
-						metadata: {
-							contentType: "text/markdown",
-						},
-						base64: true,
-					},
-				]);
-
-				return res.once(
-					ctx.status(200),
-					ctx.json({
-						success: true,
-						errors: [],
-						messages: [],
-						result: null,
-					})
-				);
-			}),
-			rest.post(`*/pages/assets/upsert-hashes`, async (req, res, ctx) => {
-				expect(req.headers.get("Authorization")).toBe(
-					"Bearer <<funfetti-auth-jwt>>"
-				);
-
-				expect(await req.json()).toMatchObject({
-					hashes: ["13a03eaf24ae98378acd36ea00f77f2f"],
-				});
-
-				return res.once(
-					ctx.status(200),
-					ctx.json({
-						success: true,
-						errors: [],
-						messages: [],
-						result: true,
-					})
-				);
-			}),
-			rest.post(
-				"*/accounts/:accountId/pages/projects/foo/deployments",
-				async (req, res, ctx) => {
-					const body = await (req as RestRequestWithFormData).formData();
-
-					const manifest = JSON.parse(body.get("manifest") as string);
-					const workerBundle = body.get("_worker.bundle") as string;
-					const customRoutesJSON = body.get("_routes.json") as string;
-
-					// make sure this is all we uploaded
-					expect([...body.keys()]).toEqual([
-						"manifest",
-						"_worker.bundle",
-						"_routes.json",
-					]);
-					expect(req.params.accountId).toEqual("some-account-id");
-					expect(manifest).toMatchInlineSnapshot(`
-				            Object {
-				              "/README.md": "13a03eaf24ae98378acd36ea00f77f2f",
-				            }
-			          `);
-
-					// some fields in workerBundle, such as the undici form boundary
-					// or the file hashes, are randomly generated. Let's replace these
-					// dynamic values with static ones so we can properly test the
-					// contents of `workerBundle`
-					// see https://jestjs.io/docs/snapshot-testing#property-matchers
-					let workerBundleWithConstantData = workerBundle.replace(
-						/------formdata-undici-0.[0-9]*/g,
-						"------formdata-undici-0.test"
-					);
-					workerBundleWithConstantData = workerBundleWithConstantData.replace(
-						/bundledWorker-0.[0-9]*.mjs/g,
-						"bundledWorker-0.test.mjs"
-					);
-
-					// we care about a couple of things here, like the presence of `metadata`,
-					// `bundledWorker`, the wasm import, etc., and since `workerBundle` is
-					// small enough, let's go ahead and snapshot test the whole thing
-					expect(workerBundleWithConstantData).toMatchInlineSnapshot(`
-				"------formdata-undici-0.test
-				Content-Disposition: form-data; name=\\"metadata\\"
-
-				{\\"main_module\\":\\"bundledWorker-0.test.mjs\\"}
-				------formdata-undici-0.test
-				Content-Disposition: form-data; name=\\"bundledWorker-0.test.mjs\\"; filename=\\"bundledWorker-0.test.mjs\\"
-				Content-Type: application/javascript+module
-
-				// _worker.js
-				var worker_default = {
-				  async fetch(request, env) {
-				    const url = new URL(request.url);
-				    return url.pathname.startsWith(\\"/api/\\") ? new Response(\\"Ok\\") : env.ASSETS.fetch(request);
-				  }
-				};
-				export {
-				  worker_default as default
-				};
-				//# sourceMappingURL=bundledWorker-0.test.mjs.map
-
-				------formdata-undici-0.test--"
-			`);
-
-					expect(JSON.parse(customRoutesJSON)).toMatchObject({
-						version: ROUTES_SPEC_VERSION,
-						description: "Custom _routes.json file",
-						include: ["/api/*"],
-						exclude: [],
-					});
-
-					return res.once(
-						ctx.status(200),
-						ctx.json({
-							success: true,
-							errors: [],
-							messages: [],
-							result: {
-								url: "https://abcxyz.foo.pages.dev/",
-							},
-						})
-					);
-				}
-			),
-			rest.get(
-				"*/accounts/:accountId/pages/projects/foo",
-				async (req, res, ctx) => {
-					expect(req.params.accountId).toEqual("some-account-id");
-
-					return res.once(
-						ctx.status(200),
-						ctx.json({
-							success: true,
-							errors: [],
-							messages: [],
-							result: {
-								deployment_configs: { production: {}, preview: {} },
-							},
-						})
-					);
-				}
-			)
-		);
-
-		await runWrangler("pages deploy public --project-name=foo");
-
-		expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
-		"✨ Success! Uploaded 1 files (TIMINGS)
-
-		✨ Compiled Worker successfully
-		✨ Uploading Worker bundle
-		✨ Uploading _routes.json
-		✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
-	`);
-
-		expect(std.warn).toMatchInlineSnapshot(`""`);
-		expect(std.err).toMatchInlineSnapshot(`""`);
-	});
-
-	it("should not deploy Advanced Mode projects that provide an invalid _routes.json file", async () => {
-		// set up the directory of static files to upload.
-		mkdirSync("public");
-		writeFileSync("public/README.md", "This is a readme");
-
-		// set up _routes.json
-		writeFileSync(
-			"public/_routes.json",
-			`
-      {
-        "description": "Custom _routes.json file",
-        "include": [],
-        "exclude": []
-      }
-      `
-		);
-
-		// set up _worker.js
-		writeFileSync(
-			"public/_worker.js",
-			`
-      export default {
-        async fetch(request, env) {
-          const url = new URL(request.url);
-          return url.pathname.startsWith('/api/') ? new Response('Ok') : env.ASSETS.fetch(request);
-        }
-      };
-    `
-		);
-
-		mockGetUploadTokenRequest(
-			"<<funfetti-auth-jwt>>",
-			"some-account-id",
-			"foo"
-		);
-
-		msw.use(
-			rest.post("*/pages/assets/check-missing", async (req, res, ctx) => {
-				const body = (await req.json()) as {
-					hashes: string[];
-				};
-
-				expect(req.headers.get("Authorization")).toBe(
-					"Bearer <<funfetti-auth-jwt>>"
-				);
-				expect(body).toMatchObject({
-					hashes: ["13a03eaf24ae98378acd36ea00f77f2f"],
-				});
-
-				return res.once(
-					ctx.status(200),
-					ctx.json({
-						success: true,
-						errors: [],
-						messages: [],
-						result: body.hashes,
-					})
-				);
-			}),
-			rest.post("*/pages/assets/upload", async (req, res, ctx) => {
-				expect(req.headers.get("Authorization")).toBe(
-					"Bearer <<funfetti-auth-jwt>>"
-				);
-
-				expect(await req.json()).toMatchObject([
-					{
-						key: "13a03eaf24ae98378acd36ea00f77f2f",
-						value: Buffer.from("This is a readme").toString("base64"),
-						metadata: {
-							contentType: "text/markdown",
-						},
-						base64: true,
-					},
-				]);
-
-				return res.once(
-					ctx.status(200),
-					ctx.json({
-						success: true,
-						errors: [],
-						messages: [],
-						result: null,
-					})
-				);
-			}),
-
-			rest.get(
-				"*/accounts/:accountId/pages/projects/foo",
-				async (req, res, ctx) => {
-					expect(req.params.accountId).toEqual("some-account-id");
-					return res.once(
-						ctx.status(200),
-						ctx.json({
-							success: true,
-							errors: [],
-							messages: [],
-							result: {
-								deployment_configs: { production: {}, preview: {} },
-							},
-						})
-					);
-				}
-			)
-		);
-
-		await expect(runWrangler("pages deploy public --project-name=foo")).rejects
-			.toThrow(`Invalid _routes.json file found at: public/_routes.json
-Please make sure the JSON object has the following format:
-{
-	version: ${ROUTES_SPEC_VERSION};
-	include: string[];
-	exclude: string[];
-}
-and that at least one include rule is provided.
-		`);
-	});
-
-	it("should ignore the entire /functions directory if _worker.js is provided", async () => {
-		// set up the directory of static files to upload.
-		mkdirSync("public");
-		writeFileSync("public/README.md", "This is a readme");
-
-		// set up /functions
-		mkdirSync("functions");
-		writeFileSync(
-			"functions/hello.js",
-			`
-      export async function onRequest() {
-        return new Response("Hello, world!");
-      }
-      `
-		);
-
-		// set up _worker.js
-		writeFileSync(
-			"public/_worker.js",
-			`
-      export default {
-        async fetch(request, env) {
-          const url = new URL(request.url);
-          return url.pathname.startsWith('/api/') ? new Response('Ok') : env.ASSETS.fetch(request);
-        }
-      };
-    `
-		);
-
-		mockGetUploadTokenRequest(
-			"<<funfetti-auth-jwt>>",
-			"some-account-id",
-			"foo"
-		);
-
-		msw.use(
-			rest.post("*/pages/assets/check-missing", async (req, res, ctx) => {
-				const body = (await req.json()) as {
-					hashes: string[];
-				};
-
-				expect(req.headers.get("Authorization")).toBe(
-					"Bearer <<funfetti-auth-jwt>>"
-				);
-				expect(body).toMatchObject({
-					hashes: ["13a03eaf24ae98378acd36ea00f77f2f"],
-				});
-
-				return res.once(
-					ctx.status(200),
-					ctx.json({
-						success: true,
-						errors: [],
-						messages: [],
-						result: body.hashes,
-					})
-				);
-			}),
-			rest.post("*/pages/assets/upload", async (req, res, ctx) => {
-				expect(req.headers.get("Authorization")).toBe(
-					"Bearer <<funfetti-auth-jwt>>"
-				);
-
-				expect(await req.json()).toMatchObject([
-					{
-						key: "13a03eaf24ae98378acd36ea00f77f2f",
-						value: Buffer.from("This is a readme").toString("base64"),
-						metadata: {
-							contentType: "text/markdown",
-						},
-						base64: true,
-					},
-				]);
-
-				return res.once(
-					ctx.status(200),
-					ctx.json({
-						success: true,
-						errors: [],
-						messages: [],
-						result: null,
-					})
-				);
-			}),
-
-			rest.post(
-				"*/accounts/:accountId/pages/projects/foo/deployments",
-				async (req, res, ctx) => {
-					const body = await (req as RestRequestWithFormData).formData();
-					const manifest = JSON.parse(body.get("manifest") as string);
-					const customWorkerBundle = body.get("_worker.bundle") as string;
-
-					expect(req.params.accountId).toEqual("some-account-id");
-					// make sure this is all we uploaded
-					expect([...body.keys()].sort()).toEqual(
-						["manifest", "_worker.bundle"].sort()
-					);
-					expect(manifest).toMatchInlineSnapshot(`
-				Object {
-				  "/README.md": "13a03eaf24ae98378acd36ea00f77f2f",
-				}
-			`);
-
-					// some fields in workerBundle, such as the undici form boundary
-					// or the file hashes, are randomly generated. Let's replace these
-					// dynamic values with static ones so we can properly test the
-					// contents of `workerBundle`
-					// see https://jestjs.io/docs/snapshot-testing#property-matchers
-					let workerBundleWithConstantData = customWorkerBundle.replace(
-						/------formdata-undici-0.[0-9]*/g,
-						"------formdata-undici-0.test"
-					);
-					workerBundleWithConstantData = workerBundleWithConstantData.replace(
-						/bundledWorker-0.[0-9]*.mjs/g,
-						"bundledWorker-0.test.mjs"
-					);
-
-					// we care about a couple of things here, like the presence of `metadata`,
-					// `bundledWorker`, the wasm import, etc., and since `workerBundle` is
-					// small enough, let's go ahead and snapshot test the whole thing
-					expect(workerBundleWithConstantData).toMatchInlineSnapshot(`
-				"------formdata-undici-0.test
-				Content-Disposition: form-data; name=\\"metadata\\"
-
-				{\\"main_module\\":\\"bundledWorker-0.test.mjs\\"}
-				------formdata-undici-0.test
-				Content-Disposition: form-data; name=\\"bundledWorker-0.test.mjs\\"; filename=\\"bundledWorker-0.test.mjs\\"
-				Content-Type: application/javascript+module
-
-				// _worker.js
-				var worker_default = {
-				  async fetch(request, env) {
-				    const url = new URL(request.url);
-				    return url.pathname.startsWith(\\"/api/\\") ? new Response(\\"Ok\\") : env.ASSETS.fetch(request);
-				  }
-				};
-				export {
-				  worker_default as default
-				};
-				//# sourceMappingURL=bundledWorker-0.test.mjs.map
-
-				------formdata-undici-0.test--"
-			`);
-
-					return res.once(
-						ctx.status(200),
-						ctx.json({
-							success: true,
-							errors: [],
-							messages: [],
-							result: {
-								url: "https://abcxyz.foo.pages.dev/",
-							},
-						})
-					);
-				}
-			),
-			rest.get(
-				"*/accounts/:accountId/pages/projects/foo",
-				async (req, res, ctx) => {
-					expect(req.params.accountId).toEqual("some-account-id");
-
-					return res.once(
-						ctx.status(200),
-						ctx.json({
-							success: true,
-							errors: [],
-							messages: [],
-							result: {
-								deployment_configs: { production: {}, preview: {} },
-							},
-						})
-					);
-				}
-			)
-		);
-
-		await runWrangler("pages deploy public --project-name=foo");
-
-		expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
-		"✨ Success! Uploaded 1 files (TIMINGS)
-
-		✨ Compiled Worker successfully
-		✨ Uploading Worker bundle
-		✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
-	`);
-
-		expect(std.err).toMatchInlineSnapshot('""');
-	});
-
-	it("should bundle Functions and resolve its external module imports", async () => {
-		// set up the directory of static files to upload.
-		mkdirSync("public");
-		writeFileSync("public/README.md", "This is a readme");
-
-		// set up some "external" modules
-		mkdirSync("external");
-		writeFileSync("external/hello.wasm", "Hello Wasm modules world!");
-		writeFileSync("external/hello.txt", "Hello Text modules world!");
-
-		// set up Functions
-		mkdirSync("functions");
-		writeFileSync(
-			"functions/hello.js",
-			`
-			import wasm from "./../external/hello.wasm";
-			import text from "./../external/hello.txt"
+	describe("with Pages Functions", () => {
+		it("should upload a Functions project", async () => {
+			// set up the directory of static files to upload.
+			mkdirSync("public");
+			writeFileSync("public/README.md", "This is a readme");
+
+			// set up /functions
+			mkdirSync("functions");
+			writeFileSync(
+				"functions/hello.js",
+				`
 			export async function onRequest() {
-				const helloModule = await WebAssembly.instantiate(wasm);
-				const wasmGreeting = helloModule.exports.hello;
-				return new Response(wasmGreeting + text);
+				return new Response("Hello, world!");
 			}
 			`
-		);
+			);
 
-		mockGetUploadTokenRequest(
-			"<<funfetti-auth-jwt>>",
-			"some-account-id",
-			"foo"
-		);
+			mockGetUploadTokenRequest(
+				"<<funfetti-auth-jwt>>",
+				"some-account-id",
+				"foo"
+			);
 
-		msw.use(
-			// /pages/assets/check-missing
-			rest.post("*/pages/assets/check-missing", async (req, res, ctx) => {
-				const body = (await req.json()) as {
-					hashes: string[];
-				};
+			let getProjectRequestCount = 0;
 
-				expect(req.headers.get("Authorization")).toBe(
-					"Bearer <<funfetti-auth-jwt>>"
-				);
-				expect(body).toMatchObject({
-					hashes: ["13a03eaf24ae98378acd36ea00f77f2f"],
-				});
+			msw.use(
+				http.post(
+					"*/pages/assets/check-missing",
+					async ({ request }) => {
+						const body = (await request.json()) as {
+							hashes: string[];
+						};
 
-				return res.once(
-					ctx.status(200),
-					ctx.json({
-						success: true,
-						errors: [],
-						messages: [],
-						result: body.hashes,
-					})
-				);
-			}),
+						expect(request.headers.get("Authorization")).toBe(
+							"Bearer <<funfetti-auth-jwt>>"
+						);
+						expect(body).toMatchObject({
+							hashes: ["13a03eaf24ae98378acd36ea00f77f2f"],
+						});
 
-			// /pages/assets/upload
-			rest.post("*/pages/assets/upload", async (req, res, ctx) => {
-				expect(req.headers.get("Authorization")).toBe(
-					"Bearer <<funfetti-auth-jwt>>"
-				);
-
-				expect(await req.json()).toMatchObject([
-					{
-						key: "13a03eaf24ae98378acd36ea00f77f2f",
-						value: Buffer.from("This is a readme").toString("base64"),
-						metadata: {
-							contentType: "text/markdown",
-						},
-						base64: true,
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: body.hashes,
+							},
+							{ status: 200 }
+						);
 					},
-				]);
+					{ once: true }
+				),
+				http.post(
+					"*/pages/assets/upload",
+					async ({ request }) => {
+						expect(request.headers.get("Authorization")).toBe(
+							"Bearer <<funfetti-auth-jwt>>"
+						);
 
-				return res.once(
-					ctx.status(200),
-					ctx.json({
-						success: true,
-						errors: [],
-						messages: [],
-						result: null,
-					})
-				);
-			}),
+						expect(await request.json()).toMatchObject([
+							{
+								key: "13a03eaf24ae98378acd36ea00f77f2f",
+								value: Buffer.from("This is a readme").toString("base64"),
+								metadata: {
+									contentType: "text/markdown",
+								},
+								base64: true,
+							},
+						]);
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: true,
+							},
+							{ status: 200 }
+						);
+					},
+					{ once: true }
+				),
+				http.post(
+					`*/pages/assets/upsert-hashes`,
+					async ({ request }) => {
+						expect(request.headers.get("Authorization")).toBe(
+							"Bearer <<funfetti-auth-jwt>>"
+						);
 
-			// /accounts/:accountId/pages/projects/<project-name>/deployments
-			rest.post(
-				"*/accounts/:accountId/pages/projects/foo/deployments",
-				async (req, res, ctx) => {
-					const body = await (req as RestRequestWithFormData).formData();
-					const manifest = JSON.parse(body.get("manifest") as string);
-					const workerBundle = body.get("_worker.bundle") as string;
+						expect(await request.json()).toMatchObject({
+							hashes: ["13a03eaf24ae98378acd36ea00f77f2f"],
+						});
 
-					expect(req.params.accountId).toEqual("some-account-id");
-					// make sure this is all we uploaded
-					expect([...body.keys()].sort()).toEqual(
-						[
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: true,
+							},
+							{ status: 200 }
+						);
+					},
+					{ once: true }
+				),
+
+				http.post(
+					"*/accounts/:accountId/pages/projects/foo/deployments",
+					async ({ request, params }) => {
+						expect(params.accountId).toEqual("some-account-id");
+						const body = await request.formData();
+						const manifest = JSON.parse(await toString(body.get("manifest")));
+
+						// for Functions projects, we auto-generate a `_worker.bundle`,
+						// `functions-filepath-routing-config.json`, and `_routes.json`
+						// file, based on the contents of `/functions`
+						const generatedWorkerBundle = await toString(
+							body.get("_worker.bundle")
+						);
+						const generatedRoutesJSON = await toString(
+							body.get("_routes.json")
+						);
+						const generatedFilepathRoutingConfig = await toString(
+							body.get("functions-filepath-routing-config.json")
+						);
+
+						// make sure this is all we uploaded
+						expect([...body.keys()]).toEqual([
 							"manifest",
-							"_worker.bundle",
 							"functions-filepath-routing-config.json",
+							"_worker.bundle",
 							"_routes.json",
-						].sort()
-					);
-					expect(manifest).toMatchInlineSnapshot(`
+						]);
+
+						expect(manifest).toMatchInlineSnapshot(`
 				Object {
 				  "/README.md": "13a03eaf24ae98378acd36ea00f77f2f",
 				}
 			`);
 
-					// some fields in workerBundle, such as the undici form boundary
-					// or the file hashes, are randomly generated. Let's replace these
-					// dynamic values with static ones so we can properly test the
-					// contents of `workerBundle`
-					// see https://jestjs.io/docs/snapshot-testing#property-matchers
-					let workerBundleWithConstantData = workerBundle.replace(
-						/------formdata-undici-0.[0-9]*/g,
-						"------formdata-undici-0.test"
-					);
-					workerBundleWithConstantData = workerBundleWithConstantData.replace(
-						/functionsWorker-0.[0-9]*.js/g,
-						"functionsWorker-0.test.js"
-					);
-					workerBundleWithConstantData = workerBundleWithConstantData.replace(
-						/[0-9a-z]*-hello.wasm/g,
-						"test-hello.wasm"
-					);
-					workerBundleWithConstantData = workerBundleWithConstantData.replace(
-						/[0-9a-z]*-hello.txt/g,
-						"test-hello.txt"
-					);
+						// the contents of the generated `_worker.bundle` file is pretty massive, so I don't
+						// think snapshot testing makes much sense here. Plus, calling
+						// `.toMatchInlineSnapshot()` without any arguments, in order to generate that
+						// snapshot value, doesn't generate anything in this case (probably because the
+						// file contents is too big). So for now, let's test that _worker.bundle was indeed
+						// generated and that the file size is greater than zero
+						expect(generatedWorkerBundle).not.toBeNull();
+						expect(generatedWorkerBundle.length).toBeGreaterThan(0);
 
-					// check we appended the metadata
-					expect(workerBundleWithConstantData).toContain(
-						`Content-Disposition: form-data; name="metadata"`
-					);
-					expect(workerBundleWithConstantData).toContain(
-						`{"main_module":"functionsWorker-0.test.js"}`
-					);
+						const maybeRoutesJSONSpec = JSON.parse(generatedRoutesJSON);
+						expect(isRoutesJSONSpec(maybeRoutesJSONSpec)).toBe(true);
+						expect(maybeRoutesJSONSpec).toMatchObject({
+							version: ROUTES_SPEC_VERSION,
+							description: `Generated by wrangler@${version}`,
+							include: ["/hello"],
+							exclude: [],
+						});
 
-					// check we appended the compiled Worker
-					expect(workerBundleWithConstantData).toContain(
-						`Content-Disposition: form-data; name="functionsWorker-0.test.js"; filename="functionsWorker-0.test.js"`
-					);
-					expect(workerBundleWithConstantData).toContain(`
+						// Make sure the routing config is valid json
+						const parsedFilepathRoutingConfig = JSON.parse(
+							generatedFilepathRoutingConfig
+						);
+						// The actual shape doesn't matter that much since this
+						// is only used for display in Dash, but it's still useful for
+						// tracking unexpected changes to this config.
+						expect(parsedFilepathRoutingConfig).toStrictEqual({
+							routes: [
+								{
+									routePath: "/hello",
+									mountPath: "/",
+									method: "",
+									module: ["hello.js:onRequest"],
+								},
+							],
+							baseURL: "/",
+						});
+
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: {
+									id: "123-456-789",
+									url: "https://abcxyz.foo.pages.dev/",
+								},
+							},
+							{ status: 200 }
+						);
+					},
+					{ once: true }
+				),
+				http.get(
+					"*/accounts/:accountId/pages/projects/foo/deployments/:deploymentId",
+					async ({ params }) => {
+						expect(params.accountId).toEqual("some-account-id");
+						expect(params.deploymentId).toEqual("123-456-789");
+
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: {
+									latest_stage: {
+										name: "deploy",
+										status: "success",
+									},
+								},
+							},
+							{ status: 200 }
+						);
+					},
+					{ once: true }
+				),
+				http.get(
+					"*/accounts/:accountId/pages/projects/foo",
+					async ({ params }) => {
+						getProjectRequestCount++;
+
+						expect(params.accountId).toEqual("some-account-id");
+
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: {
+									deployment_configs: { production: {}, preview: {} },
+								},
+							},
+							{ status: 200 }
+						);
+					}
+				)
+			);
+
+			await runWrangler("pages deploy public --project-name=foo");
+
+			expect(getProjectRequestCount).toEqual(2);
+			expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
+			"✨ Compiled Worker successfully
+			✨ Success! Uploaded 1 files (TIMINGS)
+
+			✨ Uploading Functions bundle
+			🌎 Deploying...
+			✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
+		`);
+
+			expect(std.err).toMatchInlineSnapshot('""');
+		});
+
+		it("should bundle Functions and resolve its external module imports", async () => {
+			// set up the directory of static files to upload.
+			mkdirSync("public");
+			writeFileSync("public/README.md", "This is a readme");
+
+			// set up some "external" modules
+			mkdirSync("external");
+			writeFileSync("external/hello.wasm", "Hello Wasm modules world!");
+			writeFileSync("external/hello.txt", "Hello Text modules world!");
+
+			// set up Functions
+			mkdirSync("functions");
+			writeFileSync(
+				"functions/hello.js",
+				`
+				import wasm from "./../external/hello.wasm";
+				import text from "./../external/hello.txt"
+				export async function onRequest() {
+					const helloModule = await WebAssembly.instantiate(wasm);
+					const wasmGreeting = helloModule.exports.hello;
+					return new Response(wasmGreeting + text);
+				}
+				`
+			);
+
+			mockGetUploadTokenRequest(
+				"<<funfetti-auth-jwt>>",
+				"some-account-id",
+				"foo"
+			);
+
+			let getProjectRequestCount = 0;
+			msw.use(
+				// /pages/assets/check-missing
+				http.post(
+					"*/pages/assets/check-missing",
+					async ({ request }) => {
+						const body = (await request.json()) as {
+							hashes: string[];
+						};
+
+						expect(request.headers.get("Authorization")).toBe(
+							"Bearer <<funfetti-auth-jwt>>"
+						);
+						expect(body).toMatchObject({
+							hashes: ["13a03eaf24ae98378acd36ea00f77f2f"],
+						});
+
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: body.hashes,
+							},
+							{ status: 200 }
+						);
+					},
+					{ once: true }
+				),
+
+				// /pages/assets/upload
+				http.post(
+					"*/pages/assets/upload",
+					async ({ request }) => {
+						expect(request.headers.get("Authorization")).toBe(
+							"Bearer <<funfetti-auth-jwt>>"
+						);
+
+						expect(await request.json()).toMatchObject([
+							{
+								key: "13a03eaf24ae98378acd36ea00f77f2f",
+								value: Buffer.from("This is a readme").toString("base64"),
+								metadata: {
+									contentType: "text/markdown",
+								},
+								base64: true,
+							},
+						]);
+
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: null,
+							},
+							{ status: 200 }
+						);
+					},
+					{ once: true }
+				),
+
+				// /accounts/:accountId/pages/projects/<project-name>/deployments
+				http.post(
+					"*/accounts/:accountId/pages/projects/foo/deployments",
+					async ({ request, params }) => {
+						const body = await request.formData();
+						const manifest = JSON.parse(await toString(body.get("manifest")));
+						const workerBundle = body.get("_worker.bundle");
+
+						expect(params.accountId).toEqual("some-account-id");
+						// make sure this is all we uploaded
+						expect([...body.keys()].sort()).toEqual(
+							[
+								"manifest",
+								"_worker.bundle",
+								"functions-filepath-routing-config.json",
+								"_routes.json",
+							].sort()
+						);
+						expect(manifest).toMatchInlineSnapshot(`
+				Object {
+				  "/README.md": "13a03eaf24ae98378acd36ea00f77f2f",
+				}
+			`);
+
+						// some fields in workerBundle, such as the undici form boundary
+						// or the file hashes, are randomly generated. Let's replace these
+						// dynamic values with static ones so we can properly test the
+						// contents of `workerBundle`
+						// see https://jestjs.io/docs/snapshot-testing#property-matchers
+						let workerBundleWithConstantData = (
+							await toString(workerBundle)
+						).replace(
+							/------formdata-undici-0.[0-9]*/g,
+							"------formdata-undici-0.test"
+						);
+						workerBundleWithConstantData = workerBundleWithConstantData.replace(
+							/functionsWorker-0.[0-9]*.js/g,
+							"functionsWorker-0.test.js"
+						);
+						workerBundleWithConstantData = workerBundleWithConstantData.replace(
+							/[0-9a-z]*-hello.wasm/g,
+							"test-hello.wasm"
+						);
+						workerBundleWithConstantData = workerBundleWithConstantData.replace(
+							/[0-9a-z]*-hello.txt/g,
+							"test-hello.txt"
+						);
+
+						// check we appended the metadata
+						expect(workerBundleWithConstantData).toContain(
+							`Content-Disposition: form-data; name="metadata"`
+						);
+						expect(workerBundleWithConstantData).toContain(
+							`{"main_module":"functionsWorker-0.test.js"}`
+						);
+
+						// check we appended the compiled Worker
+						expect(workerBundleWithConstantData).toContain(
+							`Content-Disposition: form-data; name="functionsWorker-0.test.js"; filename="functionsWorker-0.test.js"`
+						);
+						expect(workerBundleWithConstantData).toContain(`
 import wasm from "./test-hello.wasm";
 import text from "./test-hello.txt";
 async function onRequest() {
@@ -2553,210 +2157,1331 @@ async function onRequest() {
   return new Response(wasmGreeting + text);
 }`);
 
-					// check we appended the wasm module
-					expect(workerBundleWithConstantData).toContain(
-						`Content-Disposition: form-data; name="./test-hello.wasm"; filename="./test-hello.wasm"`
-					);
-					expect(workerBundleWithConstantData).toContain(
-						`Hello Wasm modules world!`
-					);
+						// check we appended the wasm module
+						expect(workerBundleWithConstantData).toContain(
+							`Content-Disposition: form-data; name="./test-hello.wasm"; filename="./test-hello.wasm"`
+						);
+						expect(workerBundleWithConstantData).toContain(
+							`Hello Wasm modules world!`
+						);
 
-					// check we appended the text module
-					expect(workerBundleWithConstantData).toContain(
-						`Content-Disposition: form-data; name="./test-hello.txt"; filename="./test-hello.txt"`
-					);
-					expect(workerBundleWithConstantData).toContain(
-						`Hello Text modules world!`
-					);
+						// check we appended the text module
+						expect(workerBundleWithConstantData).toContain(
+							`Content-Disposition: form-data; name="./test-hello.txt"; filename="./test-hello.txt"`
+						);
+						expect(workerBundleWithConstantData).toContain(
+							`Hello Text modules world!`
+						);
 
-					return res.once(
-						ctx.status(200),
-						ctx.json({
-							success: true,
-							errors: [],
-							messages: [],
-							result: {
-								url: "https://abcxyz.foo.pages.dev/",
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: {
+									id: "123-456-789",
+									url: "https://abcxyz.foo.pages.dev/",
+								},
 							},
-						})
-					);
-				}
-			),
-
-			// /accounts/:accountId/pages/projects/<project-name>
-			rest.get(
-				"*/accounts/:accountId/pages/projects/foo",
-				async (req, res, ctx) => {
-					expect(req.params.accountId).toEqual("some-account-id");
-
-					return res.once(
-						ctx.status(200),
-						ctx.json({
-							success: true,
-							errors: [],
-							messages: [],
-							result: {
-								deployment_configs: { production: {}, preview: {} },
-							},
-						})
-					);
-				}
-			)
-		);
-
-		await runWrangler("pages deploy public --project-name=foo");
-
-		expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
-		"✨ Compiled Worker successfully
-		✨ Success! Uploaded 1 files (TIMINGS)
-
-		✨ Uploading Functions bundle
-		✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
-	`);
-
-		// make sure there were no errors
-		expect(std.err).toMatchInlineSnapshot('""');
-	});
-
-	it("should bundle _worker.js and resolve its external module imports", async () => {
-		// set up the directory of static files to upload
-		mkdirSync("public");
-		writeFileSync("public/README.md", "This is a readme");
-
-		// set up hello.wasm
-		mkdirSync("external");
-		writeFileSync("external/hello.wasm", "Hello wasm modules");
-		writeFileSync(
-			"external/hello.html",
-			"<html><body>Hello text modules</body></html>"
-		);
-
-		// set up _worker.js
-		writeFileSync(
-			"public/_worker.js",
-			`
-			import wasm from "./../external/hello.wasm";
-			import html from "./../external/hello.html";
-			export default {
-				async fetch(request, env) {
-					const url = new URL(request.url);
-					const helloModule = await WebAssembly.instantiate(wasm);
-					const wasmGreeting = helloModule.exports.hello;
-					if(url.pathname.startsWith('/hello-wasm')) {
-						return new Response(wasmGreeting);
-					}
-					if(url.pathname.startsWith('/hello-text')) {
-						return new Response(html);
-					}
-					return env.ASSETS.fetch(request);
-				}
-			};
-		`
-		);
-
-		mockGetUploadTokenRequest(
-			"<<funfetti-auth-jwt>>",
-			"some-account-id",
-			"foo"
-		);
-
-		msw.use(
-			// /pages/assets/check-missing
-			rest.post("*/pages/assets/check-missing", async (req, res, ctx) => {
-				const body = (await req.json()) as {
-					hashes: string[];
-				};
-
-				expect(req.headers.get("Authorization")).toBe(
-					"Bearer <<funfetti-auth-jwt>>"
-				);
-				expect(body).toMatchObject({
-					hashes: ["13a03eaf24ae98378acd36ea00f77f2f"],
-				});
-
-				return res.once(
-					ctx.status(200),
-					ctx.json({
-						success: true,
-						errors: [],
-						messages: [],
-						result: body.hashes,
-					})
-				);
-			}),
-
-			// /pages/assets/upload
-			rest.post("*/pages/assets/upload", async (req, res, ctx) => {
-				expect(req.headers.get("Authorization")).toBe(
-					"Bearer <<funfetti-auth-jwt>>"
-				);
-
-				expect(await req.json()).toMatchObject([
-					{
-						key: "13a03eaf24ae98378acd36ea00f77f2f",
-						value: Buffer.from("This is a readme").toString("base64"),
-						metadata: {
-							contentType: "text/markdown",
-						},
-						base64: true,
+							{ status: 200 }
+						);
 					},
-				]);
+					{ once: true }
+				),
+				http.get(
+					"*/accounts/:accountId/pages/projects/foo/deployments/:deploymentId",
+					async ({ params }) => {
+						expect(params.accountId).toEqual("some-account-id");
+						expect(params.deploymentId).toEqual("123-456-789");
 
-				return res.once(
-					ctx.status(200),
-					ctx.json({
-						success: true,
-						errors: [],
-						messages: [],
-						result: null,
-					})
-				);
-			}),
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: {
+									latest_stage: {
+										name: "deploy",
+										status: "success",
+									},
+								},
+							},
+							{ status: 200 }
+						);
+					},
+					{ once: true }
+				),
 
-			// /accounts/:accountId/pages/projects/<project-name>/deployments
-			rest.post(
-				"*/accounts/:accountId/pages/projects/foo/deployments",
-				async (req, res, ctx) => {
-					const body = await (req as RestRequestWithFormData).formData();
-					const manifest = JSON.parse(body.get("manifest") as string);
-					const workerBundle = body.get("_worker.bundle") as string;
+				// /accounts/:accountId/pages/projects/<project-name>
+				http.get(
+					"*/accounts/:accountId/pages/projects/foo",
+					async ({ params }) => {
+						getProjectRequestCount++;
 
-					expect(req.params.accountId).toEqual("some-account-id");
-					// make sure this is all we uploaded
-					expect([...body.keys()].sort()).toEqual(
-						["manifest", "_worker.bundle"].sort()
-					);
-					expect(manifest).toMatchInlineSnapshot(`
+						expect(params.accountId).toEqual("some-account-id");
+
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: {
+									deployment_configs: { production: {}, preview: {} },
+								},
+							},
+							{ status: 200 }
+						);
+					}
+				)
+			);
+
+			await runWrangler("pages deploy public --project-name=foo");
+
+			expect(getProjectRequestCount).toEqual(2);
+			expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
+			"✨ Compiled Worker successfully
+			✨ Success! Uploaded 1 files (TIMINGS)
+
+			✨ Uploading Functions bundle
+			🌎 Deploying...
+			✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
+		`);
+
+			// make sure there were no errors
+			expect(std.err).toMatchInlineSnapshot('""');
+		});
+
+		it("should upload _routes.json for Functions projects, if provided", async () => {
+			// set up the directory of static files to upload.
+			mkdirSync("public");
+			writeFileSync("public/README.md", "This is a readme");
+
+			// set up /functions
+			mkdirSync("functions");
+			writeFileSync(
+				"functions/hello.js",
+				`
+			export async function onRequest() {
+				return new Response("Hello, world!");
+			}
+			`
+			);
+
+			writeFileSync(
+				"functions/goodbye.ts",
+				`
+			export async function onRequest() {
+				return new Response("Bye bye!");
+			}
+						`
+			);
+
+			// set up _routes.json
+			writeFileSync(
+				"public/_routes.json",
+				`
+			{
+				"version": ${ROUTES_SPEC_VERSION},
+				"description": "Custom _routes.json file",
+				"include": ["/hello"],
+				"exclude": []
+			}
+						`
+			);
+
+			mockGetUploadTokenRequest(
+				"<<funfetti-auth-jwt>>",
+				"some-account-id",
+				"foo"
+			);
+
+			let getProjectRequestCount = 0;
+			msw.use(
+				http.post(
+					"*/pages/assets/check-missing",
+					async ({ request }) => {
+						const body = (await request.json()) as {
+							hashes: string[];
+						};
+
+						expect(request.headers.get("Authorization")).toBe(
+							"Bearer <<funfetti-auth-jwt>>"
+						);
+						expect(body).toMatchObject({
+							hashes: ["13a03eaf24ae98378acd36ea00f77f2f"],
+						});
+
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: body.hashes,
+							},
+							{ status: 200 }
+						);
+					},
+					{ once: true }
+				),
+				http.post(
+					"*/pages/assets/upload",
+					async ({ request }) => {
+						expect(request.headers.get("Authorization")).toBe(
+							"Bearer <<funfetti-auth-jwt>>"
+						);
+
+						expect(await request.json()).toMatchObject([
+							{
+								key: "13a03eaf24ae98378acd36ea00f77f2f",
+								value: Buffer.from("This is a readme").toString("base64"),
+								metadata: {
+									contentType: "text/markdown",
+								},
+								base64: true,
+							},
+						]);
+
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: null,
+							},
+							{ status: 200 }
+						);
+					},
+					{ once: true }
+				),
+				http.post(
+					`*/pages/assets/upsert-hashes`,
+					async ({ request }) => {
+						expect(request.headers.get("Authorization")).toBe(
+							"Bearer <<funfetti-auth-jwt>>"
+						);
+
+						expect(await request.json()).toMatchObject({
+							hashes: ["13a03eaf24ae98378acd36ea00f77f2f"],
+						});
+
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: true,
+							},
+							{ status: 200 }
+						);
+					},
+					{ once: true }
+				),
+				http.post(
+					"*/accounts/:accountId/pages/projects/foo/deployments",
+					async ({ request, params }) => {
+						expect(params.accountId).toEqual("some-account-id");
+						const body = await request.formData();
+						const manifest = JSON.parse(await toString(body.get("manifest")));
+						const generatedWorkerBundle = await toString(
+							body.get("_worker.bundle")
+						);
+						const customRoutesJSON = await toString(body.get("_routes.json"));
+						const generatedFilepathRoutingConfig = await toString(
+							body.get("functions-filepath-routing-config.json")
+						);
+
+						// make sure this is all we uploaded
+						expect([...body.keys()].sort()).toEqual(
+							[
+								"manifest",
+								"functions-filepath-routing-config.json",
+								"_worker.bundle",
+								"_routes.json",
+							].sort()
+						);
+
+						expect(manifest).toMatchInlineSnapshot(`
 				Object {
 				  "/README.md": "13a03eaf24ae98378acd36ea00f77f2f",
 				}
 			`);
-					// some fields in workerBundle, such as the undici form boundary
-					// or the file hashes, are randomly generated. Let's replace these
-					// dynamic values with static ones so we can properly test the
-					// contents of `workerBundle`
-					// see https://jestjs.io/docs/snapshot-testing#property-matchers
-					let workerBundleWithConstantData = workerBundle.replace(
-						/------formdata-undici-0.[0-9]*/g,
-						"------formdata-undici-0.test"
-					);
-					workerBundleWithConstantData = workerBundleWithConstantData.replace(
-						/bundledWorker-0.[0-9]*.mjs/g,
-						"bundledWorker-0.test.mjs"
-					);
-					workerBundleWithConstantData = workerBundleWithConstantData.replace(
-						/[0-9a-z]*-hello.wasm/g,
-						"test-hello.wasm"
-					);
-					workerBundleWithConstantData = workerBundleWithConstantData.replace(
-						/[0-9a-z]*-hello.html/g,
-						"test-hello.html"
-					);
 
-					// we care about a couple of things here, like the presence of `metadata`,
-					// `bundledWorker`, the wasm import, etc., and since `workerBundle` is
-					// small enough, let's go ahead and snapshot test the whole thing
-					expect(workerBundleWithConstantData).toMatchInlineSnapshot(`
+						// file content of generated `_worker.bundle` is too massive to snapshot test
+						expect(generatedWorkerBundle).not.toBeNull();
+						expect(generatedWorkerBundle.length).toBeGreaterThan(0);
+
+						const customRoutes = JSON.parse(customRoutesJSON);
+						expect(customRoutes).toMatchObject({
+							version: ROUTES_SPEC_VERSION,
+							description: "Custom _routes.json file",
+							include: ["/hello"],
+							exclude: [],
+						});
+
+						// Make sure the routing config is valid json
+						const parsedFilepathRoutingConfig = JSON.parse(
+							generatedFilepathRoutingConfig
+						);
+						// The actual shape doesn't matter that much since this
+						// is only used for display in Dash, but it's still useful for
+						// tracking unexpected changes to this config.
+						expect(parsedFilepathRoutingConfig).toStrictEqual({
+							routes: [
+								{
+									routePath: "/goodbye",
+									mountPath: "/",
+									method: "",
+									module: ["goodbye.ts:onRequest"],
+								},
+								{
+									routePath: "/hello",
+									mountPath: "/",
+									method: "",
+									module: ["hello.js:onRequest"],
+								},
+							],
+							baseURL: "/",
+						});
+
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: {
+									id: "123-456-789",
+									url: "https://abcxyz.foo.pages.dev/",
+								},
+							},
+							{ status: 200 }
+						);
+					},
+					{ once: true }
+				),
+				http.get(
+					"*/accounts/:accountId/pages/projects/foo/deployments/:deploymentId",
+					async ({ params }) => {
+						expect(params.accountId).toEqual("some-account-id");
+						expect(params.deploymentId).toEqual("123-456-789");
+
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: {
+									latest_stage: {
+										name: "deploy",
+										status: "success",
+									},
+								},
+							},
+							{ status: 200 }
+						);
+					},
+					{ once: true }
+				),
+				http.get(
+					"*/accounts/:accountId/pages/projects/foo",
+					async ({ params }) => {
+						getProjectRequestCount++;
+
+						expect(params.accountId).toEqual("some-account-id");
+
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: {
+									deployment_configs: { production: {}, preview: {} },
+								},
+							},
+							{ status: 200 }
+						);
+					}
+				)
+			);
+
+			await runWrangler("pages deploy public --project-name=foo");
+
+			expect(getProjectRequestCount).toEqual(2);
+			expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
+			"✨ Compiled Worker successfully
+			✨ Success! Uploaded 1 files (TIMINGS)
+
+			✨ Uploading Functions bundle
+			✨ Uploading _routes.json
+			🌎 Deploying...
+			✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
+		`);
+
+			expect(std.warn).toMatchInlineSnapshot(`""`);
+			expect(std.err).toMatchInlineSnapshot('""');
+		});
+
+		it("should not deploy Functions projects that provide an invalid custom _routes.json file", async () => {
+			// set up the directory of static files to upload.
+			mkdirSync("public");
+			writeFileSync("public/README.md", "This is a readme");
+
+			// set up _routes.json
+			writeFileSync(
+				"public/_routes.json",
+				`
+				{
+					"description": "Custom _routes.json file",
+					"include": [],
+					"exclude": []
+				}
+				`
+			);
+
+			// set up /functions
+			mkdirSync("functions");
+			writeFileSync(
+				"functions/hello.js",
+				`
+				export async function onRequest() {
+					return new Response("Hello, world!");
+				}
+				`
+			);
+
+			mockGetUploadTokenRequest(
+				"<<funfetti-auth-jwt>>",
+				"some-account-id",
+				"foo"
+			);
+
+			let getProjectRequestCount = 0;
+			msw.use(
+				http.post(
+					"*/pages/assets/check-missing",
+					async ({ request }) => {
+						const body = (await request.json()) as {
+							hashes: string[];
+						};
+
+						expect(request.headers.get("Authorization")).toBe(
+							"Bearer <<funfetti-auth-jwt>>"
+						);
+						expect(body).toMatchObject({
+							hashes: ["13a03eaf24ae98378acd36ea00f77f2f"],
+						});
+
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: body.hashes,
+							},
+							{ status: 200 }
+						);
+					},
+					{ once: true }
+				),
+				http.post(
+					"*/pages/assets/upload",
+					async ({ request }) => {
+						expect(request.headers.get("Authorization")).toBe(
+							"Bearer <<funfetti-auth-jwt>>"
+						);
+
+						expect(await request.json()).toMatchObject([
+							{
+								key: "13a03eaf24ae98378acd36ea00f77f2f",
+								value: Buffer.from("This is a readme").toString("base64"),
+								metadata: {
+									contentType: "text/markdown",
+								},
+								base64: true,
+							},
+						]);
+
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: null,
+							},
+							{ status: 200 }
+						);
+					},
+					{ once: true }
+				),
+				http.get(
+					"*/accounts/:accountId/pages/projects/foo",
+					async ({ params }) => {
+						getProjectRequestCount++;
+						expect(params.accountId).toEqual("some-account-id");
+
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: {
+									deployment_configs: { production: {}, preview: {} },
+								},
+							},
+							{ status: 200 }
+						);
+					}
+				)
+			);
+
+			await expect(runWrangler("pages deploy public --project-name=foo"))
+				.rejects
+				.toThrow(`Invalid _routes.json file found at: public/_routes.json
+Please make sure the JSON object has the following format:
+{
+	version: ${ROUTES_SPEC_VERSION};
+	include: string[];
+	exclude: string[];
+}
+and that at least one include rule is provided.
+		`);
+			expect(getProjectRequestCount).toEqual(2);
+		});
+
+		it("should fail with the appropriate error message, if the deployment of the project failed", async () => {
+			// set up the directory of static files to upload.
+			mkdirSync("public");
+			writeFileSync("public/README.md", "This is a readme");
+
+			// set up /functions
+			mkdirSync("functions");
+			writeFileSync(
+				"functions/hello.js",
+				`
+			const a = true;
+			a();
+
+			export async function onRequest() {
+				return new Response("Hello, world!");
+			}
+			`
+			);
+
+			mockGetUploadTokenRequest(
+				"<<funfetti-auth-jwt>>",
+				"some-account-id",
+				"foo"
+			);
+
+			msw.use(
+				http.post(
+					"*/pages/assets/check-missing",
+					async ({ request }) => {
+						const body = (await request.json()) as {
+							hashes: string[];
+						};
+
+						expect(request.headers.get("Authorization")).toBe(
+							"Bearer <<funfetti-auth-jwt>>"
+						);
+						expect(body).toMatchObject({
+							hashes: ["13a03eaf24ae98378acd36ea00f77f2f"],
+						});
+
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: body.hashes,
+							},
+							{ status: 200 }
+						);
+					},
+					{ once: true }
+				),
+				http.post(
+					"*/pages/assets/upload",
+					async ({ request }) => {
+						expect(request.headers.get("Authorization")).toBe(
+							"Bearer <<funfetti-auth-jwt>>"
+						);
+
+						expect(await request.json()).toMatchObject([
+							{
+								key: "13a03eaf24ae98378acd36ea00f77f2f",
+								value: Buffer.from("This is a readme").toString("base64"),
+								metadata: {
+									contentType: "text/markdown",
+								},
+								base64: true,
+							},
+						]);
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: true,
+							},
+							{ status: 200 }
+						);
+					},
+					{ once: true }
+				),
+				http.post(
+					`*/pages/assets/upsert-hashes`,
+					async ({ request }) => {
+						expect(request.headers.get("Authorization")).toBe(
+							"Bearer <<funfetti-auth-jwt>>"
+						);
+
+						expect(await request.json()).toMatchObject({
+							hashes: ["13a03eaf24ae98378acd36ea00f77f2f"],
+						});
+
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: true,
+							},
+							{ status: 200 }
+						);
+					},
+					{ once: true }
+				),
+				http.post(
+					"*/accounts/:accountId/pages/projects/foo/deployments",
+					async ({ request, params }) => {
+						expect(params.accountId).toEqual("some-account-id");
+						const body = await request.formData();
+						const manifest = JSON.parse(await toString(body.get("manifest")));
+
+						// make sure this is all we uploaded
+						expect([...body.keys()]).toEqual([
+							"manifest",
+							"functions-filepath-routing-config.json",
+							"_worker.bundle",
+							"_routes.json",
+						]);
+
+						expect(manifest).toMatchInlineSnapshot(`
+				Object {
+				  "/README.md": "13a03eaf24ae98378acd36ea00f77f2f",
+				}
+			`);
+
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: {
+									id: "123-456-789",
+									url: "https://abcxyz.foo.pages.dev/",
+								},
+							},
+							{ status: 200 }
+						);
+					},
+					{ once: true }
+				),
+				http.get(
+					"*/accounts/:accountId/pages/projects/foo/deployments/:deploymentId",
+					async ({ params }) => {
+						expect(params.accountId).toEqual("some-account-id");
+						expect(params.deploymentId).toEqual("123-456-789");
+
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: {
+									latest_stage: {
+										name: "deploy",
+										status: "failure",
+									},
+								},
+							},
+							{ status: 200 }
+						);
+					},
+					{ once: true }
+				),
+				http.get(
+					"*/accounts/:accountId/pages/projects/foo/deployments/:deploymentId/history/logs?size=10000000",
+					async ({ params }) => {
+						expect(params.accountId).toEqual("some-account-id");
+						expect(params.deploymentId).toEqual("123-456-789");
+
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: {
+									total: 1,
+									data: [
+										{
+											line: "Error: Failed to publish your Function. Got error: Uncaught TypeError: a is not a function\n  at functionsWorker-0.11031665179307093.js:41:1\n",
+											ts: "2024-05-13T12:12:45.606855Z",
+										},
+									],
+								},
+							},
+							{ status: 200 }
+						);
+					},
+					{ once: true }
+				),
+				http.get(
+					"*/accounts/:accountId/pages/projects/foo",
+					async ({ params }) => {
+						expect(params.accountId).toEqual("some-account-id");
+
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: {
+									deployment_configs: { production: {}, preview: {} },
+								},
+							},
+							{ status: 200 }
+						);
+					}
+				)
+			);
+
+			await expect(runWrangler("pages deploy public --project-name=foo"))
+				.rejects.toThrow(`Deployment failed!
+Failed to publish your Function. Got error: Uncaught TypeError: a is not a function
+  at functionsWorker-0.11031665179307093.js:41:1`);
+		});
+	});
+
+	describe("in Advanced Mode [_worker,js]", () => {
+		it("should upload an Advanced Mode project", async () => {
+			// set up the directory of static files to upload.
+			mkdirSync("public");
+			writeFileSync("public/README.md", "This is a readme");
+
+			// set up _worker.js
+			writeFileSync(
+				"public/_worker.js",
+				`
+				export default {
+					async fetch(request, env) {
+						const url = new URL(request.url);
+						console.log("SOMETHING FROM WITHIN THE WORKER");
+						return url.pathname.startsWith('/api/') ? new Response('Ok') : env.ASSETS.fetch(request);
+					}
+				};
+			`
+			);
+
+			mockGetUploadTokenRequest(
+				"<<funfetti-auth-jwt>>",
+				"some-account-id",
+				"foo"
+			);
+
+			let getProjectRequestCount = 0;
+			msw.use(
+				http.post(
+					"*/pages/assets/check-missing",
+					async ({ request }) => {
+						const body = (await request.json()) as {
+							hashes: string[];
+						};
+
+						expect(request.headers.get("Authorization")).toBe(
+							"Bearer <<funfetti-auth-jwt>>"
+						);
+						expect(body).toMatchObject({
+							hashes: ["13a03eaf24ae98378acd36ea00f77f2f"],
+						});
+
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: body.hashes,
+							},
+							{ status: 200 }
+						);
+					},
+					{ once: true }
+				),
+				http.post(
+					"*/pages/assets/upload",
+					async ({ request }) => {
+						expect(request.headers.get("Authorization")).toBe(
+							"Bearer <<funfetti-auth-jwt>>"
+						);
+
+						expect(await request.json()).toMatchObject([
+							{
+								key: "13a03eaf24ae98378acd36ea00f77f2f",
+								value: Buffer.from("This is a readme").toString("base64"),
+								metadata: {
+									contentType: "text/markdown",
+								},
+								base64: true,
+							},
+						]);
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: true,
+							},
+							{ status: 200 }
+						);
+					},
+					{ once: true }
+				),
+				http.post(
+					"*/accounts/:accountId/pages/projects/foo/deployments",
+					async ({ request, params }) => {
+						expect(params.accountId).toEqual("some-account-id");
+						const body = await request.formData();
+						const manifest = JSON.parse(await toString(body.get("manifest")));
+						const workerBundle = body.get("_worker.bundle");
+
+						// make sure this is all we uploaded
+						expect([...body.keys()].sort()).toEqual(
+							["manifest", "_worker.bundle"].sort()
+						);
+
+						expect(manifest).toMatchInlineSnapshot(`
+				Object {
+				  "/README.md": "13a03eaf24ae98378acd36ea00f77f2f",
+				}
+			`);
+
+						await expect(workerHasD1Shim(workerBundle)).resolves.toBeFalsy();
+						expect(await toString(workerBundle)).toContain(
+							`console.log("SOMETHING FROM WITHIN THE WORKER");`
+						);
+
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: {
+									id: "123-456-789",
+									url: "https://abcxyz.foo.pages.dev/",
+								},
+							},
+							{ status: 200 }
+						);
+					},
+					{ once: true }
+				),
+				http.get(
+					"*/accounts/:accountId/pages/projects/foo/deployments/:deploymentId",
+					async ({ params }) => {
+						expect(params.accountId).toEqual("some-account-id");
+						expect(params.deploymentId).toEqual("123-456-789");
+
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: {
+									latest_stage: {
+										name: "deploy",
+										status: "success",
+									},
+								},
+							},
+							{ status: 200 }
+						);
+					},
+					{ once: true }
+				),
+				http.get(
+					"*/accounts/:accountId/pages/projects/foo",
+					async ({ params }) => {
+						getProjectRequestCount++;
+
+						expect(params.accountId).toEqual("some-account-id");
+
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: {
+									deployment_configs: {
+										production: {
+											d1_databases: { MY_D1_DB: { id: "fake-db" } },
+										},
+										preview: {
+											d1_databases: { MY_D1_DB: { id: "fake-db" } },
+										},
+									},
+								} as Partial<Project>,
+							},
+							{ status: 200 }
+						);
+					}
+				)
+			);
+
+			await runWrangler("pages deploy public --project-name=foo");
+
+			expect(getProjectRequestCount).toEqual(2);
+			expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
+			"✨ Success! Uploaded 1 files (TIMINGS)
+
+			✨ Compiled Worker successfully
+			✨ Uploading Worker bundle
+			🌎 Deploying...
+			✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
+		`);
+
+			expect(std.err).toMatchInlineSnapshot('""');
+		});
+
+		it("should bundle _worker.js and resolve its external module imports", async () => {
+			// set up the directory of static files to upload
+			mkdirSync("public");
+			writeFileSync("public/README.md", "This is a readme");
+
+			// set up hello.wasm
+			mkdirSync("external");
+			writeFileSync("external/hello.wasm", "Hello wasm modules");
+			writeFileSync(
+				"external/hello.html",
+				"<html><body>Hello text modules</body></html>"
+			);
+
+			// set up _worker.js
+			writeFileSync(
+				"public/_worker.js",
+				`
+				import wasm from "./../external/hello.wasm";
+				import html from "./../external/hello.html";
+				export default {
+					async fetch(request, env) {
+						const url = new URL(request.url);
+						const helloModule = await WebAssembly.instantiate(wasm);
+						const wasmGreeting = helloModule.exports.hello;
+						if(url.pathname.startsWith('/hello-wasm')) {
+							return new Response(wasmGreeting);
+						}
+						if(url.pathname.startsWith('/hello-text')) {
+							return new Response(html);
+						}
+						return env.ASSETS.fetch(request);
+					}
+				};
+			`
+			);
+
+			mockGetUploadTokenRequest(
+				"<<funfetti-auth-jwt>>",
+				"some-account-id",
+				"foo"
+			);
+
+			let getProjectRequestCount = 0;
+			msw.use(
+				// /pages/assets/check-missing
+				http.post(
+					"*/pages/assets/check-missing",
+					async ({ request }) => {
+						const body = (await request.json()) as {
+							hashes: string[];
+						};
+
+						expect(request.headers.get("Authorization")).toBe(
+							"Bearer <<funfetti-auth-jwt>>"
+						);
+						expect(body).toMatchObject({
+							hashes: ["13a03eaf24ae98378acd36ea00f77f2f"],
+						});
+
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: body.hashes,
+							},
+							{ status: 200 }
+						);
+					},
+					{ once: true }
+				),
+
+				// /pages/assets/upload
+				http.post(
+					"*/pages/assets/upload",
+					async ({ request }) => {
+						expect(request.headers.get("Authorization")).toBe(
+							"Bearer <<funfetti-auth-jwt>>"
+						);
+
+						expect(await request.json()).toMatchObject([
+							{
+								key: "13a03eaf24ae98378acd36ea00f77f2f",
+								value: Buffer.from("This is a readme").toString("base64"),
+								metadata: {
+									contentType: "text/markdown",
+								},
+								base64: true,
+							},
+						]);
+
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: null,
+							},
+							{ status: 200 }
+						);
+					},
+					{ once: true }
+				),
+
+				http.post(
+					"*/accounts/:accountId/pages/projects/foo/deployments",
+					async ({ request, params }) => {
+						const body = await request.formData();
+						const manifest = JSON.parse(await toString(body.get("manifest")));
+						const workerBundle = body.get("_worker.bundle");
+
+						expect(params.accountId).toEqual("some-account-id");
+						// make sure this is all we uploaded
+						expect([...body.keys()].sort()).toEqual(
+							["manifest", "_worker.bundle"].sort()
+						);
+						expect(manifest).toMatchInlineSnapshot(`
+				Object {
+				  "/README.md": "13a03eaf24ae98378acd36ea00f77f2f",
+				}
+			`);
+						// some fields in workerBundle, such as the undici form boundary
+						// or the file hashes, are randomly generated. Let's replace these
+						// dynamic values with static ones so we can properly test the
+						// contents of `workerBundle`
+						// see https://jestjs.io/docs/snapshot-testing#property-matchers
+						let workerBundleWithConstantData = (
+							await toString(workerBundle)
+						).replace(
+							/------formdata-undici-0.[0-9]*/g,
+							"------formdata-undici-0.test"
+						);
+						workerBundleWithConstantData = workerBundleWithConstantData.replace(
+							/bundledWorker-0.[0-9]*.mjs/g,
+							"bundledWorker-0.test.mjs"
+						);
+						workerBundleWithConstantData = workerBundleWithConstantData.replace(
+							/[0-9a-z]*-hello.wasm/g,
+							"test-hello.wasm"
+						);
+						workerBundleWithConstantData = workerBundleWithConstantData.replace(
+							/[0-9a-z]*-hello.html/g,
+							"test-hello.html"
+						);
+
+						// we care about a couple of things here, like the presence of `metadata`,
+						// `bundledWorker`, the wasm import, etc., and since `workerBundle` is
+						// small enough, let's go ahead and snapshot test the whole thing
+						expect(workerBundleWithConstantData).toMatchInlineSnapshot(`
+							"------formdata-undici-0.test
+							Content-Disposition: form-data; name=\\"metadata\\"
+
+							{\\"main_module\\":\\"bundledWorker-0.test.mjs\\"}
+							------formdata-undici-0.test
+							Content-Disposition: form-data; name=\\"bundledWorker-0.test.mjs\\"; filename=\\"bundledWorker-0.test.mjs\\"
+							Content-Type: application/javascript+module
+
+							// _worker.js
+							import wasm from \\"./test-hello.wasm\\";
+							import html from \\"./test-hello.html\\";
+							var worker_default = {
+							  async fetch(request, env) {
+							    const url = new URL(request.url);
+							    const helloModule = await WebAssembly.instantiate(wasm);
+							    const wasmGreeting = helloModule.exports.hello;
+							    if (url.pathname.startsWith(\\"/hello-wasm\\")) {
+							      return new Response(wasmGreeting);
+							    }
+							    if (url.pathname.startsWith(\\"/hello-text\\")) {
+							      return new Response(html);
+							    }
+							    return env.ASSETS.fetch(request);
+							  }
+							};
+							export {
+							  worker_default as default
+							};
+							//# sourceMappingURL=bundledWorker-0.test.mjs.map
+
+							------formdata-undici-0.test
+							Content-Disposition: form-data; name=\\"./test-hello.wasm\\"; filename=\\"./test-hello.wasm\\"
+							Content-Type: application/wasm
+
+							Hello wasm modules
+							------formdata-undici-0.test
+							Content-Disposition: form-data; name=\\"./test-hello.html\\"; filename=\\"./test-hello.html\\"
+							Content-Type: text/plain
+
+							<html><body>Hello text modules</body></html>
+							------formdata-undici-0.test--"
+						`);
+
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: {
+									id: "123-456-789",
+									url: "https://abcxyz.foo.pages.dev/",
+								},
+							},
+							{ status: 200 }
+						);
+					},
+					{ once: true }
+				),
+				http.get(
+					"*/accounts/:accountId/pages/projects/foo/deployments/:deploymentId",
+					async ({ params }) => {
+						expect(params.accountId).toEqual("some-account-id");
+						expect(params.deploymentId).toEqual("123-456-789");
+
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: {
+									latest_stage: {
+										name: "deploy",
+										status: "success",
+									},
+								},
+							},
+							{ status: 200 }
+						);
+					},
+					{ once: true }
+				),
+
+				// /accounts/:accountId/pages/projects/<project-name>
+				http.get(
+					"*/accounts/:accountId/pages/projects/foo",
+					async ({ params }) => {
+						getProjectRequestCount++;
+
+						expect(params.accountId).toEqual("some-account-id");
+
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: {
+									deployment_configs: { production: {}, preview: {} },
+								},
+							},
+							{ status: 200 }
+						);
+					}
+				)
+			);
+
+			await runWrangler("pages deploy public --project-name=foo");
+
+			expect(getProjectRequestCount).toEqual(2);
+			expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
+			"✨ Success! Uploaded 1 files (TIMINGS)
+
+			✨ Compiled Worker successfully
+			✨ Uploading Worker bundle
+			🌎 Deploying...
+			✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
+		`);
+
+			// make sure there were no errors
+			expect(std.err).toMatchInlineSnapshot('""');
+		});
+
+		it("should upload _routes.json for Advanced Mode projects, if provided", async () => {
+			// set up the directory of static files to upload.
+			mkdirSync("public");
+			writeFileSync("public/README.md", "This is a readme");
+
+			// set up _routes.json
+			writeFileSync(
+				"public/_routes.json",
+				`
+				{
+					"version": ${ROUTES_SPEC_VERSION},
+					"description": "Custom _routes.json file",
+					"include": ["/api/*"],
+					"exclude": []
+				}
+				`
+			);
+
+			// set up _worker.js
+			writeFileSync(
+				"public/_worker.js",
+				`
+				export default {
+					async fetch(request, env) {
+						const url = new URL(request.url);
+						return url.pathname.startsWith('/api/') ? new Response('Ok') : env.ASSETS.fetch(request);
+					}
+				};
+			`
+			);
+
+			mockGetUploadTokenRequest(
+				"<<funfetti-auth-jwt>>",
+				"some-account-id",
+				"foo"
+			);
+
+			let getProjectRequestCount = 0;
+			msw.use(
+				http.post(
+					"*/pages/assets/check-missing",
+					async ({ request }) => {
+						const body = (await request.json()) as {
+							hashes: string[];
+						};
+
+						expect(request.headers.get("Authorization")).toBe(
+							"Bearer <<funfetti-auth-jwt>>"
+						);
+						expect(body).toMatchObject({
+							hashes: ["13a03eaf24ae98378acd36ea00f77f2f"],
+						});
+
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: body.hashes,
+							},
+							{ status: 200 }
+						);
+					},
+					{ once: true }
+				),
+				http.post(
+					"*/pages/assets/upload",
+					async ({ request }) => {
+						expect(request.headers.get("Authorization")).toBe(
+							"Bearer <<funfetti-auth-jwt>>"
+						);
+
+						expect(await request.json()).toMatchObject([
+							{
+								key: "13a03eaf24ae98378acd36ea00f77f2f",
+								value: Buffer.from("This is a readme").toString("base64"),
+								metadata: {
+									contentType: "text/markdown",
+								},
+								base64: true,
+							},
+						]);
+
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: null,
+							},
+							{ status: 200 }
+						);
+					},
+					{ once: true }
+				),
+				http.post(
+					`*/pages/assets/upsert-hashes`,
+					async ({ request }) => {
+						expect(request.headers.get("Authorization")).toBe(
+							"Bearer <<funfetti-auth-jwt>>"
+						);
+
+						expect(await request.json()).toMatchObject({
+							hashes: ["13a03eaf24ae98378acd36ea00f77f2f"],
+						});
+
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: true,
+							},
+							{ status: 200 }
+						);
+					},
+					{ once: true }
+				),
+				http.post(
+					"*/accounts/:accountId/pages/projects/foo/deployments",
+					async ({ request, params }) => {
+						const body = await request.formData();
+
+						const manifest = JSON.parse(await toString(body.get("manifest")));
+						const workerBundle = body.get("_worker.bundle");
+						const customRoutesJSON = await toString(body.get("_routes.json"));
+
+						// make sure this is all we uploaded
+						expect([...body.keys()]).toEqual([
+							"manifest",
+							"_worker.bundle",
+							"_routes.json",
+						]);
+						expect(params.accountId).toEqual("some-account-id");
+						expect(manifest).toMatchInlineSnapshot(`
+				Object {
+				  "/README.md": "13a03eaf24ae98378acd36ea00f77f2f",
+				}
+			`);
+
+						// some fields in workerBundle, such as the undici form boundary
+						// or the file hashes, are randomly generated. Let's replace these
+						// dynamic values with static ones so we can properly test the
+						// contents of `workerBundle`
+						// see https://jestjs.io/docs/snapshot-testing#property-matchers
+						let workerBundleWithConstantData = (
+							await toString(workerBundle)
+						).replace(
+							/------formdata-undici-0.[0-9]*/g,
+							"------formdata-undici-0.test"
+						);
+						workerBundleWithConstantData = workerBundleWithConstantData.replace(
+							/bundledWorker-0.[0-9]*.mjs/g,
+							"bundledWorker-0.test.mjs"
+						);
+
+						// we care about a couple of things here, like the presence of `metadata`,
+						// `bundledWorker`, the wasm import, etc., and since `workerBundle` is
+						// small enough, let's go ahead and snapshot test the whole thing
+						expect(workerBundleWithConstantData).toMatchInlineSnapshot(`
 				"------formdata-undici-0.test
 				Content-Disposition: form-data; name=\\"metadata\\"
 
@@ -2766,20 +3491,10 @@ async function onRequest() {
 				Content-Type: application/javascript+module
 
 				// _worker.js
-				import wasm from \\"./test-hello.wasm\\";
-				import html from \\"./test-hello.html\\";
 				var worker_default = {
 				  async fetch(request, env) {
 				    const url = new URL(request.url);
-				    const helloModule = await WebAssembly.instantiate(wasm);
-				    const wasmGreeting = helloModule.exports.hello;
-				    if (url.pathname.startsWith(\\"/hello-wasm\\")) {
-				      return new Response(wasmGreeting);
-				    }
-				    if (url.pathname.startsWith(\\"/hello-text\\")) {
-				      return new Response(html);
-				    }
-				    return env.ASSETS.fetch(request);
+				    return url.pathname.startsWith(\\"/api/\\") ? new Response(\\"Ok\\") : env.ASSETS.fetch(request);
 				  }
 				};
 				export {
@@ -2787,67 +3502,1593 @@ async function onRequest() {
 				};
 				//# sourceMappingURL=bundledWorker-0.test.mjs.map
 
-				------formdata-undici-0.test
-				Content-Disposition: form-data; name=\\"./test-hello.wasm\\"; filename=\\"./test-hello.wasm\\"
-				Content-Type: application/wasm
-
-				Hello wasm modules
-				------formdata-undici-0.test
-				Content-Disposition: form-data; name=\\"./test-hello.html\\"; filename=\\"./test-hello.html\\"
-				Content-Type: text/plain
-
-				<html><body>Hello text modules</body></html>
 				------formdata-undici-0.test--"
 			`);
 
-					return res.once(
-						ctx.status(200),
-						ctx.json({
-							success: true,
-							errors: [],
-							messages: [],
-							result: {
-								url: "https://abcxyz.foo.pages.dev/",
-							},
-						})
-					);
-				}
-			),
+						expect(JSON.parse(customRoutesJSON)).toMatchObject({
+							version: ROUTES_SPEC_VERSION,
+							description: "Custom _routes.json file",
+							include: ["/api/*"],
+							exclude: [],
+						});
 
-			// /accounts/:accountId/pages/projects/<project-name>
-			rest.get(
-				"*/accounts/:accountId/pages/projects/foo",
-				async (req, res, ctx) => {
-					expect(req.params.accountId).toEqual("some-account-id");
-
-					return res.once(
-						ctx.status(200),
-						ctx.json({
-							success: true,
-							errors: [],
-							messages: [],
-							result: {
-								deployment_configs: { production: {}, preview: {} },
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: {
+									id: "123-456-789",
+									url: "https://abcxyz.foo.pages.dev/",
+								},
 							},
-						})
-					);
+							{ status: 200 }
+						);
+					},
+					{ once: true }
+				),
+				http.get(
+					"*/accounts/:accountId/pages/projects/foo/deployments/:deploymentId",
+					async ({ params }) => {
+						expect(params.accountId).toEqual("some-account-id");
+						expect(params.deploymentId).toEqual("123-456-789");
+
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: {
+									latest_stage: {
+										name: "deploy",
+										status: "success",
+									},
+								},
+							},
+							{ status: 200 }
+						);
+					},
+					{ once: true }
+				),
+				http.get(
+					"*/accounts/:accountId/pages/projects/foo",
+					async ({ params }) => {
+						getProjectRequestCount++;
+
+						expect(params.accountId).toEqual("some-account-id");
+
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: {
+									deployment_configs: { production: {}, preview: {} },
+								},
+							},
+							{ status: 200 }
+						);
+					}
+				)
+			);
+
+			await runWrangler("pages deploy public --project-name=foo");
+
+			expect(getProjectRequestCount).toEqual(2);
+			expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
+			"✨ Success! Uploaded 1 files (TIMINGS)
+
+			✨ Compiled Worker successfully
+			✨ Uploading Worker bundle
+			✨ Uploading _routes.json
+			🌎 Deploying...
+			✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
+		`);
+
+			expect(std.warn).toMatchInlineSnapshot(`""`);
+			expect(std.err).toMatchInlineSnapshot(`""`);
+		});
+
+		it("should not deploy Advanced Mode projects that provide an invalid _routes.json file", async () => {
+			// set up the directory of static files to upload.
+			mkdirSync("public");
+			writeFileSync("public/README.md", "This is a readme");
+
+			// set up _routes.json
+			writeFileSync(
+				"public/_routes.json",
+				`
+				{
+					"description": "Custom _routes.json file",
+					"include": [],
+					"exclude": []
 				}
-			)
+				`
+			);
+
+			// set up _worker.js
+			writeFileSync(
+				"public/_worker.js",
+				`
+				export default {
+					async fetch(request, env) {
+						const url = new URL(request.url);
+						return url.pathname.startsWith('/api/') ? new Response('Ok') : env.ASSETS.fetch(request);
+					}
+				};
+			`
+			);
+
+			mockGetUploadTokenRequest(
+				"<<funfetti-auth-jwt>>",
+				"some-account-id",
+				"foo"
+			);
+
+			let getProjectRequestCount = 0;
+			msw.use(
+				http.post(
+					"*/pages/assets/check-missing",
+					async ({ request }) => {
+						const body = (await request.json()) as {
+							hashes: string[];
+						};
+
+						expect(request.headers.get("Authorization")).toBe(
+							"Bearer <<funfetti-auth-jwt>>"
+						);
+						expect(body).toMatchObject({
+							hashes: ["13a03eaf24ae98378acd36ea00f77f2f"],
+						});
+
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: body.hashes,
+							},
+							{ status: 200 }
+						);
+					},
+					{ once: true }
+				),
+				http.post(
+					"*/pages/assets/upload",
+					async ({ request }) => {
+						expect(request.headers.get("Authorization")).toBe(
+							"Bearer <<funfetti-auth-jwt>>"
+						);
+
+						expect(await request.json()).toMatchObject([
+							{
+								key: "13a03eaf24ae98378acd36ea00f77f2f",
+								value: Buffer.from("This is a readme").toString("base64"),
+								metadata: {
+									contentType: "text/markdown",
+								},
+								base64: true,
+							},
+						]);
+
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: null,
+							},
+							{ status: 200 }
+						);
+					},
+					{ once: true }
+				),
+
+				http.get(
+					"*/accounts/:accountId/pages/projects/foo",
+					async ({ params }) => {
+						getProjectRequestCount++;
+
+						expect(params.accountId).toEqual("some-account-id");
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: {
+									deployment_configs: { production: {}, preview: {} },
+								},
+							},
+							{ status: 200 }
+						);
+					}
+				)
+			);
+
+			await expect(runWrangler("pages deploy public --project-name=foo"))
+				.rejects
+				.toThrow(`Invalid _routes.json file found at: public/_routes.json
+Please make sure the JSON object has the following format:
+{
+	version: 1;
+	include: string[];
+	exclude: string[];
+}
+and that at least one include rule is provided.
+		`);
+			expect(getProjectRequestCount).toEqual(2);
+		});
+
+		it("should ignore the entire /functions directory if _worker.js is provided", async () => {
+			// set up the directory of static files to upload.
+			mkdirSync("public");
+			writeFileSync("public/README.md", "This is a readme");
+
+			// set up /functions
+			mkdirSync("functions");
+			writeFileSync(
+				"functions/hello.js",
+				`
+				export async function onRequest() {
+					return new Response("Hello, world!");
+				}
+				`
+			);
+
+			// set up _worker.js
+			writeFileSync(
+				"public/_worker.js",
+				`
+				export default {
+					async fetch(request, env) {
+						const url = new URL(request.url);
+						return url.pathname.startsWith('/api/') ? new Response('Ok') : env.ASSETS.fetch(request);
+					}
+				};
+			`
+			);
+
+			mockGetUploadTokenRequest(
+				"<<funfetti-auth-jwt>>",
+				"some-account-id",
+				"foo"
+			);
+
+			let getProjectRequestCount = 0;
+			msw.use(
+				http.post(
+					"*/pages/assets/check-missing",
+					async ({ request }) => {
+						const body = (await request.json()) as {
+							hashes: string[];
+						};
+
+						expect(request.headers.get("Authorization")).toBe(
+							"Bearer <<funfetti-auth-jwt>>"
+						);
+						expect(body).toMatchObject({
+							hashes: ["13a03eaf24ae98378acd36ea00f77f2f"],
+						});
+
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: body.hashes,
+							},
+							{ status: 200 }
+						);
+					},
+					{ once: true }
+				),
+				http.post(
+					"*/pages/assets/upload",
+					async ({ request }) => {
+						expect(request.headers.get("Authorization")).toBe(
+							"Bearer <<funfetti-auth-jwt>>"
+						);
+
+						expect(await request.json()).toMatchObject([
+							{
+								key: "13a03eaf24ae98378acd36ea00f77f2f",
+								value: Buffer.from("This is a readme").toString("base64"),
+								metadata: {
+									contentType: "text/markdown",
+								},
+								base64: true,
+							},
+						]);
+
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: null,
+							},
+							{ status: 200 }
+						);
+					},
+					{ once: true }
+				),
+
+				http.post(
+					"*/accounts/:accountId/pages/projects/foo/deployments",
+					async ({ request, params }) => {
+						const body = await request.formData();
+						const manifest = JSON.parse(await toString(body.get("manifest")));
+						const customWorkerBundle = body.get("_worker.bundle");
+
+						expect(params.accountId).toEqual("some-account-id");
+						// make sure this is all we uploaded
+						expect([...body.keys()].sort()).toEqual(
+							["manifest", "_worker.bundle"].sort()
+						);
+						expect(manifest).toMatchInlineSnapshot(`
+				Object {
+				  "/README.md": "13a03eaf24ae98378acd36ea00f77f2f",
+				}
+			`);
+
+						// some fields in workerBundle, such as the undici form boundary
+						// or the file hashes, are randomly generated. Let's replace these
+						// dynamic values with static ones so we can properly test the
+						// contents of `workerBundle`
+						// see https://jestjs.io/docs/snapshot-testing#property-matchers
+						let workerBundleWithConstantData = (
+							await toString(customWorkerBundle)
+						).replace(
+							/------formdata-undici-0.[0-9]*/g,
+							"------formdata-undici-0.test"
+						);
+						workerBundleWithConstantData = workerBundleWithConstantData.replace(
+							/bundledWorker-0.[0-9]*.mjs/g,
+							"bundledWorker-0.test.mjs"
+						);
+
+						// we care about a couple of things here, like the presence of `metadata`,
+						// `bundledWorker`, the wasm import, etc., and since `workerBundle` is
+						// small enough, let's go ahead and snapshot test the whole thing
+						expect(workerBundleWithConstantData).toMatchInlineSnapshot(`
+				"------formdata-undici-0.test
+				Content-Disposition: form-data; name=\\"metadata\\"
+
+				{\\"main_module\\":\\"bundledWorker-0.test.mjs\\"}
+				------formdata-undici-0.test
+				Content-Disposition: form-data; name=\\"bundledWorker-0.test.mjs\\"; filename=\\"bundledWorker-0.test.mjs\\"
+				Content-Type: application/javascript+module
+
+				// _worker.js
+				var worker_default = {
+				  async fetch(request, env) {
+				    const url = new URL(request.url);
+				    return url.pathname.startsWith(\\"/api/\\") ? new Response(\\"Ok\\") : env.ASSETS.fetch(request);
+				  }
+				};
+				export {
+				  worker_default as default
+				};
+				//# sourceMappingURL=bundledWorker-0.test.mjs.map
+
+				------formdata-undici-0.test--"
+			`);
+
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: {
+									id: "123-456-789",
+									url: "https://abcxyz.foo.pages.dev/",
+								},
+							},
+							{ status: 200 }
+						);
+					},
+					{ once: true }
+				),
+				http.get(
+					"*/accounts/:accountId/pages/projects/foo/deployments/:deploymentId",
+					async ({ params }) => {
+						expect(params.accountId).toEqual("some-account-id");
+						expect(params.deploymentId).toEqual("123-456-789");
+
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: {
+									latest_stage: {
+										name: "deploy",
+										status: "success",
+									},
+								},
+							},
+							{ status: 200 }
+						);
+					},
+					{ once: true }
+				),
+				http.get(
+					"*/accounts/:accountId/pages/projects/foo",
+					async ({ params }) => {
+						getProjectRequestCount++;
+						expect(params.accountId).toEqual("some-account-id");
+
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: {
+									deployment_configs: { production: {}, preview: {} },
+								},
+							},
+							{ status: 200 }
+						);
+					}
+				)
+			);
+
+			await runWrangler("pages deploy public --project-name=foo");
+
+			expect(getProjectRequestCount).toEqual(2);
+			expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
+			"✨ Success! Uploaded 1 files (TIMINGS)
+
+			✨ Compiled Worker successfully
+			✨ Uploading Worker bundle
+			🌎 Deploying...
+			✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
+		`);
+
+			expect(std.err).toMatchInlineSnapshot('""');
+		});
+
+		it("should error with --no-bundle and a single _worker.js file", async () => {
+			// set up the directory of static files to upload.
+			mkdirSync("public");
+			writeFileSync("public/README.md", "This is a readme");
+
+			// set up _worker.js
+			writeFileSync(
+				"public/_worker.js",
+				`
+				import { thing } from "some-module";
+
+				export default {
+					async fetch(request, env) {
+						console.log(thing);
+						const url = new URL(request.url);
+						return url.pathname.startsWith('/api/') ? new Response('Ok') : env.ASSETS.fetch(request);
+					}
+				};
+			`
+			);
+
+			mockGetUploadTokenRequest(
+				"<<funfetti-auth-jwt>>",
+				"some-account-id",
+				"foo"
+			);
+
+			msw.use(
+				http.post(
+					"*/pages/assets/check-missing",
+					async ({ request }) => {
+						const body = (await request.json()) as {
+							hashes: string[];
+						};
+
+						expect(request.headers.get("Authorization")).toBe(
+							"Bearer <<funfetti-auth-jwt>>"
+						);
+						expect(body).toMatchObject({
+							hashes: ["13a03eaf24ae98378acd36ea00f77f2f"],
+						});
+
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: body.hashes,
+							},
+							{ status: 200 }
+						);
+					},
+					{ once: true }
+				),
+				http.post(
+					"*/pages/assets/upload",
+					async ({ request }) => {
+						expect(request.headers.get("Authorization")).toBe(
+							"Bearer <<funfetti-auth-jwt>>"
+						);
+
+						expect(await request.json()).toMatchObject([
+							{
+								key: "13a03eaf24ae98378acd36ea00f77f2f",
+								value: Buffer.from("This is a readme").toString("base64"),
+								metadata: {
+									contentType: "text/markdown",
+								},
+								base64: true,
+							},
+						]);
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: true,
+							},
+							{ status: 200 }
+						);
+					},
+					{ once: true }
+				),
+				http.post(
+					"*/accounts/:accountId/pages/projects/foo/deployments",
+					async ({ request, params }) => {
+						expect(params.accountId).toEqual("some-account-id");
+						const body = await request.formData();
+						const manifest = JSON.parse(await toString(body.get("manifest")));
+						const workerBundle = body.get("_worker.bundle");
+
+						// make sure this is all we uploaded
+						expect([...body.keys()].sort()).toEqual(
+							["manifest", "_worker.bundle"].sort()
+						);
+
+						expect(manifest).toMatchInlineSnapshot(`
+																								Object {
+																									"/README.md": "13a03eaf24ae98378acd36ea00f77f2f",
+																								}
+																				`);
+
+						await expect(workerHasD1Shim(workerBundle)).resolves.toBeFalsy();
+						expect(await toString(workerBundle)).toContain(`some-module`);
+
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: {
+									id: "123-456-789",
+									url: "https://abcxyz.foo.pages.dev/",
+								},
+							},
+							{ status: 200 }
+						);
+					},
+					{ once: true }
+				),
+				http.get(
+					"*/accounts/:accountId/pages/projects/foo/deployments/:deploymentId",
+					async ({ params }) => {
+						expect(params.accountId).toEqual("some-account-id");
+						expect(params.deploymentId).toEqual("123-456-789");
+
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: {
+									latest_stage: {
+										name: "deploy",
+										status: "success",
+									},
+								},
+							},
+							{ status: 200 }
+						);
+					},
+					{ once: true }
+				),
+				http.get(
+					"*/accounts/:accountId/pages/projects/foo",
+					async ({ params }) => {
+						expect(params.accountId).toEqual("some-account-id");
+
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: {
+									deployment_configs: {
+										production: {
+											d1_databases: { MY_D1_DB: { id: "fake-db" } },
+										},
+										preview: {
+											d1_databases: { MY_D1_DB: { id: "fake-db" } },
+										},
+									},
+								} as Partial<Project>,
+							},
+							{ status: 200 }
+						);
+					}
+				)
+			);
+
+			let error = "Code did not throw!";
+			try {
+				await runWrangler("pages deploy public --project-name=foo --no-bundle");
+			} catch (e) {
+				error = `${e}`;
+			}
+			expect(error).toContain(
+				"ERROR: [plugin: block-worker-js-imports] _worker.js is not being bundled by Wrangler but it is importing from another file."
+			);
+		});
+
+		it("should not error with --no-bundle and an index.js in a _worker.js/ directory", async () => {
+			// set up the directory of static files to upload.
+			mkdirSync("public");
+			writeFileSync("public/README.md", "This is a readme");
+
+			// set up _worker/index.js
+			mkdirSync("public/_worker.js");
+			writeFileSync(
+				"public/_worker.js/index.js",
+				`
+				import { thing } from "some-module";
+
+				export default {
+					async fetch(request, env) {
+						console.log(thing);
+						const url = new URL(request.url);
+						return url.pathname.startsWith('/api/') ? new Response('Ok') : env.ASSETS.fetch(request);
+					}
+				};
+			`
+			);
+
+			mockGetUploadTokenRequest(
+				"<<funfetti-auth-jwt>>",
+				"some-account-id",
+				"foo"
+			);
+
+			msw.use(
+				http.post(
+					"*/pages/assets/check-missing",
+					async ({ request }) => {
+						const body = (await request.json()) as {
+							hashes: string[];
+						};
+
+						expect(request.headers.get("Authorization")).toBe(
+							"Bearer <<funfetti-auth-jwt>>"
+						);
+						expect(body).toMatchObject({
+							hashes: ["13a03eaf24ae98378acd36ea00f77f2f"],
+						});
+
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: body.hashes,
+							},
+							{ status: 200 }
+						);
+					},
+					{ once: true }
+				),
+				http.post(
+					"*/pages/assets/upload",
+					async ({ request }) => {
+						expect(request.headers.get("Authorization")).toBe(
+							"Bearer <<funfetti-auth-jwt>>"
+						);
+
+						expect(await request.json()).toMatchObject([
+							{
+								key: "13a03eaf24ae98378acd36ea00f77f2f",
+								value: Buffer.from("This is a readme").toString("base64"),
+								metadata: {
+									contentType: "text/markdown",
+								},
+								base64: true,
+							},
+						]);
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: true,
+							},
+							{ status: 200 }
+						);
+					},
+					{ once: true }
+				),
+				http.post(
+					"*/accounts/:accountId/pages/projects/foo/deployments",
+					async ({ request, params }) => {
+						expect(params.accountId).toEqual("some-account-id");
+						const body = await request.formData();
+						const manifest = JSON.parse(await toString(body.get("manifest")));
+						const workerBundle = body.get("_worker.bundle");
+
+						// make sure this is all we uploaded
+						expect([...body.keys()].sort()).toEqual(
+							["manifest", "_worker.bundle"].sort()
+						);
+
+						expect(manifest).toMatchInlineSnapshot(`
+				Object {
+				  "/README.md": "13a03eaf24ae98378acd36ea00f77f2f",
+				}
+			`);
+
+						await expect(workerHasD1Shim(workerBundle)).resolves.toBeFalsy();
+						expect(await toString(workerBundle)).toContain(`some-module`);
+
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: {
+									id: "123-456-789",
+									url: "https://abcxyz.foo.pages.dev/",
+								},
+							},
+							{ status: 200 }
+						);
+					},
+					{ once: true }
+				),
+				http.get(
+					"*/accounts/:accountId/pages/projects/foo/deployments/:deploymentId",
+					async ({ params }) => {
+						expect(params.accountId).toEqual("some-account-id");
+						expect(params.deploymentId).toEqual("123-456-789");
+
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: {
+									latest_stage: {
+										name: "deploy",
+										status: "success",
+									},
+								},
+							},
+							{ status: 200 }
+						);
+					},
+					{ once: true }
+				),
+				http.get(
+					"*/accounts/:accountId/pages/projects/foo",
+					async ({ params }) => {
+						expect(params.accountId).toEqual("some-account-id");
+
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: {
+									deployment_configs: {
+										production: {
+											d1_databases: { MY_D1_DB: { id: "fake-db" } },
+										},
+										preview: {
+											d1_databases: { MY_D1_DB: { id: "fake-db" } },
+										},
+									},
+								} as Partial<Project>,
+							},
+							{ status: 200 }
+						);
+					}
+				)
+			);
+
+			await runWrangler("pages deploy public --project-name=foo --no-bundle");
+
+			expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
+			"✨ Success! Uploaded 1 files (TIMINGS)
+
+			✨ Uploading Worker bundle
+			🌎 Deploying...
+			✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
+		`);
+
+			expect(std.err).toMatchInlineSnapshot('""');
+		});
+
+		it("should fail with the appropriate logs, if the deployment of the project failed", async () => {
+			// set up the directory of static files to upload.
+			mkdirSync("public");
+			writeFileSync("public/README.md", "This is a readme");
+
+			// set up _worker.js
+			writeFileSync(
+				"public/_worker.js",
+				`
+				const a = true;
+				a();
+
+				export default {
+					async fetch(request, env) {
+						const url = new URL(request.url);
+						console.log("SOMETHING FROM WITHIN THE WORKER");
+						return url.pathname.startsWith('/api/') ? new Response('Ok') : env.ASSETS.fetch(request);
+					}
+				};
+			`
+			);
+
+			mockGetUploadTokenRequest(
+				"<<funfetti-auth-jwt>>",
+				"some-account-id",
+				"foo"
+			);
+
+			msw.use(
+				http.post(
+					"*/pages/assets/check-missing",
+					async ({ request }) => {
+						const body = (await request.json()) as {
+							hashes: string[];
+						};
+
+						expect(request.headers.get("Authorization")).toBe(
+							"Bearer <<funfetti-auth-jwt>>"
+						);
+						expect(body).toMatchObject({
+							hashes: ["13a03eaf24ae98378acd36ea00f77f2f"],
+						});
+
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: body.hashes,
+							},
+							{ status: 200 }
+						);
+					},
+					{ once: true }
+				),
+				http.post(
+					"*/pages/assets/upload",
+					async ({ request }) => {
+						expect(request.headers.get("Authorization")).toBe(
+							"Bearer <<funfetti-auth-jwt>>"
+						);
+
+						expect(await request.json()).toMatchObject([
+							{
+								key: "13a03eaf24ae98378acd36ea00f77f2f",
+								value: Buffer.from("This is a readme").toString("base64"),
+								metadata: {
+									contentType: "text/markdown",
+								},
+								base64: true,
+							},
+						]);
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: true,
+							},
+							{ status: 200 }
+						);
+					},
+					{ once: true }
+				),
+				http.post(
+					"*/accounts/:accountId/pages/projects/foo/deployments",
+					async ({ request, params }) => {
+						expect(params.accountId).toEqual("some-account-id");
+						const body = await request.formData();
+						const manifest = JSON.parse(await toString(body.get("manifest")));
+						const workerBundle = body.get("_worker.bundle");
+
+						// make sure this is all we uploaded
+						expect([...body.keys()].sort()).toEqual(
+							["manifest", "_worker.bundle"].sort()
+						);
+
+						expect(manifest).toMatchInlineSnapshot(`
+				Object {
+				  "/README.md": "13a03eaf24ae98378acd36ea00f77f2f",
+				}
+			`);
+
+						await expect(workerHasD1Shim(workerBundle)).resolves.toBeFalsy();
+						expect(await toString(workerBundle)).toContain(
+							`console.log("SOMETHING FROM WITHIN THE WORKER");`
+						);
+
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: {
+									id: "123-456-789",
+									url: "https://abcxyz.foo.pages.dev/",
+								},
+							},
+							{ status: 200 }
+						);
+					},
+					{ once: true }
+				),
+				http.get(
+					"*/accounts/:accountId/pages/projects/foo/deployments/:deploymentId",
+					async ({ params }) => {
+						expect(params.accountId).toEqual("some-account-id");
+						expect(params.deploymentId).toEqual("123-456-789");
+
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: {
+									latest_stage: {
+										name: "deploy",
+										status: "failure",
+									},
+								},
+							},
+							{ status: 200 }
+						);
+					},
+					{ once: true }
+				),
+				http.get(
+					"*/accounts/:accountId/pages/projects/foo/deployments/:deploymentId/history/logs?size=10000000",
+					async ({ params }) => {
+						expect(params.accountId).toEqual("some-account-id");
+						expect(params.deploymentId).toEqual("123-456-789");
+
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: {
+									total: 1,
+									data: [
+										{
+											line: "Error: Failed to publish your Function. Got error: Uncaught TypeError: a is not a function\n  at functionsWorker-0.11031665179307093.js:41:1\n",
+											ts: "2024-05-13T12:12:45.606855Z",
+										},
+									],
+								},
+							},
+							{ status: 200 }
+						);
+					},
+					{ once: true }
+				),
+				http.get(
+					"*/accounts/:accountId/pages/projects/foo",
+					async ({ params }) => {
+						expect(params.accountId).toEqual("some-account-id");
+
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: {
+									deployment_configs: {
+										production: {
+											d1_databases: { MY_D1_DB: { id: "fake-db" } },
+										},
+										preview: {
+											d1_databases: { MY_D1_DB: { id: "fake-db" } },
+										},
+									},
+								} as Partial<Project>,
+							},
+							{ status: 200 }
+						);
+					}
+				)
+			);
+
+			await expect(runWrangler("pages deploy public --project-name=foo"))
+				.rejects.toThrow(`Deployment failed!
+Failed to publish your Function. Got error: Uncaught TypeError: a is not a function
+  at functionsWorker-0.11031665179307093.js:41:1`);
+		});
+	});
+
+	describe("with wrangler.toml configuration", () => {
+		it("should support `wrangler.toml`", async () => {
+			// set up the directory of static files to upload.
+			mkdirSync("public");
+			writeFileSync("public/README.md", "This is a readme");
+
+			// set up _worker.js
+			writeFileSync(
+				"public/_worker.js",
+				`
+				export default {
+					async fetch(request, env) {
+						const url = new URL(request.url);
+						console.log("PAGES SUPPORTS WRANGLER.TOML!!");
+						return url.pathname.startsWith('/pages-toml') ? new Response('Ok') : env.ASSETS.fetch(request);
+					}
+				};
+			`
+			);
+
+			// set up wrangler.toml
+			writeFileSync(
+				"wrangler.toml",
+				`
+			pages_build_output_dir = "public"
+			name = "pages-is-awesome"
+			compatibility_date = "2024-01-01"
+			`
+			);
+
+			mockGetUploadTokenRequest(
+				"<<funfetti-auth-jwt>>",
+				"some-account-id",
+				"pages-is-awesome"
+			);
+
+			let getProjectRequestCount = 0;
+			msw.use(
+				http.post(
+					"*/pages/assets/check-missing",
+					async ({ request }) => {
+						const body = (await request.json()) as {
+							hashes: string[];
+						};
+
+						expect(request.headers.get("Authorization")).toBe(
+							"Bearer <<funfetti-auth-jwt>>"
+						);
+						expect(body).toMatchObject({
+							hashes: ["13a03eaf24ae98378acd36ea00f77f2f"],
+						});
+
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: body.hashes,
+							},
+							{ status: 200 }
+						);
+					},
+					{ once: true }
+				),
+				http.post(
+					"*/pages/assets/upload",
+					async ({ request }) => {
+						expect(request.headers.get("Authorization")).toBe(
+							"Bearer <<funfetti-auth-jwt>>"
+						);
+
+						expect(await request.json()).toMatchObject([
+							{
+								key: "13a03eaf24ae98378acd36ea00f77f2f",
+								value: Buffer.from("This is a readme").toString("base64"),
+								metadata: {
+									contentType: "text/markdown",
+								},
+								base64: true,
+							},
+						]);
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: true,
+							},
+							{ status: 200 }
+						);
+					},
+					{ once: true }
+				),
+				http.post(
+					"*/accounts/:accountId/pages/projects/pages-is-awesome/deployments",
+					async ({ request, params }) => {
+						expect(params.accountId).toEqual("some-account-id");
+						const body = await request.formData();
+						const manifest = JSON.parse(await toString(body.get("manifest")));
+						const workerBundle = body.get("_worker.bundle");
+						const buildOutputDir = body.get("pages_build_output_dir");
+						const configHash = body.get("wrangler_config_hash");
+
+						// make sure this is all we uploaded
+						expect([...body.keys()].sort()).toEqual(
+							[
+								"_worker.bundle",
+								"manifest",
+								"pages_build_output_dir",
+								"wrangler_config_hash",
+							].sort()
+						);
+
+						expect(manifest).toMatchInlineSnapshot(`
+				Object {
+				  "/README.md": "13a03eaf24ae98378acd36ea00f77f2f",
+				}
+			`);
+						expect(await toString(workerBundle)).toContain(
+							`console.log("PAGES SUPPORTS WRANGLER.TOML!!");`
+						);
+						expect(buildOutputDir).toEqual("public");
+						expect(configHash).toEqual(
+							"738dc25ae828a170a9d782d7288ebeedd9bdc21d0c5164d810c46e309ebd4fac"
+						);
+
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: {
+									id: "123-456-789",
+									url: "https://abcxyz.pages-is-awesome.pages.dev/",
+								},
+							},
+							{ status: 200 }
+						);
+					},
+					{ once: true }
+				),
+				http.get(
+					"*/accounts/:accountId/pages/projects/pages-is-awesome/deployments/:deploymentId",
+					async ({ params }) => {
+						expect(params.accountId).toEqual("some-account-id");
+						expect(params.deploymentId).toEqual("123-456-789");
+
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: {
+									latest_stage: {
+										name: "deploy",
+										status: "success",
+									},
+								},
+							},
+							{ status: 200 }
+						);
+					},
+					{ once: true }
+				),
+				http.get(
+					"*/accounts/:accountId/pages/projects/pages-is-awesome",
+					async ({ params }) => {
+						getProjectRequestCount++;
+
+						expect(params.accountId).toEqual("some-account-id");
+
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: {
+									deployment_configs: {
+										production: {
+											d1_databases: { MY_D1_DB: { id: "fake-db" } },
+										},
+										preview: {
+											d1_databases: { MY_D1_DB: { id: "fake-db" } },
+										},
+									},
+								} as Partial<Project>,
+							},
+							{ status: 200 }
+						);
+					}
+				)
+			);
+
+			await runWrangler("pages deploy");
+
+			expect(getProjectRequestCount).toEqual(2);
+			expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
+			"✨ Success! Uploaded 1 files (TIMINGS)
+
+			✨ Compiled Worker successfully
+			✨ Uploading Worker bundle
+			🌎 Deploying...
+			✨ Deployment complete! Take a peek over at https://abcxyz.pages-is-awesome.pages.dev/"
+		`);
+
+			expect(std.err).toMatchInlineSnapshot('""');
+		});
+
+		it("should error if user attempts to specify a custom `wrangler.toml` file path", async () => {
+			await expect(
+				runWrangler("pages deploy --config foo.toml")
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: Pages does not support custom paths for the \`wrangler.toml\` configuration file]`
+			);
+		});
+
+		it("should warn and ignore the `wrangler.toml` file, if it doesn't specify the `pages_build_output_dir` field", async () => {
+			// set up the directory of static files to upload.
+			mkdirSync("public");
+			writeFileSync("public/index.html", "Greetings from Pages");
+
+			// set up /functions
+			mkdirSync("functions");
+			writeFileSync(
+				"functions/hello-world.js",
+				`
+			export async function onRequest() {
+				return new Response("Pages supports wrangler.toml!");
+			}
+			`
+			);
+
+			// set up wrangler.toml
+			writeFileSync(
+				"wrangler.toml",
+				`
+			name = "pages-is-awesome"
+			compatibility_date = "2024-01-01"
+			`
+			);
+
+			// `pages deploy` should fail because, even though the project name is specififed in the
+			// `wrangler.toml` file, the `pages_build_output_dir` field is missing from the config,
+			// so the file gets ignored
+			await expect(
+				runWrangler("pages deploy public")
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: Must specify a project name.]`
+			);
+
+			expect(
+				std.warn.replace(/\S*\.toml/g, "wrangler.toml").replace(/\s/g, "")
+			).toContain(
+				`
+				We detected a configuration file at wrangler.toml but it is missing the "pages_build_output_dir" field, required by Pages.
+				If you would like to use this configuration file to deploy your project, please use "pages_build_output_dir" to specify the directory of static files to upload.
+				Ignoring configuration file for now, and proceeding with project deploy.
+				`.replace(/\s/g, "")
+			);
+		});
+
+		it("should always deploy to the Pages project specified by the top-level `name` configuration field, regardless of the corresponding env-level configuration", async () => {
+			// set up the directory of static files to upload.
+			mkdirSync("public");
+			writeFileSync("public/README.md", "This is a readme");
+
+			// set up _worker.js
+			writeFileSync(
+				"public/_worker.js",
+				`
+				export default {
+					async fetch(request, env) {
+						const url = new URL(request.url);
+						console.log("PAGES SUPPORTS WRANGLER.TOML!!");
+						return url.pathname.startsWith('/pages-toml') ? new Response('Ok') : env.ASSETS.fetch(request);
+					}
+				};
+			`
+			);
+
+			// set up wrangler.toml
+			writeFileSync(
+				"wrangler.toml",
+				`
+				pages_build_output_dir = "public"
+				name = "pages-project"
+				compatibility_date = "2024-01-01"
+
+				[env.production]
+				name = "pages-project-production"
+				`
+			);
+
+			mockGetUploadTokenRequest(
+				"<<funfetti-auth-jwt>>",
+				"some-account-id",
+				"pages-project"
+			);
+
+			let getProjectRequestCount = 0;
+			msw.use(
+				http.post(
+					"*/pages/assets/check-missing",
+					async ({ request }) => {
+						const body = (await request.json()) as {
+							hashes: string[];
+						};
+
+						expect(request.headers.get("Authorization")).toBe(
+							"Bearer <<funfetti-auth-jwt>>"
+						);
+						expect(body).toMatchObject({
+							hashes: ["13a03eaf24ae98378acd36ea00f77f2f"],
+						});
+
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: body.hashes,
+							},
+							{ status: 200 }
+						);
+					},
+					{ once: true }
+				),
+				http.post(
+					"*/pages/assets/upload",
+					async ({ request }) => {
+						expect(request.headers.get("Authorization")).toBe(
+							"Bearer <<funfetti-auth-jwt>>"
+						);
+
+						expect(await request.json()).toMatchObject([
+							{
+								key: "13a03eaf24ae98378acd36ea00f77f2f",
+								value: Buffer.from("This is a readme").toString("base64"),
+								metadata: {
+									contentType: "text/markdown",
+								},
+								base64: true,
+							},
+						]);
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: true,
+							},
+							{ status: 200 }
+						);
+					},
+					{ once: true }
+				),
+				http.post(
+					"*/accounts/:accountId/pages/projects/pages-project/deployments",
+					async ({ request, params }) => {
+						expect(params.accountId).toEqual("some-account-id");
+						const body = await request.formData();
+						const manifest = JSON.parse(await toString(body.get("manifest")));
+						const workerBundle = body.get("_worker.bundle");
+						const branch = body.get("branch");
+						const buildOutputDir = body.get("pages_build_output_dir");
+						const configHash = body.get("wrangler_config_hash");
+
+						// make sure this is all we uploaded
+						expect([...body.keys()].sort()).toEqual(
+							[
+								"_worker.bundle",
+								"branch",
+								"manifest",
+								"pages_build_output_dir",
+								"wrangler_config_hash",
+							].sort()
+						);
+
+						expect(manifest).toMatchInlineSnapshot(`
+				Object {
+				  "/README.md": "13a03eaf24ae98378acd36ea00f77f2f",
+				}
+			`);
+
+						await expect(workerHasD1Shim(workerBundle)).resolves.toBeFalsy();
+						expect(await toString(workerBundle)).toContain(
+							`console.log("PAGES SUPPORTS WRANGLER.TOML!!");`
+						);
+						expect(branch).toEqual("main");
+						expect(buildOutputDir).toEqual("public");
+						expect(configHash).toEqual(
+							"ae9f1a896515d314b0b5f3725623b014d41170060e816b6e567effd04b7ba7b1"
+						);
+
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: {
+									id: "abc-def-ghi",
+									url: "https://abcxyz.pages-project.pages.dev/",
+								},
+							},
+							{ status: 200 }
+						);
+					},
+					{ once: true }
+				),
+				http.get(
+					"*/accounts/:accountId/pages/projects/pages-project/deployments/:deploymentId",
+					async ({ params }) => {
+						expect(params.accountId).toEqual("some-account-id");
+						expect(params.deploymentId).toEqual("abc-def-ghi");
+
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: {
+									latest_stage: {
+										name: "deploy",
+										status: "success",
+									},
+								},
+							},
+							{ status: 200 }
+						);
+					},
+					{ once: true }
+				),
+				http.get(
+					"*/accounts/:accountId/pages/projects/pages-project",
+					async ({ params }) => {
+						getProjectRequestCount++;
+						expect(params.accountId).toEqual("some-account-id");
+
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: {
+									production_branch: "main",
+									deployment_configs: {
+										production: {
+											d1_databases: { MY_D1_DB: { id: "fake-db" } },
+										},
+										preview: {
+											d1_databases: { MY_D1_DB: { id: "fake-db" } },
+										},
+									},
+								} as Partial<Project>,
+							},
+							{ status: 200 }
+						);
+					}
+				)
+			);
+
+			await runWrangler("pages deploy --branch main");
+
+			expect(getProjectRequestCount).toEqual(2);
+			expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
+			"✨ Success! Uploaded 1 files (TIMINGS)
+
+			✨ Compiled Worker successfully
+			✨ Uploading Worker bundle
+			🌎 Deploying...
+			✨ Deployment complete! Take a peek over at https://abcxyz.pages-project.pages.dev/"
+		`);
+
+			expect(std.err).toMatchInlineSnapshot('""');
+		});
+	});
+
+	const simulateServer = (
+		generatedWorkerBundleCheck: (
+			workerJsContent: FormDataEntryValue | null
+		) => Promise<void>,
+		compatibility_flags?: string[]
+	) => {
+		mockGetUploadTokenRequest(
+			"<<funfetti-auth-jwt>>",
+			"some-account-id",
+			"foo"
 		);
 
-		await runWrangler("pages deploy public --project-name=foo");
+		msw.use(
+			http.post<never, { hashes: string[] }>(
+				"*/pages/assets/check-missing",
+				async ({ request }) =>
+					HttpResponse.json(
+						{
+							success: true,
+							errors: [],
+							messages: [],
+							result: (await request.json()).hashes,
+						},
+						{ status: 200 }
+					),
+				{ once: true }
+			),
+			http.post(
+				"*/pages/assets/upload",
+				async () =>
+					HttpResponse.json(
+						{
+							success: true,
+							errors: [],
+							messages: [],
+							result: null,
+						},
+						{ status: 200 }
+					),
+				{ once: true }
+			),
+			http.post(
+				"*/accounts/:accountId/pages/projects/foo/deployments",
+				async ({ request }) => {
+					const body = await request.formData();
+					const generatedWorkerBundle = body.get("_worker.bundle");
 
-		expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
-		"✨ Success! Uploaded 1 files (TIMINGS)
+					await generatedWorkerBundleCheck(generatedWorkerBundle);
 
-		✨ Compiled Worker successfully
-		✨ Uploading Worker bundle
-		✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
-	`);
+					return HttpResponse.json(
+						{
+							success: true,
+							errors: [],
+							messages: [],
+							result: {
+								id: "123-456-789",
+								url: "https://abcxyz.foo.pages.dev/",
+							},
+						},
+						{ status: 200 }
+					);
+				},
+				{ once: true }
+			),
+			http.get(
+				"*/accounts/:accountId/pages/projects/foo/deployments/:deploymentId",
+				async ({ params }) => {
+					expect(params.accountId).toEqual("some-account-id");
+					expect(params.deploymentId).toEqual("123-456-789");
 
-		// make sure there were no errors
-		expect(std.err).toMatchInlineSnapshot('""');
-	});
+					return HttpResponse.json(
+						{
+							success: true,
+							errors: [],
+							messages: [],
+							result: {
+								latest_stage: {
+									name: "deploy",
+									status: "success",
+								},
+							},
+						},
+						{ status: 200 }
+					);
+				},
+				{ once: true }
+			),
+			// we're expecting two API calls to `/projects/<name>`, so we need
+			// to mock both of them
+			mockGetProjectHandler("foo", compatibility_flags),
+			mockGetProjectHandler("foo", compatibility_flags)
+		);
+	};
 
 	describe("_worker.js bundling", () => {
 		beforeEach(() => {
@@ -2864,86 +5105,12 @@ async function onRequest() {
 			);
 		});
 
-		const workerIsBundled = (contents: string) =>
-			contents.includes("worker_default as default");
-
-		const simulateServer = (
-			generatedWorkerBundleCheck: (workerJsContent: string) => void,
-			compatibility_flags?: string[]
-		) => {
-			mockGetUploadTokenRequest(
-				"<<funfetti-auth-jwt>>",
-				"some-account-id",
-				"foo"
-			);
-			msw.use(
-				rest.post("*/pages/assets/check-missing", async (req, res, ctx) =>
-					res.once(
-						ctx.status(200),
-						ctx.json({
-							success: true,
-							errors: [],
-							messages: [],
-							result: (await req.json()).hashes,
-						})
-					)
-				),
-				rest.post("*/pages/assets/upload", async (_req, res, ctx) =>
-					res.once(
-						ctx.status(200),
-						ctx.json({
-							success: true,
-							errors: [],
-							messages: [],
-							result: null,
-						})
-					)
-				),
-				rest.post(
-					"*/accounts/:accountId/pages/projects/foo/deployments",
-					async (req, res, ctx) => {
-						const body = await (req as RestRequestWithFormData).formData();
-						const generatedWorkerBundle = body.get("_worker.bundle") as string;
-
-						generatedWorkerBundleCheck(generatedWorkerBundle);
-
-						return res.once(
-							ctx.status(200),
-							ctx.json({
-								success: true,
-								errors: [],
-								messages: [],
-								result: {
-									url: "https://abcxyz.foo.pages.dev/",
-								},
-							})
-						);
-					}
-				),
-				rest.get(
-					"*/accounts/:accountId/pages/projects/foo",
-					async (_req, res, ctx) =>
-						res.once(
-							ctx.status(200),
-							ctx.json({
-								success: true,
-								errors: [],
-								messages: [],
-								result: {
-									deployment_configs: {
-										production: { compatibility_flags },
-										preview: { compatibility_flags },
-									},
-								},
-							})
-						)
-				)
-			);
-		};
+		const workerIsBundled = async (contents: FormDataEntryValue | null) =>
+			(await toString(contents)).includes("worker_default as default");
 
 		it("should bundle the _worker.js when both `--bundle` and `--no-bundle` are omitted", async () => {
 			simulateServer((generatedWorkerJS) =>
-				expect(workerIsBundled(generatedWorkerJS)).toBeTruthy()
+				expect(workerIsBundled(generatedWorkerJS)).resolves.toBeTruthy()
 			);
 			await runWrangler("pages deploy public --project-name=foo");
 			expect(std.out).toContain("✨ Uploading Worker bundle");
@@ -2951,7 +5118,7 @@ async function onRequest() {
 
 		it("should not bundle the _worker.js when `--no-bundle` is set", async () => {
 			simulateServer((generatedWorkerJS) =>
-				expect(workerIsBundled(generatedWorkerJS)).toBeFalsy()
+				expect(workerIsBundled(generatedWorkerJS)).resolves.toBeFalsy()
 			);
 			await runWrangler("pages deploy public --project-name=foo --no-bundle");
 			expect(std.out).toContain("✨ Uploading Worker bundle");
@@ -2973,7 +5140,7 @@ async function onRequest() {
 			);
 
 			simulateServer((generatedWorkerJS) =>
-				expect(workerIsBundled(generatedWorkerJS)).toBeFalsy()
+				expect(workerIsBundled(generatedWorkerJS)).resolves.toBeFalsy()
 			);
 			let error = "Code did not throw!";
 			try {
@@ -3002,7 +5169,7 @@ async function onRequest() {
 			);
 
 			simulateServer((generatedWorkerJS) =>
-				expect(workerIsBundled(generatedWorkerJS)).toBeFalsy()
+				expect(workerIsBundled(generatedWorkerJS)).resolves.toBeFalsy()
 			);
 			await runWrangler("pages deploy public --project-name=foo --no-bundle");
 			expect(std.out).toContain("✨ Uploading Worker bundle");
@@ -3024,7 +5191,7 @@ async function onRequest() {
 
 			simulateServer(
 				(generatedWorkerJS) =>
-					expect(workerIsBundled(generatedWorkerJS)).toBeFalsy(),
+					expect(workerIsBundled(generatedWorkerJS)).resolves.toBeFalsy(),
 				["nodejs_compat"]
 			);
 			await runWrangler("pages deploy public --project-name=foo --no-bundle");
@@ -3046,7 +5213,7 @@ async function onRequest() {
 			);
 
 			simulateServer((generatedWorkerJS) =>
-				expect(workerIsBundled(generatedWorkerJS)).toBeFalsy()
+				expect(workerIsBundled(generatedWorkerJS)).resolves.toBeFalsy()
 			);
 			let error = "Code did not throw!";
 			try {
@@ -3061,7 +5228,7 @@ async function onRequest() {
 
 		it("should not bundle the _worker.js when `--bundle` is set to false", async () => {
 			simulateServer((generatedWorkerJS) =>
-				expect(workerIsBundled(generatedWorkerJS)).toBeFalsy()
+				expect(workerIsBundled(generatedWorkerJS)).resolves.toBeFalsy()
 			);
 			await runWrangler(
 				"pages deploy public --project-name=foo --bundle=false"
@@ -3071,7 +5238,7 @@ async function onRequest() {
 
 		it("should bundle the _worker.js when the `--no-bundle` is set to false", async () => {
 			simulateServer((generatedWorkerJS) =>
-				expect(workerIsBundled(generatedWorkerJS)).toBeTruthy()
+				expect(workerIsBundled(generatedWorkerJS)).resolves.toBeTruthy()
 			);
 			await runWrangler(
 				"pages deploy public --no-bundle=false --project-name=foo"
@@ -3081,50 +5248,154 @@ async function onRequest() {
 
 		it("should bundle the _worker.js when the `--bundle` is set to true", async () => {
 			simulateServer((generatedWorkerJS) =>
-				expect(workerIsBundled(generatedWorkerJS)).toBeTruthy()
+				expect(workerIsBundled(generatedWorkerJS)).resolves.toBeTruthy()
 			);
 			await runWrangler("pages deploy public --bundle=true --project-name=foo");
 			expect(std.out).toContain("✨ Uploading Worker bundle");
 		});
 	});
+
+	describe("source maps", () => {
+		const bundleString = (entry: FormDataEntryValue | null) =>
+			toString(entry).then((str) =>
+				str
+					.replace(/formdata-undici-0.[0-9]*/g, "formdata-undici-0.test")
+					.replace(/bundledWorker-0.[0-9]*.mjs/g, "bundledWorker-0.test.mjs")
+					.replace(/functionsWorker-0.[0-9]*.js/g, "functionsWorker-0.test.js")
+			);
+
+		beforeEach(() => {
+			mkdirSync("dist");
+			writeFileSync(
+				"wrangler.toml",
+				dedent`
+					name = "foo"
+					pages_build_output_dir = "dist"
+					compatibility_date = "2024-01-01"
+					upload_source_maps = true
+				`
+			);
+		});
+
+		it("should upload sourcemaps for functions directory projects", async () => {
+			mkdirSync("functions");
+			writeFileSync(
+				"functions/[[path]].ts",
+				dedent`
+					export function onRequestGet() {
+						return new Response("")
+					};
+				`
+			);
+
+			simulateServer(async (entry) => {
+				const contents = await bundleString(entry);
+				// Ensure we get a sourcemap containing our functions file
+				expect(contents).toContain(
+					'Content-Disposition: form-data; name="functionsWorker-0.test.js.map"'
+				);
+				expect(contents).toContain('"sources":["[[path]].ts"');
+			});
+
+			await runWrangler("pages deploy");
+		});
+
+		it("should upload sourcemaps for _worker.js file projects", async () => {
+			writeFileSync(
+				"dist/_worker.js",
+				dedent`
+					export default {
+						async fetch() {
+							return new Response("foo");
+						}
+					}
+				`
+			);
+
+			simulateServer(async (entry) => {
+				const contents = await bundleString(entry);
+				// Ensure we get a sourcemap containing our _worker.js file
+				expect(contents).toContain(
+					'Content-Disposition: form-data; name="bundledWorker-0.test.mjs.map"'
+				);
+				expect(contents).toContain('"sources":["_worker.js"');
+			});
+
+			await runWrangler("pages deploy");
+		});
+
+		it("should upload sourcemaps for _worker.js directory projects", async () => {
+			mkdirSync("dist/_worker.js");
+			mkdirSync("dist/_worker.js/chunks");
+			writeFileSync(
+				"dist/_worker.js/index.js",
+				`export { handlers as default } from "./chunks/runtime.mjs";`
+			);
+
+			writeFileSync(
+				"dist/_worker.js/chunks/runtime.mjs",
+				dedent`
+					export const handlers = {};
+					//# sourceMappingURL=runtime.mjs.map
+				`
+			);
+			writeFileSync(
+				"dist/_worker.js/chunks/runtime.mjs.map",
+				JSON.stringify({
+					version: 3,
+					file: "runtime.mjs",
+					sources: [],
+					sourcesContent: null,
+					names: [],
+					mappings: "",
+				})
+			);
+
+			simulateServer(async (entry) => {
+				const contents = await bundleString(entry);
+
+				// Ensure we get a sourcemap containing our main worker file
+				expect(contents).toContain(
+					'Content-Disposition: form-data; name="bundledWorker-0.test.mjs.map"'
+				);
+				expect(contents).toContain('"sources":["dist/_worker.js/index.js"');
+
+				// Ensure our runtime file that wrangler doesn't bundle into the main output still
+				// get uploaded alongside their sourcemaps
+				expect(contents).toContain(
+					'Content-Disposition: form-data; name="chunks/runtime.mjs"; filename="chunks/runtime.mjs"'
+				);
+				expect(contents).toContain(
+					'Content-Disposition: form-data; name="chunks/runtime.mjs.map"; filename="chunks/runtime.mjs.map"'
+				);
+			});
+
+			await runWrangler("pages deploy");
+		});
+	});
 });
 
-function mockFormDataToString(this: FormData) {
-	const entries = [];
-	for (const [key, value] of this.entries()) {
-		if (value instanceof Blob) {
-			const reader = new FileReaderSync();
-			reader.readAsText(value);
-			const result = reader.result;
-			entries.push([key, result]);
-		} else {
-			entries.push([key, value]);
-		}
-	}
-	return JSON.stringify({
-		__formdata: entries,
-	});
+function mockGetProjectHandler(
+	projectName: string,
+	compatibility_flags: string[] | undefined
+) {
+	return http.get(
+		`*/accounts/:accountId/pages/projects/${projectName}`,
+		async () =>
+			HttpResponse.json(
+				{
+					success: true,
+					errors: [],
+					messages: [],
+					result: {
+						deployment_configs: {
+							production: { compatibility_flags },
+							preview: { compatibility_flags },
+						},
+					},
+				},
+				{ status: 200 }
+			),
+		{ once: true }
+	);
 }
-
-async function mockFormDataFromString(this: MockedRequest): Promise<FormData> {
-	const { __formdata } = await this.json();
-	expect(__formdata).toBeInstanceOf(Array);
-
-	const form = new FormData();
-	for (const [key, value] of __formdata) {
-		form.set(key, value);
-	}
-	return form;
-}
-
-// The following two functions workaround the fact that MSW does not yet support FormData in requests.
-// We use the fact that MSW relies upon `node-fetch` internally, which will call `toString()` on the FormData object,
-// rather than passing it through or serializing it as a proper FormData object.
-// The hack is to serialize FormData to a JSON string by overriding `FormData.toString()`.
-// And then to deserialize back to a FormData object by monkey-patching a `formData()` helper onto `MockedRequest`.
-FormData.prototype.toString = mockFormDataToString;
-export interface RestRequestWithFormData extends MockedRequest, RestRequest {
-	formData(): Promise<FormData>;
-}
-(MockedRequest.prototype as RestRequestWithFormData).formData =
-	mockFormDataFromString;

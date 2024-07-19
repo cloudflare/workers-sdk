@@ -52,4 +52,86 @@ describe("getPlatformProxy - ctx", () => {
 			await dispose();
 		}
 	});
+
+	describe("detached methods should behave like workerd", () => {
+		it("destructured methods should throw illegal invocation errors", async () => {
+			const {
+				ctx: { waitUntil, passThroughOnException },
+				dispose,
+			} = await getPlatformProxy();
+			try {
+				expect(() => {
+					waitUntil(() => {});
+				}).toThrowError("Illegal invocation");
+
+				expect(() => {
+					passThroughOnException();
+				}).toThrowError("Illegal invocation");
+			} finally {
+				await dispose();
+			}
+		});
+
+		it("extracted methods should throw illegal invocation errors", async () => {
+			const { ctx, dispose } = await getPlatformProxy();
+			const waitUntil = ctx.waitUntil;
+			const passThroughOnException = ctx.passThroughOnException;
+
+			try {
+				expect(() => {
+					waitUntil(() => {});
+				}).toThrowError("Illegal invocation");
+
+				expect(() => {
+					passThroughOnException();
+				}).toThrowError("Illegal invocation");
+			} finally {
+				await dispose();
+			}
+		});
+
+		it("extracted methods which correctly bind this should not throw illegal invocation errors", async () => {
+			const { ctx, dispose } = await getPlatformProxy();
+			const waitUntil = ctx.waitUntil.bind(ctx);
+			const passThroughOnException = ctx.passThroughOnException;
+
+			try {
+				expect(() => {
+					waitUntil(() => {});
+				}).not.toThrowError("Illegal invocation");
+
+				expect(() => {
+					passThroughOnException.apply(ctx, []);
+				}).not.toThrowError("Illegal invocation");
+
+				expect(() => {
+					passThroughOnException.call(ctx);
+				}).not.toThrowError("Illegal invocation");
+			} finally {
+				await dispose();
+			}
+		});
+
+		it("extracted methods which incorrectly bind this should throw illegal invocation errors", async () => {
+			const { ctx, dispose } = await getPlatformProxy();
+			const waitUntil = ctx.waitUntil.bind({});
+			const passThroughOnException = ctx.passThroughOnException;
+
+			try {
+				expect(() => {
+					waitUntil(() => {});
+				}).toThrowError("Illegal invocation");
+
+				expect(() => {
+					passThroughOnException.apply(5, []);
+				}).toThrowError("Illegal invocation");
+
+				expect(() => {
+					passThroughOnException.call(new Boolean(), []);
+				}).toThrowError("Illegal invocation");
+			} finally {
+				await dispose();
+			}
+		});
+	});
 });

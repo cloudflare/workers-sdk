@@ -1,15 +1,16 @@
 import * as mime from "mime";
 import {
-	AssetManifestType,
 	CacheControl,
 	InternalError,
 	MethodNotAllowedError,
 	NotFoundError,
 	Options,
 } from "./types";
+import type { AssetManifestType } from "./types";
 
 declare global {
-	var __STATIC_CONTENT: any, __STATIC_CONTENT_MANIFEST: string;
+	const __STATIC_CONTENT: KVNamespace | undefined,
+		__STATIC_CONTENT_MANIFEST: string;
 }
 
 const defaultCacheControl: CacheControl = {
@@ -116,7 +117,7 @@ function serveSinglePageApp(
 
 type Evt = {
 	request: Request;
-	waitUntil: (promise: Promise<any>) => void;
+	waitUntil: (promise: Promise<unknown>) => void;
 };
 
 const getAssetFromKV = async (
@@ -177,7 +178,7 @@ const getAssetFromKV = async (
 	// pathKey is the file path to look up in the manifest
 	let pathKey = pathname.replace(/^\/+/, ""); // remove prepended /
 
-	// @ts-ignore
+	// @ts-expect-error we should pick cf types here
 	const cache = caches.default;
 	let mimeType = mime.getType(pathKey) || options.defaultMimeType;
 	if (mimeType.startsWith("text") || mimeType === "application/javascript") {
@@ -195,7 +196,7 @@ const getAssetFromKV = async (
 	}
 
 	// TODO this excludes search params from cache, investigate ideal behavior
-	let cacheKey = new Request(`${parsedUrl.origin}/${pathKey}`, request);
+	const cacheKey = new Request(`${parsedUrl.origin}/${pathKey}`, request);
 
 	// if argument passed in for cacheControl is a function then
 	// evaluate that function. otherwise return the Object passed in
@@ -216,7 +217,7 @@ const getAssetFromKV = async (
 	// the potentially disastrous scenario where the value of the Etag resp
 	// header is "null". Could be modified in future to base64 encode etc
 	const formatETag = (
-		entityId: any = pathKey,
+		entityId: string = pathKey,
 		validatorType: string = options.defaultETag
 	) => {
 		if (!entityId) {
@@ -274,7 +275,7 @@ const getAssetFromKV = async (
 			response = new Response(null, response);
 		} else {
 			// fixes #165
-			let opts = {
+			const opts = {
 				headers: new Headers(response.headers),
 				status: 0,
 				statusText: "",
@@ -322,9 +323,9 @@ const getAssetFromKV = async (
 	response.headers.set("Content-Type", mimeType);
 
 	if (response.status === 304) {
-		let etag = formatETag(response.headers.get("etag"));
-		let ifNoneMatch = cacheKey.headers.get("if-none-match");
-		let proxyCacheStatus = response.headers.get("CF-Cache-Status");
+		const etag = formatETag(response.headers.get("etag"));
+		const ifNoneMatch = cacheKey.headers.get("if-none-match");
+		const proxyCacheStatus = response.headers.get("CF-Cache-Status");
 		if (etag) {
 			if (ifNoneMatch && ifNoneMatch === etag && proxyCacheStatus === "MISS") {
 				response.headers.set("CF-Cache-Status", "EXPIRED");

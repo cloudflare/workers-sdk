@@ -2,9 +2,11 @@ import { resolve } from "node:path";
 import { logRaw } from "@cloudflare/cli";
 import { brandColor, dim } from "@cloudflare/cli/colors";
 import { spinner } from "@cloudflare/cli/interactive";
-import { installPackages, runFrameworkGenerator } from "helpers/command";
-import { compatDateFlag, readFile, readJSON, writeFile } from "helpers/files";
-import { detectPackageManager } from "helpers/packages";
+import { runFrameworkGenerator } from "frameworks/index";
+import { compatDateFlag } from "helpers/compatDate";
+import { readFile, readJSON, writeFile } from "helpers/files";
+import { detectPackageManager } from "helpers/packageManagers";
+import { installPackages } from "helpers/packages";
 import type { TemplateConfig } from "../../src/templates";
 import type { C3Context } from "types";
 
@@ -28,7 +30,7 @@ async function installCFWorker() {
 			dev: true,
 			startText: "Installing adapter dependencies",
 			doneText: `${brandColor("installed")} ${dim(`via \`${npm} install\``)}`,
-		}
+		},
 	);
 }
 async function updateAppCode() {
@@ -43,7 +45,7 @@ async function updateAppCode() {
 		"import { provideHttpClient, withFetch } from '@angular/common/http';\n" +
 		appConfig.replace(
 			"providers: [",
-			"providers: [provideHttpClient(withFetch()), "
+			"providers: [provideHttpClient(withFetch()), ",
 		);
 	writeFile(resolve(appConfigPath), newAppConfig);
 	s.stop(`${brandColor(`updated`)} ${dim(appConfigPath)}`);

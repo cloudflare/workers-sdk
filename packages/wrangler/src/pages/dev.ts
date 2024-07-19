@@ -1,32 +1,35 @@
 import { execSync, spawn } from "node:child_process";
 import { existsSync, lstatSync, readFileSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { dirname, join, normalize, resolve } from "node:path";
 import { watch } from "chokidar";
 import * as esbuild from "esbuild";
 import { unstable_dev } from "../api";
+import { readConfig } from "../config";
 import { isBuildFailure } from "../deployment-bundle/build-failures";
 import { esbuildAliasExternalPlugin } from "../deployment-bundle/esbuild-plugins/alias-external";
+import { validateNodeCompat } from "../deployment-bundle/node-compat";
 import { FatalError } from "../errors";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { isNavigatorDefined } from "../navigator-user-agent";
 import { getBasePath } from "../paths";
+import { printWranglerBanner } from "../update-check";
 import * as shellquote from "../utils/shell-quote";
 import { buildFunctions } from "./buildFunctions";
 import { ROUTES_SPEC_VERSION, SECONDS_TO_WAIT_FOR_PROXY } from "./constants";
-import {
-	FunctionsBuildError,
-	FunctionsNoRoutesError,
-	getFunctionsBuildWarning,
-	getFunctionsNoRoutesWarning,
-} from "./errors";
+import { FunctionsNoRoutesError, getFunctionsNoRoutesWarning } from "./errors";
 import {
 	buildRawWorker,
 	checkRawWorker,
-	traverseAndBuildWorkerJSDirectory,
+	produceWorkerBundleForWorkerJSDirectory,
 } from "./functions/buildWorker";
 import { validateRoutes } from "./functions/routes-validation";
-import { CLEANUP, CLEANUP_CALLBACKS, getPagesTmpDir } from "./utils";
+import { CLEANUP, CLEANUP_CALLBACKS, debounce, getPagesTmpDir } from "./utils";
+import type { Config } from "../config";
+import type {
+	DurableObjectBindings,
+	EnvironmentNonInheritable,
+} from "../config/environment";
 import type { CfModule } from "../deployment-bundle/worker";
 import type { AdditionalDevProps } from "../dev";
 import type {
@@ -60,12 +63,18 @@ const BINDING_REGEXP = new RegExp(/^(?<binding>[^=]+)(?:=(?<ref>[^\s]+))?$/);
 /* SERVICE_BINDING_REGEXP matches strings like:
  * - "binding=service"
  * - "binding=service@environment"
+ * - "binding=service#entrypoint"
  * This is used to capture both the binding name (how the binding is used in JS) alongside the name of the service it needs to bind to.
  * Additionally it can also accept an environment which indicates what environment the service has to be running for.
+ * Additionally it can also accept an entrypoint which indicates what named entrypoint of the service to use, if not the default.
  */
 const SERVICE_BINDING_REGEXP = new RegExp(
-	/^(?<binding>[^=]+)=(?<service>[^@\s]+)(@(?<environment>.*)$)?$/
+	/^(?<binding>[^=]+)=(?<service>[^@#\s]+)(@(?<environment>.*)$)?(#(?<entrypoint>.*))?$/
 );
+
+const DEFAULT_IP = process.platform === "win32" ? "127.0.0.1" : "localhost";
+const DEFAULT_PAGES_LOCAL_PORT = 8788;
+const DEFAULT_SCRIPT_PATH = "_worker.js";
 
 export function Options(yargs: CommonYargsArgv) {
 	return yargs
@@ -77,7 +86,7 @@ export function Options(yargs: CommonYargsArgv) {
 		.positional("command", {
 			type: "string",
 			demandOption: undefined,
-			description: "The proxy command to run",
+			description: "The proxy command to run  [deprecated]", // no official way to deprecate a positional argument
 		})
 		.options({
 			local: {
@@ -106,12 +115,10 @@ export function Options(yargs: CommonYargsArgv) {
 				// For now, on Windows, we default to listening on IPv4 only and using
 				// `127.0.0.1` when sending control requests to `workerd` (e.g. with the
 				// `ProxyController`).
-				default: process.platform === "win32" ? "127.0.0.1" : "localhost",
 				description: "The IP address to listen on",
 			},
 			port: {
 				type: "number",
-				default: 8788,
 				description: "The port to listen on (serve from)",
 			},
 			"inspector-port": {
@@ -121,12 +128,14 @@ export function Options(yargs: CommonYargsArgv) {
 			proxy: {
 				type: "number",
 				description: "The port to proxy (where the static assets are served)",
+				deprecated: true,
 			},
 			"script-path": {
 				type: "string",
-				default: "_worker.js",
 				description:
-					"The location of the single Worker script if not using functions",
+					"The location of the single Worker script if not using functions  [default: _worker.js]",
+				// hacking in a fake default message here so we can detect when user is setting this and show a deprecation message
+				deprecated: true,
 			},
 			bundle: {
 				type: "boolean",
@@ -165,6 +174,11 @@ export function Options(yargs: CommonYargsArgv) {
 			ai: {
 				type: "string",
 				description: "AI to bind (--ai AI_BINDING)",
+			},
+			"version-metadata": {
+				type: "string",
+				description:
+					"Worker Version metadata (--version-metadata VERSION_METADATA_BINDING)",
 			},
 			service: {
 				type: "array",
@@ -209,7 +223,8 @@ export function Options(yargs: CommonYargsArgv) {
 				hidden: true,
 			},
 			config: {
-				describe: "Pages does not support wrangler.toml",
+				describe:
+					"Pages does not support custom paths for the wrangler.toml configuration file",
 				type: "string",
 				hidden: true,
 			},
@@ -217,55 +232,68 @@ export function Options(yargs: CommonYargsArgv) {
 				choices: ["debug", "info", "log", "warn", "error", "none"] as const,
 				describe: "Specify logging level",
 			},
+			"show-interactive-dev-session": {
+				describe:
+					"Show interactive dev session (defaults to true if the terminal supports interactivity)",
+				type: "boolean",
+			},
+			"experimental-registry": {
+				alias: ["x-registry"],
+				type: "boolean",
+				describe:
+					"Use the experimental file based dev registry for multi-worker development",
+				default: false,
+			},
 		});
 }
 
-export const Handler = async ({
-	directory,
-	compatibilityDate,
-	compatibilityFlags,
-	ip,
-	port,
-	inspectorPort,
-	proxy: requestedProxyPort,
-	bundle,
-	noBundle,
-	scriptPath: singleWorkerScriptPath,
-	binding: bindings = [],
-	kv: kvs = [],
-	do: durableObjects = [],
-	d1: d1s = [],
-	r2: r2s = [],
-	ai,
-	service: requestedServices = [],
-	liveReload,
-	localProtocol,
-	httpsKeyPath,
-	httpsCertPath,
-	persistTo,
-	nodeCompat: legacyNodeCompat,
-	experimentalLocal,
-	config: config,
-	_: [_pages, _dev, ...remaining],
-	logLevel,
-}: StrictYargsOptionsToInterface<typeof Options>) => {
-	if (logLevel) {
-		logger.loggerLevel = logLevel;
+type PagesDevArguments = StrictYargsOptionsToInterface<typeof Options>;
+
+export const Handler = async (args: PagesDevArguments) => {
+	if (args.logLevel) {
+		logger.loggerLevel = args.logLevel;
 	}
 
-	if (experimentalLocal) {
+	await printWranglerBanner();
+
+	if (args.experimentalLocal) {
 		logger.warn(
 			"--experimental-local is no longer required and will be removed in a future version.\n`wrangler pages dev` now uses the local Cloudflare Workers runtime by default."
 		);
 	}
 
-	if (config) {
-		throw new FatalError("Pages does not support wrangler.toml", 1);
+	if (args.config) {
+		throw new FatalError(
+			"Pages does not support custom paths for the `wrangler.toml` configuration file",
+			1
+		);
 	}
 
-	const command = remaining;
+	if (args.experimentalJsonConfig) {
+		throw new FatalError("Pages does not support `wrangler.json`", 1);
+	}
 
+	if (args.env) {
+		throw new FatalError(
+			"Pages does not support targeting an environment with the --env flag. Use the --branch flag to target your production or preview branch",
+			1
+		);
+	}
+
+	if (args.scriptPath !== undefined) {
+		logger.warn(
+			`\`--script-path\` is deprecated and will be removed in a future version of Wrangler.\nThe Worker script should be named \`_worker.js\` and located in the build output directory of your project (specified with \`wrangler pages dev <directory>\`).`
+		);
+	}
+
+	// for `dev` we always use the top-level config, which means we need
+	// to read the config file with `env` set to `undefined`
+	const config = readConfig(undefined, { ...args, env: undefined });
+	const resolvedDirectory = args.directory ?? config.pages_build_output_dir;
+	const [_pages, _dev, ...remaining] = args._;
+	const command = remaining;
 	let proxyPort: number | undefined;
+	let directory = resolvedDirectory;
 
 	if (directory !== undefined && command.length > 0) {
 		throw new FatalError(
@@ -274,32 +302,41 @@ export const Handler = async ({
 		);
 	} else if (directory === undefined) {
 		proxyPort = await spawnProxyProcess({
-			port: requestedProxyPort,
+			port: args.proxy,
 			command,
 		});
-		if (proxyPort === undefined) return undefined;
+		if (proxyPort === undefined) {
+			return undefined;
+		}
 	} else {
 		directory = resolve(directory);
 	}
 
-	if (!compatibilityDate) {
-		const currentDate = new Date().toISOString().substring(0, 10);
-		logger.warn(
-			`No compatibility_date was specified. Using today's date: ${currentDate}.\n` +
-				"Pass it in your terminal:\n" +
-				"```\n" +
-				`--compatibility-date=${currentDate}\n` +
-				"```\n" +
-				"See https://developers.cloudflare.com/workers/platform/compatibility-dates/ for more information."
-		);
-		compatibilityDate = currentDate;
-	}
+	const {
+		compatibilityDate,
+		compatibilityFlags,
+		ip,
+		port,
+		inspectorPort,
+		localProtocol,
+	} = resolvePagesDevServerSettings(config, args);
+
+	const {
+		vars,
+		kv_namespaces,
+		do_bindings,
+		d1_databases,
+		r2_buckets,
+		services,
+		ai,
+	} = getBindingsFromArgs(args);
 
 	let scriptReadyResolve: () => void;
 	const scriptReadyPromise = new Promise<void>(
 		(promiseResolve) => (scriptReadyResolve = promiseResolve)
 	);
 
+	const singleWorkerScriptPath = args.scriptPath ?? DEFAULT_SCRIPT_PATH;
 	const workerScriptPath =
 		directory !== undefined
 			? join(directory, singleWorkerScriptPath)
@@ -309,14 +346,20 @@ export const Handler = async ({
 	const usingWorkerScript = existsSync(workerScriptPath);
 	// TODO: Here lies a known bug. If you specify both `--bundle` and `--no-bundle`, this behavior is undefined and you will get unexpected results.
 	// There is no sane way to get the true value out of yargs, so here we are.
-	const enableBundling = bundle ?? !noBundle;
+	const enableBundling = args.bundle ?? !args.noBundle;
 
 	const functionsDirectory = "./functions";
 	let usingFunctions = !usingWorkerScript && existsSync(functionsDirectory);
 
 	let scriptPath = "";
 
-	const nodejsCompat = compatibilityFlags?.includes("nodejs_compat") ?? false;
+	const nodejsCompatMode = validateNodeCompat({
+		legacyNodeCompat: args.nodeCompat,
+		compatibilityFlags:
+			args.compatibilityFlags ?? config.compatibility_flags ?? [],
+		noBundle: args.noBundle ?? config.no_bundle ?? false,
+	});
+
 	const defineNavigatorUserAgent = isNavigatorDefined(
 		compatibilityDate,
 		compatibilityFlags
@@ -325,11 +368,13 @@ export const Handler = async ({
 
 	if (usingWorkerDirectory) {
 		const runBuild = async () => {
-			const bundleResult = await traverseAndBuildWorkerJSDirectory({
+			const bundleResult = await produceWorkerBundleForWorkerJSDirectory({
 				workerJSDirectory: workerScriptPath,
+				bundle: enableBundling,
 				buildOutputDirectory: directory ?? ".",
-				nodejsCompat,
+				nodejsCompatMode,
 				defineNavigatorUserAgent,
+				sourceMaps: config?.upload_source_maps ?? false,
 			});
 			modules = bundleResult.modules;
 			scriptPath = bundleResult.resolvedEntryPointPath;
@@ -352,9 +397,22 @@ export const Handler = async ({
 			}
 		});
 	} else if (usingWorkerScript) {
+		/*
+		 * Delegate watching for file changes to chokidar entirely. This gives
+		 * us a bit more flexibility and control as opposed to esbuild watch
+		 * mode, and keeps things consistent with the Functions implementation
+		 */
+		// always watch _worker.js
+		const watcher = watch([workerScriptPath], {
+			persistent: true,
+			ignoreInitial: true,
+		});
+		let watchedBundleDependencies: string[] = [];
+
 		scriptPath = workerScriptPath;
+
 		let runBuild = async () => {
-			await checkRawWorker(workerScriptPath, nodejsCompat, () =>
+			await checkRawWorker(workerScriptPath, nodejsCompatMode, () =>
 				scriptReadyResolve()
 			);
 		};
@@ -367,37 +425,122 @@ export const Handler = async ({
 				getPagesTmpDir(),
 				`./bundledWorker-${Math.random()}.mjs`
 			);
+
 			runBuild = async () => {
-				try {
-					await buildRawWorker({
-						workerScriptPath: usingWorkerDirectory
-							? join(workerScriptPath, "index.js")
-							: workerScriptPath,
-						outfile: scriptPath,
-						directory: directory ?? ".",
-						nodejsCompat,
-						local: true,
-						sourcemap: true,
-						watch: false,
-						onEnd: () => scriptReadyResolve(),
-						defineNavigatorUserAgent,
-					});
-				} catch (e: unknown) {
-					logger.warn("Failed to bundle _worker.js.", e);
+				const workerScriptDirectory = dirname(workerScriptPath);
+				let currentBundleDependencies: string[] = [];
+
+				const bundle = await buildRawWorker({
+					workerScriptPath: usingWorkerDirectory
+						? join(workerScriptPath, "index.js")
+						: workerScriptPath,
+					outfile: scriptPath,
+					directory: directory ?? ".",
+					nodejsCompatMode,
+					local: true,
+					sourcemap: true,
+					watch: false,
+					onEnd: () => scriptReadyResolve(),
+					defineNavigatorUserAgent,
+				});
+
+				/*
+				 * EXCLUDE:
+				 *   - "_worker.js" because we're already watching it
+				 *   - everything in "./.wrangler", as it's mostly cache and
+				 *     temporary files
+				 *   - anything outside of the current working directory, since we
+				 *     are expecting `wrangler pages dev` to be run from the Pages
+				 *     project root folder
+				 */
+				const bundleDependencies = Object.keys(bundle.dependencies)
+					.map((dep) => resolve(workerScriptDirectory, dep))
+					.filter(
+						(resolvedDep) =>
+							!resolvedDep.includes(normalize(singleWorkerScriptPath)) &&
+							!resolvedDep.includes(normalize("/.wrangler/")) &&
+							resolvedDep.includes(resolve(process.cwd()))
+					);
+
+				// handle non-JS module dependencies, such as wasm/html/binary imports
+				const bundleModules = bundle.modules
+					.filter((module) => !!module.filePath)
+					.map((module) =>
+						resolve(workerScriptDirectory, module.filePath as string)
+					);
+
+				/*
+				 *`bundle.dependencies` and `bundle.modules` combined, will always
+				 * provide us with the most up-to-date list of dependencies we need
+				 * to watch, since they reflect the latest built Worker bundle.
+				 * Therefore, we can safely unwatch all dependencies we have been
+				 * watching so far, and add all the new ones.
+				 */
+				currentBundleDependencies = [...bundleDependencies, ...bundleModules];
+
+				if (watchedBundleDependencies.length) {
+					watcher.unwatch(watchedBundleDependencies);
 				}
+				watcher.add(currentBundleDependencies);
+				watchedBundleDependencies = [...currentBundleDependencies];
 			};
 		}
 
-		await runBuild();
-		watch([workerScriptPath], {
-			persistent: true,
-			ignoreInitial: true,
-		}).on("all", async (event) => {
-			if (event === "unlink") {
-				return;
+		/*
+		 * Improve developer experience by debouncing the re-building
+		 * of the Worker script, in case file changes are trigerred
+		 * at a high rate (for example if code editor runs auto-saves
+		 * at very short intervals)
+		 *
+		 * "Debouncing ensures that exactly one signal is sent for an
+		 * event that may be happening several times — or even several
+		 * hundreds of times over an extended period. As long as the
+		 * events are occurring fast enough to happen at least once in
+		 * every detection period, the signal will not be sent!"
+		 * (http://unscriptable.com/2009/03/20/debouncing-javascript-methods/)
+		 */
+		const debouncedRunBuild = debounce(async () => {
+			try {
+				await runBuild();
+			} catch (e) {
+				/*
+				 * don't break developer flow in watch mode by throwing an error
+				 * here. Many times errors will be just the result of unfinished
+				 * typing. Instead, log the error, point out we are still serving
+				 * the last successfully built Worker, and allow developers to
+				 * write their code to completion
+				 */
+				logger.warn(
+					`Failed to build ${singleWorkerScriptPath}. Continuing to serve the last successfully built version of the Worker.`
+				);
 			}
+		}, 50);
+
+		try {
 			await runBuild();
-		});
+
+			watcher.on("all", async (eventName, path) => {
+				logger.debug(`🌀 "${eventName}" event detected at ${path}.`);
+
+				// Skip re-building the Worker if "_worker.js" was deleted.
+				// This is necessary for Pages projects + Frameworks, where
+				// the file was potentially deleted as part of a build process,
+				// which will add the updated file back.
+				// see https://github.com/cloudflare/workers-sdk/issues/3886
+				if (eventName === "unlink") {
+					return;
+				}
+
+				debouncedRunBuild();
+			});
+		} catch (e: unknown) {
+			/*
+			 * fail early if we encounter errors while attempting to build the
+			 * Worker. These flag underlying issues in the _worker.js code, and
+			 * should be addressed before starting the dev process
+			 */
+			throw new FatalError(`Failed to build ${singleWorkerScriptPath}.`);
+		}
 	} else if (usingFunctions) {
 		// Try to use Functions
 		scriptPath = join(
@@ -409,73 +552,178 @@ export const Handler = async ({
 			`./functionsRoutes-${Math.random()}.mjs`
 		);
 
-		if (legacyNodeCompat) {
-			console.warn(
-				"Enabling Node.js compatibility mode for builtins and globals. This is experimental and has serious tradeoffs. Please see https://github.com/ionic-team/rollup-plugin-node-polyfills/ for more details."
-			);
-		}
+		logger.debug(`Compiling worker to "${scriptPath}"...`);
 
-		if (legacyNodeCompat && nodejsCompat) {
-			throw new FatalError(
-				"The `nodejs_compat` compatibility flag cannot be used in conjunction with the legacy `--node-compat` flag. If you want to use the Workers runtime Node.js compatibility features, please remove the `--node-compat` argument from your CLI command or `node_compat = true` from your config file.",
-				1
-			);
-		}
-
-		logger.log(`Compiling worker to "${scriptPath}"...`);
 		const onEnd = () => scriptReadyResolve();
-		try {
-			const buildFn = async () => {
-				await buildFunctions({
-					outfile: scriptPath,
-					functionsDirectory,
-					sourcemap: true,
-					watch: false,
-					onEnd,
-					buildOutputDirectory: directory,
-					legacyNodeCompat,
-					nodejsCompat,
-					local: true,
-					routesModule,
-					defineNavigatorUserAgent,
-				});
-				await metrics.sendMetricsEvent("build pages functions");
-			};
 
-			await buildFn();
-			// If Functions found routes, continue using Functions
-			watch([functionsDirectory], {
-				persistent: true,
-				ignoreInitial: true,
-			}).on("all", async () => {
-				try {
-					await buildFn();
-				} catch (e) {
-					if (e instanceof FunctionsNoRoutesError) {
-						logger.warn(
-							getFunctionsNoRoutesWarning(functionsDirectory, "skipping")
-						);
-					} else if (e instanceof FunctionsBuildError) {
-						logger.warn(
-							getFunctionsBuildWarning(functionsDirectory, e.message)
-						);
-					} else {
-						throw e;
-					}
-				}
+		/*
+		 * Pages Functions projects cannot rely on esbuild's watch mode alone.
+		 * That's because the watch mode that's built into esbuild is designed
+		 * specifically for only triggering a rebuild when esbuild's build inputs
+		 * are changed (see https://github.com/evanw/esbuild/issues/3705). With
+		 * Functions, we would actually want to trigger a rebuild every time a new
+		 * file is added to the "/functions" directory.
+		 *
+		 * One solution would be to use an esbuild plugin, and "teach" esbuild to
+		 * watch the "/functions" directory. But it's more complicated than that.
+		 * When we build Functions, one of the steps is to generate the routes
+		 * based on the file tree (see `generateConfigFileFromTree`). These routes
+		 * are then injected into the esbuild entrypoint (see
+		 * `templates/pages-template-worker.ts`). Delegating the "/functions" dir
+		 * watching to an esbuild plugin, would mean delegating the routes generation
+		 * to that plugin as well. This gets very hairy very quickly.
+		 *
+		 * Another solution, is to use a combination of dependencies watching, via
+		 * esbuild, and file system watching, via chokidar. The downside of this
+		 * approach is that a lot of syncing between the two watch modes must be put
+		 * in place, in order to avoid triggering building Functions multiple times
+		 * over one single change (like for example renaming file that's part of the
+		 * dependency graph)
+		 *
+		 * Another solution, which is the one we opted for here, is to delegate file
+		 * watching entirely to a file system watcher, chokidar in this case. While
+		 * not entirely downside-free
+		 *   - we still rely on esbuild to provide us with the dependency graph
+		 *   - we need some logic in place to pre-process and filter the dependencies
+		 *     we pass to chokidar
+		 *   - we need to keep track of which dependencies are being watched
+		 * this solution keeps all things watch mode in one place, makes things easier
+		 * to read, reason about and maintain, separates Pages <-> esbuild concerns
+		 * better, and gives all the flexibility we needed.
+		 */
+		// always watch the "/functions" directory
+		const watcher = watch([functionsDirectory], {
+			persistent: true,
+			ignoreInitial: true,
+		});
+		let watchedBundleDependencies: string[] = [];
+
+		const buildFn = async () => {
+			let currentBundleDependencies: string[] = [];
+
+			const bundle = await buildFunctions({
+				outfile: scriptPath,
+				functionsDirectory,
+				sourcemap: true,
+				watch: false,
+				onEnd,
+				buildOutputDirectory: directory,
+				nodejsCompatMode,
+				local: true,
+				routesModule,
+				defineNavigatorUserAgent,
 			});
-		} catch (e) {
+
+			/*
+			 * EXCLUDE:
+			 *   - the "/functions" directory because we're already watching it
+			 *   - everything in "./.wrangler", as it's mostly cache and
+			 *     temporary files
+			 *   - any bundle dependencies we are already watching
+			 *   - anything outside of the current working directory, since we
+			 *     are expecting `wrangler pages dev` to be run from the Pages
+			 *     project root folder
+			 */
+			const bundleDependencies = Object.keys(bundle.dependencies)
+				.map((dep) => resolve(functionsDirectory, dep))
+				.filter(
+					(resolvedDep) =>
+						!resolvedDep.includes(normalize("/functions/")) &&
+						!resolvedDep.includes(normalize("/.wrangler/")) &&
+						resolvedDep.includes(resolve(process.cwd()))
+				);
+
+			// handle non-JS module dependencies, such as wasm/html/binary imports
+			const bundleModules = bundle.modules
+				.filter((module) => !!module.filePath)
+				.map((module) =>
+					resolve(functionsDirectory, module.filePath as string)
+				);
+
+			/*
+			 *`bundle.dependencies` and `bundle.modules` will always contain the
+			 * latest dependency list of the current bundle. If we are currently
+			 * watching any dependency files not in that list, we should remove
+			 * them, as they are no longer relevant to the compiled Functions.
+			 */
+			currentBundleDependencies = [...bundleDependencies, ...bundleModules];
+
+			if (watchedBundleDependencies.length) {
+				watcher.unwatch(watchedBundleDependencies);
+			}
+			watcher.add(currentBundleDependencies);
+			watchedBundleDependencies = [...currentBundleDependencies];
+
+			await metrics.sendMetricsEvent("build pages functions");
+		};
+
+		/*
+		 * Improve developer experience by debouncing the re-building
+		 * of Functions.
+		 *
+		 * "Debouncing ensures that exactly one signal is sent for an
+		 * event that may be happening several times — or even several
+		 * hundreds of times over an extended period. As long as the
+		 * events are occurring fast enough to happen at least once in
+		 * every detection period, the signal will not be sent!"
+		 * (http://unscriptable.com/2009/03/20/debouncing-javascript-methods/)
+		 *
+		 * This handles use cases such as bulk file/directory changes
+		 * (such as copy/pasting multiple files/directories), where
+		 * chokidar will trigger a change event per each changed file/
+		 * directory. In such use cases, we want to ensure that we
+		 * re-build Functions once, as opposed to once per change event.
+		 */
+		const debouncedBuildFn = debounce(async () => {
+			try {
+				await buildFn();
+			} catch (e) {
+				if (e instanceof FunctionsNoRoutesError) {
+					logger.warn(
+						`${getFunctionsNoRoutesWarning(functionsDirectory)}. Continuing to serve the last successfully built version of Functions.`
+					);
+				} else {
+					/*
+					 * don't break developer flow in watch mode by throwing an error
+					 * here. Many times errors will be just the result of unfinished
+					 * typing. Instead, log the error, point out we are still serving
+					 * the last successfully built Functions, and allow developers to
+					 * write their code to completion
+					 */
+					logger.warn(
+						`Failed to build Functions at ${functionsDirectory}. Continuing to serve the last successfully built version of Functions.`
+					);
+				}
+			}
+		}, 50);
+
+		try {
+			await buildFn();
+
+			// If Functions found routes, continue using Functions
+			watcher.on("all", async (eventName, path) => {
+				logger.debug(`🌀 "${eventName}" event detected at ${path}.`);
+
+				debouncedBuildFn();
+			});
+		} catch (e: unknown) {
 			// If there are no Functions, then Pages will only serve assets.
 			if (e instanceof FunctionsNoRoutesError) {
-				logger.warn(
+				logger.error(
 					getFunctionsNoRoutesWarning(functionsDirectory, "skipping")
 				);
 				// Resolve anyway and run without Functions
 				onEnd();
-				// Turn off Functions
 				usingFunctions = false;
 			} else {
-				throw e;
+				/*
+				 * do not start the `pages dev` session if we encounter errors
+				 * while attempting to build Functions. These flag underlying
+				 * issues in the Functions code, and should be addressed before
+				 */
+				throw new FatalError(
+					`Failed to build Functions at ${functionsDirectory}.`
+				);
 			}
 		}
 	}
@@ -486,7 +734,7 @@ export const Handler = async ({
 		// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
 		scriptReadyResolve!();
 
-		logger.log("No functions. Shimming...");
+		logger.log("No Functions. Shimming...");
 		scriptPath = resolve(getBasePath(), "templates/pages-shim.ts");
 	}
 
@@ -500,7 +748,7 @@ export const Handler = async ({
 		);
 	}
 
-	let entrypoint = scriptPath;
+	let scriptEntrypoint = scriptPath;
 
 	// custom _routes.json apply only to Functions or Advanced Mode Pages projects
 	if (
@@ -545,11 +793,11 @@ export const Handler = async ({
 				routesJSONContents = readFileSync(routesJSONPath, "utf-8");
 				validateRoutes(JSON.parse(routesJSONContents), directory);
 
-				entrypoint = join(
+				scriptEntrypoint = join(
 					getPagesTmpDir(),
 					`${Math.random().toString(36).slice(2)}.js`
 				);
-				await runBuild(scriptPath, entrypoint, routesJSONContents);
+				await runBuild(scriptPath, scriptEntrypoint, routesJSONContents);
 			} catch (err) {
 				if (err instanceof FatalError) {
 					throw err;
@@ -575,7 +823,7 @@ export const Handler = async ({
 					 */
 					routesJSONContents = readFileSync(routesJSONPath, "utf-8");
 					validateRoutes(JSON.parse(routesJSONContents), directory as string);
-					await runBuild(scriptPath, entrypoint, routesJSONContents);
+					await runBuild(scriptPath, scriptEntrypoint, routesJSONContents);
 				} catch (err) {
 					/**
 					 * If _routes.json is invalid, don't exit but instead fallback to a sensible default
@@ -596,164 +844,61 @@ export const Handler = async ({
 
 					logger.error(error);
 					logger.warn(
-						`Falling back to the following _routes.json default: ${JSON.stringify(
-							defaultRoutesJSONSpec,
-							null,
-							2
-						)}`
+						`Ignoring provided _routes.json file, and falling back to the following default routes configuration:\n` +
+							`${JSON.stringify(defaultRoutesJSONSpec, null, 2)}`
 					);
 
 					routesJSONContents = JSON.stringify(defaultRoutesJSONSpec);
-					await runBuild(scriptPath, entrypoint, routesJSONContents);
+					await runBuild(scriptPath, scriptEntrypoint, routesJSONContents);
 				}
 			});
 		}
 	}
 
-	const services = requestedServices
-		.map((serviceBinding) => {
-			const { binding, service, environment } =
-				SERVICE_BINDING_REGEXP.exec(serviceBinding.toString())?.groups || {};
-
-			if (!binding || !service) {
-				logger.warn(
-					"Could not parse Service binding:",
-					serviceBinding.toString()
-				);
-				return;
-			}
-
-			// Envs get appended to the end of the name
-			let serviceName = service;
-			if (environment) {
-				serviceName = `${service}-${environment}`;
-			}
-
-			return {
-				binding,
-				service: serviceName,
-				environment,
-			};
-		})
-		.filter(Boolean) as NonNullable<AdditionalDevProps["services"]>;
-
-	if (services.find(({ environment }) => !!environment)) {
-		// We haven't yet properly defined how environments of service bindings should
-		// work, so if the user is using an environment for any of their service
-		// bindings we warn them that they are experimental
-		logger.warn("Support for service binding environments is experimental.");
-	}
-
-	const { stop, waitUntilExit } = await unstable_dev(entrypoint, {
+	const { stop, waitUntilExit } = await unstable_dev(scriptEntrypoint, {
+		env: undefined,
 		ip,
 		port,
 		inspectorPort,
 		localProtocol,
-		httpsKeyPath,
-		httpsCertPath,
+		httpsKeyPath: args.httpsKeyPath,
+		httpsCertPath: args.httpsCertPath,
 		compatibilityDate,
 		compatibilityFlags,
-		nodeCompat: legacyNodeCompat,
-		vars: Object.fromEntries(
-			bindings
-				.map((binding) => binding.toString().split("="))
-				.map(([key, ...values]) => [key, values.join("=")])
-		),
+		nodeCompat: nodejsCompatMode === "legacy",
+		vars,
+		kv: kv_namespaces,
+		durableObjects: do_bindings,
+		r2: r2_buckets,
 		services,
-		kv: kvs
-			.map((kv) => {
-				const { binding, ref } =
-					BINDING_REGEXP.exec(kv.toString())?.groups || {};
-
-				if (!binding) {
-					logger.warn("Could not parse KV binding:", kv.toString());
-					return;
-				}
-
-				return {
-					binding,
-					id: ref || kv.toString(),
-				};
-			})
-			.filter(Boolean) as AdditionalDevProps["kv"],
-		durableObjects: durableObjects
-			.map((durableObject) => {
-				const { binding, className, scriptName } =
-					DURABLE_OBJECTS_BINDING_REGEXP.exec(durableObject.toString())
-						?.groups || {};
-
-				if (!binding || !className) {
-					logger.warn(
-						"Could not parse Durable Object binding:",
-						durableObject.toString()
-					);
-					return;
-				}
-
-				return {
-					name: binding,
-					class_name: className,
-					script_name: scriptName,
-				};
-			})
-			.filter(Boolean) as AdditionalDevProps["durableObjects"],
-		r2: r2s
-			.map((r2) => {
-				const { binding, ref } =
-					BINDING_REGEXP.exec(r2.toString())?.groups || {};
-
-				if (!binding) {
-					logger.warn("Could not parse R2 binding:", r2.toString());
-					return;
-				}
-
-				return { binding, bucket_name: ref || binding.toString() };
-			})
-			.filter(Boolean) as AdditionalDevProps["r2"],
-		ai: ai ? { binding: ai.toString() } : undefined,
+		ai,
 		rules: usingWorkerDirectory
 			? [
 					{
 						type: "ESModule",
 						globs: ["**/*.js", "**/*.mjs"],
 					},
-			  ]
+				]
 			: undefined,
 		bundle: enableBundling,
-		persistTo,
+		persistTo: args.persistTo,
 		inspect: undefined,
-		logLevel,
-		updateCheck: true,
+		logLevel: args.logLevel,
 		experimental: {
 			processEntrypoint: true,
 			additionalModules: modules,
-			d1Databases: d1s
-				.map((d1) => {
-					const { binding, ref } =
-						BINDING_REGEXP.exec(d1.toString())?.groups || {};
-
-					if (!binding) {
-						logger.warn("Could not parse D1 binding:", d1.toString());
-						return;
-					}
-
-					return {
-						binding,
-						database_id: ref || d1.toString(),
-						database_name: `local-${d1}`,
-					};
-				})
-				.filter(Boolean) as AdditionalDevProps["d1Databases"],
+			d1Databases: d1_databases,
 			disableExperimentalWarning: true,
 			enablePagesAssetsServiceBinding: {
 				proxyPort,
 				directory,
 			},
-			liveReload,
+			liveReload: args.liveReload,
 			forceLocal: true,
-			showInteractiveDevSession: undefined,
+			showInteractiveDevSession: args.showInteractiveDevSession,
 			testMode: false,
 			watch: true,
+			fileBasedRegistry: args.experimentalRegistry,
 		},
 	});
 	await metrics.sendMetricsEvent("run pages dev");
@@ -823,7 +968,9 @@ function getPort(pid: number) {
 			.filter((line) => line !== null) as RegExpExecArray[];
 
 		const match = matches[0];
-		if (match) return parseInt(match[1]);
+		if (match) {
+			return parseInt(match[1]);
+		}
 	} catch (thrown) {
 		logger.error(
 			`Error scanning for ports of process with PID ${pid}: ${thrown}`
@@ -838,6 +985,11 @@ async function spawnProxyProcess({
 	port?: number;
 	command: (string | number)[];
 }): Promise<undefined | number> {
+	if (command.length > 0 || port !== undefined) {
+		logger.warn(
+			`Specifying a \`-- <command>\` or \`--proxy\` is deprecated and will be removed in a future version of Wrangler.\nBuild your application to a directory and run the \`wrangler pages dev <directory>\` instead.\nThis results in a more faithful emulation of production behavior.`
+		);
+	}
 	if (command.length === 0) {
 		if (port !== undefined) {
 			return port;
@@ -845,7 +997,7 @@ async function spawnProxyProcess({
 
 		CLEANUP();
 		throw new FatalError(
-			"Must specify a directory of static assets to serve or a command to run or a proxy port.",
+			"Must specify a directory of static assets to serve, or a command to run, or a proxy port, or configure `pages_build_output_dir` in `wrangler.toml`.",
 			1
 		);
 	}
@@ -906,4 +1058,225 @@ async function spawnProxyProcess({
 	}
 
 	return port;
+}
+
+/**
+ * Reconciles top-level & local development settings, with `pages dev`command line args taking
+ * precedence over `wrangler.toml` configuration. This function does not handle the bindings
+ * reconciliation.
+ */
+function resolvePagesDevServerSettings(
+	config: Config,
+	args: PagesDevArguments
+) {
+	// resolve compatibility date
+	let compatibilityDate = args.compatibilityDate || config.compatibility_date;
+	if (!compatibilityDate) {
+		const currentDate = new Date().toISOString().substring(0, 10);
+		logger.warn(
+			`No compatibility_date was specified. Using today's date: ${currentDate}.\n` +
+				`❯❯ Add one to your wrangler.toml file: compatibility_date = "${currentDate}", or\n` +
+				`❯❯ Pass it in your terminal: wrangler pages dev [<DIRECTORY>] --compatibility-date=${currentDate}\n\n` +
+				"See https://developers.cloudflare.com/workers/platform/compatibility-dates/ for more information."
+		);
+		compatibilityDate = currentDate;
+	}
+
+	return {
+		compatibilityDate,
+		compatibilityFlags: args.compatibilityFlags ?? config.compatibility_flags,
+		ip: args.ip ?? config.dev.ip ?? DEFAULT_IP,
+		// because otherwise `unstable_dev` will default the port number to `0`
+		port: args.port ?? config.dev?.port ?? DEFAULT_PAGES_LOCAL_PORT,
+		inspectorPort: args.inspectorPort ?? config.dev?.inspector_port,
+		localProtocol: args.localProtocol ?? config.dev?.local_protocol,
+	};
+}
+
+/**
+ * Parses the arguments specified by `pages dev` for environment bindings, and converts them
+ * into arrays of appropriate environment binding structures
+ */
+function getBindingsFromArgs(args: PagesDevArguments): Partial<
+	Pick<
+		EnvironmentNonInheritable,
+		| "vars"
+		| "kv_namespaces"
+		| "r2_buckets"
+		| "d1_databases"
+		| "services"
+		| "ai"
+		| "version_metadata"
+	>
+> & {
+	do_bindings?: DurableObjectBindings;
+} {
+	// get environment variables from the [--vars] arg
+	let vars: EnvironmentNonInheritable["vars"] = {};
+	if (args.binding?.length) {
+		vars = Object.fromEntries(
+			args.binding
+				.map((binding) => binding.toString().split("="))
+				.map(([key, ...values]) => [key, values.join("=")])
+		);
+	}
+
+	// get KV bindings from the [--kv] arg
+	let kvNamespaces: EnvironmentNonInheritable["kv_namespaces"] | undefined;
+	if (args.kv?.length) {
+		kvNamespaces = args.kv
+			.map((kv) => {
+				const { binding, ref } =
+					BINDING_REGEXP.exec(kv.toString())?.groups || {};
+
+				if (!binding) {
+					logger.warn("Could not parse KV binding:", kv.toString());
+					return;
+				}
+
+				return {
+					binding,
+					id: ref || kv.toString(),
+				};
+			})
+			.filter(Boolean) as AdditionalDevProps["kv"];
+	}
+
+	// get DO bindings from the [--do] arg
+	let durableObjectsBindings: DurableObjectBindings | undefined;
+	if (args.do?.length) {
+		durableObjectsBindings = args.do
+			.map((durableObject) => {
+				const { binding, className, scriptName } =
+					DURABLE_OBJECTS_BINDING_REGEXP.exec(durableObject.toString())
+						?.groups || {};
+
+				if (!binding || !className) {
+					logger.warn(
+						"Could not parse Durable Object binding:",
+						durableObject.toString()
+					);
+					return;
+				}
+
+				return {
+					name: binding,
+					class_name: className,
+					script_name: scriptName,
+				};
+			})
+			.filter(Boolean) as AdditionalDevProps["durableObjects"];
+	}
+
+	// get D1 bindings from the [--d1] arg
+	let d1Databases: EnvironmentNonInheritable["d1_databases"] | undefined;
+	if (args.d1?.length) {
+		d1Databases = args.d1
+			.map((d1) => {
+				const { binding, ref } =
+					BINDING_REGEXP.exec(d1.toString())?.groups || {};
+
+				if (!binding) {
+					logger.warn("Could not parse D1 binding:", d1.toString());
+					return;
+				}
+
+				return {
+					binding,
+					database_id: ref || d1.toString(),
+					database_name: `local-${d1}`,
+				};
+			})
+			.filter(Boolean) as AdditionalDevProps["d1Databases"];
+	}
+
+	// get R2 bindings from the [--r2] arg
+	let r2Buckets: EnvironmentNonInheritable["r2_buckets"] | undefined;
+	if (args.r2?.length) {
+		r2Buckets = args.r2
+			.map((r2) => {
+				const { binding, ref } =
+					BINDING_REGEXP.exec(r2.toString())?.groups || {};
+
+				if (!binding) {
+					logger.warn("Could not parse R2 binding:", r2.toString());
+					return;
+				}
+
+				return { binding, bucket_name: ref || binding.toString() };
+			})
+			.filter(Boolean) as AdditionalDevProps["r2"];
+	}
+
+	// get service bindings from the [--services] arg
+	let services: EnvironmentNonInheritable["services"] | undefined;
+	if (args.service?.length) {
+		services = args.service
+			.map((serviceBinding) => {
+				const { binding, service, environment, entrypoint } =
+					SERVICE_BINDING_REGEXP.exec(serviceBinding.toString())?.groups || {};
+
+				if (!binding || !service) {
+					logger.warn(
+						"Could not parse Service binding:",
+						serviceBinding.toString()
+					);
+					return;
+				}
+
+				// Envs get appended to the end of the name
+				let serviceName = service;
+				if (environment) {
+					serviceName = `${service}-${environment}`;
+				}
+
+				return {
+					binding,
+					service: serviceName,
+					environment,
+					entrypoint,
+				};
+			})
+			.filter(Boolean) as NonNullable<AdditionalDevProps["services"]>;
+
+		if (services.find(({ environment }) => !!environment)) {
+			// We haven't yet properly defined how environments of service bindings should
+			// work, so if the user is using an environment for any of their service
+			// bindings we warn them that they are experimental
+			logger.warn("Support for service binding environments is experimental.");
+		}
+	}
+
+	// get ai bindings from the [--ai] arg
+	let ai: EnvironmentNonInheritable["ai"] | undefined;
+	if (args.ai) {
+		ai = { binding: args.ai.toString() };
+	}
+
+	// get version_metadata binding from the [--version_metadata] arg
+	let version_metadata:
+		| EnvironmentNonInheritable["version_metadata"]
+		| undefined;
+	if (args.versionMetadata) {
+		version_metadata = { binding: args.versionMetadata.toString() };
+	}
+
+	/*
+	 * all these bindings will be merged with their corresponding configuration file counterparts
+	 * in `startDev()` -> `getBindingsAndAssetPaths()` -> `getBindings()`, so no need to address
+	 * that here
+	 */
+	return {
+		vars: vars,
+		kv_namespaces: kvNamespaces,
+		d1_databases: d1Databases,
+		r2_buckets: r2Buckets,
+		services,
+		ai,
+		version_metadata,
+
+		// don't construct the full `EnvironmentNonInheritable["durable_objects"]` shape here.
+		// `startDev()` will do that for us in its `getBindings()` function
+		do_bindings: durableObjectsBindings,
+	};
 }

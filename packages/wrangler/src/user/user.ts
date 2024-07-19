@@ -220,6 +220,7 @@ import {
 	saveToConfigCache,
 } from "../config-cache";
 import { NoDefaultValueProvided, select } from "../dialogs";
+import { getCloudflareApiEnvironmentFromEnv } from "../environment-variables/misc-variables";
 import { UserError } from "../errors";
 import { getGlobalWranglerConfigPath } from "../global-wrangler-config-path";
 import { CI } from "../is-ci";
@@ -245,6 +246,7 @@ import { generateAuthUrl } from "./generate-auth-url";
 import { generateRandomState } from "./generate-random-state";
 import type { ChooseAccountItem } from "./choose-account";
 import type { ParsedUrlQuery } from "node:querystring";
+import type { Response } from "undici";
 
 export type ApiCredentials =
 	| {
@@ -306,7 +308,7 @@ interface AuthTokens {
  * The path to the config file that holds user authentication data,
  * relative to the user's home directory.
  */
-export const USER_AUTH_CONFIG_FILE = "config/default.toml";
+export const USER_AUTH_CONFIG_PATH = "config";
 
 /**
  * The data that may be read from the `USER_CONFIG_FILE`.
@@ -349,7 +351,8 @@ const DefaultScopes = {
 	"zone:read": "Grants read level access to account zone.",
 	"ssl_certs:write": "See and manage mTLS certificates for your account",
 	"constellation:write": "Manage Constellation projects/models",
-	"ai:read": "List AI models",
+	"ai:write": "See and change Workers AI catalog and assets",
+	"queues:write": "See and change Cloudflare Queues settings and data",
 } as const;
 
 const OptionalScopes = {
@@ -393,7 +396,9 @@ function getAuthTokens(config?: UserAuthConfig): AuthTokens | undefined {
 	// get refreshToken/accessToken from fs if exists
 	try {
 		// if the environment variable is available, we don't need to do anything here
-		if (getAuthFromEnv()) return;
+		if (getAuthFromEnv()) {
+			return;
+		}
 
 		// otherwise try loading from the user auth config file.
 		const { oauth_token, refresh_token, expiration_time, scopes, api_token } =
@@ -448,10 +453,14 @@ export function getAPIToken(): ApiCredentials | undefined {
 	}
 
 	const localAPIToken = getAuthFromEnv();
-	if (localAPIToken) return localAPIToken;
+	if (localAPIToken) {
+		return localAPIToken;
+	}
 
 	const storedAccessToken = LocalState.accessToken?.value;
-	if (storedAccessToken) return { apiToken: storedAccessToken };
+	if (storedAccessToken) {
+		return { apiToken: storedAccessToken };
+	}
 
 	return undefined;
 }
@@ -720,7 +729,7 @@ async function exchangeRefreshTokenForAccessToken(): Promise<AccessContext> {
 		}
 	} else {
 		try {
-			const json = (await response.json()) as TokenResponse;
+			const json = (await getJSONFromResponse(response)) as TokenResponse;
 			if ("error" in json) {
 				throw json.error;
 			}
@@ -785,7 +794,9 @@ async function exchangeAuthCodeForAccessToken(): Promise<AccessContext> {
 
 	const response = await fetchAuthToken(params);
 	if (!response.ok) {
-		const { error } = (await response.json()) as { error: string };
+		const { error } = (await getJSONFromResponse(response)) as {
+			error: string;
+		};
 		// .catch((_) => ({ error: "invalid_json" }));
 		if (error === "invalid_grant") {
 			logger.log("Expired! Auth code or refresh token needs to be renewed.");
@@ -794,7 +805,7 @@ async function exchangeAuthCodeForAccessToken(): Promise<AccessContext> {
 		}
 		throw toErrorClass(error);
 	}
-	const json = (await response.json()) as TokenResponse;
+	const json = (await getJSONFromResponse(response)) as TokenResponse;
 	if ("error" in json) {
 		throw new Error(json.error);
 	}
@@ -868,33 +879,32 @@ async function generatePKCECodes(): Promise<PKCECodes> {
 	return { codeChallenge, codeVerifier };
 }
 
+export function getAuthConfigFilePath() {
+	const environment = getCloudflareApiEnvironmentFromEnv();
+	const filePath = `${USER_AUTH_CONFIG_PATH}/${environment === "production" ? "default.toml" : `${environment}.toml`}`;
+
+	return path.join(getGlobalWranglerConfigPath(), filePath);
+}
+
 /**
  * Writes a a wrangler config file (auth credentials) to disk,
  * and updates the user auth state with the new credentials.
  */
 export function writeAuthConfigFile(config: UserAuthConfig) {
-	const authConfigFilePath = path.join(
-		getGlobalWranglerConfigPath(),
-		USER_AUTH_CONFIG_FILE
-	);
-	mkdirSync(path.dirname(authConfigFilePath), {
+	const configPath = getAuthConfigFilePath();
+
+	mkdirSync(path.dirname(configPath), {
 		recursive: true,
 	});
-	writeFileSync(
-		path.join(authConfigFilePath),
-		TOML.stringify(config as TOML.JsonMap),
-		{ encoding: "utf-8" }
-	);
+	writeFileSync(path.join(configPath), TOML.stringify(config as TOML.JsonMap), {
+		encoding: "utf-8",
+	});
 
 	reinitialiseAuthTokens();
 }
 
 export function readAuthConfigFile(): UserAuthConfig {
-	const authConfigFilePath = path.join(
-		getGlobalWranglerConfigPath(),
-		USER_AUTH_CONFIG_FILE
-	);
-	const toml = parseTOML(readFileSync(authConfigFilePath));
+	const toml = parseTOML(readFileSync(getAuthConfigFilePath()));
 	return toml;
 }
 
@@ -932,10 +942,20 @@ export async function loginOrRefreshIfRequired(
 export async function login(
 	props: LoginProps = { browser: true }
 ): Promise<boolean> {
+	const authFromEnv = getAuthFromEnv();
+	if (authFromEnv) {
+		// Auth from env overrides any login details, so no point in allowing the user to login.
+		logger.error(
+			"You are logged in with an API Token. Unset the CLOUDFLARE_API_TOKEN in the " +
+				"environment to log in via OAuth."
+		);
+		return false;
+	}
+
 	logger.log("Attempting to login via OAuth...");
 	const urlToOpen = await getAuthURL(props?.scopes);
 	let server: http.Server;
-	let loginTimeoutHandle: NodeJS.Timeout;
+	let loginTimeoutHandle: ReturnType<typeof setTimeout>;
 	const timerPromise = new Promise<boolean>((resolve) => {
 		loginTimeoutHandle = setTimeout(() => {
 			logger.error(
@@ -954,12 +974,17 @@ export async function login(
 				server.close((closeErr?: Error) => {
 					if (error || closeErr) {
 						reject(error || closeErr);
-					} else resolve(status);
+					} else {
+						resolve(status);
+					}
 				});
 			}
 
 			assert(req.url, "This request doesn't have a URL"); // This should never happen
 			const { pathname, query } = url.parse(req.url, true);
+			if (req.method !== "GET") {
+				return res.end("OK");
+			}
 			switch (pathname) {
 				case "/oauth/callback": {
 					let hasAuthCode = false;
@@ -1058,6 +1083,16 @@ async function refreshToken(): Promise<boolean> {
 }
 
 export async function logout(): Promise<void> {
+	const authFromEnv = getAuthFromEnv();
+	if (authFromEnv) {
+		// Auth from env overrides any login details, so we cannot log out.
+		logger.log(
+			"You are logged in with an API Token. Unset the CLOUDFLARE_API_TOKEN in the " +
+				"environment to log out."
+		);
+		return;
+	}
+
 	if (!LocalState.accessToken) {
 		if (!LocalState.refreshToken) {
 			logger.log("Not logged in, exiting...");
@@ -1094,7 +1129,7 @@ export async function logout(): Promise<void> {
 		},
 	});
 	await response.text(); // blank text? would be nice if it was something meaningful
-	rmSync(path.join(getGlobalWranglerConfigPath(), USER_AUTH_CONFIG_FILE));
+	rmSync(getAuthConfigFilePath());
 	logger.log(`Successfully logged out.`);
 }
 
@@ -1108,10 +1143,7 @@ export function listScopes(message = "💁 Available scopes:"): void {
 	// TODO: maybe a good idea to show usage here
 }
 
-export async function getAccountId(): Promise<string | undefined> {
-	const apiToken = getAPIToken();
-	if (!apiToken) return;
-
+export async function getAccountId(): Promise<string> {
 	// check if we have a cached value
 	const cachedAccount = getAccountFromCache();
 	if (cachedAccount && !getCloudflareAccountIdFromEnv()) {
@@ -1239,4 +1271,28 @@ async function fetchAuthToken(body: URLSearchParams) {
 		body: body.toString(),
 		headers,
 	});
+}
+
+async function getJSONFromResponse(response: Response) {
+	const text = await response.text();
+	try {
+		return JSON.parse(text);
+	} catch (e) {
+		// Sometime we get an error response where the body is HTML
+		if (text.match(/<!DOCTYPE html>/)) {
+			logger.error(
+				"The body of the response was HTML rather than JSON. Check the debug logs to see the full body of the response."
+			);
+			if (text.match(/challenge-platform/)) {
+				logger.error(
+					"It looks like you might have hit a bot challenge page. This may be transient but if not, please contact Cloudflare to find out what can be done."
+				);
+			}
+		}
+		logger.debug("Full body of response\n\n", text);
+		throw new Error(
+			`Invalid JSON in response: status: ${response.status} ${response.statusText}`,
+			{ cause: e }
+		);
+	}
 }

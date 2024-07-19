@@ -2,7 +2,6 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { getBasePath } from "../paths";
 import { dedent } from "../utils/dedent";
-import type { DurableObjectBindings } from "../config/environment";
 import type { Entry } from "./entry";
 import type { CfScriptFormat } from "./worker";
 
@@ -25,8 +24,7 @@ export interface MiddlewareLoader {
 export async function applyMiddlewareLoaderFacade(
 	entry: Entry,
 	tmpDirPath: string,
-	middleware: MiddlewareLoader[],
-	doBindings: DurableObjectBindings
+	middleware: MiddlewareLoader[]
 ): Promise<{ entry: Entry; inject?: string[] }> {
 	// Firstly we need to insert the middleware array into the project,
 	// and then we load the middleware - this insertion and loading is
@@ -56,51 +54,24 @@ export async function applyMiddlewareLoaderFacade(
 		)
 		.join("\n");
 
-	const middlewareFns = middlewareIdentifiers.map(([m]) => `${m}.default`);
+	const middlewareFns = middlewareIdentifiers
+		.map(([m]) => `${m}.default`)
+		.join(",");
 
 	if (entry.format === "modules") {
-		const middlewareWrappers = middlewareIdentifiers
-			.map(([m]) => `${m}.wrap`)
-			.join(",");
-
-		const durableObjects = doBindings
-			// Don't shim anything not local to this worker
-			.filter((b) => !b.script_name)
-			// Reexport the DO classnames
-			.map(
-				(b) =>
-					/*javascript*/ `export const ${b.class_name} = maskDurableObjectDefinition(OTHER_EXPORTS.${b.class_name});`
-			)
-			.join("\n");
 		await fs.promises.writeFile(
 			dynamicFacadePath,
 			dedent/*javascript*/ `
 				import worker, * as OTHER_EXPORTS from "${prepareFilePath(entry.file)}";
 				${imports}
-				const envWrappers = [${middlewareWrappers}].filter(Boolean);
-				const facade = {
-					...worker,
-					envWrappers,
-					middleware: [
-						${middlewareFns.join(",")},
-            ...(worker.middleware ? worker.middleware : []),
-					].filter(Boolean)
-				}
+
 				export * from "${prepareFilePath(entry.file)}";
 
-				const maskDurableObjectDefinition = (cls) =>
-					class extends cls {
-						constructor(state, env) {
-							let wrappedEnv = env
-							for (const wrapFn of envWrappers) {
-								wrappedEnv = wrapFn(wrappedEnv)
-							}
-							super(state, wrappedEnv);
-						}
-					};
-				${durableObjects}
-
-				export default facade;
+				export const __INTERNAL_WRANGLER_MIDDLEWARE__ = [
+					${process.env.NODE_ENV === "test" ? `...(OTHER_EXPORTS.__INJECT_FOR_TESTING_WRANGLER_MIDDLEWARE__ ?? []),` : ""}
+					${middlewareFns}
+				]
+				export default worker;
 			`
 		);
 

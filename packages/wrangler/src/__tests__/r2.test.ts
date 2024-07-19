@@ -1,53 +1,144 @@
 import * as fs from "node:fs";
-import { rest } from "msw";
-import prettyBytes from "pretty-bytes";
+import { http, HttpResponse } from "msw";
 import { MAX_UPLOAD_SIZE } from "../r2/constants";
+import { actionsForEventCategories } from "../r2/helpers";
+import { endEventLoop } from "./helpers/end-event-loop";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { useMockIsTTY } from "./helpers/mock-istty";
-import { createFetchResult, msw, mswSuccessR2handlers } from "./helpers/msw";
+import { createFetchResult, msw, mswR2handlers } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
-import type { R2BucketInfo } from "../r2/helpers";
+import type {
+	PutNotificationRequestBody,
+	R2BucketInfo,
+	R2EventableOperation,
+	R2EventType,
+} from "../r2/helpers";
 
 describe("r2", () => {
 	const std = mockConsoleMethods();
-	beforeEach(() => msw.use(...mswSuccessR2handlers));
+	beforeEach(() => msw.use(...mswR2handlers));
 
 	runInTempDir();
+
+	it("should show help when no argument is passed", async () => {
+		await runWrangler("r2");
+		await endEventLoop();
+		expect(std.out).toMatchInlineSnapshot(`
+		"wrangler r2
+
+		📦 Manage R2 buckets & objects
+
+		COMMANDS
+		  wrangler r2 object  Manage R2 objects
+		  wrangler r2 bucket  Manage R2 buckets
+
+		GLOBAL FLAGS
+		  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
+		  -c, --config                    Path to .toml configuration file  [string]
+		  -e, --env                       Environment to use for operations and .env files  [string]
+		  -h, --help                      Show help  [boolean]
+		  -v, --version                   Show version number  [boolean]"
+	`);
+	});
+
+	it("should show help when an invalid argument is passed", async () => {
+		await expect(() => runWrangler("r2 asdf")).rejects.toThrow(
+			"Unknown argument: asdf"
+		);
+		await endEventLoop();
+		expect(std.err).toMatchInlineSnapshot(`
+			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mUnknown argument: asdf[0m
+
+			"
+		`);
+		expect(std.out).toMatchInlineSnapshot(`
+		"
+		wrangler r2
+
+		📦 Manage R2 buckets & objects
+
+		COMMANDS
+		  wrangler r2 object  Manage R2 objects
+		  wrangler r2 bucket  Manage R2 buckets
+
+		GLOBAL FLAGS
+		  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
+		  -c, --config                    Path to .toml configuration file  [string]
+		  -e, --env                       Environment to use for operations and .env files  [string]
+		  -h, --help                      Show help  [boolean]
+		  -v, --version                   Show version number  [boolean]"
+	`);
+	});
 
 	describe("bucket", () => {
 		mockAccountId();
 		mockApiToken();
 
+		it("should show help when the bucket command is passed", async () => {
+			await expect(() => runWrangler("r2 bucket")).rejects.toThrow(
+				"Not enough non-option arguments: got 0, need at least 1"
+			);
+			expect(std.err).toMatchInlineSnapshot(`
+				"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNot enough non-option arguments: got 0, need at least 1[0m
+
+"`);
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				wrangler r2 bucket
+
+				Manage R2 buckets
+
+				COMMANDS
+				  wrangler r2 bucket create <name>  Create a new R2 bucket
+				  wrangler r2 bucket update         Update bucket state
+				  wrangler r2 bucket list           List R2 buckets
+				  wrangler r2 bucket delete <name>  Delete an R2 bucket
+				  wrangler r2 bucket sippy          Manage Sippy incremental migration on an R2 bucket
+				  wrangler r2 bucket notification   Manage event notifications for an R2 bucket
+
+				GLOBAL FLAGS
+				  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
+				  -c, --config                    Path to .toml configuration file  [string]
+				  -e, --env                       Environment to use for operations and .env files  [string]
+				  -h, --help                      Show help  [boolean]
+				  -v, --version                   Show version number  [boolean]"
+			`);
+		});
+
 		it("should show the correct help when an invalid command is passed", async () => {
 			await expect(() =>
 				runWrangler("r2 bucket foo")
-			).rejects.toThrowErrorMatchingInlineSnapshot(`"Unknown argument: foo"`);
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: Unknown argument: foo]`
+			);
 			expect(std.err).toMatchInlineSnapshot(`
 			          "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mUnknown argument: foo[0m
 
 			          "
 		        `);
 			expect(std.out).toMatchInlineSnapshot(`
-			"
-			wrangler r2 bucket
+				"
+				wrangler r2 bucket
 
-			Manage R2 buckets
+				Manage R2 buckets
 
-			Commands:
-			  wrangler r2 bucket create <name>  Create a new R2 bucket
-			  wrangler r2 bucket list           List R2 buckets
-			  wrangler r2 bucket delete <name>  Delete an R2 bucket
-			  wrangler r2 bucket sippy          Manage Sippy incremental migration on an R2 bucket
+				COMMANDS
+				  wrangler r2 bucket create <name>  Create a new R2 bucket
+				  wrangler r2 bucket update         Update bucket state
+				  wrangler r2 bucket list           List R2 buckets
+				  wrangler r2 bucket delete <name>  Delete an R2 bucket
+				  wrangler r2 bucket sippy          Manage Sippy incremental migration on an R2 bucket
+				  wrangler r2 bucket notification   Manage event notifications for an R2 bucket
 
-			Flags:
-			  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
-			  -c, --config                    Path to .toml configuration file  [string]
-			  -e, --env                       Environment to use for operations and .env files  [string]
-			  -h, --help                      Show help  [boolean]
-			  -v, --version                   Show version number  [boolean]"
-		`);
+				GLOBAL FLAGS
+				  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
+				  -c, --config                    Path to .toml configuration file  [string]
+				  -e, --env                       Environment to use for operations and .env files  [string]
+				  -h, --help                      Show help  [boolean]
+				  -v, --version                   Show version number  [boolean]"
+			`);
 		});
 
 		describe("list", () => {
@@ -57,29 +148,28 @@ describe("r2", () => {
 					{ name: "bucket-2-local-once", creation_date: "01-01-2001" },
 				];
 				msw.use(
-					rest.get(
+					http.get(
 						"*/accounts/:accountId/r2/buckets",
-						async (request, response, context) => {
-							const { accountId } = request.params;
+						async ({ request, params }) => {
+							const { accountId } = params;
 							expect(accountId).toEqual("some-account-id");
 							expect(await request.text()).toEqual("");
-							return response.once(
-								context.json(
-									createFetchResult({
-										buckets: [
-											{
-												name: "bucket-1-local-once",
-												creation_date: "01-01-2001",
-											},
-											{
-												name: "bucket-2-local-once",
-												creation_date: "01-01-2001",
-											},
-										],
-									})
-								)
+							return HttpResponse.json(
+								createFetchResult({
+									buckets: [
+										{
+											name: "bucket-1-local-once",
+											creation_date: "01-01-2001",
+										},
+										{
+											name: "bucket-2-local-once",
+											creation_date: "01-01-2001",
+										},
+									],
+								})
 							);
-						}
+						},
+						{ once: true }
 					)
 				);
 				await runWrangler("r2 bucket list");
@@ -95,27 +185,28 @@ describe("r2", () => {
 				await expect(
 					runWrangler("r2 bucket create")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
-					`"Not enough non-option arguments: got 0, need at least 1"`
+					`[Error: Not enough non-option arguments: got 0, need at least 1]`
 				);
 				expect(std.out).toMatchInlineSnapshot(`
-			"
-			wrangler r2 bucket create <name>
+					"
+					wrangler r2 bucket create <name>
 
-			Create a new R2 bucket
+					Create a new R2 bucket
 
-			Positionals:
-			  name  The name of the new bucket  [string] [required]
+					POSITIONALS
+					  name  The name of the new bucket  [string] [required]
 
-			Flags:
-			  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
-			  -c, --config                    Path to .toml configuration file  [string]
-			  -e, --env                       Environment to use for operations and .env files  [string]
-			  -h, --help                      Show help  [boolean]
-			  -v, --version                   Show version number  [boolean]
+					GLOBAL FLAGS
+					  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
+					  -c, --config                    Path to .toml configuration file  [string]
+					  -e, --env                       Environment to use for operations and .env files  [string]
+					  -h, --help                      Show help  [boolean]
+					  -v, --version                   Show version number  [boolean]
 
-			Options:
-			  -J, --jurisdiction  The jurisdiction where the new bucket will be created  [string]"
-		`);
+					OPTIONS
+					  -J, --jurisdiction   The jurisdiction where the new bucket will be created  [string]
+					  -s, --storage-class  The default storage class for objects uploaded to this bucket  [string]"
+				`);
 				expect(std.err).toMatchInlineSnapshot(`
 				            "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNot enough non-option arguments: got 0, need at least 1[0m
 
@@ -127,27 +218,28 @@ describe("r2", () => {
 				await expect(
 					runWrangler("r2 bucket create abc def ghi")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
-					`"Unknown arguments: def, ghi"`
+					`[Error: Unknown arguments: def, ghi]`
 				);
 				expect(std.out).toMatchInlineSnapshot(`
-			"
-			wrangler r2 bucket create <name>
+					"
+					wrangler r2 bucket create <name>
 
-			Create a new R2 bucket
+					Create a new R2 bucket
 
-			Positionals:
-			  name  The name of the new bucket  [string] [required]
+					POSITIONALS
+					  name  The name of the new bucket  [string] [required]
 
-			Flags:
-			  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
-			  -c, --config                    Path to .toml configuration file  [string]
-			  -e, --env                       Environment to use for operations and .env files  [string]
-			  -h, --help                      Show help  [boolean]
-			  -v, --version                   Show version number  [boolean]
+					GLOBAL FLAGS
+					  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
+					  -c, --config                    Path to .toml configuration file  [string]
+					  -e, --env                       Environment to use for operations and .env files  [string]
+					  -h, --help                      Show help  [boolean]
+					  -v, --version                   Show version number  [boolean]
 
-			Options:
-			  -J, --jurisdiction  The jurisdiction where the new bucket will be created  [string]"
-		`);
+					OPTIONS
+					  -J, --jurisdiction   The jurisdiction where the new bucket will be created  [string]
+					  -s, --storage-class  The default storage class for objects uploaded to this bucket  [string]"
+				`);
 				expect(std.err).toMatchInlineSnapshot(`
 				            "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mUnknown arguments: def, ghi[0m
 
@@ -157,41 +249,167 @@ describe("r2", () => {
 
 			it("should create a bucket & check request inputs", async () => {
 				msw.use(
-					rest.post(
+					http.post(
 						"*/accounts/:accountId/r2/buckets",
-						async (request, response, context) => {
-							const { accountId } = request.params;
+						async ({ request, params }) => {
+							const { accountId } = params;
 							expect(accountId).toEqual("some-account-id");
 							expect(await request.json()).toEqual({ name: "testBucket" });
-							return response.once(context.json(createFetchResult({})));
-						}
+							return HttpResponse.json(createFetchResult({}));
+						},
+						{ once: true }
 					)
 				);
 				await runWrangler("r2 bucket create testBucket");
 				expect(std.out).toMatchInlineSnapshot(`
-				            "Creating bucket testBucket.
-				            Created bucket testBucket."
+				            "Creating bucket testBucket with default storage class set to Standard.
+				            Created bucket testBucket with default storage class set to Standard."
 			          `);
 			});
 
 			it("should create a bucket with the expected jurisdiction", async () => {
 				msw.use(
-					rest.post(
+					http.post(
 						"*/accounts/:accountId/r2/buckets",
-						async (request, response, context) => {
-							const { accountId } = request.params;
+						async ({ request, params }) => {
+							const { accountId } = params;
 							expect(accountId).toEqual("some-account-id");
 							expect(request.headers.get("cf-r2-jurisdiction")).toEqual("eu");
 							expect(await request.json()).toEqual({ name: "testBucket" });
-							return response.once(context.json(createFetchResult({})));
-						}
+							return HttpResponse.json(createFetchResult({}));
+						},
+						{ once: true }
 					)
 				);
 				await runWrangler("r2 bucket create testBucket -J eu");
 				expect(std.out).toMatchInlineSnapshot(`
-				            "Creating bucket testBucket (eu).
-				            Created bucket testBucket (eu)."
+				            "Creating bucket testBucket (eu) with default storage class set to Standard.
+				            Created bucket testBucket (eu) with default storage class set to Standard."
 			          `);
+			});
+
+			it("should create a bucket with the expected default storage class", async () => {
+				await runWrangler("r2 bucket create testBucket -s InfrequentAccess");
+				expect(std.out).toMatchInlineSnapshot(`
+				            "Creating bucket testBucket with default storage class set to InfrequentAccess.
+				            Created bucket testBucket with default storage class set to InfrequentAccess."
+			          `);
+			});
+
+			it("should error if storage class is invalid", async () => {
+				await expect(
+					runWrangler("r2 bucket create testBucket -s Foo")
+				).rejects.toThrowErrorMatchingInlineSnapshot(
+					`[APIError: A request to the Cloudflare API (/accounts/some-account-id/r2/buckets) failed.]`
+				);
+				expect(std.out).toMatchInlineSnapshot(`
+				"Creating bucket testBucket with default storage class set to Foo.
+
+				[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/accounts/some-account-id/r2/buckets) failed.[0m
+
+				  The JSON you provided was not well formed. [code: 10040]
+
+				  If you think this is a bug, please open an issue at:
+				  [4mhttps://github.com/cloudflare/workers-sdk/issues/new/choose[0m
+
+				"
+		`);
+			});
+		});
+
+		describe("update", () => {
+			it("should error if invalid command is passed", async () => {
+				await expect(
+					runWrangler("r2 bucket update foo")
+				).rejects.toThrowErrorMatchingInlineSnapshot(
+					`[Error: Unknown argument: foo]`
+				);
+				expect(std.out).toMatchInlineSnapshot(`
+					"
+					wrangler r2 bucket update
+
+					Update bucket state
+
+					COMMANDS
+					  wrangler r2 bucket update storage-class <name>  Update the default storage class of an existing R2 bucket
+
+					GLOBAL FLAGS
+					  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
+					  -c, --config                    Path to .toml configuration file  [string]
+					  -e, --env                       Environment to use for operations and .env files  [string]
+					  -h, --help                      Show help  [boolean]
+					  -v, --version                   Show version number  [boolean]"
+				`);
+				expect(std.err).toMatchInlineSnapshot(`
+				            "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mUnknown argument: foo[0m
+
+				            "
+			          `);
+			});
+
+			describe("storage-class", () => {
+				it("should error if storage class is missing", async () => {
+					await expect(
+						runWrangler("r2 bucket update storage-class testBucket")
+					).rejects.toThrowErrorMatchingInlineSnapshot(
+						`[Error: Missing required argument: storage-class]`
+					);
+					expect(std.out).toMatchInlineSnapshot(`
+						"
+						wrangler r2 bucket update storage-class <name>
+
+						Update the default storage class of an existing R2 bucket
+
+						POSITIONALS
+						  name  The name of the existing bucket  [string] [required]
+
+						GLOBAL FLAGS
+						  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
+						  -c, --config                    Path to .toml configuration file  [string]
+						  -e, --env                       Environment to use for operations and .env files  [string]
+						  -h, --help                      Show help  [boolean]
+						  -v, --version                   Show version number  [boolean]
+
+						OPTIONS
+						  -J, --jurisdiction   The jurisdiction of the bucket to be updated  [string]
+						  -s, --storage-class  The new default storage class for this bucket  [string] [required]"
+					`);
+					expect(std.err).toMatchInlineSnapshot(`
+				            "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mMissing required argument: storage-class[0m
+
+				            "
+			          `);
+				});
+
+				it("should error if storage class is invalid", async () => {
+					await expect(
+						runWrangler("r2 bucket update storage-class testBucket -s Foo")
+					).rejects.toThrowErrorMatchingInlineSnapshot(
+						`[APIError: A request to the Cloudflare API (/accounts/some-account-id/r2/buckets/testBucket) failed.]`
+					);
+					expect(std.out).toMatchInlineSnapshot(`
+				"Updating bucket testBucket to Foo default storage class.
+
+				[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/accounts/some-account-id/r2/buckets/testBucket) failed.[0m
+
+				  The storage class specified is not valid. [code: 10062]
+
+				  If you think this is a bug, please open an issue at:
+				  [4mhttps://github.com/cloudflare/workers-sdk/issues/new/choose[0m
+
+				"
+		`);
+				});
+
+				it("should update the default storage class", async () => {
+					await runWrangler(
+						"r2 bucket update storage-class testBucket -s InfrequentAccess"
+					);
+					expect(std.out).toMatchInlineSnapshot(`
+				            "Updating bucket testBucket to InfrequentAccess default storage class.
+				            Updated bucket testBucket to InfrequentAccess default storage class."
+			          `);
+				});
 			});
 		});
 
@@ -200,27 +418,27 @@ describe("r2", () => {
 				await expect(
 					runWrangler("r2 bucket delete")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
-					`"Not enough non-option arguments: got 0, need at least 1"`
+					`[Error: Not enough non-option arguments: got 0, need at least 1]`
 				);
 				expect(std.out).toMatchInlineSnapshot(`
-			"
-			wrangler r2 bucket delete <name>
+					"
+					wrangler r2 bucket delete <name>
 
-			Delete an R2 bucket
+					Delete an R2 bucket
 
-			Positionals:
-			  name  The name of the bucket to delete  [string] [required]
+					POSITIONALS
+					  name  The name of the bucket to delete  [string] [required]
 
-			Flags:
-			  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
-			  -c, --config                    Path to .toml configuration file  [string]
-			  -e, --env                       Environment to use for operations and .env files  [string]
-			  -h, --help                      Show help  [boolean]
-			  -v, --version                   Show version number  [boolean]
+					GLOBAL FLAGS
+					  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
+					  -c, --config                    Path to .toml configuration file  [string]
+					  -e, --env                       Environment to use for operations and .env files  [string]
+					  -h, --help                      Show help  [boolean]
+					  -v, --version                   Show version number  [boolean]
 
-			Options:
-			  -J, --jurisdiction  The jurisdiction where the bucket exists  [string]"
-		`);
+					OPTIONS
+					  -J, --jurisdiction  The jurisdiction where the bucket exists  [string]"
+				`);
 				expect(std.err).toMatchInlineSnapshot(`
 				            "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNot enough non-option arguments: got 0, need at least 1[0m
 
@@ -228,31 +446,39 @@ describe("r2", () => {
 			          `);
 			});
 
+			it("should error if the bucket name contains invalid characters", async () => {
+				await expect(
+					runWrangler("r2 bucket create abc_def")
+				).rejects.toThrowErrorMatchingInlineSnapshot(
+					`[Error: The bucket name "abc_def" is invalid. Bucket names can only have alphanumeric and - characters.]`
+				);
+			});
+
 			it("should error if the bucket name to delete contains spaces", async () => {
 				await expect(
 					runWrangler("r2 bucket delete abc def ghi")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
-					`"Unknown arguments: def, ghi"`
+					`[Error: Unknown arguments: def, ghi]`
 				);
 				expect(std.out).toMatchInlineSnapshot(`
-			"
-			wrangler r2 bucket delete <name>
+					"
+					wrangler r2 bucket delete <name>
 
-			Delete an R2 bucket
+					Delete an R2 bucket
 
-			Positionals:
-			  name  The name of the bucket to delete  [string] [required]
+					POSITIONALS
+					  name  The name of the bucket to delete  [string] [required]
 
-			Flags:
-			  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
-			  -c, --config                    Path to .toml configuration file  [string]
-			  -e, --env                       Environment to use for operations and .env files  [string]
-			  -h, --help                      Show help  [boolean]
-			  -v, --version                   Show version number  [boolean]
+					GLOBAL FLAGS
+					  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
+					  -c, --config                    Path to .toml configuration file  [string]
+					  -e, --env                       Environment to use for operations and .env files  [string]
+					  -h, --help                      Show help  [boolean]
+					  -v, --version                   Show version number  [boolean]
 
-			Options:
-			  -J, --jurisdiction  The jurisdiction where the bucket exists  [string]"
-		`);
+					OPTIONS
+					  -J, --jurisdiction  The jurisdiction where the bucket exists  [string]"
+				`);
 				expect(std.err).toMatchInlineSnapshot(`
 				            "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mUnknown arguments: def, ghi[0m
 
@@ -262,10 +488,10 @@ describe("r2", () => {
 
 			it("should delete a bucket specified by name & check requests inputs", async () => {
 				msw.use(
-					rest.delete(
+					http.delete(
 						"*/accounts/:accountId/r2/buckets/:bucketName",
-						async (request, response, context) => {
-							const { accountId, bucketName } = request.params;
+						async ({ request, params }) => {
+							const { accountId, bucketName } = params;
 							expect(accountId).toEqual("some-account-id");
 							expect(bucketName).toEqual("some-bucket");
 							expect(await request.text()).toEqual("");
@@ -273,8 +499,9 @@ describe("r2", () => {
 								"Bearer some-api-token"
 							);
 
-							return response.once(context.json(createFetchResult(null)));
-						}
+							return HttpResponse.json(createFetchResult(null));
+						},
+						{ once: true }
 					)
 				);
 				await runWrangler(`r2 bucket delete some-bucket`);
@@ -291,30 +518,32 @@ describe("r2", () => {
 			it("should show the correct help when an invalid command is passed", async () => {
 				await expect(() =>
 					runWrangler("r2 bucket sippy foo")
-				).rejects.toThrowErrorMatchingInlineSnapshot(`"Unknown argument: foo"`);
+				).rejects.toThrowErrorMatchingInlineSnapshot(
+					`[Error: Unknown argument: foo]`
+				);
 				expect(std.err).toMatchInlineSnapshot(`
 			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mUnknown argument: foo[0m
 
 			"
 		`);
 				expect(std.out).toMatchInlineSnapshot(`
-			"
-			wrangler r2 bucket sippy
+					"
+					wrangler r2 bucket sippy
 
-			Manage Sippy incremental migration on an R2 bucket
+					Manage Sippy incremental migration on an R2 bucket
 
-			Commands:
-			  wrangler r2 bucket sippy enable <name>   Enable Sippy on an R2 bucket
-			  wrangler r2 bucket sippy disable <name>  Disable Sippy on an R2 bucket
-			  wrangler r2 bucket sippy get <name>      Check the status of Sippy on an R2 bucket
+					COMMANDS
+					  wrangler r2 bucket sippy enable <name>   Enable Sippy on an R2 bucket
+					  wrangler r2 bucket sippy disable <name>  Disable Sippy on an R2 bucket
+					  wrangler r2 bucket sippy get <name>      Check the status of Sippy on an R2 bucket
 
-			Flags:
-			  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
-			  -c, --config                    Path to .toml configuration file  [string]
-			  -e, --env                       Environment to use for operations and .env files  [string]
-			  -h, --help                      Show help  [boolean]
-			  -v, --version                   Show version number  [boolean]"
-		`);
+					GLOBAL FLAGS
+					  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
+					  -c, --config                    Path to .toml configuration file  [string]
+					  -e, --env                       Environment to use for operations and .env files  [string]
+					  -h, --help                      Show help  [boolean]
+					  -v, --version                   Show version number  [boolean]"
+				`);
 			});
 
 			describe("enable", () => {
@@ -322,9 +551,9 @@ describe("r2", () => {
 					setIsTTY(false);
 
 					msw.use(
-						rest.put(
+						http.put(
 							"*/accounts/some-account-id/r2/buckets/testBucket/sippy",
-							async (request, response, context) => {
+							async ({ request }) => {
 								expect(await request.json()).toEqual({
 									source: {
 										provider: "aws",
@@ -339,8 +568,9 @@ describe("r2", () => {
 										secretAccessKey: "some-secret",
 									},
 								});
-								return response.once(context.json(createFetchResult({})));
-							}
+								return HttpResponse.json(createFetchResult({}));
+							},
+							{ once: true }
 						)
 					);
 					await runWrangler(
@@ -355,9 +585,9 @@ describe("r2", () => {
 					setIsTTY(false);
 
 					msw.use(
-						rest.put(
+						http.put(
 							"*/accounts/some-account-id/r2/buckets/testBucket/sippy",
-							async (request, response, context) => {
+							async ({ request }) => {
 								expect(await request.json()).toEqual({
 									source: {
 										provider: "gcs",
@@ -371,8 +601,9 @@ describe("r2", () => {
 										secretAccessKey: "some-secret",
 									},
 								});
-								return response.once(context.json(createFetchResult({})));
-							}
+								return HttpResponse.json(createFetchResult({}));
+							},
+							{ once: true }
 						)
 					);
 					await runWrangler(
@@ -387,37 +618,37 @@ describe("r2", () => {
 					await expect(
 						runWrangler("r2 bucket sippy enable")
 					).rejects.toThrowErrorMatchingInlineSnapshot(
-						`"Not enough non-option arguments: got 0, need at least 1"`
+						`[Error: Not enough non-option arguments: got 0, need at least 1]`
 					);
 					expect(std.out).toMatchInlineSnapshot(`
-				"
-				wrangler r2 bucket sippy enable <name>
+						"
+						wrangler r2 bucket sippy enable <name>
 
-				Enable Sippy on an R2 bucket
+						Enable Sippy on an R2 bucket
 
-				Positionals:
-				  name  The name of the bucket  [string] [required]
+						POSITIONALS
+						  name  The name of the bucket  [string] [required]
 
-				Flags:
-				  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
-				  -c, --config                    Path to .toml configuration file  [string]
-				  -e, --env                       Environment to use for operations and .env files  [string]
-				  -h, --help                      Show help  [boolean]
-				  -v, --version                   Show version number  [boolean]
+						GLOBAL FLAGS
+						  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
+						  -c, --config                    Path to .toml configuration file  [string]
+						  -e, --env                       Environment to use for operations and .env files  [string]
+						  -h, --help                      Show help  [boolean]
+						  -v, --version                   Show version number  [boolean]
 
-				Options:
-				  -J, --jurisdiction              The jurisdiction where the bucket exists  [string]
-				      --provider  [choices: \\"AWS\\", \\"GCS\\"]
-				      --bucket                    The name of the upstream bucket  [string]
-				      --region                    (AWS provider only) The region of the upstream bucket  [string]
-				      --access-key-id             (AWS provider only) The secret access key id for the upstream bucket  [string]
-				      --secret-access-key         (AWS provider only) The secret access key for the upstream bucket  [string]
-				      --service-account-key-file  (GCS provider only) The path to your Google Cloud service account key JSON file  [string]
-				      --client-email              (GCS provider only) The client email for your Google Cloud service account key  [string]
-				      --private-key               (GCS provider only) The private key for your Google Cloud service account key  [string]
-				      --r2-access-key-id          The secret access key id for this R2 bucket  [string]
-				      --r2-secret-access-key      The secret access key for this R2 bucket  [string]"
-			`);
+						OPTIONS
+						  -J, --jurisdiction              The jurisdiction where the bucket exists  [string]
+						      --provider  [choices: \\"AWS\\", \\"GCS\\"]
+						      --bucket                    The name of the upstream bucket  [string]
+						      --region                    (AWS provider only) The region of the upstream bucket  [string]
+						      --access-key-id             (AWS provider only) The secret access key id for the upstream bucket  [string]
+						      --secret-access-key         (AWS provider only) The secret access key for the upstream bucket  [string]
+						      --service-account-key-file  (GCS provider only) The path to your Google Cloud service account key JSON file  [string]
+						      --client-email              (GCS provider only) The client email for your Google Cloud service account key  [string]
+						      --private-key               (GCS provider only) The private key for your Google Cloud service account key  [string]
+						      --r2-access-key-id          The secret access key id for this R2 bucket  [string]
+						      --r2-secret-access-key      The secret access key for this R2 bucket  [string]"
+					`);
 					expect(std.err).toMatchInlineSnapshot(`
 				"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNot enough non-option arguments: got 0, need at least 1[0m
 
@@ -431,27 +662,27 @@ describe("r2", () => {
 					await expect(
 						runWrangler("r2 bucket sippy disable")
 					).rejects.toThrowErrorMatchingInlineSnapshot(
-						`"Not enough non-option arguments: got 0, need at least 1"`
+						`[Error: Not enough non-option arguments: got 0, need at least 1]`
 					);
 					expect(std.out).toMatchInlineSnapshot(`
-				"
-				wrangler r2 bucket sippy disable <name>
+						"
+						wrangler r2 bucket sippy disable <name>
 
-				Disable Sippy on an R2 bucket
+						Disable Sippy on an R2 bucket
 
-				Positionals:
-				  name  The name of the bucket  [string] [required]
+						POSITIONALS
+						  name  The name of the bucket  [string] [required]
 
-				Flags:
-				  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
-				  -c, --config                    Path to .toml configuration file  [string]
-				  -e, --env                       Environment to use for operations and .env files  [string]
-				  -h, --help                      Show help  [boolean]
-				  -v, --version                   Show version number  [boolean]
+						GLOBAL FLAGS
+						  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
+						  -c, --config                    Path to .toml configuration file  [string]
+						  -e, --env                       Environment to use for operations and .env files  [string]
+						  -h, --help                      Show help  [boolean]
+						  -v, --version                   Show version number  [boolean]
 
-				Options:
-				  -J, --jurisdiction  The jurisdiction where the bucket exists  [string]"
-			`);
+						OPTIONS
+						  -J, --jurisdiction  The jurisdiction where the bucket exists  [string]"
+					`);
 					expect(std.err).toMatchInlineSnapshot(`
 				"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNot enough non-option arguments: got 0, need at least 1[0m
 
@@ -463,11 +694,12 @@ describe("r2", () => {
 					setIsTTY(false);
 
 					msw.use(
-						rest.delete(
+						http.delete(
 							"*/accounts/some-account-id/r2/buckets/testBucket/sippy",
-							async (request, response, context) => {
-								return response.once(context.json(createFetchResult({})));
-							}
+							async () => {
+								return HttpResponse.json(createFetchResult({}));
+							},
+							{ once: true }
 						)
 					);
 					await runWrangler("r2 bucket sippy disable testBucket");
@@ -482,27 +714,27 @@ describe("r2", () => {
 					await expect(
 						runWrangler("r2 bucket sippy get")
 					).rejects.toThrowErrorMatchingInlineSnapshot(
-						`"Not enough non-option arguments: got 0, need at least 1"`
+						`[Error: Not enough non-option arguments: got 0, need at least 1]`
 					);
 					expect(std.out).toMatchInlineSnapshot(`
-				"
-				wrangler r2 bucket sippy get <name>
+						"
+						wrangler r2 bucket sippy get <name>
 
-				Check the status of Sippy on an R2 bucket
+						Check the status of Sippy on an R2 bucket
 
-				Positionals:
-				  name  The name of the bucket  [string] [required]
+						POSITIONALS
+						  name  The name of the bucket  [string] [required]
 
-				Flags:
-				  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
-				  -c, --config                    Path to .toml configuration file  [string]
-				  -e, --env                       Environment to use for operations and .env files  [string]
-				  -h, --help                      Show help  [boolean]
-				  -v, --version                   Show version number  [boolean]
+						GLOBAL FLAGS
+						  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
+						  -c, --config                    Path to .toml configuration file  [string]
+						  -e, --env                       Environment to use for operations and .env files  [string]
+						  -h, --help                      Show help  [boolean]
+						  -v, --version                   Show version number  [boolean]
 
-				Options:
-				  -J, --jurisdiction  The jurisdiction where the bucket exists  [string]"
-			`);
+						OPTIONS
+						  -J, --jurisdiction  The jurisdiction where the bucket exists  [string]"
+					`);
 					expect(std.err).toMatchInlineSnapshot(`
 				"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNot enough non-option arguments: got 0, need at least 1[0m
 
@@ -515,20 +747,19 @@ describe("r2", () => {
 				setIsTTY(false);
 
 				msw.use(
-					rest.get(
+					http.get(
 						"*/accounts/:accountId/r2/buckets/:bucketName/sippy",
-						async (request, response, context) => {
-							const { accountId } = request.params;
+						async ({ request, params }) => {
+							const { accountId } = params;
 							expect(accountId).toEqual("some-account-id");
 							expect(await request.text()).toEqual("");
-							return response.once(
-								context.json(
-									createFetchResult(
-										"https://storage.googleapis.com/storage/v1/b/testBucket"
-									)
+							return HttpResponse.json(
+								createFetchResult(
+									"https://storage.googleapis.com/storage/v1/b/testBucket"
 								)
 							);
-						}
+						},
+						{ once: true }
 					)
 				);
 				await runWrangler("r2 bucket sippy get testBucket");
@@ -537,9 +768,330 @@ describe("r2", () => {
 				);
 			});
 		});
+
+		describe("notification", () => {
+			describe("get", () => {
+				it("follows happy path as expected", async () => {
+					const bucketName = "my-bucket";
+					const queueId = "471537e8-6e5a-4163-a4d4-9478087c32c3";
+					const queueName = "my-queue";
+					msw.use(
+						http.get(
+							"*/accounts/:accountId/event_notifications/r2/:bucketName/configuration",
+							async ({ request, params }) => {
+								const { accountId, bucketName: bucketParam } = params;
+								expect(accountId).toEqual("some-account-id");
+								expect(bucketName).toEqual(bucketParam);
+								expect(request.headers.get("authorization")).toEqual(
+									"Bearer some-api-token"
+								);
+								const getResponse = {
+									[bucketName]: {
+										"9d738cb7-be18-433a-957f-a9b88793de2c": {
+											queue: queueId,
+											rules: [
+												{
+													prefix: "",
+													suffix: "",
+													actions: [
+														"PutObject",
+														"CompleteMultipartUpload",
+														"CopyObject",
+													],
+												},
+											],
+										},
+									},
+								};
+								return HttpResponse.json(createFetchResult(getResponse));
+							},
+							{ once: true }
+						),
+						http.get(
+							"*/accounts/:accountId/queues/:queueId",
+							async ({ request, params }) => {
+								const { accountId, queueId: queueParam } = params;
+								expect(accountId).toEqual("some-account-id");
+								expect(queueParam).toEqual(queueId);
+								expect(request.headers.get("authorization")).toEqual(
+									"Bearer some-api-token"
+								);
+								return HttpResponse.json(
+									createFetchResult({ queue_name: queueName })
+								);
+							},
+							{ once: true }
+						)
+					);
+					await expect(
+						await runWrangler(`r2 bucket notification get ${bucketName}`)
+					).toBe(undefined);
+					expect(std.out).toMatchInlineSnapshot(`
+				"Fetching notification configuration for bucket my-bucket...
+				┌────────────┬────────┬────────┬───────────────┐
+				│ queue_name │ prefix │ suffix │ event_type    │
+				├────────────┼────────┼────────┼───────────────┤
+				│ my-queue   │        │        │ object-create │
+				└────────────┴────────┴────────┴───────────────┘"
+			`);
+				});
+
+				it("shows correct output on error", async () => {
+					await expect(
+						runWrangler(`r2 bucket notification get`)
+					).rejects.toMatchInlineSnapshot(
+						`[Error: Not enough non-option arguments: got 0, need at least 1]`
+					);
+					expect(std.out).toMatchInlineSnapshot(`
+						"
+						wrangler r2 bucket notification get <bucket>
+
+						Get event notification configuration for a bucket
+
+						POSITIONALS
+						  bucket  The name of the bucket for which notifications will be emitted  [string] [required]
+
+						GLOBAL FLAGS
+						  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
+						  -c, --config                    Path to .toml configuration file  [string]
+						  -e, --env                       Environment to use for operations and .env files  [string]
+						  -h, --help                      Show help  [boolean]
+						  -v, --version                   Show version number  [boolean]"
+					`);
+				});
+			});
+			describe("create", () => {
+				it("follows happy path as expected", async () => {
+					const eventTypes: R2EventType[] = ["object-create", "object-delete"];
+					const actions: R2EventableOperation[] = [];
+					const bucketName = "my-bucket";
+					const queue = "my-queue";
+
+					const config: PutNotificationRequestBody = {
+						rules: [
+							{
+								actions: eventTypes.reduce(
+									(acc, et) => acc.concat(actionsForEventCategories[et]),
+									actions
+								),
+							},
+						],
+					};
+					msw.use(
+						http.put(
+							"*/accounts/:accountId/event_notifications/r2/:bucketName/configuration/queues/:queueUUID",
+							async ({ request, params }) => {
+								const { accountId } = params;
+								expect(accountId).toEqual("some-account-id");
+								expect(await request.json()).toEqual({
+									...config,
+									// We fill in `prefix` & `suffix` with empty strings if not
+									// provided
+									rules: [{ ...config.rules[0], prefix: "", suffix: "" }],
+								});
+								expect(request.headers.get("authorization")).toEqual(
+									"Bearer some-api-token"
+								);
+								return HttpResponse.json(createFetchResult({}));
+							},
+							{ once: true }
+						),
+						http.get(
+							"*/accounts/:accountId/queues?*",
+							async ({ request, params }) => {
+								const url = new URL(request.url);
+								const { accountId } = params;
+								const nameParams = url.searchParams.getAll("name");
+
+								expect(accountId).toEqual("some-account-id");
+								expect(nameParams[0]).toEqual(queue);
+								expect(request.headers.get("authorization")).toEqual(
+									"Bearer some-api-token"
+								);
+								return HttpResponse.json({
+									success: true,
+									errors: [],
+									messages: [],
+									result: [
+										{
+											queue_id: "queue-id",
+											queue_name: queue,
+											created_on: "",
+											producers: [],
+											consumers: [],
+											producers_total_count: 1,
+											consumers_total_count: 0,
+											modified_on: "",
+										},
+									],
+								});
+							},
+							{ once: true }
+						)
+					);
+					await expect(
+						runWrangler(
+							`r2 bucket notification create ${bucketName} --queue ${queue} --event-types ${eventTypes.join(
+								" "
+							)}`
+						)
+					).resolves.toBe(undefined);
+					expect(std.out).toMatchInlineSnapshot(`
+				"Creating event notification rule for object creation and deletion (PutObject,CompleteMultipartUpload,CopyObject,DeleteObject)
+				Configuration created successfully!"
+			`);
+				});
+
+				it("errors if required options are not provided", async () => {
+					await expect(
+						runWrangler("r2 bucket notification create notification-test-001")
+					).rejects.toMatchInlineSnapshot(
+						`[Error: Missing required arguments: event-types, queue]`
+					);
+					expect(std.out).toMatchInlineSnapshot(`
+						"
+						wrangler r2 bucket notification create <bucket>
+
+						Create new event notification configuration for an R2 bucket
+
+						POSITIONALS
+						  bucket  The name of the bucket for which notifications will be emitted  [string] [required]
+
+						GLOBAL FLAGS
+						  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
+						  -c, --config                    Path to .toml configuration file  [string]
+						  -e, --env                       Environment to use for operations and .env files  [string]
+						  -h, --help                      Show help  [boolean]
+						  -v, --version                   Show version number  [boolean]
+
+						OPTIONS
+						      --event-types, --event-type  Specify the kinds of object events to emit notifications for. ex. '--event-types object-create object-delete'  [array] [required] [choices: \\"object-create\\", \\"object-delete\\"]
+						      --prefix                     only actions on objects with this prefix will emit notifications  [string]
+						      --suffix                     only actions on objects with this suffix will emit notifications  [string]
+						      --queue                      The name of the queue to which event notifications will be sent. ex '--queue my-queue'  [string] [required]"
+					`);
+				});
+			});
+
+			describe("delete", () => {
+				it("follows happy path as expected", async () => {
+					const bucketName = "my-bucket";
+					const queue = "my-queue";
+					msw.use(
+						http.delete(
+							"*/accounts/:accountId/event_notifications/r2/:bucketName/configuration/queues/:queueUUID",
+							async ({ request, params }) => {
+								const { accountId } = params;
+								expect(accountId).toEqual("some-account-id");
+								expect(request.headers.get("authorization")).toEqual(
+									"Bearer some-api-token"
+								);
+								return HttpResponse.json(createFetchResult({}));
+							},
+							{ once: true }
+						),
+						http.get(
+							"*/accounts/:accountId/queues?*",
+							async ({ request, params }) => {
+								const url = new URL(request.url);
+								const { accountId } = params;
+								const nameParams = url.searchParams.getAll("name");
+
+								expect(accountId).toEqual("some-account-id");
+								expect(nameParams[0]).toEqual(queue);
+								expect(request.headers.get("authorization")).toEqual(
+									"Bearer some-api-token"
+								);
+								return HttpResponse.json({
+									success: true,
+									errors: [],
+									messages: [],
+									result: [
+										{
+											queue_id: "queue-id",
+											queue_name: queue,
+											created_on: "",
+											producers: [],
+											consumers: [],
+											producers_total_count: 1,
+											consumers_total_count: 0,
+											modified_on: "",
+										},
+									],
+								});
+							},
+							{ once: true }
+						)
+					);
+					await expect(
+						runWrangler(
+							`r2 bucket notification delete ${bucketName} --queue ${queue}`
+						)
+					).resolves.toBe(undefined);
+					expect(std.out).toMatchInlineSnapshot(`
+				"Disabling event notifications for \\"my-bucket\\" to queue my-queue...
+				Configuration deleted successfully!"
+			`);
+				});
+
+				it("errors if required options are not provided", async () => {
+					await expect(
+						runWrangler("r2 bucket notification delete notification-test-001")
+					).rejects.toMatchInlineSnapshot(
+						`[Error: Missing required argument: queue]`
+					);
+					expect(std.out).toMatchInlineSnapshot(`
+						"
+						wrangler r2 bucket notification delete <bucket>
+
+						Delete event notification configuration for an R2 bucket and queue
+
+						POSITIONALS
+						  bucket  The name of the bucket for which notifications will be emitted  [string] [required]
+
+						GLOBAL FLAGS
+						  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
+						  -c, --config                    Path to .toml configuration file  [string]
+						  -e, --env                       Environment to use for operations and .env files  [string]
+						  -h, --help                      Show help  [boolean]
+						  -v, --version                   Show version number  [boolean]
+
+						OPTIONS
+						      --queue  The name of the queue that is configured to receive notifications. ex '--queue my-queue'  [string] [required]"
+					`);
+				});
+			});
+		});
 	});
 
 	describe("r2 object", () => {
+		it("should show help when the object command is passed", async () => {
+			await expect(() => runWrangler("r2 object")).rejects.toThrow(
+				"Not enough non-option arguments: got 0, need at least 1"
+			);
+			expect(std.err).toMatchInlineSnapshot(`
+				"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNot enough non-option arguments: got 0, need at least 1[0m
+
+"`);
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				wrangler r2 object
+
+				Manage R2 objects
+
+				COMMANDS
+				  wrangler r2 object get <objectPath>     Fetch an object from an R2 bucket
+				  wrangler r2 object put <objectPath>     Create an object in an R2 bucket
+				  wrangler r2 object delete <objectPath>  Delete an object in an R2 bucket
+
+				GLOBAL FLAGS
+				  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
+				  -c, --config                    Path to .toml configuration file  [string]
+				  -e, --env                       Environment to use for operations and .env files  [string]
+				  -h, --help                      Show help  [boolean]
+				  -v, --version                   Show version number  [boolean]"
+			`);
+		});
 		describe("remote", () => {
 			// Only login for remote tests, local tests shouldn't require auth
 			mockAccountId();
@@ -577,6 +1129,18 @@ describe("r2", () => {
 		`);
 			});
 
+			it("should upload R2 object with storage class to bucket", async () => {
+				fs.writeFileSync("wormhole-img.png", "passageway");
+				await runWrangler(
+					`r2 object put bucketName-object-test/wormhole-img.png --file ./wormhole-img.png -s InfrequentAccess`
+				);
+
+				expect(std.out).toMatchInlineSnapshot(`
+			"Creating object \\"wormhole-img.png\\" with InfrequentAccess storage class in bucket \\"bucketName-object-test\\".
+			Upload complete."
+		`);
+			});
+
 			it("should fail to upload R2 object to bucket if too large", async () => {
 				const TOO_BIG_FILE_SIZE = MAX_UPLOAD_SIZE + 1024 * 1024;
 				fs.writeFileSync("wormhole-img.png", Buffer.alloc(TOO_BIG_FILE_SIZE));
@@ -585,52 +1149,46 @@ describe("r2", () => {
 						`r2 object put bucketName-object-test/wormhole-img.png --file ./wormhole-img.png`
 					)
 				).rejects.toThrowErrorMatchingInlineSnapshot(`
-				"Error: Wrangler only supports uploading files up to ${prettyBytes(
-					MAX_UPLOAD_SIZE,
-					{ binary: true }
-				)} in size
-				wormhole-img.png is ${prettyBytes(TOO_BIG_FILE_SIZE, { binary: true })} in size"
-			`);
+					[Error: Error: Wrangler only supports uploading files up to 300 MiB in size
+					wormhole-img.png is 301 MiB in size]
+				`);
 			});
 
 			it("should pass all fetch option flags into requestInit & check request inputs", async () => {
 				msw.use(
-					rest.put(
+					http.put(
 						"*/accounts/:accountId/r2/buckets/:bucketName/objects/:objectName",
-						(request, response, context) => {
-							const { accountId, bucketName, objectName } = request.params;
+						({ request, params }) => {
+							const { accountId, bucketName, objectName } = params;
 							expect(accountId).toEqual("some-account-id");
 							expect(bucketName).toEqual("bucketName-object-test");
 							expect(objectName).toEqual("wormhole-img.png");
-							const headersObject = request.headers.all();
+							const headersObject = Object.fromEntries(
+								request.headers.entries()
+							);
 							delete headersObject["user-agent"];
 							//This is removed because jest-fetch-mock does not support ReadableStream request bodies and has an incorrect body and content-length
 							delete headersObject["content-length"];
 							expect(headersObject).toMatchInlineSnapshot(`
 					Object {
-					  "accept": "*/*",
-					  "accept-encoding": "gzip,deflate",
 					  "authorization": "Bearer some-api-token",
 					  "cache-control": "cache-control-mock",
-					  "connection": "close",
 					  "content-disposition": "content-disposition-mock",
 					  "content-encoding": "content-encoding-mock",
 					  "content-language": "content-lang-mock",
 					  "content-type": "content-type-mock",
 					  "expires": "expire-time-mock",
-					  "host": "api.cloudflare.com",
 					}
 				`);
-							return response.once(
-								context.json(
-									createFetchResult({
-										accountId: "some-account-id",
-										bucketName: "bucketName-object-test",
-										objectName: "wormhole-img.png",
-									})
-								)
+							return HttpResponse.json(
+								createFetchResult({
+									accountId: "some-account-id",
+									bucketName: "bucketName-object-test",
+									objectName: "wormhole-img.png",
+								})
 							);
-						}
+						},
+						{ once: true }
 					)
 				);
 				fs.writeFileSync("wormhole-img.png", "passageway");
@@ -665,7 +1223,7 @@ describe("r2", () => {
 						`r2 object put bucketName-object-test/wormhole-img.png --pipe --file wormhole-img.png`
 					)
 				).rejects.toThrowErrorMatchingInlineSnapshot(
-					`"Arguments pipe and file are mutually exclusive"`
+					`[Error: Arguments pipe and file are mutually exclusive]`
 				);
 
 				expect(std.err).toMatchInlineSnapshot(`

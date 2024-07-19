@@ -3,14 +3,17 @@
 	"private": true,
 	"description": "A test for the getPlatformProxy utility",
 	"scripts": {
-		"test": "vitest run",
+		"test:ci": "vitest run",
 		"test:watch": "vitest",
 		"type:tests": "tsc --noEmit"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-tsconfig": "workspace:*",
-		"@cloudflare/workers-types": "^4.20221111.1",
-		"wrangler": "workspace:*",
-		"undici": "^5.28.3"
+		"@cloudflare/workers-types": "^4.20240712.0",
+		"undici": "^5.28.4",
+		"wrangler": "workspace:*"
+	},
+	"volta": {
+		"extends": "../../package.json"
 	}
 }

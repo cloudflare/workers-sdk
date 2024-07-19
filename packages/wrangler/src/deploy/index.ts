@@ -134,6 +134,12 @@ export function deployOptions(yargs: CommonYargsArgv) {
 				requiresArg: true,
 				array: true,
 			})
+			.option("alias", {
+				describe: "A module pair to be substituted in the script",
+				type: "string",
+				requiresArg: true,
+				array: true,
+			})
 			.option("triggers", {
 				describe: "cron schedules to attach",
 				alias: ["schedule", "schedules"],
@@ -191,10 +197,19 @@ export function deployOptions(yargs: CommonYargsArgv) {
 				describe:
 					"Send Trace Events from this worker to Workers Logpush.\nThis will not configure a corresponding Logpush job automatically.",
 			})
+			.option("upload-source-maps", {
+				type: "boolean",
+				describe: "Include source maps when uploading this worker.",
+			})
 			.option("old-asset-ttl", {
 				describe:
 					"Expire old assets in given seconds rather than immediate deletion.",
 				type: "number",
+			})
+			.option("dispatch-namespace", {
+				describe:
+					"Name of a dispatch namespace to deploy the Worker to (Workers for Platforms)",
+				type: "string",
 			})
 	);
 }
@@ -216,15 +231,6 @@ export async function deployHandler(
 	const projectRoot = configPath && path.dirname(configPath);
 	const config = readConfig(configPath, args);
 	const entry = await getEntry(args, config, "deploy");
-	await metrics.sendMetricsEvent(
-		"deploy worker script",
-		{
-			usesTypeScript: /\.tsx?$/.test(entry.file),
-		},
-		{
-			sendMetrics: config.send_metrics,
-		}
-	);
 
 	if (args.public) {
 		throw new UserError("The --public field has been renamed to --assets");
@@ -254,6 +260,7 @@ export async function deployHandler(
 
 	const cliVars = collectKeyValues(args.var);
 	const cliDefines = collectKeyValues(args.define);
+	const cliAlias = collectKeyValues(args.alias);
 
 	const accountId = args.dryRun ? undefined : await requireAuth(config);
 
@@ -265,11 +272,14 @@ export async function deployHandler(
 					args.site,
 					args.siteInclude,
 					args.siteExclude
-			  );
+				);
 
-	if (!args.dryRun) await standardPricingWarning(config);
+	if (!args.dryRun) {
+		await standardPricingWarning(config);
+	}
 
-	await deploy({
+	const beforeUpload = Date.now();
+	const { sourceMapSize } = await deploy({
 		config,
 		accountId,
 		name: getScriptName(args, config),
@@ -282,6 +292,7 @@ export async function deployHandler(
 		compatibilityFlags: args.compatibilityFlags,
 		vars: cliVars,
 		defines: cliDefines,
+		alias: cliAlias,
 		triggers: args.triggers,
 		jsxFactory: args.jsxFactory,
 		jsxFragment: args.jsxFragment,
@@ -297,7 +308,22 @@ export async function deployHandler(
 		noBundle: !(args.bundle ?? !config.no_bundle),
 		keepVars: args.keepVars,
 		logpush: args.logpush,
+		uploadSourceMaps: args.uploadSourceMaps,
 		oldAssetTtl: args.oldAssetTtl,
 		projectRoot,
+		dispatchNamespace: args.dispatchNamespace,
+		experimentalVersions: args.experimentalVersions,
 	});
+
+	await metrics.sendMetricsEvent(
+		"deploy worker script",
+		{
+			usesTypeScript: /\.tsx?$/.test(entry.file),
+			durationMs: Date.now() - beforeUpload,
+			sourceMapSize,
+		},
+		{
+			sendMetrics: config.send_metrics,
+		}
+	);
 }

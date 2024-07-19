@@ -50,27 +50,24 @@ export type TextPromptConfig = BasePromptConfig & {
 	type: "text";
 	initialValue?: string;
 };
-export type BaseSelectPromptConfig =
-	| BasePromptConfig & {
-			options: Option[];
-			maxItemsPerPage?: number;
-	  };
+export type BaseSelectPromptConfig = BasePromptConfig & {
+	options: Option[];
+	maxItemsPerPage?: number;
+};
 
-export type SelectPromptConfig =
-	| BaseSelectPromptConfig & {
-			type: "select";
-	  };
+export type SelectPromptConfig = BaseSelectPromptConfig & {
+	type: "select";
+};
 
 export type MultiSelectPromptConfig = BaseSelectPromptConfig & {
 	type: "multiselect";
 };
 
-export type ConfirmPromptConfig =
-	| BasePromptConfig & {
-			type: "confirm";
-			activeText?: string;
-			inactiveText?: string;
-	  };
+export type ConfirmPromptConfig = BasePromptConfig & {
+	type: "confirm";
+	activeText?: string;
+	inactiveText?: string;
+};
 
 export type ListPromptConfig = BasePromptConfig & {
 	type: "list";
@@ -563,7 +560,7 @@ export const spinner = (
 	// const frames = ["㊂", "㊀", "㊁"];
 
 	const frameRate = 120;
-	let loop: NodeJS.Timer | null = null;
+	let loop: ReturnType<typeof setTimeout> | null = null;
 	let startMsg: string;
 	let currentMsg: string;
 
@@ -611,7 +608,9 @@ export const spinner = (
 				}
 				clearLoop();
 			} else {
-				logUpdate(`\n${grayBar} ${msg}`);
+				if (msg !== undefined) {
+					logUpdate(`\n${grayBar} ${msg}`);
+				}
 				newline();
 			}
 		},

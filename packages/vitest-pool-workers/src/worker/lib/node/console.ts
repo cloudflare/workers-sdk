@@ -25,7 +25,9 @@ export class Console {
 		stderr?: Writable,
 		ignoreErrors?: boolean
 	) {
-		if (opts instanceof Writable) opts = { stdout: opts, stderr, ignoreErrors };
+		if (opts instanceof Writable) {
+			opts = { stdout: opts, stderr, ignoreErrors };
+		}
 		this.#stdout = opts.stdout;
 		this.#stderr = opts.stderr ?? this.#stdout;
 		const colors =
@@ -52,8 +54,11 @@ export class Console {
 		originalConsole.countReset(label);
 	}
 	debug(...data: unknown[]): void {
-		if (this.#stdout === undefined) originalConsole.debug(...data);
-		else this.value(this.#stdout, data);
+		if (this.#stdout === undefined) {
+			originalConsole.debug(...data);
+		} else {
+			this.value(this.#stdout, data);
+		}
 	}
 	dir(item?: unknown, options?: unknown): void {
 		originalConsole.dir(item, options);
@@ -62,8 +67,11 @@ export class Console {
 		originalConsole.dirxml(...data);
 	}
 	error(...data: unknown[]): void {
-		if (this.#stderr === undefined) originalConsole.error(...data);
-		else this.value(this.#stderr, data);
+		if (this.#stderr === undefined) {
+			originalConsole.error(...data);
+		} else {
+			this.value(this.#stderr, data);
+		}
 	}
 	group(...data: unknown[]): void {
 		originalConsole.group(...data);
@@ -75,12 +83,18 @@ export class Console {
 		originalConsole.groupEnd();
 	}
 	info(...data: unknown[]): void {
-		if (this.#stdout === undefined) originalConsole.info(...data);
-		else this.value(this.#stdout, data);
+		if (this.#stdout === undefined) {
+			originalConsole.info(...data);
+		} else {
+			this.value(this.#stdout, data);
+		}
 	}
 	log(...data: unknown[]): void {
-		if (this.#stdout === undefined) originalConsole.log(...data);
-		else this.value(this.#stdout, data);
+		if (this.#stdout === undefined) {
+			originalConsole.log(...data);
+		} else {
+			this.value(this.#stdout, data);
+		}
 	}
 	table(tabularData?: unknown, properties?: string[]): void {
 		originalConsole.table(tabularData, properties);
@@ -98,11 +112,17 @@ export class Console {
 		originalConsole.timeStamp(label);
 	}
 	trace(...data: unknown[]): void {
-		if (this.#stdout === undefined) originalConsole.trace(...data);
-		else this.value(this.#stdout, data);
+		if (this.#stdout === undefined) {
+			originalConsole.trace(...data);
+		} else {
+			this.value(this.#stdout, data);
+		}
 	}
 	warn(...data: unknown[]): void {
-		if (this.#stderr === undefined) originalConsole.warn(...data);
-		else this.value(this.#stderr, data);
+		if (this.#stderr === undefined) {
+			originalConsole.warn(...data);
+		} else {
+			this.value(this.#stderr, data);
+		}
 	}
 }

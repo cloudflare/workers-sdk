@@ -2,7 +2,7 @@ import { existsSync } from "fs";
 import { cp, mkdtemp, rename } from "fs/promises";
 import { tmpdir } from "os";
 import { join, resolve } from "path";
-import { crash } from "@cloudflare/cli";
+import { crash, warn } from "@cloudflare/cli";
 import { processArgument } from "@cloudflare/cli/args";
 import { blue, brandColor, dim } from "@cloudflare/cli/colors";
 import { spinner } from "@cloudflare/cli/interactive";
@@ -82,7 +82,7 @@ export type TemplateConfig = {
 	 * */
 	transformPackageJson?: (
 		pkgJson: PackageJson,
-		ctx: C3Context
+		ctx: C3Context,
 	) => Promise<Record<string, string | object>>;
 
 	/** An array of compatibility flags to be specified when deploying to pages or workers.*/
@@ -122,6 +122,7 @@ export type FrameworkMap = Awaited<ReturnType<typeof getFrameworkMap>>;
 export type FrameworkName = keyof FrameworkMap;
 
 export const getFrameworkMap = async () => ({
+	analog: (await import("../templates/analog/c3")).default,
 	angular: (await import("../templates/angular/c3")).default,
 	astro: (await import("../templates/astro/c3")).default,
 	docusaurus: (await import("../templates/docusaurus/c3")).default,
@@ -140,14 +141,16 @@ export const getFrameworkMap = async () => ({
 export const getTemplateMap = async () => {
 	return {
 		"hello-world": (await import("../templates/hello-world/c3")).default,
-		"hello-world-durable-object": (
-			await import("../templates/hello-world-durable-object/c3")
-		).default,
+		"hello-world-python": (await import("../templates/hello-world-python/c3"))
+			.default,
 		// Dummy record -- actual template config resolved in `selectFramework`
-		webFramework: { displayName: "Website or web app" } as TemplateConfig,
+		"web-framework": { displayName: "Website or web app" } as TemplateConfig,
 		common: (await import("../templates/common/c3")).default,
 		scheduled: (await import("../templates/scheduled/c3")).default,
 		queues: (await import("../templates/queues/c3")).default,
+		"hello-world-durable-object": (
+			await import("../templates/hello-world-durable-object/c3")
+		).default,
 		openapi: (await import("../templates/openapi/c3")).default,
 		// Dummy record -- actual template config resolved in `processRemoteTemplate`
 		"remote-template": {
@@ -161,12 +164,20 @@ export const selectTemplate = async (args: Partial<C3Args>) => {
 	// If not specified, attempt to infer the `type` argument from other flags
 	if (!args.type) {
 		if (args.framework) {
-			args.type = "webFramework";
+			args.type = "web-framework";
 		} else if (args.existingScript) {
 			args.type = "pre-existing";
 		} else if (args.template) {
 			args.type = "remote-template";
 		}
+	}
+
+	// Add backwards compatibility for the older argument (webFramework)
+	if (args.type && args.type === "webFramework") {
+		warn(
+			"The `webFramework` type is deprecated and will be removed in a future version. Please use `web-framework` instead.",
+		);
+		args.type = "web-framework";
 	}
 
 	const templateMap = await getTemplateMap();
@@ -176,7 +187,7 @@ export const selectTemplate = async (args: Partial<C3Args>) => {
 			value,
 			label: displayName,
 			hidden,
-		})
+		}),
 	);
 
 	const type = await processArgument<string>(args, "type", {
@@ -195,7 +206,7 @@ export const selectTemplate = async (args: Partial<C3Args>) => {
 		return crash(`Unknown application type provided: ${type}.`);
 	}
 
-	if (type === "webFramework") {
+	if (type === "web-framework") {
 		return selectFramework(args);
 	}
 
@@ -212,7 +223,7 @@ export const selectFramework = async (args: Partial<C3Args>) => {
 		([key, config]) => ({
 			label: config.displayName,
 			value: key,
-		})
+		}),
 	);
 
 	const framework = await processArgument<string>(args, "framework", {
@@ -455,13 +466,13 @@ export const getTemplatePath = (ctx: C3Context) => {
 };
 
 export const isVariantInfo = (
-	copyFiles: CopyFiles
+	copyFiles: CopyFiles,
 ): copyFiles is VariantInfo => {
 	return "path" in (copyFiles as VariantInfo);
 };
 
 export const getCopyFilesDestinationDir = (
-	ctx: C3Context
+	ctx: C3Context,
 ): undefined | string => {
 	const { copyFiles } = ctx.template;
 
@@ -498,8 +509,8 @@ export const addWranglerToGitIgnore = (ctx: C3Context) => {
 	const wranglerGitIgnoreFilesToAdd = wranglerGitIgnoreFiles.filter(
 		(file) =>
 			!existingGitIgnoreContent.match(
-				new RegExp(`\n${file}${file === ".wrangler" ? "/?" : ""}\\s+(#'*)?`)
-			)
+				new RegExp(`\n${file}${file === ".wrangler" ? "/?" : ""}\\s+(#'*)?`),
+			),
 	);
 
 	if (wranglerGitIgnoreFilesToAdd.length === 0) {
@@ -526,7 +537,7 @@ export const addWranglerToGitIgnore = (ctx: C3Context) => {
 
 	s.stop(
 		`${brandColor(gitIgnorePreExisted ? "updated" : "created")} ${dim(
-			".gitignore file"
-		)}`
+			".gitignore file",
+		)}`,
 	);
 };

@@ -1,19 +1,19 @@
-import { rest } from "msw";
+import { http, HttpResponse } from "msw";
 import { createFetchResult } from "../index";
 
 export default [
-	rest.get("*/zones", ({ url: { searchParams } }, res, context) => {
-		return res(
-			context.json(
-				createFetchResult(
-					searchParams.get("name") === "exists.com"
-						? [
-								{
-									id: "exists-com",
-								},
-						  ]
-						: []
-				)
+	http.get("*/zones", ({ request }) => {
+		const url = new URL(request.url);
+
+		return HttpResponse.json(
+			createFetchResult(
+				url.searchParams.get("name") === "exists.com"
+					? [
+							{
+								id: "exists-com",
+							},
+						]
+					: []
 			)
 		);
 	}),

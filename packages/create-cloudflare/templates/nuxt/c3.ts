@@ -1,12 +1,13 @@
 import { logRaw } from "@cloudflare/cli";
 import { brandColor, dim } from "@cloudflare/cli/colors";
 import { spinner } from "@cloudflare/cli/interactive";
-import { transformFile } from "helpers/codemod";
-import { installPackages, runFrameworkGenerator } from "helpers/command";
+import { runFrameworkGenerator } from "frameworks/index";
+import { mergeObjectProperties, transformFile } from "helpers/codemod";
+import { getLatestTypesEntrypoint } from "helpers/compatDate";
 import { readFile, writeFile } from "helpers/files";
-import { detectPackageManager } from "helpers/packages";
+import { detectPackageManager } from "helpers/packageManagers";
+import { installPackages } from "helpers/packages";
 import * as recast from "recast";
-import { getLatestTypesEntrypoint } from "../../src/workers";
 import type { TemplateConfig } from "../../src/templates";
 import type { C3Context } from "types";
 
@@ -55,7 +56,7 @@ const updateEnvTypes = (ctx: C3Context) => {
 
 	let file = readFile(filepath);
 
-	let typesEntrypoint = `@cloudflare/workers-types/`;
+	let typesEntrypoint = `@cloudflare/workers-types`;
 	const latestEntrypoint = getLatestTypesEntrypoint(ctx);
 	if (latestEntrypoint) {
 		typesEntrypoint += `/${latestEntrypoint}`;
@@ -81,25 +82,24 @@ const updateNuxtConfig = () => {
 		b.objectExpression([
 			b.objectProperty(
 				b.identifier("preset"),
-				b.stringLiteral("cloudflare-pages")
+				b.stringLiteral("cloudflare-pages"),
 			),
-		])
+		]),
 	);
 
 	const moduleDef = b.objectProperty(
 		b.identifier("modules"),
-		b.arrayExpression([b.stringLiteral("nitro-cloudflare-dev")])
+		b.arrayExpression([b.stringLiteral("nitro-cloudflare-dev")]),
 	);
 
 	transformFile(configFile, {
 		visitCallExpression: function (n) {
 			const callee = n.node.callee as recast.types.namedTypes.Identifier;
 			if (callee.name === "defineNuxtConfig") {
-				const obj = n.node
-					.arguments[0] as recast.types.namedTypes.ObjectExpression;
-
-				obj.properties.push(presetDef);
-				obj.properties.push(moduleDef);
+				mergeObjectProperties(
+					n.node.arguments[0] as recast.types.namedTypes.ObjectExpression,
+					[presetDef, moduleDef],
+				);
 			}
 
 			return this.traverse(n);
@@ -121,9 +121,9 @@ const config: TemplateConfig = {
 	configure,
 	transformPackageJson: async () => ({
 		scripts: {
-			deploy: `${npm} run build && wrangler pages deploy ./dist`,
-			preview: `${npm} run build && wrangler pages dev ./dist`,
-			"build-cf-types": `wrangler types`,
+			deploy: `${npm} run build && wrangler pages deploy`,
+			preview: `${npm} run build && wrangler pages dev`,
+			"cf-typegen": `wrangler types`,
 		},
 	}),
 	devScript: "dev",

@@ -66,7 +66,18 @@ export class Log {
 	}
 
 	protected log(message: string): void {
+		Log.#beforeLogHook?.();
 		console.log(message);
+		Log.#afterLogHook?.();
+	}
+
+	static #beforeLogHook: (() => void) | undefined;
+	static unstable_registerBeforeLogHook(callback: (() => void) | undefined) {
+		this.#beforeLogHook = callback;
+	}
+	static #afterLogHook: (() => void) | undefined;
+	static unstable_registerAfterLogHook(callback: (() => void) | undefined) {
+		this.#afterLogHook = callback;
 	}
 
 	logWithLevel(level: LogLevel, message: string): void {

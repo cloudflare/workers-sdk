@@ -147,16 +147,24 @@ export async function EnableHandler(
 	let sippyConfig: SippyPutParams;
 
 	if (args.provider === "AWS") {
-		if (!args.region) throw new UserError("Error: must provide --region.");
-		if (!args.bucket) throw new UserError("Error: must provide --bucket.");
-		if (!args.accessKeyId)
+		if (!args.region) {
+			throw new UserError("Error: must provide --region.");
+		}
+		if (!args.bucket) {
+			throw new UserError("Error: must provide --bucket.");
+		}
+		if (!args.accessKeyId) {
 			throw new UserError("Error: must provide --access-key-id.");
-		if (!args.secretAccessKey)
+		}
+		if (!args.secretAccessKey) {
 			throw new UserError("Error: must provide --secret-access-key.");
-		if (!args.r2AccessKeyId)
+		}
+		if (!args.r2AccessKeyId) {
 			throw new UserError("Error: must provide --r2-access-key-id.");
-		if (!args.r2SecretAccessKey)
+		}
+		if (!args.r2SecretAccessKey) {
 			throw new UserError("Error: must provide --r2-secret-access-key.");
+		}
 
 		sippyConfig = {
 			source: {
@@ -183,21 +191,27 @@ export async function EnableHandler(
 			}
 		}
 
-		if (!args.bucket) throw new UserError("Error: must provide --bucket.");
-		if (!args.clientEmail)
+		if (!args.bucket) {
+			throw new UserError("Error: must provide --bucket.");
+		}
+		if (!args.clientEmail) {
 			throw new UserError(
 				"Error: must provide --service-account-key-file or --client-email."
 			);
-		if (!args.privateKey)
+		}
+		if (!args.privateKey) {
 			throw new UserError(
 				"Error: must provide --service-account-key-file or --private-key."
 			);
+		}
 		args.privateKey = args.privateKey.replace(/\\n/g, "\n");
 
-		if (!args.r2AccessKeyId)
+		if (!args.r2AccessKeyId) {
 			throw new UserError("Error: must provide --r2-access-key-id.");
-		if (!args.r2SecretAccessKey)
+		}
+		if (!args.r2SecretAccessKey) {
 			throw new UserError("Error: must provide --r2-secret-access-key.");
+		}
 
 		sippyConfig = {
 			source: {

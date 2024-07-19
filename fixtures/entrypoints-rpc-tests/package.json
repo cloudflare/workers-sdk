@@ -1,0 +1,17 @@
+{
+	"name": "entrypoints-rpc-tests",
+	"private": true,
+	"scripts": {
+		"test:ci": "vitest run",
+		"test:watch": "vitest"
+	},
+	"devDependencies": {
+		"@cloudflare/workers-tsconfig": "workspace:*",
+		"ts-dedent": "^2.2.0",
+		"undici": "^5.28.4",
+		"wrangler": "workspace:*"
+	},
+	"volta": {
+		"extends": "../../package.json"
+	}
+}

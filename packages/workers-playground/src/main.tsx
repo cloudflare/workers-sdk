@@ -15,7 +15,7 @@ function syncDarkModeWithSystem() {
 	const inSystemDarkMode =
 		window.matchMedia &&
 		window.matchMedia("(prefers-color-scheme: dark)").matches;
-	var classList = document.documentElement.classList;
+	const classList = document.documentElement.classList;
 	if (inSystemDarkMode) {
 		classList.add("dark-mode");
 	} else {
@@ -24,6 +24,7 @@ function syncDarkModeWithSystem() {
 }
 syncDarkModeWithSystem();
 setDarkMode(DarkModeSettings.SYSTEM);
+// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
 ReactDOM.createRoot(document.getElementById("root")!).render(
 	<React.StrictMode>
 		<StyleProvider renderer={felaRenderer}>

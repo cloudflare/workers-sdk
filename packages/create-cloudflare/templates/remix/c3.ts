@@ -1,9 +1,9 @@
 import { logRaw } from "@cloudflare/cli";
 import { brandColor, dim } from "@cloudflare/cli/colors";
 import { spinner } from "@cloudflare/cli/interactive";
+import { runFrameworkGenerator } from "frameworks/index";
 import { transformFile } from "helpers/codemod";
-import { runFrameworkGenerator } from "helpers/command.js";
-import { detectPackageManager } from "helpers/packages";
+import { detectPackageManager } from "helpers/packageManagers";
 import type { TemplateConfig } from "../../src/templates";
 import type { C3Context } from "types";
 
@@ -13,7 +13,7 @@ const generate = async (ctx: C3Context) => {
 	await runFrameworkGenerator(ctx, [
 		ctx.project.name,
 		"--template",
-		"https://github.com/remix-run/remix/tree/main/templates/vite-cloudflare",
+		"https://github.com/remix-run/remix/tree/main/templates/cloudflare",
 	]);
 
 	logRaw(""); // newline
@@ -54,9 +54,9 @@ const config: TemplateConfig = {
 	configure,
 	transformPackageJson: async () => ({
 		scripts: {
-			deploy: `${npm} run build && wrangler pages deploy ./build/client`,
-			preview: `${npm} run build && wrangler pages dev ./build/client`,
-			"build-cf-types": `wrangler types`,
+			deploy: `${npm} run build && wrangler pages deploy`,
+			preview: `${npm} run build && wrangler pages dev`,
+			"cf-typegen": `wrangler types`,
 		},
 	}),
 	devScript: "dev",

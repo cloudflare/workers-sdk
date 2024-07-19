@@ -171,6 +171,17 @@ level will be logged.
   Creates a new logger that logs nothing to the `console`, and always `throw`s
   `message`s logged at the `ERROR` level.
 
+### `interface QueueProducerOptions`
+
+- `queueName: string`
+
+  The name of the queue where messages will be sent by the producer.
+
+- `deliveryDelay?: number`
+
+  Default number of seconds to delay the delivery of messages to consumers.
+  Value between `0` (no delay) and `42300` (12 hours).
+
 ### `interface QueueConsumerOptions`
 
 - `maxBatchSize?: number`
@@ -191,6 +202,11 @@ level will be logged.
 
   Name of another Queue to send a message on if it fails processing after
   `maxRetries`. If this isn't specified, failed messages will be discarded.
+
+- `retryDelay?: number`
+
+  Number of seconds to delay the (re-)delivery of messages by default. Value
+  between `0` (no delay) and `42300` (12 hours).
 
 ### `interface WorkerOptions`
 
@@ -296,7 +312,7 @@ parameter in module format Workers.
   Record mapping binding name to paths containing arbitrary binary data to
   inject as `ArrayBuffer` bindings into this Worker.
 
-- `serviceBindings?: Record<string, string | typeof kCurrentWorker | { network: Network } | { external: ExternalServer } | { disk: DiskDirectory } | (request: Request, instance: Miniflare) => Awaitable<Response>>`
+- `serviceBindings?: Record<string, string | typeof kCurrentWorker | { name: string | typeof kCurrentWorker, entrypoint?: string } | { network: Network } | { external: ExternalServer } | { disk: DiskDirectory } | (request: Request, instance: Miniflare) => Awaitable<Response>>`
 
   Record mapping binding name to service designators to inject as
   `{ fetch: typeof fetch }`
@@ -307,6 +323,12 @@ parameter in module format Workers.
     with that `name`.
   - If the designator is `(await import("miniflare")).kCurrentWorker`, requests
     will be dispatched to the Worker defining the binding.
+  - If the designator is an object of the form `{ name: ..., entrypoint: ... }`,
+    requests will be dispatched to the entrypoint named `entrypoint` in the
+    Worker named `name`. The `entrypoint` defaults to `default`, meaning
+    `{ name: "a" }` is the same as `"a"`. If `name` is
+    `(await import("miniflare")).kCurrentWorker`, requests will be dispatched to
+    the Worker defining the binding.
   - If the designator is an object of the form `{ network: { ... } }`, where
     `network` is a
     [`workerd` `Network` struct](https://github.com/cloudflare/workerd/blob/bdbd6075c7c53948050c52d22f2dfa37bf376253/src/workerd/server/workerd.capnp#L555-L598),
@@ -528,12 +550,12 @@ parameter in module format Workers.
 
 #### Queues
 
-- `queueProducers?: Record<string, string> | string[]`
+- `queueProducers?: Record<string, QueueProducerOptions> | string[]`
 
-  Record mapping binding name to queue names to inject as `WorkerQueue` bindings
+  Record mapping binding name to queue options to inject as `WorkerQueue` bindings
   into this Worker. Different Workers may bind to the same queue name with
   different binding names. If a `string[]` of binding names is specified, the
-  binding name and queue name are assumed to be the same.
+  binding name and queue name (part of the queue options) are assumed to be the same.
 
 - `queueConsumers?: Record<string, QueueConsumerOptions> | string[]`
 
@@ -799,4 +821,17 @@ defined at the top-level.
 
 - `getCf(): Promise<Record<string, any>>`
 
-  Returns the same object returned from incoming `Request`'s `cf` property. This object depends on the `cf` property from `SharedOptions`.
+  Returns the same object returned from incoming `Request`'s `cf` property. This
+  object depends on the `cf` property from `SharedOptions`.
+
+## Configuration
+
+### Local `workerd`
+
+You can override the `workerd` binary being used by miniflare with a your own local build by setting the `MINIFLARE_WORKERD_PATH` environment variable.
+
+For example:
+
+```shell
+$ export MINIFLARE_WORKERD_PATH="<WORKERD_REPO_DIR>/bazel-bin/src/workerd/server/workerd"
+```

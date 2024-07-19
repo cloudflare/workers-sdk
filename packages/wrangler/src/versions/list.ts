@@ -6,7 +6,7 @@ import * as metrics from "../metrics";
 import { printWranglerBanner } from "../update-check";
 import { requireAuth } from "../user";
 import formatLabelledValues from "../utils/render-labelled-values";
-import { fetchLatestUploadedVersions } from "./api";
+import { fetchDeployableVersions } from "./api";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
@@ -20,20 +20,28 @@ export type VersionsListArgs = StrictYargsOptionsToInterface<
 >;
 
 export function versionsListOptions(yargs: CommonYargsArgv) {
-	return yargs.option("name", {
-		describe: "Name of the worker",
-		type: "string",
-		requiresArg: true,
-	});
+	return yargs
+		.option("name", {
+			describe: "Name of the worker",
+			type: "string",
+			requiresArg: true,
+		})
+		.option("json", {
+			describe: "Display output as clean JSON",
+			type: "boolean",
+			default: false,
+		});
 }
 
 export async function versionsListHandler(args: VersionsListArgs) {
-	await printWranglerBanner();
+	if (!args.json) {
+		await printWranglerBanner();
+	}
 
 	const config = getConfig(args);
 	await metrics.sendMetricsEvent(
 		"list worker versions",
-		{},
+		{ json: args.json },
 		{
 			sendMetrics: config.send_metrics,
 		}
@@ -49,11 +57,16 @@ export async function versionsListHandler(args: VersionsListArgs) {
 	}
 
 	const versionCache: VersionCache = new Map();
-	const versions = await fetchLatestUploadedVersions(
+	const versions = await fetchDeployableVersions(
 		accountId,
 		workerName,
 		versionCache
 	);
+
+	if (args.json) {
+		logRaw(JSON.stringify(versions, null, 2));
+		return;
+	}
 
 	for (const version of versions) {
 		const formattedVersion = formatLabelledValues({
@@ -66,6 +79,7 @@ export async function versionsListHandler(args: VersionsListArgs) {
 		});
 
 		logRaw(formattedVersion);
+		logRaw(``);
 	}
 }
 

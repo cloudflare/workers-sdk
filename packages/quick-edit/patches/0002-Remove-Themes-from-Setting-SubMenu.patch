@@ -1,26 +1,26 @@
-From 2890ec43e2c34f8cf530eed8b1a5a7d887c8da66 Mon Sep 17 00:00:00 2001
+From 0ae310974f575dc69c4815249b3d7d582f77b7ab Mon Sep 17 00:00:00 2001
 From: Jacob M-G Evans <jacobmgevans@gmail.com>
 Date: Fri, 31 Mar 2023 17:11:08 -0500
-Subject: [PATCH 02/13] Remove Themes from Setting SubMenu
+Subject: [PATCH 2/9] Remove Themes from Setting SubMenu
 
 ---
- .../themes/browser/themes.contribution.ts     | 76 +++++++++----------
- 1 file changed, 38 insertions(+), 38 deletions(-)
+ .../themes/browser/themes.contribution.ts     | 40 +------------------
+ 1 file changed, 1 insertion(+), 39 deletions(-)
 
 diff --git a/src/vs/workbench/contrib/themes/browser/themes.contribution.ts b/src/vs/workbench/contrib/themes/browser/themes.contribution.ts
-index c94be39..22dfc43 100644
+index 60a131a..ecd9363 100644
 --- a/src/vs/workbench/contrib/themes/browser/themes.contribution.ts
 +++ b/src/vs/workbench/contrib/themes/browser/themes.contribution.ts
-@@ -534,7 +534,7 @@ interface ThemeItem extends IQuickPickItem {
- }
+@@ -5,7 +5,7 @@
  
- function isItem(i: QuickPickInput<ThemeItem>): i is ThemeItem {
--	return (<any>i)['type'] !== 'separator';
-+	return (<any> i)['type'] !== 'separator';
- }
- 
- function toEntry(theme: IWorkbenchTheme): ThemeItem {
-@@ -655,41 +655,41 @@ registerAction2(class extends Action2 {
+ import { localize } from 'vs/nls';
+ import { KeyMod, KeyChord, KeyCode } from 'vs/base/common/keyCodes';
+-import { MenuRegistry, MenuId, Action2, registerAction2, ISubmenuItem } from 'vs/platform/actions/common/actions';
++import { Action2, registerAction2 } from 'vs/platform/actions/common/actions';
+ import { equalsIgnoreCase } from 'vs/base/common/strings';
+ import { Registry } from 'vs/platform/registry/common/platform';
+ import { Categories } from 'vs/platform/action/common/actionCommonCategories';
+@@ -719,44 +719,6 @@ registerAction2(class extends Action2 {
  	}
  });
  
@@ -29,13 +29,13 @@ index c94be39..22dfc43 100644
 -	title: localize('themes', "Themes"),
 -	submenu: ThemesSubMenu,
 -	group: '2_configuration',
--	order: 6
+-	order: 7
 -});
 -MenuRegistry.appendMenuItem(MenuId.MenubarPreferencesMenu, <ISubmenuItem>{
 -	title: localize({ key: 'miSelectTheme', comment: ['&& denotes a mnemonic'] }, "&&Theme"),
 -	submenu: ThemesSubMenu,
 -	group: '2_configuration',
--	order: 6
+-	order: 7
 -});
 -
 -MenuRegistry.appendMenuItem(ThemesSubMenu, {
@@ -61,44 +61,10 @@ index c94be39..22dfc43 100644
 -	},
 -	order: 3
 -});
-+// const ThemesSubMenu = new MenuId('ThemesSubMenu');
-+// MenuRegistry.appendMenuItem(MenuId.GlobalActivity, <ISubmenuItem>{
-+// 	title: localize('themes', "Themes"),
-+// 	submenu: ThemesSubMenu,
-+// 	group: '2_configuration',
-+// 	order: 6
-+// });
-+// MenuRegistry.appendMenuItem(MenuId.MenubarPreferencesMenu, <ISubmenuItem>{
-+// 	title: localize({ key: 'miSelectTheme', comment: ['&& denotes a mnemonic'] }, "&&Theme"),
-+// 	submenu: ThemesSubMenu,
-+// 	group: '2_configuration',
-+// 	order: 6
-+// });
-+
-+// MenuRegistry.appendMenuItem(ThemesSubMenu, {
-+// 	command: {
-+// 		id: SelectColorThemeCommandId,
-+// 		title: localize('selectTheme.label', "Color Theme")
-+// 	},
-+// 	order: 1
-+// });
-+
-+// MenuRegistry.appendMenuItem(ThemesSubMenu, {
-+// 	command: {
-+// 		id: SelectFileIconThemeCommandId,
-+// 		title: localize('themes.selectIconTheme.label', "File Icon Theme")
-+// 	},
-+// 	order: 2
-+// });
-+
-+// MenuRegistry.appendMenuItem(ThemesSubMenu, {
-+// 	command: {
-+// 		id: SelectProductIconThemeCommandId,
-+// 		title: localize('themes.selectProductIconTheme.label', "Product Icon Theme")
-+// 	},
-+// 	order: 3
-+// });
+-
+ type DefaultThemeUpdatedNotificationReaction = 'keepNew' | 'keepOld' | 'tryNew' | 'cancel' | 'browse';
  
+ class DefaultThemeUpdatedNotificationContribution implements IWorkbenchContribution {
 -- 
-2.39.2 (Apple Git-143)
+2.39.3 (Apple Git-145)
 

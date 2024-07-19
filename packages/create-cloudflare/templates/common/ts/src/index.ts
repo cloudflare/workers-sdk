@@ -5,6 +5,9 @@
  * - Open a browser tab at http://localhost:8787/ to see your worker in action
  * - Run `npm run deploy` to publish your worker
  *
+ * Bind resources to your worker in `wrangler.toml`. After adding bindings, a type definition for the
+ * `Env` object can be regenerated with `npm run cf-typegen`.
+ *
  * Learn more at https://developers.cloudflare.com/workers/
  */
 
@@ -16,7 +19,7 @@ import apiRouter from './router';
 export default {
 	// The fetch handler is invoked when this worker receives a HTTP(S) request
 	// and should return a Response (optionally wrapped in a Promise)
-	async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+	async fetch(request, env, ctx): Promise<Response> {
 		// You'll find it helpful to parse the request.url string into a URL object. Learn more at https://developer.mozilla.org/en-US/docs/Web/API/URL
 		const url = new URL(request.url);
 
@@ -43,4 +46,4 @@ export default {
 			{ headers: { 'Content-Type': 'text/html' } }
 		);
 	},
-};
+} satisfies ExportedHandler<Env>;

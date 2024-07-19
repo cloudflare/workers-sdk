@@ -12,7 +12,9 @@ export const CLEANUP = () => {
 };
 
 export function isUrl(maybeUrl?: string): maybeUrl is string {
-	if (!maybeUrl) return false;
+	if (!maybeUrl) {
+		return false;
+	}
 
 	try {
 		new URL(maybeUrl);
@@ -72,4 +74,23 @@ export function getPagesTmpDir(): string {
 	tmpDirCache = tmpDir.path;
 	tmpDirCacheProjectRoot = projectRoot;
 	return tmpDirCache;
+}
+
+/**
+ * Creates a basic debounced function that delays invoking `fn` until after
+ * `delayMs` milliseconds have elapsed since the last time the debounced
+ * function was invoked.
+ */
+export function debounce(fn: () => void, delayMs = 100) {
+	let crrTimeoutId: NodeJS.Timeout | undefined;
+
+	return () => {
+		if (crrTimeoutId) {
+			clearTimeout(crrTimeoutId);
+		}
+
+		crrTimeoutId = setTimeout(() => {
+			fn();
+		}, delayMs);
+	};
 }

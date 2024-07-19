@@ -1,9 +1,10 @@
 import { logRaw, updateStatus } from "@cloudflare/cli";
 import { blue, brandColor, dim } from "@cloudflare/cli/colors";
+import { runFrameworkGenerator } from "frameworks/index";
 import { loadTemplateSnippets, transformFile } from "helpers/codemod";
-import { runCommand, runFrameworkGenerator } from "helpers/command";
+import { runCommand } from "helpers/command";
 import { usesTypescript } from "helpers/files";
-import { detectPackageManager } from "helpers/packages";
+import { detectPackageManager } from "helpers/packageManagers";
 import * as recast from "recast";
 import type { TemplateConfig } from "../../src/templates";
 import type { C3Context, PackageJson } from "types";
@@ -21,7 +22,7 @@ const configure = async (ctx: C3Context) => {
 		silent: true,
 		startText: "Installing adapter",
 		doneText: `${brandColor("installed")} ${dim(
-			`via \`${npx} astro add cloudflare\``
+			`via \`${npx} astro add cloudflare\``,
 		)}`,
 	});
 
@@ -45,10 +46,10 @@ const updateAstroConfig = () => {
 			n.node.arguments = [
 				b.objectExpression([
 					b.objectProperty(
-						b.identifier("runtime"),
+						b.identifier("platformProxy"),
 						b.objectExpression([
-							b.objectProperty(b.identifier("mode"), b.stringLiteral("local")),
-						])
+							b.objectProperty(b.identifier("enabled"), b.booleanLiteral(true)),
+						]),
 					),
 				]),
 			];
@@ -76,7 +77,7 @@ const updateEnvDeclaration = (ctx: C3Context) => {
 			// Preserve comments with the new body
 			const comments = n.get("comments").value;
 			n.node.comments = comments.map((c: recast.types.namedTypes.CommentLine) =>
-				b.commentLine(c.value)
+				b.commentLine(c.value),
 			);
 
 			// Add the patch
@@ -102,9 +103,9 @@ const config: TemplateConfig = {
 	configure,
 	transformPackageJson: async (pkgJson: PackageJson, ctx: C3Context) => ({
 		scripts: {
-			deploy: `astro build && wrangler pages deploy ./dist`,
-			preview: `astro build && wrangler pages dev ./dist`,
-			...(usesTypescript(ctx) && { "build-cf-types": `wrangler types` }),
+			deploy: `astro build && wrangler pages deploy`,
+			preview: `astro build && wrangler pages dev`,
+			...(usesTypescript(ctx) && { "cf-typegen": `wrangler types` }),
 		},
 	}),
 };

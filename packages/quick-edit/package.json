@@ -1,6 +1,6 @@
 {
 	"name": "@cloudflare/quick-edit",
-	"version": "0.0.0",
+	"version": "0.0.1",
 	"private": true,
 	"description": "VSCode for Web hosted for use in Cloudflare's Quick Editor",
 	"homepage": "https://github.com/cloudflare/workers-sdk#readme",
@@ -10,21 +10,26 @@
 	"license": "BSD-3-Clause",
 	"author": "workers-devprod@cloudflare.com",
 	"scripts": {
+		"check:lint": "eslint functions --max-warnings=0",
+		"check:type": "tsc",
 		"custom:build": "./build.sh",
-		"dev": "concurrently '../../vendor/vscode/scripts/code-web.sh --extensionDevelopmentPath ../../packages/quick-edit/web/quick-edit-extension' 'npm --prefix web/quick-edit-extension run watch-web' 'yarn --cwd ../../vendor/vscode watch' 'yarn --cwd ../../vendor/vscode watch-web'",
-		"setup": "rm -rf web/assets web/quick-edit-extension && ./setup.sh",
-		"deploy": "CLOUDFLARE_ACCOUNT_ID=e35fd947284363a46fd7061634477114 pnpm exec wrangler pages deploy --project-name quick-edit ./web"
+		"deploy": "CLOUDFLARE_ACCOUNT_ID=e35fd947284363a46fd7061634477114 pnpm exec wrangler pages deploy --project-name quick-edit ./web",
+		"dev": "concurrently 'pnpm exec wrangler pages dev ./web' 'npm --prefix web/quick-edit-extension run watch-web' 'yarn --cwd ../../vendor/vscode watch' 'yarn --cwd ../../vendor/vscode watch-web'",
+		"setup": "rm -rf web/assets web/quick-edit-extension && ./setup.sh"
 	},
 	"dependencies": {
 		"yarn": "^1.22.19"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-tsconfig": "workspace:*",
-		"concurrently": "^8.0.1",
+		"concurrently": "^8.2.2",
 		"tsx": "^3.12.8",
 		"wrangler": "workspace:*"
 	},
 	"engines": {
-		"node": "<17"
+		"node": ">=18.15"
+	},
+	"volta": {
+		"extends": "../../package.json"
 	}
 }

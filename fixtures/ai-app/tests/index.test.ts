@@ -20,12 +20,21 @@ describe("'wrangler dev' correctly renders pages", () => {
 		await stop?.();
 	});
 
-	it("ai binding is defined ", async ({ expect }) => {
+	it("ai binding methods ", async ({ expect }) => {
 		const response = await fetch(`http://${ip}:${port}/`);
 		const content = await response.json();
-		expect(content).toEqual({
-			binding: {},
-			fetcher: "function fetch() { [native code] }",
+		expect((content as Record<string, object>).fetch).toEqual("function");
+		expect((content as Record<string, object>).run).toEqual("function");
+	});
+
+	it("ai binding properties", async ({ expect }) => {
+		const response = await fetch(`http://${ip}:${port}/`);
+		const content = await response.json();
+		expect((content as Record<string, object>).binding).toEqual({
+			fetcher: {},
+			lastRequestId: null,
+			logs: [],
+			options: {},
 		});
 	});
 });

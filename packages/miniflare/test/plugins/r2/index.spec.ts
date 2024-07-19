@@ -5,14 +5,6 @@ import crypto from "crypto";
 import fs from "fs/promises";
 import path from "path";
 import { text } from "stream/consumers";
-import type {
-	R2Bucket,
-	R2Conditional,
-	R2ListOptions,
-	R2Object,
-	R2ObjectBody,
-	R2Objects,
-} from "@cloudflare/workers-types/experimental";
 import { Macro, ThrowsExpectation } from "ava";
 import {
 	Headers,
@@ -21,20 +13,28 @@ import {
 	R2_PLUGIN_NAME,
 	ReplaceWorkersTypes,
 } from "miniflare";
+import {
+	FIXTURES_PATH,
+	isWithin,
+	MiniflareDurableObjectControlStub,
+	miniflareTest,
+	MiniflareTestContext,
+	namespace,
+	Namespaced,
+	useTmp,
+} from "../../test-shared";
 import type {
 	MultipartPartRow,
 	ObjectRow,
 } from "../../../src/workers/r2/schemas.worker";
-import {
-	FIXTURES_PATH,
-	MiniflareDurableObjectControlStub,
-	MiniflareTestContext,
-	Namespaced,
-	isWithin,
-	miniflareTest,
-	namespace,
-	useTmp,
-} from "../../test-shared";
+import type {
+	R2Bucket,
+	R2Conditional,
+	R2ListOptions,
+	R2Object,
+	R2ObjectBody,
+	R2Objects,
+} from "@cloudflare/workers-types/experimental";
 
 const WITHIN_EPSILON = 10_000;
 

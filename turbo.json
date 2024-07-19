@@ -3,41 +3,40 @@
 	"remoteCache": {
 		"signature": true
 	},
-	"globalEnv": ["CI_OS", "NODE_VERSION"],
+	"globalEnv": ["CI_OS", "NODE_VERSION", "VITEST"],
 	"pipeline": {
-		"wrangler#dev": {
+		"dev": {
 			"persistent": true,
 			"cache": false
 		},
-		"miniflare#dev": {
-			"persistent": true,
-			"cache": false
+		"build": {
+			"dependsOn": ["^build"]
 		},
-		"@cloudflare/vitest-pool-workers#dev": {
-			"persistent": true,
-			"cache": false
-		},
-		"build": { "dependsOn": ["^build"] },
 		"test": {
-			"dependsOn": ["^build"],
-			"cache": false
+			"dependsOn": ["build"]
 		},
 		"test:watch": {
+			"persistent": true,
 			"cache": false
-		},
-		"check:lint": {
-			"dependsOn": ["^topological"]
-		},
-		"check:type": {
-			"dependsOn": ["^topological"]
 		},
 		"topological": {
 			"dependsOn": ["^topological"]
 		},
-		"type:tests": {},
-		"test:ci": {
-			"cache": false
+		"check:lint": {
+			"dependsOn": ["topological"]
 		},
-		"//#check:format": { "cache": true }
+		"check:type": {
+			"dependsOn": ["topological"]
+		},
+		"type:tests": {
+			"dependsOn": ["topological"]
+		},
+		"test:ci": {
+			"dependsOn": ["build"]
+		},
+		"test:e2e": {},
+		"//#check:format": {
+			"cache": true
+		}
 	}
 }
