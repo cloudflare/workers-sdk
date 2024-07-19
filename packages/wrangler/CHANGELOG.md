@@ -1,5 +1,16 @@
 # wrangler
 
+## 3.65.1
+
+### Patch Changes
+
+- [#6267](https://github.com/cloudflare/workers-sdk/pull/6267) [`957d668`](https://github.com/cloudflare/workers-sdk/commit/957d668947b8b234dd909806065c02db6d1b3a01) Thanks [@WalshyDev](https://github.com/WalshyDev)! - chore: add total module size to the logged table, this makes it much easier to see the total size of all modules combined.
+
+- [#6244](https://github.com/cloudflare/workers-sdk/pull/6244) [`e7c06d7`](https://github.com/cloudflare/workers-sdk/commit/e7c06d78b14eb89060f431bc4aee8dbc1cc08fa5) Thanks [@gabivlj](https://github.com/gabivlj)! - fix: wrangler cloudchamber json errors are properly formatted
+
+- Updated dependencies [[`779c713`](https://github.com/cloudflare/workers-sdk/commit/779c71349ea1c747ff4486e4084024a7e88a05cb)]:
+  - miniflare@3.20240718.0
+
 ## 3.65.0
 
 ### Minor Changes
