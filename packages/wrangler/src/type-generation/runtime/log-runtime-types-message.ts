@@ -1,10 +1,15 @@
 import { existsSync, readFileSync } from "fs";
 import { logger } from "../../logger";
+import { parseJSONC } from "../../parse";
 
 /**
  * Constructs a comprehensive log message for the user after generating runtime types.
  */
-export function logRuntimeTypesMessage(outFile: string, tsconfigPath: string) {
+export function logRuntimeTypesMessage(
+	outFile: string,
+	tsconfigPath: string,
+	isNodeCompat = false
+) {
 	const existingTypes = readExistingTypes(tsconfigPath);
 	const isWorkersTypesInstalled = workersTypesEntryExists(existingTypes);
 	const updatedTypesString = buildUpdatedTypesString(existingTypes, outFile);
@@ -19,16 +24,20 @@ ${message}
 
 {
 	"compilerOptions": {
+	    ...
 		"types": ${updatedTypesString}
+		...
 	}
 }
     `);
 	if (isWorkersTypesInstalled) {
 		logger.info('📣 You can now uninstall "@cloudflare/workers-types".');
 	}
-	logger.info(
-		'📣 To get Node.js typings, install with "npm i --save-dev @types/node".'
-	);
+	if (isNodeCompat) {
+		logger.info(
+			'📣 To get Node.js typings, install with "npm i --save-dev @types/node".'
+		);
+	}
 	logger.info(
 		"📣 Remember to run 'wrangler types --x-with-runtime' again if you change 'compatibility_date' or 'compatibility_flags' in your wrangler.toml.\n"
 	);
@@ -62,12 +71,18 @@ function readExistingTypes(tsconfigPath: string): string[] {
 	}
 
 	try {
-		const tsconfig = JSON.parse(readFileSync(tsconfigPath, "utf-8"));
+		const tsconfig = parseJSONC<TSConfig>(readFileSync(tsconfigPath, "utf-8"));
 		return tsconfig.compilerOptions?.types || [];
 	} catch (e) {
 		return [];
 	}
 }
+
+type TSConfig = {
+	compilerOptions: {
+		types: string[];
+	};
+};
 
 /**
  * Find any @cloudflare/workers-types entry in the tsconfig.json types array.

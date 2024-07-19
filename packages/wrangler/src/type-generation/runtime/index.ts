@@ -1,7 +1,7 @@
 import { readFileSync } from "fs";
 import { writeFile } from "fs/promises";
 import { Miniflare } from "miniflare";
-import { ensureDirectoryExists } from "../../utils/log-file";
+import { ensureDirectoryExists } from "../../utils/filesystem";
 import type { Config } from "../../config/config";
 
 const DEFAULT_OUTFILE_RELATIVE_PATH = "./.wrangler/types/runtime.d.ts";
@@ -35,23 +35,19 @@ const DEFAULT_OUTFILE_RELATIVE_PATH = "./.wrangler/types/runtime.d.ts";
  * - This could be improved by hashing the compat date and flags to avoid unnecessary regeneration.
  */
 export async function generateRuntimeTypes({
-	config,
-	generateFn = generate,
+	config: { compatibility_date, compatibility_flags = [] },
 	outFile = DEFAULT_OUTFILE_RELATIVE_PATH,
 }: {
 	config: Config;
-	generateFn?: typeof generate;
 	outFile?: string;
 }) {
-	const { compatibility_date, compatibility_flags = [] } = config;
-
 	if (!compatibility_date) {
-		throw new Error("Config must have a compatability date.");
+		throw new Error("Config must have a compatibility date.");
 	}
 
 	await ensureDirectoryExists(outFile);
 
-	const types = await generateFn({
+	const types = await generate({
 		compatibilityDate: compatibility_date,
 		compatibilityFlags: compatibility_flags,
 	});

@@ -85,8 +85,9 @@ export async function typesHandler(
 			config,
 			outFile: args.xWithRuntime || undefined,
 		});
-		const tsconfigPath = join(dirname(configPath), "tsconfig.json");
-		logRuntimeTypesMessage(outFile, tsconfigPath);
+		const tsconfigPath =
+			config.tsconfig ?? join(dirname(configPath), "tsconfig.json");
+		logRuntimeTypesMessage(outFile, tsconfigPath, config.node_compat);
 	}
 
 	const secrets = getVarsForDev(
