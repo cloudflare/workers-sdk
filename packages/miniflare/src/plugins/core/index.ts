@@ -790,7 +790,7 @@ export function getGlobalServices({
 			network: {
 				// Allow access to private/public addresses:
 				// https://github.com/cloudflare/miniflare/issues/412
-				allow: ["public", "private"],
+				allow: ["public", "private", "240.0.0.0/4"],
 				deny: [],
 				tlsOptions: {
 					trustBrowserCas: true,
