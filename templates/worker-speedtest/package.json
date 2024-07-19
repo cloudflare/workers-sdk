@@ -8,7 +8,7 @@
 		"test": "jest"
 	},
 	"devDependencies": {
-		"@cloudflare/workers-types": "^4.20240712.0",
+		"@cloudflare/workers-types": "^4.20240718.0",
 		"@types/jest": "^28.1.6",
 		"eslint": "^8.49.0",
 		"eslint-config-prettier": "^8.5.0",
