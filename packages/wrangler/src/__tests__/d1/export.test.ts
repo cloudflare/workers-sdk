@@ -120,7 +120,7 @@ describe("export", () => {
 					const body = (await request.json()) as Record<string, unknown>;
 
 					// First request, initiates a new task
-					if (!body.currentBookmark) {
+					if (!body.current_bookmark) {
 						return HttpResponse.json(
 							{
 								success: true,
