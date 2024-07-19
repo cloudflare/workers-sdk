@@ -57,6 +57,7 @@ async function updateAppCode() {
 
 	delete packageManifest["dependencies"]["@angular/ssr"];
 	delete packageManifest["dependencies"]["express"];
+	delete packageManifest["devDependencies"]["@types/express"];
 
 	writeFile(packageJsonPath, JSON.stringify(packageManifest, null, 2));
 	s.stop(`${brandColor(`updated`)} ${dim(`\`package.json\``)}`);
