@@ -1,4 +1,5 @@
 import fs from "fs";
+import { setTimeout } from "node:timers/promises";
 import { http, HttpResponse } from "msw";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
@@ -117,6 +118,12 @@ describe("export", () => {
 			http.post(
 				"*/accounts/:accountId/d1/database/:databaseId/export",
 				async ({ request }) => {
+					// This endpoint is polled recursively. If we respond immediately,
+					// the callstack builds up quickly leading to a hard-to-debug OOM error.
+					// This timeout ensures that if the endpoint is accidently polled infinitely
+					// the test will timeout before breaching available memory
+					await setTimeout(10);
+
 					const body = (await request.json()) as Record<string, unknown>;
 
 					// First request, initiates a new task
