@@ -1,4 +1,5 @@
 import fs from "fs";
+import { setTimeout } from "node:timers/promises";
 import { http, HttpResponse } from "msw";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
@@ -9,7 +10,7 @@ import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 import writeWranglerToml from "../helpers/write-wrangler-toml";
 
-describe("execute", () => {
+describe("export", () => {
 	mockAccountId({ accountId: null });
 	mockApiToken();
 	mockConsoleMethods();
@@ -117,10 +118,16 @@ describe("execute", () => {
 			http.post(
 				"*/accounts/:accountId/d1/database/:databaseId/export",
 				async ({ request }) => {
+					// This endpoint is polled recursively. If we respond immediately,
+					// the callstack builds up quickly leading to a hard-to-debug OOM error.
+					// This timeout ensures that if the endpoint is accidently polled infinitely
+					// the test will timeout before breaching available memory
+					await setTimeout(10);
+
 					const body = (await request.json()) as Record<string, unknown>;
 
 					// First request, initiates a new task
-					if (!body.currentBookmark) {
+					if (!body.current_bookmark) {
 						return HttpResponse.json(
 							{
 								success: true,
@@ -151,7 +158,7 @@ describe("execute", () => {
 									status: "complete",
 									result: {
 										filename: "xxxx-yyyy.sql",
-										signedUrl: "https://example.com/xxxx-yyyy.sql",
+										signed_url: "https://example.com/xxxx-yyyy.sql",
 									},
 									messages: [
 										"Uploaded part 3",

@@ -400,10 +400,10 @@ async function executeRemotely({
 			startMessage: "Checking if file needs uploading",
 		});
 
-		// An init response usually returns a {filename, uploadUrl} pair, except if we've detected that file
+		// An init response usually returns a {filename, upload_url} pair, except if we've detected that file
 		// already exists and is valid, to save people reuploading. In which case `initResponse` has already
 		// kicked the import process off.
-		const uploadRequired = "uploadUrl" in initResponse;
+		const uploadRequired = "upload_url" in initResponse;
 		if (!uploadRequired) {
 			logger.log(`🌀 File already uploaded. Processing.`);
 		}
@@ -432,29 +432,29 @@ async function executeRemotely({
 		}
 
 		const {
-			result: { numQueries, finalBookmark, meta },
+			result: { num_queries, final_bookmark, meta },
 		} = finalResponse;
 		logger.log(
-			`🚣 Executed ${numQueries} queries in ${(meta.duration / 1000).toFixed(
+			`🚣 Executed ${num_queries} queries in ${(meta.duration / 1000).toFixed(
 				2
 			)} seconds (${meta.rows_read} rows read, ${
 				meta.rows_written
 			} rows written)\n` +
-				chalk.gray(`   Database is currently at bookmark ${finalBookmark}.`)
+				chalk.gray(`   Database is currently at bookmark ${final_bookmark}.`)
 		);
 
 		return [
 			{
 				results: [
 					{
-						"Total queries executed": numQueries,
+						"Total queries executed": num_queries,
 						"Rows read": meta.rows_read,
 						"Rows written": meta.rows_written,
 						"Database size (MB)": (meta.size_after / 1_000_000).toFixed(2),
 					},
 				],
 				success: true,
-				finalBookmark,
+				finalBookmark: final_bookmark,
 				meta,
 			},
 		];
@@ -474,12 +474,12 @@ async function uploadAndBeginIngestion(
 	etag: string,
 	initResponse: ImportInitResponse
 ) {
-	const { uploadUrl, filename } = initResponse;
+	const { upload_url, filename } = initResponse;
 
 	const { size } = await fs.stat(file);
 
 	const uploadResponse = await spinnerWhile({
-		promise: fetch(uploadUrl, {
+		promise: fetch(upload_url, {
 			method: "PUT",
 			headers: {
 				"Content-length": `${size}`,
@@ -542,7 +542,7 @@ async function pollUntilComplete(
 			"import",
 			{
 				action: "poll",
-				currentBookmark: response.at_bookmark,
+				current_bookmark: response.at_bookmark,
 			}
 		);
 		return await pollUntilComplete(newResponse, accountId, db);
