@@ -3,18 +3,12 @@ import { readToml } from "helpers/files";
 import { retry } from "helpers/retry";
 import { sleep } from "helpers/sleep";
 import { fetch } from "undici";
-import { beforeAll, beforeEach, describe, expect, test } from "vitest";
+import { beforeAll, describe, expect } from "vitest";
 import { deleteWorker } from "../scripts/common";
 import { frameworkToTest } from "./frameworkToTest";
-import {
-	createTestLogStream,
-	isQuarantineMode,
-	recreateLogFolder,
-	runC3,
-	testProjectDir,
-} from "./helpers";
+import { isQuarantineMode, recreateLogFolder, runC3, test } from "./helpers";
 import type { RunnerConfig } from "./helpers";
-import type { WriteStream } from "fs";
+import type { Writable } from "stream";
 import type { Suite } from "vitest";
 
 const TEST_TIMEOUT = 1000 * 60 * 5;
@@ -68,14 +62,8 @@ const workerTemplates: WorkerTestConfig[] = [
 describe
 	.skipIf(frameworkToTest || isQuarantineMode() || process.platform === "win32")
 	.concurrent(`E2E: Workers templates`, () => {
-		let logStream: WriteStream;
-
 		beforeAll((ctx) => {
 			recreateLogFolder(ctx as Suite);
-		});
-
-		beforeEach(async (ctx) => {
-			logStream = createTestLogStream(ctx);
 		});
 
 		workerTemplates
@@ -110,42 +98,38 @@ describe
 				const name = template.name ?? template.template;
 				test(
 					name,
-					async () => {
-						const { getPath, getName, clean } = testProjectDir("workers");
-						const projectPath = getPath(name);
-						const projectName = getName(name);
+					async ({ project, logStream }) => {
 						try {
 							const deployedUrl = await runCli(
 								template,
-								projectPath,
+								project.path,
 								logStream,
 							);
 
 							// Relevant project files should have been created
-							expect(projectPath).toExist();
+							expect(project.path).toExist();
 
-							const gitignorePath = join(projectPath, ".gitignore");
+							const gitignorePath = join(project.path, ".gitignore");
 							expect(gitignorePath).toExist();
 
-							const pkgJsonPath = join(projectPath, "package.json");
+							const pkgJsonPath = join(project.path, "package.json");
 							expect(pkgJsonPath).toExist();
 
-							const wranglerPath = join(projectPath, "node_modules/wrangler");
+							const wranglerPath = join(project.path, "node_modules/wrangler");
 							expect(wranglerPath).toExist();
 
-							const tomlPath = join(projectPath, "wrangler.toml");
+							const tomlPath = join(project.path, "wrangler.toml");
 							expect(tomlPath).toExist();
 
 							const config = readToml(tomlPath) as { main: string };
-							expect(join(projectPath, config.main)).toExist();
+							expect(join(project.path, config.main)).toExist();
 
 							const { verifyDeploy } = template;
 							if (verifyDeploy && deployedUrl) {
 								await verifyDeployment(deployedUrl, verifyDeploy.expectedText);
 							}
 						} finally {
-							clean(name);
-							await deleteWorker(projectName);
+							await deleteWorker(project.name);
 						}
 					},
 					{ retry: 1, timeout: template.timeout || TEST_TIMEOUT },
@@ -156,7 +140,7 @@ describe
 const runCli = async (
 	template: WorkerTestConfig,
 	projectPath: string,
-	logStream: WriteStream,
+	logStream: Writable,
 ) => {
 	const { argv, promptHandlers, verifyDeploy } = template;
 

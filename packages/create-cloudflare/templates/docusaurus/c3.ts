@@ -17,10 +17,11 @@ const config: TemplateConfig = {
 	generate,
 	transformPackageJson: async () => ({
 		scripts: {
+			preview: `${npm} run build && wrangler pages dev ./build`,
 			deploy: `${npm} run build && wrangler pages deploy ./build`,
 		},
 	}),
-	devScript: "start",
+	devScript: "preview",
 	deployScript: "deploy",
 };
 export default config;

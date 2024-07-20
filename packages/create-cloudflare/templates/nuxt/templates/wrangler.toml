@@ -1,6 +1,7 @@
 #:schema node_modules/wrangler/config-schema.json
 name = "<TBD>"
 compatibility_date = "<TBD>"
+compatibility_flags = ["nodejs_compat"]
 pages_build_output_dir = "./dist"
 
 # Automatically place your workloads in an optimal location to minimize latency.
