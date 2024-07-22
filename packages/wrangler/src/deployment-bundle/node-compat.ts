@@ -43,19 +43,13 @@ export function validateNodeCompat({
 		);
 	}
 
-	const nodejsCompatV2NotExperimental =
-		compatibilityFlags.includes("nodejs_compat_v2");
-
-	if (nodejsCompatV2NotExperimental) {
-		throw new UserError(
-			`The \`nodejs_compat_v2\` compatibility flag is experimental and must be prefixed with \`experimental:\`. Use \`experimental:nodejs_compat_v2\` flag instead.`
-		);
-	}
-
 	const { mode, nodejsCompat, nodejsCompatV2 } = getNodeCompatMode({
 		compatibility_flags: compatibilityFlags,
 		node_compat: legacyNodeCompat,
 	});
+
+	const nodejsCompatV2NotExperimental =
+		compatibilityFlags.includes("nodejs_compat_v2");
 
 	if (nodejsCompatV2) {
 		// strip the "experimental:" prefix because workerd doesn't understand it yet.
@@ -73,6 +67,12 @@ export function validateNodeCompat({
 	if (legacyNodeCompat && (nodejsCompat || nodejsCompatV2)) {
 		throw new UserError(
 			`The ${nodejsCompat ? "`nodejs_compat`" : "`nodejs_compat_v2`"} compatibility flag cannot be used in conjunction with the legacy \`--node-compat\` flag. If you want to use the Workers ${nodejsCompat ? "`nodejs_compat`" : "`nodejs_compat_v2`"} compatibility flag, please remove the \`--node-compat\` argument from your CLI command or \`node_compat = true\` from your config file.`
+		);
+	}
+
+	if (nodejsCompatV2NotExperimental) {
+		throw new UserError(
+			`The \`nodejs_compat_v2\` compatibility flag is experimental and must be prefixed with \`experimental:\`. Use \`experimental:nodejs_compat_v2\` flag instead.`
 		);
 	}
 
