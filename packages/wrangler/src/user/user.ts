@@ -1285,7 +1285,7 @@ async function getJSONFromResponse(response: Response) {
 			);
 			if (text.match(/challenge-platform/)) {
 				logger.error(
-					"It looks like you might have hit a bot challenge page. This may be transient but if not, please contact Cloudflare to find out what can be done."
+					`It looks like you might have hit a bot challenge page. This may be transient but if not, please contact Cloudflare to find out what can be done. When you contact Cloudflare, please provide your Ray ID: ${response.headers.get("cf-ray")}`
 				);
 			}
 		}
