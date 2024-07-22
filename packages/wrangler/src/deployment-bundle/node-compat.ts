@@ -106,17 +106,16 @@ export function getNodeCompatMode({
 		"experimental:nodejs_compat_v2"
 	);
 
-	let mode;
+	let mode: NodeJSCompatMode;
 	if (nodejsCompatV2) {
 		mode = "v2";
-	}
-	if (nodejsCompat) {
+	} else if (nodejsCompat) {
 		mode = "v1";
-	}
-	if (node_compat) {
+	} else if (node_compat) {
 		mode = "legacy";
+	} else {
+		mode = null;
 	}
-	mode = null;
 
 	return {
 		legacy: node_compat === true,
