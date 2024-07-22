@@ -1,0 +1,23 @@
+{
+	"name": "browser-rendering-app",
+	"private": true,
+	"description": "",
+	"license": "ISC",
+	"author": "",
+	"main": "src/index.js",
+	"scripts": {
+		"check:type": "tsc",
+		"test:ci": "vitest run",
+		"test:watch": "vitest",
+		"type:tests": "tsc -p ./tests/tsconfig.json"
+	},
+	"devDependencies": {
+		"@cloudflare/puppeteer": "^0.0.11",
+		"@cloudflare/workers-tsconfig": "workspace:^",
+		"undici": "^5.28.4",
+		"wrangler": "workspace:*"
+	},
+	"volta": {
+		"extends": "../../package.json"
+	}
+}

@@ -46,6 +46,7 @@ import type { MiniflareOptions, SourceOptions, WorkerOptions } from "miniflare";
 import type { UUID } from "node:crypto";
 import type { Abortable } from "node:events";
 import type { Readable } from "node:stream";
+import { BrowserFetcher } from "../browser-rendering/fetcher";
 
 // This worker proxies all external Durable Objects to the Wrangler session
 // where they're defined, and receives all requests from other Wrangler sessions
@@ -585,6 +586,10 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 		wrappedBindings[bindings.ai.binding] = {
 			scriptName: EXTERNAL_AI_WORKER_NAME,
 		};
+	}
+
+	if (bindings.browser?.binding) {
+		config.serviceBindings[bindings.browser.binding] = BrowserFetcher;
 	}
 
 	const bindingOptions = {
