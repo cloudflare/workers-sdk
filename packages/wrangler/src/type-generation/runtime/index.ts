@@ -38,7 +38,7 @@ export async function generateRuntimeTypes({
 	config: { compatibility_date, compatibility_flags = [] },
 	outFile = DEFAULT_OUTFILE_RELATIVE_PATH,
 }: {
-	config: Config;
+	config: Pick<Config, "compatibility_date" | "compatibility_flags">;
 	outFile?: string;
 }) {
 	if (!compatibility_date) {

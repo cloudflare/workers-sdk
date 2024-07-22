@@ -1,18 +1,15 @@
-import { existsSync, readFileSync } from "fs";
 import { logger } from "../../logger";
-import { parseJSONC } from "../../parse";
 
 /**
  * Constructs a comprehensive log message for the user after generating runtime types.
  */
 export function logRuntimeTypesMessage(
 	outFile: string,
-	tsconfigPath: string,
+	tsconfigTypes: string[],
 	isNodeCompat = false
 ) {
-	const existingTypes = readExistingTypes(tsconfigPath);
-	const isWorkersTypesInstalled = workersTypesEntryExists(existingTypes);
-	const updatedTypesString = buildUpdatedTypesString(existingTypes, outFile);
+	const isWorkersTypesInstalled = workersTypesEntryExists(tsconfigTypes);
+	const updatedTypesString = buildUpdatedTypesString(tsconfigTypes, outFile);
 
 	const message = isWorkersTypesInstalled
 		? `\n📣 Replace the existing "@cloudflare/workers-types" entry with the generated types path:`
@@ -24,7 +21,7 @@ ${message}
 
 {
 	"compilerOptions": {
-	    ...
+		...
 		"types": ${updatedTypesString}
 		...
 	}
@@ -35,7 +32,7 @@ ${message}
 	}
 	if (isNodeCompat) {
 		logger.info(
-			'📣 To get Node.js typings, install with "npm i --save-dev @types/node".'
+			'📣 It looks like you have some node compatibility turned on in your project. You might want to consider adding Node.js typings with "npm i --save-dev @types/node@20.8.3". Please see the docs for more details: https://developers.cloudflare.com/workers/languages/typescript/#transitive-loading-of-typesnode-overrides-cloudflareworkers-types'
 		);
 	}
 	logger.info(
@@ -61,28 +58,6 @@ function buildUpdatedTypesString(
 
 	return JSON.stringify(updatedTypesArray);
 }
-
-/**
- * Attempts to read the tsconfig.json at the current path.
- */
-function readExistingTypes(tsconfigPath: string): string[] {
-	if (!existsSync(tsconfigPath)) {
-		return [];
-	}
-
-	try {
-		const tsconfig = parseJSONC<TSConfig>(readFileSync(tsconfigPath, "utf-8"));
-		return tsconfig.compilerOptions?.types || [];
-	} catch (e) {
-		return [];
-	}
-}
-
-type TSConfig = {
-	compilerOptions: {
-		types: string[];
-	};
-};
 
 /**
  * Find any @cloudflare/workers-types entry in the tsconfig.json types array.

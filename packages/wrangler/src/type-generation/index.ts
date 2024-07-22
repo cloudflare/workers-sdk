@@ -8,6 +8,7 @@ import { getVarsForDev } from "../dev/dev-vars";
 import { UserError } from "../errors";
 import { CommandLineArgsError } from "../index";
 import { logger } from "../logger";
+import { parseJSONC } from "../parse";
 import { printWranglerBanner } from "../update-check";
 import { generateRuntimeTypes } from "./runtime";
 import { logRuntimeTypesMessage } from "./runtime/log-runtime-types-message";
@@ -32,7 +33,8 @@ export function typesOptions(yargs: CommonYargsArgv) {
 			describe: "The name of the generated environment interface",
 			requiresArg: true,
 		})
-		.option("x-with-runtime", {
+		.option("experimental-with-runtime", {
+			alias: "x-with-runtime",
 			type: "string",
 			describe: "The outfile for runtime types",
 			demandOption: false,
@@ -78,16 +80,23 @@ export async function typesHandler(
 	const config = readConfig(configPath, args);
 
 	// args.xRuntime will be a string if the user passes "--x-runtime" or "--x-runtime=..."
-	if (typeof args.xWithRuntime === "string") {
+	if (typeof args.experimentalWithRuntime === "string") {
 		logger.log(`Generating runtime types...`);
 
 		const { outFile } = await generateRuntimeTypes({
 			config,
-			outFile: args.xWithRuntime || undefined,
+			outFile: args.experimentalWithRuntime || undefined,
 		});
 		const tsconfigPath =
 			config.tsconfig ?? join(dirname(configPath), "tsconfig.json");
-		logRuntimeTypesMessage(outFile, tsconfigPath, config.node_compat);
+		const tsconfigTypes = readTsconfigTypes(tsconfigPath);
+		const hasNodeCompatFlag = config.compatibility_flags.some((flag) =>
+			flag.includes("nodejs_")
+		);
+
+		const isNodeCompat = config.node_compat || hasNodeCompatFlag;
+
+		logRuntimeTypesMessage(outFile, tsconfigTypes, isNodeCompat);
 	}
 
 	const secrets = getVarsForDev(
@@ -492,3 +501,27 @@ function writeDTSFile({
 		logger.log(combinedTypeStrings);
 	}
 }
+
+/**
+ * Attempts to read the tsconfig.json at the current path.
+ */
+function readTsconfigTypes(tsconfigPath: string): string[] {
+	if (!fs.existsSync(tsconfigPath)) {
+		return [];
+	}
+
+	try {
+		const tsconfig = parseJSONC<TSConfig>(
+			fs.readFileSync(tsconfigPath, "utf-8")
+		);
+		return tsconfig.compilerOptions?.types || [];
+	} catch (e) {
+		return [];
+	}
+}
+
+type TSConfig = {
+	compilerOptions: {
+		types: string[];
+	};
+};
