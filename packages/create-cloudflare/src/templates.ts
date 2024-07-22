@@ -2,7 +2,7 @@ import { existsSync } from "fs";
 import { cp, mkdtemp, rename } from "fs/promises";
 import { tmpdir } from "os";
 import { join, resolve } from "path";
-import { crash, warn } from "@cloudflare/cli";
+import { crash, updateStatus, warn } from "@cloudflare/cli";
 import { processArgument } from "@cloudflare/cli/args";
 import { blue, brandColor, dim } from "@cloudflare/cli/colors";
 import { spinner } from "@cloudflare/cli/interactive";
@@ -325,7 +325,9 @@ export const processRemoteTemplate = async (args: Partial<C3Args>) => {
 
 	const path = await downloadRemoteTemplate(templateUrl);
 	const config = inferTemplateConfig(path);
+
 	validateTemplate(path, config);
+	updateStatus(`${brandColor("template")} ${dim("cloned and validated")}`);
 
 	return {
 		path,
@@ -398,10 +400,13 @@ const inferCopyFilesDefinition = (path: string): CopyFiles => {
  *            For convenience, `owner/repo` is also accepted.
  * @returns A path to a temporary directory containing the downloaded template
  */
-const downloadRemoteTemplate = async (src: string) => {
-	const s = spinner();
+export const downloadRemoteTemplate = async (src: string) => {
+	// degit runs `git clone` internally which may prompt for credentials if required
+	// Avoid using a `spinner()` during this operation -- use updateStatus instead.
+
 	try {
-		s.start(`Cloning template from: ${blue(src)}`);
+		updateStatus(`Cloning template from: ${blue(src)}`);
+
 		const emitter = degit(src, {
 			cache: false,
 			verbose: false,
@@ -410,11 +415,10 @@ const downloadRemoteTemplate = async (src: string) => {
 
 		const tmpDir = await mkdtemp(join(tmpdir(), "c3-template"));
 		await emitter.clone(tmpDir);
-		s.stop(`${brandColor("template")} ${dim("cloned and validated")}`);
 
 		return tmpDir;
 	} catch (error) {
-		s.stop(`${brandColor("template")} ${dim("failed")}`);
+		updateStatus(`${brandColor("template")} ${dim("failed")}`);
 		return crash(`Failed to clone remote template: ${src}`);
 	}
 };
