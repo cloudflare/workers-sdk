@@ -271,6 +271,8 @@ describe("downloadRemoteTemplate", () => {
 	});
 
 	test("should not use a spinner", async () => {
+		// Degit runs `git clone` internally which might prompt for credentials
+		// A spinner will suppress the prompt and keep the CLI in the cloning stage
 		mockDegit();
 
 		await downloadRemoteTemplate("cloudflare/workers-sdk");
