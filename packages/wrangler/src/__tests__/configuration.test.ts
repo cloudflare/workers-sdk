@@ -16,7 +16,7 @@ describe("normalizeAndValidateConfig()", () => {
 
 		expect(config).toEqual({
 			account_id: undefined,
-			assets: undefined,
+			legacy_assets: undefined,
 			build: {
 				command: undefined,
 				cwd: undefined,
@@ -445,61 +445,60 @@ describe("normalizeAndValidateConfig()", () => {
 			});
 		});
 
-		describe("[assets]", () => {
+		describe("[legacy_assets]", () => {
 			it("normalizes a string input to an object", () => {
 				const { config, diagnostics } = normalizeAndValidateConfig(
 					{
-						assets: "path/to/assets",
+						legacy_assets: "path/to/assets",
 					} as unknown as RawConfig,
 					undefined,
 					{ env: undefined }
 				);
 
-				expect(config.assets).toMatchInlineSnapshot(`
-			Object {
-			  "browser_TTL": undefined,
-			  "bucket": "path/to/assets",
-			  "exclude": Array [],
-			  "include": Array [],
-			  "serve_single_page_app": false,
-			}
-		`);
+				expect(config.legacy_assets).toMatchInlineSnapshot(`
+					Object {
+					  "browser_TTL": undefined,
+					  "bucket": "path/to/assets",
+					  "exclude": Array [],
+					  "include": Array [],
+					  "serve_single_page_app": false,
+					}
+				`);
 				expect(diagnostics.hasWarnings()).toBe(true);
 				expect(diagnostics.hasErrors()).toBe(false);
 
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-			"Processing wrangler configuration:
-			  - \\"assets\\" fields are experimental and may change or break at any time."
-		`);
+					"Processing wrangler configuration:
+					  - \\"legacy_assets\\" fields are experimental and may change or break at any time."
+				`);
 			});
 
 			it("errors when input is not a string or object", () => {
 				const { config, diagnostics } = normalizeAndValidateConfig(
 					{
-						assets: 123,
+						legacy_assets: 123,
 					} as unknown as RawConfig,
 					undefined,
 					{ env: undefined }
 				);
-
-				expect(config.assets).toBeUndefined();
+				expect(config.legacy_assets).toBeUndefined();
 				expect(diagnostics.hasWarnings()).toBe(true);
 				expect(diagnostics.hasErrors()).toBe(true);
 
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-			"Processing wrangler configuration:
-			  - \\"assets\\" fields are experimental and may change or break at any time."
-		`);
+					"Processing wrangler configuration:
+					  - \\"legacy_assets\\" fields are experimental and may change or break at any time."
+				`);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			"Processing wrangler configuration:
-			  - Expected the \`assets\` field to be a string or an object, but got number."
-		`);
+					"Processing wrangler configuration:
+					  - Expected the \`legacy_assets\` field to be a string or an object, but got number."
+				`);
 			});
 
-			it("should error if `assets` config is missing `bucket`", () => {
+			it("should error if `legacy_assets` config is missing `bucket`", () => {
 				const expectedConfig: RawConfig = {
 					// @ts-expect-error we're intentionally passing an invalid configuration here
-					assets: {
+					legacy_assets: {
 						include: ["INCLUDE_1", "INCLUDE_2"],
 						exclude: ["EXCLUDE_1", "EXCLUDE_2"],
 					},
@@ -511,25 +510,25 @@ describe("normalizeAndValidateConfig()", () => {
 					{ env: undefined }
 				);
 
-				expect(config.assets).toEqual(
-					expect.objectContaining(expectedConfig.assets)
+				expect(config.legacy_assets).toEqual(
+					expect.objectContaining(expectedConfig.legacy_assets)
 				);
 				expect(diagnostics.hasWarnings()).toBe(true);
 				expect(diagnostics.hasErrors()).toBe(true);
 
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-			          "Processing wrangler configuration:
-			            - \\"assets\\" fields are experimental and may change or break at any time."
-		        `);
+					"Processing wrangler configuration:
+					  - \\"legacy_assets\\" fields are experimental and may change or break at any time."
+				`);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			          "Processing wrangler configuration:
-			            - \\"assets.bucket\\" is a required field."
-		        `);
+					"Processing wrangler configuration:
+					  - \\"legacy_assets.bucket\\" is a required field."
+				`);
 			});
 
-			it("should error on invalid `assets` values", () => {
+			it("should error on invalid `legacy_assets` values", () => {
 				const expectedConfig = {
-					assets: {
+					legacy_assets: {
 						bucket: "BUCKET",
 						include: [222, 333],
 						exclude: [444, 555],
@@ -547,18 +546,67 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(config).toEqual(expect.objectContaining(expectedConfig));
 				expect(diagnostics.hasWarnings()).toBe(true);
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-			          "Processing wrangler configuration:
-			            - \\"assets\\" fields are experimental and may change or break at any time."
-		        `);
+					"Processing wrangler configuration:
+					  - \\"legacy_assets\\" fields are experimental and may change or break at any time."
+				`);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			"Processing wrangler configuration:
-			  - Expected \\"assets.include.[0]\\" to be of type string but got 222.
-			  - Expected \\"assets.include.[1]\\" to be of type string but got 333.
-			  - Expected \\"assets.exclude.[0]\\" to be of type string but got 444.
-			  - Expected \\"assets.exclude.[1]\\" to be of type string but got 555.
-			  - Expected \\"assets.browser_TTL\\" to be of type number but got \\"not valid\\".
-			  - Expected \\"assets.serve_single_page_app\\" to be of type boolean but got \\"INVALID\\"."
-		`);
+					"Processing wrangler configuration:
+					  - Expected \\"legacy_assets.include.[0]\\" to be of type string but got 222.
+					  - Expected \\"legacy_assets.include.[1]\\" to be of type string but got 333.
+					  - Expected \\"legacy_assets.exclude.[0]\\" to be of type string but got 444.
+					  - Expected \\"legacy_assets.exclude.[1]\\" to be of type string but got 555.
+					  - Expected \\"legacy_assets.browser_TTL\\" to be of type number but got \\"not valid\\".
+					  - Expected \\"legacy_assets.serve_single_page_app\\" to be of type boolean but got \\"INVALID\\"."
+				`);
+			});
+
+			it("saves `assets` values under `legacy_assets`", () => {
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					{
+						assets: "path/to/assets",
+					} as unknown as RawConfig,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(config.legacy_assets).toMatchInlineSnapshot(`
+					Object {
+					  "browser_TTL": undefined,
+					  "bucket": "path/to/assets",
+					  "exclude": Array [],
+					  "include": Array [],
+					  "serve_single_page_app": false,
+					}
+				`);
+				expect(diagnostics.hasWarnings()).toBe(true);
+				expect(diagnostics.hasErrors()).toBe(false);
+
+				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - [1mBehavior change[0m: \\"assets\\":
+					    The \`assets\` feature is experimental. We are going to be changing its behavior on August 15th.
+					    Releases of wrangler after this date will no longer support current functionality.
+					    Please shift to \`legacy_assets\` to preserve the current functionality. "
+				`);
+			});
+
+			it("should error if `assets` and `legacy_assets` are both defined", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						assets: "path/to/assets",
+						legacy_assets: "path/to/assets",
+					} as unknown as RawConfig,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(true);
+				expect(diagnostics.hasErrors()).toBe(true);
+
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - Expected only one of \`assets\` or \`legacy_assets\`."
+				`);
 			});
 		});
 

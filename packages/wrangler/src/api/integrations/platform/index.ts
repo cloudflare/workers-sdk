@@ -290,7 +290,7 @@ export function unstable_getMiniflareWorkerOptions(
 		);
 	}
 
-	const assetPaths = config.assets
+	const assetPaths = config.legacy_assets
 		? getAssetPaths(config, undefined)
 		: getSiteAssetPaths(config);
 	const sitesOptions = buildSitesOptions({ assetPaths });

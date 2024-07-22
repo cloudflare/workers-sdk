@@ -468,7 +468,7 @@ export interface AssetPaths {
  * Uses the args (passed from the command line) if available,
  * falling back to those defined in the config.
  *
- * (This function corresponds to --assets/config.assets)
+ * (This function corresponds to --legacy-assets/config.assets)
  *
  */
 export function getAssetPaths(
@@ -480,17 +480,21 @@ export function getAssetPaths(
 		: path.resolve(path.dirname(config.configPath ?? "wrangler.toml"));
 
 	assetDirectory ??=
-		typeof config.assets === "string"
-			? config.assets
-			: config.assets !== undefined
-				? config.assets.bucket
+		typeof config.legacy_assets === "string"
+			? config.legacy_assets
+			: config.legacy_assets !== undefined
+				? config.legacy_assets.bucket
 				: undefined;
 
 	const includePatterns =
-		(typeof config.assets !== "string" && config.assets?.include) || [];
+		(typeof config.legacy_assets !== "string" &&
+			config.legacy_assets?.include) ||
+		[];
 
 	const excludePatterns =
-		(typeof config.assets !== "string" && config.assets?.exclude) || [];
+		(typeof config.legacy_assets !== "string" &&
+			config.legacy_assets?.exclude) ||
+		[];
 
 	return assetDirectory
 		? {

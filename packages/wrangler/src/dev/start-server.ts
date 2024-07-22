@@ -170,7 +170,7 @@ export async function startDevServer(
 		noBundle: props.noBundle,
 		findAdditionalModules: props.findAdditionalModules,
 		alias: props.alias,
-		assets: props.assetsConfig,
+		legacyAssets: props.assetsConfig,
 		testScheduled: props.testScheduled,
 		local: props.local,
 		doBindings: props.bindings.durable_objects?.bindings ?? [],
@@ -347,7 +347,7 @@ async function runEsbuild({
 	additionalModules,
 	rules,
 	alias,
-	assets,
+	legacyAssets,
 	serveAssetsFromWorker,
 	tsconfig,
 	minify,
@@ -369,7 +369,7 @@ async function runEsbuild({
 	additionalModules: CfModule[];
 	rules: Config["rules"];
 	alias: Config["alias"];
-	assets: Config["assets"];
+	legacyAssets: Config["legacy_assets"];
 	define: Config["define"];
 	serveAssetsFromWorker: boolean;
 	tsconfig: string | undefined;
@@ -418,7 +418,7 @@ async function runEsbuild({
 					define,
 					checkFetch: true,
 					alias,
-					assets,
+					legacyAssets,
 					// disable the cache in dev
 					bypassAssetCache: true,
 					targetConsumer: "dev", // We are starting a dev server

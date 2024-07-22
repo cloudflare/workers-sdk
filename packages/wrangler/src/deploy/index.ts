@@ -84,23 +84,29 @@ export function deployOptions(yargs: CommonYargsArgv) {
 				default: false,
 			})
 			.option("experimental-public", {
-				describe: "Static assets to be served",
+				describe: "(Deprecated) Static assets to be served",
 				type: "string",
 				requiresArg: true,
 				deprecated: true,
 				hidden: true,
 			})
 			.option("public", {
-				describe: "Static assets to be served",
+				describe: "(Deprecated) Static assets to be served",
 				type: "string",
 				requiresArg: true,
 				deprecated: true,
 				hidden: true,
 			})
-			.option("assets", {
-				describe: "Static assets to be served",
+			.option("legacy-assets", {
+				describe: "(Experimental) Static assets to be served",
 				type: "string",
 				requiresArg: true,
+			})
+			.option("assets", {
+				describe: "(Experimental) Static assets to be served",
+				type: "string",
+				requiresArg: true,
+				hidden: true,
 			})
 			.option("site", {
 				describe: "Root folder of static assets for Workers Sites",
@@ -226,6 +232,26 @@ export async function deployHandler(
 		);
 	}
 
+	if (args.assets) {
+		logger.warn(
+			`The --assets argument is experimental. We are going to be changing the behavior of this experimental command on August 15th.\n` +
+				`Releases of wrangler after this date will no longer support current functionality.\n` +
+				`Please shift to the --legacy-assets command to preserve the current functionality.`
+		);
+	}
+
+	if (args.legacyAssets) {
+		logger.warn(
+			`The --legacy-assets argument is experimental and may change or break at any time.`
+		);
+	}
+
+	if (args.legacyAssets && args.assets) {
+		throw new UserError("Cannot use both --assets and --legacy-assets.");
+	}
+
+	args.legacyAssets = args.legacyAssets ?? args.assets;
+
 	const configPath =
 		args.config || (args.script && findWranglerToml(path.dirname(args.script)));
 	const projectRoot = configPath && path.dirname(configPath);
@@ -233,25 +259,25 @@ export async function deployHandler(
 	const entry = await getEntry(args, config, "deploy");
 
 	if (args.public) {
-		throw new UserError("The --public field has been renamed to --assets");
+		throw new UserError(
+			"The --public field has been deprecated, try --legacy-assets instead."
+		);
 	}
 	if (args.experimentalPublic) {
 		throw new UserError(
-			"The --experimental-public field has been renamed to --assets"
+			"The --experimental-public field has been deprecated, try --legacy-assets instead."
 		);
 	}
 
-	if ((args.assets || config.assets) && (args.site || config.site)) {
+	if (
+		(args.legacyAssets || config.legacy_assets) &&
+		(args.site || config.site)
+	) {
 		throw new UserError(
 			"Cannot use Assets and Workers Sites in the same Worker."
 		);
 	}
 
-	if (args.assets) {
-		logger.warn(
-			"The --assets argument is experimental and may change or break at any time"
-		);
-	}
 	if (args.latest) {
 		logger.warn(
 			"Using the latest version of the Workers runtime. To silence this warning, please choose a specific version of the runtime with --compatibility-date, or add a compatibility_date to your wrangler.toml.\n"
@@ -265,8 +291,8 @@ export async function deployHandler(
 	const accountId = args.dryRun ? undefined : await requireAuth(config);
 
 	const assetPaths =
-		args.assets || config.assets
-			? getAssetPaths(config, args.assets)
+		args.legacyAssets || config.legacy_assets
+			? getAssetPaths(config, args.legacyAssets)
 			: getSiteAssetPaths(
 					config,
 					args.site,
