@@ -1,5 +1,6 @@
 import { UserError } from "../errors";
 import { logger } from "../logger";
+import type { Config } from "../config";
 
 /**
  * Wrangler can provide Node.js compatibility in a number of different modes:
@@ -42,11 +43,19 @@ export function validateNodeCompat({
 		);
 	}
 
-	const nodejsCompatV2 = compatibilityFlags.includes(
-		"experimental:nodejs_compat_v2"
-	);
 	const nodejsCompatV2NotExperimental =
 		compatibilityFlags.includes("nodejs_compat_v2");
+
+	if (nodejsCompatV2NotExperimental) {
+		throw new UserError(
+			`The \`nodejs_compat_v2\` compatibility flag is experimental and must be prefixed with \`experimental:\`. Use \`experimental:nodejs_compat_v2\` flag instead.`
+		);
+	}
+
+	const { mode, nodejsCompat, nodejsCompatV2 } = getNodeCompatMode({
+		compatibility_flags: compatibilityFlags,
+		node_compat: legacyNodeCompat,
+	});
 
 	if (nodejsCompatV2) {
 		// strip the "experimental:" prefix because workerd doesn't understand it yet.
@@ -55,7 +64,6 @@ export function validateNodeCompat({
 		] = "nodejs_compat_v2";
 	}
 
-	const nodejsCompat = compatibilityFlags.includes("nodejs_compat");
 	if (nodejsCompat && nodejsCompatV2) {
 		throw new UserError(
 			"The `nodejs_compat` and `nodejs_compat_v2` compatibility flags cannot be used in together. Please select just one."
@@ -65,12 +73,6 @@ export function validateNodeCompat({
 	if (legacyNodeCompat && (nodejsCompat || nodejsCompatV2)) {
 		throw new UserError(
 			`The ${nodejsCompat ? "`nodejs_compat`" : "`nodejs_compat_v2`"} compatibility flag cannot be used in conjunction with the legacy \`--node-compat\` flag. If you want to use the Workers ${nodejsCompat ? "`nodejs_compat`" : "`nodejs_compat_v2`"} compatibility flag, please remove the \`--node-compat\` argument from your CLI command or \`node_compat = true\` from your config file.`
-		);
-	}
-
-	if (nodejsCompatV2NotExperimental) {
-		throw new UserError(
-			`The \`nodejs_compat_v2\` compatibility flag is experimental and must be prefixed with \`experimental:\`. Use \`experimental:nodejs_compat_v2\` flag instead.`
 		);
 	}
 
@@ -92,14 +94,34 @@ export function validateNodeCompat({
 		);
 	}
 
+	return mode;
+}
+
+export function getNodeCompatMode({
+	compatibility_flags,
+	node_compat,
+}: Pick<Config, "compatibility_flags" | "node_compat">) {
+	const nodejsCompat = compatibility_flags.includes("nodejs_compat");
+	const nodejsCompatV2 = compatibility_flags.includes(
+		"experimental:nodejs_compat_v2"
+	);
+
+	let mode;
 	if (nodejsCompatV2) {
-		return "v2";
+		mode = "v2";
 	}
 	if (nodejsCompat) {
-		return "v1";
+		mode = "v1";
 	}
-	if (legacyNodeCompat) {
-		return "legacy";
+	if (node_compat) {
+		mode = "legacy";
 	}
-	return null;
+	mode = null;
+
+	return {
+		legacy: node_compat === true,
+		mode,
+		nodejsCompat,
+		nodejsCompatV2,
+	};
 }

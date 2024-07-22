@@ -4,6 +4,7 @@ import * as esmLexer from "es-module-lexer";
 import { findUpSync } from "find-up";
 import { findWranglerToml, readConfig } from "../config";
 import { getEntry } from "../deployment-bundle/entry";
+import { getNodeCompatMode } from "../deployment-bundle/node-compat";
 import { getVarsForDev } from "../dev/dev-vars";
 import { UserError } from "../errors";
 import { CommandLineArgsError } from "../index";
@@ -90,13 +91,9 @@ export async function typesHandler(
 		const tsconfigPath =
 			config.tsconfig ?? join(dirname(configPath), "tsconfig.json");
 		const tsconfigTypes = readTsconfigTypes(tsconfigPath);
-		const hasNodeCompatFlag = config.compatibility_flags.some((flag) =>
-			flag.includes("nodejs_")
-		);
+		const { mode } = getNodeCompatMode(config);
 
-		const isNodeCompat = config.node_compat || hasNodeCompatFlag;
-
-		logRuntimeTypesMessage(outFile, tsconfigTypes, isNodeCompat);
+		logRuntimeTypesMessage(outFile, tsconfigTypes, mode !== null);
 	}
 
 	const secrets = getVarsForDev(
