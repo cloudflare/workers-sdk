@@ -1,0 +1,6 @@
+# These are valid:
+/home / 301
+/twitch https://twitch.tv
+
+# This is invalid
+https://lol.com https://zombo.com

@@ -92,7 +92,7 @@ async function convertToConfigBundle(
 		compatibilityFlags: event.config.compatibilityFlags,
 		bindings,
 		workerDefinitions: event.config.dev?.registry,
-		assetPaths: event.config.legacy?.site?.bucket
+		legacyAssetPaths: event.config.legacy?.site?.bucket
 			? {
 					baseDirectory: event.config.legacy?.site?.bucket,
 					assetDirectory: "",
@@ -100,6 +100,7 @@ async function convertToConfigBundle(
 					includePatterns: event.config.legacy?.site?.include ?? [],
 				}
 			: undefined,
+		experimentalAssets: undefined, // TODO
 		initialPort: undefined,
 		initialIp: "127.0.0.1",
 		rules: [],

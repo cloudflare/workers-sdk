@@ -23,6 +23,7 @@ import { logger } from "../logger";
 import { getSourceMappedString } from "../sourcemap";
 import { updateCheck } from "../update-check";
 import type { ServiceFetch } from "../api";
+import type { AssetsConfig } from "../assets";
 import type { Config } from "../config";
 import type {
 	CfD1Database,
@@ -171,7 +172,8 @@ export interface ConfigBundle {
 	compatibilityFlags: string[] | undefined;
 	bindings: CfWorkerInit["bindings"];
 	workerDefinitions: WorkerRegistry | undefined;
-	assetPaths: AssetPaths | undefined;
+	legacyAssetPaths: AssetPaths | undefined;
+	experimentalAssets: AssetsConfig | undefined;
 	initialPort: Port;
 	initialIp: string;
 	rules: Config["rules"];
@@ -675,8 +677,8 @@ export function buildPersistOptions(
 }
 
 export function buildSitesOptions({
-	assetPaths,
-}: Pick<ConfigBundle, "assetPaths">) {
+	legacyAssetPaths: assetPaths,
+}: Pick<ConfigBundle, "legacyAssetPaths">) {
 	if (assetPaths !== undefined) {
 		const { baseDirectory, assetDirectory, includePatterns, excludePatterns } =
 			assetPaths;

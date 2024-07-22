@@ -1,0 +1,13 @@
+name = "experimental-assets"
+# main = "src/index.ts"
+compatibility_date = "2024-07-21"
+
+[experimental_assets]
+config = "./assets_config.json"
+
+# [experimental_assets]
+# directory = ".publi"
+# config = "./assets_config.json"
+
+# [experimental_assets]
+# config = "./assets_config.json"

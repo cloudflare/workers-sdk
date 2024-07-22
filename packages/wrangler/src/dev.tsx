@@ -10,6 +10,7 @@ import {
 	convertCfWorkerInitBindingstoBindings,
 	extractBindingsOfType,
 } from "./api/startDevWorker/utils";
+import { getAssetsConfig } from "./assets";
 import { findWranglerToml, printBindings, readConfig } from "./config";
 import { getEntry } from "./deployment-bundle/entry";
 import { validateNodeCompat } from "./deployment-bundle/node-compat";
@@ -165,16 +166,28 @@ export function devOptions(yargs: CommonYargsArgv) {
 					"Host to act as origin in local mode, defaults to dev.host or route",
 			})
 			.option("experimental-public", {
-				describe: "Static assets to be served",
+				describe: "(Deprecated) Static assets to be served",
 				type: "string",
 				requiresArg: true,
 				deprecated: true,
 				hidden: true,
 			})
-			.option("assets", {
-				describe: "Static assets to be served",
+			.option("legacy-assets", {
+				describe: "(Experimental) Static assets to be served",
 				type: "string",
 				requiresArg: true,
+			})
+			.option("assets", {
+				describe: "(Experimental) Static assets to be served",
+				type: "string",
+				requiresArg: true,
+				hidden: true,
+			})
+			.option("experimental-assets", {
+				describe: "(Experimental) Static assets to be served",
+				type: "string",
+				requiresArg: true,
+				hidden: true,
 			})
 			.option("public", {
 				describe: "(Deprecated) Static assets to be served",
@@ -361,6 +374,32 @@ This is currently not supported 😭, but we think that we'll get it to work soo
 		}
 	}
 
+	if (args.assets) {
+		logger.warn(
+			`The --assets argument is experimental. We are going to be changing the behavior of this experimental command on August 15th.\n` +
+				`Releases of wrangler after this date will no longer support current functionality.\n` +
+				`Please shift to the --legacy-assets command to preserve the current functionality.`
+		);
+	}
+
+	if (args.legacyAssets) {
+		logger.warn(
+			`The --legacy-assets argument is experimental and may change or break at any time.`
+		);
+	}
+
+	if (
+		(args.legacyAssets && args.assets) ||
+		(args.legacyAssets && args.experimentalAssets) ||
+		(args.assets && args.experimentalAssets)
+	) {
+		throw new UserError(
+			"Cannot use --assets, --legacy-assets or --experimental-assets together."
+		);
+	}
+
+	args.legacyAssets = args.legacyAssets ?? args.assets;
+
 	let watcher;
 	try {
 		const devInstance = await run(
@@ -426,7 +465,7 @@ export type AdditionalDevProps = {
 	showInteractiveDevSession?: boolean;
 };
 
-export type StartDevOptions = DevArguments &
+export type StartDevOptions = Omit<DevArguments, "assets"> &
 	// These options can be passed in directly when called with the `wrangler.dev()` API.
 	// They aren't exposed as CLI arguments.
 	AdditionalDevProps & {
@@ -489,6 +528,11 @@ export async function startDev(args: StartDevOptions) {
 	let watcher: ReturnType<typeof watch> | undefined;
 	let rerender: (node: React.ReactNode) => void | undefined;
 	try {
+		const configPath =
+			args.config ||
+			(args.script && findWranglerToml(path.dirname(args.script)));
+		let config = readConfig(configPath, args);
+
 		if (args.logLevel) {
 			logger.loggerLevel = args.logLevel;
 		}
@@ -512,12 +556,14 @@ export async function startDev(args: StartDevOptions) {
 		}
 		if (args.experimentalPublic) {
 			throw new UserError(
-				"The --experimental-public field has been renamed to --assets"
+				"The --experimental-public field has been deprecated, try --legacy-assets instead."
 			);
 		}
 
 		if (args.public) {
-			throw new UserError("The --public field has been renamed to --assets");
+			throw new UserError(
+				"The --public field has been deprecated, try --legacy-assets instead."
+			);
 		}
 
 		if (args.experimentalEnableLocalPersistence) {
@@ -528,18 +574,11 @@ export async function startDev(args: StartDevOptions) {
 			);
 		}
 
-		if (args.assets) {
-			logger.warn(
-				"The --assets argument is experimental and may change or break at any time"
-			);
+		if (args.experimentalAssets) {
+			args.forceLocal = true;
 		}
 
-		const configPath =
-			args.config ||
-			(args.script && findWranglerToml(path.dirname(args.script)));
-
 		const projectRoot = configPath && path.dirname(configPath);
-		let config = readConfig(configPath, args);
 
 		const devEnv = new DevEnv();
 
@@ -601,7 +640,8 @@ export async function startDev(args: StartDevOptions) {
 						pattern: r,
 					})
 				),
-
+				experimentalAssets: (configParam) =>
+					getAssetsConfig(configParam, args.experimentalAssets),
 				build: {
 					bundle: args.bundle !== undefined ? args.bundle : undefined,
 					define: collectKeyValues(args.define),
@@ -707,7 +747,7 @@ export async function startDev(args: StartDevOptions) {
 								}
 							: undefined;
 					},
-					assets: (configParam) => configParam.assets,
+					legacyAssets: (configParam) => configParam.legacy_assets,
 					enableServiceEnvironments: !(args.legacyEnv ?? true),
 				},
 			} satisfies StartDevWorkerInput);
@@ -814,8 +854,12 @@ export async function startDev(args: StartDevOptions) {
 						configParam.account_id ??
 						getAccountFromCache()?.id
 					}
-					assetPaths={assetPaths}
-					assetsConfig={configParam.assets}
+					legacyAssetPaths={assetPaths}
+					legacyAssetsConfig={configParam.legacy_assets}
+					assetsConfig={await getAssetsConfig(
+						configParam,
+						args.experimentalAssets
+					)}
 					initialPort={
 						args.port ?? configParam.dev.port ?? (await getLocalPort())
 					}
@@ -975,8 +1019,9 @@ export async function startApiDev(args: StartDevOptions) {
 			liveReload: args.liveReload ?? false,
 			accountId:
 				args.accountId ?? configParam.account_id ?? getAccountFromCache()?.id,
-			assetPaths: assetPaths,
-			assetsConfig: configParam.assets,
+			legacyAssetPaths: assetPaths,
+			legacyAssetsConfig: configParam.legacy_assets,
+			assetsConfig: await getAssetsConfig(configParam, args.experimentalAssets),
 			//port can be 0, which means to use a random port
 			initialPort: args.port ?? configParam.dev.port ?? (await getLocalPort()),
 			initialIp: args.ip ?? configParam.dev.ip,
@@ -1115,7 +1160,12 @@ export async function validateDevServerSettings(
 	config: Config
 ) {
 	const entry = await getEntry(
-		{ assets: args.assets, script: args.script, moduleRoot: args.moduleRoot },
+		{
+			legacyAssets: args.legacyAssets,
+			experimentalAssets: args.experimentalAssets,
+			script: args.script,
+			moduleRoot: args.moduleRoot,
+		},
 		config,
 		"dev"
 	);
@@ -1159,7 +1209,13 @@ export async function validateDevServerSettings(
 		);
 	}
 
-	if ((args.assets ?? config.assets) && (args.site ?? config.site)) {
+	if (
+		(args.legacyAssets ??
+			config.legacy_assets ??
+			args.experimentalAssets ??
+			config.experimental_assets) &&
+		(args.site ?? config.site)
+	) {
 		throw new UserError(
 			"Cannot use Assets and Workers Sites in the same Worker."
 		);
@@ -1232,8 +1288,8 @@ export function getResolvedAssetPaths(
 	configParam: Config
 ) {
 	const assetPaths =
-		args.assets || configParam.assets
-			? getAssetPaths(configParam, args.assets)
+		args.legacyAssets || configParam.legacy_assets
+			? getAssetPaths(configParam, args.legacyAssets)
 			: getSiteAssetPaths(
 					configParam,
 					args.site,

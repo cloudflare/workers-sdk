@@ -1951,7 +1951,7 @@ addEventListener('fetch', event => {});`
 		      `);
 		});
 
-		it("should not require an explicit entry point when using --assets", async () => {
+		it("should not require an explicit entry point when using --legacy-assets", async () => {
 			const assets = [
 				{ filePath: "file-1.txt", content: "Content of file-1" },
 				{ filePath: "file-2.txt", content: "Content of file-2" },
@@ -1969,38 +1969,40 @@ addEventListener('fetch', event => {});`
 			mockKeyListRequest(kvNamespace.id, []);
 			mockUploadAssetsToKVRequest(kvNamespace.id, assets);
 
-			await runWrangler("deploy --assets assets --latest --name test-name");
+			await runWrangler(
+				"deploy --legacy-assets assets --latest --name test-name"
+			);
 
 			expect(std).toMatchInlineSnapshot(`
-			Object {
-			  "debug": "",
-			  "err": "",
-			  "info": "Fetching list of already uploaded assets...
-			Building list of assets to upload...
-			 + file-1.2ca234f380.txt (uploading new version of file-1.txt)
-			 + file-2.5938485188.txt (uploading new version of file-2.txt)
-			Uploading 2 new assets...
-			Uploaded 100% [2 out of 2]",
-			  "out": "↗️  Done syncing assets
-			Total Upload: xx KiB / gzip: xx KiB
-			Uploaded test-name (TIMINGS)
-			Published test-name (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
+				Object {
+				  "debug": "",
+				  "err": "",
+				  "info": "Fetching list of already uploaded assets...
+				Building list of assets to upload...
+				 + file-1.2ca234f380.txt (uploading new version of file-1.txt)
+				 + file-2.5938485188.txt (uploading new version of file-2.txt)
+				Uploading 2 new assets...
+				Uploaded 100% [2 out of 2]",
+				  "out": "↗️  Done syncing assets
+				Total Upload: xx KiB / gzip: xx KiB
+				Uploaded test-name (TIMINGS)
+				Published test-name (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Deployment ID: Galaxy-Class
+				Current Version ID: Galaxy-Class
 
 
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --assets argument is experimental and may change or break at any time[0m
+				Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments",
+				  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --legacy-assets argument is experimental and may change or break at any time.[0m
 
 
-			[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mUsing the latest version of the Workers runtime. To silence this warning, please choose a specific version of the runtime with --compatibility-date, or add a compatibility_date to your wrangler.toml.[0m
+				[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mUsing the latest version of the Workers runtime. To silence this warning, please choose a specific version of the runtime with --compatibility-date, or add a compatibility_date to your wrangler.toml.[0m
 
 
 
-			",
-			}
-		`);
+				",
+				}
+			`);
 		});
 
 		describe("should source map validation errors", () => {
@@ -2165,7 +2167,57 @@ addEventListener('fetch', event => {});`
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should upload all the files in the directory specified by `--assets`", async () => {
+		it("should upload all the files in the directory specified by `--legacy-assets`", async () => {
+			const assets = [
+				{ filePath: "file-1.txt", content: "Content of file-1" },
+				{ filePath: "file-2.txt", content: "Content of file-2" },
+			];
+			const kvNamespace = {
+				title: "__test-name-workers_sites_assets",
+				id: "__test-name-workers_sites_assets-id",
+			};
+			writeWranglerToml({
+				main: "./index.js",
+			});
+			writeWorkerSource();
+			writeAssets(assets);
+			mockUploadWorkerRequest({
+				expectedMainModule: "index.js",
+			});
+			mockSubDomainRequest();
+			mockListKVNamespacesRequest(kvNamespace);
+			mockKeyListRequest(kvNamespace.id, []);
+			mockUploadAssetsToKVRequest(kvNamespace.id, assets);
+			await runWrangler("deploy --legacy-assets assets");
+
+			expect(std).toMatchInlineSnapshot(`
+				Object {
+				  "debug": "",
+				  "err": "",
+				  "info": "Fetching list of already uploaded assets...
+				Building list of assets to upload...
+				 + file-1.2ca234f380.txt (uploading new version of file-1.txt)
+				 + file-2.5938485188.txt (uploading new version of file-2.txt)
+				Uploading 2 new assets...
+				Uploaded 100% [2 out of 2]",
+				  "out": "↗️  Done syncing assets
+				Total Upload: xx KiB / gzip: xx KiB
+				Uploaded test-name (TIMINGS)
+				Published test-name (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Deployment ID: Galaxy-Class
+				Current Version ID: Galaxy-Class
+
+
+				Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments",
+				  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --legacy-assets argument is experimental and may change or break at any time.[0m
+
+				",
+				}
+			`);
+		});
+
+		it("should upload all the files in the directory specified by `--assets` as with `--legacy-assets`", async () => {
 			const assets = [
 				{ filePath: "file-1.txt", content: "Content of file-1" },
 				{ filePath: "file-2.txt", content: "Content of file-2" },
@@ -2189,83 +2241,88 @@ addEventListener('fetch', event => {});`
 			await runWrangler("deploy --assets assets");
 
 			expect(std).toMatchInlineSnapshot(`
-			Object {
-			  "debug": "",
-			  "err": "",
-			  "info": "Fetching list of already uploaded assets...
-			Building list of assets to upload...
-			 + file-1.2ca234f380.txt (uploading new version of file-1.txt)
-			 + file-2.5938485188.txt (uploading new version of file-2.txt)
-			Uploading 2 new assets...
-			Uploaded 100% [2 out of 2]",
-			  "out": "↗️  Done syncing assets
-			Total Upload: xx KiB / gzip: xx KiB
-			Uploaded test-name (TIMINGS)
-			Published test-name (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
+				Object {
+				  "debug": "",
+				  "err": "",
+				  "info": "Fetching list of already uploaded assets...
+				Building list of assets to upload...
+				 + file-1.2ca234f380.txt (uploading new version of file-1.txt)
+				 + file-2.5938485188.txt (uploading new version of file-2.txt)
+				Uploading 2 new assets...
+				Uploaded 100% [2 out of 2]",
+				  "out": "↗️  Done syncing assets
+				Total Upload: xx KiB / gzip: xx KiB
+				Uploaded test-name (TIMINGS)
+				Published test-name (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Deployment ID: Galaxy-Class
+				Current Version ID: Galaxy-Class
 
 
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --assets argument is experimental and may change or break at any time[0m
+				Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments",
+				  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --assets argument is experimental. We are going to be changing the behavior of this experimental command on August 15th.[0m
 
-			",
-			}
-		`);
+				  Releases of wrangler after this date will no longer support current functionality.
+				  Please shift to the --legacy-assets command to preserve the current functionality.
+
+				",
+				}
+			`);
 		});
 
-		it("should error when trying to use --assets with a service-worker Worker", async () => {
+		it("should error when trying to use --legacy-assets with a service-worker Worker", async () => {
 			writeWranglerToml({
 				main: "./index.js",
 			});
 			writeWorkerSource({ type: "sw" });
 			await expect(
-				runWrangler("deploy --assets abc")
+				runWrangler("deploy --legacy-assets abc")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
 				`[Error: You cannot use the service-worker format with an \`assets\` directory yet. For information on how to migrate to the module-worker format, see: https://developers.cloudflare.com/workers/learning/migrating-to-module-workers/]`
 			);
 
 			expect(std).toMatchInlineSnapshot(`
-			Object {
-			  "debug": "",
-			  "err": "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mYou cannot use the service-worker format with an \`assets\` directory yet. For information on how to migrate to the module-worker format, see: https://developers.cloudflare.com/workers/learning/migrating-to-module-workers/[0m
+				Object {
+				  "debug": "",
+				  "err": "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mYou cannot use the service-worker format with an \`assets\` directory yet. For information on how to migrate to the module-worker format, see: https://developers.cloudflare.com/workers/learning/migrating-to-module-workers/[0m
 
-			",
-			  "info": "",
-			  "out": "",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --assets argument is experimental and may change or break at any time[0m
+				",
+				  "info": "",
+				  "out": "",
+				  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --legacy-assets argument is experimental and may change or break at any time.[0m
 
-			",
-			}
-		`);
+				",
+				}
+			`);
 		});
 
-		it("should error if --assets and --site are used together", async () => {
+		it("should error if --legacy-assets and --site are used together", async () => {
 			writeWranglerToml({
 				main: "./index.js",
 			});
 			writeWorkerSource();
 			await expect(
-				runWrangler("deploy --assets abc --site xyz")
+				runWrangler("deploy --legacy-assets abc --site xyz")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
 				`[Error: Cannot use Assets and Workers Sites in the same Worker.]`
 			);
 
 			expect(std).toMatchInlineSnapshot(`
-			Object {
-			  "debug": "",
-			  "err": "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mCannot use Assets and Workers Sites in the same Worker.[0m
+				Object {
+				  "debug": "",
+				  "err": "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mCannot use Assets and Workers Sites in the same Worker.[0m
 
-			",
-			  "info": "",
-			  "out": "",
-			  "warn": "",
-			}
-		`);
+				",
+				  "info": "",
+				  "out": "",
+				  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --legacy-assets argument is experimental and may change or break at any time.[0m
+
+				",
+				}
+			`);
 		});
 
-		it("should error if --assets and config.site are used together", async () => {
+		it("should error if --legacy-assets and config.site are used together", async () => {
 			writeWranglerToml({
 				main: "./index.js",
 				site: {
@@ -2274,28 +2331,30 @@ addEventListener('fetch', event => {});`
 			});
 			writeWorkerSource();
 			await expect(
-				runWrangler("deploy --assets abc")
+				runWrangler("deploy --legacy-assets abc")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
 				`[Error: Cannot use Assets and Workers Sites in the same Worker.]`
 			);
 
 			expect(std).toMatchInlineSnapshot(`
-			Object {
-			  "debug": "",
-			  "err": "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mCannot use Assets and Workers Sites in the same Worker.[0m
+				Object {
+				  "debug": "",
+				  "err": "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mCannot use Assets and Workers Sites in the same Worker.[0m
 
-			",
-			  "info": "",
-			  "out": "",
-			  "warn": "",
-			}
-		`);
+				",
+				  "info": "",
+				  "out": "",
+				  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --legacy-assets argument is experimental and may change or break at any time.[0m
+
+				",
+				}
+			`);
 		});
 
-		it("should error if config.assets and --site are used together", async () => {
+		it("should error if config.legacy_assets and --site are used together", async () => {
 			writeWranglerToml({
 				main: "./index.js",
-				assets: "abc",
+				legacy_assets: "abc",
 			});
 			writeWorkerSource();
 			await expect(
@@ -2305,26 +2364,26 @@ addEventListener('fetch', event => {});`
 			);
 
 			expect(std).toMatchInlineSnapshot(`
-			Object {
-			  "debug": "",
-			  "err": "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mCannot use Assets and Workers Sites in the same Worker.[0m
+				Object {
+				  "debug": "",
+				  "err": "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mCannot use Assets and Workers Sites in the same Worker.[0m
 
-			",
-			  "info": "",
-			  "out": "",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
+				",
+				  "info": "",
+				  "out": "",
+				  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
 
-			    - \\"assets\\" fields are experimental and may change or break at any time.
+				    - \\"legacy_assets\\" fields are experimental and may change or break at any time.
 
-			",
-			}
-		`);
+				",
+				}
+			`);
 		});
 
-		it("should error if config.assets and config.site are used together", async () => {
+		it("should error if config.legacy_assets and config.site are used together", async () => {
 			writeWranglerToml({
 				main: "./index.js",
-				assets: "abc",
+				legacy_assets: "abc",
 				site: {
 					bucket: "xyz",
 				},
@@ -2337,23 +2396,23 @@ addEventListener('fetch', event => {});`
 			);
 
 			expect(std).toMatchInlineSnapshot(`
-			Object {
-			  "debug": "",
-			  "err": "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mCannot use Assets and Workers Sites in the same Worker.[0m
+				Object {
+				  "debug": "",
+				  "err": "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mCannot use Assets and Workers Sites in the same Worker.[0m
 
-			",
-			  "info": "",
-			  "out": "",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
+				",
+				  "info": "",
+				  "out": "",
+				  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
 
-			    - \\"assets\\" fields are experimental and may change or break at any time.
+				    - \\"legacy_assets\\" fields are experimental and may change or break at any time.
 
-			",
-			}
-		`);
+				",
+				}
+			`);
 		});
 
-		it("should warn if --assets is used", async () => {
+		it("should warn if --legacy-assets is used", async () => {
 			writeWranglerToml({
 				main: "./index.js",
 			});
@@ -2376,38 +2435,38 @@ addEventListener('fetch', event => {});`
 			mockKeyListRequest(kvNamespace.id, []);
 			mockUploadAssetsToKVRequest(kvNamespace.id, assets);
 
-			await runWrangler("deploy --assets ./assets");
+			await runWrangler("deploy --legacy-assets ./assets");
 			expect(std).toMatchInlineSnapshot(`
-			Object {
-			  "debug": "",
-			  "err": "",
-			  "info": "Fetching list of already uploaded assets...
-			Building list of assets to upload...
-			 + subdir/file-1.2ca234f380.txt (uploading new version of subdir/file-1.txt)
-			 + subdir/file-2.5938485188.txt (uploading new version of subdir/file-2.txt)
-			Uploading 2 new assets...
-			Uploaded 100% [2 out of 2]",
-			  "out": "↗️  Done syncing assets
-			Total Upload: xx KiB / gzip: xx KiB
-			Uploaded test-name (TIMINGS)
-			Published test-name (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
+				Object {
+				  "debug": "",
+				  "err": "",
+				  "info": "Fetching list of already uploaded assets...
+				Building list of assets to upload...
+				 + subdir/file-1.2ca234f380.txt (uploading new version of subdir/file-1.txt)
+				 + subdir/file-2.5938485188.txt (uploading new version of subdir/file-2.txt)
+				Uploading 2 new assets...
+				Uploaded 100% [2 out of 2]",
+				  "out": "↗️  Done syncing assets
+				Total Upload: xx KiB / gzip: xx KiB
+				Uploaded test-name (TIMINGS)
+				Published test-name (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Deployment ID: Galaxy-Class
+				Current Version ID: Galaxy-Class
 
 
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --assets argument is experimental and may change or break at any time[0m
+				Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments",
+				  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --legacy-assets argument is experimental and may change or break at any time.[0m
 
-			",
-			}
-		`);
+				",
+				}
+			`);
 		});
 
-		it("should warn if config.assets is used", async () => {
+		it("should warn if config.legacy_assets is used", async () => {
 			writeWranglerToml({
 				main: "./index.js",
-				assets: "./assets",
+				legacy_assets: "./assets",
 			});
 			const assets = [
 				{ filePath: "subdir/file-1.txt", content: "Content of file-1" },
@@ -2430,32 +2489,32 @@ addEventListener('fetch', event => {});`
 
 			await runWrangler("deploy");
 			expect(std).toMatchInlineSnapshot(`
-			Object {
-			  "debug": "",
-			  "err": "",
-			  "info": "Fetching list of already uploaded assets...
-			Building list of assets to upload...
-			 + subdir/file-1.2ca234f380.txt (uploading new version of subdir/file-1.txt)
-			 + subdir/file-2.5938485188.txt (uploading new version of subdir/file-2.txt)
-			Uploading 2 new assets...
-			Uploaded 100% [2 out of 2]",
-			  "out": "↗️  Done syncing assets
-			Total Upload: xx KiB / gzip: xx KiB
-			Uploaded test-name (TIMINGS)
-			Published test-name (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
+				Object {
+				  "debug": "",
+				  "err": "",
+				  "info": "Fetching list of already uploaded assets...
+				Building list of assets to upload...
+				 + subdir/file-1.2ca234f380.txt (uploading new version of subdir/file-1.txt)
+				 + subdir/file-2.5938485188.txt (uploading new version of subdir/file-2.txt)
+				Uploading 2 new assets...
+				Uploaded 100% [2 out of 2]",
+				  "out": "↗️  Done syncing assets
+				Total Upload: xx KiB / gzip: xx KiB
+				Uploaded test-name (TIMINGS)
+				Published test-name (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Deployment ID: Galaxy-Class
+				Current Version ID: Galaxy-Class
 
 
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
+				Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments",
+				  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
 
-			    - \\"assets\\" fields are experimental and may change or break at any time.
+				    - \\"legacy_assets\\" fields are experimental and may change or break at any time.
 
-			",
-			}
-		`);
+				",
+				}
+			`);
 		});
 
 		it("should not contain backslash for assets with nested directories", async () => {
@@ -3643,7 +3702,7 @@ addEventListener('fetch', event => {});`
 		`);
 		});
 
-		it("should use the relative path from current working directory to Worker directory when using `--assets`", async () => {
+		it("should use the relative path from current working directory to Worker directory when using `--legacy-assets`", async () => {
 			const assets = [
 				{ filePath: "file-1.txt", content: "Content of file-1" },
 				{ filePath: "file-2.txt", content: "Content of file-2" },
@@ -3665,33 +3724,33 @@ addEventListener('fetch', event => {});`
 			mockKeyListRequest(kvNamespace.id, []);
 			mockUploadAssetsToKVRequest(kvNamespace.id, assets);
 			process.chdir("./my-assets");
-			await runWrangler("deploy --assets .");
+			await runWrangler("deploy --legacy-assets .");
 
 			expect(std).toMatchInlineSnapshot(`
-			Object {
-			  "debug": "",
-			  "err": "",
-			  "info": "Fetching list of already uploaded assets...
-			Building list of assets to upload...
-			 + file-1.2ca234f380.txt (uploading new version of file-1.txt)
-			 + file-2.5938485188.txt (uploading new version of file-2.txt)
-			Uploading 2 new assets...
-			Uploaded 100% [2 out of 2]",
-			  "out": "↗️  Done syncing assets
-			Total Upload: xx KiB / gzip: xx KiB
-			Uploaded test-name (TIMINGS)
-			Published test-name (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
+				Object {
+				  "debug": "",
+				  "err": "",
+				  "info": "Fetching list of already uploaded assets...
+				Building list of assets to upload...
+				 + file-1.2ca234f380.txt (uploading new version of file-1.txt)
+				 + file-2.5938485188.txt (uploading new version of file-2.txt)
+				Uploading 2 new assets...
+				Uploaded 100% [2 out of 2]",
+				  "out": "↗️  Done syncing assets
+				Total Upload: xx KiB / gzip: xx KiB
+				Uploaded test-name (TIMINGS)
+				Published test-name (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Deployment ID: Galaxy-Class
+				Current Version ID: Galaxy-Class
 
 
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --assets argument is experimental and may change or break at any time[0m
+				Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments",
+				  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --legacy-assets argument is experimental and may change or break at any time.[0m
 
-			",
-			}
-		`);
+				",
+				}
+			`);
 		});
 
 		it("should abort other bucket uploads if one bucket upload fails", async () => {
@@ -8400,34 +8459,36 @@ addEventListener('fetch', event => {});`
 			mockListKVNamespacesRequest(kvNamespace);
 			mockKeyListRequest(kvNamespace.id, []);
 			mockUploadAssetsToKVRequest(kvNamespace.id, assets);
-			await runWrangler("deploy index.js --outdir some-dir --assets assets");
+			await runWrangler(
+				"deploy index.js --outdir some-dir --legacy-assets assets"
+			);
 			expect(fs.existsSync("some-dir/index.js")).toBe(true);
 			expect(fs.existsSync("some-dir/index.js.map")).toBe(true);
 			expect(std).toMatchInlineSnapshot(`
-			Object {
-			  "debug": "",
-			  "err": "",
-			  "info": "Fetching list of already uploaded assets...
-			Building list of assets to upload...
-			 + file-1.2ca234f380.txt (uploading new version of file-1.txt)
-			 + file-2.5938485188.txt (uploading new version of file-2.txt)
-			Uploading 2 new assets...
-			Uploaded 100% [2 out of 2]",
-			  "out": "↗️  Done syncing assets
-			Total Upload: xx KiB / gzip: xx KiB
-			Uploaded test-name (TIMINGS)
-			Published test-name (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
+				Object {
+				  "debug": "",
+				  "err": "",
+				  "info": "Fetching list of already uploaded assets...
+				Building list of assets to upload...
+				 + file-1.2ca234f380.txt (uploading new version of file-1.txt)
+				 + file-2.5938485188.txt (uploading new version of file-2.txt)
+				Uploading 2 new assets...
+				Uploaded 100% [2 out of 2]",
+				  "out": "↗️  Done syncing assets
+				Total Upload: xx KiB / gzip: xx KiB
+				Uploaded test-name (TIMINGS)
+				Published test-name (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Deployment ID: Galaxy-Class
+				Current Version ID: Galaxy-Class
 
 
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --assets argument is experimental and may change or break at any time[0m
+				Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments",
+				  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --legacy-assets argument is experimental and may change or break at any time.[0m
 
-			",
-			}
-		`);
+				",
+				}
+			`);
 		});
 
 		it("should copy any module imports related assets to --outdir if specified", async () => {

@@ -63,7 +63,7 @@ export type BundleOptions = {
 	// A module collector enables you to observe what modules are in the Worker.
 	moduleCollector: ModuleCollector;
 	serveAssetsFromWorker: boolean;
-	assets?: Config["assets"];
+	legacyAssets?: Config["legacy_assets"];
 	bypassAssetCache?: boolean;
 	doBindings: DurableObjectBindings;
 	jsxFactory?: string;
@@ -112,7 +112,7 @@ export async function bundleWorker(
 		alias,
 		define,
 		checkFetch,
-		assets,
+		legacyAssets,
 		bypassAssetCache,
 		targetConsumer,
 		testScheduled,
@@ -186,12 +186,15 @@ export async function bundleWorker(
 			path: "templates/middleware/middleware-serve-static-assets.ts",
 			config: {
 				spaMode:
-					typeof assets === "object" ? assets.serve_single_page_app : false,
+					typeof legacyAssets === "object"
+						? legacyAssets.serve_single_page_app
+						: false,
 				cacheControl:
-					typeof assets === "object"
+					typeof legacyAssets === "object"
 						? {
 								browserTTL:
-									assets.browser_TTL || 172800 /* 2 days: 2* 60 * 60 * 24 */,
+									legacyAssets.browser_TTL ||
+									172800 /* 2 days: 2* 60 * 60 * 24 */,
 								bypassCache: bypassAssetCache,
 							}
 						: {},

@@ -1218,7 +1218,7 @@ describe("wrangler dev", () => {
 				      --https-key-path                             Path to a custom certificate key  [string]
 				      --https-cert-path                            Path to a custom certificate  [string]
 				      --local-upstream                             Host to act as origin in local mode, defaults to dev.host or route  [string]
-				      --assets                                     Static assets to be served  [string]
+				      --legacy-assets                              (Experimental) Static assets to be served  [string]
 				      --site                                       Root folder of static assets for Workers Sites  [string]
 				      --site-include                               Array of .gitignore-style patterns that match file or directory names from the sites directory. Only matched items will be uploaded.  [array]
 				      --site-exclude                               Array of .gitignore-style patterns that match file or directory names from the sites directory. Matched items will not be uploaded.  [array]
@@ -1244,19 +1244,19 @@ describe("wrangler dev", () => {
 			`);
 		});
 
-		it("should error if --assets and --site are used together", async () => {
+		it("should error if --legacy-assets and --site are used together", async () => {
 			writeWranglerToml({
 				main: "./index.js",
 			});
 			fs.writeFileSync("index.js", `export default {};`);
 			await expect(
-				runWrangler("dev --assets abc --site xyz")
+				runWrangler("dev --legacy-assets abc --site xyz")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
 				`[Error: Cannot use Assets and Workers Sites in the same Worker.]`
 			);
 		});
 
-		it("should error if --assets and config.site are used together", async () => {
+		it("should error if --legacy-assets and config.site are used together", async () => {
 			writeWranglerToml({
 				main: "./index.js",
 				site: {
@@ -1265,16 +1265,16 @@ describe("wrangler dev", () => {
 			});
 			fs.writeFileSync("index.js", `export default {};`);
 			await expect(
-				runWrangler("dev --assets abc")
+				runWrangler("dev --legacy-assets abc")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
 				`[Error: Cannot use Assets and Workers Sites in the same Worker.]`
 			);
 		});
 
-		it("should error if config.assets and --site are used together", async () => {
+		it("should error if config.legacy_assets and --site are used together", async () => {
 			writeWranglerToml({
 				main: "./index.js",
-				assets: "abc",
+				legacy_assets: "abc",
 			});
 			fs.writeFileSync("index.js", `export default {};`);
 			await expect(
@@ -1284,17 +1284,17 @@ describe("wrangler dev", () => {
 			);
 		});
 
-		it("should error if config.assets and config.site are used together", async () => {
+		it("should error if config.legacy_assets and config.site are used together", async () => {
 			writeWranglerToml({
 				main: "./index.js",
-				assets: "abc",
+				legacy_assets: "abc",
 				site: {
 					bucket: "xyz",
 				},
 			});
 			fs.writeFileSync("index.js", `export default {};`);
 			await expect(
-				runWrangler("dev --assets abc")
+				runWrangler("dev --legacy-assets abc")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
 				`[Error: Cannot use Assets and Workers Sites in the same Worker.]`
 			);
@@ -1312,10 +1312,11 @@ describe("wrangler dev", () => {
 			await runWrangler("dev --site abc");
 			expect((Dev as Mock).mock.calls[1][0].isWorkersSite).toEqual(true);
 
-			await runWrangler("dev --assets abc");
+			await runWrangler("dev --legacy-assets abc");
 			expect((Dev as Mock).mock.calls[2][0].isWorkersSite).toEqual(false);
 		});
-		it("should warn if --assets is used", async () => {
+
+		it("should point to --legacy-assets if --assets is used", async () => {
 			writeWranglerToml({
 				main: "./index.js",
 			});
@@ -1323,39 +1324,46 @@ describe("wrangler dev", () => {
 
 			await runWrangler('dev --assets "./assets"');
 			expect(std).toMatchInlineSnapshot(`
-			Object {
-			  "debug": "",
-			  "err": "",
-			  "info": "",
-			  "out": "",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --assets argument is experimental and may change or break at any time[0m
+				Object {
+				  "debug": "",
+				  "err": "",
+				  "info": "",
+				  "out": "",
+				  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --assets argument is experimental. We are going to be changing the behavior of this experimental command on August 15th.[0m
 
-			",
-			}
-		`);
+				  Releases of wrangler after this date will no longer support current functionality.
+				  Please shift to the --legacy-assets command to preserve the current functionality.
+
+				",
+				}
+			`);
 		});
 
-		it("should warn if config.assets is used", async () => {
+		it("should warn if --legacy-assets is used", async () => {
 			writeWranglerToml({
 				main: "./index.js",
-				assets: "./assets",
 			});
 			fs.writeFileSync("index.js", `export default {};`);
 
-			await runWrangler("dev");
+			await runWrangler('dev --legacy-assets "./assets"');
 			expect(std).toMatchInlineSnapshot(`
-			Object {
-			  "debug": "",
-			  "err": "",
-			  "info": "",
-			  "out": "",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
+				Object {
+				  "debug": "",
+				  "err": "",
+				  "info": "",
+				  "out": "",
+				  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --legacy-assets argument is experimental and may change or break at any time.[0m
 
-			    - \\"assets\\" fields are experimental and may change or break at any time.
+				",
+				}
+			`);
+		});
 
-			",
-			}
-		`);
+		it("should warn if config.legacy_assets is used", async () => {
+			writeWranglerToml({
+				main: "./index.js",
+				legacy_assets: "./assets",
+			});
 		});
 	});
 

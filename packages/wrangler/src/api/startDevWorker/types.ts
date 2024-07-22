@@ -1,3 +1,4 @@
+import type { AssetsConfig } from "../../assets";
 import type { Config } from "../../config";
 import type {
 	CustomDomainRoute,
@@ -75,6 +76,8 @@ export interface StartDevWorkerInput {
 	bindings?: Record<string, Binding>; // Type level constraint for bindings not sharing names
 	/** The triggers which will cause the worker's exported default handlers to be called. */
 	triggers?: Trigger[];
+
+	experimentalAssets?: AsyncHook<AssetsConfig | undefined, [Config]>;
 
 	/**
 	 * Whether Wrangler should send usage metrics to Cloudflare for this project.
@@ -158,7 +161,7 @@ export interface StartDevWorkerInput {
 	};
 	legacy?: {
 		site?: Hook<Config["site"], [Config]>;
-		assets?: Hook<Config["assets"], [Config]>;
+		legacyAssets?: Hook<Config["legacy_assets"], [Config]>;
 		enableServiceEnvironments?: boolean;
 	};
 	unsafe?: Omit<CfUnsafe, "bindings">;
@@ -178,7 +181,7 @@ export type StartDevWorkerOptions = StartDevWorkerInput & {
 		processEntrypoint: boolean;
 	};
 	legacy: StartDevWorkerInput["legacy"] & {
-		assets?: Config["assets"];
+		legacyAssets?: Config["legacy_assets"];
 		site?: Config["site"];
 	};
 	dev: StartDevWorkerInput["dev"] & {

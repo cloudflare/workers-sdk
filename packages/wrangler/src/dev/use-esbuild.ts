@@ -42,7 +42,7 @@ export type EsbuildBundleProps = {
 	processEntrypoint: boolean;
 	additionalModules: CfModule[];
 	rules: Config["rules"];
-	assets: Config["assets"];
+	legacyAssets: Config["legacy_assets"];
 	define: Config["define"];
 	alias: Config["alias"];
 	serveAssetsFromWorker: boolean;
@@ -70,7 +70,7 @@ export function runBuild(
 		processEntrypoint,
 		additionalModules,
 		rules,
-		assets,
+		legacyAssets,
 		serveAssetsFromWorker,
 		tsconfig,
 		minify,
@@ -94,7 +94,7 @@ export function runBuild(
 		processEntrypoint: boolean;
 		additionalModules: CfModule[];
 		rules: Config["rules"];
-		assets: Config["assets"];
+		legacyAssets: Config["legacy_assets"];
 		define: Config["define"];
 		alias: Config["alias"];
 		serveAssetsFromWorker: boolean;
@@ -216,7 +216,7 @@ export function runBuild(
 						alias,
 						define,
 						checkFetch: true,
-						assets,
+						legacyAssets,
 						// disable the cache in dev
 						bypassAssetCache: true,
 						targetConsumer,
@@ -288,7 +288,7 @@ export function useEsbuild({
 	processEntrypoint,
 	additionalModules,
 	rules,
-	assets,
+	legacyAssets,
 	serveAssetsFromWorker,
 	tsconfig,
 	minify,
@@ -318,7 +318,7 @@ export function useEsbuild({
 				processEntrypoint,
 				additionalModules,
 				rules,
-				assets,
+				legacyAssets,
 				serveAssetsFromWorker,
 				tsconfig,
 				minify,
@@ -359,7 +359,7 @@ export function useEsbuild({
 		nodejsCompatMode,
 		alias,
 		define,
-		assets,
+		legacyAssets,
 		durableObjects,
 		local,
 		targetConsumer,

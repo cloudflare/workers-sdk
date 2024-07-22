@@ -197,11 +197,13 @@ async function resolveConfig(
 ): Promise<StartDevWorkerOptions> {
 	const legacySite = unwrapHook(input.legacy?.site, config);
 
-	const legacyAssets = unwrapHook(input.legacy?.assets, config);
+	const legacyAssets = unwrapHook(input.legacy?.legacyAssets, config);
+	const experimentalAssets = unwrapHook(input.experimentalAssets, config);
 
 	const entry = await getEntry(
 		{
-			assets: Boolean(legacyAssets),
+			legacyAssets: Boolean(legacyAssets),
+			experimentalAssets: Boolean(experimentalAssets),
 			script: input.entrypoint,
 			moduleRoot: input.build?.moduleRoot,
 		},
@@ -249,7 +251,7 @@ async function resolveConfig(
 		dev: await resolveDevConfig(config, input),
 		legacy: {
 			site: legacySite,
-			assets: legacyAssets,
+			legacyAssets: legacyAssets,
 			enableServiceEnvironments:
 				input.legacy?.enableServiceEnvironments ?? !isLegacyEnv(config),
 		},
@@ -259,7 +261,7 @@ async function resolveConfig(
 		},
 	} satisfies StartDevWorkerOptions;
 
-	if (resolved.legacy.assets && resolved.legacy.site) {
+	if (resolved.legacy.legacyAssets && resolved.legacy.site) {
 		throw new UserError(
 			"Cannot use Assets and Workers Sites in the same Worker."
 		);
