@@ -326,8 +326,9 @@ export const processRemoteTemplate = async (args: Partial<C3Args>) => {
 	let src = templateUrl;
 
 	// GitHub URL with subdirectory is not supported by degit and has to be transformed.
-	// This only address templates on the main branch as a branch name
-	// might includes slashes that span multiple segments in the URL.
+	// This only addresses input template URLs on the main branch as a branch name
+	// might includes slashes that span multiple segments in the URL and cannot be
+	// reliably differentiated from the subdirectory path.
 	if (src.startsWith("https://github.com/") && src.includes("/tree/main/")) {
 		src = src
 			.replace("https://github.com/", "github:")
