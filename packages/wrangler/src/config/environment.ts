@@ -332,6 +332,18 @@ interface EnvironmentInheritable {
 	 * @inheritable
 	 */
 	placement: { mode: "off" | "smart" } | undefined;
+
+	/**
+	 * Specify the directory of static assets to deploy/serve
+	 *
+	 * @inheritable
+	 */
+	experimental_assets:
+		| {
+				directory: string;
+				binding?: string;
+		  }[]
+		| undefined;
 }
 
 export type DurableObjectBindings = {

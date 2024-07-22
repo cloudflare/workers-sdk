@@ -38,6 +38,7 @@ export async function getEntry(
 		format?: CfScriptFormat | undefined;
 		legacyAssets?: string | undefined | boolean;
 		moduleRoot?: string;
+		experimentalAssets?: string;
 	},
 	config: Config,
 	command: "dev" | "deploy" | "types"
@@ -54,7 +55,12 @@ export async function getEntry(
 				? path.resolve(config.site?.["entry-point"])
 				: // site.entry-point could be a directory
 					path.resolve(config.site?.["entry-point"], "index.js");
-		} else if (args.legacyAssets || config.legacy_assets) {
+		} else if (
+			args.legacyAssets ||
+			config.legacy_assets ||
+			args.experimentalAssets ||
+			config.experimental_assets?.some((x) => x.directory)
+		) {
 			file = path.resolve(getBasePath(), "templates/no-op-worker.js");
 		} else {
 			throw new UserError(

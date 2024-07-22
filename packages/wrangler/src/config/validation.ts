@@ -1222,6 +1222,14 @@ function normalizeAndValidateEnvironment(
 			isObjectWith("crons"),
 			{ crons: [] }
 		),
+		experimental_assets: inheritable(
+			diagnostics,
+			topLevelEnv,
+			rawEnv,
+			"experimental_assets",
+			validateAssetsConfig,
+			undefined
+		),
 		usage_model: inheritable(
 			diagnostics,
 			topLevelEnv,
@@ -2034,6 +2042,57 @@ const validateCflogfwdrBinding: ValidatorFn = (diagnostics, field, value) => {
 		"name",
 	]);
 
+	return isValid;
+};
+
+const validateAssetsConfig: ValidatorFn = (diagnostics, field, value) => {
+	if (value === undefined) {
+		return true;
+	}
+
+	if (!Array.isArray(value) || value === null) {
+		diagnostics.errors.push(
+			`The field "${field}" should be an array, but got value ${JSON.stringify(
+				value
+			)} of type ${typeof value}.`
+		);
+		return false;
+	}
+
+	let isValid = true;
+	for (let i = 0; i < value.length; i++) {
+		const assetConfig = value[i];
+
+		if (typeof assetConfig !== "object" || assetConfig === null) {
+			diagnostics.errors.push(
+				`"${field}[${i}]" should be an object, but got value ${JSON.stringify(
+					assetConfig
+				)} of type ${typeof assetConfig}`
+			);
+			isValid = false;
+		}
+
+		if (!isRequiredProperty(assetConfig, "directory", "string")) {
+			diagnostics.errors.push(
+				`"${field}[${i}]" should have a string "directory" field but got ${JSON.stringify(assetConfig)}.`
+			);
+			isValid = false;
+		}
+
+		if (!isOptionalProperty(assetConfig, "binding", "string")) {
+			diagnostics.errors.push(
+				`"${field}[${i}]" should, optionally, have a string "binding" field, but got ${JSON.stringify(assetConfig)}.`
+			);
+			isValid = false;
+		}
+
+		validateAdditionalProperties(
+			diagnostics,
+			`"${field}[${i}]"`,
+			Object.keys(assetConfig),
+			["directory", "binding"]
+		);
+	}
 	return isValid;
 };
 

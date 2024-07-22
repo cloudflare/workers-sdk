@@ -1,3 +1,4 @@
+import { existsSync } from "node:fs";
 import path from "node:path";
 import { findWranglerToml, readConfig } from "../config";
 import { getEntry } from "../deployment-bundle/entry";
@@ -104,6 +105,12 @@ export function deployOptions(yargs: CommonYargsArgv) {
 			})
 			.option("assets", {
 				describe: "(Experimental) Static assets to be served",
+				type: "string",
+				requiresArg: true,
+				hidden: true,
+			})
+			.option("experimental-assets", {
+				describe: "Static assets to be served",
 				type: "string",
 				requiresArg: true,
 				hidden: true,
@@ -270,11 +277,40 @@ export async function deployHandler(
 	}
 
 	if (
-		(args.legacyAssets || config.legacy_assets) &&
+		(args.legacyAssets ||
+			config.legacy_assets ||
+			args.experimentalAssets ||
+			config.experimental_assets) &&
 		(args.site || config.site)
 	) {
 		throw new UserError(
 			"Cannot use Assets and Workers Sites in the same Worker."
+		);
+	}
+
+	if (
+		args.experimentalAssets &&
+		!existsSync(path.resolve(process.cwd(), args.experimentalAssets))
+	) {
+		throw new UserError(
+			`The directory specified by the "--experimental-assets" command line argument does not exist:\n` +
+				`${path.resolve(process.cwd(), args.experimentalAssets)}`
+		);
+	} else {
+		config.experimental_assets?.forEach((x) => {
+			const assetDir = path.resolve(process.cwd(), x.directory);
+			if (!existsSync(assetDir)) {
+				throw new UserError(
+					`The directory specified by the \`experimental_assets\` field in your configuration file does not exist:\n` +
+						`${assetDir}`
+				);
+			}
+		});
+	}
+
+	if (args.assets) {
+		logger.warn(
+			"The --assets argument is experimental and may change or break at any time"
 		);
 	}
 
@@ -300,6 +336,9 @@ export async function deployHandler(
 					args.siteExclude
 				);
 
+	const experimentalAssetsDirectory =
+		args.experimentalAssets ?? config.experimental_assets?.at(0)?.directory;
+
 	if (!args.dryRun) {
 		await standardPricingWarning(config);
 	}
@@ -324,6 +363,7 @@ export async function deployHandler(
 		jsxFragment: args.jsxFragment,
 		tsconfig: args.tsconfig,
 		routes: args.routes,
+		experimentalAssets: experimentalAssetsDirectory,
 		assetPaths,
 		legacyEnv: isLegacyEnv(config),
 		minify: args.minify,
