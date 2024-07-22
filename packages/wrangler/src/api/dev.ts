@@ -24,6 +24,7 @@ export interface UnstableDevOptions {
 	httpsKeyPath?: string;
 	httpsCertPath?: string;
 	legacyAssets?: string; // Static assets to be served
+	experimentalAssets?: string; // TODO: Take a full AssetsConfig object here
 	site?: string; // Root folder of static assets for Workers Sites
 	siteInclude?: string[]; // Array of .gitignore-style patterns that match file or directory names from the sites directory. Only matched items will be uploaded.
 	siteExclude?: string[]; // Array of .gitignore-style patterns that match file or directory names from the sites directory. Matched items will not be uploaded.
@@ -189,6 +190,7 @@ export async function unstable_dev(
 		httpsKeyPath: options?.httpsKeyPath,
 		httpsCertPath: options?.httpsCertPath,
 		legacyAssets: options?.legacyAssets,
+		experimentalAssets: options?.experimentalAssets,
 		site: options?.site, // Root folder of static assets for Workers Sites
 		siteInclude: options?.siteInclude, // Array of .gitignore-style patterns that match file or directory names from the sites directory. Only matched items will be uploaded.
 		siteExclude: options?.siteExclude, // Array of .gitignore-style patterns that match file or directory names from the sites directory. Matched items will not be uploaded.

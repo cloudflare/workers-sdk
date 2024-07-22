@@ -156,6 +156,21 @@ importers:
         specifier: workspace:*
         version: link:../../packages/wrangler
 
+  fixtures/experimental-assets:
+    devDependencies:
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:*
+        version: link:../../packages/workers-tsconfig
+      ts-dedent:
+        specifier: ^2.2.0
+        version: 2.2.0
+      undici:
+        specifier: ^5.28.4
+        version: 5.28.4
+      wrangler:
+        specifier: workspace:*
+        version: link:../../packages/wrangler
+
   fixtures/external-durable-objects-app:
     devDependencies:
       '@cloudflare/workers-tsconfig':
@@ -1460,6 +1475,25 @@ importers:
         specifier: workspace:^
         version: link:../wrangler
 
+  packages/workers-shared:
+    dependencies:
+      miniflare:
+        specifier: workspace:*
+        version: link:../miniflare
+    devDependencies:
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:*
+        version: link:../workers-tsconfig
+      '@cloudflare/workers-types':
+        specifier: ^4.20240712.0
+        version: 4.20240712.0
+      concurrently:
+        specifier: ^8.2.2
+        version: 8.2.2
+      glob:
+        specifier: ^10.3.3
+        version: 10.3.10
+
   packages/workers-tsconfig: {}
 
   packages/workers.new:
@@ -1553,6 +1587,9 @@ importers:
       '@cloudflare/types':
         specifier: ^6.18.4
         version: 6.18.4(react@18.2.0)
+      '@cloudflare/workers-shared':
+        specifier: workspace:^
+        version: link:../workers-shared
       '@cloudflare/workers-tsconfig':
         specifier: workspace:*
         version: link:../workers-tsconfig

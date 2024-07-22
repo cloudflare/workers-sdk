@@ -4,7 +4,7 @@ import type { DevProps } from "./dev";
 export function validateDevProps(props: Omit<DevProps, "host">) {
 	if (
 		!props.isWorkersSite &&
-		props.assetPaths &&
+		props.legacyAssetPaths &&
 		props.entry.format === "service-worker"
 	) {
 		throw new UserError(

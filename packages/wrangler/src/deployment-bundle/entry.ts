@@ -37,6 +37,7 @@ export async function getEntry(
 		script?: string;
 		format?: CfScriptFormat | undefined;
 		legacyAssets?: string | undefined | boolean;
+		experimentalAssets?: string | undefined | boolean;
 		moduleRoot?: string;
 	},
 	config: Config,
@@ -56,7 +57,10 @@ export async function getEntry(
 					path.resolve(config.site?.["entry-point"], "index.js");
 		} else if (args.legacyAssets || config.legacy_assets) {
 			file = path.resolve(getBasePath(), "templates/no-op-worker.js");
+		} else if (args.experimentalAssets || config.experimental_assets) {
+			file = path.resolve(getBasePath(), "templates/router-worker.ts");
 		} else {
+			console.log(args, config);
 			throw new UserError(
 				`Missing entry-point: The entry-point should be specified via the command line (e.g. \`wrangler ${command} path/to/script\`) or the \`main\` config field.`
 			);

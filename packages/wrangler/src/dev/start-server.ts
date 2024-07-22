@@ -161,7 +161,7 @@ export async function startDevServer(
 		rules: props.rules,
 		jsxFragment: props.jsxFragment,
 		serveAssetsFromWorker: Boolean(
-			props.assetPaths && !props.isWorkersSite && props.local
+			props.legacyAssetPaths && !props.isWorkersSite && props.local
 		),
 		tsconfig: props.tsconfig,
 		minify: props.minify,
@@ -170,7 +170,7 @@ export async function startDevServer(
 		noBundle: props.noBundle,
 		findAdditionalModules: props.findAdditionalModules,
 		alias: props.alias,
-		legacyAssets: props.assetsConfig,
+		legacyAssets: props.legacyAssetsConfig,
 		testScheduled: props.testScheduled,
 		local: props.local,
 		doBindings: props.bindings.durable_objects?.bindings ?? [],
@@ -208,7 +208,8 @@ export async function startDevServer(
 			compatibilityDate: props.compatibilityDate,
 			compatibilityFlags: props.compatibilityFlags,
 			bindings: props.bindings,
-			assetPaths: props.assetPaths,
+			legacyAssetPaths: props.legacyAssetPaths,
+			experimentalAssets: props.assetsConfig,
 			initialPort: undefined, // hard-code for userworker, DevEnv-ProxyWorker now uses this prop value
 			initialIp: "127.0.0.1", // hard-code for userworker, DevEnv-ProxyWorker now uses this prop value
 			rules: props.rules,
@@ -275,7 +276,7 @@ export async function startDevServer(
 			format: props.entry.format,
 			accountId: props.accountId,
 			bindings: props.bindings,
-			assetPaths: props.assetPaths,
+			legacyAssetPaths: props.legacyAssetPaths,
 			isWorkersSite: props.isWorkersSite,
 			port: props.initialPort,
 			ip: props.initialIp,

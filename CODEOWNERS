@@ -1,6 +1,7 @@
 * @cloudflare/wrangler
 
 # Pages ownership
+/packages/workers-shared/ @cloudflare/pages @cloudflare/wrangler
 /packages/pages-shared/ @cloudflare/pages @cloudflare/wrangler
 /packages/wrangler/pages/ @cloudflare/pages @cloudflare/wrangler
 /packages/wrangler/src/api/pages/ @cloudflare/pages @cloudflare/wrangler

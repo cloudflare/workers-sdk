@@ -198,10 +198,12 @@ async function resolveConfig(
 	const legacySite = unwrapHook(input.legacy?.site, config);
 
 	const legacyAssets = unwrapHook(input.legacy?.legacyAssets, config);
+	const experimentalAssets = unwrapHook(input.experimentalAssets, config);
 
 	const entry = await getEntry(
 		{
 			legacyAssets: Boolean(legacyAssets),
+			experimentalAssets: Boolean(experimentalAssets),
 			script: input.entrypoint,
 			moduleRoot: input.build?.moduleRoot,
 		},

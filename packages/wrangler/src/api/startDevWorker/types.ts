@@ -1,3 +1,4 @@
+import type { AssetsConfig } from "../../assets";
 import type { Config } from "../../config";
 import type {
 	CustomDomainRoute,
@@ -75,6 +76,8 @@ export interface StartDevWorkerInput {
 	bindings?: Record<string, Binding>; // Type level constraint for bindings not sharing names
 	/** The triggers which will cause the worker's exported default handlers to be called. */
 	triggers?: Trigger[];
+
+	experimentalAssets?: AsyncHook<AssetsConfig | undefined, [Config]>;
 
 	/**
 	 * Whether Wrangler should send usage metrics to Cloudflare for this project.

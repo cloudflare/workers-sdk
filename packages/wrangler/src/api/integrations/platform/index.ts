@@ -293,7 +293,7 @@ export function unstable_getMiniflareWorkerOptions(
 	const assetPaths = config.legacy_assets
 		? getAssetPaths(config, undefined)
 		: getSiteAssetPaths(config);
-	const sitesOptions = buildSitesOptions({ assetPaths });
+	const sitesOptions = buildSitesOptions({ legacyAssetPaths: assetPaths });
 
 	const workerOptions: SourcelessWorkerOptions = {
 		compatibilityDate: config.compatibility_date,

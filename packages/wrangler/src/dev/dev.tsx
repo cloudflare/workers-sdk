@@ -41,6 +41,7 @@ import type {
 	StartDevWorkerOptions,
 	Trigger,
 } from "../api";
+import type { AssetsConfig } from "../assets";
 import type { Config } from "../config";
 import type { Route } from "../config/environment";
 import type { Entry } from "../deployment-bundle/entry";
@@ -231,8 +232,9 @@ export type DevProps = {
 	crons: Config["triggers"]["crons"];
 	queueConsumers: Config["queues"]["consumers"];
 	isWorkersSite: boolean;
-	assetPaths: AssetPaths | undefined;
-	assetsConfig: Config["legacy_assets"];
+	legacyAssetPaths: AssetPaths | undefined;
+	legacyAssetsConfig: Config["legacy_assets"];
+	assetsConfig: AssetsConfig | undefined;
 	compatibilityDate: string;
 	compatibilityFlags: string[] | undefined;
 	usageModel: "bundled" | "unbound" | undefined;
@@ -413,6 +415,7 @@ function DevSession(props: DevSessionProps) {
 			bindings: convertCfWorkerInitBindingstoBindings(props.bindings),
 
 			triggers: [...routes, ...queueConsumers, ...crons],
+			experimentalAssets: props.assetsConfig,
 			env: props.env,
 			build: {
 				additionalModules: props.additionalModules,
@@ -462,17 +465,17 @@ function DevSession(props: DevSessionProps) {
 			},
 			legacy: {
 				site:
-					props.isWorkersSite && props.assetPaths
+					props.isWorkersSite && props.legacyAssetPaths
 						? {
 								bucket: path.join(
-									props.assetPaths.baseDirectory,
-									props.assetPaths?.assetDirectory
+									props.legacyAssetPaths.baseDirectory,
+									props.legacyAssetPaths?.assetDirectory
 								),
-								include: props.assetPaths.includePatterns,
-								exclude: props.assetPaths.excludePatterns,
+								include: props.legacyAssetPaths.includePatterns,
+								exclude: props.legacyAssetPaths.excludePatterns,
 							}
 						: undefined,
-				legacyAssets: props.assetsConfig,
+				legacyAssets: props.legacyAssetsConfig,
 				enableServiceEnvironments: !props.legacyEnv,
 			},
 			unsafe: {
@@ -489,9 +492,10 @@ function DevSession(props: DevSessionProps) {
 		props.compatibilityFlags,
 		props.bindings,
 		props.entry,
-		props.assetPaths,
+		props.legacyAssetPaths,
 		props.isWorkersSite,
 		props.local,
+		props.legacyAssetsConfig,
 		props.assetsConfig,
 		props.processEntrypoint,
 		props.additionalModules,
@@ -591,7 +595,7 @@ function DevSession(props: DevSessionProps) {
 		rules: props.rules,
 		jsxFragment: props.jsxFragment,
 		serveAssetsFromWorker: Boolean(
-			props.assetPaths && !props.isWorkersSite && props.local
+			props.legacyAssetPaths && !props.isWorkersSite && props.local
 		),
 		tsconfig: props.tsconfig,
 		minify: props.minify,
@@ -600,7 +604,7 @@ function DevSession(props: DevSessionProps) {
 		alias: props.alias,
 		noBundle: props.noBundle,
 		findAdditionalModules: props.findAdditionalModules,
-		legacyAssets: props.assetsConfig,
+		legacyAssets: props.legacyAssetsConfig,
 		durableObjects: props.bindings.durable_objects || { bindings: [] },
 		local: props.local,
 		// Enable the bundling to know whether we are using dev or deploy
@@ -683,7 +687,8 @@ function DevSession(props: DevSessionProps) {
 			usageModel={props.usageModel}
 			bindings={props.bindings}
 			workerDefinitions={workerDefinitions}
-			assetPaths={props.assetPaths}
+			legacyAssetPaths={props.legacyAssetPaths}
+			experimentalAssets={props.assetsConfig}
 			initialPort={undefined} // hard-code for userworker, DevEnv-ProxyWorker now uses this prop value
 			initialIp={"127.0.0.1"} // hard-code for userworker, DevEnv-ProxyWorker now uses this prop value
 			rules={props.rules}
@@ -710,7 +715,7 @@ function DevSession(props: DevSessionProps) {
 			bundle={bundle}
 			format={props.entry.format}
 			bindings={props.bindings}
-			assetPaths={props.assetPaths}
+			legacyAssetPaths={props.legacyAssetPaths}
 			isWorkersSite={props.isWorkersSite}
 			port={props.initialPort}
 			ip={props.initialIp}

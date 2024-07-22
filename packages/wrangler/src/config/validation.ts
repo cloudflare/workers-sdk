@@ -285,6 +285,11 @@ export function normalizeAndValidateConfig(
 			configPath,
 			rawConfig
 		),
+		experimental_assets: normalizeAndValidateExperimentalAssets(
+			diagnostics,
+			configPath,
+			rawConfig
+		),
 		alias: normalizeAndValidateAliases(diagnostics, configPath, rawConfig),
 		wasm_modules: normalizeAndValidateModulePaths(
 			diagnostics,
@@ -746,6 +751,64 @@ function normalizeAndValidateLegacyAssets(
 		exclude,
 		browser_TTL,
 		serve_single_page_app,
+	};
+}
+
+/**
+ * Validate the `experimental_assets` configuration and return normalized values.
+ */
+function normalizeAndValidateExperimentalAssets(
+	diagnostics: Diagnostics,
+	configPath: string | undefined,
+	rawConfig: RawConfig
+): Config["experimental_assets"] {
+	const experimentalAssetsConfig = rawConfig["experimental_assets"];
+
+	if (typeof experimentalAssetsConfig === "string") {
+		return experimentalAssetsConfig;
+	}
+
+	if (experimentalAssetsConfig === undefined) {
+		return undefined;
+	}
+
+	const fieldName = rawConfig["assets"] ? "assets" : "legacy_assets";
+
+	if (typeof experimentalAssetsConfig !== "object") {
+		diagnostics.errors.push(
+			`Expected the \`${fieldName}\` field to be a string or an object, but got ${typeof experimentalAssetsConfig}.`
+		);
+		return undefined;
+	}
+
+	const { directory, binding, config, ...rest } = experimentalAssetsConfig;
+
+	validateAdditionalProperties(diagnostics, fieldName, Object.keys(rest), []);
+
+	validateOptionalProperty(
+		diagnostics,
+		fieldName,
+		"directory",
+		directory,
+		"string"
+	);
+
+	validateOptionalProperty(
+		diagnostics,
+		fieldName,
+		"binding",
+		binding,
+		"string"
+	);
+
+	validateOptionalProperty(diagnostics, fieldName, "config", config, "string");
+
+	// TODO: Should we load the external confiig here, or handle that later on?
+
+	return {
+		directory,
+		binding,
+		config,
 	};
 }
 

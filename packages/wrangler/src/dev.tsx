@@ -10,6 +10,7 @@ import {
 	convertCfWorkerInitBindingstoBindings,
 	extractBindingsOfType,
 } from "./api/startDevWorker/utils";
+import { getAssetsConfig } from "./assets";
 import { findWranglerToml, printBindings, readConfig } from "./config";
 import { getEntry } from "./deployment-bundle/entry";
 import { validateNodeCompat } from "./deployment-bundle/node-compat";
@@ -177,6 +178,12 @@ export function devOptions(yargs: CommonYargsArgv) {
 				requiresArg: true,
 			})
 			.option("assets", {
+				describe: "(Experimental) Static assets to be served",
+				type: "string",
+				requiresArg: true,
+				hidden: true,
+			})
+			.option("experimental-assets", {
 				describe: "(Experimental) Static assets to be served",
 				type: "string",
 				requiresArg: true,
@@ -381,8 +388,14 @@ This is currently not supported 😭, but we think that we'll get it to work soo
 		);
 	}
 
-	if (args.legacyAssets && args.assets) {
-		throw new UserError("Cannot use both --assets and --legacy-assets.");
+	if (
+		(args.legacyAssets && args.assets) ||
+		(args.legacyAssets && args.experimentalAssets) ||
+		(args.assets && args.experimentalAssets)
+	) {
+		throw new UserError(
+			"Cannot use --assets, --legacy-assets or --experimental-assets together."
+		);
 	}
 
 	args.legacyAssets = args.legacyAssets ?? args.assets;
@@ -561,6 +574,10 @@ export async function startDev(args: StartDevOptions) {
 			);
 		}
 
+		if (args.experimentalAssets) {
+			args.forceLocal = true;
+		}
+
 		const projectRoot = configPath && path.dirname(configPath);
 
 		const devEnv = new DevEnv();
@@ -623,7 +640,8 @@ export async function startDev(args: StartDevOptions) {
 						pattern: r,
 					})
 				),
-
+				experimentalAssets: (configParam) =>
+					getAssetsConfig(configParam, args.experimentalAssets),
 				build: {
 					bundle: args.bundle !== undefined ? args.bundle : undefined,
 					define: collectKeyValues(args.define),
@@ -836,8 +854,12 @@ export async function startDev(args: StartDevOptions) {
 						configParam.account_id ??
 						getAccountFromCache()?.id
 					}
-					assetPaths={assetPaths}
-					assetsConfig={configParam.legacy_assets}
+					legacyAssetPaths={assetPaths}
+					legacyAssetsConfig={configParam.legacy_assets}
+					assetsConfig={await getAssetsConfig(
+						configParam,
+						args.experimentalAssets
+					)}
 					initialPort={
 						args.port ?? configParam.dev.port ?? (await getLocalPort())
 					}
@@ -997,8 +1019,9 @@ export async function startApiDev(args: StartDevOptions) {
 			liveReload: args.liveReload ?? false,
 			accountId:
 				args.accountId ?? configParam.account_id ?? getAccountFromCache()?.id,
-			assetPaths: assetPaths,
-			assetsConfig: configParam.legacy_assets,
+			legacyAssetPaths: assetPaths,
+			legacyAssetsConfig: configParam.legacy_assets,
+			assetsConfig: await getAssetsConfig(configParam, args.experimentalAssets),
 			//port can be 0, which means to use a random port
 			initialPort: args.port ?? configParam.dev.port ?? (await getLocalPort()),
 			initialIp: args.ip ?? configParam.dev.ip,
@@ -1139,6 +1162,7 @@ export async function validateDevServerSettings(
 	const entry = await getEntry(
 		{
 			legacyAssets: args.legacyAssets,
+			experimentalAssets: args.experimentalAssets,
 			script: args.script,
 			moduleRoot: args.moduleRoot,
 		},
@@ -1186,7 +1210,10 @@ export async function validateDevServerSettings(
 	}
 
 	if (
-		(args.legacyAssets ?? config.legacy_assets) &&
+		(args.legacyAssets ??
+			config.legacy_assets ??
+			args.experimentalAssets ??
+			config.experimental_assets) &&
 		(args.site ?? config.site)
 	) {
 		throw new UserError(

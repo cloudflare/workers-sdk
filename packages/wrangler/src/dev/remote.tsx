@@ -105,7 +105,7 @@ interface RemoteProps {
 	bundle: EsbuildBundle | undefined;
 	format: CfScriptFormat | undefined;
 	isWorkersSite: boolean;
-	assetPaths: AssetPaths | undefined;
+	legacyAssetPaths: AssetPaths | undefined;
 	port: number;
 	ip: string;
 	localProtocol: "https" | "http";
@@ -142,7 +142,7 @@ export function Remote(props: RemoteProps) {
 		modules: props.bundle ? props.bundle.modules : [],
 		accountId: props.accountId,
 		bindings: props.bindings,
-		assetPaths: props.assetPaths,
+		assetPaths: props.legacyAssetPaths,
 		isWorkersSite: props.isWorkersSite,
 		compatibilityDate: props.compatibilityDate,
 		compatibilityFlags: props.compatibilityFlags,
@@ -469,7 +469,7 @@ export async function startRemoteServer(
 		previewToken,
 		assetDirectory: props.isWorkersSite
 			? undefined
-			: props.assetPaths?.assetDirectory,
+			: props.legacyAssetPaths?.assetDirectory,
 		localProtocol: props.localProtocol,
 		customHttpsKeyPath: props.httpsKeyPath,
 		customHttpsCertPath: props.httpsCertPath,
@@ -559,7 +559,7 @@ export async function getRemotePreviewToken(props: RemoteProps) {
 			legacyEnv: props.legacyEnv,
 			env: props.env,
 			isWorkersSite: props.isWorkersSite,
-			assetPaths: props.assetPaths,
+			assetPaths: props.legacyAssetPaths,
 			format: props.format,
 			bindings: props.bindings,
 			compatibilityDate: props.compatibilityDate,

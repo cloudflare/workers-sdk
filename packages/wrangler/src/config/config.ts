@@ -130,6 +130,12 @@ export interface ConfigFields<Dev extends RawDevConfig> {
 		| string
 		| undefined;
 
+	experimental_assets:
+		| { config: undefined; directory: string; binding?: string }
+		| { config?: string; binding?: string; directory?: string }
+		| string
+		| undefined;
+
 	/**
 	 * A list of wasm modules that your worker should be bound to. This is
 	 * the "legacy" way of binding to a wasm module. ES module workers should
@@ -355,6 +361,7 @@ export const defaultWranglerConfig: Config = {
 	legacy_env: true,
 	site: undefined,
 	legacy_assets: undefined,
+	experimental_assets: undefined,
 	wasm_modules: undefined,
 	text_blobs: undefined,
 	data_blobs: undefined,

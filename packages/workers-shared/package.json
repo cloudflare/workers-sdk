@@ -1,0 +1,34 @@
+{
+	"name": "@cloudflare/workers-shared",
+	"version": "0.0.0",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/cloudflare/workers-sdk.git",
+		"directory": "packages/workers-shared"
+	},
+	"files": [
+		"tsconfig.json",
+		"asset-server/**/*"
+	],
+	"scripts": {
+		"check:lint": "eslint . --max-warnings=0",
+		"check:type": "tsc",
+		"test": "vitest run",
+		"test:ci": "vitest run"
+	},
+	"dependencies": {
+		"miniflare": "workspace:*"
+	},
+	"devDependencies": {
+		"@cloudflare/workers-tsconfig": "workspace:*",
+		"@cloudflare/workers-types": "^4.20240712.0",
+		"concurrently": "^8.2.2",
+		"glob": "^10.3.3"
+	},
+	"volta": {
+		"extends": "../../package.json"
+	},
+	"workers-sdk": {
+		"prerelease": true
+	}
+}
