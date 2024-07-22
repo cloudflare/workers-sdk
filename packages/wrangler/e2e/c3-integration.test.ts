@@ -1,3 +1,4 @@
+import assert from "node:assert";
 import { execSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import path from "node:path";
@@ -14,7 +15,12 @@ describe("c3 integration", () => {
 	beforeAll(async () => {
 		const pathToC3 = path.resolve(__dirname, "../../create-cloudflare");
 		execSync("pnpm pack --pack-destination ./pack", { cwd: pathToC3 });
-		const version = execSync("ls pack", { encoding: "utf-8", cwd: pathToC3 });
+		const versions = execSync("ls -1 pack", {
+			encoding: "utf-8",
+			cwd: pathToC3,
+		});
+		const version = versions.trim().split("\n").at(-1); // get last version
+		assert(version);
 		c3Packed = path.join(pathToC3, "pack", version);
 	});
 
@@ -32,7 +38,7 @@ describe("c3 integration", () => {
 			env,
 		});
 
-		expect(init.stdout).toContain("APPLICATION CREATED");
+		expect(init.output).toContain("APPLICATION CREATED");
 
 		expect(existsSync(path.join(helper.tmpPath, workerName))).toBe(true);
 	});

@@ -32,7 +32,7 @@ export function runCommand(
 	{ cwd, env, timeout = DEFAULT_TIMEOUT }: CommandOptions = {}
 ) {
 	try {
-		const { status, stdout, stderr } = spawnSync(command, [], {
+		const { status, stdout, stderr, output } = spawnSync(command, [], {
 			shell: true,
 			cwd,
 			stdio: "pipe",
@@ -49,7 +49,12 @@ export function runCommand(
 				console.error(stderr);
 			}
 		}
-		return { status, stdout, stderr };
+		return {
+			status,
+			stdout,
+			stderr,
+			output: output.filter(Boolean).join("\n"),
+		};
 	} catch (e) {
 		if (isTimedOutError(e)) {
 			throw new Error(dedent`
