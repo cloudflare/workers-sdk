@@ -2,4 +2,4 @@
 "create-cloudflare": patch
 ---
 
-fix(create-cloudflare): support GitHub URL with subdirectory
+fix: support GitHub URL with subdirectory
