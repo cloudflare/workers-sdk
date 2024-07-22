@@ -166,5 +166,29 @@ describe.skipIf(frameworkToTest || isQuarantineMode())(
 				expect(output).toContain(`no deploy`);
 			},
 		);
+
+		test.skipIf(process.platform === "win32")(
+			"Cloning remote template with full GitHub URL",
+			async () => {
+				const { output } = await runC3(
+					[
+						projectPath,
+						"--template=https://github.com/cloudflare/workers-sdk/tree/main/templates/worker-router",
+						"--no-deploy",
+						"--git=false",
+					],
+					[],
+					logStream,
+				);
+
+				expect(output).toContain(
+					`repository https://github.com/cloudflare/workers-sdk/tree/main/templates/worker-router`,
+				);
+				expect(output).toContain(
+					`Cloning template from: github:cloudflare/workers-sdk/templates/worker-router`,
+				);
+				expect(output).toContain(`template cloned and validated`);
+			},
+		);
 	},
 );
