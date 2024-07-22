@@ -2,4 +2,4 @@
 "create-cloudflare": patch
 ---
 
-fix: cloning non-existent or private repository should fail gracefully
+fix: creating an application from a non-existent or private repository will no longer cause the CLI to get stuck in the cloning stage
