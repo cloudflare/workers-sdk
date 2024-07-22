@@ -81,16 +81,19 @@ export async function generate({
 	const flagsString = compatibilityFlags.length
 		? `+${compatibilityFlags.join("+")}`
 		: "";
+
 	const path = `http://dummy.com/${compatibilityDate}${flagsString}`;
 
-	const res = await mf.dispatchFetch(path);
-	const text = await res.text();
+	try {
+		const res = await mf.dispatchFetch(path);
+		const text = await res.text();
 
-	if (!res.ok) {
-		throw new Error(text);
+		if (!res.ok) {
+			throw new Error(text);
+		}
+
+		return text;
+	} finally {
+		await mf.dispose();
 	}
-
-	await mf.dispose();
-
-	return text;
 }
