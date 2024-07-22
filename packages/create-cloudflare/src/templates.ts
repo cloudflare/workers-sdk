@@ -398,7 +398,7 @@ const inferCopyFilesDefinition = (path: string): CopyFiles => {
  *            For convenience, `owner/repo` is also accepted.
  * @returns A path to a temporary directory containing the downloaded template
  */
-const downloadRemoteTemplate = async (src: string) => {
+export const downloadRemoteTemplate = async (src: string) => {
 	const s = spinner();
 	try {
 		s.start(`Cloning template from: ${blue(src)}`);

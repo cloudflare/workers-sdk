@@ -1,4 +1,6 @@
 import { existsSync, statSync } from "fs";
+import { spinner } from "@cloudflare/cli/interactive";
+import degit from "degit";
 import { mockSpinner } from "helpers/__tests__/mocks";
 import {
 	appendFile,
@@ -6,11 +8,12 @@ import {
 	readFile,
 	writeFile,
 } from "helpers/files";
-import { beforeEach, describe, expect, test, vi } from "vitest";
-import { addWranglerToGitIgnore } from "../templates";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import { addWranglerToGitIgnore, downloadRemoteTemplate } from "../templates";
 import type { PathLike } from "fs";
 import type { C3Context } from "types";
 
+vi.mock("degit");
 vi.mock("fs");
 vi.mock("helpers/files");
 vi.mock("@cloudflare/cli/interactive");
@@ -245,4 +248,33 @@ describe("addWranglerToGitIgnore", () => {
 			filePath === path ? content.replace(/\n\s*/g, "\n") : "",
 		);
 	}
+});
+
+describe("downloadRemoteTemplate", () => {
+	function mockDegit() {
+		// @ts-expect-error only clone will be used
+		return vi.mocked(degit).mockReturnValue({
+			clone: () => Promise.resolve(),
+		});
+	}
+
+	afterEach(() => {
+		vi.resetAllMocks();
+	});
+
+	test("should download template using degit", async () => {
+		const mock = mockDegit();
+
+		await downloadRemoteTemplate("cloudflare/workers-sdk");
+
+		expect(mock).toBeCalled();
+	});
+
+	test("should not use a spinner", async () => {
+		mockDegit();
+
+		await downloadRemoteTemplate("cloudflare/workers-sdk");
+
+		expect(spinner).not.toBeCalled();
+	});
 });
