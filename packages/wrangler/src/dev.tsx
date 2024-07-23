@@ -27,7 +27,6 @@ import { run } from "./experimental-flags";
 import isInteractive from "./is-interactive";
 import { logger } from "./logger";
 import * as metrics from "./metrics";
-import { generateASSETSBinding } from "./miniflare-cli/generateASSETSBinding";
 import { getLegacyAssetPaths, getSiteAssetPaths } from "./sites";
 import {
 	getAccountFromCache,
@@ -524,6 +523,16 @@ async function getPagesAssetsFetcher(
 	options: EnablePagesAssetsServiceBindingOptions | undefined
 ): Promise<StartDevWorkerInput["bindings"] | undefined> {
 	if (options !== undefined) {
+		// `../miniflare-cli/assets` dynamically imports`@cloudflare/pages-shared/environment-polyfills`.
+		// `@cloudflare/pages-shared/environment-polyfills/types.ts` defines `global`
+		// augmentations that pollute the `import`-site's typing environment.
+		//
+		// We `require` instead of `import`ing here to avoid polluting the main
+		// `wrangler` TypeScript project with the `global` augmentations. This
+		// relies on the fact that `require` is untyped.
+		//
+		// eslint-disable-next-line @typescript-eslint/no-var-requires
+		const generateASSETSBinding = require("./miniflare-cli/assets").default;
 		return {
 			ASSETS: {
 				type: "fetcher",
