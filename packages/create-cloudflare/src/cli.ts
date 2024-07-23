@@ -90,7 +90,7 @@ export const runCli = async (args: Partial<C3Args>) => {
 	const originalCWD = process.cwd();
 	const { name, path } = setupProjectDirectory(validatedArgs);
 
-	const template = await selectTemplate(args);
+	const template = await selectTemplate(validatedArgs);
 	const ctx: C3Context = {
 		project: { name, path },
 		args: validatedArgs,
