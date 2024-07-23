@@ -523,7 +523,7 @@ async function getPagesAssetsFetcher(
 	options: EnablePagesAssetsServiceBindingOptions | undefined
 ): Promise<StartDevWorkerInput["bindings"] | undefined> {
 	if (options !== undefined) {
-		// `../miniflare-cli/assets` dynamically imports`@cloudflare/pages-shared/environment-polyfills`.
+		// `./miniflare-cli/assets` dynamically imports`@cloudflare/pages-shared/environment-polyfills`.
 		// `@cloudflare/pages-shared/environment-polyfills/types.ts` defines `global`
 		// augmentations that pollute the `import`-site's typing environment.
 		//
