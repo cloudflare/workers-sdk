@@ -27,7 +27,6 @@ import type {
 import type { WorkerRegistry } from "../../dev-registry";
 import type { CfAccount } from "../../dev/create-worker-preview";
 import type { EsbuildBundle } from "../../dev/use-esbuild";
-import type { EnablePagesAssetsServiceBindingOptions } from "../../miniflare-cli/types";
 import type { ConfigController } from "./ConfigController";
 import type {
 	DispatchFetch,
@@ -160,7 +159,6 @@ export interface StartDevWorkerInput {
 		site?: Hook<Config["site"], [Config]>;
 		legacyAssets?: Hook<Config["legacy_assets"], [Config]>;
 		enableServiceEnvironments?: boolean;
-		enablePagesAssetsServiceBinding?: EnablePagesAssetsServiceBindingOptions;
 	};
 	unsafe?: Omit<CfUnsafe, "bindings">;
 }

@@ -84,23 +84,6 @@ async function convertToConfigBundle(
 		event.bundle = { ...event.bundle, modules: [] };
 	}
 
-	if (event.config.legacy?.enablePagesAssetsServiceBinding !== undefined) {
-		// `../miniflare-cli/assets` dynamically imports`@cloudflare/pages-shared/environment-polyfills`.
-		// `@cloudflare/pages-shared/environment-polyfills/types.ts` defines `global`
-		// augmentations that pollute the `import`-site's typing environment.
-		//
-		// We `require` instead of `import`ing here to avoid polluting the main
-		// `wrangler` TypeScript project with the `global` augmentations. This
-		// relies on the fact that `require` is untyped.
-		//
-		// eslint-disable-next-line @typescript-eslint/no-var-requires
-		const generateASSETSBinding = require("../../miniflare-cli/assets").default;
-		fetchers.ASSETS = await generateASSETSBinding({
-			log: logger,
-			...event.config.legacy?.enablePagesAssetsServiceBinding,
-		});
-	}
-
 	return {
 		name: event.config.name,
 		bundle: event.bundle,
