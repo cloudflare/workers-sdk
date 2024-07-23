@@ -52,7 +52,7 @@ export function logRuntimeTypesMessage(
 		);
 	}
 	logger.info(
-		"📣 Remember to run 'wrangler types --x-with-runtime' again if you change 'compatibility_date' or 'compatibility_flags' in your wrangler.toml.\n"
+		"📣 Remember to run 'wrangler types --x-include-runtime' again if you change 'compatibility_date' or 'compatibility_flags' in your wrangler.toml.\n"
 	);
 }
 

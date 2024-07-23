@@ -40,7 +40,7 @@ describe("types", () => {
 	it("should generate runtime types at the default path", async () => {
 		const helper = new WranglerE2ETestHelper();
 		await helper.seed(seed);
-		const output = await helper.run(`wrangler types --x-with-runtime`);
+		const output = await helper.run(`wrangler types --x-include-runtime`);
 
 		const fileExists = existsSync(
 			path.join(helper.tmpPath, "./.wrangler/types/runtime.d.ts")
@@ -59,7 +59,7 @@ describe("types", () => {
 			`📣 It looks like you have some Node.js compatibility turned on in your project. You might want to consider adding Node.js typings with "npm i --save-dev @types/node@20.8.3". Please see the docs for more details: https://developers.cloudflare.com/workers/languages/typescript/#transitive-loading-of-typesnode-overrides-cloudflareworkers-types`
 		);
 		expect(output.stdout).toContain(
-			`Remember to run 'wrangler types --x-with-runtime' again if you change 'compatibility_date' or 'compatibility_flags' in your wrangler.toml.`
+			`Remember to run 'wrangler types --x-include-runtime' again if you change 'compatibility_date' or 'compatibility_flags' in your wrangler.toml.`
 		);
 	});
 
@@ -67,7 +67,7 @@ describe("types", () => {
 		const helper = new WranglerE2ETestHelper();
 		await helper.seed(seed);
 		const output = await helper.run(
-			`wrangler types --x-with-runtime="./types.d.ts"`
+			`wrangler types --x-include-runtime="./types.d.ts"`
 		);
 
 		const fileExists = existsSync(path.join(helper.tmpPath, "./types.d.ts"));
@@ -80,7 +80,7 @@ describe("types", () => {
 	it("should generate types", async () => {
 		const helper = new WranglerE2ETestHelper();
 		await helper.seed(seed);
-		await helper.run(`wrangler types --x-with-runtime="./types.d.ts"`);
+		await helper.run(`wrangler types --x-include-runtime="./types.d.ts"`);
 
 		const file = (
 			await readFile(path.join(helper.tmpPath, "./types.d.ts"))
@@ -102,7 +102,7 @@ describe("types", () => {
 			`,
 		});
 		const output = await helper.run(
-			`wrangler types --x-with-runtime="./types.d.ts"`
+			`wrangler types --x-include-runtime="./types.d.ts"`
 		);
 
 		expect(output.stdout).toContain(
@@ -123,7 +123,7 @@ describe("types", () => {
 			`,
 		});
 		const output = await helper.run(
-			`wrangler types --x-with-runtime="./types.d.ts"`
+			`wrangler types --x-include-runtime="./types.d.ts"`
 		);
 
 		expect(output.stdout).not.toContain(

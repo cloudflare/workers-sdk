@@ -34,10 +34,10 @@ export function typesOptions(yargs: CommonYargsArgv) {
 			describe: "The name of the generated environment interface",
 			requiresArg: true,
 		})
-		.option("experimental-with-runtime", {
-			alias: "x-with-runtime",
+		.option("experimental-include-runtime", {
+			alias: "x-include-runtime",
 			type: "string",
-			describe: "The outfile for runtime types",
+			describe: "The path of the generated runtime types file",
 			demandOption: false,
 		});
 }
@@ -80,13 +80,13 @@ export async function typesHandler(
 
 	const config = readConfig(configPath, args);
 
-	// args.xRuntime will be a string if the user passes "--x-runtime" or "--x-runtime=..."
-	if (typeof args.experimentalWithRuntime === "string") {
+	// args.xRuntime will be a string if the user passes "--x-include-runtime" or "--x-include-runtime=..."
+	if (typeof args.experimentalIncludeRuntime === "string") {
 		logger.log(`Generating runtime types...`);
 
 		const { outFile } = await generateRuntimeTypes({
 			config,
-			outFile: args.experimentalWithRuntime || undefined,
+			outFile: args.experimentalIncludeRuntime || undefined,
 		});
 
 		const tsconfigPath =
