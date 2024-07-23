@@ -1,5 +1,39 @@
 # create-cloudflare
 
+## 2.22.2
+
+### Patch Changes
+
+- [#6308](https://github.com/cloudflare/workers-sdk/pull/6308) [`d947d72`](https://github.com/cloudflare/workers-sdk/commit/d947d72ea518358bb11df94ede76c9aef7646ea4) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | gatsby     | 5.13.6 | 5.13.7 |
+
+- [#6309](https://github.com/cloudflare/workers-sdk/pull/6309) [`a04796d`](https://github.com/cloudflare/workers-sdk/commit/a04796db7f618999c04c9a7b5ddc30d310ea3644) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency   | From   | To     |
+  | ------------ | ------ | ------ |
+  | create-solid | 0.5.11 | 0.5.12 |
+
+- [#6316](https://github.com/cloudflare/workers-sdk/pull/6316) [`7e421fb`](https://github.com/cloudflare/workers-sdk/commit/7e421fb75ddd4f21786c479da1beaf85ba3cdb56) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency  | From   | To     |
+  | ----------- | ------ | ------ |
+  | create-hono | 0.10.0 | 0.10.1 |
+
+- [#6306](https://github.com/cloudflare/workers-sdk/pull/6306) [`819eed9`](https://github.com/cloudflare/workers-sdk/commit/819eed9cc577517c8289f49916929996a069a85b) Thanks [@edmundhung](https://github.com/edmundhung)! - fix: creating an application from a non-existent or private repository will now be prompted for the username/password if required
+
+- [#6310](https://github.com/cloudflare/workers-sdk/pull/6310) [`20c0bf1`](https://github.com/cloudflare/workers-sdk/commit/20c0bf1cae81fdcc188aee4e87130bfdb8151543) Thanks [@edmundhung](https://github.com/edmundhung)! - fix: support GitHub URL with subdirectory
+
+  You can now copy+paste the URL directly from your address bar when you find a template within a (mono)repo on github.com.
+
 ## 2.22.1
 
 ### Patch Changes
