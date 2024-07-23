@@ -88,6 +88,7 @@ export async function typesHandler(
 			config,
 			outFile: args.experimentalWithRuntime || undefined,
 		});
+
 		const tsconfigPath =
 			config.tsconfig ?? join(dirname(configPath), "tsconfig.json");
 		const tsconfigTypes = readTsconfigTypes(tsconfigPath);

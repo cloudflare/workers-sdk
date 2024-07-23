@@ -56,7 +56,7 @@ describe("types", () => {
 			`"types": ["./.wrangler/types/runtime.d.ts"]`
 		);
 		expect(output.stdout).toContain(
-			`📣 It looks like you have some node compatibility turned on in your project. You might want to consider adding Node.js typings with "npm i --save-dev @types/node@20.8.3". Please see the docs for more details: https://developers.cloudflare.com/workers/languages/typescript/#transitive-loading-of-typesnode-overrides-cloudflareworkers-types`
+			`📣 It looks like you have some Node.js compatibility turned on in your project. You might want to consider adding Node.js typings with "npm i --save-dev @types/node@20.8.3". Please see the docs for more details: https://developers.cloudflare.com/workers/languages/typescript/#transitive-loading-of-typesnode-overrides-cloudflareworkers-types`
 		);
 		expect(output.stdout).toContain(
 			`Remember to run 'wrangler types --x-with-runtime' again if you change 'compatibility_date' or 'compatibility_flags' in your wrangler.toml.`
@@ -87,5 +87,47 @@ describe("types", () => {
 		).toString();
 
 		expect(file).contains('declare module "cloudflare:workers"');
+	});
+
+	it("should recommend to uninstall @cloudflare/workers-types", async () => {
+		const helper = new WranglerE2ETestHelper();
+		await helper.seed({
+			...seed,
+			"tsconfig.json": dedent`
+			{
+				"compilerOptions": {
+					"types": ["@cloudflare/workers-types"]
+				}
+			}
+			`,
+		});
+		const output = await helper.run(
+			`wrangler types --x-with-runtime="./types.d.ts"`
+		);
+
+		expect(output.stdout).toContain(
+			`📣 You can now uninstall "@cloudflare/workers-types".`
+		);
+	});
+
+	it("should not recommend to install @types/node if 'node' exists in types array", async () => {
+		const helper = new WranglerE2ETestHelper();
+		await helper.seed({
+			...seed,
+			"tsconfig.json": dedent`
+			{
+				"compilerOptions": {
+					"types": ["node"]
+				}
+			}
+			`,
+		});
+		const output = await helper.run(
+			`wrangler types --x-with-runtime="./types.d.ts"`
+		);
+
+		expect(output.stdout).not.toContain(
+			`📣 It looks like you have some Node.js compatibility turned on in your project. You might want to consider adding Node.js typings with "npm i --save-dev @types/node@20.8.3". Please see the docs for more details: https://developers.cloudflare.com/workers/languages/typescript/#transitive-loading-of-typesnode-overrides-cloudflareworkers-types`
+		);
 	});
 });

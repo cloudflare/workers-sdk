@@ -1,3 +1,4 @@
+import { dedent } from "ts-dedent";
 import { logger } from "../../logger";
 
 /**
@@ -8,31 +9,46 @@ export function logRuntimeTypesMessage(
 	tsconfigTypes: string[],
 	isNodeCompat = false
 ) {
-	const isWorkersTypesInstalled = workersTypesEntryExists(tsconfigTypes);
+	const isWorkersTypesInstalled = tsconfigTypes.find((type) =>
+		type.startsWith("@cloudflare/workers-types")
+	);
+	const isNodeTypesInstalled = tsconfigTypes.find((type) => type === "node");
 	const updatedTypesString = buildUpdatedTypesString(tsconfigTypes, outFile);
 
-	const message = isWorkersTypesInstalled
-		? `\n📣 Replace the existing "@cloudflare/workers-types" entry with the generated types path:`
-		: "📣 Add the generated types to the types array in your tsconfig.json:";
+	logger.info(`✨ Runtime types written to ${outFile}`);
 
-	logger.info(`
-✨ Runtime types written to ${outFile}
-${message}
+	if (updatedTypesString) {
+		logger.info(dedent`
+			📣 Add the generated types to the types array in your tsconfig.json:
 
-{
-	"compilerOptions": {
-		...
-		"types": ${updatedTypesString}
-		...
+				{
+					"compilerOptions": {
+						...
+						"types": ${updatedTypesString}
+						...
+					}
+				}
+
+		`);
+	} else if (isWorkersTypesInstalled) {
+		logger.info(dedent`
+			📣 Replace the existing "@cloudflare/workers-types" entry with the generated types path:
+				{
+					"compilerOptions": {
+						...
+						"types": ${updatedTypesString}
+						...
+					}
+				}
+
+		`);
 	}
-}
-    `);
 	if (isWorkersTypesInstalled) {
 		logger.info('📣 You can now uninstall "@cloudflare/workers-types".');
 	}
-	if (isNodeCompat) {
+	if (isNodeCompat && !isNodeTypesInstalled) {
 		logger.info(
-			'📣 It looks like you have some node compatibility turned on in your project. You might want to consider adding Node.js typings with "npm i --save-dev @types/node@20.8.3". Please see the docs for more details: https://developers.cloudflare.com/workers/languages/typescript/#transitive-loading-of-typesnode-overrides-cloudflareworkers-types'
+			'📣 It looks like you have some Node.js compatibility turned on in your project. You might want to consider adding Node.js typings with "npm i --save-dev @types/node@20.8.3". Please see the docs for more details: https://developers.cloudflare.com/workers/languages/typescript/#transitive-loading-of-typesnode-overrides-cloudflareworkers-types'
 		);
 	}
 	logger.info(
@@ -47,23 +63,14 @@ ${message}
 function buildUpdatedTypesString(
 	types: string[],
 	newTypesPath: string
-): string {
+): string | null {
+	if (types.some((type) => type.includes(".wrangler/types/runtime"))) {
+		return null;
+	}
+
 	const updatedTypesArray = types
-		.filter(
-			(type) =>
-				!type.startsWith("@cloudflare/workers-types") &&
-				!type.includes(".wrangler/types/runtime")
-		)
+		.filter((type) => !type.startsWith("@cloudflare/workers-types"))
 		.concat([newTypesPath]);
 
 	return JSON.stringify(updatedTypesArray);
-}
-
-/**
- * Find any @cloudflare/workers-types entry in the tsconfig.json types array.
- */
-function workersTypesEntryExists(types: string[]): boolean {
-	return Boolean(
-		types.find((type) => type.startsWith("@cloudflare/workers-types"))
-	);
 }
