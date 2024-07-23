@@ -1,5 +1,22 @@
 # wrangler
 
+## 3.66.0
+
+### Minor Changes
+
+- [#6295](https://github.com/cloudflare/workers-sdk/pull/6295) [`ebc85c3`](https://github.com/cloudflare/workers-sdk/commit/ebc85c362a424778b7f0565217488504bd42964e) Thanks [@andyjessop](https://github.com/andyjessop)! - feat: introduce an experimental flag for `wrangler types` to dynamically generate runtime types according to the user's project configuration.
+
+- [#6272](https://github.com/cloudflare/workers-sdk/pull/6272) [`084d39e`](https://github.com/cloudflare/workers-sdk/commit/084d39e15e35471fabfb789dd280afe16a919fcf) Thanks [@emily-shen](https://github.com/emily-shen)! - fix: add `legacy-assets` config and flag as alias of current `assets` behavior
+
+  - The existing behavior of the `assets` config key/flag will change on August 15th.
+  - `legacy-assets` will preserve current functionality.
+
+### Patch Changes
+
+- [#6203](https://github.com/cloudflare/workers-sdk/pull/6203) [`5462ead`](https://github.com/cloudflare/workers-sdk/commit/5462ead9207459e7547ba571157159c8618d3583) Thanks [@geelen](https://github.com/geelen)! - fix: Updating to match new D1 import/export API format
+
+- [#6315](https://github.com/cloudflare/workers-sdk/pull/6315) [`3fd94e7`](https://github.com/cloudflare/workers-sdk/commit/3fd94e7c6ed29339797d9376a8b8398724085b66) Thanks [@penalosa](https://github.com/penalosa)! - chore: Add RayID to `wrangler login` error message displayed when a user hits a bot challenge page
+
 ## 3.65.1
 
 ### Patch Changes
