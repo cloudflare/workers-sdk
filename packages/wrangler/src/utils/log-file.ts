@@ -1,10 +1,11 @@
-import { appendFile, mkdir, readFile } from "node:fs/promises";
+import { appendFile, readFile } from "node:fs/promises";
 import path from "node:path";
 import { Mutex } from "miniflare";
 import onExit from "signal-exit";
 import { getEnvironmentVariableFactory } from "../environment-variables/factory";
 import { getGlobalWranglerConfigPath } from "../global-wrangler-config-path";
 import { logger } from "../logger";
+import { ensureDirectoryExists } from "./filesystem";
 import type { LoggerLevel } from "../logger";
 
 const getDebugFileDir = getEnvironmentVariableFactory({
@@ -32,12 +33,6 @@ function getDebugFilepath() {
 
 	// use path.resolve to allow the user-provided env var to be a relative path
 	return path.resolve(filepath);
-}
-
-async function ensureDirectoryExists(filepath: string) {
-	const dirpath = path.dirname(filepath);
-
-	await mkdir(dirpath, { recursive: true });
 }
 
 export const debugLogFilepath = getDebugFilepath();

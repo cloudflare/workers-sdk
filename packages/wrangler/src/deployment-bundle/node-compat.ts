@@ -1,5 +1,6 @@
 import { UserError } from "../errors";
 import { logger } from "../logger";
+import type { Config } from "../config";
 
 /**
  * Wrangler can provide Node.js compatibility in a number of different modes:
@@ -42,9 +43,11 @@ export function validateNodeCompat({
 		);
 	}
 
-	const nodejsCompatV2 = compatibilityFlags.includes(
-		"experimental:nodejs_compat_v2"
-	);
+	const { mode, nodejsCompat, nodejsCompatV2 } = getNodeCompatMode({
+		compatibility_flags: compatibilityFlags,
+		node_compat: legacyNodeCompat,
+	});
+
 	const nodejsCompatV2NotExperimental =
 		compatibilityFlags.includes("nodejs_compat_v2");
 
@@ -55,7 +58,6 @@ export function validateNodeCompat({
 		] = "nodejs_compat_v2";
 	}
 
-	const nodejsCompat = compatibilityFlags.includes("nodejs_compat");
 	if (nodejsCompat && nodejsCompatV2) {
 		throw new UserError(
 			"The `nodejs_compat` and `nodejs_compat_v2` compatibility flags cannot be used in together. Please select just one."
@@ -92,14 +94,33 @@ export function validateNodeCompat({
 		);
 	}
 
+	return mode;
+}
+
+export function getNodeCompatMode({
+	compatibility_flags,
+	node_compat,
+}: Pick<Config, "compatibility_flags" | "node_compat">) {
+	const nodejsCompat = compatibility_flags.includes("nodejs_compat");
+	const nodejsCompatV2 = compatibility_flags.includes(
+		"experimental:nodejs_compat_v2"
+	);
+
+	let mode: NodeJSCompatMode;
 	if (nodejsCompatV2) {
-		return "v2";
+		mode = "v2";
+	} else if (nodejsCompat) {
+		mode = "v1";
+	} else if (node_compat) {
+		mode = "legacy";
+	} else {
+		mode = null;
 	}
-	if (nodejsCompat) {
-		return "v1";
-	}
-	if (legacyNodeCompat) {
-		return "legacy";
-	}
-	return null;
+
+	return {
+		legacy: node_compat === true,
+		mode,
+		nodejsCompat,
+		nodejsCompatV2,
+	};
 }

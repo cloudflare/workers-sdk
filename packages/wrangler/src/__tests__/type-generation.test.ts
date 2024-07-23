@@ -274,13 +274,19 @@ describe("generateTypes()", () => {
 		await runWrangler("types -c my-wrangler-config-b.toml");
 
 		expect(std.out).toMatchInlineSnapshot(`
-		"interface Env {
+		"Generating project types...
+
+		interface Env {
 			var: \\"from wrangler toml\\";
 		}
+
+		Generating project types...
 
 		interface Env {
 			var: \\"from my-wrangler-config-a\\";
 		}
+
+		Generating project types...
 
 		interface Env {
 			var: \\"from my-wrangler-config-b\\";
@@ -313,7 +319,9 @@ describe("generateTypes()", () => {
 
 		await runWrangler("types");
 		expect(std.out).toMatchInlineSnapshot(`
-		"interface Env {
+		"Generating project types...
+
+		interface Env {
 			TEST_KV_NAMESPACE: KVNamespace;
 			SOMETHING: \\"asdasdfasdf\\";
 			ANOTHER: \\"thing\\";
@@ -413,7 +421,9 @@ describe("generateTypes()", () => {
 				/interface Env \{\s*\}/
 			);
 			expect(std.out).toMatchInlineSnapshot(`
-			"interface Env {
+			"Generating project types...
+
+			interface Env {
 			}
 			"
 		`);
@@ -467,7 +477,9 @@ describe("generateTypes()", () => {
 
 		await runWrangler("types");
 		expect(std.out).toMatchInlineSnapshot(`
-		"export {};
+		"Generating project types...
+
+		export {};
 		declare global {
 			const testing_unsafe: any;
 		}
@@ -486,7 +498,9 @@ describe("generateTypes()", () => {
 
 		await runWrangler("types");
 		expect(std.out).toMatchInlineSnapshot(`
-		"interface Env {
+		"Generating project types...
+
+		interface Env {
 			SOMETHING: \\"asdasdfasdf\\";
 			ANOTHER: \\"thing\\";
 			\\"some-other-var\\": \\"some-other-value\\";
@@ -520,7 +534,9 @@ describe("generateTypes()", () => {
 		await runWrangler("types");
 
 		expect(std.out).toMatchInlineSnapshot(`
-		"interface Env {
+		"Generating project types...
+
+		interface Env {
 			myTomlVarA: \\"A from wrangler toml\\";
 			myTomlVarB: \\"B from wrangler toml\\";
 			SECRET_A: string;
@@ -553,7 +569,9 @@ describe("generateTypes()", () => {
 		await runWrangler("types");
 
 		expect(std.out).toMatchInlineSnapshot(`
-		"interface Env {
+		"Generating project types...
+
+		interface Env {
 			MY_VARIABLE_A: string;
 			MY_VARIABLE_B: string;
 		}
@@ -574,7 +592,9 @@ describe("generateTypes()", () => {
 
 				await runWrangler("types --env-interface CloudflareEnv");
 				expect(std.out).toMatchInlineSnapshot(`
-			"interface CloudflareEnv {
+			"Generating project types...
+
+			interface CloudflareEnv {
 				SOMETHING: \\"asdasdfasdf\\";
 				ANOTHER: \\"thing\\";
 				\\"some-other-var\\": \\"some-other-value\\";

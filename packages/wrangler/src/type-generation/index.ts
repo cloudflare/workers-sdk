@@ -1,20 +1,24 @@
 import * as fs from "node:fs";
-import { basename, dirname, extname, relative, resolve } from "node:path";
+import { basename, dirname, extname, join, relative, resolve } from "node:path";
 import * as esmLexer from "es-module-lexer";
 import { findUpSync } from "find-up";
-import { findWranglerToml, readConfig } from "./config";
-import { getEntry } from "./deployment-bundle/entry";
-import { getVarsForDev } from "./dev/dev-vars";
-import { UserError } from "./errors";
-import { logger } from "./logger";
-import { printWranglerBanner } from "./update-check";
-import { CommandLineArgsError } from "./index";
-import type { Config } from "./config";
-import type { CfScriptFormat } from "./deployment-bundle/worker";
+import { findWranglerToml, readConfig } from "../config";
+import { getEntry } from "../deployment-bundle/entry";
+import { getNodeCompatMode } from "../deployment-bundle/node-compat";
+import { getVarsForDev } from "../dev/dev-vars";
+import { UserError } from "../errors";
+import { CommandLineArgsError } from "../index";
+import { logger } from "../logger";
+import { parseJSONC } from "../parse";
+import { printWranglerBanner } from "../update-check";
+import { generateRuntimeTypes } from "./runtime";
+import { logRuntimeTypesMessage } from "./runtime/log-runtime-types-message";
+import type { Config } from "../config";
+import type { CfScriptFormat } from "../deployment-bundle/worker";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
-} from "./yargs-types";
+} from "../yargs-types";
 
 export function typesOptions(yargs: CommonYargsArgv) {
 	return yargs
@@ -29,6 +33,12 @@ export function typesOptions(yargs: CommonYargsArgv) {
 			default: "Env",
 			describe: "The name of the generated environment interface",
 			requiresArg: true,
+		})
+		.option("experimental-include-runtime", {
+			alias: "x-include-runtime",
+			type: "string",
+			describe: "The path of the generated runtime types file",
+			demandOption: false,
 		});
 }
 
@@ -69,6 +79,23 @@ export async function typesHandler(
 	}
 
 	const config = readConfig(configPath, args);
+
+	// args.xRuntime will be a string if the user passes "--x-include-runtime" or "--x-include-runtime=..."
+	if (typeof args.experimentalIncludeRuntime === "string") {
+		logger.log(`Generating runtime types...`);
+
+		const { outFile } = await generateRuntimeTypes({
+			config,
+			outFile: args.experimentalIncludeRuntime || undefined,
+		});
+
+		const tsconfigPath =
+			config.tsconfig ?? join(dirname(configPath), "tsconfig.json");
+		const tsconfigTypes = readTsconfigTypes(tsconfigPath);
+		const { mode } = getNodeCompatMode(config);
+
+		logRuntimeTypesMessage(outFile, tsconfigTypes, mode !== null);
+	}
 
 	const secrets = getVarsForDev(
 		{ configPath, vars: {} },
@@ -468,6 +495,31 @@ function writeDTSFile({
 				combinedTypeStrings,
 			].join("\n")
 		);
+		logger.log(`Generating project types...\n`);
 		logger.log(combinedTypeStrings);
 	}
 }
+
+/**
+ * Attempts to read the tsconfig.json at the current path.
+ */
+function readTsconfigTypes(tsconfigPath: string): string[] {
+	if (!fs.existsSync(tsconfigPath)) {
+		return [];
+	}
+
+	try {
+		const tsconfig = parseJSONC<TSConfig>(
+			fs.readFileSync(tsconfigPath, "utf-8")
+		);
+		return tsconfig.compilerOptions?.types || [];
+	} catch (e) {
+		return [];
+	}
+}
+
+type TSConfig = {
+	compilerOptions: {
+		types: string[];
+	};
+};
