@@ -1,5 +1,5 @@
 import { existsSync } from "node:fs";
-import { readFile } from "node:fs/promises";
+import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { dedent } from "../src/utils/dedent";
@@ -10,7 +10,7 @@ const seed = {
 		name = "test-worker"
 		main = "src/index.ts"
 		compatibility_date = "2023-01-01"
-		compatibility_flags = ["nodejs_compat"]
+		compatibility_flags = ["nodejs_compat", "no_global_navigator"]
 	`,
 	"src/index.ts": dedent`
 		export default {
@@ -149,5 +149,39 @@ describe("types", () => {
 
 		expect(output.stderr).toBe("");
 		expect(output.status).toBe(0);
+	});
+	it("should include header with version information in the generated types", async () => {
+		const helper = new WranglerE2ETestHelper();
+		await helper.seed(seed);
+		await helper.run(`wrangler types --x-include-runtime="./types.d.ts"`);
+
+		const file = (
+			await readFile(path.join(helper.tmpPath, "./types.d.ts"))
+		).toString();
+
+		expect(file.split("\n")[0]).match(
+			/\/\/ Runtime types generated with workerd@1\.\d+\.\d \d\d\d\d-\d\d-\d\d ([a-z_]+,?)*/
+		);
+	});
+	it("should not regenerate types if the header matches", async () => {
+		const helper = new WranglerE2ETestHelper();
+		await helper.seed(seed);
+		await helper.run(`wrangler types --x-include-runtime`);
+
+		const runtimeTypesFile = path.join(
+			helper.tmpPath,
+			"./.wrangler/types/runtime.d.ts"
+		);
+		const file = (await readFile(runtimeTypesFile)).toString();
+
+		const header = file.split("\n")[0];
+
+		await writeFile(runtimeTypesFile, header + "\n" + "SOME_RANDOM_DATA");
+
+		await helper.run(`wrangler types --x-include-runtime`);
+
+		const file2 = (await readFile(runtimeTypesFile)).toString();
+
+		expect(file2.split("\n")[1]).toBe("SOME_RANDOM_DATA");
 	});
 });
