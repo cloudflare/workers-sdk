@@ -798,6 +798,10 @@ export function handleRuntimeStdio(stdout: Readable, stderr: Readable) {
 	});
 }
 
+let didWarnMiniflareCronSupport = false;
+let didWarnMiniflareVectorizeSupport = false;
+let didWarnAiAccountUsage = false;
+
 export async function buildMiniflareOptions(
 	log: Log,
 	config: Omit<ConfigBundle, "rules">,
@@ -808,20 +812,29 @@ export async function buildMiniflareOptions(
 	entrypointNames: string[];
 }> {
 	if (config.crons.length > 0) {
-		logger.warn("Miniflare 3 does not support CRON triggers yet, ignoring...");
+		if (!didWarnMiniflareCronSupport) {
+			didWarnMiniflareCronSupport = true;
+			log.warn("Miniflare 3 does not support CRON triggers yet, ignoring...");
+		}
 	}
 
 	if (config.bindings.ai) {
-		logger.warn(
-			"Using Workers AI always accesses your Cloudflare account in order to run AI models, and so will incur usage charges even in local development."
-		);
+		if (!didWarnAiAccountUsage) {
+			didWarnAiAccountUsage = true;
+			logger.warn(
+				"Using Workers AI always accesses your Cloudflare account in order to run AI models, and so will incur usage charges even in local development."
+			);
+		}
 	}
 
 	if (config.bindings.vectorize?.length) {
-		// TODO: add local support for Vectorize bindings (https://github.com/cloudflare/workers-sdk/issues/4360)
-		logger.warn(
-			"Vectorize bindings are not currently supported in local mode. Please use --remote if you are working with them."
-		);
+		if (!didWarnMiniflareVectorizeSupport) {
+			didWarnMiniflareVectorizeSupport = true;
+			// TODO: add local support for Vectorize bindings (https://github.com/cloudflare/workers-sdk/issues/4360)
+			logger.warn(
+				"Vectorize bindings are not currently supported in local mode. Please use --remote if you are working with them."
+			);
+		}
 	}
 
 	const upstream =
