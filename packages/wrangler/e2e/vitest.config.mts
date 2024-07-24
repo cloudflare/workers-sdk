@@ -15,5 +15,8 @@ export default defineConfig({
 		globalSetup: path.resolve(__dirname, "./validate-environment.ts"),
 		reporters: ["verbose", "html"],
 		bail: 1,
+		chaiConfig: {
+			truncateThreshold: 1e6,
+		},
 	},
 });

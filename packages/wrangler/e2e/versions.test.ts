@@ -1,11 +1,9 @@
 import dedent from "ts-dedent";
-import { chai, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { CLOUDFLARE_ACCOUNT_ID } from "./helpers/account-id";
 import { WranglerE2ETestHelper } from "./helpers/e2e-wrangler-test";
 import { generateResourceName } from "./helpers/generate-resource-name";
 import { normalizeOutput } from "./helpers/normalize";
-
-chai.config.truncateThreshold = 1e6;
 
 function matchVersionId(stdout: string): string {
 	return stdout.match(/Version ID:\s+([a-f\d-]+)/)?.[1] as string;
