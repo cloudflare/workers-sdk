@@ -30,7 +30,7 @@ describe("Pages Advanced Mode with custom _routes.json", () => {
 		// matches /greeting/* include rule
 		let response = await fetch(`http://${ip}:${port}/greeting/hello`);
 		let text = await response.text();
-		expect(text).toEqual("[/greeting/hello]: Bonjour le monde!");
+		expect(text).toEqual("[/greeting/hello]: [/api/greet]: Bonjour le monde!");
 
 		// matches /greeting/* include rule
 		response = await fetch(`http://${ip}:${port}/greeting/bye`);

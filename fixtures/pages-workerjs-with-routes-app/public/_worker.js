@@ -25,7 +25,17 @@ export default {
 		}
 
 		if (url.pathname === "/greeting/hello") {
-			return new Response("[/greeting/hello]: Bonjour le monde!");
+			const url = new URL(request.url);
+
+			const response = await fetch(`${url.origin}/api/greet`, {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+				},
+				body: JSON.stringify({ greeting: "Bonjour le monde!" }),
+			});
+
+			return new Response(`[/greeting/hello]: ${await response.text()}`);
 		}
 
 		if (url.pathname === "/greeting/bye") {
@@ -34,6 +44,10 @@ export default {
 
 		if (url.pathname === "/greetings") {
 			return new Response("[/greetings]: Bonjour alligators!");
+		}
+
+		if (url.pathname === "/api/greet") {
+			return new Response("[/api/greet]: Bonjour le monde!");
 		}
 
 		return env.ASSETS.fetch(request);
