@@ -241,8 +241,8 @@ export function convertCfWorkerInitBindingstoBindings(
 				break;
 			}
 			case "unsafe": {
-				for (const { type: unsafeType, name } of info.bindings ?? []) {
-					output[name] = { type: `unsafe_${unsafeType}` };
+				for (const { type: unsafeType, name, ...data } of info.bindings ?? []) {
+					output[name] = { type: `unsafe_${unsafeType}`, ...data };
 				}
 				break;
 			}
@@ -368,9 +368,12 @@ export async function convertBindingsToCfWorkerInitBindings(
 				metadata: undefined,
 				capnp: undefined,
 			};
+
+			const { type, ...data } = binding;
 			bindings.unsafe.bindings?.push({
-				type: binding.type.slice("unsafe_".length),
+				type: type.slice("unsafe_".length),
 				name: name,
+				...data,
 			});
 		}
 	}

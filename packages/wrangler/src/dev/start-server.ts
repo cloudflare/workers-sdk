@@ -3,7 +3,10 @@ import * as path from "node:path";
 import * as util from "node:util";
 import chalk from "chalk";
 import onExit from "signal-exit";
-import { fakeResolvedInput } from "../api/startDevWorker/utils";
+import {
+	convertCfWorkerInitBindingstoBindings,
+	fakeResolvedInput,
+} from "../api/startDevWorker/utils";
 import { bundleWorker } from "../deployment-bundle/bundle";
 import { getBundleType } from "../deployment-bundle/bundle-type";
 import { dedupeModulesByName } from "../deployment-bundle/dedupe-modules";
@@ -31,7 +34,7 @@ import { localPropsToConfigBundle, maybeRegisterLocalWorker } from "./local";
 import { DEFAULT_WORKER_NAME, MiniflareServer } from "./miniflare";
 import { startRemoteServer } from "./remote";
 import { validateDevProps } from "./validate-dev-props";
-import type { ProxyData, StartDevWorkerInput } from "../api";
+import type { ProxyData, StartDevWorkerInput, Trigger } from "../api";
 import type { Config } from "../config";
 import type { DurableObjectBindings } from "../config/environment";
 import type { Entry } from "../deployment-bundle/entry";
@@ -94,7 +97,15 @@ export async function startDevServer(
 	const devEnv = props.devEnv;
 	const startDevWorkerOptions: StartDevWorkerInput = {
 		name: props.name ?? "worker",
+		config: props.rawConfig.configPath,
 		entrypoint: props.entry.file,
+		compatibilityDate: props.compatibilityDate,
+		compatibilityFlags: props.compatibilityFlags,
+		triggers: props.routes?.map<Extract<Trigger, { type: "route" }>>((r) => ({
+			type: "route",
+			...(typeof r === "string" ? { pattern: r } : r),
+		})),
+		bindings: convertCfWorkerInitBindingstoBindings(props.bindings),
 		dev: {
 			server: {
 				hostname: props.initialIp,
@@ -108,10 +119,10 @@ export async function startDevServer(
 			},
 			origin: {
 				secure: props.upstreamProtocol === "https",
-				hostname: props.localUpstream,
+				hostname: props.host ?? props.localUpstream,
 			},
 			liveReload: props.liveReload,
-			remote: !props.local,
+			remote: !props.forceLocal && !props.local,
 			auth: async () => {
 				let accountId = props.accountId;
 				if (accountId === undefined) {
@@ -131,11 +142,22 @@ export async function startDevServer(
 
 				return { accountId, apiToken: requireApiToken() };
 			},
+			persist: props.localPersistencePath ?? undefined,
+			testScheduled: props.testScheduled,
+			registry: workerDefinitions,
 		},
 		build: {
-			// format: props.entry.format,
+			bundle: !props.noBundle,
+			define: props.define,
+			jsxFactory: props.jsxFactory,
+			jsxFragment: props.jsxFragment,
+			tsconfig: props.tsconfig,
+			minify: props.minify,
+			processEntrypoint: props.processEntrypoint,
+			additionalModules: props.additionalModules,
 			moduleRoot: props.entry.moduleRoot,
-			nodejsCompatMode: null,
+			moduleRules: props.rules,
+			nodejsCompatMode: props.nodejsCompatMode,
 		},
 	};
 
