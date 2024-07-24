@@ -75,11 +75,15 @@ describe.skipIf(frameworkToTest || isQuarantineMode())(
 					[projectPath],
 					[
 						{
-							matcher: /What type of application do you want to create/,
+							matcher: /What do you want to start with\?/,
 							input: [keys.enter],
 						},
 						{
-							matcher: /Do you want to use TypeScript/,
+							matcher: /Which template would you like to use\?/,
+							input: [keys.enter],
+						},
+						{
+							matcher: /Which language do you want to use\?/,
 							input: [keys.enter],
 						},
 						{
@@ -95,8 +99,9 @@ describe.skipIf(frameworkToTest || isQuarantineMode())(
 				);
 
 				expect(projectPath).toExist();
-				expect(output).toContain(`type "Hello World" Worker`);
-				expect(output).toContain(`yes typescript`);
+				expect(output).toContain(`category Hello World example`);
+				expect(output).toContain(`type Hello World Worker`);
+				expect(output).toContain(`lang TypeScript`);
 				expect(output).toContain(`no git`);
 				expect(output).toContain(`no deploy`);
 			},
@@ -114,12 +119,16 @@ describe.skipIf(frameworkToTest || isQuarantineMode())(
 							input: [projectPath, keys.enter],
 						},
 						{
-							matcher: /What type of application do you want to create/,
-							input: [keys.down, keys.down, keys.down, keys.enter],
+							matcher: /What do you want to start with\?/,
+							input: [keys.down, keys.down, keys.enter],
 						},
 						{
-							matcher: /Do you want to use TypeScript/,
-							input: ["n"],
+							matcher: /Which template would you like to use\?/,
+							input: [keys.enter],
+						},
+						{
+							matcher: /Which language do you want to use\?/,
+							input: [keys.down, keys.enter],
 						},
 						{
 							matcher: /Do you want to use git for version control/,
@@ -135,7 +144,7 @@ describe.skipIf(frameworkToTest || isQuarantineMode())(
 
 				expect(projectPath).toExist();
 				expect(output).toContain(`type Example router & proxy Worker`);
-				expect(output).toContain(`no typescript`);
+				expect(output).toContain(`lang JavaScript`);
 				expect(output).toContain(`no git`);
 				expect(output).toContain(`no deploy`);
 			},
@@ -148,7 +157,11 @@ describe.skipIf(frameworkToTest || isQuarantineMode())(
 					[projectPath, "--ts", "--no-deploy"],
 					[
 						{
-							matcher: /What type of application do you want to create/,
+							matcher: /What do you want to start with\?/,
+							input: [keys.enter],
+						},
+						{
+							matcher: /Which template would you like to use\?/,
 							input: [keys.enter],
 						},
 						{
@@ -160,8 +173,8 @@ describe.skipIf(frameworkToTest || isQuarantineMode())(
 				);
 
 				expect(projectPath).toExist();
-				expect(output).toContain(`type "Hello World" Worker`);
-				expect(output).toContain(`yes typescript`);
+				expect(output).toContain(`type Hello World Worker`);
+				expect(output).toContain(`lang TypeScript`);
 				expect(output).toContain(`no git`);
 				expect(output).toContain(`no deploy`);
 			},
@@ -188,6 +201,28 @@ describe.skipIf(frameworkToTest || isQuarantineMode())(
 					`Cloning template from: github:cloudflare/workers-sdk/templates/worker-router`,
 				);
 				expect(output).toContain(`template cloned and validated`);
+			},
+		);
+
+		test.skipIf(process.platform === "win32")(
+			"Inferring the category, type and language if the type is `hello-world-python`",
+			async () => {
+				// The `hello-world-python` template is now the python variant of the `hello-world` template
+				const { output } = await runC3(
+					[
+						projectPath,
+						"--type=hello-world-python",
+						"--no-deploy",
+						"--git=false",
+					],
+					[],
+					logStream,
+				);
+
+				expect(projectPath).toExist();
+				expect(output).toContain(`category Hello World example`);
+				expect(output).toContain(`type Hello World Worker`);
+				expect(output).toContain(`lang Python`);
 			},
 		);
 	},
