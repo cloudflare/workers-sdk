@@ -548,7 +548,6 @@ export const getBindingNames = (value: unknown): string[] => {
 	if (typeof value !== "object" || value === null) {
 		return [];
 	}
-
 	if (isBindingList(value)) {
 		return value.bindings.map(({ name }) => name);
 	} else if (isNamespaceList(value)) {
@@ -559,7 +558,6 @@ export const getBindingNames = (value: unknown): string[] => {
 		if (value["binding"] !== undefined) {
 			return [value["binding"] as string];
 		}
-
 		return Object.keys(value).filter((k) => value[k] !== undefined);
 	} else {
 		return [];
