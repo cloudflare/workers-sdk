@@ -4256,7 +4256,7 @@ addEventListener('fetch', event => {});`
 			];
 			writeAssets(assets);
 			writeWranglerToml({
-				experimental_assets: [{ directory: "assets" }],
+				experimental_assets: { directory: "assets" },
 			});
 			writeWorkerSource();
 			mockUploadWorkerRequest({
@@ -4265,10 +4265,11 @@ addEventListener('fetch', event => {});`
 			mockSubDomainRequest();
 			await runWrangler("deploy");
 		});
+
 		it("should error if config.site and config.experimental_assets are used together", async () => {
 			writeWranglerToml({
 				main: "./index.js",
-				experimental_assets: [{ directory: "abd" }],
+				experimental_assets: { directory: "abd" },
 				site: {
 					bucket: "xyz",
 				},
@@ -4279,18 +4280,6 @@ addEventListener('fetch', event => {});`
 			).rejects.toThrowErrorMatchingInlineSnapshot(
 				`[Error: Cannot use Assets and Workers Sites in the same Worker.]`
 			);
-
-			expect(std).toMatchInlineSnapshot(`
-				Object {
-				  "debug": "",
-				  "err": "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mCannot use Assets and Workers Sites in the same Worker.[0m
-
-				",
-				  "info": "",
-				  "out": "",
-				  "warn": "",
-				}
-			`);
 		});
 
 		it("should error if --experimental-assets and config.site are used together", async () => {
@@ -4306,18 +4295,6 @@ addEventListener('fetch', event => {});`
 			).rejects.toThrowErrorMatchingInlineSnapshot(
 				`[Error: Cannot use Assets and Workers Sites in the same Worker.]`
 			);
-
-			expect(std).toMatchInlineSnapshot(`
-			Object {
-			  "debug": "",
-			  "err": "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mCannot use Assets and Workers Sites in the same Worker.[0m
-
-			",
-			  "info": "",
-			  "out": "",
-			  "warn": "",
-			}
-		`);
 		});
 
 		it("should error if directory specified by flag --experimental-assets does not exist", async () => {
@@ -4333,12 +4310,12 @@ addEventListener('fetch', event => {});`
 
 		it("should error if directory specified by config experimental_assets does not exist", async () => {
 			writeWranglerToml({
-				experimental_assets: [{ directory: "abc" }],
+				experimental_assets: { directory: "abc" },
 			});
 			writeWorkerSource();
 			await expect(runWrangler("deploy")).rejects.toThrow(
 				new RegExp(
-					'^The directory specified by "experimental_assets\\[0\\]" in your configuration file does not exist:[Ss]*'
+					'^The directory specified by the "experimental_assets.directory" field in your configuration file does not exist:[Ss]*'
 				)
 			);
 		});

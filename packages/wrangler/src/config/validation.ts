@@ -34,6 +34,7 @@ import type {
 	DeprecatedUpload,
 	DispatchNamespaceOutbound,
 	Environment,
+	ExperimentalAssets,
 	RawEnvironment,
 	Rule,
 	TailConsumer,
@@ -2050,49 +2051,43 @@ const validateAssetsConfig: ValidatorFn = (diagnostics, field, value) => {
 		return true;
 	}
 
-	if (!Array.isArray(value) || value === null) {
+	if (typeof value !== "object" || value === null) {
 		diagnostics.errors.push(
-			`The field "${field}" should be an array, but got value ${JSON.stringify(
-				value
-			)} of type ${typeof value}.`
+			`"${field}" should be an object, but got value ${JSON.stringify(
+				field
+			)} of type ${typeof value}`
 		);
 		return false;
 	}
 
 	let isValid = true;
-	for (let i = 0; i < value.length; i++) {
-		const assetConfig = value[i];
 
-		if (typeof assetConfig !== "object" || assetConfig === null) {
-			diagnostics.errors.push(
-				`"${field}[${i}]" should be an object, but got value ${JSON.stringify(
-					assetConfig
-				)} of type ${typeof assetConfig}`
-			);
-			isValid = false;
-		}
-
-		if (!isRequiredProperty(assetConfig, "directory", "string")) {
-			diagnostics.errors.push(
-				`"${field}[${i}]" should have a string "directory" field but got ${JSON.stringify(assetConfig)}.`
-			);
-			isValid = false;
-		}
-
-		if (!isOptionalProperty(assetConfig, "binding", "string")) {
-			diagnostics.errors.push(
-				`"${field}[${i}]" should, optionally, have a string "binding" field, but got ${JSON.stringify(assetConfig)}.`
-			);
-			isValid = false;
-		}
-
-		validateAdditionalProperties(
+	// ensure we validate all props before we show the validation errors
+	// this way users have all the necessary info to fix all errors in one go
+	isValid =
+		validateRequiredProperty(
 			diagnostics,
-			`"${field}[${i}]"`,
-			Object.keys(assetConfig),
-			["directory", "binding"]
-		);
-	}
+			field,
+			"directory",
+			(value as ExperimentalAssets).directory,
+			"string"
+		) && isValid;
+
+	isValid =
+		validateOptionalProperty(
+			diagnostics,
+			field,
+			"binding",
+			(value as ExperimentalAssets).binding,
+			"string"
+		) && isValid;
+
+	isValid =
+		validateAdditionalProperties(diagnostics, field, Object.keys(value), [
+			"directory",
+			"binding",
+		]) && isValid;
+
 	return isValid;
 };
 

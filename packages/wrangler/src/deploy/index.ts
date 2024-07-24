@@ -113,6 +113,7 @@ export function deployOptions(yargs: CommonYargsArgv) {
 			.option("experimental-assets", {
 				describe: "Static assets to be served",
 				type: "string",
+				alias: "x-assets",
 				requiresArg: true,
 				hidden: true,
 			})
@@ -289,35 +290,29 @@ export async function deployHandler(
 		);
 	}
 
-	const experimentalAssetsBasePath = getExperimentalAssetsBasePath(
-		config,
-		args.experimentalAssets
-	);
-
-	if (
-		args.experimentalAssets &&
-		!existsSync(
-			path.resolve(experimentalAssetsBasePath, args.experimentalAssets)
-		)
-	) {
-		throw new UserError(
-			`The directory specified by the "--experimental-assets" command line argument does not exist:\n` +
-				`${path.resolve(experimentalAssetsBasePath, args.experimentalAssets)}`
+	const experimentalAssets = args.experimentalAssets
+		? { directory: args.experimentalAssets }
+		: config.experimental_assets;
+	if (experimentalAssets) {
+		const experimentalAssetsBasePath = getExperimentalAssetsBasePath(
+			config,
+			args.experimentalAssets
 		);
-	} else {
-		config.experimental_assets?.forEach((assetConfig, index) => {
-			const assetDir = path.resolve(
-				experimentalAssetsBasePath,
-				assetConfig.directory
-			);
+		const resolvedExperimentalAssetsPath = path.resolve(
+			experimentalAssetsBasePath,
+			experimentalAssets.directory
+		);
 
-			if (!existsSync(assetDir)) {
-				throw new UserError(
-					`The directory specified by "experimental_assets[${index}]" in your configuration file does not exist:\n` +
-						`${assetDir}`
-				);
-			}
-		});
+		if (!existsSync(resolvedExperimentalAssetsPath)) {
+			const sourceOfTruthMessage = args.experimentalAssets
+				? '"--experimental-assets" command line argument'
+				: '"experimental_assets.directory" field in your configuration file';
+
+			throw new UserError(
+				`The directory specified by the ${sourceOfTruthMessage} does not exist:\n` +
+					`${resolvedExperimentalAssetsPath}`
+			);
+		}
 	}
 
 	if (args.assets) {
@@ -348,9 +343,6 @@ export async function deployHandler(
 					args.siteExclude
 				);
 
-	const experimentalAssetsDirectory =
-		args.experimentalAssets ?? config.experimental_assets?.at(0)?.directory;
-
 	if (!args.dryRun) {
 		await standardPricingWarning(config);
 	}
@@ -375,7 +367,7 @@ export async function deployHandler(
 		jsxFragment: args.jsxFragment,
 		tsconfig: args.tsconfig,
 		routes: args.routes,
-		experimentalAssets: experimentalAssetsDirectory,
+		experimentalAssets: experimentalAssets?.directory,
 		assetPaths,
 		legacyEnv: isLegacyEnv(config),
 		minify: args.minify,

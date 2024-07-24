@@ -1422,15 +1422,16 @@ describe("wrangler dev", () => {
 		it("should not require entry point if using --experimental-assets", async () => {
 			fs.openSync("assets", "w");
 			writeWranglerToml({
-				experimental_assets: [{ directory: "assets" }],
+				experimental_assets: { directory: "assets" },
 			});
 
 			await runWrangler("dev");
 		});
+
 		it("should error if config.site and config.experimental_assets are used together", async () => {
 			writeWranglerToml({
 				main: "./index.js",
-				experimental_assets: [{ directory: "assets" }],
+				experimental_assets: { directory: "assets" },
 				site: {
 					bucket: "xyz",
 				},
@@ -1460,7 +1461,7 @@ describe("wrangler dev", () => {
 			);
 		});
 
-		it("should error if directory specified by flag --experimental-assets does not exist", async () => {
+		it("should error if directory specified by '--experimental-assets' command line argument does not exist", async () => {
 			writeWranglerToml({
 				main: "./index.js",
 			});
@@ -1474,19 +1475,17 @@ describe("wrangler dev", () => {
 			);
 		});
 
-		it("should error if directory specified by config experimental_assets does not exist", async () => {
+		it("should error if directory specified by 'experimental_assets' configuration key does not exist", async () => {
 			writeWranglerToml({
 				main: "./index.js",
-				experimental_assets: [
-					{
-						directory: "abc",
-					},
-				],
+				experimental_assets: {
+					directory: "abc",
+				},
 			});
 			fs.writeFileSync("index.js", `export default {};`);
 			await expect(runWrangler("dev")).rejects.toThrow(
 				new RegExp(
-					"^The directory specified by the `experimental_assets` field in your configuration file does not exist:[Ss]*"
+					'^The directory specified by the "experimental_assets.directory" field in your configuration file does not exist:[Ss]*'
 				)
 			);
 		});

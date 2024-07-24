@@ -1739,12 +1739,10 @@ describe("normalizeAndValidateConfig()", () => {
 		describe("[experimental_assets]", () => {
 			it("should override `experimental_assets` config defaults with provided values", () => {
 				const expectedConfig: RawConfig = {
-					experimental_assets: [
-						{
-							directory: "public/",
-							binding: "ASSETS",
-						},
-					],
+					experimental_assets: {
+						directory: "public/",
+						binding: "ASSETS",
+					},
 				};
 
 				const { config, diagnostics } = normalizeAndValidateConfig(
@@ -1760,12 +1758,10 @@ describe("normalizeAndValidateConfig()", () => {
 
 			it("should error on invalid `experimental_assets` values", () => {
 				const expectedConfig = {
-					experimental_assets: [
-						{
-							binding: 2,
-							notAField: "boop",
-						},
-					],
+					experimental_assets: {
+						binding: 2,
+						notAField: "boop",
+					},
 				};
 
 				const { config, diagnostics } = normalizeAndValidateConfig(
@@ -1778,12 +1774,12 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasWarnings()).toBe(true);
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - Unexpected fields found in \\"experimental_assets[0]\\" field: \\"notAField\\""
+					  - Unexpected fields found in experimental_assets field: \\"notAField\\""
 				`);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - \\"experimental_assets[0]\\" should have a string \\"directory\\" field but got {\\"binding\\":2,\\"notAField\\":\\"boop\\"}.
-					  - \\"experimental_assets[0]\\" should, optionally, have a string \\"binding\\" field, but got {\\"binding\\":2,\\"notAField\\":\\"boop\\"}."
+					  - \\"experimental_assets.directory\\" is a required field.
+					  - Expected \\"experimental_assets.binding\\" to be of type string but got 2."
 				`);
 			});
 		});

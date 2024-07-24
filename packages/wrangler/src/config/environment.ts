@@ -338,12 +338,7 @@ interface EnvironmentInheritable {
 	 *
 	 * @inheritable
 	 */
-	experimental_assets:
-		| {
-				directory: string;
-				binding?: string;
-		  }[]
-		| undefined;
+	experimental_assets: ExperimentalAssets | undefined;
 }
 
 export type DurableObjectBindings = {
@@ -891,3 +886,8 @@ export interface UserLimits {
 	/** Maximum allowed CPU time for a Worker's invocation in milliseconds */
 	cpu_ms: number;
 }
+
+export type ExperimentalAssets = {
+	directory: string;
+	binding?: string;
+};

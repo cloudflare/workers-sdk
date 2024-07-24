@@ -22,6 +22,7 @@ import registerDevHotKeys from "./dev/hotkeys";
 import { maybeRegisterLocalWorker } from "./dev/local";
 import { startDevServer } from "./dev/start-server";
 import { UserError } from "./errors";
+import { getExperimentalAssetsBasePath } from "./experimental-assets";
 import { run } from "./experimental-flags";
 import isInteractive from "./is-interactive";
 import { logger } from "./logger";
@@ -186,6 +187,7 @@ export function devOptions(yargs: CommonYargsArgv) {
 			.option("experimental-assets", {
 				describe: "Static assets to be served",
 				type: "string",
+				alias: "x-assets",
 				requiresArg: true,
 				hidden: true,
 			})
@@ -772,27 +774,31 @@ export async function startDev(args: StartDevOptions) {
 			});
 		}
 
-		if (args.experimentalAssets || config.experimental_assets) {
-			args.forceLocal = true;
-			if (
-				args.experimentalAssets &&
-				!existsSync(path.resolve(process.cwd(), args.experimentalAssets))
-			) {
+		const experimentalAssets = args.experimentalAssets
+			? { directory: args.experimentalAssets }
+			: config.experimental_assets;
+		if (experimentalAssets) {
+			const experimentalAssetsBasePath = getExperimentalAssetsBasePath(
+				config,
+				args.experimentalAssets
+			);
+			const resolvedExperimentalAssetsPath = path.resolve(
+				experimentalAssetsBasePath,
+				experimentalAssets.directory
+			);
+
+			if (!existsSync(resolvedExperimentalAssetsPath)) {
+				const sourceOfTruthMessage = args.experimentalAssets
+					? '"--experimental-assets" command line argument'
+					: '"experimental_assets.directory" field in your configuration file';
+
 				throw new UserError(
-					`The directory specified by the "--experimental-assets" command line argument does not exist:\n` +
-						`${path.resolve(process.cwd(), args.experimentalAssets)}`
+					`The directory specified by the ${sourceOfTruthMessage} does not exist:\n` +
+						`${resolvedExperimentalAssetsPath}`
 				);
-			} else {
-				config.experimental_assets?.forEach((x) => {
-					const assetDir = path.resolve(process.cwd(), x.directory);
-					if (!existsSync(assetDir)) {
-						throw new UserError(
-							`The directory specified by the \`experimental_assets\` field in your configuration file does not exist:\n` +
-								`${assetDir}`
-						);
-					}
-				});
 			}
+
+			args.forceLocal = true;
 		}
 
 		const {
