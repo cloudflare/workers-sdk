@@ -369,7 +369,7 @@ This is currently not supported 😭, but we think that we'll get it to work soo
 
 	if (args.assets) {
 		logger.warn(
-			`The --assets argument is experimental. We are going to be changing the behavior of this experimental command on August 15th.\n` +
+			`The --assets argument is experimental. We are going to be changing the behavior of this experimental command after August 15th.\n` +
 				`Releases of wrangler after this date will no longer support current functionality.\n` +
 				`Please shift to the --legacy-assets command to preserve the current functionality.`
 		);

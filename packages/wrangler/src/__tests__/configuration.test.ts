@@ -584,7 +584,7 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
 					  - [1mBehavior change[0m: \\"assets\\":
-					    The \`assets\` feature is experimental. We are going to be changing its behavior on August 15th.
+					    The \`assets\` feature is experimental. We are going to be changing its behavior after August 15th.
 					    Releases of wrangler after this date will no longer support current functionality.
 					    Please shift to \`legacy_assets\` to preserve the current functionality. "
 				`);
