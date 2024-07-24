@@ -49,7 +49,11 @@ export async function runWranglerDev(
 	options: string[],
 	env?: NodeJS.ProcessEnv
 ) {
-	return runLongLivedWrangler(["dev", "--ip=127.0.0.1", ...options], cwd, env);
+	return runLongLivedWrangler(
+		["dev", "--x-dev-env", "--ip=127.0.0.1", ...options],
+		cwd,
+		env
+	);
 }
 
 async function runLongLivedWrangler(

@@ -3,7 +3,7 @@
 	"private": true,
 	"scripts": {
 		"deploy": "wrangler deploy",
-		"start": "wrangler dev"
+		"start": "wrangler dev --x-dev-env"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-types": "^4.20240718.0",
