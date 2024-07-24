@@ -1,5 +1,13 @@
-import { crash, endSection, startSection } from "@cloudflare/cli";
+import {
+	crash,
+	endSection,
+	newline,
+	startSection,
+	updateStatus,
+} from "@cloudflare/cli";
 import { processArgument } from "@cloudflare/cli/args";
+import { brandColor, dim } from "@cloudflare/cli/colors";
+import { pollRegistriesUntilCondition } from "../cli";
 import {
 	ApiError,
 	ImageRegistriesService,
@@ -16,6 +24,7 @@ import { wrap } from "../helpers/wrap";
 import type { Config } from "../../config";
 import type {
 	CommonYargsArgvJSON,
+	CommonYargsArgvSanitizedJSON,
 	StrictYargsOptionsToInterfaceJSON,
 } from "../../yargs-types";
 import type { ImageRegistryPermissions } from "../client";
@@ -90,7 +99,10 @@ export const registriesCommand = (yargs: CommonYargsArgvJSON) => {
 			"get a temporary password for a specific domain",
 			(args) =>
 				args
-					.positional("domain", { type: "string", demandOption: true })
+					.positional("domain", {
+						type: "string",
+						demandOption: true,
+					})
 					.option("expiration-minutes", {
 						type: "number",
 						default: 15,
@@ -136,8 +148,88 @@ export const registriesCommand = (yargs: CommonYargsArgvJSON) => {
 					}
 				)(args);
 			}
+		)
+		.command(
+			"remove [domain]",
+			"removes the registry at the given domain",
+			(args) => removeImageRegistryYargs(args),
+			(args) => {
+				args.json = true;
+				return handleFailure(
+					async (
+						imageArgs: StrictYargsOptionsToInterfaceJSON<
+							typeof removeImageRegistryYargs
+						>,
+						_config
+					) => {
+						const registry = await ImageRegistriesService.deleteImageRegistry(
+							imageArgs.domain
+						);
+						console.log(JSON.stringify(registry, null, 4));
+					}
+				)(args);
+			}
+		)
+		.command(
+			"list",
+			"list registries configured for this account",
+			(args) => args,
+			(args) =>
+				handleFailure(
+					async (imageArgs: CommonYargsArgvSanitizedJSON, config) => {
+						if (!interactWithUser(imageArgs)) {
+							const registries =
+								await ImageRegistriesService.listImageRegistries();
+							console.log(JSON.stringify(registries, null, 4));
+							return;
+						}
+						await handleListImageRegistriesCommand(args, config);
+					}
+				)(args)
 		);
 };
+
+function removeImageRegistryYargs(yargs: CommonYargsArgvJSON) {
+	return yargs.positional("domain", {
+		type: "string",
+		demandOption: true,
+	});
+}
+
+async function handleListImageRegistriesCommand(
+	_args: unknown,
+	_config: Config
+) {
+	startSection("Registries", "", false);
+	const [registries, err] = await wrap(
+		promiseSpinner(pollRegistriesUntilCondition(() => true))
+	);
+
+	if (err) {
+		throw err;
+	}
+
+	if (registries.length === 0) {
+		endSection(
+			"No registries added to your account!",
+			"You can add one with\n" +
+				brandColor("wrangler cloudchamber registry configure")
+		);
+		return;
+	}
+
+	for (const registry of registries) {
+		newline();
+		updateStatus(
+			`${registry.domain}\npublic_key: ${dim(
+				(registry.public_key ?? "").trim()
+			)}`,
+			false
+		);
+	}
+
+	endSection("");
+}
 
 export async function handleConfigureImageRegistryCommand(
 	args: StrictYargsOptionsToInterfaceJSON<

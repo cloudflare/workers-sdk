@@ -10,18 +10,54 @@ import { brandColor, dim } from "@cloudflare/cli/colors";
 import { spinner } from "@cloudflare/cli/interactive";
 import {
 	DeploymentsService,
+	ImageRegistriesService,
 	PlacementsService,
 	SshPublicKeysService,
 } from "../client";
 import { wrap } from "../helpers/wrap";
 import { idToLocationName } from "../locations";
 import type {
+	CustomerImageRegistry,
 	DeploymentV2,
 	ListSSHPublicKeys,
 	PlacementEvent,
 	PlacementWithEvents,
 } from "../client";
 import type { EventName, Status } from "../enums";
+
+export function pollRegistriesUntilCondition(
+	onRegistries: (registries: Array<CustomerImageRegistry>) => boolean
+): Promise<Array<CustomerImageRegistry>> {
+	return new Promise<Array<CustomerImageRegistry>>((res, rej) => {
+		let errCount = 0;
+		const poll = () => {
+			ImageRegistriesService.listImageRegistries()
+				.then((registries) => {
+					try {
+						if (!onRegistries(registries)) {
+							setTimeout(() => poll(), 500);
+						} else {
+							res(registries);
+						}
+					} catch (err) {
+						rej(err);
+					}
+				})
+				.catch((err) => {
+					errCount++;
+					// if there are too many errors, throw it
+					if (errCount > 3) {
+						rej(err);
+						return;
+					}
+
+					poll();
+				});
+		};
+
+		poll();
+	});
+}
 
 export function pollSSHKeysUntilCondition(
 	onSSHKeys: (sshKeys: ListSSHPublicKeys) => boolean
