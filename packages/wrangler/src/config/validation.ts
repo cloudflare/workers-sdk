@@ -247,7 +247,7 @@ export function normalizeAndValidateConfig(
 		diagnostics,
 		rawConfig,
 		"assets",
-		`The \`assets\` feature is experimental. We are going to be changing its behavior on August 15th.\n` +
+		`The \`assets\` feature is experimental. We are going to be changing its behavior after August 15th.\n` +
 			`Releases of wrangler after this date will no longer support current functionality.\n` +
 			`Please shift to \`legacy_assets\` to preserve the current functionality. `,
 		false,

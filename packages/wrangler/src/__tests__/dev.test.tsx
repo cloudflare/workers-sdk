@@ -1329,7 +1329,7 @@ describe("wrangler dev", () => {
 				  "err": "",
 				  "info": "",
 				  "out": "",
-				  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --assets argument is experimental. We are going to be changing the behavior of this experimental command on August 15th.[0m
+				  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --assets argument is experimental. We are going to be changing the behavior of this experimental command after August 15th.[0m
 
 				  Releases of wrangler after this date will no longer support current functionality.
 				  Please shift to the --legacy-assets command to preserve the current functionality.
