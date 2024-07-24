@@ -15,7 +15,7 @@ import {
 } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
-import writeWranglerToml from "./helpers/write-wrangler-toml";
+import { writeWranglerToml } from "./helpers/write-wrangler-toml";
 
 function isFileNotFound(e: unknown) {
 	return (

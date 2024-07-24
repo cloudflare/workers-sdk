@@ -5,7 +5,7 @@ import { clearDialogs, mockConfirm } from "../../helpers/mock-dialogs";
 import { useMockIsTTY } from "../../helpers/mock-istty";
 import { runInTempDir } from "../../helpers/run-in-tmp";
 import { runWrangler } from "../../helpers/run-wrangler";
-import writeWranglerToml from "../../helpers/write-wrangler-toml";
+import { writeWranglerToml } from "../../helpers/write-wrangler-toml";
 import { mockGetVersion, mockPostVersion, mockSetupApiCalls } from "./utils";
 
 describe("versions secret put", () => {

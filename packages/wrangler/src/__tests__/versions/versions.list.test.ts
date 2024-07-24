@@ -5,7 +5,7 @@ import { mockConsoleMethods } from "../helpers/mock-console";
 import { msw, mswListVersions } from "../helpers/msw";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
-import writeWranglerToml from "../helpers/write-wrangler-toml";
+import { writeWranglerToml } from "../helpers/write-wrangler-toml";
 
 describe("versions list", () => {
 	mockAccountId();

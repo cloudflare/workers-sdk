@@ -6,7 +6,7 @@ import { useMockIsTTY } from "../../helpers/mock-istty";
 import { useMockStdin } from "../../helpers/mock-stdin";
 import { runInTempDir } from "../../helpers/run-in-tmp";
 import { runWrangler } from "../../helpers/run-wrangler";
-import writeWranglerToml from "../../helpers/write-wrangler-toml";
+import { writeWranglerToml } from "../../helpers/write-wrangler-toml";
 import { mockPostVersion, mockSetupApiCalls } from "./utils";
 
 describe("versions secret put", () => {

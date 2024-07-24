@@ -18,7 +18,10 @@ import {
 } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
-import writeWranglerToml from "./helpers/write-wrangler-toml";
+import {
+	writeWranglerJson,
+	writeWranglerToml,
+} from "./helpers/write-wrangler-toml";
 import type { Mock } from "vitest";
 
 async function expectedHostAndZone(
@@ -68,6 +71,53 @@ describe("wrangler dev", () => {
 		(Dev as Mock).mockClear();
 		patchConsole(() => {});
 		msw.resetHandlers();
+	});
+
+	describe("config file support", () => {
+		it("should support wrangler.toml", async () => {
+			writeWranglerToml({
+				name: "test-worker-toml",
+				main: "index.js",
+				compatibility_date: "2024-01-01",
+			});
+			fs.writeFileSync("index.js", `export default {};`);
+
+			await runWrangler("dev");
+			expect(std.out).toMatchInlineSnapshot(`""`);
+			expect(std.err).toMatchInlineSnapshot(`""`);
+			expect(std.warn).toMatchInlineSnapshot(`""`);
+		});
+
+		it("should support wrangler.json", async () => {
+			writeWranglerJson({
+				name: "test-worker-json",
+				main: "index.js",
+				compatibility_date: "2024-01-01",
+			});
+			fs.writeFileSync("index.js", `export default {};`);
+
+			await runWrangler("dev --experimental-json-config");
+			expect(std.out).toMatchInlineSnapshot(`""`);
+			expect(std.err).toMatchInlineSnapshot(`""`);
+			expect(std.warn).toMatchInlineSnapshot(`""`);
+		});
+
+		it("should support wrangler.jsonc", async () => {
+			writeWranglerJson(
+				{
+					name: "test-worker-jsonc",
+					main: "index.js",
+					compatibility_date: "2024-01-01",
+				},
+				"wrangler.jsonc"
+			);
+			fs.writeFileSync("index.js", `export default {};`);
+
+			await runWrangler("dev --experimental-json-config");
+			expect(std.out).toMatchInlineSnapshot(`""`);
+			expect(std.err).toMatchInlineSnapshot(`""`);
+			expect(std.warn).toMatchInlineSnapshot(`""`);
+		});
 	});
 
 	describe("authorization", () => {
@@ -248,6 +298,7 @@ describe("wrangler dev", () => {
 			);
 		});
 	});
+
 	describe("host", () => {
 		it("should resolve a host to its zone", async () => {
 			writeWranglerToml({

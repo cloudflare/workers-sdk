@@ -6,7 +6,7 @@ import { useMockIsTTY } from "./helpers/mock-istty";
 import { msw } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
-import writeWranglerToml from "./helpers/write-wrangler-toml";
+import { writeWranglerToml } from "./helpers/write-wrangler-toml";
 import type { ServiceReferenceResponse, Tail } from "../delete";
 import type { KVNamespaceInfo } from "../kv/helpers";
 

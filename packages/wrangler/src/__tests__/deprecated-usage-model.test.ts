@@ -8,7 +8,7 @@ import { mswListNewDeploymentsLatestFull } from "./helpers/msw/handlers/versions
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import { writeWorkerSource } from "./helpers/write-worker-source";
-import writeWranglerToml from "./helpers/write-wrangler-toml";
+import { writeWranglerToml } from "./helpers/write-wrangler-toml";
 
 describe("deprecated-usage-model", () => {
 	mockAccountId();

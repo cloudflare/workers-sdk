@@ -26,7 +26,7 @@ import { mswListNewDeploymentsLatestFiftyFifty } from "../helpers/msw/handlers/v
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 import { writeWorkerSource } from "../helpers/write-worker-source";
-import writeWranglerToml from "../helpers/write-wrangler-toml";
+import { writeWranglerToml } from "../helpers/write-wrangler-toml";
 import type { VersionsDeployArgs } from "../../versions/deploy";
 
 describe("versions deploy", () => {

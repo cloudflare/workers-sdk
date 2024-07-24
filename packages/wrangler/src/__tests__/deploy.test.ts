@@ -47,7 +47,7 @@ import { mswListNewDeploymentsLatestFull } from "./helpers/msw/handlers/versions
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import { writeWorkerSource } from "./helpers/write-worker-source";
-import writeWranglerToml from "./helpers/write-wrangler-toml";
+import { writeWranglerToml } from "./helpers/write-wrangler-toml";
 import type { Config } from "../config";
 import type { CustomDomain, CustomDomainChangeset } from "../deploy/deploy";
 import type { KVNamespaceInfo } from "../kv/helpers";
@@ -86,6 +86,190 @@ describe("deploy", () => {
 	afterEach(() => {
 		vi.unstubAllGlobals();
 		clearDialogs();
+	});
+
+	it("should resolve wrangler.toml relative to the entrypoint", async () => {
+		fs.mkdirSync("./some-path/worker", { recursive: true });
+		fs.writeFileSync(
+			"./some-path/wrangler.toml",
+			TOML.stringify({
+				name: "test-name",
+				compatibility_date: "2022-01-12",
+				vars: { xyz: 123 },
+			}),
+			"utf-8"
+		);
+		writeWorkerSource({ basePath: "./some-path/worker" });
+		mockUploadWorkerRequest({
+			expectedBindings: [
+				{
+					json: 123,
+					name: "xyz",
+					type: "json",
+				},
+			],
+			expectedCompatibilityDate: "2022-01-12",
+		});
+		mockSubDomainRequest();
+		await runWrangler("deploy ./some-path/worker/index.js");
+		expect(std.out).toMatchInlineSnapshot(`
+		"Total Upload: xx KiB / gzip: xx KiB
+		Your worker has access to the following bindings:
+		- Vars:
+		  - xyz: 123
+		Uploaded test-name (TIMINGS)
+		Published test-name (TIMINGS)
+		  https://test-name.test-sub-domain.workers.dev
+		Current Deployment ID: Galaxy-Class
+		Current Version ID: Galaxy-Class
+
+
+		Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+	`);
+		expect(std.err).toMatchInlineSnapshot(`""`);
+	});
+
+	it("should support wrangler.json", async () => {
+		fs.mkdirSync("./my-worker", { recursive: true });
+		fs.writeFileSync(
+			"./wrangler.json",
+			JSON.stringify({
+				name: "test-worker",
+				compatibility_date: "2024-01-01",
+				vars: { xyz: 123 },
+			}),
+			"utf-8"
+		);
+		writeWorkerSource({ basePath: "./my-worker" });
+		mockUploadWorkerRequest({
+			expectedScriptName: "test-worker",
+			expectedBindings: [
+				{
+					json: 123,
+					name: "xyz",
+					type: "json",
+				},
+			],
+			expectedCompatibilityDate: "2024-01-01",
+		});
+		mockSubDomainRequest();
+
+		await runWrangler("deploy ./my-worker/index.js --experimental-json-config");
+		expect(std.out).toMatchInlineSnapshot(`
+			"Total Upload: xx KiB / gzip: xx KiB
+			Your worker has access to the following bindings:
+			- Vars:
+			  - xyz: 123
+			Uploaded test-worker (TIMINGS)
+			Published test-worker (TIMINGS)
+			  https://test-worker.test-sub-domain.workers.dev
+			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
+
+
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+		`);
+		expect(std.err).toMatchInlineSnapshot(`""`);
+	});
+
+	it("should support wrangler.jsonc", async () => {
+		fs.mkdirSync("./my-worker", { recursive: true });
+		fs.writeFileSync(
+			"./wrangler.jsonc",
+			JSON.stringify({
+				name: "test-worker-jsonc",
+				compatibility_date: "2024-01-01",
+				vars: { xyz: 123 },
+			}),
+			"utf-8"
+		);
+		writeWorkerSource({ basePath: "./my-worker" });
+		mockUploadWorkerRequest({
+			expectedScriptName: "test-worker-jsonc",
+			expectedBindings: [
+				{
+					json: 123,
+					name: "xyz",
+					type: "json",
+				},
+			],
+			expectedCompatibilityDate: "2024-01-01",
+		});
+		mockSubDomainRequest();
+
+		await runWrangler("deploy ./my-worker/index.js --experimental-json-config");
+		expect(std.out).toMatchInlineSnapshot(`
+			"Total Upload: xx KiB / gzip: xx KiB
+			Your worker has access to the following bindings:
+			- Vars:
+			  - xyz: 123
+			Uploaded test-worker-jsonc (TIMINGS)
+			Published test-worker-jsonc (TIMINGS)
+			  https://test-worker-jsonc.test-sub-domain.workers.dev
+			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
+
+
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+		`);
+		expect(std.err).toMatchInlineSnapshot(`""`);
+	});
+
+	it("should not deploy if there's any other kind of error when checking deployment source", async () => {
+		writeWorkerSource();
+		writeWranglerToml();
+		mockSubDomainRequest();
+		mockUploadWorkerRequest();
+		msw.use(...mswSuccessOauthHandlers, ...mswSuccessUserHandlers);
+		msw.use(
+			http.get("*/accounts/:accountId/workers/services/:scriptName", () => {
+				return HttpResponse.json(
+					createFetchResult(null, false, [
+						{ code: 10000, message: "Authentication error" },
+					])
+				);
+			}),
+			http.get(
+				"*/accounts/:accountId/workers/deployments/by-script/:scriptTag",
+				() => {
+					return HttpResponse.json(
+						createFetchResult({
+							latest: { number: "2" },
+						})
+					);
+				}
+			)
+		);
+
+		await expect(
+			runWrangler("deploy index.js")
+		).rejects.toThrowErrorMatchingInlineSnapshot(
+			`[APIError: A request to the Cloudflare API (/accounts/some-account-id/workers/services/test-name) failed.]`
+		);
+		expect(std.out).toMatchInlineSnapshot(`
+		"
+		[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/accounts/some-account-id/workers/services/test-name) failed.[0m
+
+		  Authentication error [code: 10000]
+
+
+		📎 It looks like you are authenticating Wrangler via a custom API token set in an environment variable.
+		Please ensure it has the correct permissions for this operation.
+
+		Getting User settings...
+		👋 You are logged in with an API Token, associated with the email user@example.com!
+		ℹ️  The API Token is read from the CLOUDFLARE_API_TOKEN in your environment.
+		┌───────────────┬────────────┐
+		│ Account Name  │ Account ID │
+		├───────────────┼────────────┤
+		│ Account One   │ account-1  │
+		├───────────────┼────────────┤
+		│ Account Two   │ account-2  │
+		├───────────────┼────────────┤
+		│ Account Three │ account-3  │
+		└───────────────┴────────────┘
+		🔓 To see token permissions visit https://dash.cloudflare.com/profile/api-tokens"
+	`);
 	});
 
 	describe("output additional script information", () => {
@@ -670,47 +854,6 @@ describe("deploy", () => {
 		`);
 			});
 		});
-	});
-
-	it("should resolve wrangler.toml relative to the entrypoint", async () => {
-		fs.mkdirSync("./some-path/worker", { recursive: true });
-		fs.writeFileSync(
-			"./some-path/wrangler.toml",
-			TOML.stringify({
-				name: "test-name",
-				compatibility_date: "2022-01-12",
-				vars: { xyz: 123 },
-			}),
-			"utf-8"
-		);
-		writeWorkerSource({ basePath: "./some-path/worker" });
-		mockUploadWorkerRequest({
-			expectedBindings: [
-				{
-					json: 123,
-					name: "xyz",
-					type: "json",
-				},
-			],
-			expectedCompatibilityDate: "2022-01-12",
-		});
-		mockSubDomainRequest();
-		await runWrangler("deploy ./some-path/worker/index.js");
-		expect(std.out).toMatchInlineSnapshot(`
-		"Total Upload: xx KiB / gzip: xx KiB
-		Your worker has access to the following bindings:
-		- Vars:
-		  - xyz: 123
-		Uploaded test-name (TIMINGS)
-		Published test-name (TIMINGS)
-		  https://test-name.test-sub-domain.workers.dev
-		Current Deployment ID: Galaxy-Class
-		Current Version ID: Galaxy-Class
-
-
-		Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-	`);
-		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
 
 	describe("routes", () => {
@@ -5008,6 +5151,7 @@ addEventListener('fetch', event => {});`
 			);
 		});
 	});
+
 	describe("custom builds", () => {
 		beforeEach(() => {
 			vi.unstubAllGlobals();
@@ -9191,63 +9335,6 @@ export default{
 				"
 			`);
 		});
-	});
-
-	it("should not deploy if there's any other kind of error when checking deployment source", async () => {
-		writeWorkerSource();
-		writeWranglerToml();
-		mockSubDomainRequest();
-		mockUploadWorkerRequest();
-		msw.use(...mswSuccessOauthHandlers, ...mswSuccessUserHandlers);
-		msw.use(
-			http.get("*/accounts/:accountId/workers/services/:scriptName", () => {
-				return HttpResponse.json(
-					createFetchResult(null, false, [
-						{ code: 10000, message: "Authentication error" },
-					])
-				);
-			}),
-			http.get(
-				"*/accounts/:accountId/workers/deployments/by-script/:scriptTag",
-				() => {
-					return HttpResponse.json(
-						createFetchResult({
-							latest: { number: "2" },
-						})
-					);
-				}
-			)
-		);
-
-		await expect(
-			runWrangler("deploy index.js")
-		).rejects.toThrowErrorMatchingInlineSnapshot(
-			`[APIError: A request to the Cloudflare API (/accounts/some-account-id/workers/services/test-name) failed.]`
-		);
-		expect(std.out).toMatchInlineSnapshot(`
-		"
-		[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/accounts/some-account-id/workers/services/test-name) failed.[0m
-
-		  Authentication error [code: 10000]
-
-
-		📎 It looks like you are authenticating Wrangler via a custom API token set in an environment variable.
-		Please ensure it has the correct permissions for this operation.
-
-		Getting User settings...
-		👋 You are logged in with an API Token, associated with the email user@example.com!
-		ℹ️  The API Token is read from the CLOUDFLARE_API_TOKEN in your environment.
-		┌───────────────┬────────────┐
-		│ Account Name  │ Account ID │
-		├───────────────┼────────────┤
-		│ Account One   │ account-1  │
-		├───────────────┼────────────┤
-		│ Account Two   │ account-2  │
-		├───────────────┼────────────┤
-		│ Account Three │ account-3  │
-		└───────────────┴────────────┘
-		🔓 To see token permissions visit https://dash.cloudflare.com/profile/api-tokens"
-	`);
 	});
 
 	describe("queues", () => {

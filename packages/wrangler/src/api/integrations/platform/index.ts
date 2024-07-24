@@ -35,7 +35,7 @@ export type GetPlatformProxyOptions = {
 	 */
 	configPath?: string;
 	/**
-	 * Flag to indicate the utility to read a json config file (`wrangler.json`)
+	 * Flag to indicate the utility to read a json config file (`wrangler.json`/`wrangler.jsonc`)
 	 * instead of the toml one (`wrangler.toml`)
 	 *
 	 * Note: this feature is experimental

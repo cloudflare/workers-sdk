@@ -65,7 +65,7 @@ export function readConfig(
 		// Load the configuration from disk if available
 		if (configPath?.endsWith("toml")) {
 			rawConfig = parseTOML(readFileSync(configPath), configPath);
-		} else if (configPath?.endsWith("json")) {
+		} else if (configPath?.endsWith("json") || configPath?.endsWith("jsonc")) {
 			rawConfig = parseJSONC(readFileSync(configPath), configPath);
 		}
 	} catch (e) {
@@ -90,7 +90,8 @@ export function readConfig(
 	 * configuration file belongs to a Workers or Pages project. This key
 	 * should always be set for Pages but never for Workers. Furthermore,
 	 * Pages projects currently have support for `wrangler.toml` only,
-	 * so we should error if `wrangler.json` is detected in a Pages project
+	 * so we should error if `wrangler.json` || `wrangler.jsonc` is detected
+	 * in a Pages project
 	 */
 	const isPagesConfigFile = isPagesConfig(rawConfig);
 	if (!isPagesConfigFile && requirePagesConfig) {
@@ -101,7 +102,9 @@ export function readConfig(
 	}
 	if (
 		isPagesConfigFile &&
-		(configPath?.endsWith("json") || isJsonConfigEnabled)
+		(configPath?.endsWith("json") ||
+			configPath?.endsWith("jsonc") ||
+			isJsonConfigEnabled)
 	) {
 		throw new UserError(
 			`Pages doesn't currently support JSON formatted config \`${
@@ -169,6 +172,7 @@ export function findWranglerToml(
 	if (preferJson) {
 		return (
 			findUpSync(`wrangler.json`, { cwd: referencePath }) ??
+			findUpSync(`wrangler.jsonc`, { cwd: referencePath }) ??
 			findUpSync(`wrangler.toml`, { cwd: referencePath })
 		);
 	}

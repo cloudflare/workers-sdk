@@ -4,7 +4,7 @@ import { mockAccountId, mockApiToken } from "../../helpers/mock-account-id";
 import { mockConsoleMethods } from "../../helpers/mock-console";
 import { createFetchResult, msw } from "../../helpers/msw";
 import { runWrangler } from "../../helpers/run-wrangler";
-import writeWranglerToml from "../../helpers/write-wrangler-toml";
+import { writeWranglerToml } from "../../helpers/write-wrangler-toml";
 import type { ApiDeployment, ApiVersion } from "../../../versions/types";
 
 describe("versions secret list", () => {
