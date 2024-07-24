@@ -30,6 +30,7 @@ describe(
 				experimental: {
 					fileBasedRegistry: true,
 					disableExperimentalWarning: true,
+					devEnv: true,
 				},
 			});
 			await setTimeout(1000);
@@ -38,6 +39,7 @@ describe(
 				experimental: {
 					fileBasedRegistry: true,
 					disableExperimentalWarning: true,
+					devEnv: true,
 				},
 			});
 			await setTimeout(1000);
@@ -46,6 +48,7 @@ describe(
 				experimental: {
 					fileBasedRegistry: true,
 					disableExperimentalWarning: true,
+					devEnv: true,
 				},
 			});
 			await setTimeout(1000);

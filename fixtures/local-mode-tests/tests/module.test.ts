@@ -23,6 +23,7 @@ describe("module worker", () => {
 				experimental: {
 					disableExperimentalWarning: true,
 					disableDevRegistry: true,
+					devEnv: true,
 				},
 			}
 		);
