@@ -53,7 +53,7 @@ export function runCommand(
 			status,
 			stdout,
 			stderr,
-			output: output.filter(Boolean).join("\n"),
+			output: output.filter((line) => line !== null).join("\n"),
 		};
 	} catch (e) {
 		if (isTimedOutError(e)) {
