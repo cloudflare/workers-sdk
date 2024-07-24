@@ -218,9 +218,9 @@ export class ProxyController extends Controller<ProxyControllerEventMap> {
 		let webSocket: WebSocket | null = null;
 
 		try {
-			const { proxyWorker } = await this.ready.promise;
+			assert(this.proxyWorker);
 
-			const inspectorProxyWorkerUrl = await proxyWorker.unsafeGetDirectURL(
+			const inspectorProxyWorkerUrl = await this.proxyWorker.unsafeGetDirectURL(
 				"InspectorProxyWorker"
 			);
 			webSocket = new WebSocket(

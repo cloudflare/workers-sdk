@@ -1,3 +1,4 @@
+import { once } from "node:events";
 import { readFile } from "node:fs/promises";
 import * as path from "node:path";
 import * as util from "node:util";
@@ -161,17 +162,42 @@ export async function startDevServer(
 		},
 	};
 
-	// temp: fake these events by calling the handler directly
-	if (!props.experimentalDevEnv) {
-		devEnv.proxy.onConfigUpdate({
-			type: "configUpdate",
-			config: fakeResolvedInput(startDevWorkerOptions),
+	if (props.experimentalDevEnv) {
+		// to comply with the current contract of this function, call props.onReady on reloadComplete
+		devEnv.runtimes.forEach((runtime) => {
+			runtime.on("reloadComplete", async (ev) => {
+				const { proxyWorker } = await devEnv.proxy.ready.promise;
+				const url = await proxyWorker.ready;
+
+				props.onReady?.(url.hostname, parseInt(url.port), ev.proxyData);
+			});
 		});
-		devEnv.proxy.onBundleStart({
-			type: "bundleStart",
-			config: fakeResolvedInput(startDevWorkerOptions),
-		});
+
+		await devEnv.config.set(startDevWorkerOptions);
+
+		await Promise.race([
+			once(devEnv.runtimes[0], "reloadComplete"),
+			once(devEnv.runtimes[1], "reloadComplete"),
+			once(devEnv.runtimes[0], "error").then((err) => Promise.reject(err)),
+			once(devEnv.runtimes[1], "error").then((err) => Promise.reject(err)),
+		]);
+
+		return {
+			stop: async () => {
+				await Promise.allSettled([stopWorkerRegistry(), devEnv.teardown()]);
+			},
+		};
 	}
+
+	// temp: fake these events by calling the handler directly
+	devEnv.proxy.onConfigUpdate({
+		type: "configUpdate",
+		config: fakeResolvedInput(startDevWorkerOptions),
+	});
+	devEnv.proxy.onBundleStart({
+		type: "bundleStart",
+		config: fakeResolvedInput(startDevWorkerOptions),
+	});
 
 	//implement a react-free version of useEsbuild
 	const bundle = await runEsbuild({
@@ -202,18 +228,6 @@ export async function startDevServer(
 			props.compatibilityFlags
 		),
 	});
-
-	if (props.experimentalDevEnv) {
-		// to comply with the current contract of this function, call props.onReady on reloadComplete
-		devEnv.runtimes.forEach((runtime) => {
-			runtime.on("reloadComplete", async (ev) => {
-				const { proxyWorker } = await devEnv.proxy.ready.promise;
-				const url = await proxyWorker.ready;
-
-				props.onReady?.(url.hostname, parseInt(url.port), ev.proxyData);
-			});
-		});
-	}
 
 	if (props.local) {
 		// temp: fake these events by calling the handler directly
