@@ -15,5 +15,11 @@ export default defineConfig({
 		globalSetup: path.resolve(__dirname, "./validate-environment.ts"),
 		reporters: ["verbose", "html"],
 		bail: 1,
+		chaiConfig: {
+			// this controls how much output is shown when expect(string).toContain(...) fails
+			// the default results in a very short, unhelpful string whereas we would like to
+			// see the full string to help figure out why the assertion failed
+			truncateThreshold: 1e6,
+		},
 	},
 });

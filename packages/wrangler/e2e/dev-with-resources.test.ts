@@ -22,7 +22,17 @@ const WASM_ADD_MODULE = Buffer.from(
 	"base64"
 );
 
-describe.each(RUNTIMES)("Core: $flags", ({ runtime, flags }) => {
+/**
+ * We use the same workerName for all of the tests in this suite in hopes of reducing flakes.
+ * When creating a new worker, a <workerName>.devprod-testing7928.workers.dev subdomain is created.
+ * The platform API locks a database table for the zone (devprod-testing7928.workers.dev) while doing this.
+ * Creating many workers in the same account/zone in quick succession can run up against the lock.
+ * This test suite runs sequentially so does not cause lock issues for itself, but we run into lock issues
+ * when multiple PRs have jobs running at the same time (or the same PR has the tests run across multiple OSes).
+ */
+const workerName = generateResourceName();
+
+describe.sequential.each(RUNTIMES)("Core: $flags", ({ runtime, flags }) => {
 	const isLocal = runtime === "local";
 
 	let helper: WranglerE2ETestHelper;
@@ -31,7 +41,6 @@ describe.each(RUNTIMES)("Core: $flags", ({ runtime, flags }) => {
 	});
 
 	it("works with basic modules format worker", async () => {
-		const workerName = generateResourceName();
 		await helper.seed({
 			"wrangler.toml": dedent`
 				name = "${workerName}"
@@ -72,7 +81,6 @@ describe.each(RUNTIMES)("Core: $flags", ({ runtime, flags }) => {
 	});
 
 	it("works with basic service worker", async () => {
-		const workerName = generateResourceName();
 		await helper.seed({
 			"wrangler.toml": dedent`
 				name = "${workerName}"
@@ -113,7 +121,6 @@ describe.each(RUNTIMES)("Core: $flags", ({ runtime, flags }) => {
 	it.todo("workers with find additional modules");
 
 	it("respects compatibility settings", async () => {
-		const workerName = generateResourceName();
 		// `global_navigator` enabled on `2022-03-21`: https://developers.cloudflare.com/workers/configuration/compatibility-dates/#global-navigator
 		// `http_headers_getsetcookie` enabled on `2023-03-01`: https://developers.cloudflare.com/workers/configuration/compatibility-dates/#headers-supports-getsetcookie
 		// `2022-03-22` should enable `global_navigator` but disable `http_headers_getsetcookie`
@@ -154,7 +161,7 @@ describe.each(RUNTIMES)("Core: $flags", ({ runtime, flags }) => {
 
 	it("starts inspector and allows debugging", async () => {
 		const inspectorPort = await getPort();
-		const workerName = generateResourceName();
+
 		await helper.seed({
 			"wrangler.toml": dedent`
 				name = "${workerName}"
@@ -180,7 +187,6 @@ describe.each(RUNTIMES)("Core: $flags", ({ runtime, flags }) => {
 	});
 
 	it("starts https server", async () => {
-		const workerName = generateResourceName();
 		await helper.seed({
 			"wrangler.toml": dedent`
 				name = "${workerName}"
@@ -206,7 +212,6 @@ describe.each(RUNTIMES)("Core: $flags", ({ runtime, flags }) => {
 	});
 
 	it.skipIf(!isLocal)("uses configured upstream inside worker", async () => {
-		const workerName = generateResourceName();
 		await helper.seed({
 			"wrangler.toml": dedent`
 				name = "${workerName}"
@@ -229,7 +234,7 @@ describe.each(RUNTIMES)("Core: $flags", ({ runtime, flags }) => {
 	});
 });
 
-describe.each(RUNTIMES)("Bindings: $flags", ({ runtime, flags }) => {
+describe.sequential.each(RUNTIMES)("Bindings: $flags", ({ runtime, flags }) => {
 	const isLocal = runtime === "local";
 	const resourceFlags = isLocal ? "--local" : "";
 	const d1ResourceFlags = isLocal ? "" : "--remote";
@@ -240,7 +245,6 @@ describe.each(RUNTIMES)("Bindings: $flags", ({ runtime, flags }) => {
 	});
 
 	it("exposes basic bindings in service workers", async () => {
-		const workerName = generateResourceName();
 		await helper.seed({
 			"data/text.txt": "👋",
 			"data/binary.bin": "🌊",
@@ -280,7 +284,6 @@ describe.each(RUNTIMES)("Bindings: $flags", ({ runtime, flags }) => {
 	});
 
 	it("exposes WebAssembly module bindings in service workers", async () => {
-		const workerName = generateResourceName();
 		await helper.seed({
 			"add.wasm": WASM_ADD_MODULE,
 			"wrangler.toml": dedent`
@@ -309,7 +312,6 @@ describe.each(RUNTIMES)("Bindings: $flags", ({ runtime, flags }) => {
 			`wrangler kv key put ${resourceFlags} --namespace-id=${ns} existing-key existing-value`
 		);
 
-		const workerName = generateResourceName();
 		await helper.seed({
 			"wrangler.toml": dedent`
 				name = "${workerName}"
@@ -342,7 +344,6 @@ describe.each(RUNTIMES)("Bindings: $flags", ({ runtime, flags }) => {
 	});
 
 	it("supports Workers Sites bindings", async () => {
-		const workerName = generateResourceName();
 		const kvAssetHandler = require.resolve("@cloudflare/kv-asset-handler");
 		await helper.seed({
 			"public/index.html": "<h1>👋</h1>",
@@ -412,7 +413,6 @@ describe.each(RUNTIMES)("Bindings: $flags", ({ runtime, flags }) => {
 			`wrangler r2 object put ${resourceFlags} ${name}/existing-key --file test.txt`
 		);
 
-		const workerName = generateResourceName();
 		await helper.seed({
 			"wrangler.toml": dedent`
 				name = "${workerName}"
@@ -453,7 +453,7 @@ describe.each(RUNTIMES)("Bindings: $flags", ({ runtime, flags }) => {
 
 	it("exposes D1 database bindings", async () => {
 		const { id, name } = await helper.d1(isLocal);
-		const workerName = generateResourceName();
+
 		await helper.seed({
 			"wrangler.toml": dedent`
 				name = "${workerName}"
@@ -497,7 +497,7 @@ describe.each(RUNTIMES)("Bindings: $flags", ({ runtime, flags }) => {
 
 	it.skipIf(!isLocal)("exposes queue producer/consumer bindings", async () => {
 		const queueName = generateResourceName("queue");
-		const workerName = generateResourceName();
+
 		await helper.seed({
 			"wrangler.toml": dedent`
 				name = "${workerName}"
