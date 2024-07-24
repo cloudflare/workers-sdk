@@ -3,6 +3,7 @@ import path from "node:path";
 import { findWranglerToml, readConfig } from "../config";
 import { getEntry } from "../deployment-bundle/entry";
 import { UserError } from "../errors";
+import { getExperimentalAssetsBasePath } from "../experimental-assets";
 import {
 	getRules,
 	getScriptName,
@@ -288,20 +289,31 @@ export async function deployHandler(
 		);
 	}
 
+	const experimentalAssetsBasePath = getExperimentalAssetsBasePath(
+		config,
+		args.experimentalAssets
+	);
+
 	if (
 		args.experimentalAssets &&
-		!existsSync(path.resolve(process.cwd(), args.experimentalAssets))
+		!existsSync(
+			path.resolve(experimentalAssetsBasePath, args.experimentalAssets)
+		)
 	) {
 		throw new UserError(
 			`The directory specified by the "--experimental-assets" command line argument does not exist:\n` +
-				`${path.resolve(process.cwd(), args.experimentalAssets)}`
+				`${path.resolve(experimentalAssetsBasePath, args.experimentalAssets)}`
 		);
 	} else {
-		config.experimental_assets?.forEach((x) => {
-			const assetDir = path.resolve(process.cwd(), x.directory);
+		config.experimental_assets?.forEach((assetConfig, index) => {
+			const assetDir = path.resolve(
+				experimentalAssetsBasePath,
+				assetConfig.directory
+			);
+
 			if (!existsSync(assetDir)) {
 				throw new UserError(
-					`The directory specified by the \`experimental_assets\` field in your configuration file does not exist:\n` +
+					`The directory specified by "experimental_assets[${index}]" in your configuration file does not exist:\n` +
 						`${assetDir}`
 				);
 			}

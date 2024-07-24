@@ -4338,7 +4338,7 @@ addEventListener('fetch', event => {});`
 			writeWorkerSource();
 			await expect(runWrangler("deploy")).rejects.toThrow(
 				new RegExp(
-					"^The directory specified by the `experimental_assets` field in your configuration file does not exist:[Ss]*"
+					'^The directory specified by "experimental_assets\\[0\\]" in your configuration file does not exist:[Ss]*'
 				)
 			);
 		});
