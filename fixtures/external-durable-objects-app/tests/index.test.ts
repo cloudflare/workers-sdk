@@ -28,7 +28,6 @@ describe(
 			a = await unstable_dev(path.join(__dirname, "../a/index.ts"), {
 				config: path.join(__dirname, "../a/wrangler.toml"),
 				experimental: {
-					fileBasedRegistry: true,
 					disableExperimentalWarning: true,
 					devEnv: true,
 				},
@@ -37,7 +36,6 @@ describe(
 			b = await unstable_dev(path.join(__dirname, "../b/index.ts"), {
 				config: path.join(__dirname, "../b/wrangler.toml"),
 				experimental: {
-					fileBasedRegistry: true,
 					disableExperimentalWarning: true,
 					devEnv: true,
 				},
@@ -46,7 +44,6 @@ describe(
 			c = await unstable_dev(path.join(__dirname, "../c/index.ts"), {
 				config: path.join(__dirname, "../c/wrangler.toml"),
 				experimental: {
-					fileBasedRegistry: true,
 					disableExperimentalWarning: true,
 					devEnv: true,
 				},
@@ -65,7 +62,6 @@ describe(
 				[
 					"pages",
 					"dev",
-					"--x-registry",
 					"public",
 					"--compatibility-date=2024-03-04",
 					"--do=PAGES_REFERENCED_DO=MyDurableObject@a",
