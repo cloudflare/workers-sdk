@@ -1,5 +1,11 @@
 # create-cloudflare
 
+## 2.22.3
+
+### Patch Changes
+
+- [#6333](https://github.com/cloudflare/workers-sdk/pull/6333) [`affdc56`](https://github.com/cloudflare/workers-sdk/commit/affdc56d77b86357fc474c6b729bcaa8edd8237d) Thanks [@penalosa](https://github.com/penalosa)! - fix: Prevent `@types/node` from being erroneously included in the Hello World Worker typing environment.
+
 ## 2.22.2
 
 ### Patch Changes
