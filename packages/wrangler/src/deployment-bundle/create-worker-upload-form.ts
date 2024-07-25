@@ -88,7 +88,6 @@ export type WorkerMetadataBinding =
 			index_name: string;
 			internalEnv?: string;
 	  }
-	| { type: "constellation"; name: string; project: string }
 	| { type: "hyperdrive"; name: string; id: string }
 	| {
 			type: "service";
@@ -249,14 +248,6 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 			name: binding,
 			type: "vectorize",
 			index_name: index_name,
-		});
-	});
-
-	bindings.constellation?.forEach(({ binding, project_id }) => {
-		metadataBindings.push({
-			name: binding,
-			type: "constellation",
-			project: project_id,
 		});
 	});
 

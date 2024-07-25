@@ -2,7 +2,6 @@ import assert from "node:assert";
 import path from "node:path";
 import TOML from "@iarna/toml";
 import { dedent } from "ts-dedent";
-import { getConstellationWarningFromEnv } from "../constellation/utils";
 import { Diagnostics } from "./diagnostics";
 import {
 	all,
@@ -1345,16 +1344,6 @@ function normalizeAndValidateEnvironment(
 			validateBindingArray(envName, validateVectorizeBinding),
 			[]
 		),
-		constellation: notInheritable(
-			diagnostics,
-			topLevelEnv,
-			rawConfig,
-			rawEnv,
-			envName,
-			"constellation",
-			validateBindingArray(envName, validateConstellationBinding),
-			[]
-		),
 		hyperdrive: notInheritable(
 			diagnostics,
 			topLevelEnv,
@@ -2145,7 +2134,6 @@ const validateUnsafeBinding: ValidatorFn = (diagnostics, field, value) => {
 			"kv_namespace",
 			"durable_object_namespace",
 			"d1_database",
-			"constellation",
 			"r2_bucket",
 			"service",
 			"logfwdr",
@@ -2555,51 +2543,6 @@ const validateVectorizeBinding: ValidatorFn = (diagnostics, field, value) => {
 	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
 		"binding",
 		"index_name",
-	]);
-
-	return isValid;
-};
-
-const validateConstellationBinding: ValidatorFn = (
-	diagnostics,
-	field,
-	value
-) => {
-	if (typeof value !== "object" || value === null) {
-		diagnostics.errors.push(
-			`"constellation" bindings should be objects, but got ${JSON.stringify(
-				value
-			)}`
-		);
-		return false;
-	}
-	let isValid = true;
-	// Constellation bindings must have a binding and a project.
-	if (!isRequiredProperty(value, "binding", "string")) {
-		diagnostics.errors.push(
-			`"${field}" bindings should have a string "binding" field but got ${JSON.stringify(
-				value
-			)}.`
-		);
-		isValid = false;
-	}
-	if (!isRequiredProperty(value, "project_id", "string")) {
-		diagnostics.errors.push(
-			`"${field}" bindings must have a "project_id" field but got ${JSON.stringify(
-				value
-			)}.`
-		);
-		isValid = false;
-	}
-	if (isValid && getConstellationWarningFromEnv() === undefined) {
-		diagnostics.warnings.push(
-			"Constellation Bindings are currently in beta to allow the API to evolve before general availability.\nPlease report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose\nNote: Run this command with the environment variable NO_CONSTELLATION_WARNING=true to hide this message\n\nFor example: `export NO_CONSTELLATION_WARNING=true && wrangler <YOUR COMMAND HERE>`"
-		);
-	}
-
-	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
-		"binding",
-		"project_id",
 	]);
 
 	return isValid;

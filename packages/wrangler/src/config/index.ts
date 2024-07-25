@@ -206,7 +206,6 @@ export function printBindings(bindings: CfWorkerInit["bindings"]) {
 		queues,
 		d1_databases,
 		vectorize,
-		constellation,
 		hyperdrive,
 		r2_buckets,
 		logfwdr,
@@ -325,18 +324,6 @@ export function printBindings(bindings: CfWorkerInit["bindings"]) {
 				return {
 					key: binding,
 					value: index_name,
-				};
-			}),
-		});
-	}
-
-	if (constellation !== undefined && constellation.length > 0) {
-		output.push({
-			type: "Constellation Projects",
-			entries: constellation.map(({ binding, project_id }) => {
-				return {
-					key: binding,
-					value: project_id,
 				};
 			}),
 		});

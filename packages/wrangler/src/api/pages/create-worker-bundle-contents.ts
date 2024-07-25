@@ -65,7 +65,6 @@ function createWorkerBundleFormData(
 		wasm_modules: undefined,
 		text_blobs: undefined,
 		data_blobs: undefined,
-		constellation: undefined,
 		dispatch_namespaces: undefined,
 		logfwdr: undefined,
 		unsafe: undefined,

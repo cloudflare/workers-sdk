@@ -82,7 +82,6 @@ async function createDraftWorker({
 					d1_databases: [],
 					vectorize: [],
 					hyperdrive: [],
-					constellation: [],
 					services: [],
 					analytics_engine_datasets: [],
 					wasm_modules: {},

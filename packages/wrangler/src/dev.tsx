@@ -448,7 +448,6 @@ export type AdditionalDevProps = {
 	additionalModules?: CfModule[];
 	moduleRoot?: string;
 	rules?: Rule[];
-	constellation?: Environment["constellation"];
 	showInteractiveDevSession?: boolean;
 };
 
@@ -663,7 +662,6 @@ export async function startDev(args: StartDevOptions) {
 						r2_buckets: args.r2,
 						d1_databases: args.d1Databases,
 						vectorize: undefined,
-						constellation: args.constellation,
 						hyperdrive: undefined,
 						services: args.services,
 						analytics_engine_datasets: undefined,
@@ -1433,7 +1431,6 @@ export function getBindings(
 		r2_buckets: mergedR2Bindings,
 		d1_databases: mergedD1Bindings,
 		vectorize: configParam.vectorize,
-		constellation: configParam.constellation,
 		hyperdrive: hyperdriveBindings,
 		services: mergedServiceBindings,
 		analytics_engine_datasets: configParam.analytics_engine_datasets,
@@ -1448,12 +1445,6 @@ export function getBindings(
 		mtls_certificates: configParam.mtls_certificates,
 		send_email: configParam.send_email,
 	};
-
-	if (bindings.constellation && bindings.constellation.length > 0) {
-		logger.warn(
-			"`constellation` is deprecated and will be removed in the next major version.\nPlease migrate to Workers AI, learn more here https://developers.cloudflare.com/workers-ai/."
-		);
-	}
 
 	return bindings;
 }

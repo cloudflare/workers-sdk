@@ -182,12 +182,6 @@ export function convertCfWorkerInitBindingstoBindings(
 				}
 				break;
 			}
-			case "constellation": {
-				for (const { binding, ...x } of info) {
-					output[binding] = { type: "constellation", ...x };
-				}
-				break;
-			}
 			case "services": {
 				for (const { binding, ...x } of info) {
 					output[binding] = { type: "service", ...x };
@@ -276,7 +270,6 @@ export async function convertBindingsToCfWorkerInitBindings(
 		r2_buckets: undefined,
 		d1_databases: undefined,
 		vectorize: undefined,
-		constellation: undefined,
 		hyperdrive: undefined,
 		services: undefined,
 		analytics_engine_datasets: undefined,
@@ -339,9 +332,6 @@ export async function convertBindingsToCfWorkerInitBindings(
 		} else if (binding.type === "vectorize") {
 			bindings.vectorize ??= [];
 			bindings.vectorize.push({ ...binding, binding: name });
-		} else if (binding.type === "constellation") {
-			bindings.constellation ??= [];
-			bindings.constellation.push({ ...binding, binding: name });
 		} else if (binding.type === "hyperdrive") {
 			bindings.hyperdrive ??= [];
 			bindings.hyperdrive.push({ ...binding, binding: name });

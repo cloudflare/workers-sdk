@@ -123,7 +123,6 @@ export async function typesHandler(
 		unsafe: config.unsafe,
 		rules: config.rules,
 		queues: config.queues,
-		constellation: config.constellation,
 		send_email: config.send_email,
 		vectorize: config.vectorize,
 		hyperdrive: config.hyperdrive,
@@ -307,12 +306,6 @@ async function generateTypes(
 
 	if (configToDTS.services) {
 		for (const service of configToDTS.services) {
-			envTypeStructure.push(constructType(service.binding, "Fetcher"));
-		}
-	}
-
-	if (configToDTS.constellation) {
-		for (const service of configToDTS.constellation) {
 			envTypeStructure.push(constructType(service.binding, "Fetcher"));
 		}
 	}
