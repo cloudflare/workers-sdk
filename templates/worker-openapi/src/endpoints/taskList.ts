@@ -1,6 +1,7 @@
 import { Bool, Num, OpenAPIRoute } from "chanfana";
 import { z } from "zod";
 import { Task } from "../types";
+import type { Context } from "hono";
 
 export class TaskList extends OpenAPIRoute {
 	schema = {
@@ -37,7 +38,7 @@ export class TaskList extends OpenAPIRoute {
 		},
 	};
 
-	async handle(c) {
+	async handle(c: Context) {
 		// Get validated data
 		const data = await this.getValidatedData<typeof this.schema>();
 
