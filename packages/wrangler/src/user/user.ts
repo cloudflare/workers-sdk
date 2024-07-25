@@ -368,9 +368,9 @@ const AllScopes = {
  *
  * "offline_access" is automatically included.
  */
-type Scope = keyof typeof AllScopes;
+export type Scope = keyof typeof AllScopes;
 
-let DefaultScopeKeys = Object.keys(DefaultScopes) as Scope[];
+export let DefaultScopeKeys = Object.keys(DefaultScopes) as Scope[];
 
 export function setLoginScopeKeys(scopes: Scope[]) {
 	DefaultScopeKeys = scopes;

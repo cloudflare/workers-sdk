@@ -11,6 +11,7 @@ import { CI } from "../is-ci";
 import isInteractive from "../is-interactive";
 import { logger } from "../logger";
 import {
+	DefaultScopeKeys,
 	getAccountFromCache,
 	getAccountId,
 	getAPIToken,
@@ -25,6 +26,7 @@ import { ApiError, DeploymentMutationError, OpenAPI } from "./client";
 import { wrap } from "./helpers/wrap";
 import { idToLocationName, loadAccount } from "./locations";
 import type { Config } from "../config";
+import type { Scope } from "../user";
 import type {
 	CommonYargsOptions,
 	StrictYargsOptionsToInterfaceJSON,
@@ -140,9 +142,14 @@ export async function fillOpenAPIConfiguration(config: Config, json: boolean) {
 	const needsCloudchamberToken = !scopes?.find(
 		(scope) => scope === "cloudchamber:write"
 	);
+	const cloudchamberScope: Scope[] = ["cloudchamber:write"];
+	const scopesToSet: Scope[] =
+		scopes == undefined
+			? cloudchamberScope.concat(DefaultScopeKeys)
+			: cloudchamberScope.concat(scopes);
 
-	if (getAuthFromEnv()) {
-		setLoginScopeKeys(["cloudchamber:write", "user:read", "account:read"]);
+	if (getAuthFromEnv() && needsCloudchamberToken) {
+		setLoginScopeKeys(scopesToSet);
 		// Wrangler will try to retrieve the oauth token and refresh it
 		// for its internal fetch call even if we have AuthFromEnv.
 		// Let's mock it
@@ -154,7 +161,7 @@ export async function fillOpenAPIConfiguration(config: Config, json: boolean) {
 		if (needsCloudchamberToken && scopes) {
 			logRaw(
 				status.warning +
-					" We need to re-authenticate with a cloudchamber token..."
+					" We need to re-authenticate to add a cloudchamber token..."
 			);
 			// cache account id
 			await getAccountId();
@@ -165,7 +172,7 @@ export async function fillOpenAPIConfiguration(config: Config, json: boolean) {
 			reinitialiseAuthTokens({});
 		}
 
-		setLoginScopeKeys(["cloudchamber:write", "user:read", "account:read"]);
+		setLoginScopeKeys(scopesToSet);
 
 		// Require either login, or environment variables being set to authenticate
 		//
