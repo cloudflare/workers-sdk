@@ -50,7 +50,7 @@ import type { StartDevOptions } from "../dev";
 import type { WorkerRegistry } from "../dev-registry";
 import type { EnablePagesAssetsServiceBindingOptions } from "../miniflare-cli/types";
 import type { EphemeralDirectory } from "../paths";
-import type { AssetPaths } from "../sites";
+import type { LegacyAssetPaths } from "../sites";
 import type { EsbuildBundle } from "./use-esbuild";
 
 /**
@@ -231,8 +231,8 @@ export type DevProps = {
 	crons: Config["triggers"]["crons"];
 	queueConsumers: Config["queues"]["consumers"];
 	isWorkersSite: boolean;
-	assetPaths: AssetPaths | undefined;
-	assetsConfig: Config["legacy_assets"];
+	legacyAssetPaths: LegacyAssetPaths | undefined;
+	legacyAssetsConfig: Config["legacy_assets"];
 	compatibilityDate: string;
 	compatibilityFlags: string[] | undefined;
 	usageModel: "bundled" | "unbound" | undefined;
@@ -462,17 +462,17 @@ function DevSession(props: DevSessionProps) {
 			},
 			legacy: {
 				site:
-					props.isWorkersSite && props.assetPaths
+					props.isWorkersSite && props.legacyAssetPaths
 						? {
 								bucket: path.join(
-									props.assetPaths.baseDirectory,
-									props.assetPaths?.assetDirectory
+									props.legacyAssetPaths.baseDirectory,
+									props.legacyAssetPaths?.assetDirectory
 								),
-								include: props.assetPaths.includePatterns,
-								exclude: props.assetPaths.excludePatterns,
+								include: props.legacyAssetPaths.includePatterns,
+								exclude: props.legacyAssetPaths.excludePatterns,
 							}
 						: undefined,
-				legacyAssets: props.assetsConfig,
+				legacyAssets: props.legacyAssetsConfig,
 				enableServiceEnvironments: !props.legacyEnv,
 			},
 			unsafe: {
@@ -489,10 +489,10 @@ function DevSession(props: DevSessionProps) {
 		props.compatibilityFlags,
 		props.bindings,
 		props.entry,
-		props.assetPaths,
+		props.legacyAssetPaths,
 		props.isWorkersSite,
 		props.local,
-		props.assetsConfig,
+		props.legacyAssetsConfig,
 		props.processEntrypoint,
 		props.additionalModules,
 		props.env,
@@ -590,8 +590,8 @@ function DevSession(props: DevSessionProps) {
 		additionalModules: props.additionalModules,
 		rules: props.rules,
 		jsxFragment: props.jsxFragment,
-		serveAssetsFromWorker: Boolean(
-			props.assetPaths && !props.isWorkersSite && props.local
+		serveLegacyAssetsFromWorker: Boolean(
+			props.legacyAssetPaths && !props.isWorkersSite && props.local
 		),
 		tsconfig: props.tsconfig,
 		minify: props.minify,
@@ -600,7 +600,7 @@ function DevSession(props: DevSessionProps) {
 		alias: props.alias,
 		noBundle: props.noBundle,
 		findAdditionalModules: props.findAdditionalModules,
-		legacyAssets: props.assetsConfig,
+		legacyAssets: props.legacyAssetsConfig,
 		durableObjects: props.bindings.durable_objects || { bindings: [] },
 		local: props.local,
 		// Enable the bundling to know whether we are using dev or deploy
@@ -683,7 +683,7 @@ function DevSession(props: DevSessionProps) {
 			usageModel={props.usageModel}
 			bindings={props.bindings}
 			workerDefinitions={workerDefinitions}
-			assetPaths={props.assetPaths}
+			legacyAssetPaths={props.legacyAssetPaths}
 			initialPort={undefined} // hard-code for userworker, DevEnv-ProxyWorker now uses this prop value
 			initialIp={"127.0.0.1"} // hard-code for userworker, DevEnv-ProxyWorker now uses this prop value
 			rules={props.rules}
@@ -710,7 +710,7 @@ function DevSession(props: DevSessionProps) {
 			bundle={bundle}
 			format={props.entry.format}
 			bindings={props.bindings}
-			assetPaths={props.assetPaths}
+			legacyAssetPaths={props.legacyAssetPaths}
 			isWorkersSite={props.isWorkersSite}
 			port={props.initialPort}
 			ip={props.initialIp}

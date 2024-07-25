@@ -104,7 +104,7 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 						bundle: true,
 						additionalModules: [],
 						moduleCollector,
-						serveAssetsFromWorker: Boolean(
+						serveLegacyAssetsFromWorker: Boolean(
 							config.legacy?.legacyAssets && !config.dev?.remote
 						),
 						doBindings: bindings?.durable_objects?.bindings ?? [],
@@ -216,7 +216,7 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 				additionalModules: config.build?.additionalModules ?? [],
 				rules: config.build.moduleRules,
 				legacyAssets: config.legacy?.legacyAssets,
-				serveAssetsFromWorker: Boolean(
+				serveLegacyAssetsFromWorker: Boolean(
 					config.legacy?.legacyAssets && !config.dev?.remote
 				),
 				tsconfig: config.build?.tsconfig,

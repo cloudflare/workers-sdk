@@ -92,7 +92,7 @@ async function convertToConfigBundle(
 		compatibilityFlags: event.config.compatibilityFlags,
 		bindings,
 		workerDefinitions: event.config.dev?.registry,
-		assetPaths: event.config.legacy?.site?.bucket
+		legacyAssetPaths: event.config.legacy?.site?.bucket
 			? {
 					baseDirectory: event.config.legacy?.site?.bucket,
 					assetDirectory: "",

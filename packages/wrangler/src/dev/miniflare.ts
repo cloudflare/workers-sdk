@@ -40,7 +40,7 @@ import type {
 	WorkerRegistry,
 } from "../dev-registry";
 import type { LoggerLevel } from "../logger";
-import type { AssetPaths } from "../sites";
+import type { LegacyAssetPaths } from "../sites";
 import type { EsbuildBundle } from "./use-esbuild";
 import type { MiniflareOptions, SourceOptions, WorkerOptions } from "miniflare";
 import type { UUID } from "node:crypto";
@@ -171,7 +171,7 @@ export interface ConfigBundle {
 	compatibilityFlags: string[] | undefined;
 	bindings: CfWorkerInit["bindings"];
 	workerDefinitions: WorkerRegistry | undefined;
-	assetPaths: AssetPaths | undefined;
+	legacyAssetPaths: LegacyAssetPaths | undefined;
 	initialPort: Port;
 	initialIp: string;
 	rules: Config["rules"];
@@ -675,11 +675,11 @@ export function buildPersistOptions(
 }
 
 export function buildSitesOptions({
-	assetPaths,
-}: Pick<ConfigBundle, "assetPaths">) {
-	if (assetPaths !== undefined) {
+	legacyAssetPaths,
+}: Pick<ConfigBundle, "legacyAssetPaths">) {
+	if (legacyAssetPaths !== undefined) {
 		const { baseDirectory, assetDirectory, includePatterns, excludePatterns } =
-			assetPaths;
+			legacyAssetPaths;
 		return {
 			sitePath: path.join(baseDirectory, assetDirectory),
 			siteInclude: includePatterns.length > 0 ? includePatterns : undefined,

@@ -72,7 +72,7 @@ export class RemoteRuntimeController extends RuntimeController {
 				legacyEnv: props.legacyEnv,
 				env: props.env,
 				isWorkersSite: props.isWorkersSite,
-				assetPaths: props.assetPaths,
+				legacyAssetPaths: props.legacyAssetPaths,
 				format: props.format,
 				bindings: props.bindings,
 				compatibilityDate: props.compatibilityDate,
@@ -169,7 +169,7 @@ export class RemoteRuntimeController extends RuntimeController {
 				legacyEnv: !config.legacy?.enableServiceEnvironments,
 				env: config.env,
 				isWorkersSite: config.legacy?.site !== undefined,
-				assetPaths: config.legacy?.site?.bucket
+				legacyAssetPaths: config.legacy?.site?.bucket
 					? {
 							baseDirectory: config.legacy?.site?.bucket,
 							assetDirectory: "",

@@ -12,7 +12,7 @@ import {
 } from "../index";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
-import { getAssetPaths, getSiteAssetPaths } from "../sites";
+import { getLegacyAssetPaths, getSiteAssetPaths } from "../sites";
 import { requireAuth } from "../user";
 import { collectKeyValues } from "../utils/collectKeyValues";
 import deploy from "./deploy";
@@ -335,9 +335,9 @@ export async function deployHandler(
 
 	const accountId = args.dryRun ? undefined : await requireAuth(config);
 
-	const assetPaths =
+	const legacyAssetPaths =
 		args.legacyAssets || config.legacy_assets
-			? getAssetPaths(config, args.legacyAssets)
+			? getLegacyAssetPaths(config, args.legacyAssets)
 			: getSiteAssetPaths(
 					config,
 					args.site,
@@ -370,7 +370,7 @@ export async function deployHandler(
 		tsconfig: args.tsconfig,
 		routes: args.routes,
 		experimentalAssets: experimentalAssets?.directory,
-		assetPaths,
+		legacyAssetPaths,
 		legacyEnv: isLegacyEnv(config),
 		minify: args.minify,
 		nodeCompat: args.nodeCompat,

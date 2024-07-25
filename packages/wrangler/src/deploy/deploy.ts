@@ -63,7 +63,7 @@ import type {
 	CfWorkerInit,
 } from "../deployment-bundle/worker";
 import type { PostQueueBody, PostTypedConsumerBody } from "../queues/client";
-import type { AssetPaths } from "../sites";
+import type { LegacyAssetPaths } from "../sites";
 import type { RetrieveSourceMapFunction } from "../sourcemap";
 
 type Props = {
@@ -75,7 +75,7 @@ type Props = {
 	env: string | undefined;
 	compatibilityDate: string | undefined;
 	compatibilityFlags: string[] | undefined;
-	assetPaths: AssetPaths | undefined;
+	legacyAssetPaths: LegacyAssetPaths | undefined;
 	experimentalAssets: string | undefined;
 	vars: Record<string, string> | undefined;
 	defines: Record<string, string> | undefined;
@@ -450,7 +450,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 	if (
 		!props.isWorkersSite &&
-		Boolean(props.assetPaths) &&
+		Boolean(props.legacyAssetPaths) &&
 		format === "service-worker"
 	) {
 		throw new UserError(
@@ -521,8 +521,8 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 						bundle: true,
 						additionalModules: [],
 						moduleCollector,
-						serveAssetsFromWorker:
-							!props.isWorkersSite && Boolean(props.assetPaths),
+						serveLegacyAssetsFromWorker:
+							!props.isWorkersSite && Boolean(props.legacyAssetPaths),
 						doBindings: config.durable_objects.bindings,
 						jsxFactory,
 						jsxFragment,
@@ -595,7 +595,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			// include it in the kv namespace name regardless (since there's no
 			// concept of service environments for kv namespaces yet).
 			scriptName + (!props.legacyEnv && props.env ? `-${props.env}` : ""),
-			props.assetPaths,
+			props.legacyAssetPaths,
 			false,
 			props.dryRun,
 			props.oldAssetTtl

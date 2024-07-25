@@ -121,7 +121,7 @@ function pluralise(count: number) {
 export async function syncAssets(
 	accountId: string | undefined,
 	scriptName: string,
-	siteAssets: AssetPaths | undefined,
+	siteAssets: LegacyAssetPaths | undefined,
 	preview: boolean,
 	dryRun: boolean | undefined,
 	oldAssetTTL: number | undefined
@@ -441,7 +441,7 @@ function urlSafe(filePath: string): string {
 /**
  * Information about the assets that should be uploaded
  */
-export interface AssetPaths {
+export interface LegacyAssetPaths {
 	/**
 	 * Absolute path to the root of the project.
 	 *
@@ -471,10 +471,10 @@ export interface AssetPaths {
  * (This function corresponds to --legacy-assets/config.assets)
  *
  */
-export function getAssetPaths(
+export function getLegacyAssetPaths(
 	config: Config,
 	assetDirectory: string | undefined
-): AssetPaths | undefined {
+): LegacyAssetPaths | undefined {
 	const baseDirectory = assetDirectory
 		? process.cwd()
 		: path.resolve(path.dirname(config.configPath ?? "wrangler.toml"));
@@ -520,7 +520,7 @@ export function getSiteAssetPaths(
 	assetDirectory?: string,
 	includePatterns = config.site?.include ?? [],
 	excludePatterns = config.site?.exclude ?? []
-): AssetPaths | undefined {
+): LegacyAssetPaths | undefined {
 	const baseDirectory = assetDirectory
 		? process.cwd()
 		: path.resolve(path.dirname(config.configPath ?? "wrangler.toml"));

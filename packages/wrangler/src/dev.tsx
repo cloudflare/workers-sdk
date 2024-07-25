@@ -27,7 +27,7 @@ import { run } from "./experimental-flags";
 import isInteractive from "./is-interactive";
 import { logger } from "./logger";
 import * as metrics from "./metrics";
-import { getAssetPaths, getSiteAssetPaths } from "./sites";
+import { getLegacyAssetPaths, getSiteAssetPaths } from "./sites";
 import {
 	getAccountFromCache,
 	loginOrRefreshIfRequired,
@@ -723,16 +723,19 @@ export async function startDev(args: StartDevOptions) {
 				},
 				legacy: {
 					site: (configParam) => {
-						const assetPaths = getResolvedAssetPaths(args, configParam);
+						const legacyAssetPaths = getResolvedLegacyAssetPaths(
+							args,
+							configParam
+						);
 
-						return Boolean(args.site || configParam.site) && assetPaths
+						return Boolean(args.site || configParam.site) && legacyAssetPaths
 							? {
 									bucket: path.join(
-										assetPaths.baseDirectory,
-										assetPaths?.assetDirectory
+										legacyAssetPaths.baseDirectory,
+										legacyAssetPaths?.assetDirectory
 									),
-									include: assetPaths.includePatterns,
-									exclude: assetPaths.excludePatterns,
+									include: legacyAssetPaths.includePatterns,
+									exclude: legacyAssetPaths.excludePatterns,
 								}
 							: undefined;
 					},
@@ -821,6 +824,7 @@ export async function startDev(args: StartDevOptions) {
 				args.compatibilityFlags ?? config.compatibility_flags ?? [],
 			noBundle: args.noBundle ?? config.no_bundle ?? false,
 		});
+
 		void metrics.sendMetricsEvent(
 			"run dev",
 			{
@@ -832,7 +836,7 @@ export async function startDev(args: StartDevOptions) {
 
 		// eslint-disable-next-line no-inner-declarations
 		async function getDevReactElement(configParam: Config) {
-			const { assetPaths, bindings } = getBindingsAndAssetPaths(
+			const { legacyAssetPaths, bindings } = getBindingsAndLegacyAssetPaths(
 				args,
 				configParam
 			);
@@ -871,8 +875,8 @@ export async function startDev(args: StartDevOptions) {
 						configParam.account_id ??
 						getAccountFromCache()?.id
 					}
-					assetPaths={assetPaths}
-					assetsConfig={configParam.legacy_assets}
+					legacyAssetPaths={legacyAssetPaths}
+					legacyAssetsConfig={configParam.legacy_assets}
 					initialPort={
 						args.port ?? configParam.dev.port ?? (await getLocalPort())
 					}
@@ -910,6 +914,7 @@ export async function startDev(args: StartDevOptions) {
 				/>
 			);
 		}
+
 		const devReactElement = render(await getDevReactElement(config));
 
 		rerender = devReactElement.rerender;
@@ -992,7 +997,7 @@ export async function startApiDev(args: StartDevOptions) {
 
 	// eslint-disable-next-line no-inner-declarations
 	async function getDevServer(configParam: Config) {
-		const { assetPaths, bindings } = getBindingsAndAssetPaths(
+		const { legacyAssetPaths, bindings } = getBindingsAndLegacyAssetPaths(
 			args,
 			configParam
 		);
@@ -1032,8 +1037,8 @@ export async function startApiDev(args: StartDevOptions) {
 			liveReload: args.liveReload ?? false,
 			accountId:
 				args.accountId ?? configParam.account_id ?? getAccountFromCache()?.id,
-			assetPaths: assetPaths,
-			assetsConfig: configParam.legacy_assets,
+			legacyAssetPaths: legacyAssetPaths,
+			legacyAssetsConfig: configParam.legacy_assets,
 			//port can be 0, which means to use a random port
 			initialPort: args.port ?? configParam.dev.port ?? (await getLocalPort()),
 			initialIp: args.ip ?? configParam.dev.ip,
@@ -1295,29 +1300,29 @@ export function getResolvedBindings(
 	return bindings;
 }
 
-export function getResolvedAssetPaths(
+export function getResolvedLegacyAssetPaths(
 	args: StartDevOptions,
 	configParam: Config
 ) {
-	const assetPaths =
+	const legacyAssetPaths =
 		args.legacyAssets || configParam.legacy_assets
-			? getAssetPaths(configParam, args.legacyAssets)
+			? getLegacyAssetPaths(configParam, args.legacyAssets)
 			: getSiteAssetPaths(
 					configParam,
 					args.site,
 					args.siteInclude,
 					args.siteExclude
 				);
-	return assetPaths;
+	return legacyAssetPaths;
 }
 
-export function getBindingsAndAssetPaths(
+export function getBindingsAndLegacyAssetPaths(
 	args: StartDevOptions,
 	configParam: Config
 ) {
 	return {
 		bindings: getResolvedBindings(args, configParam),
-		assetPaths: getResolvedAssetPaths(args, configParam),
+		legacyAssetPaths: getResolvedLegacyAssetPaths(args, configParam),
 	};
 }
 
