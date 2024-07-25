@@ -46,6 +46,7 @@
 		"prettier": "^3.2.5",
 		"prettier-plugin-packagejson": "^2.2.18",
 		"rimraf": "^5.0.1",
+		"tree-kill": "^1.2.2",
 		"turbo": "^1.10.14",
 		"typescript": "^5.5.2",
 		"vite": "^5.0.12",
