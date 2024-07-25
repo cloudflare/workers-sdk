@@ -8,7 +8,6 @@ import { version as wranglerVersion } from "../package.json";
 import { ai } from "./ai";
 import { cloudchamber } from "./cloudchamber";
 import { loadDotEnv, readConfig } from "./config";
-import { constellation } from "./constellation";
 import { d1 } from "./d1";
 import { deleteHandler, deleteOptions } from "./delete";
 import { deployHandler, deployOptions } from "./deploy";
@@ -729,11 +728,6 @@ export function createCLIParser(argv: string[]) {
 		subdomainOptions,
 		subdomainHandler
 	);
-
-	// [DEPRECATED] constellation
-	wrangler.command("constellation", false, (aiYargs) => {
-		return constellation(aiYargs.command(subHelp));
-	});
 
 	// [DEPRECATED] secret:bulk
 	wrangler.command(

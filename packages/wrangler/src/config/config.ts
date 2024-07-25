@@ -394,7 +394,6 @@ export const defaultWranglerConfig: Config = {
 	define: {},
 	cloudchamber: {},
 	send_email: [],
-	constellation: [],
 	browser: undefined,
 	unsafe: {
 		bindings: undefined,

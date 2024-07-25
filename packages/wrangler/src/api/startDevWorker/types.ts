@@ -8,7 +8,6 @@ import type {
 import type { NodeJSCompatMode } from "../../deployment-bundle/node-compat";
 import type {
 	CfAnalyticsEngineDataset,
-	CfConstellation,
 	CfD1Database,
 	CfDispatchNamespace,
 	CfDurableObject,
@@ -252,7 +251,6 @@ export type Binding =
 	| ({ type: "r2_bucket" } & BindingOmit<CfR2Bucket>)
 	| ({ type: "d1" } & Omit<CfD1Database, "binding">)
 	| ({ type: "vectorize" } & Omit<CfVectorize, "binding">)
-	| ({ type: "constellation" } & Omit<CfConstellation, "binding">)
 	| ({ type: "hyperdrive" } & Omit<CfHyperdrive, "binding">)
 	| ({ type: "service" } & Omit<CfService, "binding">)
 	| { type: "fetcher"; fetcher: ServiceFetch }
