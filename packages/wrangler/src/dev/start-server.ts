@@ -175,11 +175,22 @@ export async function startDevServer(
 
 		await devEnv.config.set(startDevWorkerOptions);
 
+		// adhere to unstable_dev contract:
+		//   - only resolve when UserWorker is ready
+		//   - reject if UserWorker fails to start
+		await Promise.race(
+			devEnv.runtimes.flatMap((runtime) => [
+				once(runtime, "reloadComplete"),
+				once(runtime, "error").then((err) => Promise.reject(err)),
+			])
+		);
+		// adhere to unstable_dev contract:
+		//   - only resolve when _perceived_ UserWorker is ready
+		//   - throw if _perceived_ UserWorker fails to start
+		// to the eyeball, the ProxyWorker is the _perceived_ UserWorker
 		await Promise.race([
-			once(devEnv.runtimes[0], "reloadComplete"),
-			once(devEnv.runtimes[1], "reloadComplete"),
-			once(devEnv.runtimes[0], "error").then((err) => Promise.reject(err)),
-			once(devEnv.runtimes[1], "error").then((err) => Promise.reject(err)),
+			devEnv.proxy.ready.promise,
+			once(devEnv.proxy, "error").then((err) => Promise.reject(err)),
 		]);
 
 		return {
