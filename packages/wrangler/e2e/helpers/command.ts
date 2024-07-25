@@ -151,7 +151,7 @@ export class LongLivedCommand {
 	}
 
 	async stop() {
-		return new Promise<void>((resolve, reject) => {
+		return new Promise<void>((resolve) => {
 			assert(
 				this.commandProcess.pid,
 				`Command "${this.command}" had no process id`
