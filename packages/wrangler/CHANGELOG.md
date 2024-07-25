@@ -1,5 +1,32 @@
 # wrangler
 
+## 3.67.0
+
+### Minor Changes
+
+- [#4545](https://github.com/cloudflare/workers-sdk/pull/4545) [`e5afae0`](https://github.com/cloudflare/workers-sdk/commit/e5afae0f981304e0abdb281619e60d6f611aed06) Thanks [@G4brym](https://github.com/G4brym)! - Remove experimental/beta constellation commands and binding, please migrate to Workers AI, learn more here https://developers.cloudflare.com/workers-ai/.
+  This is not deemed a major version bump for Wrangler since these commands were never generally available.
+
+- [#6322](https://github.com/cloudflare/workers-sdk/pull/6322) [`373248e`](https://github.com/cloudflare/workers-sdk/commit/373248e2f922c40a42b3626c599caeb51d9f5073) Thanks [@IRCody](https://github.com/IRCody)! - Add cloudchamber scope to existing scopes instead of replacing them.
+
+  When using any cloudchamber command the cloudchamber scope will now be added to the existing scopes instead of replacing them.
+
+- [#6276](https://github.com/cloudflare/workers-sdk/pull/6276) [`a432a13`](https://github.com/cloudflare/workers-sdk/commit/a432a133ae825fe3c4d624d08d9fc5426fd64a82) Thanks [@CarmenPopoviciu](https://github.com/CarmenPopoviciu)! - feat: Add support for `wrangler.jsonc`
+
+  This commit adds support for `wrangler.jsonc` config file for Workers. This feature is available behind the `--experimental-json-config` flag (just like `wrangler.json`).
+
+  To use the new configuration file, add a `wrangler.jsonc` file to your Worker project and run `wrangler dev --experimental-json-config` or `wrangler deploy --experimental-json-config`.
+
+  Please note that this work does NOT add `wrangler.json` or `wrangler.jsonc` support for Pages projects!
+
+- [#6168](https://github.com/cloudflare/workers-sdk/pull/6168) [`1ee41ff`](https://github.com/cloudflare/workers-sdk/commit/1ee41fff2f7fbede1486b45e36a70ad1d98bab59) Thanks [@IRCody](https://github.com/IRCody)! - feature: Add list and remove subcommands to cloudchamber registries command.
+
+### Patch Changes
+
+- [#6331](https://github.com/cloudflare/workers-sdk/pull/6331) [`e6ada07`](https://github.com/cloudflare/workers-sdk/commit/e6ada079f7dfb67975154b39da3cd92f42018c72) Thanks [@threepointone](https://github.com/threepointone)! - fix: only warn about miniflare feature support (ai, vectorize, cron) once
+
+  We have some warnings in local mode dev when trying to use ai bindings / vectorize / cron, but they are printed every time the worker is started. This PR changes the warning to only be printed once per worker start.
+
 ## 3.66.0
 
 ### Minor Changes
