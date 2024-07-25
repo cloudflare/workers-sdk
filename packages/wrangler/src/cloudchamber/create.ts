@@ -111,8 +111,17 @@ export async function createCommand(
 		args.var
 	);
 	const labels = collectLabels(args.label);
-
 	if (!interactWithUser(args)) {
+		if (config.cloudchamber.image != undefined && args.image == undefined) {
+			args.image = config.cloudchamber.image;
+		}
+		if (
+			config.cloudchamber.location != undefined &&
+			args.location == undefined
+		) {
+			args.location = config.cloudchamber.location;
+		}
+
 		const body = checkEverythingIsSet(args, ["image", "location"]);
 		const keysToAdd = args.allSshKeys
 			? (await pollSSHKeysUntilCondition(() => true)).map((key) => key.id)
@@ -246,7 +255,7 @@ export async function handleCreateCommand(
 	});
 
 	const location = await getLocation({
-		location: args.image ?? config.cloudchamber.location,
+		location: args.location ?? config.cloudchamber.location,
 	});
 	const keys = await askWhichSSHKeysDoTheyWantToAdd(args, sshKeyID);
 	const network = await getNetworkInput({
