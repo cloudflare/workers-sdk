@@ -59,7 +59,7 @@ export async function getEntry(
 			args.legacyAssets ||
 			config.legacy_assets ||
 			args.experimentalAssets ||
-			config.experimental_assets?.directory
+			config.experimental_assets
 		) {
 			file = path.resolve(getBasePath(), "templates/no-op-worker.js");
 		} else {

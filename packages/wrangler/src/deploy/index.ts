@@ -313,6 +313,8 @@ export async function deployHandler(
 					`${resolvedExperimentalAssetsPath}`
 			);
 		}
+
+		experimentalAssets.directory = resolvedExperimentalAssetsPath;
 	}
 
 	if (args.assets) {

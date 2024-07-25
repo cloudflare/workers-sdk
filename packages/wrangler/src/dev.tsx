@@ -798,6 +798,7 @@ export async function startDev(args: StartDevOptions) {
 				);
 			}
 
+			experimentalAssets.directory = resolvedExperimentalAssetsPath;
 			args.forceLocal = true;
 		}
 
