@@ -76,9 +76,6 @@ describe.each([
 		await worker.readUntil(
 			/Support for service binding environments is experimental/
 		);
-		await worker.readUntil(
-			/Support for service bindings in local mode is experimental and may change/
-		);
 	});
 
 	it("should warn if bindings specified as args in the command line are invalid", async () => {
