@@ -1781,6 +1781,27 @@ describe("normalizeAndValidateConfig()", () => {
 					  - Expected \\"experimental_assets.binding\\" to be of type string but got 2."
 				`);
 			});
+
+			it("should error if `directory` is an empty string", () => {
+				const expectedConfig = {
+					experimental_assets: {
+						directory: "",
+					},
+				};
+
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					expectedConfig as unknown as RawConfig,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(config).toEqual(expect.objectContaining(expectedConfig));
+				expect(diagnostics.hasWarnings()).toBeFalsy();
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - Expected \\"experimental_assets.directory\\" cannot be an empty string."
+				`);
+			});
 		});
 
 		describe("[browser]", () => {

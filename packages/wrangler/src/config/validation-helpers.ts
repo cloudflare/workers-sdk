@@ -232,6 +232,27 @@ export const isString: ValidatorFn = (diagnostics, field, value) => {
 };
 
 /**
+ * Validate that the field is a non-empty string.
+ */
+export const isNonEmptyString: ValidatorFn = (diagnostics, field, value) => {
+	if (value !== undefined && typeof value !== "string") {
+		diagnostics.errors.push(
+			`Expected "${field}" to be of type string but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		return false;
+	}
+
+	if (value?.trim() === "") {
+		diagnostics.errors.push(`Expected "${field}" cannot be an empty string.`);
+		return false;
+	}
+
+	return true;
+};
+
+/**
  * Validate that the `name` field is compliant with EWC constraints.
  */
 export const isValidName: ValidatorFn = (diagnostics, field, value) => {

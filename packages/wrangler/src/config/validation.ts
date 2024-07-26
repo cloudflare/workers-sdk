@@ -14,6 +14,7 @@ import {
 	inheritableInLegacyEnvironments,
 	isBoolean,
 	isMutuallyExclusiveWith,
+	isNonEmptyString,
 	isObjectWith,
 	isOneOf,
 	isOptionalProperty,
@@ -2060,6 +2061,14 @@ const validateAssetsConfig: ValidatorFn = (diagnostics, field, value) => {
 			"directory",
 			(value as ExperimentalAssets).directory,
 			"string"
+		) && isValid;
+
+	isValid =
+		isNonEmptyString(
+			diagnostics,
+			`${field}.directory`,
+			(value as ExperimentalAssets).directory,
+			undefined
 		) && isValid;
 
 	isValid =
