@@ -1799,7 +1799,7 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasWarnings()).toBeFalsy();
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - Expected \\"experimental_assets.directory\\" cannot be an empty string."
+					  - Expected \\"experimental_assets.directory\\" to be a non-empty string."
 				`);
 			});
 		});

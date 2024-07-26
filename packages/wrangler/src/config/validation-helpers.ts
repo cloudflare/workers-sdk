@@ -234,18 +234,18 @@ export const isString: ValidatorFn = (diagnostics, field, value) => {
 /**
  * Validate that the field is a non-empty string.
  */
-export const isNonEmptyString: ValidatorFn = (diagnostics, field, value) => {
-	if (value !== undefined && typeof value !== "string") {
-		diagnostics.errors.push(
-			`Expected "${field}" to be of type string but got ${JSON.stringify(
-				value
-			)}.`
-		);
+export const isNonEmptyString: ValidatorFn = (
+	diagnostics,
+	field,
+	value,
+	topLevelEnv
+) => {
+	if (!isString(diagnostics, field, value, topLevelEnv)) {
 		return false;
 	}
 
-	if (value?.trim() === "") {
-		diagnostics.errors.push(`Expected "${field}" cannot be an empty string.`);
+	if ((value as string)?.trim() === "") {
+		diagnostics.errors.push(`Expected "${field}" to be a non-empty string.`);
 		return false;
 	}
 
