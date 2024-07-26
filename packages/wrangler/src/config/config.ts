@@ -389,6 +389,7 @@ export const defaultWranglerConfig: Config = {
 	logfwdr: { bindings: [] },
 	logpush: undefined,
 	upload_source_maps: undefined,
+	experimental_assets: undefined,
 
 	/** NON-INHERITABLE ENVIRONMENT FIELDS **/
 	define: {},

@@ -1418,6 +1418,79 @@ describe("wrangler dev", () => {
 		});
 	});
 
+	describe("--experimental-assets", () => {
+		it("should not require entry point if using --experimental-assets", async () => {
+			fs.openSync("assets", "w");
+			writeWranglerToml({
+				experimental_assets: { directory: "assets" },
+			});
+
+			await runWrangler("dev");
+		});
+
+		it("should error if config.site and config.experimental_assets are used together", async () => {
+			writeWranglerToml({
+				main: "./index.js",
+				experimental_assets: { directory: "assets" },
+				site: {
+					bucket: "xyz",
+				},
+			});
+			fs.writeFileSync("index.js", `export default {};`);
+			fs.openSync("assets", "w");
+			await expect(
+				runWrangler("dev")
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: Cannot use Assets and Workers Sites in the same Worker.]`
+			);
+		});
+
+		it("should error if --experimental-assets and config.site are used together", async () => {
+			writeWranglerToml({
+				main: "./index.js",
+				site: {
+					bucket: "xyz",
+				},
+			});
+			fs.writeFileSync("index.js", `export default {};`);
+			fs.openSync("assets", "w");
+			await expect(
+				runWrangler("dev --experimental-assets assets")
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: Cannot use Assets and Workers Sites in the same Worker.]`
+			);
+		});
+
+		it("should error if directory specified by '--experimental-assets' command line argument does not exist", async () => {
+			writeWranglerToml({
+				main: "./index.js",
+			});
+			fs.writeFileSync("index.js", `export default {};`);
+			await expect(
+				runWrangler("dev --experimental-assets abc")
+			).rejects.toThrow(
+				new RegExp(
+					'^The directory specified by the "--experimental-assets" command line argument does not exist:[Ss]*'
+				)
+			);
+		});
+
+		it("should error if directory specified by 'experimental_assets' configuration key does not exist", async () => {
+			writeWranglerToml({
+				main: "./index.js",
+				experimental_assets: {
+					directory: "abc",
+				},
+			});
+			fs.writeFileSync("index.js", `export default {};`);
+			await expect(runWrangler("dev")).rejects.toThrow(
+				new RegExp(
+					'^The directory specified by the "experimental_assets.directory" field in your configuration file does not exist:[Ss]*'
+				)
+			);
+		});
+	});
+
 	describe("--inspect", () => {
 		it("should warn if --inspect is used", async () => {
 			fs.writeFileSync("index.js", `export default {};`);

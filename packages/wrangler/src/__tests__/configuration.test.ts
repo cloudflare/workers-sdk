@@ -1735,6 +1735,54 @@ describe("normalizeAndValidateConfig()", () => {
 			});
 		});
 
+		describe("[experimental_assets]", () => {
+			it("should override `experimental_assets` config defaults with provided values", () => {
+				const expectedConfig: RawConfig = {
+					experimental_assets: {
+						directory: "public/",
+						binding: "ASSETS",
+					},
+				};
+
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					expectedConfig,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(config).toEqual(expect.objectContaining(expectedConfig));
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(diagnostics.hasWarnings()).toBe(false);
+			});
+
+			it("should error on invalid `experimental_assets` values", () => {
+				const expectedConfig = {
+					experimental_assets: {
+						binding: 2,
+						notAField: "boop",
+					},
+				};
+
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					expectedConfig as unknown as RawConfig,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(config).toEqual(expect.objectContaining(expectedConfig));
+				expect(diagnostics.hasWarnings()).toBe(true);
+				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - Unexpected fields found in experimental_assets field: \\"notAField\\""
+				`);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - \\"experimental_assets.directory\\" is a required field.
+					  - Expected \\"experimental_assets.binding\\" to be of type string but got 2."
+				`);
+			});
+		});
+
 		describe("[browser]", () => {
 			it("should error if browser is an array", () => {
 				const { diagnostics } = normalizeAndValidateConfig(

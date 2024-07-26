@@ -1,7 +1,9 @@
+import { existsSync } from "node:fs";
 import path from "node:path";
 import { findWranglerToml, readConfig } from "../config";
 import { getEntry } from "../deployment-bundle/entry";
 import { UserError } from "../errors";
+import { getExperimentalAssetsBasePath } from "../experimental-assets";
 import {
 	getRules,
 	getScriptName,
@@ -105,6 +107,13 @@ export function deployOptions(yargs: CommonYargsArgv) {
 			.option("assets", {
 				describe: "(Experimental) Static assets to be served",
 				type: "string",
+				requiresArg: true,
+				hidden: true,
+			})
+			.option("experimental-assets", {
+				describe: "Static assets to be served",
+				type: "string",
+				alias: "x-assets",
 				requiresArg: true,
 				hidden: true,
 			})
@@ -270,11 +279,47 @@ export async function deployHandler(
 	}
 
 	if (
-		(args.legacyAssets || config.legacy_assets) &&
+		(args.legacyAssets ||
+			config.legacy_assets ||
+			args.experimentalAssets ||
+			config.experimental_assets) &&
 		(args.site || config.site)
 	) {
 		throw new UserError(
 			"Cannot use Assets and Workers Sites in the same Worker."
+		);
+	}
+
+	const experimentalAssets = args.experimentalAssets
+		? { directory: args.experimentalAssets }
+		: config.experimental_assets;
+	if (experimentalAssets) {
+		const experimentalAssetsBasePath = getExperimentalAssetsBasePath(
+			config,
+			args.experimentalAssets
+		);
+		const resolvedExperimentalAssetsPath = path.resolve(
+			experimentalAssetsBasePath,
+			experimentalAssets.directory
+		);
+
+		if (!existsSync(resolvedExperimentalAssetsPath)) {
+			const sourceOfTruthMessage = args.experimentalAssets
+				? '"--experimental-assets" command line argument'
+				: '"experimental_assets.directory" field in your configuration file';
+
+			throw new UserError(
+				`The directory specified by the ${sourceOfTruthMessage} does not exist:\n` +
+					`${resolvedExperimentalAssetsPath}`
+			);
+		}
+
+		experimentalAssets.directory = resolvedExperimentalAssetsPath;
+	}
+
+	if (args.assets) {
+		logger.warn(
+			"The --assets argument is experimental and may change or break at any time"
 		);
 	}
 
@@ -324,6 +369,7 @@ export async function deployHandler(
 		jsxFragment: args.jsxFragment,
 		tsconfig: args.tsconfig,
 		routes: args.routes,
+		experimentalAssets: experimentalAssets?.directory,
 		assetPaths,
 		legacyEnv: isLegacyEnv(config),
 		minify: args.minify,

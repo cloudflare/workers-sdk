@@ -2408,6 +2408,9 @@ addEventListener('fetch', event => {});`
 				  Releases of wrangler after this date will no longer support current functionality.
 				  Please shift to the --legacy-assets command to preserve the current functionality.
 
+
+				[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --assets argument is experimental and may change or break at any time[0m
+
 				",
 				}
 			`);
@@ -4242,6 +4245,79 @@ addEventListener('fetch', event => {});`
 			Uploaded 100% [110 out of 110]"
 		`);
 			});
+		});
+	});
+
+	describe("--experimental-assets", () => {
+		it("should not require entry point if using --experimental-assets", async () => {
+			const assets = [
+				{ filePath: "file-1.txt", content: "Content of file-1" },
+				{ filePath: "file-2.txt", content: "Content of file-2" },
+			];
+			writeAssets(assets);
+			writeWranglerToml({
+				experimental_assets: { directory: "assets" },
+			});
+			writeWorkerSource();
+			mockUploadWorkerRequest({
+				expectedMainModule: "no-op-worker.js",
+			});
+			mockSubDomainRequest();
+			await runWrangler("deploy");
+		});
+
+		it("should error if config.site and config.experimental_assets are used together", async () => {
+			writeWranglerToml({
+				main: "./index.js",
+				experimental_assets: { directory: "abd" },
+				site: {
+					bucket: "xyz",
+				},
+			});
+			writeWorkerSource();
+			await expect(
+				runWrangler("deploy")
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: Cannot use Assets and Workers Sites in the same Worker.]`
+			);
+		});
+
+		it("should error if --experimental-assets and config.site are used together", async () => {
+			writeWranglerToml({
+				main: "./index.js",
+				site: {
+					bucket: "xyz",
+				},
+			});
+			writeWorkerSource();
+			await expect(
+				runWrangler("deploy --experimental-assets abc")
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: Cannot use Assets and Workers Sites in the same Worker.]`
+			);
+		});
+
+		it("should error if directory specified by flag --experimental-assets does not exist", async () => {
+			writeWorkerSource();
+			await expect(
+				runWrangler("deploy --experimental-assets abc")
+			).rejects.toThrow(
+				new RegExp(
+					'^The directory specified by the "--experimental-assets" command line argument does not exist:[Ss]*'
+				)
+			);
+		});
+
+		it("should error if directory specified by config experimental_assets does not exist", async () => {
+			writeWranglerToml({
+				experimental_assets: { directory: "abc" },
+			});
+			writeWorkerSource();
+			await expect(runWrangler("deploy")).rejects.toThrow(
+				new RegExp(
+					'^The directory specified by the "experimental_assets.directory" field in your configuration file does not exist:[Ss]*'
+				)
+			);
 		});
 	});
 

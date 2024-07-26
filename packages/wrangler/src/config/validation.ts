@@ -33,6 +33,7 @@ import type {
 	DeprecatedUpload,
 	DispatchNamespaceOutbound,
 	Environment,
+	ExperimentalAssets,
 	RawEnvironment,
 	Rule,
 	TailConsumer,
@@ -1221,6 +1222,14 @@ function normalizeAndValidateEnvironment(
 			isObjectWith("crons"),
 			{ crons: [] }
 		),
+		experimental_assets: inheritable(
+			diagnostics,
+			topLevelEnv,
+			rawEnv,
+			"experimental_assets",
+			validateAssetsConfig,
+			undefined
+		),
 		usage_model: inheritable(
 			diagnostics,
 			topLevelEnv,
@@ -2022,6 +2031,51 @@ const validateCflogfwdrBinding: ValidatorFn = (diagnostics, field, value) => {
 		"destination",
 		"name",
 	]);
+
+	return isValid;
+};
+
+const validateAssetsConfig: ValidatorFn = (diagnostics, field, value) => {
+	if (value === undefined) {
+		return true;
+	}
+
+	if (typeof value !== "object" || value === null) {
+		diagnostics.errors.push(
+			`"${field}" should be an object, but got value ${JSON.stringify(
+				field
+			)} of type ${typeof value}`
+		);
+		return false;
+	}
+
+	let isValid = true;
+
+	// ensure we validate all props before we show the validation errors
+	// this way users have all the necessary info to fix all errors in one go
+	isValid =
+		validateRequiredProperty(
+			diagnostics,
+			field,
+			"directory",
+			(value as ExperimentalAssets).directory,
+			"string"
+		) && isValid;
+
+	isValid =
+		validateOptionalProperty(
+			diagnostics,
+			field,
+			"binding",
+			(value as ExperimentalAssets).binding,
+			"string"
+		) && isValid;
+
+	isValid =
+		validateAdditionalProperties(diagnostics, field, Object.keys(value), [
+			"directory",
+			"binding",
+		]) && isValid;
 
 	return isValid;
 };

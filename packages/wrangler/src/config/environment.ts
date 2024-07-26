@@ -332,6 +332,13 @@ interface EnvironmentInheritable {
 	 * @inheritable
 	 */
 	placement: { mode: "off" | "smart" } | undefined;
+
+	/**
+	 * Specify the directory of static assets to deploy/serve
+	 *
+	 * @inheritable
+	 */
+	experimental_assets: ExperimentalAssets | undefined;
 }
 
 export type DurableObjectBindings = {
@@ -862,3 +869,8 @@ export interface UserLimits {
 	/** Maximum allowed CPU time for a Worker's invocation in milliseconds */
 	cpu_ms: number;
 }
+
+export type ExperimentalAssets = {
+	directory: string;
+	binding?: string;
+};

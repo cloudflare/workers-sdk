@@ -1,5 +1,6 @@
 import assert from "node:assert";
 import events from "node:events";
+import { existsSync } from "node:fs";
 import path from "node:path";
 import util from "node:util";
 import { isWebContainer } from "@webcontainer/env";
@@ -21,6 +22,7 @@ import registerDevHotKeys from "./dev/hotkeys";
 import { maybeRegisterLocalWorker } from "./dev/local";
 import { startDevServer } from "./dev/start-server";
 import { UserError } from "./errors";
+import { getExperimentalAssetsBasePath } from "./experimental-assets";
 import { run } from "./experimental-flags";
 import isInteractive from "./is-interactive";
 import { logger } from "./logger";
@@ -179,6 +181,13 @@ export function devOptions(yargs: CommonYargsArgv) {
 			.option("assets", {
 				describe: "(Experimental) Static assets to be served",
 				type: "string",
+				requiresArg: true,
+				hidden: true,
+			})
+			.option("experimental-assets", {
+				describe: "Static assets to be served",
+				type: "string",
+				alias: "x-assets",
 				requiresArg: true,
 				hidden: true,
 			})
@@ -763,6 +772,34 @@ export async function startDev(args: StartDevOptions) {
 			});
 		}
 
+		const experimentalAssets = args.experimentalAssets
+			? { directory: args.experimentalAssets }
+			: config.experimental_assets;
+		if (experimentalAssets) {
+			const experimentalAssetsBasePath = getExperimentalAssetsBasePath(
+				config,
+				args.experimentalAssets
+			);
+			const resolvedExperimentalAssetsPath = path.resolve(
+				experimentalAssetsBasePath,
+				experimentalAssets.directory
+			);
+
+			if (!existsSync(resolvedExperimentalAssetsPath)) {
+				const sourceOfTruthMessage = args.experimentalAssets
+					? '"--experimental-assets" command line argument'
+					: '"experimental_assets.directory" field in your configuration file';
+
+				throw new UserError(
+					`The directory specified by the ${sourceOfTruthMessage} does not exist:\n` +
+						`${resolvedExperimentalAssetsPath}`
+				);
+			}
+
+			experimentalAssets.directory = resolvedExperimentalAssetsPath;
+			args.forceLocal = true;
+		}
+
 		const {
 			entry,
 			upstreamProtocol,
@@ -1139,6 +1176,7 @@ export async function validateDevServerSettings(
 			legacyAssets: args.legacyAssets,
 			script: args.script,
 			moduleRoot: args.moduleRoot,
+			experimentalAssets: args.experimentalAssets,
 		},
 		config,
 		"dev"
@@ -1184,8 +1222,11 @@ export async function validateDevServerSettings(
 	}
 
 	if (
-		(args.legacyAssets ?? config.legacy_assets) &&
-		(args.site ?? config.site)
+		(args.legacyAssets ||
+			config.legacy_assets ||
+			args.experimentalAssets ||
+			config.experimental_assets) &&
+		(args.site || config.site)
 	) {
 		throw new UserError(
 			"Cannot use Assets and Workers Sites in the same Worker."
