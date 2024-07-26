@@ -192,7 +192,7 @@ packages/wrangler-devtools/built-devtools
 packages/wrangler-devtools/.cipd
 packages/wrangler-devtools/depot
 packages/wrangler-devtools/devtools-frontend
-packages/miniflare/dist-types/
+libs/miniflare/dist-types/
 
 fixtures/remix-pages-app/public/build
 fixtures/remix-pages-app/functions/\[\[path\]\].js
