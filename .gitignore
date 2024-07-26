@@ -177,17 +177,17 @@ dist
 
 wrangler-dist/
 miniflare-dist
-packages/wrangler/wrangler.toml
-packages/wrangler/src/cloudchamber/internal
+clis/wrangler/wrangler.toml
+clis/wrangler/src/cloudchamber/internal
 workers/prerelease-registry/_worker.bundle
-packages/wranglerjs-compat-webpack-plugin/lib
+clis/wranglerjs-compat-webpack-plugin/lib
 .wrangler-1-cache
 emitted-types/
 _routes.generated.json
 pages/quick-edit/vscode
 pages/quick-edit/web
 
-packages/wrangler/config-schema.json
+clis/wrangler/config-schema.json
 pages/wrangler-devtools/built-devtools
 pages/wrangler-devtools/.cipd
 pages/wrangler-devtools/depot
