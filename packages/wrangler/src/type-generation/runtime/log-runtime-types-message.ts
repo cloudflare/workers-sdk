@@ -60,7 +60,7 @@ export function logRuntimeTypesMessage(
  * Constructs a string representation of the existing types array with the new types path appended to.
  * It removes any existing types that are no longer relevant.
  */
-function buildUpdatedTypesString(
+export function buildUpdatedTypesString(
 	types: string[],
 	newTypesPath: string
 ): string | null {
