@@ -496,7 +496,7 @@ function writeDTSFile({
 /**
  * Attempts to read the tsconfig.json at the current path.
  */
-function readTsconfigTypes(tsconfigPath: string): string[] {
+export function readTsconfigTypes(tsconfigPath: string): string[] {
 	if (!fs.existsSync(tsconfigPath)) {
 		return [];
 	}
