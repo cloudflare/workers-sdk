@@ -184,8 +184,8 @@ packages/wranglerjs-compat-webpack-plugin/lib
 .wrangler-1-cache
 emitted-types/
 _routes.generated.json
-packages/quick-edit/vscode
-packages/quick-edit/web
+pages/quick-edit/vscode
+pages/quick-edit/web
 
 packages/wrangler/config-schema.json
 packages/wrangler-devtools/built-devtools
