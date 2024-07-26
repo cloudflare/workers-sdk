@@ -7,9 +7,9 @@ import type { Config } from "./config";
  */
 export function getExperimentalAssetsBasePath(
 	config: Config,
-	experimentalAssetsDirectory: string | undefined
+	experimentalAssetsCommandLineArg: string | undefined
 ): string {
-	return experimentalAssetsDirectory
+	return experimentalAssetsCommandLineArg
 		? process.cwd()
 		: path.resolve(path.dirname(config.configPath ?? "wrangler.toml"));
 }
