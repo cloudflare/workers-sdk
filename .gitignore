@@ -188,10 +188,10 @@ pages/quick-edit/vscode
 pages/quick-edit/web
 
 packages/wrangler/config-schema.json
-packages/wrangler-devtools/built-devtools
-packages/wrangler-devtools/.cipd
-packages/wrangler-devtools/depot
-packages/wrangler-devtools/devtools-frontend
+pages/wrangler-devtools/built-devtools
+pages/wrangler-devtools/.cipd
+pages/wrangler-devtools/depot
+pages/wrangler-devtools/devtools-frontend
 libs/miniflare/dist-types/
 
 fixtures/remix-pages-app/public/build
