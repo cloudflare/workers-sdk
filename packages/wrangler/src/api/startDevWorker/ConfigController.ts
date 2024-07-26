@@ -279,6 +279,22 @@ async function resolveConfig(
 		);
 	}
 
+	// Log warnings for experimental dev-registry-dependent options
+	if (services.length > 0) {
+		logger.warn(
+			"⎔ Support for service bindings in local mode is experimental and may change."
+		);
+	}
+	const externalDurableObjects = extractBindingsOfType(
+		"durable_object_namespace",
+		resolved.bindings
+	).filter((binding) => binding.script_name);
+	if (externalDurableObjects.length > 0) {
+		logger.warn(
+			"⎔ Support for external Durable Objects in local mode is experimental and may change."
+		);
+	}
+
 	if (!resolved.dev?.origin?.secure && resolved.dev?.remote) {
 		logger.warn(
 			"Setting upstream-protocol to http is not currently supported for remote mode.\n" +
