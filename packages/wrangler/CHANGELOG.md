@@ -1,5 +1,18 @@
 # wrangler
 
+## 3.67.1
+
+### Patch Changes
+
+- [#6312](https://github.com/cloudflare/workers-sdk/pull/6312) [`67c611a`](https://github.com/cloudflare/workers-sdk/commit/67c611a5499b17246ca50568739f9e026df7e5a8) Thanks [@emily-shen](https://github.com/emily-shen)! - feat: add CLI flag and config key for experimental Workers + Assets
+
+  This change adds a new experimental CLI flag (`--experimental-assets`) and configuration key (`experimental_assets`) for the new Workers + Assets work.
+
+  The new flag and configuration key are for the time being "inactive", in the sense that no behaviour is attached to them yet. This will follow up in future work.
+
+- Updated dependencies [[`b3c3cb8`](https://github.com/cloudflare/workers-sdk/commit/b3c3cb89787b8f669485c1c54f9d73ea9ec53605)]:
+  - miniflare@3.20240718.1
+
 ## 3.67.0
 
 ### Minor Changes
