@@ -7,7 +7,6 @@ exports[`Pages 'wrangler pages dev --x-dev-env' > should merge (with override) \
   Remote Durable Objects that are affected:
   - {"name":"DO_BINDING_1_TOML","class_name":"DO_1_TOML","script_name":"DO_SCRIPT_1_TOML"}
   - {"name":"DO_BINDING_2_TOML","class_name":"DO_2_TOML","script_name":"DO_SCRIPT_2_TOML"}
-▲ [WARNING] This worker is bound to live services: SERVICE_BINDING_1_TOML (SERVICE_NAME_1_TOML), SERVICE_BINDING_2_TOML (SERVICE_NAME_2_TOML)
 Your worker has access to the following bindings:
 - Durable Objects:
   - DO_BINDING_1_TOML: NEW_DO_1 (defined in NEW_DO_SCRIPT_1)
@@ -35,8 +34,7 @@ Your worker has access to the following bindings:
   - VAR1: "(hidden)"
   - VAR2: "VAR_2_TOML"
   - VAR3: "(hidden)"
-▲ [WARNING] ⎔ Support for service bindings in local mode is experimental and may change.
-▲ [WARNING] ⎔ Support for external Durable Objects in local mode is experimental and may change.
+▲ [WARNING] This worker is bound to live services: SERVICE_BINDING_1_TOML (NEW_SERVICE_NAME_1), SERVICE_BINDING_3_TOML (SERVICE_NAME_3_ARGS), SERVICE_BINDING_2_TOML (SERVICE_NAME_2_TOML)
 ▲ [WARNING] Using Workers AI always accesses your Cloudflare account in order to run AI models, and so will incur usage charges even in local development.
 "
 `;
