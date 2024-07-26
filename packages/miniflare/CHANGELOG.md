@@ -1,5 +1,11 @@
 # miniflare
 
+## 3.20240718.1
+
+### Patch Changes
+
+- [#6342](https://github.com/cloudflare/workers-sdk/pull/6342) [`b3c3cb8`](https://github.com/cloudflare/workers-sdk/commit/b3c3cb89787b8f669485c1c54f9d73ea9ec53605) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix Miniflare (workerd) network settings to allow 240.0.0.0 range
+
 ## 3.20240718.0
 
 ### Patch Changes
