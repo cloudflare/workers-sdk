@@ -45,7 +45,7 @@ export type EsbuildBundleProps = {
 	legacyAssets: Config["legacy_assets"];
 	define: Config["define"];
 	alias: Config["alias"];
-	serveAssetsFromWorker: boolean;
+	serveLegacyAssetsFromWorker: boolean;
 	tsconfig: string | undefined;
 	minify: boolean | undefined;
 	nodejsCompatMode: NodeJSCompatMode | undefined;
@@ -71,7 +71,7 @@ export function runBuild(
 		additionalModules,
 		rules,
 		legacyAssets,
-		serveAssetsFromWorker,
+		serveLegacyAssetsFromWorker,
 		tsconfig,
 		minify,
 		nodejsCompatMode,
@@ -97,7 +97,7 @@ export function runBuild(
 		legacyAssets: Config["legacy_assets"];
 		define: Config["define"];
 		alias: Config["alias"];
-		serveAssetsFromWorker: boolean;
+		serveLegacyAssetsFromWorker: boolean;
 		tsconfig: string | undefined;
 		minify: boolean | undefined;
 		nodejsCompatMode: NodeJSCompatMode | undefined;
@@ -205,7 +205,7 @@ export function runBuild(
 						bundle: !noBundle,
 						moduleCollector,
 						additionalModules: newAdditionalModules,
-						serveAssetsFromWorker,
+						serveLegacyAssetsFromWorker,
 						jsxFactory,
 						jsxFragment,
 						watch: true,
@@ -289,7 +289,7 @@ export function useEsbuild({
 	additionalModules,
 	rules,
 	legacyAssets,
-	serveAssetsFromWorker,
+	serveLegacyAssetsFromWorker,
 	tsconfig,
 	minify,
 	nodejsCompatMode,
@@ -319,7 +319,7 @@ export function useEsbuild({
 				additionalModules,
 				rules,
 				legacyAssets,
-				serveAssetsFromWorker,
+				serveLegacyAssetsFromWorker,
 				tsconfig,
 				minify,
 				nodejsCompatMode,
@@ -347,7 +347,7 @@ export function useEsbuild({
 		destination,
 		jsxFactory,
 		jsxFragment,
-		serveAssetsFromWorker,
+		serveLegacyAssetsFromWorker,
 		processEntrypoint,
 		additionalModules,
 		rules,

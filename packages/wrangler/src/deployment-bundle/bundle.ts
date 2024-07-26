@@ -62,7 +62,7 @@ export type BundleOptions = {
 	additionalModules: CfModule[];
 	// A module collector enables you to observe what modules are in the Worker.
 	moduleCollector: ModuleCollector;
-	serveAssetsFromWorker: boolean;
+	serveLegacyAssetsFromWorker: boolean;
 	legacyAssets?: Config["legacy_assets"];
 	bypassAssetCache?: boolean;
 	doBindings: DurableObjectBindings;
@@ -100,7 +100,7 @@ export async function bundleWorker(
 		bundle,
 		moduleCollector = noopModuleCollector,
 		additionalModules = [],
-		serveAssetsFromWorker,
+		serveLegacyAssetsFromWorker,
 		doBindings,
 		jsxFactory,
 		jsxFragment,
@@ -180,7 +180,7 @@ export async function bundleWorker(
 		});
 	}
 
-	if (serveAssetsFromWorker) {
+	if (serveLegacyAssetsFromWorker) {
 		middlewareToLoad.push({
 			name: "serve-static-assets",
 			path: "templates/middleware/middleware-serve-static-assets.ts",

@@ -5,7 +5,7 @@ describe("validateDevProps", () => {
 	it("should throw if the user tries to use the service-worker format with an `assets` directory", () => {
 		const props = {
 			isWorkersSite: false,
-			assetPaths: ["assets"],
+			legacyAssetPaths: ["assets"],
 			entry: { format: "service-worker" },
 			bindings: {},
 		};
@@ -18,7 +18,7 @@ describe("validateDevProps", () => {
 	it("should throw if the user tries to configure [wasm_modules] with an ES module worker", () => {
 		const props = {
 			isWorkersSite: false,
-			assetPaths: [],
+			legacyAssetPaths: [],
 			entry: { format: "modules" },
 			bindings: { wasm_modules: true },
 		};
@@ -31,7 +31,7 @@ describe("validateDevProps", () => {
 	it("should throw if the user tries to configure [text_blobs] with an ES module worker", () => {
 		const props = {
 			isWorkersSite: false,
-			assetPaths: [],
+			legacyAssetPaths: [],
 			entry: { format: "modules" },
 			bindings: { text_blobs: true },
 		};
@@ -44,7 +44,7 @@ describe("validateDevProps", () => {
 	it("should throw if the user tries to configure [data_blobs] with an ES module worker", () => {
 		const props = {
 			isWorkersSite: false,
-			assetPaths: [],
+			legacyAssetPaths: [],
 			entry: { format: "modules" },
 			bindings: { data_blobs: true },
 		};

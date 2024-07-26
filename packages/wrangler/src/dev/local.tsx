@@ -17,7 +17,7 @@ import type {
 	WorkerRegistry,
 } from "../dev-registry";
 import type { EnablePagesAssetsServiceBindingOptions } from "../miniflare-cli/types";
-import type { AssetPaths } from "../sites";
+import type { LegacyAssetPaths } from "../sites";
 import type { ConfigBundle } from "./miniflare";
 import type { EsbuildBundle } from "./use-esbuild";
 
@@ -30,7 +30,7 @@ export interface LocalProps {
 	usageModel: "bundled" | "unbound" | undefined;
 	bindings: CfWorkerInit["bindings"];
 	workerDefinitions: WorkerRegistry | undefined;
-	assetPaths: AssetPaths | undefined;
+	legacyAssetPaths: LegacyAssetPaths | undefined;
 	initialPort: number | undefined;
 	initialIp: string;
 	rules: Config["rules"];
@@ -89,7 +89,7 @@ export async function localPropsToConfigBundle(
 		inspectorPort: props.runtimeInspectorPort,
 		bindings: props.bindings,
 		workerDefinitions: props.workerDefinitions,
-		assetPaths: props.assetPaths,
+		legacyAssetPaths: props.legacyAssetPaths,
 		initialPort: props.initialPort,
 		initialIp: props.initialIp,
 		rules: props.rules,

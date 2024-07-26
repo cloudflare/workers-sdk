@@ -104,7 +104,7 @@ export function buildPluginFromFunctions({
 				},
 			},
 		],
-		serveAssetsFromWorker: false,
+		serveLegacyAssetsFromWorker: false,
 		checkFetch: local,
 		targetConsumer: local ? "dev" : "deploy",
 		forPages: true,
