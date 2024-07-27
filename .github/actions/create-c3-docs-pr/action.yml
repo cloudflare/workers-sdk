@@ -61,7 +61,7 @@ runs:
         git checkout -b "c3-diffs-${{ github.sha }}"
 
     - name: Download Artifacts
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v3
       with:
         name: e2e-framework-diffs
         path: ./clone-dir/content/pages/_partials/framework-diffs/
