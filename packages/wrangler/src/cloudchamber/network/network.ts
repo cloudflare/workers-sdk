@@ -12,5 +12,5 @@ export async function getNetworkInput(args: {
 		label: "Include IPv4",
 		type: "confirm",
 	});
-	return ipv4 === true ? { assign_ipv4: AssignIPv4.PREDEFINED } : undefined;
+	return ipv4 === true ? { assign_ipv4: AssignIPv4.ACCOUNT } : undefined;
 }

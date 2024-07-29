@@ -2,16 +2,19 @@
 /* tslint:disable */
 /* eslint-disable */
 
+import type { AccountID } from "./AccountID";
 import type { DeploymentID } from "./DeploymentID";
-import type { NodeName } from "./NodeName";
 
 /**
- * Configuration of an IPAllocation
+ * Configuration of an IP.
  */
 export type IPAllocationConfiguration = {
+	/**
+	 * Will be filled when a created deployment is assigned to this IP.
+	 */
 	deploymentId?: DeploymentID;
 	/**
-	 * Node name that you want this IP to be sticky to
+	 * Will be filled when Cloudchamber assigns this IP to a specific account pool.
 	 */
-	nodeName?: NodeName;
+	accountId?: AccountID;
 };

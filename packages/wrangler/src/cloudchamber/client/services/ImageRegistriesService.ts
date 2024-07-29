@@ -9,14 +9,100 @@ import type { CreateImageRegistryRequestBody } from "../models/CreateImageRegist
 import type { CustomerImageRegistry } from "../models/CustomerImageRegistry";
 import type { EmptyResponse } from "../models/EmptyResponse";
 import type { ImageRegistryCredentialsConfiguration } from "../models/ImageRegistryCredentialsConfiguration";
+import type { ImageRegistryProtocol } from "../models/ImageRegistryProtocol";
+import type { ImageRegistryProtocols } from "../models/ImageRegistryProtocols";
 
 export class ImageRegistriesService {
+	/**
+	 * Create an image registry protocol that resolves to multiple domains.
+	 * @param requestBody
+	 * @returns ImageRegistryProtocol The image registry protocol was created
+	 * @throws ApiError
+	 */
+	public static createImageRegistryProtocol(
+		requestBody: ImageRegistryProtocol
+	): CancelablePromise<ImageRegistryProtocol> {
+		return __request(OpenAPI, {
+			method: "POST",
+			url: "/registries/protos",
+			body: requestBody,
+			mediaType: "application/json",
+			errors: {
+				400: `Bad Request that contains a specific constant code and details object about the error.`,
+				403: `The registry that is being added is not allowed`,
+				409: `Image registry protocol already exists`,
+				500: `There has been an internal error`,
+			},
+		});
+	}
+
+	/**
+	 * List all image registry protocols.
+	 * @returns ImageRegistryProtocols The image registry protocols in the account
+	 * @throws ApiError
+	 */
+	public static listImageRegistryProtocols(): CancelablePromise<ImageRegistryProtocols> {
+		return __request(OpenAPI, {
+			method: "GET",
+			url: "/registries/protos",
+			errors: {
+				500: `There has been an internal error`,
+			},
+		});
+	}
+
+	/**
+	 * Modify an image registry protocol. The previous list of domains will be replaced by the ones you specify in this endpoint.
+	 * @param requestBody
+	 * @returns ImageRegistryProtocol The image registry protocol was modified
+	 * @throws ApiError
+	 */
+	public static modifyImageRegistryProtocol(
+		requestBody: ImageRegistryProtocol
+	): CancelablePromise<ImageRegistryProtocol> {
+		return __request(OpenAPI, {
+			method: "PUT",
+			url: "/registries/protos",
+			body: requestBody,
+			mediaType: "application/json",
+			errors: {
+				400: `Bad Request that contains a specific constant code and details object about the error.`,
+				403: `The registry that is being added is not allowed`,
+				404: `Image registry protocol doesn't exist`,
+				500: `There has been an internal error`,
+			},
+		});
+	}
+
+	/**
+	 * Delete an image registry protocol. Be careful, if there is deployments running referencing this protocol they won't be able to pull the image.
+	 * @param proto
+	 * @returns EmptyResponse Image registry protocol was deleted successfully
+	 * @throws ApiError
+	 */
+	public static deleteImageRegistryProto(
+		proto: string
+	): CancelablePromise<EmptyResponse> {
+		return __request(OpenAPI, {
+			method: "DELETE",
+			url: "/registries/protos/{proto}",
+			path: {
+				proto: proto,
+			},
+			errors: {
+				400: `The image registry protocol couldn't be deleted because it's referenced by a deployment or application`,
+				404: `Image registry protocol doesn't exist`,
+				500: `There has been an internal error`,
+			},
+		});
+	}
+
 	/**
 	 * Get a JWT to pull from the image registry
 	 * Get a JWT to pull from the image registry specifying its domain
 	 * @param domain
 	 * @param requestBody
-	 * @returns AccountRegistryToken Response that contains the credentials with 'pull' or 'push' permissions to access the registry
+	 * @returns AccountRegistryToken Credentials with 'pull' or 'push' permissions to access the registry
 	 * @throws ApiError
 	 */
 	public static generateImageRegistryCredentials(
@@ -33,8 +119,8 @@ export class ImageRegistriesService {
 			mediaType: "application/json",
 			errors: {
 				400: `Bad Request that contains a specific constant code and details object about the error.`,
-				404: `The response body when the registry that is trying to be found does not exist`,
-				409: `Response that contains the error ImageRegistryIsPublic`,
+				404: `The image registry does not exist`,
+				409: `The registry was configured as public, so credentials can not be generated`,
 				500: `There has been an internal error`,
 			},
 		});
@@ -57,7 +143,7 @@ export class ImageRegistriesService {
 				domain: domain,
 			},
 			errors: {
-				404: `The response body when the registry that is trying to be found does not exist`,
+				404: `The image registry does not exist`,
 				500: `There has been an internal error`,
 			},
 		});
@@ -85,7 +171,7 @@ export class ImageRegistriesService {
 	 * Add a new image registry configuration
 	 * Add a new image registry into your account, so then Cloudflare can pull docker images with public key JWT authentication
 	 * @param requestBody
-	 * @returns CustomerImageRegistry The response body when you create a new image registry in an account
+	 * @returns CustomerImageRegistry Created a new image registry in the account
 	 * @throws ApiError
 	 */
 	public static createImageRegistry(
@@ -97,9 +183,9 @@ export class ImageRegistriesService {
 			body: requestBody,
 			mediaType: "application/json",
 			errors: {
-				400: `The response body when the input to create a new image registry is malformed`,
-				403: `The response body when the registry that is being added is not allowed`,
-				409: `The response body when the image registry already exists in the account`,
+				400: `Image registry input is malformed, see the error details`,
+				403: `The registry that is being added is not allowed`,
+				409: `The image registry already exists in the account`,
 				500: `There has been an internal error`,
 			},
 		});

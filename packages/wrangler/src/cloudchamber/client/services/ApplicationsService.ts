@@ -12,7 +12,9 @@ import type { CreateApplicationJobRequest } from "../models/CreateApplicationJob
 import type { CreateApplicationRequest } from "../models/CreateApplicationRequest";
 import type { EmptyResponse } from "../models/EmptyResponse";
 import type { Image } from "../models/Image";
+import type { JobID } from "../models/JobID";
 import type { ListApplications } from "../models/ListApplications";
+import type { ListDeploymentsV2 } from "../models/ListDeploymentsV2";
 import type { ModifyApplicationRequestBody } from "../models/ModifyApplicationRequestBody";
 
 export class ApplicationsService {
@@ -32,7 +34,7 @@ export class ApplicationsService {
 			body: requestBody,
 			mediaType: "application/json",
 			errors: {
-				400: `Bad Request that contains a specific constant code and details object about the error.`,
+				400: `Could not create the application because of input/limits reasons, more details in the error code`,
 				401: `Unauthorized`,
 				500: `There has been an internal error`,
 			},
@@ -86,7 +88,7 @@ export class ApplicationsService {
 			},
 			errors: {
 				401: `Unauthorized`,
-				404: `Response body when an account/location is not found`,
+				404: `Response body when an Application is not found`,
 				500: `There has been an internal error`,
 			},
 		});
@@ -94,7 +96,7 @@ export class ApplicationsService {
 
 	/**
 	 * Modify an application
-	 * Modifies a single application by id
+	 * Modifies a single application by id. Only the instances can be modified to allow scaling up/down.
 	 * @param id
 	 * @param requestBody
 	 * @returns Application Modify application response
@@ -114,7 +116,7 @@ export class ApplicationsService {
 			mediaType: "application/json",
 			errors: {
 				401: `Unauthorized`,
-				404: `Response body when an account/location is not found`,
+				404: `Response body when an Application is not found`,
 				500: `There has been an internal error`,
 			},
 		});
@@ -138,7 +140,7 @@ export class ApplicationsService {
 			},
 			errors: {
 				401: `Unauthorized`,
-				404: `Response body when an account/location is not found`,
+				404: `Response body when an Application is not found`,
 				500: `There has been an internal error`,
 			},
 		});
@@ -167,7 +169,58 @@ export class ApplicationsService {
 			errors: {
 				400: `Can't create the application job because it has bad inputs`,
 				401: `Unauthorized`,
-				404: `Response body when an account/location is not found`,
+				404: `Response body when an Application is not found`,
+				500: `There has been an internal error`,
+			},
+		});
+	}
+
+	/**
+	 * Get an application job by application and job id
+	 * Returns a single application job by id with its current status
+	 * @param appId
+	 * @param jobId
+	 * @returns ApplicationJob A single application
+	 * @throws ApiError
+	 */
+	public static getApplicationJob(
+		appId: ApplicationID,
+		jobId: JobID
+	): CancelablePromise<ApplicationJob> {
+		return __request(OpenAPI, {
+			method: "GET",
+			url: "/applications/{appID}/jobs/{jobID}",
+			path: {
+				appID: appId,
+				jobID: jobId,
+			},
+			errors: {
+				401: `Unauthorized`,
+				404: `Response body when an Application/Job is not found`,
+				500: `There has been an internal error`,
+			},
+		});
+	}
+
+	/**
+	 * Get a single applications deployments
+	 * Returns a single applications deployments
+	 * @param id
+	 * @returns ListDeploymentsV2 List of deployments with their corresponding placements
+	 * @throws ApiError
+	 */
+	public static listDeploymentsByApplication(
+		id: ApplicationID
+	): CancelablePromise<ListDeploymentsV2> {
+		return __request(OpenAPI, {
+			method: "GET",
+			url: "/applications/{id}/deployments",
+			path: {
+				id: id,
+			},
+			errors: {
+				401: `Unauthorized`,
+				404: `Response body when an Application is not found`,
 				500: `There has been an internal error`,
 			},
 		});

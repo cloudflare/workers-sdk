@@ -3,7 +3,7 @@
 /* eslint-disable */
 
 /**
- * An IP type is an enum that can be v4, v6 or v6dynamic
+ * An IP type is an enum that can be v4 or v6
  */
 export enum IPType {
 	V4 = "v4",

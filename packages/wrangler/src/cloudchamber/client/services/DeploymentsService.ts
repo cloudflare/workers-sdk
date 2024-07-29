@@ -67,7 +67,7 @@ export class DeploymentsService {
 			method: "GET",
 			url: "/deployments/v2",
 			query: {
-				appId: appId,
+				app_id: appId,
 				location: location,
 				image: image,
 				state: state,
