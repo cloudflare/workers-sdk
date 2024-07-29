@@ -11,7 +11,11 @@ import { version } from "../package.json";
 import type { C3Context } from "types";
 
 export const offerGit = async (ctx: C3Context) => {
+	console.log('===== offerGit');
+
+	console.log('-----   isGitInstalled?');
 	const gitInstalled = await isGitInstalled();
+	console.log('-----      ' + gitInstalled);
 	if (!gitInstalled) {
 		// haven't prompted yet, if provided as --git arg
 		if (ctx.args.git) {
@@ -26,7 +30,9 @@ export const offerGit = async (ctx: C3Context) => {
 		return; // bail early
 	}
 
+	console.log('-----   isGitConfigured?');
 	const gitConfigured = await isGitConfigured();
+	console.log('-----      ' + gitConfigured);
 	if (!gitConfigured) {
 		// haven't prompted yet, if provided as --git arg
 		if (ctx.args.git) {
@@ -41,7 +47,9 @@ export const offerGit = async (ctx: C3Context) => {
 		return; // bail early
 	}
 
+	console.log('-----   isInsideGitRepo?');
 	const insideGitRepo = await isInsideGitRepo(ctx.project.path);
+	console.log('-----      ' + insideGitRepo);
 
 	if (insideGitRepo) {
 		ctx.args.git = true;
