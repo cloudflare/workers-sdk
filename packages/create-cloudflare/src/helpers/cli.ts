@@ -54,7 +54,6 @@ export const C3_DEFAULTS: C3Args = {
 	deploy: true,
 	git: true,
 	open: true,
-	ts: true,
 	lang: "ts",
 	template:
 		"cloudflare/workers-sdk/packages/create-cloudflare/templates/hello-world",
