@@ -1,4 +1,9 @@
 packages:
-  - "packages/*"
+  - "packages/clis/*"
+  - "packages/configs/*"
+  - "packages/libs/*"
+  - "packages/pages/*"
+  - "packages/vscode-extensions/*"
+  - "packages/workers/*"
   - "fixtures/*"
   - "tools"

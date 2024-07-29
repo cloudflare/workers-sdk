@@ -177,25 +177,25 @@ dist
 
 wrangler-dist/
 miniflare-dist
-clis/wrangler/wrangler.toml
-clis/wrangler/src/cloudchamber/internal
+packages/clis/wrangler/wrangler.toml
+packages/clis/wrangler/src/cloudchamber/internal
 workers/prerelease-registry/_worker.bundle
-clis/wranglerjs-compat-webpack-plugin/lib
+packages/clis/wranglerjs-compat-webpack-plugin/lib
 .wrangler-1-cache
 emitted-types/
 _routes.generated.json
-pages/quick-edit/vscode
-pages/quick-edit/web
+packages/pages/quick-edit/vscode
+packages/pages/quick-edit/web
 
-clis/wrangler/config-schema.json
-pages/wrangler-devtools/built-devtools
-pages/wrangler-devtools/.cipd
-pages/wrangler-devtools/depot
-pages/wrangler-devtools/devtools-frontend
-libs/miniflare/dist-types/
+packages/clis/wrangler/config-schema.json
+packages/pages/wrangler-devtools/built-devtools
+packages/pages/wrangler-devtools/.cipd
+packages/pages/wrangler-devtools/depot
+packages/pages/wrangler-devtools/devtools-frontend
+packages/libs/miniflare/dist-types/
 
-fixtures/remix-pages-app/public/build
-fixtures/remix-pages-app/functions/\[\[path\]\].js
+packages/fixtures/remix-pages-app/public/build
+packages/fixtures/remix-pages-app/functions/\[\[path\]\].js
 
 .mf
 .tmp
