@@ -25,13 +25,13 @@ export async function runWranglerPagesDev(
 ) {
 	if (publicPath) {
 		return runLongLivedWrangler(
-			["pages", "dev", publicPath, "--ip=127.0.0.1", ...options],
+			["pages", "dev", publicPath, "--x-dev-env", "--ip=127.0.0.1", ...options],
 			cwd,
 			env
 		);
 	} else {
 		return runLongLivedWrangler(
-			["pages", "dev", "--ip=127.0.0.1", ...options],
+			["pages", "dev", "--x-dev-env", "--ip=127.0.0.1", ...options],
 			cwd,
 			env
 		);
