@@ -11,8 +11,10 @@ it("falls through to global fetch() if unmatched", async () => {
 		.reply(200, "body");
 
 	let response = await fetch("https://example.com");
+	expect(response.url).toEqual("https://example.com/");
 	expect(await response.text()).toBe("body");
 
 	response = await fetch("https://example.com/bad");
+	expect(response.url).toEqual("https://example.com/bad");
 	expect(await response.text()).toBe("fallthrough:GET https://example.com/bad");
 });
