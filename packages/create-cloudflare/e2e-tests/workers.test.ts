@@ -9,6 +9,7 @@ import { frameworkToTest } from "./frameworkToTest";
 import {
 	createTestLogStream,
 	isQuarantineMode,
+	keys,
 	recreateLogFolder,
 	runC3,
 	testProjectDir,
@@ -22,19 +23,13 @@ const TEST_TIMEOUT = 1000 * 60 * 5;
 type WorkerTestConfig = RunnerConfig & {
 	name?: string;
 	template: string;
+	variants: string[];
 };
 
 const workerTemplates: WorkerTestConfig[] = [
 	{
 		template: "hello-world",
-		verifyDeploy: {
-			route: "/",
-			expectedText: "Hello World!",
-		},
-	},
-	{
-		template: "hello-world-python",
-		promptHandlers: [],
+		variants: ["ts", "js", "python"],
 		verifyDeploy: {
 			route: "/",
 			expectedText: "Hello World!",
@@ -42,6 +37,7 @@ const workerTemplates: WorkerTestConfig[] = [
 	},
 	{
 		template: "common",
+		variants: ["ts", "js"],
 		verifyDeploy: {
 			route: "/",
 			expectedText: "Try making requests to:",
@@ -49,15 +45,17 @@ const workerTemplates: WorkerTestConfig[] = [
 	},
 	{
 		template: "queues",
+		variants: ["ts", "js"],
 		// Skipped for now, since C3 does not yet support resource creation
 	},
 	{
 		template: "scheduled",
+		variants: ["ts", "js"],
 		// Skipped for now, since it's not possible to test scheduled events on deployed Workers
 	},
 	{
 		template: "openapi",
-		promptHandlers: [],
+		variants: [],
 		verifyDeploy: {
 			route: "/",
 			expectedText: "SwaggerUI",
@@ -80,31 +78,21 @@ describe
 
 		workerTemplates
 			.flatMap<WorkerTestConfig>((template) =>
-				template.promptHandlers
-					? [template]
-					: [
-							{
+				template.variants.length > 0
+					? template.variants.map((variant, index) => {
+							return {
 								...template,
-								name: `${template.name ?? template.template}-ts`,
+								name: `${template.name ?? template.template}-${variant}`,
 								promptHandlers: [
 									{
-										matcher: /Do you want to use TypeScript\?/,
-										input: ["y"],
+										matcher: /Which language do you want to use\?/,
+										// Assuming the variants are defined in the same order it is displayed in the prompt
+										input: Array(index).fill(keys.down).concat(keys.enter),
 									},
 								],
-							},
-
-							{
-								...template,
-								name: `${template.name ?? template.template}-js`,
-								promptHandlers: [
-									{
-										matcher: /Do you want to use TypeScript\?/,
-										input: ["n"],
-									},
-								],
-							},
-						],
+							};
+						})
+					: [template],
 			)
 			.forEach((template) => {
 				const name = template.name ?? template.template;
