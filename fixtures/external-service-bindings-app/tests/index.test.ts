@@ -41,6 +41,7 @@ describe("Pages Functions", () => {
 				experimental: {
 					fileBasedRegistry: true,
 					disableExperimentalWarning: true,
+					devEnv: true,
 				},
 			}
 		);
@@ -53,6 +54,7 @@ describe("Pages Functions", () => {
 				experimental: {
 					fileBasedRegistry: true,
 					disableExperimentalWarning: true,
+					devEnv: true,
 				},
 			}
 		);
@@ -65,6 +67,7 @@ describe("Pages Functions", () => {
 				experimental: {
 					fileBasedRegistry: true,
 					disableExperimentalWarning: true,
+					devEnv: true,
 				},
 			}
 		);
@@ -78,6 +81,7 @@ describe("Pages Functions", () => {
 				experimental: {
 					fileBasedRegistry: true,
 					disableExperimentalWarning: true,
+					devEnv: true,
 				},
 			}
 		);
@@ -91,6 +95,7 @@ describe("Pages Functions", () => {
 				experimental: {
 					fileBasedRegistry: true,
 					disableExperimentalWarning: true,
+					devEnv: true,
 				},
 			}
 		);

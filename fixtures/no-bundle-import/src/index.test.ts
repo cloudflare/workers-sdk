@@ -12,6 +12,7 @@ describe("Worker", () => {
 			ip: "127.0.0.1",
 			experimental: {
 				disableExperimentalWarning: true,
+				devEnv: true,
 			},
 		});
 	}, 30_000);

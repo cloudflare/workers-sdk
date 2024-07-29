@@ -31,7 +31,11 @@ it("logs startup errors", async () => {
 				config: path.resolve(__dirname, "..", "wrangler.logging.toml"),
 				// Intentionally omitting `compatibilityFlags: ["nodejs_compat"]`
 				ip: "127.0.0.1",
-				experimental: { disableExperimentalWarning: true },
+				experimental: {
+					disableExperimentalWarning: true,
+					disableDevRegistry: true,
+					devEnv: true,
+				},
 			}
 		);
 		await worker.stop();

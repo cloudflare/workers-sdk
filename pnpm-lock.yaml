@@ -83,6 +83,9 @@ importers:
       rimraf:
         specifier: ^5.0.1
         version: 5.0.1
+      tree-kill:
+        specifier: ^1.2.2
+        version: 1.2.2
       turbo:
         specifier: ^1.10.14
         version: 1.10.14
@@ -1772,9 +1775,6 @@ importers:
       timeago.js:
         specifier: ^4.0.2
         version: 4.0.2
-      tree-kill:
-        specifier: ^1.2.2
-        version: 1.2.2
       ts-dedent:
         specifier: ^2.2.0
         version: 2.2.0

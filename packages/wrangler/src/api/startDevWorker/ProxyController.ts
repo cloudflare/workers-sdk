@@ -282,14 +282,14 @@ export class ProxyController extends Controller<ProxyControllerEventMap> {
 
 		try {
 			await this.runtimeMessageMutex.runWith(async () => {
-				assert(this.proxyWorker, "proxyWorker should already be instantiated");
+				const { proxyWorker } = await this.ready.promise;
 
-				const ready = await this.proxyWorker.ready.catch(() => undefined);
+				const ready = await proxyWorker.ready.catch(() => undefined);
 				if (!ready) {
 					return;
 				}
 
-				return this.proxyWorker.dispatchFetch(
+				return proxyWorker.dispatchFetch(
 					`http://dummy/cdn-cgi/ProxyWorker/${message.type}`,
 					{
 						headers: { Authorization: this.secret },

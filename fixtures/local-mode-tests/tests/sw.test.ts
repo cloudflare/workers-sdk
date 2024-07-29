@@ -18,7 +18,9 @@ describe("service worker", () => {
 			config: path.resolve(__dirname, "..", "wrangler.sw.toml"),
 			ip: "127.0.0.1",
 			experimental: {
+				disableDevRegistry: true,
 				disableExperimentalWarning: true,
+				devEnv: true,
 			},
 		});
 	});

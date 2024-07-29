@@ -372,6 +372,9 @@ async function startWorkers(): Promise<UnstableDevWorker[]> {
 			return unstable_dev(path.join(workerPath, "index.ts"), {
 				config: path.join(workerPath, "wrangler.toml"),
 				ip: "127.0.0.1",
+				experimental: {
+					devEnv: true,
+				},
 			});
 		})
 	);

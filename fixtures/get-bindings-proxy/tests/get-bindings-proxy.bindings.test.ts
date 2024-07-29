@@ -246,6 +246,7 @@ async function startWorkers(): Promise<UnstableDevWorker[]> {
 				experimental: {
 					fileBasedRegistry: true,
 					disableExperimentalWarning: true,
+					devEnv: true,
 				},
 			});
 		})

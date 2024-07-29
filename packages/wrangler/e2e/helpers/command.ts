@@ -163,6 +163,9 @@ export class LongLivedCommand {
 						this.commandProcess.pid,
 						e
 					);
+					// fallthrough to resolve() because either the process is already dead
+					// or don't have permission to kill it or some other reason?
+					// either way, there is nothing we can do and we don't want to fail the test because of this
 				}
 				resolve();
 			});
