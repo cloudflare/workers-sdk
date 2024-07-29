@@ -92,6 +92,7 @@
 		"@cloudflare/eslint-config-worker": "workspace:*",
 		"@cloudflare/pages-shared": "workspace:^",
 		"@cloudflare/types": "^6.18.4",
+		"@cloudflare/workers-shared": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-types": "^4.20240725.0",
 		"@cspotcode/source-map-support": "0.8.1",

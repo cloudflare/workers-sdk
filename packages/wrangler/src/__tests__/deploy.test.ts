@@ -4363,7 +4363,7 @@ addEventListener('fetch', event => {});`
 			});
 			writeWorkerSource();
 			mockUploadWorkerRequest({
-				expectedMainModule: "no-op-worker.js",
+				expectedMainModule: "no-op-assets-worker.js",
 			});
 			mockSubDomainRequest();
 			await runWrangler("deploy");

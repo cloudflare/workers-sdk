@@ -1,0 +1,20 @@
+{
+	"name": "assets-worker",
+	"private": true,
+	"scripts": {
+		"check:type": "tsc",
+		"dev": "npx wrangler dev",
+		"test:ci": "vitest run",
+		"test:watch": "vitest",
+		"type:tests": "tsc -p ./tests/tsconfig.json"
+	},
+	"devDependencies": {
+		"@cloudflare/workers-tsconfig": "workspace:*",
+		"@cloudflare/workers-types": "^4.20240725.0",
+		"undici": "^5.28.4",
+		"wrangler": "workspace:*"
+	},
+	"volta": {
+		"extends": "../../package.json"
+	}
+}
