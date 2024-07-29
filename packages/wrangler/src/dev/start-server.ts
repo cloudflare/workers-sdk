@@ -175,31 +175,39 @@ export async function startDevServer(
 
 		await devEnv.config.set(startDevWorkerOptions);
 
-		await Promise.all([
-			// adhere to unstable_dev contract:
-			//   - only resolve when UserWorker is ready
-			//   - reject if UserWorker fails to start
-			Promise.race(
-				devEnv.runtimes.flatMap((runtime) => [
-					once(runtime, "reloadComplete"),
-					once(runtime, "error").then((err) => Promise.reject(err)),
-				])
-			),
-			// adhere to unstable_dev contract:
-			//   - only resolve when _perceived_ UserWorker is ready
-			//   - throw if _perceived_ UserWorker fails to start
-			// to the eyeball, the ProxyWorker is the _perceived_ UserWorker
-			Promise.race([
-				devEnv.proxy.ready.promise,
-				once(devEnv.proxy, "error").then((err) => Promise.reject(err)),
-			]),
-		]);
-
-		return {
-			stop: async () => {
-				await Promise.allSettled([stopWorkerRegistry(), devEnv.teardown()]);
-			},
+		const stop = async () => {
+			await Promise.allSettled([stopWorkerRegistry(), devEnv.teardown()]);
 		};
+
+		try {
+			await Promise.all([
+				// adhere to unstable_dev contract:
+				//   - only resolve when UserWorker is ready
+				//   - reject if UserWorker fails to start
+				Promise.race(
+					devEnv.runtimes.flatMap((runtime) => [
+						once(runtime, "reloadComplete"),
+						once(runtime, "error").then((err) => Promise.reject(err)),
+					])
+				),
+				// adhere to unstable_dev contract:
+				//   - only resolve when _perceived_ UserWorker is ready
+				//   - throw if _perceived_ UserWorker fails to start
+				// to the eyeball, the ProxyWorker is the _perceived_ UserWorker
+				Promise.race([
+					devEnv.proxy.ready.promise,
+					once(devEnv.proxy, "error").then((err) => Promise.reject(err)),
+				]),
+			]);
+		} catch (err) {
+			// unstable_dev's api only returns the stop function when the promise resolves
+			// so call stop for the user if the promise rejects
+			await stop();
+
+			throw err;
+		}
+
+		return { stop };
 	}
 
 	// temp: fake these events by calling the handler directly
