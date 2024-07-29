@@ -374,6 +374,7 @@ async function startWorkers(): Promise<UnstableDevWorker[]> {
 				ip: "127.0.0.1",
 				experimental: {
 					devEnv: true,
+					fileBasedRegistry: true,
 				},
 			});
 		})
