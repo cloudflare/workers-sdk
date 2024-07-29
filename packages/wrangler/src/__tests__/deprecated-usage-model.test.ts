@@ -62,6 +62,7 @@ describe("deprecated-usage-model", () => {
 		  "err": "",
 		  "info": "",
 		  "out": "Total Upload: xx KiB / gzip: xx KiB
+		Worker Startup Time: 100 ms
 		Uploaded test-name (TIMINGS)
 		Published test-name (TIMINGS)
 		  https://test-name.test-sub-domain.workers.dev
