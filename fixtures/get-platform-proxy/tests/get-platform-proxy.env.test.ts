@@ -188,8 +188,14 @@ describe("getPlatformProxy - env", () => {
 			rpc = env.MY_RPC as unknown as EntrypointService;
 			return dispose;
 		});
-		it("can call RPC methods directly", async () => {
+		it("can call RPC methods returning a string", async () => {
 			expect(await rpc.sum([1, 2, 3])).toMatchInlineSnapshot(`6`);
+		});
+		it("can call RPC methods returning an object", async () => {
+			expect(await rpc.sumObj([1, 2, 3, 5])).toEqual({
+				isObject: true,
+				value: 11,
+			});
 		});
 		it("can call RPC methods returning a Response", async () => {
 			const resp = await rpc.asJsonResponse([1, 2, 3]);

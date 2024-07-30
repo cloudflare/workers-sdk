@@ -12,6 +12,14 @@ export class NamedEntrypoint extends WorkerEntrypoint {
 	sum(args: number[]): number {
 		return args.reduce((a, b) => a + b);
 	}
+
+	sumObj(args: number[]): { isObject: true; value: number } {
+		return {
+			isObject: true,
+			value: args.reduce((a, b) => a + b),
+		};
+	}
+
 	asJsonResponse(args: unknown): {
 		status: number;
 		text: () => Promise<string>;
