@@ -1,5 +1,5 @@
 {
-	"name": "worker-ts",
+	"name": "my-workflow",
 	"private": true,
 	"scripts": {
 		"deploy": "wrangler deploy",
