@@ -26,21 +26,6 @@ export const offerGit = async (ctx: C3Context) => {
 		return; // bail early
 	}
 
-	const gitConfigured = await isGitConfigured();
-	if (!gitConfigured) {
-		// haven't prompted yet, if provided as --git arg
-		if (ctx.args.git) {
-			updateStatus(
-				"Must configure `user.name` and user.email` to use git. Continuing without git.",
-			);
-		}
-
-		// override true (--git flag) and undefined (not prompted yet) to false (don't use git)
-		ctx.args.git = false;
-
-		return; // bail early
-	}
-
 	const insideGitRepo = await isInsideGitRepo(ctx.project.path);
 
 	if (insideGitRepo) {
@@ -55,9 +40,22 @@ export const offerGit = async (ctx: C3Context) => {
 		defaultValue: C3_DEFAULTS.git,
 	});
 
-	if (ctx.args.git) {
-		await initializeGit(ctx.project.path);
+	if (!ctx.args.git) {
+		return;
 	}
+
+	const gitConfigured = await isGitConfigured();
+	if (!gitConfigured) {
+		updateStatus(
+			"Must configure `user.name` and user.email` to use git. Continuing without git.",
+		);
+
+		// override ctx.args.git to false (don't use git)
+		ctx.args.git = false;
+		return;
+	}
+
+	await initializeGit(ctx.project.path);
 };
 
 export const gitCommit = async (ctx: C3Context) => {
