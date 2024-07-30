@@ -75,7 +75,7 @@ describe.skipIf(frameworkToTest || isQuarantineMode())(
 					[projectPath],
 					[
 						{
-							matcher: /What do you want to start with\?/,
+							matcher: /What would you like to start with\?/,
 							input: [keys.enter],
 						},
 						{
@@ -119,7 +119,7 @@ describe.skipIf(frameworkToTest || isQuarantineMode())(
 							input: [projectPath, keys.enter],
 						},
 						{
-							matcher: /What do you want to start with\?/,
+							matcher: /What would you like to start with\?/,
 							input: [keys.down, keys.down, keys.enter],
 						},
 						{
@@ -157,7 +157,7 @@ describe.skipIf(frameworkToTest || isQuarantineMode())(
 					[projectPath, "--ts", "--no-deploy"],
 					[
 						{
-							matcher: /What do you want to start with\?/,
+							matcher: /What would you like to start with\?/,
 							input: [keys.enter],
 						},
 						{

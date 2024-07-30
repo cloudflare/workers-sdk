@@ -200,7 +200,7 @@ export const selectTemplate = async (args: Partial<C3Args>) => {
 
 	const category = await processArgument<string>(args, "category", {
 		type: "select",
-		question: "What do you want to start with?",
+		question: "What would you like to start with?",
 		label: "category",
 		options: [
 			{ label: "Hello World example", value: "hello-world" },
