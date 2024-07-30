@@ -1,4 +1,4 @@
-name: Workflows
+name: Prerelease Workflows
 on:
   push:
     branches:
