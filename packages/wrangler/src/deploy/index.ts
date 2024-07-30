@@ -2,6 +2,7 @@ import path from "node:path";
 import { findWranglerToml, readConfig } from "../config";
 import { getEntry } from "../deployment-bundle/entry";
 import { UserError } from "../errors";
+import { processExperimentalAssetsArg } from "../experimental-assets";
 import {
 	getRules,
 	getScriptName,
@@ -14,7 +15,6 @@ import { getLegacyAssetPaths, getSiteAssetPaths } from "../sites";
 import { requireAuth } from "../user";
 import { collectKeyValues } from "../utils/collectKeyValues";
 import deploy from "./deploy";
-import { processExperimentalAssetsArg } from "./utils";
 import type { Config } from "../config";
 import type {
 	CommonYargsArgv,

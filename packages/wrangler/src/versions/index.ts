@@ -1,8 +1,8 @@
 import path from "node:path";
 import { findWranglerToml, readConfig } from "../config";
-import { processExperimentalAssetsArg } from "../deploy/utils";
 import { getEntry } from "../deployment-bundle/entry";
 import { UserError } from "../errors";
+import { processExperimentalAssetsArg } from "../experimental-assets";
 import {
 	getRules,
 	getScriptName,
