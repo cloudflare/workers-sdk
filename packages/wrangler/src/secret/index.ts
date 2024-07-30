@@ -77,6 +77,7 @@ async function createDraftWorker({
 					send_email: [],
 					vars: {},
 					durable_objects: { bindings: [] },
+					workflows: [],
 					queues: [],
 					r2_buckets: [],
 					d1_databases: [],

@@ -244,6 +244,22 @@ export default async function triggersDeploy(props: Props): Promise<void> {
 		deployments.push(...updateConsumers);
 	}
 
+	if (config.workflows?.length) {
+		for (const workflow of config.workflows) {
+			deployments.push(
+				fetchResult(`/accounts/${accountId}/workflows/${workflow.name}`, {
+					method: "PUT",
+					body: JSON.stringify({
+						script_name: scriptName,
+					}),
+					headers: {
+						"Content-Type": "application/json",
+					},
+				}).then(() => [`workflow: ${workflow.name}`])
+			);
+		}
+	}
+
 	const targets = await Promise.all(deployments);
 	const deployMs = Date.now() - start - uploadMs;
 

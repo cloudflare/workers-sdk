@@ -201,6 +201,7 @@ export function printBindings(bindings: CfWorkerInit["bindings"]) {
 	const {
 		data_blobs,
 		durable_objects,
+		workflows,
 		kv_namespaces,
 		send_email,
 		queues,
@@ -247,6 +248,28 @@ export function printBindings(bindings: CfWorkerInit["bindings"]) {
 
 					return {
 						key: name,
+						value,
+					};
+				}
+			),
+		});
+	}
+
+	if (workflows !== undefined && workflows.length > 0) {
+		output.push({
+			type: "Workflows",
+			entries: workflows.map(
+				({ class_name, script_name, environment, binding }) => {
+					let value = class_name;
+					if (script_name) {
+						value += ` (defined in ${script_name})`;
+					}
+					if (environment) {
+						value += ` - ${environment}`;
+					}
+
+					return {
+						key: binding,
 						value,
 					};
 				}

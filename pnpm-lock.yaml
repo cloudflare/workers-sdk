@@ -686,6 +686,15 @@ importers:
         specifier: workspace:*
         version: link:../../packages/wrangler
 
+  fixtures/workflow:
+    devDependencies:
+      '@cloudflare/workers-types':
+        specifier: ^4.20240725.0
+        version: 4.20240806.0
+      wrangler:
+        specifier: workspace:*
+        version: link:../../packages/wrangler
+
   packages/cli:
     devDependencies:
       '@clack/core':
