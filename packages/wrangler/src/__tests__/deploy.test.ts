@@ -9403,35 +9403,7 @@ export default{
 			// keeping these as unit tests to try and keep them snappy, as they often deal with
 			// big files that would take a while to deal with in a full wrangler test
 
-			test("should print the bundle size and warn about large scripts when > 1MiB", async () => {
-				const bigModule = Buffer.alloc(10_000_000);
-				randomFillSync(bigModule);
-				await printBundleSize({ name: "index.js", content: "" }, [
-					{
-						name: "index.js",
-						filePath: undefined,
-						content: bigModule,
-						type: "buffer",
-					},
-				]);
-
-				expect(std).toMatchInlineSnapshot(`
-			Object {
-			  "debug": "",
-			  "err": "",
-			  "info": "",
-			  "out": "Total Upload: xx KiB / gzip: xx KiB",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mWe recommend keeping your script less than 1MiB (1024 KiB) after gzip. Exceeding this can affect cold start time. Consider using Wrangler's \`--minify\` option to reduce your bundle size.[0m
-
-			",
-			}
-		`);
-			});
-
-			test("should not warn about bundle sizes when NO_SCRIPT_SIZE_WARNING is set", async () => {
-				const previousValue = process.env.NO_SCRIPT_SIZE_WARNING;
-				process.env.NO_SCRIPT_SIZE_WARNING = "true";
-
+			test("should print the bundle size", async () => {
 				const bigModule = Buffer.alloc(10_000_000);
 				randomFillSync(bigModule);
 				await printBundleSize({ name: "index.js", content: "" }, [
@@ -9452,9 +9424,8 @@ export default{
 			  "warn": "",
 			}
 		`);
-
-				process.env.NO_SCRIPT_SIZE_WARNING = previousValue;
 			});
+
 
 			test("should print the top biggest dependencies in the bundle when upload fails", () => {
 				const deps = {
