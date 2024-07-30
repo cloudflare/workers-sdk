@@ -68,15 +68,12 @@ function isPlainObject(value: unknown) {
 		Object.getOwnPropertyNames(proto).sort().join("\0") === objectProtoNames
 	);
 }
-function objectContainsFunctions(obj: Record<string, unknown>): boolean {
+function objectContainsFunctions(obj: Record<string | symbol, unknown>): boolean {
 	const propertyNames = Object.getOwnPropertyNames(obj);
 	const propertySymbols = Object.getOwnPropertySymbols(obj);
 	const properties = [...propertyNames, ...propertySymbols];
 
 	for (const property of properties) {
-		// @ts-ignore - ignoring the following line since TypeScript seems to
-		//              incorrectly error if `property` is a symbol
-		//              (see: https://github.com/Microsoft/TypeScript/issues/24587)
 		const entry = obj[property];
 		if (typeof entry === "function") {
 			return true;
