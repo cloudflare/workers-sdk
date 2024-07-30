@@ -1,6 +1,8 @@
 import path from "node:path";
 import { findWranglerToml, readConfig } from "../config";
+import { processExperimentalAssetsArg } from "../deploy/utils";
 import { getEntry } from "../deployment-bundle/entry";
+import { UserError } from "../errors";
 import {
 	getRules,
 	getScriptName,
@@ -226,6 +228,8 @@ export async function versionsUploadHandler(
 		);
 	}
 
+	const experimentalAssets = processExperimentalAssetsArg(args, config);
+
 	if (args.latest) {
 		logger.warn(
 			"Using the latest version of the Workers runtime. To silence this warning, please choose a specific version of the runtime with --compatibility-date, or add a compatibility_date to your wrangler.toml.\n"
@@ -257,6 +261,7 @@ export async function versionsUploadHandler(
 		jsxFactory: args.jsxFactory,
 		jsxFragment: args.jsxFragment,
 		tsconfig: args.tsconfig,
+		experimentalAssets: experimentalAssets?.directory,
 		minify: args.minify,
 		uploadSourceMaps: args.uploadSourceMaps,
 		nodeCompat: args.nodeCompat,
