@@ -86,10 +86,30 @@ export function versionsUploadOptions(yargs: CommonYargsArgv) {
 				type: "boolean",
 				default: false,
 			})
+			.option("legacy-assets", {
+				describe: "(Experimental) Static assets to be served",
+				type: "string",
+				requiresArg: true,
+				hidden: true,
+			})
+			.option("assets", {
+				describe: "(Experimental) Static assets to be served",
+				type: "string",
+				requiresArg: true,
+				hidden: true,
+			})
+			.option("experimental-assets", {
+				describe: "Static assets to be served",
+				type: "string",
+				alias: "x-assets",
+				requiresArg: true,
+				hidden: true,
+			})
 			.option("site", {
 				describe: "Root folder of static assets for Workers Sites",
 				type: "string",
 				requiresArg: true,
+				hidden: true,
 			})
 			.option("site-include", {
 				describe:
@@ -97,6 +117,7 @@ export function versionsUploadOptions(yargs: CommonYargsArgv) {
 				type: "string",
 				requiresArg: true,
 				array: true,
+				hidden: true,
 			})
 			.option("site-exclude", {
 				describe:
@@ -104,6 +125,7 @@ export function versionsUploadOptions(yargs: CommonYargsArgv) {
 				type: "string",
 				requiresArg: true,
 				array: true,
+				hidden: true,
 			})
 			.option("var", {
 				describe:
@@ -190,6 +212,19 @@ export async function versionsUploadHandler(
 			sendMetrics: config.send_metrics,
 		}
 	);
+
+	args.legacyAssets = args.legacyAssets ?? args.assets;
+
+	if (args.site || config.site) {
+		throw new UserError(
+			"Workers Sites are not supported in Gradual Deployments."
+		);
+	}
+	if (args.legacyAssets || config.legacy_assets) {
+		throw new UserError(
+			"Legacy Assets are not supported in Gradual Deployments."
+		);
+	}
 
 	if (args.latest) {
 		logger.warn(
