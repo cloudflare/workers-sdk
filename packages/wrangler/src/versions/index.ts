@@ -204,7 +204,7 @@ export async function versionsUploadHandler(
 		args.config || (args.script && findWranglerToml(path.dirname(args.script)));
 	const projectRoot = configPath && path.dirname(configPath);
 	const config = readConfig(configPath, args);
-	const entry = await getEntry(args, config, "deploy");
+	const entry = await getEntry(args, config, "versions upload");
 	await metrics.sendMetricsEvent(
 		"upload worker version",
 		{

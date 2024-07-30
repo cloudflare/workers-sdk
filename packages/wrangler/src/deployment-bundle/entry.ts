@@ -41,7 +41,7 @@ export async function getEntry(
 		experimentalAssets?: string;
 	},
 	config: Config,
-	command: "dev" | "deploy" | "types"
+	command: "dev" | "deploy" | "versions upload" | "types"
 ): Promise<Entry> {
 	let file: string;
 	let directory = process.cwd();
