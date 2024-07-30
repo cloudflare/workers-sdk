@@ -3,6 +3,7 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { URLSearchParams } from "node:url";
 import { cancel } from "@cloudflare/cli";
+import { syncAssets } from "../assets";
 import { fetchListResult, fetchResult } from "../cfetch";
 import { printBindings } from "../config";
 import { bundleWorker } from "../deployment-bundle/bundle";
@@ -39,7 +40,7 @@ import {
 	putConsumerById,
 	putQueue,
 } from "../queues/client";
-import { syncAssets } from "../sites";
+import { syncSitesAssets } from "../sites";
 import {
 	getSourceMappedString,
 	maybeRetrieveFileSourceMap,
@@ -588,7 +589,14 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 				})
 			: undefined;
 
-		const assets = await syncAssets(
+		const assetManifest = await syncAssets(
+			accountId,
+			scriptName,
+			props.experimentalAssets,
+			props.dryRun
+		);
+
+		const legacyAssets = await syncSitesAssets(
 			accountId,
 			// When we're using the newer service environments, we wouldn't
 			// have added the env name on to the script name. However, we must
@@ -603,8 +611,8 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 		const bindings: CfWorkerInit["bindings"] = {
 			kv_namespaces: (config.kv_namespaces || []).concat(
-				assets.namespace
-					? { binding: "__STATIC_CONTENT", id: assets.namespace }
+				legacyAssets.namespace
+					? { binding: "__STATIC_CONTENT", id: legacyAssets.namespace }
 					: []
 			),
 			send_email: config.send_email,
@@ -615,7 +623,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			version_metadata: config.version_metadata,
 			text_blobs: {
 				...config.text_blobs,
-				...(assets.manifest &&
+				...(legacyAssets.manifest &&
 					format === "service-worker" && {
 						__STATIC_CONTENT_MANIFEST: "__STATIC_CONTENT_MANIFEST",
 					}),
@@ -641,11 +649,11 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			},
 		};
 
-		if (assets.manifest) {
+		if (legacyAssets.manifest) {
 			modules.push({
 				name: "__STATIC_CONTENT_MANIFEST",
 				filePath: undefined,
-				content: JSON.stringify(assets.manifest),
+				content: JSON.stringify(legacyAssets.manifest),
 				type: "text",
 			});
 		}
