@@ -289,6 +289,12 @@ export async function deployHandler(
 		);
 	}
 
+	if (args.assets) {
+		logger.warn(
+			"The --assets argument is experimental and may change or break at any time"
+		);
+	}
+
 	const experimentalAssets = processExperimentalAssetsArg(args, config);
 
 	if (args.latest) {
