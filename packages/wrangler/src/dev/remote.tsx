@@ -11,7 +11,7 @@ import { withSourceURLs } from "../deployment-bundle/source-url";
 import { getInferredHost } from "../dev";
 import { UserError } from "../errors";
 import { logger } from "../logger";
-import { syncAssets } from "../sites";
+import { syncSitesAssets } from "../sites";
 import {
 	getAccountChoices,
 	requireApiToken,
@@ -620,7 +620,7 @@ export async function createRemoteWorkerInit(props: {
 		props.modules
 	);
 
-	const assets = await syncAssets(
+	const assets = await syncSitesAssets(
 		props.accountId,
 		// When we're using the newer service environments, we wouldn't
 		// have added the env name on to the script name. However, we must
