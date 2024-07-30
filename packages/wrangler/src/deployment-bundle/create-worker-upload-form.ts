@@ -234,6 +234,7 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 		}
 	);
 
+	// TODO: Add this back once API supports it
 	// bindings.workflows?.forEach(
 	// 	({ name, class_name, script_name, environment, binding }) => {
 	// 		metadataBindings.push({
