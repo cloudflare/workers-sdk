@@ -5,6 +5,7 @@ import { readFile, writeFile } from "helpers/files";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { createTestContext } from "../../__tests__/helpers";
 import { updateWranglerToml } from "../config";
+import TOML from "@iarna/toml";
 
 vi.mock("helpers/files");
 vi.mock("helpers/compatDate");
@@ -83,6 +84,8 @@ describe("updateWranglerToml", () => {
 		expect(newToml).toMatch(`name = "${ctx.project.name}"`);
 		expect(newToml).toMatch(`main = "src/index.ts"`);
 		expect(newToml).toMatch(`compatibility_date = "${mockCompatDate}"`);
+		// Validate the resulting toml by parsing it.
+		TOML.parse(newToml);
 	});
 
 	test("dont replace valid existing compatibility date", async () => {
