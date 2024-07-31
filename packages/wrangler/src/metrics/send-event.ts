@@ -76,7 +76,12 @@ export type EventNames =
 	| "view latest versioned deployment"
 	| "list versioned deployments"
 	| "download pages config"
-	| "deploy worker triggers";
+	| "deploy worker triggers"
+	| "create pipeline"
+	| "list pipelines"
+	| "delete pipeline"
+	| "update pipeline"
+	| "show pipeline";
 
 /**
  * Send a metrics event, with no extra properties, to Cloudflare, if usage tracking is enabled.
