@@ -219,12 +219,12 @@ export async function versionsUploadHandler(
 
 	if (args.site || config.site) {
 		throw new UserError(
-			"Workers Sites are not supported in Gradual Deployments."
+			"Workers Sites does not support uploading versions through `wrangler versions upload`. You must use `wrangler deploy` instead."
 		);
 	}
 	if (args.legacyAssets || config.legacy_assets) {
 		throw new UserError(
-			"Legacy Assets are not supported in Gradual Deployments."
+			"Legacy Assets does not support uploading versions through `wrangler versions upload`. You must use `wrangler deploy` instead."
 		);
 	}
 
