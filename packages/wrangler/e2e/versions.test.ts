@@ -546,7 +546,7 @@ describe("versions deploy", { timeout: TIMEOUT }, () => {
 		);
 
 		expect(normalize(upload.output)).toMatchInlineSnapshot(`
-			"X [ERROR] Legacy Assets are not supported in Gradual Deployments.
+			"X [ERROR] Legacy Assets does not support uploading versions through \`wrangler versions upload\`. You must use \`wrangler deploy\` instead.
 			🪵  Logs were written to "<LOG>""
 		`);
 	});
@@ -580,7 +580,7 @@ describe("versions deploy", { timeout: TIMEOUT }, () => {
 		const upload = await helper.run(`wrangler versions upload  --x-versions`);
 
 		expect(normalize(upload.output)).toMatchInlineSnapshot(`
-			"X [ERROR] Workers Sites are not supported in Gradual Deployments.
+			"X [ERROR] Workers Sites does not support uploading versions through \`wrangler versions upload\`. You must use \`wrangler deploy\` instead.
 			🪵  Logs were written to "<LOG>""
 		`);
 	});
