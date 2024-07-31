@@ -8,6 +8,7 @@ import {
 	leftT,
 	spinnerWhile,
 } from "@cloudflare/cli/interactive";
+import { fetchResult } from "../cfetch";
 import { findWranglerToml, readConfig } from "../config";
 import { UserError } from "../errors";
 import { CI } from "../is-ci";
@@ -205,10 +206,20 @@ export async function versionsDeployHandler(args: VersionsDeployArgs) {
 		`Deployed ${workerName} ${trafficSummaryString} (${elapsedString})`
 	);
 
+	let workerTag: string | null = null;
+	try {
+		const serviceMetaData = await fetchResult<{
+			default_environment: { script: { tag: string } };
+		}>(`/accounts/${accountId}/workers/services/${workerName}`);
+		workerTag = serviceMetaData.default_environment.script.tag;
+	} catch {
+		// If the fetch fails then we just output a null for the workerTag.
+	}
 	writeOutput({
 		type: "version-deploy",
 		version: 1,
-		worker_id: workerName,
+		worker_name: workerName,
+		worker_tag: workerTag,
 		version_traffic: confirmedVersionTraffic,
 	});
 }

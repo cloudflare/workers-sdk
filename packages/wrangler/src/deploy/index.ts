@@ -326,7 +326,7 @@ export async function deployHandler(
 
 	const beforeUpload = Date.now();
 	const name = getScriptName(args, config);
-	const { sourceMapSize, deploymentId } = await deploy({
+	const { sourceMapSize, deploymentId, workerTag } = await deploy({
 		config,
 		accountId,
 		name,
@@ -363,14 +363,13 @@ export async function deployHandler(
 		experimentalVersions: args.experimentalVersions,
 	});
 
-	if (deploymentId) {
-		writeOutput({
-			type: "deployment",
-			version: 1,
-			worker_id: name,
-			deployment_id: deploymentId,
-		});
-	}
+	writeOutput({
+		type: "deployment",
+		version: 1,
+		worker_name: name ?? null,
+		worker_tag: workerTag,
+		deployment_id: deploymentId,
+	});
 
 	await metrics.sendMetricsEvent(
 		"deploy worker script",

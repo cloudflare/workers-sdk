@@ -44,7 +44,8 @@ describe("versions deploy", () => {
 			mswListVersions,
 			mswGetVersion(),
 			mswPostNewDeployment,
-			mswPatchNonVersionedScriptSettings
+			mswPatchNonVersionedScriptSettings,
+			...mswSuccessDeploymentScriptMetadata
 		);
 	});
 

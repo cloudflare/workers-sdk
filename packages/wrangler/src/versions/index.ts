@@ -245,7 +245,7 @@ export async function versionsUploadHandler(
 	const name = getScriptName(args, config);
 
 	await standardPricingWarning(config);
-	const { versionId } = await versionsUpload({
+	const { versionId, workerTag } = await versionsUpload({
 		config,
 		accountId,
 		name,
@@ -278,14 +278,13 @@ export async function versionsUploadHandler(
 		message: args.message,
 	});
 
-	if (versionId && name) {
-		writeOutput({
-			type: "version-upload",
-			version: 1,
-			worker_id: name,
-			version_id: versionId,
-		});
-	}
+	writeOutput({
+		type: "version-upload",
+		version: 1,
+		worker_name: name ?? null,
+		worker_tag: workerTag,
+		version_id: versionId,
+	});
 }
 
 export default function registerVersionsSubcommands(

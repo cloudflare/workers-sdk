@@ -83,20 +83,23 @@ export interface OutputEntrySession
 
 export interface OutputEntryDeployment extends OutputEntryBase<"deployment"> {
 	version: 1;
-	worker_id: string | undefined;
-	deployment_id: string;
+	worker_name: string | null;
+	worker_tag: string | null;
+	deployment_id: string | null;
 }
 
 export interface OutputEntryVersionUpload
 	extends OutputEntryBase<"version-upload"> {
 	version: 1;
-	worker_id: string;
-	version_id: string;
+	worker_name: string | null;
+	worker_tag: string | null;
+	version_id: string | null;
 }
 
 export interface OutputEntryVersionDeployment
 	extends OutputEntryBase<"version-deploy"> {
 	version: 1;
-	worker_id: string;
+	worker_name: string | null;
+	worker_tag: string | null;
 	version_traffic: Map<string, number>;
 }

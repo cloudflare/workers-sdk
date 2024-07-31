@@ -102,7 +102,8 @@ describe("writeOutput()", () => {
 			writeOutput({
 				type: "deployment",
 				version: 1,
-				worker_id: "Worker",
+				worker_name: "Worker",
+				worker_tag: "ABCDE12345",
 				deployment_id: "1234",
 			});
 
@@ -118,7 +119,8 @@ describe("writeOutput()", () => {
 				{
 					type: "deployment",
 					version: 1,
-					worker_id: "Worker",
+					worker_name: "Worker",
+					worker_tag: "ABCDE12345",
 					deployment_id: "1234",
 				},
 			]);
@@ -178,7 +180,8 @@ describe("writeOutput()", () => {
 			writeOutput({
 				type: "deployment",
 				version: 1,
-				worker_id: "Worker",
+				worker_name: "Worker",
+				worker_tag: "ABCDE12345",
 				deployment_id: "1234",
 			});
 
@@ -200,7 +203,8 @@ describe("writeOutput()", () => {
 				{
 					type: "deployment",
 					version: 1,
-					worker_id: "Worker",
+					worker_name: "Worker",
+					worker_tag: "ABCDE12345",
 					deployment_id: "1234",
 				},
 			]);
