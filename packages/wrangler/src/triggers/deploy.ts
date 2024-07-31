@@ -251,6 +251,7 @@ export default async function triggersDeploy(props: Props): Promise<void> {
 					method: "PUT",
 					body: JSON.stringify({
 						script_name: scriptName,
+						class_name: workflow.class_name,
 					}),
 					headers: {
 						"Content-Type": "application/json",
