@@ -821,6 +821,104 @@ test("Miniflare: service binding to named entrypoint", async (t) => {
 	});
 });
 
+test("Miniflare: service binding to named entrypoint that implements a method returning a plain object", async (t) => {
+	const mf = new Miniflare({
+		workers: [
+			{
+				name: "a",
+				serviceBindings: {
+					RPC_SERVICE: { name: "b", entrypoint: "RpcEntrypoint" },
+				},
+				compatibilityFlags: ["rpc"],
+				modules: true,
+				script: `
+				export default {
+					async fetch(request, env) {
+						const obj = await env.RPC_SERVICE.getObject();
+						return Response.json({ obj });
+					}
+				}
+				`,
+			},
+			{
+				name: "b",
+				modules: true,
+				script: `
+					import { WorkerEntrypoint } from "cloudflare:workers";
+					export class RpcEntrypoint extends WorkerEntrypoint {
+						getObject() {
+							return {
+								isPlainObject: true,
+								value: 123,
+							}
+						}
+					}
+				`,
+			},
+		],
+	});
+	t.teardown(() => mf.dispose());
+
+	const bindings = await mf.getBindings<{ RPC_SERVICE: any }>();
+	const o = await bindings.RPC_SERVICE.getObject();
+	t.deepEqual(o.isPlainObject, true);
+	t.deepEqual(o.value, 123);
+});
+
+test("Miniflare: service binding to named entrypoint that implements a method returning an RpcTarget instance", async (t) => {
+	const mf = new Miniflare({
+		workers: [
+			{
+				name: "a",
+				serviceBindings: {
+					RPC_SERVICE: { name: "b", entrypoint: "RpcEntrypoint" },
+				},
+				compatibilityFlags: ["rpc"],
+				modules: true,
+				script: `
+				export default {
+					async fetch(request, env) {
+						const rpcTarget = await env.RPC_SERVICE.getRpcTarget();
+						return Response.json(rpcTarget.id);
+					}
+				}
+				`,
+			},
+			{
+				name: "b",
+				modules: true,
+				script: `
+					import { WorkerEntrypoint, RpcTarget } from "cloudflare:workers";
+
+					export class RpcEntrypoint extends WorkerEntrypoint {
+						getRpcTarget() {
+							return new SubService("test-id");
+						}
+					}
+
+					class SubService extends RpcTarget {
+						#id
+
+						constructor(id) {
+							super()
+							this.#id = id
+						}
+
+						get id() {
+							return this.#id
+						}
+					}
+				`,
+			},
+		],
+	});
+	t.teardown(() => mf.dispose());
+
+	const bindings = await mf.getBindings<{ RPC_SERVICE: any }>();
+	const rpcTarget = await bindings.RPC_SERVICE.getRpcTarget();
+	t.deepEqual(rpcTarget.id, "test-id");
+});
+
 test("Miniflare: custom outbound service", async (t) => {
 	const mf = new Miniflare({
 		workers: [

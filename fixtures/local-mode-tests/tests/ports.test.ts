@@ -15,6 +15,7 @@ describe("multiple workers", () => {
 				experimental: {
 					disableExperimentalWarning: true,
 					disableDevRegistry: true,
+					devEnv: true,
 				},
 			}),
 			unstable_dev(path.resolve(__dirname, "..", "src", "module.ts"), {
@@ -22,6 +23,7 @@ describe("multiple workers", () => {
 				experimental: {
 					disableExperimentalWarning: true,
 					disableDevRegistry: true,
+					devEnv: true,
 				},
 			}),
 			unstable_dev(path.resolve(__dirname, "..", "src", "module.ts"), {
@@ -29,6 +31,7 @@ describe("multiple workers", () => {
 				experimental: {
 					disableExperimentalWarning: true,
 					disableDevRegistry: true,
+					devEnv: true,
 				},
 			}),
 		]);

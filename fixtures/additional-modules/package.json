@@ -5,14 +5,14 @@
 		"build": "wrangler deploy --dry-run --outdir=dist",
 		"check:type": "tsc",
 		"deploy": "wrangler deploy",
-		"start": "wrangler dev",
+		"start": "wrangler dev --x-dev-env",
 		"test:ci": "vitest run",
 		"test:watch": "vitest",
 		"type:tests": "tsc -p ./test/tsconfig.json"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-tsconfig": "workspace:*",
-		"@cloudflare/workers-types": "^4.20240718.0",
+		"@cloudflare/workers-types": "^4.20240725.0",
 		"undici": "^5.28.4",
 		"wrangler": "workspace:*"
 	},

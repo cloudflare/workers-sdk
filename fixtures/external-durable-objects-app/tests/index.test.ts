@@ -1,10 +1,9 @@
-import { fork } from "child_process";
 import * as path from "path";
 import { setTimeout } from "timers/promises";
 import { fetch } from "undici";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { unstable_dev } from "wrangler";
-import type { ChildProcess } from "child_process";
+import { runWranglerPagesDev } from "../../shared/src/run-wrangler-long-lived";
 import type { UnstableDevWorker } from "wrangler";
 
 // TODO: reenable when https://github.com/cloudflare/workers-sdk/pull/4241 lands
@@ -15,91 +14,53 @@ describe(
 		let a: UnstableDevWorker;
 		let b: UnstableDevWorker;
 		let c: UnstableDevWorker;
-
-		let dWranglerProcess: ChildProcess;
-		let dIP: string;
-		let dPort: number;
-		let dResolveReadyPromise: (value: unknown) => void;
-		const dReadyPromise = new Promise((resolve) => {
-			dResolveReadyPromise = resolve;
-		});
+		let d: Awaited<ReturnType<typeof runWranglerPagesDev>>;
 
 		beforeAll(async () => {
 			a = await unstable_dev(path.join(__dirname, "../a/index.ts"), {
 				config: path.join(__dirname, "../a/wrangler.toml"),
 				experimental: {
-					fileBasedRegistry: true,
 					disableExperimentalWarning: true,
+					devEnv: true,
 				},
 			});
 			await setTimeout(1000);
 			b = await unstable_dev(path.join(__dirname, "../b/index.ts"), {
 				config: path.join(__dirname, "../b/wrangler.toml"),
 				experimental: {
-					fileBasedRegistry: true,
 					disableExperimentalWarning: true,
+					devEnv: true,
 				},
 			});
 			await setTimeout(1000);
 			c = await unstable_dev(path.join(__dirname, "../c/index.ts"), {
 				config: path.join(__dirname, "../c/wrangler.toml"),
 				experimental: {
-					fileBasedRegistry: true,
 					disableExperimentalWarning: true,
+					devEnv: true,
 				},
 			});
 			await setTimeout(1000);
-			dWranglerProcess = fork(
-				path.join(
-					"..",
-					"..",
-					"..",
-					"packages",
-					"wrangler",
-					"bin",
-					"wrangler.js"
-				),
+
+			d = await runWranglerPagesDev(
+				path.resolve(__dirname, "..", "d"),
+				"public",
 				[
-					"pages",
-					"dev",
-					"--x-registry",
-					"public",
 					"--compatibility-date=2024-03-04",
 					"--do=PAGES_REFERENCED_DO=MyDurableObject@a",
-				],
-				{
-					stdio: ["ignore", "ignore", "ignore", "ipc"],
-					cwd: path.resolve(__dirname, "..", "d"),
-				}
-			).on("message", (message) => {
-				const parsedMessage = JSON.parse(message.toString());
-				dIP = parsedMessage.ip;
-				dPort = parsedMessage.port;
-				dResolveReadyPromise(undefined);
-			});
-			await setTimeout(1000);
+					"--port=0",
+				]
+			);
 		});
 
 		afterAll(async () => {
-			await dReadyPromise;
 			await a.stop();
 			await b.stop();
 			await c.stop();
-
-			await new Promise((resolve, reject) => {
-				dWranglerProcess.once("exit", (code) => {
-					if (!code) {
-						resolve(code);
-					} else {
-						reject(code);
-					}
-				});
-				dWranglerProcess.kill("SIGTERM");
-			});
+			await d.stop();
 		});
 
 		it("connects up Durable Objects and keeps state across wrangler instances", async () => {
-			await dReadyPromise;
 			await setTimeout(1000);
 
 			const responseA = await a.fetch(`/`, {
@@ -115,7 +76,7 @@ describe(
 			const responseC = await c.fetch(`/`);
 			const dataC = (await responseC.json()) as { count: number; id: string };
 			expect(dataC.count).toEqual(3);
-			const responseD = await fetch(`http://${dIP}:${dPort}/`);
+			const responseD = await fetch(`http://${d.ip}:${d.port}/`);
 			const dataD = (await responseD.json()) as { count: number; id: string };
 			expect(dataD.count).toEqual(4);
 			const responseA2 = await a.fetch(`/`);

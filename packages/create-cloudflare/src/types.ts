@@ -7,10 +7,12 @@ export type C3Args = {
 	open?: boolean;
 	git?: boolean;
 	autoUpdate?: boolean;
+	category?: string;
 	// pages specific
 	framework?: string;
 	// workers specific
 	ts?: boolean;
+	lang?: string;
 	existingScript?: string;
 	template?: string;
 	acceptDefaults?: boolean;

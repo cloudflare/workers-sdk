@@ -715,10 +715,11 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			}
 		}
 
-		printBindings({ ...withoutStaticAssets, vars: maskedVars });
-
-		if (!props.dryRun) {
+		if (props.dryRun) {
+			printBindings({ ...withoutStaticAssets, vars: maskedVars });
+		} else {
 			await ensureQueuesExistByConfig(config);
+			let bindingsPrinted = false;
 
 			// Upload the script so it has time to propagate.
 			// We can also now tell whether available_on_subdomain is set
@@ -730,6 +731,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 					pipeline_hash: string | null;
 					mutable_pipeline_id: string | null;
 					deployment_id: string | null;
+					startup_time_ms: number;
 				}>(
 					workerUrl,
 					{
@@ -744,6 +746,10 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 						excludeScript: "true",
 					})
 				);
+
+				logger.log("Worker Startup Time:", result.startup_time_ms, "ms");
+				bindingsPrinted = true;
+				printBindings({ ...withoutStaticAssets, vars: maskedVars });
 
 				deploymentId = addHyphens(result.deployment_id) ?? result.deployment_id;
 
@@ -768,6 +774,9 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 					}
 				}
 			} catch (err) {
+				if (!bindingsPrinted) {
+					printBindings({ ...withoutStaticAssets, vars: maskedVars });
+				}
 				helpIfErrorIsSizeOrScriptStartup(err, dependencies);
 
 				// Apply source mapping to validation startup errors if possible

@@ -1,9 +1,13 @@
+import { once } from "node:events";
 import { readFile } from "node:fs/promises";
 import * as path from "node:path";
 import * as util from "node:util";
 import chalk from "chalk";
 import onExit from "signal-exit";
-import { fakeResolvedInput } from "../api/startDevWorker/utils";
+import {
+	convertCfWorkerInitBindingstoBindings,
+	fakeResolvedInput,
+} from "../api/startDevWorker/utils";
 import { bundleWorker } from "../deployment-bundle/bundle";
 import { getBundleType } from "../deployment-bundle/bundle-type";
 import { dedupeModulesByName } from "../deployment-bundle/dedupe-modules";
@@ -31,7 +35,7 @@ import { localPropsToConfigBundle, maybeRegisterLocalWorker } from "./local";
 import { DEFAULT_WORKER_NAME, MiniflareServer } from "./miniflare";
 import { startRemoteServer } from "./remote";
 import { validateDevProps } from "./validate-dev-props";
-import type { ProxyData, StartDevWorkerInput } from "../api";
+import type { ProxyData, StartDevWorkerInput, Trigger } from "../api";
 import type { Config } from "../config";
 import type { DurableObjectBindings } from "../config/environment";
 import type { Entry } from "../deployment-bundle/entry";
@@ -94,7 +98,15 @@ export async function startDevServer(
 	const devEnv = props.devEnv;
 	const startDevWorkerOptions: StartDevWorkerInput = {
 		name: props.name ?? "worker",
+		config: props.rawConfig.configPath,
 		entrypoint: props.entry.file,
+		compatibilityDate: props.compatibilityDate,
+		compatibilityFlags: props.compatibilityFlags,
+		triggers: props.routes?.map<Extract<Trigger, { type: "route" }>>((r) => ({
+			type: "route",
+			...(typeof r === "string" ? { pattern: r } : r),
+		})),
+		bindings: convertCfWorkerInitBindingstoBindings(props.bindings),
 		dev: {
 			server: {
 				hostname: props.initialIp,
@@ -108,10 +120,10 @@ export async function startDevServer(
 			},
 			origin: {
 				secure: props.upstreamProtocol === "https",
-				hostname: props.localUpstream,
+				hostname: props.host ?? props.localUpstream,
 			},
 			liveReload: props.liveReload,
-			remote: !props.local,
+			remote: !props.forceLocal && !props.local,
 			auth: async () => {
 				let accountId = props.accountId;
 				if (accountId === undefined) {
@@ -131,25 +143,82 @@ export async function startDevServer(
 
 				return { accountId, apiToken: requireApiToken() };
 			},
+			persist: props.localPersistencePath ?? undefined,
+			testScheduled: props.testScheduled,
+			registry: workerDefinitions,
 		},
 		build: {
-			// format: props.entry.format,
+			bundle: !props.noBundle,
+			define: props.define,
+			jsxFactory: props.jsxFactory,
+			jsxFragment: props.jsxFragment,
+			tsconfig: props.tsconfig,
+			minify: props.minify,
+			processEntrypoint: props.processEntrypoint,
+			additionalModules: props.additionalModules,
 			moduleRoot: props.entry.moduleRoot,
-			nodejsCompatMode: null,
+			moduleRules: props.rules,
+			nodejsCompatMode: props.nodejsCompatMode,
 		},
 	};
 
-	// temp: fake these events by calling the handler directly
-	if (!props.experimentalDevEnv) {
-		devEnv.proxy.onConfigUpdate({
-			type: "configUpdate",
-			config: fakeResolvedInput(startDevWorkerOptions),
+	if (props.experimentalDevEnv) {
+		// to comply with the current contract of this function, call props.onReady on reloadComplete
+		devEnv.runtimes.forEach((runtime) => {
+			runtime.on("reloadComplete", async (ev) => {
+				const { proxyWorker } = await devEnv.proxy.ready.promise;
+				const url = await proxyWorker.ready;
+
+				props.onReady?.(url.hostname, parseInt(url.port), ev.proxyData);
+			});
 		});
-		devEnv.proxy.onBundleStart({
-			type: "bundleStart",
-			config: fakeResolvedInput(startDevWorkerOptions),
-		});
+
+		await devEnv.config.set(startDevWorkerOptions);
+
+		const stop = async () => {
+			await Promise.allSettled([stopWorkerRegistry(), devEnv.teardown()]);
+		};
+
+		try {
+			await Promise.all([
+				// adhere to unstable_dev contract:
+				//   - only resolve when UserWorker is ready
+				//   - reject if UserWorker fails to start
+				Promise.race(
+					devEnv.runtimes.flatMap((runtime) => [
+						once(runtime, "reloadComplete"),
+						once(runtime, "error").then((err) => Promise.reject(err)),
+					])
+				),
+				// adhere to unstable_dev contract:
+				//   - only resolve when _perceived_ UserWorker is ready
+				//   - throw if _perceived_ UserWorker fails to start
+				// to the eyeball, the ProxyWorker is the _perceived_ UserWorker
+				Promise.race([
+					devEnv.proxy.ready.promise,
+					once(devEnv.proxy, "error").then((err) => Promise.reject(err)),
+				]),
+			]);
+		} catch (err) {
+			// unstable_dev's api only returns the stop function when the promise resolves
+			// so call stop for the user if the promise rejects
+			await stop();
+
+			throw err;
+		}
+
+		return { stop };
 	}
+
+	// temp: fake these events by calling the handler directly
+	devEnv.proxy.onConfigUpdate({
+		type: "configUpdate",
+		config: fakeResolvedInput(startDevWorkerOptions),
+	});
+	devEnv.proxy.onBundleStart({
+		type: "bundleStart",
+		config: fakeResolvedInput(startDevWorkerOptions),
+	});
 
 	//implement a react-free version of useEsbuild
 	const bundle = await runEsbuild({
@@ -180,18 +249,6 @@ export async function startDevServer(
 			props.compatibilityFlags
 		),
 	});
-
-	if (props.experimentalDevEnv) {
-		// to comply with the current contract of this function, call props.onReady on reloadComplete
-		devEnv.runtimes.forEach((runtime) => {
-			runtime.on("reloadComplete", async (ev) => {
-				const { proxyWorker } = await devEnv.proxy.ready.promise;
-				const url = await proxyWorker.ready;
-
-				props.onReady?.(url.hostname, parseInt(url.port), ev.proxyData);
-			});
-		});
-	}
 
 	if (props.local) {
 		// temp: fake these events by calling the handler directly

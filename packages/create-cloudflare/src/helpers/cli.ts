@@ -6,6 +6,7 @@ import { getLatestPackageVersion } from "helpers/packages";
 import open from "open";
 import semver from "semver";
 import { version } from "../../package.json";
+import type { C3Args } from "types";
 
 /**
  * An extremely simple wrapper around the open command.
@@ -44,15 +45,16 @@ export const isUpdateAvailable = async () => {
 	}
 };
 
-export const C3_DEFAULTS = {
+export const C3_DEFAULTS: C3Args = {
 	projectName: new Haikunator().haikunate({ tokenHex: true }),
+	category: "hello-world",
 	type: "hello-world",
 	framework: "analog",
 	autoUpdate: true,
 	deploy: true,
 	git: true,
 	open: true,
-	ts: true,
+	lang: "ts",
 	template:
 		"cloudflare/workers-sdk/packages/create-cloudflare/templates/hello-world",
 };

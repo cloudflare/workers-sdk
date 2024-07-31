@@ -1,4 +1,5 @@
 import { existsSync, statSync } from "fs";
+import { crash } from "@cloudflare/cli";
 import { spinner } from "@cloudflare/cli/interactive";
 import degit from "degit";
 import { mockSpinner } from "helpers/__tests__/mocks";
@@ -8,14 +9,19 @@ import {
 	readFile,
 	writeFile,
 } from "helpers/files";
-import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import { addWranglerToGitIgnore, downloadRemoteTemplate } from "../templates";
+import { beforeEach, describe, expect, test, vi } from "vitest";
+import {
+	addWranglerToGitIgnore,
+	downloadRemoteTemplate,
+	inferLanguageArg,
+} from "../templates";
 import type { PathLike } from "fs";
-import type { C3Context } from "types";
+import type { C3Args, C3Context } from "types";
 
 vi.mock("degit");
 vi.mock("fs");
 vi.mock("helpers/files");
+vi.mock("@cloudflare/cli");
 vi.mock("@cloudflare/cli/interactive");
 
 beforeEach(() => {
@@ -258,10 +264,6 @@ describe("downloadRemoteTemplate", () => {
 		});
 	}
 
-	afterEach(() => {
-		vi.resetAllMocks();
-	});
-
 	test("should download template using degit", async () => {
 		const mock = mockDegit();
 
@@ -278,5 +280,48 @@ describe("downloadRemoteTemplate", () => {
 		await downloadRemoteTemplate("cloudflare/workers-sdk");
 
 		expect(spinner).not.toBeCalled();
+	});
+});
+
+describe("inferLanguageArg", () => {
+	test("should infer as TypeScript if `--ts` is specified", async () => {
+		const args: Partial<C3Args> = {
+			ts: true,
+		};
+
+		inferLanguageArg(args);
+
+		expect(args.lang).toBe("ts");
+	});
+
+	test("should infer as JavaScript if `--ts=false` is specified", async () => {
+		const args: Partial<C3Args> = {
+			ts: false,
+		};
+
+		inferLanguageArg(args);
+
+		expect(args.lang).toBe("js");
+	});
+
+	test("should crash only if both the lang and ts arguments are specified", async () => {
+		let args: Partial<C3Args> = {
+			lang: "ts",
+		};
+
+		inferLanguageArg(args);
+
+		expect(args.lang).toBe("ts");
+		expect(crash).not.toBeCalled();
+
+		args = {
+			ts: true,
+			lang: "ts",
+		};
+		inferLanguageArg(args);
+
+		expect(crash).toBeCalledWith(
+			"The `--ts` argument cannot be specified in conjunction with the `--lang` argument",
+		);
 	});
 });

@@ -32,6 +32,7 @@ describe("specific port", () => {
 				experimental: {
 					disableExperimentalWarning: true,
 					disableDevRegistry: true,
+					devEnv: true,
 				},
 			}
 		);

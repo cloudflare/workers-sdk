@@ -14,6 +14,7 @@ describe("Service Bindings", () => {
 			experimental: {
 				fileBasedRegistry: true,
 				disableExperimentalWarning: true,
+				devEnv: true,
 			},
 		});
 		await setTimeout(1000);
@@ -22,6 +23,7 @@ describe("Service Bindings", () => {
 			experimental: {
 				fileBasedRegistry: true,
 				disableExperimentalWarning: true,
+				devEnv: true,
 			},
 		});
 		await setTimeout(1000);

@@ -47,6 +47,17 @@ const cliDefinition: ArgumentsDefinition = {
 	],
 	options: [
 		{
+			name: "category",
+			type: "string",
+			description: `Specifies the kind of templates that should be created`,
+			values: [
+				{ name: "hello-world", description: "Hello World example" },
+				{ name: "web-framework", description: "Framework Starter" },
+				{ name: "demo", description: "Demo application" },
+				{ name: "remote-template", description: "Template from a Github repo" },
+			],
+		},
+		{
 			name: "type",
 			alias: "t",
 			type: "string",
@@ -54,13 +65,9 @@ const cliDefinition: ArgumentsDefinition = {
 			description: `
         When using a built-in template, specifies the type of application that should be created.
 
-        Note that "--type" and "--template" are mutually exclusive options. If both are provided, "--type" will be used.
+        Note that "--category" and "--template" are mutually exclusive options. If both are provided, "--category" will be used.
         `,
 			values: [
-				{
-					name: "web-framework",
-					description: "A website or web application.",
-				},
 				{
 					name: "hello-world",
 					description: "A basic “Hello World” Cloudflare Worker.",
@@ -101,7 +108,7 @@ const cliDefinition: ArgumentsDefinition = {
 			alias: "f",
 			type: "string",
 			requiresArg: true,
-			description: `The type of framework to use to create a web application (when using this option "--type" is coerced to "web-framework")
+			description: `The type of framework to use to create a web application (when using this option "--category" is coerced to "web-framework")
 
       When using the --framework option, C3 will dispatch to the official creation tool used by the framework (ex. "create-remix" is used for Remix).
 
@@ -128,6 +135,12 @@ const cliDefinition: ArgumentsDefinition = {
 			],
 		},
 		{
+			name: "lang",
+			type: "string",
+			description: `The programming language of the template`,
+			values: [{ name: "ts" }, { name: "js" }, { name: "python" }],
+		},
+		{
 			name: "deploy",
 			type: "boolean",
 			description: "Deploy your application after it has been created",
@@ -136,6 +149,7 @@ const cliDefinition: ArgumentsDefinition = {
 			name: "ts",
 			type: "boolean",
 			description: "Use TypeScript in your application",
+			hidden: true,
 		},
 		{
 			name: "git",

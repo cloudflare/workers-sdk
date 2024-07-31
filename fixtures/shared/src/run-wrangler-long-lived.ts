@@ -1,6 +1,8 @@
+import assert from "node:assert";
 import { fork } from "node:child_process";
 import events from "node:events";
 import path from "node:path";
+import treeKill from "tree-kill";
 
 export const wranglerEntryPath = path.resolve(
 	__dirname,
@@ -23,13 +25,13 @@ export async function runWranglerPagesDev(
 ) {
 	if (publicPath) {
 		return runLongLivedWrangler(
-			["pages", "dev", publicPath, "--ip=127.0.0.1", ...options],
+			["pages", "dev", publicPath, "--x-dev-env", "--ip=127.0.0.1", ...options],
 			cwd,
 			env
 		);
 	} else {
 		return runLongLivedWrangler(
-			["pages", "dev", "--ip=127.0.0.1", ...options],
+			["pages", "dev", "--x-dev-env", "--ip=127.0.0.1", ...options],
 			cwd,
 			env
 		);
@@ -49,7 +51,11 @@ export async function runWranglerDev(
 	options: string[],
 	env?: NodeJS.ProcessEnv
 ) {
-	return runLongLivedWrangler(["dev", "--ip=127.0.0.1", ...options], cwd, env);
+	return runLongLivedWrangler(
+		["dev", "--x-dev-env", "--ip=127.0.0.1", ...options],
+		cwd,
+		env
+	);
 }
 
 async function runLongLivedWrangler(
@@ -101,10 +107,25 @@ async function runLongLivedWrangler(
 	}, 50_000);
 
 	async function stop() {
-		const closePromise = events.once(wranglerProcess, "close");
-		wranglerProcess.kill("SIGTERM");
-		const [code] = await closePromise;
-		if (code) throw new Error(`Exited with code ${code}`);
+		return new Promise<void>((resolve) => {
+			assert(
+				wranglerProcess.pid,
+				`Command "${command.join(" ")}" had no process id`
+			);
+			treeKill(wranglerProcess.pid, (e) => {
+				if (e) {
+					console.error(
+						"Failed to kill command: " + command.join(" "),
+						wranglerProcess.pid,
+						e
+					);
+				}
+				// fallthrough to resolve() because either the process is already dead
+				// or don't have permission to kill it or some other reason?
+				// either way, there is nothing we can do and we don't want to fail the test because of this
+				resolve();
+			});
+		});
 	}
 
 	const { ip, port } = await ready;

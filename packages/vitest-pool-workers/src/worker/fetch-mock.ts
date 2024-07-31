@@ -136,6 +136,7 @@ globalThis.fetch = async (input, init) => {
 					statusText: responseStatusText,
 					headers: responseHeaders,
 				});
+				Object.defineProperty(response, "url", { value: url.href });
 				responseResolve(response);
 			} else {
 				responseResolve(maybeResponse);

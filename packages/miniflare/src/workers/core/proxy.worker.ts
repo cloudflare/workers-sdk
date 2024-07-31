@@ -68,8 +68,15 @@ function isPlainObject(value: unknown) {
 		Object.getOwnPropertyNames(proto).sort().join("\0") === objectProtoNames
 	);
 }
-function objectContainsFunctions(obj: Record<string, unknown>): boolean {
-	for (const [, entry] of Object.entries(obj)) {
+function objectContainsFunctions(
+	obj: Record<string | symbol, unknown>
+): boolean {
+	const propertyNames = Object.getOwnPropertyNames(obj);
+	const propertySymbols = Object.getOwnPropertySymbols(obj);
+	const properties = [...propertyNames, ...propertySymbols];
+
+	for (const property of properties) {
+		const entry = obj[property];
 		if (typeof entry === "function") {
 			return true;
 		}

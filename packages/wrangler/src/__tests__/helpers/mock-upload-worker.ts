@@ -116,6 +116,7 @@ export function mockUploadWorkerRequest(
 				mutable_pipeline_id: "mutableId",
 				tag: "sample-tag",
 				deployment_id: "Galaxy-Class",
+				startup_time_ms: 100,
 			})
 		);
 	};
