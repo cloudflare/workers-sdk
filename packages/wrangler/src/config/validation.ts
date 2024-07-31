@@ -1993,7 +1993,7 @@ const validateDurableObjectBinding: ValidatorFn = (
 /**
  * Check that the given field is a valid "workflow" binding object.
  */
-const validateWorkflowBinding: ValidatorFn = (diagnostics, field, value) => {
+const validateWorkflowBinding: ValidatorFn = (_diagnostics, _field, _value) => {
 	// if (typeof value !== "object" || value === null) {
 	// 	diagnostics.errors.push(
 	// 		`Expected "${field}" to be an object but got ${JSON.stringify(value)}`
@@ -2002,7 +2002,7 @@ const validateWorkflowBinding: ValidatorFn = (diagnostics, field, value) => {
 	// }
 
 	// Workflow bindings must have a name, class_name and binding, and optionally a script_name and an environment.
-	let isValid = true;
+	const isValid = true;
 	// if (!isRequiredProperty(value, "name", "string")) {
 	// 	diagnostics.errors.push(`binding should have a string "name" field.`);
 	// 	isValid = false;
