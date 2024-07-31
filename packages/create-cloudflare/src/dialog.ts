@@ -1,14 +1,13 @@
 import { relative } from "path";
 import {
 	endSection,
-	log,
 	logRaw,
 	newline,
 	shapes,
 	space,
 	stripAnsi,
 } from "@cloudflare/cli";
-import { bgGreen, blue, dim, gray } from "@cloudflare/cli/colors";
+import { bgGreen, blue, gray } from "@cloudflare/cli/colors";
 import { openInBrowser } from "helpers/cli";
 import { quoteShellArgs } from "helpers/command";
 import { detectPackageManager } from "helpers/packageManagers";
@@ -22,7 +21,7 @@ function getWidth(message: string): number {
 		// This emoji occupy a single space
 		.replace(/☁️/g, singleSpace)
 		// These emojis occupies double space
-		.replace(/🧡/g, singleSpace.repeat(2));
+		.replace(/🧡|💬|⚡/g, singleSpace.repeat(2));
 
 	return text.length;
 }
@@ -78,58 +77,53 @@ export function printWelcomeMessage(version: string) {
 
 export const printSummary = async (ctx: C3Context) => {
 	const { npm } = detectPackageManager();
+	const dashboardUrl = ctx.account
+		? `https://dash.cloudflare.com/?to=/:account/workers/services/view/${ctx.project.name}`
+		: null;
+	const cdCommand = `cd ${relative(ctx.originalCWD, ctx.project.path)}`;
+	const devServerCommand = quoteShellArgs([
+		npm,
+		"run",
+		ctx.template.devScript ?? "start",
+	]);
+	const deployCommand = quoteShellArgs([
+		npm,
+		"run",
+		ctx.template.deployScript ?? "deploy",
+	]);
+	const documentationUrl = `https://developers.cloudflare.com/${ctx.template.platform}`;
+	const discordUrl = `https://discord.cloudflare.com`;
 
-	const dirRelativePath = relative(ctx.originalCWD, ctx.project.path);
-	const nextSteps = [
-		...(dirRelativePath
-			? [["Navigate to the new directory", `cd ${dirRelativePath}`]]
-			: []),
-		[
-			"Run the development server",
-			quoteShellArgs([npm, "run", ctx.template.devScript ?? "start"]),
-		],
-		...(ctx.template.previewScript
-			? [
-					[
-						"Preview your application",
-						quoteShellArgs([npm, "run", ctx.template.previewScript]),
-					],
-				]
-			: []),
-		[
-			"Deploy your application",
-			quoteShellArgs([npm, "run", ctx.template.deployScript ?? "deploy"]),
-		],
-		[
-			"Read the documentation",
-			`https://developers.cloudflare.com/${ctx.template.platform}`,
-		],
-		["Stuck? Join us at", "https://discord.cloudflare.com"],
+	const lines = [
+		`🎉 ${bgGreen(" SUCCESS ")} Application ${ctx.deployment.url ? "created" : "deployed"} successfully!`,
+		``,
 	];
 
-	if (ctx.deployment.url) {
-		const msg = [
-			`${gray(shapes.leftT)}`,
-			`${bgGreen(" SUCCESS ")}`,
-			`${dim("View your deployed application at")}`,
-			`${blue(ctx.deployment.url)}`,
-		].join(" ");
-		logRaw(msg);
-	} else {
-		const msg = [
-			`${gray(shapes.leftT)}`,
-			`${bgGreen(" APPLICATION CREATED ")}`,
-			`${dim("Deploy your application with")}`,
-			`${blue(
-				quoteShellArgs([npm, "run", ctx.template.deployScript ?? "deploy"]),
-			)}`,
-		].join(" ");
-		logRaw(msg);
+	if (ctx.deployment.url && dashboardUrl) {
+		lines.push(
+			`☁️  View Project`,
+			`   ${gray("Visit:")} ${blue.underline(ctx.deployment.url)}`,
+			`   ${gray("Dash:")} ${blue.underline(dashboardUrl)}`,
+			``,
+		);
 	}
 
-	newline();
-	nextSteps.forEach((entry) => {
-		log(`${dim(entry[0])} ${blue(entry[1])}`);
+	lines.push(
+		`🧡 Continue Developing`,
+		`   ${gray("Change directories:")} ${blue(cdCommand)}`,
+		`   ${gray("Start dev server:")} ${blue(devServerCommand)}`,
+		`   ${gray(ctx.deployment.url ? `Deploy again:` : "Deploy:")} ${blue(deployCommand)}`,
+		``,
+		`⚡ Explore Documentation`,
+		`   ${blue.underline(documentationUrl)}`,
+		``,
+		`💬 Join our Community`,
+		`   ${blue.underline(discordUrl)}`,
+		``,
+	);
+
+	printDialog(lines, {
+		prefix: gray(shapes.bar),
 	});
 	newline();
 
@@ -141,6 +135,7 @@ export const printSummary = async (ctx: C3Context) => {
 			}
 		}
 	}
+
 	endSection("See you again soon!");
 	process.exit(0);
 };
