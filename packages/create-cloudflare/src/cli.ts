@@ -4,7 +4,6 @@ import { basename, dirname, resolve } from "path";
 import { chdir } from "process";
 import { crash, endSection, logRaw, startSection } from "@cloudflare/cli";
 import { processArgument } from "@cloudflare/cli/args";
-import { dim } from "@cloudflare/cli/colors";
 import { isInteractive } from "@cloudflare/cli/interactive";
 import { parseArgs } from "helpers/args";
 import { C3_DEFAULTS, isUpdateAvailable } from "helpers/cli";
@@ -16,9 +15,9 @@ import {
 import { installWrangler, npmInstall } from "helpers/packages";
 import { version } from "../package.json";
 import { offerToDeploy, runDeploy } from "./deploy";
+import { printSummary, printWelcomeMessage } from "./dialog";
 import { gitCommit, isInsideGitRepo, offerGit } from "./git";
 import { createProject } from "./pages";
-import { printSummary } from "./summary";
 import {
 	addWranglerToGitIgnore,
 	copyTemplateFiles,
@@ -181,7 +180,7 @@ const deploy = async (ctx: C3Context) => {
 };
 
 const printBanner = () => {
-	logRaw(dim(`using create-cloudflare version ${version}\n`));
+	printWelcomeMessage(version);
 	startSection(`Create an application with Cloudflare`, "Step 1 of 3");
 };
 
