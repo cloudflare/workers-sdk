@@ -73,23 +73,27 @@ export type OutputEntry =
 
 export interface OutputEntrySession
 	extends OutputEntryBase<"wrangler-session"> {
+	version: 1;
 	wrangler_version: string;
 	command_line_args: string[];
 }
 
 export interface OutputEntryDeployment extends OutputEntryBase<"deployment"> {
+	version: 1;
 	worker_id: string | undefined;
 	deployment_id: string;
 }
 
 export interface OutputEntryVersionUpload
 	extends OutputEntryBase<"version-upload"> {
+	version: 1;
 	worker_id: string;
 	version_id: string;
 }
 
 export interface OutputEntryVersionDeployment
 	extends OutputEntryBase<"version-deploy"> {
+	version: 1;
 	worker_id: string;
 	version_traffic: Map<string, number>;
 }
