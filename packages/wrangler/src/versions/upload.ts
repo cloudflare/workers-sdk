@@ -108,9 +108,13 @@ function errIsStartupErr(err: unknown): err is ParseError & { code: 10021 } {
 	return false;
 }
 
-export default async function versionsUpload(props: Props): Promise<void> {
+export default async function versionsUpload(
+	props: Props
+): Promise<{ versionId: string | null }> {
 	// TODO: warn if git/hg has uncommitted changes
 	const { config, accountId, name } = props;
+	let versionId: string | null = null;
+
 	if (accountId && name) {
 		try {
 			const serviceMetaData = await fetchResult(
@@ -127,14 +131,14 @@ export default async function versionsUpload(props: Props): Promise<void> {
 					`You are about to upload a Worker Version that was last published via the Cloudflare Dashboard.\nEdits that have been made via the dashboard will be overridden by your local code and config.`
 				);
 				if (!(await confirm("Would you like to continue?"))) {
-					return;
+					return { versionId };
 				}
 			} else if (default_environment.script.last_deployed_from === "api") {
 				logger.warn(
 					`You are about to upload a Workers Version that was last updated via the API.\nEdits that have been made via the API will be overridden by your local code and config.`
 				);
 				if (!(await confirm("Would you like to continue?"))) {
-					return;
+					return { versionId };
 				}
 			}
 		} catch (e) {
@@ -454,6 +458,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 				bindingsPrinted = true;
 				printBindings({ ...withoutStaticAssets, vars: maskedVars });
 				logger.log("Worker Version ID:", result.id);
+				versionId = result.id;
 			} catch (err) {
 				if (!bindingsPrinted) {
 					printBindings({ ...withoutStaticAssets, vars: maskedVars });
@@ -507,7 +512,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 	if (props.dryRun) {
 		logger.log(`--dry-run: exiting now.`);
-		return;
+		return { versionId };
 	}
 	if (!accountId) {
 		throw new UserError("Missing accountId");
@@ -532,6 +537,8 @@ Changes to non-versioned settings (config properties 'logpush' or 'tail_consumer
 Changes to triggers (routes, custom domains, cron schedules, etc) must be applied with the command ${cmdTriggersDeploy}
 `)
 	);
+
+	return { versionId };
 }
 
 export function helpIfErrorIsSizeOrScriptStartup(

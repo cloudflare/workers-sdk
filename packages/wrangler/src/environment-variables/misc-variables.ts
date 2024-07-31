@@ -58,10 +58,34 @@ export const getCloudflareApiBaseUrl = getEnvironmentVariableFactory({
 			: "https://api.cloudflare.com/client/v4",
 });
 
-// Should we sanitize debug logs? By default we do, since debug logs could be added to GitHub issues and shouldn't include sensitive information
+/**
+ * `WRANGLER_LOG_SANITIZE` specifies whether we sanitize debug logs.
+ *
+ * By default we do, since debug logs could be added to GitHub issues and shouldn't include sensitive information.
+ */
 export const getSanitizeLogs = getEnvironmentVariableFactory({
 	variableName: "WRANGLER_LOG_SANITIZE",
 	defaultValue() {
 		return "true";
 	},
+});
+
+/**
+ * `WRANGLER_OUTPUT_FILE_DIRECTORY` specifies a directory where we should write a file containing output data in ND-JSON format.
+ *
+ * If this is set a random file will be created in this directory, and certain Wrangler commands will write entries to this file.
+ * This is overridden by the `WRANGLER_OUTPUT_FILE_PATH` environment variable.
+ */
+export const getOutputFileDirectoryFromEnv = getEnvironmentVariableFactory({
+	variableName: "WRANGLER_OUTPUT_FILE_DIRECTORY",
+});
+
+/**
+ * `WRANGLER_OUTPUT_FILE_PATH` specifies a path to a file where we should write output data in ND-JSON format.
+ *
+ * If this is set certain Wrangler commands will write entries to this file.
+ * This overrides the `WRANGLER_OUTPUT_FILE_DIRECTORY` environment variable.
+ */
+export const getOutputFilePathFromEnv = getEnvironmentVariableFactory({
+	variableName: "WRANGLER_OUTPUT_FILE_PATH",
 });

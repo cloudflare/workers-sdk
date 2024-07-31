@@ -13,6 +13,7 @@ import { UserError } from "../errors";
 import { CI } from "../is-ci";
 import isInteractive from "../is-interactive";
 import * as metrics from "../metrics";
+import { writeOutput } from "../output";
 import { APIError } from "../parse";
 import { printWranglerBanner } from "../update-check";
 import { requireAuth } from "../user";
@@ -203,6 +204,13 @@ export async function versionsDeployHandler(args: VersionsDeployArgs) {
 	cli.success(
 		`Deployed ${workerName} ${trafficSummaryString} (${elapsedString})`
 	);
+
+	writeOutput({
+		type: "version-deploy",
+		version: 1,
+		worker_id: workerName,
+		version_traffic: confirmedVersionTraffic,
+	});
 }
 
 function getConfig(

@@ -308,7 +308,7 @@ Update them to point to this script instead?`;
 
 export default async function deploy(
 	props: Props
-): Promise<{ sourceMapSize?: number }> {
+): Promise<{ sourceMapSize?: number; deploymentId: string | null }> {
 	// TODO: warn if git/hg has uncommitted changes
 	const { config, accountId, name } = props;
 	if (!props.dispatchNamespace && accountId && name) {
@@ -327,14 +327,14 @@ export default async function deploy(
 					`You are about to publish a Workers Service that was last published via the Cloudflare Dashboard.\nEdits that have been made via the dashboard will be overridden by your local code and config.`
 				);
 				if (!(await confirm("Would you like to continue?"))) {
-					return {};
+					return { deploymentId: null };
 				}
 			} else if (default_environment.script.last_deployed_from === "api") {
 				logger.warn(
 					`You are about to publish a Workers Service that was last updated via the script API.\nEdits that have been made via the script API will be overridden by your local code and config.`
 				);
 				if (!(await confirm("Would you like to continue?"))) {
-					return {};
+					return { deploymentId: null };
 				}
 			}
 		} catch (e) {
@@ -444,7 +444,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		const yes = await confirmLatestDeploymentOverwrite(accountId, scriptName);
 		if (!yes) {
 			cancel("Aborting deploy...");
-			return {};
+			return { deploymentId: null };
 		}
 	}
 
@@ -828,7 +828,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 	if (props.dryRun) {
 		logger.log(`--dry-run: exiting now.`);
-		return {};
+		return { deploymentId: null };
 	}
 	assert(accountId, "Missing accountId");
 
@@ -839,7 +839,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 	// Early exit for WfP since it doesn't need the below code
 	if (props.dispatchNamespace !== undefined) {
 		deployWfpUserWorker(props.dispatchNamespace, deploymentId);
-		return {};
+		return { deploymentId };
 	}
 
 	// deploy triggers
@@ -850,7 +850,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 	logVersionIdChange();
 
-	return { sourceMapSize };
+	return { sourceMapSize, deploymentId };
 }
 
 function deployWfpUserWorker(
