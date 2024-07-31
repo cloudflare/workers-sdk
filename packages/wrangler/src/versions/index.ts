@@ -1,6 +1,8 @@
 import path from "node:path";
 import { findWranglerToml, readConfig } from "../config";
 import { getEntry } from "../deployment-bundle/entry";
+import { UserError } from "../errors";
+import { processExperimentalAssetsArg } from "../experimental-assets";
 import {
 	getRules,
 	getScriptName,
@@ -86,10 +88,30 @@ export function versionsUploadOptions(yargs: CommonYargsArgv) {
 				type: "boolean",
 				default: false,
 			})
+			.option("legacy-assets", {
+				describe: "(Experimental) Static assets to be served",
+				type: "string",
+				requiresArg: true,
+				hidden: true,
+			})
+			.option("assets", {
+				describe: "(Experimental) Static assets to be served",
+				type: "string",
+				requiresArg: true,
+				hidden: true,
+			})
+			.option("experimental-assets", {
+				describe: "Static assets to be served",
+				type: "string",
+				alias: "x-assets",
+				requiresArg: true,
+				hidden: true,
+			})
 			.option("site", {
 				describe: "Root folder of static assets for Workers Sites",
 				type: "string",
 				requiresArg: true,
+				hidden: true,
 			})
 			.option("site-include", {
 				describe:
@@ -97,6 +119,7 @@ export function versionsUploadOptions(yargs: CommonYargsArgv) {
 				type: "string",
 				requiresArg: true,
 				array: true,
+				hidden: true,
 			})
 			.option("site-exclude", {
 				describe:
@@ -104,6 +127,7 @@ export function versionsUploadOptions(yargs: CommonYargsArgv) {
 				type: "string",
 				requiresArg: true,
 				array: true,
+				hidden: true,
 			})
 			.option("var", {
 				describe:
@@ -180,7 +204,7 @@ export async function versionsUploadHandler(
 		args.config || (args.script && findWranglerToml(path.dirname(args.script)));
 	const projectRoot = configPath && path.dirname(configPath);
 	const config = readConfig(configPath, args);
-	const entry = await getEntry(args, config, "deploy");
+	const entry = await getEntry(args, config, "versions upload");
 	await metrics.sendMetricsEvent(
 		"upload worker version",
 		{
@@ -190,6 +214,21 @@ export async function versionsUploadHandler(
 			sendMetrics: config.send_metrics,
 		}
 	);
+
+	args.legacyAssets = args.legacyAssets ?? args.assets;
+
+	if (args.site || config.site) {
+		throw new UserError(
+			"Workers Sites are not supported in Gradual Deployments."
+		);
+	}
+	if (args.legacyAssets || config.legacy_assets) {
+		throw new UserError(
+			"Legacy Assets are not supported in Gradual Deployments."
+		);
+	}
+
+	const experimentalAssets = processExperimentalAssetsArg(args, config);
 
 	if (args.latest) {
 		logger.warn(
@@ -222,6 +261,7 @@ export async function versionsUploadHandler(
 		jsxFactory: args.jsxFactory,
 		jsxFragment: args.jsxFragment,
 		tsconfig: args.tsconfig,
+		experimentalAssets: experimentalAssets?.directory,
 		minify: args.minify,
 		uploadSourceMaps: args.uploadSourceMaps,
 		nodeCompat: args.nodeCompat,

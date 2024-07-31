@@ -518,6 +518,73 @@ describe("versions deploy", { timeout: TIMEOUT }, () => {
 		expect(countOccurrences(deploymentsList.stdout, versionId2)).toBe(1); // once for versions deploy, only
 	});
 
+	it("fails to upload if using Legacy Assets", async () => {
+		await helper.seed({
+			"wrangler.toml": dedent`
+                name = "${workerName}"
+                main = "src/index.ts"
+                compatibility_date = "2023-01-01"
+            `,
+			"src/index.ts": dedent`
+                export default {
+                    fetch(request) {
+                        return new Response("Hello World!")
+                    }
+                }
+            `,
+			"package.json": dedent`
+                {
+                    "name": "${workerName}",
+                    "version": "0.0.0",
+                    "private": true
+                }
+            `,
+		});
+
+		const upload = await helper.run(
+			`wrangler versions upload --assets='./public'  --x-versions`
+		);
+
+		expect(normalize(upload.output)).toMatchInlineSnapshot(`
+			"X [ERROR] Legacy Assets are not supported in Gradual Deployments.
+			🪵  Logs were written to "<LOG>""
+		`);
+	});
+
+	it("fails to upload if using Workers Sites", async () => {
+		await helper.seed({
+			"wrangler.toml": dedent`
+                name = "${workerName}"
+                main = "src/index.ts"
+                compatibility_date = "2023-01-01"
+
+                [site]
+                bucket = "./public"
+            `,
+			"src/index.ts": dedent`
+                export default {
+                    fetch(request) {
+                        return new Response("Hello World!")
+                    }
+                }
+            `,
+			"package.json": dedent`
+                {
+                    "name": "${workerName}",
+                    "version": "0.0.0",
+                    "private": true
+                }
+            `,
+		});
+
+		const upload = await helper.run(`wrangler versions upload  --x-versions`);
+
+		expect(normalize(upload.output)).toMatchInlineSnapshot(`
+			"X [ERROR] Workers Sites are not supported in Gradual Deployments.
+			🪵  Logs were written to "<LOG>""
+		`);
+	});
+
 	it("should delete Worker", async () => {
 		const { stdout } = await helper.run(`wrangler delete`);
 
