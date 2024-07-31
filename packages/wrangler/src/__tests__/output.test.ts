@@ -201,20 +201,21 @@ describe("writeOutput()", () => {
 
 expect.extend({
 	toContainEntries(received: string, expected: OutputEntry[]) {
-		const outputEntries = received
+		const actual = received
 			.trim()
 			.split("\n")
-			.map((line) => JSON.parse(line))
-			.map(({ timestamp, ...entry }) => {
-				expect(typeof timestamp).toBe("string");
-				console.log(entry);
-				return entry;
-			});
+			.map((line) => JSON.parse(line));
+
+		const stamped = expected.map((entry) => ({
+			...entry,
+			timestamp: expect.any(String),
+		}));
+
 		return {
-			pass: this.equals(outputEntries, expected),
-			message: () => `Entries are${this.isNot ? " not " : ""} as expected.`,
-			received,
-			expected,
+			pass: this.equals(actual, stamped),
+			message: () => `Entries are${this.isNot ? "" : " not"} as expected.`,
+			actual,
+			expected: stamped,
 		};
 	},
 });

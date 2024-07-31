@@ -71,6 +71,8 @@ export type OutputEntry =
 	| OutputEntryVersionUpload
 	| OutputEntryVersionDeployment;
 
+export type StampedOutputEntry = { timestamp: string } & OutputEntry;
+
 export interface OutputEntrySession
 	extends OutputEntryBase<"wrangler-session"> {
 	version: 1;
