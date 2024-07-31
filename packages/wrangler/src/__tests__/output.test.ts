@@ -23,6 +23,7 @@ describe("writeOutput()", () => {
 				version: 1,
 				wrangler_version: "0.0.0.0",
 				command_line_args: ["--help"],
+				log_file_path: "some/log/path.log",
 			});
 			// No files written
 			expect(readdirSync(".")).toEqual(["home"]);
@@ -40,6 +41,7 @@ describe("writeOutput()", () => {
 				version: 1,
 				wrangler_version: "0.0.0.0",
 				command_line_args: ["--help"],
+				log_file_path: "some/log/path.log",
 			});
 			const outputFile = readFileSync(WRANGLER_OUTPUT_FILE_PATH, "utf8");
 			expect(outputFile).toContainEntries([
@@ -48,6 +50,7 @@ describe("writeOutput()", () => {
 					version: 1,
 					wrangler_version: "0.0.0.0",
 					command_line_args: ["--help"],
+					log_file_path: "some/log/path.log",
 				},
 			]);
 		} finally {
@@ -68,6 +71,7 @@ describe("writeOutput()", () => {
 				version: 1,
 				wrangler_version: "0.0.0.0",
 				command_line_args: ["--help"],
+				log_file_path: "some/log/path.log",
 			});
 			const outputFile = readFileSync(WRANGLER_OUTPUT_FILE_PATH, "utf8");
 			expect(outputFile).toContainEntries([
@@ -76,6 +80,7 @@ describe("writeOutput()", () => {
 					version: 1,
 					wrangler_version: "0.0.0.0",
 					command_line_args: ["--help"],
+					log_file_path: "some/log/path.log",
 				},
 			]);
 		} finally {
@@ -92,6 +97,7 @@ describe("writeOutput()", () => {
 				version: 1,
 				wrangler_version: "0.0.0.0",
 				command_line_args: ["--help"],
+				log_file_path: "some/log/path.log",
 			});
 			writeOutput({
 				type: "deployment",
@@ -107,6 +113,7 @@ describe("writeOutput()", () => {
 					version: 1,
 					wrangler_version: "0.0.0.0",
 					command_line_args: ["--help"],
+					log_file_path: "some/log/path.log",
 				},
 				{
 					type: "deployment",
@@ -131,6 +138,7 @@ describe("writeOutput()", () => {
 				version: 1,
 				wrangler_version: "0.0.0.0",
 				command_line_args: ["--help"],
+				log_file_path: "some/log/path.log",
 			});
 
 			const outputFilePaths = readdirSync("output");
@@ -146,6 +154,7 @@ describe("writeOutput()", () => {
 					version: 1,
 					wrangler_version: "0.0.0.0",
 					command_line_args: ["--help"],
+					log_file_path: "some/log/path.log",
 				},
 			]);
 		} finally {
@@ -164,6 +173,7 @@ describe("writeOutput()", () => {
 				version: 1,
 				wrangler_version: "0.0.0.0",
 				command_line_args: ["--help"],
+				log_file_path: "some/log/path.log",
 			});
 			writeOutput({
 				type: "deployment",
@@ -185,6 +195,7 @@ describe("writeOutput()", () => {
 					version: 1,
 					wrangler_version: "0.0.0.0",
 					command_line_args: ["--help"],
+					log_file_path: "some/log/path.log",
 				},
 				{
 					type: "deployment",

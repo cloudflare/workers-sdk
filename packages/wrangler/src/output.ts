@@ -78,6 +78,7 @@ export interface OutputEntrySession
 	version: 1;
 	wrangler_version: string;
 	command_line_args: string[];
+	log_file_path: string;
 }
 
 export interface OutputEntryDeployment extends OutputEntryBase<"deployment"> {

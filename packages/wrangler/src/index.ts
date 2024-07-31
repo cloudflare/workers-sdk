@@ -66,6 +66,7 @@ import {
 	logout,
 	validateScopeKeys,
 } from "./user";
+import { debugLogFilepath } from "./utils/log-file";
 import { vectorize } from "./vectorize/index";
 import registerVersionsSubcommands from "./versions";
 import registerVersionsDeploymentsSubcommands from "./versions/deployments";
@@ -261,6 +262,7 @@ export function createCLIParser(argv: string[]) {
 				version: 1,
 				wrangler_version: wranglerVersion,
 				command_line_args: argv,
+				log_file_path: debugLogFilepath,
 			});
 
 			return true;
