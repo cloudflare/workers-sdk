@@ -596,7 +596,8 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 				})
 			: undefined;
 
-		const assetManifest = await syncAssets(
+		// eslint-disable-next-line @typescript-eslint/no-unused-vars
+		const _assetManifest = await syncAssets(
 			accountId,
 			scriptName,
 			props.experimentalAssets,
