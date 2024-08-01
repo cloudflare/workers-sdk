@@ -1,9 +1,9 @@
 import { existsSync } from "node:fs";
 import path from "node:path";
+import { getExperimentalAssetsBasePath } from "../assets";
 import { findWranglerToml, readConfig } from "../config";
 import { getEntry } from "../deployment-bundle/entry";
 import { UserError } from "../errors";
-import { getExperimentalAssetsBasePath } from "../experimental-assets";
 import {
 	getRules,
 	getScriptName,

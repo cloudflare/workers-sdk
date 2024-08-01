@@ -1,12 +1,14 @@
 import assert from "node:assert";
 import { readdir, readFile, stat } from "node:fs/promises";
 import * as path from "node:path";
+import chalk from "chalk";
 import { getType } from "mime";
 import PQueue from "p-queue";
 import prettyBytes from "pretty-bytes";
 import { fetchResult } from "./cfetch";
+import { formatTime } from "./deploy/deploy";
 import { FatalError, UserError } from "./errors";
-import { logger } from "./logger";
+import { logger, LOGGER_LEVELS } from "./logger";
 import {
 	BULK_UPLOAD_CONCURRENCY,
 	MAX_ASSET_COUNT,
@@ -16,15 +18,16 @@ import {
 } from "./pages/constants";
 import { hashFile } from "./pages/hash";
 import { APIError } from "./parse";
+import type { Config } from "./config";
 
-type AssetManifest = Map<string, { hash: string; size: number }>;
+type AssetManifest = { [path: string]: { hash: string; size: number } };
 type InitializeAssetsResponse = {
 	// string of file hashes per bucket
 	buckets: string[][];
 	jwt: string;
 };
 
-type UploadPayloadFile = {
+export type UploadPayloadFile = {
 	name: string;
 	hash: string;
 	contents: string;
@@ -33,73 +36,85 @@ type UploadPayloadFile = {
 	};
 };
 
+type UploadResponse = {
+	jwt?: string;
+};
+
 export const syncAssets = async (
 	accountId: string | undefined,
 	scriptName: string,
 	assetDirectory: string | undefined,
 	dryRun: boolean | undefined
-): Promise<{ manifest: AssetManifest | undefined }> => {
+): Promise<{
+	manifest: AssetManifest | undefined;
+	jwt: string | undefined;
+}> => {
 	if (assetDirectory === undefined) {
-		return { manifest: undefined };
+		return { manifest: undefined, jwt: undefined };
 	}
 	if (dryRun) {
 		logger.log("(Note: doing a dry run, not uploading or deleting anything.)");
-		return { manifest: undefined };
+		return { manifest: undefined, jwt: undefined };
 	}
 	assert(accountId, "Missing accountId");
 
 	const directory = path.resolve(assetDirectory);
 
 	// 1. generate asset manifest
-	const manifest = await walk(directory, new Map());
+	const manifest = await walk(directory, {});
 
 	// 2. fetch buckets w/ hashes
-	let initializeAssetsResponse = await fetchResult<InitializeAssetsResponse>(
-		`/accounts/${accountId}/workers/scripts/${scriptName}/initialize-assets-upload`,
+	const initializeAssetsResponse = await fetchResult<InitializeAssetsResponse>(
+		`/accounts/${accountId}/workers/scripts/${scriptName}/assets-upload-session`,
 		{
 			method: "POST",
 			body: JSON.stringify({ manifest: manifest }),
 		}
 	);
 
-	// nothing to upload
+	// if nothing to upload, return
 	if (initializeAssetsResponse.buckets.flat().length === 0) {
-		return { manifest };
+		return { manifest, jwt: initializeAssetsResponse.jwt };
 	}
-
-	const initializeAssetsResponseMock = {
-		buckets: [[...manifest.values()].map((x) => x.hash)],
-		jwt: "jwt",
-	};
-	initializeAssetsResponse = initializeAssetsResponseMock;
 
 	// 3. fill buckets and upload assets
 	const includedHashes = initializeAssetsResponse.buckets.flat();
-	const filteredFiles = [...manifest.entries()].filter((file) =>
-		includedHashes.includes(file[1].hash)
+	const filteredFiles = Object.entries(manifest).filter((entry) =>
+		includedHashes.includes(entry[1].hash)
 	);
-
 	const queue = new PQueue({ concurrency: BULK_UPLOAD_CONCURRENCY });
-
 	let attempts = 0;
+	const start = Date.now();
+	let assetLogCount = 0;
+	let bucketUploadCount = 0;
+	let completionJwt = "";
+
 	for (const bucket of initializeAssetsResponse.buckets) {
 		attempts = 0;
 		let gatewayErrors = 0;
-		const doUpload = async (): Promise<void> => {
+		const doUpload = async (): Promise<UploadResponse> => {
 			// Populate the payload only when actually uploading (this is limited to 3 concurrent uploads at 50 MiB per bucket meaning we'd only load in a max of ~150 MiB)
 			// This is so we don't run out of memory trying to upload the files.
 			const payload: UploadPayloadFile[] = await Promise.all(
 				bucket.map(async (fileHash) => {
-					const manifestEntry = filteredFiles.find(
+					const manifestEntryIndex = filteredFiles.findIndex(
 						(file) => file[1].hash === fileHash
 					);
-					if (manifestEntry === undefined) {
-						throw new UserError(
-							`A file was requested that does not appear to exist?`
+					// not sure if this is really a user error - what should i use instead if so?
+					if (manifestEntryIndex === -1) {
+						throw new FatalError(
+							`A file was requested that does not appear to exist`,
+							1
 						);
 					}
+					const manifestEntry = filteredFiles.splice(manifestEntryIndex, 1)[0];
 					const absFilePath = path.join(assetDirectory, manifestEntry[0]);
-
+					// just logging the upload at the moment...
+					// unsure how to log deletion vs unchanged file ignored/if we want to log this
+					assetLogCount = logAssetUpload(
+						`+ ${manifestEntry[0]}`,
+						assetLogCount
+					);
 					return {
 						name: manifestEntry[0],
 						hash: fileHash,
@@ -112,8 +127,7 @@ export const syncAssets = async (
 			);
 
 			try {
-				logger.debug("...uploading assets");
-				const res = await fetchResult(
+				const res = await fetchResult<UploadResponse>(
 					`/accounts/${accountId}/workers/assets/upload`,
 					{
 						method: "POST",
@@ -121,10 +135,11 @@ export const syncAssets = async (
 							"Content-Type": "application/x-ndjson",
 							Authorization: `Bearer ${initializeAssetsResponse.jwt}`,
 						},
-						body: JSON.stringify(payload.join("\n")),
+						body: payload.map((x) => JSON.stringify(x)).join("\n"),
 					}
 				);
 				logger.debug("result:", res);
+				return res;
 			} catch (e) {
 				if (attempts < MAX_UPLOAD_ATTEMPTS) {
 					logger.debug("failed:", e, "retrying...");
@@ -132,7 +147,7 @@ export const syncAssets = async (
 					await new Promise((resolvePromise) =>
 						setTimeout(resolvePromise, Math.pow(2, attempts) * 1000)
 					);
-					// need to actually handle errors here... jwt exp etc.
+					// TODO: handle other errors e.g. jwt expired here
 					if (e instanceof APIError && e.isGatewayError()) {
 						// Gateway problem, wait for some additional time and set concurrency to 1
 						queue.concurrency = 1;
@@ -156,23 +171,47 @@ export const syncAssets = async (
 				}
 			}
 		};
+		// add to queue and run it if we haven't reached concurrency limit
 		void queue.add(() =>
 			doUpload().then(
-				() => {},
+				(res) => {
+					bucketUploadCount++;
+					completionJwt = res.jwt || completionJwt;
+				},
 				(error) => {
 					return Promise.reject(
 						new FatalError(
-							`Failed to upload files. Please try again. Error: ${JSON.stringify(
+							`File upload failed. Please try again. Error: ${JSON.stringify(
 								error
 							)})`,
-							error.code || 1
+							1
 						)
 					);
 				}
 			)
 		);
 	}
-	return { manifest };
+	await queue.onIdle();
+	if (!completionJwt) {
+		throw new FatalError("Failed to upload all files. Please try again.", 1);
+	} else if (bucketUploadCount !== initializeAssetsResponse.buckets.length) {
+		throw new FatalError(
+			"Completion signal received unexpectedly early - we cannot confirm if all files were successfully uploaded. Please try again.",
+			1
+		);
+	}
+
+	const uploadMs = Date.now() - start;
+	const skipped = Object.keys(manifest).length - includedHashes.length;
+	const skippedMessage = skipped > 0 ? `(${skipped} already uploaded) ` : "";
+
+	logger.log(
+		`✨ Success! Uploaded ${
+			filteredFiles.length
+		} files ${skippedMessage}${formatTime(uploadMs)}\n`
+	);
+
+	return { manifest, jwt: completionJwt };
 };
 
 // modified from /pages/validate.tsx
@@ -214,10 +253,10 @@ const walk = async (
 						1
 					);
 				}
-				manifest.set(name, {
+				manifest[name] = {
 					hash: hashFile(filepath),
 					size: filestat.size,
-				});
+				};
 				counter++;
 			}
 		})
@@ -232,4 +271,37 @@ const walk = async (
  */
 function urlSafe(filePath: string): string {
 	return filePath.replace(/\\/g, "/");
+}
+
+const MAX_DIFF_LINES = 100;
+
+function logAssetUpload(line: string, diffCount: number) {
+	const level = logger.loggerLevel;
+	if (LOGGER_LEVELS[level] >= LOGGER_LEVELS.debug) {
+		// If we're logging as debug level, we want *all* diff lines to be logged
+		// at debug level, not just the first MAX_DIFF_LINES
+		logger.debug(line);
+	} else if (diffCount < MAX_DIFF_LINES) {
+		// Otherwise, log  the first MAX_DIFF_LINES diffs at info level...
+		logger.info(line);
+	} else if (diffCount === MAX_DIFF_LINES) {
+		// ...and warn when we start to truncate it
+		const msg =
+			"   (truncating changed assets log, set `WRANGLER_LOG=debug` environment variable to see full diff)";
+		logger.info(chalk.dim(msg));
+	}
+	return diffCount++;
+}
+
+/**
+ * Returns the base path of the experimental assets to upload.
+ *
+ */
+export function getExperimentalAssetsBasePath(
+	config: Config,
+	experimentalAssetsCommandLineArg: string | undefined
+): string {
+	return experimentalAssetsCommandLineArg
+		? process.cwd()
+		: path.resolve(path.dirname(config.configPath ?? "wrangler.toml"));
 }
