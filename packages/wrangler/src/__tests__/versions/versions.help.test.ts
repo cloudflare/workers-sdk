@@ -26,6 +26,8 @@ describe("versions --help", () => {
 			  wrangler secret                    🤫 Generate a secret that can be referenced in a Worker
 			  wrangler types [path]              📝 Generate types from bindings and module rules in configuration
 
+			  wrangler check                     ☑️ Validate your Worker code, including type checking
+
 			  wrangler kv                        🗂️  Manage Workers KV Namespaces
 			  wrangler queues                    🇶  Manage Workers Queues
 			  wrangler r2                        📦 Manage R2 buckets & objects

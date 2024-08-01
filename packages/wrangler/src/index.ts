@@ -6,6 +6,7 @@ import { ProxyAgent, setGlobalDispatcher } from "undici";
 import makeCLI from "yargs";
 import { version as wranglerVersion } from "../package.json";
 import { ai } from "./ai";
+import { checkHandler, checkOptions } from "./check";
 import { cloudchamber } from "./cloudchamber";
 import { loadDotEnv, readConfig } from "./config";
 import { d1 } from "./d1";
@@ -516,6 +517,13 @@ export function createCLIParser(argv: string[]) {
 		"📝 Generate types from bindings and module rules in configuration\n",
 		typesOptions,
 		typesHandler
+	);
+
+	wrangler.command(
+		"check",
+		"☑️ Validate your Worker code, including type checking\n",
+		checkOptions,
+		checkHandler
 	);
 
 	/******************** CMD GROUP ***********************/
