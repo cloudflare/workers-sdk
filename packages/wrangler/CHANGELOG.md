@@ -1,5 +1,30 @@
 # wrangler
 
+## 3.68.0
+
+### Minor Changes
+
+- [#6318](https://github.com/cloudflare/workers-sdk/pull/6318) [`dc576c8`](https://github.com/cloudflare/workers-sdk/commit/dc576c8b99d9de4afe06f568ce2e428478d6a752) Thanks [@danlapid](https://github.com/danlapid)! - feat: Add a log for worker startup time in wrangler deploy
+
+- [#6097](https://github.com/cloudflare/workers-sdk/pull/6097) [`64f34e8`](https://github.com/cloudflare/workers-sdk/commit/64f34e807fb46e33fecd3c7a0aed2d4f543cc2cf) Thanks [@RamIdeas](https://github.com/RamIdeas)! - feat: implements the `--experimental-dev-env` (shorthand: `--x-dev-env`) flag for `wrangler pages dev`
+
+### Patch Changes
+
+- [#6379](https://github.com/cloudflare/workers-sdk/pull/6379) [`31aa15c`](https://github.com/cloudflare/workers-sdk/commit/31aa15ccc931d757a449ade2bd1881bf9a83ca51) Thanks [@RamIdeas](https://github.com/RamIdeas)! - fix: clearer error message when trying to use Workers Sites or Legacy Assets with `wrangler versions upload`
+
+- [#6367](https://github.com/cloudflare/workers-sdk/pull/6367) [`7588800`](https://github.com/cloudflare/workers-sdk/commit/7588800415452fba06f49dd0fdea04fdb6df1498) Thanks [@RamIdeas](https://github.com/RamIdeas)! - fix: implicitly cleanup (call `stop()`) in `unstable_dev` if the returned Promise rejected and the `stop()` function was not returned
+
+- [#6330](https://github.com/cloudflare/workers-sdk/pull/6330) [`cfbdede`](https://github.com/cloudflare/workers-sdk/commit/cfbdede63cfe11e6aa9e8c897eec8c00e1de85d6) Thanks [@RamIdeas](https://github.com/RamIdeas)! - fix: when the worker's request.url is overridden using the `host` or `localUpstream`, ensure `port` is overridden/cleared too
+
+  When using `--localUpstream=example.com`, the request.url would incorrectly be "example.com:8787" but is now "example.com".
+
+  This only applies to `wrangler dev --x-dev-env` and `unstable_dev({ experimental: { devEnv: true } })`.
+
+- [#6365](https://github.com/cloudflare/workers-sdk/pull/6365) [`13549c3`](https://github.com/cloudflare/workers-sdk/commit/13549c39588920ffe99bd9866cbd1a5a6fb9eb81) Thanks [@WalshyDev](https://github.com/WalshyDev)! - fix: WASM modules meant that `wrangler versions secret ...` could not properly update the version. This has now been fixed.
+
+- Updated dependencies [[`a9021aa`](https://github.com/cloudflare/workers-sdk/commit/a9021aa520541e6a83e572d01e57e232cbc163e0), [`44ad2c7`](https://github.com/cloudflare/workers-sdk/commit/44ad2c777bd254dbb62cf7f8b1c2f8351c74fb75)]:
+  - miniflare@3.20240725.0
+
 ## 3.67.1
 
 ### Patch Changes

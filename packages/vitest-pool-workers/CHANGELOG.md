@@ -1,5 +1,17 @@
 # @cloudflare/vitest-pool-workers
 
+## 0.4.17
+
+### Patch Changes
+
+- [#6362](https://github.com/cloudflare/workers-sdk/pull/6362) [`35289e3`](https://github.com/cloudflare/workers-sdk/commit/35289e31fc20cd6b685c04c8c09e11c51efea573) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: ensure that mocked fetch responses have a valid URL property
+
+  Fixes [#6350](https://github.com/cloudflare/workers-sdk/issues/6350)
+
+- Updated dependencies [[`31aa15c`](https://github.com/cloudflare/workers-sdk/commit/31aa15ccc931d757a449ade2bd1881bf9a83ca51), [`a9021aa`](https://github.com/cloudflare/workers-sdk/commit/a9021aa520541e6a83e572d01e57e232cbc163e0), [`7588800`](https://github.com/cloudflare/workers-sdk/commit/7588800415452fba06f49dd0fdea04fdb6df1498), [`cfbdede`](https://github.com/cloudflare/workers-sdk/commit/cfbdede63cfe11e6aa9e8c897eec8c00e1de85d6), [`dc576c8`](https://github.com/cloudflare/workers-sdk/commit/dc576c8b99d9de4afe06f568ce2e428478d6a752), [`44ad2c7`](https://github.com/cloudflare/workers-sdk/commit/44ad2c777bd254dbb62cf7f8b1c2f8351c74fb75), [`13549c3`](https://github.com/cloudflare/workers-sdk/commit/13549c39588920ffe99bd9866cbd1a5a6fb9eb81), [`64f34e8`](https://github.com/cloudflare/workers-sdk/commit/64f34e807fb46e33fecd3c7a0aed2d4f543cc2cf)]:
+  - wrangler@3.68.0
+  - miniflare@3.20240725.0
+
 ## 0.4.16
 
 ### Patch Changes

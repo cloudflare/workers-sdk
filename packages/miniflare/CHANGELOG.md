@@ -1,5 +1,24 @@
 # miniflare
 
+## 3.20240725.0
+
+### Patch Changes
+
+- [#6345](https://github.com/cloudflare/workers-sdk/pull/6345) [`a9021aa`](https://github.com/cloudflare/workers-sdk/commit/a9021aa520541e6a83e572d01e57e232cbc163e0) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | workerd                   | 1.20240718.0  | 1.20240725.0  |
+  | @cloudflare/workers-types | ^4.20240718.0 | ^4.20240725.0 |
+
+- [#6301](https://github.com/cloudflare/workers-sdk/pull/6301) [`44ad2c7`](https://github.com/cloudflare/workers-sdk/commit/44ad2c777bd254dbb62cf7f8b1c2f8351c74fb75) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - fix: Allow the magic proxy to proxy objects containing functions indexed by symbols
+
+  In https://github.com/cloudflare/workers-sdk/pull/5670 we introduced the possibility
+  of the magic proxy to handle object containing functions, the implementation didn't
+  account for functions being indexed by symbols, address such issue
+
 ## 3.20240718.1
 
 ### Patch Changes

@@ -1,5 +1,43 @@
 # create-cloudflare
 
+## 2.23.0
+
+### Minor Changes
+
+- [#6320](https://github.com/cloudflare/workers-sdk/pull/6320) [`5aa4753`](https://github.com/cloudflare/workers-sdk/commit/5aa4753a12dde28e91e85a2f9e4eae17ead62fb0) Thanks [@edmundhung](https://github.com/edmundhung)! - feat: update submenu userflow
+
+  Now, we will first prompt for the kind of templates that should be created and show a different set of templates depending on the category. If the template selected supports different languages, we will also ask for the language user preferred.
+
+  Two new arguments are also added to support the new structure: `--category` and `--lang`. For more details, please refer to our [docs](https://developers.cloudflare.com/pages/get-started/c3#cli-arguments).
+
+### Patch Changes
+
+- [#6307](https://github.com/cloudflare/workers-sdk/pull/6307) [`4998c54`](https://github.com/cloudflare/workers-sdk/commit/4998c54371109e87feaa8cd1800ea2cb3f49fdd4) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From   | To     |
+  | --------------- | ------ | ------ |
+  | create-next-app | 14.1.0 | 14.2.5 |
+
+- [#6334](https://github.com/cloudflare/workers-sdk/pull/6334) [`6968d91`](https://github.com/cloudflare/workers-sdk/commit/6968d91065d0de2e2a3f542f17223aaacf90c687) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency    | From  | To    |
+  | ------------- | ----- | ----- |
+  | create-svelte | 6.3.3 | 6.3.4 |
+
+- [#6335](https://github.com/cloudflare/workers-sdk/pull/6335) [`5e4fd26`](https://github.com/cloudflare/workers-sdk/commit/5e4fd26fe5da1ff768d95d438d10e046e9a9de33) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From   | To     |
+  | --------------- | ------ | ------ |
+  | @angular/create | 18.1.1 | 18.1.2 |
+
+- [#6373](https://github.com/cloudflare/workers-sdk/pull/6373) [`0ffe17d`](https://github.com/cloudflare/workers-sdk/commit/0ffe17d0f734cb2e43528f3d2ac491670d6173fe) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - fix: make sure to always warn developers trying to use git when their git instance is not properly configured
+
 ## 2.22.3
 
 ### Patch Changes
