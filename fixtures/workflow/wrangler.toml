@@ -1,0 +1,10 @@
+#:schema node_modules/wrangler/config-schema.json
+name = "my-workflow"
+main = "src/index.ts"
+compatibility_date = "2024-07-25"
+
+[[workflows]]
+binding = "WORKFLOW"
+name = "my-workflow" # name of the workflow
+class_name = "default"
+script_name = "my-workflow" # we could skip this if we can infer from validator

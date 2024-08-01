@@ -695,6 +695,7 @@ export async function startDev(args: StartDevOptions) {
 						version_metadata: args.version_metadata,
 						data_blobs: undefined,
 						durable_objects: { bindings: args.durableObjects ?? [] },
+						workflows: undefined,
 						queues: undefined,
 						r2_buckets: args.r2,
 						d1_databases: args.d1Databases,
@@ -1458,7 +1459,7 @@ export function getBindings(
 		}),
 	];
 
-	const bindings = {
+	const bindings: CfWorkerInit["bindings"] = {
 		// top-level fields
 		wasm_modules: configParam.wasm_modules,
 		text_blobs: configParam.text_blobs,
@@ -1477,6 +1478,7 @@ export function getBindings(
 		durable_objects: {
 			bindings: mergedDOBindings,
 		},
+		workflows: configParam.workflows,
 		kv_namespaces: mergedKVBindings,
 		queues: queuesBindings,
 		r2_buckets: mergedR2Bindings,
