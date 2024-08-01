@@ -22,6 +22,7 @@ describe("c3 integration", () => {
 		const version = versions.trim().split("\n").at(-1); // get last version
 		assert(version);
 		c3Packed = path.join(pathToC3, "pack", version);
+		expect(true).toBe(true);
 	});
 
 	it("init project via c3", async () => {
