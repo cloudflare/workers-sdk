@@ -27,7 +27,7 @@ function getWidth(message: string): number {
 	return text.length;
 }
 
-export function printDialog(
+function printDialog(
 	lines: string[],
 	{
 		prefix = space(),
