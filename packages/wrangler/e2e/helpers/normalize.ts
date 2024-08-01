@@ -98,7 +98,9 @@ export function normalizeSlashes(str: string): string {
  * Use this in snapshot tests to be resilient to slight changes in timing of processing.
  */
 export function stripTimings(stdout: string): string {
-	return stdout.replace(/\(\d+\.\d+ sec\)/g, "(TIMINGS)");
+	return stdout
+		.replace(/\(\d+\.\d+ sec\)/g, "(TIMINGS)")
+		.replace(/\d+ ms/g, "(TIMINGS)");
 }
 
 /**
