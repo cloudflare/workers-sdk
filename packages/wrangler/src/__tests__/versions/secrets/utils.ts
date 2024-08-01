@@ -125,7 +125,9 @@ export function mockGetWorkerSettings() {
 	);
 }
 
-export function mockPostVersion(validate?: (metadata: WorkerMetadata) => void) {
+export function mockPostVersion(
+	validate?: (metadata: WorkerMetadata, formData: FormData) => void
+) {
 	msw.use(
 		http.post(
 			`*/accounts/:accountId/workers/scripts/:scriptName/versions`,
@@ -138,7 +140,7 @@ export function mockPostVersion(validate?: (metadata: WorkerMetadata) => void) {
 					formData.get("metadata") as string
 				) as WorkerMetadata;
 
-				validate && validate(metadata);
+				validate && validate(metadata, formData);
 
 				return HttpResponse.json(
 					createFetchResult({

@@ -254,7 +254,7 @@ async function parseModules(
 		// Workers Sites is not supported
 		if (formData.get("__STATIC_CONTENT_MANIFEST") !== null) {
 			throw new UserError(
-				"Workers Sites is not supported for `versions secret put` today."
+				"Workers Sites and Legacy Assets do not support updating secrets through `wrangler versions secret put`. You must use `wrangler secret put` instead."
 			);
 		}
 
@@ -272,7 +272,7 @@ async function parseModules(
 		const mainModule: CfModule = {
 			name: entrypointPart.name,
 			filePath: "",
-			content: await entrypointPart.text(),
+			content: Buffer.from(await entrypointPart.arrayBuffer()),
 			type: fromMimeType(entrypointPart.type),
 		};
 
@@ -288,7 +288,7 @@ async function parseModules(
 						({
 							name,
 							filePath: "",
-							content: await file.text(),
+							content: Buffer.from(await file.arrayBuffer()),
 							type: fromMimeType(file.type),
 						}) as CfModule
 				)

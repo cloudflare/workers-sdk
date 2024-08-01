@@ -149,8 +149,8 @@ describe("git helpers", () => {
 		test("happy path", async () => {
 			const ctx = createTestContext();
 			mockGitInstalled(true);
-			mockGitConfig();
 			mockInsideGitRepo(false);
+			mockGitConfig();
 			mockDefaultBranchName();
 
 			// Mock user selecting true
