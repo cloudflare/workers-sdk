@@ -50,12 +50,14 @@ import { writeWorkerSource } from "./helpers/write-worker-source";
 import { writeWranglerToml } from "./helpers/write-wrangler-toml";
 import type { Config } from "../config";
 import type { CustomDomain, CustomDomainChangeset } from "../deploy/deploy";
+import type { UploadPayloadFile } from "../experimental-assets";
 import type { KVNamespaceInfo } from "../kv/helpers";
 import type {
 	PostQueueBody,
 	PostTypedConsumerBody,
 	QueueResponse,
 } from "../queues/client";
+import type { StrictRequest } from "msw";
 import type { Mock } from "vitest";
 
 vi.mock("command-exists");
@@ -2340,7 +2342,7 @@ addEventListener('fetch', event => {});`
 		});
 	});
 
-	describe("asset upload", () => {
+	describe("(legacy) asset upload", () => {
 		it("should upload all the files in the directory specified by `config.site.bucket`", async () => {
 			const assets = [
 				{ filePath: "file-1.txt", content: "Content of file-1" },
@@ -4420,6 +4422,231 @@ addEventListener('fetch', event => {});`
 				new RegExp(
 					'^The directory specified by the "experimental_assets.directory" field in your configuration file does not exist:[Ss]*'
 				)
+			);
+		});
+
+		it("should upload an asset manifest of the files in the directory specified by --experimental-assets", async () => {
+			const assets = [
+				{ filePath: "file-1.txt", content: "Content of file-1" },
+				{ filePath: "boop/file-2.txt", content: "Content of file-2" },
+			];
+			writeAssets(assets);
+			writeWorkerSource();
+			msw.use(
+				http.post(
+					`*/accounts/some-account-id/workers/scripts/test-name/assets-upload-session`,
+					async ({ request }) => {
+						expect(await request.json()).toStrictEqual({
+							manifest: {
+								"file-1.txt": {
+									hash: "0de3dd5df907418e9730fd2bd747bd5e",
+									size: 17,
+								},
+								"boop/file-2.txt": {
+									hash: "7574a8cd3094a050388ac9663af1c1d6",
+									size: 17,
+								},
+							},
+						});
+
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: { jwt: "<<aus-token>>", buckets: [] },
+							},
+							{ status: 201 }
+						);
+					}
+				)
+			);
+			// skips asset uploading since empty buckets returned
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedMainModule: "no-op-worker.js",
+			});
+			await runWrangler(
+				"deploy --name test-name --compatibility-date 2024-07-31 --experimental-assets assets"
+			);
+		});
+
+		it("should upload an asset manifest of the files in the directory specified by [experimental_assets] config", async () => {
+			const assets = [
+				{ filePath: "file-1.txt", content: "Content of file-1" },
+				{ filePath: "boop/file-2.txt", content: "Content of file-2" },
+			];
+			writeAssets(assets);
+			writeWranglerToml({
+				experimental_assets: { directory: "assets" },
+			});
+			writeWorkerSource();
+			msw.use(
+				http.post(
+					`*/accounts/some-account-id/workers/scripts/test-name/assets-upload-session`,
+					async ({ request }) => {
+						expect(await request.json()).toStrictEqual({
+							manifest: {
+								"file-1.txt": {
+									hash: "0de3dd5df907418e9730fd2bd747bd5e",
+									size: 17,
+								},
+								"boop/file-2.txt": {
+									hash: "7574a8cd3094a050388ac9663af1c1d6",
+									size: 17,
+								},
+							},
+						});
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: { jwt: "<<aus-token>>", buckets: [] },
+							},
+							{ status: 201 }
+						);
+					}
+				)
+			);
+			// skips asset uploading since empty buckets returned
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedMainModule: "no-op-worker.js",
+			});
+			await runWrangler("deploy");
+		});
+
+		it("should upload assets in the requested buckets", async () => {
+			const assets = [
+				{ filePath: "file-1.txt", content: "Content of file-1" },
+				{ filePath: "boop/file-2.txt", content: "Content of file-2" },
+				{ filePath: "boop/file-3.txt", content: "Content of file-3" },
+				{ filePath: "file-4.txt", content: "Content of file-4" },
+				{ filePath: "beep/file-5.txt", content: "Content of file-5" },
+				{ filePath: "beep/file-6.txt", content: "Content of file-1" },
+			];
+			writeAssets(assets);
+			writeWranglerToml({
+				experimental_assets: { directory: "assets" },
+			});
+			writeWorkerSource();
+
+			const uploadRequests: StrictRequest<UploadPayloadFile[]>[] = [];
+			const bodies: UploadPayloadFile[][] = [];
+			const mockBuckets = [
+				[
+					"0de3dd5df907418e9730fd2bd747bd5e",
+					"7574a8cd3094a050388ac9663af1c1d6",
+				],
+				["ff5016e92f039aa743a4ff7abb3180fa"],
+				["f05e28a3d0bdb90d3cf4bdafe592488f"],
+				["0de3dd5df907418e9730fd2bd747bd5e"],
+			];
+			msw.use(
+				http.post(
+					`*/accounts/some-account-id/workers/scripts/test-name/assets-upload-session`,
+					async () => {
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: {
+									jwt: "<<aus-token>>",
+									buckets: mockBuckets,
+								},
+							},
+							{ status: 201 }
+						);
+					}
+				),
+				http.post(
+					"*/accounts/some-account-id/workers/assets/upload",
+					async ({ request }) => {
+						uploadRequests.push(request as StrictRequest<UploadPayloadFile[]>);
+						const body = (await request.text())
+							.split("\n")
+							.map((x) => JSON.parse(x)) as UploadPayloadFile[];
+
+						bodies.push(body);
+						expect(request.headers.get("Authorization")).toBe(
+							"Bearer <<aus-token>>"
+						);
+						if (uploadRequests.length === mockBuckets.length) {
+							return HttpResponse.json(
+								{
+									success: true,
+									errors: [],
+									messages: [],
+									result: { jwt: "<<aus-completion-jwt>>" },
+								},
+								{ status: 201 }
+							);
+						}
+
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: {},
+							},
+							{ status: 202 }
+						);
+					}
+				)
+			);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedMainModule: "no-op-worker.js",
+			});
+			await runWrangler("deploy");
+			expect(uploadRequests.length).toBe(mockBuckets.length);
+			expect(bodies.map((b) => b.length).sort()).toEqual([1, 1, 1, 2]);
+			expect(bodies.flatMap((b) => b)).toEqual(
+				expect.arrayContaining([
+					{
+						contents: "Q29udGVudCBvZiBmaWxlLTE=",
+						hash: "0de3dd5df907418e9730fd2bd747bd5e",
+						metadata: {
+							contentType: "text/plain",
+						},
+						name: "file-1.txt",
+					},
+					{
+						contents: "Q29udGVudCBvZiBmaWxlLTI=",
+						hash: "7574a8cd3094a050388ac9663af1c1d6",
+						metadata: {
+							contentType: "text/plain",
+						},
+						name: "boop/file-2.txt",
+					},
+					{
+						contents: "Q29udGVudCBvZiBmaWxlLTM=",
+						hash: "ff5016e92f039aa743a4ff7abb3180fa",
+						metadata: {
+							contentType: "text/plain",
+						},
+						name: "boop/file-3.txt",
+					},
+					{
+						contents: "Q29udGVudCBvZiBmaWxlLTU=",
+						hash: "f05e28a3d0bdb90d3cf4bdafe592488f",
+						metadata: {
+							contentType: "text/plain",
+						},
+						name: "beep/file-5.txt",
+					},
+					{
+						contents: "Q29udGVudCBvZiBmaWxlLTE=",
+						hash: "0de3dd5df907418e9730fd2bd747bd5e",
+						metadata: {
+							contentType: "text/plain",
+						},
+						name: "beep/file-6.txt",
+					},
+				])
 			);
 		});
 	});
