@@ -39,7 +39,7 @@ Your worker has access to the following bindings:
 "
 `;
 
-exports[`Pages 'wrangler pages dev' > should merge (with override) \`wrangler.toml\` configuration with configuration provided via the command line, with command line args taking precedence 1`] = `
+exports[`Pages 'wrangler pages dev --no-x-dev-env' > should merge (with override) \`wrangler.toml\` configuration with configuration provided via the command line, with command line args taking precedence 1`] = `
 "✨ Compiled Worker successfully
 ▲ [WARNING] WARNING: You have Durable Object bindings that are not defined locally in the worker being developed.
   Be aware that changes to the data stored in these Durable Objects will be permanent and affect the live instances.
