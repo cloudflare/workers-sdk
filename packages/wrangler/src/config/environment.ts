@@ -871,6 +871,7 @@ export interface UserLimits {
 }
 
 export type ExperimentalAssets = {
+	/** Absolute path to assets directory */
 	directory: string;
 	binding?: string;
 };

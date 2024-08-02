@@ -50,14 +50,13 @@ import { writeWorkerSource } from "./helpers/write-worker-source";
 import { writeWranglerToml } from "./helpers/write-wrangler-toml";
 import type { Config } from "../config";
 import type { CustomDomain, CustomDomainChangeset } from "../deploy/deploy";
-import type { UploadPayloadFile } from "../experimental-assets";
+import type { AssetManifest, UploadPayloadFile } from "../experimental-assets";
 import type { KVNamespaceInfo } from "../kv/helpers";
 import type {
 	PostQueueBody,
 	PostTypedConsumerBody,
 	QueueResponse,
 } from "../queues/client";
-import type { StrictRequest } from "msw";
 import type { Mock } from "vitest";
 
 vi.mock("command-exists");
@@ -4354,6 +4353,38 @@ addEventListener('fetch', event => {});`
 	});
 
 	describe("--experimental-assets", () => {
+		it("should not require entry point if using --experimental-assets", async () => {
+			const assets = [
+				{ filePath: "file-1.txt", content: "Content of file-1" },
+				{ filePath: "file-2.txt", content: "Content of file-2" },
+			];
+			writeAssets(assets);
+			// no wrangler.toml or worker source
+			mockUploadWorkerRequest({
+				expectedMainModule: "no-op-worker.js",
+			});
+			mockSubDomainRequest();
+			msw.use(
+				http.post(
+					`*/accounts/some-account-id/workers/scripts/test-name/assets-upload-session`,
+					async () => {
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: { jwt: "<<aus-token>>", buckets: [] },
+							},
+							{ status: 201 }
+						);
+					}
+				)
+			);
+			await runWrangler(
+				"deploy --name test-name --compatibility-date 2024-07-31 --experimental-assets assets"
+			);
+		});
+
 		it("should error if config.site and config.experimental_assets are used together", async () => {
 			writeWranglerToml({
 				main: "./index.js",
@@ -4415,23 +4446,12 @@ addEventListener('fetch', event => {});`
 			];
 			writeAssets(assets);
 			writeWorkerSource();
+			const bodies: AssetManifest[] = [];
 			msw.use(
-				http.post(
+				http.post<never, AssetManifest>(
 					`*/accounts/some-account-id/workers/scripts/test-name/assets-upload-session`,
 					async ({ request }) => {
-						expect(await request.json()).toStrictEqual({
-							manifest: {
-								"file-1.txt": {
-									hash: "0de3dd5df907418e9730fd2bd747bd5e",
-									size: 17,
-								},
-								"boop/file-2.txt": {
-									hash: "7574a8cd3094a050388ac9663af1c1d6",
-									size: 17,
-								},
-							},
-						});
-
+						bodies.push(await request.json());
 						return HttpResponse.json(
 							{
 								success: true,
@@ -4452,6 +4472,19 @@ addEventListener('fetch', event => {});`
 			await runWrangler(
 				"deploy --name test-name --compatibility-date 2024-07-31 --experimental-assets assets"
 			);
+			expect(bodies.length).toBe(1);
+			expect(bodies[0]).toStrictEqual({
+				manifest: {
+					"file-1.txt": {
+						hash: "0de3dd5df907418e9730fd2bd747bd5e",
+						size: 17,
+					},
+					"boop/file-2.txt": {
+						hash: "7574a8cd3094a050388ac9663af1c1d6",
+						size: 17,
+					},
+				},
+			});
 		});
 
 		it("should upload an asset manifest of the files in the directory specified by [experimental_assets] config", async () => {
@@ -4464,22 +4497,12 @@ addEventListener('fetch', event => {});`
 				experimental_assets: { directory: "assets" },
 			});
 			writeWorkerSource();
+			const bodies: AssetManifest[] = [];
 			msw.use(
-				http.post(
+				http.post<never, AssetManifest>(
 					`*/accounts/some-account-id/workers/scripts/test-name/assets-upload-session`,
 					async ({ request }) => {
-						expect(await request.json()).toStrictEqual({
-							manifest: {
-								"file-1.txt": {
-									hash: "0de3dd5df907418e9730fd2bd747bd5e",
-									size: 17,
-								},
-								"boop/file-2.txt": {
-									hash: "7574a8cd3094a050388ac9663af1c1d6",
-									size: 17,
-								},
-							},
-						});
+						bodies.push(await request.json());
 						return HttpResponse.json(
 							{
 								success: true,
@@ -4498,6 +4521,19 @@ addEventListener('fetch', event => {});`
 				expectedMainModule: "no-op-worker.js",
 			});
 			await runWrangler("deploy");
+			expect(bodies.length).toBe(1);
+			expect(bodies[0]).toStrictEqual({
+				manifest: {
+					"file-1.txt": {
+						hash: "0de3dd5df907418e9730fd2bd747bd5e",
+						size: 17,
+					},
+					"boop/file-2.txt": {
+						hash: "7574a8cd3094a050388ac9663af1c1d6",
+						size: 17,
+					},
+				},
+			});
 		});
 
 		it("should upload assets in the requested buckets", async () => {
@@ -4515,7 +4551,6 @@ addEventListener('fetch', event => {});`
 			});
 			writeWorkerSource();
 
-			const uploadRequests: StrictRequest<UploadPayloadFile[]>[] = [];
 			const bodies: UploadPayloadFile[][] = [];
 			const mockBuckets = [
 				[
@@ -4526,6 +4561,7 @@ addEventListener('fetch', event => {});`
 				["f05e28a3d0bdb90d3cf4bdafe592488f"],
 				["0de3dd5df907418e9730fd2bd747bd5e"],
 			];
+			const uploadHeaders: (string | null)[] = [];
 			msw.use(
 				http.post(
 					`*/accounts/some-account-id/workers/scripts/test-name/assets-upload-session`,
@@ -4547,16 +4583,12 @@ addEventListener('fetch', event => {});`
 				http.post(
 					"*/accounts/some-account-id/workers/assets/upload",
 					async ({ request }) => {
-						uploadRequests.push(request as StrictRequest<UploadPayloadFile[]>);
 						const body = (await request.text())
 							.split("\n")
 							.map((x) => JSON.parse(x)) as UploadPayloadFile[];
-
 						bodies.push(body);
-						expect(request.headers.get("Authorization")).toBe(
-							"Bearer <<aus-token>>"
-						);
-						if (uploadRequests.length === mockBuckets.length) {
+						uploadHeaders.push(request.headers.get("Authorization"));
+						if (bodies.length === mockBuckets.length) {
 							return HttpResponse.json(
 								{
 									success: true,
@@ -4585,7 +4617,12 @@ addEventListener('fetch', event => {});`
 				expectedMainModule: "no-op-worker.js",
 			});
 			await runWrangler("deploy");
-			expect(uploadRequests.length).toBe(mockBuckets.length);
+			expect(uploadHeaders).toStrictEqual([
+				"Bearer <<aus-token>>",
+				"Bearer <<aus-token>>",
+				"Bearer <<aus-token>>",
+				"Bearer <<aus-token>>",
+			]);
 			expect(bodies.map((b) => b.length).sort()).toEqual([1, 1, 1, 2]);
 			expect(bodies.flatMap((b) => b)).toEqual(
 				expect.arrayContaining([

@@ -26,7 +26,7 @@ import { addHyphens } from "../deployments";
 import { confirm } from "../dialogs";
 import { getMigrationsToUpload } from "../durable";
 import { UserError } from "../errors";
-import { syncAssets } from "../experimental-assets";
+import { syncExperimentalAssets } from "../experimental-assets";
 import { logger } from "../logger";
 import { getMetricsUsageHeaders } from "../metrics";
 import { isNavigatorDefined } from "../navigator-user-agent";
@@ -40,7 +40,7 @@ import {
 	putConsumerById,
 	putQueue,
 } from "../queues/client";
-import { syncSitesAssets } from "../sites";
+import { syncLegacyAssets } from "../sites";
 import {
 	getSourceMappedString,
 	maybeRetrieveFileSourceMap,
@@ -52,6 +52,7 @@ import { getZoneForRoute } from "../zones";
 import type { Config } from "../config";
 import type {
 	CustomDomainRoute,
+	ExperimentalAssets,
 	Route,
 	Rule,
 	ZoneIdRoute,
@@ -77,7 +78,7 @@ type Props = {
 	compatibilityDate: string | undefined;
 	compatibilityFlags: string[] | undefined;
 	legacyAssetPaths: LegacyAssetPaths | undefined;
-	experimentalAssets: string | undefined;
+	experimentalAssets: ExperimentalAssets | undefined;
 	vars: Record<string, string> | undefined;
 	defines: Record<string, string> | undefined;
 	alias: Record<string, string> | undefined;
@@ -589,15 +590,17 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 				})
 			: undefined;
 
-		// eslint-disable-next-line @typescript-eslint/no-unused-vars
-		const _assetManifest = await syncAssets(
-			accountId,
-			scriptName,
-			props.experimentalAssets,
-			props.dryRun
-		);
+		const { manifest: _assetManifest, jwt: _assetUploadJwt } =
+			props.experimentalAssets
+				? await syncExperimentalAssets(
+						accountId,
+						scriptName,
+						props.experimentalAssets?.directory,
+						props.dryRun
+					)
+				: { manifest: undefined, jwt: undefined };
 
-		const legacyAssets = await syncSitesAssets(
+		const legacyAssets = await syncLegacyAssets(
 			accountId,
 			// When we're using the newer service environments, we wouldn't
 			// have added the env name on to the script name. However, we must
