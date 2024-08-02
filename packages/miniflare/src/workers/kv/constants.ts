@@ -45,6 +45,7 @@ export function decodeSitesKey(key: string): string {
 		? decodeURIComponent(key.substring(SITES_NO_CACHE_PREFIX.length))
 		: key;
 }
+
 export function isSitesRequest(request: { url: string }) {
 	const url = new URL(request.url);
 	return url.pathname.startsWith(`/${SITES_NO_CACHE_PREFIX}`);
@@ -115,4 +116,18 @@ export function testSiteRegExps(
 	// Either exclude globs undefined, or name doesn't match them
 	if (regExps.exclude !== undefined) return !testRegExps(regExps.exclude, key);
 	return true;
+}
+
+export function getAssetsBindingsNames(
+	// __STATIC_CONTENT and __STATIC_CONTENT_MANIFEST binding names are
+	// reserved for Workers Sites. Since we want to allow both sites and
+	// assets to work side by side, we cannot use the same binding name
+	// for assets. Therefore deferring to a different default naming here.
+	assetsKVBindingName = "__STATIC_ASSETS_CONTENT",
+	assetsManifestBindingName = "__STATIC_ASSETS_CONTENT_MANIFEST"
+) {
+	return {
+		ASSETS_KV_NAMESPACE: assetsKVBindingName,
+		ASSETS_MANIFEST: assetsManifestBindingName,
+	} as const;
 }

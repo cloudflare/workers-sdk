@@ -931,6 +931,9 @@ function getAssetServerWorker(
 					port: 0,
 				},
 			],
+			assetsPath: config.experimentalAssets.directory,
+			assetsKVBindingName: "ASSETS_KV_NAMESPACE",
+			assetsManifestBindingName: "ASSETS_MANIFEST",
 		},
 	];
 }

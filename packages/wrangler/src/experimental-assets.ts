@@ -15,6 +15,7 @@ import { isJwtExpired } from "./pages/upload";
 import { APIError } from "./parse";
 import { urlSafe } from "./sites";
 import type { Config } from "./config";
+import type { ExperimentalAssets } from "./config/environment";
 
 export type AssetManifest = { [path: string]: { hash: string; size: number } };
 
@@ -313,7 +314,7 @@ export function getExperimentalAssetsBasePath(
 export function processExperimentalAssetsArg(
 	args: { experimentalAssets: string | undefined },
 	config: Config
-) {
+): ExperimentalAssets | undefined {
 	const experimentalAssets = args.experimentalAssets
 		? { directory: args.experimentalAssets }
 		: config.experimental_assets;
