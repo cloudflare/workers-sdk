@@ -9,7 +9,6 @@ import { frameworkToTest } from "./frameworkToTest";
 import {
 	createTestLogStream,
 	isQuarantineMode,
-	keys,
 	recreateLogFolder,
 	runC3,
 	testProjectDir,
@@ -29,7 +28,7 @@ type WorkerTestConfig = RunnerConfig & {
 const workerTemplates: WorkerTestConfig[] = [
 	{
 		template: "hello-world",
-		variants: ["ts", "js", "python"],
+		variants: ["TypeScript", "JavaScript", "Python"],
 		verifyDeploy: {
 			route: "/",
 			expectedText: "Hello World!",
@@ -37,7 +36,7 @@ const workerTemplates: WorkerTestConfig[] = [
 	},
 	{
 		template: "common",
-		variants: ["ts", "js"],
+		variants: ["TypeScript", "JavaScript"],
 		verifyDeploy: {
 			route: "/",
 			expectedText: "Try making requests to:",
@@ -45,12 +44,12 @@ const workerTemplates: WorkerTestConfig[] = [
 	},
 	{
 		template: "queues",
-		variants: ["ts", "js"],
+		variants: ["TypeScript", "JavaScript"],
 		// Skipped for now, since C3 does not yet support resource creation
 	},
 	{
 		template: "scheduled",
-		variants: ["ts", "js"],
+		variants: ["TypeScript", "JavaScript"],
 		// Skipped for now, since it's not possible to test scheduled events on deployed Workers
 	},
 	{
@@ -79,15 +78,17 @@ describe
 		workerTemplates
 			.flatMap<WorkerTestConfig>((template) =>
 				template.variants.length > 0
-					? template.variants.map((variant, index) => {
+					? template.variants.map((variant) => {
 							return {
 								...template,
-								name: `${template.name ?? template.template}-${variant}`,
+								name: `${template.name ?? template.template}-${variant.toLowerCase()}`,
 								promptHandlers: [
 									{
 										matcher: /Which language do you want to use\?/,
-										// Assuming the variants are defined in the same order it is displayed in the prompt
-										input: Array(index).fill(keys.down).concat(keys.enter),
+										input: {
+											type: "select",
+											target: variant,
+										},
 									},
 								],
 							};

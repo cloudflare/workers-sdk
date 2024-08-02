@@ -12,7 +12,6 @@ import { setTimeout } from "timers/promises";
 import { stripAnsi } from "@cloudflare/cli";
 import { spawn } from "cross-spawn";
 import { retry } from "helpers/retry";
-import { sleep } from "helpers/sleep";
 import { fetch } from "undici";
 import { expect } from "vitest";
 import { version } from "../package.json";
@@ -49,7 +48,7 @@ const testEnv = {
 
 export type PromptHandler = {
 	matcher: RegExp;
-	input: string[];
+	input: string[] | { type: "select"; target: RegExp | string };
 };
 
 export type RunnerConfig = {
@@ -71,32 +70,74 @@ export const runC3 = async (
 	const cmd = ["node", "./dist/cli.js", ...argv];
 	const proc = spawnWithLogging(cmd, { env: testEnv }, logStream);
 
-	// Clone the prompt handlers so we can consume them destructively
-	promptHandlers = promptHandlers && [...promptHandlers];
-
 	const onData = (data: string) => {
+		handlePrompt(data);
+	};
+
+	// Clone the prompt handlers so we can consume them destructively
+	promptHandlers = [...promptHandlers];
+
+	// When changing selection, stdout updates but onData may not include the question itself
+	// so we store the current PromptHandler if we have already matched the question
+	let currentSelectDialog: PromptHandler | undefined;
+	const handlePrompt = (data: string) => {
 		const lines: string[] = data.toString().split("\n");
-		const currentDialog = promptHandlers[0];
+		const currentDialog = currentSelectDialog ?? promptHandlers[0];
 
-		lines.forEach(async (line) => {
-			if (currentDialog && currentDialog.matcher.test(line)) {
-				// Add a small sleep to avoid input race
-				await sleep(1000);
+		if (!currentDialog) {
+			return;
+		}
 
-				currentDialog.input.forEach((keystroke) => {
-					proc.stdin.write(keystroke);
-				});
+		const matchesPrompt = lines.some((line) =>
+			currentDialog.matcher.test(line),
+		);
 
-				// Consume the handler once we've used it
-				promptHandlers.shift();
+		// if we don't match the current question and we haven't already matched it previously
+		if (!matchesPrompt && !currentSelectDialog) {
+			return;
+		}
 
-				// If we've consumed the last prompt handler, close the input stream
-				// Otherwise, the process wont exit properly
-				if (promptHandlers[0] === undefined) {
-					proc.stdin.end();
-				}
+		if (Array.isArray(currentDialog.input)) {
+			// keyboard input prompt handler
+			currentDialog.input.forEach((keystroke) => {
+				proc.stdin.write(keystroke);
+			});
+		} else if (currentDialog.input.type === "select") {
+			// select prompt handler
+
+			// Our select prompt options start with ○ for unselected options and ● for the current selection
+			const currentSelection = lines.find((line) => line.startsWith("●"));
+
+			if (!currentSelection) {
+				// sometimes `lines` contain only the 'clear screen' ANSI codes and not the prompt options
+				return;
 			}
-		});
+
+			const matchesSelectionTarget =
+				typeof currentDialog.input.target === "string"
+					? currentSelection.includes(currentDialog.input.target)
+					: currentDialog.input.target.test(currentSelection);
+
+			if (matchesSelectionTarget) {
+				// matches selection, so hit enter
+				proc.stdin.write(keys.enter);
+				currentSelectDialog = undefined;
+			} else {
+				// target not selected, hit down and wait for stdout to update (onData will be called again)
+				proc.stdin.write(keys.down);
+				currentSelectDialog = currentDialog;
+				return;
+			}
+		}
+
+		// Consume the handler once we've used it
+		promptHandlers.shift();
+
+		// If we've consumed the last prompt handler, close the input stream
+		// Otherwise, the process wont exit properly
+		if (promptHandlers[0] === undefined) {
+			proc.stdin.end();
+		}
 	};
 
 	return waitForExit(proc, onData);
