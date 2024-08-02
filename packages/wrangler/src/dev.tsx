@@ -343,7 +343,7 @@ export function devOptions(yargs: CommonYargsArgv) {
 				type: "boolean",
 				describe:
 					"Use the experimental DevEnv instantiation (unified across wrangler dev and unstable_dev)",
-				default: false,
+				default: true,
 			})
 			.option("experimental-registry", {
 				alias: ["x-registry"],
