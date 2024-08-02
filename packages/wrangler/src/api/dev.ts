@@ -189,7 +189,7 @@ export async function unstable_dev(
 		localProtocol: options?.localProtocol,
 		httpsKeyPath: options?.httpsKeyPath,
 		httpsCertPath: options?.httpsCertPath,
-		experimentalAssets: options?.experimentalAssets,
+		experimentalAssets: undefined,
 		legacyAssets: options?.legacyAssets,
 		site: options?.site, // Root folder of static assets for Workers Sites
 		siteInclude: options?.siteInclude, // Array of .gitignore-style patterns that match file or directory names from the sites directory. Only matched items will be uploaded.

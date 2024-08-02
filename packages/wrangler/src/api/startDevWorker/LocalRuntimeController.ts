@@ -100,6 +100,7 @@ async function convertToConfigBundle(
 					includePatterns: event.config.legacy?.site?.include ?? [],
 				}
 			: undefined,
+		experimentalAssets: event.config.experimental?.assets,
 		initialPort: undefined,
 		initialIp: "127.0.0.1",
 		rules: [],
