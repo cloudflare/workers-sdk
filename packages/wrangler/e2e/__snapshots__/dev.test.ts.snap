@@ -1,17 +1,17 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`basic js dev: 'wrangler dev --no-x-dev-env' > can modify worker during wrangler dev --no-x-dev-env 1`] = `"Hello World!"`;
+
+exports[`basic js dev: 'wrangler dev --no-x-dev-env' > can modify worker during wrangler dev --no-x-dev-env 2`] = `"Updated Worker! value"`;
+
+exports[`basic js dev: 'wrangler dev --remote --no-x-dev-env' > can modify worker during wrangler dev --remote --no-x-dev-env 1`] = `"Hello World!"`;
+
+exports[`basic js dev: 'wrangler dev --remote --no-x-dev-env' > can modify worker during wrangler dev --remote --no-x-dev-env 2`] = `"Updated Worker! value"`;
+
 exports[`basic js dev: 'wrangler dev --remote --x-dev-env' > can modify worker during wrangler dev --remote --x-dev-env 1`] = `"Hello World!"`;
 
 exports[`basic js dev: 'wrangler dev --remote --x-dev-env' > can modify worker during wrangler dev --remote --x-dev-env 2`] = `"Updated Worker! value"`;
 
-exports[`basic js dev: 'wrangler dev --remote' > can modify worker during wrangler dev --remote 1`] = `"Hello World!"`;
-
-exports[`basic js dev: 'wrangler dev --remote' > can modify worker during wrangler dev --remote 2`] = `"Updated Worker! value"`;
-
 exports[`basic js dev: 'wrangler dev --x-dev-env' > can modify worker during wrangler dev --x-dev-env 1`] = `"Hello World!"`;
 
 exports[`basic js dev: 'wrangler dev --x-dev-env' > can modify worker during wrangler dev --x-dev-env 2`] = `"Updated Worker! value"`;
-
-exports[`basic js dev: 'wrangler dev' > can modify worker during wrangler dev 1`] = `"Hello World!"`;
-
-exports[`basic js dev: 'wrangler dev' > can modify worker during wrangler dev 2`] = `"Updated Worker! value"`;
