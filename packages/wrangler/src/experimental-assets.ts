@@ -10,18 +10,13 @@ import { fetchResult } from "./cfetch";
 import { formatTime } from "./deploy/deploy";
 import { FatalError, UserError } from "./errors";
 import { logger, LOGGER_LEVELS } from "./logger";
-import {
-	BULK_UPLOAD_CONCURRENCY,
-	MAX_ASSET_COUNT,
-	MAX_ASSET_SIZE,
-	MAX_UPLOAD_ATTEMPTS,
-	MAX_UPLOAD_GATEWAY_ERRORS,
-} from "./pages/constants";
 import { hashFile } from "./pages/hash";
+import { isJwtExpired } from "./pages/upload";
 import { APIError } from "./parse";
+import { urlSafe } from "./sites";
 import type { Config } from "./config";
 
-type AssetManifest = { [path: string]: { hash: string; size: number } };
+export type AssetManifest = { [path: string]: { hash: string; size: number } };
 type InitializeAssetsResponse = {
 	// string of file hashes per bucket
 	buckets: string[][];
@@ -41,28 +36,31 @@ type UploadResponse = {
 	jwt?: string;
 };
 
-export const syncAssets = async (
+// constants same as Pages for now
+const BULK_UPLOAD_CONCURRENCY = 3;
+const MAX_ASSET_COUNT = 20_000;
+const MAX_ASSET_SIZE = 25 * 1024 * 1024;
+const MAX_UPLOAD_ATTEMPTS = 5;
+const MAX_UPLOAD_GATEWAY_ERRORS = 5;
+
+export const syncExperimentalAssets = async (
 	accountId: string | undefined,
 	scriptName: string,
-	assetDirectory: string | undefined,
+	assetDirectory: string,
 	dryRun: boolean | undefined
 ): Promise<{
 	manifest: AssetManifest | undefined;
 	jwt: string | undefined;
 }> => {
-	if (assetDirectory === undefined) {
-		return { manifest: undefined, jwt: undefined };
-	}
 	if (dryRun) {
 		logger.log("(Note: doing a dry run, not uploading or deleting anything.)");
 		return { manifest: undefined, jwt: undefined };
 	}
 	assert(accountId, "Missing accountId");
 
-	const directory = path.resolve(assetDirectory);
-
 	// 1. generate asset manifest
-	const manifest = await walk(directory, {});
+	logger.info("Building list of assets...");
+	const manifest = await walk(assetDirectory, {});
 
 	// 2. fetch buckets w/ hashes
 	const initializeAssetsResponse = await fetchResult<InitializeAssetsResponse>(
@@ -83,14 +81,17 @@ export const syncAssets = async (
 	const filteredFiles = Object.entries(manifest).filter((entry) =>
 		includedHashes.includes(entry[1].hash)
 	);
+	logger.info(`Uploading ${includedHashes.length} files...`);
 	const queue = new PQueue({ concurrency: BULK_UPLOAD_CONCURRENCY });
 	let attempts = 0;
 	const start = Date.now();
 	let assetLogCount = 0;
 	let bucketUploadCount = 0;
 	let completionJwt = "";
-
-	for (const bucket of initializeAssetsResponse.buckets) {
+	for (const [
+		bucketIndex,
+		bucket,
+	] of initializeAssetsResponse.buckets.entries()) {
 		attempts = 0;
 		let gatewayErrors = 0;
 		const doUpload = async (): Promise<UploadResponse> => {
@@ -101,16 +102,15 @@ export const syncAssets = async (
 					const manifestEntryIndex = filteredFiles.findIndex(
 						(file) => file[1].hash === fileHash
 					);
-					// not sure if this is really a user error - what should i use instead if so?
 					if (manifestEntryIndex === -1) {
 						throw new FatalError(
-							`A file was requested that does not appear to exist`,
+							`A file was requested that does not appear to exist.`,
 							1
 						);
 					}
 					const manifestEntry = filteredFiles.splice(manifestEntryIndex, 1)[0];
 					const absFilePath = path.join(assetDirectory, manifestEntry[0]);
-					// just logging the upload at the moment...
+					// just logging file uploads at the moment...
 					// unsure how to log deletion vs unchanged file ignored/if we want to log this
 					assetLogCount = logAssetUpload(
 						`+ ${manifestEntry[0]}`,
@@ -139,11 +139,17 @@ export const syncAssets = async (
 						body: payload.map((x) => JSON.stringify(x)).join("\n"),
 					}
 				);
-				logger.debug("result:", res);
+				logger.info(
+					`Uploaded bucket ${bucketIndex}/${initializeAssetsResponse.buckets.length}`
+				);
 				return res;
 			} catch (e) {
 				if (attempts < MAX_UPLOAD_ATTEMPTS) {
-					logger.debug("failed:", e, "retrying...");
+					logger.debug(
+						`Bucket ${bucketIndex}/${initializeAssetsResponse.buckets.length} upload failed:\n`,
+						e,
+						"Retrying..."
+					);
 					// Exponential backoff, 1 second first time, then 2 second, then 4 second etc.
 					await new Promise((resolvePromise) =>
 						setTimeout(resolvePromise, Math.pow(2, attempts) * 1000)
@@ -166,8 +172,15 @@ export const syncAssets = async (
 						attempts++;
 					}
 					return doUpload();
+				} else if (isJwtExpired(initializeAssetsResponse.jwt)) {
+					throw new FatalError(
+						`Asset upload took too long on bucket ${bucketIndex}/${initializeAssetsResponse.buckets.length}. Please try again.`
+					);
 				} else {
-					logger.debug("failed:", e);
+					logger.error(
+						`Bucket ${bucketIndex}/${initializeAssetsResponse.buckets.length} upload failed:\n`,
+						e
+					);
 					throw e;
 				}
 			}
@@ -197,7 +210,7 @@ export const syncAssets = async (
 		throw new FatalError("Failed to upload all files. Please try again.", 1);
 	} else if (bucketUploadCount !== initializeAssetsResponse.buckets.length) {
 		throw new FatalError(
-			"Completion signal received unexpectedly early - we cannot confirm if all files were successfully uploaded. Please try again.",
+			"Upload completion signal received unexpectedly early - we cannot confirm if all files were successfully uploaded. Please try again.",
 			1
 		);
 	}
@@ -239,19 +252,21 @@ const walk = async (
 			} else {
 				if (counter >= MAX_ASSET_COUNT) {
 					throw new UserError(
-						`You cannot have more than ${MAX_ASSET_COUNT.toLocaleString()} files in a deployment. Ensure you have specified your build output directory correctly.`
+						`Max asset count exceeded: ${counter.toLocaleString()} files found.
+						You cannot have more than ${MAX_ASSET_COUNT.toLocaleString()} files in a deployment.
+						Ensure you have specified your build output directory correctly (currently set as ${startingDir}).`
 					);
 				}
 
 				const name = urlSafe(relativeFilepath);
 				if (filestat.size > MAX_ASSET_SIZE) {
-					throw new FatalError(
-						`Max file size is ${prettyBytes(MAX_ASSET_SIZE, {
+					throw new UserError(
+						`File too large.
+						Max file size is ${prettyBytes(MAX_ASSET_SIZE, {
 							binary: true,
 						})}\n${name} is ${prettyBytes(filestat.size, {
 							binary: true,
-						})} in size`,
-						1
+						})} in size`
 					);
 				}
 				manifest[name] = {
@@ -264,15 +279,6 @@ const walk = async (
 	);
 	return manifest;
 };
-
-/**
- * Convert a filePath to be safe to use as a relative URL.
- *
- * Primarily this involves converting Windows backslashes to forward slashes.
- */
-function urlSafe(filePath: string): string {
-	return filePath.replace(/\\/g, "/");
-}
 
 const MAX_DIFF_LINES = 100;
 
