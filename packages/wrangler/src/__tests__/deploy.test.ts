@@ -4467,7 +4467,7 @@ addEventListener('fetch', event => {});`
 			// skips asset uploading since empty buckets returned
 			mockSubDomainRequest();
 			mockUploadWorkerRequest({
-				expectedMainModule: "no-op-worker.js",
+				expectedMainModule: "no-op-assets-worker.js",
 			});
 			await runWrangler(
 				"deploy --name test-name --compatibility-date 2024-07-31 --experimental-assets assets"
@@ -4518,7 +4518,7 @@ addEventListener('fetch', event => {});`
 			// skips asset uploading since empty buckets returned
 			mockSubDomainRequest();
 			mockUploadWorkerRequest({
-				expectedMainModule: "no-op-worker.js",
+				expectedMainModule: "no-op-assets-worker.js",
 			});
 			await runWrangler("deploy");
 			expect(bodies.length).toBe(1);
@@ -4614,7 +4614,7 @@ addEventListener('fetch', event => {});`
 			);
 			mockSubDomainRequest();
 			mockUploadWorkerRequest({
-				expectedMainModule: "no-op-worker.js",
+				expectedMainModule: "no-op-assets-worker.js",
 			});
 			await runWrangler("deploy");
 			expect(uploadHeaders).toStrictEqual([
