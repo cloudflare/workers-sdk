@@ -23,15 +23,19 @@ export function collectCLIOutput() {
 	return std;
 }
 
-// Based on the implementation on packages/wrangler/src/__tests__/helpers/mock-console.ts
+// Based on the implementation on packages/wrangler/e2e/helpers/normalize.ts
 export function normalizeOutput(output: string) {
-	const functions = [stripAnsi, removeZeroWidthSpaces];
+	const functions = [stripAnsi, normalizePackageManager, removeZeroWidthSpaces];
 
 	for (const f of functions) {
 		output = f(output);
 	}
 
 	return output;
+}
+
+function normalizePackageManager(output: string) {
+	return output.replace(/pnpm|yarn|bun/g, "npm");
 }
 
 function removeZeroWidthSpaces(output: string) {

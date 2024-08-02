@@ -14,7 +14,7 @@ import {
 } from "helpers/packageManagers";
 import { installWrangler, npmInstall } from "helpers/packages";
 import { version } from "../package.json";
-import { offerToDeploy, runDeploy } from "./deploy";
+import { maybeOpenBrowser, offerToDeploy, runDeploy } from "./deploy";
 import { printSummary, printWelcomeMessage } from "./dialog";
 import { gitCommit, isInsideGitRepo, offerGit } from "./git";
 import { createProject } from "./pages";
@@ -128,6 +128,10 @@ const runTemplate = async (ctx: C3Context) => {
 	await deploy(ctx);
 
 	await printSummary(ctx);
+	await maybeOpenBrowser(ctx);
+
+	endSection("See you again soon!");
+	process.exit(0);
 };
 
 const create = async (ctx: C3Context) => {
