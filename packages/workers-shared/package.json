@@ -1,0 +1,17 @@
+{
+	"name": "@cloudflare/workers-shared",
+	"version": "0.0.1",
+	"description": "Package that is used at Cloudflare to power some internal features of Cloudflare Workers.",
+	"scripts": {
+		"build": "pnpm run clean && pnpm run bundle:asset-server",
+		"bundle:asset-server": "esbuild asset-server-worker/src/index.ts --format=esm --bundle --outfile=dist/asset-server-worker.mjs --sourcemap=external",
+		"clean": "rimraf dist",
+		"dev": "pnpm run clean && concurrently -n bundle:asset-server -c blue \"pnpm run bundle:asset-server --watch\""
+	},
+	"devDependencies": {
+		"concurrently": "^8.2.2",
+		"esbuild": "0.17.19",
+		"rimraf": "^6.0.1",
+		"typescript": "^5.5.4"
+	}
+}

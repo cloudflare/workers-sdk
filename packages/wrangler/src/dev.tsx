@@ -562,6 +562,7 @@ export async function startDev(args: StartDevOptions) {
 				"--local is no longer required and will be removed in a future version.\n`wrangler dev` now uses the local Cloudflare Workers runtime by default. 🎉"
 			);
 		}
+
 		if (args.experimentalLocal) {
 			logger.warn(
 				"--experimental-local is no longer required and will be removed in a future version.\n`wrangler dev` now uses the local Cloudflare Workers runtime by default. 🎉"
@@ -574,6 +575,7 @@ export async function startDev(args: StartDevOptions) {
 				"Passing --inspect is unnecessary, now you can always connect to devtools."
 			);
 		}
+
 		if (args.experimentalPublic) {
 			throw new UserError(
 				"The --experimental-public field has been deprecated, try --legacy-assets instead."
@@ -591,6 +593,21 @@ export async function startDev(args: StartDevOptions) {
 				`--experimental-enable-local-persistence is deprecated.\n` +
 					`Move any existing data to .wrangler/state and use --persist, or\n` +
 					`use --persist-to=./wrangler-local-state to keep using the old path.`
+			);
+		}
+
+		const experimentalAssets = processExperimentalAssetsArg(args, config);
+		if (experimentalAssets) {
+			args.forceLocal = true;
+		}
+
+		/*
+		 * - `config.legacy_assets` conflates `legacy_assets` and `assets`
+		 * - `args.legacyAssets` conflates `legacy-assets` and `assets`
+		 */
+		if ((args.legacyAssets || config.legacy_assets) && experimentalAssets) {
+			throw new UserError(
+				"Cannot use Legacy Assets and Experimental Assets in the same Worker."
 			);
 		}
 
@@ -770,6 +787,9 @@ export async function startDev(args: StartDevOptions) {
 					legacyAssets: (configParam) => configParam.legacy_assets,
 					enableServiceEnvironments: !(args.legacyEnv ?? true),
 				},
+				experimental: {
+					assets: experimentalAssets,
+				},
 			} satisfies StartDevWorkerInput);
 
 			void metrics.sendMetricsEvent(
@@ -801,11 +821,6 @@ export async function startDev(args: StartDevOptions) {
 					rerender(await getDevReactElement(config));
 				}
 			});
-		}
-
-		const experimentalAssets = processExperimentalAssetsArg(args, config);
-		if (experimentalAssets) {
-			args.forceLocal = true;
 		}
 
 		const {
@@ -882,6 +897,7 @@ export async function startDev(args: StartDevOptions) {
 					}
 					legacyAssetPaths={legacyAssetPaths}
 					legacyAssetsConfig={configParam.legacy_assets}
+					experimentalAssets={experimentalAssets}
 					initialPort={
 						args.port ?? configParam.dev.port ?? (await getLocalPort())
 					}
@@ -1044,6 +1060,7 @@ export async function startApiDev(args: StartDevOptions) {
 				args.accountId ?? configParam.account_id ?? getAccountFromCache()?.id,
 			legacyAssetPaths: legacyAssetPaths,
 			legacyAssetsConfig: configParam.legacy_assets,
+			experimentalAssets: undefined,
 			//port can be 0, which means to use a random port
 			initialPort: args.port ?? configParam.dev.port ?? (await getLocalPort()),
 			initialIp: args.ip ?? configParam.dev.ip,
@@ -1181,6 +1198,28 @@ export async function validateDevServerSettings(
 	args: StartDevOptions,
 	config: Config
 ) {
+	/*
+	 * - `args.legacyAssets` conflates `legacy-assets` and `assets`
+	 * - `config.legacy_assets` conflates `legacy_assets` and `assets`
+	 */
+	if (
+		(args.legacyAssets || config.legacy_assets) &&
+		(args.site || config.site)
+	) {
+		throw new UserError(
+			"Cannot use Legacy Assets and Workers Sites in the same Worker."
+		);
+	}
+
+	if (
+		(args.experimentalAssets || config.experimental_assets) &&
+		(args.site || config.site)
+	) {
+		throw new UserError(
+			"Cannot use Experimental Assets and Workers Sites in the same Worker."
+		);
+	}
+
 	const entry = await getEntry(
 		{
 			legacyAssets: args.legacyAssets,
@@ -1228,18 +1267,6 @@ export async function validateDevServerSettings(
 						}${service.entrypoint ? `#${service.entrypoint}` : ""})`
 				)
 				.join(", ")}`
-		);
-	}
-
-	if (
-		(args.legacyAssets ||
-			config.legacy_assets ||
-			args.experimentalAssets ||
-			config.experimental_assets) &&
-		(args.site || config.site)
-	) {
-		throw new UserError(
-			"Cannot use Assets and Workers Sites in the same Worker."
 		);
 	}
 

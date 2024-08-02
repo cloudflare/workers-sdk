@@ -266,6 +266,7 @@ export async function startDevServer(
 			compatibilityFlags: props.compatibilityFlags,
 			bindings: props.bindings,
 			legacyAssetPaths: props.legacyAssetPaths,
+			experimentalAssets: props.experimentalAssets,
 			initialPort: undefined, // hard-code for userworker, DevEnv-ProxyWorker now uses this prop value
 			initialIp: "127.0.0.1", // hard-code for userworker, DevEnv-ProxyWorker now uses this prop value
 			rules: props.rules,

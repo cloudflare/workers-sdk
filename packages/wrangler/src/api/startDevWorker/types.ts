@@ -1,6 +1,7 @@
 import type { Config } from "../../config";
 import type {
 	CustomDomainRoute,
+	ExperimentalAssets,
 	Rule,
 	ZoneIdRoute,
 	ZoneNameRoute,
@@ -161,6 +162,9 @@ export interface StartDevWorkerInput {
 		enableServiceEnvironments?: boolean;
 	};
 	unsafe?: Omit<CfUnsafe, "bindings">;
+	experimental?: {
+		assets?: Omit<ExperimentalAssets, "bindings">;
+	};
 }
 
 export type StartDevWorkerOptions = StartDevWorkerInput & {
@@ -258,7 +262,8 @@ export type Binding =
 	| ({ type: "dispatch_namespace" } & Omit<CfDispatchNamespace, "binding">)
 	| ({ type: "mtls_certificate" } & Omit<CfMTlsCertificate, "binding">)
 	| ({ type: "logfwdr" } & Omit<CfLogfwdrBinding, "name">)
-	| { type: `unsafe_${string}` };
+	| { type: `unsafe_${string}` }
+	| { type: "assets" };
 
 export type ServiceFetch = (request: Request) => Promise<Response> | Response;
 

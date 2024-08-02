@@ -7,6 +7,7 @@ import { logger } from "../logger";
 import { DEFAULT_WORKER_NAME, MiniflareServer } from "./miniflare";
 import type { ProxyData } from "../api";
 import type { Config } from "../config";
+import type { ExperimentalAssets } from "../config/environment";
 import type {
 	CfDurableObject,
 	CfScriptFormat,
@@ -31,6 +32,7 @@ export interface LocalProps {
 	bindings: CfWorkerInit["bindings"];
 	workerDefinitions: WorkerRegistry | undefined;
 	legacyAssetPaths: LegacyAssetPaths | undefined;
+	experimentalAssets: ExperimentalAssets | undefined;
 	initialPort: number | undefined;
 	initialIp: string;
 	rules: Config["rules"];
@@ -90,6 +92,7 @@ export async function localPropsToConfigBundle(
 		bindings: props.bindings,
 		workerDefinitions: props.workerDefinitions,
 		legacyAssetPaths: props.legacyAssetPaths,
+		experimentalAssets: props.experimentalAssets,
 		initialPort: props.initialPort,
 		initialIp: props.initialIp,
 		rules: props.rules,

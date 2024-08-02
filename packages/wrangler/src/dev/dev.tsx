@@ -42,7 +42,7 @@ import type {
 	Trigger,
 } from "../api";
 import type { Config } from "../config";
-import type { Route } from "../config/environment";
+import type { ExperimentalAssets, Route } from "../config/environment";
 import type { Entry } from "../deployment-bundle/entry";
 import type { NodeJSCompatMode } from "../deployment-bundle/node-compat";
 import type { CfModule, CfWorkerInit } from "../deployment-bundle/worker";
@@ -233,6 +233,7 @@ export type DevProps = {
 	isWorkersSite: boolean;
 	legacyAssetPaths: LegacyAssetPaths | undefined;
 	legacyAssetsConfig: Config["legacy_assets"];
+	experimentalAssets: ExperimentalAssets | undefined;
 	compatibilityDate: string;
 	compatibilityFlags: string[] | undefined;
 	usageModel: "bundled" | "unbound" | undefined;
@@ -479,6 +480,9 @@ function DevSession(props: DevSessionProps) {
 				capnp: props.bindings.unsafe?.capnp,
 				metadata: props.bindings.unsafe?.metadata,
 			},
+			experimental: {
+				assets: props.experimentalAssets,
+			},
 		} satisfies StartDevWorkerOptions;
 	}, [
 		props.routes,
@@ -493,6 +497,7 @@ function DevSession(props: DevSessionProps) {
 		props.isWorkersSite,
 		props.local,
 		props.legacyAssetsConfig,
+		props.experimentalAssets,
 		props.processEntrypoint,
 		props.additionalModules,
 		props.env,
@@ -684,6 +689,7 @@ function DevSession(props: DevSessionProps) {
 			bindings={props.bindings}
 			workerDefinitions={workerDefinitions}
 			legacyAssetPaths={props.legacyAssetPaths}
+			experimentalAssets={props.experimentalAssets}
 			initialPort={undefined} // hard-code for userworker, DevEnv-ProxyWorker now uses this prop value
 			initialIp={"127.0.0.1"} // hard-code for userworker, DevEnv-ProxyWorker now uses this prop value
 			rules={props.rules}

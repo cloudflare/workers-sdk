@@ -4361,7 +4361,7 @@ addEventListener('fetch', event => {});`
 			writeAssets(assets);
 			// no wrangler.toml or worker source
 			mockUploadWorkerRequest({
-				expectedMainModule: "no-op-worker.js",
+				expectedMainModule: "no-op-assets-worker.js",
 			});
 			mockSubDomainRequest();
 			msw.use(
