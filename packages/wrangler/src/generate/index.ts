@@ -47,7 +47,7 @@ export async function generateHandler(args: GenerateArgs) {
 			site: undefined,
 			yes: undefined,
 			fromDash: undefined,
-			delegateC3: false,
+			delegateC3: true,
 			v: undefined,
 			config: undefined,
 			env: undefined,
@@ -61,12 +61,6 @@ export async function generateHandler(args: GenerateArgs) {
 
 	// print down here cuz `init` prints it own its own
 	await printWranglerBanner();
-
-	logger.warn(
-		`Deprecation: \`wrangler generate\` has been deprecated and will be removed in a future version.\n` +
-			`Use \`npm create cloudflare@latest\` for new Workers and Pages projects.\n\n` +
-			`Please refer to https://developers.cloudflare.com/workers/wrangler/deprecations/#generate for more information."`
-	);
 
 	if (args.type) {
 		let message = "The --type option is no longer supported.";

@@ -287,10 +287,6 @@ export async function initHandler(args: InitArgs) {
 				c3Arguments
 			)}\``;
 
-			logger.warn(
-				`The \`init\` command is no longer supported. Please use ${replacementC3Command} instead.\nThe \`init\` command will be removed in a future version.`
-			);
-
 			if (args.delegateC3) {
 				logger.log(`Running ${replacementC3Command}...`);
 

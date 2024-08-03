@@ -1,6 +1,0 @@
-name = "worker-php"
-main = "index.js"
-compatibility_date = "2023-02-22"
-
-[build]
-command = "npm run build"
