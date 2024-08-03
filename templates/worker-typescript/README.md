@@ -1,17 +1,4 @@
-# Template: worker-typescript
+# ⚠️ [DEPRECATED] Template: worker-typescript
 
-[![Deploy with Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/cloudflare/workers-sdk/tree/main/templates/worker-typescript)
+This template has been deprecated in favor of C3. To get started with TypeScript and Workers, please refer to the [getting started guide](https://github.com/cloudflare/workers-sdk/tree/main/templates/worker-typescript) and select TypeScript as the language.<｜end▁of▁sentence｜>
 
-A batteries included template for kick starting a TypeScript Cloudflare worker project.
-
-## Setup
-
-To create a `my-project` directory using this template, run:
-
-```sh
-$ npx wrangler generate my-project worker-typescript
-# or
-$ yarn wrangler generate my-project worker-typescript
-# or
-$ pnpm wrangler generate my-project worker-typescript
-```
