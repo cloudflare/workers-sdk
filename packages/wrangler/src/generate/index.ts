@@ -40,6 +40,14 @@ type GenerateArgs = StrictYargsOptionsToInterface<typeof generateOptions>;
 export async function generateHandler(args: GenerateArgs) {
 	// Questions
 	// Can we kick you over to C3 directly rather than go to init and then to C3? Simplify it
+	// If one passes a template name to wrangler generate myproject template-name — then we should show a warning that
+
+	logger.warn(
+		`Deprecation: \`wrangler generate\` is deprecated.\n` +
+			`Running \`npm create cloudflare@latest\` for you instead.\n\n` +
+	);
+
+
 	return initHandler({
 		name: args.name,
 		site: undefined,
