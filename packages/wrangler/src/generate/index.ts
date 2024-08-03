@@ -38,75 +38,23 @@ type GenerateArgs = StrictYargsOptionsToInterface<typeof generateOptions>;
 
 // Originally, generate was a rust function: https://github.com/cloudflare/wrangler-legacy/blob/master/src/cli/mod.rs#L106-L123
 export async function generateHandler(args: GenerateArgs) {
-	// somehow, `init` marks name as required but then also runs fine
-	// with the name omitted, and then substitutes it at runtime with ""
-	// delegate to `wrangler init` if no template is specified
-	if (args.template === undefined) {
-		return initHandler({
-			name: args.name,
-			site: undefined,
-			yes: undefined,
-			fromDash: undefined,
-			delegateC3: true,
-			v: undefined,
-			config: undefined,
-			env: undefined,
-			type: undefined,
-			_: args._,
-			$0: args.$0,
-			experimentalJsonConfig: false,
-			experimentalVersions: args.experimentalVersions,
-		});
-	}
-
-	// print down here cuz `init` prints it own its own
-	await printWranglerBanner();
-
-	if (args.type) {
-		let message = "The --type option is no longer supported.";
-		if (args.type === "webpack") {
-			message +=
-				"\nIf you wish to use webpack then you will need to create a custom build.";
-			// TODO: Add a link to docs
-		}
-		throw new CommandLineArgsError(message);
-	}
-
-	if (args.name && isRemote(args.name)) {
-		[args.template, args.name] = [args.name, args.template];
-	}
-
-	const creationDirectory = generateWorkerDirectoryName(args.name);
-
-	if (args.site) {
-		const gitDirectory =
-			creationDirectory !== process.cwd()
-				? path.basename(creationDirectory)
-				: "my-site";
-		const message =
-			"The --site option is no longer supported.\n" +
-			"If you wish to create a brand new Worker Sites project then clone the `worker-sites-template` starter repository:\n\n" +
-			"```\n" +
-			`git clone --depth=1 --branch=wrangler2 https://github.com/cloudflare/worker-sites-template ${gitDirectory}\n` +
-			`cd ${gitDirectory}\n` +
-			"```\n\n" +
-			"Find out more about how to create and maintain Sites projects at https://developers.cloudflare.com/workers/platform/sites.\n" +
-			"Have you considered using Cloudflare Pages instead? See https://pages.cloudflare.com/.";
-		throw new CommandLineArgsError(message);
-	}
-
-	logger.log(
-		`Creating a worker in ${path.basename(creationDirectory)} from ${
-			args.template
-		}`
-	);
-
-	const { remote, subdirectory } = parseTemplatePath(args.template);
-
-	await cloneIntoDirectory(remote, creationDirectory, subdirectory);
-	await initializeGit(creationDirectory);
-
-	logger.log("✨ Success!");
+	// Questions
+	// Can we kick you over to C3 directly rather than go to init and then to C3? Simplify it
+	return initHandler({
+		name: args.name,
+		site: undefined,
+		yes: undefined,
+		fromDash: undefined,
+		delegateC3: true,
+		v: undefined,
+		config: undefined,
+		env: undefined,
+		type: undefined,
+		_: args._,
+		$0: args.$0,
+		experimentalJsonConfig: false,
+		experimentalVersions: args.experimentalVersions,
+	});
 }
 
 /**
