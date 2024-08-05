@@ -25,7 +25,12 @@ export function collectCLIOutput() {
 
 // Based on the implementation on packages/wrangler/e2e/helpers/normalize.ts
 export function normalizeOutput(output: string) {
-	const functions = [stripAnsi, normalizePackageManager, removeZeroWidthSpaces];
+	const functions = [
+		normalizePackageManager,
+		normalizeSlashes,
+		stripAnsi,
+		removeZeroWidthSpaces,
+	];
 
 	for (const f of functions) {
 		output = f(output);
@@ -38,6 +43,12 @@ function normalizePackageManager(output: string) {
 	return output.replace(/pnpm|yarn|bun/g, "npm");
 }
 
+// Copied from packages/wrangler/e2e/helpers/normalize.ts
+export function normalizeSlashes(str: string): string {
+	return str.replace(/\\/g, "/");
+}
+
+// Copied from packages/wrangler/e2e/helpers/normalize.ts
 function removeZeroWidthSpaces(output: string) {
 	return output.replaceAll(/\u200a|\u200b/g, " ");
 }
