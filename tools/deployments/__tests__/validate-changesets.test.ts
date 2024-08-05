@@ -35,6 +35,7 @@ describe("findPackageNames()", () => {
 			  "turbo-r2-archive",
 			  "@cloudflare/vitest-pool-workers",
 			  "workers-playground",
+			  "@cloudflare/workers-shared",
 			  "workers.new",
 			  "wrangler",
 			  "@cloudflare/wrangler-devtools",
