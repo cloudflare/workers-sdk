@@ -2,6 +2,8 @@ export default {
 	configVersion: 1,
 	id: "common",
 	displayName: "Example router & proxy Worker",
+	description:
+		"Create a worker to route and forward requests to other services",
 	platform: "workers",
 	copyFiles: {
 		variants: {

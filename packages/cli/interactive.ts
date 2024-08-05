@@ -9,7 +9,16 @@ import { createLogUpdate } from "log-update";
 import { blue, bold, brandColor, dim, gray, white } from "./colors";
 import SelectRefreshablePrompt from "./select-list";
 import { stdout } from "./streams";
-import { cancel, crash, logRaw, newline, shapes, space, status } from "./index";
+import {
+	cancel,
+	crash,
+	logRaw,
+	newline,
+	shapes,
+	space,
+	status,
+	stripAnsi,
+} from "./index";
 import type { OptionWithDetails } from "./select-list";
 import type { Prompt } from "@clack/core";
 
@@ -23,6 +32,7 @@ export const leftT = gray(shapes.leftT);
 export type Option = {
 	label: string; // user-visible string
 	sublabel?: string; // user-visible string
+	description?: string;
 	value: string; // underlying key
 	hidden?: boolean;
 };
@@ -303,8 +313,7 @@ const getSelectRenderers = (
 	const helpText = _helpText ?? "";
 	const maxItemsPerPage = config.maxItemsPerPage ?? 32;
 
-	const defaultRenderer: Renderer = ({ cursor, value }) => {
-		cursor = cursor ?? 0;
+	const defaultRenderer: Renderer = ({ cursor = 0, value }) => {
 		const renderOption = (opt: Option, i: number) => {
 			const { label: optionLabel, value: optionValue } = opt;
 			const active = i === cursor;
@@ -327,7 +336,6 @@ const getSelectRenderers = (
 				return true;
 			}
 
-			cursor = cursor ?? 0;
 			if (i < cursor) {
 				return options.length - i <= maxItemsPerPage;
 			}
@@ -335,14 +343,15 @@ const getSelectRenderers = (
 			return cursor + maxItemsPerPage > i;
 		};
 
-		return [
+		const visibleOptions = options.filter((o) => !o.hidden);
+		const activeOption = visibleOptions.at(cursor);
+		const lines = [
 			`${blCorner} ${bold(question)} ${dim(helpText)}`,
 			`${
 				cursor > 0 && options.length > maxItemsPerPage
 					? `${space(2)}${dim("...")}\n`
 					: ""
-			}${options
-				.filter((o) => !o.hidden)
+			}${visibleOptions
 				.map(renderOption)
 				.filter(renderOptionCondition)
 				.join(`\n`)}${
@@ -353,6 +362,48 @@ const getSelectRenderers = (
 			}`,
 			``, // extra line for readability
 		];
+
+		if (activeOption?.description) {
+			// To wrap the text by words instead of characters
+			const wordSegmenter = new Intl.Segmenter("en", { granularity: "word" });
+			const padding = space(2);
+			const availableWidth =
+				process.stdout.columns - stripAnsi(padding).length * 2;
+
+			// The description cannot have any ANSI code
+			// As the segmenter will split the code to several segments
+			const description = stripAnsi(activeOption.description);
+			const descriptionLines: string[] = [];
+			let descriptionLineNumber = 0;
+
+			for (const data of wordSegmenter.segment(description)) {
+				let line = descriptionLines[descriptionLineNumber] ?? "";
+
+				const currentLineWidth = line.length;
+				const segmentSize = data.segment.length;
+
+				if (currentLineWidth + segmentSize > availableWidth) {
+					descriptionLineNumber++;
+					line = "";
+
+					// To avoid starting a new line with a space
+					if (data.segment.match(/^\s+$/)) {
+						continue;
+					}
+				}
+
+				descriptionLines[descriptionLineNumber] = line + data.segment;
+			}
+
+			lines.push(
+				dim(
+					descriptionLines.map((line) => padding + line + padding).join("\n")
+				),
+				``
+			);
+		}
+
+		return lines;
 	};
 
 	return {

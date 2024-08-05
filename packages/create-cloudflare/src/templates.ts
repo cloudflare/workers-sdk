@@ -31,6 +31,8 @@ export type TemplateConfig = {
 	id: string;
 	/** A string that controls how the template is presented to the user in the selection menu*/
 	displayName: string;
+	/** A string that explains what is inside the template, including any resources and how those will be used*/
+	description?: string;
 	/** The deployment platform for this template */
 	platform: "workers" | "pages";
 	/** When set to true, hides this template from the selection menu */
@@ -203,10 +205,27 @@ export const selectTemplate = async (args: Partial<C3Args>) => {
 		question: "What would you like to start with?",
 		label: "category",
 		options: [
-			{ label: "Hello World example", value: "hello-world" },
-			{ label: "Framework Starter", value: "web-framework" },
-			{ label: "Demo application", value: "demo" },
-			{ label: "Template from a Github repo", value: "remote-template" },
+			{
+				label: "Hello World example",
+				value: "hello-world",
+				description:
+					"[Recommended for beginners] Build an empty starter to configure project structure and bare-bones",
+			},
+			{
+				label: "Framework Starter",
+				value: "web-framework",
+				description: "Create a website with a JavaScript framework",
+			},
+			{
+				label: "Demo application",
+				value: "demo",
+				description: "Build a web application using Cloudflare Workers",
+			},
+			{
+				label: "Template from a Github repo",
+				value: "remote-template",
+				description: "Bring a template from an existing GitHub repository",
+			},
 			// This is used only if the type is `pre-existing`
 			{ label: "Others", value: "others", hidden: true },
 		],
@@ -223,7 +242,7 @@ export const selectTemplate = async (args: Partial<C3Args>) => {
 
 	const templateMap = await getTemplateMap();
 	const templateOptions = Object.entries(templateMap).map(
-		([value, { displayName, hidden }]) => {
+		([value, { displayName, description, hidden }]) => {
 			const isHelloWorldExample = value.startsWith("hello-world");
 			const isCategoryMatched =
 				category === "hello-world" ? isHelloWorldExample : !isHelloWorldExample;
@@ -231,6 +250,7 @@ export const selectTemplate = async (args: Partial<C3Args>) => {
 			return {
 				value,
 				label: displayName,
+				description,
 				hidden: hidden || !isCategoryMatched,
 			};
 		},
