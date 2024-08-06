@@ -367,7 +367,7 @@ const selectLanguage = async (ctx: C3Context) => {
 	const languageOptions = [
 		{ label: "TypeScript", value: "ts" },
 		{ label: "JavaScript", value: "js" },
-		{ label: "Python", value: "python" },
+		{ label: "Python (beta)", value: "python" },
 	].filter((option) => variants.includes(option.value));
 
 	// Otherwise, prompt the user for their language preference

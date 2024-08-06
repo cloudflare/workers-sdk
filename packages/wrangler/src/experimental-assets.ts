@@ -187,15 +187,10 @@ export const syncExperimentalAssets = async (
 		};
 		// add to queue and run it if we haven't reached concurrency limit
 		void queue.add(() =>
-			doUpload().then(
-				(res) => {
-					bucketUploadCount++;
-					completionJwt = res.jwt || completionJwt;
-				},
-				(error) => {
-					throw error;
-				}
-			)
+			doUpload().then((res) => {
+				bucketUploadCount++;
+				completionJwt = res.jwt || completionJwt;
+			})
 		);
 	}
 	queue.on("error", (error) => {
