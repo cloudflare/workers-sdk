@@ -4353,15 +4353,18 @@ addEventListener('fetch', event => {});`
 	});
 
 	describe("--experimental-assets", () => {
-		it("should not require entry point if using --experimental-assets", async () => {
+		it("should not require entry point if using --experimental-assets and should not upload any worker", async () => {
 			const assets = [
 				{ filePath: "file-1.txt", content: "Content of file-1" },
 				{ filePath: "file-2.txt", content: "Content of file-2" },
 			];
 			writeAssets(assets);
-			// no wrangler.toml or worker source
+			// note that wrangler.toml and worker source are not created
+			// pass expected formBody in
 			mockUploadWorkerRequest({
-				expectedMainModule: "no-op-worker.js",
+				expectedExperimentalAssetsForm: [
+					["metadata", JSON.stringify({ assets: "<<aus-completion-token>>" })],
+				],
 			});
 			mockSubDomainRequest();
 			msw.use(
@@ -4373,12 +4376,13 @@ addEventListener('fetch', event => {});`
 								success: true,
 								errors: [],
 								messages: [],
-								result: { jwt: "<<aus-token>>", buckets: [] },
+								result: { jwt: "<<aus-completion-token>>", buckets: [] },
 							},
 							{ status: 201 }
 						);
 					}
-				)
+				),
+				http.put("*/accounts/:accountId/workers/scripts/:scriptName", () => {})
 			);
 			await runWrangler(
 				"deploy --name test-name --compatibility-date 2024-07-31 --experimental-assets assets"
@@ -4457,7 +4461,7 @@ addEventListener('fetch', event => {});`
 								success: true,
 								errors: [],
 								messages: [],
-								result: { jwt: "<<aus-token>>", buckets: [] },
+								result: { jwt: "<<aus-completion-token>>", buckets: [] },
 							},
 							{ status: 201 }
 						);
@@ -4467,7 +4471,9 @@ addEventListener('fetch', event => {});`
 			// skips asset uploading since empty buckets returned
 			mockSubDomainRequest();
 			mockUploadWorkerRequest({
-				expectedMainModule: "no-op-assets-worker.js",
+				expectedExperimentalAssetsForm: [
+					["metadata", JSON.stringify({ assets: "<<aus-completion-token>>" })],
+				],
 			});
 			await runWrangler(
 				"deploy --name test-name --compatibility-date 2024-07-31 --experimental-assets assets"
@@ -4508,7 +4514,7 @@ addEventListener('fetch', event => {});`
 								success: true,
 								errors: [],
 								messages: [],
-								result: { jwt: "<<aus-token>>", buckets: [] },
+								result: { jwt: "<<aus-completion-token>>", buckets: [] },
 							},
 							{ status: 201 }
 						);
@@ -4518,7 +4524,9 @@ addEventListener('fetch', event => {});`
 			// skips asset uploading since empty buckets returned
 			mockSubDomainRequest();
 			mockUploadWorkerRequest({
-				expectedMainModule: "no-op-assets-worker.js",
+				expectedExperimentalAssetsForm: [
+					["metadata", JSON.stringify({ assets: "<<aus-completion-token>>" })],
+				],
 			});
 			await runWrangler("deploy");
 			expect(bodies.length).toBe(1);
@@ -4594,7 +4602,7 @@ addEventListener('fetch', event => {});`
 									success: true,
 									errors: [],
 									messages: [],
-									result: { jwt: "<<aus-completion-jwt>>" },
+									result: { jwt: "<<aus-completion-token>>" },
 								},
 								{ status: 201 }
 							);
@@ -4614,7 +4622,9 @@ addEventListener('fetch', event => {});`
 			);
 			mockSubDomainRequest();
 			mockUploadWorkerRequest({
-				expectedMainModule: "no-op-assets-worker.js",
+				expectedExperimentalAssetsForm: [
+					["metadata", JSON.stringify({ assets: "<<aus-completion-token>>" })],
+				],
 			});
 			await runWrangler("deploy");
 			expect(uploadHeaders).toStrictEqual([

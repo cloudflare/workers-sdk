@@ -695,6 +695,10 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			placement,
 			tail_consumers: config.tail_consumers,
 			limits: config.limits,
+			experimental_assets: {
+				jwt: experimentalAssetsJwt,
+				staticAssetsOnly: !!props.entry.staticAssetsOnly,
+			},
 		};
 
 		sourceMapSize = worker.sourceMaps?.reduce(

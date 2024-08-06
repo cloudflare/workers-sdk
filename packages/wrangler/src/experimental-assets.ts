@@ -270,7 +270,7 @@ const walk = async (
 						})} in size`
 					);
 				}
-				manifest[path.join("/", name)] = {
+				manifest[urlSafe(path.join("/", name))] = {
 					hash: hashFile(filepath),
 					size: filestat.size,
 				};
