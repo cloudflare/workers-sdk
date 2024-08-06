@@ -22,7 +22,8 @@ export type Entry = {
 	format: CfScriptFormat;
 	/** The directory that contains all of a `--no-bundle` worker's modules. Usually `${directory}/src`. Defaults to path.dirname(file) */
 	moduleRoot: string;
-
+	/** Whether this is a no-op worker that will not ultimately be uploaded e.g. for assets*/
+	staticAssetsOnly?: boolean;
 	/**
 	 * A worker's name
 	 */
@@ -112,6 +113,9 @@ export async function getEntry(
 		directory,
 		format,
 		moduleRoot: args.moduleRoot ?? config.base_dir ?? path.dirname(file),
+		staticAssetsOnly:
+			!!(args.experimentalAssets || config.experimental_assets) &&
+			!(args.script && config.main),
 		name: config.name ?? "worker",
 	};
 }

@@ -28,6 +28,7 @@ export function mockUploadWorkerRequest(
 		tag?: string;
 		expectedDispatchNamespace?: string;
 		expectedScriptName?: string;
+		expectedExperimentalAssetsForm?: string[][];
 	} = {}
 ) {
 	const expectedScriptName = (options.expectedScriptName ??= "test-name");
@@ -57,7 +58,10 @@ export function mockUploadWorkerRequest(
 		const metadata = JSON.parse(
 			await toString(formBody.get("metadata"))
 		) as WorkerMetadata;
-		if (expectedType === "esm") {
+		if (expectedExperimentalAssetsForm) {
+			const serialisedFormBody = Array.from(formBody.entries());
+			expect(serialisedFormBody).toEqual(expectedExperimentalAssetsForm);
+		} else if (expectedType === "esm") {
 			expect(metadata.main_module).toEqual(expectedMainModule);
 		} else {
 			expect(metadata.body_part).toEqual("index.js");
@@ -140,6 +144,7 @@ export function mockUploadWorkerRequest(
 		keepVars,
 		keepSecrets,
 		expectedDispatchNamespace,
+		expectedExperimentalAssetsForm,
 	} = options;
 	if (env && !legacyEnv) {
 		msw.use(

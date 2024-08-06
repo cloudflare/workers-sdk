@@ -359,7 +359,7 @@ export const isJwtExpired = (token: string): boolean | undefined => {
 		typeof vitest !== "undefined" &&
 		(token === "<<funfetti-auth-jwt>>" ||
 			token === "<<funfetti-auth-jwt2>>" ||
-			token === "<<aus-completion-jwt>>")
+			token === "<<aus-completion-token>>")
 	) {
 		return false;
 	}

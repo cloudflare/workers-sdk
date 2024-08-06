@@ -169,8 +169,17 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 		tail_consumers,
 		limits,
 		annotations,
+		experimental_assets,
 	} = worker;
 
+	// short circuit if static assets upload only
+	if (experimental_assets?.staticAssetsOnly) {
+		formData.set(
+			"metadata",
+			JSON.stringify({ assets: experimental_assets.jwt })
+		);
+		return formData;
+	}
 	let { modules } = worker;
 
 	const metadataBindings: WorkerMetadataBinding[] = rawBindings ?? [];
