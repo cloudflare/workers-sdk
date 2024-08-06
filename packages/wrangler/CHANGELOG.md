@@ -1,5 +1,26 @@
 # wrangler
 
+## 3.69.0
+
+### Minor Changes
+
+- [#6392](https://github.com/cloudflare/workers-sdk/pull/6392) [`c3e19b7`](https://github.com/cloudflare/workers-sdk/commit/c3e19b790bb597b78e0109a162ca8049b5eaf973) Thanks [@taylorlee](https://github.com/taylorlee)! - feat: log Worker startup time in the `version upload` command
+
+- [#6370](https://github.com/cloudflare/workers-sdk/pull/6370) [`8a3c6c0`](https://github.com/cloudflare/workers-sdk/commit/8a3c6c00105a3420e46da660bd3f317b26f1c6d4) Thanks [@CarmenPopoviciu](https://github.com/CarmenPopoviciu)! - feat: Create very basic Asset Server Worker and plumb it into `wrangler dev`
+
+  These changes do the ground work needed in order to add Assets support for Workers in `wrangler dev`. They implement the following:
+
+  - it creates a new package called `workers-shared` that hosts the `Asset Server Worker`, and the `Router Worker`in the future
+  - it scaffolds the `Asset Server Worker` in some very basic form, with basic configuration. Further behaviour implementation will follow in a subsequent PR
+  - it does the ground work of plumbing ASW into Miniflare
+
+### Patch Changes
+
+- [#6392](https://github.com/cloudflare/workers-sdk/pull/6392) [`c3e19b7`](https://github.com/cloudflare/workers-sdk/commit/c3e19b790bb597b78e0109a162ca8049b5eaf973) Thanks [@taylorlee](https://github.com/taylorlee)! - fix: remove bundle size warning from Worker deploy commands
+
+  Bundle size was a proxy for startup time. Now that we have startup time
+  reported, focus on bundle size is less relevant.
+
 ## 3.68.0
 
 ### Minor Changes
