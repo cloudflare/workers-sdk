@@ -1,6 +1,5 @@
 import assert from "assert";
 import events from "events";
-import { afterEach } from "node:test";
 import path from "path";
 import { setTimeout } from "timers/promises";
 import getPort from "get-port";
@@ -36,9 +35,7 @@ describe.each(OPTIONS)("DevEnv", ({ remote }) => {
 		helper = new WranglerE2ETestHelper();
 		wrangler = await helper.importWrangler();
 		startWorker = wrangler.unstable_startWorker;
-		startWorker = wrangler.unstable_startWorker;
 	});
-	afterEach(async () => {});
 
 	it("ProxyWorker buffers requests while runtime reloads", async (t) => {
 		t.onTestFinished(() => worker?.dispose());
