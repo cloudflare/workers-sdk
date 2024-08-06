@@ -1,5 +1,4 @@
-import { getRenderers, inputPrompt } from "./interactive";
-import { crash, logRaw } from ".";
+import { inputPrompt } from "./interactive";
 import type { Arg, PromptConfig } from "./interactive";
 
 export const processArgument = async <T>(
@@ -7,23 +6,16 @@ export const processArgument = async <T>(
 	name: string,
 	promptConfig: PromptConfig
 ) => {
-	let value = args[name];
-	const renderSubmitted = getRenderers(promptConfig).submit;
+	const value = args[name];
+	const result = await inputPrompt<T>({
+		...promptConfig,
+		// Accept the default value if the arg is already set
+		acceptDefault: promptConfig.acceptDefault ?? value !== undefined,
+		defaultValue: value ?? promptConfig.defaultValue,
+	});
 
-	// If the value has already been set via args, use that
-	if (value !== undefined) {
-		const error = promptConfig.validate?.(value);
-		if (error) {
-			crash(error);
-		}
+	// Update value in args before returning the result
+	args[name] = result as Arg;
 
-		const lines = renderSubmitted({ value });
-		logRaw(lines.join("\n"));
-
-		return value as T;
-	}
-
-	value = await inputPrompt(promptConfig);
-
-	return value as T;
+	return result;
 };

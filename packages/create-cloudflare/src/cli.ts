@@ -1,12 +1,11 @@
 #!/usr/bin/env node
 import { mkdirSync } from "fs";
-import { basename, dirname, resolve } from "path";
+import { dirname } from "path";
 import { chdir } from "process";
 import { crash, endSection, logRaw, startSection } from "@cloudflare/cli";
-import { processArgument } from "@cloudflare/cli/args";
 import { isInteractive } from "@cloudflare/cli/interactive";
 import { parseArgs } from "helpers/args";
-import { C3_DEFAULTS, isUpdateAvailable } from "helpers/cli";
+import { isUpdateAvailable } from "helpers/cli";
 import { runCommand } from "helpers/command";
 import {
 	detectPackageManager,
@@ -16,12 +15,13 @@ import { installWrangler, npmInstall } from "helpers/packages";
 import { version } from "../package.json";
 import { maybeOpenBrowser, offerToDeploy, runDeploy } from "./deploy";
 import { printSummary, printWelcomeMessage } from "./dialog";
-import { gitCommit, isInsideGitRepo, offerGit } from "./git";
+import { gitCommit, offerGit } from "./git";
 import { createProject } from "./pages";
 import {
 	addWranglerToGitIgnore,
 	copyTemplateFiles,
-	selectTemplate,
+	createContext,
+	inferRelatedArgs,
 	updatePackageName,
 	updatePackageScripts,
 } from "./templates";
@@ -68,58 +68,28 @@ export const runLatest = async () => {
 export const runCli = async (args: Partial<C3Args>) => {
 	printBanner();
 
-	const defaultName = args.existingScript || C3_DEFAULTS.projectName;
+	inferRelatedArgs(args);
 
-	const projectName = await processArgument<string>(args, "projectName", {
-		type: "text",
-		question: `In which directory do you want to create your application?`,
-		helpText: "also used as application name",
-		defaultValue: defaultName,
-		label: "dir",
-		validate: (value) =>
-			validateProjectDirectory(String(value) || C3_DEFAULTS.projectName, args),
-		format: (val) => `./${val}`,
-	});
-
-	const validatedArgs: C3Args = {
-		...args,
-		projectName,
-	};
-
-	const originalCWD = process.cwd();
-	const { name, path } = setupProjectDirectory(validatedArgs);
-
-	const template = await selectTemplate(validatedArgs);
-	const ctx: C3Context = {
-		project: { name, path },
-		args: validatedArgs,
-		template,
-		originalCWD,
-		gitRepoAlreadyExisted: await isInsideGitRepo(dirname(path)),
-		deployment: {},
-	};
+	const ctx = await createContext(args);
 
 	await runTemplate(ctx);
 };
 
-export const setupProjectDirectory = (args: C3Args) => {
+export const setupProjectDirectory = (ctx: C3Context) => {
 	// Crash if the directory already exists
-	const path = resolve(args.projectName);
-	const err = validateProjectDirectory(path, args);
+	const path = ctx.project.path;
+	const err = validateProjectDirectory(path, ctx.args);
 	if (err) {
 		crash(err);
 	}
 
 	const directory = dirname(path);
-	const pathBasename = basename(path);
 
 	// If the target is a nested directory, create the parent
 	mkdirSync(directory, { recursive: true });
 
 	// Change to the parent directory
 	chdir(directory);
-
-	return { name: pathBasename, path };
 };
 
 const runTemplate = async (ctx: C3Context) => {
@@ -133,6 +103,8 @@ const runTemplate = async (ctx: C3Context) => {
 
 const create = async (ctx: C3Context) => {
 	const { template } = ctx;
+
+	setupProjectDirectory(ctx);
 
 	if (template.generate) {
 		await template.generate(ctx);

@@ -35,6 +35,8 @@ export type Option = {
 	description?: string;
 	value: string; // underlying key
 	hidden?: boolean;
+	activeIcon?: string;
+	inactiveIcon?: string;
 };
 
 export type BasePromptConfig = {
@@ -325,8 +327,8 @@ const getSelectRenderers = (
 
 			const indicator =
 				isInListOfValues || (active && !Array.isArray(value))
-					? color(shapes.radioActive)
-					: color(shapes.radioInactive);
+					? color(opt.activeIcon ?? shapes.radioActive)
+					: color(opt.inactiveIcon ?? shapes.radioInactive);
 
 			return `${space(2)}${indicator} ${text} ${sublabel}`;
 		};
