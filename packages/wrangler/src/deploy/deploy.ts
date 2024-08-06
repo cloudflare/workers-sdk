@@ -597,15 +597,13 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 				})
 			: undefined;
 
-		const { manifest: _assetManifest, jwt: _assetUploadJwt } =
-			props.experimentalAssets
-				? await syncExperimentalAssets(
-						accountId,
-						scriptName,
-						props.experimentalAssets?.directory,
-						props.dryRun
-					)
-				: { manifest: undefined, jwt: undefined };
+		// Upload assets if experimental assets is being used
+		const experimentalAssetsJwt = await syncExperimentalAssets(
+			accountId,
+			scriptName,
+			props.experimentalAssets?.directory,
+			props.dryRun
+		);
 
 		const legacyAssets = await syncLegacyAssets(
 			accountId,

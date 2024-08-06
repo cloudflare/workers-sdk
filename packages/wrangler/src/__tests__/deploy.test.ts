@@ -4475,11 +4475,11 @@ addEventListener('fetch', event => {});`
 			expect(bodies.length).toBe(1);
 			expect(bodies[0]).toStrictEqual({
 				manifest: {
-					"file-1.txt": {
+					"/file-1.txt": {
 						hash: "0de3dd5df907418e9730fd2bd747bd5e",
 						size: 17,
 					},
-					"boop/file-2.txt": {
+					"/boop/file-2.txt": {
 						hash: "7574a8cd3094a050388ac9663af1c1d6",
 						size: 17,
 					},
@@ -4524,11 +4524,11 @@ addEventListener('fetch', event => {});`
 			expect(bodies.length).toBe(1);
 			expect(bodies[0]).toStrictEqual({
 				manifest: {
-					"file-1.txt": {
+					"/file-1.txt": {
 						hash: "0de3dd5df907418e9730fd2bd747bd5e",
 						size: 17,
 					},
-					"boop/file-2.txt": {
+					"/boop/file-2.txt": {
 						hash: "7574a8cd3094a050388ac9663af1c1d6",
 						size: 17,
 					},
@@ -4632,7 +4632,7 @@ addEventListener('fetch', event => {});`
 						metadata: {
 							contentType: "text/plain",
 						},
-						name: "file-1.txt",
+						name: "/file-1.txt",
 					},
 					{
 						contents: "Q29udGVudCBvZiBmaWxlLTI=",
@@ -4640,7 +4640,7 @@ addEventListener('fetch', event => {});`
 						metadata: {
 							contentType: "text/plain",
 						},
-						name: "boop/file-2.txt",
+						name: "/boop/file-2.txt",
 					},
 					{
 						contents: "Q29udGVudCBvZiBmaWxlLTM=",
@@ -4648,7 +4648,7 @@ addEventListener('fetch', event => {});`
 						metadata: {
 							contentType: "text/plain",
 						},
-						name: "boop/file-3.txt",
+						name: "/boop/file-3.txt",
 					},
 					{
 						contents: "Q29udGVudCBvZiBmaWxlLTU=",
@@ -4656,7 +4656,7 @@ addEventListener('fetch', event => {});`
 						metadata: {
 							contentType: "text/plain",
 						},
-						name: "beep/file-5.txt",
+						name: "/beep/file-5.txt",
 					},
 					{
 						contents: "Q29udGVudCBvZiBmaWxlLTE=",
@@ -4664,7 +4664,7 @@ addEventListener('fetch', event => {});`
 						metadata: {
 							contentType: "text/plain",
 						},
-						name: "beep/file-6.txt",
+						name: "/beep/file-6.txt",
 					},
 				])
 			);
