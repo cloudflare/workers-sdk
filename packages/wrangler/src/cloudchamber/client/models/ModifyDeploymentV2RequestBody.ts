@@ -8,6 +8,7 @@ import type { Entrypoint } from "./Entrypoint";
 import type { EnvironmentVariable } from "./EnvironmentVariable";
 import type { Label } from "./Label";
 import type { MemorySizeWithUnit } from "./MemorySizeWithUnit";
+import type { SecretMap } from "./SecretMap";
 import type { SSHPublicKeyID } from "./SSHPublicKeyID";
 
 /**
@@ -26,6 +27,10 @@ export type ModifyDeploymentV2RequestBody = {
 	 * A list of SSH public key IDs from the account
 	 */
 	ssh_public_key_ids?: Array<SSHPublicKeyID>;
+	/**
+	 * A list of objects with secret names and the their access types from the account
+	 */
+	secrets?: Array<SecretMap>;
 	/**
 	 * The new vcpu that the deployment will have from now on
 	 */

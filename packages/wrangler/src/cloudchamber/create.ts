@@ -118,7 +118,7 @@ export async function createCommand(
 			? (await pollSSHKeysUntilCondition(() => true)).map((key) => key.id)
 			: [];
 		const network =
-			args.ipv4 === true ? { assign_ipv4: AssignIPv4.PREDEFINED } : undefined;
+			args.ipv4 === true ? { assign_ipv4: AssignIPv4.ACCOUNT } : undefined;
 		const deployment = await DeploymentsService.createDeploymentV2({
 			image: body.image,
 			location: body.location,

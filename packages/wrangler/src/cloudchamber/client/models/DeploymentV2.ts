@@ -21,6 +21,7 @@ import type { Network } from "./Network";
 import type { NodeGroup } from "./NodeGroup";
 import type { Placement } from "./Placement";
 import type { Ref } from "./Ref";
+import type { SecretMap } from "./SecretMap";
 import type { SSHPublicKeyID } from "./SSHPublicKeyID";
 
 /**
@@ -39,6 +40,10 @@ export type DeploymentV2 = {
 	 * A list of SSH public key IDs from the account
 	 */
 	ssh_public_key_ids?: Array<SSHPublicKeyID>;
+	/**
+	 * A list of objects with secret names and the their access types from the account
+	 */
+	secrets?: Array<SecretMap>;
 	/**
 	 * Container environment variables
 	 */

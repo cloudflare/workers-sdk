@@ -314,9 +314,7 @@ export function renderDeploymentConfiguration(
 		["Labels", labelsText],
 		...(network === undefined
 			? []
-			: [
-					["Include IPv4", network.assign_ipv4 === "predefined" ? "yes" : "no"],
-				]),
+			: [["Include IPv4", network.assign_ipv4 !== undefined ? "yes" : "no"]]),
 	] as const;
 
 	updateStatus(
