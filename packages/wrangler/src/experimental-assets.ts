@@ -17,6 +17,7 @@ import { urlSafe } from "./sites";
 import type { Config } from "./config";
 
 export type AssetManifest = { [path: string]: { hash: string; size: number } };
+
 type InitializeAssetsResponse = {
 	// string of file hashes per bucket
 	buckets: string[][];
@@ -46,26 +47,28 @@ const MAX_UPLOAD_GATEWAY_ERRORS = 5;
 export const syncExperimentalAssets = async (
 	accountId: string | undefined,
 	scriptName: string,
-	assetDirectory: string,
+	assetDirectory: string | undefined,
 	dryRun: boolean | undefined
-): Promise<{
-	manifest: AssetManifest | undefined;
-	jwt: string | undefined;
-}> => {
+): Promise<string | undefined> => {
+	if (assetDirectory === undefined) {
+		return;
+	}
 	if (dryRun) {
 		logger.log("(Note: doing a dry run, not uploading or deleting anything.)");
-		return { manifest: undefined, jwt: undefined };
+		return;
 	}
 	assert(accountId, "Missing accountId");
 
 	// 1. generate asset manifest
-	logger.info("Building list of assets...");
+	logger.info("🌀 Building list of assets...");
 	const manifest = await walk(assetDirectory, {});
 
 	// 2. fetch buckets w/ hashes
+	logger.info("🌀 Uploading asset manifest...");
 	const initializeAssetsResponse = await fetchResult<InitializeAssetsResponse>(
 		`/accounts/${accountId}/workers/scripts/${scriptName}/assets-upload-session`,
 		{
+			headers: { "Content-Type": "application/json" },
 			method: "POST",
 			body: JSON.stringify({ manifest: manifest }),
 		}
@@ -73,52 +76,55 @@ export const syncExperimentalAssets = async (
 
 	// if nothing to upload, return
 	if (initializeAssetsResponse.buckets.flat().length === 0) {
-		return { manifest, jwt: initializeAssetsResponse.jwt };
+		logger.info(`✨ Success! (No files to upload)`);
+		return initializeAssetsResponse.jwt;
 	}
 
 	// 3. fill buckets and upload assets
-	const includedHashes = initializeAssetsResponse.buckets.flat();
-	const filteredFiles = Object.entries(manifest).filter((entry) =>
-		includedHashes.includes(entry[1].hash)
-	);
-	logger.info(`Uploading ${includedHashes.length} files...`);
+	const numberFilesToUpload = initializeAssetsResponse.buckets.flat().length;
+	logger.info(`🌀 Uploading ${numberFilesToUpload} file(s)...`);
+
+	// Create the buckets outside of doUpload so we can retry without losing track of potential duplicate files
+	// But don't add the actual content until uploading so we don't run out of memory
+	const manifestLookup = Object.entries(manifest);
+	let assetLogCount = 0;
+	const bucketSkeletons = initializeAssetsResponse.buckets.map((bucket) => {
+		return bucket.map((fileHash) => {
+			const manifestEntryIndex = manifestLookup.findIndex(
+				(file) => file[1].hash === fileHash
+			);
+			if (manifestEntryIndex === -1) {
+				throw new FatalError(
+					`A file was requested that does not appear to exist.`,
+					1
+				);
+			}
+			const manifestEntry = manifestLookup.splice(manifestEntryIndex, 1)[0];
+			// just logging file uploads at the moment...
+			// unsure how to log deletion vs unchanged file ignored/if we want to log this
+			assetLogCount = logAssetUpload(`+ ${manifestEntry[0]}`, assetLogCount);
+			return manifestEntry;
+		});
+	});
+
 	const queue = new PQueue({ concurrency: BULK_UPLOAD_CONCURRENCY });
 	let attempts = 0;
 	const start = Date.now();
-	let assetLogCount = 0;
 	let bucketUploadCount = 0;
 	let completionJwt = "";
-	for (const [
-		bucketIndex,
-		bucket,
-	] of initializeAssetsResponse.buckets.entries()) {
+
+	for (const [bucketIndex, bucketSkeleton] of bucketSkeletons.entries()) {
 		attempts = 0;
 		let gatewayErrors = 0;
 		const doUpload = async (): Promise<UploadResponse> => {
 			// Populate the payload only when actually uploading (this is limited to 3 concurrent uploads at 50 MiB per bucket meaning we'd only load in a max of ~150 MiB)
 			// This is so we don't run out of memory trying to upload the files.
 			const payload: UploadPayloadFile[] = await Promise.all(
-				bucket.map(async (fileHash) => {
-					const manifestEntryIndex = filteredFiles.findIndex(
-						(file) => file[1].hash === fileHash
-					);
-					if (manifestEntryIndex === -1) {
-						throw new FatalError(
-							`A file was requested that does not appear to exist.`,
-							1
-						);
-					}
-					const manifestEntry = filteredFiles.splice(manifestEntryIndex, 1)[0];
+				bucketSkeleton.map(async (manifestEntry) => {
 					const absFilePath = path.join(assetDirectory, manifestEntry[0]);
-					// just logging file uploads at the moment...
-					// unsure how to log deletion vs unchanged file ignored/if we want to log this
-					assetLogCount = logAssetUpload(
-						`+ ${manifestEntry[0]}`,
-						assetLogCount
-					);
 					return {
 						name: manifestEntry[0],
-						hash: fileHash,
+						hash: manifestEntry[1].hash,
 						contents: (await readFile(absFilePath)).toString("base64"),
 						metadata: {
 							contentType: getType(absFilePath) || "application/octet-stream",
@@ -140,30 +146,28 @@ export const syncExperimentalAssets = async (
 					}
 				);
 				logger.info(
-					`Uploaded bucket ${bucketIndex}/${initializeAssetsResponse.buckets.length}`
+					`Uploaded bucket ${bucketIndex + 1}/${initializeAssetsResponse.buckets.length}`
 				);
 				return res;
 			} catch (e) {
 				if (attempts < MAX_UPLOAD_ATTEMPTS) {
-					logger.debug(
-						`Bucket ${bucketIndex}/${initializeAssetsResponse.buckets.length} upload failed:\n`,
-						e,
-						"Retrying..."
+					logger.info(
+						chalk.dim(
+							`Bucket ${bucketIndex + 1}/${initializeAssetsResponse.buckets.length} upload failed. Retrying...\n`,
+							e
+						)
 					);
 					// Exponential backoff, 1 second first time, then 2 second, then 4 second etc.
 					await new Promise((resolvePromise) =>
 						setTimeout(resolvePromise, Math.pow(2, attempts) * 1000)
 					);
-					// TODO: handle other errors e.g. jwt expired here
 					if (e instanceof APIError && e.isGatewayError()) {
 						// Gateway problem, wait for some additional time and set concurrency to 1
 						queue.concurrency = 1;
 						await new Promise((resolvePromise) =>
 							setTimeout(resolvePromise, Math.pow(2, gatewayErrors) * 5000)
 						);
-
 						gatewayErrors++;
-
 						// only count as a failed attempt after a few initial gateway errors
 						if (gatewayErrors >= MAX_UPLOAD_GATEWAY_ERRORS) {
 							attempts++;
@@ -174,13 +178,9 @@ export const syncExperimentalAssets = async (
 					return doUpload();
 				} else if (isJwtExpired(initializeAssetsResponse.jwt)) {
 					throw new FatalError(
-						`Asset upload took too long on bucket ${bucketIndex}/${initializeAssetsResponse.buckets.length}. Please try again.`
+						`Asset upload took too long on bucket ${bucketIndex + 1}/${initializeAssetsResponse.buckets.length}. Please try again.`
 					);
 				} else {
-					logger.error(
-						`Bucket ${bucketIndex}/${initializeAssetsResponse.buckets.length} upload failed:\n`,
-						e
-					);
 					throw e;
 				}
 			}
@@ -193,21 +193,24 @@ export const syncExperimentalAssets = async (
 					completionJwt = res.jwt || completionJwt;
 				},
 				(error) => {
-					return Promise.reject(
-						new FatalError(
-							`File upload failed. Please try again. Error: ${JSON.stringify(
-								error
-							)})`,
-							1
-						)
-					);
+					throw error;
 				}
 			)
 		);
 	}
+	queue.on("error", (error) => {
+		logger.error(error.message);
+		throw error;
+	});
 	await queue.onIdle();
+
+	// if queue finishes without receiving JWT from asset upload service (AUS)
+	// AUS only returns this in the final bucket upload response
 	if (!completionJwt) {
-		throw new FatalError("Failed to upload all files. Please try again.", 1);
+		throw new FatalError(
+			"Failed to receive completion signal for file upload. Please try again.",
+			1
+		);
 	} else if (bucketUploadCount !== initializeAssetsResponse.buckets.length) {
 		throw new FatalError(
 			"Upload completion signal received unexpectedly early - we cannot confirm if all files were successfully uploaded. Please try again.",
@@ -216,16 +219,14 @@ export const syncExperimentalAssets = async (
 	}
 
 	const uploadMs = Date.now() - start;
-	const skipped = Object.keys(manifest).length - includedHashes.length;
+	const skipped = Object.keys(manifest).length - numberFilesToUpload;
 	const skippedMessage = skipped > 0 ? `(${skipped} already uploaded) ` : "";
 
 	logger.log(
-		`✨ Success! Uploaded ${
-			filteredFiles.length
-		} files ${skippedMessage}${formatTime(uploadMs)}\n`
+		`✨ Success! Uploaded ${numberFilesToUpload} file(s) ${skippedMessage}${formatTime(uploadMs)}\n`
 	);
 
-	return { manifest, jwt: completionJwt };
+	return completionJwt;
 };
 
 // modified from /pages/validate.tsx
@@ -269,7 +270,7 @@ const walk = async (
 						})} in size`
 					);
 				}
-				manifest[name] = {
+				manifest[path.join("/", name)] = {
 					hash: hashFile(filepath),
 					size: filestat.size,
 				};
