@@ -1,6 +1,8 @@
 import { readFileSync } from "fs";
-import { writeFile } from "fs/promises";
+import { readFile, writeFile } from "fs/promises";
 import { Miniflare } from "miniflare";
+import { version } from "workerd";
+import { logger } from "../../logger";
 import { ensureDirectoryExists } from "../../utils/filesystem";
 import type { Config } from "../../config/config";
 
@@ -47,12 +49,26 @@ export async function generateRuntimeTypes({
 
 	await ensureDirectoryExists(outFile);
 
+	const header = `// Runtime types generated with workerd@${version} ${compatibility_date} ${compatibility_flags.join(",")}`;
+
+	try {
+		const existingTypes = await readFile(outFile, "utf8");
+		if (existingTypes.split("\n")[0] === header) {
+			logger.debug("Using cached runtime types: ", header);
+			return { outFile };
+		}
+	} catch (e) {
+		if ((e as { code: string }).code !== "ENOENT") {
+			throw e;
+		}
+	}
+
 	const types = await generate({
 		compatibilityDate: compatibility_date,
 		compatibilityFlags: compatibility_flags,
 	});
 
-	await writeFile(outFile, types, "utf8");
+	await writeFile(outFile, header + "\n" + types, "utf8");
 
 	return {
 		outFile,
