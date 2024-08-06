@@ -126,11 +126,9 @@ const runTemplate = async (ctx: C3Context) => {
 	await create(ctx);
 	await configure(ctx);
 	await deploy(ctx);
-
 	await printSummary(ctx);
-	await maybeOpenBrowser(ctx);
 
-	endSection("See you again soon!");
+	logRaw("");
 	process.exit(0);
 };
 
@@ -181,6 +179,10 @@ const deploy = async (ctx: C3Context) => {
 		await createProject(ctx);
 		await runDeploy(ctx);
 	}
+
+	await maybeOpenBrowser(ctx);
+
+	endSection("See you again soon!");
 };
 
 const printBanner = () => {

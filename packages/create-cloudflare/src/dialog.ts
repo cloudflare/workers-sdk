@@ -3,7 +3,6 @@ import {
 	hyperlink,
 	linkRegex,
 	logRaw,
-	newline,
 	shapes,
 	space,
 	stripAnsi,
@@ -15,18 +14,16 @@ import type { C3Context } from "types";
 
 /**
  * Wrap the lines with a border and inner padding
- * Accept an optional prefix for proper alignment
  */
 export function createDialog(
 	lines: string[],
 	{
 		maxWidth = process.stdout.columns,
-		prefix = space(),
 	}: {
 		maxWidth?: number;
-		prefix?: string;
 	} = {},
 ) {
+	const prefix = space();
 	const border = shapes.bar;
 	const padding = " ";
 	const paddingWidth = padding.length * 2;
@@ -156,14 +153,10 @@ export const printSummary = async (ctx: C3Context) => {
 		``,
 		`💬 Join our Community`,
 		`   ${blue.underline(hyperlink(discordUrl))}`,
-		``,
 	);
 
-	const dialog = createDialog(lines, {
-		prefix: gray(shapes.bar),
-	});
+	const dialog = createDialog(lines);
 
 	// Print dialog
 	logRaw(dialog);
-	newline();
 };

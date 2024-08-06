@@ -55,25 +55,23 @@ describe("dialog helpers", () => {
 			await printSummary(ctx);
 
 			expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`
-				"│╭───────────────────────────────────────────────────────────────────────────────────────╮
-				││ 🎉  SUCCESS  Application deployed successfully!                                       │
-				││                                                                                       │
-				││ 🔍 View Project                                                                       │
-				││    Visit: https://example.test.workers.dev                                            │
-				││    Dash: https://dash.cloudflare.com/?to=/:account/workers/services/view/test-project │
-				││                                                                                       │
-				││ 💻 Continue Developing                                                                │
-				││    Start dev server: npm run start                                                   │
-				││    Deploy again: npm run deploy                                                      │
-				││                                                                                       │
-				││ 📖 Explore Documentation                                                              │
-				││    https://developers.cloudflare.com/workers                                          │
-				││                                                                                       │
-				││ 💬 Join our Community                                                                 │
-				││    https://discord.cloudflare.com                                                     │
-				││                                                                                       │
-				│╰───────────────────────────────────────────────────────────────────────────────────────╯
-				│ 
+				" ╭───────────────────────────────────────────────────────────────────────────────────────╮
+				 │ 🎉  SUCCESS  Application deployed successfully!                                       │
+				 │                                                                                       │
+				 │ 🔍 View Project                                                                       │
+				 │    Visit: https://example.test.workers.dev                                            │
+				 │    Dash: https://dash.cloudflare.com/?to=/:account/workers/services/view/test-project │
+				 │                                                                                       │
+				 │ 💻 Continue Developing                                                                │
+				 │    Start dev server: npm run start                                                   │
+				 │    Deploy again: npm run deploy                                                      │
+				 │                                                                                       │
+				 │ 📖 Explore Documentation                                                              │
+				 │    https://developers.cloudflare.com/workers                                          │
+				 │                                                                                       │
+				 │ 💬 Join our Community                                                                 │
+				 │    https://discord.cloudflare.com                                                     │
+				 ╰───────────────────────────────────────────────────────────────────────────────────────╯
 				"
 			`);
 		});
@@ -91,22 +89,20 @@ describe("dialog helpers", () => {
 			});
 
 			expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`
-				"│╭──────────────────────────────────────────────────────────────╮
-				││ 🎉  SUCCESS  Application created successfully!               │
-				││                                                              │
-				││ 💻 Continue Developing                                       │
-				││    Change directories: cd ../example                         │
-				││    Start dev server: npm run start                          │
-				││    Deploy: npm run deploy                                   │
-				││                                                              │
-				││ 📖 Explore Documentation                                     │
-				││    https://developers.cloudflare.com/pages                   │
-				││                                                              │
-				││ 💬 Join our Community                                        │
-				││    https://discord.cloudflare.com                            │
-				││                                                              │
-				│╰──────────────────────────────────────────────────────────────╯
-				│ 
+				" ╭──────────────────────────────────────────────────────────────╮
+				 │ 🎉  SUCCESS  Application created successfully!               │
+				 │                                                              │
+				 │ 💻 Continue Developing                                       │
+				 │    Change directories: cd ../example                         │
+				 │    Start dev server: npm run start                          │
+				 │    Deploy: npm run deploy                                   │
+				 │                                                              │
+				 │ 📖 Explore Documentation                                     │
+				 │    https://developers.cloudflare.com/pages                   │
+				 │                                                              │
+				 │ 💬 Join our Community                                        │
+				 │    https://discord.cloudflare.com                            │
+				 ╰──────────────────────────────────────────────────────────────╯
 				"
 			`);
 		});
@@ -117,25 +113,23 @@ describe("dialog helpers", () => {
 			await printSummary(ctx);
 
 			expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`
-				"│╭─────────────────────────────────────╮
-				││ 🎉  SUCCESS  Application deploye... │
-				││                                     │
-				││ 🔍 View Project                     │
-				││    Visit: https://example.test.w... │
-				││    Dash: https://dash.cloudflare... │
-				││                                     │
-				││ 💻 Continue Developing              │
-				││    Start dev server: npm run start │
-				││    Deploy again: npm run deploy    │
-				││                                     │
-				││ 📖 Explore Documentation            │
-				││    https://developers.cloudflare... │
-				││                                     │
-				││ 💬 Join our Community               │
-				││    https://discord.cloudflare.com   │
-				││                                     │
-				│╰─────────────────────────────────────╯
-				│ 
+				" ╭─────────────────────────────────────╮
+				 │ 🎉  SUCCESS  Application deploye... │
+				 │                                     │
+				 │ 🔍 View Project                     │
+				 │    Visit: https://example.test.w... │
+				 │    Dash: https://dash.cloudflare... │
+				 │                                     │
+				 │ 💻 Continue Developing              │
+				 │    Start dev server: npm run start │
+				 │    Deploy again: npm run deploy    │
+				 │                                     │
+				 │ 📖 Explore Documentation            │
+				 │    https://developers.cloudflare... │
+				 │                                     │
+				 │ 💬 Join our Community               │
+				 │    https://discord.cloudflare.com   │
+				 ╰─────────────────────────────────────╯
 				"
 			`);
 		});
