@@ -143,7 +143,7 @@ describe.skipIf(frameworkToTest || isQuarantineMode())(
 				);
 
 				expect(projectPath).toExist();
-				expect(output).toContain(`type Example router & proxy Worker`);
+				expect(output).toContain(`type Scheduled Worker (Cron Trigger)`);
 				expect(output).toContain(`lang JavaScript`);
 				expect(output).toContain(`no git`);
 				expect(output).toContain(`no deploy`);

@@ -5,6 +5,7 @@ export default {
 	description:
 		"Create a Worker to route and forward requests to other services",
 	platform: "workers",
+	hidden: true,
 	copyFiles: {
 		variants: {
 			js: {
