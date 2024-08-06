@@ -3,7 +3,7 @@ export default {
 	id: "common",
 	displayName: "Example router & proxy Worker",
 	description:
-		"Create a worker to route and forward requests to other services",
+		"Create a Worker to route and forward requests to other services",
 	platform: "workers",
 	copyFiles: {
 		variants: {

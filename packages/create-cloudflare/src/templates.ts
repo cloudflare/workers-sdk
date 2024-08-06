@@ -209,22 +209,23 @@ export const selectTemplate = async (args: Partial<C3Args>) => {
 				label: "Hello World example",
 				value: "hello-world",
 				description:
-					"[Recommended for beginners] Build an empty starter to configure project structure and bare-bones",
+					"Select from barebones examples to get started with Workers",
 			},
 			{
 				label: "Framework Starter",
 				value: "web-framework",
-				description: "Create a website with a JavaScript framework",
+				description:
+					"Select from a range of starter applications using various Cloudflare products",
 			},
 			{
 				label: "Demo application",
 				value: "demo",
-				description: "Build a web application using Cloudflare Workers",
+				description: "Select from the most popular full-stack web frameworks",
 			},
 			{
 				label: "Template from a Github repo",
 				value: "remote-template",
-				description: "Bring a template from an existing GitHub repository",
+				description: "Start from an existing GitHub repo link",
 			},
 			// This is used only if the type is `pre-existing`
 			{ label: "Others", value: "others", hidden: true },

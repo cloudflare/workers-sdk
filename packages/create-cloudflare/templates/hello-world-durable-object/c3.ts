@@ -3,7 +3,7 @@ export default {
 	id: "hello-world-durable-object",
 	displayName: "Hello World Worker Using Durable Objects",
 	description:
-		"[Requires paid plan] Create a multiplayer application starter to collaborate between clients and players",
+		"Get started with a basic stateful app to build projects like real-time chats, collaborative apps, and multiplayer games",
 	platform: "workers",
 	copyFiles: {
 		variants: {

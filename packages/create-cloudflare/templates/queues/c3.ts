@@ -3,7 +3,7 @@ export default {
 	id: "queues",
 	displayName: "Queue consumer & producer Worker",
 	description:
-		"Process background tasks and message batches with Cloudflare Queues",
+		"Get started with a Worker that processes background tasks and message batches with Cloudflare Queues",
 	platform: "workers",
 	copyFiles: {
 		variants: {
