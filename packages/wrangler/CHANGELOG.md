@@ -1,5 +1,11 @@
 # wrangler
 
+## 3.69.1
+
+### Patch Changes
+
+- [#6432](https://github.com/cloudflare/workers-sdk/pull/6432) [`cba2e25`](https://github.com/cloudflare/workers-sdk/commit/cba2e25ec3f4a8402c6960ac84651b7dfe2f11ff) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: prevent crash when running wrangler dev due to missing dependency
+
 ## 3.69.0
 
 ### Minor Changes
