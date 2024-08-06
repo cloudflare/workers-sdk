@@ -30,6 +30,11 @@ export const SiteBindings = {
 	JSON_SITE_FILTER: "MINIFLARE_SITE_FILTER",
 } as const;
 
+export const AssetsBindings = {
+	KV_NAMESPACE_ASSET: "__STATIC_CONTENT",
+	JSON_ASSET_MANIFEST: "__STATIC_CONTENT_MANIFEST",
+} as const;
+
 // Magic prefix: if a URLs pathname starts with this, it shouldn't be cached.
 // This ensures edge caching of Workers Sites files is disabled, and the latest
 // local version is always served.
@@ -45,6 +50,7 @@ export function decodeSitesKey(key: string): string {
 		? decodeURIComponent(key.substring(SITES_NO_CACHE_PREFIX.length))
 		: key;
 }
+
 export function isSitesRequest(request: { url: string }) {
 	const url = new URL(request.url);
 	return url.pathname.startsWith(`/${SITES_NO_CACHE_PREFIX}`);
@@ -115,4 +121,25 @@ export function testSiteRegExps(
 	// Either exclude globs undefined, or name doesn't match them
 	if (regExps.exclude !== undefined) return !testRegExps(regExps.exclude, key);
 	return true;
+}
+
+// Magic prefix: if a URLs pathname starts with this, it shouldn't be cached.
+// This ensures edge caching of Workers Assets files is disabled, and the latest
+// local version is always served.
+export const ASSETS_NO_CACHE_PREFIX = "$__MINIFLARE_ASSETS__$/";
+
+export function encodeAssetsKey(key: string): string {
+	// `encodeURIComponent()` ensures `ETag`s used by `@cloudflare/kv-asset-handler`
+	// are always byte strings.
+	return ASSETS_NO_CACHE_PREFIX + encodeURIComponent(key);
+}
+export function decodeAssetsKey(key: string): string {
+	return key.startsWith(ASSETS_NO_CACHE_PREFIX)
+		? decodeURIComponent(key.substring(ASSETS_NO_CACHE_PREFIX.length))
+		: key;
+}
+
+export function isAssetsRequest(request: { url: string }) {
+	const url = new URL(request.url);
+	return url.pathname.startsWith(`/${ASSETS_NO_CACHE_PREFIX}`);
 }

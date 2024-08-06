@@ -1,5 +1,9 @@
 export default {
 	async fetch(request, env) {
-		return new Response("Hello from Asset Server Worker 🚀");
+		const url = new URL(request.url);
+		let { pathname } = url;
+
+		const content = await env.__STATIC_CONTENT.get(pathname);
+		return new Response(content);
 	},
 };

@@ -528,6 +528,14 @@ parameter in module format Workers.
   If set, only files with paths _not_ matching these glob patterns will be
   served.
 
+  - `assetsPath?: string`
+
+  Path to serve Workers assets from. If set, `__STATIC_CONTENT` and
+  `__STATIC_CONTENT_MANIFEST` bindings will be injected into this Worker. In
+  modules mode, `__STATIC_CONTENT_MANIFEST` will also be exposed as a module
+  with a `string`-typed `default` export, containing the JSON-stringified
+  manifest. Note Workers assets files are never cached in Miniflare.
+
 #### R2
 
 - `r2Buckets?: Record<string, string> | string[]`

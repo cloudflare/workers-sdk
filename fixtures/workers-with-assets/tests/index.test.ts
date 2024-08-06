@@ -18,9 +18,23 @@ describe("[Workers + Assets] `wrangler dev`", () => {
 	});
 
 	it("renders ", async ({ expect }) => {
-		const response = await fetch(`http://${ip}:${port}/`);
-		const text = await response.text();
+		let response = await fetch(`http://${ip}:${port}/index.html`);
+		let text = await response.text();
 		expect(response.status).toBe(200);
-		expect(text).toContain(`Hello from Asset Server Worker 🚀`);
+		expect(text).toContain(`<h1>Hello Workers + Assets World 🚀!</h1>`);
+
+		response = await fetch(`http://${ip}:${port}/about/index.html`);
+		text = await response.text();
+		expect(response.status).toBe(200);
+		expect(text).toContain(`<p>Learn more about Workers with Assets soon!</p>`);
+	});
+
+	it("does not resolve '/' to '/index.html' ", async ({ expect }) => {
+		let response = await fetch(`http://${ip}:${port}/`);
+		expect(response.status).toBe(200);
+		let text = await response.text();
+		expect(text).toContain(
+			`[{"name":"about","type":"directory"},{"name":"index.html","type":"file"}]`
+		);
 	});
 });

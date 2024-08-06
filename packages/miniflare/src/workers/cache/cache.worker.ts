@@ -16,7 +16,7 @@ import {
 	RouteHandler,
 	Timers,
 } from "miniflare:shared";
-import { isSitesRequest } from "../kv";
+import { isAssetsRequest, isSitesRequest } from "../kv";
 import { CacheObjectCf } from "./constants";
 import {
 	CacheMiss,
@@ -287,6 +287,9 @@ export class CacheObject extends MiniflareDurableObject {
 		// Never cache Workers Sites requests, so we always return on-disk files
 		if (isSitesRequest(req)) throw new CacheMiss();
 
+		// Never cache Workers Assets requests, so we always return on-disk files
+		if (isAssetsRequest(req)) throw new CacheMiss();
+
 		let resHeaders: Headers | undefined;
 		let resRanges: InclusiveRange[] | undefined;
 
@@ -332,6 +335,9 @@ export class CacheObject extends MiniflareDurableObject {
 
 		// Never cache Workers Sites requests, so we always return on-disk files
 		if (isSitesRequest(req)) throw new CacheMiss();
+
+		// Never cache Workers Assets requests, so we always return on-disk files
+		if (isAssetsRequest(req)) throw new CacheMiss();
 
 		assert(req.body !== null);
 		const res = await parseHttpResponse(req.body);

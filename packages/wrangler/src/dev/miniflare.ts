@@ -876,6 +876,7 @@ export async function buildMiniflareOptions(
 						port: 0,
 					},
 				],
+				assetsPath: config.experimentalAssets.directory,
 			}
 		: undefined;
 
