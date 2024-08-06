@@ -27,8 +27,8 @@ export function collectCLIOutput() {
 export function normalizeOutput(output: string) {
 	const functions = [
 		normalizePackageManager,
-		normalizeSlashes,
 		stripAnsi,
+		normalizeSlashes,
 		removeZeroWidthSpaces,
 	];
 
