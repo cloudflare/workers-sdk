@@ -3,6 +3,10 @@
 	"extends": ["//"],
 
 	"pipeline": {
+		"test:ci": {
+			"inputs": ["../packages/*/package.json"],
+			"dependsOn": ["build"]
+		},
 		"build": {
 			"env": [
 				"CLOUDFLARE_API_TOKEN",
