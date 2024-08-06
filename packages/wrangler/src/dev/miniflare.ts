@@ -842,43 +842,6 @@ export async function buildMiniflareOptions(
 		}
 	}
 
-	const assetServerModulePath = require.resolve(
-		"@cloudflare/workers-shared/dist/asset-server-worker.mjs"
-	);
-	const assetServerConfigPath = require.resolve(
-		"@cloudflare/workers-shared/asset-server-worker/wrangler.toml"
-	);
-	let assetServerConfig: Config | undefined;
-
-	try {
-		assetServerConfig = readConfig(assetServerConfigPath, {});
-	} catch (err) {
-		throw new UserError(
-			"Failed to read the Asset Server Worker configuration file.\n" + `${err}`
-		);
-	}
-
-	const assetServerWorker: WorkerOptions | undefined = config.experimentalAssets
-		? {
-				name: assetServerConfig?.name,
-				compatibilityDate: assetServerConfig?.compatibility_date,
-				compatibilityFlags: assetServerConfig?.compatibility_flags,
-				modulesRoot: dirname(assetServerModulePath),
-				modules: [
-					{
-						type: "ESModule",
-						path: assetServerModulePath,
-					},
-				],
-				unsafeDirectSockets: [
-					{
-						host: "127.0.0.1",
-						port: 0,
-					},
-				],
-			}
-		: undefined;
-
 	const upstream =
 		typeof config.localUpstream === "string"
 			? `${config.upstreamProtocol}://${config.localUpstream}`
@@ -921,13 +884,55 @@ export async function buildMiniflareOptions(
 					proxy: true,
 				})),
 			},
-			...(config.experimentalAssets
-				? [assetServerWorker as WorkerOptions]
-				: []),
+			...getAssetServerWorker(config),
 			...externalWorkers,
 		],
 	};
 	return { options, internalObjects, entrypointNames };
+}
+
+function getAssetServerWorker(
+	config: Omit<ConfigBundle, "rules">
+): WorkerOptions[] {
+	if (!config.experimentalAssets) {
+		return [];
+	}
+	const assetServerModulePath = require.resolve(
+		"@cloudflare/workers-shared/dist/asset-server-worker.mjs"
+	);
+	const assetServerConfigPath = require.resolve(
+		"@cloudflare/workers-shared/asset-server-worker/wrangler.toml"
+	);
+	let assetServerConfig: Config | undefined;
+
+	try {
+		assetServerConfig = readConfig(assetServerConfigPath, {});
+	} catch (err) {
+		throw new UserError(
+			"Failed to read the Asset Server Worker configuration file.\n" + `${err}`
+		);
+	}
+
+	return [
+		{
+			name: assetServerConfig?.name,
+			compatibilityDate: assetServerConfig?.compatibility_date,
+			compatibilityFlags: assetServerConfig?.compatibility_flags,
+			modulesRoot: dirname(assetServerModulePath),
+			modules: [
+				{
+					type: "ESModule",
+					path: assetServerModulePath,
+				},
+			],
+			unsafeDirectSockets: [
+				{
+					host: "127.0.0.1",
+					port: 0,
+				},
+			],
+		},
+	];
 }
 
 export interface ReloadedEventOptions {
