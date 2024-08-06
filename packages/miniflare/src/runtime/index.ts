@@ -4,6 +4,7 @@ import { Abortable, once } from "events";
 import rl from "readline";
 import { Readable } from "stream";
 import { $ as $colors, red } from "kleur/colors";
+import treeKill from "tree-kill";
 import workerdPath, {
 	compatibilityDate as supportedCompatibilityDate,
 } from "workerd";
@@ -160,13 +161,22 @@ export class Runtime {
 	}
 
 	dispose(): Awaitable<void> {
-		// `kill()` uses `SIGTERM` by default. In `workerd`, this waits for HTTP
+		// `ChildProcss.kill()` uses `SIGTERM` by default. In `workerd`, this waits for HTTP
 		// connections to close before exiting. Notably, Chrome sometimes keeps
 		// connections open for about 10s, blocking exit. We'd like `dispose()`/
 		// `setOptions()` to immediately terminate the existing process.
 		// Therefore, use `SIGKILL` which force closes all connections.
 		// See https://github.com/cloudflare/workerd/pull/244.
-		this.#process?.kill("SIGKILL");
+		// `ChildProcss.kill()` doesn't work on Windows so use `tree-kill` instead.
+
+		if (!this.#process) return;
+		assert(this.#process.pid, `workerd process has no process id`);
+
+		treeKill(this.#process.pid, (_error) => {
+			// ignoring errors to match existing behaviour
+			// TODO: handle error (warn/log? reject?)
+		});
+
 		return this.#processExitPromise;
 	}
 }

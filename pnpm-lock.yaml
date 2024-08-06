@@ -1005,6 +1005,9 @@ importers:
       stoppable:
         specifier: ^1.1.0
         version: 1.1.0
+      tree-kill:
+        specifier: ^1.2.2
+        version: 1.2.2
       undici:
         specifier: ^5.28.4
         version: 5.28.4
