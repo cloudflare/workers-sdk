@@ -864,7 +864,8 @@ export async function main(argv: string[]): Promise<void> {
 					"Please ensure it has the correct permissions for this operation.\n";
 				logger.log(chalk.yellow(message));
 			}
-			await whoami();
+			const accountTag = (e as APIError)?.accountTag;
+			await whoami(accountTag);
 		} else if (e instanceof ParseError) {
 			e.notes.push({
 				text: "\nIf you think this is a bug, please open an issue at: https://github.com/cloudflare/workers-sdk/issues/new/choose",
