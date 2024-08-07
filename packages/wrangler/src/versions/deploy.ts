@@ -177,10 +177,10 @@ export async function versionsDeployHandler(args: VersionsDeployArgs) {
 
 	const start = Date.now();
 
-	await spinnerWhile({
+	const { id: deploymentId } = await spinnerWhile({
 		startMessage: `Deploying ${confirmedVersionsToDeploy.length} version(s)`,
-		async promise() {
-			await createDeployment(
+		promise() {
+			return createDeployment(
 				accountId,
 				workerName,
 				confirmedVersionTraffic,
@@ -220,6 +220,8 @@ export async function versionsDeployHandler(args: VersionsDeployArgs) {
 		version: 1,
 		worker_name: workerName,
 		worker_tag: workerTag,
+		// NOTE this deploymentId is related to the gradual rollout of the versions given in the version_traffic.
+		deployment_id: deploymentId,
 		version_traffic: confirmedVersionTraffic,
 	});
 }

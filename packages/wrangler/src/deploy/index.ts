@@ -364,11 +364,12 @@ export async function deployHandler(
 	});
 
 	writeOutput({
-		type: "deployment",
+		type: "deploy",
 		version: 1,
 		worker_name: name ?? null,
 		worker_tag: workerTag,
-		deployment_id: deploymentId,
+		// Note that the `deploymentId` returned from a simple deployment is actually the versionId of the uploaded version.
+		version_id: deploymentId,
 	});
 
 	await metrics.sendMetricsEvent(

@@ -107,7 +107,7 @@ export async function createDeployment(
 	message: string | undefined,
 	force?: boolean
 ) {
-	return await fetchResult(
+	return await fetchResult<{ id: string }>(
 		`/accounts/${accountId}/workers/scripts/${workerName}/deployments${force ? "?force=true" : ""}`,
 		{
 			method: "POST",
