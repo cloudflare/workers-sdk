@@ -78,7 +78,9 @@ type Props = {
 	compatibilityDate: string | undefined;
 	compatibilityFlags: string[] | undefined;
 	legacyAssetPaths: LegacyAssetPaths | undefined;
-	experimentalAssets: ExperimentalAssets | undefined;
+	experimentalAssets:
+		| (ExperimentalAssets & { staticAssetsOnly: boolean })
+		| undefined;
 	vars: Record<string, string> | undefined;
 	defines: Record<string, string> | undefined;
 	alias: Record<string, string> | undefined;
@@ -598,12 +600,15 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			: undefined;
 
 		// Upload assets if experimental assets is being used
-		const experimentalAssetsJwt = await syncExperimentalAssets(
-			accountId,
-			scriptName,
-			props.experimentalAssets?.directory,
-			props.dryRun
-		);
+		// temporarily gate this very explicitly just in case
+		const experimentalAssetsJwt = props.experimentalAssets
+			? await syncExperimentalAssets(
+					accountId,
+					scriptName,
+					props.experimentalAssets?.directory,
+					props.dryRun
+				)
+			: undefined;
 
 		const legacyAssets = await syncLegacyAssets(
 			accountId,
@@ -695,10 +700,12 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			placement,
 			tail_consumers: config.tail_consumers,
 			limits: config.limits,
-			experimental_assets: {
-				jwt: experimentalAssetsJwt,
-				staticAssetsOnly: !!props.entry.staticAssetsOnly,
-			},
+			experimental_assets: props.experimentalAssets
+				? {
+						jwt: experimentalAssetsJwt,
+						staticAssetsOnly: props.experimentalAssets?.staticAssetsOnly,
+					}
+				: undefined,
 		};
 
 		sourceMapSize = worker.sourceMaps?.reduce(

@@ -338,7 +338,7 @@ export interface CfWorkerInit {
 	annotations?: Record<string, string | undefined>;
 	experimental_assets?: {
 		jwt: string | undefined;
-		staticAssetsOnly: boolean;
+		staticAssetsOnly: boolean | undefined;
 	};
 }
 
