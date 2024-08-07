@@ -225,5 +225,38 @@ describe.skipIf(frameworkToTest || isQuarantineMode())(
 				expect(output).toContain(`lang Python`);
 			},
 		);
+
+		test.skipIf(process.platform === "win32")(
+			"Selecting template by description",
+			async () => {
+				const { output } = await runC3(
+					[projectPath, "--no-deploy", "--git=false"],
+					[
+						{
+							matcher: /What would you like to start with\?/,
+							input: {
+								type: "select",
+								searchBy: "description",
+								target:
+									"Select from the most popular full-stack web frameworks",
+							},
+						},
+						{
+							matcher: /Which template would you like to use\?/,
+							input: {
+								type: "select",
+								searchBy: "description",
+								target: "Get started building a basic API on Workers",
+							},
+						},
+					],
+					logStream,
+				);
+
+				expect(projectPath).toExist();
+				expect(output).toContain(`category Demo application`);
+				expect(output).toContain(`type API starter (OpenAPI compliant)`);
+			},
+		);
 	},
 );
