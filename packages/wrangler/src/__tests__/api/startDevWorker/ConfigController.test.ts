@@ -3,6 +3,7 @@ import path from "node:path";
 import dedent from "ts-dedent";
 import { describe, it } from "vitest";
 import { ConfigController } from "../../../api/startDevWorker/ConfigController";
+import { mockConsoleMethods } from "../../helpers/mock-console";
 import { runInTempDir } from "../../helpers/run-in-tmp";
 import { seed } from "../../helpers/seed";
 import type { ConfigUpdateEvent, StartDevWorkerInput } from "../../../api";
@@ -16,6 +17,8 @@ async function waitForConfigUpdate(
 
 describe("ConfigController", () => {
 	runInTempDir();
+	mockConsoleMethods();
+
 	it("should emit configUpdate events with defaults applied", async () => {
 		const controller = new ConfigController();
 		const event = waitForConfigUpdate(controller);
