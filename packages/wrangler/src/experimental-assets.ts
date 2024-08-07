@@ -25,9 +25,9 @@ type InitializeAssetsResponse = {
 };
 
 export type UploadPayloadFile = {
-	name: string;
-	hash: string;
-	contents: string;
+	base64: boolean;
+	key: string;
+	value: string;
 	metadata: {
 		contentType: string;
 	};
@@ -64,7 +64,7 @@ export const syncExperimentalAssets = async (
 	const manifest = await walk(assetDirectory, {});
 
 	// 2. fetch buckets w/ hashes
-	logger.info("🌀 Uploading asset manifest...");
+	logger.info("🌀 Starting asset upload...");
 	const initializeAssetsResponse = await fetchResult<InitializeAssetsResponse>(
 		`/accounts/${accountId}/workers/scripts/${scriptName}/assets-upload-session`,
 		{
@@ -76,30 +76,37 @@ export const syncExperimentalAssets = async (
 
 	// if nothing to upload, return
 	if (initializeAssetsResponse.buckets.flat().length === 0) {
-		logger.info(`✨ Success! (No files to upload)`);
+		if (!initializeAssetsResponse.jwt) {
+			throw new FatalError(
+				"Could not find assets information to attach to deployment. Please try again.",
+				1
+			);
+		}
+		logger.info(`No files to upload. Proceeding with deployment...`);
 		return initializeAssetsResponse.jwt;
 	}
 
 	// 3. fill buckets and upload assets
 	const numberFilesToUpload = initializeAssetsResponse.buckets.flat().length;
-	logger.info(`🌀 Uploading ${numberFilesToUpload} file(s)...`);
+	logger.info(
+		`🌀 Found ${numberFilesToUpload} file${numberFilesToUpload > 1 ? "s" : ""} to upload. Proceeding with upload...`
+	);
 
 	// Create the buckets outside of doUpload so we can retry without losing track of potential duplicate files
 	// But don't add the actual content until uploading so we don't run out of memory
 	const manifestLookup = Object.entries(manifest);
 	let assetLogCount = 0;
-	const bucketSkeletons = initializeAssetsResponse.buckets.map((bucket) => {
+	const assetBuckets = initializeAssetsResponse.buckets.map((bucket) => {
 		return bucket.map((fileHash) => {
-			const manifestEntryIndex = manifestLookup.findIndex(
+			const manifestEntry = manifestLookup.find(
 				(file) => file[1].hash === fileHash
 			);
-			if (manifestEntryIndex === -1) {
+			if (manifestEntry === undefined) {
 				throw new FatalError(
 					`A file was requested that does not appear to exist.`,
 					1
 				);
 			}
-			const manifestEntry = manifestLookup.splice(manifestEntryIndex, 1)[0];
 			// just logging file uploads at the moment...
 			// unsure how to log deletion vs unchanged file ignored/if we want to log this
 			assetLogCount = logAssetUpload(`+ ${manifestEntry[0]}`, assetLogCount);
@@ -110,25 +117,24 @@ export const syncExperimentalAssets = async (
 	const queue = new PQueue({ concurrency: BULK_UPLOAD_CONCURRENCY });
 	let attempts = 0;
 	const start = Date.now();
-	let bucketUploadCount = 0;
 	let completionJwt = "";
 
-	for (const [bucketIndex, bucketSkeleton] of bucketSkeletons.entries()) {
+	for (const [bucketIndex, bucket] of assetBuckets.entries()) {
 		attempts = 0;
 		let gatewayErrors = 0;
 		const doUpload = async (): Promise<UploadResponse> => {
 			// Populate the payload only when actually uploading (this is limited to 3 concurrent uploads at 50 MiB per bucket meaning we'd only load in a max of ~150 MiB)
 			// This is so we don't run out of memory trying to upload the files.
 			const payload: UploadPayloadFile[] = await Promise.all(
-				bucketSkeleton.map(async (manifestEntry) => {
+				bucket.map(async (manifestEntry) => {
 					const absFilePath = path.join(assetDirectory, manifestEntry[0]);
 					return {
-						name: manifestEntry[0],
-						hash: manifestEntry[1].hash,
-						contents: (await readFile(absFilePath)).toString("base64"),
+						base64: true,
+						key: manifestEntry[1].hash,
 						metadata: {
 							contentType: getType(absFilePath) || "application/octet-stream",
 						},
+						value: (await readFile(absFilePath)).toString("base64"),
 					};
 				})
 			);
@@ -178,7 +184,9 @@ export const syncExperimentalAssets = async (
 					return doUpload();
 				} else if (isJwtExpired(initializeAssetsResponse.jwt)) {
 					throw new FatalError(
-						`Asset upload took too long on bucket ${bucketIndex + 1}/${initializeAssetsResponse.buckets.length}. Please try again.`
+						`Upload took too long.\n` +
+							`Asset upload took too long on bucket ${bucketIndex + 1}/${initializeAssetsResponse.buckets.length}. Please try again.\n` +
+							`Assets already uploaded have been saved, so the next attempt will automatically resume from this point.`
 					);
 				} else {
 					throw e;
@@ -188,7 +196,6 @@ export const syncExperimentalAssets = async (
 		// add to queue and run it if we haven't reached concurrency limit
 		void queue.add(() =>
 			doUpload().then((res) => {
-				bucketUploadCount++;
 				completionJwt = res.jwt || completionJwt;
 			})
 		);
@@ -203,12 +210,7 @@ export const syncExperimentalAssets = async (
 	// AUS only returns this in the final bucket upload response
 	if (!completionJwt) {
 		throw new FatalError(
-			"Failed to receive completion signal for file upload. Please try again.",
-			1
-		);
-	} else if (bucketUploadCount !== initializeAssetsResponse.buckets.length) {
-		throw new FatalError(
-			"Upload completion signal received unexpectedly early - we cannot confirm if all files were successfully uploaded. Please try again.",
+			"Failed to complete asset upload. Please try again.",
 			1
 		);
 	}
@@ -218,7 +220,7 @@ export const syncExperimentalAssets = async (
 	const skippedMessage = skipped > 0 ? `(${skipped} already uploaded) ` : "";
 
 	logger.log(
-		`✨ Success! Uploaded ${numberFilesToUpload} file(s) ${skippedMessage}${formatTime(uploadMs)}\n`
+		`✨ Success! Uploaded ${numberFilesToUpload} file${numberFilesToUpload > 1 ? "s" : ""} ${skippedMessage}${formatTime(uploadMs)}\n`
 	);
 
 	return completionJwt;
@@ -248,21 +250,28 @@ const walk = async (
 			} else {
 				if (counter >= MAX_ASSET_COUNT) {
 					throw new UserError(
-						`Max asset count exceeded: ${counter.toLocaleString()} files found.
-						You cannot have more than ${MAX_ASSET_COUNT.toLocaleString()} files in a deployment.
-						Ensure you have specified your build output directory correctly (currently set as ${startingDir}).`
+						`Maximum number of assets exceeded.\n` +
+							`Cloudflare Workers supports up to ${MAX_ASSET_COUNT.toLocaleString()} assets in a version. We found ${counter.toLocaleString()} files in the specified assets directory "${startingDir}".\n` +
+							`Ensure your assets directory contains a maximum of ${MAX_ASSET_COUNT.toLocaleString()} files, and that you have specified your assets directory correctly.`
 					);
 				}
 
 				const name = urlSafe(relativeFilepath);
 				if (filestat.size > MAX_ASSET_SIZE) {
 					throw new UserError(
-						`File too large.
-						Max file size is ${prettyBytes(MAX_ASSET_SIZE, {
-							binary: true,
-						})}\n${name} is ${prettyBytes(filestat.size, {
-							binary: true,
-						})} in size`
+						`Asset too large.\n` +
+							`Cloudflare Workers supports assets with sizes of up to ${prettyBytes(
+								MAX_ASSET_SIZE,
+								{
+									binary: true,
+								}
+							)}. We found a file ${filepath} with a size of ${prettyBytes(
+								filestat.size,
+								{
+									binary: true,
+								}
+							)}.\n` +
+							`Ensure all assets in your assets directory "${startingDir}" conform with the Workers maximum size requirement.`
 					);
 				}
 				manifest[urlSafe(path.join("/", name))] = {
