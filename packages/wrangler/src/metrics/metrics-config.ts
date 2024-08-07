@@ -4,7 +4,7 @@ import path from "node:path";
 import { fetchResult } from "../cfetch";
 import { getConfigCache, saveToConfigCache } from "../config-cache";
 import { confirm } from "../dialogs";
-import { getEnvironmentVariableFactory } from "../environment-variables/factory";
+import { getWranglerSendMetricsFromEnv } from "../environment-variables/misc-variables";
 import { getGlobalWranglerConfigPath } from "../global-wrangler-config-path";
 import { CI } from "../is-ci";
 import isInteractive from "../is-interactive";
@@ -22,10 +22,6 @@ import { getAPIToken } from "../user";
  */
 export const CURRENT_METRICS_DATE = new Date(2022, 6, 4);
 export const USER_ID_CACHE_PATH = "user-id.json";
-
-export const getWranglerSendMetricsFromEnv = getEnvironmentVariableFactory({
-	variableName: "WRANGLER_SEND_METRICS",
-});
 
 export interface MetricsConfigOptions {
 	/**
