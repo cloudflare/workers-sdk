@@ -196,7 +196,9 @@ describe("wrangler", () => {
 		describe("create", () => {
 			function mockCreateRequest(
 				queueName: string,
-				queueSettings: { delivery_delay?: number } | undefined = undefined
+				queueSettings:
+					| { delivery_delay?: number; message_retention_period?: number }
+					| undefined = undefined
 			) {
 				const requests = { count: 0 };
 
@@ -210,6 +212,7 @@ describe("wrangler", () => {
 								queue_name: string;
 								settings: {
 									delivery_delay: number;
+									message_retention_period: number;
 								};
 							};
 							expect(body.queue_name).toEqual(queueName);
@@ -250,7 +253,8 @@ describe("wrangler", () => {
 					  -v, --version                   Show version number  [boolean]
 
 					OPTIONS
-					      --delivery-delay-secs  How long a published message should be delayed for, in seconds. Must be a positive integer  [number]"
+					      --delivery-delay-secs  How long a published message should be delayed for, in seconds. Must be a positive integer  [number]
+						  --message-retention-period-secs  How long to retain a message in the queue, in seconds. Must be a positive integer  [number]"
 				`);
 			});
 
@@ -326,6 +330,165 @@ describe("wrangler", () => {
 				);
 
 				expect(requests.count).toEqual(0);
+			});
+
+			it("should send queue settings with message retention period", async () => {
+				const requests = mockCreateRequest("testQueue", {
+					message_retention_period: 100,
+				});
+				await runWrangler(
+					"queues create testQueue --message-retention-period-secs=100"
+				);
+				expect(std.out).toMatchInlineSnapshot(`
+					"Creating queue testQueue.
+					Created queue testQueue."
+			  `);
+				expect(requests.count).toEqual(1);
+			});
+
+			it("should show an error when two message retention periods are set", async () => {
+				const requests = mockCreateRequest("testQueue", {
+					message_retention_period: 60,
+				});
+
+				await expect(
+					runWrangler(
+						"queues create testQueue --message-retention-period-secs=70 --message-retention-period-secs=80"
+					)
+				).rejects.toThrowErrorMatchingInlineSnapshot(
+					`[Error: Cannot specify --message-retention-period-secs multiple times]`
+				);
+
+				expect(requests.count).toEqual(0);
+			});
+		});
+
+		describe("update", () => {
+			function mockUpdateRequest(
+				queueName: string,
+				queueSettings:
+					| { delivery_delay?: number; message_retention_period?: number }
+					| undefined = undefined
+			) {
+				const requests = { count: 0 };
+
+				msw.use(
+					http.put(
+						"*/accounts/:accountId/queues/:queueName",
+						async ({ request }) => {
+							requests.count += 1;
+
+							const body = (await request.json()) as {
+								queue_name: string;
+								settings: {
+									delivery_delay: number;
+									message_retention_period: number;
+								};
+							};
+							expect(body.queue_name).toEqual(queueName);
+							expect(body.settings).toEqual(queueSettings);
+							return HttpResponse.json({
+								success: true,
+								errors: [],
+								messages: [],
+								result: {
+									queue_name: queueName,
+									created_on: "01-01-2001",
+									modified_on: "01-01-2001",
+								},
+							});
+						},
+						{ once: true }
+					)
+				);
+				return requests;
+			}
+			function mockGetQueueByNameRequest(
+				queueName: string,
+				queueSettings:
+					| { delivery_delay?: number; message_retention_period?: number }
+					| undefined = undefined
+			) {
+				const requests = { count: 0 };
+				msw.use(
+					http.get(
+						"*/accounts/:accountId/queues?*",
+						async ({ request }) => {
+							return HttpResponse.json({
+								success: true,
+								errors: [],
+								messages: [],
+								result: [
+									{
+										queue_name: queueName,
+										created_on: "",
+										producers: [],
+										consumers: [],
+										producers_total_count: 1,
+										consumers_total_count: 0,
+										modified_on: "",
+										settings: {
+											delivery_delay: queueSettings.delivery_delay,
+											message_retention_period:
+												queueSettings.message_retention_period,
+										},
+									},
+								],
+							});
+						},
+						{ once: true }
+					)
+				);
+				return requests;
+			}
+
+			it("should show the correct help text", async () => {
+				await runWrangler("queues update --help");
+				expect(std.err).toMatchInlineSnapshot(`""`);
+				expect(std.out).toMatchInlineSnapshot(`
+					"wrangler queues update <name>
+
+					Update a Queue
+
+					POSITIONALS
+					  name  The name of the queue  [string] [required]
+
+					GLOBAL FLAGS
+					  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
+					  -c, --config                    Path to .toml configuration file  [string]
+					  -e, --env                       Environment to use for operations and .env files  [string]
+					  -h, --help                      Show help  [boolean]
+					  -v, --version                   Show version number  [boolean]
+
+					OPTIONS
+					      --delivery-delay-secs  How long a published message should be delayed for, in seconds. Must be a positive integer  [number]
+					      --message-retention-period-secs  How long to retain a message in the queue, in seconds. Must be a positive integer  [number]"
+
+						  `);
+			});
+
+			it("should update a queue with new message retention period and preserve old delivery delay", async () => {
+				const getrequests = mockGetQueueByNameRequest("testQueue", {
+					delivery_delay: 10,
+					message_retention_period: 100,
+				});
+
+				//update queue with new message retention period
+				const requests = mockUpdateRequest("testQueue", {
+					delivery_delay: 10,
+					message_retention_period: 400,
+				});
+				await runWrangler(
+					"queues update testQueue --message-retention-period-secs=400"
+				);
+
+				expect(requests.count).toEqual(1);
+				expect(getrequests.count).toEqual(1);
+
+				expect(std.out).toMatchInlineSnapshot(`
+					"Updating queue testQueue.
+					Updated queue testQueue."
+			  `);
 			});
 		});
 

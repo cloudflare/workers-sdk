@@ -19,6 +19,7 @@ export interface WorkerService {
 
 export interface QueueSettings {
 	delivery_delay?: number;
+	message_retention_period?: number;
 }
 
 export interface PostQueueResponse {
@@ -105,6 +106,17 @@ export async function createQueue(
 	const accountId = await requireAuth(config);
 	return fetchResult(queuesUrl(accountId), {
 		method: "POST",
+		body: JSON.stringify(body),
+	});
+}
+
+export async function updateQueue(
+	config: Config,
+	body: PostQueueBody
+): Promise<QueueResponse> {
+	const accountId = await requireAuth(config);
+	return fetchResult(queuesUrl(accountId), {
+		method: "PUT", // TODO: PATCH
 		body: JSON.stringify(body),
 	});
 }

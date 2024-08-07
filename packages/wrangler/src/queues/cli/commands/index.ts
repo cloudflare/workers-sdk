@@ -1,6 +1,7 @@
 import { HandleUnauthorizedError } from "../../utils";
 import { consumers } from "./consumer/index";
 import { handler as createHandler, options as createOptions } from "./create";
+import { handler as updateHandler, options as updateOptions } from "./update";
 import { handler as deleteHandler, options as deleteOptions } from "./delete";
 import { handler as listHandler, options as listOptions } from "./list";
 import type { CommonYargsArgv } from "../../../yargs-types";
@@ -13,6 +14,13 @@ export function queues(yargs: CommonYargsArgv) {
 		"Create a Queue",
 		createOptions,
 		createHandler
+	);
+
+	yargs.command(
+		"update <name>",
+		"Update a Queue",
+		updateOptions,
+		updateHandler
 	);
 
 	yargs.command(
