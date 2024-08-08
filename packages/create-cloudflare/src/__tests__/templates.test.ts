@@ -12,7 +12,7 @@ import {
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import {
 	addWranglerToGitIgnore,
-	deriveCorelatedArgs,
+	deriveCorrelatedArgs,
 	downloadRemoteTemplate,
 } from "../templates";
 import type { PathLike } from "fs";
@@ -283,13 +283,13 @@ describe("downloadRemoteTemplate", () => {
 	});
 });
 
-describe("deriveCorelatedArgs", () => {
+describe("deriveCorrelatedArgs", () => {
 	test("should derive the lang as TypeScript if `--ts` is specified", () => {
 		const args: Partial<C3Args> = {
 			ts: true,
 		};
 
-		deriveCorelatedArgs(args);
+		deriveCorrelatedArgs(args);
 
 		expect(args.lang).toBe("ts");
 	});
@@ -299,7 +299,7 @@ describe("deriveCorelatedArgs", () => {
 			ts: false,
 		};
 
-		deriveCorelatedArgs(args);
+		deriveCorrelatedArgs(args);
 
 		expect(args.lang).toBe("js");
 	});
@@ -309,7 +309,7 @@ describe("deriveCorelatedArgs", () => {
 			lang: "ts",
 		};
 
-		deriveCorelatedArgs(args);
+		deriveCorrelatedArgs(args);
 
 		expect(args.lang).toBe("ts");
 		expect(crash).not.toBeCalled();
@@ -318,7 +318,7 @@ describe("deriveCorelatedArgs", () => {
 			ts: true,
 			lang: "ts",
 		};
-		deriveCorelatedArgs(args);
+		deriveCorrelatedArgs(args);
 
 		expect(crash).toBeCalledWith(
 			"The `--ts` argument cannot be specified in conjunction with the `--lang` argument",
