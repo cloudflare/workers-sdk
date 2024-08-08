@@ -16,6 +16,11 @@ export default defineConfig(({ mode }) => {
 				},
 			},
 		},
+		resolve: {
+			alias: {
+				"react/jsx-runtime.js": "react/jsx-runtime",
+			},
+		},
 
 		appType: "spa",
 		base: "/playground",

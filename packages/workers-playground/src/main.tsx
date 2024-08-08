@@ -3,7 +3,7 @@ import "./index.css";
 import { DarkModeSettings, setDarkMode } from "@cloudflare/style-const";
 import { StyleProvider } from "@cloudflare/style-provider";
 import React from "react";
-import { render } from "react-dom";
+import ReactDOM from "react-dom/client";
 import App from "./App";
 import { getRenderer } from "./QuickEditor/felaRenderer";
 
@@ -25,11 +25,10 @@ function syncDarkModeWithSystem() {
 syncDarkModeWithSystem();
 setDarkMode(DarkModeSettings.SYSTEM);
 // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-render(
+ReactDOM.createRoot(document.getElementById("root")!).render(
 	<React.StrictMode>
 		<StyleProvider renderer={felaRenderer}>
 			<App />
 		</StyleProvider>
-	</React.StrictMode>,
-	document.getElementById("root")
+	</React.StrictMode>
 );
