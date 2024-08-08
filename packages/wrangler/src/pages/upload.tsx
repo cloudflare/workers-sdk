@@ -353,11 +353,13 @@ export const upload = async (
 };
 
 // Decode and check that the current JWT has not expired
-function isJwtExpired(token: string): boolean | undefined {
+export const isJwtExpired = (token: string): boolean | undefined => {
 	// During testing we don't use valid JWTs, so don't try and parse them
 	if (
 		typeof vitest !== "undefined" &&
-		(token === "<<funfetti-auth-jwt>>" || token === "<<funfetti-auth-jwt2>>")
+		(token === "<<funfetti-auth-jwt>>" ||
+			token === "<<funfetti-auth-jwt2>>" ||
+			token === "<<aus-completion-token>>")
 	) {
 		return false;
 	}
@@ -374,7 +376,7 @@ function isJwtExpired(token: string): boolean | undefined {
 			throw new Error(`Invalid token: ${e.message}`);
 		}
 	}
-}
+};
 
 function formatTime(duration: number) {
 	return `(${(duration / 1000).toFixed(2)} sec)`;

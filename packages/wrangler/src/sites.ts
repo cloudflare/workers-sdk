@@ -118,7 +118,7 @@ function pluralise(count: number) {
  * @returns a promise for an object mapping the relative paths of the assets to the key of that
  * asset in the KV namespace.
  */
-export async function syncAssets(
+export async function syncLegacyAssets(
 	accountId: string | undefined,
 	scriptName: string,
 	siteAssets: LegacyAssetPaths | undefined,
@@ -434,7 +434,7 @@ function validateAssetKey(assetKey: string) {
  *
  * Primarily this involves converting Windows backslashes to forward slashes.
  */
-function urlSafe(filePath: string): string {
+export function urlSafe(filePath: string): string {
 	return filePath.replace(/\\/g, "/");
 }
 

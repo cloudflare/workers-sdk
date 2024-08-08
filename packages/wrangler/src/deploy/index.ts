@@ -324,6 +324,14 @@ export async function deployHandler(
 		await standardPricingWarning(config);
 	}
 
+	// Flag use of assets without user worker
+	const experimentalAssetsOptions = experimentalAssets
+		? {
+				...experimentalAssets,
+				staticAssetsOnly: !(args.script || config.main),
+			}
+		: undefined;
+
 	const beforeUpload = Date.now();
 	const name = getScriptName(args, config);
 	const { sourceMapSize, deploymentId, workerTag } = await deploy({
@@ -345,7 +353,7 @@ export async function deployHandler(
 		jsxFragment: args.jsxFragment,
 		tsconfig: args.tsconfig,
 		routes: args.routes,
-		experimentalAssets: experimentalAssets?.directory,
+		experimentalAssets: experimentalAssetsOptions,
 		legacyAssetPaths,
 		legacyEnv: isLegacyEnv(config),
 		minify: args.minify,

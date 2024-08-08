@@ -26,6 +26,7 @@ import { addHyphens } from "../deployments";
 import { confirm } from "../dialogs";
 import { getMigrationsToUpload } from "../durable";
 import { UserError } from "../errors";
+import { syncExperimentalAssets } from "../experimental-assets";
 import { logger } from "../logger";
 import { getMetricsUsageHeaders } from "../metrics";
 import { isNavigatorDefined } from "../navigator-user-agent";
@@ -39,7 +40,7 @@ import {
 	putConsumerById,
 	putQueue,
 } from "../queues/client";
-import { syncAssets } from "../sites";
+import { syncLegacyAssets } from "../sites";
 import {
 	getSourceMappedString,
 	maybeRetrieveFileSourceMap,
@@ -51,6 +52,7 @@ import { getZoneForRoute } from "../zones";
 import type { Config } from "../config";
 import type {
 	CustomDomainRoute,
+	ExperimentalAssets,
 	Route,
 	Rule,
 	ZoneIdRoute,
@@ -76,7 +78,9 @@ type Props = {
 	compatibilityDate: string | undefined;
 	compatibilityFlags: string[] | undefined;
 	legacyAssetPaths: LegacyAssetPaths | undefined;
-	experimentalAssets: string | undefined;
+	experimentalAssets:
+		| (ExperimentalAssets & { staticAssetsOnly: boolean })
+		| undefined;
 	vars: Record<string, string> | undefined;
 	defines: Record<string, string> | undefined;
 	alias: Record<string, string> | undefined;
@@ -595,7 +599,18 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 				})
 			: undefined;
 
-		const assets = await syncAssets(
+		// Upload assets if experimental assets is being used
+		// temporarily gate this very explicitly just in case
+		const experimentalAssetsJwt = props.experimentalAssets
+			? await syncExperimentalAssets(
+					accountId,
+					scriptName,
+					props.experimentalAssets?.directory,
+					props.dryRun
+				)
+			: undefined;
+
+		const legacyAssets = await syncLegacyAssets(
 			accountId,
 			// When we're using the newer service environments, we wouldn't
 			// have added the env name on to the script name. However, we must
@@ -610,8 +625,8 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 		const bindings: CfWorkerInit["bindings"] = {
 			kv_namespaces: (config.kv_namespaces || []).concat(
-				assets.namespace
-					? { binding: "__STATIC_CONTENT", id: assets.namespace }
+				legacyAssets.namespace
+					? { binding: "__STATIC_CONTENT", id: legacyAssets.namespace }
 					: []
 			),
 			send_email: config.send_email,
@@ -622,7 +637,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			version_metadata: config.version_metadata,
 			text_blobs: {
 				...config.text_blobs,
-				...(assets.manifest &&
+				...(legacyAssets.manifest &&
 					format === "service-worker" && {
 						__STATIC_CONTENT_MANIFEST: "__STATIC_CONTENT_MANIFEST",
 					}),
@@ -648,11 +663,11 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			},
 		};
 
-		if (assets.manifest) {
+		if (legacyAssets.manifest) {
 			modules.push({
 				name: "__STATIC_CONTENT_MANIFEST",
 				filePath: undefined,
-				content: JSON.stringify(assets.manifest),
+				content: JSON.stringify(legacyAssets.manifest),
 				type: "text",
 			});
 		}
@@ -685,6 +700,12 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			placement,
 			tail_consumers: config.tail_consumers,
 			limits: config.limits,
+			experimental_assets: props.experimentalAssets
+				? {
+						jwt: experimentalAssetsJwt,
+						staticAssetsOnly: props.experimentalAssets?.staticAssetsOnly,
+					}
+				: undefined,
 		};
 
 		sourceMapSize = worker.sourceMaps?.reduce(

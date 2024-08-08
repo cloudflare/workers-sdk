@@ -50,6 +50,7 @@ import { writeWorkerSource } from "./helpers/write-worker-source";
 import { writeWranglerToml } from "./helpers/write-wrangler-toml";
 import type { Config } from "../config";
 import type { CustomDomain, CustomDomainChangeset } from "../deploy/deploy";
+import type { AssetManifest, UploadPayloadFile } from "../experimental-assets";
 import type { KVNamespaceInfo } from "../kv/helpers";
 import type {
 	PostQueueBody,
@@ -2340,7 +2341,7 @@ addEventListener('fetch', event => {});`
 		});
 	});
 
-	describe("asset upload", () => {
+	describe("(legacy) asset upload", () => {
 		it("should upload all the files in the directory specified by `config.site.bucket`", async () => {
 			const assets = [
 				{ filePath: "file-1.txt", content: "Content of file-1" },
@@ -4352,21 +4353,51 @@ addEventListener('fetch', event => {});`
 	});
 
 	describe("--experimental-assets", () => {
-		it("should not require entry point if using --experimental-assets", async () => {
-			const assets = [
-				{ filePath: "file-1.txt", content: "Content of file-1" },
-				{ filePath: "file-2.txt", content: "Content of file-2" },
+		it("should use the directory specified in the CLI over wrangler.toml", async () => {
+			const cliAssets = [
+				{ filePath: "cliAsset.txt", content: "Content of file-1" },
 			];
-			writeAssets(assets);
+			writeAssets(cliAssets, "cli-assets");
+			const configAssets = [
+				{ filePath: "configAsset.txt", content: "Content of file-2" },
+			];
+			writeAssets(configAssets, "config-assets");
 			writeWranglerToml({
-				experimental_assets: { directory: "assets" },
+				experimental_assets: { directory: "config-assets" },
 			});
-			writeWorkerSource();
-			mockUploadWorkerRequest({
-				expectedMainModule: "no-op-assets-worker.js",
-			});
+			const bodies: AssetManifest[] = [];
+			msw.use(
+				http.post<never, AssetManifest>(
+					`*/accounts/some-account-id/workers/scripts/test-name/assets-upload-session`,
+					async ({ request }) => {
+						bodies.push(await request.json());
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: { jwt: "<<aus-completion-token>>", buckets: [] },
+							},
+							{ status: 201 }
+						);
+					}
+				)
+			);
 			mockSubDomainRequest();
-			await runWrangler("deploy");
+			mockUploadWorkerRequest({
+				expectedExperimentalAssets: true,
+				expectedType: "none",
+			});
+			await runWrangler("deploy --experimental-assets cli-assets");
+			expect(bodies.length).toBe(1);
+			expect(bodies[0]).toEqual({
+				manifest: {
+					"/cliAsset.txt": {
+						hash: "0de3dd5df907418e9730fd2bd747bd5e",
+						size: 17,
+					},
+				},
+			});
 		});
 
 		it("should error if config.site and config.experimental_assets are used together", async () => {
@@ -4401,7 +4432,6 @@ addEventListener('fetch', event => {});`
 		});
 
 		it("should error if directory specified by flag --experimental-assets does not exist", async () => {
-			writeWorkerSource();
 			await expect(
 				runWrangler("deploy --experimental-assets abc")
 			).rejects.toThrow(
@@ -4415,11 +4445,325 @@ addEventListener('fetch', event => {});`
 			writeWranglerToml({
 				experimental_assets: { directory: "abc" },
 			});
-			writeWorkerSource();
 			await expect(runWrangler("deploy")).rejects.toThrow(
 				new RegExp(
 					'^The directory specified by the "experimental_assets.directory" field in your configuration file does not exist:[Ss]*'
 				)
+			);
+		});
+
+		it("should resolve assets directory relative to wrangler.toml if using config", async () => {
+			const assets = [{ filePath: "file-1.txt", content: "Content of file-1" }];
+			writeAssets(assets, "some/path/assets");
+			writeWranglerToml(
+				{
+					experimental_assets: { directory: "assets" },
+				},
+				"some/path/wrangler.toml"
+			);
+			const bodies: AssetManifest[] = [];
+			msw.use(
+				http.post<never, AssetManifest>(
+					`*/accounts/some-account-id/workers/scripts/test-name/assets-upload-session`,
+					async ({ request }) => {
+						bodies.push(await request.json());
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: { jwt: "<<aus-completion-token>>", buckets: [[]] },
+							},
+							{ status: 201 }
+						);
+					}
+				)
+			);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedExperimentalAssets: true,
+				expectedType: "none",
+			});
+			await runWrangler("deploy --config some/path/wrangler.toml");
+			expect(bodies.length).toBe(1);
+			expect(bodies[0]).toEqual({
+				manifest: {
+					"/file-1.txt": {
+						hash: "0de3dd5df907418e9730fd2bd747bd5e",
+						size: 17,
+					},
+				},
+			});
+		});
+
+		it("should resolve assets directory relative to cwd if using cli", async () => {
+			const assets = [{ filePath: "file-1.txt", content: "Content of file-1" }];
+			writeAssets(assets, "some/path/assets");
+			const bodies: AssetManifest[] = [];
+			msw.use(
+				http.post<never, AssetManifest>(
+					`*/accounts/some-account-id/workers/scripts/test-name/assets-upload-session`,
+					async ({ request }) => {
+						bodies.push(await request.json());
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: { jwt: "<<aus-completion-token>>", buckets: [[]] },
+							},
+							{ status: 201 }
+						);
+					}
+				)
+			);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedExperimentalAssets: true,
+				expectedType: "none",
+			});
+			process.chdir("some/path");
+			await runWrangler(
+				"deploy --name test-name --compatibility-date 2024-07-31 --experimental-assets assets"
+			);
+			expect(bodies.length).toBe(1);
+			expect(bodies[0]).toEqual({
+				manifest: {
+					"/file-1.txt": {
+						hash: "0de3dd5df907418e9730fd2bd747bd5e",
+						size: 17,
+					},
+				},
+			});
+		});
+
+		it("should upload an asset manifest of the files in the directory specified by --experimental-assets", async () => {
+			const assets = [
+				{ filePath: "file-1.txt", content: "Content of file-1" },
+				{ filePath: "boop/file-2.txt", content: "Content of file-2" },
+			];
+			writeAssets(assets);
+			const bodies: AssetManifest[] = [];
+			msw.use(
+				http.post<never, AssetManifest>(
+					`*/accounts/some-account-id/workers/scripts/test-name/assets-upload-session`,
+					async ({ request }) => {
+						bodies.push(await request.json());
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: { jwt: "<<aus-completion-token>>", buckets: [] },
+							},
+							{ status: 201 }
+						);
+					}
+				)
+			);
+			// skips asset uploading since empty buckets returned
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedExperimentalAssets: true,
+				expectedType: "none",
+			});
+			await runWrangler(
+				"deploy --name test-name --compatibility-date 2024-07-31 --experimental-assets assets"
+			);
+			expect(bodies.length).toBe(1);
+			expect(bodies[0]).toStrictEqual({
+				manifest: {
+					"/file-1.txt": {
+						hash: "0de3dd5df907418e9730fd2bd747bd5e",
+						size: 17,
+					},
+					"/boop/file-2.txt": {
+						hash: "7574a8cd3094a050388ac9663af1c1d6",
+						size: 17,
+					},
+				},
+			});
+		});
+
+		it("should upload an asset manifest of the files in the directory specified by [experimental_assets] config", async () => {
+			const assets = [
+				{ filePath: "file-1.txt", content: "Content of file-1" },
+				{ filePath: "boop/file-2.txt", content: "Content of file-2" },
+			];
+			writeAssets(assets);
+			writeWranglerToml({
+				experimental_assets: { directory: "assets" },
+			});
+			const bodies: AssetManifest[] = [];
+			msw.use(
+				http.post<never, AssetManifest>(
+					`*/accounts/some-account-id/workers/scripts/test-name/assets-upload-session`,
+					async ({ request }) => {
+						bodies.push(await request.json());
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: { jwt: "<<aus-completion-token>>", buckets: [] },
+							},
+							{ status: 201 }
+						);
+					}
+				)
+			);
+			// skips asset uploading since empty buckets returned
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedExperimentalAssets: true,
+				expectedType: "none",
+			});
+			await runWrangler("deploy");
+			expect(bodies.length).toBe(1);
+			expect(bodies[0]).toStrictEqual({
+				manifest: {
+					"/file-1.txt": {
+						hash: "0de3dd5df907418e9730fd2bd747bd5e",
+						size: 17,
+					},
+					"/boop/file-2.txt": {
+						hash: "7574a8cd3094a050388ac9663af1c1d6",
+						size: 17,
+					},
+				},
+			});
+		});
+
+		it("should upload assets in the requested buckets", async () => {
+			const assets = [
+				{ filePath: "file-1.txt", content: "Content of file-1" },
+				{ filePath: "boop/file-2.txt", content: "Content of file-2" },
+				{ filePath: "boop/file-3.txt", content: "Content of file-3" },
+				{ filePath: "file-4.txt", content: "Content of file-4" },
+				{ filePath: "beep/file-5.txt", content: "Content of file-5" },
+				{ filePath: "beep/file-6.txt", content: "Content of file-1" },
+			];
+			writeAssets(assets);
+			writeWranglerToml({
+				experimental_assets: { directory: "assets" },
+			});
+			const bodies: UploadPayloadFile[][] = [];
+			const mockBuckets = [
+				[
+					"0de3dd5df907418e9730fd2bd747bd5e",
+					"7574a8cd3094a050388ac9663af1c1d6",
+				],
+				["ff5016e92f039aa743a4ff7abb3180fa"],
+				["f05e28a3d0bdb90d3cf4bdafe592488f"],
+				["0de3dd5df907418e9730fd2bd747bd5e"],
+			];
+			const uploadHeaders: (string | null)[] = [];
+			msw.use(
+				http.post(
+					`*/accounts/some-account-id/workers/scripts/test-name/assets-upload-session`,
+					async () => {
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: {
+									jwt: "<<aus-token>>",
+									buckets: mockBuckets,
+								},
+							},
+							{ status: 201 }
+						);
+					}
+				),
+				http.post(
+					"*/accounts/some-account-id/workers/assets/upload",
+					async ({ request }) => {
+						const body = (await request.text())
+							.split("\n")
+							.map((x) => JSON.parse(x)) as UploadPayloadFile[];
+						bodies.push(body);
+						uploadHeaders.push(request.headers.get("Authorization"));
+						if (bodies.length === mockBuckets.length) {
+							return HttpResponse.json(
+								{
+									success: true,
+									errors: [],
+									messages: [],
+									result: { jwt: "<<aus-completion-token>>" },
+								},
+								{ status: 201 }
+							);
+						}
+
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: {},
+							},
+							{ status: 202 }
+						);
+					}
+				)
+			);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedExperimentalAssets: true,
+				expectedType: "none",
+			});
+			await runWrangler("deploy");
+			expect(uploadHeaders).toStrictEqual([
+				"Bearer <<aus-token>>",
+				"Bearer <<aus-token>>",
+				"Bearer <<aus-token>>",
+				"Bearer <<aus-token>>",
+			]);
+			expect(bodies.map((b) => b.length).sort()).toEqual([1, 1, 1, 2]);
+			expect(bodies.flatMap((b) => b)).toEqual(
+				expect.arrayContaining([
+					{
+						base64: true,
+						value: "Q29udGVudCBvZiBmaWxlLTE=",
+						key: "0de3dd5df907418e9730fd2bd747bd5e",
+						metadata: {
+							contentType: "text/plain",
+						},
+					},
+					{
+						base64: true,
+						value: "Q29udGVudCBvZiBmaWxlLTI=",
+						key: "7574a8cd3094a050388ac9663af1c1d6",
+						metadata: {
+							contentType: "text/plain",
+						},
+					},
+					{
+						base64: true,
+						value: "Q29udGVudCBvZiBmaWxlLTM=",
+						key: "ff5016e92f039aa743a4ff7abb3180fa",
+						metadata: {
+							contentType: "text/plain",
+						},
+					},
+					{
+						base64: true,
+						value: "Q29udGVudCBvZiBmaWxlLTU=",
+						key: "f05e28a3d0bdb90d3cf4bdafe592488f",
+						metadata: {
+							contentType: "text/plain",
+						},
+					},
+					{
+						base64: true,
+						value: "Q29udGVudCBvZiBmaWxlLTE=",
+						key: "0de3dd5df907418e9730fd2bd747bd5e",
+						metadata: {
+							contentType: "text/plain",
+						},
+					},
+				])
 			);
 		});
 	});

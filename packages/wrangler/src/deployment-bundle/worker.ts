@@ -336,6 +336,10 @@ export interface CfWorkerInit {
 	tail_consumers: CfTailConsumer[] | undefined;
 	limits: CfUserLimits | undefined;
 	annotations?: Record<string, string | undefined>;
+	experimental_assets?: {
+		jwt: string | undefined;
+		staticAssetsOnly: boolean | undefined;
+	};
 }
 
 export interface CfWorkerContext {
