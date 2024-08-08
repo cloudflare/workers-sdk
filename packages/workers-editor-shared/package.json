@@ -23,7 +23,7 @@
 	],
 	"scripts": {
 		"build": "tsc && vite build",
-		"check:lint": "eslint src --max-warnings=0",
+		"check:lint": "eslint lib --max-warnings=0",
 		"check:type": "tsc",
 		"dev": "vite"
 	},
