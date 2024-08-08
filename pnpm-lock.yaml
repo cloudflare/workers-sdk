@@ -1472,8 +1472,8 @@ importers:
         specifier: workspace:*
         version: link:../workers-tsconfig
       '@cloudflare/workers-types':
-        specifier: ^4.20240725.0
-        version: 4.20240725.0
+        specifier: ^4.20240806.0
+        version: 4.20240806.0
       concurrently:
         specifier: ^8.2.2
         version: 8.2.2
