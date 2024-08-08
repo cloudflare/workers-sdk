@@ -161,8 +161,8 @@ export const getTemplateMap = async () => {
 	} as Record<string, TemplateConfig>;
 };
 
-export const inferRelatedArgs = (args: Partial<C3Args>) => {
-	// Infering the type based on the additional arguments provided
+export const deriveCorelatedArgs = (args: Partial<C3Args>) => {
+	// Derive the type based on the additional arguments provided
 	// Both `web-framework` and `remote-template` types are no longer used
 	// They are set only for backwards compatibility
 	if (args.framework) {
@@ -173,7 +173,7 @@ export const inferRelatedArgs = (args: Partial<C3Args>) => {
 		args.type ??= "pre-existing";
 	}
 
-	// Infering the category based on the type
+	// Derive the category based on the type
 	switch (args.type) {
 		case "hello-world":
 		case "hello-world-durable-object":
@@ -208,7 +208,17 @@ export const inferRelatedArgs = (args: Partial<C3Args>) => {
 			break;
 	}
 
-	inferLanguageArg(args);
+	if (args.ts !== undefined) {
+		const language = args.ts ? "ts" : "js";
+
+		if (args.lang !== undefined) {
+			crash(
+				"The `--ts` argument cannot be specified in conjunction with the `--lang` argument",
+			);
+		}
+
+		args.lang = language;
+	}
 };
 
 /**
@@ -503,22 +513,6 @@ export async function copyTemplateFiles(ctx: C3Context) {
 	}
 
 	s.stop(`${brandColor("files")} ${dim("copied to project directory")}`);
-}
-
-export function inferLanguageArg(args: Partial<C3Args>) {
-	if (args.ts === undefined) {
-		return;
-	}
-
-	const language = args.ts ? "ts" : "js";
-
-	if (args.lang !== undefined) {
-		crash(
-			"The `--ts` argument cannot be specified in conjunction with the `--lang` argument",
-		);
-	}
-
-	args.lang = language;
 }
 
 export const processRemoteTemplate = async (args: Partial<C3Args>) => {

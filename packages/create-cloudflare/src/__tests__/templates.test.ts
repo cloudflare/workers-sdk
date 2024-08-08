@@ -12,8 +12,8 @@ import {
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import {
 	addWranglerToGitIgnore,
+	deriveCorelatedArgs,
 	downloadRemoteTemplate,
-	inferLanguageArg,
 } from "../templates";
 import type { PathLike } from "fs";
 import type { C3Args, C3Context } from "types";
@@ -283,33 +283,33 @@ describe("downloadRemoteTemplate", () => {
 	});
 });
 
-describe("inferLanguageArg", () => {
-	test("should infer as TypeScript if `--ts` is specified", async () => {
+describe("deriveCorelatedArgs", () => {
+	test("should derive the lang as TypeScript if `--ts` is specified", () => {
 		const args: Partial<C3Args> = {
 			ts: true,
 		};
 
-		inferLanguageArg(args);
+		deriveCorelatedArgs(args);
 
 		expect(args.lang).toBe("ts");
 	});
 
-	test("should infer as JavaScript if `--ts=false` is specified", async () => {
+	test("should derive the lang as JavaScript if `--ts=false` is specified", () => {
 		const args: Partial<C3Args> = {
 			ts: false,
 		};
 
-		inferLanguageArg(args);
+		deriveCorelatedArgs(args);
 
 		expect(args.lang).toBe("js");
 	});
 
-	test("should crash only if both the lang and ts arguments are specified", async () => {
+	test("should crash if both the lang and ts arguments are specified", () => {
 		let args: Partial<C3Args> = {
 			lang: "ts",
 		};
 
-		inferLanguageArg(args);
+		deriveCorelatedArgs(args);
 
 		expect(args.lang).toBe("ts");
 		expect(crash).not.toBeCalled();
@@ -318,7 +318,7 @@ describe("inferLanguageArg", () => {
 			ts: true,
 			lang: "ts",
 		};
-		inferLanguageArg(args);
+		deriveCorelatedArgs(args);
 
 		expect(crash).toBeCalledWith(
 			"The `--ts` argument cannot be specified in conjunction with the `--lang` argument",
