@@ -80,7 +80,7 @@ export async function handler(
 		const currentQueue = await getQueue(config, args.name);
 		const body = updateBody(args, currentQueue.settings);
 		logger.log(`Updating queue ${args.name}.`);
-		await updateQueue(config, body);
+		await updateQueue(config, body, currentQueue.queue_id);
 		logger.log(`Updated queue ${args.name}.`);
 	} catch (e) {
 		handleFetchError(e as { code?: number });

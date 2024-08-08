@@ -112,10 +112,11 @@ export async function createQueue(
 
 export async function updateQueue(
 	config: Config,
-	body: PostQueueBody
+	body: PostQueueBody,
+	queue_id: string
 ): Promise<QueueResponse> {
 	const accountId = await requireAuth(config);
-	return fetchResult(queuesUrl(accountId), {
+	return fetchResult(queuesUrl(accountId, queue_id), {
 		method: "PUT", // TODO: PATCH
 		body: JSON.stringify(body),
 	});
