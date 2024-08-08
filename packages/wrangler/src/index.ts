@@ -693,10 +693,16 @@ export function createCLIParser(argv: string[]) {
 	wrangler.command(
 		"whoami",
 		"🕵️  Retrieve your user information",
-		() => {},
+		(yargs) => {
+			return yargs.option("account", {
+				type: "string",
+				describe:
+					"Show membership information for the given account (id or name).",
+			});
+		},
 		async (args) => {
 			await printWranglerBanner();
-			await whoami();
+			await whoami(args.account);
 			const config = readConfig(undefined, args);
 			await metrics.sendMetricsEvent("view accounts", {
 				sendMetrics: config.send_metrics,
