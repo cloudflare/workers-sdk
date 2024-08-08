@@ -161,7 +161,7 @@ export const getTemplateMap = async () => {
 	} as Record<string, TemplateConfig>;
 };
 
-export const deriveCorelatedArgs = (args: Partial<C3Args>) => {
+export const deriveCorrelatedArgs = (args: Partial<C3Args>) => {
 	// Derive the type based on the additional arguments provided
 	// Both `web-framework` and `remote-template` types are no longer used
 	// They are set only for backwards compatibility
