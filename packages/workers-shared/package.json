@@ -2,16 +2,50 @@
 	"name": "@cloudflare/workers-shared",
 	"version": "0.1.0",
 	"description": "Package that is used at Cloudflare to power some internal features of Cloudflare Workers.",
+	"keywords": [
+		"cloudflare",
+		"workers",
+		"cloudflare workers"
+	],
+	"homepage": "https://github.com/cloudflare/workers-sdk/tree/main/packages/workers-shared#readme",
+	"bugs": {
+		"url": "https://github.com/cloudflare/workers-sdk/issues"
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/cloudflare/workers-sdk.git",
+		"directory": "packages/workers-shared"
+	},
+	"license": "MIT OR Apache-2.0",
+	"author": "wrangler@cloudflare.com",
+	"files": [
+		"dist"
+	],
 	"scripts": {
-		"build": "pnpm run clean && pnpm run bundle:asset-server",
+		"build": "pnpm run clean && pnpm run bundle:asset-server:prod",
 		"bundle:asset-server": "esbuild asset-server-worker/src/index.ts --format=esm --bundle --outfile=dist/asset-server-worker.mjs --sourcemap=external",
+		"bundle:asset-server:prod": "pnpm run bundle:asset-server --minify",
+		"check:lint": "eslint . --max-warnings=0",
+		"check:type": "tsc",
 		"clean": "rimraf dist",
 		"dev": "pnpm run clean && concurrently -n bundle:asset-server -c blue \"pnpm run bundle:asset-server --watch\""
 	},
 	"devDependencies": {
+		"@cloudflare/eslint-config-worker": "workspace:*",
+		"@cloudflare/workers-tsconfig": "workspace:*",
+		"@cloudflare/workers-types": "^4.20240806.0",
 		"concurrently": "^8.2.2",
 		"esbuild": "0.17.19",
 		"rimraf": "^6.0.1",
 		"typescript": "^5.5.4"
+	},
+	"engines": {
+		"node": ">=16.7.0"
+	},
+	"volta": {
+		"extends": "../../package.json"
+	},
+	"workers-sdk": {
+		"prerelease": true
 	}
 }

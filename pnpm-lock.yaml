@@ -1465,6 +1465,15 @@ importers:
 
   packages/workers-shared:
     devDependencies:
+      '@cloudflare/eslint-config-worker':
+        specifier: workspace:*
+        version: link:../eslint-config-worker
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:*
+        version: link:../workers-tsconfig
+      '@cloudflare/workers-types':
+        specifier: ^4.20240806.0
+        version: 4.20240806.0
       concurrently:
         specifier: ^8.2.2
         version: 8.2.2

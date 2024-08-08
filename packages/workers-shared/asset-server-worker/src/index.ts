@@ -1,5 +1,5 @@
 export default {
-	async fetch(request, env) {
+	async fetch() {
 		return new Response("Hello from Asset Server Worker 🚀");
 	},
 };
