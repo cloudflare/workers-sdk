@@ -23,11 +23,7 @@ import {
 
 export const QueuesOptionsSchema = z.object({
 	queueProducers: z
-		.union([
-			z.record(QueueProducerOptionsSchema),
-			z.string().array(),
-			z.record(z.string()),
-		])
+		.union([z.record(QueueProducerOptionsSchema), z.string().array()])
 		.optional(),
 	queueConsumers: z
 		.union([z.record(QueueConsumerOptionsSchema), z.string().array()])
