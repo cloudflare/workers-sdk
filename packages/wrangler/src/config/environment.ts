@@ -32,8 +32,11 @@ export type Route =
  * Configuration in wrangler for Cloudchamber
  */
 export type CloudchamberConfig = {
+	image?: string;
+	location?: string;
 	vcpu?: number;
 	memory?: string;
+	ipv4?: boolean;
 };
 
 /**

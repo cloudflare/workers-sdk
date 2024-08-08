@@ -105,8 +105,8 @@ export async function modifyCommand(
 		const deployment = await DeploymentsService.modifyDeploymentV2(
 			modifyArgs.deploymentId,
 			{
-				image: modifyArgs.image,
-				location: modifyArgs.location,
+				image: modifyArgs.image ?? config.cloudchamber.image,
+				location: modifyArgs.location ?? config.cloudchamber.location,
 				environment_variables: environmentVariables,
 				labels: labels,
 				ssh_public_key_ids: modifyArgs.sshPublicKeyId,
@@ -186,8 +186,9 @@ async function handleModifyCommand(
 	const deployment = await pickDeployment(args.deploymentId);
 
 	const keys = await handleSSH(args, config, deployment);
+	const givenImage = args.image ?? config.cloudchamber.image;
 	const imagePrompt = await processArgument<string>(
-		{ image: args.image },
+		{ image: givenImage },
 		"image",
 		{
 			question: modifyImageQuestion,
@@ -200,15 +201,18 @@ async function handleModifyCommand(
 					return "we don't allow :latest tags";
 				}
 			},
-			defaultValue: args.image ?? "",
-			initialValue: args.image ?? "",
+			defaultValue: givenImage ?? "",
+			initialValue: givenImage ?? "",
 			helpText: "if you don't want to modify the image, press return",
 			type: "text",
 		}
 	);
 	const image = !imagePrompt ? undefined : imagePrompt;
 
-	const locationPick = await getLocation(args, { skipLocation: true });
+	const locationPick = await getLocation(
+		{ location: args.location ?? config.cloudchamber.location },
+		{ skipLocation: true }
+	);
 	const location = locationPick === "Skip" ? undefined : locationPick;
 
 	const environmentVariables = collectEnvironmentVariables(

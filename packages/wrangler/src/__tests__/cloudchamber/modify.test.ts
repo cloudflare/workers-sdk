@@ -9,6 +9,43 @@ import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 import { mockAccount, setWranglerConfig } from "./utils";
 
+function mockDeployment() {
+	msw.use(
+		http.patch(
+			"*/deployments/1234/v2",
+			async ({ request }) => {
+				expect(await request.text()).toMatchInlineSnapshot(
+					`"{\\"image\\":\\"hello:modify\\",\\"location\\":\\"sfo06\\",\\"environment_variables\\":[{\\"name\\":\\"HELLO\\",\\"value\\":\\"WORLD\\"},{\\"name\\":\\"YOU\\",\\"value\\":\\"CONQUERED\\"}],\\"vcpu\\":3,\\"memory\\":\\"40MB\\"}"`
+				);
+				return HttpResponse.json(MOCK_DEPLOYMENTS_COMPLEX[0]);
+			},
+			{ once: true }
+		)
+	);
+}
+
+const EXPECTED_RESULT = `
+		"{
+		    \\"id\\": \\"1\\",
+		    \\"type\\": \\"default\\",
+		    \\"created_at\\": \\"123\\",
+		    \\"account_id\\": \\"123\\",
+		    \\"vcpu\\": 4,
+		    \\"memory\\": \\"400MB\\",
+		    \\"version\\": 1,
+		    \\"image\\": \\"hello\\",
+		    \\"location\\": {
+		        \\"name\\": \\"sfo06\\",
+		        \\"enabled\\": true
+		    },
+		    \\"network\\": {
+		        \\"ipv4\\": \\"1.1.1.1\\"
+		    },
+		    \\"placements_ref\\": \\"http://ref\\",
+		    \\"node_group\\": \\"metal\\"
+		}"
+	`;
+
 describe("cloudchamber modify", () => {
 	const std = mockConsoleMethods();
 	const { setIsTTY } = useMockIsTTY();
@@ -55,45 +92,30 @@ describe("cloudchamber modify", () => {
 	it("should modify deployment (detects no interactivity)", async () => {
 		setIsTTY(false);
 		setWranglerConfig({});
-		msw.use(
-			http.patch(
-				"*/deployments/1234/v2",
-				async ({ request }) => {
-					expect(await request.text()).toMatchInlineSnapshot(
-						`"{\\"image\\":\\"hello:modify\\",\\"environment_variables\\":[{\\"name\\":\\"HELLO\\",\\"value\\":\\"WORLD\\"},{\\"name\\":\\"YOU\\",\\"value\\":\\"CONQUERED\\"}],\\"vcpu\\":3,\\"memory\\":\\"40MB\\"}"`
-					);
-					return HttpResponse.json(MOCK_DEPLOYMENTS_COMPLEX[0]);
-				},
-				{ once: true }
-			)
-		);
+		mockDeployment();
 		await runWrangler(
-			"cloudchamber modify 1234 --image hello:modify --var HELLO:WORLD --var YOU:CONQUERED --vcpu 3 --memory 40MB"
+			"cloudchamber modify 1234 --image hello:modify --location sfo06 --var HELLO:WORLD --var YOU:CONQUERED --vcpu 3 --memory 40MB"
 		);
 		expect(std.err).toMatchInlineSnapshot(`""`);
 		// so testing the actual UI will be harder than expected
 		// TODO: think better on how to test UI actions
-		expect(std.out).toMatchInlineSnapshot(`
-		"{
-		    \\"id\\": \\"1\\",
-		    \\"type\\": \\"default\\",
-		    \\"created_at\\": \\"123\\",
-		    \\"account_id\\": \\"123\\",
-		    \\"vcpu\\": 4,
-		    \\"memory\\": \\"400MB\\",
-		    \\"version\\": 1,
-		    \\"image\\": \\"hello\\",
-		    \\"location\\": {
-		        \\"name\\": \\"sfo06\\",
-		        \\"enabled\\": true
-		    },
-		    \\"network\\": {
-		        \\"ipv4\\": \\"1.1.1.1\\"
-		    },
-		    \\"placements_ref\\": \\"http://ref\\",
-		    \\"node_group\\": \\"metal\\"
-		}"
-	`);
+		expect(std.out).toMatchInlineSnapshot(EXPECTED_RESULT);
+	});
+
+	it("should modify deployment with wrangler args (detects no interactivity)", async () => {
+		setIsTTY(false);
+		setWranglerConfig({
+			image: "hello:modify",
+			vcpu: 3,
+			memory: "40MB",
+			location: "sfo06",
+		});
+		mockDeployment();
+		await runWrangler(
+			"cloudchamber modify 1234 --var HELLO:WORLD --var YOU:CONQUERED"
+		);
+		expect(std.err).toMatchInlineSnapshot(`""`);
+		expect(std.out).toMatchInlineSnapshot(EXPECTED_RESULT);
 	});
 
 	it("can't modify deployment due to lack of deploymentId (json)", async () => {
