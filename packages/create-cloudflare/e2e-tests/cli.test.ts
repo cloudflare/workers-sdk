@@ -238,7 +238,7 @@ describe.skipIf(frameworkToTest || isQuarantineMode())(
 								type: "select",
 								searchBy: "description",
 								target:
-									"Select from the most popular full-stack web frameworks",
+									"Select from a range of starter applications using various Cloudflare products",
 							},
 						},
 						{

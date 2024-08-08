@@ -214,13 +214,13 @@ export const selectTemplate = async (args: Partial<C3Args>) => {
 			{
 				label: "Framework Starter",
 				value: "web-framework",
-				description:
-					"Select from a range of starter applications using various Cloudflare products",
+				description: "Select from the most popular full-stack web frameworks",
 			},
 			{
 				label: "Demo application",
 				value: "demo",
-				description: "Select from the most popular full-stack web frameworks",
+				description:
+					"Select from a range of starter applications using various Cloudflare products",
 			},
 			{
 				label: "Template from a Github repo",
