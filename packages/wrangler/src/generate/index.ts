@@ -5,6 +5,9 @@ import { UserError } from "../errors";
 import { cloneIntoDirectory, initializeGit } from "../git-client";
 import { CommandLineArgsError, printWranglerBanner } from "../index";
 import { initHandler } from "../init";
+import { getC3CommandFromEnv } from "../environment-variables/misc-variables";
+import { getPackageManager } from "../package-manager";
+import * as shellquote from "../utils/shell-quote";
 import { logger } from "../logger";
 import type {
 	CommonYargsArgv,
@@ -41,10 +44,16 @@ export async function generateHandler(args: GenerateArgs) {
 	logger.warn(
 		`Deprecation: \`wrangler generate\` is deprecated.\n` +
 			`Running \`npm create cloudflare@latest\` for you instead.\n` +
-			`Any arguments passed to \`wrangler generate\` will be ignored.\n\n` +
+			`Any arguments passed to \`wrangler generate\` will be ignored.\n\n`
 	);
 
-	return initHandler(args);
+	const packageManager = await getPackageManager(process.cwd());
+
+	const c3Arguments = [
+		...shellquote.parse(getC3CommandFromEnv()),
+	];
+
+	return execa(packageManager.type, c3Arguments, { stdio: "inherit" });
 }
 
 /**
