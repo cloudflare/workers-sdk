@@ -78,7 +78,7 @@ async function printMembershipInfo(user: UserInfo, accountFilter?: string) {
 			return;
 		}
 		logger.log(
-			`🎢 Membership roles in "${selectedAccount.name}": Contact account admin if you need more roles.`
+			`🎢 Membership roles in "${selectedAccount.name}": Contact account super admin to change your permissions.`
 		);
 		for (const role of membershipRoles) {
 			logger.log(`- ${role}`);
