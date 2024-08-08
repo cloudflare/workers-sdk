@@ -140,7 +140,8 @@ export async function initHandler() {
 		...shellquote.parse(getC3CommandFromEnv()),
 	];
 
-	return execa(packageManager.type, c3Arguments, { stdio: "inherit" });
+	await execa(packageManager.type, c3Arguments, { stdio: "inherit" });
+	return;
 }
 
 async function getWorkerConfig(

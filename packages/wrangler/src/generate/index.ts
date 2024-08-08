@@ -47,7 +47,8 @@ export async function generateHandler() {
 		...shellquote.parse(getC3CommandFromEnv()),
 	];
 
-	return execa(packageManager.type, c3Arguments, { stdio: "inherit" });
+	await execa(packageManager.type, c3Arguments, { stdio: "inherit" });
+	return;
 }
 
 /**
