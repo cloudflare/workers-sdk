@@ -100,11 +100,11 @@ describe("writeOutput()", () => {
 				log_file_path: "some/log/path.log",
 			});
 			writeOutput({
-				type: "deployment",
+				type: "deploy",
 				version: 1,
 				worker_name: "Worker",
 				worker_tag: "ABCDE12345",
-				deployment_id: "1234",
+				version_id: "1234",
 			});
 
 			const outputFile = readFileSync(WRANGLER_OUTPUT_FILE_PATH, "utf8");
@@ -117,11 +117,11 @@ describe("writeOutput()", () => {
 					log_file_path: "some/log/path.log",
 				},
 				{
-					type: "deployment",
+					type: "deploy",
 					version: 1,
 					worker_name: "Worker",
 					worker_tag: "ABCDE12345",
-					deployment_id: "1234",
+					version_id: "1234",
 				},
 			]);
 		} finally {
@@ -178,11 +178,11 @@ describe("writeOutput()", () => {
 				log_file_path: "some/log/path.log",
 			});
 			writeOutput({
-				type: "deployment",
+				type: "deploy",
 				version: 1,
 				worker_name: "Worker",
 				worker_tag: "ABCDE12345",
-				deployment_id: "1234",
+				version_id: "1234",
 			});
 
 			const outputFilePaths = readdirSync("output");
@@ -201,11 +201,11 @@ describe("writeOutput()", () => {
 					log_file_path: "some/log/path.log",
 				},
 				{
-					type: "deployment",
+					type: "deploy",
 					version: 1,
 					worker_name: "Worker",
 					worker_tag: "ABCDE12345",
-					deployment_id: "1234",
+					version_id: "1234",
 				},
 			]);
 		} finally {

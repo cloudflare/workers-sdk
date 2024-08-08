@@ -76,30 +76,44 @@ export type StampedOutputEntry = { timestamp: string } & OutputEntry;
 export interface OutputEntrySession
 	extends OutputEntryBase<"wrangler-session"> {
 	version: 1;
+	/** The semver version string taken from Wrangler's package.json. */
 	wrangler_version: string;
+	/** The arguments passed to Wrangler. */
 	command_line_args: string[];
+	/** The absolute path to a file that contains debug logs for this Wrangler instance. */
 	log_file_path: string;
 }
 
-export interface OutputEntryDeployment extends OutputEntryBase<"deployment"> {
+export interface OutputEntryDeployment extends OutputEntryBase<"deploy"> {
 	version: 1;
+	/** The name of the Worker. */
 	worker_name: string | null;
+	/** The GUID that identifies the Worker. This never changes even if the name is changed. */
 	worker_tag: string | null;
-	deployment_id: string | null;
+	/** A GUID that identifies this deployed version of the Worker. This version is associated with an automatically created deployment, with this version set at 100%. */
+	version_id: string | null;
 }
 
 export interface OutputEntryVersionUpload
 	extends OutputEntryBase<"version-upload"> {
 	version: 1;
+	/** The name of the Worker. */
 	worker_name: string | null;
+	/** The GUID that identifies the Worker. This never changes even if the name is changed. */
 	worker_tag: string | null;
+	/** A GUID that identifies this uploaded, but not yet deployed, version of the Worker. This version will need to be "deployed" to receive traffic. */
 	version_id: string | null;
 }
 
 export interface OutputEntryVersionDeployment
 	extends OutputEntryBase<"version-deploy"> {
 	version: 1;
+	/** The name of the Worker. */
 	worker_name: string | null;
+	/** The GUID that identifies the Worker. This never changes even if the name is changed. */
 	worker_tag: string | null;
+	/** The ID of the gradual rollout deployment. */
+	deployment_id: string;
+	/** The percentage of traffic that goes to each version. */
 	version_traffic: Map<string, number>;
 }
