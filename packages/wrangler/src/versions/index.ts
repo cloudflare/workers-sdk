@@ -11,6 +11,7 @@ import {
 } from "../index";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
+import { writeOutput } from "../output";
 import { requireAuth } from "../user";
 import { collectKeyValues } from "../utils/collectKeyValues";
 import { versionsDeployHandler, versionsDeployOptions } from "./deploy";
@@ -241,12 +242,13 @@ export async function versionsUploadHandler(
 	const cliAlias = collectKeyValues(args.alias);
 
 	const accountId = args.dryRun ? undefined : await requireAuth(config);
+	const name = getScriptName(args, config);
 
 	await standardPricingWarning(config);
-	await versionsUpload({
+	const { versionId, workerTag } = await versionsUpload({
 		config,
 		accountId,
-		name: getScriptName(args, config),
+		name,
 		rules: getRules(config),
 		entry,
 		legacyEnv: isLegacyEnv(config),
@@ -274,6 +276,14 @@ export async function versionsUploadHandler(
 
 		tag: args.tag,
 		message: args.message,
+	});
+
+	writeOutput({
+		type: "version-upload",
+		version: 1,
+		worker_name: name ?? null,
+		worker_tag: workerTag,
+		version_id: versionId,
 	});
 }
 

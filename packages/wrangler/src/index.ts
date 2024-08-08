@@ -42,6 +42,7 @@ import { kvBulk, kvKey, kvNamespace, registerKvSubcommands } from "./kv";
 import { logBuildFailure, logger, LOGGER_LEVELS } from "./logger";
 import * as metrics from "./metrics";
 import { mTlsCertificateCommands } from "./mtls-certificate/cli";
+import { writeOutput } from "./output";
 import { pages } from "./pages";
 import { APIError, formatMessage, ParseError } from "./parse";
 import { pubSubCommands } from "./pubsub/pubsub-commands";
@@ -65,6 +66,7 @@ import {
 	logout,
 	validateScopeKeys,
 } from "./user";
+import { debugLogFilepath } from "./utils/log-file";
 import { vectorize } from "./vectorize/index";
 import registerVersionsSubcommands from "./versions";
 import registerVersionsDeploymentsSubcommands from "./versions/deployments";
@@ -253,6 +255,16 @@ export function createCLIParser(argv: string[]) {
 					process.env[key] = value;
 				}
 			}
+
+			// Write a session entry to the output file (if there is one).
+			writeOutput({
+				type: "wrangler-session",
+				version: 1,
+				wrangler_version: wranglerVersion,
+				command_line_args: argv,
+				log_file_path: debugLogFilepath,
+			});
+
 			return true;
 		})
 		.epilogue(

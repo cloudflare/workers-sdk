@@ -310,35 +310,44 @@ Update them to point to this script instead?`;
 	return domains.map((domain) => renderRoute(domain));
 }
 
-export default async function deploy(
-	props: Props
-): Promise<{ sourceMapSize?: number }> {
+export default async function deploy(props: Props): Promise<{
+	sourceMapSize?: number;
+	deploymentId: string | null;
+	workerTag: string | null;
+}> {
 	// TODO: warn if git/hg has uncommitted changes
 	const { config, accountId, name } = props;
+	let workerTag: string | null = null;
+	let deploymentId: string | null = null;
+
 	if (!props.dispatchNamespace && accountId && name) {
 		try {
-			const serviceMetaData = await fetchResult(
-				`/accounts/${accountId}/workers/services/${name}`
-			);
-			const { default_environment } = serviceMetaData as {
+			const serviceMetaData = await fetchResult<{
 				default_environment: {
-					script: { last_deployed_from: "dash" | "wrangler" | "api" };
+					script: {
+						tag: string;
+						last_deployed_from: "dash" | "wrangler" | "api";
+					};
 				};
-			};
+			}>(`/accounts/${accountId}/workers/services/${name}`);
+			const {
+				default_environment: { script },
+			} = serviceMetaData;
+			workerTag = script.tag;
 
-			if (default_environment.script.last_deployed_from === "dash") {
+			if (script.last_deployed_from === "dash") {
 				logger.warn(
 					`You are about to publish a Workers Service that was last published via the Cloudflare Dashboard.\nEdits that have been made via the dashboard will be overridden by your local code and config.`
 				);
 				if (!(await confirm("Would you like to continue?"))) {
-					return {};
+					return { deploymentId, workerTag };
 				}
-			} else if (default_environment.script.last_deployed_from === "api") {
+			} else if (script.last_deployed_from === "api") {
 				logger.warn(
 					`You are about to publish a Workers Service that was last updated via the script API.\nEdits that have been made via the script API will be overridden by your local code and config.`
 				);
 				if (!(await confirm("Would you like to continue?"))) {
-					return {};
+					return { deploymentId, workerTag };
 				}
 			}
 		} catch (e) {
@@ -440,15 +449,13 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			? `/accounts/${accountId}/workers/services/${scriptName}/environments/${envName}`
 			: `/accounts/${accountId}/workers/scripts/${scriptName}`;
 
-	let deploymentId: string | null = null;
-
 	const { format } = props.entry;
 
 	if (!props.dispatchNamespace && prod && accountId && scriptName) {
 		const yes = await confirmLatestDeploymentOverwrite(accountId, scriptName);
 		if (!yes) {
 			cancel("Aborting deploy...");
-			return {};
+			return { deploymentId, workerTag };
 		}
 	}
 
@@ -849,7 +856,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 	if (props.dryRun) {
 		logger.log(`--dry-run: exiting now.`);
-		return {};
+		return { deploymentId, workerTag };
 	}
 	assert(accountId, "Missing accountId");
 
@@ -860,7 +867,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 	// Early exit for WfP since it doesn't need the below code
 	if (props.dispatchNamespace !== undefined) {
 		deployWfpUserWorker(props.dispatchNamespace, deploymentId);
-		return {};
+		return { deploymentId, workerTag };
 	}
 
 	// deploy triggers
@@ -871,7 +878,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 	logVersionIdChange();
 
-	return { sourceMapSize };
+	return { sourceMapSize, deploymentId, workerTag };
 }
 
 function deployWfpUserWorker(

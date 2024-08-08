@@ -11,6 +11,7 @@ import {
 } from "../index";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
+import { writeOutput } from "../output";
 import { getLegacyAssetPaths, getSiteAssetPaths } from "../sites";
 import { requireAuth } from "../user";
 import { collectKeyValues } from "../utils/collectKeyValues";
@@ -332,10 +333,11 @@ export async function deployHandler(
 		: undefined;
 
 	const beforeUpload = Date.now();
-	const { sourceMapSize } = await deploy({
+	const name = getScriptName(args, config);
+	const { sourceMapSize, deploymentId, workerTag } = await deploy({
 		config,
 		accountId,
-		name: getScriptName(args, config),
+		name,
 		rules: getRules(config),
 		entry,
 		env: args.env,
@@ -367,6 +369,14 @@ export async function deployHandler(
 		projectRoot,
 		dispatchNamespace: args.dispatchNamespace,
 		experimentalVersions: args.experimentalVersions,
+	});
+
+	writeOutput({
+		type: "deployment",
+		version: 1,
+		worker_name: name ?? null,
+		worker_tag: workerTag,
+		deployment_id: deploymentId,
 	});
 
 	await metrics.sendMetricsEvent(
