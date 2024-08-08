@@ -46,9 +46,11 @@ const ResponseView: React.FC<Props> = ({ response, loading }) => {
 		status: string;
 		statusCode: number;
 	} => {
+		const status = response.headers.get("cf-ew-status") || "";
+		const statusCode = window.parseInt(status, 10);
 		return {
-			status: response.headers.get("cf-ew-status") || "",
-			statusCode: window.parseInt(status, 10),
+			status,
+			statusCode,
 		};
 	}, [response]);
 

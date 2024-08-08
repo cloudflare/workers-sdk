@@ -1,12 +1,14 @@
 import { Loading } from "@cloudflare/component-loading";
 import { Div } from "@cloudflare/elements";
 import { theme } from "@cloudflare/style-const";
+import {
+	useInjectSources,
+	useRefreshableIframe,
+} from "@cloudflare/workers-editor-shared";
 import { useContext, useMemo } from "react";
 import FrameErrorBoundary, { FrameError } from "../FrameErrorBoundary";
 import { ServiceContext } from "../QuickEditor";
 import UrlBar from "./UrlBar";
-import { useInjectSources } from "./useInjectSources";
-import { useRefreshableIframe } from "./useRefreshableIframe";
 
 export function getPreviewIframeUrl(edgePreview: string, previewUrl: string) {
 	const url = new URL(edgePreview);

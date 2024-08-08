@@ -1,12 +1,12 @@
-import {
+import React, {
 	useContext,
 	useEffect,
 	useLayoutEffect,
 	useRef,
 	useState,
 } from "react";
-import Frame from "../Frame";
-import { DragContext } from "../SplitPane";
+import Frame from "./Frame";
+import { DragContext } from "./SplitPane";
 
 /**
  * A wrapper around an iframe that loads any changes to the src in the background,
