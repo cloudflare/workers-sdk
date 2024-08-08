@@ -1,13 +1,13 @@
 import { readConfig } from "../../../config";
 import { CommandLineArgsError } from "../../../index";
 import { logger } from "../../../logger";
-import { createQueue } from "../../client";
+import { getQueue, updateQueue } from "../../client";
 import { handleFetchError } from "../../utils";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
 } from "../../../yargs-types";
-import type { PostQueueBody } from "../../client";
+import type { PostQueueBody, QueueSettings } from "../../client";
 
 export function options(yargs: CommonYargsArgv) {
 	return yargs
@@ -30,8 +30,9 @@ export function options(yargs: CommonYargsArgv) {
 		});
 }
 
-function createBody(
-	args: StrictYargsOptionsToInterface<typeof options>
+function updateBody(
+	args: StrictYargsOptionsToInterface<typeof options>,
+	currentSettings?: QueueSettings
 ): PostQueueBody {
 	const body: PostQueueBody = {
 		queue_name: args.name,
@@ -53,10 +54,15 @@ function createBody(
 
 	if (args.deliveryDelaySecs != undefined) {
 		body.settings.delivery_delay = args.deliveryDelaySecs;
+	} else if (currentSettings?.delivery_delay != undefined) {
+		body.settings.delivery_delay = currentSettings.delivery_delay;
 	}
 
 	if (args.messageRetentionPeriodSecs != undefined) {
 		body.settings.message_retention_period = args.messageRetentionPeriodSecs;
+	} else if (currentSettings?.message_retention_period != undefined) {
+		body.settings.message_retention_period =
+			currentSettings.message_retention_period;
 	}
 
 	if (Object.keys(body.settings).length === 0) {
@@ -70,11 +76,12 @@ export async function handler(
 	args: StrictYargsOptionsToInterface<typeof options>
 ) {
 	const config = readConfig(args.config, args);
-	const body = createBody(args);
 	try {
-		logger.log(`Creating queue ${args.name}.`);
-		await createQueue(config, body);
-		logger.log(`Created queue ${args.name}.`);
+		const currentQueue = await getQueue(config, args.name);
+		const body = updateBody(args, currentQueue.settings);
+		logger.log(`Updating queue ${args.name}.`);
+		await updateQueue(config, body);
+		logger.log(`Updated queue ${args.name}.`);
 	} catch (e) {
 		handleFetchError(e as { code?: number });
 	}
