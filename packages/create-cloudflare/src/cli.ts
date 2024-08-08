@@ -182,7 +182,7 @@ const deploy = async (ctx: C3Context) => {
 
 	await maybeOpenBrowser(ctx);
 
-	endSection("See you again soon!");
+	endSection("Done");
 };
 
 const printBanner = () => {
