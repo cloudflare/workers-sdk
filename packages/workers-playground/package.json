@@ -46,7 +46,6 @@
 		"@types/glob-to-regexp": "^0.4.1",
 		"@types/react": "^17",
 		"@types/react-dom": "^17",
-		"@types/react-tabs": "^2.3.4",
 		"@types/uuid": "^9.0.2",
 		"@typescript-eslint/eslint-plugin": "^6.9.0",
 		"@typescript-eslint/parser": "^6.9.0",

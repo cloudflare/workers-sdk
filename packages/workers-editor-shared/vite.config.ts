@@ -23,29 +23,27 @@ function addJsxRuntimeExtension() {
 }
 
 // https://vitejs.dev/config/
-export default defineConfig(({ mode }) => {
-	return {
-		plugins: [
-			pluginRewriteAll(),
-			react(),
-			dts({ rollupTypes: true }),
-			addJsxRuntimeExtension(),
-		],
-		build: {
-			chunkSizeWarningLimit: 1000,
-			lib: {
-				entry: resolve(__dirname, "lib/index.ts"),
-				formats: ["es", "cjs"],
-				fileName: "index",
-			},
-			rollupOptions: {
-				external: [
-					"react",
-					// react/jsx-runtime is externalised by the addJsxRuntimeExtension() plugin
-					"@cloudflare/style-container",
-					"@cloudflare/style-const",
-				],
-			},
+export default defineConfig({
+	plugins: [
+		pluginRewriteAll(),
+		react(),
+		dts({ rollupTypes: true }),
+		addJsxRuntimeExtension(),
+	],
+	build: {
+		chunkSizeWarningLimit: 1000,
+		lib: {
+			entry: resolve(__dirname, "lib/index.ts"),
+			formats: ["es"],
+			fileName: "index",
 		},
-	};
+		rollupOptions: {
+			external: [
+				"react",
+				// react/jsx-runtime is externalised by the addJsxRuntimeExtension() plugin
+				"@cloudflare/style-container",
+				"@cloudflare/style-const",
+			],
+		},
+	},
 });
