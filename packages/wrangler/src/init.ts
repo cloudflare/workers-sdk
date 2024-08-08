@@ -1,26 +1,10 @@
-import * as fs from "node:fs";
-import { mkdir, writeFile } from "node:fs/promises";
-import path, { dirname } from "node:path";
-import TOML from "@iarna/toml";
 import { execa } from "execa";
-import { findUp } from "find-up";
-import { version as wranglerVersion } from "../package.json";
 import { fetchResult } from "./cfetch";
 import { fetchWorker } from "./cfetch/internal";
-import { readConfig } from "./config";
 import { getDatabaseInfoFromId } from "./d1/utils";
-import { confirm, select } from "./dialogs";
 import { getC3CommandFromEnv } from "./environment-variables/misc-variables";
-import { UserError } from "./errors";
-import { getGitVersioon, initializeGit, isInsideGitRepo } from "./git-client";
-import { logger } from "./logger";
 import { getPackageManager } from "./package-manager";
-import { parsePackageJSON, parseTOML, readFileSync } from "./parse";
-import { getBasePath } from "./paths";
-import { requireAuth } from "./user";
-import { createBatches } from "./utils/create-batches";
 import * as shellquote from "./utils/shell-quote";
-import { CommandLineArgsError, printWranglerBanner } from "./index";
 import type { RawConfig } from "./config";
 import type {
 	CustomDomainRoute,
@@ -33,13 +17,10 @@ import type {
 	WorkerMetadata,
 	WorkerMetadataBinding,
 } from "./deployment-bundle/create-worker-upload-form";
-import type { PackageManager } from "./package-manager";
-import type { PackageJSON } from "./parse";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
 } from "./yargs-types";
-import type { ReadableStream } from "stream/web";
 
 export function initOptions(yargs: CommonYargsArgv) {
 	return yargs
@@ -152,11 +133,7 @@ export type StandardRes = {
 	reason: string;
 };
 
-function isNpm(packageManager: PackageManager) {
-	return packageManager.type === "npm";
-}
-
-export async function initHandler(args: InitArgs) {
+export async function initHandler() {
 	const packageManager = await getPackageManager(process.cwd());
 
 	const c3Arguments = [
@@ -164,128 +141,6 @@ export async function initHandler(args: InitArgs) {
 	];
 
 	return execa(packageManager.type, c3Arguments, { stdio: "inherit" });
-}
-
-/*
- * Passes the array of accumulated devDeps to install through to
- * the package manager. Also generates a human-readable list
- * of packages it installed.
- * If there are no devDeps to install, optionally runs
- * the package manager's install command.
- */
-async function installPackages(
-	shouldRunInstall: boolean,
-	depsToInstall: string[],
-	packageManager: PackageManager
-) {
-	//lets install the devDeps they asked for
-	//and run their package manager's install command if needed
-	if (depsToInstall.length > 0) {
-		const formatter = new Intl.ListFormat("en-US", {
-			style: "long",
-			type: "conjunction",
-		});
-		await packageManager.addDevDeps(...depsToInstall);
-		const versionlessPackages = depsToInstall.map((dep) =>
-			dep === `wrangler@${wranglerVersion}` ? "wrangler" : dep
-		);
-
-		logger.log(
-			`✨ Installed ${formatter.format(
-				versionlessPackages
-			)} into devDependencies`
-		);
-	} else {
-		if (shouldRunInstall) {
-			await packageManager.install();
-		}
-	}
-}
-
-async function getNewWorkerType(newWorkerFilename: string) {
-	return select(`Would you like to create a Worker at ${newWorkerFilename}?`, {
-		choices: [
-			{
-				value: "none",
-				title: "None",
-			},
-			{
-				value: "fetch",
-				title: "Fetch handler",
-			},
-			{
-				value: "scheduled",
-				title: "Scheduled handler",
-			},
-		],
-		defaultOption: 1,
-	});
-}
-
-async function getNewWorkerTestType(yesFlag?: boolean) {
-	return yesFlag
-		? "jest"
-		: select(`Which test runner would you like to use?`, {
-				choices: [
-					{
-						value: "vitest",
-						title: "Vitest",
-					},
-					{
-						value: "jest",
-						title: "Jest",
-					},
-				],
-				defaultOption: 1,
-			});
-}
-
-function getNewWorkerTemplate(
-	lang: "js" | "ts",
-	workerType: "fetch" | "scheduled"
-) {
-	const templates = {
-		"js-fetch": "new-worker.js",
-		"js-scheduled": "new-worker-scheduled.js",
-		"ts-fetch": "new-worker.ts",
-		"ts-scheduled": "new-worker-scheduled.ts",
-	};
-
-	return templates[`${lang}-${workerType}`];
-}
-
-function getNewWorkerToml(workerType: "fetch" | "scheduled"): TOML.JsonMap {
-	if (workerType === "scheduled") {
-		return {
-			triggers: {
-				crons: ["1 * * * *"],
-			},
-		};
-	}
-
-	return {};
-}
-
-/**
- * Find the path to the given `basename` file from the `cwd`.
- *
- * If `isolatedInit` is true then we only look in the `cwd` directory for the file.
- * Otherwise we also search up the tree.
- */
-async function findPath(
-	isolatedInit: boolean,
-	cwd: string,
-	basename: string
-): Promise<string | undefined> {
-	if (isolatedInit) {
-		return fs.existsSync(path.resolve(cwd, basename))
-			? path.resolve(cwd, basename)
-			: undefined;
-	} else {
-		return await findUp(basename, {
-			cwd: cwd,
-		});
-	}
 }
 
 async function getWorkerConfig(
@@ -580,38 +435,6 @@ export async function mapBindings(
 				// eslint-disable-next-line @typescript-eslint/no-explicit-any
 			}, {} as RawConfig)
 	);
-}
-
-/** Assert that there is no type argument passed. */
-function assertNoTypeArg(args: InitArgs) {
-	if (args.type) {
-		let message = "The --type option is no longer supported.";
-		if (args.type === "webpack") {
-			message +=
-				"\nIf you wish to use webpack then you will need to create a custom build.";
-			// TODO: Add a link to docs
-		}
-		throw new CommandLineArgsError(message);
-	}
-}
-
-function assertNoSiteArg(args: InitArgs, creationDirectory: string) {
-	if (args.site) {
-		const gitDirectory =
-			creationDirectory !== process.cwd()
-				? path.basename(creationDirectory)
-				: "my-site";
-		const message =
-			"The --site option is no longer supported.\n" +
-			"If you wish to create a brand new Worker Sites project then clone the `worker-sites-template` starter repository:\n\n" +
-			"```\n" +
-			`git clone --depth=1 --branch=wrangler2 https://github.com/cloudflare/worker-sites-template ${gitDirectory}\n` +
-			`cd ${gitDirectory}\n` +
-			"```\n\n" +
-			"Find out more about how to create and maintain Sites projects at https://developers.cloudflare.com/workers/platform/sites.\n" +
-			"Have you considered using Cloudflare Pages instead? See https://pages.cloudflare.com/.";
-		throw new CommandLineArgsError(message);
-	}
 }
 
 export async function downloadWorker(accountId: string, workerName: string) {

@@ -1,10 +1,4 @@
-import fs from "node:fs";
-import path from "node:path";
 import { execa } from "execa";
-import { UserError } from "../errors";
-import { cloneIntoDirectory, initializeGit } from "../git-client";
-import { CommandLineArgsError, printWranglerBanner } from "../index";
-import { initHandler } from "../init";
 import { getC3CommandFromEnv } from "../environment-variables/misc-variables";
 import { getPackageManager } from "../package-manager";
 import * as shellquote from "../utils/shell-quote";
@@ -40,7 +34,7 @@ export function generateOptions(yargs: CommonYargsArgv) {
 }
 type GenerateArgs = StrictYargsOptionsToInterface<typeof generateOptions>;
 
-export async function generateHandler(args: GenerateArgs) {
+export async function generateHandler() {
 	logger.warn(
 		`Deprecation: \`wrangler generate\` is deprecated.\n` +
 			`Running \`npm create cloudflare@latest\` for you instead.\n` +
@@ -55,72 +49,6 @@ export async function generateHandler(args: GenerateArgs) {
 
 	return execa(packageManager.type, c3Arguments, { stdio: "inherit" });
 }
-
-/**
- * Creates a path based on the current working directory and a worker name.
- * Automatically increments a counter when searching for an available directory.
- *
- * Running `wrangler generate worker https://some-git-repo` in a directory
- * with the structure:
- * ```
- * - workers
- * |
- * | - worker
- * | | - wrangler.toml
- * | | ...
- * |
- * | - worker-1
- * | | - wrangler.toml
- * | | ...
- * ```
- *
- * will result in a new worker called `worker-2` being generated.
- *
- * @param workerName the name of the generated worker
- * @returns an absolute path to the directory to generate the worker into
- */
-function generateWorkerDirectoryName(workerName: string): string {
-	let workerDirectoryPath = path.resolve(process.cwd(), workerName);
-	let i = 1;
-
-	while (fs.existsSync(workerDirectoryPath)) {
-		workerDirectoryPath = path.resolve(process.cwd(), `${workerName}-${i}`);
-		i++;
-	}
-
-	return workerDirectoryPath;
-}
-
-/**
- * Checks if an arg is a template, which can be useful if the order
- * of template & worker name args is switched
- *
- * @param arg a template to generate from, or a folder to generate into
- * @returns true if the given arg was remote (a template)
- */
-function isRemote(arg: string) {
-	return /^(https?|ftps?|file|git|ssh):\/\//.test(arg) || arg.includes(":");
-}
-
-/**
- * unreadable regex basically copied from degit. i put some named capture groups in,
- * but uhh...there's not much to do short of using pomsky or some other tool.
- *
- * notably: this only supports `https://` and `git@` urls,
- * and is missing support for:
- * - `http`
- * - `ftp(s)`
- * - `file`
- * - `ssh`
- */
-const TEMPLATE_REGEX =
-	/^(?:(?:https:\/\/)?(?<httpsUrl>[^:/]+\.[^:/]+)\/|git@(?<gitUrl>[^:/]+)[:/]|(?<shorthandUrl>[^/]+):)?(?<user>[^/\s]+)\/(?<repository>[^/\s#]+)(?:(?<subdirectoryPath>(?:\/[^/\s#]+)+))?(?:\/)?(?:#(?<tag>.+))?/;
-
-// there are a few URL formats we support:
-// - `user/repo` -> assume github, use "https://github.com/user/repo.git"
-// - `https://<httpsUrl>
-// - `git@<gitUrl>`
-// - `(bb|bitbucket|gh|github|gl|gitlab):user/repo` -> parse shorthand into https url
 
 /**
  * There's no URL, so assume a github repo
@@ -168,81 +96,3 @@ type TemplateRegexGroups = {
 	/** Optional tag (or branch, etc.) to clone */
 	tag?: string;
 } & TemplateRegexUrlGroup;
-
-/**
- * Parses a regex match on any of the URL groups into a URL base
- *
- * @param urlGroup a regex hit for a URL of any sort
- * @returns the protocol and domain name of the url to clone from
- */
-function toUrlBase({ httpsUrl, gitUrl, shorthandUrl }: TemplateRegexUrlGroup) {
-	if (httpsUrl !== undefined) {
-		return `https://${httpsUrl}`;
-	}
-
-	if (gitUrl !== undefined) {
-		return `git@${gitUrl}`;
-	}
-
-	if (shorthandUrl !== undefined) {
-		switch (shorthandUrl) {
-			case "github":
-			case "gh":
-				return "https://github.com";
-			case "gitlab":
-			case "gl":
-				return "https://gitlab.com";
-			case "bitbucket":
-			case "bb":
-				return "https://bitbucket.org";
-			default:
-				throw new UserError(
-					`Unable to parse shorthand ${shorthandUrl}. Supported options are "bitbucket" ("bb"), "github" ("gh"), and "gitlab" ("gl")`
-				);
-		}
-	}
-
-	return "https://github.com";
-}
-
-/**
- * Parses a template string (e.g. "user/repo", "github:user/repo/path/to/subdirectory")
- * into a remote URL to clone from and an optional subdirectory to filter for
- *
- * @param templatePath the template string to parse
- * @returns an object containing the remote url and an optional subdirectory to clone
- */
-function parseTemplatePath(templatePath: string): {
-	remote: string;
-	subdirectory?: string;
-} {
-	if (!templatePath.includes("/")) {
-		// template is a cloudflare canonical template, it doesn't include a slash in the name
-		return {
-			remote: "https://github.com/cloudflare/workers-sdk.git",
-			subdirectory: `templates/${templatePath}`,
-		};
-	}
-
-	const groups = TEMPLATE_REGEX.exec(templatePath)?.groups as unknown as
-		| TemplateRegexGroups
-		| undefined;
-
-	if (!groups) {
-		throw new UserError(`Unable to parse ${templatePath} as a template`);
-	}
-
-	const { user, repository, subdirectoryPath, tag, ...urlGroups } = groups;
-
-	const urlBase = toUrlBase(urlGroups);
-	const isHttp = urlBase.startsWith("http");
-
-	const remote = `${urlBase}${isHttp ? "/" : ":"}${user}/${repository}.git${
-		tag ? `#${tag}` : ""
-	}`;
-
-	// remove starting /
-	const subdirectory = subdirectoryPath?.slice(1);
-
-	return { remote, subdirectory };
-}
