@@ -1,9 +1,10 @@
 import { crash, startSection, updateStatus } from "@cloudflare/cli";
 import { processArgument } from "@cloudflare/cli/args";
 import { blue, brandColor, dim } from "@cloudflare/cli/colors";
-import { C3_DEFAULTS } from "helpers/cli";
+import { C3_DEFAULTS, openInBrowser } from "helpers/cli";
 import { quoteShellArgs, runCommand } from "helpers/command";
 import { detectPackageManager } from "helpers/packageManagers";
+import { poll } from "helpers/poll";
 import { isInsideGitRepo } from "./git";
 import { chooseAccount, wranglerLogin } from "./wrangler/accounts";
 import { readWranglerToml } from "./wrangler/config";
@@ -125,5 +126,16 @@ export const runDeploy = async (ctx: C3Context) => {
 		const hostnameWithoutSHA1 = hostname.split(".").slice(-3).join("."); // only keep the last 3 parts (discard the 4th, i.e. the SHA1)
 
 		ctx.deployment.url = `${proto}://${hostnameWithoutSHA1}`;
+	}
+};
+
+export const maybeOpenBrowser = async (ctx: C3Context) => {
+	if (ctx.deployment.url) {
+		const success = await poll(ctx.deployment.url);
+		if (success) {
+			if (ctx.args.open) {
+				await openInBrowser(ctx.deployment.url);
+			}
+		}
 	}
 };
