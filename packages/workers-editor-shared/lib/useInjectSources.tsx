@@ -47,6 +47,24 @@ function getFilesFromModules(
 	return { files, internalLines };
 }
 
+/**
+ * This hook works in tandem with the format-errors worker
+ * See https://github.com/cloudflare/workers-sdk/tree/main/packages/format-errors/README.md
+ *
+ * When given a Worker's source, which has:
+ * - `entrypoint` & `modules` for a modules-syntax Worker
+ * - `entrypoint`, `modules` & `serviceWorkerScript` for a service-worker syntax Worker
+ * 	   In this context, `serviceWorkerScript` is the contents of the entrypoint module with
+ *     potentially some additional lines of code prepended. The calculated `internalLines` number
+ *     represents how many internal lines of code have been prepended, and should be stripped
+ *     before displaying to the user. The prepended lines of code can be arbitrary, but in our context
+ *     usually represent the middleware system: https://github.com/cloudflare/workers-sdk/tree/main/packages/wrangler/templates/middleware/loader-sw.ts
+ *
+ * this hook will return a callback that can be used to respond to the `load` event of
+ * an iframe which renders the `format-errors` worker. It will construct the `MessageChannel`
+ * & `MessagePort`s appropriately to construct the right messages for inflating the `format-errors`
+ * stack traces: https://github.com/cloudflare/workers-sdk/tree/main/packages/format-errors/README.md#L28
+ */
 export function useInjectSources(
 	entrypoint: string | undefined,
 	modules: Record<string, TypedModule> | undefined,
