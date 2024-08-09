@@ -1,11 +1,14 @@
 import assert from "node:assert";
+import { randomUUID } from "node:crypto";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { URLSearchParams } from "node:url";
 import { cancel } from "@cloudflare/cli";
+import { inputPrompt, spinner } from "@cloudflare/cli/interactive";
 import { syncAssets } from "../assets";
 import { fetchListResult, fetchResult } from "../cfetch";
 import { printBindings } from "../config";
+import { createD1Database } from "../d1/create";
 import { bundleWorker } from "../deployment-bundle/bundle";
 import {
 	printBundleSize,
@@ -26,7 +29,8 @@ import { validateNodeCompatMode } from "../deployment-bundle/node-compat";
 import { loadSourceMaps } from "../deployment-bundle/source-maps";
 import { confirm } from "../dialogs";
 import { getMigrationsToUpload } from "../durable";
-import { UserError } from "../errors";
+import { FatalError, UserError } from "../errors";
+import { createKVNamespace } from "../kv/helpers";
 import { logger } from "../logger";
 import { getMetricsUsageHeaders } from "../metrics";
 import { isNavigatorDefined } from "../navigator-user-agent";
@@ -40,6 +44,7 @@ import {
 	putConsumerById,
 	putQueue,
 } from "../queues/client";
+import { createR2Bucket, getR2Bucket, listR2Buckets } from "../r2/helpers";
 import { syncLegacyAssets } from "../sites";
 import {
 	getSourceMappedString,
@@ -362,6 +367,145 @@ Update them to point to this script instead?`;
 	return domains.map((domain) => renderRoute(domain));
 }
 
+// Find all bindings with undefined IDs. Either:
+//  - Leave them alone (if there's an existing binding with that name they can inherit from)
+//  - Prompt the user to create the binding and set the ID
+// It currently only works with kv_namespaces
+async function ensureBindingsExist(
+	accountId: string,
+	name: string,
+	bindings: CfWorkerInit["bindings"]
+): Promise<CfWorkerInit["bindings"]> {
+	const settings = await fetchResult<{
+		bindings: { name: string }[];
+	}>(`/accounts/${accountId}/workers/scripts/${name}/settings`);
+
+	const existingBindings = Object.fromEntries(
+		settings.bindings.map((b) => [b.name, b])
+	);
+
+	let creators = [];
+	let toCreate: CfWorkerInit["bindings"] = {
+		vars: undefined,
+		kv_namespaces: undefined,
+		send_email: undefined,
+		wasm_modules: undefined,
+		text_blobs: undefined,
+		browser: undefined,
+		ai: undefined,
+		version_metadata: undefined,
+		data_blobs: undefined,
+		durable_objects: undefined,
+		queues: undefined,
+		r2_buckets: [],
+		d1_databases: undefined,
+		vectorize: undefined,
+		hyperdrive: undefined,
+		services: undefined,
+		analytics_engine_datasets: undefined,
+		dispatch_namespaces: undefined,
+		mtls_certificates: undefined,
+		logfwdr: undefined,
+		unsafe: undefined,
+	};
+
+	// First, figure out what bindings we need to create
+	for (const binding of bindings.kv_namespaces ?? []) {
+		// Is this a "draft" binding?
+		if (!binding.id) {
+			// Is it new in this deployment?
+			if (!existingBindings[binding.binding]) {
+				creators.push({
+					name: binding.binding,
+					action: async () => {
+						const id = await createKVNamespace(
+							accountId,
+							`${binding.binding}-${randomUUID()}`
+						);
+						binding.id = id;
+					},
+				});
+				toCreate.kv_namespaces ??= [];
+				toCreate.kv_namespaces.push(binding);
+			}
+		}
+	}
+
+	for (const binding of bindings.r2_buckets ?? []) {
+		// Is this a "draft" binding?
+		if (!binding.bucket_name) {
+			// Is it new in this deployment?
+			if (!existingBindings[binding.binding]) {
+				creators.push({
+					name: binding.binding,
+					action: async () => {
+						const bucketName = `${binding.binding}-${randomUUID()}`
+							.replaceAll("_", "-")
+							.toLowerCase();
+						await createR2Bucket(accountId, bucketName, binding.jurisdiction);
+						binding.bucket_name = bucketName;
+					},
+				});
+				toCreate.r2_buckets ??= [];
+				toCreate.r2_buckets.push(binding);
+			}
+		}
+	}
+
+	for (const binding of bindings.d1_databases ?? []) {
+		// Is this a "draft" binding?
+		if (!binding.database_id) {
+			// Is it new in this deployment?
+			if (!existingBindings[binding.binding]) {
+				creators.push({
+					name: binding.binding,
+					action: async () => {
+						const db = await createD1Database(
+							accountId,
+							binding.database_name ?? `${binding.binding}-${randomUUID()}`
+						);
+						binding.database_id = db.uuid;
+					},
+				});
+				toCreate.d1_databases ??= [];
+				toCreate.d1_databases.push(binding);
+			}
+		}
+	}
+
+	if (creators.length === 0) {
+		return bindings;
+	}
+
+	printBindings(toCreate, true);
+
+	// Stylistic newline
+	logger.log();
+
+	const ok = await inputPrompt({
+		type: "confirm",
+		question:
+			"Would you like Wrangler to provision these resources on your behalf and bind them to your Worker?",
+		label: "",
+		defaultValue: true,
+	});
+	if (ok) {
+		const s = spinner();
+
+		s.start("Provisioning...");
+
+		// After asking the user, create the ones we need to create, mutating `bindings` in the process
+		for (const creator of creators) {
+			s.update(`Provisioning ${creator.name}`);
+			await creator.action();
+		}
+		s.stop(`All resources provisioned, continuing deployment...`);
+	} else {
+		throw new FatalError("Deployment aborted");
+	}
+	return bindings;
+}
+
 export default async function deploy(props: Props): Promise<{
 	sourceMapSize?: number;
 	versionId: string | null;
@@ -652,50 +796,54 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			props.dryRun,
 			props.oldAssetTtl
 		);
+		assert(accountId, "Missing accountId");
 
-		const bindings: CfWorkerInit["bindings"] = {
-			kv_namespaces: (config.kv_namespaces || []).concat(
-				legacyAssets.namespace
-					? { binding: "__STATIC_CONTENT", id: legacyAssets.namespace }
-					: []
-			),
-			send_email: config.send_email,
-			vars: { ...config.vars, ...props.vars },
-			wasm_modules: config.wasm_modules,
-			browser: config.browser,
-			ai: config.ai,
-			version_metadata: config.version_metadata,
-			text_blobs: {
-				...config.text_blobs,
-				...(legacyAssets.manifest &&
-					format === "service-worker" && {
-						__STATIC_CONTENT_MANIFEST: "__STATIC_CONTENT_MANIFEST",
-					}),
-			},
-			data_blobs: config.data_blobs,
-			durable_objects: config.durable_objects,
-			queues: config.queues.producers?.map((producer) => {
-				return { binding: producer.binding, queue_name: producer.queue };
-			}),
-			r2_buckets: config.r2_buckets,
-			d1_databases: config.d1_databases,
-			vectorize: config.vectorize,
-			hyperdrive: config.hyperdrive,
-			services: config.services,
-			analytics_engine_datasets: config.analytics_engine_datasets,
-			dispatch_namespaces: config.dispatch_namespaces,
-			mtls_certificates: config.mtls_certificates,
-			pipelines: config.pipelines,
-			logfwdr: config.logfwdr,
-			assets: config.assets?.binding
-				? { binding: config.assets.binding }
-				: undefined,
-			unsafe: {
-				bindings: config.unsafe.bindings,
-				metadata: config.unsafe.metadata,
-				capnp: config.unsafe.capnp,
-			},
-		};
+		const bindings: CfWorkerInit["bindings"] = await ensureBindingsExist(
+			accountId,
+			scriptName,
+			{
+				kv_namespaces: (config.kv_namespaces || []).concat(
+					legacyAssets.namespace
+						? { binding: "__STATIC_CONTENT", id: legacyAssets.namespace }
+						: []
+				),
+				send_email: config.send_email,
+				vars: { ...config.vars, ...props.vars },
+				wasm_modules: config.wasm_modules,
+				browser: config.browser,
+				ai: config.ai,
+				version_metadata: config.version_metadata,
+				text_blobs: {
+					...config.text_blobs,
+					...(legacyAssets.manifest &&
+						format === "service-worker" && {
+							__STATIC_CONTENT_MANIFEST: "__STATIC_CONTENT_MANIFEST",
+						}),
+				},
+				data_blobs: config.data_blobs,
+				durable_objects: config.durable_objects,
+				queues: config.queues.producers?.map((producer) => {
+					return { binding: producer.binding, queue_name: producer.queue };
+				}),
+				r2_buckets: config.r2_buckets,
+				d1_databases: config.d1_databases,
+				vectorize: config.vectorize,
+				hyperdrive: config.hyperdrive,
+				services: config.services,
+				analytics_engine_datasets: config.analytics_engine_datasets,
+				dispatch_namespaces: config.dispatch_namespaces,
+				mtls_certificates: config.mtls_certificates,
+				logfwdr: config.logfwdr,
+				experimental_assets: config.experimental_assets?.binding
+					? { binding: config.experimental_assets.binding }
+					: undefined,
+				unsafe: {
+					bindings: config.unsafe.bindings,
+					metadata: config.unsafe.metadata,
+					capnp: config.unsafe.capnp,
+				},
+			}
+		);
 
 		if (legacyAssets.manifest) {
 			modules.push({

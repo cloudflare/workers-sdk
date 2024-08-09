@@ -208,6 +208,13 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 
 	const metadataBindings: WorkerMetadataBinding[] = rawBindings ?? [];
 
+	function addInheritBinding(name: string) {
+		metadataBindings.push({
+			name,
+			type: "inherit",
+		});
+	}
+
 	Object.entries(bindings.vars || {})?.forEach(([key, value]) => {
 		if (typeof value === "string") {
 			metadataBindings.push({ name: key, type: "plain_text", text: value });
@@ -217,11 +224,15 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 	});
 
 	bindings.kv_namespaces?.forEach(({ id, binding }) => {
-		metadataBindings.push({
-			name: binding,
-			type: "kv_namespace",
-			namespace_id: id,
-		});
+		if (id) {
+			metadataBindings.push({
+				name: binding,
+				type: "kv_namespace",
+				namespace_id: id,
+			});
+		} else {
+			addInheritBinding(binding);
+		}
 	});
 
 	bindings.send_email?.forEach(
@@ -257,22 +268,30 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 	});
 
 	bindings.r2_buckets?.forEach(({ binding, bucket_name, jurisdiction }) => {
-		metadataBindings.push({
-			name: binding,
-			type: "r2_bucket",
-			bucket_name,
-			jurisdiction,
-		});
+		if (bucket_name) {
+			metadataBindings.push({
+				name: binding,
+				type: "r2_bucket",
+				bucket_name,
+				jurisdiction,
+			});
+		} else {
+			addInheritBinding(binding);
+		}
 	});
 
 	bindings.d1_databases?.forEach(
 		({ binding, database_id, database_internal_env }) => {
-			metadataBindings.push({
-				name: binding,
-				type: "d1",
-				id: database_id,
-				internalEnv: database_internal_env,
-			});
+			if (database_id) {
+				metadataBindings.push({
+					name: binding,
+					type: "d1",
+					id: database_id,
+					internalEnv: database_internal_env,
+				});
+			} else {
+				addInheritBinding(binding);
+			}
 		}
 	);
 

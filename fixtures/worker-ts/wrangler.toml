@@ -3,24 +3,26 @@ main = "src/index.ts"
 compatibility_date = "2023-05-04"
 
 [vars]
-HELLO = "WORLD"
-HELLO2 = "WORLD"
-HELLO3 = "WORLD"
-HELLO4 = "WORLD"
-HELLO5 = "WORLD"
+HELLO="WORLD"
 
+# Bind a D1 database. D1 is Cloudflare’s native serverless SQL database.
+# Docs: https://developers.cloudflare.com/workers/wrangler/configuration/#d1-databases
+[[d1_databases]]
+binding = "MY_DB"
+# database_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+
+# Bind a KV Namespace. Use KV as persistent storage for small key-value pairs.
+# Docs: https://developers.cloudflare.com/workers/wrangler/configuration/#kv-namespaces
+[[kv_namespaces]]
+binding = "MY_KV_NAMESPACE"
 
 [[kv_namespaces]]
-binding = "SOME_BINDING"
-id = "0408d79206d54e859284b605fb19bff4"
+binding = "MY_KV_NAMESPACE_2"
 
-[[kv_namespaces]]
-binding = "BINDING2"
-id = "01962077d09242c5b0978a12bccaa5ed"
 
-[[kv_namespaces]]
-binding = "SOME_BINDING2"
-id = "06e46ea96ab9494dae07a2f745f7adc1"
+# id = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
 
-[[kv_namespaces]]
-binding = "BINDING45"
+# Bind an R2 Bucket. Use R2 to store arbitrarily large blobs of data, such as files.
+# Docs: https://developers.cloudflare.com/workers/wrangler/configuration/#r2-buckets
+[[r2_buckets]]
+binding = "MY_BUCKET2"
