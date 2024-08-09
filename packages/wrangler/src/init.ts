@@ -3,9 +3,9 @@ import { fetchResult } from "./cfetch";
 import { fetchWorker } from "./cfetch/internal";
 import { getDatabaseInfoFromId } from "./d1/utils";
 import { getC3CommandFromEnv } from "./environment-variables/misc-variables";
+import { logger } from "./logger";
 import { getPackageManager } from "./package-manager";
 import * as shellquote from "./utils/shell-quote";
-import { logger } from "./logger";
 import type { RawConfig } from "./config";
 import type {
 	CustomDomainRoute,
@@ -142,9 +142,7 @@ export async function initHandler(args: InitArgs) {
 
 	const packageManager = await getPackageManager(process.cwd());
 
-	const c3Arguments = [
-		...shellquote.parse(getC3CommandFromEnv()),
-	];
+	const c3Arguments = [...shellquote.parse(getC3CommandFromEnv())];
 
 	await execa(packageManager.type, c3Arguments, { stdio: "inherit" });
 	return;

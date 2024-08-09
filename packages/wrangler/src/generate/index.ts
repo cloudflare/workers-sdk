@@ -1,8 +1,8 @@
 import { execa } from "execa";
 import { getC3CommandFromEnv } from "../environment-variables/misc-variables";
+import { logger } from "../logger";
 import { getPackageManager } from "../package-manager";
 import * as shellquote from "../utils/shell-quote";
-import { logger } from "../logger";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
@@ -49,8 +49,8 @@ export async function generateHandler(args: GenerateArgs) {
 	];
 
 	if (template) {
-		c3Arguments.push(`--template`)
-		c3Arguments.push(template)
+		c3Arguments.push(`--template`);
+		c3Arguments.push(template);
 	}
 
 	await execa(packageManager.type, c3Arguments, { stdio: "inherit" });
