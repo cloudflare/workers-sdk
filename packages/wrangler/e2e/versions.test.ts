@@ -587,6 +587,47 @@ describe("versions deploy", { timeout: TIMEOUT }, () => {
 		`);
 	});
 
+	it("currently fails to upload if using experimental assets", async () => {
+		await helper.seed({
+			"wrangler.toml": dedent`
+                name = "${workerName}"
+                compatibility_date = "2023-01-01"
+
+                [experimental_assets]
+                directory = "./public"
+            `,
+			"public/asset.txt": `beep boop`,
+			"package.json": dedent`
+                {
+                    "name": "${workerName}",
+                    "version": "0.0.0",
+                    "private": true
+                }
+            `,
+		});
+
+		const upload = await helper.run(`wrangler versions upload  --x-versions`);
+
+		expect(normalize(upload.output).split("X [ERROR]")[0])
+			.toMatchInlineSnapshot(`
+			"🌀 Building list of assets...
+			🌀 Starting asset upload...
+			🌀 Found 1 file to upload. Proceeding with upload...
+			+ /asset.txt
+			Bucket 1/1 upload failed. Retrying...
+			 APIError: A request to the Cloudflare API (/accounts/CLOUDFLARE_ACCOUNT_ID/workers/assets/upload) failed.
+			Bucket 1/1 upload failed. Retrying...
+			 APIError: A request to the Cloudflare API (/accounts/CLOUDFLARE_ACCOUNT_ID/workers/assets/upload) failed.
+			Bucket 1/1 upload failed. Retrying...
+			 APIError: A request to the Cloudflare API (/accounts/CLOUDFLARE_ACCOUNT_ID/workers/assets/upload) failed.
+			Bucket 1/1 upload failed. Retrying...
+			 APIError: A request to the Cloudflare API (/accounts/CLOUDFLARE_ACCOUNT_ID/workers/assets/upload) failed.
+			Bucket 1/1 upload failed. Retrying...
+			 APIError: A request to the Cloudflare API (/accounts/CLOUDFLARE_ACCOUNT_ID/workers/assets/upload) failed.
+			"
+		`);
+	});
+
 	it("should delete Worker", async () => {
 		const { stdout } = await helper.run(`wrangler delete`);
 

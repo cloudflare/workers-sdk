@@ -24,6 +24,7 @@ import { loadSourceMaps } from "../deployment-bundle/source-maps";
 import { confirm } from "../dialogs";
 import { getMigrationsToUpload } from "../durable";
 import { UserError } from "../errors";
+import { syncExperimentalAssets } from "../experimental-assets";
 import { logger } from "../logger";
 import { getMetricsUsageHeaders } from "../metrics";
 import { isNavigatorDefined } from "../navigator-user-agent";
@@ -35,7 +36,7 @@ import {
 	maybeRetrieveFileSourceMap,
 } from "../sourcemap";
 import type { Config } from "../config";
-import type { Rule } from "../config/environment";
+import type { ExperimentalAssets, Rule } from "../config/environment";
 import type { Entry } from "../deployment-bundle/entry";
 import type { CfPlacement, CfWorkerInit } from "../deployment-bundle/worker";
 import type { RetrieveSourceMapFunction } from "../sourcemap";
@@ -50,7 +51,9 @@ type Props = {
 	env: string | undefined;
 	compatibilityDate: string | undefined;
 	compatibilityFlags: string[] | undefined;
-	experimentalAssets: string | undefined;
+	experimentalAssets:
+		| (ExperimentalAssets & { staticAssetsOnly: boolean })
+		| undefined;
 	vars: Record<string, string> | undefined;
 	defines: Record<string, string> | undefined;
 	alias: Record<string, string> | undefined;
@@ -345,6 +348,19 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 				})
 			: undefined;
 
+		// Upload assets if experimental assets is being used
+		const experimentalAssetsWorkerInfo: CfWorkerInit["experimental_assets"] =
+			props.experimentalAssets && !props.dryRun
+				? {
+						jwt: await syncExperimentalAssets(
+							accountId,
+							scriptName,
+							props.experimentalAssets.directory
+						),
+						staticAssetsOnly: props.experimentalAssets.staticAssetsOnly,
+					}
+				: undefined;
+
 		const bindings: CfWorkerInit["bindings"] = {
 			kv_namespaces: config.kv_namespaces || [],
 			send_email: config.send_email,
@@ -407,6 +423,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 				"workers/message": props.message,
 				"workers/tag": props.tag,
 			},
+			experimental_assets: experimentalAssetsWorkerInfo,
 		};
 
 		await printBundleSize(
