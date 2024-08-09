@@ -117,7 +117,7 @@ describe.each([
 	// we can verify that the inspector messages are being proxied successfully.
 	// Local-mode receives logs from workerd stdout, so this test assertion is only relevant for remote-mode.
 	// A more complete assertion would connect a websocket to the inspector and verify that the message is received. (TODO)
-	it.only("can receive large messages from the inspector", async () => {
+	it("can receive large messages from the inspector", async () => {
 		const LENGTH = 2 ** 20; // Slight larger than 1MB reliably reproduces the issue
 
 		const helper = new WranglerE2ETestHelper();
