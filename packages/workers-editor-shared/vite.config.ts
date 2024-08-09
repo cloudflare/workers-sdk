@@ -25,12 +25,7 @@ function addJsxRuntimeExtension(): Plugin {
 
 // https://vitejs.dev/config/
 export default defineConfig({
-	plugins: [
-		pluginRewriteAll(),
-		react(),
-		dts({ rollupTypes: true }),
-		addJsxRuntimeExtension(),
-	],
+	plugins: [pluginRewriteAll(), react(), dts(), addJsxRuntimeExtension()],
 	build: {
 		chunkSizeWarningLimit: 1000,
 		lib: {
