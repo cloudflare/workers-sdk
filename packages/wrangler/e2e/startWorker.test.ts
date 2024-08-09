@@ -30,16 +30,15 @@ function waitForMessageContaining<T>(ws: WebSocket, value: string): Promise<T> {
 describe.each(OPTIONS)("DevEnv", ({ remote }) => {
 	let helper: WranglerE2ETestHelper;
 	let wrangler: Wrangler;
-	let DevEnv: Wrangler["unstable_DevEnv"];
+	let startWorker: Wrangler["unstable_startWorker"];
 	beforeEach(async () => {
 		helper = new WranglerE2ETestHelper();
 		wrangler = await helper.importWrangler();
-		DevEnv = wrangler.unstable_DevEnv;
+		startWorker = wrangler.unstable_startWorker;
 	});
 
 	it("ProxyWorker buffers requests while runtime reloads", async (t) => {
-		const devEnv = new DevEnv();
-		t.onTestFinished(() => devEnv.teardown());
+		t.onTestFinished(() => worker?.dispose());
 
 		const script = dedent`
             export default {
@@ -53,7 +52,7 @@ describe.each(OPTIONS)("DevEnv", ({ remote }) => {
 			"src/index.ts": script,
 		});
 
-		const worker = await devEnv.startWorker({
+		const worker = await startWorker({
 			entrypoint: path.resolve(helper.tmpPath, "src/index.ts"),
 
 			dev: { remote },
@@ -71,8 +70,7 @@ describe.each(OPTIONS)("DevEnv", ({ remote }) => {
 		await expect(res.text()).resolves.toBe("body:2");
 	});
 	it("InspectorProxyWorker discovery endpoints + devtools websocket connection", async (t) => {
-		const devEnv = new DevEnv();
-		t.onTestFinished(() => devEnv.teardown());
+		t.onTestFinished(() => worker?.dispose());
 
 		const script = dedent`
             export default {
@@ -88,7 +86,7 @@ describe.each(OPTIONS)("DevEnv", ({ remote }) => {
 			"src/index.ts": script,
 		});
 
-		const worker = await devEnv.startWorker({
+		const worker = await startWorker({
 			name: "test-worker",
 			entrypoint: path.resolve(helper.tmpPath, "src/index.ts"),
 
@@ -145,8 +143,7 @@ describe.each(OPTIONS)("DevEnv", ({ remote }) => {
 		await executionContextClearedPromise;
 	});
 	it("InspectorProxyWorker rejects unauthorised requests", async (t) => {
-		const devEnv = new DevEnv();
-		t.onTestFinished(() => devEnv.teardown());
+		t.onTestFinished(() => worker?.dispose());
 
 		await helper.seed({
 			"src/index.ts": dedent`
@@ -158,7 +155,7 @@ describe.each(OPTIONS)("DevEnv", ({ remote }) => {
             `,
 		});
 
-		const worker = await devEnv.startWorker({
+		const worker = await startWorker({
 			name: "test-worker",
 			entrypoint: path.resolve(helper.tmpPath, "src/index.ts"),
 
@@ -185,8 +182,7 @@ describe.each(OPTIONS)("DevEnv", ({ remote }) => {
 		ws.close();
 	});
 	it("User worker exception", async (t) => {
-		const devEnv = new DevEnv();
-		t.onTestFinished(() => devEnv.teardown());
+		t.onTestFinished(() => worker?.dispose());
 
 		await helper.seed({
 			"src/index.ts": dedent`
@@ -198,7 +194,7 @@ describe.each(OPTIONS)("DevEnv", ({ remote }) => {
                 `,
 		});
 
-		const worker = await devEnv.startWorker({
+		const worker = await startWorker({
 			name: "test-worker",
 			entrypoint: path.resolve(helper.tmpPath, "src/index.ts"),
 
@@ -265,8 +261,7 @@ describe.each(OPTIONS)("DevEnv", ({ remote }) => {
 		await expect(res.text()).resolves.toBe("body:3");
 	});
 	it("config.dev.{server,inspector} changes, restart the server instance", async (t) => {
-		const devEnv = new DevEnv();
-		t.onTestFinished(() => devEnv.teardown());
+		t.onTestFinished(() => worker?.dispose());
 
 		await helper.seed({
 			"src/index.ts": dedent`
@@ -278,7 +273,7 @@ describe.each(OPTIONS)("DevEnv", ({ remote }) => {
             `,
 		});
 
-		const worker = await devEnv.startWorker({
+		const worker = await startWorker({
 			name: "test-worker",
 			entrypoint: path.resolve(helper.tmpPath, "src/index.ts"),
 
@@ -317,8 +312,7 @@ describe.each(OPTIONS)("DevEnv", ({ remote }) => {
 		).rejects.toThrowError("fetch failed");
 	});
 	it("liveReload", async (t) => {
-		const devEnv = new DevEnv();
-		t.onTestFinished(() => devEnv.teardown());
+		t.onTestFinished(() => worker?.dispose());
 
 		await helper.seed({
 			"src/index.ts": dedent`
@@ -332,7 +326,7 @@ describe.each(OPTIONS)("DevEnv", ({ remote }) => {
             `,
 		});
 
-		const worker = await devEnv.startWorker({
+		const worker = await startWorker({
 			name: "test-worker",
 			entrypoint: path.resolve(helper.tmpPath, "src/index.ts"),
 
@@ -394,8 +388,7 @@ describe.each(OPTIONS)("DevEnv", ({ remote }) => {
 		expect(resText).not.toEqual(expect.stringMatching(scriptRegex));
 	});
 	it("urlOverrides take effect in the UserWorker", async (t) => {
-		const devEnv = new DevEnv();
-		t.onTestFinished(() => devEnv.teardown());
+		t.onTestFinished(() => worker?.dispose());
 
 		await helper.seed({
 			"src/index.ts": dedent`
@@ -407,7 +400,7 @@ describe.each(OPTIONS)("DevEnv", ({ remote }) => {
             `,
 		});
 
-		const worker = await devEnv.startWorker({
+		const worker = await startWorker({
 			name: "test-worker",
 			entrypoint: path.resolve(helper.tmpPath, "src/index.ts"),
 
@@ -445,8 +438,7 @@ describe.each(OPTIONS)("DevEnv", ({ remote }) => {
 		// so that we can guarantee the race condition is hit
 		// when workerd is eventually terminated
 
-		const devEnv = new DevEnv();
-		t.onTestFinished(() => devEnv.teardown());
+		t.onTestFinished(() => worker?.dispose());
 
 		const script = dedent`
             export default {
@@ -466,7 +458,7 @@ describe.each(OPTIONS)("DevEnv", ({ remote }) => {
 			"src/index.ts": script,
 		});
 
-		const worker = await devEnv.startWorker({
+		const worker = await startWorker({
 			name: "test-worker",
 			entrypoint: path.resolve(helper.tmpPath, "src/index.ts"),
 
