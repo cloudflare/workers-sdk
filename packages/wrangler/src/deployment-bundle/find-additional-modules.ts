@@ -136,6 +136,18 @@ export async function findAdditionalModules(
 	return modules;
 }
 
+/**
+ * Remove a trailing `?raw` suffix from the file name
+ * @param filePath
+ * @returns the file path without the `?raw` suffix
+ */
+export function handleRawSuffix(filePath: string) {
+	if (filePath.endsWith("?raw")) {
+		return filePath.slice(0, -4);
+	}
+	return filePath;
+}
+
 async function matchFiles(
 	files: AsyncGenerator<string>,
 	relativeTo: string,
@@ -157,7 +169,7 @@ async function matchFiles(
 					continue;
 				}
 				const absoluteFilePath = path.join(relativeTo, filePath);
-				const fileContent = await readFile(absoluteFilePath);
+				const fileContent = await readFile(handleRawSuffix(absoluteFilePath));
 
 				const module = {
 					name: filePath,
