@@ -5,6 +5,7 @@ import { getDatabaseInfoFromId } from "./d1/utils";
 import { getC3CommandFromEnv } from "./environment-variables/misc-variables";
 import { getPackageManager } from "./package-manager";
 import * as shellquote from "./utils/shell-quote";
+import { logger } from "./logger";
 import type { RawConfig } from "./config";
 import type {
 	CustomDomainRoute,
