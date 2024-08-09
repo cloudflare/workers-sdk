@@ -105,8 +105,10 @@ export const runC3 = async (
 		} else if (currentDialog.input.type === "select") {
 			// select prompt handler
 
-			// Our select prompt options start with ○ for unselected options and ● for the current selection
-			const currentSelection = lines.find((line) => line.startsWith("●"));
+			// Our select prompt options start with ○ / ◁ for unselected options and ● / ◀ for the current selection
+			const currentSelection = lines.find(
+				(line) => line.startsWith("●") || line.startsWith("◀"),
+			);
 
 			if (!currentSelection) {
 				// sometimes `lines` contain only the 'clear screen' ANSI codes and not the prompt options

@@ -225,5 +225,98 @@ describe.skipIf(frameworkToTest || isQuarantineMode())(
 				expect(output).toContain(`lang Python`);
 			},
 		);
+
+		test.skipIf(process.platform === "win32")(
+			"Going back and forth between the category, type, framework and lang prompts",
+			async () => {
+				const { output } = await runC3(
+					[projectPath, "--git=false", "--no-deploy"],
+					[
+						{
+							matcher: /What would you like to start with\?/,
+							input: {
+								type: "select",
+								target: "Demo application",
+							},
+						},
+						{
+							matcher: /Which template would you like to use\?/,
+							input: {
+								type: "select",
+								target: "Queue consumer & producer Worker",
+							},
+						},
+						{
+							matcher: /Which language do you want to use\?/,
+							input: {
+								type: "select",
+								target: "Go back",
+							},
+						},
+						{
+							matcher: /● Queue consumer & producer Worker/,
+							input: {
+								type: "select",
+								target: "Go back",
+							},
+						},
+						{
+							matcher: /● Demo application/,
+							input: {
+								type: "select",
+								target: "Framework Starter",
+							},
+						},
+						{
+							matcher: /Which development framework do you want to use\?/,
+							input: {
+								type: "select",
+								target: "Go back",
+							},
+						},
+						{
+							matcher: /● Framework Starter/,
+							input: {
+								type: "select",
+								target: "Hello World example",
+							},
+						},
+						{
+							matcher: /Which template would you like to use\?/,
+							input: {
+								type: "select",
+								target: "Hello World Worker Using Durable Objects",
+							},
+						},
+						{
+							matcher: /Which language do you want to use\?/,
+							input: {
+								type: "select",
+								target: "Go back",
+							},
+						},
+						{
+							matcher: /● Hello World Worker Using Durable Objects/,
+							input: {
+								type: "select",
+								target: "Hello World Worker",
+							},
+						},
+						{
+							matcher: /● TypeScript/,
+							input: {
+								type: "select",
+								target: "JavaScript",
+							},
+						},
+					],
+					logStream,
+				);
+
+				expect(projectPath).toExist();
+				expect(output).toContain(`type Hello World Worker`);
+				expect(output).toContain(`lang JavaScript`);
+			},
+		);
 	},
 );
