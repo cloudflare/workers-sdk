@@ -232,15 +232,10 @@ export const createContext = async (
 ): Promise<C3Context> => {
 	// Allows the users to go back to the previous step
 	// By moving the cursor up to a certain line and clearing the screen
-	const goBack = async (from: "category" | "type" | "framework" | "lang") => {
+	const goBack = async (from: "type" | "framework" | "lang") => {
 		const newArgs = { ...args };
 
 		switch (from) {
-			case "category":
-				process.stdout.moveCursor(0, -6);
-				newArgs.projectName = undefined;
-				newArgs.category = undefined;
-				break;
 			case "type":
 				process.stdout.moveCursor(0, -9);
 				newArgs.category = undefined;
@@ -277,50 +272,46 @@ export const createContext = async (
 		type: "text",
 		question: `In which directory do you want to create your application?`,
 		helpText: "also used as application name",
-		defaultValue: prevArgs?.projectName ?? defaultName,
+		defaultValue: defaultName,
 		label: "dir",
 		validate: (value) =>
 			validateProjectDirectory(String(value) || C3_DEFAULTS.projectName, args),
 		format: (val) => `./${val}`,
 	});
 
+	const categoryOptions = [
+		{
+			label: "Hello World example",
+			value: "hello-world",
+			description: "Select from barebones examples to get started with Workers",
+		},
+		{
+			label: "Framework Starter",
+			value: "web-framework",
+			description: "Select from the most popular full-stack web frameworks",
+		},
+		{
+			label: "Demo application",
+			value: "demo",
+			description:
+				"Select from a range of starter applications using various Cloudflare products",
+		},
+		{
+			label: "Template from a Github repo",
+			value: "remote-template",
+			description: "Start from an existing GitHub repo link",
+		},
+		// This is used only if the type is `pre-existing`
+		{ label: "Others", value: "others", hidden: true },
+	];
+
 	const category = await processArgument<string>(args, "category", {
 		type: "select",
 		question: "What would you like to start with?",
 		label: "category",
-		options: [
-			{
-				label: "Hello World example",
-				value: "hello-world",
-				description:
-					"Select from barebones examples to get started with Workers",
-			},
-			{
-				label: "Framework Starter",
-				value: "web-framework",
-				description: "Select from the most popular full-stack web frameworks",
-			},
-			{
-				label: "Demo application",
-				value: "demo",
-				description:
-					"Select from a range of starter applications using various Cloudflare products",
-			},
-			{
-				label: "Template from a Github repo",
-				value: "remote-template",
-				description: "Start from an existing GitHub repo link",
-			},
-			// This is used only if the type is `pre-existing`
-			{ label: "Others", value: "others", hidden: true },
-			backOption,
-		],
+		options: categoryOptions,
 		defaultValue: prevArgs?.category ?? C3_DEFAULTS.category,
 	});
-
-	if (category === BACK_VALUE) {
-		return goBack("category");
-	}
 
 	let template: TemplateConfig;
 
