@@ -8973,7 +8973,7 @@ snapshots:
       '@babel/traverse': 7.22.20
       '@babel/types': 7.22.19
       convert-source-map: 1.8.0
-      debug: 4.3.5(supports-color@9.2.2)
+      debug: 4.3.6(supports-color@9.2.2)
       gensync: 1.0.0-beta.2
       json5: 2.2.3
       semver: 6.3.1
@@ -8993,7 +8993,7 @@ snapshots:
       '@babel/traverse': 7.24.5
       '@babel/types': 7.24.5
       convert-source-map: 2.0.0
-      debug: 4.3.5(supports-color@9.2.2)
+      debug: 4.3.6(supports-color@9.2.2)
       gensync: 1.0.0-beta.2
       json5: 2.2.3
       semver: 6.3.1
@@ -9201,7 +9201,7 @@ snapshots:
       '@babel/helper-split-export-declaration': 7.22.6
       '@babel/parser': 7.22.16
       '@babel/types': 7.22.19
-      debug: 4.3.5(supports-color@9.2.2)
+      debug: 4.3.6(supports-color@9.2.2)
       globals: 11.12.0
     transitivePeerDependencies:
       - supports-color
@@ -9216,7 +9216,7 @@ snapshots:
       '@babel/helper-split-export-declaration': 7.24.5
       '@babel/parser': 7.24.5
       '@babel/types': 7.24.5
-      debug: 4.3.5(supports-color@9.2.2)
+      debug: 4.3.6(supports-color@9.2.2)
       globals: 11.12.0
     transitivePeerDependencies:
       - supports-color
@@ -9953,7 +9953,7 @@ snapshots:
   '@eslint/eslintrc@2.1.2':
     dependencies:
       ajv: 6.12.6
-      debug: 4.3.5(supports-color@9.2.2)
+      debug: 4.3.5
       espree: 9.6.1
       globals: 13.20.0
       ignore: 5.3.1
@@ -9967,7 +9967,7 @@ snapshots:
   '@eslint/eslintrc@2.1.4':
     dependencies:
       ajv: 6.12.6
-      debug: 4.3.5(supports-color@9.2.2)
+      debug: 4.3.6(supports-color@9.2.2)
       espree: 9.6.1
       globals: 13.24.0
       ignore: 5.3.1
@@ -9992,7 +9992,7 @@ snapshots:
   '@humanwhocodes/config-array@0.11.11':
     dependencies:
       '@humanwhocodes/object-schema': 1.2.1
-      debug: 4.3.5(supports-color@9.2.2)
+      debug: 4.3.5
       minimatch: 3.1.2
     transitivePeerDependencies:
       - supports-color
@@ -10000,7 +10000,7 @@ snapshots:
   '@humanwhocodes/config-array@0.11.14':
     dependencies:
       '@humanwhocodes/object-schema': 2.0.3
-      debug: 4.3.5(supports-color@9.2.2)
+      debug: 4.3.6(supports-color@9.2.2)
       minimatch: 3.1.2
     transitivePeerDependencies:
       - supports-color
@@ -10070,18 +10070,18 @@ snapshots:
   '@jridgewell/gen-mapping@0.1.1':
     dependencies:
       '@jridgewell/set-array': 1.2.1
-      '@jridgewell/sourcemap-codec': 1.4.15
+      '@jridgewell/sourcemap-codec': 1.5.0
 
   '@jridgewell/gen-mapping@0.3.2':
     dependencies:
       '@jridgewell/set-array': 1.1.0
-      '@jridgewell/sourcemap-codec': 1.4.15
+      '@jridgewell/sourcemap-codec': 1.5.0
       '@jridgewell/trace-mapping': 0.3.19
 
   '@jridgewell/gen-mapping@0.3.5':
     dependencies:
       '@jridgewell/set-array': 1.2.1
-      '@jridgewell/sourcemap-codec': 1.4.15
+      '@jridgewell/sourcemap-codec': 1.5.0
       '@jridgewell/trace-mapping': 0.3.25
 
   '@jridgewell/resolve-uri@3.1.0': {}
@@ -10097,12 +10097,12 @@ snapshots:
   '@jridgewell/trace-mapping@0.3.19':
     dependencies:
       '@jridgewell/resolve-uri': 3.1.0
-      '@jridgewell/sourcemap-codec': 1.4.15
+      '@jridgewell/sourcemap-codec': 1.5.0
 
   '@jridgewell/trace-mapping@0.3.25':
     dependencies:
       '@jridgewell/resolve-uri': 3.1.0
-      '@jridgewell/sourcemap-codec': 1.4.15
+      '@jridgewell/sourcemap-codec': 1.5.0
 
   '@jridgewell/trace-mapping@0.3.9':
     dependencies:
@@ -11090,7 +11090,7 @@ snapshots:
       '@typescript-eslint/type-utils': 6.10.0(eslint@8.49.0)(typescript@5.5.4)
       '@typescript-eslint/utils': 6.10.0(eslint@8.49.0)(typescript@5.5.4)
       '@typescript-eslint/visitor-keys': 6.10.0
-      debug: 4.3.5(supports-color@9.2.2)
+      debug: 4.3.5
       eslint: 8.49.0
       graphemer: 1.4.0
       ignore: 5.3.1
@@ -11110,7 +11110,7 @@ snapshots:
       '@typescript-eslint/type-utils': 6.10.0(eslint@8.57.0)(typescript@5.5.4)
       '@typescript-eslint/utils': 6.10.0(eslint@8.57.0)(typescript@5.5.4)
       '@typescript-eslint/visitor-keys': 6.10.0
-      debug: 4.3.5(supports-color@9.2.2)
+      debug: 4.3.5
       eslint: 8.57.0
       graphemer: 1.4.0
       ignore: 5.3.1
@@ -11128,7 +11128,7 @@ snapshots:
       '@typescript-eslint/types': 6.10.0
       '@typescript-eslint/typescript-estree': 6.10.0(typescript@5.5.4)
       '@typescript-eslint/visitor-keys': 6.10.0
-      debug: 4.3.5(supports-color@9.2.2)
+      debug: 4.3.5
       eslint: 8.49.0
     optionalDependencies:
       typescript: 5.5.4
@@ -11141,7 +11141,7 @@ snapshots:
       '@typescript-eslint/types': 6.10.0
       '@typescript-eslint/typescript-estree': 6.10.0(typescript@5.5.4)
       '@typescript-eslint/visitor-keys': 6.10.0
-      debug: 4.3.5(supports-color@9.2.2)
+      debug: 4.3.5
       eslint: 8.57.0
     optionalDependencies:
       typescript: 5.5.4
@@ -11157,7 +11157,7 @@ snapshots:
     dependencies:
       '@typescript-eslint/typescript-estree': 6.10.0(typescript@5.5.4)
       '@typescript-eslint/utils': 6.10.0(eslint@8.49.0)(typescript@5.5.4)
-      debug: 4.3.5(supports-color@9.2.2)
+      debug: 4.3.6(supports-color@9.2.2)
       eslint: 8.49.0
       ts-api-utils: 1.0.3(typescript@5.5.4)
     optionalDependencies:
@@ -11169,7 +11169,7 @@ snapshots:
     dependencies:
       '@typescript-eslint/typescript-estree': 6.10.0(typescript@5.5.4)
       '@typescript-eslint/utils': 6.10.0(eslint@8.57.0)(typescript@5.5.4)
-      debug: 4.3.5(supports-color@9.2.2)
+      debug: 4.3.5
       eslint: 8.57.0
       ts-api-utils: 1.0.3(typescript@5.5.4)
     optionalDependencies:
@@ -11183,7 +11183,7 @@ snapshots:
     dependencies:
       '@typescript-eslint/types': 6.10.0
       '@typescript-eslint/visitor-keys': 6.10.0
-      debug: 4.3.5(supports-color@9.2.2)
+      debug: 4.3.5
       globby: 11.1.0
       is-glob: 4.0.3
       semver: 7.5.4
@@ -11288,7 +11288,7 @@ snapshots:
 
   '@vitest/snapshot@1.6.0':
     dependencies:
-      magic-string: 0.30.5
+      magic-string: 0.30.11
       pathe: 1.1.2
       pretty-format: 29.7.0
 
@@ -11416,7 +11416,7 @@ snapshots:
       '@vue/compiler-core': 3.3.4
       '@vue/shared': 3.3.4
       estree-walker: 2.0.2
-      magic-string: 0.30.5
+      magic-string: 0.30.11
 
   '@vue/shared@3.3.4': {}
 
@@ -11451,13 +11451,13 @@ snapshots:
 
   agent-base@6.0.2(supports-color@9.2.2):
     dependencies:
-      debug: 4.3.5(supports-color@9.2.2)
+      debug: 4.3.6(supports-color@9.2.2)
     transitivePeerDependencies:
       - supports-color
 
   agent-base@7.1.0(supports-color@9.2.2):
     dependencies:
-      debug: 4.3.5(supports-color@9.2.2)
+      debug: 4.3.6(supports-color@9.2.2)
     transitivePeerDependencies:
       - supports-color
 
@@ -11909,7 +11909,7 @@ snapshots:
 
   capnp-ts@0.5.1:
     dependencies:
-      debug: 4.3.5(supports-color@9.2.2)
+      debug: 4.3.5
       format: 0.2.2
       tslib: 2.5.3
       utf8-encoding: 0.1.2
@@ -12316,15 +12316,15 @@ snapshots:
     optionalDependencies:
       supports-color: 9.2.2
 
-  debug@4.3.5(supports-color@9.2.2):
+  debug@4.3.5:
+    dependencies:
+      ms: 2.1.2
+
+  debug@4.3.6(supports-color@9.2.2):
     dependencies:
       ms: 2.1.2
     optionalDependencies:
       supports-color: 9.2.2
-
-  debug@4.3.6:
-    dependencies:
-      ms: 2.1.2
 
   decamelize-keys@1.1.0:
     dependencies:
@@ -12610,7 +12610,7 @@ snapshots:
 
   esbuild-register@3.5.0(esbuild@0.17.19):
     dependencies:
-      debug: 4.3.5(supports-color@9.2.2)
+      debug: 4.3.5
       esbuild: 0.17.19
     transitivePeerDependencies:
       - supports-color
@@ -12917,7 +12917,7 @@ snapshots:
       ajv: 6.12.6
       chalk: 4.1.2
       cross-spawn: 7.0.3
-      debug: 4.3.5(supports-color@9.2.2)
+      debug: 4.3.5
       doctrine: 3.0.0
       escape-string-regexp: 4.0.0
       eslint-scope: 7.2.2
@@ -13385,7 +13385,7 @@ snapshots:
     dependencies:
       basic-ftp: 5.0.3
       data-uri-to-buffer: 5.0.1
-      debug: 4.3.5(supports-color@9.2.2)
+      debug: 4.3.6(supports-color@9.2.2)
       fs-extra: 8.1.0
     transitivePeerDependencies:
       - supports-color
@@ -13601,7 +13601,7 @@ snapshots:
   http-proxy-agent@7.0.0:
     dependencies:
       agent-base: 7.1.0(supports-color@9.2.2)
-      debug: 4.3.5(supports-color@9.2.2)
+      debug: 4.3.6(supports-color@9.2.2)
     transitivePeerDependencies:
       - supports-color
 
@@ -13620,7 +13620,7 @@ snapshots:
   https-proxy-agent@5.0.1(supports-color@9.2.2):
     dependencies:
       agent-base: 6.0.2(supports-color@9.2.2)
-      debug: 4.3.5(supports-color@9.2.2)
+      debug: 4.3.6(supports-color@9.2.2)
     transitivePeerDependencies:
       - supports-color
 
@@ -14789,7 +14789,7 @@ snapshots:
     dependencies:
       '@tootallnate/quickjs-emscripten': 0.23.0
       agent-base: 7.1.0(supports-color@9.2.2)
-      debug: 4.3.5(supports-color@9.2.2)
+      debug: 4.3.6(supports-color@9.2.2)
       get-uri: 6.0.1
       http-proxy-agent: 7.0.0
       https-proxy-agent: 7.0.2(supports-color@9.2.2)
@@ -15115,7 +15115,7 @@ snapshots:
   proxy-agent@6.3.1:
     dependencies:
       agent-base: 7.1.0(supports-color@9.2.2)
-      debug: 4.3.5(supports-color@9.2.2)
+      debug: 4.3.6(supports-color@9.2.2)
       http-proxy-agent: 7.0.0
       https-proxy-agent: 7.0.2(supports-color@9.2.2)
       lru-cache: 7.18.3
@@ -15715,7 +15715,7 @@ snapshots:
   socks-proxy-agent@8.0.2:
     dependencies:
       agent-base: 7.1.0(supports-color@9.2.2)
-      debug: 4.3.5(supports-color@9.2.2)
+      debug: 4.3.6(supports-color@9.2.2)
       socks: 2.7.1
     transitivePeerDependencies:
       - supports-color
@@ -16353,7 +16353,7 @@ snapshots:
   vite-node@1.5.0(@types/node@20.8.3):
     dependencies:
       cac: 6.7.14
-      debug: 4.3.5(supports-color@9.2.2)
+      debug: 4.3.5
       pathe: 1.1.2
       picocolors: 1.0.1
       vite: 5.0.12(@types/node@20.8.3)
@@ -16370,7 +16370,7 @@ snapshots:
   vite-node@1.6.0(@types/node@20.12.12)(supports-color@9.2.2):
     dependencies:
       cac: 6.7.14
-      debug: 4.3.5(supports-color@9.2.2)
+      debug: 4.3.6(supports-color@9.2.2)
       pathe: 1.1.2
       picocolors: 1.0.1
       vite: 5.0.12(@types/node@20.12.12)
@@ -16387,7 +16387,7 @@ snapshots:
   vite-node@1.6.0(@types/node@20.8.3):
     dependencies:
       cac: 6.7.14
-      debug: 4.3.5(supports-color@9.2.2)
+      debug: 4.3.6(supports-color@9.2.2)
       pathe: 1.1.2
       picocolors: 1.0.1
       vite: 5.0.12(@types/node@20.8.3)
@@ -16408,7 +16408,7 @@ snapshots:
       '@volar/typescript': 2.3.4
       '@vue/language-core': 2.0.29(typescript@5.5.4)
       compare-versions: 6.1.1
-      debug: 4.3.6
+      debug: 4.3.6(supports-color@9.2.2)
       kolorist: 1.8.0
       local-pkg: 0.5.0
       magic-string: 0.30.11
@@ -16470,7 +16470,7 @@ snapshots:
       '@vitest/utils': 1.5.0
       acorn-walk: 8.3.2
       chai: 4.3.10
-      debug: 4.3.5(supports-color@9.2.2)
+      debug: 4.3.5
       execa: 8.0.1
       local-pkg: 0.5.0
       magic-string: 0.30.5
