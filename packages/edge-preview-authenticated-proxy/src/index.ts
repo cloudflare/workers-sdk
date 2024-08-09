@@ -220,6 +220,15 @@ async function handleRawHttp(request: Request, url: URL) {
 	requestHeaders.delete("X-CF-Token");
 	requestHeaders.delete("X-CF-Remote");
 
+	const headerEntries = [...requestHeaders.entries()];
+
+	for (const header of headerEntries) {
+		if (header[0].startsWith("cf-ew-raw-")) {
+			requestHeaders.set(header[0].split("cf-ew-raw-")[1], header[1]);
+			requestHeaders.delete(header[0]);
+		}
+	}
+
 	const workerResponse = await fetch(
 		switchRemote(url, remote),
 		new Request(request, {
