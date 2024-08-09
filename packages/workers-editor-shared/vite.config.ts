@@ -3,10 +3,11 @@ import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 import dts from "vite-plugin-dts";
 import pluginRewriteAll from "vite-plugin-rewrite-all";
+import type { Plugin } from "vite";
 
 // See https://github.com/facebook/create-react-app/issues/11769
 // Turn react/jsx-runtime imports into react/jsx-runtime.js
-function addJsxRuntimeExtension() {
+function addJsxRuntimeExtension(): Plugin {
 	return {
 		name: "jsx-runtime-extension",
 		enforce: "pre",

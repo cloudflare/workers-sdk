@@ -1351,6 +1351,9 @@ importers:
       react-dom:
         specifier: ^18.2.21
         version: 18.3.1(react@18.3.1)
+      vite:
+        specifier: ^5.0.12
+        version: 5.0.12(@types/node@20.12.12)
       vite-plugin-dts:
         specifier: ^4.0.1
         version: 4.0.1(@types/node@20.12.12)(rollup@4.9.6)(typescript@5.5.4)(vite@5.0.12(@types/node@20.12.12))
@@ -11338,7 +11341,7 @@ snapshots:
       pathe: 1.1.1
       picocolors: 1.0.1
       sirv: 2.0.4
-      vitest: 1.6.0(@types/node@20.12.12)(@vitest/ui@1.6.0)(supports-color@9.2.2)
+      vitest: 1.6.0(@types/node@20.8.3)(@vitest/ui@1.6.0)
 
   '@vitest/utils@1.5.0':
     dependencies:
