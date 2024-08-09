@@ -18,10 +18,7 @@ import type {
 	WorkerMetadata,
 	WorkerMetadataBinding,
 } from "./deployment-bundle/create-worker-upload-form";
-import type {
-	CommonYargsArgv,
-	StrictYargsOptionsToInterface,
-} from "./yargs-types";
+import type { CommonYargsArgv } from "./yargs-types";
 
 export function initOptions(yargs: CommonYargsArgv) {
 	return yargs
@@ -59,8 +56,6 @@ export function initOptions(yargs: CommonYargsArgv) {
 			default: true,
 		});
 }
-
-type InitArgs = StrictYargsOptionsToInterface<typeof initOptions>;
 
 export type ServiceMetadataRes = {
 	id: string;
@@ -134,7 +129,7 @@ export type StandardRes = {
 	reason: string;
 };
 
-export async function initHandler(args: InitArgs) {
+export async function initHandler() {
 	logger.warn(
 		`Deprecation: \`wrangler init\` is deprecated.\n` +
 			`Running \`npm create cloudflare@latest\` for you instead.\n`
