@@ -238,23 +238,25 @@ describe("wrangler", () => {
 			it("should show the correct help text", async () => {
 				await runWrangler("queues create --help");
 				expect(std.err).toMatchInlineSnapshot(`""`);
-				expect(std.out).toMatchInlineSnapshot(`"wrangler queues create <name>
+				expect(std.out).toMatchInlineSnapshot(`
+					"wrangler queues create <name>
 
-				Create a Queue
+					Create a Queue
 
-				POSITIONALS
-				  name  The name of the queue  [string] [required]
+					POSITIONALS
+					  name  The name of the queue  [string] [required]
 
-				GLOBAL FLAGS
-				  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
-				  -c, --config                    Path to .toml configuration file  [string]
-				  -e, --env                       Environment to use for operations and .env files  [string]
-				  -h, --help                      Show help  [boolean]
-				  -v, --version                   Show version number  [boolean]
+					GLOBAL FLAGS
+					  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
+					  -c, --config                    Path to .toml configuration file  [string]
+					  -e, --env                       Environment to use for operations and .env files  [string]
+					  -h, --help                      Show help  [boolean]
+					  -v, --version                   Show version number  [boolean]
 
-				OPTIONS
-					  --delivery-delay-secs            How long a published message should be delayed for, in seconds. Must be a positive integer  [number]
-					  --message-retention-period-secs  How long to retain a message in the queue, in seconds. Must be a positive integer  [number]"`);
+					OPTIONS
+					      --delivery-delay-secs            How long a published message should be delayed for, in seconds. Must be a positive integer  [number]
+					      --message-retention-period-secs  How long to retain a message in the queue, in seconds. Must be a positive integer  [number]"
+				`);
 			});
 
 			it("should create a queue", async () => {
@@ -414,6 +416,7 @@ describe("wrangler", () => {
 					http.get(
 						"*/accounts/:accountId/queues?*",
 						async () => {
+							requests.count += 1;
 							return HttpResponse.json({
 								success: true,
 								errors: [],
@@ -427,6 +430,7 @@ describe("wrangler", () => {
 										producers_total_count: 1,
 										consumers_total_count: 0,
 										modified_on: "",
+										queue_id: "queueId",
 										settings: {
 											delivery_delay: queueSettings.delivery_delay,
 											message_retention_period:
@@ -445,24 +449,25 @@ describe("wrangler", () => {
 			it("should show the correct help text", async () => {
 				await runWrangler("queues update --help");
 				expect(std.err).toMatchInlineSnapshot(`""`);
-				expect(std.out).toMatchInlineSnapshot(`"wrangler queues update <name>
+				expect(std.out).toMatchInlineSnapshot(`
+					"wrangler queues update <name>
 
-				Update a Queue
+					Update a Queue
 
-				POSITIONALS
-				  name  The name of the queue  [string] [required]
+					POSITIONALS
+					  name  The name of the queue  [string] [required]
 
-				GLOBAL FLAGS
-				  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
-				  -c, --config                    Path to .toml configuration file  [string]
-				  -e, --env                       Environment to use for operations and .env files  [string]
-				  -h, --help                      Show help  [boolean]
-				  -v, --version                   Show version number  [boolean]
+					GLOBAL FLAGS
+					  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
+					  -c, --config                    Path to .toml configuration file  [string]
+					  -e, --env                       Environment to use for operations and .env files  [string]
+					  -h, --help                      Show help  [boolean]
+					  -v, --version                   Show version number  [boolean]
 
-				OPTIONS
-					  --delivery-delay-secs            How long a published message should be delayed for, in seconds. Must be a positive integer  [number]
-					  --message-retention-period-secs  How long to retain a message in the queue, in seconds. Must be a positive integer  [number]
-				"`);
+					OPTIONS
+					      --delivery-delay-secs            How long a published message should be delayed for, in seconds. Must be a positive integer  [number]
+					      --message-retention-period-secs  How long to retain a message in the queue, in seconds. Must be a positive integer  [number]"
+				`);
 			});
 
 			it("should update a queue with new message retention period and preserve old delivery delay", async () => {
