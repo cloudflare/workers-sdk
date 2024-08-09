@@ -34,18 +34,24 @@ export function generateOptions(yargs: CommonYargsArgv) {
 }
 type GenerateArgs = StrictYargsOptionsToInterface<typeof generateOptions>;
 
-export async function generateHandler() {
+export async function generateHandler(args: GenerateArgs) {
 	logger.warn(
 		`Deprecation: \`wrangler generate\` is deprecated.\n` +
-			`Running \`npm create cloudflare@latest\` for you instead.\n` +
-			`Any arguments passed to \`wrangler generate\` will be ignored.\n\n`
+			`Running \`npm create cloudflare@latest\` for you instead.\n`
 	);
 
 	const packageManager = await getPackageManager(process.cwd());
+	const template = args.template;
 
 	const c3Arguments = [
 		...shellquote.parse(getC3CommandFromEnv()),
+		...(packageManager.type === "npm" ? ["--"] : []),
 	];
+
+	if (template) {
+		c3Arguments.push(`--template`)
+		c3Arguments.push(template)
+	}
 
 	await execa(packageManager.type, c3Arguments, { stdio: "inherit" });
 	return;

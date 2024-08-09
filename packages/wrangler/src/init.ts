@@ -133,7 +133,12 @@ export type StandardRes = {
 	reason: string;
 };
 
-export async function initHandler() {
+export async function initHandler(args: InitArgs) {
+	logger.warn(
+		`Deprecation: \`wrangler init\` is deprecated.\n` +
+			`Running \`npm create cloudflare@latest\` for you instead.\n`
+	);
+
 	const packageManager = await getPackageManager(process.cwd());
 
 	const c3Arguments = [
