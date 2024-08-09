@@ -372,10 +372,15 @@ Update them to point to this script instead?`;
 //  - Prompt the user to create the binding and set the ID
 // It currently only works with kv_namespaces
 async function ensureBindingsExist(
-	accountId: string,
+	dryRun: boolean | undefined,
+	accountId: string | undefined,
 	name: string,
 	bindings: CfWorkerInit["bindings"]
 ): Promise<CfWorkerInit["bindings"]> {
+	if (dryRun) return bindings;
+
+	assert(accountId, "Missing accountId");
+
 	const settings = await fetchResult<{
 		bindings: { name: string }[];
 	}>(`/accounts/${accountId}/workers/scripts/${name}/settings`);
@@ -796,9 +801,9 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			props.dryRun,
 			props.oldAssetTtl
 		);
-		assert(accountId, "Missing accountId");
 
 		const bindings: CfWorkerInit["bindings"] = await ensureBindingsExist(
+			props.dryRun,
 			accountId,
 			scriptName,
 			{
