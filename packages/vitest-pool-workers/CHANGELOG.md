@@ -1,5 +1,13 @@
 # @cloudflare/vitest-pool-workers
 
+## 0.4.21
+
+### Patch Changes
+
+- [#6455](https://github.com/cloudflare/workers-sdk/pull/6455) [`b4483dd`](https://github.com/cloudflare/workers-sdk/commit/b4483dd35d28b7bcfccfed5dd996bccba66f569a) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: ensure that directory imports in commonjs modules get resolved to their index file
+
+  Fixes #6406
+
 ## 0.4.20
 
 ### Patch Changes
