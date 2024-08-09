@@ -44,7 +44,7 @@ import {
 	putConsumerById,
 	putQueue,
 } from "../queues/client";
-import { createR2Bucket, getR2Bucket, listR2Buckets } from "../r2/helpers";
+import { createR2Bucket } from "../r2/helpers";
 import { syncLegacyAssets } from "../sites";
 import {
 	getSourceMappedString,
