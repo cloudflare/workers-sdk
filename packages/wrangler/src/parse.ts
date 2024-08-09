@@ -73,6 +73,7 @@ export class ParseError extends UserError implements Message {
 export class APIError extends ParseError {
 	#status?: number;
 	code?: number;
+	accountTag?: string;
 
 	constructor({ status, ...rest }: Message & { status?: number }) {
 		super(rest);

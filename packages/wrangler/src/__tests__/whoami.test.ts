@@ -10,6 +10,7 @@ import {
 	mswSuccessUserHandlers,
 } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
+import { runWrangler } from "./helpers/run-wrangler";
 
 describe("getUserInfo()", () => {
 	const ENV_COPY = process.env;
@@ -169,6 +170,87 @@ describe("getUserInfo()", () => {
 			  environment variable.
 
 			"
+		`);
+	});
+});
+
+describe("whoami", () => {
+	runInTempDir();
+	const { setIsTTY } = useMockIsTTY();
+	const std = mockConsoleMethods();
+
+	beforeEach(() => {
+		setIsTTY(true);
+		msw.use(...mswSuccessOauthHandlers, ...mswSuccessUserHandlers);
+	});
+
+	const ENV_COPY = process.env;
+	afterEach(() => {
+		process.env = ENV_COPY;
+	});
+
+	it("should display membership roles if --account flag is given", async () => {
+		writeAuthConfigFile({ oauth_token: "some-oauth-token" });
+		msw.use(
+			http.get(
+				"*/memberships",
+				() =>
+					HttpResponse.json(
+						createFetchResult([{ account: { id: "account-2" }, roles: ["Test role"] }])
+					),
+				{ once: true }
+			)
+		);
+		await runWrangler(`whoami --account "account-2"`);
+		expect(std.out).toMatchInlineSnapshot(`
+			"Getting User settings...
+			👋 You are logged in with an OAuth Token, associated with the email user@example.com.
+			┌───────────────┬────────────┐
+			│ Account Name  │ Account ID │
+			├───────────────┼────────────┤
+			│ Account One   │ account-1  │
+			├───────────────┼────────────┤
+			│ Account Two   │ account-2  │
+			├───────────────┼────────────┤
+			│ Account Three │ account-3  │
+			└───────────────┴────────────┘
+			🔓 Token Permissions: If scopes are missing, you may need to logout and re-login.
+			Scope (Access)
+			🎢 Membership roles in \\"Account Two\\": Contact account admin if you need more roles.
+			- Test role"
+		`);
+	});
+
+	it("should display membership error on authentication error 10000", async () => {
+		writeAuthConfigFile({ oauth_token: "some-oauth-token" });
+		msw.use(
+			http.get(
+				"*/memberships",
+				() =>
+					HttpResponse.json(
+						createFetchResult(undefined, false, [
+							{ code: 10000, message: "Authentication error" },
+						])
+					),
+				{ once: true }
+			)
+		);
+		await runWrangler(`whoami --account "account-2"`);
+		expect(std.out).toMatchInlineSnapshot(`
+			"Getting User settings...
+			👋 You are logged in with an OAuth Token, associated with the email user@example.com.
+			┌───────────────┬────────────┐
+			│ Account Name  │ Account ID │
+			├───────────────┼────────────┤
+			│ Account One   │ account-1  │
+			├───────────────┼────────────┤
+			│ Account Two   │ account-2  │
+			├───────────────┼────────────┤
+			│ Account Three │ account-3  │
+			└───────────────┴────────────┘
+			🔓 Token Permissions: If scopes are missing, you may need to logout and re-login.
+			Scope (Access)
+			🎢 Unable to get membership roles. Make sure you have permissions to read the account."
 		`);
 	});
 });

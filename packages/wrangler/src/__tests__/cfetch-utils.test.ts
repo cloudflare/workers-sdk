@@ -1,5 +1,5 @@
 import { http, HttpResponse } from "msw";
-import { hasMorePages } from "../cfetch";
+import { extractAccountTag, hasMorePages } from "../cfetch";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { createFetchResult, msw } from "./helpers/msw";
@@ -93,5 +93,18 @@ describe("throwFetchError", () => {
 			text: "A request to the Cloudflare API (/user) failed.",
 			notes: [{ text: "error [code: 10000]" }],
 		});
+	});
+});
+
+describe("extractAccountTag", () => {
+	it("should return undefined when resource does not have it", () => {
+		expect(extractAccountTag("/accounts")).toBeUndefined();
+		expect(extractAccountTag("/accounts/")).toBeUndefined();
+		expect(extractAccountTag("/accounts//more")).toBeUndefined();
+	});
+	it("should return tag when resource has it", () => {
+		expect(extractAccountTag("/accounts/foo")).toBe("foo");
+		expect(extractAccountTag("/accounts/bar/")).toBe("bar");
+		expect(extractAccountTag("/accounts/baz/more")).toBe("baz");
 	});
 });

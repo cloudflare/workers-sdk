@@ -693,10 +693,16 @@ export function createCLIParser(argv: string[]) {
 	wrangler.command(
 		"whoami",
 		"🕵️  Retrieve your user information",
-		() => {},
+		(yargs) => {
+			return yargs.option("account", {
+				type: "string",
+				describe:
+					"Show membership information for the given account (id or name).",
+			});
+		},
 		async (args) => {
 			await printWranglerBanner();
-			await whoami();
+			await whoami(args.account);
 			const config = readConfig(undefined, args);
 			await metrics.sendMetricsEvent("view accounts", {
 				sendMetrics: config.send_metrics,
@@ -864,7 +870,8 @@ export async function main(argv: string[]): Promise<void> {
 					"Please ensure it has the correct permissions for this operation.\n";
 				logger.log(chalk.yellow(message));
 			}
-			await whoami();
+			const accountTag = (e as APIError)?.accountTag;
+			await whoami(accountTag);
 		} else if (e instanceof ParseError) {
 			e.notes.push({
 				text: "\nIf you think this is a bug, please open an issue at: https://github.com/cloudflare/workers-sdk/issues/new/choose",
