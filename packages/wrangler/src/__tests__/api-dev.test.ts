@@ -2,12 +2,14 @@ import * as fs from "node:fs";
 import { Request } from "undici";
 import { vi } from "vitest";
 import { unstable_dev } from "../api";
+import { mockConsoleMethods } from "./helpers/mock-console";
 import { runInTempDir } from "./helpers/run-in-tmp";
 
 vi.unmock("child_process");
 vi.unmock("undici");
 
 describe("unstable_dev", () => {
+	mockConsoleMethods();
 	it("should return Hello World", async () => {
 		const worker = await unstable_dev(
 			"src/__tests__/helpers/worker-scripts/hello-world-worker.js",
