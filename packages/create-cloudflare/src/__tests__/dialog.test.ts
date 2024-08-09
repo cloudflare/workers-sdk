@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, test } from "vitest";
+import { afterEach, beforeAll, describe, expect, test } from "vitest";
 import { collectCLIOutput, normalizeOutput } from "../../../cli/test-util";
 import { printSummary, printWelcomeMessage } from "../dialog";
 import type { C3Context } from "types";
@@ -47,7 +47,7 @@ describe("dialog helpers", () => {
 			originalStdoutColumns = process.stdout.columns;
 		});
 
-		afterAll(() => {
+		afterEach(() => {
 			process.stdout.columns = originalStdoutColumns;
 		});
 
