@@ -36,7 +36,7 @@ export function Options(d1ListYargs: CommonYargsArgv) {
 			describe: "Choose a sort direction",
 			default: "DESC" as const,
 		})
-		.option("count", {
+		.option("limit", {
 			describe: "fetch insights about the first X queries",
 			type: "number",
 			default: 5,
@@ -100,7 +100,7 @@ export const Handler = withConfig<HandlerOptions>(
 		name,
 		config,
 		json,
-		count,
+		limit,
 		timePeriod,
 		sortType,
 		sortBy,
@@ -131,7 +131,7 @@ export const Handler = withConfig<HandlerOptions>(
 						query: `query getD1QueriesOverviewQuery($accountTag: string, $filter: ZoneWorkersRequestsFilter_InputObject) {
 								viewer {
 									accounts(filter: {accountTag: $accountTag}) {
-										d1QueriesAdaptiveGroups(limit: ${count}, filter: $filter, orderBy: [${orderByClause}]) {
+										d1QueriesAdaptiveGroups(limit: ${limit}, filter: $filter, orderBy: [${orderByClause}]) {
 											sum {
 												queryDurationMs
 												rowsRead
