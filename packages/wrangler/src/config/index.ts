@@ -182,7 +182,10 @@ export function findWranglerToml(
 /**
  * Print all the bindings a worker using a given config would have access to
  */
-export function printBindings(bindings: CfWorkerInit["bindings"]) {
+export function printBindings(
+	bindings: CfWorkerInit["bindings"],
+	creation: boolean
+) {
 	const truncate = (item: string | Record<string, unknown>) => {
 		const s = typeof item === "string" ? item : JSON.stringify(item);
 		const maxLength = 40;
@@ -195,7 +198,7 @@ export function printBindings(bindings: CfWorkerInit["bindings"]) {
 
 	const output: {
 		type: string;
-		entries: { key: string; value: string | boolean }[];
+		entries: { key: string; value: string | boolean | undefined }[];
 	}[] = [];
 
 	const {
@@ -300,7 +303,7 @@ export function printBindings(bindings: CfWorkerInit["bindings"]) {
 			type: "D1 Databases",
 			entries: d1_databases.map(
 				({ binding, database_name, database_id, preview_database_id }) => {
-					let databaseValue = `${database_id}`;
+					let databaseValue = database_id;
 					if (database_name) {
 						databaseValue = `${database_name} (${database_id})`;
 					}
@@ -519,12 +522,16 @@ export function printBindings(bindings: CfWorkerInit["bindings"]) {
 	}
 
 	const message = [
-		`Your worker has access to the following bindings:`,
+		creation
+			? `The following resources need provisioned:`
+			: `Your worker has access to the following bindings:`,
 		...output
 			.map((bindingGroup) => {
 				return [
 					`- ${bindingGroup.type}:`,
-					bindingGroup.entries.map(({ key, value }) => `  - ${key}: ${value}`),
+					bindingGroup.entries.map(({ key, value }) =>
+						creation || !value ? `  - ${key}` : `  - ${key}: ${value}`
+					),
 				];
 			})
 			.flat(2),

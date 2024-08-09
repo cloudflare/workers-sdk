@@ -13,6 +13,31 @@ import type {
 } from "../yargs-types";
 import type { DatabaseCreationResult } from "./types";
 
+export async function createD1Database(
+	accountId: string,
+	name: string,
+	location?: string
+) {
+	let db: DatabaseCreationResult;
+	try {
+		db = await fetchResult(`/accounts/${accountId}/d1/database`, {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify({
+				name,
+				...(location && { primary_location_hint: location }),
+			}),
+		});
+	} catch (e) {
+		if ((e as { code: number }).code === 7502) {
+			throw new UserError("A database with that name already exists");
+		}
+		throw e;
+	}
+	return db;
+}
 export function Options(yargs: CommonYargsArgv) {
 	return yargs
 		.positional("name", {
@@ -42,25 +67,7 @@ export const Handler = withConfig<HandlerOptions>(
 				);
 			}
 		}
-
-		let db: DatabaseCreationResult;
-		try {
-			db = await fetchResult(`/accounts/${accountId}/d1/database`, {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-				},
-				body: JSON.stringify({
-					name,
-					...(location && { primary_location_hint: location }),
-				}),
-			});
-		} catch (e) {
-			if ((e as { code: number }).code === 7502) {
-				throw new UserError("A database with that name already exists");
-			}
-			throw e;
-		}
+		const db = await createD1Database(accountId, name, location);
 
 		logger.log(
 			renderToString(
