@@ -129,7 +129,6 @@ const runTemplate = async (ctx: C3Context) => {
 	await printSummary(ctx);
 
 	logRaw("");
-	process.exit(0);
 };
 
 const create = async (ctx: C3Context) => {
