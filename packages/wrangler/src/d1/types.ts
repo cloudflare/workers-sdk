@@ -78,11 +78,13 @@ export interface D1Queries {
 		queryDurationMs?: number;
 		rowsRead?: number;
 		rowsWritten?: number;
+		rowsReturned?: number;
 	};
 	sum?: {
 		queryDurationMs?: number;
 		rowsRead?: number;
 		rowsWritten?: number;
+		rowsReturned?: number;
 	};
 	count?: number;
 	dimensions: {
