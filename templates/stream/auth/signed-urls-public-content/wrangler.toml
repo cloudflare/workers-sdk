@@ -1,9 +1,0 @@
-# Top-level configuration
-name = "signed-urls-public-content"
-compatibility_date = "2022-10-31"
-
-[vars]
-CLOUDFLARE_ACCOUNT_ID = ""
-CLOUDFLARE_API_TOKEN = ""
-CLOUDFLARE_STREAM_VIDEO_UID = ""
-CLOUDFLARE_STREAM_SUBDOMAIN = ""

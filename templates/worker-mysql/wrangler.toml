@@ -1,6 +1,0 @@
-name = "" # todo
-main = "dist/index.mjs"
-compatibility_date = "2021-10-07"
-
-[build]
-command = "npm run build && cp ./src/driver/**/*.wasm ./dist"

@@ -1,6 +1,0 @@
-name = "cryptocurrency-slack-bot"
-compatibility_date = "2023-10-30"
-main = "index.js"
-
-[vars]
-SLACK_TOKEN = "PUTYOURTOKENHERE"
