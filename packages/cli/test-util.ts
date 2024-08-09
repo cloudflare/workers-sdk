@@ -25,22 +25,13 @@ export function collectCLIOutput() {
 
 // Based on the implementation on packages/wrangler/e2e/helpers/normalize.ts
 export function normalizeOutput(output: string) {
-	const functions = [
-		normalizePackageManager,
-		stripAnsi,
-		normalizeSlashes,
-		removeZeroWidthSpaces,
-	];
+	const functions = [stripAnsi, normalizeSlashes, removeZeroWidthSpaces];
 
 	for (const f of functions) {
 		output = f(output);
 	}
 
 	return output;
-}
-
-function normalizePackageManager(output: string) {
-	return output.replace(/pnpm|yarn|bun/g, "npm");
 }
 
 // Copied from packages/wrangler/e2e/helpers/normalize.ts

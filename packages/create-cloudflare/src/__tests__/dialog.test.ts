@@ -63,8 +63,8 @@ describe("dialog helpers", () => {
 				 │    Dash: https://dash.cloudflare.com/?to=/:account/workers/services/view/test-project │
 				 │                                                                                       │
 				 │ 💻 Continue Developing                                                                │
-				 │    Start dev server: npm run start                                                   │
-				 │    Deploy again: npm run deploy                                                      │
+				 │    Start dev server: pnpm run start                                                   │
+				 │    Deploy again: pnpm run deploy                                                      │
 				 │                                                                                       │
 				 │ 📖 Explore Documentation                                                              │
 				 │    https://developers.cloudflare.com/workers                                          │
@@ -94,8 +94,8 @@ describe("dialog helpers", () => {
 				 │                                                              │
 				 │ 💻 Continue Developing                                       │
 				 │    Change directories: cd ../example                         │
-				 │    Start dev server: npm run start                          │
-				 │    Deploy: npm run deploy                                   │
+				 │    Start dev server: pnpm run start                          │
+				 │    Deploy: pnpm run deploy                                   │
 				 │                                                              │
 				 │ 📖 Explore Documentation                                     │
 				 │    https://developers.cloudflare.com/pages                   │
@@ -121,8 +121,8 @@ describe("dialog helpers", () => {
 				 │    Dash: https://dash.cloudflare... │
 				 │                                     │
 				 │ 💻 Continue Developing              │
-				 │    Start dev server: npm run start │
-				 │    Deploy again: npm run deploy    │
+				 │    Start dev server: pnpm run start │
+				 │    Deploy again: pnpm run deploy    │
 				 │                                     │
 				 │ 📖 Explore Documentation            │
 				 │    https://developers.cloudflare... │
