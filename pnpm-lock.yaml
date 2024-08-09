@@ -617,6 +617,9 @@ importers:
       '@types/node':
         specifier: 20.8.3
         version: 20.8.3
+      ext-dep:
+        specifier: file:./internal-module-resolution/vendor/ext-dep
+        version: file:fixtures/vitest-pool-workers-examples/internal-module-resolution/vendor/ext-dep
       jose:
         specifier: ^5.2.2
         version: 5.2.2
@@ -5206,6 +5209,9 @@ packages:
   express@4.18.1:
     resolution: {integrity: sha512-zZBcOX9TfehHQhtupq57OF8lFZ3UZi08Y97dwFCkD8p9d/d2Y3M+ykKcwaMDEL+4qyUolgBDX6AblpR3fL212Q==}
     engines: {node: '>= 0.10.0'}
+
+  ext-dep@file:fixtures/vitest-pool-workers-examples/internal-module-resolution/vendor/ext-dep:
+    resolution: {directory: fixtures/vitest-pool-workers-examples/internal-module-resolution/vendor/ext-dep, type: directory}
 
   extendable-error@0.1.7:
     resolution: {integrity: sha512-UOiS2in6/Q0FK0R0q6UY9vYpQ21mr/Qn1KOnte7vsACuNJf514WvCCUHSRCPcgjPT2bAhNIJdlE6bVap1GKmeg==}
@@ -12806,6 +12812,8 @@ snapshots:
       vary: 1.1.2
     transitivePeerDependencies:
       - supports-color
+
+  ext-dep@file:fixtures/vitest-pool-workers-examples/internal-module-resolution/vendor/ext-dep: {}
 
   extendable-error@0.1.7: {}
 

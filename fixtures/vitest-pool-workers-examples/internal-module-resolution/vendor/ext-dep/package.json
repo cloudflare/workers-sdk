@@ -1,0 +1,5 @@
+{
+	"name": "ext-dep",
+	"type": "commonjs",
+	"main": "index.js"
+}
