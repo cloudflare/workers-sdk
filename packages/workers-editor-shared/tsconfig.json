@@ -7,15 +7,12 @@
 		"lib": ["ES2020", "DOM", "DOM.Iterable"],
 		"module": "ESNext",
 		"skipLibCheck": true,
-		// "preserveSymlinks": true,
 		"moduleResolution": "Node",
 		"resolveJsonModule": true,
 		"isolatedModules": true,
 		"noEmit": true,
 		"jsx": "react-jsx",
 		"allowSyntheticDefaultImports": true,
-
-		/* Linting */
 		"strict": true
 	},
 	"include": ["lib"],

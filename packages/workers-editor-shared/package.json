@@ -24,7 +24,7 @@
 	"scripts": {
 		"build": "tsc && vite build",
 		"check:lint": "eslint lib --max-warnings=0",
-		"check:type": "tsc",
+		"check:type": "tsc && tsc -p tsconfig.node.json --noEmit",
 		"dev": "vite"
 	},
 	"dependencies": {
