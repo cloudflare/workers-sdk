@@ -1,7 +1,7 @@
 import { readConfig } from "../config";
 import { logger } from "../logger";
-import { getIndex } from "./client";
-import { deprecatedV1DefaultFlag, vectorizeBetaWarning } from "./common";
+import { indexInfo } from "./client";
+import { vectorizeBetaWarning } from "./common";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
@@ -19,12 +19,6 @@ export function options(yargs: CommonYargsArgv) {
 			type: "boolean",
 			default: false,
 		})
-		.option("deprecated-v1", {
-			type: "boolean",
-			default: deprecatedV1DefaultFlag,
-			describe:
-				"Fetch a deprecated V1 Vectorize index. This must be enabled if the index was created with V1 option.",
-		})
 		.epilogue(vectorizeBetaWarning);
 }
 
@@ -32,21 +26,21 @@ export async function handler(
 	args: StrictYargsOptionsToInterface<typeof options>
 ) {
 	const config = readConfig(args.config, args);
-	const index = await getIndex(config, args.name, args.deprecatedV1);
+
+	logger.log(`📋 Fetching index info...`);
+	const info = await indexInfo(config, args.name);
 
 	if (args.json) {
-		logger.log(JSON.stringify(index, null, 2));
+		logger.log(JSON.stringify(info, null, 2));
 		return;
 	}
 
 	logger.table([
 		{
-			name: index.name,
-			dimensions: index.config?.dimensions.toString(),
-			metric: index.config?.metric,
-			description: index.description || "",
-			created: index.created_on,
-			modified: index.modified_on,
+			dimensions: info.dimensions.toString(),
+			vectorCount: info.vectorCount.toString(),
+			processedUpToMutation: info.processedUpToMutation,
+			processedUpToDatetime: info.processedUpToDatetime,
 		},
 	]);
 }
