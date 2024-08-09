@@ -56,8 +56,8 @@ it("can import URL from 'url' in node_compat mode", async () => {
 });
 
 describe.each([
-	{ cmd: "wrangler dev" },
-	{ cmd: "wrangler dev --remote" },
+	{ cmd: "wrangler dev --no-x-dev-env" },
+	{ cmd: "wrangler dev --remote --no-x-dev-env" },
 	{ cmd: "wrangler dev --x-dev-env" },
 	{ cmd: "wrangler dev --remote --x-dev-env" },
 ])("basic js dev: $cmd", ({ cmd }) => {
@@ -109,8 +109,8 @@ describe.each([
 });
 
 describe.each([
-	{ cmd: "wrangler dev" },
-	{ cmd: "wrangler dev --remote" },
+	{ cmd: "wrangler dev --no-x-dev-env" },
+	{ cmd: "wrangler dev --remote --no-x-dev-env" },
 	{ cmd: "wrangler dev --x-dev-env" },
 	{ cmd: "wrangler dev --remote --x-dev-env" },
 ])("basic python dev: $cmd", { timeout: 90_000 }, ({ cmd }) => {
@@ -221,10 +221,10 @@ describe.each([
 });
 
 describe.each([
-	{ cmd: "wrangler dev" },
-	{ cmd: "wrangler dev --x-dev-env" },
-	{ cmd: "wrangler dev --x-registry" },
+	{ cmd: "wrangler dev --x-dev-env --no-x-registry" },
+	{ cmd: "wrangler dev --no-x-dev-env --no-x-registry" },
 	{ cmd: "wrangler dev --x-dev-env --x-registry" },
+	{ cmd: "wrangler dev --no-x-dev-env --x-registry" },
 ])("dev registry $cmd", ({ cmd }) => {
 	let a: string;
 	let b: string;
