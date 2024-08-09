@@ -196,7 +196,7 @@ export function findWranglerToml(
  */
 export function printBindings(
 	bindings: CfWorkerInit["bindings"],
-	creation: boolean
+	creation?: boolean
 ) {
 	const truncate = (item: string | Record<string, unknown>) => {
 		const s = typeof item === "string" ? item : JSON.stringify(item);
