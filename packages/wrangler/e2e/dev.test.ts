@@ -106,48 +106,6 @@ describe.each([
 
 		await expect(fetchText(url)).resolves.toMatchSnapshot();
 	});
-
-	// Regression test for https://github.com/cloudflare/workers-sdk/issues/5297
-	// The runtime inspector can send messages larger than 1MB limit websocket message permitted by UserWorkers.
-	// In the real-world, this is encountered when debugging large source files (source maps)
-	// or inspecting a variable that serializes to a large string.
-	// Connecting devtools directly to the inspector works fine, but we proxy the inspector messages
-	// through a worker (InspectorProxyWorker) which hits the limit (without the fix, compatibilityFlags:["increase_websocket_message_size"])
-	// By logging a large string and verifying that wrangler logs it to the console,
-	// we can verify that the inspector messages are being proxied successfully.
-	// Local-mode receives logs from workerd stdout, so this test assertion is only relevant for remote-mode.
-	// A more complete assertion would connect a websocket to the inspector and verify that the message is received. (TODO)
-	it("can receive large messages from the inspector", async () => {
-		const LENGTH = 2 ** 20; // Slight larger than 1MB reliably reproduces the issue
-
-		const helper = new WranglerE2ETestHelper();
-		await helper.seed({
-			"wrangler.toml": dedent`
-                name = "${workerName}"
-                main = "src/index.ts"
-                compatibility_date = "2023-01-01"
-            `,
-			"src/index.ts": dedent`
-                export default {
-                    fetch(request) {
-                        console.log("a".repeat(${LENGTH}));
-
-                        return new Response("Hello World!");
-                    }
-                }
-            `,
-		});
-		const worker = helper.runLongLived(cmd);
-
-		const { url } = await worker.waitForReady();
-		await expect(fetchText(url)).resolves.toBe("Hello World!");
-
-		// this consoleAPICalled inspector message would've been larger than the 1MB default limit
-		// but it may have been chunked when written to the terminal (eg. split by request logging)
-		// so we only need to check if part (eg 100 chars) of the message made it to the terminal to infer
-		// the consoleAPICalled inspector message was received without a "Message is too large" runtime error.
-		await worker.readUntil(/a{100,}/);
-	});
 });
 
 describe.each([

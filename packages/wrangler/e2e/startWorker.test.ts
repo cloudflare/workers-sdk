@@ -31,7 +31,7 @@ function waitForMessageContaining<T>(ws: WebSocket, value: string): Promise<T> {
 function collectMessagesContaining<T>(
 	ws: WebSocket,
 	value: string,
-	collection: T[]
+	collection: T[] = []
 ) {
 	ws.addEventListener("message", (event) => {
 		assert(typeof event.data === "string");
@@ -39,6 +39,8 @@ function collectMessagesContaining<T>(
 			collection.push(JSON.parse(event.data));
 		}
 	});
+
+	return collection;
 }
 
 describe.each(OPTIONS)("DevEnv $remote", ({ remote }) => {
@@ -113,9 +115,7 @@ describe.each(OPTIONS)("DevEnv $remote", ({ remote }) => {
 
 		await expect(res.json()).resolves.toBeInstanceOf(Array);
 
-		const ws = new WebSocket(
-			`ws://${inspectorUrl.host}/core:user:${worker.config.name}`
-		);
+		const ws = new WebSocket(inspectorUrl.href);
 		const openPromise = events.once(ws, "open");
 
 		const consoleAPICalledPromise = waitForMessageContaining(
@@ -180,19 +180,16 @@ describe.each(OPTIONS)("DevEnv $remote", ({ remote }) => {
 
 		const inspectorUrl = await worker.inspectorUrl;
 
-		let ws = new WebSocket(
-			`ws://${inspectorUrl.host}/core:user:${worker.config.name}`,
-			{ setHost: false, headers: { Host: "example.com" } }
-		);
+		let ws = new WebSocket(inspectorUrl.href, {
+			setHost: false,
+			headers: { Host: "example.com" },
+		});
 
 		let openPromise = events.once(ws, "open");
 		await expect(openPromise).rejects.toThrow("Unexpected server response");
 
 		// Check validates `Origin` header
-		ws = new WebSocket(
-			`ws://${inspectorUrl.host}/core:user:${worker.config.name}`,
-			{ origin: "https://example.com" }
-		);
+		ws = new WebSocket(inspectorUrl.href, { origin: "https://example.com" });
 		openPromise = events.once(ws, "open");
 		await expect(openPromise).rejects.toThrow("Unexpected server response");
 		ws.close();
@@ -202,13 +199,13 @@ describe.each(OPTIONS)("DevEnv $remote", ({ remote }) => {
 	// The runtime inspector can send messages larger than 1MB limit websocket message permitted by UserWorkers.
 	// In the real-world, this is encountered when debugging large source files (source maps)
 	// or inspecting a variable that serializes to a large string.
-	// Connecting devtools directly to the inspector works fine, but we proxy the inspector messages
+	// Connecting devtools directly to the inspector would work fine, but we proxy the inspector messages
 	// through a worker (InspectorProxyWorker) which hits the limit (without the fix, compatibilityFlags:["increase_websocket_message_size"])
 	// By logging a large string we can verify that the inspector messages are being proxied successfully.
 	it("InspectorProxyWorker can proxy messages > 1MB", async (t) => {
 		t.onTestFinished(() => worker?.dispose());
 
-		const LARGE_STRING = "a".repeat(2 ** 22);
+		const LARGE_STRING = "This is a large string" + "\u200b".repeat(2 ** 20);
 
 		const script = dedent`
                 export default {
@@ -232,17 +229,10 @@ describe.each(OPTIONS)("DevEnv $remote", ({ remote }) => {
 		});
 
 		const inspectorUrl = await worker.inspectorUrl;
+		const ws = new WebSocket(inspectorUrl.href);
 
-		const ws = new WebSocket(
-			`ws://${inspectorUrl.host}/core:user:${worker.config.name}`
-		);
-
-		const consoleApiMessages: DevToolsEvent<"Runtime.consoleAPICalled">[] = [];
-		collectMessagesContaining(
-			ws,
-			"Runtime.consoleAPICalled",
-			consoleApiMessages
-		);
+		const consoleApiMessages: DevToolsEvent<"Runtime.consoleAPICalled">[] =
+			collectMessagesContaining(ws, "Runtime.consoleAPICalled");
 
 		await worker.fetch("http://dummy");
 
