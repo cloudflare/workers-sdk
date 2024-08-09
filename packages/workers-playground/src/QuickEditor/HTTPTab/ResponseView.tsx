@@ -42,15 +42,8 @@ function maybeGetLanguage(
 }
 
 const ResponseView: React.FC<Props> = ({ response, loading }) => {
-	const { status, statusCode } = useMemo((): {
-		status: string;
-		statusCode: number;
-	} => {
-		return {
-			status: response.headers.get("cf-ew-status") || "",
-			statusCode: window.parseInt(status, 10),
-		};
-	}, [response]);
+	const status = response.headers.get("cf-ew-status") ?? "200";
+	const statusCode = window.parseInt(status, 10);
 
 	const headers = useMemo(
 		() =>

@@ -5,11 +5,10 @@ import {
 	theme as styleTheme,
 } from "@cloudflare/style-const";
 import { createComponent } from "@cloudflare/style-container";
+import { BACKGROUND_GRAY, SplitPane } from "@cloudflare/workers-editor-shared";
 import React, { createContext, useEffect, useState } from "react";
-import { BACKGROUND_GRAY } from "./constants";
 import defaultHashes from "./defaultHashes";
 import EditorPane from "./EditorPane";
-import SplitPane from "./SplitPane";
 import ToolsPane from "./ToolsPane";
 import { TopBar } from "./TopBar";
 import { useDraftWorker } from "./useDraftWorker";

@@ -1,8 +1,7 @@
+import { DragContext, Frame } from "@cloudflare/workers-editor-shared";
 import { useContext } from "react";
-import Frame from "./Frame";
 import FrameErrorBoundary from "./FrameErrorBoundary";
 import { ServiceContext } from "./QuickEditor";
-import { DragContext } from "./SplitPane";
 import type React from "react";
 
 function getDevtoolsIframeUrl(inspectorUrl: string) {

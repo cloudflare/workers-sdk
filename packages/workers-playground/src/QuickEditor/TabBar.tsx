@@ -2,12 +2,15 @@
 import { isDarkMode, variables } from "@cloudflare/style-const";
 import { createComponent } from "@cloudflare/style-container";
 import {
+	BORDER_GRAY,
+	STYLED_TAB_HEIGHT,
+} from "@cloudflare/workers-editor-shared";
+import {
 	Tab as ReactTab,
 	TabList as ReactTabList,
 	TabPanel as ReactTabPanel,
 	Tabs as ReactTabs,
 } from "react-tabs";
-import { BORDER_GRAY, STYLED_TAB_HEIGHT } from "./constants";
 import type { TabProps as ReactTabProps } from "react-tabs";
 
 const HIGHLIGHT_BLUE = variables.colors.blue[4];

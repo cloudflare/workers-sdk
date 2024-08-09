@@ -34,6 +34,7 @@ describe("findPackageNames()", () => {
 			  "solarflare-theme",
 			  "turbo-r2-archive",
 			  "@cloudflare/vitest-pool-workers",
+			  "@cloudflare/workers-editor-shared",
 			  "workers-playground",
 			  "@cloudflare/workers-shared",
 			  "workers.new",
