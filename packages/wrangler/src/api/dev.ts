@@ -59,6 +59,9 @@ export interface UnstableDevOptions {
 	ai?: {
 		binding: string;
 	};
+	browser?: {
+		binding: string;
+	}
 	version_metadata?: {
 		binding: string;
 	};

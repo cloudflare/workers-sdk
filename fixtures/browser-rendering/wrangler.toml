@@ -1,0 +1,9 @@
+name = "browser-rendering-app"
+compatibility_date = "2024-06-20"
+
+compatibility_flags = ["nodejs_compat"]
+main = "src/index.js"
+
+
+[browser]
+binding = "BROWSER"
