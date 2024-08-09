@@ -237,6 +237,14 @@ export async function versionsUploadHandler(
 		);
 	}
 
+	const experimentalAssetsOptions = experimentalAssets
+		? {
+				...experimentalAssets,
+				// Flag use of assets without user worker
+				staticAssetsOnly: !(args.script || config.main),
+			}
+		: undefined;
+
 	const cliVars = collectKeyValues(args.var);
 	const cliDefines = collectKeyValues(args.define);
 	const cliAlias = collectKeyValues(args.alias);
@@ -263,7 +271,7 @@ export async function versionsUploadHandler(
 		jsxFactory: args.jsxFactory,
 		jsxFragment: args.jsxFragment,
 		tsconfig: args.tsconfig,
-		experimentalAssets: experimentalAssets?.directory,
+		experimentalAssets: experimentalAssetsOptions,
 		minify: args.minify,
 		uploadSourceMaps: args.uploadSourceMaps,
 		nodeCompat: args.nodeCompat,
