@@ -75,6 +75,17 @@ function isFile(filePath: string): boolean {
 	}
 }
 
+function isDirectory(filePath: string): boolean {
+	try {
+		return fs.statSync(filePath).isDirectory();
+	} catch (e) {
+		if (isFileNotFoundError(e)) {
+			return false;
+		}
+		throw e;
+	}
+}
+
 function getParentPaths(filePath: string): string[] {
 	const parentPaths: string[] = [];
 	// eslint-disable-next-line no-constant-condition
@@ -225,6 +236,9 @@ function maybeGetTargetFilePath(target: string): string | undefined {
 	}
 	if (target.endsWith(disableCjsEsmShimSuffix)) {
 		return target;
+	}
+	if (isDirectory(target)) {
+		return maybeGetTargetFilePath(target + "/index");
 	}
 }
 
