@@ -391,7 +391,12 @@ export const createContext = async (
 	}
 
 	const path = resolve(projectName);
+	const languageVariants =
+		template.copyFiles && !isVariantInfo(template.copyFiles)
+			? Object.keys(template.copyFiles.variants)
+			: [];
 
+	if (languageVariants.length > 0) {
 	// If we can infer from the directory that it uses typescript, use that
 	if (hasTsConfig(path)) {
 		args.lang = "ts";
@@ -425,23 +430,21 @@ export const createContext = async (
 		return crash("An application type must be specified to continue.");
 	}
 
-	const variants =
-		template.copyFiles && !isVariantInfo(template.copyFiles)
-			? Object.keys(template.copyFiles.variants)
-			: [];
 	const languageOptions = [
 		{ label: "TypeScript", value: "ts" },
 		{ label: "JavaScript", value: "js" },
 		{ label: "Python (beta)", value: "python" },
-	].filter((option) => variants.includes(option.value));
+		];
 
-	if (variants.length > 0) {
 		// Otherwise, prompt the user for their language preference
 		const lang = await processArgument<string>(args, "lang", {
 			type: "select",
 			question: "Which language do you want to use?",
 			label: "lang",
-			options: languageOptions.concat(backOption),
+			options: languageOptions
+				.filter((option) => languageVariants.includes(option.value))
+				// Allow going back only if the user is not selecting a remote template
+				.concat(args.template ? [] : backOption),
 			defaultValue: C3_DEFAULTS.lang,
 		});
 
