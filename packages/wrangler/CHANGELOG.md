@@ -1,5 +1,18 @@
 # wrangler
 
+## 3.70.0
+
+### Minor Changes
+
+- [#6383](https://github.com/cloudflare/workers-sdk/pull/6383) [`05082ad`](https://github.com/cloudflare/workers-sdk/commit/05082adae40c9b30a72b6b6b31f466803f5eab5d) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - feat: support outputting ND-JSON files via an environment variable
+
+### Patch Changes
+
+- [#6440](https://github.com/cloudflare/workers-sdk/pull/6440) [`09b5092`](https://github.com/cloudflare/workers-sdk/commit/09b50927a62731f8aa621b9d872d10d1900a60a5) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: tweak the properties of the new Wrangler output file entries for better consistency
+
+- Updated dependencies [[`d55eeca`](https://github.com/cloudflare/workers-sdk/commit/d55eeca878b68bd10ddcc5ef3b1b4d820b037684)]:
+  - miniflare@3.20240806.0
+
 ## 3.69.1
 
 ### Patch Changes
