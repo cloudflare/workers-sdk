@@ -1,5 +1,6 @@
 import { handleFailure } from "./common";
 import { createCommand, createCommandOptionalYargs } from "./create";
+import { curlCommand, yargsCurl } from "./curl";
 import { deleteCommand, deleteCommandOptionalYargs } from "./delete";
 import { registriesCommand } from "./images/images";
 import { listCommand, listDeploymentsYargs } from "./list";
@@ -54,5 +55,11 @@ export const cloudchamber = (
 		)
 		.command("registries", "Configure registries via Cloudchamber", (args) =>
 			registriesCommand(args).command(subHelp)
+		)
+		.command(
+			"curl <path>",
+			"perform curl in wrangler",
+			(args) => yargsCurl(args),
+			(args) => handleFailure(curlCommand)(args)
 		);
 };
