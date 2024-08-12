@@ -167,7 +167,7 @@ const runCli = async (
 
 	// Verify deployment
 	const deployedUrlRe =
-		/deployment is ready at: (https:\/\/.+\.(workers)\.dev)/;
+		/deployment is ready at: (https:\/\/.+?\.(workers)\.dev)/;
 
 	const match = output.replaceAll("\n", "").match(deployedUrlRe);
 	if (!match || !match[1]) {
