@@ -2,12 +2,12 @@ import { stringify } from "@iarna/toml";
 import { readConfig } from "../config";
 import { logger } from "../logger";
 import { createIndex } from "./client";
-import { vectorizeBetaWarning } from "./common";
+import { deprecatedV1DefaultFlag, vectorizeBetaWarning } from "./common";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
 } from "../yargs-types";
-import type { VectorizeDistanceMetric } from "@cloudflare/workers-types";
+import type { VectorizeDistanceMetric } from "./types";
 
 export function options(yargs: CommonYargsArgv) {
 	return yargs
@@ -56,6 +56,12 @@ export function options(yargs: CommonYargsArgv) {
 			type: "boolean",
 			default: false,
 		})
+		.option("deprecated-v1", {
+			type: "boolean",
+			default: deprecatedV1DefaultFlag,
+			describe:
+				"Create a deprecated Vectorize V1 index. This is not recommended and indexes created with this option need all other Vectorize operations to have this option enabled.",
+		})
 		.epilogue(vectorizeBetaWarning);
 }
 
@@ -91,7 +97,14 @@ export async function handler(
 	};
 
 	logger.log(`🚧 Creating index: '${args.name}'`);
-	const indexResult = await createIndex(config, index);
+	const indexResult = await createIndex(config, index, args.deprecatedV1);
+
+	let bindingName: string;
+	if (args.deprecatedV1) {
+		bindingName = "VECTORIZE_INDEX";
+	} else {
+		bindingName = "VECTORIZE";
+	}
 
 	if (args.json) {
 		logger.log(JSON.stringify(index, null, 2));
@@ -108,7 +121,7 @@ export async function handler(
 		stringify({
 			vectorize: [
 				{
-					binding: "VECTORIZE_INDEX",
+					binding: bindingName,
 					index_name: indexResult.name,
 				},
 			],
