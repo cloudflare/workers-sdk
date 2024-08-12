@@ -38,7 +38,7 @@ describe("c3 integration", () => {
 			env,
 		});
 
-		expect(existsSync(path.join(helper.tmpPath, workerName))).toBe(true);
+		expect(existsSync(path.join(helper.tmpPath, workerName, "wrangler.toml"))).toBe(true);
 	});
 
 	it("can run `wrangler dev` on generated worker", async () => {
