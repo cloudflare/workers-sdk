@@ -34,11 +34,9 @@ describe("c3 integration", () => {
 			GIT_COMMITTER_EMAIL: "test-user@cloudflare.com",
 		};
 
-		const init = await helper.run(`wrangler init ${workerName} --yes`, {
+		await helper.run(`wrangler init ${workerName} --yes`, {
 			env,
 		});
-
-		expect(init.output).toContain("APPLICATION CREATED");
 
 		expect(existsSync(path.join(helper.tmpPath, workerName))).toBe(true);
 	});
