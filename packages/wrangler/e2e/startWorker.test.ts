@@ -205,20 +205,28 @@ describe.each(OPTIONS)("DevEnv $remote", ({ remote }) => {
 	it("InspectorProxyWorker can proxy messages > 1MB", async (t) => {
 		t.onTestFinished(() => worker?.dispose());
 
-		const LARGE_STRING =
-			"::group::This is a large string" +
-			"\u200b".repeat(2 ** 20) +
-			"::endgroup::";
+		const originalConsoleLog = console.log;
+		const mockConsoleLogImpl = (message: unknown, ...args: unknown[]) => {
+			if (typeof message === "string" && /z+/.test(message)) {
+				return; // don't log chunks of the large string
+			}
+
+			originalConsoleLog(message, ...args);
+		};
+		vi.spyOn(console, "info").mockImplementation(mockConsoleLogImpl);
+		vi.spyOn(console, "log").mockImplementation(mockConsoleLogImpl);
+
+		const LARGE_STRING = "This is a large string" + "z".repeat(2 ** 20);
 
 		const script = dedent`
-                export default {
-                    fetch() {
-                        console.log("${LARGE_STRING}");
+            export default {
+                fetch() {
+                    console.log("${LARGE_STRING}");
 
-                        return new Response("body:1");
-                    }
+                    return new Response("body:1");
                 }
-            `;
+            }
+        `;
 
 		await helper.seed({
 			"src/index.ts": script,
