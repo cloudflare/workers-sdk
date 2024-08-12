@@ -47,16 +47,8 @@ const MAX_UPLOAD_GATEWAY_ERRORS = 5;
 export const syncExperimentalAssets = async (
 	accountId: string | undefined,
 	scriptName: string,
-	assetDirectory: string | undefined,
-	dryRun: boolean | undefined
-): Promise<string | undefined> => {
-	if (assetDirectory === undefined) {
-		return;
-	}
-	if (dryRun) {
-		logger.log("(Note: doing a dry run, not uploading or deleting anything.)");
-		return;
-	}
+	assetDirectory: string
+): Promise<string> => {
 	assert(accountId, "Missing accountId");
 
 	// 1. generate asset manifest

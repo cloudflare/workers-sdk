@@ -272,6 +272,11 @@ export interface CfUserLimits {
 	cpu_ms?: number;
 }
 
+export interface CfExperimentalAssets {
+	jwt: string;
+	staticAssetsOnly: boolean;
+}
+
 /**
  * Options for creating a `CfWorker`.
  */
@@ -336,10 +341,7 @@ export interface CfWorkerInit {
 	tail_consumers: CfTailConsumer[] | undefined;
 	limits: CfUserLimits | undefined;
 	annotations?: Record<string, string | undefined>;
-	experimental_assets?: {
-		jwt: string | undefined;
-		staticAssetsOnly: boolean | undefined;
-	};
+	experimental_assets: CfExperimentalAssets | undefined;
 }
 
 export interface CfWorkerContext {
