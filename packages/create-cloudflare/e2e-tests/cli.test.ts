@@ -143,7 +143,7 @@ describe.skipIf(frameworkToTest || isQuarantineMode())(
 				);
 
 				expect(projectPath).toExist();
-				expect(output).toContain(`type Example router & proxy Worker`);
+				expect(output).toContain(`type Scheduled Worker (Cron Trigger)`);
 				expect(output).toContain(`lang JavaScript`);
 				expect(output).toContain(`no git`);
 				expect(output).toContain(`no deploy`);
@@ -223,6 +223,39 @@ describe.skipIf(frameworkToTest || isQuarantineMode())(
 				expect(output).toContain(`category Hello World example`);
 				expect(output).toContain(`type Hello World Worker`);
 				expect(output).toContain(`lang Python`);
+			},
+		);
+
+		test.skipIf(process.platform === "win32")(
+			"Selecting template by description",
+			async () => {
+				const { output } = await runC3(
+					[projectPath, "--no-deploy", "--git=false"],
+					[
+						{
+							matcher: /What would you like to start with\?/,
+							input: {
+								type: "select",
+								searchBy: "description",
+								target:
+									"Select from a range of starter applications using various Cloudflare products",
+							},
+						},
+						{
+							matcher: /Which template would you like to use\?/,
+							input: {
+								type: "select",
+								searchBy: "description",
+								target: "Get started building a basic API on Workers",
+							},
+						},
+					],
+					logStream,
+				);
+
+				expect(projectPath).toExist();
+				expect(output).toContain(`category Demo application`);
+				expect(output).toContain(`type API starter (OpenAPI compliant)`);
 			},
 		);
 	},

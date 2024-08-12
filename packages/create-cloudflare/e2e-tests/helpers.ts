@@ -48,7 +48,13 @@ const testEnv = {
 
 export type PromptHandler = {
 	matcher: RegExp;
-	input: string[] | { type: "select"; target: RegExp | string };
+	input:
+		| string[]
+		| {
+				type: "select";
+				target: RegExp | string;
+				searchBy?: "label" | "description";
+		  };
 };
 
 export type RunnerConfig = {
@@ -113,10 +119,17 @@ export const runC3 = async (
 				return;
 			}
 
+			const { target, searchBy } = currentDialog.input;
+			const searchText =
+				searchBy === "description"
+					? lines
+							.filter((line) => !line.startsWith("●") && !line.startsWith("○"))
+							.join(" ")
+					: currentSelection;
 			const matchesSelectionTarget =
-				typeof currentDialog.input.target === "string"
-					? currentSelection.includes(currentDialog.input.target)
-					: currentDialog.input.target.test(currentSelection);
+				typeof target === "string"
+					? searchText.includes(target)
+					: target.test(searchText);
 
 			if (matchesSelectionTarget) {
 				// matches selection, so hit enter
