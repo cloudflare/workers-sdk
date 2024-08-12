@@ -234,16 +234,19 @@ export const createContext = async (
 				process.stdout.moveCursor(0, -9);
 				newArgs.category = undefined;
 				newArgs.type = undefined;
+				args.type = undefined;
 				break;
 			case "framework":
 				process.stdout.moveCursor(0, -9);
 				newArgs.category = undefined;
 				newArgs.framework = undefined;
+				args.framework = undefined;
 				break;
 			case "lang":
 				process.stdout.moveCursor(0, -12);
 				newArgs.type = undefined;
 				newArgs.lang = undefined;
+				args.lang = undefined;
 				break;
 		}
 
