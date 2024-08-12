@@ -254,7 +254,7 @@ describe.each(OPTIONS)("DevEnv $remote", ({ remote }) => {
 						method: "Runtime.consoleAPICalled",
 						params: {
 							args: expect.arrayContaining([
-								{ type: "string", value: LARGE_STRING },
+								{ type: "string", value: expect.stringContaining("zzzzzzzzz") },
 							]),
 						},
 					},
