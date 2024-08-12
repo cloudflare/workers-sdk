@@ -254,8 +254,8 @@ describe("wrangler", () => {
 					  -v, --version                   Show version number  [boolean]
 
 					OPTIONS
-					      --delivery-delay-secs            How long a published message should be delayed for, in seconds. Must be a positive integer  [number]
-					      --message-retention-period-secs  How long to retain a message in the queue, in seconds. Must be a positive integer  [number]"
+					      --delivery-delay-secs            How long a published message should be delayed for, in seconds. Must be between 0 and 42300
+					      --message-retention-period-secs  How long to retain a message in the queue, in seconds. Must be between 60 and 1209600"
 				`);
 			});
 
@@ -465,8 +465,8 @@ describe("wrangler", () => {
 					  -v, --version                   Show version number  [boolean]
 
 					OPTIONS
-					      --delivery-delay-secs            How long a published message should be delayed for, in seconds. Must be a positive integer  [number]
-					      --message-retention-period-secs  How long to retain a message in the queue, in seconds. Must be a positive integer  [number]"
+					      --delivery-delay-secs            How long a published message should be delayed for, in seconds. Must be between 0 and 42300
+					      --message-retention-period-secs  How long to retain a message in the queue, in seconds. Must be between 60 and 1209600"
 				`);
 			});
 
