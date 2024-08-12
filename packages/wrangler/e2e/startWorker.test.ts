@@ -57,12 +57,12 @@ describe.each(OPTIONS)("DevEnv $remote", ({ remote }) => {
 		t.onTestFinished(() => worker?.dispose());
 
 		const script = dedent`
-            export default {
-                fetch() {
-                    return new Response("body:1");
-                }
-            }
-        `;
+			export default {
+				fetch() {
+					return new Response("body:1");
+				}
+			}
+		`;
 
 		await helper.seed({
 			"src/index.ts": script,
@@ -90,14 +90,14 @@ describe.each(OPTIONS)("DevEnv $remote", ({ remote }) => {
 		t.onTestFinished(() => worker?.dispose());
 
 		const script = dedent`
-            export default {
-                fetch() {
-                    console.log('Inside mock user worker');
+			export default {
+				fetch() {
+					console.log('Inside mock user worker');
 
-                    return new Response("body:1");
-                }
-            }
-        `;
+					return new Response("body:1");
+				}
+			}
+		`;
 
 		await helper.seed({
 			"src/index.ts": script,
@@ -163,12 +163,12 @@ describe.each(OPTIONS)("DevEnv $remote", ({ remote }) => {
 
 		await helper.seed({
 			"src/index.ts": dedent`
-                export default {
-                    fetch() {
-                        return new Response("body:1");
-                    }
-                }
-            `,
+				export default {
+					fetch() {
+						return new Response("body:1");
+					}
+				}
+			`,
 		});
 
 		const worker = await startWorker({
@@ -219,14 +219,14 @@ describe.each(OPTIONS)("DevEnv $remote", ({ remote }) => {
 		const LARGE_STRING = "This is a large string" + "z".repeat(2 ** 20);
 
 		const script = dedent`
-            export default {
-                fetch() {
-                    console.log("${LARGE_STRING}");
+			export default {
+				fetch() {
+					console.log("${LARGE_STRING}");
 
-                    return new Response("body:1");
-                }
-            }
-        `;
+					return new Response("body:1");
+				}
+			}
+		`;
 
 		await helper.seed({
 			"src/index.ts": script,
@@ -269,12 +269,12 @@ describe.each(OPTIONS)("DevEnv $remote", ({ remote }) => {
 
 		await helper.seed({
 			"src/index.ts": dedent`
-                    export default {
-                        fetch() {
+					export default {
+						fetch() {
 							throw new Error('Boom!');
-                        }
-                    }
-                `,
+						}
+					}
+				`,
 		});
 
 		const worker = await startWorker({
@@ -288,12 +288,12 @@ describe.each(OPTIONS)("DevEnv $remote", ({ remote }) => {
 
 		await helper.seed({
 			"src/index.ts": dedent`
-                    export default {
-                        fetch() {
+					export default {
+						fetch() {
 							throw new Error('Boom 2!');
-                        }
-                    }
-                `,
+						}
+					}
+				`,
 		});
 		await setTimeout(300);
 
@@ -328,12 +328,12 @@ describe.each(OPTIONS)("DevEnv $remote", ({ remote }) => {
 		// test further changes that fix the code
 		await helper.seed({
 			"src/index.ts": dedent`
-                export default {
-                    fetch() {
-                        return new Response("body:3");
-                    }
-                }
-            `,
+				export default {
+					fetch() {
+						return new Response("body:3");
+					}
+				}
+			`,
 		});
 		await setTimeout(300);
 
@@ -349,12 +349,12 @@ describe.each(OPTIONS)("DevEnv $remote", ({ remote }) => {
 
 		await helper.seed({
 			"src/index.ts": dedent`
-                export default {
-                    fetch() {
-                        return new Response("body:1");
-                    }
-                }
-            `,
+				export default {
+					fetch() {
+						return new Response("body:1");
+					}
+				}
+			`,
 		});
 
 		const worker = await startWorker({
@@ -401,14 +401,14 @@ describe.each(OPTIONS)("DevEnv $remote", ({ remote }) => {
 
 		await helper.seed({
 			"src/index.ts": dedent`
-                export default {
-                    fetch() {
-                        return new Response("body:1", {
+				export default {
+					fetch() {
+						return new Response("body:1", {
 							headers: { 'Content-Type': 'text/html' }
 						});
-                    }
-                }
-            `,
+					}
+				}
+			`,
 		});
 
 		const worker = await startWorker({
@@ -433,12 +433,12 @@ describe.each(OPTIONS)("DevEnv $remote", ({ remote }) => {
 
 		await helper.seed({
 			"src/index.ts": dedent`
-                export default {
-                    fetch() {
-                        return new Response("body:2");
-                    }
-                }
-            `,
+				export default {
+					fetch() {
+						return new Response("body:2");
+					}
+				}
+			`,
 		});
 		await setTimeout(300);
 
@@ -450,14 +450,14 @@ describe.each(OPTIONS)("DevEnv $remote", ({ remote }) => {
 
 		await helper.seed({
 			"src/index.ts": dedent`
-                export default {
-                    fetch() {
-                        return new Response("body:3", {
+				export default {
+					fetch() {
+						return new Response("body:3", {
 							headers: { 'Content-Type': 'text/html' }
 						});
-                    }
-                }
-            `,
+					}
+				}
+			`,
 		});
 		await worker.patchConfig({
 			dev: {
@@ -478,12 +478,12 @@ describe.each(OPTIONS)("DevEnv $remote", ({ remote }) => {
 
 		await helper.seed({
 			"src/index.ts": dedent`
-                export default {
-                    fetch(request) {
-                        return new Response("URL: " + request.url);
-                    }
-                }
-            `,
+				export default {
+					fetch(request) {
+						return new Response("URL: " + request.url);
+					}
+				}
+			`,
 		});
 
 		const worker = await startWorker({
@@ -528,18 +528,18 @@ describe.each(OPTIONS)("DevEnv $remote", ({ remote }) => {
 		t.onTestFinished(() => worker?.dispose());
 
 		const script = dedent`
-            export default {
-                async fetch(request) {
-                    const url = new URL(request.url);
+			export default {
+				async fetch(request) {
+					const url = new URL(request.url);
 
-                    if (url.pathname === '/long') {
-                        await new Promise(r => setTimeout(r, 30_000));
-                    }
+					if (url.pathname === '/long') {
+						await new Promise(r => setTimeout(r, 30_000));
+					}
 
-                    return new Response("UserWorker:1");
-                }
-            }
-        `;
+					return new Response("UserWorker:1");
+				}
+			}
+		`;
 
 		await helper.seed({
 			"src/index.ts": script,
