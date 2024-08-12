@@ -1,5 +1,6 @@
 import { http, HttpResponse } from "msw";
 import patchConsole from "patch-console";
+import { collectCLIOutput } from "../helpers/collect-cli-output";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { MOCK_DEPLOYMENTS_COMPLEX } from "../helpers/mock-cloudchamber";
 import { mockConsoleMethods } from "../helpers/mock-console";
@@ -10,7 +11,8 @@ import { runWrangler } from "../helpers/run-wrangler";
 import { mockAccount, setWranglerConfig } from "./utils";
 
 describe("cloudchamber curl", () => {
-	const std = mockConsoleMethods();
+	const std = collectCLIOutput();
+	const helpStd = mockConsoleMethods();
 	const { setIsTTY } = useMockIsTTY();
 
 	mockAccountId();
@@ -28,7 +30,7 @@ describe("cloudchamber curl", () => {
 	it("should help", async () => {
 		await runWrangler("cloudchamber curl --help");
 		expect(std.err).toMatchInlineSnapshot(`""`);
-		expect(std.out).toMatchInlineSnapshot(`
+		expect(helpStd.out).toMatchInlineSnapshot(`
 			"wrangler cloudchamber curl <path>
 
 			send a request to an arbitrary cloudchamber endpoint
@@ -106,7 +108,8 @@ describe("cloudchamber curl", () => {
 			    },
 			    \\"placements_ref\\": \\"http://ref\\",
 			    \\"node_group\\": \\"metal\\"
-			}"
+			}
+			"
 		`);
 	});
 
@@ -127,7 +130,10 @@ describe("cloudchamber curl", () => {
 			"cloudchamber curl /test --json --header something:here --header other:thing"
 		);
 		expect(std.err).toMatchInlineSnapshot(`""`);
-		expect(std.out).toMatchInlineSnapshot(`"\\"{}\\""`);
+		expect(std.out).toMatchInlineSnapshot(`
+			"\\"{}\\"
+			"
+		`);
 	});
 
 	it("should give response without --json flag set", async () => {
@@ -147,7 +153,9 @@ describe("cloudchamber curl", () => {
 		);
 		expect(std.err).toMatchInlineSnapshot(`""`);
 		expect(std.out).toMatchInlineSnapshot(`
-			">> Body
+			"├ Loading account 
+			│ 
+			>> Body
 				 [
 				     {
 				         \\"id\\": \\"1\\",
@@ -245,7 +253,8 @@ describe("cloudchamber curl", () => {
 				         \\"placements_ref\\": \\"http://ref\\",
 				         \\"node_group\\": \\"metal\\"
 				     }
-				 ]"
+				 ]
+			"
 		`);
 	});
 
@@ -301,7 +310,8 @@ describe("cloudchamber curl", () => {
 			"cloudchamber curl /deployments/v2 --header something:here"
 		);
 		expect(std.err).toMatchInlineSnapshot(`""`);
-		const response = JSON.parse(std.out);
+		const text = std.out.split("\n").splice(1).join("\n");
+		const response = JSON.parse(text);
 		expect(response.status).toEqual(500);
 		expect(response.statusText).toEqual("Unhandled Exception");
 	});

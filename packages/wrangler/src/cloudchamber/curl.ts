@@ -1,4 +1,5 @@
 import { randomUUID } from "crypto";
+import { logRaw } from "@cloudflare/cli";
 import { bold, brandColor, cyanBright, yellow } from "@cloudflare/cli/colors";
 import { OpenAPI } from "./client";
 import { ApiError } from "./client/core/ApiError";
@@ -75,7 +76,7 @@ async function requestFromCmd(
 ): Promise<void> {
 	const requestId = `wrangler-${randomUUID()}`;
 	if (!args.json && args.verbose) {
-		console.log(bold(brandColor("Request id: " + requestId)));
+		logRaw(bold(brandColor("Request id: " + requestId)));
 	}
 
 	if (args.useStdin) {
@@ -107,7 +108,7 @@ async function requestFromCmd(
 			headers: headers,
 		});
 		if (args.json || args.silent) {
-			console.log(
+			logRaw(
 				JSON.stringify(
 					!args.verbose
 						? res
@@ -122,14 +123,14 @@ async function requestFromCmd(
 			);
 		} else if (!args.json && !args.silent) {
 			if (args.verbose) {
-				console.log(cyanBright(">> Headers"));
+				logRaw(cyanBright(">> Headers"));
 				for (const header in headers) {
-					console.log("\t", yellow(`${header}: ${headers[header]}`));
+					logRaw("\t" + yellow(`${header}: ${headers[header]}`));
 				}
 			}
-			console.log(cyanBright(">> Body"));
+			logRaw(cyanBright(">> Body"));
 			const text = JSON.stringify(res, null, 4);
-			console.log(
+			logRaw(
 				text
 					.split("\n")
 					.map((line) => `${yellow(`\t`)} ${brandColor(line)}`)
@@ -139,7 +140,7 @@ async function requestFromCmd(
 		return;
 	} catch (error) {
 		if (error instanceof ApiError) {
-			console.log(
+			logRaw(
 				JSON.stringify({
 					request: error.request,
 					status: error.status,
@@ -147,7 +148,7 @@ async function requestFromCmd(
 				})
 			);
 		} else {
-			console.log(String(error));
+			logRaw(String(error));
 		}
 	}
 }
