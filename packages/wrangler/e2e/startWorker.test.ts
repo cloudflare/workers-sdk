@@ -205,7 +205,10 @@ describe.each(OPTIONS)("DevEnv $remote", ({ remote }) => {
 	it("InspectorProxyWorker can proxy messages > 1MB", async (t) => {
 		t.onTestFinished(() => worker?.dispose());
 
-		const LARGE_STRING = "This is a large string" + "\u200b".repeat(2 ** 20);
+		const LARGE_STRING =
+			"::group::This is a large string" +
+			"\u200b".repeat(2 ** 20) +
+			"::endgroup::";
 
 		const script = dedent`
                 export default {
