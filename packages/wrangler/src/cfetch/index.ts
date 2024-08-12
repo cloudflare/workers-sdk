@@ -183,7 +183,15 @@ function throwFetchError(
 	if (code) {
 		error.code = code;
 	}
+	// extract the account tag from the resource (if any)
+	error.accountTag = extractAccountTag(resource);
 	throw error;
+}
+
+export function extractAccountTag(resource: string) {
+	const re = new RegExp("/accounts/([a-zA-Z0-9]+)/?");
+	const matches = re.exec(resource);
+	return matches?.[1];
 }
 
 function hasCursor(result_info: unknown): result_info is { cursor: string } {

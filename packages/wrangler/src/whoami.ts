@@ -1,46 +1,55 @@
 import chalk from "chalk";
 import { fetchPagedListResult, fetchResult } from "./cfetch";
+import { isAuthenticationError } from "./deploy/deploy";
 import { logger } from "./logger";
 import { getAPIToken, getAuthFromEnv, getScopes } from "./user";
+import { fetchMembershipRoles } from "./user/membership";
 
-export async function whoami() {
+export async function whoami(accountFilter?: string) {
 	logger.log("Getting User settings...");
 	const user = await getUserInfo();
-	if (user === undefined) {
+	if (!user) {
 		return void logger.log(
 			"You are not authenticated. Please run `wrangler login`."
 		);
 	}
-	if (user.email !== undefined) {
-		logger.log(
-			`👋 You are logged in with an ${
-				user.authType
-			}, associated with the email ${chalk.blue(user.email)}!`
-		);
-	} else {
-		logger.log(
-			`👋 You are logged in with an ${user.authType}. Unable to retrieve email for this user. Are you missing the \`User->User Details->Read\` permission?`
-		);
-	}
-
 	if (user.authType === "API Token") {
 		logger.log(
 			"ℹ️  The API Token is read from the CLOUDFLARE_API_TOKEN in your environment."
 		);
 	}
+	await printUserEmail(user);
+	await printAccountList(user);
+	await printTokenPermissions(user);
+	await printMembershipInfo(user, accountFilter);
+}
 
+function printUserEmail(user: UserInfo) {
+	if (!user.email) {
+		return void logger.log(
+			`👋 You are logged in with an ${user.authType}. Unable to retrieve email for this user. Are you missing the \`User->User Details->Read\` permission?`
+		);
+	}
+	logger.log(
+		`👋 You are logged in with an ${user.authType}, associated with the email ${chalk.blue(user.email)}.`
+	);
+}
+
+function printAccountList(user: UserInfo) {
 	logger.table(
 		user.accounts.map((account) => ({
 			"Account Name": account.name,
 			"Account ID": account.id,
 		}))
 	);
+}
+
+function printTokenPermissions(user: UserInfo) {
 	const permissions =
 		user.tokenPermissions?.map((scope) => scope.split(":")) ?? [];
-
 	if (user.authType !== "OAuth Token") {
 		return void logger.log(
-			`🔓 To see token permissions visit https://dash.cloudflare.com/profile/api-tokens`
+			`🔓 To see token permissions visit https://dash.cloudflare.com/profile/api-tokens.`
 		);
 	}
 	logger.log(
@@ -49,6 +58,40 @@ export async function whoami() {
 	logger.log(`Scope (Access)`);
 	for (const [scope, access] of permissions) {
 		logger.log(`- ${scope} ${access ? `(${access})` : ``}`);
+	}
+}
+
+async function printMembershipInfo(user: UserInfo, accountFilter?: string) {
+	try {
+		if (!accountFilter) {
+			return;
+		}
+		const eq = (a: string, b: string) => a.localeCompare(b, undefined, { sensitivity: "base" }) == 0; // prettier-ignore
+		const selectedAccount = user.accounts.find(
+			(a) => eq(a.id, accountFilter) || eq(a.name, accountFilter)
+		);
+		if (!selectedAccount) {
+			return;
+		}
+		const membershipRoles = await fetchMembershipRoles(selectedAccount.id);
+		if (!membershipRoles) {
+			return;
+		}
+		logger.log(
+			`🎢 Membership roles in "${selectedAccount.name}": Contact account super admin to change your permissions.`
+		);
+		for (const role of membershipRoles) {
+			logger.log(`- ${role}`);
+		}
+	} catch (e) {
+		if (isAuthenticationError(e)) {
+			logger.log(
+				`🎢 Unable to get membership roles. Make sure you have permissions to read the account.`
+			);
+			return;
+		} else {
+			throw e;
+		}
 	}
 }
 
@@ -89,7 +132,8 @@ async function getEmail(): Promise<string | undefined> {
 		const { email } = await fetchResult<{ email: string }>("/user");
 		return email;
 	} catch (e) {
-		if ((e as { code?: number }).code === 9109) {
+		const unauthorizedAccess = 9109;
+		if ((e as { code?: number }).code === unauthorizedAccess) {
 			return undefined;
 		} else {
 			throw e;
