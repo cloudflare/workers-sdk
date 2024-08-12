@@ -72,7 +72,12 @@ export const runCli = async (args: Partial<C3Args>) => {
 
 	const ctx = await createContext(args);
 
-	await runTemplate(ctx);
+	await create(ctx);
+	await configure(ctx);
+	await deploy(ctx);
+
+	printSummary(ctx);
+	logRaw("");
 };
 
 export const setupProjectDirectory = (ctx: C3Context) => {
@@ -90,15 +95,6 @@ export const setupProjectDirectory = (ctx: C3Context) => {
 
 	// Change to the parent directory
 	chdir(directory);
-};
-
-const runTemplate = async (ctx: C3Context) => {
-	await create(ctx);
-	await configure(ctx);
-	await deploy(ctx);
-	await printSummary(ctx);
-
-	logRaw("");
 };
 
 const create = async (ctx: C3Context) => {
