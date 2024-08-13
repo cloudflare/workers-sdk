@@ -1,8 +1,8 @@
 ---
-"wrangler": patch
+"wrangler": minor
 ---
 
-fix: rename `--count` to `--limit` in `wrangler d1 insights`
+feat: rename `--count` to `--limit` in `wrangler d1 insights`
 
 This PR renames `wrangler d1 insight`'s `--count` flag to `--limit` to improve clarity and conform to naming conventions.
 
