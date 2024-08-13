@@ -1,7 +1,7 @@
 ---
-"wrangler": major
+"wrangler": minor
 ---
 
 feat: rename `--count` to `--limit` in wrangler insights
 
-This is a breaking change and was made to align with traditional naming conventions and improve clarity.
+BREAKING CHANGE: This PR renames `wrangler d1 insight`'s `--count` flag to `--limit` to improve clarity and conform to naming conventions.
