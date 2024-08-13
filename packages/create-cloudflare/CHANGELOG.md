@@ -1,5 +1,31 @@
 # create-cloudflare
 
+## 2.24.0
+
+### Minor Changes
+
+- [#6418](https://github.com/cloudflare/workers-sdk/pull/6418) [`5d771c2`](https://github.com/cloudflare/workers-sdk/commit/5d771c287e6edd077d7be8edabdf17629163b4e6) Thanks [@edmundhung](https://github.com/edmundhung)! - feat: guiding user template selection with description for each options
+
+- [#6412](https://github.com/cloudflare/workers-sdk/pull/6412) [`71882ee`](https://github.com/cloudflare/workers-sdk/commit/71882ee9a58eccb8332dd34c0f7dd96ec55bdcdd) Thanks [@edmundhung](https://github.com/edmundhung)! - feat: update welcome and summary message
+
+### Patch Changes
+
+- [#6395](https://github.com/cloudflare/workers-sdk/pull/6395) [`3aa7463`](https://github.com/cloudflare/workers-sdk/commit/3aa7463dffe62651dce3a7dca261d4ebe6fb5a39) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From   | To     |
+  | --------------- | ------ | ------ |
+  | @angular/create | 18.1.2 | 18.1.3 |
+
+- [#6396](https://github.com/cloudflare/workers-sdk/pull/6396) [`7dcaa3e`](https://github.com/cloudflare/workers-sdk/commit/7dcaa3e834a58b9baff649229b6db3c401c7a8e9) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency    | From  | To    |
+  | ------------- | ----- | ----- |
+  | create-svelte | 6.3.4 | 6.3.5 |
+
 ## 2.23.0
 
 ### Minor Changes
