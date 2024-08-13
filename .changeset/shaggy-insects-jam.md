@@ -2,4 +2,4 @@
 "create-cloudflare": patch
 ---
 
-style(create-cloudflare): update welcome and summary message
+feat: update welcome and summary message
