@@ -21,6 +21,7 @@ import { ModuleTypeToRuleType } from "../deployment-bundle/module-collection";
 import { withSourceURLs } from "../deployment-bundle/source-url";
 import { UserError } from "../errors";
 import { logger } from "../logger";
+import { getBasePath } from "../paths";
 import { getSourceMappedString } from "../sourcemap";
 import { updateCheck } from "../update-check";
 import type { ServiceFetch } from "../api";
@@ -847,10 +848,12 @@ export async function buildMiniflareOptions(
 			? `${config.upstreamProtocol}://${config.localUpstream}`
 			: undefined;
 
-	const { sourceOptions, entrypointNames } = await buildSourceOptions(config);
-	const { bindingOptions, internalObjects, externalWorkers } =
-		buildMiniflareBindingOptions(config);
-	const sitesOptions = buildSitesOptions(config);
+	const {
+		userWorkerOptions,
+		entrypointNames,
+		internalObjects,
+		externalWorkers,
+	} = await getUserWorker(config);
 	const persistOptions = buildPersistOptions(config.localPersistencePath);
 
 	const options: MiniflareOptions = {
@@ -867,6 +870,41 @@ export async function buildMiniflareOptions(
 
 		...persistOptions,
 		workers: [
+			...getAssetServerWorker(config),
+			...userWorkerOptions,
+			...externalWorkers,
+		],
+	};
+	return { options, internalObjects, entrypointNames };
+}
+
+async function getUserWorker(config: Omit<ConfigBundle, "rules">): Promise<{
+	userWorkerOptions: WorkerOptions[];
+	entrypointNames: string[];
+	internalObjects: CfDurableObject[];
+	externalWorkers: WorkerOptions[];
+}> {
+	const { bindingOptions, internalObjects, externalWorkers } =
+		buildMiniflareBindingOptions(config);
+	// if static assets only, no user worker:
+	if (
+		config.experimentalAssets &&
+		config.bundle.entry.file ===
+			path.resolve(getBasePath(), "templates/no-op-worker.js")
+	) {
+		// todo: confirm assets only requires external workers (the proxy worker?)
+		// and that passing in the no-op worker config into buildMiniflareBindingOptions still sets it up ok
+		return {
+			userWorkerOptions: [],
+			entrypointNames: [],
+			internalObjects: [],
+			externalWorkers,
+		};
+	}
+	const { sourceOptions, entrypointNames } = await buildSourceOptions(config);
+	const sitesOptions = buildSitesOptions(config);
+	return {
+		userWorkerOptions: [
 			{
 				name: getName(config),
 				compatibilityDate: config.compatibilityDate,
@@ -884,11 +922,11 @@ export async function buildMiniflareOptions(
 					proxy: true,
 				})),
 			},
-			...getAssetServerWorker(config),
-			...externalWorkers,
 		],
+		entrypointNames,
+		internalObjects,
+		externalWorkers,
 	};
-	return { options, internalObjects, entrypointNames };
 }
 
 function getAssetServerWorker(
