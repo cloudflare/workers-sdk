@@ -254,6 +254,69 @@ describe("happy path bundle + watch", () => {
 				"
 			`);
 	});
+
+	test("module aliasing", async ({ controller }) => {
+		await seed({
+			"src/index.ts": dedent/* javascript */ `
+				import name from "node:foo"
+				export default {
+					fetch(request, env, ctx) {
+						//comment
+						return new Response("hello world" + name)
+					}
+				} satisfies ExportedHandler
+			`,
+			"node_modules/node:foo": dedent/* javascript */ `
+				export default "node"
+			`,
+			"node_modules/replacement:foo": dedent/* javascript */ `
+				export default "replacement"
+			`,
+		});
+		const config = configDefaults({
+			legacy: {},
+			name: "worker",
+			entrypoint: path.resolve("src/index.ts"),
+			directory: path.resolve("src"),
+			build: {
+				additionalModules: [],
+				processEntrypoint: false,
+				nodejsCompatMode: null,
+				bundle: true,
+				moduleRules: [],
+				custom: {},
+				define: {},
+				format: "modules",
+				moduleRoot: path.resolve("src"),
+			},
+		});
+
+		await controller.onConfigUpdate({ type: "configUpdate", config });
+
+		let ev = await waitForBundleComplete(controller);
+		expect(ev.bundle.entrypointSource).toContain(dedent/* javascript */ `
+            // ../node_modules/node:foo
+            var node_foo_default = "node"
+        `);
+
+		await controller.onConfigUpdate({
+			type: "configUpdate",
+			config: {
+				...config,
+				build: {
+					...config.build,
+					alias: {
+						"node:foo": "replacement:foo",
+					},
+				},
+			},
+		});
+		ev = await waitForBundleComplete(controller);
+		expect(ev.bundle.entrypointSource).toContain(dedent/* javascript */ `
+            // ../node_modules/replacement:foo
+            var replacement_foo_default = "replacement"
+        `);
+	});
 });
 
 describe("switching", () => {

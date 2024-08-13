@@ -27,6 +27,15 @@ import type { ModuleCollector } from "./module-collection";
 import type { NodeJSCompatMode } from "./node-compat";
 import type { CfModule, CfModuleType } from "./worker";
 
+// Taken from https://stackoverflow.com/a/3561711
+// which is everything from the tc39 proposal, plus the following two characters: ^/
+// It's also everything included in the URLPattern escape (https://wicg.github.io/urlpattern/#escape-a-regexp-string), plus the following: -
+// As the answer says, there's no downside to escaping these extra characters, so better safe than sorry
+const ESCAPE_REGEX_CHARACTERS = /[-/\\^$*+?.()|[\]{}]/g;
+const escapeRegex = (str: string) => {
+	return str.replace(ESCAPE_REGEX_CHARACTERS, "\\$&");
+};
+
 export const COMMON_ESBUILD_OPTIONS = {
 	// Our workerd runtime uses the same V8 version as recent Chrome, which is highly ES2022 compliant: https://kangax.github.io/compat-table/es2016plus/
 	target: "es2022",
@@ -278,6 +287,42 @@ export async function bundleWorker(
 		inject.push(path.resolve(getBasePath(), "templates/modules-watch-stub.js"));
 	}
 
+	// esbuild's `alias` option is applied after each plugin's onResolve hook,
+	// whereas we would like these user-defined aliases to take precedence over
+	// the unenv polyfill aliases, so we reimplement the aliasing as a plugin
+	// to be applied before that plugin (earlier in the array of plugins)
+	const aliasPlugin: esbuild.Plugin = {
+		name: "alias",
+		setup(build) {
+			if (!alias) {
+				return;
+			}
+
+			// filter the hook calls to only those that match the alias keys
+			// this should avoid slowing down builds which don't use aliasing
+			const filter = new RegExp(
+				Object.entries(alias)
+					.map(([key, _value]) => escapeRegex(key))
+					.join("|")
+			);
+
+			// reimplement module aliasing as an esbuild plugin onResolve hook
+			build.onResolve({ filter }, (args) => {
+				const aliasPath = alias[args.path];
+				if (aliasPath) {
+					return {
+						// resolve with node resolution
+						path: require.resolve(aliasPath, {
+							// From the esbuild alias docs: "Note that when an import path is substituted using an alias, the resulting import path is resolved in the working directory instead of in the directory containing the source file with the import path."
+							// https://esbuild.github.io/api/#alias:~:text=Note%20that%20when%20an%20import%20path%20is%20substituted%20using%20an%20alias%2C%20the%20resulting%20import%20path%20is%20resolved%20in%20the%20working%20directory%20instead%20of%20in%20the%20directory%20containing%20the%20source%20file%20with%20the%20import%20path.
+							paths: [entry.directory],
+						}),
+					};
+				}
+			});
+		},
+	};
+
 	const buildOptions: esbuild.BuildOptions & { metafile: true } = {
 		// Don't use entryFile here as the file may have been changed when applying the middleware
 		entryPoints: [entry.file],
@@ -317,12 +362,12 @@ export async function bundleWorker(
 				...define,
 			},
 		}),
-		alias,
 		loader: {
 			...COMMON_ESBUILD_OPTIONS.loader,
 			...(loader || {}),
 		},
 		plugins: [
+			aliasPlugin,
 			moduleCollector.plugin,
 			...(nodejsCompatMode === "legacy"
 				? [
