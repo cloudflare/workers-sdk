@@ -587,23 +587,24 @@ describe("versions deploy", { timeout: TIMEOUT }, () => {
 		`);
 	});
 
-	it("currently fails to upload if using experimental assets", async () => {
+	// TODO: revisit once AUS stabilises/works
+	it.skip("currently fails to upload if using experimental assets", async () => {
 		await helper.seed({
 			"wrangler.toml": dedent`
-                name = "${workerName}"
-                compatibility_date = "2023-01-01"
+	            name = "${workerName}"
+	            compatibility_date = "2023-01-01"
 
-                [experimental_assets]
-                directory = "./public"
-            `,
+	            [experimental_assets]
+	            directory = "./public"
+	        `,
 			"public/asset.txt": `beep boop`,
 			"package.json": dedent`
-                {
-                    "name": "${workerName}",
-                    "version": "0.0.0",
-                    "private": true
-                }
-            `,
+	            {
+	                "name": "${workerName}",
+	                "version": "0.0.0",
+	                "private": true
+	            }
+	        `,
 		});
 
 		const upload = await helper.run(`wrangler versions upload  --x-versions`);
