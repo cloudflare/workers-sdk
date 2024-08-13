@@ -156,6 +156,44 @@ describe("getHttpsOptions()", () => {
 		`);
 		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
+
+	it("should read the certs from the paths if provided", async () => {
+		fs.mkdirSync("./certs");
+		await fs.promises.writeFile("./certs/test.key", "xxxxx");
+		await fs.promises.writeFile("./certs/test.pem", "yyyyy");
+		const options = getHttpsOptions("./certs/test.key", "./certs/test.pem");
+		expect(options.key).toEqual("xxxxx");
+		expect(options.cert).toEqual("yyyyy");
+	});
+
+	it("should error if only one of the two paths is provided", async () => {
+		expect(() =>
+			getHttpsOptions("./certs/test.key", undefined)
+		).toThrowErrorMatchingInlineSnapshot(
+			`[Error: Must specify both certificate path and key path to use a Custom Certificate.]`
+		);
+		expect(() =>
+			getHttpsOptions(undefined, "./certs/test.pem")
+		).toThrowErrorMatchingInlineSnapshot(
+			`[Error: Must specify both certificate path and key path to use a Custom Certificate.]`
+		);
+	});
+
+	it("should error if the key file does not exist", async () => {
+		fs.mkdirSync("./certs");
+		await fs.promises.writeFile("./certs/test.pem", "yyyyy");
+		expect(() =>
+			getHttpsOptions("./certs/test.key", "./certs/test.pem")
+		).toThrowErrorMatchingInlineSnapshot(`[Error: Missing Custom Certificate Key at ./certs/test.key]`);
+	});
+
+	it("should error if the cert file does not exist", async () => {
+		fs.mkdirSync("./certs");
+		await fs.promises.writeFile("./certs/test.key", "xxxxx");
+		expect(() =>
+			getHttpsOptions("./certs/test.key", "./certs/test.pem")
+		).toThrowErrorMatchingInlineSnapshot(`[Error: Missing Custom Certificate File at ./certs/test.pem]`);
+	});
 });
 
 async function mockWriteFileSyncThrow(matcher: RegExp) {
