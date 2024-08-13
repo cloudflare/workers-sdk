@@ -258,7 +258,7 @@ describe("happy path bundle + watch", () => {
 	test("module aliasing", async ({ controller }) => {
 		await seed({
 			"src/index.ts": dedent/* javascript */ `
-				import name from "node:foo"
+				import name from "foo"
 				export default {
 					fetch(request, env, ctx) {
 						//comment
@@ -266,11 +266,11 @@ describe("happy path bundle + watch", () => {
 					}
 				} satisfies ExportedHandler
 			`,
-			"node_modules/node:foo": dedent/* javascript */ `
-				export default "node"
+			"node_modules/foo": dedent/* javascript */ `
+				export default "foo"
 			`,
-			"node_modules/replacement:foo": dedent/* javascript */ `
-				export default "replacement"
+			"node_modules/bar": dedent/* javascript */ `
+				export default "bar"
 			`,
 		});
 		const config = configDefaults({
@@ -295,8 +295,8 @@ describe("happy path bundle + watch", () => {
 
 		let ev = await waitForBundleComplete(controller);
 		expect(ev.bundle.entrypointSource).toContain(dedent/* javascript */ `
-            // ../node_modules/node:foo
-            var node_foo_default = "node"
+            // ../node_modules/foo
+            var foo_default = "foo"
         `);
 
 		await controller.onConfigUpdate({
@@ -306,15 +306,15 @@ describe("happy path bundle + watch", () => {
 				build: {
 					...config.build,
 					alias: {
-						"node:foo": "replacement:foo",
+						foo: "bar",
 					},
 				},
 			},
 		});
 		ev = await waitForBundleComplete(controller);
 		expect(ev.bundle.entrypointSource).toContain(dedent/* javascript */ `
-            // ../node_modules/replacement:foo
-            var replacement_foo_default = "replacement"
+            // ../node_modules/bar
+            var bar_default = "bar"
         `);
 	});
 });
