@@ -115,7 +115,10 @@ export class ProxyController extends Controller<ProxyControllerEventMap> {
 				{
 					name: "InspectorProxyWorker",
 					compatibilityDate: "2023-12-18",
-					compatibilityFlags: ["nodejs_compat"],
+					compatibilityFlags: [
+						"nodejs_compat",
+						"increase_websocket_message_size",
+					],
 					modulesRoot: path.dirname(inspectorProxyWorkerPath),
 					modules: [{ type: "ESModule", path: inspectorProxyWorkerPath }],
 					durableObjects: {

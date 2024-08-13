@@ -5,9 +5,10 @@ import { setTimeout } from "timers/promises";
 import getPort from "get-port";
 import dedent from "ts-dedent";
 import undici from "undici";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import WebSocket from "ws";
 import { WranglerE2ETestHelper } from "./helpers/e2e-wrangler-test";
+import type { DevToolsEvent } from "../src/api";
 
 const OPTIONS = [
 	{ remote: false },
@@ -27,7 +28,22 @@ function waitForMessageContaining<T>(ws: WebSocket, value: string): Promise<T> {
 	});
 }
 
-describe.each(OPTIONS)("DevEnv", ({ remote }) => {
+function collectMessagesContaining<T>(
+	ws: WebSocket,
+	value: string,
+	collection: T[] = []
+) {
+	ws.addEventListener("message", (event) => {
+		assert(typeof event.data === "string");
+		if (event.data.includes(value)) {
+			collection.push(JSON.parse(event.data));
+		}
+	});
+
+	return collection;
+}
+
+describe.each(OPTIONS)("DevEnv $remote", ({ remote }) => {
 	let helper: WranglerE2ETestHelper;
 	let wrangler: Wrangler;
 	let startWorker: Wrangler["unstable_startWorker"];
@@ -41,12 +57,12 @@ describe.each(OPTIONS)("DevEnv", ({ remote }) => {
 		t.onTestFinished(() => worker?.dispose());
 
 		const script = dedent`
-            export default {
-                fetch() {
-                    return new Response("body:1");
-                }
-            }
-        `;
+			export default {
+				fetch() {
+					return new Response("body:1");
+				}
+			}
+		`;
 
 		await helper.seed({
 			"src/index.ts": script,
@@ -69,18 +85,19 @@ describe.each(OPTIONS)("DevEnv", ({ remote }) => {
 		res = await worker.fetch("http://dummy");
 		await expect(res.text()).resolves.toBe("body:2");
 	});
+
 	it("InspectorProxyWorker discovery endpoints + devtools websocket connection", async (t) => {
 		t.onTestFinished(() => worker?.dispose());
 
 		const script = dedent`
-            export default {
-                fetch() {
-                    console.log('Inside mock user worker');
+			export default {
+				fetch() {
+					console.log('Inside mock user worker');
 
-                    return new Response("body:1");
-                }
-            }
-        `;
+					return new Response("body:1");
+				}
+			}
+		`;
 
 		await helper.seed({
 			"src/index.ts": script,
@@ -98,9 +115,7 @@ describe.each(OPTIONS)("DevEnv", ({ remote }) => {
 
 		await expect(res.json()).resolves.toBeInstanceOf(Array);
 
-		const ws = new WebSocket(
-			`ws://${inspectorUrl.host}/core:user:${worker.config.name}`
-		);
+		const ws = new WebSocket(inspectorUrl.href);
 		const openPromise = events.once(ws, "open");
 
 		const consoleAPICalledPromise = waitForMessageContaining(
@@ -142,17 +157,18 @@ describe.each(OPTIONS)("DevEnv", ({ remote }) => {
 
 		await executionContextClearedPromise;
 	});
+
 	it("InspectorProxyWorker rejects unauthorised requests", async (t) => {
 		t.onTestFinished(() => worker?.dispose());
 
 		await helper.seed({
 			"src/index.ts": dedent`
-                export default {
-                    fetch() {
-                        return new Response("body:1");
-                    }
-                }
-            `,
+				export default {
+					fetch() {
+						return new Response("body:1");
+					}
+				}
+			`,
 		});
 
 		const worker = await startWorker({
@@ -164,34 +180,101 @@ describe.each(OPTIONS)("DevEnv", ({ remote }) => {
 
 		const inspectorUrl = await worker.inspectorUrl;
 
-		let ws = new WebSocket(
-			`ws://${inspectorUrl.host}/core:user:${worker.config.name}`,
-			{ setHost: false, headers: { Host: "example.com" } }
-		);
+		let ws = new WebSocket(inspectorUrl.href, {
+			setHost: false,
+			headers: { Host: "example.com" },
+		});
 
 		let openPromise = events.once(ws, "open");
 		await expect(openPromise).rejects.toThrow("Unexpected server response");
 
 		// Check validates `Origin` header
-		ws = new WebSocket(
-			`ws://${inspectorUrl.host}/core:user:${worker.config.name}`,
-			{ origin: "https://example.com" }
-		);
+		ws = new WebSocket(inspectorUrl.href, { origin: "https://example.com" });
 		openPromise = events.once(ws, "open");
 		await expect(openPromise).rejects.toThrow("Unexpected server response");
 		ws.close();
 	});
+
+	// Regression test for https://github.com/cloudflare/workers-sdk/issues/5297
+	// The runtime inspector can send messages larger than 1MB limit websocket message permitted by UserWorkers.
+	// In the real-world, this is encountered when debugging large source files (source maps)
+	// or inspecting a variable that serializes to a large string.
+	// Connecting devtools directly to the inspector would work fine, but we proxy the inspector messages
+	// through a worker (InspectorProxyWorker) which hits the limit (without the fix, compatibilityFlags:["increase_websocket_message_size"])
+	// By logging a large string we can verify that the inspector messages are being proxied successfully.
+	it("InspectorProxyWorker can proxy messages > 1MB", async (t) => {
+		t.onTestFinished(() => worker?.dispose());
+
+		const originalConsoleLog = console.log;
+		const mockConsoleLogImpl = (message: unknown, ...args: unknown[]) => {
+			if (typeof message === "string" && /z+/.test(message)) {
+				return; // don't log chunks of the large string
+			}
+
+			originalConsoleLog(message, ...args);
+		};
+		vi.spyOn(console, "info").mockImplementation(mockConsoleLogImpl);
+		vi.spyOn(console, "log").mockImplementation(mockConsoleLogImpl);
+
+		const LARGE_STRING = "This is a large string" + "z".repeat(2 ** 20);
+
+		const script = dedent`
+			export default {
+				fetch() {
+					console.log("${LARGE_STRING}");
+
+					return new Response("body:1");
+				}
+			}
+		`;
+
+		await helper.seed({
+			"src/index.ts": script,
+		});
+
+		const worker = await startWorker({
+			name: "test-worker",
+			entrypoint: path.resolve(helper.tmpPath, "src/index.ts"),
+
+			dev: { remote },
+		});
+
+		const inspectorUrl = await worker.inspectorUrl;
+		const ws = new WebSocket(inspectorUrl.href);
+
+		const consoleApiMessages: DevToolsEvent<"Runtime.consoleAPICalled">[] =
+			collectMessagesContaining(ws, "Runtime.consoleAPICalled");
+
+		await worker.fetch("http://dummy");
+
+		await vi.waitFor(
+			async () => {
+				await expect(consoleApiMessages).toMatchObject([
+					{
+						method: "Runtime.consoleAPICalled",
+						params: {
+							args: expect.arrayContaining([
+								{ type: "string", value: expect.stringContaining("zzzzzzzzz") },
+							]),
+						},
+					},
+				]);
+			},
+			{ timeout: 5_000 }
+		);
+	});
+
 	it("User worker exception", async (t) => {
 		t.onTestFinished(() => worker?.dispose());
 
 		await helper.seed({
 			"src/index.ts": dedent`
-                    export default {
-                        fetch() {
+					export default {
+						fetch() {
 							throw new Error('Boom!');
-                        }
-                    }
-                `,
+						}
+					}
+				`,
 		});
 
 		const worker = await startWorker({
@@ -205,12 +288,12 @@ describe.each(OPTIONS)("DevEnv", ({ remote }) => {
 
 		await helper.seed({
 			"src/index.ts": dedent`
-                    export default {
-                        fetch() {
+					export default {
+						fetch() {
 							throw new Error('Boom 2!');
-                        }
-                    }
-                `,
+						}
+					}
+				`,
 		});
 		await setTimeout(300);
 
@@ -245,12 +328,12 @@ describe.each(OPTIONS)("DevEnv", ({ remote }) => {
 		// test further changes that fix the code
 		await helper.seed({
 			"src/index.ts": dedent`
-                export default {
-                    fetch() {
-                        return new Response("body:3");
-                    }
-                }
-            `,
+				export default {
+					fetch() {
+						return new Response("body:3");
+					}
+				}
+			`,
 		});
 		await setTimeout(300);
 
@@ -260,17 +343,18 @@ describe.each(OPTIONS)("DevEnv", ({ remote }) => {
 		res = await worker.fetch("http://dummy");
 		await expect(res.text()).resolves.toBe("body:3");
 	});
+
 	it("config.dev.{server,inspector} changes, restart the server instance", async (t) => {
 		t.onTestFinished(() => worker?.dispose());
 
 		await helper.seed({
 			"src/index.ts": dedent`
-                export default {
-                    fetch() {
-                        return new Response("body:1");
-                    }
-                }
-            `,
+				export default {
+					fetch() {
+						return new Response("body:1");
+					}
+				}
+			`,
 		});
 
 		const worker = await startWorker({
@@ -311,19 +395,20 @@ describe.each(OPTIONS)("DevEnv", ({ remote }) => {
 			undici.fetch(`http://127.0.0.1:${oldPort}`)
 		).rejects.toThrowError("fetch failed");
 	});
+
 	it("liveReload", async (t) => {
 		t.onTestFinished(() => worker?.dispose());
 
 		await helper.seed({
 			"src/index.ts": dedent`
-                export default {
-                    fetch() {
-                        return new Response("body:1", {
+				export default {
+					fetch() {
+						return new Response("body:1", {
 							headers: { 'Content-Type': 'text/html' }
 						});
-                    }
-                }
-            `,
+					}
+				}
+			`,
 		});
 
 		const worker = await startWorker({
@@ -348,12 +433,12 @@ describe.each(OPTIONS)("DevEnv", ({ remote }) => {
 
 		await helper.seed({
 			"src/index.ts": dedent`
-                export default {
-                    fetch() {
-                        return new Response("body:2");
-                    }
-                }
-            `,
+				export default {
+					fetch() {
+						return new Response("body:2");
+					}
+				}
+			`,
 		});
 		await setTimeout(300);
 
@@ -365,14 +450,14 @@ describe.each(OPTIONS)("DevEnv", ({ remote }) => {
 
 		await helper.seed({
 			"src/index.ts": dedent`
-                export default {
-                    fetch() {
-                        return new Response("body:3", {
+				export default {
+					fetch() {
+						return new Response("body:3", {
 							headers: { 'Content-Type': 'text/html' }
 						});
-                    }
-                }
-            `,
+					}
+				}
+			`,
 		});
 		await worker.patchConfig({
 			dev: {
@@ -387,17 +472,18 @@ describe.each(OPTIONS)("DevEnv", ({ remote }) => {
 		expect(resText).toBe("body:3");
 		expect(resText).not.toEqual(expect.stringMatching(scriptRegex));
 	});
+
 	it("urlOverrides take effect in the UserWorker", async (t) => {
 		t.onTestFinished(() => worker?.dispose());
 
 		await helper.seed({
 			"src/index.ts": dedent`
-                export default {
-                    fetch(request) {
-                        return new Response("URL: " + request.url);
-                    }
-                }
-            `,
+				export default {
+					fetch(request) {
+						return new Response("URL: " + request.url);
+					}
+				}
+			`,
 		});
 
 		const worker = await startWorker({
@@ -432,6 +518,7 @@ describe.each(OPTIONS)("DevEnv", ({ remote }) => {
 			"URL: https://mybank.co.uk/test/path/2"
 		);
 	});
+
 	it("inflight requests are retried during UserWorker reloads", async (t) => {
 		// to simulate inflight requests failing during UserWorker reloads,
 		// we will use a UserWorker with a longish `await setTimeout(...)`
@@ -441,18 +528,18 @@ describe.each(OPTIONS)("DevEnv", ({ remote }) => {
 		t.onTestFinished(() => worker?.dispose());
 
 		const script = dedent`
-            export default {
-                async fetch(request) {
-                    const url = new URL(request.url);
+			export default {
+				async fetch(request) {
+					const url = new URL(request.url);
 
-                    if (url.pathname === '/long') {
-                        await new Promise(r => setTimeout(r, 30_000));
-                    }
+					if (url.pathname === '/long') {
+						await new Promise(r => setTimeout(r, 30_000));
+					}
 
-                    return new Response("UserWorker:1");
-                }
-            }
-        `;
+					return new Response("UserWorker:1");
+				}
+			}
+		`;
 
 		await helper.seed({
 			"src/index.ts": script,
