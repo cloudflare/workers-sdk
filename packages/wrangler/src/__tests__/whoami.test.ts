@@ -13,8 +13,6 @@ import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 
 describe("getUserInfo()", () => {
-	const ENV_COPY = process.env;
-
 	runInTempDir();
 	const std = mockConsoleMethods();
 	const { setIsTTY } = useMockIsTTY();
@@ -22,10 +20,6 @@ describe("getUserInfo()", () => {
 	beforeEach(() => {
 		msw.use(...mswSuccessOauthHandlers, ...mswSuccessUserHandlers);
 		setIsTTY(true);
-	});
-
-	afterEach(() => {
-		process.env = ENV_COPY;
 	});
 
 	it("should return undefined if there is no config file", async () => {
@@ -40,9 +34,7 @@ describe("getUserInfo()", () => {
 	});
 
 	it("should return undefined for email if the user settings API request fails with 9109", async () => {
-		process.env = {
-			CLOUDFLARE_API_TOKEN: "123456789",
-		};
+		vi.stubEnv("CLOUDFLARE_API_TOKEN", "123456789");
 		msw.use(
 			http.get(
 				"*/user",
@@ -78,9 +70,7 @@ describe("getUserInfo()", () => {
 		expect(userInfo?.email).toBeUndefined();
 	});
 	it("should say it's using an API token when one is set", async () => {
-		process.env = {
-			CLOUDFLARE_API_TOKEN: "123456789",
-		};
+		vi.stubEnv("CLOUDFLARE_API_TOKEN", "123456789");
 
 		const userInfo = await getUserInfo();
 		expect(userInfo).toEqual({
@@ -96,10 +86,8 @@ describe("getUserInfo()", () => {
 	});
 
 	it("should say it's using a Global API Key when one is set", async () => {
-		process.env = {
-			CLOUDFLARE_API_KEY: "123456789",
-			CLOUDFLARE_EMAIL: "user@example.com",
-		};
+		vi.stubEnv("CLOUDFLARE_API_KEY", "123456789");
+		vi.stubEnv("CLOUDFLARE_EMAIL", "user@example.com");
 
 		const userInfo = await getUserInfo();
 		expect(userInfo).toEqual({
@@ -115,11 +103,9 @@ describe("getUserInfo()", () => {
 	});
 
 	it("should use a Global API Key in preference to an API token", async () => {
-		process.env = {
-			CLOUDFLARE_API_KEY: "123456789",
-			CLOUDFLARE_EMAIL: "user@example.com",
-			CLOUDFLARE_API_TOKEN: "123456789",
-		};
+		vi.stubEnv("CLOUDFLARE_API_KEY", "123456789");
+		vi.stubEnv("CLOUDFLARE_EMAIL", "user@example.com");
+		vi.stubEnv("CLOUDFLARE_API_TOKEN", "123456789");
 
 		const userInfo = await getUserInfo();
 		expect(userInfo).toEqual({
@@ -135,9 +121,7 @@ describe("getUserInfo()", () => {
 	});
 
 	it("should return undefined only a Global API Key, but not Email, is set", async () => {
-		process.env = {
-			CLOUDFLARE_API_KEY: "123456789",
-		};
+		vi.stubEnv("CLOUDFLARE_API_KEY", "123456789");
 		const userInfo = await getUserInfo();
 		expect(userInfo).toEqual(undefined);
 	});
@@ -182,11 +166,6 @@ describe("whoami", () => {
 	beforeEach(() => {
 		setIsTTY(true);
 		msw.use(...mswSuccessOauthHandlers, ...mswSuccessUserHandlers);
-	});
-
-	const ENV_COPY = process.env;
-	afterEach(() => {
-		process.env = ENV_COPY;
 	});
 
 	it("should display membership roles if --account flag is given", async () => {

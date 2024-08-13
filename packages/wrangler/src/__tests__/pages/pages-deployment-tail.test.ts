@@ -63,13 +63,9 @@ describe("pages deployment tail", () => {
 	mockApiToken();
 	const std = mockConsoleMethods();
 
-	beforeAll(() => {
+	beforeEach(() => {
 		// Force the CLI to be "non-interactive" in test env
-		process.env.CF_PAGES = "1";
-	});
-
-	afterAll(() => {
-		delete process.env.CF_PAGES;
+		vi.stubEnv("CF_PAGES", "1");
 	});
 
 	/**

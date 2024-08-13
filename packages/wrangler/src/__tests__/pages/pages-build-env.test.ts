@@ -13,15 +13,13 @@ import { writeWranglerToml } from "../helpers/write-wrangler-toml";
 describe("pages build env", () => {
 	const std = mockConsoleMethods();
 	runInTempDir();
-	const originalEnv = process.env;
 	const originalLoggerLevel = logger.loggerLevel;
 
 	afterEach(() => {
-		process.env = originalEnv;
 		logger.loggerLevel = originalLoggerLevel;
 	});
 	beforeEach(() => {
-		process.env.PAGES_ENVIRONMENT = "production";
+		vi.stubEnv("PAGES_ENVIRONMENT", "production");
 	});
 
 	it("should render empty object", async () => {
@@ -218,7 +216,7 @@ describe("pages build env", () => {
 	});
 
 	it("should return top-level by default", async () => {
-		process.env.PAGES_ENVIRONMENT = "";
+		vi.stubEnv("PAGES_ENVIRONMENT", "");
 		writeWranglerToml({
 			pages_build_output_dir: "./dist",
 			vars: {
@@ -261,7 +259,7 @@ describe("pages build env", () => {
 	});
 
 	it("should return production", async () => {
-		process.env.PAGES_ENVIRONMENT = "production";
+		vi.stubEnv("PAGES_ENVIRONMENT", "production");
 		writeWranglerToml({
 			pages_build_output_dir: "./dist",
 			vars: {
@@ -305,7 +303,7 @@ describe("pages build env", () => {
 	});
 
 	it("should return preview", async () => {
-		process.env.PAGES_ENVIRONMENT = "preview";
+		vi.stubEnv("PAGES_ENVIRONMENT", "preview");
 		writeWranglerToml({
 			pages_build_output_dir: "./dist",
 			vars: {

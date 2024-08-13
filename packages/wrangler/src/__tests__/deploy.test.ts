@@ -442,17 +442,8 @@ describe("deploy", () => {
 		});
 
 		describe("non-TTY", () => {
-			const ENV_COPY = process.env;
-
-			afterEach(() => {
-				process.env = ENV_COPY;
-			});
-
 			it("should not throw an error in non-TTY if 'CLOUDFLARE_API_TOKEN' & 'account_id' are in scope", async () => {
-				process.env = {
-					...process.env,
-					CLOUDFLARE_API_TOKEN: "123456789",
-				};
+				vi.stubEnv("CLOUDFLARE_API_TOKEN", "123456789");
 				setIsTTY(false);
 				writeWranglerToml({
 					account_id: "some-account-id",
@@ -480,11 +471,8 @@ describe("deploy", () => {
 			});
 
 			it("should not throw an error if 'CLOUDFLARE_ACCOUNT_ID' & 'CLOUDFLARE_API_TOKEN' are in scope", async () => {
-				process.env = {
-					...process.env,
-					CLOUDFLARE_API_TOKEN: "hunter2",
-					CLOUDFLARE_ACCOUNT_ID: "some-account-id",
-				};
+				vi.stubEnv("CLOUDFLARE_API_TOKEN", "hunter2");
+				vi.stubEnv("CLOUDFLARE_ACCOUNT_ID", "some-account-id");
 				setIsTTY(false);
 				writeWranglerToml();
 				writeWorkerSource();
@@ -512,11 +500,8 @@ describe("deploy", () => {
 
 			it("should throw an error in non-TTY & there is more than one account associated with API token", async () => {
 				setIsTTY(false);
-				process.env = {
-					...process.env,
-					CLOUDFLARE_API_TOKEN: "hunter2",
-					CLOUDFLARE_ACCOUNT_ID: undefined,
-				};
+				vi.stubEnv("CLOUDFLARE_API_TOKEN", "hunter2");
+				vi.stubEnv("CLOUDFLARE_ACCOUNT_ID", "");
 				writeWranglerToml({
 					account_id: undefined,
 				});
@@ -544,11 +529,8 @@ describe("deploy", () => {
 				writeWranglerToml({
 					account_id: undefined,
 				});
-				process.env = {
-					...process.env,
-					CLOUDFLARE_API_TOKEN: undefined,
-					CLOUDFLARE_ACCOUNT_ID: "badwolf",
-				};
+				vi.stubEnv("CLOUDFLARE_API_TOKEN", "");
+				vi.stubEnv("CLOUDFLARE_ACCOUNT_ID", "badwolf");
 				writeWorkerSource();
 				mockSubDomainRequest();
 				mockUploadWorkerRequest();
@@ -571,11 +553,8 @@ describe("deploy", () => {
 				writeWranglerToml({
 					account_id: undefined,
 				});
-				process.env = {
-					...process.env,
-					CLOUDFLARE_API_TOKEN: "picard",
-					CLOUDFLARE_ACCOUNT_ID: undefined,
-				};
+				vi.stubEnv("CLOUDFLARE_API_TOKEN", "picard");
+				vi.stubEnv("CLOUDFLARE_ACCOUNT_ID", "");
 				writeWorkerSource();
 				mockSubDomainRequest();
 				mockUploadWorkerRequest();
@@ -8870,14 +8849,10 @@ addEventListener('fetch', event => {});`
 		});
 
 		describe("inject process.env.NODE_ENV", () => {
-			let actualProcessEnvNodeEnv: string | undefined;
 			beforeEach(() => {
-				actualProcessEnvNodeEnv = process.env.NODE_ENV;
-				process.env.NODE_ENV = "some-node-env";
+				vi.stubEnv("NODE_ENV", "some-node-env");
 			});
-			afterEach(() => {
-				process.env.NODE_ENV = actualProcessEnvNodeEnv;
-			});
+
 			it("should replace `process.env.NODE_ENV` in scripts", async () => {
 				writeWranglerToml();
 				fs.writeFileSync(
@@ -9317,7 +9292,7 @@ export default{
       	};
 				export class SomeClass {};`
 			);
-			process.env.CLOUDFLARE_ACCOUNT_ID = "";
+			vi.stubEnv("CLOUDFLARE_ACCOUNT_ID", "");
 			await runWrangler("deploy index.js --dry-run");
 			expect(std).toMatchInlineSnapshot(`
 			Object {
@@ -10959,11 +10934,8 @@ export default{
 
 	describe("--keep-vars", () => {
 		it("should send keepVars when keep-vars is passed in", async () => {
-			process.env = {
-				...process.env,
-				CLOUDFLARE_API_TOKEN: "hunter2",
-				CLOUDFLARE_ACCOUNT_ID: "some-account-id",
-			};
+			vi.stubEnv("CLOUDFLARE_API_TOKEN", "hunter2");
+			vi.stubEnv("CLOUDFLARE_ACCOUNT_ID", "some-account-id");
 			setIsTTY(false);
 			writeWranglerToml();
 			writeWorkerSource();
@@ -10990,11 +10962,8 @@ export default{
 		});
 
 		it("should not send keepVars by default", async () => {
-			process.env = {
-				...process.env,
-				CLOUDFLARE_API_TOKEN: "hunter2",
-				CLOUDFLARE_ACCOUNT_ID: "some-account-id",
-			};
+			vi.stubEnv("CLOUDFLARE_API_TOKEN", "hunter2");
+			vi.stubEnv("CLOUDFLARE_ACCOUNT_ID", "some-account-id");
 			setIsTTY(false);
 			writeWranglerToml();
 			writeWorkerSource();
@@ -11021,11 +10990,8 @@ export default{
 		});
 
 		it("should send keepVars when `keep_vars = true`", async () => {
-			process.env = {
-				...process.env,
-				CLOUDFLARE_API_TOKEN: "hunter2",
-				CLOUDFLARE_ACCOUNT_ID: "some-account-id",
-			};
+			vi.stubEnv("CLOUDFLARE_API_TOKEN", "hunter2");
+			vi.stubEnv("CLOUDFLARE_ACCOUNT_ID", "some-account-id");
 			setIsTTY(false);
 			writeWranglerToml({
 				keep_vars: true,

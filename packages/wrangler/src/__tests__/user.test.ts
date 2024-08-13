@@ -39,10 +39,6 @@ describe("User", () => {
 		isCISpy = vi.spyOn(CI, "isCI").mockReturnValue(false);
 	});
 
-	afterEach(() => {
-		delete process.env.WRANGLER_API_ENVIRONMENT;
-	});
-
 	describe("login", () => {
 		it("should login a user when `wrangler login` is run", async () => {
 			mockOAuthServerCallback("success");
@@ -83,7 +79,7 @@ describe("User", () => {
 		});
 
 		it("login works in a different environment", async () => {
-			process.env.WRANGLER_API_ENVIRONMENT = "staging";
+			vi.stubEnv("WRANGLER_API_ENVIRONMENT", "staging");
 			mockOAuthServerCallback("success");
 
 			let counter = 0;
@@ -171,7 +167,7 @@ describe("User", () => {
 
 	it("should have auth per environment", async () => {
 		setIsTTY(false);
-		process.env.WRANGLER_API_ENVIRONMENT = "staging";
+		vi.stubEnv("WRANGLER_API_ENVIRONMENT", "staging");
 
 		writeAuthConfigFile({
 			oauth_token: "hunter2",

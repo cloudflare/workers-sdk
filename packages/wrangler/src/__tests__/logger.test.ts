@@ -120,10 +120,7 @@ describe("logger", () => {
 
 	describe("loggerLevelFromEnvVar=error", () => {
 		beforeEach(() => {
-			process.env.WRANGLER_LOG = "error";
-		});
-		afterEach(() => {
-			process.env.WRANGLER_LOG = undefined;
+			vi.stubEnv("WRANGLER_LOG", "error");
 		});
 
 		it("should render messages that are at or above the log level set in the env var", () => {
@@ -146,10 +143,10 @@ describe("logger", () => {
 
 	describe("loggerLevelFromEnvVar case-insensitive", () => {
 		beforeEach(() => {
-			process.env.WRANGLER_LOG = "wARn";
+			vi.stubEnv("WRANGLER_LOG", "wARn");
 		});
 		afterEach(() => {
-			process.env.WRANGLER_LOG = undefined;
+			vi.stubEnv("WRANGLER_LOG", "");
 		});
 
 		it("should render messages that are at or above the log level set in the env var", () => {
@@ -176,10 +173,10 @@ describe("logger", () => {
 
 	describe("loggerLevelFromEnvVar falls back to log on invalid level", () => {
 		beforeEach(() => {
-			process.env.WRANGLER_LOG = "everything";
+			vi.stubEnv("WRANGLER_LOG", "everything");
 		});
 		afterEach(() => {
-			process.env.WRANGLER_LOG = undefined;
+			vi.stubEnv("WRANGLER_LOG", "");
 		});
 
 		it("should render messages that are at or above the log level set in the env var", () => {

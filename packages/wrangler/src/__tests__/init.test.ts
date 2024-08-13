@@ -103,17 +103,8 @@ describe("init", () => {
 		});
 
 		describe("with custom C3 command", () => {
-			const ORIGINAL_ENV = process.env;
-
 			beforeEach(() => {
-				process.env = {
-					...ORIGINAL_ENV,
-					WRANGLER_C3_COMMAND: "run create-cloudflare",
-				};
-			});
-
-			afterEach(() => {
-				process.env = ORIGINAL_ENV;
+				vi.stubEnv("WRANGLER_C3_COMMAND", "run create-cloudflare");
 			});
 
 			test("shows deprecation message and delegates to C3", async () => {

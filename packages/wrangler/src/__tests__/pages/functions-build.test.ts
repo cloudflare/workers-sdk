@@ -540,17 +540,13 @@ describe("functions build w/ config", () => {
 	const std = mockConsoleMethods();
 
 	runInTempDir();
-	const originalEnv = process.env;
-
 	afterEach(async () => {
-		process.env = originalEnv;
 		// Force a tick to ensure that all promises resolve
 		await endEventLoop();
 	});
 
 	beforeEach(() => {
-		// eslint-disable-next-line turbo/no-undeclared-env-vars
-		process.env.PAGES_ENVIRONMENT = "production";
+		vi.stubEnv("PAGES_ENVIRONMENT", "production");
 	});
 
 	it("should include all config in the _worker.bundle metadata", async () => {

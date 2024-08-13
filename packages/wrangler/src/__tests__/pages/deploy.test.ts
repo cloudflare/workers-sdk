@@ -27,7 +27,6 @@ describe("pages deploy", () => {
 
 	const workerHasD1Shim = async (contents: FormDataEntryValue | null) =>
 		(await toString(contents)).includes("D1_ERROR");
-	let actualProcessEnvCI: string | undefined;
 
 	runInTempDir();
 	mockAccountId();
@@ -36,13 +35,11 @@ describe("pages deploy", () => {
 
 	//TODO Abstract MSW handlers that repeat to this level - JACOB
 	beforeEach(() => {
-		actualProcessEnvCI = process.env.CI;
-		process.env.CI = "true";
+		vi.stubEnv("CI", "true");
 		setIsTTY(false);
 	});
 
 	afterEach(async () => {
-		process.env.CI = actualProcessEnvCI;
 		// Force a tick to ensure that all promises resolve
 		await endEventLoop();
 		// Reset MSW after tick to ensure that all requests have been handled
