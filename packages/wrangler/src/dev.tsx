@@ -723,6 +723,7 @@ export async function startDev(args: StartDevOptions) {
 						mtls_certificates: undefined,
 						logfwdr: undefined,
 						unsafe: undefined,
+						experimental_assets: undefined,
 					}),
 				},
 				dev: {
@@ -1522,6 +1523,9 @@ export function getBindings(
 		},
 		mtls_certificates: configParam.mtls_certificates,
 		send_email: configParam.send_email,
+		experimental_assets: configParam.experimental_assets?.binding
+			? { binding: configParam.experimental_assets?.binding }
+			: undefined,
 	};
 
 	return bindings;

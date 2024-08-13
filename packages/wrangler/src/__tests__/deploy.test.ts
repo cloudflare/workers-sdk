@@ -4753,6 +4753,44 @@ addEventListener('fetch', event => {});`
 				])
 			);
 		});
+		it("should be able to upload a user worker with ASSETS binding", async () => {
+			const assets = [
+				{ filePath: "file-1.txt", content: "Content of file-1" },
+				{ filePath: "boop/file-2.txt", content: "Content of file-2" },
+			];
+			writeAssets(assets);
+			writeWorkerSource({ format: "js" });
+			writeWranglerToml({
+				main: "index.js",
+				experimental_assets: { directory: "assets", binding: "ASSETS" },
+			});
+			msw.use(
+				http.post(
+					`*/accounts/some-account-id/workers/scripts/test-name/assets-upload-session`,
+					async () => {
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: {
+									jwt: "<<aus-completion-token>>",
+									buckets: [[]],
+								},
+							},
+							{ status: 201 }
+						);
+					}
+				)
+			);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedExperimentalAssets: true,
+				expectedBindings: [{ name: "ASSETS", type: "assets" }],
+				expectedMainModule: "index.js",
+			});
+			await runWrangler("deploy");
+		});
 	});
 
 	describe("workers_dev setting", () => {

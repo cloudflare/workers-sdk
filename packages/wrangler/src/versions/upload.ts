@@ -384,6 +384,9 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			dispatch_namespaces: config.dispatch_namespaces,
 			mtls_certificates: config.mtls_certificates,
 			logfwdr: config.logfwdr,
+			experimental_assets: config.experimental_assets?.binding
+				? { binding: config.experimental_assets?.binding }
+				: undefined,
 			unsafe: {
 				bindings: config.unsafe.bindings,
 				metadata: config.unsafe.metadata,

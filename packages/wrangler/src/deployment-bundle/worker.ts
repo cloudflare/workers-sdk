@@ -221,6 +221,10 @@ export interface CfLogfwdrBinding {
 	destination: string;
 }
 
+export interface CfExperimentalAssetBinding {
+	binding: string;
+}
+
 export interface CfUnsafeBinding {
 	name: string;
 	type: string;
@@ -322,6 +326,7 @@ export interface CfWorkerInit {
 		mtls_certificates: CfMTlsCertificate[] | undefined;
 		logfwdr: CfLogfwdr | undefined;
 		unsafe: CfUnsafe | undefined;
+		experimental_assets: CfExperimentalAssetBinding | undefined;
 	};
 	/**
 	 * The raw bindings - this is basically never provided and it'll be the bindings above
