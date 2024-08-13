@@ -301,8 +301,8 @@ export async function bundleWorker(
 			// filter the hook calls to only those that match the alias keys
 			// this should avoid slowing down builds which don't use aliasing
 			const filter = new RegExp(
-				Object.entries(alias)
-					.map(([key, _value]) => escapeRegex(key))
+				Object.keys(alias)
+					.map((key) => escapeRegex(key))
 					.join("|")
 			);
 
