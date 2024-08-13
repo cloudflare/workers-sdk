@@ -408,36 +408,6 @@ export const createContext = async (
 			args.lang = "ts";
 		}
 
-		const templateMap = await getTemplateMap();
-		const templateOptions = Object.entries(templateMap).map(
-			([value, { displayName, description, hidden }]) => {
-				const isHelloWorldExample = value.startsWith("hello-world");
-				const isCategoryMatched =
-					category === "hello-world"
-						? isHelloWorldExample
-						: !isHelloWorldExample;
-
-				return {
-					value,
-					label: displayName,
-					description,
-					hidden: hidden || !isCategoryMatched,
-				};
-			},
-		);
-
-		const type = await processArgument<string>(args, "type", {
-			type: "select",
-			question: "Which template would you like to use?",
-			label: "type",
-			options: templateOptions,
-			defaultValue: C3_DEFAULTS.type,
-		});
-
-		if (!type) {
-			return crash("An application type must be specified to continue.");
-		}
-
 		const languageOptions = [
 			{ label: "TypeScript", value: "ts" },
 			{ label: "JavaScript", value: "js" },
