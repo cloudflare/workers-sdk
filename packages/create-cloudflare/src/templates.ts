@@ -228,29 +228,33 @@ export const createContext = async (
 	// By moving the cursor up to a certain line and clearing the screen
 	const goBack = async (from: "type" | "framework" | "lang") => {
 		const newArgs = { ...args };
+		let linesPrinted = 0;
 
 		switch (from) {
 			case "type":
-				process.stdout.moveCursor(0, -9);
+				linesPrinted = 9;
 				newArgs.category = undefined;
 				newArgs.type = undefined;
 				args.type = undefined;
 				break;
 			case "framework":
-				process.stdout.moveCursor(0, -9);
+				linesPrinted = 9;
 				newArgs.category = undefined;
 				newArgs.framework = undefined;
 				args.framework = undefined;
 				break;
 			case "lang":
-				process.stdout.moveCursor(0, -12);
+				linesPrinted = 12;
 				newArgs.type = undefined;
 				newArgs.lang = undefined;
 				args.lang = undefined;
 				break;
 		}
 
-		process.stdout.clearScreenDown();
+		if (process.stdout.isTTY) {
+			process.stdout.moveCursor(0, -linesPrinted);
+			process.stdout.clearScreenDown();
+		}
 
 		return await createContext(newArgs, args);
 	};
@@ -353,7 +357,7 @@ export const createContext = async (
 	} else {
 		const templateMap = await getTemplateMap();
 		const templateOptions: Option[] = Object.entries(templateMap).map(
-			([value, { displayName, hidden }]) => {
+			([value, { displayName, description, hidden }]) => {
 				const isHelloWorldExample = value.startsWith("hello-world");
 				const isCategoryMatched =
 					category === "hello-world"
@@ -363,6 +367,7 @@ export const createContext = async (
 				return {
 					value,
 					label: displayName,
+					description,
 					hidden: hidden || !isCategoryMatched,
 				};
 			},

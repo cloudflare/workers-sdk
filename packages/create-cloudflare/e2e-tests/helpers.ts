@@ -87,7 +87,7 @@ export const runC3 = async (
 	// so we store the current PromptHandler if we have already matched the question
 	let currentSelectDialog: PromptHandler | undefined;
 	const handlePrompt = (data: string) => {
-		const lines: string[] = data.toString().split("\n");
+		const lines = stripAnsi(data.toString()).split("\n");
 		const currentDialog = currentSelectDialog ?? promptHandlers[0];
 
 		if (!currentDialog) {
@@ -125,7 +125,13 @@ export const runC3 = async (
 			const searchText =
 				searchBy === "description"
 					? lines
-							.filter((line) => !line.startsWith("●") && !line.startsWith("○"))
+							.filter(
+								(line) =>
+									!line.startsWith("●") &&
+									!line.startsWith("○") &&
+									!line.startsWith("◀") &&
+									!line.startsWith("◁"),
+							)
 							.join(" ")
 					: currentSelection;
 			const matchesSelectionTarget =
