@@ -136,11 +136,13 @@ export const Handler = withConfig<HandlerOptions>(
 												queryDurationMs
 												rowsRead
 												rowsWritten
+												rowsReturned
 											}
 											avg {
 												queryDurationMs
 												rowsRead
 												rowsWritten
+												rowsReturned
 											}
 											count
 											dimensions {
@@ -183,6 +185,10 @@ export const Handler = withConfig<HandlerOptions>(
 						avgDurationMs: row?.avg?.queryDurationMs ?? 0,
 						totalDurationMs: row?.sum?.queryDurationMs ?? 0,
 						numberOfTimesRun: row?.count ?? 0,
+						queryEfficiency:
+							row?.avg?.rowsReturned && row?.avg?.rowsRead
+								? row?.avg?.rowsReturned / row?.avg?.rowsRead
+								: 0,
 					});
 				}
 			);
