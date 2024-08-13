@@ -1,5 +1,25 @@
 # wrangler
 
+## 3.71.0
+
+### Minor Changes
+
+- [#6464](https://github.com/cloudflare/workers-sdk/pull/6464) [`da9106c`](https://github.com/cloudflare/workers-sdk/commit/da9106c7c1d2734c04b6aa357ba0d4f054871466) Thanks [@AnantharamanSI](https://github.com/AnantharamanSI)! - feat: rename `--count` to `--limit` in `wrangler d1 insights`
+
+  This PR renames `wrangler d1 insight`'s `--count` flag to `--limit` to improve clarity and conform to naming conventions.
+
+  To avoid a breaking change, we have kept `--count` as an alias to `--limit`.
+
+- [#6451](https://github.com/cloudflare/workers-sdk/pull/6451) [`515de6a`](https://github.com/cloudflare/workers-sdk/commit/515de6ab40ed6154a2e6579ff90b14b304809609) Thanks [@danielrs](https://github.com/danielrs)! - feat: `whoami` shows membership information when available
+
+- [#6463](https://github.com/cloudflare/workers-sdk/pull/6463) [`dbc6782`](https://github.com/cloudflare/workers-sdk/commit/dbc678218a0ec9c42201da1300c610068c3d7dcb) Thanks [@AnantharamanSI](https://github.com/AnantharamanSI)! - feat: add queryEfficiency to `wrangler d1 insights` output
+
+- [#6252](https://github.com/cloudflare/workers-sdk/pull/6252) [`a2a144c`](https://github.com/cloudflare/workers-sdk/commit/a2a144ca1bcdf83118bf1d61427ffd0ae265c1a2) Thanks [@garvit-gupta](https://github.com/garvit-gupta)! - feat: Enable Wrangler to operate on Vectorize V2 indexes
+
+### Patch Changes
+
+- [#6424](https://github.com/cloudflare/workers-sdk/pull/6424) [`3402ab9`](https://github.com/cloudflare/workers-sdk/commit/3402ab9d517553fe0a602669e8e151a82555a72c) Thanks [@RamIdeas](https://github.com/RamIdeas)! - fix: using a debugger sometimes disconnected with "Message is too large" error
+
 ## 3.70.0
 
 ### Minor Changes
