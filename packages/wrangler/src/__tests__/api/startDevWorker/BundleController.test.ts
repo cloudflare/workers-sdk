@@ -254,6 +254,69 @@ describe("happy path bundle + watch", () => {
 				"
 			`);
 	});
+
+	test("module aliasing", async ({ controller }) => {
+		await seed({
+			"src/index.ts": dedent/* javascript */ `
+				import name from "foo"
+				export default {
+					fetch(request, env, ctx) {
+						//comment
+						return new Response("hello world" + name)
+					}
+				} satisfies ExportedHandler
+			`,
+			"node_modules/foo": dedent/* javascript */ `
+				export default "foo"
+			`,
+			"node_modules/bar": dedent/* javascript */ `
+				export default "bar"
+			`,
+		});
+		const config = configDefaults({
+			legacy: {},
+			name: "worker",
+			entrypoint: path.resolve("src/index.ts"),
+			directory: path.resolve("src"),
+			build: {
+				additionalModules: [],
+				processEntrypoint: false,
+				nodejsCompatMode: null,
+				bundle: true,
+				moduleRules: [],
+				custom: {},
+				define: {},
+				format: "modules",
+				moduleRoot: path.resolve("src"),
+			},
+		});
+
+		await controller.onConfigUpdate({ type: "configUpdate", config });
+
+		let ev = await waitForBundleComplete(controller);
+		expect(ev.bundle.entrypointSource).toContain(dedent/* javascript */ `
+            // ../node_modules/foo
+            var foo_default = "foo"
+        `);
+
+		await controller.onConfigUpdate({
+			type: "configUpdate",
+			config: {
+				...config,
+				build: {
+					...config.build,
+					alias: {
+						foo: "bar",
+					},
+				},
+			},
+		});
+		ev = await waitForBundleComplete(controller);
+		expect(ev.bundle.entrypointSource).toContain(dedent/* javascript */ `
+            // ../node_modules/bar
+            var bar_default = "bar"
+        `);
+	});
 });
 
 describe("switching", () => {
