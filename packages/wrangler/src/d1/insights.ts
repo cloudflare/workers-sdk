@@ -41,6 +41,7 @@ export function Options(d1ListYargs: CommonYargsArgv) {
 			type: "number",
 			default: 5,
 		})
+		.alias("count", "limit") //--limit used to be --count, we renamed the flags for clarity
 		.option("json", {
 			describe: "return output as clean JSON",
 			type: "boolean",
