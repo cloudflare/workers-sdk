@@ -161,6 +161,7 @@ export class ProxyController extends Controller<ProxyControllerEventMap> {
 					logger.loggerLevel === "debug" ? "wrangler-ProxyWorker" : "wrangler",
 			}),
 			handleRuntimeStdio,
+			liveReload: false,
 		};
 
 		const proxyWorkerOptionsChanged = didMiniflareOptionsChange(
