@@ -52,6 +52,7 @@ export type PromptHandler = {
 		| string[]
 		| {
 				type: "select";
+				defaultValue?: string;
 				target: RegExp | string;
 				searchBy?: "label" | "description";
 		  };
@@ -112,16 +113,28 @@ export const runC3 = async (
 			// select prompt handler
 
 			// Our select prompt options start with ○ / ◁ for unselected options and ● / ◀ for the current selection
-			const currentSelection = lines.find(
-				(line) => line.startsWith("●") || line.startsWith("◀"),
-			);
+			const currentSelection = lines
+				.find((line) => line.startsWith("●") || line.startsWith("◀"))
+				?.replace(/^(●|◀)\s{1}/, "");
 
 			if (!currentSelection) {
 				// sometimes `lines` contain only the 'clear screen' ANSI codes and not the prompt options
 				return;
 			}
 
-			const { target, searchBy } = currentDialog.input;
+			const { target, searchBy, defaultValue } = currentDialog.input;
+
+			if (
+				// currentSelectDialog is `undefined` when first matching the prompt handler
+				!currentSelectDialog &&
+				defaultValue !== undefined &&
+				defaultValue !== currentSelection
+			) {
+				throw new Error(
+					`The default option does not match; Expected "${defaultValue}" but found "${currentSelection}".`,
+				);
+			}
+
 			const searchText =
 				searchBy === "description"
 					? lines
@@ -225,8 +238,14 @@ export const waitForExit = async (
 	await new Promise((resolve, rejects) => {
 		proc.stdout.on("data", (data) => {
 			stdout.push(data);
-			if (onData) {
-				onData(data);
+			try {
+				if (onData) {
+					onData(data);
+				}
+			} catch (error) {
+				// Close the input stream so the process can exit properly
+				proc.stdin.end();
+				throw error;
 			}
 		});
 

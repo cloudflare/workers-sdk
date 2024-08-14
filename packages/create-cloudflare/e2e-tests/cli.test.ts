@@ -287,16 +287,18 @@ describe.skipIf(frameworkToTest || isQuarantineMode())(
 							},
 						},
 						{
-							matcher: /● Queue consumer & producer Worker/,
+							matcher: /Which template would you like to use\?/,
 							input: {
 								type: "select",
+								defaultValue: "Queue consumer & producer Worker",
 								target: "Go back",
 							},
 						},
 						{
-							matcher: /● Demo application/,
+							matcher: /What would you like to start with\?/,
 							input: {
 								type: "select",
+								defaultValue: "Demo application",
 								target: "Framework Starter",
 							},
 						},
@@ -308,9 +310,10 @@ describe.skipIf(frameworkToTest || isQuarantineMode())(
 							},
 						},
 						{
-							matcher: /● Framework Starter/,
+							matcher: /What would you like to start with\?/,
 							input: {
 								type: "select",
+								defaultValue: "Framework Starter",
 								target: "Hello World example",
 							},
 						},
@@ -329,14 +332,15 @@ describe.skipIf(frameworkToTest || isQuarantineMode())(
 							},
 						},
 						{
-							matcher: /● Hello World Worker Using Durable Objects/,
+							matcher: /Which template would you like to use\?/,
 							input: {
 								type: "select",
+								defaultValue: "Hello World Worker Using Durable Objects",
 								target: "Hello World Worker",
 							},
 						},
 						{
-							matcher: /● TypeScript/,
+							matcher: /Which language do you want to use\?/,
 							input: {
 								type: "select",
 								target: "JavaScript",
