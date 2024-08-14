@@ -30,7 +30,9 @@ describe("middleware", () => {
 	describe("workers change behaviour with middleware with wrangler dev", () => {
 		runInTempDir();
 
-		process.env.EXPERIMENTAL_MIDDLEWARE = "true";
+		beforeEach(() => {
+			vi.stubEnv("EXPERIMENTAL_MIDDLEWARE", "true");
+		});
 
 		describe("module workers", () => {
 			it("should register a middleware and intercept", async () => {
@@ -272,7 +274,9 @@ describe("middleware", () => {
 	describe("unchanged functionality when wrapping with middleware", () => {
 		runInTempDir();
 
-		process.env.EXPERIMENTAL_MIDDLEWARE = "true";
+		beforeEach(() => {
+			vi.stubEnv("EXPERIMENTAL_MIDDLEWARE", "true");
+		});
 
 		describe("module workers", () => {
 			it("should return Hello World with no middleware export", async () => {
@@ -814,6 +818,11 @@ describe("middleware", () => {
 
 	describe("multiple middleware", () => {
 		runInTempDir();
+
+		beforeEach(() => {
+			vi.stubEnv("EXPERIMENTAL_MIDDLEWARE", "true");
+		});
+
 		it("should build multiple middleware as expected", async () => {
 			await seedFs({
 				"src/index.js": dedent/* javascript */ `

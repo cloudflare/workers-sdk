@@ -17,16 +17,12 @@ describe("normalizeAndValidateConfig()", () => {
 			);
 
 			// supress Hyperdrive beta warnings
-			process.env.NO_HYPERDRIVE_WARNING = "true";
+			vi.stubEnv("NO_HYPERDRIVE_WARNING", "true");
 
 			// sanity checks
 			expect(pagesRawConfig.env).not.toBeUndefined();
 			expect(pagesRawConfig.env?.preview).not.toBeUndefined();
 			expect(pagesRawConfig.env?.production).not.toBeUndefined();
-		});
-
-		afterEach(() => {
-			process.env.NO_HYPERDRIVE_WARNING = undefined;
 		});
 
 		describe("named environments", () => {

@@ -71,5 +71,6 @@ export default defineConfig({
 			escapeString: true,
 			printBasicPrototype: true,
 		},
+		unstubEnvs: true,
 	},
 });

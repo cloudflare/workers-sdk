@@ -754,8 +754,9 @@ describe("wrangler dev", () => {
 				});
 
 				// We won't overwrite existing process.env keys with .env values (to
-				// allow .env overrides to specified on then shell), so make sure this
+				// allow .env overrides to be specified on the shell), so make sure this
 				// key definitely doesn't exist.
+				vi.stubEnv("CUSTOM_BUILD_VAR", "");
 				delete process.env.CUSTOM_BUILD_VAR;
 			});
 
