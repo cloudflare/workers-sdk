@@ -132,19 +132,13 @@ describe.each(OPTIONS)("DevEnv (remote: $remote)", ({ remote }) => {
 			},
 		});
 		await vi.waitFor(
-			async () => {
-				// TODO: cleanup the expect.{arrayContaining|objectContaining} calls with a custom matcher
-				// https://medium.com/@joelmalone/a-custom-deep-partial-match-on-any-item-in-an-array-matcher-for-jest-f77caaf49d33
-				await expect(consoleApiMessages).toMatchObject(
-					expect.arrayContaining([
-						expect.objectContaining({
-							method: "Runtime.consoleAPICalled",
-							params: expect.objectContaining({
-								args: [{ type: "string", value: "Inside mock user worker" }],
-							}),
-						}),
-					])
-				);
+			() => {
+				expect(consoleApiMessages).toContainMatchingObject({
+					method: "Runtime.consoleAPICalled",
+					params: expect.objectContaining({
+						args: [{ type: "string", value: "Inside mock user worker" }],
+					}),
+				});
 			},
 			{ timeout: 5_000 }
 		);
@@ -252,24 +246,15 @@ describe.each(OPTIONS)("DevEnv (remote: $remote)", ({ remote }) => {
 		await worker.fetch("http://dummy");
 
 		await vi.waitFor(
-			async () => {
-				// TODO: cleanup the expect.{arrayContaining|objectContaining} calls with a custom matcher
-				// https://medium.com/@joelmalone/a-custom-deep-partial-match-on-any-item-in-an-array-matcher-for-jest-f77caaf49d33
-				await expect(consoleApiMessages).toMatchObject(
-					expect.arrayContaining([
-						expect.objectContaining({
-							method: "Runtime.consoleAPICalled",
-							params: expect.objectContaining({
-								args: expect.arrayContaining([
-									{
-										type: "string",
-										value: expect.stringContaining("zzzzzzzzz"),
-									},
-								]),
-							}),
-						}),
-					])
-				);
+			() => {
+				expect(consoleApiMessages).toContainMatchingObject({
+					method: "Runtime.consoleAPICalled",
+					params: expect.objectContaining({
+						args: [
+							{ type: "string", value: expect.stringContaining("zzzzzzzzz") },
+						],
+					}),
+				});
 			},
 			{ timeout: 5_000 }
 		);
