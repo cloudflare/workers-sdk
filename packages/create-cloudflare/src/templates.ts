@@ -234,22 +234,19 @@ export const createContext = async (
 			case "type":
 				linesPrinted = 9;
 				newArgs.category = undefined;
-				newArgs.type = undefined;
-				args.type = undefined;
 				break;
 			case "framework":
 				linesPrinted = 9;
 				newArgs.category = undefined;
-				newArgs.framework = undefined;
-				args.framework = undefined;
 				break;
 			case "lang":
 				linesPrinted = 12;
 				newArgs.type = undefined;
-				newArgs.lang = undefined;
-				args.lang = undefined;
 				break;
 		}
+
+		newArgs[from] = undefined;
+		args[from] = undefined;
 
 		if (process.stdout.isTTY) {
 			process.stdout.moveCursor(0, -linesPrinted);
