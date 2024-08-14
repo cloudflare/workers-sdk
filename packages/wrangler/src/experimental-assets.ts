@@ -13,7 +13,6 @@ import { logger, LOGGER_LEVELS } from "./logger";
 import { hashFile } from "./pages/hash";
 import { isJwtExpired } from "./pages/upload";
 import { APIError } from "./parse";
-import { urlSafe } from "./sites";
 import type { Config } from "./config";
 
 export type AssetManifest = { [path: string]: { hash: string; size: number } };
@@ -248,7 +247,6 @@ const walk = async (
 					);
 				}
 
-				const name = urlSafe(relativeFilepath);
 				if (filestat.size > MAX_ASSET_SIZE) {
 					throw new UserError(
 						`Asset too large.\n` +
@@ -266,7 +264,7 @@ const walk = async (
 							`Ensure all assets in your assets directory "${startingDir}" conform with the Workers maximum size requirement.`
 					);
 				}
-				manifest[urlSafe(path.join("/", name))] = {
+				manifest[validateAndEncodeFilePath(relativeFilepath)] = {
 					hash: hashFile(filepath),
 					size: filestat.size,
 				};
@@ -343,3 +341,11 @@ export function processExperimentalAssetsArg(
 
 	return experimentalAssets;
 }
+
+const validateAndEncodeFilePath = (filePath: string) => {
+	const encodedPath = filePath
+		.split(path.sep)
+		.map((segment) => encodeURIComponent(segment))
+		.join("/");
+	return path.join("/", encodedPath);
+};

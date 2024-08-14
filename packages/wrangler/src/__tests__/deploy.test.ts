@@ -4345,23 +4345,7 @@ addEventListener('fetch', event => {});`
 				experimental_assets: { directory: "config-assets" },
 			});
 			const bodies: AssetManifest[] = [];
-			msw.use(
-				http.post<never, AssetManifest>(
-					`*/accounts/some-account-id/workers/scripts/test-name/assets-upload-session`,
-					async ({ request }) => {
-						bodies.push(await request.json());
-						return HttpResponse.json(
-							{
-								success: true,
-								errors: [],
-								messages: [],
-								result: { jwt: "<<aus-completion-token>>", buckets: [] },
-							},
-							{ status: 201 }
-						);
-					}
-				)
-			);
+			await mockAUSRequest(bodies);
 			mockSubDomainRequest();
 			mockUploadWorkerRequest({
 				expectedExperimentalAssets: true,
@@ -4431,6 +4415,49 @@ addEventListener('fetch', event => {});`
 			);
 		});
 
+		it("should encode file paths", async () => {
+			const assets = [
+				{ filePath: "file-1.txt", content: "Content of file-1" },
+				{ filePath: "boop/file?1.txt", content: "Content of file-1" },
+				{ filePath: "boop/file#1.txt", content: "Content of file-1" },
+				{ filePath: "béëp/boo^p.txt", content: "Content of file-1" },
+			];
+			writeAssets(assets);
+			writeWranglerToml({
+				experimental_assets: { directory: "assets" },
+			});
+
+			const bodies: AssetManifest[] = [];
+			await mockAUSRequest(bodies);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedExperimentalAssets: true,
+				expectedType: "none",
+			});
+			await runWrangler("deploy");
+			expect(bodies.length).toBe(1);
+			expect(bodies[0]).toEqual({
+				manifest: {
+					"/b%C3%A9%C3%ABp/boo%5Ep.txt": {
+						hash: "0de3dd5df907418e9730fd2bd747bd5e",
+						size: 17,
+					},
+					"/boop/file%231.txt": {
+						hash: "0de3dd5df907418e9730fd2bd747bd5e",
+						size: 17,
+					},
+					"/boop/file%3F1.txt": {
+						hash: "0de3dd5df907418e9730fd2bd747bd5e",
+						size: 17,
+					},
+					"/file-1.txt": {
+						hash: "0de3dd5df907418e9730fd2bd747bd5e",
+						size: 17,
+					},
+				},
+			});
+		});
+
 		it("should resolve assets directory relative to wrangler.toml if using config", async () => {
 			const assets = [{ filePath: "file-1.txt", content: "Content of file-1" }];
 			writeAssets(assets, "some/path/assets");
@@ -4441,23 +4468,7 @@ addEventListener('fetch', event => {});`
 				"some/path/wrangler.toml"
 			);
 			const bodies: AssetManifest[] = [];
-			msw.use(
-				http.post<never, AssetManifest>(
-					`*/accounts/some-account-id/workers/scripts/test-name/assets-upload-session`,
-					async ({ request }) => {
-						bodies.push(await request.json());
-						return HttpResponse.json(
-							{
-								success: true,
-								errors: [],
-								messages: [],
-								result: { jwt: "<<aus-completion-token>>", buckets: [[]] },
-							},
-							{ status: 201 }
-						);
-					}
-				)
-			);
+			await mockAUSRequest(bodies);
 			mockSubDomainRequest();
 			mockUploadWorkerRequest({
 				expectedExperimentalAssets: true,
@@ -4479,23 +4490,7 @@ addEventListener('fetch', event => {});`
 			const assets = [{ filePath: "file-1.txt", content: "Content of file-1" }];
 			writeAssets(assets, "some/path/assets");
 			const bodies: AssetManifest[] = [];
-			msw.use(
-				http.post<never, AssetManifest>(
-					`*/accounts/some-account-id/workers/scripts/test-name/assets-upload-session`,
-					async ({ request }) => {
-						bodies.push(await request.json());
-						return HttpResponse.json(
-							{
-								success: true,
-								errors: [],
-								messages: [],
-								result: { jwt: "<<aus-completion-token>>", buckets: [[]] },
-							},
-							{ status: 201 }
-						);
-					}
-				)
-			);
+			await mockAUSRequest(bodies);
 			mockSubDomainRequest();
 			mockUploadWorkerRequest({
 				expectedExperimentalAssets: true,
@@ -4523,23 +4518,7 @@ addEventListener('fetch', event => {});`
 			];
 			writeAssets(assets);
 			const bodies: AssetManifest[] = [];
-			msw.use(
-				http.post<never, AssetManifest>(
-					`*/accounts/some-account-id/workers/scripts/test-name/assets-upload-session`,
-					async ({ request }) => {
-						bodies.push(await request.json());
-						return HttpResponse.json(
-							{
-								success: true,
-								errors: [],
-								messages: [],
-								result: { jwt: "<<aus-completion-token>>", buckets: [] },
-							},
-							{ status: 201 }
-						);
-					}
-				)
-			);
+			await mockAUSRequest(bodies);
 			// skips asset uploading since empty buckets returned
 			mockSubDomainRequest();
 			mockUploadWorkerRequest({
@@ -4574,23 +4553,7 @@ addEventListener('fetch', event => {});`
 				experimental_assets: { directory: "assets" },
 			});
 			const bodies: AssetManifest[] = [];
-			msw.use(
-				http.post<never, AssetManifest>(
-					`*/accounts/some-account-id/workers/scripts/test-name/assets-upload-session`,
-					async ({ request }) => {
-						bodies.push(await request.json());
-						return HttpResponse.json(
-							{
-								success: true,
-								errors: [],
-								messages: [],
-								result: { jwt: "<<aus-completion-token>>", buckets: [] },
-							},
-							{ status: 201 }
-						);
-					}
-				)
-			);
+			await mockAUSRequest(bodies);
 			// skips asset uploading since empty buckets returned
 			mockSubDomainRequest();
 			mockUploadWorkerRequest({
@@ -4764,25 +4727,7 @@ addEventListener('fetch', event => {});`
 				main: "index.js",
 				experimental_assets: { directory: "assets", binding: "ASSETS" },
 			});
-			msw.use(
-				http.post(
-					`*/accounts/some-account-id/workers/scripts/test-name/assets-upload-session`,
-					async () => {
-						return HttpResponse.json(
-							{
-								success: true,
-								errors: [],
-								messages: [],
-								result: {
-									jwt: "<<aus-completion-token>>",
-									buckets: [[]],
-								},
-							},
-							{ status: 201 }
-						);
-					}
-				)
-			);
+			await mockAUSRequest();
 			mockSubDomainRequest();
 			mockUploadWorkerRequest({
 				expectedExperimentalAssets: true,
@@ -11766,3 +11711,23 @@ function mockPostQueueHTTPConsumer(
 	);
 	return requests;
 }
+
+const mockAUSRequest = async (bodies?: AssetManifest[]) => {
+	msw.use(
+		http.post<never, AssetManifest>(
+			`*/accounts/some-account-id/workers/scripts/test-name/assets-upload-session`,
+			async ({ request }) => {
+				bodies?.push(await request.json());
+				return HttpResponse.json(
+					{
+						success: true,
+						errors: [],
+						messages: [],
+						result: { jwt: "<<aus-completion-token>>", buckets: [[]] },
+					},
+					{ status: 201 }
+				);
+			}
+		)
+	);
+};
