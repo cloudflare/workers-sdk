@@ -400,31 +400,35 @@ export const createContext = async (
 	// Prompt for language preference only if selectVariant is not defined
 	// If it is defined, copyTemplateFiles will handle the selection
 	if (languageVariants.length > 0) {
-		// If we can infer from the directory that it uses typescript, use that
 		if (hasTsConfig(path)) {
+			// If we can infer from the directory that it uses typescript, use that
 			args.lang = "ts";
-		}
+		} else if (template.generate) {
+			// If there is a generate process then we assume that a potential typescript
+			// setup must have been part of it, so we should not offer it here
+			args.lang = "js";
+		} else {
+			// Otherwise, prompt the user for their language preference
+			const languageOptions = [
+				{ label: "TypeScript", value: "ts" },
+				{ label: "JavaScript", value: "js" },
+				{ label: "Python (beta)", value: "python" },
+			];
 
-		const languageOptions = [
-			{ label: "TypeScript", value: "ts" },
-			{ label: "JavaScript", value: "js" },
-			{ label: "Python (beta)", value: "python" },
-		];
+			const lang = await processArgument<string>(args, "lang", {
+				type: "select",
+				question: "Which language do you want to use?",
+				label: "lang",
+				options: languageOptions
+					.filter((option) => languageVariants.includes(option.value))
+					// Allow going back only if the user is not selecting a remote template
+					.concat(args.template ? [] : backOption),
+				defaultValue: C3_DEFAULTS.lang,
+			});
 
-		// Otherwise, prompt the user for their language preference
-		const lang = await processArgument<string>(args, "lang", {
-			type: "select",
-			question: "Which language do you want to use?",
-			label: "lang",
-			options: languageOptions
-				.filter((option) => languageVariants.includes(option.value))
-				// Allow going back only if the user is not selecting a remote template
-				.concat(args.template ? [] : backOption),
-			defaultValue: C3_DEFAULTS.lang,
-		});
-
-		if (lang === BACK_VALUE) {
-			return goBack("lang");
+			if (lang === BACK_VALUE) {
+				return goBack("lang");
+			}
 		}
 	}
 
