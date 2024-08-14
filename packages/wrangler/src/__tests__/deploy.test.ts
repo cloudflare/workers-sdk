@@ -4657,7 +4657,8 @@ addEventListener('fetch', event => {});`
 				["f05e28a3d0bdb90d3cf4bdafe592488f"],
 				["0de3dd5df907418e9730fd2bd747bd5e"],
 			];
-			const uploadHeaders: (string | null)[] = [];
+			const uploadAuthHeaders: (string | null)[] = [];
+			const uploadContentTypeHeaders: (string | null)[] = [];
 			msw.use(
 				http.post(
 					`*/accounts/some-account-id/workers/scripts/test-name/assets-upload-session`,
@@ -4679,11 +4680,12 @@ addEventListener('fetch', event => {});`
 				http.post(
 					"*/accounts/some-account-id/workers/assets/upload",
 					async ({ request }) => {
+						uploadContentTypeHeaders.push(request.headers.get("Content-Type"));
+						uploadAuthHeaders.push(request.headers.get("Authorization"));
 						const body = (await request.text())
 							.split("\n")
 							.map((x) => JSON.parse(x)) as UploadPayloadFile[];
 						bodies.push(body);
-						uploadHeaders.push(request.headers.get("Authorization"));
 						if (bodies.length === mockBuckets.length) {
 							return HttpResponse.json(
 								{
@@ -4714,11 +4716,17 @@ addEventListener('fetch', event => {});`
 				expectedType: "none",
 			});
 			await runWrangler("deploy");
-			expect(uploadHeaders).toStrictEqual([
+			expect(uploadAuthHeaders).toStrictEqual([
 				"Bearer <<aus-token>>",
 				"Bearer <<aus-token>>",
 				"Bearer <<aus-token>>",
 				"Bearer <<aus-token>>",
+			]);
+			expect(uploadContentTypeHeaders).toStrictEqual([
+				"application/jsonl",
+				"application/jsonl",
+				"application/jsonl",
+				"application/jsonl",
 			]);
 			expect(bodies.map((b) => b.length).sort()).toEqual([1, 1, 1, 2]);
 			expect(bodies.flatMap((b) => b)).toEqual(

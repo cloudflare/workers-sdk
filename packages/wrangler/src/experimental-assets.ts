@@ -137,7 +137,7 @@ export const syncExperimentalAssets = async (
 					{
 						method: "POST",
 						headers: {
-							"Content-Type": "application/x-ndjson",
+							"Content-Type": "application/jsonl",
 							Authorization: `Bearer ${initializeAssetsResponse.jwt}`,
 						},
 						body: payload.map((x) => JSON.stringify(x)).join("\n"),
