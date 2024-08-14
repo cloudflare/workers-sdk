@@ -104,7 +104,7 @@ export function printWelcomeMessage(version: string) {
 	logRaw(dialog);
 }
 
-export const printSummary = async (ctx: C3Context) => {
+export const printSummary = (ctx: C3Context) => {
 	// Prepare relevant information
 	const dashboardUrl = ctx.account
 		? `https://dash.cloudflare.com/?to=/:account/workers/services/view/${ctx.project.name}`
