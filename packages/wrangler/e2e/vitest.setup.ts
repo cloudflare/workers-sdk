@@ -28,7 +28,6 @@ expect.extend({
 				expect(superset).toMatchObject(subset);
 				return true;
 			} catch (ex) {
-				console.log(JSON.stringify(ex.expected), ex.actual.params.args);
 				return false;
 			}
 		}
