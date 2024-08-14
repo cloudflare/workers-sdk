@@ -241,8 +241,7 @@ export function convertCfWorkerInitBindingstoBindings(
 				break;
 			}
 			case "experimental_assets": {
-				const { binding, ...x } = info;
-				output[binding] = { type: "assets", ...x };
+				output[info["binding"]] = { type: "assets" };
 				break;
 			}
 			default: {
