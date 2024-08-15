@@ -264,7 +264,7 @@ const walk = async (
 							`Ensure all assets in your assets directory "${startingDir}" conform with the Workers maximum size requirement.`
 					);
 				}
-				manifest[validateAndEncodeFilePath(relativeFilepath)] = {
+				manifest[encodeFilePath(relativeFilepath)] = {
 					hash: hashFile(filepath),
 					size: filestat.size,
 				};
@@ -342,10 +342,11 @@ export function processExperimentalAssetsArg(
 	return experimentalAssets;
 }
 
-const validateAndEncodeFilePath = (filePath: string) => {
+const encodeFilePath = (filePath: string) => {
+	// NB windows will disallow these characters in file paths anyway < > : " / \ | ? *
 	const encodedPath = filePath
 		.split(path.sep)
 		.map((segment) => encodeURIComponent(segment))
 		.join("/");
-	return path.join("/", encodedPath);
+	return "/" + encodedPath;
 };

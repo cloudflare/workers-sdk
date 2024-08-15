@@ -4416,9 +4416,9 @@ addEventListener('fetch', event => {});`
 		});
 
 		it("should encode file paths", async () => {
+			// NB windows will disallow these characters in file paths anyway < > : " / \ | ? *
 			const assets = [
 				{ filePath: "file-1.txt", content: "Content of file-1" },
-				{ filePath: "boop/file?1.txt", content: "Content of file-1" },
 				{ filePath: "boop/file#1.txt", content: "Content of file-1" },
 				{ filePath: "béëp/boo^p.txt", content: "Content of file-1" },
 			];
@@ -4443,10 +4443,6 @@ addEventListener('fetch', event => {});`
 						size: 17,
 					},
 					"/boop/file%231.txt": {
-						hash: "0de3dd5df907418e9730fd2bd747bd5e",
-						size: 17,
-					},
-					"/boop/file%3F1.txt": {
 						hash: "0de3dd5df907418e9730fd2bd747bd5e",
 						size: 17,
 					},
