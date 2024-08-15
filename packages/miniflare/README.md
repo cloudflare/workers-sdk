@@ -528,6 +528,16 @@ parameter in module format Workers.
   If set, only files with paths _not_ matching these glob patterns will be
   served.
 
+  - `assetsPath?: string`
+
+  Path to serve Workers assets from.
+
+  - `assetsKVBindingName?: string`
+    Name of the binding to the KV namespace that the assets are in. If `assetsPath` is set, this binding will be injected into this Worker.
+
+  - `assetsManifestBindingName?: string`
+    Name of the binding to an `ArrayBuffer` containing the binary-encoded assets manifest. If `assetsPath` is set, this binding will be injected into this Worker.
+
 #### R2
 
 - `r2Buckets?: Record<string, string> | string[]`
