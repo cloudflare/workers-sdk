@@ -1,5 +1,5 @@
 ---
-"wrangler": patch
+"wrangler": minor
 ---
 
 feat: Add a new update command for Queues and a message-retention-period-secs option
