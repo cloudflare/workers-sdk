@@ -207,7 +207,7 @@ export async function copyWorkerVersionWithNewSecrets({
 			"workers/message": versionMessage,
 			"workers/tag": versionTag,
 		},
-		experimental_assets: undefined,
+		experimental_assets_jwt: undefined,
 	};
 
 	const body = createWorkerUploadForm(worker);

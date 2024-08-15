@@ -93,7 +93,7 @@ function createWorkerBundleFormData(
 		placement: placement,
 		tail_consumers: undefined,
 		limits: config?.limits,
-		experimental_assets: undefined,
+		experimental_assets_jwt: undefined,
 	};
 
 	return createWorkerUploadForm(worker);

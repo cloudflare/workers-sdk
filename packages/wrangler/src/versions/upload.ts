@@ -349,16 +349,13 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			: undefined;
 
 		// Upload assets if experimental assets is being used
-		const experimentalAssetsWorkerInfo: CfWorkerInit["experimental_assets"] =
+		const experimentalAssetsJwt: CfWorkerInit["experimental_assets_jwt"] =
 			props.experimentalAssets && !props.dryRun
-				? {
-						jwt: await syncExperimentalAssets(
-							accountId,
-							scriptName,
-							props.experimentalAssets.directory
-						),
-						staticAssetsOnly: props.experimentalAssets.staticAssetsOnly,
-					}
+				? await syncExperimentalAssets(
+						accountId,
+						scriptName,
+						props.experimentalAssets.directory
+					)
 				: undefined;
 
 		const bindings: CfWorkerInit["bindings"] = {
@@ -426,7 +423,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 				"workers/message": props.message,
 				"workers/tag": props.tag,
 			},
-			experimental_assets: experimentalAssetsWorkerInfo,
+			experimental_assets_jwt: experimentalAssetsJwt,
 		};
 
 		await printBundleSize(
