@@ -51,9 +51,7 @@ type Props = {
 	env: string | undefined;
 	compatibilityDate: string | undefined;
 	compatibilityFlags: string[] | undefined;
-	experimentalAssets:
-		| (ExperimentalAssets & { staticAssetsOnly: boolean })
-		| undefined;
+	experimentalAssets: ExperimentalAssets | undefined;
 	vars: Record<string, string> | undefined;
 	defines: Record<string, string> | undefined;
 	alias: Record<string, string> | undefined;
