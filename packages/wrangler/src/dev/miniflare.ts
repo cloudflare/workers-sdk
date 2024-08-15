@@ -1,6 +1,6 @@
 import assert from "node:assert";
 import { randomUUID } from "node:crypto";
-import path, { dirname } from "node:path";
+import path from "node:path";
 import * as esmLexer from "es-module-lexer";
 import {
 	CoreHeaders,
@@ -16,7 +16,6 @@ import {
 	EXTERNAL_AI_WORKER_NAME,
 	EXTERNAL_AI_WORKER_SCRIPT,
 } from "../ai/fetcher";
-import { readConfig } from "../config";
 import { ModuleTypeToRuleType } from "../deployment-bundle/module-collection";
 import { stripExperimentalPrefixes } from "../deployment-bundle/node-compat";
 import { withSourceURLs } from "../deployment-bundle/source-url";
@@ -412,7 +411,6 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 	// Setup service bindings to external services
 	const serviceBindings: NonNullable<WorkerOptions["serviceBindings"]> = {
 		...config.serviceBindings,
-		...(config.experimentalAssets ? { ASSET_SERVER: "asset-server" } : {}),
 	};
 
 	const notFoundServices = new Set<string>();
@@ -680,6 +678,19 @@ export function buildPersistOptions(
 	}
 }
 
+function buildAssetOptions(
+	experimentalAssets: ConfigBundle["experimentalAssets"]
+) {
+	if (experimentalAssets) {
+		return {
+			assetsPath: experimentalAssets.directory,
+			assetsBindingName: experimentalAssets.binding,
+		};
+	} else {
+		return null;
+	}
+}
+
 export function buildSitesOptions({
 	legacyAssetPaths,
 }: Pick<ConfigBundle, "legacyAssetPaths">) {
@@ -874,6 +885,7 @@ export async function buildMiniflareOptions(
 		buildMiniflareBindingOptions(config);
 	const sitesOptions = buildSitesOptions(config);
 	const persistOptions = buildPersistOptions(config.localPersistencePath);
+	const assetOptions = buildAssetOptions(config.experimentalAssets);
 
 	const options: MiniflareOptions = {
 		host: config.initialIp,
@@ -907,59 +919,12 @@ export async function buildMiniflareOptions(
 					entrypoint: name,
 					proxy: true,
 				})),
+				...assetOptions,
 			},
-			...getAssetServerWorker(config),
 			...externalWorkers,
 		],
 	};
 	return { options, internalObjects, entrypointNames };
-}
-
-function getAssetServerWorker(
-	config: Omit<ConfigBundle, "rules">
-): WorkerOptions[] {
-	if (!config.experimentalAssets) {
-		return [];
-	}
-	const assetServerModulePath = require.resolve(
-		"@cloudflare/workers-shared/dist/asset-server-worker.mjs"
-	);
-	const assetServerConfigPath = require.resolve(
-		"@cloudflare/workers-shared/asset-server-worker/wrangler.toml"
-	);
-	let assetServerConfig: Config | undefined;
-
-	try {
-		assetServerConfig = readConfig(assetServerConfigPath, {});
-	} catch (err) {
-		throw new UserError(
-			"Failed to read the Asset Server Worker configuration file.\n" + `${err}`
-		);
-	}
-
-	return [
-		{
-			name: assetServerConfig?.name,
-			compatibilityDate: assetServerConfig?.compatibility_date,
-			compatibilityFlags: assetServerConfig?.compatibility_flags,
-			modulesRoot: dirname(assetServerModulePath),
-			modules: [
-				{
-					type: "ESModule",
-					path: assetServerModulePath,
-				},
-			],
-			unsafeDirectSockets: [
-				{
-					host: "127.0.0.1",
-					port: 0,
-				},
-			],
-			assetsPath: config.experimentalAssets.directory,
-			assetsKVBindingName: "ASSETS_KV_NAMESPACE",
-			assetsManifestBindingName: "ASSETS_MANIFEST",
-		},
-	];
 }
 
 export interface ReloadedEventOptions {

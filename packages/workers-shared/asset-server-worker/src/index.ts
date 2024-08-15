@@ -15,7 +15,15 @@ interface Env {
 
 export default {
 	async fetch(request: Request, env: Env) {
-		const { ASSETS_MANIFEST, ASSETS_KV_NAMESPACE } = env;
+		const {
+			// ASSETS_MANIFEST is a pipeline binding to an ArrayBuffer containing the
+			// binary-encoded site manifest
+			ASSETS_MANIFEST,
+
+			// ASSETS_KV_NAMESPACE is a pipeline binding to the KV namespace that the
+			// assets are in.
+			ASSETS_KV_NAMESPACE,
+		} = env;
 
 		const url = new URL(request.url);
 		const { pathname } = url;

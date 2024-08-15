@@ -1,5 +1,7 @@
 import { z } from "zod";
 import { ValueOf } from "../workers";
+import { ASSETS_PLUGIN } from "./assets";
+import { ASSETS_PLUGIN_NAME } from "./assets/constants";
 import { CACHE_PLUGIN, CACHE_PLUGIN_NAME } from "./cache";
 import { CORE_PLUGIN, CORE_PLUGIN_NAME } from "./core";
 import { D1_PLUGIN, D1_PLUGIN_NAME } from "./d1";
@@ -11,6 +13,7 @@ import { R2_PLUGIN, R2_PLUGIN_NAME } from "./r2";
 import { RATELIMIT_PLUGIN, RATELIMIT_PLUGIN_NAME } from "./ratelimit";
 
 export const PLUGINS = {
+	[ASSETS_PLUGIN_NAME]: ASSETS_PLUGIN,
 	[CORE_PLUGIN_NAME]: CORE_PLUGIN,
 	[CACHE_PLUGIN_NAME]: CACHE_PLUGIN,
 	[D1_PLUGIN_NAME]: D1_PLUGIN,
@@ -59,6 +62,7 @@ export type Plugins = typeof PLUGINS;
 // Considering we don't have too many plugins, we now just define these types
 // manually, which has the added benefit of faster type checking.
 export type WorkerOptions = z.input<typeof CORE_PLUGIN.options> &
+	z.input<typeof ASSETS_PLUGIN.options> &
 	z.input<typeof CACHE_PLUGIN.options> &
 	z.input<typeof D1_PLUGIN.options> &
 	z.input<typeof DURABLE_OBJECTS_PLUGIN.options> &
@@ -82,6 +86,8 @@ export const PLUGIN_ENTRIES = Object.entries(PLUGINS) as [
 export * from "./shared";
 
 // TODO: be more liberal on exports?
+export * from "./assets";
+export * from "./assets/schema";
 export * from "./cache";
 export {
 	CORE_PLUGIN,

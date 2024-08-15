@@ -3,7 +3,7 @@
 	"private": true,
 	"scripts": {
 		"check:type": "tsc",
-		"dev": "npx wrangler dev",
+		"dev": "npx wrangler dev --experimental-assets=./public",
 		"test:ci": "vitest run",
 		"test:watch": "vitest",
 		"type:tests": "tsc -p ./tests/tsconfig.json"
