@@ -1,1 +1,1 @@
-new Hono<{ Bindings: Bindings }>()
+new Hono<{ Bindings: CloudflareBindings }>()

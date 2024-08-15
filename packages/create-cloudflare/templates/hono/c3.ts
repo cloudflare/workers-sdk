@@ -32,16 +32,6 @@ const configure = async (ctx: C3Context) => {
 	const snippets = loadTemplateSnippets(ctx);
 
 	transformFile(indexFile, {
-		// Insert the env declaration after the last import (but before the rest of the body)
-		visitProgram: function (n) {
-			const lastImportIndex = n.node.body.findLastIndex(
-				(t) => t.type === "ImportDeclaration",
-			);
-			const lastImport = n.get("body", lastImportIndex);
-			lastImport.insertAfter(...snippets.bindingsTypeTs);
-
-			return this.traverse(n);
-		},
 		visitVariableDeclarator(n) {
 			if (n.node.id.type === "Identifier" && n.node.id.name === "app") {
 				n.node.init = snippets
