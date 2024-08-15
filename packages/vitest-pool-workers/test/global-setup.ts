@@ -35,6 +35,10 @@ export default async function ({ provide }: GlobalSetupContext) {
 		packDestinationPath,
 		path.join(packagesRoot, "kv-asset-handler")
 	);
+	const workersSharedTarballPath = packPackage(
+		packDestinationPath,
+		path.join(packagesRoot, "workers-shared")
+	);
 	const miniflareTarballPath = packPackage(
 		packDestinationPath,
 		path.join(packagesRoot, "miniflare")
@@ -75,6 +79,7 @@ export default async function ({ provide }: GlobalSetupContext) {
 		pnpm: {
 			overrides: {
 				"@cloudflare/kv-asset-handler": kvAssetHandlerTarballPath,
+				"@cloudflare/workers-shared": workersSharedTarballPath,
 				miniflare: miniflareTarballPath,
 				wrangler: wranglerTarballPath,
 			},
