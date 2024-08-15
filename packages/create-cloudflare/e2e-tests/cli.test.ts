@@ -236,8 +236,8 @@ describe.skipIf(frameworkToTest || isQuarantineMode())(
 							matcher: /What would you like to start with\?/,
 							input: {
 								type: "select",
-								searchBy: "description",
-								target:
+								target: "Demo application",
+								assertDescriptionText:
 									"Select from a range of starter applications using various Cloudflare products",
 							},
 						},
@@ -245,8 +245,9 @@ describe.skipIf(frameworkToTest || isQuarantineMode())(
 							matcher: /Which template would you like to use\?/,
 							input: {
 								type: "select",
-								searchBy: "description",
-								target: "Get started building a basic API on Workers",
+								target: "API starter (OpenAPI compliant)",
+								assertDescriptionText:
+									"Get started building a basic API on Workers",
 							},
 						},
 					],
@@ -290,16 +291,16 @@ describe.skipIf(frameworkToTest || isQuarantineMode())(
 							matcher: /Which template would you like to use\?/,
 							input: {
 								type: "select",
-								defaultValue: "Queue consumer & producer Worker",
 								target: "Go back",
+								assertDefaultSelection: "Queue consumer & producer Worker",
 							},
 						},
 						{
 							matcher: /What would you like to start with\?/,
 							input: {
 								type: "select",
-								defaultValue: "Demo application",
 								target: "Framework Starter",
+								assertDefaultSelection: "Demo application",
 							},
 						},
 						{
@@ -313,8 +314,8 @@ describe.skipIf(frameworkToTest || isQuarantineMode())(
 							matcher: /What would you like to start with\?/,
 							input: {
 								type: "select",
-								defaultValue: "Framework Starter",
 								target: "Hello World example",
+								assertDefaultSelection: "Framework Starter",
 							},
 						},
 						{
@@ -335,8 +336,9 @@ describe.skipIf(frameworkToTest || isQuarantineMode())(
 							matcher: /Which template would you like to use\?/,
 							input: {
 								type: "select",
-								defaultValue: "Hello World Worker Using Durable Objects",
 								target: "Hello World Worker",
+								assertDefaultSelection:
+									"Hello World Worker Using Durable Objects",
 							},
 						},
 						{
