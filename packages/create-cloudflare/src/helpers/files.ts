@@ -74,7 +74,11 @@ export const probePaths = (paths: string[]) => {
 };
 
 export const usesTypescript = (ctx: C3Context) => {
-	return existsSync(join(`${ctx.project.path}`, `tsconfig.json`));
+	return hasTsConfig(ctx.project.path);
+};
+
+export const hasTsConfig = (path: string) => {
+	return existsSync(join(`${path}`, `tsconfig.json`));
 };
 
 const eslintRcExts = ["js", "cjs", "yaml", "yml", "json"] as const;

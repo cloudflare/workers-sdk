@@ -53,7 +53,8 @@ export type PromptHandler = {
 		| {
 				type: "select";
 				target: RegExp | string;
-				searchBy?: "label" | "description";
+				assertDefaultSelection?: string;
+				assertDescriptionText?: string;
 		  };
 };
 
@@ -87,7 +88,8 @@ export const runC3 = async (
 	// so we store the current PromptHandler if we have already matched the question
 	let currentSelectDialog: PromptHandler | undefined;
 	const handlePrompt = (data: string) => {
-		const lines: string[] = data.toString().split("\n");
+		const text = stripAnsi(data.toString());
+		const lines = text.split("\n");
 		const currentDialog = currentSelectDialog ?? promptHandlers[0];
 
 		if (!currentDialog) {
@@ -111,25 +113,49 @@ export const runC3 = async (
 		} else if (currentDialog.input.type === "select") {
 			// select prompt handler
 
-			// Our select prompt options start with ○ for unselected options and ● for the current selection
-			const currentSelection = lines.find((line) => line.startsWith("●"));
+			// FirstFrame: The first onData call for the current select dialog
+			const isFirstFrameOfCurrentSelectDialog =
+				currentSelectDialog === undefined;
+
+			// Our select prompt options start with ○ / ◁ for unselected options and ● / ◀ for the current selection
+			const selectedOptionRegex = /^(●|◀)\s/;
+			const currentSelection = lines
+				.find((line) => line.match(selectedOptionRegex))
+				?.replace(selectedOptionRegex, "");
 
 			if (!currentSelection) {
 				// sometimes `lines` contain only the 'clear screen' ANSI codes and not the prompt options
 				return;
 			}
 
-			const { target, searchBy } = currentDialog.input;
-			const searchText =
-				searchBy === "description"
-					? lines
-							.filter((line) => !line.startsWith("●") && !line.startsWith("○"))
-							.join(" ")
-					: currentSelection;
+			const { target, assertDefaultSelection, assertDescriptionText } =
+				currentDialog.input;
+
+			if (
+				isFirstFrameOfCurrentSelectDialog &&
+				assertDefaultSelection !== undefined &&
+				assertDefaultSelection !== currentSelection
+			) {
+				throw new Error(
+					`The default selection does not match; Expected "${assertDefaultSelection}" but found "${currentSelection}".`,
+				);
+			}
+
 			const matchesSelectionTarget =
 				typeof target === "string"
-					? searchText.includes(target)
-					: target.test(searchText);
+					? currentSelection.includes(target)
+					: target.test(currentSelection);
+			const description = text.replaceAll("\n", " ");
+
+			if (
+				matchesSelectionTarget &&
+				assertDescriptionText !== undefined &&
+				!description.includes(assertDescriptionText)
+			) {
+				throw new Error(
+					`The description does not match; Expected "${assertDescriptionText}" but found "${description}".`,
+				);
+			}
 
 			if (matchesSelectionTarget) {
 				// matches selection, so hit enter
@@ -217,8 +243,14 @@ export const waitForExit = async (
 	await new Promise((resolve, rejects) => {
 		proc.stdout.on("data", (data) => {
 			stdout.push(data);
-			if (onData) {
-				onData(data);
+			try {
+				if (onData) {
+					onData(data);
+				}
+			} catch (error) {
+				// Close the input stream so the process can exit properly
+				proc.stdin.end();
+				throw error;
 			}
 		});
 

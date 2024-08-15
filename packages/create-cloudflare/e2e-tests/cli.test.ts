@@ -236,8 +236,8 @@ describe.skipIf(frameworkToTest || isQuarantineMode())(
 							matcher: /What would you like to start with\?/,
 							input: {
 								type: "select",
-								searchBy: "description",
-								target:
+								target: "Demo application",
+								assertDescriptionText:
 									"Select from a range of starter applications using various Cloudflare products",
 							},
 						},
@@ -245,8 +245,9 @@ describe.skipIf(frameworkToTest || isQuarantineMode())(
 							matcher: /Which template would you like to use\?/,
 							input: {
 								type: "select",
-								searchBy: "description",
-								target: "Get started building a basic API on Workers",
+								target: "API starter (OpenAPI compliant)",
+								assertDescriptionText:
+									"Get started building a basic API on Workers",
 							},
 						},
 					],
@@ -256,6 +257,104 @@ describe.skipIf(frameworkToTest || isQuarantineMode())(
 				expect(projectPath).toExist();
 				expect(output).toContain(`category Demo application`);
 				expect(output).toContain(`type API starter (OpenAPI compliant)`);
+			},
+		);
+
+		test.skipIf(process.platform === "win32")(
+			"Going back and forth between the category, type, framework and lang prompts",
+			async () => {
+				const { output } = await runC3(
+					[projectPath, "--git=false", "--no-deploy"],
+					[
+						{
+							matcher: /What would you like to start with\?/,
+							input: {
+								type: "select",
+								target: "Demo application",
+							},
+						},
+						{
+							matcher: /Which template would you like to use\?/,
+							input: {
+								type: "select",
+								target: "Queue consumer & producer Worker",
+							},
+						},
+						{
+							matcher: /Which language do you want to use\?/,
+							input: {
+								type: "select",
+								target: "Go back",
+							},
+						},
+						{
+							matcher: /Which template would you like to use\?/,
+							input: {
+								type: "select",
+								target: "Go back",
+								assertDefaultSelection: "Queue consumer & producer Worker",
+							},
+						},
+						{
+							matcher: /What would you like to start with\?/,
+							input: {
+								type: "select",
+								target: "Framework Starter",
+								assertDefaultSelection: "Demo application",
+							},
+						},
+						{
+							matcher: /Which development framework do you want to use\?/,
+							input: {
+								type: "select",
+								target: "Go back",
+							},
+						},
+						{
+							matcher: /What would you like to start with\?/,
+							input: {
+								type: "select",
+								target: "Hello World example",
+								assertDefaultSelection: "Framework Starter",
+							},
+						},
+						{
+							matcher: /Which template would you like to use\?/,
+							input: {
+								type: "select",
+								target: "Hello World Worker Using Durable Objects",
+							},
+						},
+						{
+							matcher: /Which language do you want to use\?/,
+							input: {
+								type: "select",
+								target: "Go back",
+							},
+						},
+						{
+							matcher: /Which template would you like to use\?/,
+							input: {
+								type: "select",
+								target: "Hello World Worker",
+								assertDefaultSelection:
+									"Hello World Worker Using Durable Objects",
+							},
+						},
+						{
+							matcher: /Which language do you want to use\?/,
+							input: {
+								type: "select",
+								target: "JavaScript",
+							},
+						},
+					],
+					logStream,
+				);
+
+				expect(projectPath).toExist();
+				expect(output).toContain(`type Hello World Worker`);
+				expect(output).toContain(`lang JavaScript`);
 			},
 		);
 	},

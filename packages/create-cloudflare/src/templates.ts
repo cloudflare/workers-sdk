@@ -1,8 +1,8 @@
 import { existsSync } from "fs";
 import { cp, mkdtemp, rename } from "fs/promises";
 import { tmpdir } from "os";
-import { join, resolve } from "path";
-import { crash, updateStatus, warn } from "@cloudflare/cli";
+import { basename, dirname, join, resolve } from "path";
+import { crash, shapes, updateStatus, warn } from "@cloudflare/cli";
 import { processArgument } from "@cloudflare/cli/args";
 import { blue, brandColor, dim } from "@cloudflare/cli/colors";
 import { spinner } from "@cloudflare/cli/interactive";
@@ -12,13 +12,15 @@ import { C3_DEFAULTS } from "helpers/cli";
 import {
 	appendFile,
 	directoryExists,
+	hasTsConfig,
 	readFile,
 	readJSON,
-	usesTypescript,
 	writeFile,
 	writeJSON,
 } from "helpers/files";
-import { validateTemplateUrl } from "./validators";
+import { isInsideGitRepo } from "./git";
+import { validateProjectDirectory, validateTemplateUrl } from "./validators";
+import type { Option } from "@cloudflare/cli/interactive";
 import type { C3Args, C3Context, PackageJson } from "types";
 
 export type TemplateConfig = {
@@ -116,7 +118,7 @@ type StaticFileMap = {
 };
 
 const defaultSelectVariant = async (ctx: C3Context) => {
-	return await selectLanguage(ctx);
+	return ctx.args.lang;
 };
 
 export type FrameworkMap = Awaited<ReturnType<typeof getFrameworkMap>>;
@@ -153,8 +155,8 @@ export const getTemplateMap = async () => {
 	} as Record<string, TemplateConfig>;
 };
 
-export const selectTemplate = async (args: Partial<C3Args>) => {
-	// Infering the type based on the additional arguments provided
+export const deriveCorrelatedArgs = (args: Partial<C3Args>) => {
+	// Derive the type based on the additional arguments provided
 	// Both `web-framework` and `remote-template` types are no longer used
 	// They are set only for backwards compatibility
 	if (args.framework) {
@@ -165,7 +167,7 @@ export const selectTemplate = async (args: Partial<C3Args>) => {
 		args.type ??= "pre-existing";
 	}
 
-	// Infering the category based on the type
+	// Derive the category based on the type
 	switch (args.type) {
 		case "hello-world":
 		case "hello-world-durable-object":
@@ -200,115 +202,250 @@ export const selectTemplate = async (args: Partial<C3Args>) => {
 			break;
 	}
 
+	if (args.ts !== undefined) {
+		const language = args.ts ? "ts" : "js";
+
+		if (args.lang !== undefined) {
+			crash(
+				"The `--ts` argument cannot be specified in conjunction with the `--lang` argument",
+			);
+		}
+
+		args.lang = language;
+	}
+};
+
+/**
+ * Collecting all information about the template here
+ * This includes the project name, the type fo template and the language to use (if applicable)
+ * There should be no side effects in these prompts so that we can always go back to the previous step
+ */
+export const createContext = async (
+	args: Partial<C3Args>,
+	prevArgs?: Partial<C3Args>,
+): Promise<C3Context> => {
+	// Allows the users to go back to the previous step
+	// By moving the cursor up to a certain line and clearing the screen
+	const goBack = async (from: "type" | "framework" | "lang") => {
+		const newArgs = { ...args };
+		let linesPrinted = 0;
+
+		switch (from) {
+			case "type":
+				linesPrinted = 9;
+				newArgs.category = undefined;
+				break;
+			case "framework":
+				linesPrinted = 9;
+				newArgs.category = undefined;
+				break;
+			case "lang":
+				linesPrinted = 12;
+				newArgs.type = undefined;
+				break;
+		}
+
+		newArgs[from] = undefined;
+		args[from] = undefined;
+
+		if (process.stdout.isTTY) {
+			process.stdout.moveCursor(0, -linesPrinted);
+			process.stdout.clearScreenDown();
+		}
+
+		return await createContext(newArgs, args);
+	};
+
+	// The option to go back to the previous step
+	const BACK_VALUE = "__BACK__";
+	const backOption: Option = {
+		label: "Go back",
+		value: BACK_VALUE,
+		activeIcon: shapes.backActive,
+		inactiveIcon: shapes.backInactive,
+	};
+
+	const defaultName = args.existingScript || C3_DEFAULTS.projectName;
+	const projectName = await processArgument<string>(args, "projectName", {
+		type: "text",
+		question: `In which directory do you want to create your application?`,
+		helpText: "also used as application name",
+		defaultValue: defaultName,
+		label: "dir",
+		validate: (value) =>
+			validateProjectDirectory(String(value) || C3_DEFAULTS.projectName, args),
+		format: (val) => `./${val}`,
+	});
+
+	const categoryOptions = [
+		{
+			label: "Hello World example",
+			value: "hello-world",
+			description: "Select from barebones examples to get started with Workers",
+		},
+		{
+			label: "Framework Starter",
+			value: "web-framework",
+			description: "Select from the most popular full-stack web frameworks",
+		},
+		{
+			label: "Demo application",
+			value: "demo",
+			description:
+				"Select from a range of starter applications using various Cloudflare products",
+		},
+		{
+			label: "Template from a Github repo",
+			value: "remote-template",
+			description: "Start from an existing GitHub repo link",
+		},
+		// This is used only if the type is `pre-existing`
+		{ label: "Others", value: "others", hidden: true },
+	];
+
 	const category = await processArgument<string>(args, "category", {
 		type: "select",
 		question: "What would you like to start with?",
 		label: "category",
-		options: [
-			{
-				label: "Hello World example",
-				value: "hello-world",
-				description:
-					"Select from barebones examples to get started with Workers",
-			},
-			{
-				label: "Framework Starter",
-				value: "web-framework",
-				description: "Select from the most popular full-stack web frameworks",
-			},
-			{
-				label: "Demo application",
-				value: "demo",
-				description:
-					"Select from a range of starter applications using various Cloudflare products",
-			},
-			{
-				label: "Template from a Github repo",
-				value: "remote-template",
-				description: "Start from an existing GitHub repo link",
-			},
-			// This is used only if the type is `pre-existing`
-			{ label: "Others", value: "others", hidden: true },
-		],
-		defaultValue: C3_DEFAULTS.category,
+		options: categoryOptions,
+		defaultValue: prevArgs?.category ?? C3_DEFAULTS.category,
 	});
+
+	let template: TemplateConfig;
 
 	if (category === "web-framework") {
-		return selectFramework(args);
+		const frameworkMap = await getFrameworkMap();
+		const frameworkOptions = Object.entries(frameworkMap).map(
+			([key, config]) => ({
+				label: config.displayName,
+				value: key,
+			}),
+		);
+
+		const framework = await processArgument<FrameworkName | typeof BACK_VALUE>(
+			args,
+			"framework",
+			{
+				type: "select",
+				label: "framework",
+				question: "Which development framework do you want to use?",
+				options: frameworkOptions.concat(backOption),
+				defaultValue: prevArgs?.framework ?? C3_DEFAULTS.framework,
+			},
+		);
+
+		if (framework === BACK_VALUE) {
+			return goBack("framework");
+		}
+
+		const frameworkConfig = frameworkMap[framework];
+
+		if (!frameworkConfig) {
+			crash(`Unsupported framework: ${framework}`);
+		}
+
+		template = {
+			deployScript: "pages:deploy",
+			devScript: "pages:dev",
+			...frameworkConfig,
+		};
+	} else if (category === "remote-template") {
+		template = await processRemoteTemplate(args);
+	} else {
+		const templateMap = await getTemplateMap();
+		const templateOptions: Option[] = Object.entries(templateMap).map(
+			([value, { displayName, description, hidden }]) => {
+				const isHelloWorldExample = value.startsWith("hello-world");
+				const isCategoryMatched =
+					category === "hello-world"
+						? isHelloWorldExample
+						: !isHelloWorldExample;
+
+				return {
+					value,
+					label: displayName,
+					description,
+					hidden: hidden || !isCategoryMatched,
+				};
+			},
+		);
+
+		const type = await processArgument<string>(args, "type", {
+			type: "select",
+			question: "Which template would you like to use?",
+			label: "type",
+			options: templateOptions.concat(backOption),
+			defaultValue: prevArgs?.type ?? C3_DEFAULTS.type,
+		});
+
+		if (type === BACK_VALUE) {
+			return goBack("type");
+		}
+
+		template = templateMap[type];
+
+		if (!template) {
+			return crash(`Unknown application type provided: ${type}.`);
+		}
 	}
 
-	if (category === "remote-template") {
-		return processRemoteTemplate(args);
+	const path = resolve(projectName);
+	const languageVariants =
+		template.copyFiles &&
+		!isVariantInfo(template.copyFiles) &&
+		!template.copyFiles.selectVariant
+			? Object.keys(template.copyFiles.variants)
+			: [];
+
+	// Prompt for language preference only if selectVariant is not defined
+	// If it is defined, copyTemplateFiles will handle the selection
+	if (languageVariants.length > 0) {
+		if (hasTsConfig(path)) {
+			// If we can infer from the directory that it uses typescript, use that
+			args.lang = "ts";
+		} else if (template.generate) {
+			// If there is a generate process then we assume that a potential typescript
+			// setup must have been part of it, so we should not offer it here
+			args.lang = "js";
+		} else {
+			// Otherwise, prompt the user for their language preference
+			const languageOptions = [
+				{ label: "TypeScript", value: "ts" },
+				{ label: "JavaScript", value: "js" },
+				{ label: "Python (beta)", value: "python" },
+			];
+
+			const lang = await processArgument<string>(args, "lang", {
+				type: "select",
+				question: "Which language do you want to use?",
+				label: "lang",
+				options: languageOptions
+					.filter((option) => languageVariants.includes(option.value))
+					// Allow going back only if the user is not selecting a remote template
+					.concat(args.template ? [] : backOption),
+				defaultValue: C3_DEFAULTS.lang,
+			});
+
+			if (lang === BACK_VALUE) {
+				return goBack("lang");
+			}
+		}
 	}
 
-	const templateMap = await getTemplateMap();
-	const templateOptions = Object.entries(templateMap).map(
-		([value, { displayName, description, hidden }]) => {
-			const isHelloWorldExample = value.startsWith("hello-world");
-			const isCategoryMatched =
-				category === "hello-world" ? isHelloWorldExample : !isHelloWorldExample;
-
-			return {
-				value,
-				label: displayName,
-				description,
-				hidden: hidden || !isCategoryMatched,
-			};
-		},
-	);
-
-	const type = await processArgument<string>(args, "type", {
-		type: "select",
-		question: "Which template would you like to use?",
-		label: "type",
-		options: templateOptions,
-		defaultValue: C3_DEFAULTS.type,
-	});
-
-	if (!type) {
-		return crash("An application type must be specified to continue.");
-	}
-
-	if (!Object.keys(templateMap).includes(type)) {
-		return crash(`Unknown application type provided: ${type}.`);
-	}
-
-	return templateMap[type];
-};
-
-export const selectFramework = async (args: Partial<C3Args>) => {
-	const frameworkMap = await getFrameworkMap();
-	const frameworkOptions = Object.entries(frameworkMap).map(
-		([key, config]) => ({
-			label: config.displayName,
-			value: key,
-		}),
-	);
-
-	const framework = await processArgument<string>(args, "framework", {
-		type: "select",
-		label: "framework",
-		question: "Which development framework do you want to use?",
-		options: frameworkOptions,
-		defaultValue: C3_DEFAULTS.framework,
-	});
-
-	if (!framework) {
-		crash("A framework must be selected to continue.");
-	}
-
-	if (!Object.keys(frameworkMap).includes(framework)) {
-		crash(`Unsupported framework: ${framework}`);
-	}
-
-	const defaultFrameworkConfig = {
-		deployScript: "pages:deploy",
-		devScript: "pages:dev",
-	};
+	const name = basename(path);
+	const directory = dirname(path);
+	const originalCWD = process.cwd();
 
 	return {
-		...defaultFrameworkConfig,
-		...frameworkMap[framework as FrameworkName],
+		project: { name, path },
+		args: {
+			...args,
+			projectName,
+		},
+		template,
+		originalCWD,
+		gitRepoAlreadyExisted: await isInsideGitRepo(directory),
+		deployment: {},
 	};
 };
 
@@ -329,8 +466,13 @@ export async function copyTemplateFiles(ctx: C3Context) {
 
 		const variant = await selectVariant(ctx);
 
-		const variantPath = copyFiles.variants[variant].path;
-		srcdir = join(getTemplatePath(ctx), variantPath);
+		const variantInfo = variant ? copyFiles.variants[variant] : null;
+
+		if (!variantInfo) {
+			crash(`Unknown variant provided: ${JSON.stringify(variant ?? "")}`);
+		}
+
+		srcdir = join(getTemplatePath(ctx), variantInfo.path);
 	}
 
 	const copyDestDir = await getCopyFilesDestinationDir(ctx);
@@ -350,56 +492,6 @@ export async function copyTemplateFiles(ctx: C3Context) {
 
 	s.stop(`${brandColor("files")} ${dim("copied to project directory")}`);
 }
-
-export function inferLanguageArg(args: Partial<C3Args>) {
-	if (args.ts === undefined) {
-		return;
-	}
-
-	const language = args.ts ? "ts" : "js";
-
-	if (args.lang !== undefined) {
-		crash(
-			"The `--ts` argument cannot be specified in conjunction with the `--lang` argument",
-		);
-	}
-
-	args.lang = language;
-}
-
-const selectLanguage = async (ctx: C3Context) => {
-	// If we can infer from the directory that it uses typescript, use that
-	if (usesTypescript(ctx)) {
-		return "ts";
-	}
-
-	// If there is a generate process then we assume that a potential typescript
-	// setup must have been part of it, so we should not offer it here
-	if (ctx.template.generate) {
-		return "js";
-	}
-
-	inferLanguageArg(ctx.args);
-
-	const variants =
-		ctx.template.copyFiles && !isVariantInfo(ctx.template.copyFiles)
-			? Object.keys(ctx.template.copyFiles.variants)
-			: [];
-	const languageOptions = [
-		{ label: "TypeScript", value: "ts" },
-		{ label: "JavaScript", value: "js" },
-		{ label: "Python (beta)", value: "python" },
-	].filter((option) => variants.includes(option.value));
-
-	// Otherwise, prompt the user for their language preference
-	return processArgument<string>(ctx.args, "lang", {
-		type: "select",
-		question: "Which language do you want to use?",
-		label: "lang",
-		options: languageOptions,
-		defaultValue: C3_DEFAULTS.lang,
-	});
-};
 
 export const processRemoteTemplate = async (args: Partial<C3Args>) => {
 	const templateUrl = await processArgument<string>(args, "template", {

@@ -18,6 +18,9 @@ export const shapes = {
 	radioInactive: "○",
 	radioActive: "●",
 
+	backActive: "◀",
+	backInactive: "◁",
+
 	bar: "│",
 	leftT: "├",
 	rigthT: "┤",
