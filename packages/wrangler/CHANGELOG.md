@@ -1,5 +1,29 @@
 # wrangler
 
+## 3.72.0
+
+### Minor Changes
+
+- [#6479](https://github.com/cloudflare/workers-sdk/pull/6479) [`3c24d84`](https://github.com/cloudflare/workers-sdk/commit/3c24d84ffaed0e8c5a0f1f20354b837eb0815cf6) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - feat: allow HTTPS custom certificate paths to be provided by a environment variables
+
+  As well as providing paths to custom HTTPS certificate files, it is now possible to use WRANGLER_HTTPS_KEY_PATH and WRANGLER_HTTPS_CERT_PATH environment variables.
+
+  Specifying the file paths at the command line overrides specifying in environment variables.
+
+  Fixes #5997
+
+### Patch Changes
+
+- [#6471](https://github.com/cloudflare/workers-sdk/pull/6471) [`0d85f24`](https://github.com/cloudflare/workers-sdk/commit/0d85f24644d2a4600255b692e79060533f5b41e4) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: add a helpful message on Windows when Miniflare fails to start
+
+- [#6489](https://github.com/cloudflare/workers-sdk/pull/6489) [`34bf393`](https://github.com/cloudflare/workers-sdk/commit/34bf3930101401ca01772f71d7e53f623293def9) Thanks [@GregBrimble](https://github.com/GregBrimble)! - fix: Upload assets as JSON Lines (application/jsonl) rather than NDJSON (application/x-ndjson)
+
+- [#6482](https://github.com/cloudflare/workers-sdk/pull/6482) [`e24939c`](https://github.com/cloudflare/workers-sdk/commit/e24939c53475228e12a3c5228aa652c6473a889f) Thanks [@RamIdeas](https://github.com/RamIdeas)! - fix: reimplement module aliasing so user-defined aliases take precedence over other plugins (eg unenv node.js polyfills)
+
+- Updated dependencies [[`00f340f`](https://github.com/cloudflare/workers-sdk/commit/00f340f7c1709db777e80a8ea24d245909ff4486)]:
+  - miniflare@3.20240806.1
+  - @cloudflare/workers-shared@0.2.0
+
 ## 3.71.0
 
 ### Minor Changes

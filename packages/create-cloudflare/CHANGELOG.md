@@ -1,5 +1,41 @@
 # create-cloudflare
 
+## 2.25.0
+
+### Minor Changes
+
+- [#6428](https://github.com/cloudflare/workers-sdk/pull/6428) [`37dc86f`](https://github.com/cloudflare/workers-sdk/commit/37dc86ff436aacadd7c0bab6a76293408f4c417f) Thanks [@edmundhung](https://github.com/edmundhung)! - feat: allow users to change prompt answer
+
+  It is now possible to change the answer for category and type while the project has not been created locally.
+
+### Patch Changes
+
+- [#6475](https://github.com/cloudflare/workers-sdk/pull/6475) [`dfe8c0d`](https://github.com/cloudflare/workers-sdk/commit/dfe8c0d5134407ac6a6539eefcb17fba0ec2c6ce) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency  | From   | To     |
+  | ----------- | ------ | ------ |
+  | create-hono | 0.10.1 | 0.12.0 |
+
+- [#6476](https://github.com/cloudflare/workers-sdk/pull/6476) [`1d4a36f`](https://github.com/cloudflare/workers-sdk/commit/1d4a36f179cadf14a00458a1d5c4e489bbf1b75b) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency        | From  | To    |
+  | ----------------- | ----- | ----- |
+  | create-docusaurus | 3.4.0 | 3.5.1 |
+
+- [#6495](https://github.com/cloudflare/workers-sdk/pull/6495) [`3516faa`](https://github.com/cloudflare/workers-sdk/commit/3516faaed25ed60903272af18d7c5d4c8da8c208) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency   | From   | To     |
+  | ------------ | ------ | ------ |
+  | create-remix | 2.10.3 | 2.11.1 |
+
+- [#6481](https://github.com/cloudflare/workers-sdk/pull/6481) [`83083d7`](https://github.com/cloudflare/workers-sdk/commit/83083d7f3e672bc0726d0c65d72a4a1b032eb516) Thanks [@roottool](https://github.com/roottool)! - fix: Update `hono` template to remove binding type snippet.
+
 ## 2.24.0
 
 ### Minor Changes
