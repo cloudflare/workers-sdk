@@ -13,7 +13,6 @@ import { logger, LOGGER_LEVELS } from "./logger";
 import { hashFile } from "./pages/hash";
 import { isJwtExpired } from "./pages/upload";
 import { APIError } from "./parse";
-import { urlSafe } from "./sites";
 import type { Config } from "./config";
 import type { ExperimentalAssets } from "./config/environment";
 
@@ -249,7 +248,6 @@ const walk = async (
 					);
 				}
 
-				const name = urlSafe(relativeFilepath);
 				if (filestat.size > MAX_ASSET_SIZE) {
 					throw new UserError(
 						`Asset too large.\n` +
@@ -267,7 +265,7 @@ const walk = async (
 							`Ensure all assets in your assets directory "${startingDir}" conform with the Workers maximum size requirement.`
 					);
 				}
-				manifest[urlSafe(path.join("/", name))] = {
+				manifest[encodeFilePath(relativeFilepath)] = {
 					hash: hashFile(filepath),
 					size: filestat.size,
 				};
@@ -344,3 +342,12 @@ export function processExperimentalAssetsArg(
 
 	return experimentalAssets;
 }
+
+const encodeFilePath = (filePath: string) => {
+	// NB windows will disallow these characters in file paths anyway < > : " / \ | ? *
+	const encodedPath = filePath
+		.split(path.sep)
+		.map((segment) => encodeURIComponent(segment))
+		.join("/");
+	return "/" + encodedPath;
+};

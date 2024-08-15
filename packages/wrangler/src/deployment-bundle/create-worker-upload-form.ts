@@ -114,7 +114,8 @@ export type WorkerMetadataBinding =
 			type: "logfwdr";
 			name: string;
 			destination: string;
-	  };
+	  }
+	| { type: "assets"; name: string };
 
 // for PUT /accounts/:accountId/workers/scripts/:scriptName
 export type WorkerMetadataPut = {
@@ -171,14 +172,14 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 		tail_consumers,
 		limits,
 		annotations,
-		experimental_assets,
+		experimental_assets_jwt,
 	} = worker;
 
 	// short circuit if static assets upload only
-	if (experimental_assets?.staticAssetsOnly) {
+	if (main.name === "no-op-assets-worker.js" && experimental_assets_jwt) {
 		formData.set(
 			"metadata",
-			JSON.stringify({ assets: experimental_assets.jwt })
+			JSON.stringify({ assets: experimental_assets_jwt })
 		);
 		return formData;
 	}
@@ -364,6 +365,13 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 		});
 	}
 
+	if (bindings.experimental_assets !== undefined) {
+		metadataBindings.push({
+			name: bindings.experimental_assets.binding,
+			type: "assets",
+		});
+	}
+
 	for (const [name, filePath] of Object.entries(bindings.text_blobs || {})) {
 		metadataBindings.push({
 			name,
@@ -546,6 +554,7 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 		...(tail_consumers && { tail_consumers }),
 		...(limits && { limits }),
 		...(annotations && { annotations }),
+		...(experimental_assets_jwt && { assets: experimental_assets_jwt }),
 	};
 
 	if (bindings.unsafe?.metadata !== undefined) {

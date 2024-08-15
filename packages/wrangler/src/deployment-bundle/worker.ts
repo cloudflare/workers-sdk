@@ -221,6 +221,10 @@ export interface CfLogfwdrBinding {
 	destination: string;
 }
 
+export interface CfExperimentalAssetBinding {
+	binding: string;
+}
+
 export interface CfUnsafeBinding {
 	name: string;
 	type: string;
@@ -272,11 +276,6 @@ export interface CfUserLimits {
 	cpu_ms?: number;
 }
 
-export interface CfExperimentalAssets {
-	jwt: string;
-	staticAssetsOnly: boolean;
-}
-
 /**
  * Options for creating a `CfWorker`.
  */
@@ -322,6 +321,7 @@ export interface CfWorkerInit {
 		mtls_certificates: CfMTlsCertificate[] | undefined;
 		logfwdr: CfLogfwdr | undefined;
 		unsafe: CfUnsafe | undefined;
+		experimental_assets: CfExperimentalAssetBinding | undefined;
 	};
 	/**
 	 * The raw bindings - this is basically never provided and it'll be the bindings above
@@ -341,7 +341,7 @@ export interface CfWorkerInit {
 	tail_consumers: CfTailConsumer[] | undefined;
 	limits: CfUserLimits | undefined;
 	annotations?: Record<string, string | undefined>;
-	experimental_assets: CfExperimentalAssets | undefined;
+	experimental_assets_jwt: string | undefined;
 }
 
 export interface CfWorkerContext {

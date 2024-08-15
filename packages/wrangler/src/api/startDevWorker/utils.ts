@@ -240,6 +240,10 @@ export function convertCfWorkerInitBindingstoBindings(
 				}
 				break;
 			}
+			case "experimental_assets": {
+				output[info["binding"]] = { type: "assets" };
+				break;
+			}
 			default: {
 				assertNever(type);
 			}
@@ -277,6 +281,7 @@ export async function convertBindingsToCfWorkerInitBindings(
 		mtls_certificates: undefined,
 		logfwdr: undefined,
 		unsafe: undefined,
+		experimental_assets: undefined,
 	};
 
 	const fetchers: Record<string, ServiceFetch> = {};
