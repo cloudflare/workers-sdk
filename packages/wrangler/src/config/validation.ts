@@ -2282,7 +2282,7 @@ const validateBindingArray =
 	};
 
 const validateCloudchamberConfig: ValidatorFn = (diagnostics, field, value) => {
-	if (typeof value !== "object" || value === null) {
+	if (typeof value !== "object" || value === null || Array.isArray(value)) {
 		diagnostics.errors.push(
 			`"cloudchamber" should be an object, but got ${JSON.stringify(value)}`
 		);
