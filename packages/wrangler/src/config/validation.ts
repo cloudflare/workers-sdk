@@ -2201,7 +2201,6 @@ const validateUnsafeBinding: ValidatorFn = (diagnostics, field, value) => {
 			"service",
 			"logfwdr",
 			"mtls_certificate",
-			"assets",
 		];
 
 		if (safeBindings.includes(value.type)) {
