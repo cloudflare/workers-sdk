@@ -333,6 +333,17 @@ describe("wrangler", () => {
 				expect(requests.count).toEqual(0);
 			});
 
+			it("should show an error when invalid delivery delay is set", async () => {
+				const requests = mockCreateRequest("testQueue", { delivery_delay: 10 });
+				await expect(
+					runWrangler("queues create testQueue --delivery-delay-secs=99999")
+				).rejects.toThrowErrorMatchingInlineSnapshot(
+					`[Error: Invalid --delivery-delay-secs value: 99999. Must be between 0 and 42300]`
+				);
+
+				expect(requests.count).toEqual(0);
+			});
+
 			it("should send queue settings with message retention period", async () => {
 				const requests = mockCreateRequest("testQueue", {
 					message_retention_period: 100,
@@ -358,6 +369,21 @@ describe("wrangler", () => {
 					)
 				).rejects.toThrowErrorMatchingInlineSnapshot(
 					`[Error: Cannot specify --message-retention-period-secs multiple times]`
+				);
+
+				expect(requests.count).toEqual(0);
+			});
+
+			it("should show an error when invalid message retention period is set", async () => {
+				const requests = mockCreateRequest("testQueue", {
+					message_retention_period: 100,
+				});
+				await expect(
+					runWrangler(
+						"queues create testQueue --message-retention-period-secs=0"
+					)
+				).rejects.toThrowErrorMatchingInlineSnapshot(
+					`[Error: Invalid --message-retention-period-secs value: 0. Must be between 60 and 1209600]`
 				);
 
 				expect(requests.count).toEqual(0);
@@ -492,6 +518,88 @@ describe("wrangler", () => {
 					"Updating queue testQueue.
 					Updated queue testQueue."
 			  `);
+			});
+
+			it("should show an error when two message retention periods are set", async () => {
+				const requests = mockUpdateRequest("testQueue", {
+					message_retention_period: 60,
+				});
+
+				mockGetQueueRequest("testQueue", {
+					delivery_delay: 0,
+					message_retention_period: 100,
+				});
+
+				await expect(
+					runWrangler(
+						"queues update testQueue --message-retention-period-secs=70 --message-retention-period-secs=80"
+					)
+				).rejects.toThrowErrorMatchingInlineSnapshot(
+					`[Error: Cannot specify --message-retention-period-secs multiple times]`
+				);
+
+				expect(requests.count).toEqual(0);
+			});
+
+			it("should show an error when two delivery delays are set", async () => {
+				const requests = mockUpdateRequest("testQueue", {
+					delivery_delay: 10,
+				});
+
+				mockGetQueueRequest("testQueue", {
+					delivery_delay: 0,
+					message_retention_period: 100,
+				});
+
+				await expect(
+					runWrangler(
+						"queues update testQueue --delivery-delay-secs=5 --delivery-delay-secs=10"
+					)
+				).rejects.toThrowErrorMatchingInlineSnapshot(
+					`[Error: Cannot specify --delivery-delay-secs multiple times]`
+				);
+
+				expect(requests.count).toEqual(0);
+			});
+
+			it("should show an error when invalid delivery delay is set", async () => {
+				const requests = mockUpdateRequest("testQueue", {
+					delivery_delay: 10,
+				});
+
+				mockGetQueueRequest("testQueue", {
+					delivery_delay: 0,
+					message_retention_period: 100,
+				});
+
+				await expect(
+					runWrangler("queues update testQueue --delivery-delay-secs=99999")
+				).rejects.toThrowErrorMatchingInlineSnapshot(
+					`[Error: Invalid --delivery-delay-secs value: 99999. Must be between 0 and 42300]`
+				);
+
+				expect(requests.count).toEqual(0);
+			});
+
+			it("should show an error when invalid message retention period is set", async () => {
+				const requests = mockUpdateRequest("testQueue", {
+					message_retention_period: 100,
+				});
+
+				mockGetQueueRequest("testQueue", {
+					delivery_delay: 0,
+					message_retention_period: 100,
+				});
+
+				await expect(
+					runWrangler(
+						"queues update testQueue --message-retention-period-secs=0"
+					)
+				).rejects.toThrowErrorMatchingInlineSnapshot(
+					`[Error: Invalid --message-retention-period-secs value: 0. Must be between 60 and 1209600]`
+				);
+
+				expect(requests.count).toEqual(0);
 			});
 		});
 
