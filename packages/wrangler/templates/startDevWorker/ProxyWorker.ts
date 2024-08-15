@@ -288,22 +288,22 @@ function insertLiveReloadScript(
 
 const liveReloadScript = `
 <script defer type="application/javascript">
-    (function() {
-        var ws;
-        function recover() {
-            ws = null;
-            setTimeout(initLiveReload, 100);
-        }
-        function initLiveReload() {
-            if (ws) return;
-            var origin = (location.protocol === "http:" ? "ws://" : "wss://") + location.host;
-            ws = new WebSocket(origin + "/cdn-cgi/live-reload", "${LIVE_RELOAD_PROTOCOL}");
-            ws.onclose = recover;
-            ws.onerror = recover;
-            ws.onmessage = location.reload.bind(location);
-        }
-        initLiveReload();
-    })();
+	(function() {
+		var ws;
+		function recover() {
+			ws = null;
+			setTimeout(initLiveReload, 100);
+		}
+		function initLiveReload() {
+			if (ws) return;
+			var origin = (location.protocol === "http:" ? "ws://" : "wss://") + location.host;
+			ws = new WebSocket(origin + "/cdn-cgi/live-reload", "${LIVE_RELOAD_PROTOCOL}");
+			ws.onclose = recover;
+			ws.onerror = recover;
+			ws.onmessage = location.reload.bind(location);
+		}
+		initLiveReload();
+	})();
 </script>
 `;
 
