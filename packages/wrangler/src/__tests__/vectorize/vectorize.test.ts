@@ -1088,7 +1088,7 @@ function mockVectorizeV2Request() {
 			},
 			{ once: true }
 		),
-		http.post(
+		http.get(
 			"*/accounts/:accountId/vectorize/v2/indexes/test-index/metadata_index/list",
 			() => {
 				return HttpResponse.json(
@@ -1163,7 +1163,7 @@ function mockVectorizeV2RequestError() {
 			},
 			{ once: true }
 		),
-		http.post(
+		http.get(
 			"*/accounts/:accountId/vectorize/v2/indexes/test-index/metadata_index/list",
 			() => {
 				return HttpResponse.json(
