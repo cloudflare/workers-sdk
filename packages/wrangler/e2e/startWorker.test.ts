@@ -201,29 +201,24 @@ describe.each(OPTIONS)("DevEnv $remote", ({ remote }) => {
 	// or inspecting a variable that serializes to a large string.
 	// Connecting devtools directly to the inspector would work fine, but we proxy the inspector messages
 	// through a worker (InspectorProxyWorker) which hits the limit (without the fix, compatibilityFlags:["increase_websocket_message_size"])
-	// By logging a large string we can verify that the inspector messages are being proxied successfully.
-	it("InspectorProxyWorker can proxy messages > 1MB", async (t) => {
+	it.only("InspectorProxyWorker can proxy messages > 1MB", async (t) => {
 		t.onTestFinished(() => worker?.dispose());
 
-		const originalConsoleLog = console.log;
-		const mockConsoleLogImpl = (message: unknown, ...args: unknown[]) => {
-			if (typeof message === "string" && /z+/.test(message)) {
-				return; // don't log chunks of the large string
-			}
-
-			originalConsoleLog(message, ...args);
-		};
-		vi.spyOn(console, "info").mockImplementation(mockConsoleLogImpl);
-		vi.spyOn(console, "log").mockImplementation(mockConsoleLogImpl);
-
-		const LARGE_STRING = "This is a large string" + "z".repeat(2 ** 20);
+		// A script source with a bunch of vars creates a large source map file
+		const MANY_VARS = Array(1e5)
+			.fill(0)
+			.map((_, i) => "z_" + i);
+		const VAR_DECLARATIONS = MANY_VARS.map((z) => `const ${z} = "${z}";`).join(
+			"\n"
+		);
+		const RETURN_OBJECT = `{ ${MANY_VARS.join(", ")} }`;
 
 		const script = dedent`
 			export default {
 				fetch() {
-					console.log("${LARGE_STRING}");
+					${VAR_DECLARATIONS};
 
-					return new Response("body:1");
+					return Response.json(${RETURN_OBJECT});
 				}
 			}
 		`;
@@ -240,28 +235,49 @@ describe.each(OPTIONS)("DevEnv $remote", ({ remote }) => {
 		});
 
 		const inspectorUrl = await worker.inspectorUrl;
-		const ws = new WebSocket(inspectorUrl.href);
+		const ws = new WebSocket(inspectorUrl.href, {
+			// User-Agent header tells the InspectorProxyWorker we don't have file-system access
+			// So it will rewrite the `scriptParsedEvent.params.sourceMapURL`
+			// and allow us to send a "Network.loadNetworkResource" request
+			// But I can't send User-Agent header without getting a 400 Bad Response ??
+			// so X-User-Agent has been added as a fallback inside the InspectorProxyWorker
+			headers: { "X-User-Agent": "Mozilla" },
+		});
+		ws.addEventListener("error", (err) => {
+			expect.fail(err.message);
+		});
+		await events.once(ws, "open");
 
-		const consoleApiMessages: DevToolsEvent<"Runtime.consoleAPICalled">[] =
-			collectMessagesContaining(ws, "Runtime.consoleAPICalled");
+		const scriptParsedEvent = await waitForMessageContaining<
+			DevToolsEvent<"Debugger.scriptParsed">
+		>(ws, "Debugger.scriptParsed");
 
-		await worker.fetch("http://dummy");
-
-		await vi.waitFor(
-			async () => {
-				await expect(consoleApiMessages).toMatchObject([
-					{
-						method: "Runtime.consoleAPICalled",
-						params: {
-							args: expect.arrayContaining([
-								{ type: "string", value: expect.stringContaining("zzzzzzzzz") },
-							]),
-						},
-					},
-				]);
-			},
-			{ timeout: 5_000 }
+		// Send request to load the large source map file
+		ws.send(
+			JSON.stringify({
+				id: 100001234, // required to identify the response
+				method: "Network.loadNetworkResource",
+				params: {
+					url: scriptParsedEvent.params.sourceMapURL,
+					options: { disableCache: false, includeCredentials: true },
+				},
+			})
 		);
+
+		// Wait for response to request for large source map file
+		const response = await waitForMessageContaining(ws, `"id":100001234`);
+		expect(response).toMatchObject({
+			id: 100001234,
+			result: {
+				resource: {
+					success: true,
+				},
+			},
+		});
+
+		// assert the message size was larger than 1MiB
+		const messageSize = JSON.stringify(response).length;
+		expect(messageSize).toBeGreaterThanOrEqual(2 ** 20);
 	});
 
 	it("User worker exception", async (t) => {
@@ -269,12 +285,12 @@ describe.each(OPTIONS)("DevEnv $remote", ({ remote }) => {
 
 		await helper.seed({
 			"src/index.ts": dedent`
-					export default {
-						fetch() {
-							throw new Error('Boom!');
-						}
+				export default {
+					fetch() {
+						throw new Error('Boom!');
 					}
-				`,
+				}
+			`,
 		});
 
 		const worker = await startWorker({
@@ -288,12 +304,12 @@ describe.each(OPTIONS)("DevEnv $remote", ({ remote }) => {
 
 		await helper.seed({
 			"src/index.ts": dedent`
-					export default {
-						fetch() {
-							throw new Error('Boom 2!');
-						}
+				export default {
+					fetch() {
+						throw new Error('Boom 2!');
 					}
-				`,
+				}
+			`,
 		});
 		await setTimeout(300);
 
@@ -302,19 +318,19 @@ describe.each(OPTIONS)("DevEnv $remote", ({ remote }) => {
 		// test eyeball requests receive the pretty error page
 		await helper.seed({
 			"src/index.ts": dedent`
-					export default {
-						fetch() {
-							const e = new Error('Boom 3!');
+				export default {
+					fetch() {
+						const e = new Error('Boom 3!');
 
-							// this is how errors are serialised after they are caught by wrangler/miniflare3 middlewares
-							const error = { name: e.name, message: e.message, stack: e.stack };
-							return Response.json(error, {
-								status: 500,
-								headers: { "MF-Experimental-Error-Stack": "true" },
-							});
-						}
+						// this is how errors are serialised after they are caught by wrangler/miniflare3 middlewares
+						const error = { name: e.name, message: e.message, stack: e.stack };
+						return Response.json(error, {
+							status: 500,
+							headers: { "MF-Experimental-Error-Stack": "true" },
+						});
 					}
-				`,
+				}
+			`,
 		});
 		await setTimeout(300);
 

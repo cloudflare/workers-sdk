@@ -598,7 +598,8 @@ export class InspectorProxyWorker implements DurableObject {
 			// add this in future versions. We could also look for an `Origin` header
 			// matching the hosted DevTools URL, but this would prevent preview/local
 			// versions working. Instead, we look for a browser-like `User-Agent`.
-			const userAgent = req.headers.get("User-Agent") ?? "";
+			const userAgent =
+				req.headers.get("User-Agent") ?? req.headers.get("X-User-Agent") ?? "";
 			const hasFileSystemAccess = !/mozilla/i.test(userAgent);
 
 			this.websockets.devtools = devtools;
