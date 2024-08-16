@@ -2,4 +2,4 @@
 "wrangler": patch
 ---
 
-Fix Vectorize List MetadataIndex Http Method
+fix: Fix Vectorize List MetadataIndex Http Method
