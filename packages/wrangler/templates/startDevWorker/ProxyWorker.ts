@@ -278,34 +278,34 @@ function insertLiveReloadScript(
 				websocketUrl.protocol =
 					websocketUrl.protocol === "http:" ? "ws:" : "wss:";
 
-				end.append(
-					`
-					<script>
-						(function() {
-							var ws;
-							function recover() {
-								ws = null;
-								setTimeout(initLiveReload, 100);
-							}
-							function initLiveReload() {
-								if (ws) return;
-                var origin = (location.protocol === "http:" ? "ws://" : "wss://") + location.host;
-								ws = new WebSocket(origin + "/cdn-cgi/live-reload", "${LIVE_RELOAD_PROTOCOL}");
-								ws.onclose = recover;
-								ws.onerror = recover;
-								ws.onmessage = location.reload.bind(location);
-							}
-						})();
-					</script>
-				`,
-					{ html: true }
-				);
+				end.append(liveReloadScript, { html: true });
 			}
 		},
 	});
 
 	return htmlRewriter.transform(response);
 }
+
+const liveReloadScript = `
+<script defer type="application/javascript">
+	(function() {
+		var ws;
+		function recover() {
+			ws = null;
+			setTimeout(initLiveReload, 100);
+		}
+		function initLiveReload() {
+			if (ws) return;
+			var origin = (location.protocol === "http:" ? "ws://" : "wss://") + location.host;
+			ws = new WebSocket(origin + "/cdn-cgi/live-reload", "${LIVE_RELOAD_PROTOCOL}");
+			ws.onclose = recover;
+			ws.onerror = recover;
+			ws.onmessage = location.reload.bind(location);
+		}
+		initLiveReload();
+	})();
+</script>
+`;
 
 /**
  * Rewrite references to URLs in request/response headers.
