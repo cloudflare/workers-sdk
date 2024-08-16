@@ -4579,7 +4579,10 @@ addEventListener('fetch', event => {});`
 				{ filePath: "boop/file-3.txt", content: "Content of file-3" },
 				{ filePath: "file-4.txt", content: "Content of file-4" },
 				{ filePath: "beep/file-5.txt", content: "Content of file-5" },
-				{ filePath: "beep/file-6.txt", content: "Content of file-1" },
+				{
+					filePath: "beep/boop/beep/boop/file-6.txt",
+					content: "Content of file-1",
+				},
 			];
 			writeAssets(assets);
 			writeWranglerToml({
