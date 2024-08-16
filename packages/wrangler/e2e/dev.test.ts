@@ -110,7 +110,7 @@ describe.each([
 
 // Skipping remote python tests because they consistently flake with timeouts
 // Unskip once remote dev with python workers is more stable
-describe.skip.each([
+describe.each([
 	{ cmd: "wrangler dev" },
 	// { cmd: "wrangler dev --remote" },
 	{ cmd: "wrangler dev --x-dev-env" },
