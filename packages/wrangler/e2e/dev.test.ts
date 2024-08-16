@@ -108,7 +108,7 @@ describe.each([
 	});
 });
 
-// Skipping remote python tests because the consistently flake with timeouts
+// Skipping remote python tests because they consistently flake with timeouts
 // Unskip once remote dev with python workers is more stable
 describe.skip.each([
 	{ cmd: "wrangler dev" },
