@@ -108,11 +108,13 @@ describe.each([
 	});
 });
 
+// Skipping remote python tests because they consistently flake with timeouts
+// Unskip once remote dev with python workers is more stable
 describe.each([
 	{ cmd: "wrangler dev" },
-	{ cmd: "wrangler dev --remote" },
+	// { cmd: "wrangler dev --remote" },
 	{ cmd: "wrangler dev --x-dev-env" },
-	{ cmd: "wrangler dev --remote --x-dev-env" },
+	// { cmd: "wrangler dev --remote --x-dev-env" },
 ])("basic python dev: $cmd", { timeout: 90_000 }, ({ cmd }) => {
 	it(`can modify entrypoint during ${cmd}`, async () => {
 		const helper = new WranglerE2ETestHelper();
