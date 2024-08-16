@@ -28,7 +28,7 @@ export function options(yargs: CommonYargsArgv) {
 				type: "array",
 				demandOption: true,
 				describe:
-					"Vector to query the Vectorize Index. Example: `--vector 1 2 3 0.5 1.25 6`",
+					"Vector to query the Vectorize Index. Example: `--vector 1 2 3 0.5 1.25 6`. To read from a json file that contains data in the format [1, 2, 3], you could use a command like `--vector $(jq -r '.[]' data.json | xargs)`",
 				coerce: (arg: unknown[]) =>
 					arg
 						.map((value) =>

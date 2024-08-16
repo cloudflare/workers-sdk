@@ -221,7 +221,7 @@ export async function listMetadataIndex(
 	return await fetchResult(
 		`/accounts/${accountId}/vectorize/v2/indexes/${indexName}/metadata_index/list`,
 		{
-			method: "POST",
+			method: "GET",
 		}
 	);
 }
