@@ -2068,6 +2068,90 @@ describe("normalizeAndValidateConfig()", () => {
 			});
 		});
 
+		describe("[cloudchamber]", () => {
+			it("should error if cloudchamber is null", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{ cloudchamber: null } as unknown as RawConfig,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - \\"cloudchamber\\" should be an object, but got null"
+				`);
+			});
+
+			it("should error if cloudchamber is an array", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{ cloudchamber: [] } as unknown as RawConfig,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - \\"cloudchamber\\" should be an object, but got []"
+				`);
+			});
+
+			it("should error if cloudchamber is a string", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{ cloudchamber: "test" } as unknown as RawConfig,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - \\"cloudchamber\\" should be an object, but got \\"test\\""
+				`);
+			});
+
+			it("should error if cloudchamber is a number", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{ cloudchamber: 22 } as unknown as RawConfig,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - \\"cloudchamber\\" should be an object, but got 22"
+				`);
+			});
+
+			it("should error if cloudchamber bindings are not valid", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						cloudchamber: {
+							image: 123, // should be a string
+							location: 123, // should be a string
+							vcpu: "invalid", // should be a number
+							memory: 123, // should be a string
+							ipv4: "invalid", // should be a boolean
+						},
+					} as unknown as RawConfig,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - \\"cloudchamber\\" bindings should, optionally, have a string \\"memory\\" field but got {\\"image\\":123,\\"location\\":123,\\"vcpu\\":\\"invalid\\",\\"memory\\":123,\\"ipv4\\":\\"invalid\\"}.
+					  - \\"cloudchamber\\" bindings should, optionally, have a string \\"image\\" field but got {\\"image\\":123,\\"location\\":123,\\"vcpu\\":\\"invalid\\",\\"memory\\":123,\\"ipv4\\":\\"invalid\\"}.
+					  - \\"cloudchamber\\" bindings should, optionally, have a string \\"location\\" field but got {\\"image\\":123,\\"location\\":123,\\"vcpu\\":\\"invalid\\",\\"memory\\":123,\\"ipv4\\":\\"invalid\\"}.
+					  - \\"cloudchamber\\" bindings should, optionally, have a boolean \\"ipv4\\" field but got {\\"image\\":123,\\"location\\":123,\\"vcpu\\":\\"invalid\\",\\"memory\\":123,\\"ipv4\\":\\"invalid\\"}.
+					  - \\"cloudchamber\\" bindings should, optionally, have a number \\"vcpu\\" field but got {\\"image\\":123,\\"location\\":123,\\"vcpu\\":\\"invalid\\",\\"memory\\":123,\\"ipv4\\":\\"invalid\\"}."
+				`);
+			});
+		});
+
 		describe("[kv_namespaces]", () => {
 			it("should error if kv_namespaces is an object", () => {
 				const { diagnostics } = normalizeAndValidateConfig(

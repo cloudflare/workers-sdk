@@ -39,7 +39,7 @@ import type {
 	Rule,
 	TailConsumer,
 } from "./environment";
-import type { ValidatorFn } from "./validation-helpers";
+import type { TypeofType, ValidatorFn } from "./validation-helpers";
 
 export type NormalizeAndValidateConfigArgs = {
 	name?: string;
@@ -2282,25 +2282,33 @@ const validateBindingArray =
 	};
 
 const validateCloudchamberConfig: ValidatorFn = (diagnostics, field, value) => {
-	if (typeof value !== "object" || value === null) {
+	if (typeof value !== "object" || value === null || Array.isArray(value)) {
 		diagnostics.errors.push(
 			`"cloudchamber" should be an object, but got ${JSON.stringify(value)}`
 		);
 		return false;
 	}
 
+	const optionalAttrsByType = {
+		string: ["memory", "image", "location"],
+		boolean: ["ipv4"],
+		number: ["vcpu"],
+	};
+
 	let isValid = true;
-	const requiredKeys: string[] = [];
-	requiredKeys.forEach((key) => {
-		if (!isRequiredProperty(value, key, "string")) {
-			diagnostics.errors.push(
-				`"${field}" bindings should have a string "${key}" field but got ${JSON.stringify(
-					value
-				)}.`
-			);
-			isValid = false;
-		}
+	Object.entries(optionalAttrsByType).forEach(([attrType, attrNames]) => {
+		attrNames.forEach((key) => {
+			if (!isOptionalProperty(value, key, attrType as TypeofType)) {
+				diagnostics.errors.push(
+					`"${field}" bindings should, optionally, have a ${attrType} "${key}" field but got ${JSON.stringify(
+						value
+					)}.`
+				);
+				isValid = false;
+			}
+		});
 	});
+
 	return isValid;
 };
 
