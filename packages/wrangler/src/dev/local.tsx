@@ -228,15 +228,6 @@ function useLocalWorker(props: LocalProps) {
 					"code" in error &&
 					(error as { code: string }).code === "ERR_RUNTIME_FAILURE"
 				) {
-					// In the past we have seen Access Violation errors on Windows, which may be caused by an outdated
-					// version of the Microsoft Visual C++ Redistributable.
-					// See https://github.com/cloudflare/workers-sdk/issues/6170#issuecomment-2245209918
-					if (process.platform === "win32") {
-						logger.error(
-							"Check that you have the latest Microsoft Visual C++ Redistributable library installed.\n" +
-								"See https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist."
-						);
-					}
 					// Don't log a full verbose stack-trace when Miniflare 3's workerd instance fails to start.
 					// workerd will log its own errors, and our stack trace won't have any useful information.
 					logger.error(String(error));
