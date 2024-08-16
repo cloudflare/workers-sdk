@@ -9,8 +9,8 @@ import { WranglerE2ETestHelper } from "./helpers/e2e-wrangler-test";
 import { generateResourceName } from "./helpers/generate-resource-name";
 
 const RUNTIMES = [
-	{ flags: "", runtime: "local" },
-	{ flags: "--remote", runtime: "remote" },
+	{ flags: "--no-x-dev-env", runtime: "local" },
+	{ flags: "--remote --no-x-dev-env", runtime: "remote" },
 	{ flags: "--x-dev-env", runtime: "local" },
 	{ flags: "--remote --x-dev-env", runtime: "remote" },
 ] as const;
