@@ -21,14 +21,13 @@ export function options(yargs: CommonYargsArgv) {
 		.positional("name", {
 			type: "string",
 			demandOption: true,
-			description: "The name of the Vectorize index.",
+			description: "The name of the Vectorize index",
 		})
 		.options({
 			vector: {
 				type: "array",
 				demandOption: true,
-				describe:
-					"Vector to query the Vectorize Index. Example: `--vector 1 2 3 0.5 1.25 6`. To read from a json file that contains data in the format [1, 2, 3], you could use a command like `--vector $(jq -r '.[]' data.json | xargs)`",
+				describe: "Vector to query the Vectorize Index",
 				coerce: (arg: unknown[]) =>
 					arg
 						.map((value) =>
@@ -42,20 +41,20 @@ export function options(yargs: CommonYargsArgv) {
 			"top-k": {
 				type: "number",
 				default: 5,
-				describe: "The number of results (nearest neighbors) to return.",
+				describe: "The number of results (nearest neighbors) to return",
 			},
 			"return-values": {
 				type: "boolean",
 				default: false,
 				describe:
-					"Specify if the vector values should be included in the results.",
+					"Specify if the vector values should be included in the results",
 			},
 			"return-metadata": {
 				type: "string",
 				choices: ["all", "indexed", "none"],
 				default: "none",
 				describe:
-					"Specify if the vector metadata should be included in the results. Should be either 'all', 'indexed' or 'none'",
+					"Specify if the vector metadata should be included in the results",
 			},
 			namespace: {
 				type: "string",
@@ -63,8 +62,7 @@ export function options(yargs: CommonYargsArgv) {
 			},
 			filter: {
 				type: "string",
-				describe:
-					"Filter the query results based on this metadata filter. Example: `--filter '{ 'p1': 'abc', 'p2': { '$ne': true }, 'p3': 10, 'p4': false, 'nested.p5': 'abcd' }'`",
+				describe: "Filter the query results based on this metadata filter.",
 				coerce: (jsonStr: string): VectorizeQueryOptions["filter"] => {
 					try {
 						return JSON.parse(jsonStr);
@@ -76,6 +74,17 @@ export function options(yargs: CommonYargsArgv) {
 				},
 			},
 		})
+		.example([
+			[
+				`❯❯ wrangler vectorize query --vector 1 2 3 0.5 1.25 6\n` +
+					"   Query the Vectorize Index by vector. To read from a json file that contains data in the format [1, 2, 3], you could use a command like\n" +
+					"   `wrangler vectorize query --vector $(jq -r '.[]' data.json | xargs)`\n",
+			],
+			[
+				"❯❯ wrangler vectorize query --filter '{ 'p1': 'abc', 'p2': { '$ne': true }, 'p3': 10, 'p4': false, 'nested.p5': 'abcd' }'\n" +
+					"   Filter the query results.",
+			],
+		])
 		.epilogue(vectorizeBetaWarning);
 }
 

@@ -277,6 +277,7 @@ export function createCLIParser(argv: string[]) {
 		"Commands:": `${chalk.bold("COMMANDS")}`,
 		"Options:": `${chalk.bold("OPTIONS")}`,
 		"Positionals:": `${chalk.bold("POSITIONALS")}`,
+		"Examples:": `${chalk.bold("EXAMPLES")}`,
 	});
 	wrangler.group(
 		["experimental-json-config", "config", "env", "help", "version"],
