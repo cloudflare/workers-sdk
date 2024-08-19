@@ -11,7 +11,9 @@ export function fetchWorker(
 	return fetch(`${proxyUrl.origin}${init}`, {
 		...input,
 		headers: [
-			...(input?.headers ?? []).filter(([name]) => name),
+			...(input?.headers ?? [])
+				.filter(([name]) => name)
+				.map<[string, string]>(([n, v]) => [`cf-ew-raw-${n}`, v]),
 			["X-CF-Token", token],
 			["cf-raw-http", "true"],
 		],
