@@ -4,7 +4,7 @@ import { Miniflare } from "miniflare";
 import { ensureDirectoryExists } from "../../utils/filesystem";
 import type { Config } from "../../config/config";
 
-const DEFAULT_OUTFILE_RELATIVE_PATH = "./.wrangler/types/runtime.d.ts";
+export const DEFAULT_OUTFILE_RELATIVE_PATH = "./.wrangler/types/runtime.d.ts";
 
 /**
  * Generates runtime types for a Workers project based on the provided project configuration.

@@ -1,5 +1,6 @@
 import { dedent } from "ts-dedent";
 import { logger } from "../../logger";
+import { buildUpdatedTypesString } from "../helpers";
 
 /**
  * Constructs a comprehensive log message for the user after generating runtime types.
@@ -52,25 +53,6 @@ export function logRuntimeTypesMessage(
 		);
 	}
 	logger.info(
-		"📣 Remember to run 'wrangler types --x-include-runtime' again if you change 'compatibility_date' or 'compatibility_flags' in your wrangler.toml.\n"
+		"📣 Remember to run 'wrangler types --x-runtime' again if you change 'compatibility_date' or 'compatibility_flags' in your wrangler.toml.\n"
 	);
-}
-
-/**
- * Constructs a string representation of the existing types array with the new types path appended to.
- * It removes any existing types that are no longer relevant.
- */
-function buildUpdatedTypesString(
-	types: string[],
-	newTypesPath: string
-): string | null {
-	if (types.some((type) => type.includes(".wrangler/types/runtime"))) {
-		return null;
-	}
-
-	const updatedTypesArray = types
-		.filter((type) => !type.startsWith("@cloudflare/workers-types"))
-		.concat([newTypesPath]);
-
-	return JSON.stringify(updatedTypesArray);
 }
