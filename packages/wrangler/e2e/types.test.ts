@@ -270,7 +270,7 @@ describe("check", () => {
 		const output = await helper.run(`wrangler types --x-check --x-runtime`);
 
 		expect(output.stdout).toContain(
-			"src/index.ts(3,23): error TS2304: Cannot find name 'navigator'.\n"
+			"src/index.ts(3,23): error TS2304: Cannot find name 'navigator'."
 		);
 
 		expect(output.status).toBe(2);
