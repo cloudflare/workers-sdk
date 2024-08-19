@@ -50,7 +50,7 @@
 		"web-vitals": "^1.1.2"
 	},
 	"devDependencies": {
-		"@cloudflare/workers-types": "^4.20240718.0",
+		"@cloudflare/workers-types": "^4.20240815.0",
 		"@tailwindcss/aspect-ratio": "^0.3.0",
 		"@tailwindcss/forms": "^0.3.4",
 		"autoprefixer": "^9.8.8",
