@@ -13,3 +13,28 @@ export type Version = {
 	modified_on: string;
 	workflow_id: string;
 };
+
+export type InstanceStatus =
+	| "unknown"
+	| "queued"
+	| "running"
+	| "paused"
+	| "errored"
+	| "terminated"
+	| "complete";
+
+export type InstanceWithoutDates = {
+	status: InstanceStatus;
+	instanceId: string;
+	versionId: string;
+	workflowId: string;
+};
+
+export type Instance = {
+	id: string;
+	created_on: string;
+	modified_on: string;
+	workflow_id: string;
+	version_id: string;
+	status: InstanceStatus;
+};

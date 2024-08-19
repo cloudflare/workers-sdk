@@ -1,11 +1,24 @@
 import { type CommonYargsArgv } from "../yargs-types";
 import {
+	workflowDeleteHandler,
+	workflowDeleteOptions,
+} from "./commands/delete";
+import {
 	workflowDescribeHandler,
 	workflowDescribeOptions,
 } from "./commands/describe";
+import {
+	instancesListHandler,
+	instancesListOptions,
+} from "./commands/instances/list";
 import { workflowListHandler, workflowListOptions } from "./commands/list";
+import {
+	workflowTriggerHandler,
+	workflowTriggerOptions,
+} from "./commands/trigger";
 
-const workflowsEpilog = "'wrangler workflows ...' commands are currently in private beta. If your account isn't authorized, your commands will fail."
+const workflowsEpilog =
+	"🚨 'wrangler workflows ...' commands are currently in private beta. If your account isn't authorized, your commands will fail.";
 
 export const workflows = (yargs: CommonYargsArgv) => {
 	return yargs
@@ -21,5 +34,23 @@ export const workflows = (yargs: CommonYargsArgv) => {
 			workflowDescribeOptions,
 			workflowDescribeHandler
 		)
-        .epilog(workflowsEpilog);
+		.command(
+			"delete <name>",
+			"Delete workflow - when deleting a workflow, it will also delete it's own instances",
+			workflowDeleteOptions,
+			workflowDeleteHandler
+		)
+		.command(
+			"trigger <name> [params]",
+			"Trigger a workflow, creating a new instance. Can optionally take a JSON string to pass a parameter into the workflow instance.",
+			workflowTriggerOptions,
+			workflowTriggerHandler
+		)
+		.command(
+			"instances list <name>",
+			"List workflow instances",
+			instancesListOptions,
+			instancesListHandler
+		)
+		.epilog(workflowsEpilog);
 };
