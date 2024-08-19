@@ -5,7 +5,7 @@ import {
 	constructTypeKey,
 	generateImportSpecifier,
 	isValidIdentifier,
-} from "../type-generation";
+} from "../type-generation/env/generate-env-types";
 import { dedent } from "../utils/dedent";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { runInTempDir } from "./helpers/run-in-tmp";
