@@ -142,6 +142,58 @@ describe("vectorize help", () => {
 				--------------------"
 			`);
 	});
+
+	it("should show help when the query command is passed without an argument", async () => {
+		await expect(() => runWrangler("vectorize query")).rejects.toThrow(
+			"Not enough non-option arguments: got 0, need at least 1"
+		);
+
+		expect(std.err).toMatchInlineSnapshot(`
+			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNot enough non-option arguments: got 0, need at least 1[0m
+
+			"
+		`);
+		expect(std.out).toMatchInlineSnapshot(`
+			"
+			wrangler vectorize query <name>
+
+			Query a Vectorize index
+
+			POSITIONALS
+			  name  The name of the Vectorize index  [string] [required]
+
+			GLOBAL FLAGS
+			  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
+			  -c, --config                    Path to .toml configuration file  [string]
+			  -e, --env                       Environment to use for operations and .env files  [string]
+			  -h, --help                      Show help  [boolean]
+			  -v, --version                   Show version number  [boolean]
+
+			OPTIONS
+			      --vector           Vector to query the Vectorize Index  [array] [required]
+			      --top-k            The number of results (nearest neighbors) to return  [number] [default: 5]
+			      --return-values    Specify if the vector values should be included in the results  [boolean] [default: false]
+			      --return-metadata  Specify if the vector metadata should be included in the results  [string] [choices: \\"all\\", \\"indexed\\", \\"none\\"] [default: \\"none\\"]
+			      --namespace        Filter the query results based on this namespace  [string]
+			      --filter           Filter the query results based on this metadata filter.  [string]
+
+			EXAMPLES
+			  ❯❯ wrangler vectorize query --vector 1 2 3 0.5 1.25 6
+			     Query the Vectorize Index by vector. To read from a json file that contains data in the format [1, 2, 3], you could use a command like
+			     \`wrangler vectorize query --vector $(jq -r '.[]' data.json | xargs)\`
+
+			  ❯❯ wrangler vectorize query --filter '{ 'p1': 'abc', 'p2': { '$ne': true }, 'p3': 10, 'p4': false, 'nested.p5': 'abcd' }'
+			     Filter the query results.
+
+			--------------------
+			📣 Vectorize is currently in open beta
+			📣 Please use the '--deprecated-v1' flag to create, get, list, delete and insert vectors into legacy Vectorize indexes
+			📣 See the Vectorize docs for how to get started and known issues: https://developers.cloudflare.com/vectorize
+			📣 Please report any bugs to https://github.com/cloudflare/workers-sdk/issues/new/choose
+			📣 To give feedback, visit https://discord.cloudflare.com/
+			--------------------"
+		`);
+	});
 });
 
 describe("vectorize commands", () => {
