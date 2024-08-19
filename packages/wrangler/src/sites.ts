@@ -38,8 +38,7 @@ async function* getFilesInFolder(dirPath: string): AsyncIterable<string> {
 		if (file.name.startsWith(".") && !HIDDEN_FILES_TO_INCLUDE.has(file.name)) {
 			continue;
 		}
-		// TODO: follow symlinks??
-		if (file.isDirectory()) {
+		if (file.isDirectory() || (file.isSymbolicLink() && (await stat(path.join(dirPath, file.name))).isDirectory())) {
 			yield* await getFilesInFolder(path.join(dirPath, file.name));
 		} else {
 			yield path.join(dirPath, file.name);
