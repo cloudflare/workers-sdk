@@ -728,6 +728,9 @@ export function handleRuntimeStdio(stdout: Readable, stderr: Readable) {
 		isCodeMovedWarning(chunk: string) {
 			return /CODE_MOVED for unknown code block/.test(chunk);
 		},
+		isAccessViolation(chunk: string) {
+			return chunk.includes("access violation;");
+		},
 	};
 
 	stdout.on("data", (chunk: Buffer | string) => {
@@ -752,7 +755,7 @@ export function handleRuntimeStdio(stdout: Readable, stderr: Readable) {
 			logger.warn(chunk);
 		}
 
-		// anything not exlicitly handled above should be logged as info (via stdout)
+		// anything not explicitly handled above should be logged as info (via stdout)
 		else {
 			logger.info(getSourceMappedString(chunk));
 		}
@@ -775,15 +778,33 @@ export function handleRuntimeStdio(stdout: Readable, stderr: Readable) {
 					`Address already in use (${address}). Please check that you are not already running a server on this address or specify a different port with --port.`
 				);
 
-				// even though we've intercepted the chunk and logged a better error to stderr
-				// fallthrough to log the original chunk to the debug log file for observability
+				// Log the original error to the debug logs.
+				logger.debug(chunk);
+			}
+			// In the past we have seen Access Violation errors on Windows, which may be caused by an outdated
+			// version of the Windows OS or the Microsoft Visual C++ Redistributable.
+			// See https://github.com/cloudflare/workers-sdk/issues/6170#issuecomment-2245209918
+			else if (classifiers.isAccessViolation(chunk)) {
+				let error = "There was an access violation in the runtime.";
+				if (process.platform === "win32") {
+					error +=
+						"\nOn Windows, this may be caused by an outdated Microsoft Visual C++ Redistributable library.\n" +
+						"Check that you have the latest version installed.\n" +
+						"See https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist.";
+				}
+				logger.error(error);
+
+				// Log the original error to the debug logs.
+				logger.debug(chunk);
 			}
 
 			// IGNORABLE:
 			// anything else not handled above is considered ignorable
 			// so send it to the debug logs which are discarded unless
 			// the user explicitly sets a logLevel indicating they care
-			logger.debug(chunk);
+			else {
+				logger.debug(chunk);
+			}
 		}
 
 		// known case: warnings are not errors, log them as such
@@ -796,7 +817,7 @@ export function handleRuntimeStdio(stdout: Readable, stderr: Readable) {
 			// ignore entirely, don't even send it to the debug log file
 		}
 
-		// anything not exlicitly handled above should be logged as an error (via stderr)
+		// anything not explicitly handled above should be logged as an error (via stderr)
 		else {
 			logger.error(getSourceMappedString(chunk));
 		}

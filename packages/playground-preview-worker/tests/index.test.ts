@@ -608,4 +608,73 @@ describe("Raw HTTP preview", () => {
 			`"foo=1, bar=2"`
 		);
 	});
+
+	it("should pass headers to the user-worker", async () => {
+		const resp = await fetch(`${PREVIEW_REMOTE}`, {
+			method: "GET",
+			headers: {
+				origin: "https://cloudflare.dev",
+				"cf-raw-http": "true",
+				"X-CF-Token": defaultUserToken,
+				"Some-Custom-Header": "custom",
+				Accept: "application/json",
+			},
+		});
+
+		const body = (await resp.json()) as Record<string, unknown>;
+
+		const headers = (body.headers as [string, string][]).filter(
+			(h) => h[0] === "some-custom-header" || h[0] === "accept"
+		);
+
+		// This contains some-custom-header & accept, as expected
+		expect(headers).toMatchInlineSnapshot(`
+			[
+			  [
+			    "accept",
+			    "application/json",
+			  ],
+			  [
+			    "some-custom-header",
+			    "custom",
+			  ],
+			]
+		`);
+	});
+
+	it("should strip cf-ew-raw- prefix from headers which have it before hitting the user-worker", async () => {
+		const resp = await fetch(`${PREVIEW_REMOTE}`, {
+			method: "GET",
+			headers: {
+				origin: "https://cloudflare.dev",
+				"cf-raw-http": "true",
+				"X-CF-Token": defaultUserToken,
+				"Some-Custom-Header": "custom",
+				Accept: "application/json",
+			},
+		});
+
+		const body = (await resp.json()) as Record<string, unknown>;
+
+		const headers = (body.headers as [string, string][]).filter(
+			(h) =>
+				h[0] === "some-custom-header" ||
+				h[0] === "accept" ||
+				h[0].startsWith("cf-ew-raw-")
+		);
+
+		// This contains some-custom-header & accept, as expected, and does not contain cf-ew-raw-some-custom-header or cf-ew-raw-accept
+		expect(headers).toMatchInlineSnapshot(`
+			[
+			  [
+			    "accept",
+			    "application/json",
+			  ],
+			  [
+			    "some-custom-header",
+			    "custom",
+			  ],
+			]
+		`);
+	});
 });

@@ -65,6 +65,15 @@ async function handleRawHttp(request: Request, url: URL, env: Env) {
 	const headers = new Headers(request.headers);
 	headers.delete("X-CF-Token");
 
+	const headerEntries = [...headers.entries()];
+
+	for (const header of headerEntries) {
+		if (header[0].startsWith("cf-ew-raw-")) {
+			headers.set(header[0].split("cf-ew-raw-")[1], header[1]);
+			headers.delete(header[0]);
+		}
+	}
+
 	const workerResponse = await userObject.fetch(
 		url,
 		new Request(request, {

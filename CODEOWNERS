@@ -16,7 +16,7 @@
 /packages/wrangler/src/cloudchamber/ @cloudflare/cloudchamber @cloudflare/wrangler
 
 # C3 ownership
-/packages/create-cloudflare/ @cloudflare/c3
+/packages/create-cloudflare/ @cloudflare/c3 @cloudflare/wrangler
 
 # kv-asset-handler ownership
 /packages/kv-asset-handler/ @cloudflare/wrangler

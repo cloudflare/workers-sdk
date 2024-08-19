@@ -356,7 +356,7 @@ describe("Raw HTTP preview", () => {
 						return Response.json({
 							url: request.url,
 							headers: [...request.headers.entries()]
-						})
+						}, { headers: { "Content-Encoding": "identity" } })
 					}
 				}
 			`.trim()
@@ -429,5 +429,84 @@ compatibility_date = "2023-01-01"
 		expect(resp.headers.get("cf-ew-raw-set-cookie")).toMatchInlineSnapshot(
 			`"foo=1, bar=2"`
 		);
+	});
+
+	it("should pass headers to the user-worker", async () => {
+		const token = randomBytes(4096).toString("hex");
+		const resp = await worker.fetch(
+			`https://0000.rawhttp.devprod.cloudflare.dev/`,
+			{
+				method: "GET",
+				headers: {
+					"Access-Control-Request-Method": "GET",
+					origin: "https://cloudflare.dev",
+					"X-CF-Token": token,
+					"X-CF-Remote": `http://127.0.0.1:${remote.port}`,
+					"Some-Custom-Header": "custom",
+					Accept: "application/json",
+				},
+			}
+		);
+
+		const body = (await resp.json()) as Record<string, unknown>;
+
+		const headers = (body.headers as [string, string][]).filter(
+			(h) => h[0] === "some-custom-header" || h[0] === "accept"
+		);
+
+		// This contains some-custom-header & accept, as expected
+		expect(headers).toMatchInlineSnapshot(`
+			[
+			  [
+			    "accept",
+			    "application/json",
+			  ],
+			  [
+			    "some-custom-header",
+			    "custom",
+			  ],
+			]
+		`);
+	});
+
+	it("should strip cf-ew-raw- prefix from headers which have it before hitting the user-worker", async () => {
+		const token = randomBytes(4096).toString("hex");
+		const resp = await worker.fetch(
+			`https://0000.rawhttp.devprod.cloudflare.dev/`,
+			{
+				method: "GET",
+				headers: {
+					"Access-Control-Request-Method": "GET",
+					origin: "https://cloudflare.dev",
+					"X-CF-Token": token,
+					"X-CF-Remote": `http://127.0.0.1:${remote.port}`,
+					"cf-ew-raw-Some-Custom-Header": "custom",
+					"cf-ew-raw-Accept": "application/json",
+				},
+			}
+		);
+
+		const body = (await resp.json()) as Record<string, unknown>;
+
+		const headers = (body.headers as [string, string][]).filter(
+			(h) =>
+				h[0] === "some-custom-header" ||
+				h[0] === "accept" ||
+				h[0].startsWith("cf-ew-raw-")
+		);
+
+		// This contains some-custom-header & accept, as expected, and does not contain cf-ew-raw-some-custom-header or cf-ew-raw-accept
+		expect(headers).toMatchInlineSnapshot(`
+			[
+			  [
+			    "accept",
+			    "application/json",
+			  ],
+			  [
+			    "some-custom-header",
+			    "custom",
+			  ],
+			]
+		`);
 	});
 });
