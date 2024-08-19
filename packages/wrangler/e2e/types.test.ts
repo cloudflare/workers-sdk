@@ -202,7 +202,7 @@ describe("check", () => {
 		const output = await helper.run(`wrangler types --x-check --x-runtime`);
 
 		expect(output.stdout).toContain(
-			"src/index.ts(5,13): error TS2304: Cannot find name 'Exported'.\n"
+			"src/index.ts(5,13): error TS2304: Cannot find name 'Exported'."
 		);
 
 		expect(output.status).toBe(2);
