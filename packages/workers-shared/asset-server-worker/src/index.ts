@@ -1,5 +1,4 @@
 import { AssetsManifest } from "./assets-manifest";
-import { NoopAssetsManifest } from "./assets-manifest-no-op";
 
 interface Env {
 	ASSETS_MANIFEST: ArrayBuffer;
@@ -21,13 +20,17 @@ export default {
 		const url = new URL(request.url);
 		const { pathname } = url;
 
-		const isLocalDevContext = new Uint8Array(ASSETS_MANIFEST).at(0) === 1;
-		const assetsManifest = isLocalDevContext
-			? new NoopAssetsManifest()
-			: new AssetsManifest(ASSETS_MANIFEST);
+		const assetsManifest = new AssetsManifest(ASSETS_MANIFEST);
 		const assetEntry = await assetsManifest.get(pathname);
+		if (!assetEntry) {
+			return new Response("Not Found", { status: 404 });
+		}
 
-		const content = await ASSETS_KV_NAMESPACE.get(assetEntry);
+		const isLocalDevContext = new Uint8Array(ASSETS_MANIFEST).at(0) === 1;
+		const assetKey = isLocalDevContext
+			? assetEntry.path
+			: assetEntry.contentHash;
+		const content = await ASSETS_KV_NAMESPACE.get(assetKey);
 
 		if (!content) {
 			return new Response("Not Found", { status: 404 });
