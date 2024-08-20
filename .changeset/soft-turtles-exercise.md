@@ -1,5 +1,5 @@
 ---
-"workers-playground": patch
+"workers-playground": minor
 ---
 
-Add Wrangler CTA to the playground
+feat: Add Wrangler CTA to the playground
