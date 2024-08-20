@@ -11,8 +11,10 @@ import {
 	TabPanel as ReactTabPanel,
 	Tabs as ReactTabs,
 } from "react-tabs";
-import type { TabPanelProps as ReactTabPanelProps } from "react-tabs";
-import type { TabProps as ReactTabProps } from "react-tabs";
+import type {
+	TabPanelProps as ReactTabPanelProps,
+	TabProps as ReactTabProps,
+} from "react-tabs";
 
 const HIGHLIGHT_BLUE = variables.colors.blue[4];
 
