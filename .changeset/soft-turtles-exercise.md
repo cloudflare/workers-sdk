@@ -2,4 +2,4 @@
 "workers-playground": patch
 ---
 
-Add Wrangler CTA to the playground
+feat: Add Wrangler CTA to the playground
