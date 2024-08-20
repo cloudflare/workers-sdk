@@ -1,5 +1,19 @@
 # wrangler
 
+## 3.72.1
+
+### Patch Changes
+
+- [#6530](https://github.com/cloudflare/workers-sdk/pull/6530) [`d0ecc6a`](https://github.com/cloudflare/workers-sdk/commit/d0ecc6afb24160862083c09eb316103162d94720) Thanks [@WalshyDev](https://github.com/WalshyDev)! - fix: fixed `wrangler versions upload` printing bindings twice
+
+- [#6502](https://github.com/cloudflare/workers-sdk/pull/6502) [`a9b4f25`](https://github.com/cloudflare/workers-sdk/commit/a9b4f252ccbce4856ffc967e51c0aa8cf2e1bb4f) Thanks [@garvit-gupta](https://github.com/garvit-gupta)! - fix: Fix Vectorize List MetadataIndex Http Method
+
+- [#6508](https://github.com/cloudflare/workers-sdk/pull/6508) [`56a3de2`](https://github.com/cloudflare/workers-sdk/commit/56a3de2c8b50f029e5c8c0554b563b9e715f629c) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: move the Windows C++ redistributable warning so it is only shown if there is an actual access violation
+
+  Replaces #6471, which was too verbose.
+
+  Fixes #6170
+
 ## 3.72.0
 
 ### Minor Changes
