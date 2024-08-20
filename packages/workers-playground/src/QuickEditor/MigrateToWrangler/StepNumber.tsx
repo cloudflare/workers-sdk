@@ -1,5 +1,5 @@
 import { Div } from "@cloudflare/elements";
-import React from "react";
+import type React from "react";
 
 export const StepNumber: React.FC<{
 	number: React.ReactNode;
@@ -22,6 +22,7 @@ export const StepNumber: React.FC<{
 		color={active ? "#fff" : complete ? "blue.4" : "gray.4"}
 		backgroundColor={active ? "blue.4" : "transparent"}
 		userSelect="none"
-		children={number}
-	/>
+	>
+		{number}
+	</Div>
 );

@@ -47,8 +47,8 @@ export function MigrateToWranglerGuide() {
 							<Div ml={2} flex="1">
 								<Heading size={4}>Deploy your project </Heading>
 								<P>
-									You'll be asked to deploy via the create-cloudflare CLI.
-									Choose 'yes' and your project will deploy.
+									You&apos;ll be asked to deploy via the create-cloudflare CLI.
+									Choose &apos;yes&apos; and your project will deploy.
 								</P>
 							</Div>
 						</Li>
@@ -57,8 +57,8 @@ export function MigrateToWranglerGuide() {
 						<Heading size={4}>That’s it! 🎉 </Heading>
 						<P mt={3}>
 							You’ve now deployed your project via the CLI. To support you along
-							your journey developing with Cloudflare's CLI tool, Wrangler, here
-							are some resources:
+							your journey developing with Cloudflare&apos;s CLI tool, Wrangler,
+							here are some resources:
 						</P>
 						<Ul mt={3} pl={0} ml={0} listStyle="none">
 							<Li mb={2}>
