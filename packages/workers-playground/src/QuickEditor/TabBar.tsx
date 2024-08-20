@@ -11,7 +11,10 @@ import {
 	TabPanel as ReactTabPanel,
 	Tabs as ReactTabs,
 } from "react-tabs";
-import type { TabProps as ReactTabProps } from "react-tabs";
+import type {
+	TabPanelProps as ReactTabPanelProps,
+	TabProps as ReactTabProps,
+} from "react-tabs";
 
 const HIGHLIGHT_BLUE = variables.colors.blue[4];
 
@@ -137,12 +140,14 @@ export const Tabs = createComponent(
 	ReactTabs
 );
 
-export const TabPanel = createComponent(
-	({ selected }) => ({
+export const TabPanel = createComponent<
+	React.FC<ReactTabPanelProps & { scrollable?: boolean }>
+>(
+	({ selected, scrollable }) => ({
 		display: selected ? "flex" : "none",
 		flex: selected ? "auto" : "none",
 		position: "relative",
-		overflow: "hidden",
+		overflow: scrollable ? "auto" : "hidden",
 	}),
 	ReactTabPanel
 );
