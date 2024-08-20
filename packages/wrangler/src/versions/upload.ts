@@ -446,8 +446,6 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			}
 		}
 
-		printBindings({ ...withoutStaticAssets, vars: maskedVars });
-
 		if (props.dryRun) {
 			printBindings({ ...withoutStaticAssets, vars: maskedVars });
 		} else {
