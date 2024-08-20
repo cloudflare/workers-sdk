@@ -24,8 +24,8 @@ export function isWorkersWithAssets(
 const SERVICE_NAMESPACE_ASSET = `${KV_PLUGIN_NAME}:asset`;
 
 export const buildAssetsManifest = async (dir: string) => {
-	const assetManifest = await walk(dir);
-	const sortedAssetManifest = sortManifest(assetManifest);
+	const manifest = await walk(dir);
+	const sortedAssetManifest = sortManifest(manifest);
 	const encodedAssetManifest = encodeManifest(sortedAssetManifest);
 	// to indicate it is in dev:
 	encodedAssetManifest.set([1], 0);
@@ -71,7 +71,11 @@ export async function getAssetsNodeBindings(
 	};
 }
 
-export function getAssetsServices(options: AssetsOptions): Service[] {
+export async function getAssetsServices(
+	options: AssetsOptions
+): Promise<Service[]> {
+	const assetsReverseMap = await createReverseMap(options.assetsPath);
+
 	const storageServiceName = `${SERVICE_NAMESPACE_ASSET}:storage`;
 	const storageService: Service = {
 		name: storageServiceName,
@@ -93,12 +97,26 @@ export function getAssetsServices(options: AssetsOptions): Service[] {
 					name: SharedBindings.MAYBE_SERVICE_BLOBS,
 					service: { name: storageServiceName },
 				},
+				{
+					name: "__STATIC_ASSETS_REVERSE_MAP",
+					data: assetsReverseMap,
+				},
 			],
 		},
 	};
 	return [storageService, namespaceService];
 }
 
+/**
+ *  ASSET MANIFEST
+ *  1. Traverse the asset directory to create an asset manifest.
+ * 		(In prod the manifest contains a pathHash and a contentHash. The
+ * 		contentHash is used for uploading and as the keys for the KV namespace
+ * 		where the assets are stored. Uploading is irrelevant in dev, so for
+ * 		performance reasons, the pathHash is reused for the "contentHash".)
+ *  2. Sort and binary encode the asset manifest
+ * 	This is available to asset service worker as a binding.
+ */
 const MAX_ASSET_COUNT = 20_000;
 const MAX_ASSET_SIZE = 25 * 1024 * 1024;
 const MANIFEST_HEADER_SIZE = 20;
@@ -113,11 +131,9 @@ const TAIL_RESERVED_SIZE = 8;
 
 const ENTRY_SIZE = PATH_HASH_SIZE + CONTENT_HASH_SIZE + TAIL_RESERVED_SIZE;
 
-type AssetManifestEntry = { contentHash: Uint8Array; pathHash: Uint8Array };
-
 const walk = async (dir: string) => {
 	const files = await fs.readdir(dir, { recursive: true });
-	const manifest: AssetManifestEntry[] = [];
+	const manifest: Uint8Array[] = [];
 	let counter = 0;
 	await Promise.all(
 		files.map(async (file) => {
@@ -144,12 +160,7 @@ const walk = async (dir: string) => {
 					);
 				}
 
-				// not the same as deploy but more similar to what is stored in gcs
-				manifest.push({
-					contentHash: fakeHashFile(),
-					pathHash: await hashPath(encodeFilePath(relativeFilepath)),
-				});
-
+				manifest.push(await hashPath(encodeFilePath(relativeFilepath)));
 				counter++;
 			}
 		})
@@ -164,12 +175,6 @@ const hashPath = async (path: string) => {
 	return new Uint8Array(hashBuffer, 0, PATH_HASH_SIZE);
 };
 
-// not actually needed in dev
-const fakeHashFile = () => {
-	const hashBuffer = new ArrayBuffer(CONTENT_HASH_SIZE);
-	return new Uint8Array(hashBuffer, 0);
-};
-
 const encodeFilePath = (filePath: string) => {
 	const encodedPath = filePath
 		.split(path.sep)
@@ -179,41 +184,82 @@ const encodeFilePath = (filePath: string) => {
 };
 
 // sorts ascending by path hash
-const sortManifest = (manifest: AssetManifestEntry[]) => {
+const sortManifest = (manifest: Uint8Array[]) => {
 	return manifest.sort(comparisonFn);
 };
 
-const comparisonFn = (a: AssetManifestEntry, b: AssetManifestEntry) => {
+const comparisonFn = (a: Uint8Array, b: Uint8Array) => {
 	// i don't see why this would ever be the case
-	if (a.pathHash.length < b.pathHash.length) {
+	if (a.length < b.length) {
 		return -1;
 	}
-	if (a.pathHash.length > b.pathHash.length) {
+	if (a.length > b.length) {
 		return 1;
 	}
-	for (const [i, v] of a.pathHash.entries()) {
-		if (v < b.pathHash[i]) {
+	for (const [i, v] of a.entries()) {
+		if (v < b[i]) {
 			return -1;
 		}
-		if (v > b.pathHash[i]) {
+		if (v > b[i]) {
 			return 1;
 		}
 	}
 	return 1;
 };
 
-const encodeManifest = (manifest: AssetManifestEntry[]) => {
+const encodeManifest = (manifest: Uint8Array[]) => {
 	const assetManifestBytes = new Uint8Array(
 		MANIFEST_HEADER_SIZE + manifest.length * ENTRY_SIZE
 	);
 	for (const [i, entry] of manifest.entries()) {
 		const entryOffset = MANIFEST_HEADER_SIZE + i * ENTRY_SIZE;
 		// NB: PATH_HASH_OFFSET = 0
-		assetManifestBytes.set(entry.pathHash, entryOffset + PATH_HASH_OFFSET);
-		assetManifestBytes.set(
-			entry.contentHash,
-			entryOffset + CONTENT_HASH_OFFSET
-		);
+		// set the path hash:
+		assetManifestBytes.set(entry, entryOffset + PATH_HASH_OFFSET);
+		// set the content hash, which happens to be the same as the path hash in dev:
+		assetManifestBytes.set(entry, entryOffset + CONTENT_HASH_OFFSET);
 	}
 	return assetManifestBytes;
+};
+
+/**
+ *  ASSET REVERSE MAP
+ * 	In prod, the contentHash is used as the key for the KV store that holds the assets.
+ *  ASW will hash the path of an incoming request, look for that pathHash in the stored manifest,
+ * 	and get the corresponding contentHash to use as the KV key.
+ *  In dev, we fake out this KV store and just get the assets from disk. However we still need
+ *  to map a given "contentHash" to the filePath. This is what the ASSET REVERSE MAP is for.
+ * 	This is available to the FAKE_KV_NAMESPACE service (assets.worker.ts) as a binding.
+ */
+
+type AssetReverseMap = { [pathHash: string]: string }; //map to actual filepath
+
+const createReverseMap = async (dir: string) => {
+	const files = await fs.readdir(dir, { recursive: true });
+	const assetsReverseMap: AssetReverseMap = {};
+	await Promise.all(
+		files.map(async (file) => {
+			const filepath = path.join(dir, file);
+			const relativeFilepath = path.relative(dir, filepath);
+			const filestat = await fs.stat(filepath);
+
+			if (filestat.isSymbolicLink() || filestat.isDirectory()) {
+				return;
+			} else {
+				const pathHash = bytesToHex(
+					await hashPath(encodeFilePath(relativeFilepath))
+				);
+				assetsReverseMap[pathHash] = relativeFilepath;
+			}
+		})
+	);
+	const encoder = new TextEncoder();
+	const encodedReverseMap = encoder.encode(JSON.stringify(assetsReverseMap));
+	return encodedReverseMap;
+};
+
+const bytesToHex = (buffer: ArrayBufferLike) => {
+	return [...new Uint8Array(buffer)]
+		.map((b) => b.toString(16).padStart(2, "0"))
+		.join("");
 };

@@ -41,6 +41,7 @@ export const KVOptionsSchema = z.object({
 	assetsPath: PathSchema.optional(),
 	assetsKVBindingName: z.string().optional(),
 	assetsManifestBindingName: z.string().optional(),
+	assetsReverseMapBindingName: z.string().optional(),
 
 	// Workers Sites
 	sitePath: PathSchema.optional(),
@@ -174,7 +175,7 @@ export const KV_PLUGIN: Plugin<
 		}
 
 		if (isWorkersWithAssets(options)) {
-			services.push(...getAssetsServices(options));
+			services.push(...(await getAssetsServices(options)));
 		}
 
 		return services;

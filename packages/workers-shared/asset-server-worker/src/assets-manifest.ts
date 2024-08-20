@@ -18,9 +18,7 @@ export class AssetsManifest {
 			new Uint8Array(this.data, HEADER_SIZE),
 			pathHash
 		);
-		// just pass in the pathname string directly to asset entry view
-		// for use in dev
-		return entry ? new AssetEntryView(pathname, entry) : null;
+		return entry ? contentHashToKey(entry) : null;
 	}
 }
 
@@ -86,32 +84,10 @@ const compare = (a: Uint8Array, b: Uint8Array) => {
 	return 0;
 };
 
-export type AssetEntry = {
-	path: string;
-	contentHash: string;
-};
-export class AssetEntryView implements AssetEntry {
-	path: string;
-	private data: Uint8Array;
-
-	constructor(path: string, data: Uint8Array) {
-		this.path = path;
-		this.data = data;
-	}
-
-	get contentHash() {
-		// for prod KV
-		return bytesToHex(
-			new Uint8Array(
-				this.data.buffer,
-				this.data.byteOffset + PATH_HASH_SIZE,
-				CONTENT_HASH_SIZE
-			)
-		);
-	}
-}
-const bytesToHex = (buffer: ArrayBufferLike) => {
-	return [...new Uint8Array(buffer)]
-		.map((b) => b.toString(16).padStart(2, "0"))
-		.join("");
+const contentHashToKey = (buffer: Uint8Array) => {
+	const contentHash = new Uint8Array(
+		buffer,
+		buffer.byteOffset + PATH_HASH_SIZE
+	).slice(0, CONTENT_HASH_SIZE);
+	return [...contentHash].map((b) => b.toString(16).padStart(2, "0")).join("");
 };

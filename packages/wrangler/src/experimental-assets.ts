@@ -39,10 +39,11 @@ type UploadResponse = {
 
 // constants same as Pages for now
 const BULK_UPLOAD_CONCURRENCY = 3;
-const MAX_ASSET_COUNT = 20_000;
-const MAX_ASSET_SIZE = 25 * 1024 * 1024;
 const MAX_UPLOAD_ATTEMPTS = 5;
 const MAX_UPLOAD_GATEWAY_ERRORS = 5;
+// NB also used in miniflare in plugins/kv/assets.ts, so please update there too.
+const MAX_ASSET_COUNT = 20_000;
+const MAX_ASSET_SIZE = 25 * 1024 * 1024;
 
 export const syncExperimentalAssets = async (
 	accountId: string | undefined,
