@@ -7,10 +7,7 @@ import {
 	workflowDescribeHandler,
 	workflowDescribeOptions,
 } from "./commands/describe";
-import {
-	instancesListHandler,
-	instancesListOptions,
-} from "./commands/instances/list";
+import { instances } from "./commands/instances";
 import { workflowListHandler, workflowListOptions } from "./commands/list";
 import {
 	workflowTriggerHandler,
@@ -47,10 +44,9 @@ export const workflows = (yargs: CommonYargsArgv) => {
 			workflowTriggerHandler
 		)
 		.command(
-			"instances list <name>",
-			"List workflow instances",
-			instancesListOptions,
-			instancesListHandler
+			"instances",
+			"Instance related commands (list, describe, terminate...)",
+			instances
 		)
 		.epilog(workflowsEpilog);
 };

@@ -1,4 +1,4 @@
-import type { InstanceStatus } from "./types";
+import type { InstanceStatus, InstanceTriggerName } from "./types";
 
 export const emojifyInstanceStatus = (status: InstanceStatus) => {
 	switch (status) {
@@ -16,5 +16,33 @@ export const emojifyInstanceStatus = (status: InstanceStatus) => {
 			return "▶ Running";
 		case "terminated":
 			return "🚫 Terminated";
+	}
+};
+
+export const emojifyInstanceTriggerName = (status: InstanceTriggerName) => {
+	switch (status) {
+		case "api":
+			return "🌎 API";
+		case "binding":
+			return "🔗 Binding";
+		case "cron":
+			return "⌛ Cron";
+		case "event":
+			return "📩 Event";
+		default:
+			return "❓ Unknown";
+	}
+};
+
+export const emojifyStepType = (type: string) => {
+	switch (type) {
+		case "step":
+			return "🎯 Step";
+		case "sleep":
+			return "💤 Sleeping";
+		case "termination":
+			return "🚫 Termination";
+		default:
+			return "❓ Unknown";
 	}
 };
