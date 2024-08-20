@@ -11174,7 +11174,7 @@ snapshots:
     dependencies:
       '@typescript-eslint/typescript-estree': 6.10.0(typescript@5.5.4)
       '@typescript-eslint/utils': 6.10.0(eslint@8.49.0)(typescript@5.5.4)
-      debug: 4.3.5
+      debug: 4.3.6(supports-color@9.2.2)
       eslint: 8.49.0
       ts-api-utils: 1.0.3(typescript@5.5.4)
     optionalDependencies:
@@ -11200,7 +11200,7 @@ snapshots:
     dependencies:
       '@typescript-eslint/types': 6.10.0
       '@typescript-eslint/visitor-keys': 6.10.0
-      debug: 4.3.5
+      debug: 4.3.6(supports-color@9.2.2)
       globby: 11.1.0
       is-glob: 4.0.3
       semver: 7.5.4
@@ -11326,7 +11326,7 @@ snapshots:
       pathe: 1.1.1
       picocolors: 1.0.1
       sirv: 2.0.4
-      vitest: 1.6.0(@types/node@20.8.3)(@vitest/ui@1.6.0)
+      vitest: 1.6.0(@types/node@20.12.12)(@vitest/ui@1.6.0)(supports-color@9.2.2)
 
   '@vitest/utils@1.5.0':
     dependencies:

@@ -1,5 +1,13 @@
 # workers-playground
 
+## 0.1.0
+
+### Minor Changes
+
+- [#6528](https://github.com/cloudflare/workers-sdk/pull/6528) [`c3441c5`](https://github.com/cloudflare/workers-sdk/commit/c3441c544ea664badb34bbbdeda10a3fe6916085) Thanks [@penalosa](https://github.com/penalosa)! - feat: Prefix HTTP headers sent by the playground with `cf-ew-raw-`
+
+- [#6532](https://github.com/cloudflare/workers-sdk/pull/6532) [`d80fccb`](https://github.com/cloudflare/workers-sdk/commit/d80fccbb41aec8e620194479e12d167685124f56) Thanks [@penalosa](https://github.com/penalosa)! - feat: Add Wrangler CTA to the playground
+
 ## 0.0.7
 
 ### Patch Changes
