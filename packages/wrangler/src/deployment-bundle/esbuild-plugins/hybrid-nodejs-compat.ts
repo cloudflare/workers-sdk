@@ -108,14 +108,11 @@ function handleNodeJSGlobals(
 	build.onLoad({ filter: UNENV_GLOBALS_RE }, ({ path }) => {
 		// eslint-disable-next-line  @typescript-eslint/no-non-null-assertion
 		const globalName = decodeFromLowerCase(path.match(UNENV_GLOBALS_RE)![1]);
-		const globalMapping = inject[globalName];
+		const { importStatement, exportName } = getGlobalInject(inject[globalName]);
 
-		if (typeof globalMapping === "string") {
-			const globalPolyfillSpecifier = globalMapping;
-
-			return {
-				contents: `
-								import globalVar from "${globalPolyfillSpecifier}";
+		return {
+			contents: `
+								${importStatement}
 
 								${
 									/*
@@ -135,7 +132,7 @@ function handleNodeJSGlobals(
 									*/ ""
 									}
 									/* @__PURE__ */ (() => {
-										return globalThis.${globalName} = globalVar;
+										return globalThis.${globalName} = ${exportName};
 									})();
 
 								export {
@@ -143,44 +140,28 @@ function handleNodeJSGlobals(
 									exportable as 'globalThis.${globalName}',
 								}
 							`,
-			};
-		}
-
-		const [moduleName, exportName] = inject[globalName];
-
-		return {
-			contents: `
-							import { ${exportName} } from "${moduleName}";
-
-							${
-								/*
-							// ESBuild's inject doesn't actually touch globalThis, so let's do it ourselves
-							// by creating an exportable so that we can preserve the globalThis assignment if
-							// the ${globalName} was found in the app, or tree-shake it, if it wasn't
-							// see https://esbuild.github.io/api/#inject
-							*/ ""
-							}
-							const exportable =
-								${
-									/*
-								// mark this as a PURE call so it can be ignored and tree-shaken by ESBuild,
-								// when we don't detect 'process', 'global.process', or 'globalThis.process'
-								// in the app code
-								// see https://esbuild.github.io/api/#tree-shaking-and-side-effects
-								*/ ""
-								}
-								/* @__PURE__ */ (() => {
-									return globalThis.${globalName} = ${exportName};
-							})();
-
-							export {
-								exportable as '${globalName}',
-								exportable as 'global.${globalName}',
-								exportable as 'globalThis.${globalName}'
-							}
-						`,
 		};
 	});
+}
+
+/**
+ * Get the import statement and export name to be used for the given global inject setting.
+ */
+function getGlobalInject(globalInject: string | string[]) {
+	if (typeof globalInject === "string") {
+		// the mapping is a simple string, indicating a default export, so the string is just the module specifier.
+		return {
+			importStatement: `import globalVar from "${globalInject}";`,
+			exportName: "globalVar",
+		};
+	} else {
+		// the mapping is a 2 item tuple, indicating a named export, made up of a module specifier and an export name.
+		const [moduleSpecifier, exportName] = globalInject;
+		return {
+			importStatement: `import { ${exportName} } from "${moduleSpecifier}";`,
+			exportName,
+		};
+	}
 }
 
 /**
