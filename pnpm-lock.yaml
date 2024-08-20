@@ -1372,6 +1372,9 @@ importers:
       '@cloudflare/component-code-block':
         specifier: ^4.1.2
         version: 4.2.8(@cloudflare/component-icon@11.8.0(@cloudflare/style-const@5.7.3(react@18.3.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1))(react@18.3.1))(@cloudflare/style-const@5.7.3(react@18.3.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1))(@types/react-dom@18.2.0)(@types/react@18.3.3)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(regenerator-runtime@0.14.1)
+      '@cloudflare/component-heading':
+        specifier: ^4.0.6
+        version: 4.0.6(@cloudflare/style-const@5.7.3(react@18.3.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1))(react@18.3.1)
       '@cloudflare/component-icon':
         specifier: ^11.5.1
         version: 11.8.0(@cloudflare/style-const@5.7.3(react@18.3.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1))(react@18.3.1)
@@ -2277,6 +2280,13 @@ packages:
       '@cloudflare/style-container': ^7.10.0
       react: ^15.0.0-0 || ^16.0.0-0 || ^17.0.0-0
       react-dom: ^15.0.0-0 || ^16.0.0-0 || ^17.0.0-0
+
+  '@cloudflare/component-heading@4.0.6':
+    resolution: {integrity: sha512-Rj4yClX7MsUZopiBrLEILCaLx5xl75Mn0Ad3As1Mlb7NcRpVHKR5giAt06M9a+bKg7fqKx8EV+jlf7RSwDeypQ==}
+    peerDependencies:
+      '@cloudflare/style-const': ^5.3.9
+      '@cloudflare/style-container': ^7.10.0
+      react: ^15.0.0-0 || ^16.0.0-0 || ^17.0.0-0
 
   '@cloudflare/component-icon@11.8.0':
     resolution: {integrity: sha512-H97P7IRQv1PwKbIgn0ZVukQNggGF4sZeBUze3B7li5qZIKWd1f04te6Ef5tOrdq7E+l0/6zpmg1uCtShxTuPkA==}
@@ -9472,6 +9482,13 @@ snapshots:
       - '@types/react-dom'
       - regenerator-runtime
 
+  '@cloudflare/component-heading@4.0.6(@cloudflare/style-const@5.7.3(react@18.3.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1))(react@18.3.1)':
+    dependencies:
+      '@cloudflare/style-const': 5.7.3(react@18.3.1)
+      '@cloudflare/style-container': 7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1)
+      prop-types: 15.8.1
+      react: 18.3.1
+
   '@cloudflare/component-icon@11.8.0(@cloudflare/style-const@5.7.3(react@18.3.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1))(react@18.3.1)':
     dependencies:
       '@cloudflare/style-const': 5.7.3(react@18.3.1)
@@ -11309,7 +11326,7 @@ snapshots:
       pathe: 1.1.1
       picocolors: 1.0.1
       sirv: 2.0.4
-      vitest: 1.6.0(@types/node@20.12.12)(@vitest/ui@1.6.0)(supports-color@9.2.2)
+      vitest: 1.6.0(@types/node@20.8.3)(@vitest/ui@1.6.0)
 
   '@vitest/utils@1.5.0':
     dependencies:

@@ -6,6 +6,7 @@ import { SplitPane } from "@cloudflare/workers-editor-shared";
 import { useState } from "react";
 import DevtoolsIframe from "./DevtoolsIframe";
 import { HTTPTab } from "./HTTPTab/HTTPTab";
+import MigrateToWrangler from "./MigrateToWrangler/MigrateToWrangler";
 import PreviewTab from "./PreviewTab/PreviewTab";
 import { Tab, TabBar, TabList, TabPanel, Tabs } from "./TabBar";
 
@@ -40,6 +41,9 @@ export default function ToolsPane() {
 								<Tab>
 									<Icon type="two-way" mr={2} />
 									HTTP
+								</Tab>
+								<Tab>
+									<Icon type="wrangler" />
 								</Tab>
 							</TabList>
 							<Div
@@ -89,6 +93,9 @@ export default function ToolsPane() {
 						)}
 						<TabPanel>
 							<HTTPTab />
+						</TabPanel>
+						<TabPanel scrollable>
+							<MigrateToWrangler />
 						</TabPanel>
 					</Tabs>
 				</Main>
