@@ -36,6 +36,17 @@ export const instancesDescribeOptions = (args: CommonYargsArgv) => {
 				"ID of the instance - instead of an UUID you can type 'latest' to get the latest instance and describe it",
 			type: "string",
 			demandOption: true,
+		})
+		.option("step-output", {
+			describe:
+				"Don't output the step output since it might clutter the terminal",
+			type: "boolean",
+			default: true,
+		})
+		.option("truncate-output-limit", {
+			describe: "Truncate step output after x characters",
+			type: "number",
+			default: 5000,
 		});
 };
 
@@ -115,10 +126,11 @@ export const instancesDescribeHandler = async (args: HandlerOptions) => {
 	logRaw(formatLabelledValues(formattedInstance));
 	logRaw(white("Steps:"));
 
-	instance.steps.forEach(logStep);
+	instance.steps.forEach(logStep.bind(false, args));
 };
 
 const logStep = (
+	args: HandlerOptions,
 	step: InstanceStepLog | InstanceSleepLog | InstanceTerminateLog
 ) => {
 	logRaw("");
@@ -154,8 +166,18 @@ const logStep = (
 
 	if (step.type == "step") {
 		formattedInstance.Success = step.success ? "✅ Yes" : "❌ No";
-		if (step.output !== undefined) {
-			formattedInstance.Output = step.output as string;
+		if (step.output !== undefined && args.stepOutput) {
+			let output: string;
+			try {
+				output = JSON.stringify(step.output);
+			} catch {
+				output = step.output as string;
+			}
+			formattedInstance.Output =
+				output.length > args.truncateOutputLimit
+					? output.substring(0, args.truncateOutputLimit) +
+						"[...output truncated]"
+					: output;
 		}
 	}
 
