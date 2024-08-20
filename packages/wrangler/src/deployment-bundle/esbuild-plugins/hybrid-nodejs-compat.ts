@@ -91,15 +91,16 @@ function handleNodeJSGlobals(
 	inject: Record<string, string | string[]>
 ) {
 	const UNENV_GLOBALS_RE = /_virtual_unenv_global_polyfill-([^.]+)\.js$/;
+	const prefix = nodePath.resolve(
+		getBasePath(),
+		"_virtual_unenv_global_polyfill-"
+	);
 
 	build.initialOptions.inject = [
 		...(build.initialOptions.inject ?? []),
 		//convert unenv's inject keys to absolute specifiers of custom virtual modules that will be provided via a custom onLoad
-		...Object.keys(inject).map((globalName) =>
-			nodePath.resolve(
-				getBasePath(),
-				`_virtual_unenv_global_polyfill-${encodeToLowerCase(globalName)}.js`
-			)
+		...Object.keys(inject).map(
+			(globalName) => `${prefix}${encodeToLowerCase(globalName)}.js`
 		),
 	];
 
@@ -111,35 +112,7 @@ function handleNodeJSGlobals(
 		const { importStatement, exportName } = getGlobalInject(inject[globalName]);
 
 		return {
-			contents: `
-								${importStatement}
-
-								${
-									/*
-								// ESBuild's inject doesn't actually touch globalThis, so let's do it ourselves
-								// by creating an exportable so that we can preserve the globalThis assignment if
-								// the ${globalName} was found in the app, or tree-shake it, if it wasn't
-								// see https://esbuild.github.io/api/#inject
-								*/ ""
-								}
-								const exportable =
-									${
-										/*
-									// mark this as a PURE call so it can be ignored and tree-shaken by ESBuild,
-									// when we don't detect 'process', 'global.process', or 'globalThis.process'
-									// in the app code
-									// see https://esbuild.github.io/api/#tree-shaking-and-side-effects
-									*/ ""
-									}
-									/* @__PURE__ */ (() => {
-										return globalThis.${globalName} = ${exportName};
-									})();
-
-								export {
-									exportable as '${globalName}',
-									exportable as 'globalThis.${globalName}',
-								}
-							`,
+			contents: `${importStatement}\nglobalThis.${globalName} = ${exportName};`,
 		};
 	});
 }
