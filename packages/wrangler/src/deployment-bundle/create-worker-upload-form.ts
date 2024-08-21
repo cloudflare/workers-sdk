@@ -3,7 +3,6 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { File, FormData } from "undici";
 import { handleUnsafeCapnp } from "./capnp";
-import { stripExperimentalPrefixes } from "./node-compat";
 import type {
 	CfDurableObjectMigrations,
 	CfModuleType,
@@ -547,7 +546,7 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 		bindings: metadataBindings,
 		...(compatibility_date && { compatibility_date }),
 		...(compatibility_flags && {
-			compatibility_flags: stripExperimentalPrefixes(compatibility_flags),
+			compatibility_flags,
 		}),
 		...(migrations && { migrations }),
 		capnp_schema: capnpSchemaOutputFile,
