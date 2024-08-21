@@ -527,10 +527,10 @@ declare module "*.bin" {
 		_options: FileSearchOptions,
 		_token: CancellationToken
 	): ProviderResult<Uri[]> {
-		return this._findFiles(query.pattern);
+		return this._findFiles(query.pattern, _options.excludes);
 	}
 
-	private _findFiles(query: string | undefined): Uri[] {
+	private _findFiles(query: string | undefined, excludes: string[]): Uri[] {
 		const files = this._getFiles();
 		const result: Uri[] = [];
 
@@ -538,8 +538,38 @@ declare module "*.bin" {
 			? new RegExp(this._convertSimple2RegExpPattern(query))
 			: null;
 
+		// The memfs implementation does not support the `files.exclude` and `search.exclude` settings
+		// This implements a simple mechanism to filter out files by just matching the filename
+		// which does not take into account the full path of the file
+		const excludePatterns = excludes.reduce<Array<RegExp>>(
+			(patterns, exclude) => {
+				if (exclude) {
+					const lastSlashIndex = exclude.lastIndexOf("/");
+					// Excludes might include a glob pattern, e.g. `**/*.js`
+					// As we are only comparing the filename, we need to make sure the file path is stripped
+					// This makes the final RegExp /.*\.js/
+					const filenamePattern = new RegExp(
+						this._convertSimple2RegExpPattern(
+							lastSlashIndex !== -1
+								? exclude.substring(lastSlashIndex + 1)
+								: exclude
+						)
+					);
+
+					patterns.push(filenamePattern);
+				}
+
+				return patterns;
+			},
+			[]
+		);
+
 		for (const file of files) {
-			if (!pattern || pattern.exec(file.name)) {
+			if (
+				(!pattern || pattern.exec(file.name)) &&
+				// Ensure the file name is not excluded
+				excludePatterns.every((regex) => !regex.exec(file.name))
+			) {
 				result.push(file.uri);
 			}
 		}
@@ -557,7 +587,7 @@ declare module "*.bin" {
 	) {
 		const result: TextSearchComplete = { limitHit: false };
 
-		const files = this._findFiles(options.includes[0]);
+		const files = this._findFiles(options.includes[0], options.excludes);
 		if (files) {
 			for (const file of files) {
 				const content = this._textDecoder.decode(await this.readFile(file));
