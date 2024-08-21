@@ -17,10 +17,10 @@ export type NodeJSCompatMode = "legacy" | "v1" | "v2" | null;
  * Returns one of:
  *  - "legacy": build-time polyfills, from `node_compat` flag
  *  - "v1": nodejs_compat compatibility flag
- *  - "v2": experimental nodejs_compat_v2 flag
+ *  - "v2": nodejs_compat_v2 compatibility flag
  *  - null: no Node.js compatibility
  *
- * Currently we require that the v2 mode is configured via `nodejs_compat_v2` compat flag.
+ * Currently v2 mode is configured via `nodejs_compat_v2` compat flag.
  * At a future compatibility date, the use of `nodejs_compat` flag will imply `nodejs_compat_v2`.
  *
  * We assert that only one of these modes can be specified at a time.
