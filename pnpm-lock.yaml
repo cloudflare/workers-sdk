@@ -1015,6 +1015,9 @@ importers:
       '@cloudflare/kv-asset-handler':
         specifier: workspace:*
         version: link:../kv-asset-handler
+      '@cloudflare/workers-shared':
+        specifier: workspace:*
+        version: link:../workers-shared
       '@cloudflare/workers-types':
         specifier: ^4.20240806.0
         version: 4.20240806.0
@@ -1033,9 +1036,6 @@ importers:
       '@types/http-cache-semantics':
         specifier: ^4.0.1
         version: 4.0.1
-      '@types/mime':
-        specifier: ^3.0.4
-        version: 3.0.4
       '@types/node':
         specifier: 20.8.3
         version: 20.8.3
@@ -1099,12 +1099,6 @@ importers:
       kleur:
         specifier: ^4.1.5
         version: 4.1.5
-      mime:
-        specifier: ^3.0.0
-        version: 3.0.0
-      pretty-bytes:
-        specifier: ^6.0.0
-        version: 6.0.0
       rimraf:
         specifier: ^5.0.1
         version: 5.0.1
@@ -1505,12 +1499,24 @@ importers:
       '@cloudflare/workers-types':
         specifier: ^4.20240806.0
         version: 4.20240806.0
+      '@types/mime':
+        specifier: ^3.0.4
+        version: 3.0.4
+      blake3-wasm:
+        specifier: ^2.1.5
+        version: 2.1.5
       concurrently:
         specifier: ^8.2.2
         version: 8.2.2
       esbuild:
         specifier: 0.17.19
         version: 0.17.19
+      mime:
+        specifier: ^3.0.0
+        version: 3.0.0
+      pretty-bytes:
+        specifier: ^6.0.0
+        version: 6.0.0
       rimraf:
         specifier: ^6.0.1
         version: 6.0.1

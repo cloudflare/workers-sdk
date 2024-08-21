@@ -1,22 +1,19 @@
 import assert from "node:assert";
 import { existsSync } from "node:fs";
-import { readdir, readFile, stat } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
 import * as path from "node:path";
+import { buildProdAssetsManifest } from "@cloudflare/workers-shared/utils/generate-manifest";
 import chalk from "chalk";
 import { getType } from "mime";
 import PQueue from "p-queue";
-import prettyBytes from "pretty-bytes";
 import { fetchResult } from "./cfetch";
 import { formatTime } from "./deploy/deploy";
 import { FatalError, UserError } from "./errors";
 import { logger, LOGGER_LEVELS } from "./logger";
-import { hashFile } from "./pages/hash";
 import { isJwtExpired } from "./pages/upload";
 import { APIError } from "./parse";
 import type { Config } from "./config";
 import type { ExperimentalAssets } from "./config/environment";
-
-export type AssetManifest = { [path: string]: { hash: string; size: number } };
 
 type InitializeAssetsResponse = {
 	// string of file hashes per bucket
@@ -37,13 +34,9 @@ type UploadResponse = {
 	jwt?: string;
 };
 
-// constants same as Pages for now
-const BULK_UPLOAD_CONCURRENCY = 3;
-const MAX_UPLOAD_ATTEMPTS = 5;
-const MAX_UPLOAD_GATEWAY_ERRORS = 5;
-// NB also used in miniflare in plugins/kv/assets.ts, so please update there too.
-const MAX_ASSET_COUNT = 20_000;
-const MAX_ASSET_SIZE = 25 * 1024 * 1024;
+export const BULK_UPLOAD_CONCURRENCY = 3;
+export const MAX_UPLOAD_ATTEMPTS = 5;
+export const MAX_UPLOAD_GATEWAY_ERRORS = 5;
 
 export const syncExperimentalAssets = async (
 	accountId: string | undefined,
@@ -54,7 +47,7 @@ export const syncExperimentalAssets = async (
 
 	// 1. generate asset manifest
 	logger.info("🌀 Building list of assets...");
-	const manifest = await buildAssetsManifest(assetDirectory);
+	const manifest = await buildProdAssetsManifest(assetDirectory);
 
 	// 2. fetch buckets w/ hashes
 	logger.info("🌀 Starting asset upload...");
@@ -219,55 +212,6 @@ export const syncExperimentalAssets = async (
 	return completionJwt;
 };
 
-export const buildAssetsManifest = async (dir: string) => {
-	const files = await readdir(dir, { recursive: true });
-	const manifest: AssetManifest = {};
-	let counter = 0;
-	await Promise.all(
-		files.map(async (file) => {
-			const filepath = path.join(dir, file);
-			const relativeFilepath = path.relative(dir, filepath);
-			const filestat = await stat(filepath);
-
-			if (filestat.isSymbolicLink() || filestat.isDirectory()) {
-				return;
-			} else {
-				if (counter >= MAX_ASSET_COUNT) {
-					throw new UserError(
-						`Maximum number of assets exceeded.\n` +
-							`Cloudflare Workers supports up to ${MAX_ASSET_COUNT.toLocaleString()} assets in a version. We found ${counter.toLocaleString()} files in the specified assets directory "${dir}".\n` +
-							`Ensure your assets directory contains a maximum of ${MAX_ASSET_COUNT.toLocaleString()} files, and that you have specified your assets directory correctly.`
-					);
-				}
-
-				if (filestat.size > MAX_ASSET_SIZE) {
-					throw new UserError(
-						`Asset too large.\n` +
-							`Cloudflare Workers supports assets with sizes of up to ${prettyBytes(
-								MAX_ASSET_SIZE,
-								{
-									binary: true,
-								}
-							)}. We found a file ${filepath} with a size of ${prettyBytes(
-								filestat.size,
-								{
-									binary: true,
-								}
-							)}.\n` +
-							`Ensure all assets in your assets directory "${dir}" conform with the Workers maximum size requirement.`
-					);
-				}
-				manifest[encodeFilePath(relativeFilepath)] = {
-					hash: hashFile(filepath),
-					size: filestat.size,
-				};
-				counter++;
-			}
-		})
-	);
-	return manifest;
-};
-
 const MAX_DIFF_LINES = 100;
 
 function logAssetUpload(line: string, diffCount: number) {
@@ -334,12 +278,3 @@ export function processExperimentalAssetsArg(
 
 	return experimentalAssets;
 }
-
-const encodeFilePath = (filePath: string) => {
-	// NB windows will disallow these characters in file paths anyway < > : " / \ | ? *
-	const encodedPath = filePath
-		.split(path.sep)
-		.map((segment) => encodeURIComponent(segment))
-		.join("/");
-	return "/" + encodedPath;
-};

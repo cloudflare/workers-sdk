@@ -1,13 +1,10 @@
 import { SharedBindings } from "miniflare:shared";
+import type { AssetReverseMap } from "@cloudflare/workers-shared/utils/generate-manifest";
 
 interface Env {
 	[SharedBindings.MAYBE_SERVICE_BLOBS]: Fetcher;
 	__STATIC_ASSETS_REVERSE_MAP: string;
 }
-
-type AssetReverseMap = {
-	[pathHash: string]: { filePath: string; contentType: string };
-}; //map to actual filepath
 
 export default <ExportedHandler<Env>>{
 	async fetch(request, env) {

@@ -50,13 +50,14 @@ import { writeWorkerSource } from "./helpers/write-worker-source";
 import { writeWranglerToml } from "./helpers/write-wrangler-toml";
 import type { Config } from "../config";
 import type { CustomDomain, CustomDomainChangeset } from "../deploy/deploy";
-import type { AssetManifest, UploadPayloadFile } from "../experimental-assets";
+import type { UploadPayloadFile } from "../experimental-assets";
 import type { KVNamespaceInfo } from "../kv/helpers";
 import type {
 	PostQueueBody,
 	PostTypedConsumerBody,
 	QueueResponse,
 } from "../queues/client";
+import type { ProdAssetManifest } from "@cloudflare/workers-shared/utils/generate-manifest";
 import type { Mock } from "vitest";
 
 vi.mock("command-exists");
@@ -4344,7 +4345,7 @@ addEventListener('fetch', event => {});`
 			writeWranglerToml({
 				experimental_assets: { directory: "config-assets" },
 			});
-			const bodies: AssetManifest[] = [];
+			const bodies: ProdAssetManifest[] = [];
 			await mockAUSRequest(bodies);
 			mockSubDomainRequest();
 			mockUploadWorkerRequest({
@@ -4427,7 +4428,7 @@ addEventListener('fetch', event => {});`
 				experimental_assets: { directory: "assets" },
 			});
 
-			const bodies: AssetManifest[] = [];
+			const bodies: ProdAssetManifest[] = [];
 			await mockAUSRequest(bodies);
 			mockSubDomainRequest();
 			mockUploadWorkerRequest({
@@ -4463,7 +4464,7 @@ addEventListener('fetch', event => {});`
 				},
 				"some/path/wrangler.toml"
 			);
-			const bodies: AssetManifest[] = [];
+			const bodies: ProdAssetManifest[] = [];
 			await mockAUSRequest(bodies);
 			mockSubDomainRequest();
 			mockUploadWorkerRequest({
@@ -4485,7 +4486,7 @@ addEventListener('fetch', event => {});`
 		it("should resolve assets directory relative to cwd if using cli", async () => {
 			const assets = [{ filePath: "file-1.txt", content: "Content of file-1" }];
 			writeAssets(assets, "some/path/assets");
-			const bodies: AssetManifest[] = [];
+			const bodies: ProdAssetManifest[] = [];
 			await mockAUSRequest(bodies);
 			mockSubDomainRequest();
 			mockUploadWorkerRequest({
@@ -4513,7 +4514,7 @@ addEventListener('fetch', event => {});`
 				{ filePath: "boop/file-2.txt", content: "Content of file-2" },
 			];
 			writeAssets(assets);
-			const bodies: AssetManifest[] = [];
+			const bodies: ProdAssetManifest[] = [];
 			await mockAUSRequest(bodies);
 			// skips asset uploading since empty buckets returned
 			mockSubDomainRequest();
@@ -4548,7 +4549,7 @@ addEventListener('fetch', event => {});`
 			writeWranglerToml({
 				experimental_assets: { directory: "assets" },
 			});
-			const bodies: AssetManifest[] = [];
+			const bodies: ProdAssetManifest[] = [];
 			await mockAUSRequest(bodies);
 			// skips asset uploading since empty buckets returned
 			mockSubDomainRequest();
@@ -11711,9 +11712,9 @@ function mockPostQueueHTTPConsumer(
 	return requests;
 }
 
-const mockAUSRequest = async (bodies?: AssetManifest[]) => {
+const mockAUSRequest = async (bodies?: ProdAssetManifest[]) => {
 	msw.use(
-		http.post<never, AssetManifest>(
+		http.post<never, ProdAssetManifest>(
 			`*/accounts/some-account-id/workers/scripts/test-name/assets-upload-session`,
 			async ({ request }) => {
 				bodies?.push(await request.json());

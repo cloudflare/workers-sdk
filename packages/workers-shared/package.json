@@ -34,8 +34,12 @@
 		"@cloudflare/eslint-config-worker": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-types": "^4.20240806.0",
+		"@types/mime": "^3.0.4",
+		"blake3-wasm": "^2.1.5",
 		"concurrently": "^8.2.2",
 		"esbuild": "0.17.19",
+		"mime": "^3.0.0",
+		"pretty-bytes": "^6.0.0",
 		"rimraf": "^6.0.1",
 		"typescript": "^5.5.4"
 	},
