@@ -5,7 +5,9 @@ interface Env {
 	__STATIC_ASSETS_REVERSE_MAP: ArrayBuffer;
 }
 
-type AssetReverseMap = { [pathHash: string]: string }; //map to actual filepath
+type AssetReverseMap = {
+	[pathHash: string]: { filePath: string; contentType: string };
+}; //map to actual filepath
 
 export default <ExportedHandler<Env>>{
 	async fetch(request, env) {
@@ -20,9 +22,13 @@ export default <ExportedHandler<Env>>{
 			decoder.decode(env.__STATIC_ASSETS_REVERSE_MAP)
 		);
 
-		// don't decode pathname because we encode the filepath before hashing
+		// don't uri decode pathname, because we encode the filepath before hashing
 		const key = new URL(request.url).pathname.substring(1);
-		const filePath = reverseMap[key] ?? "";
+
+		const entry = reverseMap[key] ?? {};
+		const filePath = entry["filePath"] ?? "";
+		// falls back to application/octet-stream
+		// const contentType = entry["contentType"];
 
 		const blobsService = env[SharedBindings.MAYBE_SERVICE_BLOBS];
 		if (filePath === "" || filePath === "/") {

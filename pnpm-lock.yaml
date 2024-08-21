@@ -1033,6 +1033,9 @@ importers:
       '@types/http-cache-semantics':
         specifier: ^4.0.1
         version: 4.0.1
+      '@types/mime':
+        specifier: ^3.0.4
+        version: 3.0.4
       '@types/node':
         specifier: 20.8.3
         version: 20.8.3
@@ -1096,6 +1099,9 @@ importers:
       kleur:
         specifier: ^4.1.5
         version: 4.1.5
+      mime:
+        specifier: ^3.0.0
+        version: 3.0.0
       pretty-bytes:
         specifier: ^6.0.0
         version: 6.0.0

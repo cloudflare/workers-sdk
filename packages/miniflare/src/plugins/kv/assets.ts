@@ -1,6 +1,7 @@
 import crypto from "crypto";
 import fs from "fs/promises";
 import path from "path";
+import { getType } from "mime";
 import { KVOptionsSchema } from "miniflare";
 import prettyBytes from "pretty-bytes";
 import SCRIPT_KV_ASSETS from "worker:kv/assets";
@@ -243,7 +244,9 @@ const encodeManifest = (manifest: Uint8Array[]) => {
  * 	This is available to the FAKE_KV_NAMESPACE service (assets.worker.ts) as a binding.
  */
 
-type AssetReverseMap = { [pathHash: string]: string }; //map to actual filepath
+type AssetReverseMap = {
+	[pathHash: string]: { filePath: string; contentType: string };
+};
 
 const createReverseMap = async (dir: string) => {
 	const files = await fs.readdir(dir, { recursive: true });
@@ -260,7 +263,10 @@ const createReverseMap = async (dir: string) => {
 				const pathHash = bytesToHex(
 					await hashPath(encodeFilePath(relativeFilepath))
 				);
-				assetsReverseMap[pathHash] = relativeFilepath;
+				assetsReverseMap[pathHash] = {
+					filePath: relativeFilepath,
+					contentType: getType(filepath) ?? "application/octet-stream",
+				};
 			}
 		})
 	);
