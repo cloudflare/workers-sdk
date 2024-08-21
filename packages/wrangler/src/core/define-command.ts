@@ -12,12 +12,21 @@ import type {
 	PositionalOptions,
 } from "yargs";
 
-export type CommandDefinition = Input<BasedNamedArgs, boolean>;
+export type Command = `wrangler ${string}`;
+export type Metadata = {
+	description: string;
+	status: "experimental" | "alpha" | "private-beta" | "open-beta" | "stable";
+	statusMessage?: string;
+	deprecated?: boolean;
+	deprecatedMessage?: string;
+	hidden?: boolean;
+	owner: Teams;
+};
 
-export type YargsOptionSubset = PositionalOptions & Pick<Options, "hidden">;
-export type BasedNamedArgs = { [key: string]: YargsOptionSubset }; // TODO(consider): refining value to subset of Options type
+export type ArgDefinition = PositionalOptions & Pick<Options, "hidden">;
+export type BaseNamedArgDefinitions = { [key: string]: ArgDefinition };
 type StringKeyOf<T> = Extract<keyof T, string>;
-export type HandlerArgs<Args extends BasedNamedArgs> = OnlyCamelCase<
+export type HandlerArgs<Args extends BaseNamedArgDefinitions> = OnlyCamelCase<
 	ArgumentsCamelCase<
 		CommonYargsOptions & InferredOptionTypes<Args> & Alias<Args>
 	>
@@ -53,34 +62,26 @@ export type HandlerContext<RequireConfig extends boolean> = {
 	// TODO: accountId
 };
 
-type Input<
-	NamedArgs extends BasedNamedArgs,
+export type CommandDefinition<
+	NamedArgs extends BaseNamedArgDefinitions = BaseNamedArgDefinitions,
 	RequireConfig extends boolean = boolean,
 > = {
 	/**
 	 * The full command as it would be written by the user.
 	 */
-	command: `wrangler ${string}`;
+	command: Command;
 
 	/**
 	 * Descriptive information about the command which does not affect behaviour.
 	 * This is used for the CLI --help and subcommand --help output.
 	 * This should be used as the source-of-truth for status and ownership.
 	 */
-	metadata: {
-		description: string;
-		status: "exprimental" | "alpha" | "private-beta" | "open-beta" | "stable";
-		statusMessage?: string;
-		deprecated?: boolean;
-		deprecatedMessage?: string;
-		hidden?: boolean;
-		owner: Teams;
-	};
+	metadata: Metadata;
 	/**
 	 * Controls shared behaviour across all commands.
 	 * This will allow wrangler commands to remain consistent and only diverge intentionally.
 	 */
-	behaviour: {
+	behaviour?: {
 		/**
 		 * If true, throw error if a config file cannot be found.
 		 */
@@ -131,21 +132,37 @@ type Input<
 	) => void | Promise<void>;
 };
 
-export const COMMAND_DEFINITIONS: CommandDefinition[] = [];
+export const COMMAND_DEFINITIONS: Array<
+	CommandDefinition | NamespaceDefinition | AliasDefinition
+> = [];
 
 export function defineCommand<
-	NamedArgs extends BasedNamedArgs,
+	NamedArgs extends BaseNamedArgDefinitions,
 	RequireConfig extends boolean,
->(input: Input<NamedArgs, RequireConfig>) {
-	COMMAND_DEFINITIONS.push(input);
+>(definition: CommandDefinition<NamedArgs, RequireConfig>) {
+	COMMAND_DEFINITIONS.push(definition as unknown as CommandDefinition);
 
 	return {
-		input,
+		definition,
 		get args(): HandlerArgs<NamedArgs> {
 			throw new Error();
 		},
 	};
 }
 
-// TODO: defineCommandAlias
-// TODO: defineCommandGroup
+export type NamespaceDefinition = {
+	command: Command;
+	metadata: Metadata;
+};
+export function defineNamespace(definition: NamespaceDefinition) {
+	COMMAND_DEFINITIONS.push(definition);
+}
+
+export type AliasDefinition = {
+	command: Command;
+	aliasOf: Command;
+	metadata?: Partial<Metadata>;
+};
+export function defineAlias(definition: AliasDefinition) {
+	COMMAND_DEFINITIONS.push(definition);
+}
