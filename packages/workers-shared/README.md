@@ -10,7 +10,7 @@ For more details please refer to the dedicated README file.
 
 ## `router-worker`
 
-Router worker.
+Router Worker.
 
 For more details please refer to the dedicated README file.
 

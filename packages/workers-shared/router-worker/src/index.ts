@@ -9,11 +9,13 @@ export default {
 		const result = await env.ASSET_SERVER.fetch(request);
 		if (!result.ok) {
 			if (result.status === 404) {
-				await env.USER_WORKER.fetch(request);
+				return await env.USER_WORKER.fetch(request);
 			}
+			// return failed response on non-404 errors
 			return new Response(`Failed to fetch content: ${result.statusText}`, {
 				status: result.status,
 			});
 		}
+		return result;
 	},
 };
