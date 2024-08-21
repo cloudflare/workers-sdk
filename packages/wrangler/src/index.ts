@@ -619,7 +619,7 @@ export function createCLIParser(argv: string[]) {
 
 	// workflows
 	wrangler.command("workflows", false, (workflowArgs) => {
-		return workflows(workflowArgs.command(subHelp));
+		return workflows(workflowArgs.command(subHelp), subHelp);
 	});
 
 	/******************** CMD GROUP ***********************/

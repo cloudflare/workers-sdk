@@ -1,4 +1,4 @@
-import { type CommonYargsArgv } from "../yargs-types";
+import { type CommonYargsArgv, type SubHelp } from "../yargs-types";
 import {
 	workflowDeleteHandler,
 	workflowDeleteOptions,
@@ -17,7 +17,7 @@ import {
 const workflowsEpilog =
 	"🚨 'wrangler workflows ...' commands are currently in private beta. If your account isn't authorized, your commands will fail.";
 
-export const workflows = (yargs: CommonYargsArgv) => {
+export const workflows = (yargs: CommonYargsArgv, subHelp: SubHelp) => {
 	return yargs
 		.command(
 			"list",
@@ -46,7 +46,9 @@ export const workflows = (yargs: CommonYargsArgv) => {
 		.command(
 			"instances",
 			"Instance related commands (list, describe, terminate...)",
-			instances
+			(instancesYargs) => {
+				return instances(instancesYargs).command(subHelp);
+			}
 		)
 		.epilog(workflowsEpilog);
 };
