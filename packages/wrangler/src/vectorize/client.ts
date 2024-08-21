@@ -141,7 +141,9 @@ export async function queryIndex(
 		`/accounts/${accountId}/vectorize/v2/indexes/${indexName}/query`,
 		{
 			method: "POST",
-			headers: { "Content-Type": "application/json" },
+			headers: {
+				"content-type": jsonContentType,
+			},
 			body: JSON.stringify({
 				...options,
 				vector: Array.isArray(vector) ? vector : Array.from(vector),
@@ -161,6 +163,9 @@ export async function getByIds(
 		`/accounts/${accountId}/vectorize/v2/indexes/${indexName}/get_by_ids`,
 		{
 			method: "POST",
+			headers: {
+				"content-type": jsonContentType,
+			},
 			body: JSON.stringify(ids),
 		}
 	);
@@ -177,6 +182,9 @@ export async function deleteByIds(
 		`/accounts/${accountId}/vectorize/v2/indexes/${indexName}/delete_by_ids`,
 		{
 			method: "POST",
+			headers: {
+				"content-type": jsonContentType,
+			},
 			body: JSON.stringify(ids),
 		}
 	);
@@ -207,6 +215,9 @@ export async function createMetadataIndex(
 		`/accounts/${accountId}/vectorize/v2/indexes/${indexName}/metadata_index/create`,
 		{
 			method: "POST",
+			headers: {
+				"content-type": jsonContentType,
+			},
 			body: JSON.stringify(payload),
 		}
 	);
@@ -237,6 +248,9 @@ export async function deleteMetadataIndex(
 		`/accounts/${accountId}/vectorize/v2/indexes/${indexName}/metadata_index/delete`,
 		{
 			method: "POST",
+			headers: {
+				"content-type": jsonContentType,
+			},
 			body: JSON.stringify(payload),
 		}
 	);
