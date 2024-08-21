@@ -78,83 +78,7 @@ export function buildWorkerFromFunctions({
 		alias: {},
 		doBindings: [], // Pages functions don't support internal Durable Objects
 		external,
-		plugins: [
-			buildNotifierPlugin(onEnd),
-			{
-				name: "Assets",
-				setup(pluginBuild) {
-					const identifiers = new Map<string, string>();
-
-					pluginBuild.onResolve({ filter: /^assets:/ }, async (args) => {
-						const directory = resolve(
-							args.resolveDir,
-							args.path.slice("assets:".length)
-						);
-
-						const exists = await access(directory)
-							.then(() => true)
-							.catch(() => false);
-
-						const isDirectory =
-							exists && (await lstat(directory)).isDirectory();
-
-						if (!isDirectory) {
-							return {
-								errors: [
-									{
-										text: `'${directory}' does not exist or is not a directory.`,
-									},
-								],
-							};
-						}
-
-						// TODO: Consider hashing the contents rather than using a unique identifier every time?
-						identifiers.set(directory, nanoid());
-						if (!buildOutputDirectory) {
-							console.warn(
-								"You're attempting to import static assets as part of your Pages Functions, but have not specified a directory in which to put them. You must use 'wrangler pages dev <directory>' rather than 'wrangler pages dev -- <command>' to import static assets in Functions."
-							);
-						}
-						return { path: directory, namespace: "assets" };
-					});
-
-					pluginBuild.onLoad(
-						{ filter: /.*/, namespace: "assets" },
-						async (args) => {
-							const identifier = identifiers.get(args.path);
-
-							if (buildOutputDirectory) {
-								const staticAssetsOutputDirectory = join(
-									buildOutputDirectory,
-									"cdn-cgi",
-									"pages-plugins",
-									identifier as string
-								);
-								await rm(staticAssetsOutputDirectory, {
-									force: true,
-									recursive: true,
-								});
-								await cp(args.path, staticAssetsOutputDirectory, {
-									force: true,
-									recursive: true,
-								});
-
-								return {
-									// TODO: Watch args.path for changes and re-copy when updated
-									contents: `export const onRequest = ({ request, env, functionPath }) => {
-                    const url = new URL(request.url)
-                    const relativePathname = \`/\${url.pathname.replace(functionPath, "") || ""}\`.replace(/^\\/\\//, '/');
-                    url.pathname = '/cdn-cgi/pages-plugins/${identifier}' + relativePathname
-                    request = new Request(url.toString(), request)
-                    return env.ASSETS.fetch(request)
-                  }`,
-								};
-							}
-						}
-					);
-				},
-			},
-		],
+		plugins: [buildNotifierPlugin(onEnd), assetsPlugin(buildOutputDirectory)],
 		isOutfile: !outdir,
 		serveLegacyAssetsFromWorker: false,
 		checkFetch: local,
@@ -417,6 +341,82 @@ function blockWorkerJsImports(nodejsCompatMode: NodeJSCompatMode): Plugin {
 					1
 				);
 			});
+		},
+	};
+}
+
+function assetsPlugin(buildOutputDirectory: string | undefined): Plugin {
+	return {
+		name: "Assets",
+		setup(pluginBuild) {
+			const identifiers = new Map<string, string>();
+
+			pluginBuild.onResolve({ filter: /^assets:/ }, async (args) => {
+				const directory = resolve(
+					args.resolveDir,
+					args.path.slice("assets:".length)
+				);
+
+				const exists = await access(directory)
+					.then(() => true)
+					.catch(() => false);
+
+				const isDirectory = exists && (await lstat(directory)).isDirectory();
+
+				if (!isDirectory) {
+					return {
+						errors: [
+							{
+								text: `'${directory}' does not exist or is not a directory.`,
+							},
+						],
+					};
+				}
+
+				// TODO: Consider hashing the contents rather than using a unique identifier every time?
+				identifiers.set(directory, nanoid());
+				if (!buildOutputDirectory) {
+					console.warn(
+						"You're attempting to import static assets as part of your Pages Functions, but have not specified a directory in which to put them. You must use 'wrangler pages dev <directory>' rather than 'wrangler pages dev -- <command>' to import static assets in Functions."
+					);
+				}
+				return { path: directory, namespace: "assets" };
+			});
+
+			pluginBuild.onLoad(
+				{ filter: /.*/, namespace: "assets" },
+				async (args) => {
+					const identifier = identifiers.get(args.path);
+
+					if (buildOutputDirectory) {
+						const staticAssetsOutputDirectory = join(
+							buildOutputDirectory,
+							"cdn-cgi",
+							"pages-plugins",
+							identifier as string
+						);
+						await rm(staticAssetsOutputDirectory, {
+							force: true,
+							recursive: true,
+						});
+						await cp(args.path, staticAssetsOutputDirectory, {
+							force: true,
+							recursive: true,
+						});
+
+						return {
+							// TODO: Watch args.path for changes and re-copy when updated
+							contents: `export const onRequest = ({ request, env, functionPath }) => {
+								const url = new URL(request.url);
+								const relativePathname = \`/\${url.pathname.replace(functionPath, "") || ""}\`.replace(/^\\/\\//, '/');
+								url.pathname = '/cdn-cgi/pages-plugins/${identifier}' + relativePathname;
+								request = new Request(url.toString(), request);
+								return env.ASSETS.fetch(request);
+							}`,
+						};
+					}
+				}
+			);
 		},
 	};
 }
