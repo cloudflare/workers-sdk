@@ -4581,7 +4581,7 @@ addEventListener('fetch', event => {});`
 				{ filePath: "beep/file-5.txt", content: "Content of file-5" },
 				{
 					filePath: "beep/boop/beep/boop/file-6.txt",
-					content: "Content of file-1",
+					content: "Content of file-6",
 				},
 			];
 			writeAssets(assets);

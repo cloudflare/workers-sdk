@@ -2,6 +2,7 @@ import crypto from "crypto";
 import fs from "fs/promises";
 import path from "path";
 import { KVOptionsSchema } from "miniflare";
+import prettyBytes from "pretty-bytes";
 import SCRIPT_KV_ASSETS from "worker:kv/assets";
 import { z } from "zod";
 import { Service, Worker_Binding } from "../../runtime";
@@ -155,7 +156,17 @@ const walk = async (dir: string) => {
 				if (filestat.size > MAX_ASSET_SIZE) {
 					throw new Error(
 						`Asset too large.\n` +
-							`Cloudflare Workers supports assets with sizes of up to ${MAX_ASSET_SIZE}. We found a file ${filepath} with a size of ${filestat.size}.\n` +
+							`Cloudflare Workers supports assets with sizes of up to ${prettyBytes(
+								MAX_ASSET_SIZE,
+								{
+									binary: true,
+								}
+							)}. We found a file ${filepath} with a size of ${prettyBytes(
+								filestat.size,
+								{
+									binary: true,
+								}
+							)}.\n` +
 							`Ensure all assets in your assets directory "${dir}" conform with the Workers maximum size requirement.`
 					);
 				}
