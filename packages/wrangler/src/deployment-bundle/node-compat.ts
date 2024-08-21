@@ -78,6 +78,7 @@ export function getNodeCompatMode({
 	compatibility_flags,
 	node_compat,
 }: Pick<Config, "compatibility_flags" | "node_compat">) {
+	const legacy = node_compat === true;
 	const nodejsCompat = compatibility_flags.includes("nodejs_compat");
 	const nodejsCompatV2 = compatibility_flags.includes("nodejs_compat_v2");
 
@@ -86,14 +87,14 @@ export function getNodeCompatMode({
 		mode = "v2";
 	} else if (nodejsCompat) {
 		mode = "v1";
-	} else if (node_compat) {
+	} else if (legacy) {
 		mode = "legacy";
 	} else {
 		mode = null;
 	}
 
 	return {
-		legacy: node_compat === true,
+		legacy,
 		mode,
 		nodejsCompat,
 		nodejsCompatV2,
