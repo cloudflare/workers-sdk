@@ -1,3 +1,4 @@
+import { WorkerEntrypoint } from "cloudflare:workers";
 import { AssetsManifest } from "./assets-manifest";
 import {
 	InternalServerErrorResponse,
@@ -8,48 +9,38 @@ import {
 import { getAdditionalHeaders, getMergedHeaders } from "./utils/headers";
 import { getAssetWithMetadataFromKV } from "./utils/kv";
 
-export default {
-	async fetch(request: Request, env: Env) {
+export default class extends WorkerEntrypoint<Env> {
+	async fetch(request: Request) {
 		if (!request.method.match(/^(get)$/i)) {
 			return new MethodNotAllowedResponse();
 		}
 
 		try {
-			return this.handleRequest(request, env);
+			return this.handleRequest(request);
 		} catch (err) {
 			return new InternalServerErrorResponse(err);
 		}
-	},
+	}
 
-	async handleRequest(request: Request, env: Env) {
-		const {
-			// ASSETS_MANIFEST is a pipeline binding to an ArrayBuffer containing the
-			// binary-encoded site manifest
-			ASSETS_MANIFEST = new ArrayBuffer(0),
+	async hasResponseForRequest(request: Request) {
+		return !!(await this.getAssetEntry(request));
+	}
 
-			// ASSETS_KV_NAMESPACE is a pipeline binding to the KV namespace that the
-			// assets are in.
-			ASSETS_KV_NAMESPACE,
-		} = env;
-
-		const url = new URL(request.url);
-		let { pathname } = url;
-
-		const assetsManifest = new AssetsManifest(ASSETS_MANIFEST);
-
-		pathname = globalThis.decodeURIComponent(pathname);
-
-		const assetEntry = await assetsManifest.get(pathname);
+	async handleRequest(request: Request) {
+		const assetEntry = await this.getAssetEntry(request);
 		if (!assetEntry) {
-			return new NotFoundResponse("Not Found :(");
+			return new NotFoundResponse();
 		}
 
 		const assetResponse = await getAssetWithMetadataFromKV(
-			ASSETS_KV_NAMESPACE,
+			this.env.ASSETS_KV_NAMESPACE,
 			assetEntry
 		);
+		console.log(assetResponse);
 		if (!assetResponse || !assetResponse.value) {
-			return new NotFoundResponse("Not Found :(");
+			throw new Error(
+				`Requested asset ${assetEntry} exists in the asset manifest but not in the KV namespace.`
+			);
 		}
 
 		const { value: assetContent, metadata: assetMetadata } = assetResponse;
@@ -60,6 +51,16 @@ export default {
 		);
 		const headers = getMergedHeaders(request.headers, additionalHeaders);
 
-		return new OkResponse(assetContent, { headers, encodeBody: "automatic" });
-	},
-};
+		return new OkResponse(assetContent, { headers });
+	}
+
+	private async getAssetEntry(request: Request) {
+		const url = new URL(request.url);
+		let { pathname } = url;
+
+		const assetsManifest = new AssetsManifest(this.env.ASSETS_MANIFEST);
+		pathname = globalThis.decodeURIComponent(pathname);
+
+		return await assetsManifest.get(pathname);
+	}
+}

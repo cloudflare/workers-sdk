@@ -1,32 +1,13 @@
 type Environment = "production" | "local";
 
 type Env = {
+	// ASSETS_MANIFEST is a pipeline binding to an ArrayBuffer containing the
+	// binary-encoded site manifest
 	ASSETS_MANIFEST: ArrayBuffer;
+
+	// ASSETS_KV_NAMESPACE is a pipeline binding to the KV namespace that the
+	// assets are in.
 	ASSETS_KV_NAMESPACE: KVNamespace;
+
 	ENVIRONMENT: Environment;
 };
-
-type BodyEncoding = "manual" | "automatic";
-
-interface ResponseInit {
-	encodeBody?: BodyEncoding;
-}
-
-interface KVNamespace {
-	getWithMetadata<Metadata = unknown>(
-		key: string,
-		type: "stream"
-	): KVValueWithMetadata<ReadableStream, Metadata>;
-	getWithMetadata<Metadata = unknown>(
-		key: string,
-		options?: {
-			type: "stream";
-			cacheTtl?: number;
-		}
-	): KVValueWithMetadata<ReadableStream, Metadata>;
-}
-
-type KVValueWithMetadata<Value, Metadata> = Promise<{
-	value: Value | null;
-	metadata: Metadata | null;
-}>;

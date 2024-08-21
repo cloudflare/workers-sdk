@@ -32,7 +32,20 @@ describe("[Workers + Assets] `wrangler dev`", () => {
 	it("should not resolve '/' to '/index.html' ", async ({ expect }) => {
 		let response = await fetch(`http://${ip}:${port}/`);
 		let text = await response.text();
-		expect(response.status).toBe(404);
-		expect(text).toContain("Not Found");
+		expect(response.status).toBe(500);
+		expect(text).toContain(
+			"Requested asset &#x2F; exists in the asset manifest but not in the KV namespace."
+		);
+	});
+
+	it("should throw an error if asset is found in the manifest but not in KV ", async ({
+		expect,
+	}) => {
+		let response = await fetch(`http://${ip}:${port}/test.html`);
+		let text = await response.text();
+		expect(response.status).toBe(500);
+		expect(text).toContain(
+			"Requested asset &#x2F;test.html exists in the asset manifest but not in the KV namespace."
+		);
 	});
 });

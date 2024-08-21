@@ -18,7 +18,7 @@ export async function getAssetWithMetadataFromKV(
 		} catch (err) {
 			if (attempts >= retries) {
 				throw new Error(
-					`Requested asset ${assetKey} could not be found in KV namespace.`
+					`Requested asset ${assetKey} could not be fetched from KV namespace.`
 				);
 			}
 
