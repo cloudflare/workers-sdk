@@ -5,11 +5,13 @@ import { mockConsoleMethods } from "../helpers/mock-console";
 import { useMockIsTTY } from "../helpers/mock-istty";
 import { mockSubDomainRequest } from "../helpers/mock-workers-subdomain";
 import { msw } from "../helpers/msw";
+import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 import { writeWorkerSource } from "../helpers/write-worker-source";
 import { writeWranglerToml } from "../helpers/write-wrangler-toml";
 
 describe("versions upload", () => {
+	runInTempDir();
 	mockAccountId();
 	mockApiToken();
 	const { setIsTTY } = useMockIsTTY();
