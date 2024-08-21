@@ -2,4 +2,4 @@
 "wrangler": patch
 ---
 
-fix(6516): Add content-type header to Vectorize POST operations
+fix: Add content-type header to Vectorize POST operations; #6516/VS-269

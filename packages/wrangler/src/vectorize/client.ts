@@ -12,6 +12,7 @@ import type {
 	VectorizeMetadataIndexPropertyName,
 	VectorizeQueryOptions,
 	VectorizeVector,
+	VectorizeVectorIds,
 	VectorizeVectorMutation,
 } from "./types";
 import type { FormData } from "undici";
@@ -155,7 +156,7 @@ export async function queryIndex(
 export async function getByIds(
 	config: Config,
 	indexName: string,
-	ids: Array<string>
+	ids: VectorizeVectorIds
 ): Promise<VectorizeVector[]> {
 	const accountId = await requireAuth(config);
 
@@ -174,7 +175,7 @@ export async function getByIds(
 export async function deleteByIds(
 	config: Config,
 	indexName: string,
-	ids: Array<string>
+	ids: VectorizeVectorIds
 ): Promise<VectorizeAsyncMutation> {
 	const accountId = await requireAuth(config);
 
