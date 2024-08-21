@@ -4,5 +4,7 @@ process.env.foo = "bar";
 globalThis.process = process;
 
 export const onRequest = () => {
-	return new Response(`Pages functions, process: ${Object.keys(process)}`);
+	return new Response(
+		`Pages functions, process: ${Object.keys(process).sort()}`
+	);
 };

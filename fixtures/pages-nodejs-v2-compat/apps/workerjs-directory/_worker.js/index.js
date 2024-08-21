@@ -6,7 +6,7 @@ globalThis.process = process;
 export default {
 	fetch() {
 		return new Response(
-			`_worker.js directory, process: ${Object.keys(process)}`
+			`_worker.js directory, process: ${Object.keys(process).sort()}`
 		);
 	},
 };

@@ -127,14 +127,13 @@ function getGlobalInject(globalInject: string | string[]) {
 			importStatement: `import globalVar from "${globalInject}";`,
 			exportName: "globalVar",
 		};
-	} else {
-		// the mapping is a 2 item tuple, indicating a named export, made up of a module specifier and an export name.
-		const [moduleSpecifier, exportName] = globalInject;
-		return {
-			importStatement: `import { ${exportName} } from "${moduleSpecifier}";`,
-			exportName,
-		};
 	}
+	// the mapping is a 2 item tuple, indicating a named export, made up of a module specifier and an export name.
+	const [moduleSpecifier, exportName] = globalInject;
+	return {
+		importStatement: `import { ${exportName} } from "${moduleSpecifier}";`,
+		exportName,
+	};
 }
 
 /**

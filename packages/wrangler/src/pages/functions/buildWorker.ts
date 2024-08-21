@@ -407,11 +407,11 @@ function assetsPlugin(buildOutputDirectory: string | undefined): Plugin {
 						return {
 							// TODO: Watch args.path for changes and re-copy when updated
 							contents: `export const onRequest = ({ request, env, functionPath }) => {
-								const url = new URL(request.url)
+								const url = new URL(request.url);
 								const relativePathname = \`/\${url.pathname.replace(functionPath, "") || ""}\`.replace(/^\\/\\//, '/');
-								url.pathname = '/cdn-cgi/pages-plugins/${identifier}' + relativePathname
-								request = new Request(url.toString(), request)
-								return env.ASSETS.fetch(request)
+								url.pathname = '/cdn-cgi/pages-plugins/${identifier}' + relativePathname;
+								request = new Request(url.toString(), request);
+								return env.ASSETS.fetch(request);
 							}`,
 						};
 					}

@@ -1,5 +1,5 @@
 {
-	"name": "pages-nodejs_v2-compat",
+	"name": "pages-nodejs-v2-compat",
 	"private": true,
 	"sideEffects": false,
 	"scripts": {
