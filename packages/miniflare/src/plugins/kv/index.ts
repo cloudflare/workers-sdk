@@ -41,7 +41,6 @@ export const KVOptionsSchema = z.object({
 	assetsPath: PathSchema.optional(),
 	assetsKVBindingName: z.string().optional(),
 	assetsManifestBindingName: z.string().optional(),
-	assetsReverseMapBindingName: z.string().optional(),
 
 	// Workers Sites
 	sitePath: PathSchema.optional(),

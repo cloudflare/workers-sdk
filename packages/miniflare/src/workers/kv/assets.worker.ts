@@ -2,7 +2,7 @@ import { SharedBindings } from "miniflare:shared";
 
 interface Env {
 	[SharedBindings.MAYBE_SERVICE_BLOBS]: Fetcher;
-	__STATIC_ASSETS_REVERSE_MAP: ArrayBuffer;
+	__STATIC_ASSETS_REVERSE_MAP: AssetReverseMap;
 }
 
 type AssetReverseMap = {
@@ -17,26 +17,16 @@ export default <ExportedHandler<Env>>{
 			return new Response(message, { status: 405, statusText: message });
 		}
 
-		const decoder = new TextDecoder();
-		const reverseMap: AssetReverseMap = JSON.parse(
-			decoder.decode(env.__STATIC_ASSETS_REVERSE_MAP)
-		);
-
 		// don't uri decode pathname, because we encode the filepath before hashing
-		const key = new URL(request.url).pathname.substring(1);
+		const pathHash = new URL(request.url).pathname.substring(1);
 
-		const entry = reverseMap[key] ?? {};
-		const filePath = entry["filePath"] ?? "";
-		// falls back to application/octet-stream
-		// const contentType = entry["contentType"];
-
-		const blobsService = env[SharedBindings.MAYBE_SERVICE_BLOBS];
-		if (filePath === "" || filePath === "/") {
-			return new Response("Not Found", {
-				status: 404,
-			});
-		} else {
-			return blobsService.fetch(new URL(filePath, "http://placeholder"));
+		const entry = env.__STATIC_ASSETS_REVERSE_MAP[pathHash];
+		if (entry === undefined) {
+			return new Response("Not Found", { status: 404 });
 		}
+		// eslint-disable-next-line @typescript-eslint/no-unused-vars
+		const { filePath, contentType } = entry;
+		const blobsService = env[SharedBindings.MAYBE_SERVICE_BLOBS];
+		return blobsService.fetch(new URL(filePath, "http://placeholder"));
 	},
 };

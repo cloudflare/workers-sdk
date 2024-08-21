@@ -29,8 +29,6 @@ export const buildAssetsManifest = async (dir: string) => {
 	const manifest = await walk(dir);
 	const sortedAssetManifest = sortManifest(manifest);
 	const encodedAssetManifest = encodeManifest(sortedAssetManifest);
-	// to indicate it is in dev:
-	encodedAssetManifest.set([1], 0);
 	return encodedAssetManifest;
 };
 
@@ -101,7 +99,7 @@ export async function getAssetsServices(
 				},
 				{
 					name: "__STATIC_ASSETS_REVERSE_MAP",
-					data: assetsReverseMap,
+					json: assetsReverseMap,
 				},
 			],
 		},
@@ -109,16 +107,17 @@ export async function getAssetsServices(
 	return [storageService, namespaceService];
 }
 
-/**
- *  ASSET MANIFEST
- *  1. Traverse the asset directory to create an asset manifest.
- * 		(In prod the manifest contains a pathHash and a contentHash. The
- * 		contentHash is used for uploading and as the keys for the KV namespace
- * 		where the assets are stored. Uploading is irrelevant in dev, so for
- * 		performance reasons, the pathHash is reused for the "contentHash".)
- *  2. Sort and binary encode the asset manifest
- * 	This is available to asset service worker as a binding.
- */
+// ASSET MANIFEST
+//
+// 1. Traverse the asset directory to create an asset manifest.
+// (In prod the manifest contains a pathHash and a contentHash. The
+// contentHash is used for uploading and as the keys for the KV namespace
+// where the assets are stored. Uploading is irrelevant in dev, so for
+// performance reasons, the pathHash is reused for the "contentHash".)
+//
+// 2. Sort and binary encode the asset manifest
+// This is available to asset service worker as a binding.
+
 const MAX_ASSET_COUNT = 20_000;
 const MAX_ASSET_SIZE = 25 * 1024 * 1024;
 const MANIFEST_HEADER_SIZE = 20;
@@ -143,6 +142,7 @@ const walk = async (dir: string) => {
 			const relativeFilepath = path.relative(dir, filepath);
 			const filestat = await fs.stat(filepath);
 
+			// TODO: decide whether to follow symbolic links
 			if (filestat.isSymbolicLink() || filestat.isDirectory()) {
 				return;
 			} else {
@@ -234,15 +234,14 @@ const encodeManifest = (manifest: Uint8Array[]) => {
 	return assetManifestBytes;
 };
 
-/**
- *  ASSET REVERSE MAP
- * 	In prod, the contentHash is used as the key for the KV store that holds the assets.
- *  ASW will hash the path of an incoming request, look for that pathHash in the stored manifest,
- * 	and get the corresponding contentHash to use as the KV key.
- *  In dev, we fake out this KV store and just get the assets from disk. However we still need
- *  to map a given "contentHash" to the filePath. This is what the ASSET REVERSE MAP is for.
- * 	This is available to the FAKE_KV_NAMESPACE service (assets.worker.ts) as a binding.
- */
+// ASSET REVERSE MAP
+//
+// In prod, the contentHash is used as the key for the KV store that holds the assets.
+// ASW will hash the path of an incoming request, look for that pathHash in the stored manifest,
+// and get the corresponding contentHash to use as the KV key.
+// In dev, we fake out this KV store and just get the assets from disk. However we still need
+// to map a given "contentHash" to the filePath. This is what the ASSET REVERSE MAP is for.
+// This is available to the FAKE_KV_NAMESPACE service (assets.worker.ts) as a binding.
 
 type AssetReverseMap = {
 	[pathHash: string]: { filePath: string; contentType: string };
@@ -270,9 +269,7 @@ const createReverseMap = async (dir: string) => {
 			}
 		})
 	);
-	const encoder = new TextEncoder();
-	const encodedReverseMap = encoder.encode(JSON.stringify(assetsReverseMap));
-	return encodedReverseMap;
+	return JSON.stringify(assetsReverseMap);
 };
 
 const bytesToHex = (buffer: ArrayBufferLike) => {
