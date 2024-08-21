@@ -121,6 +121,9 @@ export function getNodeCompatMode({
 /**
  * The nodejs_compat_v2 flag currently requires an `experimental:` prefix within Wrangler,
  * but this needs to be stripped before sending to workerd, since that doesn't know about that.
+ *
+ * TODO: Remove this function when we graduate nodejs_v2 to non-experimental.
+ * See https://jira.cfdata.org/browse/DEVDASH-218
  */
 export function stripExperimentalPrefixes(
 	compatFlags: string[] | undefined
