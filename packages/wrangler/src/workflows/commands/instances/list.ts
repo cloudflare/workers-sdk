@@ -11,11 +11,17 @@ import type {
 import type { Instance } from "../../types";
 
 export const instancesListOptions = (args: CommonYargsArgv) => {
-	return args.positional("name", {
-		describe: "Name of the workflow",
-		type: "string",
-		demandOption: true,
-	});
+	return args
+		.positional("name", {
+			describe: "Name of the workflow",
+			type: "string",
+			demandOption: true,
+		})
+		.option("reverse", {
+			describe: "Reverse order of the instances table",
+			type: "boolean",
+			default: false,
+		});
 };
 
 type HandlerOptions = StrictYargsOptionsToInterface<
@@ -39,7 +45,11 @@ export const instancesListHandler = async (args: HandlerOptions) => {
 	}
 
 	const prettierInstances = instances
-		.sort((a, b) => b.modified_on.localeCompare(a.modified_on))
+		.sort((a, b) =>
+			args.reverse
+				? a.modified_on.localeCompare(b.modified_on)
+				: b.modified_on.localeCompare(a.modified_on)
+		)
 		.map((instance) => ({
 			Id: instance.id,
 			Version: instance.version_id,
