@@ -1,7 +1,7 @@
 name = "nodejs-hybrid-app"
 main = "src/index.ts"
 compatibility_date = "2024-06-03"
-compatibility_flags = ["experimental:nodejs_compat_v2"]
+compatibility_flags = ["nodejs_compat_v2"]
 
 [vars]
 # These DB connection values are to a public database containing information about

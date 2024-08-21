@@ -7,7 +7,6 @@ import { useErrorHandler } from "react-error-boundary";
 import { helpIfErrorIsSizeOrScriptStartup } from "../deploy/deploy";
 import { printBundleSize } from "../deployment-bundle/bundle-reporter";
 import { getBundleType } from "../deployment-bundle/bundle-type";
-import { stripExperimentalPrefixes } from "../deployment-bundle/node-compat";
 import { withSourceURLs } from "../deployment-bundle/source-url";
 import { getInferredHost } from "../dev";
 import { UserError } from "../errors";
@@ -669,7 +668,7 @@ export async function createRemoteWorkerInit(props: {
 		},
 		migrations: undefined, // no migrations in dev
 		compatibility_date: props.compatibilityDate,
-		compatibility_flags: stripExperimentalPrefixes(props.compatibilityFlags),
+		compatibility_flags: props.compatibilityFlags,
 		keepVars: true,
 		keepSecrets: true,
 		logpush: false,
