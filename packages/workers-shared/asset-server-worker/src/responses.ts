@@ -29,13 +29,7 @@ export class MethodNotAllowedResponse extends Response {
 
 export class InternalServerErrorResponse extends Response {
 	constructor(err: Error, init?: ResponseInit) {
-		let body: string | undefined = undefined;
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		if ((globalThis as any).DEBUG) {
-			body = `${err.message}\n\n${err.stack}`;
-		}
-
-		super(body, {
+		super(undefined, {
 			...init,
 			status: 500,
 		});

@@ -9,7 +9,7 @@ export async function getAssetWithMetadataFromKV(
 ) {
 	let attempts = 0;
 
-	while (attempts < retries) {
+	while (attempts <= retries) {
 		try {
 			return await assetsKVNamespace.getWithMetadata<AssetMetadata>(assetKey, {
 				type: "stream",

@@ -11,7 +11,7 @@ import { getAssetWithMetadataFromKV } from "./utils/kv";
 
 export default class extends WorkerEntrypoint<Env> {
 	async fetch(request: Request) {
-		if (!request.method.match(/^(get)$/i)) {
+		if (request.method.toLowerCase() !== "get") {
 			return new MethodNotAllowedResponse();
 		}
 
@@ -20,10 +20,6 @@ export default class extends WorkerEntrypoint<Env> {
 		} catch (err) {
 			return new InternalServerErrorResponse(err);
 		}
-	}
-
-	async hasResponseForRequest(request: Request) {
-		return !!(await this.getAssetEntry(request));
 	}
 
 	async handleRequest(request: Request) {
@@ -36,7 +32,7 @@ export default class extends WorkerEntrypoint<Env> {
 			this.env.ASSETS_KV_NAMESPACE,
 			assetEntry
 		);
-		console.log(assetResponse);
+
 		if (!assetResponse || !assetResponse.value) {
 			throw new Error(
 				`Requested asset ${assetEntry} exists in the asset manifest but not in the KV namespace.`

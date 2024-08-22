@@ -22,15 +22,17 @@
 		"dist"
 	],
 	"scripts": {
-		"build": "pnpm run clean && pnpm run bundle:asset-server:prod && pnpm run bundle:router:prod",
-		"bundle:asset-server": "esbuild asset-server-worker/src/index.ts --format=esm --bundle --outfile=dist/asset-server-worker.mjs --sourcemap=external --external:cloudflare:*",
-		"bundle:asset-server:prod": "pnpm run bundle:asset-server --minify",
-		"bundle:router": "esbuild router-worker/src/index.ts --format=esm --bundle --outfile=dist/router-worker.mjs --sourcemap=external",
-		"bundle:router:prod": "pnpm run bundle:router --minify",
+		"build": "pnpm run clean && pnpm run bundle:asset-worker:prod && pnpm run bundle:router-worker:prod",
+		"bundle:asset-worker": "esbuild asset-server-worker/src/index.ts --format=esm --bundle --outfile=dist/asset-server-worker.mjs --sourcemap=external --external:cloudflare:*",
+		"bundle:asset-worker:prod": "pnpm run bundle:asset-worker --minify",
+		"bundle:router-worker": "esbuild router-worker/src/index.ts --format=esm --bundle --outfile=dist/router-worker.mjs --sourcemap=external",
+		"bundle:router-worker:prod": "pnpm run bundle:router-worker --minify",
 		"check:lint": "eslint . --max-warnings=0",
 		"check:type": "tsc",
 		"clean": "rimraf dist",
-		"dev": "pnpm run clean && concurrently -n bundle:asset-server,bundle:router -c blue,magenta \"pnpm run bundle:asset-server --watch\" \"pnpm run bundle:router --watch\""
+		"dev": "pnpm run clean && concurrently -n bundle:asset-worker,bundle:router-worker -c blue,magenta \"pnpm run bundle:asset-worker --watch\" \"pnpm run bundle:router-worker --watch\"",
+		"test": "vitest",
+		"test:ci": "pnpm run test"
 	},
 	"devDependencies": {
 		"@cloudflare/eslint-config-worker": "workspace:*",
@@ -39,7 +41,8 @@
 		"concurrently": "^8.2.2",
 		"esbuild": "0.17.19",
 		"rimraf": "^6.0.1",
-		"typescript": "^5.5.4"
+		"typescript": "^5.5.4",
+		"vitest": "2.0.5"
 	},
 	"engines": {
 		"node": ">=16.7.0"

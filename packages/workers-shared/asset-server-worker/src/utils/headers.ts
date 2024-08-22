@@ -39,7 +39,7 @@ export function getAdditionalHeaders(
 		"Content-Type": contentType,
 		"Referrer-Policy": "strict-origin-when-cross-origin",
 		"X-Content-Type-Options": "nosniff",
-		ETag: `"${assetKey}"`,
+		ETag: `${assetKey}`,
 	});
 
 	if (isCacheable(request)) {
