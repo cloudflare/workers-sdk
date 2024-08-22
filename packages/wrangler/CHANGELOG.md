@@ -1,5 +1,17 @@
 # wrangler
 
+## 3.72.2
+
+### Patch Changes
+
+- [#6511](https://github.com/cloudflare/workers-sdk/pull/6511) [`e75c581`](https://github.com/cloudflare/workers-sdk/commit/e75c5812f54e8660f3880e240cdb0051fc01674f) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: allow Pages projects to use `experimental:nodejs_compat_v2" flag
+
+  Fixes #6288
+
+- Updated dependencies [[`b0e2f0b`](https://github.com/cloudflare/workers-sdk/commit/b0e2f0bfc67bee9c43a64ca12447e778758c27cd), [`f5bde66`](https://github.com/cloudflare/workers-sdk/commit/f5bde66914d24c59da35e051c5343c8f0554f782)]:
+  - miniflare@3.20240821.0
+  - @cloudflare/workers-shared@0.3.0
+
 ## 3.72.1
 
 ### Patch Changes
