@@ -4,7 +4,7 @@ import { readConfig } from "../config";
 import { FatalError, UserError } from "../errors";
 import { logger } from "../logger";
 import { printWranglerBanner } from "../update-check";
-import { CommonYargsOptions } from "../yargs-types";
+import { CommonYargsArgv, CommonYargsOptions } from "../yargs-types";
 import {
 	BaseNamedArgDefinitions,
 	CommandDefinition,
@@ -24,7 +24,8 @@ export function wrapCommandDefinition(
 	let deprecatedMessage = def.metadata.deprecated
 		? def.metadata.deprecatedMessage ?? defaultDeprecatedMessage
 		: undefined;
-	let defineArgs: undefined | CommandBuilder<CommonYargsOptions> = undefined;
+	let defineArgs: undefined | ((yargs: CommonYargsArgv) => CommonYargsArgv) =
+		undefined;
 	let handler:
 		| undefined
 		| ((args: HandlerArgs<BaseNamedArgDefinitions>) => Promise<void>) =
@@ -100,7 +101,7 @@ export function wrapCommandDefinition(
 
 	return {
 		commandSuffix,
-		description: description,
+		description,
 		hidden: def.metadata.hidden,
 		deprecatedMessage,
 		statusMessage,
