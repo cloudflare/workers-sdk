@@ -18,10 +18,10 @@ import {
 } from "../ai/fetcher";
 import { readConfig } from "../config";
 import { ModuleTypeToRuleType } from "../deployment-bundle/module-collection";
-import { stripExperimentalPrefixes } from "../deployment-bundle/node-compat";
 import { withSourceURLs } from "../deployment-bundle/source-url";
 import { UserError } from "../errors";
 import { logger } from "../logger";
+import { stripExperimentalPrefixes } from "../node-compat";
 import { getSourceMappedString } from "../sourcemap";
 import { updateCheck } from "../update-check";
 import type { ServiceFetch } from "../api";

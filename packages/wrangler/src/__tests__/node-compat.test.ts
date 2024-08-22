@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getNodeCompatMode } from "../deployment-bundle/node-compat";
+import { getNodeCompatMode } from "../node-compat";
 
 describe("getNodeCompatMode", () => {
 	it("should return v2 mode when experimental:nodejs_compat_v2 flag is present", () => {

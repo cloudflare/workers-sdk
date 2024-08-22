@@ -7,11 +7,11 @@ import { useErrorHandler } from "react-error-boundary";
 import { helpIfErrorIsSizeOrScriptStartup } from "../deploy/deploy";
 import { printBundleSize } from "../deployment-bundle/bundle-reporter";
 import { getBundleType } from "../deployment-bundle/bundle-type";
-import { stripExperimentalPrefixes } from "../deployment-bundle/node-compat";
 import { withSourceURLs } from "../deployment-bundle/source-url";
 import { getInferredHost } from "../dev";
 import { UserError } from "../errors";
 import { logger } from "../logger";
+import { stripExperimentalPrefixes } from "../node-compat";
 import { syncLegacyAssets } from "../sites";
 import {
 	getAccountChoices,

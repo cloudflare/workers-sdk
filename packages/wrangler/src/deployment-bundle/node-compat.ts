@@ -1,6 +1,6 @@
 import { UserError } from "../errors";
 import { logger } from "../logger";
-import type { Config } from "../config";
+import { getNodeCompatMode } from "../node-compat";
 
 /**
  * Wrangler can provide Node.js compatibility in a number of different modes:
@@ -88,45 +88,4 @@ export function validateNodeCompat({
 	}
 
 	return mode;
-}
-
-export function getNodeCompatMode({
-	compatibility_flags,
-	node_compat,
-}: Pick<Config, "compatibility_flags" | "node_compat">) {
-	const nodejsCompat = compatibility_flags.includes("nodejs_compat");
-	const nodejsCompatV2 = compatibility_flags.includes(
-		"experimental:nodejs_compat_v2"
-	);
-
-	let mode: NodeJSCompatMode;
-	if (nodejsCompatV2) {
-		mode = "v2";
-	} else if (nodejsCompat) {
-		mode = "v1";
-	} else if (node_compat) {
-		mode = "legacy";
-	} else {
-		mode = null;
-	}
-
-	return {
-		legacy: mode === "legacy",
-		mode,
-		nodejsCompat,
-		nodejsCompatV2,
-	};
-}
-
-/**
- * The nodejs_compat_v2 flag currently requires an `experimental:` prefix within Wrangler,
- * but this needs to be stripped before sending to workerd, since that doesn't know about that.
- *
- * TODO: Remove this function when we graduate nodejs_v2 to non-experimental.
- * See https://jira.cfdata.org/browse/DEVDASH-218
- */
-export function stripExperimentalPrefixes(
-	compatFlags: string[] | undefined
-): string[] | undefined {
-	return compatFlags?.map((flag) => flag.replace(/^experimental:/, ""));
 }
