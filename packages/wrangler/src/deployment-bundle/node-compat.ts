@@ -27,25 +27,22 @@ export type NodeJSCompatMode = "legacy" | "v1" | "v2" | null;
  * We assert that you must prefix v2 mode with `experimental`.
  * We warn if using legacy or v2 mode.
  */
-export function validateNodeCompat({
-	legacyNodeCompat,
-	compatibilityFlags,
-	noBundle,
-}: {
-	legacyNodeCompat: boolean;
-	/* mutate */ compatibilityFlags: string[];
-	noBundle: boolean;
-}): NodeJSCompatMode {
-	if (legacyNodeCompat) {
-		logger.warn(
-			"Enabling Wrangler compile-time Node.js compatibility polyfill mode for builtins and globals. This is experimental and has serious tradeoffs."
+export function validateNodeCompat(
+	config: Pick<Config, "compatibility_flags" | "node_compat" | "no_bundle">
+): NodeJSCompatMode {
+	const {
+		mode,
+		nodejsCompat,
+		nodejsCompatV2,
+		experimentalNodejsCompatV2,
+		legacy,
+	} = getNodeCompatMode(config);
+
+	if (experimentalNodejsCompatV2) {
+		throw new UserError(
+			"The `experimental:` prefix on `nodejs_compat_v2` is no longer valid. Please remove it and try again."
 		);
 	}
-
-	const { mode, nodejsCompat, nodejsCompatV2 } = getNodeCompatMode({
-		compatibility_flags: compatibilityFlags,
-		node_compat: legacyNodeCompat,
-	});
 
 	if (nodejsCompat && nodejsCompatV2) {
 		throw new UserError(
@@ -53,21 +50,27 @@ export function validateNodeCompat({
 		);
 	}
 
-	if (legacyNodeCompat && (nodejsCompat || nodejsCompatV2)) {
+	if (legacy && (nodejsCompat || nodejsCompatV2)) {
 		throw new UserError(
 			`The ${nodejsCompat ? "`nodejs_compat`" : "`nodejs_compat_v2`"} compatibility flag cannot be used in conjunction with the legacy \`--node-compat\` flag. If you want to use the Workers ${nodejsCompat ? "`nodejs_compat`" : "`nodejs_compat_v2`"} compatibility flag, please remove the \`--node-compat\` argument from your CLI command or \`node_compat = true\` from your config file.`
 		);
 	}
 
-	if (noBundle && legacyNodeCompat) {
+	if (config.no_bundle && legacy) {
 		logger.warn(
 			"`--node-compat` and `--no-bundle` can't be used together. If you want to polyfill Node.js built-ins and disable Wrangler's bundling, please polyfill as part of your own bundling process."
 		);
 	}
 
-	if (noBundle && nodejsCompatV2) {
+	if (config.no_bundle && nodejsCompatV2) {
 		logger.warn(
 			"`nodejs_compat_v2` compatibility flag and `--no-bundle` can't be used together. If you want to polyfill Node.js built-ins and disable Wrangler's bundling, please polyfill as part of your own bundling process."
+		);
+	}
+
+	if (mode === "legacy") {
+		logger.warn(
+			"Enabling Wrangler compile-time Node.js compatibility polyfill mode for builtins and globals. This is experimental and has serious tradeoffs."
 		);
 	}
 
@@ -81,6 +84,9 @@ export function getNodeCompatMode({
 	const legacy = node_compat === true;
 	const nodejsCompat = compatibility_flags.includes("nodejs_compat");
 	const nodejsCompatV2 = compatibility_flags.includes("nodejs_compat_v2");
+	const experimentalNodejsCompatV2 = compatibility_flags.includes(
+		"experimental:nodejs_compat_v2"
+	);
 
 	let mode: NodeJSCompatMode;
 	if (nodejsCompatV2) {
@@ -98,5 +104,6 @@ export function getNodeCompatMode({
 		mode,
 		nodejsCompat,
 		nodejsCompatV2,
+		experimentalNodejsCompatV2,
 	};
 }
