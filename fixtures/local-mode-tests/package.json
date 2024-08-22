@@ -14,7 +14,7 @@
 	},
 	"devDependencies": {
 		"@cloudflare/workers-tsconfig": "workspace:*",
-		"@cloudflare/workers-types": "^4.20240806.0",
+		"@cloudflare/workers-types": "^4.20240821.1",
 		"@types/node": "20.8.3",
 		"buffer": "^6.0.3",
 		"wrangler": "workspace:*"

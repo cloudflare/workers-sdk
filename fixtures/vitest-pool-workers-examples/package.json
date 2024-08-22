@@ -9,7 +9,7 @@
 	},
 	"devDependencies": {
 		"@cloudflare/vitest-pool-workers": "workspace:*",
-		"@cloudflare/workers-types": "^4.20240806.0",
+		"@cloudflare/workers-types": "^4.20240821.1",
 		"@types/node": "20.8.3",
 		"ext-dep": "file:./internal-module-resolution/vendor/ext-dep",
 		"jose": "^5.2.2",
