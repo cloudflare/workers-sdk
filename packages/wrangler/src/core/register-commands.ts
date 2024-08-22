@@ -1,21 +1,23 @@
-import { CommonYargsArgv, SubHelp } from "../yargs-types";
+import assert from "assert";
+import { CommonYargsArgv } from "../yargs-types";
 import { COMMAND_DEFINITIONS } from "./define-command";
 import { wrapCommandDefinition } from "./wrap-command";
 import type {
 	AliasDefinition,
+	BaseNamedArgDefinitions,
 	Command,
 	CommandDefinition,
+	HandlerArgs,
 	NamespaceDefinition,
 } from "./define-command";
 
-export default function registerAllCommands(
-	yargs: CommonYargsArgv,
-	subHelp: SubHelp
-) {
+export class CommandRegistrationError extends Error {}
+
+export default function registerAllCommands(yargs: CommonYargsArgv) {
 	const [root, commands] = createCommandTree("wrangler");
 
 	for (const [segment, node] of root.subtree.entries()) {
-		walkTreeAndRegister(segment, node, commands, yargs, subHelp);
+		yargs = walkTreeAndRegister(segment, node, commands, yargs);
 	}
 }
 
@@ -46,9 +48,10 @@ type DefinitionTree = Map<string, DefinitionTreeNode>;
 function createCommandTree(prefix: string) {
 	const root: DefinitionTreeNode = { subtree: new Map() };
 	const commands = new Map<Command, CommandDefinition>();
+	const aliases = new Set<AliasDefinition>();
 
-	for (const def of COMMAND_DEFINITIONS) {
-		const segments = def.command.split(" ").slice(1); // eg. ["versions", "secret", "put"]
+	function getNodeFor(command: Command) {
+		const segments = command.split(" ").slice(1); // eg. ["versions", "secret", "put"]
 
 		let node = root;
 		for (const segment of segments) {
@@ -60,14 +63,57 @@ function createCommandTree(prefix: string) {
 			subtree.set(segment, node);
 		}
 
+		return node;
+	}
+
+	for (const def of COMMAND_DEFINITIONS) {
+		const node = getNodeFor(def.command);
+
 		if (node.definition) {
-			throw new Error(`Duplicate definition for "${def.command}"`);
+			throw new CommandRegistrationError(
+				`Duplicate definition for "${def.command}"`
+			);
 		}
 		node.definition = def;
 
-		if ("handler" in def) {
-			commands.set(def.command, def);
+		if ("aliasOf" in def) {
+			aliases.add(def);
 		}
+	}
+
+	// reloop to allow aliases of aliases
+	const MAX_HOPS = 5;
+	for (let hops = 0; hops < MAX_HOPS && aliases.size > 0; hops++) {
+		for (const def of aliases) {
+			const realNode = getNodeFor(def.aliasOf); // TODO: this might be creating unnecessary undefined definitions
+			const real = realNode.definition;
+			if (!real || "aliasOf" in real) continue;
+
+			const node = getNodeFor(def.command);
+
+			node.definition = {
+				...real,
+				command: def.command,
+				metadata: {
+					...real.metadata,
+					...def.metadata,
+					description:
+						def.metadata?.description ?? // use description override
+						`Alias for "${real.command}". ${real.metadata.description}`, // or add prefix to real description
+					hidden: def.metadata?.hidden ?? true, // hide aliases by default
+				},
+			};
+
+			node.subtree = realNode.subtree;
+
+			aliases.delete(def);
+		}
+	}
+
+	if (aliases.size > 0) {
+		throw new CommandRegistrationError(
+			`Alias of alias encountered greater than ${MAX_HOPS} hops`
+		);
 	}
 
 	return [root, commands] as const;
@@ -77,66 +123,41 @@ function walkTreeAndRegister(
 	segment: string,
 	{ definition, subtree }: DefinitionTreeNode,
 	commands: Map<Command, CommandDefinition>,
-	yargs: CommonYargsArgv,
-	subHelp: SubHelp
+	yargs: CommonYargsArgv
 ) {
 	if (!definition) {
 		// TODO: make error message clearer which command is missing namespace definition
-		throw new Error(
+		throw new CommandRegistrationError(
 			`Missing namespace definition for 'wrangler ... ${segment} ...'`
 		);
 	}
 
-	// rewrite `definition` to copy behaviour/implementation from the (runnable) `real` command
-	if ("aliasOf" in definition) {
-		const real = commands.get(definition.aliasOf);
-		if (!real) {
-			throw new Error(
-				`No command definition for "${real}" (to alias from "${definition.command}")`
-			);
-		}
-
-		// this rewrites definition and narrows its type
-		// from: CommandDefinition | NamespaceDefinition | AliasDefintion
-		//   to: CommandDefinition | NamespaceDefinition
-		definition = {
-			...definition,
-			metadata: {
-				...real.metadata,
-				...definition.metadata,
-				description:
-					definition.metadata?.description ?? // use description override
-					`Alias for ${real.command}. ${real.metadata.description}`, // or add prefix to real description
-				hidden: definition.metadata?.hidden ?? true, // hide aliases by default
-			},
-			behaviour: real.behaviour,
-			args: real.args,
-			positionalArgs: real.positionalArgs,
-			handler: real.handler,
-		};
-	}
+	// cannot be AliasDefinition anymore
+	assert(
+		!("aliasOf" in definition),
+		`Unexpected AliasDefinition for "${definition.command}"`
+	);
 
 	// convert our definition into something we can pass to yargs.command
 	const def = wrapCommandDefinition(definition);
 
 	// register command
-	yargs
-		.command(
-			segment + def.commandSuffix,
-			(def.hidden ? false : def.description) as string, // cast to satisfy typescript overload selection
-			(subYargs) => {
-				def.defineArgs?.(subYargs);
+	yargs.command(
+		segment + def.commandSuffix,
+		(def.hidden ? false : def.description) as string, // cast to satisfy typescript overload selection
+		(subYargs) => {
+			if (def.defineArgs) {
+				subYargs = def.defineArgs(subYargs);
+			}
 
-				for (const [segment, node] of subtree.entries()) {
-					walkTreeAndRegister(segment, node, commands, subYargs, subHelp);
-				}
+			for (const [segment, node] of subtree.entries()) {
+				subYargs = walkTreeAndRegister(segment, node, commands, subYargs);
+			}
 
-				return subYargs;
-			},
-			def.handler, // TODO: will be possibly undefined when groups/aliases are implemented
-			undefined,
-			def.deprecatedMessage
-		)
-		// .epilog(def.statusMessage)
-		.command(subHelp);
+			return subYargs;
+		},
+		def.handler // TODO: subHelp (def.handler will be undefined for namespaces, so set default handler to print subHelp)
+	);
+
+	return yargs;
 }
