@@ -1,9 +1,13 @@
 import { SharedBindings } from "miniflare:shared";
-import { KVParams } from "./constants";
 
 interface Env {
 	[SharedBindings.MAYBE_SERVICE_BLOBS]: Fetcher;
+	__STATIC_ASSETS_REVERSE_MAP: AssetReverseMap;
 }
+
+type AssetReverseMap = {
+	[pathHash: string]: { filePath: string; contentType: string };
+}; //map to actual filepath
 
 export default <ExportedHandler<Env>>{
 	async fetch(request, env) {
@@ -13,21 +17,16 @@ export default <ExportedHandler<Env>>{
 			return new Response(message, { status: 405, statusText: message });
 		}
 
-		// Decode key
-		const url = new URL(request.url);
-		let key = url.pathname.substring(1); // Strip leading "/"
+		// don't uri decode pathname, because we encode the filepath before hashing
+		const pathHash = new URL(request.url).pathname.substring(1);
 
-		if (url.searchParams.get(KVParams.URL_ENCODED)?.toLowerCase() === "true") {
-			key = decodeURIComponent(key);
+		const entry = env.__STATIC_ASSETS_REVERSE_MAP[pathHash];
+		if (entry === undefined) {
+			return new Response("Not Found", { status: 404 });
 		}
-
+		// eslint-disable-next-line @typescript-eslint/no-unused-vars
+		const { filePath, contentType } = entry;
 		const blobsService = env[SharedBindings.MAYBE_SERVICE_BLOBS];
-		if (key === "" || key === "/") {
-			return new Response("Not Found", {
-				status: 404,
-			});
-		} else {
-			return blobsService.fetch(new URL(key, "http://placeholder"));
-		}
+		return blobsService.fetch(new URL(filePath, "http://placeholder"));
 	},
 };

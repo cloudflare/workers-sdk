@@ -1,3 +1,5 @@
+import { bytesToHex, hashPath } from "./asset-test-helpers.ts";
+
 interface Env {
 	//  custom kv binding name
 	CUSTOM_ASSETS_NAMESPACE: KVNamespace;
@@ -8,7 +10,8 @@ export default {
 		const url = new URL(request.url);
 		const { pathname } = url;
 
-		const content = await env.CUSTOM_ASSETS_NAMESPACE.get(pathname);
+		const pathHash = bytesToHex(await hashPath(pathname));
+		const content = await env.CUSTOM_ASSETS_NAMESPACE.get(pathHash);
 		return new Response(content);
 	},
 };

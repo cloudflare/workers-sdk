@@ -174,7 +174,7 @@ export const KV_PLUGIN: Plugin<
 		}
 
 		if (isWorkersWithAssets(options)) {
-			services.push(...getAssetsServices(options));
+			services.push(...(await getAssetsServices(options)));
 		}
 
 		return services;

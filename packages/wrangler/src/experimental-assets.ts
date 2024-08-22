@@ -39,10 +39,11 @@ type UploadResponse = {
 
 // constants same as Pages for now
 const BULK_UPLOAD_CONCURRENCY = 3;
-const MAX_ASSET_COUNT = 20_000;
-const MAX_ASSET_SIZE = 25 * 1024 * 1024;
 const MAX_UPLOAD_ATTEMPTS = 5;
 const MAX_UPLOAD_GATEWAY_ERRORS = 5;
+// NB also used in miniflare in plugins/kv/assets.ts, so please update there too.
+const MAX_ASSET_COUNT = 20_000;
+const MAX_ASSET_SIZE = 25 * 1024 * 1024;
 
 export const syncExperimentalAssets = async (
 	accountId: string | undefined,
@@ -53,7 +54,7 @@ export const syncExperimentalAssets = async (
 
 	// 1. generate asset manifest
 	logger.info("🌀 Building list of assets...");
-	const manifest = await walk(assetDirectory, {});
+	const manifest = await buildAssetsManifest(assetDirectory);
 
 	// 2. fetch buckets w/ hashes
 	logger.info("🌀 Starting asset upload...");
@@ -218,32 +219,23 @@ export const syncExperimentalAssets = async (
 	return completionJwt;
 };
 
-// modified from /pages/validate.tsx
-const walk = async (
-	dir: string,
-	manifest: AssetManifest,
-	startingDir: string = dir
-) => {
-	const files = await readdir(dir);
-
+export const buildAssetsManifest = async (dir: string) => {
+	const files = await readdir(dir, { recursive: true });
+	const manifest: AssetManifest = {};
 	let counter = 0;
 	await Promise.all(
 		files.map(async (file) => {
 			const filepath = path.join(dir, file);
-			const relativeFilepath = path.relative(startingDir, filepath);
+			const relativeFilepath = path.relative(dir, filepath);
 			const filestat = await stat(filepath);
 
-			if (filestat.isSymbolicLink()) {
+			if (filestat.isSymbolicLink() || filestat.isDirectory()) {
 				return;
-			}
-
-			if (filestat.isDirectory()) {
-				manifest = await walk(filepath, manifest, startingDir);
 			} else {
 				if (counter >= MAX_ASSET_COUNT) {
 					throw new UserError(
 						`Maximum number of assets exceeded.\n` +
-							`Cloudflare Workers supports up to ${MAX_ASSET_COUNT.toLocaleString()} assets in a version. We found ${counter.toLocaleString()} files in the specified assets directory "${startingDir}".\n` +
+							`Cloudflare Workers supports up to ${MAX_ASSET_COUNT.toLocaleString()} assets in a version. We found ${counter.toLocaleString()} files in the specified assets directory "${dir}".\n` +
 							`Ensure your assets directory contains a maximum of ${MAX_ASSET_COUNT.toLocaleString()} files, and that you have specified your assets directory correctly.`
 					);
 				}
@@ -262,7 +254,7 @@ const walk = async (
 									binary: true,
 								}
 							)}.\n` +
-							`Ensure all assets in your assets directory "${startingDir}" conform with the Workers maximum size requirement.`
+							`Ensure all assets in your assets directory "${dir}" conform with the Workers maximum size requirement.`
 					);
 				}
 				manifest[encodeFilePath(relativeFilepath)] = {
