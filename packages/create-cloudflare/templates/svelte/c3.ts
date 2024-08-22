@@ -97,7 +97,7 @@ const updateTypeDefinitions = (ctx: C3Context) => {
 const config: TemplateConfig = {
 	configVersion: 1,
 	id: "svelte",
-	displayName: "Svelte",
+	displayName: "SvelteKit",
 	platform: "pages",
 	copyFiles: {
 		variants: {
