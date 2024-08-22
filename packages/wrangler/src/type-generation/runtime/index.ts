@@ -49,7 +49,10 @@ export async function generateRuntimeTypes({
 
 	const types = await generate({
 		compatibilityDate: compatibility_date,
-		compatibilityFlags: compatibility_flags,
+		// Ignore nodejs compat flags as there is currently no mechanism to generate these dynamically.
+		compatibilityFlags: compatibility_flags.filter(
+			(flag) => !flag.includes("nodejs_compat")
+		),
 	});
 
 	await writeFile(outFile, types, "utf8");

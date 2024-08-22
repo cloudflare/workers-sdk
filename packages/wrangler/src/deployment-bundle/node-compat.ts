@@ -111,7 +111,7 @@ export function getNodeCompatMode({
 	}
 
 	return {
-		legacy: node_compat === true,
+		legacy: mode === "legacy",
 		mode,
 		nodejsCompat,
 		nodejsCompatV2,
