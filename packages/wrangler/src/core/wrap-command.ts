@@ -21,13 +21,15 @@ export function wrapCommandDefinition(
 	let description = def.metadata.description;
 	let statusMessage = "";
 	let defaultDeprecatedMessage = `Deprecated: "${def.command}" is deprecated`; // TODO: improve
+	let deprecatedMessage = def.metadata.deprecated
+		? def.metadata.deprecatedMessage ?? defaultDeprecatedMessage
+		: undefined;
 	let defineArgs: undefined | CommandBuilder<CommonYargsOptions> = undefined;
 	let handler:
 		| undefined
 		| ((args: HandlerArgs<BaseNamedArgDefinitions>) => Promise<void>) =
 		undefined;
 
-	console.log(def.metadata.status);
 	if (def.metadata.status !== "stable") {
 		description += chalk.hex(betaCmdColor)(` [${def.metadata.status}]`);
 
@@ -73,6 +75,13 @@ export function wrapCommandDefinition(
 			try {
 				await printWranglerBanner();
 
+				if (deprecatedMessage) {
+					logger.warn(deprecatedMessage);
+				}
+				if (statusMessage) {
+					logger.warn(statusMessage);
+				}
+
 				// TODO(telemetry): send command started event
 
 				await def.handler(args, {
@@ -93,9 +102,7 @@ export function wrapCommandDefinition(
 		commandSuffix,
 		description: description,
 		hidden: def.metadata.hidden,
-		deprecatedMessage: def.metadata.deprecated
-			? def.metadata.deprecatedMessage ?? defaultDeprecatedMessage
-			: undefined,
+		deprecatedMessage,
 		statusMessage,
 		defineArgs,
 		handler,
