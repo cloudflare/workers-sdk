@@ -1,6 +1,5 @@
 import { UserError } from "../errors";
 import { logger } from "../logger";
-import type { Config } from "../config";
 
 /**
  * Wrangler can provide Node.js compatibility in a number of different modes:
@@ -28,7 +27,9 @@ export type NodeJSCompatMode = "legacy" | "v1" | "v2" | null;
  * We warn if using legacy or v2 mode.
  */
 export function validateNodeCompat(
-	config: Pick<Config, "compatibility_flags" | "node_compat" | "no_bundle">
+	compatibilityFlags: string[],
+	nodeCompat: boolean | undefined,
+	noBundle: boolean | undefined
 ): NodeJSCompatMode {
 	const {
 		mode,
@@ -36,7 +37,7 @@ export function validateNodeCompat(
 		nodejsCompatV2,
 		experimentalNodejsCompatV2,
 		legacy,
-	} = getNodeCompatMode(config);
+	} = getNodeCompatMode(compatibilityFlags, nodeCompat);
 
 	if (experimentalNodejsCompatV2) {
 		throw new UserError(
@@ -56,13 +57,13 @@ export function validateNodeCompat(
 		);
 	}
 
-	if (config.no_bundle && legacy) {
+	if (noBundle && legacy) {
 		logger.warn(
 			"`--node-compat` and `--no-bundle` can't be used together. If you want to polyfill Node.js built-ins and disable Wrangler's bundling, please polyfill as part of your own bundling process."
 		);
 	}
 
-	if (config.no_bundle && nodejsCompatV2) {
+	if (noBundle && nodejsCompatV2) {
 		logger.warn(
 			"`nodejs_compat_v2` compatibility flag and `--no-bundle` can't be used together. If you want to polyfill Node.js built-ins and disable Wrangler's bundling, please polyfill as part of your own bundling process."
 		);
@@ -77,14 +78,14 @@ export function validateNodeCompat(
 	return mode;
 }
 
-export function getNodeCompatMode({
-	compatibility_flags,
-	node_compat,
-}: Pick<Config, "compatibility_flags" | "node_compat">) {
-	const legacy = node_compat === true;
-	const nodejsCompat = compatibility_flags.includes("nodejs_compat");
-	const nodejsCompatV2 = compatibility_flags.includes("nodejs_compat_v2");
-	const experimentalNodejsCompatV2 = compatibility_flags.includes(
+export function getNodeCompatMode(
+	compatibilityFlags: string[],
+	nodeCompat: boolean | undefined
+) {
+	const legacy = nodeCompat === true;
+	const nodejsCompat = compatibilityFlags.includes("nodejs_compat");
+	const nodejsCompatV2 = compatibilityFlags.includes("nodejs_compat_v2");
+	const experimentalNodejsCompatV2 = compatibilityFlags.includes(
 		"experimental:nodejs_compat_v2"
 	);
 

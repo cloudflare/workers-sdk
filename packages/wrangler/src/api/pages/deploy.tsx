@@ -174,12 +174,11 @@ export async function deploy({
 		}
 	}
 
-	const nodejsCompatMode = validateNodeCompat({
-		legacyNodeCompat: false,
-		compatibilityFlags:
-			config?.compatibility_flags ?? deploymentConfig.compatibility_flags ?? [],
-		noBundle: config?.no_bundle ?? false,
-	});
+	const nodejsCompatMode = validateNodeCompat(
+		config?.compatibility_flags ?? deploymentConfig.compatibility_flags ?? [],
+		/* node_compat */ false,
+		config?.no_bundle
+	);
 	const defineNavigatorUserAgent = isNavigatorDefined(
 		config?.compatibility_date ?? deploymentConfig.compatibility_date,
 		config?.compatibility_flags ?? deploymentConfig.compatibility_flags

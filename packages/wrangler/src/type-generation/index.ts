@@ -92,7 +92,10 @@ export async function typesHandler(
 		const tsconfigPath =
 			config.tsconfig ?? join(dirname(configPath), "tsconfig.json");
 		const tsconfigTypes = readTsconfigTypes(tsconfigPath);
-		const { mode } = getNodeCompatMode(config);
+		const { mode } = getNodeCompatMode(
+			config.compatibility_flags,
+			config.node_compat
+		);
 
 		logRuntimeTypesMessage(outFile, tsconfigTypes, mode !== null);
 	}

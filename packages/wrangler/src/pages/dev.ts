@@ -360,12 +360,11 @@ export const Handler = async (args: PagesDevArguments) => {
 
 	let scriptPath = "";
 
-	const nodejsCompatMode = validateNodeCompat({
-		legacyNodeCompat: args.nodeCompat,
-		compatibilityFlags:
-			args.compatibilityFlags ?? config.compatibility_flags ?? [],
-		noBundle: args.noBundle ?? config.no_bundle ?? false,
-	});
+	const nodejsCompatMode = validateNodeCompat(
+		args.compatibilityFlags ?? config.compatibility_flags ?? [],
+		args.nodeCompat,
+		args.noBundle ?? config.no_bundle
+	);
 
 	const defineNavigatorUserAgent = isNavigatorDefined(
 		compatibilityDate,
