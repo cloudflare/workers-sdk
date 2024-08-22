@@ -22,13 +22,15 @@
 		"dist"
 	],
 	"scripts": {
-		"build": "pnpm run clean && pnpm run bundle:asset-server:prod",
+		"build": "pnpm run clean && pnpm run bundle:asset-server:prod && pnpm run bundle:router:prod",
 		"bundle:asset-server": "esbuild asset-server-worker/src/index.ts --format=esm --bundle --outfile=dist/asset-server-worker.mjs --sourcemap=external",
 		"bundle:asset-server:prod": "pnpm run bundle:asset-server --minify",
+		"bundle:router": "esbuild router-worker/src/index.ts --format=esm --bundle --outfile=dist/router-worker.mjs --sourcemap=external",
+		"bundle:router:prod": "pnpm run bundle:router --minify",
 		"check:lint": "eslint . --max-warnings=0",
 		"check:type": "tsc",
 		"clean": "rimraf dist",
-		"dev": "pnpm run clean && concurrently -n bundle:asset-server -c blue \"pnpm run bundle:asset-server --watch\""
+		"dev": "pnpm run clean && concurrently -n bundle:asset-server,bundle:router -c blue,magenta \"pnpm run bundle:asset-server --watch\" \"pnpm run bundle:router --watch\""
 	},
 	"devDependencies": {
 		"@cloudflare/eslint-config-worker": "workspace:*",
