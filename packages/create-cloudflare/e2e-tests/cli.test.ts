@@ -236,7 +236,7 @@ describe.skipIf(frameworkToTest || isQuarantineMode())(
 							matcher: /What would you like to start with\?/,
 							input: {
 								type: "select",
-								target: "Demo application",
+								target: "Application Starter",
 								assertDescriptionText:
 									"Select from a range of starter applications using various Cloudflare products",
 							},
@@ -255,7 +255,7 @@ describe.skipIf(frameworkToTest || isQuarantineMode())(
 				);
 
 				expect(projectPath).toExist();
-				expect(output).toContain(`category Demo application`);
+				expect(output).toContain(`category Application Starter`);
 				expect(output).toContain(`type API starter (OpenAPI compliant)`);
 			},
 		);
@@ -270,7 +270,7 @@ describe.skipIf(frameworkToTest || isQuarantineMode())(
 							matcher: /What would you like to start with\?/,
 							input: {
 								type: "select",
-								target: "Demo application",
+								target: "Application Starter",
 							},
 						},
 						{
@@ -300,7 +300,7 @@ describe.skipIf(frameworkToTest || isQuarantineMode())(
 							input: {
 								type: "select",
 								target: "Framework Starter",
-								assertDefaultSelection: "Demo application",
+								assertDefaultSelection: "Application Starter",
 							},
 						},
 						{
