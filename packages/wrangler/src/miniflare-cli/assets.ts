@@ -1,5 +1,5 @@
 import assert from "node:assert";
-import { existsSync, lstatSync, readFileSync } from "node:fs";
+import { existsSync, statSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { createMetadataObject } from "@cloudflare/pages-shared/metadata-generator/createMetadataObject";
 import { parseHeaders } from "@cloudflare/pages-shared/metadata-generator/parseHeaders";
@@ -216,7 +216,7 @@ async function generateAssetsFetch(
 
 				if (
 					existsSync(filepath) &&
-					lstatSync(filepath).isFile() &&
+					statSync(filepath).isFile() &&
 					!ignoredFiles.includes(filepath)
 				) {
 					const hash = hashFile(filepath);

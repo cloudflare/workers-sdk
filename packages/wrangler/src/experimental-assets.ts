@@ -233,10 +233,6 @@ const walk = async (
 			const relativeFilepath = path.relative(startingDir, filepath);
 			const filestat = await stat(filepath);
 
-			if (filestat.isSymbolicLink()) {
-				return;
-			}
-
 			if (filestat.isDirectory()) {
 				manifest = await walk(filepath, manifest, startingDir);
 			} else {

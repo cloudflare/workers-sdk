@@ -81,10 +81,6 @@ export const validate = async (args: {
 					}
 				}
 
-				if (filestat.isSymbolicLink()) {
-					return;
-				}
-
 				if (filestat.isDirectory()) {
 					fileMap = await walk(filepath, fileMap, startingDir);
 				} else {
