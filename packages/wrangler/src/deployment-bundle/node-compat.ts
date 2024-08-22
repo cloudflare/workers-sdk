@@ -51,13 +51,6 @@ export function validateNodeCompat({
 	const nodejsCompatV2NotExperimental =
 		compatibilityFlags.includes("nodejs_compat_v2");
 
-	if (nodejsCompatV2) {
-		// strip the "experimental:" prefix because workerd doesn't understand it yet.
-		compatibilityFlags[
-			compatibilityFlags.indexOf("experimental:nodejs_compat_v2")
-		] = "nodejs_compat_v2";
-	}
-
 	if (nodejsCompat && nodejsCompatV2) {
 		throw new UserError(
 			"The `nodejs_compat` and `nodejs_compat_v2` compatibility flags cannot be used in together. Please select just one."
