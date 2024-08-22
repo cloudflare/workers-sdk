@@ -53,7 +53,7 @@ const cliDefinition: ArgumentsDefinition = {
 			values: [
 				{ name: "hello-world", description: "Hello World example" },
 				{ name: "web-framework", description: "Framework Starter" },
-				{ name: "demo", description: "Demo application" },
+				{ name: "demo", description: "Application Starter" },
 				{ name: "remote-template", description: "Template from a Github repo" },
 			],
 		},
