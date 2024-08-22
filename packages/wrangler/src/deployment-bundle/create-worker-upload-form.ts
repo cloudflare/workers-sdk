@@ -2,8 +2,8 @@ import assert from "node:assert";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { File, FormData } from "undici";
-import { stripExperimentalPrefixes } from "../node-compat";
 import { handleUnsafeCapnp } from "./capnp";
+import { stripExperimentalPrefixes } from "./node-compat";
 import type {
 	CfDurableObjectMigrations,
 	CfModuleType,
