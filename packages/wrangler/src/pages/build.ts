@@ -437,12 +437,12 @@ const validateArgs = async (args: PagesBuildArgs): Promise<ValidatedArgs> => {
 		args.outfile = resolvePath(args.outfile);
 	}
 
-	const { nodeCompat: legacyNodeCompat, ...argsExceptNodeCompat } = args;
-	const nodejsCompatMode = validateNodeCompat({
-		legacyNodeCompat: legacyNodeCompat,
-		compatibilityFlags: args.compatibilityFlags ?? [],
-		noBundle: config?.no_bundle ?? false,
-	});
+	const { nodeCompat: node_compat, ...argsExceptNodeCompat } = args;
+	const nodejsCompatMode = validateNodeCompat(
+		args.compatibilityFlags ?? [],
+		node_compat,
+		config?.no_bundle
+	);
 
 	const defineNavigatorUserAgent = isNavigatorDefined(
 		args.compatibilityDate,

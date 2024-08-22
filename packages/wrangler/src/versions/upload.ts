@@ -184,11 +184,11 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 	const minify = props.minify ?? config.minify;
 
-	const nodejsCompatMode = validateNodeCompat({
-		legacyNodeCompat: props.nodeCompat ?? config.node_compat ?? false,
-		compatibilityFlags: props.compatibilityFlags ?? config.compatibility_flags,
-		noBundle: props.noBundle ?? config.no_bundle ?? false,
-	});
+	const nodejsCompatMode = validateNodeCompat(
+		props.compatibilityFlags ?? config.compatibility_flags,
+		props.nodeCompat ?? config.node_compat,
+		props.noBundle ?? config.no_bundle
+	);
 
 	const compatibilityFlags =
 		props.compatibilityFlags ?? config.compatibility_flags;
