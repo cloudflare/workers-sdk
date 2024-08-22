@@ -625,6 +625,34 @@ describe("deploy", () => {
 			"
 		`);
 		});
+
+		it("should log esbuild warnings", async () => {
+			writeWranglerToml();
+			fs.writeFileSync(
+				"index.js",
+				dedent/* javascript */ `
+					export default {
+						fetch() {
+							return
+							new Response(dep);
+						}
+					}
+				`
+			);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest();
+			await runWrangler("deploy ./index");
+
+			expect(std.warn).toMatchInlineSnapshot(`
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe following expression is not returned because of an automatically-inserted semicolon[0m [semicolon-after-return]
+
+				    index.js:3:8:
+				[37m      3 │     return[32m[37m
+				        ╵           [32m^[0m
+
+				"
+			`);
+		});
 	});
 
 	describe("environments", () => {
