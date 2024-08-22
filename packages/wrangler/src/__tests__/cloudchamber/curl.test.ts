@@ -156,104 +156,104 @@ describe("cloudchamber curl", () => {
 			"├ Loading account 
 			│ 
 			>> Body
-				 [
-				     {
-				         \\"id\\": \\"1\\",
-				         \\"type\\": \\"default\\",
-				         \\"created_at\\": \\"123\\",
-				         \\"account_id\\": \\"123\\",
-				         \\"vcpu\\": 4,
-				         \\"memory\\": \\"400MB\\",
-				         \\"version\\": 1,
-				         \\"image\\": \\"hello\\",
-				         \\"location\\": {
-				             \\"name\\": \\"sfo06\\",
-				             \\"enabled\\": true
-				         },
-				         \\"network\\": {
-				             \\"ipv4\\": \\"1.1.1.1\\"
-				         },
-				         \\"placements_ref\\": \\"http://ref\\",
-				         \\"node_group\\": \\"metal\\"
-				     },
-				     {
-				         \\"id\\": \\"2\\",
-				         \\"type\\": \\"default\\",
-				         \\"created_at\\": \\"1234\\",
-				         \\"account_id\\": \\"123\\",
-				         \\"vcpu\\": 4,
-				         \\"memory\\": \\"400MB\\",
-				         \\"version\\": 2,
-				         \\"image\\": \\"hello\\",
-				         \\"location\\": {
-				             \\"name\\": \\"sfo06\\",
-				             \\"enabled\\": true
-				         },
-				         \\"network\\": {
-				             \\"ipv4\\": \\"1.1.1.2\\"
-				         },
-				         \\"current_placement\\": {
-				             \\"deployment_version\\": 2,
-				             \\"status\\": {
-				                 \\"health\\": \\"running\\"
-				             },
-				             \\"deployment_id\\": \\"2\\",
-				             \\"terminate\\": false,
-				             \\"created_at\\": \\"123\\",
-				             \\"id\\": \\"1\\"
-				         },
-				         \\"placements_ref\\": \\"http://ref\\",
-				         \\"node_group\\": \\"metal\\"
-				     },
-				     {
-				         \\"id\\": \\"3\\",
-				         \\"type\\": \\"default\\",
-				         \\"created_at\\": \\"123\\",
-				         \\"account_id\\": \\"123\\",
-				         \\"vcpu\\": 4,
-				         \\"memory\\": \\"400MB\\",
-				         \\"version\\": 1,
-				         \\"image\\": \\"hello\\",
-				         \\"location\\": {
-				             \\"name\\": \\"sfo06\\",
-				             \\"enabled\\": true
-				         },
-				         \\"network\\": {
-				             \\"ipv4\\": \\"1.1.1.1\\"
-				         },
-				         \\"placements_ref\\": \\"http://ref\\",
-				         \\"node_group\\": \\"metal\\"
-				     },
-				     {
-				         \\"id\\": \\"4\\",
-				         \\"type\\": \\"default\\",
-				         \\"created_at\\": \\"1234\\",
-				         \\"account_id\\": \\"123\\",
-				         \\"vcpu\\": 4,
-				         \\"memory\\": \\"400MB\\",
-				         \\"version\\": 2,
-				         \\"image\\": \\"hello\\",
-				         \\"location\\": {
-				             \\"name\\": \\"sfo06\\",
-				             \\"enabled\\": true
-				         },
-				         \\"network\\": {
-				             \\"ipv4\\": \\"1.1.1.2\\"
-				         },
-				         \\"current_placement\\": {
-				             \\"deployment_version\\": 2,
-				             \\"status\\": {
-				                 \\"health\\": \\"running\\"
-				             },
-				             \\"deployment_id\\": \\"2\\",
-				             \\"terminate\\": false,
-				             \\"created_at\\": \\"123\\",
-				             \\"id\\": \\"1\\"
-				         },
-				         \\"placements_ref\\": \\"http://ref\\",
-				         \\"node_group\\": \\"metal\\"
-				     }
-				 ]
+			[
+			    {
+			        \\"id\\": \\"1\\",
+			        \\"type\\": \\"default\\",
+			        \\"created_at\\": \\"123\\",
+			        \\"account_id\\": \\"123\\",
+			        \\"vcpu\\": 4,
+			        \\"memory\\": \\"400MB\\",
+			        \\"version\\": 1,
+			        \\"image\\": \\"hello\\",
+			        \\"location\\": {
+			            \\"name\\": \\"sfo06\\",
+			            \\"enabled\\": true
+			        },
+			        \\"network\\": {
+			            \\"ipv4\\": \\"1.1.1.1\\"
+			        },
+			        \\"placements_ref\\": \\"http://ref\\",
+			        \\"node_group\\": \\"metal\\"
+			    },
+			    {
+			        \\"id\\": \\"2\\",
+			        \\"type\\": \\"default\\",
+			        \\"created_at\\": \\"1234\\",
+			        \\"account_id\\": \\"123\\",
+			        \\"vcpu\\": 4,
+			        \\"memory\\": \\"400MB\\",
+			        \\"version\\": 2,
+			        \\"image\\": \\"hello\\",
+			        \\"location\\": {
+			            \\"name\\": \\"sfo06\\",
+			            \\"enabled\\": true
+			        },
+			        \\"network\\": {
+			            \\"ipv4\\": \\"1.1.1.2\\"
+			        },
+			        \\"current_placement\\": {
+			            \\"deployment_version\\": 2,
+			            \\"status\\": {
+			                \\"health\\": \\"running\\"
+			            },
+			            \\"deployment_id\\": \\"2\\",
+			            \\"terminate\\": false,
+			            \\"created_at\\": \\"123\\",
+			            \\"id\\": \\"1\\"
+			        },
+			        \\"placements_ref\\": \\"http://ref\\",
+			        \\"node_group\\": \\"metal\\"
+			    },
+			    {
+			        \\"id\\": \\"3\\",
+			        \\"type\\": \\"default\\",
+			        \\"created_at\\": \\"123\\",
+			        \\"account_id\\": \\"123\\",
+			        \\"vcpu\\": 4,
+			        \\"memory\\": \\"400MB\\",
+			        \\"version\\": 1,
+			        \\"image\\": \\"hello\\",
+			        \\"location\\": {
+			            \\"name\\": \\"sfo06\\",
+			            \\"enabled\\": true
+			        },
+			        \\"network\\": {
+			            \\"ipv4\\": \\"1.1.1.1\\"
+			        },
+			        \\"placements_ref\\": \\"http://ref\\",
+			        \\"node_group\\": \\"metal\\"
+			    },
+			    {
+			        \\"id\\": \\"4\\",
+			        \\"type\\": \\"default\\",
+			        \\"created_at\\": \\"1234\\",
+			        \\"account_id\\": \\"123\\",
+			        \\"vcpu\\": 4,
+			        \\"memory\\": \\"400MB\\",
+			        \\"version\\": 2,
+			        \\"image\\": \\"hello\\",
+			        \\"location\\": {
+			            \\"name\\": \\"sfo06\\",
+			            \\"enabled\\": true
+			        },
+			        \\"network\\": {
+			            \\"ipv4\\": \\"1.1.1.2\\"
+			        },
+			        \\"current_placement\\": {
+			            \\"deployment_version\\": 2,
+			            \\"status\\": {
+			                \\"health\\": \\"running\\"
+			            },
+			            \\"deployment_id\\": \\"2\\",
+			            \\"terminate\\": false,
+			            \\"created_at\\": \\"123\\",
+			            \\"id\\": \\"1\\"
+			        },
+			        \\"placements_ref\\": \\"http://ref\\",
+			        \\"node_group\\": \\"metal\\"
+			    }
+			]
 			"
 		`);
 	});

@@ -1,6 +1,7 @@
 import { randomUUID } from "crypto";
 import { logRaw } from "@cloudflare/cli";
 import { bold, brandColor, cyanBright, yellow } from "@cloudflare/cli/colors";
+import formatLabelledValues from "../utils/render-labelled-values";
 import { OpenAPI } from "./client";
 import { ApiError } from "./client/core/ApiError";
 import { request } from "./client/core/request";
@@ -121,19 +122,25 @@ async function requestFromCmd(
 					4
 				)
 			);
-		} else if (!args.json && !args.silent) {
+		} else {
 			if (args.verbose) {
 				logRaw(cyanBright(">> Headers"));
-				for (const header in headers) {
-					logRaw("\t" + yellow(`${header}: ${headers[header]}`));
-				}
+				logRaw(
+					formatLabelledValues(headers, {
+						indentationCount: 4,
+						formatLabel: function (label: string): string {
+							return yellow(label + ":");
+						},
+						formatValue: yellow,
+					})
+				);
 			}
 			logRaw(cyanBright(">> Body"));
 			const text = JSON.stringify(res, null, 4);
 			logRaw(
 				text
 					.split("\n")
-					.map((line) => `${yellow(`\t`)} ${brandColor(line)}`)
+					.map((line) => `${brandColor(line)}`)
 					.join("\n")
 			);
 		}
