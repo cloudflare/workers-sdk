@@ -1,5 +1,11 @@
 # create-cloudflare
 
+## 2.25.2
+
+### Patch Changes
+
+- [#6557](https://github.com/cloudflare/workers-sdk/pull/6557) [`2e9aa53`](https://github.com/cloudflare/workers-sdk/commit/2e9aa53751c575128dc513dabc3878426a6f4c5a) Thanks [@edmundhung](https://github.com/edmundhung)! - fix: renamed the "Demo Application" category to "Application Starter"
+
 ## 2.25.1
 
 ### Patch Changes
