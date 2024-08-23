@@ -139,6 +139,14 @@ export interface VectorizeVectorMutation {
 }
 
 /**
+ * Request type used to pass vector ids to fetch or delete.
+ */
+export interface VectorizeVectorIds {
+	/* List of vector ids that are fetched or deleted. */
+	ids: string[];
+}
+
+/**
  * Result type indicating a mutation on the Vectorize Index.
  * Actual mutations are processed async where the `mutationId` is the unique identifier for the operation.
  */

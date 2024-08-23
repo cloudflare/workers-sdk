@@ -6,6 +6,7 @@ import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
 } from "../yargs-types";
+import type { VectorizeVectorIds } from "./types";
 
 export function options(yargs: CommonYargsArgv) {
 	return yargs
@@ -37,7 +38,12 @@ export async function handler(
 	}
 
 	logger.log(`📋 Fetching vectors...`);
-	const vectors = await getByIds(config, args.name, args.ids);
+
+	const ids: VectorizeVectorIds = {
+		ids: args.ids,
+	};
+
+	const vectors = await getByIds(config, args.name, ids);
 
 	if (vectors.length === 0) {
 		logger.warn(
