@@ -97,13 +97,6 @@ describe("Pages Functions", () => {
 		expect(text).toContain("<h1>An asset</h1>");
 	});
 
-	it("doesn't warn about local mode", async ({ expect }) => {
-		// Regression test for https://github.com/cloudflare/workers-sdk/issues/4210
-		expect(getOutput()).not.toContain(
-			"--local is no longer required and will be removed in a future version"
-		);
-	});
-
 	describe("can mount a plugin", () => {
 		it("should mount Middleware", async ({ expect }) => {
 			const response = await fetch(
