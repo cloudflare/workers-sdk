@@ -28,6 +28,10 @@ export const workflowListHandler = async (args: HandlerOptions) => {
 	if (workflows.length === 0) {
 		logger.warn("There are no deployed Workflows in this account.");
 	} else {
+		// TODO(lduarte): can we improve this message once pagination is deployed
+		logger.info(
+			`Showing last ${workflows.length} workflow${workflows.length > 1 ? "s" : ""}:`
+		);
 		// sort by name and make the table head prettier by changing the keys
 		const prettierWorkflows = workflows
 			.sort((a, b) => a.name.localeCompare(b.name))

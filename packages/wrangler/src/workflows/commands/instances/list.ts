@@ -44,6 +44,11 @@ export const instancesListHandler = async (args: HandlerOptions) => {
 		return;
 	}
 
+	// TODO(lduarte): can we improve this message once pagination is deployed
+	logger.info(
+		`Showing last ${instances.length} instance${instances.length > 1 ? "s" : ""}:`
+	);
+
 	const prettierInstances = instances
 		.sort((a, b) =>
 			args.reverse
