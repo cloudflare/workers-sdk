@@ -412,7 +412,9 @@ describe("Command Registration", () => {
 				handler() {},
 			});
 
-			expect(runWrangler("my-test-command")).rejects.toMatchInlineSnapshot(
+			await expect(
+				runWrangler("my-test-command")
+			).rejects.toMatchInlineSnapshot(
 				`[Error: Duplicate definition for "wrangler my-test-command"]`
 			);
 		});
@@ -426,11 +428,22 @@ describe("Command Registration", () => {
 				},
 			});
 
-			expect(runWrangler("my-test-command")).rejects.toMatchInlineSnapshot(
+			await expect(
+				runWrangler("my-test-command")
+			).rejects.toMatchInlineSnapshot(
 				`[Error: Duplicate definition for "wrangler one two"]`
 			);
 		});
 		test("throws upon missing namespace definition", async () => {
+			defineNamespace({
+				command: "wrangler known-namespace",
+				metadata: {
+					description: "",
+					owner: "Workers: Authoring and Testing",
+					status: "stable",
+				},
+			});
+
 			defineCommand({
 				command: "wrangler missing-namespace subcommand",
 				metadata: {
@@ -442,8 +455,10 @@ describe("Command Registration", () => {
 				handler() {},
 			});
 
-			expect(runWrangler("my-test-command")).rejects.toMatchInlineSnapshot(
-				`[Error: Missing namespace definition for 'wrangler ... missing-namespace ...']`
+			await expect(
+				runWrangler("known-namespace missing-namespace subcommand")
+			).rejects.toMatchInlineSnapshot(
+				`[Error: Missing namespace definition for 'wrangler missing-namespace']`
 			);
 		});
 		test("throws upon alias to undefined command", async () => {
@@ -452,7 +467,9 @@ describe("Command Registration", () => {
 				aliasOf: "wrangler undefined-command",
 			});
 
-			expect(runWrangler("my-test-command")).rejects.toMatchInlineSnapshot(
+			await expect(
+				runWrangler("my-test-command")
+			).rejects.toMatchInlineSnapshot(
 				`[Error: Alias of alias encountered greater than 5 hops]`
 			);
 		});

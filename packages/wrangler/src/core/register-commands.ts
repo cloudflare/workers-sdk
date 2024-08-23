@@ -1,7 +1,6 @@
-import assert from "assert";
-import { CommonYargsArgv } from "../yargs-types";
 import { COMMAND_DEFINITIONS } from "./define-command";
 import { wrapCommandDefinition } from "./wrap-command";
+import type { CommonYargsArgv } from "../yargs-types";
 import type {
 	AliasDefinition,
 	Command,
@@ -12,10 +11,10 @@ import type {
 export class CommandRegistrationError extends Error {}
 
 export default function registerAllCommands(yargs: CommonYargsArgv) {
-	const [root, commands] = createCommandTree("wrangler");
+	const tree = createCommandTree();
 
-	for (const [segment, node] of root.subtree.entries()) {
-		yargs = walkTreeAndRegister(segment, node, commands, yargs);
+	for (const [segment, node] of tree.entries()) {
+		yargs = walkTreeAndRegister(segment, node, yargs);
 	}
 }
 
@@ -24,6 +23,12 @@ type DefinitionTreeNode = {
 	subtree: DefinitionTree;
 };
 type DefinitionTree = Map<string, DefinitionTreeNode>;
+
+type ResolvedDefinitionTreeNode = {
+	definition?: CommandDefinition | NamespaceDefinition;
+	subtree: ResolvedDefinitionTree;
+};
+type ResolvedDefinitionTree = Map<string, ResolvedDefinitionTreeNode>;
 
 /**
  * Converts a flat list of COMMAND_DEFINITIONS into a tree of defintions
@@ -43,13 +48,14 @@ type DefinitionTree = Map<string, DefinitionTreeNode>;
  *               upload
  *               deploy
  */
-function createCommandTree(prefix: string) {
+function createCommandTree() {
 	const root: DefinitionTreeNode = { subtree: new Map() };
-	const commands = new Map<Command, CommandDefinition>();
 	const aliases = new Set<AliasDefinition>();
 
+	// STEP 1: Create tree from flat definitions array
+
 	for (const def of COMMAND_DEFINITIONS) {
-		const node = createNodeFor(def.command);
+		const node = createNodeFor(def.command, root);
 
 		if (node.definition) {
 			throw new CommandRegistrationError(
@@ -63,14 +69,18 @@ function createCommandTree(prefix: string) {
 		}
 	}
 
+	// STEP 2: Resolve all aliases to their real definitions
+
 	const MAX_HOPS = 5; // reloop to allow aliases of aliases (to avoid infinite loop, limit to 5 hops)
 	for (let hops = 0; hops < MAX_HOPS && aliases.size > 0; hops++) {
 		for (const def of aliases) {
-			const realNode = findNodeFor(def.aliasOf);
+			const realNode = findNodeFor(def.aliasOf, root);
 			const real = realNode?.definition;
-			if (!real || "aliasOf" in real) continue;
+			if (!real || "aliasOf" in real) {
+				continue;
+			}
 
-			const node = createNodeFor(def.command);
+			const node = createNodeFor(def.command, root);
 
 			node.definition = {
 				...real,
@@ -97,55 +107,31 @@ function createCommandTree(prefix: string) {
 		);
 	}
 
-	return [root, commands] as const;
+	// STEP 3: validate missing namespace definitions
 
-	// utils to
-	function createNodeFor(command: Command) {
-		const segments = command.split(" ").slice(1); // eg. ["versions", "secret", "put"]
-
-		let node = root;
-		for (const segment of segments) {
-			const subtree = node.subtree;
-			node = subtree.get(segment) ?? {
-				definition: undefined,
-				subtree: new Map(),
-			};
-			subtree.set(segment, node);
+	for (const [command, node] of walk("wrangler", root)) {
+		if (!node.definition) {
+			throw new CommandRegistrationError(
+				`Missing namespace definition for '${command}'`
+			);
 		}
-
-		return node;
 	}
-	function findNodeFor(command: Command) {
-		const segments = command.split(" ").slice(1); // eg. ["versions", "secret", "put"]
 
-		let node: DefinitionTreeNode | undefined = root;
-		for (const segment of segments) {
-			node = node?.subtree.get(segment);
-			if (!node) return undefined;
-		}
+	// STEP 4: return the resolved tree
 
-		return node;
-	}
+	return root.subtree as ResolvedDefinitionTree;
 }
 
 function walkTreeAndRegister(
 	segment: string,
-	{ definition, subtree }: DefinitionTreeNode,
-	commands: Map<Command, CommandDefinition>,
+	{ definition, subtree }: ResolvedDefinitionTreeNode,
 	yargs: CommonYargsArgv
 ) {
 	if (!definition) {
-		// TODO: make error message clearer which command is missing namespace definition
 		throw new CommandRegistrationError(
-			`Missing namespace definition for 'wrangler ... ${segment} ...'`
+			`Missing namespace definition for '${segment}'`
 		);
 	}
-
-	// cannot be AliasDefinition anymore
-	assert(
-		!("aliasOf" in definition),
-		`Unexpected AliasDefinition for "${definition.command}"`
-	);
 
 	// convert our definition into something we can pass to yargs.command
 	const def = wrapCommandDefinition(definition);
@@ -159,8 +145,8 @@ function walkTreeAndRegister(
 				subYargs = def.defineArgs(subYargs);
 			}
 
-			for (const [segment, node] of subtree.entries()) {
-				subYargs = walkTreeAndRegister(segment, node, commands, subYargs);
+			for (const [nextSegment, nextNode] of subtree.entries()) {
+				subYargs = walkTreeAndRegister(nextSegment, nextNode, subYargs);
 			}
 
 			return subYargs;
@@ -170,3 +156,51 @@ function walkTreeAndRegister(
 
 	return yargs;
 }
+
+// #region utils
+function createNodeFor(command: Command, root: DefinitionTreeNode) {
+	const segments = command.split(" ").slice(1); // eg. ["versions", "secret", "put"]
+
+	let node = root;
+	for (const segment of segments) {
+		const subtree = node.subtree;
+		let child = subtree.get(segment);
+		if (!child) {
+			child = {
+				definition: undefined,
+				subtree: new Map(),
+			};
+			subtree.set(segment, child);
+		}
+
+		node = child;
+	}
+
+	return node;
+}
+function findNodeFor(command: Command, root: DefinitionTreeNode) {
+	const segments = command.split(" ").slice(1); // eg. ["versions", "secret", "put"]
+
+	let node = root;
+	for (const segment of segments) {
+		const subtree = node.subtree;
+		const child = subtree.get(segment);
+		if (!child) {
+			return undefined;
+		}
+
+		node = child;
+	}
+
+	return node;
+}
+function* walk(
+	command: Command,
+	parent: DefinitionTreeNode
+): IterableIterator<[Command, DefinitionTreeNode]> {
+	for (const [segment, node] of parent.subtree) {
+		yield [`${command} ${segment}`, node];
+		yield* walk(`${command} ${segment}`, node);
+	}
+}
+// #endregion

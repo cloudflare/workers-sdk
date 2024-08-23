@@ -1,9 +1,9 @@
-import { OnlyCamelCase } from "../config/config";
-import { FatalError, UserError } from "../errors";
-import { CommonYargsOptions } from "../yargs-types";
-import { Teams } from "./teams";
 import type { Config } from "../config";
+import type { OnlyCamelCase } from "../config/config";
+import type { FatalError, UserError } from "../errors";
 import type { Logger } from "../logger";
+import type { CommonYargsOptions } from "../yargs-types";
+import type { Teams } from "./teams";
 import type {
 	Alias,
 	ArgumentsCamelCase,
@@ -12,7 +12,7 @@ import type {
 	PositionalOptions,
 } from "yargs";
 
-export type Command = `wrangler ${string}`;
+export type Command = `wrangler${string}`;
 export type Metadata = {
 	description: string;
 	status: "experimental" | "alpha" | "private-beta" | "open-beta" | "stable";
