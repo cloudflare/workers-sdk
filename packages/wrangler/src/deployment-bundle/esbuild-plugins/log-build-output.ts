@@ -15,16 +15,14 @@ export function logBuildOutput(
 
 	return {
 		name: "log-build-output",
-		setup(b) {
-			b.onStart(() => {
+		setup(build) {
+			build.onStart(() => {
 				onStart?.();
 			});
-			b.onEnd(async (result) => {
-				const errors = result.errors;
-				const warnings = result.warnings;
+			build.onEnd(async ({ errors, warnings }) => {
 				if (errors.length > 0) {
 					if (nodejsCompatMode !== "legacy") {
-						rewriteNodeCompatBuildFailure(result.errors);
+						rewriteNodeCompatBuildFailure(errors);
 					}
 					logBuildFailure(errors, warnings);
 					return;
