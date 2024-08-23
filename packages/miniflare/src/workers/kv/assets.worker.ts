@@ -27,6 +27,15 @@ export default <ExportedHandler<Env>>{
 		// eslint-disable-next-line @typescript-eslint/no-unused-vars
 		const { filePath, contentType } = entry;
 		const blobsService = env[SharedBindings.MAYBE_SERVICE_BLOBS];
-		return blobsService.fetch(new URL(filePath, "http://placeholder"));
+		const response = await blobsService.fetch(
+			new URL(filePath, "http://placeholder")
+		);
+		const newResponse = new Response(response.body, response);
+		// ensure the runtime will return the metadata we need
+		newResponse.headers.append(
+			"cf-kv-metadata",
+			`{"contentType": "${contentType}"}`
+		);
+		return newResponse;
 	},
 };

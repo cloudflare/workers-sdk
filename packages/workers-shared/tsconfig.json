@@ -5,8 +5,8 @@
 		"sourceMap": true,
 		"forceConsistentCasingInFileNames": true,
 		"useUnknownInCatchVariables": false,
-		"types": ["@cloudflare/workers-types"]
+		"types": ["@cloudflare/workers-types/experimental"]
 	},
-	"include": ["**/*.ts"],
-	"exclude": ["node_modules", "dist"]
+	"include": ["**/*.ts", "vitest.config.mts"],
+	"exclude": ["node_modules", "dist", "**/tests", "**/*.test.ts"]
 }

@@ -4,6 +4,11 @@ const CONTENT_HASH_SIZE = 16;
 const TAIL_SIZE = 8;
 const ENTRY_SIZE = PATH_HASH_SIZE + CONTENT_HASH_SIZE + TAIL_SIZE;
 
+export type AssetEntry = {
+	path: string;
+	contentHash: string;
+};
+
 export class AssetsManifest {
 	private data: ArrayBuffer;
 
