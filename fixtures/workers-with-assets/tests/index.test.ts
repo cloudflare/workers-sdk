@@ -113,4 +113,14 @@ describe("[Workers + Assets] `wrangler dev`", () => {
 		expect(response.status).toBe(405);
 		expect(response.statusText).toBe("Method Not Allowed");
 	});
+
+	it("should handle funky path names", async ({ expect }) => {
+		let response = await fetch(`http://${ip}:${port}/funkÈÈÈ_$&.html`);
+		let text = await response.text();
+		expect(response.status).toBe(200);
+		expect(response.headers.get("Content-Type")).toBe(
+			"text/html; charset=utf-8"
+		);
+		expect(text).toBe("This is a file with a funkÈÈÈÈ name");
+	});
 });
