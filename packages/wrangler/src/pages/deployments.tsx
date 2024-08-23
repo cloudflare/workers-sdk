@@ -19,16 +19,22 @@ import type { Deployment } from "@cloudflare/types";
 type ListArgs = StrictYargsOptionsToInterface<typeof ListOptions>;
 
 export function ListOptions(yargs: CommonYargsArgv) {
-	return yargs.options({
-		"project-name": {
-			type: "string",
-			description:
-				"The name of the project you would like to list deployments for",
-		},
-	});
+	return yargs
+		.options({
+			"project-name": {
+				type: "string",
+				description:
+					"The name of the project you would like to list deployments for",
+			},
+		})
+		.option("format", {
+			default: "pretty",
+			choices: ["json", "pretty"],
+			describe: "The format to print deployments in",
+		});
 }
 
-export async function ListHandler({ projectName }: ListArgs) {
+export async function ListHandler({ projectName, format }: ListArgs) {
 	const config = getConfigCache<PagesConfigCache>(PAGES_CONFIG_CACHE_FILENAME);
 	const accountId = await requireAuth(config);
 
@@ -79,6 +85,20 @@ export async function ListHandler({ projectName }: ListArgs) {
 		account_id: accountId,
 	});
 
-	logger.log(renderToString(<Table data={data}></Table>));
+	if (format === "json") {
+		const json = JSON.stringify(
+			data.map((obj) =>
+				Object.fromEntries(
+					Object.entries(obj).map(([k, v]) => [k.toLowerCase(), v])
+				)
+			),
+			null,
+			2
+		);
+		logger.log(json);
+	} else {
+		logger.log(renderToString(<Table data={data}></Table>));
+	}
+
 	await metrics.sendMetricsEvent("list pages deployments");
 }
