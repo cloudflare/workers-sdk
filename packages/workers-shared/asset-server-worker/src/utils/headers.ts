@@ -11,11 +11,13 @@ export function getMergedHeaders(
 	existingHeaders: Headers,
 	additionalHeaders: Headers
 ) {
-	return new Headers({
+	const mergedHeaders = new Headers(existingHeaders);
+	for (const [key, value] of additionalHeaders) {
 		// override existing headers
-		...Object.fromEntries(new Headers(existingHeaders).entries()),
-		...Object.fromEntries(new Headers(additionalHeaders).entries()),
-	});
+		mergedHeaders.set(key, value);
+	}
+
+	return mergedHeaders;
 }
 
 /**
