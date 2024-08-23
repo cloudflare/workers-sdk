@@ -4,10 +4,8 @@ import { COMMAND_DEFINITIONS } from "./define-command";
 import { wrapCommandDefinition } from "./wrap-command";
 import type {
 	AliasDefinition,
-	BaseNamedArgDefinitions,
 	Command,
 	CommandDefinition,
-	HandlerArgs,
 	NamespaceDefinition,
 } from "./define-command";
 
@@ -50,24 +48,8 @@ function createCommandTree(prefix: string) {
 	const commands = new Map<Command, CommandDefinition>();
 	const aliases = new Set<AliasDefinition>();
 
-	function getNodeFor(command: Command) {
-		const segments = command.split(" ").slice(1); // eg. ["versions", "secret", "put"]
-
-		let node = root;
-		for (const segment of segments) {
-			const subtree = node.subtree;
-			node = subtree.get(segment) ?? {
-				definition: undefined,
-				subtree: new Map(),
-			};
-			subtree.set(segment, node);
-		}
-
-		return node;
-	}
-
 	for (const def of COMMAND_DEFINITIONS) {
-		const node = getNodeFor(def.command);
+		const node = createNodeFor(def.command);
 
 		if (node.definition) {
 			throw new CommandRegistrationError(
@@ -81,15 +63,14 @@ function createCommandTree(prefix: string) {
 		}
 	}
 
-	// reloop to allow aliases of aliases
-	const MAX_HOPS = 5;
+	const MAX_HOPS = 5; // reloop to allow aliases of aliases (to avoid infinite loop, limit to 5 hops)
 	for (let hops = 0; hops < MAX_HOPS && aliases.size > 0; hops++) {
 		for (const def of aliases) {
-			const realNode = getNodeFor(def.aliasOf); // TODO: this might be creating unnecessary undefined definitions
-			const real = realNode.definition;
+			const realNode = findNodeFor(def.aliasOf);
+			const real = realNode?.definition;
 			if (!real || "aliasOf" in real) continue;
 
-			const node = getNodeFor(def.command);
+			const node = createNodeFor(def.command);
 
 			node.definition = {
 				...real,
@@ -117,6 +98,34 @@ function createCommandTree(prefix: string) {
 	}
 
 	return [root, commands] as const;
+
+	// utils to
+	function createNodeFor(command: Command) {
+		const segments = command.split(" ").slice(1); // eg. ["versions", "secret", "put"]
+
+		let node = root;
+		for (const segment of segments) {
+			const subtree = node.subtree;
+			node = subtree.get(segment) ?? {
+				definition: undefined,
+				subtree: new Map(),
+			};
+			subtree.set(segment, node);
+		}
+
+		return node;
+	}
+	function findNodeFor(command: Command) {
+		const segments = command.split(" ").slice(1); // eg. ["versions", "secret", "put"]
+
+		let node: DefinitionTreeNode | undefined = root;
+		for (const segment of segments) {
+			node = node?.subtree.get(segment);
+			if (!node) return undefined;
+		}
+
+		return node;
+	}
 }
 
 function walkTreeAndRegister(
