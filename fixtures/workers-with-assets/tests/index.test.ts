@@ -37,7 +37,39 @@ describe("[Workers + Assets] `wrangler dev`", () => {
 	it("should 404 if asset is not found in the asset manifest", async ({
 		expect,
 	}) => {
-		let response = await fetch(`http://${ip}:${port}/test.html`);
+		let response = await fetch(`http://${ip}:${port}/hello.html`);
 		expect(response.status).toBe(404);
+
+		response = await fetch(`http://${ip}:${port}/hello.txt`);
+		expect(response.status).toBe(404);
+	});
+
+	it("should handle content types correctly", async ({ expect }) => {
+		let response = await fetch(`http://${ip}:${port}/index.html`);
+		let text = await response.text();
+		expect(response.status).toBe(200);
+		expect(response.headers.get("Content-Type")).toBe(
+			"text/html; charset=utf-8"
+		);
+
+		response = await fetch(`http://${ip}:${port}/README.md`);
+		text = await response.text();
+		expect(response.status).toBe(200);
+		expect(response.headers.get("Content-Type")).toBe(
+			"text/markdown; charset=utf-8"
+		);
+		expect(text).toContain(`Welcome to Workers + Assets YAY!`);
+
+		response = await fetch(`http://${ip}:${port}/yay.txt`);
+		text = await response.text();
+		expect(response.status).toBe(200);
+		expect(response.headers.get("Content-Type")).toBe(
+			"text/plain; charset=utf-8"
+		);
+		expect(text).toContain(`.----------------.`);
+
+		response = await fetch(`http://${ip}:${port}/lava-lamps.jpg`);
+		expect(response.status).toBe(200);
+		expect(response.headers.get("Content-Type")).toBe("image/jpeg");
 	});
 });
