@@ -156,6 +156,11 @@ export function readConfig(
 		if (!config.rules.some((rule) => rule.type === "PythonModule")) {
 			config.rules.push({ type: "PythonModule", globs: ["**/*.py"] });
 		}
+		if (!config.compatibility_flags.includes("python_workers")) {
+			throw new UserError(
+				"The `python_workers` compatibility flag is required to use Python."
+			);
+		}
 	}
 
 	return config;

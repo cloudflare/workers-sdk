@@ -1,12 +1,49 @@
 import path from "node:path";
+import { readConfig } from "../config";
 import { normalizeAndValidateConfig } from "../config/validation";
 import { normalizeSlashes } from "./helpers/mock-console";
+import { runInTempDir } from "./helpers/run-in-tmp";
+import { writeWranglerToml } from "./helpers/write-wrangler-toml";
 import type {
 	ConfigFields,
 	RawConfig,
 	RawDevConfig,
 	RawEnvironment,
 } from "../config";
+
+describe.only("readConfig()", () => {
+	runInTempDir();
+	it("should not error if a python entrypoint is used with the right compatibility_flag", () => {
+		writeWranglerToml({
+			main: "index.py",
+			compatibility_flags: ["python_workers"],
+		});
+		const config = readConfig("wrangler.toml", {});
+		expect(config.rules).toMatchInlineSnapshot(`
+			Array [
+			  Object {
+			    "globs": Array [
+			      "**/*.py",
+			    ],
+			    "type": "PythonModule",
+			  },
+			]
+		`);
+	});
+	it("should error if a python entrypoint is used without the right compatibility_flag", () => {
+		writeWranglerToml({
+			main: "index.py",
+		});
+		try {
+			readConfig("wrangler.toml", {});
+			expect.fail();
+		} catch (e) {
+			expect(e).toMatchInlineSnapshot(
+				`[Error: The \`python_workers\` compatibility flag is required to use Python.]`
+			);
+		}
+	});
+});
 
 describe("normalizeAndValidateConfig()", () => {
 	it("should use defaults for empty configuration", () => {
