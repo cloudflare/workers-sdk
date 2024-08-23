@@ -72,4 +72,45 @@ describe("[Workers + Assets] `wrangler dev`", () => {
 		expect(response.status).toBe(200);
 		expect(response.headers.get("Content-Type")).toBe("image/jpeg");
 	});
+
+	it("should only ever handle GET requests", async ({ expect }) => {
+		// as per https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods
+		// excl. TRACE and CONNECT which are not supported
+
+		let response = await fetch(`http://${ip}:${port}/hello.html`, {
+			method: "HEAD",
+		});
+		expect(response.status).toBe(405);
+		expect(response.statusText).toBe("Method Not Allowed");
+
+		response = await fetch(`http://${ip}:${port}/hello.html`, {
+			method: "POST",
+		});
+		expect(response.status).toBe(405);
+		expect(response.statusText).toBe("Method Not Allowed");
+
+		response = await fetch(`http://${ip}:${port}/hello.html`, {
+			method: "PUT",
+		});
+		expect(response.status).toBe(405);
+		expect(response.statusText).toBe("Method Not Allowed");
+
+		response = await fetch(`http://${ip}:${port}/hello.html`, {
+			method: "DELETE",
+		});
+		expect(response.status).toBe(405);
+		expect(response.statusText).toBe("Method Not Allowed");
+
+		response = await fetch(`http://${ip}:${port}/hello.html`, {
+			method: "OPTIONS",
+		});
+		expect(response.status).toBe(405);
+		expect(response.statusText).toBe("Method Not Allowed");
+
+		response = await fetch(`http://${ip}:${port}/hello.html`, {
+			method: "PATCH",
+		});
+		expect(response.status).toBe(405);
+		expect(response.statusText).toBe("Method Not Allowed");
+	});
 });
