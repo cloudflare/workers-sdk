@@ -1,0 +1,7 @@
+{
+	"extends": "@cloudflare/workers-tsconfig/tsconfig.json",
+	"compilerOptions": {
+		"types": ["@cloudflare/workers-types/experimental", "vitest/globals"]
+	},
+	"include": ["**/*.ts"]
+}

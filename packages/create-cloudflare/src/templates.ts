@@ -289,7 +289,7 @@ export const createContext = async (
 			description: "Select from the most popular full-stack web frameworks",
 		},
 		{
-			label: "Demo application",
+			label: "Application Starter",
 			value: "demo",
 			description:
 				"Select from a range of starter applications using various Cloudflare products",

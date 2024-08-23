@@ -1,5 +1,11 @@
 # playground-preview-worker
 
+## 0.1.0
+
+### Minor Changes
+
+- [#6458](https://github.com/cloudflare/workers-sdk/pull/6458) [`50a60a6`](https://github.com/cloudflare/workers-sdk/commit/50a60a69ee66499759d2f04459c1d182689efa64) Thanks [@penalosa](https://github.com/penalosa)! - feat: Optionally strip `cf-ew-raw-` prefix from headers before passing to the user worker
+
 ## 0.0.4
 
 ### Patch Changes

@@ -18,6 +18,7 @@ import {
 } from "../ai/fetcher";
 import { readConfig } from "../config";
 import { ModuleTypeToRuleType } from "../deployment-bundle/module-collection";
+import { stripExperimentalPrefixes } from "../deployment-bundle/node-compat";
 import { withSourceURLs } from "../deployment-bundle/source-url";
 import { UserError } from "../errors";
 import { logger } from "../logger";
@@ -411,7 +412,9 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 	// Setup service bindings to external services
 	const serviceBindings: NonNullable<WorkerOptions["serviceBindings"]> = {
 		...config.serviceBindings,
-		...(config.experimentalAssets ? { ASSET_SERVER: "asset-server" } : {}),
+		...(config.experimentalAssets
+			? { ASSET_SERVER: "asset-server-worker" }
+			: {}),
 	};
 
 	const notFoundServices = new Set<string>();
@@ -891,7 +894,9 @@ export async function buildMiniflareOptions(
 			{
 				name: getName(config),
 				compatibilityDate: config.compatibilityDate,
-				compatibilityFlags: config.compatibilityFlags,
+				compatibilityFlags: stripExperimentalPrefixes(
+					config.compatibilityFlags
+				),
 
 				...sourceOptions,
 				...bindingOptions,

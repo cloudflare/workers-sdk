@@ -31,8 +31,86 @@ describe("[Workers + Assets] `wrangler dev`", () => {
 
 	it("should not resolve '/' to '/index.html' ", async ({ expect }) => {
 		let response = await fetch(`http://${ip}:${port}/`);
-		let text = await response.text();
 		expect(response.status).toBe(404);
-		expect(text).toContain("Not Found");
+	});
+
+	it("should 404 if asset is not found in the asset manifest", async ({
+		expect,
+	}) => {
+		let response = await fetch(`http://${ip}:${port}/hello.html`);
+		expect(response.status).toBe(404);
+
+		response = await fetch(`http://${ip}:${port}/hello.txt`);
+		expect(response.status).toBe(404);
+	});
+
+	it("should handle content types correctly", async ({ expect }) => {
+		let response = await fetch(`http://${ip}:${port}/index.html`);
+		let text = await response.text();
+		expect(response.status).toBe(200);
+		expect(response.headers.get("Content-Type")).toBe(
+			"text/html; charset=utf-8"
+		);
+
+		response = await fetch(`http://${ip}:${port}/README.md`);
+		text = await response.text();
+		expect(response.status).toBe(200);
+		expect(response.headers.get("Content-Type")).toBe(
+			"text/markdown; charset=utf-8"
+		);
+		expect(text).toContain(`Welcome to Workers + Assets YAY!`);
+
+		response = await fetch(`http://${ip}:${port}/yay.txt`);
+		text = await response.text();
+		expect(response.status).toBe(200);
+		expect(response.headers.get("Content-Type")).toBe(
+			"text/plain; charset=utf-8"
+		);
+		expect(text).toContain(`.----------------.`);
+
+		response = await fetch(`http://${ip}:${port}/lava-lamps.jpg`);
+		expect(response.status).toBe(200);
+		expect(response.headers.get("Content-Type")).toBe("image/jpeg");
+	});
+
+	it("should only ever handle GET requests", async ({ expect }) => {
+		// as per https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods
+		// excl. TRACE and CONNECT which are not supported
+
+		let response = await fetch(`http://${ip}:${port}/hello.html`, {
+			method: "HEAD",
+		});
+		expect(response.status).toBe(405);
+		expect(response.statusText).toBe("Method Not Allowed");
+
+		response = await fetch(`http://${ip}:${port}/hello.html`, {
+			method: "POST",
+		});
+		expect(response.status).toBe(405);
+		expect(response.statusText).toBe("Method Not Allowed");
+
+		response = await fetch(`http://${ip}:${port}/hello.html`, {
+			method: "PUT",
+		});
+		expect(response.status).toBe(405);
+		expect(response.statusText).toBe("Method Not Allowed");
+
+		response = await fetch(`http://${ip}:${port}/hello.html`, {
+			method: "DELETE",
+		});
+		expect(response.status).toBe(405);
+		expect(response.statusText).toBe("Method Not Allowed");
+
+		response = await fetch(`http://${ip}:${port}/hello.html`, {
+			method: "OPTIONS",
+		});
+		expect(response.status).toBe(405);
+		expect(response.statusText).toBe("Method Not Allowed");
+
+		response = await fetch(`http://${ip}:${port}/hello.html`, {
+			method: "PATCH",
+		});
+		expect(response.status).toBe(405);
+		expect(response.statusText).toBe("Method Not Allowed");
 	});
 });

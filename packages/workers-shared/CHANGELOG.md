@@ -1,5 +1,11 @@
 # @cloudflare/workers-shared
 
+## 0.3.0
+
+### Minor Changes
+
+- [#6537](https://github.com/cloudflare/workers-sdk/pull/6537) [`f5bde66`](https://github.com/cloudflare/workers-sdk/commit/f5bde66914d24c59da35e051c5343c8f0554f782) Thanks [@emily-shen](https://github.com/emily-shen)! - feat: add basic Router Worker to workers-shared
+
 ## 0.2.0
 
 ### Minor Changes

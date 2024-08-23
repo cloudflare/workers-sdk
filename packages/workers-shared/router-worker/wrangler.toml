@@ -1,0 +1,12 @@
+##
+# Configuration file for the Router Worker
+#
+# Please note that wrangler has a dependency on this file, and will
+# attempt to read it as part of setting up a new Miniflare instance
+# in developemnt mode. We should ensure that any configuration changes
+# to this file are persisted in wrangler as well, when necessary.
+# (see packages/wrangler/src/dev/miniflare.ts -> buildMiniflareOptions())
+##
+name = "router-worker"
+main = "src/index.ts"
+compatibility_date = "2024-07-31"

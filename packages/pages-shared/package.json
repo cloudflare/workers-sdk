@@ -1,6 +1,6 @@
 {
 	"name": "@cloudflare/pages-shared",
-	"version": "0.11.52",
+	"version": "0.11.53",
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/cloudflare/workers-sdk.git",
@@ -23,7 +23,7 @@
 	},
 	"devDependencies": {
 		"@cloudflare/workers-tsconfig": "workspace:*",
-		"@cloudflare/workers-types": "^4.20240806.0",
+		"@cloudflare/workers-types": "^4.20240821.1",
 		"@miniflare/cache": "^2.14.2",
 		"@miniflare/core": "^2.14.2",
 		"@miniflare/html-rewriter": "^2.14.2",

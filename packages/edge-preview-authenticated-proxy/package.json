@@ -1,6 +1,6 @@
 {
 	"name": "edge-preview-authenticated-proxy",
-	"version": "0.1.4",
+	"version": "0.2.0",
 	"private": true,
 	"scripts": {
 		"check:lint": "eslint . --max-warnings=0",
@@ -12,7 +12,7 @@
 	},
 	"devDependencies": {
 		"@cloudflare/eslint-config-worker": "workspace:*",
-		"@cloudflare/workers-types": "^4.20240806.0",
+		"@cloudflare/workers-types": "^4.20240821.1",
 		"@types/cookie": "^0.6.0",
 		"cookie": "^0.6.0",
 		"promjs": "^0.4.2",

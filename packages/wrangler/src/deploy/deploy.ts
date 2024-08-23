@@ -395,13 +395,13 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 	const minify = props.minify ?? config.minify;
 
-	const nodejsCompatMode = validateNodeCompat({
-		legacyNodeCompat: props.nodeCompat ?? config.node_compat ?? false,
-		compatibilityFlags: props.compatibilityFlags ?? config.compatibility_flags,
-		noBundle: props.noBundle ?? config.no_bundle ?? false,
-	});
 	const compatibilityFlags =
 		props.compatibilityFlags ?? config.compatibility_flags;
+	const nodejsCompatMode = validateNodeCompat({
+		legacyNodeCompat: props.nodeCompat ?? config.node_compat ?? false,
+		compatibilityFlags,
+		noBundle: props.noBundle ?? config.no_bundle ?? false,
+	});
 
 	// Warn if user tries minify with no-bundle
 	if (props.noBundle && minify) {

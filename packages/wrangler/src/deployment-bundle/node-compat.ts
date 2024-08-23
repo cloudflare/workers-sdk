@@ -51,13 +51,6 @@ export function validateNodeCompat({
 	const nodejsCompatV2NotExperimental =
 		compatibilityFlags.includes("nodejs_compat_v2");
 
-	if (nodejsCompatV2) {
-		// strip the "experimental:" prefix because workerd doesn't understand it yet.
-		compatibilityFlags[
-			compatibilityFlags.indexOf("experimental:nodejs_compat_v2")
-		] = "nodejs_compat_v2";
-	}
-
 	if (nodejsCompat && nodejsCompatV2) {
 		throw new UserError(
 			"The `nodejs_compat` and `nodejs_compat_v2` compatibility flags cannot be used in together. Please select just one."
@@ -123,4 +116,17 @@ export function getNodeCompatMode({
 		nodejsCompat,
 		nodejsCompatV2,
 	};
+}
+
+/**
+ * The nodejs_compat_v2 flag currently requires an `experimental:` prefix within Wrangler,
+ * but this needs to be stripped before sending to workerd, since that doesn't know about that.
+ *
+ * TODO: Remove this function when we graduate nodejs_v2 to non-experimental.
+ * See https://jira.cfdata.org/browse/DEVDASH-218
+ */
+export function stripExperimentalPrefixes(
+	compatFlags: string[] | undefined
+): string[] | undefined {
+	return compatFlags?.map((flag) => flag.replace(/^experimental:/, ""));
 }
