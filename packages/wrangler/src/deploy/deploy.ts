@@ -312,6 +312,7 @@ export default async function deploy(props: Props): Promise<{
 	sourceMapSize?: number;
 	deploymentId: string | null;
 	workerTag: string | null;
+	targets?: string[];
 }> {
 	// TODO: warn if git/hg has uncommitted changes
 	const { config, accountId, name } = props;
@@ -866,14 +867,19 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 	}
 
 	// deploy triggers
-	await triggersDeploy(props);
+	const targets = await triggersDeploy(props);
 
 	logger.log("Current Deployment ID:", deploymentId);
 	logger.log("Current Version ID:", deploymentId);
 
 	logVersionIdChange();
 
-	return { sourceMapSize, deploymentId, workerTag };
+	return {
+		sourceMapSize,
+		deploymentId,
+		workerTag,
+		targets: targets ?? [],
+	};
 }
 
 function deployWfpUserWorker(

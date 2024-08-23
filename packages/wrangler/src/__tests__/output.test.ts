@@ -85,6 +85,7 @@ describe("writeOutput()", () => {
 			worker_name: "Worker",
 			worker_tag: "ABCDE12345",
 			version_id: "1234",
+			targets: undefined,
 		});
 
 		const outputFile = readFileSync(WRANGLER_OUTPUT_FILE_PATH, "utf8");
@@ -102,6 +103,7 @@ describe("writeOutput()", () => {
 				worker_name: "Worker",
 				worker_tag: "ABCDE12345",
 				version_id: "1234",
+				targets: undefined,
 			},
 		]);
 	});
@@ -148,6 +150,7 @@ describe("writeOutput()", () => {
 			worker_name: "Worker",
 			worker_tag: "ABCDE12345",
 			version_id: "1234",
+			targets: undefined,
 		});
 
 		const outputFilePaths = readdirSync("output");
@@ -168,6 +171,7 @@ describe("writeOutput()", () => {
 				worker_name: "Worker",
 				worker_tag: "ABCDE12345",
 				version_id: "1234",
+				targets: undefined,
 			},
 		]);
 	});

@@ -326,7 +326,7 @@ export async function deployHandler(
 
 	const beforeUpload = Date.now();
 	const name = getScriptName(args, config);
-	const { sourceMapSize, deploymentId, workerTag } = await deploy({
+	const { sourceMapSize, deploymentId, workerTag, targets } = await deploy({
 		config,
 		accountId,
 		name,
@@ -370,6 +370,7 @@ export async function deployHandler(
 		worker_tag: workerTag,
 		// Note that the `deploymentId` returned from a simple deployment is actually the versionId of the uploaded version.
 		version_id: deploymentId,
+		targets,
 	});
 
 	await metrics.sendMetricsEvent(
