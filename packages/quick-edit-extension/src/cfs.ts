@@ -539,36 +539,21 @@ declare module "*.bin" {
 			: null;
 
 		// The memfs implementation does not support the `files.exclude` and `search.exclude` settings
-		// This implements a simple mechanism to filter out files by just matching the filename
-		// which does not take into account the full path of the file
-		const excludePatterns = excludes.reduce<Array<RegExp>>(
-			(patterns, exclude) => {
-				if (exclude) {
-					const lastSlashIndex = exclude.lastIndexOf("/");
-					// Excludes might include a glob pattern, e.g. `**/*.js`
-					// As we are only comparing the filename, we need to make sure the file path is stripped
-					// This makes the final RegExp /.*\.js/
-					const filenamePattern = new RegExp(
-						this._convertSimple2RegExpPattern(
-							lastSlashIndex !== -1
-								? exclude.substring(lastSlashIndex + 1)
-								: exclude
-						)
-					);
+		// This implements a simple mechanism to filter out files by matching against the file path
+		// e.g. Both `package.json` and `**/package.json` will exclude all files named `package.json` in any folder
+		const excludePatterns = excludes.map((exclude) => {
+			if (!exclude) {
+				return null;
+			}
 
-					patterns.push(filenamePattern);
-				}
-
-				return patterns;
-			},
-			[]
-		);
+			return new RegExp(this._convertSimple2RegExpPattern(exclude));
+		});
 
 		for (const file of files) {
 			if (
 				(!pattern || pattern.exec(file.name)) &&
-				// Ensure the file name is not excluded
-				excludePatterns.every((regex) => !regex.exec(file.name))
+				// Ensure the file is not excluded
+				!excludePatterns.some((regex) => regex?.exec(file.uri.path))
 			) {
 				result.push(file.uri);
 			}
