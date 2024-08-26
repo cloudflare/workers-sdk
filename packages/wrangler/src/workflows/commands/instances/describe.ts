@@ -84,7 +84,7 @@ export const instancesDescribeHandler = async (args: HandlerOptions) => {
 	);
 
 	const formattedInstance: Record<string, string> = {
-		"Instance Name": args.name,
+		"Workflow Name": args.name,
 		"Instance Id": id,
 		"Version Id": instance.versionId,
 		Status: emojifyInstanceStatus(instance.status),
