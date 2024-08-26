@@ -130,4 +130,24 @@ describe("types", () => {
 			`📣 It looks like you have some Node.js compatibility turned on in your project. You might want to consider adding Node.js typings with "npm i --save-dev @types/node@20.8.3". Please see the docs for more details: https://developers.cloudflare.com/workers/languages/typescript/#transitive-loading-of-typesnode-overrides-cloudflareworkers-types`
 		);
 	});
+
+	it("should not error with nodejs_compat flags", async () => {
+		const helper = new WranglerE2ETestHelper();
+		await helper.seed({
+			...seed,
+			"wrangler.toml": dedent`
+				name = "test-worker"
+				main = "src/index.ts"
+				compatibility_date = "2023-01-01"
+				compatibility_flags = ["nodejs_compat", "experimental:nodejs_compat_v2"]
+			`,
+		});
+
+		const output = await helper.run(
+			`wrangler types --x-include-runtime="./types.d.ts"`
+		);
+
+		expect(output.stderr).toBe("");
+		expect(output.status).toBe(0);
+	});
 });
