@@ -77,6 +77,7 @@ export function buildWorkerFromFunctions({
 		},
 		alias: {},
 		doBindings: [], // Pages functions don't support internal Durable Objects
+		workflowBindings: [], // Pages functions don't support internal Workflows
 		external,
 		plugins: [buildNotifierPlugin(onEnd), assetsPlugin(buildOutputDirectory)],
 		isOutfile: !outdir,
@@ -156,6 +157,7 @@ export function buildRawWorker({
 		define: {},
 		alias: {},
 		doBindings: [], // Pages functions don't support internal Durable Objects
+		workflowBindings: [], // Pages functions don't support internal Workflows
 		external,
 		plugins: [
 			...plugins,

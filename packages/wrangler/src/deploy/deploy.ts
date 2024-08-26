@@ -533,6 +533,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 						serveLegacyAssetsFromWorker:
 							!props.isWorkersSite && Boolean(props.legacyAssetPaths),
 						doBindings: config.durable_objects.bindings,
+						workflowBindings: config.workflows ?? [],
 						jsxFactory,
 						jsxFragment,
 						tsconfig: props.tsconfig ?? config.tsconfig,

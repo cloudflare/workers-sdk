@@ -37,7 +37,10 @@ import { startRemoteServer } from "./remote";
 import { validateDevProps } from "./validate-dev-props";
 import type { ProxyData, StartDevWorkerInput, Trigger } from "../api";
 import type { Config } from "../config";
-import type { DurableObjectBindings } from "../config/environment";
+import type {
+	DurableObjectBindings,
+	WorkflowBinding,
+} from "../config/environment";
 import type { Entry } from "../deployment-bundle/entry";
 import type { NodeJSCompatMode } from "../deployment-bundle/node-compat";
 import type { CfModule } from "../deployment-bundle/worker";
@@ -243,6 +246,7 @@ export async function startDevServer(
 		testScheduled: props.testScheduled,
 		local: props.local,
 		doBindings: props.bindings.durable_objects?.bindings ?? [],
+		workflowBindings: props.bindings.workflows ?? [],
 		projectRoot: props.projectRoot,
 		defineNavigatorUserAgent: isNavigatorDefined(
 			props.compatibilityDate,
@@ -416,6 +420,7 @@ async function runEsbuild({
 	testScheduled,
 	local,
 	doBindings,
+	workflowBindings,
 	projectRoot,
 	defineNavigatorUserAgent,
 }: {
@@ -438,6 +443,7 @@ async function runEsbuild({
 	testScheduled?: boolean;
 	local: boolean;
 	doBindings: DurableObjectBindings;
+	workflowBindings: WorkflowBinding[];
 	projectRoot: string | undefined;
 	defineNavigatorUserAgent: boolean;
 }): Promise<EsbuildBundle> {
@@ -483,6 +489,7 @@ async function runEsbuild({
 					local,
 					testScheduled,
 					doBindings,
+					workflowBindings,
 					projectRoot,
 					defineNavigatorUserAgent,
 				})

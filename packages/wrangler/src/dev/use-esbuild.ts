@@ -52,6 +52,7 @@ export type EsbuildBundleProps = {
 	noBundle: boolean;
 	findAdditionalModules: boolean | undefined;
 	durableObjects: Config["durable_objects"];
+	workflows: Config["workflows"];
 	local: boolean;
 	targetConsumer: "dev" | "deploy";
 	testScheduled: boolean;
@@ -80,6 +81,7 @@ export function runBuild(
 		noBundle,
 		findAdditionalModules,
 		durableObjects,
+		workflows,
 		local,
 		targetConsumer,
 		testScheduled,
@@ -104,6 +106,7 @@ export function runBuild(
 		noBundle: boolean;
 		findAdditionalModules: boolean | undefined;
 		durableObjects: Config["durable_objects"];
+		workflows: Config["workflows"];
 		local: boolean;
 		targetConsumer: "dev" | "deploy";
 		testScheduled: boolean;
@@ -213,6 +216,7 @@ export function runBuild(
 						minify,
 						nodejsCompatMode,
 						doBindings: durableObjects.bindings,
+						workflowBindings: workflows,
 						alias,
 						define,
 						checkFetch: true,
@@ -298,6 +302,7 @@ export function useEsbuild({
 	noBundle,
 	findAdditionalModules,
 	durableObjects,
+	workflows,
 	local,
 	targetConsumer,
 	testScheduled,
@@ -328,6 +333,7 @@ export function useEsbuild({
 				noBundle,
 				findAdditionalModules,
 				durableObjects,
+				workflows,
 				local,
 				targetConsumer,
 				testScheduled,
@@ -361,6 +367,7 @@ export function useEsbuild({
 		define,
 		legacyAssets,
 		durableObjects,
+		workflows,
 		local,
 		targetConsumer,
 		testScheduled,

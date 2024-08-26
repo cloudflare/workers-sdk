@@ -295,6 +295,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 						moduleCollector,
 						serveLegacyAssetsFromWorker: false,
 						doBindings: config.durable_objects.bindings,
+						workflowBindings: config.workflows,
 						jsxFactory,
 						jsxFragment,
 						tsconfig: props.tsconfig ?? config.tsconfig,

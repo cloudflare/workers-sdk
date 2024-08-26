@@ -107,6 +107,7 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 						serveLegacyAssetsFromWorker: Boolean(
 							config.legacy?.legacyAssets && !config.dev?.remote
 						),
+						workflowBindings: bindings?.workflows ?? [],
 						doBindings: bindings?.durable_objects?.bindings ?? [],
 						jsxFactory: config.build.jsxFactory,
 						jsxFragment: config.build.jsxFactory,
@@ -227,6 +228,7 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 				noBundle: !config.build?.bundle,
 				findAdditionalModules: config.build?.findAdditionalModules,
 				durableObjects: bindings?.durable_objects ?? { bindings: [] },
+				workflows: bindings?.workflows ?? [],
 				local: !config.dev?.remote,
 				// startDevWorker only applies to "dev"
 				targetConsumer: "dev",
