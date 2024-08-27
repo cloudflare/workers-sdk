@@ -16,6 +16,7 @@ export const onRequest = async ({
 						: "Solarflare Light",
 				"workbench.startupEditor": "none",
 				"editor.minimap.autohide": true,
+				"files.autoSave": "off",
 				"files.exclude": {
 					"*.d.ts": true,
 					"jsconfig.json": true,
