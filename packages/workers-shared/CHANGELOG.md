@@ -1,5 +1,17 @@
 # @cloudflare/workers-shared
 
+## 0.4.0
+
+### Minor Changes
+
+- [#6539](https://github.com/cloudflare/workers-sdk/pull/6539) [`6c057d1`](https://github.com/cloudflare/workers-sdk/commit/6c057d10b22e9a2e08aa066e074c792cff78d1da) Thanks [@CarmenPopoviciu](https://github.com/CarmenPopoviciu)! - feat: Add basic Asset Worker behaviour
+
+  This commit implements a basic Asset Worker behaviour, including:
+
+  - headers handling
+  - `200`/`404`/`500` response handling
+  - fetching data from KV
+
 ## 0.3.0
 
 ### Minor Changes
