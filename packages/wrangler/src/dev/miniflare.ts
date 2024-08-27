@@ -843,7 +843,9 @@ export async function buildMiniflareOptions(
 	if (config.crons.length > 0) {
 		if (!didWarnMiniflareCronSupport) {
 			didWarnMiniflareCronSupport = true;
-			log.warn("Miniflare 3 does not support CRON triggers yet, ignoring...");
+			log.warn(
+				"Miniflare 3 does not currently trigger scheduled workers automatically.\nUse `--test-scheduled` to forward fetch triggers."
+			);
 		}
 	}
 
