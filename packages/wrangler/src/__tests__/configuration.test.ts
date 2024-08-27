@@ -1207,7 +1207,7 @@ describe("normalizeAndValidateConfig()", () => {
 		describe("name", () => {
 			it("should error on invalid `name` value with spaces", () => {
 				const expectedConfig: RawEnvironment = {
-					name: "NCC 1701 D",
+					name: "this has spaces",
 				} as unknown as RawEnvironment;
 
 				const { config, diagnostics } = normalizeAndValidateConfig(
@@ -1218,10 +1218,11 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(config).toEqual(expect.objectContaining(expectedConfig));
 				expect(diagnostics.hasWarnings()).toBe(false);
+
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			          "Processing wrangler configuration:
-			            - Expected \\"name\\" to be of type string, alphanumeric and lowercase with dashes only but got \\"NCC 1701 D\\"."
-		        `);
+					"Processing wrangler configuration:
+					  - Expected \\"name\\" to be of type string, alphanumeric and lowercase with dashes only but got \\"this has spaces\\"."
+				`);
 			});
 
 			it("should be valid `name` with underscores", () => {
