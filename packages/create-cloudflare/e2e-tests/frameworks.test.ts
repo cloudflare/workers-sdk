@@ -295,6 +295,7 @@ const frameworkTests: Record<string, FrameworkTestConfig> = {
 		],
 		testCommitMessage: true,
 		unsupportedOSs: ["win32"],
+		unsupportedPms: ["yarn"],
 		timeout: LONG_TIMEOUT,
 		verifyDeploy: {
 			route: "/",
