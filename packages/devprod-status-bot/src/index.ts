@@ -446,7 +446,7 @@ async function sendUpcomingReleaseMessage(pat: string, webhookUrl: string) {
 	await sendMessage(
 		webhookUrl,
 		{
-			text: "cc <users/103802752659756021218> <users/111710439474343081424>",
+			text: "cc <users/103802752659756021218>",
 		},
 		"release-notification"
 	);
