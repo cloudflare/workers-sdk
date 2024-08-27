@@ -23,20 +23,20 @@ const generate = async (ctx: C3Context) => {
 
 const variantsOptions = [
 	{
-		value: 'react-ts',
-		label: 'TypeScript',
+		value: "react-ts",
+		label: "TypeScript",
 	},
 	{
-		value: 'react-swc-ts',
-		label: 'TypeScript + SWC',
+		value: "react-swc-ts",
+		label: "TypeScript + SWC",
 	},
 	{
-		value: 'react',
-		label: 'JavaScript',
+		value: "react",
+		label: "JavaScript",
 	},
 	{
-		value: 'react-swc',
-		label: 'JavaScript + SWC',
+		value: "react-swc",
+		label: "JavaScript + SWC",
 	},
 ];
 
