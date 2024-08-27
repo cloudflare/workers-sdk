@@ -11,7 +11,7 @@ import type {
 	RawEnvironment,
 } from "../config";
 
-describe.only("readConfig()", () => {
+describe("readConfig()", () => {
 	runInTempDir();
 	it("should not error if a python entrypoint is used with the right compatibility_flag", () => {
 		writeWranglerToml({
