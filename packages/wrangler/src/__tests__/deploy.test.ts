@@ -10797,6 +10797,7 @@ export default{
 		it("should upload python module defined in wrangler.toml", async () => {
 			writeWranglerToml({
 				main: "index.py",
+				compatibility_flags: ["python_workers"],
 			});
 			await fs.promises.writeFile(
 				"index.py",
@@ -10835,7 +10836,9 @@ export default{
 		});
 
 		it("should upload python module specified in CLI args", async () => {
-			writeWranglerToml();
+			writeWranglerToml({
+				compatibility_flags: ["python_workers"],
+			});
 			await fs.promises.writeFile(
 				"index.py",
 				"from js import Response;\ndef fetch(request):\n return Response.new('hello')"
