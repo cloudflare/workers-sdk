@@ -147,6 +147,15 @@ export function readConfig(
 		}
 	}
 
+	applyPythonConfig(config, args);
+
+	return config;
+}
+
+/**
+ * Modifies the provided config to support python workers, if the entrypoint is a .py file
+ */
+function applyPythonConfig(config: Config, args: ReadConfigCommandArgs) {
 	const mainModule = "script" in args ? args.script : config.main;
 	if (typeof mainModule === "string" && mainModule.endsWith(".py")) {
 		// Workers with a python entrypoint should have bundling turned off, since all of Wrangler's bundling is JS/TS specific
@@ -156,9 +165,12 @@ export function readConfig(
 		if (!config.rules.some((rule) => rule.type === "PythonModule")) {
 			config.rules.push({ type: "PythonModule", globs: ["**/*.py"] });
 		}
+		if (!config.compatibility_flags.includes("python_workers")) {
+			throw new UserError(
+				"The `python_workers` compatibility flag is required to use Python."
+			);
+		}
 	}
-
-	return config;
 }
 
 /**
