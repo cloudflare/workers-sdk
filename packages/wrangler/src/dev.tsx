@@ -788,7 +788,7 @@ export async function startDev(args: StartDevOptions) {
 					enableServiceEnvironments: !(args.legacyEnv ?? true),
 				},
 				experimental: {
-					assets: experimentalAssets,
+					assets: args.experimentalAssets ? experimentalAssets : undefined,
 				},
 			} satisfies StartDevWorkerInput);
 
@@ -1583,4 +1583,27 @@ export function getBindings(
 	};
 
 	return bindings;
+}
+
+export function getAssetChangeMessage(
+	eventName: "add" | "addDir" | "change" | "unlink" | "unlinkDir",
+	assetPath: string
+): string {
+	let message = `${assetPath} changed`;
+	switch (eventName) {
+		case "add":
+			message = `File ${assetPath} was added`;
+			break;
+		case "addDir":
+			message = `Directory ${assetPath} was added`;
+			break;
+		case "unlink":
+			message = `File ${assetPath} was removed`;
+			break;
+		case "unlinkDir":
+			message = `Directory ${assetPath} was removed`;
+			break;
+	}
+
+	return message;
 }
