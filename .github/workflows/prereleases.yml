@@ -31,6 +31,7 @@ jobs:
       - name: Modify package.json version
         run: |
           node .github/version-script.js wrangler
+          node .github/version-script.js miniflare
           node .github/version-script.js create-cloudflare
           node .github/version-script.js workers-shared
 
@@ -55,10 +56,16 @@ jobs:
           SENTRY_DSN: "https://9edbb8417b284aa2bbead9b4c318918b@sentry10.cfdata.org/583"
           ALGOLIA_PUBLIC_KEY: ${{ secrets.ALGOLIA_PUBLIC_KEY }}
 
+      - name: Publish miniflare@beta to NPM
+        run: pnpm --filter miniflare publish --tag beta
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_PUBLISH_TOKEN }}
+
       - name: Publish create-cloudflare@beta to NPM
         run: pnpm --filter create-cloudflare publish --tag beta
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_PUBLISH_TOKEN }}
+
       - name: Publish workers-shared@beta to NPM
         run: pnpm --filter workers-shared publish --tag beta
         env:
