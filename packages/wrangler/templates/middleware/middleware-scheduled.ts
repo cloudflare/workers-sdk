@@ -13,7 +13,7 @@ const scheduled: Middleware = async (request, env, _ctx, middlewareCtx) => {
 	const resp = await middlewareCtx.next(request, env);
 
 	// If you open the `/__scheduled` page in a browser, the browser will automatically make a request to `/favicon.ico`.
-	// For scheduled workers _without_ a fetch handler, this will result in a 500 response that clutters the log with unhelpful error messages.
+	// For scheduled Workers _without_ a fetch handler, this will result in a 500 response that clutters the log with unhelpful error messages.
 	// To avoid this, inject a 404 response to favicon.ico loads on the `/__scheduled` page
 	if (
 		request.headers.get("referer")?.endsWith("/__scheduled") &&
