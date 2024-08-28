@@ -152,7 +152,11 @@ The code is checked for formatting errors by [Prettier](https://prettier.io/).
   ```sh
   > pnpm run check:format
   ```
-- The repository has a recommended VS Code plugin to run Prettier checks, and to automatically format using Prettier, while editing source code, providing immediate feedback.
+- The repository has a recommended VS Code plugin to run Prettier checks, and to automatically format using Prettier, while editing source code, providing immediate feedback
+- Use the following command to run prettier on the codebase
+  ```sh
+  > pnpm run prettify
+  ```
 
 ### Testing
 
@@ -252,7 +256,7 @@ $ WRANGLER="node ~/path/to/workers-sdk/packages/wrangler/wrangler-dist/cli.js" C
 ### Creating an API Token
 
 1. Go to ["My Profile" > "User API Tokens"](https://dash.cloudflare.com/profile/api-tokens)
-1. Click "Create API Token"
+1. Click "Create Token"
 1. Use the "Edit Cloudflare Workers" template
 1. Set "Account Resources" to "Include" "DevProd Testing" (you can use any account you have access to)
 1. Set "Zone Resources" to "All zones from an account" and the same account as above
