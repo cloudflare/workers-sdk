@@ -2,15 +2,15 @@
 
 This is a package that is used at Cloudflare to power some internal features of [Cloudflare Workers](https://developers.cloudflare.com/workers/), as well as their open-source equivalents here in workers-sdk and Wrangler.
 
-## `asset-server`
+## `asset-worker`
 
-The Asset Server Worker.
+The Asset Worker.
 
 For more details please refer to the dedicated README file.
 
 ## `router-worker`
 
-Router Worker.
+The Router Worker.
 
 For more details please refer to the dedicated README file.
 

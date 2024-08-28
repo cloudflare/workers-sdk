@@ -6,6 +6,7 @@ import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
 } from "../yargs-types";
+import type { VectorizeVectorIds } from "./types";
 
 export function options(yargs: CommonYargsArgv) {
 	return yargs
@@ -37,7 +38,12 @@ export async function handler(
 	}
 
 	logger.log(`📋 Deleting vectors...`);
-	const mutation = await deleteByIds(config, args.name, args.ids);
+
+	const ids: VectorizeVectorIds = {
+		ids: args.ids,
+	};
+
+	const mutation = await deleteByIds(config, args.name, ids);
 
 	logger.log(
 		`✅ Successfully enqueued ${args.ids.length} vectors into index '${args.name}' for deletion. Mutation changeset identifier: ${mutation.mutationId}.`

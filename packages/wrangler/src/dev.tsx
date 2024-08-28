@@ -557,12 +557,6 @@ export async function startDev(args: StartDevOptions) {
 			logger.loggerLevel = args.logLevel;
 		}
 
-		if (args.local) {
-			logger.warn(
-				"--local is no longer required and will be removed in a future version.\n`wrangler dev` now uses the local Cloudflare Workers runtime by default. 🎉"
-			);
-		}
-
 		if (args.experimentalLocal) {
 			logger.warn(
 				"--experimental-local is no longer required and will be removed in a future version.\n`wrangler dev` now uses the local Cloudflare Workers runtime by default. 🎉"

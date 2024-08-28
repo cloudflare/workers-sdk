@@ -1,5 +1,20 @@
 # wrangler
 
+## 3.72.3
+
+### Patch Changes
+
+- [#6548](https://github.com/cloudflare/workers-sdk/pull/6548) [`439e63a`](https://github.com/cloudflare/workers-sdk/commit/439e63a4ac636fc16196e900d863863b7395feed) Thanks [@garvit-gupta](https://github.com/garvit-gupta)! - fix: Fix Vectorize getVectors, deleteVectors payload in Wrangler Client; VS-271
+
+- [#6554](https://github.com/cloudflare/workers-sdk/pull/6554) [`46aee5d`](https://github.com/cloudflare/workers-sdk/commit/46aee5d16c46ae734ba8196d4d942d0fb69d0730) Thanks [@andyjessop](https://github.com/andyjessop)! - fix: nodejs_compat flags no longer error when running wrangler types --x-include-runtime
+
+- [#6548](https://github.com/cloudflare/workers-sdk/pull/6548) [`439e63a`](https://github.com/cloudflare/workers-sdk/commit/439e63a4ac636fc16196e900d863863b7395feed) Thanks [@garvit-gupta](https://github.com/garvit-gupta)! - fix: Add content-type header to Vectorize POST operations; #6516/VS-269
+
+- [#6566](https://github.com/cloudflare/workers-sdk/pull/6566) [`669ec1c`](https://github.com/cloudflare/workers-sdk/commit/669ec1c4d100aec1e16131cf178f2aa1a067b372) Thanks [@penalosa](https://github.com/penalosa)! - fix: Ensure esbuild warnings are logged when running wrangler deploy
+
+- Updated dependencies [[`6c057d1`](https://github.com/cloudflare/workers-sdk/commit/6c057d10b22e9a2e08aa066e074c792cff78d1da)]:
+  - @cloudflare/workers-shared@0.4.0
+
 ## 3.72.2
 
 ### Patch Changes

@@ -12,6 +12,7 @@ import {
 } from "../deployment-bundle/bundle-reporter";
 import { getBundleType } from "../deployment-bundle/bundle-type";
 import { createWorkerUploadForm } from "../deployment-bundle/create-worker-upload-form";
+import { logBuildOutput } from "../deployment-bundle/esbuild-plugins/log-build-output";
 import {
 	findAdditionalModules,
 	writeAdditionalModules,
@@ -555,21 +556,9 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 							props.compatibilityDate ?? config.compatibility_date,
 							props.compatibilityFlags ?? config.compatibility_flags
 						),
+						plugins: [logBuildOutput(nodejsCompatMode)],
 					}
 				);
-
-		// Add modules to dependencies for size warning
-		for (const module of modules) {
-			const modulePath =
-				module.filePath === undefined
-					? module.name
-					: path.relative("", module.filePath);
-			const bytesInOutput =
-				typeof module.content === "string"
-					? Buffer.byteLength(module.content)
-					: module.content.byteLength;
-			dependencies[modulePath] = { bytesInOutput };
-		}
 
 		// Add modules to dependencies for size warning
 		for (const module of modules) {

@@ -23,11 +23,11 @@
  * this Worker is.
  */
 type Env = {
-	ASSET_SERVER: Fetcher;
+	ASSET_WORKER: Fetcher;
 };
 
 export default {
 	async fetch(request: Request, env: Env) {
-		return env.ASSET_SERVER.fetch(request);
+		return env.ASSET_WORKER.fetch(request);
 	},
 };

@@ -237,8 +237,8 @@ const encodeManifest = (manifest: Uint8Array[]) => {
 // ASSET REVERSE MAP
 //
 // In prod, the contentHash is used as the key for the KV store that holds the assets.
-// ASW will hash the path of an incoming request, look for that pathHash in the stored manifest,
-// and get the corresponding contentHash to use as the KV key.
+// Asset Worker will hash the path of an incoming request, look for that pathHash in
+// the stored manifest, and get the corresponding contentHash to use as the KV key.
 // In dev, we fake out this KV store and just get the assets from disk. However we still need
 // to map a given "contentHash" to the filePath. This is what the ASSET REVERSE MAP is for.
 // This is available to the FAKE_KV_NAMESPACE service (assets.worker.ts) as a binding.

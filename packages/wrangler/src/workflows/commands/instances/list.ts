@@ -23,7 +23,8 @@ export const instancesListOptions = (args: CommonYargsArgv) => {
 			default: false,
 		})
 		.option("status", {
-			describe: "Filters list by instance status (can be one of: queued, running, paused, errored, terminated, complete)",
+			describe:
+				"Filters list by instance status (can be one of: queued, running, paused, errored, terminated, complete)",
 			type: "string",
 		});
 };
@@ -37,15 +38,15 @@ export const instancesListHandler = async (args: HandlerOptions) => {
 	const config = readConfig(args.config, args);
 	const accountId = await requireAuth(config);
 
-	const URLParams = new URLSearchParams()
+	const URLParams = new URLSearchParams();
 
-	if (args.status !== undefined){
-		const validatedStatus = validateStatus(args.status)
-		URLParams.set("status", validatedStatus)
+	if (args.status !== undefined) {
+		const validatedStatus = validateStatus(args.status);
+		URLParams.set("status", validatedStatus);
 	}
 
 	const instances = await fetchResult<Instance[]>(
-		`/accounts/${accountId}/workflows/${args.name}/instances${URLParams.size != 0 ? `?${URLParams.toString()}` : ''}`
+		`/accounts/${accountId}/workflows/${args.name}/instances${URLParams.size != 0 ? `?${URLParams.toString()}` : ""}`
 	);
 
 	if (instances.length === 0) {
