@@ -52,6 +52,6 @@ export const workflowTriggerHandler = async (args: HandlerOptions) => {
 	);
 
 	logger.info(
-		`🚀 Workflow instance "${response.instanceId}" has been queued successfully`
+		`🚀 Workflow instance "${response.id}" has been queued successfully`
 	);
 };

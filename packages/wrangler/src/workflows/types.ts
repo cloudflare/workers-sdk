@@ -25,9 +25,9 @@ export type InstanceStatus =
 
 export type InstanceWithoutDates = {
 	status: InstanceStatus;
-	instanceId: string;
-	versionId: string;
-	workflowId: string;
+	id: string;
+	version_id: string;
+	workflow_id: string;
 };
 
 export type Instance = {
