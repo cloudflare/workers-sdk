@@ -5,7 +5,7 @@ export default mergeConfig(
 	configShared,
 	defineProject({
 		test: {
-			include: ["asset-server-worker/tests/**.{test,spec}.{ts,js}"],
+			include: ["asset-worker/tests/**.{test,spec}.{ts,js}"],
 			globals: true,
 		},
 	})
