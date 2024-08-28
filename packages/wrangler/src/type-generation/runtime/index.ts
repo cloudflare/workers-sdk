@@ -1,7 +1,10 @@
 import { readFileSync } from "fs";
 import { writeFile } from "fs/promises";
+import { dirname } from "path";
 import { Miniflare } from "miniflare";
+import { getNodeCompatMode } from "../../deployment-bundle/node-compat";
 import { ensureDirectoryExists } from "../../utils/filesystem";
+import { generateNodeCompatV2Types } from "./node-compat";
 import type { Config } from "../../config/config";
 
 const DEFAULT_OUTFILE_RELATIVE_PATH = "./.wrangler/types/runtime.d.ts";
@@ -35,10 +38,13 @@ const DEFAULT_OUTFILE_RELATIVE_PATH = "./.wrangler/types/runtime.d.ts";
  * - This could be improved by hashing the compat date and flags to avoid unnecessary regeneration.
  */
 export async function generateRuntimeTypes({
-	config: { compatibility_date, compatibility_flags = [] },
+	config: { compatibility_date, compatibility_flags = [], node_compat },
 	outFile = DEFAULT_OUTFILE_RELATIVE_PATH,
 }: {
-	config: Pick<Config, "compatibility_date" | "compatibility_flags">;
+	config: Pick<
+		Config,
+		"compatibility_date" | "compatibility_flags" | "node_compat"
+	>;
 	outFile?: string;
 }) {
 	if (!compatibility_date) {
@@ -47,13 +53,20 @@ export async function generateRuntimeTypes({
 
 	await ensureDirectoryExists(outFile);
 
-	const types = await generate({
+	let types = await generate({
 		compatibilityDate: compatibility_date,
 		// Ignore nodejs compat flags as there is currently no mechanism to generate these dynamically.
 		compatibilityFlags: compatibility_flags.filter(
 			(flag) => !flag.includes("nodejs_compat")
 		),
 	});
+
+	const { mode } = getNodeCompatMode({ compatibility_flags, node_compat });
+
+	if (mode === "v2") {
+		const nodeTypesPath = dirname(require.resolve("@types/node/index.d.ts"));
+		types += generateNodeCompatV2Types(nodeTypesPath);
+	}
 
 	await writeFile(outFile, types, "utf8");
 

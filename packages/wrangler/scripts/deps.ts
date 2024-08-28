@@ -23,6 +23,7 @@ export const EXTERNAL_DEPENDENCIES = [
 	"unenv",
 	"workerd/worker.mjs",
 	"@cloudflare/workers-shared",
+	"@types/node/index.d.ts",
 ];
 
 const pathToPackageJson = path.resolve(__dirname, "..", "package.json");
