@@ -26,6 +26,15 @@ describe("run scheduled events with middleware", () => {
 			};
 			`;
 			fs.writeFileSync("index.js", scriptContent);
+
+			const scheduledScriptContent = `
+			export default {
+				scheduled(controller, env, ctx) {
+					// Doing something scheduled in modules...
+				},
+			};
+			`;
+			fs.writeFileSync("only-scheduled.js", scheduledScriptContent);
 		});
 
 		it("should not intercept when middleware is not enabled", async () => {
@@ -81,6 +90,45 @@ describe("run scheduled events with middleware", () => {
 				text = await resp.text();
 			}
 			expect(text).toMatchInlineSnapshot(`"Hello world!"`);
+			await worker.stop();
+		});
+
+		it("should respond with 404 for favicons", async () => {
+			const worker = await unstable_dev("only-scheduled.js", {
+				ip: "127.0.0.1",
+				experimental: {
+					disableExperimentalWarning: true,
+					disableDevRegistry: true,
+					testScheduled: true,
+				},
+			});
+
+			const resp = await worker.fetch("/favicon.ico", {
+				headers: {
+					referer: "http://localhost/__scheduled",
+				},
+			});
+
+			expect(resp.status).toEqual(404);
+			await worker.stop();
+		});
+		it("should not respond with 404 for favicons if user-worker has a response", async () => {
+			const worker = await unstable_dev("index.js", {
+				ip: "127.0.0.1",
+				experimental: {
+					disableExperimentalWarning: true,
+					disableDevRegistry: true,
+					testScheduled: true,
+				},
+			});
+
+			const resp = await worker.fetch("/favicon.ico", {
+				headers: {
+					referer: "http://localhost/__scheduled",
+				},
+			});
+
+			expect(resp.status).not.toEqual(404);
 			await worker.stop();
 		});
 	});
@@ -104,6 +152,13 @@ describe("run scheduled events with middleware", () => {
 			});
 			`;
 			fs.writeFileSync("index.js", scriptContent);
+
+			const scheduledScriptContent = `
+			addEventListener("scheduled", (event) => {
+				// Doing something scheduled in service worker...
+			});
+			`;
+			fs.writeFileSync("only-scheduled.js", scheduledScriptContent);
 		});
 
 		it("should not intercept when middleware is not enabled", async () => {
@@ -159,6 +214,45 @@ describe("run scheduled events with middleware", () => {
 				text = await resp.text();
 			}
 			expect(text).toMatchInlineSnapshot(`"Hello world!"`);
+			await worker.stop();
+		});
+
+		it("should respond with 404 for favicons", async () => {
+			const worker = await unstable_dev("only-scheduled.js", {
+				ip: "127.0.0.1",
+				experimental: {
+					disableExperimentalWarning: true,
+					disableDevRegistry: true,
+					testScheduled: true,
+				},
+			});
+
+			const resp = await worker.fetch("/favicon.ico", {
+				headers: {
+					referer: "http://localhost/__scheduled",
+				},
+			});
+
+			expect(resp.status).toEqual(404);
+			await worker.stop();
+		});
+		it("should not respond with 404 for favicons if user-worker has a response", async () => {
+			const worker = await unstable_dev("index.js", {
+				ip: "127.0.0.1",
+				experimental: {
+					disableExperimentalWarning: true,
+					disableDevRegistry: true,
+					testScheduled: true,
+				},
+			});
+
+			const resp = await worker.fetch("/favicon.ico", {
+				headers: {
+					referer: "http://localhost/__scheduled",
+				},
+			});
+
+			expect(resp.status).not.toEqual(404);
 			await worker.stop();
 		});
 	});
