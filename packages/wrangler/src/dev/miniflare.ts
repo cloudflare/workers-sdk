@@ -925,7 +925,7 @@ function getAssetServerWorker(
 		"@cloudflare/workers-shared/dist/asset-worker.mjs"
 	);
 	const assetServerConfigPath = require.resolve(
-		"@cloudflare/workers-shared/asset-worker/wrangler.toml"
+		"@cloudflare/workers-shared/dist/asset-worker.toml"
 	);
 	let assetServerConfig: Config | undefined;
 
