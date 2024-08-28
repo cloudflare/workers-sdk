@@ -12,7 +12,7 @@ import {
 } from "./api/startDevWorker/utils";
 import { findWranglerToml, printBindings, readConfig } from "./config";
 import { getEntry } from "./deployment-bundle/entry";
-import { validateNodeCompat } from "./deployment-bundle/node-compat";
+import { getNodeCompatMode } from "./deployment-bundle/node-compat";
 import { getBoundRegisteredWorkers } from "./dev-registry";
 import Dev, { devRegistry } from "./dev/dev";
 import { getVarsForDev } from "./dev/dev-vars";
@@ -680,10 +680,12 @@ export async function startDev(args: StartDevOptions) {
 					moduleRoot: args.moduleRoot,
 					moduleRules: args.rules,
 					nodejsCompatMode: (parsedConfig: Config) =>
-						validateNodeCompat(
+						getNodeCompatMode(
 							args.compatibilityFlags ?? parsedConfig.compatibility_flags ?? [],
-							args.nodeCompat ?? parsedConfig.node_compat,
-							args.noBundle ?? parsedConfig.no_bundle
+							{
+								nodeCompat: args.nodeCompat ?? parsedConfig.node_compat,
+								noBundle: args.noBundle ?? parsedConfig.no_bundle,
+							}
 						),
 				},
 				bindings: {
@@ -829,10 +831,12 @@ export async function startDev(args: StartDevOptions) {
 			additionalModules,
 		} = await validateDevServerSettings(args, config);
 
-		const nodejsCompatMode = validateNodeCompat(
+		const nodejsCompatMode = getNodeCompatMode(
 			args.compatibilityFlags ?? config.compatibility_flags ?? [],
-			args.nodeCompat ?? config.node_compat,
-			args.noBundle ?? config.no_bundle
+			{
+				nodeCompat: args.nodeCompat ?? config.node_compat,
+				noBundle: args.noBundle ?? config.no_bundle,
+			}
 		);
 
 		void metrics.sendMetricsEvent(
@@ -968,10 +972,12 @@ export async function startApiDev(args: StartDevOptions) {
 		additionalModules,
 	} = await validateDevServerSettings(args, config);
 
-	const nodejsCompatMode = validateNodeCompat(
+	const nodejsCompatMode = getNodeCompatMode(
 		args.compatibilityFlags ?? config.compatibility_flags,
-		args.nodeCompat ?? config.node_compat,
-		args.noBundle ?? config.no_bundle
+		{
+			nodeCompat: args.nodeCompat ?? config.node_compat,
+			noBundle: args.noBundle ?? config.no_bundle,
+		}
 	);
 
 	await metrics.sendMetricsEvent(

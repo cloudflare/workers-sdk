@@ -10,7 +10,7 @@ import path, {
 import { createUploadWorkerBundleContents } from "../api/pages/create-worker-bundle-contents";
 import { readConfig } from "../config";
 import { writeAdditionalModules } from "../deployment-bundle/find-additional-modules";
-import { validateNodeCompat } from "../deployment-bundle/node-compat";
+import { getNodeCompatMode } from "../deployment-bundle/node-compat";
 import { FatalError } from "../errors";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
@@ -438,11 +438,10 @@ const validateArgs = async (args: PagesBuildArgs): Promise<ValidatedArgs> => {
 	}
 
 	const { nodeCompat: node_compat, ...argsExceptNodeCompat } = args;
-	const nodejsCompatMode = validateNodeCompat(
-		args.compatibilityFlags ?? [],
-		node_compat,
-		config?.no_bundle
-	);
+	const nodejsCompatMode = getNodeCompatMode(args.compatibilityFlags ?? [], {
+		nodeCompat: node_compat,
+		noBundle: config?.no_bundle,
+	});
 
 	const defineNavigatorUserAgent = isNavigatorDefined(
 		args.compatibilityDate,

@@ -21,7 +21,7 @@ import {
 	createModuleCollector,
 	getWrangler1xLegacyModuleReferences,
 } from "../deployment-bundle/module-collection";
-import { validateNodeCompat } from "../deployment-bundle/node-compat";
+import { getNodeCompatMode } from "../deployment-bundle/node-compat";
 import { loadSourceMaps } from "../deployment-bundle/source-maps";
 import { addHyphens } from "../deployments";
 import { confirm } from "../dialogs";
@@ -399,11 +399,10 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 	const compatibilityFlags =
 		props.compatibilityFlags ?? config.compatibility_flags;
-	const nodejsCompatMode = validateNodeCompat(
-		compatibilityFlags,
-		props.nodeCompat ?? config.node_compat,
-		props.noBundle ?? config.no_bundle
-	);
+	const nodejsCompatMode = getNodeCompatMode(compatibilityFlags, {
+		nodeCompat: props.nodeCompat ?? config.node_compat,
+		noBundle: props.noBundle ?? config.no_bundle,
+	});
 
 	// Warn if user tries minify with no-bundle
 	if (props.noBundle && minify) {

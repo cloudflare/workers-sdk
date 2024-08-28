@@ -7,7 +7,7 @@ import { unstable_dev } from "../api";
 import { readConfig } from "../config";
 import { isBuildFailure } from "../deployment-bundle/build-failures";
 import { esbuildAliasExternalPlugin } from "../deployment-bundle/esbuild-plugins/alias-external";
-import { validateNodeCompat } from "../deployment-bundle/node-compat";
+import { getNodeCompatMode } from "../deployment-bundle/node-compat";
 import { FatalError } from "../errors";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
@@ -360,10 +360,12 @@ export const Handler = async (args: PagesDevArguments) => {
 
 	let scriptPath = "";
 
-	const nodejsCompatMode = validateNodeCompat(
+	const nodejsCompatMode = getNodeCompatMode(
 		args.compatibilityFlags ?? config.compatibility_flags ?? [],
-		args.nodeCompat,
-		args.noBundle ?? config.no_bundle
+		{
+			nodeCompat: args.nodeCompat,
+			noBundle: args.noBundle ?? config.no_bundle,
+		}
 	);
 
 	const defineNavigatorUserAgent = isNavigatorDefined(

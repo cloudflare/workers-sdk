@@ -11,49 +11,72 @@ import { logger } from "../logger";
 export type NodeJSCompatMode = "legacy" | "v1" | "v2" | null;
 
 /**
- * Validate and compute the Node.js compatibility mode we are running.
+ * Computes the Node.js compatibility mode we are running.
  *
- * Returns one of:
+ * NOTE:
+ * Currently v2 mode is configured via `nodejs_compat_v2` compat flag.
+ * At a future compatibility date, the use of `nodejs_compat` flag will imply `nodejs_compat_v2`.
+ *
+ * see `EnvironmentInheritable` for `nodeCompat` and `noBundle`.
+ *
+ * @param compatibilityFlags The compatibility flags
+ * @param validateConfig Whether to validate the config (logs and throws)
+ * @param nodeCompat Whether to add polyfills for node builtin modules and globals
+ * @param noBundle Whether to skip internal build steps and directly deploy script
+ * @returns one of:
  *  - "legacy": build-time polyfills, from `node_compat` flag
  *  - "v1": nodejs_compat compatibility flag
  *  - "v2": nodejs_compat_v2 compatibility flag
  *  - null: no Node.js compatibility
- *
- * Currently v2 mode is configured via `nodejs_compat_v2` compat flag.
- * At a future compatibility date, the use of `nodejs_compat` flag will imply `nodejs_compat_v2`.
- *
- * We assert that only one of these modes can be specified at a time.
- * We assert that you must prefix v2 mode with `experimental`.
- * We warn if using legacy or v2 mode.
  */
-export function validateNodeCompat(
+export function getNodeCompatMode(
 	compatibilityFlags: string[],
-	nodeCompat: boolean | undefined,
-	noBundle: boolean | undefined
+	{
+		validateConfig = true,
+		nodeCompat = undefined,
+		noBundle = undefined,
+	}: {
+		validateConfig?: boolean;
+		nodeCompat?: boolean;
+		noBundle?: boolean;
+	}
 ): NodeJSCompatMode {
 	const {
-		mode,
-		nodejsCompat,
-		nodejsCompatV2,
-		experimentalNodejsCompatV2,
-		legacy,
-	} = getNodeCompatMode(compatibilityFlags, nodeCompat);
+		hasNodejsCompatFlag,
+		hasNodejsCompatV2Flag,
+		hasExperimentalNodejsCompatV2Flag,
+	} = parseNodeCompatibilityFlags(compatibilityFlags);
 
-	if (experimentalNodejsCompatV2) {
+	const legacy = nodeCompat === true;
+	let mode: NodeJSCompatMode = null;
+	if (hasNodejsCompatV2Flag) {
+		mode = "v2";
+	} else if (hasNodejsCompatFlag) {
+		mode = "v1";
+	} else if (legacy) {
+		mode = "legacy";
+	}
+
+	if (validateConfig !== true) {
+		// Skip the validation.
+		return mode;
+	}
+
+	if (hasExperimentalNodejsCompatV2Flag) {
 		throw new UserError(
 			"The `experimental:` prefix on `nodejs_compat_v2` is no longer valid. Please remove it and try again."
 		);
 	}
 
-	if (nodejsCompat && nodejsCompatV2) {
+	if (hasNodejsCompatFlag && hasNodejsCompatV2Flag) {
 		throw new UserError(
 			"The `nodejs_compat` and `nodejs_compat_v2` compatibility flags cannot be used in together. Please select just one."
 		);
 	}
 
-	if (legacy && (nodejsCompat || nodejsCompatV2)) {
+	if (legacy && (hasNodejsCompatFlag || hasNodejsCompatV2Flag)) {
 		throw new UserError(
-			`The ${nodejsCompat ? "`nodejs_compat`" : "`nodejs_compat_v2`"} compatibility flag cannot be used in conjunction with the legacy \`--node-compat\` flag. If you want to use the Workers ${nodejsCompat ? "`nodejs_compat`" : "`nodejs_compat_v2`"} compatibility flag, please remove the \`--node-compat\` argument from your CLI command or \`node_compat = true\` from your config file.`
+			`The ${hasNodejsCompatFlag ? "`nodejs_compat`" : "`nodejs_compat_v2`"} compatibility flag cannot be used in conjunction with the legacy \`--node-compat\` flag. If you want to use the Workers ${hasNodejsCompatFlag ? "`nodejs_compat`" : "`nodejs_compat_v2`"} compatibility flag, please remove the \`--node-compat\` argument from your CLI command or \`node_compat = true\` from your config file.`
 		);
 	}
 
@@ -63,7 +86,7 @@ export function validateNodeCompat(
 		);
 	}
 
-	if (noBundle && nodejsCompatV2) {
+	if (noBundle && hasNodejsCompatV2Flag) {
 		logger.warn(
 			"`nodejs_compat_v2` compatibility flag and `--no-bundle` can't be used together. If you want to polyfill Node.js built-ins and disable Wrangler's bundling, please polyfill as part of your own bundling process."
 		);
@@ -78,33 +101,12 @@ export function validateNodeCompat(
 	return mode;
 }
 
-export function getNodeCompatMode(
-	compatibilityFlags: string[],
-	nodeCompat: boolean | undefined
-) {
-	const legacy = nodeCompat === true;
-	const nodejsCompat = compatibilityFlags.includes("nodejs_compat");
-	const nodejsCompatV2 = compatibilityFlags.includes("nodejs_compat_v2");
-	const experimentalNodejsCompatV2 = compatibilityFlags.includes(
-		"experimental:nodejs_compat_v2"
-	);
-
-	let mode: NodeJSCompatMode;
-	if (nodejsCompatV2) {
-		mode = "v2";
-	} else if (nodejsCompat) {
-		mode = "v1";
-	} else if (legacy) {
-		mode = "legacy";
-	} else {
-		mode = null;
-	}
-
+function parseNodeCompatibilityFlags(compatibilityFlags: string[]) {
 	return {
-		legacy,
-		mode,
-		nodejsCompat,
-		nodejsCompatV2,
-		experimentalNodejsCompatV2,
+		hasNodejsCompatFlag: compatibilityFlags.includes("nodejs_compat"),
+		hasNodejsCompatV2Flag: compatibilityFlags.includes("nodejs_compat_v2"),
+		hasExperimentalNodejsCompatV2Flag: compatibilityFlags.includes(
+			"experimental:nodejs_compat_v2"
+		),
 	};
 }
