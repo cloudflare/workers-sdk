@@ -3,7 +3,7 @@ import { fetchResult } from "../../../cfetch";
 import { readConfig } from "../../../config";
 import { logger } from "../../../logger";
 import { requireAuth } from "../../../user";
-import { emojifyInstanceStatus } from "../../utils";
+import { emojifyInstanceStatus, validateStatus } from "../../utils";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
@@ -21,6 +21,10 @@ export const instancesListOptions = (args: CommonYargsArgv) => {
 			describe: "Reverse order of the instances table",
 			type: "boolean",
 			default: false,
+		})
+		.option("status", {
+			describe: "Filters list by instance status (can be one of: queued, running, paused, errored, terminated, complete)",
+			type: "string",
 		});
 };
 
@@ -33,8 +37,15 @@ export const instancesListHandler = async (args: HandlerOptions) => {
 	const config = readConfig(args.config, args);
 	const accountId = await requireAuth(config);
 
+	const URLParams = new URLSearchParams()
+
+	if (args.status !== undefined){
+		const validatedStatus = validateStatus(args.status)
+		URLParams.set("status", validatedStatus)
+	}
+
 	const instances = await fetchResult<Instance[]>(
-		`/accounts/${accountId}/workflows/${args.name}/instances`
+		`/accounts/${accountId}/workflows/${args.name}/instances${URLParams.size != 0 ? `?${URLParams.toString()}` : ''}`
 	);
 
 	if (instances.length === 0) {

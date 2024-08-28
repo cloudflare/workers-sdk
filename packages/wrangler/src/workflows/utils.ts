@@ -1,3 +1,4 @@
+import { UserError } from "../errors";
 import type { InstanceStatus, InstanceTriggerName } from "./types";
 
 export const emojifyInstanceStatus = (status: InstanceStatus) => {
@@ -44,5 +45,26 @@ export const emojifyStepType = (type: string) => {
 			return "🚫 Termination";
 		default:
 			return "❓ Unknown";
+	}
+};
+
+export const validateStatus = (status: string): InstanceStatus => {
+	switch (status) {
+		case "complete":
+			return "complete";
+		case "errored":
+			return "errored";
+		case "paused":
+			return "paused";
+		case "queued":
+			return "queued";
+		case "running":
+			return "running";
+		case "terminated":
+			return "terminated";
+		default:
+			throw new UserError(
+				`Looks like you have provided a invalid status "${status}". Valid statuses are: queued, running, paused, errored, terminated, complete`
+			);
 	}
 };
