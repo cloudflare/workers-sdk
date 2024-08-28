@@ -112,7 +112,7 @@ export function parseRedirects(input: string): ParsedRedirects {
 		}
 
 		// We want to always block the `/* /index.html` redirect - this will cause TOO_MANY_REDIRECTS errors as
-		// the asset server will redirect it back to `/`, removing the `/index.html`. This is the case for regular
+		// the asset worker will redirect it back to `/`, removing the `/index.html`. This is the case for regular
 		// redirects, as well as proxied (200) rewrites. We only want to run this on relative urls
 		if (/\/\*?$/.test(from) && /\/index(.html)?$/.test(to) && !urlHasHost(to)) {
 			invalid.push({
