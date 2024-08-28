@@ -41,36 +41,36 @@ describe("versions list", () => {
 			await expect(result).resolves.toBeUndefined();
 
 			expect(std.out).toMatchInlineSnapshot(`
-			"Version ID:  40000000-0000-0000-0000-000000000000
-			Created:     2021-01-01T00:00:00.000Z
-			Author:      Jean-Luc-Picard@federation.org
-			Source:      Upload
-			Tag:         -
-			Message:     -
+				"Version ID:  10000000-0000-0000-0000-000000000000
+				Created:     2021-01-01T00:00:00.000Z
+				Author:      Jean-Luc-Picard@federation.org
+				Source:      Upload
+				Tag:         -
+				Message:     -
 
-			Version ID:  30000000-0000-0000-0000-000000000000
-			Created:     2021-02-02T00:00:00.000Z
-			Author:      Kathryn-Janeway@federation.org
-			Source:      Rollback
-			Tag:         -
-			Message:     Rolled back for this version
+				Version ID:  20000000-0000-0000-0000-000000000000
+				Created:     2021-01-04T00:00:00.000Z
+				Author:      Jean-Luc-Picard@federation.org
+				Source:      Rollback
+				Tag:         -
+				Message:     -
 
-			Version ID:  20000000-0000-0000-0000-000000000000
-			Created:     2021-02-03T00:00:00.000Z
-			Author:      Kathryn-Janeway@federation.org
-			Source:      Wrangler 🤠
-			Tag:         -
-			Message:     -
+				Version ID:  30000000-0000-0000-0000-000000000000
+				Created:     2021-02-02T00:00:00.000Z
+				Author:      Kathryn-Janeway@federation.org
+				Source:      Rollback
+				Tag:         -
+				Message:     Rolled back for this version
 
-			Version ID:  10000000-0000-0000-0000-000000000000
-			Created:     2021-01-04T00:00:00.000Z
-			Author:      Jean-Luc-Picard@federation.org
-			Source:      Rollback
-			Tag:         -
-			Message:     -
+				Version ID:  40000000-0000-0000-0000-000000000000
+				Created:     2021-02-03T00:00:00.000Z
+				Author:      Kathryn-Janeway@federation.org
+				Source:      Wrangler 🤠
+				Tag:         -
+				Message:     -
 
-			"
-		`);
+				"
+			`);
 
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -83,70 +83,70 @@ describe("versions list", () => {
 			await expect(result).resolves.toBeUndefined();
 
 			expect(std.out).toMatchInlineSnapshot(`
-			"[
-			  {
-			    \\"id\\": \\"40000000-0000-0000-0000-000000000000\\",
-			    \\"number\\": \\"1701-E\\",
-			    \\"annotations\\": {
-			      \\"workers/triggered_by\\": \\"upload\\"
-			    },
-			    \\"metadata\\": {
-			      \\"author_id\\": \\"Picard-Gamma-6-0-7-3\\",
-			      \\"author_email\\": \\"Jean-Luc-Picard@federation.org\\",
-			      \\"source\\": \\"wrangler\\",
-			      \\"created_on\\": \\"2021-01-01T00:00:00.000000Z\\",
-			      \\"modified_on\\": \\"2021-01-01T00:00:00.000000Z\\"
-			    }
-			  },
-			  {
-			    \\"id\\": \\"30000000-0000-0000-0000-000000000000\\",
-			    \\"number\\": \\"NCC-74656\\",
-			    \\"annotations\\": {
-			      \\"workers/triggered_by\\": \\"rollback\\",
-			      \\"workers/rollback_from\\": \\"MOCK-DEPLOYMENT-ID-1111\\",
-			      \\"workers/message\\": \\"Rolled back for this version\\"
-			    },
-			    \\"metadata\\": {
-			      \\"author_id\\": \\"Kathryn-Jane-Gamma-6-0-7-3\\",
-			      \\"author_email\\": \\"Kathryn-Janeway@federation.org\\",
-			      \\"source\\": \\"wrangler\\",
-			      \\"created_on\\": \\"2021-02-02T00:00:00.000000Z\\",
-			      \\"modified_on\\": \\"2021-02-02T00:00:00.000000Z\\"
-			    }
-			  },
-			  {
-			    \\"id\\": \\"20000000-0000-0000-0000-000000000000\\",
-			    \\"number\\": \\"NCC-74656\\",
-			    \\"metadata\\": {
-			      \\"author_id\\": \\"Kathryn-Jane-Gamma-6-0-7-3\\",
-			      \\"author_email\\": \\"Kathryn-Janeway@federation.org\\",
-			      \\"source\\": \\"wrangler\\",
-			      \\"created_on\\": \\"2021-02-03T00:00:00.000000Z\\",
-			      \\"modified_on\\": \\"2021-02-03T00:00:00.000000Z\\"
-			    }
-			  },
-			  {
-			    \\"id\\": \\"10000000-0000-0000-0000-000000000000\\",
-			    \\"number\\": \\"1701-E\\",
-			    \\"annotations\\": {
-			      \\"workers/triggered_by\\": \\"rollback\\",
-			      \\"workers/rollback_from\\": \\"MOCK-DEPLOYMENT-ID-2222\\"
-			    },
-			    \\"metadata\\": {
-			      \\"author_id\\": \\"Picard-Gamma-6-0-7-3\\",
-			      \\"author_email\\": \\"Jean-Luc-Picard@federation.org\\",
-			      \\"source\\": \\"wrangler\\",
-			      \\"created_on\\": \\"2021-01-04T00:00:00.000000Z\\",
-			      \\"modified_on\\": \\"2021-01-04T00:00:00.000000Z\\"
-			    },
-			    \\"resources\\": {
-			      \\"script\\": \\"test-name\\",
-			      \\"bindings\\": []
-			    }
-			  }
-			]
-			"
-		`);
+				"[
+				  {
+				    \\"id\\": \\"10000000-0000-0000-0000-000000000000\\",
+				    \\"number\\": \\"1701-E\\",
+				    \\"annotations\\": {
+				      \\"workers/triggered_by\\": \\"upload\\"
+				    },
+				    \\"metadata\\": {
+				      \\"author_id\\": \\"Picard-Gamma-6-0-7-3\\",
+				      \\"author_email\\": \\"Jean-Luc-Picard@federation.org\\",
+				      \\"source\\": \\"wrangler\\",
+				      \\"created_on\\": \\"2021-01-01T00:00:00.000000Z\\",
+				      \\"modified_on\\": \\"2021-01-01T00:00:00.000000Z\\"
+				    }
+				  },
+				  {
+				    \\"id\\": \\"20000000-0000-0000-0000-000000000000\\",
+				    \\"number\\": \\"1701-E\\",
+				    \\"annotations\\": {
+				      \\"workers/triggered_by\\": \\"rollback\\",
+				      \\"workers/rollback_from\\": \\"MOCK-DEPLOYMENT-ID-2222\\"
+				    },
+				    \\"metadata\\": {
+				      \\"author_id\\": \\"Picard-Gamma-6-0-7-3\\",
+				      \\"author_email\\": \\"Jean-Luc-Picard@federation.org\\",
+				      \\"source\\": \\"wrangler\\",
+				      \\"created_on\\": \\"2021-01-04T00:00:00.000000Z\\",
+				      \\"modified_on\\": \\"2021-01-04T00:00:00.000000Z\\"
+				    },
+				    \\"resources\\": {
+				      \\"script\\": \\"test-name\\",
+				      \\"bindings\\": []
+				    }
+				  },
+				  {
+				    \\"id\\": \\"30000000-0000-0000-0000-000000000000\\",
+				    \\"number\\": \\"NCC-74656\\",
+				    \\"annotations\\": {
+				      \\"workers/triggered_by\\": \\"rollback\\",
+				      \\"workers/rollback_from\\": \\"MOCK-DEPLOYMENT-ID-1111\\",
+				      \\"workers/message\\": \\"Rolled back for this version\\"
+				    },
+				    \\"metadata\\": {
+				      \\"author_id\\": \\"Kathryn-Jane-Gamma-6-0-7-3\\",
+				      \\"author_email\\": \\"Kathryn-Janeway@federation.org\\",
+				      \\"source\\": \\"wrangler\\",
+				      \\"created_on\\": \\"2021-02-02T00:00:00.000000Z\\",
+				      \\"modified_on\\": \\"2021-02-02T00:00:00.000000Z\\"
+				    }
+				  },
+				  {
+				    \\"id\\": \\"40000000-0000-0000-0000-000000000000\\",
+				    \\"number\\": \\"NCC-74656\\",
+				    \\"metadata\\": {
+				      \\"author_id\\": \\"Kathryn-Jane-Gamma-6-0-7-3\\",
+				      \\"author_email\\": \\"Kathryn-Janeway@federation.org\\",
+				      \\"source\\": \\"wrangler\\",
+				      \\"created_on\\": \\"2021-02-03T00:00:00.000000Z\\",
+				      \\"modified_on\\": \\"2021-02-03T00:00:00.000000Z\\"
+				    }
+				  }
+				]
+				"
+			`);
 
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -161,36 +161,36 @@ describe("versions list", () => {
 			await expect(result).resolves.toBeUndefined();
 
 			expect(std.out).toMatchInlineSnapshot(`
-			"Version ID:  40000000-0000-0000-0000-000000000000
-			Created:     2021-01-01T00:00:00.000Z
-			Author:      Jean-Luc-Picard@federation.org
-			Source:      Upload
-			Tag:         -
-			Message:     -
+				"Version ID:  10000000-0000-0000-0000-000000000000
+				Created:     2021-01-01T00:00:00.000Z
+				Author:      Jean-Luc-Picard@federation.org
+				Source:      Upload
+				Tag:         -
+				Message:     -
 
-			Version ID:  30000000-0000-0000-0000-000000000000
-			Created:     2021-02-02T00:00:00.000Z
-			Author:      Kathryn-Janeway@federation.org
-			Source:      Rollback
-			Tag:         -
-			Message:     Rolled back for this version
+				Version ID:  20000000-0000-0000-0000-000000000000
+				Created:     2021-01-04T00:00:00.000Z
+				Author:      Jean-Luc-Picard@federation.org
+				Source:      Rollback
+				Tag:         -
+				Message:     -
 
-			Version ID:  20000000-0000-0000-0000-000000000000
-			Created:     2021-02-03T00:00:00.000Z
-			Author:      Kathryn-Janeway@federation.org
-			Source:      Wrangler 🤠
-			Tag:         -
-			Message:     -
+				Version ID:  30000000-0000-0000-0000-000000000000
+				Created:     2021-02-02T00:00:00.000Z
+				Author:      Kathryn-Janeway@federation.org
+				Source:      Rollback
+				Tag:         -
+				Message:     Rolled back for this version
 
-			Version ID:  10000000-0000-0000-0000-000000000000
-			Created:     2021-01-04T00:00:00.000Z
-			Author:      Jean-Luc-Picard@federation.org
-			Source:      Rollback
-			Tag:         -
-			Message:     -
+				Version ID:  40000000-0000-0000-0000-000000000000
+				Created:     2021-02-03T00:00:00.000Z
+				Author:      Kathryn-Janeway@federation.org
+				Source:      Wrangler 🤠
+				Tag:         -
+				Message:     -
 
-			"
-		`);
+				"
+			`);
 
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -203,70 +203,70 @@ describe("versions list", () => {
 			await expect(result).resolves.toBeUndefined();
 
 			expect(std.out).toMatchInlineSnapshot(`
-			"[
-			  {
-			    \\"id\\": \\"40000000-0000-0000-0000-000000000000\\",
-			    \\"number\\": \\"1701-E\\",
-			    \\"annotations\\": {
-			      \\"workers/triggered_by\\": \\"upload\\"
-			    },
-			    \\"metadata\\": {
-			      \\"author_id\\": \\"Picard-Gamma-6-0-7-3\\",
-			      \\"author_email\\": \\"Jean-Luc-Picard@federation.org\\",
-			      \\"source\\": \\"wrangler\\",
-			      \\"created_on\\": \\"2021-01-01T00:00:00.000000Z\\",
-			      \\"modified_on\\": \\"2021-01-01T00:00:00.000000Z\\"
-			    }
-			  },
-			  {
-			    \\"id\\": \\"30000000-0000-0000-0000-000000000000\\",
-			    \\"number\\": \\"NCC-74656\\",
-			    \\"annotations\\": {
-			      \\"workers/triggered_by\\": \\"rollback\\",
-			      \\"workers/rollback_from\\": \\"MOCK-DEPLOYMENT-ID-1111\\",
-			      \\"workers/message\\": \\"Rolled back for this version\\"
-			    },
-			    \\"metadata\\": {
-			      \\"author_id\\": \\"Kathryn-Jane-Gamma-6-0-7-3\\",
-			      \\"author_email\\": \\"Kathryn-Janeway@federation.org\\",
-			      \\"source\\": \\"wrangler\\",
-			      \\"created_on\\": \\"2021-02-02T00:00:00.000000Z\\",
-			      \\"modified_on\\": \\"2021-02-02T00:00:00.000000Z\\"
-			    }
-			  },
-			  {
-			    \\"id\\": \\"20000000-0000-0000-0000-000000000000\\",
-			    \\"number\\": \\"NCC-74656\\",
-			    \\"metadata\\": {
-			      \\"author_id\\": \\"Kathryn-Jane-Gamma-6-0-7-3\\",
-			      \\"author_email\\": \\"Kathryn-Janeway@federation.org\\",
-			      \\"source\\": \\"wrangler\\",
-			      \\"created_on\\": \\"2021-02-03T00:00:00.000000Z\\",
-			      \\"modified_on\\": \\"2021-02-03T00:00:00.000000Z\\"
-			    }
-			  },
-			  {
-			    \\"id\\": \\"10000000-0000-0000-0000-000000000000\\",
-			    \\"number\\": \\"1701-E\\",
-			    \\"annotations\\": {
-			      \\"workers/triggered_by\\": \\"rollback\\",
-			      \\"workers/rollback_from\\": \\"MOCK-DEPLOYMENT-ID-2222\\"
-			    },
-			    \\"metadata\\": {
-			      \\"author_id\\": \\"Picard-Gamma-6-0-7-3\\",
-			      \\"author_email\\": \\"Jean-Luc-Picard@federation.org\\",
-			      \\"source\\": \\"wrangler\\",
-			      \\"created_on\\": \\"2021-01-04T00:00:00.000000Z\\",
-			      \\"modified_on\\": \\"2021-01-04T00:00:00.000000Z\\"
-			    },
-			    \\"resources\\": {
-			      \\"script\\": \\"test-name\\",
-			      \\"bindings\\": []
-			    }
-			  }
-			]
-			"
-		`);
+				"[
+				  {
+				    \\"id\\": \\"10000000-0000-0000-0000-000000000000\\",
+				    \\"number\\": \\"1701-E\\",
+				    \\"annotations\\": {
+				      \\"workers/triggered_by\\": \\"upload\\"
+				    },
+				    \\"metadata\\": {
+				      \\"author_id\\": \\"Picard-Gamma-6-0-7-3\\",
+				      \\"author_email\\": \\"Jean-Luc-Picard@federation.org\\",
+				      \\"source\\": \\"wrangler\\",
+				      \\"created_on\\": \\"2021-01-01T00:00:00.000000Z\\",
+				      \\"modified_on\\": \\"2021-01-01T00:00:00.000000Z\\"
+				    }
+				  },
+				  {
+				    \\"id\\": \\"20000000-0000-0000-0000-000000000000\\",
+				    \\"number\\": \\"1701-E\\",
+				    \\"annotations\\": {
+				      \\"workers/triggered_by\\": \\"rollback\\",
+				      \\"workers/rollback_from\\": \\"MOCK-DEPLOYMENT-ID-2222\\"
+				    },
+				    \\"metadata\\": {
+				      \\"author_id\\": \\"Picard-Gamma-6-0-7-3\\",
+				      \\"author_email\\": \\"Jean-Luc-Picard@federation.org\\",
+				      \\"source\\": \\"wrangler\\",
+				      \\"created_on\\": \\"2021-01-04T00:00:00.000000Z\\",
+				      \\"modified_on\\": \\"2021-01-04T00:00:00.000000Z\\"
+				    },
+				    \\"resources\\": {
+				      \\"script\\": \\"test-name\\",
+				      \\"bindings\\": []
+				    }
+				  },
+				  {
+				    \\"id\\": \\"30000000-0000-0000-0000-000000000000\\",
+				    \\"number\\": \\"NCC-74656\\",
+				    \\"annotations\\": {
+				      \\"workers/triggered_by\\": \\"rollback\\",
+				      \\"workers/rollback_from\\": \\"MOCK-DEPLOYMENT-ID-1111\\",
+				      \\"workers/message\\": \\"Rolled back for this version\\"
+				    },
+				    \\"metadata\\": {
+				      \\"author_id\\": \\"Kathryn-Jane-Gamma-6-0-7-3\\",
+				      \\"author_email\\": \\"Kathryn-Janeway@federation.org\\",
+				      \\"source\\": \\"wrangler\\",
+				      \\"created_on\\": \\"2021-02-02T00:00:00.000000Z\\",
+				      \\"modified_on\\": \\"2021-02-02T00:00:00.000000Z\\"
+				    }
+				  },
+				  {
+				    \\"id\\": \\"40000000-0000-0000-0000-000000000000\\",
+				    \\"number\\": \\"NCC-74656\\",
+				    \\"metadata\\": {
+				      \\"author_id\\": \\"Kathryn-Jane-Gamma-6-0-7-3\\",
+				      \\"author_email\\": \\"Kathryn-Janeway@federation.org\\",
+				      \\"source\\": \\"wrangler\\",
+				      \\"created_on\\": \\"2021-02-03T00:00:00.000000Z\\",
+				      \\"modified_on\\": \\"2021-02-03T00:00:00.000000Z\\"
+				    }
+				  }
+				]
+				"
+			`);
 
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});

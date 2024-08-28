@@ -186,11 +186,11 @@ export class CommandLineArgsError extends UserError {}
 export function createCLIParser(argv: string[]) {
 	const experimentalGradualRollouts =
 		// original flag -- using internal product name (Gradual Rollouts) -- kept for temp back-compat
-		argv.includes("--experimental-gradual-rollouts") ||
+		!argv.includes("--no-experimental-gradual-rollouts") &&
 		// new flag -- using external product name (Versions)
-		argv.includes("--experimental-versions") ||
+		!argv.includes("--no-experimental-versions") &&
 		// new flag -- shorthand
-		argv.includes("--x-versions");
+		!argv.includes("--no-x-versions");
 
 	// Type check result against CommonYargsOptions to make sure we've included
 	// all common options
@@ -239,6 +239,7 @@ export function createCLIParser(argv: string[]) {
 		.option("experimental-versions", {
 			describe: `Experimental: support Worker Versions`,
 			type: "boolean",
+			default: true,
 			hidden: true,
 			alias: ["x-versions", "experimental-gradual-rollouts"],
 		})
@@ -369,20 +370,16 @@ export function createCLIParser(argv: string[]) {
 		deployHandler
 	);
 
-	// [OPEN BETA] deployments
-	const deploymentsWarning =
-		"🚧`wrangler deployments` is a beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose";
-	const deploymentsDescription = `🚢 List and view the current and past deployments for your Worker ${chalk.hex(betaCmdColor)("[open beta]")}`;
+	// deployments
+	const deploymentsDescription =
+		"🚢 List and view the current and past deployments for your Worker";
 
 	if (experimentalGradualRollouts) {
-		wrangler
-			.command(
-				"deployments",
-				deploymentsDescription,
-				registerVersionsDeploymentsSubcommands
-			)
-			.command(subHelp)
-			.epilogue(deploymentsWarning);
+		wrangler.command(
+			"deployments",
+			deploymentsDescription,
+			registerVersionsDeploymentsSubcommands
+		);
 	} else {
 		wrangler.command("deployments", deploymentsDescription, (yargs) =>
 			yargs
@@ -396,7 +393,7 @@ export function createCLIParser(argv: string[]) {
 					async (listYargs) => listYargs,
 					async (listYargs) => {
 						const { accountId, scriptName, config } =
-							await commonDeploymentCMDSetup(listYargs, deploymentsWarning);
+							await commonDeploymentCMDSetup(listYargs);
 						await deployments(accountId, scriptName, config);
 					}
 				)
@@ -411,7 +408,7 @@ export function createCLIParser(argv: string[]) {
 						}),
 					async (viewYargs) => {
 						const { accountId, scriptName, config } =
-							await commonDeploymentCMDSetup(viewYargs, deploymentsWarning);
+							await commonDeploymentCMDSetup(viewYargs);
 
 						await viewDeployment(
 							accountId,
@@ -422,22 +419,14 @@ export function createCLIParser(argv: string[]) {
 					}
 				)
 				.command(subHelp)
-				.epilogue(deploymentsWarning)
 		);
 	}
 
-	// [OPEN BETA] rollback
-	const rollbackWarning =
-		"🚧`wrangler rollback` is a beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose";
-	const rollbackDescription = `🔙 Rollback a deployment for a Worker ${chalk.hex(betaCmdColor)("[open beta]")}`;
+	// rollback
+	const rollbackDescription = "🔙 Rollback a deployment for a Worker";
 
 	if (experimentalGradualRollouts) {
-		registerVersionsRollbackCommand(
-			wrangler,
-			rollbackWarning,
-			subHelp,
-			rollbackDescription
-		);
+		registerVersionsRollbackCommand(wrangler, rollbackDescription);
 	} else {
 		wrangler.command(
 			"rollback [deployment-id]",
@@ -459,11 +448,10 @@ export function createCLIParser(argv: string[]) {
 					.option("name", {
 						describe: "The name of your Worker",
 						type: "string",
-					})
-					.epilogue(rollbackWarning),
+					}),
 			async (rollbackYargs) => {
 				const { accountId, scriptName, config } =
-					await commonDeploymentCMDSetup(rollbackYargs, rollbackWarning);
+					await commonDeploymentCMDSetup(rollbackYargs);
 
 				await rollbackDeployment(
 					accountId,
@@ -476,22 +464,22 @@ export function createCLIParser(argv: string[]) {
 		);
 	}
 
-	// [OPEN BETA] versions
+	// versions
 	if (experimentalGradualRollouts) {
 		wrangler.command(
 			"versions",
-			`🫧  List, view, upload and deploy Versions of your Worker to Cloudflare ${chalk.hex(betaCmdColor)("[open beta]")}`,
+			"🫧  List, view, upload and deploy Versions of your Worker to Cloudflare",
 			(yargs) => {
 				return registerVersionsSubcommands(yargs.command(subHelp), subHelp);
 			}
 		);
 	}
 
-	// [OPEN BETA] triggers
+	// triggers
 	if (experimentalGradualRollouts) {
 		wrangler.command(
 			"triggers",
-			`🎯 Updates the triggers of your current deployment ${chalk.hex(betaCmdColor)("[open beta]")}`,
+			"🎯 Updates the triggers of your current deployment",
 			(yargs) => {
 				return registerTriggersSubcommands(yargs.command(subHelp));
 			}

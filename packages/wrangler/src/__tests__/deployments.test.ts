@@ -23,6 +23,8 @@ function isFileNotFound(e: unknown) {
 	);
 }
 
+// This is testing the old deployments behaviour, which is now deprecated
+// and replaced by the versions one - see the new tests in versions/deployments/...
 describe("deployments", () => {
 	const std = mockConsoleMethods();
 	runInTempDir();
@@ -57,23 +59,18 @@ describe("deployments", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 			"wrangler deployments
 
-			🚢 List and view the current and past deployments for your Worker [open beta]
+			🚢 List and view the current and past deployments for your Worker
 
 			COMMANDS
-			  wrangler deployments list                  Displays the 10 most recent deployments for a Worker
-			  wrangler deployments view [deployment-id]  View a deployment
+			  wrangler deployments list    Displays the 10 most recent deployments of your Worker
+			  wrangler deployments status  View the current state of your production
 
 			GLOBAL FLAGS
 			  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
 			  -c, --config                    Path to .toml configuration file  [string]
 			  -e, --env                       Environment to use for operations and .env files  [string]
 			  -h, --help                      Show help  [boolean]
-			  -v, --version                   Show version number  [boolean]
-
-			OPTIONS
-			      --name  The name of your Worker  [string]
-
-			🚧\`wrangler deployments\` is a beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose"
+			  -v, --version                   Show version number  [boolean]"
 		`);
 	});
 
@@ -82,173 +79,151 @@ describe("deployments", () => {
 			it("should log deployments", async () => {
 				writeWranglerToml();
 
-				await runWrangler("deployments list");
+				await runWrangler("deployments list --no-x-versions");
 				expect(std.out).toMatchInlineSnapshot(`
-			"🚧\`wrangler deployments\` is a beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose
+					"
+					Version ID:    Constitution-Class-tag:test-name
+					Created on:    2021-01-01T00:00:00.000000Z
+					Author:        Jean-Luc-Picard@federation.org
+					Source:        Upload from Wrangler 🤠
 
+					Version ID:    Intrepid-Class-tag:test-name
+					Created on:    2021-02-02T00:00:00.000000Z
+					Author:        Kathryn-Janeway@federation.org
+					Source:        Rollback from Wrangler 🤠
+					Rollback from: MOCK-DEPLOYMENT-ID-1111
+					Message:       Rolled back for this version
 
-			Deployment ID: Constitution-Class-tag:test-name
-			Version ID:    Constitution-Class-tag:test-name
-			Created on:    2021-01-01T00:00:00.000000Z
-			Author:        Jean-Luc-Picard@federation.org
-			Source:        Upload from Wrangler 🤠
+					Version ID:    3mEgaU1T-Intrepid-someThing-tag:test-name
+					Created on:    2021-02-03T00:00:00.000000Z
+					Author:        Kathryn-Janeway@federation.org
+					Source:        Wrangler 🤠
 
-			Deployment ID: Intrepid-Class-tag:test-name
-			Version ID:    Intrepid-Class-tag:test-name
-			Created on:    2021-02-02T00:00:00.000000Z
-			Author:        Kathryn-Janeway@federation.org
-			Source:        Rollback from Wrangler 🤠
-			Rollback from: MOCK-DEPLOYMENT-ID-1111
-			Message:       Rolled back for this version
-
-			Deployment ID: 3mEgaU1T-Intrepid-someThing-tag:test-name
-			Version ID:    3mEgaU1T-Intrepid-someThing-tag:test-name
-			Created on:    2021-02-03T00:00:00.000000Z
-			Author:        Kathryn-Janeway@federation.org
-			Source:        Wrangler 🤠
-
-			Deployment ID: Galaxy-Class-tag:test-name
-			Version ID:    Galaxy-Class-tag:test-name
-			Created on:    2021-01-04T00:00:00.000000Z
-			Author:        Jean-Luc-Picard@federation.org
-			Source:        Rollback from Wrangler 🤠
-			Rollback from: MOCK-DEPLOYMENT-ID-2222
-			🟩 Active
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+					Version ID:    Galaxy-Class-tag:test-name
+					Created on:    2021-01-04T00:00:00.000000Z
+					Author:        Jean-Luc-Picard@federation.org
+					Source:        Rollback from Wrangler 🤠
+					Rollback from: MOCK-DEPLOYMENT-ID-2222
+					🟩 Active"
+				`);
 			});
 
 			it("should log deployments for script with passed in name option", async () => {
-				await runWrangler("deployments list --name something-else");
+				await runWrangler(
+					"deployments list --name something-else --no-x-versions"
+				);
 				expect(std.out).toMatchInlineSnapshot(`
-			"🚧\`wrangler deployments\` is a beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose
+					"
+					Version ID:    Constitution-Class-tag:something-else
+					Created on:    2021-01-01T00:00:00.000000Z
+					Author:        Jean-Luc-Picard@federation.org
+					Source:        Upload from Wrangler 🤠
 
+					Version ID:    Intrepid-Class-tag:something-else
+					Created on:    2021-02-02T00:00:00.000000Z
+					Author:        Kathryn-Janeway@federation.org
+					Source:        Rollback from Wrangler 🤠
+					Rollback from: MOCK-DEPLOYMENT-ID-1111
+					Message:       Rolled back for this version
 
-			Deployment ID: Constitution-Class-tag:something-else
-			Version ID:    Constitution-Class-tag:something-else
-			Created on:    2021-01-01T00:00:00.000000Z
-			Author:        Jean-Luc-Picard@federation.org
-			Source:        Upload from Wrangler 🤠
+					Version ID:    3mEgaU1T-Intrepid-someThing-tag:something-else
+					Created on:    2021-02-03T00:00:00.000000Z
+					Author:        Kathryn-Janeway@federation.org
+					Source:        Wrangler 🤠
 
-			Deployment ID: Intrepid-Class-tag:something-else
-			Version ID:    Intrepid-Class-tag:something-else
-			Created on:    2021-02-02T00:00:00.000000Z
-			Author:        Kathryn-Janeway@federation.org
-			Source:        Rollback from Wrangler 🤠
-			Rollback from: MOCK-DEPLOYMENT-ID-1111
-			Message:       Rolled back for this version
-
-			Deployment ID: 3mEgaU1T-Intrepid-someThing-tag:something-else
-			Version ID:    3mEgaU1T-Intrepid-someThing-tag:something-else
-			Created on:    2021-02-03T00:00:00.000000Z
-			Author:        Kathryn-Janeway@federation.org
-			Source:        Wrangler 🤠
-
-			Deployment ID: Galaxy-Class-tag:something-else
-			Version ID:    Galaxy-Class-tag:something-else
-			Created on:    2021-01-04T00:00:00.000000Z
-			Author:        Jean-Luc-Picard@federation.org
-			Source:        Rollback from Wrangler 🤠
-			Rollback from: MOCK-DEPLOYMENT-ID-2222
-			🟩 Active
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+					Version ID:    Galaxy-Class-tag:something-else
+					Created on:    2021-01-04T00:00:00.000000Z
+					Author:        Jean-Luc-Picard@federation.org
+					Source:        Rollback from Wrangler 🤠
+					Rollback from: MOCK-DEPLOYMENT-ID-2222
+					🟩 Active"
+				`);
 			});
 
 			it("should error on missing script name", async () => {
 				await expect(
-					runWrangler("deployments list")
+					runWrangler("deployments list --no-x-versions")
 				).rejects.toMatchInlineSnapshot(
 					`[Error: Required Worker name missing. Please specify the Worker name in wrangler.toml, or pass it as an argument with \`--name\`]`
 				);
 			});
 		});
+
 		describe("deployment view", () => {
+			it("should error with no --no-x-versions flag", async () => {
+				writeWranglerToml();
+
+				await expect(
+					runWrangler("deployments view 1701-E")
+				).rejects.toThrowErrorMatchingInlineSnapshot(
+					`[Error: \`wrangler deployments view <deployment-id>\` has been renamed \`wrangler versions view [version-id] --x-versions\`. Please use that command instead.]`
+				);
+			});
+
 			it("should log deployment details", async () => {
 				writeWranglerToml();
 
-				await runWrangler("deployments view 1701-E");
+				await runWrangler("deployments view 1701-E --no-x-versions");
 
 				expect(std.out).toMatchInlineSnapshot(`
-			"🚧\`wrangler deployments\` is a beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose
-
-
-			Deployment ID:       1701-E
-			Version ID:          1701-E
-			Created on:          2021-01-01T00:00:00.000000Z
-			Author:              Jean-Luc-Picard@federation.org
-			Source:              Wrangler 🤠
-			------------------------------------------------------------
-			Author ID:           Picard-Gamma-6-0-7-3
-			Usage Model:         bundled
-			Handlers:            fetch
-			--------------------------bindings--------------------------
-			None
-
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+					"
+					Version ID:          1701-E
+					Created on:          2021-01-01T00:00:00.000000Z
+					Author:              Jean-Luc-Picard@federation.org
+					Source:              Wrangler 🤠
+					------------------------------------------------------------
+					Author ID:           Picard-Gamma-6-0-7-3
+					Usage Model:         bundled
+					Handlers:            fetch
+					--------------------------bindings--------------------------
+					None
+					"
+				`);
 			});
 
 			it("should log deployment details with bindings", async () => {
 				writeWranglerToml();
 
-				await runWrangler("deployments view bindings-tag");
+				await runWrangler("deployments view bindings-tag --no-x-versions");
 
 				expect(std.out).toMatchInlineSnapshot(`
-			"🚧\`wrangler deployments\` is a beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose
+					"
+					Version ID:          1701-E
+					Created on:          2021-01-01T00:00:00.000000Z
+					Author:              Jean-Luc-Picard@federation.org
+					Source:              Wrangler 🤠
+					------------------------------------------------------------
+					Author ID:           Picard-Gamma-6-0-7-3
+					Usage Model:         bundled
+					Handlers:            fetch
+					--------------------------bindings--------------------------
+					[[r2_buckets]]
+					binding = \\"MY_BUCKET\\"
+					bucket_name = \\"testr2\\"
 
-
-			Deployment ID:       1701-E
-			Version ID:          1701-E
-			Created on:          2021-01-01T00:00:00.000000Z
-			Author:              Jean-Luc-Picard@federation.org
-			Source:              Wrangler 🤠
-			------------------------------------------------------------
-			Author ID:           Picard-Gamma-6-0-7-3
-			Usage Model:         bundled
-			Handlers:            fetch
-			--------------------------bindings--------------------------
-			[[r2_buckets]]
-			binding = \\"MY_BUCKET\\"
-			bucket_name = \\"testr2\\"
-
-
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+					"
+				`);
 			});
+
 			it("should automatically log latest deployment details", async () => {
 				writeWranglerToml();
 
-				await runWrangler("deployments view");
+				await runWrangler("deployments view --no-x-versions");
 
 				expect(std.out).toMatchInlineSnapshot(`
-			"🚧\`wrangler deployments\` is a beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose
-
-
-			Deployment ID:       1701-E
-			Version ID:          1701-E
-			Created on:          2021-01-01T00:00:00.000000Z
-			Author:              Jean-Luc-Picard@federation.org
-			Source:              Wrangler 🤠
-			------------------------------------------------------------
-			Author ID:           Picard-Gamma-6-0-7-3
-			Usage Model:         bundled
-			Handlers:            fetch
-			--------------------------bindings--------------------------
-			None
-
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+					"
+					Version ID:          1701-E
+					Created on:          2021-01-01T00:00:00.000000Z
+					Author:              Jean-Luc-Picard@federation.org
+					Source:              Wrangler 🤠
+					------------------------------------------------------------
+					Author ID:           Picard-Gamma-6-0-7-3
+					Usage Model:         bundled
+					Handlers:            fetch
+					--------------------------bindings--------------------------
+					None
+					"
+				`);
 			});
 		});
 
@@ -310,18 +285,14 @@ describe("deployments", () => {
 				});
 
 				writeWranglerToml();
-				await runWrangler("rollback 3mEgaU1T-Intrepid-someThing-tag:test-name");
+				await runWrangler(
+					"rollback 3mEgaU1T-Intrepid-someThing-tag:test-name --no-x-versions"
+				);
 				expect(std.out).toMatchInlineSnapshot(`
-			"🚧\`wrangler rollback\` is a beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose
-
-
-			Successfully rolled back to Deployment ID: 3mEgaU1T-Intrepid-someThing-tag:test-name
-			Current Deployment ID: galactic_mission_alpha
-			Current Version ID: galactic_mission_alpha
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+					"
+					Successfully rolled back to Deployment ID: 3mEgaU1T-Intrepid-someThing-tag:test-name
+					Current Version ID: galactic_mission_alpha"
+				`);
 
 				expect(requests.count).toEqual(1);
 			});
@@ -333,11 +304,10 @@ describe("deployments", () => {
 				});
 
 				writeWranglerToml();
-				await runWrangler("rollback 3mEgaU1T-Intrpid-someThing-tag:test-name");
-				expect(std.out).toMatchInlineSnapshot(`
-			"🚧\`wrangler rollback\` is a beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose
-			"
-		`);
+				await runWrangler(
+					"rollback 3mEgaU1T-Intrpid-someThing-tag:test-name --no-x-versions"
+				);
+				expect(std.out).toMatchInlineSnapshot(`""`);
 
 				expect(requests.count).toEqual(0);
 			});
@@ -346,22 +316,18 @@ describe("deployments", () => {
 				setIsTTY(false);
 
 				writeWranglerToml();
-				await runWrangler("rollback 3mEgaU1T-Intrepid-someThing-tag:test-name");
+				await runWrangler(
+					"rollback 3mEgaU1T-Intrepid-someThing-tag:test-name --no-x-versions"
+				);
 				expect(std.out).toMatchInlineSnapshot(`
-			"🚧\`wrangler rollback\` is a beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose
+					"? This deployment 3mEgaU1T will immediately replace the current deployment and become the active deployment across all your deployed routes and domains. However, your local development environment will not be affected by this rollback. Note: Rolling back to a previous deployment will not rollback any of the bound resources (Durable Object, D1, R2, KV, etc).
+					🤖 Using fallback value in non-interactive context: yes
+					? Please provide a message for this rollback (120 characters max)
+					🤖 Using default value in non-interactive context:
 
-			? This deployment 3mEgaU1T will immediately replace the current deployment and become the active deployment across all your deployed routes and domains. However, your local development environment will not be affected by this rollback. Note: Rolling back to a previous deployment will not rollback any of the bound resources (Durable Object, D1, R2, KV, etc).
-			🤖 Using fallback value in non-interactive context: yes
-			? Please provide a message for this rollback (120 characters max)
-			🤖 Using default value in non-interactive context:
-
-			Successfully rolled back to Deployment ID: 3mEgaU1T-Intrepid-someThing-tag:test-name
-			Current Deployment ID: galactic_mission_alpha
-			Current Version ID: galactic_mission_alpha
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+					Successfully rolled back to Deployment ID: 3mEgaU1T-Intrepid-someThing-tag:test-name
+					Current Version ID: galactic_mission_alpha"
+				`);
 
 				expect(requests.count).toEqual(1);
 			});
@@ -369,19 +335,13 @@ describe("deployments", () => {
 			it("should skip prompt automatically in rollback if message flag is provided", async () => {
 				writeWranglerToml();
 				await runWrangler(
-					`rollback 3mEgaU1T-Intrepid-someThing-tag:test-name --message "test"`
+					`rollback 3mEgaU1T-Intrepid-someThing-tag:test-name --message "test" --no-x-versions`
 				);
 				expect(std.out).toMatchInlineSnapshot(`
-			"🚧\`wrangler rollback\` is a beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose
-
-
-			Successfully rolled back to Deployment ID: 3mEgaU1T-Intrepid-someThing-tag:test-name
-			Current Deployment ID: galactic_mission_alpha
-			Current Version ID: galactic_mission_alpha
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+					"
+					Successfully rolled back to Deployment ID: 3mEgaU1T-Intrepid-someThing-tag:test-name
+					Current Version ID: galactic_mission_alpha"
+				`);
 
 				expect(requests.count).toEqual(1);
 			});
@@ -389,19 +349,13 @@ describe("deployments", () => {
 			it("should skip prompt automatically in rollback with empty message", async () => {
 				writeWranglerToml();
 				await runWrangler(
-					`rollback 3mEgaU1T-Intrepid-someThing-tag:test-name --message "test"`
+					`rollback 3mEgaU1T-Intrepid-someThing-tag:test-name --message "test" --no-x-versions`
 				);
 				expect(std.out).toMatchInlineSnapshot(`
-			"🚧\`wrangler rollback\` is a beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose
-
-
-			Successfully rolled back to Deployment ID: 3mEgaU1T-Intrepid-someThing-tag:test-name
-			Current Deployment ID: galactic_mission_alpha
-			Current Version ID: galactic_mission_alpha
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+					"
+					Successfully rolled back to Deployment ID: 3mEgaU1T-Intrepid-someThing-tag:test-name
+					Current Version ID: galactic_mission_alpha"
+				`);
 
 				expect(requests.count).toEqual(1);
 			});
@@ -418,25 +372,19 @@ describe("deployments", () => {
 				});
 
 				writeWranglerToml();
-				await runWrangler("rollback");
+				await runWrangler("rollback --no-x-versions");
 				expect(std.out).toMatchInlineSnapshot(`
-			"🚧\`wrangler rollback\` is a beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose
-
-
-			Successfully rolled back to Deployment ID: 3mEgaU1T-Intrepid-someThing-tag:test-name
-			Current Deployment ID: galactic_mission_alpha
-			Current Version ID: galactic_mission_alpha
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+					"
+					Successfully rolled back to Deployment ID: 3mEgaU1T-Intrepid-someThing-tag:test-name
+					Current Version ID: galactic_mission_alpha"
+				`);
 
 				expect(requests.count).toEqual(1);
 			});
 
 			it("should require a worker name", async () => {
 				await expect(runWrangler("rollback")).rejects.toMatchInlineSnapshot(
-					`[Error: Required Worker name missing. Please specify the Worker name in wrangler.toml, or pass it as an argument with \`--name\`]`
+					`[Error: You need to provide a name of your worker. Either pass it as a cli arg with \`--name <name>\` or in your config file as \`name = "<name>"\`]`
 				);
 
 				expect(requests.count).toEqual(0);
@@ -453,18 +401,12 @@ describe("deployments", () => {
 					result: "",
 				});
 
-				await runWrangler("rollback --name something-else");
+				await runWrangler("rollback --name something-else --no-x-versions");
 				expect(std.out).toMatchInlineSnapshot(`
-			"🚧\`wrangler rollback\` is a beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose
-
-
-			Successfully rolled back to Deployment ID: 3mEgaU1T-Intrepid-someThing-tag:something-else
-			Current Deployment ID: galactic_mission_alpha
-			Current Version ID: galactic_mission_alpha
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+					"
+					Successfully rolled back to Deployment ID: 3mEgaU1T-Intrepid-someThing-tag:something-else
+					Current Version ID: galactic_mission_alpha"
+				`);
 
 				expect(requests.count).toEqual(1);
 			});

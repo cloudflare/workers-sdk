@@ -5,8 +5,8 @@ import { runWrangler } from "../helpers/run-wrangler";
 describe("versions --help", () => {
 	const std = mockConsoleMethods();
 
-	test("shows generic help w/ --help flag but w/o --experimental-versions flag", async () => {
-		const result = runWrangler("versions --help");
+	test("shows generic help w/ --help flag and --no-experimental-versions flag", async () => {
+		const result = runWrangler("versions --help --no-experimental-versions");
 
 		await expect(result).resolves.toBeUndefined();
 
@@ -19,8 +19,8 @@ describe("versions --help", () => {
 			  wrangler init [name]               📥 Initialize a basic Worker
 			  wrangler dev [script]              👂 Start a local server for developing your Worker
 			  wrangler deploy [script]           🆙 Deploy a Worker to Cloudflare  [aliases: publish]
-			  wrangler deployments               🚢 List and view the current and past deployments for your Worker [open beta]
-			  wrangler rollback [deployment-id]  🔙 Rollback a deployment for a Worker [open beta]
+			  wrangler deployments               🚢 List and view the current and past deployments for your Worker
+			  wrangler rollback [deployment-id]  🔙 Rollback a deployment for a Worker
 			  wrangler delete [script]           🗑  Delete a Worker from Cloudflare
 			  wrangler tail [worker]             🦚 Start a log tailing session for a Worker
 			  wrangler secret                    🤫 Generate a secret that can be referenced in a Worker
@@ -61,7 +61,7 @@ describe("versions --help", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 			"wrangler versions
 
-			🫧  List, view, upload and deploy Versions of your Worker to Cloudflare [open beta]
+			🫧  List, view, upload and deploy Versions of your Worker to Cloudflare
 
 			COMMANDS
 			  wrangler versions view <version-id>         View the details of a specific version of your Worker [beta]
@@ -78,17 +78,70 @@ describe("versions --help", () => {
 			  -v, --version                   Show version number  [boolean]"
 		`);
 	});
+
+	test("shows versions help w/ --help", async () => {
+		const result = runWrangler("versions --help");
+
+		await expect(result).resolves.toBeUndefined();
+
+		expect(std.out).toMatchInlineSnapshot(`
+			  	"wrangler versions
+
+			  	🫧  List, view, upload and deploy Versions of your Worker to Cloudflare
+
+			  	COMMANDS
+			  	  wrangler versions view <version-id>         View the details of a specific version of your Worker [beta]
+			  	  wrangler versions list                      List the 10 most recent Versions of your Worker [beta]
+			  	  wrangler versions upload                    Uploads your Worker code and config as a new Version [beta]
+			  	  wrangler versions deploy [version-specs..]  Safely roll out new Versions of your Worker by splitting traffic between multiple Versions [beta]
+			  	  wrangler versions secret                    Generate a secret that can be referenced in a Worker
+
+			  	GLOBAL FLAGS
+			  	  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
+			  	  -c, --config                    Path to .toml configuration file  [string]
+			  	  -e, --env                       Environment to use for operations and .env files  [string]
+			  	  -h, --help                      Show help  [boolean]
+			  	  -v, --version                   Show version number  [boolean]"
+			  `);
+	});
 });
 
 describe("versions subhelp", () => {
 	const std = mockConsoleMethods();
 
-	test("fails without --experimental-versions flag", async () => {
-		const result = runWrangler("versions");
+	test("fails with --no-experimental-versions flag", async () => {
+		const result = runWrangler("versions --no-experimental-versions");
 
 		await expect(result).rejects.toMatchInlineSnapshot(
 			`[Error: Unknown argument: versions]`
 		);
+	});
+
+	test("shows implicit subhelp", async () => {
+		const result = runWrangler("versions");
+
+		await expect(result).resolves.toBeUndefined();
+		await setImmediate(); // wait for subhelp
+
+		expect(std.out).toMatchInlineSnapshot(`
+			"wrangler versions
+
+			🫧  List, view, upload and deploy Versions of your Worker to Cloudflare
+
+			COMMANDS
+			  wrangler versions view <version-id>         View the details of a specific version of your Worker [beta]
+			  wrangler versions list                      List the 10 most recent Versions of your Worker [beta]
+			  wrangler versions upload                    Uploads your Worker code and config as a new Version [beta]
+			  wrangler versions deploy [version-specs..]  Safely roll out new Versions of your Worker by splitting traffic between multiple Versions [beta]
+			  wrangler versions secret                    Generate a secret that can be referenced in a Worker
+
+			GLOBAL FLAGS
+			  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
+			  -c, --config                    Path to .toml configuration file  [string]
+			  -e, --env                       Environment to use for operations and .env files  [string]
+			  -h, --help                      Show help  [boolean]
+			  -v, --version                   Show version number  [boolean]"
+		`);
 	});
 
 	test("shows implicit subhelp with --experimental-versions flag", async () => {
@@ -98,24 +151,24 @@ describe("versions subhelp", () => {
 		await setImmediate(); // wait for subhelp
 
 		expect(std.out).toMatchInlineSnapshot(`
-			"wrangler versions
+			  	"wrangler versions
 
-			🫧  List, view, upload and deploy Versions of your Worker to Cloudflare [open beta]
+			  	🫧  List, view, upload and deploy Versions of your Worker to Cloudflare
 
-			COMMANDS
-			  wrangler versions view <version-id>         View the details of a specific version of your Worker [beta]
-			  wrangler versions list                      List the 10 most recent Versions of your Worker [beta]
-			  wrangler versions upload                    Uploads your Worker code and config as a new Version [beta]
-			  wrangler versions deploy [version-specs..]  Safely roll out new Versions of your Worker by splitting traffic between multiple Versions [beta]
-			  wrangler versions secret                    Generate a secret that can be referenced in a Worker
+			  	COMMANDS
+			  	  wrangler versions view <version-id>         View the details of a specific version of your Worker [beta]
+			  	  wrangler versions list                      List the 10 most recent Versions of your Worker [beta]
+			  	  wrangler versions upload                    Uploads your Worker code and config as a new Version [beta]
+			  	  wrangler versions deploy [version-specs..]  Safely roll out new Versions of your Worker by splitting traffic between multiple Versions [beta]
+			  	  wrangler versions secret                    Generate a secret that can be referenced in a Worker
 
-			GLOBAL FLAGS
-			  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
-			  -c, --config                    Path to .toml configuration file  [string]
-			  -e, --env                       Environment to use for operations and .env files  [string]
-			  -h, --help                      Show help  [boolean]
-			  -v, --version                   Show version number  [boolean]"
-		`);
+			  	GLOBAL FLAGS
+			  	  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
+			  	  -c, --config                    Path to .toml configuration file  [string]
+			  	  -e, --env                       Environment to use for operations and .env files  [string]
+			  	  -h, --help                      Show help  [boolean]
+			  	  -v, --version                   Show version number  [boolean]"
+			  `);
 	});
 
 	test("shows implicit subhelp with --x-versions flag", async () => {
@@ -127,7 +180,7 @@ describe("versions subhelp", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 			"wrangler versions
 
-			🫧  List, view, upload and deploy Versions of your Worker to Cloudflare [open beta]
+			🫧  List, view, upload and deploy Versions of your Worker to Cloudflare
 
 			COMMANDS
 			  wrangler versions view <version-id>         View the details of a specific version of your Worker [beta]
@@ -154,7 +207,7 @@ describe("versions subhelp", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 			"wrangler versions
 
-			🫧  List, view, upload and deploy Versions of your Worker to Cloudflare [open beta]
+			🫧  List, view, upload and deploy Versions of your Worker to Cloudflare
 
 			COMMANDS
 			  wrangler versions view <version-id>         View the details of a specific version of your Worker [beta]

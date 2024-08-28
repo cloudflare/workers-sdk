@@ -76,15 +76,15 @@ describe("versions deploy", { timeout: TIMEOUT }, () => {
 			"Version ID:  00000000-0000-0000-0000-000000000000
 			Created:     TIMESTAMP
 			Author:      person@example.com
-			Source:      Unknown (version_upload)
-			Tag:         e2e-upload
-			Message:     Upload via e2e test
+			Source:      Upload
+			Tag:         -
+			Message:     -
 			Version ID:  00000000-0000-0000-0000-000000000000
 			Created:     TIMESTAMP
 			Author:      person@example.com
-			Source:      Upload
-			Tag:         -
-			Message:     -"
+			Source:      Unknown (version_upload)
+			Tag:         e2e-upload
+			Message:     Upload via e2e test"
 		`);
 
 		expect(list.stdout).toMatch(/Message:\s+Upload via e2e test/);
@@ -138,20 +138,20 @@ describe("versions deploy", { timeout: TIMEOUT }, () => {
 		expect(normalize(list.stdout)).toMatchInlineSnapshot(`
 			"Created:     TIMESTAMP
 			Author:      person@example.com
-			Source:      Unknown (deployment)
-			Message:     Deploy via e2e test
-			Version(s):  (100%) 00000000-0000-0000-0000-000000000000
-			                 Created:  TIMESTAMP
-			                     Tag:  e2e-upload
-			                 Message:  Upload via e2e test
-			Created:     TIMESTAMP
-			Author:      person@example.com
 			Source:      Upload
 			Message:     Automatic deployment on upload.
 			Version(s):  (100%) 00000000-0000-0000-0000-000000000000
 			                 Created:  TIMESTAMP
 			                     Tag:  -
-			                 Message:  -"
+			                 Message:  -
+			Created:     TIMESTAMP
+			Author:      person@example.com
+			Source:      Unknown (deployment)
+			Message:     Deploy via e2e test
+			Version(s):  (100%) 00000000-0000-0000-0000-000000000000
+			                 Created:  TIMESTAMP
+			                     Tag:  e2e-upload
+			                 Message:  Upload via e2e test"
 		`);
 
 		expect(list.stdout).toContain(versionId1);
@@ -191,9 +191,9 @@ describe("versions deploy", { timeout: TIMEOUT }, () => {
 			"Version ID:  00000000-0000-0000-0000-000000000000
 			Created:     TIMESTAMP
 			Author:      person@example.com
-			Source:      Unknown (version_upload)
-			Tag:         e2e-upload-AGAIN
-			Message:     Upload AGAIN via e2e test
+			Source:      Upload
+			Tag:         -
+			Message:     -
 			Version ID:  00000000-0000-0000-0000-000000000000
 			Created:     TIMESTAMP
 			Author:      person@example.com
@@ -203,9 +203,9 @@ describe("versions deploy", { timeout: TIMEOUT }, () => {
 			Version ID:  00000000-0000-0000-0000-000000000000
 			Created:     TIMESTAMP
 			Author:      person@example.com
-			Source:      Upload
-			Tag:         -
-			Message:     -"
+			Source:      Unknown (version_upload)
+			Tag:         e2e-upload-AGAIN
+			Message:     Upload AGAIN via e2e test"
 		`);
 
 		expect(versionsList.stdout).toMatch(/Message:\s+Upload AGAIN via e2e test/);
@@ -260,12 +260,12 @@ describe("versions deploy", { timeout: TIMEOUT }, () => {
 		expect(normalize(deploymentsList.stdout)).toMatchInlineSnapshot(`
 			"Created:     TIMESTAMP
 			Author:      person@example.com
-			Source:      Unknown (deployment)
-			Message:     Deploy AGAIN via e2e test
+			Source:      Upload
+			Message:     Automatic deployment on upload.
 			Version(s):  (100%) 00000000-0000-0000-0000-000000000000
 			                 Created:  TIMESTAMP
-			                     Tag:  e2e-upload-AGAIN
-			                 Message:  Upload AGAIN via e2e test
+			                     Tag:  -
+			                 Message:  -
 			Created:     TIMESTAMP
 			Author:      person@example.com
 			Source:      Unknown (deployment)
@@ -276,12 +276,12 @@ describe("versions deploy", { timeout: TIMEOUT }, () => {
 			                 Message:  Upload via e2e test
 			Created:     TIMESTAMP
 			Author:      person@example.com
-			Source:      Upload
-			Message:     Automatic deployment on upload.
+			Source:      Unknown (deployment)
+			Message:     Deploy AGAIN via e2e test
 			Version(s):  (100%) 00000000-0000-0000-0000-000000000000
 			                 Created:  TIMESTAMP
-			                     Tag:  -
-			                 Message:  -"
+			                     Tag:  e2e-upload-AGAIN
+			                 Message:  Upload AGAIN via e2e test"
 		`);
 
 		expect(countOccurrences(deploymentsList.stdout, versionId0)).toBe(1); // once for regular deploy, only
@@ -332,7 +332,8 @@ describe("versions deploy", { timeout: TIMEOUT }, () => {
 			🤖 Using fallback value in non-interactive context: yes
 			Performing rollback...
 			│
-			╰  SUCCESS  Worker Version 00000000-0000-0000-0000-000000000000 has been deployed to 100% of traffic."
+			╰  SUCCESS  Worker Version 00000000-0000-0000-0000-000000000000 has been deployed to 100% of traffic.
+			Current Version ID: 00000000-0000-0000-0000-000000000000"
 		`);
 
 		expect(rollback.stdout).toContain(
@@ -344,9 +345,9 @@ describe("versions deploy", { timeout: TIMEOUT }, () => {
 			"Version ID:  00000000-0000-0000-0000-000000000000
 			Created:     TIMESTAMP
 			Author:      person@example.com
-			Source:      Unknown (version_upload)
-			Tag:         e2e-upload-AGAIN
-			Message:     Upload AGAIN via e2e test
+			Source:      Upload
+			Tag:         -
+			Message:     -
 			Version ID:  00000000-0000-0000-0000-000000000000
 			Created:     TIMESTAMP
 			Author:      person@example.com
@@ -356,17 +357,25 @@ describe("versions deploy", { timeout: TIMEOUT }, () => {
 			Version ID:  00000000-0000-0000-0000-000000000000
 			Created:     TIMESTAMP
 			Author:      person@example.com
-			Source:      Upload
-			Tag:         -
-			Message:     -"
+			Source:      Unknown (version_upload)
+			Tag:         e2e-upload-AGAIN
+			Message:     Upload AGAIN via e2e test"
 		`);
 
 		// list deployments with new rollback deployment of 1st version (1 new deployment created)
 		expect(normalize(deploymentsList.stdout)).toMatchInlineSnapshot(`
 			"Created:     TIMESTAMP
 			Author:      person@example.com
+			Source:      Upload
+			Message:     Automatic deployment on upload.
+			Version(s):  (100%) 00000000-0000-0000-0000-000000000000
+			                 Created:  TIMESTAMP
+			                     Tag:  -
+			                 Message:  -
+			Created:     TIMESTAMP
+			Author:      person@example.com
 			Source:      Unknown (deployment)
-			Message:     Rollback via e2e test
+			Message:     Deploy via e2e test
 			Version(s):  (100%) 00000000-0000-0000-0000-000000000000
 			                 Created:  TIMESTAMP
 			                     Tag:  e2e-upload
@@ -382,19 +391,11 @@ describe("versions deploy", { timeout: TIMEOUT }, () => {
 			Created:     TIMESTAMP
 			Author:      person@example.com
 			Source:      Unknown (deployment)
-			Message:     Deploy via e2e test
+			Message:     Rollback via e2e test
 			Version(s):  (100%) 00000000-0000-0000-0000-000000000000
 			                 Created:  TIMESTAMP
 			                     Tag:  e2e-upload
-			                 Message:  Upload via e2e test
-			Created:     TIMESTAMP
-			Author:      person@example.com
-			Source:      Upload
-			Message:     Automatic deployment on upload.
-			Version(s):  (100%) 00000000-0000-0000-0000-000000000000
-			                 Created:  TIMESTAMP
-			                     Tag:  -
-			                 Message:  -"
+			                 Message:  Upload via e2e test"
 		`);
 
 		expect(countOccurrences(deploymentsList.stdout, versionId0)).toBe(1); // once for regular deploy, only
@@ -442,7 +443,8 @@ describe("versions deploy", { timeout: TIMEOUT }, () => {
 			🤖 Using fallback value in non-interactive context: yes
 			Performing rollback...
 			│
-			╰  SUCCESS  Worker Version 00000000-0000-0000-0000-000000000000 has been deployed to 100% of traffic."
+			╰  SUCCESS  Worker Version 00000000-0000-0000-0000-000000000000 has been deployed to 100% of traffic.
+			Current Version ID: 00000000-0000-0000-0000-000000000000"
 		`);
 
 		expect(rollback.stdout).toContain(
@@ -454,9 +456,9 @@ describe("versions deploy", { timeout: TIMEOUT }, () => {
 			"Version ID:  00000000-0000-0000-0000-000000000000
 			Created:     TIMESTAMP
 			Author:      person@example.com
-			Source:      Unknown (version_upload)
-			Tag:         e2e-upload-AGAIN
-			Message:     Upload AGAIN via e2e test
+			Source:      Upload
+			Tag:         -
+			Message:     -
 			Version ID:  00000000-0000-0000-0000-000000000000
 			Created:     TIMESTAMP
 			Author:      person@example.com
@@ -466,17 +468,17 @@ describe("versions deploy", { timeout: TIMEOUT }, () => {
 			Version ID:  00000000-0000-0000-0000-000000000000
 			Created:     TIMESTAMP
 			Author:      person@example.com
-			Source:      Upload
-			Tag:         -
-			Message:     -"
+			Source:      Unknown (version_upload)
+			Tag:         e2e-upload-AGAIN
+			Message:     Upload AGAIN via e2e test"
 		`);
 
 		// list deployments with new rollback deployment of 0th version (1 new deployment created)
 		expect(normalize(deploymentsList.stdout)).toMatchInlineSnapshot(`
 			"Created:     TIMESTAMP
 			Author:      person@example.com
-			Source:      Unknown (deployment)
-			Message:     Rollback to old version
+			Source:      Upload
+			Message:     Automatic deployment on upload.
 			Version(s):  (100%) 00000000-0000-0000-0000-000000000000
 			                 Created:  TIMESTAMP
 			                     Tag:  -
@@ -484,7 +486,7 @@ describe("versions deploy", { timeout: TIMEOUT }, () => {
 			Created:     TIMESTAMP
 			Author:      person@example.com
 			Source:      Unknown (deployment)
-			Message:     Rollback via e2e test
+			Message:     Deploy via e2e test
 			Version(s):  (100%) 00000000-0000-0000-0000-000000000000
 			                 Created:  TIMESTAMP
 			                     Tag:  e2e-upload
@@ -500,15 +502,15 @@ describe("versions deploy", { timeout: TIMEOUT }, () => {
 			Created:     TIMESTAMP
 			Author:      person@example.com
 			Source:      Unknown (deployment)
-			Message:     Deploy via e2e test
+			Message:     Rollback via e2e test
 			Version(s):  (100%) 00000000-0000-0000-0000-000000000000
 			                 Created:  TIMESTAMP
 			                     Tag:  e2e-upload
 			                 Message:  Upload via e2e test
 			Created:     TIMESTAMP
 			Author:      person@example.com
-			Source:      Upload
-			Message:     Automatic deployment on upload.
+			Source:      Unknown (deployment)
+			Message:     Rollback to old version
 			Version(s):  (100%) 00000000-0000-0000-0000-000000000000
 			                 Created:  TIMESTAMP
 			                     Tag:  -

@@ -47,7 +47,6 @@ import {
 	maybeRetrieveFileSourceMap,
 } from "../sourcemap";
 import triggersDeploy from "../triggers/deploy";
-import { logVersionIdChange } from "../utils/deployment-id-version-id-change";
 import { confirmLatestDeploymentOverwrite } from "../versions/deploy";
 import { getZoneForRoute } from "../zones";
 import type { Config } from "../config";
@@ -858,10 +857,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 	// deploy triggers
 	const targets = await triggersDeploy(props);
 
-	logger.log("Current Deployment ID:", deploymentId);
 	logger.log("Current Version ID:", deploymentId);
-
-	logVersionIdChange();
 
 	return {
 		sourceMapSize,
@@ -877,10 +873,7 @@ function deployWfpUserWorker(
 ) {
 	// Will go under the "Uploaded" text
 	logger.log("  Dispatch Namespace:", dispatchNamespace);
-	logger.log("Current Deployment ID:", deploymentId);
 	logger.log("Current Version ID:", deploymentId);
-
-	logVersionIdChange();
 }
 
 export function helpIfErrorIsSizeOrScriptStartup(
