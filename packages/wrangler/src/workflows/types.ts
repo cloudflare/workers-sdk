@@ -53,6 +53,17 @@ export type InstanceAttempt = {
 	error: { name: string; message: string } | null;
 };
 
+export type Backoff = "constant" | "linear" | "exponential";
+
+export type StepConfig = {
+	retries: {
+		limit: number;
+		delay: string | number;
+		backoff?: Backoff;
+	};
+	timeout: string | number;
+};
+
 export type InstanceStepLog = {
 	name: string;
 	start: string;
@@ -60,6 +71,7 @@ export type InstanceStepLog = {
 	attempts: InstanceAttempt[];
 	output: unknown;
 	success: boolean | null;
+	config: StepConfig;
 	type: "step";
 };
 

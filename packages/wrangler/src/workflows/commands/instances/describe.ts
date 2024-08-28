@@ -1,6 +1,11 @@
 import { logRaw } from "@cloudflare/cli";
 import { red, white } from "@cloudflare/cli/colors";
-import { formatDistanceStrict, formatDistanceToNowStrict } from "date-fns";
+import {
+	addMilliseconds,
+	formatDistanceStrict,
+	formatDistanceToNowStrict,
+} from "date-fns";
+import { ms } from "itty-time";
 import { fetchResult } from "../../../cfetch";
 import { readConfig } from "../../../config";
 import { logger } from "../../../logger";
@@ -134,38 +139,51 @@ const logStep = (
 	step: InstanceStepLog | InstanceSleepLog | InstanceTerminateLog
 ) => {
 	logRaw("");
-	const formattedInstance: Record<string, string> = {};
+	const formattedStep: Record<string, string> = {};
 
 	if (step.type == "sleep" || step.type == "step") {
-		formattedInstance.Name = step.name;
-		formattedInstance.Type = emojifyStepType(step.type);
+		formattedStep.Name = step.name;
+		formattedStep.Type = emojifyStepType(step.type);
 
 		// date related stuff, if the step is still running assume duration until now
 		if (step.start != undefined) {
-			formattedInstance.Start = new Date(step.start).toLocaleString();
+			formattedStep.Start = new Date(step.start).toLocaleString();
 		}
 
 		if (step.end != undefined) {
-			formattedInstance.End = new Date(step.end).toLocaleString();
+			formattedStep.End = new Date(step.end).toLocaleString();
 		}
 
 		if (step.start != undefined && step.end != undefined) {
-			formattedInstance.Duration = formatDistanceStrict(
+			formattedStep.Duration = formatDistanceStrict(
 				new Date(step.end),
 				new Date(step.start)
 			);
 		} else if (step.start != undefined) {
-			formattedInstance.Duration = formatDistanceToNowStrict(
-				new Date(step.start)
-			);
+			formattedStep.Duration = formatDistanceToNowStrict(new Date(step.start));
 		}
 	} else if (step.type == "termination") {
-		formattedInstance.Type = emojifyStepType(step.type);
-		formattedInstance.Trigger = step.trigger.source;
+		formattedStep.Type = emojifyStepType(step.type);
+		formattedStep.Trigger = step.trigger.source;
 	}
 
 	if (step.type == "step") {
-		formattedInstance.Success = step.success ? "✅ Yes" : "❌ No";
+		formattedStep.Success = step.success ? "✅ Yes" : "❌ No";
+		if (step.success === null) {
+			const latestAttempt = step.attempts.at(-1);
+			let delay = step.config.retries.delay;
+			if (latestAttempt !== undefined && latestAttempt.success === false) {
+				// SAFETY: It's okay because end date must always exist in the API, otherwise it's okay to fail
+				// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+				const endDate = new Date(latestAttempt.end!);
+				if (typeof delay === "string") {
+					delay = ms(delay);
+				}
+				const retryDate = addMilliseconds(endDate, delay);
+				formattedStep["Retries At"] =
+					`${retryDate.toLocaleString()} (in ${formatDistanceToNowStrict(retryDate)} from now)`;
+			}
+		}
 		if (step.output !== undefined && args.stepOutput) {
 			let output: string;
 			try {
@@ -173,7 +191,7 @@ const logStep = (
 			} catch {
 				output = step.output as string;
 			}
-			formattedInstance.Output =
+			formattedStep.Output =
 				output.length > args.truncateOutputLimit
 					? output.substring(0, args.truncateOutputLimit) +
 						"[...output truncated]"
@@ -181,7 +199,7 @@ const logStep = (
 		}
 	}
 
-	logRaw(formatLabelledValues(formattedInstance, { indentationCount: 2 }));
+	logRaw(formatLabelledValues(formattedStep, { indentationCount: 2 }));
 
 	if (step.type == "step") {
 		const prettyAttempts = step.attempts.map((val) => {

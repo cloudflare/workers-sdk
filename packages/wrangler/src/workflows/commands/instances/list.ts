@@ -28,9 +28,10 @@ export const instancesListOptions = (args: CommonYargsArgv) => {
 			type: "string",
 		})
 		.option("page", {
-			describe: "Show a sepecific page from the listing, can configure page size using \"per-page\".",
+			describe:
+				'Show a sepecific page from the listing, can configure page size using "per-page".',
 			type: "number",
-			default: 1
+			default: 1,
 		})
 		.option("per-page", {
 			describe: "Configure the maximum number of instances to show per page.",
@@ -53,12 +54,11 @@ export const instancesListHandler = async (args: HandlerOptions) => {
 		const validatedStatus = validateStatus(args.status);
 		URLParams.set("status", validatedStatus);
 	}
-	if(args.perPage !== undefined) {
-		URLParams.set("per_page", args.perPage.toString())
+	if (args.perPage !== undefined) {
+		URLParams.set("per_page", args.perPage.toString());
 	}
 
-	URLParams.set("page", args.page.toString())
-
+	URLParams.set("page", args.page.toString());
 
 	const instances = await fetchResult<Instance[]>(
 		`/accounts/${accountId}/workflows/${args.name}/instances`,
