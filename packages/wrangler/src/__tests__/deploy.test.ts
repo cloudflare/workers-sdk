@@ -89,6 +89,63 @@ describe("deploy", () => {
 		clearDialogs();
 	});
 
+	it("should output log file with deployment details", async () => {
+		vi.stubEnv("WRANGLER_OUTPUT_FILE_DIRECTORY", "output");
+		vi.stubEnv("WRANGLER_OUTPUT_FILE_PATH", "");
+		writeWorkerSource();
+		writeWranglerToml({
+			routes: ["example.com/some-route/*"],
+			workers_dev: true,
+		});
+		mockSubDomainRequest();
+		mockUploadWorkerRequest();
+		mockUpdateWorkerRequest({ enabled: false });
+		mockPublishRoutesRequest({ routes: ["example.com/some-route/*"] });
+
+		await runWrangler("deploy ./index.js");
+		expect(std.out).toMatchInlineSnapshot(`
+			"Total Upload: xx KiB / gzip: xx KiB
+			Worker Startup Time: 100 ms
+			Uploaded test-name (TIMINGS)
+			Published test-name (TIMINGS)
+			  https://test-name.test-sub-domain.workers.dev
+			  example.com/some-route/*
+			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
+
+
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+		`);
+		expect(std.err).toMatchInlineSnapshot(`""`);
+
+		const outputFilePaths = fs.readdirSync("output");
+
+		expect(outputFilePaths.length).toEqual(1);
+		expect(outputFilePaths[0]).toMatch(/wrangler-output-.+\.json/);
+		const outputFile = fs.readFileSync(
+			path.join("output", outputFilePaths[0]),
+			"utf8"
+		);
+		const entries = outputFile
+			.split("\n")
+			.filter(Boolean)
+			.map((e) => JSON.parse(e));
+
+		expect(entries.find((e) => e.type === "deploy")).toMatchObject({
+			targets: [
+				"https://test-name.test-sub-domain.workers.dev",
+				"example.com/some-route/*",
+			],
+			// Omitting timestamp for matching
+			// timestamp: ...
+			type: "deploy",
+			version: 1,
+			version_id: "Galaxy-Class",
+			worker_name: "test-name",
+			worker_tag: "tag:test-name",
+		});
+	});
+
 	it("should resolve wrangler.toml relative to the entrypoint", async () => {
 		fs.mkdirSync("./some-path/worker", { recursive: true });
 		fs.writeFileSync(

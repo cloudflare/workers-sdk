@@ -30,7 +30,9 @@ type Props = {
 	experimentalVersions: boolean | undefined;
 };
 
-export default async function triggersDeploy(props: Props): Promise<void> {
+export default async function triggersDeploy(
+	props: Props
+): Promise<string[] | void> {
 	const { config, accountId, name: scriptName } = props;
 
 	const triggers = props.triggers || config.triggers?.crons;
@@ -253,13 +255,15 @@ export default async function triggersDeploy(props: Props): Promise<void> {
 			: `Published ${workerName}`;
 		logger.log(msg, formatTime(deployMs));
 
-		for (const target of targets.flat()) {
+		const flatTargets = targets.flat().map(
 			// Append protocol only on workers.dev domains
-			logger.log(
-				" ",
-				(target.endsWith("workers.dev") ? "https://" : "") + target
-			);
+			(target) => (target.endsWith("workers.dev") ? "https://" : "") + target
+		);
+
+		for (const target of flatTargets) {
+			logger.log(" ", target);
 		}
+		return flatTargets;
 	} else {
 		logger.log("No deploy targets for", workerName, formatTime(deployMs));
 	}

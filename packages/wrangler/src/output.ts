@@ -68,6 +68,7 @@ interface OutputEntryBase<T extends string> {
 export type OutputEntry =
 	| OutputEntrySession
 	| OutputEntryDeployment
+	| OutputEntryPagesDeployment
 	| OutputEntryVersionUpload
 	| OutputEntryVersionDeployment;
 
@@ -92,6 +93,19 @@ export interface OutputEntryDeployment extends OutputEntryBase<"deploy"> {
 	worker_tag: string | null;
 	/** A GUID that identifies this deployed version of the Worker. This version is associated with an automatically created deployment, with this version set at 100%. */
 	version_id: string | null;
+	/** A list of URLs that represent the HTTP triggers associated with this deployment */
+	targets: string[] | undefined;
+}
+
+export interface OutputEntryPagesDeployment
+	extends OutputEntryBase<"pages-deploy"> {
+	version: 1;
+	/** The name of the Pages project. */
+	pages_project: string | null;
+	/** A GUID that identifies this Pages deployment. */
+	deployment_id: string | null;
+	/** The URL associated with this deployment */
+	url: string | undefined;
 }
 
 export interface OutputEntryVersionUpload
