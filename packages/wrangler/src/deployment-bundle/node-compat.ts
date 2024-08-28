@@ -1,6 +1,5 @@
 import { UserError } from "../errors";
 import { logger } from "../logger";
-import type { Config } from "../config";
 
 /**
  * Wrangler can provide Node.js compatibility in a number of different modes:
@@ -12,121 +11,102 @@ import type { Config } from "../config";
 export type NodeJSCompatMode = "legacy" | "v1" | "v2" | null;
 
 /**
- * Validate and compute the Node.js compatibility mode we are running.
+ * Computes the Node.js compatibility mode we are running.
  *
- * Returns one of:
+ * NOTE:
+ * Currently v2 mode is configured via `nodejs_compat_v2` compat flag.
+ * At a future compatibility date, the use of `nodejs_compat` flag will imply `nodejs_compat_v2`.
+ *
+ * see `EnvironmentInheritable` for `nodeCompat` and `noBundle`.
+ *
+ * @param compatibilityFlags The compatibility flags
+ * @param validateConfig Whether to validate the config (logs and throws)
+ * @param nodeCompat Whether to add polyfills for node builtin modules and globals
+ * @param noBundle Whether to skip internal build steps and directly deploy script
+ * @returns one of:
  *  - "legacy": build-time polyfills, from `node_compat` flag
  *  - "v1": nodejs_compat compatibility flag
- *  - "v2": experimental nodejs_compat_v2 flag
+ *  - "v2": nodejs_compat_v2 compatibility flag
  *  - null: no Node.js compatibility
- *
- * Currently we require that the v2 mode is configured via `experimental:nodejs_compat_v2` compat flag,
- * where the `experimental:` prefix is stripped before being passed to the runtime since that does not
- * understand this prefix.
- *
- * We assert that only one of these modes can be specified at a time.
- * We assert that you must prefix v2 mode with `experimental`.
- * We warn if using legacy or v2 mode.
  */
-export function validateNodeCompat({
-	legacyNodeCompat,
-	compatibilityFlags,
-	noBundle,
-}: {
-	legacyNodeCompat: boolean;
-	/* mutate */ compatibilityFlags: string[];
-	noBundle: boolean;
-}): NodeJSCompatMode {
-	if (legacyNodeCompat) {
-		logger.warn(
-			"Enabling Wrangler compile-time Node.js compatibility polyfill mode for builtins and globals. This is experimental and has serious tradeoffs."
+export function getNodeCompatMode(
+	compatibilityFlags: string[],
+	{
+		validateConfig = true,
+		nodeCompat = undefined,
+		noBundle = undefined,
+	}: {
+		validateConfig?: boolean;
+		nodeCompat?: boolean;
+		noBundle?: boolean;
+	}
+): NodeJSCompatMode {
+	const {
+		hasNodejsCompatFlag,
+		hasNodejsCompatV2Flag,
+		hasExperimentalNodejsCompatV2Flag,
+	} = parseNodeCompatibilityFlags(compatibilityFlags);
+
+	const legacy = nodeCompat === true;
+	let mode: NodeJSCompatMode = null;
+	if (hasNodejsCompatV2Flag) {
+		mode = "v2";
+	} else if (hasNodejsCompatFlag) {
+		mode = "v1";
+	} else if (legacy) {
+		mode = "legacy";
+	}
+
+	if (validateConfig !== true) {
+		// Skip the validation.
+		return mode;
+	}
+
+	if (hasExperimentalNodejsCompatV2Flag) {
+		throw new UserError(
+			"The `experimental:` prefix on `nodejs_compat_v2` is no longer valid. Please remove it and try again."
 		);
 	}
 
-	const { mode, nodejsCompat, nodejsCompatV2 } = getNodeCompatMode({
-		compatibility_flags: compatibilityFlags,
-		node_compat: legacyNodeCompat,
-	});
-
-	const nodejsCompatV2NotExperimental =
-		compatibilityFlags.includes("nodejs_compat_v2");
-
-	if (nodejsCompat && nodejsCompatV2) {
+	if (hasNodejsCompatFlag && hasNodejsCompatV2Flag) {
 		throw new UserError(
 			"The `nodejs_compat` and `nodejs_compat_v2` compatibility flags cannot be used in together. Please select just one."
 		);
 	}
 
-	if (legacyNodeCompat && (nodejsCompat || nodejsCompatV2)) {
+	if (legacy && (hasNodejsCompatFlag || hasNodejsCompatV2Flag)) {
 		throw new UserError(
-			`The ${nodejsCompat ? "`nodejs_compat`" : "`nodejs_compat_v2`"} compatibility flag cannot be used in conjunction with the legacy \`--node-compat\` flag. If you want to use the Workers ${nodejsCompat ? "`nodejs_compat`" : "`nodejs_compat_v2`"} compatibility flag, please remove the \`--node-compat\` argument from your CLI command or \`node_compat = true\` from your config file.`
+			`The ${hasNodejsCompatFlag ? "`nodejs_compat`" : "`nodejs_compat_v2`"} compatibility flag cannot be used in conjunction with the legacy \`--node-compat\` flag. If you want to use the Workers ${hasNodejsCompatFlag ? "`nodejs_compat`" : "`nodejs_compat_v2`"} compatibility flag, please remove the \`--node-compat\` argument from your CLI command or \`node_compat = true\` from your config file.`
 		);
 	}
 
-	if (nodejsCompatV2NotExperimental) {
-		throw new UserError(
-			`The \`nodejs_compat_v2\` compatibility flag is experimental and must be prefixed with \`experimental:\`. Use \`experimental:nodejs_compat_v2\` flag instead.`
-		);
-	}
-
-	if (nodejsCompatV2) {
-		logger.warn(
-			"Enabling experimental Node.js compatibility mode v2. This feature is still in development and not ready for production use."
-		);
-	}
-
-	if (noBundle && legacyNodeCompat) {
+	if (noBundle && legacy) {
 		logger.warn(
 			"`--node-compat` and `--no-bundle` can't be used together. If you want to polyfill Node.js built-ins and disable Wrangler's bundling, please polyfill as part of your own bundling process."
 		);
 	}
 
-	if (noBundle && nodejsCompatV2) {
+	if (noBundle && hasNodejsCompatV2Flag) {
 		logger.warn(
 			"`nodejs_compat_v2` compatibility flag and `--no-bundle` can't be used together. If you want to polyfill Node.js built-ins and disable Wrangler's bundling, please polyfill as part of your own bundling process."
+		);
+	}
+
+	if (mode === "legacy") {
+		logger.warn(
+			"Enabling Wrangler compile-time Node.js compatibility polyfill mode for builtins and globals. This is experimental and has serious tradeoffs."
 		);
 	}
 
 	return mode;
 }
 
-export function getNodeCompatMode({
-	compatibility_flags,
-	node_compat,
-}: Pick<Config, "compatibility_flags" | "node_compat">) {
-	const nodejsCompat = compatibility_flags.includes("nodejs_compat");
-	const nodejsCompatV2 = compatibility_flags.includes(
-		"experimental:nodejs_compat_v2"
-	);
-
-	let mode: NodeJSCompatMode;
-	if (nodejsCompatV2) {
-		mode = "v2";
-	} else if (nodejsCompat) {
-		mode = "v1";
-	} else if (node_compat) {
-		mode = "legacy";
-	} else {
-		mode = null;
-	}
-
+function parseNodeCompatibilityFlags(compatibilityFlags: string[]) {
 	return {
-		legacy: node_compat === true,
-		mode,
-		nodejsCompat,
-		nodejsCompatV2,
+		hasNodejsCompatFlag: compatibilityFlags.includes("nodejs_compat"),
+		hasNodejsCompatV2Flag: compatibilityFlags.includes("nodejs_compat_v2"),
+		hasExperimentalNodejsCompatV2Flag: compatibilityFlags.includes(
+			"experimental:nodejs_compat_v2"
+		),
 	};
-}
-
-/**
- * The nodejs_compat_v2 flag currently requires an `experimental:` prefix within Wrangler,
- * but this needs to be stripped before sending to workerd, since that doesn't know about that.
- *
- * TODO: Remove this function when we graduate nodejs_v2 to non-experimental.
- * See https://jira.cfdata.org/browse/DEVDASH-218
- */
-export function stripExperimentalPrefixes(
-	compatFlags: string[] | undefined
-): string[] | undefined {
-	return compatFlags?.map((flag) => flag.replace(/^experimental:/, ""));
 }

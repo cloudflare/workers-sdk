@@ -12,7 +12,7 @@ import {
 } from "./api/startDevWorker/utils";
 import { findWranglerToml, printBindings, readConfig } from "./config";
 import { getEntry } from "./deployment-bundle/entry";
-import { validateNodeCompat } from "./deployment-bundle/node-compat";
+import { getNodeCompatMode } from "./deployment-bundle/node-compat";
 import { getBoundRegisteredWorkers } from "./dev-registry";
 import Dev, { devRegistry } from "./dev/dev";
 import { getVarsForDev } from "./dev/dev-vars";
@@ -680,15 +680,13 @@ export async function startDev(args: StartDevOptions) {
 					moduleRoot: args.moduleRoot,
 					moduleRules: args.rules,
 					nodejsCompatMode: (parsedConfig: Config) =>
-						validateNodeCompat({
-							legacyNodeCompat:
-								args.nodeCompat ?? parsedConfig.node_compat ?? false,
-							compatibilityFlags:
-								args.compatibilityFlags ??
-								parsedConfig.compatibility_flags ??
-								[],
-							noBundle: args.noBundle ?? parsedConfig.no_bundle ?? false,
-						}),
+						getNodeCompatMode(
+							args.compatibilityFlags ?? parsedConfig.compatibility_flags ?? [],
+							{
+								nodeCompat: args.nodeCompat ?? parsedConfig.node_compat,
+								noBundle: args.noBundle ?? parsedConfig.no_bundle,
+							}
+						),
 				},
 				bindings: {
 					...(await getPagesAssetsFetcher(
@@ -833,12 +831,13 @@ export async function startDev(args: StartDevOptions) {
 			additionalModules,
 		} = await validateDevServerSettings(args, config);
 
-		const nodejsCompatMode = validateNodeCompat({
-			legacyNodeCompat: args.nodeCompat ?? config.node_compat ?? false,
-			compatibilityFlags:
-				args.compatibilityFlags ?? config.compatibility_flags ?? [],
-			noBundle: args.noBundle ?? config.no_bundle ?? false,
-		});
+		const nodejsCompatMode = getNodeCompatMode(
+			args.compatibilityFlags ?? config.compatibility_flags ?? [],
+			{
+				nodeCompat: args.nodeCompat ?? config.node_compat,
+				noBundle: args.noBundle ?? config.no_bundle,
+			}
+		);
 
 		void metrics.sendMetricsEvent(
 			"run dev",
@@ -973,11 +972,13 @@ export async function startApiDev(args: StartDevOptions) {
 		additionalModules,
 	} = await validateDevServerSettings(args, config);
 
-	const nodejsCompatMode = validateNodeCompat({
-		legacyNodeCompat: args.nodeCompat ?? config.node_compat ?? false,
-		compatibilityFlags: args.compatibilityFlags ?? config.compatibility_flags,
-		noBundle: args.noBundle ?? config.no_bundle ?? false,
-	});
+	const nodejsCompatMode = getNodeCompatMode(
+		args.compatibilityFlags ?? config.compatibility_flags,
+		{
+			nodeCompat: args.nodeCompat ?? config.node_compat,
+			noBundle: args.noBundle ?? config.no_bundle,
+		}
+	);
 
 	await metrics.sendMetricsEvent(
 		"run dev (api)",

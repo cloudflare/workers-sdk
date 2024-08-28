@@ -6,7 +6,7 @@ import { cwd } from "node:process";
 import { File, FormData } from "undici";
 import { fetchResult } from "../../cfetch";
 import { readConfig } from "../../config";
-import { validateNodeCompat } from "../../deployment-bundle/node-compat";
+import { getNodeCompatMode } from "../../deployment-bundle/node-compat";
 import { FatalError } from "../../errors";
 import { logger } from "../../logger";
 import { isNavigatorDefined } from "../../navigator-user-agent";
@@ -174,12 +174,13 @@ export async function deploy({
 		}
 	}
 
-	const nodejsCompatMode = validateNodeCompat({
-		legacyNodeCompat: false,
-		compatibilityFlags:
-			config?.compatibility_flags ?? deploymentConfig.compatibility_flags ?? [],
-		noBundle: config?.no_bundle ?? false,
-	});
+	const nodejsCompatMode = getNodeCompatMode(
+		config?.compatibility_flags ?? deploymentConfig.compatibility_flags ?? [],
+		{
+			nodeCompat: false,
+			noBundle: config?.no_bundle,
+		}
+	);
 	const defineNavigatorUserAgent = isNavigatorDefined(
 		config?.compatibility_date ?? deploymentConfig.compatibility_date,
 		config?.compatibility_flags ?? deploymentConfig.compatibility_flags
