@@ -326,7 +326,7 @@ export async function deployHandler(
 
 	const beforeUpload = Date.now();
 	const name = getScriptName(args, config);
-	const { sourceMapSize, deploymentId, workerTag, targets } = await deploy({
+	const { sourceMapSize, versionId, workerTag, targets } = await deploy({
 		config,
 		accountId,
 		name,
@@ -368,8 +368,7 @@ export async function deployHandler(
 		version: 1,
 		worker_name: name ?? null,
 		worker_tag: workerTag,
-		// Note that the `deploymentId` returned from a simple deployment is actually the versionId of the uploaded version.
-		version_id: deploymentId,
+		version_id: versionId,
 		targets,
 	});
 

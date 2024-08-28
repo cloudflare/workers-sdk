@@ -332,7 +332,10 @@ describe("deploy", () => {
 			);
 			writeWorkerSource();
 			mockSubDomainRequest();
-			mockUploadWorkerRequest({ expectedType: "esm" });
+			mockUploadWorkerRequest({
+				expectedType: "esm",
+				useOldUploadApi: true,
+			});
 			mockOAuthServerCallback();
 
 			await runWrangler("deploy ./index");
@@ -848,6 +851,7 @@ describe("deploy", () => {
 				mockUploadWorkerRequest({
 					env: "some-env",
 					legacyEnv: false,
+					useOldUploadApi: true,
 				});
 
 				await runWrangler("deploy index.js --env some-env --legacy-env false");
@@ -1109,6 +1113,7 @@ describe("deploy", () => {
 				expectedType: "esm",
 				env: "staging",
 				legacyEnv: false,
+				useOldUploadApi: true,
 			});
 			mockPublishRoutesRequest({
 				routes: [
@@ -1535,7 +1540,10 @@ Update them to point to this script instead?`,
 		it("should be able to use `index` with no extension as the entry-point (sw)", async () => {
 			writeWranglerToml();
 			writeWorkerSource({ type: "sw" });
-			mockUploadWorkerRequest({ expectedType: "sw" });
+			mockUploadWorkerRequest({
+				expectedType: "sw",
+				useOldUploadApi: true,
+			});
 			mockSubDomainRequest();
 
 			await runWrangler("deploy ./index");
@@ -1706,6 +1714,7 @@ Update them to point to this script instead?`,
 			mockUploadWorkerRequest({
 				expectedEntry: "var foo = 100;",
 				expectedType: "sw",
+				useOldUploadApi: true,
 			});
 			mockSubDomainRequest();
 			await runWrangler("deploy index.ts");
@@ -1882,6 +1891,7 @@ addEventListener('fetch', event => {});`
 			mockUploadWorkerRequest({
 				expectedEntry: "var foo = 100;",
 				expectedType: "sw",
+				useOldUploadApi: true,
 			});
 			mockSubDomainRequest();
 
@@ -2141,8 +2151,8 @@ addEventListener('fetch', event => {});`
 
 		describe("should source map validation errors", () => {
 			function mockDeployWithValidationError(message: string) {
-				const handler = http.put(
-					"*/accounts/:accountId/workers/scripts/:scriptName",
+				const handler = http.post(
+					"*/accounts/:accountId/workers/scripts/:scriptName/versions",
 					async () => {
 						const body = createFetchResult(null, false, [
 							{ code: 10021, message },
@@ -2731,6 +2741,7 @@ addEventListener('fetch', event => {});`
 						type: "text_blob",
 					},
 				],
+				useOldUploadApi: true,
 			});
 			mockSubDomainRequest();
 			mockListKVNamespacesRequest(kvNamespace);
@@ -2901,6 +2912,7 @@ addEventListener('fetch', event => {});`
 						type: "kv_namespace",
 					},
 				],
+				useOldUploadApi: true,
 			});
 			mockSubDomainRequest();
 			mockListKVNamespacesRequest(kvNamespace);
@@ -4686,6 +4698,7 @@ addEventListener('fetch', event => {});`
 			writeWorkerSource();
 			mockUploadWorkerRequest({
 				env: "dev",
+				useOldUploadApi: true,
 			});
 			mockUpdateWorkerRequest({ enabled: false, env: "dev" });
 
@@ -4723,7 +4736,7 @@ addEventListener('fetch', event => {});`
 				Worker Startup Time: 100 ms
 				Uploaded test-name (dev) (TIMINGS)
 				No deploy targets for test-name (dev) (TIMINGS)
-				Current Version ID: Galaxy-Class"
+				Current Version ID: undefined"
 			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -4739,6 +4752,7 @@ addEventListener('fetch', event => {});`
 			writeWorkerSource();
 			mockUploadWorkerRequest({
 				env: "dev",
+				useOldUploadApi: true,
 			});
 			mockSubDomainRequest();
 			mockUpdateWorkerRequest({ enabled: true, env: "dev" });
@@ -4768,6 +4782,7 @@ addEventListener('fetch', event => {});`
 			writeWorkerSource();
 			mockUploadWorkerRequest({
 				env: "dev",
+				useOldUploadApi: true,
 			});
 			mockSubDomainRequest();
 			mockUpdateWorkerRequest({ enabled: true, env: "dev" });
@@ -4798,6 +4813,7 @@ addEventListener('fetch', event => {});`
 				env: "dev",
 				expectedCompatibilityDate: "2022-01-12",
 				expectedCompatibilityFlags: ["no_global_navigator"],
+				useOldUploadApi: true,
 			});
 			mockSubDomainRequest();
 			mockUpdateWorkerRequest({ enabled: true, env: "dev" });
@@ -4831,6 +4847,7 @@ addEventListener('fetch', event => {});`
 				env: "dev",
 				expectedCompatibilityDate: "2022-01-13",
 				expectedCompatibilityFlags: ["global_navigator"],
+				useOldUploadApi: true,
 			});
 			mockSubDomainRequest();
 			mockUpdateWorkerRequest({ enabled: true, env: "dev" });
@@ -4878,7 +4895,7 @@ addEventListener('fetch', event => {});`
 				Uploaded test-name (dev) (TIMINGS)
 				Deployed test-name (dev) triggers (TIMINGS)
 				  https://dev.test-name.test-sub-domain.workers.dev
-				Current Version ID: Galaxy-Class"
+				Current Version ID: undefined"
 			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -5609,7 +5626,7 @@ addEventListener('fetch', event => {});`
 				Uploaded test-name (testEnv) (TIMINGS)
 				Deployed test-name (testEnv) triggers (TIMINGS)
 				  https://testEnv.test-name.test-sub-domain.workers.dev
-				Current Version ID: Galaxy-Class"
+				Current Version ID: undefined"
 			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -5723,6 +5740,7 @@ addEventListener('fetch', event => {});`
 						{ new_classes: ["SomeOtherClass"] },
 					],
 				},
+				useOldUploadApi: true,
 			});
 
 			await runWrangler("deploy index.js");
@@ -5773,6 +5791,7 @@ addEventListener('fetch', event => {});`
 						},
 					],
 				},
+				useOldUploadApi: true,
 			});
 
 			await runWrangler("deploy index.js");
@@ -5872,6 +5891,7 @@ addEventListener('fetch', event => {});`
 							{ new_classes: ["SomeOtherClass"] },
 						],
 					},
+					useOldUploadApi: true,
 				});
 
 				await runWrangler("deploy index.js --legacy-env false");
@@ -5937,6 +5957,7 @@ addEventListener('fetch', event => {});`
 							{ new_classes: ["SomeOtherClass"] },
 						],
 					},
+					useOldUploadApi: true,
 				});
 
 				await runWrangler("deploy index.js --legacy-env false --env xyz");
@@ -5997,6 +6018,7 @@ addEventListener('fetch', event => {});`
 							},
 						],
 					},
+					useOldUploadApi: true,
 				});
 
 				await runWrangler("deploy index.js --legacy-env false");
@@ -6069,6 +6091,7 @@ addEventListener('fetch', event => {});`
 							},
 						],
 					},
+					useOldUploadApi: true,
 				});
 
 				await runWrangler("deploy index.js --legacy-env false --env xyz");
@@ -6361,6 +6384,7 @@ addEventListener('fetch', event => {});`
 						type: "another unsafe thing",
 					},
 				],
+				useOldUploadApi: true,
 			});
 			mockSubDomainRequest();
 			mockLegacyScriptData({ scripts: [] });
@@ -6811,6 +6835,7 @@ addEventListener('fetch', event => {});`
 					expectedBindings: [
 						{ name: "TESTWASMNAME", part: "TESTWASMNAME", type: "wasm_module" },
 					],
+					useOldUploadApi: true,
 				});
 				mockSubDomainRequest();
 
@@ -6881,6 +6906,7 @@ addEventListener('fetch', event => {});`
 						{ name: "TESTWASMNAME", part: "TESTWASMNAME", type: "wasm_module" },
 					],
 					expectedCompatibilityDate: "2022-01-12",
+					useOldUploadApi: true,
 				});
 				mockSubDomainRequest();
 				await runWrangler("deploy index.js --config ./path/to/wrangler.toml");
@@ -6919,6 +6945,7 @@ addEventListener('fetch', event => {});`
 							type: "wasm_module",
 						},
 					],
+					useOldUploadApi: true,
 				});
 				mockSubDomainRequest();
 				await runWrangler("deploy index.js");
@@ -6955,6 +6982,7 @@ addEventListener('fetch', event => {});`
 							type: "text_blob",
 						},
 					],
+					useOldUploadApi: true,
 				});
 				mockSubDomainRequest();
 				await runWrangler("deploy index.js");
@@ -7028,6 +7056,7 @@ addEventListener('fetch', event => {});`
 						},
 					],
 					expectedCompatibilityDate: "2022-01-12",
+					useOldUploadApi: true,
 				});
 				mockSubDomainRequest();
 				await runWrangler("deploy index.js --config ./path/to/wrangler.toml");
@@ -7067,6 +7096,7 @@ addEventListener('fetch', event => {});`
 							type: "data_blob",
 						},
 					],
+					useOldUploadApi: true,
 				});
 				mockSubDomainRequest();
 				await runWrangler("deploy index.js");
@@ -7140,6 +7170,7 @@ addEventListener('fetch', event => {});`
 						},
 					],
 					expectedCompatibilityDate: "2022-01-12",
+					useOldUploadApi: true,
 				});
 				mockSubDomainRequest();
 				await runWrangler("deploy index.js --config ./path/to/wrangler.toml");
@@ -7407,6 +7438,7 @@ addEventListener('fetch', event => {});`
 							type: "durable_object_namespace",
 						},
 					],
+					useOldUploadApi: true,
 				});
 
 				await runWrangler("deploy index.js");
@@ -8133,6 +8165,7 @@ addEventListener('fetch', event => {});`
 					__2d91d1c4dd6e57d4f5432187ab7c25f45a8973f0_text_file:
 						"SOME TEXT CONTENT",
 				},
+				useOldUploadApi: true,
 			});
 			await runWrangler("deploy index.js");
 			expect(std.out).toMatchInlineSnapshot(`
@@ -8350,6 +8383,7 @@ addEventListener('fetch', event => {});`
 				expectedModules: {
 					__text_file: "SOME TEXT CONTENT",
 				},
+				useOldUploadApi: true,
 			});
 			await runWrangler("deploy index.js");
 			expect(std.out).toMatchInlineSnapshot(`
@@ -9019,17 +9053,20 @@ export default{
 			mockUploadWorkerRequest();
 			// Override PUT call to error out from previous helper functions
 			msw.use(
-				http.put("*/accounts/:accountId/workers/scripts/:scriptName", () => {
-					return HttpResponse.json(
-						createFetchResult(null, false, [
-							{
-								code: 11337,
-								message:
-									"Worker Startup Timed out. This could be due to script exceeding size limits or expensive code in the global scope.",
-							},
-						])
-					);
-				})
+				http.post(
+					"*/accounts/:accountId/workers/scripts/:scriptName/versions",
+					() => {
+						return HttpResponse.json(
+							createFetchResult(null, false, [
+								{
+									code: 11337,
+									message:
+										"Worker Startup Timed out. This could be due to script exceeding size limits or expensive code in the global scope.",
+								},
+							])
+						);
+					}
+				)
 			);
 
 			fs.writeFileSync(
@@ -9058,44 +9095,47 @@ export default{
 			});
 
 			await expect(runWrangler("deploy")).rejects.toMatchInlineSnapshot(
-				`[APIError: A request to the Cloudflare API (/accounts/some-account-id/workers/scripts/test-name) failed.]`
+				`[APIError: A request to the Cloudflare API (/accounts/some-account-id/workers/scripts/test-name/versions) failed.]`
 			);
 			expect(std).toMatchInlineSnapshot(`
-			Object {
-			  "debug": "",
-			  "err": "",
-			  "info": "",
-			  "out": "Total Upload: xx KiB / gzip: xx KiB
+				Object {
+				  "debug": "",
+				  "err": "",
+				  "info": "",
+				  "out": "Total Upload: xx KiB / gzip: xx KiB
 
-			[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/accounts/some-account-id/workers/scripts/test-name) failed.[0m
+				[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/accounts/some-account-id/workers/scripts/test-name/versions) failed.[0m
 
-			  Worker Startup Timed out. This could be due to script exceeding size limits or expensive code in
-			  the global scope. [code: 11337]
+				  Worker Startup Timed out. This could be due to script exceeding size limits or expensive code in
+				  the global scope. [code: 11337]
 
-			  If you think this is a bug, please open an issue at:
-			  [4mhttps://github.com/cloudflare/workers-sdk/issues/new/choose[0m
+				  If you think this is a bug, please open an issue at:
+				  [4mhttps://github.com/cloudflare/workers-sdk/issues/new/choose[0m
 
-			",
-			  "warn": "",
-			}
-		`);
+				",
+				  "warn": "",
+				}
+			`);
 		});
 
 		test("should check biggest dependencies when upload fails with script size error", async () => {
 			mockSubDomainRequest();
 			mockUploadWorkerRequest();
-			// Override PUT call to error out from previous helper functions
+			// Override POST call to error out from previous helper functions
 			msw.use(
-				http.put("*/accounts/:accountId/workers/scripts/:scriptName", () => {
-					return HttpResponse.json(
-						createFetchResult({}, false, [
-							{
-								code: 10027,
-								message: "workers.api.error.script_too_large",
-							},
-						])
-					);
-				})
+				http.post(
+					"*/accounts/:accountId/workers/scripts/:scriptName/versions",
+					() => {
+						return HttpResponse.json(
+							createFetchResult({}, false, [
+								{
+									code: 10027,
+									message: "workers.api.error.script_too_large",
+								},
+							])
+						);
+					}
+				)
 			);
 
 			fs.writeFileSync(
@@ -9126,52 +9166,55 @@ export default{
 			});
 
 			await expect(runWrangler("deploy")).rejects.toMatchInlineSnapshot(
-				`[APIError: A request to the Cloudflare API (/accounts/some-account-id/workers/scripts/test-name) failed.]`
+				`[APIError: A request to the Cloudflare API (/accounts/some-account-id/workers/scripts/test-name/versions) failed.]`
 			);
 
 			expect(std).toMatchInlineSnapshot(`
-			Object {
-			  "debug": "",
-			  "err": "",
-			  "info": "",
-			  "out": "Total Upload: xx KiB / gzip: xx KiB
+				Object {
+				  "debug": "",
+				  "err": "",
+				  "info": "",
+				  "out": "Total Upload: xx KiB / gzip: xx KiB
 
-			[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/accounts/some-account-id/workers/scripts/test-name) failed.[0m
+				[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/accounts/some-account-id/workers/scripts/test-name/versions) failed.[0m
 
-			  workers.api.error.script_too_large [code: 10027]
+				  workers.api.error.script_too_large [code: 10027]
 
-			  If you think this is a bug, please open an issue at:
-			  [4mhttps://github.com/cloudflare/workers-sdk/issues/new/choose[0m
+				  If you think this is a bug, please open an issue at:
+				  [4mhttps://github.com/cloudflare/workers-sdk/issues/new/choose[0m
 
-			",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mHere are the 4 largest dependencies included in your script:[0m
+				",
+				  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mHere are the 4 largest dependencies included in your script:[0m
 
-			  - index.js - xx KiB
-			  - add.wasm - xx KiB
-			  - dependency.js - xx KiB
-			  - message.txt - xx KiB
-			  If these are unnecessary, consider removing them
+				  - index.js - xx KiB
+				  - add.wasm - xx KiB
+				  - dependency.js - xx KiB
+				  - message.txt - xx KiB
+				  If these are unnecessary, consider removing them
 
-			",
-			}
-		`);
+				",
+				}
+			`);
 		});
 
 		test("should offer some helpful advice when upload fails with script startup error", async () => {
 			mockSubDomainRequest();
 			mockUploadWorkerRequest();
-			// Override PUT call to error out from previous helper functions
+			// Override POST call to error out from previous helper functions
 			msw.use(
-				http.put("*/accounts/:accountId/workers/scripts/:scriptName", () => {
-					return HttpResponse.json(
-						createFetchResult({}, false, [
-							{
-								code: 10021,
-								message: "Error: Script startup exceeded CPU time limit.",
-							},
-						])
-					);
-				})
+				http.post(
+					"*/accounts/:accountId/workers/scripts/:scriptName/versions",
+					() => {
+						return HttpResponse.json(
+							createFetchResult({}, false, [
+								{
+									code: 10021,
+									message: "Error: Script startup exceeded CPU time limit.",
+								},
+							])
+						);
+					}
+				)
 			);
 			fs.writeFileSync("dependency.js", `export const thing = "a string dep";`);
 
@@ -9191,34 +9234,34 @@ export default{
 			});
 
 			await expect(runWrangler("deploy")).rejects.toMatchInlineSnapshot(
-				`[APIError: A request to the Cloudflare API (/accounts/some-account-id/workers/scripts/test-name) failed.]`
+				`[APIError: A request to the Cloudflare API (/accounts/some-account-id/workers/scripts/test-name/versions) failed.]`
 			);
 			expect(std).toMatchInlineSnapshot(`
-			Object {
-			  "debug": "",
-			  "err": "",
-			  "info": "",
-			  "out": "Total Upload: xx KiB / gzip: xx KiB
+				Object {
+				  "debug": "",
+				  "err": "",
+				  "info": "",
+				  "out": "Total Upload: xx KiB / gzip: xx KiB
 
-			[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/accounts/some-account-id/workers/scripts/test-name) failed.[0m
+				[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/accounts/some-account-id/workers/scripts/test-name/versions) failed.[0m
 
-			  Error: Script startup exceeded CPU time limit. [code: 10021]
+				  Error: Script startup exceeded CPU time limit. [code: 10021]
 
-			  If you think this is a bug, please open an issue at:
-			  [4mhttps://github.com/cloudflare/workers-sdk/issues/new/choose[0m
+				  If you think this is a bug, please open an issue at:
+				  [4mhttps://github.com/cloudflare/workers-sdk/issues/new/choose[0m
 
-			",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mYour Worker failed validation because it exceeded startup limits.[0m
+				",
+				  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mYour Worker failed validation because it exceeded startup limits.[0m
 
-			  To ensure fast responses, we place constraints on Worker startup -- like how much CPU it can use,
-			  or how long it can take.
-			  Your Worker failed validation, which means it hit one of these startup limits.
-			  Try reducing the amount of work done during startup (outside the event handler), either by
-			  removing code or relocating it inside the event handler.
+				  To ensure fast responses, we place constraints on Worker startup -- like how much CPU it can use,
+				  or how long it can take.
+				  Your Worker failed validation, which means it hit one of these startup limits.
+				  Try reducing the amount of work done during startup (outside the event handler), either by
+				  removing code or relocating it inside the event handler.
 
-			",
-			}
-		`);
+				",
+				}
+			`);
 		});
 
 		describe("unit tests", () => {
@@ -10474,7 +10517,7 @@ export default{
 				Worker Startup Time: 100 ms
 				Uploaded test-name (TIMINGS)
 				  Dispatch Namespace: test-dispatch-namespace
-				Current Version ID: Galaxy-Class"
+				Current Version ID: undefined"
 			`);
 		});
 	});

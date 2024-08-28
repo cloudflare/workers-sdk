@@ -47,6 +47,7 @@ export type ApiVersion = {
 			limits: CfUserLimits;
 		};
 	};
+	startup_time_ms?: number;
 };
 
 export type VersionCache = Map<VersionId, ApiVersion>;
