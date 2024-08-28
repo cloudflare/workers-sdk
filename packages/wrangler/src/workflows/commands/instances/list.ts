@@ -26,6 +26,15 @@ export const instancesListOptions = (args: CommonYargsArgv) => {
 			describe:
 				"Filters list by instance status (can be one of: queued, running, paused, errored, terminated, complete)",
 			type: "string",
+		})
+		.option("page", {
+			describe: "Show a sepecific page from the listing, can configure page size using \"per-page\".",
+			type: "number",
+			default: 1
+		})
+		.option("per-page", {
+			describe: "Configure the maximum number of instances to show per page.",
+			type: "number",
 		});
 };
 
@@ -44,9 +53,17 @@ export const instancesListHandler = async (args: HandlerOptions) => {
 		const validatedStatus = validateStatus(args.status);
 		URLParams.set("status", validatedStatus);
 	}
+	if(args.perPage !== undefined) {
+		URLParams.set("per_page", args.perPage.toString())
+	}
+
+	URLParams.set("page", args.page.toString())
+
 
 	const instances = await fetchResult<Instance[]>(
-		`/accounts/${accountId}/workflows/${args.name}/instances${URLParams.size != 0 ? `?${URLParams.toString()}` : ""}`
+		`/accounts/${accountId}/workflows/${args.name}/instances`,
+		undefined,
+		URLParams
 	);
 
 	if (instances.length === 0) {
@@ -56,9 +73,8 @@ export const instancesListHandler = async (args: HandlerOptions) => {
 		return;
 	}
 
-	// TODO(lduarte): can we improve this message once pagination is deployed
 	logger.info(
-		`Showing last ${instances.length} instance${instances.length > 1 ? "s" : ""}:`
+		`Showing ${instances.length} instance${instances.length > 1 ? "s" : ""} from page ${args.page}:`
 	);
 
 	const prettierInstances = instances

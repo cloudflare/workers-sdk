@@ -3,7 +3,6 @@ import { fetchResult } from "../../cfetch";
 import { readConfig } from "../../config";
 import { logger } from "../../logger";
 import { requireAuth } from "../../user";
-import { asJson } from "../../yargs-types";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
@@ -11,7 +10,16 @@ import type {
 import type { Workflow } from "../types";
 
 export const workflowListOptions = (args: CommonYargsArgv) => {
-	return asJson(args);
+	return args
+	.option("page", {
+		describe: "Show a sepecific page from the listing, can configure page size using \"per-page\".",
+		type: "number",
+		default: 1
+	})
+	.option("per-page", {
+		describe: "Configure the maximum number of workflows to show per page.",
+		type: "number",
+	});
 };
 
 type HandlerOptions = StrictYargsOptionsToInterface<typeof workflowListOptions>;
@@ -21,8 +29,18 @@ export const workflowListHandler = async (args: HandlerOptions) => {
 	const config = readConfig(args.config, args);
 	const accountId = await requireAuth(config);
 
+	const URLParams = new URLSearchParams();
+
+	if(args.perPage !== undefined) {
+		URLParams.set("per_page", args.perPage.toString())
+	}
+
+	URLParams.set("page", args.page.toString())
+
 	const workflows = await fetchResult<Workflow[]>(
-		`/accounts/${accountId}/workflows`
+		`/accounts/${accountId}/workflows`,
+		undefined,
+		URLParams
 	);
 
 	if (workflows.length === 0) {
