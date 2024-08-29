@@ -12,6 +12,8 @@ export function generateNodeCompatV2Types(nodeTypesPath: string): string {
 			.map((id) => id.replace("node:", ""))
 	);
 
+	console.log(_env);
+
 	// Create a TypeScript program from the @types/node declaration files
 	const program = ts.createProgram(
 		fs
