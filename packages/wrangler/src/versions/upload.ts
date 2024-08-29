@@ -476,7 +476,6 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 				logger.log("Worker Startup Time:", result.startup_time_ms, "ms");
 				bindingsPrinted = true;
 				printBindings({ ...withoutStaticAssets, vars: maskedVars });
-				logger.log("Worker Version ID:", result.id);
 				versionId = result.id;
 			} catch (err) {
 				if (!bindingsPrinted) {
@@ -540,6 +539,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 	const uploadMs = Date.now() - start;
 
 	logger.log("Uploaded", workerName, formatTime(uploadMs));
+	logger.log("Worker Version ID:", versionId);
 
 	const cmdVersionsDeploy = blue("wrangler versions deploy");
 	const cmdTriggersDeploy = blue("wrangler triggers deploy");

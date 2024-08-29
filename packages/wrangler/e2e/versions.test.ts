@@ -61,8 +61,8 @@ describe("versions deploy", { timeout: TIMEOUT }, () => {
 		expect(normalize(upload.stdout)).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Worker Startup Time: (TIMINGS)
-			Worker Version ID: 00000000-0000-0000-0000-000000000000
 			Uploaded tmp-e2e-worker-00000000-0000-0000-0000-000000000000 (TIMINGS)
+			Worker Version ID: 00000000-0000-0000-0000-000000000000
 			To deploy this version to production traffic use the command wrangler versions deploy
 			Changes to non-versioned settings (config properties 'logpush' or 'tail_consumers') take effect after your next deployment using the command wrangler versions deploy
 			Changes to triggers (routes, custom domains, cron schedules, etc) must be applied with the command wrangler triggers deploy"
@@ -176,8 +176,8 @@ describe("versions deploy", { timeout: TIMEOUT }, () => {
 		expect(normalize(upload.stdout)).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Worker Startup Time: (TIMINGS)
-			Worker Version ID: 00000000-0000-0000-0000-000000000000
 			Uploaded tmp-e2e-worker-00000000-0000-0000-0000-000000000000 (TIMINGS)
+			Worker Version ID: 00000000-0000-0000-0000-000000000000
 			To deploy this version to production traffic use the command wrangler versions deploy
 			Changes to non-versioned settings (config properties 'logpush' or 'tail_consumers') take effect after your next deployment using the command wrangler versions deploy
 			Changes to triggers (routes, custom domains, cron schedules, etc) must be applied with the command wrangler triggers deploy"

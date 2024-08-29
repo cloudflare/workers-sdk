@@ -98,8 +98,8 @@ describe("versions upload", () => {
 			 \\"abc\\": \\"def\\",
 			 \\"bool\\": true
 			}
-			Worker Version ID: 51e4886e-2db7-4900-8d38-fbfecfeab993
-			Uploaded test-worker (TIMINGS)"
+			Uploaded test-worker (TIMINGS)
+			Worker Version ID: 51e4886e-2db7-4900-8d38-fbfecfeab993"
 		`);
 	});
 });
