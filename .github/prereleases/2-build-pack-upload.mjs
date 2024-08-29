@@ -61,11 +61,11 @@ async function uploadPackageArtifact(pkg, artifactPath) {
 
 	for (const pkg of pkgs) {
 		if (pkg.json["workers-sdk"].type === "extension") {
-			const path = path.join(
+			const filePath = path.join(
 				pkg.path,
 				`${pkg.json.name}-${pkg.json.version}.vsix`
 			);
-			await uploadPackageArtifact(pkg, path);
+			await uploadPackageArtifact(pkg, filePath);
 		} else {
 			const tarballPath = packPackage(pkg);
 			await uploadPackageArtifact(pkg, tarballPath);
