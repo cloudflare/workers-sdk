@@ -1250,6 +1250,7 @@ export class Miniflare {
 			loopbackPort,
 			log: this.#log,
 			proxyBindings,
+			hasWorkerAssets: !!this.#workerOpts[0].assets.assets,
 		});
 		for (const service of globalServices) {
 			// Global services should all have unique names

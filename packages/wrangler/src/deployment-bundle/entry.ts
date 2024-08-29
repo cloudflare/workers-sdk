@@ -22,8 +22,6 @@ export type Entry = {
 	format: CfScriptFormat;
 	/** The directory that contains all of a `--no-bundle` worker's modules. Usually `${directory}/src`. Defaults to path.dirname(file) */
 	moduleRoot: string;
-	/** Whether this is a no-op worker that will not ultimately be uploaded e.g. for assets*/
-	staticAssetsOnly?: boolean;
 	/**
 	 * A worker's name
 	 */
@@ -57,10 +55,13 @@ export async function getEntry(
 				? path.resolve(config.site?.["entry-point"])
 				: // site.entry-point could be a directory
 					path.resolve(config.site?.["entry-point"], "index.js");
-		} else if (args.legacyAssets || config.legacy_assets) {
+		} else if (
+			args.legacyAssets ||
+			config.legacy_assets ||
+			args.experimentalAssets ||
+			config.experimental_assets
+		) {
 			file = path.resolve(getBasePath(), "templates/no-op-worker.js");
-		} else if (args.experimentalAssets || config.experimental_assets) {
-			file = path.resolve(getBasePath(), "templates/no-op-assets-worker.ts");
 		} else {
 			throw new UserError(
 				`Missing entry-point: The entry-point should be specified via the command line (e.g. \`wrangler ${command} path/to/script\`) or the \`main\` config field.`
@@ -113,9 +114,6 @@ export async function getEntry(
 		directory,
 		format,
 		moduleRoot: args.moduleRoot ?? config.base_dir ?? path.dirname(file),
-		staticAssetsOnly:
-			!!(args.experimentalAssets || config.experimental_assets) &&
-			!(args.script && config.main),
 		name: config.name ?? "worker",
 	};
 }

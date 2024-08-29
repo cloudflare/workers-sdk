@@ -296,7 +296,7 @@ export async function deployHandler(
 		);
 	}
 
-	const experimentalAssets = processExperimentalAssetsArg(args, config);
+	const experimentalAssetsOptions = processExperimentalAssetsArg(args, config);
 
 	if (args.latest) {
 		logger.warn(
@@ -345,7 +345,7 @@ export async function deployHandler(
 		jsxFragment: args.jsxFragment,
 		tsconfig: args.tsconfig,
 		routes: args.routes,
-		experimentalAssets,
+		experimentalAssetsOptions,
 		legacyAssetPaths,
 		legacyEnv: isLegacyEnv(config),
 		minify: args.minify,

@@ -1,8 +1,7 @@
 {
-	"name": "workers-assets-with-user-worker",
+	"name": "workers-assets-only",
 	"private": true,
 	"scripts": {
-		"check:type": "tsc",
 		"dev": "npx wrangler dev",
 		"test:ci": "vitest run",
 		"test:watch": "vitest",

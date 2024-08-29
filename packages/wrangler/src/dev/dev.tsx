@@ -22,6 +22,7 @@ import {
 	stopWorkerRegistry,
 	unregisterWorker,
 } from "../dev-registry";
+import { ExperimentalAssetsOptions } from "../experimental-assets";
 import { getFlag } from "../experimental-flags";
 import { logger } from "../logger";
 import { isNavigatorDefined } from "../navigator-user-agent";
@@ -42,7 +43,7 @@ import type {
 	Trigger,
 } from "../api";
 import type { Config } from "../config";
-import type { ExperimentalAssets, Route } from "../config/environment";
+import type { Route } from "../config/environment";
 import type { Entry } from "../deployment-bundle/entry";
 import type { NodeJSCompatMode } from "../deployment-bundle/node-compat";
 import type { CfModule, CfWorkerInit } from "../deployment-bundle/worker";
@@ -233,7 +234,7 @@ export type DevProps = {
 	isWorkersSite: boolean;
 	legacyAssetPaths: LegacyAssetPaths | undefined;
 	legacyAssetsConfig: Config["legacy_assets"];
-	experimentalAssets: ExperimentalAssets | undefined;
+	experimentalAssets: ExperimentalAssetsOptions | undefined;
 	compatibilityDate: string;
 	compatibilityFlags: string[] | undefined;
 	usageModel: "bundled" | "unbound" | undefined;

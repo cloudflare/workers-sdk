@@ -301,13 +301,21 @@ export function getExperimentalAssetsBasePath(
 		: path.resolve(path.dirname(config.configPath ?? "wrangler.toml"));
 }
 
+export type RoutingConfig = {
+	hasUserWorker: boolean;
+};
+export interface ExperimentalAssetsOptions extends ExperimentalAssets {
+	routingConfig: RoutingConfig;
+}
+
 export function processExperimentalAssetsArg(
-	args: { experimentalAssets: string | undefined },
+	args: { experimentalAssets: string | undefined; script?: string },
 	config: Config
-): ExperimentalAssets | undefined {
+): ExperimentalAssetsOptions | undefined {
 	const experimentalAssets = args.experimentalAssets
 		? { directory: args.experimentalAssets }
 		: config.experimental_assets;
+	let experimentalAssetsOptions: ExperimentalAssetsOptions | undefined;
 	if (experimentalAssets) {
 		const experimentalAssetsBasePath = getExperimentalAssetsBasePath(
 			config,
@@ -330,9 +338,16 @@ export function processExperimentalAssetsArg(
 		}
 
 		experimentalAssets.directory = resolvedExperimentalAssetsPath;
+		const routingConfig = {
+			hasUserWorker: !!(args.script || config.main),
+		};
+		experimentalAssetsOptions = {
+			...experimentalAssets,
+			routingConfig,
+		};
 	}
 
-	return experimentalAssets;
+	return experimentalAssetsOptions;
 }
 
 const encodeFilePath = (filePath: string) => {

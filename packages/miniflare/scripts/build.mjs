@@ -102,7 +102,7 @@ const embedWorkersPlugin = {
 					bundle: true,
 					sourcemap: true,
 					sourcesContent: false,
-					external: ["miniflare:shared", "miniflare:zod"],
+					external: ["miniflare:shared", "miniflare:zod", "cloudflare:workers"],
 					metafile: true,
 					entryPoints: [args.path],
 					minifySyntax: true,

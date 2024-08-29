@@ -3,11 +3,11 @@ import chalk from "chalk";
 import { useEffect, useRef } from "react";
 import onExit from "signal-exit";
 import { registerWorker } from "../dev-registry";
+import { ExperimentalAssetsOptions } from "../experimental-assets";
 import { logger } from "../logger";
 import { DEFAULT_WORKER_NAME, MiniflareServer } from "./miniflare";
 import type { ProxyData } from "../api";
 import type { Config } from "../config";
-import type { ExperimentalAssets } from "../config/environment";
 import type {
 	CfDurableObject,
 	CfScriptFormat,
@@ -32,7 +32,7 @@ export interface LocalProps {
 	bindings: CfWorkerInit["bindings"];
 	workerDefinitions: WorkerRegistry | undefined;
 	legacyAssetPaths: LegacyAssetPaths | undefined;
-	experimentalAssets: ExperimentalAssets | undefined;
+	experimentalAssets: ExperimentalAssetsOptions | undefined;
 	initialPort: number | undefined;
 	initialIp: string;
 	rules: Config["rules"];

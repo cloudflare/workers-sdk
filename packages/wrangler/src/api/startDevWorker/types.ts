@@ -1,7 +1,7 @@
+import { ExperimentalAssetsOptions } from "../../experimental-assets";
 import type { Config } from "../../config";
 import type {
 	CustomDomainRoute,
-	ExperimentalAssets,
 	Rule,
 	ZoneIdRoute,
 	ZoneNameRoute,
@@ -163,7 +163,7 @@ export interface StartDevWorkerInput {
 	};
 	unsafe?: Omit<CfUnsafe, "bindings">;
 	experimental?: {
-		assets?: Omit<ExperimentalAssets, "bindings">;
+		assets?: Omit<ExperimentalAssetsOptions, "bindings">;
 	};
 }
 

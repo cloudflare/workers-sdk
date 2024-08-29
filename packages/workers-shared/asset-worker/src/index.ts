@@ -11,10 +11,6 @@ import { getAssetWithMetadataFromKV } from "./utils/kv";
 
 export default class extends WorkerEntrypoint<Env> {
 	async fetch(request: Request) {
-		if (request.method.toLowerCase() !== "get") {
-			return new MethodNotAllowedResponse();
-		}
-
 		try {
 			return this.handleRequest(request);
 		} catch (err) {
@@ -27,7 +23,9 @@ export default class extends WorkerEntrypoint<Env> {
 		if (!assetEntry) {
 			return new NotFoundResponse();
 		}
-
+		if (request.method.toLowerCase() !== "get") {
+			return new MethodNotAllowedResponse();
+		}
 		const assetResponse = await getAssetWithMetadataFromKV(
 			this.env.ASSETS_KV_NAMESPACE,
 			assetEntry
