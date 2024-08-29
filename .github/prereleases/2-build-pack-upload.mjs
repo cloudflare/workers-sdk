@@ -60,7 +60,7 @@ async function uploadPackageArtifact(pkg, artifactPath) {
 	pkgs.forEach(setPackage);
 
 	for (const pkg of pkgs) {
-		if (pkg.json.type === "extension") {
+		if (pkg.json["workers-sdk"].type === "extension") {
 			const path = path.join(
 				pkg.path,
 				`${pkg.json.name}-${pkg.json.version}.vsix`
