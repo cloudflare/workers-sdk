@@ -1,0 +1,127 @@
+{
+	"name": "cloudflare-workers-bindings-extension",
+	"displayName": "cloudflare-workers-bindings-extension",
+	"version": "0.0.1",
+	"description": "Manage your Cloudflare Worker's bindings",
+	"categories": [
+		"Other"
+	],
+	"repository": "https://github.com/cloudflare/workers-sdk",
+	"main": "./dist/extension.js",
+	"scripts": {
+		"vscode:prepublish": "pnpm run package",
+		"compile": "pnpm run check-types && pnpm run lint && node esbuild.js",
+		"watch": "npm-run-all -p watch:*",
+		"watch:esbuild": "node esbuild.js --watch",
+		"watch:tsc": "tsc --noEmit --watch --project tsconfig.json",
+		"package": "pnpm run check-types && pnpm run lint && node esbuild.js --production",
+		"compile-tests": "tsc -p . --outDir out",
+		"watch-tests": "tsc -p . -w --outDir out",
+		"pretest": "pnpm run compile-tests && pnpm run compile && pnpm run lint",
+		"test": "vscode-test",
+		"check-types": "tsc --noEmit",
+		"lint": "eslint src --ext ts",
+		"build": "vsce package"
+	},
+	"contributes": {
+		"commands": [
+			{
+				"command": "workerBindings.refreshEntry",
+				"title": "Refresh",
+				"icon": {
+					"light": "resources/light/refresh.svg",
+					"dark": "resources/dark/refresh.svg"
+				}
+			},
+			{
+				"command": "workerBindings.addEntry",
+				"title": "Add",
+				"icon": "$(add)"
+			},
+			{
+				"command": "workerBindings.editEntry",
+				"title": "Edit",
+				"icon": {
+					"light": "resources/light/edit.svg",
+					"dark": "resources/dark/edit.svg"
+				}
+			},
+			{
+				"command": "workerBindings.deleteEntry",
+				"title": "Delete"
+			},
+			{
+				"command": "workerBindings.selectNewBinding",
+				"title": "Select New Binding"
+			},
+			{
+				"command": "samples.quickInput",
+				"title": "Quick Input Samples"
+			}
+		],
+		"menus": {
+			"view/title": [
+				{
+					"command": "workerBindings.refreshEntry",
+					"when": "view == workerBindings"
+				},
+				{
+					"command": "workerBindings.addEntry",
+					"when": "view == workerBindings",
+					"group": "navigation"
+				}
+			],
+			"view/item/context": [
+				{
+					"command": "workerBindings.editEntry",
+					"when": "view == workerBindings && viewItem == dependency",
+					"group": "inline"
+				},
+				{
+					"command": "workerBindings.deleteEntry",
+					"when": "view == workerBindings && viewItem == dependency"
+				}
+			]
+		},
+		"views": {
+			"cloudflare-workers-bindings": [
+				{
+					"id": "workerBindings",
+					"name": "",
+					"icon": "media/cf-workers-logo.svg"
+				}
+			]
+		},
+		"viewsContainers": {
+			"activitybar": [
+				{
+					"id": "cloudflare-workers-bindings",
+					"title": "Cloudflare Workers",
+					"icon": "media/cf-workers-logo.svg"
+				}
+			]
+		}
+	},
+	"activationEvents": [],
+	"devDependencies": {
+		"@types/mocha": "^10.0.7",
+		"@types/node": "20.x",
+		"@types/vscode": "^1.92.0",
+		"@typescript-eslint/eslint-plugin": "^7.14.1",
+		"@typescript-eslint/parser": "^7.11.0",
+		"@vscode/test-cli": "^0.0.9",
+		"@vscode/test-electron": "^2.4.0",
+		"esbuild": "^0.21.5",
+		"eslint": "^8.57.0",
+		"npm-run-all": "^4.1.5",
+		"typescript": "^5.4.5",
+		"vsce": "^2.15.0"
+	},
+	"engines": {
+		"vscode": "^1.92.0"
+	},
+	"workers-sdk": {
+		"prerelease": true,
+		"type": "extension"
+	}
+}

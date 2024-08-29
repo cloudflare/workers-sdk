@@ -42,12 +42,12 @@ function packPackage(pkg) {
 
 /**
  * @param {~Package} pkg
- * @param {string} tarballPath
+ * @param {string} artifactPath
  */
-async function uploadPackageTarball(pkg, tarballPath) {
+async function uploadPackageArtifact(pkg, artifactPath) {
 	const name = getPrereleaseArtifactName(pkg.json.name);
-	console.log(`Uploading ${tarballPath} as ${name}...`);
-	await artifact.uploadArtifact(name, [tarballPath], pkg.path);
+	console.log(`Uploading ${artifactPath} as ${name}...`);
+	await artifact.uploadArtifact(name, [artifactPath], pkg.path);
 }
 
 {
@@ -60,7 +60,15 @@ async function uploadPackageTarball(pkg, tarballPath) {
 	pkgs.forEach(setPackage);
 
 	for (const pkg of pkgs) {
-		const tarballPath = packPackage(pkg);
-		await uploadPackageTarball(pkg, tarballPath);
+		if (pkg.json.type === "extension") {
+			const path = path.join(
+				pkg.path,
+				`${pkg.json.name}-${pkg.json.version}.vsix`
+			);
+			await uploadPackageArtifact(pkg, path);
+		} else {
+			const tarballPath = packPackage(pkg);
+			await uploadPackageArtifact(pkg, tarballPath);
+		}
 	}
 }

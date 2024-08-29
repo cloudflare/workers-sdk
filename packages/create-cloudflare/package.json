@@ -91,7 +91,8 @@
 		"node": ">=18.14.1"
 	},
 	"workers-sdk": {
-		"prerelease": true
+		"prerelease": true,
+		"type": "cli"
 	},
 	"volta": {
 		"extends": "../../package.json"
