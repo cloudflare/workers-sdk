@@ -1,6 +1,5 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { URLSearchParams } from "node:url";
 import { blue, gray } from "@cloudflare/cli/colors";
 import { fetchResult } from "../cfetch";
 import { printBindings } from "../config";
@@ -458,18 +457,12 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			await ensureQueuesExistByConfig(config);
 			let bindingsPrinted = false;
 
-			// Upload the script so it has time to propagate.
-			// We can also now tell whether available_on_subdomain is set
+			// Upload the version.
 			try {
 				const body = createWorkerUploadForm(worker);
 
 				const result = await fetchResult<{
-					available_on_subdomain: boolean;
-					id: string | null;
-					etag: string | null;
-					pipeline_hash: string | null;
-					mutable_pipeline_id: string | null;
-					deployment_id: string | null;
+					id: string;
 					startup_time_ms: number;
 				}>(
 					workerUrl,
@@ -478,12 +471,6 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 						body,
 						headers: await getMetricsUsageHeaders(config.send_metrics),
 					},
-					new URLSearchParams({
-						include_subdomain_availability: "true",
-						// pass excludeScript so the whole body of the
-						// script doesn't get included in the response
-						excludeScript: "true",
-					})
 				);
 
 				logger.log("Worker Startup Time:", result.startup_time_ms, "ms");
