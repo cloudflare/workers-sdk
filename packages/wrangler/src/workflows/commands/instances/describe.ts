@@ -110,14 +110,16 @@ export const instancesDescribeHandler = async (args: HandlerOptions) => {
 		formattedInstance.End = new Date(instance.end).toLocaleString();
 	}
 
-	if (instance.start != undefined && instance.end != undefined) {
+	if (instance.start != null && instance.end != null) {
 		formattedInstance.Duration = formatDistanceStrict(
 			new Date(instance.end),
 			new Date(instance.start)
 		);
-	} else if (instance.start != undefined) {
-		formattedInstance.Duration = formatDistanceToNowStrict(
-			new Date(instance.start)
+	} else if (instance.start != null) {
+		// Convert current date to UTC
+		formattedInstance.Duration = formatDistanceStrict(
+			new Date(instance.start),
+			new Date(new Date().toUTCString().slice(0, -4))
 		);
 	}
 
@@ -154,13 +156,17 @@ const logStep = (
 			formattedStep.End = new Date(step.end).toLocaleString();
 		}
 
-		if (step.start != undefined && step.end != undefined) {
+		if (step.start != null && step.end != null) {
 			formattedStep.Duration = formatDistanceStrict(
 				new Date(step.end),
 				new Date(step.start)
 			);
-		} else if (step.start != undefined) {
-			formattedStep.Duration = formatDistanceToNowStrict(new Date(step.start));
+		} else if (step.start != null) {
+			// Convert current date to UTC
+			formattedStep.Duration = formatDistanceStrict(
+				new Date(step.start),
+				new Date(new Date().toUTCString().slice(0, -4))
+			);
 		}
 	} else if (step.type == "termination") {
 		formattedStep.Type = emojifyStepType(step.type);
@@ -168,7 +174,12 @@ const logStep = (
 	}
 
 	if (step.type == "step") {
-		formattedStep.Success = step.success ? "✅ Yes" : "❌ No";
+		if (step.success !== null) {
+			formattedStep.Success = step.success ? "✅ Yes" : "❌ No";
+		} else {
+			formattedStep.Success = "▶ Running";
+		}
+
 		if (step.success === null) {
 			const latestAttempt = step.attempts.at(-1);
 			let delay = step.config.retries.delay;
@@ -208,13 +219,17 @@ const logStep = (
 			attempt.Start = new Date(val.start).toLocaleString();
 			attempt.End = val.end == null ? "" : new Date(val.end).toLocaleString();
 
-			if (val.start != undefined && val.end != undefined) {
+			if (val.start != null && val.end != null) {
 				attempt.Duration = formatDistanceStrict(
 					new Date(val.end),
 					new Date(val.start)
 				);
-			} else if (attempt.start != undefined) {
-				attempt.Duration = formatDistanceToNowStrict(new Date(val.start));
+			} else if (val.start != null) {
+				// Converting datetimes into UTC is very cool in JS
+				attempt.Duration = formatDistanceStrict(
+					new Date(val.start),
+					new Date(new Date().toUTCString().slice(0, -4))
+				);
 			}
 
 			attempt.State =
