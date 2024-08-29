@@ -57,11 +57,9 @@ export async function versionsListHandler(args: VersionsListArgs) {
 	}
 
 	const versionCache: VersionCache = new Map();
-	const versions = await fetchDeployableVersions(
-		accountId,
-		workerName,
-		versionCache
-	);
+	const versions = (
+		await fetchDeployableVersions(accountId, workerName, versionCache)
+	).sort((a, b) => a.metadata.created_on.localeCompare(b.metadata.created_on));
 
 	if (args.json) {
 		logRaw(JSON.stringify(versions, null, 2));

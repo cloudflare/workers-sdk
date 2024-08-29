@@ -11,7 +11,6 @@ import { getConfig } from "../list";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
-	SubHelp,
 } from "../../yargs-types";
 import type { VersionId } from "../types";
 
@@ -23,19 +22,14 @@ export type VersionsRollbackArgs = StrictYargsOptionsToInterface<
 
 export default function registerVersionsRollbackCommand(
 	yargs: CommonYargsArgv,
-	epilogue: string,
-	subHelp: SubHelp,
 	description = "🔙 Rollback to a Worker Version"
 ) {
-	return yargs
-		.command(
-			"rollback [version-id]",
-			description,
-			versionsRollbackOptions,
-			versionsRollbackHandler
-		)
-		.command(subHelp)
-		.epilogue(epilogue);
+	return yargs.command(
+		"rollback [version-id]",
+		description,
+		versionsRollbackOptions,
+		versionsRollbackHandler
+	);
 }
 
 export function versionsRollbackOptions(rollbackYargs: CommonYargsArgv) {
@@ -151,6 +145,8 @@ export async function versionsRollbackHandler(args: VersionsRollbackArgs) {
 	cli.success(
 		`Worker Version ${versionId} has been deployed to 100% of traffic.`
 	);
+
+	logger.log("\nCurrent Version ID: " + versionId);
 }
 
 async function fetchDefaultRollbackVersionId(

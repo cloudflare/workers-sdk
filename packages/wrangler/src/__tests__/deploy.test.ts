@@ -107,14 +107,10 @@ describe("deploy", () => {
 			"Total Upload: xx KiB / gzip: xx KiB
 			Worker Startup Time: 100 ms
 			Uploaded test-name (TIMINGS)
-			Published test-name (TIMINGS)
+			Deployed test-name triggers (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			  example.com/some-route/*
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Current Version ID: Galaxy-Class"
 		`);
 		expect(std.err).toMatchInlineSnapshot(`""`);
 
@@ -171,20 +167,16 @@ describe("deploy", () => {
 		mockSubDomainRequest();
 		await runWrangler("deploy ./some-path/worker/index.js");
 		expect(std.out).toMatchInlineSnapshot(`
-		"Total Upload: xx KiB / gzip: xx KiB
-		Worker Startup Time: 100 ms
-		Your worker has access to the following bindings:
-		- Vars:
-		  - xyz: 123
-		Uploaded test-name (TIMINGS)
-		Published test-name (TIMINGS)
-		  https://test-name.test-sub-domain.workers.dev
-		Current Deployment ID: Galaxy-Class
-		Current Version ID: Galaxy-Class
-
-
-		Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-	`);
+			"Total Upload: xx KiB / gzip: xx KiB
+			Worker Startup Time: 100 ms
+			Your worker has access to the following bindings:
+			- Vars:
+			  - xyz: 123
+			Uploaded test-name (TIMINGS)
+			Deployed test-name triggers (TIMINGS)
+			  https://test-name.test-sub-domain.workers.dev
+			Current Version ID: Galaxy-Class"
+		`);
 		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
 
@@ -221,13 +213,9 @@ describe("deploy", () => {
 			- Vars:
 			  - xyz: 123
 			Uploaded test-worker (TIMINGS)
-			Published test-worker (TIMINGS)
+			Deployed test-worker triggers (TIMINGS)
 			  https://test-worker.test-sub-domain.workers.dev
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Current Version ID: Galaxy-Class"
 		`);
 		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
@@ -265,13 +253,9 @@ describe("deploy", () => {
 			- Vars:
 			  - xyz: 123
 			Uploaded test-worker-jsonc (TIMINGS)
-			Published test-worker-jsonc (TIMINGS)
+			Deployed test-worker-jsonc triggers (TIMINGS)
 			  https://test-worker-jsonc.test-sub-domain.workers.dev
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Current Version ID: Galaxy-Class"
 		`);
 		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
@@ -348,33 +332,32 @@ describe("deploy", () => {
 			);
 			writeWorkerSource();
 			mockSubDomainRequest();
-			mockUploadWorkerRequest({ expectedType: "esm" });
+			mockUploadWorkerRequest({
+				expectedType: "esm",
+				useOldUploadApi: true,
+			});
 			mockOAuthServerCallback();
 
 			await runWrangler("deploy ./index");
 
 			expect(std).toMatchInlineSnapshot(`
-			Object {
-			  "debug": "",
-			  "err": "",
-			  "info": "",
-			  "out": "Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Worker ID:  abc12345
-			Worker ETag:  etag98765
-			Worker PipelineHash:  hash9999
-			Worker Mutable PipelineID (Development ONLY!): mutableId
-			Uploaded test-name (TIMINGS)
-			Published test-name (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments",
-			  "warn": "",
-			}
-		`);
+				Object {
+				  "debug": "",
+				  "err": "",
+				  "info": "",
+				  "out": "Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Worker ID:  abc12345
+				Worker ETag:  etag98765
+				Worker PipelineHash:  hash9999
+				Worker Mutable PipelineID (Development ONLY!): mutableId
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class",
+				  "warn": "",
+				}
+			`);
 		});
 	});
 
@@ -399,20 +382,16 @@ describe("deploy", () => {
 			await expect(runWrangler("deploy index.js")).resolves.toBeUndefined();
 
 			expect(std.out).toMatchInlineSnapshot(`
-			"Attempting to login via OAuth...
-			Opening a link in your default browser: https://dash.cloudflare.com/oauth2/auth?response_type=code&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20ai%3Awrite%20queues%3Awrite%20offline_access&state=MOCK_STATE_PARAM&code_challenge=MOCK_CODE_CHALLENGE&code_challenge_method=S256
-			Successfully logged in.
-			Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Uploaded test-name (TIMINGS)
-			Published test-name (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+				"Attempting to login via OAuth...
+				Opening a link in your default browser: https://dash.cloudflare.com/oauth2/auth?response_type=code&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20ai%3Awrite%20queues%3Awrite%20offline_access&state=MOCK_STATE_PARAM&code_challenge=MOCK_CODE_CHALLENGE&code_challenge_method=S256
+				Successfully logged in.
+				Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -444,20 +423,16 @@ describe("deploy", () => {
 				expect(accessTokenRequest.actual).toEqual(accessTokenRequest.expected);
 
 				expect(std.out).toMatchInlineSnapshot(`
-			"Attempting to login via OAuth...
-			Opening a link in your default browser: https://dash.staging.cloudflare.com/oauth2/auth?response_type=code&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20ai%3Awrite%20queues%3Awrite%20offline_access&state=MOCK_STATE_PARAM&code_challenge=MOCK_CODE_CHALLENGE&code_challenge_method=S256
-			Successfully logged in.
-			Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Uploaded test-name (TIMINGS)
-			Published test-name (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+					"Attempting to login via OAuth...
+					Opening a link in your default browser: https://dash.staging.cloudflare.com/oauth2/auth?response_type=code&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20ai%3Awrite%20queues%3Awrite%20offline_access&state=MOCK_STATE_PARAM&code_challenge=MOCK_CODE_CHALLENGE&code_challenge_method=S256
+					Successfully logged in.
+					Total Upload: xx KiB / gzip: xx KiB
+					Worker Startup Time: 100 ms
+					Uploaded test-name (TIMINGS)
+					Deployed test-name triggers (TIMINGS)
+					  https://test-name.test-sub-domain.workers.dev
+					Current Version ID: Galaxy-Class"
+				`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 			});
@@ -475,17 +450,13 @@ describe("deploy", () => {
 			await expect(runWrangler("deploy index.js")).resolves.toBeUndefined();
 
 			expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Uploaded test-name (TIMINGS)
-			Published test-name (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+				"Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
 			expect(std.warn).toMatchInlineSnapshot(`
 			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mIt looks like you have used Wrangler v1's \`config\` command to login with an API token.[0m
 
@@ -513,17 +484,13 @@ describe("deploy", () => {
 				await runWrangler("deploy index.js");
 
 				expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Uploaded test-name (TIMINGS)
-			Published test-name (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+					"Total Upload: xx KiB / gzip: xx KiB
+					Worker Startup Time: 100 ms
+					Uploaded test-name (TIMINGS)
+					Deployed test-name triggers (TIMINGS)
+					  https://test-name.test-sub-domain.workers.dev
+					Current Version ID: Galaxy-Class"
+				`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 			});
 
@@ -541,17 +508,13 @@ describe("deploy", () => {
 				await runWrangler("deploy index.js");
 
 				expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Uploaded test-name (TIMINGS)
-			Published test-name (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+					"Total Upload: xx KiB / gzip: xx KiB
+					Worker Startup Time: 100 ms
+					Uploaded test-name (TIMINGS)
+					Deployed test-name triggers (TIMINGS)
+					  https://test-name.test-sub-domain.workers.dev
+					Current Version ID: Galaxy-Class"
+				`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 			});
 
@@ -724,17 +687,13 @@ describe("deploy", () => {
 
 			await runWrangler("deploy index.js --env some-env");
 			expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Uploaded test-name-some-env (TIMINGS)
-			Published test-name-some-env (TIMINGS)
-			  https://test-name-some-env.test-sub-domain.workers.dev
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+				"Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Uploaded test-name-some-env (TIMINGS)
+				Deployed test-name-some-env triggers (TIMINGS)
+				  https://test-name-some-env.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
@@ -750,17 +709,13 @@ describe("deploy", () => {
 
 				await runWrangler("deploy index.js --legacy-env true");
 				expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Uploaded test-name (TIMINGS)
-			Published test-name (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+					"Total Upload: xx KiB / gzip: xx KiB
+					Worker Startup Time: 100 ms
+					Uploaded test-name (TIMINGS)
+					Deployed test-name triggers (TIMINGS)
+					  https://test-name.test-sub-domain.workers.dev
+					Current Version ID: Galaxy-Class"
+				`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
@@ -776,17 +731,13 @@ describe("deploy", () => {
 
 				await runWrangler("deploy index.js --env some-env --legacy-env true");
 				expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Uploaded test-name-some-env (TIMINGS)
-			Published test-name-some-env (TIMINGS)
-			  https://test-name-some-env.test-sub-domain.workers.dev
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+					"Total Upload: xx KiB / gzip: xx KiB
+					Worker Startup Time: 100 ms
+					Uploaded test-name-some-env (TIMINGS)
+					Deployed test-name-some-env triggers (TIMINGS)
+					  https://test-name-some-env.test-sub-domain.workers.dev
+					Current Version ID: Galaxy-Class"
+				`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
@@ -802,17 +753,13 @@ describe("deploy", () => {
 
 				await runWrangler("deploy index.js --env some-env --legacy-env true");
 				expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Uploaded test-name-some-env (TIMINGS)
-			Published test-name-some-env (TIMINGS)
-			  https://test-name-some-env.test-sub-domain.workers.dev
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+					"Total Upload: xx KiB / gzip: xx KiB
+					Worker Startup Time: 100 ms
+					Uploaded test-name-some-env (TIMINGS)
+					Deployed test-name-some-env triggers (TIMINGS)
+					  https://test-name-some-env.test-sub-domain.workers.dev
+					Current Version ID: Galaxy-Class"
+				`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`
 			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
@@ -879,17 +826,13 @@ describe("deploy", () => {
 
 				await runWrangler("deploy index.js --legacy-env false");
 				expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Uploaded test-name (TIMINGS)
-			Published test-name (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+					"Total Upload: xx KiB / gzip: xx KiB
+					Worker Startup Time: 100 ms
+					Uploaded test-name (TIMINGS)
+					Deployed test-name triggers (TIMINGS)
+					  https://test-name.test-sub-domain.workers.dev
+					Current Version ID: Galaxy-Class"
+				`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`
 			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
@@ -908,21 +851,18 @@ describe("deploy", () => {
 				mockUploadWorkerRequest({
 					env: "some-env",
 					legacyEnv: false,
+					useOldUploadApi: true,
 				});
 
 				await runWrangler("deploy index.js --env some-env --legacy-env false");
 				expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Uploaded test-name (some-env) (TIMINGS)
-			Published test-name (some-env) (TIMINGS)
-			  https://some-env.test-name.test-sub-domain.workers.dev
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+					"Total Upload: xx KiB / gzip: xx KiB
+					Worker Startup Time: 100 ms
+					Uploaded test-name (some-env) (TIMINGS)
+					Deployed test-name (some-env) triggers (TIMINGS)
+					  https://some-env.test-name.test-sub-domain.workers.dev
+					Current Version ID: Galaxy-Class"
+				`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`
 			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
@@ -961,20 +901,16 @@ describe("deploy", () => {
 		mockSubDomainRequest();
 		await runWrangler("deploy ./some-path/worker/index.js");
 		expect(std.out).toMatchInlineSnapshot(`
-		"Total Upload: xx KiB / gzip: xx KiB
-		Worker Startup Time: 100 ms
-		Your worker has access to the following bindings:
-		- Vars:
-		  - xyz: 123
-		Uploaded test-name (TIMINGS)
-		Published test-name (TIMINGS)
-		  https://test-name.test-sub-domain.workers.dev
-		Current Deployment ID: Galaxy-Class
-		Current Version ID: Galaxy-Class
-
-
-		Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-	`);
+			"Total Upload: xx KiB / gzip: xx KiB
+			Worker Startup Time: 100 ms
+			Your worker has access to the following bindings:
+			- Vars:
+			  - xyz: 123
+			Uploaded test-name (TIMINGS)
+			Deployed test-name triggers (TIMINGS)
+			  https://test-name.test-sub-domain.workers.dev
+			Current Version ID: Galaxy-Class"
+		`);
 		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
 
@@ -1001,28 +937,24 @@ describe("deploy", () => {
 			mockPublishRoutesRequest({ routes: [] });
 			await runWrangler("deploy ./index");
 			expect(std).toMatchInlineSnapshot(`
-			Object {
-			  "debug": "",
-			  "err": "",
-			  "info": "",
-			  "out": "Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Uploaded test-name (TIMINGS)
-			Published test-name (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
+				Object {
+				  "debug": "",
+				  "err": "",
+				  "info": "",
+				  "out": "Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class",
+				  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
 
+				    - The \\"route\\" field in your configuration is an empty string and will be ignored.
+				      Please remove the \\"route\\" field from your configuration.
 
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
-
-			    - The \\"route\\" field in your configuration is an empty string and will be ignored.
-			      Please remove the \\"route\\" field from your configuration.
-
-			",
-			}
-		`);
+				",
+				}
+			`);
 		});
 		it("should deploy to a route with a pattern/{zone_id|zone_name} combo", async () => {
 			writeWranglerToml({
@@ -1054,27 +986,23 @@ describe("deploy", () => {
 			});
 			await runWrangler("deploy ./index");
 			expect(std).toMatchInlineSnapshot(`
-			Object {
-			  "debug": "",
-			  "err": "",
-			  "info": "",
-			  "out": "Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Uploaded test-name (TIMINGS)
-			Published test-name (TIMINGS)
-			  some-example.com/some-route/*
-			  *a-boring-website.com (zone id: 54sdf7fsda)
-			  *another-boring-website.com (zone name: some-zone.com)
-			  example.com/some-route/* (zone id: JGHFHG654gjcj)
-			  more-examples.com/*
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments",
-			  "warn": "",
-			}
-		`);
+				Object {
+				  "debug": "",
+				  "err": "",
+				  "info": "",
+				  "out": "Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  some-example.com/some-route/*
+				  *a-boring-website.com (zone id: 54sdf7fsda)
+				  *another-boring-website.com (zone name: some-zone.com)
+				  example.com/some-route/* (zone id: JGHFHG654gjcj)
+				  more-examples.com/*
+				Current Version ID: Galaxy-Class",
+				  "warn": "",
+				}
+			`);
 		});
 
 		it("should deploy to a route with a SaaS domain", async () => {
@@ -1102,23 +1030,19 @@ describe("deploy", () => {
 			});
 			await runWrangler("deploy ./index");
 			expect(std).toMatchInlineSnapshot(`
-			Object {
-			  "debug": "",
-			  "err": "",
-			  "info": "",
-			  "out": "Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Uploaded test-name (TIMINGS)
-			Published test-name (TIMINGS)
-			  partner.com/* (zone name: owned-zone.com)
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments",
-			  "warn": "",
-			}
-		`);
+				Object {
+				  "debug": "",
+				  "err": "",
+				  "info": "",
+				  "out": "Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  partner.com/* (zone name: owned-zone.com)
+				Current Version ID: Galaxy-Class",
+				  "warn": "",
+				}
+			`);
 		});
 
 		it("should deploy to a route with a SaaS subdomain", async () => {
@@ -1146,23 +1070,19 @@ describe("deploy", () => {
 			});
 			await runWrangler("deploy ./index");
 			expect(std).toMatchInlineSnapshot(`
-			Object {
-			  "debug": "",
-			  "err": "",
-			  "info": "",
-			  "out": "Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Uploaded test-name (TIMINGS)
-			Published test-name (TIMINGS)
-			  subdomain.partner.com/* (zone name: owned-zone.com)
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments",
-			  "warn": "",
-			}
-		`);
+				Object {
+				  "debug": "",
+				  "err": "",
+				  "info": "",
+				  "out": "Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  subdomain.partner.com/* (zone name: owned-zone.com)
+				Current Version ID: Galaxy-Class",
+				  "warn": "",
+				}
+			`);
 		});
 
 		it("should deploy to a route with a pattern/{zone_id|zone_name} combo (service environments)", async () => {
@@ -1193,6 +1113,7 @@ describe("deploy", () => {
 				expectedType: "esm",
 				env: "staging",
 				legacyEnv: false,
+				useOldUploadApi: true,
 			});
 			mockPublishRoutesRequest({
 				routes: [
@@ -1210,32 +1131,28 @@ describe("deploy", () => {
 			});
 			await runWrangler("deploy ./index --legacy-env false --env staging");
 			expect(std).toMatchInlineSnapshot(`
-			Object {
-			  "debug": "",
-			  "err": "",
-			  "info": "",
-			  "out": "Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Uploaded test-name (staging) (TIMINGS)
-			Published test-name (staging) (TIMINGS)
-			  some-example.com/some-route/*
-			  *a-boring-website.com (zone id: 54sdf7fsda)
-			  *another-boring-website.com (zone name: some-zone.com)
-			  example.com/some-route/* (zone id: JGHFHG654gjcj)
-			  more-examples.com/*
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
+				Object {
+				  "debug": "",
+				  "err": "",
+				  "info": "",
+				  "out": "Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Uploaded test-name (staging) (TIMINGS)
+				Deployed test-name (staging) triggers (TIMINGS)
+				  some-example.com/some-route/*
+				  *a-boring-website.com (zone id: 54sdf7fsda)
+				  *another-boring-website.com (zone name: some-zone.com)
+				  example.com/some-route/* (zone id: JGHFHG654gjcj)
+				  more-examples.com/*
+				Current Version ID: Galaxy-Class",
+				  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
 
+				    - Experimental: Service environments are in beta, and their behaviour is guaranteed to change in
+				  the future. DO NOT USE IN PRODUCTION.
 
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
-
-			    - Experimental: Service environments are in beta, and their behaviour is guaranteed to change in
-			  the future. DO NOT USE IN PRODUCTION.
-
-			",
-			}
-		`);
+				",
+				}
+			`);
 		});
 
 		it("should deploy to legacy environment specific routes", async () => {
@@ -1326,17 +1243,13 @@ describe("deploy", () => {
 			"
 		`);
 			expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Uploaded test-name (TIMINGS)
-			Published test-name (TIMINGS)
-			  example.com/some-route/*
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+				"Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  example.com/some-route/*
+				Current Version ID: Galaxy-Class"
+			`);
 		});
 
 		it("should error if the bulk-routes API fails and trying to push to a non-production environment", async () => {
@@ -1614,40 +1527,35 @@ Update them to point to this script instead?`,
 			await runWrangler("deploy ./index");
 
 			expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Uploaded test-name (TIMINGS)
-			Published test-name (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+				"Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
 		it("should be able to use `index` with no extension as the entry-point (sw)", async () => {
 			writeWranglerToml();
 			writeWorkerSource({ type: "sw" });
-			mockUploadWorkerRequest({ expectedType: "sw" });
+			mockUploadWorkerRequest({
+				expectedType: "sw",
+				useOldUploadApi: true,
+			});
 			mockSubDomainRequest();
 
 			await runWrangler("deploy ./index");
 
 			expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Uploaded test-name (TIMINGS)
-			Published test-name (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+				"Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
@@ -1660,17 +1568,13 @@ Update them to point to this script instead?`,
 			await runWrangler("deploy");
 
 			expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Uploaded test-name (TIMINGS)
-			Published test-name (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+				"Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
@@ -1685,17 +1589,13 @@ Update them to point to this script instead?`,
 			await runWrangler("deploy");
 
 			expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Uploaded test-name (TIMINGS)
-			Published test-name (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+				"Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
@@ -1708,17 +1608,13 @@ Update them to point to this script instead?`,
 			await runWrangler("deploy");
 
 			expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Uploaded test-name (TIMINGS)
-			Published test-name (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+				"Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`
 			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
@@ -1750,17 +1646,13 @@ Update them to point to this script instead?`,
 			await runWrangler("deploy");
 
 			expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Uploaded test-name (TIMINGS)
-			Published test-name (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+				"Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`
 			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing ../wrangler.toml configuration:[0m
@@ -1806,17 +1698,13 @@ Update them to point to this script instead?`,
 			await runWrangler("deploy index.ts");
 
 			expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Uploaded test-name (TIMINGS)
-			Published test-name (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+				"Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
@@ -1826,22 +1714,19 @@ Update them to point to this script instead?`,
 			mockUploadWorkerRequest({
 				expectedEntry: "var foo = 100;",
 				expectedType: "sw",
+				useOldUploadApi: true,
 			});
 			mockSubDomainRequest();
 			await runWrangler("deploy index.ts");
 
 			expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Uploaded test-name (TIMINGS)
-			Published test-name (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+				"Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
@@ -1868,17 +1753,13 @@ export default{
 			mockSubDomainRequest();
 			await runWrangler("deploy index.js");
 			expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Uploaded test-name (TIMINGS)
-			Published test-name (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+				"Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
@@ -1899,17 +1780,13 @@ export default{
 			mockSubDomainRequest();
 			await runWrangler("deploy index.js");
 			expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Uploaded test-name (TIMINGS)
-			Published test-name (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+				"Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
@@ -1922,17 +1799,13 @@ export default{
 			await runWrangler("deploy ./src/index.js");
 
 			expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Uploaded test-name (TIMINGS)
-			Published test-name (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+				"Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
@@ -2018,23 +1891,20 @@ addEventListener('fetch', event => {});`
 			mockUploadWorkerRequest({
 				expectedEntry: "var foo = 100;",
 				expectedType: "sw",
+				useOldUploadApi: true,
 			});
 			mockSubDomainRequest();
 
 			await runWrangler("deploy ./src/index.js");
 
 			expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Uploaded test-name (TIMINGS)
-			Published test-name (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+				"Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
@@ -2101,38 +1971,34 @@ addEventListener('fetch', event => {});`
 			await runWrangler("deploy ./index.js");
 
 			expect(std).toMatchInlineSnapshot(`
-			Object {
-			  "debug": "",
-			  "err": "",
-			  "info": "Fetching list of already uploaded assets...
-			Building list of assets to upload...
-			 + file-1.2ca234f380.txt (uploading new version of file-1.txt)
-			 + file-2.5938485188.txt (uploading new version of file-2.txt)
-			Uploading 2 new assets...
-			Uploaded 100% [2 out of 2]",
-			  "out": "↗️  Done syncing assets
-			Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Uploaded test-name (TIMINGS)
-			Published test-name (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
+				Object {
+				  "debug": "",
+				  "err": "",
+				  "info": "Fetching list of already uploaded assets...
+				Building list of assets to upload...
+				 + file-1.2ca234f380.txt (uploading new version of file-1.txt)
+				 + file-2.5938485188.txt (uploading new version of file-2.txt)
+				Uploading 2 new assets...
+				Uploaded 100% [2 out of 2]",
+				  "out": "↗️  Done syncing assets
+				Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class",
+				  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
 
+				    - [1mDeprecation[0m: \\"site.entry-point\\":
+				      Delete the \`site.entry-point\` field, then add the top level \`main\` field to your configuration
+				  file:
+				      \`\`\`
+				      main = \\"index.js\\"
+				      \`\`\`
 
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
-
-			    - [1mDeprecation[0m: \\"site.entry-point\\":
-			      Delete the \`site.entry-point\` field, then add the top level \`main\` field to your configuration
-			  file:
-			      \`\`\`
-			      main = \\"index.js\\"
-			      \`\`\`
-
-			",
-			}
-		`);
+				",
+				}
+			`);
 		});
 
 		it("should resolve site.entry-point relative to wrangler.toml", async () => {
@@ -2172,18 +2038,14 @@ addEventListener('fetch', event => {});`
 			Uploaded 100% [2 out of 2]"
 		`);
 			expect(std.out).toMatchInlineSnapshot(`
-			"↗️  Done syncing assets
-			Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Uploaded test-name (TIMINGS)
-			Published test-name (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+				"↗️  Done syncing assets
+				Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(normalizeSlashes(std.warn)).toMatchInlineSnapshot(`
 			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing my-site/wrangler.toml configuration:[0m
@@ -2272,13 +2134,9 @@ addEventListener('fetch', event => {});`
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				Uploaded test-name (TIMINGS)
-				Published test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
-				Current Deployment ID: Galaxy-Class
-				Current Version ID: Galaxy-Class
-
-
-				Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments",
+				Current Version ID: Galaxy-Class",
 				  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --legacy-assets argument is experimental and may change or break at any time.[0m
 
 
@@ -2293,8 +2151,8 @@ addEventListener('fetch', event => {});`
 
 		describe("should source map validation errors", () => {
 			function mockDeployWithValidationError(message: string) {
-				const handler = http.put(
-					"*/accounts/:accountId/workers/scripts/:scriptName",
+				const handler = http.post(
+					"*/accounts/:accountId/workers/scripts/:scriptName/versions",
 					async () => {
 						const body = createFetchResult(null, false, [
 							{ code: 10021, message },
@@ -2439,18 +2297,14 @@ addEventListener('fetch', event => {});`
 			Uploaded 100% [2 out of 2]"
 		`);
 			expect(std.out).toMatchInlineSnapshot(`
-			"↗️  Done syncing assets
-			Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Uploaded test-name (TIMINGS)
-			Published test-name (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+				"↗️  Done syncing assets
+				Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
@@ -2491,13 +2345,9 @@ addEventListener('fetch', event => {});`
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				Uploaded test-name (TIMINGS)
-				Published test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
-				Current Deployment ID: Galaxy-Class
-				Current Version ID: Galaxy-Class
-
-
-				Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments",
+				Current Version ID: Galaxy-Class",
 				  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --legacy-assets argument is experimental and may change or break at any time.[0m
 
 				",
@@ -2542,13 +2392,9 @@ addEventListener('fetch', event => {});`
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				Uploaded test-name (TIMINGS)
-				Published test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
-				Current Deployment ID: Galaxy-Class
-				Current Version ID: Galaxy-Class
-
-
-				Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments",
+				Current Version ID: Galaxy-Class",
 				  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --assets argument is experimental. We are going to be changing the behavior of this experimental command after August 15th.[0m
 
 				  Releases of wrangler after this date will no longer support current functionality.
@@ -2742,13 +2588,9 @@ addEventListener('fetch', event => {});`
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				Uploaded test-name (TIMINGS)
-				Published test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
-				Current Deployment ID: Galaxy-Class
-				Current Version ID: Galaxy-Class
-
-
-				Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments",
+				Current Version ID: Galaxy-Class",
 				  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --legacy-assets argument is experimental and may change or break at any time.[0m
 
 				",
@@ -2795,13 +2637,9 @@ addEventListener('fetch', event => {});`
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				Uploaded test-name (TIMINGS)
-				Published test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
-				Current Deployment ID: Galaxy-Class
-				Current Version ID: Galaxy-Class
-
-
-				Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments",
+				Current Version ID: Galaxy-Class",
 				  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
 
 				    - \\"legacy_assets\\" fields are experimental and may change or break at any time.
@@ -2857,18 +2695,14 @@ addEventListener('fetch', event => {});`
 			Uploaded 100% [2 out of 2]"
 		`);
 			expect(std.out).toMatchInlineSnapshot(`
-			"↗️  Done syncing assets
-			Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Uploaded test-name (TIMINGS)
-			Published test-name (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+				"↗️  Done syncing assets
+				Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
@@ -2907,6 +2741,7 @@ addEventListener('fetch', event => {});`
 						type: "text_blob",
 					},
 				],
+				useOldUploadApi: true,
 			});
 			mockSubDomainRequest();
 			mockListKVNamespacesRequest(kvNamespace);
@@ -2924,18 +2759,14 @@ addEventListener('fetch', event => {});`
 			Uploaded 100% [2 out of 2]"
 		`);
 			expect(std.out).toMatchInlineSnapshot(`
-			"↗️  Done syncing assets
-			Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Uploaded test-name (TIMINGS)
-			Published test-name (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+				"↗️  Done syncing assets
+				Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
@@ -3046,13 +2877,9 @@ addEventListener('fetch', event => {});`
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				Uploaded test-name (TIMINGS)
-				Published test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
-				Current Deployment ID: Galaxy-Class
-				Current Version ID: Galaxy-Class
-
-
-				Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+				Current Version ID: Galaxy-Class"
 			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -3085,6 +2912,7 @@ addEventListener('fetch', event => {});`
 						type: "kv_namespace",
 					},
 				],
+				useOldUploadApi: true,
 			});
 			mockSubDomainRequest();
 			mockListKVNamespacesRequest(kvNamespace);
@@ -3101,18 +2929,14 @@ addEventListener('fetch', event => {});`
 			Uploaded 100% [2 out of 2]"
 		`);
 			expect(std.out).toMatchInlineSnapshot(`
-			"↗️  Done syncing assets
-			Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Uploaded test-name (some-env) (TIMINGS)
-			Published test-name (some-env) (TIMINGS)
-			  https://some-env.test-name.test-sub-domain.workers.dev
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+				"↗️  Done syncing assets
+				Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Uploaded test-name (some-env) (TIMINGS)
+				Deployed test-name (some-env) triggers (TIMINGS)
+				  https://some-env.test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
@@ -3161,18 +2985,14 @@ addEventListener('fetch', event => {});`
 			Uploaded 100% [2 out of 2]"
 		`);
 			expect(std.out).toMatchInlineSnapshot(`
-			"↗️  Done syncing assets
-			Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Uploaded test-name-some-env (TIMINGS)
-			Published test-name-some-env (TIMINGS)
-			  https://test-name-some-env.test-sub-domain.workers.dev
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+				"↗️  Done syncing assets
+				Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Uploaded test-name-some-env (TIMINGS)
+				Deployed test-name-some-env triggers (TIMINGS)
+				  https://test-name-some-env.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
@@ -3206,18 +3026,14 @@ addEventListener('fetch', event => {});`
 			await runWrangler("deploy");
 
 			expect(std.out).toMatchInlineSnapshot(`
-			"↗️  Done syncing assets
-			Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Uploaded test-name (TIMINGS)
-			Published test-name (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+				"↗️  Done syncing assets
+				Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
@@ -3257,18 +3073,14 @@ addEventListener('fetch', event => {});`
 			Uploaded 100% [1 out of 1]"
 		`);
 			expect(std.out).toMatchInlineSnapshot(`
-			"↗️  Done syncing assets
-			Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Uploaded test-name (TIMINGS)
-			Published test-name (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+				"↗️  Done syncing assets
+				Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
@@ -3308,18 +3120,14 @@ addEventListener('fetch', event => {});`
 			Uploaded 100% [1 out of 1]"
 		`);
 			expect(std.out).toMatchInlineSnapshot(`
-			"↗️  Done syncing assets
-			Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Uploaded test-name (TIMINGS)
-			Published test-name (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+				"↗️  Done syncing assets
+				Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
@@ -3360,18 +3168,14 @@ addEventListener('fetch', event => {});`
 			Uploaded 100% [1 out of 1]"
 		`);
 			expect(std.out).toMatchInlineSnapshot(`
-			"↗️  Done syncing assets
-			Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Uploaded test-name (TIMINGS)
-			Published test-name (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+				"↗️  Done syncing assets
+				Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
@@ -3412,18 +3216,14 @@ addEventListener('fetch', event => {});`
 			Uploaded 100% [1 out of 1]"
 		`);
 			expect(std.out).toMatchInlineSnapshot(`
-			"↗️  Done syncing assets
-			Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Uploaded test-name (TIMINGS)
-			Published test-name (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+				"↗️  Done syncing assets
+				Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
@@ -3464,18 +3264,14 @@ addEventListener('fetch', event => {});`
 			Uploaded 100% [1 out of 1]"
 		`);
 			expect(std.out).toMatchInlineSnapshot(`
-			"↗️  Done syncing assets
-			Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Uploaded test-name (TIMINGS)
-			Published test-name (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+				"↗️  Done syncing assets
+				Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
@@ -3516,18 +3312,14 @@ addEventListener('fetch', event => {});`
 			Uploaded 100% [1 out of 1]"
 		`);
 			expect(std.out).toMatchInlineSnapshot(`
-			"↗️  Done syncing assets
-			Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Uploaded test-name (TIMINGS)
-			Published test-name (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+				"↗️  Done syncing assets
+				Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
@@ -3570,18 +3362,14 @@ addEventListener('fetch', event => {});`
 			Uploaded 100% [1 out of 1]"
 		`);
 			expect(std.out).toMatchInlineSnapshot(`
-			"↗️  Done syncing assets
-			Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Uploaded test-name (TIMINGS)
-			Published test-name (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+				"↗️  Done syncing assets
+				Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
@@ -3628,18 +3416,14 @@ addEventListener('fetch', event => {});`
 			Uploaded 100% [1 out of 1]"
 		`);
 			expect(std.out).toMatchInlineSnapshot(`
-			"↗️  Done syncing assets
-			Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Uploaded test-name (TIMINGS)
-			Published test-name (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+				"↗️  Done syncing assets
+				Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
@@ -3742,18 +3526,14 @@ addEventListener('fetch', event => {});`
 
 			expect(std.debug).toMatchInlineSnapshot(`""`);
 			expect(std.out).toMatchInlineSnapshot(`
-			"↗️  Done syncing assets
-			Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Uploaded test-name (TIMINGS)
-			Published test-name (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+				"↗️  Done syncing assets
+				Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
 			// Mask all but last upload progress message as upload order unknown
 			// (regexp replaces all single/double-digit percentages, i.e. not 100%)
 			expect(std.info.replace(/Uploaded \d\d?% \[\d+/g, "Uploaded X% [X"))
@@ -3885,18 +3665,14 @@ addEventListener('fetch', event => {});`
 			Removing 2 stale assets..."
 		`);
 			expect(std.out).toMatchInlineSnapshot(`
-			"↗️  Done syncing assets
-			Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Uploaded test-name (TIMINGS)
-			Published test-name (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+				"↗️  Done syncing assets
+				Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
@@ -3949,18 +3725,14 @@ addEventListener('fetch', event => {});`
 			Uploaded 100% [2 out of 2]"
 		`);
 			expect(std.out).toMatchInlineSnapshot(`
-			"↗️  Done syncing assets
-			Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Uploaded test-name (TIMINGS)
-			Published test-name (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+				"↗️  Done syncing assets
+				Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
@@ -3989,29 +3761,25 @@ addEventListener('fetch', event => {});`
 			await runWrangler("deploy --site .");
 
 			expect(std).toMatchInlineSnapshot(`
-			Object {
-			  "debug": "",
-			  "err": "",
-			  "info": "Fetching list of already uploaded assets...
-			Building list of assets to upload...
-			 + file-1.2ca234f380.txt (uploading new version of file-1.txt)
-			 + file-2.5938485188.txt (uploading new version of file-2.txt)
-			Uploading 2 new assets...
-			Uploaded 100% [2 out of 2]",
-			  "out": "↗️  Done syncing assets
-			Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Uploaded test-name (TIMINGS)
-			Published test-name (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments",
-			  "warn": "",
-			}
-		`);
+				Object {
+				  "debug": "",
+				  "err": "",
+				  "info": "Fetching list of already uploaded assets...
+				Building list of assets to upload...
+				 + file-1.2ca234f380.txt (uploading new version of file-1.txt)
+				 + file-2.5938485188.txt (uploading new version of file-2.txt)
+				Uploading 2 new assets...
+				Uploaded 100% [2 out of 2]",
+				  "out": "↗️  Done syncing assets
+				Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class",
+				  "warn": "",
+				}
+			`);
 		});
 
 		it("should use the relative path from current working directory to Worker directory when using `--legacy-assets`", async () => {
@@ -4052,13 +3820,9 @@ addEventListener('fetch', event => {});`
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				Uploaded test-name (TIMINGS)
-				Published test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
-				Current Deployment ID: Galaxy-Class
-				Current Version ID: Galaxy-Class
-
-
-				Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments",
+				Current Version ID: Galaxy-Class",
 				  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --legacy-assets argument is experimental and may change or break at any time.[0m
 
 				",
@@ -4161,128 +3925,124 @@ addEventListener('fetch', event => {});`
 			it("default log level", async () => {
 				await runWrangler("deploy");
 				expect(std).toMatchInlineSnapshot(`
-			Object {
-			  "debug": "",
-			  "err": "",
-			  "info": "Fetching list of already uploaded assets...
-			Building list of assets to upload...
-			 + file-000.010257e8bb.txt (uploading new version of file-000.txt)
-			 + file-001.010257e8bb.txt (uploading new version of file-001.txt)
-			 + file-002.010257e8bb.txt (uploading new version of file-002.txt)
-			 + file-003.010257e8bb.txt (uploading new version of file-003.txt)
-			 + file-004.010257e8bb.txt (uploading new version of file-004.txt)
-			 + file-005.010257e8bb.txt (uploading new version of file-005.txt)
-			 + file-006.010257e8bb.txt (uploading new version of file-006.txt)
-			 + file-007.010257e8bb.txt (uploading new version of file-007.txt)
-			 + file-008.010257e8bb.txt (uploading new version of file-008.txt)
-			 + file-009.010257e8bb.txt (uploading new version of file-009.txt)
-			 + file-010.010257e8bb.txt (uploading new version of file-010.txt)
-			 + file-011.010257e8bb.txt (uploading new version of file-011.txt)
-			 + file-012.010257e8bb.txt (uploading new version of file-012.txt)
-			 + file-013.010257e8bb.txt (uploading new version of file-013.txt)
-			 + file-014.010257e8bb.txt (uploading new version of file-014.txt)
-			 + file-015.010257e8bb.txt (uploading new version of file-015.txt)
-			 + file-016.010257e8bb.txt (uploading new version of file-016.txt)
-			 + file-017.010257e8bb.txt (uploading new version of file-017.txt)
-			 + file-018.010257e8bb.txt (uploading new version of file-018.txt)
-			 + file-019.010257e8bb.txt (uploading new version of file-019.txt)
-			 + file-020.010257e8bb.txt (uploading new version of file-020.txt)
-			 + file-021.010257e8bb.txt (uploading new version of file-021.txt)
-			 + file-022.010257e8bb.txt (uploading new version of file-022.txt)
-			 + file-023.010257e8bb.txt (uploading new version of file-023.txt)
-			 + file-024.010257e8bb.txt (uploading new version of file-024.txt)
-			 + file-025.010257e8bb.txt (uploading new version of file-025.txt)
-			 + file-026.010257e8bb.txt (uploading new version of file-026.txt)
-			 + file-027.010257e8bb.txt (uploading new version of file-027.txt)
-			 + file-028.010257e8bb.txt (uploading new version of file-028.txt)
-			 + file-029.010257e8bb.txt (uploading new version of file-029.txt)
-			 + file-030.010257e8bb.txt (uploading new version of file-030.txt)
-			 + file-031.010257e8bb.txt (uploading new version of file-031.txt)
-			 + file-032.010257e8bb.txt (uploading new version of file-032.txt)
-			 + file-033.010257e8bb.txt (uploading new version of file-033.txt)
-			 + file-034.010257e8bb.txt (uploading new version of file-034.txt)
-			 + file-035.010257e8bb.txt (uploading new version of file-035.txt)
-			 + file-036.010257e8bb.txt (uploading new version of file-036.txt)
-			 + file-037.010257e8bb.txt (uploading new version of file-037.txt)
-			 + file-038.010257e8bb.txt (uploading new version of file-038.txt)
-			 + file-039.010257e8bb.txt (uploading new version of file-039.txt)
-			 + file-040.010257e8bb.txt (uploading new version of file-040.txt)
-			 + file-041.010257e8bb.txt (uploading new version of file-041.txt)
-			 + file-042.010257e8bb.txt (uploading new version of file-042.txt)
-			 + file-043.010257e8bb.txt (uploading new version of file-043.txt)
-			 + file-044.010257e8bb.txt (uploading new version of file-044.txt)
-			 + file-045.010257e8bb.txt (uploading new version of file-045.txt)
-			 + file-046.010257e8bb.txt (uploading new version of file-046.txt)
-			 + file-047.010257e8bb.txt (uploading new version of file-047.txt)
-			 + file-048.010257e8bb.txt (uploading new version of file-048.txt)
-			 + file-049.010257e8bb.txt (uploading new version of file-049.txt)
-			 + file-050.010257e8bb.txt (uploading new version of file-050.txt)
-			 + file-051.010257e8bb.txt (uploading new version of file-051.txt)
-			 + file-052.010257e8bb.txt (uploading new version of file-052.txt)
-			 + file-053.010257e8bb.txt (uploading new version of file-053.txt)
-			 + file-054.010257e8bb.txt (uploading new version of file-054.txt)
-			 + file-055.010257e8bb.txt (uploading new version of file-055.txt)
-			 + file-056.010257e8bb.txt (uploading new version of file-056.txt)
-			 + file-057.010257e8bb.txt (uploading new version of file-057.txt)
-			 + file-058.010257e8bb.txt (uploading new version of file-058.txt)
-			 + file-059.010257e8bb.txt (uploading new version of file-059.txt)
-			 + file-060.010257e8bb.txt (uploading new version of file-060.txt)
-			 + file-061.010257e8bb.txt (uploading new version of file-061.txt)
-			 + file-062.010257e8bb.txt (uploading new version of file-062.txt)
-			 + file-063.010257e8bb.txt (uploading new version of file-063.txt)
-			 + file-064.010257e8bb.txt (uploading new version of file-064.txt)
-			 + file-065.010257e8bb.txt (uploading new version of file-065.txt)
-			 + file-066.010257e8bb.txt (uploading new version of file-066.txt)
-			 + file-067.010257e8bb.txt (uploading new version of file-067.txt)
-			 + file-068.010257e8bb.txt (uploading new version of file-068.txt)
-			 + file-069.010257e8bb.txt (uploading new version of file-069.txt)
-			 + file-070.010257e8bb.txt (uploading new version of file-070.txt)
-			 + file-071.010257e8bb.txt (uploading new version of file-071.txt)
-			 + file-072.010257e8bb.txt (uploading new version of file-072.txt)
-			 + file-073.010257e8bb.txt (uploading new version of file-073.txt)
-			 + file-074.010257e8bb.txt (uploading new version of file-074.txt)
-			 + file-075.010257e8bb.txt (uploading new version of file-075.txt)
-			 + file-076.010257e8bb.txt (uploading new version of file-076.txt)
-			 + file-077.010257e8bb.txt (uploading new version of file-077.txt)
-			 + file-078.010257e8bb.txt (uploading new version of file-078.txt)
-			 + file-079.010257e8bb.txt (uploading new version of file-079.txt)
-			 + file-080.010257e8bb.txt (uploading new version of file-080.txt)
-			 + file-081.010257e8bb.txt (uploading new version of file-081.txt)
-			 + file-082.010257e8bb.txt (uploading new version of file-082.txt)
-			 + file-083.010257e8bb.txt (uploading new version of file-083.txt)
-			 + file-084.010257e8bb.txt (uploading new version of file-084.txt)
-			 + file-085.010257e8bb.txt (uploading new version of file-085.txt)
-			 + file-086.010257e8bb.txt (uploading new version of file-086.txt)
-			 + file-087.010257e8bb.txt (uploading new version of file-087.txt)
-			 + file-088.010257e8bb.txt (uploading new version of file-088.txt)
-			 + file-089.010257e8bb.txt (uploading new version of file-089.txt)
-			 + file-090.010257e8bb.txt (uploading new version of file-090.txt)
-			 + file-091.010257e8bb.txt (uploading new version of file-091.txt)
-			 + file-092.010257e8bb.txt (uploading new version of file-092.txt)
-			 + file-093.010257e8bb.txt (uploading new version of file-093.txt)
-			 + file-094.010257e8bb.txt (uploading new version of file-094.txt)
-			 + file-095.010257e8bb.txt (uploading new version of file-095.txt)
-			 + file-096.010257e8bb.txt (uploading new version of file-096.txt)
-			 + file-097.010257e8bb.txt (uploading new version of file-097.txt)
-			 + file-098.010257e8bb.txt (uploading new version of file-098.txt)
-			 + file-099.010257e8bb.txt (uploading new version of file-099.txt)
-			   (truncating changed assets log, set \`WRANGLER_LOG=debug\` environment variable to see full diff)
-			Uploading 110 new assets...
-			Uploaded 100% [110 out of 110]",
-			  "out": "↗️  Done syncing assets
-			Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Uploaded test-name (TIMINGS)
-			Published test-name (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments",
-			  "warn": "",
-			}
-		`);
+					Object {
+					  "debug": "",
+					  "err": "",
+					  "info": "Fetching list of already uploaded assets...
+					Building list of assets to upload...
+					 + file-000.010257e8bb.txt (uploading new version of file-000.txt)
+					 + file-001.010257e8bb.txt (uploading new version of file-001.txt)
+					 + file-002.010257e8bb.txt (uploading new version of file-002.txt)
+					 + file-003.010257e8bb.txt (uploading new version of file-003.txt)
+					 + file-004.010257e8bb.txt (uploading new version of file-004.txt)
+					 + file-005.010257e8bb.txt (uploading new version of file-005.txt)
+					 + file-006.010257e8bb.txt (uploading new version of file-006.txt)
+					 + file-007.010257e8bb.txt (uploading new version of file-007.txt)
+					 + file-008.010257e8bb.txt (uploading new version of file-008.txt)
+					 + file-009.010257e8bb.txt (uploading new version of file-009.txt)
+					 + file-010.010257e8bb.txt (uploading new version of file-010.txt)
+					 + file-011.010257e8bb.txt (uploading new version of file-011.txt)
+					 + file-012.010257e8bb.txt (uploading new version of file-012.txt)
+					 + file-013.010257e8bb.txt (uploading new version of file-013.txt)
+					 + file-014.010257e8bb.txt (uploading new version of file-014.txt)
+					 + file-015.010257e8bb.txt (uploading new version of file-015.txt)
+					 + file-016.010257e8bb.txt (uploading new version of file-016.txt)
+					 + file-017.010257e8bb.txt (uploading new version of file-017.txt)
+					 + file-018.010257e8bb.txt (uploading new version of file-018.txt)
+					 + file-019.010257e8bb.txt (uploading new version of file-019.txt)
+					 + file-020.010257e8bb.txt (uploading new version of file-020.txt)
+					 + file-021.010257e8bb.txt (uploading new version of file-021.txt)
+					 + file-022.010257e8bb.txt (uploading new version of file-022.txt)
+					 + file-023.010257e8bb.txt (uploading new version of file-023.txt)
+					 + file-024.010257e8bb.txt (uploading new version of file-024.txt)
+					 + file-025.010257e8bb.txt (uploading new version of file-025.txt)
+					 + file-026.010257e8bb.txt (uploading new version of file-026.txt)
+					 + file-027.010257e8bb.txt (uploading new version of file-027.txt)
+					 + file-028.010257e8bb.txt (uploading new version of file-028.txt)
+					 + file-029.010257e8bb.txt (uploading new version of file-029.txt)
+					 + file-030.010257e8bb.txt (uploading new version of file-030.txt)
+					 + file-031.010257e8bb.txt (uploading new version of file-031.txt)
+					 + file-032.010257e8bb.txt (uploading new version of file-032.txt)
+					 + file-033.010257e8bb.txt (uploading new version of file-033.txt)
+					 + file-034.010257e8bb.txt (uploading new version of file-034.txt)
+					 + file-035.010257e8bb.txt (uploading new version of file-035.txt)
+					 + file-036.010257e8bb.txt (uploading new version of file-036.txt)
+					 + file-037.010257e8bb.txt (uploading new version of file-037.txt)
+					 + file-038.010257e8bb.txt (uploading new version of file-038.txt)
+					 + file-039.010257e8bb.txt (uploading new version of file-039.txt)
+					 + file-040.010257e8bb.txt (uploading new version of file-040.txt)
+					 + file-041.010257e8bb.txt (uploading new version of file-041.txt)
+					 + file-042.010257e8bb.txt (uploading new version of file-042.txt)
+					 + file-043.010257e8bb.txt (uploading new version of file-043.txt)
+					 + file-044.010257e8bb.txt (uploading new version of file-044.txt)
+					 + file-045.010257e8bb.txt (uploading new version of file-045.txt)
+					 + file-046.010257e8bb.txt (uploading new version of file-046.txt)
+					 + file-047.010257e8bb.txt (uploading new version of file-047.txt)
+					 + file-048.010257e8bb.txt (uploading new version of file-048.txt)
+					 + file-049.010257e8bb.txt (uploading new version of file-049.txt)
+					 + file-050.010257e8bb.txt (uploading new version of file-050.txt)
+					 + file-051.010257e8bb.txt (uploading new version of file-051.txt)
+					 + file-052.010257e8bb.txt (uploading new version of file-052.txt)
+					 + file-053.010257e8bb.txt (uploading new version of file-053.txt)
+					 + file-054.010257e8bb.txt (uploading new version of file-054.txt)
+					 + file-055.010257e8bb.txt (uploading new version of file-055.txt)
+					 + file-056.010257e8bb.txt (uploading new version of file-056.txt)
+					 + file-057.010257e8bb.txt (uploading new version of file-057.txt)
+					 + file-058.010257e8bb.txt (uploading new version of file-058.txt)
+					 + file-059.010257e8bb.txt (uploading new version of file-059.txt)
+					 + file-060.010257e8bb.txt (uploading new version of file-060.txt)
+					 + file-061.010257e8bb.txt (uploading new version of file-061.txt)
+					 + file-062.010257e8bb.txt (uploading new version of file-062.txt)
+					 + file-063.010257e8bb.txt (uploading new version of file-063.txt)
+					 + file-064.010257e8bb.txt (uploading new version of file-064.txt)
+					 + file-065.010257e8bb.txt (uploading new version of file-065.txt)
+					 + file-066.010257e8bb.txt (uploading new version of file-066.txt)
+					 + file-067.010257e8bb.txt (uploading new version of file-067.txt)
+					 + file-068.010257e8bb.txt (uploading new version of file-068.txt)
+					 + file-069.010257e8bb.txt (uploading new version of file-069.txt)
+					 + file-070.010257e8bb.txt (uploading new version of file-070.txt)
+					 + file-071.010257e8bb.txt (uploading new version of file-071.txt)
+					 + file-072.010257e8bb.txt (uploading new version of file-072.txt)
+					 + file-073.010257e8bb.txt (uploading new version of file-073.txt)
+					 + file-074.010257e8bb.txt (uploading new version of file-074.txt)
+					 + file-075.010257e8bb.txt (uploading new version of file-075.txt)
+					 + file-076.010257e8bb.txt (uploading new version of file-076.txt)
+					 + file-077.010257e8bb.txt (uploading new version of file-077.txt)
+					 + file-078.010257e8bb.txt (uploading new version of file-078.txt)
+					 + file-079.010257e8bb.txt (uploading new version of file-079.txt)
+					 + file-080.010257e8bb.txt (uploading new version of file-080.txt)
+					 + file-081.010257e8bb.txt (uploading new version of file-081.txt)
+					 + file-082.010257e8bb.txt (uploading new version of file-082.txt)
+					 + file-083.010257e8bb.txt (uploading new version of file-083.txt)
+					 + file-084.010257e8bb.txt (uploading new version of file-084.txt)
+					 + file-085.010257e8bb.txt (uploading new version of file-085.txt)
+					 + file-086.010257e8bb.txt (uploading new version of file-086.txt)
+					 + file-087.010257e8bb.txt (uploading new version of file-087.txt)
+					 + file-088.010257e8bb.txt (uploading new version of file-088.txt)
+					 + file-089.010257e8bb.txt (uploading new version of file-089.txt)
+					 + file-090.010257e8bb.txt (uploading new version of file-090.txt)
+					 + file-091.010257e8bb.txt (uploading new version of file-091.txt)
+					 + file-092.010257e8bb.txt (uploading new version of file-092.txt)
+					 + file-093.010257e8bb.txt (uploading new version of file-093.txt)
+					 + file-094.010257e8bb.txt (uploading new version of file-094.txt)
+					 + file-095.010257e8bb.txt (uploading new version of file-095.txt)
+					 + file-096.010257e8bb.txt (uploading new version of file-096.txt)
+					 + file-097.010257e8bb.txt (uploading new version of file-097.txt)
+					 + file-098.010257e8bb.txt (uploading new version of file-098.txt)
+					 + file-099.010257e8bb.txt (uploading new version of file-099.txt)
+					   (truncating changed assets log, set \`WRANGLER_LOG=debug\` environment variable to see full diff)
+					Uploading 110 new assets...
+					Uploaded 100% [110 out of 110]",
+					  "out": "↗️  Done syncing assets
+					Total Upload: xx KiB / gzip: xx KiB
+					Worker Startup Time: 100 ms
+					Uploaded test-name (TIMINGS)
+					Deployed test-name triggers (TIMINGS)
+					  https://test-name.test-sub-domain.workers.dev
+					Current Version ID: Galaxy-Class",
+					  "warn": "",
+					}
+				`);
 			});
 
 			it("debug log level", async () => {
@@ -4832,17 +4592,13 @@ addEventListener('fetch', event => {});`
 			await runWrangler("deploy ./index");
 
 			expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Uploaded test-name (TIMINGS)
-			Published test-name (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+				"Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
@@ -4858,17 +4614,13 @@ addEventListener('fetch', event => {});`
 			await runWrangler("deploy ./index");
 
 			expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Uploaded test-name (TIMINGS)
-			Published test-name (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+				"Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
@@ -4883,17 +4635,13 @@ addEventListener('fetch', event => {});`
 			await runWrangler("deploy ./index");
 
 			expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Uploaded test-name (TIMINGS)
-			Published test-name (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+				"Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
@@ -4908,16 +4656,12 @@ addEventListener('fetch', event => {});`
 			await runWrangler("deploy ./index");
 
 			expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Uploaded test-name (TIMINGS)
-			No deploy targets for test-name (TIMINGS)
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+				"Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Uploaded test-name (TIMINGS)
+				No deploy targets for test-name (TIMINGS)
+				Current Version ID: Galaxy-Class"
+			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
@@ -4934,16 +4678,12 @@ addEventListener('fetch', event => {});`
 			await runWrangler("deploy ./index");
 
 			expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Uploaded test-name (TIMINGS)
-			No deploy targets for test-name (TIMINGS)
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+				"Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Uploaded test-name (TIMINGS)
+				No deploy targets for test-name (TIMINGS)
+				Current Version ID: Galaxy-Class"
+			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
@@ -4958,22 +4698,19 @@ addEventListener('fetch', event => {});`
 			writeWorkerSource();
 			mockUploadWorkerRequest({
 				env: "dev",
+				useOldUploadApi: true,
 			});
 			mockUpdateWorkerRequest({ enabled: false, env: "dev" });
 
 			await runWrangler("deploy ./index --env dev --legacy-env false");
 
 			expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Uploaded test-name (dev) (TIMINGS)
-			No deploy targets for test-name (dev) (TIMINGS)
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+				"Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Uploaded test-name (dev) (TIMINGS)
+				No deploy targets for test-name (dev) (TIMINGS)
+				Current Version ID: Galaxy-Class"
+			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
@@ -4995,16 +4732,12 @@ addEventListener('fetch', event => {});`
 			await runWrangler("deploy ./index --env dev --legacy-env false");
 
 			expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Uploaded test-name (dev) (TIMINGS)
-			No deploy targets for test-name (dev) (TIMINGS)
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+				"Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Uploaded test-name (dev) (TIMINGS)
+				No deploy targets for test-name (dev) (TIMINGS)
+				Current Version ID: undefined"
+			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
@@ -5019,6 +4752,7 @@ addEventListener('fetch', event => {});`
 			writeWorkerSource();
 			mockUploadWorkerRequest({
 				env: "dev",
+				useOldUploadApi: true,
 			});
 			mockSubDomainRequest();
 			mockUpdateWorkerRequest({ enabled: true, env: "dev" });
@@ -5026,17 +4760,13 @@ addEventListener('fetch', event => {});`
 			await runWrangler("deploy ./index --env dev --legacy-env false");
 
 			expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Uploaded test-name (dev) (TIMINGS)
-			Published test-name (dev) (TIMINGS)
-			  https://dev.test-name.test-sub-domain.workers.dev
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+				"Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Uploaded test-name (dev) (TIMINGS)
+				Deployed test-name (dev) triggers (TIMINGS)
+				  https://dev.test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
@@ -5052,6 +4782,7 @@ addEventListener('fetch', event => {});`
 			writeWorkerSource();
 			mockUploadWorkerRequest({
 				env: "dev",
+				useOldUploadApi: true,
 			});
 			mockSubDomainRequest();
 			mockUpdateWorkerRequest({ enabled: true, env: "dev" });
@@ -5059,17 +4790,13 @@ addEventListener('fetch', event => {});`
 			await runWrangler("deploy ./index --env dev --legacy-env false");
 
 			expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Uploaded test-name (dev) (TIMINGS)
-			Published test-name (dev) (TIMINGS)
-			  https://dev.test-name.test-sub-domain.workers.dev
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+				"Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Uploaded test-name (dev) (TIMINGS)
+				Deployed test-name (dev) triggers (TIMINGS)
+				  https://dev.test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
@@ -5086,6 +4813,7 @@ addEventListener('fetch', event => {});`
 				env: "dev",
 				expectedCompatibilityDate: "2022-01-12",
 				expectedCompatibilityFlags: ["no_global_navigator"],
+				useOldUploadApi: true,
 			});
 			mockSubDomainRequest();
 			mockUpdateWorkerRequest({ enabled: true, env: "dev" });
@@ -5093,17 +4821,13 @@ addEventListener('fetch', event => {});`
 			await runWrangler("deploy ./index --env dev --legacy-env false");
 
 			expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Uploaded test-name (dev) (TIMINGS)
-			Published test-name (dev) (TIMINGS)
-			  https://dev.test-name.test-sub-domain.workers.dev
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+				"Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Uploaded test-name (dev) (TIMINGS)
+				Deployed test-name (dev) triggers (TIMINGS)
+				  https://dev.test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
@@ -5123,6 +4847,7 @@ addEventListener('fetch', event => {});`
 				env: "dev",
 				expectedCompatibilityDate: "2022-01-13",
 				expectedCompatibilityFlags: ["global_navigator"],
+				useOldUploadApi: true,
 			});
 			mockSubDomainRequest();
 			mockUpdateWorkerRequest({ enabled: true, env: "dev" });
@@ -5130,17 +4855,13 @@ addEventListener('fetch', event => {});`
 			await runWrangler("deploy ./index --env dev --legacy-env false");
 
 			expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Uploaded test-name (dev) (TIMINGS)
-			Published test-name (dev) (TIMINGS)
-			  https://dev.test-name.test-sub-domain.workers.dev
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+				"Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Uploaded test-name (dev) (TIMINGS)
+				Deployed test-name (dev) triggers (TIMINGS)
+				  https://dev.test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
@@ -5169,17 +4890,13 @@ addEventListener('fetch', event => {});`
 			);
 
 			expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Uploaded test-name (dev) (TIMINGS)
-			Published test-name (dev) (TIMINGS)
-			  https://dev.test-name.test-sub-domain.workers.dev
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+				"Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Uploaded test-name (dev) (TIMINGS)
+				Deployed test-name (dev) triggers (TIMINGS)
+				  https://dev.test-name.test-sub-domain.workers.dev
+				Current Version ID: undefined"
+			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
@@ -5235,17 +4952,13 @@ addEventListener('fetch', event => {});`
 			await runWrangler("deploy ./index");
 
 			expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Uploaded test-name (TIMINGS)
-			Published test-name (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+				"Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
@@ -5259,17 +4972,13 @@ addEventListener('fetch', event => {});`
 			await runWrangler("deploy ./index");
 
 			expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Uploaded test-name (TIMINGS)
-			Published test-name (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+				"Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
@@ -5340,17 +5049,13 @@ addEventListener('fetch', event => {});`
 			await runWrangler("deploy index.js");
 
 			expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Uploaded test-name (TIMINGS)
-			Published test-name (TIMINGS)
-			  http://example.com/*
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+				"Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  http://example.com/*
+				Current Version ID: Galaxy-Class"
+			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
@@ -5380,17 +5085,13 @@ addEventListener('fetch', event => {});`
 			await runWrangler("deploy index.js --env production");
 
 			expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Uploaded test-name-production (TIMINGS)
-			Published test-name-production (TIMINGS)
-			  http://production.example.com/*
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+				"Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Uploaded test-name-production (TIMINGS)
+				Deployed test-name-production triggers (TIMINGS)
+				  http://production.example.com/*
+				Current Version ID: Galaxy-Class"
+			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
@@ -5419,17 +5120,13 @@ addEventListener('fetch', event => {});`
 			await runWrangler("deploy index.js --env production");
 
 			expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Uploaded test-name-production (TIMINGS)
-			Published test-name-production (TIMINGS)
-			  http://production.example.com/*
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+				"Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Uploaded test-name-production (TIMINGS)
+				Deployed test-name-production triggers (TIMINGS)
+				  http://production.example.com/*
+				Current Version ID: Galaxy-Class"
+			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
@@ -5451,18 +5148,14 @@ addEventListener('fetch', event => {});`
 			await runWrangler("deploy index.js");
 
 			expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Uploaded test-name (TIMINGS)
-			Published test-name (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			  http://example.com/*
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+				"Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				  http://example.com/*
+				Current Version ID: Galaxy-Class"
+			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
@@ -5492,18 +5185,14 @@ addEventListener('fetch', event => {});`
 			await runWrangler("deploy index.js --env production");
 
 			expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Uploaded test-name-production (TIMINGS)
-			Published test-name-production (TIMINGS)
-			  https://test-name-production.test-sub-domain.workers.dev
-			  http://production.example.com/*
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+				"Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Uploaded test-name-production (TIMINGS)
+				Deployed test-name-production triggers (TIMINGS)
+				  https://test-name-production.test-sub-domain.workers.dev
+				  http://production.example.com/*
+				Current Version ID: Galaxy-Class"
+			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
@@ -5533,18 +5222,14 @@ addEventListener('fetch', event => {});`
 			await runWrangler("deploy index.js --env production");
 
 			expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Uploaded test-name-production (TIMINGS)
-			Published test-name-production (TIMINGS)
-			  https://test-name-production.test-sub-domain.workers.dev
-			  http://production.example.com/*
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+				"Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Uploaded test-name-production (TIMINGS)
+				Deployed test-name-production triggers (TIMINGS)
+				  https://test-name-production.test-sub-domain.workers.dev
+				  http://production.example.com/*
+				Current Version ID: Galaxy-Class"
+			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
@@ -5574,17 +5259,13 @@ addEventListener('fetch', event => {});`
 			await runWrangler("deploy index.js --env production");
 
 			expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Uploaded test-name-production (TIMINGS)
-			Published test-name-production (TIMINGS)
-			  http://production.example.com/*
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+				"Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Uploaded test-name-production (TIMINGS)
+				Deployed test-name-production triggers (TIMINGS)
+				  http://production.example.com/*
+				Current Version ID: Galaxy-Class"
+			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
@@ -5614,17 +5295,13 @@ addEventListener('fetch', event => {});`
 			await runWrangler("deploy index.js --env production");
 
 			expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Uploaded test-name-production (TIMINGS)
-			Published test-name-production (TIMINGS)
-			  http://production.example.com/*
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+				"Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Uploaded test-name-production (TIMINGS)
+				Deployed test-name-production triggers (TIMINGS)
+				  http://production.example.com/*
+				Current Version ID: Galaxy-Class"
+			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
@@ -5769,18 +5446,14 @@ addEventListener('fetch', event => {});`
 
 			await runWrangler("deploy index.js");
 			expect(std.out).toMatchInlineSnapshot(`
-			"Running custom build: node -e \\"4+4; require('fs').writeFileSync('index.js', 'export default { fetch(){ return new Response(123) } }')\\"
-			Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Uploaded test-name (TIMINGS)
-			Published test-name (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+				"Running custom build: node -e \\"4+4; require('fs').writeFileSync('index.js', 'export default { fetch(){ return new Response(123) } }')\\"
+				Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
@@ -5800,18 +5473,14 @@ addEventListener('fetch', event => {});`
 
 				await runWrangler("deploy index.js");
 				expect(std.out).toMatchInlineSnapshot(`
-			"Running custom build: echo \\"export default { fetch(){ return new Response(123) } }\\" > index.js
-			Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Uploaded test-name (TIMINGS)
-			Published test-name (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+					"Running custom build: echo \\"export default { fetch(){ return new Response(123) } }\\" > index.js
+					Total Upload: xx KiB / gzip: xx KiB
+					Worker Startup Time: 100 ms
+					Uploaded test-name (TIMINGS)
+					Deployed test-name triggers (TIMINGS)
+					  https://test-name.test-sub-domain.workers.dev
+					Current Version ID: Galaxy-Class"
+				`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
@@ -5911,17 +5580,13 @@ addEventListener('fetch', event => {});`
 			mockSubDomainRequest();
 			await runWrangler("deploy index.js --minify");
 			expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Uploaded test-name (TIMINGS)
-			Published test-name (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+				"Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
@@ -5956,17 +5621,13 @@ addEventListener('fetch', event => {});`
 			mockSubDomainRequest();
 			await runWrangler("deploy -e testEnv index.js");
 			expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Uploaded test-name (testEnv) (TIMINGS)
-			Published test-name (testEnv) (TIMINGS)
-			  https://testEnv.test-name.test-sub-domain.workers.dev
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+				"Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Uploaded test-name (testEnv) (TIMINGS)
+				Deployed test-name (testEnv) triggers (TIMINGS)
+				  https://testEnv.test-name.test-sub-domain.workers.dev
+				Current Version ID: undefined"
+			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 	});
@@ -5986,20 +5647,16 @@ addEventListener('fetch', event => {});`
 			mockUploadWorkerRequest();
 			await runWrangler("deploy index.js");
 			expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Your worker has access to the following bindings:
-			- Durable Objects:
-			  - SOMENAME: SomeClass
-			Uploaded test-name (TIMINGS)
-			Published test-name (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+				"Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Your worker has access to the following bindings:
+				- Durable Objects:
+				  - SOMENAME: SomeClass
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`
 			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
@@ -6042,20 +5699,16 @@ addEventListener('fetch', event => {});`
 			mockUploadWorkerRequest();
 			await runWrangler("deploy index.js");
 			expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Your worker has access to the following bindings:
-			- Durable Objects:
-			  - SOMENAME: SomeClass (defined in some-script)
-			Uploaded test-name (TIMINGS)
-			Published test-name (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+				"Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Your worker has access to the following bindings:
+				- Durable Objects:
+				  - SOMENAME: SomeClass (defined in some-script)
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
@@ -6087,25 +5740,22 @@ addEventListener('fetch', event => {});`
 						{ new_classes: ["SomeOtherClass"] },
 					],
 				},
+				useOldUploadApi: true,
 			});
 
 			await runWrangler("deploy index.js");
 			expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Your worker has access to the following bindings:
-			- Durable Objects:
-			  - SOMENAME: SomeClass
-			  - SOMEOTHERNAME: SomeOtherClass
-			Uploaded test-name (TIMINGS)
-			Published test-name (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+				"Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Your worker has access to the following bindings:
+				- Durable Objects:
+				  - SOMENAME: SomeClass
+				  - SOMEOTHERNAME: SomeOtherClass
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
@@ -6141,31 +5791,28 @@ addEventListener('fetch', event => {});`
 						},
 					],
 				},
+				useOldUploadApi: true,
 			});
 
 			await runWrangler("deploy index.js");
 			expect(std).toMatchInlineSnapshot(`
-			Object {
-			  "debug": "",
-			  "err": "",
-			  "info": "",
-			  "out": "Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Your worker has access to the following bindings:
-			- Durable Objects:
-			  - SOMENAME: SomeClass
-			  - SOMEOTHERNAME: SomeOtherClass
-			Uploaded test-name (TIMINGS)
-			Published test-name (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments",
-			  "warn": "",
-			}
-		`);
+				Object {
+				  "debug": "",
+				  "err": "",
+				  "info": "",
+				  "out": "Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Your worker has access to the following bindings:
+				- Durable Objects:
+				  - SOMENAME: SomeClass
+				  - SOMEOTHERNAME: SomeOtherClass
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class",
+				  "warn": "",
+				}
+			`);
 		});
 
 		it("should not send migrations if they've all already been sent", async () => {
@@ -6196,27 +5843,23 @@ addEventListener('fetch', event => {});`
 
 			await runWrangler("deploy index.js");
 			expect(std).toMatchInlineSnapshot(`
-			Object {
-			  "debug": "",
-			  "err": "",
-			  "info": "",
-			  "out": "Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Your worker has access to the following bindings:
-			- Durable Objects:
-			  - SOMENAME: SomeClass
-			  - SOMEOTHERNAME: SomeOtherClass
-			Uploaded test-name (TIMINGS)
-			Published test-name (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments",
-			  "warn": "",
-			}
-		`);
+				Object {
+				  "debug": "",
+				  "err": "",
+				  "info": "",
+				  "out": "Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Your worker has access to the following bindings:
+				- Durable Objects:
+				  - SOMENAME: SomeClass
+				  - SOMEOTHERNAME: SomeOtherClass
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class",
+				  "warn": "",
+				}
+			`);
 		});
 
 		describe("service environments", () => {
@@ -6248,25 +5891,22 @@ addEventListener('fetch', event => {});`
 							{ new_classes: ["SomeOtherClass"] },
 						],
 					},
+					useOldUploadApi: true,
 				});
 
 				await runWrangler("deploy index.js --legacy-env false");
 				expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Your worker has access to the following bindings:
-			- Durable Objects:
-			  - SOMENAME: SomeClass
-			  - SOMEOTHERNAME: SomeOtherClass
-			Uploaded test-name (TIMINGS)
-			Published test-name (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+					"Total Upload: xx KiB / gzip: xx KiB
+					Worker Startup Time: 100 ms
+					Your worker has access to the following bindings:
+					- Durable Objects:
+					  - SOMENAME: SomeClass
+					  - SOMEOTHERNAME: SomeOtherClass
+					Uploaded test-name (TIMINGS)
+					Deployed test-name triggers (TIMINGS)
+					  https://test-name.test-sub-domain.workers.dev
+					Current Version ID: Galaxy-Class"
+				`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`
 			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
@@ -6317,25 +5957,22 @@ addEventListener('fetch', event => {});`
 							{ new_classes: ["SomeOtherClass"] },
 						],
 					},
+					useOldUploadApi: true,
 				});
 
 				await runWrangler("deploy index.js --legacy-env false --env xyz");
 				expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Your worker has access to the following bindings:
-			- Durable Objects:
-			  - SOMENAME: SomeClass
-			  - SOMEOTHERNAME: SomeOtherClass
-			Uploaded test-name (xyz) (TIMINGS)
-			Published test-name (xyz) (TIMINGS)
-			  https://xyz.test-name.test-sub-domain.workers.dev
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+					"Total Upload: xx KiB / gzip: xx KiB
+					Worker Startup Time: 100 ms
+					Your worker has access to the following bindings:
+					- Durable Objects:
+					  - SOMENAME: SomeClass
+					  - SOMEOTHERNAME: SomeOtherClass
+					Uploaded test-name (xyz) (TIMINGS)
+					Deployed test-name (xyz) triggers (TIMINGS)
+					  https://xyz.test-name.test-sub-domain.workers.dev
+					Current Version ID: Galaxy-Class"
+				`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`
 			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
@@ -6381,36 +6018,33 @@ addEventListener('fetch', event => {});`
 							},
 						],
 					},
+					useOldUploadApi: true,
 				});
 
 				await runWrangler("deploy index.js --legacy-env false");
 				expect(std).toMatchInlineSnapshot(`
-			Object {
-			  "debug": "",
-			  "err": "",
-			  "info": "",
-			  "out": "Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Your worker has access to the following bindings:
-			- Durable Objects:
-			  - SOMENAME: SomeClass
-			  - SOMEOTHERNAME: SomeOtherClass
-			Uploaded test-name (TIMINGS)
-			Published test-name (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
+					Object {
+					  "debug": "",
+					  "err": "",
+					  "info": "",
+					  "out": "Total Upload: xx KiB / gzip: xx KiB
+					Worker Startup Time: 100 ms
+					Your worker has access to the following bindings:
+					- Durable Objects:
+					  - SOMENAME: SomeClass
+					  - SOMEOTHERNAME: SomeOtherClass
+					Uploaded test-name (TIMINGS)
+					Deployed test-name triggers (TIMINGS)
+					  https://test-name.test-sub-domain.workers.dev
+					Current Version ID: Galaxy-Class",
+					  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
 
+					    - Experimental: Service environments are in beta, and their behaviour is guaranteed to change in
+					  the future. DO NOT USE IN PRODUCTION.
 
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
-
-			    - Experimental: Service environments are in beta, and their behaviour is guaranteed to change in
-			  the future. DO NOT USE IN PRODUCTION.
-
-			",
-			}
-		`);
+					",
+					}
+				`);
 			});
 
 			it("should use an environment's current migration tag when publishing migrations", async () => {
@@ -6457,36 +6091,33 @@ addEventListener('fetch', event => {});`
 							},
 						],
 					},
+					useOldUploadApi: true,
 				});
 
 				await runWrangler("deploy index.js --legacy-env false --env xyz");
 				expect(std).toMatchInlineSnapshot(`
-			Object {
-			  "debug": "",
-			  "err": "",
-			  "info": "",
-			  "out": "Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Your worker has access to the following bindings:
-			- Durable Objects:
-			  - SOMENAME: SomeClass
-			  - SOMEOTHERNAME: SomeOtherClass
-			Uploaded test-name (xyz) (TIMINGS)
-			Published test-name (xyz) (TIMINGS)
-			  https://xyz.test-name.test-sub-domain.workers.dev
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
+					Object {
+					  "debug": "",
+					  "err": "",
+					  "info": "",
+					  "out": "Total Upload: xx KiB / gzip: xx KiB
+					Worker Startup Time: 100 ms
+					Your worker has access to the following bindings:
+					- Durable Objects:
+					  - SOMENAME: SomeClass
+					  - SOMEOTHERNAME: SomeOtherClass
+					Uploaded test-name (xyz) (TIMINGS)
+					Deployed test-name (xyz) triggers (TIMINGS)
+					  https://xyz.test-name.test-sub-domain.workers.dev
+					Current Version ID: Galaxy-Class",
+					  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
 
+					    - Experimental: Service environments are in beta, and their behaviour is guaranteed to change in
+					  the future. DO NOT USE IN PRODUCTION.
 
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
-
-			    - Experimental: Service environments are in beta, and their behaviour is guaranteed to change in
-			  the future. DO NOT USE IN PRODUCTION.
-
-			",
-			}
-		`);
+					",
+					}
+				`);
 			});
 		});
 	});
@@ -6510,17 +6141,13 @@ addEventListener('fetch', event => {});`
 
 			await runWrangler("publish index.js");
 			expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Uploaded test-name (TIMINGS)
-			Published test-name (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+				"Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
 		});
 	});
 
@@ -6538,17 +6165,13 @@ addEventListener('fetch', event => {});`
 
 			await runWrangler("publish index.js");
 			expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Uploaded test-name (TIMINGS)
-			Published test-name (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+				"Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
 		});
 	});
 
@@ -6761,59 +6384,56 @@ addEventListener('fetch', event => {});`
 						type: "another unsafe thing",
 					},
 				],
+				useOldUploadApi: true,
 			});
 			mockSubDomainRequest();
 			mockLegacyScriptData({ scripts: [] });
 
 			await expect(runWrangler("deploy index.js")).resolves.toBeUndefined();
 			expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Your worker has access to the following bindings:
-			- Data Blobs:
-			  - DATA_BLOB_ONE: some-data-blob.bin
-			  - DATA_BLOB_TWO: more-data-blob.bin
-			- Durable Objects:
-			  - DURABLE_OBJECT_ONE: SomeDurableObject (defined in some-durable-object-worker)
-			  - DURABLE_OBJECT_TWO: AnotherDurableObject (defined in another-durable-object-worker) - staging
-			- KV Namespaces:
-			  - KV_NAMESPACE_ONE: kv-ns-one-id
-			  - KV_NAMESPACE_TWO: kv-ns-two-id
-			- R2 Buckets:
-			  - R2_BUCKET_ONE: r2-bucket-one-name
-			  - R2_BUCKET_TWO: r2-bucket-two-name
-			  - R2_BUCKET_ONE_EU: r2-bucket-one-name (eu)
-			  - R2_BUCKET_TWO_EU: r2-bucket-two-name (eu)
-			- logfwdr:
-			  - httplogs: httplogs
-			  - trace: trace
-			- Analytics Engine Datasets:
-			  - AE_DATASET_ONE: ae-dataset-one-name
-			  - AE_DATASET_TWO: ae-dataset-two-name
-			- Text Blobs:
-			  - TEXT_BLOB_ONE: my-entire-app-depends-on-this.cfg
-			  - TEXT_BLOB_TWO: the-entirety-of-human-knowledge.txt
-			- Unsafe:
-			  - some unsafe thing: UNSAFE_BINDING_ONE
-			  - another unsafe thing: UNSAFE_BINDING_TWO
-			- Vars:
-			  - ENV_VAR_ONE: 123
-			  - ENV_VAR_TWO: \\"Hello, I'm an environment variable\\"
-			- Wasm Modules:
-			  - WASM_MODULE_ONE: some_wasm.wasm
-			  - WASM_MODULE_TWO: more_wasm.wasm
-			- Unsafe Metadata:
-			  - extra_data: \\"interesting value\\"
-			  - more_data: \\"dubious value\\"
-			Uploaded test-name (TIMINGS)
-			Published test-name (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+				"Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Your worker has access to the following bindings:
+				- Data Blobs:
+				  - DATA_BLOB_ONE: some-data-blob.bin
+				  - DATA_BLOB_TWO: more-data-blob.bin
+				- Durable Objects:
+				  - DURABLE_OBJECT_ONE: SomeDurableObject (defined in some-durable-object-worker)
+				  - DURABLE_OBJECT_TWO: AnotherDurableObject (defined in another-durable-object-worker) - staging
+				- KV Namespaces:
+				  - KV_NAMESPACE_ONE: kv-ns-one-id
+				  - KV_NAMESPACE_TWO: kv-ns-two-id
+				- R2 Buckets:
+				  - R2_BUCKET_ONE: r2-bucket-one-name
+				  - R2_BUCKET_TWO: r2-bucket-two-name
+				  - R2_BUCKET_ONE_EU: r2-bucket-one-name (eu)
+				  - R2_BUCKET_TWO_EU: r2-bucket-two-name (eu)
+				- logfwdr:
+				  - httplogs: httplogs
+				  - trace: trace
+				- Analytics Engine Datasets:
+				  - AE_DATASET_ONE: ae-dataset-one-name
+				  - AE_DATASET_TWO: ae-dataset-two-name
+				- Text Blobs:
+				  - TEXT_BLOB_ONE: my-entire-app-depends-on-this.cfg
+				  - TEXT_BLOB_TWO: the-entirety-of-human-knowledge.txt
+				- Unsafe:
+				  - some unsafe thing: UNSAFE_BINDING_ONE
+				  - another unsafe thing: UNSAFE_BINDING_TWO
+				- Vars:
+				  - ENV_VAR_ONE: 123
+				  - ENV_VAR_TWO: \\"Hello, I'm an environment variable\\"
+				- Wasm Modules:
+				  - WASM_MODULE_ONE: some_wasm.wasm
+				  - WASM_MODULE_TWO: more_wasm.wasm
+				- Unsafe Metadata:
+				  - extra_data: \\"interesting value\\"
+				  - more_data: \\"dubious value\\"
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`
 			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
@@ -7215,25 +6835,22 @@ addEventListener('fetch', event => {});`
 					expectedBindings: [
 						{ name: "TESTWASMNAME", part: "TESTWASMNAME", type: "wasm_module" },
 					],
+					useOldUploadApi: true,
 				});
 				mockSubDomainRequest();
 
 				await runWrangler("deploy index.js");
 				expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Your worker has access to the following bindings:
-			- Wasm Modules:
-			  - TESTWASMNAME: path/to/test.wasm
-			Uploaded test-name (TIMINGS)
-			Published test-name (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+					"Total Upload: xx KiB / gzip: xx KiB
+					Worker Startup Time: 100 ms
+					Your worker has access to the following bindings:
+					- Wasm Modules:
+					  - TESTWASMNAME: path/to/test.wasm
+					Uploaded test-name (TIMINGS)
+					Deployed test-name triggers (TIMINGS)
+					  https://test-name.test-sub-domain.workers.dev
+					Current Version ID: Galaxy-Class"
+				`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
@@ -7289,24 +6906,21 @@ addEventListener('fetch', event => {});`
 						{ name: "TESTWASMNAME", part: "TESTWASMNAME", type: "wasm_module" },
 					],
 					expectedCompatibilityDate: "2022-01-12",
+					useOldUploadApi: true,
 				});
 				mockSubDomainRequest();
 				await runWrangler("deploy index.js --config ./path/to/wrangler.toml");
 				expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Your worker has access to the following bindings:
-			- Wasm Modules:
-			  - TESTWASMNAME: path/to/and/the/path/to/test.wasm
-			Uploaded test-name (TIMINGS)
-			Published test-name (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+					"Total Upload: xx KiB / gzip: xx KiB
+					Worker Startup Time: 100 ms
+					Your worker has access to the following bindings:
+					- Wasm Modules:
+					  - TESTWASMNAME: path/to/and/the/path/to/test.wasm
+					Uploaded test-name (TIMINGS)
+					Deployed test-name triggers (TIMINGS)
+					  https://test-name.test-sub-domain.workers.dev
+					Current Version ID: Galaxy-Class"
+				`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
@@ -7331,21 +6945,18 @@ addEventListener('fetch', event => {});`
 							type: "wasm_module",
 						},
 					],
+					useOldUploadApi: true,
 				});
 				mockSubDomainRequest();
 				await runWrangler("deploy index.js");
 				expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Uploaded test-name (TIMINGS)
-			Published test-name (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+					"Total Upload: xx KiB / gzip: xx KiB
+					Worker Startup Time: 100 ms
+					Uploaded test-name (TIMINGS)
+					Deployed test-name triggers (TIMINGS)
+					  https://test-name.test-sub-domain.workers.dev
+					Current Version ID: Galaxy-Class"
+				`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
@@ -7371,24 +6982,21 @@ addEventListener('fetch', event => {});`
 							type: "text_blob",
 						},
 					],
+					useOldUploadApi: true,
 				});
 				mockSubDomainRequest();
 				await runWrangler("deploy index.js");
 				expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Your worker has access to the following bindings:
-			- Text Blobs:
-			  - TESTTEXTBLOBNAME: path/to/text.file
-			Uploaded test-name (TIMINGS)
-			Published test-name (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+					"Total Upload: xx KiB / gzip: xx KiB
+					Worker Startup Time: 100 ms
+					Your worker has access to the following bindings:
+					- Text Blobs:
+					  - TESTTEXTBLOBNAME: path/to/text.file
+					Uploaded test-name (TIMINGS)
+					Deployed test-name triggers (TIMINGS)
+					  https://test-name.test-sub-domain.workers.dev
+					Current Version ID: Galaxy-Class"
+				`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
@@ -7448,24 +7056,21 @@ addEventListener('fetch', event => {});`
 						},
 					],
 					expectedCompatibilityDate: "2022-01-12",
+					useOldUploadApi: true,
 				});
 				mockSubDomainRequest();
 				await runWrangler("deploy index.js --config ./path/to/wrangler.toml");
 				expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Your worker has access to the following bindings:
-			- Text Blobs:
-			  - TESTTEXTBLOBNAME: path/to/and/the/path/to/text.file
-			Uploaded test-name (TIMINGS)
-			Published test-name (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+					"Total Upload: xx KiB / gzip: xx KiB
+					Worker Startup Time: 100 ms
+					Your worker has access to the following bindings:
+					- Text Blobs:
+					  - TESTTEXTBLOBNAME: path/to/and/the/path/to/text.file
+					Uploaded test-name (TIMINGS)
+					Deployed test-name triggers (TIMINGS)
+					  https://test-name.test-sub-domain.workers.dev
+					Current Version ID: Galaxy-Class"
+				`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
@@ -7491,24 +7096,21 @@ addEventListener('fetch', event => {});`
 							type: "data_blob",
 						},
 					],
+					useOldUploadApi: true,
 				});
 				mockSubDomainRequest();
 				await runWrangler("deploy index.js");
 				expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Your worker has access to the following bindings:
-			- Data Blobs:
-			  - TESTDATABLOBNAME: path/to/data.bin
-			Uploaded test-name (TIMINGS)
-			Published test-name (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+					"Total Upload: xx KiB / gzip: xx KiB
+					Worker Startup Time: 100 ms
+					Your worker has access to the following bindings:
+					- Data Blobs:
+					  - TESTDATABLOBNAME: path/to/data.bin
+					Uploaded test-name (TIMINGS)
+					Deployed test-name triggers (TIMINGS)
+					  https://test-name.test-sub-domain.workers.dev
+					Current Version ID: Galaxy-Class"
+				`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
@@ -7568,24 +7170,21 @@ addEventListener('fetch', event => {});`
 						},
 					],
 					expectedCompatibilityDate: "2022-01-12",
+					useOldUploadApi: true,
 				});
 				mockSubDomainRequest();
 				await runWrangler("deploy index.js --config ./path/to/wrangler.toml");
 				expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Your worker has access to the following bindings:
-			- Data Blobs:
-			  - TESTDATABLOBNAME: path/to/and/the/path/to/data.bin
-			Uploaded test-name (TIMINGS)
-			Published test-name (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+					"Total Upload: xx KiB / gzip: xx KiB
+					Worker Startup Time: 100 ms
+					Your worker has access to the following bindings:
+					- Data Blobs:
+					  - TESTDATABLOBNAME: path/to/and/the/path/to/data.bin
+					Uploaded test-name (TIMINGS)
+					Deployed test-name triggers (TIMINGS)
+					  https://test-name.test-sub-domain.workers.dev
+					Current Version ID: Galaxy-Class"
+				`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
@@ -7616,25 +7215,21 @@ addEventListener('fetch', event => {});`
 
 				await runWrangler("deploy index.js");
 				expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Your worker has access to the following bindings:
-			- Vars:
-			  - text: \\"plain ol' string\\"
-			  - count: 1
-			  - complex: {
-			 \\"enabled\\": true,
-			 \\"id\\": 123
-			}
-			Uploaded test-name (TIMINGS)
-			Published test-name (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+					"Total Upload: xx KiB / gzip: xx KiB
+					Worker Startup Time: 100 ms
+					Your worker has access to the following bindings:
+					- Vars:
+					  - text: \\"plain ol' string\\"
+					  - count: 1
+					  - complex: {
+					 \\"enabled\\": true,
+					 \\"id\\": 123
+					}
+					Uploaded test-name (TIMINGS)
+					Deployed test-name triggers (TIMINGS)
+					  https://test-name.test-sub-domain.workers.dev
+					Current Version ID: Galaxy-Class"
+				`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
@@ -7646,27 +7241,23 @@ addEventListener('fetch', event => {});`
 				mockUploadWorkerRequest();
 				await runWrangler("deploy index.js --var TEXT:sometext --var COUNT:1");
 				expect(std).toMatchInlineSnapshot(`
-			Object {
-			  "debug": "",
-			  "err": "",
-			  "info": "",
-			  "out": "Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Your worker has access to the following bindings:
-			- Vars:
-			  - TEXT: \\"(hidden)\\"
-			  - COUNT: \\"(hidden)\\"
-			Uploaded test-name (TIMINGS)
-			Published test-name (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments",
-			  "warn": "",
-			}
-		`);
+					Object {
+					  "debug": "",
+					  "err": "",
+					  "info": "",
+					  "out": "Total Upload: xx KiB / gzip: xx KiB
+					Worker Startup Time: 100 ms
+					Your worker has access to the following bindings:
+					- Vars:
+					  - TEXT: \\"(hidden)\\"
+					  - COUNT: \\"(hidden)\\"
+					Uploaded test-name (TIMINGS)
+					Deployed test-name triggers (TIMINGS)
+					  https://test-name.test-sub-domain.workers.dev
+					Current Version ID: Galaxy-Class",
+					  "warn": "",
+					}
+				`);
 			});
 		});
 
@@ -7685,20 +7276,16 @@ addEventListener('fetch', event => {});`
 
 				await runWrangler("deploy index.js");
 				expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Your worker has access to the following bindings:
-			- R2 Buckets:
-			  - FOO: foo-bucket
-			Uploaded test-name (TIMINGS)
-			Published test-name (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+					"Total Upload: xx KiB / gzip: xx KiB
+					Worker Startup Time: 100 ms
+					Your worker has access to the following bindings:
+					- R2 Buckets:
+					  - FOO: foo-bucket
+					Uploaded test-name (TIMINGS)
+					Deployed test-name triggers (TIMINGS)
+					  https://test-name.test-sub-domain.workers.dev
+					Current Version ID: Galaxy-Class"
+				`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
@@ -7739,21 +7326,17 @@ addEventListener('fetch', event => {});`
 
 				await runWrangler("deploy index.js");
 				expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Your worker has access to the following bindings:
-			- logfwdr:
-			  - httplogs: httplogs
-			  - trace: trace
-			Uploaded test-name (TIMINGS)
-			Published test-name (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+					"Total Upload: xx KiB / gzip: xx KiB
+					Worker Startup Time: 100 ms
+					Your worker has access to the following bindings:
+					- logfwdr:
+					  - httplogs: httplogs
+					  - trace: trace
+					Uploaded test-name (TIMINGS)
+					Deployed test-name triggers (TIMINGS)
+					  https://test-name.test-sub-domain.workers.dev
+					Current Version ID: Galaxy-Class"
+				`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
@@ -7817,20 +7400,16 @@ addEventListener('fetch', event => {});`
 
 				await runWrangler("deploy index.js");
 				expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Your worker has access to the following bindings:
-			- Durable Objects:
-			  - EXAMPLE_DO_BINDING: ExampleDurableObject
-			Uploaded test-name (TIMINGS)
-			Published test-name (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+					"Total Upload: xx KiB / gzip: xx KiB
+					Worker Startup Time: 100 ms
+					Your worker has access to the following bindings:
+					- Durable Objects:
+					  - EXAMPLE_DO_BINDING: ExampleDurableObject
+					Uploaded test-name (TIMINGS)
+					Deployed test-name triggers (TIMINGS)
+					  https://test-name.test-sub-domain.workers.dev
+					Current Version ID: Galaxy-Class"
+				`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
@@ -7859,24 +7438,21 @@ addEventListener('fetch', event => {});`
 							type: "durable_object_namespace",
 						},
 					],
+					useOldUploadApi: true,
 				});
 
 				await runWrangler("deploy index.js");
 				expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Your worker has access to the following bindings:
-			- Durable Objects:
-			  - EXAMPLE_DO_BINDING: ExampleDurableObject (defined in example-do-binding-worker)
-			Uploaded test-name (TIMINGS)
-			Published test-name (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+					"Total Upload: xx KiB / gzip: xx KiB
+					Worker Startup Time: 100 ms
+					Your worker has access to the following bindings:
+					- Durable Objects:
+					  - EXAMPLE_DO_BINDING: ExampleDurableObject (defined in example-do-binding-worker)
+					Uploaded test-name (TIMINGS)
+					Deployed test-name triggers (TIMINGS)
+					  https://test-name.test-sub-domain.workers.dev
+					Current Version ID: Galaxy-Class"
+				`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
@@ -7914,20 +7490,16 @@ addEventListener('fetch', event => {});`
 
 				await runWrangler("deploy index.js");
 				expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Your worker has access to the following bindings:
-			- Durable Objects:
-			  - EXAMPLE_DO_BINDING: ExampleDurableObject
-			Uploaded test-name (TIMINGS)
-			Published test-name (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+					"Total Upload: xx KiB / gzip: xx KiB
+					Worker Startup Time: 100 ms
+					Your worker has access to the following bindings:
+					- Durable Objects:
+					  - EXAMPLE_DO_BINDING: ExampleDurableObject
+					Uploaded test-name (TIMINGS)
+					Deployed test-name triggers (TIMINGS)
+					  https://test-name.test-sub-domain.workers.dev
+					Current Version ID: Galaxy-Class"
+				`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
@@ -8041,20 +7613,16 @@ addEventListener('fetch', event => {});`
 
 				await runWrangler("deploy index.js");
 				expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Your worker has access to the following bindings:
-			- Services:
-			  - FOO: foo-service - production
-			Uploaded test-name (TIMINGS)
-			Published test-name (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+					"Total Upload: xx KiB / gzip: xx KiB
+					Worker Startup Time: 100 ms
+					Your worker has access to the following bindings:
+					- Services:
+					  - FOO: foo-service - production
+					Uploaded test-name (TIMINGS)
+					Deployed test-name triggers (TIMINGS)
+					  https://test-name.test-sub-domain.workers.dev
+					Current Version ID: Galaxy-Class"
+				`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
@@ -8086,20 +7654,16 @@ addEventListener('fetch', event => {});`
 
 				await runWrangler("deploy index.js");
 				expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Your worker has access to the following bindings:
-			- Services:
-			  - FOO: foo-service - production (#MyHandler)
-			Uploaded test-name (TIMINGS)
-			Published test-name (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+					"Total Upload: xx KiB / gzip: xx KiB
+					Worker Startup Time: 100 ms
+					Your worker has access to the following bindings:
+					- Services:
+					  - FOO: foo-service - production (#MyHandler)
+					Uploaded test-name (TIMINGS)
+					Deployed test-name triggers (TIMINGS)
+					  https://test-name.test-sub-domain.workers.dev
+					Current Version ID: Galaxy-Class"
+				`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
@@ -8122,20 +7686,16 @@ addEventListener('fetch', event => {});`
 
 				await runWrangler("deploy index.js");
 				expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Your worker has access to the following bindings:
-			- Analytics Engine Datasets:
-			  - FOO: foo-dataset
-			Uploaded test-name (TIMINGS)
-			Published test-name (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+					"Total Upload: xx KiB / gzip: xx KiB
+					Worker Startup Time: 100 ms
+					Your worker has access to the following bindings:
+					- Analytics Engine Datasets:
+					  - FOO: foo-dataset
+					Uploaded test-name (TIMINGS)
+					Deployed test-name triggers (TIMINGS)
+					  https://test-name.test-sub-domain.workers.dev
+					Current Version ID: Galaxy-Class"
+				`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
@@ -8164,20 +7724,16 @@ addEventListener('fetch', event => {});`
 				});
 				await runWrangler("deploy index.js");
 				expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Your worker has access to the following bindings:
-			- dispatch namespaces:
-			  - foo: Foo
-			Uploaded test-name (TIMINGS)
-			Published test-name (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+					"Total Upload: xx KiB / gzip: xx KiB
+					Worker Startup Time: 100 ms
+					Your worker has access to the following bindings:
+					- dispatch namespaces:
+					  - foo: Foo
+					Uploaded test-name (TIMINGS)
+					Deployed test-name triggers (TIMINGS)
+					  https://test-name.test-sub-domain.workers.dev
+					Current Version ID: Galaxy-Class"
+				`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
@@ -8226,21 +7782,17 @@ addEventListener('fetch', event => {});`
 				});
 				await runWrangler("publish index.js");
 				expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Your worker has access to the following bindings:
-			- dispatch namespaces:
-			  - foo: Foo (outbound -> foo_outbound)
-			  - bar: Bar (outbound -> bar_outbound)
-			Uploaded test-name (TIMINGS)
-			Published test-name (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+					"Total Upload: xx KiB / gzip: xx KiB
+					Worker Startup Time: 100 ms
+					Your worker has access to the following bindings:
+					- dispatch namespaces:
+					  - foo: Foo (outbound -> foo_outbound)
+					  - bar: Bar (outbound -> bar_outbound)
+					Uploaded test-name (TIMINGS)
+					Deployed test-name triggers (TIMINGS)
+					  https://test-name.test-sub-domain.workers.dev
+					Current Version ID: Galaxy-Class"
+				`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`
 			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m\`wrangler publish\` is deprecated and will be removed in the next major version.[0m
@@ -8287,20 +7839,16 @@ addEventListener('fetch', event => {});`
 				});
 				await runWrangler("publish index.js");
 				expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Your worker has access to the following bindings:
-			- dispatch namespaces:
-			  - foo: Foo (outbound -> foo_outbound)
-			Uploaded test-name (TIMINGS)
-			Published test-name (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+					"Total Upload: xx KiB / gzip: xx KiB
+					Worker Startup Time: 100 ms
+					Your worker has access to the following bindings:
+					- dispatch namespaces:
+					  - foo: Foo (outbound -> foo_outbound)
+					Uploaded test-name (TIMINGS)
+					Deployed test-name triggers (TIMINGS)
+					  https://test-name.test-sub-domain.workers.dev
+					Current Version ID: Galaxy-Class"
+				`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`
 			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m\`wrangler publish\` is deprecated and will be removed in the next major version.[0m
@@ -8341,22 +7889,18 @@ addEventListener('fetch', event => {});`
 					});
 					await runWrangler("deploy index.js");
 					expect(std.out).toMatchInlineSnapshot(`
-				"Total Upload: xx KiB / gzip: xx KiB
-				Worker Startup Time: 100 ms
-				Your worker has access to the following bindings:
-				- Unsafe Metadata:
-				  - stringify: true
-				  - something: \\"else\\"
-				  - nested: {\\"stuff\\":\\"here\\"}
-				Uploaded test-name (TIMINGS)
-				Published test-name (TIMINGS)
-				  https://test-name.test-sub-domain.workers.dev
-				Current Deployment ID: Galaxy-Class
-				Current Version ID: Galaxy-Class
-
-
-				Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-			`);
+						"Total Upload: xx KiB / gzip: xx KiB
+						Worker Startup Time: 100 ms
+						Your worker has access to the following bindings:
+						- Unsafe Metadata:
+						  - stringify: true
+						  - something: \\"else\\"
+						  - nested: {\\"stuff\\":\\"here\\"}
+						Uploaded test-name (TIMINGS)
+						Deployed test-name triggers (TIMINGS)
+						  https://test-name.test-sub-domain.workers.dev
+						Current Version ID: Galaxy-Class"
+					`);
 				});
 
 				it("should warn if using unsafe bindings", async () => {
@@ -8386,20 +7930,16 @@ addEventListener('fetch', event => {});`
 
 					await runWrangler("deploy index.js");
 					expect(std.out).toMatchInlineSnapshot(`
-				"Total Upload: xx KiB / gzip: xx KiB
-				Worker Startup Time: 100 ms
-				Your worker has access to the following bindings:
-				- Unsafe:
-				  - binding-type: my-binding
-				Uploaded test-name (TIMINGS)
-				Published test-name (TIMINGS)
-				  https://test-name.test-sub-domain.workers.dev
-				Current Deployment ID: Galaxy-Class
-				Current Version ID: Galaxy-Class
-
-
-				Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-			`);
+						"Total Upload: xx KiB / gzip: xx KiB
+						Worker Startup Time: 100 ms
+						Your worker has access to the following bindings:
+						- Unsafe:
+						  - binding-type: my-binding
+						Uploaded test-name (TIMINGS)
+						Deployed test-name triggers (TIMINGS)
+						  https://test-name.test-sub-domain.workers.dev
+						Current Version ID: Galaxy-Class"
+					`);
 					expect(std.err).toMatchInlineSnapshot(`""`);
 					expect(std.warn).toMatchInlineSnapshot(`
 				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
@@ -8437,20 +7977,16 @@ addEventListener('fetch', event => {});`
 
 					await runWrangler("deploy index.js");
 					expect(std.out).toMatchInlineSnapshot(`
-				"Total Upload: xx KiB / gzip: xx KiB
-				Worker Startup Time: 100 ms
-				Your worker has access to the following bindings:
-				- Unsafe:
-				  - plain_text: my-binding
-				Uploaded test-name (TIMINGS)
-				Published test-name (TIMINGS)
-				  https://test-name.test-sub-domain.workers.dev
-				Current Deployment ID: Galaxy-Class
-				Current Version ID: Galaxy-Class
-
-
-				Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-			`);
+						"Total Upload: xx KiB / gzip: xx KiB
+						Worker Startup Time: 100 ms
+						Your worker has access to the following bindings:
+						- Unsafe:
+						  - plain_text: my-binding
+						Uploaded test-name (TIMINGS)
+						Deployed test-name triggers (TIMINGS)
+						  https://test-name.test-sub-domain.workers.dev
+						Current Version ID: Galaxy-Class"
+					`);
 					expect(std.err).toMatchInlineSnapshot(`""`);
 					expect(std.warn).toMatchInlineSnapshot(`
 				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
@@ -8484,17 +8020,13 @@ addEventListener('fetch', event => {});`
 
 					await runWrangler("deploy index.js");
 					expect(std.out).toMatchInlineSnapshot(`
-				"Total Upload: xx KiB / gzip: xx KiB
-				Worker Startup Time: 100 ms
-				Uploaded test-name (TIMINGS)
-				Published test-name (TIMINGS)
-				  https://test-name.test-sub-domain.workers.dev
-				Current Deployment ID: Galaxy-Class
-				Current Version ID: Galaxy-Class
-
-
-				Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-			`);
+						"Total Upload: xx KiB / gzip: xx KiB
+						Worker Startup Time: 100 ms
+						Uploaded test-name (TIMINGS)
+						Deployed test-name triggers (TIMINGS)
+						  https://test-name.test-sub-domain.workers.dev
+						Current Version ID: Galaxy-Class"
+					`);
 					expect(std.err).toMatchInlineSnapshot(`""`);
 					expect(std.warn).toMatchInlineSnapshot(`
 				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
@@ -8592,17 +8124,13 @@ addEventListener('fetch', event => {});`
 
 					await runWrangler("deploy index.js");
 					expect(std.out).toMatchInlineSnapshot(`
-				"Total Upload: xx KiB / gzip: xx KiB
-				Worker Startup Time: 100 ms
-				Uploaded test-name (TIMINGS)
-				Published test-name (TIMINGS)
-				  https://test-name.test-sub-domain.workers.dev
-				Current Deployment ID: Galaxy-Class
-				Current Version ID: Galaxy-Class
-
-
-				Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-			`);
+						"Total Upload: xx KiB / gzip: xx KiB
+						Worker Startup Time: 100 ms
+						Uploaded test-name (TIMINGS)
+						Deployed test-name triggers (TIMINGS)
+						  https://test-name.test-sub-domain.workers.dev
+						Current Version ID: Galaxy-Class"
+					`);
 					expect(std.err).toMatchInlineSnapshot(`""`);
 					expect(std.warn).toMatchInlineSnapshot(`
 				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
@@ -8637,20 +8165,17 @@ addEventListener('fetch', event => {});`
 					__2d91d1c4dd6e57d4f5432187ab7c25f45a8973f0_text_file:
 						"SOME TEXT CONTENT",
 				},
+				useOldUploadApi: true,
 			});
 			await runWrangler("deploy index.js");
 			expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Uploaded test-name (TIMINGS)
-			Published test-name (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+				"Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
@@ -8675,17 +8200,13 @@ addEventListener('fetch', event => {});`
 			});
 			await runWrangler("deploy index.js");
 			expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Uploaded test-name (TIMINGS)
-			Published test-name (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+				"Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
@@ -8714,17 +8235,13 @@ addEventListener('fetch', event => {});`
 			});
 			await runWrangler("deploy index.js");
 			expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Uploaded test-name (TIMINGS)
-			Published test-name (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+				"Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`
 			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
@@ -8769,17 +8286,13 @@ addEventListener('fetch', event => {});`
 			});
 			await runWrangler("deploy index.js");
 			expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Uploaded test-name (TIMINGS)
-			Published test-name (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+				"Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
@@ -8870,20 +8383,17 @@ addEventListener('fetch', event => {});`
 				expectedModules: {
 					__text_file: "SOME TEXT CONTENT",
 				},
+				useOldUploadApi: true,
 			});
 			await runWrangler("deploy index.js");
 			expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Uploaded test-name (TIMINGS)
-			Published test-name (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+				"Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
@@ -8908,17 +8418,13 @@ addEventListener('fetch', event => {});`
 			});
 			await runWrangler("deploy index.js");
 			expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Uploaded test-name (TIMINGS)
-			Published test-name (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+				"Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
@@ -8944,17 +8450,13 @@ addEventListener('fetch', event => {});`
 				});
 				await runWrangler("deploy index.js");
 				expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Uploaded test-name (TIMINGS)
-			Published test-name (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+					"Total Upload: xx KiB / gzip: xx KiB
+					Worker Startup Time: 100 ms
+					Uploaded test-name (TIMINGS)
+					Deployed test-name triggers (TIMINGS)
+					  https://test-name.test-sub-domain.workers.dev
+					Current Version ID: Galaxy-Class"
+				`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
@@ -8980,17 +8482,13 @@ addEventListener('fetch', event => {});`
 			});
 			await runWrangler("deploy index.js");
 			expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Uploaded test-name (TIMINGS)
-			Published test-name (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+				"Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`
 			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mDeprecation: detected a legacy module import in \\"./index.js\\". This will stop working in the future. Replace references to \\"text.file\\" with \\"./text.file\\";[0m
@@ -9015,17 +8513,13 @@ addEventListener('fetch', event => {});`
 			});
 			await runWrangler("deploy index.js");
 			expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Uploaded test-name (TIMINGS)
-			Published test-name (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+				"Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`
 			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mDeprecation: detected a legacy module import in \\"./index.js\\". This will stop working in the future. Replace references to \\"index.wasm\\" with \\"./index.wasm\\";[0m
@@ -9052,17 +8546,13 @@ addEventListener('fetch', event => {});`
 			});
 			await runWrangler("deploy index.js");
 			expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Uploaded test-name (TIMINGS)
-			Published test-name (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+				"Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`
 			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mDeprecation: detected a legacy module import in \\"./index.js\\". This will stop working in the future. Replace references to \\"text+name.file\\" with \\"./text+name.file\\";[0m
@@ -9087,17 +8577,13 @@ addEventListener('fetch', event => {});`
 				"deploy index.js --compatibility-date 2022-03-17 --name test-name"
 			);
 			expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Uploaded test-name (TIMINGS)
-			Published test-name (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+				"Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
@@ -9131,23 +8617,19 @@ addEventListener('fetch', event => {});`
 			});
 			await runWrangler("deploy index.ts");
 			expect(std).toMatchInlineSnapshot(`
-			Object {
-			  "debug": "",
-			  "err": "",
-			  "info": "",
-			  "out": "Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Uploaded test-name (TIMINGS)
-			Published test-name (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments",
-			  "warn": "",
-			}
-		`);
+				Object {
+				  "debug": "",
+				  "err": "",
+				  "info": "",
+				  "out": "Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class",
+				  "warn": "",
+				}
+			`);
 		});
 
 		it("should output to target es2022 even if tsconfig says otherwise", async () => {
@@ -9187,23 +8669,19 @@ addEventListener('fetch', event => {});`
 			});
 			await runWrangler("deploy index.js"); // this would throw if we tried to compile with es5
 			expect(std).toMatchInlineSnapshot(`
-			Object {
-			  "debug": "",
-			  "err": "",
-			  "info": "",
-			  "out": "Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Uploaded test-name (TIMINGS)
-			Published test-name (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments",
-			  "warn": "",
-			}
-		`);
+				Object {
+				  "debug": "",
+				  "err": "",
+				  "info": "",
+				  "out": "Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class",
+				  "warn": "",
+				}
+			`);
 		});
 	});
 
@@ -9217,23 +8695,19 @@ addEventListener('fetch', event => {});`
 			expect(fs.existsSync("some-dir/index.js")).toBe(true);
 			expect(fs.existsSync("some-dir/index.js.map")).toBe(true);
 			expect(std).toMatchInlineSnapshot(`
-			Object {
-			  "debug": "",
-			  "err": "",
-			  "info": "",
-			  "out": "Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Uploaded test-name (TIMINGS)
-			Published test-name (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments",
-			  "warn": "",
-			}
-		`);
+				Object {
+				  "debug": "",
+				  "err": "",
+				  "info": "",
+				  "out": "Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class",
+				  "warn": "",
+				}
+			`);
 		});
 
 		it("should preserve the entry point file name, even when using a facade", async () => {
@@ -9272,13 +8746,9 @@ addEventListener('fetch', event => {});`
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				Uploaded test-name (TIMINGS)
-				Published test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
-				Current Deployment ID: Galaxy-Class
-				Current Version ID: Galaxy-Class
-
-
-				Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments",
+				Current Version ID: Galaxy-Class",
 				  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --legacy-assets argument is experimental and may change or break at any time.[0m
 
 				",
@@ -9328,23 +8798,19 @@ export default{
 				)
 			).toBe(true);
 			expect(std).toMatchInlineSnapshot(`
-			Object {
-			  "debug": "",
-			  "err": "",
-			  "info": "",
-			  "out": "Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Uploaded test-name (TIMINGS)
-			Published test-name (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments",
-			  "warn": "",
-			}
-		`);
+				Object {
+				  "debug": "",
+				  "err": "",
+				  "info": "",
+				  "out": "Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class",
+				  "warn": "",
+				}
+			`);
 		});
 	});
 
@@ -9567,23 +9033,19 @@ export default{
 			await runWrangler("deploy");
 
 			expect(std).toMatchInlineSnapshot(`
-			Object {
-			  "debug": "",
-			  "err": "",
-			  "info": "",
-			  "out": "Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Uploaded test-name (TIMINGS)
-			Published test-name (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments",
-			  "warn": "",
-			}
-		`);
+				Object {
+				  "debug": "",
+				  "err": "",
+				  "info": "",
+				  "out": "Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class",
+				  "warn": "",
+				}
+			`);
 		});
 
 		it("should print the bundle size, with API errors", async () => {
@@ -9591,17 +9053,20 @@ export default{
 			mockUploadWorkerRequest();
 			// Override PUT call to error out from previous helper functions
 			msw.use(
-				http.put("*/accounts/:accountId/workers/scripts/:scriptName", () => {
-					return HttpResponse.json(
-						createFetchResult(null, false, [
-							{
-								code: 11337,
-								message:
-									"Worker Startup Timed out. This could be due to script exceeding size limits or expensive code in the global scope.",
-							},
-						])
-					);
-				})
+				http.post(
+					"*/accounts/:accountId/workers/scripts/:scriptName/versions",
+					() => {
+						return HttpResponse.json(
+							createFetchResult(null, false, [
+								{
+									code: 11337,
+									message:
+										"Worker Startup Timed out. This could be due to script exceeding size limits or expensive code in the global scope.",
+								},
+							])
+						);
+					}
+				)
 			);
 
 			fs.writeFileSync(
@@ -9630,44 +9095,47 @@ export default{
 			});
 
 			await expect(runWrangler("deploy")).rejects.toMatchInlineSnapshot(
-				`[APIError: A request to the Cloudflare API (/accounts/some-account-id/workers/scripts/test-name) failed.]`
+				`[APIError: A request to the Cloudflare API (/accounts/some-account-id/workers/scripts/test-name/versions) failed.]`
 			);
 			expect(std).toMatchInlineSnapshot(`
-			Object {
-			  "debug": "",
-			  "err": "",
-			  "info": "",
-			  "out": "Total Upload: xx KiB / gzip: xx KiB
+				Object {
+				  "debug": "",
+				  "err": "",
+				  "info": "",
+				  "out": "Total Upload: xx KiB / gzip: xx KiB
 
-			[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/accounts/some-account-id/workers/scripts/test-name) failed.[0m
+				[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/accounts/some-account-id/workers/scripts/test-name/versions) failed.[0m
 
-			  Worker Startup Timed out. This could be due to script exceeding size limits or expensive code in
-			  the global scope. [code: 11337]
+				  Worker Startup Timed out. This could be due to script exceeding size limits or expensive code in
+				  the global scope. [code: 11337]
 
-			  If you think this is a bug, please open an issue at:
-			  [4mhttps://github.com/cloudflare/workers-sdk/issues/new/choose[0m
+				  If you think this is a bug, please open an issue at:
+				  [4mhttps://github.com/cloudflare/workers-sdk/issues/new/choose[0m
 
-			",
-			  "warn": "",
-			}
-		`);
+				",
+				  "warn": "",
+				}
+			`);
 		});
 
 		test("should check biggest dependencies when upload fails with script size error", async () => {
 			mockSubDomainRequest();
 			mockUploadWorkerRequest();
-			// Override PUT call to error out from previous helper functions
+			// Override POST call to error out from previous helper functions
 			msw.use(
-				http.put("*/accounts/:accountId/workers/scripts/:scriptName", () => {
-					return HttpResponse.json(
-						createFetchResult({}, false, [
-							{
-								code: 10027,
-								message: "workers.api.error.script_too_large",
-							},
-						])
-					);
-				})
+				http.post(
+					"*/accounts/:accountId/workers/scripts/:scriptName/versions",
+					() => {
+						return HttpResponse.json(
+							createFetchResult({}, false, [
+								{
+									code: 10027,
+									message: "workers.api.error.script_too_large",
+								},
+							])
+						);
+					}
+				)
 			);
 
 			fs.writeFileSync(
@@ -9698,52 +9166,55 @@ export default{
 			});
 
 			await expect(runWrangler("deploy")).rejects.toMatchInlineSnapshot(
-				`[APIError: A request to the Cloudflare API (/accounts/some-account-id/workers/scripts/test-name) failed.]`
+				`[APIError: A request to the Cloudflare API (/accounts/some-account-id/workers/scripts/test-name/versions) failed.]`
 			);
 
 			expect(std).toMatchInlineSnapshot(`
-			Object {
-			  "debug": "",
-			  "err": "",
-			  "info": "",
-			  "out": "Total Upload: xx KiB / gzip: xx KiB
+				Object {
+				  "debug": "",
+				  "err": "",
+				  "info": "",
+				  "out": "Total Upload: xx KiB / gzip: xx KiB
 
-			[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/accounts/some-account-id/workers/scripts/test-name) failed.[0m
+				[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/accounts/some-account-id/workers/scripts/test-name/versions) failed.[0m
 
-			  workers.api.error.script_too_large [code: 10027]
+				  workers.api.error.script_too_large [code: 10027]
 
-			  If you think this is a bug, please open an issue at:
-			  [4mhttps://github.com/cloudflare/workers-sdk/issues/new/choose[0m
+				  If you think this is a bug, please open an issue at:
+				  [4mhttps://github.com/cloudflare/workers-sdk/issues/new/choose[0m
 
-			",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mHere are the 4 largest dependencies included in your script:[0m
+				",
+				  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mHere are the 4 largest dependencies included in your script:[0m
 
-			  - index.js - xx KiB
-			  - add.wasm - xx KiB
-			  - dependency.js - xx KiB
-			  - message.txt - xx KiB
-			  If these are unnecessary, consider removing them
+				  - index.js - xx KiB
+				  - add.wasm - xx KiB
+				  - dependency.js - xx KiB
+				  - message.txt - xx KiB
+				  If these are unnecessary, consider removing them
 
-			",
-			}
-		`);
+				",
+				}
+			`);
 		});
 
 		test("should offer some helpful advice when upload fails with script startup error", async () => {
 			mockSubDomainRequest();
 			mockUploadWorkerRequest();
-			// Override PUT call to error out from previous helper functions
+			// Override POST call to error out from previous helper functions
 			msw.use(
-				http.put("*/accounts/:accountId/workers/scripts/:scriptName", () => {
-					return HttpResponse.json(
-						createFetchResult({}, false, [
-							{
-								code: 10021,
-								message: "Error: Script startup exceeded CPU time limit.",
-							},
-						])
-					);
-				})
+				http.post(
+					"*/accounts/:accountId/workers/scripts/:scriptName/versions",
+					() => {
+						return HttpResponse.json(
+							createFetchResult({}, false, [
+								{
+									code: 10021,
+									message: "Error: Script startup exceeded CPU time limit.",
+								},
+							])
+						);
+					}
+				)
 			);
 			fs.writeFileSync("dependency.js", `export const thing = "a string dep";`);
 
@@ -9763,34 +9234,34 @@ export default{
 			});
 
 			await expect(runWrangler("deploy")).rejects.toMatchInlineSnapshot(
-				`[APIError: A request to the Cloudflare API (/accounts/some-account-id/workers/scripts/test-name) failed.]`
+				`[APIError: A request to the Cloudflare API (/accounts/some-account-id/workers/scripts/test-name/versions) failed.]`
 			);
 			expect(std).toMatchInlineSnapshot(`
-			Object {
-			  "debug": "",
-			  "err": "",
-			  "info": "",
-			  "out": "Total Upload: xx KiB / gzip: xx KiB
+				Object {
+				  "debug": "",
+				  "err": "",
+				  "info": "",
+				  "out": "Total Upload: xx KiB / gzip: xx KiB
 
-			[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/accounts/some-account-id/workers/scripts/test-name) failed.[0m
+				[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/accounts/some-account-id/workers/scripts/test-name/versions) failed.[0m
 
-			  Error: Script startup exceeded CPU time limit. [code: 10021]
+				  Error: Script startup exceeded CPU time limit. [code: 10021]
 
-			  If you think this is a bug, please open an issue at:
-			  [4mhttps://github.com/cloudflare/workers-sdk/issues/new/choose[0m
+				  If you think this is a bug, please open an issue at:
+				  [4mhttps://github.com/cloudflare/workers-sdk/issues/new/choose[0m
 
-			",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mYour Worker failed validation because it exceeded startup limits.[0m
+				",
+				  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mYour Worker failed validation because it exceeded startup limits.[0m
 
-			  To ensure fast responses, we place constraints on Worker startup -- like how much CPU it can use,
-			  or how long it can take.
-			  Your Worker failed validation, which means it hit one of these startup limits.
-			  Try reducing the amount of work done during startup (outside the event handler), either by
-			  removing code or relocating it inside the event handler.
+				  To ensure fast responses, we place constraints on Worker startup -- like how much CPU it can use,
+				  or how long it can take.
+				  Your Worker failed validation, which means it hit one of these startup limits.
+				  Try reducing the amount of work done during startup (outside the event handler), either by
+				  removing code or relocating it inside the event handler.
 
-			",
-			}
-		`);
+				",
+				}
+			`);
 		});
 
 		describe("unit tests", () => {
@@ -9998,21 +9469,17 @@ export default{
 
 			await runWrangler("deploy index.js");
 			expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Your worker has access to the following bindings:
-			- Queues:
-			  - QUEUE_ONE: queue1
-			Uploaded test-name (TIMINGS)
-			Published test-name (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			  Producer for queue1
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+				"Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Your worker has access to the following bindings:
+				- Queues:
+				  - QUEUE_ONE: queue1
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				  Producer for queue1
+				Current Version ID: Galaxy-Class"
+			`);
 		});
 
 		it("should update queue producers on deploy", async () => {
@@ -10049,21 +9516,17 @@ export default{
 			});
 			await runWrangler("deploy index.js");
 			expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Your worker has access to the following bindings:
-			- Queues:
-			  - MY_QUEUE: queue1
-			Uploaded test-name (TIMINGS)
-			Published test-name (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			  Producer for queue1
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+				"Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Your worker has access to the following bindings:
+				- Queues:
+				  - MY_QUEUE: queue1
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				  Producer for queue1
+				Current Version ID: Galaxy-Class"
+			`);
 		});
 
 		it("should post worker queue consumers on deploy", async () => {
@@ -10108,18 +9571,14 @@ export default{
 			});
 			await runWrangler("deploy index.js");
 			expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Uploaded test-name (TIMINGS)
-			Published test-name (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			  Consumer for queue1
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+				"Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				  Consumer for queue1
+				Current Version ID: Galaxy-Class"
+			`);
 		});
 
 		it("should post worker queue consumers on deploy, using command line script name arg", async () => {
@@ -10168,14 +9627,10 @@ export default{
 				"Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				Uploaded command-line-arg-script-name (TIMINGS)
-				Published command-line-arg-script-name (TIMINGS)
+				Deployed command-line-arg-script-name triggers (TIMINGS)
 				  https://command-line-arg-script-name.test-sub-domain.workers.dev
 				  Consumer for queue1
-				Current Deployment ID: Galaxy-Class
-				Current Version ID: Galaxy-Class
-
-
-				Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+				Current Version ID: Galaxy-Class"
 			`);
 		});
 
@@ -10229,18 +9684,14 @@ export default{
 			});
 			await runWrangler("deploy index.js");
 			expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Uploaded test-name (TIMINGS)
-			Published test-name (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			  Consumer for queue1
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+				"Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				  Consumer for queue1
+				Current Version ID: Galaxy-Class"
+			`);
 		});
 
 		it("should update worker (service) queue consumers with default environment on deploy", async () => {
@@ -10298,18 +9749,14 @@ export default{
 
 			await runWrangler("deploy index.js");
 			expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Uploaded test-name (TIMINGS)
-			Published test-name (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			  Consumer for queue1
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+				"Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				  Consumer for queue1
+				Current Version ID: Galaxy-Class"
+			`);
 		});
 
 		it("should post queue http consumers on deploy", async () => {
@@ -10354,18 +9801,14 @@ export default{
 			});
 			await runWrangler("deploy index.js");
 			expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Uploaded test-name (TIMINGS)
-			Published test-name (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			  Consumer for queue1
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+				"Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				  Consumer for queue1
+				Current Version ID: Galaxy-Class"
+			`);
 		});
 
 		it("should update queue http consumers when one already exists for queue", async () => {
@@ -10418,18 +9861,14 @@ export default{
 			);
 			await runWrangler("deploy index.js");
 			expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Uploaded test-name (TIMINGS)
-			Published test-name (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			  Consumer for queue1
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+				"Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				  Consumer for queue1
+				Current Version ID: Galaxy-Class"
+			`);
 		});
 
 		it("should support queue consumer concurrency with a max concurrency specified", async () => {
@@ -10482,18 +9921,14 @@ export default{
 			});
 			await runWrangler("deploy index.js");
 			expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Uploaded test-name (TIMINGS)
-			Published test-name (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			  Consumer for queue1
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+				"Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				  Consumer for queue1
+				Current Version ID: Galaxy-Class"
+			`);
 		});
 
 		it("should support queue consumer concurrency with a null max concurrency", async () => {
@@ -10547,18 +9982,14 @@ export default{
 
 			await runWrangler("deploy index.js");
 			expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Uploaded test-name (TIMINGS)
-			Published test-name (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			  Consumer for queue1
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+				"Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				  Consumer for queue1
+				Current Version ID: Galaxy-Class"
+			`);
 		});
 
 		it("should support queue consumer with max_batch_timeout of 0", async () => {
@@ -10612,18 +10043,14 @@ export default{
 
 			await runWrangler("deploy index.js");
 			expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Uploaded test-name (TIMINGS)
-			Published test-name (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			  Consumer for queue1
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+				"Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				  Consumer for queue1
+				Current Version ID: Galaxy-Class"
+			`);
 		});
 
 		it("consumer should error when a queue doesn't exist", async () => {
@@ -10831,22 +10258,18 @@ export default{
 
 			await runWrangler("deploy index.js");
 			expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Your worker has access to the following bindings:
-			- Browser:
-			  - Name: MYBROWSER
-			- AI:
-			  - Name: AI_BIND
-			Uploaded test-name (TIMINGS)
-			Published test-name (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+				"Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Your worker has access to the following bindings:
+				- Browser:
+				  - Name: MYBROWSER
+				- AI:
+				  - Name: AI_BIND
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
 		});
 	});
 
@@ -10882,13 +10305,9 @@ export default{
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				Uploaded test-name (TIMINGS)
-				Published test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
-				Current Deployment ID: Galaxy-Class
-				Current Version ID: Galaxy-Class
-
-
-				Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+				Current Version ID: Galaxy-Class"
 			`);
 		});
 
@@ -10922,13 +10341,9 @@ export default{
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				Uploaded test-name (TIMINGS)
-				Published test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
-				Current Deployment ID: Galaxy-Class
-				Current Version ID: Galaxy-Class
-
-
-				Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+				Current Version ID: Galaxy-Class"
 			`);
 		});
 	});
@@ -10957,20 +10372,16 @@ export default{
 
 			await runWrangler("deploy index.js");
 			expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Your worker has access to the following bindings:
-			- Hyperdrive Configs:
-			  - HYPERDRIVE: 343cd4f1d58c42fbb5bd082592fd7143
-			Uploaded test-name (TIMINGS)
-			Published test-name (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+				"Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Your worker has access to the following bindings:
+				- Hyperdrive Configs:
+				  - HYPERDRIVE: 343cd4f1d58c42fbb5bd082592fd7143
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
 		});
 	});
 
@@ -10993,20 +10404,16 @@ export default{
 
 			await runWrangler("deploy index.js");
 			expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Your worker has access to the following bindings:
-			- mTLS Certificates:
-			  - CERT_ONE: 1234
-			Uploaded test-name (TIMINGS)
-			Published test-name (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+				"Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Your worker has access to the following bindings:
+				- mTLS Certificates:
+				  - CERT_ONE: 1234
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
 		});
 	});
 
@@ -11025,17 +10432,13 @@ export default{
 			await runWrangler("deploy index.js --keep-vars");
 
 			expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Uploaded test-name (TIMINGS)
-			Published test-name (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+				"Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
@@ -11053,17 +10456,13 @@ export default{
 			await runWrangler("deploy index.js");
 
 			expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Uploaded test-name (TIMINGS)
-			Published test-name (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+				"Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
@@ -11083,17 +10482,13 @@ export default{
 			await runWrangler("deploy index.js");
 
 			expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Uploaded test-name (TIMINGS)
-			Published test-name (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+				"Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 	});
@@ -11118,16 +10513,12 @@ export default{
 				"deploy --dispatch-namespace test-dispatch-namespace index.js"
 			);
 			expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Uploaded test-name (TIMINGS)
-			  Dispatch Namespace: test-dispatch-namespace
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+				"Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Uploaded test-name (TIMINGS)
+				  Dispatch Namespace: test-dispatch-namespace
+				Current Version ID: undefined"
+			`);
 		});
 	});
 });

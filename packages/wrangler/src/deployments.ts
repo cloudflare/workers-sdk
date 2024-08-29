@@ -10,7 +10,6 @@ import { mapBindings } from "./init";
 import { logger } from "./logger";
 import * as metrics from "./metrics";
 import { requireAuth } from "./user";
-import { logVersionIdChange } from "./utils/deployment-id-version-id-change";
 import { getScriptName, printWranglerBanner } from ".";
 import type { Config } from "./config";
 import type { WorkerMetadataBinding } from "./deployment-bundle/create-worker-upload-form";
@@ -85,7 +84,6 @@ export async function deployments(
 			: `${formatSource(versions.metadata.source)}`;
 
 		let version = `
-Deployment ID: ${versions.id}
 Version ID:    ${versions.id}
 Created on:    ${versions.metadata.created_on}
 Author:        ${versions.metadata.author_email}
@@ -104,8 +102,6 @@ Source:        ${triggerStr}`;
 
 	versionMessages[versionMessages.length - 1] += "🟩 Active";
 	logger.log(...versionMessages);
-
-	logVersionIdChange();
 }
 
 function formatSource(source: string): string {
@@ -213,10 +209,7 @@ export async function rollbackDeployment(
 	rollbackVersion = addHyphens(rollbackVersion) ?? rollbackVersion;
 
 	logger.log(`\nSuccessfully rolled back to Deployment ID: ${deploymentId}`);
-	logger.log("Current Deployment ID:", rollbackVersion);
 	logger.log("Current Version ID:", rollbackVersion);
-
-	logVersionIdChange();
 }
 
 async function rollbackRequest(
@@ -305,7 +298,6 @@ export async function viewDeployment(
 	const bindings = deploymentDetails.resources.bindings;
 
 	const version = `
-Deployment ID:       ${deploymentDetails.id}
 Version ID:          ${deploymentDetails.id}
 Created on:          ${deploymentDetails.metadata.created_on}
 Author:              ${deploymentDetails.metadata.author_email}
@@ -325,13 +317,10 @@ ${
 `;
 
 	logger.log(version);
-
-	logVersionIdChange();
 }
 
 export async function commonDeploymentCMDSetup(
-	yargs: ArgumentsCamelCase<CommonYargsOptions>,
-	deploymentsWarning: string
+	yargs: ArgumentsCamelCase<CommonYargsOptions>
 ) {
 	await printWranglerBanner();
 	const config = readConfig(yargs.config, yargs);
@@ -341,7 +330,6 @@ export async function commonDeploymentCMDSetup(
 		config
 	);
 
-	logger.log(`${deploymentsWarning}\n`);
 	if (!scriptName) {
 		throw new UserError(
 			"Required Worker name missing. Please specify the Worker name in wrangler.toml, or pass it as an argument with `--name`"

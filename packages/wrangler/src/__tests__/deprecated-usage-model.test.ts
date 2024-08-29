@@ -57,22 +57,18 @@ describe("deprecated-usage-model", () => {
 		await runWrangler("deploy ./index");
 
 		expect(std).toMatchInlineSnapshot(`
-		Object {
-		  "debug": "",
-		  "err": "",
-		  "info": "",
-		  "out": "Total Upload: xx KiB / gzip: xx KiB
-		Worker Startup Time: 100 ms
-		Uploaded test-name (TIMINGS)
-		Published test-name (TIMINGS)
-		  https://test-name.test-sub-domain.workers.dev
-		Current Deployment ID: Galaxy-Class
-		Current Version ID: Galaxy-Class
-
-
-		Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments",
-		  "warn": "",
-		}
-	`);
+			Object {
+			  "debug": "",
+			  "err": "",
+			  "info": "",
+			  "out": "Total Upload: xx KiB / gzip: xx KiB
+			Worker Startup Time: 100 ms
+			Uploaded test-name (TIMINGS)
+			Deployed test-name triggers (TIMINGS)
+			  https://test-name.test-sub-domain.workers.dev
+			Current Version ID: Galaxy-Class",
+			  "warn": "",
+			}
+		`);
 	});
 });
