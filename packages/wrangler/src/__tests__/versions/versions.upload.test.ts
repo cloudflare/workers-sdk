@@ -59,6 +59,20 @@ describe("versions upload", () => {
 		);
 	}
 
+	function mockGetWorkerSubdomain(available_on_subdomain: boolean) {
+		msw.use(
+			http.get(
+				`*/accounts/:accountId/workers/scripts/:scriptName/subdomain`,
+				({ params }) => {
+					expect(params.scriptName).toEqual("test-worker");
+					return HttpResponse.json(
+						createFetchResult({ enabled: available_on_subdomain })
+					);
+				}
+			)
+		);
+	}
+
 	test("should print bindings & startup time on versions upload", async () => {
 		mockGetScript();
 		mockUploadVersion(false);
@@ -95,6 +109,70 @@ describe("versions upload", () => {
 			 \\"abc\\": \\"def\\",
 			 \\"bool\\": true
 			}
+			Uploaded test-worker (TIMINGS)
+			Worker Version ID: 51e4886e-2db7-4900-8d38-fbfecfeab993"
+		`);
+	});
+
+	test("should print preview url if version has preview", async () => {
+		mockGetScript();
+		mockUploadVersion(true);
+		mockGetWorkerSubdomain(true);
+		mockSubDomainRequest();
+
+		// Setup
+		writeWranglerToml({
+			name: "test-worker",
+			main: "./index.js",
+			vars: {
+				TEST: "test-string",
+			},
+		});
+		writeWorkerSource();
+		setIsTTY(false);
+
+		const result = runWrangler("versions upload --x-versions");
+
+		await expect(result).resolves.toBeUndefined();
+
+		expect(std.out).toMatchInlineSnapshot(`
+			"Total Upload: xx KiB / gzip: xx KiB
+			Worker Startup Time: 500 ms
+			Your worker has access to the following bindings:
+			- Vars:
+			  - TEST: \\"test-string\\"
+			Uploaded test-worker (TIMINGS)
+			Worker Version ID: 51e4886e-2db7-4900-8d38-fbfecfeab993
+			Version Preview URL: https://51e4886e-test-worker.test-sub-domain.workers.dev"
+		`);
+	});
+
+	it("should not print preview url workers_dev is false", async () => {
+		mockGetScript();
+		mockUploadVersion(true);
+		mockGetWorkerSubdomain(false);
+
+		// Setup
+		writeWranglerToml({
+			name: "test-worker",
+			main: "./index.js",
+			vars: {
+				TEST: "test-string",
+			},
+		});
+		writeWorkerSource();
+		setIsTTY(false);
+
+		const result = runWrangler("versions upload --x-versions");
+
+		await expect(result).resolves.toBeUndefined();
+
+		expect(std.out).toMatchInlineSnapshot(`
+			"Total Upload: xx KiB / gzip: xx KiB
+			Worker Startup Time: 500 ms
+			Your worker has access to the following bindings:
+			- Vars:
+			  - TEST: \\"test-string\\"
 			Uploaded test-worker (TIMINGS)
 			Worker Version ID: 51e4886e-2db7-4900-8d38-fbfecfeab993"
 		`);
