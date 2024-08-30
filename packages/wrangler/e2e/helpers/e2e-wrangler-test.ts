@@ -2,7 +2,7 @@ import assert from "node:assert";
 import crypto from "node:crypto";
 import { onTestFinished } from "vitest";
 import { generateResourceName } from "./generate-resource-name";
-import { makeRoot, seed } from "./setup";
+import { makeRoot, removeFiles, seed } from "./setup";
 import {
 	runWrangler,
 	WRANGLER_IMPORT,
@@ -19,6 +19,10 @@ export class WranglerE2ETestHelper {
 
 	async seed(files: Record<string, string | Uint8Array>) {
 		await seed(this.tmpPath, files);
+	}
+
+	async removeFiles(files: string[]) {
+		await removeFiles(this.tmpPath, files);
 	}
 
 	// eslint-disable-next-line @typescript-eslint/consistent-type-imports
