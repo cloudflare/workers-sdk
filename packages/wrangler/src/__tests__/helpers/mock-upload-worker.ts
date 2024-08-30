@@ -196,6 +196,10 @@ export function mockUploadWorkerRequest(
 			http.post(
 				"*/accounts/:accountId/workers/scripts/:scriptName/deployments",
 				() => HttpResponse.json(createFetchResult({ id: "Deployment-ID" }))
+			),
+			http.patch(
+				"*/accounts/:accountId/workers/scripts/:scriptName/script-settings",
+				() => HttpResponse.json(createFetchResult({}))
 			)
 		);
 	}

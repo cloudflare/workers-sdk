@@ -46,6 +46,7 @@ import {
 	maybeRetrieveFileSourceMap,
 } from "../sourcemap";
 import triggersDeploy from "../triggers/deploy";
+import { patchNonVersionedScriptSettings } from "../versions/api";
 import { confirmLatestDeploymentOverwrite } from "../versions/deploy";
 import { getZoneForRoute } from "../zones";
 import type { Config } from "../config";
@@ -745,6 +746,8 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		if (props.dryRun) {
 			printBindings({ ...withoutStaticAssets, vars: maskedVars });
 		} else {
+			assert(accountId, "Missing accountId");
+
 			await ensureQueuesExistByConfig(config);
 			let bindingsPrinted = false;
 
@@ -763,6 +766,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 				// If we're using the new APIs, first upload the version
 				if (canUseNewVersionsDeploymentsApi) {
+					// Upload new version
 					const versionResult = await fetchResult<ApiVersion>(
 						`/accounts/${accountId}/workers/scripts/${scriptName}/versions`,
 						{
@@ -772,6 +776,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 						}
 					);
 
+					// Deploy new version to 100%
 					await fetchResult(
 						`/accounts/${accountId}/workers/scripts/${scriptName}/deployments`,
 						{
@@ -788,6 +793,12 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 							headers: await getMetricsUsageHeaders(config.send_metrics),
 						}
 					);
+
+					// Update tail consumers and logpush settings
+					await patchNonVersionedScriptSettings(accountId, scriptName, {
+						tail_consumers: worker.tail_consumers,
+						logpush: worker.logpush,
+					});
 
 					const { available_on_subdomain } = await fetchResult<{
 						available_on_subdomain: boolean;
@@ -920,7 +931,6 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		logger.log(`--dry-run: exiting now.`);
 		return { versionId, workerTag };
 	}
-	assert(accountId, "Missing accountId");
 
 	const uploadMs = Date.now() - start;
 
