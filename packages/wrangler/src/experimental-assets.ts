@@ -339,7 +339,7 @@ export function processExperimentalAssetsArg(
 
 		experimentalAssets.directory = resolvedExperimentalAssetsPath;
 		const routingConfig = {
-			hasUserWorker: !!(args.script || config.main),
+			hasUserWorker: Boolean(args.script || config.main),
 		};
 		experimentalAssetsOptions = {
 			...experimentalAssets,

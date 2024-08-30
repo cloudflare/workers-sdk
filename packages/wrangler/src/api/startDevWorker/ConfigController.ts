@@ -219,6 +219,14 @@ async function resolveConfig(
 
 	const { bindings, unsafe } = await resolveBindings(config, input);
 
+	const experimentalAssetsOptions = processExperimentalAssetsArg(
+		{
+			experimentalAssets: input?.experimental?.assets?.directory,
+			script: input.entrypoint,
+		},
+		config
+	);
+
 	const resolved = {
 		name: getScriptName({ name: input.name, env: input.env }, config),
 		compatibilityDate: getDevCompatibilityDate(config, input.compatibilityDate),
@@ -264,7 +272,7 @@ async function resolveConfig(
 			metadata: input.unsafe?.metadata ?? unsafe?.metadata,
 		},
 		experimental: {
-			assets: input?.experimental?.assets ?? config.experimental_assets,
+			assets: experimentalAssetsOptions,
 		},
 	} satisfies StartDevWorkerOptions;
 

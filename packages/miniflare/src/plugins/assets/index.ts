@@ -27,7 +27,7 @@ export const ASSETS_PLUGIN: Plugin<typeof AssetsOptionsSchema> = {
 		}
 		return [
 			{
-				// binding between User Worker and Asset Worke
+				// binding between User Worker and Asset Worker
 				name: options.assets.bindingName,
 				service: { name: ASSETS_SERVICE_NAME },
 			},

@@ -599,10 +599,7 @@ export async function startDev(args: StartDevOptions) {
 			);
 		}
 
-		const experimentalAssetsOptions = processExperimentalAssetsArg(
-			args,
-			config
-		);
+		let experimentalAssetsOptions = processExperimentalAssetsArg(args, config);
 		if (experimentalAssetsOptions) {
 			args.forceLocal = true;
 		}
@@ -799,7 +796,9 @@ export async function startDev(args: StartDevOptions) {
 					// only pass `experimentalAssetsOptions` if it came from args not from config
 					// otherwise config at startup ends up overriding future config changes in the
 					// ConfigController
-					assets: args.experimentalAssets ? experimentalAssetsOptions :undefined,
+					assets: args.experimentalAssets
+						? experimentalAssetsOptions
+						: undefined,
 				},
 			} satisfies StartDevWorkerInput);
 
@@ -846,13 +845,18 @@ export async function startDev(args: StartDevOptions) {
 					 *    file, we should ensure we're still watching the correct
 					 *    directory
 					 */
-					if (experimentalAssets && !args.experimentalAssets) {
+					if (experimentalAssetsOptions && !args.experimentalAssets) {
 						await assetsWatcher?.close();
 
-						experimentalAssets = processExperimentalAssetsArg(args, config);
+						// this gets passed into the Dev React element, so ensure we don't
+						// block scope this var
+						experimentalAssetsOptions = processExperimentalAssetsArg(
+							args,
+							config
+						);
 
-						if (experimentalAssets) {
-							assetsWatcher = watch(experimentalAssets.directory, {
+						if (experimentalAssetsOptions) {
+							assetsWatcher = watch(experimentalAssetsOptions.directory, {
 								persistent: true,
 								ignoreInitial: true,
 							}).on("all", async (eventName, changedPath) => {
@@ -988,8 +992,8 @@ export async function startDev(args: StartDevOptions) {
 		const devReactElement = render(await getDevReactElement(config));
 		rerender = devReactElement.rerender;
 
-		if (experimentalAssets && !args.experimentalDevEnv) {
-			assetsWatcher = watch(experimentalAssets.directory, {
+		if (experimentalAssetsOptions && !args.experimentalDevEnv) {
+			assetsWatcher = watch(experimentalAssetsOptions.directory, {
 				persistent: true,
 				ignoreInitial: true,
 			}).on("all", async (eventName, filePath) => {
