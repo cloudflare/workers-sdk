@@ -4,7 +4,7 @@
 
 ### Minor Changes
 
-- [#6573](https://github.com/cloudflare/workers-sdk/pull/6573) [`3ff6506`](https://github.com/cloudflare/workers-sdk/commit/3ff6506cc5f1d79e5df6530673cb600507c7da1b) Thanks [@penalosa](https://github.com/penalosa)! - feature: Use `create-vite` instead of `create-react-app` for React projects.
+- [#6573](https://github.com/cloudflare/workers-sdk/pull/6573) [`3ff6506`](https://github.com/cloudflare/workers-sdk/commit/3ff6506cc5f1d79e5df6530673cb600507c7da1b) Thanks [@santraez](https://github.com/penalosa)! - feature: Use `create-vite` instead of `create-react-app` for React projects.
 
   [React's documentation](https://react.dev/learn/start-a-new-react-project#can-i-use-react-without-a-framework) now recommends using `create-vite` over `create-react-app`, as the latter has been deprecated. To align with these best practices, React projects created with C3 will now use [Vite](https://vitejs.dev/).
 
