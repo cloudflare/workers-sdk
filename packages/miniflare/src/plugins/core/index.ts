@@ -33,7 +33,6 @@ import {
 	CoreHeaders,
 	viewToBuffer,
 } from "../../workers";
-import { ROUTER_SERVICE_NAME } from "../assets/constants";
 import { getCacheServiceName } from "../cache";
 import { DURABLE_OBJECTS_STORAGE_SERVICE_NAME } from "../do";
 import {
@@ -692,7 +691,6 @@ export interface GlobalServicesOptions {
 	loopbackPort: number;
 	log: Log;
 	proxyBindings: Worker_Binding[];
-	hasWorkerAssets: boolean;
 }
 export function getGlobalServices({
 	sharedOptions,
@@ -701,7 +699,6 @@ export function getGlobalServices({
 	loopbackPort,
 	log,
 	proxyBindings,
-	hasWorkerAssets,
 }: GlobalServicesOptions): Service[] {
 	// Collect list of workers we could route to, then parse and sort all routes
 	const workerNames = [...allWorkerRoutes.keys()];
@@ -715,11 +712,7 @@ export function getGlobalServices({
 		{ name: CoreBindings.JSON_LOG_LEVEL, json: JSON.stringify(log.level) },
 		{
 			name: CoreBindings.SERVICE_USER_FALLBACK,
-			service: {
-				name: hasWorkerAssets
-					? ROUTER_SERVICE_NAME
-					: getUserServiceName(fallbackWorkerName),
-			},
+			service: { name: fallbackWorkerName },
 		},
 		...workerNames.map((name) => ({
 			name: CoreBindings.SERVICE_USER_ROUTE_PREFIX + name,

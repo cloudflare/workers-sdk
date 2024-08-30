@@ -22,7 +22,6 @@ import {
 	stopWorkerRegistry,
 	unregisterWorker,
 } from "../dev-registry";
-import { ExperimentalAssetsOptions } from "../experimental-assets";
 import { getFlag } from "../experimental-flags";
 import { logger } from "../logger";
 import { isNavigatorDefined } from "../navigator-user-agent";
@@ -49,6 +48,7 @@ import type { NodeJSCompatMode } from "../deployment-bundle/node-compat";
 import type { CfModule, CfWorkerInit } from "../deployment-bundle/worker";
 import type { StartDevOptions } from "../dev";
 import type { WorkerRegistry } from "../dev-registry";
+import type { ExperimentalAssetsOptions } from "../experimental-assets";
 import type { EnablePagesAssetsServiceBindingOptions } from "../miniflare-cli/types";
 import type { EphemeralDirectory } from "../paths";
 import type { LegacyAssetPaths } from "../sites";

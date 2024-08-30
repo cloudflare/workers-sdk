@@ -24,10 +24,7 @@ import { loadSourceMaps } from "../deployment-bundle/source-maps";
 import { confirm } from "../dialogs";
 import { getMigrationsToUpload } from "../durable";
 import { UserError } from "../errors";
-import {
-	ExperimentalAssetsOptions,
-	syncExperimentalAssets,
-} from "../experimental-assets";
+import { syncExperimentalAssets } from "../experimental-assets";
 import { logger } from "../logger";
 import { getMetricsUsageHeaders } from "../metrics";
 import { isNavigatorDefined } from "../navigator-user-agent";
@@ -41,11 +38,8 @@ import {
 import type { Config } from "../config";
 import type { Rule } from "../config/environment";
 import type { Entry } from "../deployment-bundle/entry";
-import type {
-	CfExperimentalAssets,
-	CfPlacement,
-	CfWorkerInit,
-} from "../deployment-bundle/worker";
+import type { CfPlacement, CfWorkerInit } from "../deployment-bundle/worker";
+import type { ExperimentalAssetsOptions } from "../experimental-assets";
 import type { RetrieveSourceMapFunction } from "../sourcemap";
 
 type Props = {
