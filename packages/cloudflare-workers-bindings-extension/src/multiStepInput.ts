@@ -21,108 +21,7 @@ import {
 
 const encoder = new TextEncoder();
 const kvApiResponse = {
-	result: [
-		{
-			id: "017365f38ab6405ea41492fbfb430563",
-			title: "quicklink-worker-html",
-			supports_url_encoding: true,
-		},
-		{
-			id: "01962077d09242c5b0978a12bccaa5ed",
-			title: "logs",
-			supports_url_encoding: true,
-		},
-		{
-			id: "02df5be2a39f48d68ddefd025b6aff5c",
-			title: "MY_SECOND-d3080592-6268-4bcb-a4e8-027e02f15393",
-			supports_url_encoding: true,
-		},
-		{
-			id: "0346f704377f4aca8bed24f489a8ddb4",
-			title: "MY_SECOND-f21124d0-c2f5-4feb-9ee7-0fcfe971afae",
-			supports_url_encoding: true,
-		},
-		{
-			id: "03c25b8cef234529972544ce60f0c56f",
-			title: "SOME_NEW_KV_NAMESPACE3-aa66219f-8acc-4068-9785-86ea576e530c",
-			supports_url_encoding: true,
-		},
-		{
-			id: "0408d79206d54e859284b605fb19bff4",
-			title: "wildebeest-penalosa-cache",
-			supports_url_encoding: true,
-		},
-		{
-			id: "059c2d670d6e49b8b32978ace0df869e",
-			title: "manifest",
-			supports_url_encoding: true,
-		},
-		{
-			id: "065bba804e944768a90e5c88cdc7f406",
-			title: "MY_KV_NAMESPACE-71f987ad-a890-49d2-9e18-90debb5ca6be",
-			supports_url_encoding: true,
-		},
-		{
-			id: "06e46ea96ab9494dae07a2f745f7adc1",
-			title: "broadcast_info",
-			supports_url_encoding: true,
-		},
-		{
-			id: "09efc35d963e403e8bd813838e305978",
-			title: "MY_KV_NAMESPACE2-f636017b-6055-4d4c-b646-24e881be7a50",
-			supports_url_encoding: true,
-		},
-		{
-			id: "0cad668ee48c48938e730942b7b280d2",
-			title: "SOME_KV_BINDING-e32c862a-d628-4dd5-bcc6-d3ff2a2778fb",
-			supports_url_encoding: true,
-		},
-		{
-			id: "11b261c49761446dac77085232ceb76f",
-			title: "playground-wfp-preview-TOKEN_LOOKUP",
-			supports_url_encoding: true,
-		},
-		{
-			id: "158cca1449f84a1c8adce9cf389621a2",
-			title: "quicklink-worker-redirects",
-			supports_url_encoding: true,
-		},
-		{
-			id: "18fc60fe7cb74d6391e8e8bba4fa2b7e",
-			title: "template-EXAMPLE_TODOS-9d495239-bc98-4ca0-a45a-7336be6258da",
-			supports_url_encoding: true,
-		},
-		{
-			id: "1cb0505406234378a06090cd5fd49354",
-			title: "MY_KV_NAMESPACE",
-			supports_url_encoding: true,
-		},
-		{
-			id: "24d2846984dc4eb3831de7752682997b",
-			title: "__test-301-workers_sites_assets",
-			supports_url_encoding: true,
-		},
-		{
-			id: "27401a5de9bb4a119a1f1445e396d6a6",
-			title: "MY_KV-98ec60a5-7841-46fe-90c2-8ffa1704779f",
-			supports_url_encoding: true,
-		},
-		{
-			id: "27a719f73d4c40238b735c5170277d03",
-			title: "Hell world",
-			supports_url_encoding: true,
-		},
-		{
-			id: "29ca6f5fc630477fa4b46d1bcd599db1",
-			title: "__abuse-test-staging-workers_sites_assets",
-			supports_url_encoding: true,
-		},
-		{
-			id: "29f1e0838dde473ea421ec33568fe270",
-			title: "todo-binding",
-			supports_url_encoding: true,
-		},
-	],
+	result: [],
 	success: true,
 	errors: [],
 	messages: [],
@@ -130,7 +29,7 @@ const kvApiResponse = {
 		page: 1,
 		per_page: 20,
 		count: 20,
-		total_count: 100,
+		total_count: 101,
 		total_pages: 5,
 	},
 };
@@ -278,7 +177,7 @@ export async function multiStepInput(
 
 				if (state.bindingType?.description === "r2_buckets") {
 					text += `
-					
+
 [[r2_buckets]]
 binding = "${state.name}"
 bucket_name = "${crypto.randomUUID()}"`;
@@ -289,7 +188,7 @@ bucket_name = "${crypto.randomUUID()}"`;
 binding = "${state.name}"${state.id ? `\nid = "${state.id}"` : ""}`;
 				} else if (state.bindingType?.description === "d1_databases") {
 					text += `
-					
+
 [[d1_databases]]
 binding = "${state.name}"
 database_id = "${crypto.randomUUID()}"`;
