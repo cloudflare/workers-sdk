@@ -1,7 +1,6 @@
 import type { Config } from "../../config";
 import type {
 	CustomDomainRoute,
-	ExperimentalAssets,
 	Rule,
 	ZoneIdRoute,
 	ZoneNameRoute,
@@ -28,6 +27,7 @@ import type {
 import type { WorkerRegistry } from "../../dev-registry";
 import type { CfAccount } from "../../dev/create-worker-preview";
 import type { EsbuildBundle } from "../../dev/use-esbuild";
+import type { ExperimentalAssetsOptions } from "../../experimental-assets";
 import type { ConfigController } from "./ConfigController";
 import type {
 	DispatchFetch,
@@ -163,7 +163,7 @@ export interface StartDevWorkerInput {
 	};
 	unsafe?: Omit<CfUnsafe, "bindings">;
 	experimental?: {
-		assets?: Omit<ExperimentalAssets, "bindings">;
+		assets?: Omit<ExperimentalAssetsOptions, "bindings">;
 	};
 }
 

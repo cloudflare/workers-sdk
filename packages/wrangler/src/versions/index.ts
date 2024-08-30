@@ -229,7 +229,7 @@ export async function versionsUploadHandler(
 		);
 	}
 
-	const experimentalAssets = processExperimentalAssetsArg(args, config);
+	const experimentalAssetsOptions = processExperimentalAssetsArg(args, config);
 
 	if (args.latest) {
 		logger.warn(
@@ -263,7 +263,7 @@ export async function versionsUploadHandler(
 		jsxFactory: args.jsxFactory,
 		jsxFragment: args.jsxFragment,
 		tsconfig: args.tsconfig,
-		experimentalAssets,
+		experimentalAssetsOptions,
 		minify: args.minify,
 		uploadSourceMaps: args.uploadSourceMaps,
 		nodeCompat: args.nodeCompat,

@@ -36,9 +36,10 @@ import {
 	maybeRetrieveFileSourceMap,
 } from "../sourcemap";
 import type { Config } from "../config";
-import type { ExperimentalAssets, Rule } from "../config/environment";
+import type { Rule } from "../config/environment";
 import type { Entry } from "../deployment-bundle/entry";
 import type { CfPlacement, CfWorkerInit } from "../deployment-bundle/worker";
+import type { ExperimentalAssetsOptions } from "../experimental-assets";
 import type { RetrieveSourceMapFunction } from "../sourcemap";
 
 type Props = {
@@ -51,7 +52,7 @@ type Props = {
 	env: string | undefined;
 	compatibilityDate: string | undefined;
 	compatibilityFlags: string[] | undefined;
-	experimentalAssets: ExperimentalAssets | undefined;
+	experimentalAssetsOptions: ExperimentalAssetsOptions | undefined;
 	vars: Record<string, string> | undefined;
 	defines: Record<string, string> | undefined;
 	alias: Record<string, string> | undefined;
@@ -349,13 +350,16 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			: undefined;
 
 		// Upload assets if experimental assets is being used
-		const experimentalAssetsJwt: CfWorkerInit["experimental_assets_jwt"] =
-			props.experimentalAssets && !props.dryRun
-				? await syncExperimentalAssets(
-						accountId,
-						scriptName,
-						props.experimentalAssets.directory
-					)
+		const experimentalAssetsOptions =
+			props.experimentalAssetsOptions && !props.dryRun
+				? {
+						routingConfig: props.experimentalAssetsOptions?.routingConfig,
+						jwt: await syncExperimentalAssets(
+							accountId,
+							scriptName,
+							props.experimentalAssetsOptions.directory
+						),
+					}
 				: undefined;
 
 		const bindings: CfWorkerInit["bindings"] = {
@@ -423,7 +427,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 				"workers/message": props.message,
 				"workers/tag": props.tag,
 			},
-			experimental_assets_jwt: experimentalAssetsJwt,
+			experimental_assets: experimentalAssetsOptions,
 		};
 
 		await printBundleSize(

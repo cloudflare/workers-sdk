@@ -676,7 +676,7 @@ export async function createRemoteWorkerInit(props: {
 		placement: undefined, // no placement in dev
 		tail_consumers: undefined, // no tail consumers in dev - TODO revisit?
 		limits: undefined, // no limits in preview - not supported yet but can be added
-		experimental_assets_jwt: undefined, // no remote mode for assets
+		experimental_assets: undefined, // no remote mode for assets
 	};
 
 	return init;

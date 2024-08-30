@@ -599,8 +599,8 @@ export async function startDev(args: StartDevOptions) {
 			);
 		}
 
-		let experimentalAssets = processExperimentalAssetsArg(args, config);
-		if (experimentalAssets) {
+		let experimentalAssetsOptions = processExperimentalAssetsArg(args, config);
+		if (experimentalAssetsOptions) {
 			args.forceLocal = true;
 		}
 
@@ -608,7 +608,10 @@ export async function startDev(args: StartDevOptions) {
 		 * - `config.legacy_assets` conflates `legacy_assets` and `assets`
 		 * - `args.legacyAssets` conflates `legacy-assets` and `assets`
 		 */
-		if ((args.legacyAssets || config.legacy_assets) && experimentalAssets) {
+		if (
+			(args.legacyAssets || config.legacy_assets) &&
+			experimentalAssetsOptions
+		) {
 			throw new UserError(
 				"Cannot use Legacy Assets and Experimental Assets in the same Worker."
 			);
@@ -790,7 +793,12 @@ export async function startDev(args: StartDevOptions) {
 					enableServiceEnvironments: !(args.legacyEnv ?? true),
 				},
 				experimental: {
-					assets: args.experimentalAssets ? experimentalAssets : undefined,
+					// only pass `experimentalAssetsOptions` if it came from args not from config
+					// otherwise config at startup ends up overriding future config changes in the
+					// ConfigController
+					assets: args.experimentalAssets
+						? experimentalAssetsOptions
+						: undefined,
 				},
 			} satisfies StartDevWorkerInput);
 
@@ -837,13 +845,18 @@ export async function startDev(args: StartDevOptions) {
 					 *    file, we should ensure we're still watching the correct
 					 *    directory
 					 */
-					if (experimentalAssets && !args.experimentalAssets) {
+					if (experimentalAssetsOptions && !args.experimentalAssets) {
 						await assetsWatcher?.close();
 
-						experimentalAssets = processExperimentalAssetsArg(args, config);
+						// this gets passed into the Dev React element, so ensure we don't
+						// block scope this var
+						experimentalAssetsOptions = processExperimentalAssetsArg(
+							args,
+							config
+						);
 
-						if (experimentalAssets) {
-							assetsWatcher = watch(experimentalAssets.directory, {
+						if (experimentalAssetsOptions) {
+							assetsWatcher = watch(experimentalAssetsOptions.directory, {
 								persistent: true,
 								ignoreInitial: true,
 							}).on("all", async (eventName, changedPath) => {
@@ -937,7 +950,7 @@ export async function startDev(args: StartDevOptions) {
 					}
 					legacyAssetPaths={legacyAssetPaths}
 					legacyAssetsConfig={configParam.legacy_assets}
-					experimentalAssets={experimentalAssets}
+					experimentalAssets={experimentalAssetsOptions}
 					initialPort={
 						args.port ?? configParam.dev.port ?? (await getLocalPort())
 					}
@@ -979,8 +992,8 @@ export async function startDev(args: StartDevOptions) {
 		const devReactElement = render(await getDevReactElement(config));
 		rerender = devReactElement.rerender;
 
-		if (experimentalAssets && !args.experimentalDevEnv) {
-			assetsWatcher = watch(experimentalAssets.directory, {
+		if (experimentalAssetsOptions && !args.experimentalDevEnv) {
+			assetsWatcher = watch(experimentalAssetsOptions.directory, {
 				persistent: true,
 				ignoreInitial: true,
 			}).on("all", async (eventName, filePath) => {

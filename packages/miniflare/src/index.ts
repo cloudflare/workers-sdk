@@ -59,6 +59,7 @@ import {
 	WorkerOptions,
 	WrappedBindingNames,
 } from "./plugins";
+import { ROUTER_SERVICE_NAME } from "./plugins/assets/constants";
 import {
 	CUSTOM_SERVICE_KNOWN_OUTBOUND,
 	CustomServiceKind,
@@ -1246,7 +1247,10 @@ export class Miniflare {
 		const globalServices = getGlobalServices({
 			sharedOptions: sharedOpts.core,
 			allWorkerRoutes,
-			fallbackWorkerName: this.#workerOpts[0].core.name,
+			// if Workers + Assets project, point to router Worker service rather than user Worker
+			fallbackWorkerName: this.#workerOpts[0].assets.assets
+				? ROUTER_SERVICE_NAME
+				: getUserServiceName(this.#workerOpts[0].core.name),
 			loopbackPort,
 			log: this.#log,
 			proxyBindings,

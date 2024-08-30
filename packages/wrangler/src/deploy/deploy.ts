@@ -51,7 +51,6 @@ import { getZoneForRoute } from "../zones";
 import type { Config } from "../config";
 import type {
 	CustomDomainRoute,
-	ExperimentalAssets,
 	Route,
 	Rule,
 	ZoneIdRoute,
@@ -63,6 +62,7 @@ import type {
 	CfPlacement,
 	CfWorkerInit,
 } from "../deployment-bundle/worker";
+import type { ExperimentalAssetsOptions } from "../experimental-assets";
 import type { PostQueueBody, PostTypedConsumerBody } from "../queues/client";
 import type { LegacyAssetPaths } from "../sites";
 import type { RetrieveSourceMapFunction } from "../sourcemap";
@@ -78,7 +78,7 @@ type Props = {
 	compatibilityDate: string | undefined;
 	compatibilityFlags: string[] | undefined;
 	legacyAssetPaths: LegacyAssetPaths | undefined;
-	experimentalAssets: ExperimentalAssets | undefined;
+	experimentalAssetsOptions: ExperimentalAssetsOptions | undefined;
 	vars: Record<string, string> | undefined;
 	defines: Record<string, string> | undefined;
 	alias: Record<string, string> | undefined;
@@ -590,13 +590,16 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			: undefined;
 
 		// Upload assets if experimental assets is being used
-		const experimentalAssetsJwt: CfWorkerInit["experimental_assets_jwt"] =
-			props.experimentalAssets && !props.dryRun
-				? await syncExperimentalAssets(
-						accountId,
-						scriptName,
-						props.experimentalAssets.directory
-					)
+		const experimentalAssetsOptions =
+			props.experimentalAssetsOptions && !props.dryRun
+				? {
+						routingConfig: props.experimentalAssetsOptions?.routingConfig,
+						jwt: await syncExperimentalAssets(
+							accountId,
+							scriptName,
+							props.experimentalAssetsOptions.directory
+						),
+					}
 				: undefined;
 
 		const legacyAssets = await syncLegacyAssets(
@@ -692,7 +695,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			placement,
 			tail_consumers: config.tail_consumers,
 			limits: config.limits,
-			experimental_assets_jwt: experimentalAssetsJwt,
+			experimental_assets: experimentalAssetsOptions,
 		};
 
 		sourceMapSize = worker.sourceMaps?.reduce(

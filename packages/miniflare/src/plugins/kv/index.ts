@@ -20,12 +20,6 @@ import {
 	Plugin,
 	SERVICE_LOOPBACK,
 } from "../shared";
-import {
-	getAssetsBindings,
-	getAssetsNodeBindings,
-	getAssetsServices,
-	isWorkersWithAssets,
-} from "./assets";
 import { KV_PLUGIN_NAME } from "./constants";
 import {
 	getSitesBindings,
@@ -36,11 +30,6 @@ import {
 
 export const KVOptionsSchema = z.object({
 	kvNamespaces: z.union([z.record(z.string()), z.string().array()]).optional(),
-
-	// Workers + Assets
-	assetsPath: PathSchema.optional(),
-	assetsKVBindingName: z.string().optional(),
-	assetsManifestBindingName: z.string().optional(),
 
 	// Workers Sites
 	sitePath: PathSchema.optional(),
@@ -82,10 +71,6 @@ export const KV_PLUGIN: Plugin<
 			bindings.push(...(await getSitesBindings(options)));
 		}
 
-		if (isWorkersWithAssets(options)) {
-			bindings.push(...(await getAssetsBindings(options)));
-		}
-
 		return bindings;
 	},
 
@@ -99,9 +84,6 @@ export const KV_PLUGIN: Plugin<
 			Object.assign(bindings, await getSitesNodeBindings(options));
 		}
 
-		if (isWorkersWithAssets(options)) {
-			Object.assign(bindings, await getAssetsNodeBindings(options));
-		}
 		return bindings;
 	},
 
@@ -171,10 +153,6 @@ export const KV_PLUGIN: Plugin<
 
 		if (isWorkersSitesEnabled(options)) {
 			services.push(...getSitesServices(options));
-		}
-
-		if (isWorkersWithAssets(options)) {
-			services.push(...(await getAssetsServices(options)));
 		}
 
 		return services;

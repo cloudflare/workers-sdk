@@ -1,6 +1,6 @@
-# workers-with-assets
+# workers-assets-with-user-worker"
 
-`workers-with-assets` is a test fixture that showcases Workers with Assets. This particular fixture sets up an assets-only Workers project.
+`workers-assets-with-user-worker"` is a test fixture that showcases Workers with Assets. This particular fixture sets up a User Worker, assets, and a binding from the user Worker to the assets.
 
 ## dev
 

@@ -1,5 +1,7 @@
 import { z } from "zod";
 import { ValueOf } from "../workers";
+import { ASSETS_PLUGIN } from "./assets";
+import { ASSETS_PLUGIN_NAME } from "./assets/constants";
 import { CACHE_PLUGIN, CACHE_PLUGIN_NAME } from "./cache";
 import { CORE_PLUGIN, CORE_PLUGIN_NAME } from "./core";
 import { D1_PLUGIN, D1_PLUGIN_NAME } from "./d1";
@@ -20,6 +22,7 @@ export const PLUGINS = {
 	[R2_PLUGIN_NAME]: R2_PLUGIN,
 	[HYPERDRIVE_PLUGIN_NAME]: HYPERDRIVE_PLUGIN,
 	[RATELIMIT_PLUGIN_NAME]: RATELIMIT_PLUGIN,
+	[ASSETS_PLUGIN_NAME]: ASSETS_PLUGIN,
 };
 export type Plugins = typeof PLUGINS;
 
@@ -66,7 +69,8 @@ export type WorkerOptions = z.input<typeof CORE_PLUGIN.options> &
 	z.input<typeof QUEUES_PLUGIN.options> &
 	z.input<typeof R2_PLUGIN.options> &
 	z.input<typeof HYPERDRIVE_PLUGIN.options> &
-	z.input<typeof RATELIMIT_PLUGIN.options>;
+	z.input<typeof RATELIMIT_PLUGIN.options> &
+	z.input<typeof ASSETS_PLUGIN.options>;
 export type SharedOptions = z.input<typeof CORE_PLUGIN.sharedOptions> &
 	z.input<typeof CACHE_PLUGIN.sharedOptions> &
 	z.input<typeof D1_PLUGIN.sharedOptions> &
@@ -116,3 +120,5 @@ export * from "./queues";
 export * from "./r2";
 export * from "./hyperdrive";
 export * from "./ratelimit";
+export * from "./assets";
+export * from "./assets/schema";
