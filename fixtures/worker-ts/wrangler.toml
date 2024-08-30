@@ -1,3 +1,26 @@
 name = "worker-ts"
 main = "src/index.ts"
 compatibility_date = "2023-05-04"
+
+[vars]
+HELLO = "WORLD"
+HELLO2 = "WORLD"
+HELLO3 = "WORLD"
+HELLO4 = "WORLD"
+HELLO5 = "WORLD"
+
+
+[[kv_namespaces]]
+binding = "SOME_BINDING"
+id = "0408d79206d54e859284b605fb19bff4"
+
+[[kv_namespaces]]
+binding = "BINDING2"
+id = "01962077d09242c5b0978a12bccaa5ed"
+
+[[kv_namespaces]]
+binding = "SOME_BINDING2"
+id = "06e46ea96ab9494dae07a2f745f7adc1"
+
+[[kv_namespaces]]
+binding = "BINDING45"

@@ -87,8 +87,8 @@
 			"cloudflare-workers-bindings": [
 				{
 					"id": "workerBindings",
-					"name": "",
-					"icon": "media/cf-workers-logo.svg"
+					"name": "Bindings",
+					"icon": "resources/icons/cf-workers-logo.svg"
 				}
 			]
 		},
