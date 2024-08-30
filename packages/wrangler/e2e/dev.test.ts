@@ -889,7 +889,7 @@ describe("watch mode", () => {
 				text = await fetchText(`${url}/workers/index.html`);
 				expect(text).toBe("Cloudflare Workers!");
 
-				await helper.remove(["public/index.html"]);
+				await helper.removeFiles(["public/index.html"]);
 
 				await worker.waitForReload();
 
@@ -1010,7 +1010,7 @@ describe("watch mode", () => {
 			expect(text).toBe("<h1>Read more about Workers + Assets</h1>");
 
 			// remove
-			await helper.remove(["dist/about.html"]);
+			await helper.removeFiles(["dist/about.html"]);
 
 			await worker.waitForReload();
 

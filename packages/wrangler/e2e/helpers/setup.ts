@@ -22,7 +22,7 @@ export async function seed(
 }
 
 // Removes the given files from the `root` directory on the file system.
-export async function remove(root: string, files: string[]) {
+export async function removeFiles(root: string, files: string[]) {
 	for (const name of files) {
 		const filePath = path.resolve(root, name);
 		if (filePath) {

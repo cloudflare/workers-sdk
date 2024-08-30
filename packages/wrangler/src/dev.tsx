@@ -421,8 +421,10 @@ This is currently not supported 😭, but we think that we'll get it to work soo
 			await waitUntilExit();
 		}
 	} finally {
-		await configFileWatcher?.close();
-		await assetsWatcher?.close();
+		await Promise.allSettled([
+			configFileWatcher?.close(),
+			assetsWatcher?.close(),
+		]);
 	}
 }
 
@@ -995,13 +997,17 @@ export async function startDev(args: StartDevOptions) {
 			assetsWatcher,
 			stop: async () => {
 				devReactElement.unmount();
-				await configFileWatcher?.close();
-				await assetsWatcher?.close();
+				await Promise.allSettled([
+					configFileWatcher?.close(),
+					assetsWatcher?.close(),
+				]);
 			},
 		};
 	} catch (e) {
-		await configFileWatcher?.close();
-		await assetsWatcher?.close();
+		await Promise.allSettled([
+			configFileWatcher?.close(),
+			assetsWatcher?.close(),
+		]);
 		throw e;
 	}
 }

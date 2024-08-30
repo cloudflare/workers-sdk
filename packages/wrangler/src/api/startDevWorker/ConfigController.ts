@@ -322,6 +322,7 @@ export class ConfigController extends Controller<ConfigControllerEventMap> {
 		if (configPath) {
 			this.#configWatcher = watch(configPath, {
 				persistent: true,
+				ignoreInitial: true,
 			}).on("change", async (_event) => {
 				logger.log(`${path.basename(configPath)} changed...`);
 				assert(
@@ -422,8 +423,10 @@ export class ConfigController extends Controller<ConfigControllerEventMap> {
 
 	async teardown() {
 		logger.debug("ConfigController teardown beginning...");
-		await this.#configWatcher?.close();
-		await this.#assetsWatcher?.close();
+		await Promise.allSettled([
+			this.#configWatcher?.close(),
+			this.#assetsWatcher?.close(),
+		]);
 		logger.debug("ConfigController teardown complete");
 	}
 
