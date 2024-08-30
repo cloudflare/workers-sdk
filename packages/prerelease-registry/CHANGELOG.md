@@ -1,5 +1,11 @@
 # @cloudflare/prerelease-registry
 
+## 0.1.0
+
+### Minor Changes
+
+- [#6602](https://github.com/cloudflare/workers-sdk/pull/6602) [`bf2e03e`](https://github.com/cloudflare/workers-sdk/commit/bf2e03e76836ef2618bcb00ab27c3624ae35b789) Thanks [@penalosa](https://github.com/penalosa)! - feat: Support `.vsix` artifacts in pre-release registry
+
 ## 0.0.4
 
 ### Patch Changes

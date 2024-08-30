@@ -1,5 +1,11 @@
 # @cloudflare/quick-edit
 
+## 0.0.2
+
+### Patch Changes
+
+- [#6558](https://github.com/cloudflare/workers-sdk/pull/6558) [`2a5b648`](https://github.com/cloudflare/workers-sdk/commit/2a5b64815455a324dd57cdcf98abbcc3f7156c98) Thanks [@edmundhung](https://github.com/edmundhung)! - fix: disable autosave on quick editor to avoid context reset without explicit user action
+
 ## 0.0.1
 
 ### Patch Changes

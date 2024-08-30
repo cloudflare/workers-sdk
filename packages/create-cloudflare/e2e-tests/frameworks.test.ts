@@ -363,6 +363,7 @@ const frameworkTests: Record<string, FrameworkTestConfig> = {
 			expectedText: "Vite App",
 		},
 		flags: ["--ts"],
+		quarantine: true,
 	},
 };
 
