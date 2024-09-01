@@ -4,10 +4,10 @@ import { Worker_Binding } from "../../runtime";
 import { getUserServiceName } from "../core";
 import {
 	getPersistPath,
-	kProxyNodeBinding,
 	kUnsafeEphemeralUniqueKey,
 	PersistenceSchema,
 	Plugin,
+	ProxyNodeBinding,
 	UnsafeUniqueKey,
 } from "../shared";
 
@@ -83,7 +83,9 @@ export const DURABLE_OBJECTS_PLUGIN: Plugin<
 	},
 	getNodeBindings(options) {
 		const objects = Object.keys(options.durableObjects ?? {});
-		return Object.fromEntries(objects.map((name) => [name, kProxyNodeBinding]));
+		return Object.fromEntries(
+			objects.map((name) => [name, new ProxyNodeBinding()])
+		);
 	},
 	async getServices({
 		sharedOptions,

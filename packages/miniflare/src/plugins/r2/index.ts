@@ -10,13 +10,13 @@ import { SharedBindings } from "../../workers";
 import {
 	getMiniflareObjectBindings,
 	getPersistPath,
-	kProxyNodeBinding,
 	migrateDatabase,
 	namespaceEntries,
 	namespaceKeys,
 	objectEntryWorker,
 	PersistenceSchema,
 	Plugin,
+	ProxyNodeBinding,
 	SERVICE_LOOPBACK,
 } from "../shared";
 
@@ -51,7 +51,9 @@ export const R2_PLUGIN: Plugin<
 	},
 	getNodeBindings(options) {
 		const buckets = namespaceKeys(options.r2Buckets);
-		return Object.fromEntries(buckets.map((name) => [name, kProxyNodeBinding]));
+		return Object.fromEntries(
+			buckets.map((name) => [name, new ProxyNodeBinding()])
+		);
 	},
 	async getServices({
 		options,
