@@ -272,7 +272,11 @@ async function resolveConfig(
 			moduleRules: input.build?.moduleRules ?? getRules(config),
 
 			minify: input.build?.minify ?? config.minify,
-			define: { ...config.define, ...input.build?.define },
+			define: {
+				...input.build?.processEnvValues,
+				...config.define,
+				...input.build?.define,
+			},
 			custom: {
 				command: input.build?.custom?.command ?? config.build?.command,
 				watch: input.build?.custom?.watch ?? config.build?.watch_dir,

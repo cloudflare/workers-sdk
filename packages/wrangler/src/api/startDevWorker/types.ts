@@ -99,6 +99,8 @@ export interface StartDevWorkerInput {
 		processEntrypoint?: boolean;
 		/** Specifies types of modules matched by globs. */
 		moduleRules?: Rule[];
+		/** A set of values to populate process.env/import.meta.env in the worker. */
+		processEnvValues?: Record<string, string>;
 		/** Replace global identifiers with constant expressions, e.g. { debug: 'true', version: '"1.0.0"' }. Only takes effect if bundle: true. */
 		define?: Record<string, string>;
 		/** Alias modules */

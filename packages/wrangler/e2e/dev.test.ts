@@ -141,6 +141,104 @@ describe.each([
 	});
 });
 
+describe.each([
+	{ cmd: "wrangler dev --no-x-dev-env" },
+	{ cmd: "wrangler dev --remote --no-x-dev-env" },
+	{ cmd: "wrangler dev --x-dev-env" },
+	{ cmd: "wrangler dev --remote --x-dev-env" },
+])("can read from .env: $cmd", ({ cmd }) => {
+	it(`can read from .env with --dotenv: ${cmd}`, async () => {
+		const helper = new WranglerE2ETestHelper();
+		await helper.seed({
+			"wrangler.toml": dedent`
+					name = "${workerName}"
+					main = "index.ts"
+					compatibility_date = "2024-08-08"
+			`,
+			".env": dedent`
+					FOO=some-value
+					BAR=some-other-value
+					BAZ=some-third-value
+			`,
+			"index.ts": dedent`
+					export default {
+						fetch(request, env) {
+							return new Response(process.env.FOO + ' ' + import.meta.env.BAR + ' ' + env.BAZ);
+						}
+					}
+			`,
+		});
+
+		const worker = helper.runLongLived(`${cmd} --dotenv`);
+
+		const { url } = await worker.waitForReady();
+
+		await expect(fetchText(url)).resolves.toBe(
+			"some-value some-other-value some-third-value"
+		);
+	});
+
+	it(`can read from .env with dotenv = true: ${cmd}`, async () => {
+		const helper = new WranglerE2ETestHelper();
+		await helper.seed({
+			"wrangler.toml": dedent`
+					name = "${workerName}"
+					main = "index.ts"
+					compatibility_date = "2024-08-08"
+					dotenv = true
+			`,
+			".env": dedent`
+					FOO=some-value
+					BAR=some-other-value
+					BAZ=some-third-value
+			`,
+			"index.ts": dedent`
+					export default {
+						fetch(request, env) {
+							return new Response(process.env.FOO + ' ' + import.meta.env.BAR + ' ' + env.BAZ);
+						}
+					}
+			`,
+		});
+
+		const worker = helper.runLongLived(cmd);
+
+		const { url } = await worker.waitForReady();
+
+		await expect(fetchText(url)).resolves.toBe(
+			"some-value some-other-value some-third-value"
+		);
+	});
+
+	it(`can set values from --penv: ${cmd}`, async () => {
+		const helper = new WranglerE2ETestHelper();
+		await helper.seed({
+			"wrangler.toml": dedent`
+					name = "${workerName}"
+					main = "index.ts"
+					compatibility_date = "2024-08-08"
+			`,
+			"index.ts": dedent`
+					export default {
+						fetch(request, env) {
+							return new Response(process.env.FOO + ' ' + import.meta.env.BAR + ' ' + env.BAZ);
+						}
+					}
+			`,
+		});
+
+		const worker = helper.runLongLived(
+			`${cmd} --penv FOO=some-value BAR=some-other-value BAZ=some-third-value`
+		);
+
+		const { url } = await worker.waitForReady();
+
+		await expect(fetchText(url)).resolves.toBe(
+			"some-value some-other-value some-third-value"
+		);
+	});
+});
+
 // Skipping remote python tests because they consistently flake with timeouts
 // Unskip once remote dev with python workers is more stable
 describe.each([

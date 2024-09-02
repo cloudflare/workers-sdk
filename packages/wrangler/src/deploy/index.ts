@@ -157,6 +157,21 @@ export function deployOptions(yargs: CommonYargsArgv) {
 				requiresArg: true,
 				array: true,
 			})
+			.option("dotenv", {
+				describe: "Populate process.env/import.meta.env with values from .env",
+				type: "boolean",
+			})
+			.option("env-file", {
+				describe: "Path to a file to populate process.env/import.meta.env",
+				type: "string",
+				requiresArg: true,
+			})
+			.option("penv", {
+				describe: "Set a value on process.env/import.meta.env",
+				type: "string",
+				requiresArg: true,
+				array: true,
+			})
 			.option("triggers", {
 				describe: "cron schedules to attach",
 				alias: ["schedule", "schedules"],
@@ -346,6 +361,9 @@ export async function deployHandler(args: DeployArgs) {
 		vars: cliVars,
 		defines: cliDefines,
 		alias: cliAlias,
+		dotenv: args.dotenv,
+		env_file: args.envFile,
+		penv: args.penv,
 		triggers: args.triggers,
 		jsxFactory: args.jsxFactory,
 		jsxFragment: args.jsxFragment,
