@@ -123,5 +123,9 @@
 	"workers-sdk": {
 		"prerelease": true,
 		"type": "extension"
+	},
+	"dependencies": {
+		"cloudflare": "^3.5.0",
+		"undici": "^5.28.4"
 	}
 }

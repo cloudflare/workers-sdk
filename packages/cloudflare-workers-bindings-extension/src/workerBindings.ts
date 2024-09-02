@@ -46,6 +46,7 @@ export class DepNodeProvider implements vscode.TreeDataProvider<Binding> {
 		const { unstable_getMiniflareWorkerOptions } = await import(wrangler);
 
 		console.log(path.join(this.workspaceRoot!, "wrangler.toml"));
+		// TODO: multiroot workspaces
 		const options = await unstable_getMiniflareWorkerOptions(
 			path.join(this.workspaceRoot!, "wrangler.toml")
 		);

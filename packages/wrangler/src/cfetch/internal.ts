@@ -1,5 +1,6 @@
 import assert from "node:assert";
-import { fetch, File, FormData, Headers, Response } from "undici";
+import Cloudflare from "cloudflare";
+import { fetch, File, FormData, Headers, Request, Response } from "undici";
 import { version as wranglerVersion } from "../../package.json";
 import { getCloudflareApiBaseUrl } from "../environment-variables/misc-variables";
 import { UserError } from "../errors";
@@ -115,6 +116,22 @@ export async function fetchInternal<ResponseType>(
 			status: response.status,
 		});
 	}
+}
+
+export function getSdk() {
+	return new Cloudflare({
+		async fetch(info, init) {
+			const request = new Request(info, init);
+			const url = new URL(request.url);
+
+			return performApiFetch(
+				url.pathname.split("/client/v4")[1],
+				{ ...request },
+				url.searchParams,
+				request.signal
+			);
+		},
+	});
 }
 
 function truncate(text: string, maxLength: number): string {

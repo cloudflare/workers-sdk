@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 import crypto from "crypto";
 import path from "path";
+import { setTimeout } from "timers/promises";
 import {
 	CancellationToken,
 	Disposable,
@@ -18,6 +19,7 @@ import {
 	window,
 	workspace,
 } from "vscode";
+import { getSdk, parseTOML } from "./api";
 
 const encoder = new TextEncoder();
 const kvApiResponse = {
@@ -127,11 +129,24 @@ export async function multiStepInput(
 		input: MultiStepInput,
 		state: Partial<State>
 	) {
+		const sdk = await getSdk(rootPath);
+		console.log(sdk);
+
+		const toml = await parseTOML(
+			rootPath,
+			path.join(rootPath, "wrangler.toml")
+		);
+		console.log(toml);
+		// TODO: support Wrangler account ID inference + caching, with dialog to choose account
+		const kvNamespaces = await sdk.kv.namespaces.list({
+			account_id: toml.account_id,
+			per_page: 100,
+		});
 		let existing = await input.showQuickPick({
 			title,
 			step: 2,
 			totalSteps: 4,
-			items: kvApiResponse.result.map(
+			items: kvNamespaces.result.map(
 				(r) =>
 					new BindingType(
 						r.title,

@@ -1,13 +1,14 @@
 import crypto from "crypto";
 import path from "path";
 import * as vscode from "vscode";
+import { getSdk } from "./api";
 import { showInputBox, showQuickPick } from "./basicInput";
 import { multiStepInput } from "./multiStepInput";
 import { quickOpen } from "./quickOpen";
 import { Binding, DepNodeProvider } from "./workerBindings";
 
 const encoder = new TextEncoder();
-export function activate(context: vscode.ExtensionContext) {
+export async function activate(context: vscode.ExtensionContext) {
 	const rootPath =
 		vscode.workspace.workspaceFolders &&
 		vscode.workspace.workspaceFolders.length > 0
@@ -20,18 +21,19 @@ export function activate(context: vscode.ExtensionContext) {
 	const watcher = vscode.workspace.createFileSystemWatcher("**/wrangler.toml");
 
 	context.subscriptions.push(watcher);
-	// watcher.onDidChange((uri) => {
-	// 	console.log("really changed");
-	// 	workerBindingsProvider.refresh();
-	// }); // listen to files being changed
+	watcher.onDidChange((uri) => {
+		console.log("really changed");
+		workerBindingsProvider.refresh();
+	}); // listen to files being changed
 
 	vscode.window.registerTreeDataProvider(
 		"workerBindings",
 		workerBindingsProvider
 	);
-	vscode.commands.registerCommand("workerBindings.refreshEntry", () =>
-		workerBindingsProvider.refresh()
-	);
+	vscode.commands.registerCommand("workerBindings.refreshEntry", async () => {
+		workerBindingsProvider.refresh();
+		console.log(await (await getSdk(rootPath!)).accounts.list());
+	});
 	vscode.commands.registerCommand("extension.openPackageOnNpm", (moduleName) =>
 		vscode.commands.executeCommand(
 			"vscode.open",
