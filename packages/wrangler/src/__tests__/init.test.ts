@@ -70,22 +70,22 @@ describe("init", () => {
 			});
 
 			expect(std).toMatchInlineSnapshot(`
-			Object {
-			  "debug": "",
-			  "err": "",
-			  "info": "",
-			  "out": "Running \`mockpm create cloudflare/@2.5.0\`...",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare/@2.5.0\` instead.[0m
+				Object {
+				  "debug": "",
+				  "err": "",
+				  "info": "",
+				  "out": "Running \`mockpm create cloudflare/@/^2.5.0\`...",
+				  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare/@/^2.5.0\` instead.[0m
 
-			  The \`init\` command will be removed in a future version.
+				  The \`init\` command will be removed in a future version.
 
-			",
-			}
-		`);
+				",
+				}
+			`);
 
 			expect(execa).toHaveBeenCalledWith(
 				"mockpm",
-				["create", "cloudflare@2.5.0"],
+				["create", "cloudflare@^2.5.0"],
 				{
 					stdio: "inherit",
 				}
@@ -97,7 +97,7 @@ describe("init", () => {
 
 			expect(execa).toHaveBeenCalledWith(
 				"mockpm",
-				["create", "cloudflare@2.5.0", "--wrangler-defaults"],
+				["create", "cloudflare@^2.5.0", "--wrangler-defaults"],
 				{ stdio: "inherit" }
 			);
 		});
@@ -185,12 +185,12 @@ describe("init", () => {
 		`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`
-			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare/@2.5.0 --wrangler-defaults\` instead.[0m
+					"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare/@/^2.5.0 --wrangler-defaults\` instead.[0m
 
-			  The \`init\` command will be removed in a future version.
+					  The \`init\` command will be removed in a future version.
 
-			"
-		`);
+					"
+				`);
 			});
 
 			it("should initialize with no interactive prompts if `--yes` is used (named worker)", async () => {
@@ -224,12 +224,12 @@ describe("init", () => {
 		`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`
-			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare/@2.5.0 my-worker --wrangler-defaults\` instead.[0m
+					"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare/@/^2.5.0 my-worker --wrangler-defaults\` instead.[0m
 
-			  The \`init\` command will be removed in a future version.
+					  The \`init\` command will be removed in a future version.
 
-			"
-		`);
+					"
+				`);
 			});
 
 			it("should initialize with no interactive prompts if `-y` is used", async () => {
@@ -246,28 +246,28 @@ describe("init", () => {
 				});
 
 				expect(std).toMatchInlineSnapshot(`
-			Object {
-			  "debug": "",
-			  "err": "",
-			  "info": "Your project will use Vitest to run your tests.",
-			  "out": "✨ Created wrangler.toml
-			✨ Initialized git repository
-			✨ Created package.json
-			✨ Created tsconfig.json
-			✨ Created src/index.ts
-			✨ Created src/index.test.ts
-			✨ Installed @cloudflare/workers-types, typescript, and vitest into devDependencies
+					Object {
+					  "debug": "",
+					  "err": "",
+					  "info": "Your project will use Vitest to run your tests.",
+					  "out": "✨ Created wrangler.toml
+					✨ Initialized git repository
+					✨ Created package.json
+					✨ Created tsconfig.json
+					✨ Created src/index.ts
+					✨ Created src/index.test.ts
+					✨ Installed @cloudflare/workers-types, typescript, and vitest into devDependencies
 
-			To start developing your Worker, run \`npm start\`
-			To start testing your Worker, run \`npm test\`
-			To publish your Worker to the Internet, run \`npm run deploy\`",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare/@2.5.0 --wrangler-defaults\` instead.[0m
+					To start developing your Worker, run \`npm start\`
+					To start testing your Worker, run \`npm test\`
+					To publish your Worker to the Internet, run \`npm run deploy\`",
+					  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare/@/^2.5.0 --wrangler-defaults\` instead.[0m
 
-			  The \`init\` command will be removed in a future version.
+					  The \`init\` command will be removed in a future version.
 
-			",
-			}
-		`);
+					",
+					}
+				`);
 			});
 
 			it("should error if `--type javascript` is used", async () => {
@@ -336,18 +336,18 @@ describe("init", () => {
 				});
 
 				expect(std).toMatchInlineSnapshot(`
-			Object {
-			  "debug": "",
-			  "err": "",
-			  "info": "",
-			  "out": "✨ Created wrangler.toml",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare/@2.5.0\` instead.[0m
+					Object {
+					  "debug": "",
+					  "err": "",
+					  "info": "",
+					  "out": "✨ Created wrangler.toml",
+					  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare/@/^2.5.0\` instead.[0m
 
-			  The \`init\` command will be removed in a future version.
+					  The \`init\` command will be removed in a future version.
 
-			",
-			}
-		`);
+					",
+					}
+				`);
 			});
 
 			it("should create a wrangler.toml and a directory for a named Worker ", async () => {
@@ -375,18 +375,18 @@ describe("init", () => {
 				});
 
 				expect(std).toMatchInlineSnapshot(`
-			Object {
-			  "debug": "",
-			  "err": "",
-			  "info": "",
-			  "out": "✨ Created my-worker/wrangler.toml",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare/@2.5.0 my-worker\` instead.[0m
+					Object {
+					  "debug": "",
+					  "err": "",
+					  "info": "",
+					  "out": "✨ Created my-worker/wrangler.toml",
+					  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare/@/^2.5.0 my-worker\` instead.[0m
 
-			  The \`init\` command will be removed in a future version.
+					  The \`init\` command will be removed in a future version.
 
-			",
-			}
-		`);
+					",
+					}
+				`);
 			});
 
 			it("should display warning when wrangler.toml already exists, and exit if user does not want to carry on", async () => {
@@ -679,19 +679,19 @@ describe("init", () => {
 					},
 				});
 				expect(std).toMatchInlineSnapshot(`
-			Object {
-			  "debug": "",
-			  "err": "",
-			  "info": "",
-			  "out": "✨ Created wrangler.toml
-			✨ Initialized git repository",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare/@2.5.0\` instead.[0m
+					Object {
+					  "debug": "",
+					  "err": "",
+					  "info": "",
+					  "out": "✨ Created wrangler.toml
+					✨ Initialized git repository",
+					  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare/@/^2.5.0\` instead.[0m
 
-			  The \`init\` command will be removed in a future version.
+					  The \`init\` command will be removed in a future version.
 
-			",
-			}
-		`);
+					",
+					}
+				`);
 				expect(
 					(await execa("git", ["branch", "--show-current"])).stdout
 				).toEqual(getDefaultBranchName());
@@ -716,27 +716,27 @@ describe("init", () => {
 
 				// Note the lack of "✨ Initialized git repository" in the log
 				expect(std).toMatchInlineSnapshot(`
-			Object {
-			  "debug": "",
-			  "err": "",
-			  "info": "Your project will use Vitest to run your tests.",
-			  "out": "✨ Created wrangler.toml
-			✨ Created package.json
-			✨ Created tsconfig.json
-			✨ Created src/index.ts
-			✨ Created src/index.test.ts
-			✨ Installed @cloudflare/workers-types, typescript, and vitest into devDependencies
+					Object {
+					  "debug": "",
+					  "err": "",
+					  "info": "Your project will use Vitest to run your tests.",
+					  "out": "✨ Created wrangler.toml
+					✨ Created package.json
+					✨ Created tsconfig.json
+					✨ Created src/index.ts
+					✨ Created src/index.test.ts
+					✨ Installed @cloudflare/workers-types, typescript, and vitest into devDependencies
 
-			To start developing your Worker, run \`npm start\`
-			To start testing your Worker, run \`npm test\`
-			To publish your Worker to the Internet, run \`npm run deploy\`",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare/@2.5.0 --wrangler-defaults\` instead.[0m
+					To start developing your Worker, run \`npm start\`
+					To start testing your Worker, run \`npm test\`
+					To publish your Worker to the Internet, run \`npm run deploy\`",
+					  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare/@/^2.5.0 --wrangler-defaults\` instead.[0m
 
-			  The \`init\` command will be removed in a future version.
+					  The \`init\` command will be removed in a future version.
 
-			",
-			}
-		`);
+					",
+					}
+				`);
 			});
 
 			it("should not offer to initialize a git repo if it's already inside one (when using a path as name)", async () => {
@@ -748,27 +748,27 @@ describe("init", () => {
 
 				// Note the lack of "✨ Initialized git repository" in the log
 				expect(std).toMatchInlineSnapshot(`
-			Object {
-			  "debug": "",
-			  "err": "",
-			  "info": "Your project will use Vitest to run your tests.",
-			  "out": "✨ Created path/to/worker/my-worker/wrangler.toml
-			✨ Created path/to/worker/my-worker/package.json
-			✨ Created path/to/worker/my-worker/tsconfig.json
-			✨ Created path/to/worker/my-worker/src/index.ts
-			✨ Created path/to/worker/my-worker/src/index.test.ts
-			✨ Installed @cloudflare/workers-types, typescript, and vitest into devDependencies
+					Object {
+					  "debug": "",
+					  "err": "",
+					  "info": "Your project will use Vitest to run your tests.",
+					  "out": "✨ Created path/to/worker/my-worker/wrangler.toml
+					✨ Created path/to/worker/my-worker/package.json
+					✨ Created path/to/worker/my-worker/tsconfig.json
+					✨ Created path/to/worker/my-worker/src/index.ts
+					✨ Created path/to/worker/my-worker/src/index.test.ts
+					✨ Installed @cloudflare/workers-types, typescript, and vitest into devDependencies
 
-			To start developing your Worker, run \`cd path/to/worker/my-worker && npm start\`
-			To start testing your Worker, run \`npm test\`
-			To publish your Worker to the Internet, run \`npm run deploy\`",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare/@2.5.0 path/to/worker/my-worker --wrangler-defaults\` instead.[0m
+					To start developing your Worker, run \`cd path/to/worker/my-worker && npm start\`
+					To start testing your Worker, run \`npm test\`
+					To publish your Worker to the Internet, run \`npm run deploy\`",
+					  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare/@/^2.5.0 path/to/worker/my-worker --wrangler-defaults\` instead.[0m
 
-			  The \`init\` command will be removed in a future version.
+					  The \`init\` command will be removed in a future version.
 
-			",
-			}
-		`);
+					",
+					}
+				`);
 			});
 
 			// I... don't know how to test this lol
@@ -789,19 +789,19 @@ describe("init", () => {
 				);
 				await runWrangler("init --no-delegate-c3");
 				expect(std).toMatchInlineSnapshot(`
-			Object {
-			  "debug": "",
-			  "err": "",
-			  "info": "",
-			  "out": "✨ Created wrangler.toml
-			✨ Initialized git repository",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare/@2.5.0\` instead.[0m
+					Object {
+					  "debug": "",
+					  "err": "",
+					  "info": "",
+					  "out": "✨ Created wrangler.toml
+					✨ Initialized git repository",
+					  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare/@/^2.5.0\` instead.[0m
 
-			  The \`init\` command will be removed in a future version.
+					  The \`init\` command will be removed in a future version.
 
-			",
-			}
-		`);
+					",
+					}
+				`);
 
 				expect(execaSync("git", ["symbolic-ref", "HEAD"]).stdout).toEqual(
 					`refs/heads/${getDefaultBranchName()}`
@@ -851,19 +851,19 @@ describe("init", () => {
 				});
 				expect(mockPackageManager.install).toHaveBeenCalled();
 				expect(std).toMatchInlineSnapshot(`
-			Object {
-			  "debug": "",
-			  "err": "",
-			  "info": "",
-			  "out": "✨ Created wrangler.toml
-			✨ Created package.json",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare/@2.5.0\` instead.[0m
+					Object {
+					  "debug": "",
+					  "err": "",
+					  "info": "",
+					  "out": "✨ Created wrangler.toml
+					✨ Created package.json",
+					  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare/@/^2.5.0\` instead.[0m
 
-			  The \`init\` command will be removed in a future version.
+					  The \`init\` command will be removed in a future version.
 
-			",
-			}
-		`);
+					",
+					}
+				`);
 			});
 
 			it("should create a package.json, with the specified name, if none is found and user confirms", async () => {
@@ -907,19 +907,19 @@ describe("init", () => {
 					},
 				});
 				expect(std).toMatchInlineSnapshot(`
-			Object {
-			  "debug": "",
-			  "err": "",
-			  "info": "",
-			  "out": "✨ Created my-worker/wrangler.toml
-			✨ Created my-worker/package.json",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare/@2.5.0 my-worker\` instead.[0m
+					Object {
+					  "debug": "",
+					  "err": "",
+					  "info": "",
+					  "out": "✨ Created my-worker/wrangler.toml
+					✨ Created my-worker/package.json",
+					  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare/@/^2.5.0 my-worker\` instead.[0m
 
-			  The \`init\` command will be removed in a future version.
+					  The \`init\` command will be removed in a future version.
 
-			",
-			}
-		`);
+					",
+					}
+				`);
 			});
 
 			it("should not touch an existing package.json in the same directory", async () => {
@@ -958,18 +958,18 @@ describe("init", () => {
 					},
 				});
 				expect(std).toMatchInlineSnapshot(`
-			Object {
-			  "debug": "",
-			  "err": "",
-			  "info": "",
-			  "out": "✨ Created wrangler.toml",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare/@2.5.0\` instead.[0m
+					Object {
+					  "debug": "",
+					  "err": "",
+					  "info": "",
+					  "out": "✨ Created wrangler.toml",
+					  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare/@/^2.5.0\` instead.[0m
 
-			  The \`init\` command will be removed in a future version.
+					  The \`init\` command will be removed in a future version.
 
-			",
-			}
-		`);
+					",
+					}
+				`);
 			});
 
 			it("should not touch an existing package.json in an ancestor directory, when a name is passed", async () => {
@@ -1016,19 +1016,19 @@ describe("init", () => {
 					},
 				});
 				expect(std).toMatchInlineSnapshot(`
-			Object {
-			  "debug": "",
-			  "err": "",
-			  "info": "",
-			  "out": "✨ Created path/to/worker/my-worker/wrangler.toml
-			✨ Created path/to/worker/my-worker/package.json",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare/@2.5.0 path/to/worker/my-worker\` instead.[0m
+					Object {
+					  "debug": "",
+					  "err": "",
+					  "info": "",
+					  "out": "✨ Created path/to/worker/my-worker/wrangler.toml
+					✨ Created path/to/worker/my-worker/package.json",
+					  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare/@/^2.5.0 path/to/worker/my-worker\` instead.[0m
 
-			  The \`init\` command will be removed in a future version.
+					  The \`init\` command will be removed in a future version.
 
-			",
-			}
-		`);
+					",
+					}
+				`);
 			});
 
 			it("should offer to install wrangler into an existing package.json", async () => {
@@ -1074,19 +1074,19 @@ describe("init", () => {
 					`wrangler@${wranglerVersion}`
 				);
 				expect(std).toMatchInlineSnapshot(`
-			Object {
-			  "debug": "",
-			  "err": "",
-			  "info": "",
-			  "out": "✨ Created wrangler.toml
-			✨ Installed wrangler into devDependencies",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare/@2.5.0\` instead.[0m
+					Object {
+					  "debug": "",
+					  "err": "",
+					  "info": "",
+					  "out": "✨ Created wrangler.toml
+					✨ Installed wrangler into devDependencies",
+					  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare/@/^2.5.0\` instead.[0m
 
-			  The \`init\` command will be removed in a future version.
+					  The \`init\` command will be removed in a future version.
 
-			",
-			}
-		`);
+					",
+					}
+				`);
 			});
 
 			it("should offer to install wrangler into a package.json relative to the target directory, if no name is provided", async () => {
@@ -1139,19 +1139,19 @@ describe("init", () => {
 				);
 				expect(mockPackageManager.cwd).toBe(process.cwd());
 				expect(std).toMatchInlineSnapshot(`
-			Object {
-			  "debug": "",
-			  "err": "",
-			  "info": "",
-			  "out": "✨ Created wrangler.toml
-			✨ Installed wrangler into devDependencies",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare/@2.5.0\` instead.[0m
+					Object {
+					  "debug": "",
+					  "err": "",
+					  "info": "",
+					  "out": "✨ Created wrangler.toml
+					✨ Installed wrangler into devDependencies",
+					  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare/@/^2.5.0\` instead.[0m
 
-			  The \`init\` command will be removed in a future version.
+					  The \`init\` command will be removed in a future version.
 
-			",
-			}
-		`);
+					",
+					}
+				`);
 			});
 
 			it("should not touch an existing package.json in an ancestor directory", async () => {
@@ -1200,18 +1200,18 @@ describe("init", () => {
 					},
 				});
 				expect(std).toMatchInlineSnapshot(`
-			Object {
-			  "debug": "",
-			  "err": "",
-			  "info": "",
-			  "out": "✨ Created wrangler.toml",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare/@2.5.0\` instead.[0m
+					Object {
+					  "debug": "",
+					  "err": "",
+					  "info": "",
+					  "out": "✨ Created wrangler.toml",
+					  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare/@/^2.5.0\` instead.[0m
 
-			  The \`init\` command will be removed in a future version.
+					  The \`init\` command will be removed in a future version.
 
-			",
-			}
-		`);
+					",
+					}
+				`);
 			});
 		});
 
@@ -1263,22 +1263,22 @@ describe("init", () => {
 					},
 				});
 				expect(std).toMatchInlineSnapshot(`
-			Object {
-			  "debug": "",
-			  "err": "",
-			  "info": "",
-			  "out": "✨ Created wrangler.toml
-			✨ Created src/index.js
+					Object {
+					  "debug": "",
+					  "err": "",
+					  "info": "",
+					  "out": "✨ Created wrangler.toml
+					✨ Created src/index.js
 
-			To start developing your Worker, run \`npx wrangler dev\`
-			To publish your Worker to the Internet, run \`npx wrangler deploy\`",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare/@2.5.0\` instead.[0m
+					To start developing your Worker, run \`npx wrangler dev\`
+					To publish your Worker to the Internet, run \`npx wrangler deploy\`",
+					  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare/@/^2.5.0\` instead.[0m
 
-			  The \`init\` command will be removed in a future version.
+					  The \`init\` command will be removed in a future version.
 
-			",
-			}
-		`);
+					",
+					}
+				`);
 			});
 
 			it("should offer to create a worker in a typescript project", async () => {
@@ -1324,25 +1324,25 @@ describe("init", () => {
 					},
 				});
 				expect(std).toMatchInlineSnapshot(`
-			Object {
-			  "debug": "",
-			  "err": "",
-			  "info": "",
-			  "out": "✨ Created wrangler.toml
-			✨ Created tsconfig.json
-			✨ Created src/index.ts
-			✨ Created src/index.test.ts
-			✨ Installed @cloudflare/workers-types, typescript, and vitest into devDependencies
+					Object {
+					  "debug": "",
+					  "err": "",
+					  "info": "",
+					  "out": "✨ Created wrangler.toml
+					✨ Created tsconfig.json
+					✨ Created src/index.ts
+					✨ Created src/index.test.ts
+					✨ Installed @cloudflare/workers-types, typescript, and vitest into devDependencies
 
-			To start developing your Worker, run \`npx wrangler dev\`
-			To publish your Worker to the Internet, run \`npx wrangler deploy\`",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare/@2.5.0\` instead.[0m
+					To start developing your Worker, run \`npx wrangler dev\`
+					To publish your Worker to the Internet, run \`npx wrangler deploy\`",
+					  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare/@/^2.5.0\` instead.[0m
 
-			  The \`init\` command will be removed in a future version.
+					  The \`init\` command will be removed in a future version.
 
-			",
-			}
-		`);
+					",
+					}
+				`);
 			});
 
 			it("should add scripts for a typescript project with .ts extension", async () => {
@@ -1508,20 +1508,20 @@ describe("init", () => {
 					},
 				});
 				expect(std).toMatchInlineSnapshot(`
-			Object {
-			  "debug": "",
-			  "err": "",
-			  "info": "",
-			  "out": "✨ Created wrangler.toml
-			✨ Created tsconfig.json
-			✨ Installed @cloudflare/workers-types and typescript into devDependencies",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare/@2.5.0\` instead.[0m
+					Object {
+					  "debug": "",
+					  "err": "",
+					  "info": "",
+					  "out": "✨ Created wrangler.toml
+					✨ Created tsconfig.json
+					✨ Installed @cloudflare/workers-types and typescript into devDependencies",
+					  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare/@/^2.5.0\` instead.[0m
 
-			  The \`init\` command will be removed in a future version.
+					  The \`init\` command will be removed in a future version.
 
-			",
-			}
-		`);
+					",
+					}
+				`);
 			});
 
 			it("should not offer to create a worker in a ts project for a named worker if a file already exists at the location", async () => {
@@ -1557,21 +1557,21 @@ describe("init", () => {
 					},
 				});
 				expect(std).toMatchInlineSnapshot(`
-			Object {
-			  "debug": "",
-			  "err": "",
-			  "info": "",
-			  "out": "✨ Created my-worker/wrangler.toml
-			✨ Created my-worker/package.json
-			✨ Created my-worker/tsconfig.json
-			✨ Installed @cloudflare/workers-types and typescript into devDependencies",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare/@2.5.0 my-worker\` instead.[0m
+					Object {
+					  "debug": "",
+					  "err": "",
+					  "info": "",
+					  "out": "✨ Created my-worker/wrangler.toml
+					✨ Created my-worker/package.json
+					✨ Created my-worker/tsconfig.json
+					✨ Installed @cloudflare/workers-types and typescript into devDependencies",
+					  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare/@/^2.5.0 my-worker\` instead.[0m
 
-			  The \`init\` command will be removed in a future version.
+					  The \`init\` command will be removed in a future version.
 
-			",
-			}
-		`);
+					",
+					}
+				`);
 			});
 
 			it("should create a tsconfig.json and install `workers-types` if none is found and user confirms", async () => {
@@ -1618,21 +1618,21 @@ describe("init", () => {
 					"typescript"
 				);
 				expect(std).toMatchInlineSnapshot(`
-			Object {
-			  "debug": "",
-			  "err": "",
-			  "info": "",
-			  "out": "✨ Created wrangler.toml
-			✨ Created package.json
-			✨ Created tsconfig.json
-			✨ Installed @cloudflare/workers-types and typescript into devDependencies",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare/@2.5.0\` instead.[0m
+					Object {
+					  "debug": "",
+					  "err": "",
+					  "info": "",
+					  "out": "✨ Created wrangler.toml
+					✨ Created package.json
+					✨ Created tsconfig.json
+					✨ Installed @cloudflare/workers-types and typescript into devDependencies",
+					  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare/@/^2.5.0\` instead.[0m
 
-			  The \`init\` command will be removed in a future version.
+					  The \`init\` command will be removed in a future version.
 
-			",
-			}
-		`);
+					",
+					}
+				`);
 			});
 
 			it("should not touch an existing tsconfig.json in the same directory", async () => {
@@ -1677,24 +1677,24 @@ describe("init", () => {
 					},
 				});
 				expect(std).toMatchInlineSnapshot(`
-			Object {
-			  "debug": "",
-			  "err": "",
-			  "info": "",
-			  "out": "✨ Created wrangler.toml
-			✨ Created src/index.ts
-			✨ Created src/index.test.ts
-			✨ Installed vitest into devDependencies
+					Object {
+					  "debug": "",
+					  "err": "",
+					  "info": "",
+					  "out": "✨ Created wrangler.toml
+					✨ Created src/index.ts
+					✨ Created src/index.test.ts
+					✨ Installed vitest into devDependencies
 
-			To start developing your Worker, run \`npx wrangler dev\`
-			To publish your Worker to the Internet, run \`npx wrangler deploy\`",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare/@2.5.0\` instead.[0m
+					To start developing your Worker, run \`npx wrangler dev\`
+					To publish your Worker to the Internet, run \`npx wrangler deploy\`",
+					  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare/@/^2.5.0\` instead.[0m
 
-			  The \`init\` command will be removed in a future version.
+					  The \`init\` command will be removed in a future version.
 
-			",
-			}
-		`);
+					",
+					}
+				`);
 			});
 
 			it("should not touch an existing tsconfig.json in the ancestor of a target directory, if a name is passed", async () => {
@@ -1755,27 +1755,27 @@ describe("init", () => {
 					},
 				});
 				expect(std).toMatchInlineSnapshot(`
-			Object {
-			  "debug": "",
-			  "err": "",
-			  "info": "",
-			  "out": "✨ Created path/to/worker/my-worker/wrangler.toml
-			✨ Created path/to/worker/my-worker/package.json
-			✨ Created path/to/worker/my-worker/tsconfig.json
-			✨ Created path/to/worker/my-worker/src/index.ts
-			✨ Created path/to/worker/my-worker/src/index.test.ts
-			✨ Installed @cloudflare/workers-types, typescript, and vitest into devDependencies
+					Object {
+					  "debug": "",
+					  "err": "",
+					  "info": "",
+					  "out": "✨ Created path/to/worker/my-worker/wrangler.toml
+					✨ Created path/to/worker/my-worker/package.json
+					✨ Created path/to/worker/my-worker/tsconfig.json
+					✨ Created path/to/worker/my-worker/src/index.ts
+					✨ Created path/to/worker/my-worker/src/index.test.ts
+					✨ Installed @cloudflare/workers-types, typescript, and vitest into devDependencies
 
-			To start developing your Worker, run \`cd path/to/worker/my-worker && npm start\`
-			To start testing your Worker, run \`npm test\`
-			To publish your Worker to the Internet, run \`npm run deploy\`",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare/@2.5.0 path/to/worker/my-worker\` instead.[0m
+					To start developing your Worker, run \`cd path/to/worker/my-worker && npm start\`
+					To start testing your Worker, run \`npm test\`
+					To publish your Worker to the Internet, run \`npm run deploy\`",
+					  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare/@/^2.5.0 path/to/worker/my-worker\` instead.[0m
 
-			  The \`init\` command will be removed in a future version.
+					  The \`init\` command will be removed in a future version.
 
-			",
-			}
-		`);
+					",
+					}
+				`);
 			});
 
 			it("should offer to install type definitions in an existing typescript project", async () => {
@@ -1824,20 +1824,20 @@ describe("init", () => {
 					"@cloudflare/workers-types"
 				);
 				expect(std).toMatchInlineSnapshot(`
-			Object {
-			  "debug": "",
-			  "err": "",
-			  "info": "",
-			  "out": "✨ Created wrangler.toml
-			✨ Installed @cloudflare/workers-types into devDependencies
-			🚨 Please add \\"@cloudflare/workers-types\\" to compilerOptions.types in tsconfig.json",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare/@2.5.0\` instead.[0m
+					Object {
+					  "debug": "",
+					  "err": "",
+					  "info": "",
+					  "out": "✨ Created wrangler.toml
+					✨ Installed @cloudflare/workers-types into devDependencies
+					🚨 Please add \\"@cloudflare/workers-types\\" to compilerOptions.types in tsconfig.json",
+					  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare/@/^2.5.0\` instead.[0m
 
-			  The \`init\` command will be removed in a future version.
+					  The \`init\` command will be removed in a future version.
 
-			",
-			}
-		`);
+					",
+					}
+				`);
 			});
 
 			it("should not touch an existing tsconfig.json in an ancestor directory", async () => {
@@ -1884,24 +1884,24 @@ describe("init", () => {
 					},
 				});
 				expect(std).toMatchInlineSnapshot(`
-			Object {
-			  "debug": "",
-			  "err": "",
-			  "info": "",
-			  "out": "✨ Created wrangler.toml
-			✨ Created src/index.ts
-			✨ Created src/index.test.ts
-			✨ Installed vitest into devDependencies
+					Object {
+					  "debug": "",
+					  "err": "",
+					  "info": "",
+					  "out": "✨ Created wrangler.toml
+					✨ Created src/index.ts
+					✨ Created src/index.test.ts
+					✨ Installed vitest into devDependencies
 
-			To start developing your Worker, run \`npx wrangler dev\`
-			To publish your Worker to the Internet, run \`npx wrangler deploy\`",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare/@2.5.0\` instead.[0m
+					To start developing your Worker, run \`npx wrangler dev\`
+					To publish your Worker to the Internet, run \`npx wrangler deploy\`",
+					  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare/@/^2.5.0\` instead.[0m
 
-			  The \`init\` command will be removed in a future version.
+					  The \`init\` command will be removed in a future version.
 
-			",
-			}
-		`);
+					",
+					}
+				`);
 			});
 		});
 
@@ -2182,18 +2182,18 @@ describe("init", () => {
 					},
 				});
 				expect(std).toMatchInlineSnapshot(`
-			Object {
-			  "debug": "",
-			  "err": "",
-			  "info": "",
-			  "out": "✨ Created wrangler.toml",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare/@2.5.0\` instead.[0m
+					Object {
+					  "debug": "",
+					  "err": "",
+					  "info": "",
+					  "out": "✨ Created wrangler.toml",
+					  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare/@/^2.5.0\` instead.[0m
 
-			  The \`init\` command will be removed in a future version.
+					  The \`init\` command will be removed in a future version.
 
-			",
-			}
-		`);
+					",
+					}
+				`);
 			});
 
 			it("should not offer to create a worker in a non-ts named worker project if a file already exists at the location", async () => {
@@ -2233,18 +2233,18 @@ describe("init", () => {
 					},
 				});
 				expect(std).toMatchInlineSnapshot(`
-			Object {
-			  "debug": "",
-			  "err": "",
-			  "info": "",
-			  "out": "✨ Created my-worker/wrangler.toml",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare/@2.5.0 my-worker\` instead.[0m
+					Object {
+					  "debug": "",
+					  "err": "",
+					  "info": "",
+					  "out": "✨ Created my-worker/wrangler.toml",
+					  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare/@/^2.5.0 my-worker\` instead.[0m
 
-			  The \`init\` command will be removed in a future version.
+					  The \`init\` command will be removed in a future version.
 
-			",
-			}
-		`);
+					",
+					}
+				`);
 			});
 		});
 
@@ -2289,28 +2289,28 @@ describe("init", () => {
 					},
 				});
 				expect(std).toMatchInlineSnapshot(`
-			Object {
-			  "debug": "",
-			  "err": "",
-			  "info": "Your project will use Vitest to run your tests.",
-			  "out": "✨ Created wrangler.toml
-			✨ Initialized git repository
-			✨ Created package.json
-			✨ Created tsconfig.json
-			✨ Created src/index.ts
-			✨ Created src/index.test.ts
-			✨ Installed @cloudflare/workers-types, typescript, and vitest into devDependencies
+					Object {
+					  "debug": "",
+					  "err": "",
+					  "info": "Your project will use Vitest to run your tests.",
+					  "out": "✨ Created wrangler.toml
+					✨ Initialized git repository
+					✨ Created package.json
+					✨ Created tsconfig.json
+					✨ Created src/index.ts
+					✨ Created src/index.test.ts
+					✨ Installed @cloudflare/workers-types, typescript, and vitest into devDependencies
 
-			To start developing your Worker, run \`npm start\`
-			To start testing your Worker, run \`npm test\`
-			To publish your Worker to the Internet, run \`npm run deploy\`",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare/@2.5.0 . --wrangler-defaults\` instead.[0m
+					To start developing your Worker, run \`npm start\`
+					To start testing your Worker, run \`npm test\`
+					To publish your Worker to the Internet, run \`npm run deploy\`",
+					  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare/@/^2.5.0 . --wrangler-defaults\` instead.[0m
 
-			  The \`init\` command will be removed in a future version.
+					  The \`init\` command will be removed in a future version.
 
-			",
-			}
-		`);
+					",
+					}
+				`);
 			});
 
 			it('should create a worker in a nested directory if "name" is path/to/worker', async () => {
@@ -2325,28 +2325,28 @@ describe("init", () => {
 					},
 				});
 				expect(std).toMatchInlineSnapshot(`
-			Object {
-			  "debug": "",
-			  "err": "",
-			  "info": "Your project will use Vitest to run your tests.",
-			  "out": "✨ Created path/to/worker/wrangler.toml
-			✨ Initialized git repository at path/to/worker
-			✨ Created path/to/worker/package.json
-			✨ Created path/to/worker/tsconfig.json
-			✨ Created path/to/worker/src/index.ts
-			✨ Created path/to/worker/src/index.test.ts
-			✨ Installed @cloudflare/workers-types, typescript, and vitest into devDependencies
+					Object {
+					  "debug": "",
+					  "err": "",
+					  "info": "Your project will use Vitest to run your tests.",
+					  "out": "✨ Created path/to/worker/wrangler.toml
+					✨ Initialized git repository at path/to/worker
+					✨ Created path/to/worker/package.json
+					✨ Created path/to/worker/tsconfig.json
+					✨ Created path/to/worker/src/index.ts
+					✨ Created path/to/worker/src/index.test.ts
+					✨ Installed @cloudflare/workers-types, typescript, and vitest into devDependencies
 
-			To start developing your Worker, run \`cd path/to/worker && npm start\`
-			To start testing your Worker, run \`npm test\`
-			To publish your Worker to the Internet, run \`npm run deploy\`",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare/@2.5.0 path/to/worker --wrangler-defaults\` instead.[0m
+					To start developing your Worker, run \`cd path/to/worker && npm start\`
+					To start testing your Worker, run \`npm test\`
+					To publish your Worker to the Internet, run \`npm run deploy\`",
+					  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare/@/^2.5.0 path/to/worker --wrangler-defaults\` instead.[0m
 
-			  The \`init\` command will be removed in a future version.
+					  The \`init\` command will be removed in a future version.
 
-			",
-			}
-		`);
+					",
+					}
+				`);
 			});
 
 			it("should normalize characters that aren't lowercase alphanumeric, underscores, or dashes", async () => {
@@ -2363,28 +2363,28 @@ describe("init", () => {
 					},
 				});
 				expect(std).toMatchInlineSnapshot(`
-			Object {
-			  "debug": "",
-			  "err": "",
-			  "info": "Your project will use Vitest to run your tests.",
-			  "out": "✨ Created WEIRD_w0rkr_N4m3.js.tsx.tar.gz/wrangler.toml
-			✨ Initialized git repository at WEIRD_w0rkr_N4m3.js.tsx.tar.gz
-			✨ Created WEIRD_w0rkr_N4m3.js.tsx.tar.gz/package.json
-			✨ Created WEIRD_w0rkr_N4m3.js.tsx.tar.gz/tsconfig.json
-			✨ Created WEIRD_w0rkr_N4m3.js.tsx.tar.gz/src/index.ts
-			✨ Created WEIRD_w0rkr_N4m3.js.tsx.tar.gz/src/index.test.ts
-			✨ Installed @cloudflare/workers-types, typescript, and vitest into devDependencies
+					Object {
+					  "debug": "",
+					  "err": "",
+					  "info": "Your project will use Vitest to run your tests.",
+					  "out": "✨ Created WEIRD_w0rkr_N4m3.js.tsx.tar.gz/wrangler.toml
+					✨ Initialized git repository at WEIRD_w0rkr_N4m3.js.tsx.tar.gz
+					✨ Created WEIRD_w0rkr_N4m3.js.tsx.tar.gz/package.json
+					✨ Created WEIRD_w0rkr_N4m3.js.tsx.tar.gz/tsconfig.json
+					✨ Created WEIRD_w0rkr_N4m3.js.tsx.tar.gz/src/index.ts
+					✨ Created WEIRD_w0rkr_N4m3.js.tsx.tar.gz/src/index.test.ts
+					✨ Installed @cloudflare/workers-types, typescript, and vitest into devDependencies
 
-			To start developing your Worker, run \`cd WEIRD_w0rkr_N4m3.js.tsx.tar.gz && npm start\`
-			To start testing your Worker, run \`npm test\`
-			To publish your Worker to the Internet, run \`npm run deploy\`",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare/@2.5.0 WEIRD_w0rkr_N4m3.js.tsx.tar.gz --wrangler-defaults\` instead.[0m
+					To start developing your Worker, run \`cd WEIRD_w0rkr_N4m3.js.tsx.tar.gz && npm start\`
+					To start testing your Worker, run \`npm test\`
+					To publish your Worker to the Internet, run \`npm run deploy\`",
+					  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare/@/^2.5.0 WEIRD_w0rkr_N4m3.js.tsx.tar.gz --wrangler-defaults\` instead.[0m
 
-			  The \`init\` command will be removed in a future version.
+					  The \`init\` command will be removed in a future version.
 
-			",
-			}
-		`);
+					",
+					}
+				`);
 			});
 
 			it("should ignore ancestor files (such as wrangler.toml, package.json and tsconfig.json) if a name/path is given", async () => {
@@ -2980,25 +2980,25 @@ describe("init", () => {
 				});
 
 				expect(std).toMatchInlineSnapshot(`
-			Object {
-			  "debug": "",
-			  "err": "",
-			  "info": "",
-			  "out": "Running \`mockpm create cloudflare@2.5.0 existing-memory-crystal --existing-script existing-memory-crystal\`...",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init --from-dash\` command is no longer supported. Please use \`mockpm create cloudflare@2.5.0 existing-memory-crystal --existing-script existing-memory-crystal\` instead.[0m
+					Object {
+					  "debug": "",
+					  "err": "",
+					  "info": "",
+					  "out": "Running \`mockpm create cloudflare@^2.5.0 existing-memory-crystal --existing-script existing-memory-crystal\`...",
+					  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init --from-dash\` command is no longer supported. Please use \`mockpm create cloudflare@^2.5.0 existing-memory-crystal --existing-script existing-memory-crystal\` instead.[0m
 
-			  The \`init\` command will be removed in a future version.
+					  The \`init\` command will be removed in a future version.
 
-			",
-			}
-		`);
+					",
+					}
+				`);
 
 				expect(execa).toHaveBeenCalledTimes(1);
 				expect(execa).toHaveBeenCalledWith(
 					"mockpm",
 					[
 						"create",
-						"cloudflare@2.5.0",
+						"cloudflare@^2.5.0",
 						"existing-memory-crystal",
 						"--existing-script",
 						"existing-memory-crystal",
