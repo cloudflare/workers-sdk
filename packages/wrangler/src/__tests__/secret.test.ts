@@ -348,7 +348,7 @@ describe("wrangler secret", () => {
 
 			await expect(runWrangler(`secret put secret-name --name ${scriptName}`))
 				.rejects.toThrowErrorMatchingInlineSnapshot(`
-				[Error: Secret edit failed. You attempted to modify a secret, but the latest version of your Worker isn't currently deployed. Please ensure that the latest version of your Worker is fully deployed (wrangler versions deploy --x-versions) before modifying secrets. Alternatively, you can use the Cloudflare dashboard to modify secrets and deploy the version.
+				[Error: Secret edit failed. You attempted to modify a secret, but the latest version of your Worker isn't currently deployed. Please ensure that the latest version of your Worker is fully deployed (wrangler versions deploy) before modifying secrets. Alternatively, you can use the Cloudflare dashboard to modify secrets and deploy the version.
 
 				Note: This limitation will be addressed in an upcoming release.]
 			`);

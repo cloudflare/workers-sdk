@@ -113,7 +113,7 @@ export async function versionsSecretDeleteHandler(
 
 		logger.log(
 			`✨ Success! Created version ${newVersion.id} with deleted secret ${args.key}.` +
-				`\n➡️  To deploy this version without the secret ${args.key} to production traffic use the command "wrangler versions deploy --x-versions".`
+				`\n➡️  To deploy this version without the secret ${args.key} to production traffic use the command "wrangler versions deploy".`
 		);
 	}
 }
