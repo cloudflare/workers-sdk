@@ -3485,6 +3485,31 @@ describe("normalizeAndValidateConfig()", () => {
 			});
 		});
 
+		describe("[placement]", () => {
+			it(`should error if placement hint is set with placement mode "off"`, () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{ placement: { mode: "off", hint: "wnam" } },
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - \\"placement.hint\\" cannot be set if \\"placement.mode\\" is not \\"smart\\""
+				`);
+			});
+
+			it(`should not error if placement hint is set with placement mode "smart"`, () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{ placement: { mode: "smart", hint: "wnam" } },
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+			});
+		});
+
 		describe("(deprecated)", () => {
 			it("should remove and warn about deprecated properties", () => {
 				const rawConfig: RawConfig = {
