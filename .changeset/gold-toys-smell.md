@@ -2,4 +2,4 @@
 "wrangler": minor
 ---
 
-Redirect wrangler generate and init to npm create cloudflare
+Redirect `wrangler generate [template name]` and `wrangler init` to `npm create cloudflare`
