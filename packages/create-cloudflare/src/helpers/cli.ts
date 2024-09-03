@@ -51,7 +51,7 @@ export const C3_DEFAULTS: C3Args = {
 	type: "hello-world",
 	framework: "analog",
 	autoUpdate: true,
-	deploy: true,
+	deploy: false,
 	git: true,
 	open: true,
 	lang: "ts",
