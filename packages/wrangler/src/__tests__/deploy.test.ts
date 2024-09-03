@@ -8,6 +8,7 @@ import { sync } from "command-exists";
 import * as esbuild from "esbuild";
 import { http, HttpResponse } from "msw";
 import dedent from "ts-dedent";
+import { File } from "undici";
 import { vi } from "vitest";
 import {
 	printBundleSize,
@@ -50,13 +51,14 @@ import { writeWorkerSource } from "./helpers/write-worker-source";
 import { writeWranglerToml } from "./helpers/write-wrangler-toml";
 import type { Config } from "../config";
 import type { CustomDomain, CustomDomainChangeset } from "../deploy/deploy";
-import type { AssetManifest, UploadPayloadFile } from "../experimental-assets";
+import type { AssetManifest } from "../experimental-assets";
 import type { KVNamespaceInfo } from "../kv/helpers";
 import type {
 	PostQueueBody,
 	PostTypedConsumerBody,
 	QueueResponse,
 } from "../queues/client";
+import type { FormData } from "undici";
 import type { Mock } from "vitest";
 
 vi.mock("command-exists");
@@ -4281,7 +4283,7 @@ addEventListener('fetch', event => {});`
 				],
 			];
 			await mockAUSRequest(manifestBodies, mockBuckets, "<<aus-token>>");
-			const uploadBodies: UploadPayloadFile[][] = [];
+			const uploadBodies: FormData[] = [];
 			const uploadAuthHeaders: (string | null)[] = [];
 			const uploadContentTypeHeaders: (string | null)[] = [];
 			await mockAssetUploadRequest(
@@ -4487,7 +4489,7 @@ addEventListener('fetch', event => {});`
 				["0de3dd5df907418e9730fd2bd747bd5e"],
 			];
 			await mockAUSRequest([], mockBuckets, "<<aus-token>>");
-			const bodies: UploadPayloadFile[][] = [];
+			const bodies: FormData[] = [];
 			const uploadAuthHeaders: (string | null)[] = [];
 			const uploadContentTypeHeaders: (string | null)[] = [];
 			await mockAssetUploadRequest(
@@ -4508,56 +4510,63 @@ addEventListener('fetch', event => {});`
 				"Bearer <<aus-token>>",
 				"Bearer <<aus-token>>",
 			]);
-			expect(uploadContentTypeHeaders).toStrictEqual([
-				"application/jsonl",
-				"application/jsonl",
-				"application/jsonl",
-				"application/jsonl",
-			]);
-			expect(bodies.map((b) => b.length).sort()).toEqual([1, 1, 1, 2]);
-			expect(bodies.flatMap((b) => b)).toEqual(
-				expect.arrayContaining([
+			for (const uploadContentTypeHeader of uploadContentTypeHeaders) {
+				expect(uploadContentTypeHeader).toMatch(/multipart\/form-data/);
+			}
+
+			expect(
+				bodies
+					.map((b) => [...b.entries()])
+					.map((entry) => entry.length)
+					.sort()
+			).toEqual([1, 1, 1, 2]);
+
+			const flatBodies = Object.fromEntries(
+				bodies.flatMap((b) => [...b.entries()])
+			);
+			await expect(
+				flatBodies["0de3dd5df907418e9730fd2bd747bd5e"]
+			).toBeAFileWhichMatches(
+				new File(
+					["Q29udGVudCBvZiBmaWxlLTE="],
+					"0de3dd5df907418e9730fd2bd747bd5e",
 					{
-						base64: true,
-						value: "Q29udGVudCBvZiBmaWxlLTE=",
-						key: "0de3dd5df907418e9730fd2bd747bd5e",
-						metadata: {
-							contentType: "text/plain",
-						},
-					},
+						type: "text/plain",
+					}
+				)
+			);
+			await expect(
+				flatBodies["7574a8cd3094a050388ac9663af1c1d6"]
+			).toBeAFileWhichMatches(
+				new File(
+					["Q29udGVudCBvZiBmaWxlLTI="],
+					"7574a8cd3094a050388ac9663af1c1d6",
 					{
-						base64: true,
-						value: "Q29udGVudCBvZiBmaWxlLTI=",
-						key: "7574a8cd3094a050388ac9663af1c1d6",
-						metadata: {
-							contentType: "text/plain",
-						},
-					},
+						type: "text/plain",
+					}
+				)
+			);
+			await expect(
+				flatBodies["ff5016e92f039aa743a4ff7abb3180fa"]
+			).toBeAFileWhichMatches(
+				new File(
+					["Q29udGVudCBvZiBmaWxlLTM="],
+					"ff5016e92f039aa743a4ff7abb3180fa",
 					{
-						base64: true,
-						value: "Q29udGVudCBvZiBmaWxlLTM=",
-						key: "ff5016e92f039aa743a4ff7abb3180fa",
-						metadata: {
-							contentType: "text/plain",
-						},
-					},
+						type: "text/plain",
+					}
+				)
+			);
+			await expect(
+				flatBodies["f05e28a3d0bdb90d3cf4bdafe592488f"]
+			).toBeAFileWhichMatches(
+				new File(
+					["Q29udGVudCBvZiBmaWxlLTU="],
+					"f05e28a3d0bdb90d3cf4bdafe592488f",
 					{
-						base64: true,
-						value: "Q29udGVudCBvZiBmaWxlLTU=",
-						key: "f05e28a3d0bdb90d3cf4bdafe592488f",
-						metadata: {
-							contentType: "text/plain",
-						},
-					},
-					{
-						base64: true,
-						value: "Q29udGVudCBvZiBmaWxlLTE=",
-						key: "0de3dd5df907418e9730fd2bd747bd5e",
-						metadata: {
-							contentType: "text/plain",
-						},
-					},
-				])
+						type: "text/plain",
+					}
+				)
 			);
 		});
 
@@ -11265,7 +11274,7 @@ const mockAUSRequest = async (
 
 const mockAssetUploadRequest = async (
 	numberOfBuckets: number,
-	bodies: UploadPayloadFile[][],
+	bodies: FormData[],
 	uploadContentTypeHeaders: (string | null)[],
 	uploadAuthHeaders: (string | null)[]
 ) => {
@@ -11275,10 +11284,8 @@ const mockAssetUploadRequest = async (
 			async ({ request }) => {
 				uploadContentTypeHeaders.push(request.headers.get("Content-Type"));
 				uploadAuthHeaders.push(request.headers.get("Authorization"));
-				const body = (await request.text())
-					.split("\n")
-					.map((x) => JSON.parse(x)) as UploadPayloadFile[];
-				bodies.push(body);
+				const formData = await request.formData();
+				bodies.push(formData);
 				if (bodies.length === numberOfBuckets) {
 					return HttpResponse.json(
 						{
@@ -11304,3 +11311,48 @@ const mockAssetUploadRequest = async (
 		)
 	);
 };
+expect.extend({
+	async toBeAFileWhichMatches(received: File, expected: File) {
+		const { equals } = this;
+
+		if (!equals(received.name, expected.name)) {
+			return {
+				pass: false,
+				message: () =>
+					`${received.name} name does not match ${expected.name} name`,
+			};
+		}
+
+		if (!equals(received.type, expected.type)) {
+			return {
+				pass: false,
+				message: () =>
+					`${received.type} type does not match ${expected.type} type`,
+			};
+		}
+
+		const receviedText = await received.text();
+		const expectedText = await expected.text();
+		if (!equals(receviedText, expectedText)) {
+			return {
+				pass: false,
+				message: () =>
+					`${receviedText} value does not match ${expectedText} value`,
+			};
+		}
+
+		return {
+			pass: true,
+			message: () => "Files are equal",
+		};
+	},
+});
+
+interface CustomMatchers {
+	toBeAFileWhichMatches: (expected: File) => unknown;
+}
+
+declare module "vitest" {
+	interface Assertion extends CustomMatchers {}
+	interface AsymmetricMatchersContaining extends CustomMatchers {}
+}

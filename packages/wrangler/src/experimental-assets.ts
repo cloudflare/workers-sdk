@@ -6,6 +6,7 @@ import chalk from "chalk";
 import { getType } from "mime";
 import PQueue from "p-queue";
 import prettyBytes from "pretty-bytes";
+import { File, FormData } from "undici";
 import { fetchResult } from "./cfetch";
 import { formatTime } from "./deploy/deploy";
 import { FatalError, UserError } from "./errors";
@@ -22,15 +23,6 @@ type InitializeAssetsResponse = {
 	// string of file hashes per bucket
 	buckets: string[][];
 	jwt: string;
-};
-
-export type UploadPayloadFile = {
-	base64: boolean;
-	key: string;
-	value: string;
-	metadata: {
-		contentType: string;
-	};
 };
 
 type UploadResponse = {
@@ -121,21 +113,22 @@ export const syncExperimentalAssets = async (
 		const doUpload = async (): Promise<UploadResponse> => {
 			// Populate the payload only when actually uploading (this is limited to 3 concurrent uploads at 50 MiB per bucket meaning we'd only load in a max of ~150 MiB)
 			// This is so we don't run out of memory trying to upload the files.
-			const payload: UploadPayloadFile[] = await Promise.all(
-				bucket.map(async (manifestEntry) => {
-					const decodedFilePath = decodeFilepath(manifestEntry[0]);
-					const absFilePath = path.join(assetDirectory, decodedFilePath);
-
-					return {
-						base64: true,
-						key: manifestEntry[1].hash,
-						metadata: {
-							contentType: getType(absFilePath) || "application/octet-stream",
-						},
-						value: (await readFile(absFilePath)).toString("base64"),
-					};
-				})
-			);
+			const payload = new FormData();
+			for (const manifestEntry of bucket) {
+				const decodedFilePath = decodeFilepath(manifestEntry[0]);
+				const absFilePath = path.join(assetDirectory, decodedFilePath);
+				payload.append(
+					manifestEntry[1].hash,
+					new File(
+						[(await readFile(absFilePath)).toString("base64")],
+						manifestEntry[1].hash,
+						{
+							type: getType(absFilePath) || "application/octet-stream",
+						}
+					),
+					manifestEntry[1].hash
+				);
+			}
 
 			try {
 				const res = await fetchResult<UploadResponse>(
@@ -143,10 +136,9 @@ export const syncExperimentalAssets = async (
 					{
 						method: "POST",
 						headers: {
-							"Content-Type": "application/jsonl",
 							Authorization: `Bearer ${initializeAssetsResponse.jwt}`,
 						},
-						body: payload.map((x) => JSON.stringify(x)).join("\n"),
+						body: payload,
 					}
 				);
 				logger.info(
