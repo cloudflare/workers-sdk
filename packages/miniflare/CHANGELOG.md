@@ -1,5 +1,13 @@
 # miniflare
 
+## 3.20240821.1
+
+### Patch Changes
+
+- [#6564](https://github.com/cloudflare/workers-sdk/pull/6564) [`e8975a9`](https://github.com/cloudflare/workers-sdk/commit/e8975a93a46d41ea270f63fd9ef40677ccc689c3) Thanks [@emily-shen](https://github.com/emily-shen)! - feat: add assets plugin to miniflare
+
+  New miniflare plugin for Workers + Assets, with relevant services imported from `workers-shared`.
+
 ## 3.20240821.0
 
 ### Patch Changes
