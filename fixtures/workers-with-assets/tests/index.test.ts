@@ -125,6 +125,15 @@ describe("[Workers + Assets] dynamic site", () => {
 		expect(response.statusText).toBe("Method Not Allowed");
 	});
 
+	it("should work with encoded path names", async ({ expect }) => {
+		let response = await fetch(
+			`http://${ip}:${port}/about/%5Bf%C3%BCnky%5D.txt`
+		);
+		let text = await response.text();
+		expect(response.status).toBe(200);
+		expect(text).toContain(`This should work.`);
+	});
+
 	it("should forward all request types to the user Worker if there are *not* assets on that route", async ({
 		expect,
 	}) => {
