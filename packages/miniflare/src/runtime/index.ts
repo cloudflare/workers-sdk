@@ -168,15 +168,14 @@ export class Runtime {
 		// Therefore, use `SIGKILL` which force closes all connections.
 		// See https://github.com/cloudflare/workerd/pull/244.
 		// `ChildProcss.kill()` is unreliable so use `tree-kill` to guarantee.
+		this.#process?.kill("SIGKILL");
 
-		if (!this.#process) return;
-		assert(this.#process.pid, `workerd process has no process id`);
-
-		this.#process.kill("SIGKILL");
-		treeKill(this.#process.pid, (_error) => {
-			// ignoring errors to match existing behaviour
-			// TODO: handle error (warn/log? reject?)
-		});
+		if (this.#process?.pid) {
+			treeKill(this.#process.pid, (_error) => {
+				// ignoring errors to match existing behaviour
+				// TODO: handle error (warn/log? reject?)
+			});
+		}
 
 		return this.#processExitPromise;
 	}
