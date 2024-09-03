@@ -554,12 +554,8 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 	logger.log("Uploaded", workerName, formatTime(uploadMs));
 
-	const cmdVersionsDeploy = blue(
-		"wrangler versions deploy --experimental-versions"
-	);
-	const cmdTriggersDeploy = blue(
-		"wrangler triggers deploy --experimental-versions"
-	);
+	const cmdVersionsDeploy = blue("wrangler versions deploy");
+	const cmdTriggersDeploy = blue("wrangler triggers deploy");
 	logger.info(
 		gray(`
 To deploy this version to production traffic use the command ${cmdVersionsDeploy}

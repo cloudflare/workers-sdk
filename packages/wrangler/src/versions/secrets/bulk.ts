@@ -124,6 +124,6 @@ export async function versionsSecretPutBulkHandler(
 	}
 	logger.log(
 		`✨ Success! Created version ${newVersion.id} with ${secrets.length} secrets.` +
-			`\n➡️  To deploy this version to production traffic use the command "wrangler versions deploy --x-versions".`
+			`\n➡️  To deploy this version to production traffic use the command "wrangler versions deploy".`
 	);
 }

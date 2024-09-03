@@ -156,7 +156,7 @@ describe("deployments", () => {
 				await expect(
 					runWrangler("deployments view 1701-E")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
-					`[Error: \`wrangler deployments view <deployment-id>\` has been renamed \`wrangler versions view [version-id] --x-versions\`. Please use that command instead.]`
+					`[Error: \`wrangler deployments view <deployment-id>\` has been renamed \`wrangler versions view [version-id]\`. Please use that command instead.]`
 				);
 			});
 

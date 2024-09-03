@@ -46,7 +46,10 @@ import {
 	maybeRetrieveFileSourceMap,
 } from "../sourcemap";
 import triggersDeploy from "../triggers/deploy";
-import { patchNonVersionedScriptSettings } from "../versions/api";
+import {
+	createDeployment,
+	patchNonVersionedScriptSettings,
+} from "../versions/api";
 import { confirmLatestDeploymentOverwrite } from "../versions/deploy";
 import { getZoneForRoute } from "../zones";
 import type { Config } from "../config";
@@ -67,7 +70,7 @@ import type { ExperimentalAssetsOptions } from "../experimental-assets";
 import type { PostQueueBody, PostTypedConsumerBody } from "../queues/client";
 import type { LegacyAssetPaths } from "../sites";
 import type { RetrieveSourceMapFunction } from "../sourcemap";
-import type { ApiVersion } from "../versions/types";
+import type { ApiVersion, Percentage, VersionId } from "../versions/types";
 
 type Props = {
 	config: Config;
@@ -777,22 +780,9 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 					);
 
 					// Deploy new version to 100%
-					await fetchResult(
-						`/accounts/${accountId}/workers/scripts/${scriptName}/deployments`,
-						{
-							method: "POST",
-							body: JSON.stringify({
-								stratergy: "percentage",
-								versions: [
-									{
-										percentage: 100,
-										version_id: versionResult.id,
-									},
-								],
-							}),
-							headers: await getMetricsUsageHeaders(config.send_metrics),
-						}
-					);
+					const versionMap = new Map<VersionId, Percentage>();
+					versionMap.set(versionResult.id, 100);
+					await createDeployment(accountId, scriptName, versionMap, undefined);
 
 					// Update tail consumers and logpush settings
 					await patchNonVersionedScriptSettings(accountId, scriptName, {
