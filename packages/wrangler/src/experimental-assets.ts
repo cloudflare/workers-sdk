@@ -2,6 +2,12 @@ import assert from "node:assert";
 import { existsSync } from "node:fs";
 import { readdir, readFile, stat } from "node:fs/promises";
 import * as path from "node:path";
+import {
+	decodeFilePath,
+	encodeFilePath,
+	MAX_ASSET_COUNT,
+	MAX_ASSET_SIZE,
+} from "@cloudflare/workers-shared/utils/utils";
 import chalk from "chalk";
 import { getType } from "mime";
 import PQueue from "p-queue";
@@ -15,6 +21,7 @@ import { isJwtExpired } from "./pages/upload";
 import { APIError } from "./parse";
 import type { Config } from "./config";
 import type { ExperimentalAssets } from "./config/environment";
+import type { RoutingConfig } from "@cloudflare/workers-shared/dist/utils";
 
 export type AssetManifest = { [path: string]: { hash: string; size: number } };
 
@@ -41,9 +48,6 @@ type UploadResponse = {
 const BULK_UPLOAD_CONCURRENCY = 3;
 const MAX_UPLOAD_ATTEMPTS = 5;
 const MAX_UPLOAD_GATEWAY_ERRORS = 5;
-// NB also used in miniflare in plugins/kv/assets.ts, so please update there too.
-const MAX_ASSET_COUNT = 20_000;
-const MAX_ASSET_SIZE = 25 * 1024 * 1024;
 
 export const syncExperimentalAssets = async (
 	accountId: string | undefined,
@@ -103,7 +107,7 @@ export const syncExperimentalAssets = async (
 			// just logging file uploads at the moment...
 			// unsure how to log deletion vs unchanged file ignored/if we want to log this
 			assetLogCount = logAssetUpload(
-				`+ ${decodeFilepath(manifestEntry[0])}`,
+				`+ ${decodeFilePath(manifestEntry[0], path.sep)}`,
 				assetLogCount
 			);
 			return manifestEntry;
@@ -123,7 +127,7 @@ export const syncExperimentalAssets = async (
 			// This is so we don't run out of memory trying to upload the files.
 			const payload: UploadPayloadFile[] = await Promise.all(
 				bucket.map(async (manifestEntry) => {
-					const decodedFilePath = decodeFilepath(manifestEntry[0]);
+					const decodedFilePath = decodeFilePath(manifestEntry[0], path.sep);
 					const absFilePath = path.join(assetDirectory, decodedFilePath);
 
 					return {
@@ -262,7 +266,7 @@ export const buildAssetsManifest = async (dir: string) => {
 							`Ensure all assets in your assets directory "${dir}" conform with the Workers maximum size requirement.`
 					);
 				}
-				manifest[encodeFilePath(relativeFilepath)] = {
+				manifest[encodeFilePath(relativeFilepath, path.sep)] = {
 					hash: hashFile(filepath),
 					size: filestat.size,
 				};
@@ -306,9 +310,6 @@ export function getExperimentalAssetsBasePath(
 		: path.resolve(path.dirname(config.configPath ?? "wrangler.toml"));
 }
 
-export type RoutingConfig = {
-	hasUserWorker: boolean;
-};
 export interface ExperimentalAssetsOptions extends ExperimentalAssets {
 	routingConfig: RoutingConfig;
 }
@@ -354,18 +355,3 @@ export function processExperimentalAssetsArg(
 
 	return experimentalAssetsOptions;
 }
-
-const encodeFilePath = (filePath: string) => {
-	const encodedPath = filePath
-		.split(path.sep)
-		.map((segment) => encodeURIComponent(segment))
-		.join("/");
-	return "/" + encodedPath;
-};
-
-const decodeFilepath = (filePath: string) => {
-	return filePath
-		.split("/")
-		.map((segment) => decodeURIComponent(segment))
-		.join(path.sep);
-};

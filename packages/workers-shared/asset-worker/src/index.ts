@@ -9,12 +9,22 @@ import {
 import { getAdditionalHeaders, getMergedHeaders } from "./utils/headers";
 import { getAssetWithMetadataFromKV } from "./utils/kv";
 
+type Env = {
+	// ASSETS_MANIFEST is a pipeline binding to an ArrayBuffer containing the
+	// binary-encoded site manifest
+	ASSETS_MANIFEST: ArrayBuffer;
+
+	// ASSETS_KV_NAMESPACE is a pipeline binding to the KV namespace that the
+	// assets are in.
+	ASSETS_KV_NAMESPACE: KVNamespace;
+};
+
 export default class extends WorkerEntrypoint<Env> {
 	async fetch(request: Request) {
 		try {
 			return this.handleRequest(request);
 		} catch (err) {
-			return new InternalServerErrorResponse(err);
+			return new InternalServerErrorResponse(err as Error);
 		}
 	}
 

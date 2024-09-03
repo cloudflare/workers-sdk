@@ -1,13 +1,9 @@
-const HEADER_SIZE = 20;
-const PATH_HASH_SIZE = 16;
-const CONTENT_HASH_SIZE = 16;
-const TAIL_SIZE = 8;
-const ENTRY_SIZE = PATH_HASH_SIZE + CONTENT_HASH_SIZE + TAIL_SIZE;
-
-export type AssetEntry = {
-	path: string;
-	contentHash: string;
-};
+import {
+	CONTENT_HASH_SIZE,
+	ENTRY_SIZE,
+	HEADER_SIZE,
+	PATH_HASH_SIZE,
+} from "../../utils/utils";
 
 export class AssetsManifest {
 	private data: ArrayBuffer;
@@ -25,13 +21,6 @@ export class AssetsManifest {
 		return entry ? contentHashToKey(entry) : null;
 	}
 }
-
-const hashPath = async (path: string) => {
-	const encoder = new TextEncoder();
-	const data = encoder.encode(path);
-	const hashBuffer = await crypto.subtle.digest("SHA-256", data.buffer);
-	return new Uint8Array(hashBuffer, 0, PATH_HASH_SIZE);
-};
 
 const binarySearch = (
 	arr: Uint8Array,
@@ -89,9 +78,16 @@ const compare = (a: Uint8Array, b: Uint8Array) => {
 };
 
 const contentHashToKey = (buffer: Uint8Array) => {
-	const contentHash = new Uint8Array(
-		buffer,
-		buffer.byteOffset + PATH_HASH_SIZE
-	).slice(0, CONTENT_HASH_SIZE);
+	const contentHash = buffer.slice(
+		PATH_HASH_SIZE,
+		PATH_HASH_SIZE + CONTENT_HASH_SIZE
+	);
 	return [...contentHash].map((b) => b.toString(16).padStart(2, "0")).join("");
+};
+
+const hashPath = async (path: string) => {
+	const encoder = new TextEncoder();
+	const data = encoder.encode(path);
+	const hashBuffer = await crypto.subtle.digest("SHA-256", data.buffer);
+	return new Uint8Array(hashBuffer, 0, PATH_HASH_SIZE);
 };

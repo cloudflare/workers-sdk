@@ -1,9 +1,6 @@
+import { RoutingConfigSchema } from "@cloudflare/workers-shared/utils/utils";
 import { z } from "zod";
 import { PathSchema } from "../../shared";
-
-export const RoutingConfigSchema = z.object({
-	hasUserWorker: z.boolean(),
-});
 
 export const AssetsOptionsSchema = z.object({
 	assets: z

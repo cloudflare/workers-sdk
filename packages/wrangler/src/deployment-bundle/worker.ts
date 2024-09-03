@@ -1,9 +1,9 @@
 import type { Route } from "../config/environment";
-import type { RoutingConfig } from "../experimental-assets";
 import type {
 	WorkerMetadata,
 	WorkerMetadataBinding,
 } from "./create-worker-upload-form";
+import type { RoutingConfig } from "@cloudflare/workers-shared/dist/utils";
 import type { Json } from "miniflare";
 
 /**

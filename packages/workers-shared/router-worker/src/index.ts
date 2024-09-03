@@ -1,4 +1,4 @@
-import type { RoutingConfig } from "../../utils/types";
+import type { RoutingConfig } from "../../utils/utils";
 
 interface Env {
 	ASSET_WORKER: Fetcher;

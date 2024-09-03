@@ -1528,6 +1528,10 @@ importers:
         version: link:../wrangler
 
   packages/workers-shared:
+    dependencies:
+      zod:
+        specifier: ^3.22.3
+        version: 3.22.3
     devDependencies:
       '@cloudflare/eslint-config-worker':
         specifier: workspace:*
