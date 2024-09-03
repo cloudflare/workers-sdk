@@ -297,6 +297,90 @@ describe("wrangler dev", () => {
 				})
 			);
 		});
+		it("should error if custom domains with paths are passed in but allow paths on normal routes", async () => {
+			fs.writeFileSync("index.js", `export default {};`);
+			writeWranglerToml({
+				main: "index.js",
+				routes: [
+					"simple.co.uk/path",
+					"simple.co.uk/*",
+					"simple.co.uk",
+					{ pattern: "route.co.uk/path", zone_id: "asdfadsf" },
+					{ pattern: "route.co.uk/*", zone_id: "asdfadsf" },
+					{ pattern: "route.co.uk", zone_id: "asdfadsf" },
+					{ pattern: "custom.co.uk/path", custom_domain: true },
+					{ pattern: "custom.co.uk/*", custom_domain: true },
+					{ pattern: "custom.co.uk", custom_domain: true },
+				],
+			});
+			await expect(runWrangler(`dev`)).rejects
+				.toThrowErrorMatchingInlineSnapshot(`
+				[Error: Invalid Routes:
+				custom.co.uk/path:
+				Paths are not allowed in Custom Domains
+
+				custom.co.uk/*:
+				Wildcard operators (*) are not allowed in Custom Domains
+				Paths are not allowed in Custom Domains]
+			`);
+		});
+		it("should error on routes with paths if experimental assets are present", async () => {
+			writeWranglerToml({
+				routes: [
+					"simple.co.uk/path",
+					"simple.co.uk/path/*",
+					"simple.co.uk/",
+					"simple.co.uk/*",
+					"simple.co.uk",
+					{ pattern: "route.co.uk/path", zone_id: "asdfadsf" },
+					{ pattern: "route.co.uk/path/*", zone_id: "asdfadsf" },
+					{ pattern: "route.co.uk/*", zone_id: "asdfadsf" },
+					{ pattern: "route.co.uk/", zone_id: "asdfadsf" },
+					{ pattern: "route.co.uk", zone_id: "asdfadsf" },
+					{ pattern: "custom.co.uk/path", custom_domain: true },
+					{ pattern: "custom.co.uk/*", custom_domain: true },
+					{ pattern: "custom.co.uk", custom_domain: true },
+				],
+				experimental_assets: {
+					directory: "assets",
+				},
+			});
+			fs.openSync("assets", "w");
+			await expect(runWrangler(`dev`)).rejects
+				.toThrowErrorMatchingInlineSnapshot(`
+				[Error: Invalid Routes:
+				simple.co.uk/path:
+				Workers which have static assets cannot be routed on a URL which has a path component. Update the route to replace /path with /*
+
+				simple.co.uk/path/*:
+				Workers which have static assets cannot be routed on a URL which has a path component. Update the route to replace /path/* with /*
+
+				simple.co.uk/:
+				Workers which have static assets must end with a wildcard path. Update the route to end with /*
+
+				simple.co.uk:
+				Workers which have static assets must end with a wildcard path. Update the route to end with /*
+
+				route.co.uk/path:
+				Workers which have static assets cannot be routed on a URL which has a path component. Update the route to replace /path with /*
+
+				route.co.uk/path/*:
+				Workers which have static assets cannot be routed on a URL which has a path component. Update the route to replace /path/* with /*
+
+				route.co.uk/:
+				Workers which have static assets must end with a wildcard path. Update the route to end with /*
+
+				route.co.uk:
+				Workers which have static assets must end with a wildcard path. Update the route to end with /*
+
+				custom.co.uk/path:
+				Paths are not allowed in Custom Domains
+
+				custom.co.uk/*:
+				Wildcard operators (*) are not allowed in Custom Domains
+				Paths are not allowed in Custom Domains]
+			`);
+		});
 	});
 
 	describe("host", () => {

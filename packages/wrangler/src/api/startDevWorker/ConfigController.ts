@@ -62,6 +62,7 @@ async function resolveDevConfig(
 			routes: input.triggers?.filter(
 				(t): t is Extract<Trigger, { type: "route" }> => t.type === "route"
 			),
+			experimentalAssets: input.experimental?.assets?.directory,
 		},
 		config
 	);
@@ -163,6 +164,7 @@ async function resolveTriggers(
 			routes: input.triggers?.filter(
 				(t): t is Extract<Trigger, { type: "route" }> => t.type === "route"
 			),
+			experimentalAssets: input.experimental?.assets?.directory,
 		},
 		config
 	);
