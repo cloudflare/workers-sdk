@@ -17,9 +17,7 @@ export default <ExportedHandler<Env>>{
 			return new Response(message, { status: 405, statusText: message });
 		}
 
-		// don't uri decode pathname, because we encode the filepath before hashing
 		const pathHash = new URL(request.url).pathname.substring(1);
-
 		const entry = env.ASSETS_REVERSE_MAP[pathHash];
 		if (entry === undefined) {
 			return new Response("Not Found", { status: 404 });

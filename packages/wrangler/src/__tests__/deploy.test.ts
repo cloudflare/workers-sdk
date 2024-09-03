@@ -4260,35 +4260,51 @@ addEventListener('fetch', event => {});`
 			);
 		});
 
-		it("should encode file paths", async () => {
+		it("should be able to upload files with special characters in filepaths", async () => {
 			// NB windows will disallow these characters in file paths anyway < > : " / \ | ? *
 			const assets = [
 				{ filePath: "file-1.txt", content: "Content of file-1" },
-				{ filePath: "boop/file#1.txt", content: "Content of file-1" },
-				{ filePath: "béëp/boo^p.txt", content: "Content of file-1" },
+				{ filePath: "boop/file#1.txt", content: "Content of file-2" },
+				{ filePath: "béëp/boo^p.txt", content: "Content of file-3" },
 			];
 			writeAssets(assets);
 			writeWranglerToml({
 				experimental_assets: { directory: "assets" },
 			});
 
-			const bodies: AssetManifest[] = [];
-			await mockAUSRequest(bodies);
+			const manifestBodies: AssetManifest[] = [];
+			const mockBuckets = [
+				[
+					"ff5016e92f039aa743a4ff7abb3180fa",
+					"7574a8cd3094a050388ac9663af1c1d6",
+					"0de3dd5df907418e9730fd2bd747bd5e",
+				],
+			];
+			await mockAUSRequest(manifestBodies, mockBuckets, "<<aus-token>>");
+			const uploadBodies: UploadPayloadFile[][] = [];
+			const uploadAuthHeaders: (string | null)[] = [];
+			const uploadContentTypeHeaders: (string | null)[] = [];
+			await mockAssetUploadRequest(
+				mockBuckets.length,
+				uploadBodies,
+				uploadContentTypeHeaders,
+				uploadAuthHeaders
+			);
 			mockSubDomainRequest();
 			mockUploadWorkerRequest({
 				expectedExperimentalAssets: true,
 				expectedType: "none",
 			});
 			await runWrangler("deploy");
-			expect(bodies.length).toBe(1);
-			expect(bodies[0]).toEqual({
+			expect(manifestBodies.length).toBe(1);
+			expect(manifestBodies[0]).toEqual({
 				manifest: {
 					"/b%C3%A9%C3%ABp/boo%5Ep.txt": {
-						hash: "0de3dd5df907418e9730fd2bd747bd5e",
+						hash: "ff5016e92f039aa743a4ff7abb3180fa",
 						size: 17,
 					},
 					"/boop/file%231.txt": {
-						hash: "0de3dd5df907418e9730fd2bd747bd5e",
+						hash: "7574a8cd3094a050388ac9663af1c1d6",
 						size: 17,
 					},
 					"/file-1.txt": {
@@ -4297,6 +4313,34 @@ addEventListener('fetch', event => {});`
 					},
 				},
 			});
+			expect(uploadBodies.flatMap((b) => b)).toEqual(
+				expect.arrayContaining([
+					{
+						base64: true,
+						key: "ff5016e92f039aa743a4ff7abb3180fa",
+						metadata: {
+							contentType: "text/plain",
+						},
+						value: "Q29udGVudCBvZiBmaWxlLTM=",
+					},
+					{
+						base64: true,
+						key: "7574a8cd3094a050388ac9663af1c1d6",
+						metadata: {
+							contentType: "text/plain",
+						},
+						value: "Q29udGVudCBvZiBmaWxlLTI=",
+					},
+					{
+						base64: true,
+						key: "0de3dd5df907418e9730fd2bd747bd5e",
+						metadata: {
+							contentType: "text/plain",
+						},
+						value: "Q29udGVudCBvZiBmaWxlLTE=",
+					},
+				])
+			);
 		});
 
 		it("should resolve assets directory relative to wrangler.toml if using config", async () => {
@@ -4433,7 +4477,6 @@ addEventListener('fetch', event => {});`
 			writeWranglerToml({
 				experimental_assets: { directory: "assets" },
 			});
-			const bodies: UploadPayloadFile[][] = [];
 			const mockBuckets = [
 				[
 					"0de3dd5df907418e9730fd2bd747bd5e",
@@ -4443,58 +4486,15 @@ addEventListener('fetch', event => {});`
 				["f05e28a3d0bdb90d3cf4bdafe592488f"],
 				["0de3dd5df907418e9730fd2bd747bd5e"],
 			];
+			await mockAUSRequest([], mockBuckets, "<<aus-token>>");
+			const bodies: UploadPayloadFile[][] = [];
 			const uploadAuthHeaders: (string | null)[] = [];
 			const uploadContentTypeHeaders: (string | null)[] = [];
-			msw.use(
-				http.post(
-					`*/accounts/some-account-id/workers/scripts/test-name/assets-upload-session`,
-					async () => {
-						return HttpResponse.json(
-							{
-								success: true,
-								errors: [],
-								messages: [],
-								result: {
-									jwt: "<<aus-token>>",
-									buckets: mockBuckets,
-								},
-							},
-							{ status: 201 }
-						);
-					}
-				),
-				http.post(
-					"*/accounts/some-account-id/workers/assets/upload",
-					async ({ request }) => {
-						uploadContentTypeHeaders.push(request.headers.get("Content-Type"));
-						uploadAuthHeaders.push(request.headers.get("Authorization"));
-						const body = (await request.text())
-							.split("\n")
-							.map((x) => JSON.parse(x)) as UploadPayloadFile[];
-						bodies.push(body);
-						if (bodies.length === mockBuckets.length) {
-							return HttpResponse.json(
-								{
-									success: true,
-									errors: [],
-									messages: [],
-									result: { jwt: "<<aus-completion-token>>" },
-								},
-								{ status: 201 }
-							);
-						}
-
-						return HttpResponse.json(
-							{
-								success: true,
-								errors: [],
-								messages: [],
-								result: {},
-							},
-							{ status: 202 }
-						);
-					}
-				)
+			await mockAssetUploadRequest(
+				mockBuckets.length,
+				bodies,
+				uploadContentTypeHeaders,
+				uploadAuthHeaders
 			);
 			mockSubDomainRequest();
 			mockUploadWorkerRequest({
@@ -4560,6 +4560,7 @@ addEventListener('fetch', event => {});`
 				])
 			);
 		});
+
 		it("should be able to upload a user worker with ASSETS binding", async () => {
 			const assets = [
 				{ filePath: "file-1.txt", content: "Content of file-1" },
@@ -11190,7 +11191,11 @@ function mockPostQueueHTTPConsumer(
 	return requests;
 }
 
-const mockAUSRequest = async (bodies?: AssetManifest[]) => {
+const mockAUSRequest = async (
+	bodies?: AssetManifest[],
+	buckets: string[][] = [[]],
+	jwt: string = "<<aus-completion-token>>"
+) => {
 	msw.use(
 		http.post<never, AssetManifest>(
 			`*/accounts/some-account-id/workers/scripts/test-name/assets-upload-session`,
@@ -11201,9 +11206,51 @@ const mockAUSRequest = async (bodies?: AssetManifest[]) => {
 						success: true,
 						errors: [],
 						messages: [],
-						result: { jwt: "<<aus-completion-token>>", buckets: [[]] },
+						result: { jwt, buckets },
 					},
 					{ status: 201 }
+				);
+			}
+		)
+	);
+};
+
+const mockAssetUploadRequest = async (
+	numberOfBuckets: number,
+	bodies: UploadPayloadFile[][],
+	uploadContentTypeHeaders: (string | null)[],
+	uploadAuthHeaders: (string | null)[]
+) => {
+	msw.use(
+		http.post(
+			"*/accounts/some-account-id/workers/assets/upload",
+			async ({ request }) => {
+				uploadContentTypeHeaders.push(request.headers.get("Content-Type"));
+				uploadAuthHeaders.push(request.headers.get("Authorization"));
+				const body = (await request.text())
+					.split("\n")
+					.map((x) => JSON.parse(x)) as UploadPayloadFile[];
+				bodies.push(body);
+				if (bodies.length === numberOfBuckets) {
+					return HttpResponse.json(
+						{
+							success: true,
+							errors: [],
+							messages: [],
+							result: { jwt: "<<aus-completion-token>>" },
+						},
+						{ status: 201 }
+					);
+				}
+
+				return HttpResponse.json(
+					{
+						success: true,
+						errors: [],
+						messages: [],
+						result: {},
+					},
+					{ status: 202 }
 				);
 			}
 		)

@@ -50,11 +50,7 @@ export default class extends WorkerEntrypoint<Env> {
 
 	private async getAssetEntry(request: Request) {
 		const url = new URL(request.url);
-		let { pathname } = url;
-
 		const assetsManifest = new AssetsManifest(this.env.ASSETS_MANIFEST);
-		pathname = globalThis.decodeURIComponent(pathname);
-
-		return await assetsManifest.get(pathname);
+		return await assetsManifest.get(url.pathname);
 	}
 }
