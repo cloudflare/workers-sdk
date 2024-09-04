@@ -33,6 +33,17 @@ export class Console {
 		const colors =
 			typeof opts.colorMode === "string" ? false : opts.colorMode ?? false;
 		this.#inspectOptions = opts.inspectOptions ?? { colors };
+
+		// Ensure methods are bound to the instance
+		return new Proxy(this, {
+			get(target, prop) {
+				const value = target[prop as keyof Console];
+				if (typeof value === "function") {
+					return value.bind(target);
+				}
+				return value;
+			},
+		});
 	}
 
 	// Vitest expects this function to be called `value`:
