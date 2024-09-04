@@ -2,7 +2,6 @@ import assert from "node:assert";
 import { readdir, readFile, stat } from "node:fs/promises";
 import * as path from "node:path";
 import chalk from "chalk";
-import ignore from "ignore";
 import xxhash from "xxhash-wasm";
 import { UserError } from "./errors";
 import {
@@ -17,6 +16,7 @@ import {
 	putKVKeyValue,
 } from "./kv/helpers";
 import { logger, LOGGER_LEVELS } from "./logger";
+import { createPatternMatcher } from "./utils/filesystem";
 import type { Config } from "./config";
 import type { KeyValue } from "./kv/helpers";
 import type { XXHashAPI } from "xxhash-wasm";
@@ -389,18 +389,6 @@ export async function syncLegacyAssets(
 	logger.log("↗️  Done syncing assets");
 
 	return { manifest, namespace };
-}
-
-function createPatternMatcher(
-	patterns: string[],
-	exclude: boolean
-): (filePath: string) => boolean {
-	if (patterns.length === 0) {
-		return (_filePath) => !exclude;
-	} else {
-		const ignorer = ignore().add(patterns);
-		return (filePath) => ignorer.test(filePath).ignored;
-	}
 }
 
 /**

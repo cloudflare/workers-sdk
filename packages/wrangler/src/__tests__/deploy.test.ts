@@ -4371,6 +4371,47 @@ addEventListener('fetch', event => {});`
 			});
 		});
 
+		it("should ignore assets that match patterns in an .cfassetsignore file in the root of the assets directory", async () => {
+			const assets = [
+				{ filePath: ".cfassetsignore", content: "*.bak\nsub-dir" },
+				{ filePath: "file-1.txt", content: "Content of file-1" },
+				{ filePath: "file-2.bak", content: "Content of file-2" },
+				{ filePath: "file-3.txt", content: "Content of file-3" },
+				{ filePath: "sub-dir/file-4.bak", content: "Content of file-4" },
+				{ filePath: "sub-dir/file-5.txt", content: "Content of file-5" },
+			];
+			writeAssets(assets, "some/path/assets");
+			writeWranglerToml(
+				{
+					experimental_assets: { directory: "assets" },
+				},
+				"some/path/wrangler.toml"
+			);
+			const bodies: AssetManifest[] = [];
+			await mockAUSRequest(bodies);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedExperimentalAssets: true,
+				expectedType: "none",
+			});
+			await runWrangler("deploy --config some/path/wrangler.toml");
+			expect(bodies.length).toBe(1);
+			expect(bodies[0]).toMatchInlineSnapshot(`
+				Object {
+				  "manifest": Object {
+				    "/file-1.txt": Object {
+				      "hash": "0de3dd5df907418e9730fd2bd747bd5e",
+				      "size": 17,
+				    },
+				    "/file-3.txt": Object {
+				      "hash": "ff5016e92f039aa743a4ff7abb3180fa",
+				      "size": 17,
+				    },
+				  },
+				}
+			`);
+		});
+
 		it("should resolve assets directory relative to cwd if using cli", async () => {
 			const assets = [{ filePath: "file-1.txt", content: "Content of file-1" }];
 			writeAssets(assets, "some/path/assets");
