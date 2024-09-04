@@ -63,7 +63,7 @@ test("handles detatched console methods", async ({
 		"index.test.ts": dedent`
 			import { SELF } from "cloudflare:test";
 			import { expect, it } from "vitest";
-			it("no crash console", async () => {
+			it("does not crash when using a detached console method", async () => {
 				const fn = console["debug"];
 				fn("Does not crash");
 				expect(true).toBe(true);
