@@ -16,6 +16,26 @@ export default function registerAllCommands(yargs: CommonYargsArgv) {
 	for (const [segment, node] of tree.entries()) {
 		yargs = walkTreeAndRegister(segment, node, yargs);
 	}
+
+	return yargs;
+}
+/**
+ * Ideally we would just use registerAllCommands, but we need to be able to
+ * hook into the way wrangler (hackily) does --help text with yargs right now.
+ * Once all commands are registered using this utility, we can completely
+ * take over rendering help text without yargs and use registerAllCommands.
+ */
+export function registerNamespace(namespace: string, yargs: CommonYargsArgv) {
+	const tree = createCommandTree();
+	const node = tree.get(namespace);
+
+	if (!node) {
+		throw new CommandRegistrationError(
+			`No definition found for namespace '${namespace}'`
+		);
+	}
+
+	return walkTreeAndRegister(namespace, node, yargs);
 }
 
 type DefinitionTreeNode = {

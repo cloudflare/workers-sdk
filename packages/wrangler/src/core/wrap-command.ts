@@ -1,11 +1,10 @@
 import chalk from "chalk";
-import { CommandBuilder } from "yargs";
 import { readConfig } from "../config";
 import { FatalError, UserError } from "../errors";
 import { logger } from "../logger";
 import { printWranglerBanner } from "../update-check";
-import { CommonYargsArgv, CommonYargsOptions } from "../yargs-types";
-import {
+import type { CommonYargsArgv } from "../yargs-types";
+import type {
 	BaseNamedArgDefinitions,
 	CommandDefinition,
 	HandlerArgs,
@@ -20,8 +19,8 @@ export function wrapCommandDefinition(
 	let commandSuffix = "";
 	let description = def.metadata.description;
 	let statusMessage = "";
-	let defaultDeprecatedMessage = `Deprecated: "${def.command}" is deprecated`; // TODO: improve
-	let deprecatedMessage = def.metadata.deprecated
+	const defaultDeprecatedMessage = `Deprecated: "${def.command}" is deprecated`; // TODO: improve
+	const deprecatedMessage = def.metadata.deprecated
 		? def.metadata.deprecatedMessage ?? defaultDeprecatedMessage
 		: undefined;
 	let defineArgs: undefined | ((yargs: CommonYargsArgv) => CommonYargsArgv) =
@@ -43,8 +42,9 @@ export function wrapCommandDefinition(
 		const commandPositionalArgsSuffix = def.positionalArgs
 			?.map((key) => {
 				const { demandOption, array } = def.args[key];
-				if (demandOption) return `<${key}${array ? ".." : ""}>`; // <key> or <key..>
-				return `[${key}${array ? ".." : ""}]`; // [key] or [key..]
+				return demandOption
+					? `<${key}${array ? ".." : ""}>` // <key> or <key..>
+					: `[${key}${array ? ".." : ""}]`; // [key] or [key..]
 			})
 			.join(" ");
 
@@ -73,6 +73,7 @@ export function wrapCommandDefinition(
 
 	if ("handler" in def) {
 		handler = async (args: HandlerArgs<BaseNamedArgDefinitions>) => {
+			// eslint-disable-next-line no-useless-catch
 			try {
 				await printWranglerBanner();
 
