@@ -53,6 +53,27 @@ test.skipIf(process.platform === "win32")(
 	}
 );
 
+test("handles detatched console methods", async ({
+	expect,
+	seed,
+	vitestDev,
+}) => {
+	await seed({
+		"vitest.config.mts": minimalVitestConfig,
+		"index.test.ts": dedent`
+			import { SELF } from "cloudflare:test";
+			import { expect, it } from "vitest";
+			it("does not crash when using a detached console method", async () => {
+				const fn = console["debug"];
+				fn("Does not crash");
+				expect(true).toBe(true);
+			});
+	`,
+	});
+	const result = vitestDev();
+	expect(result.stderr).toMatch("");
+});
+
 test("console.logs() inside `export default`ed handlers with SELF", async ({
 	expect,
 	seed,
