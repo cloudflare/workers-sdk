@@ -1,3 +1,7 @@
+> [!NOTE]
+>
+> Wrangler v2 is **only receiving critical security updates.** We recommend you [migrate to Wrangler v3](https://developers.cloudflare.com/workers/wrangler/migration/update-v2-to-v3/) if you can.
+
 <h1 align="center"> ⛅️ wrangler </h1>
 <section align="center" id="shieldio-badges">
 <a href="https://www.npmjs.com/package/wrangler"><img alt="npm"  src="https://img.shields.io/npm/dw/wrangler?style=flat-square"></a>
