@@ -82,7 +82,7 @@ export const syncExperimentalAssets = async (
 	// 3. fill buckets and upload assets
 	const numberFilesToUpload = initializeAssetsResponse.buckets.flat().length;
 	logger.info(
-		`🌀 Found ${numberFilesToUpload} file${numberFilesToUpload > 1 ? "s" : ""} to upload. Proceeding with upload...`
+		`🌀 Found ${numberFilesToUpload} new or modified file${numberFilesToUpload > 1 ? "s" : ""} to upload. Proceeding with upload...`
 	);
 
 	// Create the buckets outside of doUpload so we can retry without losing track of potential duplicate files
@@ -118,6 +118,7 @@ export const syncExperimentalAssets = async (
 	for (const [bucketIndex, bucket] of assetBuckets.entries()) {
 		attempts = 0;
 		let gatewayErrors = 0;
+		let assetUploadCount = 0;
 		const doUpload = async (): Promise<UploadResponse> => {
 			// Populate the payload only when actually uploading (this is limited to 3 concurrent uploads at 50 MiB per bucket meaning we'd only load in a max of ~150 MiB)
 			// This is so we don't run out of memory trying to upload the files.
@@ -149,18 +150,14 @@ export const syncExperimentalAssets = async (
 						body: payload.map((x) => JSON.stringify(x)).join("\n"),
 					}
 				);
+				assetUploadCount += payload.length;
 				logger.info(
-					`Uploaded bucket ${bucketIndex + 1}/${initializeAssetsResponse.buckets.length}`
+					`Uploaded ${assetUploadCount} of ${numberFilesToUpload} assets`
 				);
 				return res;
 			} catch (e) {
 				if (attempts < MAX_UPLOAD_ATTEMPTS) {
-					logger.info(
-						chalk.dim(
-							`Bucket ${bucketIndex + 1}/${initializeAssetsResponse.buckets.length} upload failed. Retrying...\n`,
-							e
-						)
-					);
+					logger.info(chalk.dim(`Asset upload failed. Retrying...\n`, e));
 					// Exponential backoff, 1 second first time, then 2 second, then 4 second etc.
 					await new Promise((resolvePromise) =>
 						setTimeout(resolvePromise, Math.pow(2, attempts) * 1000)
