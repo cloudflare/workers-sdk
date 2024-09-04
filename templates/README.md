@@ -1,6 +1,6 @@
 # Cloudflare Workers – Templates & Examples
 
-Cloudflare Workers make it possible to write Javascript which runs on Cloudflare’s network around the world. Using Workers you can build services which run exceptionally close to your users. You can also intercept any request, which would ordinarily travel through Cloudflare to your origin, and modify it in any way you need. Workers can make requests to arbitrary resources on the Internet, perform cryptography using the WebCrypto API, or do nearly anything you'd typically configure a CDN to accomplish.
+Cloudflare Workers make it possible to write JavaScript which runs on Cloudflare’s network around the world. Using Workers you can build services which run exceptionally close to your users. You can also intercept any request, which would ordinarily travel through Cloudflare to your origin, and modify it in any way you need. Workers can make requests to arbitrary resources on the Internet, perform cryptography using the WebCrypto API, or do nearly anything you'd typically configure a CDN to accomplish.
 
 This repository contains a collection of starter templates and examples of how Workers can be used to accomplish common tasks. **You are welcome to use, modify, and extend this code!** If you have an additional example you think would be valuable, please submit a pull request.
 
