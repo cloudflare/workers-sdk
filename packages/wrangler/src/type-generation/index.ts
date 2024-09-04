@@ -347,7 +347,11 @@ async function generateTypes(
 
 	if (configToDTS.unsafe?.bindings) {
 		for (const unsafe of configToDTS.unsafe.bindings) {
-			envTypeStructure.push(constructType(unsafe.name, "any"));
+			if (unsafe.type === "ratelimit") {
+				envTypeStructure.push(constructType(unsafe.name, "RateLimit"));
+			} else {
+				envTypeStructure.push(constructType(unsafe.name, "any"));
+			}
 		}
 	}
 
