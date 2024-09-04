@@ -179,14 +179,6 @@ const walk = async (dir: string) => {
 			if (filestat.isSymbolicLink() || filestat.isDirectory()) {
 				return;
 			} else {
-				if (counter >= MAX_ASSET_COUNT) {
-					throw new Error(
-						`Maximum number of assets exceeded.\n` +
-							`Cloudflare Workers supports up to ${MAX_ASSET_COUNT.toLocaleString()} assets in a version. We found ${counter.toLocaleString()} files in the specified assets directory "${dir}".\n` +
-							`Ensure your assets directory contains a maximum of ${MAX_ASSET_COUNT.toLocaleString()} files, and that you have specified your assets directory correctly.`
-					);
-				}
-
 				if (filestat.size > MAX_ASSET_SIZE) {
 					throw new Error(
 						`Asset too large.\n` +
@@ -210,6 +202,13 @@ const walk = async (dir: string) => {
 			}
 		})
 	);
+	if (counter >= MAX_ASSET_COUNT) {
+		throw new Error(
+			`Maximum number of assets exceeded.\n` +
+				`Cloudflare Workers supports up to ${MAX_ASSET_COUNT.toLocaleString()} assets in a version. We found ${counter.toLocaleString()} files in the specified assets directory "${dir}".\n` +
+				`Ensure your assets directory contains a maximum of ${MAX_ASSET_COUNT.toLocaleString()} files, and that you have specified your assets directory correctly.`
+		);
+	}
 	return manifest;
 };
 
