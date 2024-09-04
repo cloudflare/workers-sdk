@@ -122,6 +122,7 @@ interface EnvironmentInheritable {
 	 * test and deploy your Worker.
 	 *
 	 * // Carmen according to our tests the default is undefined
+	 * // warning: you must force "workers_dev: true" in tests to match expected behavior
 	 * @default `true` (This is a breaking change from Wrangler v1)
 	 * @breaking
 	 * @inheritable

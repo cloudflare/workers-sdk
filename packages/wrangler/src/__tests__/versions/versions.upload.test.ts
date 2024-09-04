@@ -1,10 +1,9 @@
-import * as fs from "node:fs";
 import { http, HttpResponse } from "msw";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { useMockIsTTY } from "../helpers/mock-istty";
 import { mockSubDomainRequest } from "../helpers/mock-workers-subdomain";
-import { msw } from "../helpers/msw";
+import { createFetchResult, msw } from "../helpers/msw";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 import { writeWorkerSource } from "../helpers/write-worker-source";
@@ -17,7 +16,7 @@ describe("versions upload", () => {
 	const { setIsTTY } = useMockIsTTY();
 	const std = mockConsoleMethods();
 
-	test("should print bindings & startup time on versions upload", async () => {
+	function mockGetScript() {
 		msw.use(
 			http.get(
 				`*/accounts/:accountId/workers/services/:scriptName`,
@@ -25,48 +24,60 @@ describe("versions upload", () => {
 					expect(params.scriptName).toEqual("test-worker");
 
 					return HttpResponse.json(
-						{
-							success: true,
-							errors: [],
-							messages: [],
-							result: {
-								default_environment: {
-									script: {
-										last_deployed_from: "wrangler",
-									},
+						createFetchResult({
+							default_environment: {
+								script: {
+									last_deployed_from: "wrangler",
 								},
 							},
-						},
-						{ status: 200 }
+						})
 					);
 				},
 				{ once: true }
-			),
+			)
+		);
+	}
+	function mockUploadVersion(has_preview: boolean) {
+		msw.use(
 			http.post(
 				`*/accounts/:accountId/workers/scripts/:scriptName/versions`,
 				({ params }) => {
 					expect(params.scriptName).toEqual("test-worker");
 
 					return HttpResponse.json(
-						{
-							success: true,
-							errors: [],
-							messages: [],
-							result: {
-								id: "51e4886e-2db7-4900-8d38-fbfecfeab993",
-								startup_time_ms: 500,
+						createFetchResult({
+							id: "51e4886e-2db7-4900-8d38-fbfecfeab993",
+							startup_time_ms: 500,
+							metadata: {
+								has_preview: has_preview,
 							},
-						},
-						{ status: 200 }
+						})
 					);
 				},
 				{ once: true }
 			)
 		);
-		mockSubDomainRequest();
+	}
+
+	function mockGetWorkerSubdomain(available_on_subdomain: boolean) {
+		msw.use(
+			http.get(
+				`*/accounts/:accountId/workers/scripts/:scriptName/subdomain`,
+				({ params }) => {
+					expect(params.scriptName).toEqual("test-worker");
+					return HttpResponse.json(
+						createFetchResult({ enabled: available_on_subdomain })
+					);
+				}
+			)
+		);
+	}
+
+	test("should print bindings & startup time on versions upload", async () => {
+		mockGetScript();
+		mockUploadVersion(false);
 
 		// Setup
-		fs.mkdirSync("./versions-upload-test-worker", { recursive: true });
 		writeWranglerToml({
 			name: "test-worker",
 			main: "./index.js",
@@ -98,8 +109,72 @@ describe("versions upload", () => {
 			 \\"abc\\": \\"def\\",
 			 \\"bool\\": true
 			}
+			Uploaded test-worker (TIMINGS)
+			Worker Version ID: 51e4886e-2db7-4900-8d38-fbfecfeab993"
+		`);
+	});
+
+	test("should print preview url if version has preview", async () => {
+		mockGetScript();
+		mockUploadVersion(true);
+		mockGetWorkerSubdomain(true);
+		mockSubDomainRequest();
+
+		// Setup
+		writeWranglerToml({
+			name: "test-worker",
+			main: "./index.js",
+			vars: {
+				TEST: "test-string",
+			},
+		});
+		writeWorkerSource();
+		setIsTTY(false);
+
+		const result = runWrangler("versions upload --x-versions");
+
+		await expect(result).resolves.toBeUndefined();
+
+		expect(std.out).toMatchInlineSnapshot(`
+			"Total Upload: xx KiB / gzip: xx KiB
+			Worker Startup Time: 500 ms
+			Your worker has access to the following bindings:
+			- Vars:
+			  - TEST: \\"test-string\\"
+			Uploaded test-worker (TIMINGS)
 			Worker Version ID: 51e4886e-2db7-4900-8d38-fbfecfeab993
-			Uploaded test-worker (TIMINGS)"
+			Version Preview URL: https://51e4886e-test-worker.test-sub-domain.workers.dev"
+		`);
+	});
+
+	it("should not print preview url workers_dev is false", async () => {
+		mockGetScript();
+		mockUploadVersion(true);
+		mockGetWorkerSubdomain(false);
+
+		// Setup
+		writeWranglerToml({
+			name: "test-worker",
+			main: "./index.js",
+			vars: {
+				TEST: "test-string",
+			},
+		});
+		writeWorkerSource();
+		setIsTTY(false);
+
+		const result = runWrangler("versions upload --x-versions");
+
+		await expect(result).resolves.toBeUndefined();
+
+		expect(std.out).toMatchInlineSnapshot(`
+			"Total Upload: xx KiB / gzip: xx KiB
+			Worker Startup Time: 500 ms
+			Your worker has access to the following bindings:
+			- Vars:
+			  - TEST: \\"test-string\\"
+			Uploaded test-worker (TIMINGS)
+			Worker Version ID: 51e4886e-2db7-4900-8d38-fbfecfeab993"
 		`);
 	});
 });

@@ -1,6 +1,5 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { URLSearchParams } from "node:url";
 import { blue, gray } from "@cloudflare/cli/colors";
 import { fetchResult } from "../cfetch";
 import { printBindings } from "../config";
@@ -31,6 +30,7 @@ import { isNavigatorDefined } from "../navigator-user-agent";
 import { ParseError } from "../parse";
 import { getWranglerTmpDir } from "../paths";
 import { ensureQueuesExistByConfig } from "../queues/client";
+import { getWorkersDevSubdomain } from "../routes";
 import {
 	getSourceMappedString,
 	maybeRetrieveFileSourceMap,
@@ -233,7 +233,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 	const start = Date.now();
 	const workerName = scriptName;
-	const workerUrl = `/accounts/${accountId}/workers/scripts/${scriptName}/versions`;
+	const workerUrl = `/accounts/${accountId}/workers/scripts/${scriptName}`;
 
 	const { format } = props.entry;
 
@@ -254,6 +254,9 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			"You cannot configure [data_blobs] with an ES module worker. Instead, import the file directly in your code, and optionally configure `[rules]` in your wrangler.toml"
 		);
 	}
+
+	let hasPreview = false;
+
 	try {
 		if (props.noBundle) {
 			// if we're not building, let's just copy the entry to the destination directory
@@ -458,39 +461,27 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			await ensureQueuesExistByConfig(config);
 			let bindingsPrinted = false;
 
-			// Upload the script so it has time to propagate.
-			// We can also now tell whether available_on_subdomain is set
+			// Upload the version.
 			try {
 				const body = createWorkerUploadForm(worker);
 
 				const result = await fetchResult<{
-					available_on_subdomain: boolean;
-					id: string | null;
-					etag: string | null;
-					pipeline_hash: string | null;
-					mutable_pipeline_id: string | null;
-					deployment_id: string | null;
+					id: string;
 					startup_time_ms: number;
-				}>(
-					workerUrl,
-					{
-						method: "POST",
-						body,
-						headers: await getMetricsUsageHeaders(config.send_metrics),
-					},
-					new URLSearchParams({
-						include_subdomain_availability: "true",
-						// pass excludeScript so the whole body of the
-						// script doesn't get included in the response
-						excludeScript: "true",
-					})
-				);
+					metadata: {
+						has_preview: boolean;
+					};
+				}>(`${workerUrl}/versions`, {
+					method: "POST",
+					body,
+					headers: await getMetricsUsageHeaders(config.send_metrics),
+				});
 
 				logger.log("Worker Startup Time:", result.startup_time_ms, "ms");
 				bindingsPrinted = true;
 				printBindings({ ...withoutStaticAssets, vars: maskedVars });
-				logger.log("Worker Version ID:", result.id);
 				versionId = result.id;
+				hasPreview = result.metadata.has_preview;
 			} catch (err) {
 				if (!bindingsPrinted) {
 					printBindings({ ...withoutStaticAssets, vars: maskedVars });
@@ -553,6 +544,21 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 	const uploadMs = Date.now() - start;
 
 	logger.log("Uploaded", workerName, formatTime(uploadMs));
+	logger.log("Worker Version ID:", versionId);
+
+	if (versionId && hasPreview) {
+		const { enabled: available_on_subdomain } = await fetchResult<{
+			enabled: boolean;
+		}>(`${workerUrl}/subdomain`);
+
+		if (available_on_subdomain) {
+			const userSubdomain = await getWorkersDevSubdomain(accountId);
+			const shortVersion = versionId.slice(0, 8);
+			logger.log(
+				`Version Preview URL: https://${shortVersion}-${workerName}.${userSubdomain}.workers.dev`
+			);
+		}
+	}
 
 	const cmdVersionsDeploy = blue("wrangler versions deploy");
 	const cmdTriggersDeploy = blue("wrangler triggers deploy");
