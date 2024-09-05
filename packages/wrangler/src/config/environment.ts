@@ -188,6 +188,8 @@ interface EnvironmentInheritable {
 		tag: string;
 		/** The new Durable Objects being defined. */
 		new_classes?: string[];
+		/** The new SQLite Durable Objects being defined. */
+		new_sqlite_classes?: string[];
 		/** The Durable Objects being renamed. */
 		renamed_classes?: {
 			from: string;
