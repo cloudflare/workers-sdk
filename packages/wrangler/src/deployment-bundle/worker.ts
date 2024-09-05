@@ -226,6 +226,11 @@ export interface CfExperimentalAssetBinding {
 	binding: string;
 }
 
+export interface CfPipeline {
+	binding: string;
+	pipeline: string;
+}
+
 export interface CfUnsafeBinding {
 	name: string;
 	type: string;
@@ -326,6 +331,7 @@ export interface CfWorkerInit {
 		dispatch_namespaces: CfDispatchNamespace[] | undefined;
 		mtls_certificates: CfMTlsCertificate[] | undefined;
 		logfwdr: CfLogfwdr | undefined;
+		pipelines: CfPipeline[] | undefined;
 		unsafe: CfUnsafe | undefined;
 		experimental_assets: CfExperimentalAssetBinding | undefined;
 	};

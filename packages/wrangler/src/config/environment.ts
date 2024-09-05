@@ -754,6 +754,23 @@ export interface EnvironmentNonInheritable {
 		/** Details about the outbound Worker which will handle outbound requests from your namespace */
 		outbound?: DispatchNamespaceOutbound;
 	}[];
+
+	/**
+	 * Specifies list of Pipelines bound to this Worker environment
+	 *
+	 * NOTE: This field is not automatically inherited from the top level environment,
+	 * and so must be specified in every named environment.
+	 *
+	 * @default `[]`
+	 * @nonInheritable
+	 */
+	pipelines: {
+		/** The binding name used to refer to the bound service. */
+		binding: string;
+
+		/** Name of the Pipeline to bind */
+		pipeline: string;
+	}[];
 }
 
 /**
