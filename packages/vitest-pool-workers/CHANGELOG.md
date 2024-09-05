@@ -1,5 +1,14 @@
 # @cloudflare/vitest-pool-workers
 
+## 0.4.29
+
+### Patch Changes
+
+- [#6633](https://github.com/cloudflare/workers-sdk/pull/6633) [`1a4b4ba`](https://github.com/cloudflare/workers-sdk/commit/1a4b4ba406d7caf72f8ce06fc4d9c3dfdaacbb53) Thanks [@andyjessop](https://github.com/andyjessop)! - Ensures console methods are bound to their instance in Vitest Pool Worker tests
+
+- Updated dependencies [[`21a09e0`](https://github.com/cloudflare/workers-sdk/commit/21a09e06473e28722c3fe73dee9cd49b41807be3), [`a197460`](https://github.com/cloudflare/workers-sdk/commit/a197460f47db47279f2c5536269cd0de2b543576), [`a197460`](https://github.com/cloudflare/workers-sdk/commit/a197460f47db47279f2c5536269cd0de2b543576), [`8d1d464`](https://github.com/cloudflare/workers-sdk/commit/8d1d464f2b549dc7d7020fd45f025cd7c8671ce9)]:
+  - wrangler@3.75.0
+
 ## 0.4.28
 
 ### Patch Changes
