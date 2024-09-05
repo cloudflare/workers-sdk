@@ -37,11 +37,8 @@ export function getAdditionalHeaders(
 	}
 
 	const headers = new Headers({
-		"Access-Control-Allow-Origin": "*",
 		"Content-Type": contentType,
-		"Referrer-Policy": "strict-origin-when-cross-origin",
-		"X-Content-Type-Options": "nosniff",
-		ETag: `${assetKey}`,
+		ETag: `"${assetKey}"`,
 	});
 
 	if (isCacheable(request)) {
