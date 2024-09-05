@@ -32,14 +32,14 @@ export type HandlerArgs<Args extends BaseNamedArgDefinitions> = OnlyCamelCase<
 	>
 >;
 
-export type HandlerContext<RequireConfig extends boolean> = {
+export type HandlerContext = {
 	/**
 	 * The wrangler config file read from disk and parsed.
 	 * If no config file can be found, this value will undefined.
 	 * Set `behaviour.requireConfig` to refine this type and
 	 * throw if it cannot be found.
 	 */
-	config: RequireConfig extends true ? Config : Config | undefined;
+	config: Config;
 	/**
 	 * The logger instance provided to the command implementor as a convenience.
 	 */
@@ -64,7 +64,6 @@ export type HandlerContext<RequireConfig extends boolean> = {
 
 export type CommandDefinition<
 	NamedArgs extends BaseNamedArgDefinitions = BaseNamedArgDefinitions,
-	RequireConfig extends boolean = boolean,
 > = {
 	/**
 	 * The full command as it would be written by the user.
@@ -83,30 +82,10 @@ export type CommandDefinition<
 	 */
 	behaviour?: {
 		/**
-		 * If true, throw error if a config file cannot be found.
-		 */
-		requireConfig?: RequireConfig; // boolean type which affects the HandlerContext type
-		/**
 		 * By default, metrics are sent if the user has opted-in.
 		 * This allows metrics to be disabled unconditionally.
 		 */
 		sendMetrics?: false;
-		sharedArgs?: {
-			/**
-			 * Enable the --config arg which allows the user to override the default config file path
-			 */
-			config?: boolean;
-			/**
-			 * Enable the --account-id arg which allows the user to override the CLOUDFLARE_ACCOUNT_ID env var and accountId config property
-			 */
-			accountId?: boolean;
-			/**
-			 * Enable the --json arg which enables
-			 */
-			json?: boolean;
-
-			// TODO: experimental flags
-		};
 	};
 
 	/**
@@ -123,12 +102,19 @@ export type CommandDefinition<
 	positionalArgs?: Array<StringKeyOf<NamedArgs>>;
 
 	/**
+	 * A hook to implement custom validation of the args before the handler is called.
+	 * Throw `CommandLineArgsError` with actionable error message if args are invalid.
+	 * The return value is ignored.
+	 */
+	validateArgs?: (args: HandlerArgs<NamedArgs>) => void | Promise<void>;
+
+	/**
 	 * The implementation of the command which is given camelCase'd args
 	 * and a ctx object of convenience properties
 	 */
 	handler: (
 		args: HandlerArgs<NamedArgs>,
-		ctx: HandlerContext<RequireConfig>
+		ctx: HandlerContext
 	) => void | Promise<void>;
 };
 
@@ -136,10 +122,9 @@ export const COMMAND_DEFINITIONS: Array<
 	CommandDefinition | NamespaceDefinition | AliasDefinition
 > = [];
 
-export function defineCommand<
-	NamedArgs extends BaseNamedArgDefinitions,
-	RequireConfig extends boolean,
->(definition: CommandDefinition<NamedArgs, RequireConfig>) {
+export function defineCommand<NamedArgs extends BaseNamedArgDefinitions>(
+	definition: CommandDefinition<NamedArgs>
+) {
 	COMMAND_DEFINITIONS.push(definition as unknown as CommandDefinition);
 
 	return {

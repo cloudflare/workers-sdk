@@ -86,6 +86,8 @@ export function wrapCommandDefinition(
 
 				// TODO(telemetry): send command started event
 
+				await def.validateArgs?.(args);
+
 				await def.handler(args, {
 					config: readConfig(args.config, args),
 					errors: { UserError, FatalError },
