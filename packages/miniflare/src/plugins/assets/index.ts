@@ -87,7 +87,19 @@ export const ASSETS_PLUGIN: Plugin<typeof AssetsOptionsSchema> = {
 				],
 			},
 		};
-
+		// Set defaults:
+		const assetConfig = {
+			serveExactMatchesOnly:
+				options.assets.assetConfig.serveExactMatchesOnly ?? false,
+			// trailingSlashes is disabled when { "serveExactMatchesOnly": true }.
+			trailingSlashes:
+				!options.assets.assetConfig.trailingSlashes &&
+				!options.assets.assetConfig.serveExactMatchesOnly
+					? "auto"
+					: undefined,
+			notFoundBehavior:
+				options.assets.assetConfig.serveExactMatchesOnly ?? "default",
+		};
 		const assetsManifest = await buildAssetsManifest(options.assets.path);
 		const assetService: Service = {
 			name: ASSETS_SERVICE_NAME,
@@ -107,6 +119,10 @@ export const ASSETS_PLUGIN: Plugin<typeof AssetsOptionsSchema> = {
 					{
 						name: "ASSETS_MANIFEST",
 						data: assetsManifest,
+					},
+					{
+						name: "CONFIG",
+						json: JSON.stringify(assetConfig),
 					},
 				],
 			},

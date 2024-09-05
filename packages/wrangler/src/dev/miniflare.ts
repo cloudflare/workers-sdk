@@ -685,6 +685,7 @@ function buildAssetOptions(config: Omit<ConfigBundle, "rules">) {
 				path: config.experimentalAssets.directory,
 				bindingName: config.experimentalAssets.binding,
 				routingConfig: config.experimentalAssets.routingConfig,
+				assetConfig: config.experimentalAssets.assetConfig,
 			},
 		};
 	}
