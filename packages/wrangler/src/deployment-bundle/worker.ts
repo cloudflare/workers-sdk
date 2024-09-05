@@ -3,7 +3,10 @@ import type {
 	WorkerMetadata,
 	WorkerMetadataBinding,
 } from "./create-worker-upload-form";
-import type { RoutingConfig } from "@cloudflare/workers-shared/dist/utils";
+import type {
+	AssetConfig,
+	RoutingConfig,
+} from "@cloudflare/workers-shared/dist/utils";
 import type { Json } from "miniflare";
 
 /**
@@ -280,6 +283,7 @@ export interface CfUserLimits {
 export interface CfExperimentalAssets {
 	jwt: string;
 	routingConfig: RoutingConfig;
+	assetConfig?: AssetConfig;
 }
 /**
  * Options for creating a `CfWorker`.

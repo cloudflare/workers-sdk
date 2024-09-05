@@ -2081,11 +2081,51 @@ const validateAssetsConfig: ValidatorFn = (diagnostics, field, value) => {
 		) && isValid;
 
 	isValid =
+		validateOptionalProperty(
+			diagnostics,
+			field,
+			"serveExactMatchesOnly",
+			(value as ExperimentalAssets).serveExactMatchesOnly,
+			"boolean"
+		) && isValid;
+
+	isValid =
+		validateOptionalProperty(
+			diagnostics,
+			field,
+			"trailingSlashes",
+			(value as ExperimentalAssets).trailingSlashes,
+			"string",
+			["auto", "add", "remove"]
+		) && isValid;
+
+	isValid =
+		validateOptionalProperty(
+			diagnostics,
+			field,
+			"notFoundBehavior",
+			(value as ExperimentalAssets).notFoundBehavior,
+			"string",
+			["default", "single-page-application", "404-page", "nearest-404-page"]
+		) && isValid;
+
+	isValid =
 		validateAdditionalProperties(diagnostics, field, Object.keys(value), [
 			"directory",
 			"binding",
+			"serveExactMatchesOnly",
+			"trailingSlashes",
+			"notFoundBehavior",
 		]) && isValid;
 
+	if (
+		(value as ExperimentalAssets).serveExactMatchesOnly &&
+		(value as ExperimentalAssets).trailingSlashes
+	) {
+		diagnostics.errors.push(
+			`trailing_slashes is disabled when serve_exact_matches_only = true`
+		);
+	}
 	return isValid;
 };
 

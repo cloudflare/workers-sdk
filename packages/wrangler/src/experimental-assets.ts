@@ -21,7 +21,10 @@ import { isJwtExpired } from "./pages/upload";
 import { APIError } from "./parse";
 import type { Config } from "./config";
 import type { ExperimentalAssets } from "./config/environment";
-import type { RoutingConfig } from "@cloudflare/workers-shared/dist/utils";
+import type {
+	AssetConfig,
+	RoutingConfig,
+} from "@cloudflare/workers-shared/dist/utils";
 
 export type AssetManifest = { [path: string]: { hash: string; size: number } };
 
@@ -310,9 +313,13 @@ export function getExperimentalAssetsBasePath(
 		: path.resolve(path.dirname(config.configPath ?? "wrangler.toml"));
 }
 
-export interface ExperimentalAssetsOptions extends ExperimentalAssets {
+export type ExperimentalAssetsOptions = Pick<
+	ExperimentalAssets,
+	"directory" | "binding"
+> & {
 	routingConfig: RoutingConfig;
-}
+	assetConfig: AssetConfig;
+};
 
 export function processExperimentalAssetsArg(
 	args: { experimentalAssets: string | undefined; script?: string },
@@ -347,9 +354,16 @@ export function processExperimentalAssetsArg(
 		const routingConfig = {
 			hasUserWorker: Boolean(args.script || config.main),
 		};
+		// defaults are set by EWC
+		const assetConfig = {
+			serveExactMatchesOnly: config.experimental_assets?.serveExactMatchesOnly,
+			trailingSlashes: config.experimental_assets?.trailingSlashes,
+			notFoundBehavior: config.experimental_assets?.notFoundBehavior,
+		};
 		experimentalAssetsOptions = {
 			...experimentalAssets,
 			routingConfig,
+			assetConfig,
 		};
 	}
 

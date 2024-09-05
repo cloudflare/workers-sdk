@@ -11,6 +11,7 @@ import type {
 	CfUserLimits,
 	CfWorkerInit,
 } from "./worker.js";
+import type { AssetConfig } from "@cloudflare/workers-shared/dist/utils";
 import type { Json } from "miniflare";
 
 const moduleTypeMimeType: { [type in CfModuleType]: string | undefined } = {
@@ -139,7 +140,15 @@ export type WorkerMetadataPut = {
 	tail_consumers?: CfTailConsumer[];
 	limits?: CfUserLimits;
 	// experimental assets (EWC will expect 'assets')
-	assets?: string;
+	assets?: {
+		jwt: string;
+		config?: {
+			serve_exact_matches_only?: AssetConfig["serveExactMatchesOnly"];
+			trailing_slashes?: AssetConfig["trailingSlashes"];
+			not_found_behavior?: AssetConfig["notFoundBehavior"];
+		};
+	};
+
 	// Allow unsafe.metadata to add arbitrary properties at runtime
 	[key: string]: unknown;
 };
@@ -175,11 +184,24 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 		experimental_assets,
 	} = worker;
 
+	const assetConfig = {
+		serve_exact_matches_only:
+			experimental_assets?.assetConfig?.serveExactMatchesOnly,
+		trailing_slashes: experimental_assets?.assetConfig?.trailingSlashes,
+		not_found_behavior: experimental_assets?.assetConfig?.notFoundBehavior,
+	};
+
+	// TODO bugbash: allow adding compat dates etc. if assets only
 	// short circuit if static assets upload only
 	if (experimental_assets && !experimental_assets.routingConfig.hasUserWorker) {
 		formData.set(
 			"metadata",
-			JSON.stringify({ assets: experimental_assets.jwt })
+			JSON.stringify({
+				assets: {
+					jwt: experimental_assets.jwt,
+					...(Object.values(assetConfig).every((x) => x) && { assetConfig }),
+				},
+			})
 		);
 		return formData;
 	}
@@ -556,7 +578,14 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 		...(tail_consumers && { tail_consumers }),
 		...(limits && { limits }),
 		...(annotations && { annotations }),
-		...(experimental_assets && { assets: experimental_assets.jwt }),
+		...(experimental_assets && {
+			assets: {
+				jwt: experimental_assets.jwt,
+				...(Object.values(assetConfig).every((x) => x) && {
+					config: assetConfig,
+				}),
+			},
+		}),
 	};
 
 	if (bindings.unsafe?.metadata !== undefined) {

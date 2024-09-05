@@ -4,7 +4,22 @@ export const RoutingConfigSchema = z.object({
 	hasUserWorker: z.boolean().optional(),
 });
 
+export const AssetConfigSchema = z.object({
+	serveExactMatchesOnly: z.boolean().optional(),
+	trailingSlashes: z.enum(["auto", "add", "remove"]).optional(),
+	notFoundBehavior: z
+		.enum([
+			"default",
+			"single-page-application",
+			"404-page",
+			"nearest-404-page",
+		])
+		.optional(),
+});
+
 export type RoutingConfig = z.infer<typeof RoutingConfigSchema>;
+
+export type AssetConfig = z.infer<typeof AssetConfigSchema>;
 
 export const HEADER_SIZE = 20;
 export const PATH_HASH_SIZE = 16;

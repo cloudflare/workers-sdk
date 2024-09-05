@@ -591,16 +591,13 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			: undefined;
 
 		// Upload assets if experimental assets is being used
-		const experimentalAssetsOptions =
+		const experimentalAssetsJwt =
 			props.experimentalAssetsOptions && !props.dryRun
-				? {
-						routingConfig: props.experimentalAssetsOptions?.routingConfig,
-						jwt: await syncExperimentalAssets(
-							accountId,
-							scriptName,
-							props.experimentalAssetsOptions.directory
-						),
-					}
+				? await syncExperimentalAssets(
+						accountId,
+						scriptName,
+						props.experimentalAssetsOptions.directory
+					)
 				: undefined;
 
 		const legacyAssets = await syncLegacyAssets(
@@ -696,7 +693,14 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			placement,
 			tail_consumers: config.tail_consumers,
 			limits: config.limits,
-			experimental_assets: experimentalAssetsOptions,
+			experimental_assets:
+				props.experimentalAssetsOptions && experimentalAssetsJwt
+					? {
+							jwt: experimentalAssetsJwt,
+							routingConfig: props.experimentalAssetsOptions.routingConfig,
+							assetConfig: props.experimentalAssetsOptions.assetConfig,
+						}
+					: undefined,
 		};
 
 		sourceMapSize = worker.sourceMaps?.reduce(

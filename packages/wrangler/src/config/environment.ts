@@ -877,4 +877,11 @@ export type ExperimentalAssets = {
 	/** Absolute path to assets directory */
 	directory: string;
 	binding?: string;
+	serveExactMatchesOnly?: boolean;
+	trailingSlashes?: "auto" | "add" | "remove";
+	notFoundBehavior?:
+		| "default"
+		| "single-page-application"
+		| "404-page"
+		| "nearest-404-page";
 };
