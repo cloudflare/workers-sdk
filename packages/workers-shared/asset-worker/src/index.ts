@@ -121,13 +121,112 @@ export default class extends WorkerEntrypoint<Env> {
 				return this.notFound(assetsManifest, url.pathname, configuration);
 			}
 		} else if (configuration.trailingSlashes === "add") {
+			let entry = await assetsManifest.get(url.pathname);
+			let actual = url.pathname;
+			// try alternatives:
+			if (!entry) {
+				if (url.pathname.endsWith("/")) {
+					actual = url.pathname + "index.html";
+					entry = await assetsManifest.get(actual);
+					if (!entry) {
+						actual = url.pathname.slice(0, -1) + ".html";
+						entry = await assetsManifest.get(actual);
+					}
+				} else {
+					actual = url.pathname + "/index.html";
+					entry = await assetsManifest.get(actual);
+					if (!entry) {
+						actual = url.pathname + ".html";
+						entry = await assetsManifest.get(actual);
+					}
+				}
+			}
+
+			if (!entry) {
+				return this.notFound(assetsManifest, url.pathname, configuration);
+			}
+
+			this.handleRedirect(actual, entry);
 		} else if (configuration.trailingSlashes === "remove") {
+			let entry = await assetsManifest.get(url.pathname);
+			let actual = url.pathname;
+			// try alternatives:
+			if (!entry) {
+				if (url.pathname.endsWith("/")) {
+					actual = url.pathname.slice(0, -1) + ".html";
+					entry = await assetsManifest.get(actual);
+					if (!entry) {
+						actual = url.pathname + "index.html";
+						entry = await assetsManifest.get(actual);
+					}
+				} else {
+					actual = url.pathname + ".html";
+					entry = await assetsManifest.get(actual);
+					if (!entry) {
+						actual = url.pathname + "/index.html";
+						entry = await assetsManifest.get(actual);
+					}
+				}
+			}
+
+			if (!entry) {
+				return this.notFound(assetsManifest, url.pathname, configuration);
+			}
+
+			this.handleRedirect(actual, entry);
 		} else {
 			// configuration.serveExactMatchesOnly === false &&
 			// configuration.trailingSlashes === 'auto'
+			let entry = await assetsManifest.get(url.pathname);
+			let actual = url.pathname;
+			// try alternatives:
+			if (!entry) {
+				if (url.pathname.endsWith("/")) {
+					actual = url.pathname + "index.html";
+					entry = await assetsManifest.get(actual);
+					if (!entry) {
+						actual = url.pathname.slice(0, -1) + ".html";
+						entry = await assetsManifest.get(actual);
+					}
+				} else {
+					actual = url.pathname + ".html";
+					entry = await assetsManifest.get(actual);
+					if (!entry) {
+						actual = url.pathname + "/index.html";
+						entry = await assetsManifest.get(actual);
+					}
+				}
+			}
+
+			if (!entry) {
+				return this.notFound(assetsManifest, url.pathname, configuration);
+			}
+
+			this.handleRedirect(actual, entry);
 		}
 
 		return null;
+	}
+
+	private handleRedirect(actual: string, entry: string) {
+		// determine redirects:
+		if (actual.endsWith("index.html")) {
+			// /folder/index.html -> /folder/
+			return {
+				asset: undefined,
+				redirect: actual.slice(0, -10),
+			};
+		} else if (actual.endsWith(".html")) {
+			// /file.html -> /file
+			return {
+				asset: undefined,
+				redirect: actual.slice(0, -5),
+			};
+		}
+		return {
+			asset: { entry, status: 200 },
+			redirect: undefined,
+		};
 	}
 
 	private async notFound(
