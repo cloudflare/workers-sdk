@@ -1,29 +1,25 @@
-import fs from "node:fs";
 import dotenv from "dotenv";
 import { findUpSync } from "find-up";
+import fs from "node:fs";
+import type { CfWorkerInit } from "../deployment-bundle/worker";
 import { FatalError, UserError } from "../errors";
 import { getFlag } from "../experimental-flags";
 import { logger } from "../logger";
 import { EXIT_CODE_INVALID_PAGES_CONFIG } from "../pages/errors";
 import { parseJSONC, parseTOML, readFileSync } from "../parse";
-import { isPagesConfig, normalizeAndValidateConfig } from "./validation";
-import { validatePagesConfig } from "./validation-pages";
-import type { CfWorkerInit } from "../deployment-bundle/worker";
 import type { CommonYargsOptions } from "../yargs-types";
 import type { Config, OnlyCamelCase, RawConfig } from "./config";
 import type { NormalizeAndValidateConfigArgs } from "./validation";
+import { isPagesConfig, normalizeAndValidateConfig } from "./validation";
+import { validatePagesConfig } from "./validation-pages";
 
 export type {
-	Config,
-	RawConfig,
-	ConfigFields,
-	DevConfig,
-	RawDevConfig,
+	Config, ConfigFields,
+	DevConfig, RawConfig, RawDevConfig
 } from "./config";
 export type {
-	Environment,
-	RawEnvironment,
-	ConfigModuleRuleType,
+	ConfigModuleRuleType, Environment,
+	RawEnvironment
 } from "./environment";
 
 type ReadConfigCommandArgs = NormalizeAndValidateConfigArgs & {
@@ -232,6 +228,7 @@ export function printBindings(bindings: CfWorkerInit["bindings"]) {
 		wasm_modules,
 		dispatch_namespaces,
 		mtls_certificates,
+		pipelines,
 	} = bindings;
 
 	if (data_blobs !== undefined && Object.keys(data_blobs).length > 0) {
@@ -441,6 +438,16 @@ export function printBindings(bindings: CfWorkerInit["bindings"]) {
 			type: "AI",
 			entries: entries,
 		});
+	}
+
+	if (pipelines?.length) {
+		output.push({
+			type: "Pipelines",
+			entries: pipelines.map(({ binding, pipeline }) => ({
+				key: binding,
+				value: pipeline,
+			}))
+		})
 	}
 
 	if (version_metadata !== undefined) {

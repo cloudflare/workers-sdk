@@ -71,6 +71,7 @@ import type {
 } from "./yargs-types";
 import type { Json } from "miniflare";
 import type React from "react";
+import { pipeline } from "node:stream";
 
 export function devOptions(yargs: CommonYargsArgv) {
 	return (
@@ -725,6 +726,7 @@ export async function startDev(args: StartDevOptions) {
 						analytics_engine_datasets: undefined,
 						dispatch_namespaces: undefined,
 						mtls_certificates: undefined,
+						pipelines: undefined,
 						logfwdr: undefined,
 						unsafe: undefined,
 						experimental_assets: undefined,
@@ -1595,6 +1597,7 @@ export function getBindings(
 			capnp: configParam.unsafe.capnp,
 		},
 		mtls_certificates: configParam.mtls_certificates,
+		pipelines: configParam.pipelines,
 		send_email: configParam.send_email,
 		experimental_assets: configParam.experimental_assets?.binding
 			? { binding: configParam.experimental_assets?.binding }
