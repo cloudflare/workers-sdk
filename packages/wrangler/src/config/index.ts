@@ -232,6 +232,7 @@ export function printBindings(bindings: CfWorkerInit["bindings"]) {
 		wasm_modules,
 		dispatch_namespaces,
 		mtls_certificates,
+		pipelines,
 	} = bindings;
 
 	if (data_blobs !== undefined && Object.keys(data_blobs).length > 0) {
@@ -441,6 +442,16 @@ export function printBindings(bindings: CfWorkerInit["bindings"]) {
 			type: "AI",
 			entries: entries,
 		});
+	}
+
+	if (pipelines != undefined && pipelines.length>0) {
+		output.push({
+			type: "Pipelines",
+			entries: pipelines.map(({ binding, pipeline }) => ({
+				key: binding,
+				value: pipeline,
+			}))
+		})
 	}
 
 	if (version_metadata !== undefined) {

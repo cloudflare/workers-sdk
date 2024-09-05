@@ -725,6 +725,7 @@ export async function startDev(args: StartDevOptions) {
 						analytics_engine_datasets: undefined,
 						dispatch_namespaces: undefined,
 						mtls_certificates: undefined,
+						pipelines: undefined,
 						logfwdr: undefined,
 						unsafe: undefined,
 						experimental_assets: undefined,
