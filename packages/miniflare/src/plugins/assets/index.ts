@@ -202,7 +202,7 @@ const walk = async (dir: string) => {
 			}
 		})
 	);
-	if (counter >= MAX_ASSET_COUNT) {
+	if (counter > MAX_ASSET_COUNT) {
 		throw new Error(
 			`Maximum number of assets exceeded.\n` +
 				`Cloudflare Workers supports up to ${MAX_ASSET_COUNT.toLocaleString()} assets in a version. We found ${counter.toLocaleString()} files in the specified assets directory "${dir}".\n` +
