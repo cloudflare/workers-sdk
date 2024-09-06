@@ -72,7 +72,7 @@ export function wrapCommandDefinition(
 	}
 
 	if ("handler" in def) {
-		handler = async (args: HandlerArgs<BaseNamedArgDefinitions>) => {
+		handler = async (args) => {
 			// eslint-disable-next-line no-useless-catch
 			try {
 				await printWranglerBanner();
