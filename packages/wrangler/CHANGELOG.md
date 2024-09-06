@@ -1,5 +1,42 @@
 # wrangler
 
+## 3.75.0
+
+### Minor Changes
+
+- [#6603](https://github.com/cloudflare/workers-sdk/pull/6603) [`a197460`](https://github.com/cloudflare/workers-sdk/commit/a197460f47db47279f2c5536269cd0de2b543576) Thanks [@taylorlee](https://github.com/taylorlee)! - feature: log version preview url when previews exist
+
+  The version upload API returns a field indicating whether
+  a preview exists for that version. If a preview exists and
+  workers.dev is enabled, wrangler will now log the full
+  URL on version upload.
+
+  This does not impact wrangler deploy, which only prints the
+  workers.dev route of the latest deployment.
+
+- [#6550](https://github.com/cloudflare/workers-sdk/pull/6550) [`8d1d464`](https://github.com/cloudflare/workers-sdk/commit/8d1d464f2b549dc7d7020fd45f025cd7c8671ce9) Thanks [@Pedr0Rocha](https://github.com/Pedr0Rocha)! - feature: add RateLimit type generation to the ratelimit unsafe binding.
+
+### Patch Changes
+
+- [#6615](https://github.com/cloudflare/workers-sdk/pull/6615) [`21a09e0`](https://github.com/cloudflare/workers-sdk/commit/21a09e06473e28722c3fe73dee9cd49b41807be3) Thanks [@RamIdeas](https://github.com/RamIdeas)! - chore: avoid potential double-install of create-cloudflare
+
+  When `wrangler init` delegates to C3, it did so via `npm create cloudflare@2.5.0`. C3's v2.5.0 was the first to include auto-update support to avoid `npx`'s potentially stale cache. But this also guaranteed a double install for users who do not have 2.5.0 cached. Now, wrangler delegates via `npm create cloudflare@^2.5.0` which should use the latest version cached on the user's system or install and use the latest v2.x.x.
+
+- [#6603](https://github.com/cloudflare/workers-sdk/pull/6603) [`a197460`](https://github.com/cloudflare/workers-sdk/commit/a197460f47db47279f2c5536269cd0de2b543576) Thanks [@taylorlee](https://github.com/taylorlee)! - chore: fix version upload log order
+
+  Previously deploy prints:
+  upload timings
+  deploy timings
+  current version id
+
+  while version upload prints:
+  worker version id
+  upload timings
+
+  This change makes version upload more similar to deploy by printing
+  version id after upload, which also makes more sense, as version ID can
+  only be known after upload has finished.
+
 ## 3.74.0
 
 ### Minor Changes
