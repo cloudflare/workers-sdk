@@ -50,7 +50,7 @@ function buildAdditionalArtifactReport(pkg) {
 	if (type === "cli") {
 		return `\`\`\`sh\nnpx ${url} --no-auto-update\n\`\`\``;
 	} else if (type === "extension") {
-		return `\`\`\`sh\ncode --install-extension ${url}\n\`\`\``;
+		return `\`\`\`sh\nwget ${url} -O ./${name}.${pkg.json.version}.vsix && code --install-extension ./${name}.${pkg.json.version}.extension.vsix\n\`\`\``;
 	} else {
 		return `\`\`\`sh\nnpm install ${url}\n\`\`\``;
 	}
