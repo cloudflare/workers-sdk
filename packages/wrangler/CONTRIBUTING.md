@@ -14,58 +14,58 @@
 1. define the command with the util defineCommand
 
 ```ts
-    import { defineCommand } from './util';
+import { defineCommand } from "./util";
 
-    // Namespaces are the prefix before the subcommand
-    // eg "wrangler kv" in "wrangler kv put"
-    // eg "wrangler kv key" in "wrangler kv key put"
-    defineNamespace({
-        command: "wrangler kv",
-        metadata: {
-            description: "Commands for interacting with Workers KV",
-            status: "stable",
-        },
-    });
-    // Every level of namespaces must be defined
-    // eg "wrangler kv key" in "wrangler kv key put"
-    defineNamespace({
-        command: "wrangler kv",
-        metadata: {
-            description: "Commands for interacting with Workers KV",
-            status: "stable",
-        },
-    });
+// Namespaces are the prefix before the subcommand
+// eg "wrangler kv" in "wrangler kv put"
+// eg "wrangler kv key" in "wrangler kv key put"
+defineNamespace({
+	command: "wrangler kv",
+	metadata: {
+		description: "Commands for interacting with Workers KV",
+		status: "stable",
+	},
+});
+// Every level of namespaces must be defined
+// eg "wrangler kv key" in "wrangler kv key put"
+defineNamespace({
+	command: "wrangler kv",
+	metadata: {
+		description: "Commands for interacting with Workers KV",
+		status: "stable",
+	},
+});
 
-    // Define the command args, implementation and metadata
-    const command = defineCommand({
-        command: "wrangler kv key put", // the full command including the namespace
-        metadata: {
-            description: "Put a key-value pair into a Workers KV namespace",
-            status: "stable",
-        },
-        args: {
-            key: {
-                type: "string",
-                description: "The key to put into the KV namespace",
-                required: true,
-            },
-            value: {
-                type: "string",
-                description: "The value to put into the KV namespace",
-                required: true,
-            },
-            "namespace-id": {
-                type: "string",
-                description: "The namespace to put the key-value pair into",
-                required: true,
-            },
-        },
-        // the positionalArgs defines which of the args are positional and in what order
-        positionalArgs: ["key", "value"],
-        handler(args) {
-            // implementation here
-        },
-    });
+// Define the command args, implementation and metadata
+const command = defineCommand({
+	command: "wrangler kv key put", // the full command including the namespace
+	metadata: {
+		description: "Put a key-value pair into a Workers KV namespace",
+		status: "stable",
+	},
+	args: {
+		key: {
+			type: "string",
+			description: "The key to put into the KV namespace",
+			required: true,
+		},
+		value: {
+			type: "string",
+			description: "The value to put into the KV namespace",
+			required: true,
+		},
+		"namespace-id": {
+			type: "string",
+			description: "The namespace to put the key-value pair into",
+			required: true,
+		},
+	},
+	// the positionalArgs defines which of the args are positional and in what order
+	positionalArgs: ["key", "value"],
+	handler(args) {
+		// implementation here
+	},
+});
 ```
 
 2. global vs shared vs command specific (named + positional) args
@@ -87,11 +87,11 @@ A command handler is just a function that receives the args as the first param. 
 Define API response type. Use `fetchResult` to make API calls. `fetchResult` will throw an error if the response is not 2xx.
 
 ```ts
-    await fetchResult(
-        `/accounts/${accountId}/workers/services/${scriptName}`,
-        { method: "DELETE" },
-        new URLSearchParams({ force: needsForceDelete.toString() })
-    );
+await fetchResult(
+	`/accounts/${accountId}/workers/services/${scriptName}`,
+	{ method: "DELETE" },
+	new URLSearchParams({ force: needsForceDelete.toString() })
+);
 ```
 
 - logging
