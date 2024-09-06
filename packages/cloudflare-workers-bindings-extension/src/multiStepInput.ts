@@ -225,15 +225,6 @@ database_id = "${crypto.randomUUID()}"`;
 		return name === "SOME_KV_BINDING" ? "Name not unique" : undefined;
 	}
 
-	async function getAvailableRuntimes(
-		resourceGroup: QuickPickItem | string,
-		token?: CancellationToken
-	): Promise<QuickPickItem[]> {
-		// ...retrieve...
-		await new Promise((resolve) => setTimeout(resolve, 1000));
-		return ["Node 8.9", "Node 6.11", "Node 4.5"].map((label) => ({ label }));
-	}
-
 	const state = await collectInputs();
 	window.showInformationMessage(`Creating Application Service '${state.name}'`);
 }

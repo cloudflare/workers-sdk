@@ -113,6 +113,7 @@ export async function activate(context: vscode.ExtensionContext) {
 				} = {
 					showQuickPick,
 					showInputBox,
+					// @ts-ignore
 					multiStepInput,
 					quickOpen,
 				};
