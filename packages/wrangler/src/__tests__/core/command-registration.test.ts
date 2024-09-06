@@ -136,6 +136,12 @@ describe("Command Registration", () => {
 			  num: 2,
 			  bool: true,
 			  arr: [ 'first', 'second', 'third' ],
+			  'experimental-versions': true,
+			  'x-versions': true,
+			  'experimental-gradual-rollouts': true,
+			  xVersions: true,
+			  experimentalGradualRollouts: true,
+			  experimentalVersions: true,
 			  '$0': 'wrangler',
 			  pos: 'positionalFoo',
 			  posNum: 5,
@@ -171,8 +177,10 @@ describe("Command Registration", () => {
 			  wrangler init [name]                     📥 Initialize a basic Worker
 			  wrangler dev [script]                    👂 Start a local server for developing your Worker
 			  wrangler deploy [script]                 🆙 Deploy a Worker to Cloudflare  [aliases: publish]
-			  wrangler deployments                     🚢 List and view the current and past deployments for your Worker [open beta]
-			  wrangler rollback [deployment-id]        🔙 Rollback a deployment for a Worker [open beta]
+			  wrangler deployments                     🚢 List and view the current and past deployments for your Worker
+			  wrangler rollback [version-id]           🔙 Rollback a deployment for a Worker
+			  wrangler versions                        🫧  List, view, upload and deploy Versions of your Worker to Cloudflare
+			  wrangler triggers                        🎯 Updates the triggers of your current deployment
 			  wrangler delete [script]                 🗑  Delete a Worker from Cloudflare
 			  wrangler tail [worker]                   🦚 Start a log tailing session for a Worker
 			  wrangler secret                          🤫 Generate a secret that can be referenced in a Worker
@@ -283,6 +291,12 @@ describe("Command Registration", () => {
 			  num: 3,
 			  bool: true,
 			  arr: [ '1st', '2nd', '3rd' ],
+			  'experimental-versions': true,
+			  'x-versions': true,
+			  'experimental-gradual-rollouts': true,
+			  xVersions: true,
+			  experimentalGradualRollouts: true,
+			  experimentalVersions: true,
 			  '$0': 'wrangler'
 			}"
 		`);
