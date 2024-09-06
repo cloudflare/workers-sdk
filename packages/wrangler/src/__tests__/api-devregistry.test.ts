@@ -6,12 +6,15 @@ import { mockConsoleMethods } from "./helpers/mock-console";
 vi.unmock("child_process");
 vi.unmock("undici");
 
+// We need this outside the describe block to make sure the console spies are not
+// torn down before the workers.
+const std = mockConsoleMethods();
+
 /**
  * a huge caveat to how testing multi-worker scripts works:
  * you can't shutdown the first worker you spun up, or it'll kill the devRegistry
  */
 describe("multi-worker testing", () => {
-	mockConsoleMethods();
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	let childWorker: any;
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -80,25 +83,6 @@ describe("multi-worker testing", () => {
 	});
 
 	it("should be able to stop and start the server with no warning logs", async () => {
-		// Spy on all the console methods
-		let logs = "";
-		// Resolve when we see `[mf:inf] GET / 200 OK` message. This log is sent in
-		// a `waitUntil()`, which may execute after tests complete. To stop Vitest
-		// complaining about logging after a test, wait for this log.
-		let requestResolve: () => void;
-		const requestPromise = new Promise<void>(
-			(resolve) => (requestResolve = resolve)
-		);
-		(["debug", "info", "log", "warn", "error"] as const).forEach((method) =>
-			vi.spyOn(console, method).mockImplementation((...args: unknown[]) => {
-				logs += `\n${args}`;
-				// Regexp ignores colour codes
-				if (/\[wrangler.*:inf].+GET.+\/.+200.+OK/.test(String(args))) {
-					requestResolve();
-				}
-			})
-		);
-
 		async function startWorker() {
 			const worker = await unstable_dev(
 				"src/__tests__/helpers/worker-scripts/hello-world-worker.js",
@@ -131,9 +115,11 @@ describe("multi-worker testing", () => {
 		const resp = await worker.fetch();
 		expect(resp).not.toBe(undefined);
 
-		await requestPromise;
+		await vi.waitFor(() =>
+			/\[wrangler.*:inf].+GET.+\/.+200.+OK/.test(std.debug)
+		);
 
-		expect(logs).not.toMatch(
+		expect(std.debug).not.toMatch(
 			/Failed to register worker in local service registry/
 		);
 	}, 10000);
