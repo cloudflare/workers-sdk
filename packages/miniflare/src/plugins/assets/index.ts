@@ -276,6 +276,7 @@ type AssetReverseMap = {
 	[pathHash: string]: { filePath: string; contentType: string };
 };
 
+// TODO: This walk should be pulled into a common place, shared by wrangler and miniflare
 const createReverseMap = async (dir: string) => {
 	const files = await fs.readdir(dir, { recursive: true });
 	const assetsReverseMap: AssetReverseMap = {};
@@ -291,9 +292,17 @@ const createReverseMap = async (dir: string) => {
 				const pathHash = bytesToHex(
 					await hashPath(encodeFilePath(relativeFilepath, path.sep))
 				);
+				let contentType = getType(filepath) ?? "application/octet-stream";
+				if (
+					contentType.startsWith("text/") &&
+					!contentType.includes("charset")
+				) {
+					contentType = `${contentType}; charset=utf-8`;
+				}
+
 				assetsReverseMap[pathHash] = {
 					filePath: relativeFilepath,
-					contentType: getType(filepath) ?? "application/octet-stream",
+					contentType,
 				};
 			}
 		})

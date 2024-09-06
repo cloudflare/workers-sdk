@@ -133,6 +133,14 @@ export const syncExperimentalAssets = async (
 					const decodedFilePath = decodeFilePath(manifestEntry[0], path.sep);
 					const absFilePath = path.join(assetDirectory, decodedFilePath);
 
+					let contentType = getType(absFilePath) || "application/octet-stream";
+					if (
+						contentType.startsWith("text/") &&
+						!contentType.includes("charset")
+					) {
+						contentType = `${contentType}; charset=utf-8`;
+					}
+
 					return {
 						base64: true,
 						key: manifestEntry[1].hash,

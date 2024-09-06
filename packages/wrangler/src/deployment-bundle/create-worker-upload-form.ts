@@ -143,9 +143,13 @@ export type WorkerMetadataPut = {
 	assets?: {
 		jwt: string;
 		config?: {
-			serve_exact_matches_only?: AssetConfig["serveExactMatchesOnly"];
-			trailing_slashes?: AssetConfig["trailingSlashes"];
-			not_found_behavior?: AssetConfig["notFoundBehavior"];
+			serve_exact_matches_only?: boolean;
+			trailing_slashes?: "auto" | "add" | "remove";
+			not_found_behavior?:
+				| "default"
+				| "single-page-application"
+				| "404-page"
+				| "nearest-404-page";
 		};
 	};
 
