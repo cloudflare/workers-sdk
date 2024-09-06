@@ -356,9 +356,10 @@ export function processExperimentalAssetsArg(
 		};
 		// defaults are set by EWC
 		const assetConfig = {
-			serveExactMatchesOnly: config.experimental_assets?.serveExactMatchesOnly,
-			trailingSlashes: config.experimental_assets?.trailingSlashes,
-			notFoundBehavior: config.experimental_assets?.notFoundBehavior,
+			serveExactMatchesOnly:
+				config.experimental_assets?.serve_exact_matches_only,
+			trailingSlashes: config.experimental_assets?.trailing_slashes,
+			notFoundBehavior: config.experimental_assets?.not_found_behavior,
 		};
 		experimentalAssetsOptions = {
 			...experimentalAssets,

@@ -1820,6 +1820,58 @@ describe("normalizeAndValidateConfig()", () => {
 				`);
 			});
 
+			it("should error on invalid `experimental_assets` config values", () => {
+				const expectedConfig = {
+					experimental_assets: {
+						directory: "./public",
+						serve_exact_matches_only: "foo",
+						trailing_slashes: "bar",
+						not_found_behavior: "cat",
+					},
+				};
+
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					expectedConfig as unknown as RawConfig,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(config).toEqual(expect.objectContaining(expectedConfig));
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					"
+				`);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - Expected \\"experimental_assets.serve_exact_matches_only\\" to be of type boolean but got \\"foo\\".
+					  - Expected \\"experimental_assets.trailing_slashes\\" field to be one of [\\"auto\\",\\"add\\",\\"remove\\"] but got \\"bar\\".
+					  - Expected \\"experimental_assets.not_found_behavior\\" field to be one of [\\"default\\",\\"single-page-application\\",\\"404-page\\",\\"nearest-404-page\\"] but got \\"cat\\".
+					  - trailing_slashes is disabled when serve_exact_matches_only = true"
+				`);
+			});
+
+			it("should accept valid `experimental_assets` config values", () => {
+				const expectedConfig = {
+					experimental_assets: {
+						directory: "./public",
+						serve_exact_matches_only: false,
+						trailing_slashes: "add",
+						not_found_behavior: "nearest-404-page",
+					},
+				};
+
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					expectedConfig as unknown as RawConfig,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(config).toEqual(expect.objectContaining(expectedConfig));
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(false);
+			});
+
 			it("should error if `directory` is an empty string", () => {
 				const expectedConfig = {
 					experimental_assets: {
