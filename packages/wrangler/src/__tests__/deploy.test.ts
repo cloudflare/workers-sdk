@@ -4371,9 +4371,9 @@ addEventListener('fetch', event => {});`
 			});
 		});
 
-		it("should ignore assets that match patterns in an .cfassetsignore file in the root of the assets directory", async () => {
+		it("should ignore assets that match patterns in an .assetsignore file in the root of the assets directory", async () => {
 			const assets = [
-				{ filePath: ".cfassetsignore", content: "*.bak\nsub-dir" },
+				{ filePath: ".assetsignore", content: "*.bak\nsub-dir" },
 				{ filePath: "file-1.txt", content: "Content of file-1" },
 				{ filePath: "file-2.bak", content: "Content of file-2" },
 				{ filePath: "file-3.txt", content: "Content of file-3" },

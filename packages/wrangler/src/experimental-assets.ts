@@ -388,7 +388,7 @@ const decodeFilepath = (filePath: string) => {
  * and returns true if the asset should not be ignored.
  */
 async function createAssetIgnoreFunction(dir: string) {
-	const CF_ASSETS_IGNORE_FILENAME = ".cfassetsignore";
+	const CF_ASSETS_IGNORE_FILENAME = ".assetsignore";
 
 	const cfAssetIgnorePath = path.resolve(dir, CF_ASSETS_IGNORE_FILENAME);
 
@@ -400,7 +400,7 @@ async function createAssetIgnoreFunction(dir: string) {
 		await readFile(cfAssetIgnorePath, { encoding: "utf8" })
 	).split("\n");
 
-	// Always ignore the `.cfassetsignore` file.
+	// Always ignore the `.assetsignore` file.
 	ignorePatterns.push(CF_ASSETS_IGNORE_FILENAME);
 
 	return createPatternMatcher(ignorePatterns, true);

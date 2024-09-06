@@ -2,7 +2,7 @@
 	"editor.defaultFormatter": "esbenp.prettier-vscode",
 	"cSpell.words": [
 		"Abortable",
-		"cfassetsignore",
+		"assetsignore",
 		"cfetch",
 		"chatgpt",
 		"clipboardy",
