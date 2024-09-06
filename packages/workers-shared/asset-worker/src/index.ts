@@ -51,14 +51,16 @@ export default class extends WorkerEntrypoint<Env> {
 	}
 
 	private async handleRequest(request: Request, configuration: Configuration) {
-		const method = request.method.toUpperCase();
-		if (!["GET", "HEAD"].includes(method)) {
-			return new MethodNotAllowedResponse();
-		}
-
 		const action = await this.getAction(request, configuration);
 		if (!action) {
 			return new NotFoundResponse();
+		}
+		// if there was a POST etc. to a route without an asset
+		// this should be passed onto a user worker if one exists
+		// so prioritise returning a 404 over 405?
+		const method = request.method.toUpperCase();
+		if (!["GET", "HEAD"].includes(method)) {
+			return new MethodNotAllowedResponse();
 		}
 		if (action.redirect) {
 			return new TemporaryRedirectResponse(action.redirect);
@@ -66,7 +68,6 @@ export default class extends WorkerEntrypoint<Env> {
 		if (!action.asset) {
 			return new InternalServerErrorResponse(new Error("Unknown action"));
 		}
-
 		// const eTag = `"${assetEntry}"`;
 		// const weakETag = `W/${eTag}`;
 
