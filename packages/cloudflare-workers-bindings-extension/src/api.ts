@@ -13,7 +13,7 @@ export async function getSdk(workspaceRoot: string): Promise<Cloudflare> {
 		)
 	);
 
-	const { getSdk } = await import(wrangler);
+	const { getSdk } = require(wrangler);
 
 	return getSdk();
 }
@@ -29,7 +29,7 @@ export async function parseTOML(workspaceRoot: string, file: string) {
 		)
 	);
 
-	const { parseTOML } = await import(wrangler);
+	const { parseTOML } = require(wrangler);
 
 	return parseTOML(await readFile(file, "utf8"));
 }
