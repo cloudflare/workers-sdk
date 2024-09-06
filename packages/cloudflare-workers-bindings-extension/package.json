@@ -17,8 +17,6 @@
 		"package": "pnpm run check-types && pnpm run lint && node esbuild.js --production",
 		"compile-tests": "tsc -p . --outDir out",
 		"watch-tests": "tsc -p . -w --outDir out",
-		"pretest": "pnpm run compile-tests && pnpm run compile && pnpm run lint",
-		"test": "vscode-test",
 		"check-types": "tsc --noEmit",
 		"lint": "eslint src --ext ts",
 		"build": "vsce package"
@@ -103,6 +101,10 @@
 		}
 	},
 	"activationEvents": [],
+	"dependencies": {
+		"cloudflare": "^3.5.0",
+		"undici": "^5.28.4"
+	},
 	"devDependencies": {
 		"@types/mocha": "^10.0.7",
 		"@types/node": "20.x",
@@ -120,12 +122,11 @@
 	"engines": {
 		"vscode": "^1.92.0"
 	},
+	"vsce": {
+		"dependencies": false
+	},
 	"workers-sdk": {
 		"prerelease": true,
 		"type": "extension"
-	},
-	"dependencies": {
-		"cloudflare": "^3.5.0",
-		"undici": "^5.28.4"
 	}
 }
