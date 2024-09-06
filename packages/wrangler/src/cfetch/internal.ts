@@ -1,5 +1,5 @@
 import assert from "node:assert";
-import Cloudflare from "cloudflare";
+import Cloudflare, { ClientOptions } from "cloudflare";
 import { fetch, File, FormData, Headers, Request, Response } from "undici";
 import { version as wranglerVersion } from "../../package.json";
 import { getCloudflareApiBaseUrl } from "../environment-variables/misc-variables";
@@ -120,17 +120,18 @@ export async function fetchInternal<ResponseType>(
 
 export function getSdk() {
 	return new Cloudflare({
-		async fetch(info, init) {
+		fetch: (async (info, init) => {
 			const request = new Request(info, init);
 			const url = new URL(request.url);
 
 			return performApiFetch(
 				url.pathname.split("/client/v4")[1],
+				// @ts-ignore
 				{ ...request },
 				url.searchParams,
 				request.signal
 			);
-		},
+		}) as ClientOptions["fetch"],
 	});
 }
 

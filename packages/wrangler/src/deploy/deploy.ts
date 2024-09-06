@@ -412,6 +412,7 @@ async function ensureBindingsExist(
 		mtls_certificates: undefined,
 		logfwdr: undefined,
 		unsafe: undefined,
+		experimental_assets: undefined,
 	};
 
 	// First, figure out what bindings we need to create
