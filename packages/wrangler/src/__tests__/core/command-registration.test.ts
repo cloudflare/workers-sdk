@@ -13,8 +13,18 @@ describe("Command Registration", () => {
 	runInTempDir();
 	const std = mockConsoleMethods();
 
+	let originalDefinitions: typeof COMMAND_DEFINITIONS = [];
+	beforeAll(() => {
+		originalDefinitions = COMMAND_DEFINITIONS.slice();
+	});
+
 	beforeEach(() => {
-		COMMAND_DEFINITIONS.length = 0; // clears commands definitions so tests do not conflict with eachother
+		// resets the commands definitions so the tests do not conflict with eachother
+		COMMAND_DEFINITIONS.splice(
+			0,
+			COMMAND_DEFINITIONS.length,
+			...originalDefinitions
+		);
 
 		// To make these tests less verbose, we will define
 		// a bunch of commands that *use* all features
@@ -34,7 +44,10 @@ describe("Command Registration", () => {
 				bool: { type: "boolean", demandOption: true },
 				arr: { type: "string", array: true, demandOption: true },
 				optional: { type: "string" },
+				pos: { type: "string" },
+				posNum: { type: "number" },
 			},
+			positionalArgs: ["pos", "posNum"],
 			handler(args, ctx) {
 				ctx.logger.log(args);
 			},
@@ -113,7 +126,7 @@ describe("Command Registration", () => {
 
 	test("can define a command and run it", async () => {
 		await runWrangler(
-			"my-test-command --str foo --num 2 --bool --arr first second --arr third"
+			"my-test-command positionalFoo 5 --str foo --num 2 --bool --arr first second --arr third"
 		);
 
 		expect(std.out).toMatchInlineSnapshot(`
@@ -123,7 +136,10 @@ describe("Command Registration", () => {
 			  num: 2,
 			  bool: true,
 			  arr: [ 'first', 'second', 'third' ],
-			  '$0': 'wrangler'
+			  '$0': 'wrangler',
+			  pos: 'positionalFoo',
+			  posNum: 5,
+			  'pos-num': 5
 			}"
 		`);
 	});
@@ -150,36 +166,36 @@ describe("Command Registration", () => {
 			"wrangler
 
 			COMMANDS
-			  wrangler my-test-command           My test command
-			  wrangler one                       namespace 1
-			  wrangler two                       namespace 2
-			  wrangler docs [command]            📚 Open Wrangler's command documentation in your browser
+			  wrangler docs [command]                  📚 Open Wrangler's command documentation in your browser
 
-			  wrangler init [name]               📥 Initialize a basic Worker
-			  wrangler dev [script]              👂 Start a local server for developing your Worker
-			  wrangler deploy [script]           🆙 Deploy a Worker to Cloudflare  [aliases: publish]
-			  wrangler deployments               🚢 List and view the current and past deployments for your Worker [open beta]
-			  wrangler rollback [deployment-id]  🔙 Rollback a deployment for a Worker [open beta]
-			  wrangler delete [script]           🗑  Delete a Worker from Cloudflare
-			  wrangler tail [worker]             🦚 Start a log tailing session for a Worker
-			  wrangler secret                    🤫 Generate a secret that can be referenced in a Worker
-			  wrangler types [path]              📝 Generate types from bindings and module rules in configuration
+			  wrangler init [name]                     📥 Initialize a basic Worker
+			  wrangler dev [script]                    👂 Start a local server for developing your Worker
+			  wrangler deploy [script]                 🆙 Deploy a Worker to Cloudflare  [aliases: publish]
+			  wrangler deployments                     🚢 List and view the current and past deployments for your Worker [open beta]
+			  wrangler rollback [deployment-id]        🔙 Rollback a deployment for a Worker [open beta]
+			  wrangler delete [script]                 🗑  Delete a Worker from Cloudflare
+			  wrangler tail [worker]                   🦚 Start a log tailing session for a Worker
+			  wrangler secret                          🤫 Generate a secret that can be referenced in a Worker
+			  wrangler types [path]                    📝 Generate types from bindings and module rules in configuration
 
-			  wrangler kv                        🗂️  Manage Workers KV Namespaces
-			  wrangler queues                    🇶  Manage Workers Queues
-			  wrangler r2                        📦 Manage R2 buckets & objects
-			  wrangler d1                        🗄  Manage Workers D1 databases
-			  wrangler vectorize                 🧮 Manage Vectorize indexes [open beta]
-			  wrangler hyperdrive                🚀 Manage Hyperdrive databases
-			  wrangler pages                     ⚡️ Configure Cloudflare Pages
-			  wrangler mtls-certificate          🪪  Manage certificates used for mTLS connections
-			  wrangler pubsub                    📮 Manage Pub/Sub brokers [private beta]
-			  wrangler dispatch-namespace        🏗️  Manage dispatch namespaces
-			  wrangler ai                        🤖 Manage AI models
+			  wrangler kv                              🗂️  Manage Workers KV Namespaces
+			  wrangler queues                          🇶  Manage Workers Queues
+			  wrangler r2                              📦 Manage R2 buckets & objects
+			  wrangler d1                              🗄  Manage Workers D1 databases
+			  wrangler vectorize                       🧮 Manage Vectorize indexes [open beta]
+			  wrangler hyperdrive                      🚀 Manage Hyperdrive databases
+			  wrangler pages                           ⚡️ Configure Cloudflare Pages
+			  wrangler mtls-certificate                🪪  Manage certificates used for mTLS connections
+			  wrangler pubsub                          📮 Manage Pub/Sub brokers [private beta]
+			  wrangler dispatch-namespace              🏗️  Manage dispatch namespaces
+			  wrangler ai                              🤖 Manage AI models
 
-			  wrangler login                     🔓 Login to Cloudflare
-			  wrangler logout                    🚪 Logout from Cloudflare
-			  wrangler whoami                    🕵️  Retrieve your user information
+			  wrangler login                           🔓 Login to Cloudflare
+			  wrangler logout                          🚪 Logout from Cloudflare
+			  wrangler whoami                          🕵️  Retrieve your user information
+			  wrangler my-test-command [pos] [posNum]  My test command
+			  wrangler one                             namespace 1
+			  wrangler two                             namespace 2
 
 			GLOBAL FLAGS
 			  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
@@ -309,9 +325,13 @@ describe("Command Registration", () => {
 
 		expect(std.out).toContain(`Alias for "wrangler my-test-command".`);
 		expect(std.out).toMatchInlineSnapshot(`
-			"wrangler my-test-alias
+			"wrangler my-test-alias [pos] [posNum]
 
 			Alias for \\"wrangler my-test-command\\". My test command
+
+			POSITIONALS
+			  pos  [string]
+			  posNum  [number]
 
 			GLOBAL FLAGS
 			  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]

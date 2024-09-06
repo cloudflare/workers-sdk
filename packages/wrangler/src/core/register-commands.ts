@@ -1,6 +1,6 @@
 import { COMMAND_DEFINITIONS } from "./define-command";
 import { wrapCommandDefinition } from "./wrap-command";
-import type { CommonYargsArgv } from "../yargs-types";
+import type { CommonYargsArgv, SubHelp } from "../yargs-types";
 import type {
 	AliasDefinition,
 	Command,
@@ -10,32 +10,32 @@ import type {
 
 export class CommandRegistrationError extends Error {}
 
-export default function registerAllCommands(yargs: CommonYargsArgv) {
+export function createCommandRegister(
+	yargs: CommonYargsArgv,
+	subHelp: SubHelp
+) {
 	const tree = createCommandTree();
 
-	for (const [segment, node] of tree.entries()) {
-		yargs = walkTreeAndRegister(segment, node, yargs);
-	}
+	return {
+		registerAll() {
+			for (const [segment, node] of tree.entries()) {
+				yargs = walkTreeAndRegister(segment, node, yargs, subHelp);
+				tree.delete(segment);
+			}
+		},
+		registerNamespace(namespace: string) {
+			const node = tree.get(namespace);
 
-	return yargs;
-}
-/**
- * Ideally we would just use registerAllCommands, but we need to be able to
- * hook into the way wrangler (hackily) does --help text with yargs right now.
- * Once all commands are registered using this utility, we can completely
- * take over rendering help text without yargs and use registerAllCommands.
- */
-export function registerNamespace(namespace: string, yargs: CommonYargsArgv) {
-	const tree = createCommandTree();
-	const node = tree.get(namespace);
+			if (!node) {
+				throw new CommandRegistrationError(
+					`No definition found for namespace '${namespace}'`
+				);
+			}
 
-	if (!node) {
-		throw new CommandRegistrationError(
-			`No definition found for namespace '${namespace}'`
-		);
-	}
-
-	return walkTreeAndRegister(namespace, node, yargs);
+			tree.delete(namespace);
+			return walkTreeAndRegister(namespace, node, yargs, subHelp);
+		},
+	};
 }
 
 type DefinitionTreeNode = {
@@ -145,7 +145,8 @@ function createCommandTree() {
 function walkTreeAndRegister(
 	segment: string,
 	{ definition, subtree }: ResolvedDefinitionTreeNode,
-	yargs: CommonYargsArgv
+	yargs: CommonYargsArgv,
+	subHelp: SubHelp
 ) {
 	if (!definition) {
 		throw new CommandRegistrationError(
@@ -163,15 +164,24 @@ function walkTreeAndRegister(
 		(subYargs) => {
 			if (def.defineArgs) {
 				subYargs = def.defineArgs(subYargs);
+			} else {
+				// this is our hacky way of printing --help text for incomplete commands
+				// eg `wrangler kv namespace` will run `wrangler kv namespace --help`
+				subYargs = subYargs.command(subHelp);
 			}
 
 			for (const [nextSegment, nextNode] of subtree.entries()) {
-				subYargs = walkTreeAndRegister(nextSegment, nextNode, subYargs);
+				subYargs = walkTreeAndRegister(
+					nextSegment,
+					nextNode,
+					subYargs,
+					subHelp
+				);
 			}
 
 			return subYargs;
 		},
-		def.handler // TODO: subHelp (def.handler will be undefined for namespaces, so set default handler to print subHelp)
+		def.handler // TODO: replace hacky subHelp with default handler impl (def.handler will be undefined for namespaces, so set default handler to print subHelp)
 	);
 
 	return yargs;
