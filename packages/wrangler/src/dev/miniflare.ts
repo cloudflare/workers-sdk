@@ -678,6 +678,8 @@ export function buildPersistOptions(
 }
 
 function buildAssetOptions(config: Omit<ConfigBundle, "rules">) {
+	console.log("hello1!!!!");
+	console.log(config.experimentalAssets?.assetConfig);
 	if (config.experimentalAssets) {
 		return {
 			assets: {

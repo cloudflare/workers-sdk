@@ -7,7 +7,7 @@ import {
 	TemporaryRedirectResponse,
 } from "./responses";
 import { getHeaders } from "./utils/headers";
-import { ExistsMethod, GetByETagMethod } from ".";
+import type { ExistsMethod, GetByETagMethod } from ".";
 import type { Configuration } from "./configuration";
 
 export const handleRequest = async (

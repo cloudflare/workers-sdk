@@ -32,10 +32,13 @@
 		"check:type": "pnpm run check:type:tests && tsc",
 		"check:type:tests": "tsc -p ./asset-worker/tests/tsconfig.json",
 		"clean": "rimraf dist",
-		"dev": "pnpm run clean && bundle:asset-worker,bundle:router-worker -c blue,magenta \"pnpm run bundle:asset-worker --watch\" \"pnpm run bundle:router-worker --watch\"",
+		"dev": "pnpm run clean && concurrently :asset-worker,bundle:router-worker -c blue,magenta \"pnpm run bundle:asset-worker --watch\" \"pnpm run bundle:router-worker --watch\"",
 		"test": "vitest",
 		"test:ci": "pnpm run test",
 		"types:emit": "tsc utils/utils.ts --declaration --emitDeclarationOnly --declarationDir ./dist"
+	},
+	"dependencies": {
+		"zod": "^3.22.3"
 	},
 	"devDependencies": {
 		"@cloudflare/eslint-config-worker": "workspace:*",
@@ -55,8 +58,5 @@
 	},
 	"workers-sdk": {
 		"prerelease": true
-	},
-	"dependencies": {
-		"zod": "^3.22.3"
 	}
 }

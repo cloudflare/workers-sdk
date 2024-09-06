@@ -10,3 +10,8 @@
 name = "asset-worker"
 main = "src/index.ts"
 compatibility_date = "2024-07-31"
+compatibility_flags = ["nodejs_compat"]
+
+[experimental_assets]
+directory="../utils/public-fake"
+serve_exact_matches_only = true
