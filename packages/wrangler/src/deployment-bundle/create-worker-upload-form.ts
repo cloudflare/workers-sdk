@@ -199,7 +199,9 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 			JSON.stringify({
 				assets: {
 					jwt: experimental_assets.jwt,
-					...(Object.values(assetConfig).every((x) => x) && { assetConfig }),
+					...Object.fromEntries(
+						Object.entries(assetConfig).filter(([k, v]) => v !== undefined)
+					),
 				},
 			})
 		);
@@ -581,9 +583,9 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 		...(experimental_assets && {
 			assets: {
 				jwt: experimental_assets.jwt,
-				...(Object.values(assetConfig).every((x) => x) && {
-					config: assetConfig,
-				}),
+				...Object.fromEntries(
+					Object.entries(assetConfig).filter(([k, v]) => v !== undefined)
+				),
 			},
 		}),
 	};
