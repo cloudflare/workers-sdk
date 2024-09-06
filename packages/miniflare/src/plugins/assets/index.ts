@@ -92,13 +92,11 @@ export const ASSETS_PLUGIN: Plugin<typeof AssetsOptionsSchema> = {
 			serveExactMatchesOnly:
 				options.assets.assetConfig.serveExactMatchesOnly ?? false,
 			// trailingSlashes is disabled when { "serveExactMatchesOnly": true }.
-			trailingSlashes:
-				!options.assets.assetConfig.trailingSlashes &&
-				!options.assets.assetConfig.serveExactMatchesOnly
-					? "auto"
-					: undefined,
+			trailingSlashes: options.assets.assetConfig.serveExactMatchesOnly
+				? undefined
+				: options.assets.assetConfig.trailingSlashes ?? "auto",
 			notFoundBehavior:
-				options.assets.assetConfig.serveExactMatchesOnly ?? "default",
+				options.assets.assetConfig.notFoundBehavior ?? "default",
 		};
 		const assetsManifest = await buildAssetsManifest(options.assets.path);
 		const assetService: Service = {
