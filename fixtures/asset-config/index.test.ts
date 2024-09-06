@@ -60,9 +60,8 @@ const testCases: TestCase[] = [
 ];
 
 describe("default config", () => {
-	// serveExactMatchesOnly: false;
-	// trailingSlashes: "auto"
-	// notFoundBehavior: "default"
+	// htmlHandling: "auto-trailing-slash";
+	// notFoundHandling: "none";
 
 	beforeEach(() => {
 		vi.mocked(getAssetWithMetadataFromKV).mockReturnValueOnce(

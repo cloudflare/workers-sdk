@@ -89,14 +89,9 @@ export const ASSETS_PLUGIN: Plugin<typeof AssetsOptionsSchema> = {
 		};
 		// Set defaults:
 		const assetConfig = {
-			serveExactMatchesOnly:
-				options.assets.assetConfig.serveExactMatchesOnly ?? false,
-			// trailingSlashes is disabled when { "serveExactMatchesOnly": true }.
-			trailingSlashes: options.assets.assetConfig.serveExactMatchesOnly
-				? undefined
-				: options.assets.assetConfig.trailingSlashes ?? "auto",
-			notFoundBehavior:
-				options.assets.assetConfig.notFoundBehavior ?? "default",
+			htmlHandling:
+				options.assets.assetConfig.htmlHandling ?? "auto-trailing-slash",
+			notFoundHandling: options.assets.assetConfig.notFoundHandling ?? "none",
 		};
 		const assetsManifest = await buildAssetsManifest(options.assets.path);
 		const assetService: Service = {

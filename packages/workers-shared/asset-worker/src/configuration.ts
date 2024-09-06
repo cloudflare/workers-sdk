@@ -1,19 +1,17 @@
 export interface Configuration {
-	serveExactMatchesOnly: boolean;
-	trailingSlashes: "auto" | "add" | "remove";
-	notFoundBehavior:
-		| "default"
-		| "single-page-application"
-		| "404-page"
-		| "nearest-404-page";
+	htmlHandling:
+		| "auto-trailing-slash"
+		| "force-trailing-slash"
+		| "drop-trailing-slash"
+		| "none";
+	notFoundHandling: "single-page-application" | "404-page" | "none";
 }
 
 export const applyConfigurationDefaults = (
 	configuration?: Partial<Configuration>
 ): Configuration => {
 	return {
-		serveExactMatchesOnly: configuration?.serveExactMatchesOnly ?? false,
-		trailingSlashes: configuration?.trailingSlashes ?? "auto",
-		notFoundBehavior: configuration?.notFoundBehavior ?? "default",
+		htmlHandling: configuration?.htmlHandling ?? "auto-trailing-slash",
+		notFoundHandling: configuration?.notFoundHandling ?? "none",
 	};
 };

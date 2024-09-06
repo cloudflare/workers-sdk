@@ -2084,48 +2084,27 @@ const validateAssetsConfig: ValidatorFn = (diagnostics, field, value) => {
 		validateOptionalProperty(
 			diagnostics,
 			field,
-			"serve_exact_matches_only",
-			(value as ExperimentalAssets).serve_exact_matches_only,
-			"boolean"
+			"html_handling",
+			(value as ExperimentalAssets).html_handling,
+			"string",
+			[
+				"auto-trailing-slash",
+				"force-trailing-slash",
+				"drop-trailing-slash",
+				"none",
+			]
 		) && isValid;
 
 	isValid =
 		validateOptionalProperty(
 			diagnostics,
 			field,
-			"trailing_slashes",
-			(value as ExperimentalAssets).trailing_slashes,
+			"not_found_handling",
+			(value as ExperimentalAssets).not_found_handling,
 			"string",
-			["auto", "add", "remove"]
+			["single-page-application", "404-page", "none"]
 		) && isValid;
 
-	isValid =
-		validateOptionalProperty(
-			diagnostics,
-			field,
-			"not_found_behavior",
-			(value as ExperimentalAssets).not_found_behavior,
-			"string",
-			["default", "single-page-application", "404-page", "nearest-404-page"]
-		) && isValid;
-
-	isValid =
-		validateAdditionalProperties(diagnostics, field, Object.keys(value), [
-			"directory",
-			"binding",
-			"serve_exact_matches_only",
-			"trailing_slashes",
-			"not_found_behavior",
-		]) && isValid;
-
-	if (
-		(value as ExperimentalAssets).serve_exact_matches_only &&
-		(value as ExperimentalAssets).trailing_slashes
-	) {
-		diagnostics.errors.push(
-			`trailing_slashes is disabled when serve_exact_matches_only = true`
-		);
-	}
 	return isValid;
 };
 

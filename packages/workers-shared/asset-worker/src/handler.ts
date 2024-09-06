@@ -71,37 +71,164 @@ const getIntent = async (
 	exists: ExistsMethod,
 	skipRedirects = false
 ): Promise<Intent> => {
-	if (configuration.serveExactMatchesOnly) {
-		return serveExactMatchesOnly(pathname, configuration, exists);
-	} else if (configuration.trailingSlashes === "add") {
-		return trailingSlashesAdd(pathname, configuration, exists, skipRedirects);
-	} else if (configuration.trailingSlashes === "remove") {
-		return trailingSlashesRemove(
-			pathname,
+	switch (configuration.htmlHandling) {
+		case "auto-trailing-slash": {
+			return htmlHandlingAutoTrailingSlash(
+				pathname,
+				configuration,
+				exists,
+				skipRedirects
+			);
+		}
+		case "force-trailing-slash": {
+			return htmlHandlingForceTrailingSlash(
+				pathname,
+				configuration,
+				exists,
+				skipRedirects
+			);
+		}
+		case "drop-trailing-slash": {
+			return htmlHandlingDropTrailingSlash(
+				pathname,
+				configuration,
+				exists,
+				skipRedirects
+			);
+		}
+		case "none": {
+			return htmlHandlingNone(pathname, configuration, exists);
+		}
+	}
+};
+
+const htmlHandlingAutoTrailingSlash = async (
+	pathname: string,
+	configuration: Configuration,
+	exists: ExistsMethod,
+	skipRedirects: boolean
+): Promise<Intent> => {
+	let redirectResult: Intent = null;
+	let eTagResult: string | null = null;
+	const exactETag = await exists(pathname);
+	if (pathname.endsWith("/index")) {
+		if (exactETag) {
+			// there's a binary /index file
+			return { asset: { eTag: exactETag, status: 200 }, redirect: null };
+		} else {
+			if (
+				(redirectResult = await safeRedirect(
+					`${pathname}.html`,
+					pathname.slice(0, -"index".length),
+					configuration,
+					exists,
+					skipRedirects
+				))
+			) {
+				// /foo/index.html exists so redirect to /foo/
+				return redirectResult;
+			} else if (
+				(redirectResult = await safeRedirect(
+					`${pathname.slice(0, -"/index".length)}.html`,
+					pathname.slice(0, -"/index".length),
+					configuration,
+					exists,
+					skipRedirects
+				))
+			) {
+				// /foo.html exists so redirect to /foo
+				return redirectResult;
+			}
+		}
+	} else if (pathname.endsWith("/index.html")) {
+		if (
+			(redirectResult = await safeRedirect(
+				pathname,
+				pathname.slice(0, -"index.html".length),
+				configuration,
+				exists,
+				skipRedirects
+			))
+		) {
+			// /foo/index.html exists so redirect to /foo/
+			return redirectResult;
+		} else if (
+			(redirectResult = await safeRedirect(
+				`${pathname.slice(0, -"/index.html".length)}.html`,
+				pathname.slice(0, -"/index.html".length),
+				configuration,
+				exists,
+				skipRedirects
+			))
+		) {
+			// /foo.html exists so redirect to /foo
+			return redirectResult;
+		}
+	} else if (pathname.endsWith("/")) {
+		if ((eTagResult = await exists(`${pathname}index.html`))) {
+			// /foo/index.html exists so serve at /foo/
+			return { asset: { eTag: eTagResult, status: 200 }, redirect: null };
+		} else if (
+			(redirectResult = await safeRedirect(
+				`${pathname.slice(0, -"/".length)}.html`,
+				pathname.slice(0, -"/".length),
+				configuration,
+				exists,
+				skipRedirects
+			))
+		) {
+			// /foo.html exists so redirect to /foo
+			return redirectResult;
+		}
+	} else if (pathname.endsWith(".html")) {
+		if (
+			(redirectResult = await safeRedirect(
+				pathname,
+				pathname.slice(0, -".html".length),
+				configuration,
+				exists,
+				skipRedirects
+			))
+		) {
+			// /foo.html exists so redirect to /foo
+			return redirectResult;
+		} else if (
+			(redirectResult = await safeRedirect(
+				`${pathname.slice(0, -".html".length)}/index.html`,
+				`${pathname.slice(0, -".html".length)}/`,
+				configuration,
+				exists,
+				skipRedirects
+			))
+		) {
+			// request for /foo.html but /foo/index.html exists so redirect to /foo/
+			return redirectResult;
+		}
+	}
+
+	if (exactETag) {
+		// there's a binary /foo file
+		return { asset: { eTag: exactETag, status: 200 }, redirect: null };
+	} else if ((eTagResult = await exists(`${pathname}.html`))) {
+		// foo.html exists so serve at /foo
+		return { asset: { eTag: eTagResult, status: 200 }, redirect: null };
+	} else if (
+		(redirectResult = await safeRedirect(
+			`${pathname}/index.html`,
+			`${pathname}/`,
 			configuration,
 			exists,
 			skipRedirects
-		);
-	} else {
-		// configuration.trailingSlashes === 'auto'
-		return trailingSlashesAuto(pathname, configuration, exists, skipRedirects);
+		))
+	) {
+		// /foo/index.html exists so redirect to /foo/
+		return redirectResult;
 	}
+
+	return notFound(pathname, configuration, exists);
 };
 
-const serveExactMatchesOnly = async (
-	pathname: string,
-	configuration: Configuration,
-	exists: ExistsMethod
-): Promise<Intent> => {
-	const exactETag = await exists(pathname);
-	if (exactETag) {
-		return { asset: { eTag: exactETag, status: 200 }, redirect: null };
-	} else {
-		return notFound(pathname, configuration, exists);
-	}
-};
-
-const trailingSlashesAdd = async (
+const htmlHandlingForceTrailingSlash = async (
 	pathname: string,
 	configuration: Configuration,
 	exists: ExistsMethod,
@@ -232,7 +359,7 @@ const trailingSlashesAdd = async (
 	return notFound(pathname, configuration, exists);
 };
 
-const trailingSlashesRemove = async (
+const htmlHandlingDropTrailingSlash = async (
 	pathname: string,
 	configuration: Configuration,
 	exists: ExistsMethod,
@@ -390,130 +517,17 @@ const trailingSlashesRemove = async (
 	return notFound(pathname, configuration, exists);
 };
 
-const trailingSlashesAuto = async (
+const htmlHandlingNone = async (
 	pathname: string,
 	configuration: Configuration,
-	exists: ExistsMethod,
-	skipRedirects: boolean
+	exists: ExistsMethod
 ): Promise<Intent> => {
-	let redirectResult: Intent = null;
-	let eTagResult: string | null = null;
 	const exactETag = await exists(pathname);
-	if (pathname.endsWith("/index")) {
-		if (exactETag) {
-			// there's a binary /index file
-			return { asset: { eTag: exactETag, status: 200 }, redirect: null };
-		} else {
-			if (
-				(redirectResult = await safeRedirect(
-					`${pathname}.html`,
-					pathname.slice(0, -"index".length),
-					configuration,
-					exists,
-					skipRedirects
-				))
-			) {
-				// /foo/index.html exists so redirect to /foo/
-				return redirectResult;
-			} else if (
-				(redirectResult = await safeRedirect(
-					`${pathname.slice(0, -"/index".length)}.html`,
-					pathname.slice(0, -"/index".length),
-					configuration,
-					exists,
-					skipRedirects
-				))
-			) {
-				// /foo.html exists so redirect to /foo
-				return redirectResult;
-			}
-		}
-	} else if (pathname.endsWith("/index.html")) {
-		if (
-			(redirectResult = await safeRedirect(
-				pathname,
-				pathname.slice(0, -"index.html".length),
-				configuration,
-				exists,
-				skipRedirects
-			))
-		) {
-			// /foo/index.html exists so redirect to /foo/
-			return redirectResult;
-		} else if (
-			(redirectResult = await safeRedirect(
-				`${pathname.slice(0, -"/index.html".length)}.html`,
-				pathname.slice(0, -"/index.html".length),
-				configuration,
-				exists,
-				skipRedirects
-			))
-		) {
-			// /foo.html exists so redirect to /foo
-			return redirectResult;
-		}
-	} else if (pathname.endsWith("/")) {
-		if ((eTagResult = await exists(`${pathname}index.html`))) {
-			// /foo/index.html exists so serve at /foo/
-			return { asset: { eTag: eTagResult, status: 200 }, redirect: null };
-		} else if (
-			(redirectResult = await safeRedirect(
-				`${pathname.slice(0, -"/".length)}.html`,
-				pathname.slice(0, -"/".length),
-				configuration,
-				exists,
-				skipRedirects
-			))
-		) {
-			// /foo.html exists so redirect to /foo
-			return redirectResult;
-		}
-	} else if (pathname.endsWith(".html")) {
-		if (
-			(redirectResult = await safeRedirect(
-				pathname,
-				pathname.slice(0, -".html".length),
-				configuration,
-				exists,
-				skipRedirects
-			))
-		) {
-			// /foo.html exists so redirect to /foo
-			return redirectResult;
-		} else if (
-			(redirectResult = await safeRedirect(
-				`${pathname.slice(0, -".html".length)}/index.html`,
-				`${pathname.slice(0, -".html".length)}/`,
-				configuration,
-				exists,
-				skipRedirects
-			))
-		) {
-			// request for /foo.html but /foo/index.html exists so redirect to /foo/
-			return redirectResult;
-		}
-	}
-
 	if (exactETag) {
-		// there's a binary /foo file
 		return { asset: { eTag: exactETag, status: 200 }, redirect: null };
-	} else if ((eTagResult = await exists(`${pathname}.html`))) {
-		// foo.html exists so serve at /foo
-		return { asset: { eTag: eTagResult, status: 200 }, redirect: null };
-	} else if (
-		(redirectResult = await safeRedirect(
-			`${pathname}/index.html`,
-			`${pathname}/`,
-			configuration,
-			exists,
-			skipRedirects
-		))
-	) {
-		// /foo/index.html exists so redirect to /foo/
-		return redirectResult;
+	} else {
+		return notFound(pathname, configuration, exists);
 	}
-
-	return notFound(pathname, configuration, exists);
 };
 
 const notFound = async (
@@ -521,7 +535,7 @@ const notFound = async (
 	configuration: Configuration,
 	exists: ExistsMethod
 ): Promise<Intent> => {
-	switch (configuration.notFoundBehavior) {
+	switch (configuration.notFoundHandling) {
 		case "single-page-application": {
 			const eTag = await exists("/index.html");
 			if (eTag) {
@@ -529,12 +543,6 @@ const notFound = async (
 			}
 		}
 		case "404-page": {
-			const eTag = await exists("/404.html");
-			if (eTag) {
-				return { asset: { eTag, status: 404 }, redirect: null };
-			}
-		}
-		case "nearest-404-page": {
 			let cwd = pathname;
 			while (cwd) {
 				cwd = cwd.slice(0, cwd.lastIndexOf("/"));
@@ -544,7 +552,7 @@ const notFound = async (
 				}
 			}
 		}
-		case "default":
+		case "none":
 		default: {
 			return null;
 		}

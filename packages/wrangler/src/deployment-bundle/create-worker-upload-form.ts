@@ -11,7 +11,6 @@ import type {
 	CfUserLimits,
 	CfWorkerInit,
 } from "./worker.js";
-import type { AssetConfig } from "@cloudflare/workers-shared/dist/utils";
 import type { Json } from "miniflare";
 
 const moduleTypeMimeType: { [type in CfModuleType]: string | undefined } = {
@@ -143,13 +142,12 @@ export type WorkerMetadataPut = {
 	assets?: {
 		jwt: string;
 		config?: {
-			serve_exact_matches_only?: boolean;
-			trailing_slashes?: "auto" | "add" | "remove";
-			not_found_behavior?:
-				| "default"
-				| "single-page-application"
-				| "404-page"
-				| "nearest-404-page";
+			html_handling?:
+				| "auto-trailing-slash"
+				| "force-trailing-slash"
+				| "drop-trailing-slash"
+				| "none";
+			not_found_handling?: "single-page-application" | "404-page" | "none";
 		};
 	};
 
@@ -189,10 +187,8 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 	} = worker;
 
 	const assetConfig = {
-		serve_exact_matches_only:
-			experimental_assets?.assetConfig?.serveExactMatchesOnly,
-		trailing_slashes: experimental_assets?.assetConfig?.trailingSlashes,
-		not_found_behavior: experimental_assets?.assetConfig?.notFoundBehavior,
+		html_handling: experimental_assets?.assetConfig?.htmlHandling,
+		not_found_handling: experimental_assets?.assetConfig?.notFoundHandling,
 	};
 
 	// TODO bugbash: allow adding compat dates etc. if assets only

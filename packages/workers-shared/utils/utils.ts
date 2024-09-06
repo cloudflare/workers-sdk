@@ -5,15 +5,16 @@ export const RoutingConfigSchema = z.object({
 });
 
 export const AssetConfigSchema = z.object({
-	serveExactMatchesOnly: z.boolean().optional(),
-	trailingSlashes: z.enum(["auto", "add", "remove"]).optional(),
-	notFoundBehavior: z
+	htmlHandling: z
 		.enum([
-			"default",
-			"single-page-application",
-			"404-page",
-			"nearest-404-page",
+			"auto-trailing-slash",
+			"force-trailing-slash",
+			"drop-trailing-slash",
+			"none",
 		])
+		.optional(),
+	notFoundHandling: z
+		.enum(["single-page-application", "404-page", "none"])
 		.optional(),
 });
 

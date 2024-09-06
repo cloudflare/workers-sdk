@@ -8,7 +8,7 @@
 		"type:tests": "tsc -p ./tests/tsconfig.json"
 	},
 	"devDependencies": {
-		"@cloudflare/vitest-pool-workers": "^0.4.29",
+		"@cloudflare/vitest-pool-workers": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-types": "^4.20240821.1",
 		"undici": "^5.28.4",

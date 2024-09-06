@@ -1824,9 +1824,8 @@ describe("normalizeAndValidateConfig()", () => {
 				const expectedConfig = {
 					experimental_assets: {
 						directory: "./public",
-						serve_exact_matches_only: "foo",
-						trailing_slashes: "bar",
-						not_found_behavior: "cat",
+						html_handling: "foo",
+						not_found_handling: "bar",
 					},
 				};
 
@@ -1844,25 +1843,22 @@ describe("normalizeAndValidateConfig()", () => {
 				`);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - Expected \\"experimental_assets.serve_exact_matches_only\\" to be of type boolean but got \\"foo\\".
-					  - Expected \\"experimental_assets.trailing_slashes\\" field to be one of [\\"auto\\",\\"add\\",\\"remove\\"] but got \\"bar\\".
-					  - Expected \\"experimental_assets.not_found_behavior\\" field to be one of [\\"default\\",\\"single-page-application\\",\\"404-page\\",\\"nearest-404-page\\"] but got \\"cat\\".
-					  - trailing_slashes is disabled when serve_exact_matches_only = true"
+					  - Expected \\"experimental_assets.html_handling\\" to be one of [\\"auto-trailing-slash\\",\\"force-trailing-slash\\",\\"drop-trailing-slash\\",\\"none\\"] but got \\"foo\\".
+					  - Expected \\"experimental_assets.not_found_handling\\" field to be one of [\\"single-page-application\\",\\"404-page\\",\\"none\\"] but got \\"bar\\".
 				`);
 			});
 
 			it("should accept valid `experimental_assets` config values", () => {
-				const expectedConfig = {
+				const expectedConfig: RawConfig = {
 					experimental_assets: {
 						directory: "./public",
-						serve_exact_matches_only: false,
-						trailing_slashes: "add",
-						not_found_behavior: "nearest-404-page",
+						html_handling: "drop-trailing-slash",
+						not_found_handling: "404-page",
 					},
 				};
 
 				const { config, diagnostics } = normalizeAndValidateConfig(
-					expectedConfig as unknown as RawConfig,
+					expectedConfig,
 					undefined,
 					{ env: undefined }
 				);
