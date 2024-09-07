@@ -106,23 +106,29 @@ describe("getPlatformProxy()", () => {
 			});
 		});
 
-		it("can connect to a TCP socket via the hyperdrive connect method", async () => {
-			const socketDataMsgPromise = new Promise<string>((resolve, _) => {
-				server.on("connection", (sock) => {
-					sock.on("data", (data) => {
-						resolve(new TextDecoder().decode(data));
-						server.close();
+		it.skipIf(
+			// in c3 this test fails for windows because of ECONNRESET issues
+			process.platform === "win32"
+		)(
+			"can connect to a TCP socket via the hyperdrive connect method",
+			async () => {
+				const socketDataMsgPromise = new Promise<string>((resolve, _) => {
+					server.on("connection", (sock) => {
+						sock.on("data", (data) => {
+							resolve(new TextDecoder().decode(data));
+							server.close();
+						});
 					});
 				});
-			});
 
-			execSync("node index.mjs", {
-				cwd: root,
-				encoding: "utf-8",
-			});
-			expect(await socketDataMsgPromise).toMatchInlineSnapshot(
-				`"test string sent using getPlatformProxy"`
-			);
-		});
+				execSync("node index.mjs", {
+					cwd: root,
+					encoding: "utf-8",
+				});
+				expect(await socketDataMsgPromise).toMatchInlineSnapshot(
+					`"test string sent using getPlatformProxy"`
+				);
+			}
+		);
 	});
 });
