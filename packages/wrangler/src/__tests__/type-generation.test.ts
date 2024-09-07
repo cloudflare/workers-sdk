@@ -147,6 +147,12 @@ const bindingsConfigMock: Omit<
 			},
 		],
 	},
+	migrations: [
+		{
+			tag: "v1",
+			new_classes: ["DurableDirect", "DurableReexport", "DurableNoexport"],
+		},
+	],
 	r2_buckets: [
 		{
 			binding: "R2_BUCKET_BINDING",

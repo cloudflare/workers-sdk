@@ -1186,47 +1186,22 @@ describe("wrangler dev", () => {
 				},
 			});
 			fs.writeFileSync("index.js", `export default {};`);
-			await runWrangler("dev");
-			expect((Dev as Mock).mock.calls[0][0].initialIp).toEqual(
-				process.platform === "win32" ? "127.0.0.1" : "localhost"
-			);
-			expect(std.out).toMatchInlineSnapshot(`
-			        "Your worker has access to the following bindings:
-			        - Durable Objects:
-			          - NAME_1: CLASS_1
-			          - NAME_2: CLASS_2 (defined in SCRIPT_A)
-			          - NAME_3: CLASS_3
-			          - NAME_4: CLASS_4 (defined in SCRIPT_B)"
-		      `);
-			expect(std.warn).toMatchInlineSnapshot(`
-			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
+			await expect(
+				runWrangler("dev")
+			).rejects.toThrowErrorMatchingInlineSnapshot(dedent`
+				[Error: Processing wrangler.toml configuration:
+			   - In wrangler.toml, you have configured [durable_objects] exported by this Worker (CLASS_1, CLASS_3), but no [migrations] for them. This may not work as expected until you add a [migrations] section to your wrangler.toml. Add this configuration to your wrangler.toml:
 
-			    - In wrangler.toml, you have configured [durable_objects] exported by this Worker (CLASS_1,
-			  CLASS_3), but no [migrations] for them. This may not work as expected until you add a [migrations]
-			  section to your wrangler.toml. Add this configuration to your wrangler.toml:
+			       \`\`\`
+			       [[migrations]]
+			       tag = \"v1\" # Should be unique for each entry
+			       new_classes = [\"CLASS_1\", \"CLASS_3\"]
+			       \`\`\`
 
-			        \`\`\`
-			        [[migrations]]
-			        tag = \\"v1\\" # Should be unique for each entry
-			        new_classes = [\\"CLASS_1\\", \\"CLASS_3\\"]
-			        \`\`\`
-
-			      Refer to
-			  [4mhttps://developers.cloudflare.com/durable-objects/reference/durable-objects-migrations/[0m for more
-			  details.
-
-
-			[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mWARNING: You have Durable Object bindings that are not defined locally in the worker being developed.[0m
-
-			  Be aware that changes to the data stored in these Durable Objects will be permanent and affect the
-			  live instances.
-			  Remote Durable Objects that are affected:
-			  - {\\"name\\":\\"NAME_2\\",\\"class_name\\":\\"CLASS_2\\",\\"script_name\\":\\"SCRIPT_A\\"}
-			  - {\\"name\\":\\"NAME_4\\",\\"class_name\\":\\"CLASS_4\\",\\"script_name\\":\\"SCRIPT_B\\"}
-
-			"
-		`);
-			expect(std.err).toMatchInlineSnapshot(`""`);
+			     Refer to https://developers.cloudflare.com/durable-objects/reference/durable-objects-migrations/ for more details.]
+			`);
+			expect(std.out).toMatchInlineSnapshot(`""`);
+			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
 	});
 

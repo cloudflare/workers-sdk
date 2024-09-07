@@ -989,6 +989,12 @@ describe("normalizeAndValidateConfig()", () => {
 						},
 					],
 				},
+				migrations: [
+					{
+						tag: "v1",
+						new_classes: ["CLASS1", "CLASS2", "CLASS3"],
+					},
+				],
 				kv_namespaces: [
 					{ binding: "KV_BINDING_1", id: "KV_ID_1" },
 					{
@@ -1071,16 +1077,7 @@ describe("normalizeAndValidateConfig()", () => {
 			expect(diagnostics.hasErrors()).toBe(false);
 			expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
 				"Processing wrangler configuration:
-				  - \\"unsafe\\" fields are experimental and may change or break at any time.
-				  - In wrangler.toml, you have configured [durable_objects] exported by this Worker (CLASS1), but no [migrations] for them. This may not work as expected until you add a [migrations] section to your wrangler.toml. Add this configuration to your wrangler.toml:
-
-				      \`\`\`
-				      [[migrations]]
-				      tag = \\"v1\\" # Should be unique for each entry
-				      new_classes = [\\"CLASS1\\"]
-				      \`\`\`
-
-				    Refer to https://developers.cloudflare.com/durable-objects/reference/durable-objects-migrations/ for more details."
+				  - \\"unsafe\\" fields are experimental and may change or break at any time."
 			`);
 		});
 
@@ -1722,7 +1719,7 @@ describe("normalizeAndValidateConfig()", () => {
 								},
 							],
 							deleted_classes: [666, 777],
-							bad_key: null
+							bad_key: null,
 						},
 					],
 				};
@@ -1746,6 +1743,148 @@ describe("normalizeAndValidateConfig()", () => {
 					  - Expected \\"migrations[0].renamed_classes\\" to be an array of \\"{from: string, to: string}\\" objects but got [{\\"from\\":444,\\"to\\":555}].
 					  - Expected \\"migrations[0].deleted_classes.[0]\\" to be of type string but got 666.
 					  - Expected \\"migrations[0].deleted_classes.[1]\\" to be of type string but got 777."
+				`);
+			});
+		});
+
+		describe("[durable_objects] and [migrations]", () => {
+			it("should require migrations for all namespaces", () => {
+				const expectedConfig = {
+					durable_objects: {
+						bindings: [
+							{
+								name: "SOME_CLASS",
+								class_name: "SomeClass",
+							},
+							{
+								name: "ANOTHER_CLASS",
+								class_name: "AnotherClass",
+							},
+						],
+					},
+					migrations: [
+						{
+							tag: "v1",
+							new_classes: ["SomeClass"],
+						},
+					],
+				};
+
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					expectedConfig as unknown as RawConfig,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(config).toEqual(expect.objectContaining(expectedConfig));
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - No valid migrations for Durable Objects class (AnotherClass)"
+				`);
+			});
+
+			it("should allow valid migrations", () => {
+				const expectedConfig = {
+					migrations: [
+						{
+							tag: "v1",
+							new_classes: ["SomeClass", "AnotherClass"],
+						},
+						{
+							tag: "v2",
+							deleted_classes: ["AnotherClass"],
+							renamed_classes: [{ from: "SomeClass", to: "AnotherClass" }],
+							new_sqlite_classes: ["SomeClass"],
+						},
+						{
+							tag: "v3",
+							deleted_classes: ["AnotherClass"],
+							renamed_classes: [{ from: "SomeClass", to: "AnotherClass" }],
+						},
+						{
+							tag: "v4",
+							deleted_classes: ["AnotherClass"],
+						},
+					],
+				};
+
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					expectedConfig as unknown as RawConfig,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(config).toEqual(expect.objectContaining(expectedConfig));
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(false);
+			});
+
+			it("should error when creating existing classes", () => {
+				const expectedConfig = {
+					durable_objects: {
+						bindings: [
+							{
+								name: "SOME_CLASS",
+								class_name: "SomeClass",
+							},
+						],
+					},
+					migrations: [
+						{
+							tag: "v1",
+							new_classes: ["SomeClass", "AnotherClass"],
+							new_sqlite_classes: ["SomeClass"],
+						},
+					],
+				};
+
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					expectedConfig as unknown as RawConfig,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(config).toEqual(expect.objectContaining(expectedConfig));
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - Cannot apply new_sqlite_classes migration to existing class SomeClass"
+				`);
+			});
+
+			it("should error when deleting or renaming non-existant classes", () => {
+				const expectedConfig = {
+					durable_objects: {
+						bindings: [
+							{
+								name: "SOME_CLASS",
+								class_name: "SomeClass",
+							},
+						],
+					},
+					migrations: [
+						{
+							tag: "v1",
+							renamed_classes: [{ from: "SomeClass", to: "AnotherClass" }],
+							deleted_classes: ["SomeClass"],
+						},
+					],
+				};
+
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					expectedConfig as unknown as RawConfig,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(config).toEqual(expect.objectContaining(expectedConfig));
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - Cannot apply deleted_classes migration to non-existant class SomeClass
+					  - Cannot apply renamed_classes migration to non-existant class SomeClass
+					  - No valid migrations for Durable Objects class (SomeClass)"
 				`);
 			});
 		});

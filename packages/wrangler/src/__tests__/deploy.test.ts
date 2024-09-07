@@ -7777,12 +7777,17 @@ addEventListener('fetch', event => {});`
 				mockSubDomainRequest();
 
 				await expect(runWrangler("deploy index.js")).rejects
-					.toThrowErrorMatchingInlineSnapshot(`
-					[Error: You seem to be trying to use Durable Objects in a Worker written as a service-worker.
-					You can use Durable Objects defined in other Workers by specifying a \`script_name\` in your wrangler.toml, where \`script_name\` is the name of the Worker that implements that Durable Object. For example:
-					{ name = EXAMPLE_DO_BINDING, class_name = ExampleDurableObject } ==> { name = EXAMPLE_DO_BINDING, class_name = ExampleDurableObject, script_name = example-do-binding-worker }
-					Alternatively, migrate your worker to ES Module syntax to implement a Durable Object in this Worker:
-					https://developers.cloudflare.com/workers/learning/migrating-to-module-workers/]
+					.toThrowErrorMatchingInlineSnapshot(dedent`
+					[Error: Processing wrangler.toml configuration:
+			    - In wrangler.toml, you have configured [durable_objects] exported by this Worker (ExampleDurableObject), but no [migrations] for them. This may not work as expected until you add a [migrations] section to your wrangler.toml. Add this configuration to your wrangler.toml:
+
+			        \`\`\`
+			        [[migrations]]
+			        tag = \"v1\" # Should be unique for each entry
+			        new_classes = [\"ExampleDurableObject\"]
+			        \`\`\`
+
+			      Refer to https://developers.cloudflare.com/durable-objects/reference/durable-objects-migrations/ for more details.]
 				`);
 			});
 		});
