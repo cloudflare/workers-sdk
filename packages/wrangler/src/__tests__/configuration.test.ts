@@ -1722,6 +1722,7 @@ describe("normalizeAndValidateConfig()", () => {
 								},
 							],
 							deleted_classes: [666, 777],
+							bad_key: null
 						},
 					],
 				};
@@ -1735,56 +1736,17 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(config).toEqual(expect.objectContaining(expectedConfig));
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			          "Processing wrangler configuration:
-			            - Expected \\"migrations[0].tag\\" to be of type string but got 111.
-			            - Expected \\"migrations[0].new_classes.[0]\\" to be of type string but got 222.
-			            - Expected \\"migrations[0].new_classes.[1]\\" to be of type string but got 333.
-			            - Expected \\"migrations[0].new_sqlite_classes.[0]\\" to be of type string but got 222.
-			            - Expected \\"migrations[0].new_sqlite_classes.[1]\\" to be of type string but got 333.
-			            - Expected \\"migrations[0].renamed_classes\\" to be an array of \\"{from: string, to: string}\\" objects but got [{\\"from\\":444,\\"to\\":555}].
-			            - Expected \\"migrations[0].deleted_classes.[0]\\" to be of type string but got 666.
-			            - Expected \\"migrations[0].deleted_classes.[1]\\" to be of type string but got 777."
-		        `);
-			});
-
-			it("should warn/error on unexpected fields on `migrations`", async () => {
-				const expectedConfig = {
-					migrations: [
-						{
-							tag: "TAG",
-							new_classes: ["CLASS_1", "CLASS_2"],
-							renamed_classes: [
-								{
-									from: "FROM_CLASS",
-									to: "TO_CLASS",
-								},
-								{
-									a: "something",
-									b: "someone",
-								},
-							],
-							deleted_classes: ["CLASS_3", "CLASS_4"],
-							unrecognized_field: "FOO",
-						},
-					],
-				};
-
-				const { config, diagnostics } = normalizeAndValidateConfig(
-					expectedConfig as unknown as RawConfig,
-					undefined,
-					{ env: undefined }
-				);
-
-				expect(config).toEqual(expect.objectContaining(expectedConfig));
-				expect(diagnostics.hasErrors()).toBe(true);
-				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-			          "Processing wrangler configuration:
-			            - Unexpected fields found in migrations field: \\"unrecognized_field\\""
-		        `);
-				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			          "Processing wrangler configuration:
-			            - Expected \\"migrations[0].renamed_classes\\" to be an array of \\"{from: string, to: string}\\" objects but got [{\\"from\\":\\"FROM_CLASS\\",\\"to\\":\\"TO_CLASS\\"},{\\"a\\":\\"something\\",\\"b\\":\\"someone\\"}]."
-		        `);
+					"Processing wrangler configuration:
+					  - Unexpected fields found in migrations field: \\"bad_key\\"
+					  - Expected \\"migrations[0].tag\\" to be of type string but got 111.
+					  - Expected \\"migrations[0].new_classes.[0]\\" to be of type string but got 222.
+					  - Expected \\"migrations[0].new_classes.[1]\\" to be of type string but got 333.
+					  - Expected \\"migrations[0].new_sqlite_classes.[0]\\" to be of type string but got 222.
+					  - Expected \\"migrations[0].new_sqlite_classes.[1]\\" to be of type string but got 333.
+					  - Expected \\"migrations[0].renamed_classes\\" to be an array of \\"{from: string, to: string}\\" objects but got [{\\"from\\":444,\\"to\\":555}].
+					  - Expected \\"migrations[0].deleted_classes.[0]\\" to be of type string but got 666.
+					  - Expected \\"migrations[0].deleted_classes.[1]\\" to be of type string but got 777."
+				`);
 			});
 		});
 
@@ -4729,14 +4691,13 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasErrors()).toBe(true);
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-
-					  - \\"env.ENV1\\" environment configuration
-					    - Unexpected fields found in migrations field: \\"unrecognized_field\\""
+					"
 				`);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
 
 					  - \\"env.ENV1\\" environment configuration
+					    - Unexpected fields found in migrations field: \\"unrecognized_field\\"
 					    - Expected \\"migrations[0].renamed_classes\\" to be an array of \\"{from: string, to: string}\\" objects but got [{\\"from\\":\\"FROM_CLASS\\",\\"to\\":\\"TO_CLASS\\"},{\\"a\\":\\"something\\",\\"b\\":\\"someone\\"}]."
 				`);
 			});

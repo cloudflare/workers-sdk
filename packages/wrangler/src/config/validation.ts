@@ -3251,7 +3251,8 @@ const validateMigrations: ValidatorFn = (diagnostics, field, value) => {
 				diagnostics,
 				"migrations",
 				Object.keys(rest),
-				[]
+				[],
+				true
 			) && valid;
 
 		valid =
