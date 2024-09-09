@@ -28,6 +28,7 @@ export type MiniflareCoreErrorCode =
 	| "ERR_NO_WORKERS" // No workers defined
 	| "ERR_VALIDATION" // Options failed to parse
 	| "ERR_DUPLICATE_NAME" // Multiple workers defined with same name
+	| "ERR_DIFFERENT_STORAGE_BACKEND" // Multiple Durable Object bindings declared for same class with different storage backends
 	| "ERR_DIFFERENT_UNIQUE_KEYS" // Multiple Durable Object bindings declared for same class with different unsafe unique keys
 	| "ERR_DIFFERENT_PREVENT_EVICTION" // Multiple Durable Object bindings declared for same class with different unsafe prevent eviction values
 	| "ERR_MULTIPLE_OUTBOUNDS" // Both `outboundService` and `fetchMock` specified

@@ -91,6 +91,7 @@ async function convertToConfigBundle(
 		compatibilityDate: event.config.compatibilityDate,
 		compatibilityFlags: event.config.compatibilityFlags,
 		bindings,
+		migrations: event.config.migrations,
 		workerDefinitions: event.config.dev?.registry,
 		legacyAssetPaths: event.config.legacy?.site?.bucket
 			? {
@@ -154,7 +155,6 @@ export class LocalRuntimeController extends RuntimeController {
 			options.liveReload = false; // TODO: set in buildMiniflareOptions once old code path is removed
 			if (this.#mf === undefined) {
 				logger.log(chalk.dim("⎔ Starting local server..."));
-
 				this.#mf = new Miniflare(options);
 			} else {
 				logger.log(chalk.dim("⎔ Reloading local server..."));

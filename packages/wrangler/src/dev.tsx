@@ -972,6 +972,7 @@ export async function startDev(args: StartDevOptions) {
 					}
 					usageModel={configParam.usage_model}
 					bindings={bindings}
+					migrations={configParam.migrations}
 					crons={configParam.triggers.crons}
 					queueConsumers={configParam.queues.consumers}
 					onReady={args.onReady}
@@ -1154,6 +1155,7 @@ export async function startApiDev(args: StartDevOptions) {
 				args.compatibilityFlags ?? configParam.compatibility_flags,
 			usageModel: configParam.usage_model,
 			bindings: bindings,
+			migrations: configParam.migrations,
 			crons: configParam.triggers.crons,
 			queueConsumers: configParam.queues.consumers,
 			onReady: args.onReady,
