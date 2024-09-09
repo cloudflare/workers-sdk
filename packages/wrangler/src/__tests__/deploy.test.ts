@@ -10466,6 +10466,47 @@ export default{
 		});
 	});
 
+	describe("pipelines", () => {
+		it("should upload pipelines bindings", async () => {
+			writeWranglerToml({
+				pipelines: [
+					{
+						binding: "MY_PIPELINE",
+						pipeline: "0123456789ABCDEF0123456789ABCDEF",
+					},
+				],
+			});
+			await fs.promises.writeFile("index.js", `export default {};`);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedBindings: [
+					{
+						type: "pipelines",
+						name: "MY_PIPELINE",
+						id: "0123456789ABCDEF0123456789ABCDEF",
+					},
+				],
+			});
+
+			await runWrangler("deploy index.js");
+			expect(std.out).toMatchInlineSnapshot(`
+			"Total Upload: xx KiB / gzip: xx KiB
+			Worker Startup Time: 100 ms
+			Your worker has access to the following bindings:
+			- Pipelines:
+			  - MY_PIPELINE: 0123456789ABCDEF0123456789ABCDEF
+			Uploaded test-name (TIMINGS)
+			Published test-name (TIMINGS)
+			  https://test-name.test-sub-domain.workers.dev
+			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
+
+
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+		`);
+		});
+	});
+
 	describe("--keep-vars", () => {
 		it("should send keepVars when keep-vars is passed in", async () => {
 			vi.stubEnv("CLOUDFLARE_API_TOKEN", "hunter2");

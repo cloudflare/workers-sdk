@@ -387,6 +387,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			analytics_engine_datasets: config.analytics_engine_datasets,
 			dispatch_namespaces: config.dispatch_namespaces,
 			mtls_certificates: config.mtls_certificates,
+			pipelines: config.pipelines,
 			logfwdr: config.logfwdr,
 			experimental_assets: config.experimental_assets?.binding
 				? { binding: config.experimental_assets?.binding }
