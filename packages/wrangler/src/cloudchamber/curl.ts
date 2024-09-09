@@ -7,12 +7,12 @@ import { ApiError } from "./client/core/ApiError";
 import { request } from "./client/core/request";
 import type { Config } from "../config";
 import type {
-	CommonYargsOptionsJSON,
-	StrictYargsOptionsToInterfaceJSON,
+	CommonYargsOptions,
+	StrictYargsOptionsToInterface,
 } from "../yargs-types";
 import type yargs from "yargs";
 
-export function yargsCurl(args: yargs.Argv<CommonYargsOptionsJSON>) {
+export function yargsCurl(args: yargs.Argv<CommonYargsOptions>) {
 	return args
 		.positional("path", { type: "string", default: "/" })
 		.option("header", {
@@ -44,11 +44,16 @@ export function yargsCurl(args: yargs.Argv<CommonYargsOptionsJSON>) {
 			describe: "Equivalent of using --data-binary @- in curl",
 			type: "boolean",
 			alias: "stdin",
+		})
+		.option("json", {
+			describe: "Output json. Use for consistent, machine readable output.",
+			type: "boolean",
+			default: false,
 		});
 }
 
 export async function curlCommand(
-	args: StrictYargsOptionsToInterfaceJSON<typeof yargsCurl>,
+	args: StrictYargsOptionsToInterface<typeof yargsCurl>,
 	config: Config
 ) {
 	await requestFromCmd(args, config);

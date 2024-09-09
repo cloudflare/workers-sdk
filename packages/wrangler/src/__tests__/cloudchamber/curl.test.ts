@@ -46,7 +46,7 @@ describe("cloudchamber curl", () => {
 			  -v, --version                   Show version number  [boolean]
 
 			OPTIONS
-			      --json                Return output as clean JSON  [boolean] [default: false]
+			      --json                Output json. Use for consistent, machine readable output.  [boolean] [default: false]
 			  -H, --header              Add headers in the form of --header <name>:<value>  [array]
 			  -D, --data                Add a JSON body to the request  [string]
 			  -X, --method  [string] [default: \\"GET\\"]
