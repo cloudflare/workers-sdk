@@ -444,14 +444,14 @@ export function printBindings(bindings: CfWorkerInit["bindings"]) {
 		});
 	}
 
-	if (pipelines != undefined && pipelines.length>0) {
+	if (pipelines != undefined && pipelines.length > 0) {
 		output.push({
 			type: "Pipelines",
 			entries: pipelines.map(({ binding, pipeline }) => ({
 				key: binding,
 				value: pipeline,
-			}))
-		})
+			})),
+		});
 	}
 
 	if (version_metadata !== undefined) {
