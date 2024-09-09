@@ -1,17 +1,15 @@
 import path from "node:path";
+import type {
+    ConfigFields,
+    RawConfig,
+    RawDevConfig,
+    RawEnvironment,
+} from "../config";
 import { readConfig } from "../config";
 import { normalizeAndValidateConfig } from "../config/validation";
 import { normalizeSlashes } from "./helpers/mock-console";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { writeWranglerToml } from "./helpers/write-wrangler-toml";
-import type {
-	ConfigFields,
-	RawConfig,
-	RawDevConfig,
-	RawEnvironment,
-} from "../config";
-import { pipeline } from "node:stream";
-import { pipelines } from "../pipelines";
 
 describe("readConfig()", () => {
 	runInTempDir();
