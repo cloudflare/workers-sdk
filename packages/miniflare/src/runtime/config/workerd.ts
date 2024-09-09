@@ -3,13 +3,13 @@ import type {
 	HttpOptions_Style,
 	TlsOptions_Version,
 	Worker_Binding_CryptoKey_Usage,
-} from "./workerd.capnp.js";
+} from "./generated/workerd";
 
 export {
 	HttpOptions_Style,
 	TlsOptions_Version,
 	Worker_Binding_CryptoKey_Usage,
-} from "./workerd.capnp.js";
+} from "./generated/workerd";
 
 export const kVoid = Symbol("kVoid");
 export type Void = typeof kVoid;
