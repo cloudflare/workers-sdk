@@ -37,14 +37,12 @@ import { docsHandler, docsOptions } from "./docs";
 import { JsonFriendlyFatalError, UserError } from "./errors";
 import { generateHandler, generateOptions } from "./generate";
 import { initHandler, initOptions } from "./init";
-import "./commands"; // This imports all command definitions as side-effect
 import { logBuildFailure, logger, LOGGER_LEVELS } from "./logger";
 import { mTlsCertificateCommands } from "./mtls-certificate/cli";
 import { writeOutput } from "./output";
 import { pages } from "./pages";
 import { APIError, formatMessage, ParseError } from "./parse";
 import { pubSubCommands } from "./pubsub/pubsub-commands";
-import { queues } from "./queues/cli/commands";
 import { r2 } from "./r2";
 import { secret, secretBulkHandler, secretBulkOptions } from "./secret";
 import {
@@ -68,6 +66,7 @@ import { asJson } from "./yargs-types";
 import type { Config } from "./config";
 import type { LoggerLevel } from "./logger";
 import type { CommonYargsArgv, SubHelp } from "./yargs-types";
+import "./commands"; // This imports all command definitions as side-effect
 
 const resetColor = "\x1b[0m";
 const fgGreenColor = "\x1b[32m";
@@ -517,9 +516,7 @@ export function createCLIParser(argv: string[]) {
 	register.registerNamespace("kv");
 
 	// queues
-	wrangler.command("queues", "🇶  Manage Workers Queues", (queuesYargs) => {
-		return queues(queuesYargs.command(subHelp));
-	});
+	register.registerNamespace("queues");
 
 	// r2
 	wrangler.command("r2", "📦 Manage R2 buckets & objects", (r2Yargs) => {

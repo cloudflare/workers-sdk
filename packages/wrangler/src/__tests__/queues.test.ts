@@ -290,18 +290,17 @@ describe("wrangler", () => {
 					runWrangler(`queues create ${queueName}`)
 				).rejects.toThrowError();
 				expect(std.out).toMatchInlineSnapshot(`
-			"Creating queue testQueue.
-			Queues is not currently enabled on this account. Go to https://dash.cloudflare.com/some-account-id/workers/queues to enable it.
+					"Creating queue testQueue.
 
-			[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/accounts/some-account-id/queues) failed.[0m
+					[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/accounts/some-account-id/queues) failed.[0m
 
-			  workers.api.error.unauthorized [code: 10023]
+					  workers.api.error.unauthorized [code: 10023]
 
-			  If you think this is a bug, please open an issue at:
-			  [4mhttps://github.com/cloudflare/workers-sdk/issues/new/choose[0m
+					  If you think this is a bug, please open an issue at:
+					  [4mhttps://github.com/cloudflare/workers-sdk/issues/new/choose[0m
 
-			"
-		`);
+					"
+				`);
 			});
 
 			it("should send queue settings with delivery delay", async () => {
@@ -427,10 +426,10 @@ describe("wrangler", () => {
 					Configure Queue consumers
 
 					COMMANDS
-					  wrangler queues consumer add <queue-name> <script-name>     Add a Queue Worker Consumer
-					  wrangler queues consumer remove <queue-name> <script-name>  Remove a Queue Worker Consumer
 					  wrangler queues consumer http                               Configure Queue HTTP Pull Consumers
 					  wrangler queues consumer worker                             Configure Queue Worker Consumers
+					  wrangler queues consumer add <queue-name> <script-name>     Alias for \\"wrangler queues consumer worker add\\". Add a Queue Worker Consumer
+					  wrangler queues consumer remove <queue-name> <script-name>  Alias for \\"wrangler queues consumer worker remove\\". Remove a Queue Worker Consumer
 
 					GLOBAL FLAGS
 					  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
@@ -474,7 +473,7 @@ describe("wrangler", () => {
 					expect(std.out).toMatchInlineSnapshot(`
 						"wrangler queues consumer add <queue-name> <script-name>
 
-						Add a Queue Worker Consumer
+						Alias for \\"wrangler queues consumer worker add\\". Add a Queue Worker Consumer
 
 						POSITIONALS
 						  queue-name   Name of the queue to configure  [string] [required]
@@ -796,7 +795,7 @@ describe("wrangler", () => {
 					expect(std.out).toMatchInlineSnapshot(`
 						"wrangler queues consumer remove <queue-name> <script-name>
 
-						Remove a Queue Worker Consumer
+						Alias for \\"wrangler queues consumer worker remove\\". Remove a Queue Worker Consumer
 
 						POSITIONALS
 						  queue-name   Name of the queue to configure  [string] [required]

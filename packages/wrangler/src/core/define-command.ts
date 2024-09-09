@@ -126,6 +126,13 @@ export type CommandDefinition<
 		args: HandlerArgs<NamedArgs>,
 		ctx: HandlerContext
 	) => void | Promise<void>;
+
+	/**
+	 * This is a hook to handle errors thrown by the handler.
+	 * Conditionally handle the error or rethrow the error
+	 * to delegate to the top-level error handling.
+	 */
+	handleError?: (err: Error) => void | Promise<void>;
 };
 
 export const COMMAND_DEFINITIONS: Array<

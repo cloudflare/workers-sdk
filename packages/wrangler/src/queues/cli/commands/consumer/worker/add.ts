@@ -1,58 +1,80 @@
 import { readConfig } from "../../../../../config";
+import { defineCommand } from "../../../../../core";
 import { CommandLineArgsError } from "../../../../../index";
 import { logger } from "../../../../../logger";
 import { postConsumer } from "../../../../client";
-import type {
-	CommonYargsArgv,
-	StrictYargsOptionsToInterface,
-} from "../../../../../yargs-types";
+import { handleUnauthorizedError } from "../../../../utils";
 import type { PostTypedConsumerBody } from "../../../../client";
 
-export function options(yargs: CommonYargsArgv) {
-	return yargs
-		.positional("queue-name", {
-			type: "string",
-			demandOption: true,
-			description: "Name of the queue to configure",
-		})
-		.positional("script-name", {
-			type: "string",
-			demandOption: true,
-			description: "Name of the consumer script",
-		})
-		.options({
-			"batch-size": {
-				type: "number",
-				describe: "Maximum number of messages per batch",
-			},
-			"batch-timeout": {
-				type: "number",
-				describe:
-					"Maximum number of seconds to wait to fill a batch with messages",
-			},
-			"message-retries": {
-				type: "number",
-				describe: "Maximum number of retries for each message",
-			},
-			"dead-letter-queue": {
-				type: "string",
-				describe: "Queue to send messages that failed to be consumed",
-			},
-			"max-concurrency": {
-				type: "number",
-				describe:
-					"The maximum number of concurrent consumer Worker invocations. Must be a positive integer",
-			},
-			"retry-delay-secs": {
-				type: "number",
-				describe: "The number of seconds to wait before retrying a message",
-			},
-		});
-}
+const command = defineCommand({
+	command: "wrangler queues consumer worker add",
 
-function createBody(
-	args: StrictYargsOptionsToInterface<typeof options>
-): PostTypedConsumerBody {
+	metadata: {
+		description: "Add a Queue Worker Consumer",
+		status: "stable",
+		owner: "Product: Queues",
+	},
+
+	args: {
+		"queue-name": {
+			type: "string",
+			demandOption: true,
+			describe: "Name of the queue to configure",
+		},
+		"script-name": {
+			type: "string",
+			demandOption: true,
+			describe: "Name of the consumer script",
+		},
+		"batch-size": {
+			type: "number",
+			describe: "Maximum number of messages per batch",
+		},
+		"batch-timeout": {
+			type: "number",
+			describe:
+				"Maximum number of seconds to wait to fill a batch with messages",
+		},
+		"message-retries": {
+			type: "number",
+			describe: "Maximum number of retries for each message",
+		},
+		"dead-letter-queue": {
+			type: "string",
+			describe: "Queue to send messages that failed to be consumed",
+		},
+		"max-concurrency": {
+			type: "number",
+			describe:
+				"The maximum number of concurrent consumer Worker invocations. Must be a positive integer",
+		},
+		"retry-delay-secs": {
+			type: "number",
+			describe: "The number of seconds to wait before retrying a message",
+		},
+	},
+	positionalArgs: ["queue-name", "script-name"],
+
+	async handler(args) {
+		const config = readConfig(args.config, args);
+
+		if (Array.isArray(args.retryDelaySecs)) {
+			throw new CommandLineArgsError(
+				`Cannot specify --retry-delay-secs multiple times`
+			);
+		}
+
+		const body = createBody(args);
+
+		logger.log(`Adding consumer to queue ${args.queueName}.`);
+		await postConsumer(config, args.queueName, body);
+		logger.log(`Added consumer to queue ${args.queueName}.`);
+	},
+
+	handleError: handleUnauthorizedError,
+});
+
+function createBody(args: typeof command.args): PostTypedConsumerBody {
 	return {
 		script_name: args.scriptName,
 		// TODO(soon) is this still the correct usage of the environment?
@@ -70,21 +92,4 @@ function createBody(
 		},
 		dead_letter_queue: args.deadLetterQueue,
 	};
-}
-export async function handler(
-	args: StrictYargsOptionsToInterface<typeof options>
-) {
-	const config = readConfig(args.config, args);
-
-	if (Array.isArray(args.retryDelaySecs)) {
-		throw new CommandLineArgsError(
-			`Cannot specify --retry-delay-secs multiple times`
-		);
-	}
-
-	const body = createBody(args);
-
-	logger.log(`Adding consumer to queue ${args.queueName}.`);
-	await postConsumer(config, args.queueName, body);
-	logger.log(`Added consumer to queue ${args.queueName}.`);
 }

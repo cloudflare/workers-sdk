@@ -73,7 +73,6 @@ export function wrapCommandDefinition(
 
 	if ("handler" in def) {
 		handler = async (args) => {
-			// eslint-disable-next-line no-useless-catch
 			try {
 				if (def.behaviour?.printBanner !== false) {
 					await printWranglerBanner();
@@ -100,6 +99,8 @@ export function wrapCommandDefinition(
 				// TODO(telemetry): send command completed event
 			} catch (err) {
 				// TODO(telemetry): send command errored event
+				def.handleError?.(err as Error);
+
 				throw err;
 			}
 		};

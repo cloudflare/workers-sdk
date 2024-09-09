@@ -1,34 +1,15 @@
-import { HandleUnauthorizedError } from "../../utils";
-import { consumers } from "./consumer/index";
-import { handler as createHandler, options as createOptions } from "./create";
-import { handler as deleteHandler, options as deleteOptions } from "./delete";
-import { handler as listHandler, options as listOptions } from "./list";
-import type { CommonYargsArgv } from "../../../yargs-types";
+import { defineNamespace } from "../../../core";
+import "./list";
+import "./create";
+import "./delete";
+import "./consumer";
 
-export function queues(yargs: CommonYargsArgv) {
-	yargs.command("list", "List Queues", listOptions, listHandler);
+defineNamespace({
+	command: "wrangler queues",
 
-	yargs.command(
-		"create <name>",
-		"Create a Queue",
-		createOptions,
-		createHandler
-	);
-
-	yargs.command(
-		"delete <name>",
-		"Delete a Queue",
-		deleteOptions,
-		deleteHandler
-	);
-
-	yargs.command(
-		"consumer",
-		"Configure Queue consumers",
-		async (consumersYargs) => {
-			await consumers(consumersYargs);
-		}
-	);
-
-	yargs.fail(HandleUnauthorizedError);
-}
+	metadata: {
+		description: "🇶  Manage Workers Queues",
+		status: "stable",
+		owner: "Product: Queues",
+	},
+});

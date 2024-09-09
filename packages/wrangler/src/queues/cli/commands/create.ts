@@ -1,33 +1,50 @@
 import { readConfig } from "../../../config";
+import { defineCommand } from "../../../core";
 import { CommandLineArgsError } from "../../../index";
 import { logger } from "../../../logger";
 import { createQueue } from "../../client";
-import { handleFetchError } from "../../utils";
-import type {
-	CommonYargsArgv,
-	StrictYargsOptionsToInterface,
-} from "../../../yargs-types";
+import { handleFetchError, handleUnauthorizedError } from "../../utils";
 import type { PostQueueBody } from "../../client";
 
-export function options(yargs: CommonYargsArgv) {
-	return yargs
-		.positional("name", {
+const command = defineCommand({
+	command: "wrangler queues create",
+
+	metadata: {
+		description: "Create a Queue",
+		status: "stable",
+		owner: "Product: Queues",
+	},
+
+	args: {
+		name: {
 			type: "string",
 			demandOption: true,
 			description: "The name of the queue",
-		})
-		.options({
-			"delivery-delay-secs": {
-				type: "number",
-				describe:
-					"How long a published message should be delayed for, in seconds. Must be a positive integer",
-			},
-		});
-}
+		},
+		"delivery-delay-secs": {
+			type: "number",
+			describe:
+				"How long a published message should be delayed for, in seconds. Must be a positive integer",
+		},
+	},
+	positionalArgs: ["name"],
 
-function createBody(
-	args: StrictYargsOptionsToInterface<typeof options>
-): PostQueueBody {
+	async handler(args) {
+		const config = readConfig(args.config, args);
+		const body = createBody(args);
+		try {
+			logger.log(`Creating queue ${args.name}.`);
+			await createQueue(config, body);
+			logger.log(`Created queue ${args.name}.`);
+		} catch (e) {
+			handleFetchError(e as { code?: number });
+		}
+	},
+
+	handleError: handleUnauthorizedError,
+});
+
+function createBody(args: typeof command.args): PostQueueBody {
 	const body: PostQueueBody = {
 		queue_name: args.name,
 	};
@@ -45,18 +62,4 @@ function createBody(
 	}
 
 	return body;
-}
-
-export async function handler(
-	args: StrictYargsOptionsToInterface<typeof options>
-) {
-	const config = readConfig(args.config, args);
-	const body = createBody(args);
-	try {
-		logger.log(`Creating queue ${args.name}.`);
-		await createQueue(config, body);
-		logger.log(`Created queue ${args.name}.`);
-	} catch (e) {
-		handleFetchError(e as { code?: number });
-	}
 }
