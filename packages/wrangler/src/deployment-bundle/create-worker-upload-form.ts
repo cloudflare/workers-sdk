@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { File, FormData } from "undici";
 import { handleUnsafeCapnp } from "./capnp";
+import type { Observability } from "../config/environment";
 import type {
 	CfDurableObjectMigrations,
 	CfModuleType,
@@ -145,7 +146,7 @@ export type WorkerMetadataPut = {
 		jwt: string;
 		config?: AssetConfig;
 	};
-
+	observability?: Observability | undefined;
 	// Allow unsafe.metadata to add arbitrary properties at runtime
 	[key: string]: unknown;
 };
@@ -179,6 +180,7 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 		limits,
 		annotations,
 		experimental_assets,
+		observability,
 	} = worker;
 
 	const assetConfig = {
@@ -589,6 +591,7 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 				config: assetConfig,
 			},
 		}),
+		...(observability && { observability }),
 	};
 
 	if (bindings.unsafe?.metadata !== undefined) {

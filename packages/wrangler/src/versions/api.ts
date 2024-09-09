@@ -1,5 +1,5 @@
 import { fetchResult } from "../cfetch";
-import type { TailConsumer } from "../config/environment";
+import type { Observability, TailConsumer } from "../config/environment";
 import type {
 	ApiDeployment,
 	ApiVersion,
@@ -128,6 +128,7 @@ export async function createDeployment(
 type NonVersionedScriptSettings = {
 	logpush: boolean;
 	tail_consumers: TailConsumer[];
+	observability: Observability;
 };
 
 export async function patchNonVersionedScriptSettings(

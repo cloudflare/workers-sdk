@@ -345,6 +345,13 @@ interface EnvironmentInheritable {
 	 * @inheritable
 	 */
 	experimental_assets: ExperimentalAssets | undefined;
+
+	/**
+	 * Specify the observability behavior of the Worker.
+	 *
+	 * @inheritable
+	 */
+	observability: Observability | undefined;
 }
 
 export type DurableObjectBindings = {
@@ -904,3 +911,10 @@ export type ExperimentalAssets = {
 		| "none";
 	not_found_handling?: "single-page-application" | "404-page" | "none";
 };
+
+export interface Observability {
+	/** If observability is enabled for this Worker */
+	enabled: boolean;
+	/** The sampling rate */
+	head_sampling_rate?: number;
+}

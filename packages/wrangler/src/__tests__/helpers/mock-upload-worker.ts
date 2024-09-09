@@ -30,6 +30,7 @@ export function mockUploadWorkerRequest(
 		expectedScriptName?: string;
 		expectedExperimentalAssets?: boolean;
 		useOldUploadApi?: boolean;
+		expectedObservability?: CfWorkerInit["observability"];
 	} = {}
 ) {
 	const expectedScriptName = (options.expectedScriptName ??= "test-name");
@@ -111,6 +112,9 @@ export function mockUploadWorkerRequest(
 				config: {},
 			});
 		}
+		if ("expectedObservability" in options) {
+			expect(metadata.observability).toEqual(expectedObservability);
+		}
 		if (expectedUnsafeMetaData !== undefined) {
 			Object.keys(expectedUnsafeMetaData).forEach((key) => {
 				expect(metadata[key]).toEqual(expectedUnsafeMetaData[key]);
@@ -168,6 +172,7 @@ export function mockUploadWorkerRequest(
 		keepSecrets,
 		expectedDispatchNamespace,
 		useOldUploadApi,
+		expectedObservability,
 	} = options;
 	if (env && !legacyEnv) {
 		msw.use(

@@ -2611,6 +2611,7 @@ describe("init", () => {
 								limits,
 								compatibility_date,
 								tail_consumers: [{ service: "listener" }],
+								observability: { enabled: true, head_sampling_rate: 0.5 },
 							},
 						},
 						created_on: "1987-09-27",
@@ -2747,6 +2748,7 @@ describe("init", () => {
 					],
 				},
 				tail_consumers: [{ service: "listener" }],
+				observability: { enabled: true, head_sampling_rate: 0.5 },
 			};
 
 			function mockSupportingDashRequests(expectedAccountId: string) {
@@ -3041,24 +3043,28 @@ describe("init", () => {
 				expect(
 					fs.readFileSync("./isolinear-optical-chip/wrangler.toml", "utf8")
 				).toMatchInlineSnapshot(`
-			"name = \\"isolinear-optical-chip\\"
-			main = \\"src/index.js\\"
-			compatibility_date = \\"1987-09-27\\"
-			workers_dev = false
+					"name = \\"isolinear-optical-chip\\"
+					main = \\"src/index.js\\"
+					compatibility_date = \\"1987-09-27\\"
+					workers_dev = false
 
-			[[routes]]
-			pattern = \\"delta.quadrant\\"
-			zone_name = \\"delta.quadrant\\"
+					[[routes]]
+					pattern = \\"delta.quadrant\\"
+					zone_name = \\"delta.quadrant\\"
 
-			[[routes]]
-			pattern = \\"random.host.name\\"
-			zone_name = \\"some-zone-name\\"
-			custom_domain = true
+					[[routes]]
+					pattern = \\"random.host.name\\"
+					zone_name = \\"some-zone-name\\"
+					custom_domain = true
 
-			[[tail_consumers]]
-			service = \\"listener\\"
-			"
-		`);
+					[[tail_consumers]]
+					service = \\"listener\\"
+
+					[observability]
+					enabled = true
+					head_sampling_rate = 0.5
+					"
+				`);
 			});
 
 			it("should download source script from dashboard w/ positional <name> in TypeScript project", async () => {
@@ -3175,6 +3181,10 @@ describe("init", () => {
 
 					[[tail_consumers]]
 					service = \\"listener\\"
+
+					[observability]
+					enabled = true
+					head_sampling_rate = 0.5
 
 					[vars]
 					ANOTHER-NAME = \\"thing-TEXT\\"
@@ -3456,6 +3466,10 @@ describe("init", () => {
 							workers_dev: true,
 							name: "isolinear-optical-chip",
 							tail_consumers: [{ service: "listener" }],
+							observability: {
+								enabled: true,
+								head_sampling_rate: 0.5,
+							},
 						}),
 					},
 				});

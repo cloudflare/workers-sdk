@@ -748,6 +748,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 							assetConfig: props.experimentalAssetsOptions.assetConfig,
 						}
 					: undefined,
+			observability: config.observability,
 		};
 
 		sourceMapSize = worker.sourceMaps?.reduce(
@@ -836,6 +837,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 					await patchNonVersionedScriptSettings(accountId, scriptName, {
 						tail_consumers: worker.tail_consumers,
 						logpush: worker.logpush,
+						observability: worker.observability,
 					});
 
 					const { available_on_subdomain } = await fetchResult<{

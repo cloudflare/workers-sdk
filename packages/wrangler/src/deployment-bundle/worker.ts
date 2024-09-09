@@ -1,4 +1,4 @@
-import type { Route } from "../config/environment";
+import type { Observability, Route } from "../config/environment";
 import type {
 	WorkerMetadata,
 	WorkerMetadataBinding,
@@ -356,6 +356,7 @@ export interface CfWorkerInit {
 	limits: CfUserLimits | undefined;
 	annotations?: Record<string, string | undefined>;
 	experimental_assets: CfExperimentalAssets | undefined;
+	observability: Observability | undefined;
 }
 
 export interface CfWorkerContext {

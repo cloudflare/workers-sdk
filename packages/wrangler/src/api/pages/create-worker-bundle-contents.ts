@@ -97,6 +97,7 @@ function createWorkerBundleFormData(
 		tail_consumers: undefined,
 		limits: config?.limits,
 		experimental_assets: undefined,
+		observability: undefined,
 	};
 
 	return createWorkerUploadForm(worker);
