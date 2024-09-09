@@ -1,18 +1,34 @@
+import { isWebContainer } from "@webcontainer/env";
+import { watch } from "chokidar";
+import { render } from "ink";
+import type { Json } from "miniflare";
 import assert from "node:assert";
 import events from "node:events";
 import path from "node:path";
 import util from "node:util";
-import { isWebContainer } from "@webcontainer/env";
-import { watch } from "chokidar";
-import { render } from "ink";
+import type React from "react";
+import type {
+    ProxyData,
+    ReloadCompleteEvent,
+    StartDevWorkerInput,
+    Trigger,
+} from "./api";
 import { DevEnv } from "./api";
 import {
-	convertCfWorkerInitBindingstoBindings,
-	extractBindingsOfType,
+    convertCfWorkerInitBindingstoBindings,
+    extractBindingsOfType,
 } from "./api/startDevWorker/utils";
+import type { Config, Environment } from "./config";
 import { findWranglerToml, printBindings, readConfig } from "./config";
+import type {
+    EnvironmentNonInheritable,
+    Route,
+    Rule,
+} from "./config/environment";
 import { getEntry } from "./deployment-bundle/entry";
 import { getNodeCompatMode } from "./deployment-bundle/node-compat";
+import type { CfModule, CfWorkerInit } from "./deployment-bundle/worker";
+import type { WorkerRegistry } from "./dev-registry";
 import { getBoundRegisteredWorkers } from "./dev-registry";
 import Dev, { devRegistry } from "./dev/dev";
 import { getVarsForDev } from "./dev/dev-vars";
@@ -23,54 +39,38 @@ import { startDevServer } from "./dev/start-server";
 import { UserError } from "./errors";
 import { processExperimentalAssetsArg } from "./experimental-assets";
 import { run } from "./experimental-flags";
+import {
+    DEFAULT_INSPECTOR_PORT,
+    DEFAULT_LOCAL_PORT,
+    getDevCompatibilityDate,
+    getRules,
+    getScriptName,
+    isLegacyEnv,
+    printWranglerBanner,
+} from "./index";
 import isInteractive from "./is-interactive";
+import type { LoggerLevel } from "./logger";
 import { logger } from "./logger";
 import * as metrics from "./metrics";
+import type { EnablePagesAssetsServiceBindingOptions } from "./miniflare-cli/types";
 import { getLegacyAssetPaths, getSiteAssetPaths } from "./sites";
 import {
-	getAccountFromCache,
-	loginOrRefreshIfRequired,
-	requireApiToken,
-	requireAuth,
+    getAccountFromCache,
+    loginOrRefreshIfRequired,
+    requireApiToken,
+    requireAuth,
 } from "./user";
 import {
-	collectKeyValues,
-	collectPlainTextVars,
+    collectKeyValues,
+    collectPlainTextVars,
 } from "./utils/collectKeyValues";
 import { memoizeGetPort } from "./utils/memoizeGetPort";
 import { mergeWithOverride } from "./utils/mergeWithOverride";
-import { getHostFromRoute, getZoneIdForPreview } from "./zones";
-import {
-	DEFAULT_INSPECTOR_PORT,
-	DEFAULT_LOCAL_PORT,
-	getDevCompatibilityDate,
-	getRules,
-	getScriptName,
-	isLegacyEnv,
-	printWranglerBanner,
-} from "./index";
 import type {
-	ProxyData,
-	ReloadCompleteEvent,
-	StartDevWorkerInput,
-	Trigger,
-} from "./api";
-import type { Config, Environment } from "./config";
-import type {
-	EnvironmentNonInheritable,
-	Route,
-	Rule,
-} from "./config/environment";
-import type { CfModule, CfWorkerInit } from "./deployment-bundle/worker";
-import type { WorkerRegistry } from "./dev-registry";
-import type { LoggerLevel } from "./logger";
-import type { EnablePagesAssetsServiceBindingOptions } from "./miniflare-cli/types";
-import type {
-	CommonYargsArgv,
-	StrictYargsOptionsToInterface,
+    CommonYargsArgv,
+    StrictYargsOptionsToInterface,
 } from "./yargs-types";
-import type { Json } from "miniflare";
-import type React from "react";
+import { getHostFromRoute, getZoneIdForPreview } from "./zones";
 
 export function devOptions(yargs: CommonYargsArgv) {
 	return (
@@ -1600,6 +1600,7 @@ export function getBindings(
 		experimental_assets: configParam.experimental_assets?.binding
 			? { binding: configParam.experimental_assets?.binding }
 			: undefined,
+		pipelines: configParam.pipelines,
 	};
 
 	return bindings;
