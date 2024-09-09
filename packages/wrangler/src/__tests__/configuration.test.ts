@@ -1,15 +1,15 @@
 import path from "node:path";
-import type {
-    ConfigFields,
-    RawConfig,
-    RawDevConfig,
-    RawEnvironment,
-} from "../config";
 import { readConfig } from "../config";
 import { normalizeAndValidateConfig } from "../config/validation";
 import { normalizeSlashes } from "./helpers/mock-console";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { writeWranglerToml } from "./helpers/write-wrangler-toml";
+import type {
+	ConfigFields,
+	RawConfig,
+	RawDevConfig,
+	RawEnvironment,
+} from "../config";
 
 describe("readConfig()", () => {
 	runInTempDir();
@@ -3243,7 +3243,10 @@ describe("normalizeAndValidateConfig()", () => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						pipelines: [
-							{ binding: "VALID", pipeline: "343cd4f1d58c42fbb5bd082592fd7143" },
+							{
+								binding: "VALID",
+								pipeline: "343cd4f1d58c42fbb5bd082592fd7143",
+							},
 						],
 					} as unknown as RawConfig,
 					undefined,
@@ -3258,7 +3261,10 @@ describe("normalizeAndValidateConfig()", () => {
 					{
 						pipelines: [
 							{},
-							{ binding: "VALID", pipeline: "343cd4f1d58c42fbb5bd082592fd7143" },
+							{
+								binding: "VALID",
+								pipeline: "343cd4f1d58c42fbb5bd082592fd7143",
+							},
 							{ binding: 2000, project: 2111 },
 						],
 					} as unknown as RawConfig,

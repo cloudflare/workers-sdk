@@ -1,33 +1,28 @@
-import { blue, gray } from "@cloudflare/cli/colors";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
+import { blue, gray } from "@cloudflare/cli/colors";
 import { fetchResult } from "../cfetch";
-import type { Config } from "../config";
 import { printBindings } from "../config";
-import type { Rule } from "../config/environment";
 import { bundleWorker } from "../deployment-bundle/bundle";
 import {
-    printBundleSize,
-    printOffendingDependencies,
+	printBundleSize,
+	printOffendingDependencies,
 } from "../deployment-bundle/bundle-reporter";
 import { getBundleType } from "../deployment-bundle/bundle-type";
 import { createWorkerUploadForm } from "../deployment-bundle/create-worker-upload-form";
-import type { Entry } from "../deployment-bundle/entry";
 import {
-    findAdditionalModules,
-    writeAdditionalModules,
+	findAdditionalModules,
+	writeAdditionalModules,
 } from "../deployment-bundle/find-additional-modules";
 import {
-    createModuleCollector,
-    getWrangler1xLegacyModuleReferences,
+	createModuleCollector,
+	getWrangler1xLegacyModuleReferences,
 } from "../deployment-bundle/module-collection";
 import { getNodeCompatMode } from "../deployment-bundle/node-compat";
 import { loadSourceMaps } from "../deployment-bundle/source-maps";
-import type { CfPlacement, CfWorkerInit } from "../deployment-bundle/worker";
 import { confirm } from "../dialogs";
 import { getMigrationsToUpload } from "../durable";
 import { UserError } from "../errors";
-import type { ExperimentalAssetsOptions } from "../experimental-assets";
 import { syncExperimentalAssets } from "../experimental-assets";
 import { logger } from "../logger";
 import { getMetricsUsageHeaders } from "../metrics";
@@ -36,11 +31,16 @@ import { ParseError } from "../parse";
 import { getWranglerTmpDir } from "../paths";
 import { ensureQueuesExistByConfig } from "../queues/client";
 import { getWorkersDevSubdomain } from "../routes";
-import type { RetrieveSourceMapFunction } from "../sourcemap";
 import {
-    getSourceMappedString,
-    maybeRetrieveFileSourceMap,
+	getSourceMappedString,
+	maybeRetrieveFileSourceMap,
 } from "../sourcemap";
+import type { Config } from "../config";
+import type { Rule } from "../config/environment";
+import type { Entry } from "../deployment-bundle/entry";
+import type { CfPlacement, CfWorkerInit } from "../deployment-bundle/worker";
+import type { ExperimentalAssetsOptions } from "../experimental-assets";
+import type { RetrieveSourceMapFunction } from "../sourcemap";
 
 type Props = {
 	config: Config;

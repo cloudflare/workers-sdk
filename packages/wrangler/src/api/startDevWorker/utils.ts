@@ -2,14 +2,14 @@ import assert from "node:assert";
 import { readFile } from "node:fs/promises";
 import type { CfWorkerInit } from "../../deployment-bundle/worker";
 import type {
-    AsyncHook,
-    Binding,
-    File,
-    Hook,
-    HookValues,
-    ServiceFetch,
-    StartDevWorkerInput,
-    StartDevWorkerOptions,
+	AsyncHook,
+	Binding,
+	File,
+	Hook,
+	HookValues,
+	ServiceFetch,
+	StartDevWorkerInput,
+	StartDevWorkerOptions,
 } from "./types";
 
 export type MaybePromise<T> = T | Promise<T>;
