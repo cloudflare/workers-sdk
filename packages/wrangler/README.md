@@ -6,9 +6,15 @@
 <a href="https://discord.gg/CloudflareDev"><img alt="Discord" src="https://img.shields.io/discord/595317990191398933?color=%23F48120&style=flat-square"></a>
 </section>
 
+`wrangler` is a command line tool for building [Cloudflare Workers](https://workers.cloudflare.com/).
+
+> [!NOTE]
+>
 > This package is for wrangler v2.x, released first in May 2022. If you're looking for v1.x of the `@cloudflare/wrangler` package, visit https://www.npmjs.com/package/@cloudflare/wrangler / https://github.com/cloudflare/wrangler-legacy.
 
-`wrangler` is a command line tool for building [Cloudflare Workers](https://workers.cloudflare.com/).
+> [!WARNING]
+>
+> Wrangler v2 is **only receiving critical security updates.** We recommend you [migrate to Wrangler v3](https://developers.cloudflare.com/workers/wrangler/migration/update-v2-to-v3/) if you can.
 
 ## Quick Start
 
