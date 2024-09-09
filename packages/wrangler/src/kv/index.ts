@@ -36,17 +36,29 @@ import type { KeyValue, NamespaceKeyInfo } from "./helpers";
 defineAlias({
 	command: "wrangler kv:key",
 	aliasOf: "wrangler kv key",
-	metadata: { deprecated: true },
+	metadata: {
+		deprecated: true,
+		deprecatedMessage:
+			"The `wrangler kv:key` command is deprecated and will be removed in a future major version. Please use `wrangler kv key` instead which behaves the same.",
+	},
 });
 defineAlias({
 	command: "wrangler kv:namespace",
 	aliasOf: "wrangler kv namespace",
-	metadata: { deprecated: true },
+	metadata: {
+		deprecated: true,
+		deprecatedMessage:
+			"The `wrangler kv:namespace` command is deprecated and will be removed in a future major version. Please use `wrangler kv namespace` instead which behaves the same.",
+	},
 });
 defineAlias({
 	command: "wrangler kv:bulk",
 	aliasOf: "wrangler kv bulk",
-	metadata: { deprecated: true },
+	metadata: {
+		deprecated: true,
+		deprecatedMessage:
+			"The `wrangler kv:bulk` command is deprecated and will be removed in a future major version. Please use `wrangler kv bulk` instead which behaves the same.",
+	},
 });
 
 defineNamespace({
