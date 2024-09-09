@@ -1,11 +1,11 @@
 import assert from "node:assert";
 import fs from "node:fs";
-import { createRequire } from "node:module";
 import platformPath from "node:path";
 import posixPath from "node:path/posix";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import util from "node:util";
 import * as cjsModuleLexer from "cjs-module-lexer";
+import enhancedResolve from "enhanced-resolve";
 import { buildSync } from "esbuild";
 import { ModuleRuleTypeSchema, Response } from "miniflare";
 import { isFileNotFoundError } from "./helpers";
@@ -28,7 +28,6 @@ export function ensurePosixLikePath(filePath: string) {
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = platformPath.dirname(__filename);
-const require = createRequire(__filename);
 
 const distPath = ensurePosixLikePath(platformPath.resolve(__dirname, ".."));
 const libPath = posixPath.join(distPath, "worker", "lib");
@@ -270,27 +269,42 @@ function getApproximateSpecifier(target: string, referrerDir: string): string {
 	return posixPath.relative(referrerDir, target);
 }
 
+const cjsResolver = enhancedResolve.ResolverFactory.createResolver({
+	useSyncFileSystemCalls: true,
+	fileSystem: new enhancedResolve.CachedInputFileSystem(fs, 4000),
+	extensions: [".cjs", ".js"],
+	conditionNames: ["require"],
+});
+
 async function viteResolve(
 	vite: ViteDevServer,
 	specifier: string,
 	referrer: string,
 	isRequire: boolean
 ): Promise<string> {
+	if (isRequire) {
+		try {
+			// we use enhancedResolve to resolve require/cjs modules
+			const resolved = cjsResolver.resolveSync(
+				{},
+				platformPath.dirname(referrer),
+				specifier
+			);
+
+			if (resolved) {
+				return resolved;
+			}
+		} catch {}
+	}
+
+	// we repurpose pluginContainer.resolveId for the esm module resolution
+	// when bumping to vite 6 we should instead use the createIdResolver method instead
+	// (which we can use for both cjs and esm)
 	const resolved = await vite.pluginContainer.resolveId(specifier, referrer, {
 		ssr: true,
-		// https://github.com/vitejs/vite/blob/v5.1.4/packages/vite/src/node/plugins/resolve.ts#L178-L179
-		custom: { "node-resolve": { isRequire } },
 	});
+
 	if (resolved === null) {
-		// Vite's resolution algorithm doesn't apply Node resolution to specifiers
-		// starting with a dot. Unfortunately, the `@prisma/client` package includes
-		// `require(".prisma/client/wasm")` which needs to resolve to something in
-		// `node_modules/.prisma/client`. Since Prisma officially supports Workers,
-		// it's quite likely users will want to use it with the Vitest pool. To fix
-		// this, we fall back to Node's resolution algorithm in this case.
-		if (isRequire && specifier[0] === ".") {
-			return require.resolve(specifier, { paths: [referrer] });
-		}
 		throw new Error("Not found");
 	}
 	// Handle case where `package.json` `browser` field stubs out built-in with an
