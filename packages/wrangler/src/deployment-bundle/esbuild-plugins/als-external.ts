@@ -6,7 +6,7 @@ import type { Plugin } from "esbuild";
 export const asyncLocalStoragePlugin: Plugin = {
 	name: "Mark async local storage imports as external plugin",
 	setup(pluginBuild) {
-		pluginBuild.onResolve({ filter: /^node:async_hooks/ }, () => {
+		pluginBuild.onResolve({ filter: /^node:async_hooks(\/|$)/ }, () => {
 			return { external: true };
 		});
 	},

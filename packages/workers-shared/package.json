@@ -33,7 +33,7 @@
 		"clean": "rimraf dist",
 		"dev": "pnpm run clean && concurrently -n bundle:asset-worker,bundle:router-worker -c blue,magenta \"pnpm run bundle:asset-worker --watch\" \"pnpm run bundle:router-worker --watch\"",
 		"test": "vitest",
-		"test:ci": "pnpm run test"
+		"test:ci": "pnpm run test run"
 	},
 	"devDependencies": {
 		"@cloudflare/eslint-config-worker": "workspace:*",
