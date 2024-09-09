@@ -93,11 +93,11 @@ export async function CreateHandler(
 		config,
 		apiCreds,
 		accountId,
-		`${bucket}`,
-		`${queue}`,
+		bucket,
+		queue,
 		eventTypes as R2EventType[],
-		`${prefix}`,
-		`${suffix}`
+		prefix,
+		suffix
 	);
 	logger.log("Configuration created successfully!");
 }
@@ -116,6 +116,12 @@ export function DeleteOptions(yargs: CommonYargsArgv) {
 			demandOption: true,
 			requiresArg: true,
 			type: "string",
+		})
+		.option("rule", {
+			describe:
+				"The id of the rule to delete. If no rule is specified, all rules for the bucket/queue configuration will be deleted.",
+			requiresArg: false,
+			type: "string",
 		});
 }
 
@@ -126,13 +132,14 @@ export async function DeleteHandler(
 	const config = readConfig(args.config, args);
 	const accountId = await requireAuth(config);
 	const apiCreds = requireApiToken();
-	const { bucket, queue } = args;
+	const { bucket, queue, rule } = args;
 	await deleteEventNotificationConfig(
 		config,
 		apiCreds,
 		accountId,
-		`${bucket}`,
-		`${queue}`
+		bucket,
+		queue,
+		rule
 	);
 	logger.log("Configuration deleted successfully!");
 }
