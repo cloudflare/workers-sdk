@@ -75,7 +75,9 @@ export function wrapCommandDefinition(
 		handler = async (args) => {
 			// eslint-disable-next-line no-useless-catch
 			try {
-				await printWranglerBanner();
+				if (def.behaviour?.printBanner !== false) {
+					await printWranglerBanner();
+				}
 
 				if (deprecatedMessage) {
 					logger.warn(deprecatedMessage);
