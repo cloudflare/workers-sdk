@@ -12,6 +12,7 @@ import {
 } from "./build-failures";
 import { dedupeModulesByName } from "./dedupe-modules";
 import { getEntryPointFromMetafile } from "./entry-point-from-metafile";
+import { asyncLocalStoragePlugin } from "./esbuild-plugins/als-external";
 import { cloudflareInternalPlugin } from "./esbuild-plugins/cloudflare-internal";
 import { configProviderPlugin } from "./esbuild-plugins/config-provider";
 import { nodejsHybridPlugin } from "./esbuild-plugins/hybrid-nodejs-compat";
@@ -369,6 +370,7 @@ export async function bundleWorker(
 		plugins: [
 			aliasPlugin,
 			moduleCollector.plugin,
+			...(nodejsCompatMode === "als" ? [asyncLocalStoragePlugin] : []),
 			...(nodejsCompatMode === "legacy"
 				? [
 						NodeGlobalsPolyfills({ buffer: true }),
