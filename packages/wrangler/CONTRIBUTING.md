@@ -14,7 +14,7 @@
 1. define the command with the util defineCommand
 
 ```ts
-import { defineCommand } from "./util";
+import { defineCommand, defineNamespace } from "./util";
 
 // Namespaces are the prefix before the subcommand
 // eg "wrangler kv" in "wrangler kv put"
@@ -29,9 +29,9 @@ defineNamespace({
 // Every level of namespaces must be defined
 // eg "wrangler kv key" in "wrangler kv key put"
 defineNamespace({
-	command: "wrangler kv",
+	command: "wrangler kv key",
 	metadata: {
-		description: "Commands for interacting with Workers KV",
+		description: "Commands for interacting with Workers KV data",
 		status: "stable",
 	},
 });
