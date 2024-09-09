@@ -107,7 +107,7 @@ describe("getPlatformProxy()", () => {
 		});
 
 		it.skipIf(
-			// in c3 this test fails for windows because of ECONNRESET issues
+			// in CI this test fails for windows because of ECONNRESET issues
 			process.platform === "win32"
 		)(
 			"can connect to a TCP socket via the hyperdrive connect method",
