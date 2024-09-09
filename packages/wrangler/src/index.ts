@@ -36,7 +36,6 @@ import { workerNamespaceCommands } from "./dispatch-namespace";
 import { docsHandler, docsOptions } from "./docs";
 import { JsonFriendlyFatalError, UserError } from "./errors";
 import { generateHandler, generateOptions } from "./generate";
-import { hyperdrive } from "./hyperdrive/index";
 import { initHandler, initOptions } from "./init";
 import "./commands"; // This imports all command definitions as side-effect
 import { logBuildFailure, logger, LOGGER_LEVELS } from "./logger";
@@ -542,13 +541,7 @@ export function createCLIParser(argv: string[]) {
 	);
 
 	// hyperdrive
-	wrangler.command(
-		"hyperdrive",
-		"🚀 Manage Hyperdrive databases",
-		(hyperdriveYargs) => {
-			return hyperdrive(hyperdriveYargs.command(subHelp));
-		}
-	);
+	register.registerNamespace("hyperdrive");
 
 	// pages
 	wrangler.command("pages", "⚡️ Configure Cloudflare Pages", (pagesYargs) => {
