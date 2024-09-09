@@ -5,7 +5,6 @@ import chalk from "chalk";
 import { ProxyAgent, setGlobalDispatcher } from "undici";
 import makeCLI from "yargs";
 import { version as wranglerVersion } from "../package.json";
-import { ai } from "./ai";
 import { cloudchamber } from "./cloudchamber";
 import { loadDotEnv } from "./config";
 import { createCommandRegister } from "./core/register-commands";
@@ -593,9 +592,7 @@ export function createCLIParser(argv: string[]) {
 	);
 
 	// ai
-	wrangler.command("ai", "🤖 Manage AI models\n", (aiYargs) => {
-		return ai(aiYargs.command(subHelp));
-	});
+	register.registerNamespace("ai");
 
 	/******************** CMD GROUP ***********************/
 	// login
