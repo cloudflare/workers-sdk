@@ -156,6 +156,7 @@ defineCommand({
 
 	args: {},
 
+	behaviour: { printBanner: false },
 	async handler(args) {
 		const config = readConfig(args.config, args);
 
@@ -413,6 +414,7 @@ defineCommand({
 		demandOneOfOption("binding", "namespace-id")(args);
 	},
 
+	behaviour: { printBanner: false },
 	async handler({ prefix, ...args }) {
 		// TODO: support for limit+cursor (pagination)
 		const config = readConfig(args.config, args);
@@ -494,6 +496,7 @@ defineCommand({
 		demandOneOfOption("binding", "namespace-id")(args);
 	},
 
+	behaviour: { printBanner: false },
 	async handler({ key, ...args }) {
 		const config = readConfig(args.config, args);
 		const namespaceId = getKVNamespaceId(args, config);
