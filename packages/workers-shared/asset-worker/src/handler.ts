@@ -65,7 +65,7 @@ type Intent =
 	| { asset: null; redirect: string }
 	| null;
 
-const getIntent = async (
+export const getIntent = async (
 	pathname: string,
 	configuration: Configuration,
 	exists: ExistsMethod,

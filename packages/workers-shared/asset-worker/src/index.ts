@@ -1,7 +1,7 @@
 import { WorkerEntrypoint } from "cloudflare:workers";
 import { AssetsManifest } from "./assets-manifest";
 import { applyConfigurationDefaults } from "./configuration";
-import { handleRequest } from "./handler";
+import { getIntent, handleRequest } from "./handler";
 import { InternalServerErrorResponse } from "./responses";
 import { getAssetWithMetadataFromKV } from "./utils/kv";
 import type { Configuration } from "./configuration";
@@ -19,6 +19,7 @@ type Env = {
 };
 
 export type FetchMethod = (request: Request) => Promise<Response>;
+export type UnstableCanFetchMethod = (request: Request) => Promise<boolean>;
 export type GetByETagMethod = (
 	eTag: string
 ) => Promise<{ readableStream: ReadableStream; contentType: string }>;
@@ -39,6 +40,22 @@ export default class extends WorkerEntrypoint<Env> {
 		} catch (err) {
 			return new InternalServerErrorResponse(err as Error);
 		}
+	}
+
+	async unstable_canFetch(...[request]: Parameters<UnstableCanFetchMethod>) {
+		const url = new URL(request.url);
+		const intent = await getIntent(
+			url.pathname,
+			{
+				...applyConfigurationDefaults(this.env.CONFIG),
+				notFoundHandling: "none",
+			},
+			this.exists.bind(this)
+		);
+		if (intent === null) {
+			return false;
+		}
+		return true;
 	}
 
 	async getByETag(
