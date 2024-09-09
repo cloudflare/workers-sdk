@@ -364,6 +364,9 @@ export async function convertBindingsToCfWorkerInitBindings(
 		} else if (binding.type === "logfwdr") {
 			bindings.logfwdr ??= { bindings: [] };
 			bindings.logfwdr.bindings.push({ ...binding, name: name });
+		} else if (binding.type === "pipeline") {
+			bindings.pipelines ??= [];
+			bindings.pipelines.push({ ...binding, binding: name });
 		} else if (isUnsafeBindingType(binding.type)) {
 			bindings.unsafe ??= {
 				bindings: [],
