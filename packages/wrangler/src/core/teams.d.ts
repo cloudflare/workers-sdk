@@ -11,7 +11,7 @@ export type Teams =
 	| "Product: R2"
 	| "Product: D1"
 	| "Product: Queues"
-	| "Produce: AI"
+	| "Product: AI"
 	| "Product: Hyperdrive"
 	| "Product: Vectorize"
 	| "Product: Cloudchamber";

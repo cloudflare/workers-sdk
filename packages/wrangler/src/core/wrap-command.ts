@@ -79,6 +79,7 @@ export function wrapCommandDefinition(
 					await printWranglerBanner();
 				}
 
+				// TODO: log deprecation/status message of parent namespace(s)
 				if (deprecatedMessage) {
 					logger.warn(deprecatedMessage);
 				}

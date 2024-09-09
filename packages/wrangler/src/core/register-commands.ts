@@ -19,7 +19,7 @@ export function createCommandRegister(
 	return {
 		registerAll() {
 			for (const [segment, node] of tree.entries()) {
-				yargs = walkTreeAndRegister(segment, node, yargs, subHelp);
+				walkTreeAndRegister(segment, node, yargs, subHelp);
 				tree.delete(segment);
 			}
 		},
@@ -33,7 +33,7 @@ export function createCommandRegister(
 			}
 
 			tree.delete(namespace);
-			return walkTreeAndRegister(namespace, node, yargs, subHelp);
+			walkTreeAndRegister(namespace, node, yargs, subHelp);
 		},
 	};
 }
