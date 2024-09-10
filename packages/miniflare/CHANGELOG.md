@@ -1,5 +1,17 @@
 # miniflare
 
+## 3.20240821.2
+
+### Patch Changes
+
+- [#6627](https://github.com/cloudflare/workers-sdk/pull/6627) [`5936282`](https://github.com/cloudflare/workers-sdk/commit/5936282bfbda848b465396a70f6334988d1a57a0) Thanks [@GregBrimble](https://github.com/GregBrimble)! - fix: Fixes max asset count error message to properly report count of assets
+
+- [#6612](https://github.com/cloudflare/workers-sdk/pull/6612) [`6471090`](https://github.com/cloudflare/workers-sdk/commit/64710904ad4055054bea09ebb23ededab140aa79) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - fix: add hyperdrive bindings support in `getBindings`
+
+  Note: the returned binding values are no-op/passthrough that can be used inside node.js, meaning
+  that besides direct connections via the `connect` methods, all the other values point to the
+  same db connection specified in the user configuration
+
 ## 3.20240821.1
 
 ### Patch Changes
