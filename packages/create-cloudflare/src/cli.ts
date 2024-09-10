@@ -2,7 +2,14 @@
 import { mkdirSync } from "fs";
 import { dirname } from "path";
 import { chdir } from "process";
-import { crash, endSection, logRaw, startSection } from "@cloudflare/cli";
+import {
+	cancel,
+	endSection,
+	error,
+	logRaw,
+	startSection,
+} from "@cloudflare/cli";
+import { CancelError } from "@cloudflare/cli/error";
 import { isInteractive } from "@cloudflare/cli/interactive";
 import { cliDefinition, parseArgs } from "helpers/args";
 import { isUpdateAvailable } from "helpers/cli";
@@ -103,7 +110,7 @@ export const setupProjectDirectory = (ctx: C3Context) => {
 	const path = ctx.project.path;
 	const err = validateProjectDirectory(path, ctx.args);
 	if (err) {
-		crash(err);
+		throw new Error(err);
 	}
 
 	const directory = dirname(path);
@@ -175,4 +182,11 @@ const printBanner = () => {
 	startSection(`Create an application with Cloudflare`, "Step 1 of 3");
 };
 
-main(process.argv).catch((e) => crash(e));
+main(process.argv)
+	.catch((e) => {
+		if (e instanceof CancelError) {
+			cancel(e.message);
+		} else {
+			error(e);
+		}
+	});

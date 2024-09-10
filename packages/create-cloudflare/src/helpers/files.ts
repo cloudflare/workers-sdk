@@ -1,6 +1,5 @@
 import fs, { existsSync, statSync } from "fs";
 import { join } from "path";
-import { crash } from "@cloudflare/cli";
 import TOML from "@iarna/toml";
 import type { C3Context } from "types";
 
@@ -8,7 +7,7 @@ export const copyFile = (path: string, dest: string) => {
 	try {
 		fs.copyFileSync(path, dest);
 	} catch (error) {
-		crash(error as string);
+		throw new Error(error as string);
 	}
 };
 
@@ -16,7 +15,7 @@ export const writeFile = (path: string, content: string) => {
 	try {
 		fs.writeFileSync(path, content);
 	} catch (error) {
-		crash(error as string);
+		throw new Error(error as string);
 	}
 };
 
@@ -24,7 +23,7 @@ export const appendFile = (path: string, content: string) => {
 	try {
 		fs.appendFileSync(path, content);
 	} catch (error) {
-		crash(error as string);
+		throw new Error(error as string);
 	}
 };
 
@@ -32,7 +31,7 @@ export const readFile = (path: string) => {
 	try {
 		return fs.readFileSync(path, "utf-8");
 	} catch (error) {
-		return crash(error as string);
+		throw new Error(error as string);
 	}
 };
 
@@ -52,7 +51,7 @@ export const directoryExists = (path: string): boolean => {
 		if ((error as { code: string }).code === "ENOENT") {
 			return false;
 		}
-		return crash(error as string);
+		throw new Error(error as string);
 	}
 };
 
