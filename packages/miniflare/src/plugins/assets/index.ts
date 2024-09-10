@@ -10,7 +10,7 @@ import { z } from "zod";
 import { Service } from "../../runtime";
 import { SharedBindings } from "../../workers";
 import { getUserServiceName } from "../core";
-import { kProxyNodeBinding, Plugin } from "../shared";
+import { Plugin, ProxyNodeBinding } from "../shared";
 import {
 	ASSETS_KV_SERVICE_NAME,
 	ASSETS_PLUGIN_NAME,
@@ -39,7 +39,7 @@ export const ASSETS_PLUGIN: Plugin<typeof AssetsOptionsSchema> = {
 			return {};
 		}
 		return {
-			[options.assets.bindingName]: kProxyNodeBinding,
+			[options.assets.bindingName]: new ProxyNodeBinding(),
 		};
 	},
 

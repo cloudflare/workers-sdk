@@ -15,9 +15,9 @@ import {
 import { getUserServiceName } from "../core";
 import {
 	getMiniflareObjectBindings,
-	kProxyNodeBinding,
 	objectEntryWorker,
 	Plugin,
+	ProxyNodeBinding,
 	SERVICE_LOOPBACK,
 } from "../shared";
 
@@ -53,7 +53,9 @@ export const QUEUES_PLUGIN: Plugin<typeof QueuesOptionsSchema> = {
 	},
 	getNodeBindings(options) {
 		const queues = bindingKeys(options.queueProducers);
-		return Object.fromEntries(queues.map((name) => [name, kProxyNodeBinding]));
+		return Object.fromEntries(
+			queues.map((name) => [name, new ProxyNodeBinding()])
+		);
 	},
 	async getServices({
 		options,

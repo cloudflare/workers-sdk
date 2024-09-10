@@ -10,13 +10,13 @@ import { SharedBindings } from "../../workers";
 import {
 	getMiniflareObjectBindings,
 	getPersistPath,
-	kProxyNodeBinding,
 	migrateDatabase,
 	namespaceEntries,
 	namespaceKeys,
 	objectEntryWorker,
 	PersistenceSchema,
 	Plugin,
+	ProxyNodeBinding,
 	SERVICE_LOOPBACK,
 } from "../shared";
 
@@ -69,7 +69,7 @@ export const D1_PLUGIN: Plugin<
 	getNodeBindings(options) {
 		const databases = namespaceKeys(options.d1Databases);
 		return Object.fromEntries(
-			databases.map((name) => [name, kProxyNodeBinding])
+			databases.map((name) => [name, new ProxyNodeBinding()])
 		);
 	},
 	async getServices({

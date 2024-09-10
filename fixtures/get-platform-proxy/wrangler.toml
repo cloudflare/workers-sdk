@@ -27,6 +27,11 @@ bindings = [
   { name = "MY_DO_B", script_name = "do-worker-b", class_name = "DurableObjectClass" }
 ]
 
+[[hyperdrive]]
+binding = "MY_HYPERDRIVE"
+id = "000000000000000000000000000000000"
+localConnectionString = "postgres://user:pass@127.0.0.1:1234/db"
+
 [[d1_databases]]
 binding = "MY_D1"
 database_name = "test-db"

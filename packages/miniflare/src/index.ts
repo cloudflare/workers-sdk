@@ -39,13 +39,13 @@ import {
 	getDirectSocketName,
 	getGlobalServices,
 	HOST_CAPNP_CONNECT,
-	kProxyNodeBinding,
 	KV_PLUGIN_NAME,
 	normaliseDurableObject,
 	PLUGIN_ENTRIES,
 	Plugins,
 	PluginServicesOptions,
 	ProxyClient,
+	ProxyNodeBinding,
 	QueueConsumers,
 	QueueProducers,
 	QUEUES_PLUGIN_NAME,
@@ -1668,13 +1668,16 @@ export class Miniflare {
 			//  missing in other plugins' options.
 			const pluginBindings = await plugin.getNodeBindings(workerOpts[key]);
 			for (const [name, binding] of Object.entries(pluginBindings)) {
-				if (binding === kProxyNodeBinding) {
+				if (binding instanceof ProxyNodeBinding) {
 					const proxyBindingName = getProxyBindingName(key, workerName, name);
-					const proxy = proxyClient.env[proxyBindingName];
+					let proxy = proxyClient.env[proxyBindingName];
 					assert(
 						proxy !== undefined,
 						`Expected ${proxyBindingName} to be bound`
 					);
+					if (binding.proxyOverrideHandler) {
+						proxy = new Proxy(proxy, binding.proxyOverrideHandler);
+					}
 					bindings[name] = proxy;
 				} else {
 					bindings[name] = binding;
