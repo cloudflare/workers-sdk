@@ -282,6 +282,9 @@ export const createContext = async (
 	args: Partial<C3Args>,
 	prevArgs?: Partial<C3Args>,
 ): Promise<C3Context> => {
+	// Derive all correlated arguments first so we can skip some prompts
+	deriveCorrelatedArgs(args);
+
 	// Allows the users to go back to the previous step
 	// By moving the cursor up to a certain line and clearing the screen
 	const goBack = async (from: "type" | "framework" | "lang") => {
