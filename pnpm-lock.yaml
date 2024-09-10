@@ -126,6 +126,27 @@ importers:
         specifier: workspace:*
         version: link:../../packages/wrangler
 
+  fixtures/asset-config:
+    devDependencies:
+      '@cloudflare/vitest-pool-workers':
+        specifier: workspace:*
+        version: link:../../packages/vitest-pool-workers
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:*
+        version: link:../../packages/workers-tsconfig
+      '@cloudflare/workers-types':
+        specifier: ^4.20240821.1
+        version: 4.20240821.1
+      undici:
+        specifier: ^5.28.4
+        version: 5.28.4
+      vitest:
+        specifier: 1.5.0
+        version: 1.5.0(@types/node@20.12.12)(@vitest/ui@1.6.0(vitest@1.6.0))
+      wrangler:
+        specifier: workspace:*
+        version: link:../../packages/wrangler
+
   fixtures/d1-worker-app:
     devDependencies:
       wrangler:
@@ -1543,6 +1564,10 @@ importers:
         version: link:../wrangler
 
   packages/workers-shared:
+    dependencies:
+      zod:
+        specifier: ^3.22.3
+        version: 3.22.3
     devDependencies:
       '@cloudflare/eslint-config-worker':
         specifier: workspace:*

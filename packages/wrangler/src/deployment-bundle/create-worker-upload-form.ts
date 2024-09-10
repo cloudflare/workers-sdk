@@ -140,7 +140,18 @@ export type WorkerMetadataPut = {
 	tail_consumers?: CfTailConsumer[];
 	limits?: CfUserLimits;
 	// experimental assets (EWC will expect 'assets')
-	assets?: string;
+	assets?: {
+		jwt: string;
+		config?: {
+			html_handling?:
+				| "auto-trailing-slash"
+				| "force-trailing-slash"
+				| "drop-trailing-slash"
+				| "none";
+			not_found_handling?: "single-page-application" | "404-page" | "none";
+		};
+	};
+
 	// Allow unsafe.metadata to add arbitrary properties at runtime
 	[key: string]: unknown;
 };
@@ -176,11 +187,24 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 		experimental_assets,
 	} = worker;
 
+	const assetConfig = {
+		html_handling: experimental_assets?.assetConfig?.htmlHandling,
+		not_found_handling: experimental_assets?.assetConfig?.notFoundHandling,
+	};
+
+	// TODO bugbash: allow adding compat dates etc. if assets only
 	// short circuit if static assets upload only
 	if (experimental_assets && !experimental_assets.routingConfig.hasUserWorker) {
 		formData.set(
 			"metadata",
-			JSON.stringify({ assets: experimental_assets.jwt })
+			JSON.stringify({
+				assets: {
+					jwt: experimental_assets.jwt,
+					...Object.fromEntries(
+						Object.entries(assetConfig).filter(([k, v]) => v !== undefined)
+					),
+				},
+			})
 		);
 		return formData;
 	}
@@ -565,7 +589,14 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 		...(tail_consumers && { tail_consumers }),
 		...(limits && { limits }),
 		...(annotations && { annotations }),
-		...(experimental_assets && { assets: experimental_assets.jwt }),
+		...(experimental_assets && {
+			assets: {
+				jwt: experimental_assets.jwt,
+				...Object.fromEntries(
+					Object.entries(assetConfig).filter(([k, v]) => v !== undefined)
+				),
+			},
+		}),
 	};
 
 	if (bindings.unsafe?.metadata !== undefined) {
