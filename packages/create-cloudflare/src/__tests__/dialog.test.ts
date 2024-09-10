@@ -6,14 +6,28 @@ import type { C3Context } from "types";
 describe("dialog helpers", () => {
 	const std = collectCLIOutput();
 
-	test("printWelcomeMessage", () => {
-		printWelcomeMessage("0.0.0");
+	test("printWelcomeMessage with telemetry disabled", () => {
+		printWelcomeMessage("0.0.0", false);
 
 		expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`
 			" ╭──────────────────────────────────────────────────────────────╮
 			 │ 👋 Welcome to create-cloudflare v0.0.0!                      │
 			 │ 🧡 Let's get started.                                        │
 			 ╰──────────────────────────────────────────────────────────────╯
+			"
+		`);
+	});
+
+	test("printWelcomeMessage with telemetry enabled", () => {
+		printWelcomeMessage("0.0.0", true);
+
+		expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`
+			" ╭───────────────────────────────────────────────────────────────────────────────────────────────────╮
+			 │ 👋 Welcome to create-cloudflare v0.0.0!                                                           │
+			 │ 🧡 Let's get started.                                                                             │
+			 │ 📊 Cloudflare collects telemetry about your usage of Create-Cloudflare to improve the experience. │
+			 │    Read more / opt out at [link to data policy]                                                   │
+			 ╰───────────────────────────────────────────────────────────────────────────────────────────────────╯
 			"
 		`);
 	});

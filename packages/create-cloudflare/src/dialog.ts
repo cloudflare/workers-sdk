@@ -95,11 +95,23 @@ export function createDialog(
 	].join("\n");
 }
 
-export function printWelcomeMessage(version: string) {
-	const dialog = createDialog([
+export function printWelcomeMessage(
+	version: string,
+	telemetryEnabled: boolean,
+) {
+	const lines = [
 		`👋 Welcome to create-cloudflare v${version}!`,
 		`🧡 Let's get started.`,
-	]);
+	];
+
+	if (telemetryEnabled) {
+		lines.push(
+			`📊 Cloudflare collects telemetry about your usage of Create-Cloudflare to improve the experience.`,
+			`   Read more / opt out at [link to data policy]`,
+		);
+	}
+
+	const dialog = createDialog(lines);
 
 	logRaw(dialog);
 }

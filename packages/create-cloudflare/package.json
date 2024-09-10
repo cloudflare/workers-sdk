@@ -84,6 +84,7 @@
 		"which-pm-runs": "^1.1.0",
 		"wrangler": "workspace:*",
 		"wrap-ansi": "^9.0.0",
+		"xdg-app-paths": "^8.3.0",
 		"yargs": "^17.7.2"
 	},
 	"engines": {
