@@ -1,20 +1,22 @@
-import { withConfig } from "../config";
+import { defineCommand, SharedArgs } from "../core";
 import { logger } from "../logger";
 import { requireAuth } from "../user";
-import { asJson } from "../yargs-types";
 import { listCatalogEntries, truncateDescription } from "./utils";
-import type {
-	CommonYargsArgv,
-	StrictYargsOptionsToInterface,
-} from "../yargs-types";
 
-export function options(yargs: CommonYargsArgv) {
-	return asJson(yargs);
-}
+defineCommand({
+	command: "wrangler ai models",
 
-type HandlerOptions = StrictYargsOptionsToInterface<typeof options>;
-export const handler = withConfig<HandlerOptions>(
-	async ({ json, config }): Promise<void> => {
+	metadata: {
+		description: "List catalog models",
+		status: "stable",
+		owner: "Product: AI",
+	},
+
+	args: {
+		...SharedArgs.json,
+	},
+
+	async handler({ json }, { config }): Promise<void> {
 		const accountId = await requireAuth(config);
 		const entries = await listCatalogEntries(accountId);
 
@@ -40,5 +42,5 @@ export const handler = withConfig<HandlerOptions>(
 				);
 			}
 		}
-	}
-);
+	},
+});

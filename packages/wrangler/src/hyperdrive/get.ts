@@ -1,24 +1,30 @@
 import { readConfig } from "../config";
+import { defineCommand } from "../core";
 import { logger } from "../logger";
 import { getConfig } from "./client";
-import type {
-	CommonYargsArgv,
-	StrictYargsOptionsToInterface,
-} from "../yargs-types";
 
-export function options(yargs: CommonYargsArgv) {
-	return yargs.positional("id", {
-		type: "string",
-		demandOption: true,
-		description: "The ID of the Hyperdrive config",
-	});
-}
+defineCommand({
+	command: "wrangler hyperdrive get",
 
-export async function handler(
-	args: StrictYargsOptionsToInterface<typeof options>
-) {
-	const config = readConfig(args.config, args);
+	metadata: {
+		description: "Get a Hyperdrive config",
+		status: "stable",
+		owner: "Product: Hyperdrive",
+	},
 
-	const database = await getConfig(config, args.id);
-	logger.log(JSON.stringify(database, null, 2));
-}
+	args: {
+		id: {
+			type: "string",
+			demandOption: true,
+			description: "The ID of the Hyperdrive config",
+		},
+	},
+	positionalArgs: ["id"],
+
+	async handler(args) {
+		const config = readConfig(args.config, args);
+
+		const database = await getConfig(config, args.id);
+		logger.log(JSON.stringify(database, null, 2));
+	},
+});

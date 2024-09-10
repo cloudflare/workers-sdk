@@ -7,96 +7,102 @@ import { fetch } from "undici";
 import { printWranglerBanner } from "..";
 import { fetchResult } from "../cfetch";
 import { readConfig } from "../config";
+import { defineCommand } from "../core";
 import { getLocalPersistencePath } from "../dev/get-local-persistence-path";
 import { UserError } from "../errors";
 import { logger } from "../logger";
 import { APIError } from "../parse";
 import { readableRelative } from "../paths";
 import { requireAuth } from "../user";
-import { Name } from "./options";
+import * as SharedArgs from "./options";
 import { getDatabaseByNameOrBinding, getDatabaseInfoFromConfig } from "./utils";
 import type { Config } from "../config";
-import type {
-	CommonYargsArgv,
-	StrictYargsOptionsToInterface,
-} from "../yargs-types";
 import type { Database, ExportPollingResponse, PollingFailure } from "./types";
 
-export function Options(yargs: CommonYargsArgv) {
-	return (
-		Name(yargs)
-			.option("local", {
-				type: "boolean",
-				describe: "Export from your local DB you use with wrangler dev",
-				conflicts: "remote",
-			})
-			.option("remote", {
-				type: "boolean",
-				describe: "Export from your live D1",
-				conflicts: "local",
-			})
-			.option("no-schema", {
-				type: "boolean",
-				describe: "Only output table contents, not the DB schema",
-				conflicts: "no-data",
-			})
-			.option("no-data", {
-				type: "boolean",
-				describe:
-					"Only output table schema, not the contents of the DBs themselves",
-				conflicts: "no-schema",
-			})
-			// For --no-schema and --no-data to work, we need their positive versions
-			// to be defined. But keep them hidden as they default to true
-			.option("schema", {
-				type: "boolean",
-				hidden: true,
-				default: true,
-			})
-			.option("data", {
-				type: "boolean",
-				hidden: true,
-				default: true,
-			})
-			.option("table", {
-				type: "string",
-				describe: "Specify which tables to include in export",
-			})
-			.option("output", {
-				type: "string",
-				describe: "Which .sql file to output to",
-				demandOption: true,
-			})
-	);
-}
+defineCommand({
+	command: "wrangler d1 export",
 
-type HandlerOptions = StrictYargsOptionsToInterface<typeof Options>;
-export const Handler = async (args: HandlerOptions): Promise<void> => {
-	const { local, remote, name, output, schema, data, table } = args;
-	await printWranglerBanner();
-	const config = readConfig(args.config, args);
+	metadata: {
+		description:
+			"Export the contents or schema of your database as a .sql file",
+		status: "stable",
+		owner: "Product: D1",
+	},
 
-	if (!local && !remote) {
-		throw new UserError(`You must specify either --local or --remote`);
-	}
+	positionalArgs: ["name"],
+	args: {
+		...SharedArgs.Name,
+		local: {
+			type: "boolean",
+			describe: "Export from your local DB you use with wrangler dev",
+			conflicts: "remote",
+		},
+		remote: {
+			type: "boolean",
+			describe: "Export from your live D1",
+			conflicts: "local",
+		},
+		"no-schema": {
+			type: "boolean",
+			describe: "Only output table contents, not the DB schema",
+			conflicts: "no-data",
+		},
+		"no-data": {
+			type: "boolean",
+			describe:
+				"Only output table schema, not the contents of the DBs themselves",
+			conflicts: "no-schema",
+		},
+		// For --no-schema and --no-data to work, we need their positive versions
+		// to be defined. But keep them hidden as they default to true
+		schema: {
+			type: "boolean",
+			hidden: true,
+			default: true,
+		},
+		data: {
+			type: "boolean",
+			hidden: true,
+			default: true,
+		},
+		table: {
+			type: "string",
+			describe: "Specify which tables to include in export",
+		},
+		output: {
+			type: "string",
+			describe: "Which .sql file to output to",
+			demandOption: true,
+		},
+	},
 
-	if (!schema && !data) {
-		throw new UserError(`You cannot specify both --no-schema and --no-data`);
-	}
+	async handler(args) {
+		const { local, remote, name, output, schema, data, table } = args;
+		await printWranglerBanner();
+		const config = readConfig(args.config, args);
 
-	// Allow multiple --table x --table y flags or none
-	const tables: string[] = table
-		? Array.isArray(table)
-			? table
-			: [table]
-		: [];
+		if (!local && !remote) {
+			throw new UserError(`You must specify either --local or --remote`);
+		}
 
-	if (local) {
-		return await exportLocal(config, name, output, tables, !schema, !data);
-	} else {
-		return await exportRemotely(config, name, output, tables, !schema, !data);
-	}
-};
+		if (!schema && !data) {
+			throw new UserError(`You cannot specify both --no-schema and --no-data`);
+		}
+
+		// Allow multiple --table x --table y flags or none
+		const tables: string[] = table
+			? Array.isArray(table)
+				? table
+				: [table]
+			: [];
+
+		if (local) {
+			return await exportLocal(config, name, output, tables, !schema, !data);
+		} else {
+			return await exportRemotely(config, name, output, tables, !schema, !data);
+		}
+	},
+});
 
 async function exportLocal(
 	config: Config,

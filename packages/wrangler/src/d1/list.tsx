@@ -1,27 +1,30 @@
 import Table from "ink-table";
 import { printWranglerBanner } from "..";
 import { fetchResult } from "../cfetch";
-import { withConfig } from "../config";
+import { defineCommand } from "../core";
 import { logger } from "../logger";
 import { requireAuth } from "../user";
 import { renderToString } from "../utils/render";
-import type {
-	CommonYargsArgv,
-	StrictYargsOptionsToInterface,
-} from "../yargs-types";
 import type { Database } from "./types";
 
-export function Options(d1ListYargs: CommonYargsArgv) {
-	return d1ListYargs.option("json", {
-		describe: "return output as clean JSON",
-		type: "boolean",
-		default: false,
-	});
-}
+defineCommand({
+	command: "wrangler d1 list",
 
-type HandlerOptions = StrictYargsOptionsToInterface<typeof Options>;
-export const Handler = withConfig<HandlerOptions>(
-	async ({ json, config }): Promise<void> => {
+	metadata: {
+		description: "List D1 databases",
+		status: "stable",
+		owner: "Product: D1",
+	},
+
+	args: {
+		json: {
+			describe: "return output as clean JSON",
+			type: "boolean",
+			default: false,
+		},
+	},
+
+	async handler({ json }, { config }) {
 		const accountId = await requireAuth(config);
 		const dbs: Array<Database> = await listDatabases(accountId);
 
@@ -31,8 +34,8 @@ export const Handler = withConfig<HandlerOptions>(
 			await printWranglerBanner();
 			logger.log(renderToString(<Table data={dbs}></Table>));
 		}
-	}
-);
+	},
+});
 
 export const listDatabases = async (
 	accountId: string

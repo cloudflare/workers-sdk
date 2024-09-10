@@ -11,6 +11,7 @@ import { fetch } from "undici";
 import { printWranglerBanner } from "../";
 import { fetchResult } from "../cfetch";
 import { readConfig } from "../config";
+import { defineCommand } from "../core";
 import { getLocalPersistencePath } from "../dev/get-local-persistence-path";
 import { confirm } from "../dialogs";
 import { createFatalError, JsonFriendlyFatalError, UserError } from "../errors";
@@ -19,7 +20,7 @@ import { APIError, readFileSync } from "../parse";
 import { readableRelative } from "../paths";
 import { requireAuth } from "../user";
 import { renderToString } from "../utils/render";
-import * as options from "./options";
+import * as SharedArgs from "./options";
 import splitSqlQuery from "./splitter";
 import { getDatabaseByNameOrBinding, getDatabaseInfoFromConfig } from "./utils";
 import type { Config, ConfigFields, DevConfig, Environment } from "../config";
@@ -44,147 +45,155 @@ export type QueryResult = {
 	query?: string;
 };
 
-export function Options(yargs: CommonYargsArgv) {
-	return options
-		.Database(yargs)
-		.option("yes", {
+defineCommand({
+	command: "wrangler d1 execute",
+
+	metadata: {
+		description: "Execute a command or SQL file",
+		status: "stable",
+		owner: "Product: D1",
+	},
+
+	positionalArgs: ["database"],
+	args: {
+		...SharedArgs.Database,
+		yes: {
 			describe: 'Answer "yes" to any prompts',
 			type: "boolean",
 			alias: "y",
-		})
-		.option("local", {
+		},
+		local: {
 			describe:
 				"Execute commands/files against a local DB for use with wrangler dev",
 			type: "boolean",
-		})
-		.option("remote", {
+		},
+		remote: {
 			describe:
 				"Execute commands/files against a remote DB for use with wrangler dev",
 			type: "boolean",
-		})
-		.option("file", {
+		},
+		file: {
 			describe: "A .sql file to ingest",
 			type: "string",
-		})
-		.option("command", {
+		},
+		command: {
 			describe: "A single SQL statement to execute",
 			type: "string",
-		})
-		.option("persist-to", {
+		},
+		"persist-to": {
 			describe: "Specify directory to use for local persistence (for --local)",
 			type: "string",
 			requiresArg: true,
-		})
-		.option("json", {
+		},
+		json: {
 			describe: "Return output as clean JSON",
 			type: "boolean",
 			default: false,
-		})
-		.option("preview", {
+		},
+		preview: {
 			describe: "Execute commands/files against a preview D1 DB",
 			type: "boolean",
 			default: false,
-		})
-		.option("batch-size", {
+		},
+		"batch-size": {
 			describe: "Number of queries to send in a single batch",
 			type: "number",
 			deprecated: true,
 			hidden: true,
-		});
-}
+		},
+	},
 
-type HandlerOptions = StrictYargsOptionsToInterface<typeof Options>;
-
-export const Handler = async (args: HandlerOptions): Promise<void> => {
-	const {
-		local,
-		remote,
-		database,
-		yes,
-		persistTo,
-		file,
-		command,
-		json,
-		preview,
-	} = args;
-	const existingLogLevel = logger.loggerLevel;
-	if (json) {
-		// set loggerLevel to error to avoid readConfig warnings appearing in JSON output
-		logger.loggerLevel = "error";
-	}
-	await printWranglerBanner();
-
-	const config = readConfig(args.config, args);
-
-	if (file && command) {
-		throw createFatalError(
-			`Error: can't provide both --command and --file.`,
-			json
-		);
-	}
-
-	const isInteractive = process.stdout.isTTY;
-	try {
-		const response: QueryResult[] | null = await executeSql({
+	async handler(args) {
+		const {
 			local,
 			remote,
-			config,
-			name: database,
-			shouldPrompt: isInteractive && !yes && !json,
+			database,
+			yes,
 			persistTo,
 			file,
 			command,
 			json,
 			preview,
-		});
+		} = args;
+		const existingLogLevel = logger.loggerLevel;
+		if (json) {
+			// set loggerLevel to error to avoid readConfig warnings appearing in JSON output
+			logger.loggerLevel = "error";
+		}
+		await printWranglerBanner();
 
-		// Early exit if prompt rejected
-		if (!response) {
-			return;
+		const config = readConfig(args.config, args);
+
+		if (file && command) {
+			throw createFatalError(
+				`Error: can't provide both --command and --file.`,
+				json
+			);
 		}
 
-		if (isInteractive && !json) {
-			// Render table if single result
-			logger.log(
-				renderToString(
-					<Static items={response}>
-						{(result) => {
-							// batch results
-							if (!Array.isArray(result)) {
-								const { results, query } = result;
+		const isInteractive = process.stdout.isTTY;
+		try {
+			const response: QueryResult[] | null = await executeSql({
+				local,
+				remote,
+				config,
+				name: database,
+				shouldPrompt: isInteractive && !yes && !json,
+				persistTo,
+				file,
+				command,
+				json,
+				preview,
+			});
 
-								if (Array.isArray(results) && results.length > 0) {
-									const shortQuery = shorten(query, 48);
-									return (
-										<>
-											{shortQuery ? <Text dimColor>{shortQuery}</Text> : null}
-											<Table data={results}></Table>
-										</>
-									);
+			// Early exit if prompt rejected
+			if (!response) {
+				return;
+			}
+
+			if (isInteractive && !json) {
+				// Render table if single result
+				logger.log(
+					renderToString(
+						<Static items={response}>
+							{(result) => {
+								// batch results
+								if (!Array.isArray(result)) {
+									const { results, query } = result;
+
+									if (Array.isArray(results) && results.length > 0) {
+										const shortQuery = shorten(query, 48);
+										return (
+											<>
+												{shortQuery ? <Text dimColor>{shortQuery}</Text> : null}
+												<Table data={results}></Table>
+											</>
+										);
+									}
 								}
-							}
-						}}
-					</Static>
-				)
-			);
-		} else {
-			// set loggerLevel back to what it was before to actually output the JSON in stdout
-			logger.loggerLevel = existingLogLevel;
-			logger.log(JSON.stringify(response, null, 2));
+							}}
+						</Static>
+					)
+				);
+			} else {
+				// set loggerLevel back to what it was before to actually output the JSON in stdout
+				logger.loggerLevel = existingLogLevel;
+				logger.log(JSON.stringify(response, null, 2));
+			}
+		} catch (error) {
+			if (json && error instanceof Error) {
+				logger.loggerLevel = existingLogLevel;
+				const messageToDisplay =
+					error.name === "APIError" ? error : { text: error.message };
+				throw new JsonFriendlyFatalError(
+					JSON.stringify({ error: messageToDisplay }, null, 2)
+				);
+			} else {
+				throw error;
+			}
 		}
-	} catch (error) {
-		if (json && error instanceof Error) {
-			logger.loggerLevel = existingLogLevel;
-			const messageToDisplay =
-				error.name === "APIError" ? error : { text: error.message };
-			throw new JsonFriendlyFatalError(
-				JSON.stringify({ error: messageToDisplay }, null, 2)
-			);
-		} else {
-			throw error;
-		}
-	}
-};
+	},
+});
 
 type ExecuteInput =
 	| { file: string; command: never }

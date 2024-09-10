@@ -1,40 +1,47 @@
-import { pullConsumers } from "./http-pull";
-import { workerConsumers } from "./worker";
-import { handler as addHandler, options as addOptions } from "./worker/add";
-import {
-	handler as removeHandler,
-	options as removeOptions,
-} from "./worker/remove";
-import type { CommonYargsArgv } from "../../../../yargs-types";
+import { defineAlias, defineNamespace } from "../../../../core";
+import "./http-pull/add";
+import "./http-pull/remove";
+import "./worker/add";
+import "./worker/remove";
 
-export function consumers(yargs: CommonYargsArgv) {
-	yargs.command(
-		"add <queue-name> <script-name>",
-		"Add a Queue Worker Consumer",
-		addOptions,
-		addHandler
-	);
+defineNamespace({
+	command: "wrangler queues consumer",
 
-	yargs.command(
-		"remove <queue-name> <script-name>",
-		"Remove a Queue Worker Consumer",
-		removeOptions,
-		removeHandler
-	);
+	metadata: {
+		description: "Configure Queue consumers",
+		status: "stable",
+		owner: "Product: Queues",
+	},
+});
 
-	yargs.command(
-		"http",
-		"Configure Queue HTTP Pull Consumers",
-		async (consumersYargs) => {
-			await pullConsumers(consumersYargs);
-		}
-	);
+defineAlias({
+	command: "wrangler queues consumer add",
+	aliasOf: "wrangler queues consumer worker add",
+	metadata: { hidden: false },
+});
 
-	yargs.command(
-		"worker",
-		"Configure Queue Worker Consumers",
-		async (consumersYargs) => {
-			await workerConsumers(consumersYargs);
-		}
-	);
-}
+defineAlias({
+	command: "wrangler queues consumer remove",
+	aliasOf: "wrangler queues consumer worker remove",
+	metadata: { hidden: false },
+});
+
+defineNamespace({
+	command: "wrangler queues consumer http",
+
+	metadata: {
+		description: "Configure Queue HTTP Pull Consumers",
+		status: "stable",
+		owner: "Product: Queues",
+	},
+});
+
+defineNamespace({
+	command: "wrangler queues consumer worker",
+
+	metadata: {
+		description: "Configure Queue Worker Consumers",
+		status: "stable",
+		owner: "Product: Queues",
+	},
+});

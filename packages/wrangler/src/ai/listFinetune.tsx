@@ -1,21 +1,23 @@
-import { withConfig } from "../config";
+import { defineCommand, SharedArgs } from "../core";
 import { logger } from "../logger";
 import { requireAuth } from "../user";
-import { asJson } from "../yargs-types";
 import { listFinetuneEntries, truncateDescription } from "./utils";
-import type {
-	CommonYargsArgv,
-	StrictYargsOptionsToInterface,
-} from "../yargs-types";
 import type { Finetune } from "./types";
 
-export function options(yargs: CommonYargsArgv) {
-	return asJson(yargs);
-}
+defineCommand({
+	command: "wrangler ai finetune list",
 
-type HandlerOptions = StrictYargsOptionsToInterface<typeof options>;
-export const handler = withConfig<HandlerOptions>(
-	async ({ json, config }): Promise<void> => {
+	metadata: {
+		description: "List catalog models",
+		status: "stable",
+		owner: "Product: AI",
+	},
+
+	args: {
+		...SharedArgs.json,
+	},
+
+	async handler({ json }, { config }): Promise<void> {
 		const accountId = await requireAuth(config);
 		const entries = await listFinetuneEntries(accountId);
 
@@ -37,5 +39,5 @@ export const handler = withConfig<HandlerOptions>(
 				);
 			}
 		}
-	}
-);
+	},
+});

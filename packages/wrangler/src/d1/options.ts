@@ -1,17 +1,15 @@
-import type { CommonYargsArgv } from "../yargs-types";
-
-export function Name(yargs: CommonYargsArgv) {
-	return yargs.positional("name", {
+export const Name = {
+	name: {
 		describe: "The name or binding of the DB",
 		type: "string",
 		demandOption: true,
-	});
-}
+	},
+} as const;
 
-export function Database(yargs: CommonYargsArgv) {
-	return yargs.positional("database", {
+export const Database = {
+	database: {
 		describe: "The name or binding of the DB",
 		type: "string",
 		demandOption: true,
-	});
-}
+	},
+} as const;

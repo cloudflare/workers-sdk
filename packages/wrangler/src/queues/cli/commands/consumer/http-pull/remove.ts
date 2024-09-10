@@ -1,26 +1,35 @@
 import { readConfig } from "../../../../../config";
+import { defineCommand } from "../../../../../core";
 import { logger } from "../../../../../logger";
 import { deletePullConsumer } from "../../../../client";
-import type {
-	CommonYargsArgv,
-	StrictYargsOptionsToInterface,
-} from "../../../../../yargs-types";
+import { handleUnauthorizedError } from "../../../../utils";
 
-export function options(yargs: CommonYargsArgv) {
-	return yargs.positional("queue-name", {
-		type: "string",
-		demandOption: true,
-		description: "Name of the queue for the consumer",
-	});
-}
+defineCommand({
+	command: "wrangler queues consumer http remove",
 
-export async function handler(
-	args: StrictYargsOptionsToInterface<typeof options>
-) {
-	const config = readConfig(args.config, args);
+	metadata: {
+		description: "Remove a Queue HTTP Pull Consumer",
+		status: "stable",
+		owner: "Product: Queues",
+	},
 
-	logger.log(`Removing consumer from queue ${args.queueName}.`);
-	await deletePullConsumer(config, args.queueName);
+	args: {
+		"queue-name": {
+			type: "string",
+			demandOption: true,
+			description: "Name of the queue for the consumer",
+		},
+	},
+	positionalArgs: ["queue-name"],
 
-	logger.log(`Removed consumer from queue ${args.queueName}.`);
-}
+	async handler(args) {
+		const config = readConfig(args.config, args);
+
+		logger.log(`Removing consumer from queue ${args.queueName}.`);
+		await deletePullConsumer(config, args.queueName);
+
+		logger.log(`Removed consumer from queue ${args.queueName}.`);
+	},
+
+	handleError: handleUnauthorizedError,
+});

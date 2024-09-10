@@ -3,8 +3,7 @@ import fs from "node:fs";
 import path from "path";
 import { Box, Text } from "ink";
 import Table from "ink-table";
-import { printWranglerBanner } from "../..";
-import { withConfig } from "../../config";
+import { defineCommand } from "../../core";
 import { confirm } from "../../dialogs";
 import { UserError } from "../../errors";
 import { CI } from "../../is-ci";
@@ -23,31 +22,27 @@ import {
 } from "./helpers";
 import { MigrationOptions } from "./options";
 import type { ParseError } from "../../parse";
-import type {
-	CommonYargsArgv,
-	StrictYargsOptionsToInterface,
-} from "../../yargs-types";
 
-export function ApplyOptions(yargs: CommonYargsArgv) {
-	return MigrationOptions(yargs).option("batch-size", {
-		describe: "Number of queries to send in a single batch",
-		type: "number",
-		deprecated: true,
-	});
-}
+defineCommand({
+	command: "wrangler d1 migrations apply",
 
-type ApplyHandlerOptions = StrictYargsOptionsToInterface<typeof ApplyOptions>;
+	metadata: {
+		description: "Apply D1 migrations",
+		status: "stable",
+		owner: "Product: D1",
+	},
 
-export const ApplyHandler = withConfig<ApplyHandlerOptions>(
-	async ({
-		config,
-		database,
-		local,
-		remote,
-		persistTo,
-		preview,
-	}): Promise<void> => {
-		await printWranglerBanner();
+	positionalArgs: ["database"],
+	args: {
+		...MigrationOptions,
+		"batch-size": {
+			describe: "Number of queries to send in a single batch",
+			type: "number",
+			deprecated: true,
+		},
+	},
+
+	async handler({ database, local, remote, persistTo, preview }, { config }) {
 		const databaseInfo = getDatabaseInfoFromConfig(config, database);
 
 		if (!databaseInfo && remote) {
@@ -231,5 +226,5 @@ Your database may not be available to serve requests during the migration, conti
 				);
 			}
 		}
-	}
-);
+	},
+});

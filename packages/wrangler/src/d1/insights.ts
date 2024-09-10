@@ -1,6 +1,7 @@
 import { printWranglerBanner } from "..";
 import { fetchGraphqlResult } from "../cfetch";
 import { withConfig } from "../config";
+import { defineCommand } from "../core";
 import { logger } from "../logger";
 import { requireAuth } from "../user";
 import { getDatabaseByNameOrBinding, getDatabaseInfoFromId } from "./utils";
@@ -10,103 +11,59 @@ import type {
 } from "../yargs-types";
 import type { D1QueriesGraphQLResponse, Database } from "./types";
 
-export function Options(d1ListYargs: CommonYargsArgv) {
-	return d1ListYargs
-		.positional("name", {
+defineCommand({
+	command: "wrangler d1 insights",
+
+	metadata: {
+		description:
+			"Experimental command. Get information about the queries run on a D1 database.",
+		status: "stable",
+		owner: "Product: D1",
+	},
+
+	positionalArgs: ["name"],
+	args: {
+		name: {
 			describe: "The name of the DB",
 			type: "string",
 			demandOption: true,
-		})
-		.option("timePeriod", {
+		},
+		timePeriod: {
 			describe: "Fetch data from now to the provided time period",
 			default: "1d" as const,
-		})
-		.option("sort-type", {
+		},
+		"sort-type": {
 			choices: ["sum", "avg"] as const,
 			describe: "Choose the operation you want to sort insights by",
 			default: "sum" as const,
-		})
-		.option("sort-by", {
+		},
+		"sort-by": {
 			choices: ["time", "reads", "writes", "count"] as const,
 			describe: "Choose the field you want to sort insights by",
 			default: "time" as const,
-		})
-		.option("sort-direction", {
+		},
+		"sort-direction": {
 			choices: ["ASC", "DESC"] as const,
 			describe: "Choose a sort direction",
 			default: "DESC" as const,
-		})
-		.option("limit", {
+		},
+		limit: {
 			describe: "fetch insights about the first X queries",
 			type: "number",
 			default: 5,
-		})
-		.alias("count", "limit") //--limit used to be --count, we renamed the flags for clarity
-		.option("json", {
+			alias: "count", //--limit used to be --count, we renamed the flags for clarity
+		},
+		json: {
 			describe: "return output as clean JSON",
 			type: "boolean",
 			default: false,
-		});
-}
+		},
+	},
 
-const cliOptionToGraphQLOption = {
-	time: "queryDurationMs",
-	reads: "rowsRead",
-	writes: "rowsWritten",
-	count: "count",
-};
-
-export function getDurationDates(durationString: string) {
-	const endDate = new Date();
-
-	const durationValue = parseInt(durationString.slice(0, -1));
-	const durationUnit = durationString.slice(-1);
-
-	let startDate;
-	switch (durationUnit) {
-		case "d":
-			if (durationValue > 31) {
-				throw new Error("Duration cannot be greater than 31 days");
-			}
-			startDate = new Date(
-				endDate.getTime() - durationValue * 24 * 60 * 60 * 1000
-			);
-			break;
-		case "m":
-			if (durationValue > 31 * 24 * 60) {
-				throw new Error(
-					`Duration cannot be greater than ${31 * 24 * 60} minutes (31 days)`
-				);
-			}
-			startDate = new Date(endDate.getTime() - durationValue * 60 * 1000);
-			break;
-		case "h":
-			if (durationValue > 31 * 24) {
-				throw new Error(
-					`Duration cannot be greater than ${31 * 24} hours (31 days)`
-				);
-			}
-			startDate = new Date(endDate.getTime() - durationValue * 60 * 60 * 1000);
-			break;
-		default:
-			throw new Error("Invalid duration unit");
-	}
-
-	return [startDate.toISOString(), endDate.toISOString()];
-}
-
-type HandlerOptions = StrictYargsOptionsToInterface<typeof Options>;
-export const Handler = withConfig<HandlerOptions>(
-	async ({
-		name,
-		config,
-		json,
-		limit,
-		timePeriod,
-		sortType,
-		sortBy,
-		sortDirection,
-	}): Promise<void> => {
+	async handler(
+		{ name, json, limit, timePeriod, sortType, sortBy, sortDirection },
+		{ config }
+	) {
 		const accountId = await requireAuth(config);
 		const db: Database = await getDatabaseByNameOrBinding(
 			config,
@@ -204,5 +161,51 @@ export const Handler = withConfig<HandlerOptions>(
 			);
 			logger.log(JSON.stringify(output, null, 2));
 		}
+	},
+});
+
+const cliOptionToGraphQLOption = {
+	time: "queryDurationMs",
+	reads: "rowsRead",
+	writes: "rowsWritten",
+	count: "count",
+};
+
+export function getDurationDates(durationString: string) {
+	const endDate = new Date();
+
+	const durationValue = parseInt(durationString.slice(0, -1));
+	const durationUnit = durationString.slice(-1);
+
+	let startDate;
+	switch (durationUnit) {
+		case "d":
+			if (durationValue > 31) {
+				throw new Error("Duration cannot be greater than 31 days");
+			}
+			startDate = new Date(
+				endDate.getTime() - durationValue * 24 * 60 * 60 * 1000
+			);
+			break;
+		case "m":
+			if (durationValue > 31 * 24 * 60) {
+				throw new Error(
+					`Duration cannot be greater than ${31 * 24 * 60} minutes (31 days)`
+				);
+			}
+			startDate = new Date(endDate.getTime() - durationValue * 60 * 1000);
+			break;
+		case "h":
+			if (durationValue > 31 * 24) {
+				throw new Error(
+					`Duration cannot be greater than ${31 * 24} hours (31 days)`
+				);
+			}
+			startDate = new Date(endDate.getTime() - durationValue * 60 * 60 * 1000);
+			break;
+		default:
+			throw new Error("Invalid duration unit");
 	}
-);
+
+	return [startDate.toISOString(), endDate.toISOString()];
+}

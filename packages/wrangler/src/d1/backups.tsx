@@ -3,26 +3,41 @@ import * as path from "path";
 import Table from "ink-table";
 import { fetchResult } from "../cfetch";
 import { performApiFetch } from "../cfetch/internal";
-import { withConfig } from "../config";
+import { defineCommand, defineNamespace } from "../core";
 import { logger } from "../logger";
 import { requireAuth } from "../user";
 import { renderToString } from "../utils/render";
 import { formatBytes, formatTimeAgo } from "./formatTimeAgo";
-import { Name } from "./options";
+import * as SharedArgs from "./options";
 import { getDatabaseByNameOrBinding } from "./utils";
-import type {
-	CommonYargsArgv,
-	StrictYargsOptionsToInterface,
-} from "../yargs-types";
 import type { Backup, Database } from "./types";
 import type { Response } from "undici";
 
-export function ListOptions(yargs: CommonYargsArgv) {
-	return Name(yargs);
-}
-type ListHandlerOptions = StrictYargsOptionsToInterface<typeof ListOptions>;
-export const ListHandler = withConfig<ListHandlerOptions>(
-	async ({ config, name }): Promise<void> => {
+defineNamespace({
+	command: "wrangler d1 backup",
+
+	metadata: {
+		description: "Interact with D1 backups",
+		status: "stable",
+		owner: "Product: D1",
+	},
+});
+
+defineCommand({
+	command: "wrangler d1 backup list",
+
+	metadata: {
+		description: "List your D1 backups",
+		status: "stable",
+		owner: "Product: D1",
+	},
+
+	positionalArgs: ["name"],
+	args: {
+		...SharedArgs.Name,
+	},
+
+	async handler({ name }, { config }) {
 		const accountId = await requireAuth(config);
 
 		const db: Database = await getDatabaseByNameOrBinding(
@@ -40,8 +55,127 @@ export const ListHandler = withConfig<ListHandlerOptions>(
 				></Table>
 			)
 		);
-	}
-);
+	},
+});
+
+defineCommand({
+	command: "wrangler d1 backup create",
+
+	metadata: {
+		description: "Create a new D1 backup",
+		status: "stable",
+		owner: "Product: D1",
+	},
+
+	positionalArgs: ["name"],
+	args: {
+		...SharedArgs.Name,
+	},
+
+	async handler({ name }, { config }) {
+		const accountId = await requireAuth(config);
+
+		const db: Database = await getDatabaseByNameOrBinding(
+			config,
+			accountId,
+			name
+		);
+
+		const backup: Backup = await createBackup(accountId, db.uuid);
+		logger.log(
+			renderToString(
+				<Table
+					data={[backup]}
+					columns={["created_at", "id", "num_tables", "size", "state"]}
+				></Table>
+			)
+		);
+	},
+});
+
+defineCommand({
+	command: "wrangler d1 backup restore",
+
+	metadata: {
+		description: "Restore a DB backup",
+		status: "stable",
+		owner: "Product: D1",
+	},
+
+	positionalArgs: ["name", "backup-id"],
+	args: {
+		...SharedArgs.Name,
+		"backup-id": {
+			describe: "The Backup ID to restore",
+			type: "string",
+			demandOption: true,
+		},
+	},
+
+	async handler({ name, backupId }, { config }) {
+		const accountId = await requireAuth(config);
+
+		const db: Database = await getDatabaseByNameOrBinding(
+			config,
+			accountId,
+			name
+		);
+
+		logger.log(`Restoring ${name} from backup ${backupId}....`);
+		await restoreBackup(accountId, db.uuid, backupId);
+		logger.log(`Done!`);
+	},
+});
+
+defineCommand({
+	command: "wrangler d1 backup download",
+
+	metadata: {
+		description: "Download a DB backup",
+		status: "stable",
+		owner: "Product: D1",
+	},
+
+	positionalArgs: ["name", "backup-id"],
+	args: {
+		...SharedArgs.Name,
+		"backup-id": {
+			describe: "The Backup ID to download",
+			type: "string",
+			demandOption: true,
+		},
+		output: {
+			describe:
+				"The .sqlite3 file to write to (defaults to '<db-name>.<short-backup-id>.sqlite3'",
+			type: "string",
+		},
+	},
+
+	async handler({ name, backupId, output }, { config }) {
+		const accountId = await requireAuth(config);
+
+		const db: Database = await getDatabaseByNameOrBinding(
+			config,
+			accountId,
+			name
+		);
+		const filename =
+			output || path.resolve(`${name}.${backupId.slice(0, 8)}.sqlite3`);
+
+		logger.log(`🌀 Downloading backup ${backupId} from '${name}'`);
+		const response = await getBackupResponse(accountId, db.uuid, backupId);
+		if (!response.ok) {
+			throw new Error(
+				`Failed to download backup ${backupId} from '${name}' - got ${response.status} from the API`
+			);
+		}
+		logger.log(`🌀 Saving to ${filename}`);
+		// TODO: stream this once we upgrade to Node18 and can use Writable.fromWeb
+		const buffer = await response.arrayBuffer();
+		await fs.writeFile(filename, new Buffer(buffer));
+		logger.log(`🌀 Done!`);
+	},
+});
 
 export const listBackups = async (
 	accountId: string,
@@ -79,33 +213,6 @@ export const listBackups = async (
 	return Object.values(results);
 };
 
-export function CreateOptions(yargs: CommonYargsArgv) {
-	return ListOptions(yargs);
-}
-type CreateHandlerOptions = StrictYargsOptionsToInterface<typeof CreateOptions>;
-
-export const CreateHandler = withConfig<CreateHandlerOptions>(
-	async ({ config, name }): Promise<void> => {
-		const accountId = await requireAuth(config);
-
-		const db: Database = await getDatabaseByNameOrBinding(
-			config,
-			accountId,
-			name
-		);
-
-		const backup: Backup = await createBackup(accountId, db.uuid);
-		logger.log(
-			renderToString(
-				<Table
-					data={[backup]}
-					columns={["created_at", "id", "num_tables", "size", "state"]}
-				></Table>
-			)
-		);
-	}
-);
-
 export const createBackup = async (
 	accountId: string,
 	uuid: string
@@ -122,32 +229,6 @@ export const createBackup = async (
 	};
 };
 
-export function RestoreOptions(yargs: CommonYargsArgv) {
-	return ListOptions(yargs).positional("backup-id", {
-		describe: "The Backup ID to restore",
-		type: "string",
-		demandOption: true,
-	});
-}
-type RestoreHandlerOptions = StrictYargsOptionsToInterface<
-	typeof RestoreOptions
->;
-export const RestoreHandler = withConfig<RestoreHandlerOptions>(
-	async ({ config, name, backupId }): Promise<void> => {
-		const accountId = await requireAuth(config);
-
-		const db: Database = await getDatabaseByNameOrBinding(
-			config,
-			accountId,
-			name
-		);
-
-		logger.log(`Restoring ${name} from backup ${backupId}....`);
-		await restoreBackup(accountId, db.uuid, backupId);
-		logger.log(`Done!`);
-	}
-);
-
 export const restoreBackup = async (
 	accountId: string,
 	uuid: string,
@@ -163,49 +244,6 @@ export const restoreBackup = async (
 		}
 	);
 };
-
-export function DownloadOptions(yargs: CommonYargsArgv) {
-	return ListOptions(yargs)
-		.positional("backup-id", {
-			describe: "The Backup ID to download",
-			type: "string",
-			demandOption: true,
-		})
-		.option("output", {
-			describe:
-				"The .sqlite3 file to write to (defaults to '<db-name>.<short-backup-id>.sqlite3'",
-			type: "string",
-		});
-}
-type DownloadHandlerOptions = StrictYargsOptionsToInterface<
-	typeof DownloadOptions
->;
-export const DownloadHandler = withConfig<DownloadHandlerOptions>(
-	async ({ name, backupId, output, config }): Promise<void> => {
-		const accountId = await requireAuth(config);
-
-		const db: Database = await getDatabaseByNameOrBinding(
-			config,
-			accountId,
-			name
-		);
-		const filename =
-			output || path.resolve(`${name}.${backupId.slice(0, 8)}.sqlite3`);
-
-		logger.log(`🌀 Downloading backup ${backupId} from '${name}'`);
-		const response = await getBackupResponse(accountId, db.uuid, backupId);
-		if (!response.ok) {
-			throw new Error(
-				`Failed to download backup ${backupId} from '${name}' - got ${response.status} from the API`
-			);
-		}
-		logger.log(`🌀 Saving to ${filename}`);
-		// TODO: stream this once we upgrade to Node18 and can use Writable.fromWeb
-		const buffer = await response.arrayBuffer();
-		await fs.writeFile(filename, new Buffer(buffer));
-		logger.log(`🌀 Done!`);
-	}
-);
 
 export const getBackupResponse = async (
 	accountId: string,

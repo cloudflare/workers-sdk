@@ -9,17 +9,20 @@ import {
 
 const isFetchError = (err: unknown): err is ParseError => err instanceof Error;
 
-export const HandleUnauthorizedError = async (_msg: string, err: Error) => {
+export const handleUnauthorizedError = async (err: Error | unknown) => {
 	//@ts-expect-error non-standard property on Error
 	if (isFetchError(err) && err.code === 10023) {
 		const accountId = await getAccountId();
 		if (accountId) {
-			return logger.log(
+			logger.error(
 				`Queues is not currently enabled on this account. Go to https://dash.cloudflare.com/${accountId}/workers/queues to enable it.`
 			);
+
+			return;
 		}
 	}
-	return err;
+
+	// TODO(consider): should this rethrow?
 };
 
 export function handleFetchError(e: { code?: number }): void {

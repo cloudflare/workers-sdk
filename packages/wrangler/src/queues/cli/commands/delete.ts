@@ -1,26 +1,35 @@
 import { readConfig } from "../../../config";
+import { defineCommand } from "../../../core";
 import { logger } from "../../../logger";
 import { deleteQueue } from "../../client";
-import type {
-	CommonYargsArgv,
-	StrictYargsOptionsToInterface,
-} from "../../../yargs-types";
+import { handleFetchError, handleUnauthorizedError } from "../../utils";
 
-export function options(yargs: CommonYargsArgv) {
-	// TODO(soon) --force option
-	return yargs.positional("name", {
-		type: "string",
-		demandOption: true,
-		description: "The name of the queue",
-	});
-}
+defineCommand({
+	command: "wrangler queues delete",
 
-export async function handler(
-	args: StrictYargsOptionsToInterface<typeof options>
-) {
-	const config = readConfig(args.config, args);
+	metadata: {
+		description: "Delete a Queue",
+		status: "stable",
+		owner: "Product: Queues",
+	},
 
-	logger.log(`Deleting queue ${args.name}.`);
-	await deleteQueue(config, args.name);
-	logger.log(`Deleted queue ${args.name}.`);
-}
+	args: {
+		// TODO(soon) --force option
+		name: {
+			type: "string",
+			demandOption: true,
+			description: "The name of the queue",
+		},
+	},
+	positionalArgs: ["name"],
+
+	async handler(args) {
+		const config = readConfig(args.config, args);
+
+		logger.log(`Deleting queue ${args.name}.`);
+		await deleteQueue(config, args.name);
+		logger.log(`Deleted queue ${args.name}.`);
+	},
+
+	handleError: handleUnauthorizedError,
+});

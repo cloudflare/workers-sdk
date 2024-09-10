@@ -2,42 +2,44 @@ import fs from "fs";
 import path from "path";
 import { FormData } from "undici";
 import { fetchResult } from "../cfetch";
-import { withConfig } from "../config";
+import { defineCommand } from "../core";
 import { logger } from "../logger";
 import { requireAuth } from "../user";
 import { getErrorMessage } from "./utils";
 import type { Message } from "../parse";
-import type {
-	CommonYargsArgv,
-	StrictYargsOptionsToInterface,
-} from "../yargs-types";
 import type { Finetune } from "./types";
 
 const requiredAssets = ["adapter_config.json", "adapter_model.safetensors"];
 
-type HandlerOptions = StrictYargsOptionsToInterface<typeof options>;
+defineCommand({
+	command: "wrangler ai finetune create",
 
-export function options(yargs: CommonYargsArgv) {
-	return yargs
-		.positional("model_name", {
+	metadata: {
+		description: "Create finetune and upload assets",
+		status: "stable",
+		owner: "Product: AI",
+	},
+
+	args: {
+		model_name: {
 			describe: "The catalog model name",
 			type: "string",
 			demandOption: true,
-		})
-		.positional("finetune_name", {
+		},
+		finetune_name: {
 			describe: "The finetune name",
 			type: "string",
 			demandOption: true,
-		})
-		.positional("folder_path", {
+		},
+		folder_path: {
 			describe: "The folder path containing the finetune assets",
 			type: "string",
 			demandOption: true,
-		});
-}
+		},
+	},
+	positionalArgs: ["model_name", "finetune_name", "folder_path"],
 
-export const handler = withConfig<HandlerOptions>(
-	async ({ finetune_name, model_name, folder_path, config }): Promise<void> => {
+	async handler({ finetune_name, model_name, folder_path }, { config }) {
 		const accountId = await requireAuth(config);
 
 		logger.log(
@@ -113,5 +115,5 @@ export const handler = withConfig<HandlerOptions>(
 				`🚨 Folder does not exist: ${getErrorMessage(e as Message)}`
 			);
 		}
-	}
-);
+	},
+});

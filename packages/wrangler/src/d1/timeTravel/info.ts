@@ -1,33 +1,41 @@
 import { printWranglerBanner } from "../..";
-import { withConfig } from "../../config";
+import { defineCommand } from "../../core";
 import { logger } from "../../logger";
 import { requireAuth } from "../../user";
-import { Database } from "../options";
+import * as SharedArgs from "../options";
 import { getDatabaseByNameOrBinding } from "../utils";
 import { getBookmarkIdFromTimestamp, throwIfDatabaseIsAlpha } from "./utils";
-import type {
-	CommonYargsArgv,
-	StrictYargsOptionsToInterface,
-} from "../../yargs-types";
 
-export function InfoOptions(yargs: CommonYargsArgv) {
-	return Database(yargs)
-		.option("timestamp", {
+defineCommand({
+	command: "wrangler d1 time-travel info",
+
+	metadata: {
+		description:
+			"Retrieve information about a database at a specific point-in-time using Time Travel",
+		status: "stable",
+		owner: "Product: D1",
+	},
+
+	positionalArgs: ["database"],
+	args: {
+		...SharedArgs.Database,
+		timestamp: {
 			describe:
 				"accepts a Unix (seconds from epoch) or RFC3339 timestamp (e.g. 2023-07-13T08:46:42.228Z) to retrieve a bookmark for",
 			type: "string",
-		})
-		.option("json", {
+		},
+		json: {
 			describe: "return output as clean JSON",
 			type: "boolean",
 			default: false,
-		});
-}
+		},
+	},
 
-type HandlerOptions = StrictYargsOptionsToInterface<typeof InfoOptions>;
+	behaviour: {
+		printBanner: false,
+	},
 
-export const InfoHandler = withConfig<HandlerOptions>(
-	async ({ database, config, json, timestamp }): Promise<void> => {
+	async handler({ database, json, timestamp }, { config }) {
 		// bookmark
 		const accountId = await requireAuth(config);
 		const db = await getDatabaseByNameOrBinding(config, accountId, database);
@@ -47,8 +55,9 @@ export const InfoHandler = withConfig<HandlerOptions>(
 					? `⚠️ Timestamp '${timestamp}' corresponds with bookmark '${result.bookmark}'`
 					: `⚠️ The current bookmark is '${result.bookmark}'`
 			);
-			logger.log(`⚡️ To restore to this specific bookmark, run:\n \`wrangler d1 time-travel restore ${database} --bookmark=${result.bookmark}\`
-      `);
+			logger.log(
+				`⚡️ To restore to this specific bookmark, run:\n \`wrangler d1 time-travel restore ${database} --bookmark=${result.bookmark}\``
+			);
 		}
-	}
-);
+	},
+});
