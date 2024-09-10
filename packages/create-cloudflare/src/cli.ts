@@ -25,7 +25,7 @@ import { maybeOpenBrowser, offerToDeploy, runDeploy } from "./deploy";
 import { printSummary, printWelcomeMessage } from "./dialog";
 import { gitCommit, offerGit } from "./git";
 import { showHelp } from "./help";
-import { getC3Permission, runTelemetryCommand } from "./metrics";
+import { getC3Permission, reporter, runTelemetryCommand } from "./metrics";
 import { createProject } from "./pages";
 import {
 	addWranglerToGitIgnore,
@@ -79,7 +79,13 @@ export const main = async (argv: string[]) => {
 	) {
 		await runLatest();
 	} else {
-		await runCli(args);
+		await reporter.collectAsyncMetrics({
+			eventPrefix: "c3 session",
+			props: {
+				args,
+			},
+			promise: () => runCli(args),
+		});
 	}
 };
 
@@ -199,4 +205,7 @@ main(process.argv)
 		} else {
 			error(e);
 		}
+	})
+	.finally(async () => {
+		await reporter.waitForAllEventsSettled();
 	});
