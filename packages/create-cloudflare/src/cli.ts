@@ -4,7 +4,7 @@ import { dirname } from "path";
 import { chdir } from "process";
 import { crash, endSection, logRaw, startSection } from "@cloudflare/cli";
 import { isInteractive } from "@cloudflare/cli/interactive";
-import { parseArgs } from "helpers/args";
+import { cliDefinition, parseArgs } from "helpers/args";
 import { isUpdateAvailable } from "helpers/cli";
 import { runCommand } from "helpers/command";
 import {
@@ -16,6 +16,7 @@ import { version } from "../package.json";
 import { maybeOpenBrowser, offerToDeploy, runDeploy } from "./deploy";
 import { printSummary, printWelcomeMessage } from "./dialog";
 import { gitCommit, offerGit } from "./git";
+import { showHelp } from "./help";
 import { createProject } from "./pages";
 import {
 	addWranglerToGitIgnore,
@@ -33,7 +34,24 @@ import type { C3Args, C3Context } from "types";
 const { npm } = detectPackageManager();
 
 export const main = async (argv: string[]) => {
-	const args = await parseArgs(argv);
+	const result = await parseArgs(argv);
+
+	if (result.type === "unknown") {
+		if (result.showHelpMessage) {
+			showHelp(result.args, cliDefinition);
+		}
+
+		if (result.errorMessage) {
+			console.error(`\n${result.errorMessage}`);
+		}
+
+		if (result.args === null || result.errorMessage) {
+			process.exit(1);
+		}
+		return;
+	}
+
+	const { args } = result;
 
 	// Print a newline
 	logRaw("");

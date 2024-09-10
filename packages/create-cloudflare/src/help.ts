@@ -16,7 +16,7 @@ const MAX_WIDTH = 100;
 const PADDING_RIGHT = 5;
 
 export const showHelp = (
-	args: C3Args | null,
+	args: Partial<C3Args> | null,
 	{ positionals, options, intro }: ArgumentsDefinition,
 ) => {
 	const { name: pm } = detectPackageManager();
@@ -69,7 +69,10 @@ const renderPositionals = (positionals?: ArgDefinition[]) => {
 	}
 };
 
-const renderOptions = (args: C3Args | null, options?: OptionDefinition[]) => {
+const renderOptions = (
+	args: Partial<C3Args> | null,
+	options?: OptionDefinition[],
+) => {
 	if (!options) {
 		return;
 	}

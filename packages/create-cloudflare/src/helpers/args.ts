@@ -1,7 +1,6 @@
 import yargs from "yargs";
 import { hideBin } from "yargs/helpers";
 import { version } from "../../package.json";
-import { showHelp } from "../help";
 import {
 	getFrameworkMap,
 	getNamesAndDescriptions,
@@ -25,7 +24,7 @@ export type OptionDefinition = {
 	footer?: string;
 	values?:
 		| AllowedValueDefinition[]
-		| ((args: C3Args | null) => AllowedValueDefinition[]);
+		| ((args: Partial<C3Args> | null) => AllowedValueDefinition[]);
 } & ArgDefinition;
 
 export type AllowedValueDefinition = {
@@ -39,7 +38,7 @@ export type ArgumentsDefinition = {
 	options: OptionDefinition[];
 };
 
-const cliDefinition: ArgumentsDefinition = {
+export const cliDefinition: ArgumentsDefinition = {
 	intro: `
     The create-cloudflare cli (also known as C3) is a command-line tool designed to help you set up and deploy new applications to Cloudflare. In addition to speed, it leverages officially developed templates for Workers and framework-specific setup guides to ensure each new application that you set up follows Cloudflare and any third-party best practices for deployment on the Cloudflare network.
   `,
@@ -245,7 +244,20 @@ const cliDefinition: ArgumentsDefinition = {
 	],
 };
 
-export const parseArgs = async (argv: string[]): Promise<Partial<C3Args>> => {
+export const parseArgs = async (
+	argv: string[],
+): Promise<
+	| {
+			type: "default";
+			args: Partial<C3Args>;
+	  }
+	| {
+			type: "unknown";
+			args: Partial<C3Args> | null;
+			showHelpMessage?: boolean;
+			errorMessage?: string;
+	  }
+> => {
 	const doubleDashesIdx = argv.indexOf("--");
 	const c3Args = argv.slice(
 		0,
@@ -259,7 +271,7 @@ export const parseArgs = async (argv: string[]): Promise<Partial<C3Args>> => {
 		.usage("$0 [args]")
 		.version(version)
 		.alias("v", "version")
-		.help(false) as unknown as Argv<C3Args>;
+		.help(false) as unknown as Argv<Partial<C3Args>>;
 
 	const { positionals, options } = cliDefinition;
 	if (positionals) {
@@ -270,11 +282,7 @@ export const parseArgs = async (argv: string[]): Promise<Partial<C3Args>> => {
 
 	if (options) {
 		for (const { name, alias, ...props } of options) {
-			const values =
-				typeof props.values === "function"
-					? await props.values(await yargsObj.argv)
-					: props.values;
-			yargsObj.option(name, { values, ...props });
+			yargsObj.option(name, props);
 			if (alias) {
 				yargsObj.alias(alias, name);
 			}
@@ -288,42 +296,52 @@ export const parseArgs = async (argv: string[]): Promise<Partial<C3Args>> => {
 	} catch {}
 
 	if (args === null) {
-		showHelp(args, cliDefinition);
-		process.exit(1);
+		return {
+			type: "unknown",
+			args,
+		};
 	}
 
-	if (args.version) {
-		process.exit(0);
-	}
-
-	if (args.help) {
-		showHelp(args, cliDefinition);
-		process.exit(0);
+	if (args.version || args.help) {
+		return {
+			type: "unknown",
+			showHelpMessage: args.help,
+			args,
+		};
 	}
 
 	const positionalArgs = args._;
 
 	for (const opt in args) {
 		if (!validOption(opt)) {
-			showHelp(args, cliDefinition);
-			console.error(`\nUnrecognized option: ${opt}`);
-			process.exit(1);
+			return {
+				type: "unknown",
+				showHelpMessage: true,
+				args,
+				errorMessage: `Unrecognized option: ${opt}`,
+			};
 		}
 	}
 
 	// since `yargs.strict()` can't check the `positional`s for us we need to do it manually ourselves
 	if (positionalArgs.length > 1) {
-		showHelp(args, cliDefinition);
-		console.error("\nToo many positional arguments provided");
-		process.exit(1);
+		return {
+			type: "unknown",
+			showHelpMessage: true,
+			args,
+			errorMessage: "Too many positional arguments provided",
+		};
 	}
 
 	return {
-		...(args.wranglerDefaults && WRANGLER_DEFAULTS),
-		...(args.acceptDefaults && C3_DEFAULTS),
-		...args,
-		additionalArgs,
-		projectName: positionalArgs[0] as string | undefined,
+		type: "default",
+		args: {
+			...(args.wranglerDefaults && WRANGLER_DEFAULTS),
+			...(args.acceptDefaults && C3_DEFAULTS),
+			...args,
+			additionalArgs,
+			projectName: positionalArgs[0] as string | undefined,
+		},
 	};
 };
 
