@@ -602,6 +602,104 @@ describe("writes debug logs to hidden file", () => {
 	});
 });
 
+describe("analytics engine", () => {
+	describe.each([
+		{ cmd: "wrangler dev" },
+		{ cmd: "wrangler dev --x-dev-env" },
+		{ cmd: "wrangler dev --remote" },
+		{ cmd: "wrangler dev --remote --x-dev-env" },
+	])("mock analytics engine datasets: $cmd", ({ cmd }) => {
+		describe("module worker", () => {
+			it("analytics engine datasets are mocked in dev", async () => {
+				const helper = new WranglerE2ETestHelper();
+				await helper.seed({
+					"wrangler.toml": dedent`
+				name = "${workerName}"
+				main = "src/index.ts"
+				compatibility_date = "2024-08-08"
+
+				[[analytics_engine_datasets]]
+				binding = "ANALYTICS_BINDING"
+				dataset = "ANALYTICS_DATASET"
+			`,
+					"src/index.ts": dedent`
+				export default {
+					fetch(request, env) {
+						// let's make an analytics call
+						env.ANALYTICS_BINDING.writeDataPoint({
+							'blobs': ["Seattle", "USA", "pro_sensor_9000"], // City, State
+							'doubles': [25, 0.5],
+							'indexes': ["a3cd45"]
+						});
+						// and return a response
+						return new Response("successfully wrote datapoint from module worker");
+					}
+				}`,
+					"package.json": dedent`
+				{
+					"name": "worker",
+					"version": "0.0.0",
+					"private": true
+				}
+				`,
+				});
+				const worker = helper.runLongLived(cmd);
+
+				const { url } = await worker.waitForReady();
+
+				const text = await fetchText(url);
+				expect(text).toContain(
+					`successfully wrote datapoint from module worker`
+				);
+			});
+		});
+
+		describe("service worker", async () => {
+			it("analytics engine datasets are mocked in dev", async () => {
+				const helper = new WranglerE2ETestHelper();
+				await helper.seed({
+					"wrangler.toml": dedent`
+				name = "${workerName}"
+				main = "src/index.ts"
+				compatibility_date = "2024-08-08"
+
+				[[analytics_engine_datasets]]
+				binding = "ANALYTICS_BINDING"
+				dataset = "ANALYTICS_DATASET"
+			`,
+					"src/index.ts": dedent`
+							addEventListener("fetch", (event) => {
+								// let's make an analytics call
+								ANALYTICS_BINDING.writeDataPoint({
+									blobs: ["Seattle", "USA", "pro_sensor_9000"], // City, State
+									doubles: [25, 0.5],
+									indexes: ["a3cd45"],
+								});
+								// and return a response
+								event.respondWith(new Response("successfully wrote datapoint from service worker"));
+							});
+				`,
+					"package.json": dedent`
+				{
+					"name": "worker",
+					"version": "0.0.0",
+					"private": true
+				}
+				`,
+				});
+				const worker = helper.runLongLived(cmd);
+
+				const { url } = await worker.waitForReady();
+
+				const text = await fetchText(url);
+				expect(text).toContain(
+					`successfully wrote datapoint from service worker`
+				);
+			});
+		});
+	});
+});
+
 describe("zone selection", () => {
 	it("defaults to a workers.dev preview", async () => {
 		const helper = new WranglerE2ETestHelper();

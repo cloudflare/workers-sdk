@@ -115,6 +115,8 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 						nodejsCompatMode: config.build.nodejsCompatMode,
 						define: config.build.define,
 						checkFetch: true,
+						mockAnalyticsEngineDatasets:
+							bindings.analytics_engine_datasets ?? [],
 						alias: config.build.alias,
 						legacyAssets: config.legacy?.legacyAssets,
 						// enable the cache when publishing
@@ -227,6 +229,7 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 				noBundle: !config.build?.bundle,
 				findAdditionalModules: config.build?.findAdditionalModules,
 				durableObjects: bindings?.durable_objects ?? { bindings: [] },
+				mockAnalyticsEngineDatasets: bindings.analytics_engine_datasets ?? [],
 				local: !config.dev?.remote,
 				// startDevWorker only applies to "dev"
 				targetConsumer: "dev",

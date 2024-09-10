@@ -311,6 +311,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 						alias: { ...config.alias, ...props.alias },
 						checkFetch: false,
 						legacyAssets: config.legacy_assets,
+						mockAnalyticsEngineDatasets: [],
 						// enable the cache when publishing
 						bypassAssetCache: false,
 						// We want to know if the build is for development or publishing
