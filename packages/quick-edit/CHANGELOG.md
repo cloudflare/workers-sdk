@@ -1,5 +1,11 @@
 # @cloudflare/quick-edit
 
+## 0.1.0
+
+### Minor Changes
+
+- [#6546](https://github.com/cloudflare/workers-sdk/pull/6546) [`addb210`](https://github.com/cloudflare/workers-sdk/commit/addb21010dc68ff8867903b90aca438a31f0a3fc) Thanks [@edmundhung](https://github.com/edmundhung)! - feat: hide wrangler.toml and package.json with `search.exclude` support added
+
 ## 0.0.2
 
 ### Patch Changes

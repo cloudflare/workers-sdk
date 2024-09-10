@@ -1,5 +1,78 @@
 # wrangler
 
+## 3.76.0
+
+### Minor Changes
+
+- [#6126](https://github.com/cloudflare/workers-sdk/pull/6126) [`18c105b`](https://github.com/cloudflare/workers-sdk/commit/18c105baec9d3625b56531ec332517fcae1ede59) Thanks [@IRCody](https://github.com/IRCody)! - feature: Add 'cloudchamber curl' command
+
+  Adds a cloudchamber curl command which allows easy access to arbitrary cloudchamber API endpoints.
+
+- [#6649](https://github.com/cloudflare/workers-sdk/pull/6649) [`46a91e7`](https://github.com/cloudflare/workers-sdk/commit/46a91e7e7d286e6835bb87cfdd6c9096deaeba6e) Thanks [@andyjessop](https://github.com/andyjessop)! - feature: Integrate the Cloudflare Pipelines product into wrangler.
+
+  Cloudflare Pipelines is a product that handles the ingest of event streams
+  into R2. This feature integrates various forms of managing pipelines.
+
+  Usage:
+  `wrangler pipelines create <pipeline>`: Create a new pipeline
+  `wrangler pipelines list`: List current pipelines
+  `wrangler pipelines show <pipeline>`: Show a pipeline configuration
+  `wrangler pipelines update <pipeline>`: Update a pipeline
+  `wrangler pipelines delete <pipeline>`: Delete a pipeline
+
+  Examples:
+  wrangler pipelines create my-pipeline --r2 MY_BUCKET --access-key-id "my-key" --secret-access-key "my-secret"
+  wrangler pipelines show my-pipeline
+  wrangler pipelines delete my-pipline
+
+### Patch Changes
+
+- [#6612](https://github.com/cloudflare/workers-sdk/pull/6612) [`6471090`](https://github.com/cloudflare/workers-sdk/commit/64710904ad4055054bea09ebb23ededab140aa79) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - fix: Add hyperdrive binding support in `getPlatformProxy`
+
+  example:
+
+  ```toml
+  # wrangler.toml
+  [[hyperdrive]]
+  binding = "MY_HYPERDRIVE"
+  id = "000000000000000000000000000000000"
+  localConnectionString = "postgres://user:pass@127.0.0.1:1234/db"
+  ```
+
+  ```js
+  // index.mjs
+
+  import postgres from "postgres";
+  import { getPlatformProxy } from "wrangler";
+
+  const { env, dispose } = await getPlatformProxy();
+
+  try {
+    const sql = postgres(
+      // Note: connectionString points to `postgres://user:pass@127.0.0.1:1234/db` not to the actual hyperdrive
+      //       connection string, for more details see the explanation below
+      env.MY_HYPERDRIVE.connectionString,
+    );
+    const results = await sql`SELECT * FROM pg_tables`;
+    await sql.end();
+  } catch (e) {
+    console.error(e);
+  }
+
+  await dispose();
+  ```
+
+  Note: the returned binding values are no-op/passthrough that can be used inside node.js, meaning
+  that besides direct connections via the `connect` methods, all the other values point to the
+  same db connection specified in the user configuration
+
+- [#6620](https://github.com/cloudflare/workers-sdk/pull/6620) [`ecdfabe`](https://github.com/cloudflare/workers-sdk/commit/ecdfabed04cdc56bfb4fd43cd769eda48ba13366) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: don't warn about `node:async_hooks` if `nodejs_als` is set
+
+  Fixes #6011
+
+- Updated dependencies [[`5936282`](https://github.com/cloudflare/workers-sdk/commit/5936282bfbda848b465396a70f6334988d1a57a0), [`6471090`](https://github.com/cloudflare/workers-sdk/commit/64710904ad4055054bea09ebb23ededab140aa79)]:
+  - miniflare@3.20240821.2
+
 ## 3.75.0
 
 ### Minor Changes
