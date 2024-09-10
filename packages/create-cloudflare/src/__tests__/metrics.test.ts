@@ -293,6 +293,7 @@ describe("createReporter", () => {
 				args: {
 					projectName: "app",
 				},
+				signal: "SIGINT",
 				durationMs: 1234,
 				durationSeconds: 1234 / 1000,
 				durationMinutes: 1234 / 1000 / 60,
@@ -351,6 +352,7 @@ describe("createReporter", () => {
 				args: {
 					projectName: "app",
 				},
+				signal: "SIGTERM",
 				durationMs: 1234,
 				durationSeconds: 1234 / 1000,
 				durationMinutes: 1234 / 1000 / 60,

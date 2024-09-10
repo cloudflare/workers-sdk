@@ -102,18 +102,59 @@ export function createReporter() {
 		events.push(request);
 	}
 
-	function getDuration(startTime: number) {
-		const ms = Date.now() - startTime;
-
-		return {
-			ms,
-			seconds: ms / 1000,
-			minutes: ms / 1000 / 60,
-		};
-	}
-
 	async function waitForAllEventsSettled(): Promise<void> {
 		await Promise.allSettled(events);
+	}
+
+	function createTracker<
+		Prefix extends EventPrefix<
+			"started" | "cancelled" | "errored" | "completed"
+		>,
+	>(eventPrefix: Prefix, props: EventProperties<`${Prefix} started`>) {
+		let startTime: number | null = null;
+		const additionalProperties: Record<string, unknown> = {};
+
+		function submitEvent(name: Event["name"]) {
+			if (!startTime) {
+				startTime = Date.now();
+			} else {
+				const ms = Date.now() - startTime;
+
+				additionalProperties["durationMs"] = ms;
+				additionalProperties["durationSeconds"] = ms / 1000;
+				additionalProperties["durationMinutes"] = ms / 1000 / 60;
+			}
+
+			sendEvent(name, {
+				...props,
+				...additionalProperties,
+			});
+		}
+
+		return {
+			setEventProperty(key: string, value: unknown) {
+				additionalProperties[key] = value;
+			},
+			started() {
+				submitEvent(`${eventPrefix} started`);
+			},
+			completed() {
+				submitEvent(`${eventPrefix} completed`);
+			},
+			cancelled(signal?: NodeJS.Signals) {
+				additionalProperties["signal"] = signal;
+
+				submitEvent(`${eventPrefix} cancelled`);
+			},
+			errored(error: unknown) {
+				additionalProperties["error"] = {
+					message: error instanceof Error ? error.message : String(error),
+					stack: error instanceof Error ? error.stack : undefined,
+				};
+
+				submitEvent(`${eventPrefix} errored`);
+			},
+		};
 	}
 
 	// Collect metrics for an async function
@@ -137,14 +178,12 @@ export function createReporter() {
 
 			cancelDeferred.reject(new CancelError(`Operation cancelled`, signal));
 		};
-
-		const startTime = Date.now();
-		const additionalProperties: Record<string, unknown> = {};
+		const tracker = !options.disableTelemetry
+			? createTracker(options.eventPrefix, options.props)
+			: null;
 
 		try {
-			if (!options.disableTelemetry) {
-				sendEvent(`${options.eventPrefix} started`, options.props);
-			}
+			tracker?.started();
 
 			// Attach the SIGINT and SIGTERM event listeners to handle cancellation
 			process.on("SIGINT", cancel).on("SIGTERM", cancel);
@@ -157,51 +196,21 @@ export function createReporter() {
 						// This allows the promise to use the `setEventProperty` helper to
 						// update the properties object sent to sparrow
 						setEventProperty(key, value) {
-							additionalProperties[key] = value;
+							tracker?.setEventProperty(key, value);
 						},
 					},
 					options.promise,
 				),
 			]);
 
-			if (!options.disableTelemetry) {
-				const duration = getDuration(startTime);
-
-				sendEvent(`${options.eventPrefix} completed`, {
-					...options.props,
-					...additionalProperties,
-					durationMs: duration.ms,
-					durationSeconds: duration.seconds,
-					durationMinutes: duration.minutes,
-				});
-			}
+			tracker?.completed();
 
 			return result;
 		} catch (e) {
-			if (!options.disableTelemetry) {
-				const duration = getDuration(startTime);
-
-				if (e instanceof CancelError) {
-					sendEvent(`${options.eventPrefix} cancelled`, {
-						...options.props,
-						...additionalProperties,
-						durationMs: duration.ms,
-						durationSeconds: duration.seconds,
-						durationMinutes: duration.minutes,
-					});
-				} else {
-					sendEvent(`${options.eventPrefix} errored`, {
-						...options.props,
-						...additionalProperties,
-						durationMs: duration.ms,
-						durationSeconds: duration.seconds,
-						durationMinutes: duration.minutes,
-						error: {
-							message: e instanceof Error ? e.message : undefined,
-							stack: e instanceof Error ? e.stack : undefined,
-						},
-					});
-				}
+			if (e instanceof CancelError) {
+				tracker?.cancelled(e.signal);
+			} else {
+				tracker?.errored(e);
 			}
 
 			// Rethrow the error so it can be caught by the caller
