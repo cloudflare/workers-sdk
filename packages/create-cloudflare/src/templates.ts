@@ -285,25 +285,26 @@ export const createContext = async (
 	// Allows the users to go back to the previous step
 	// By moving the cursor up to a certain line and clearing the screen
 	const goBack = async (from: "type" | "framework" | "lang") => {
-		const newArgs = { ...args };
+		const currentArgs = { ...args };
 		let linesPrinted = 0;
 
 		switch (from) {
 			case "type":
 				linesPrinted = 9;
-				newArgs.category = undefined;
+				args.category = undefined;
 				break;
 			case "framework":
 				linesPrinted = 9;
-				newArgs.category = undefined;
+				args.category = undefined;
 				break;
 			case "lang":
 				linesPrinted = 12;
-				newArgs.type = undefined;
+				args.type = undefined;
 				break;
 		}
 
-		newArgs[from] = undefined;
+		// To remove the BACK_VALUE from the result args
+		currentArgs[from] = undefined;
 		args[from] = undefined;
 
 		if (process.stdout.isTTY) {
@@ -311,7 +312,7 @@ export const createContext = async (
 			process.stdout.clearScreenDown();
 		}
 
-		return await createContext(newArgs, args);
+		return await createContext(args, currentArgs);
 	};
 
 	// The option to go back to the previous step
@@ -496,10 +497,9 @@ export const createContext = async (
 
 	return {
 		project: { name, path },
-		args: {
-			...args,
-			projectName,
-		},
+		// We need to maintain a reference to the original args
+		// To ensure that we send the latest args to Sparrow
+		args: Object.assign(args, { projectName }),
 		template,
 		originalCWD,
 		gitRepoAlreadyExisted: await isInsideGitRepo(directory),
