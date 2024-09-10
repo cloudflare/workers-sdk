@@ -10,7 +10,7 @@ const IncomingRequest = Request<unknown, IncomingRequestCfProperties>;
 vi.mock("../../packages/workers-shared/asset-worker/src/utils/kv.ts");
 vi.mock("../../packages/workers-shared/asset-worker/src/configuration");
 const existsMock = (fileList: Set<string>) => {
-	vi.spyOn(Worker.prototype, "exists").mockImplementation(
+	vi.spyOn(Worker.prototype, "unstable_exists").mockImplementation(
 		async (pathname: string) => {
 			if (fileList.has(pathname)) {
 				return pathname;
