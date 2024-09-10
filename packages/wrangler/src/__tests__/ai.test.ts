@@ -21,7 +21,6 @@ describe("ai help", () => {
 
 			🤖 Manage AI models
 
-
 			COMMANDS
 			  wrangler ai models    List catalog models
 			  wrangler ai finetune  Interact with finetune files
@@ -50,7 +49,6 @@ describe("ai help", () => {
 			wrangler ai
 
 			🤖 Manage AI models
-
 
 			COMMANDS
 			  wrangler ai models    List catalog models
