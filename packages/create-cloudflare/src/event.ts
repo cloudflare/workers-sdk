@@ -470,12 +470,12 @@ export type Event =
 				/**
 				 * Whether the user was already logged in before running the CLI
 				 */
-				alreadyLoggedIn?: boolean;
+				isAlreadyLoggedIn?: boolean;
 
 				/**
 				 * Whether the user successfully going through the login process if they were not already logged in
 				 */
-				newLoginSuccessful?: boolean;
+				isLoginSuccessful?: boolean;
 
 				/**
 				 * The duration of the prompt since it started in milliseconds (ms)
@@ -526,12 +526,12 @@ export type Event =
 				/**
 				 * Whether the user was already logged in before running the CLI
 				 */
-				alreadyLoggedIn?: boolean;
+				isAlreadyLoggedIn?: boolean;
 
 				/**
 				 * Whether the user successfully going through the login process if they were not already logged in
 				 */
-				newLoginSuccessful?: boolean;
+				isLoginSuccessful?: boolean;
 
 				/**
 				 * The error that caused the session to be crashed
@@ -590,12 +590,12 @@ export type Event =
 				/**
 				 * Whether the user was already logged in before running the CLI
 				 */
-				alreadyLoggedIn?: boolean;
+				isAlreadyLoggedIn?: boolean;
 
 				/**
 				 * Whether the user successfully going through the login process if they were not already logged in
 				 */
-				newLoginSuccessful?: boolean;
+				isLoginSuccessful?: boolean;
 
 				/**
 				 * The duration of the prompt since it started in milliseconds (ms)

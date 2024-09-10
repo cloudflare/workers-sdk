@@ -60,12 +60,12 @@ export const wranglerLogin = async (ctx: C3Context) => {
 			s.start(
 				`Logging into Cloudflare ${dim("checking authentication status")}`,
 			);
-			const alreadyLoggedIn = await isLoggedIn();
-			s.stop(brandColor(alreadyLoggedIn ? "logged in" : "not logged in"));
+			const isAlreadyLoggedIn = await isLoggedIn();
+			s.stop(brandColor(isAlreadyLoggedIn ? "logged in" : "not logged in"));
 
-			reporter.setEventProperty("alreadyLoggedIn", alreadyLoggedIn);
+			reporter.setEventProperty("isAlreadyLoggedIn", isAlreadyLoggedIn);
 
-			if (alreadyLoggedIn) {
+			if (isAlreadyLoggedIn) {
 				return true;
 			}
 
@@ -83,7 +83,7 @@ export const wranglerLogin = async (ctx: C3Context) => {
 			const verb = success ? "allowed" : "denied";
 			s.stop(`${brandColor(verb)} ${dim("via `wrangler login`")}`);
 
-			reporter.setEventProperty("newLoginSuccessful", success);
+			reporter.setEventProperty("isLoginSuccessful", success);
 
 			return success;
 		},
