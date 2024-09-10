@@ -43,7 +43,6 @@ import { writeOutput } from "./output";
 import { pages } from "./pages";
 import { APIError, formatMessage, ParseError } from "./parse";
 import { pubSubCommands } from "./pubsub/pubsub-commands";
-import { r2 } from "./r2";
 import { secret, secretBulkHandler, secretBulkOptions } from "./secret";
 import {
 	addBreadcrumb,
@@ -519,9 +518,7 @@ export function createCLIParser(argv: string[]) {
 	register.registerNamespace("queues");
 
 	// r2
-	wrangler.command("r2", "📦 Manage R2 buckets & objects", (r2Yargs) => {
-		return r2(r2Yargs, subHelp);
-	});
+	register.registerNamespace("r2");
 
 	// d1
 	wrangler.command("d1", `🗄  Manage Workers D1 databases`, (d1Yargs) => {

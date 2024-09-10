@@ -1,4 +1,5 @@
 import * as fs from "node:fs";
+import { setTimeout } from "node:timers/promises";
 import { http, HttpResponse } from "msw";
 import { MAX_UPLOAD_SIZE } from "../r2/constants";
 import { actionsForEventCategories } from "../r2/helpers";
@@ -77,16 +78,11 @@ describe("r2", () => {
 		mockApiToken();
 
 		it("should show help when the bucket command is passed", async () => {
-			await expect(() => runWrangler("r2 bucket")).rejects.toThrow(
-				"Not enough non-option arguments: got 0, need at least 1"
-			);
-			expect(std.err).toMatchInlineSnapshot(`
-				"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNot enough non-option arguments: got 0, need at least 1[0m
+			await runWrangler("r2 bucket");
+			await setTimeout(0); // workaround because hacky subhelp logs within setImmediate
 
-"`);
 			expect(std.out).toMatchInlineSnapshot(`
-				"
-				wrangler r2 bucket
+				"wrangler r2 bucket
 
 				Manage R2 buckets
 
@@ -1066,16 +1062,11 @@ describe("r2", () => {
 
 	describe("r2 object", () => {
 		it("should show help when the object command is passed", async () => {
-			await expect(() => runWrangler("r2 object")).rejects.toThrow(
-				"Not enough non-option arguments: got 0, need at least 1"
-			);
-			expect(std.err).toMatchInlineSnapshot(`
-				"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNot enough non-option arguments: got 0, need at least 1[0m
+			await runWrangler("r2 object");
+			await setTimeout(0); // workaround because hacky subhelp logs within setImmediate
 
-"`);
 			expect(std.out).toMatchInlineSnapshot(`
-				"
-				wrangler r2 object
+				"wrangler r2 object
 
 				Manage R2 objects
 
