@@ -132,7 +132,7 @@ export const syncExperimentalAssets = async (
 
 			try {
 				const res = await fetchResult<UploadResponse>(
-					`/accounts/${accountId}/workers/assets/upload`,
+					`/accounts/${accountId}/workers/assets/upload?base64=true`,
 					{
 						method: "POST",
 						headers: {

@@ -4315,33 +4315,41 @@ addEventListener('fetch', event => {});`
 					},
 				},
 			});
-			expect(uploadBodies.flatMap((b) => b)).toEqual(
-				expect.arrayContaining([
+			const flatBodies = Object.fromEntries(
+				uploadBodies.flatMap((b) => [...b.entries()])
+			);
+			await expect(
+				flatBodies["ff5016e92f039aa743a4ff7abb3180fa"]
+			).toBeAFileWhichMatches(
+				new File(
+					["Q29udGVudCBvZiBmaWxlLTM="],
+					"ff5016e92f039aa743a4ff7abb3180fa",
 					{
-						base64: true,
-						key: "ff5016e92f039aa743a4ff7abb3180fa",
-						metadata: {
-							contentType: "text/plain",
-						},
-						value: "Q29udGVudCBvZiBmaWxlLTM=",
-					},
+						type: "text/plain",
+					}
+				)
+			);
+			await expect(
+				flatBodies["7574a8cd3094a050388ac9663af1c1d6"]
+			).toBeAFileWhichMatches(
+				new File(
+					["Q29udGVudCBvZiBmaWxlLTI="],
+					"7574a8cd3094a050388ac9663af1c1d6",
 					{
-						base64: true,
-						key: "7574a8cd3094a050388ac9663af1c1d6",
-						metadata: {
-							contentType: "text/plain",
-						},
-						value: "Q29udGVudCBvZiBmaWxlLTI=",
-					},
+						type: "text/plain",
+					}
+				)
+			);
+			await expect(
+				flatBodies["0de3dd5df907418e9730fd2bd747bd5e"]
+			).toBeAFileWhichMatches(
+				new File(
+					["Q29udGVudCBvZiBmaWxlLTE="],
+					"0de3dd5df907418e9730fd2bd747bd5e",
 					{
-						base64: true,
-						key: "0de3dd5df907418e9730fd2bd747bd5e",
-						metadata: {
-							contentType: "text/plain",
-						},
-						value: "Q29udGVudCBvZiBmaWxlLTE=",
-					},
-				])
+						type: "text/plain",
+					}
+				)
 			);
 		});
 
