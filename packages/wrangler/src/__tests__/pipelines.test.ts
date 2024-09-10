@@ -315,6 +315,7 @@ describe("pipelines", () => {
 
           🚰 Manage Worker Pipelines [open beta]
 
+
           COMMANDS
             wrangler pipelines create <pipeline>  Create a new pipeline
             wrangler pipelines list               List current pipelines
