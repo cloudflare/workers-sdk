@@ -1,5 +1,6 @@
 import assert from "node:assert";
 import fs from "node:fs";
+import { createRequire } from "node:module";
 import platformPath from "node:path";
 import posixPath from "node:path/posix";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -7,7 +8,6 @@ import util from "node:util";
 import * as cjsModuleLexer from "cjs-module-lexer";
 import { buildSync } from "esbuild";
 import { ModuleRuleTypeSchema, Response } from "miniflare";
-import resolvePkg from "resolve";
 import { isFileNotFoundError } from "./helpers";
 import type { ModuleRuleType, Request, Worker_Module } from "miniflare";
 import type { ViteDevServer } from "vite";
@@ -28,6 +28,7 @@ export function ensurePosixLikePath(filePath: string) {
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = platformPath.dirname(__filename);
+const require = createRequire(__filename);
 
 const distPath = ensurePosixLikePath(platformPath.resolve(__dirname, ".."));
 const libPath = posixPath.join(distPath, "worker", "lib");
@@ -275,11 +276,12 @@ async function viteResolve(
 	referrer: string,
 	isRequire: boolean
 ): Promise<string> {
-	if (isRequire) {
+	// note: using require.resolve doesn't seem to work well on windows, so there we skip this more proper cjs module resolution
+	if (isRequire && !isWindows) {
 		try {
-			return resolvePkg.sync(specifier, {
-				basedir: platformPath.dirname(referrer),
-				extensions: [".cjs", ".js"],
+			// we use the built in require.resolve method to resolve required/cjs modules
+			return require.resolve(specifier, {
+				paths: [platformPath.dirname(referrer)],
 			});
 		} catch {}
 	}
