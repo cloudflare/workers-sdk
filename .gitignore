@@ -209,6 +209,9 @@ fixtures/remix-pages-app/functions/\[\[path\]\].js
 # IntelliJ
 .idea/
 
+# Zed
+.zed/
+
 # VSCode Theme
 *.vsix
 vendor/vscode/
