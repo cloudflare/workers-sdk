@@ -14,6 +14,9 @@ const run = async () => {
 		// This is required to support jsonc-parser. See https://github.com/microsoft/node-jsonc-parser/issues/57
 		mainFields: ["module", "main"],
 		format: "cjs",
+		define: {
+			SPARROW_SOURCE_KEY: `"${process.env.SPARROW_SOURCE_KEY ?? ""}"`,
+		},
 	};
 
 	const runBuild = async () => {

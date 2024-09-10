@@ -254,6 +254,10 @@ export const parseArgs = async (
 			args: Partial<C3Args>;
 	  }
 	| {
+			type: "telemetry";
+			action: "enable" | "disable" | "status";
+	  }
+	| {
 			type: "unknown";
 			args: Partial<C3Args> | null;
 			showHelpMessage?: boolean;
@@ -267,6 +271,27 @@ export const parseArgs = async (
 	);
 	const additionalArgs =
 		doubleDashesIdx < 0 ? [] : argv.slice(doubleDashesIdx + 1);
+
+	const c3positionalArgs = c3Args.filter((arg) => !arg.startsWith("-"));
+
+	if (
+		c3positionalArgs[2] === "telemetry" &&
+		c3positionalArgs[3] !== undefined
+	) {
+		const action = c3positionalArgs[3];
+
+		switch (action) {
+			case "enable":
+			case "disable":
+			case "status":
+				return {
+					type: "telemetry",
+					action,
+				};
+			default:
+				throw new Error(`Unknown subcommand "telemetry ${action}"`);
+		}
+	}
 
 	const yargsObj = yargs(hideBin(c3Args))
 		.scriptName("create-cloudflare")

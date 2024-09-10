@@ -19,11 +19,13 @@ import {
 	rectifyPmMismatch,
 } from "helpers/packageManagers";
 import { installWrangler, npmInstall } from "helpers/packages";
+import { hasSparrowSourceKey } from "helpers/sparrow";
 import { version } from "../package.json";
 import { maybeOpenBrowser, offerToDeploy, runDeploy } from "./deploy";
 import { printSummary, printWelcomeMessage } from "./dialog";
 import { gitCommit, offerGit } from "./git";
 import { showHelp } from "./help";
+import { getC3Permission, runTelemetryCommand } from "./metrics";
 import { createProject } from "./pages";
 import {
 	addWranglerToGitIgnore,
@@ -55,6 +57,11 @@ export const main = async (argv: string[]) => {
 		if (result.args === null || result.errorMessage) {
 			process.exit(1);
 		}
+		return;
+	}
+
+	if (result.type === "telemetry") {
+		runTelemetryCommand(result.action);
 		return;
 	}
 
@@ -178,7 +185,10 @@ const deploy = async (ctx: C3Context) => {
 };
 
 const printBanner = () => {
-	printWelcomeMessage(version);
+	printWelcomeMessage(
+		version,
+		hasSparrowSourceKey() && getC3Permission().enabled,
+	);
 	startSection(`Create an application with Cloudflare`, "Step 1 of 3");
 };
 
