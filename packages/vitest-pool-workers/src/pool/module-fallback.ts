@@ -1,11 +1,11 @@
 import assert from "node:assert";
 import fs from "node:fs";
+import { createRequire } from "node:module";
 import platformPath from "node:path";
 import posixPath from "node:path/posix";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import util from "node:util";
 import * as cjsModuleLexer from "cjs-module-lexer";
-import enhancedResolve from "enhanced-resolve";
 import { buildSync } from "esbuild";
 import { ModuleRuleTypeSchema, Response } from "miniflare";
 import { isFileNotFoundError } from "./helpers";
@@ -28,6 +28,7 @@ export function ensurePosixLikePath(filePath: string) {
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = platformPath.dirname(__filename);
+const require = createRequire(__filename);
 
 const distPath = ensurePosixLikePath(platformPath.resolve(__dirname, ".."));
 const libPath = posixPath.join(distPath, "worker", "lib");
@@ -269,13 +270,6 @@ function getApproximateSpecifier(target: string, referrerDir: string): string {
 	return posixPath.relative(referrerDir, target);
 }
 
-const cjsResolver = enhancedResolve.ResolverFactory.createResolver({
-	useSyncFileSystemCalls: true,
-	fileSystem: new enhancedResolve.CachedInputFileSystem(fs, 4000),
-	extensions: [".cjs", ".js"],
-	conditionNames: ["require"],
-});
-
 async function viteResolve(
 	vite: ViteDevServer,
 	specifier: string,
@@ -284,16 +278,10 @@ async function viteResolve(
 ): Promise<string> {
 	if (isRequire) {
 		try {
-			// we use enhancedResolve to resolve require/cjs modules
-			const resolved = cjsResolver.resolveSync(
-				{},
-				platformPath.dirname(referrer),
-				specifier
-			);
-
-			if (resolved) {
-				return resolved;
-			}
+			// we use the built in require.resolve method to resolve required/cjs modules
+			return require.resolve(specifier, {
+				paths: [platformPath.dirname(referrer)],
+			});
 		} catch {}
 	}
 
