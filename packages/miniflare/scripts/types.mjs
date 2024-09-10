@@ -149,14 +149,15 @@ function bundleTypes() {
 	fs.copyFileSync(indexTsPath, indexDtsPath);
 	try {
 		fs.copyFileSync(
-			path.join(pkgRoot, "src", "runtime", "config", "workerd.capnp.d.ts"),
+			path.join(pkgRoot, "src", "runtime", "config", "generated/workerd.ts"),
 			path.join(
 				pkgRoot,
 				"dist-types",
 				"src",
 				"runtime",
 				"config",
-				"workerd.capnp.d.ts"
+				"generated",
+				"workerd.ts"
 			)
 		);
 

@@ -1,6 +1,6 @@
-import { Data, List, Message, Struct } from "capnp-ts";
+import { Data, List, Message, Struct } from "capnp-es";
+import { Config as CapnpConfig } from "./generated/workerd.js";
 import { Config, kVoid } from "./workerd";
-import { Config as CapnpConfig } from "./workerd.capnp.js";
 
 function capitalize<S extends string>(str: S): Capitalize<S> {
 	return (

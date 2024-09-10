@@ -31,7 +31,7 @@
 	],
 	"scripts": {
 		"build": "node scripts/build.mjs && pnpm run types:build",
-		"capnp:workerd": "capnp-es src/runtime/config/workerd.capnp -ots:src/runtime/config/generated --src-prefix=src/runtime/config",
+		"capnp:workerd": "capnp-es src/runtime/config/workerd.capnp -ots,js:src/runtime/config/generated --src-prefix=src/runtime/config",
 		"check:lint": "eslint --max-warnings=0 \"{src,test}/**/*.ts\" \"scripts/**/*.{js,mjs}\" \"types/**/*.ts\"",
 		"check:type": "tsc",
 		"clean": "rimraf ./dist ./dist-types",

@@ -5,7 +5,7 @@ export const _capnpFileId = BigInt("0xe6afd26682091c01");
 * Top-level configuration for a workerd instance.
 * */
 export class Config extends $.Struct {
-  static readonly _capnp = {
+  static readonly _capnp: any = {
     displayName: "Config",
     id: "8794486c76aaa7d6",
     size: new $.ObjectSize(0, 5)
@@ -149,7 +149,7 @@ export class Config extends $.Struct {
   }
 }
 export class Socket_Https extends $.Struct {
-  static readonly _capnp = {
+  static readonly _capnp: any = {
     displayName: "https",
     id: "de123876383cbbdc",
     size: new $.ObjectSize(8, 5)
@@ -202,7 +202,7 @@ export type Socket_Which = (typeof Socket_Which)[keyof typeof Socket_Which];
 export class Socket extends $.Struct {
   static readonly HTTP = Socket_Which.HTTP;
   static readonly HTTPS = Socket_Which.HTTPS;
-  static readonly _capnp = {
+  static readonly _capnp: any = {
     displayName: "Socket",
     id: "9a0eba45530ee79f",
     size: new $.ObjectSize(8, 5)
@@ -326,7 +326,7 @@ export class Service extends $.Struct {
   static readonly NETWORK = Service_Which.NETWORK;
   static readonly EXTERNAL = Service_Which.EXTERNAL;
   static readonly DISK = Service_Which.DISK;
-  static readonly _capnp = {
+  static readonly _capnp: any = {
     displayName: "Service",
     id: "e5c88e8bb7bcb6b9",
     size: new $.ObjectSize(8, 2)
@@ -487,7 +487,7 @@ export class Service extends $.Struct {
 *     bindings = [(service = "foo")]
 * */
 export class ServiceDesignator extends $.Struct {
-  static readonly _capnp = {
+  static readonly _capnp: any = {
     displayName: "ServiceDesignator",
     id: "ae8ec91cee724450",
     size: new $.ObjectSize(0, 2)
@@ -539,7 +539,7 @@ export class Worker_Module extends $.Struct {
   static readonly NODE_JS_COMPAT_MODULE = Worker_Module_Which.NODE_JS_COMPAT_MODULE;
   static readonly PYTHON_MODULE = Worker_Module_Which.PYTHON_MODULE;
   static readonly PYTHON_REQUIREMENT = Worker_Module_Which.PYTHON_REQUIREMENT;
-  static readonly _capnp = {
+  static readonly _capnp: any = {
     displayName: "Module",
     id: "d9d87a63770a12f3",
     size: new $.ObjectSize(8, 2)
@@ -758,7 +758,7 @@ export class Worker_Binding_Type extends $.Struct {
   static readonly QUEUE = Worker_Binding_Type_Which.QUEUE;
   static readonly ANALYTICS_ENGINE = Worker_Binding_Type_Which.ANALYTICS_ENGINE;
   static readonly HYPERDRIVE = Worker_Binding_Type_Which.HYPERDRIVE;
-  static readonly _capnp = {
+  static readonly _capnp: any = {
     displayName: "Type",
     id: "8906a1296519bf8a",
     size: new $.ObjectSize(8, 1)
@@ -877,7 +877,7 @@ export class Worker_Binding_Type extends $.Struct {
 * The type of a Durable Object namespace binding.
 * */
 export class Worker_Binding_DurableObjectNamespaceDesignator extends $.Struct {
-  static readonly _capnp = {
+  static readonly _capnp: any = {
     displayName: "DurableObjectNamespaceDesignator",
     id: "804f144ff477aac7",
     size: new $.ObjectSize(0, 2)
@@ -934,7 +934,7 @@ export type Worker_Binding_CryptoKey_Algorithm_Which = (typeof Worker_Binding_Cr
 export class Worker_Binding_CryptoKey_Algorithm extends $.Struct {
   static readonly NAME = Worker_Binding_CryptoKey_Algorithm_Which.NAME;
   static readonly JSON = Worker_Binding_CryptoKey_Algorithm_Which.JSON;
-  static readonly _capnp = {
+  static readonly _capnp: any = {
     displayName: "algorithm",
     id: "a1a040c5e00d7021",
     size: new $.ObjectSize(8, 3)
@@ -994,7 +994,7 @@ export class Worker_Binding_CryptoKey extends $.Struct {
   static readonly SPKI = Worker_Binding_CryptoKey_Which.SPKI;
   static readonly JWK = Worker_Binding_CryptoKey_Which.JWK;
   static readonly Usage = Worker_Binding_CryptoKey_Usage;
-  static readonly _capnp = {
+  static readonly _capnp: any = {
     displayName: "CryptoKey",
     id: "b5e1bff0e57d6eb0",
     size: new $.ObjectSize(8, 3),
@@ -1145,7 +1145,7 @@ export class Worker_Binding_CryptoKey extends $.Struct {
   }
 }
 export class Worker_Binding_MemoryCacheLimits extends $.Struct {
-  static readonly _capnp = {
+  static readonly _capnp: any = {
     displayName: "MemoryCacheLimits",
     id: "8d66725b0867e634",
     size: new $.ObjectSize(16, 0)
@@ -1176,7 +1176,7 @@ export class Worker_Binding_MemoryCacheLimits extends $.Struct {
 * A binding that wraps a group of (lower-level) bindings in a common API.
 * */
 export class Worker_Binding_WrappedBinding extends $.Struct {
-  static readonly _capnp = {
+  static readonly _capnp: any = {
     displayName: "WrappedBinding",
     id: "e6f066b75f0ea113",
     size: new $.ObjectSize(0, 3),
@@ -1238,7 +1238,7 @@ export class Worker_Binding_WrappedBinding extends $.Struct {
 * here. Another Worker can inherit this Worker and fill in this binding.
 * */
 export class Worker_Binding_Parameter extends $.Struct {
-  static readonly _capnp = {
+  static readonly _capnp: any = {
     displayName: "parameter",
     id: "dc57e1258d26d152",
     size: new $.ObjectSize(8, 6)
@@ -1286,7 +1286,7 @@ export class Worker_Binding_Parameter extends $.Struct {
 * databases.
 * */
 export class Worker_Binding_Hyperdrive extends $.Struct {
-  static readonly _capnp = {
+  static readonly _capnp: any = {
     displayName: "hyperdrive",
     id: "ad6c391cd55f3134",
     size: new $.ObjectSize(8, 6)
@@ -1341,7 +1341,7 @@ export class Worker_Binding_Hyperdrive extends $.Struct {
 * A binding representing access to an in-memory cache.
 * */
 export class Worker_Binding_MemoryCache extends $.Struct {
-  static readonly _capnp = {
+  static readonly _capnp: any = {
     displayName: "memoryCache",
     id: "aed5760c349869da",
     size: new $.ObjectSize(8, 6)
@@ -1426,7 +1426,7 @@ export class Worker_Binding extends $.Struct {
   static readonly CryptoKey = Worker_Binding_CryptoKey;
   static readonly MemoryCacheLimits = Worker_Binding_MemoryCacheLimits;
   static readonly WrappedBinding = Worker_Binding_WrappedBinding;
-  static readonly _capnp = {
+  static readonly _capnp: any = {
     displayName: "Binding",
     id: "8e7e492fd7e35f3e",
     size: new $.ObjectSize(8, 6)
@@ -1886,7 +1886,7 @@ export type Worker_DurableObjectNamespace_Which = (typeof Worker_DurableObjectNa
 export class Worker_DurableObjectNamespace extends $.Struct {
   static readonly UNIQUE_KEY = Worker_DurableObjectNamespace_Which.UNIQUE_KEY;
   static readonly EPHEMERAL_LOCAL = Worker_DurableObjectNamespace_Which.EPHEMERAL_LOCAL;
-  static readonly _capnp = {
+  static readonly _capnp: any = {
     displayName: "DurableObjectNamespace",
     id: "b429dd547d15747d",
     size: new $.ObjectSize(8, 2)
@@ -1966,7 +1966,7 @@ export class Worker_DurableObjectStorage extends $.Struct {
   static readonly NONE = Worker_DurableObjectStorage_Which.NONE;
   static readonly IN_MEMORY = Worker_DurableObjectStorage_Which.IN_MEMORY;
   static readonly LOCAL_DISK = Worker_DurableObjectStorage_Which.LOCAL_DISK;
-  static readonly _capnp = {
+  static readonly _capnp: any = {
     displayName: "durableObjectStorage",
     id: "cc72b3faa57827d4",
     size: new $.ObjectSize(8, 10)
@@ -2025,7 +2025,7 @@ export class Worker extends $.Struct {
   static readonly Module = Worker_Module;
   static readonly Binding = Worker_Binding;
   static readonly DurableObjectNamespace = Worker_DurableObjectNamespace;
-  static readonly _capnp = {
+  static readonly _capnp: any = {
     displayName: "Worker",
     id: "acfa77e88fd97d1c",
     size: new $.ObjectSize(8, 10),
@@ -2272,7 +2272,7 @@ export class Worker extends $.Struct {
 * Talk to the server over encrypted HTTPS.
 * */
 export class ExternalServer_Https extends $.Struct {
-  static readonly _capnp = {
+  static readonly _capnp: any = {
     displayName: "https",
     id: "ac37e02afd3dc6db",
     size: new $.ObjectSize(8, 4)
@@ -2332,7 +2332,7 @@ export class ExternalServer_Https extends $.Struct {
 * `connect()` method; `fetch()` will throw an exception.
 * */
 export class ExternalServer_Tcp extends $.Struct {
-  static readonly _capnp = {
+  static readonly _capnp: any = {
     displayName: "tcp",
     id: "d941637df0fb39f1",
     size: new $.ObjectSize(8, 4)
@@ -2392,7 +2392,7 @@ export class ExternalServer extends $.Struct {
   static readonly HTTP = ExternalServer_Which.HTTP;
   static readonly HTTPS = ExternalServer_Which.HTTPS;
   static readonly TCP = ExternalServer_Which.TCP;
-  static readonly _capnp = {
+  static readonly _capnp: any = {
     displayName: "ExternalServer",
     id: "ff209f9aa352f5a4",
     size: new $.ObjectSize(8, 4)
@@ -2504,7 +2504,7 @@ export class ExternalServer extends $.Struct {
 *     )
 * */
 export class Network extends $.Struct {
-  static readonly _capnp = {
+  static readonly _capnp: any = {
     displayName: "Network",
     id: "fa42244f950c9b9c",
     size: new $.ObjectSize(0, 3),
@@ -2620,7 +2620,7 @@ export class Network extends $.Struct {
 * `HEAD` requests are properly optimized to perform a stat() without actually opening the file.
 * */
 export class DiskDirectory extends $.Struct {
-  static readonly _capnp = {
+  static readonly _capnp: any = {
     displayName: "DiskDirectory",
     id: "9048ab22835f51c3",
     size: new $.ObjectSize(8, 1),
@@ -2674,7 +2674,7 @@ export const HttpOptions_Style = {
 } as const;
 export type HttpOptions_Style = (typeof HttpOptions_Style)[keyof typeof HttpOptions_Style];
 export class HttpOptions_Header extends $.Struct {
-  static readonly _capnp = {
+  static readonly _capnp: any = {
     displayName: "Header",
     id: "dc0394b5a6f3417e",
     size: new $.ObjectSize(0, 2)
@@ -2708,7 +2708,7 @@ export class HttpOptions_Header extends $.Struct {
 export class HttpOptions extends $.Struct {
   static readonly Style = HttpOptions_Style;
   static readonly Header = HttpOptions_Header;
-  static readonly _capnp = {
+  static readonly _capnp: any = {
     displayName: "HttpOptions",
     id: "aa8dc6885da78f19",
     size: new $.ObjectSize(8, 5),
@@ -2812,7 +2812,7 @@ export class HttpOptions extends $.Struct {
   }
 }
 export class TlsOptions_Keypair extends $.Struct {
-  static readonly _capnp = {
+  static readonly _capnp: any = {
     displayName: "Keypair",
     id: "f546bf2d5d8bd13e",
     size: new $.ObjectSize(0, 2)
@@ -2861,7 +2861,7 @@ export type TlsOptions_Version = (typeof TlsOptions_Version)[keyof typeof TlsOpt
 export class TlsOptions extends $.Struct {
   static readonly Keypair = TlsOptions_Keypair;
   static readonly Version = TlsOptions_Version;
-  static readonly _capnp = {
+  static readonly _capnp: any = {
     displayName: "TlsOptions",
     id: "aabb3c3778ac4311",
     size: new $.ObjectSize(8, 3),
@@ -2971,7 +2971,7 @@ export class TlsOptions extends $.Struct {
 * A module extending workerd functionality.
 * */
 export class Extension_Module extends $.Struct {
-  static readonly _capnp = {
+  static readonly _capnp: any = {
     displayName: "Module",
     id: "d5d16e76fdedc37d",
     size: new $.ObjectSize(8, 2),
@@ -3013,7 +3013,7 @@ export class Extension_Module extends $.Struct {
 * */
 export class Extension extends $.Struct {
   static readonly Module = Extension_Module;
-  static readonly _capnp = {
+  static readonly _capnp: any = {
     displayName: "Extension",
     id: "e390128a861973a6",
     size: new $.ObjectSize(0, 1)

@@ -9,7 +9,7 @@ export {
 	HttpOptions_Style,
 	TlsOptions_Version,
 	Worker_Binding_CryptoKey_Usage,
-} from "./generated/workerd";
+} from "./generated/workerd.js";
 
 export const kVoid = Symbol("kVoid");
 export type Void = typeof kVoid;
