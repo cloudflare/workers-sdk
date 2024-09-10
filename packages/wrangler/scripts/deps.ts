@@ -22,7 +22,6 @@ export const EXTERNAL_DEPENDENCIES = [
 	// and read when we are bundling the worker application
 	"unenv",
 	"workerd/worker.mjs",
-	"@cloudflare/workers-shared",
 ];
 
 const pathToPackageJson = path.resolve(__dirname, "..", "package.json");
