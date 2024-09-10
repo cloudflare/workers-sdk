@@ -16,6 +16,9 @@ import type { Event } from "./event";
 type EventPrefix<Suffix extends string> =
 	Event["name"] extends `${infer Name} ${Suffix}` ? Name : never;
 
+// A type to get all possible keys of a union type
+type KeysOfUnion<Obj> = Obj extends Obj ? keyof Obj : never;
+
 // A type to extract the properties of an event based on the name
 type EventProperties<EventName extends Event["name"]> = Extract<
 	Event,
@@ -222,7 +225,10 @@ export function createReporter() {
 	}
 
 	// To be used within `collectAsyncMetrics` to update the properties object sent to sparrow
-	function setEventProperty(key: string, value: unknown) {
+	function setEventProperty<Key extends KeysOfUnion<Event["properties"]>>(
+		key: Key,
+		value: unknown,
+	) {
 		const store = als.getStore();
 
 		// Throw only on test environment to avoid breaking the CLI
