@@ -18,11 +18,12 @@
 	},
 	"license": "MIT OR Apache-2.0",
 	"author": "wrangler@cloudflare.com",
+	"types": "./dist",
 	"files": [
 		"dist"
 	],
 	"scripts": {
-		"build": "pnpm run clean && pnpm run bundle:asset-worker:prod && pnpm run bundle:router-worker:prod",
+		"build": "pnpm run clean && pnpm run bundle:asset-worker:prod && pnpm run bundle:router-worker:prod && pnpm run types:emit",
 		"bundle:asset-worker": "esbuild asset-worker/src/index.ts --format=esm --bundle --outfile=dist/asset-worker.mjs --sourcemap=external --external:cloudflare:*",
 		"bundle:asset-worker:prod": "pnpm run bundle:asset-worker --minify && node -r esbuild-register scripts/copy-config-file.ts",
 		"bundle:router-worker": "esbuild router-worker/src/index.ts --format=esm --bundle --outfile=dist/router-worker.mjs --sourcemap=external",
@@ -36,7 +37,11 @@
 		"deploy:router-worker": "CLOUDFLARE_API_TOKEN=$WORKERS_DEPLOY_AND_CONFIG_CLOUDFLARE_API_TOKEN wrangler versions upload --experimental-versions -c router-worker/wrangler.toml",
 		"dev": "pnpm run clean && concurrently -n bundle:asset-worker,bundle:router-worker -c blue,magenta \"pnpm run bundle:asset-worker --watch\" \"pnpm run bundle:router-worker --watch\"",
 		"test": "vitest",
-		"test:ci": "pnpm run test run"
+		"test:ci": "pnpm run test",
+		"types:emit": "tsc utils/utils.ts --declaration --emitDeclarationOnly --declarationDir ./dist"
+	},
+	"dependencies": {
+		"zod": "^3.22.3"
 	},
 	"devDependencies": {
 		"@cloudflare/eslint-config-worker": "workspace:*",

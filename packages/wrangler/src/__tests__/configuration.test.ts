@@ -1825,6 +1825,54 @@ describe("normalizeAndValidateConfig()", () => {
 				`);
 			});
 
+			it("should error on invalid `experimental_assets` config values", () => {
+				const expectedConfig = {
+					experimental_assets: {
+						directory: "./public",
+						html_handling: "foo",
+						not_found_handling: "bar",
+					},
+				};
+
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					expectedConfig as unknown as RawConfig,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(config).toEqual(expect.objectContaining(expectedConfig));
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					"
+				`);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - Expected \\"experimental_assets.html_handling\\" to be one of [\\"auto-trailing-slash\\",\\"force-trailing-slash\\",\\"drop-trailing-slash\\",\\"none\\"] but got \\"foo\\".
+					  - Expected \\"experimental_assets.not_found_handling\\" field to be one of [\\"single-page-application\\",\\"404-page\\",\\"none\\"] but got \\"bar\\".
+				`);
+			});
+
+			it("should accept valid `experimental_assets` config values", () => {
+				const expectedConfig: RawConfig = {
+					experimental_assets: {
+						directory: "./public",
+						html_handling: "drop-trailing-slash",
+						not_found_handling: "404-page",
+					},
+				};
+
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					expectedConfig,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(config).toEqual(expect.objectContaining(expectedConfig));
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(false);
+			});
+
 			it("should error if `directory` is an empty string", () => {
 				const expectedConfig = {
 					experimental_assets: {
