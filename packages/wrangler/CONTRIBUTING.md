@@ -9,9 +9,9 @@
 - How to implement a command
 - How to test a command
 
-## Defining your new command to Wrangler
+## Defining your new command in Wrangler
 
-1. define the command with the util defineCommand
+1. Define the command structure with the utils `defineNamespace()` & `defineCommand()`
 
 ```ts
 import { defineCommand, defineNamespace } from "./util";
@@ -47,60 +47,72 @@ const command = defineCommand({
 		key: {
 			type: "string",
 			description: "The key to put into the KV namespace",
-			required: true,
+			demandOption: true,
 		},
 		value: {
 			type: "string",
 			description: "The value to put into the KV namespace",
-			required: true,
+			demandOption: true,
 		},
 		"namespace-id": {
 			type: "string",
 			description: "The namespace to put the key-value pair into",
-			required: true,
 		},
 	},
 	// the positionalArgs defines which of the args are positional and in what order
 	positionalArgs: ["key", "value"],
-	handler(args) {
+	handler(args, ctx) {
 		// implementation here
 	},
 });
 ```
 
-2. global vs shared vs command specific (named + positional) args
+2. Command specific (named + positional) args vs Shared args vs Global args
 
 - Command-specific args are defined in the `args` field of the command definition. Command handlers receive these as a typed object automatically. To make any of these positional, add the key to the `positionalArgs` array.
 - You can share args between commands by declaring a separate object and spreading it into the `args` field. Feel free to import from another file.
-- Global args are shared across all commands and defined in `src/commands/global-args.ts` (same schema as command-specific args). They are passed to every command handler.
+- Global args are shared across all commands and defined in `src/commands/global-args.ts` (same schema as command-specific args). They are available in every command handler.
 
-3. (get a type for the args)
+3. Optionally, get a type for the args
 
 You may want to pass your args to other functions. These functions will need to be typed. To get a type of your args, you can use `typeof command.args`.
 
-4. implement the command handler
+4. Implement the command handler
 
-A command handler is just a function that receives the args as the first param. This is where you will want to do API calls, I/O, logging, etc.
+A command handler is just a function that receives the `args` as the first param and `ctx` as the second param. This is where you will want to do API calls, I/O, logging, etc.
 
-- api calls
+- API calls
 
-Define API response type. Use `fetchResult` to make API calls. `fetchResult` will throw an error if the response is not 2xx.
+Define API response type. Use `fetchResult` to make authenticated API calls. Import it from `src/cfetch` or use `ctx.fetchResult`. `fetchResult` will throw an error if the response is not 2xx.
 
 ```ts
-await fetchResult(
-	`/accounts/${accountId}/workers/services/${scriptName}`,
-	{ method: "DELETE" },
-	new URLSearchParams({ force: needsForceDelete.toString() })
+type UploadResponse = {
+	jwt?: string;
+};
+
+const res = await fetchResult<UploadResponse>(
+	`/accounts/${accountId}/workers/assets/upload`,
+	{
+		method: "POST",
+		headers: {
+			"Content-Type": "application/json",
+		},
+		body: payload,
+	}
 );
 ```
 
-- logging
+- Logging
 
-Do not use `console.*` methods to log. You must import and use the `logger` singleton.
+Do not use `console.*` methods to log. You must the `logger` singleton (imported from `src/logger`) or use `ctx.logger`.
 
-- error handling - UserError vs Error
+- Error handling - UserError vs Error
 
-Throw `UserError` for errors _caused_ by the user -- these are not sent to Sentry whereas regular `Error` are and show be used for unexpected exceptions.
+These classes can be imported from `src/errors` or found on `ctx`, eg. `ctx.errors.UserError`.
+
+Throw `UserError` for errors _caused_ by the user -- these are not sent to Sentry whereas regular `Error`s are and should be used for unexpected exceptions.
+
+For example, if an exception was encountered because the user provided an invalid SQL statement in a D1 command, a `UserError` should be thrown. Whereas, if the D1 local DB crashed for another reason or there was a network error, a regular `Error` would be thrown.
 
 Errors are caught at the top-level and formatted for the console.
 
@@ -108,7 +120,7 @@ Errors are caught at the top-level and formatted for the console.
 
 ### Status / Deprecation
 
-Status can be alpha, private-beta, open-beta, or stable. Breaking changes can freely be made in alpha or private-beta. Try avoid breaking changes in open-beta but are acceptable and should be called out in changeset.
+Status can be alpha, private-beta, open-beta, or stable. Breaking changes can freely be made in alpha or private-beta. Try avoid breaking changes in open-beta but are acceptable and should be called out in [a changeset](../../CONTRIBUTING.md#Changesets).
 
 Stable commands should never have breaking changes.
 
@@ -116,13 +128,31 @@ Stable commands should never have breaking changes.
 
 Run `npx changesets` from the top of the repo. New commands warrant a "minor" bump. Please explain the functionality with examples.
 
+For example:
+
+```md
+feat: implement the `wrangler versions deploy` command
+
+This command allows users to deploy a multiple versions of their Worker.
+
+Note: while in open-beta, the `--experimental-versions` flag is required.
+
+For interactive use (to be prompted for all options), run:
+
+- `wrangler versions deploy --x-versions`
+
+For non-interactive use, run with CLI args (and `--yes` to accept defaults):
+
+- `wrangler versions deploy --version-id $v1 --percentage 90 --version-id $v2 --percentage 10 --yes`
+```
+
 ### Experimental Flags
 
 If you have a stable command, new features should be added behind an experimental flag. By convention, these are named `--experimental-<feature-name>` and have an alias `--x-<feature-name>`. These should be boolean, defaulting to false (off by default).
 
-To stabilise a feature, flip the default to true while keeping the flag to allow users to disable the feature.
+To stabilise a feature, flip the default to true while keeping the flag to allow users to disable the feature with `--no-x-<feature-name>`.
 
-After a bedding period, you can mark the flag as deprecated and hidden. And remove all code paths using the flag.
+After a validation period with no issues reported, you can mark the flag as deprecated and hidden, and remove all code paths using the flag.
 
 ### Documentation
 

@@ -35,9 +35,6 @@ export type HandlerArgs<Args extends BaseNamedArgDefinitions> = OnlyCamelCase<
 export type HandlerContext = {
 	/**
 	 * The wrangler config file read from disk and parsed.
-	 * If no config file can be found, this value will undefined.
-	 * Set `behaviour.requireConfig` to refine this type and
-	 * throw if it cannot be found.
 	 */
 	config: Config;
 	/**
