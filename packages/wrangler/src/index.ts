@@ -42,7 +42,6 @@ import { writeOutput } from "./output";
 import { pages } from "./pages";
 import { APIError, formatMessage, ParseError } from "./parse";
 import { pubSubCommands } from "./pubsub/pubsub-commands";
-import { secret, secretBulkHandler, secretBulkOptions } from "./secret";
 import {
 	addBreadcrumb,
 	captureGlobalException,
@@ -493,13 +492,7 @@ export function createCLIParser(argv: string[]) {
 	);
 
 	// secret
-	wrangler.command(
-		"secret",
-		"🤫 Generate a secret that can be referenced in a Worker",
-		(secretYargs) => {
-			return secret(secretYargs.command(subHelp));
-		}
-	);
+	register.registerNamespace("secret");
 
 	// types
 	wrangler.command(
@@ -623,14 +616,6 @@ export function createCLIParser(argv: string[]) {
 		// "👷 Create or change your workers.dev subdomain.",
 		subdomainOptions,
 		subdomainHandler
-	);
-
-	// [DEPRECATED] secret:bulk
-	wrangler.command(
-		"secret:bulk [json]",
-		false,
-		secretBulkOptions,
-		secretBulkHandler
 	);
 
 	// [DEPRECATED] generate
