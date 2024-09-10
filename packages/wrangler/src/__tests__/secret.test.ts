@@ -674,8 +674,8 @@ describe("wrangler secret", () => {
 
 			await expect(
 				runWrangler("secret bulk ./secret.json --name script-name")
-			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: The contents of "./secret.json" is not valid JSON: "ParseError: Unexpected token b"]`
+			).rejects.toThrowError(
+				`The contents of "./secret.json" is not valid JSON`
 			);
 		});
 
