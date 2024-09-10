@@ -2,6 +2,7 @@ import { inputPrompt } from "@cloudflare/cli/interactive";
 import yargs from "yargs";
 import { hideBin } from "yargs/helpers";
 import { version } from "../../package.json";
+import { reporter } from "../metrics";
 import {
 	getFrameworkMap,
 	getNamesAndDescriptions,
@@ -402,17 +403,34 @@ export const processArgument = async <Key extends keyof C3Args>(
 	key: Key,
 	promptConfig: PromptConfig,
 ) => {
-	const value = args[key];
-	const result = await inputPrompt<Required<C3Args>[Key]>({
-		...promptConfig,
-		// Accept the default value if the arg is already set
-		acceptDefault: promptConfig.acceptDefault ?? value !== undefined,
-		defaultValue: value ?? promptConfig.defaultValue,
-		throwOnError: true,
+	return await reporter.collectAsyncMetrics({
+		eventPrefix: "c3 prompt",
+		props: {
+			args,
+			key,
+			promptConfig,
+		},
+		// Skip metrics collection if the arg value is already set
+		// This can happen when the arg is set via the CLI or if the user has already answered the prompt previously
+		disableTelemetry: args[key] !== undefined,
+		async promise() {
+			const value = args[key];
+			const result = await inputPrompt<Required<C3Args>[Key]>({
+				...promptConfig,
+				// Accept the default value if the arg is already set
+				acceptDefault: promptConfig.acceptDefault ?? value !== undefined,
+				defaultValue: value ?? promptConfig.defaultValue,
+				throwOnError: true,
+			});
+
+			// Update value in args before returning the result
+			args[key] = result;
+
+			// Set properties for prompt completed event
+			reporter.setEventProperty("answer", result);
+			reporter.setEventProperty("isDefaultValue", result === C3_DEFAULTS[key]);
+
+			return result;
+		},
 	});
-
-	// Update value in args before returning the result
-	args[key] = result;
-
-	return result;
 };
