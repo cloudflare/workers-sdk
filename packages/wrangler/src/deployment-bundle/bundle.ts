@@ -86,6 +86,7 @@ export type BundleOptions = {
 	define: Config["define"];
 	alias: Config["alias"];
 	checkFetch: boolean;
+	mockAnalyticsEngineDatasets: Config["analytics_engine_datasets"];
 	targetConsumer: "dev" | "deploy";
 	testScheduled?: boolean;
 	inject?: string[];
@@ -122,6 +123,7 @@ export async function bundleWorker(
 		alias,
 		define,
 		checkFetch,
+		mockAnalyticsEngineDatasets,
 		legacyAssets,
 		bypassAssetCache,
 		targetConsumer,
@@ -147,6 +149,21 @@ export async function bundleWorker(
 
 	// At this point, we take the opportunity to "wrap" the worker with middleware.
 	const middlewareToLoad: MiddlewareLoader[] = [];
+
+	if (
+		targetConsumer === "dev" &&
+		mockAnalyticsEngineDatasets &&
+		mockAnalyticsEngineDatasets.length > 0
+	) {
+		middlewareToLoad.push({
+			name: "mock-analytics-engine",
+			path: "templates/middleware/middleware-mock-analytics-engine.ts",
+			config: {
+				bindings: mockAnalyticsEngineDatasets.map(({ binding }) => binding),
+			},
+			supports: ["modules", "service-worker"],
+		});
+	}
 
 	if (
 		targetConsumer === "dev" &&

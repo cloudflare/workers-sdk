@@ -14,7 +14,7 @@ import type * as kvAssetHandler from "@cloudflare/kv-asset-handler";
 
 const ASSET_MANIFEST = JSON.parse(manifest);
 
-const staticAssets: Middleware = async (request, env, _ctx, middlewareCtx) => {
+const staticAssets: Middleware = async (request, env, ctx, middlewareCtx) => {
 	let options: Partial<Options> = {
 		ASSET_MANIFEST,
 		ASSET_NAMESPACE: env.__STATIC_CONTENT,
@@ -27,7 +27,7 @@ const staticAssets: Middleware = async (request, env, _ctx, middlewareCtx) => {
 			{
 				request,
 				waitUntil(promise) {
-					return _ctx.waitUntil(promise);
+					return ctx.waitUntil(promise);
 				},
 			},
 			options

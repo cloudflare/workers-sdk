@@ -551,6 +551,8 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 						checkFetch: false,
 						alias: config.alias,
 						legacyAssets: config.legacy_assets,
+						// We do not mock AE datasets when deploying
+						mockAnalyticsEngineDatasets: [],
 						// enable the cache when publishing
 						bypassAssetCache: false,
 						// We want to know if the build is for development or publishing

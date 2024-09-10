@@ -606,6 +606,7 @@ function DevSession(props: DevSessionProps) {
 		alias: props.alias,
 		noBundle: props.noBundle,
 		findAdditionalModules: props.findAdditionalModules,
+		mockAnalyticsEngineDatasets: props.bindings.analytics_engine_datasets ?? [],
 		legacyAssets: props.legacyAssetsConfig,
 		durableObjects: props.bindings.durable_objects || { bindings: [] },
 		local: props.local,
