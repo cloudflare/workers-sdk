@@ -14,13 +14,63 @@ export class AssetsManifest {
 
 	async get(pathname: string) {
 		const pathHash = await hashPath(pathname);
-		const entry = binarySearch(
+		const entry = interpolationSearch(
 			new Uint8Array(this.data, HEADER_SIZE),
 			pathHash
 		);
 		return entry ? contentHashToKey(entry) : null;
 	}
 }
+
+const interpolationSearch = (
+	arr: Uint8Array,
+	searchValue: Uint8Array
+): Uint8Array | false => {
+	// use the fact that the search space is sorted and uniformly distributed and that the search value is random to do a biased search
+	// like humans do when looking through a phonebook
+
+	// Find indexes of two corners
+	let low = 0;
+	let high = arr.byteLength / ENTRY_SIZE - 1;
+
+	// Since array is sorted, an element present
+	// in array must be in range defined by corner
+	while (
+		low <= high &&
+		compare(searchValue, arr[low]) >= 0 &&
+		compare(searchValue, arr[high]) <= 0
+	) {
+		if (low == high) {
+			if (compare(arr[low], searchValue) === 0) {
+				return low;
+			}
+			return -1;
+		}
+
+		// Probing the position with keeping
+		// uniform distribution in mind.
+		let pos = Math.floor(
+			low + ((high - low) / (arr[high] - arr[low])) * (searchValue - arr[low])
+		);
+
+		// Condition of target found
+		if (compare(arr[pos], searchValue) === 0) {
+			return pos;
+		}
+
+		// If searchValue is larger, searchValue is in upper part
+		if (arr[pos] < searchValue) {
+			low = pos + 1;
+		}
+
+		// If searchValue is smaller, searchValue is in lower part
+		else {
+			high = pos - 1;
+		}
+	}
+
+	return -1;
+};
 
 const binarySearch = (
 	arr: Uint8Array,
