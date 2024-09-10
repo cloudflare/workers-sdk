@@ -46,7 +46,8 @@ export const offerToDeploy = async (ctx: C3Context) => {
 	// initialize a deployment object in context
 	ctx.deployment = {};
 
-	const loginSuccess = await wranglerLogin();
+	const loginSuccess = await wranglerLogin(ctx);
+
 	if (!loginSuccess) {
 		return false;
 	}
