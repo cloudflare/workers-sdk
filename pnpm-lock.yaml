@@ -9,7 +9,7 @@ overrides:
   '@types/react-tabs>@types/react': ^18
   '@types/react-transition-group>@types/react': ^18
   '@cloudflare/elements>@types/react': ^18
-  capnpc-ts>typescript: 5.5.2
+  capnpc-ts>typescript: 4.2.4
 
 patchedDependencies:
   '@cloudflare/component-listbox@1.10.6':
@@ -8381,6 +8381,11 @@ packages:
     engines: {node: '>=4.2.0'}
     hasBin: true
 
+  typescript@4.2.4:
+    resolution: {integrity: sha512-V+evlYHZnQkaz8TRBuxTA92yZBPotr5H+WhQ7bD3hZUndx5tGOa1fuCgeSjxAzM1RiN5IzvadIXTVefuuwZCRg==}
+    engines: {node: '>=4.2.0'}
+    hasBin: true
+
   typescript@5.3.3:
     resolution: {integrity: sha512-pXWcraxM0uxAS+tN0AG/BF2TyqmHO014Z070UsJ+pFvYuRSq8KH8DmWpnbXe0pEPDHXZV3FcAbJkijJ5oNEnWw==}
     engines: {node: '>=14.17'}
@@ -12038,7 +12043,7 @@ snapshots:
       hex2dec: 1.1.2
       mkdirp: 1.0.4
       tslib: 2.5.3
-      typescript: 5.5.2
+      typescript: 4.2.4
     transitivePeerDependencies:
       - supports-color
 
@@ -16328,6 +16333,8 @@ snapshots:
       is-typed-array: 1.1.10
 
   typescript@3.9.10: {}
+
+  typescript@4.2.4: {}
 
   typescript@5.3.3: {}
 
