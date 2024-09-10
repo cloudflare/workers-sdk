@@ -31,7 +31,6 @@ import {
 	addWranglerToGitIgnore,
 	copyTemplateFiles,
 	createContext,
-	deriveCorrelatedArgs,
 	updatePackageName,
 	updatePackageScripts,
 } from "./templates";
@@ -105,8 +104,6 @@ export const runLatest = async () => {
 // Entrypoint to c3
 export const runCli = async (args: Partial<C3Args>) => {
 	printBanner();
-
-	deriveCorrelatedArgs(args);
 
 	const ctx = await createContext(args);
 
