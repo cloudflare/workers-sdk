@@ -276,7 +276,8 @@ async function viteResolve(
 	referrer: string,
 	isRequire: boolean
 ): Promise<string> {
-	if (isRequire) {
+	// note: using require.resolve doesn't seem to work well on windows, so there we skip this more proper cjs module resolution
+	if (isRequire && !isWindows) {
 		try {
 			// we use the built in require.resolve method to resolve required/cjs modules
 			return require.resolve(specifier, {
@@ -293,6 +294,15 @@ async function viteResolve(
 	});
 
 	if (resolved === null) {
+		// Vite's resolution algorithm doesn't apply Node resolution to specifiers
+		// starting with a dot. Unfortunately, the `@prisma/client` package includes
+		// `require(".prisma/client/wasm")` which needs to resolve to something in
+		// `node_modules/.prisma/client`. Since Prisma officially supports Workers,
+		// it's quite likely users will want to use it with the Vitest pool. To fix
+		// this, we fall back to Node's resolution algorithm in this case.
+		if (isRequire && specifier[0] === ".") {
+			return require.resolve(specifier, { paths: [referrer] });
+		}
 		throw new Error("Not found");
 	}
 	// Handle case where `package.json` `browser` field stubs out built-in with an
