@@ -57,6 +57,7 @@
 		"devalue": "^4.3.0",
 		"esbuild": "0.17.19",
 		"miniflare": "workspace:*",
+		"resolve": "^1.22.8",
 		"semver": "^7.5.1",
 		"wrangler": "workspace:*",
 		"zod": "^3.22.3"
@@ -66,6 +67,7 @@
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-types": "^4.20240821.1",
 		"@types/node": "20.8.3",
+		"@types/resolve": "^1.20.6",
 		"@types/semver": "^7.5.1",
 		"@vitest/runner": "1.3.x - 1.5.x",
 		"@vitest/snapshot": "1.3.x - 1.5.x",
