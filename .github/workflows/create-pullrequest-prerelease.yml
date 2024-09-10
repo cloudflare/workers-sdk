@@ -64,6 +64,8 @@ jobs:
           # Required by the `@actions/artifact` package
           ACTIONS_RUNTIME_TOKEN: ${{ env.GITHUB_ACTIONS_RUNTIME_TOKEN }}
           ACTIONS_RESULTS_URL: ${{ env.GITHUB_ACTIONS_RESULTS_URL }}
+          # this is the "test/staging" key for sparrow analytics
+          SPARROW_SOURCE_KEY: "5adf183f94b3436ba78d67f506965998"
 
       - name: Build and upload prerelease comment
         run: node .github/prereleases/3-comment.mjs
