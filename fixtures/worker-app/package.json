@@ -6,6 +6,7 @@
 	"author": "",
 	"main": "src/index.js",
 	"scripts": {
+		"pipelines": "wrangler --help",
 		"check:type": "tsc",
 		"test:ci": "vitest run",
 		"test:watch": "vitest",
