@@ -1,4 +1,5 @@
 import { http, HttpResponse } from "msw";
+import { normalizeOutput } from "../../e2e/helpers/normalize";
 import { __testSkipDelays } from "../pipelines";
 import { endEventLoop } from "./helpers/end-event-loop";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
@@ -312,8 +313,7 @@ describe("pipelines", () => {
 		expect(std.out).toMatchInlineSnapshot(`
           "wrangler pipelines
 
-          🚰 Manage Worker Pipelines
-
+          🚰 Manage Worker Pipelines [open beta]
 
           COMMANDS
             wrangler pipelines create <pipeline>  Create a new pipeline
@@ -356,10 +356,8 @@ describe("pipelines", () => {
 
 		await endEventLoop();
 
-		expect(std.err).toMatchInlineSnapshot(`
-			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe R2 bucket [bad-bucket] doesn't exist[0m
-
-			"
+		expect(normalizeOutput(std.err)).toMatchInlineSnapshot(`
+			"X [ERROR] The R2 bucket [bad-bucket] doesn't exist"
 		`);
 		expect(std.out).toMatchInlineSnapshot(`""`);
 		expect(requests.count).toEqual(1);
@@ -434,17 +432,12 @@ describe("pipelines", () => {
 		await endEventLoop();
 
 		expect(std.err).toMatchInlineSnapshot(`""`);
-		expect(std.out).toMatchInlineSnapshot(`
+		expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`
 			"Retrieving config for pipeline \\"bad-pipeline\\".
-
-			[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/accounts/some-account-id/pipelines/bad-pipeline) failed.[0m
-
+			X [ERROR] A request to the Cloudflare API (/accounts/some-account-id/pipelines/bad-pipeline) failed.
 			  Pipeline does not exist [code: 1000]
-
 			  If you think this is a bug, please open an issue at:
-			  [4mhttps://github.com/cloudflare/workers-sdk/issues/new/choose[0m
-
-			"
+			  https://github.com/cloudflare/workers-sdk/issues/new/choose"
 		`);
 		expect(requests.count).toEqual(1);
 	});
@@ -516,16 +509,11 @@ describe("pipelines", () => {
 		await endEventLoop();
 
 		expect(std.err).toMatchInlineSnapshot(`""`);
-		expect(std.out).toMatchInlineSnapshot(`
-			"
-			[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/accounts/some-account-id/pipelines/bad-pipeline) failed.[0m
-
+		expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`
+			"X [ERROR] A request to the Cloudflare API (/accounts/some-account-id/pipelines/bad-pipeline) failed.
 			  Pipeline does not exist [code: 1000]
-
 			  If you think this is a bug, please open an issue at:
-			  [4mhttps://github.com/cloudflare/workers-sdk/issues/new/choose[0m
-
-			"
+			  https://github.com/cloudflare/workers-sdk/issues/new/choose"
 		`);
 		expect(requests.count).toEqual(1);
 	});
@@ -554,17 +542,12 @@ describe("pipelines", () => {
 		await endEventLoop();
 
 		expect(std.err).toMatchInlineSnapshot(`""`);
-		expect(std.out).toMatchInlineSnapshot(`
+		expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`
 			"Deleting pipeline bad-pipeline.
-
-			[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/accounts/some-account-id/pipelines/bad-pipeline) failed.[0m
-
+			X [ERROR] A request to the Cloudflare API (/accounts/some-account-id/pipelines/bad-pipeline) failed.
 			  Pipeline does not exist [code: 1000]
-
 			  If you think this is a bug, please open an issue at:
-			  [4mhttps://github.com/cloudflare/workers-sdk/issues/new/choose[0m
-
-			"
+			  https://github.com/cloudflare/workers-sdk/issues/new/choose"
 		`);
 		expect(requests.count).toEqual(1);
 	});
