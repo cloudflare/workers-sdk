@@ -1,8 +1,7 @@
 import { join } from "path";
-import { crash, updateStatus, warn } from "@cloudflare/cli";
-import { processArgument } from "@cloudflare/cli/args";
+import { updateStatus, warn } from "@cloudflare/cli";
 import { brandColor, dim } from "@cloudflare/cli/colors";
-import { spinner } from "@cloudflare/cli/interactive";
+import { inputPrompt, spinner } from "@cloudflare/cli/interactive";
 import { runFrameworkGenerator } from "frameworks/index";
 import {
 	copyFile,
@@ -18,7 +17,7 @@ import { detectPackageManager } from "helpers/packageManagers";
 import { installPackages } from "helpers/packages";
 import { getTemplatePath } from "../../src/templates";
 import type { TemplateConfig } from "../../src/templates";
-import type { C3Args, C3Context } from "types";
+import type { C3Context } from "types";
 
 const { npm, npx } = detectPackageManager();
 
@@ -42,7 +41,7 @@ const generate = async (ctx: C3Context) => {
 		// This should never happen to users, it is a check mostly so that
 		// if the toml file is changed in a way that breaks the "KV Example" addition
 		// the C3 Next.js e2e runs will fail with this
-		crash("Failed to properly generate the wrangler.toml file");
+		throw new Error("Failed to properly generate the wrangler.toml file");
 	}
 
 	writeFile(join(ctx.project.path, "wrangler.toml"), newTomlContent);
@@ -89,7 +88,7 @@ const configure = async (ctx: C3Context) => {
 	]);
 
 	if (!path) {
-		crash("Could not find the `/api` or `/app` directory");
+		throw new Error("Could not find the `/api` or `/app` directory");
 	}
 
 	const usesTs = usesTypescript(ctx);
@@ -135,7 +134,7 @@ export const shouldInstallNextOnPagesEslintPlugin = async (
 		return false;
 	}
 
-	return await processArgument(ctx.args, "eslint-plugin" as keyof C3Args, {
+	return await inputPrompt({
 		type: "confirm",
 		question: "Do you want to use the next-on-pages eslint-plugin?",
 		label: "eslint-plugin",

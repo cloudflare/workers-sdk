@@ -1,8 +1,8 @@
 import { cp, mkdtemp } from "fs/promises";
 import { tmpdir } from "os";
 import { join } from "path";
-import { processArgument } from "@cloudflare/cli/args";
 import { brandColor, dim } from "@cloudflare/cli/colors";
+import { processArgument } from "helpers/args";
 import { runCommand } from "helpers/command";
 import { detectPackageManager } from "helpers/packageManagers";
 import { chooseAccount } from "../../src/wrangler/accounts";
@@ -14,7 +14,7 @@ export async function copyExistingWorkerFiles(ctx: C3Context) {
 	await chooseAccount(ctx);
 
 	if (ctx.args.existingScript === undefined) {
-		ctx.args.existingScript = await processArgument<string>(
+		ctx.args.existingScript = await processArgument(
 			ctx.args,
 			"existingScript",
 			{
