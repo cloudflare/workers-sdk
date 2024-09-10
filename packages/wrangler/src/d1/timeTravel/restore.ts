@@ -1,55 +1,59 @@
 import { printWranglerBanner } from "../..";
 import { fetchResult } from "../../cfetch";
-import { withConfig } from "../../config";
+import { defineCommand } from "../../core";
 import { confirm } from "../../dialogs";
 import { UserError } from "../../errors";
 import { logger } from "../../logger";
 import { requireAuth } from "../../user";
-import { Database } from "../options";
+import * as SharedArgs from "../options";
 import { getDatabaseByNameOrBinding } from "../utils";
 import { getBookmarkIdFromTimestamp, throwIfDatabaseIsAlpha } from "./utils";
-import type {
-	CommonYargsArgv,
-	StrictYargsOptionsToInterface,
-} from "../../yargs-types";
 import type { RestoreBookmarkResponse } from "./types";
 
-export function RestoreOptions(yargs: CommonYargsArgv) {
-	return Database(yargs)
-		.option("bookmark", {
+defineCommand({
+	command: "wrangler d1 time-travel restore",
+
+	metadata: {
+		description: "Restore a database back to a specific point-in-time",
+		status: "stable",
+		owner: "Product: D1",
+	},
+
+	positionalArgs: ["database"],
+	args: {
+		...SharedArgs.Database,
+		bookmark: {
 			describe: "Bookmark to use for time travel",
 			type: "string",
-		})
-		.option("timestamp", {
+		},
+		timestamp: {
 			describe:
 				"accepts a Unix (seconds from epoch) or RFC3339 timestamp (e.g. 2023-07-13T08:46:42.228Z) to retrieve a bookmark for",
 			type: "string",
-		})
-		.option("json", {
+		},
+		json: {
 			describe: "return output as clean JSON",
 			type: "boolean",
 			default: false,
-		})
-		.check(function (argv) {
-			if (
-				(argv.timestamp && !argv.bookmark) ||
-				(!argv.timestamp && argv.bookmark)
-			) {
-				return true;
-			} else if (argv.timestamp && argv.bookmark) {
-				throw new UserError(
-					"Provide either a timestamp, or a bookmark - not both."
-				);
-			} else {
-				throw new UserError("Provide either a timestamp or a bookmark");
-			}
-		});
-}
+		},
+	},
 
-type HandlerOptions = StrictYargsOptionsToInterface<typeof RestoreOptions>;
+	validateArgs(argv) {
+		if (
+			(argv.timestamp && !argv.bookmark) ||
+			(!argv.timestamp && argv.bookmark)
+		) {
+			return;
+		} else if (argv.timestamp && argv.bookmark) {
+			throw new UserError(
+				"Provide either a timestamp, or a bookmark - not both."
+			);
+		} else {
+			throw new UserError("Provide either a timestamp or a bookmark");
+		}
+	},
 
-export const RestoreHandler = withConfig<HandlerOptions>(
-	async ({ database, config, json, timestamp, bookmark }): Promise<void> => {
+	async handler({ database, json, timestamp, bookmark }, { config }) {
 		// bookmark
 		const accountId = await requireAuth(config);
 		const db = await getDatabaseByNameOrBinding(config, accountId, database);
@@ -89,8 +93,8 @@ export const RestoreHandler = withConfig<HandlerOptions>(
 				);
 			}
 		}
-	}
-);
+	},
+});
 
 const handleRestore = async (
 	accountId: string,

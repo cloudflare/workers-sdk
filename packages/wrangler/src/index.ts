@@ -8,7 +8,6 @@ import { version as wranglerVersion } from "../package.json";
 import { cloudchamber } from "./cloudchamber";
 import { loadDotEnv } from "./config";
 import { createCommandRegister } from "./core/register-commands";
-import { d1 } from "./d1";
 import { deleteHandler, deleteOptions } from "./delete";
 import { deployHandler, deployOptions } from "./deploy";
 import { isAuthenticationError } from "./deploy/deploy";
@@ -521,9 +520,7 @@ export function createCLIParser(argv: string[]) {
 	register.registerNamespace("r2");
 
 	// d1
-	wrangler.command("d1", `🗄  Manage Workers D1 databases`, (d1Yargs) => {
-		return d1(d1Yargs.command(subHelp));
-	});
+	register.registerNamespace("d1");
 
 	// [OPEN BETA] vectorize
 	wrangler.command(

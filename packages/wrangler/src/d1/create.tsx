@@ -1,36 +1,37 @@
 import { Box, Text } from "ink";
-import { printWranglerBanner } from "..";
 import { fetchResult } from "../cfetch";
-import { withConfig } from "../config";
+import { defineCommand } from "../core";
 import { UserError } from "../errors";
 import { logger } from "../logger";
 import { requireAuth } from "../user";
 import { renderToString } from "../utils/render";
 import { LOCATION_CHOICES } from "./constants";
-import type {
-	CommonYargsArgv,
-	StrictYargsOptionsToInterface,
-} from "../yargs-types";
 import type { DatabaseCreationResult } from "./types";
 
-export function Options(yargs: CommonYargsArgv) {
-	return yargs
-		.positional("name", {
+defineCommand({
+	command: "wrangler d1 create",
+
+	metadata: {
+		description: "Create D1 database",
+		status: "stable",
+		owner: "Product: D1",
+	},
+
+	positionalArgs: ["name"],
+	args: {
+		name: {
 			describe: "The name of the new DB",
 			type: "string",
 			demandOption: true,
-		})
-		.option("location", {
+		},
+		location: {
 			describe:
 				"A hint for the primary location of the new DB. Options:\nweur: Western Europe\neeur: Eastern Europe\napac: Asia Pacific\noc: Oceania\nwnam: Western North America\nenam: Eastern North America \n",
 			type: "string",
-		});
-}
+		},
+	},
 
-type HandlerOptions = StrictYargsOptionsToInterface<typeof Options>;
-export const Handler = withConfig<HandlerOptions>(
-	async ({ name, config, location }): Promise<void> => {
-		await printWranglerBanner();
+	async handler({ name, location }, { config }) {
 		const accountId = await requireAuth(config);
 
 		if (location) {
@@ -84,5 +85,5 @@ export const Handler = withConfig<HandlerOptions>(
 				</Box>
 			)
 		);
-	}
-);
+	},
+});

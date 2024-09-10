@@ -1,8 +1,7 @@
 import path from "path";
 import { Box, Text } from "ink";
 import Table from "ink-table";
-import { printWranglerBanner } from "../..";
-import { withConfig } from "../../config";
+import { defineCommand } from "../../core";
 import { UserError } from "../../errors";
 import { logger } from "../../logger";
 import { requireAuth } from "../../user";
@@ -15,27 +14,22 @@ import {
 	initMigrationsTable,
 } from "./helpers";
 import { MigrationOptions } from "./options";
-import type {
-	CommonYargsArgv,
-	StrictYargsOptionsToInterface,
-} from "../../yargs-types";
 
-export function ListOptions(yargs: CommonYargsArgv) {
-	return MigrationOptions(yargs);
-}
+defineCommand({
+	command: "wrangler d1 migrations list",
 
-type ListHandlerOptions = StrictYargsOptionsToInterface<typeof ListOptions>;
+	metadata: {
+		description: "List your D1 migrations",
+		status: "stable",
+		owner: "Product: D1",
+	},
 
-export const ListHandler = withConfig<ListHandlerOptions>(
-	async ({
-		config,
-		database,
-		local,
-		remote,
-		persistTo,
-		preview,
-	}): Promise<void> => {
-		await printWranglerBanner();
+	positionalArgs: ["database"],
+	args: {
+		...MigrationOptions,
+	},
+
+	async handler({ database, local, remote, persistTo, preview }, { config }) {
 		if (remote) {
 			await requireAuth({});
 		}
@@ -101,5 +95,5 @@ export const ListHandler = withConfig<ListHandlerOptions>(
 				</Box>
 			)
 		);
-	}
-);
+	},
+});

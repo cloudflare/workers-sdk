@@ -1,3 +1,4 @@
+import { setTimeout } from "timers/promises";
 import { endEventLoop } from "../helpers/end-event-loop";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { runInTempDir } from "../helpers/run-in-tmp";
@@ -75,18 +76,11 @@ describe("d1", () => {
 	});
 
 	it("should show help when the migrations command is passed", async () => {
-		await expect(() => runWrangler("d1 migrations")).rejects.toThrow(
-			"Not enough non-option arguments: got 0, need at least 1"
-		);
+		await runWrangler("d1 migrations");
+		await setTimeout(10); // workaround because hacky subhelp logs within setImmediate
 
-		expect(std.err).toMatchInlineSnapshot(`
-		"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNot enough non-option arguments: got 0, need at least 1[0m
-
-		"
-	`);
 		expect(std.out).toMatchInlineSnapshot(`
-			"
-			wrangler d1 migrations
+			"wrangler d1 migrations
 
 			Interact with D1 migrations
 
@@ -105,18 +99,11 @@ describe("d1", () => {
 	});
 
 	it("should show help when the time travel command is passed", async () => {
-		await expect(() => runWrangler("d1 time-travel")).rejects.toThrow(
-			"Not enough non-option arguments: got 0, need at least 1"
-		);
+		await runWrangler("d1 time-travel");
+		await setTimeout(10); // workaround because hacky subhelp logs within setImmediate
 
-		expect(std.err).toMatchInlineSnapshot(`
-		"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNot enough non-option arguments: got 0, need at least 1[0m
-
-		"
-	`);
 		expect(std.out).toMatchInlineSnapshot(`
-			"
-			wrangler d1 time-travel
+			"wrangler d1 time-travel
 
 			Use Time Travel to restore, fork or copy a database at a specific point-in-time
 

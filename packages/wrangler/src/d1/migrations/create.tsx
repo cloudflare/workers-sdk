@@ -1,33 +1,35 @@
 import fs from "node:fs";
 import path from "path";
 import { Box, Text } from "ink";
-import { printWranglerBanner } from "../..";
-import { withConfig } from "../../config";
+import { defineCommand } from "../../core";
 import { UserError } from "../../errors";
 import { logger } from "../../logger";
 import { renderToString } from "../../utils/render";
 import { DEFAULT_MIGRATION_PATH } from "../constants";
-import { Database } from "../options";
+import * as options from "../options";
 import { getDatabaseInfoFromConfig } from "../utils";
 import { getMigrationsPath, getNextMigrationNumber } from "./helpers";
-import type {
-	CommonYargsArgv,
-	StrictYargsOptionsToInterface,
-} from "../../yargs-types";
 
-export function CreateOptions(yargs: CommonYargsArgv) {
-	return Database(yargs).positional("message", {
-		describe: "The Migration message",
-		type: "string",
-		demandOption: true,
-	});
-}
+defineCommand({
+	command: "wrangler d1 migrations create",
 
-type CreateHandlerOptions = StrictYargsOptionsToInterface<typeof CreateOptions>;
+	metadata: {
+		description: "Create a new migration",
+		status: "stable",
+		owner: "Product: D1",
+	},
 
-export const CreateHandler = withConfig<CreateHandlerOptions>(
-	async ({ config, database, message }): Promise<void> => {
-		await printWranglerBanner();
+	positionalArgs: ["database", "message"],
+	args: {
+		...options.Database,
+		message: {
+			describe: "The Migration message",
+			type: "string",
+			demandOption: true,
+		},
+	},
+
+	async handler({ database, message }, { config }) {
 		const databaseInfo = getDatabaseInfoFromConfig(config, database);
 		if (!databaseInfo) {
 			throw new UserError(
@@ -69,8 +71,8 @@ export const CreateHandler = withConfig<CreateHandlerOptions>(
 				</Box>
 			)
 		);
-	}
-);
+	},
+});
 
 function pad(num: number, size: number): string {
 	let newNum = num.toString();
