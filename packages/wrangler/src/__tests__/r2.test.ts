@@ -96,7 +96,7 @@ describe("r2", () => {
 				  wrangler r2 bucket list           List R2 buckets
 				  wrangler r2 bucket delete <name>  Delete an R2 bucket
 				  wrangler r2 bucket sippy          Manage Sippy incremental migration on an R2 bucket
-				  wrangler r2 bucket notification   Manage event notifications for an R2 bucket
+				  wrangler r2 bucket notification   Manage event notifications for an R2 bucket [open beta]
 
 				GLOBAL FLAGS
 				  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
@@ -130,7 +130,7 @@ describe("r2", () => {
 				  wrangler r2 bucket list           List R2 buckets
 				  wrangler r2 bucket delete <name>  Delete an R2 bucket
 				  wrangler r2 bucket sippy          Manage Sippy incremental migration on an R2 bucket
-				  wrangler r2 bucket notification   Manage event notifications for an R2 bucket
+				  wrangler r2 bucket notification   Manage event notifications for an R2 bucket [open beta]
 
 				GLOBAL FLAGS
 				  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
@@ -902,7 +902,7 @@ describe("r2", () => {
 						"
 						wrangler r2 bucket notification get <bucket>
 
-						Get event notification configuration for a bucket
+						Get event notification configuration for a bucket [open beta]
 
 						POSITIONALS
 						  bucket  The name of the bucket for which notifications will be emitted  [string] [required]
@@ -1008,7 +1008,7 @@ describe("r2", () => {
 						"
 						wrangler r2 bucket notification create <bucket>
 
-						Create new event notification configuration for an R2 bucket
+						Create new event notification configuration for an R2 bucket [open beta]
 
 						POSITIONALS
 						  bucket  The name of the bucket for which notifications will be emitted  [string] [required]
@@ -1100,7 +1100,7 @@ describe("r2", () => {
 						"
 						wrangler r2 bucket notification delete <bucket>
 
-						Delete event notification configuration for an R2 bucket and queue
+						Delete event notification configuration for an R2 bucket and queue [open beta]
 
 						POSITIONALS
 						  bucket  The name of the bucket for which notifications will be emitted  [string] [required]
