@@ -12,3 +12,18 @@ account_id = "0f1b8aa119a907021f659042f95ea9ba"
 workers_dev = false
 main = "src/index.ts"
 compatibility_date = "2024-07-31"
+compatibility_flags = ["nodejs_compat"]
+
+[[unsafe.bindings]]
+name = "ASSETS_MANIFEST"
+type = "param"
+param = "assetManifest"
+data_ref = true
+
+[[unsafe.bindings]]
+name = "ASSETS_KV_NAMESPACE"
+type = "internal_assets"
+
+[unsafe.metadata.build_options]
+stable_id = "cloudflare/cf_asset_worker"
+networks = ["cf","jdc"]
