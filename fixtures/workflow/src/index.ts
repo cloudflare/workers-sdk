@@ -1,28 +1,50 @@
-import { WorkerEntrypoint } from "cloudflare:workers";
+import {
+	WorkerEntrypoint,
+	Workflow,
+	WorkflowEvent,
+	WorkflowStep,
+} from "cloudflare:workers";
 
-export default class extends WorkerEntrypoint {
-	async init(event: any, step: any): Promise<void> {
-		await step.run("first step", async function () {
-			await fetch(
-				`https://webhook.site/16ffb499-32d1-4a0b-b2fd-ad8b15114f30?step=first`
-			);
+type Params = {
+	name: string;
+};
+export class Demo extends Workflow<{}, Params> {
+	async run(events: Array<WorkflowEvent<Params>>, step: WorkflowStep) {
+		const { timestamp, payload } = events[0];
+		const result = await step.do("First step", async function () {
 			return {
-				result: "ok",
+				output: "First step result",
 			};
 		});
 
-		await step.sleep("10 seconds");
+		await step.sleep("Wait", "1 minute");
 
-		await step.run("second step", async function () {
-			await fetch(
-				`https://webhook.site/16ffb499-32d1-4a0b-b2fd-ad8b15114f30?step=second`
-			);
+		const result2 = await step.do("Second step", async function () {
 			return {
-				result: "ok",
+				output: "Second step result",
 			};
 		});
+
+		return {
+			result,
+			result2,
+			timestamp,
+			payload,
+		};
 	}
-	async fetch(): Promise<Response> {
+}
+
+type Env = {
+	WORKFLOW: {
+		create: (id: string) => {
+			pause: () => {};
+		};
+	};
+};
+export default class extends WorkerEntrypoint<Env> {
+	async fetch() {
+		const handle = await this.env.WORKFLOW.create(crypto.randomUUID());
+		await handle.pause();
 		return new Response();
 	}
 }
