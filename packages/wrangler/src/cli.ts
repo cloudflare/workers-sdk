@@ -58,3 +58,7 @@ const generateASSETSBinding: (
 	// eslint-disable-next-line @typescript-eslint/no-var-requires
 	require("./miniflare-cli/assets").default;
 export { generateASSETSBinding as unstable_generateASSETSBinding };
+
+export { getSdk } from "./cfetch/internal";
+
+export { parseTOML } from "./parse";
