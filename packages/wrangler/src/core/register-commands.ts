@@ -163,28 +163,19 @@ function walkTreeAndRegister(
 		(def.hidden ? false : def.description) as string, // cast to satisfy typescript overload selection
 		(subYargs) => {
 			if (def.defineArgs) {
-				subYargs = def.defineArgs(subYargs);
+				def.defineArgs(subYargs);
 			} else {
 				// this is our hacky way of printing --help text for incomplete commands
 				// eg `wrangler kv namespace` will run `wrangler kv namespace --help`
-				subYargs = subYargs.command(subHelp);
+				subYargs.command(subHelp);
 			}
 
 			for (const [nextSegment, nextNode] of subtree.entries()) {
-				subYargs = walkTreeAndRegister(
-					nextSegment,
-					nextNode,
-					subYargs,
-					subHelp
-				);
+				walkTreeAndRegister(nextSegment, nextNode, subYargs, subHelp);
 			}
-
-			return subYargs;
 		},
 		def.handler // TODO: replace hacky subHelp with default handler impl (def.handler will be undefined for namespaces, so set default handler to print subHelp)
 	);
-
-	return yargs;
 }
 
 // #region utils
