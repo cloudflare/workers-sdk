@@ -1,0 +1,31 @@
+name: Validate PR Description
+
+on: pull_request
+
+jobs:
+  check:
+    if: github.ref != 'refs/heads/changeset-release/main'
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}-add-pr
+      cancel-in-progress: true
+    timeout-minutes: 30
+    name: Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install Dependencies
+        uses: ./.github/actions/install-dependencies
+        with:
+          turbo-api: ${{ secrets.TURBO_API }}
+          turbo-team: ${{ secrets.TURBO_TEAM }}
+          turbo-token: ${{ secrets.TURBO_TOKEN }}
+          turbo-signature: ${{ secrets.TURBO_REMOTE_CACHE_SIGNATURE_KEY }}
+
+      - run: node -r esbuild-register tools/deployments/validate-pr-description.ts
+        env:
+          TITLE: ${{ github.event.pull_request.title }}
+          BODY: ${{ github.event.pull_request.body }}
