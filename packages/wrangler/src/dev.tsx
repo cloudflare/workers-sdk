@@ -71,7 +71,6 @@ import type {
 } from "./yargs-types";
 import type { Json } from "miniflare";
 import type React from "react";
-import { pipeline } from "node:stream";
 
 export function devOptions(yargs: CommonYargsArgv) {
 	return (

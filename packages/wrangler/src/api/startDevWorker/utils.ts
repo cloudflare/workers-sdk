@@ -288,7 +288,7 @@ export async function convertBindingsToCfWorkerInitBindings(
 		logfwdr: undefined,
 		unsafe: undefined,
 		experimental_assets: undefined,
-		pipelines: undefined
+		pipelines: undefined,
 	};
 
 	const fetchers: Record<string, ServiceFetch> = {};

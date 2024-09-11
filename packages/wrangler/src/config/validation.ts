@@ -3117,9 +3117,7 @@ const validateConsumer: ValidatorFn = (diagnostics, field, value, _config) => {
 const validatePipelineBinding: ValidatorFn = (diagnostics, field, value) => {
 	if (typeof value !== "object" || value === null) {
 		diagnostics.errors.push(
-			`"pipeline" bindings should be objects, but got ${JSON.stringify(
-				value
-			)}`
+			`"pipeline" bindings should be objects, but got ${JSON.stringify(value)}`
 		);
 		return false;
 	}
@@ -3149,8 +3147,6 @@ const validatePipelineBinding: ValidatorFn = (diagnostics, field, value) => {
 
 	return isValid;
 };
-
-
 
 function normalizeAndValidateLimits(
 	diagnostics: Diagnostics,
