@@ -8,7 +8,7 @@
 
   Adds a cloudchamber curl command which allows easy access to arbitrary cloudchamber API endpoints.
 
-- [#6649](https://github.com/cloudflare/workers-sdk/pull/6649) [`46a91e7`](https://github.com/cloudflare/workers-sdk/commit/46a91e7e7d286e6835bb87cfdd6c9096deaeba6e) Thanks [@andyjessop](https://github.com/andyjessop)! - feature: Integrate the Cloudflare Pipelines product into wrangler.
+- [#6649](https://github.com/cloudflare/workers-sdk/pull/6649) [`46a91e7`](https://github.com/cloudflare/workers-sdk/commit/46a91e7e7d286e6835bb87cfdd6c9096deaeba6e) Thanks [@oliy](https://github.com/oliy)! - feature: Integrate the Cloudflare Pipelines product into wrangler.
 
   Cloudflare Pipelines is a product that handles the ingest of event streams
   into R2. This feature integrates various forms of managing pipelines.
