@@ -139,17 +139,20 @@ export const COMMAND_DEFINITIONS: Array<
 	CommandDefinition | NamespaceDefinition | AliasDefinition
 > = [];
 
+type DefineCommandResult<NamedArgs extends BaseNamedArgDefinitions> =
+	DeepFlatten<{
+		args: HandlerArgs<NamedArgs>; // used for type inference only
+	}>;
 export function defineCommand<NamedArgs extends BaseNamedArgDefinitions>(
 	definition: CommandDefinition<NamedArgs>
-) {
+): DefineCommandResult<NamedArgs>;
+export function defineCommand(
+	definition: CommandDefinition
+): DefineCommandResult<BaseNamedArgDefinitions> {
 	COMMAND_DEFINITIONS.push(definition as unknown as CommandDefinition);
 
-	return {
-		definition,
-		get args(): HandlerArgs<NamedArgs> {
-			throw new Error();
-		},
-	};
+	// @ts-ignore return type is used for type inference only
+	return {};
 }
 
 export type NamespaceDefinition = {
