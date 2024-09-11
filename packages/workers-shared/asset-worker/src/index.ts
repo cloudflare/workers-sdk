@@ -2,9 +2,12 @@ import { WorkerEntrypoint } from "cloudflare:workers";
 import { AssetsManifest } from "./assets-manifest";
 import { applyConfigurationDefaults } from "./configuration";
 import { getIntent, handleRequest } from "./handler";
-import { InternalServerErrorResponse } from "./responses";
+import {
+	InternalServerErrorResponse,
+	MethodNotAllowedResponse,
+} from "./responses";
 import { getAssetWithMetadataFromKV } from "./utils/kv";
-import type { Configuration } from "./configuration";
+import type { AssetConfig } from "../../utils/types";
 
 type Env = {
 	// ASSETS_MANIFEST is a pipeline binding to an ArrayBuffer containing the
@@ -15,21 +18,11 @@ type Env = {
 	// assets are in.
 	ASSETS_KV_NAMESPACE: KVNamespace;
 
-	CONFIG: Partial<Configuration>;
+	CONFIG: AssetConfig;
 };
 
-export type FetchMethod = (request: Request) => Promise<Response>;
-export type UnstableCanFetchMethod = (request: Request) => Promise<boolean>;
-export type GetByETagMethod = (
-	eTag: string
-) => Promise<{ readableStream: ReadableStream; contentType: string }>;
-export type GetByPathnameMethod = (
-	pathname: string
-) => Promise<Awaited<ReturnType<GetByETagMethod>> | null>;
-export type ExistsMethod = (pathname: string) => Promise<string | null>;
-
 export default class extends WorkerEntrypoint<Env> {
-	async fetch(...[request]: Parameters<FetchMethod>): ReturnType<FetchMethod> {
+	async fetch(request: Request): Promise<Response> {
 		try {
 			return handleRequest(
 				request,
@@ -42,16 +35,21 @@ export default class extends WorkerEntrypoint<Env> {
 		}
 	}
 
-	async unstable_canFetch(...[request]: Parameters<UnstableCanFetchMethod>) {
+	async unstable_canFetch(request: Request): Promise<boolean | Response> {
 		const url = new URL(request.url);
+		const method = request.method.toUpperCase();
 		const intent = await getIntent(
 			url.pathname,
 			{
 				...applyConfigurationDefaults(this.env.CONFIG),
-				notFoundHandling: "none",
+				not_found_handling: "none",
 			},
 			this.exists.bind(this)
 		);
+		// if asset exists but non GET/HEAD method, 405
+		if (intent && ["GET", "HEAD"].includes(method)) {
+			return new MethodNotAllowedResponse();
+		}
 		if (intent === null) {
 			return false;
 		}
@@ -59,8 +57,8 @@ export default class extends WorkerEntrypoint<Env> {
 	}
 
 	async getByETag(
-		...[eTag]: Parameters<GetByETagMethod>
-	): ReturnType<GetByETagMethod> {
+		eTag: string
+	): Promise<{ readableStream: ReadableStream; contentType: string }> {
 		const asset = await getAssetWithMetadataFromKV(
 			this.env.ASSETS_KV_NAMESPACE,
 			eTag
@@ -79,8 +77,8 @@ export default class extends WorkerEntrypoint<Env> {
 	}
 
 	async getByPathname(
-		...[pathname]: Parameters<GetByPathnameMethod>
-	): ReturnType<GetByPathnameMethod> {
+		pathname: string
+	): Promise<{ readableStream: ReadableStream; contentType: string } | null> {
 		const eTag = await this.exists(pathname);
 		if (!eTag) {
 			return null;
@@ -89,9 +87,7 @@ export default class extends WorkerEntrypoint<Env> {
 		return this.getByETag(eTag);
 	}
 
-	async exists(
-		...[pathname]: Parameters<ExistsMethod>
-	): ReturnType<ExistsMethod> {
+	async exists(pathname: string): Promise<string | null> {
 		const assetsManifest = new AssetsManifest(this.env.ASSETS_MANIFEST);
 		return await assetsManifest.get(pathname);
 	}

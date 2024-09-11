@@ -5,11 +5,11 @@ import * as path from "node:path";
 import {
 	decodeFilePath,
 	encodeFilePath,
+	getContentType,
 	MAX_ASSET_COUNT,
 	MAX_ASSET_SIZE,
-} from "@cloudflare/workers-shared/utils/utils";
+} from "@cloudflare/workers-shared";
 import chalk from "chalk";
-import { getType } from "mime";
 import PQueue from "p-queue";
 import prettyBytes from "pretty-bytes";
 import { File, FormData } from "undici";
@@ -23,10 +23,7 @@ import { APIError } from "./parse";
 import { createPatternMatcher } from "./utils/filesystem";
 import type { Config } from "./config";
 import type { ExperimentalAssets } from "./config/environment";
-import type {
-	AssetConfig,
-	RoutingConfig,
-} from "@cloudflare/workers-shared/dist/utils";
+import type { AssetConfig, RoutingConfig } from "@cloudflare/workers-shared";
 
 export type AssetManifest = { [path: string]: { hash: string; size: number } };
 
@@ -132,7 +129,7 @@ export const syncExperimentalAssets = async (
 						[(await readFile(absFilePath)).toString("base64")],
 						manifestEntry[1].hash,
 						{
-							type: getType(absFilePath) || "application/octet-stream",
+							type: getContentType(absFilePath) || "application/octet-stream",
 						}
 					),
 					manifestEntry[1].hash
@@ -352,12 +349,12 @@ export function processExperimentalAssetsArg(
 
 		experimentalAssets.directory = resolvedExperimentalAssetsPath;
 		const routingConfig = {
-			hasUserWorker: Boolean(args.script || config.main),
+			has_user_worker: Boolean(args.script || config.main),
 		};
-		// defaults are set by EWC
+		// defaults are set in asset worker
 		const assetConfig = {
-			htmlHandling: config.experimental_assets?.html_handling,
-			notFoundHandling: config.experimental_assets?.not_found_handling,
+			html_handling: config.experimental_assets?.html_handling,
+			not_found_handling: config.experimental_assets?.not_found_handling,
 		};
 		experimentalAssetsOptions = {
 			...experimentalAssets,

@@ -11,6 +11,7 @@ import type {
 	CfUserLimits,
 	CfWorkerInit,
 } from "./worker.js";
+import type { AssetConfig } from "@cloudflare/workers-shared";
 import type { Json } from "miniflare";
 
 const moduleTypeMimeType: { [type in CfModuleType]: string | undefined } = {
@@ -142,14 +143,7 @@ export type WorkerMetadataPut = {
 	// experimental assets (EWC will expect 'assets')
 	assets?: {
 		jwt: string;
-		config?: {
-			html_handling?:
-				| "auto-trailing-slash"
-				| "force-trailing-slash"
-				| "drop-trailing-slash"
-				| "none";
-			not_found_handling?: "single-page-application" | "404-page" | "none";
-		};
+		config?: AssetConfig;
 	};
 
 	// Allow unsafe.metadata to add arbitrary properties at runtime
@@ -188,21 +182,21 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 	} = worker;
 
 	const assetConfig = {
-		html_handling: experimental_assets?.assetConfig?.htmlHandling,
-		not_found_handling: experimental_assets?.assetConfig?.notFoundHandling,
+		html_handling: experimental_assets?.assetConfig?.html_handling,
+		not_found_handling: experimental_assets?.assetConfig?.not_found_handling,
 	};
 
-	// TODO bugbash: allow adding compat dates etc. if assets only
 	// short circuit if static assets upload only
-	if (experimental_assets && !experimental_assets.routingConfig.hasUserWorker) {
+	if (
+		experimental_assets &&
+		!experimental_assets.routingConfig.has_user_worker
+	) {
 		formData.set(
 			"metadata",
 			JSON.stringify({
 				assets: {
 					jwt: experimental_assets.jwt,
-					...Object.fromEntries(
-						Object.entries(assetConfig).filter(([k, v]) => v !== undefined)
-					),
+					config: assetConfig,
 				},
 			})
 		);
@@ -593,7 +587,7 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 			assets: {
 				jwt: experimental_assets.jwt,
 				...Object.fromEntries(
-					Object.entries(assetConfig).filter(([k, v]) => v !== undefined)
+					Object.entries(assetConfig).filter(([_, v]) => v !== undefined)
 				),
 			},
 		}),

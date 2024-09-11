@@ -29,9 +29,12 @@ describe("[Workers + Assets] static-assets only site`", () => {
 		expect(text).toContain(`<p>Learn more about Workers with Assets soon!</p>`);
 	});
 
-	it("should not resolve '/' to '/index.html' ", async ({ expect }) => {
+	it("should resolve '/' to '/index.html' ", async ({ expect }) => {
 		let response = await fetch(`http://${ip}:${port}/`);
-		expect(response.status).toBe(404);
+		expect(response.status).toBe(200);
+		expect(await response.text()).toContain(
+			`<h1>Hello Workers + Assets World 🚀!</h1>`
+		);
 	});
 
 	it("should 404 if asset is not found in the asset manifest", async ({
@@ -73,19 +76,13 @@ describe("[Workers + Assets] static-assets only site`", () => {
 		expect(response.headers.get("Content-Type")).toBe("image/jpeg");
 	});
 
-	it("should return 405 for non-GET requests if asset route exists", async ({
+	it("should return 405 for non-GET or HEAD requests if asset route exists", async ({
 		expect,
 	}) => {
 		// as per https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods
 		// excl. TRACE and CONNECT which are not supported
 
 		let response = await fetch(`http://${ip}:${port}/index.html`, {
-			method: "HEAD",
-		});
-		expect(response.status).toBe(405);
-		expect(response.statusText).toBe("Method Not Allowed");
-
-		response = await fetch(`http://${ip}:${port}/index.html`, {
 			method: "POST",
 		});
 		expect(response.status).toBe(405);

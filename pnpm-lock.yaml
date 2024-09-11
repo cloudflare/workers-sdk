@@ -1565,6 +1565,9 @@ importers:
 
   packages/workers-shared:
     dependencies:
+      mime:
+        specifier: ^3.0.0
+        version: 3.0.0
       zod:
         specifier: ^3.22.3
         version: 3.22.3
@@ -1578,6 +1581,9 @@ importers:
       '@cloudflare/workers-types':
         specifier: ^4.20240909.0
         version: 4.20240909.0
+      '@types/mime':
+        specifier: ^3.0.4
+        version: 3.0.4
       concurrently:
         specifier: ^8.2.2
         version: 8.2.2
