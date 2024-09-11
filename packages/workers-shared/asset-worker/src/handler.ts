@@ -101,7 +101,6 @@ export const getIntent = async (
 			return htmlHandlingNone(pathname, configuration, exists);
 		}
 	}
-	return null;
 };
 
 const htmlHandlingAutoTrailingSlash = async (

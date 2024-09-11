@@ -586,9 +586,7 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 		...(experimental_assets && {
 			assets: {
 				jwt: experimental_assets.jwt,
-				...Object.fromEntries(
-					Object.entries(assetConfig).filter(([_, v]) => v !== undefined)
-				),
+				config: assetConfig,
 			},
 		}),
 	};

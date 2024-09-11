@@ -106,7 +106,10 @@ export function mockUploadWorkerRequest(
 			expect(metadata.limits).toEqual(expectedLimits);
 		}
 		if ("expectedExperimentalAssets" in options) {
-			expect(metadata.assets).toEqual("<<aus-completion-token>>");
+			expect(metadata.assets).toEqual({
+				jwt: "<<aus-completion-token>>",
+				config: {},
+			});
 		}
 		if (expectedUnsafeMetaData !== undefined) {
 			Object.keys(expectedUnsafeMetaData).forEach((key) => {
