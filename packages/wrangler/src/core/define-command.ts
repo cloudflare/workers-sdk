@@ -2,7 +2,7 @@ import type { Config } from "../config";
 import type { OnlyCamelCase } from "../config/config";
 import type { FatalError, UserError } from "../errors";
 import type { Logger } from "../logger";
-import type { CommonYargsOptions } from "../yargs-types";
+import type { CommonYargsOptions, RemoveIndex } from "../yargs-types";
 import type { Teams } from "./teams";
 import type {
 	Alias,
@@ -24,13 +24,23 @@ export type Metadata = {
 };
 
 export type ArgDefinition = PositionalOptions & Pick<Options, "hidden">;
-export type BaseNamedArgDefinitions = { [key: string]: ArgDefinition };
+export type BaseNamedArgDefinitions = {
+	[key: string]: ArgDefinition;
+};
 type StringKeyOf<T> = Extract<keyof T, string>;
-export type HandlerArgs<Args extends BaseNamedArgDefinitions> = OnlyCamelCase<
-	ArgumentsCamelCase<
-		CommonYargsOptions & InferredOptionTypes<Args> & Alias<Args>
+export type HandlerArgs<Args extends BaseNamedArgDefinitions> = DeepFlatten<
+	OnlyCamelCase<
+		RemoveIndex<
+			ArgumentsCamelCase<
+				CommonYargsOptions & InferredOptionTypes<Args> & Alias<Args>
+			>
+		>
 	>
 >;
+
+type DeepFlatten<T> = T extends object
+	? { [K in keyof T]: DeepFlatten<T[K]> }
+	: T;
 
 export type HandlerContext = {
 	/**
