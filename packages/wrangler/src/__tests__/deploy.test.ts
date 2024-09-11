@@ -1455,11 +1455,12 @@ Update them to point to this script instead?`,
 					routes: [{ pattern: "*.example.com", custom_domain: true }],
 				});
 				writeWorkerSource();
-				await expect(
-					runWrangler("deploy ./index")
-				).rejects.toThrowErrorMatchingInlineSnapshot(
-					`[Error: Cannot use "*.example.com" as a Custom Domain; wildcard operators (*) are not allowed]`
-				);
+				await expect(runWrangler("deploy ./index")).rejects
+					.toThrowErrorMatchingInlineSnapshot(`
+					[Error: Invalid Routes:
+					*.example.com:
+					Wildcard operators (*) are not allowed in Custom Domains]
+				`);
 
 				writeWranglerToml({
 					routes: [
@@ -1469,11 +1470,12 @@ Update them to point to this script instead?`,
 				writeWorkerSource();
 				mockServiceScriptData({});
 
-				await expect(
-					runWrangler("deploy ./index")
-				).rejects.toThrowErrorMatchingInlineSnapshot(
-					`[Error: Cannot use "api.example.com/at/a/path" as a Custom Domain; paths are not allowed]`
-				);
+				await expect(runWrangler("deploy ./index")).rejects
+					.toThrowErrorMatchingInlineSnapshot(`
+					[Error: Invalid Routes:
+					api.example.com/at/a/path:
+					Paths are not allowed in Custom Domains]
+				`);
 			});
 
 			it("should not continue with publishing an override if user does not confirm", async () => {
@@ -1514,6 +1516,95 @@ Update them to point to this script instead?`,
 					'Publishing to Custom Domain "api.example.com" was skipped, fix conflict and try again'
 				);
 			});
+		});
+
+		it("should error on routes with paths if experimental assets are present", async () => {
+			writeWranglerToml({
+				routes: [
+					"simple.co.uk/path",
+					"simple.co.uk/path/*",
+					"simple.co.uk/",
+					"simple.co.uk/*",
+					"simple.co.uk",
+					{ pattern: "route.co.uk/path", zone_id: "asdfadsf" },
+					{ pattern: "route.co.uk/path/*", zone_id: "asdfadsf" },
+					{ pattern: "route.co.uk/*", zone_id: "asdfadsf" },
+					{ pattern: "route.co.uk/", zone_id: "asdfadsf" },
+					{ pattern: "route.co.uk", zone_id: "asdfadsf" },
+					{ pattern: "custom.co.uk/path", custom_domain: true },
+					{ pattern: "custom.co.uk/*", custom_domain: true },
+					{ pattern: "custom.co.uk", custom_domain: true },
+				],
+			});
+			writeWorkerSource();
+			writeAssets([{ filePath: "asset.txt", content: "Content of file-1" }]);
+
+			await expect(runWrangler(`deploy --experimental-assets="assets"`)).rejects
+				.toThrowErrorMatchingInlineSnapshot(`
+				[Error: Invalid Routes:
+				simple.co.uk/path:
+				Workers which have static assets cannot be routed on a URL which has a path component. Update the route to replace /path with /*
+
+				simple.co.uk/path/*:
+				Workers which have static assets cannot be routed on a URL which has a path component. Update the route to replace /path/* with /*
+
+				simple.co.uk/:
+				Workers which have static assets must end with a wildcard path. Update the route to end with /*
+
+				simple.co.uk:
+				Workers which have static assets must end with a wildcard path. Update the route to end with /*
+
+				route.co.uk/path:
+				Workers which have static assets cannot be routed on a URL which has a path component. Update the route to replace /path with /*
+
+				route.co.uk/path/*:
+				Workers which have static assets cannot be routed on a URL which has a path component. Update the route to replace /path/* with /*
+
+				route.co.uk/:
+				Workers which have static assets must end with a wildcard path. Update the route to end with /*
+
+				route.co.uk:
+				Workers which have static assets must end with a wildcard path. Update the route to end with /*
+
+				custom.co.uk/path:
+				Paths are not allowed in Custom Domains
+
+				custom.co.uk/*:
+				Wildcard operators (*) are not allowed in Custom Domains
+				Paths are not allowed in Custom Domains]
+			`);
+		});
+
+		it("shouldn't error on routes with paths if there are no experimental assets", async () => {
+			writeWranglerToml({
+				routes: [
+					"simple.co.uk/path",
+					"simple.co.uk/path/*",
+					"simple.co.uk/",
+					"simple.co.uk/*",
+					"simple.co.uk",
+					{ pattern: "route.co.uk/path", zone_id: "asdfadsf" },
+					{ pattern: "route.co.uk/path/*", zone_id: "asdfadsf" },
+					{ pattern: "route.co.uk/*", zone_id: "asdfadsf" },
+					{ pattern: "route.co.uk/", zone_id: "asdfadsf" },
+					{ pattern: "route.co.uk", zone_id: "asdfadsf" },
+					{ pattern: "custom.co.uk/path", custom_domain: true },
+					{ pattern: "custom.co.uk/*", custom_domain: true },
+					{ pattern: "custom.co.uk", custom_domain: true },
+				],
+			});
+			writeWorkerSource();
+
+			await expect(runWrangler(`deploy ./index`)).rejects
+				.toThrowErrorMatchingInlineSnapshot(`
+				[Error: Invalid Routes:
+				custom.co.uk/path:
+				Paths are not allowed in Custom Domains
+
+				custom.co.uk/*:
+				Wildcard operators (*) are not allowed in Custom Domains
+				Paths are not allowed in Custom Domains]
+			`);
 		});
 
 		it.todo("should error if it's a workers.dev route");
