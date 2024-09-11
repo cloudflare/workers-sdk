@@ -835,6 +835,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 					logger.log("Worker Startup Time:", result.startup_time_ms, "ms");
 				}
 				bindingsPrinted = true;
+
 				printBindings({ ...withoutStaticAssets, vars: maskedVars });
 
 				versionId = parseNonHyphenedUuid(result.deployment_id);

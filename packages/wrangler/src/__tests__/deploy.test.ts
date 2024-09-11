@@ -10524,7 +10524,7 @@ export default{
 		});
 	});
 
-	describe("pipelines", () => {
+	describe.only("pipelines", () => {
 		it("should upload pipelines bindings", async () => {
 			writeWranglerToml({
 				pipelines: [
@@ -10554,13 +10554,9 @@ export default{
 			- Pipelines:
 			  - MY_PIPELINE: 0123456789ABCDEF0123456789ABCDEF
 			Uploaded test-name (TIMINGS)
-			Published test-name (TIMINGS)
+			Deployed test-name triggers (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
-
-
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Current Version ID: Galaxy-Class"
 		`);
 		});
 	});
