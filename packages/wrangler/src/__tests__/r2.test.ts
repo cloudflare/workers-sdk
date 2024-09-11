@@ -786,6 +786,61 @@ describe("r2", () => {
 									"Bearer some-api-token"
 								);
 								const getResponse = {
+									bucketName,
+									queues: [
+										{
+											queueId: queueId,
+											queueName,
+											rules: [
+												{
+													ruleId: "8cdcce8a-89b3-474f-a087-3eb4fcacfa37",
+													createdAt: "2024-09-05T01:02:03.000Z",
+													prefix: "",
+													suffix: "",
+													actions: [
+														"PutObject",
+														"CompleteMultipartUpload",
+														"CopyObject",
+													],
+												},
+											],
+										},
+									],
+								};
+								return HttpResponse.json(createFetchResult(getResponse));
+							},
+							{ once: true }
+						)
+					);
+					await expect(
+						await runWrangler(`r2 bucket notification get ${bucketName}`)
+					).toBe(undefined);
+					expect(std.out).toMatchInlineSnapshot(`
+				"Fetching notification configuration for bucket my-bucket...
+				rule_id:     8cdcce8a-89b3-474f-a087-3eb4fcacfa37
+				created_at:  2024-09-05T01:02:03.000Z
+				queue_name:  my-queue
+				prefix:
+				suffix:
+				event_type:  PutObject,CompleteMultipartUpload,CopyObject"
+			`);
+				});
+
+				it("is backwards compatible with old API version", async () => {
+					const bucketName = "my-bucket";
+					const queueId = "471537e8-6e5a-4163-a4d4-9478087c32c3";
+					const queueName = "my-queue";
+					msw.use(
+						http.get(
+							"*/accounts/:accountId/event_notifications/r2/:bucketName/configuration",
+							async ({ request, params }) => {
+								const { accountId, bucketName: bucketParam } = params;
+								expect(accountId).toEqual("some-account-id");
+								expect(bucketName).toEqual(bucketParam);
+								expect(request.headers.get("authorization")).toEqual(
+									"Bearer some-api-token"
+								);
+								const getResponse = {
 									[bucketName]: {
 										"9d738cb7-be18-433a-957f-a9b88793de2c": {
 											queue: queueId,
@@ -828,11 +883,12 @@ describe("r2", () => {
 					).toBe(undefined);
 					expect(std.out).toMatchInlineSnapshot(`
 				"Fetching notification configuration for bucket my-bucket...
-				┌────────────┬────────┬────────┬───────────────┐
-				│ queue_name │ prefix │ suffix │ event_type    │
-				├────────────┼────────┼────────┼───────────────┤
-				│ my-queue   │        │        │ object-create │
-				└────────────┴────────┴────────┴───────────────┘"
+				rule_id:
+				created_at:
+				queue_name:  my-queue
+				prefix:
+				suffix:
+				event_type:  PutObject,CompleteMultipartUpload,CopyObject"
 			`);
 				});
 
@@ -937,7 +993,7 @@ describe("r2", () => {
 						)
 					).resolves.toBe(undefined);
 					expect(std.out).toMatchInlineSnapshot(`
-				"Creating event notification rule for object creation and deletion (PutObject,CompleteMultipartUpload,CopyObject,DeleteObject)
+				"Creating event notification rule for object creation and deletion (PutObject,CompleteMultipartUpload,CopyObject,DeleteObject,LifecycleDeletion)
 				Configuration created successfully!"
 			`);
 				});
