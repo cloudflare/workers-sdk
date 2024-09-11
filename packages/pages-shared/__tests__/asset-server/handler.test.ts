@@ -998,6 +998,21 @@ describe("asset-server handler", () => {
 				"https://foobar.com/#def?test=abc"
 			);
 		});
+
+		// Query string needs to be _before_ the hash
+		test("redirects to a hash with an incoming query cross-origin", async () => {
+			const { response } = await getTestResponse({
+				request: "https://foo.com/bar?test=abc",
+				metadata: createMetadataObjectWithRedirects([
+					{ from: "/bar", to: "https://foobar.com/#heading", status: 301 },
+				]),
+			});
+
+			expect(response.status).toBe(301);
+			expect(response.headers.get("Location")).toBe(
+				"https://foobar.com/?test=abc#heading"
+			);
+		});
 	});
 });
 
