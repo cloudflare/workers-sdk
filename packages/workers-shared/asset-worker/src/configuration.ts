@@ -1,17 +1,10 @@
-export interface Configuration {
-	htmlHandling:
-		| "auto-trailing-slash"
-		| "force-trailing-slash"
-		| "drop-trailing-slash"
-		| "none";
-	notFoundHandling: "single-page-application" | "404-page" | "none";
-}
+import type { AssetConfig } from "../../utils/types";
 
 export const applyConfigurationDefaults = (
-	configuration?: Partial<Configuration>
-): Configuration => {
+	configuration?: AssetConfig
+): Required<AssetConfig> => {
 	return {
-		htmlHandling: configuration?.htmlHandling ?? "auto-trailing-slash",
-		notFoundHandling: configuration?.notFoundHandling ?? "none",
+		html_handling: configuration?.html_handling ?? "auto-trailing-slash",
+		not_found_handling: configuration?.not_found_handling ?? "none",
 	};
 };

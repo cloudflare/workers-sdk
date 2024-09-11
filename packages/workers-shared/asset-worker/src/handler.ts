@@ -7,14 +7,15 @@ import {
 	TemporaryRedirectResponse,
 } from "./responses";
 import { getHeaders } from "./utils/headers";
-import type { ExistsMethod, GetByETagMethod } from ".";
-import type { Configuration } from "./configuration";
+import type { AssetConfig } from "../../utils/types";
+import type EntrypointType from "./index";
 
 export const handleRequest = async (
 	request: Request,
-	configuration: Configuration,
-	exists: ExistsMethod,
-	getByETag: GetByETagMethod
+	configuration: Required<AssetConfig>,
+	// HELP: is this a legit pattern? can i do this?? feels wrong
+	exists: typeof EntrypointType.prototype.exists,
+	getByETag: typeof EntrypointType.prototype.getByETag
 ) => {
 	const { pathname, search } = new URL(request.url);
 
@@ -67,11 +68,11 @@ type Intent =
 
 export const getIntent = async (
 	pathname: string,
-	configuration: Configuration,
-	exists: ExistsMethod,
+	configuration: Required<AssetConfig>,
+	exists: typeof EntrypointType.prototype.exists,
 	skipRedirects = false
 ): Promise<Intent> => {
-	switch (configuration.htmlHandling) {
+	switch (configuration.html_handling) {
 		case "auto-trailing-slash": {
 			return htmlHandlingAutoTrailingSlash(
 				pathname,
@@ -100,12 +101,13 @@ export const getIntent = async (
 			return htmlHandlingNone(pathname, configuration, exists);
 		}
 	}
+	return null;
 };
 
 const htmlHandlingAutoTrailingSlash = async (
 	pathname: string,
-	configuration: Configuration,
-	exists: ExistsMethod,
+	configuration: Required<AssetConfig>,
+	exists: typeof EntrypointType.prototype.exists,
 	skipRedirects: boolean
 ): Promise<Intent> => {
 	let redirectResult: Intent = null;
@@ -230,8 +232,8 @@ const htmlHandlingAutoTrailingSlash = async (
 
 const htmlHandlingForceTrailingSlash = async (
 	pathname: string,
-	configuration: Configuration,
-	exists: ExistsMethod,
+	configuration: Required<AssetConfig>,
+	exists: typeof EntrypointType.prototype.exists,
 	skipRedirects: boolean
 ): Promise<Intent> => {
 	let redirectResult: Intent = null;
@@ -361,8 +363,8 @@ const htmlHandlingForceTrailingSlash = async (
 
 const htmlHandlingDropTrailingSlash = async (
 	pathname: string,
-	configuration: Configuration,
-	exists: ExistsMethod,
+	configuration: Required<AssetConfig>,
+	exists: typeof EntrypointType.prototype.exists,
 	skipRedirects: boolean
 ): Promise<Intent> => {
 	let redirectResult: Intent = null;
@@ -520,8 +522,8 @@ const htmlHandlingDropTrailingSlash = async (
 
 const htmlHandlingNone = async (
 	pathname: string,
-	configuration: Configuration,
-	exists: ExistsMethod
+	configuration: Required<AssetConfig>,
+	exists: typeof EntrypointType.prototype.exists
 ): Promise<Intent> => {
 	const exactETag = await exists(pathname);
 	if (exactETag) {
@@ -533,15 +535,16 @@ const htmlHandlingNone = async (
 
 const notFound = async (
 	pathname: string,
-	configuration: Configuration,
-	exists: ExistsMethod
+	configuration: Required<AssetConfig>,
+	exists: typeof EntrypointType.prototype.exists
 ): Promise<Intent> => {
-	switch (configuration.notFoundHandling) {
+	switch (configuration.not_found_handling) {
 		case "single-page-application": {
 			const eTag = await exists("/index.html");
 			if (eTag) {
 				return { asset: { eTag, status: 200 }, redirect: null };
 			}
+			return null;
 		}
 		case "404-page": {
 			let cwd = pathname;
@@ -552,6 +555,7 @@ const notFound = async (
 					return { asset: { eTag, status: 404 }, redirect: null };
 				}
 			}
+			return null;
 		}
 		case "none":
 		default: {
@@ -563,8 +567,8 @@ const notFound = async (
 const safeRedirect = async (
 	file: string,
 	destination: string,
-	configuration: Configuration,
-	exists: ExistsMethod,
+	configuration: Required<AssetConfig>,
+	exists: typeof EntrypointType.prototype.exists,
 	skip: boolean
 ): Promise<Intent> => {
 	if (skip) {

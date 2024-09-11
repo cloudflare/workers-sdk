@@ -3,7 +3,7 @@ import {
 	ENTRY_SIZE,
 	HEADER_SIZE,
 	PATH_HASH_SIZE,
-} from "../../utils/utils";
+} from "../../utils/constants";
 
 export class AssetsManifest {
 	private data: ArrayBuffer;

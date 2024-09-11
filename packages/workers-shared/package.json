@@ -38,15 +38,17 @@
 		"dev": "pnpm run clean && concurrently -n bundle:asset-worker,bundle:router-worker -c blue,magenta \"pnpm run bundle:asset-worker --watch\" \"pnpm run bundle:router-worker --watch\"",
 		"test": "vitest",
 		"test:ci": "pnpm run test",
-		"types:emit": "tsc utils/utils.ts --declaration --emitDeclarationOnly --declarationDir ./dist"
+		"types:emit": "tsc index.ts --declaration --emitDeclarationOnly --declarationDir ./dist"
 	},
 	"dependencies": {
+		"mime": "^3.0.0",
 		"zod": "^3.22.3"
 	},
 	"devDependencies": {
 		"@cloudflare/eslint-config-worker": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-types": "^4.20240909.0",
+		"@types/mime": "^3.0.4",
 		"concurrently": "^8.2.2",
 		"esbuild": "0.17.19",
 		"rimraf": "^6.0.1",

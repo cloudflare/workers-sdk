@@ -5,13 +5,13 @@ import {
 	CONTENT_HASH_OFFSET,
 	encodeFilePath,
 	ENTRY_SIZE,
+	getContentType,
 	HEADER_SIZE,
 	MAX_ASSET_COUNT,
 	MAX_ASSET_SIZE,
 	PATH_HASH_OFFSET,
 	PATH_HASH_SIZE,
-} from "@cloudflare/workers-shared/utils/utils";
-import { getType } from "mime";
+} from "@cloudflare/workers-shared";
 import prettyBytes from "pretty-bytes";
 import SCRIPT_ASSETS from "worker:assets/assets";
 import SCRIPT_ASSETS_KV from "worker:assets/assets-kv";
@@ -87,12 +87,6 @@ export const ASSETS_PLUGIN: Plugin<typeof AssetsOptionsSchema> = {
 				],
 			},
 		};
-		// Set defaults:
-		const assetConfig = {
-			htmlHandling:
-				options.assets.assetConfig.htmlHandling ?? "auto-trailing-slash",
-			notFoundHandling: options.assets.assetConfig.notFoundHandling ?? "none",
-		};
 		const assetsManifest = await buildAssetsManifest(options.assets.path);
 		const assetService: Service = {
 			name: ASSETS_SERVICE_NAME,
@@ -115,7 +109,7 @@ export const ASSETS_PLUGIN: Plugin<typeof AssetsOptionsSchema> = {
 					},
 					{
 						name: "CONFIG",
-						json: JSON.stringify(assetConfig),
+						json: JSON.stringify(options.assets.assetConfig),
 					},
 				],
 			},
@@ -286,17 +280,10 @@ const createReverseMap = async (dir: string) => {
 				const pathHash = bytesToHex(
 					await hashPath(encodeFilePath(relativeFilepath, path.sep))
 				);
-				let contentType = getType(filepath) ?? "application/octet-stream";
-				if (
-					contentType.startsWith("text/") &&
-					!contentType.includes("charset")
-				) {
-					contentType = `${contentType}; charset=utf-8`;
-				}
 
 				assetsReverseMap[pathHash] = {
 					filePath: relativeFilepath,
-					contentType,
+					contentType: getContentType(filepath),
 				};
 			}
 		})
