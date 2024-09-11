@@ -17,7 +17,7 @@ import {
 } from "vitest";
 import { deleteProject, deleteWorker } from "../scripts/common";
 import { getFrameworkMap } from "../src/templates";
-import { frameworkToTest } from "./frameworkToTest";
+import { getFrameworkToTest } from "./frameworkToTest";
 import {
 	createTestLogStream,
 	getDiffsPath,
@@ -372,7 +372,7 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 	let logStream: WriteStream;
 
 	beforeAll(async (ctx) => {
-		frameworkMap = await getFrameworkMap({ experimental: false });
+		frameworkMap = getFrameworkMap({ experimental: false });
 		recreateLogFolder(ctx as Suite);
 		recreateDiffsFolder();
 	});
@@ -394,6 +394,7 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 		// If the framework in question is being run in isolation, always run it.
 		// Otherwise, only run the test if it's configured `quarantine` value matches
 		// what is set in E2E_QUARANTINE
+		const frameworkToTest = getFrameworkToTest({ experimental: false });
 		let shouldRun = frameworkToTest
 			? frameworkToTest === framework
 			: quarantineModeMatch;
@@ -575,7 +576,7 @@ const verifyDevScript = async (
 		return;
 	}
 
-	const frameworkMap = await getFrameworkMap({ experimental: false });
+	const frameworkMap = getFrameworkMap({ experimental: false });
 	const template = frameworkMap[framework];
 
 	// Run the devserver on a random port to avoid colliding with other tests

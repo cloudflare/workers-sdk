@@ -48,6 +48,7 @@ const configure = async (ctx: C3Context) => {
 const config: TemplateConfig = {
 	configVersion: 1,
 	id: "hono",
+	frameworkCli: "create-hono",
 	displayName: "Hono",
 	copyFiles: {
 		path: "./templates",

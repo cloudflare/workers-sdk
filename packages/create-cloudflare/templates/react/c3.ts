@@ -43,6 +43,8 @@ const variantsOptions = [
 const config: TemplateConfig = {
 	configVersion: 1,
 	id: "react",
+	// React's documentation now recommends using create-vite.
+	frameworkCli: "create-vite",
 	displayName: "React",
 	platform: "pages",
 	generate,

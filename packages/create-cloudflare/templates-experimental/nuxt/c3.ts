@@ -112,7 +112,8 @@ const updateNuxtConfig = () => {
 const config: TemplateConfig = {
 	configVersion: 1,
 	id: "nuxt",
-	platform: "pages",
+	frameworkCli: "nuxi",
+	platform: "workers",
 	displayName: "Nuxt",
 	copyFiles: {
 		path: "./templates",

@@ -79,6 +79,7 @@ function updateAngularJson(ctx: C3Context) {
 const config: TemplateConfig = {
 	configVersion: 1,
 	id: "angular",
+	frameworkCli: "@angular/create",
 	displayName: "Angular",
 	platform: "pages",
 	copyFiles: {

@@ -32,6 +32,7 @@ const generate = async (ctx: C3Context) => {
 const config: TemplateConfig = {
 	configVersion: 1,
 	id: "gatsby",
+	frameworkCli: "gatsby",
 	platform: "pages",
 	displayName: "Gatsby",
 	generate,

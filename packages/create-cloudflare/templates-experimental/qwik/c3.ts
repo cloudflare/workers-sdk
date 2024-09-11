@@ -130,8 +130,9 @@ const populateCloudflareEnv = () => {
 const config: TemplateConfig = {
 	configVersion: 1,
 	id: "qwik",
+	frameworkCli: "create-qwik",
 	displayName: "Qwik",
-	platform: "pages",
+	platform: "workers",
 	copyFiles: {
 		path: "./templates",
 	},

@@ -40,7 +40,6 @@ const configure = async (ctx: C3Context) => {
 			}
 
 			const b = recast.types.builders;
-			debugger;
 			mergeObjectProperties(
 				n.node.arguments[0] as recast.types.namedTypes.ObjectExpression,
 				[
@@ -115,8 +114,9 @@ const configure = async (ctx: C3Context) => {
 const config: TemplateConfig = {
 	configVersion: 1,
 	id: "solid",
+	frameworkCli: "create-solid",
 	displayName: "Solid",
-	platform: "pages",
+	platform: "workers",
 	copyFiles: {
 		path: "./templates",
 	},

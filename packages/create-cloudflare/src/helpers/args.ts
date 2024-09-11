@@ -25,7 +25,7 @@ export type OptionDefinition = {
 	footer?: string;
 	values?:
 		| AllowedValueDefinition[]
-		| ((args: C3Args | null) => Promise<AllowedValueDefinition[]>);
+		| ((args: C3Args | null) => AllowedValueDefinition[]);
 } & ArgDefinition;
 
 export type AllowedValueDefinition = {
@@ -64,7 +64,7 @@ const cliDefinition: ArgumentsDefinition = {
 			name: "category",
 			type: "string",
 			description: `Specifies the kind of templates that should be created`,
-			async values(args) {
+			values(args) {
 				const experimental = Boolean(args?.["experimental"]);
 				if (experimental) {
 					return [
@@ -94,12 +94,10 @@ const cliDefinition: ArgumentsDefinition = {
 
         Note that "--category" and "--template" are mutually exclusive options. If both are provided, "--category" will be used.
         `,
-			async values(args) {
+			values(args) {
 				const experimental = Boolean(args?.["experimental"]);
 				if (experimental) {
-					return getNamesAndDescriptions(
-						await getTemplateMap({ experimental }),
-					);
+					return getNamesAndDescriptions(getTemplateMap({ experimental }));
 				} else {
 					return [
 						{
@@ -153,9 +151,9 @@ const cliDefinition: ArgumentsDefinition = {
       npm create cloudflare -- --framework next -- --ts
       pnpm create clouldfare --framework next -- --ts
       `,
-			values: async (args) =>
+			values: (args) =>
 				getNamesAndDescriptions(
-					await getFrameworkMap({
+					getFrameworkMap({
 						experimental: Boolean(args?.["experimental"]),
 					}),
 				),
