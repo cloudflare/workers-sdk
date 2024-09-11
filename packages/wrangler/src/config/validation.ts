@@ -945,6 +945,18 @@ function normalizeAndValidatePlacement(
 			"string",
 			["off", "smart"]
 		);
+		validateOptionalProperty(
+			diagnostics,
+			"placement",
+			"hint",
+			rawEnv.placement.hint,
+			"string"
+		);
+		if (rawEnv.placement.hint && rawEnv.placement.mode !== "smart") {
+			diagnostics.errors.push(
+				`"placement.hint" cannot be set if "placement.mode" is not "smart"`
+			);
+		}
 	}
 
 	return inheritable(

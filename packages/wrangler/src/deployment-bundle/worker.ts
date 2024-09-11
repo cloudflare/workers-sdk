@@ -267,6 +267,7 @@ export interface CfDurableObjectMigrations {
 
 export interface CfPlacement {
 	mode: "smart";
+	hint?: string;
 }
 
 export interface CfTailConsumer {

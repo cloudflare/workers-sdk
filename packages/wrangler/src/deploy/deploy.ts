@@ -714,7 +714,9 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 		// The upload API only accepts an empty string or no specified placement for the "off" mode.
 		const placement: CfPlacement | undefined =
-			config.placement?.mode === "smart" ? { mode: "smart" } : undefined;
+			config.placement?.mode === "smart"
+				? { mode: "smart", hint: config.placement.hint }
+				: undefined;
 
 		const entryPointName = path.basename(resolvedEntryPointPath);
 		const main: CfModule = {
