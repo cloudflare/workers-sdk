@@ -1,4 +1,5 @@
 import { readdir } from "fs/promises";
+import * as nodeNet from "node:net";
 import path from "path";
 import {
 	D1Database,
@@ -18,7 +19,12 @@ import {
 import { unstable_dev } from "wrangler";
 import { getPlatformProxy } from "./shared";
 import type { NamedEntrypoint } from "../workers/rpc-worker";
-import type { KVNamespace, Rpc, Service } from "@cloudflare/workers-types";
+import type {
+	Hyperdrive,
+	KVNamespace,
+	Rpc,
+	Service,
+} from "@cloudflare/workers-types";
 import type { UnstableDevWorker } from "wrangler";
 
 type Env = {
@@ -35,6 +41,7 @@ type Env = {
 	MY_DO_B: DurableObjectNamespace;
 	MY_BUCKET: R2Bucket;
 	MY_D1: D1Database;
+	MY_HYPERDRIVE: Hyperdrive;
 };
 
 const wranglerTomlFilePath = path.join(__dirname, "..", "wrangler.toml");
@@ -298,6 +305,27 @@ describe("getPlatformProxy - env", () => {
 				{ name: "userB" },
 				{ name: "userC" },
 			]);
+		} finally {
+			await dispose();
+		}
+	});
+
+	// Important: the hyperdrive values are passthrough ones since the workerd specific hyperdrive values only make sense inside
+	//            workerd itself and would simply not work in a node.js process
+	it("correctly obtains passthrough Hyperdrive bindings", async () => {
+		const { env, dispose } = await getPlatformProxy<Env>({
+			configPath: wranglerTomlFilePath,
+		});
+		try {
+			const { MY_HYPERDRIVE } = env;
+			expect(MY_HYPERDRIVE.connectionString).toEqual(
+				"postgres://user:pass@127.0.0.1:1234/db"
+			);
+			expect(MY_HYPERDRIVE.database).toEqual("db");
+			expect(MY_HYPERDRIVE.host).toEqual("127.0.0.1");
+			expect(MY_HYPERDRIVE.user).toEqual("user");
+			expect(MY_HYPERDRIVE.password).toEqual("pass");
+			expect(MY_HYPERDRIVE.port).toEqual(1234);
 		} finally {
 			await dispose();
 		}

@@ -122,6 +122,7 @@ interface EnvironmentInheritable {
 	 * test and deploy your Worker.
 	 *
 	 * // Carmen according to our tests the default is undefined
+	 * // warning: you must force "workers_dev: true" in tests to match expected behavior
 	 * @default `true` (This is a breaking change from Wrangler v1)
 	 * @breaking
 	 * @inheritable
@@ -187,6 +188,8 @@ interface EnvironmentInheritable {
 		tag: string;
 		/** The new Durable Objects being defined. */
 		new_classes?: string[];
+		/** The new SQLite Durable Objects being defined. */
+		new_sqlite_classes?: string[];
 		/** The Durable Objects being renamed. */
 		renamed_classes?: {
 			from: string;

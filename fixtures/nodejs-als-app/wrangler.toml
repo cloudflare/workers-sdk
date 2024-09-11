@@ -1,0 +1,5 @@
+name = "nodejs-als-app"
+main = "src/index.ts"
+compatibility_date = "2024-08-03"
+compatibility_flags = ["nodejs_als"]
+

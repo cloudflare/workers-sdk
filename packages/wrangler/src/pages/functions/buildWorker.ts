@@ -72,6 +72,8 @@ export function buildWorkerFromFunctions({
 		sourcemap,
 		watch,
 		nodejsCompatMode,
+		// TODO: mock AE datasets in Pages functions for dev
+		mockAnalyticsEngineDatasets: [],
 		define: {
 			__FALLBACK_SERVICE__: JSON.stringify(fallbackService),
 		},
@@ -154,6 +156,8 @@ export function buildRawWorker({
 		sourcemap,
 		watch,
 		nodejsCompatMode,
+		// TODO: mock AE datasets in Pages functions for dev
+		mockAnalyticsEngineDatasets: [],
 		define: {},
 		alias: {},
 		doBindings: [], // Pages functions don't support internal Durable Objects

@@ -1,7 +1,7 @@
 import assert from "node:assert";
 import { z } from "zod";
 import { Service, Worker_Binding } from "../../runtime";
-import { Plugin } from "../shared";
+import { Plugin, ProxyNodeBinding } from "../shared";
 
 export const HYPERDRIVE_PLUGIN_NAME = "hyperdrive";
 
@@ -90,8 +90,24 @@ export const HYPERDRIVE_PLUGIN: Plugin<typeof HyperdriveInputOptionsSchema> = {
 			}
 		);
 	},
-	getNodeBindings() {
-		return {};
+	getNodeBindings(options) {
+		return Object.fromEntries(
+			Object.entries(options.hyperdrives ?? {}).map(([name, url]) => {
+				const connectionOverrides: Record<string | symbol, string | number> = {
+					connectionString: `${url}`,
+					port: Number.parseInt(url.port),
+					host: url.hostname,
+				};
+				const proxyNodeBinding = new ProxyNodeBinding({
+					get(target, prop) {
+						return prop in connectionOverrides
+							? connectionOverrides[prop]
+							: target[prop];
+					},
+				});
+				return [name, proxyNodeBinding];
+			})
+		);
 	},
 	async getServices({ options }) {
 		return Object.entries(options.hyperdrives ?? {}).map<Service>(

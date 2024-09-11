@@ -12,6 +12,7 @@ import {
 import { printBindings, readConfig } from "../../config";
 import { getEntry } from "../../deployment-bundle/entry";
 import {
+	getAssetChangeMessage,
 	getBindings,
 	getHostAndRoutes,
 	getInferredHost,
@@ -19,6 +20,7 @@ import {
 } from "../../dev";
 import { getLocalPersistencePath } from "../../dev/get-local-persistence-path";
 import { UserError } from "../../errors";
+import { processExperimentalAssetsArg } from "../../experimental-assets";
 import { logger } from "../../logger";
 import { getAccountId, requireApiToken } from "../../user";
 import { memoizeGetPort } from "../../utils/memoizeGetPort";
@@ -217,6 +219,14 @@ async function resolveConfig(
 
 	const { bindings, unsafe } = await resolveBindings(config, input);
 
+	const experimentalAssetsOptions = processExperimentalAssetsArg(
+		{
+			experimentalAssets: input?.experimental?.assets?.directory,
+			script: input.entrypoint,
+		},
+		config
+	);
+
 	const resolved = {
 		name: getScriptName({ name: input.name, env: input.env }, config),
 		compatibilityDate: getDevCompatibilityDate(config, input.compatibilityDate),
@@ -262,7 +272,7 @@ async function resolveConfig(
 			metadata: input.unsafe?.metadata ?? unsafe?.metadata,
 		},
 		experimental: {
-			assets: input?.experimental?.assets,
+			assets: experimentalAssetsOptions,
 		},
 	} satisfies StartDevWorkerOptions;
 
@@ -312,6 +322,7 @@ export class ConfigController extends Controller<ConfigControllerEventMap> {
 	latestConfig?: StartDevWorkerOptions;
 
 	#configWatcher?: ReturnType<typeof watch>;
+	#assetsWatcher?: ReturnType<typeof watch>;
 	#abortController?: AbortController;
 
 	async #ensureWatchingConfig(configPath: string | undefined) {
@@ -319,8 +330,28 @@ export class ConfigController extends Controller<ConfigControllerEventMap> {
 		if (configPath) {
 			this.#configWatcher = watch(configPath, {
 				persistent: true,
+				ignoreInitial: true,
 			}).on("change", async (_event) => {
 				logger.log(`${path.basename(configPath)} changed...`);
+				assert(
+					this.latestInput,
+					"Cannot be watching config without having first set an input"
+				);
+				void this.#updateConfig(this.latestInput);
+			});
+		}
+	}
+
+	async #ensureWatchingAssets(assetsPath: string | undefined) {
+		await this.#assetsWatcher?.close();
+
+		if (assetsPath) {
+			this.#assetsWatcher = watch(assetsPath, {
+				persistent: true,
+				ignoreInitial: true,
+			}).on("all", async (eventName, filePath) => {
+				const message = getAssetChangeMessage(eventName, filePath);
+				logger.log(`🌀 ${message}...`);
 				assert(
 					this.latestInput,
 					"Cannot be watching config without having first set an input"
@@ -352,33 +383,46 @@ export class ConfigController extends Controller<ConfigControllerEventMap> {
 		const signal = this.#abortController.signal;
 		this.latestInput = input;
 
-		const fileConfig = readConfig(input.config, {
-			env: input.env,
-			"dispatch-namespace": undefined,
-			"legacy-env": !input.legacy?.enableServiceEnvironments ?? true,
-			remote: input.dev?.remote,
-			upstreamProtocol:
-				input.dev?.origin?.secure === undefined
-					? undefined
-					: input.dev?.origin?.secure
-						? "https"
-						: "http",
-			localProtocol:
-				input.dev?.server?.secure === undefined
-					? undefined
-					: input.dev?.server?.secure
-						? "https"
-						: "http",
-		});
-		void this.#ensureWatchingConfig(fileConfig.configPath);
+		try {
+			const fileConfig = readConfig(input.config, {
+				env: input.env,
+				"dispatch-namespace": undefined,
+				"legacy-env": !input.legacy?.enableServiceEnvironments ?? true,
+				remote: input.dev?.remote,
+				upstreamProtocol:
+					input.dev?.origin?.secure === undefined
+						? undefined
+						: input.dev?.origin?.secure
+							? "https"
+							: "http",
+				localProtocol:
+					input.dev?.server?.secure === undefined
+						? undefined
+						: input.dev?.server?.secure
+							? "https"
+							: "http",
+			});
 
-		const resolvedConfig = await resolveConfig(fileConfig, input);
-		if (signal.aborted) {
-			return;
+			void this.#ensureWatchingConfig(fileConfig.configPath);
+
+			const experimentalAssets = processExperimentalAssetsArg(
+				{ experimentalAssets: input.experimental?.assets?.directory },
+				fileConfig
+			);
+			if (experimentalAssets) {
+				void this.#ensureWatchingAssets(experimentalAssets.directory);
+			}
+
+			const resolvedConfig = await resolveConfig(fileConfig, input);
+			if (signal.aborted) {
+				return;
+			}
+			this.latestConfig = resolvedConfig;
+			this.emitConfigUpdateEvent(resolvedConfig);
+			return this.latestConfig;
+		} catch (err) {
+			logger.error(err);
 		}
-		this.latestConfig = resolvedConfig;
-		this.emitConfigUpdateEvent(resolvedConfig);
-		return this.latestConfig;
 	}
 
 	// ******************
@@ -387,7 +431,10 @@ export class ConfigController extends Controller<ConfigControllerEventMap> {
 
 	async teardown() {
 		logger.debug("ConfigController teardown beginning...");
-		await this.#configWatcher?.close();
+		await Promise.allSettled([
+			this.#configWatcher?.close(),
+			this.#assetsWatcher?.close(),
+		]);
 		logger.debug("ConfigController teardown complete");
 	}
 

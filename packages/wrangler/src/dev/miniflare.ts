@@ -1,6 +1,6 @@
 import assert from "node:assert";
 import { randomUUID } from "node:crypto";
-import path, { dirname } from "node:path";
+import path from "node:path";
 import * as esmLexer from "es-module-lexer";
 import {
 	CoreHeaders,
@@ -16,9 +16,7 @@ import {
 	EXTERNAL_AI_WORKER_NAME,
 	EXTERNAL_AI_WORKER_SCRIPT,
 } from "../ai/fetcher";
-import { readConfig } from "../config";
 import { ModuleTypeToRuleType } from "../deployment-bundle/module-collection";
-import { stripExperimentalPrefixes } from "../deployment-bundle/node-compat";
 import { withSourceURLs } from "../deployment-bundle/source-url";
 import { UserError } from "../errors";
 import { logger } from "../logger";
@@ -26,7 +24,6 @@ import { getSourceMappedString } from "../sourcemap";
 import { updateCheck } from "../update-check";
 import type { ServiceFetch } from "../api";
 import type { Config } from "../config";
-import type { ExperimentalAssets } from "../config/environment";
 import type {
 	CfD1Database,
 	CfDurableObject,
@@ -42,6 +39,7 @@ import type {
 	WorkerEntrypointsDefinition,
 	WorkerRegistry,
 } from "../dev-registry";
+import type { ExperimentalAssetsOptions } from "../experimental-assets";
 import type { LoggerLevel } from "../logger";
 import type { LegacyAssetPaths } from "../sites";
 import type { EsbuildBundle } from "./use-esbuild";
@@ -175,7 +173,7 @@ export interface ConfigBundle {
 	bindings: CfWorkerInit["bindings"];
 	workerDefinitions: WorkerRegistry | undefined;
 	legacyAssetPaths: LegacyAssetPaths | undefined;
-	experimentalAssets: ExperimentalAssets | undefined;
+	experimentalAssets: ExperimentalAssetsOptions | undefined;
 	initialPort: Port;
 	initialIp: string;
 	rules: Config["rules"];
@@ -412,7 +410,6 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 	// Setup service bindings to external services
 	const serviceBindings: NonNullable<WorkerOptions["serviceBindings"]> = {
 		...config.serviceBindings,
-		...(config.experimentalAssets ? { ASSET_WORKER: "asset-worker" } : {}),
 	};
 
 	const notFoundServices = new Set<string>();
@@ -680,6 +677,19 @@ export function buildPersistOptions(
 	}
 }
 
+function buildAssetOptions(config: Omit<ConfigBundle, "rules">) {
+	if (config.experimentalAssets) {
+		return {
+			assets: {
+				workerName: config.name,
+				path: config.experimentalAssets.directory,
+				bindingName: config.experimentalAssets.binding,
+				routingConfig: config.experimentalAssets.routingConfig,
+			},
+		};
+	}
+}
+
 export function buildSitesOptions({
 	legacyAssetPaths,
 }: Pick<ConfigBundle, "legacyAssetPaths">) {
@@ -841,7 +851,9 @@ export async function buildMiniflareOptions(
 	if (config.crons.length > 0) {
 		if (!didWarnMiniflareCronSupport) {
 			didWarnMiniflareCronSupport = true;
-			log.warn("Miniflare 3 does not support CRON triggers yet, ignoring...");
+			log.warn(
+				"Miniflare 3 does not currently trigger scheduled Workers automatically.\nUse `--test-scheduled` to forward fetch triggers."
+			);
 		}
 	}
 
@@ -874,6 +886,7 @@ export async function buildMiniflareOptions(
 		buildMiniflareBindingOptions(config);
 	const sitesOptions = buildSitesOptions(config);
 	const persistOptions = buildPersistOptions(config.localPersistencePath);
+	const assetOptions = buildAssetOptions(config);
 
 	const options: MiniflareOptions = {
 		host: config.initialIp,
@@ -892,14 +905,12 @@ export async function buildMiniflareOptions(
 			{
 				name: getName(config),
 				compatibilityDate: config.compatibilityDate,
-				compatibilityFlags: stripExperimentalPrefixes(
-					config.compatibilityFlags
-				),
+				compatibilityFlags: config.compatibilityFlags,
 
 				...sourceOptions,
 				...bindingOptions,
 				...sitesOptions,
-
+				...assetOptions,
 				// Allow each entrypoint to be accessed directly over `127.0.0.1:0`
 				unsafeDirectSockets: entrypointNames.map((name) => ({
 					host: "127.0.0.1",
@@ -908,58 +919,10 @@ export async function buildMiniflareOptions(
 					proxy: true,
 				})),
 			},
-			...getAssetServerWorker(config),
 			...externalWorkers,
 		],
 	};
 	return { options, internalObjects, entrypointNames };
-}
-
-function getAssetServerWorker(
-	config: Omit<ConfigBundle, "rules">
-): WorkerOptions[] {
-	if (!config.experimentalAssets) {
-		return [];
-	}
-	const assetServerModulePath = require.resolve(
-		"@cloudflare/workers-shared/dist/asset-worker.mjs"
-	);
-	const assetServerConfigPath = require.resolve(
-		"@cloudflare/workers-shared/asset-worker/wrangler.toml"
-	);
-	let assetServerConfig: Config | undefined;
-
-	try {
-		assetServerConfig = readConfig(assetServerConfigPath, {});
-	} catch (err) {
-		throw new UserError(
-			"Failed to read the Asset Worker configuration file.\n" + `${err}`
-		);
-	}
-
-	return [
-		{
-			name: assetServerConfig?.name,
-			compatibilityDate: assetServerConfig?.compatibility_date,
-			compatibilityFlags: assetServerConfig?.compatibility_flags,
-			modulesRoot: dirname(assetServerModulePath),
-			modules: [
-				{
-					type: "ESModule",
-					path: assetServerModulePath,
-				},
-			],
-			unsafeDirectSockets: [
-				{
-					host: "127.0.0.1",
-					port: 0,
-				},
-			],
-			assetsPath: config.experimentalAssets.directory,
-			assetsKVBindingName: "ASSETS_KV_NAMESPACE",
-			assetsManifestBindingName: "ASSETS_MANIFEST",
-		},
-	];
 }
 
 export interface ReloadedEventOptions {

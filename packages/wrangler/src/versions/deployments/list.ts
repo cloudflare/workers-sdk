@@ -59,7 +59,9 @@ export async function versionsDeploymentsListHandler(
 		);
 	}
 
-	const deployments = await fetchLatestDeployments(accountId, workerName);
+	const deployments = (
+		await fetchLatestDeployments(accountId, workerName)
+	).sort((a, b) => a.created_on.localeCompare(b.created_on));
 
 	if (args.json) {
 		logRaw(JSON.stringify(deployments, null, 2));

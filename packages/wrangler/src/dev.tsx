@@ -12,7 +12,7 @@ import {
 } from "./api/startDevWorker/utils";
 import { findWranglerToml, printBindings, readConfig } from "./config";
 import { getEntry } from "./deployment-bundle/entry";
-import { validateNodeCompat } from "./deployment-bundle/node-compat";
+import { getNodeCompatMode } from "./deployment-bundle/node-compat";
 import { getBoundRegisteredWorkers } from "./dev-registry";
 import Dev, { devRegistry } from "./dev/dev";
 import { getVarsForDev } from "./dev/dev-vars";
@@ -395,7 +395,10 @@ This is currently not supported 😭, but we think that we'll get it to work soo
 
 	args.legacyAssets = args.legacyAssets ?? args.assets;
 
-	let watcher;
+	// use separate watchers for config file and assets directory since
+	// behaviour will be different between the two
+	let configFileWatcher;
+	let assetsWatcher;
 	try {
 		const devInstance = await run(
 			{
@@ -411,12 +414,17 @@ This is currently not supported 😭, but we think that we'll get it to work soo
 		} else {
 			assert(!(devInstance instanceof DevEnv));
 
-			watcher = devInstance.watcher;
+			configFileWatcher = devInstance.configFileWatcher;
+			assetsWatcher = devInstance.assetsWatcher;
+
 			const { waitUntilExit } = devInstance.devReactElement;
 			await waitUntilExit();
 		}
 	} finally {
-		await watcher?.close();
+		await Promise.allSettled([
+			configFileWatcher?.close(),
+			assetsWatcher?.close(),
+		]);
 	}
 }
 
@@ -545,7 +553,8 @@ async function getPagesAssetsFetcher(
 }
 
 export async function startDev(args: StartDevOptions) {
-	let watcher: ReturnType<typeof watch> | undefined;
+	let configFileWatcher: ReturnType<typeof watch> | undefined;
+	let assetsWatcher: ReturnType<typeof watch> | undefined;
 	let rerender: (node: React.ReactNode) => void | undefined;
 	try {
 		const configPath =
@@ -590,8 +599,8 @@ export async function startDev(args: StartDevOptions) {
 			);
 		}
 
-		const experimentalAssets = processExperimentalAssetsArg(args, config);
-		if (experimentalAssets) {
+		let experimentalAssetsOptions = processExperimentalAssetsArg(args, config);
+		if (experimentalAssetsOptions) {
 			args.forceLocal = true;
 		}
 
@@ -599,7 +608,10 @@ export async function startDev(args: StartDevOptions) {
 		 * - `config.legacy_assets` conflates `legacy_assets` and `assets`
 		 * - `args.legacyAssets` conflates `legacy-assets` and `assets`
 		 */
-		if ((args.legacyAssets || config.legacy_assets) && experimentalAssets) {
+		if (
+			(args.legacyAssets || config.legacy_assets) &&
+			experimentalAssetsOptions
+		) {
 			throw new UserError(
 				"Cannot use Legacy Assets and Experimental Assets in the same Worker."
 			);
@@ -680,15 +692,13 @@ export async function startDev(args: StartDevOptions) {
 					moduleRoot: args.moduleRoot,
 					moduleRules: args.rules,
 					nodejsCompatMode: (parsedConfig: Config) =>
-						validateNodeCompat({
-							legacyNodeCompat:
-								args.nodeCompat ?? parsedConfig.node_compat ?? false,
-							compatibilityFlags:
-								args.compatibilityFlags ??
-								parsedConfig.compatibility_flags ??
-								[],
-							noBundle: args.noBundle ?? parsedConfig.no_bundle ?? false,
-						}),
+						getNodeCompatMode(
+							args.compatibilityFlags ?? parsedConfig.compatibility_flags ?? [],
+							{
+								nodeCompat: args.nodeCompat ?? parsedConfig.node_compat,
+								noBundle: args.noBundle ?? parsedConfig.no_bundle,
+							}
+						),
 				},
 				bindings: {
 					...(await getPagesAssetsFetcher(
@@ -784,7 +794,12 @@ export async function startDev(args: StartDevOptions) {
 					enableServiceEnvironments: !(args.legacyEnv ?? true),
 				},
 				experimental: {
-					assets: experimentalAssets,
+					// only pass `experimentalAssetsOptions` if it came from args not from config
+					// otherwise config at startup ends up overriding future config changes in the
+					// ConfigController
+					assets: args.experimentalAssets
+						? experimentalAssetsOptions
+						: undefined,
 				},
 			} satisfies StartDevWorkerInput);
 
@@ -806,15 +821,57 @@ export async function startDev(args: StartDevOptions) {
 		}
 
 		if (config.configPath && !args.experimentalDevEnv) {
-			watcher = watch(config.configPath, {
+			configFileWatcher = watch(config.configPath, {
 				persistent: true,
 			}).on("change", async (_event) => {
-				// TODO: Do we need to handle different `_event` types differently?
-				//       e.g. what if the file is deleted, or added?
-				config = readConfig(configPath, args);
-				if (config.configPath) {
+				try {
+					// TODO: Do we need to handle different `_event` types differently?
+					// e.g. what if the file is deleted, or added?
+					config = readConfig(configPath, args);
+					if (!config.configPath) {
+						return;
+					}
+
 					logger.log(`${path.basename(config.configPath)} changed...`);
+
+					/*
+					 * Handle experimental assets watching on config file changes
+					 *
+					 * 1. if experimental assets was specified via CLI args, config file
+					 *    changes shouldn't affect anything
+					 * 2. if experimental_assets was not specififed via the configuration
+					 *    file, but it is now, we should start watching the assets
+					 *    directory
+					 * 3. if experimental_assets was specified via the configuration
+					 *    file, we should ensure we're still watching the correct
+					 *    directory
+					 */
+					if (experimentalAssetsOptions && !args.experimentalAssets) {
+						await assetsWatcher?.close();
+
+						// this gets passed into the Dev React element, so ensure we don't
+						// block scope this var
+						experimentalAssetsOptions = processExperimentalAssetsArg(
+							args,
+							config
+						);
+
+						if (experimentalAssetsOptions) {
+							assetsWatcher = watch(experimentalAssetsOptions.directory, {
+								persistent: true,
+								ignoreInitial: true,
+							}).on("all", async (eventName, changedPath) => {
+								const message = getAssetChangeMessage(eventName, changedPath);
+
+								logger.log(`🌀 ${message}...`);
+								rerender(await getDevReactElement(config));
+							});
+						}
+					}
+
 					rerender(await getDevReactElement(config));
+				} catch (err) {
+					logger.error(err);
 				}
 			});
 		}
@@ -834,12 +891,13 @@ export async function startDev(args: StartDevOptions) {
 			additionalModules,
 		} = await validateDevServerSettings(args, config);
 
-		const nodejsCompatMode = validateNodeCompat({
-			legacyNodeCompat: args.nodeCompat ?? config.node_compat ?? false,
-			compatibilityFlags:
-				args.compatibilityFlags ?? config.compatibility_flags ?? [],
-			noBundle: args.noBundle ?? config.no_bundle ?? false,
-		});
+		const nodejsCompatMode = getNodeCompatMode(
+			args.compatibilityFlags ?? config.compatibility_flags ?? [],
+			{
+				nodeCompat: args.nodeCompat ?? config.node_compat,
+				noBundle: args.noBundle ?? config.no_bundle,
+			}
+		);
 
 		void metrics.sendMetricsEvent(
 			"run dev",
@@ -893,7 +951,7 @@ export async function startDev(args: StartDevOptions) {
 					}
 					legacyAssetPaths={legacyAssetPaths}
 					legacyAssetsConfig={configParam.legacy_assets}
-					experimentalAssets={experimentalAssets}
+					experimentalAssets={experimentalAssetsOptions}
 					initialPort={
 						args.port ?? configParam.dev.port ?? (await getLocalPort())
 					}
@@ -933,18 +991,37 @@ export async function startDev(args: StartDevOptions) {
 		}
 
 		const devReactElement = render(await getDevReactElement(config));
-
 		rerender = devReactElement.rerender;
+
+		if (experimentalAssetsOptions && !args.experimentalDevEnv) {
+			assetsWatcher = watch(experimentalAssetsOptions.directory, {
+				persistent: true,
+				ignoreInitial: true,
+			}).on("all", async (eventName, filePath) => {
+				const message = getAssetChangeMessage(eventName, filePath);
+
+				logger.log(`🌀 ${message}...`);
+				rerender(await getDevReactElement(config));
+			});
+		}
+
 		return {
 			devReactElement,
-			watcher,
+			configFileWatcher,
+			assetsWatcher,
 			stop: async () => {
 				devReactElement.unmount();
-				await watcher?.close();
+				await Promise.allSettled([
+					configFileWatcher?.close(),
+					assetsWatcher?.close(),
+				]);
 			},
 		};
 	} catch (e) {
-		await watcher?.close();
+		await Promise.allSettled([
+			configFileWatcher?.close(),
+			assetsWatcher?.close(),
+		]);
 		throw e;
 	}
 }
@@ -974,11 +1051,13 @@ export async function startApiDev(args: StartDevOptions) {
 		additionalModules,
 	} = await validateDevServerSettings(args, config);
 
-	const nodejsCompatMode = validateNodeCompat({
-		legacyNodeCompat: args.nodeCompat ?? config.node_compat ?? false,
-		compatibilityFlags: args.compatibilityFlags ?? config.compatibility_flags,
-		noBundle: args.noBundle ?? config.no_bundle ?? false,
-	});
+	const nodejsCompatMode = getNodeCompatMode(
+		args.compatibilityFlags ?? config.compatibility_flags,
+		{
+			nodeCompat: args.nodeCompat ?? config.node_compat,
+			noBundle: args.noBundle ?? config.no_bundle,
+		}
+	);
 
 	await metrics.sendMetricsEvent(
 		"run dev (api)",
@@ -1525,4 +1604,27 @@ export function getBindings(
 	};
 
 	return bindings;
+}
+
+export function getAssetChangeMessage(
+	eventName: "add" | "addDir" | "change" | "unlink" | "unlinkDir",
+	assetPath: string
+): string {
+	let message = `${assetPath} changed`;
+	switch (eventName) {
+		case "add":
+			message = `File ${assetPath} was added`;
+			break;
+		case "addDir":
+			message = `Directory ${assetPath} was added`;
+			break;
+		case "unlink":
+			message = `File ${assetPath} was removed`;
+			break;
+		case "unlinkDir":
+			message = `Directory ${assetPath} was removed`;
+			break;
+	}
+
+	return message;
 }

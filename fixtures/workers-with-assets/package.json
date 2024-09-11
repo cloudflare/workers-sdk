@@ -1,5 +1,5 @@
 {
-	"name": "assets-worker",
+	"name": "workers-assets-with-user-worker",
 	"private": true,
 	"scripts": {
 		"check:type": "tsc",

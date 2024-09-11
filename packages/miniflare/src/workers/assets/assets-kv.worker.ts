@@ -2,7 +2,7 @@ import { SharedBindings } from "miniflare:shared";
 
 interface Env {
 	[SharedBindings.MAYBE_SERVICE_BLOBS]: Fetcher;
-	__STATIC_ASSETS_REVERSE_MAP: AssetReverseMap;
+	ASSETS_REVERSE_MAP: AssetReverseMap;
 }
 
 type AssetReverseMap = {
@@ -17,14 +17,12 @@ export default <ExportedHandler<Env>>{
 			return new Response(message, { status: 405, statusText: message });
 		}
 
-		// don't uri decode pathname, because we encode the filepath before hashing
 		const pathHash = new URL(request.url).pathname.substring(1);
-
-		const entry = env.__STATIC_ASSETS_REVERSE_MAP[pathHash];
+		const entry = env.ASSETS_REVERSE_MAP[pathHash];
 		if (entry === undefined) {
 			return new Response("Not Found", { status: 404 });
 		}
-		// eslint-disable-next-line @typescript-eslint/no-unused-vars
+
 		const { filePath, contentType } = entry;
 		const blobsService = env[SharedBindings.MAYBE_SERVICE_BLOBS];
 		const response = await blobsService.fetch(

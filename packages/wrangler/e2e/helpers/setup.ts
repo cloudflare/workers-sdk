@@ -1,5 +1,5 @@
 import { mkdtempSync } from "node:fs";
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -18,5 +18,15 @@ export async function seed(
 		const filePath = path.resolve(root, name);
 		await mkdir(path.dirname(filePath), { recursive: true });
 		await writeFile(filePath, contents);
+	}
+}
+
+// Removes the given files from the `root` directory on the file system.
+export async function removeFiles(root: string, files: string[]) {
+	for (const name of files) {
+		const filePath = path.resolve(root, name);
+		if (filePath) {
+			await rm(filePath);
+		}
 	}
 }

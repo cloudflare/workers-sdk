@@ -6,6 +6,7 @@ import chalk from "chalk";
 import { getType } from "mime";
 import PQueue from "p-queue";
 import prettyBytes from "pretty-bytes";
+import { File, FormData } from "undici";
 import { fetchResult } from "./cfetch";
 import { formatTime } from "./deploy/deploy";
 import { FatalError, UserError } from "./errors";
@@ -13,6 +14,7 @@ import { logger, LOGGER_LEVELS } from "./logger";
 import { hashFile } from "./pages/hash";
 import { isJwtExpired } from "./pages/upload";
 import { APIError } from "./parse";
+import { createPatternMatcher } from "./utils/filesystem";
 import type { Config } from "./config";
 import type { ExperimentalAssets } from "./config/environment";
 
@@ -22,15 +24,6 @@ type InitializeAssetsResponse = {
 	// string of file hashes per bucket
 	buckets: string[][];
 	jwt: string;
-};
-
-export type UploadPayloadFile = {
-	base64: boolean;
-	key: string;
-	value: string;
-	metadata: {
-		contentType: string;
-	};
 };
 
 type UploadResponse = {
@@ -102,7 +95,10 @@ export const syncExperimentalAssets = async (
 			}
 			// just logging file uploads at the moment...
 			// unsure how to log deletion vs unchanged file ignored/if we want to log this
-			assetLogCount = logAssetUpload(`+ ${manifestEntry[0]}`, assetLogCount);
+			assetLogCount = logAssetUpload(
+				`+ ${decodeFilepath(manifestEntry[0])}`,
+				assetLogCount
+			);
 			return manifestEntry;
 		});
 	});
@@ -118,30 +114,32 @@ export const syncExperimentalAssets = async (
 		const doUpload = async (): Promise<UploadResponse> => {
 			// Populate the payload only when actually uploading (this is limited to 3 concurrent uploads at 50 MiB per bucket meaning we'd only load in a max of ~150 MiB)
 			// This is so we don't run out of memory trying to upload the files.
-			const payload: UploadPayloadFile[] = await Promise.all(
-				bucket.map(async (manifestEntry) => {
-					const absFilePath = path.join(assetDirectory, manifestEntry[0]);
-					return {
-						base64: true,
-						key: manifestEntry[1].hash,
-						metadata: {
-							contentType: getType(absFilePath) || "application/octet-stream",
-						},
-						value: (await readFile(absFilePath)).toString("base64"),
-					};
-				})
-			);
+			const payload = new FormData();
+			for (const manifestEntry of bucket) {
+				const decodedFilePath = decodeFilepath(manifestEntry[0]);
+				const absFilePath = path.join(assetDirectory, decodedFilePath);
+				payload.append(
+					manifestEntry[1].hash,
+					new File(
+						[(await readFile(absFilePath)).toString("base64")],
+						manifestEntry[1].hash,
+						{
+							type: getType(absFilePath) || "application/octet-stream",
+						}
+					),
+					manifestEntry[1].hash
+				);
+			}
 
 			try {
 				const res = await fetchResult<UploadResponse>(
-					`/accounts/${accountId}/workers/assets/upload`,
+					`/accounts/${accountId}/workers/assets/upload?base64=true`,
 					{
 						method: "POST",
 						headers: {
-							"Content-Type": "application/jsonl",
 							Authorization: `Bearer ${initializeAssetsResponse.jwt}`,
 						},
-						body: payload.map((x) => JSON.stringify(x)).join("\n"),
+						body: payload,
 					}
 				);
 				logger.info(
@@ -223,10 +221,20 @@ export const buildAssetsManifest = async (dir: string) => {
 	const files = await readdir(dir, { recursive: true });
 	const manifest: AssetManifest = {};
 	let counter = 0;
+
+	const ignoreFn = await createAssetIgnoreFunction(dir);
+
 	await Promise.all(
 		files.map(async (file) => {
 			const filepath = path.join(dir, file);
 			const relativeFilepath = path.relative(dir, filepath);
+
+			if (ignoreFn?.(relativeFilepath)) {
+				logger.debug("Ignoring asset:", relativeFilepath);
+				// This file should not be included in the manifest.
+				return;
+			}
+
 			const filestat = await stat(filepath);
 
 			if (filestat.isSymbolicLink() || filestat.isDirectory()) {
@@ -301,13 +309,21 @@ export function getExperimentalAssetsBasePath(
 		: path.resolve(path.dirname(config.configPath ?? "wrangler.toml"));
 }
 
+export type RoutingConfig = {
+	hasUserWorker: boolean;
+};
+export interface ExperimentalAssetsOptions extends ExperimentalAssets {
+	routingConfig: RoutingConfig;
+}
+
 export function processExperimentalAssetsArg(
-	args: { experimentalAssets: string | undefined },
+	args: { experimentalAssets: string | undefined; script?: string },
 	config: Config
-): ExperimentalAssets | undefined {
+): ExperimentalAssetsOptions | undefined {
 	const experimentalAssets = args.experimentalAssets
 		? { directory: args.experimentalAssets }
 		: config.experimental_assets;
+	let experimentalAssetsOptions: ExperimentalAssetsOptions | undefined;
 	if (experimentalAssets) {
 		const experimentalAssetsBasePath = getExperimentalAssetsBasePath(
 			config,
@@ -330,16 +346,54 @@ export function processExperimentalAssetsArg(
 		}
 
 		experimentalAssets.directory = resolvedExperimentalAssetsPath;
+		const routingConfig = {
+			hasUserWorker: Boolean(args.script || config.main),
+		};
+		experimentalAssetsOptions = {
+			...experimentalAssets,
+			routingConfig,
+		};
 	}
 
-	return experimentalAssets;
+	return experimentalAssetsOptions;
 }
 
 const encodeFilePath = (filePath: string) => {
-	// NB windows will disallow these characters in file paths anyway < > : " / \ | ? *
 	const encodedPath = filePath
 		.split(path.sep)
 		.map((segment) => encodeURIComponent(segment))
 		.join("/");
 	return "/" + encodedPath;
 };
+
+const decodeFilepath = (filePath: string) => {
+	return filePath
+		.split("/")
+		.map((segment) => decodeURIComponent(segment))
+		.join(path.sep);
+};
+
+/**
+ * Create a function for filtering out ignored assets.
+ *
+ * The generated function takes an asset path, relative to the asset directory,
+ * and returns true if the asset should not be ignored.
+ */
+async function createAssetIgnoreFunction(dir: string) {
+	const CF_ASSETS_IGNORE_FILENAME = ".assetsignore";
+
+	const cfAssetIgnorePath = path.resolve(dir, CF_ASSETS_IGNORE_FILENAME);
+
+	if (!existsSync(cfAssetIgnorePath)) {
+		return null;
+	}
+
+	const ignorePatterns = (
+		await readFile(cfAssetIgnorePath, { encoding: "utf8" })
+	).split("\n");
+
+	// Always ignore the `.assetsignore` file.
+	ignorePatterns.push(CF_ASSETS_IGNORE_FILENAME);
+
+	return createPatternMatcher(ignorePatterns, true);
+}

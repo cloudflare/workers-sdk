@@ -296,7 +296,7 @@ export async function deployHandler(
 		);
 	}
 
-	const experimentalAssets = processExperimentalAssetsArg(args, config);
+	const experimentalAssetsOptions = processExperimentalAssetsArg(args, config);
 
 	if (args.latest) {
 		logger.warn(
@@ -326,7 +326,7 @@ export async function deployHandler(
 
 	const beforeUpload = Date.now();
 	const name = getScriptName(args, config);
-	const { sourceMapSize, deploymentId, workerTag } = await deploy({
+	const { sourceMapSize, versionId, workerTag, targets } = await deploy({
 		config,
 		accountId,
 		name,
@@ -345,7 +345,7 @@ export async function deployHandler(
 		jsxFragment: args.jsxFragment,
 		tsconfig: args.tsconfig,
 		routes: args.routes,
-		experimentalAssets,
+		experimentalAssetsOptions,
 		legacyAssetPaths,
 		legacyEnv: isLegacyEnv(config),
 		minify: args.minify,
@@ -368,8 +368,8 @@ export async function deployHandler(
 		version: 1,
 		worker_name: name ?? null,
 		worker_tag: workerTag,
-		// Note that the `deploymentId` returned from a simple deployment is actually the versionId of the uploaded version.
-		version_id: deploymentId,
+		version_id: versionId,
+		targets,
 	});
 
 	await metrics.sendMetricsEvent(

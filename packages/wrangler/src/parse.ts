@@ -337,3 +337,25 @@ export function parseHumanDuration(s: string): number {
 	}
 	return Number(s) * base;
 }
+
+export function parseNonHyphenedUuid(uuid: string | null): string | null {
+	if (uuid == null || uuid.includes("-")) {
+		return uuid;
+	}
+
+	if (uuid.length != 32) {
+		return null;
+	}
+
+	const uuid_parts: string[] = [];
+	uuid_parts.push(uuid.slice(0, 8));
+	uuid_parts.push(uuid.slice(8, 12));
+	uuid_parts.push(uuid.slice(12, 16));
+	uuid_parts.push(uuid.slice(16, 20));
+	uuid_parts.push(uuid.slice(20));
+
+	let hyphenated = "";
+	uuid_parts.forEach((part) => (hyphenated += part + "-"));
+
+	return hyphenated.slice(0, 36);
+}

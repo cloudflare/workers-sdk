@@ -52,6 +52,7 @@ export type EsbuildBundleProps = {
 	findAdditionalModules: boolean | undefined;
 	durableObjects: Config["durable_objects"];
 	workflows: Config["workflows"];
+	mockAnalyticsEngineDatasets: Config["analytics_engine_datasets"];
 	local: boolean;
 	targetConsumer: "dev" | "deploy";
 	testScheduled: boolean;
@@ -79,6 +80,7 @@ export function runBuild(
 		alias,
 		noBundle,
 		findAdditionalModules,
+		mockAnalyticsEngineDatasets,
 		durableObjects,
 		workflows,
 		local,
@@ -106,6 +108,7 @@ export function runBuild(
 		findAdditionalModules: boolean | undefined;
 		durableObjects: Config["durable_objects"];
 		workflows: Config["workflows"];
+		mockAnalyticsEngineDatasets: Config["analytics_engine_datasets"];
 		local: boolean;
 		targetConsumer: "dev" | "deploy";
 		testScheduled: boolean;
@@ -187,6 +190,7 @@ export function runBuild(
 						alias,
 						define,
 						checkFetch: true,
+						mockAnalyticsEngineDatasets,
 						legacyAssets,
 						// disable the cache in dev
 						bypassAssetCache: true,
@@ -268,6 +272,7 @@ export function useEsbuild({
 	define,
 	noBundle,
 	findAdditionalModules,
+	mockAnalyticsEngineDatasets,
 	durableObjects,
 	workflows,
 	local,
@@ -301,6 +306,7 @@ export function useEsbuild({
 				findAdditionalModules,
 				durableObjects,
 				workflows,
+				mockAnalyticsEngineDatasets,
 				local,
 				targetConsumer,
 				testScheduled,
@@ -333,6 +339,7 @@ export function useEsbuild({
 		alias,
 		define,
 		legacyAssets,
+		mockAnalyticsEngineDatasets,
 		durableObjects,
 		workflows,
 		local,

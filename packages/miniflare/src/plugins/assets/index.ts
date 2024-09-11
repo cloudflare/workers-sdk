@@ -1,113 +1,139 @@
-import crypto from "crypto";
-import fs from "fs/promises";
-import path from "path";
+import crypto from "node:crypto";
+import fs from "node:fs/promises";
+import path from "node:path";
 import { getType } from "mime";
-import { KVOptionsSchema } from "miniflare";
 import prettyBytes from "pretty-bytes";
-import SCRIPT_KV_ASSETS from "worker:kv/assets";
+import SCRIPT_ASSETS from "worker:assets/assets";
+import SCRIPT_ASSETS_KV from "worker:assets/assets-kv";
+import SCRIPT_ROUTER from "worker:assets/router";
 import { z } from "zod";
-import { Service, Worker_Binding } from "../../runtime";
-import { getAssetsBindingsNames, SharedBindings } from "../../workers";
-import { kProxyNodeBinding } from "../shared";
-import { KV_PLUGIN_NAME } from "./constants";
+import { Service } from "../../runtime";
+import { SharedBindings } from "../../workers";
+import { getUserServiceName } from "../core";
+import { Plugin, ProxyNodeBinding } from "../shared";
+import {
+	ASSETS_KV_SERVICE_NAME,
+	ASSETS_PLUGIN_NAME,
+	ASSETS_SERVICE_NAME,
+	ROUTER_SERVICE_NAME,
+} from "./constants";
+import { AssetsOptionsSchema } from "./schema";
 
-export interface AssetsOptions {
-	assetsPath: string;
-	assetsKVBindingName?: string;
-	assetsManifestBindingName?: string;
-}
+export const ASSETS_PLUGIN: Plugin<typeof AssetsOptionsSchema> = {
+	options: AssetsOptionsSchema,
+	async getBindings(options: z.infer<typeof AssetsOptionsSchema>) {
+		if (!options.assets?.bindingName) {
+			return [];
+		}
+		return [
+			{
+				// binding between User Worker and Asset Worker
+				name: options.assets.bindingName,
+				service: { name: ASSETS_SERVICE_NAME },
+			},
+		];
+	},
 
-export function isWorkersWithAssets(
-	options: z.infer<typeof KVOptionsSchema>
-): options is AssetsOptions {
-	return options.assetsPath !== undefined;
-}
+	async getNodeBindings(options) {
+		if (!options.assets?.bindingName) {
+			return {};
+		}
+		return {
+			[options.assets.bindingName]: new ProxyNodeBinding(),
+		};
+	},
 
-const SERVICE_NAMESPACE_ASSET = `${KV_PLUGIN_NAME}:asset`;
+	async getServices({ options }) {
+		if (!options.assets) {
+			return [];
+		}
+		const assetsReverseMap = await createReverseMap(options.assets?.path);
 
-export const buildAssetsManifest = async (dir: string) => {
-	const manifest = await walk(dir);
-	const sortedAssetManifest = sortManifest(manifest);
-	const encodedAssetManifest = encodeManifest(sortedAssetManifest);
-	return encodedAssetManifest;
+		const storageServiceName = `${ASSETS_PLUGIN_NAME}:storage`;
+		const storageService: Service = {
+			name: storageServiceName,
+			disk: { path: options.assets.path, writable: true },
+		};
+		const namespaceService: Service = {
+			name: ASSETS_KV_SERVICE_NAME,
+			worker: {
+				compatibilityDate: "2023-07-24",
+				compatibilityFlags: ["nodejs_compat"],
+				modules: [
+					{
+						name: "assets-kv-worker.mjs",
+						esModule: SCRIPT_ASSETS_KV(),
+					},
+				],
+				bindings: [
+					{
+						name: SharedBindings.MAYBE_SERVICE_BLOBS,
+						service: { name: storageServiceName },
+					},
+					{
+						name: "ASSETS_REVERSE_MAP",
+						json: assetsReverseMap,
+					},
+				],
+			},
+		};
+
+		const assetsManifest = await buildAssetsManifest(options.assets.path);
+		const assetService: Service = {
+			name: ASSETS_SERVICE_NAME,
+			worker: {
+				compatibilityDate: "2024-08-01",
+				modules: [
+					{
+						name: "asset-worker.mjs",
+						esModule: SCRIPT_ASSETS(),
+					},
+				],
+				bindings: [
+					{
+						name: "ASSETS_KV_NAMESPACE",
+						kvNamespace: { name: ASSETS_KV_SERVICE_NAME },
+					},
+					{
+						name: "ASSETS_MANIFEST",
+						data: assetsManifest,
+					},
+				],
+			},
+		};
+
+		const routerService: Service = {
+			name: ROUTER_SERVICE_NAME,
+			worker: {
+				compatibilityDate: "2024-08-01",
+				modules: [
+					{
+						name: "router-worker.mjs",
+						esModule: SCRIPT_ROUTER(),
+					},
+				],
+				bindings: [
+					{
+						name: "ASSET_WORKER",
+						service: { name: ASSETS_SERVICE_NAME },
+					},
+					{
+						name: "USER_WORKER",
+						service: { name: getUserServiceName(options.assets.workerName) },
+					},
+					{
+						name: "CONFIG",
+						json: JSON.stringify(options.assets.routingConfig),
+					},
+				],
+			},
+		};
+
+		return [storageService, namespaceService, assetService, routerService];
+	},
 };
 
-export async function getAssetsBindings(
-	options: AssetsOptions
-): Promise<Worker_Binding[]> {
-	const assetsBindings = getAssetsBindingsNames(
-		options?.assetsKVBindingName,
-		options?.assetsManifestBindingName
-	);
-
-	const assetsManifest = await buildAssetsManifest(options.assetsPath);
-	return [
-		{
-			// this is the binding to the KV namespace that the assets are in.
-			name: assetsBindings.ASSETS_KV_NAMESPACE,
-			kvNamespace: { name: SERVICE_NAMESPACE_ASSET },
-		},
-		{
-			// this is the binding to an ArrayBuffer containing the binary-encoded
-			// assets manifest.
-			name: assetsBindings.ASSETS_MANIFEST,
-			data: assetsManifest,
-		},
-	];
-}
-
-export async function getAssetsNodeBindings(
-	options: AssetsOptions
-): Promise<Record<string, unknown>> {
-	const assetsManifest = buildAssetsManifest(options.assetsPath);
-	const assetsBindings = getAssetsBindingsNames(
-		options?.assetsKVBindingName,
-		options?.assetsManifestBindingName
-	);
-
-	return {
-		[assetsBindings.ASSETS_KV_NAMESPACE]: kProxyNodeBinding,
-		[assetsBindings.ASSETS_MANIFEST]: assetsManifest,
-	};
-}
-
-export async function getAssetsServices(
-	options: AssetsOptions
-): Promise<Service[]> {
-	const assetsReverseMap = await createReverseMap(options.assetsPath);
-
-	const storageServiceName = `${SERVICE_NAMESPACE_ASSET}:storage`;
-	const storageService: Service = {
-		name: storageServiceName,
-		disk: { path: options.assetsPath, writable: true },
-	};
-	const namespaceService: Service = {
-		name: SERVICE_NAMESPACE_ASSET,
-		worker: {
-			compatibilityDate: "2023-07-24",
-			compatibilityFlags: ["nodejs_compat"],
-			modules: [
-				{
-					name: "assets.worker.js",
-					esModule: SCRIPT_KV_ASSETS(),
-				},
-			],
-			bindings: [
-				{
-					name: SharedBindings.MAYBE_SERVICE_BLOBS,
-					service: { name: storageServiceName },
-				},
-				{
-					name: "__STATIC_ASSETS_REVERSE_MAP",
-					json: assetsReverseMap,
-				},
-			],
-		},
-	};
-	return [storageService, namespaceService];
-}
-
-// ASSET MANIFEST
+// -- ASSET MANIFEST --
 //
 // 1. Traverse the asset directory to create an asset manifest.
 // (In prod the manifest contains a pathHash and a contentHash. The
@@ -132,6 +158,13 @@ const TAIL_RESERVED_SIZE = 8;
 
 const ENTRY_SIZE = PATH_HASH_SIZE + CONTENT_HASH_SIZE + TAIL_RESERVED_SIZE;
 
+export const buildAssetsManifest = async (dir: string) => {
+	const manifest = await walk(dir);
+	const sortedAssetManifest = sortManifest(manifest);
+	const encodedAssetManifest = encodeManifest(sortedAssetManifest);
+	return encodedAssetManifest;
+};
+
 const walk = async (dir: string) => {
 	const files = await fs.readdir(dir, { recursive: true });
 	const manifest: Uint8Array[] = [];
@@ -146,14 +179,6 @@ const walk = async (dir: string) => {
 			if (filestat.isSymbolicLink() || filestat.isDirectory()) {
 				return;
 			} else {
-				if (counter >= MAX_ASSET_COUNT) {
-					throw new Error(
-						`Maximum number of assets exceeded.\n` +
-							`Cloudflare Workers supports up to ${MAX_ASSET_COUNT.toLocaleString()} assets in a version. We found ${counter.toLocaleString()} files in the specified assets directory "${dir}".\n` +
-							`Ensure your assets directory contains a maximum of ${MAX_ASSET_COUNT.toLocaleString()} files, and that you have specified your assets directory correctly.`
-					);
-				}
-
 				if (filestat.size > MAX_ASSET_SIZE) {
 					throw new Error(
 						`Asset too large.\n` +
@@ -177,6 +202,13 @@ const walk = async (dir: string) => {
 			}
 		})
 	);
+	if (counter > MAX_ASSET_COUNT) {
+		throw new Error(
+			`Maximum number of assets exceeded.\n` +
+				`Cloudflare Workers supports up to ${MAX_ASSET_COUNT.toLocaleString()} assets in a version. We found ${counter.toLocaleString()} files in the specified assets directory "${dir}".\n` +
+				`Ensure your assets directory contains a maximum of ${MAX_ASSET_COUNT.toLocaleString()} files, and that you have specified your assets directory correctly.`
+		);
+	}
 	return manifest;
 };
 
@@ -234,14 +266,14 @@ const encodeManifest = (manifest: Uint8Array[]) => {
 	return assetManifestBytes;
 };
 
-// ASSET REVERSE MAP
+// -- ASSET REVERSE MAP --
 //
 // In prod, the contentHash is used as the key for the KV store that holds the assets.
 // Asset Worker will hash the path of an incoming request, look for that pathHash in
 // the stored manifest, and get the corresponding contentHash to use as the KV key.
 // In dev, we fake out this KV store and just get the assets from disk. However we still need
 // to map a given "contentHash" to the filePath. This is what the ASSET REVERSE MAP is for.
-// This is available to the FAKE_KV_NAMESPACE service (assets.worker.ts) as a binding.
+// This is available to the ASSETS_KV_NAMESPACE service (assets-kv.worker.ts) as a binding.
 
 type AssetReverseMap = {
 	[pathHash: string]: { filePath: string; contentType: string };

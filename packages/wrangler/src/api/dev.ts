@@ -263,7 +263,8 @@ export async function unstable_dev(
 			() => startDev(devOptions)
 		)) as {
 			devReactElement: Instance;
-			watcher: FSWatcher | undefined;
+			configFileWatcher: FSWatcher | undefined;
+			assetsWatcher: FSWatcher | undefined;
 			stop: () => Promise<void>;
 		};
 		const { port, address, proxyData } = await readyPromise;

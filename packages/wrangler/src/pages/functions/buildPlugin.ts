@@ -107,6 +107,8 @@ export function buildPluginFromFunctions({
 		],
 		serveLegacyAssetsFromWorker: false,
 		checkFetch: local,
+		// TODO: mock AE datasets in Pages functions for dev
+		mockAnalyticsEngineDatasets: [],
 		targetConsumer: local ? "dev" : "deploy",
 		forPages: true,
 		local,

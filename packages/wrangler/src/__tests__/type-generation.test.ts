@@ -199,7 +199,10 @@ const bindingsConfigMock: Omit<
 	},
 	wasm_modules: { MODULE1: "module1.wasm", MODULE2: "module2.wasm" },
 	unsafe: {
-		bindings: [{ name: "testing_unsafe", type: "plain_text" }],
+		bindings: [
+			{ name: "testing_unsafe", type: "plain_text" },
+			{ name: "UNSAFE_RATELIMIT", type: "ratelimit" },
+		],
 		metadata: { some_key: "some_value" },
 	},
 	rules: [
@@ -343,6 +346,7 @@ describe("generateTypes()", () => {
 			SOME_TEXT_BLOB1: string;
 			SOME_TEXT_BLOB2: string;
 			testing_unsafe: any;
+			UNSAFE_RATELIMIT: RateLimit;
 			TEST_QUEUE_BINDING: Queue;
 			SEND_EMAIL_BINDING: SendEmail;
 			VECTORIZE_BINDING: VectorizeIndex;
@@ -483,6 +487,7 @@ describe("generateTypes()", () => {
 		export {};
 		declare global {
 			const testing_unsafe: any;
+			const UNSAFE_RATELIMIT: RateLimit;
 		}
 		"
 	`);

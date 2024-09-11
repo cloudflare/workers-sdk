@@ -9,6 +9,7 @@ import { prompt } from "../dialogs";
 import { FatalError } from "../errors";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
+import { writeOutput } from "../output";
 import { requireAuth } from "../user";
 import {
 	MAX_DEPLOYMENT_STATUS_ATTEMPTS,
@@ -432,6 +433,14 @@ ${failureMessage}`,
 				`⚡️ Check the deployment details on the Cloudflare dashboard: https://dash.cloudflare.com/${accountId}/pages/view/${projectName}/${deploymentResponse.id}`
 		);
 	}
+
+	writeOutput({
+		type: "pages-deploy",
+		version: 1,
+		pages_project: deploymentResponse.project_name,
+		deployment_id: deploymentResponse.id,
+		url: deploymentResponse.url,
+	});
 
 	await metrics.sendMetricsEvent("create pages deployment");
 };

@@ -62,8 +62,16 @@ describe("deployments", { timeout: TIMEOUT }, () => {
 	it("list 1 deployment", async () => {
 		const output = await helper.run(`wrangler deployments list`);
 
-		expect(output.stdout).toContain("Upload from Wrangler 🤠");
-		expect(output.stdout).toContain("🟩 Active");
+		expect(normalize(output.stdout)).toMatchInlineSnapshot(`
+			"Created:     TIMESTAMP
+			Author:      person@example.com
+			Source:      Upload
+			Message:     Automatic deployment on upload.
+			Version(s):  (100%) 00000000-0000-0000-0000-000000000000
+			                 Created:  TIMESTAMP
+			                     Tag:  -
+			                 Message:  -"
+		`);
 	});
 
 	it("modify & deploy worker", async () => {
@@ -96,19 +104,22 @@ describe("deployments", { timeout: TIMEOUT }, () => {
 	it("list 2 deployments", async () => {
 		const dep = await helper.run(`wrangler deployments list`);
 		expect(normalize(dep.stdout)).toMatchInlineSnapshot(`
-			"🚧\`wrangler deployments\` is a beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose
-			Deployment ID: 00000000-0000-0000-0000-000000000000
-			Version ID:    00000000-0000-0000-0000-000000000000
-			Created on:    TIMESTAMP
-			Author:        person@example.com
-			Source:        Upload from Wrangler 🤠
-			Deployment ID: 00000000-0000-0000-0000-000000000000
-			Version ID:    00000000-0000-0000-0000-000000000000
-			Created on:    TIMESTAMP
-			Author:        person@example.com
-			Source:        Upload from Wrangler 🤠
-			🟩 Active
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			"Created:     TIMESTAMP
+			Author:      person@example.com
+			Source:      Upload
+			Message:     Automatic deployment on upload.
+			Version(s):  (100%) 00000000-0000-0000-0000-000000000000
+			                 Created:  TIMESTAMP
+			                     Tag:  -
+			                 Message:  -
+			Created:     TIMESTAMP
+			Author:      person@example.com
+			Source:      Unknown (deployment)
+			Message:     -
+			Version(s):  (100%) 00000000-0000-0000-0000-000000000000
+			                 Created:  TIMESTAMP
+			                     Tag:  -
+			                 Message:  -"
 		`);
 	});
 
@@ -116,32 +127,68 @@ describe("deployments", { timeout: TIMEOUT }, () => {
 		const output = await helper.run(
 			`wrangler rollback --message "A test message"`
 		);
-		expect(output.stdout).toContain("Successfully rolled back");
+		expect(normalize(output.stdout)).toMatchInlineSnapshot(`
+			"├ Fetching latest deployment
+			│
+			├ Your current deployment has 1 version(s):
+			│
+			│ (100%) 00000000-0000-0000-0000-000000000000
+			│       Created:  TIMESTAMP
+			│           Tag:  -
+			│       Message:  -
+			│
+			├ Finding latest stable Worker Version to rollback to
+			│
+			│
+			? Please provide an optional message for this rollback (120 characters max)
+			🤖 Using default value in non-interactive context: A test message
+			│
+			├  WARNING  You are about to rollback to Worker Version 00000000-0000-0000-0000-000000000000.
+			│ This will immediately replace the current deployment and become the active deployment across all your deployed triggers.
+			│ However, your local development environment will not be affected by this rollback.
+			│ Rolling back to a previous deployment will not rollback any of the bound resources (Durable Object, D1, R2, KV, etc).
+			│
+			│ (100%) 00000000-0000-0000-0000-000000000000
+			│       Created:  TIMESTAMP
+			│           Tag:  -
+			│       Message:  -
+			│
+			? Are you sure you want to deploy this Worker Version to 100% of traffic?
+			🤖 Using fallback value in non-interactive context: yes
+			Performing rollback...
+			│
+			╰  SUCCESS  Worker Version 00000000-0000-0000-0000-000000000000 has been deployed to 100% of traffic.
+			Current Version ID: 00000000-0000-0000-0000-000000000000"
+		`);
 	});
 
 	it("list deployments", async () => {
 		const dep = await helper.run(`wrangler deployments list`);
 		expect(normalize(dep.stdout)).toMatchInlineSnapshot(`
-			"🚧\`wrangler deployments\` is a beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose
-			Deployment ID: 00000000-0000-0000-0000-000000000000
-			Version ID:    00000000-0000-0000-0000-000000000000
-			Created on:    TIMESTAMP
-			Author:        person@example.com
-			Source:        Upload from Wrangler 🤠
-			Deployment ID: 00000000-0000-0000-0000-000000000000
-			Version ID:    00000000-0000-0000-0000-000000000000
-			Created on:    TIMESTAMP
-			Author:        person@example.com
-			Source:        Upload from Wrangler 🤠
-			Deployment ID: 00000000-0000-0000-0000-000000000000
-			Version ID:    00000000-0000-0000-0000-000000000000
-			Created on:    TIMESTAMP
-			Author:        person@example.com
-			Source:        Rollback from Wrangler 🤠
-			Rollback from: 00000000-0000-0000-0000-000000000000
-			Message:       A test message
-			🟩 Active
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			"Created:     TIMESTAMP
+			Author:      person@example.com
+			Source:      Upload
+			Message:     Automatic deployment on upload.
+			Version(s):  (100%) 00000000-0000-0000-0000-000000000000
+			                 Created:  TIMESTAMP
+			                     Tag:  -
+			                 Message:  -
+			Created:     TIMESTAMP
+			Author:      person@example.com
+			Source:      Unknown (deployment)
+			Message:     -
+			Version(s):  (100%) 00000000-0000-0000-0000-000000000000
+			                 Created:  TIMESTAMP
+			                     Tag:  -
+			                 Message:  -
+			Created:     TIMESTAMP
+			Author:      person@example.com
+			Source:      Unknown (deployment)
+			Message:     A test message
+			Version(s):  (100%) 00000000-0000-0000-0000-000000000000
+			                 Created:  TIMESTAMP
+			                     Tag:  -
+			                 Message:  -"
 		`);
 	});
 

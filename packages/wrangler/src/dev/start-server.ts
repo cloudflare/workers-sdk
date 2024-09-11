@@ -247,6 +247,7 @@ export async function startDevServer(
 		local: props.local,
 		doBindings: props.bindings.durable_objects?.bindings ?? [],
 		workflowBindings: props.bindings.workflows ?? [],
+		mockAnalyticsEngineDatasets: props.bindings.analytics_engine_datasets ?? [],
 		projectRoot: props.projectRoot,
 		defineNavigatorUserAgent: isNavigatorDefined(
 			props.compatibilityDate,
@@ -421,6 +422,7 @@ async function runEsbuild({
 	local,
 	doBindings,
 	workflowBindings,
+	mockAnalyticsEngineDatasets,
 	projectRoot,
 	defineNavigatorUserAgent,
 }: {
@@ -444,6 +446,7 @@ async function runEsbuild({
 	local: boolean;
 	doBindings: DurableObjectBindings;
 	workflowBindings: WorkflowBinding[];
+	mockAnalyticsEngineDatasets: Config["analytics_engine_datasets"];
 	projectRoot: string | undefined;
 	defineNavigatorUserAgent: boolean;
 }): Promise<EsbuildBundle> {
@@ -481,6 +484,7 @@ async function runEsbuild({
 					nodejsCompatMode,
 					define,
 					checkFetch: true,
+					mockAnalyticsEngineDatasets,
 					alias,
 					legacyAssets,
 					// disable the cache in dev

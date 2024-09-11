@@ -26,7 +26,7 @@ import { getEnvironmentVariableFactory } from "./factory";
  */
 export const getC3CommandFromEnv = getEnvironmentVariableFactory({
 	variableName: "WRANGLER_C3_COMMAND",
-	defaultValue: () => "create cloudflare@2.5.0",
+	defaultValue: () => "create cloudflare@^2.5.0",
 });
 
 /**

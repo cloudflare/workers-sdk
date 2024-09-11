@@ -527,10 +527,10 @@ declare module "*.bin" {
 		_options: FileSearchOptions,
 		_token: CancellationToken
 	): ProviderResult<Uri[]> {
-		return this._findFiles(query.pattern);
+		return this._findFiles(query.pattern, _options.excludes);
 	}
 
-	private _findFiles(query: string | undefined): Uri[] {
+	private _findFiles(query: string | undefined, excludes: string[]): Uri[] {
 		const files = this._getFiles();
 		const result: Uri[] = [];
 
@@ -538,8 +538,23 @@ declare module "*.bin" {
 			? new RegExp(this._convertSimple2RegExpPattern(query))
 			: null;
 
+		// The memfs implementation does not support the `files.exclude` and `search.exclude` settings
+		// This implements a simple mechanism to filter out files by matching against the file path
+		// e.g. Both `package.json` and `**/package.json` will exclude all files named `package.json` in any folder
+		const excludePatterns = excludes.map((exclude) => {
+			if (!exclude) {
+				return null;
+			}
+
+			return new RegExp(this._convertSimple2RegExpPattern(exclude));
+		});
+
 		for (const file of files) {
-			if (!pattern || pattern.exec(file.name)) {
+			if (
+				(!pattern || pattern.exec(file.name)) &&
+				// Ensure the file is not excluded
+				!excludePatterns.some((regex) => regex?.exec(file.uri.path))
+			) {
 				result.push(file.uri);
 			}
 		}
@@ -557,7 +572,7 @@ declare module "*.bin" {
 	) {
 		const result: TextSearchComplete = { limitHit: false };
 
-		const files = this._findFiles(options.includes[0]);
+		const files = this._findFiles(options.includes[0], options.excludes);
 		if (files) {
 			for (const file of files) {
 				const content = this._textDecoder.decode(await this.readFile(file));

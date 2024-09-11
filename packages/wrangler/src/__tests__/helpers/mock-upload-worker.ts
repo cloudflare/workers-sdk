@@ -29,6 +29,7 @@ export function mockUploadWorkerRequest(
 		expectedDispatchNamespace?: string;
 		expectedScriptName?: string;
 		expectedExperimentalAssets?: boolean;
+		useOldUploadApi?: boolean;
 	} = {}
 ) {
 	const expectedScriptName = (options.expectedScriptName ??= "test-name");
@@ -41,10 +42,12 @@ export function mockUploadWorkerRequest(
 		if (!legacyEnv) {
 			expect(params.envName).toEqual(env);
 		}
-		expect(url.searchParams.get("include_subdomain_availability")).toEqual(
-			"true"
-		);
-		expect(url.searchParams.get("excludeScript")).toEqual("true");
+		if (useOldUploadApi) {
+			expect(url.searchParams.get("include_subdomain_availability")).toEqual(
+				"true"
+			);
+			expect(url.searchParams.get("excludeScript")).toEqual("true");
+		}
 		if (expectedDispatchNamespace) {
 			expect(params.dispatchNamespace).toEqual(expectedDispatchNamespace);
 		}
@@ -114,16 +117,30 @@ export function mockUploadWorkerRequest(
 			expect(await serialize(formBody.get(name))).toEqual(content);
 		}
 
+		if (useOldUploadApi) {
+			return HttpResponse.json(
+				createFetchResult({
+					available_on_subdomain,
+					id: "abc12345",
+					etag: "etag98765",
+					pipeline_hash: "hash9999",
+					mutable_pipeline_id: "mutableId",
+					tag: "sample-tag",
+					deployment_id: "Galaxy-Class",
+					startup_time_ms: 100,
+				})
+			);
+		}
+
 		return HttpResponse.json(
 			createFetchResult({
-				available_on_subdomain,
-				id: "abc12345",
-				etag: "etag98765",
-				pipeline_hash: "hash9999",
-				mutable_pipeline_id: "mutableId",
-				tag: "sample-tag",
-				deployment_id: "Galaxy-Class",
+				id: "Galaxy-Class",
 				startup_time_ms: 100,
+				resources: {
+					script: {
+						etag: "etag98765",
+					},
+				},
 			})
 		);
 	};
@@ -147,6 +164,7 @@ export function mockUploadWorkerRequest(
 		keepVars,
 		keepSecrets,
 		expectedDispatchNamespace,
+		useOldUploadApi,
 	} = options;
 	if (env && !legacyEnv) {
 		msw.use(
@@ -162,11 +180,26 @@ export function mockUploadWorkerRequest(
 				handleUpload
 			)
 		);
-	} else {
+	} else if (useOldUploadApi) {
 		msw.use(
 			http.put(
 				"*/accounts/:accountId/workers/scripts/:scriptName",
 				handleUpload
+			)
+		);
+	} else {
+		msw.use(
+			http.post(
+				"*/accounts/:accountId/workers/scripts/:scriptName/versions",
+				handleUpload
+			),
+			http.post(
+				"*/accounts/:accountId/workers/scripts/:scriptName/deployments",
+				() => HttpResponse.json(createFetchResult({ id: "Deployment-ID" }))
+			),
+			http.patch(
+				"*/accounts/:accountId/workers/scripts/:scriptName/script-settings",
+				() => HttpResponse.json(createFetchResult({}))
 			)
 		);
 	}

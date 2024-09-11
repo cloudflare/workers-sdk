@@ -192,7 +192,7 @@ export const mswListNewDeployments = http.get(
 );
 
 const latestVersion = (workerName: string) => ({
-	id: `10000000-0000-0000-0000-000000000000`,
+	id: `20000000-0000-0000-0000-000000000000`,
 	number: "1701-E",
 	annotations: {
 		"workers/triggered_by": "rollback",
@@ -219,7 +219,7 @@ export const mswListVersions = http.get(
 				latest: latestVersion(workerName),
 				items: [
 					{
-						id: `40000000-0000-0000-0000-000000000000`,
+						id: `10000000-0000-0000-0000-000000000000`,
 						number: "1701-E",
 						annotations: {
 							"workers/triggered_by": "upload",
@@ -232,6 +232,7 @@ export const mswListVersions = http.get(
 							modified_on: "2021-01-01T00:00:00.000000Z",
 						},
 					},
+					// Latest version deployed at 01-04 takes 2xxxxxx
 					{
 						id: `30000000-0000-0000-0000-000000000000`,
 						number: "NCC-74656",
@@ -249,7 +250,7 @@ export const mswListVersions = http.get(
 						},
 					},
 					{
-						id: `20000000-0000-0000-0000-000000000000`,
+						id: `40000000-0000-0000-0000-000000000000`,
 						number: "NCC-74656",
 						metadata: {
 							author_id: "Kathryn-Jane-Gamma-6-0-7-3",

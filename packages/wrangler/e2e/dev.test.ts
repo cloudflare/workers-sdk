@@ -602,6 +602,104 @@ describe("writes debug logs to hidden file", () => {
 	});
 });
 
+describe("analytics engine", () => {
+	describe.each([
+		{ cmd: "wrangler dev" },
+		{ cmd: "wrangler dev --x-dev-env" },
+		{ cmd: "wrangler dev --remote" },
+		{ cmd: "wrangler dev --remote --x-dev-env" },
+	])("mock analytics engine datasets: $cmd", ({ cmd }) => {
+		describe("module worker", () => {
+			it("analytics engine datasets are mocked in dev", async () => {
+				const helper = new WranglerE2ETestHelper();
+				await helper.seed({
+					"wrangler.toml": dedent`
+				name = "${workerName}"
+				main = "src/index.ts"
+				compatibility_date = "2024-08-08"
+
+				[[analytics_engine_datasets]]
+				binding = "ANALYTICS_BINDING"
+				dataset = "ANALYTICS_DATASET"
+			`,
+					"src/index.ts": dedent`
+				export default {
+					fetch(request, env) {
+						// let's make an analytics call
+						env.ANALYTICS_BINDING.writeDataPoint({
+							'blobs': ["Seattle", "USA", "pro_sensor_9000"], // City, State
+							'doubles': [25, 0.5],
+							'indexes': ["a3cd45"]
+						});
+						// and return a response
+						return new Response("successfully wrote datapoint from module worker");
+					}
+				}`,
+					"package.json": dedent`
+				{
+					"name": "worker",
+					"version": "0.0.0",
+					"private": true
+				}
+				`,
+				});
+				const worker = helper.runLongLived(cmd);
+
+				const { url } = await worker.waitForReady();
+
+				const text = await fetchText(url);
+				expect(text).toContain(
+					`successfully wrote datapoint from module worker`
+				);
+			});
+		});
+
+		describe("service worker", async () => {
+			it("analytics engine datasets are mocked in dev", async () => {
+				const helper = new WranglerE2ETestHelper();
+				await helper.seed({
+					"wrangler.toml": dedent`
+				name = "${workerName}"
+				main = "src/index.ts"
+				compatibility_date = "2024-08-08"
+
+				[[analytics_engine_datasets]]
+				binding = "ANALYTICS_BINDING"
+				dataset = "ANALYTICS_DATASET"
+			`,
+					"src/index.ts": dedent`
+							addEventListener("fetch", (event) => {
+								// let's make an analytics call
+								ANALYTICS_BINDING.writeDataPoint({
+									blobs: ["Seattle", "USA", "pro_sensor_9000"], // City, State
+									doubles: [25, 0.5],
+									indexes: ["a3cd45"],
+								});
+								// and return a response
+								event.respondWith(new Response("successfully wrote datapoint from service worker"));
+							});
+				`,
+					"package.json": dedent`
+				{
+					"name": "worker",
+					"version": "0.0.0",
+					"private": true
+				}
+				`,
+				});
+				const worker = helper.runLongLived(cmd);
+
+				const { url } = await worker.waitForReady();
+
+				const text = await fetchText(url);
+				expect(text).toContain(
+					`successfully wrote datapoint from service worker`
+				);
+			});
+		});
+	});
+});
+
 describe("zone selection", () => {
 	it("defaults to a workers.dev preview", async () => {
 		const helper = new WranglerE2ETestHelper();
@@ -779,5 +877,251 @@ describe("custom builds", () => {
 
 		text = await fetchText(url);
 		expect(text).toMatchInlineSnapshot(`"Hello, World!"`);
+	});
+});
+
+describe("watch mode", () => {
+	describe.each([{ cmd: "wrangler dev" }, { cmd: "wrangler dev --x-dev-env" }])(
+		"Workers + Assets watch mode: $cmd",
+		({ cmd }) => {
+			it(`supports modifying existing assets during dev session`, async () => {
+				const helper = new WranglerE2ETestHelper();
+				await helper.seed({
+					"wrangler.toml": dedent`
+								name = "${workerName}"
+								compatibility_date = "2023-01-01"
+
+								[experimental_assets]
+								directory = "./public"
+						`,
+					"public/index.html": dedent`
+								<h1>Hello Workers + Assets</h1>`,
+				});
+
+				const worker = helper.runLongLived(cmd);
+				const { url } = await worker.waitForReady();
+
+				let text = await fetchText(`${url}/index.html`);
+				expect(text).toBe("<h1>Hello Workers + Assets</h1>");
+
+				await helper.seed({
+					"public/index.html": dedent`
+							<h1>Hello Updated Workers + Assets</h1>`,
+				});
+
+				await worker.waitForReload();
+
+				text = await fetchText(`${url}/index.html`);
+				expect(text).toBe("<h1>Hello Updated Workers + Assets</h1>");
+			});
+
+			it(`supports adding new assets during dev session`, async () => {
+				const helper = new WranglerE2ETestHelper();
+				await helper.seed({
+					"wrangler.toml": dedent`
+								name = "${workerName}"
+								compatibility_date = "2023-01-01"
+
+								[experimental_assets]
+								directory = "./public"
+						`,
+					"public/index.html": dedent`
+								<h1>Hello Workers + Assets</h1>`,
+				});
+
+				const worker = helper.runLongLived(cmd);
+				const { url } = await worker.waitForReady();
+				let text = await fetchText(`${url}/index.html`);
+				expect(text).toBe("<h1>Hello Workers + Assets</h1>");
+
+				await helper.seed({
+					"public/about.html": dedent`About Workers + Assets`,
+					"public/workers/index.html": dedent`Cloudflare Workers!`,
+				});
+
+				await worker.waitForReload();
+
+				// re-calculating the asset manifest / reverse assets map might not be
+				// done at this point, so retry until they are available
+				const response = await retry(
+					(s) => s.status !== 200,
+					async () => {
+						const r = await fetch(`${url}/about.html`);
+						return { text: await r.text(), status: r.status };
+					}
+				);
+				expect(response.text).toBe("About Workers + Assets");
+
+				text = await fetchText(`${url}/workers/index.html`);
+				expect(text).toBe("Cloudflare Workers!");
+
+				text = await fetchText(`${url}/index.html`);
+				expect(text).toBe("<h1>Hello Workers + Assets</h1>");
+			});
+
+			it(`supports removing existing assets during dev session`, async () => {
+				const helper = new WranglerE2ETestHelper();
+				await helper.seed({
+					"wrangler.toml": dedent`
+								name = "${workerName}"
+								compatibility_date = "2023-01-01"
+
+								[experimental_assets]
+								directory = "./public"
+						`,
+					"public/index.html": dedent`
+								<h1>Hello Workers + Assets</h1>`,
+					"public/about.html": dedent`About Workers + Assets`,
+					"public/workers/index.html": dedent`Cloudflare Workers!`,
+				});
+
+				const worker = helper.runLongLived(cmd);
+				const { url } = await worker.waitForReady();
+
+				let text = await fetchText(`${url}/index.html`);
+				expect(text).toBe("<h1>Hello Workers + Assets</h1>");
+
+				text = await fetchText(`${url}/about.html`);
+				expect(text).toBe("About Workers + Assets");
+
+				text = await fetchText(`${url}/workers/index.html`);
+				expect(text).toBe("Cloudflare Workers!");
+
+				await helper.removeFiles(["public/index.html"]);
+
+				await worker.waitForReload();
+
+				// re-calculating the asset manifest / reverse assets map might not be
+				// done at this point, so retry until they are available
+				const response = await retry(
+					(s) => s.status !== 404,
+					async () => {
+						const r = await fetch(`${url}/index.html`);
+						return { text: await r.text(), status: r.status };
+					}
+				);
+				expect(response.status).toBe(404);
+			});
+
+			it(`supports modifying the assets directory in wrangler.toml during dev session`, async () => {
+				const helper = new WranglerE2ETestHelper();
+				await helper.seed({
+					"wrangler.toml": dedent`
+								name = "${workerName}"
+								compatibility_date = "2023-01-01"
+
+								[experimental_assets]
+								directory = "./public"
+						`,
+					"public/index.html": dedent`
+								<h1>Hello Workers + Assets</h1>`,
+					"public2/index.html": dedent`
+								<h1>Hola Workers + Assets</h1>`,
+					"public2/about/index.html": dedent`
+								<h1>Read more about Workers + Assets</h1>`,
+				});
+
+				const worker = helper.runLongLived(cmd);
+				const { url } = await worker.waitForReady();
+
+				let text = await fetchText(`${url}/index.html`);
+				expect(text).toBe("<h1>Hello Workers + Assets</h1>");
+
+				await helper.seed({
+					"wrangler.toml": dedent`
+							name = "${workerName}"
+							compatibility_date = "2023-01-01"
+
+							[experimental_assets]
+							directory = "./public2"
+					`,
+				});
+
+				await worker.waitForReload();
+
+				const response = await retry(
+					(s) => s.text !== "<h1>Hola Workers + Assets</h1>",
+					async () => {
+						const r = await fetch(`${url}/index.html`);
+						return { text: await r.text(), status: r.status };
+					}
+				);
+				expect(response.text).toBe("<h1>Hola Workers + Assets</h1>");
+
+				text = await fetchText(`${url}/about/index.html`);
+				expect(text).toBe("<h1>Read more about Workers + Assets</h1>");
+			});
+		}
+	);
+
+	describe.each([
+		{ cmd: "wrangler dev --x-assets=dist" },
+		{ cmd: "wrangler dev --x-dev-env --x-assets=dist" },
+	])("Workers + Assets watch mode: $cmd", ({ cmd }) => {
+		it(`supports modifying assets during dev session`, async () => {
+			const helper = new WranglerE2ETestHelper();
+			await helper.seed({
+				"wrangler.toml": dedent`
+								name = "${workerName}"
+								compatibility_date = "2023-01-01"
+						`,
+				"dist/index.html": dedent`
+								<h1>Hello Workers + Assets</h1>`,
+				"dist/about.html": dedent`
+								<h1>Read more about Workers + Assets</h1>`,
+			});
+
+			const worker = helper.runLongLived(cmd);
+			const { url } = await worker.waitForReady();
+
+			let text = await fetchText(`${url}/index.html`);
+			expect(text).toBe("<h1>Hello Workers + Assets</h1>");
+
+			text = await fetchText(`${url}/about.html`);
+			expect(text).toBe("<h1>Read more about Workers + Assets</h1>");
+
+			// change + add
+			await helper.seed({
+				"dist/index.html": dedent`
+							<h1>Hello Updated Workers + Assets</h1>`,
+				"dist/hello.html": dedent`
+							<h1>Hya Workers!</h1>`,
+			});
+
+			await worker.waitForReload();
+
+			// re-calculating the asset manifest / reverse assets map might not be
+			// done at this point, so retry until they are available
+			let response = await retry(
+				(s) => s.status !== 200,
+				async () => {
+					const r = await fetch(`${url}/hello.html`);
+					return { text: await r.text(), status: r.status };
+				}
+			);
+			expect(response.text).toBe("<h1>Hya Workers!</h1>");
+
+			text = await fetchText(`${url}/index.html`);
+			expect(text).toBe("<h1>Hello Updated Workers + Assets</h1>");
+
+			text = await fetchText(`${url}/about.html`);
+			expect(text).toBe("<h1>Read more about Workers + Assets</h1>");
+
+			// remove
+			await helper.removeFiles(["dist/about.html"]);
+
+			await worker.waitForReload();
+
+			// re-calculating the asset manifest / reverse assets map might not be
+			// done at this point, so retry until they are available
+			response = await retry(
+				(s) => s.status !== 404,
+				async () => {
+					const r = await fetch(`${url}/about.html`);
+					return { text: await r.text(), status: r.status };
+				}
+			);
+			expect(response.status).toBe(404);
+		});
 	});
 });

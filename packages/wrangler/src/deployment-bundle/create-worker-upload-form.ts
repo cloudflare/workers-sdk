@@ -3,7 +3,6 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { File, FormData } from "undici";
 import { handleUnsafeCapnp } from "./capnp";
-import { stripExperimentalPrefixes } from "./node-compat";
 import type {
 	CfDurableObjectMigrations,
 	CfModuleType,
@@ -181,14 +180,14 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 		tail_consumers,
 		limits,
 		annotations,
-		experimental_assets_jwt,
+		experimental_assets,
 	} = worker;
 
 	// short circuit if static assets upload only
-	if (main.name === "no-op-assets-worker.js" && experimental_assets_jwt) {
+	if (experimental_assets && !experimental_assets.routingConfig.hasUserWorker) {
 		formData.set(
 			"metadata",
-			JSON.stringify({ assets: experimental_assets_jwt })
+			JSON.stringify({ assets: experimental_assets.jwt })
 		);
 		return formData;
 	}
@@ -569,7 +568,7 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 		bindings: metadataBindings,
 		...(compatibility_date && { compatibility_date }),
 		...(compatibility_flags && {
-			compatibility_flags: stripExperimentalPrefixes(compatibility_flags),
+			compatibility_flags,
 		}),
 		...(migrations && { migrations }),
 		capnp_schema: capnpSchemaOutputFile,
@@ -579,7 +578,7 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 		...(tail_consumers && { tail_consumers }),
 		...(limits && { limits }),
 		...(annotations && { annotations }),
-		...(experimental_assets_jwt && { assets: experimental_assets_jwt }),
+		...(experimental_assets && { assets: experimental_assets.jwt }),
 	};
 
 	if (bindings.unsafe?.metadata !== undefined) {

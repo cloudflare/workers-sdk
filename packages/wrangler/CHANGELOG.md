@@ -1,5 +1,167 @@
 # wrangler
 
+## 3.76.0
+
+### Minor Changes
+
+- [#6126](https://github.com/cloudflare/workers-sdk/pull/6126) [`18c105b`](https://github.com/cloudflare/workers-sdk/commit/18c105baec9d3625b56531ec332517fcae1ede59) Thanks [@IRCody](https://github.com/IRCody)! - feature: Add 'cloudchamber curl' command
+
+  Adds a cloudchamber curl command which allows easy access to arbitrary cloudchamber API endpoints.
+
+- [#6649](https://github.com/cloudflare/workers-sdk/pull/6649) [`46a91e7`](https://github.com/cloudflare/workers-sdk/commit/46a91e7e7d286e6835bb87cfdd6c9096deaeba6e) Thanks [@andyjessop](https://github.com/andyjessop)! - feature: Integrate the Cloudflare Pipelines product into wrangler.
+
+  Cloudflare Pipelines is a product that handles the ingest of event streams
+  into R2. This feature integrates various forms of managing pipelines.
+
+  Usage:
+  `wrangler pipelines create <pipeline>`: Create a new pipeline
+  `wrangler pipelines list`: List current pipelines
+  `wrangler pipelines show <pipeline>`: Show a pipeline configuration
+  `wrangler pipelines update <pipeline>`: Update a pipeline
+  `wrangler pipelines delete <pipeline>`: Delete a pipeline
+
+  Examples:
+  wrangler pipelines create my-pipeline --r2 MY_BUCKET --access-key-id "my-key" --secret-access-key "my-secret"
+  wrangler pipelines show my-pipeline
+  wrangler pipelines delete my-pipline
+
+### Patch Changes
+
+- [#6612](https://github.com/cloudflare/workers-sdk/pull/6612) [`6471090`](https://github.com/cloudflare/workers-sdk/commit/64710904ad4055054bea09ebb23ededab140aa79) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - fix: Add hyperdrive binding support in `getPlatformProxy`
+
+  example:
+
+  ```toml
+  # wrangler.toml
+  [[hyperdrive]]
+  binding = "MY_HYPERDRIVE"
+  id = "000000000000000000000000000000000"
+  localConnectionString = "postgres://user:pass@127.0.0.1:1234/db"
+  ```
+
+  ```js
+  // index.mjs
+
+  import postgres from "postgres";
+  import { getPlatformProxy } from "wrangler";
+
+  const { env, dispose } = await getPlatformProxy();
+
+  try {
+    const sql = postgres(
+      // Note: connectionString points to `postgres://user:pass@127.0.0.1:1234/db` not to the actual hyperdrive
+      //       connection string, for more details see the explanation below
+      env.MY_HYPERDRIVE.connectionString,
+    );
+    const results = await sql`SELECT * FROM pg_tables`;
+    await sql.end();
+  } catch (e) {
+    console.error(e);
+  }
+
+  await dispose();
+  ```
+
+  Note: the returned binding values are no-op/passthrough that can be used inside node.js, meaning
+  that besides direct connections via the `connect` methods, all the other values point to the
+  same db connection specified in the user configuration
+
+- [#6620](https://github.com/cloudflare/workers-sdk/pull/6620) [`ecdfabe`](https://github.com/cloudflare/workers-sdk/commit/ecdfabed04cdc56bfb4fd43cd769eda48ba13366) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: don't warn about `node:async_hooks` if `nodejs_als` is set
+
+  Fixes #6011
+
+- Updated dependencies [[`5936282`](https://github.com/cloudflare/workers-sdk/commit/5936282bfbda848b465396a70f6334988d1a57a0), [`6471090`](https://github.com/cloudflare/workers-sdk/commit/64710904ad4055054bea09ebb23ededab140aa79)]:
+  - miniflare@3.20240821.2
+
+## 3.75.0
+
+### Minor Changes
+
+- [#6603](https://github.com/cloudflare/workers-sdk/pull/6603) [`a197460`](https://github.com/cloudflare/workers-sdk/commit/a197460f47db47279f2c5536269cd0de2b543576) Thanks [@taylorlee](https://github.com/taylorlee)! - feature: log version preview url when previews exist
+
+  The version upload API returns a field indicating whether
+  a preview exists for that version. If a preview exists and
+  workers.dev is enabled, wrangler will now log the full
+  URL on version upload.
+
+  This does not impact wrangler deploy, which only prints the
+  workers.dev route of the latest deployment.
+
+- [#6550](https://github.com/cloudflare/workers-sdk/pull/6550) [`8d1d464`](https://github.com/cloudflare/workers-sdk/commit/8d1d464f2b549dc7d7020fd45f025cd7c8671ce9) Thanks [@Pedr0Rocha](https://github.com/Pedr0Rocha)! - feature: add RateLimit type generation to the ratelimit unsafe binding.
+
+### Patch Changes
+
+- [#6615](https://github.com/cloudflare/workers-sdk/pull/6615) [`21a09e0`](https://github.com/cloudflare/workers-sdk/commit/21a09e06473e28722c3fe73dee9cd49b41807be3) Thanks [@RamIdeas](https://github.com/RamIdeas)! - chore: avoid potential double-install of create-cloudflare
+
+  When `wrangler init` delegates to C3, it did so via `npm create cloudflare@2.5.0`. C3's v2.5.0 was the first to include auto-update support to avoid `npx`'s potentially stale cache. But this also guaranteed a double install for users who do not have 2.5.0 cached. Now, wrangler delegates via `npm create cloudflare@^2.5.0` which should use the latest version cached on the user's system or install and use the latest v2.x.x.
+
+- [#6603](https://github.com/cloudflare/workers-sdk/pull/6603) [`a197460`](https://github.com/cloudflare/workers-sdk/commit/a197460f47db47279f2c5536269cd0de2b543576) Thanks [@taylorlee](https://github.com/taylorlee)! - chore: fix version upload log order
+
+  Previously deploy prints:
+  upload timings
+  deploy timings
+  current version id
+
+  while version upload prints:
+  worker version id
+  upload timings
+
+  This change makes version upload more similar to deploy by printing
+  version id after upload, which also makes more sense, as version ID can
+  only be known after upload has finished.
+
+## 3.74.0
+
+### Minor Changes
+
+- [#6574](https://github.com/cloudflare/workers-sdk/pull/6574) [`dff8d44`](https://github.com/cloudflare/workers-sdk/commit/dff8d44f4e47b746b9b1fa276094e1dc4c4f906b) Thanks [@CarmenPopoviciu](https://github.com/CarmenPopoviciu)! - feat: add support for experimental assets in `wrangler dev` watch mode
+
+### Patch Changes
+
+- [#6605](https://github.com/cloudflare/workers-sdk/pull/6605) [`c4f0d9e`](https://github.com/cloudflare/workers-sdk/commit/c4f0d9e01ef333f5882096ad1e0f37e0911089a7) Thanks [@WalshyDev](https://github.com/WalshyDev)! - fix: ensure we update non-versioned Worker settings for the new deploy path in `wrangler deploy`
+
+- Updated dependencies [[`e8975a9`](https://github.com/cloudflare/workers-sdk/commit/e8975a93a46d41ea270f63fd9ef40677ccc689c3)]:
+  - miniflare@3.20240821.1
+
+## 3.73.0
+
+### Minor Changes
+
+- [#6571](https://github.com/cloudflare/workers-sdk/pull/6571) [`a7e1bfe`](https://github.com/cloudflare/workers-sdk/commit/a7e1bfea3e01413495e964c09ce74f209f408d32) Thanks [@penalosa](https://github.com/penalosa)! - feat: Add deployment http targets to wrangler deploy logs, and add url to pages deploy logs
+
+- [#6497](https://github.com/cloudflare/workers-sdk/pull/6497) [`3bd833c`](https://github.com/cloudflare/workers-sdk/commit/3bd833cbe29b92edf512759833f0a0115e1799bc) Thanks [@WalshyDev](https://github.com/WalshyDev)! - chore: move `wrangler versions ...`, `wrangler deployments ...`, `wrangler rollback` and `wrangler triggers ...` out of experimental and open beta.
+  These are now available to use without the --x-versions flag, you can continue to pass this however without issue to keep compatibility with all the usage today.
+
+  A few of the commands had an output that wasn't guarded by `--x-versions` those have been updated to use the newer output, we have tried to keep compatibility where possible (for example: `wrangler rollback` will continue to output "Worker Version ID:" so users can continue to grab the ID).
+  If you wish to use the old versions of the commands you can pass the `--no-x-versions` flag. Note, these will be removed in the future so please work on migrating.
+
+- [#6586](https://github.com/cloudflare/workers-sdk/pull/6586) [`72ea742`](https://github.com/cloudflare/workers-sdk/commit/72ea74214d8df3bcabf842249865edc9d13029f1) Thanks [@penalosa](https://github.com/penalosa)! - feat: Inject a 404 response for browser requested `favicon.ico` files when loading the `/__scheduled` page for scheduled-only Workers
+
+- [#6497](https://github.com/cloudflare/workers-sdk/pull/6497) [`3bd833c`](https://github.com/cloudflare/workers-sdk/commit/3bd833cbe29b92edf512759833f0a0115e1799bc) Thanks [@WalshyDev](https://github.com/WalshyDev)! - feat: update `wrangler deploy` to use the new versions and deployments API.
+  This should have zero user-facing impact but sets up the most used command to deploy Workers to use the new recommended APIs and move away from the old ones.
+  We will still call the old upload path where required (e.g. Durable Object migration or Service Worker format).
+
+### Patch Changes
+
+- [#6563](https://github.com/cloudflare/workers-sdk/pull/6563) [`da48a70`](https://github.com/cloudflare/workers-sdk/commit/da48a7036911bbc5b23d7cd70e3260b3c3fa99bc) Thanks [@threepointone](https://github.com/threepointone)! - chore: remove the warning about local mode flag being removed in the future
+
+- [#6595](https://github.com/cloudflare/workers-sdk/pull/6595) [`0a76d7e`](https://github.com/cloudflare/workers-sdk/commit/0a76d7e550893eefb60ffe78236ef5fc3a6d3e2e) Thanks [@vicb](https://github.com/vicb)! - feat: update unenv to the latest available version
+
+- [#5738](https://github.com/cloudflare/workers-sdk/pull/5738) [`c2460c4`](https://github.com/cloudflare/workers-sdk/commit/c2460c4d89ecdf74f48bcd37466dce47d01c4f43) Thanks [@penalosa](https://github.com/penalosa)! - fix: Prevent spaces in names when validating
+
+- [#6586](https://github.com/cloudflare/workers-sdk/pull/6586) [`72ea742`](https://github.com/cloudflare/workers-sdk/commit/72ea74214d8df3bcabf842249865edc9d13029f1) Thanks [@penalosa](https://github.com/penalosa)! - chore: Improve Miniflare CRON warning wording
+
+- [#6593](https://github.com/cloudflare/workers-sdk/pull/6593) [`f097cb7`](https://github.com/cloudflare/workers-sdk/commit/f097cb73befbd317ce0c4ab4cd0203e9e8e9b811) Thanks [@vicb](https://github.com/vicb)! - fix: remove `experimental:` prefix requirement for nodejs_compat_v2
+
+  See https://jira.cfdata.org/browse/DEVDASH-218
+
+- [#6572](https://github.com/cloudflare/workers-sdk/pull/6572) [`0d83428`](https://github.com/cloudflare/workers-sdk/commit/0d834284d00b43bd1da5d09404ff7a6b8409babe) Thanks [@penalosa](https://github.com/penalosa)! - fix: Show a clearer user error when trying to use a python worker without the `python_workers` compatibility flag specified
+
+- [#6589](https://github.com/cloudflare/workers-sdk/pull/6589) [`f4c8cea`](https://github.com/cloudflare/workers-sdk/commit/f4c8cea142b03629e0dfffc5acaf71da0a33d15c) Thanks [@vicb](https://github.com/vicb)! - feat: update unenv to the latest available version
+
+- Updated dependencies [[`45ad2e0`](https://github.com/cloudflare/workers-sdk/commit/45ad2e0c83f1382e1662aadc2b145969ed9a719b)]:
+  - @cloudflare/workers-shared@0.4.1
+
 ## 3.72.3
 
 ### Patch Changes

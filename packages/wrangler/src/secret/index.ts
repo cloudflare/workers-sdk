@@ -112,7 +112,7 @@ async function createDraftWorker({
 				placement: undefined,
 				tail_consumers: undefined,
 				limits: undefined,
-				experimental_assets_jwt: undefined,
+				experimental_assets: undefined,
 			}),
 		}
 	);
@@ -190,7 +190,7 @@ export const secret = (secretYargs: CommonYargsArgv) => {
 							throw new UserError(
 								"Secret edit failed. You attempted to modify a secret, but the latest version of your Worker isn't currently deployed. " +
 									"Please ensure that the latest version of your Worker is fully deployed " +
-									"(wrangler versions deploy --x-versions) before modifying secrets. " +
+									"(wrangler versions deploy) before modifying secrets. " +
 									"Alternatively, you can use the Cloudflare dashboard to modify secrets and deploy the version." +
 									"\n\nNote: This limitation will be addressed in an upcoming release."
 							);

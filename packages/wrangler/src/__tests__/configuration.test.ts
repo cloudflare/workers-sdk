@@ -1674,6 +1674,7 @@ describe("normalizeAndValidateConfig()", () => {
 						{
 							tag: "TAG",
 							new_classes: ["CLASS_1", "CLASS_2"],
+							new_sqlite_classes: ["CLASS_1", "CLASS_2"],
 							renamed_classes: [
 								{
 									from: "FROM_CLASS",
@@ -1702,6 +1703,7 @@ describe("normalizeAndValidateConfig()", () => {
 						{
 							tag: 111,
 							new_classes: [222, 333],
+							new_sqlite_classes: [222, 333],
 							renamed_classes: [
 								{
 									from: 444,
@@ -1726,6 +1728,8 @@ describe("normalizeAndValidateConfig()", () => {
 			            - Expected \\"migrations[0].tag\\" to be of type string but got 111.
 			            - Expected \\"migrations[0].new_classes.[0]\\" to be of type string but got 222.
 			            - Expected \\"migrations[0].new_classes.[1]\\" to be of type string but got 333.
+			            - Expected \\"migrations[0].new_sqlite_classes.[0]\\" to be of type string but got 222.
+			            - Expected \\"migrations[0].new_sqlite_classes.[1]\\" to be of type string but got 333.
 			            - Expected \\"migrations[0].renamed_classes\\" to be an array of \\"{from: string, to: string}\\" objects but got [{\\"from\\":444,\\"to\\":555}].
 			            - Expected \\"migrations[0].deleted_classes.[0]\\" to be of type string but got 666.
 			            - Expected \\"migrations[0].deleted_classes.[1]\\" to be of type string but got 777."
@@ -4456,6 +4460,7 @@ describe("normalizeAndValidateConfig()", () => {
 						{
 							tag: 111,
 							new_classes: [222, 333],
+							new_sqlite_classes: [222, 333],
 							renamed_classes: [
 								{
 									from: 444,
@@ -4482,6 +4487,8 @@ describe("normalizeAndValidateConfig()", () => {
 					    - Expected \\"migrations[0].tag\\" to be of type string but got 111.
 					    - Expected \\"migrations[0].new_classes.[0]\\" to be of type string but got 222.
 					    - Expected \\"migrations[0].new_classes.[1]\\" to be of type string but got 333.
+					    - Expected \\"migrations[0].new_sqlite_classes.[0]\\" to be of type string but got 222.
+					    - Expected \\"migrations[0].new_sqlite_classes.[1]\\" to be of type string but got 333.
 					    - Expected \\"migrations[0].renamed_classes\\" to be an array of \\"{from: string, to: string}\\" objects but got [{\\"from\\":444,\\"to\\":555}].
 					    - Expected \\"migrations[0].deleted_classes.[0]\\" to be of type string but got 666.
 					    - Expected \\"migrations[0].deleted_classes.[1]\\" to be of type string but got 777."

@@ -36,10 +36,10 @@ import {
 import { getCacheServiceName } from "../cache";
 import { DURABLE_OBJECTS_STORAGE_SERVICE_NAME } from "../do";
 import {
-	kProxyNodeBinding,
 	kUnsafeEphemeralUniqueKey,
 	parseRoutes,
 	Plugin,
+	ProxyNodeBinding,
 	SERVICE_LOOPBACK,
 	WORKER_BINDING_SERVICE_LOOPBACK,
 } from "../shared";
@@ -473,7 +473,7 @@ export const CORE_PLUGIN: Plugin<
 			bindingEntries.push(
 				...Object.keys(options.serviceBindings).map((name) => [
 					name,
-					kProxyNodeBinding,
+					new ProxyNodeBinding(),
 				])
 			);
 		}
@@ -481,7 +481,7 @@ export const CORE_PLUGIN: Plugin<
 			bindingEntries.push(
 				...Object.keys(options.wrappedBindings).map((name) => [
 					name,
-					kProxyNodeBinding,
+					new ProxyNodeBinding(),
 				])
 			);
 		}
@@ -712,7 +712,7 @@ export function getGlobalServices({
 		{ name: CoreBindings.JSON_LOG_LEVEL, json: JSON.stringify(log.level) },
 		{
 			name: CoreBindings.SERVICE_USER_FALLBACK,
-			service: { name: getUserServiceName(fallbackWorkerName) },
+			service: { name: fallbackWorkerName },
 		},
 		...workerNames.map((name) => ({
 			name: CoreBindings.SERVICE_USER_ROUTE_PREFIX + name,

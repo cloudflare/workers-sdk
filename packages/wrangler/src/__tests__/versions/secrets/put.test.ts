@@ -48,7 +48,7 @@ describe("versions secret put", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 			"🌀 Creating the secret for the Worker \\"script-name\\"
 			✨ Success! Created version id with secret NEW_SECRET.
-			➡️  To deploy this version with secret NEW_SECRET to production traffic use the command \\"wrangler versions deploy --x-versions\\"."
+			➡️  To deploy this version with secret NEW_SECRET to production traffic use the command \\"wrangler versions deploy\\"."
 		`);
 		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
@@ -113,7 +113,7 @@ describe("versions secret put", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 			"🌀 Creating the secret for the Worker \\"script-name\\"
 			✨ Success! Created version id with secret NEW_SECRET.
-			➡️  To deploy this version with secret NEW_SECRET to production traffic use the command \\"wrangler versions deploy --x-versions\\"."
+			➡️  To deploy this version with secret NEW_SECRET to production traffic use the command \\"wrangler versions deploy\\"."
 		`);
 		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
@@ -149,7 +149,7 @@ describe("versions secret put", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 			"🌀 Creating the secret for the Worker \\"script-name\\"
 			✨ Success! Created version id with secret NEW_SECRET.
-			➡️  To deploy this version with secret NEW_SECRET to production traffic use the command \\"wrangler versions deploy --x-versions\\"."
+			➡️  To deploy this version with secret NEW_SECRET to production traffic use the command \\"wrangler versions deploy\\"."
 		`);
 		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
@@ -188,7 +188,7 @@ describe("versions secret put", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 			"🌀 Creating the secret for the Worker \\"script-name\\"
 			✨ Success! Created version id with secret NEW_SECRET.
-			➡️  To deploy this version with secret NEW_SECRET to production traffic use the command \\"wrangler versions deploy --x-versions\\"."
+			➡️  To deploy this version with secret NEW_SECRET to production traffic use the command \\"wrangler versions deploy\\"."
 		`);
 		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
@@ -224,7 +224,7 @@ describe("versions secret put", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 			"🌀 Creating the secret for the Worker \\"script-name\\"
 			✨ Success! Created version id with secret SECRET.
-			➡️  To deploy this version with secret SECRET to production traffic use the command \\"wrangler versions deploy --x-versions\\"."
+			➡️  To deploy this version with secret SECRET to production traffic use the command \\"wrangler versions deploy\\"."
 		`);
 		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
@@ -299,7 +299,7 @@ describe("versions secret put", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 			"🌀 Creating the secret for the Worker \\"script-name\\"
 			✨ Success! Created version id with secret SECRET.
-			➡️  To deploy this version with secret SECRET to production traffic use the command \\"wrangler versions deploy --x-versions\\"."
+			➡️  To deploy this version with secret SECRET to production traffic use the command \\"wrangler versions deploy\\"."
 		`);
 		expect(std.err).toMatchInlineSnapshot(`""`);
 	});

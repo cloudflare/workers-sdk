@@ -39,63 +39,63 @@ describe("deployments list", () => {
 			await expect(result).resolves.toBeUndefined();
 
 			expect(std.out).toMatchInlineSnapshot(`
-			"Created:     2021-01-04T00:00:00.000Z
-			Author:      Jean-Luc-Picard@federation.org
-			Source:      Rollback
-			Message:     -
-			Version(s):  (10%) 10000000-0000-0000-0000-000000000000
-			                 Created:  2021-01-01T00:00:00.000Z
-			                     Tag:  -
-			                 Message:  -
+				"Created:     2021-01-01T00:00:00.000Z
+				Author:      Jean-Luc-Picard@federation.org
+				Source:      Upload
+				Message:     -
+				Version(s):  (20%) 10000000-0000-0000-0000-000000000000
+				                 Created:  2021-01-01T00:00:00.000Z
+				                     Tag:  -
+				                 Message:  -
 
-			             (90%) 20000000-0000-0000-0000-000000000000
-			                 Created:  2021-01-01T00:00:00.000Z
-			                     Tag:  -
-			                 Message:  -
+				             (80%) 20000000-0000-0000-0000-000000000000
+				                 Created:  2021-01-01T00:00:00.000Z
+				                     Tag:  -
+				                 Message:  -
 
-			Created:     2021-01-01T00:00:00.000Z
-			Author:      Jean-Luc-Picard@federation.org
-			Source:      Upload
-			Message:     -
-			Version(s):  (20%) 10000000-0000-0000-0000-000000000000
-			                 Created:  2021-01-01T00:00:00.000Z
-			                     Tag:  -
-			                 Message:  -
+				Created:     2021-01-04T00:00:00.000Z
+				Author:      Jean-Luc-Picard@federation.org
+				Source:      Rollback
+				Message:     -
+				Version(s):  (10%) 10000000-0000-0000-0000-000000000000
+				                 Created:  2021-01-01T00:00:00.000Z
+				                     Tag:  -
+				                 Message:  -
 
-			             (80%) 20000000-0000-0000-0000-000000000000
-			                 Created:  2021-01-01T00:00:00.000Z
-			                     Tag:  -
-			                 Message:  -
+				             (90%) 20000000-0000-0000-0000-000000000000
+				                 Created:  2021-01-01T00:00:00.000Z
+				                     Tag:  -
+				                 Message:  -
 
-			Created:     2021-02-02T00:00:00.000Z
-			Author:      Kathryn-Janeway@federation.org
-			Source:      Rollback
-			Message:     Rolled back for this version
-			Version(s):  (30%) 10000000-0000-0000-0000-000000000000
-			                 Created:  2021-01-01T00:00:00.000Z
-			                     Tag:  -
-			                 Message:  -
+				Created:     2021-02-02T00:00:00.000Z
+				Author:      Kathryn-Janeway@federation.org
+				Source:      Rollback
+				Message:     Rolled back for this version
+				Version(s):  (30%) 10000000-0000-0000-0000-000000000000
+				                 Created:  2021-01-01T00:00:00.000Z
+				                     Tag:  -
+				                 Message:  -
 
-			             (70%) 20000000-0000-0000-0000-000000000000
-			                 Created:  2021-01-01T00:00:00.000Z
-			                     Tag:  -
-			                 Message:  -
+				             (70%) 20000000-0000-0000-0000-000000000000
+				                 Created:  2021-01-01T00:00:00.000Z
+				                     Tag:  -
+				                 Message:  -
 
-			Created:     2021-02-03T00:00:00.000Z
-			Author:      Kathryn-Janeway@federation.org
-			Source:      Wrangler 🤠
-			Message:     -
-			Version(s):  (40%) 10000000-0000-0000-0000-000000000000
-			                 Created:  2021-01-01T00:00:00.000Z
-			                     Tag:  -
-			                 Message:  -
+				Created:     2021-02-03T00:00:00.000Z
+				Author:      Kathryn-Janeway@federation.org
+				Source:      Wrangler 🤠
+				Message:     -
+				Version(s):  (40%) 10000000-0000-0000-0000-000000000000
+				                 Created:  2021-01-01T00:00:00.000Z
+				                     Tag:  -
+				                 Message:  -
 
-			             (60%) 20000000-0000-0000-0000-000000000000
-			                 Created:  2021-01-01T00:00:00.000Z
-			                     Tag:  -
-			                 Message:  -
-			"
-		`);
+				             (60%) 20000000-0000-0000-0000-000000000000
+				                 Created:  2021-01-01T00:00:00.000Z
+				                     Tag:  -
+				                 Message:  -
+				"
+			`);
 
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -108,90 +108,90 @@ describe("deployments list", () => {
 			await expect(result).resolves.toBeUndefined();
 
 			expect(std.out).toMatchInlineSnapshot(`
-			"[
-			  {
-			    \\"id\\": \\"Galaxy-Class-test-name\\",
-			    \\"source\\": \\"api\\",
-			    \\"strategy\\": \\"percentage\\",
-			    \\"author_email\\": \\"Jean-Luc-Picard@federation.org\\",
-			    \\"created_on\\": \\"2021-01-04T00:00:00.000000Z\\",
-			    \\"annotations\\": {
-			      \\"workers/triggered_by\\": \\"rollback\\",
-			      \\"workers/rollback_from\\": \\"MOCK-DEPLOYMENT-ID-2222\\"
-			    },
-			    \\"versions\\": [
-			      {
-			        \\"version_id\\": \\"10000000-0000-0000-0000-000000000000\\",
-			        \\"percentage\\": 10
-			      },
-			      {
-			        \\"version_id\\": \\"20000000-0000-0000-0000-000000000000\\",
-			        \\"percentage\\": 90
-			      }
-			    ]
-			  },
-			  {
-			    \\"id\\": \\"Galaxy-Class-test-name\\",
-			    \\"source\\": \\"wrangler\\",
-			    \\"strategy\\": \\"percentage\\",
-			    \\"author_email\\": \\"Jean-Luc-Picard@federation.org\\",
-			    \\"created_on\\": \\"2021-01-01T00:00:00.000000Z\\",
-			    \\"annotations\\": {
-			      \\"workers/triggered_by\\": \\"upload\\"
-			    },
-			    \\"versions\\": [
-			      {
-			        \\"version_id\\": \\"10000000-0000-0000-0000-000000000000\\",
-			        \\"percentage\\": 20
-			      },
-			      {
-			        \\"version_id\\": \\"20000000-0000-0000-0000-000000000000\\",
-			        \\"percentage\\": 80
-			      }
-			    ]
-			  },
-			  {
-			    \\"id\\": \\"Intrepid-Class-test-name\\",
-			    \\"source\\": \\"wrangler\\",
-			    \\"strategy\\": \\"percentage\\",
-			    \\"author_email\\": \\"Kathryn-Janeway@federation.org\\",
-			    \\"created_on\\": \\"2021-02-02T00:00:00.000000Z\\",
-			    \\"annotations\\": {
-			      \\"workers/triggered_by\\": \\"rollback\\",
-			      \\"workers/rollback_from\\": \\"MOCK-DEPLOYMENT-ID-1111\\",
-			      \\"workers/message\\": \\"Rolled back for this version\\"
-			    },
-			    \\"versions\\": [
-			      {
-			        \\"version_id\\": \\"10000000-0000-0000-0000-000000000000\\",
-			        \\"percentage\\": 30
-			      },
-			      {
-			        \\"version_id\\": \\"20000000-0000-0000-0000-000000000000\\",
-			        \\"percentage\\": 70
-			      }
-			    ]
-			  },
-			  {
-			    \\"id\\": \\"3mEgaU1T-Intrepid-someThing-test-name\\",
-			    \\"source\\": \\"wrangler\\",
-			    \\"strategy\\": \\"percentage\\",
-			    \\"author_email\\": \\"Kathryn-Janeway@federation.org\\",
-			    \\"created_on\\": \\"2021-02-03T00:00:00.000000Z\\",
-			    \\"versions\\": [
-			      {
-			        \\"version_id\\": \\"10000000-0000-0000-0000-000000000000\\",
-			        \\"percentage\\": 40
-			      },
-			      {
-			        \\"version_id\\": \\"20000000-0000-0000-0000-000000000000\\",
-			        \\"percentage\\": 60
-			      }
-			    ]
-			  }
-			]
-			"
-		`);
+				"[
+				  {
+				    \\"id\\": \\"Galaxy-Class-test-name\\",
+				    \\"source\\": \\"wrangler\\",
+				    \\"strategy\\": \\"percentage\\",
+				    \\"author_email\\": \\"Jean-Luc-Picard@federation.org\\",
+				    \\"created_on\\": \\"2021-01-01T00:00:00.000000Z\\",
+				    \\"annotations\\": {
+				      \\"workers/triggered_by\\": \\"upload\\"
+				    },
+				    \\"versions\\": [
+				      {
+				        \\"version_id\\": \\"10000000-0000-0000-0000-000000000000\\",
+				        \\"percentage\\": 20
+				      },
+				      {
+				        \\"version_id\\": \\"20000000-0000-0000-0000-000000000000\\",
+				        \\"percentage\\": 80
+				      }
+				    ]
+				  },
+				  {
+				    \\"id\\": \\"Galaxy-Class-test-name\\",
+				    \\"source\\": \\"api\\",
+				    \\"strategy\\": \\"percentage\\",
+				    \\"author_email\\": \\"Jean-Luc-Picard@federation.org\\",
+				    \\"created_on\\": \\"2021-01-04T00:00:00.000000Z\\",
+				    \\"annotations\\": {
+				      \\"workers/triggered_by\\": \\"rollback\\",
+				      \\"workers/rollback_from\\": \\"MOCK-DEPLOYMENT-ID-2222\\"
+				    },
+				    \\"versions\\": [
+				      {
+				        \\"version_id\\": \\"10000000-0000-0000-0000-000000000000\\",
+				        \\"percentage\\": 10
+				      },
+				      {
+				        \\"version_id\\": \\"20000000-0000-0000-0000-000000000000\\",
+				        \\"percentage\\": 90
+				      }
+				    ]
+				  },
+				  {
+				    \\"id\\": \\"Intrepid-Class-test-name\\",
+				    \\"source\\": \\"wrangler\\",
+				    \\"strategy\\": \\"percentage\\",
+				    \\"author_email\\": \\"Kathryn-Janeway@federation.org\\",
+				    \\"created_on\\": \\"2021-02-02T00:00:00.000000Z\\",
+				    \\"annotations\\": {
+				      \\"workers/triggered_by\\": \\"rollback\\",
+				      \\"workers/rollback_from\\": \\"MOCK-DEPLOYMENT-ID-1111\\",
+				      \\"workers/message\\": \\"Rolled back for this version\\"
+				    },
+				    \\"versions\\": [
+				      {
+				        \\"version_id\\": \\"10000000-0000-0000-0000-000000000000\\",
+				        \\"percentage\\": 30
+				      },
+				      {
+				        \\"version_id\\": \\"20000000-0000-0000-0000-000000000000\\",
+				        \\"percentage\\": 70
+				      }
+				    ]
+				  },
+				  {
+				    \\"id\\": \\"3mEgaU1T-Intrepid-someThing-test-name\\",
+				    \\"source\\": \\"wrangler\\",
+				    \\"strategy\\": \\"percentage\\",
+				    \\"author_email\\": \\"Kathryn-Janeway@federation.org\\",
+				    \\"created_on\\": \\"2021-02-03T00:00:00.000000Z\\",
+				    \\"versions\\": [
+				      {
+				        \\"version_id\\": \\"10000000-0000-0000-0000-000000000000\\",
+				        \\"percentage\\": 40
+				      },
+				      {
+				        \\"version_id\\": \\"20000000-0000-0000-0000-000000000000\\",
+				        \\"percentage\\": 60
+				      }
+				    ]
+				  }
+				]
+				"
+			`);
 		});
 	});
 
@@ -204,63 +204,63 @@ describe("deployments list", () => {
 			await expect(result).resolves.toBeUndefined();
 
 			expect(std.out).toMatchInlineSnapshot(`
-			"Created:     2021-01-04T00:00:00.000Z
-			Author:      Jean-Luc-Picard@federation.org
-			Source:      Rollback
-			Message:     -
-			Version(s):  (10%) 10000000-0000-0000-0000-000000000000
-			                 Created:  2021-01-01T00:00:00.000Z
-			                     Tag:  -
-			                 Message:  -
+				"Created:     2021-01-01T00:00:00.000Z
+				Author:      Jean-Luc-Picard@federation.org
+				Source:      Upload
+				Message:     -
+				Version(s):  (20%) 10000000-0000-0000-0000-000000000000
+				                 Created:  2021-01-01T00:00:00.000Z
+				                     Tag:  -
+				                 Message:  -
 
-			             (90%) 20000000-0000-0000-0000-000000000000
-			                 Created:  2021-01-01T00:00:00.000Z
-			                     Tag:  -
-			                 Message:  -
+				             (80%) 20000000-0000-0000-0000-000000000000
+				                 Created:  2021-01-01T00:00:00.000Z
+				                     Tag:  -
+				                 Message:  -
 
-			Created:     2021-01-01T00:00:00.000Z
-			Author:      Jean-Luc-Picard@federation.org
-			Source:      Upload
-			Message:     -
-			Version(s):  (20%) 10000000-0000-0000-0000-000000000000
-			                 Created:  2021-01-01T00:00:00.000Z
-			                     Tag:  -
-			                 Message:  -
+				Created:     2021-01-04T00:00:00.000Z
+				Author:      Jean-Luc-Picard@federation.org
+				Source:      Rollback
+				Message:     -
+				Version(s):  (10%) 10000000-0000-0000-0000-000000000000
+				                 Created:  2021-01-01T00:00:00.000Z
+				                     Tag:  -
+				                 Message:  -
 
-			             (80%) 20000000-0000-0000-0000-000000000000
-			                 Created:  2021-01-01T00:00:00.000Z
-			                     Tag:  -
-			                 Message:  -
+				             (90%) 20000000-0000-0000-0000-000000000000
+				                 Created:  2021-01-01T00:00:00.000Z
+				                     Tag:  -
+				                 Message:  -
 
-			Created:     2021-02-02T00:00:00.000Z
-			Author:      Kathryn-Janeway@federation.org
-			Source:      Rollback
-			Message:     Rolled back for this version
-			Version(s):  (30%) 10000000-0000-0000-0000-000000000000
-			                 Created:  2021-01-01T00:00:00.000Z
-			                     Tag:  -
-			                 Message:  -
+				Created:     2021-02-02T00:00:00.000Z
+				Author:      Kathryn-Janeway@federation.org
+				Source:      Rollback
+				Message:     Rolled back for this version
+				Version(s):  (30%) 10000000-0000-0000-0000-000000000000
+				                 Created:  2021-01-01T00:00:00.000Z
+				                     Tag:  -
+				                 Message:  -
 
-			             (70%) 20000000-0000-0000-0000-000000000000
-			                 Created:  2021-01-01T00:00:00.000Z
-			                     Tag:  -
-			                 Message:  -
+				             (70%) 20000000-0000-0000-0000-000000000000
+				                 Created:  2021-01-01T00:00:00.000Z
+				                     Tag:  -
+				                 Message:  -
 
-			Created:     2021-02-03T00:00:00.000Z
-			Author:      Kathryn-Janeway@federation.org
-			Source:      Wrangler 🤠
-			Message:     -
-			Version(s):  (40%) 10000000-0000-0000-0000-000000000000
-			                 Created:  2021-01-01T00:00:00.000Z
-			                     Tag:  -
-			                 Message:  -
+				Created:     2021-02-03T00:00:00.000Z
+				Author:      Kathryn-Janeway@federation.org
+				Source:      Wrangler 🤠
+				Message:     -
+				Version(s):  (40%) 10000000-0000-0000-0000-000000000000
+				                 Created:  2021-01-01T00:00:00.000Z
+				                     Tag:  -
+				                 Message:  -
 
-			             (60%) 20000000-0000-0000-0000-000000000000
-			                 Created:  2021-01-01T00:00:00.000Z
-			                     Tag:  -
-			                 Message:  -
-			"
-		`);
+				             (60%) 20000000-0000-0000-0000-000000000000
+				                 Created:  2021-01-01T00:00:00.000Z
+				                     Tag:  -
+				                 Message:  -
+				"
+			`);
 
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -273,90 +273,90 @@ describe("deployments list", () => {
 			await expect(result).resolves.toBeUndefined();
 
 			expect(std.out).toMatchInlineSnapshot(`
-			"[
-			  {
-			    \\"id\\": \\"Galaxy-Class-test-name\\",
-			    \\"source\\": \\"api\\",
-			    \\"strategy\\": \\"percentage\\",
-			    \\"author_email\\": \\"Jean-Luc-Picard@federation.org\\",
-			    \\"created_on\\": \\"2021-01-04T00:00:00.000000Z\\",
-			    \\"annotations\\": {
-			      \\"workers/triggered_by\\": \\"rollback\\",
-			      \\"workers/rollback_from\\": \\"MOCK-DEPLOYMENT-ID-2222\\"
-			    },
-			    \\"versions\\": [
-			      {
-			        \\"version_id\\": \\"10000000-0000-0000-0000-000000000000\\",
-			        \\"percentage\\": 10
-			      },
-			      {
-			        \\"version_id\\": \\"20000000-0000-0000-0000-000000000000\\",
-			        \\"percentage\\": 90
-			      }
-			    ]
-			  },
-			  {
-			    \\"id\\": \\"Galaxy-Class-test-name\\",
-			    \\"source\\": \\"wrangler\\",
-			    \\"strategy\\": \\"percentage\\",
-			    \\"author_email\\": \\"Jean-Luc-Picard@federation.org\\",
-			    \\"created_on\\": \\"2021-01-01T00:00:00.000000Z\\",
-			    \\"annotations\\": {
-			      \\"workers/triggered_by\\": \\"upload\\"
-			    },
-			    \\"versions\\": [
-			      {
-			        \\"version_id\\": \\"10000000-0000-0000-0000-000000000000\\",
-			        \\"percentage\\": 20
-			      },
-			      {
-			        \\"version_id\\": \\"20000000-0000-0000-0000-000000000000\\",
-			        \\"percentage\\": 80
-			      }
-			    ]
-			  },
-			  {
-			    \\"id\\": \\"Intrepid-Class-test-name\\",
-			    \\"source\\": \\"wrangler\\",
-			    \\"strategy\\": \\"percentage\\",
-			    \\"author_email\\": \\"Kathryn-Janeway@federation.org\\",
-			    \\"created_on\\": \\"2021-02-02T00:00:00.000000Z\\",
-			    \\"annotations\\": {
-			      \\"workers/triggered_by\\": \\"rollback\\",
-			      \\"workers/rollback_from\\": \\"MOCK-DEPLOYMENT-ID-1111\\",
-			      \\"workers/message\\": \\"Rolled back for this version\\"
-			    },
-			    \\"versions\\": [
-			      {
-			        \\"version_id\\": \\"10000000-0000-0000-0000-000000000000\\",
-			        \\"percentage\\": 30
-			      },
-			      {
-			        \\"version_id\\": \\"20000000-0000-0000-0000-000000000000\\",
-			        \\"percentage\\": 70
-			      }
-			    ]
-			  },
-			  {
-			    \\"id\\": \\"3mEgaU1T-Intrepid-someThing-test-name\\",
-			    \\"source\\": \\"wrangler\\",
-			    \\"strategy\\": \\"percentage\\",
-			    \\"author_email\\": \\"Kathryn-Janeway@federation.org\\",
-			    \\"created_on\\": \\"2021-02-03T00:00:00.000000Z\\",
-			    \\"versions\\": [
-			      {
-			        \\"version_id\\": \\"10000000-0000-0000-0000-000000000000\\",
-			        \\"percentage\\": 40
-			      },
-			      {
-			        \\"version_id\\": \\"20000000-0000-0000-0000-000000000000\\",
-			        \\"percentage\\": 60
-			      }
-			    ]
-			  }
-			]
-			"
-		`);
+				"[
+				  {
+				    \\"id\\": \\"Galaxy-Class-test-name\\",
+				    \\"source\\": \\"wrangler\\",
+				    \\"strategy\\": \\"percentage\\",
+				    \\"author_email\\": \\"Jean-Luc-Picard@federation.org\\",
+				    \\"created_on\\": \\"2021-01-01T00:00:00.000000Z\\",
+				    \\"annotations\\": {
+				      \\"workers/triggered_by\\": \\"upload\\"
+				    },
+				    \\"versions\\": [
+				      {
+				        \\"version_id\\": \\"10000000-0000-0000-0000-000000000000\\",
+				        \\"percentage\\": 20
+				      },
+				      {
+				        \\"version_id\\": \\"20000000-0000-0000-0000-000000000000\\",
+				        \\"percentage\\": 80
+				      }
+				    ]
+				  },
+				  {
+				    \\"id\\": \\"Galaxy-Class-test-name\\",
+				    \\"source\\": \\"api\\",
+				    \\"strategy\\": \\"percentage\\",
+				    \\"author_email\\": \\"Jean-Luc-Picard@federation.org\\",
+				    \\"created_on\\": \\"2021-01-04T00:00:00.000000Z\\",
+				    \\"annotations\\": {
+				      \\"workers/triggered_by\\": \\"rollback\\",
+				      \\"workers/rollback_from\\": \\"MOCK-DEPLOYMENT-ID-2222\\"
+				    },
+				    \\"versions\\": [
+				      {
+				        \\"version_id\\": \\"10000000-0000-0000-0000-000000000000\\",
+				        \\"percentage\\": 10
+				      },
+				      {
+				        \\"version_id\\": \\"20000000-0000-0000-0000-000000000000\\",
+				        \\"percentage\\": 90
+				      }
+				    ]
+				  },
+				  {
+				    \\"id\\": \\"Intrepid-Class-test-name\\",
+				    \\"source\\": \\"wrangler\\",
+				    \\"strategy\\": \\"percentage\\",
+				    \\"author_email\\": \\"Kathryn-Janeway@federation.org\\",
+				    \\"created_on\\": \\"2021-02-02T00:00:00.000000Z\\",
+				    \\"annotations\\": {
+				      \\"workers/triggered_by\\": \\"rollback\\",
+				      \\"workers/rollback_from\\": \\"MOCK-DEPLOYMENT-ID-1111\\",
+				      \\"workers/message\\": \\"Rolled back for this version\\"
+				    },
+				    \\"versions\\": [
+				      {
+				        \\"version_id\\": \\"10000000-0000-0000-0000-000000000000\\",
+				        \\"percentage\\": 30
+				      },
+				      {
+				        \\"version_id\\": \\"20000000-0000-0000-0000-000000000000\\",
+				        \\"percentage\\": 70
+				      }
+				    ]
+				  },
+				  {
+				    \\"id\\": \\"3mEgaU1T-Intrepid-someThing-test-name\\",
+				    \\"source\\": \\"wrangler\\",
+				    \\"strategy\\": \\"percentage\\",
+				    \\"author_email\\": \\"Kathryn-Janeway@federation.org\\",
+				    \\"created_on\\": \\"2021-02-03T00:00:00.000000Z\\",
+				    \\"versions\\": [
+				      {
+				        \\"version_id\\": \\"10000000-0000-0000-0000-000000000000\\",
+				        \\"percentage\\": 40
+				      },
+				      {
+				        \\"version_id\\": \\"20000000-0000-0000-0000-000000000000\\",
+				        \\"percentage\\": 60
+				      }
+				    ]
+				  }
+				]
+				"
+			`);
 		});
 	});
 });
