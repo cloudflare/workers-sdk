@@ -135,6 +135,13 @@ const cliDefinition: ArgumentsDefinition = {
 			],
 		},
 		{
+			name: "experimental",
+			hidden: true,
+			type: "boolean",
+			description: "Select from experimental frameworks.",
+			default: false,
+		},
+		{
 			name: "lang",
 			type: "string",
 			description: `The programming language of the template`,

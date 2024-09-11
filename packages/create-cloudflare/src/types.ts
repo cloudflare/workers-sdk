@@ -8,8 +8,9 @@ export type C3Args = {
 	git?: boolean;
 	autoUpdate?: boolean;
 	category?: string;
-	// pages specific
+	// frameworks specific
 	framework?: string;
+	experimental?: boolean;
 	// workers specific
 	ts?: boolean;
 	lang?: string;

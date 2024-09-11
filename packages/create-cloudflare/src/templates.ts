@@ -124,35 +124,56 @@ const defaultSelectVariant = async (ctx: C3Context) => {
 export type FrameworkMap = Awaited<ReturnType<typeof getFrameworkMap>>;
 export type FrameworkName = keyof FrameworkMap;
 
-export const getFrameworkMap = async () => ({
-	analog: (await import("../templates/analog/c3")).default,
-	angular: (await import("../templates/angular/c3")).default,
-	astro: (await import("../templates/astro/c3")).default,
-	docusaurus: (await import("../templates/docusaurus/c3")).default,
-	gatsby: (await import("../templates/gatsby/c3")).default,
-	hono: (await import("../templates/hono/c3")).default,
-	next: (await import("../templates/next/c3")).default,
-	nuxt: (await import("../templates/nuxt/c3")).default,
-	qwik: (await import("../templates/qwik/c3")).default,
-	react: (await import("../templates/react/c3")).default,
-	remix: (await import("../templates/remix/c3")).default,
-	solid: (await import("../templates/solid/c3")).default,
-	svelte: (await import("../templates/svelte/c3")).default,
-	vue: (await import("../templates/vue/c3")).default,
-});
+export const getFrameworkMap = async ({ experimental = false }) => {
+	if (experimental) {
+		return {
+			astro: (await import("../templates-experimental/astro/c3")).default,
+			nuxt: (await import("../templates-experimental/nuxt/c3")).default,
+			qwik: (await import("../templates-experimental/qwik/c3")).default,
+			remix: (await import("../templates-experimental/remix/c3")).default,
+			solid: (await import("../templates-experimental/solid/c3")).default,
+			svelte: (await import("../templates-experimental/svelte/c3")).default,
+		};
+	} else {
+		return {
+			analog: (await import("../templates/analog/c3")).default,
+			angular: (await import("../templates/angular/c3")).default,
+			astro: (await import("../templates/astro/c3")).default,
+			docusaurus: (await import("../templates/docusaurus/c3")).default,
+			gatsby: (await import("../templates/gatsby/c3")).default,
+			hono: (await import("../templates/hono/c3")).default,
+			next: (await import("../templates/next/c3")).default,
+			nuxt: (await import("../templates/nuxt/c3")).default,
+			qwik: (await import("../templates/qwik/c3")).default,
+			react: (await import("../templates/react/c3")).default,
+			remix: (await import("../templates/remix/c3")).default,
+			solid: (await import("../templates/solid/c3")).default,
+			svelte: (await import("../templates/svelte/c3")).default,
+			vue: (await import("../templates/vue/c3")).default,
+		};
+	}
+};
 
-export const getTemplateMap = async () => {
-	return {
-		"hello-world": (await import("../templates/hello-world/c3")).default,
-		common: (await import("../templates/common/c3")).default,
-		scheduled: (await import("../templates/scheduled/c3")).default,
-		queues: (await import("../templates/queues/c3")).default,
-		"hello-world-durable-object": (
-			await import("../templates/hello-world-durable-object/c3")
-		).default,
-		openapi: (await import("../templates/openapi/c3")).default,
-		"pre-existing": (await import("../templates/pre-existing/c3")).default,
-	} as Record<string, TemplateConfig>;
+export const getTemplateMap = async ({ experimental = false }) => {
+	if (experimental) {
+		return {
+			"hello-world-with-assets": (
+				await import("../templates-experimental/hello-world-with-assets/c3")
+			).default,
+		} as Record<string, TemplateConfig>;
+	} else {
+		return {
+			"hello-world": (await import("../templates/hello-world/c3")).default,
+			common: (await import("../templates/common/c3")).default,
+			scheduled: (await import("../templates/scheduled/c3")).default,
+			queues: (await import("../templates/queues/c3")).default,
+			"hello-world-durable-object": (
+				await import("../templates/hello-world-durable-object/c3")
+			).default,
+			openapi: (await import("../templates/openapi/c3")).default,
+			"pre-existing": (await import("../templates/pre-existing/c3")).default,
+		} as Record<string, TemplateConfig>;
+	}
 };
 
 export const deriveCorrelatedArgs = (args: Partial<C3Args>) => {
@@ -314,7 +335,9 @@ export const createContext = async (
 	let template: TemplateConfig;
 
 	if (category === "web-framework") {
-		const frameworkMap = await getFrameworkMap();
+		const frameworkMap = await getFrameworkMap({
+			experimental: args.experimental,
+		});
 		const frameworkOptions = Object.entries(frameworkMap).map(
 			([key, config]) => ({
 				label: config.displayName,
@@ -352,7 +375,9 @@ export const createContext = async (
 	} else if (category === "remote-template") {
 		template = await processRemoteTemplate(args);
 	} else {
-		const templateMap = await getTemplateMap();
+		const templateMap = await getTemplateMap({
+			experimental: args.experimental,
+		});
 		const templateOptions: Option[] = Object.entries(templateMap).map(
 			([value, { displayName, description, hidden }]) => {
 				const isHelloWorldExample = value.startsWith("hello-world");
@@ -655,7 +680,7 @@ export const updatePackageScripts = async (ctx: C3Context) => {
 
 export const getTemplatePath = (ctx: C3Context) => {
 	if (ctx.template.path) {
-		return ctx.template.path;
+		return resolve(__dirname, "..", ctx.template.path);
 	}
 
 	return resolve(__dirname, "..", "templates", ctx.template.id);
