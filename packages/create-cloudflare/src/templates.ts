@@ -121,10 +121,11 @@ const defaultSelectVariant = async (ctx: C3Context) => {
 	return ctx.args.lang;
 };
 
-export type FrameworkMap = Awaited<ReturnType<typeof getFrameworkMap>>;
-export type FrameworkName = keyof FrameworkMap;
+export type TemplateMap = Record<string, TemplateConfig>;
 
-export const getFrameworkMap = async ({ experimental = false }) => {
+export async function getFrameworkMap({
+	experimental = false,
+}): Promise<TemplateMap> {
 	if (experimental) {
 		return {
 			astro: (await import("../templates-experimental/astro/c3")).default,
@@ -152,7 +153,7 @@ export const getFrameworkMap = async ({ experimental = false }) => {
 			vue: (await import("../templates/vue/c3")).default,
 		};
 	}
-};
+}
 
 export const getTemplateMap = async ({ experimental = false }) => {
 	if (experimental) {
@@ -175,6 +176,12 @@ export const getTemplateMap = async ({ experimental = false }) => {
 		} as Record<string, TemplateConfig>;
 	}
 };
+
+export function getNamesAndDescriptions(templateMap: TemplateMap) {
+	return Array.from(Object.entries(templateMap)).map(
+		([name, { description }]) => ({ name, description }),
+	);
+}
 
 export const deriveCorrelatedArgs = (args: Partial<C3Args>) => {
 	// Derive the type based on the additional arguments provided
@@ -345,17 +352,13 @@ export const createContext = async (
 			}),
 		);
 
-		const framework = await processArgument<FrameworkName | typeof BACK_VALUE>(
-			args,
-			"framework",
-			{
-				type: "select",
-				label: "framework",
-				question: "Which development framework do you want to use?",
-				options: frameworkOptions.concat(backOption),
-				defaultValue: prevArgs?.framework ?? C3_DEFAULTS.framework,
-			},
-		);
+		const framework = await processArgument<string>(args, "framework", {
+			type: "select",
+			label: "framework",
+			question: "Which development framework do you want to use?",
+			options: frameworkOptions.concat(backOption),
+			defaultValue: prevArgs?.framework ?? C3_DEFAULTS.framework,
+		});
 
 		if (framework === BACK_VALUE) {
 			return goBack("framework");

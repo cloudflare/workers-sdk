@@ -31,7 +31,7 @@ import {
 	testProjectDir,
 	waitForExit,
 } from "./helpers";
-import type { FrameworkMap, FrameworkName } from "../src/templates";
+import type { TemplateMap } from "../src/templates";
 import type { RunnerConfig } from "./helpers";
 import type { WriteStream } from "fs";
 import type { Suite } from "vitest";
@@ -368,11 +368,11 @@ const frameworkTests: Record<string, FrameworkTestConfig> = {
 };
 
 describe.concurrent(`E2E: Web frameworks`, () => {
-	let frameworkMap: FrameworkMap;
+	let frameworkMap: TemplateMap;
 	let logStream: WriteStream;
 
 	beforeAll(async (ctx) => {
-		frameworkMap = await getFrameworkMap();
+		frameworkMap = await getFrameworkMap({ experimental: false });
 		recreateLogFolder(ctx as Suite);
 		recreateDiffsFolder();
 	});
@@ -409,7 +409,7 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 				const { getPath, getName, clean } = testProjectDir("pages");
 				const projectPath = getPath(framework);
 				const projectName = getName(framework);
-				const frameworkConfig = frameworkMap[framework as FrameworkName];
+				const frameworkConfig = frameworkMap[framework];
 
 				const { promptHandlers, verifyDeploy, flags } =
 					frameworkTests[framework];
@@ -575,8 +575,8 @@ const verifyDevScript = async (
 		return;
 	}
 
-	const frameworkMap = await getFrameworkMap();
-	const template = frameworkMap[framework as FrameworkName];
+	const frameworkMap = await getFrameworkMap({ experimental: false });
+	const template = frameworkMap[framework];
 
 	// Run the devserver on a random port to avoid colliding with other tests
 	const TEST_PORT = Math.ceil(Math.random() * 1000) + 20000;

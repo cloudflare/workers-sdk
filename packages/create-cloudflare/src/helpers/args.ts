@@ -2,6 +2,11 @@ import yargs from "yargs";
 import { hideBin } from "yargs/helpers";
 import { version } from "../../package.json";
 import { showHelp } from "../help";
+import {
+	getFrameworkMap,
+	getNamesAndDescriptions,
+	getTemplateMap,
+} from "../templates";
 import { C3_DEFAULTS, WRANGLER_DEFAULTS } from "./cli";
 import type { C3Args } from "types";
 import type { Argv } from "yargs";
@@ -18,7 +23,9 @@ export type ArgDefinition = {
 export type OptionDefinition = {
 	alias?: string;
 	footer?: string;
-	values?: AllowedValueDefinition[];
+	values?:
+		| AllowedValueDefinition[]
+		| ((args: C3Args | null) => Promise<AllowedValueDefinition[]>);
 } & ArgDefinition;
 
 export type AllowedValueDefinition = {
@@ -47,15 +54,35 @@ const cliDefinition: ArgumentsDefinition = {
 	],
 	options: [
 		{
+			name: "experimental",
+			hidden: true,
+			type: "boolean",
+			description: "Select from experimental frameworks.",
+			default: false,
+		},
+		{
 			name: "category",
 			type: "string",
 			description: `Specifies the kind of templates that should be created`,
-			values: [
-				{ name: "hello-world", description: "Hello World example" },
-				{ name: "web-framework", description: "Framework Starter" },
-				{ name: "demo", description: "Application Starter" },
-				{ name: "remote-template", description: "Template from a Github repo" },
-			],
+			async values(args) {
+				const experimental = Boolean(args?.["experimental"]);
+				if (experimental) {
+					return [
+						{ name: "hello-world", description: "Hello World example" },
+						{ name: "web-framework", description: "Framework Starter" },
+					];
+				} else {
+					return [
+						{ name: "hello-world", description: "Hello World example" },
+						{ name: "web-framework", description: "Framework Starter" },
+						{ name: "demo", description: "Application Starter" },
+						{
+							name: "remote-template",
+							description: "Template from a Github repo",
+						},
+					];
+				}
+			},
 		},
 		{
 			name: "type",
@@ -67,41 +94,50 @@ const cliDefinition: ArgumentsDefinition = {
 
         Note that "--category" and "--template" are mutually exclusive options. If both are provided, "--category" will be used.
         `,
-			values: [
-				{
-					name: "hello-world",
-					description: "A basic “Hello World” Cloudflare Worker.",
-				},
-				{
-					name: "hello-world-durable-object",
-					description:
-						"A basic “Hello World” Cloudflare Worker with a Durable Worker.",
-				},
-				{
-					name: "common",
-					description:
-						"A Cloudflare Worker which implements a common example of routing/proxying functionalities.",
-				},
-				{
-					name: "scheduled",
-					description:
-						"A scheduled Cloudflare Worker (triggered via Cron Triggers).",
-				},
-				{
-					name: "queues",
-					description:
-						"A Cloudflare Worker which is both a consumer and produced of Queues.",
-				},
-				{
-					name: "openapi",
-					description: "A Worker implementing an OpenAPI REST endpoint.",
-				},
-				{
-					name: "pre-existing",
-					description:
-						"Fetch a Worker initialized from the Cloudflare dashboard.",
-				},
-			],
+			async values(args) {
+				const experimental = Boolean(args?.["experimental"]);
+				if (experimental) {
+					return getNamesAndDescriptions(
+						await getTemplateMap({ experimental }),
+					);
+				} else {
+					return [
+						{
+							name: "hello-world",
+							description: "A basic “Hello World” Cloudflare Worker.",
+						},
+						{
+							name: "hello-world-durable-object",
+							description:
+								"A basic “Hello World” Cloudflare Worker with a Durable Worker.",
+						},
+						{
+							name: "common",
+							description:
+								"A Cloudflare Worker which implements a common example of routing/proxying functionalities.",
+						},
+						{
+							name: "scheduled",
+							description:
+								"A scheduled Cloudflare Worker (triggered via Cron Triggers).",
+						},
+						{
+							name: "queues",
+							description:
+								"A Cloudflare Worker which is both a consumer and produced of Queues.",
+						},
+						{
+							name: "openapi",
+							description: "A Worker implementing an OpenAPI REST endpoint.",
+						},
+						{
+							name: "pre-existing",
+							description:
+								"Fetch a Worker initialized from the Cloudflare dashboard.",
+						},
+					];
+				}
+			},
 		},
 		{
 			name: "framework",
@@ -117,29 +153,12 @@ const cliDefinition: ArgumentsDefinition = {
       npm create cloudflare -- --framework next -- --ts
       pnpm create clouldfare --framework next -- --ts
       `,
-			values: [
-				{ name: "analog" },
-				{ name: "angular" },
-				{ name: "astro" },
-				{ name: "docusaurus" },
-				{ name: "gatsby" },
-				{ name: "hono" },
-				{ name: "next" },
-				{ name: "nuxt" },
-				{ name: "qwik" },
-				{ name: "react" },
-				{ name: "remix" },
-				{ name: "solid" },
-				{ name: "svelte" },
-				{ name: "vue" },
-			],
-		},
-		{
-			name: "experimental",
-			hidden: true,
-			type: "boolean",
-			description: "Select from experimental frameworks.",
-			default: false,
+			values: async (args) =>
+				getNamesAndDescriptions(
+					await getFrameworkMap({
+						experimental: Boolean(args?.["experimental"]),
+					}),
+				),
 		},
 		{
 			name: "lang",
@@ -253,7 +272,11 @@ export const parseArgs = async (argv: string[]): Promise<Partial<C3Args>> => {
 
 	if (options) {
 		for (const { name, alias, ...props } of options) {
-			yargsObj.option(name, props);
+			const values =
+				typeof props.values === "function"
+					? await props.values(await yargsObj.argv)
+					: props.values;
+			yargsObj.option(name, { values, ...props });
 			if (alias) {
 				yargsObj.alias(alias, name);
 			}
@@ -267,7 +290,7 @@ export const parseArgs = async (argv: string[]): Promise<Partial<C3Args>> => {
 	} catch {}
 
 	if (args === null) {
-		showHelp(cliDefinition);
+		showHelp(args, cliDefinition);
 		process.exit(1);
 	}
 
@@ -276,7 +299,7 @@ export const parseArgs = async (argv: string[]): Promise<Partial<C3Args>> => {
 	}
 
 	if (args.help) {
-		showHelp(cliDefinition);
+		showHelp(args, cliDefinition);
 		process.exit(0);
 	}
 
@@ -284,7 +307,7 @@ export const parseArgs = async (argv: string[]): Promise<Partial<C3Args>> => {
 
 	for (const opt in args) {
 		if (!validOption(opt)) {
-			showHelp(cliDefinition);
+			showHelp(args, cliDefinition);
 			console.error(`\nUnrecognized option: ${opt}`);
 			process.exit(1);
 		}
@@ -292,7 +315,7 @@ export const parseArgs = async (argv: string[]): Promise<Partial<C3Args>> => {
 
 	// since `yargs.strict()` can't check the `positional`s for us we need to do it manually ourselves
 	if (positionalArgs.length > 1) {
-		showHelp(cliDefinition);
+		showHelp(args, cliDefinition);
 		console.error("\nToo many positional arguments provided");
 		process.exit(1);
 	}
