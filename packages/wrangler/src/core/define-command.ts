@@ -89,14 +89,6 @@ export type CommandDefinition<
 	 */
 	behaviour?: {
 		/**
-		 * By default, metrics are sent if the user has opted-in.
-		 * Set this value to `false` to disable metrics unconditionally.
-		 *
-		 * @default true
-		 */
-		sendMetrics?: boolean;
-
-		/**
 		 * By default, wrangler's version banner will be printed before the handler is executed.
 		 * Set this value to `false` to skip printing the banner.
 		 *
