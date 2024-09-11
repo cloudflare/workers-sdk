@@ -75,7 +75,7 @@ function createCommandTree() {
 	// STEP 1: Create tree from flat definitions array
 
 	for (const def of COMMAND_DEFINITIONS) {
-		const node = createNodeFor(def.command, root);
+		const node = upsertNodeFor(def.command, root);
 
 		if (node.definition) {
 			throw new CommandRegistrationError(
@@ -100,7 +100,7 @@ function createCommandTree() {
 				continue;
 			}
 
-			const node = createNodeFor(def.command, root);
+			const node = upsertNodeFor(def.command, root);
 
 			node.definition = {
 				...real,
@@ -179,7 +179,7 @@ function walkTreeAndRegister(
 }
 
 // #region utils
-function createNodeFor(command: Command, root: DefinitionTreeNode) {
+function upsertNodeFor(command: Command, root: DefinitionTreeNode) {
 	const segments = command.split(" ").slice(1); // eg. ["versions", "secret", "put"]
 
 	let node = root;
