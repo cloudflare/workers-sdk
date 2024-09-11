@@ -18,6 +18,7 @@ import {
 	writeFile,
 	writeJSON,
 } from "helpers/files";
+import angularTemplateExperimental from "../templates-experimental/angular/c3";
 import astroTemplateExperimental from "../templates-experimental/astro/c3";
 import helloWorldWithAssetsTemplateExperimental from "../templates-experimental/hello-world-with-assets/c3";
 import nuxtTemplateExperimental from "../templates-experimental/nuxt/c3";
@@ -156,6 +157,7 @@ export type TemplateMap = Record<string, TemplateConfig>;
 export function getFrameworkMap({ experimental = false }): TemplateMap {
 	if (experimental) {
 		return {
+			angular: angularTemplateExperimental,
 			astro: astroTemplateExperimental,
 			nuxt: nuxtTemplateExperimental,
 			qwik: qwikTemplateExperimental,
