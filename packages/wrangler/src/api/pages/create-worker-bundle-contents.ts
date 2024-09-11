@@ -66,6 +66,7 @@ function createWorkerBundleFormData(
 		text_blobs: undefined,
 		data_blobs: undefined,
 		dispatch_namespaces: undefined,
+		pipelines: undefined,
 		logfwdr: undefined,
 		unsafe: undefined,
 		experimental_assets: undefined,

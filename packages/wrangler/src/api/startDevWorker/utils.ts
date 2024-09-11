@@ -244,6 +244,12 @@ export function convertCfWorkerInitBindingstoBindings(
 				output[info["binding"]] = { type: "assets" };
 				break;
 			}
+			case "pipelines": {
+				for (const { binding, ...x } of info) {
+					output[binding] = { type: "pipeline", ...x };
+				}
+				break;
+			}
 			default: {
 				assertNever(type);
 			}
@@ -282,6 +288,7 @@ export async function convertBindingsToCfWorkerInitBindings(
 		logfwdr: undefined,
 		unsafe: undefined,
 		experimental_assets: undefined,
+		pipelines: undefined,
 	};
 
 	const fetchers: Record<string, ServiceFetch> = {};
@@ -357,6 +364,9 @@ export async function convertBindingsToCfWorkerInitBindings(
 		} else if (binding.type === "logfwdr") {
 			bindings.logfwdr ??= { bindings: [] };
 			bindings.logfwdr.bindings.push({ ...binding, name: name });
+		} else if (binding.type === "pipeline") {
+			bindings.pipelines ??= [];
+			bindings.pipelines.push({ ...binding, binding: name });
 		} else if (isUnsafeBindingType(binding.type)) {
 			bindings.unsafe ??= {
 				bindings: [],

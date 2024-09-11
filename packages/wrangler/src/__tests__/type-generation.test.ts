@@ -217,6 +217,7 @@ const bindingsConfigMock: Omit<
 		},
 		{ type: "CompiledWasm", globs: ["**/*.wasm"], fallthrough: true },
 	],
+	pipelines: [],
 };
 
 describe("generateTypes()", () => {
