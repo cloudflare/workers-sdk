@@ -1,0 +1,47 @@
+name: Tests + Checks
+
+on:
+  pull_request:
+    paths:
+      - "**/*.md"
+
+jobs:
+  add-to-project:
+    if: github.ref != 'refs/heads/changeset-release/main'
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}-add-pr
+      cancel-in-progress: true
+    timeout-minutes: 30
+    name: Add PR to project
+    runs-on: ubuntu-latest
+    steps:
+      - run: curl -X POST https://devprod-status-bot.devprod.workers.dev/pr-project/workers-sdk/${{ github.event.number }}
+
+  check:
+    timeout-minutes: 30
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}-pr-checks
+      cancel-in-progress: true
+
+    name: "Checks"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Succeed
+        run: "true"
+
+  test:
+    timeout-minutes: 60
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}-${{ matrix.filter }}-test
+      cancel-in-progress: true
+
+    name: "Tests"
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-13]
+        filter: ["./fixtures/*", "./packages/*", "./tools"]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Succeed
+        run: "true"
