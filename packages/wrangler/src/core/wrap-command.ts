@@ -13,9 +13,7 @@ import type {
 
 const betaCmdColor = "#BD5B08";
 
-export function wrapCommandDefinition(
-	def: CommandDefinition | NamespaceDefinition
-) {
+export function wrapDefinition(def: CommandDefinition | NamespaceDefinition) {
 	let commandSuffix = "";
 	let description = def.metadata.description;
 	let statusMessage = "";

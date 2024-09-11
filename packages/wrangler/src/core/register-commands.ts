@@ -1,5 +1,5 @@
 import { COMMAND_DEFINITIONS } from "./define-command";
-import { wrapCommandDefinition } from "./wrap-command";
+import { wrapDefinition } from "./wrap-command";
 import type { CommonYargsArgv, SubHelp } from "../yargs-types";
 import type {
 	AliasDefinition,
@@ -155,7 +155,7 @@ function walkTreeAndRegister(
 	}
 
 	// convert our definition into something we can pass to yargs.command
-	const def = wrapCommandDefinition(definition);
+	const def = wrapDefinition(definition);
 
 	// register command
 	yargs.command(
