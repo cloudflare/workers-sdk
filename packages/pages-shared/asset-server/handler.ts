@@ -227,9 +227,8 @@ export async function generateHandler<
 						? `${destination.pathname}${destination.search || search}${
 								destination.hash
 							}`
-						: `${destination.href}${destination.search ? "" : search}${
-								destination.hash
-							}`;
+						: `${destination.href}${destination.search ? "" : search}`;
+
 				switch (status) {
 					case 301:
 						return new MovedPermanentlyResponse(location, undefined, {
