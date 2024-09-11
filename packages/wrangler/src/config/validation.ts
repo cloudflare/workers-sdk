@@ -2127,6 +2127,14 @@ const validateAssetsConfig: ValidatorFn = (diagnostics, field, value) => {
 			["single-page-application", "404-page", "none"]
 		) && isValid;
 
+	isValid =
+		validateAdditionalProperties(diagnostics, field, Object.keys(value), [
+			"directory",
+			"binding",
+			"html_handling",
+			"not_found_handling",
+		]) && isValid;
+
 	return isValid;
 };
 

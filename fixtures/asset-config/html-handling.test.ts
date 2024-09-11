@@ -29,7 +29,7 @@ type TestCase = {
 };
 
 const testCases: {
-	htmlHandling:
+	html_handling:
 		| "auto-trailing-slash"
 		| "drop-trailing-slash"
 		| "force-trailing-slash"
@@ -37,7 +37,7 @@ const testCases: {
 	cases: TestCase[];
 }[] = [
 	{
-		htmlHandling: "auto-trailing-slash",
+		html_handling: "auto-trailing-slash",
 		cases: [
 			{
 				title: "/ -> 200 (with /index.html)",
@@ -70,7 +70,7 @@ const testCases: {
 			{
 				title: "/both.html -> /both 307 (with /both.html)",
 				files: ["/both.html", "/both/index.html"],
-				requestPath: "/both",
+				requestPath: "/both.html",
 				matchedFile: "/both.html",
 				finalPath: "/both",
 			},
@@ -242,7 +242,7 @@ const testCases: {
 		],
 	},
 	{
-		htmlHandling: "drop-trailing-slash",
+		html_handling: "drop-trailing-slash",
 		cases: [
 			// note that we don't drop the "/" if that is the only path component
 			{
@@ -450,7 +450,7 @@ const testCases: {
 		],
 	},
 	{
-		htmlHandling: "force-trailing-slash",
+		html_handling: "force-trailing-slash",
 		cases: [
 			{
 				title: "/ -> 200 (with /index.html)",
@@ -664,7 +664,7 @@ const testCases: {
 		],
 	},
 	{
-		htmlHandling: "none",
+		html_handling: "none",
 		cases: [
 			{
 				title: "/ -> 404",
@@ -794,12 +794,12 @@ describe("htmlHanding options", () => {
 	afterEach(() => {
 		vi.mocked(getAssetWithMetadataFromKV).mockRestore();
 	});
-	describe.each(testCases)(`$htmlHandling`, ({ htmlHandling, cases }) => {
+	describe.each(testCases)(`$html_handling`, ({ html_handling, cases }) => {
 		beforeEach(() => {
 			vi.mocked(applyConfigurationDefaults).mockImplementation(() => {
 				return {
-					htmlHandling,
-					notFoundHandling: "none",
+					html_handling,
+					not_found_handling: "none",
 				};
 			});
 		});
@@ -815,6 +815,7 @@ describe("htmlHanding options", () => {
 						undefined,
 						matchedFile
 					);
+					console.dir(response.status);
 					expect(response.status).toBe(200);
 					expect(response.url).toBe(BASE_URL + finalPath);
 					// can't check intermediate 307 directly:
