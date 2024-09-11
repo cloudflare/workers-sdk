@@ -123,6 +123,11 @@ export const instancesDescribeHandler = async (args: HandlerOptions) => {
 		);
 	}
 
+	const lastSuccessfulStepName = getLastSuccessfulStep(instance);
+	if (lastSuccessfulStepName != null) {
+		formattedInstance["Last Successful Step"] = lastSuccessfulStepName;
+	}
+
 	// display the error if the instance errored out
 	if (instance.error != null) {
 		formattedInstance.Error = red(
@@ -249,4 +254,27 @@ const logStep = (
 
 		logger.table(prettyAttempts);
 	}
+};
+
+const getLastSuccessfulStep = (logs: InstanceStatusAndLogs): string | null => {
+	let lastSuccessfulStepName: string | null = null;
+
+	for (const step of logs.steps) {
+		switch (step.type) {
+			case "step":
+				if (step.success == true) {
+					lastSuccessfulStepName = step.name;
+				}
+				break;
+			case "sleep":
+				if (step.end != null) {
+					lastSuccessfulStepName = step.name;
+				}
+				break;
+			case "termination":
+				break;
+		}
+	}
+
+	return lastSuccessfulStepName;
 };
