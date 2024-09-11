@@ -29,7 +29,7 @@
 
 - [#6612](https://github.com/cloudflare/workers-sdk/pull/6612) [`6471090`](https://github.com/cloudflare/workers-sdk/commit/64710904ad4055054bea09ebb23ededab140aa79) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - fix: Add hyperdrive binding support in `getPlatformProxy`
 
-  example:
+  Example:
 
   ```toml
   # wrangler.toml
