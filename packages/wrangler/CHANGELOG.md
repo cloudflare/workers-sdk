@@ -21,9 +21,9 @@
   `wrangler pipelines delete <pipeline>`: Delete a pipeline
 
   Examples:
-  wrangler pipelines create my-pipeline --r2 MY_BUCKET --access-key-id "my-key" --secret-access-key "my-secret"
-  wrangler pipelines show my-pipeline
-  wrangler pipelines delete my-pipline
+  `wrangler pipelines create my-pipeline --r2 MY_BUCKET --access-key-id "my-key" --secret-access-key "my-secret"`
+  `wrangler pipelines show my-pipeline`
+  `wrangler pipelines delete my-pipline`
 
 ### Patch Changes
 
