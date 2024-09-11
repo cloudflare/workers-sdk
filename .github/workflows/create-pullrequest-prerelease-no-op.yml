@@ -1,0 +1,19 @@
+name: Create Pull Request Prerelease
+
+on:
+  pull_request:
+    paths:
+      - "**/*.md"
+
+jobs:
+  build:
+    if: ${{ github.repository_owner == 'cloudflare' }}
+    name: Build & Publish a Prerelease to the Adhoc Registry
+    runs-on: ubuntu-latest
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}
+      cancel-in-progress: true
+    timeout-minutes: 30
+    steps:
+      - name: Succeed
+        run: "true"
