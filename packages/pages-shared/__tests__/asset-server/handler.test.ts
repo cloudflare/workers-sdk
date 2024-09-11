@@ -390,40 +390,6 @@ describe("asset-server handler", () => {
 		});
 	}
 
-	// test("Returns a redirect without duplicating the hash component", async () => {
-	// 	const { response, spies } = await getTestResponse({
-	// 		request: "https://foo.com/bar",
-	// 		metadata: createMetadataObjectWithRedirects([
-	// 			{ from: "/bar", to: "https://foobar.com/##heading-7", status: 301 },
-	// 		]),
-	// 	});
-
-	// 	expect(spies.fetchAsset).toBe(0);
-	// 	expect(spies.findAssetEntryForPath).toBe(0);
-	// 	expect(spies.getAssetKey).toBe(0);
-	// 	expect(spies.negotiateContent).toBe(0);
-	// 	expect(response.status).toBe(301);
-	// 	expect(response.headers.get("Location")).toBe(
-	// 		"https://foobar.com/##heading-7"
-	// 	);
-	// });
-
-	test("it should redirect uri-encoded paths", async () => {
-		const { response, spies } = await getTestResponse({
-			request: "https://foo.com/some%20page",
-			metadata: createMetadataObjectWithRedirects([
-				{ from: "/some%20page", to: "/home", status: 301 },
-			]),
-		});
-
-		expect(spies.fetchAsset).toBe(0);
-		expect(spies.findAssetEntryForPath).toBe(0);
-		expect(spies.getAssetKey).toBe(0);
-		expect(spies.negotiateContent).toBe(0);
-		expect(response.status).toBe(301);
-		expect(response.headers.get("Location")).toBe("/home");
-	});
-
 	// 	test("getResponseFromMatch - same origin paths specified as root-relative", () => {
 	// 		const res = getResponseFromMatch(
 	// 			{
@@ -917,6 +883,134 @@ describe("asset-server handler", () => {
 				expect.objectContaining({
 					"cache-control": "public, max-age=604800",
 				})
+			);
+		});
+	});
+
+	describe("redirects", () => {
+		test("it should redirect uri-encoded paths", async () => {
+			const { response, spies } = await getTestResponse({
+				request: "https://foo.com/some%20page",
+				metadata: createMetadataObjectWithRedirects([
+					{ from: "/some%20page", to: "/home", status: 301 },
+				]),
+			});
+
+			expect(spies.fetchAsset).toBe(0);
+			expect(spies.findAssetEntryForPath).toBe(0);
+			expect(spies.getAssetKey).toBe(0);
+			expect(spies.negotiateContent).toBe(0);
+			expect(response.status).toBe(301);
+			expect(response.headers.get("Location")).toBe("/home");
+		});
+
+		test("redirects to a query string same-origin", async () => {
+			const { response } = await getTestResponse({
+				request: "https://foo.com/bar",
+				metadata: createMetadataObjectWithRedirects([
+					{ from: "/bar", to: "/?test=abc", status: 301 },
+				]),
+			});
+
+			expect(response.status).toBe(301);
+			expect(response.headers.get("Location")).toBe("/?test=abc");
+		});
+
+		test("redirects to a query string cross-origin", async () => {
+			const { response } = await getTestResponse({
+				request: "https://foo.com/bar",
+				metadata: createMetadataObjectWithRedirects([
+					{ from: "/bar", to: "https://foobar.com/?test=abc", status: 301 },
+				]),
+			});
+
+			expect(response.status).toBe(301);
+			expect(response.headers.get("Location")).toBe(
+				"https://foobar.com/?test=abc"
+			);
+		});
+
+		test("redirects to hash component same-origin", async () => {
+			const { response } = await getTestResponse({
+				request: "https://foo.com/bar",
+				metadata: createMetadataObjectWithRedirects([
+					{ from: "/bar", to: "https://foo.com/##heading-7", status: 301 },
+				]),
+			});
+
+			expect(response.status).toBe(301);
+			expect(response.headers.get("Location")).toBe("/##heading-7");
+		});
+
+		test("redirects to hash component cross-origin", async () => {
+			const { response } = await getTestResponse({
+				request: "https://foo.com/bar",
+				metadata: createMetadataObjectWithRedirects([
+					{ from: "/bar", to: "https://foobar.com/##heading-7", status: 301 },
+				]),
+			});
+
+			expect(response.status).toBe(301);
+			expect(response.headers.get("Location")).toBe(
+				"https://foobar.com/##heading-7"
+			);
+		});
+
+		test("redirects to a query string and hash same-origin", async () => {
+			const { response } = await getTestResponse({
+				request: "https://foo.com/bar",
+				metadata: createMetadataObjectWithRedirects([
+					{ from: "/bar", to: "/?test=abc#def", status: 301 },
+				]),
+			});
+
+			expect(response.status).toBe(301);
+			expect(response.headers.get("Location")).toBe("/?test=abc#def");
+		});
+
+		test("redirects to a query string and hash cross-origin", async () => {
+			const { response } = await getTestResponse({
+				request: "https://foo.com/bar",
+				metadata: createMetadataObjectWithRedirects([
+					{ from: "/bar", to: "https://foobar.com/?test=abc#def", status: 301 },
+				]),
+			});
+
+			expect(response.status).toBe(301);
+			expect(response.headers.get("Location")).toBe(
+				"https://foobar.com/?test=abc#def"
+			);
+		});
+
+		// Query strings must be before the hash to be considered query strings
+		// https://www.rfc-editor.org/rfc/rfc3986#section-4.1
+		// Behaviour in Chrome is that the .hash is "#def?test=abc" and .search is ""
+		test("redirects to a query string and hash against rfc", async () => {
+			const { response } = await getTestResponse({
+				request: "https://foo.com/bar",
+				metadata: createMetadataObjectWithRedirects([
+					{ from: "/bar", to: "https://foobar.com/#def?test=abc", status: 301 },
+				]),
+			});
+
+			expect(response.status).toBe(301);
+			expect(response.headers.get("Location")).toBe(
+				"https://foobar.com/#def?test=abc"
+			);
+		});
+
+		// Query string needs to be _before_ the hash
+		test("redirects to a hash with an incoming query cross-origin", async () => {
+			const { response } = await getTestResponse({
+				request: "https://foo.com/bar?test=abc",
+				metadata: createMetadataObjectWithRedirects([
+					{ from: "/bar", to: "https://foobar.com/#heading", status: 301 },
+				]),
+			});
+
+			expect(response.status).toBe(301);
+			expect(response.headers.get("Location")).toBe(
+				"https://foobar.com/?test=abc#heading"
 			);
 		});
 	});
