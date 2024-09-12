@@ -143,7 +143,7 @@ export function defineCommand(
 ): DefineCommandResult<BaseNamedArgDefinitions> {
 	COMMAND_DEFINITIONS.push(definition as unknown as CommandDefinition);
 
-	// @ts-ignore return type is used for type inference only
+	// @ts-expect-error return type is used for type inference only
 	return {};
 }
 
