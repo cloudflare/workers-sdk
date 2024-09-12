@@ -10,7 +10,13 @@ import {
 	convertCfWorkerInitBindingstoBindings,
 	extractBindingsOfType,
 } from "./api/startDevWorker/utils";
-import { findWranglerToml, printBindings, readConfig } from "./config";
+import {
+	findWranglerToml,
+	loadDotEnvVars,
+	loadProcessDotEnv,
+	printBindings,
+	readConfig,
+} from "./config";
 import { validateRoutes } from "./deploy/deploy";
 import { getEntry } from "./deployment-bundle/entry";
 import { getNodeCompatMode } from "./deployment-bundle/node-compat";
@@ -236,6 +242,21 @@ export function devOptions(yargs: CommonYargsArgv) {
 			})
 			.option("alias", {
 				describe: "A module pair to be substituted in the script",
+				type: "string",
+				requiresArg: true,
+				array: true,
+			})
+			.option("dotenv", {
+				describe: "Populate process.env/import.meta.env with values from .env",
+				type: "boolean",
+			})
+			.option("env-file", {
+				describe: "Path to a file to populate process.env/import.meta.env",
+				type: "string",
+				requiresArg: true,
+			})
+			.option("penv", {
+				describe: "Set a value on process.env/import.meta.env",
 				type: "string",
 				requiresArg: true,
 				array: true,
@@ -618,6 +639,21 @@ export async function startDev(args: StartDevOptions) {
 			);
 		}
 
+		// populate process.env values from .env file and/or --penv cli args
+		const processEnvValues = loadProcessDotEnv({
+			readEnvFile: args.dotenv ?? config.dotenv,
+			path: args.envFile ?? config.env_file ?? ".env",
+			env: args.env,
+			keys: args.penv,
+		}).parsed;
+
+		const dotEnvVars = loadDotEnvVars({
+			readEnvFile: args.dotenv ?? config.dotenv,
+			path: args.envFile ?? config.env_file ?? ".env",
+			env: args.env,
+			keys: args.penv,
+		}).parsed;
+
 		const projectRoot = configPath && path.dirname(configPath);
 
 		const devEnv = new DevEnv();
@@ -684,6 +720,7 @@ export async function startDev(args: StartDevOptions) {
 				build: {
 					bundle: args.bundle !== undefined ? args.bundle : undefined,
 					define: collectKeyValues(args.define),
+					processEnvValues,
 					jsxFactory: args.jsxFactory,
 					jsxFragment: args.jsxFragment,
 					tsconfig: args.tsconfig,
@@ -708,7 +745,7 @@ export async function startDev(args: StartDevOptions) {
 					...collectPlainTextVars(args.var),
 					...convertCfWorkerInitBindingstoBindings({
 						kv_namespaces: args.kv,
-						vars: args.vars,
+						vars: { ...args.vars, ...dotEnvVars },
 						send_email: undefined,
 						wasm_modules: undefined,
 						text_blobs: undefined,
@@ -932,7 +969,7 @@ export async function startDev(args: StartDevOptions) {
 					minify={args.minify ?? configParam.minify}
 					nodejsCompatMode={nodejsCompatMode}
 					build={configParam.build || {}}
-					define={{ ...configParam.define, ...cliDefines }}
+					define={{ ...processEnvValues, ...configParam.define, ...cliDefines }}
 					alias={{ ...configParam.alias, ...cliAlias }}
 					initialMode={args.remote ? "remote" : "local"}
 					jsxFactory={args.jsxFactory || configParam.jsx_factory}
@@ -1390,10 +1427,17 @@ export function getResolvedBindings(
 ) {
 	const cliVars = collectKeyValues(args.var);
 
+	const dotEnvVars = loadDotEnvVars({
+		readEnvFile: args.dotenv ?? configParam.dotenv,
+		path: args.envFile ?? configParam.env_file ?? ".env",
+		env: args.env,
+		keys: args.penv,
+	}).parsed;
+
 	// now log all available bindings into the terminal
 	const bindings = getBindings(configParam, args.env, !args.remote, {
 		kv: args.kv,
-		vars: { ...args.vars, ...cliVars },
+		vars: { ...args.vars, ...cliVars, ...dotEnvVars },
 		durableObjects: args.durableObjects,
 		r2: args.r2,
 		services: args.services,

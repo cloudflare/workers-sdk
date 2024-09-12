@@ -4,7 +4,7 @@ import path from "node:path";
 import { URLSearchParams } from "node:url";
 import { cancel } from "@cloudflare/cli";
 import { fetchListResult, fetchResult } from "../cfetch";
-import { printBindings } from "../config";
+import { loadDotEnvVars, loadProcessDotEnv, printBindings } from "../config";
 import { bundleWorker } from "../deployment-bundle/bundle";
 import {
 	printBundleSize,
@@ -86,6 +86,9 @@ type Props = {
 	vars: Record<string, string> | undefined;
 	defines: Record<string, string> | undefined;
 	alias: Record<string, string> | undefined;
+	dotenv: boolean | undefined;
+	env_file: string | undefined;
+	penv: string[] | undefined;
 	triggers: string[] | undefined;
 	routes: string[] | undefined;
 	legacyEnv: boolean | undefined;
@@ -562,6 +565,21 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		const uploadSourceMaps =
 			props.uploadSourceMaps ?? config.upload_source_maps;
 
+		// populate process.env values from .env file and/or --penv cli args
+		const processEnvValues = loadProcessDotEnv({
+			readEnvFile: props.dotenv ?? config.dotenv,
+			path: props.env_file ?? config.env_file ?? ".env",
+			env: props.env,
+			keys: props.penv,
+		}).parsed;
+
+		const dotEnvVars = loadDotEnvVars({
+			readEnvFile: props.dotenv ?? config.dotenv,
+			path: props.env_file ?? config.env_file ?? ".env",
+			env: props.env,
+			keys: props.penv,
+		}).parsed;
+
 		const {
 			modules,
 			dependencies,
@@ -586,7 +604,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 						minify,
 						sourcemap: uploadSourceMaps,
 						nodejsCompatMode,
-						define: { ...config.define, ...props.defines },
+						define: { ...processEnvValues, ...config.define, ...props.defines },
 						checkFetch: false,
 						alias: config.alias,
 						legacyAssets: config.legacy_assets,
@@ -664,7 +682,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 					: []
 			),
 			send_email: config.send_email,
-			vars: { ...config.vars, ...props.vars },
+			vars: { ...config.vars, ...props.vars, ...dotEnvVars },
 			wasm_modules: config.wasm_modules,
 			browser: config.browser,
 			ai: config.ai,
