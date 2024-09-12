@@ -10758,6 +10758,35 @@ export default{
 			`);
 		});
 	});
+
+	describe("[observability]", () => {
+		it("should allow uploading workers with observability", async () => {
+			writeWranglerToml({
+				observability: {
+					enabled: true,
+					head_sampling_rate: 0.5,
+				},
+			});
+			await fs.promises.writeFile("index.js", `export default {};`);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedObservability: {
+					enabled: true,
+					head_sampling_rate: 0.5,
+				},
+			});
+
+			await runWrangler("publish index.js");
+			expect(std.out).toMatchInlineSnapshot(`
+				"Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
+		});
+	});
 });
 
 /** Write mock assets to the file system so they can be uploaded. */

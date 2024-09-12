@@ -16,6 +16,7 @@ import {
 } from "./delete";
 import { versionsSecretListHandler, versionsSecretsListOptions } from "./list";
 import { versionsSecretPutHandler, versionsSecretsPutOptions } from "./put";
+import type { Observability } from "../../config/environment";
 import type {
 	WorkerMetadata as CfWorkerMetadata,
 	WorkerMetadataBinding,
@@ -104,6 +105,7 @@ export interface VersionDetails {
 interface ScriptSettings {
 	logpush: boolean;
 	tail_consumers: CfTailConsumer[] | null;
+	observability: Observability;
 }
 
 interface CopyLatestWorkerVersionArgs {
@@ -208,6 +210,7 @@ export async function copyWorkerVersionWithNewSecrets({
 			"workers/tag": versionTag,
 		},
 		experimental_assets: undefined,
+		observability: scriptSettings.observability,
 	};
 
 	const body = createWorkerUploadForm(worker);

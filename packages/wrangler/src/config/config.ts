@@ -390,6 +390,7 @@ export const defaultWranglerConfig: Config = {
 	logpush: undefined,
 	upload_source_maps: undefined,
 	experimental_assets: undefined,
+	observability: { enabled: true },
 
 	/** NON-INHERITABLE ENVIRONMENT FIELDS **/
 	define: {},
