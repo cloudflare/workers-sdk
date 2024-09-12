@@ -10,7 +10,7 @@
 		"type:tests": "tsc -p ./tsconfig.json"
 	},
 	"devDependencies": {
-		"@cloudflare/vitest-pool-workers": "^0.4.29",
+		"@cloudflare/vitest-pool-workers": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-types": "^4.20240821.1",
 		"run-script-os": "^1.1.6",
