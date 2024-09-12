@@ -21,7 +21,13 @@ export function validateDescription(
 	const errors: string[] = [];
 
 	console.log("PR:", title);
-	console.log("Labels:", JSON.parse(labels));
+	const parsedLabels = JSON.parse(labels);
+
+	if (parsedLabels.includes("skip-pr-validation")) {
+		console.log(
+			"Skipping validation because the `skip-pr-validation` label has been applied"
+		);
+	}
 
 	if (
 		!/^Fixes (#\d+|\[[A-Z]+-\d+\]\(https:\/\/jira\.cfdata\.org\/browse\/[A-Z]+-\d+\))/m.test(
@@ -47,6 +53,32 @@ export function validateDescription(
 	) {
 		errors.push(
 			"Your PR must include tests, or provide justification for why no tests are required"
+		);
+	}
+
+	if (/- \[x\] I don't know/.test(body)) {
+		errors.push(
+			"Your PR cannot be merged with a status of `I don't know` for e2e tests. When your PR is reviewed by the Wrangler team they'll decide whether e2e tests need to be run"
+		);
+	}
+
+	if (
+		!(
+			/- \[x\] Required \/ Maybe required/.test(body) ||
+			/- \[x\] Not required because: .+/.test(body)
+		)
+	) {
+		errors.push(
+			"Your PR must run E2E tests, or provide justification for why running them is not required"
+		);
+	}
+
+	if (
+		/- \[x\] Required \/ Maybe required/.test(body) &&
+		!parsedLabels.includes("e2e")
+	) {
+		errors.push(
+			"Since your PR requires E2E tests to be run, it needs to have the `e2e` label applied on GitHub"
 		);
 	}
 
