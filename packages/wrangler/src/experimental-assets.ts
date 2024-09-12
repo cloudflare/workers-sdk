@@ -143,7 +143,7 @@ export const syncExperimentalAssets = async (
 						body: payload,
 					}
 				);
-				assetUploadCount += payload.length;
+				assetUploadCount += bucket.length;
 				logger.info(
 					`Uploaded ${assetUploadCount} of ${numberFilesToUpload} assets`
 				);
