@@ -66,7 +66,7 @@ describe("match-tag", () => {
 		it("throws no errors", async () => {
 			vi.stubEnv("WRANGLER_CI_MATCH_TAG", "abc123");
 			mockWorker("my-worker", "abc123");
-			expect(
+			await expect(
 				verifyWorkerMatchesCITag("some-account-id", "my-worker")
 			).resolves.toBeUndefined();
 		});
@@ -74,7 +74,7 @@ describe("match-tag", () => {
 		it("ignores errors if no tag match provided", async () => {
 			vi.stubEnv("WRANGLER_CI_MATCH_TAG", "");
 			mockWorker("network-error-worker", "abc123");
-			expect(
+			await expect(
 				verifyWorkerMatchesCITag("some-account-id", "my-worker")
 			).resolves.toBeUndefined();
 		});
@@ -84,7 +84,7 @@ describe("match-tag", () => {
 		it("catches worker not found from API and throws validation error", async () => {
 			vi.stubEnv("WRANGLER_CI_MATCH_TAG", "abc123");
 			mockWorker("a-worker", "abc123");
-			expect(
+			await expect(
 				verifyWorkerMatchesCITag("some-account-id", "b-worker")
 			).rejects.toMatchInlineSnapshot(
 				`[Error: Your Worker's name (b-worker) does not match what is expected by the CI system]`
@@ -94,7 +94,7 @@ describe("match-tag", () => {
 		it("catches all other API errors and throws generic validation error", async () => {
 			vi.stubEnv("WRANGLER_CI_MATCH_TAG", "abc123");
 			mockWorker("a-worker", "abc123");
-			expect(
+			await expect(
 				verifyWorkerMatchesCITag("some-account-id", "network-error-worker")
 			).rejects.toMatchInlineSnapshot(
 				`[Error: Wrangler cannot validate that your Worker name matches what is expected by the CI system]`
@@ -104,7 +104,7 @@ describe("match-tag", () => {
 		it("throws validation error if tag mismatches", async () => {
 			vi.stubEnv("WRANGLER_CI_MATCH_TAG", "abc123a");
 			mockWorker("my-worker", "abc123b");
-			expect(
+			await expect(
 				verifyWorkerMatchesCITag("some-account-id", "my-worker")
 			).rejects.toMatchInlineSnapshot(
 				`[Error: Your Worker's name (my-worker) does not match what is expected by the CI system]`
@@ -121,7 +121,9 @@ describe("match-tag", () => {
 				vi.stubEnv("WRANGLER_CI_MATCH_TAG", "abc123");
 				mockWorker("a-worker", "abc123");
 				writeWranglerToml({ name: "b-worker" });
-				expect(runWrangler("deploy ./index.js")).rejects.toMatchInlineSnapshot(
+				await expect(
+					runWrangler("deploy ./index.js")
+				).rejects.toMatchInlineSnapshot(
 					`[Error: Your Worker's name (b-worker) does not match what is expected by the CI system]`
 				);
 			});
@@ -130,7 +132,9 @@ describe("match-tag", () => {
 				vi.stubEnv("WRANGLER_CI_MATCH_TAG", "abc123");
 				mockWorker("a-worker", "abc123");
 				writeWranglerToml({ name: "network-error-worker" });
-				expect(runWrangler("deploy ./index.js")).rejects.toMatchInlineSnapshot(
+				await expect(
+					runWrangler("deploy ./index.js")
+				).rejects.toMatchInlineSnapshot(
 					`[Error: Wrangler cannot validate that your Worker name matches what is expected by the CI system]`
 				);
 			});
@@ -139,7 +143,9 @@ describe("match-tag", () => {
 				vi.stubEnv("WRANGLER_CI_MATCH_TAG", "abc123a");
 				mockWorker("my-worker", "abc123b");
 				writeWranglerToml({ name: "my-worker" });
-				expect(runWrangler("deploy ./index.js")).rejects.toMatchInlineSnapshot(
+				await expect(
+					runWrangler("deploy ./index.js")
+				).rejects.toMatchInlineSnapshot(
 					`[Error: Your Worker's name (my-worker) does not match what is expected by the CI system]`
 				);
 			});
