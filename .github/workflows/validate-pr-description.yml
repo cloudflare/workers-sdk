@@ -1,6 +1,8 @@
 name: Validate PR Description
 
-on: pull_request
+on:
+  pull_request:
+    types: [opened, reopened, labeled, unlabeled, edited]
 
 jobs:
   check:
@@ -29,3 +31,4 @@ jobs:
         env:
           TITLE: ${{ github.event.pull_request.title }}
           BODY: ${{ github.event.pull_request.body }}
+          LABELS: ${{ github.event.pull_request.labels.*.name }}
