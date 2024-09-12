@@ -2,7 +2,7 @@ name: Validate PR Description
 
 on:
   pull_request:
-    types: [opened, reopened, labeled, unlabeled, edited]
+    types: [opened, synchronize, reopened, labeled, unlabeled, edited]
 
 jobs:
   check:
