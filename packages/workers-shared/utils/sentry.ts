@@ -6,7 +6,11 @@ export function setupSentry(
 	dsn: string,
 	clientId: string,
 	clientSecret: string
-): Toucan {
+): Toucan | undefined {
+	// Are we running locally without access to Sentry secrets? If so, don't initialise Sentry
+	if (!(dsn && clientId && clientSecret)) {
+		return undefined;
+	}
 	const sentry = new Toucan({
 		dsn,
 		request,
