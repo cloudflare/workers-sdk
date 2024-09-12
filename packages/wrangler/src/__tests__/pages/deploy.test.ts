@@ -249,11 +249,11 @@ describe("pages deploy", () => {
 
 		expect(getProjectRequestCount).toBe(2);
 		expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
-		"✨ Success! Uploaded 1 files (TIMINGS)
+			"✨ Success! Uploaded 1 files (TIMINGS)
 
-		🌎 Deploying...
-		✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
-	`);
+			🌎 Deploying...
+			✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
+		`);
 	});
 
 	it("should retry uploads", async () => {
@@ -420,11 +420,11 @@ describe("pages deploy", () => {
 		expect(getProjectRequestCount).toBe(2);
 
 		expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
-		"✨ Success! Uploaded 1 files (TIMINGS)
+			"✨ Success! Uploaded 1 files (TIMINGS)
 
-		🌎 Deploying...
-		✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
-	`);
+			🌎 Deploying...
+			✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
+		`);
 	});
 
 	it("should retry POST /deployments", async () => {
@@ -582,11 +582,11 @@ describe("pages deploy", () => {
 		expect(requests.length).toBe(2);
 
 		expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
-		"✨ Success! Uploaded 1 files (TIMINGS)
+			"✨ Success! Uploaded 1 files (TIMINGS)
 
-		🌎 Deploying...
-		✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
-	`);
+			🌎 Deploying...
+			✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
+		`);
 	});
 
 	it("should retry GET /deployments/:deploymentId", async () => {
@@ -802,13 +802,13 @@ describe("pages deploy", () => {
 		expect(getProjectRequestCount).toEqual(2);
 		expect(getDeploymentDetailsRequestCount).toEqual(3);
 		expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
-		"✨ Compiled Worker successfully
-		✨ Success! Uploaded 1 files (TIMINGS)
+			"✨ Compiled Worker successfully
+			✨ Success! Uploaded 1 files (TIMINGS)
 
-		✨ Uploading Functions bundle
-		🌎 Deploying...
-		✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
-	`);
+			✨ Uploading Functions bundle
+			🌎 Deploying...
+			✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
+		`);
 
 		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
@@ -1010,11 +1010,11 @@ describe("pages deploy", () => {
 		await runWrangler("pages deploy . --project-name=foo");
 
 		expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
-		"✨ Success! Uploaded 1 files (TIMINGS)
+			"✨ Success! Uploaded 1 files (TIMINGS)
 
-		🌎 Deploying...
-		✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
-	`);
+			🌎 Deploying...
+			✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
+		`);
 	});
 
 	it("should try to use multiple buckets (up to the max concurrency)", async () => {
@@ -1204,11 +1204,11 @@ describe("pages deploy", () => {
 		);
 
 		expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
-		"✨ Success! Uploaded 4 files (TIMINGS)
+			"✨ Success! Uploaded 4 files (TIMINGS)
 
-		🌎 Deploying...
-		✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
-	`);
+			🌎 Deploying...
+			✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
+		`);
 	});
 
 	it("should resolve child directories correctly", async () => {
@@ -1397,11 +1397,11 @@ describe("pages deploy", () => {
 		);
 
 		expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
-		"✨ Success! Uploaded 4 files (TIMINGS)
+			"✨ Success! Uploaded 4 files (TIMINGS)
 
-		🌎 Deploying...
-		✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
-	`);
+			🌎 Deploying...
+			✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
+		`);
 	});
 
 	it("should resolve the current directory correctly", async () => {
@@ -1592,11 +1592,11 @@ describe("pages deploy", () => {
 		);
 
 		expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
-		"✨ Success! Uploaded 4 files (TIMINGS)
+			"✨ Success! Uploaded 4 files (TIMINGS)
 
-		🌎 Deploying...
-		✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
-	`);
+			🌎 Deploying...
+			✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
+		`);
 	});
 
 	it("should not error when directory names contain periods and houses a extensionless file", async () => {
@@ -1981,13 +1981,13 @@ describe("pages deploy", () => {
 
 			expect(getProjectRequestCount).toEqual(2);
 			expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
-			"✨ Compiled Worker successfully
-			✨ Success! Uploaded 1 files (TIMINGS)
+				"✨ Compiled Worker successfully
+				✨ Success! Uploaded 1 files (TIMINGS)
 
-			✨ Uploading Functions bundle
-			🌎 Deploying...
-			✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
-		`);
+				✨ Uploading Functions bundle
+				🌎 Deploying...
+				✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
+			`);
 
 			expect(std.err).toMatchInlineSnapshot('""');
 		});
@@ -2236,13 +2236,13 @@ async function onRequest() {
 
 			expect(getProjectRequestCount).toEqual(2);
 			expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
-			"✨ Compiled Worker successfully
-			✨ Success! Uploaded 1 files (TIMINGS)
+				"✨ Compiled Worker successfully
+				✨ Success! Uploaded 1 files (TIMINGS)
 
-			✨ Uploading Functions bundle
-			🌎 Deploying...
-			✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
-		`);
+				✨ Uploading Functions bundle
+				🌎 Deploying...
+				✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
+			`);
 
 			// make sure there were no errors
 			expect(std.err).toMatchInlineSnapshot('""');
@@ -2504,14 +2504,14 @@ async function onRequest() {
 
 			expect(getProjectRequestCount).toEqual(2);
 			expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
-			"✨ Compiled Worker successfully
-			✨ Success! Uploaded 1 files (TIMINGS)
+				"✨ Compiled Worker successfully
+				✨ Success! Uploaded 1 files (TIMINGS)
 
-			✨ Uploading Functions bundle
-			✨ Uploading _routes.json
-			🌎 Deploying...
-			✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
-		`);
+				✨ Uploading Functions bundle
+				✨ Uploading _routes.json
+				🌎 Deploying...
+				✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
+			`);
 
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 			expect(std.err).toMatchInlineSnapshot('""');
@@ -3038,13 +3038,13 @@ Failed to publish your Function. Got error: Uncaught TypeError: a is not a funct
 
 			expect(getProjectRequestCount).toEqual(2);
 			expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
-			"✨ Success! Uploaded 1 files (TIMINGS)
+				"✨ Success! Uploaded 1 files (TIMINGS)
 
-			✨ Compiled Worker successfully
-			✨ Uploading Worker bundle
-			🌎 Deploying...
-			✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
-		`);
+				✨ Compiled Worker successfully
+				✨ Uploading Worker bundle
+				🌎 Deploying...
+				✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
+			`);
 
 			expect(std.err).toMatchInlineSnapshot('""');
 		});
@@ -3307,13 +3307,13 @@ Failed to publish your Function. Got error: Uncaught TypeError: a is not a funct
 
 			expect(getProjectRequestCount).toEqual(2);
 			expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
-			"✨ Success! Uploaded 1 files (TIMINGS)
+				"✨ Success! Uploaded 1 files (TIMINGS)
 
-			✨ Compiled Worker successfully
-			✨ Uploading Worker bundle
-			🌎 Deploying...
-			✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
-		`);
+				✨ Compiled Worker successfully
+				✨ Uploading Worker bundle
+				🌎 Deploying...
+				✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
+			`);
 
 			// make sure there were no errors
 			expect(std.err).toMatchInlineSnapshot('""');
@@ -3573,14 +3573,14 @@ Failed to publish your Function. Got error: Uncaught TypeError: a is not a funct
 
 			expect(getProjectRequestCount).toEqual(2);
 			expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
-			"✨ Success! Uploaded 1 files (TIMINGS)
+				"✨ Success! Uploaded 1 files (TIMINGS)
 
-			✨ Compiled Worker successfully
-			✨ Uploading Worker bundle
-			✨ Uploading _routes.json
-			🌎 Deploying...
-			✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
-		`);
+				✨ Compiled Worker successfully
+				✨ Uploading Worker bundle
+				✨ Uploading _routes.json
+				🌎 Deploying...
+				✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
+			`);
 
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
@@ -3934,13 +3934,13 @@ and that at least one include rule is provided.
 
 			expect(getProjectRequestCount).toEqual(2);
 			expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
-			"✨ Success! Uploaded 1 files (TIMINGS)
+				"✨ Success! Uploaded 1 files (TIMINGS)
 
-			✨ Compiled Worker successfully
-			✨ Uploading Worker bundle
-			🌎 Deploying...
-			✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
-		`);
+				✨ Compiled Worker successfully
+				✨ Uploading Worker bundle
+				🌎 Deploying...
+				✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
+			`);
 
 			expect(std.err).toMatchInlineSnapshot('""');
 		});
@@ -4300,12 +4300,12 @@ and that at least one include rule is provided.
 			await runWrangler("pages deploy public --project-name=foo --no-bundle");
 
 			expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
-			"✨ Success! Uploaded 1 files (TIMINGS)
+				"✨ Success! Uploaded 1 files (TIMINGS)
 
-			✨ Uploading Worker bundle
-			🌎 Deploying...
-			✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
-		`);
+				✨ Uploading Worker bundle
+				🌎 Deploying...
+				✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
+			`);
 
 			expect(std.err).toMatchInlineSnapshot('""');
 		});
@@ -4713,13 +4713,13 @@ Failed to publish your Function. Got error: Uncaught TypeError: a is not a funct
 
 			expect(getProjectRequestCount).toEqual(2);
 			expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
-			"✨ Success! Uploaded 1 files (TIMINGS)
+				"✨ Success! Uploaded 1 files (TIMINGS)
 
-			✨ Compiled Worker successfully
-			✨ Uploading Worker bundle
-			🌎 Deploying...
-			✨ Deployment complete! Take a peek over at https://abcxyz.pages-is-awesome.pages.dev/"
-		`);
+				✨ Compiled Worker successfully
+				✨ Uploading Worker bundle
+				🌎 Deploying...
+				✨ Deployment complete! Take a peek over at https://abcxyz.pages-is-awesome.pages.dev/"
+			`);
 
 			expect(std.err).toMatchInlineSnapshot('""');
 		});
@@ -4981,13 +4981,13 @@ Failed to publish your Function. Got error: Uncaught TypeError: a is not a funct
 
 			expect(getProjectRequestCount).toEqual(2);
 			expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
-			"✨ Success! Uploaded 1 files (TIMINGS)
+				"✨ Success! Uploaded 1 files (TIMINGS)
 
-			✨ Compiled Worker successfully
-			✨ Uploading Worker bundle
-			🌎 Deploying...
-			✨ Deployment complete! Take a peek over at https://abcxyz.pages-project.pages.dev/"
-		`);
+				✨ Compiled Worker successfully
+				✨ Uploading Worker bundle
+				🌎 Deploying...
+				✨ Deployment complete! Take a peek over at https://abcxyz.pages-project.pages.dev/"
+			`);
 
 			expect(std.err).toMatchInlineSnapshot('""');
 		});
@@ -4997,7 +4997,8 @@ Failed to publish your Function. Got error: Uncaught TypeError: a is not a funct
 		generatedWorkerBundleCheck: (
 			workerJsContent: FormDataEntryValue | null
 		) => Promise<void>,
-		compatibility_flags?: string[]
+		compatibility_flags?: string[],
+		aliases?: string[]
 	) => {
 		mockGetUploadTokenRequest(
 			"<<funfetti-auth-jwt>>",
@@ -5069,6 +5070,7 @@ Failed to publish your Function. Got error: Uncaught TypeError: a is not a funct
 							errors: [],
 							messages: [],
 							result: {
+								aliases,
 								latest_stage: {
 									name: "deploy",
 									status: "success",
@@ -5368,6 +5370,66 @@ Failed to publish your Function. Got error: Uncaught TypeError: a is not a funct
 			});
 
 			await runWrangler("pages deploy");
+		});
+	});
+
+	describe("deployment aliases", () => {
+		it("should support outputting an alias url", async () => {
+			// set up the directory of static files to upload.
+			mkdirSync("public");
+			writeFileSync("public/README.md", "This is a readme");
+
+			simulateServer(async () => {}, [], ["https://staging.foo.pages.dev"]);
+
+			await runWrangler("pages deploy public --project-name=foo");
+
+			expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
+				"✨ Success! Uploaded 1 files (TIMINGS)
+
+				🌎 Deploying...
+				✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/
+				✨ Deployment alias URL: https://staging.foo.pages.dev"
+			`);
+
+			expect(std.err).toMatchInlineSnapshot(`""`);
+		});
+
+		it("ignores custom domains", async () => {
+			// set up the directory of static files to upload.
+			mkdirSync("public");
+			writeFileSync("public/README.md", "This is a readme");
+
+			simulateServer(async () => {}, [], ["https://example.com"]);
+
+			await runWrangler("pages deploy public --project-name=foo");
+
+			expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
+				"✨ Success! Uploaded 1 files (TIMINGS)
+
+				🌎 Deploying...
+				✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
+			`);
+
+			expect(std.err).toMatchInlineSnapshot(`""`);
+		});
+
+		it("continues to work fine if no aliases", async () => {
+			// set up the directory of static files to upload.
+			mkdirSync("public");
+			writeFileSync("public/README.md", "This is a readme");
+
+			simulateServer(async () => {}, [], []);
+
+			await runWrangler("pages deploy public --project-name=foo");
+
+			expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
+				"✨ Success! Uploaded 1 files (TIMINGS)
+
+				🌎 Deploying...
+				✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
+			`);
+
+			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 	});
 });
