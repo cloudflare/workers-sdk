@@ -1,3 +1,4 @@
+/* eslint-disable turbo/no-undeclared-env-vars */
 if (require.main === module) {
 	const errors = validateDescription(
 		process.env.TITLE as string,
