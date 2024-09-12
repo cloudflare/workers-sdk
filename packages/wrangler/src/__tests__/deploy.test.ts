@@ -144,6 +144,35 @@ describe("deploy", () => {
 		});
 	});
 
+	it("should successfully deploy with CI tag match", async () => {
+		vi.stubEnv("WRANGLER_CI_MATCH_TAG", "abc123");
+		writeWorkerSource();
+		writeWranglerToml({
+			routes: ["example.com/some-route/*"],
+			workers_dev: true,
+		});
+		mockServiceScriptData({
+			scriptName: "test-name",
+			script: { id: "test-name", tag: "abc123" },
+		});
+		mockSubDomainRequest();
+		mockUploadWorkerRequest();
+		mockUpdateWorkerRequest({ enabled: false });
+		mockPublishRoutesRequest({ routes: ["example.com/some-route/*"] });
+
+		await runWrangler("deploy ./index.js");
+		expect(std.out).toMatchInlineSnapshot(`
+			"Total Upload: xx KiB / gzip: xx KiB
+			Worker Startup Time: 100 ms
+			Uploaded test-name (TIMINGS)
+			Deployed test-name triggers (TIMINGS)
+			  https://test-name.test-sub-domain.workers.dev
+			  example.com/some-route/*
+			Current Version ID: Galaxy-Class"
+		`);
+		expect(std.err).toMatchInlineSnapshot(`""`);
+	});
+
 	it("should resolve wrangler.toml relative to the entrypoint", async () => {
 		fs.mkdirSync("./some-path/worker", { recursive: true });
 		fs.writeFileSync(
@@ -11204,7 +11233,7 @@ function mockLegacyScriptData(options: { scripts: LegacyScriptInfo[] }) {
 	);
 }
 
-type DurableScriptInfo = { id: string; migration_tag?: string };
+type DurableScriptInfo = { id: string; migration_tag?: string; tag?: string };
 
 function mockServiceScriptData(options: {
 	script?: DurableScriptInfo;

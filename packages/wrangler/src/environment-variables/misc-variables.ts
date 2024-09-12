@@ -89,3 +89,12 @@ export const getOutputFileDirectoryFromEnv = getEnvironmentVariableFactory({
 export const getOutputFilePathFromEnv = getEnvironmentVariableFactory({
 	variableName: "WRANGLER_OUTPUT_FILE_PATH",
 });
+
+/**
+ * `WRANGLER_CI_MATCH_TAG` specifies a worker tag
+ *
+ * If this is set, Wrangler will ensure the worker being targeted has this tag
+ */
+export const getCIMatchTag = getEnvironmentVariableFactory({
+	variableName: "WRANGLER_CI_MATCH_TAG",
+});
