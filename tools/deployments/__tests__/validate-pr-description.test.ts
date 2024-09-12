@@ -1,14 +1,4 @@
-import {
-	existsSync,
-	mkdtempSync,
-	realpathSync,
-	rmSync,
-	writeFileSync,
-} from "node:fs";
-import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
-import dedent from "ts-dedent";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { validateDescription } from "../validate-pr-description";
 
 describe("validateDescription()", () => {
