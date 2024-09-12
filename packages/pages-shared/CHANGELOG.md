@@ -1,5 +1,14 @@
 # @cloudflare/pages-shared
 
+## 0.11.56
+
+### Patch Changes
+
+- [#6680](https://github.com/cloudflare/workers-sdk/pull/6680) [`7579bd8`](https://github.com/cloudflare/workers-sdk/commit/7579bd8e53a30a5ae8e3dc606b46e575948c9ff1) Thanks [@WalshyDev](https://github.com/WalshyDev)! - fix: fix Pages redirects going to a hash location to be duped. This means if you have a rule like `/foo/bar /foo#bar` it will no longer result in `/foo#bar#bar` but the correct `/foo#bar`.
+
+- Updated dependencies [[`3f5b934`](https://github.com/cloudflare/workers-sdk/commit/3f5b9343a46dedcb80c8e216eb3ca9d7f687f6cf)]:
+  - miniflare@3.20240909.0
+
 ## 0.11.55
 
 ### Patch Changes
