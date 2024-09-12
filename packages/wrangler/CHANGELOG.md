@@ -8,7 +8,7 @@
 
   Adds a cloudchamber curl command which allows easy access to arbitrary cloudchamber API endpoints.
 
-- [#6649](https://github.com/cloudflare/workers-sdk/pull/6649) [`46a91e7`](https://github.com/cloudflare/workers-sdk/commit/46a91e7e7d286e6835bb87cfdd6c9096deaeba6e) Thanks [@andyjessop](https://github.com/andyjessop)! - feature: Integrate the Cloudflare Pipelines product into wrangler.
+- [#6649](https://github.com/cloudflare/workers-sdk/pull/6649) [`46a91e7`](https://github.com/cloudflare/workers-sdk/commit/46a91e7e7d286e6835bb87cfdd6c9096deaeba6e) Thanks [@oliy](https://github.com/oliy)! - feature: Integrate the Cloudflare Pipelines product into wrangler.
 
   Cloudflare Pipelines is a product that handles the ingest of event streams
   into R2. This feature integrates various forms of managing pipelines.
@@ -21,15 +21,15 @@
   `wrangler pipelines delete <pipeline>`: Delete a pipeline
 
   Examples:
-  wrangler pipelines create my-pipeline --r2 MY_BUCKET --access-key-id "my-key" --secret-access-key "my-secret"
-  wrangler pipelines show my-pipeline
-  wrangler pipelines delete my-pipline
+  `wrangler pipelines create my-pipeline --r2 MY_BUCKET --access-key-id "my-key" --secret-access-key "my-secret"`
+  `wrangler pipelines show my-pipeline`
+  `wrangler pipelines delete my-pipline`
 
 ### Patch Changes
 
 - [#6612](https://github.com/cloudflare/workers-sdk/pull/6612) [`6471090`](https://github.com/cloudflare/workers-sdk/commit/64710904ad4055054bea09ebb23ededab140aa79) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - fix: Add hyperdrive binding support in `getPlatformProxy`
 
-  example:
+  Example:
 
   ```toml
   # wrangler.toml
