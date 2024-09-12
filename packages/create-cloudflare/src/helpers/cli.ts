@@ -50,6 +50,7 @@ export const C3_DEFAULTS: C3Args = {
 	category: "hello-world",
 	type: "hello-world",
 	framework: "analog",
+	experimental: false,
 	autoUpdate: true,
 	deploy: true,
 	git: true,

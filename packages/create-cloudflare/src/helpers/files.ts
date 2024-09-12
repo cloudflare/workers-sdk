@@ -36,6 +36,14 @@ export const readFile = (path: string) => {
 	}
 };
 
+export const removeFile = (path: string) => {
+	try {
+		fs.rmSync(path, { force: true });
+	} catch (error) {
+		crash(error as string);
+	}
+};
+
 export const directoryExists = (path: string): boolean => {
 	try {
 		const stat = statSync(path);

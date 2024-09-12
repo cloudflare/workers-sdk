@@ -113,6 +113,7 @@ const updateViteConfig = (ctx: C3Context) => {
 const config: TemplateConfig = {
 	configVersion: 1,
 	id: "analog",
+	frameworkCli: "create-analog",
 	platform: "pages",
 	displayName: "Analog",
 	copyFiles: {
