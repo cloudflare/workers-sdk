@@ -1,8 +1,8 @@
 import { fetchResult } from "./cfetch";
 import { getCIMatchTag } from "./environment-variables/misc-variables";
 import { FatalError } from "./errors";
-import { ServiceMetadataRes } from "./init";
 import { logger } from "./logger";
+import type { ServiceMetadataRes } from "./init";
 
 export async function verifyWorkerMatchesCITag(
 	accountId: string,
