@@ -10615,6 +10615,43 @@ export default{
 		});
 	});
 
+	describe("pipelines", () => {
+		it("should upload pipelines bindings", async () => {
+			writeWranglerToml({
+				pipelines: [
+					{
+						binding: "MY_PIPELINE",
+						pipeline: "0123456789ABCDEF0123456789ABCDEF",
+					},
+				],
+			});
+			await fs.promises.writeFile("index.js", `export default {};`);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedBindings: [
+					{
+						type: "pipelines",
+						name: "MY_PIPELINE",
+						id: "0123456789ABCDEF0123456789ABCDEF",
+					},
+				],
+			});
+
+			await runWrangler("deploy index.js");
+			expect(std.out).toMatchInlineSnapshot(`
+			"Total Upload: xx KiB / gzip: xx KiB
+			Worker Startup Time: 100 ms
+			Your worker has access to the following bindings:
+			- Pipelines:
+			  - MY_PIPELINE: 0123456789ABCDEF0123456789ABCDEF
+			Uploaded test-name (TIMINGS)
+			Deployed test-name triggers (TIMINGS)
+			  https://test-name.test-sub-domain.workers.dev
+			Current Version ID: Galaxy-Class"
+		`);
+		});
+	});
+
 	describe("--keep-vars", () => {
 		it("should send keepVars when keep-vars is passed in", async () => {
 			vi.stubEnv("CLOUDFLARE_API_TOKEN", "hunter2");

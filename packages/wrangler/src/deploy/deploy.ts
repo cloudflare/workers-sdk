@@ -692,6 +692,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			analytics_engine_datasets: config.analytics_engine_datasets,
 			dispatch_namespaces: config.dispatch_namespaces,
 			mtls_certificates: config.mtls_certificates,
+			pipelines: config.pipelines,
 			logfwdr: config.logfwdr,
 			experimental_assets: config.experimental_assets?.binding
 				? { binding: config.experimental_assets.binding }
@@ -875,6 +876,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 					logger.log("Worker Startup Time:", result.startup_time_ms, "ms");
 				}
 				bindingsPrinted = true;
+
 				printBindings({ ...withoutStaticAssets, vars: maskedVars });
 
 				versionId = parseNonHyphenedUuid(result.deployment_id);
