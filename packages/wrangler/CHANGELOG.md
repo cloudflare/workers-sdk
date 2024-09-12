@@ -1,5 +1,70 @@
 # wrangler
 
+## 3.77.0
+
+### Minor Changes
+
+- [#6674](https://github.com/cloudflare/workers-sdk/pull/6674) [`831f892`](https://github.com/cloudflare/workers-sdk/commit/831f89217627554f4fc984dd8d51bf2a4409ec31) Thanks [@andyjessop](https://github.com/andyjessop)! - feat: Added new [[pipelines]] bindings. This creates a new binding that allows sending events to
+  the specified pipeline.
+
+  Example:
+
+  [[pipelines]]
+  binding = "MY_PIPELINE"
+  pipeline = "my-pipeline"
+
+- [#6668](https://github.com/cloudflare/workers-sdk/pull/6668) [`88c40be`](https://github.com/cloudflare/workers-sdk/commit/88c40bec9b32ae1a6bcc2f41427ba5958cb3ae63) Thanks [@zebp](https://github.com/zebp)! - feature: add observability setting to wrangler.toml
+
+  Adds the `observability` setting which provides your Worker with automatic persistent logs that can be searched, filtered, and queried directly from the Workers dashboard.
+
+- [#6679](https://github.com/cloudflare/workers-sdk/pull/6679) [`2174127`](https://github.com/cloudflare/workers-sdk/commit/21741277a5bcd6fe6a3f531c8cacc34df84d287e) Thanks [@jkoe-cf](https://github.com/jkoe-cf)! - feat: adding option to specify a rule within the config to delete (if no rules are specified, all rules get deleted)
+
+- [#6666](https://github.com/cloudflare/workers-sdk/pull/6666) [`4107f57`](https://github.com/cloudflare/workers-sdk/commit/4107f573b85eb86cc163c4acadf2b85138f76d97) Thanks [@threepointone](https://github.com/threepointone)! - feat: support analytics engine in local/remote dev
+
+  This adds "support" for analytics engine datasets for `wrangler dev`. Specifically, it simply mocks the AE bindings so that they exist while developing (and don't throw when accessed).
+
+  This does NOT add support in Pages, though we very well could do so in a similar way in a followup.
+
+- [#6640](https://github.com/cloudflare/workers-sdk/pull/6640) [`8527675`](https://github.com/cloudflare/workers-sdk/commit/8527675e1cf83519a211c8b4cc43161ac29757f1) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - feat: experimental workers assets can be ignored by adding a .assetsignore file
+
+  This file can be added to the root of the assets directory that is to be uploaded alongside the Worker
+  when using `experimental_assets`.
+
+  The file follows the `.gitignore` syntax, and any matching paths will not be included in the upload.
+
+- [#6652](https://github.com/cloudflare/workers-sdk/pull/6652) [`648cfdd`](https://github.com/cloudflare/workers-sdk/commit/648cfdd32d8c1b60e037c3d453fcb1691fbf4b45) Thanks [@bthwaites](https://github.com/bthwaites)! - feat: Update R2 Get Event Notification response, display, and actions
+
+- [#6625](https://github.com/cloudflare/workers-sdk/pull/6625) [`8dcd456`](https://github.com/cloudflare/workers-sdk/commit/8dcd45665c0c420653f57cc7218269e05b2f9a25) Thanks [@maxwellpeterson](https://github.com/maxwellpeterson)! - feature: Add support for placement hints
+
+  Adds the `hint` field to smart placement configuration. When set, placement hints will be used to decide where smart-placement-enabled Workers are run.
+
+- [#6631](https://github.com/cloudflare/workers-sdk/pull/6631) [`59a0072`](https://github.com/cloudflare/workers-sdk/commit/59a0072740aa19f8d2b7524b993a7be35ba67fce) Thanks [@emily-shen](https://github.com/emily-shen)! - feat: Add config options 'html_handling' and 'not_found_handling' to experimental_asset field in wrangler.toml
+
+### Patch Changes
+
+- [#6621](https://github.com/cloudflare/workers-sdk/pull/6621) [`6523db2`](https://github.com/cloudflare/workers-sdk/commit/6523db2695d70ad64da7cfe6f4731ac82181ac51) Thanks [@emily-shen](https://github.com/emily-shen)! - fix: Validate `routes` in `wrangler dev` and `wrangler deploy` for Workers with assets
+
+  We want wrangler to error if users are trying to deploy a Worker with assets, and routes with a path component.
+
+  All Workers with assets must have either:
+
+  - custom domain routes
+  - pattern routes which have no path component (except for the wildcard splat) "some.domain.com/\*"
+
+- [#6687](https://github.com/cloudflare/workers-sdk/pull/6687) [`7bbed63`](https://github.com/cloudflare/workers-sdk/commit/7bbed63fb592df9b5fd081eebad614a8a1a4c281) Thanks [@GregBrimble](https://github.com/GregBrimble)! - fix: Fix asset upload count messaging
+
+- [#6628](https://github.com/cloudflare/workers-sdk/pull/6628) [`33cc0ec`](https://github.com/cloudflare/workers-sdk/commit/33cc0ecce9062641649fc6ee2e1d68a15f20fc5c) Thanks [@GregBrimble](https://github.com/GregBrimble)! - chore: Improves messaging when uploading assets
+
+- [#6671](https://github.com/cloudflare/workers-sdk/pull/6671) [`48eeff4`](https://github.com/cloudflare/workers-sdk/commit/48eeff4674a47da4d1faffc93f44543e909fca01) Thanks [@jkoe-cf](https://github.com/jkoe-cf)! - fix: Update R2 Create Event Notification response
+
+- [#6618](https://github.com/cloudflare/workers-sdk/pull/6618) [`67711c2`](https://github.com/cloudflare/workers-sdk/commit/67711c2158d706ba2e6bafebf923013e0e0feec0) Thanks [@GregBrimble](https://github.com/GregBrimble)! - fix: Switch to multipart/form-data upload format for Workers Assets
+
+  This has proven to be much more reliable.
+
+- Updated dependencies [[`3f5b934`](https://github.com/cloudflare/workers-sdk/commit/3f5b9343a46dedcb80c8e216eb3ca9d7f687f6cf), [`59a0072`](https://github.com/cloudflare/workers-sdk/commit/59a0072740aa19f8d2b7524b993a7be35ba67fce)]:
+  - miniflare@3.20240909.0
+  - @cloudflare/workers-shared@0.5.0
+
 ## 3.76.0
 
 ### Minor Changes
