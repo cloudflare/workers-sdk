@@ -4416,6 +4416,7 @@ addEventListener('fetch', event => {});`
 					["Q29udGVudCBvZiBmaWxlLTM="],
 					"ff5016e92f039aa743a4ff7abb3180fa",
 					{
+						// TODO: this should be "text/plain; charset=utf-8", but msw? is stripping the charset part
 						type: "text/plain",
 					}
 				)
@@ -4682,6 +4683,7 @@ addEventListener('fetch', event => {});`
 					["Q29udGVudCBvZiBmaWxlLTI="],
 					"7574a8cd3094a050388ac9663af1c1d6",
 					{
+						// TODO: this should be "text/plain; charset=utf-8", but msw? is stripping the charset part
 						type: "text/plain",
 					}
 				)

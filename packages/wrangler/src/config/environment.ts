@@ -897,4 +897,10 @@ export type ExperimentalAssets = {
 	/** Absolute path to assets directory */
 	directory: string;
 	binding?: string;
+	html_handling?:
+		| "auto-trailing-slash"
+		| "force-trailing-slash"
+		| "drop-trailing-slash"
+		| "none";
+	not_found_handling?: "single-page-application" | "404-page" | "none";
 };

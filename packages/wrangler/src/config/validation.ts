@@ -2103,9 +2103,36 @@ const validateAssetsConfig: ValidatorFn = (diagnostics, field, value) => {
 		) && isValid;
 
 	isValid =
+		validateOptionalProperty(
+			diagnostics,
+			field,
+			"html_handling",
+			(value as ExperimentalAssets).html_handling,
+			"string",
+			[
+				"auto-trailing-slash",
+				"force-trailing-slash",
+				"drop-trailing-slash",
+				"none",
+			]
+		) && isValid;
+
+	isValid =
+		validateOptionalProperty(
+			diagnostics,
+			field,
+			"not_found_handling",
+			(value as ExperimentalAssets).not_found_handling,
+			"string",
+			["single-page-application", "404-page", "none"]
+		) && isValid;
+
+	isValid =
 		validateAdditionalProperties(diagnostics, field, Object.keys(value), [
 			"directory",
 			"binding",
+			"html_handling",
+			"not_found_handling",
 		]) && isValid;
 
 	return isValid;

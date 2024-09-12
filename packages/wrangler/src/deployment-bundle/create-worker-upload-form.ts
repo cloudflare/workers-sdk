@@ -11,6 +11,7 @@ import type {
 	CfUserLimits,
 	CfWorkerInit,
 } from "./worker.js";
+import type { AssetConfig } from "@cloudflare/workers-shared";
 import type { Json } from "miniflare";
 
 const moduleTypeMimeType: { [type in CfModuleType]: string | undefined } = {
@@ -140,7 +141,11 @@ export type WorkerMetadataPut = {
 	tail_consumers?: CfTailConsumer[];
 	limits?: CfUserLimits;
 	// experimental assets (EWC will expect 'assets')
-	assets?: string;
+	assets?: {
+		jwt: string;
+		config?: AssetConfig;
+	};
+
 	// Allow unsafe.metadata to add arbitrary properties at runtime
 	[key: string]: unknown;
 };
@@ -176,11 +181,24 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 		experimental_assets,
 	} = worker;
 
+	const assetConfig = {
+		html_handling: experimental_assets?.assetConfig?.html_handling,
+		not_found_handling: experimental_assets?.assetConfig?.not_found_handling,
+	};
+
 	// short circuit if static assets upload only
-	if (experimental_assets && !experimental_assets.routingConfig.hasUserWorker) {
+	if (
+		experimental_assets &&
+		!experimental_assets.routingConfig.has_user_worker
+	) {
 		formData.set(
 			"metadata",
-			JSON.stringify({ assets: experimental_assets.jwt })
+			JSON.stringify({
+				assets: {
+					jwt: experimental_assets.jwt,
+					config: assetConfig,
+				},
+			})
 		);
 		return formData;
 	}
@@ -565,7 +583,12 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 		...(tail_consumers && { tail_consumers }),
 		...(limits && { limits }),
 		...(annotations && { annotations }),
-		...(experimental_assets && { assets: experimental_assets.jwt }),
+		...(experimental_assets && {
+			assets: {
+				jwt: experimental_assets.jwt,
+				config: assetConfig,
+			},
+		}),
 	};
 
 	if (bindings.unsafe?.metadata !== undefined) {
