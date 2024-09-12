@@ -3125,7 +3125,7 @@ const validatePipelineBinding: ValidatorFn = (diagnostics, field, value) => {
 	// Pipeline bindings must have a binding and a pipeline.
 	if (!isRequiredProperty(value, "binding", "string")) {
 		diagnostics.errors.push(
-			`"${field}" bindings should have a string "binding" field but got ${JSON.stringify(
+			`"${field}" bindings must have a string "binding" field but got ${JSON.stringify(
 				value
 			)}.`
 		);
@@ -3133,7 +3133,7 @@ const validatePipelineBinding: ValidatorFn = (diagnostics, field, value) => {
 	}
 	if (!isRequiredProperty(value, "pipeline", "string")) {
 		diagnostics.errors.push(
-			`"${field}" bindings must have a "pipeline" field but got ${JSON.stringify(
+			`"${field}" bindings must have a string "pipeline" field but got ${JSON.stringify(
 				value
 			)}.`
 		);
