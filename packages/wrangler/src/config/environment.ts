@@ -40,6 +40,25 @@ export type CloudchamberConfig = {
 };
 
 /**
+ * Configuration in wrangler for Durable Object Migrations
+ */
+export type DurableObjectMigration = {
+	/** A unique identifier for this migration. */
+	tag: string;
+	/** The new Durable Objects being defined. */
+	new_classes?: string[];
+	/** The new SQLite Durable Objects being defined. */
+	new_sqlite_classes?: string[];
+	/** The Durable Objects being renamed. */
+	renamed_classes?: {
+		from: string;
+		to: string;
+	}[];
+	/** The Durable Objects being removed. */
+	deleted_classes?: string[];
+};
+
+/**
  * The `EnvironmentInheritable` interface declares all the configuration fields for an environment
  * that can be inherited (and overridden) from the top-level environment.
  */
@@ -183,21 +202,7 @@ interface EnvironmentInheritable {
 	 * @default []
 	 * @inheritable
 	 */
-	migrations: {
-		/** A unique identifier for this migration. */
-		tag: string;
-		/** The new Durable Objects being defined. */
-		new_classes?: string[];
-		/** The new SQLite Durable Objects being defined. */
-		new_sqlite_classes?: string[];
-		/** The Durable Objects being renamed. */
-		renamed_classes?: {
-			from: string;
-			to: string;
-		}[];
-		/** The Durable Objects being removed. */
-		deleted_classes?: string[];
-	}[];
+	migrations: DurableObjectMigration[];
 
 	/**
 	 * "Cron" definitions to trigger a Worker's "scheduled" function.

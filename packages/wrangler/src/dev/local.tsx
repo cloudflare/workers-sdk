@@ -30,6 +30,7 @@ export interface LocalProps {
 	compatibilityFlags: string[] | undefined;
 	usageModel: "bundled" | "unbound" | undefined;
 	bindings: CfWorkerInit["bindings"];
+	migrations: Config["migrations"] | undefined;
 	workerDefinitions: WorkerRegistry | undefined;
 	legacyAssetPaths: LegacyAssetPaths | undefined;
 	experimentalAssets: ExperimentalAssetsOptions | undefined;
@@ -90,6 +91,7 @@ export async function localPropsToConfigBundle(
 		compatibilityFlags: props.compatibilityFlags,
 		inspectorPort: props.runtimeInspectorPort,
 		bindings: props.bindings,
+		migrations: props.migrations,
 		workerDefinitions: props.workerDefinitions,
 		legacyAssetPaths: props.legacyAssetPaths,
 		experimentalAssets: props.experimentalAssets,

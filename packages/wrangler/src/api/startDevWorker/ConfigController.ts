@@ -236,6 +236,7 @@ async function resolveConfig(
 		entrypoint: entry.file,
 		directory: entry.directory,
 		bindings,
+		migrations: input.migrations ?? config.migrations,
 		sendMetrics: input.sendMetrics ?? config.send_metrics,
 		triggers: await resolveTriggers(config, input),
 		env: input.env,
@@ -315,6 +316,18 @@ async function resolveConfig(
 	) {
 		logger.warn(
 			"Queues are currently in Beta and are not supported in wrangler dev remote mode."
+		);
+	}
+
+	if (
+		resolved.migrations?.some(
+			(m) =>
+				Array.isArray(m.new_sqlite_classes) && m.new_sqlite_classes.length > 0
+		) &&
+		resolved.dev?.remote
+	) {
+		throw new UserError(
+			"SQLite in Durable Objects is only supported in local mode."
 		);
 	}
 	return resolved;

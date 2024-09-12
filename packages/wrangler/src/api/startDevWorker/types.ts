@@ -1,6 +1,7 @@
 import type { Config } from "../../config";
 import type {
 	CustomDomainRoute,
+	DurableObjectMigration,
 	Rule,
 	ZoneIdRoute,
 	ZoneNameRoute,
@@ -74,6 +75,7 @@ export interface StartDevWorkerInput {
 
 	/** The bindings available to the worker. The specified bindind type will be exposed to the worker on the `env` object under the same key. */
 	bindings?: Record<string, Binding>; // Type level constraint for bindings not sharing names
+	migrations?: DurableObjectMigration[];
 	/** The triggers which will cause the worker's exported default handlers to be called. */
 	triggers?: Trigger[];
 
