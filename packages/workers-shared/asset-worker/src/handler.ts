@@ -13,7 +13,6 @@ import type EntrypointType from "./index";
 export const handleRequest = async (
 	request: Request,
 	configuration: Required<AssetConfig>,
-	// HELP: is this a legit pattern? can i do this?? feels wrong
 	exists: typeof EntrypointType.prototype.exists,
 	getByETag: typeof EntrypointType.prototype.getByETag
 ) => {
