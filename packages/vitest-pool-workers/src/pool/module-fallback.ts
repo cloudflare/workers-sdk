@@ -276,11 +276,23 @@ async function viteResolve(
 	referrer: string,
 	isRequire: boolean
 ): Promise<string> {
+	// note: using require.resolve doesn't seem to work well on windows, so there we skip this more proper cjs module resolution
+	if (isRequire && !isWindows) {
+		try {
+			// we use the built in require.resolve method to resolve required/cjs modules
+			return require.resolve(specifier, {
+				paths: [platformPath.dirname(referrer)],
+			});
+		} catch {}
+	}
+
+	// we repurpose pluginContainer.resolveId for the esm module resolution
+	// when bumping to vite 6 we should instead use the createIdResolver method instead
+	// (which we can use for both cjs and esm)
 	const resolved = await vite.pluginContainer.resolveId(specifier, referrer, {
 		ssr: true,
-		// https://github.com/vitejs/vite/blob/v5.1.4/packages/vite/src/node/plugins/resolve.ts#L178-L179
-		custom: { "node-resolve": { isRequire } },
 	});
+
 	if (resolved === null) {
 		// Vite's resolution algorithm doesn't apply Node resolution to specifiers
 		// starting with a dot. Unfortunately, the `@prisma/client` package includes
