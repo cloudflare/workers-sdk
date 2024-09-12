@@ -27,6 +27,7 @@ export function validateDescription(
 		console.log(
 			"Skipping validation because the `skip-pr-validation` label has been applied"
 		);
+		return [];
 	}
 
 	if (
