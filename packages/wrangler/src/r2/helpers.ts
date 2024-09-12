@@ -417,6 +417,11 @@ export type PutNotificationRequestBody = {
 	rules: NotificationRule[];
 };
 
+// This type captures the shape of the data expected by EWC API.
+export type DeleteNotificationRequestBody = {
+	ruleIds?: string[];
+};
+
 export function eventNotificationHeaders(
 	apiCredentials: ApiCredentials
 ): HeadersInit {
@@ -571,16 +576,25 @@ export async function deleteEventNotificationConfig(
 	apiCredentials: ApiCredentials,
 	accountId: string,
 	bucketName: string,
-	queueName: string
+	queueName: string,
+	ruleId: string | undefined
 ): Promise<null> {
 	const queue = await getQueue(config, queueName);
 	const headers = eventNotificationHeaders(apiCredentials);
 	logger.log(
 		`Disabling event notifications for "${bucketName}" to queue ${queueName}...`
 	);
+
+	const body: DeleteNotificationRequestBody =
+		ruleId !== undefined
+			? {
+					ruleIds: [ruleId],
+				}
+			: {};
+
 	return await fetchResult<null>(
 		`/accounts/${accountId}/event_notifications/r2/${bucketName}/configuration/queues/${queue.queue_id}`,
-		{ method: "DELETE", headers }
+		{ method: "DELETE", body: JSON.stringify(body), headers }
 	);
 }
 
