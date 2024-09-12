@@ -10,6 +10,7 @@ overrides:
   '@types/react-transition-group>@types/react': ^18
   '@cloudflare/elements>@types/react': ^18
   capnpc-ts>typescript: 4.2.4
+  vitest@1.5.0>@types/node: 20.8.3
 
 patchedDependencies:
   '@cloudflare/component-listbox@1.10.6':
@@ -140,9 +141,6 @@ importers:
       '@cloudflare/workers-types':
         specifier: ^4.20240821.1
         version: 4.20240909.0
-      '@types/node':
-        specifier: 20.8.3
-        version: 20.8.3
       run-script-os:
         specifier: ^1.1.6
         version: 1.1.6
@@ -1593,9 +1591,6 @@ importers:
       '@types/mime':
         specifier: ^3.0.4
         version: 3.0.4
-      '@types/node':
-        specifier: 20.8.3
-        version: 20.8.3
       concurrently:
         specifier: ^8.2.2
         version: 8.2.2
@@ -8605,7 +8600,7 @@ packages:
     hasBin: true
     peerDependencies:
       '@edge-runtime/vm': '*'
-      '@types/node': ^18.0.0 || >=20.0.0
+      '@types/node': 20.8.3
       '@vitest/browser': 1.5.0
       '@vitest/ui': 1.5.0
       happy-dom: '*'
