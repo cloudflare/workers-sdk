@@ -56,6 +56,7 @@ describe("versions secret put", () => {
 				"secret_key",
 				"secret_text",
 			]);
+			expect(metadata.keep_assets).toBeTruthy();
 		});
 
 		await runWrangler(
@@ -96,6 +97,7 @@ describe("versions secret put", () => {
 				"secret_key",
 				"secret_text",
 			]);
+			expect(metadata.keep_assets).toBeTruthy();
 		});
 
 		await runWrangler(`versions secret bulk --name script-name --x-versions`);
@@ -146,6 +148,7 @@ describe("versions secret put", () => {
 				"secret_key",
 				"secret_text",
 			]);
+			expect(metadata.keep_assets).toBeTruthy();
 		});
 
 		await runWrangler(`versions secret bulk --name script-name --x-versions`);
