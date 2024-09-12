@@ -137,6 +137,9 @@ importers:
       '@cloudflare/workers-types':
         specifier: ^4.20240821.1
         version: 4.20240909.0
+      run-script-os:
+        specifier: ^1.1.6
+        version: 1.1.6
       undici:
         specifier: ^5.28.4
         version: 5.28.4
@@ -7758,6 +7761,10 @@ packages:
   run-parallel@1.2.0:
     resolution: {integrity: sha512-5l4VyZR86LZ/lDxZTR6jqL8AFE2S0IFLMP26AbjsLVADxHdhB/c0GUsH+y39UfCi3dzz8OlQuPmnaJOMoDHQBA==}
 
+  run-script-os@1.1.6:
+    resolution: {integrity: sha512-ql6P2LzhBTTDfzKts+Qo4H94VUKpxKDFz6QxxwaUZN0mwvi7L3lpOI7BqPCq7lgDh3XLl0dpeXwfcVIitlrYrw==}
+    hasBin: true
+
   rxjs@6.6.7:
     resolution: {integrity: sha512-hTdwr+7yYNIT5n4AMYp85KA6yw2Va0FLa3Rguvbpa4W3I5xynaBZo41cM3XM+4Q6fRMj3sBYIR1VAmZMXYJvRQ==}
     engines: {npm: '>=2.0.0'}
@@ -11549,7 +11556,7 @@ snapshots:
       pathe: 1.1.1
       picocolors: 1.0.1
       sirv: 2.0.4
-      vitest: 1.6.0(@types/node@20.12.12)(@vitest/ui@1.6.0)(supports-color@9.2.2)
+      vitest: 1.6.0(@types/node@20.8.3)(@vitest/ui@1.6.0)
 
   '@vitest/utils@1.5.0':
     dependencies:
@@ -15763,6 +15770,8 @@ snapshots:
   run-parallel@1.2.0:
     dependencies:
       queue-microtask: 1.2.3
+
+  run-script-os@1.1.6: {}
 
   rxjs@6.6.7:
     dependencies:
