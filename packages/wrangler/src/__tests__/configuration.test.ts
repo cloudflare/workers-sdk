@@ -3282,10 +3282,10 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasWarnings()).toBe(true);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - \\"pipelines[0]\\" bindings should have a string \\"binding\\" field but got {}.
-					  - \\"pipelines[0]\\" bindings must have a \\"pipeline\\" field but got {}.
-					  - \\"pipelines[2]\\" bindings should have a string \\"binding\\" field but got {\\"binding\\":2000,\\"project\\":2111}.
-					  - \\"pipelines[2]\\" bindings must have a \\"pipeline\\" field but got {\\"binding\\":2000,\\"project\\":2111}."
+					  - \\"pipelines[0]\\" bindings must have a string \\"binding\\" field but got {}.
+					  - \\"pipelines[0]\\" bindings must have a string \\"pipeline\\" field but got {}.
+					  - \\"pipelines[2]\\" bindings must have a string \\"binding\\" field but got {\\"binding\\":2000,\\"project\\":2111}.
+					  - \\"pipelines[2]\\" bindings must have a string \\"pipeline\\" field but got {\\"binding\\":2000,\\"project\\":2111}."
 				`);
 			});
 		});
