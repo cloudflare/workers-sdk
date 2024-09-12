@@ -13,6 +13,7 @@
 		"@cloudflare/vitest-pool-workers": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-types": "^4.20240821.1",
+		"@types/node": "20.8.3",
 		"run-script-os": "^1.1.6",
 		"undici": "^5.28.4",
 		"vitest": "1.5.0",

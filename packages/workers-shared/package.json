@@ -49,12 +49,13 @@
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-types": "^4.20240909.0",
 		"@types/mime": "^3.0.4",
+		"@types/node": "20.8.3",
 		"concurrently": "^8.2.2",
 		"esbuild": "0.17.19",
 		"rimraf": "^6.0.1",
 		"toucan-js": "^3.3.1",
 		"typescript": "^5.5.4",
-		"vitest": "2.0.5"
+		"vitest": "1.5.0"
 	},
 	"engines": {
 		"node": ">=16.7.0"
