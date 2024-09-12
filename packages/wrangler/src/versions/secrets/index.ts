@@ -209,6 +209,7 @@ export async function copyWorkerVersionWithNewSecrets({
 			"workers/message": versionMessage,
 			"workers/tag": versionTag,
 		},
+		keep_assets: true,
 		experimental_assets: undefined,
 		observability: scriptSettings.observability,
 	};

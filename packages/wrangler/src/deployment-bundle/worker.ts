@@ -355,6 +355,7 @@ export interface CfWorkerInit {
 	tail_consumers: CfTailConsumer[] | undefined;
 	limits: CfUserLimits | undefined;
 	annotations?: Record<string, string | undefined>;
+	keep_assets?: boolean | undefined;
 	experimental_assets: CfExperimentalAssets | undefined;
 	observability: Observability | undefined;
 }

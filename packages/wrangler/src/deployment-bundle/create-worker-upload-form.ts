@@ -179,6 +179,7 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 		tail_consumers,
 		limits,
 		annotations,
+		keep_assets,
 		experimental_assets,
 		observability,
 	} = worker;
@@ -585,6 +586,7 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 		...(tail_consumers && { tail_consumers }),
 		...(limits && { limits }),
 		...(annotations && { annotations }),
+		...(keep_assets !== undefined && { keep_assets }),
 		...(experimental_assets && {
 			assets: {
 				jwt: experimental_assets.jwt,
