@@ -38,9 +38,9 @@
 
   Adds the `hint` field to smart placement configuration. When set, placement hints will be used to decide where smart-placement-enabled Workers are run.
 
-### Patch Changes
+- [#6631](https://github.com/cloudflare/workers-sdk/pull/6631) [`59a0072`](https://github.com/cloudflare/workers-sdk/commit/59a0072740aa19f8d2b7524b993a7be35ba67fce) Thanks [@emily-shen](https://github.com/emily-shen)! - feat: Add config options 'html_handling' and 'not_found_handling' to experimental_asset field in wrangler.toml
 
-- [#6631](https://github.com/cloudflare/workers-sdk/pull/6631) [`59a0072`](https://github.com/cloudflare/workers-sdk/commit/59a0072740aa19f8d2b7524b993a7be35ba67fce) Thanks [@emily-shen](https://github.com/emily-shen)! - Add config options 'html_handling' and 'not_found_handling' to experimental_asset field in wrangler.toml
+### Patch Changes
 
 - [#6621](https://github.com/cloudflare/workers-sdk/pull/6621) [`6523db2`](https://github.com/cloudflare/workers-sdk/commit/6523db2695d70ad64da7cfe6f4731ac82181ac51) Thanks [@emily-shen](https://github.com/emily-shen)! - fix: Validate `routes` in `wrangler dev` and `wrangler deploy` for Workers with assets
 
