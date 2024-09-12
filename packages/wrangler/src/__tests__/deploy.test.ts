@@ -5085,7 +5085,7 @@ addEventListener('fetch', event => {});`
 			writeWorkerSource();
 			let err: undefined | Error;
 			try {
-				await runWrangler("deploy ./index.js");
+				await runWrangler("deploy ./index.js --name my-worker");
 			} catch (e) {
 				err = e as Error;
 			}
@@ -5108,7 +5108,7 @@ addEventListener('fetch', event => {});`
 			writeWorkerSource();
 			let err: undefined | Error;
 			try {
-				await runWrangler("deploy ./index.js");
+				await runWrangler("deploy ./index.js --name my-worker");
 			} catch (e) {
 				err = e as Error;
 			}
