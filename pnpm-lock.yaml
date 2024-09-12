@@ -24,6 +24,9 @@ patchedDependencies:
   pg@8.11.3:
     hash: afbi5l3roukyz2s7kkn56yzjte
     path: patches/pg@8.11.3.patch
+  toucan-js:
+    hash: b5gffumfuckaq3c77sda2gdfuq
+    path: patches/toucan-js.patch
 
 importers:
 
@@ -679,7 +682,7 @@ importers:
         version: link:../../packages/miniflare
       toucan-js:
         specifier: ^3.3.1
-        version: 3.3.1
+        version: 3.3.1(patch_hash=b5gffumfuckaq3c77sda2gdfuq)
       typescript:
         specifier: ^5.5.2
         version: 5.5.2
@@ -945,7 +948,7 @@ importers:
         version: 0.4.2
       toucan-js:
         specifier: ^3.3.1
-        version: 3.3.1
+        version: 3.3.1(patch_hash=b5gffumfuckaq3c77sda2gdfuq)
       wrangler:
         specifier: workspace:*
         version: link:../wrangler
@@ -997,7 +1000,7 @@ importers:
         version: 0.4.2
       toucan-js:
         specifier: ^3.3.1
-        version: 3.3.1
+        version: 3.3.1(patch_hash=b5gffumfuckaq3c77sda2gdfuq)
       tsconfig:
         specifier: '*'
         version: 7.0.0
@@ -1244,7 +1247,7 @@ importers:
         version: 0.4.2
       toucan-js:
         specifier: ^3.3.1
-        version: 3.3.1
+        version: 3.3.1(patch_hash=b5gffumfuckaq3c77sda2gdfuq)
       undici:
         specifier: ^5.28.4
         version: 5.28.4
@@ -1598,7 +1601,7 @@ importers:
         version: 6.0.1
       toucan-js:
         specifier: ^3.3.1
-        version: 3.3.1
+        version: 3.3.1(patch_hash=b5gffumfuckaq3c77sda2gdfuq)
       typescript:
         specifier: ^5.5.4
         version: 5.5.4
@@ -11559,7 +11562,7 @@ snapshots:
       pathe: 1.1.1
       picocolors: 1.0.1
       sirv: 2.0.4
-      vitest: 1.6.0(@types/node@20.8.3)(@vitest/ui@1.6.0)
+      vitest: 1.6.0(@types/node@20.12.12)(@vitest/ui@1.6.0)(supports-color@9.2.2)
 
   '@vitest/utils@1.5.0':
     dependencies:
@@ -16304,7 +16307,7 @@ snapshots:
 
   totalist@3.0.1: {}
 
-  toucan-js@3.3.1:
+  toucan-js@3.3.1(patch_hash=b5gffumfuckaq3c77sda2gdfuq):
     dependencies:
       '@sentry/core': 7.76.0
       '@sentry/integrations': 7.76.0
