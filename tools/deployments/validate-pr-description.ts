@@ -21,7 +21,7 @@ export function validateDescription(
 	const errors: string[] = [];
 
 	console.log("PR:", title);
-	console.log("Labels:", labels);
+	console.log("Labels:", JSON.parse(labels));
 
 	if (
 		!/^Fixes (#\d+|\[[A-Z]+-\d+\]\(https:\/\/jira\.cfdata\.org\/browse\/[A-Z]+-\d+\))/m.test(
