@@ -24,9 +24,9 @@ patchedDependencies:
   pg@8.11.3:
     hash: afbi5l3roukyz2s7kkn56yzjte
     path: patches/pg@8.11.3.patch
-  toucan-js:
+  toucan-js@3.3.1:
     hash: b5gffumfuckaq3c77sda2gdfuq
-    path: patches/toucan-js.patch
+    path: patches/toucan-js@3.3.1.patch
 
 importers:
 
