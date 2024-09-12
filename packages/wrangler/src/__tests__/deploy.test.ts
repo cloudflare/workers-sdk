@@ -10524,7 +10524,7 @@ export default{
 		});
 	});
 
-	describe.only("pipelines", () => {
+	describe("pipelines", () => {
 		it("should upload pipelines bindings", async () => {
 			writeWranglerToml({
 				pipelines: [
