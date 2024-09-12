@@ -1,4 +1,5 @@
 import { WorkerEntrypoint } from "cloudflare:workers";
+import { setupSentry } from "../../utils/sentry";
 import { AssetsManifest } from "./assets-manifest";
 import { applyConfigurationDefaults } from "./configuration";
 import { getIntent, handleRequest } from "./handler";
@@ -19,11 +20,25 @@ type Env = {
 	ASSETS_KV_NAMESPACE: KVNamespace;
 
 	CONFIG: AssetConfig;
+
+	SENTRY_DSN: string;
+
+	SENTRY_ACCESS_CLIENT_ID: string;
+	SENTRY_ACCESS_CLIENT_SECRET: string;
 };
 
 export default class extends WorkerEntrypoint<Env> {
 	async fetch(request: Request): Promise<Response> {
+		let sentry: ReturnType<typeof setupSentry> | undefined;
 		try {
+			sentry = setupSentry(
+				request,
+				this.ctx,
+				this.env.SENTRY_DSN,
+				this.env.SENTRY_ACCESS_CLIENT_ID,
+				this.env.SENTRY_ACCESS_CLIENT_SECRET
+			);
+
 			return handleRequest(
 				request,
 				applyConfigurationDefaults(this.env.CONFIG),
@@ -31,7 +46,14 @@ export default class extends WorkerEntrypoint<Env> {
 				this.getByETag.bind(this)
 			);
 		} catch (err) {
-			return new InternalServerErrorResponse(err as Error);
+			const response = new InternalServerErrorResponse(err as Error);
+
+			// Log to Sentry if we can
+			if (sentry) {
+				sentry.captureException(err);
+			}
+
+			return response;
 		}
 	}
 
