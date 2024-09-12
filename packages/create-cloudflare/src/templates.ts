@@ -20,6 +20,7 @@ import {
 } from "helpers/files";
 import angularTemplateExperimental from "templates-experimental/angular/c3";
 import astroTemplateExperimental from "templates-experimental/astro/c3";
+import docusaurusTemplateExperimental from "templates-experimental/docusaurus/c3";
 import helloWorldWithAssetsTemplateExperimental from "templates-experimental/hello-world-with-assets/c3";
 import nuxtTemplateExperimental from "templates-experimental/nuxt/c3";
 import qwikTemplateExperimental from "templates-experimental/qwik/c3";
@@ -159,6 +160,7 @@ export function getFrameworkMap({ experimental = false }): TemplateMap {
 		return {
 			angular: angularTemplateExperimental,
 			astro: astroTemplateExperimental,
+			docusaurus: docusaurusTemplateExperimental,
 			nuxt: nuxtTemplateExperimental,
 			qwik: qwikTemplateExperimental,
 			remix: remixTemplateExperimental,
