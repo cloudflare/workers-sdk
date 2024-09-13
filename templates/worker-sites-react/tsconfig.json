@@ -1,8 +1,0 @@
-{
-	"include": ["src", "worker"],
-	"compilerOptions": {
-		"noEmit": true,
-		"allowJs": true,
-		"jsx": "react-jsx"
-	}
-}

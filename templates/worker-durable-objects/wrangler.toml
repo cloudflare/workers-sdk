@@ -1,9 +1,0 @@
-name = "" # todo
-compatibility_date = "2022-05-03"
-
-[durable_objects]
-bindings = [{name = "COUNTER", class_name = "Counter"}]
-
-[[migrations]]
-tag = "v1" # Should be unique for each entry
-new_classes = ["Counter"]
