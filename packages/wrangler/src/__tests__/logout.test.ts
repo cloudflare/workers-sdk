@@ -46,7 +46,7 @@ describe("logout", () => {
 
 		await runWrangler("logout", { CLOUDFLARE_API_TOKEN: undefined });
 
-		expect(std.out).toMatchInlineSnapshot(`"Successfully logged out."`);
+		expect(std.out).toMatchInlineSnapshot(`"Not logged in, exiting..."`);
 		expect(fs.existsSync(config)).toBeFalsy();
 		expect(counter).toBe(1);
 	});

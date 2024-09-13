@@ -146,15 +146,7 @@ describe("getUserInfo()", () => {
 		writeAuthConfigFile({ api_token: "API_TOKEN" });
 		await getUserInfo();
 
-		expect(std.warn).toMatchInlineSnapshot(`
-			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mIt looks like you have used Wrangler v1's \`config\` command to login with an API token.[0m
-
-			  This is no longer supported in the current version of Wrangler.
-			  If you wish to authenticate via an API token then please set the \`CLOUDFLARE_API_TOKEN\`
-			  environment variable.
-
-			"
-		`);
+		expect(std.warn).toMatchInlineSnapshot(`""`);
 	});
 });
 
@@ -185,7 +177,8 @@ describe("whoami", () => {
 		await runWrangler(`whoami --account "account-2"`);
 		expect(std.out).toMatchInlineSnapshot(`
 			"Getting User settings...
-			👋 You are logged in with an OAuth Token, associated with the email user@example.com.
+			ℹ️  The API Token is read from the CLOUDFLARE_API_TOKEN in your environment.
+			👋 You are logged in with an API Token, associated with the email user@example.com.
 			┌───────────────┬────────────┐
 			│ Account Name  │ Account ID │
 			├───────────────┼────────────┤
@@ -195,8 +188,7 @@ describe("whoami", () => {
 			├───────────────┼────────────┤
 			│ Account Three │ account-3  │
 			└───────────────┴────────────┘
-			🔓 Token Permissions: If scopes are missing, you may need to logout and re-login.
-			Scope (Access)
+			🔓 To see token permissions visit https://dash.cloudflare.com/profile/api-tokens.
 			🎢 Membership roles in \\"Account Two\\": Contact account super admin to change your permissions.
 			- Test role"
 		`);
@@ -219,7 +211,8 @@ describe("whoami", () => {
 		await runWrangler(`whoami --account "account-2"`);
 		expect(std.out).toMatchInlineSnapshot(`
 			"Getting User settings...
-			👋 You are logged in with an OAuth Token, associated with the email user@example.com.
+			ℹ️  The API Token is read from the CLOUDFLARE_API_TOKEN in your environment.
+			👋 You are logged in with an API Token, associated with the email user@example.com.
 			┌───────────────┬────────────┐
 			│ Account Name  │ Account ID │
 			├───────────────┼────────────┤
@@ -229,8 +222,7 @@ describe("whoami", () => {
 			├───────────────┼────────────┤
 			│ Account Three │ account-3  │
 			└───────────────┴────────────┘
-			🔓 Token Permissions: If scopes are missing, you may need to logout and re-login.
-			Scope (Access)
+			🔓 To see token permissions visit https://dash.cloudflare.com/profile/api-tokens.
 			🎢 Unable to get membership roles. Make sure you have permissions to read the account."
 		`);
 	});

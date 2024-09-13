@@ -74,7 +74,18 @@ describe("metrics", () => {
 
 				expect(request.count).toBe(1);
 				expect(std.debug).toMatchInlineSnapshot(
-					`"Metrics dispatcher: Posting data {\\"type\\":\\"identify\\",\\"name\\":\\"identify\\",\\"properties\\":{\\"a\\":1,\\"b\\":2}}"`
+					`
+					"-- START CF API REQUEST: GET https://api.cloudflare.com/client/v4/user
+					HEADERS: omitted; set WRANGLER_LOG_SANITIZE=false to include sanitized data
+					INIT: omitted; set WRANGLER_LOG_SANITIZE=false to include sanitized data
+					-- END CF API REQUEST
+					-- START CF API RESPONSE: OK 200
+					HEADERS: omitted; set WRANGLER_LOG_SANITIZE=false to include sanitized data
+					RESPONSE: omitted; set WRANGLER_LOG_SANITIZE=false to include sanitized data
+					-- END CF API RESPONSE
+					Saving to cache: {\\"userId\\":\\"MOCK_USER_ID\\"}
+					Metrics dispatcher: Posting data {\\"type\\":\\"identify\\",\\"name\\":\\"identify\\",\\"properties\\":{\\"a\\":1,\\"b\\":2}}"
+				`
 				);
 				expect(std.out).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -92,7 +103,18 @@ describe("metrics", () => {
 
 				expect(requests.count).toBe(0);
 				expect(std.debug).toMatchInlineSnapshot(
-					`"Metrics dispatcher: Dispatching disabled - would have sent {\\"type\\":\\"identify\\",\\"name\\":\\"identify\\",\\"properties\\":{\\"a\\":1,\\"b\\":2}}."`
+					`
+					"-- START CF API REQUEST: GET https://api.cloudflare.com/client/v4/user
+					HEADERS: omitted; set WRANGLER_LOG_SANITIZE=false to include sanitized data
+					INIT: omitted; set WRANGLER_LOG_SANITIZE=false to include sanitized data
+					-- END CF API REQUEST
+					-- START CF API RESPONSE: OK 200
+					HEADERS: omitted; set WRANGLER_LOG_SANITIZE=false to include sanitized data
+					RESPONSE: omitted; set WRANGLER_LOG_SANITIZE=false to include sanitized data
+					-- END CF API RESPONSE
+					Saving to cache: {\\"userId\\":\\"MOCK_USER_ID\\"}
+					Metrics dispatcher: Dispatching disabled - would have sent {\\"type\\":\\"identify\\",\\"name\\":\\"identify\\",\\"properties\\":{\\"a\\":1,\\"b\\":2}}."
+				`
 				);
 				expect(std.out).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -110,7 +132,16 @@ describe("metrics", () => {
 				await dispatcher.identify({ a: 1, b: 2 });
 				await flushPromises();
 				expect(std.debug).toMatchInlineSnapshot(`
-					"Metrics dispatcher: Posting data {\\"type\\":\\"identify\\",\\"name\\":\\"identify\\",\\"properties\\":{\\"a\\":1,\\"b\\":2}}
+					"-- START CF API REQUEST: GET https://api.cloudflare.com/client/v4/user
+					HEADERS: omitted; set WRANGLER_LOG_SANITIZE=false to include sanitized data
+					INIT: omitted; set WRANGLER_LOG_SANITIZE=false to include sanitized data
+					-- END CF API REQUEST
+					-- START CF API RESPONSE: OK 200
+					HEADERS: omitted; set WRANGLER_LOG_SANITIZE=false to include sanitized data
+					RESPONSE: omitted; set WRANGLER_LOG_SANITIZE=false to include sanitized data
+					-- END CF API RESPONSE
+					Saving to cache: {\\"userId\\":\\"MOCK_USER_ID\\"}
+					Metrics dispatcher: Posting data {\\"type\\":\\"identify\\",\\"name\\":\\"identify\\",\\"properties\\":{\\"a\\":1,\\"b\\":2}}
 					Metrics dispatcher: Failed to send request: Failed to fetch"
 				`);
 				expect(std.out).toMatchInlineSnapshot(`""`);
@@ -154,7 +185,18 @@ describe("metrics", () => {
 
 				expect(requests.count).toBe(1);
 				expect(std.debug).toMatchInlineSnapshot(
-					`"Metrics dispatcher: Posting data {\\"type\\":\\"event\\",\\"name\\":\\"some-event\\",\\"properties\\":{\\"a\\":1,\\"b\\":2}}"`
+					`
+					"-- START CF API REQUEST: GET https://api.cloudflare.com/client/v4/user
+					HEADERS: omitted; set WRANGLER_LOG_SANITIZE=false to include sanitized data
+					INIT: omitted; set WRANGLER_LOG_SANITIZE=false to include sanitized data
+					-- END CF API REQUEST
+					-- START CF API RESPONSE: OK 200
+					HEADERS: omitted; set WRANGLER_LOG_SANITIZE=false to include sanitized data
+					RESPONSE: omitted; set WRANGLER_LOG_SANITIZE=false to include sanitized data
+					-- END CF API RESPONSE
+					Saving to cache: {\\"userId\\":\\"MOCK_USER_ID\\"}
+					Metrics dispatcher: Posting data {\\"type\\":\\"event\\",\\"name\\":\\"some-event\\",\\"properties\\":{\\"a\\":1,\\"b\\":2}}"
+				`
 				);
 				expect(std.out).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -173,7 +215,18 @@ describe("metrics", () => {
 
 				expect(requests.count).toBe(0);
 				expect(std.debug).toMatchInlineSnapshot(
-					`"Metrics dispatcher: Dispatching disabled - would have sent {\\"type\\":\\"event\\",\\"name\\":\\"some-event\\",\\"properties\\":{\\"a\\":1,\\"b\\":2}}."`
+					`
+					"-- START CF API REQUEST: GET https://api.cloudflare.com/client/v4/user
+					HEADERS: omitted; set WRANGLER_LOG_SANITIZE=false to include sanitized data
+					INIT: omitted; set WRANGLER_LOG_SANITIZE=false to include sanitized data
+					-- END CF API REQUEST
+					-- START CF API RESPONSE: OK 200
+					HEADERS: omitted; set WRANGLER_LOG_SANITIZE=false to include sanitized data
+					RESPONSE: omitted; set WRANGLER_LOG_SANITIZE=false to include sanitized data
+					-- END CF API RESPONSE
+					Saving to cache: {\\"userId\\":\\"MOCK_USER_ID\\"}
+					Metrics dispatcher: Dispatching disabled - would have sent {\\"type\\":\\"event\\",\\"name\\":\\"some-event\\",\\"properties\\":{\\"a\\":1,\\"b\\":2}}."
+				`
 				);
 				expect(std.out).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -190,7 +243,16 @@ describe("metrics", () => {
 				await dispatcher.sendEvent("some-event", { a: 1, b: 2 });
 				await flushPromises();
 				expect(std.debug).toMatchInlineSnapshot(`
-					"Metrics dispatcher: Posting data {\\"type\\":\\"event\\",\\"name\\":\\"some-event\\",\\"properties\\":{\\"a\\":1,\\"b\\":2}}
+					"-- START CF API REQUEST: GET https://api.cloudflare.com/client/v4/user
+					HEADERS: omitted; set WRANGLER_LOG_SANITIZE=false to include sanitized data
+					INIT: omitted; set WRANGLER_LOG_SANITIZE=false to include sanitized data
+					-- END CF API REQUEST
+					-- START CF API RESPONSE: OK 200
+					HEADERS: omitted; set WRANGLER_LOG_SANITIZE=false to include sanitized data
+					RESPONSE: omitted; set WRANGLER_LOG_SANITIZE=false to include sanitized data
+					-- END CF API RESPONSE
+					Saving to cache: {\\"userId\\":\\"MOCK_USER_ID\\"}
+					Metrics dispatcher: Posting data {\\"type\\":\\"event\\",\\"name\\":\\"some-event\\",\\"properties\\":{\\"a\\":1,\\"b\\":2}}
 					Metrics dispatcher: Failed to send request: Failed to fetch"
 				`);
 				expect(std.out).toMatchInlineSnapshot(`""`);

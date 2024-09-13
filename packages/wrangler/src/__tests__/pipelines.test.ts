@@ -311,25 +311,22 @@ describe("pipelines", () => {
 
 		expect(std.err).toMatchInlineSnapshot(`""`);
 		expect(std.out).toMatchInlineSnapshot(`
-          "wrangler pipelines
+			"wrangler pipelines
 
-          🚰 Manage Worker Pipelines [open beta]
+			COMMANDS
+			  wrangler pipelines create <pipeline>  Create a new pipeline
+			  wrangler pipelines list               List current pipelines
+			  wrangler pipelines show <pipeline>    Show a pipeline configuration
+			  wrangler pipelines update <pipeline>  Update a pipeline
+			  wrangler pipelines delete <pipeline>  Delete a pipeline
 
-
-          COMMANDS
-            wrangler pipelines create <pipeline>  Create a new pipeline
-            wrangler pipelines list               List current pipelines
-            wrangler pipelines show <pipeline>    Show a pipeline configuration
-            wrangler pipelines update <pipeline>  Update a pipeline
-            wrangler pipelines delete <pipeline>  Delete a pipeline
-
-          GLOBAL FLAGS
-            -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
-            -c, --config                    Path to .toml configuration file  [string]
-            -e, --env                       Environment to use for operations and .env files  [string]
-            -h, --help                      Show help  [boolean]
-            -v, --version                   Show version number  [boolean]"
-        `);
+			GLOBAL FLAGS
+			  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
+			  -c, --config                    Path to .toml configuration file  [string]
+			  -e, --env                       Environment to use for operations and .env files  [string]
+			  -h, --help                      Show help  [boolean]
+			  -v, --version                   Show version number  [boolean]"
+		`);
 	});
 
 	it("create - should create a pipeline", async () => {
