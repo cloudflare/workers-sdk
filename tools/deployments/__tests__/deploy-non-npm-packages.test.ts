@@ -105,6 +105,7 @@ describe("findDeployablePackageNames()", () => {
 			  "@cloudflare/quick-edit",
 			  "turbo-r2-archive",
 			  "workers-playground",
+			  "@cloudflare/workers-shared",
 			  "workers.new",
 			  "@cloudflare/wrangler-devtools",
 			}

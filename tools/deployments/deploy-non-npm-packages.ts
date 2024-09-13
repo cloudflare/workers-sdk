@@ -89,7 +89,7 @@ export function findDeployablePackageNames(): Set<string> {
 	}
 	const deployablePackages = new Set<string>();
 	for (const pkg of allPackages) {
-		if (pkg.private && pkg.scripts?.deploy !== undefined) {
+		if (pkg.scripts?.deploy !== undefined) {
 			deployablePackages.add(pkg.name);
 		}
 	}
