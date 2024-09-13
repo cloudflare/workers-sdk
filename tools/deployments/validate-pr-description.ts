@@ -32,12 +32,12 @@ export function validateDescription(
 	}
 
 	if (
-		!/^Fixes (#\d+|\[[A-Z]+-\d+\]\(https:\/\/jira\.cfdata\.org\/browse\/[A-Z]+-\d+\))/m.test(
+		!/^Fixes (#\d+|N\\A|\[[A-Z]+-\d+\]\(https:\/\/jira\.cfdata\.org\/browse\/[A-Z]+-\d+\))/m.test(
 			body
 		)
 	) {
 		errors.push(
-			"Your PR description must include an issue reference in the format `Fixes #000` (for GitHub issues) or `Fixes [AA-000](https://jira.cfdata.org/browse/AA-000)` (for internal Jira ticket references)"
+			"Your PR description must include an issue reference in the format `Fixes #000` (for GitHub issues), `Fixes [AA-000](https://jira.cfdata.org/browse/AA-000)` (for internal Jira ticket references), or `Fixes N/A` if there's no associated issue (and it doesn't make sense to create one)"
 		);
 	}
 
