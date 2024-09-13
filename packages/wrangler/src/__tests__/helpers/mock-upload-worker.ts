@@ -4,6 +4,7 @@ import { serialize, toString } from "./serialize-form-data-entry";
 import type { WorkerMetadata } from "../../deployment-bundle/create-worker-upload-form";
 import type { CfWorkerInit } from "../../deployment-bundle/worker";
 import type { HttpResponseResolver } from "msw";
+import type { AssetConfig } from "@cloudflare/workers-shared";
 
 /** Create a mock handler for the request to upload a worker script. */
 export function mockUploadWorkerRequest(
@@ -28,7 +29,10 @@ export function mockUploadWorkerRequest(
 		tag?: string;
 		expectedDispatchNamespace?: string;
 		expectedScriptName?: string;
-		expectedExperimentalAssets?: boolean;
+		expectedExperimentalAssets?: {
+			jwt: string;
+			config: AssetConfig;
+		};
 		useOldUploadApi?: boolean;
 		expectedObservability?: CfWorkerInit["observability"];
 	} = {}
@@ -107,10 +111,7 @@ export function mockUploadWorkerRequest(
 			expect(metadata.limits).toEqual(expectedLimits);
 		}
 		if ("expectedExperimentalAssets" in options) {
-			expect(metadata.assets).toEqual({
-				jwt: "<<aus-completion-token>>",
-				config: {},
-			});
+			expect(metadata.assets).toEqual(expectedExperimentalAssets);
 		}
 		if ("expectedObservability" in options) {
 			expect(metadata.observability).toEqual(expectedObservability);
@@ -155,7 +156,9 @@ export function mockUploadWorkerRequest(
 	const {
 		available_on_subdomain = true,
 		expectedEntry,
-		expectedMainModule = "index.js",
+		expectedExperimentalAssets,
+		// Allow setting expectedMainModule to undefined to test static-asset only uploads
+		expectedMainModule = expectedExperimentalAssets ? options.expectedMainModule: "index.js" ,
 		expectedType = "esm",
 		expectedBindings,
 		expectedModules = {},
@@ -173,6 +176,7 @@ export function mockUploadWorkerRequest(
 		expectedDispatchNamespace,
 		useOldUploadApi,
 		expectedObservability,
+
 	} = options;
 	if (env && !legacyEnv) {
 		msw.use(

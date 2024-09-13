@@ -4286,7 +4286,7 @@ addEventListener('fetch', event => {});`
 			await mockAUSRequest(bodies);
 			mockSubDomainRequest();
 			mockUploadWorkerRequest({
-				expectedExperimentalAssets: true,
+				expectedExperimentalAssets: { jwt: "<<aus-completion-token>>" , config:{}},
 				expectedType: "none",
 			});
 			await runWrangler("deploy --experimental-assets cli-assets");
@@ -4385,7 +4385,7 @@ addEventListener('fetch', event => {});`
 			);
 			mockSubDomainRequest();
 			mockUploadWorkerRequest({
-				expectedExperimentalAssets: true,
+				expectedExperimentalAssets: { jwt: "<<aus-completion-token>>" , config:{}},
 				expectedType: "none",
 			});
 			await runWrangler("deploy");
@@ -4458,7 +4458,7 @@ addEventListener('fetch', event => {});`
 			await mockAUSRequest(bodies);
 			mockSubDomainRequest();
 			mockUploadWorkerRequest({
-				expectedExperimentalAssets: true,
+				expectedExperimentalAssets: { jwt: "<<aus-completion-token>>" , config:{}},
 				expectedType: "none",
 			});
 			await runWrangler("deploy --config some/path/wrangler.toml");
@@ -4493,7 +4493,7 @@ addEventListener('fetch', event => {});`
 			await mockAUSRequest(bodies);
 			mockSubDomainRequest();
 			mockUploadWorkerRequest({
-				expectedExperimentalAssets: true,
+				expectedExperimentalAssets: { jwt: "<<aus-completion-token>>" , config:{}},
 				expectedType: "none",
 			});
 			await runWrangler("deploy --config some/path/wrangler.toml");
@@ -4521,7 +4521,7 @@ addEventListener('fetch', event => {});`
 			await mockAUSRequest(bodies);
 			mockSubDomainRequest();
 			mockUploadWorkerRequest({
-				expectedExperimentalAssets: true,
+				expectedExperimentalAssets: { jwt: "<<aus-completion-token>>" , config:{}},
 				expectedType: "none",
 			});
 			process.chdir("some/path");
@@ -4550,7 +4550,7 @@ addEventListener('fetch', event => {});`
 			// skips asset uploading since empty buckets returned
 			mockSubDomainRequest();
 			mockUploadWorkerRequest({
-				expectedExperimentalAssets: true,
+				expectedExperimentalAssets: { jwt: "<<aus-completion-token>>" , config:{}},
 				expectedType: "none",
 			});
 			await runWrangler(
@@ -4585,7 +4585,7 @@ addEventListener('fetch', event => {});`
 			// skips asset uploading since empty buckets returned
 			mockSubDomainRequest();
 			mockUploadWorkerRequest({
-				expectedExperimentalAssets: true,
+				expectedExperimentalAssets: { jwt: "<<aus-completion-token>>" , config:{}},
 				expectedType: "none",
 			});
 			await runWrangler("deploy");
@@ -4641,7 +4641,7 @@ addEventListener('fetch', event => {});`
 			);
 			mockSubDomainRequest();
 			mockUploadWorkerRequest({
-				expectedExperimentalAssets: true,
+				expectedExperimentalAssets: { jwt: "<<aus-completion-token>>" , config:{}},
 				expectedType: "none",
 			});
 			await runWrangler("deploy");
@@ -4712,7 +4712,7 @@ addEventListener('fetch', event => {});`
 			);
 		});
 
-		it("should be able to upload a user worker with ASSETS binding", async () => {
+		it("should be able to upload a user worker with ASSETS binding and config", async () => {
 			const assets = [
 				{ filePath: "file-1.txt", content: "Content of file-1" },
 				{ filePath: "boop/file-2.txt", content: "Content of file-2" },
@@ -4721,14 +4721,37 @@ addEventListener('fetch', event => {});`
 			writeWorkerSource({ format: "js" });
 			writeWranglerToml({
 				main: "index.js",
-				experimental_assets: { directory: "assets", binding: "ASSETS" },
+				experimental_assets: { directory: "assets", binding: "ASSETS", html_handling: "none", not_found_handling: "404-page" },
 			});
 			await mockAUSRequest();
 			mockSubDomainRequest();
 			mockUploadWorkerRequest({
-				expectedExperimentalAssets: true,
+				expectedExperimentalAssets: {jwt:"<<aus-completion-token>>", config: { html_handling: "none", not_found_handling: "404-page"}},
 				expectedBindings: [{ name: "ASSETS", type: "assets" }],
 				expectedMainModule: "index.js",
+			});
+			await runWrangler("deploy");
+		});
+
+		it("should be able to upload an asset-only project", async () => {
+			const assets = [
+				{ filePath: "file-1.txt", content: "Content of file-1" },
+				{ filePath: "boop/file-2.txt", content: "Content of file-2" },
+			];
+			writeAssets(assets);
+			writeWorkerSource({ format: "js" });
+			writeWranglerToml({
+				experimental_assets: {
+					directory: "assets",
+					html_handling: "none",
+				},
+			});
+			await mockAUSRequest();
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedExperimentalAssets: {jwt:"<<aus-completion-token>>", config: {html_handling: "none"}},
+				expectedBindings: [],
+				expectedMainModule: undefined,
 			});
 			await runWrangler("deploy");
 		});
