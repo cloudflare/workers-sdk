@@ -32,15 +32,15 @@ export default defineWorkersConfig({
 		// always "externalised", meaning they're imported directly by Node.
 		server: {
 			deps: {
-				// Vitest automatically adds `/^(?!.*(?:node_modules)).*\.mjs$/` as an
-				// `inline` RegExp: https://github.com/vitest-dev/vitest/blob/v1.5.0/packages/vitest/src/node/config.ts#L236
+				// Vitest automatically adds `/^(?!.*node_modules).*\.mjs$/` as an
+				// `inline` RegExp: https://github.com/vitest-dev/vitest/blob/v2.0.5/packages/vitest/src/constants.ts#L9
 				// We'd like `packages/vitest-pool-workers/dist/pool/index.mjs` to be
 				// externalised though. Unfortunately, `inline`s are checked before
 				// `external`s, so there's no nice way we can override this. Instead,
 				// we prevent the extra `inline` being added in the first place.
 				inline: new FilteredPushArray((item) => {
 					const str = `${item}`;
-					return str !== "/^(?!.*(?:node_modules)).*\\.mjs$/";
+					return str !== "/^(?!.*node_modules).*\\.mjs$/";
 				}),
 				external: [
 					/packages\/vitest-pool-workers\/dist/,

@@ -63,12 +63,12 @@ import type {
 } from "vitest";
 import type { ProcessPool, Vitest, WorkspaceProject } from "vitest/node";
 
-// https://github.com/vitest-dev/vitest/blob/v1.5.0/packages/vite-node/src/client.ts#L386
+// https://github.com/vitest-dev/vitest/blob/v2.0.5/packages/vite-node/src/client.ts#L468
 declare const __vite_ssr_import__: unknown;
-// assert(
-// 	typeof __vite_ssr_import__ === "undefined",
-// 	"Expected `@cloudflare/vitest-pool-workers` not to be transformed by Vite"
-// );
+assert(
+	typeof __vite_ssr_import__ === "undefined",
+	"Expected `@cloudflare/vitest-pool-workers` not to be transformed by Vite"
+);
 
 function structuredSerializableStringify(value: unknown): string {
 	// Vitest v2+ sends a sourcemap to it's runner, which we can't serialise currently
@@ -901,7 +901,6 @@ export default function (ctx: Vitest): ProcessPool {
 	// This function is called when config changes and may be called on re-runs
 	assertCompatibleVitestVersion(ctx);
 
-	// @ts-expect-error TODO: figure out how to implement `collectTests()`
 	return {
 		name: "vitest-pool-workers",
 		async runTests(specs, invalidates) {
@@ -1063,6 +1062,12 @@ export default function (ctx: Vitest): ProcessPool {
 			// const thingModule = moduleGraph.getModuleById(".../packages/vitest-pool-workers/test/kv/thing.ts");
 			// assert(testModule && thingModule);
 			// thingModule.importers.add(testModule);
+		},
+		async collectTests(specs, invalidates) {
+			// TODO: This is a new API introduced in Vitest v2+ which we should consider supporting at some point
+			throw new Error(
+				"The Cloudflare Workers Vitest integration does not support the `.collect()` or `vitest list` APIs"
+			);
 		},
 		async close() {
 			// `close()` will be called when shutting down Vitest or updating config

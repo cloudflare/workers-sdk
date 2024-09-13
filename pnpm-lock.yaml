@@ -688,7 +688,7 @@ importers:
         specifier: ^5.5.2
         version: 5.5.2
       vitest:
-        specifier: 2.0.1
+        specifier: 2.0.x
         version: 2.0.1(@types/node@20.8.3)(@vitest/ui@1.6.0(vitest@1.6.0))
       wrangler:
         specifier: workspace:*
@@ -964,7 +964,7 @@ importers:
         version: 8.49.0
       eslint-config-turbo:
         specifier: latest
-        version: 2.1.1(eslint@8.49.0)
+        version: 2.1.2(eslint@8.49.0)
       eslint-plugin-import:
         specifier: 2.26.x
         version: 2.26.0(@typescript-eslint/parser@6.10.0(eslint@8.49.0)(typescript@5.5.4))(eslint@8.49.0)
@@ -1630,8 +1630,8 @@ importers:
         specifier: ^5.5.2
         version: 5.5.2
       vitest:
-        specifier: 1.5.0
-        version: 1.5.0(@types/node@20.8.3)(@vitest/ui@1.6.0(vitest@1.6.0))
+        specifier: 2.0.x
+        version: 2.0.1(@types/node@20.8.3)(@vitest/ui@1.6.0(vitest@1.6.0))
       wrangler:
         specifier: workspace:*
         version: link:../wrangler
@@ -5231,8 +5231,8 @@ packages:
     peerDependencies:
       eslint: '>=7.0.0'
 
-  eslint-config-turbo@2.1.1:
-    resolution: {integrity: sha512-JJF8SZErmgKCGkt124WUmTt0sQ5YLvPo2YxDsfzn9avGJC7/BQIa+3FZoDb3zeYYsZx91pZ6htQAJaKK8NQQAg==}
+  eslint-config-turbo@2.1.2:
+    resolution: {integrity: sha512-UCNwxBrTOx0K41h1OrwMg7vPdGvcGSAlj40ZzpuUi0S2Muac2UOs+6F2dMYQiKg7lX2HAtyHXlF0T2wlWNHjGg==}
     peerDependencies:
       eslint: '>6.6.0'
 
@@ -5306,8 +5306,8 @@ packages:
     peerDependencies:
       eslint: ^3 || ^4 || ^5 || ^6 || ^7 || ^8
 
-  eslint-plugin-turbo@2.1.1:
-    resolution: {integrity: sha512-E/34kdQd0n3RP18+e0DSV0f3YTSCOojUh1p4X0Xrho2PBYmJ3umSnNo9FhkZt6UDACl+nBQcYTFkRHMz76lJdw==}
+  eslint-plugin-turbo@2.1.2:
+    resolution: {integrity: sha512-q2ikGubfVLZDPEKliiuubZc3sI5oqbKIZJ6fRi6Bldv8E3cMNH3Qt7g6hXZV4+GxwQbzEEteCYSBNbOn1DBqRg==}
     peerDependencies:
       eslint: '>6.6.0'
 
@@ -12093,7 +12093,7 @@ snapshots:
 
   capnp-ts@0.5.1:
     dependencies:
-      debug: 4.3.5
+      debug: 4.3.6(supports-color@9.2.2)
       format: 0.2.2
       tslib: 2.5.3
       utf8-encoding: 0.1.2
@@ -12909,10 +12909,10 @@ snapshots:
     dependencies:
       eslint: 8.57.0
 
-  eslint-config-turbo@2.1.1(eslint@8.49.0):
+  eslint-config-turbo@2.1.2(eslint@8.49.0):
     dependencies:
       eslint: 8.49.0
-      eslint-plugin-turbo: 2.1.1(eslint@8.49.0)
+      eslint-plugin-turbo: 2.1.2(eslint@8.49.0)
 
   eslint-import-resolver-node@0.3.7:
     dependencies:
@@ -13029,7 +13029,7 @@ snapshots:
       semver: 6.3.1
       string.prototype.matchall: 4.0.8
 
-  eslint-plugin-turbo@2.1.1(eslint@8.49.0):
+  eslint-plugin-turbo@2.1.2(eslint@8.49.0):
     dependencies:
       dotenv: 16.0.3
       eslint: 8.49.0
