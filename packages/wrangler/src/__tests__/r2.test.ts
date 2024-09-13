@@ -1039,6 +1039,7 @@ describe("r2", () => {
 							async ({ request, params }) => {
 								const { accountId } = params;
 								expect(accountId).toEqual("some-account-id");
+								expect(request.body).toBeNull();
 								expect(request.headers.get("authorization")).toEqual(
 									"Bearer some-api-token"
 								);
@@ -1100,6 +1101,9 @@ describe("r2", () => {
 							async ({ request, params }) => {
 								const { accountId } = params;
 								expect(accountId).toEqual("some-account-id");
+								expect(request.body).not.toBeNull();
+								const requestBody = await request.text();
+								expect(requestBody).toContain(`"ruleIds":["${ruleId}"]`);
 								expect(request.headers.get("authorization")).toEqual(
 									"Bearer some-api-token"
 								);
