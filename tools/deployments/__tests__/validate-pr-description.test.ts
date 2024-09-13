@@ -38,7 +38,7 @@ Fixes #[insert GH or internal issue number(s)].
 			)
 		).toMatchInlineSnapshot(`
 			[
-			  "Your PR description must include an issue reference in the format \`Fixes #000\` (for GitHub issues) or \`Fixes [AA-000](https://jira.cfdata.org/browse/AA-000)\` (for internal Jira ticket references)",
+			  "Your PR description must include an issue reference in the format \`Fixes #000\` (for GitHub issues), \`Fixes [AA-000](https://jira.cfdata.org/browse/AA-000)\` (for internal Jira ticket references), or \`Fixes N/A\` if there's no associated issue (and it doesn't make sense to create one)",
 			  "All TODO checkboxes in your PR description must be unchecked before merging",
 			  "Your PR must include tests, or provide justification for why no tests are required",
 			  "Your PR must run E2E tests, or provide justification for why running them is not required",
