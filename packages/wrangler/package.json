@@ -169,7 +169,7 @@
 		"ts-json-schema-generator": "^1.5.0",
 		"undici": "^5.28.4",
 		"update-check": "^1.5.4",
-		"vitest": "^1.6.0",
+		"vitest": "catalog:default",
 		"vitest-websocket-mock": "^0.3.0",
 		"ws": "^8.17.1",
 		"xdg-app-paths": "^8.3.0",

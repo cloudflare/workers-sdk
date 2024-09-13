@@ -15,7 +15,7 @@
 		"@types/node": "20.8.3",
 		"miniflare": "workspace:*",
 		"typescript": "^5.5.2",
-		"vitest": "2.0.x",
+		"vitest": "catalog:default",
 		"wrangler": "workspace:*"
 	},
 	"volta": {

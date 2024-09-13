@@ -17,7 +17,7 @@
 		"miniflare": "workspace:*",
 		"toucan-js": "^3.3.1",
 		"typescript": "^5.5.2",
-		"vitest": "2.0.x",
+		"vitest": "catalog:default",
 		"wrangler": "workspace:*"
 	},
 	"volta": {
