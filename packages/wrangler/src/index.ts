@@ -606,13 +606,9 @@ export function createCLIParser(argv: string[]) {
 	});
 
 	// pipelines
-	wrangler.command(
-		"pipelines",
-		`🚰 Manage Worker Pipelines ${chalk.hex(betaCmdColor)("[open beta]")}\n`,
-		(pipelinesYargs) => {
-			return pipelines(pipelinesYargs.command(subHelp));
-		}
-	);
+	wrangler.command("pipelines", false, (pipelinesYargs) => {
+		return pipelines(pipelinesYargs.command(subHelp));
+	});
 
 	/******************** CMD GROUP ***********************/
 	// login
