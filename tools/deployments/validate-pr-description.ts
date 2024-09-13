@@ -32,7 +32,7 @@ export function validateDescription(
 	}
 
 	if (
-		!/^Fixes (#\d+|N\\A|\[[A-Z]+-\d+\]\(https:\/\/jira\.cfdata\.org\/browse\/[A-Z]+-\d+\))/m.test(
+		!/^Fixes (#\d+|N\/A|\[[A-Z]+-\d+\]\(https:\/\/jira\.cfdata\.org\/browse\/[A-Z]+-\d+\))/m.test(
 			body
 		)
 	) {
