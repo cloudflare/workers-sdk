@@ -15,6 +15,11 @@ compatibility_date = "2024-07-31"
 compatibility_flags = ["nodejs_compat"]
 
 [[unsafe.bindings]]
+name = "CONFIG"
+type = "param"
+param = "assetConfig"
+
+[[unsafe.bindings]]
 name = "ASSETS_MANIFEST"
 type = "param"
 param = "assetManifest"
