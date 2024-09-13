@@ -1,5 +1,11 @@
 # @cloudflare/quick-edit
 
+## 0.2.0
+
+### Minor Changes
+
+- [#6708](https://github.com/cloudflare/workers-sdk/pull/6708) [`31bfd37`](https://github.com/cloudflare/workers-sdk/commit/31bfd374cf6764c1e8a4491518c58cb112010340) Thanks [@penalosa](https://github.com/penalosa)! - chore: Trigger a re-deploy
+
 ## 0.1.1
 
 ### Patch Changes
