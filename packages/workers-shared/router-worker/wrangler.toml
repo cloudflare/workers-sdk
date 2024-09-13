@@ -8,5 +8,20 @@
 # (see packages/wrangler/src/dev/miniflare.ts -> buildMiniflareOptions())
 ##
 name = "router-worker"
+account_id = "0f1b8aa119a907021f659042f95ea9ba"
+workers_dev = false
 main = "src/index.ts"
 compatibility_date = "2024-07-31"
+
+[[unsafe.bindings]]
+name = "ASSET_WORKER"
+type = "internal_assets"
+fetcherApi = "fetcher"
+
+[[unsafe.bindings]]
+name = "USER_WORKER"
+type = "origin"
+
+[unsafe.metadata.build_options]
+stable_id = "cloudflare/cf_router_worker"
+networks = ["cf","jdc"]

@@ -13,8 +13,8 @@ import type EntrypointType from "./index";
 export const handleRequest = async (
 	request: Request,
 	configuration: Required<AssetConfig>,
-	exists: typeof EntrypointType.prototype.exists,
-	getByETag: typeof EntrypointType.prototype.getByETag
+	exists: typeof EntrypointType.prototype.unstable_exists,
+	getByETag: typeof EntrypointType.prototype.unstable_getByETag
 ) => {
 	const { pathname, search } = new URL(request.url);
 
@@ -68,7 +68,7 @@ type Intent =
 export const getIntent = async (
 	pathname: string,
 	configuration: Required<AssetConfig>,
-	exists: typeof EntrypointType.prototype.exists,
+	exists: typeof EntrypointType.prototype.unstable_exists,
 	skipRedirects = false
 ): Promise<Intent> => {
 	switch (configuration.html_handling) {
@@ -105,7 +105,7 @@ export const getIntent = async (
 const htmlHandlingAutoTrailingSlash = async (
 	pathname: string,
 	configuration: Required<AssetConfig>,
-	exists: typeof EntrypointType.prototype.exists,
+	exists: typeof EntrypointType.prototype.unstable_exists,
 	skipRedirects: boolean
 ): Promise<Intent> => {
 	let redirectResult: Intent = null;
@@ -231,7 +231,7 @@ const htmlHandlingAutoTrailingSlash = async (
 const htmlHandlingForceTrailingSlash = async (
 	pathname: string,
 	configuration: Required<AssetConfig>,
-	exists: typeof EntrypointType.prototype.exists,
+	exists: typeof EntrypointType.prototype.unstable_exists,
 	skipRedirects: boolean
 ): Promise<Intent> => {
 	let redirectResult: Intent = null;
@@ -362,7 +362,7 @@ const htmlHandlingForceTrailingSlash = async (
 const htmlHandlingDropTrailingSlash = async (
 	pathname: string,
 	configuration: Required<AssetConfig>,
-	exists: typeof EntrypointType.prototype.exists,
+	exists: typeof EntrypointType.prototype.unstable_exists,
 	skipRedirects: boolean
 ): Promise<Intent> => {
 	let redirectResult: Intent = null;
@@ -521,7 +521,7 @@ const htmlHandlingDropTrailingSlash = async (
 const htmlHandlingNone = async (
 	pathname: string,
 	configuration: Required<AssetConfig>,
-	exists: typeof EntrypointType.prototype.exists
+	exists: typeof EntrypointType.prototype.unstable_exists
 ): Promise<Intent> => {
 	const exactETag = await exists(pathname);
 	if (exactETag) {
@@ -534,7 +534,7 @@ const htmlHandlingNone = async (
 const notFound = async (
 	pathname: string,
 	configuration: Required<AssetConfig>,
-	exists: typeof EntrypointType.prototype.exists
+	exists: typeof EntrypointType.prototype.unstable_exists
 ): Promise<Intent> => {
 	switch (configuration.not_found_handling) {
 		case "single-page-application": {
@@ -566,7 +566,7 @@ const safeRedirect = async (
 	file: string,
 	destination: string,
 	configuration: Required<AssetConfig>,
-	exists: typeof EntrypointType.prototype.exists,
+	exists: typeof EntrypointType.prototype.unstable_exists,
 	skip: boolean
 ): Promise<Intent> => {
 	if (skip) {

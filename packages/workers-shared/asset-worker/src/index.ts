@@ -11,12 +11,16 @@ import { getAssetWithMetadataFromKV } from "./utils/kv";
 import type { AssetConfig } from "../../utils/types";
 
 type Env = {
-	// ASSETS_MANIFEST is a pipeline binding to an ArrayBuffer containing the
-	// binary-encoded site manifest
+	/*
+	 * ASSETS_MANIFEST is a pipeline binding to an ArrayBuffer containing the
+	 * binary-encoded site manifest
+	 */
 	ASSETS_MANIFEST: ArrayBuffer;
 
-	// ASSETS_KV_NAMESPACE is a pipeline binding to the KV namespace that the
-	// assets are in.
+	/*
+	 * ASSETS_KV_NAMESPACE is a pipeline binding to the KV namespace that the
+	 * assets are in.
+	 */
 	ASSETS_KV_NAMESPACE: KVNamespace;
 
 	CONFIG: AssetConfig;
@@ -27,6 +31,17 @@ type Env = {
 	SENTRY_ACCESS_CLIENT_SECRET: string;
 };
 
+/*
+ * The Asset Worker is currently set up as a `WorkerEntrypoint` class so
+ * that it is able to accept RPC calls to any of its public methods. There
+ * are currently four such public methods defined on this Worker:
+ * `canFetch`, `getByETag`, `getByPathname` and `exists`. While we are
+ * stabilising the implementation details of these methods, we would like
+ * to prevent developers from having their Workers call these methods
+ * directly. To that end, we are adopting the `unstable_<method_name>`
+ * naming convention for all of the aforementioned methods, to indicate that
+ * they are still in flux and that they are not an established API contract.
+ */
 export default class extends WorkerEntrypoint<Env> {
 	async fetch(request: Request): Promise<Response> {
 		let sentry: ReturnType<typeof setupSentry> | undefined;
@@ -42,8 +57,8 @@ export default class extends WorkerEntrypoint<Env> {
 			return handleRequest(
 				request,
 				applyConfigurationDefaults(this.env.CONFIG),
-				this.exists.bind(this),
-				this.getByETag.bind(this)
+				this.unstable_exists.bind(this),
+				this.unstable_getByETag.bind(this)
 			);
 		} catch (err) {
 			const response = new InternalServerErrorResponse(err as Error);
@@ -66,7 +81,7 @@ export default class extends WorkerEntrypoint<Env> {
 				...applyConfigurationDefaults(this.env.CONFIG),
 				not_found_handling: "none",
 			},
-			this.exists.bind(this)
+			this.unstable_exists.bind(this)
 		);
 		// if asset exists but non GET/HEAD method, 405
 		if (intent && ["GET", "HEAD"].includes(method)) {
@@ -78,7 +93,7 @@ export default class extends WorkerEntrypoint<Env> {
 		return true;
 	}
 
-	async getByETag(
+	async unstable_getByETag(
 		eTag: string
 	): Promise<{ readableStream: ReadableStream; contentType: string }> {
 		const asset = await getAssetWithMetadataFromKV(
@@ -98,18 +113,18 @@ export default class extends WorkerEntrypoint<Env> {
 		};
 	}
 
-	async getByPathname(
+	async unstable_getByPathname(
 		pathname: string
 	): Promise<{ readableStream: ReadableStream; contentType: string } | null> {
-		const eTag = await this.exists(pathname);
+		const eTag = await this.unstable_exists(pathname);
 		if (!eTag) {
 			return null;
 		}
 
-		return this.getByETag(eTag);
+		return this.unstable_getByETag(eTag);
 	}
 
-	async exists(pathname: string): Promise<string | null> {
+	async unstable_exists(pathname: string): Promise<string | null> {
 		const assetsManifest = new AssetsManifest(this.env.ASSETS_MANIFEST);
 		return await assetsManifest.get(pathname);
 	}
