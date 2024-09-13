@@ -6,12 +6,12 @@ This package contains Cloudflare's fork VSCode for Web, to support web editing o
 
 1. You must switch your NodeJS version to NodeJS 18 (using a tool like nvm). VSCode's build process requires this. For instance, if you use `nvm`, running `nvm use` would be enough to switch to the correct NodeJS version.
 2. Run `pnpm install`
-3. Run `yarn setup`, which will install dependencies, clone VSCode (currently v1.85.2), apply the patches specified in `./patches`, and symlink the top level packages within `workers-sdk`.
+3. Run `pnpm run setup`, which will install dependencies, clone VSCode (currently v1.85.2), apply the patches specified in `./patches`, and symlink the top level packages within `workers-sdk`.
 4. Run `pnpm run dev`. This will start various dev servers for VSCode and `quick-edit-extension`. Note, this takes a _long_ time to start up. Expect up to 3 minutes, although reloads will be much faster. You can access the VSCode dev server at `http://localhost:8788`
 
 ## Building
 
-Follow steps (1), (2) and (3) from above, and then run `yarn custom:build`
+Follow steps (1), (2) and (3) from above, and then run `pnpm run custom:build`
 
 ## Deployment
 
@@ -26,7 +26,7 @@ Deployments are managed by Github Actions:
 
 ## Patching VSCode
 
-If you need to add additional patches to VSCode, ensure you've run `yarn setup`. Then:
+If you need to add additional patches to VSCode, ensure you've run `pnpm run setup`. Then:
 
 1. Make your changes in the checked out VSCode in `vendor/vscode`.
 2. Commit your changes with `git commit -m "YOUR MESSAGE" --no-verify` (run this in the `vendor/vscode` directory).

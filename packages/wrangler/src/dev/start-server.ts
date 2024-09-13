@@ -107,6 +107,7 @@ export async function startDevServer(
 			...(typeof r === "string" ? { pattern: r } : r),
 		})),
 		bindings: convertCfWorkerInitBindingstoBindings(props.bindings),
+		migrations: props.migrations,
 		dev: {
 			server: {
 				hostname: props.initialIp,
@@ -258,7 +259,6 @@ export async function startDevServer(
 			config: fakeResolvedInput(startDevWorkerOptions),
 			bundle,
 		});
-
 		const { stop } = await startLocalServer({
 			name: props.name,
 			bundle: bundle,
@@ -266,6 +266,7 @@ export async function startDevServer(
 			compatibilityDate: props.compatibilityDate,
 			compatibilityFlags: props.compatibilityFlags,
 			bindings: props.bindings,
+			migrations: props.migrations,
 			legacyAssetPaths: props.legacyAssetPaths,
 			experimentalAssets: props.experimentalAssets,
 			initialPort: undefined, // hard-code for userworker, DevEnv-ProxyWorker now uses this prop value

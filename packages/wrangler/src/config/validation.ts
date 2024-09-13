@@ -35,6 +35,7 @@ import type {
 	DispatchNamespaceOutbound,
 	Environment,
 	ExperimentalAssets,
+	Observability,
 	RawEnvironment,
 	Rule,
 	TailConsumer,
@@ -1535,6 +1536,14 @@ function normalizeAndValidateEnvironment(
 			isBoolean,
 			undefined
 		),
+		observability: inheritable(
+			diagnostics,
+			topLevelEnv,
+			rawEnv,
+			"observability",
+			validateObservability,
+			undefined
+		),
 	};
 
 	warnIfDurableObjectsHaveNoMigrations(
@@ -2103,9 +2112,36 @@ const validateAssetsConfig: ValidatorFn = (diagnostics, field, value) => {
 		) && isValid;
 
 	isValid =
+		validateOptionalProperty(
+			diagnostics,
+			field,
+			"html_handling",
+			(value as ExperimentalAssets).html_handling,
+			"string",
+			[
+				"auto-trailing-slash",
+				"force-trailing-slash",
+				"drop-trailing-slash",
+				"none",
+			]
+		) && isValid;
+
+	isValid =
+		validateOptionalProperty(
+			diagnostics,
+			field,
+			"not_found_handling",
+			(value as ExperimentalAssets).not_found_handling,
+			"string",
+			["single-page-application", "404-page", "none"]
+		) && isValid;
+
+	isValid =
 		validateAdditionalProperties(diagnostics, field, Object.keys(value), [
 			"directory",
 			"binding",
+			"html_handling",
+			"not_found_handling",
 		]) && isValid;
 
 	return isValid;
@@ -3276,6 +3312,50 @@ const validateMigrations: ValidatorFn = (diagnostics, field, value) => {
 			) && valid;
 	}
 	return valid;
+};
+
+const validateObservability: ValidatorFn = (diagnostics, field, value) => {
+	if (value === undefined) {
+		return true;
+	}
+
+	if (typeof value !== "object") {
+		diagnostics.errors.push(
+			`"${field}" should be an object but got ${JSON.stringify(value)}.`
+		);
+		return false;
+	}
+
+	const val = value as Observability;
+	let isValid = true;
+
+	isValid =
+		validateRequiredProperty(
+			diagnostics,
+			field,
+			"enabled",
+			val.enabled,
+			"boolean"
+		) && isValid;
+
+	isValid =
+		validateOptionalProperty(
+			diagnostics,
+			field,
+			"head_sampling_rate",
+			val.head_sampling_rate,
+			"number"
+		) && isValid;
+
+	const samplingRate = val?.head_sampling_rate;
+
+	if (samplingRate && (samplingRate < 0 || samplingRate > 1)) {
+		diagnostics.errors.push(
+			`\`${field}.head_sampling_rate\` must be a value between 0 and 1.`
+		);
+	}
+
+	return isValid;
 };
 
 function warnIfDurableObjectsHaveNoMigrations(

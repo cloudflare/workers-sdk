@@ -175,6 +175,7 @@ const addDevDependencies = async (installEslintPlugin: boolean) => {
 export default {
 	configVersion: 1,
 	id: "next",
+	frameworkCli: "create-next-app",
 	platform: "pages",
 	displayName: "Next",
 	generate,

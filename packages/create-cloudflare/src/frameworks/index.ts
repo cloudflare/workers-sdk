@@ -3,7 +3,7 @@ import { dim } from "@cloudflare/cli/colors";
 import { quoteShellArgs, runCommand } from "helpers/command";
 import { detectPackageManager } from "helpers/packageManagers";
 import { isInsideGitRepo } from "../git";
-import clisPackageJson from "./package.json";
+import frameworksPackageJson from "./package.json";
 import type { C3Context } from "types";
 
 export const getFrameworkCli = (ctx: C3Context, withVersion = true) => {
@@ -11,12 +11,9 @@ export const getFrameworkCli = (ctx: C3Context, withVersion = true) => {
 		return crash("Framework not specified.");
 	}
 
-	const framework = ctx.template
-		.id as keyof typeof clisPackageJson.frameworkCliMap;
-	const frameworkCli = clisPackageJson.frameworkCliMap[
-		framework
-	] as keyof typeof clisPackageJson.dependencies;
-	const version = clisPackageJson.dependencies[frameworkCli];
+	const frameworkCli = ctx.template
+		.frameworkCli as keyof typeof frameworksPackageJson.dependencies;
+	const version = frameworksPackageJson.dependencies[frameworkCli];
 	return withVersion ? `${frameworkCli}@${version}` : frameworkCli;
 };
 

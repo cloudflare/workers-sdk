@@ -246,7 +246,7 @@ type Renderer = (
 const renderSubmit = (config: PromptConfig, value: string) => {
 	const { question, label } = config;
 
-	if (config.type !== "confirm" && value.length === 0) {
+	if (config.type !== "confirm" && !value) {
 		return [`${leftT} ${question} ${dim("(skipped)")}`, `${grayBar}`];
 	}
 

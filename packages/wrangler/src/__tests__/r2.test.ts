@@ -1030,7 +1030,7 @@ describe("r2", () => {
 			});
 
 			describe("delete", () => {
-				it("follows happy path as expected", async () => {
+				it("follows happy path as expected without specified rules", async () => {
 					const bucketName = "my-bucket";
 					const queue = "my-queue";
 					msw.use(
@@ -1090,6 +1090,67 @@ describe("r2", () => {
 			`);
 				});
 
+				it("follows happy path as expected with specified rules", async () => {
+					const bucketName = "my-bucket";
+					const queue = "my-queue";
+					const ruleId = "rule123456789";
+					msw.use(
+						http.delete(
+							"*/accounts/:accountId/event_notifications/r2/:bucketName/configuration/queues/:queueUUID",
+							async ({ request, params }) => {
+								const { accountId } = params;
+								expect(accountId).toEqual("some-account-id");
+								expect(request.headers.get("authorization")).toEqual(
+									"Bearer some-api-token"
+								);
+								return HttpResponse.json(createFetchResult({}));
+							},
+							{ once: true }
+						),
+						http.get(
+							"*/accounts/:accountId/queues?*",
+							async ({ request, params }) => {
+								const url = new URL(request.url);
+								const { accountId } = params;
+								const nameParams = url.searchParams.getAll("name");
+
+								expect(accountId).toEqual("some-account-id");
+								expect(nameParams[0]).toEqual(queue);
+								expect(request.headers.get("authorization")).toEqual(
+									"Bearer some-api-token"
+								);
+								return HttpResponse.json({
+									success: true,
+									errors: [],
+									messages: [],
+									result: [
+										{
+											queue_id: "queue-id",
+											queue_name: queue,
+											created_on: "",
+											producers: [],
+											consumers: [],
+											producers_total_count: 1,
+											consumers_total_count: 0,
+											modified_on: "",
+										},
+									],
+								});
+							},
+							{ once: true }
+						)
+					);
+					await expect(
+						runWrangler(
+							`r2 bucket notification delete ${bucketName} --queue ${queue} --rule ${ruleId}`
+						)
+					).resolves.toBe(undefined);
+					expect(std.out).toMatchInlineSnapshot(`
+				"Disabling event notifications for \\"my-bucket\\" to queue my-queue...
+				Configuration deleted successfully!"
+			`);
+				});
+
 				it("errors if required options are not provided", async () => {
 					await expect(
 						runWrangler("r2 bucket notification delete notification-test-001")
@@ -1113,7 +1174,8 @@ describe("r2", () => {
 						  -v, --version                   Show version number  [boolean]
 
 						OPTIONS
-						      --queue  The name of the queue that is configured to receive notifications. ex '--queue my-queue'  [string] [required]"
+						      --queue  The name of the queue that is configured to receive notifications. ex '--queue my-queue'  [string] [required]
+						      --rule   The id of the rule to delete. If no rule is specified, all rules for the bucket/queue configuration will be deleted.  [string]"
 					`);
 				});
 			});

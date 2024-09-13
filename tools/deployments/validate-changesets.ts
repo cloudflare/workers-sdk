@@ -35,6 +35,13 @@ export function validateChangesets(
 					);
 				}
 			}
+			if (
+				!/^feature:|feat:|fix:|refactor:|docs:|chore:/.test(changeset.summary)
+			) {
+				errors.push(
+					`Invalid summary in changeset "${file}". It must start with one of "feat:", "fix:", "refactor:", "docs:", or "chore:"`
+				);
+			}
 		} catch (e) {
 			if (e instanceof Error) {
 				errors.push(e.toString() + `at file "${file}"`);

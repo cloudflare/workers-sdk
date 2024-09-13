@@ -159,6 +159,7 @@ async function getMiniflareOptionsFromConfig(
 		queueConsumers: undefined,
 		services: rawConfig.services,
 		serviceBindings: {},
+		migrations: rawConfig.migrations,
 	});
 
 	const persistOptions = getMiniflarePersistOptions(options.persist);
@@ -264,6 +265,7 @@ export function unstable_getMiniflareWorkerOptions(
 		queueConsumers: config.queues.consumers,
 		services: [],
 		serviceBindings: {},
+		migrations: config.migrations,
 	});
 
 	// This function is currently only exported for the Workers Vitest pool.
@@ -285,7 +287,11 @@ export function unstable_getMiniflareWorkerOptions(
 		bindingOptions.durableObjects = Object.fromEntries(
 			bindings.durable_objects.bindings.map((binding) => [
 				binding.name,
-				{ className: binding.class_name, scriptName: binding.script_name },
+				{
+					className: binding.class_name,
+					scriptName: binding.script_name,
+					binding,
+				},
 			])
 		);
 	}

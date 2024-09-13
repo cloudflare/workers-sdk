@@ -227,6 +227,7 @@ export type DevProps = {
 	localPersistencePath: string | null;
 	liveReload: boolean;
 	bindings: CfWorkerInit["bindings"];
+	migrations: Config["migrations"] | undefined;
 	define: Config["define"];
 	alias: Config["alias"];
 	crons: Config["triggers"]["crons"];
@@ -413,7 +414,7 @@ function DevSession(props: DevSessionProps) {
 			entrypoint: props.entry.file,
 			directory: props.entry.directory,
 			bindings: convertCfWorkerInitBindingstoBindings(props.bindings),
-
+			migrations: props.migrations,
 			triggers: [...routes, ...queueConsumers, ...crons],
 			env: props.env,
 			build: {
@@ -493,6 +494,7 @@ function DevSession(props: DevSessionProps) {
 		props.compatibilityDate,
 		props.compatibilityFlags,
 		props.bindings,
+		props.migrations,
 		props.entry,
 		props.legacyAssetPaths,
 		props.isWorkersSite,
@@ -689,6 +691,7 @@ function DevSession(props: DevSessionProps) {
 			compatibilityFlags={props.compatibilityFlags}
 			usageModel={props.usageModel}
 			bindings={props.bindings}
+			migrations={props.migrations}
 			workerDefinitions={workerDefinitions}
 			legacyAssetPaths={props.legacyAssetPaths}
 			experimentalAssets={props.experimentalAssets}

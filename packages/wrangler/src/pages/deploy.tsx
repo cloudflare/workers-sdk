@@ -365,6 +365,7 @@ export const Handler = async (args: PagesDeployArgs) => {
 	});
 
 	let latestDeploymentStage: DeploymentStage | undefined;
+	let alias: string | undefined;
 	let attempts = 0;
 
 	logger.log("🌎 Deploying...");
@@ -393,6 +394,10 @@ export const Handler = async (args: PagesDeployArgs) => {
 				`/accounts/${accountId}/pages/projects/${projectName}/deployments/${deploymentResponse.id}`
 			);
 			latestDeploymentStage = deployment.latest_stage;
+			// Aliases is an array but will only ever return one pages.dev
+			// If preview, this will return a branch alias. If production, this will return custom domains
+			alias = (deployment.aliases?.filter((a) => a.endsWith(".pages.dev")) ??
+				[])[0];
 		} catch (err) {
 			// don't retry if API call retruned an error
 			logger.debug(
@@ -406,7 +411,8 @@ export const Handler = async (args: PagesDeployArgs) => {
 		latestDeploymentStage?.status === "success"
 	) {
 		logger.log(
-			`✨ Deployment complete! Take a peek over at ${deploymentResponse.url}`
+			`✨ Deployment complete! Take a peek over at ${deploymentResponse.url}` +
+				(alias ? `\n✨ Deployment alias URL: ${alias}` : "")
 		);
 	} else if (
 		latestDeploymentStage?.name === "deploy" &&

@@ -312,6 +312,7 @@ function getDurableObjectClassNames(
 				className,
 				// Fallback to current worker service if name not defined
 				serviceName = workerServiceName,
+				enableSql,
 				unsafeUniqueKey,
 				unsafePreventEviction,
 			} = normaliseDurableObject(designator);
@@ -325,6 +326,14 @@ function getDurableObjectClassNames(
 				// If we've already seen this class in this service, make sure the
 				// unsafe unique keys and unsafe prevent eviction values match
 				const existingInfo = classNames.get(className);
+				if (existingInfo?.enableSql !== enableSql) {
+					throw new MiniflareCoreError(
+						"ERR_DIFFERENT_STORAGE_BACKEND",
+						`Different storage backends defined for Durable Object "${className}" in "${serviceName}": ${JSON.stringify(
+							enableSql
+						)} and ${JSON.stringify(existingInfo?.enableSql)}`
+					);
+				}
 				if (existingInfo?.unsafeUniqueKey !== unsafeUniqueKey) {
 					throw new MiniflareCoreError(
 						"ERR_DIFFERENT_UNIQUE_KEYS",
@@ -343,7 +352,11 @@ function getDurableObjectClassNames(
 				}
 			} else {
 				// Otherwise, just add it
-				classNames.set(className, { unsafeUniqueKey, unsafePreventEviction });
+				classNames.set(className, {
+					enableSql,
+					unsafeUniqueKey,
+					unsafePreventEviction,
+				});
 			}
 		}
 	}

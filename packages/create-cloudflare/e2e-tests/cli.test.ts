@@ -10,7 +10,7 @@ import {
 	test,
 } from "vitest";
 import { version } from "../package.json";
-import { frameworkToTest } from "./frameworkToTest";
+import { getFrameworkToTest } from "./frameworkToTest";
 import {
 	createTestLogStream,
 	isQuarantineMode,
@@ -20,6 +20,8 @@ import {
 } from "./helpers";
 import type { WriteStream } from "fs";
 import type { Suite } from "vitest";
+
+const frameworkToTest = getFrameworkToTest({ experimental: false });
 
 // Note: skipIf(frameworkToTest) makes it so that all the basic C3 functionality
 //       tests are skipped in case we are testing a specific framework

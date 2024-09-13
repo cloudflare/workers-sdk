@@ -29,7 +29,7 @@ export class MethodNotAllowedResponse extends Response {
 
 export class InternalServerErrorResponse extends Response {
 	constructor(err: Error, init?: ResponseInit) {
-		super(undefined, {
+		super(null, {
 			...init,
 			status: 500,
 		});
@@ -37,10 +37,25 @@ export class InternalServerErrorResponse extends Response {
 }
 
 export class NotModifiedResponse extends Response {
-	constructor(...[_body, _init]: ConstructorParameters<typeof Response>) {
-		super(undefined, {
+	constructor(...[_body, init]: ConstructorParameters<typeof Response>) {
+		super(null, {
+			...init,
 			status: 304,
 			statusText: "Not Modified",
+		});
+	}
+}
+
+export class TemporaryRedirectResponse extends Response {
+	constructor(location: string, init?: ResponseInit) {
+		super(null, {
+			...init,
+			status: 307,
+			statusText: "Temporary Redirect",
+			headers: {
+				...init?.headers,
+				Location: location,
+			},
 		});
 	}
 }

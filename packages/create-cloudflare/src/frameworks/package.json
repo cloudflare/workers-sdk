@@ -1,9 +1,8 @@
 {
 	"name": "frameworks_clis_info",
-	"description": [
-		"this package.json is only used to keep track of the frameworks cli dependencies",
-		"so that we can use dependabot to update these dependencies automatically",
-		"additionally it also contains a map that maps frameworks to their respective clis"
+	"info": [
+		"This package.json is only used to keep track of the frameworks cli dependencies",
+		"so that we can use dependabot to update these dependencies automatically."
 	],
 	"dependencies": {
 		"create-astro": "4.8.0",
@@ -20,21 +19,5 @@
 		"create-vue": "3.10.4",
 		"gatsby": "5.13.7",
 		"nuxi": "3.12.0"
-	},
-	"frameworkCliMap": {
-		"analog": "create-analog",
-		"angular": "@angular/create",
-		"astro": "create-astro",
-		"docusaurus": "create-docusaurus",
-		"gatsby": "gatsby",
-		"hono": "create-hono",
-		"next": "create-next-app",
-		"nuxt": "nuxi",
-		"qwik": "create-qwik",
-		"react": "create-vite",
-		"remix": "create-remix",
-		"solid": "create-solid",
-		"svelte": "create-svelte",
-		"vue": "create-vue"
 	}
 }

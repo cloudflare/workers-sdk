@@ -3,3 +3,6 @@ compatibility_date = "2024-01-01"
 
 [experimental_assets]
 directory = "./public"
+serve_exact_matches_only = false
+trailing_slashes = "remove"
+not_found_behavior = "404-page"

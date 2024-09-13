@@ -49,7 +49,7 @@ describe("deploy helpers", async () => {
 			await expect(offerToDeploy(ctx)).resolves.toBe(true);
 		});
 
-		test("project is undeployable", async () => {
+		test("project is undeployable (simple binding)", async () => {
 			const ctx = createTestContext();
 			// Can't deploy things with bindings (yet!)
 			vi.mocked(readFile).mockReturnValue(`binding = "MY_QUEUE"`);
@@ -58,6 +58,39 @@ describe("deploy helpers", async () => {
 			expect(processArgument).toHaveBeenCalledOnce();
 			expect(ctx.args.deploy).toBe(false);
 			expect(wranglerLogin).not.toHaveBeenCalled();
+		});
+
+		test("project is undeployable (complex binding)", async () => {
+			const ctx = createTestContext();
+			// Can't deploy things with bindings (yet!)
+			vi.mocked(readFile).mockReturnValue(`
+				experimental_assets = { directory = "./dist", binding = "ASSETS" }
+
+				[[durable_objects.bindings]]
+				name = "MY_DURABLE_OBJECT"
+				class_name = "MyDurableObject"
+			`);
+
+			await expect(offerToDeploy(ctx)).resolves.toBe(false);
+			expect(processArgument).toHaveBeenCalledOnce();
+			expect(ctx.args.deploy).toBe(false);
+			expect(wranglerLogin).not.toHaveBeenCalled();
+		});
+
+		test("assets project is deployable (no other bindings)", async () => {
+			const ctx = createTestContext();
+			vi.mocked(readFile).mockReturnValue(`
+				experimental_assets = { directory = "./dist", binding = "ASSETS" }
+			`);
+			// mock the user selecting yes when asked to deploy
+			vi.mocked(processArgument).mockResolvedValueOnce(true);
+			// mock a successful wrangler login
+			vi.mocked(wranglerLogin).mockResolvedValueOnce(true);
+
+			await expect(offerToDeploy(ctx)).resolves.toBe(true);
+			expect(processArgument).toHaveBeenCalledOnce();
+			expect(ctx.args.deploy).toBe(true);
+			expect(wranglerLogin).toHaveBeenCalled();
 		});
 
 		test("--no-deploy from command line", async () => {

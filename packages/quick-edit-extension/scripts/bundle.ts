@@ -7,7 +7,6 @@ type BuildFlags = {
 
 async function buildMain(flags: BuildFlags = {}) {
 	const options: esbuild.BuildOptions = {
-		watch: flags.watch,
 		entryPoints: ["./src/extension.ts"],
 		bundle: true,
 		outfile: "./dist/extension.js",
@@ -41,15 +40,18 @@ async function buildMain(flags: BuildFlags = {}) {
 		],
 	};
 
-	await esbuild.build(options);
+	if (flags.watch) {
+		const ctx = await esbuild.context(options);
+
+		// Start watching for changes...
+		await ctx.watch();
+	} else {
+		await esbuild.build(options);
+	}
 }
 
 async function run() {
-	await buildMain();
-	if (process.argv.includes("--watch")) {
-		console.log("Built. Watching for changes...");
-		await Promise.all([buildMain({ watch: true })]);
-	}
+	await buildMain({ watch: process.argv.includes("--watch") });
 }
 
 run().catch((e) => {

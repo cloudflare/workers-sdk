@@ -1,24 +1,4 @@
 import { CACHE_CONTROL_BROWSER } from "../constants";
-import type { AssetMetadata } from "./kv";
-
-/**
- * Returns a Headers object that is the union of `existingHeaders`
- * and `additionalHeaders`. Headers specified by `additionalHeaders`
- * will override those specified by `existingHeaders`.
- *
- */
-export function getMergedHeaders(
-	existingHeaders: Headers,
-	additionalHeaders: Headers
-) {
-	const mergedHeaders = new Headers(existingHeaders);
-	for (const [key, value] of additionalHeaders) {
-		// override existing headers
-		mergedHeaders.set(key, value);
-	}
-
-	return mergedHeaders;
-}
 
 /**
  * Returns a Headers object that contains additional headers (to those
@@ -26,22 +6,14 @@ export function getMergedHeaders(
  * should attach to its response.
  *
  */
-export function getAdditionalHeaders(
-	assetKey: string,
-	assetMetadata: AssetMetadata | null,
+export function getHeaders(
+	eTag: string,
+	contentType: string,
 	request: Request
 ) {
-	let contentType = assetMetadata?.contentType ?? "application/octet-stream";
-	if (contentType.startsWith("text/") && !contentType.includes("charset")) {
-		contentType = `${contentType}; charset=utf-8`;
-	}
-
 	const headers = new Headers({
-		"Access-Control-Allow-Origin": "*",
 		"Content-Type": contentType,
-		"Referrer-Policy": "strict-origin-when-cross-origin",
-		"X-Content-Type-Options": "nosniff",
-		ETag: `${assetKey}`,
+		ETag: `"${eTag}"`,
 	});
 
 	if (isCacheable(request)) {
@@ -52,5 +24,5 @@ export function getAdditionalHeaders(
 }
 
 function isCacheable(request: Request) {
-	return !request.headers.has("authorization") && !request.headers.has("range");
+	return !request.headers.has("Authorization") && !request.headers.has("Range");
 }

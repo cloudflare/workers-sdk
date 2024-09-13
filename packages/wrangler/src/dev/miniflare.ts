@@ -171,6 +171,7 @@ export interface ConfigBundle {
 	compatibilityDate: string | undefined;
 	compatibilityFlags: string[] | undefined;
 	bindings: CfWorkerInit["bindings"];
+	migrations: Config["migrations"] | undefined;
 	workerDefinitions: WorkerRegistry | undefined;
 	legacyAssetPaths: LegacyAssetPaths | undefined;
 	experimentalAssets: ExperimentalAssetsOptions | undefined;
@@ -370,6 +371,7 @@ type WorkerOptionsBindings = Pick<
 type MiniflareBindingsConfig = Pick<
 	ConfigBundle,
 	| "bindings"
+	| "migrations"
 	| "workerDefinitions"
 	| "queueConsumers"
 	| "name"
@@ -494,6 +496,8 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 		}
 	}
 
+	const classNameToUseSQLite = getClassNamesWhichUseSQLite(config.migrations);
+
 	// Partition Durable Objects based on whether they're internal (defined by
 	// this session's worker), or external (defined by another session's worker
 	// registered in the dev registry)
@@ -511,10 +515,13 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 		// Bind all internal objects, so they're accessible by all other sessions
 		// that proxy requests for our objects to this worker
 		durableObjects: Object.fromEntries(
-			internalObjects.map(({ class_name }) => [
-				class_name,
-				{ className: class_name, scriptName: getName(config) },
-			])
+			internalObjects.map(({ class_name }) => {
+				const useSQLite = classNameToUseSQLite.get(class_name);
+				return [
+					class_name,
+					{ className: class_name, scriptName: getName(config), useSQLite },
+				];
+			})
 		),
 		// Use this worker instead of the user worker if the pathname is
 		// `/${EXTERNAL_SERVICE_WORKER_NAME}`
@@ -622,14 +629,25 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 		),
 
 		durableObjects: Object.fromEntries([
-			...internalObjects.map(({ name, class_name }) => [name, class_name]),
+			...internalObjects.map(({ name, class_name }) => {
+				const useSQLite = classNameToUseSQLite.get(class_name);
+				return [
+					name,
+					{
+						className: class_name,
+						useSQLite,
+					},
+				];
+			}),
 			...externalObjects.map(({ name, class_name, script_name }) => {
 				const identifier = getIdentifier(`do_${script_name}_${class_name}`);
+				const useSQLite = classNameToUseSQLite.get(class_name);
 				return [
 					name,
 					{
 						className: identifier,
 						scriptName: EXTERNAL_SERVICE_WORKER_NAME,
+						useSQLite,
 						// Matches the unique key Miniflare will generate for this object in
 						// the target session. We need to do this so workerd generates the
 						// same IDs it would if this were part of the same process. workerd
@@ -656,6 +674,55 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 		internalObjects,
 		externalWorkers,
 	};
+}
+
+function getClassNamesWhichUseSQLite(
+	migrations: Config["migrations"] | undefined
+) {
+	const classNameToUseSQLite = new Map<string, boolean>();
+	(migrations || []).forEach((migration) => {
+		migration.deleted_classes?.forEach((deleted_class) => {
+			if (!classNameToUseSQLite.delete(deleted_class)) {
+				throw new UserError(
+					`Cannot apply deleted_classes migration to non-existent class ${deleted_class}`
+				);
+			}
+		});
+
+		migration.renamed_classes?.forEach(({ from, to }) => {
+			const useSQLite = classNameToUseSQLite.get(from);
+			if (useSQLite === undefined) {
+				throw new UserError(
+					`Cannot apply renamed_classes migration to non-existent class ${from}`
+				);
+			} else {
+				classNameToUseSQLite.delete(from);
+				classNameToUseSQLite.set(to, useSQLite);
+			}
+		});
+
+		migration.new_classes?.forEach((new_class) => {
+			if (classNameToUseSQLite.has(new_class)) {
+				throw new UserError(
+					`Cannot apply new_classes migration to existing class ${new_class}`
+				);
+			} else {
+				classNameToUseSQLite.set(new_class, false);
+			}
+		});
+
+		migration.new_sqlite_classes?.forEach((new_class) => {
+			if (classNameToUseSQLite.has(new_class)) {
+				throw new UserError(
+					`Cannot apply new_sqlite_classes migration to existing class ${new_class}`
+				);
+			} else {
+				classNameToUseSQLite.set(new_class, true);
+			}
+		});
+	});
+
+	return classNameToUseSQLite;
 }
 
 type PickTemplate<T, K extends string> = {
@@ -685,6 +752,7 @@ function buildAssetOptions(config: Omit<ConfigBundle, "rules">) {
 				path: config.experimentalAssets.directory,
 				bindingName: config.experimentalAssets.binding,
 				routingConfig: config.experimentalAssets.routingConfig,
+				assetConfig: config.experimentalAssets.assetConfig,
 			},
 		};
 	}

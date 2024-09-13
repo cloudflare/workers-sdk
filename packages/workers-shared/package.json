@@ -1,6 +1,6 @@
 {
 	"name": "@cloudflare/workers-shared",
-	"version": "0.4.1",
+	"version": "0.5.0",
 	"description": "Package that is used at Cloudflare to power some internal features of Cloudflare Workers.",
 	"keywords": [
 		"cloudflare",
@@ -18,11 +18,12 @@
 	},
 	"license": "MIT OR Apache-2.0",
 	"author": "wrangler@cloudflare.com",
+	"types": "./dist",
 	"files": [
 		"dist"
 	],
 	"scripts": {
-		"build": "pnpm run clean && pnpm run bundle:asset-worker:prod && pnpm run bundle:router-worker:prod",
+		"build": "pnpm run clean && pnpm run bundle:asset-worker:prod && pnpm run bundle:router-worker:prod && pnpm run types:emit",
 		"bundle:asset-worker": "esbuild asset-worker/src/index.ts --format=esm --bundle --outfile=dist/asset-worker.mjs --sourcemap=external --external:cloudflare:*",
 		"bundle:asset-worker:prod": "pnpm run bundle:asset-worker --minify && node -r esbuild-register scripts/copy-config-file.ts",
 		"bundle:router-worker": "esbuild router-worker/src/index.ts --format=esm --bundle --outfile=dist/router-worker.mjs --sourcemap=external",
@@ -31,21 +32,29 @@
 		"check:type": "pnpm run check:type:tests && tsc",
 		"check:type:tests": "tsc -p ./asset-worker/tests/tsconfig.json",
 		"clean": "rimraf dist",
-		"deploy": "pnpm run deploy:asset-worker",
+		"deploy": "pnpm run deploy:router-worker && pnpm run deploy:asset-worker",
 		"deploy:asset-worker": "CLOUDFLARE_API_TOKEN=$WORKERS_NEW_CLOUDFLARE_API_TOKEN wrangler versions upload --experimental-versions -c asset-worker/wrangler.toml",
+		"deploy:router-worker": "CLOUDFLARE_API_TOKEN=$WORKERS_DEPLOY_AND_CONFIG_CLOUDFLARE_API_TOKEN wrangler versions upload --experimental-versions -c router-worker/wrangler.toml",
 		"dev": "pnpm run clean && concurrently -n bundle:asset-worker,bundle:router-worker -c blue,magenta \"pnpm run bundle:asset-worker --watch\" \"pnpm run bundle:router-worker --watch\"",
 		"test": "vitest",
-		"test:ci": "pnpm run test run"
+		"test:ci": "pnpm run test",
+		"types:emit": "tsc index.ts --declaration --emitDeclarationOnly --declarationDir ./dist"
+	},
+	"dependencies": {
+		"mime": "^3.0.0",
+		"zod": "^3.22.3"
 	},
 	"devDependencies": {
 		"@cloudflare/eslint-config-worker": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-types": "^4.20240909.0",
+		"@types/mime": "^3.0.4",
 		"concurrently": "^8.2.2",
 		"esbuild": "0.17.19",
 		"rimraf": "^6.0.1",
+		"toucan-js": "^3.3.1",
 		"typescript": "^5.5.4",
-		"vitest": "2.0.5"
+		"vitest": "1.5.0"
 	},
 	"engines": {
 		"node": ">=16.7.0"

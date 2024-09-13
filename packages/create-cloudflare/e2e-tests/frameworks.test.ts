@@ -17,7 +17,7 @@ import {
 } from "vitest";
 import { deleteProject, deleteWorker } from "../scripts/common";
 import { getFrameworkMap } from "../src/templates";
-import { frameworkToTest } from "./frameworkToTest";
+import { getFrameworkToTest } from "./frameworkToTest";
 import {
 	createTestLogStream,
 	getDiffsPath,
@@ -31,7 +31,7 @@ import {
 	testProjectDir,
 	waitForExit,
 } from "./helpers";
-import type { FrameworkMap, FrameworkName } from "../src/templates";
+import type { TemplateMap } from "../src/templates";
 import type { RunnerConfig } from "./helpers";
 import type { WriteStream } from "fs";
 import type { Suite } from "vitest";
@@ -368,11 +368,11 @@ const frameworkTests: Record<string, FrameworkTestConfig> = {
 };
 
 describe.concurrent(`E2E: Web frameworks`, () => {
-	let frameworkMap: FrameworkMap;
+	let frameworkMap: TemplateMap;
 	let logStream: WriteStream;
 
 	beforeAll(async (ctx) => {
-		frameworkMap = await getFrameworkMap();
+		frameworkMap = getFrameworkMap({ experimental: false });
 		recreateLogFolder(ctx as Suite);
 		recreateDiffsFolder();
 	});
@@ -394,6 +394,7 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 		// If the framework in question is being run in isolation, always run it.
 		// Otherwise, only run the test if it's configured `quarantine` value matches
 		// what is set in E2E_QUARANTINE
+		const frameworkToTest = getFrameworkToTest({ experimental: false });
 		let shouldRun = frameworkToTest
 			? frameworkToTest === framework
 			: quarantineModeMatch;
@@ -409,7 +410,7 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 				const { getPath, getName, clean } = testProjectDir("pages");
 				const projectPath = getPath(framework);
 				const projectName = getName(framework);
-				const frameworkConfig = frameworkMap[framework as FrameworkName];
+				const frameworkConfig = frameworkMap[framework];
 
 				const { promptHandlers, verifyDeploy, flags } =
 					frameworkTests[framework];
@@ -575,8 +576,8 @@ const verifyDevScript = async (
 		return;
 	}
 
-	const frameworkMap = await getFrameworkMap();
-	const template = frameworkMap[framework as FrameworkName];
+	const frameworkMap = getFrameworkMap({ experimental: false });
+	const template = frameworkMap[framework];
 
 	// Run the devserver on a random port to avoid colliding with other tests
 	const TEST_PORT = Math.ceil(Math.random() * 1000) + 20000;

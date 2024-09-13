@@ -1053,6 +1053,10 @@ describe("normalizeAndValidateConfig()", () => {
 				placement: {
 					mode: "smart",
 				},
+				observability: {
+					enabled: true,
+					head_sampling_rate: 1,
+				},
 			};
 
 			const { config, diagnostics } = normalizeAndValidateConfig(
@@ -1131,6 +1135,10 @@ describe("normalizeAndValidateConfig()", () => {
 				placement: {
 					mode: "INVALID",
 				},
+				observability: {
+					enabled: "INVALID",
+					head_sampling_rate: "INVALID",
+				},
 			} as unknown as RawEnvironment;
 
 			const { config, diagnostics } = normalizeAndValidateConfig(
@@ -1142,67 +1150,69 @@ describe("normalizeAndValidateConfig()", () => {
 			expect(config).toEqual(expect.objectContaining(expectedConfig));
 			expect(diagnostics.hasWarnings()).toBe(false);
 			expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			"Processing wrangler configuration:
-			  - Expected \\"route\\" to be either a string, or an object with shape { pattern, custom_domain, zone_id | zone_name }, but got 888.
-			  - Expected \\"account_id\\" to be of type string but got 222.
-			  - Expected \\"routes\\" to be an array of either strings or objects with the shape { pattern, custom_domain, zone_id | zone_name }, but these weren't valid: [
-			      666,
-			      777,
-			      {
-			        \\"pattern\\": 123,
-			        \\"zone_id\\": \\"zone_id_1\\"
-			      },
-			      {
-			        \\"pattern\\": \\"route_2\\",
-			        \\"zone_id\\": 123
-			      },
-			      {
-			        \\"pattern\\": \\"route_2\\",
-			        \\"zone_name\\": 123
-			      },
-			      {
-			        \\"pattern\\": \\"route_3\\"
-			      },
-			      {
-			        \\"zone_id\\": \\"zone_id_4\\"
-			      },
-			      {
-			        \\"zone_name\\": \\"zone_name_4\\"
-			      },
-			      {},
-			      {
-			        \\"pattern\\": \\"route_5\\",
-			        \\"zone_id\\": \\"zone_id_5\\",
-			        \\"some_other_key\\": 123
-			      },
-			      {
-			        \\"pattern\\": \\"route_5\\",
-			        \\"zone_name\\": \\"zone_name_5\\",
-			        \\"some_other_key\\": 123
-			      }
-			    ].
-			  - Expected exactly one of the following fields [\\"routes\\",\\"route\\"].
-			  - Expected \\"workers_dev\\" to be of type boolean but got \\"BAD\\".
-			  - Expected \\"build.command\\" to be of type string but got 1444.
-			  - Expected \\"build.cwd\\" to be of type string but got 1555.
-			  - Expected \\"build.watch_dir\\" to be of type string but got 1666.
-			  - Expected \\"compatibility_date\\" to be of type string but got 333.
-			  - Expected \\"compatibility_flags\\" to be of type string array but got [444,555].
-			  - Expected \\"jsx_factory\\" to be of type string but got 999.
-			  - Expected \\"jsx_fragment\\" to be of type string but got 1000.
-			  - Expected \\"tsconfig\\" to be of type string but got true.
-			  - Expected \\"name\\" to be of type string, alphanumeric and lowercase with dashes only but got 111.
-			  - Expected \\"main\\" to be of type string but got 1333.
-			  - Expected \\"usage_model\\" field to be one of [\\"bundled\\",\\"unbound\\"] but got \\"INVALID\\".
-			  - Expected \\"placement.mode\\" field to be one of [\\"off\\",\\"smart\\"] but got \\"INVALID\\".
-			  - The field \\"define.DEF1\\" should be a string but got 1777.
-			  - Expected \\"no_bundle\\" to be of type boolean but got \\"INVALID\\".
-			  - Expected \\"minify\\" to be of type boolean but got \\"INVALID\\".
-			  - Expected \\"node_compat\\" to be of type boolean but got \\"INVALID\\".
-			  - Expected \\"first_party_worker\\" to be of type boolean but got \\"INVALID\\".
-			  - Expected \\"logpush\\" to be of type boolean but got \\"INVALID\\".
-			  - Expected \\"upload_source_maps\\" to be of type boolean but got \\"INVALID\\"."
-		`);
+				"Processing wrangler configuration:
+				  - Expected \\"route\\" to be either a string, or an object with shape { pattern, custom_domain, zone_id | zone_name }, but got 888.
+				  - Expected \\"account_id\\" to be of type string but got 222.
+				  - Expected \\"routes\\" to be an array of either strings or objects with the shape { pattern, custom_domain, zone_id | zone_name }, but these weren't valid: [
+				      666,
+				      777,
+				      {
+				        \\"pattern\\": 123,
+				        \\"zone_id\\": \\"zone_id_1\\"
+				      },
+				      {
+				        \\"pattern\\": \\"route_2\\",
+				        \\"zone_id\\": 123
+				      },
+				      {
+				        \\"pattern\\": \\"route_2\\",
+				        \\"zone_name\\": 123
+				      },
+				      {
+				        \\"pattern\\": \\"route_3\\"
+				      },
+				      {
+				        \\"zone_id\\": \\"zone_id_4\\"
+				      },
+				      {
+				        \\"zone_name\\": \\"zone_name_4\\"
+				      },
+				      {},
+				      {
+				        \\"pattern\\": \\"route_5\\",
+				        \\"zone_id\\": \\"zone_id_5\\",
+				        \\"some_other_key\\": 123
+				      },
+				      {
+				        \\"pattern\\": \\"route_5\\",
+				        \\"zone_name\\": \\"zone_name_5\\",
+				        \\"some_other_key\\": 123
+				      }
+				    ].
+				  - Expected exactly one of the following fields [\\"routes\\",\\"route\\"].
+				  - Expected \\"workers_dev\\" to be of type boolean but got \\"BAD\\".
+				  - Expected \\"build.command\\" to be of type string but got 1444.
+				  - Expected \\"build.cwd\\" to be of type string but got 1555.
+				  - Expected \\"build.watch_dir\\" to be of type string but got 1666.
+				  - Expected \\"compatibility_date\\" to be of type string but got 333.
+				  - Expected \\"compatibility_flags\\" to be of type string array but got [444,555].
+				  - Expected \\"jsx_factory\\" to be of type string but got 999.
+				  - Expected \\"jsx_fragment\\" to be of type string but got 1000.
+				  - Expected \\"tsconfig\\" to be of type string but got true.
+				  - Expected \\"name\\" to be of type string, alphanumeric and lowercase with dashes only but got 111.
+				  - Expected \\"main\\" to be of type string but got 1333.
+				  - Expected \\"usage_model\\" field to be one of [\\"bundled\\",\\"unbound\\"] but got \\"INVALID\\".
+				  - Expected \\"placement.mode\\" field to be one of [\\"off\\",\\"smart\\"] but got \\"INVALID\\".
+				  - The field \\"define.DEF1\\" should be a string but got 1777.
+				  - Expected \\"no_bundle\\" to be of type boolean but got \\"INVALID\\".
+				  - Expected \\"minify\\" to be of type boolean but got \\"INVALID\\".
+				  - Expected \\"node_compat\\" to be of type boolean but got \\"INVALID\\".
+				  - Expected \\"first_party_worker\\" to be of type boolean but got \\"INVALID\\".
+				  - Expected \\"logpush\\" to be of type boolean but got \\"INVALID\\".
+				  - Expected \\"upload_source_maps\\" to be of type boolean but got \\"INVALID\\".
+				  - Expected \\"observability.enabled\\" to be of type boolean but got \\"INVALID\\".
+				  - Expected \\"observability.head_sampling_rate\\" to be of type number but got \\"INVALID\\"."
+			`);
 		});
 
 		describe("name", () => {
@@ -1823,6 +1833,54 @@ describe("normalizeAndValidateConfig()", () => {
 					  - \\"experimental_assets.directory\\" is a required field.
 					  - Expected \\"experimental_assets.binding\\" to be of type string but got 2."
 				`);
+			});
+
+			it("should error on invalid `experimental_assets` config values", () => {
+				const expectedConfig = {
+					experimental_assets: {
+						directory: "./public",
+						html_handling: "foo",
+						not_found_handling: "bar",
+					},
+				};
+
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					expectedConfig as unknown as RawConfig,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(config).toEqual(expect.objectContaining(expectedConfig));
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					"
+				`);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - Expected \\"experimental_assets.html_handling\\" field to be one of [\\"auto-trailing-slash\\",\\"force-trailing-slash\\",\\"drop-trailing-slash\\",\\"none\\"] but got \\"foo\\".
+					  - Expected \\"experimental_assets.not_found_handling\\" field to be one of [\\"single-page-application\\",\\"404-page\\",\\"none\\"] but got \\"bar\\"."
+				`);
+			});
+
+			it("should accept valid `experimental_assets` config values", () => {
+				const expectedConfig: RawConfig = {
+					experimental_assets: {
+						directory: "./public",
+						html_handling: "drop-trailing-slash",
+						not_found_handling: "404-page",
+					},
+				};
+
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					expectedConfig,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(config).toEqual(expect.objectContaining(expectedConfig));
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(false);
 			});
 
 			it("should error if `directory` is an empty string", () => {
@@ -3747,6 +3805,10 @@ describe("normalizeAndValidateConfig()", () => {
 				first_party_worker: true,
 				logpush: true,
 				upload_source_maps: true,
+				observability: {
+					enabled: true,
+					head_sampling_rate: 0.5,
+				},
 			};
 
 			const { config, diagnostics } = normalizeAndValidateConfig(
@@ -3793,6 +3855,9 @@ describe("normalizeAndValidateConfig()", () => {
 				first_party_worker: false,
 				logpush: false,
 				upload_source_maps: false,
+				observability: {
+					enabled: false,
+				},
 			};
 			const rawConfig: RawConfig = {
 				name: "mock-name",
@@ -3818,6 +3883,9 @@ describe("normalizeAndValidateConfig()", () => {
 				first_party_worker: true,
 				logpush: true,
 				upload_source_maps: true,
+				observability: {
+					enabled: true,
+				},
 				env: {
 					ENV1: rawEnv,
 				},
@@ -5413,6 +5481,49 @@ describe("normalizeAndValidateConfig()", () => {
 			  - Expected \\"tail_consumers[3].service\\" to be of type string but got {}.
 			  - Expected \\"tail_consumers[4].service\\" to be of type string but got 123."
 		`);
+			});
+		});
+
+		describe("[observability]", () => {
+			it("should error on invalid observability", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						observability: {
+							notEnabled: "true",
+							head_sampling_rate: true,
+						},
+					} as unknown as RawConfig,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - \\"observability.enabled\\" is a required field.
+					  - Expected \\"observability.head_sampling_rate\\" to be of type number but got true."
+				`);
+			});
+
+			it("should error on a sampling rate out of range", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						observability: {
+							enabled: true,
+							head_sampling_rate: 2,
+						},
+					} satisfies RawConfig,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - \`observability.head_sampling_rate\` must be a value between 0 and 1."
+				`);
 			});
 		});
 

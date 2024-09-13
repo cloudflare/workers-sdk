@@ -24,6 +24,7 @@ import { CommandLineArgsError, printWranglerBanner } from "./index";
 import type { RawConfig } from "./config";
 import type {
 	CustomDomainRoute,
+	Observability,
 	Route,
 	TailConsumer,
 	ZoneNameRoute,
@@ -103,6 +104,7 @@ export type ServiceMetadataRes = {
 			last_deployed_from?: "wrangler" | "dash" | "api";
 			placement_mode?: "smart";
 			tail_consumers?: TailConsumer[];
+			observability?: Observability;
 		};
 	};
 	created_on: string;
@@ -983,6 +985,7 @@ async function getWorkerConfig(
 				}
 			: {}),
 		tail_consumers: serviceEnvMetadata.script.tail_consumers,
+		observability: serviceEnvMetadata.script.observability,
 		...mappedBindings,
 	};
 }

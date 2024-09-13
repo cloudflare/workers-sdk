@@ -1,5 +1,15 @@
 # create-cloudflare
 
+## 2.27.0
+
+### Minor Changes
+
+- [#6678](https://github.com/cloudflare/workers-sdk/pull/6678) [`40ecf47`](https://github.com/cloudflare/workers-sdk/commit/40ecf4796860fd45ec593c1d143406a90a92c793) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - feat: add experimental mode and associated workers + assets templates
+
+### Patch Changes
+
+- [#6678](https://github.com/cloudflare/workers-sdk/pull/6678) [`40ecf47`](https://github.com/cloudflare/workers-sdk/commit/40ecf4796860fd45ec593c1d143406a90a92c793) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: do not crash if the chosen framework does not exist
+
 ## 2.26.0
 
 ### Minor Changes

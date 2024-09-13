@@ -91,6 +91,7 @@ const updateEnvDeclaration = (ctx: C3Context) => {
 const config: TemplateConfig = {
 	configVersion: 1,
 	id: "astro",
+	frameworkCli: "create-astro",
 	platform: "pages",
 	displayName: "Astro",
 	copyFiles: {

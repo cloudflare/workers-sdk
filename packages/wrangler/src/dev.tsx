@@ -618,6 +618,18 @@ export async function startDev(args: StartDevOptions) {
 			);
 		}
 
+		if (
+			args.remote &&
+			config.migrations?.some(
+				(m) =>
+					Array.isArray(m.new_sqlite_classes) && m.new_sqlite_classes.length > 0
+			)
+		) {
+			throw new UserError(
+				"SQLite in Durable Objects is only supported in local mode."
+			);
+		}
+
 		const projectRoot = configPath && path.dirname(configPath);
 
 		const devEnv = new DevEnv();
@@ -973,6 +985,7 @@ export async function startDev(args: StartDevOptions) {
 					}
 					usageModel={configParam.usage_model}
 					bindings={bindings}
+					migrations={configParam.migrations}
 					crons={configParam.triggers.crons}
 					queueConsumers={configParam.queues.consumers}
 					onReady={args.onReady}
@@ -1155,6 +1168,7 @@ export async function startApiDev(args: StartDevOptions) {
 				args.compatibilityFlags ?? configParam.compatibility_flags,
 			usageModel: configParam.usage_model,
 			bindings: bindings,
+			migrations: configParam.migrations,
 			crons: configParam.triggers.crons,
 			queueConsumers: configParam.queues.consumers,
 			onReady: args.onReady,

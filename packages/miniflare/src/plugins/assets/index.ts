@@ -1,7 +1,17 @@
 import crypto from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
-import { getType } from "mime";
+import {
+	CONTENT_HASH_OFFSET,
+	encodeFilePath,
+	ENTRY_SIZE,
+	getContentType,
+	HEADER_SIZE,
+	MAX_ASSET_COUNT,
+	MAX_ASSET_SIZE,
+	PATH_HASH_OFFSET,
+	PATH_HASH_SIZE,
+} from "@cloudflare/workers-shared";
 import prettyBytes from "pretty-bytes";
 import SCRIPT_ASSETS from "worker:assets/assets";
 import SCRIPT_ASSETS_KV from "worker:assets/assets-kv";
@@ -77,7 +87,6 @@ export const ASSETS_PLUGIN: Plugin<typeof AssetsOptionsSchema> = {
 				],
 			},
 		};
-
 		const assetsManifest = await buildAssetsManifest(options.assets.path);
 		const assetService: Service = {
 			name: ASSETS_SERVICE_NAME,
@@ -97,6 +106,10 @@ export const ASSETS_PLUGIN: Plugin<typeof AssetsOptionsSchema> = {
 					{
 						name: "ASSETS_MANIFEST",
 						data: assetsManifest,
+					},
+					{
+						name: "CONFIG",
+						json: JSON.stringify(options.assets.assetConfig),
 					},
 				],
 			},
@@ -144,20 +157,6 @@ export const ASSETS_PLUGIN: Plugin<typeof AssetsOptionsSchema> = {
 // 2. Sort and binary encode the asset manifest
 // This is available to asset service worker as a binding.
 
-const MAX_ASSET_COUNT = 20_000;
-const MAX_ASSET_SIZE = 25 * 1024 * 1024;
-const MANIFEST_HEADER_SIZE = 20;
-
-const PATH_HASH_OFFSET = 0;
-const PATH_HASH_SIZE = 16;
-
-const CONTENT_HASH_OFFSET = PATH_HASH_SIZE;
-const CONTENT_HASH_SIZE = 16;
-
-const TAIL_RESERVED_SIZE = 8;
-
-const ENTRY_SIZE = PATH_HASH_SIZE + CONTENT_HASH_SIZE + TAIL_RESERVED_SIZE;
-
 export const buildAssetsManifest = async (dir: string) => {
 	const manifest = await walk(dir);
 	const sortedAssetManifest = sortManifest(manifest);
@@ -197,7 +196,9 @@ const walk = async (dir: string) => {
 					);
 				}
 
-				manifest.push(await hashPath(encodeFilePath(relativeFilepath)));
+				manifest.push(
+					await hashPath(encodeFilePath(relativeFilepath, path.sep))
+				);
 				counter++;
 			}
 		})
@@ -211,22 +212,6 @@ const walk = async (dir: string) => {
 	}
 	return manifest;
 };
-
-const hashPath = async (path: string) => {
-	const encoder = new TextEncoder();
-	const data = encoder.encode(path);
-	const hashBuffer = await crypto.subtle.digest("SHA-256", data.buffer);
-	return new Uint8Array(hashBuffer, 0, PATH_HASH_SIZE);
-};
-
-const encodeFilePath = (filePath: string) => {
-	const encodedPath = filePath
-		.split(path.sep)
-		.map((segment) => encodeURIComponent(segment))
-		.join("/");
-	return "/" + encodedPath;
-};
-
 // sorts ascending by path hash
 const sortManifest = (manifest: Uint8Array[]) => {
 	return manifest.sort(comparisonFn);
@@ -253,10 +238,10 @@ const comparisonFn = (a: Uint8Array, b: Uint8Array) => {
 
 const encodeManifest = (manifest: Uint8Array[]) => {
 	const assetManifestBytes = new Uint8Array(
-		MANIFEST_HEADER_SIZE + manifest.length * ENTRY_SIZE
+		HEADER_SIZE + manifest.length * ENTRY_SIZE
 	);
 	for (const [i, entry] of manifest.entries()) {
-		const entryOffset = MANIFEST_HEADER_SIZE + i * ENTRY_SIZE;
+		const entryOffset = HEADER_SIZE + i * ENTRY_SIZE;
 		// NB: PATH_HASH_OFFSET = 0
 		// set the path hash:
 		assetManifestBytes.set(entry, entryOffset + PATH_HASH_OFFSET);
@@ -279,6 +264,7 @@ type AssetReverseMap = {
 	[pathHash: string]: { filePath: string; contentType: string };
 };
 
+// TODO: This walk should be pulled into a common place, shared by wrangler and miniflare
 const createReverseMap = async (dir: string) => {
 	const files = await fs.readdir(dir, { recursive: true });
 	const assetsReverseMap: AssetReverseMap = {};
@@ -292,11 +278,12 @@ const createReverseMap = async (dir: string) => {
 				return;
 			} else {
 				const pathHash = bytesToHex(
-					await hashPath(encodeFilePath(relativeFilepath))
+					await hashPath(encodeFilePath(relativeFilepath, path.sep))
 				);
+
 				assetsReverseMap[pathHash] = {
 					filePath: relativeFilepath,
-					contentType: getType(filepath) ?? "application/octet-stream",
+					contentType: getContentType(filepath),
 				};
 			}
 		})
@@ -308,4 +295,11 @@ const bytesToHex = (buffer: ArrayBufferLike) => {
 	return [...new Uint8Array(buffer)]
 		.map((b) => b.toString(16).padStart(2, "0"))
 		.join("");
+};
+
+const hashPath = async (path: string) => {
+	const encoder = new TextEncoder();
+	const data = encoder.encode(path);
+	const hashBuffer = await crypto.subtle.digest("SHA-256", data.buffer);
+	return new Uint8Array(hashBuffer, 0, PATH_HASH_SIZE);
 };

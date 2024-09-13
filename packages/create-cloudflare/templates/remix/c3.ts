@@ -45,6 +45,7 @@ const configure = async () => {
 const config: TemplateConfig = {
 	configVersion: 1,
 	id: "remix",
+	frameworkCli: "create-remix",
 	platform: "pages",
 	displayName: "Remix",
 	copyFiles: {

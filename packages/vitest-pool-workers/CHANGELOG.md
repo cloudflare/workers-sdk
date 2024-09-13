@@ -1,5 +1,15 @@
 # @cloudflare/vitest-pool-workers
 
+## 0.4.31
+
+### Patch Changes
+
+- [#6673](https://github.com/cloudflare/workers-sdk/pull/6673) [`3f5b934`](https://github.com/cloudflare/workers-sdk/commit/3f5b9343a46dedcb80c8e216eb3ca9d7f687f6cf) Thanks [@dependabot](https://github.com/apps/dependabot)! - fix: The `workerd` provided `node:url` module doesn't support everything Vitest needs. As a short-term fix, inject the `node:url` polyfill into the worker bundle.
+
+- Updated dependencies [[`831f892`](https://github.com/cloudflare/workers-sdk/commit/831f89217627554f4fc984dd8d51bf2a4409ec31), [`88c40be`](https://github.com/cloudflare/workers-sdk/commit/88c40bec9b32ae1a6bcc2f41427ba5958cb3ae63), [`3f5b934`](https://github.com/cloudflare/workers-sdk/commit/3f5b9343a46dedcb80c8e216eb3ca9d7f687f6cf), [`59a0072`](https://github.com/cloudflare/workers-sdk/commit/59a0072740aa19f8d2b7524b993a7be35ba67fce), [`2174127`](https://github.com/cloudflare/workers-sdk/commit/21741277a5bcd6fe6a3f531c8cacc34df84d287e), [`6523db2`](https://github.com/cloudflare/workers-sdk/commit/6523db2695d70ad64da7cfe6f4731ac82181ac51), [`4107f57`](https://github.com/cloudflare/workers-sdk/commit/4107f573b85eb86cc163c4acadf2b85138f76d97), [`8527675`](https://github.com/cloudflare/workers-sdk/commit/8527675e1cf83519a211c8b4cc43161ac29757f1), [`648cfdd`](https://github.com/cloudflare/workers-sdk/commit/648cfdd32d8c1b60e037c3d453fcb1691fbf4b45), [`7bbed63`](https://github.com/cloudflare/workers-sdk/commit/7bbed63fb592df9b5fd081eebad614a8a1a4c281), [`33cc0ec`](https://github.com/cloudflare/workers-sdk/commit/33cc0ecce9062641649fc6ee2e1d68a15f20fc5c), [`48eeff4`](https://github.com/cloudflare/workers-sdk/commit/48eeff4674a47da4d1faffc93f44543e909fca01), [`67711c2`](https://github.com/cloudflare/workers-sdk/commit/67711c2158d706ba2e6bafebf923013e0e0feec0), [`8dcd456`](https://github.com/cloudflare/workers-sdk/commit/8dcd45665c0c420653f57cc7218269e05b2f9a25)]:
+  - wrangler@3.77.0
+  - miniflare@3.20240909.0
+
 ## 0.4.30
 
 ### Patch Changes

@@ -1,6 +1,6 @@
 {
 	"name": "create-cloudflare",
-	"version": "2.26.0",
+	"version": "2.27.0",
 	"description": "A CLI for creating and deploying new applications to Cloudflare.",
 	"keywords": [
 		"cloudflare",
@@ -23,7 +23,8 @@
 	"bin": "./dist/cli.js",
 	"files": [
 		"dist",
-		"templates"
+		"templates",
+		"templates-experimental"
 	],
 	"scripts": {
 		"build": "node -r esbuild-register scripts/build.ts",

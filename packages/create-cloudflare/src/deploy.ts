@@ -1,6 +1,7 @@
 import { crash, startSection, updateStatus } from "@cloudflare/cli";
 import { processArgument } from "@cloudflare/cli/args";
 import { blue, brandColor, dim } from "@cloudflare/cli/colors";
+import TOML from "@iarna/toml";
 import { C3_DEFAULTS, openInBrowser } from "helpers/cli";
 import { quoteShellArgs, runCommand } from "helpers/command";
 import { detectPackageManager } from "helpers/packageManagers";
@@ -67,12 +68,11 @@ const isDeployable = async (ctx: C3Context) => {
 		return true;
 	}
 
-	const wranglerToml = readWranglerToml(ctx);
-	if (wranglerToml.match(/(?<!#\s*)bindings?\s*=.*/m)) {
-		return false;
-	}
+	const wranglerTomlStr = readWranglerToml(ctx);
 
-	return true;
+	const wranglerToml = TOML.parse(wranglerTomlStr.replace(/\r\n/g, "\n"));
+
+	return !hasBinding(wranglerToml);
 };
 
 export const runDeploy = async (ctx: C3Context) => {
@@ -138,4 +138,24 @@ export const maybeOpenBrowser = async (ctx: C3Context) => {
 			}
 		}
 	}
+};
+
+/**
+ * Recursively search the properties of node for a binding.
+ */
+export const hasBinding = (node: unknown): boolean => {
+	if (typeof node !== "object" || node === null) {
+		return false;
+	}
+	for (const key of Object.keys(node)) {
+		if (key === "experimental_assets" || key === "assets") {
+			// Properties called "binding" within "assets" do not count as bindings.
+			continue;
+		}
+		if (key === "binding" || key === "bindings") {
+			return true;
+		}
+		return hasBinding(node[key as keyof typeof node]);
+	}
+	return false;
 };

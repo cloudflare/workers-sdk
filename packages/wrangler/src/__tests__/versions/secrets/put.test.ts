@@ -40,6 +40,7 @@ describe("versions secret put", () => {
 				"secret_key",
 				"secret_text",
 			]);
+			expect(metadata.keep_assets).toBeTruthy();
 		});
 		await runWrangler(
 			"versions secret put NEW_SECRET --name script-name --x-versions"
@@ -67,6 +68,7 @@ describe("versions secret put", () => {
 				"secret_key",
 				"secret_text",
 			]);
+			expect(metadata.keep_assets).toBeTruthy();
 		});
 
 		mockStdIn.send(
@@ -107,6 +109,7 @@ describe("versions secret put", () => {
 				"secret_key",
 				"secret_text",
 			]);
+			expect(metadata.keep_assets).toBeTruthy();
 		});
 		await runWrangler("versions secret put NEW_SECRET --x-versions");
 
@@ -136,6 +139,7 @@ describe("versions secret put", () => {
 				"secret_key",
 				"secret_text",
 			]);
+			expect(metadata.keep_assets).toBeTruthy();
 
 			expect(metadata.annotations).not.toBeUndefined();
 			expect(
@@ -172,6 +176,7 @@ describe("versions secret put", () => {
 				"secret_key",
 				"secret_text",
 			]);
+			expect(metadata.keep_assets).toBeTruthy();
 
 			expect(metadata.annotations).not.toBeUndefined();
 			expect(
@@ -211,6 +216,7 @@ describe("versions secret put", () => {
 				"secret_key",
 				"secret_text",
 			]);
+			expect(metadata.keep_assets).toBeTruthy();
 
 			expect(metadata.annotations).not.toBeUndefined();
 			expect(
@@ -286,6 +292,7 @@ describe("versions secret put", () => {
 				"secret_key",
 				"secret_text",
 			]);
+			expect(metadata.keep_assets).toBeTruthy();
 
 			expect(metadata.annotations).not.toBeUndefined();
 			expect(

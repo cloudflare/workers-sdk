@@ -113,6 +113,7 @@ async function createDraftWorker({
 				tail_consumers: undefined,
 				limits: undefined,
 				experimental_assets: undefined,
+				observability: undefined,
 			}),
 		}
 	);

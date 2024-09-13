@@ -4416,6 +4416,7 @@ addEventListener('fetch', event => {});`
 					["Q29udGVudCBvZiBmaWxlLTM="],
 					"ff5016e92f039aa743a4ff7abb3180fa",
 					{
+						// TODO: this should be "text/plain; charset=utf-8", but msw? is stripping the charset part
 						type: "text/plain",
 					}
 				)
@@ -4682,6 +4683,7 @@ addEventListener('fetch', event => {});`
 					["Q29udGVudCBvZiBmaWxlLTI="],
 					"7574a8cd3094a050388ac9663af1c1d6",
 					{
+						// TODO: this should be "text/plain; charset=utf-8", but msw? is stripping the charset part
 						type: "text/plain",
 					}
 				)
@@ -10753,6 +10755,35 @@ export default{
 				Uploaded test-name (TIMINGS)
 				  Dispatch Namespace: test-dispatch-namespace
 				Current Version ID: undefined"
+			`);
+		});
+	});
+
+	describe("[observability]", () => {
+		it("should allow uploading workers with observability", async () => {
+			writeWranglerToml({
+				observability: {
+					enabled: true,
+					head_sampling_rate: 0.5,
+				},
+			});
+			await fs.promises.writeFile("index.js", `export default {};`);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedObservability: {
+					enabled: true,
+					head_sampling_rate: 0.5,
+				},
+			});
+
+			await runWrangler("publish index.js");
+			expect(std.out).toMatchInlineSnapshot(`
+				"Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
 			`);
 		});
 	});
