@@ -66,7 +66,7 @@ export function validateDescription(
 
 	if (
 		!(
-			/- \[x\] Required \/ Maybe required/.test(body) ||
+			/- \[x\] Required/.test(body) ||
 			/- \[x\] Not required because: .+/.test(body)
 		)
 	) {
@@ -75,10 +75,7 @@ export function validateDescription(
 		);
 	}
 
-	if (
-		/- \[x\] Required \/ Maybe required/.test(body) &&
-		!parsedLabels.includes("e2e")
-	) {
+	if (/- \[x\] Required/.test(body) && !parsedLabels.includes("e2e")) {
 		errors.push(
 			"Since your PR requires E2E tests to be run, it needs to have the `e2e` label applied on GitHub"
 		);

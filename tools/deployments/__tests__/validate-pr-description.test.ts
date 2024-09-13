@@ -23,7 +23,7 @@ Fixes #[insert GH or internal issue number(s)].
   - [ ] Tests not necessary because:
 - E2E Tests CI Job required? (Use "e2e" label or ask maintainer to run separately)
   - [ ] I don't know
-  - [ ] Required / Maybe required
+  - [ ] Required
   - [ ] Not required because:
 - Changeset ([Changeset guidelines](https://github.com/cloudflare/workers-sdk/blob/main/CONTRIBUTING.md#changesets))
   - [ ] TODO (before merge)
@@ -63,7 +63,7 @@ Fixes #1234.
   - [x] Tests not necessary because: test
 - E2E Tests CI Job required? (Use "e2e" label or ask maintainer to run separately)
   - [ ] I don't know
-  - [ ] Required / Maybe required
+  - [ ] Required
   - [x] Not required because: test
 - Changeset ([Changeset guidelines](https://github.com/cloudflare/workers-sdk/blob/main/CONTRIBUTING.md#changesets))
   - [ ] TODO (before merge)
@@ -95,7 +95,7 @@ Fixes [AA-000](https://jira.cfdata.org/browse/AA-000).
   - [x] Tests not necessary because: test
 - E2E Tests CI Job required? (Use "e2e" label or ask maintainer to run separately)
   - [ ] I don't know
-  - [ ] Required / Maybe required
+  - [ ] Required
   - [x] Not required because: test
 - Changeset ([Changeset guidelines](https://github.com/cloudflare/workers-sdk/blob/main/CONTRIBUTING.md#changesets))
   - [ ] TODO (before merge)
@@ -127,7 +127,7 @@ Fixes [AA-000](https://jira.cfdata.org/browse/AA-000).
   - [ ] Tests not necessary because:
 - E2E Tests CI Job required? (Use "e2e" label or ask maintainer to run separately)
   - [ ] I don't know
-  - [ ] Required / Maybe required
+  - [ ] Required
   - [x] Not required because: test
 - Changeset ([Changeset guidelines](https://github.com/cloudflare/workers-sdk/blob/main/CONTRIBUTING.md#changesets))
   - [ ] TODO (before merge)
@@ -159,7 +159,7 @@ Fixes [AA-000](https://jira.cfdata.org/browse/AA-000).
   - [ ] Tests not necessary because:
 - E2E Tests CI Job required? (Use "e2e" label or ask maintainer to run separately)
   - [x] I don't know
-  - [ ] Required / Maybe required
+  - [ ] Required
   - [ ] Not required because: test
 - Changeset ([Changeset guidelines](https://github.com/cloudflare/workers-sdk/blob/main/CONTRIBUTING.md#changesets))
   - [ ] TODO (before merge)
@@ -196,7 +196,7 @@ Fixes [AA-000](https://jira.cfdata.org/browse/AA-000).
   - [ ] Tests not necessary because:
 - E2E Tests CI Job required? (Use "e2e" label or ask maintainer to run separately)
   - [ ] I don't know
-  - [x] Required / Maybe required
+  - [x] Required
   - [ ] Not required because: test
 - Changeset ([Changeset guidelines](https://github.com/cloudflare/workers-sdk/blob/main/CONTRIBUTING.md#changesets))
   - [ ] TODO (before merge)
@@ -231,7 +231,7 @@ Fixes [AA-000](https://jira.cfdata.org/browse/AA-000).
   - [ ] Tests not necessary because:
 - E2E Tests CI Job required? (Use "e2e" label or ask maintainer to run separately)
   - [ ] I don't know
-  - [x] Required / Maybe required
+  - [x] Required
   - [ ] Not required because: test
 - Changeset ([Changeset guidelines](https://github.com/cloudflare/workers-sdk/blob/main/CONTRIBUTING.md#changesets))
   - [ ] TODO (before merge)
