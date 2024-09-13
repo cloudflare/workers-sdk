@@ -19,6 +19,7 @@ import {
 	maskVars,
 } from "../../dev";
 import { getLocalPersistencePath } from "../../dev/get-local-persistence-path";
+import { getClassNamesWhichUseSQLite } from "../../dev/validate-dev-props";
 import { UserError } from "../../errors";
 import { processExperimentalAssetsArg } from "../../experimental-assets";
 import { logger } from "../../logger";
@@ -319,17 +320,17 @@ async function resolveConfig(
 		);
 	}
 
+	// TODO(do) support remote wrangler dev
+	const classNamesWhichUseSQLite = getClassNamesWhichUseSQLite(
+		resolved.migrations
+	);
 	if (
-		resolved.migrations?.some(
-			(m) =>
-				Array.isArray(m.new_sqlite_classes) && m.new_sqlite_classes.length > 0
-		) &&
-		resolved.dev?.remote
+		resolved.dev.remote &&
+		Array.from(classNamesWhichUseSQLite.values()).some((v) => v)
 	) {
-		throw new UserError(
-			"SQLite in Durable Objects is only supported in local mode."
-		);
+		logger.warn("SQLite in Durable Objects is only supported in local mode.");
 	}
+
 	return resolved;
 }
 export class ConfigController extends Controller<ConfigControllerEventMap> {

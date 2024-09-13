@@ -32,7 +32,10 @@ import { openInspector } from "./inspect";
 import { Local, maybeRegisterLocalWorker } from "./local";
 import { Remote } from "./remote";
 import { useEsbuild } from "./use-esbuild";
-import { validateDevProps } from "./validate-dev-props";
+import {
+	getClassNamesWhichUseSQLite,
+	validateDevProps,
+} from "./validate-dev-props";
 import type {
 	DevEnv,
 	ProxyData,
@@ -632,6 +635,17 @@ function DevSession(props: DevSessionProps) {
 		logger.warn(
 			"Queues are currently in Beta and are not supported in wrangler dev remote mode."
 		);
+	}
+
+	// TODO(do) support remote wrangler dev
+	const classNamesWhichUseSQLite = getClassNamesWhichUseSQLite(
+		props.migrations
+	);
+	if (
+		!props.local &&
+		Array.from(classNamesWhichUseSQLite.values()).some((v) => v)
+	) {
+		logger.warn("SQLite in Durable Objects is only supported in local mode.");
 	}
 
 	// this won't be called with props.experimentalDevEnv because useWorker is guarded with the same flag
