@@ -99,22 +99,22 @@ describe("hyperdrive commands", () => {
 			"hyperdrive create test123 --connection-string='postgresql://test:password@example.com:12345/neondb'"
 		);
 		expect(std.out).toMatchInlineSnapshot(`
-		"🚧 Creating 'test123'
-		✅ Created new Hyperdrive config
-		 {
-		  \\"id\\": \\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\\",
-		  \\"name\\": \\"test123\\",
-		  \\"origin\\": {
-		    \\"host\\": \\"example.com\\",
-		    \\"port\\": 12345,
-		    \\"database\\": \\"neondb\\",
-		    \\"user\\": \\"test\\"
-		  },
-		  \\"caching\\": {
-		    \\"disabled\\": false
-		  }
-		}"
-	`);
+			"🚧 Creating 'test123'
+			✅ Created new Hyperdrive config
+			 {
+			  \\"id\\": \\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\\",
+			  \\"name\\": \\"test123\\",
+			  \\"origin\\": {
+			    \\"host\\": \\"example.com\\",
+			    \\"port\\": 12345,
+			    \\"database\\": \\"neondb\\",
+			    \\"user\\": \\"test\\"
+			  },
+			  \\"caching\\": {
+			    \\"disabled\\": false
+			  }
+			}"
+		`);
 	});
 
 	it("should handle creating a hyperdrive config for postgres without a port specified", async () => {
@@ -123,22 +123,22 @@ describe("hyperdrive commands", () => {
 			"hyperdrive create test123 --connection-string='postgresql://test:password@example.com/neondb'"
 		);
 		expect(std.out).toMatchInlineSnapshot(`
-		"🚧 Creating 'test123'
-		✅ Created new Hyperdrive config
-		 {
-		  \\"id\\": \\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\\",
-		  \\"name\\": \\"test123\\",
-		  \\"origin\\": {
-		    \\"host\\": \\"example.com\\",
-		    \\"port\\": 5432,
-		    \\"database\\": \\"neondb\\",
-		    \\"user\\": \\"test\\"
-		  },
-		  \\"caching\\": {
-		    \\"disabled\\": false
-		  }
-		}"
-	`);
+			"🚧 Creating 'test123'
+			✅ Created new Hyperdrive config
+			 {
+			  \\"id\\": \\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\\",
+			  \\"name\\": \\"test123\\",
+			  \\"origin\\": {
+			    \\"host\\": \\"example.com\\",
+			    \\"port\\": 5432,
+			    \\"database\\": \\"neondb\\",
+			    \\"user\\": \\"test\\"
+			  },
+			  \\"caching\\": {
+			    \\"disabled\\": false
+			  }
+			}"
+		`);
 	});
 
 	it("should handle creating a hyperdrive config with caching options", async () => {
@@ -147,24 +147,24 @@ describe("hyperdrive commands", () => {
 			"hyperdrive create test123 --connection-string='postgresql://test:password@example.com:12345/neondb' --max-age=30 --swr=15"
 		);
 		expect(std.out).toMatchInlineSnapshot(`
-		"🚧 Creating 'test123'
-		✅ Created new Hyperdrive config
-		 {
-		  \\"id\\": \\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\\",
-		  \\"name\\": \\"test123\\",
-		  \\"origin\\": {
-		    \\"host\\": \\"example.com\\",
-		    \\"port\\": 12345,
-		    \\"database\\": \\"neondb\\",
-		    \\"user\\": \\"test\\"
-		  },
-		  \\"caching\\": {
-		    \\"disabled\\": false,
-		    \\"max_age\\": 30,
-		    \\"stale_while_revalidate\\": 15
-		  }
-		}"
-	`);
+			"🚧 Creating 'test123'
+			✅ Created new Hyperdrive config
+			 {
+			  \\"id\\": \\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\\",
+			  \\"name\\": \\"test123\\",
+			  \\"origin\\": {
+			    \\"host\\": \\"example.com\\",
+			    \\"port\\": 12345,
+			    \\"database\\": \\"neondb\\",
+			    \\"user\\": \\"test\\"
+			  },
+			  \\"caching\\": {
+			    \\"disabled\\": false,
+			    \\"max_age\\": 30,
+			    \\"stale_while_revalidate\\": 15
+			  }
+			}"
+		`);
 	});
 
 	it("should handle creating a hyperdrive config if the user is URL encoded", async () => {
@@ -173,22 +173,22 @@ describe("hyperdrive commands", () => {
 			"hyperdrive create test123 --connection-string='postgresql://user%3Aname:password@example.com/neondb'"
 		);
 		expect(std.out).toMatchInlineSnapshot(`
-		"🚧 Creating 'test123'
-		✅ Created new Hyperdrive config
-		 {
-		  \\"id\\": \\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\\",
-		  \\"name\\": \\"test123\\",
-		  \\"origin\\": {
-		    \\"host\\": \\"example.com\\",
-		    \\"port\\": 5432,
-		    \\"database\\": \\"neondb\\",
-		    \\"user\\": \\"user:name\\"
-		  },
-		  \\"caching\\": {
-		    \\"disabled\\": false
-		  }
-		}"
-	`);
+			"🚧 Creating 'test123'
+			✅ Created new Hyperdrive config
+			 {
+			  \\"id\\": \\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\\",
+			  \\"name\\": \\"test123\\",
+			  \\"origin\\": {
+			    \\"host\\": \\"example.com\\",
+			    \\"port\\": 5432,
+			    \\"database\\": \\"neondb\\",
+			    \\"user\\": \\"user:name\\"
+			  },
+			  \\"caching\\": {
+			    \\"disabled\\": false
+			  }
+			}"
+		`);
 	});
 
 	it("should handle creating a hyperdrive config if the password is URL encoded", async () => {
@@ -197,22 +197,22 @@ describe("hyperdrive commands", () => {
 			"hyperdrive create test123 --connection-string='postgresql://test:a%23%3F81n%287@example.com/neondb'"
 		);
 		expect(std.out).toMatchInlineSnapshot(`
-		"🚧 Creating 'test123'
-		✅ Created new Hyperdrive config
-		 {
-		  \\"id\\": \\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\\",
-		  \\"name\\": \\"test123\\",
-		  \\"origin\\": {
-		    \\"host\\": \\"example.com\\",
-		    \\"port\\": 5432,
-		    \\"database\\": \\"neondb\\",
-		    \\"user\\": \\"test\\"
-		  },
-		  \\"caching\\": {
-		    \\"disabled\\": false
-		  }
-		}"
-	`);
+			"🚧 Creating 'test123'
+			✅ Created new Hyperdrive config
+			 {
+			  \\"id\\": \\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\\",
+			  \\"name\\": \\"test123\\",
+			  \\"origin\\": {
+			    \\"host\\": \\"example.com\\",
+			    \\"port\\": 5432,
+			    \\"database\\": \\"neondb\\",
+			    \\"user\\": \\"test\\"
+			  },
+			  \\"caching\\": {
+			    \\"disabled\\": false
+			  }
+			}"
+		`);
 	});
 
 	it("should handle creating a hyperdrive config if the database name is URL encoded", async () => {
@@ -221,22 +221,22 @@ describe("hyperdrive commands", () => {
 			"hyperdrive create test123 --connection-string='postgresql://test:password@example.com/%22weird%22%20dbname'"
 		);
 		expect(std.out).toMatchInlineSnapshot(`
-		"🚧 Creating 'test123'
-		✅ Created new Hyperdrive config
-		 {
-		  \\"id\\": \\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\\",
-		  \\"name\\": \\"test123\\",
-		  \\"origin\\": {
-		    \\"host\\": \\"example.com\\",
-		    \\"port\\": 5432,
-		    \\"database\\": \\"/\\"weird/\\" dbname\\",
-		    \\"user\\": \\"test\\"
-		  },
-		  \\"caching\\": {
-		    \\"disabled\\": false
-		  }
-		}"
-	`);
+			"🚧 Creating 'test123'
+			✅ Created new Hyperdrive config
+			 {
+			  \\"id\\": \\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\\",
+			  \\"name\\": \\"test123\\",
+			  \\"origin\\": {
+			    \\"host\\": \\"example.com\\",
+			    \\"port\\": 5432,
+			    \\"database\\": \\"/\\"weird/\\" dbname\\",
+			    \\"user\\": \\"test\\"
+			  },
+			  \\"caching\\": {
+			    \\"disabled\\": false
+			  }
+			}"
+		`);
 	});
 
 	it("should reject a create hyperdrive command if both connection string and individual origin params are provided", async () => {
@@ -266,6 +266,30 @@ describe("hyperdrive commands", () => {
 			  \\"name\\": \\"test123\\",
 			  \\"origin\\": {
 			    \\"host\\": \\"example.com\\",
+			    \\"database\\": \\"neondb\\",
+			    \\"user\\": \\"test\\",
+			    \\"access_client_id\\": \\"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.access\\"
+			  },
+			  \\"caching\\": {
+			    \\"disabled\\": false
+			  }
+			}"
+		`);
+	});
+
+	it("should create a hyperdrive over access config with a path in the host", async () => {
+		mockHyperdriveRequest();
+		await runWrangler(
+			"hyperdrive create test123 --host=example.com/database --database=neondb --user=test --password=password --access-client-id=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.access --access-client-secret=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+		);
+		expect(std.out).toMatchInlineSnapshot(`
+			"🚧 Creating 'test123'
+			✅ Created new Hyperdrive config
+			 {
+			  \\"id\\": \\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\\",
+			  \\"name\\": \\"test123\\",
+			  \\"origin\\": {
+			    \\"host\\": \\"example.com/database\\",
 			    \\"database\\": \\"neondb\\",
 			    \\"user\\": \\"test\\",
 			    \\"access_client_id\\": \\"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.access\\"
@@ -385,11 +409,43 @@ describe("hyperdrive commands", () => {
 			)
 		).rejects.toThrow();
 		expect(std.err).toMatchInlineSnapshot(`
-			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mWhen updating the origin, all of the following must be set: origin-host, database, origin-user, origin-password[0m
+			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mMissing dependent arguments:[0m
+
+			   origin-port -> origin-host origin-port -> origin-password database -> origin-host database ->
+			  origin-password origin-user -> origin-host origin-user -> origin-password
 
 			"
 		`);
-		expect(std.out).toMatchInlineSnapshot(`""`);
+		expect(std.out).toMatchInlineSnapshot(`
+			"
+			wrangler hyperdrive update <id>
+
+			Update a Hyperdrive config
+
+			POSITIONALS
+			  id  The ID of the Hyperdrive config  [string] [required]
+
+			GLOBAL FLAGS
+			  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
+			  -c, --config                    Path to .toml configuration file  [string]
+			  -e, --env                       Environment to use for operations and .env files  [string]
+			  -h, --help                      Show help  [boolean]
+			  -v, --version                   Show version number  [boolean]
+
+			OPTIONS
+			      --name                  Give your config a new name  [string]
+			      --origin-host           The host of the origin database  [string]
+			      --origin-port           The port number of the origin database  [number]
+			      --origin-scheme         The scheme used to connect to the origin database - e.g. postgresql or postgres  [string]
+			      --database              The name of the database within the origin database  [string]
+			      --origin-user           The username used to connect to the origin database  [string]
+			      --origin-password       The password used to connect to the origin database  [string]
+			      --access-client-id      The Client ID of the Access token to use when connecting to the origin database  [string]
+			      --access-client-secret  The Client Secret of the Access token to use when connecting to the origin database  [string]
+			      --caching-disabled      Disables the caching of SQL responses  [boolean] [default: false]
+			      --max-age               Specifies max duration for which items should persist in the cache, cannot be set when caching is disabled  [number]
+			      --swr                   Indicates the number of seconds cache may serve the response after it becomes stale, cannot be set when caching is disabled  [number]"
+		`);
 	});
 
 	it("should handle updating a hyperdrive config's caching settings", async () => {
@@ -398,24 +454,24 @@ describe("hyperdrive commands", () => {
 			"hyperdrive update xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx --max-age=30 --swr=15"
 		);
 		expect(std.out).toMatchInlineSnapshot(`
-		"🚧 Updating 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'
-		✅ Updated xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx Hyperdrive config
-		 {
-		  \\"id\\": \\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\\",
-		  \\"name\\": \\"test123\\",
-		  \\"origin\\": {
-		    \\"host\\": \\"example.com\\",
-		    \\"port\\": 5432,
-		    \\"database\\": \\"neondb\\",
-		    \\"user\\": \\"test\\"
-		  },
-		  \\"caching\\": {
-		    \\"disabled\\": false,
-		    \\"max_age\\": 30,
-		    \\"stale_while_revalidate\\": 15
-		  }
-		}"
-	`);
+			"🚧 Updating 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'
+			✅ Updated xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx Hyperdrive config
+			 {
+			  \\"id\\": \\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\\",
+			  \\"name\\": \\"test123\\",
+			  \\"origin\\": {
+			    \\"host\\": \\"example.com\\",
+			    \\"port\\": 5432,
+			    \\"database\\": \\"neondb\\",
+			    \\"user\\": \\"test\\"
+			  },
+			  \\"caching\\": {
+			    \\"disabled\\": false,
+			    \\"max_age\\": 30,
+			    \\"stale_while_revalidate\\": 15
+			  }
+			}"
+		`);
 	});
 
 	it("should handle disabling caching for a hyperdrive config", async () => {
@@ -424,22 +480,22 @@ describe("hyperdrive commands", () => {
 			"hyperdrive update xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx --caching-disabled=true"
 		);
 		expect(std.out).toMatchInlineSnapshot(`
-		"🚧 Updating 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'
-		✅ Updated xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx Hyperdrive config
-		 {
-		  \\"id\\": \\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\\",
-		  \\"name\\": \\"test123\\",
-		  \\"origin\\": {
-		    \\"host\\": \\"example.com\\",
-		    \\"port\\": 5432,
-		    \\"database\\": \\"neondb\\",
-		    \\"user\\": \\"test\\"
-		  },
-		  \\"caching\\": {
-		    \\"disabled\\": true
-		  }
-		}"
-	`);
+			"🚧 Updating 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'
+			✅ Updated xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx Hyperdrive config
+			 {
+			  \\"id\\": \\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\\",
+			  \\"name\\": \\"test123\\",
+			  \\"origin\\": {
+			    \\"host\\": \\"example.com\\",
+			    \\"port\\": 5432,
+			    \\"database\\": \\"neondb\\",
+			    \\"user\\": \\"test\\"
+			  },
+			  \\"caching\\": {
+			    \\"disabled\\": true
+			  }
+			}"
+		`);
 	});
 
 	it("should handle updating a hyperdrive config's name", async () => {
@@ -448,22 +504,22 @@ describe("hyperdrive commands", () => {
 			"hyperdrive update xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx --name='new-name'"
 		);
 		expect(std.out).toMatchInlineSnapshot(`
-		"🚧 Updating 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'
-		✅ Updated xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx Hyperdrive config
-		 {
-		  \\"id\\": \\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\\",
-		  \\"name\\": \\"new-name\\",
-		  \\"origin\\": {
-		    \\"host\\": \\"example.com\\",
-		    \\"port\\": 5432,
-		    \\"database\\": \\"neondb\\",
-		    \\"user\\": \\"test\\"
-		  },
-		  \\"caching\\": {
-		    \\"disabled\\": false
-		  }
-		}"
-	`);
+			"🚧 Updating 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'
+			✅ Updated xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx Hyperdrive config
+			 {
+			  \\"id\\": \\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\\",
+			  \\"name\\": \\"new-name\\",
+			  \\"origin\\": {
+			    \\"host\\": \\"example.com\\",
+			    \\"port\\": 5432,
+			    \\"database\\": \\"neondb\\",
+			    \\"user\\": \\"test\\"
+			  },
+			  \\"caching\\": {
+			    \\"disabled\\": false
+			  }
+			}"
+		`);
 	});
 
 	it("should handle updating a hyperdrive to a hyperdrive over access config given the right parameters", async () => {
@@ -503,6 +559,54 @@ describe("hyperdrive commands", () => {
 			"
 		`);
 		expect(std.out).toMatchInlineSnapshot(`""`);
+	});
+
+	it("should throw an exception when updating a hyperdrive config's origin with access credentials but no other origin fields", async () => {
+		mockHyperdriveRequest();
+		await expect(() =>
+			runWrangler(
+				"hyperdrive update xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx --access-client-id='xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.access' --access-client-secret='xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'"
+			)
+		).rejects.toThrow();
+		expect(std.err).toMatchInlineSnapshot(`
+			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mMissing dependent arguments:[0m
+
+			   access-client-id -> origin-host access-client-id -> database access-client-id -> origin-user
+			  access-client-id -> origin-password access-client-secret -> origin-host access-client-secret ->
+			  database access-client-secret -> origin-user access-client-secret -> origin-password
+
+			"
+		`);
+		expect(std.out).toMatchInlineSnapshot(`
+			"
+			wrangler hyperdrive update <id>
+
+			Update a Hyperdrive config
+
+			POSITIONALS
+			  id  The ID of the Hyperdrive config  [string] [required]
+
+			GLOBAL FLAGS
+			  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
+			  -c, --config                    Path to .toml configuration file  [string]
+			  -e, --env                       Environment to use for operations and .env files  [string]
+			  -h, --help                      Show help  [boolean]
+			  -v, --version                   Show version number  [boolean]
+
+			OPTIONS
+			      --name                  Give your config a new name  [string]
+			      --origin-host           The host of the origin database  [string]
+			      --origin-port           The port number of the origin database  [number]
+			      --origin-scheme         The scheme used to connect to the origin database - e.g. postgresql or postgres  [string]
+			      --database              The name of the database within the origin database  [string]
+			      --origin-user           The username used to connect to the origin database  [string]
+			      --origin-password       The password used to connect to the origin database  [string]
+			      --access-client-id      The Client ID of the Access token to use when connecting to the origin database  [string]
+			      --access-client-secret  The Client Secret of the Access token to use when connecting to the origin database  [string]
+			      --caching-disabled      Disables the caching of SQL responses  [boolean] [default: false]
+			      --max-age               Specifies max duration for which items should persist in the cache, cannot be set when caching is disabled  [number]
+			      --swr                   Indicates the number of seconds cache may serve the response after it becomes stale, cannot be set when caching is disabled  [number]"
+		`);
 	});
 
 	it("should reject an update command if the access client ID is provided but not the access client secret", async () => {
