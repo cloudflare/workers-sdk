@@ -1,5 +1,11 @@
 # @cloudflare/workers-shared
 
+## 0.5.3
+
+### Patch Changes
+
+- [#6712](https://github.com/cloudflare/workers-sdk/pull/6712) [`7a8bb17`](https://github.com/cloudflare/workers-sdk/commit/7a8bb17a5f35e11cba336ca1bc5ea16413291bc7) Thanks [@penalosa](https://github.com/penalosa)! - fix: Use D&C token when deploying
+
 ## 0.5.2
 
 ### Patch Changes

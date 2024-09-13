@@ -1,5 +1,13 @@
 # @cloudflare/vitest-pool-workers
 
+## 0.5.2
+
+### Patch Changes
+
+- Updated dependencies []:
+  - miniflare@3.20240909.1
+  - wrangler@3.78.2
+
 ## 0.5.1
 
 ### Patch Changes
