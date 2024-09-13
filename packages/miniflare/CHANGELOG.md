@@ -1,5 +1,11 @@
 # miniflare
 
+## 3.20240909.1
+
+### Minor Changes
+
+- [#6647](https://github.com/cloudflare/workers-sdk/pull/6647) [`d68e8c9`](https://github.com/cloudflare/workers-sdk/commit/d68e8c996ba40eaaf4a3b237f89880bdaafd0113) Thanks [@joshthoward](https://github.com/joshthoward)! - feat: Configure SQLite backed Durable Objects in local dev
+
 ## 3.20240909.0
 
 ### Patch Changes

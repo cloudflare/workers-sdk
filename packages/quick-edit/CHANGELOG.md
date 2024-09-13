@@ -1,5 +1,11 @@
 # @cloudflare/quick-edit
 
+## 0.1.1
+
+### Patch Changes
+
+- [#6624](https://github.com/cloudflare/workers-sdk/pull/6624) [`66f5b25`](https://github.com/cloudflare/workers-sdk/commit/66f5b259a760e4a5ebe0dac01a3d82df15aa3040) Thanks [@edmundhung](https://github.com/edmundhung)! - fix: quick editor deploy script setup
+
 ## 0.1.0
 
 ### Minor Changes

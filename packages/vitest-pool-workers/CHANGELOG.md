@@ -1,5 +1,21 @@
 # @cloudflare/vitest-pool-workers
 
+## 0.5.0
+
+### Minor Changes
+
+- [#6232](https://github.com/cloudflare/workers-sdk/pull/6232) [`f3c0400`](https://github.com/cloudflare/workers-sdk/commit/f3c040016bad4fd4c7a222e9d5f74a1a6207529e) Thanks [@penalosa](https://github.com/penalosa)! - feat: Support Vitest v2.0.x
+
+  This drops support for Vitest@1, due to the issues described in [workers-sdk#6071](https://github.com/cloudflare/workers-sdk/issues/6071)
+
+### Patch Changes
+
+- [#6700](https://github.com/cloudflare/workers-sdk/pull/6700) [`d6c1dd2`](https://github.com/cloudflare/workers-sdk/commit/d6c1dd2bce8b3dce07fb7d09e68b008f6872467b) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: minor performance improvement to the url polyfill used by the vitest integration
+
+- Updated dependencies [[`f30c61f`](https://github.com/cloudflare/workers-sdk/commit/f30c61f1f59ee010c53d3696ad19fe309d315cb9), [`2507304`](https://github.com/cloudflare/workers-sdk/commit/2507304d9680e9968173560fe57f3e909f293fd7), [`b27b741`](https://github.com/cloudflare/workers-sdk/commit/b27b741809babae34f95641b968dacb0db77a815), [`d68e8c9`](https://github.com/cloudflare/workers-sdk/commit/d68e8c996ba40eaaf4a3b237f89880bdaafd0113), [`0737e0f`](https://github.com/cloudflare/workers-sdk/commit/0737e0f78baa98d2cec27e96edefc86500445429), [`0a9e90a`](https://github.com/cloudflare/workers-sdk/commit/0a9e90a309106c21c9e8ac2982d500c16aacb1e2), [`aa603ab`](https://github.com/cloudflare/workers-sdk/commit/aa603ab82fbc35212de19fd1957055493118a73b)]:
+  - wrangler@3.78.0
+  - miniflare@3.20240909.1
+
 ## 0.4.31
 
 ### Patch Changes
