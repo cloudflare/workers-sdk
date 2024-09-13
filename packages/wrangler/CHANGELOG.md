@@ -1,5 +1,13 @@
 # wrangler
 
+## 3.78.2
+
+### Patch Changes
+
+- Updated dependencies [[`7a8bb17`](https://github.com/cloudflare/workers-sdk/commit/7a8bb17a5f35e11cba336ca1bc5ea16413291bc7)]:
+  - @cloudflare/workers-shared@0.5.3
+  - miniflare@3.20240909.1
+
 ## 3.78.1
 
 ### Patch Changes
