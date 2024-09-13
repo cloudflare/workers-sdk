@@ -6,12 +6,6 @@ settings:
 
 catalogs:
   default:
-    '@vitest/runner':
-      specifier: ~2.0.5
-      version: 2.0.5
-    '@vitest/snapshot':
-      specifier: ~2.0.5
-      version: 2.0.5
     vitest:
       specifier: ~2.0.5
       version: 2.0.5
