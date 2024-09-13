@@ -1,3 +1,4 @@
+import assert from "node:assert";
 import path from "node:path";
 import { findWranglerToml, readConfig } from "../config";
 import { getEntry } from "../deployment-bundle/entry";
@@ -10,6 +11,7 @@ import {
 	printWranglerBanner,
 } from "../index";
 import { logger } from "../logger";
+import { verifyWorkerMatchesCITag } from "../match-tag";
 import * as metrics from "../metrics";
 import { writeOutput } from "../output";
 import { getLegacyAssetPaths, getSiteAssetPaths } from "../sites";
@@ -326,6 +328,15 @@ export async function deployHandler(
 
 	const beforeUpload = Date.now();
 	const name = getScriptName(args, config);
+	assert(
+		name,
+		'You need to provide a name when publishing a worker. Either pass it as a cli arg with `--name <name>` or in your config file as `name = "<name>"`'
+	);
+
+	if (!args.dryRun) {
+		assert(accountId, "Missing account ID");
+		await verifyWorkerMatchesCITag(accountId, name);
+	}
 	const { sourceMapSize, versionId, workerTag, targets } = await deploy({
 		config,
 		accountId,

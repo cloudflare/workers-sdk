@@ -77,7 +77,7 @@ type Props = {
 	accountId: string | undefined;
 	entry: Entry;
 	rules: Config["rules"];
-	name: string | undefined;
+	name: string;
 	env: string | undefined;
 	compatibilityDate: string | undefined;
 	compatibilityFlags: string[] | undefined;
@@ -377,7 +377,7 @@ export default async function deploy(props: Props): Promise<{
 
 	let workerExists: boolean = true;
 
-	if (!props.dispatchNamespace && accountId && name) {
+	if (!props.dispatchNamespace && accountId) {
 		try {
 			const serviceMetaData = await fetchResult<{
 				default_environment: {
@@ -458,10 +458,6 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 	}
 
 	const scriptName = props.name;
-	assert(
-		scriptName,
-		'You need to provide a name when publishing a worker. Either pass it as a cli arg with `--name <name>` or in your config file as `name = "<name>"`'
-	);
 
 	assert(
 		!config.site || config.site.bucket,

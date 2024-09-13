@@ -47,7 +47,7 @@ type Props = {
 	accountId: string | undefined;
 	entry: Entry;
 	rules: Config["rules"];
-	name: string | undefined;
+	name: string;
 	legacyEnv: boolean | undefined;
 	env: string | undefined;
 	compatibilityDate: string | undefined;
@@ -204,11 +204,6 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 	}
 
 	const scriptName = props.name;
-	if (!scriptName) {
-		throw new UserError(
-			'You need to provide a name when uploading a Worker Version. Either pass it as a cli arg with `--name <name>` or in your config file as `name = "<name>"`'
-		);
-	}
 
 	if (config.site && !config.site.bucket) {
 		throw new UserError(
