@@ -21,5 +21,8 @@
 	},
 	"volta": {
 		"extends": "../../package.json"
+	},
+	"workers-sdk": {
+		"deploy": true
 	}
 }
