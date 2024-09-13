@@ -11,15 +11,15 @@ Fixes #[insert GH or internal issue number(s)].
 - E2E Tests CI Job required? (Use "e2e" label or ask maintainer to run separately)
   - [ ] I don't know
   - [ ] Required / Maybe required
-  - [ ] Not required because:
+  - [ ] Not required because: 
 - Changeset ([Changeset guidelines](https://github.com/cloudflare/workers-sdk/blob/main/CONTRIBUTING.md#changesets))
   - [ ] TODO (before merge)
   - [ ] Included
-  - [ ] Not necessary because:
+  - [ ] Not necessary because: 
 - Public documentation
   - [ ] TODO (before merge)
   - [ ] Cloudflare docs PR(s): <!--e.g. <https://github.com/cloudflare/cloudflare-docs/pull/>...-->
-  - [ ] Not necessary because:
+  - [ ] Not necessary because: 
 
 <!--
 Have you read our [Contributing guide](https://github.com/cloudflare/workers-sdk/blob/main/CONTRIBUTING.md)?

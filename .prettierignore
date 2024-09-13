@@ -34,3 +34,5 @@ vscode.*.d.ts
 .e2e-logs
 templates/*/build
 templates/*/dist
+
+.github/pull_request_template.md
