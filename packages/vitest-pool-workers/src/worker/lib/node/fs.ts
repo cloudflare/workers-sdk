@@ -18,4 +18,4 @@ export function statSync(_path: string) {
 
 export const promises = {};
 
-export default {};
+export default { existsSync };

@@ -56,14 +56,23 @@ import type {
 import type { Readable } from "node:stream";
 import type { MessagePort } from "node:worker_threads";
 import type {
-	ResolvedConfig,
 	RunnerRPC,
 	RuntimeRPC,
+	SerializedConfig,
 	WorkerContext,
 } from "vitest";
 import type { ProcessPool, Vitest, WorkspaceProject } from "vitest/node";
 
-// https://github.com/vitest-dev/vitest/blob/v1.5.0/packages/vite-node/src/client.ts#L386
+interface SerializedOptions {
+	main?: string;
+	durableObjectBindingDesignators?: Map<
+		string /* bound name */,
+		DurableObjectDesignator
+	>;
+	isolatedStorage?: boolean;
+}
+
+// https://github.com/vitest-dev/vitest/blob/v2.0.5/packages/vite-node/src/client.ts#L468
 declare const __vite_ssr_import__: unknown;
 assert(
 	typeof __vite_ssr_import__ === "undefined",
@@ -71,6 +80,21 @@ assert(
 );
 
 function structuredSerializableStringify(value: unknown): string {
+	// Vitest v2+ sends a sourcemap to it's runner, which we can't serialise currently
+	// Deleting it doesn't seem to cause any problems, and error stack traces etc...
+	// still seem to work
+	// TODO: Figure out how to serialise SourceMap instances
+	if (
+		value &&
+		typeof value === "object" &&
+		"r" in value &&
+		value.r &&
+		typeof value.r === "object" &&
+		"map" in value.r &&
+		value.r.map
+	) {
+		delete value.r.map;
+	}
 	return devalue.stringify(value, structuredSerializableReducers);
 }
 function structuredSerializableParse(value: string): unknown {
@@ -663,7 +687,7 @@ async function runTests(
 	mf: Miniflare,
 	workerName: string,
 	project: Project,
-	config: ResolvedConfig,
+	config: SerializedConfig,
 	files: string[],
 	invalidates: string[] = []
 ) {
@@ -740,7 +764,9 @@ async function runTests(
 	const rules = project.options.miniflare?.modulesRules;
 	const compiledRules = compileModuleRules(rules ?? []);
 
-	const localRpcFunctions = createMethodsRPC(project.project);
+	const localRpcFunctions = createMethodsRPC(project.project, {
+		cacheFs: false,
+	});
 	const patchedLocalRpcFunctions: RuntimeRPC = {
 		...localRpcFunctions,
 		async fetch(...args) {
@@ -953,6 +979,7 @@ export default function (ctx: Vitest): ProcessPool {
 				// serialisable. `getSerializableConfig()` may also return references to
 				// the same objects, so override it with a new object.
 				config.poolOptions = {
+					// @ts-expect-error Vitest provides no way to extend this type
 					threads: {
 						// Allow workers to be re-used by removing the isolation requirement
 						isolate: false,
@@ -974,7 +1001,7 @@ export default function (ctx: Vitest): ProcessPool {
 						// project, so we know whether to call out to the loopback service
 						// to push/pop the storage stack between tests.
 						isolatedStorage: project.options.isolatedStorage,
-					},
+					} satisfies SerializedOptions,
 				};
 
 				const mf = await getProjectMiniflare(ctx, project);
@@ -1045,6 +1072,12 @@ export default function (ctx: Vitest): ProcessPool {
 			// const thingModule = moduleGraph.getModuleById(".../packages/vitest-pool-workers/test/kv/thing.ts");
 			// assert(testModule && thingModule);
 			// thingModule.importers.add(testModule);
+		},
+		async collectTests(_specs, _invalidates) {
+			// TODO: This is a new API introduced in Vitest v2+ which we should consider supporting at some point
+			throw new Error(
+				"The Cloudflare Workers Vitest integration does not support the `.collect()` or `vitest list` APIs"
+			);
 		},
 		async close() {
 			// `close()` will be called when shutting down Vitest or updating config

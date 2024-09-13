@@ -2,3 +2,8 @@ packages:
   - "packages/*"
   - "fixtures/*"
   - "tools"
+
+catalog:
+  vitest: ~2.0.5
+  "@vitest/runner": ~2.0.5
+  "@vitest/snapshot": ~2.0.5

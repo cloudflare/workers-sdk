@@ -50,7 +50,7 @@
 		"turbo": "^1.10.14",
 		"typescript": "^5.5.2",
 		"vite": "^5.0.12",
-		"vitest": "^1.2.2"
+		"vitest": "catalog:default"
 	},
 	"packageManager": "pnpm@9.1.3",
 	"engines": {
@@ -75,7 +75,7 @@
 			"@types/react-transition-group>@types/react": "^18",
 			"@cloudflare/elements>@types/react": "^18",
 			"capnpc-ts>typescript": "4.2.4",
-			"vitest@1.5.0>@types/node": "$@types/node"
+			"vitest>@types/node": "$@types/node"
 		},
 		"patchedDependencies": {
 			"ink@3.2.0": "patches/ink@3.2.0.patch",

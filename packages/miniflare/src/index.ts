@@ -13,7 +13,12 @@ import zlib from "zlib";
 import exitHook from "exit-hook";
 import { $ as colors$ } from "kleur/colors";
 import stoppable from "stoppable";
-import { Dispatcher, getGlobalDispatcher, Pool } from "undici";
+import {
+	Dispatcher,
+	getGlobalDispatcher,
+	Pool,
+	Response as UndiciResponse,
+} from "undici";
 import SCRIPT_MINIFLARE_SHARED from "worker:shared/index";
 import SCRIPT_MINIFLARE_ZOD from "worker:shared/zod";
 import { WebSocketServer } from "ws";
@@ -830,7 +835,12 @@ export class Miniflare {
 		// Should only define custom service bindings if `service` is a function
 		assert(typeof service === "function");
 		try {
-			const response = await service(request, this);
+			let response: UndiciResponse | Response = await service(request, this);
+
+			if (!(response instanceof Response)) {
+				response = new Response(response.body, response);
+			}
+
 			// Validate return type as `service` is a user defined function
 			// TODO: should we validate outside this try/catch?
 			return z.instanceof(Response).parse(response);

@@ -206,7 +206,7 @@ vi.mock("execa", async (importOriginal) => {
 	const realModule = await importOriginal<typeof import("execa")>();
 	return {
 		...realModule,
-		execa: vi.fn<Parameters<typeof realModule.execa>>((...args) => {
+		execa: vi.fn((...args: Parameters<typeof realModule.execa>) => {
 			return args[0] === "mockpm"
 				? Promise.resolve()
 				: realModule.execa(...args);
