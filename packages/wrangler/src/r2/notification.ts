@@ -1,8 +1,8 @@
 import { readConfig } from "../config";
 import { logger } from "../logger";
-import { getQueueById } from "../queues/client";
 import { printWranglerBanner } from "../update-check";
 import { requireApiToken, requireAuth } from "../user";
+import formatLabelledValues from "../utils/render-labelled-values";
 import {
 	actionsForEventCategories,
 	deleteEventNotificationConfig,
@@ -36,12 +36,8 @@ export async function GetHandler(
 		accountId,
 		`${args.bucket}`
 	);
-	const tableOutput = await tableFromNotificationGetResponse(
-		config,
-		resp[args.bucket],
-		getQueueById
-	);
-	logger.table(tableOutput);
+	const tableOutput = await tableFromNotificationGetResponse(config, resp);
+	logger.log(tableOutput.map((x) => formatLabelledValues(x)).join("\n\n"));
 }
 
 export function CreateOptions(yargs: CommonYargsArgv) {

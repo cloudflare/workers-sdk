@@ -92,6 +92,7 @@ async function createDraftWorker({
 					data_blobs: {},
 					dispatch_namespaces: [],
 					mtls_certificates: [],
+					pipelines: [],
 					logfwdr: { bindings: [] },
 					experimental_assets: undefined,
 					unsafe: {

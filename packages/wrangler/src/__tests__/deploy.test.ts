@@ -1455,11 +1455,12 @@ Update them to point to this script instead?`,
 					routes: [{ pattern: "*.example.com", custom_domain: true }],
 				});
 				writeWorkerSource();
-				await expect(
-					runWrangler("deploy ./index")
-				).rejects.toThrowErrorMatchingInlineSnapshot(
-					`[Error: Cannot use "*.example.com" as a Custom Domain; wildcard operators (*) are not allowed]`
-				);
+				await expect(runWrangler("deploy ./index")).rejects
+					.toThrowErrorMatchingInlineSnapshot(`
+					[Error: Invalid Routes:
+					*.example.com:
+					Wildcard operators (*) are not allowed in Custom Domains]
+				`);
 
 				writeWranglerToml({
 					routes: [
@@ -1469,11 +1470,12 @@ Update them to point to this script instead?`,
 				writeWorkerSource();
 				mockServiceScriptData({});
 
-				await expect(
-					runWrangler("deploy ./index")
-				).rejects.toThrowErrorMatchingInlineSnapshot(
-					`[Error: Cannot use "api.example.com/at/a/path" as a Custom Domain; paths are not allowed]`
-				);
+				await expect(runWrangler("deploy ./index")).rejects
+					.toThrowErrorMatchingInlineSnapshot(`
+					[Error: Invalid Routes:
+					api.example.com/at/a/path:
+					Paths are not allowed in Custom Domains]
+				`);
 			});
 
 			it("should not continue with publishing an override if user does not confirm", async () => {
@@ -1514,6 +1516,95 @@ Update them to point to this script instead?`,
 					'Publishing to Custom Domain "api.example.com" was skipped, fix conflict and try again'
 				);
 			});
+		});
+
+		it("should error on routes with paths if experimental assets are present", async () => {
+			writeWranglerToml({
+				routes: [
+					"simple.co.uk/path",
+					"simple.co.uk/path/*",
+					"simple.co.uk/",
+					"simple.co.uk/*",
+					"simple.co.uk",
+					{ pattern: "route.co.uk/path", zone_id: "asdfadsf" },
+					{ pattern: "route.co.uk/path/*", zone_id: "asdfadsf" },
+					{ pattern: "route.co.uk/*", zone_id: "asdfadsf" },
+					{ pattern: "route.co.uk/", zone_id: "asdfadsf" },
+					{ pattern: "route.co.uk", zone_id: "asdfadsf" },
+					{ pattern: "custom.co.uk/path", custom_domain: true },
+					{ pattern: "custom.co.uk/*", custom_domain: true },
+					{ pattern: "custom.co.uk", custom_domain: true },
+				],
+			});
+			writeWorkerSource();
+			writeAssets([{ filePath: "asset.txt", content: "Content of file-1" }]);
+
+			await expect(runWrangler(`deploy --experimental-assets="assets"`)).rejects
+				.toThrowErrorMatchingInlineSnapshot(`
+				[Error: Invalid Routes:
+				simple.co.uk/path:
+				Workers which have static assets cannot be routed on a URL which has a path component. Update the route to replace /path with /*
+
+				simple.co.uk/path/*:
+				Workers which have static assets cannot be routed on a URL which has a path component. Update the route to replace /path/* with /*
+
+				simple.co.uk/:
+				Workers which have static assets must end with a wildcard path. Update the route to end with /*
+
+				simple.co.uk:
+				Workers which have static assets must end with a wildcard path. Update the route to end with /*
+
+				route.co.uk/path:
+				Workers which have static assets cannot be routed on a URL which has a path component. Update the route to replace /path with /*
+
+				route.co.uk/path/*:
+				Workers which have static assets cannot be routed on a URL which has a path component. Update the route to replace /path/* with /*
+
+				route.co.uk/:
+				Workers which have static assets must end with a wildcard path. Update the route to end with /*
+
+				route.co.uk:
+				Workers which have static assets must end with a wildcard path. Update the route to end with /*
+
+				custom.co.uk/path:
+				Paths are not allowed in Custom Domains
+
+				custom.co.uk/*:
+				Wildcard operators (*) are not allowed in Custom Domains
+				Paths are not allowed in Custom Domains]
+			`);
+		});
+
+		it("shouldn't error on routes with paths if there are no experimental assets", async () => {
+			writeWranglerToml({
+				routes: [
+					"simple.co.uk/path",
+					"simple.co.uk/path/*",
+					"simple.co.uk/",
+					"simple.co.uk/*",
+					"simple.co.uk",
+					{ pattern: "route.co.uk/path", zone_id: "asdfadsf" },
+					{ pattern: "route.co.uk/path/*", zone_id: "asdfadsf" },
+					{ pattern: "route.co.uk/*", zone_id: "asdfadsf" },
+					{ pattern: "route.co.uk/", zone_id: "asdfadsf" },
+					{ pattern: "route.co.uk", zone_id: "asdfadsf" },
+					{ pattern: "custom.co.uk/path", custom_domain: true },
+					{ pattern: "custom.co.uk/*", custom_domain: true },
+					{ pattern: "custom.co.uk", custom_domain: true },
+				],
+			});
+			writeWorkerSource();
+
+			await expect(runWrangler(`deploy ./index`)).rejects
+				.toThrowErrorMatchingInlineSnapshot(`
+				[Error: Invalid Routes:
+				custom.co.uk/path:
+				Paths are not allowed in Custom Domains
+
+				custom.co.uk/*:
+				Wildcard operators (*) are not allowed in Custom Domains
+				Paths are not allowed in Custom Domains]
+			`);
 		});
 
 		it.todo("should error if it's a workers.dev route");
@@ -4379,6 +4470,47 @@ addEventListener('fetch', event => {});`
 					},
 				},
 			});
+		});
+
+		it("should ignore assets that match patterns in an .assetsignore file in the root of the assets directory", async () => {
+			const assets = [
+				{ filePath: ".assetsignore", content: "*.bak\nsub-dir" },
+				{ filePath: "file-1.txt", content: "Content of file-1" },
+				{ filePath: "file-2.bak", content: "Content of file-2" },
+				{ filePath: "file-3.txt", content: "Content of file-3" },
+				{ filePath: "sub-dir/file-4.bak", content: "Content of file-4" },
+				{ filePath: "sub-dir/file-5.txt", content: "Content of file-5" },
+			];
+			writeAssets(assets, "some/path/assets");
+			writeWranglerToml(
+				{
+					experimental_assets: { directory: "assets" },
+				},
+				"some/path/wrangler.toml"
+			);
+			const bodies: AssetManifest[] = [];
+			await mockAUSRequest(bodies);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedExperimentalAssets: true,
+				expectedType: "none",
+			});
+			await runWrangler("deploy --config some/path/wrangler.toml");
+			expect(bodies.length).toBe(1);
+			expect(bodies[0]).toMatchInlineSnapshot(`
+				Object {
+				  "manifest": Object {
+				    "/file-1.txt": Object {
+				      "hash": "0de3dd5df907418e9730fd2bd747bd5e",
+				      "size": 17,
+				    },
+				    "/file-3.txt": Object {
+				      "hash": "ff5016e92f039aa743a4ff7abb3180fa",
+				      "size": 17,
+				    },
+				  },
+				}
+			`);
 		});
 
 		it("should resolve assets directory relative to cwd if using cli", async () => {
@@ -10480,6 +10612,43 @@ export default{
 				  https://test-name.test-sub-domain.workers.dev
 				Current Version ID: Galaxy-Class"
 			`);
+		});
+	});
+
+	describe("pipelines", () => {
+		it("should upload pipelines bindings", async () => {
+			writeWranglerToml({
+				pipelines: [
+					{
+						binding: "MY_PIPELINE",
+						pipeline: "0123456789ABCDEF0123456789ABCDEF",
+					},
+				],
+			});
+			await fs.promises.writeFile("index.js", `export default {};`);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedBindings: [
+					{
+						type: "pipelines",
+						name: "MY_PIPELINE",
+						id: "0123456789ABCDEF0123456789ABCDEF",
+					},
+				],
+			});
+
+			await runWrangler("deploy index.js");
+			expect(std.out).toMatchInlineSnapshot(`
+			"Total Upload: xx KiB / gzip: xx KiB
+			Worker Startup Time: 100 ms
+			Your worker has access to the following bindings:
+			- Pipelines:
+			  - MY_PIPELINE: 0123456789ABCDEF0123456789ABCDEF
+			Uploaded test-name (TIMINGS)
+			Deployed test-name triggers (TIMINGS)
+			  https://test-name.test-sub-domain.workers.dev
+			Current Version ID: Galaxy-Class"
+		`);
 		});
 	});
 

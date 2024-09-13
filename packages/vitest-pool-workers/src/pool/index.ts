@@ -92,6 +92,8 @@ const __dirname = path.dirname(__filename);
 const DIST_PATH = path.resolve(__dirname, "..");
 const POOL_WORKER_PATH = path.join(DIST_PATH, "worker", "index.mjs");
 
+const NODE_URL_PATH = path.join(DIST_PATH, "worker", "lib", "node", "url.mjs");
+
 const symbolizerWarning =
 	"warning: Not symbolizing stack traces because $LLVM_SYMBOLIZER is not set.";
 const ignoreMessages = [
@@ -485,6 +487,13 @@ function buildProjectWorkerOptions(
 			type: "ESModule",
 			path: path.join(modulesRoot, DEFINES_MODULE_PATH),
 			contents: defines,
+		},
+		// The workerd provided `node:url` module doesn't support everything Vitest needs.
+		// As a short-term fix, inject a `node:url` polyfill into the worker bundle
+		{
+			type: "ESModule",
+			path: path.join(modulesRoot, "node:url"),
+			contents: fs.readFileSync(NODE_URL_PATH),
 		},
 	];
 

@@ -14,6 +14,7 @@ import { logger, LOGGER_LEVELS } from "./logger";
 import { hashFile } from "./pages/hash";
 import { isJwtExpired } from "./pages/upload";
 import { APIError } from "./parse";
+import { createPatternMatcher } from "./utils/filesystem";
 import type { Config } from "./config";
 import type { ExperimentalAssets } from "./config/environment";
 
@@ -220,10 +221,20 @@ export const buildAssetsManifest = async (dir: string) => {
 	const files = await readdir(dir, { recursive: true });
 	const manifest: AssetManifest = {};
 	let counter = 0;
+
+	const ignoreFn = await createAssetIgnoreFunction(dir);
+
 	await Promise.all(
 		files.map(async (file) => {
 			const filepath = path.join(dir, file);
 			const relativeFilepath = path.relative(dir, filepath);
+
+			if (ignoreFn?.(relativeFilepath)) {
+				logger.debug("Ignoring asset:", relativeFilepath);
+				// This file should not be included in the manifest.
+				return;
+			}
+
 			const filestat = await stat(filepath);
 
 			if (filestat.isSymbolicLink() || filestat.isDirectory()) {
@@ -361,3 +372,28 @@ const decodeFilepath = (filePath: string) => {
 		.map((segment) => decodeURIComponent(segment))
 		.join(path.sep);
 };
+
+/**
+ * Create a function for filtering out ignored assets.
+ *
+ * The generated function takes an asset path, relative to the asset directory,
+ * and returns true if the asset should not be ignored.
+ */
+async function createAssetIgnoreFunction(dir: string) {
+	const CF_ASSETS_IGNORE_FILENAME = ".assetsignore";
+
+	const cfAssetIgnorePath = path.resolve(dir, CF_ASSETS_IGNORE_FILENAME);
+
+	if (!existsSync(cfAssetIgnorePath)) {
+		return null;
+	}
+
+	const ignorePatterns = (
+		await readFile(cfAssetIgnorePath, { encoding: "utf8" })
+	).split("\n");
+
+	// Always ignore the `.assetsignore` file.
+	ignorePatterns.push(CF_ASSETS_IGNORE_FILENAME);
+
+	return createPatternMatcher(ignorePatterns, true);
+}

@@ -945,6 +945,18 @@ function normalizeAndValidatePlacement(
 			"string",
 			["off", "smart"]
 		);
+		validateOptionalProperty(
+			diagnostics,
+			"placement",
+			"hint",
+			rawEnv.placement.hint,
+			"string"
+		);
+		if (rawEnv.placement.hint && rawEnv.placement.mode !== "smart") {
+			diagnostics.errors.push(
+				`"placement.hint" cannot be set if "placement.mode" is not "smart"`
+			);
+		}
 	}
 
 	return inheritable(
@@ -1443,6 +1455,16 @@ function normalizeAndValidateEnvironment(
 			"ai",
 			validateAIBinding(envName),
 			undefined
+		),
+		pipelines: notInheritable(
+			diagnostics,
+			topLevelEnv,
+			rawConfig,
+			rawEnv,
+			envName,
+			"pipelines",
+			validateBindingArray(envName, validatePipelineBinding),
+			[]
 		),
 		version_metadata: notInheritable(
 			diagnostics,
@@ -2201,6 +2223,7 @@ const validateUnsafeBinding: ValidatorFn = (diagnostics, field, value) => {
 			"service",
 			"logfwdr",
 			"mtls_certificate",
+			"pipeline",
 		];
 
 		if (safeBindings.includes(value.type)) {
@@ -3099,6 +3122,40 @@ const validateConsumer: ValidatorFn = (diagnostics, field, value, _config) => {
 			isValid = false;
 		}
 	}
+
+	return isValid;
+};
+
+const validatePipelineBinding: ValidatorFn = (diagnostics, field, value) => {
+	if (typeof value !== "object" || value === null) {
+		diagnostics.errors.push(
+			`"pipeline" bindings should be objects, but got ${JSON.stringify(value)}`
+		);
+		return false;
+	}
+	let isValid = true;
+	// Pipeline bindings must have a binding and a pipeline.
+	if (!isRequiredProperty(value, "binding", "string")) {
+		diagnostics.errors.push(
+			`"${field}" bindings must have a string "binding" field but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		isValid = false;
+	}
+	if (!isRequiredProperty(value, "pipeline", "string")) {
+		diagnostics.errors.push(
+			`"${field}" bindings must have a string "pipeline" field but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		isValid = false;
+	}
+
+	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
+		"binding",
+		"pipeline",
+	]);
 
 	return isValid;
 };

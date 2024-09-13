@@ -64,6 +64,7 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           WORKERS_NEW_CLOUDFLARE_ACCOUNT_ID: ${{ secrets.WORKERS_NEW_CLOUDFLARE_ACCOUNT_ID }}
           WORKERS_NEW_CLOUDFLARE_API_TOKEN: ${{ secrets.WORKERS_NEW_CLOUDFLARE_API_TOKEN }}
+          WORKERS_DEPLOY_AND_CONFIG_CLOUDFLARE_API_TOKEN: ${{ secrets.WORKERS_DEPLOY_AND_CONFIG_CLOUDFLARE_API_TOKEN }}
 
       - name: Create C3 Diffs PR
         if: contains(steps.changesets.outputs.publishedPackages, '"create-cloudflare"')

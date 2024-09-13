@@ -2,6 +2,7 @@
 	"editor.defaultFormatter": "esbenp.prettier-vscode",
 	"cSpell.words": [
 		"Abortable",
+		"assetsignore",
 		"cfetch",
 		"chatgpt",
 		"clipboardy",
@@ -11,6 +12,7 @@
 		"esbuild",
 		"eslintcache",
 		"execa",
+		"filestat",
 		"haikunate",
 		"haikunator",
 		"httplogs",

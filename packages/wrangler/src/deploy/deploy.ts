@@ -171,6 +171,58 @@ function errIsStartupErr(err: unknown): err is ParseError & { code: 10021 } {
 	return false;
 }
 
+export const validateRoutes = (
+	routes: Route[],
+	hasExperimentalAssets: boolean
+) => {
+	const invalidRoutes: Record<string, string[]> = {};
+	for (const route of routes) {
+		if (typeof route !== "string" && route.custom_domain) {
+			if (route.pattern.includes("*")) {
+				invalidRoutes[route.pattern] ??= [];
+				invalidRoutes[route.pattern].push(
+					`Wildcard operators (*) are not allowed in Custom Domains`
+				);
+			}
+			if (route.pattern.includes("/")) {
+				invalidRoutes[route.pattern] ??= [];
+				invalidRoutes[route.pattern].push(
+					`Paths are not allowed in Custom Domains`
+				);
+			}
+		} else if (hasExperimentalAssets) {
+			const pattern = typeof route === "string" ? route : route.pattern;
+			const components = pattern.split("/");
+
+			if (
+				// = ["route.com"]  bare domains are invalid as it would only match exactly that
+				components.length === 1 ||
+				// = ["route.com",""] as above
+				(components.length === 2 && components[1] === "")
+			) {
+				invalidRoutes[pattern] ??= [];
+				invalidRoutes[pattern].push(
+					`Workers which have static assets must end with a wildcard path. Update the route to end with /*`
+				);
+				// ie it doesn't match exactly "route.com/*" = [route.com, *]
+			} else if (!(components.length === 2 && components[1] === "*")) {
+				invalidRoutes[pattern] ??= [];
+				invalidRoutes[pattern].push(
+					`Workers which have static assets cannot be routed on a URL which has a path component. Update the route to replace /${components.slice(1).join("/")} with /*`
+				);
+			}
+		}
+	}
+	if (Object.keys(invalidRoutes).length > 0) {
+		throw new UserError(
+			`Invalid Routes:\n` +
+				Object.entries(invalidRoutes)
+					.map(([route, errors]) => `${route}:\n` + errors.join("\n"))
+					.join(`\n\n`)
+		);
+	}
+};
+
 export function renderRoute(route: Route): string {
 	let result = "";
 	if (typeof route === "string") {
@@ -383,20 +435,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 	const routes =
 		props.routes ?? config.routes ?? (config.route ? [config.route] : []) ?? [];
-	for (const route of routes) {
-		if (typeof route !== "string" && route.custom_domain) {
-			if (route.pattern.includes("*")) {
-				throw new UserError(
-					`Cannot use "${route.pattern}" as a Custom Domain; wildcard operators (*) are not allowed`
-				);
-			}
-			if (route.pattern.includes("/")) {
-				throw new UserError(
-					`Cannot use "${route.pattern}" as a Custom Domain; paths are not allowed`
-				);
-			}
-		}
-	}
+	validateRoutes(routes, Boolean(props.experimentalAssetsOptions));
 
 	const jsxFactory = props.jsxFactory || config.jsx_factory;
 	const jsxFragment = props.jsxFragment || config.jsx_fragment;
@@ -653,6 +692,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			analytics_engine_datasets: config.analytics_engine_datasets,
 			dispatch_namespaces: config.dispatch_namespaces,
 			mtls_certificates: config.mtls_certificates,
+			pipelines: config.pipelines,
 			logfwdr: config.logfwdr,
 			experimental_assets: config.experimental_assets?.binding
 				? { binding: config.experimental_assets.binding }
@@ -675,7 +715,9 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 		// The upload API only accepts an empty string or no specified placement for the "off" mode.
 		const placement: CfPlacement | undefined =
-			config.placement?.mode === "smart" ? { mode: "smart" } : undefined;
+			config.placement?.mode === "smart"
+				? { mode: "smart", hint: config.placement.hint }
+				: undefined;
 
 		const entryPointName = path.basename(resolvedEntryPointPath);
 		const main: CfModule = {
@@ -834,6 +876,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 					logger.log("Worker Startup Time:", result.startup_time_ms, "ms");
 				}
 				bindingsPrinted = true;
+
 				printBindings({ ...withoutStaticAssets, vars: maskedVars });
 
 				versionId = parseNonHyphenedUuid(result.deployment_id);

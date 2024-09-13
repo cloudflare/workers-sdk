@@ -204,10 +204,9 @@ async function ensureQueuesExist(config: Config, queueNames: string[]) {
 }
 
 export async function getQueueById(
-	config: Pick<Config, "account_id">,
+	accountId: string,
 	queueId: string
 ): Promise<QueueResponse> {
-	const accountId = await requireAuth(config);
 	return fetchResult(queuesUrl(accountId, queueId), {});
 }
 

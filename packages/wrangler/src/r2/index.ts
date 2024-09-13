@@ -3,10 +3,15 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import * as stream from "node:stream";
 import { ReadableStream } from "node:stream/web";
+import chalk from "chalk";
 import prettyBytes from "pretty-bytes";
 import { readConfig } from "../config";
 import { FatalError, UserError } from "../errors";
-import { CommandLineArgsError, printWranglerBanner } from "../index";
+import {
+	betaCmdColor,
+	CommandLineArgsError,
+	printWranglerBanner,
+} from "../index";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { requireAuth } from "../user";
@@ -643,24 +648,24 @@ export function r2(r2Yargs: CommonYargsArgv, subHelp: SubHelp) {
 
 			r2BucketYargs.command(
 				"notification",
-				"Manage event notifications for an R2 bucket",
+				`Manage event notifications for an R2 bucket ${chalk.hex(betaCmdColor)("[open beta]")}`,
 				(r2EvNotifyYargs) => {
 					return r2EvNotifyYargs
 						.command(
 							"get <bucket>",
-							"Get event notification configuration for a bucket",
+							`Get event notification configuration for a bucket ${chalk.hex(betaCmdColor)("[open beta]")}`,
 							Notification.GetOptions,
 							Notification.GetHandler
 						)
 						.command(
 							"create <bucket>",
-							"Create new event notification configuration for an R2 bucket",
+							`Create new event notification configuration for an R2 bucket ${chalk.hex(betaCmdColor)("[open beta]")}`,
 							Notification.CreateOptions,
 							Notification.CreateHandler
 						)
 						.command(
 							"delete <bucket>",
-							"Delete event notification configuration for an R2 bucket and queue",
+							`Delete event notification configuration for an R2 bucket and queue ${chalk.hex(betaCmdColor)("[open beta]")}`,
 							Notification.DeleteOptions,
 							Notification.DeleteHandler
 						);

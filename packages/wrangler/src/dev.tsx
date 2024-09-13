@@ -11,6 +11,7 @@ import {
 	extractBindingsOfType,
 } from "./api/startDevWorker/utils";
 import { findWranglerToml, printBindings, readConfig } from "./config";
+import { validateRoutes } from "./deploy/deploy";
 import { getEntry } from "./deployment-bundle/entry";
 import { getNodeCompatMode } from "./deployment-bundle/node-compat";
 import { getBoundRegisteredWorkers } from "./dev-registry";
@@ -725,6 +726,7 @@ export async function startDev(args: StartDevOptions) {
 						analytics_engine_datasets: undefined,
 						dispatch_namespaces: undefined,
 						mtls_certificates: undefined,
+						pipelines: undefined,
 						logfwdr: undefined,
 						unsafe: undefined,
 						experimental_assets: undefined,
@@ -1214,12 +1216,13 @@ export function maskVars(
 
 export async function getHostAndRoutes(
 	args:
-		| Pick<StartDevOptions, "host" | "routes">
+		| Pick<StartDevOptions, "host" | "routes" | "experimentalAssets">
 		| {
 				host?: string;
 				routes?: Extract<Trigger, { type: "route" }>[];
+				experimentalAssets?: string;
 		  },
-	config: Pick<Config, "route" | "routes"> & {
+	config: Pick<Config, "route" | "routes" | "experimental_assets"> & {
 		dev: Pick<Config["dev"], "host">;
 	}
 ) {
@@ -1241,7 +1244,12 @@ export async function getHostAndRoutes(
 			return r.pattern;
 		}
 	});
-
+	if (routes) {
+		validateRoutes(
+			routes,
+			Boolean(args.experimentalAssets || config.experimental_assets)
+		);
+	}
 	return { host, routes };
 }
 
@@ -1304,9 +1312,7 @@ export async function validateDevServerSettings(
 		config,
 		"dev"
 	);
-
 	const { host, routes } = await getHostAndRoutes(args, config);
-
 	// TODO: Remove this hack
 	// This function throws if the zone ID can't be found given the provided host and routes
 	// However, it's called as part of initialising a preview session, which is nested deep within
@@ -1595,6 +1601,7 @@ export function getBindings(
 			capnp: configParam.unsafe.capnp,
 		},
 		mtls_certificates: configParam.mtls_certificates,
+		pipelines: configParam.pipelines,
 		send_email: configParam.send_email,
 		experimental_assets: configParam.experimental_assets?.binding
 			? { binding: configParam.experimental_assets?.binding }

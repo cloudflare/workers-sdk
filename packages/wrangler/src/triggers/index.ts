@@ -1,4 +1,5 @@
 import { readConfig } from "../config";
+import { processExperimentalAssetsArg } from "../experimental-assets";
 import { getScriptName, isLegacyEnv, printWranglerBanner } from "../index";
 import * as metrics from "../metrics";
 import { requireAuth } from "../user";
@@ -57,6 +58,10 @@ export async function triggersDeployHandler(
 	await printWranglerBanner();
 
 	const config = readConfig(undefined, args);
+	const experimentalAssetsOptions = processExperimentalAssetsArg(
+		{ experimentalAssets: undefined },
+		config
+	);
 	await metrics.sendMetricsEvent(
 		"deploy worker triggers",
 		{},
@@ -77,5 +82,6 @@ export async function triggersDeployHandler(
 		legacyEnv: isLegacyEnv(config),
 		dryRun: args.dryRun,
 		experimentalVersions: args.experimentalJsonConfig,
+		experimentalAssetsOptions,
 	});
 }

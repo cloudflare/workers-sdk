@@ -130,6 +130,7 @@ describe("normalizeAndValidateConfig()", () => {
 			upload_source_maps: undefined,
 			placement: undefined,
 			tail_consumers: undefined,
+			pipelines: [],
 		});
 		expect(diagnostics.hasErrors()).toBe(false);
 		expect(diagnostics.hasWarnings()).toBe(false);
@@ -3181,6 +3182,114 @@ describe("normalizeAndValidateConfig()", () => {
 			});
 		});
 
+		describe("[pipelines]", () => {
+			it("should error if pipelines is an object", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					// @ts-expect-error purposely using an invalid value
+					{ pipelines: {} },
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+			"Processing wrangler configuration:
+			  - The field \\"pipelines\\" should be an array but got {}."
+		`);
+			});
+
+			it("should error if pipelines is a string", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					// @ts-expect-error purposely using an invalid value
+					{ pipelines: "BAD" },
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+			"Processing wrangler configuration:
+			  - The field \\"pipelines\\" should be an array but got \\"BAD\\"."
+		`);
+			});
+
+			it("should error if pipelines is a number", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					// @ts-expect-error purposely using an invalid value
+					{ pipelines: 999 },
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+			"Processing wrangler configuration:
+			  - The field \\"pipelines\\" should be an array but got 999."
+		`);
+			});
+
+			it("should error if pipelines is null", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					// @ts-expect-error purposely using an invalid value
+					{ pipelines: null },
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+			"Processing wrangler configuration:
+			  - The field \\"pipelines\\" should be an array but got null."
+		`);
+			});
+
+			it("should accept valid bindings", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						pipelines: [
+							{
+								binding: "VALID",
+								pipeline: "343cd4f1d58c42fbb5bd082592fd7143",
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+			});
+
+			it("should error if pipelines.bindings are not valid", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						pipelines: [
+							{},
+							{
+								binding: "VALID",
+								pipeline: "343cd4f1d58c42fbb5bd082592fd7143",
+							},
+							{ binding: 2000, project: 2111 },
+						],
+					} as unknown as RawConfig,
+					undefined,
+					{ env: undefined }
+				);
+				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+			"Processing wrangler configuration:
+			  - Unexpected fields found in pipelines[2] field: \\"project\\""
+		`);
+				expect(diagnostics.hasWarnings()).toBe(true);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - \\"pipelines[0]\\" bindings must have a string \\"binding\\" field but got {}.
+					  - \\"pipelines[0]\\" bindings must have a string \\"pipeline\\" field but got {}.
+					  - \\"pipelines[2]\\" bindings must have a string \\"binding\\" field but got {\\"binding\\":2000,\\"project\\":2111}.
+					  - \\"pipelines[2]\\" bindings must have a string \\"pipeline\\" field but got {\\"binding\\":2000,\\"project\\":2111}."
+				`);
+			});
+		});
+
 		describe("[unsafe.bindings]", () => {
 			it("should error if unsafe is an array", () => {
 				const { diagnostics } = normalizeAndValidateConfig(
@@ -3481,6 +3590,31 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(false);
+			});
+		});
+
+		describe("[placement]", () => {
+			it(`should error if placement hint is set with placement mode "off"`, () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{ placement: { mode: "off", hint: "wnam" } },
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - \\"placement.hint\\" cannot be set if \\"placement.mode\\" is not \\"smart\\""
+				`);
+			});
+
+			it(`should not error if placement hint is set with placement mode "smart"`, () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{ placement: { mode: "smart", hint: "wnam" } },
+					undefined,
+					{ env: undefined }
+				);
+
 				expect(diagnostics.hasErrors()).toBe(false);
 			});
 		});

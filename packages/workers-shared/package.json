@@ -31,6 +31,8 @@
 		"check:type": "pnpm run check:type:tests && tsc",
 		"check:type:tests": "tsc -p ./asset-worker/tests/tsconfig.json",
 		"clean": "rimraf dist",
+		"deploy": "pnpm run deploy:asset-worker",
+		"deploy:asset-worker": "CLOUDFLARE_API_TOKEN=$WORKERS_NEW_CLOUDFLARE_API_TOKEN wrangler versions upload --experimental-versions -c asset-worker/wrangler.toml",
 		"dev": "pnpm run clean && concurrently -n bundle:asset-worker,bundle:router-worker -c blue,magenta \"pnpm run bundle:asset-worker --watch\" \"pnpm run bundle:router-worker --watch\"",
 		"test": "vitest",
 		"test:ci": "pnpm run test run"
@@ -38,7 +40,7 @@
 	"devDependencies": {
 		"@cloudflare/eslint-config-worker": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
-		"@cloudflare/workers-types": "^4.20240821.1",
+		"@cloudflare/workers-types": "^4.20240909.0",
 		"concurrently": "^8.2.2",
 		"esbuild": "0.17.19",
 		"rimraf": "^6.0.1",

@@ -16,6 +16,7 @@ import type {
 	CfLogfwdrBinding,
 	CfModule,
 	CfMTlsCertificate,
+	CfPipeline,
 	CfQueue,
 	CfR2Bucket,
 	CfScriptFormat,
@@ -261,6 +262,7 @@ export type Binding =
 	| ({ type: "analytics_engine" } & Omit<CfAnalyticsEngineDataset, "binding">)
 	| ({ type: "dispatch_namespace" } & Omit<CfDispatchNamespace, "binding">)
 	| ({ type: "mtls_certificate" } & Omit<CfMTlsCertificate, "binding">)
+	| ({ type: "pipeline" } & Omit<CfPipeline, "binding">)
 	| ({ type: "logfwdr" } & Omit<CfLogfwdrBinding, "name">)
 	| { type: `unsafe_${string}` }
 	| { type: "assets" };

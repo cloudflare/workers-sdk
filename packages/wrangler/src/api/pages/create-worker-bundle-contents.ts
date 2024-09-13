@@ -66,6 +66,7 @@ function createWorkerBundleFormData(
 		text_blobs: undefined,
 		data_blobs: undefined,
 		dispatch_namespaces: undefined,
+		pipelines: undefined,
 		logfwdr: undefined,
 		unsafe: undefined,
 		experimental_assets: undefined,
@@ -73,7 +74,9 @@ function createWorkerBundleFormData(
 
 	// The upload API only accepts an empty string or no specified placement for the "off" mode.
 	const placement: CfPlacement | undefined =
-		config?.placement?.mode === "smart" ? { mode: "smart" } : undefined;
+		config?.placement?.mode === "smart"
+			? { mode: "smart", hint: config.placement.hint }
+			: undefined;
 
 	const worker: CfWorkerInit = {
 		name: mainModule.name,

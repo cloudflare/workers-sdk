@@ -15,15 +15,15 @@ import type { NormalizeAndValidateConfigArgs } from "./validation";
 
 export type {
 	Config,
-	RawConfig,
 	ConfigFields,
 	DevConfig,
+	RawConfig,
 	RawDevConfig,
 } from "./config";
 export type {
+	ConfigModuleRuleType,
 	Environment,
 	RawEnvironment,
-	ConfigModuleRuleType,
 } from "./environment";
 
 type ReadConfigCommandArgs = NormalizeAndValidateConfigArgs & {
@@ -232,6 +232,7 @@ export function printBindings(bindings: CfWorkerInit["bindings"]) {
 		wasm_modules,
 		dispatch_namespaces,
 		mtls_certificates,
+		pipelines,
 	} = bindings;
 
 	if (data_blobs !== undefined && Object.keys(data_blobs).length > 0) {
@@ -440,6 +441,16 @@ export function printBindings(bindings: CfWorkerInit["bindings"]) {
 		output.push({
 			type: "AI",
 			entries: entries,
+		});
+	}
+
+	if (pipelines?.length) {
+		output.push({
+			type: "Pipelines",
+			entries: pipelines.map(({ binding, pipeline }) => ({
+				key: binding,
+				value: pipeline,
+			})),
 		});
 	}
 
