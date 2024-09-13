@@ -618,18 +618,6 @@ export async function startDev(args: StartDevOptions) {
 			);
 		}
 
-		if (
-			args.remote &&
-			config.migrations?.some(
-				(m) =>
-					Array.isArray(m.new_sqlite_classes) && m.new_sqlite_classes.length > 0
-			)
-		) {
-			throw new UserError(
-				"SQLite in Durable Objects is only supported in local mode."
-			);
-		}
-
 		const projectRoot = configPath && path.dirname(configPath);
 
 		const devEnv = new DevEnv();

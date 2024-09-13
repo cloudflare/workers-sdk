@@ -22,6 +22,7 @@ import { UserError } from "../errors";
 import { logger } from "../logger";
 import { getSourceMappedString } from "../sourcemap";
 import { updateCheck } from "../update-check";
+import { getClassNamesWhichUseSQLite } from "./validate-dev-props";
 import type { ServiceFetch } from "../api";
 import type { Config } from "../config";
 import type {
@@ -674,55 +675,6 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 		internalObjects,
 		externalWorkers,
 	};
-}
-
-function getClassNamesWhichUseSQLite(
-	migrations: Config["migrations"] | undefined
-) {
-	const classNameToUseSQLite = new Map<string, boolean>();
-	(migrations || []).forEach((migration) => {
-		migration.deleted_classes?.forEach((deleted_class) => {
-			if (!classNameToUseSQLite.delete(deleted_class)) {
-				throw new UserError(
-					`Cannot apply deleted_classes migration to non-existent class ${deleted_class}`
-				);
-			}
-		});
-
-		migration.renamed_classes?.forEach(({ from, to }) => {
-			const useSQLite = classNameToUseSQLite.get(from);
-			if (useSQLite === undefined) {
-				throw new UserError(
-					`Cannot apply renamed_classes migration to non-existent class ${from}`
-				);
-			} else {
-				classNameToUseSQLite.delete(from);
-				classNameToUseSQLite.set(to, useSQLite);
-			}
-		});
-
-		migration.new_classes?.forEach((new_class) => {
-			if (classNameToUseSQLite.has(new_class)) {
-				throw new UserError(
-					`Cannot apply new_classes migration to existing class ${new_class}`
-				);
-			} else {
-				classNameToUseSQLite.set(new_class, false);
-			}
-		});
-
-		migration.new_sqlite_classes?.forEach((new_class) => {
-			if (classNameToUseSQLite.has(new_class)) {
-				throw new UserError(
-					`Cannot apply new_sqlite_classes migration to existing class ${new_class}`
-				);
-			} else {
-				classNameToUseSQLite.set(new_class, true);
-			}
-		});
-	});
-
-	return classNameToUseSQLite;
 }
 
 type PickTemplate<T, K extends string> = {
