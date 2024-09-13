@@ -4,7 +4,11 @@ import { readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 if (require.main === module) {
-	deployNonNpmPackages(getUpdatedPackages(), findDeployablePackageNames());
+	if (process.argv[2] === "check") {
+		findDeployablePackageNames();
+	} else {
+		deployNonNpmPackages(getUpdatedPackages(), findDeployablePackageNames());
+	}
 }
 
 /**
@@ -69,8 +73,7 @@ export function getUpdatedPackages(): UpdatedPackage[] {
  * Look for all the packages (under the top-level "packages" directory of the monorepo)
  * that can be deployed using this script.
  *
- * This is determined by the package containing a package.json that is marked as `"private": true`
- * and has a `deploy` script.
+ * This is determined by the package containing a package.json "workers-sdk": { "deploy": true }`
  */
 export function findDeployablePackageNames(): Set<string> {
 	const packagesDirectory = resolve(__dirname, "../../packages");
@@ -89,7 +92,11 @@ export function findDeployablePackageNames(): Set<string> {
 	}
 	const deployablePackages = new Set<string>();
 	for (const pkg of allPackages) {
-		if (pkg.scripts?.deploy !== undefined) {
+		if (pkg["workers-sdk"]?.deploy) {
+			assert(
+				pkg.scripts?.deploy !== undefined,
+				`Expected package "${pkg.name}" to have a deploy script`
+			);
 			deployablePackages.add(pkg.name);
 		}
 	}
@@ -124,4 +131,7 @@ export type PackageJSON = {
 	name: string;
 	private?: boolean;
 	scripts?: Record<string, unknown>;
+	"workers-sdk"?: {
+		deploy?: boolean;
+	};
 };
