@@ -1,12 +1,12 @@
 import path from "node:path";
 import { setTimeout } from "node:timers/promises";
 import util from "node:util";
-import { afterEach, beforeEach, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, expect, it, Mock, vi } from "vitest";
 import { unstable_dev } from "wrangler";
 
 let output = "";
 function spyOnConsoleMethod(name: keyof typeof console) {
-	vi.spyOn(console, name).mockImplementation((...args: unknown[]) => {
+	(vi.spyOn(console, name) as Mock).mockImplementation((...args: unknown[]) => {
 		output += util.format(...args) + "\n";
 	});
 }

@@ -56,12 +56,22 @@ import type {
 import type { Readable } from "node:stream";
 import type { MessagePort } from "node:worker_threads";
 import type {
-	ResolvedConfig,
 	RunnerRPC,
 	RuntimeRPC,
+	SerializedConfig,
 	WorkerContext,
 } from "vitest";
 import type { ProcessPool, Vitest, WorkspaceProject } from "vitest/node";
+
+interface SerializedOptions {
+	// Defined in `src/pool/index.ts`
+	main?: string;
+	durableObjectBindingDesignators?: Map<
+		string /* bound name */,
+		DurableObjectDesignator
+	>;
+	isolatedStorage?: boolean;
+}
 
 // https://github.com/vitest-dev/vitest/blob/v2.0.5/packages/vite-node/src/client.ts#L468
 declare const __vite_ssr_import__: unknown;
@@ -678,7 +688,7 @@ async function runTests(
 	mf: Miniflare,
 	workerName: string,
 	project: Project,
-	config: ResolvedConfig,
+	config: SerializedConfig,
 	files: string[],
 	invalidates: string[] = []
 ) {
@@ -970,6 +980,7 @@ export default function (ctx: Vitest): ProcessPool {
 				// serialisable. `getSerializableConfig()` may also return references to
 				// the same objects, so override it with a new object.
 				config.poolOptions = {
+					// @ts-expect-error Vitest provides no way to extend this type
 					threads: {
 						// Allow workers to be re-used by removing the isolation requirement
 						isolate: false,
@@ -991,7 +1002,7 @@ export default function (ctx: Vitest): ProcessPool {
 						// project, so we know whether to call out to the loopback service
 						// to push/pop the storage stack between tests.
 						isolatedStorage: project.options.isolatedStorage,
-					},
+					} satisfies SerializedOptions,
 				};
 
 				const mf = await getProjectMiniflare(ctx, project);
@@ -1063,7 +1074,7 @@ export default function (ctx: Vitest): ProcessPool {
 			// assert(testModule && thingModule);
 			// thingModule.importers.add(testModule);
 		},
-		async collectTests(specs, invalidates) {
+		async collectTests(_specs, _invalidates) {
 			// TODO: This is a new API introduced in Vitest v2+ which we should consider supporting at some point
 			throw new Error(
 				"The Cloudflare Workers Vitest integration does not support the `.collect()` or `vitest list` APIs"
