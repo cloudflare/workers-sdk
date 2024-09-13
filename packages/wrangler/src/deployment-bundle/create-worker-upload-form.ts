@@ -553,12 +553,13 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 		not_found_handling: experimental_assets?.assetConfig?.not_found_handling,
 	};
 
-	const staticAssetOnly = experimental_assets?.routingConfig?.has_user_worker === false;
-	let mainModuleName = {}
-	if(main.type !== "commonjs" && !staticAssetOnly) {
-		mainModuleName = { main_module: main.name }
+	const staticAssetOnly =
+		experimental_assets?.routingConfig?.has_user_worker === false;
+	let mainModuleName = {};
+	if (main.type !== "commonjs" && !staticAssetOnly) {
+		mainModuleName = { main_module: main.name };
 	} else if (!staticAssetOnly) {
-		mainModuleName = { body_part: main.name }
+		mainModuleName = { body_part: main.name };
 	}
 
 	const metadata: WorkerMetadata = {
@@ -600,7 +601,7 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 		);
 	}
 
-	if (!staticAssetOnly){
+	if (!staticAssetOnly) {
 		for (const module of [main].concat(modules || [])) {
 			formData.set(
 				module.name,

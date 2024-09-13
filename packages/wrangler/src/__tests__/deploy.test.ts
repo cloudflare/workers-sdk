@@ -4286,7 +4286,10 @@ addEventListener('fetch', event => {});`
 			await mockAUSRequest(bodies);
 			mockSubDomainRequest();
 			mockUploadWorkerRequest({
-				expectedExperimentalAssets: { jwt: "<<aus-completion-token>>" , config:{}},
+				expectedExperimentalAssets: {
+					jwt: "<<aus-completion-token>>",
+					config: {},
+				},
 				expectedType: "none",
 			});
 			await runWrangler("deploy --experimental-assets cli-assets");
@@ -4385,7 +4388,10 @@ addEventListener('fetch', event => {});`
 			);
 			mockSubDomainRequest();
 			mockUploadWorkerRequest({
-				expectedExperimentalAssets: { jwt: "<<aus-completion-token>>" , config:{}},
+				expectedExperimentalAssets: {
+					jwt: "<<aus-completion-token>>",
+					config: {},
+				},
 				expectedType: "none",
 			});
 			await runWrangler("deploy");
@@ -4458,7 +4464,10 @@ addEventListener('fetch', event => {});`
 			await mockAUSRequest(bodies);
 			mockSubDomainRequest();
 			mockUploadWorkerRequest({
-				expectedExperimentalAssets: { jwt: "<<aus-completion-token>>" , config:{}},
+				expectedExperimentalAssets: {
+					jwt: "<<aus-completion-token>>",
+					config: {},
+				},
 				expectedType: "none",
 			});
 			await runWrangler("deploy --config some/path/wrangler.toml");
@@ -4493,7 +4502,10 @@ addEventListener('fetch', event => {});`
 			await mockAUSRequest(bodies);
 			mockSubDomainRequest();
 			mockUploadWorkerRequest({
-				expectedExperimentalAssets: { jwt: "<<aus-completion-token>>" , config:{}},
+				expectedExperimentalAssets: {
+					jwt: "<<aus-completion-token>>",
+					config: {},
+				},
 				expectedType: "none",
 			});
 			await runWrangler("deploy --config some/path/wrangler.toml");
@@ -4521,7 +4533,10 @@ addEventListener('fetch', event => {});`
 			await mockAUSRequest(bodies);
 			mockSubDomainRequest();
 			mockUploadWorkerRequest({
-				expectedExperimentalAssets: { jwt: "<<aus-completion-token>>" , config:{}},
+				expectedExperimentalAssets: {
+					jwt: "<<aus-completion-token>>",
+					config: {},
+				},
 				expectedType: "none",
 			});
 			process.chdir("some/path");
@@ -4550,7 +4565,10 @@ addEventListener('fetch', event => {});`
 			// skips asset uploading since empty buckets returned
 			mockSubDomainRequest();
 			mockUploadWorkerRequest({
-				expectedExperimentalAssets: { jwt: "<<aus-completion-token>>" , config:{}},
+				expectedExperimentalAssets: {
+					jwt: "<<aus-completion-token>>",
+					config: {},
+				},
 				expectedType: "none",
 			});
 			await runWrangler(
@@ -4585,7 +4603,10 @@ addEventListener('fetch', event => {});`
 			// skips asset uploading since empty buckets returned
 			mockSubDomainRequest();
 			mockUploadWorkerRequest({
-				expectedExperimentalAssets: { jwt: "<<aus-completion-token>>" , config:{}},
+				expectedExperimentalAssets: {
+					jwt: "<<aus-completion-token>>",
+					config: {},
+				},
 				expectedType: "none",
 			});
 			await runWrangler("deploy");
@@ -4641,7 +4662,10 @@ addEventListener('fetch', event => {});`
 			);
 			mockSubDomainRequest();
 			mockUploadWorkerRequest({
-				expectedExperimentalAssets: { jwt: "<<aus-completion-token>>" , config:{}},
+				expectedExperimentalAssets: {
+					jwt: "<<aus-completion-token>>",
+					config: {},
+				},
 				expectedType: "none",
 			});
 			await runWrangler("deploy");
@@ -4721,12 +4745,20 @@ addEventListener('fetch', event => {});`
 			writeWorkerSource({ format: "js" });
 			writeWranglerToml({
 				main: "index.js",
-				experimental_assets: { directory: "assets", binding: "ASSETS", html_handling: "none", not_found_handling: "404-page" },
+				experimental_assets: {
+					directory: "assets",
+					binding: "ASSETS",
+					html_handling: "none",
+					not_found_handling: "404-page",
+				},
 			});
 			await mockAUSRequest();
 			mockSubDomainRequest();
 			mockUploadWorkerRequest({
-				expectedExperimentalAssets: {jwt:"<<aus-completion-token>>", config: { html_handling: "none", not_found_handling: "404-page"}},
+				expectedExperimentalAssets: {
+					jwt: "<<aus-completion-token>>",
+					config: { html_handling: "none", not_found_handling: "404-page" },
+				},
 				expectedBindings: [{ name: "ASSETS", type: "assets" }],
 				expectedMainModule: "index.js",
 			});
@@ -4749,7 +4781,10 @@ addEventListener('fetch', event => {});`
 			await mockAUSRequest();
 			mockSubDomainRequest();
 			mockUploadWorkerRequest({
-				expectedExperimentalAssets: {jwt:"<<aus-completion-token>>", config: {html_handling: "none"}},
+				expectedExperimentalAssets: {
+					jwt: "<<aus-completion-token>>",
+					config: { html_handling: "none" },
+				},
 				expectedBindings: [],
 				expectedMainModule: undefined,
 			});

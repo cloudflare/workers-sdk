@@ -3,8 +3,8 @@ import { createFetchResult, msw } from "./msw";
 import { serialize, toString } from "./serialize-form-data-entry";
 import type { WorkerMetadata } from "../../deployment-bundle/create-worker-upload-form";
 import type { CfWorkerInit } from "../../deployment-bundle/worker";
-import type { HttpResponseResolver } from "msw";
 import type { AssetConfig } from "@cloudflare/workers-shared";
+import type { HttpResponseResolver } from "msw";
 
 /** Create a mock handler for the request to upload a worker script. */
 export function mockUploadWorkerRequest(
@@ -158,7 +158,9 @@ export function mockUploadWorkerRequest(
 		expectedEntry,
 		expectedExperimentalAssets,
 		// Allow setting expectedMainModule to undefined to test static-asset only uploads
-		expectedMainModule = expectedExperimentalAssets ? options.expectedMainModule: "index.js" ,
+		expectedMainModule = expectedExperimentalAssets
+			? options.expectedMainModule
+			: "index.js",
 		expectedType = "esm",
 		expectedBindings,
 		expectedModules = {},
@@ -176,7 +178,6 @@ export function mockUploadWorkerRequest(
 		expectedDispatchNamespace,
 		useOldUploadApi,
 		expectedObservability,
-
 	} = options;
 	if (env && !legacyEnv) {
 		msw.use(
