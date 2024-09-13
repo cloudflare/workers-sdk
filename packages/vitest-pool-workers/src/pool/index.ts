@@ -64,7 +64,6 @@ import type {
 import type { ProcessPool, Vitest, WorkspaceProject } from "vitest/node";
 
 interface SerializedOptions {
-	// Defined in `src/pool/index.ts`
 	main?: string;
 	durableObjectBindingDesignators?: Map<
 		string /* bound name */,

@@ -837,10 +837,7 @@ export class Miniflare {
 		try {
 			let response: UndiciResponse | Response = await service(request, this);
 
-			if (
-				response instanceof UndiciResponse &&
-				!(response instanceof Response)
-			) {
+			if (!(response instanceof Response)) {
 				response = new Response(response.body, response);
 			}
 
