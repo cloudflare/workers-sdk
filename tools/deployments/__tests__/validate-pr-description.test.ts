@@ -111,6 +111,38 @@ Fixes [AA-000](https://jira.cfdata.org/browse/AA-000).
 		).toMatchInlineSnapshot(`[]`);
 	});
 
+	it("should accept N/A issue reference", () => {
+		expect(
+			validateDescription(
+				"",
+				`## What this PR solves / how to test
+
+Fixes N/A.
+
+## Author has addressed the following
+
+- Tests
+  - [ ] TODO (before merge)
+  - [ ] Tests included
+  - [x] Tests not necessary because: test
+- E2E Tests CI Job required? (Use "e2e" label or ask maintainer to run separately)
+  - [ ] I don't know
+  - [ ] Required
+  - [x] Not required because: test
+- Changeset ([Changeset guidelines](https://github.com/cloudflare/workers-sdk/blob/main/CONTRIBUTING.md#changesets))
+  - [ ] TODO (before merge)
+  - [ ] Changeset included
+  - [x] Changeset not necessary because: test
+- Public documentation
+  - [ ] TODO (before merge)
+  - [ ] Cloudflare docs PR(s): <!--e.g. <https://github.com/cloudflare/cloudflare-docs/pull/>...-->
+  - [x] Documentation not necessary because: test
+`,
+				"[]"
+			)
+		).toMatchInlineSnapshot(`[]`);
+	});
+
 	it("should accept everything included", () => {
 		expect(
 			validateDescription(
