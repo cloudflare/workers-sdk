@@ -805,6 +805,12 @@ test("validates message size", async (t) => {
 	const mf = new Miniflare({
 		verbose: true,
 		queueProducers: ["QUEUE"],
+		queueConsumers: {
+			QUEUE: {
+				maxBatchSize: 100,
+				maxBatchTimeout: 0,
+			},
+		},
 		modules: true,
 		script: `export default {
       async fetch(request, env, ctx) {
