@@ -627,6 +627,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 					config,
 					legacyEnv: props.legacyEnv,
 					env: props.env,
+					dispatchNamespace: props.dispatchNamespace,
 				})
 			: undefined;
 
