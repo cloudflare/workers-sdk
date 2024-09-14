@@ -35,7 +35,7 @@ export default defineWorkersProject({
 		server: {
 			deps: {
 				// Vitest automatically adds `/^(?!.*node_modules).*\.mjs$/` as an
-				// `inline` RegExp: https://github.com/vitest-dev/vitest/blob/v2.0.5/packages/vitest/src/constants.ts#L9
+				// `inline` RegExp: https://github.com/vitest-dev/vitest/blob/v2.1.1/packages/vitest/src/constants.ts#L9
 				// We'd like `packages/vitest-pool-workers/dist/pool/index.mjs` to be
 				// externalised though. Unfortunately, `inline`s are checked before
 				// `external`s, so there's no nice way we can override this. Instead,
