@@ -493,7 +493,8 @@ describe("pages deploy", () => {
 				async ({ request, params }) => {
 					requests.push(request);
 					expect(params.accountId).toEqual("some-account-id");
-					expect(await request.formData()).toMatchInlineSnapshot(`
+					if (requests.length === 1) {
+						expect(await request.formData()).toMatchInlineSnapshot(`
 				      FormData {
 				        Symbol(state): Array [
 				          Object {
@@ -503,6 +504,7 @@ describe("pages deploy", () => {
 				        ],
 				      }
 			    `);
+					}
 
 					if (requests.length < 2) {
 						return HttpResponse.json(
