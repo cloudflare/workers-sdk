@@ -212,7 +212,9 @@ export class QueueBrokerObject extends MiniflareDurableObject<QueueBrokerObjectE
 	}
 
 	get #maybeProducer() {
-		return this.#producers[this.name];
+		return Object.values(this.#producers).find(
+			(p) => p?.queueName === this.name
+		);
 	}
 
 	get #maybeConsumer() {
