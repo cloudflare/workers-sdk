@@ -70,10 +70,8 @@ async function waitForPorts(
 	}
 }
 
-function waitForExit(process: childProcess.ChildProcess): Promise<void> {
-	return new Promise((resolve) => {
-		process.once("exit", () => resolve());
-	});
+async function waitForExit(process: childProcess.ChildProcess): Promise<void> {
+	await once(process, "close");
 }
 
 function pipeOutput(stdout: Readable, stderr: Readable) {
@@ -164,9 +162,12 @@ export class Runtime {
 		// connections to close before exiting. Notably, Chrome sometimes keeps
 		// connections open for about 10s, blocking exit. We'd like `dispose()`/
 		// `setOptions()` to immediately terminate the existing process.
-		// Therefore, use `SIGKILL` which force closes all connections.
+		// Therefore, use `SIGINT` which force closes all connections.
+		// We previously used `SIGKILL` here, but that prevents *any* cleanup,
+		// including things like closing SQLite databases. This lead to a bunch of
+		// `.sqlite-wal` and `.sqlite-shm` files being left behind.
 		// See https://github.com/cloudflare/workerd/pull/244.
-		this.#process?.kill("SIGKILL");
+		this.#process?.kill("SIGINT");
 		return this.#processExitPromise;
 	}
 }
