@@ -124,6 +124,7 @@ export default class extends WorkerEntrypoint<Env> {
 		return this.unstable_getByETag(eTag);
 	}
 
+	/** Returns the eTag (content hash) if asset exists in the manifest */
 	async unstable_exists(pathname: string): Promise<string | null> {
 		const assetsManifest = new AssetsManifest(this.env.ASSETS_MANIFEST);
 		return await assetsManifest.get(pathname);

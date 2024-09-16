@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { applyConfigurationDefaults } from "../../packages/workers-shared/asset-worker/src/configuration";
 import Worker from "../../packages/workers-shared/asset-worker/src/index";
 import { getAssetWithMetadataFromKV } from "../../packages/workers-shared/asset-worker/src/utils/kv";
+import { encodingTestCases } from "./test-cases/encoding-test-cases";
 import { htmlHandlingTestCases } from "./test-cases/html-handling-test-cases";
 import type { AssetMetadata } from "../../packages/workers-shared/asset-worker/src/utils/kv";
 
@@ -21,7 +22,6 @@ const existsMock = (fileList: Set<string>) => {
 };
 const BASE_URL = "http://example.com";
 
-type TestCase = {
 export type TestCase = {
 	title: string;
 	files: string[];
@@ -36,6 +36,8 @@ const testSuites = [
 		suite: htmlHandlingTestCases,
 	},
 	{
+		title: "encoding options",
+		suite: encodingTestCases,
 	},
 ];
 
