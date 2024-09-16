@@ -4745,6 +4745,7 @@ addEventListener('fetch', event => {});`
 			writeWorkerSource({ format: "js" });
 			writeWranglerToml({
 				main: "index.js",
+				compatibility_date: "2024-09-27",
 				experimental_assets: {
 					directory: "assets",
 					binding: "ASSETS",
@@ -4761,6 +4762,7 @@ addEventListener('fetch', event => {});`
 				},
 				expectedBindings: [{ name: "ASSETS", type: "assets" }],
 				expectedMainModule: "index.js",
+				expectedCompatibilityDate: "2024-09-27",
 			});
 			await runWrangler("deploy");
 		});
@@ -4773,6 +4775,7 @@ addEventListener('fetch', event => {});`
 			writeAssets(assets);
 			writeWorkerSource({ format: "js" });
 			writeWranglerToml({
+				compatibility_date: "2024-09-27",
 				experimental_assets: {
 					directory: "assets",
 					html_handling: "none",
@@ -4785,6 +4788,7 @@ addEventListener('fetch', event => {});`
 					jwt: "<<aus-completion-token>>",
 					config: { html_handling: "none" },
 				},
+				expectedCompatibilityDate: "2024-09-27",
 				expectedBindings: [],
 				expectedMainModule: undefined,
 			});
