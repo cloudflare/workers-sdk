@@ -27,4 +27,25 @@ describe("nodejs compat", () => {
 			await stop();
 		}
 	});
+
+	it("should be able to call `getRandomValues()` bound to any object", async ({
+		expect,
+	}) => {
+		const { ip, port, stop } = await runWranglerDev(
+			resolve(__dirname, "../src"),
+			["--port=0", "--inspector-port=0"]
+		);
+		try {
+			const response = await fetch(`http://${ip}:${port}/test-crypto`);
+			const body = await response.json();
+			expect(body).toEqual([
+				expect.any(String),
+				expect.any(String),
+				expect.any(String),
+				expect.any(String),
+			]);
+		} finally {
+			await stop();
+		}
+	});
 });
