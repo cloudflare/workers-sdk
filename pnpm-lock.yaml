@@ -1681,8 +1681,8 @@ importers:
         specifier: ^3.3.3
         version: 3.3.6
       path-to-regexp:
-        specifier: ^6.2.0
-        version: 6.2.0
+        specifier: ^6.3.0
+        version: 6.3.0
       resolve:
         specifier: ^1.22.8
         version: 1.22.8
@@ -7120,8 +7120,8 @@ packages:
   path-to-regexp@0.1.7:
     resolution: {integrity: sha512-5DFkuoqlv1uYQKxy8omFBeJPQcdoE07Kv2sferDCrAq1ohOU+MSDswDIbnx3YAM60qIOnYa53wBhXW0EbMonrQ==}
 
-  path-to-regexp@6.2.0:
-    resolution: {integrity: sha512-f66KywYG6+43afgE/8j/GoiNyygk/bnoCbps++3ErRKsIYkGGupyv07R2Ok5m9i67Iqc+T2g1eAUGUPzWhYTyg==}
+  path-to-regexp@6.3.0:
+    resolution: {integrity: sha512-Yhpw4T9C6hPpgPeA28us07OJeqZ5EzQTkbfwuhsUg0c237RomFoETJgmp2sa3F/41gfLE6G5cqcYwznmeEeOlQ==}
 
   path-type@4.0.0:
     resolution: {integrity: sha512-gDKb8aZMDeD/tZWs9P6+q0J9Mwkdl6xMV8TjnGP3qJVJ06bdMgkbBlLU8IdfOsIsFz2BW1rNVT3XuNEl8zPAvw==}
@@ -14355,7 +14355,7 @@ snapshots:
       headers-polyfill: 4.0.3
       is-node-process: 1.2.0
       outvariant: 1.4.2
-      path-to-regexp: 6.2.0
+      path-to-regexp: 6.3.0
       strict-event-emitter: 0.5.1
       type-fest: 4.18.2
       yargs: 17.7.2
@@ -14793,7 +14793,7 @@ snapshots:
 
   path-to-regexp@0.1.7: {}
 
-  path-to-regexp@6.2.0: {}
+  path-to-regexp@6.3.0: {}
 
   path-type@4.0.0: {}
 
@@ -16039,7 +16039,7 @@ snapshots:
       '@protobuf-ts/plugin-framework': 2.9.3
       camel-case: 4.1.2
       dot-object: 2.1.4
-      path-to-regexp: 6.2.0
+      path-to-regexp: 6.3.0
       ts-poet: 4.15.0
       yaml: 1.10.2
     optionalDependencies:
