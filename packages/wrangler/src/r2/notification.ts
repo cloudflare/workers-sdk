@@ -49,8 +49,7 @@ export function CreateOptions(yargs: CommonYargsArgv) {
 			demandOption: true,
 		})
 		.option("event-types", {
-			describe:
-				"Specify the kinds of object events to emit notifications for. ex. '--event-types object-create object-delete'",
+			describe: "The type of event(s) that will emit event notifications",
 			alias: "event-type",
 			choices: Object.keys(actionsForEventCategories),
 			demandOption: true,
@@ -59,18 +58,18 @@ export function CreateOptions(yargs: CommonYargsArgv) {
 		})
 		.option("prefix", {
 			describe:
-				"only actions on objects with this prefix will emit notifications",
+				"The prefix that an object must match to emit event notifications (note: regular expressions not supported)",
 			requiresArg: false,
 			type: "string",
 		})
 		.option("suffix", {
 			describe:
-				"only actions on objects with this suffix will emit notifications",
+				"The suffix that an object must match to emit event notifications (note: regular expressions not supported)",
 			type: "string",
 		})
 		.option("queue", {
 			describe:
-				"The name of the queue to which event notifications will be sent. ex '--queue my-queue'",
+				"The name of the queue that will receive event notification messages",
 			demandOption: true,
 			requiresArg: true,
 			type: "string",
@@ -108,14 +107,14 @@ export function DeleteOptions(yargs: CommonYargsArgv) {
 		})
 		.option("queue", {
 			describe:
-				"The name of the queue that is configured to receive notifications. ex '--queue my-queue'",
+				"The name of the queue that will receive event notification messages",
 			demandOption: true,
 			requiresArg: true,
 			type: "string",
 		})
 		.option("rule", {
 			describe:
-				"The id of the rule to delete. If no rule is specified, all rules for the bucket/queue configuration will be deleted.",
+				"The id of the rule to delete. If no rule is specified, all rules for the bucket/queue configuration will be deleted",
 			requiresArg: false,
 			type: "string",
 		});

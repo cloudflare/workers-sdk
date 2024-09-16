@@ -1021,10 +1021,10 @@ describe("r2", () => {
 						  -v, --version                   Show version number  [boolean]
 
 						OPTIONS
-						      --event-types, --event-type  Specify the kinds of object events to emit notifications for. ex. '--event-types object-create object-delete'  [array] [required] [choices: \\"object-create\\", \\"object-delete\\"]
-						      --prefix                     only actions on objects with this prefix will emit notifications  [string]
-						      --suffix                     only actions on objects with this suffix will emit notifications  [string]
-						      --queue                      The name of the queue to which event notifications will be sent. ex '--queue my-queue'  [string] [required]"
+						      --event-types, --event-type  The type of event(s) that will emit event notifications  [array] [required] [choices: \\"object-create\\", \\"object-delete\\"]
+						      --prefix                     The prefix that an object must match to emit event notifications (note: regular expressions not supported)  [string]
+						      --suffix                     The suffix that an object must match to emit event notifications (note: regular expressions not supported)  [string]
+						      --queue                      The name of the queue that will receive event notification messages  [string] [required]"
 					`);
 				});
 			});
@@ -1178,8 +1178,8 @@ describe("r2", () => {
 						  -v, --version                   Show version number  [boolean]
 
 						OPTIONS
-						      --queue  The name of the queue that is configured to receive notifications. ex '--queue my-queue'  [string] [required]
-						      --rule   The id of the rule to delete. If no rule is specified, all rules for the bucket/queue configuration will be deleted.  [string]"
+						      --queue  The name of the queue that will receive event notification messages  [string] [required]
+						      --rule   The id of the rule to delete. If no rule is specified, all rules for the bucket/queue configuration will be deleted  [string]"
 					`);
 				});
 			});
