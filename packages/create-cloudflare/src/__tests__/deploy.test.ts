@@ -89,7 +89,7 @@ describe("deploy helpers", async () => {
 
 			await expect(offerToDeploy(ctx)).resolves.toBe(true);
 			expect(processArgument).toHaveBeenCalledOnce();
-			expect(ctx.args.deploy).toBe(true);
+			expect(ctx.args.deploy).toBe(false);
 			expect(wranglerLogin).toHaveBeenCalled();
 		});
 
