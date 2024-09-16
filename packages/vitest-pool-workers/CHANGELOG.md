@@ -4,7 +4,7 @@
 
 ### Patch Changes
 
-- [#6716](https://github.com/cloudflare/workers-sdk/pull/6716) [`321a9e1`](https://github.com/cloudflare/workers-sdk/commit/321a9e1c82b0d937d9acbdb438bf6678755a6e40) Thanks [@Cherry](https://github.com/Cherry)! - feat: add support for Vitest 2.1.x
+- [#6716](https://github.com/cloudflare/workers-sdk/pull/6716) [`321a9e1`](https://github.com/cloudflare/workers-sdk/commit/321a9e1c82b0d937d9acbdb438bf6678755a6e40) Thanks [@Cherry](https://github.com/Cherry)! - chore: add support for Vitest 2.1.x
 
 - Updated dependencies [[`2c8506f`](https://github.com/cloudflare/workers-sdk/commit/2c8506f874171f4ccdf99357855389841578d348), [`c135de4`](https://github.com/cloudflare/workers-sdk/commit/c135de4707234e11f7f6438bea6a7067e8f284f9), [`5b5dd95`](https://github.com/cloudflare/workers-sdk/commit/5b5dd9573b2c43023cbcba0fbcc3e374465e745e)]:
   - wrangler@3.78.3
