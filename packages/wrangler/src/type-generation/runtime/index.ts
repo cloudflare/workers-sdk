@@ -71,7 +71,7 @@ export async function generateRuntimeTypes({
 		),
 	});
 
-	await writeFile(outFile, header + "\n" + types, "utf8");
+	await writeFile(outFile, `${header}\n${types}`, "utf8");
 
 	return {
 		outFile,
