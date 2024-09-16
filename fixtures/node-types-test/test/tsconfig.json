@@ -1,0 +1,8 @@
+{
+	"extends": "../tsconfig.json",
+	"compilerOptions": {
+		"types": []
+	},
+	"include": ["./**/*.ts", "../src/env.d.ts"],
+	"exclude": []
+}
