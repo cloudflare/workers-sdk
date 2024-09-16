@@ -11,8 +11,7 @@
 	"author": "wrangler@cloudflare.com",
 	"scripts": {
 		"build": "dotenv -- turbo build",
-		"check": "pnpm check:fixtures && pnpm check:deployments && node lint-turbo.mjs && dotenv -- turbo check:lint check:type check:format type:tests",
-		"check:deployments": "node -r esbuild-register tools/deployments/deploy-non-npm-packages.ts check",
+		"check": "pnpm check:fixtures && node lint-turbo.mjs && dotenv -- turbo check:lint check:type check:format type:tests",
 		"check:fixtures": "node -r esbuild-register tools/deployments/ensure-fixtures-are-not-deployable.ts",
 		"check:format": "prettier . --check --ignore-unknown",
 		"check:lint": "dotenv -- turbo check:lint",
@@ -24,6 +23,7 @@
 		"test": "vitest run --no-file-parallelism && dotenv -- turbo test --filter=wrangler --filter=miniflare --filter=kv-asset-handler --filter=@cloudflare/vitest-pool-workers --filter=@cloudflare/vitest-pool-workers-examples",
 		"test:ci": "dotenv -- turbo test:ci",
 		"test:e2e": "dotenv -- turbo test:e2e",
+		"test:e2e:create-cloudflare": "node -r esbuild-register tools/e2e/runIndividualE2ETests.ts",
 		"test:e2e:wrangler": "node -r esbuild-register tools/e2e/runIndividualE2EFiles.ts",
 		"test:watch": "turbo test:watch",
 		"type:tests": "dotenv -- turbo type:tests"
@@ -33,7 +33,7 @@
 		"@changesets/changelog-github": "^0.5.0",
 		"@changesets/cli": "^2.27.1",
 		"@changesets/parse": "^0.4.0",
-		"@cloudflare/workers-types": "^4.20240909.0",
+		"@cloudflare/workers-types": "^4.20240620.0",
 		"@ianvs/prettier-plugin-sort-imports": "4.2.1",
 		"@manypkg/cli": "^0.21.4",
 		"@turbo/gen": "^1.10.13",
@@ -47,20 +47,18 @@
 		"prettier": "^3.2.5",
 		"prettier-plugin-packagejson": "^2.2.18",
 		"rimraf": "^5.0.1",
-		"tree-kill": "^1.2.2",
 		"turbo": "^1.10.14",
 		"typescript": "^5.5.2",
 		"vite": "^5.0.12",
-		"vitest": "catalog:default"
+		"vitest": "^1.2.2"
 	},
-	"packageManager": "pnpm@9.10.0",
+	"packageManager": "pnpm@9.1.3",
 	"engines": {
 		"node": ">=18.20.0",
-		"pnpm": "^9.10.0"
+		"pnpm": "^9.1.3"
 	},
 	"volta": {
-		"node": "18.20.2",
-		"pnpm": "9.10.0"
+		"node": "18.20.2"
 	},
 	"pnpm": {
 		"peerDependencyRules": {
@@ -76,15 +74,13 @@
 			"@types/react-tabs>@types/react": "^18",
 			"@types/react-transition-group>@types/react": "^18",
 			"@cloudflare/elements>@types/react": "^18",
-			"capnpc-ts>typescript": "4.2.4",
-			"vitest>@types/node": "$@types/node"
+			"capnpc-ts>typescript": "5.5.2"
 		},
 		"patchedDependencies": {
 			"ink@3.2.0": "patches/ink@3.2.0.patch",
 			"@cloudflare/component-listbox@1.10.6": "patches/@cloudflare__component-listbox@1.10.6.patch",
 			"capnp-ts@0.7.0": "patches/capnp-ts@0.7.0.patch",
-			"pg@8.11.3": "patches/pg@8.11.3.patch",
-			"toucan-js@3.3.1": "patches/toucan-js@3.3.1.patch"
+			"pg@8.11.3": "patches/pg@8.11.3.patch"
 		}
 	}
 }

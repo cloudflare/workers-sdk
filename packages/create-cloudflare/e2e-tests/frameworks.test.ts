@@ -17,6 +17,7 @@ import {
 } from "vitest";
 import { deleteProject, deleteWorker } from "../scripts/common";
 import { getFrameworkMap } from "../src/templates";
+import { frameworkMap } from "./definitions";
 import { getFrameworkToTest } from "./frameworkToTest";
 import {
 	createTestLogStream,
@@ -68,8 +69,8 @@ type FrameworkTestConfig = RunnerConfig & {
 const { name: pm, npx } = detectPackageManager();
 
 // These are ordered based on speed and reliability for ease of debugging
-const frameworkTests: Record<string, FrameworkTestConfig> = {
-	astro: {
+export const frameworkTests: Record<string, FrameworkTestConfig> = {
+	[frameworkMap.astro]: {
 		testCommitMessage: true,
 		quarantine: true,
 		unsupportedOSs: ["win32"],
@@ -97,7 +98,7 @@ const frameworkTests: Record<string, FrameworkTestConfig> = {
 			"strict",
 		],
 	},
-	docusaurus: {
+	[frameworkMap.docusaurus]: {
 		unsupportedPms: ["bun"],
 		testCommitMessage: true,
 		unsupportedOSs: ["win32"],
@@ -114,7 +115,7 @@ const frameworkTests: Record<string, FrameworkTestConfig> = {
 			},
 		],
 	},
-	analog: {
+	[frameworkMap.analog]: {
 		testCommitMessage: true,
 		timeout: LONG_TIMEOUT,
 		unsupportedOSs: ["win32"],
@@ -142,7 +143,7 @@ const frameworkTests: Record<string, FrameworkTestConfig> = {
 		flags: ["--skipTailwind"],
 		quarantine: true,
 	},
-	angular: {
+	[frameworkMap.angular]: {
 		testCommitMessage: true,
 		timeout: LONG_TIMEOUT,
 		unsupportedOSs: ["win32"],
@@ -152,7 +153,7 @@ const frameworkTests: Record<string, FrameworkTestConfig> = {
 		},
 		flags: ["--style", "sass"],
 	},
-	gatsby: {
+	[frameworkMap.gatsby]: {
 		unsupportedPms: ["bun", "pnpm"],
 		promptHandlers: [
 			{
@@ -167,7 +168,7 @@ const frameworkTests: Record<string, FrameworkTestConfig> = {
 			expectedText: "Gatsby!",
 		},
 	},
-	hono: {
+	[frameworkMap.hono]: {
 		testCommitMessage: false,
 		unsupportedOSs: ["win32"],
 		verifyDeploy: {
@@ -181,7 +182,7 @@ const frameworkTests: Record<string, FrameworkTestConfig> = {
 			},
 		],
 	},
-	qwik: {
+	[frameworkMap.qwik]: {
 		promptHandlers: [
 			{
 				matcher: /Yes looks good, finish update/,
@@ -210,7 +211,7 @@ const frameworkTests: Record<string, FrameworkTestConfig> = {
 			expectedText: "C3_TEST",
 		},
 	},
-	remix: {
+	[frameworkMap.remix]: {
 		testCommitMessage: true,
 		timeout: LONG_TIMEOUT,
 		unsupportedPms: ["yarn"],
@@ -235,7 +236,7 @@ const frameworkTests: Record<string, FrameworkTestConfig> = {
 		},
 		flags: ["--typescript", "--no-install", "--no-git-init"],
 	},
-	next: {
+	[frameworkMap.next]: {
 		promptHandlers: [
 			{
 				matcher: /Do you want to use the next-on-pages eslint-plugin\?/,
@@ -263,7 +264,7 @@ const frameworkTests: Record<string, FrameworkTestConfig> = {
 			"@/*",
 		],
 	},
-	nuxt: {
+	[frameworkMap.nuxt]: {
 		testCommitMessage: true,
 		timeout: LONG_TIMEOUT,
 		unsupportedOSs: ["win32"],
@@ -286,7 +287,7 @@ const frameworkTests: Record<string, FrameworkTestConfig> = {
 			expectedText: "C3_TEST",
 		},
 	},
-	react: {
+	[frameworkMap.react]: {
 		promptHandlers: [
 			{
 				matcher: /Select a variant:/,
@@ -302,7 +303,7 @@ const frameworkTests: Record<string, FrameworkTestConfig> = {
 			expectedText: "Vite + React",
 		},
 	},
-	solid: {
+	[frameworkMap.solid]: {
 		promptHandlers: [
 			{
 				matcher: /Which template would you like to use/,
@@ -322,7 +323,7 @@ const frameworkTests: Record<string, FrameworkTestConfig> = {
 			expectedText: "Hello world",
 		},
 	},
-	svelte: {
+	[frameworkMap.svelte]: {
 		promptHandlers: [
 			{
 				matcher: /Which Svelte app template/,
@@ -355,7 +356,7 @@ const frameworkTests: Record<string, FrameworkTestConfig> = {
 			expectedText: "C3_TEST",
 		},
 	},
-	vue: {
+	[frameworkMap.vue]: {
 		testCommitMessage: true,
 		unsupportedOSs: ["win32"],
 		verifyDeploy: {
