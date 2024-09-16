@@ -4789,7 +4789,6 @@ addEventListener('fetch', event => {});`
 					config: { html_handling: "none" },
 				},
 				expectedCompatibilityDate: "2024-09-27",
-				expectedBindings: [],
 				expectedMainModule: undefined,
 			});
 			await runWrangler("deploy");

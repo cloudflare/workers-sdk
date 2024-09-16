@@ -184,6 +184,28 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 		observability,
 	} = worker;
 
+	const assetConfig = {
+		html_handling: experimental_assets?.assetConfig?.html_handling,
+		not_found_handling: experimental_assets?.assetConfig?.not_found_handling,
+	};
+
+	// short circuit if static assets upload only
+	if (
+		experimental_assets &&
+		!experimental_assets.routingConfig.has_user_worker
+	) {
+		formData.set(
+			"metadata",
+			JSON.stringify({
+				assets: {
+					jwt: experimental_assets.jwt,
+					config: assetConfig,
+				},
+				...(compatibility_date && { compatibility_date }),
+			})
+		);
+		return formData;
+	}
 	let { modules } = worker;
 
 	const metadataBindings: WorkerMetadataBinding[] = rawBindings ?? [];
@@ -548,22 +570,10 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 		keep_bindings.push(...keepBindings);
 	}
 
-	const assetConfig = {
-		html_handling: experimental_assets?.assetConfig?.html_handling,
-		not_found_handling: experimental_assets?.assetConfig?.not_found_handling,
-	};
-
-	const staticAssetOnly =
-		experimental_assets?.routingConfig?.has_user_worker === false;
-	let mainModuleName = {};
-	if (main.type !== "commonjs" && !staticAssetOnly) {
-		mainModuleName = { main_module: main.name };
-	} else if (!staticAssetOnly) {
-		mainModuleName = { body_part: main.name };
-	}
-
 	const metadata: WorkerMetadata = {
-		...mainModuleName,
+		...(main.type !== "commonjs"
+			? { main_module: main.name }
+			: { body_part: main.name }),
 		bindings: metadataBindings,
 		...(compatibility_date && { compatibility_date }),
 		...(compatibility_flags && {
@@ -601,24 +611,22 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 		);
 	}
 
-	if (!staticAssetOnly) {
-		for (const module of [main].concat(modules || [])) {
-			formData.set(
-				module.name,
-				new File([module.content], module.name, {
-					type: toMimeType(module.type ?? main.type ?? "esm"),
-				})
-			);
-		}
+	for (const module of [main].concat(modules || [])) {
+		formData.set(
+			module.name,
+			new File([module.content], module.name, {
+				type: toMimeType(module.type ?? main.type ?? "esm"),
+			})
+		);
+	}
 
-		for (const sourceMap of sourceMaps || []) {
-			formData.set(
-				sourceMap.name,
-				new File([sourceMap.content], sourceMap.name, {
-					type: "application/source-map",
-				})
-			);
-		}
+	for (const sourceMap of sourceMaps || []) {
+		formData.set(
+			sourceMap.name,
+			new File([sourceMap.content], sourceMap.name, {
+				type: "application/source-map",
+			})
+		);
 	}
 
 	return formData;
