@@ -66,7 +66,7 @@ export function createReporter() {
 
 	const config = readMetricsConfig() ?? {};
 	const isFirstUsage = config.c3permission === undefined;
-	const telemetry = getC3Permission(config);
+	const isEnabled = isTelemetryEnabled();
 	const deviceId = getDeviceId(config);
 	const packageManager = detectPackageManager();
 	const platform = getPlatform();
@@ -80,7 +80,7 @@ export function createReporter() {
 		name: EventName,
 		properties: EventProperties<EventName>,
 	): void {
-		if (!telemetry.enabled || !sparrow.hasSparrowSourceKey()) {
+		if (!isEnabled) {
 			return;
 		}
 
@@ -103,6 +103,14 @@ export function createReporter() {
 		// TODO(consider): add a timeout to avoid the process staying alive for too long
 
 		events.push(request);
+	}
+
+	function isTelemetryEnabled() {
+		if (process.env.CREATE_CLOUDFLARE_TELEMETRY_DISABLED === "1") {
+			return false;
+		}
+
+		return sparrow.hasSparrowSourceKey() && getC3Permission(config).enabled;
 	}
 
 	async function waitForAllEventsSettled(): Promise<void> {
@@ -246,6 +254,7 @@ export function createReporter() {
 		waitForAllEventsSettled,
 		collectAsyncMetrics,
 		setEventProperty,
+		isEnabled,
 	};
 }
 

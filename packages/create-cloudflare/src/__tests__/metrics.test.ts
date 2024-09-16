@@ -40,6 +40,7 @@ describe("createReporter", () => {
 	afterEach(() => {
 		vi.useRealTimers();
 		vi.clearAllMocks();
+		vi.unstubAllEnvs();
 	});
 
 	test("sends started and completed event to sparrow if the promise resolves", async () => {
@@ -115,6 +116,63 @@ describe("createReporter", () => {
 			},
 			promise: () => deferred.promise,
 		});
+
+		expect(reporter.isEnabled).toBe(false);
+
+		expect(sendEvent).toBeCalledTimes(0);
+
+		deferred.resolve("test result");
+
+		await expect(operation).resolves.toBe("test result");
+		expect(sendEvent).toBeCalledTimes(0);
+	});
+
+	test("sends no event if the c3 permission is disabled", async () => {
+		vi.mocked(readMetricsConfig).mockReturnValueOnce({
+			c3permission: {
+				enabled: false,
+				date: new Date(),
+			},
+		});
+
+		const deferred = promiseWithResolvers<string>();
+		const reporter = createReporter();
+		const operation = reporter.collectAsyncMetrics({
+			eventPrefix: "c3 session",
+			props: {
+				args: {
+					projectName: "app",
+				},
+			},
+			promise: () => deferred.promise,
+		});
+
+		expect(reporter.isEnabled).toBe(false);
+
+		expect(sendEvent).toBeCalledTimes(0);
+
+		deferred.resolve("test result");
+
+		await expect(operation).resolves.toBe("test result");
+		expect(sendEvent).toBeCalledTimes(0);
+	});
+
+	test("sends no event if the CREATE_CLOUDFLARE_TELEMETRY_DISABLED env is set to '1'", async () => {
+		vi.stubEnv("CREATE_CLOUDFLARE_TELEMETRY_DISABLED", "1");
+
+		const deferred = promiseWithResolvers<string>();
+		const reporter = createReporter();
+		const operation = reporter.collectAsyncMetrics({
+			eventPrefix: "c3 session",
+			props: {
+				args: {
+					projectName: "app",
+				},
+			},
+			promise: () => deferred.promise,
+		});
+
+		expect(reporter.isEnabled).toBe(false);
 
 		expect(sendEvent).toBeCalledTimes(0);
 

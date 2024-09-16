@@ -3,7 +3,14 @@
 	"extends": ["//"],
 	"pipeline": {
 		"build": {
-			"env": ["TEST_PM", "TEST_PM_VERSION", "npm_config_user_agent", "CI"],
+			"env": [
+				"TEST_PM",
+				"TEST_PM_VERSION",
+				"npm_config_user_agent",
+				"CI",
+				"CREATE_CLOUDFLARE_TELEMETRY_DISABLED",
+				"SPARROW_SOURCE_KEY"
+			],
 			"outputs": ["dist/**"]
 		},
 		"test:e2e": {
