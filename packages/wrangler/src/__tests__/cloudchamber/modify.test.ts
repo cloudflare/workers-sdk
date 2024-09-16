@@ -14,8 +14,8 @@ function mockDeployment() {
 		http.patch(
 			"*/deployments/1234/v2",
 			async ({ request }) => {
-				expect(await request.text()).toMatchInlineSnapshot(
-					`"{\\"image\\":\\"hello:modify\\",\\"location\\":\\"sfo06\\",\\"environment_variables\\":[{\\"name\\":\\"HELLO\\",\\"value\\":\\"WORLD\\"},{\\"name\\":\\"YOU\\",\\"value\\":\\"CONQUERED\\"}],\\"vcpu\\":3,\\"memory\\":\\"40MB\\"}"`
+				expect(await request.text()).toBe(
+					`{"image":"hello:modify","location":"sfo06","environment_variables":[{"name":"HELLO","value":"WORLD"},{"name":"YOU","value":"CONQUERED"}],"vcpu":3,"memory":"40MB"}`
 				);
 				return HttpResponse.json(MOCK_DEPLOYMENTS_COMPLEX[0]);
 			},

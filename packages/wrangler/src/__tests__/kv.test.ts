@@ -952,7 +952,7 @@ describe("wrangler", () => {
 							blankCursorValue
 						);
 						await runWrangler("kv key list --namespace-id some-namespace-id");
-						expect(std.err).toMatchInlineSnapshot(`""`);
+						expect(std.err).toEqual("");
 						expect(JSON.parse(std.out)).toEqual(keys);
 						expect(requests.count).toEqual(6);
 					});

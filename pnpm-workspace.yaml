@@ -4,6 +4,6 @@ packages:
   - "tools"
 
 catalog:
-  vitest: ~2.0.5
-  "@vitest/runner": ~2.0.5
-  "@vitest/snapshot": ~2.0.5
+  vitest: ~2.1.1
+  "@vitest/runner": ~2.1.1
+  "@vitest/snapshot": ~2.1.1

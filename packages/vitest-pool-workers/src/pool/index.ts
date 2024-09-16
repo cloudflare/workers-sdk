@@ -72,7 +72,7 @@ interface SerializedOptions {
 	isolatedStorage?: boolean;
 }
 
-// https://github.com/vitest-dev/vitest/blob/v2.0.5/packages/vite-node/src/client.ts#L468
+// https://github.com/vitest-dev/vitest/blob/v2.1.1/packages/vite-node/src/client.ts#L468
 declare const __vite_ssr_import__: unknown;
 assert(
 	typeof __vite_ssr_import__ === "undefined",
