@@ -1,5 +1,11 @@
 # create-cloudflare
 
+## 2.27.1
+
+### Patch Changes
+
+- [#6626](https://github.com/cloudflare/workers-sdk/pull/6626) [`3628814`](https://github.com/cloudflare/workers-sdk/commit/3628814d001a349a6576a02bee4a65f043f156f4) Thanks [@elithrar](https://github.com/elithrar)! - fix: Changes the default for "Do you want to deploy your application" in create cloudflare (C3) to a resounding "No".
+
 ## 2.27.0
 
 ### Minor Changes

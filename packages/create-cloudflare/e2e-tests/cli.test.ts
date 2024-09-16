@@ -188,7 +188,7 @@ describe.skipIf(frameworkToTest || isQuarantineMode())(
 				const { output } = await runC3(
 					[
 						projectPath,
-						"--template=https://github.com/cloudflare/workers-sdk/tree/main/templates/worker-router",
+						"--template=https://github.com/cloudflare/templates/worker-router",
 						"--no-deploy",
 						"--git=false",
 					],
@@ -197,10 +197,10 @@ describe.skipIf(frameworkToTest || isQuarantineMode())(
 				);
 
 				expect(output).toContain(
-					`repository https://github.com/cloudflare/workers-sdk/tree/main/templates/worker-router`,
+					`repository https://github.com/cloudflare/templates/worker-router`,
 				);
 				expect(output).toContain(
-					`Cloning template from: github:cloudflare/workers-sdk/templates/worker-router`,
+					`Cloning template from: https://github.com/cloudflare/templates/worker-router`,
 				);
 				expect(output).toContain(`template cloned and validated`);
 			},

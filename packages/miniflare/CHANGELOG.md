@@ -1,5 +1,11 @@
 # miniflare
 
+## 3.20240909.2
+
+### Patch Changes
+
+- [#6719](https://github.com/cloudflare/workers-sdk/pull/6719) [`5b5dd95`](https://github.com/cloudflare/workers-sdk/commit/5b5dd9573b2c43023cbcba0fbcc3e374465e745e) Thanks [@sdnts](https://github.com/sdnts)! - fix: Respect delivery delays for Queue consumers in local dev mode
+
 ## 3.20240909.1
 
 ### Minor Changes
