@@ -212,7 +212,9 @@ export class QueueBrokerObject extends MiniflareDurableObject<QueueBrokerObjectE
 	}
 
 	get #maybeProducer() {
-		return this.#producers[this.name];
+		return Object.values(this.#producers).find(
+			(p) => p?.queueName === this.name
+		);
 	}
 
 	get #maybeConsumer() {
@@ -355,7 +357,7 @@ export class QueueBrokerObject extends MiniflareDurableObject<QueueBrokerObjectE
 		this.#pendingFlush = { immediate: delay === 0, timeout };
 	}
 
-	#enqueue(messages: QueueIncomingMessage[], globalDelay: number = 0) {
+	#enqueue(messages: QueueIncomingMessage[], globalDelay = 0) {
 		for (const message of messages) {
 			const randomness = crypto.getRandomValues(new Uint8Array(16));
 			const id = message.id ?? Buffer.from(randomness).toString("hex");
@@ -375,14 +377,15 @@ export class QueueBrokerObject extends MiniflareDurableObject<QueueBrokerObjectE
 
 	@POST("/message")
 	message: RouteHandler = async (req) => {
-		validateMessageSize(req.headers);
-		const contentType = validateContentType(req.headers);
-		const delay = validateMessageDelay(req.headers);
-		const body = Buffer.from(await req.arrayBuffer());
-
 		// If we don't have a consumer, drop the message
 		const consumer = this.#maybeConsumer;
 		if (consumer === undefined) return new Response();
+
+		validateMessageSize(req.headers);
+		const contentType = validateContentType(req.headers);
+		const delay =
+			validateMessageDelay(req.headers) ?? this.#maybeProducer?.deliveryDelay;
+		const body = Buffer.from(await req.arrayBuffer());
 
 		this.#enqueue(
 			[{ contentType, delaySecs: delay, body }],
@@ -393,6 +396,10 @@ export class QueueBrokerObject extends MiniflareDurableObject<QueueBrokerObjectE
 
 	@POST("/batch")
 	batch: RouteHandler = async (req) => {
+		// If we don't have a consumer, drop the message
+		const consumer = this.#maybeConsumer;
+		if (consumer === undefined) return new Response();
+
 		// NOTE: this endpoint is also used when moving messages to the dead-letter
 		// queue. In this case, size headers won't be added and this validation is
 		// a no-op. This allows us to enqueue a maximum size batch with additional
@@ -401,10 +408,6 @@ export class QueueBrokerObject extends MiniflareDurableObject<QueueBrokerObjectE
 		const delay =
 			validateMessageDelay(req.headers) ?? this.#maybeProducer?.deliveryDelay;
 		const body = QueuesBatchRequestSchema.parse(await req.json());
-
-		// If we don't have a consumer, drop the message
-		const consumer = this.#maybeConsumer;
-		if (consumer === undefined) return new Response();
 
 		this.#enqueue(body.messages, delay);
 		return new Response();

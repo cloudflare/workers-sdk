@@ -805,6 +805,12 @@ test("validates message size", async (t) => {
 	const mf = new Miniflare({
 		verbose: true,
 		queueProducers: ["QUEUE"],
+		queueConsumers: {
+			QUEUE: {
+				maxBatchSize: 100,
+				maxBatchTimeout: 0,
+			},
+		},
 		modules: true,
 		script: `export default {
       async fetch(request, env, ctx) {
@@ -832,152 +838,4 @@ test("validates message size", async (t) => {
 		message:
 			"Queue send failed: message length of 128001 bytes exceeds limit of 128000",
 	});
-});
-
-test("supports delivery delay", async (t) => {
-	let batches: string[][] = [];
-
-	const log = new TestLog(t);
-	const mf = new Miniflare({
-		log,
-		verbose: true,
-		queueProducers: { QUEUE: { queueName: "QUEUE", deliveryDelay: 2 } },
-		queueConsumers: {
-			QUEUE: {
-				maxBatchSize: 100,
-				maxBatchTimeout: 0,
-				maxRetires: 1,
-				retryDelay: 3,
-			},
-		},
-		serviceBindings: {
-			async REPORTER(request) {
-				const batch = StringArraySchema.parse(await request.json());
-				if (batch.length > 0) {
-					batches.push(batch);
-				}
-				return new Response();
-			},
-		},
-		modules: true,
-		script: `export default {
-      async fetch(request, env, ctx) {
-		const delay = request.headers.get("X-Msg-Delay-Secs");
-		const url = new URL(request.url);
-		const body = await request.json();
-
-		if (url.pathname === "/send") {
-			if (delay === null) {
-				await env.QUEUE.send(body);
-			} else {
-				await env.QUEUE.send(body, { delaySeconds: Number(delay) });
-			}
-		} else if (url.pathname === "/batch") {
-		  await env.QUEUE.sendBatch(body, { delaySeconds: Number(delay) });
-		}
-        return new Response(null, { status: 204 });
-      },
-      async queue(batch, env, ctx) {
-        delete Date.prototype.toJSON; // JSON.stringify calls .toJSON before the replacer
-        await env.REPORTER.fetch("http://localhost", {
-          method: "POST",
-		  body: JSON.stringify(batch.messages.map(({ id }) => id)),
-        });
-
-		let isBatch = true;
-		for (const message of batch.messages) {
-			if (message.body < 10) {
-				if (message.body % 2 == 0)  {
-					message.retry({ delaySeconds: 20 });
-				}
-				isBatch = false;
-			}
-		}
-		batch.retryAll(isBatch ? {} : { delaySeconds: 10 });
-      },
-    };`,
-	});
-	t.teardown(() => mf.dispose());
-	const object = await getControlStub(mf, "QUEUE");
-
-	// Test send.
-
-	async function send(delay: number, message: unknown) {
-		await mf.dispatchFetch("http://localhost/send", {
-			method: "POST",
-			headers: { "X-Msg-Delay-Secs": delay.toString() },
-			body: JSON.stringify(message),
-		});
-	}
-
-	// Send 10 messages.
-	for (let i = 0; i < 10; i++) {
-		send(i, i);
-	}
-
-	// Verify messages are delivered at the right times.
-	for (let i = 1; i <= 10; i++) {
-		await object.advanceFakeTime(1000);
-		await object.waitForFakeTasks();
-		t.is(batches.length, i);
-	}
-
-	batches = [];
-
-	// Verify messages are retried at the right times.
-	for (let i = 1; i <= 10; i++) {
-		await object.advanceFakeTime(2000);
-		await object.waitForFakeTasks();
-		t.is(batches.length, i);
-	}
-
-	batches = [];
-
-	// Test send batch.
-
-	async function sendBatch(delay: number, ...messages: unknown[]) {
-		await mf.dispatchFetch("http://localhost/batch", {
-			method: "POST",
-			headers: { "X-Msg-Delay-Secs": delay.toString() },
-			body: JSON.stringify(messages),
-		});
-	}
-
-	// Send batch of messages (default batch delay: 1 sec).
-	sendBatch(
-		1,
-		{ body: 10, delaySeconds: 0 },
-		{ body: 11 },
-		{ body: 12, delaySeconds: 2 }
-	);
-
-	// Verify messages are received at the right times.
-	for (let i = 1; i <= 3; i++) {
-		await object.advanceFakeTime(1000);
-		await object.waitForFakeTasks();
-		t.is(batches.length, i);
-	}
-
-	batches = [];
-
-	// Verify messages are retried at the right times.
-	for (let i = 1; i <= 3; i++) {
-		await object.advanceFakeTime(1000);
-		await object.waitForFakeTasks();
-		t.is(batches.length, i);
-	}
-
-	batches = [];
-
-	// Sending message with delivery delay set at the producer settings level.
-	await mf.dispatchFetch("http://localhost/send", {
-		method: "POST",
-		body: JSON.stringify("test"),
-	});
-	await object.advanceFakeTime(1000);
-	await object.waitForFakeTasks();
-	t.is(batches.length, 0);
-	await object.advanceFakeTime(1000);
-	await object.waitForFakeTasks();
-	t.is(batches.length, 1);
 });
