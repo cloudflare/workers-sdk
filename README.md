@@ -61,8 +61,6 @@ Visit the official Workers documentation [here](https://developers.cloudflare.co
 | [`wrangler-devtools`](https://github.com/cloudflare/workers-sdk/tree/main/packages/wrangler-devtools)      | Cloudflare's fork of Chrome DevTools for inspecting your local or remote Workers                                       |                                                                 |
 | [`pages-shared`](https://github.com/cloudflare/workers-sdk/tree/main/packages/pages-shared)                | Used internally to power Wrangler and Cloudflare Pages. It contains all the code that is shared between these clients. |                                                                 |
 
-In addition to these, this repo contains a selection of [`templates`](https://github.com/cloudflare/workers-sdk/tree/main/templates) to help you get started with a variety of projects.
-
 ## Contributing
 
 We welcome new contributors! Refer to the [`CONTRIBUTING.md`](/CONTRIBUTING.md) guide for details.
