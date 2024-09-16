@@ -49,7 +49,7 @@ runs:
     - name: E2E Tests
       id: run-e2e
       shell: bash
-      run: pnpm run test:e2e --filter create-cloudflare
+      run: pnpm run test:e2e:create-cloudflare
       env:
         CLOUDFLARE_API_TOKEN: ${{ inputs.apiToken }}
         CLOUDFLARE_ACCOUNT_ID: ${{ inputs.accountId }}
