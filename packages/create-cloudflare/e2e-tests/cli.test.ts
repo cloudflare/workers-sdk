@@ -94,7 +94,7 @@ describe.skipIf(frameworkToTest || isQuarantineMode())(
 						},
 						{
 							matcher: /Do you want to deploy your application/,
-							input: [keys.left, keys.enter],
+							input: [keys.enter],
 						},
 					],
 					logStream,
