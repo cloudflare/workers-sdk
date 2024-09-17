@@ -420,6 +420,7 @@ function getQueueProducers(
 		if (workerProducers !== undefined) {
 			// De-sugar array consumer options to record mapping to empty options
 			if (Array.isArray(workerProducers)) {
+				// queueProducers: ["MY_QUEUE"]
 				workerProducers = Object.fromEntries(
 					workerProducers.map((bindingName) => [
 						bindingName,
@@ -428,8 +429,20 @@ function getQueueProducers(
 				);
 			}
 
-			for (const [bindingName, opts] of Object.entries(workerProducers)) {
-				queueProducers.set(bindingName, { workerName, ...opts });
+			type Entries<T> = { [K in keyof T]: [K, T[K]] }[keyof T][];
+			type ProducersIterable = Entries<typeof workerProducers>;
+			const producersIterable = Object.entries(
+				workerProducers
+			) as ProducersIterable;
+
+			for (const [bindingName, opts] of producersIterable) {
+				if (typeof opts === "string") {
+					// queueProducers: { "MY_QUEUE": "my-queue" }
+					queueProducers.set(bindingName, { workerName, queueName: opts });
+				} else {
+					// queueProducers: { QUEUE: { queueName: "QUEUE", ... } }
+					queueProducers.set(bindingName, { workerName, ...opts });
+				}
 			}
 		}
 	}

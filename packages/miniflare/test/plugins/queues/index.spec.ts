@@ -178,6 +178,126 @@ test("flushes partial and full batches", async (t) => {
 	batches = [];
 });
 
+test("supports declaring queue producers as a key-value pair -> queueProducers: { 'MY_QUEUE_BINDING': 'my-queue_name' }", async (t) => {
+	const promise = new DeferredPromise<z.infer<typeof MessageArraySchema>>();
+	const mf = new Miniflare({
+		verbose: true,
+		queueProducers: { MY_QUEUE_PRODUCER: "MY_QUEUE" },
+		queueConsumers: ["MY_QUEUE"],
+		serviceBindings: {
+			async REPORTER(request) {
+				promise.resolve(MessageArraySchema.parse(await request.json()));
+				return new Response();
+			},
+		},
+		modules: true,
+		script: `export default {
+      async fetch(request, env, ctx) {
+				await env.MY_QUEUE_PRODUCER.send("Hello world!");
+				await env.MY_QUEUE_PRODUCER.sendBatch([{ body: "Hola mundo!" }]);
+        return new Response(null, { status: 204 });
+      },
+      async queue(batch, env, ctx) {
+        await env.REPORTER.fetch("http://localhost", {
+          method: "POST",
+          body: JSON.stringify(batch.messages.map(({ id, body, attempts }) => ({ queue: batch.queue, id, body, attempts }))),
+        });
+      }
+    }`,
+	});
+	t.teardown(() => mf.dispose());
+	const object = await getControlStub(mf, "MY_QUEUE");
+
+	await mf.dispatchFetch("http://localhost");
+	await object.advanceFakeTime(1000);
+	await object.waitForFakeTasks();
+	const batch = await promise;
+	t.deepEqual(batch, [
+		{ queue: "MY_QUEUE", id: batch[0].id, body: "Hello world!", attempts: 1 },
+		{ queue: "MY_QUEUE", id: batch[1].id, body: "Hola mundo!", attempts: 1 },
+	]);
+});
+
+test("supports declaring queue producers as an array -> queueProducers: ['MY_QUEUE_BINDING']", async (t) => {
+	const promise = new DeferredPromise<z.infer<typeof MessageArraySchema>>();
+	const mf = new Miniflare({
+		verbose: true,
+		queueProducers: ["MY_QUEUE"],
+		queueConsumers: ["MY_QUEUE"],
+		serviceBindings: {
+			async REPORTER(request) {
+				promise.resolve(MessageArraySchema.parse(await request.json()));
+				return new Response();
+			},
+		},
+		modules: true,
+		script: `export default {
+      async fetch(request, env, ctx) {
+        await env.MY_QUEUE.send("Hello World!");
+				await env.MY_QUEUE.sendBatch([{ body: "Hola Mundo!" }]);
+        return new Response(null, { status: 204 });
+      },
+      async queue(batch, env, ctx) {
+        await env.REPORTER.fetch("http://localhost", {
+          method: "POST",
+          body: JSON.stringify(batch.messages.map(({ id, body, attempts }) => ({ queue: batch.queue, id, body, attempts }))),
+        });
+      }
+    }`,
+	});
+	t.teardown(() => mf.dispose());
+	const object = await getControlStub(mf, "MY_QUEUE");
+
+	await mf.dispatchFetch("http://localhost");
+	await object.advanceFakeTime(1000);
+	await object.waitForFakeTasks();
+	const batch = await promise;
+	t.deepEqual(batch, [
+		{ queue: "MY_QUEUE", id: batch[0].id, body: "Hello World!", attempts: 1 },
+		{ queue: "MY_QUEUE", id: batch[1].id, body: "Hola Mundo!", attempts: 1 },
+	]);
+});
+
+test("supports declaring queue producers as {MY_QUEUE_BINDING: {queueName: 'my-queue-name'}}", async (t) => {
+	const promise = new DeferredPromise<z.infer<typeof MessageArraySchema>>();
+	const mf = new Miniflare({
+		verbose: true,
+		queueProducers: { MY_QUEUE_PRODUCER: { queueName: "MY_QUEUE" } },
+		queueConsumers: ["MY_QUEUE"],
+		serviceBindings: {
+			async REPORTER(request) {
+				promise.resolve(MessageArraySchema.parse(await request.json()));
+				return new Response();
+			},
+		},
+		modules: true,
+		script: `export default {
+      async fetch(request, env, ctx) {
+        await env.MY_QUEUE_PRODUCER.send("Hello World!");
+				await env.MY_QUEUE_PRODUCER.sendBatch([{ body: "Hola Mundo!" }]);
+        return new Response(null, { status: 204 });
+      },
+      async queue(batch, env, ctx) {
+        await env.REPORTER.fetch("http://localhost", {
+          method: "POST",
+          body: JSON.stringify(batch.messages.map(({ id, body, attempts }) => ({ queue: batch.queue, id, body, attempts }))),
+        });
+      }
+    }`,
+	});
+	t.teardown(() => mf.dispose());
+	const object = await getControlStub(mf, "MY_QUEUE");
+
+	await mf.dispatchFetch("http://localhost");
+	await object.advanceFakeTime(1000);
+	await object.waitForFakeTasks();
+	const batch = await promise;
+	t.deepEqual(batch, [
+		{ queue: "MY_QUEUE", id: batch[0].id, body: "Hello World!", attempts: 1 },
+		{ queue: "MY_QUEUE", id: batch[1].id, body: "Hola Mundo!", attempts: 1 },
+	]);
+});
+
 test("sends all structured cloneable types", async (t) => {
 	const errorPromise = new DeferredPromise<string>();
 
@@ -804,9 +924,9 @@ test("supports message contentTypes", async (t) => {
 test("validates message size", async (t) => {
 	const mf = new Miniflare({
 		verbose: true,
-		queueProducers: ["QUEUE"],
+		queueProducers: { QUEUE: "MY_QUEUE" },
 		queueConsumers: {
-			QUEUE: {
+			MY_QUEUE: {
 				maxBatchSize: 100,
 				maxBatchTimeout: 0,
 			},
