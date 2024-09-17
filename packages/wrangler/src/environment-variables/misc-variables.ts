@@ -98,3 +98,12 @@ export const getOutputFilePathFromEnv = getEnvironmentVariableFactory({
 export const getCIMatchTag = getEnvironmentVariableFactory({
 	variableName: "WRANGLER_CI_MATCH_TAG",
 });
+
+/**
+ * `WRANGLER_BUILD_CONDITIONS` specifies the "build conditions" to use when importing packages at build time.
+ *
+ * If this is set, Wrangler will configure esbuild to use this list of conditions.
+ */
+export const getBuildConditions = getEnvironmentVariableFactory({
+	variableName: "WRANGLER_BUILD_CONDITIONS",
+});
