@@ -198,6 +198,7 @@ declare module "*.bin" {
 				create: true,
 				overwrite: true,
 				suppressChannelUpdate: true,
+				readOnly: files.readOnly,
 			});
 		}
 		if (this.readRoot !== null) {
