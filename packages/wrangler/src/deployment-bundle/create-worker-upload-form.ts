@@ -202,6 +202,7 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 					config: assetConfig,
 				},
 				...(compatibility_date && { compatibility_date }),
+				...(compatibility_flags && { compatibility_flags }),
 			})
 		);
 		return formData;

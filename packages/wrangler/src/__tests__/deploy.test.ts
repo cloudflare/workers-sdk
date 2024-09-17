@@ -4746,6 +4746,7 @@ addEventListener('fetch', event => {});`
 			writeWranglerToml({
 				main: "index.js",
 				compatibility_date: "2024-09-27",
+				compatibility_flags: ["nodejs_compat"],
 				experimental_assets: {
 					directory: "assets",
 					binding: "ASSETS",
@@ -4763,6 +4764,7 @@ addEventListener('fetch', event => {});`
 				expectedBindings: [{ name: "ASSETS", type: "assets" }],
 				expectedMainModule: "index.js",
 				expectedCompatibilityDate: "2024-09-27",
+				expectedCompatibilityFlags: ["nodejs_compat"],
 			});
 			await runWrangler("deploy");
 		});
@@ -4776,6 +4778,7 @@ addEventListener('fetch', event => {});`
 			writeWorkerSource({ format: "js" });
 			writeWranglerToml({
 				compatibility_date: "2024-09-27",
+				compatibility_flags: ["nodejs_compat"],
 				experimental_assets: {
 					directory: "assets",
 					html_handling: "none",
@@ -4789,6 +4792,7 @@ addEventListener('fetch', event => {});`
 					config: { html_handling: "none" },
 				},
 				expectedCompatibilityDate: "2024-09-27",
+				expectedCompatibilityFlags: ["nodejs_compat"],
 				expectedMainModule: undefined,
 			});
 			await runWrangler("deploy");
