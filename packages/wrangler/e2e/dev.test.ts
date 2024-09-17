@@ -7,6 +7,7 @@ import { fetch } from "undici";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { WranglerE2ETestHelper } from "./helpers/e2e-wrangler-test";
 import { fetchText } from "./helpers/fetch-text";
+import { fetchWithETag } from "./helpers/fetch-with-etag";
 import { generateResourceName } from "./helpers/generate-resource-name";
 import { retry } from "./helpers/retry";
 import { seed as baseSeed, makeRoot } from "./helpers/setup";
@@ -901,8 +902,13 @@ describe("watch mode", () => {
 				const worker = helper.runLongLived(cmd);
 				const { url } = await worker.waitForReady();
 
-				let text = await fetchText(`${url}/index.html`);
-				expect(text).toBe("<h1>Hello Workers + Assets</h1>");
+				// let cachedETags: Record<string,string> = {};
+				let { response, cachedETags } = await fetchWithETag(
+					`${url}/index.html`,
+					{}
+				);
+				const originalETag = response.headers.get("etag");
+				expect(await response.text()).toBe("<h1>Hello Workers + Assets</h1>");
 
 				await helper.seed({
 					"public/index.html": dedent`
@@ -910,9 +916,17 @@ describe("watch mode", () => {
 				});
 
 				await worker.waitForReload();
-
-				text = await fetchText(`${url}/index.html`);
-				expect(text).toBe("<h1>Hello Updated Workers + Assets</h1>");
+				({ response, cachedETags } = await retry(
+					(s) => s.response.status !== 200,
+					async () => {
+						return await fetchWithETag(`${url}/index.html`, cachedETags);
+					}
+				));
+				expect(await response.text()).toBe(
+					"<h1>Hello Updated Workers + Assets</h1>"
+				);
+				// expect a new eTag back because the content for this path has changed
+				expect(response.headers.get("etag")).not.toBe(originalETag);
 			});
 
 			it(`supports adding new assets during dev session`, async () => {
@@ -931,8 +945,12 @@ describe("watch mode", () => {
 
 				const worker = helper.runLongLived(cmd);
 				const { url } = await worker.waitForReady();
-				let text = await fetchText(`${url}/index.html`);
-				expect(text).toBe("<h1>Hello Workers + Assets</h1>");
+				let { response, cachedETags } = await fetchWithETag(
+					`${url}/index.html`,
+					{}
+				);
+
+				expect(await response.text()).toBe("<h1>Hello Workers + Assets</h1>");
 
 				await helper.seed({
 					"public/about.html": dedent`About Workers + Assets`,
@@ -943,20 +961,26 @@ describe("watch mode", () => {
 
 				// re-calculating the asset manifest / reverse assets map might not be
 				// done at this point, so retry until they are available
-				const response = await retry(
-					(s) => s.status !== 200,
+				({ response, cachedETags } = await retry(
+					(s) => s.response.status !== 200,
 					async () => {
-						const r = await fetch(`${url}/about.html`);
-						return { text: await r.text(), status: r.status };
+						return await fetchWithETag(`${url}/about.html`, cachedETags);
 					}
-				);
-				expect(response.text).toBe("About Workers + Assets");
+				));
+				expect(await response.text()).toBe("About Workers + Assets");
 
-				text = await fetchText(`${url}/workers/index.html`);
-				expect(text).toBe("Cloudflare Workers!");
+				({ response, cachedETags } = await fetchWithETag(
+					`${url}/workers/index.html`,
+					cachedETags
+				));
+				expect(await response.text()).toBe("Cloudflare Workers!");
 
-				text = await fetchText(`${url}/index.html`);
-				expect(text).toBe("<h1>Hello Workers + Assets</h1>");
+				// expect 304 for the original asset as the content has not changed
+				({ response, cachedETags } = await fetchWithETag(
+					`${url}/index.html`,
+					cachedETags
+				));
+				expect(response.status).toBe(304);
 			});
 
 			it(`supports removing existing assets during dev session`, async () => {
@@ -977,15 +1001,22 @@ describe("watch mode", () => {
 
 				const worker = helper.runLongLived(cmd);
 				const { url } = await worker.waitForReady();
+				let { response, cachedETags } = await fetchWithETag(
+					`${url}/index.html`,
+					{}
+				);
+				expect(await response.text()).toBe("<h1>Hello Workers + Assets</h1>");
 
-				let text = await fetchText(`${url}/index.html`);
-				expect(text).toBe("<h1>Hello Workers + Assets</h1>");
-
-				text = await fetchText(`${url}/about.html`);
-				expect(text).toBe("About Workers + Assets");
-
-				text = await fetchText(`${url}/workers/index.html`);
-				expect(text).toBe("Cloudflare Workers!");
+				({ response, cachedETags } = await fetchWithETag(
+					`${url}/about.html`,
+					cachedETags
+				));
+				expect(await response.text()).toBe("About Workers + Assets");
+				({ response, cachedETags } = await fetchWithETag(
+					`${url}/workers/index.html`,
+					cachedETags
+				));
+				expect(await response.text()).toBe("Cloudflare Workers!");
 
 				await helper.removeFiles(["public/index.html"]);
 
@@ -993,13 +1024,12 @@ describe("watch mode", () => {
 
 				// re-calculating the asset manifest / reverse assets map might not be
 				// done at this point, so retry until they are available
-				const response = await retry(
-					(s) => s.status !== 404,
+				({ response, cachedETags } = await retry(
+					(s) => s.response.status !== 404,
 					async () => {
-						const r = await fetch(`${url}/index.html`);
-						return { text: await r.text(), status: r.status };
+						return await fetchWithETag(`${url}/index.html`, cachedETags);
 					}
-				);
+				));
 				expect(response.status).toBe(404);
 			});
 
@@ -1024,8 +1054,11 @@ describe("watch mode", () => {
 				const worker = helper.runLongLived(cmd);
 				const { url } = await worker.waitForReady();
 
-				let text = await fetchText(`${url}/index.html`);
-				expect(text).toBe("<h1>Hello Workers + Assets</h1>");
+				let { response, cachedETags } = await fetchWithETag(
+					`${url}/index.html`,
+					{}
+				);
+				expect(await response.text()).toBe("<h1>Hello Workers + Assets</h1>");
 
 				await helper.seed({
 					"wrangler.toml": dedent`
@@ -1039,17 +1072,20 @@ describe("watch mode", () => {
 
 				await worker.waitForReload();
 
-				const response = await retry(
-					(s) => s.text !== "<h1>Hola Workers + Assets</h1>",
+				({ response, cachedETags } = await retry(
+					(s) => s.response.status !== 200,
 					async () => {
-						const r = await fetch(`${url}/index.html`);
-						return { text: await r.text(), status: r.status };
+						return await fetchWithETag(`${url}/index.html`, cachedETags);
 					}
+				));
+				expect(await response.text()).toBe("<h1>Hola Workers + Assets</h1>");
+				({ response, cachedETags } = await fetchWithETag(
+					`${url}/about/index.html`,
+					{}
+				));
+				expect(await response.text()).toBe(
+					"<h1>Read more about Workers + Assets</h1>"
 				);
-				expect(response.text).toBe("<h1>Hola Workers + Assets</h1>");
-
-				text = await fetchText(`${url}/about/index.html`);
-				expect(text).toBe("<h1>Read more about Workers + Assets</h1>");
 			});
 		}
 	);
@@ -1074,11 +1110,20 @@ describe("watch mode", () => {
 			const worker = helper.runLongLived(cmd);
 			const { url } = await worker.waitForReady();
 
-			let text = await fetchText(`${url}/index.html`);
-			expect(text).toBe("<h1>Hello Workers + Assets</h1>");
+			let { response, cachedETags } = await fetchWithETag(
+				`${url}/index.html`,
+				{}
+			);
+			const originalETag = response.headers.get("etag");
+			expect(await response.text()).toBe("<h1>Hello Workers + Assets</h1>");
 
-			text = await fetchText(`${url}/about.html`);
-			expect(text).toBe("<h1>Read more about Workers + Assets</h1>");
+			({ response, cachedETags } = await fetchWithETag(
+				`${url}/about.html`,
+				cachedETags
+			));
+			expect(await response.text()).toBe(
+				"<h1>Read more about Workers + Assets</h1>"
+			);
 
 			// change + add
 			await helper.seed({
@@ -1092,20 +1137,29 @@ describe("watch mode", () => {
 
 			// re-calculating the asset manifest / reverse assets map might not be
 			// done at this point, so retry until they are available
-			let response = await retry(
-				(s) => s.status !== 200,
+			({ response, cachedETags } = await retry(
+				(s) => s.response.status !== 200,
 				async () => {
-					const r = await fetch(`${url}/hello.html`);
-					return { text: await r.text(), status: r.status };
+					return await fetchWithETag(`${url}/hello.html`, cachedETags);
 				}
+			));
+			expect(await response.text()).toBe("<h1>Hya Workers!</h1>");
+
+			({ response, cachedETags } = await fetchWithETag(
+				`${url}/index.html`,
+				cachedETags
+			));
+			expect(await response.text()).toBe(
+				"<h1>Hello Updated Workers + Assets</h1>"
 			);
-			expect(response.text).toBe("<h1>Hya Workers!</h1>");
+			expect(response.headers.get("etag")).not.toBe(originalETag);
 
-			text = await fetchText(`${url}/index.html`);
-			expect(text).toBe("<h1>Hello Updated Workers + Assets</h1>");
-
-			text = await fetchText(`${url}/about.html`);
-			expect(text).toBe("<h1>Read more about Workers + Assets</h1>");
+			// unchanged -> expect 304
+			({ response, cachedETags } = await fetchWithETag(
+				`${url}/about.html`,
+				cachedETags
+			));
+			expect(response.status).toBe(304);
 
 			// remove
 			await helper.removeFiles(["dist/about.html"]);
@@ -1114,13 +1168,12 @@ describe("watch mode", () => {
 
 			// re-calculating the asset manifest / reverse assets map might not be
 			// done at this point, so retry until they are available
-			response = await retry(
-				(s) => s.status !== 404,
+			({ response, cachedETags } = await retry(
+				(s) => s.response.status !== 404,
 				async () => {
-					const r = await fetch(`${url}/about.html`);
-					return { text: await r.text(), status: r.status };
+					return await fetchWithETag(`${url}/about.html`, cachedETags);
 				}
-			);
+			));
 			expect(response.status).toBe(404);
 		});
 	});

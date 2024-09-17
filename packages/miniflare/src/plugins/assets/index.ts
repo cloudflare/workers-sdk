@@ -164,9 +164,14 @@ export const buildAssetsManifest = async (dir: string) => {
 	return encodedAssetManifest;
 };
 
+type ManifestEntry = {
+	pathHash: Uint8Array;
+	contentHash: Uint8Array;
+};
+
 const walk = async (dir: string) => {
 	const files = await fs.readdir(dir, { recursive: true });
-	const manifest: Uint8Array[] = [];
+	const manifest: ManifestEntry[] = [];
 	let counter = 0;
 	await Promise.all(
 		files.map(async (file) => {
@@ -195,10 +200,19 @@ const walk = async (dir: string) => {
 							`Ensure all assets in your assets directory "${dir}" conform with the Workers maximum size requirement.`
 					);
 				}
+				const modifiedTime = (await fs.stat(filepath)).mtimeMs;
 
-				manifest.push(
-					await hashPath(encodeFilePath(relativeFilepath, path.sep))
-				);
+				manifest.push({
+					pathHash: await hashPath(encodeFilePath(relativeFilepath, path.sep)),
+					// In prod the structure of each manifest entry is [header, pathHash, contentHash].
+					// In dev we want to avoid reading and hashing all file contents every time we
+					// reload the dev server, so in dev the 'content hash' is hash(path + modifiedTime).
+					// This way the 'content hash' still updates on file change, so the eTag also updates,
+					// and we don't incorrectly get a 304.
+					contentHash: await hashPath(
+						encodeFilePath(relativeFilepath, path.sep) + modifiedTime.toString()
+					),
+				});
 				counter++;
 			}
 		})
@@ -213,40 +227,42 @@ const walk = async (dir: string) => {
 	return manifest;
 };
 // sorts ascending by path hash
-const sortManifest = (manifest: Uint8Array[]) => {
+const sortManifest = (manifest: ManifestEntry[]) => {
 	return manifest.sort(comparisonFn);
 };
 
-const comparisonFn = (a: Uint8Array, b: Uint8Array) => {
+const comparisonFn = (a: ManifestEntry, b: ManifestEntry) => {
 	// i don't see why this would ever be the case
-	if (a.length < b.length) {
+	if (a.pathHash.length < b.pathHash.length) {
 		return -1;
 	}
-	if (a.length > b.length) {
+	if (a.pathHash.length > b.pathHash.length) {
 		return 1;
 	}
-	for (const [i, v] of a.entries()) {
-		if (v < b[i]) {
+	for (const [i, v] of a.pathHash.entries()) {
+		if (v < b.pathHash[i]) {
 			return -1;
 		}
-		if (v > b[i]) {
+		if (v > b.pathHash[i]) {
 			return 1;
 		}
 	}
 	return 1;
 };
 
-const encodeManifest = (manifest: Uint8Array[]) => {
+const encodeManifest = (manifest: ManifestEntry[]) => {
 	const assetManifestBytes = new Uint8Array(
 		HEADER_SIZE + manifest.length * ENTRY_SIZE
 	);
+
 	for (const [i, entry] of manifest.entries()) {
 		const entryOffset = HEADER_SIZE + i * ENTRY_SIZE;
-		// NB: PATH_HASH_OFFSET = 0
-		// set the path hash:
-		assetManifestBytes.set(entry, entryOffset + PATH_HASH_OFFSET);
-		// set the content hash, which happens to be the same as the path hash in dev:
-		assetManifestBytes.set(entry, entryOffset + CONTENT_HASH_OFFSET);
+		assetManifestBytes.set(entry.pathHash, entryOffset + PATH_HASH_OFFSET);
+		// NB content hash in dev is hash(path + modifiedTime)
+		assetManifestBytes.set(
+			entry.contentHash,
+			entryOffset + CONTENT_HASH_OFFSET
+		);
 	}
 	return assetManifestBytes;
 };
@@ -278,7 +294,10 @@ const createReverseMap = async (dir: string) => {
 				return;
 			} else {
 				const pathHash = bytesToHex(
-					await hashPath(encodeFilePath(relativeFilepath, path.sep))
+					await hashPath(
+						encodeFilePath(relativeFilepath, path.sep) +
+							filestat.mtimeMs.toString()
+					)
 				);
 
 				assetsReverseMap[pathHash] = {
