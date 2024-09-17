@@ -201,6 +201,8 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 					jwt: experimental_assets.jwt,
 					config: assetConfig,
 				},
+				...(compatibility_date && { compatibility_date }),
+				...(compatibility_flags && { compatibility_flags }),
 			})
 		);
 		return formData;
