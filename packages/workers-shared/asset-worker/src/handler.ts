@@ -19,6 +19,7 @@ export const handleRequest = async (
 	const { pathname, search } = new URL(request.url);
 
 	const intent = await getIntent(pathname, configuration, exists);
+
 	if (!intent) {
 		return new NotFoundResponse();
 	}
@@ -30,9 +31,30 @@ export const handleRequest = async (
 	if (!["GET", "HEAD"].includes(method)) {
 		return new MethodNotAllowedResponse();
 	}
+
+	// prefer serving on the encoded path
+	const destination = intent.redirect ?? pathname;
+	const encodedDestination = destination
+		.split("/")
+		.map((x) => encodeURIComponent(decodeURIComponent(x)))
+		.join("/");
+	if (encodedDestination !== destination) {
+		const maybeRedirect = await safeRedirect(
+			intent.file,
+			encodedDestination,
+			configuration,
+			exists,
+			false
+		);
+		if (maybeRedirect) {
+			return new TemporaryRedirectResponse(maybeRedirect.redirect + search);
+		}
+	}
+
 	if (intent.redirect) {
 		return new TemporaryRedirectResponse(intent.redirect + search);
 	}
+
 	if (!intent.asset) {
 		return new InternalServerErrorResponse(new Error("Unknown action"));
 	}
@@ -61,11 +83,12 @@ type Intent =
 	| {
 			asset: { eTag: string; status: 200 | 404 };
 			redirect: null;
+			file: string;
 	  }
-	| { asset: null; redirect: string }
+	| { asset: null; redirect: string; file: string }
 	| null;
 
-export const getIntent = async (
+export const getIntentForConfig = async (
 	pathname: string,
 	configuration: Required<AssetConfig>,
 	exists: typeof EntrypointType.prototype.unstable_exists,
@@ -102,6 +125,49 @@ export const getIntent = async (
 	}
 };
 
+export const getIntent = async (
+	pathname: string,
+	configuration: Required<AssetConfig>,
+	exists: typeof EntrypointType.prototype.unstable_exists,
+	skipRedirects = false
+): Promise<Intent> => {
+	// try exact path first
+	let intent = await getIntentForConfig(
+		pathname,
+		configuration,
+		exists,
+		skipRedirects
+	);
+
+	// try decoded path if the path has been encoded
+	if (pathname.includes("%")) {
+		const decodedPath = pathname
+			.split("/")
+			.map((x) => decodeURIComponent(x))
+			.join("/");
+		intent ??= await getIntentForConfig(
+			decodedPath,
+			configuration,
+			exists,
+			skipRedirects
+		);
+	}
+
+	// try encoded path if no exact match (i.e. user has encoded the filepath themselves)
+	const encodedPath = pathname
+		.split("/")
+		.map((x) => encodeURIComponent(decodeURIComponent(x)))
+		.join("/");
+	intent ??= await getIntentForConfig(
+		encodedPath,
+		configuration,
+		exists,
+		skipRedirects
+	);
+
+	return intent;
+};
+
 const htmlHandlingAutoTrailingSlash = async (
 	pathname: string,
 	configuration: Required<AssetConfig>,
@@ -114,7 +180,11 @@ const htmlHandlingAutoTrailingSlash = async (
 	if (pathname.endsWith("/index")) {
 		if (exactETag) {
 			// there's a binary /index file
-			return { asset: { eTag: exactETag, status: 200 }, redirect: null };
+			return {
+				asset: { eTag: exactETag, status: 200 },
+				redirect: null,
+				file: pathname,
+			};
 		} else {
 			if (
 				(redirectResult = await safeRedirect(
@@ -167,7 +237,11 @@ const htmlHandlingAutoTrailingSlash = async (
 	} else if (pathname.endsWith("/")) {
 		if ((eTagResult = await exists(`${pathname}index.html`))) {
 			// /foo/index.html exists so serve at /foo/
-			return { asset: { eTag: eTagResult, status: 200 }, redirect: null };
+			return {
+				asset: { eTag: eTagResult, status: 200 },
+				redirect: null,
+				file: `${pathname}index.html`,
+			};
 		} else if (
 			(redirectResult = await safeRedirect(
 				`${pathname.slice(0, -"/".length)}.html`,
@@ -208,10 +282,18 @@ const htmlHandlingAutoTrailingSlash = async (
 
 	if (exactETag) {
 		// there's a binary /foo file
-		return { asset: { eTag: exactETag, status: 200 }, redirect: null };
+		return {
+			asset: { eTag: exactETag, status: 200 },
+			redirect: null,
+			file: pathname,
+		};
 	} else if ((eTagResult = await exists(`${pathname}.html`))) {
 		// foo.html exists so serve at /foo
-		return { asset: { eTag: eTagResult, status: 200 }, redirect: null };
+		return {
+			asset: { eTag: eTagResult, status: 200 },
+			redirect: null,
+			file: `${pathname}.html`,
+		};
 	} else if (
 		(redirectResult = await safeRedirect(
 			`${pathname}/index.html`,
@@ -240,7 +322,11 @@ const htmlHandlingForceTrailingSlash = async (
 	if (pathname.endsWith("/index")) {
 		if (exactETag) {
 			// there's a binary /index file
-			return { asset: { eTag: exactETag, status: 200 }, redirect: null };
+			return {
+				asset: { eTag: exactETag, status: 200 },
+				redirect: null,
+				file: pathname,
+			};
 		} else {
 			if (
 				(redirectResult = await safeRedirect(
@@ -293,12 +379,20 @@ const htmlHandlingForceTrailingSlash = async (
 	} else if (pathname.endsWith("/")) {
 		if ((eTagResult = await exists(`${pathname}index.html`))) {
 			// /foo/index.html exists so serve at /foo/
-			return { asset: { eTag: eTagResult, status: 200 }, redirect: null };
+			return {
+				asset: { eTag: eTagResult, status: 200 },
+				redirect: null,
+				file: `${pathname}index.html`,
+			};
 		} else if (
 			(eTagResult = await exists(`${pathname.slice(0, -"/".length)}.html`))
 		) {
 			// /foo.html exists so serve at /foo/
-			return { asset: { eTag: eTagResult, status: 200 }, redirect: null };
+			return {
+				asset: { eTag: eTagResult, status: 200 },
+				redirect: null,
+				file: `${pathname.slice(0, -"/".length)}.html`,
+			};
 		}
 	} else if (pathname.endsWith(".html")) {
 		if (
@@ -314,7 +408,11 @@ const htmlHandlingForceTrailingSlash = async (
 			return redirectResult;
 		} else if (exactETag) {
 			// there's both /foo.html and /foo/index.html so we serve /foo.html at /foo.html only
-			return { asset: { eTag: exactETag, status: 200 }, redirect: null };
+			return {
+				asset: { eTag: exactETag, status: 200 },
+				redirect: null,
+				file: pathname,
+			};
 		} else if (
 			(redirectResult = await safeRedirect(
 				`${pathname.slice(0, -".html".length)}/index.html`,
@@ -331,7 +429,11 @@ const htmlHandlingForceTrailingSlash = async (
 
 	if (exactETag) {
 		// there's a binary /foo file
-		return { asset: { eTag: exactETag, status: 200 }, redirect: null };
+		return {
+			asset: { eTag: exactETag, status: 200 },
+			redirect: null,
+			file: pathname,
+		};
 	} else if (
 		(redirectResult = await safeRedirect(
 			`${pathname}.html`,
@@ -371,7 +473,11 @@ const htmlHandlingDropTrailingSlash = async (
 	if (pathname.endsWith("/index")) {
 		if (exactETag) {
 			// there's a binary /index file
-			return { asset: { eTag: exactETag, status: 200 }, redirect: null };
+			return {
+				asset: { eTag: exactETag, status: 200 },
+				redirect: null,
+				file: pathname,
+			};
 		} else {
 			if (pathname === "/index") {
 				if (
@@ -436,7 +542,11 @@ const htmlHandlingDropTrailingSlash = async (
 			return redirectResult;
 		} else if (exactETag) {
 			// there's both /foo.html and /foo/index.html so we serve /foo/index.html at /foo/index.html only
-			return { asset: { eTag: exactETag, status: 200 }, redirect: null };
+			return {
+				asset: { eTag: exactETag, status: 200 },
+				redirect: null,
+				file: pathname,
+			};
 		} else if (
 			(redirectResult = await safeRedirect(
 				`${pathname.slice(0, -"/index.html".length)}.html`,
@@ -453,7 +563,11 @@ const htmlHandlingDropTrailingSlash = async (
 		if (pathname === "/") {
 			if ((eTagResult = await exists("/index.html"))) {
 				// /index.html exists so serve at /
-				return { asset: { eTag: eTagResult, status: 200 }, redirect: null };
+				return {
+					asset: { eTag: eTagResult, status: 200 },
+					redirect: null,
+					file: "/index.html",
+				};
 			}
 		} else if (
 			(redirectResult = await safeRedirect(
@@ -506,13 +620,25 @@ const htmlHandlingDropTrailingSlash = async (
 
 	if (exactETag) {
 		// there's a binary /foo file
-		return { asset: { eTag: exactETag, status: 200 }, redirect: null };
+		return {
+			asset: { eTag: exactETag, status: 200 },
+			redirect: null,
+			file: pathname,
+		};
 	} else if ((eTagResult = await exists(`${pathname}.html`))) {
 		// /foo.html exists so serve at /foo
-		return { asset: { eTag: eTagResult, status: 200 }, redirect: null };
+		return {
+			asset: { eTag: eTagResult, status: 200 },
+			redirect: null,
+			file: `${pathname}.html`,
+		};
 	} else if ((eTagResult = await exists(`${pathname}/index.html`))) {
 		// /foo/index.html exists so serve at /foo
-		return { asset: { eTag: eTagResult, status: 200 }, redirect: null };
+		return {
+			asset: { eTag: eTagResult, status: 200 },
+			redirect: null,
+			file: `${pathname}/index.html`,
+		};
 	}
 
 	return notFound(pathname, configuration, exists);
@@ -525,7 +651,11 @@ const htmlHandlingNone = async (
 ): Promise<Intent> => {
 	const exactETag = await exists(pathname);
 	if (exactETag) {
-		return { asset: { eTag: exactETag, status: 200 }, redirect: null };
+		return {
+			asset: { eTag: exactETag, status: 200 },
+			redirect: null,
+			file: pathname,
+		};
 	} else {
 		return notFound(pathname, configuration, exists);
 	}
@@ -540,7 +670,11 @@ const notFound = async (
 		case "single-page-application": {
 			const eTag = await exists("/index.html");
 			if (eTag) {
-				return { asset: { eTag, status: 200 }, redirect: null };
+				return {
+					asset: { eTag, status: 200 },
+					redirect: null,
+					file: "/index.html",
+				};
 			}
 			return null;
 		}
@@ -550,7 +684,11 @@ const notFound = async (
 				cwd = cwd.slice(0, cwd.lastIndexOf("/"));
 				const eTag = await exists(`${cwd}/404.html`);
 				if (eTag) {
-					return { asset: { eTag, status: 404 }, redirect: null };
+					return {
+						asset: { eTag, status: 404 },
+						redirect: null,
+						file: `${cwd}/404.html`,
+					};
 				}
 			}
 			return null;
@@ -573,12 +711,17 @@ const safeRedirect = async (
 		return null;
 	}
 
-	if (!(await exists(destination))) {
+	if (
+		!(await exists(destination)) ||
+		(await exists(destination)) === (await exists(file))
+	) {
 		const intent = await getIntent(destination, configuration, exists, true);
+		// return only if the eTag matches - i.e. not the 404 case
 		if (intent?.asset && intent.asset.eTag === (await exists(file))) {
 			return {
 				asset: null,
 				redirect: destination,
+				file,
 			};
 		}
 	}

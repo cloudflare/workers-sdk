@@ -1,20 +1,9 @@
 import { getType } from "mime";
 
-/** normalises sep for windows, and encodes each segment */
-export const encodeFilePath = (filePath: string, sep: string) => {
-	const encodedPath = filePath
-		.split(sep)
-		.map((segment) => encodeURIComponent(segment))
-		.join("/");
+/** normalises sep for windows */
+export const normalizeFilePath = (filePath: string, sep: string) => {
+	const encodedPath = filePath.split(sep).join("/");
 	return "/" + encodedPath;
-};
-
-/** reverses encodeFilePath for accessing from file system */
-export const decodeFilePath = (filePath: string, sep: string) => {
-	return filePath
-		.split("/")
-		.map((segment) => decodeURIComponent(segment))
-		.join(sep);
 };
 
 export const getContentType = (absFilePath: string) => {

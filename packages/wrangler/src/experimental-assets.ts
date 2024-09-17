@@ -3,11 +3,10 @@ import { existsSync } from "node:fs";
 import { readdir, readFile, stat } from "node:fs/promises";
 import * as path from "node:path";
 import {
-	decodeFilePath,
-	encodeFilePath,
 	getContentType,
 	MAX_ASSET_COUNT,
 	MAX_ASSET_SIZE,
+	normalizeFilePath,
 } from "@cloudflare/workers-shared";
 import chalk from "chalk";
 import PQueue from "p-queue";
@@ -99,10 +98,7 @@ export const syncExperimentalAssets = async (
 			}
 			// just logging file uploads at the moment...
 			// unsure how to log deletion vs unchanged file ignored/if we want to log this
-			assetLogCount = logAssetUpload(
-				`+ ${decodeFilePath(manifestEntry[0], path.sep)}`,
-				assetLogCount
-			);
+			assetLogCount = logAssetUpload(`+ ${manifestEntry[0]}`, assetLogCount);
 			return manifestEntry;
 		});
 	});
@@ -121,8 +117,7 @@ export const syncExperimentalAssets = async (
 			// This is so we don't run out of memory trying to upload the files.
 			const payload = new FormData();
 			for (const manifestEntry of bucket) {
-				const decodedFilePath = decodeFilePath(manifestEntry[0], path.sep);
-				const absFilePath = path.join(assetDirectory, decodedFilePath);
+				const absFilePath = path.join(assetDirectory, manifestEntry[0]);
 				payload.append(
 					manifestEntry[1].hash,
 					new File(
@@ -266,7 +261,7 @@ export const buildAssetsManifest = async (dir: string) => {
 							`Ensure all assets in your assets directory "${dir}" conform with the Workers maximum size requirement.`
 					);
 				}
-				manifest[encodeFilePath(relativeFilepath, path.sep)] = {
+				manifest[normalizeFilePath(relativeFilepath, path.sep)] = {
 					hash: hashFile(filepath),
 					size: filestat.size,
 				};
