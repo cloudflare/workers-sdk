@@ -156,6 +156,7 @@ export async function handler(
 						host: url.hostname,
 						port: parseInt(url.port),
 						scheme: url.protocol.replace(":", ""),
+						// database will either be the value passed in the relevant yargs flag or is URL-decoded value from the url pathname
 						database: args.connectionString !== "" ? decodeURIComponent(url.pathname.replace("/", "")) : args.database,
 						user: decodeURIComponent(url.username),
 						password: decodeURIComponent(url.password),

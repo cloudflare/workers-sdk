@@ -2,4 +2,4 @@
 "wrangler": patch
 ---
 
-Fix rough edges when creating and updating Hyperdrive over Access configs
+fix: rough edges when creating and updating Hyperdrive over Access configs
