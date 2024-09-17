@@ -584,18 +584,24 @@ export async function deleteEventNotificationConfig(
 	logger.log(
 		`Disabling event notifications for "${bucketName}" to queue ${queueName}...`
 	);
+	if (ruleId !== undefined) {
+		const body: DeleteNotificationRequestBody =
+			ruleId !== undefined
+				? {
+						ruleIds: [ruleId],
+					}
+				: {};
 
-	const body: DeleteNotificationRequestBody =
-		ruleId !== undefined
-			? {
-					ruleIds: [ruleId],
-				}
-			: {};
-
-	return await fetchResult<null>(
-		`/accounts/${accountId}/event_notifications/r2/${bucketName}/configuration/queues/${queue.queue_id}`,
-		{ method: "DELETE", body: JSON.stringify(body), headers }
-	);
+		return await fetchResult<null>(
+			`/accounts/${accountId}/event_notifications/r2/${bucketName}/configuration/queues/${queue.queue_id}`,
+			{ method: "DELETE", body: JSON.stringify(body), headers }
+		);
+	} else {
+		return await fetchResult<null>(
+			`/accounts/${accountId}/event_notifications/r2/${bucketName}/configuration/queues/${queue.queue_id}`,
+			{ method: "DELETE", headers }
+		);
+	}
 }
 
 /**
