@@ -6,7 +6,7 @@ import formatLabelledValues from "../utils/render-labelled-values";
 import {
 	actionsForEventCategories,
 	deleteEventNotificationConfig,
-	getEventNotificationConfig,
+	listEventNotificationConfig,
 	putEventNotificationConfig,
 	tableFromNotificationGetResponse,
 } from "./helpers";
@@ -16,22 +16,22 @@ import type {
 } from "../yargs-types";
 import type { R2EventType } from "./helpers";
 
-export function GetOptions(yargs: CommonYargsArgv) {
+export function ListOptions(yargs: CommonYargsArgv) {
 	return yargs.positional("bucket", {
-		describe: "The name of the bucket for which notifications will be emitted",
+		describe: "The name of the R2 bucket to get event notification rules for",
 		type: "string",
 		demandOption: true,
 	});
 }
 
-export async function GetHandler(
-	args: StrictYargsOptionsToInterface<typeof GetOptions>
+export async function ListHandler(
+	args: StrictYargsOptionsToInterface<typeof ListOptions>
 ) {
 	await printWranglerBanner();
 	const config = readConfig(args.config, args);
 	const accountId = await requireAuth(config);
 	const apiCreds = requireApiToken();
-	const resp = await getEventNotificationConfig(
+	const resp = await listEventNotificationConfig(
 		apiCreds,
 		accountId,
 		`${args.bucket}`
@@ -44,7 +44,7 @@ export function CreateOptions(yargs: CommonYargsArgv) {
 	return yargs
 		.positional("bucket", {
 			describe:
-				"The name of the bucket for which notifications will be emitted",
+				"The name of the R2 bucket to create an event notification rule for",
 			type: "string",
 			demandOption: true,
 		})
@@ -94,27 +94,26 @@ export async function CreateHandler(
 		prefix,
 		suffix
 	);
-	logger.log("Configuration created successfully!");
+	logger.log("Event notification rule created successfully!");
 }
 
 export function DeleteOptions(yargs: CommonYargsArgv) {
 	return yargs
 		.positional("bucket", {
 			describe:
-				"The name of the bucket for which notifications will be emitted",
+				"The name of the R2 bucket to delete an event notification rule for",
 			type: "string",
 			demandOption: true,
 		})
 		.option("queue", {
 			describe:
-				"The name of the queue that will receive event notification messages",
+				"The name of the queue that corresponds to the event notification rule. If no rule is provided, all event notification rules associated with the bucket and queue will be deleted",
 			demandOption: true,
 			requiresArg: true,
 			type: "string",
 		})
 		.option("rule", {
-			describe:
-				"The id of the rule to delete. If no rule is specified, all rules for the bucket/queue configuration will be deleted",
+			describe: "The ID of the event notification rule to delete",
 			requiresArg: false,
 			type: "string",
 		});
@@ -136,5 +135,5 @@ export async function DeleteHandler(
 		queue,
 		rule
 	);
-	logger.log("Configuration deleted successfully!");
+	logger.log("Event notification rule deleted successfully!");
 }

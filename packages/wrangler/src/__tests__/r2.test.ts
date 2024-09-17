@@ -96,7 +96,7 @@ describe("r2", () => {
 				  wrangler r2 bucket list           List R2 buckets
 				  wrangler r2 bucket delete <name>  Delete an R2 bucket
 				  wrangler r2 bucket sippy          Manage Sippy incremental migration on an R2 bucket
-				  wrangler r2 bucket notification   Manage event notifications for an R2 bucket [open beta]
+				  wrangler r2 bucket notification   Manage event notification rules for an R2 bucket [open beta]
 
 				GLOBAL FLAGS
 				  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
@@ -130,7 +130,7 @@ describe("r2", () => {
 				  wrangler r2 bucket list           List R2 buckets
 				  wrangler r2 bucket delete <name>  Delete an R2 bucket
 				  wrangler r2 bucket sippy          Manage Sippy incremental migration on an R2 bucket
-				  wrangler r2 bucket notification   Manage event notifications for an R2 bucket [open beta]
+				  wrangler r2 bucket notification   Manage event notification rules for an R2 bucket [open beta]
 
 				GLOBAL FLAGS
 				  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
@@ -813,15 +813,15 @@ describe("r2", () => {
 						)
 					);
 					await expect(
-						await runWrangler(`r2 bucket notification get ${bucketName}`)
+						await runWrangler(`r2 bucket notification list ${bucketName}`)
 					).toBe(undefined);
 					expect(std.out).toMatchInlineSnapshot(`
-				"Fetching notification configuration for bucket my-bucket...
+				"Fetching notification rules for bucket my-bucket...
 				rule_id:     8cdcce8a-89b3-474f-a087-3eb4fcacfa37
 				created_at:  2024-09-05T01:02:03.000Z
 				queue_name:  my-queue
-				prefix:
-				suffix:
+				prefix:      (all prefixes)
+				suffix:      (all suffixes)
 				event_type:  PutObject,CompleteMultipartUpload,CopyObject"
 			`);
 				});
@@ -879,33 +879,33 @@ describe("r2", () => {
 						)
 					);
 					await expect(
-						await runWrangler(`r2 bucket notification get ${bucketName}`)
+						await runWrangler(`r2 bucket notification list ${bucketName}`)
 					).toBe(undefined);
 					expect(std.out).toMatchInlineSnapshot(`
-				"Fetching notification configuration for bucket my-bucket...
+				"Fetching notification rules for bucket my-bucket...
 				rule_id:
 				created_at:
 				queue_name:  my-queue
-				prefix:
-				suffix:
+				prefix:      (all prefixes)
+				suffix:      (all suffixes)
 				event_type:  PutObject,CompleteMultipartUpload,CopyObject"
 			`);
 				});
 
 				it("shows correct output on error", async () => {
 					await expect(
-						runWrangler(`r2 bucket notification get`)
+						runWrangler(`r2 bucket notification list`)
 					).rejects.toMatchInlineSnapshot(
 						`[Error: Not enough non-option arguments: got 0, need at least 1]`
 					);
 					expect(std.out).toMatchInlineSnapshot(`
 						"
-						wrangler r2 bucket notification get <bucket>
+						wrangler r2 bucket notification list <bucket>
 
-						Get event notification configuration for a bucket [open beta]
+						List event notification rules for a bucket [open beta]
 
 						POSITIONALS
-						  bucket  The name of the bucket for which notifications will be emitted  [string] [required]
+						  bucket  The name of the R2 bucket to get event notification rules for  [string] [required]
 
 						GLOBAL FLAGS
 						  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
@@ -994,7 +994,7 @@ describe("r2", () => {
 					).resolves.toBe(undefined);
 					expect(std.out).toMatchInlineSnapshot(`
 				"Creating event notification rule for object creation and deletion (PutObject,CompleteMultipartUpload,CopyObject,DeleteObject,LifecycleDeletion)
-				Configuration created successfully!"
+				Event notification rule created successfully!"
 			`);
 				});
 
@@ -1008,10 +1008,10 @@ describe("r2", () => {
 						"
 						wrangler r2 bucket notification create <bucket>
 
-						Create new event notification configuration for an R2 bucket [open beta]
+						Create an event notification rule for an R2 bucket [open beta]
 
 						POSITIONALS
-						  bucket  The name of the bucket for which notifications will be emitted  [string] [required]
+						  bucket  The name of the R2 bucket to create an event notification rule for  [string] [required]
 
 						GLOBAL FLAGS
 						  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
@@ -1086,8 +1086,8 @@ describe("r2", () => {
 						)
 					).resolves.toBe(undefined);
 					expect(std.out).toMatchInlineSnapshot(`
-				"Disabling event notifications for \\"my-bucket\\" to queue my-queue...
-				Configuration deleted successfully!"
+				"Deleting event notification rules associated with queue my-queue...
+				Event notification rule deleted successfully!"
 			`);
 				});
 
@@ -1150,8 +1150,8 @@ describe("r2", () => {
 						)
 					).resolves.toBe(undefined);
 					expect(std.out).toMatchInlineSnapshot(`
-				"Disabling event notifications for \\"my-bucket\\" to queue my-queue...
-				Configuration deleted successfully!"
+				"Deleting event notifications rule \\"rule123456789\\"...
+				Event notification rule deleted successfully!"
 			`);
 				});
 
@@ -1165,10 +1165,10 @@ describe("r2", () => {
 						"
 						wrangler r2 bucket notification delete <bucket>
 
-						Delete event notification configuration for an R2 bucket and queue [open beta]
+						Delete an event notification rule from an R2 bucket [open beta]
 
 						POSITIONALS
-						  bucket  The name of the bucket for which notifications will be emitted  [string] [required]
+						  bucket  The name of the R2 bucket to delete an event notification rule for  [string] [required]
 
 						GLOBAL FLAGS
 						  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
@@ -1178,8 +1178,8 @@ describe("r2", () => {
 						  -v, --version                   Show version number  [boolean]
 
 						OPTIONS
-						      --queue  The name of the queue that will receive event notification messages  [string] [required]
-						      --rule   The id of the rule to delete. If no rule is specified, all rules for the bucket/queue configuration will be deleted  [string]"
+						      --queue  The name of the queue that corresponds to the event notification rule. If no rule is provided, all event notification rules associated with the bucket and queue will be deleted  [string] [required]
+						      --rule   The ID of the event notification rule to delete  [string]"
 					`);
 				});
 			});
