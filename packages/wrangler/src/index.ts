@@ -8,6 +8,7 @@ import { version as wranglerVersion } from "../package.json";
 import { ai } from "./ai";
 import { cloudchamber } from "./cloudchamber";
 import { loadDotEnv, readConfig } from "./config";
+import { createCommandRegister } from "./core/register-commands";
 import { d1 } from "./d1";
 import { deleteHandler, deleteOptions } from "./delete";
 import { deployHandler, deployOptions } from "./deploy";
@@ -38,7 +39,7 @@ import { JsonFriendlyFatalError, UserError } from "./errors";
 import { generateHandler, generateOptions } from "./generate";
 import { hyperdrive } from "./hyperdrive/index";
 import { initHandler, initOptions } from "./init";
-import { kvBulk, kvKey, kvNamespace, registerKvSubcommands } from "./kv";
+import "./kv";
 import { logBuildFailure, logger, LOGGER_LEVELS } from "./logger";
 import * as metrics from "./metrics";
 import { mTlsCertificateCommands } from "./mtls-certificate/cli";
@@ -77,7 +78,6 @@ import { asJson } from "./yargs-types";
 import type { Config } from "./config";
 import type { LoggerLevel } from "./logger";
 import type { CommonYargsArgv, SubHelp } from "./yargs-types";
-import type { Arguments } from "yargs";
 
 const resetColor = "\x1b[0m";
 const fgGreenColor = "\x1b[32m";
@@ -160,7 +160,7 @@ export function getLegacyScriptName(
  * via https://github.com/yargs/yargs/issues/1093#issuecomment-491299261
  */
 export function demandOneOfOption(...options: string[]) {
-	return function (argv: Arguments) {
+	return function (argv: { [key: string]: unknown }) {
 		const count = options.filter((option) => argv[option]).length;
 		const lastOption = options.pop();
 
@@ -319,6 +319,8 @@ export function createCLIParser(argv: string[]) {
 			}
 		}
 	);
+
+	const register = createCommandRegister(wrangler, subHelp);
 
 	/*
 	 * You will note that we use the form for all commands where we use the builder function
@@ -522,9 +524,7 @@ export function createCLIParser(argv: string[]) {
 
 	/******************** CMD GROUP ***********************/
 	// kv
-	wrangler.command("kv", `🗂️  Manage Workers KV Namespaces`, (kvYargs) => {
-		return registerKvSubcommands(kvYargs, subHelp);
-	});
+	register.registerNamespace("kv");
 
 	// queues
 	wrangler.command("queues", "🇶  Manage Workers Queues", (queuesYargs) => {
@@ -750,45 +750,6 @@ export function createCLIParser(argv: string[]) {
 		secretBulkHandler
 	);
 
-	// [DEPRECATED] kv:namespace
-	wrangler.command(
-		"kv:namespace",
-		false, // deprecated, don't show
-		(namespaceYargs) => {
-			logger.warn(
-				"The `wrangler kv:namespace` command is deprecated and will be removed in a future major version. Please use `wrangler kv namespace` instead which behaves the same."
-			);
-
-			return kvNamespace(namespaceYargs.command(subHelp));
-		}
-	);
-
-	// [DEPRECATED] kv:key
-	wrangler.command(
-		"kv:key",
-		false, // deprecated, don't show
-		(keyYargs) => {
-			logger.warn(
-				"The `wrangler kv:key` command is deprecated and will be removed in a future major version. Please use `wrangler kv key` instead which behaves the same."
-			);
-
-			return kvKey(keyYargs.command(subHelp));
-		}
-	);
-
-	// [DEPRECATED] kv:bulk
-	wrangler.command(
-		"kv:bulk",
-		false, // deprecated, don't show
-		(bulkYargs) => {
-			logger.warn(
-				"The `wrangler kv:bulk` command is deprecated and will be removed in a future major version. Please use `wrangler kv bulk` instead which behaves the same."
-			);
-
-			return kvBulk(bulkYargs.command(subHelp));
-		}
-	);
-
 	// [DEPRECATED] generate
 	wrangler.command(
 		"generate [name] [template]",
@@ -817,6 +778,8 @@ export function createCLIParser(argv: string[]) {
 			);
 		}
 	);
+
+	register.registerAll();
 
 	wrangler.exitProcess(false);
 
