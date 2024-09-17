@@ -125,7 +125,10 @@ export async function handler(
 		throw new UserError(
 			"You must provide a port number - e.g. 'user:password@database.example.com:port/databasename"
 		);
-	} else if ((args.connectionString && url.pathname === "") || args.database === "") {
+	} else if (
+		(args.connectionString && url.pathname === "") ||
+		args.database === ""
+	) {
 		throw new UserError(
 			"You must provide a database name as the path component - e.g. example.com:port/postgres"
 		);
@@ -157,7 +160,10 @@ export async function handler(
 						port: parseInt(url.port),
 						scheme: url.protocol.replace(":", ""),
 						// database will either be the value passed in the relevant yargs flag or is URL-decoded value from the url pathname
-						database: args.connectionString !== "" ? decodeURIComponent(url.pathname.replace("/", "")) : args.database,
+						database:
+							args.connectionString !== ""
+								? decodeURIComponent(url.pathname.replace("/", ""))
+								: args.database,
 						user: decodeURIComponent(url.username),
 						password: decodeURIComponent(url.password),
 					};
