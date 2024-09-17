@@ -1,15 +1,10 @@
-import nodeCrypto from "crypto";
+import nodeCrypto, { getRandomValues, webcrypto } from "crypto";
 // node:assert/strict is currently an unenv alias to node:assert
 // this is not very common, but happens and we need to support it
 import assert from "node:assert/strict";
 import { Stream } from "node:stream";
 import { Client } from "pg";
 import { s } from "./dep.cjs";
-
-assert(
-	nodeCrypto.webcrypto.getRandomValues === globalThis.crypto.getRandomValues,
-	"Expected the imported and global webcrypto to be identical"
-);
 
 assert(s instanceof Stream, "expected s to be an instance of Stream");
 
@@ -45,6 +40,9 @@ export default {
 		ctx: ExecutionContext
 	): Promise<Response> {
 		const url = new URL(request.url);
+		if (url.pathname === "/test-crypto") {
+			return testGetRandomValues();
+		}
 		if (url.pathname === "/test-process") {
 			const originalProcess = process;
 			try {
@@ -165,3 +163,20 @@ export default {
 		}
 	},
 };
+
+function testGetRandomValues() {
+	assert(
+		webcrypto.getRandomValues === getRandomValues,
+		"Unexpected identity for getRandomValues"
+	);
+	assert(
+		nodeCrypto.getRandomValues === getRandomValues,
+		"Unexpected identity for getRandomValues"
+	);
+	return Response.json([
+		crypto.getRandomValues(new Uint8Array(6)).toString(), // global
+		webcrypto.getRandomValues(new Uint8Array(6)).toString(), // webcrypto
+		nodeCrypto.getRandomValues(new Uint8Array(6)).toString(), // namespace import
+		getRandomValues(new Uint8Array(6)).toString(), // named import
+	]);
+}
