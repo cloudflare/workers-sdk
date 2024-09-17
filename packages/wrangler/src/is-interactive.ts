@@ -6,7 +6,7 @@ import { CI } from "./is-ci";
  * or you're piping values from / to another process, etc
  */
 export default function isInteractive(): boolean {
-	if (process.env.CF_PAGES === "1") {
+	if (process.env.CF_PAGES === "1" || process.env.WORKERS_CI === "1") {
 		return false;
 	}
 
