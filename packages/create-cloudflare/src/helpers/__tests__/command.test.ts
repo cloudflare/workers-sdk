@@ -51,6 +51,7 @@ describe("Command Helpers", () => {
 		expect(spawn).toHaveBeenCalledWith("ls", ["-l"], {
 			stdio: "inherit",
 			env: process.env,
+			signal: expect.any(AbortSignal),
 		});
 	});
 

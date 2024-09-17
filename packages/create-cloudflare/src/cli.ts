@@ -2,9 +2,16 @@
 import { mkdirSync } from "fs";
 import { dirname } from "path";
 import { chdir } from "process";
-import { crash, endSection, logRaw, startSection } from "@cloudflare/cli";
+import {
+	cancel,
+	endSection,
+	error,
+	logRaw,
+	startSection,
+} from "@cloudflare/cli";
+import { CancelError } from "@cloudflare/cli/error";
 import { isInteractive } from "@cloudflare/cli/interactive";
-import { parseArgs } from "helpers/args";
+import { cliDefinition, parseArgs } from "helpers/args";
 import { isUpdateAvailable } from "helpers/cli";
 import { runCommand } from "helpers/command";
 import {
@@ -16,12 +23,13 @@ import { version } from "../package.json";
 import { maybeOpenBrowser, offerToDeploy, runDeploy } from "./deploy";
 import { printSummary, printWelcomeMessage } from "./dialog";
 import { gitCommit, offerGit } from "./git";
+import { showHelp } from "./help";
+import { reporter, runTelemetryCommand } from "./metrics";
 import { createProject } from "./pages";
 import {
 	addWranglerToGitIgnore,
 	copyTemplateFiles,
 	createContext,
-	deriveCorrelatedArgs,
 	updatePackageName,
 	updatePackageScripts,
 } from "./templates";
@@ -33,7 +41,29 @@ import type { C3Args, C3Context } from "types";
 const { npm } = detectPackageManager();
 
 export const main = async (argv: string[]) => {
-	const args = await parseArgs(argv);
+	const result = await parseArgs(argv);
+
+	if (result.type === "unknown") {
+		if (result.showHelpMessage) {
+			showHelp(result.args, cliDefinition);
+		}
+
+		if (result.errorMessage) {
+			console.error(`\n${result.errorMessage}`);
+		}
+
+		if (result.args === null || result.errorMessage) {
+			process.exit(1);
+		}
+		return;
+	}
+
+	if (result.type === "telemetry") {
+		runTelemetryCommand(result.action);
+		return;
+	}
+
+	const { args } = result;
 
 	// Print a newline
 	logRaw("");
@@ -47,7 +77,13 @@ export const main = async (argv: string[]) => {
 	) {
 		await runLatest();
 	} else {
-		await runCli(args);
+		await reporter.collectAsyncMetrics({
+			eventPrefix: "c3 session",
+			props: {
+				args,
+			},
+			promise: () => runCli(args),
+		});
 	}
 };
 
@@ -68,8 +104,6 @@ export const runLatest = async () => {
 export const runCli = async (args: Partial<C3Args>) => {
 	printBanner();
 
-	deriveCorrelatedArgs(args);
-
 	const ctx = await createContext(args);
 
 	await create(ctx);
@@ -85,7 +119,7 @@ export const setupProjectDirectory = (ctx: C3Context) => {
 	const path = ctx.project.path;
 	const err = validateProjectDirectory(path, ctx.args);
 	if (err) {
-		crash(err);
+		throw new Error(err);
 	}
 
 	const directory = dirname(path);
@@ -153,8 +187,18 @@ const deploy = async (ctx: C3Context) => {
 };
 
 const printBanner = () => {
-	printWelcomeMessage(version);
+	printWelcomeMessage(version, reporter.isEnabled);
 	startSection(`Create an application with Cloudflare`, "Step 1 of 3");
 };
 
-main(process.argv).catch((e) => crash(e));
+main(process.argv)
+	.catch((e) => {
+		if (e instanceof CancelError) {
+			cancel(e.message);
+		} else {
+			error(e);
+		}
+	})
+	.finally(async () => {
+		await reporter.waitForAllEventsSettled();
+	});

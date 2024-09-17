@@ -1,6 +1,5 @@
-import { crash } from "@cloudflare/cli";
-import { processArgument } from "@cloudflare/cli/args";
 import { mockPackageManager, mockSpinner } from "helpers/__tests__/mocks";
+import { processArgument } from "helpers/args";
 import { runCommand } from "helpers/command";
 import { readFile } from "helpers/files";
 import { beforeEach, describe, expect, test, vi } from "vitest";
@@ -10,10 +9,9 @@ import { createTestContext } from "./helpers";
 
 vi.mock("helpers/command");
 vi.mock("../wrangler/accounts");
-vi.mock("@cloudflare/cli/args");
+vi.mock("helpers/args");
 vi.mock("@cloudflare/cli/interactive");
 vi.mock("which-pm-runs");
-vi.mock("@cloudflare/cli");
 vi.mock("helpers/files");
 
 const mockInsideGitRepo = (isInside = true) => {
@@ -128,7 +126,6 @@ describe("deploy helpers", async () => {
 			vi.mocked(runCommand).mockResolvedValueOnce(deployedUrl);
 
 			await runDeploy(ctx);
-			expect(crash).not.toHaveBeenCalled();
 			expect(runCommand).toHaveBeenCalledWith(
 				["npm", "run", "deploy", "--", "--commit-message", `"${commitMsg}"`],
 				expect.any(Object),
@@ -139,8 +136,9 @@ describe("deploy helpers", async () => {
 		test("no account in ctx", async () => {
 			const ctx = createTestContext();
 			ctx.account = undefined;
-			await runDeploy(ctx);
-			expect(crash).toHaveBeenCalledWith("Failed to read Cloudflare account.");
+			await expect(() => runDeploy(ctx)).rejects.toThrow(
+				"Failed to read Cloudflare account.",
+			);
 		});
 
 		test("Failed deployment", async () => {
@@ -151,8 +149,9 @@ describe("deploy helpers", async () => {
 			mockInsideGitRepo(false);
 			vi.mocked(runCommand).mockResolvedValueOnce("");
 
-			await runDeploy(ctx);
-			expect(crash).toHaveBeenCalledWith("Failed to find deployment url.");
+			await expect(() => runDeploy(ctx)).rejects.toThrow(
+				"Failed to find deployment url.",
+			);
 		});
 	});
 });

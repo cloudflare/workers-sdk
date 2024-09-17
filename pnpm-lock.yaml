@@ -920,6 +920,9 @@ importers:
       wrap-ansi:
         specifier: ^9.0.0
         version: 9.0.0
+      xdg-app-paths:
+        specifier: ^8.3.0
+        version: 8.3.0
       yargs:
         specifier: ^17.7.2
         version: 17.7.2
