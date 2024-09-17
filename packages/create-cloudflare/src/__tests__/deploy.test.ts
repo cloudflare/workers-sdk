@@ -1,5 +1,5 @@
 import { crash } from "@cloudflare/cli";
-import { processArgument } from "@cloudflare/cli/args";
+import { inputPrompt } from "@cloudflare/cli/interactive";
 import { mockPackageManager, mockSpinner } from "helpers/__tests__/mocks";
 import { runCommand } from "helpers/command";
 import { readFile } from "helpers/files";
@@ -10,7 +10,6 @@ import { createTestContext } from "./helpers";
 
 vi.mock("helpers/command");
 vi.mock("../wrangler/accounts");
-vi.mock("@cloudflare/cli/args");
 vi.mock("@cloudflare/cli/interactive");
 vi.mock("which-pm-runs");
 vi.mock("@cloudflare/cli");
@@ -33,8 +32,16 @@ const mockInsideGitRepo = (isInside = true) => {
 describe("deploy helpers", async () => {
 	beforeEach(() => {
 		mockPackageManager("npm");
-
 		mockSpinner();
+		vi.mocked(inputPrompt).mockImplementation(async (options) => {
+			if (options.acceptDefault) {
+				return options.defaultValue;
+			}
+
+			throw new Error(
+				"If you don't want to accept the default, you must mock this function.",
+			);
+		});
 	});
 
 	describe("offerToDeploy", async () => {
@@ -42,7 +49,7 @@ describe("deploy helpers", async () => {
 			const ctx = createTestContext();
 			ctx.template.platform = "pages";
 			// mock the user selecting yes when asked to deploy
-			vi.mocked(processArgument).mockResolvedValueOnce(true);
+			vi.mocked(inputPrompt).mockResolvedValueOnce(true);
 			// mock a successful wrangler login
 			vi.mocked(wranglerLogin).mockResolvedValueOnce(true);
 
@@ -55,7 +62,7 @@ describe("deploy helpers", async () => {
 			vi.mocked(readFile).mockReturnValue(`binding = "MY_QUEUE"`);
 
 			await expect(offerToDeploy(ctx)).resolves.toBe(false);
-			expect(processArgument).toHaveBeenCalledOnce();
+			expect(inputPrompt).toHaveBeenCalledOnce();
 			expect(ctx.args.deploy).toBe(false);
 			expect(wranglerLogin).not.toHaveBeenCalled();
 		});
@@ -72,7 +79,7 @@ describe("deploy helpers", async () => {
 			`);
 
 			await expect(offerToDeploy(ctx)).resolves.toBe(false);
-			expect(processArgument).toHaveBeenCalledOnce();
+			expect(inputPrompt).toHaveBeenCalledOnce();
 			expect(ctx.args.deploy).toBe(false);
 			expect(wranglerLogin).not.toHaveBeenCalled();
 		});
@@ -83,13 +90,13 @@ describe("deploy helpers", async () => {
 				experimental_assets = { directory = "./dist", binding = "ASSETS" }
 			`);
 			// mock the user selecting yes when asked to deploy
-			vi.mocked(processArgument).mockResolvedValueOnce(true);
+			vi.mocked(inputPrompt).mockResolvedValueOnce(true);
 			// mock a successful wrangler login
 			vi.mocked(wranglerLogin).mockResolvedValueOnce(true);
 
 			await expect(offerToDeploy(ctx)).resolves.toBe(true);
-			expect(processArgument).toHaveBeenCalledOnce();
-			expect(ctx.args.deploy).toBe(false);
+			expect(inputPrompt).toHaveBeenCalledOnce();
+			expect(ctx.args.deploy).toBe(true);
 			expect(wranglerLogin).toHaveBeenCalled();
 		});
 
@@ -99,7 +106,7 @@ describe("deploy helpers", async () => {
 			ctx.template.platform = "pages";
 
 			await expect(offerToDeploy(ctx)).resolves.toBe(false);
-			expect(processArgument).toHaveBeenCalledOnce();
+			expect(inputPrompt).toHaveBeenCalledOnce();
 			expect(ctx.args.deploy).toBe(false);
 			expect(wranglerLogin).not.toHaveBeenCalled();
 		});
@@ -107,7 +114,7 @@ describe("deploy helpers", async () => {
 		test("wrangler login failure", async () => {
 			const ctx = createTestContext();
 			ctx.template.platform = "pages";
-			vi.mocked(processArgument).mockResolvedValueOnce(true);
+			vi.mocked(inputPrompt).mockResolvedValueOnce(true);
 			vi.mocked(wranglerLogin).mockResolvedValueOnce(false);
 
 			await expect(offerToDeploy(ctx)).resolves.toBe(false);
