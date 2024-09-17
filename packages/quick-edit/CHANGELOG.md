@@ -1,5 +1,11 @@
 # @cloudflare/quick-edit
 
+## 0.2.1
+
+### Patch Changes
+
+- [#6738](https://github.com/cloudflare/workers-sdk/pull/6738) [`d818634`](https://github.com/cloudflare/workers-sdk/commit/d8186341980ab2c02917852a9e790a7655f93a78) Thanks [@edmundhung](https://github.com/edmundhung)! - fix: set readOnly property when writing files
+
 ## 0.2.0
 
 ### Minor Changes
