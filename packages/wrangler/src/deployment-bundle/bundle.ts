@@ -3,6 +3,7 @@ import * as path from "node:path";
 import NodeGlobalsPolyfills from "@esbuild-plugins/node-globals-polyfill";
 import NodeModulesPolyfills from "@esbuild-plugins/node-modules-polyfill";
 import * as esbuild from "esbuild";
+import { getBuildConditions } from "../environment-variables/misc-variables";
 import { UserError } from "../errors";
 import { getBasePath, getWranglerTmpDir } from "../paths";
 import { applyMiddlewareLoaderFacade } from "./apply-middleware";
@@ -44,7 +45,9 @@ export const COMMON_ESBUILD_OPTIONS = {
 } as const;
 
 // build conditions used by esbuild, and when resolving custom `import` calls
-export const BUILD_CONDITIONS = ["workerd", "worker", "browser"];
+export const BUILD_CONDITIONS = JSON.parse(
+	getBuildConditions() ?? `["workerd", "worker", "browser"]`
+);
 
 /**
  * Information about Wrangler's bundling process that needs passed through
