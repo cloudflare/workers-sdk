@@ -65,8 +65,8 @@ describe("event notifications", () => {
 		rule_id:     5aa280bb-39d7-48ed-8c21-405fcd078192
 		created_at:
 		queue_name:  my-queue-1
-		prefix:
-		suffix:
+		prefix:      (all prefixes)
+		suffix:      (all suffixes)
 		event_type:  DeleteObject
 
 		rule_id:     c4725929-3799-477a-a8d9-2d300f957e51

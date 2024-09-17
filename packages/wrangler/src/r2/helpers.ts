@@ -462,8 +462,8 @@ export async function tableFromNotificationGetResponse(
 				rule_id: ruleId,
 				created_at: createdAt,
 				queue_name: entry.queueName,
-				prefix,
-				suffix,
+				prefix: prefix || "(all prefixes)",
+				suffix: suffix || "(all suffixes)",
 				event_type: actions.join(","),
 			});
 		}
@@ -483,13 +483,13 @@ export async function tableFromNotificationGetResponse(
 	return tableOutput;
 }
 
-export async function getEventNotificationConfig(
+export async function listEventNotificationConfig(
 	apiCredentials: ApiCredentials,
 	accountId: string,
 	bucketName: string
 ): Promise<GetNotificationConfigResponse> {
 	const headers = eventNotificationHeaders(apiCredentials);
-	logger.log(`Fetching notification configuration for bucket ${bucketName}...`);
+	logger.log(`Fetching notification rules for bucket ${bucketName}...`);
 	const res = await fetchResult<GetNotificationConfigResponse>(
 		`/accounts/${accountId}/event_notifications/r2/${bucketName}/configuration`,
 		{ method: "GET", headers }
@@ -581,10 +581,8 @@ export async function deleteEventNotificationConfig(
 ): Promise<null> {
 	const queue = await getQueue(config, queueName);
 	const headers = eventNotificationHeaders(apiCredentials);
-	logger.log(
-		`Disabling event notifications for "${bucketName}" to queue ${queueName}...`
-	);
 	if (ruleId !== undefined) {
+		logger.log(`Deleting event notifications rule "${ruleId}"...`);
 		const body: DeleteNotificationRequestBody =
 			ruleId !== undefined
 				? {
@@ -597,6 +595,9 @@ export async function deleteEventNotificationConfig(
 			{ method: "DELETE", body: JSON.stringify(body), headers }
 		);
 	} else {
+		logger.log(
+			`Deleting event notification rules associated with queue ${queueName}...`
+		);
 		return await fetchResult<null>(
 			`/accounts/${accountId}/event_notifications/r2/${bucketName}/configuration/queues/${queue.queue_id}`,
 			{ method: "DELETE", headers }
