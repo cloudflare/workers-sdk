@@ -1,5 +1,11 @@
 # create-cloudflare
 
+## 2.27.2
+
+### Patch Changes
+
+- [#6732](https://github.com/cloudflare/workers-sdk/pull/6732) [`e4fe35c`](https://github.com/cloudflare/workers-sdk/commit/e4fe35cc52c3eb01dfb81fd44c83397f06db4597) Thanks [@penalosa](https://github.com/penalosa)! - chore: trigger re-release
+
 ## 2.27.1
 
 ### Patch Changes
