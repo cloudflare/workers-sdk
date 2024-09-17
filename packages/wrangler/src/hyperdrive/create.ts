@@ -98,7 +98,6 @@ export async function handler(
 				args.host,
 				args.port,
 				args.scheme,
-				args.database,
 				args.user,
 				args.password
 			);
@@ -126,9 +125,12 @@ export async function handler(
 		throw new UserError(
 			"You must provide a port number - e.g. 'user:password@database.example.com:port/databasename"
 		);
-	} else if (url.pathname === "") {
+	} else if (
+		(args.connectionString && url.pathname === "") ||
+		args.database === ""
+	) {
 		throw new UserError(
-			"You must provide a database name as the path component - e.g. /postgres"
+			"You must provide a database name as the path component - e.g. example.com:port/postgres"
 		);
 	} else if (url.username === "") {
 		throw new UserError(
@@ -145,9 +147,9 @@ export async function handler(
 		const origin =
 			args.accessClientId && args.accessClientSecret
 				? {
-						host: url.hostname,
+						host: url.hostname + url.pathname,
 						scheme: url.protocol.replace(":", ""),
-						database: decodeURIComponent(url.pathname.replace("/", "")),
+						database: args.database,
 						user: decodeURIComponent(url.username),
 						password: decodeURIComponent(url.password),
 						access_client_id: args.accessClientId,
@@ -157,7 +159,11 @@ export async function handler(
 						host: url.hostname,
 						port: parseInt(url.port),
 						scheme: url.protocol.replace(":", ""),
-						database: decodeURIComponent(url.pathname.replace("/", "")),
+						// database will either be the value passed in the relevant yargs flag or is URL-decoded value from the url pathname
+						database:
+							args.connectionString !== ""
+								? decodeURIComponent(url.pathname.replace("/", ""))
+								: args.database,
 						user: decodeURIComponent(url.username),
 						password: decodeURIComponent(url.password),
 					};
@@ -181,11 +187,10 @@ function buildURLFromParts(
 	host: string | undefined,
 	port: number | undefined,
 	scheme: string,
-	database: string | undefined,
 	user: string | undefined,
 	password: string | undefined
 ): URL {
-	const url = new URL(database ? `/${database}` : "", `${scheme}://${host}`);
+	const url = new URL(`${scheme}://${host}`);
 
 	if (port) {
 		url.port = port.toString();
