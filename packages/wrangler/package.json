@@ -75,7 +75,6 @@
 		"@esbuild-plugins/node-modules-polyfill": "^0.2.2",
 		"blake3-wasm": "^2.1.5",
 		"chokidar": "^3.5.3",
-		"date-fns": "^3.6.0",
 		"esbuild": "0.17.19",
 		"miniflare": "workspace:*",
 		"nanoid": "^3.3.3",
