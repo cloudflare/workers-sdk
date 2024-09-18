@@ -1,5 +1,5 @@
 ---
-"miniflare": minor
+"miniflare": patch
 ---
 
 fix: Fix Miniflare regression introduced in #5570
