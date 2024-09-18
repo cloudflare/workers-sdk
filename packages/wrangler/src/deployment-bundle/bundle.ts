@@ -64,7 +64,8 @@ function getBuildPlatform(): esbuild.Platform {
 		!["browser", "node", "neutral"].includes(platform)
 	) {
 		throw new UserError(
-			"Invalid esbuild platform configuration defined in the WRANGLER_BUILD_PLATFORM environment variable."
+			"Invalid esbuild platform configuration defined in the WRANGLER_BUILD_PLATFORM environment variable.\n" +
+				"Valid platform values are: 'browser', 'node' and 'neutral'."
 		);
 	}
 	return platform as esbuild.Platform;
