@@ -1,49 +1,68 @@
-import { execSync } from "child_process";
-import { readFileSync } from "fs";
-import { resolve } from "path";
-import { fetch } from "undici";
-import { afterAll, beforeAll, describe, it } from "vitest";
-import {
-	runWranglerDev,
-	wranglerEntryPath,
-} from "../../shared/src/run-wrangler-long-lived";
+import { execFileSync } from "child_process";
+import { mkdtempSync, readFileSync } from "fs";
+import { tmpdir } from "os";
+import { join, resolve } from "path";
+import { beforeEach, describe, it } from "vitest";
+import { wranglerEntryPath } from "../../shared/src/run-wrangler-long-lived";
 
 describe("'wrangler dev' with WRANGLER_BUILD_CONDITIONS", () => {
-	let ip: string, port: number, stop: (() => Promise<unknown>) | undefined;
+	let tempDir: string;
 
-	beforeAll(async () => {
-		({ ip, port, stop } = await runWranglerDev(
-			resolve(__dirname, ".."),
-			[
-				"--port=0",
-				"--inspector-port=0",
-				"--upstream-protocol=https",
-				"--host=prod.example.org",
-			],
-			{ ...process.env, WRANGLER_BUILD_CONDITIONS: "other,node,browser" }
-		));
+	beforeEach(() => {
+		tempDir = mkdtempSync(join(tmpdir(), "c3-wrangler-init--from-dash-"));
 	});
 
-	afterAll(async () => {
-		await stop?.();
+	it("should import from the `other` package export if that is in the conditions", async ({
+		expect,
+	}) => {
+		execFileSync(
+			"node",
+			[wranglerEntryPath, "deploy", "--dry-run", `--outdir=${tempDir}`],
+			{
+				env: {
+					...process.env,
+					WRANGLER_BUILD_CONDITIONS: "other,node,browser",
+				},
+			}
+		);
+		expect(readFileSync(resolve(tempDir, "index.js"), "utf8")).toContain(
+			"isomorphic-random-example/src/other.js"
+		);
 	});
 
-	it("should import from the `other` package export", async ({ expect }) => {
-		const response = await fetch(`http://${ip}:${port}/random`);
-		expect(await response.text()).toEqual("010203040506");
+	it("should import from the `default` package export if the conditions are explicitly empty", async ({
+		expect,
+	}) => {
+		execFileSync(
+			"node",
+			[wranglerEntryPath, "deploy", "--dry-run", `--outdir=${tempDir}`],
+			{
+				env: {
+					...process.env,
+					WRANGLER_BUILD_CONDITIONS: "",
+				},
+			}
+		);
+		expect(readFileSync(resolve(tempDir, "index.js"), "utf8")).toContain(
+			"isomorphic-random-example/src/default.js"
+		);
 	});
 });
 
-describe("'wrangler build' with  WRANGLER_BUILD_PLATFORM", () => {
+describe("'wrangler build' with WRANGLER_BUILD_PLATFORM", () => {
 	it("should import from node imports if platform is set to 'node'", ({
 		expect,
 	}) => {
-		execSync(`node ${wranglerEntryPath} deploy --dry-run --outdir=dist/node`, {
-			env: {
-				...process.env,
-				WRANGLER_BUILD_PLATFORM: "node",
-			},
-		});
+		execFileSync(
+			"node",
+			[wranglerEntryPath, "deploy", "--dry-run", "--outdir=dist/node"],
+			{
+				env: {
+					...process.env,
+					WRANGLER_BUILD_PLATFORM: "node",
+				},
+			}
+		);
 		expect(
 			readFileSync(resolve(__dirname, "../dist/node/index.js"), "utf8")
 		).toContain("isomorphic-random-example/src/node.js");
@@ -52,8 +71,9 @@ describe("'wrangler build' with  WRANGLER_BUILD_PLATFORM", () => {
 	it("should import from node imports if platform is set to 'browser'", ({
 		expect,
 	}) => {
-		execSync(
-			`node ${wranglerEntryPath} deploy --dry-run --outdir=dist/browser`,
+		execFileSync(
+			"node",
+			[wranglerEntryPath, "deploy", "--dry-run", "--outdir=dist/browser"],
 			{
 				env: {
 					...process.env,

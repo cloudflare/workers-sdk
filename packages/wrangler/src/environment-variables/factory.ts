@@ -78,9 +78,9 @@ export function getEnvironmentVariableFactory({
 }): () => string | undefined {
 	let hasWarned = false;
 	return () => {
-		if (process.env[variableName]) {
+		if (variableName in process.env) {
 			return process.env[variableName];
-		} else if (deprecatedName && process.env[deprecatedName]) {
+		} else if (deprecatedName && deprecatedName in process.env) {
 			if (!hasWarned) {
 				// Only show the warning once.
 				hasWarned = true;

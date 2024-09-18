@@ -47,10 +47,24 @@ export const COMMON_ESBUILD_OPTIONS = {
 	loader: { ".js": "jsx", ".mjs": "jsx", ".cjs": "jsx" },
 } as const;
 
-// build conditions used by esbuild, and when resolving custom `import` calls
+/**
+ * Get the custom build conditions used by esbuild, and when resolving custom `import` calls.
+ *
+ * If we do not override these in an env var, we will set them to "workerd", "worker" and "browser".
+ * If we override in env vars then these will be provided to esbuild instead.
+ *
+ * Whether or not we set custom conditions the `default` condition will always be active.
+ * If the Worker is using ESM syntax, then the `import` condition will also be active.
+ *
+ * Moreover the following applies:
+ * - if the platform is set to `browser` (the default) then the `browser` condition will be active.
+ * - if the platform is set to `node` then the `node` condition will be active.
+ *
+ * See https://esbuild.github.io/api/#how-conditions-work for more info.
+ */
 export function getBuildConditions() {
 	const envVar = getBuildConditionsFromEnv();
-	if (typeof envVar === "string") {
+	if (envVar !== undefined) {
 		return envVar.split(",");
 	} else {
 		return ["workerd", "worker", "browser"];
