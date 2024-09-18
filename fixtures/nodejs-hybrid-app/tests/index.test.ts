@@ -36,7 +36,7 @@ describe("nodejs compat", () => {
 			["--port=0", "--inspector-port=0"]
 		);
 		try {
-			const response = await fetch(`http://${ip}:${port}/test-crypto`);
+			const response = await fetch(`http://${ip}:${port}/test-random`);
 			const body = await response.json();
 			expect(body).toEqual([
 				expect.any(String),
