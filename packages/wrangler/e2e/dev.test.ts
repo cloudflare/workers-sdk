@@ -902,7 +902,6 @@ describe("watch mode", () => {
 				const worker = helper.runLongLived(cmd);
 				const { url } = await worker.waitForReady();
 
-				// let cachedETags: Record<string,string> = {};
 				let { response, cachedETags } = await fetchWithETag(
 					`${url}/index.html`,
 					{}
