@@ -2,6 +2,7 @@
 name = "<TBD>"
 compatibility_date = "<TBD>"
 pages_build_output_dir = "./dist"
+compatibility_flags = ["nodejs_compat"]
 
 # Automatically place your workloads in an optimal location to minimize latency.
 # If you are running back-end logic in a Pages Function, running it closer to your back-end infrastructure
