@@ -35,7 +35,9 @@ describe("dialog helpers", () => {
 			"────────────────────────────────────────────────────────────
 			👋 Welcome to create-cloudflare v0.0.0!
 			🧡 Let's get started.
-			📊 Cloudflare collects telemetry about your usage of Create-Cloudflare to improve the experience. Read more / opt out at https://developers.cloudflare.com/workers/telemetry
+			📊 Cloudflare collects telemetry about your usage of Create-Cloudflare.
+
+			Learn more at: https://github.com/cloudflare/workers-sdk/blob/main/packages/create-cloudflare/telemetry.md
 			────────────────────────────────────────────────────────────
 
 			"

@@ -34,10 +34,12 @@ export function printWelcomeMessage(
 	];
 
 	if (telemetryEnabled) {
-		const telemetryDocsUrl = `https://developers.cloudflare.com/workers/telemetry`;
+		const telemetryDocsUrl = `https://github.com/cloudflare/workers-sdk/blob/main/packages/create-cloudflare/telemetry.md`;
 
 		lines.push(
-			`📊 Cloudflare collects telemetry about your usage of Create-Cloudflare to improve the experience. Read more / opt out at ${blue.underline(hyperlink(telemetryDocsUrl))}`,
+			`📊 Cloudflare collects telemetry about your usage of Create-Cloudflare.`,
+			``,
+			`Learn more at: ${blue.underline(hyperlink(telemetryDocsUrl))}`,
 		);
 	}
 
