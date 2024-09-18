@@ -3,7 +3,6 @@ import { readdirSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import globToRegExp from "glob-to-regexp";
-import { sync as resolveSync } from "resolve";
 import { exports as resolveExports } from "resolve.exports";
 import { UserError } from "../errors";
 import { logger } from "../logger";
@@ -328,10 +327,9 @@ export function createModuleCollector(props: {
 
 								// Next try to resolve using the node module resolution algorithm
 								try {
-									const resolved = resolveSync(args.path, {
-										basedir: args.resolveDir,
+									filePath = require.resolve(args.path, {
+										paths: [args.resolveDir],
 									});
-									filePath = resolved;
 								} catch (e) {
 									// We tried, now it'll just fall-through to the previous behaviour
 									// and ENOENT if the absolute file path doesn't exist.

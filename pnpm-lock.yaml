@@ -1683,9 +1683,6 @@ importers:
       path-to-regexp:
         specifier: ^6.3.0
         version: 6.3.0
-      resolve:
-        specifier: ^1.22.8
-        version: 1.22.8
       resolve.exports:
         specifier: ^2.0.2
         version: 2.0.2
