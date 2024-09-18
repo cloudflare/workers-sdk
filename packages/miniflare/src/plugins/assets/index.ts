@@ -217,9 +217,9 @@ const walk = async (dir: string) => {
 				/*
 				 * Each manifest entry is a series of bytes that store data in a [header,
 				 * pathHash, contentHash] format, where:
-				 *   - `header` is a fixed ??x?? bytes reserved for ??
+				 *   - `header` is a fixed 20 bytes reserved but currently unused
 				 *   - `pathHash` is the hashed file path
-				 *   - `contentHash` is the hashed file content
+				 *   - `contentHash` is the hashed file content in prod
 				 *
 				 * The `contentHash` of a file is determined by reading the contents of
 				 * the file, and applying a hash function on the read data. In local
