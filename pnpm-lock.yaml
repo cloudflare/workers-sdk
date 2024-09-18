@@ -1696,8 +1696,8 @@ importers:
         specifier: ^0.6.1
         version: 0.6.1
       unenv:
-        specifier: npm:unenv-nightly@2.0.0-1724863496.70db6f1
-        version: unenv-nightly@2.0.0-1724863496.70db6f1
+        specifier: npm:unenv-nightly@2.0.0-1726478054.1e87097
+        version: unenv-nightly@2.0.0-1726478054.1e87097
       workerd:
         specifier: 1.20240909.0
         version: 1.20240909.0
@@ -8415,8 +8415,8 @@ packages:
     resolution: {integrity: sha512-72RFADWFqKmUb2hmmvNODKL3p9hcB6Gt2DOQMis1SEBaV6a4MH8soBvzg+95CYhCKPFedut2JY9bMfrDl9D23g==}
     engines: {node: '>=14.0'}
 
-  unenv-nightly@2.0.0-1724863496.70db6f1:
-    resolution: {integrity: sha512-r+VIl1gnsI4WQxluruSQhy8alpAf1AsLRLm4sEKp3otCyTIVD6I6wHEYzeQnwsyWgaD4+3BD4A/eqrgOpdTzhw==}
+  unenv-nightly@2.0.0-1726478054.1e87097:
+    resolution: {integrity: sha512-uZso8dCkGlJzWQqkyjOA5L4aUqNJl9E9oKRm03V/d+URrg6rFMJwBonlX9AAq538NxwJpPnCX0gAz0IfTxsbFQ==}
 
   unicorn-magic@0.1.0:
     resolution: {integrity: sha512-lRfVq8fE8gz6QMBuDM6a+LO3IAzTi05H6gCVaUpir2E1Rwpo4ZUog45KpNXKC/Mn3Yb9UDuHumeFTo9iV/D9FQ==}
@@ -16133,7 +16133,7 @@ snapshots:
     dependencies:
       '@fastify/busboy': 2.1.1
 
-  unenv-nightly@2.0.0-1724863496.70db6f1:
+  unenv-nightly@2.0.0-1726478054.1e87097:
     dependencies:
       defu: 6.1.4
       ohash: 1.1.3
