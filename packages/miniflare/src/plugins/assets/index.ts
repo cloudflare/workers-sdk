@@ -150,13 +150,15 @@ export const ASSETS_PLUGIN: Plugin<typeof AssetsOptionsSchema> = {
 	},
 };
 
-// The Asset Manifest and Asset Reverse Map are used to map a request path to an asset.
-// 1. Hash path of request
-// 2. Use this path hash to find the manifest entry
-// 3. Get content hash from manifest entry
-// 4a. In prod, use content hash to get asset from KV
-// 4b. In dev, we fake out the KV store and use the file system instead.
-//     Use content hash to get file path from asset reverse map.
+/**
+ * The Asset Manifest and Asset Reverse Map are used to map a request path to an asset.
+ * 1. Hash path of request
+ * 2. Use this path hash to find the manifest entry
+ * 3. Get content hash from manifest entry
+ * 4a. In prod, use content hash to get asset from KV
+ * 4b. In dev, we fake out the KV store and use the file system instead.
+ * 	   Use content hash to get file path from asset reverse map.
+ */
 
 export const buildAssetManifest = async (dir: string) => {
 	const { manifest, assetsReverseMap } = await walk(dir);
@@ -176,7 +178,7 @@ export type AssetReverseMap = {
 
 /**
  * Traverses the asset directory to create an asset manifest and asset reverse map.
- * These are available to asset service worker as a binding.
+ * These are available to the Asset Worker as a binding.
  * NB: This runs every time the dev server restarts.
  */
 const walk = async (dir: string) => {
@@ -212,18 +214,36 @@ const walk = async (dir: string) => {
 					);
 				}
 
-				// Each manifest entry is [header, pathHash, contentHash].
-				// In dev we want to avoid reading and hashing every file every time we
-				// reload the dev server, so in dev the 'content hash' is hash(path + modifiedTime).
-				// This way the 'content hash' still updates on file change, so the eTag also updates,
-				// and we don't incorrectly get a 304.
-				const pathHash = await hashPath(
-					encodeFilePath(relativeFilepath, path.sep)
-				);
-				const modifiedTime = (await fs.stat(filepath)).mtimeMs;
-				const contentHash = await hashPath(
-					encodeFilePath(relativeFilepath, path.sep) + modifiedTime.toString()
-				);
+				/*
+				 * Each manifest entry is a series of bytes that store data in a [header,
+				 * pathHash, contentHash] format, where:
+				 *   - `header` is a fixed ??x?? bytes reserved for ??
+				 *   - `pathHash` is the hashed file path
+				 *   - `contentHash` is the hashed file content
+				 *
+				 * The `contentHash` of a file is determined by reading the contents of
+				 * the file, and applying a hash function on the read data. In local
+				 * development, performing this operation for each asset file would
+				 * become very expensive very quickly, as it would have to be performed
+				 * every time a dev server reload is trigerred. In watch mode, depending
+				 * on the user's setup, this could potentially be on every file change.
+				 *
+				 * To avoid this from becoming a performance bottleneck, we're doing
+				 * things a bit differently for dev, and implementing the `contentHash`
+				 * as a hash function of the file path and the modified timestamp.
+				 * (`hash(filePath + modifiedTime)`).
+				 * This way a file's corresponding 'contentHash' will always update
+				 * if the file changes, and `wrangler dev` will serve the updated asset
+				 * files instead of incorrectly returning 304s.
+				 */
+
+				const [pathHash, contentHash] = await Promise.all([
+					hashPath(encodeFilePath(relativeFilepath, path.sep)),
+					hashPath(
+						encodeFilePath(relativeFilepath, path.sep) +
+							filestat.mtimeMs.toString()
+					),
+				]);
 				manifest.push({
 					pathHash,
 					contentHash,
