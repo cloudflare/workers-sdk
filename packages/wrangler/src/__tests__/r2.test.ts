@@ -770,7 +770,7 @@ describe("r2", () => {
 		});
 
 		describe("notification", () => {
-			describe("get", () => {
+			describe("list", () => {
 				it("follows happy path as expected", async () => {
 					const bucketName = "my-bucket";
 					const queueId = "471537e8-6e5a-4163-a4d4-9478087c32c3";

@@ -28,6 +28,12 @@ export async function ListHandler(
 	args: StrictYargsOptionsToInterface<typeof ListOptions>
 ) {
 	await printWranglerBanner();
+	// Check for deprecated `wrangler pages publish` command
+	if (args._[3] === "get") {
+		logger.warn(
+			"`wrangler r2 bucket notification get` is deprecated and will be removed in an upcoming release.\nPlease use `wrangler r2 bucket notification list` instead."
+		);
+	}
 	const config = readConfig(args.config, args);
 	const accountId = await requireAuth(config);
 	const apiCreds = requireApiToken();

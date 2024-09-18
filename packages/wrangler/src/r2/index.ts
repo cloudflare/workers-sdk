@@ -652,7 +652,7 @@ export function r2(r2Yargs: CommonYargsArgv, subHelp: SubHelp) {
 				(r2EvNotifyYargs) => {
 					return r2EvNotifyYargs
 						.command(
-							"list <bucket>",
+							["list <bucket>", "get <bucket>"],
 							`List event notification rules for a bucket ${chalk.hex(betaCmdColor)("[open beta]")}`,
 							Notification.ListOptions,
 							Notification.ListHandler
