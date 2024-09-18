@@ -22,7 +22,10 @@ import registerDevHotKeys from "./dev/hotkeys";
 import { maybeRegisterLocalWorker } from "./dev/local";
 import { startDevServer } from "./dev/start-server";
 import { UserError } from "./errors";
-import { processExperimentalAssetsArg } from "./experimental-assets";
+import {
+	processExperimentalAssetsArg,
+	verifyMutuallyExclusiveAssetsArgsOrConfig,
+} from "./experimental-assets";
 import { run } from "./experimental-flags";
 import isInteractive from "./is-interactive";
 import { logger } from "./logger";
@@ -600,22 +603,20 @@ export async function startDev(args: StartDevOptions) {
 			);
 		}
 
+		if (
+			(args.legacyAssets || config.legacy_assets) &&
+			(args.site || config.site)
+		) {
+			throw new UserError(
+				"Cannot use Legacy Assets and Workers Sites in the same Worker."
+			);
+		}
+
+		verifyMutuallyExclusiveAssetsArgsOrConfig(args, config);
+
 		let experimentalAssetsOptions = processExperimentalAssetsArg(args, config);
 		if (experimentalAssetsOptions) {
 			args.forceLocal = true;
-		}
-
-		/*
-		 * - `config.legacy_assets` conflates `legacy_assets` and `assets`
-		 * - `args.legacyAssets` conflates `legacy-assets` and `assets`
-		 */
-		if (
-			(args.legacyAssets || config.legacy_assets) &&
-			experimentalAssetsOptions
-		) {
-			throw new UserError(
-				"Cannot use Legacy Assets and Experimental Assets in the same Worker."
-			);
 		}
 
 		const projectRoot = configPath && path.dirname(configPath);
@@ -1282,28 +1283,6 @@ export async function validateDevServerSettings(
 	args: StartDevOptions,
 	config: Config
 ) {
-	/*
-	 * - `args.legacyAssets` conflates `legacy-assets` and `assets`
-	 * - `config.legacy_assets` conflates `legacy_assets` and `assets`
-	 */
-	if (
-		(args.legacyAssets || config.legacy_assets) &&
-		(args.site || config.site)
-	) {
-		throw new UserError(
-			"Cannot use Legacy Assets and Workers Sites in the same Worker."
-		);
-	}
-
-	if (
-		(args.experimentalAssets || config.experimental_assets) &&
-		(args.site || config.site)
-	) {
-		throw new UserError(
-			"Cannot use Experimental Assets and Workers Sites in the same Worker."
-		);
-	}
-
 	const entry = await getEntry(
 		{
 			legacyAssets: args.legacyAssets,

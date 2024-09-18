@@ -23,6 +23,8 @@ import { APIError } from "./parse";
 import { createPatternMatcher } from "./utils/filesystem";
 import type { Config } from "./config";
 import type { ExperimentalAssets } from "./config/environment";
+import type { DeployArgs } from "./deploy";
+import type { StartDevOptions } from "./dev";
 import type { AssetConfig, RoutingConfig } from "@cloudflare/workers-shared";
 
 export type AssetManifest = { [path: string]: { hash: string; size: number } };
@@ -364,6 +366,51 @@ export function processExperimentalAssetsArg(
 	}
 
 	return experimentalAssetsOptions;
+}
+
+/**
+ * Workers assets cannot be used in combination with a few other select
+ * Workers features, such as: legacy assets, sites and tail consumers.
+ *
+ * This function ensures that if any of these mutually exclusive config
+ * keys or command args are used together, an appropriate error is thrown.
+ */
+export function verifyMutuallyExclusiveAssetsArgsOrConfig(
+	args:
+		| Pick<StartDevOptions, "legacyAssets" | "site" | "experimentalAssets">
+		| Pick<DeployArgs, "legacyAssets" | "site" | "experimentalAssets">,
+	config: Config
+) {
+	/*
+	 * - `config.legacy_assets` conflates `legacy_assets` and `assets`
+	 * - `args.legacyAssets` conflates `legacy-assets` and `assets`
+	 */
+	if (
+		(args.experimentalAssets || config.experimental_assets) &&
+		(args.legacyAssets || config.legacy_assets)
+	) {
+		throw new UserError(
+			"Cannot use Experimental Assets and Legacy Assets in the same Worker."
+		);
+	}
+
+	if (
+		(args.experimentalAssets || config.experimental_assets) &&
+		(args.site || config.site)
+	) {
+		throw new UserError(
+			"Cannot use Experimental Assets and Workers Sites in the same Worker."
+		);
+	}
+
+	if (
+		(args.experimentalAssets || config.experimental_assets) &&
+		config.tail_consumers?.length
+	) {
+		throw new UserError(
+			"Cannot use Experimental Assets and tail consumers in the same Worker. Tail Workers are not yet supported for Workers with assets."
+		);
+	}
 }
 
 /**

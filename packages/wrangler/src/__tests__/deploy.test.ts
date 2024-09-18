@@ -2453,27 +2453,28 @@ addEventListener('fetch', event => {});`
 			mockUploadAssetsToKVRequest(kvNamespace.id, assets);
 			await runWrangler("deploy --legacy-assets assets");
 
-			expect(std).toMatchInlineSnapshot(`
-				Object {
-				  "debug": "",
-				  "err": "",
-				  "info": "Fetching list of already uploaded assets...
-				Building list of assets to upload...
-				 + file-1.2ca234f380.txt (uploading new version of file-1.txt)
-				 + file-2.5938485188.txt (uploading new version of file-2.txt)
-				Uploading 2 new assets...
-				Uploaded 100% [2 out of 2]",
-				  "out": "↗️  Done syncing assets
+			expect(std.warn).toMatchInlineSnapshot(`
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --legacy-assets argument is experimental and may change or break at any time.[0m
+
+				"
+			`);
+			expect(std.out).toMatchInlineSnapshot(`
+				"↗️  Done syncing assets
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
-				Current Version ID: Galaxy-Class",
-				  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --legacy-assets argument is experimental and may change or break at any time.[0m
+				Current Version ID: Galaxy-Class"
+			`);
 
-				",
-				}
+			expect(std.info).toMatchInlineSnapshot(`
+				"Fetching list of already uploaded assets...
+				Building list of assets to upload...
+				 + file-1.2ca234f380.txt (uploading new version of file-1.txt)
+				 + file-2.5938485188.txt (uploading new version of file-2.txt)
+				Uploading 2 new assets...
+				Uploaded 100% [2 out of 2]"
 			`);
 		});
 
@@ -2500,33 +2501,32 @@ addEventListener('fetch', event => {});`
 			mockUploadAssetsToKVRequest(kvNamespace.id, assets);
 			await runWrangler("deploy --assets assets");
 
-			expect(std).toMatchInlineSnapshot(`
-				Object {
-				  "debug": "",
-				  "err": "",
-				  "info": "Fetching list of already uploaded assets...
-				Building list of assets to upload...
-				 + file-1.2ca234f380.txt (uploading new version of file-1.txt)
-				 + file-2.5938485188.txt (uploading new version of file-2.txt)
-				Uploading 2 new assets...
-				Uploaded 100% [2 out of 2]",
-				  "out": "↗️  Done syncing assets
+			expect(std.warn).toMatchInlineSnapshot(`
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --assets argument is experimental. We are going to be changing the behavior of this experimental command after August 15th.[0m
+
+				  Releases of wrangler after this date will no longer support current functionality.
+				  Please shift to the --legacy-assets command to preserve the current functionality.
+
+				"
+			`);
+
+			expect(std.out).toMatchInlineSnapshot(`
+				"↗️  Done syncing assets
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
-				Current Version ID: Galaxy-Class",
-				  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --assets argument is experimental. We are going to be changing the behavior of this experimental command after August 15th.[0m
+				Current Version ID: Galaxy-Class"
+			`);
 
-				  Releases of wrangler after this date will no longer support current functionality.
-				  Please shift to the --legacy-assets command to preserve the current functionality.
-
-
-				[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --assets argument is experimental and may change or break at any time[0m
-
-				",
-				}
+			expect(std.info).toMatchInlineSnapshot(`
+				"Fetching list of already uploaded assets...
+				Building list of assets to upload...
+				 + file-1.2ca234f380.txt (uploading new version of file-1.txt)
+				 + file-2.5938485188.txt (uploading new version of file-2.txt)
+				Uploading 2 new assets...
+				Uploaded 100% [2 out of 2]"
 			`);
 		});
 
@@ -2564,13 +2564,13 @@ addEventListener('fetch', event => {});`
 			await expect(
 				runWrangler("deploy --legacy-assets abc --site xyz")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: Cannot use Assets and Workers Sites in the same Worker.]`
+				`[Error: Cannot use Legacy Assets and Workers Sites in the same Worker.]`
 			);
 
 			expect(std).toMatchInlineSnapshot(`
 				Object {
 				  "debug": "",
-				  "err": "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mCannot use Assets and Workers Sites in the same Worker.[0m
+				  "err": "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mCannot use Legacy Assets and Workers Sites in the same Worker.[0m
 
 				",
 				  "info": "",
@@ -2593,13 +2593,13 @@ addEventListener('fetch', event => {});`
 			await expect(
 				runWrangler("deploy --legacy-assets abc")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: Cannot use Assets and Workers Sites in the same Worker.]`
+				`[Error: Cannot use Legacy Assets and Workers Sites in the same Worker.]`
 			);
 
 			expect(std).toMatchInlineSnapshot(`
 				Object {
 				  "debug": "",
-				  "err": "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mCannot use Assets and Workers Sites in the same Worker.[0m
+				  "err": "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mCannot use Legacy Assets and Workers Sites in the same Worker.[0m
 
 				",
 				  "info": "",
@@ -2620,13 +2620,13 @@ addEventListener('fetch', event => {});`
 			await expect(
 				runWrangler("deploy --site xyz")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: Cannot use Assets and Workers Sites in the same Worker.]`
+				`[Error: Cannot use Legacy Assets and Workers Sites in the same Worker.]`
 			);
 
 			expect(std).toMatchInlineSnapshot(`
 				Object {
 				  "debug": "",
-				  "err": "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mCannot use Assets and Workers Sites in the same Worker.[0m
+				  "err": "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mCannot use Legacy Assets and Workers Sites in the same Worker.[0m
 
 				",
 				  "info": "",
@@ -2652,13 +2652,13 @@ addEventListener('fetch', event => {});`
 			await expect(
 				runWrangler("deploy")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: Cannot use Assets and Workers Sites in the same Worker.]`
+				`[Error: Cannot use Legacy Assets and Workers Sites in the same Worker.]`
 			);
 
 			expect(std).toMatchInlineSnapshot(`
 				Object {
 				  "debug": "",
-				  "err": "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mCannot use Assets and Workers Sites in the same Worker.[0m
+				  "err": "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mCannot use Legacy Assets and Workers Sites in the same Worker.[0m
 
 				",
 				  "info": "",
@@ -4345,7 +4345,7 @@ addEventListener('fetch', event => {});`
 			await expect(
 				runWrangler("deploy")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: Cannot use Assets and Workers Sites in the same Worker.]`
+				`[Error: Cannot use Experimental Assets and Workers Sites in the same Worker.]`
 			);
 		});
 
@@ -4360,7 +4360,7 @@ addEventListener('fetch', event => {});`
 			await expect(
 				runWrangler("deploy --experimental-assets abc")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: Cannot use Assets and Workers Sites in the same Worker.]`
+				`[Error: Cannot use Experimental Assets and Workers Sites in the same Worker.]`
 			);
 		});
 
