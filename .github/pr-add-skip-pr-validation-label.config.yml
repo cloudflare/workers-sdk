@@ -1,4 +1,4 @@
-# add 'skip-pr-validation' label to [TODO: change me:any changes within the 'packages/wrangler/e2e' directory]
+# add 'skip-pr-validation' label to Version Packages PRs
 skip-pr-validation:
   - all:
       - head-branch: 'changeset-release/main'
