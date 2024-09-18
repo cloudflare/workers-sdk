@@ -3,7 +3,10 @@ import * as path from "node:path";
 import NodeGlobalsPolyfills from "@esbuild-plugins/node-globals-polyfill";
 import NodeModulesPolyfills from "@esbuild-plugins/node-modules-polyfill";
 import * as esbuild from "esbuild";
-import { getBuildConditions } from "../environment-variables/misc-variables";
+import {
+	getBuildConditionsFromEnv,
+	getBuildPlatformFromEnv,
+} from "../environment-variables/misc-variables";
 import { UserError } from "../errors";
 import { getBasePath, getWranglerTmpDir } from "../paths";
 import { applyMiddlewareLoaderFacade } from "./apply-middleware";
@@ -45,9 +48,27 @@ export const COMMON_ESBUILD_OPTIONS = {
 } as const;
 
 // build conditions used by esbuild, and when resolving custom `import` calls
-export const BUILD_CONDITIONS = JSON.parse(
-	getBuildConditions() ?? `["workerd", "worker", "browser"]`
-);
+export function getBuildConditions() {
+	const envVar = getBuildConditionsFromEnv();
+	if (typeof envVar === "string") {
+		return envVar.split(",");
+	} else {
+		return ["workerd", "worker", "browser"];
+	}
+}
+
+function getBuildPlatform(): esbuild.Platform {
+	const platform = getBuildPlatformFromEnv();
+	if (
+		platform !== undefined &&
+		!["browser", "node", "neutral"].includes(platform)
+	) {
+		throw new UserError(
+			"Invalid esbuild platform configuration defined in the WRANGLER_BUILD_PLATFORM environment variable."
+		);
+	}
+	return platform as esbuild.Platform;
+}
 
 /**
  * Information about Wrangler's bundling process that needs passed through
@@ -370,7 +391,8 @@ export async function bundleWorker(
 		sourceRoot: destination,
 		minify,
 		metafile: true,
-		conditions: BUILD_CONDITIONS,
+		conditions: getBuildConditions(),
+		platform: getBuildPlatform(),
 		...(process.env.NODE_ENV && {
 			define: {
 				...(defineNavigatorUserAgent

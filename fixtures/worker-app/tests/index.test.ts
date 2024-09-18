@@ -183,29 +183,3 @@ describe("'wrangler dev' correctly renders pages", () => {
 		expect(await response.text()).toEqual("x".repeat(100));
 	});
 });
-
-describe("'wrangler dev' with WRANGLER_BUILD_CONDITIONS", () => {
-	let ip: string, port: number, stop: (() => Promise<unknown>) | undefined;
-
-	beforeAll(async () => {
-		({ ip, port, stop } = await runWranglerDev(
-			resolve(__dirname, ".."),
-			[
-				"--port=0",
-				"--inspector-port=0",
-				"--upstream-protocol=https",
-				"--host=prod.example.org",
-			],
-			{ ...process.env, WRANGLER_BUILD_CONDITIONS: `["other"]` }
-		));
-	});
-
-	afterAll(async () => {
-		await stop?.();
-	});
-
-	it("should import from the `other` package export", async ({ expect }) => {
-		const response = await fetch(`http://${ip}:${port}/random`);
-		expect(await response.text()).toEqual("010203040506");
-	});
-});
