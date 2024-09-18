@@ -1,4 +1,0 @@
-# add 'skip-pr-description-validation' label to Version Packages PRs
-skip-pr-description-validation:
-  - all:
-      - head-branch: 'changeset-release/main'

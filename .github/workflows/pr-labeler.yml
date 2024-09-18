@@ -14,5 +14,6 @@ jobs:
           fetch-depth: 0
       - uses: actions/labeler@v5
         with:
-          configuration-path: .github/pr-add-skip-validation-label.config.yml
+          configuration-path: .github/pr-labeler.config.yml
           repo-token: ${{ secrets.GH_ACCESS_TOKEN }}
+
