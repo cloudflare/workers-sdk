@@ -9,6 +9,7 @@
 				"npm_config_user_agent",
 				"CI",
 				"CREATE_CLOUDFLARE_TELEMETRY_DISABLED",
+				"CREATE_CLOUDFLARE_TELEMETRY_DEBUG",
 				"SPARROW_SOURCE_KEY"
 			],
 			"outputs": ["dist/**"]

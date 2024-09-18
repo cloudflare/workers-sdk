@@ -17,6 +17,10 @@ export function hasSparrowSourceKey() {
 }
 
 export async function sendEvent(payload: EventPayload) {
+	if (process.env.CREATE_CLOUDFLARE_TELEMETRY_DEBUG === "1") {
+		console.log("[telemetry]", JSON.stringify(payload, null, 2));
+	}
+
 	await fetch(`${SPARROW_URL}/api/v1/event`, {
 		method: "POST",
 		headers: {
