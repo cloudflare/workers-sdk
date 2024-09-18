@@ -1563,7 +1563,7 @@ describe("wrangler dev", () => {
 			await expect(
 				runWrangler("dev")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: Cannot use Legacy Assets and Experimental Assets in the same Worker.]`
+				`[Error: Cannot use Experimental Assets and Legacy Assets in the same Worker.]`
 			);
 		});
 
@@ -1573,7 +1573,7 @@ describe("wrangler dev", () => {
 			await expect(
 				runWrangler("dev --experimental-assets assets --legacy-assets assets")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: Cannot use Legacy Assets and Experimental Assets in the same Worker.]`
+				`[Error: Cannot use Experimental Assets and Legacy Assets in the same Worker.]`
 			);
 		});
 
@@ -1593,7 +1593,7 @@ describe("wrangler dev", () => {
 			await expect(
 				runWrangler("dev --experimental-assets assets")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: Cannot use Legacy Assets and Experimental Assets in the same Worker.]`
+				`[Error: Cannot use Experimental Assets and Legacy Assets in the same Worker.]`
 			);
 		});
 
@@ -1609,7 +1609,7 @@ describe("wrangler dev", () => {
 			await expect(
 				runWrangler("dev --legacy-assets xyz")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: Cannot use Legacy Assets and Experimental Assets in the same Worker.]`
+				`[Error: Cannot use Experimental Assets and Legacy Assets in the same Worker.]`
 			);
 		});
 
@@ -1639,6 +1639,31 @@ describe("wrangler dev", () => {
 				new RegExp(
 					'^The directory specified by the "experimental_assets.directory" field in your configuration file does not exist:[Ss]*'
 				)
+			);
+		});
+
+		it("should error if --experimental-assets and config.tail_consumers are used together", async () => {
+			writeWranglerToml({
+				tail_consumers: [{ service: "<TAIL_WORKER_NAME>" }],
+			});
+			fs.openSync("public", "w");
+			await expect(
+				runWrangler("dev --experimental-assets public")
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: Cannot use Experimental Assets and tail consumers in the same Worker. Tail Workers are not yet supported for Workers with assets.]`
+			);
+		});
+
+		it("should error if config.experimental_assets and config.tail_consumers are used together", async () => {
+			writeWranglerToml({
+				experimental_assets: { directory: "./public" },
+				tail_consumers: [{ service: "<TAIL_WORKER_NAME>" }],
+			});
+			fs.openSync("public", "w");
+			await expect(
+				runWrangler("dev")
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: Cannot use Experimental Assets and tail consumers in the same Worker. Tail Workers are not yet supported for Workers with assets.]`
 			);
 		});
 	});

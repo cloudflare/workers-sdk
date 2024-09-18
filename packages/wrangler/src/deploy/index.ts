@@ -3,7 +3,10 @@ import path from "node:path";
 import { findWranglerToml, readConfig } from "../config";
 import { getEntry } from "../deployment-bundle/entry";
 import { UserError } from "../errors";
-import { processExperimentalAssetsArg } from "../experimental-assets";
+import {
+	processExperimentalAssetsArg,
+	verifyMutuallyExclusiveAssetsArgsOrConfig,
+} from "../experimental-assets";
 import {
 	getRules,
 	getScriptName,
@@ -231,9 +234,9 @@ export function deployOptions(yargs: CommonYargsArgv) {
 	);
 }
 
-export async function deployHandler(
-	args: StrictYargsOptionsToInterface<typeof deployOptions>
-) {
+export type DeployArgs = StrictYargsOptionsToInterface<typeof deployOptions>;
+
+export async function deployHandler(args: DeployArgs) {
 	await printWranglerBanner();
 
 	// Check for deprecated `wrangler publish` command
@@ -281,22 +284,15 @@ export async function deployHandler(
 	}
 
 	if (
-		(args.legacyAssets ||
-			config.legacy_assets ||
-			args.experimentalAssets ||
-			config.experimental_assets) &&
+		(args.legacyAssets || config.legacy_assets) &&
 		(args.site || config.site)
 	) {
 		throw new UserError(
-			"Cannot use Assets and Workers Sites in the same Worker."
+			"Cannot use Legacy Assets and Workers Sites in the same Worker."
 		);
 	}
 
-	if (args.assets) {
-		logger.warn(
-			"The --assets argument is experimental and may change or break at any time"
-		);
-	}
+	verifyMutuallyExclusiveAssetsArgsOrConfig(args, config);
 
 	const experimentalAssetsOptions = processExperimentalAssetsArg(args, config);
 

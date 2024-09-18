@@ -3,7 +3,10 @@ import path from "node:path";
 import { findWranglerToml, readConfig } from "../config";
 import { getEntry } from "../deployment-bundle/entry";
 import { UserError } from "../errors";
-import { processExperimentalAssetsArg } from "../experimental-assets";
+import {
+	processExperimentalAssetsArg,
+	verifyMutuallyExclusiveAssetsArgsOrConfig,
+} from "../experimental-assets";
 import {
 	getRules,
 	getScriptName,
@@ -230,6 +233,18 @@ export async function versionsUploadHandler(
 			"Legacy Assets does not support uploading versions through `wrangler versions upload`. You must use `wrangler deploy` instead."
 		);
 	}
+
+	verifyMutuallyExclusiveAssetsArgsOrConfig(
+		{
+			// given that legacyAssets and sites are not supported by
+			// `wrangler versions upload` pass them as undefined to
+			// skip the corresponding mutual exclusivity validation
+			legacyAssets: undefined,
+			site: undefined,
+			experimentalAssets: args.experimentalAssets,
+		},
+		config
+	);
 
 	const experimentalAssetsOptions = processExperimentalAssetsArg(args, config);
 
