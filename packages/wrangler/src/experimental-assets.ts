@@ -113,11 +113,11 @@ export const syncExperimentalAssets = async (
 	let attempts = 0;
 	const start = Date.now();
 	let completionJwt = "";
+	let assetUploadCount = 0;
 
 	for (const [bucketIndex, bucket] of assetBuckets.entries()) {
 		attempts = 0;
 		let gatewayErrors = 0;
-		let assetUploadCount = 0;
 		const doUpload = async (): Promise<UploadResponse> => {
 			// Populate the payload only when actually uploading (this is limited to 3 concurrent uploads at 50 MiB per bucket meaning we'd only load in a max of ~150 MiB)
 			// This is so we don't run out of memory trying to upload the files.
