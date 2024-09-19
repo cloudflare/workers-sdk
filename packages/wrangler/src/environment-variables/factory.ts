@@ -22,7 +22,9 @@ type VariableNames =
 	| "WRANGLER_TOKEN_URL"
 	| "WRANGLER_OUTPUT_FILE_DIRECTORY"
 	| "WRANGLER_OUTPUT_FILE_PATH"
-	| "WRANGLER_CI_MATCH_TAG";
+	| "WRANGLER_CI_MATCH_TAG"
+	| "WRANGLER_BUILD_CONDITIONS"
+	| "WRANGLER_BUILD_PLATFORM";
 
 type DeprecatedNames =
 	| "CF_ACCOUNT_ID"
@@ -76,9 +78,9 @@ export function getEnvironmentVariableFactory({
 }): () => string | undefined {
 	let hasWarned = false;
 	return () => {
-		if (process.env[variableName]) {
+		if (variableName in process.env) {
 			return process.env[variableName];
-		} else if (deprecatedName && process.env[deprecatedName]) {
+		} else if (deprecatedName && deprecatedName in process.env) {
 			if (!hasWarned) {
 				// Only show the warning once.
 				hasWarned = true;
