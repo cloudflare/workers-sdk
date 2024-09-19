@@ -53,7 +53,7 @@ export const syncExperimentalAssets = async (
 
 	// 1. generate asset manifest
 	logger.info("🌀 Building list of assets...");
-	const manifest = await buildAssetsManifest(assetDirectory);
+	const manifest = await buildAssetManifest(assetDirectory);
 
 	// 2. fetch buckets w/ hashes
 	logger.info("🌀 Starting asset upload...");
@@ -220,7 +220,7 @@ export const syncExperimentalAssets = async (
 	return completionJwt;
 };
 
-export const buildAssetsManifest = async (dir: string) => {
+export const buildAssetManifest = async (dir: string) => {
 	const files = await readdir(dir, { recursive: true });
 	const manifest: AssetManifest = {};
 	let counter = 0;
