@@ -268,7 +268,11 @@ export async function versionsUploadHandler(
 
 	if (!args.dryRun) {
 		assert(accountId, "Missing account ID");
-		await verifyWorkerMatchesCITag(accountId, name);
+		await verifyWorkerMatchesCITag(
+			accountId,
+			name,
+			path.relative(entry.directory, config.configPath ?? "wrangler.toml")
+		);
 	}
 
 	if (!args.dryRun) {

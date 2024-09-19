@@ -2,17 +2,27 @@ import { fetchResult } from "./cfetch";
 import { getCIMatchTag } from "./environment-variables/misc-variables";
 import { FatalError } from "./errors";
 import { logger } from "./logger";
+import { getCloudflareAccountIdFromEnv } from "./user/auth-variables";
 import type { ServiceMetadataRes } from "./init";
 
 export async function verifyWorkerMatchesCITag(
 	accountId: string,
-	workerName: string
+	workerName: string,
+	configPath?: string
 ) {
 	const matchTag = getCIMatchTag();
 
 	// If no tag is provided through the environment, nothing needs to be verified
 	if (!matchTag) {
 		return;
+	}
+
+	const envAccountID = getCloudflareAccountIdFromEnv();
+
+	if (accountId !== envAccountID) {
+		throw new FatalError(
+			`The \`account_id\` in \`${configPath ?? "wrangler.toml"}\` must match the \`account_id\` for this account. Please update your wrangler.toml with \`account_id = "${envAccountID}"\``
+		);
 	}
 
 	let tag;
@@ -27,11 +37,11 @@ export async function verifyWorkerMatchesCITag(
 		// code: 10090, message: workers.api.error.service_not_found
 		if ((e as { code?: number }).code === 10090) {
 			throw new FatalError(
-				`Your Worker's name (${workerName}) does not match what is expected by the CI system`
+				`The name in \`${configPath ?? "wrangler.toml"}\` (${workerName}) must match the name of your Worker. Please update the name field in your wrangler.toml.`
 			);
 		} else {
 			throw new FatalError(
-				"Wrangler cannot validate that your Worker name matches what is expected by the CI system"
+				"Wrangler cannot validate that your Worker name matches what is expected by the build system. Please retry the build."
 			);
 		}
 	}
@@ -40,7 +50,7 @@ export async function verifyWorkerMatchesCITag(
 			`Failed to match Worker tag. The API returned "${tag}", but the CI system expected "${matchTag}"`
 		);
 		throw new FatalError(
-			`Your Worker's name (${workerName}) does not match what is expected by the CI system`
+			`The name in \`${configPath ?? "wrangler.toml"}\` (${workerName}) must match the name of your Worker. Please update the name field in your wrangler.toml.`
 		);
 	}
 }

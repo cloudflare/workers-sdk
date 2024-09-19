@@ -331,7 +331,11 @@ export async function deployHandler(args: DeployArgs) {
 
 	if (!args.dryRun) {
 		assert(accountId, "Missing account ID");
-		await verifyWorkerMatchesCITag(accountId, name);
+		await verifyWorkerMatchesCITag(
+			accountId,
+			name,
+			path.relative(entry.directory, config.configPath ?? "wrangler.toml")
+		);
 	}
 	const { sourceMapSize, versionId, workerTag, targets } = await deploy({
 		config,

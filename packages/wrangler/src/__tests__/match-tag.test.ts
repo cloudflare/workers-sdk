@@ -1,3 +1,4 @@
+import { mkdir } from "node:fs/promises";
 import { http, HttpResponse } from "msw";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { verifyWorkerMatchesCITag } from "../match-tag";
@@ -87,7 +88,7 @@ describe("match-tag", () => {
 			await expect(
 				verifyWorkerMatchesCITag("some-account-id", "b-worker")
 			).rejects.toMatchInlineSnapshot(
-				`[Error: Your Worker's name (b-worker) does not match what is expected by the CI system]`
+				`[Error: The name in \`wrangler.toml\` (b-worker) must match the name of your Worker. Please update the name field in your wrangler.toml.]`
 			);
 		});
 
@@ -97,7 +98,7 @@ describe("match-tag", () => {
 			await expect(
 				verifyWorkerMatchesCITag("some-account-id", "network-error-worker")
 			).rejects.toMatchInlineSnapshot(
-				`[Error: Wrangler cannot validate that your Worker name matches what is expected by the CI system]`
+				`[Error: Wrangler cannot validate that your Worker name matches what is expected by the build system. Please retry the build.]`
 			);
 		});
 
@@ -107,7 +108,18 @@ describe("match-tag", () => {
 			await expect(
 				verifyWorkerMatchesCITag("some-account-id", "my-worker")
 			).rejects.toMatchInlineSnapshot(
-				`[Error: Your Worker's name (my-worker) does not match what is expected by the CI system]`
+				`[Error: The name in \`wrangler.toml\` (my-worker) must match the name of your Worker. Please update the name field in your wrangler.toml.]`
+			);
+		});
+
+		it("throws validation error if account_id mismatches", async () => {
+			vi.stubEnv("WRANGLER_CI_MATCH_TAG", "abc123a");
+			vi.stubEnv("CLOUDFLARE_ACCOUNT_ID", "some-other-account-id");
+			mockWorker("my-worker", "abc123b");
+			await expect(
+				verifyWorkerMatchesCITag("some-account-id", "my-worker")
+			).rejects.toMatchInlineSnapshot(
+				`[Error: The \`account_id\` in \`wrangler.toml\` must match the \`account_id\` for this account. Please update your wrangler.toml with \`account_id = "some-other-account-id"\`]`
 			);
 		});
 
@@ -124,7 +136,7 @@ describe("match-tag", () => {
 				await expect(
 					runWrangler("deploy ./index.js")
 				).rejects.toMatchInlineSnapshot(
-					`[Error: Your Worker's name (b-worker) does not match what is expected by the CI system]`
+					`[Error: The name in \`wrangler.toml\` (b-worker) must match the name of your Worker. Please update the name field in your wrangler.toml.]`
 				);
 			});
 
@@ -135,7 +147,7 @@ describe("match-tag", () => {
 				await expect(
 					runWrangler("deploy ./index.js")
 				).rejects.toMatchInlineSnapshot(
-					`[Error: Wrangler cannot validate that your Worker name matches what is expected by the CI system]`
+					`[Error: Wrangler cannot validate that your Worker name matches what is expected by the build system. Please retry the build.]`
 				);
 			});
 
@@ -146,7 +158,40 @@ describe("match-tag", () => {
 				await expect(
 					runWrangler("deploy ./index.js")
 				).rejects.toMatchInlineSnapshot(
-					`[Error: Your Worker's name (my-worker) does not match what is expected by the CI system]`
+					`[Error: The name in \`wrangler.toml\` (my-worker) must match the name of your Worker. Please update the name field in your wrangler.toml.]`
+				);
+			});
+			it("throws validation error if account_id mismatches", async () => {
+				vi.stubEnv("WRANGLER_CI_MATCH_TAG", "abc123a");
+				vi.stubEnv("CLOUDFLARE_ACCOUNT_ID", "some-other-account-id");
+				mockWorker("my-worker", "abc123a");
+				writeWranglerToml({
+					name: "my-worker",
+					account_id: "some-account-id",
+				});
+				await expect(
+					runWrangler("deploy ./index.js")
+				).rejects.toMatchInlineSnapshot(
+					`[Error: The \`account_id\` in \`wrangler.toml\` must match the \`account_id\` for this account. Please update your wrangler.toml with \`account_id = "some-other-account-id"\`]`
+				);
+			});
+
+			it("throws validation error if account_id mismatches w/ custom wrangler.toml path", async () => {
+				vi.stubEnv("WRANGLER_CI_MATCH_TAG", "abc123a");
+				vi.stubEnv("CLOUDFLARE_ACCOUNT_ID", "some-other-account-id");
+				mockWorker("my-worker", "abc123a");
+				await mkdir("path");
+				writeWranglerToml(
+					{
+						name: "my-worker",
+						account_id: "some-account-id",
+					},
+					"path/config.toml"
+				);
+				await expect(
+					runWrangler("deploy -c path/config.toml ./index.js")
+				).rejects.toMatchInlineSnapshot(
+					`[Error: The \`account_id\` in \`path/config.toml\` must match the \`account_id\` for this account. Please update your wrangler.toml with \`account_id = "some-other-account-id"\`]`
 				);
 			});
 		});
