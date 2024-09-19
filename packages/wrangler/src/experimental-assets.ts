@@ -412,6 +412,15 @@ export function verifyMutuallyExclusiveAssetsArgsOrConfig(
 			"Cannot use Experimental Assets and tail consumers in the same Worker. Tail Workers are not yet supported for Workers with assets."
 		);
 	}
+
+	if (
+		(args.experimentalAssets || config.experimental_assets) &&
+		(args as StartDevOptions).remote
+	) {
+		throw new UserError(
+			"Cannot use Experimental Assets in remote mode. Workers with assets are only supported in local mode. Please use `wrangler dev`."
+		);
+	}
 }
 
 const CF_ASSETS_IGNORE_FILENAME = ".assetsignore";

@@ -1666,6 +1666,27 @@ describe("wrangler dev", () => {
 				`[Error: Cannot use Experimental Assets and tail consumers in the same Worker. Tail Workers are not yet supported for Workers with assets.]`
 			);
 		});
+
+		it("should error if --experimental-assets and --remote are used together", async () => {
+			fs.openSync("public", "w");
+			await expect(
+				runWrangler("dev --experimental-assets public --remote")
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: Cannot use Experimental Assets in remote mode. Workers with assets are only supported in local mode.]`
+			);
+		});
+
+		it("should error if config.experimental_assets and --remote are used together", async () => {
+			writeWranglerToml({
+				experimental_assets: { directory: "./public" },
+			});
+			fs.openSync("public", "w");
+			await expect(
+				runWrangler("dev --remote")
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: Cannot use Experimental Assets in remote mode. Workers with assets are only supported in local mode.]`
+			);
+		});
 	});
 
 	describe("--inspect", () => {
