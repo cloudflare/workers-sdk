@@ -23,6 +23,8 @@ jobs:
         node: ["18"]
     runs-on: ${{ matrix.os }}
     steps:
+      - run: echo repo owner ${{ github.repository_owner }}
+      - run: echo head ${{ github.event.pull_request.head.repo.owner.login }}
       - name: Checkout Repo
         uses: actions/checkout@v4
         with:
