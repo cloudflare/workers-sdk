@@ -39,6 +39,7 @@ export async function verifyWorkerMatchesCITag(
 			`/accounts/${accountId}/workers/services/${workerName}`
 		);
 		tag = worker.default_environment.script.tag;
+		logger.debug(`API returned with tag: ${tag} for worker: ${workerName}`);
 	} catch (e) {
 		logger.debug(e);
 		// code: 10090, message: workers.api.error.service_not_found
