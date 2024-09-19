@@ -4555,7 +4555,7 @@ addEventListener('fetch', event => {});`
 			`);
 		});
 
-		it("should warn if it is going to upload a _worker.js file as an asset", async () => {
+		it("should error if it is going to upload a _worker.js file as an asset", async () => {
 			const assets = [
 				{ filePath: "_worker.js", content: "// some secret server-side code." },
 			];
@@ -4576,31 +4576,16 @@ addEventListener('fetch', event => {});`
 				},
 				expectedType: "none",
 			});
-			await runWrangler("deploy --config some/path/wrangler.toml");
-			expect(bodies.length).toBe(1);
-			expect(bodies[0]).toMatchInlineSnapshot(`
-				Object {
-				  "manifest": Object {
-				    "/_worker.js": Object {
-				      "hash": "266570622a24a5fb8913d53fd3ac8562",
-				      "size": 32,
-				    },
-				  },
-				}
-			`);
-			expect(std.warn).toMatchInlineSnapshot(`
-				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mUploading Pages _worker.js code as an asset.[0m
-
-				  This could expose your private server-side code to the public Internet. Is this intended?
-				  If not, either remove this file or add an \\".assetsignore\\" file containing \\"_worker.js\\" to avoid
-				  uploading this.
-				  You can add an empty \\".assetsignore\\" file to hide this warning.
-
-				"
+			await expect(runWrangler("deploy --config some/path/wrangler.toml"))
+				.rejects.toThrowErrorMatchingInlineSnapshot(`
+				[Error: Uploading a Pages _worker.js file as an asset.
+				This could expose your private server-side code to the public Internet. Is this intended?
+				If you do not want to upload this file, either remove it or add an ".assetsignore" file, to the root of your asset directory, containing "_worker.js" to avoid uploading.
+				If you do want to upload this file, you can add an empty ".assetsignore" file, to the root of your asset directory, to hide this error.]
 			`);
 		});
 
-		it("should warn (once) if it is going to upload a _worker.js folder as an asset", async () => {
+		it("should error if it is going to upload a _worker.js directory as an asset", async () => {
 			const assets = [
 				{
 					filePath: "_worker.js/index.js",
@@ -4628,35 +4613,16 @@ addEventListener('fetch', event => {});`
 				},
 				expectedType: "none",
 			});
-			await runWrangler("deploy --config some/path/wrangler.toml");
-			expect(bodies.length).toBe(1);
-			expect(bodies[0]).toMatchInlineSnapshot(`
-				Object {
-				  "manifest": Object {
-				    "/_worker.js/dep.js": Object {
-				      "hash": "266570622a24a5fb8913d53fd3ac8562",
-				      "size": 32,
-				    },
-				    "/_worker.js/index.js": Object {
-				      "hash": "266570622a24a5fb8913d53fd3ac8562",
-				      "size": 32,
-				    },
-				  },
-				}
-			`);
-			expect(std.warn).toMatchInlineSnapshot(`
-				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mUploading Pages _worker.js code as an asset.[0m
-
-				  This could expose your private server-side code to the public Internet. Is this intended?
-				  If not, either remove this file or add an \\".assetsignore\\" file containing \\"_worker.js\\" to avoid
-				  uploading this.
-				  You can add an empty \\".assetsignore\\" file to hide this warning.
-
-				"
+			await expect(runWrangler("deploy --config some/path/wrangler.toml"))
+				.rejects.toThrowErrorMatchingInlineSnapshot(`
+				[Error: Uploading a Pages _worker.js file as an asset.
+				This could expose your private server-side code to the public Internet. Is this intended?
+				If you do not want to upload this file, either remove it or add an ".assetsignore" file, to the root of your asset directory, containing "_worker.js" to avoid uploading.
+				If you do want to upload this file, you can add an empty ".assetsignore" file, to the root of your asset directory, to hide this error.]
 			`);
 		});
 
-		it("should not warn if it is going to upload a _worker.js file as an asset and there is an .assetsignore file", async () => {
+		it("should not error if it is going to upload a _worker.js file as an asset and there is an .assetsignore file", async () => {
 			const assets = [
 				{ filePath: ".assetsignore", content: "" },
 				{ filePath: "_worker.js", content: "// some secret server-side code." },
@@ -4693,7 +4659,7 @@ addEventListener('fetch', event => {});`
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should not warn if it is going to upload a _worker.js file that is not at the root of the asset directory", async () => {
+		it("should not error if it is going to upload a _worker.js file that is not at the root of the asset directory", async () => {
 			const assets = [
 				{
 					filePath: "foo/_worker.js",

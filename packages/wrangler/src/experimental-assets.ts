@@ -227,8 +227,6 @@ export const buildAssetManifest = async (dir: string) => {
 	let counter = 0;
 
 	const ignoreFn = await createAssetIgnoreFunction(dir);
-	const warnOnLegacyPagesWorkerJSAsset =
-		createWarnOnLegacyPagesWorkerJSAssetFn();
 
 	await Promise.all(
 		files.map(async (relativeFilepath) => {
@@ -238,7 +236,7 @@ export const buildAssetManifest = async (dir: string) => {
 				return;
 			}
 
-			warnOnLegacyPagesWorkerJSAsset(relativeFilepath, !!ignoreFn);
+			errorOnLegacyPagesWorkerJSAsset(relativeFilepath, !!ignoreFn);
 
 			const filepath = path.join(dir, relativeFilepath);
 			const filestat = await stat(filepath);
@@ -444,17 +442,24 @@ async function createAssetIgnoreFunction(dir: string) {
 /**
  * Creates a function that logs a warning (only once) if the project has no `.assetsIgnore` file and is uploading _worker.js code as an asset.
  */
-function createWarnOnLegacyPagesWorkerJSAssetFn() {
-	let hasWarned = false;
-	return (file: string, hasAssetsIgnoreFile: boolean) => {
-		if (!hasWarned && file.startsWith("_worker.js") && !hasAssetsIgnoreFile) {
-			hasWarned = true;
-			logger.warn(dedent`
-			Uploading Pages _worker.js code as an asset.
+function errorOnLegacyPagesWorkerJSAsset(
+	file: string,
+	hasAssetsIgnoreFile: boolean
+) {
+	if (!hasAssetsIgnoreFile) {
+		const workerJsType: "file" | "directory" | null =
+			file === "_worker.js"
+				? "file"
+				: file.startsWith("_worker.js")
+					? "directory"
+					: null;
+		if (workerJsType !== null) {
+			throw new UserError(dedent`
+			Uploading a Pages _worker.js ${workerJsType} as an asset.
 			This could expose your private server-side code to the public Internet. Is this intended?
-			If not, either remove this file or add an "${CF_ASSETS_IGNORE_FILENAME}" file containing "_worker.js" to avoid uploading this.
-			You can add an empty "${CF_ASSETS_IGNORE_FILENAME}" file to hide this warning.
+			If you do not want to upload this ${workerJsType}, either remove it or add an "${CF_ASSETS_IGNORE_FILENAME}" file, to the root of your asset directory, containing "_worker.js" to avoid uploading.
+			If you do want to upload this ${workerJsType}, you can add an empty "${CF_ASSETS_IGNORE_FILENAME}" file, to the root of your asset directory, to hide this error.
 		`);
 		}
-	};
+	}
 }
