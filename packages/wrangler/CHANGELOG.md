@@ -1,5 +1,22 @@
 # wrangler
 
+## 3.78.6
+
+### Patch Changes
+
+- [#6743](https://github.com/cloudflare/workers-sdk/pull/6743) [`b45e326`](https://github.com/cloudflare/workers-sdk/commit/b45e32695cc1b4d5c5fb84384cff30a15f744bb3) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: ability to build tricky Node.js compat scenario Workers
+
+  Adds support for non-default build conditions and platform via the WRANGLER_BUILD_CONDITIONS and WRANGLER_BUILD_PLATFORM flags.
+
+  Fixes https://github.com/cloudflare/workers-sdk/issues/6742
+
+- [#6776](https://github.com/cloudflare/workers-sdk/pull/6776) [`02de103`](https://github.com/cloudflare/workers-sdk/commit/02de103435689c552e231a2ae2249adeb5f60a8b) Thanks [@zebp](https://github.com/zebp)! - fix: disable observability on deploy if not explicitly defined in config
+
+  When deploying a Worker that has observability enabled in the deployed version but not specified in the `wrangler.toml` Wrangler will now set observability to disabled for the new version to match the `wrangler.toml` as the source of truth.
+
+- Updated dependencies [[`2ddbb65`](https://github.com/cloudflare/workers-sdk/commit/2ddbb65033e88dfc2127a093fc894ac91bd96369)]:
+  - miniflare@3.20240909.4
+
 ## 3.78.5
 
 ### Patch Changes
