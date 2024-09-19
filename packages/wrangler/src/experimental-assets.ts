@@ -236,14 +236,14 @@ export const buildAssetManifest = async (dir: string) => {
 				return;
 			}
 
-			errorOnLegacyPagesWorkerJSAsset(relativeFilepath, !!ignoreFn);
-
 			const filepath = path.join(dir, relativeFilepath);
 			const filestat = await stat(filepath);
 
 			if (filestat.isSymbolicLink() || filestat.isDirectory()) {
 				return;
 			} else {
+				errorOnLegacyPagesWorkerJSAsset(relativeFilepath, !!ignoreFn);
+
 				if (counter >= MAX_ASSET_COUNT) {
 					throw new UserError(
 						`Maximum number of assets exceeded.\n` +

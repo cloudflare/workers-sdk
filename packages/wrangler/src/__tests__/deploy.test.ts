@@ -4615,10 +4615,10 @@ addEventListener('fetch', event => {});`
 			});
 			await expect(runWrangler("deploy --config some/path/wrangler.toml"))
 				.rejects.toThrowErrorMatchingInlineSnapshot(`
-				[Error: Uploading a Pages _worker.js file as an asset.
+				[Error: Uploading a Pages _worker.js directory as an asset.
 				This could expose your private server-side code to the public Internet. Is this intended?
-				If you do not want to upload this file, either remove it or add an ".assetsignore" file, to the root of your asset directory, containing "_worker.js" to avoid uploading.
-				If you do want to upload this file, you can add an empty ".assetsignore" file, to the root of your asset directory, to hide this error.]
+				If you do not want to upload this directory, either remove it or add an ".assetsignore" file, to the root of your asset directory, containing "_worker.js" to avoid uploading.
+				If you do want to upload this directory, you can add an empty ".assetsignore" file, to the root of your asset directory, to hide this error.]
 			`);
 		});
 
