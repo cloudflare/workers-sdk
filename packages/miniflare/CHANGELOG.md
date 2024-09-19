@@ -1,5 +1,11 @@
 # miniflare
 
+## 3.20240909.4
+
+### Patch Changes
+
+- [#6736](https://github.com/cloudflare/workers-sdk/pull/6736) [`2ddbb65`](https://github.com/cloudflare/workers-sdk/commit/2ddbb65033e88dfc2127a093fc894ac91bd96369) Thanks [@emily-shen](https://github.com/emily-shen)! - fix: reflect file changes when using dev with workers + assets
+
 ## 3.20240909.3
 
 ### Patch Changes

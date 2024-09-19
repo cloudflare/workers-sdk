@@ -1,5 +1,39 @@
 # create-cloudflare
 
+## 2.27.3
+
+### Patch Changes
+
+- [#6536](https://github.com/cloudflare/workers-sdk/pull/6536) [`baa29db`](https://github.com/cloudflare/workers-sdk/commit/baa29dbd365c33c0740339caff7bd07a9fb161b5) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From   | To     |
+  | --------------- | ------ | ------ |
+  | @angular/create | 18.1.4 | 18.2.0 |
+
+- [#6766](https://github.com/cloudflare/workers-sdk/pull/6766) [`fe0253d`](https://github.com/cloudflare/workers-sdk/commit/fe0253d34c69de72baf634b97abd5ab2ab075375) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency   | From   | To     |
+  | ------------ | ------ | ------ |
+  | create-remix | 2.11.1 | 2.12.0 |
+
+- [#6755](https://github.com/cloudflare/workers-sdk/pull/6755) [`a602de0`](https://github.com/cloudflare/workers-sdk/commit/a602de088c1b450ea62e84d48df7189f2443f127) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - fix: add missing `nodejs_compat` flag to c3 qwik template
+
+  The c3 qwik template doesn't include the `nodejs_compat` but qwik seems to be using
+  AsyncLocalStorage, so newly created applications do display a warning regarding it
+  missing, fix the above issue by adding the missing compat flag
+
+- [#6755](https://github.com/cloudflare/workers-sdk/pull/6755) [`a602de0`](https://github.com/cloudflare/workers-sdk/commit/a602de088c1b450ea62e84d48df7189f2443f127) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency  | From  | To    |
+  | ----------- | ----- | ----- |
+  | create-qwik | 1.5.7 | 1.9.0 |
+
 ## 2.27.2
 
 ### Patch Changes
