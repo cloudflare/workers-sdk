@@ -12,6 +12,10 @@ export async function verifyWorkerMatchesCITag(
 ) {
 	const matchTag = getCIMatchTag();
 
+	logger.debug(
+		`Starting verifyWorkerMatchesCITag() with tag: ${matchTag}, name: ${workerName}`
+	);
+
 	// If no tag is provided through the environment, nothing needs to be verified
 	if (!matchTag) {
 		logger.debug(
