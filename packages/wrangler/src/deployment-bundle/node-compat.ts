@@ -107,7 +107,7 @@ export function getNodeCompatMode(
 
 	if (mode === "legacy") {
 		logger.warn(
-			"Enabling Wrangler compile-time Node.js compatibility polyfill mode for builtins and globals. This is experimental and has serious tradeoffs."
+			"You are using `node_compat`, which is a legacy Node.js compatability option. Instead, use the `nodejs_compat` compatibility flag. This includes the functionality from legacy `node_compat` polyfills and natively implemented Node.js APIs."
 		);
 	}
 
