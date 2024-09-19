@@ -4555,6 +4555,183 @@ addEventListener('fetch', event => {});`
 			`);
 		});
 
+		it("should warn if it is going to upload a _worker.js file as an asset", async () => {
+			const assets = [
+				{ filePath: "_worker.js", content: "// some secret server-side code." },
+			];
+			writeAssets(assets, "some/path/assets");
+			writeWranglerToml(
+				{
+					experimental_assets: { directory: "assets" },
+				},
+				"some/path/wrangler.toml"
+			);
+			const bodies: AssetManifest[] = [];
+			await mockAUSRequest(bodies);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedExperimentalAssets: {
+					jwt: "<<aus-completion-token>>",
+					config: {},
+				},
+				expectedType: "none",
+			});
+			await runWrangler("deploy --config some/path/wrangler.toml");
+			expect(bodies.length).toBe(1);
+			expect(bodies[0]).toMatchInlineSnapshot(`
+				Object {
+				  "manifest": Object {
+				    "/_worker.js": Object {
+				      "hash": "266570622a24a5fb8913d53fd3ac8562",
+				      "size": 32,
+				    },
+				  },
+				}
+			`);
+			expect(std.warn).toMatchInlineSnapshot(`
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mUploading Pages _worker.js code as an asset.[0m
+
+				  This could expose your private server-side code to the public Internet. Is this intended?
+				  If not, either remove this file or add an \\".assetsignore\\" file containing \\"_worker.js\\" to avoid
+				  uploading this.
+				  You can add an empty \\".assetsignore\\" file to hide this warning.
+
+				"
+			`);
+		});
+
+		it("should warn (once) if it is going to upload a _worker.js folder as an asset", async () => {
+			const assets = [
+				{
+					filePath: "_worker.js/index.js",
+					content: "// some secret server-side code.",
+				},
+				{
+					filePath: "_worker.js/dep.js",
+					content: "// some secret server-side code.",
+				},
+			];
+			writeAssets(assets, "some/path/assets");
+			writeWranglerToml(
+				{
+					experimental_assets: { directory: "assets" },
+				},
+				"some/path/wrangler.toml"
+			);
+			const bodies: AssetManifest[] = [];
+			await mockAUSRequest(bodies);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedExperimentalAssets: {
+					jwt: "<<aus-completion-token>>",
+					config: {},
+				},
+				expectedType: "none",
+			});
+			await runWrangler("deploy --config some/path/wrangler.toml");
+			expect(bodies.length).toBe(1);
+			expect(bodies[0]).toMatchInlineSnapshot(`
+				Object {
+				  "manifest": Object {
+				    "/_worker.js/dep.js": Object {
+				      "hash": "266570622a24a5fb8913d53fd3ac8562",
+				      "size": 32,
+				    },
+				    "/_worker.js/index.js": Object {
+				      "hash": "266570622a24a5fb8913d53fd3ac8562",
+				      "size": 32,
+				    },
+				  },
+				}
+			`);
+			expect(std.warn).toMatchInlineSnapshot(`
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mUploading Pages _worker.js code as an asset.[0m
+
+				  This could expose your private server-side code to the public Internet. Is this intended?
+				  If not, either remove this file or add an \\".assetsignore\\" file containing \\"_worker.js\\" to avoid
+				  uploading this.
+				  You can add an empty \\".assetsignore\\" file to hide this warning.
+
+				"
+			`);
+		});
+
+		it("should not warn if it is going to upload a _worker.js file as an asset and there is an .assetsignore file", async () => {
+			const assets = [
+				{ filePath: ".assetsignore", content: "" },
+				{ filePath: "_worker.js", content: "// some secret server-side code." },
+			];
+			writeAssets(assets, "some/path/assets");
+			writeWranglerToml(
+				{
+					experimental_assets: { directory: "assets" },
+				},
+				"some/path/wrangler.toml"
+			);
+			const bodies: AssetManifest[] = [];
+			await mockAUSRequest(bodies);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedExperimentalAssets: {
+					jwt: "<<aus-completion-token>>",
+					config: {},
+				},
+				expectedType: "none",
+			});
+			await runWrangler("deploy --config some/path/wrangler.toml");
+			expect(bodies.length).toBe(1);
+			expect(bodies[0]).toMatchInlineSnapshot(`
+				Object {
+				  "manifest": Object {
+				    "/_worker.js": Object {
+				      "hash": "266570622a24a5fb8913d53fd3ac8562",
+				      "size": 32,
+				    },
+				  },
+				}
+			`);
+			expect(std.warn).toMatchInlineSnapshot(`""`);
+		});
+
+		it("should not warn if it is going to upload a _worker.js file that is not at the root of the asset directory", async () => {
+			const assets = [
+				{
+					filePath: "foo/_worker.js",
+					content: "// some secret server-side code.",
+				},
+			];
+			writeAssets(assets, "some/path/assets");
+			writeWranglerToml(
+				{
+					experimental_assets: { directory: "assets" },
+				},
+				"some/path/wrangler.toml"
+			);
+			const bodies: AssetManifest[] = [];
+			await mockAUSRequest(bodies);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedExperimentalAssets: {
+					jwt: "<<aus-completion-token>>",
+					config: {},
+				},
+				expectedType: "none",
+			});
+			await runWrangler("deploy --config some/path/wrangler.toml");
+			expect(bodies.length).toBe(1);
+			expect(bodies[0]).toMatchInlineSnapshot(`
+				Object {
+				  "manifest": Object {
+				    "/foo/_worker.js": Object {
+				      "hash": "266570622a24a5fb8913d53fd3ac8562",
+				      "size": 32,
+				    },
+				  },
+				}
+			`);
+			expect(std.warn).toMatchInlineSnapshot(`""`);
+		});
+
 		it("should resolve assets directory relative to cwd if using cli", async () => {
 			const assets = [{ filePath: "file-1.txt", content: "Content of file-1" }];
 			writeAssets(assets, "some/path/assets");
