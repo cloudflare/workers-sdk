@@ -92,7 +92,7 @@ jobs:
         run: node -r esbuild-register tools/deployments/validate-changesets.ts
 
   fixtures:
-    timeout-minutes: 60
+    timeout-minutes: 30
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}-${{ matrix.filter }}-test
       cancel-in-progress: true
@@ -147,7 +147,7 @@ jobs:
           path: ${{ runner.temp }}/test-report/
 
   test:
-    timeout-minutes: 60
+    timeout-minutes: 30
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}-${{ matrix.filter }}-test
       cancel-in-progress: true
