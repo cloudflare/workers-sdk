@@ -8,3 +8,8 @@ e2e:
 skip-pr-description-validation:
   - all:
       - head-branch: "changeset-release/main"
+
+fixtures:
+  - all:
+      - changed-files:
+          - any-glob-to-any-file: "fixtures/**/*"
