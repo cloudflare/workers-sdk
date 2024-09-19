@@ -1,4 +1,4 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 	<head>
 		<meta charset="UTF-8" />
@@ -7,8 +7,6 @@
 	</head>
 	<body>
 		<h1 id="heading"></h1>
-		<button id="button">Fetch a random UUID</button>
-		<div id="random"></div>
 		<script>
 			fetch('/message')
 				.then((resp) => resp.text())
@@ -16,16 +14,6 @@
 					const h1 = document.getElementById('heading');
 					h1.textContent = text;
 				});
-
-			const button = document.getElementById("button");
-			button.addEventListener("click", () => {
-				fetch('/random')
-					.then((resp) => resp.text())
-					.then((text) => {
-						const random = document.getElementById('random');
-						random.textContent = text;
-					});
-			});
 		</script>
 	</body>
 </html>
