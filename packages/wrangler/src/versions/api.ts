@@ -125,7 +125,7 @@ export async function createDeployment(
 	);
 }
 
-type NonVersionedScriptSettings = {
+export type NonVersionedScriptSettings = {
 	logpush: boolean;
 	tail_consumers: TailConsumer[];
 	observability: Observability;
