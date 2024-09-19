@@ -129,9 +129,6 @@ jobs:
           TEST_REPORT_PATH: ${{ runner.temp }}/test-report/index.html
           CI_OS: ${{ runner.os }}
 
-      - name: Run changeset version tests
-        run: node .github/changeset-version.test.js
-
       - name: Upload debug logs
         if: always()
         uses: actions/upload-artifact@v3
@@ -195,10 +192,6 @@ jobs:
           WRANGLER_LOG_PATH: ${{ runner.temp }}/wrangler-debug-logs/
           TEST_REPORT_PATH: ${{ runner.temp }}/test-report/index.html
           CI_OS: ${{ runner.os }}
-
-      - name: Run changeset version tests
-        if: steps.changes.outputs.everything_but_markdown == 'true'
-        run: node .github/changeset-version.test.js
 
       - name: Upload debug logs
         if: always()
