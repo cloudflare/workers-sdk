@@ -1,9 +1,10 @@
 import { normalizeOutput } from "../../../e2e/helpers/normalize";
 import {
-	COMMAND_DEFINITIONS,
 	defineAlias,
 	defineCommand,
 	defineNamespace,
+	DefinitionTreeNode,
+	DefinitionTreeRoot,
 } from "../../core/define-command";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { runInTempDir } from "../helpers/run-in-tmp";
@@ -13,18 +14,14 @@ describe("Command Registration", () => {
 	runInTempDir();
 	const std = mockConsoleMethods();
 
-	let originalDefinitions: typeof COMMAND_DEFINITIONS = [];
+	let originalDefinitions: [string, DefinitionTreeNode][];
 	beforeAll(() => {
-		originalDefinitions = COMMAND_DEFINITIONS.slice();
+		originalDefinitions = [...DefinitionTreeRoot.subtree.entries()];
 	});
 
 	beforeEach(() => {
 		// resets the commands definitions so the tests do not conflict with eachother
-		COMMAND_DEFINITIONS.splice(
-			0,
-			COMMAND_DEFINITIONS.length,
-			...originalDefinitions
-		);
+		DefinitionTreeRoot.subtree = new Map(originalDefinitions);
 
 		// To make these tests less verbose, we will define
 		// a bunch of commands that *use* all features
@@ -165,9 +162,6 @@ describe("Command Registration", () => {
 	test("displays commands in top-level --help", async () => {
 		await runWrangler("--help");
 
-		// TODO: fix ordering in top-level --help output
-		//     The current ordering is hackily built on top of yargs default output
-		//     This abstraction will enable us to completely customise the --help output
 		expect(std.out).toMatchInlineSnapshot(`
 			"wrangler
 
@@ -331,9 +325,6 @@ describe("Command Registration", () => {
 		defineAlias({
 			command: "wrangler my-test-alias",
 			aliasOf: "wrangler my-test-command",
-			metadata: {
-				hidden: false,
-			},
 		});
 
 		await runWrangler("my-test-alias --help");
@@ -342,7 +333,9 @@ describe("Command Registration", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 			"wrangler my-test-alias [pos] [posNum]
 
-			Alias for \\"wrangler my-test-command\\". My test command
+			My test command
+
+			Alias for \\"wrangler my-test-command\\".
 
 			POSITIONALS
 			  pos  [string]
@@ -383,7 +376,7 @@ describe("Command Registration", () => {
 
 		expect(std.out).toMatchInlineSnapshot(`"Ran command"`);
 		expect(normalizeOutput(std.warn)).toMatchInlineSnapshot(
-			`"▲ [WARNING] 🚧 \`wrangler alpha-command\` is a alpha command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose"`
+			`"▲ [WARNING] 🚧 \`wrangler alpha-command\` is an alpha command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose"`
 		);
 	});
 	test("auto log deprecation message", async () => {
@@ -436,36 +429,32 @@ describe("Command Registration", () => {
 
 	describe("registration errors", () => {
 		test("throws upon duplicate command definition", async () => {
-			defineCommand({
-				command: "wrangler my-test-command",
-				metadata: {
-					description: "",
-					owner: "Workers: Authoring and Testing",
-					status: "stable",
-				},
-				args: {},
-				handler() {},
-			});
-
-			await expect(
-				runWrangler("my-test-command")
-			).rejects.toMatchInlineSnapshot(
+			await expect(() => {
+				defineCommand({
+					command: "wrangler my-test-command",
+					metadata: {
+						description: "",
+						owner: "Workers: Authoring and Testing",
+						status: "stable",
+					},
+					args: {},
+					handler() {},
+				});
+			}).toThrowErrorMatchingInlineSnapshot(
 				`[Error: Duplicate definition for "wrangler my-test-command"]`
 			);
 		});
 		test("throws upon duplicate namespace definition", async () => {
-			defineNamespace({
-				command: "wrangler one two",
-				metadata: {
-					description: "",
-					owner: "Workers: Authoring and Testing",
-					status: "stable",
-				},
-			});
-
-			await expect(
-				runWrangler("my-test-command")
-			).rejects.toMatchInlineSnapshot(
+			await expect(() => {
+				defineNamespace({
+					command: "wrangler one two",
+					metadata: {
+						description: "",
+						owner: "Workers: Authoring and Testing",
+						status: "stable",
+					},
+				});
+			}).toThrowErrorMatchingInlineSnapshot(
 				`[Error: Duplicate definition for "wrangler one two"]`
 			);
 		});
@@ -505,7 +494,7 @@ describe("Command Registration", () => {
 			await expect(
 				runWrangler("my-test-command")
 			).rejects.toMatchInlineSnapshot(
-				`[Error: Alias of alias encountered greater than 5 hops]`
+				`[Error: Missing definition for "wrangler undefined-command" (resolving from "wrangler my-alias-command")]`
 			);
 		});
 	});

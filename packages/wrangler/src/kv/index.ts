@@ -2,11 +2,7 @@ import { Blob } from "node:buffer";
 import { arrayBuffer } from "node:stream/consumers";
 import { StringDecoder } from "node:string_decoder";
 import { readConfig } from "../config";
-import {
-	defineAlias,
-	defineCommand,
-	defineNamespace,
-} from "../core/define-command";
+import { defineAlias, defineCommand, defineNamespace } from "../core";
 import { confirm } from "../dialogs";
 import { UserError } from "../errors";
 import { CommandLineArgsError, demandOneOfOption } from "../index";
@@ -40,6 +36,7 @@ defineAlias({
 		deprecated: true,
 		deprecatedMessage:
 			"The `wrangler kv:key` command is deprecated and will be removed in a future major version. Please use `wrangler kv key` instead which behaves the same.",
+		hidden: true,
 	},
 });
 defineAlias({
@@ -49,6 +46,7 @@ defineAlias({
 		deprecated: true,
 		deprecatedMessage:
 			"The `wrangler kv:namespace` command is deprecated and will be removed in a future major version. Please use `wrangler kv namespace` instead which behaves the same.",
+		hidden: true,
 	},
 });
 defineAlias({
@@ -58,6 +56,7 @@ defineAlias({
 		deprecated: true,
 		deprecatedMessage:
 			"The `wrangler kv:bulk` command is deprecated and will be removed in a future major version. Please use `wrangler kv bulk` instead which behaves the same.",
+		hidden: true,
 	},
 });
 

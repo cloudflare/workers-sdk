@@ -1,211 +1,292 @@
-import { COMMAND_DEFINITIONS } from "./define-command";
-import { wrapDefinition } from "./wrap-command";
+import assert from "node:assert";
+import chalk from "chalk";
+import { fetchResult } from "../cfetch";
+import { readConfig } from "../config";
+import { FatalError, UserError } from "../errors";
+import { logger } from "../logger";
+import { printWranglerBanner } from "../update-check";
+import { CommandRegistrationError, DefinitionTreeRoot } from "./define-command";
 import type { CommonYargsArgv, SubHelp } from "../yargs-types";
 import type {
-	AliasDefinition,
 	Command,
 	CommandDefinition,
-	NamespaceDefinition,
+	DefinitionTreeNode,
+	HandlerArgs,
+	InternalDefinition,
+	NamedArgDefinitions,
 } from "./define-command";
 
-export class CommandRegistrationError extends Error {}
+const betaCmdColor = "#BD5B08";
 
 export function createCommandRegister(
 	yargs: CommonYargsArgv,
 	subHelp: SubHelp
 ) {
-	const tree = createCommandTree();
+	const tree = DefinitionTreeRoot.subtree;
+	const registeredNamespaces = new Set<string>();
 
 	return {
 		registerAll() {
 			for (const [segment, node] of tree.entries()) {
-				walkTreeAndRegister(segment, node, yargs, subHelp);
-				tree.delete(segment);
+				if (registeredNamespaces.has(segment)) {
+					continue;
+				}
+				registeredNamespaces.add(segment);
+				walkTreeAndRegister(
+					segment,
+					node,
+					yargs,
+					subHelp,
+					`wrangler ${segment}`
+				);
 			}
 		},
 		registerNamespace(namespace: string) {
+			if (registeredNamespaces.has(namespace)) {
+				return;
+			}
+
 			const node = tree.get(namespace);
 
-			if (!node) {
+			if (!node?.definition) {
 				throw new CommandRegistrationError(
-					`No definition found for namespace '${namespace}'`
+					`Missing namespace definition for 'wrangler ${namespace}'`
 				);
 			}
 
-			tree.delete(namespace);
-			walkTreeAndRegister(namespace, node, yargs, subHelp);
+			registeredNamespaces.add(namespace);
+			walkTreeAndRegister(
+				namespace,
+				node,
+				yargs,
+				subHelp,
+				`wrangler ${namespace}`
+			);
 		},
 	};
 }
 
-type DefinitionTreeNode = {
-	definition?: CommandDefinition | NamespaceDefinition | AliasDefinition;
-	subtree: DefinitionTree;
-};
-type DefinitionTree = Map<string, DefinitionTreeNode>;
-
-type ResolvedDefinitionTreeNode = {
-	definition?: CommandDefinition | NamespaceDefinition;
-	subtree: ResolvedDefinitionTree;
-};
-type ResolvedDefinitionTree = Map<string, ResolvedDefinitionTreeNode>;
-
-/**
- * Converts a flat list of COMMAND_DEFINITIONS into a tree of defintions
- * which can be passed to yargs builder api
- *
- * For example,
- *      wrangler dev
- *      wrangler deploy
- *      wrangler versions upload
- *      wrangler versions deploy
- *
- * Will be transformed into:
- *      wrangler
- *           dev
- *           deploy
- *           versions
- *               upload
- *               deploy
- */
-function createCommandTree() {
-	const root: DefinitionTreeNode = { subtree: new Map() };
-	const aliases = new Set<AliasDefinition>();
-
-	// STEP 1: Create tree from flat definitions array
-
-	for (const def of COMMAND_DEFINITIONS) {
-		const node = upsertNodeFor(def.command, root);
-
-		if (node.definition) {
-			throw new CommandRegistrationError(
-				`Duplicate definition for "${def.command}"`
-			);
-		}
-		node.definition = def;
-
-		if ("aliasOf" in def) {
-			aliases.add(def);
-		}
-	}
-
-	// STEP 2: Resolve all aliases to their real definitions
-
-	const MAX_HOPS = 5; // reloop to allow aliases of aliases (to avoid infinite loop, limit to 5 hops)
-	for (let hops = 0; hops < MAX_HOPS && aliases.size > 0; hops++) {
-		for (const def of aliases) {
-			const realNode = findNodeFor(def.aliasOf, root);
-			const real = realNode?.definition;
-			if (!real || "aliasOf" in real) {
-				continue;
-			}
-
-			const node = upsertNodeFor(def.command, root);
-
-			node.definition = {
-				...real,
-				command: def.command,
-				metadata: {
-					...real.metadata,
-					...def.metadata,
-					description:
-						def.metadata?.description ?? // use description override
-						`Alias for "${real.command}". ${real.metadata.description}`, // or add prefix to real description
-					hidden: def.metadata?.hidden ?? true, // hide aliases by default
-				},
-			};
-
-			node.subtree = realNode.subtree;
-
-			aliases.delete(def);
-		}
-	}
-
-	if (aliases.size > 0) {
-		throw new CommandRegistrationError(
-			`Alias of alias encountered greater than ${MAX_HOPS} hops`
-		);
-	}
-
-	// STEP 3: validate missing namespace definitions
-
-	for (const [command, node] of walk("wrangler", root)) {
-		if (!node.definition) {
-			throw new CommandRegistrationError(
-				`Missing namespace definition for '${command}'`
-			);
-		}
-	}
-
-	// STEP 4: return the resolved tree
-
-	return root.subtree as ResolvedDefinitionTree;
-}
-
 function walkTreeAndRegister(
 	segment: string,
-	{ definition, subtree }: ResolvedDefinitionTreeNode,
+	node: DefinitionTreeNode,
 	yargs: CommonYargsArgv,
-	subHelp: SubHelp
+	subHelp: SubHelp,
+	fullCommand: Command
 ) {
-	if (!definition) {
+	if (!node.definition) {
 		throw new CommandRegistrationError(
-			`Missing namespace definition for '${segment}'`
+			`Missing namespace definition for '${fullCommand}'`
 		);
 	}
 
-	// convert our definition into something we can pass to yargs.command
-	const def = wrapDefinition(definition);
+	const aliasOf = node.definition.type === "alias" && node.definition.aliasOf;
+	const { definition: def, subtree } = resolveDefinitionNode(node);
+
+	if (aliasOf) {
+		def.metadata.description += `\n\nAlias for "${aliasOf}".`;
+	}
+
+	if (def.metadata.deprecated) {
+		def.metadata.deprecatedMessage ??= `Deprecated: "${def.command}" is deprecated`;
+	}
+
+	if (def.metadata.status !== "stable") {
+		def.metadata.description += chalk.hex(betaCmdColor)(
+			` [${def.metadata.status}]`
+		);
+
+		const indefiniteArticle = "aeiou".includes(def.metadata.status[0])
+			? "an"
+			: "a";
+		def.metadata.statusMessage ??= `🚧 \`${def.command}\` is ${indefiniteArticle} ${def.metadata.status} command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose`;
+	}
+
+	if (def.type === "command") {
+		// inference from positionalArgs
+		const commandPositionalArgsSuffix = def.positionalArgs
+			?.map((key) => {
+				const { demandOption, array } = def.args[key];
+				return demandOption
+					? `<${key}${array ? ".." : ""}>` // <key> or <key..>
+					: `[${key}${array ? ".." : ""}]`; // [key] or [key..]
+			})
+			.join(" ");
+
+		if (commandPositionalArgsSuffix) {
+			segment += " " + commandPositionalArgsSuffix;
+		}
+	}
 
 	// register command
 	yargs.command(
-		segment + def.commandSuffix,
-		(def.hidden ? false : def.description) as string, // cast to satisfy typescript overload selection
-		(subYargs) => {
-			if (def.defineArgs) {
-				def.defineArgs(subYargs);
-			} else {
+		segment,
+		(def.metadata.hidden ? false : def.metadata.description) as string, // cast to satisfy typescript overload selection
+		function builder(subYargs) {
+			if (def.type === "command") {
+				yargs.options(def.args);
+
+				for (const key of def.positionalArgs ?? []) {
+					yargs.positional(key, def.args[key]);
+				}
+			} else if (def.type === "namespace") {
 				// this is our hacky way of printing --help text for incomplete commands
 				// eg `wrangler kv namespace` will run `wrangler kv namespace --help`
 				subYargs.command(subHelp);
 			}
 
 			for (const [nextSegment, nextNode] of subtree.entries()) {
-				walkTreeAndRegister(nextSegment, nextNode, subYargs, subHelp);
+				walkTreeAndRegister(
+					nextSegment,
+					nextNode,
+					subYargs,
+					subHelp,
+					`${fullCommand} ${nextSegment}`
+				);
 			}
 		},
-		def.handler // TODO: replace hacky subHelp with default handler impl (def.handler will be undefined for namespaces, so set default handler to print subHelp)
+		def.type === "command" ? createHandler(def) : undefined
 	);
 }
 
-// #region utils
-function upsertNodeFor(command: Command, root: DefinitionTreeNode) {
-	const segments = command.split(" ").slice(1); // eg. ["versions", "secret", "put"]
+function createHandler(def: CommandDefinition) {
+	return async function handler(args: HandlerArgs<NamedArgDefinitions>) {
+		// eslint-disable-next-line no-useless-catch
+		try {
+			if (def.behaviour?.printBanner !== false) {
+				await printWranglerBanner();
+			}
 
-	let node = root;
-	for (const segment of segments) {
-		const subtree = node.subtree;
-		let child = subtree.get(segment);
-		if (!child) {
-			child = {
-				definition: undefined,
-				subtree: new Map(),
-			};
-			subtree.set(segment, child);
+			if (def.metadata.deprecated) {
+				logger.warn(def.metadata.deprecatedMessage);
+			}
+			if (def.metadata.statusMessage) {
+				logger.warn(def.metadata.statusMessage);
+			}
+
+			// TODO(telemetry): send command started event
+
+			await def.validateArgs?.(args);
+
+			await def.handler(args, {
+				config: readConfig(args.config, args),
+				errors: { UserError, FatalError },
+				logger,
+				fetchResult,
+			});
+
+			// TODO(telemetry): send command completed event
+		} catch (err) {
+			// TODO(telemetry): send command errored event
+			throw err;
+		}
+	};
+}
+
+// #region utils
+
+/**
+ * Returns a non-alias (resolved) definition and subtree with inherited metadata values
+ *
+ * Inheriting metadata values means deprecated namespaces also automatically
+ * deprecates its subcommands unless the subcommand overrides it.
+ * The same inheritiance applies to deprecation-/status-messages, hidden, etc...
+ */
+function resolveDefinitionNode(
+	node: DefinitionTreeNode,
+	root = DefinitionTreeRoot
+) {
+	assert(node.definition);
+	const chain = resolveDefinitionChain(node.definition, root);
+
+	// get non-alias (resolved) definition
+	const resolvedDef = chain.find((def) => def.type !== "alias");
+	assert(resolvedDef);
+
+	// get subtree for the resolved node
+	const { subtree } =
+		node.definition.type !== "alias"
+			? node
+			: findNodeFor(resolvedDef.command, root) ?? node;
+
+	const definition: InternalDefinition = {
+		// take all properties from the resolved alias
+		...resolvedDef,
+		// keep the original command
+		command: node.definition.command,
+		// flatten metadata from entire chain (decreasing precedence)
+		metadata: Object.assign({}, ...chain.map((def) => def.metadata).reverse()),
+	};
+
+	return { definition, subtree };
+}
+
+/**
+ * Returns a list of definitions starting from `def`
+ *  walking "up" the tree to the `root` and hopping "across" the tree for aliases
+ *
+ * eg. `wrangler versions secret put` => `wrangler versions secret` => `wrangler versions`
+ * eg. `wrangler kv:key put` => `wrangler kv:key` => `wrangler kv key` => `wrangler kv`
+ */
+function resolveDefinitionChain(
+	def: InternalDefinition,
+	root = DefinitionTreeRoot
+) {
+	const chain: InternalDefinition[] = [];
+	const stringifyChain = (...extra: InternalDefinition[]) =>
+		[...chain, ...extra].map((def) => `"${def.command}"`).join(" => ");
+
+	while (true) {
+		if (chain.includes(def)) {
+			throw new CommandRegistrationError(
+				`Circular reference detected for alias definition: "${def.command}" (resolving from ${stringifyChain(def)})`
+			);
 		}
 
-		node = child;
-	}
+		chain.push(def);
 
-	return node;
+		const node =
+			def.type === "alias"
+				? findNodeFor(def.aliasOf, root)
+				: findParentFor(def.command, root);
+
+		if (node === root) {
+			return chain;
+		}
+
+		if (!node?.definition) {
+			throw new CommandRegistrationError(
+				`Missing definition for "${def.type === "alias" ? def.aliasOf : def.command}" (resolving from ${stringifyChain()})`
+			);
+		}
+
+		def = node.definition;
+	}
 }
-function findNodeFor(command: Command, root: DefinitionTreeNode) {
+
+/**
+ * Finds the parent node for a command by removing the last segment of the command and calling findNodeFor
+ *
+ * eg. findParentFor("wrangler kv key") => findNodeFor("wrangler kv")
+ */
+function findParentFor(command: Command, root = DefinitionTreeRoot) {
+	const parentCommand = command.split(" ").slice(0, -2).join(" ") as Command;
+
+	return findNodeFor(parentCommand, root);
+}
+
+/**
+ * Finds a node by segmenting the command and indexing through the subtrees.
+ *
+ *  eg. findNodeFor("wrangler versions secret put") => root.subtree.get("versions").subtree.get("secret").subtree.get("put")
+ *
+ * Returns `undefined` if the node does not exist.
+ */
+function findNodeFor(command: Command, root = DefinitionTreeRoot) {
 	const segments = command.split(" ").slice(1); // eg. ["versions", "secret", "put"]
 
 	let node = root;
 	for (const segment of segments) {
-		const subtree = node.subtree;
-		const child = subtree.get(segment);
+		const child = node.subtree.get(segment);
 		if (!child) {
 			return undefined;
 		}
@@ -215,13 +296,5 @@ function findNodeFor(command: Command, root: DefinitionTreeNode) {
 
 	return node;
 }
-function* walk(
-	command: Command,
-	parent: DefinitionTreeNode
-): IterableIterator<[Command, DefinitionTreeNode]> {
-	for (const [segment, node] of parent.subtree) {
-		yield [`${command} ${segment}`, node];
-		yield* walk(`${command} ${segment}`, node);
-	}
-}
+
 // #endregion
