@@ -165,7 +165,15 @@ jobs:
         with:
           fetch-depth: 0
 
+      - uses: dorny/paths-filter@v3
+        id: changes
+        with:
+          filters: |
+            everything_but_markdown:
+              - '!**/*.md'
+
       - name: Install Dependencies
+        if: steps.changes.outputs.everything_but_markdown == 'true'
         uses: ./.github/actions/install-dependencies
         with:
           turbo-api: ${{ secrets.TURBO_API }}
@@ -174,6 +182,7 @@ jobs:
           turbo-signature: ${{ secrets.TURBO_REMOTE_CACHE_SIGNATURE_KEY }}
 
       - name: Run tests
+        if: steps.changes.outputs.everything_but_markdown == 'true'
         run: pnpm run test:ci --concurrency 1 --filter=${{ matrix.filter }}
         env:
           TMP_CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -184,6 +193,7 @@ jobs:
           CI_OS: ${{ runner.os }}
 
       - name: Run changeset version tests
+        if: steps.changes.outputs.everything_but_markdown == 'true'
         run: node .github/changeset-version.test.js
 
       - name: Upload debug logs
