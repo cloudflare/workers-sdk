@@ -188,6 +188,7 @@ const walk = async (dir: string) => {
 	let counter = 0;
 	await Promise.all(
 		files.map(async (file) => {
+			/** absolute file path */
 			const filepath = path.join(dir, file);
 			const relativeFilepath = path.relative(dir, filepath);
 			const filestat = await fs.stat(filepath);
@@ -240,8 +241,7 @@ const walk = async (dir: string) => {
 				const [pathHash, contentHash] = await Promise.all([
 					hashPath(encodeFilePath(relativeFilepath, path.sep)),
 					hashPath(
-						encodeFilePath(relativeFilepath, path.sep) +
-							filestat.mtimeMs.toString()
+						encodeFilePath(filepath, path.sep) + filestat.mtimeMs.toString()
 					),
 				]);
 				manifest.push({

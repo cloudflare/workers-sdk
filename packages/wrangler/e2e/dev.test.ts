@@ -1044,12 +1044,13 @@ describe("watch mode", () => {
 						`,
 					"public/index.html": dedent`
 								<h1>Hello Workers + Assets</h1>`,
+				});
+				await helper.seed({
 					"public2/index.html": dedent`
 								<h1>Hola Workers + Assets</h1>`,
 					"public2/about/index.html": dedent`
 								<h1>Read more about Workers + Assets</h1>`,
 				});
-
 				const worker = helper.runLongLived(cmd);
 				const { url } = await worker.waitForReady();
 
