@@ -846,10 +846,38 @@ export async function startDev(args: StartDevOptions) {
 					logger.log(`${path.basename(config.configPath)} changed...`);
 
 					/*
+					 * If this is a Worker with assets, we want to enable switching
+					 * from assets only Worker to Worker with assets and vice versa
+					 * during local development. For that, we need to watch for changes
+					 * in the `wrangler.toml` file, specifically the `main` configuration
+					 * key, and re-asses the entry point every time.
+					 */
+					if (experimentalAssetsOptions?.directory) {
+						entry = await getEntry(
+							{
+								legacyAssets: args.legacyAssets,
+								script: args.script,
+								moduleRoot: args.moduleRoot,
+								experimentalAssets: args.experimentalAssets,
+							},
+							config,
+							"dev"
+						);
+
+						// this gets passed into the Dev React element, so ensure we don't
+						// block scope this var
+						experimentalAssetsOptions = processExperimentalAssetsArg(
+							args,
+							config
+						);
+					}
+
+					/*
 					 * Handle experimental assets watching on config file changes
 					 *
-					 * 1. if experimental assets was specified via CLI args, config file
-					 *    changes shouldn't affect anything
+					 * 1. if experimental assets was specified via CLI args, only config file
+					 *    changes related to `main` will matter. In this case, re-running
+					 *    `processExperimentalAssetsArg` is enough (see above)
 					 * 2. if experimental_assets was not specififed via the configuration
 					 *    file, but it is now, we should start watching the assets
 					 *    directory
@@ -859,13 +887,6 @@ export async function startDev(args: StartDevOptions) {
 					 */
 					if (experimentalAssetsOptions && !args.experimentalAssets) {
 						await assetsWatcher?.close();
-
-						// this gets passed into the Dev React element, so ensure we don't
-						// block scope this var
-						experimentalAssetsOptions = processExperimentalAssetsArg(
-							args,
-							config
-						);
 
 						if (experimentalAssetsOptions) {
 							assetsWatcher = watch(experimentalAssetsOptions.directory, {
@@ -887,8 +908,9 @@ export async function startDev(args: StartDevOptions) {
 			});
 		}
 
+		const devServerSettings = await validateDevServerSettings(args, config);
+		let { entry } = devServerSettings;
 		const {
-			entry,
 			upstreamProtocol,
 			host,
 			routes,
@@ -900,7 +922,7 @@ export async function startDev(args: StartDevOptions) {
 			localPersistencePath,
 			processEntrypoint,
 			additionalModules,
-		} = await validateDevServerSettings(args, config);
+		} = devServerSettings;
 
 		const nodejsCompatMode = getNodeCompatMode(
 			args.compatibilityFlags ?? config.compatibility_flags ?? [],

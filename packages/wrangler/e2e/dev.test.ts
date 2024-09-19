@@ -1087,6 +1087,110 @@ describe("watch mode", () => {
 					"<h1>Read more about Workers + Assets</h1>"
 				);
 			});
+
+			it(`supports switching from assets-only to Workers with assets during the current dev session`, async () => {
+				const helper = new WranglerE2ETestHelper();
+				await helper.seed({
+					"wrangler.toml": dedent`
+								name = "${workerName}"
+								compatibility_date = "2023-01-01"
+
+								[experimental_assets]
+								directory = "./public"
+						`,
+					"public/index.html": dedent`
+								<h1>Hello Workers + Assets</h1>`,
+				});
+				const worker = helper.runLongLived(cmd);
+				const { url } = await worker.waitForReady();
+
+				// verify response from Asset Worker
+				let { response } = await fetchWithETag(`${url}/index.html`, {});
+				expect(await response.text()).toBe("<h1>Hello Workers + Assets</h1>");
+
+				// verify no response from route that will be handled by the
+				// User Worker in the future
+				({ response } = await fetchWithETag(`${url}/hey`, {}));
+				expect(await response.status).toBe(404);
+
+				await helper.seed({
+					"wrangler.toml": dedent`
+							name = "${workerName}"
+							main = "src/index.ts"
+							compatibility_date = "2023-01-01"
+
+							[experimental_assets]
+							directory = "./public"
+					`,
+					"src/index.ts": dedent`
+						export default {
+							fetch(request) {
+								return new Response("Hello from user Worker!")
+							}
+						}`,
+				});
+
+				await worker.waitForReload();
+
+				({ response } = await fetchWithETag(`${url}/index.html`, {}));
+				expect(await response.text()).toBe("<h1>Hello Workers + Assets</h1>");
+
+				({ response } = await fetchWithETag(`${url}/hey`, {}));
+				expect(await response.text()).toBe("Hello from user Worker!");
+			});
+
+			it(`supports switching from Workers with assets to assets-only during the current dev session`, async () => {
+				const helper = new WranglerE2ETestHelper();
+				await helper.seed({
+					"wrangler.toml": dedent`
+							name = "${workerName}"
+							main = "src/index.ts"
+							compatibility_date = "2023-01-01"
+
+							[experimental_assets]
+							directory = "./public"
+					`,
+					"public/index.html": dedent`
+							<h1>Hello Workers + Assets</h1>`,
+					"src/index.ts": dedent`
+						export default {
+							fetch(request) {
+								return new Response("Hello from user Worker!")
+							}
+						}`,
+				});
+
+				const worker = helper.runLongLived(cmd);
+				const { url } = await worker.waitForReady();
+
+				// verify response from Asset Worker
+				let { response } = await fetchWithETag(`${url}/index.html`, {});
+				expect(await response.text()).toBe("<h1>Hello Workers + Assets</h1>");
+
+				// verify response from User Worker
+				({ response } = await fetchWithETag(`${url}/hey`, {}));
+				expect(await response.text()).toBe("Hello from user Worker!");
+
+				await helper.seed({
+					"wrangler.toml": dedent`
+								name = "${workerName}"
+								compatibility_date = "2023-01-01"
+
+								[experimental_assets]
+								directory = "./public"
+						`,
+				});
+
+				await worker.waitForReload();
+
+				// verify we still get the correct response from Asset Worker
+				({ response } = await fetchWithETag(`${url}/index.html`, {}));
+				expect(await response.text()).toBe("<h1>Hello Workers + Assets</h1>");
+
+				// verify we no longer get a response from the User Worker
+				({ response } = await fetchWithETag(`${url}/hey`, {}));
+				expect(await response.status).toBe(404);
+			});
 		}
 	);
 
@@ -1175,6 +1279,103 @@ describe("watch mode", () => {
 				}
 			));
 			expect(response.status).toBe(404);
+		});
+
+		it(`supports switching from assets-only to Workers with assets during the current dev session`, async () => {
+			const helper = new WranglerE2ETestHelper();
+			await helper.seed({
+				"wrangler.toml": dedent`
+							name = "${workerName}"
+							compatibility_date = "2023-01-01"
+					`,
+				"dist/index.html": dedent`
+					<h1>Hello Workers + Assets</h1>`,
+				"src/index.ts": dedent`
+					export default {
+						fetch(request) {
+							return new Response("Hello from user Worker!")
+						}
+					}`,
+			});
+			const worker = helper.runLongLived(cmd);
+			const { url } = await worker.waitForReady();
+
+			// verify response from Asset Worker
+			let { response } = await fetchWithETag(`${url}/index.html`, {});
+			expect(await response.text()).toBe("<h1>Hello Workers + Assets</h1>");
+			expect(await response.status).toBe(200);
+
+			// verify no response from route that will be handled by the
+			// User Worker in the future
+			({ response } = await fetchWithETag(`${url}/hey`, {}));
+			expect(await response.status).toBe(404);
+
+			await helper.seed({
+				"wrangler.toml": dedent`
+						name = "${workerName}"
+						main = "src/index.ts"
+						compatibility_date = "2023-01-01"
+				`,
+			});
+
+			await worker.waitForReload();
+
+			({ response } = await fetchWithETag(`${url}/index.html`, {}));
+			expect(await response.text()).toBe("<h1>Hello Workers + Assets</h1>");
+			expect(await response.status).toBe(200);
+
+			({ response } = await fetchWithETag(`${url}/hey`, {}));
+			expect(await response.text()).toBe("Hello from user Worker!");
+			expect(await response.status).toBe(200);
+		});
+
+		it(`supports switching from Workers with assets to assets-only Workers during the current dev session`, async () => {
+			const helper = new WranglerE2ETestHelper();
+			await helper.seed({
+				"wrangler.toml": dedent`
+							name = "${workerName}"
+							main = "src/index.ts"
+							compatibility_date = "2023-01-01"
+					`,
+				"dist/index.html": dedent`
+					<h1>Hello Workers + Assets</h1>`,
+				"src/index.ts": dedent`
+					export default {
+						fetch(request) {
+							return new Response("Hello from user Worker!")
+						}
+					}`,
+			});
+			const worker = helper.runLongLived(cmd);
+			const { url } = await worker.waitForReady();
+
+			// verify response from Asset Worker
+			let { response } = await fetchWithETag(`${url}/index.html`, {});
+			expect(await response.text()).toBe("<h1>Hello Workers + Assets</h1>");
+			expect(await response.status).toBe(200);
+
+			// verify response from User Worker
+			({ response } = await fetchWithETag(`${url}/hey`, {}));
+			expect(await response.text()).toBe("Hello from user Worker!");
+			expect(await response.status).toBe(200);
+
+			await helper.seed({
+				"wrangler.toml": dedent`
+						name = "${workerName}"
+						compatibility_date = "2023-01-01"
+				`,
+			});
+
+			await worker.waitForReload();
+
+			({ response } = await fetchWithETag(`${url}/index.html`, {}));
+			// verify response from Asset
+			expect(await response.text()).toBe("<h1>Hello Workers + Assets</h1>");
+			expect(await response.status).toBe(200);
+
+			// verify no response from User Worker
+			({ response } = await fetchWithETag(`${url}/hey`, {}));
+			expect(await response.status).toBe(404);
 		});
 	});
 });
