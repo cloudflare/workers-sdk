@@ -3,12 +3,12 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import {
 	CONTENT_HASH_OFFSET,
-	encodeFilePath,
 	ENTRY_SIZE,
 	getContentType,
 	HEADER_SIZE,
 	MAX_ASSET_COUNT,
 	MAX_ASSET_SIZE,
+	normalizeFilePath,
 	PATH_HASH_OFFSET,
 	PATH_HASH_SIZE,
 } from "@cloudflare/workers-shared";

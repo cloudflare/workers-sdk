@@ -4427,11 +4427,11 @@ addEventListener('fetch', event => {});`
 			expect(manifestBodies.length).toBe(1);
 			expect(manifestBodies[0]).toEqual({
 				manifest: {
-					"/b%C3%A9%C3%ABp/boo%5Ep.txt": {
+					"/béëp/boo^p.txt": {
 						hash: "ff5016e92f039aa743a4ff7abb3180fa",
 						size: 17,
 					},
-					"/boop/file%231.txt": {
+					"/boop/file#1.txt": {
 						hash: "7574a8cd3094a050388ac9663af1c1d6",
 						size: 17,
 					},
