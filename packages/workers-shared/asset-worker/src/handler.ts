@@ -18,13 +18,23 @@ export const handleRequest = async (
 ) => {
 	const { pathname, search } = new URL(request.url);
 
-	const intent = await getIntent(pathname, configuration, exists);
+	const decoded = pathname
+		.split("/")
+		// except this needs to not decode %2F -> / specifically...
+		.map((x) => decodeURIComponent(x))
+		.join("/");
+	let intent = await getIntent(decoded, configuration, exists);
+
+	const encodedPath = pathname
+		.split("/")
+		.map((x) => encodeURIComponent(decodeURIComponent(x)))
+		.join("/");
+	intent ??= await getIntent(encodedPath, configuration, exists);
 
 	if (!intent) {
 		return new NotFoundResponse();
 	}
 
-	// if there was a POST etc. to a route without an asset
 	// this should be passed onto a user worker if one exists
 	// so prioritise returning a 404 over 405?
 	const method = request.method.toUpperCase();
@@ -38,21 +48,9 @@ export const handleRequest = async (
 		.split("/")
 		.map((x) => encodeURIComponent(decodeURIComponent(x)))
 		.join("/");
-	if (encodedDestination !== destination) {
-		const maybeRedirect = await safeRedirect(
-			intent.file,
-			encodedDestination,
-			configuration,
-			exists,
-			false
-		);
-		if (maybeRedirect) {
-			return new TemporaryRedirectResponse(maybeRedirect.redirect + search);
-		}
-	}
-
-	if (intent.redirect) {
-		return new TemporaryRedirectResponse(intent.redirect + search);
+	if (encodedDestination !== destination || intent.redirect) {
+		// just double encode if the matched file was already encoded
+		return new TemporaryRedirectResponse(encodedDestination + search);
 	}
 
 	if (!intent.asset) {
@@ -88,7 +86,7 @@ type Intent =
 	| { asset: null; redirect: string; file: string }
 	| null;
 
-export const getIntentForConfig = async (
+export const getIntent = async (
 	pathname: string,
 	configuration: Required<AssetConfig>,
 	exists: typeof EntrypointType.prototype.unstable_exists,
@@ -123,49 +121,6 @@ export const getIntentForConfig = async (
 			return htmlHandlingNone(pathname, configuration, exists);
 		}
 	}
-};
-
-export const getIntent = async (
-	pathname: string,
-	configuration: Required<AssetConfig>,
-	exists: typeof EntrypointType.prototype.unstable_exists,
-	skipRedirects = false
-): Promise<Intent> => {
-	// try exact path first
-	let intent = await getIntentForConfig(
-		pathname,
-		configuration,
-		exists,
-		skipRedirects
-	);
-
-	// try decoded path if the path has been encoded
-	if (pathname.includes("%")) {
-		const decodedPath = pathname
-			.split("/")
-			.map((x) => decodeURIComponent(x))
-			.join("/");
-		intent ??= await getIntentForConfig(
-			decodedPath,
-			configuration,
-			exists,
-			skipRedirects
-		);
-	}
-
-	// try encoded path if no exact match (i.e. user has encoded the filepath themselves)
-	const encodedPath = pathname
-		.split("/")
-		.map((x) => encodeURIComponent(decodeURIComponent(x)))
-		.join("/");
-	intent ??= await getIntentForConfig(
-		encodedPath,
-		configuration,
-		exists,
-		skipRedirects
-	);
-
-	return intent;
 };
 
 const htmlHandlingAutoTrailingSlash = async (
