@@ -2,9 +2,9 @@ import { describe, expect, it } from "vitest";
 import { validateDescription } from "../validate-pr-description";
 
 describe("validateDescription()", () => {
-	it("should skip validation with the `skip-pr-validation` label", () => {
+	it("should skip validation with the `skip-pr-description-validation` label", () => {
 		expect(
-			validateDescription("", "", '["skip-pr-validation"]')
+			validateDescription("", "", '["skip-pr-description-validation"]')
 		).toMatchInlineSnapshot(`[]`);
 	});
 	it("should show errors with default template + TODOs checked", () => {

@@ -24,9 +24,9 @@ export function validateDescription(
 	console.log("PR:", title);
 	const parsedLabels = JSON.parse(labels);
 
-	if (parsedLabels.includes("skip-pr-validation")) {
+	if (parsedLabels.includes("skip-pr-description-validation")) {
 		console.log(
-			"Skipping validation because the `skip-pr-validation` label has been applied"
+			"Skipping validation because the `skip-pr-description-validation` label has been applied"
 		);
 		return [];
 	}
