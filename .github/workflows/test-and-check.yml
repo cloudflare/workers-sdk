@@ -1,6 +1,8 @@
 name: Tests + Checks
 
-on: pull_request
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
 
 jobs:
   add-to-project:
@@ -103,6 +105,7 @@ jobs:
         filter: ["./fixtures/*", "./packages/*", "./tools"]
     runs-on: ${{ matrix.os }}
     steps:
+      - run: echo ${{ github.ref }}
       - name: Checkout Repo
         uses: actions/checkout@v4
         with:
