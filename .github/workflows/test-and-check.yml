@@ -157,7 +157,11 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-13]
-        filter: ["./packages/*", "./tools"]
+        filter: ["./packages/*"]
+        # Things in the tools folder are for running in CI, and so only need to run on linux
+        include:
+          - os: ubuntu-latest
+            filter: "./tools"
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout Repo
