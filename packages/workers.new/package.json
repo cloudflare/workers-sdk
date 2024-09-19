@@ -7,7 +7,7 @@
 		"deploy": "CLOUDFLARE_ACCOUNT_ID=$WORKERS_NEW_CLOUDFLARE_ACCOUNT_ID CLOUDFLARE_API_TOKEN=$WORKERS_NEW_CLOUDFLARE_API_TOKEN wrangler deploy",
 		"dev": "wrangler dev",
 		"test": "vitest -c tests/vitest.config.mts",
-		"test:ci": "vitest -c tests/vitest.config.mts"
+		"test:ci": "vitest run -c tests/vitest.config.mts"
 	},
 	"devDependencies": {
 		"@cloudflare/vitest-pool-workers": "workspace:*",
