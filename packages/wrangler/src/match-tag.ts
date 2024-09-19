@@ -14,6 +14,9 @@ export async function verifyWorkerMatchesCITag(
 
 	// If no tag is provided through the environment, nothing needs to be verified
 	if (!matchTag) {
+		logger.debug(
+			"No WRANGLER_CI_MATCH_TAG variable provided, aborting verifyWorkerMatchesCITag()"
+		);
 		return;
 	}
 
