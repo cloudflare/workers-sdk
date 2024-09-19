@@ -1105,13 +1105,14 @@ describe("watch mode", () => {
 				const { url } = await worker.waitForReady();
 
 				// verify response from Asset Worker
-				let { response } = await fetchWithETag(`${url}/index.html`, {});
+				let response = await fetch(`${url}/index.html`);
+				expect(response.status).toBe(200);
 				expect(await response.text()).toBe("<h1>Hello Workers + Assets</h1>");
 
 				// verify no response from route that will be handled by the
 				// User Worker in the future
-				({ response } = await fetchWithETag(`${url}/hey`, {}));
-				expect(await response.status).toBe(404);
+				response = await fetch(`${url}/hey`);
+				expect(response.status).toBe(404);
 
 				await helper.seed({
 					"wrangler.toml": dedent`
@@ -1132,10 +1133,14 @@ describe("watch mode", () => {
 
 				await worker.waitForReload();
 
-				({ response } = await fetchWithETag(`${url}/index.html`, {}));
+				// verify we still get the correct response for the Asset Worker
+				response = await fetch(`${url}/index.html`);
+				expect(response.status).toBe(200);
 				expect(await response.text()).toBe("<h1>Hello Workers + Assets</h1>");
 
-				({ response } = await fetchWithETag(`${url}/hey`, {}));
+				// verify response from User Worker
+				response = await fetch(`${url}/hey`);
+				expect(response.status).toBe(200);
 				expect(await response.text()).toBe("Hello from user Worker!");
 			});
 
@@ -1164,11 +1169,13 @@ describe("watch mode", () => {
 				const { url } = await worker.waitForReady();
 
 				// verify response from Asset Worker
-				let { response } = await fetchWithETag(`${url}/index.html`, {});
+				let response = await fetch(`${url}/index.html`);
+				expect(response.status).toBe(200);
 				expect(await response.text()).toBe("<h1>Hello Workers + Assets</h1>");
 
 				// verify response from User Worker
-				({ response } = await fetchWithETag(`${url}/hey`, {}));
+				response = await fetch(`${url}/hey`);
+				expect(response.status).toBe(200);
 				expect(await response.text()).toBe("Hello from user Worker!");
 
 				await helper.seed({
@@ -1184,12 +1191,13 @@ describe("watch mode", () => {
 				await worker.waitForReload();
 
 				// verify we still get the correct response from Asset Worker
-				({ response } = await fetchWithETag(`${url}/index.html`, {}));
+				response = await fetch(`${url}/index.html`);
+				expect(response.status).toBe(200);
 				expect(await response.text()).toBe("<h1>Hello Workers + Assets</h1>");
 
 				// verify we no longer get a response from the User Worker
-				({ response } = await fetchWithETag(`${url}/hey`, {}));
-				expect(await response.status).toBe(404);
+				response = await fetch(`${url}/hey`);
+				expect(response.status).toBe(404);
 			});
 		}
 	);
@@ -1301,14 +1309,14 @@ describe("watch mode", () => {
 			const { url } = await worker.waitForReady();
 
 			// verify response from Asset Worker
-			let { response } = await fetchWithETag(`${url}/index.html`, {});
+			let response = await fetch(`${url}/index.html`);
+			expect(response.status).toBe(200);
 			expect(await response.text()).toBe("<h1>Hello Workers + Assets</h1>");
-			expect(await response.status).toBe(200);
 
 			// verify no response from route that will be handled by the
 			// User Worker in the future
-			({ response } = await fetchWithETag(`${url}/hey`, {}));
-			expect(await response.status).toBe(404);
+			response = await fetch(`${url}/hey`);
+			expect(response.status).toBe(404);
 
 			await helper.seed({
 				"wrangler.toml": dedent`
@@ -1320,13 +1328,15 @@ describe("watch mode", () => {
 
 			await worker.waitForReload();
 
-			({ response } = await fetchWithETag(`${url}/index.html`, {}));
+			// verify response from Asset Worker
+			response = await fetch(`${url}/index.html`);
+			expect(response.status).toBe(200);
 			expect(await response.text()).toBe("<h1>Hello Workers + Assets</h1>");
-			expect(await response.status).toBe(200);
 
-			({ response } = await fetchWithETag(`${url}/hey`, {}));
+			// verify response from User Worker
+			response = await fetch(`${url}/hey`);
+			expect(response.status).toBe(200);
 			expect(await response.text()).toBe("Hello from user Worker!");
-			expect(await response.status).toBe(200);
 		});
 
 		it(`supports switching from Workers with assets to assets-only Workers during the current dev session`, async () => {
@@ -1350,14 +1360,14 @@ describe("watch mode", () => {
 			const { url } = await worker.waitForReady();
 
 			// verify response from Asset Worker
-			let { response } = await fetchWithETag(`${url}/index.html`, {});
+			let response = await fetch(`${url}/index.html`);
+			expect(response.status).toBe(200);
 			expect(await response.text()).toBe("<h1>Hello Workers + Assets</h1>");
-			expect(await response.status).toBe(200);
 
 			// verify response from User Worker
-			({ response } = await fetchWithETag(`${url}/hey`, {}));
+			response = await fetch(`${url}/hey`);
+			expect(response.status).toBe(200);
 			expect(await response.text()).toBe("Hello from user Worker!");
-			expect(await response.status).toBe(200);
 
 			await helper.seed({
 				"wrangler.toml": dedent`
@@ -1368,14 +1378,14 @@ describe("watch mode", () => {
 
 			await worker.waitForReload();
 
-			({ response } = await fetchWithETag(`${url}/index.html`, {}));
+			response = await fetch(`${url}/index.html`);
 			// verify response from Asset
+			expect(response.status).toBe(200);
 			expect(await response.text()).toBe("<h1>Hello Workers + Assets</h1>");
-			expect(await response.status).toBe(200);
 
 			// verify no response from User Worker
-			({ response } = await fetchWithETag(`${url}/hey`, {}));
-			expect(await response.status).toBe(404);
+			response = await fetch(`${url}/hey`);
+			expect(response.status).toBe(404);
 		});
 	});
 });
