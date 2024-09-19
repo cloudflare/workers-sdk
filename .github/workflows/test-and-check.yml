@@ -104,7 +104,6 @@ jobs:
         os: [ubuntu-latest, windows-latest, macos-13]
         filter: ["./fixtures/*"]
     runs-on: ${{ matrix.os }}
-    if: github.head_ref == 'changeset-release/main' || contains(github.event.*.labels.*.name, 'fixtures' )
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v4
@@ -112,6 +111,7 @@ jobs:
           fetch-depth: 0
 
       - name: Install Dependencies
+        if: github.head_ref == 'changeset-release/main' || contains(github.event.*.labels.*.name, 'fixtures' )
         uses: ./.github/actions/install-dependencies
         with:
           turbo-api: ${{ secrets.TURBO_API }}
@@ -120,6 +120,7 @@ jobs:
           turbo-signature: ${{ secrets.TURBO_REMOTE_CACHE_SIGNATURE_KEY }}
 
       - name: Run tests
+        if: github.head_ref == 'changeset-release/main' || contains(github.event.*.labels.*.name, 'fixtures' )
         run: pnpm run test:ci --concurrency 1 --filter=${{ matrix.filter }}
         env:
           TMP_CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -130,6 +131,7 @@ jobs:
           CI_OS: ${{ runner.os }}
 
       - name: Run changeset version tests
+        if: github.head_ref == 'changeset-release/main' || contains(github.event.*.labels.*.name, 'fixtures' )
         run: node .github/changeset-version.test.js
 
       - name: Upload debug logs
