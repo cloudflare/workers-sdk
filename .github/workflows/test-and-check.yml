@@ -6,7 +6,7 @@ on:
 
 jobs:
   add-to-project:
-    if: github.ref != 'refs/heads/changeset-release/main'
+    if: github.head_ref != 'changeset-release/main'
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}-add-pr
       cancel-in-progress: true
@@ -17,7 +17,7 @@ jobs:
       - run: curl -X POST https://devprod-status-bot.devprod.workers.dev/pr-project/workers-sdk/${{ github.event.number }}
 
   check-non-linux:
-    if: github.ref == 'refs/heads/changeset-release/main'
+    if: github.head_ref == 'changeset-release/main'
     timeout-minutes: 30
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}-checks
@@ -91,6 +91,61 @@ jobs:
       - name: Check the changesets
         run: node -r esbuild-register tools/deployments/validate-changesets.ts
 
+  fixtures:
+    timeout-minutes: 60
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}-${{ matrix.filter }}-test
+      cancel-in-progress: true
+
+    name: "Tests"
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-13]
+        filter: ["./fixtures/*"]
+    runs-on: ${{ matrix.os }}
+    if: github.head_ref == 'changeset-release/main' || contains(github.event.*.labels.*.name, 'fixtures' )
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install Dependencies
+        uses: ./.github/actions/install-dependencies
+        with:
+          turbo-api: ${{ secrets.TURBO_API }}
+          turbo-team: ${{ secrets.TURBO_TEAM }}
+          turbo-token: ${{ secrets.TURBO_TOKEN }}
+          turbo-signature: ${{ secrets.TURBO_REMOTE_CACHE_SIGNATURE_KEY }}
+
+      - name: Run tests
+        run: pnpm run test:ci --concurrency 1 --filter=${{ matrix.filter }}
+        env:
+          TMP_CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          TMP_CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          NODE_OPTIONS: "--max_old_space_size=8192"
+          WRANGLER_LOG_PATH: ${{ runner.temp }}/wrangler-debug-logs/
+          TEST_REPORT_PATH: ${{ runner.temp }}/test-report/index.html
+          CI_OS: ${{ runner.os }}
+
+      - name: Run changeset version tests
+        run: node .github/changeset-version.test.js
+
+      - name: Upload debug logs
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: e2e-test-debug-logs-${{ matrix.os }}-${{ matrix.node }}
+          path: ${{ runner.temp }}/wrangler-debug-logs/
+
+      - name: Upload test report
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: e2e-test-report-${{ matrix.os }}-${{ matrix.node }}
+          path: ${{ runner.temp }}/test-report/
+
   test:
     timeout-minutes: 60
     concurrency:
@@ -102,10 +157,9 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-13]
-        filter: ["./fixtures/*", "./packages/*", "./tools"]
+        filter: ["./packages/*", "./tools"]
     runs-on: ${{ matrix.os }}
     steps:
-      - run: echo ${{ github.head_ref }}
       - name: Checkout Repo
         uses: actions/checkout@v4
         with:
