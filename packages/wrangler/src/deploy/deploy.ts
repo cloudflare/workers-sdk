@@ -829,11 +829,14 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 					versionMap.set(versionResult.id, 100);
 					await createDeployment(accountId, scriptName, versionMap, undefined);
 
-					// Update tail consumers and logpush settings
+					// Update tail consumers, logpush, and observability settings
 					await patchNonVersionedScriptSettings(accountId, scriptName, {
 						tail_consumers: worker.tail_consumers,
 						logpush: worker.logpush,
-						observability: worker.observability,
+						// If the user hasn't specified observability assume that they want it disabled if they have it on.
+						// This is a no-op in the event that they don't have observability enabled, but will remove observability
+						// if it has been removed from their wrangler.toml
+						observability: worker.observability ?? { enabled: false },
 					});
 
 					const { available_on_subdomain } = await fetchResult<{

@@ -3,6 +3,7 @@ import { createFetchResult, msw } from "./msw";
 import { serialize, toString } from "./serialize-form-data-entry";
 import type { WorkerMetadata } from "../../deployment-bundle/create-worker-upload-form";
 import type { CfWorkerInit } from "../../deployment-bundle/worker";
+import type { NonVersionedScriptSettings } from "../../versions/api";
 import type { AssetConfig } from "@cloudflare/workers-shared";
 import type { HttpResponseResolver } from "msw";
 
@@ -35,6 +36,7 @@ export function mockUploadWorkerRequest(
 		};
 		useOldUploadApi?: boolean;
 		expectedObservability?: CfWorkerInit["observability"];
+		expectedSettingsPatch?: Partial<NonVersionedScriptSettings>;
 	} = {}
 ) {
 	const expectedScriptName = (options.expectedScriptName ??= "test-name");
@@ -178,6 +180,7 @@ export function mockUploadWorkerRequest(
 		expectedDispatchNamespace,
 		useOldUploadApi,
 		expectedObservability,
+		expectedSettingsPatch,
 	} = options;
 	if (env && !legacyEnv) {
 		msw.use(
@@ -212,7 +215,15 @@ export function mockUploadWorkerRequest(
 			),
 			http.patch(
 				"*/accounts/:accountId/workers/scripts/:scriptName/script-settings",
-				() => HttpResponse.json(createFetchResult({}))
+				async ({ request }) => {
+					const body = await request.json();
+
+					if ("expectedSettingsPatch" in options) {
+						expect(body).toEqual(expectedSettingsPatch);
+					}
+
+					return HttpResponse.json(createFetchResult({}));
+				}
 			)
 		);
 	}
