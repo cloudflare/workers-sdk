@@ -37,7 +37,7 @@
 		"deploy:router-worker": "CLOUDFLARE_API_TOKEN=$WORKERS_DEPLOY_AND_CONFIG_CLOUDFLARE_API_TOKEN pnpx wrangler versions upload --experimental-versions -c router-worker/wrangler.toml",
 		"dev": "pnpm run clean && concurrently -n bundle:asset-worker,bundle:router-worker -c blue,magenta \"pnpm run bundle:asset-worker --watch\" \"pnpm run bundle:router-worker --watch\"",
 		"test": "vitest",
-		"test:ci": "pnpm run test",
+		"test:ci": "vitest run",
 		"types:emit": "tsc index.ts --declaration --emitDeclarationOnly --declarationDir ./dist"
 	},
 	"dependencies": {
