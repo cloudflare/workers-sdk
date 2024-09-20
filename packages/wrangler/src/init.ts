@@ -5,13 +5,14 @@ import TOML from "@iarna/toml";
 import { execa } from "execa";
 import { findUp } from "find-up";
 import { version as wranglerVersion } from "../package.json";
+import { assertNever } from "./api/startDevWorker/utils";
 import { fetchResult } from "./cfetch";
 import { fetchWorker } from "./cfetch/internal";
 import { readConfig } from "./config";
 import { getDatabaseInfoFromId } from "./d1/utils";
 import { confirm, select } from "./dialogs";
 import { getC3CommandFromEnv } from "./environment-variables/misc-variables";
-import { UserError } from "./errors";
+import { FatalError, UserError } from "./errors";
 import { getGitVersioon, initializeGit, isInsideGitRepo } from "./git-client";
 import { logger } from "./logger";
 import { getPackageManager } from "./package-manager";
@@ -1167,16 +1168,92 @@ export async function mapBindings(
 							};
 						}
 						break;
-					default: {
-						// If we don't know what the type is, its an unsafe binding
-						// eslint-disable-next-line @typescript-eslint/no-explicit-any
-						if (!(binding as any)?.type) {
-							break;
+					case "secret_text":
+						// Ignore secrets
+						break;
+					case "version_metadata": {
+						{
+							configObj.version_metadata = {
+								binding: binding.name,
+							};
 						}
+						break;
+					}
+					case "send_email": {
+						configObj.send_email = [
+							...(configObj.send_email ?? []),
+							{
+								name: binding.name,
+								destination_address: binding.destination_address,
+								allowed_destination_addresses:
+									binding.allowed_destination_addresses,
+							},
+						];
+						break;
+					}
+					case "queue":
+						configObj.queues ??= { producers: [] };
+						configObj.queues.producers = [
+							...(configObj.queues.producers ?? []),
+							{
+								binding: binding.name,
+								queue: binding.queue_name,
+								delivery_delay: binding.delivery_delay,
+							},
+						];
+						break;
+					case "vectorize":
+						configObj.vectorize = [
+							...(configObj.vectorize ?? []),
+							{
+								binding: binding.name,
+								index_name: binding.index_name,
+							},
+						];
+						break;
+					case "hyperdrive":
+						configObj.hyperdrive = [
+							...(configObj.hyperdrive ?? []),
+							{
+								binding: binding.name,
+								id: binding.id,
+							},
+						];
+						break;
+					case "mtls_certificate":
+						configObj.mtls_certificates = [
+							...(configObj.mtls_certificates ?? []),
+							{
+								binding: binding.name,
+								certificate_id: binding.certificate_id,
+							},
+						];
+						break;
+					case "pipelines":
+						configObj.pipelines = [
+							...(configObj.pipelines ?? []),
+							{
+								binding: binding.name,
+								pipeline: binding.id,
+							},
+						];
+						break;
+					case "assets":
+						throw new FatalError(
+							"`wrangler init --from-dash` is not yet supported for Workers with Assets"
+						);
+					case "inherit":
 						configObj.unsafe = {
 							bindings: [...(configObj.unsafe?.bindings ?? []), binding],
 							metadata: configObj.unsafe?.metadata ?? undefined,
 						};
+						break;
+					default: {
+						configObj.unsafe = {
+							bindings: [...(configObj.unsafe?.bindings ?? []), binding],
+							metadata: configObj.unsafe?.metadata ?? undefined,
+						};
+						assertNever(binding);
 					}
 				}
 
