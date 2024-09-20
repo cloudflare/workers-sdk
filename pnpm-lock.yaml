@@ -693,6 +693,9 @@ importers:
       miniflare:
         specifier: workspace:*
         version: link:../../packages/miniflare
+      run-script-os:
+        specifier: ^1.1.6
+        version: 1.1.6
       toucan-js:
         specifier: ^3.3.1
         version: 3.3.1(patch_hash=b5gffumfuckaq3c77sda2gdfuq)
