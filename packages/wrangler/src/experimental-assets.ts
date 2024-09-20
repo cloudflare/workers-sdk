@@ -20,6 +20,7 @@ import { logger, LOGGER_LEVELS } from "./logger";
 import { hashFile } from "./pages/hash";
 import { isJwtExpired } from "./pages/upload";
 import { APIError } from "./parse";
+import { dedent } from "./utils/dedent";
 import { createPatternMatcher } from "./utils/filesystem";
 import type { Config } from "./config";
 import type { ExperimentalAssets } from "./config/environment";
@@ -228,21 +229,21 @@ export const buildAssetManifest = async (dir: string) => {
 	const ignoreFn = await createAssetIgnoreFunction(dir);
 
 	await Promise.all(
-		files.map(async (file) => {
-			const filepath = path.join(dir, file);
-			const relativeFilepath = path.relative(dir, filepath);
-
+		files.map(async (relativeFilepath) => {
 			if (ignoreFn?.(relativeFilepath)) {
 				logger.debug("Ignoring asset:", relativeFilepath);
 				// This file should not be included in the manifest.
 				return;
 			}
 
+			const filepath = path.join(dir, relativeFilepath);
 			const filestat = await stat(filepath);
 
 			if (filestat.isSymbolicLink() || filestat.isDirectory()) {
 				return;
 			} else {
+				errorOnLegacyPagesWorkerJSAsset(relativeFilepath, !!ignoreFn);
+
 				if (counter >= MAX_ASSET_COUNT) {
 					throw new UserError(
 						`Maximum number of assets exceeded.\n` +
@@ -413,6 +414,8 @@ export function verifyMutuallyExclusiveAssetsArgsOrConfig(
 	}
 }
 
+const CF_ASSETS_IGNORE_FILENAME = ".assetsignore";
+
 /**
  * Create a function for filtering out ignored assets.
  *
@@ -420,8 +423,6 @@ export function verifyMutuallyExclusiveAssetsArgsOrConfig(
  * and returns true if the asset should not be ignored.
  */
 async function createAssetIgnoreFunction(dir: string) {
-	const CF_ASSETS_IGNORE_FILENAME = ".assetsignore";
-
 	const cfAssetIgnorePath = path.resolve(dir, CF_ASSETS_IGNORE_FILENAME);
 
 	if (!existsSync(cfAssetIgnorePath)) {
@@ -436,4 +437,29 @@ async function createAssetIgnoreFunction(dir: string) {
 	ignorePatterns.push(CF_ASSETS_IGNORE_FILENAME);
 
 	return createPatternMatcher(ignorePatterns, true);
+}
+
+/**
+ * Creates a function that logs a warning (only once) if the project has no `.assetsIgnore` file and is uploading _worker.js code as an asset.
+ */
+function errorOnLegacyPagesWorkerJSAsset(
+	file: string,
+	hasAssetsIgnoreFile: boolean
+) {
+	if (!hasAssetsIgnoreFile) {
+		const workerJsType: "file" | "directory" | null =
+			file === "_worker.js"
+				? "file"
+				: file.startsWith("_worker.js")
+					? "directory"
+					: null;
+		if (workerJsType !== null) {
+			throw new UserError(dedent`
+			Uploading a Pages _worker.js ${workerJsType} as an asset.
+			This could expose your private server-side code to the public Internet. Is this intended?
+			If you do not want to upload this ${workerJsType}, either remove it or add an "${CF_ASSETS_IGNORE_FILENAME}" file, to the root of your asset directory, containing "_worker.js" to avoid uploading.
+			If you do want to upload this ${workerJsType}, you can add an empty "${CF_ASSETS_IGNORE_FILENAME}" file, to the root of your asset directory, to hide this error.
+		`);
+		}
+	}
 }
