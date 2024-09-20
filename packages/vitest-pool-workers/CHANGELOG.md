@@ -1,5 +1,14 @@
 # @cloudflare/vitest-pool-workers
 
+## 0.5.7
+
+### Patch Changes
+
+- [#6725](https://github.com/cloudflare/workers-sdk/pull/6725) [`92730bb`](https://github.com/cloudflare/workers-sdk/commit/92730bba1b8d1693cd1aaa3e6b66894e3aad4aa0) Thanks [@penalosa](https://github.com/penalosa)! - fix: SQLite Durable Objects cannot be tested with vitest-pool-workers
+
+- Updated dependencies [[`ecd82e8`](https://github.com/cloudflare/workers-sdk/commit/ecd82e8471688901307c3bbbab8a382eb9d04811), [`2840b9f`](https://github.com/cloudflare/workers-sdk/commit/2840b9f80c1b8fe66489eb6d749c38f6ece2779d), [`61dd93a`](https://github.com/cloudflare/workers-sdk/commit/61dd93aaacac8b421b4ffcf7cde59ed6b651fc1b), [`7655505`](https://github.com/cloudflare/workers-sdk/commit/7655505654400c8525e4b0164e4e5b3b3c20bed4), [`9649dbc`](https://github.com/cloudflare/workers-sdk/commit/9649dbc74d022fa5fdb065cf3e7a8d6d791f0a88), [`3e75612`](https://github.com/cloudflare/workers-sdk/commit/3e75612ffb5e422021d1d3b172e5dc93a4b7c48a)]:
+  - wrangler@3.78.7
+
 ## 0.5.6
 
 ### Patch Changes
