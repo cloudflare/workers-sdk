@@ -612,6 +612,15 @@ export async function startDev(args: StartDevOptions) {
 			);
 		}
 
+		if (
+			(args.experimentalAssets || config.experimental_assets) &&
+			args.remote
+		) {
+			throw new UserError(
+				"Cannot use Experimental Assets in remote mode. Workers with assets are only supported in local mode. Please use `wrangler dev`."
+			);
+		}
+
 		verifyMutuallyExclusiveAssetsArgsOrConfig(args, config);
 
 		let experimentalAssetsOptions = processExperimentalAssetsArg(args, config);
