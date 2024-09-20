@@ -50,7 +50,6 @@ export const handleRequest = async (
 	}
 
 	const asset = await getByETag(intent.asset.eTag);
-
 	const headers = getHeaders(intent.asset.eTag, asset.contentType, request);
 
 	const strongETag = `"${intent.asset.eTag}"`;
@@ -677,7 +676,7 @@ const safeRedirect = async (
 /**
  * Decode all incoming paths to ensure that we can handle paths with non-ASCII characters.
  */
-const decodePath = (pathname: string) => {
+export const decodePath = (pathname: string) => {
 	return pathname
 		.split("/")
 		.map((x) => decodeURIComponent(x))

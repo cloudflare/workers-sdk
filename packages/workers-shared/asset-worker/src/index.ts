@@ -2,7 +2,7 @@ import { WorkerEntrypoint } from "cloudflare:workers";
 import { setupSentry } from "../../utils/sentry";
 import { AssetsManifest } from "./assets-manifest";
 import { applyConfigurationDefaults } from "./configuration";
-import { getIntent, handleRequest } from "./handler";
+import { decodePath, getIntent, handleRequest } from "./handler";
 import {
 	InternalServerErrorResponse,
 	MethodNotAllowedResponse,
@@ -75,8 +75,9 @@ export default class extends WorkerEntrypoint<Env> {
 	async unstable_canFetch(request: Request): Promise<boolean | Response> {
 		const url = new URL(request.url);
 		const method = request.method.toUpperCase();
+		const decodedPathname = decodePath(url.pathname);
 		const intent = await getIntent(
-			url.pathname,
+			decodedPathname,
 			{
 				...applyConfigurationDefaults(this.env.CONFIG),
 				not_found_handling: "none",
