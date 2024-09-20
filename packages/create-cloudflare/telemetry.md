@@ -10,7 +10,7 @@ Create-Cloudflare Telemetry allows us to better identify roadblocks and bugs and
 
 - If certain errors are hit more frequently, those bug fixes will be prioritized in future releases
 - If certain languages are used more frequently, we will add more templates in this language
-- If certain templates are no longer used, they will be removed and replace
+- If certain templates are no longer used, they will be removed and replaced
 
 ## What telemetry data is Cloudflare collecting?
 
