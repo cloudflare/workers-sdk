@@ -1,6 +1,7 @@
 import * as fs from "fs";
 import * as TOML from "@iarna/toml";
 import {
+	constructTSModuleGlob,
 	constructType,
 	constructTypeKey,
 	generateImportSpecifier,
@@ -45,6 +46,22 @@ describe("constructTypeKey", () => {
 		expect(constructTypeKey("123invalid")).toBe('"123invalid"');
 		expect(constructTypeKey("invalid-123")).toBe('"invalid-123"');
 		expect(constructTypeKey("invalid 123")).toBe('"invalid 123"');
+	});
+});
+
+describe.only("constructTSModuleGlob() should return a valid TS glob ", () => {
+	it.each([
+		["**/*.wasm", "*.wasm"],
+		["**/*.txt", "*.txt"],
+		["**/foo", "*/foo"],
+		["**/*foo", "*foo"],
+		["file.foo", "file.foo"],
+		["folder/file.foo", "folder/file.foo"],
+		["folder/*", "folder/*"],
+		["folder/**", "folder/*"],
+		["folder/**/*", "folder/*"],
+	])("$1 -> $2", (from, to) => {
+		expect(constructTSModuleGlob(from)).toBe(to);
 	});
 });
 
