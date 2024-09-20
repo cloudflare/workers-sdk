@@ -263,7 +263,7 @@ export const buildAssetManifest = async (dir: string) => {
 							`Ensure all assets in your assets directory "${dir}" conform with the Workers maximum size requirement.`
 					);
 				}
-				manifest[normalizeFilePath(relativeFilepath, path.sep)] = {
+				manifest[normalizeFilePath(relativeFilepath)] = {
 					hash: hashFile(filepath),
 					size: filestat.size,
 				};

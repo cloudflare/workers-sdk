@@ -18,11 +18,8 @@ export const handleRequest = async (
 ) => {
 	const { pathname, search } = new URL(request.url);
 
-	const decoded = pathname
-		.split("/")
-		.map((x) => decodeURIComponent(x))
-		.join("/");
-	const intent = await getIntent(decoded, configuration, exists);
+	const decodedPathname = decodePath(pathname);
+	const intent = await getIntent(decodedPathname, configuration, exists);
 
 	if (!intent) {
 		return new NotFoundResponse();
@@ -36,11 +33,14 @@ export const handleRequest = async (
 		return new MethodNotAllowedResponse();
 	}
 
-	const decodedDestination = intent.redirect ?? decoded;
-	const encodedDestination = decodedDestination
-		.split("/")
-		.map((x) => encodeURIComponent(x))
-		.join("/");
+	const decodedDestination = intent.redirect ?? decodedPathname;
+	const encodedDestination = encodePath(decodedDestination);
+
+	/**
+	 * The canonical path we serve an asset at is the decoded and re-encoded version.
+	 * Thus we need to redirect if that is different from the decoded version.
+	 * We combine this with other redirects (e.g. for html_handling) to avoid multiple redirects.
+	 */
 	if (encodedDestination !== pathname || intent.redirect) {
 		return new TemporaryRedirectResponse(encodedDestination + search);
 	}
@@ -370,7 +370,6 @@ const htmlHandlingForceTrailingSlash = async (
 		return {
 			asset: { eTag: exactETag, status: 200 },
 			redirect: null,
-			file: pathname,
 		};
 	} else if (
 		(redirectResult = await safeRedirect(
@@ -652,4 +651,45 @@ const safeRedirect = async (
 	}
 
 	return null;
+};
+/**
+ *
+ * +===========================================+===========+======================+
+ * |              character type               |  fetch()  | encodeURIComponent() |
+ * +===========================================+===========+======================+
+ * | unreserved ASCII e.g. a-z                 | unchanged | unchanged            |
+ * +-------------------------------------------+-----------+----------------------+
+ * | reserved (sometimes encoded)			   | unchanged | encoded			  |
+ * | e.g. [ ] @ $ ! ' ( ) * + , ; = : ? # & %  |           |                      |
+ * +-------------------------------------------+-----------+----------------------+
+ * | non-ASCII e.g. ü. and space               | encoded   | encoded              |
+ * +-------------------------------------------+-----------+----------------------+
+ *
+ * 1. Decode incoming path to handle non-ASCII characters or optionally encoded characters (e.g. square brackets)
+ * 2. Match decoded path to manifest
+ * 3. Re-encode the path and redirect if the re-encoded path is different from the original path
+ *
+ * If the user uploads a file that is already URL-encoded, that is accessible only at the (double) encoded path.
+ * e.g. /%5Bboop%5D.html is served at /%255Bboop%255D only
+ *
+ * */
+
+/**
+ * Decode all incoming paths to ensure that we can handle paths with non-ASCII characters.
+ */
+const decodePath = (pathname: string) => {
+	return pathname
+		.split("/")
+		.map((x) => decodeURIComponent(x))
+		.join("/");
+};
+/**
+ * Use the encoded path as the canonical path for sometimes-encoded characters
+ * e.g. /[boop] -> /%5Bboop%5D 307
+ */
+const encodePath = (pathname: string) => {
+	return pathname
+		.split("/")
+		.map((x) => encodeURIComponent(x))
+		.join("/");
 };

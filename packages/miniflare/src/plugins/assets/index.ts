@@ -239,10 +239,9 @@ const walk = async (dir: string) => {
 				 */
 
 				const [pathHash, contentHash] = await Promise.all([
-					hashPath(encodeFilePath(relativeFilepath, path.sep)),
-					hashPath(
-						encodeFilePath(filepath, path.sep) + filestat.mtimeMs.toString()
-					),
+					hashPath(normalizeFilePath(relativeFilepath)),
+					// used absolute filepath here so that changes to the enclosing asset folder will be registered
+					hashPath(filepath + filestat.mtimeMs.toString()),
 				]);
 				manifest.push({
 					pathHash,

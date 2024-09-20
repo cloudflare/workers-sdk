@@ -1,8 +1,12 @@
+import { isAbsolute, sep } from "node:path";
 import { getType } from "mime";
 
-/** normalises sep for windows */
-export const normalizeFilePath = (filePath: string, sep: string) => {
-	const encodedPath = filePath.split(sep).join("/");
+/** normalises sep for windows and prefix with `/` */
+export const normalizeFilePath = (relativeFilepath: string) => {
+	if (!isAbsolute(relativeFilepath)) {
+		throw new Error(`Expected relative path`);
+	}
+	const encodedPath = relativeFilepath.split(sep).join("/");
 	return "/" + encodedPath;
 };
 
