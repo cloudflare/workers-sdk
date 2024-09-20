@@ -845,32 +845,22 @@ export async function startDev(args: StartDevOptions) {
 
 					logger.log(`${path.basename(config.configPath)} changed...`);
 
-					/*
-					 * If this is a Worker with assets, we want to enable switching
-					 * from assets only Worker to Worker with assets and vice versa
-					 * during local development. For that, we need to watch for changes
-					 * in the `wrangler.toml` file, specifically the `main` configuration
-					 * key, and re-asses the entry point every time.
-					 */
-					if (experimentalAssetsOptions?.directory) {
-						entry = await getEntry(
-							{
-								legacyAssets: args.legacyAssets,
-								script: args.script,
-								moduleRoot: args.moduleRoot,
-								experimentalAssets: args.experimentalAssets,
-							},
-							config,
-							"dev"
-						);
+					// ensure we reflect config changes in the `main` entry point
+					entry = await getEntry(
+						{
+							legacyAssets: args.legacyAssets,
+							script: args.script,
+							moduleRoot: args.moduleRoot,
+							experimentalAssets: args.experimentalAssets,
+						},
+						config,
+						"dev"
+					);
 
-						// this gets passed into the Dev React element, so ensure we don't
-						// block scope this var
-						experimentalAssetsOptions = processExperimentalAssetsArg(
-							args,
-							config
-						);
-					}
+					experimentalAssetsOptions = processExperimentalAssetsArg(
+						args,
+						config
+					);
 
 					/*
 					 * Handle experimental assets watching on config file changes

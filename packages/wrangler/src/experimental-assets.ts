@@ -328,45 +328,46 @@ export function processExperimentalAssetsArg(
 	const experimentalAssets = args.experimentalAssets
 		? { directory: args.experimentalAssets }
 		: config.experimental_assets;
-	let experimentalAssetsOptions: ExperimentalAssetsOptions | undefined;
-	if (experimentalAssets) {
-		const experimentalAssetsBasePath = getExperimentalAssetsBasePath(
-			config,
-			args.experimentalAssets
-		);
-		const resolvedExperimentalAssetsPath = path.resolve(
-			experimentalAssetsBasePath,
-			experimentalAssets.directory
-		);
 
-		if (!existsSync(resolvedExperimentalAssetsPath)) {
-			const sourceOfTruthMessage = args.experimentalAssets
-				? '"--experimental-assets" command line argument'
-				: '"experimental_assets.directory" field in your configuration file';
-
-			throw new UserError(
-				`The directory specified by the ${sourceOfTruthMessage} does not exist:\n` +
-					`${resolvedExperimentalAssetsPath}`
-			);
-		}
-
-		experimentalAssets.directory = resolvedExperimentalAssetsPath;
-		const routingConfig = {
-			has_user_worker: Boolean(args.script || config.main),
-		};
-		// defaults are set in asset worker
-		const assetConfig = {
-			html_handling: config.experimental_assets?.html_handling,
-			not_found_handling: config.experimental_assets?.not_found_handling,
-		};
-		experimentalAssetsOptions = {
-			...experimentalAssets,
-			routingConfig,
-			assetConfig,
-		};
+	if (!experimentalAssets) {
+		return;
 	}
 
-	return experimentalAssetsOptions;
+	const experimentalAssetsBasePath = getExperimentalAssetsBasePath(
+		config,
+		args.experimentalAssets
+	);
+	const resolvedExperimentalAssetsPath = path.resolve(
+		experimentalAssetsBasePath,
+		experimentalAssets.directory
+	);
+
+	if (!existsSync(resolvedExperimentalAssetsPath)) {
+		const sourceOfTruthMessage = args.experimentalAssets
+			? '"--experimental-assets" command line argument'
+			: '"experimental_assets.directory" field in your configuration file';
+
+		throw new UserError(
+			`The directory specified by the ${sourceOfTruthMessage} does not exist:\n` +
+				`${resolvedExperimentalAssetsPath}`
+		);
+	}
+
+	experimentalAssets.directory = resolvedExperimentalAssetsPath;
+	const routingConfig = {
+		has_user_worker: Boolean(args.script || config.main),
+	};
+	// defaults are set in asset worker
+	const assetConfig = {
+		html_handling: config.experimental_assets?.html_handling,
+		not_found_handling: config.experimental_assets?.not_found_handling,
+	};
+
+	return {
+		...experimentalAssets,
+		routingConfig,
+		assetConfig,
+	};
 }
 
 /**
