@@ -345,7 +345,7 @@ describe("wrangler dev", () => {
 					directory: "assets",
 				},
 			});
-			fs.openSync("assets", "w");
+			fs.mkdirSync("assets");
 			await expect(runWrangler(`dev`)).rejects
 				.toThrowErrorMatchingInlineSnapshot(`
 				[Error: Invalid Routes:
@@ -1505,7 +1505,7 @@ describe("wrangler dev", () => {
 
 	describe("--experimental-assets", () => {
 		it("should not require entry point if using --experimental-assets", async () => {
-			fs.openSync("assets", "w");
+			fs.mkdirSync("assets");
 			writeWranglerToml({
 				experimental_assets: { directory: "assets" },
 			});
@@ -1522,7 +1522,7 @@ describe("wrangler dev", () => {
 				},
 			});
 			fs.writeFileSync("index.js", `export default {};`);
-			fs.openSync("assets", "w");
+			fs.mkdirSync("assets");
 			await expect(
 				runWrangler("dev")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
@@ -1538,7 +1538,7 @@ describe("wrangler dev", () => {
 				},
 			});
 			fs.writeFileSync("index.js", `export default {};`);
-			fs.openSync("assets", "w");
+			fs.mkdirSync("assets");
 			await expect(
 				runWrangler("dev --experimental-assets assets")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
@@ -1559,7 +1559,7 @@ describe("wrangler dev", () => {
 				},
 			});
 			fs.writeFileSync("index.js", `export default {};`);
-			fs.openSync("assets", "w");
+			fs.mkdirSync("assets");
 			await expect(
 				runWrangler("dev")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
@@ -1569,7 +1569,7 @@ describe("wrangler dev", () => {
 
 		it("should error if --experimental-assets and --legacy-assets are used together", async () => {
 			fs.writeFileSync("index.js", `export default {};`);
-			fs.openSync("assets", "w");
+			fs.mkdirSync("assets");
 			await expect(
 				runWrangler("dev --experimental-assets assets --legacy-assets assets")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
@@ -1589,7 +1589,7 @@ describe("wrangler dev", () => {
 				},
 			});
 			fs.writeFileSync("index.js", `export default {};`);
-			fs.openSync("assets", "w");
+			fs.mkdirSync("assets");
 			await expect(
 				runWrangler("dev --experimental-assets assets")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
@@ -1605,7 +1605,7 @@ describe("wrangler dev", () => {
 				},
 			});
 			fs.writeFileSync("index.js", `export default {};`);
-			fs.openSync("xyz", "w");
+			fs.mkdirSync("xyz");
 			await expect(
 				runWrangler("dev --legacy-assets xyz")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
@@ -1646,7 +1646,7 @@ describe("wrangler dev", () => {
 			writeWranglerToml({
 				tail_consumers: [{ service: "<TAIL_WORKER_NAME>" }],
 			});
-			fs.openSync("public", "w");
+			fs.mkdirSync("public");
 			await expect(
 				runWrangler("dev --experimental-assets public")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
@@ -1659,7 +1659,7 @@ describe("wrangler dev", () => {
 				experimental_assets: { directory: "./public" },
 				tail_consumers: [{ service: "<TAIL_WORKER_NAME>" }],
 			});
-			fs.openSync("public", "w");
+			fs.mkdirSync("public");
 			await expect(
 				runWrangler("dev")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
@@ -1668,11 +1668,11 @@ describe("wrangler dev", () => {
 		});
 
 		it("should error if --experimental-assets and --remote are used together", async () => {
-			fs.openSync("public", "w");
+			fs.mkdirSync("public");
 			await expect(
 				runWrangler("dev --experimental-assets public --remote")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: Cannot use Experimental Assets in remote mode. Workers with assets are only supported in local mode.]`
+				`[Error: Cannot use Experimental Assets in remote mode. Workers with assets are only supported in local mode. Please use \`wrangler dev\`.]`
 			);
 		});
 
@@ -1680,11 +1680,11 @@ describe("wrangler dev", () => {
 			writeWranglerToml({
 				experimental_assets: { directory: "./public" },
 			});
-			fs.openSync("public", "w");
+			fs.mkdirSync("public");
 			await expect(
 				runWrangler("dev --remote")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: Cannot use Experimental Assets in remote mode. Workers with assets are only supported in local mode.]`
+				`[Error: Cannot use Experimental Assets in remote mode. Workers with assets are only supported in local mode. Please use \`wrangler dev\`.]`
 			);
 		});
 	});
