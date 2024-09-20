@@ -14,14 +14,14 @@ Create-Cloudflare Telemetry allows us to better identify roadblocks and bugs and
 
 ## What telemetry data is Cloudflare collecting?
 
-- What command is used as the entrypoint into Create-Cloudflare? (e.g. `npm create cloudflare@latest`, `npm create cloudflare –-template myrepo`)
-- Package manager being used (e.g. npm, yarn)
-- Which version of Create-Cloudflare is being run (e.g. create-cloudflare 10.8.1)
-- Whether projects are renamed
+- Command used as the entrypoint into Create-Cloudflare (e.g. `npm create cloudflare@latest`, `npm create cloudflare –-template myrepo`)
+- Package manager (e.g. npm, yarn)
+- Create-Cloudflare version (e.g. create-cloudflare 10.8.1)
+- Whether project is renamed
 - Sanitized error information (e.g. error type, frequency)
-- Number of first time Create-Cloudflare downloads
-- What types of templates and languages are most/least popular
-- Experience outcome (e.g. deploy project, create locally, or no project creation)
+- Whether instance is a first time Create-Cloudflare download
+- Used template and language
+- Experience outcome (e.g. deployed, created locally, or no project created)
 - Total session duration (e.g. 30 seconds, etc.)
 - General machine information such as OS Version, CPU architecture (e.g. macOS, x84)
 
