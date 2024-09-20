@@ -1,6 +1,6 @@
 import { resolve } from "node:path";
 import { fetch } from "undici";
-import { describe, it } from "vitest";
+import { describe, it, test } from "vitest";
 import { runWranglerDev } from "../../shared/src/run-wrangler-long-lived";
 
 describe("nodejs compat", () => {
@@ -44,6 +44,21 @@ describe("nodejs compat", () => {
 				expect.any(String),
 				expect.any(String),
 			]);
+		} finally {
+			await stop();
+		}
+	});
+
+	test("crypto.X509Certificate is implemented", async ({ expect }) => {
+		const { ip, port, stop } = await runWranglerDev(
+			resolve(__dirname, "../src"),
+			["--port=0", "--inspector-port=0"]
+		);
+		try {
+			const response = await fetch(
+				`http://${ip}:${port}/test-x509-certificate`
+			);
+			await expect(response.text()).resolves.toBe(`"OK!"`);
 		} finally {
 			await stop();
 		}
