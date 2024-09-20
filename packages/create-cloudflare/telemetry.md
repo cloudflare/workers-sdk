@@ -35,9 +35,9 @@ Cloudflare takes your privacy seriously and does not collect any sensitive infor
 
 ## How can I view analytics code?
 
-To view what is being collected while using Create-Cloudflare, provide the environment variable
+To view what data is being collected while using Create-Cloudflare, provide the environment variable `CREATE_CLOUDFLARE_TELEMETRY_DEBUG=1` during invocation:
 
-`CREATE_CLOUDFLARE_TELEMETRY_DEBUG=1` (`CREATE_CLOUDFLARE_TELEMETRY_DEBUG=1 npm create cloudflare`)
+`CREATE_CLOUDFLARE_TELEMETRY_DEBUG=1 npm create cloudflare`
 
 All events can be viewed at [./src/event.ts](./src/event.ts). It is run in the background and will not delay project execution. As a result, when necessary (e.g. no internet connection), it will fail quickly and quietly.
 
