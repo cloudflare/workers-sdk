@@ -423,7 +423,7 @@ export function validateAssetsArgsAndConfig(
 
 	if (!(args.script || config.main) && config.experimental_assets?.binding) {
 		throw new UserError(
-			"Cannot use Experimental Assets with a binding in a assets-only Worker."
+			"Cannot use Experimental Assets with a binding in an assets-only Worker."
 		);
 	}
 }
