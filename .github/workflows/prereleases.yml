@@ -41,7 +41,8 @@ jobs:
           NODE_ENV: "production"
           CI_OS: ${{ runner.os }}
           # this is the "test/staging" key for sparrow analytics
-          # This is needed for create-cloudflare
+          # This is needed for create-cloudflare only as wrangler will be rebuilt in the next step
+          # FIXME: We should removes the need to setup the env in multiple steps
           SPARROW_SOURCE_KEY: "5adf183f94b3436ba78d67f506965998"
 
       - name: Check for errors

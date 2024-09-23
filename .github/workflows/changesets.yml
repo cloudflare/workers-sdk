@@ -34,7 +34,8 @@ jobs:
         env:
           CI_OS: ${{ runner.os }}
           # This is the "production" key for sparrow analytics.
-          # This is needed for create-cloudflare
+          # This is needed for create-cloudflare only as wrangler will be rebuilt in the next step
+          # FIXME: We should removes the need to setup the env in multiple steps
           SPARROW_SOURCE_KEY: "50598e014ed44c739ec8074fdc16057c"
 
       - name: Create Version PR or Publish to NPM
