@@ -1,54 +1,52 @@
-import { beforeEach, describe, expect, test, vi } from "vitest";
+import { assert, describe, expect, test, vi } from "vitest";
 import { parseArgs } from "../args";
-import type { MockInstance } from "vitest";
 
 vi.mock("@cloudflare/cli");
 vi.mock("yargs/helpers", () => ({ hideBin: (x: string[]) => x }));
 
 describe("Cli", () => {
-	let consoleErrorMock: MockInstance;
-
-	beforeEach(() => {
-		// mock `console.error` for all tests in order to avoid noise
-		consoleErrorMock = vi.spyOn(console, "error").mockImplementation(() => {});
-	});
-
 	describe("parseArgs", () => {
 		test("no arguments provide", async () => {
 			const result = await parseArgs([]);
-			expect(result.projectName).toBeFalsy();
-			expect(result.additionalArgs).toEqual([]);
+
+			assert(result.type === "default");
+			expect(result.args.projectName).toBeFalsy();
+			expect(result.args.additionalArgs).toEqual([]);
 		});
 
 		test("parsing the first argument as the projectName", async () => {
 			const result = await parseArgs(["my-project"]);
-			expect(result.projectName).toBe("my-project");
+
+			assert(result.type === "default");
+			expect(result.args.projectName).toBe("my-project");
 		});
 
 		test("too many positional arguments provided", async () => {
-			const processExitMock = vi
-				.spyOn(process, "exit")
-				.mockImplementation(() => null as never);
+			const result = await parseArgs(["my-project", "123"]);
 
-			await parseArgs(["my-project", "123"]);
-
-			expect(consoleErrorMock).toHaveBeenCalledWith(
-				expect.stringMatching(/Too many positional arguments provided/),
+			assert(result.type === "unknown");
+			expect(result.showHelpMessage).toBe(true);
+			expect(result.args).not.toBe(null);
+			expect(result.errorMessage).toBe(
+				"Too many positional arguments provided",
 			);
-			expect(processExitMock).toHaveBeenCalledWith(1);
 		});
 
 		test("not parsing first argument as the projectName if it is after --", async () => {
 			const result = await parseArgs(["--", "my-project"]);
-			expect(result.projectName).toBeFalsy();
+
+			assert(result.type === "default");
+			expect(result.args.projectName).toBeFalsy();
 		});
 
 		test("parsing optional C3 arguments correctly", async () => {
 			const result = await parseArgs(["--framework", "angular", "--ts=true"]);
-			expect(result.projectName).toBeFalsy();
-			expect(result.framework).toEqual("angular");
-			expect(result.ts).toEqual(true);
-			expect(result.additionalArgs).toEqual([]);
+
+			assert(result.type === "default");
+			expect(result.args.projectName).toBeFalsy();
+			expect(result.args.framework).toEqual("angular");
+			expect(result.args.ts).toEqual(true);
+			expect(result.args.additionalArgs).toEqual([]);
 		});
 
 		test("parsing positional + optional C3 arguments correctly", async () => {
@@ -60,11 +58,13 @@ describe("Cli", () => {
 				"true",
 				"--git=false",
 			]);
-			expect(result.projectName).toEqual("my-project");
-			expect(result.framework).toEqual("angular");
-			expect(result.deploy).toEqual(true);
-			expect(result.git).toEqual(false);
-			expect(result.additionalArgs).toEqual([]);
+
+			assert(result.type === "default");
+			expect(result.args.projectName).toEqual("my-project");
+			expect(result.args.framework).toEqual("angular");
+			expect(result.args.deploy).toEqual(true);
+			expect(result.args.git).toEqual(false);
+			expect(result.args.additionalArgs).toEqual([]);
 		});
 
 		test("parsing optional C3 arguments + additional arguments correctly", async () => {
@@ -77,10 +77,12 @@ describe("Cli", () => {
 				"--react-option",
 				"5",
 			]);
-			expect(result.projectName).toBeFalsy();
-			expect(result.framework).toEqual("react");
-			expect(result.ts).toEqual(true);
-			expect(result.additionalArgs).toEqual([
+
+			assert(result.type === "default");
+			expect(result.args.projectName).toBeFalsy();
+			expect(result.args.framework).toEqual("react");
+			expect(result.args.ts).toEqual(true);
+			expect(result.args.additionalArgs).toEqual([
 				"positional-arg",
 				"--react-option",
 				"5",
@@ -98,10 +100,12 @@ describe("Cli", () => {
 				"--react-option",
 				"5",
 			]);
-			expect(result.projectName).toBe("my-react-project");
-			expect(result.framework).toEqual("react");
-			expect(result.ts).toEqual(true);
-			expect(result.additionalArgs).toEqual([
+
+			assert(result.type === "default");
+			expect(result.args.projectName).toBe("my-react-project");
+			expect(result.args.framework).toEqual("react");
+			expect(result.args.ts).toEqual(true);
+			expect(result.args.additionalArgs).toEqual([
 				"positional-arg",
 				"--react-option",
 				"5",
@@ -115,7 +119,10 @@ describe("Cli", () => {
 			"--existing-script",
 		];
 		test.each(stringArgs)("%s requires an argument", async (arg) => {
-			await expect(parseArgs(["my-react-project", arg])).rejects.toThrowError();
+			await expect(parseArgs(["my-react-project", arg])).resolves.toEqual({
+				type: "unknown",
+				args: null,
+			});
 		});
 	});
 });

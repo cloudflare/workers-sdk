@@ -1,4 +1,4 @@
-import { crash, logRaw, updateStatus } from "@cloudflare/cli";
+import { logRaw, updateStatus } from "@cloudflare/cli";
 import { dim } from "@cloudflare/cli/colors";
 import { quoteShellArgs, runCommand } from "helpers/command";
 import { detectPackageManager } from "helpers/packageManagers";
@@ -8,7 +8,7 @@ import type { C3Context } from "types";
 
 export const getFrameworkCli = (ctx: C3Context, withVersion = true) => {
 	if (!ctx.template) {
-		return crash("Framework not specified.");
+		throw new Error("Framework not specified.");
 	}
 
 	const frameworkCli = ctx.template

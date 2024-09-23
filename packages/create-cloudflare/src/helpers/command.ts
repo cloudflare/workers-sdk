@@ -1,4 +1,5 @@
 import { stripAnsi } from "@cloudflare/cli";
+import { CancelError } from "@cloudflare/cli/error";
 import { isInteractive, spinner } from "@cloudflare/cli/interactive";
 import { spawn } from "cross-spawn";
 
@@ -51,7 +52,7 @@ export const runCommand = async (
 		doneText: opts.doneText,
 		promise() {
 			const [executable, ...args] = command;
-
+			const abortController = new AbortController();
 			const cmd = spawn(executable, [...args], {
 				// TODO: ideally inherit stderr, but npm install uses this for warnings
 				// stdio: [ioMode, ioMode, "inherit"],
@@ -61,6 +62,7 @@ export const runCommand = async (
 					...opts.env,
 				},
 				cwd: opts.cwd,
+				signal: abortController.signal,
 			});
 
 			let output = ``;
@@ -74,7 +76,21 @@ export const runCommand = async (
 				});
 			}
 
+			let cleanup: (() => void) | null = null;
+
 			return new Promise<string>((resolvePromise, reject) => {
+				const cancel = (signal?: NodeJS.Signals) => {
+					reject(new CancelError(`Command cancelled`, signal));
+					abortController.abort(signal ? `${signal} received` : null);
+				};
+
+				process.on("SIGTERM", cancel).on("SIGINT", cancel);
+
+				// To cleanup the signal listeners when the promise settles
+				cleanup = () => {
+					process.off("SIGTERM", cancel).off("SIGINT", cancel);
+				};
+
 				cmd.on("close", (code) => {
 					try {
 						if (code !== 0) {
@@ -95,9 +111,11 @@ export const runCommand = async (
 					}
 				});
 
-				cmd.on("error", (code) => {
-					reject(code);
+				cmd.on("error", (error) => {
+					reject(error);
 				});
+			}).finally(() => {
+				cleanup?.();
 			});
 		},
 	});
