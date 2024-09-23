@@ -1,0 +1,14 @@
+{
+	"name": "@flarelabs-net/vite-plugin-cloudflare",
+	"version": "0.0.0",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/flarelabs-net/vite-plugin-cloudflare",
+		"directory": "packages/vite-plugin-cloudflare"
+	},
+	"license": "MIT",
+	"type": "module",
+	"main": "dist/index.js",
+	"types": "dist/index.d.ts",
+	"sideEffects": false
+}

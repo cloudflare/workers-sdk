@@ -1,0 +1,21 @@
+{
+	"compilerOptions": {
+		"esModuleInterop": false,
+		"skipLibCheck": true,
+		"target": "ES2022",
+		"resolveJsonModule": true,
+		"moduleDetection": "force",
+		"isolatedModules": true,
+		"verbatimModuleSyntax": true,
+		"strict": true,
+		"noUncheckedIndexedAccess": true,
+		"noImplicitOverride": true,
+		"module": "Preserve",
+		"lib": ["ES2022"],
+		"declaration": true,
+		"composite": true,
+		"sourceMap": true,
+		"declarationMap": true,
+		"noEmit": true
+	}
+}
