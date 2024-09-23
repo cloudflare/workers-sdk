@@ -100,16 +100,16 @@ export default {
 		const module = await moduleRunner.import(entrypoint);
 		const handler = module.default as ExportedHandler;
 
+		if (!handler.fetch) {
+			throw new Error('Missing fetch handler');
+		}
+
 		const {
 			__VITE_ROOT__,
 			__VITE_FETCH_MODULE__,
 			__VITE_UNSAFE_EVAL__,
 			...filteredEnv
 		} = env;
-
-		if (!handler.fetch) {
-			throw new Error('Missing fetch handler');
-		}
 
 		return handler.fetch(request, filteredEnv, ctx);
 	},

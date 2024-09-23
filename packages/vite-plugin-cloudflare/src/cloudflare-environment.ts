@@ -3,6 +3,9 @@ import { Miniflare, Response as MiniflareResponse } from 'miniflare';
 import { fileURLToPath } from 'node:url';
 import { UNKNOWN_HOST, INIT_PATH } from './shared';
 import type { FetchFunctionOptions } from 'vite/module-runner';
+import type { ReplaceWorkersTypes } from 'miniflare';
+import type { Fetcher } from '@cloudflare/workers-types/experimental';
+// import type { ReplaceWorkersTypes } from 'miniflare';
 
 export interface CloudflareEnvironmentOptions {
 	entrypoint: string;
@@ -17,8 +20,7 @@ export interface CloudflareEnvironmentOptions {
 
 export class CloudflareDevEnvironment extends vite.DevEnvironment {
 	#options: CloudflareEnvironmentOptions;
-	#miniflare: Miniflare;
-	#initialized = false;
+	#runner?: ReplaceWorkersTypes<Fetcher>;
 
 	constructor(
 		name: string,
@@ -27,75 +29,38 @@ export class CloudflareDevEnvironment extends vite.DevEnvironment {
 	) {
 		super(name, config, { hot: false });
 		this.#options = options;
-		this.#miniflare = new Miniflare({
-			// ...workerOptions
-			// name: '',
-			modulesRoot: '/',
-			modules: [
-				{
-					type: 'ESModule',
-					path: fileURLToPath(import.meta.resolve('./runner/worker.js')),
-				},
-			],
-			unsafeEvalBinding: '__VITE_UNSAFE_EVAL__',
-			bindings: {
-				// ...bindings,
-				__VITE_ROOT__: this.config.root,
-			},
-			serviceBindings: {
-				// ...serviceBindings
-				__VITE_FETCH_MODULE__: async (request) => {
-					const args = (await request.json()) as [
-						string,
-						string,
-						FetchFunctionOptions
-					];
-
-					try {
-						const result = await this.fetchModule(...args);
-
-						return new MiniflareResponse(JSON.stringify(result));
-					} catch (error) {
-						const result = {
-							externalize: args[0],
-							type: 'builtin',
-						} satisfies vite.FetchResult;
-
-						return new MiniflareResponse(JSON.stringify(result));
-					}
-				},
-			},
-		});
 	}
 
-	override async init() {
-		await super.init();
+	async initRunner(miniflare: Miniflare) {
+		this.#runner = await miniflare.getWorker(this.name);
 
-		if (!this.#initialized) {
-			const initResponse = await this.#miniflare.dispatchFetch(
-				new URL(INIT_PATH, UNKNOWN_HOST),
-				{
-					headers: {
-						upgrade: 'websocket',
-						'x-vite-entrypoint': this.#options.entrypoint,
-					},
-				}
-			);
-
-			if (!initResponse.ok) {
-				throw new Error('Failed to initialize module runner');
+		const response = await this.#runner.fetch(
+			new URL(INIT_PATH, UNKNOWN_HOST),
+			{
+				headers: {
+					upgrade: 'websocket',
+					'x-vite-entrypoint': this.#options.entrypoint,
+				},
 			}
+		);
 
-			const webSocket = initResponse.webSocket;
+		if (!response.ok) {
+			throw new Error('Failed to initialize module runner');
+		}
 
-			if (!webSocket) {
-				throw new Error('Failed to establish a WebSocket');
-			}
+		const webSocket = response.webSocket;
+
+		if (!webSocket) {
+			throw new Error('Failed to establish a WebSocket');
 		}
 	}
 
 	async dispatchFetch(request: Request) {
-		return this.#miniflare.dispatchFetch(request.url, {
+		if (!this.#runner) {
+			throw new Error('Runner not initialized');
+		}
+
+		return this.#runner.fetch(request.url, {
 			method: request.method,
 			headers: [['accept-encoding', 'identity'], ...request.headers],
 			body: request.body,

@@ -1,8 +1,5 @@
 {
 	"files": [],
-	"compilerOptions": {
-		"module": "Preserve"
-	},
 	"references": [
 		{ "path": "./tsconfig.plugin.json" },
 		{ "path": "./tsconfig.runner.json" }

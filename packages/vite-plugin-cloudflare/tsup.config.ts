@@ -7,6 +7,7 @@ export default defineConfig([
 		platform: 'node',
 		dts: true,
 		outDir: 'dist',
+		tsconfig: 'tsconfig.plugin.json',
 	},
 	{
 		entry: ['src/runner/worker.ts'],
@@ -14,5 +15,6 @@ export default defineConfig([
 		platform: 'neutral',
 		outDir: 'dist/runner',
 		noExternal: ['vite/module-runner'],
+		tsconfig: 'tsconfig.runner.json',
 	},
 ]);
