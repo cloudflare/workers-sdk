@@ -1,5 +1,11 @@
 # @cloudflare/quick-edit
 
+## 0.2.2
+
+### Patch Changes
+
+- [#6806](https://github.com/cloudflare/workers-sdk/pull/6806) [`4db75e1`](https://github.com/cloudflare/workers-sdk/commit/4db75e1eaf8eb088d869986efc28d5345789ff50) Thanks [@penalosa](https://github.com/penalosa)! - chore: Revert "fix(quick-edit): disable autosave"
+
 ## 0.2.1
 
 ### Patch Changes
