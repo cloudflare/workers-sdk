@@ -485,9 +485,7 @@ function DevSession(props: DevSessionProps) {
 				capnp: props.bindings.unsafe?.capnp,
 				metadata: props.bindings.unsafe?.metadata,
 			},
-			experimental: {
-				assets: props.assets,
-			},
+			assets: props.assets,
 		} satisfies StartDevWorkerOptions;
 	}, [
 		props.routes,

@@ -63,7 +63,7 @@ async function resolveDevConfig(
 			routes: input.triggers?.filter(
 				(t): t is Extract<Trigger, { type: "route" }> => t.type === "route"
 			),
-			assets: input.experimental?.assets?.directory,
+			assets: input?.assets?.directory,
 		},
 		config
 	);
@@ -165,7 +165,7 @@ async function resolveTriggers(
 			routes: input.triggers?.filter(
 				(t): t is Extract<Trigger, { type: "route" }> => t.type === "route"
 			),
-			assets: input.experimental?.assets?.directory,
+			assets: input?.assets?.directory,
 		},
 		config
 	);
@@ -212,7 +212,7 @@ async function resolveConfig(
 			// getEntry only needs to know if assets was specified.
 			// The actualy value is not relevant here, which is why not passing
 			// the entire Assets object is fine.
-			assets: input?.experimental?.assets?.directory,
+			assets: input?.assets?.directory,
 		},
 		config,
 		"dev"
@@ -224,7 +224,7 @@ async function resolveConfig(
 
 	const assetsOptions = processAssetsArg(
 		{
-			assets: input?.experimental?.assets?.directory,
+			assets: input?.assets?.directory,
 			script: input.entrypoint,
 		},
 		config
@@ -275,9 +275,7 @@ async function resolveConfig(
 			capnp: input.unsafe?.capnp ?? unsafe?.capnp,
 			metadata: input.unsafe?.metadata ?? unsafe?.metadata,
 		},
-		experimental: {
-			assets: assetsOptions,
-		},
+		assets: assetsOptions,
 	} satisfies StartDevWorkerOptions;
 
 	if (resolved.legacy.legacyAssets && resolved.legacy.site) {
@@ -422,7 +420,7 @@ export class ConfigController extends Controller<ConfigControllerEventMap> {
 			void this.#ensureWatchingConfig(fileConfig.configPath);
 
 			const assets = processAssetsArg(
-				{ assets: input.experimental?.assets?.directory },
+				{ assets: input?.assets?.directory },
 				fileConfig
 			);
 			if (assets) {

@@ -778,13 +778,10 @@ export async function startDev(args: StartDevOptions) {
 					legacyAssets: (configParam) => configParam.legacy_assets,
 					enableServiceEnvironments: !(args.legacyEnv ?? true),
 				},
-				experimental: {
-					// only pass `assetsOptions` if it came from args not from config
-					// otherwise config at startup ends up overriding future config changes in the
-					// ConfigController
-					// TODO @Carmen should `assets` still be under `experimental` here?
-					assets: args.assets ? assetsOptions : undefined,
-				},
+				// only pass `assetsOptions` if it came from args not from config
+				// otherwise config at startup ends up overriding future config changes in the
+				// ConfigController
+				assets: args.assets ? assetsOptions : undefined,
 			} satisfies StartDevWorkerInput);
 
 			void metrics.sendMetricsEvent(

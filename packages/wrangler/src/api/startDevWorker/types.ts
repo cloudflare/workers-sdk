@@ -165,9 +165,7 @@ export interface StartDevWorkerInput {
 		enableServiceEnvironments?: boolean;
 	};
 	unsafe?: Omit<CfUnsafe, "bindings">;
-	experimental?: {
-		assets?: Omit<AssetsOptions, "bindings">;
-	};
+	assets?: Omit<AssetsOptions, "bindings">;
 }
 
 export type StartDevWorkerOptions = StartDevWorkerInput & {
