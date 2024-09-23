@@ -177,12 +177,7 @@ export function devOptions(yargs: CommonYargsArgv) {
 				hidden: true,
 			})
 			.option("legacy-assets", {
-				describe: "(Experimental) Static assets to be served",
-				type: "string",
-				requiresArg: true,
-			})
-			.option("assets", {
-				describe: "(Experimental) Static assets to be served",
+				describe: "Static assets to be served",
 				type: "string",
 				requiresArg: true,
 				hidden: true,
@@ -379,25 +374,12 @@ This is currently not supported 😭, but we think that we'll get it to work soo
 		}
 	}
 
-	if (args.assets) {
-		logger.warn(
-			`The --assets argument is experimental. We are going to be changing the behavior of this experimental command after August 15th.\n` +
-				`Releases of wrangler after this date will no longer support current functionality.\n` +
-				`Please shift to the --legacy-assets command to preserve the current functionality.`
-		);
-	}
-
 	if (args.legacyAssets) {
 		logger.warn(
-			`The --legacy-assets argument is experimental and may change or break at any time.`
+			`The --legacy-assets argument will be deprecated in the near future. Please use --experimental-assets instead.\n` +
+				`To learn more about Workers with assets, visit our documentation at https://developers.cloudflare.com/workers/frameworks/.`
 		);
 	}
-
-	if (args.legacyAssets && args.assets) {
-		throw new UserError("Cannot use both --assets and --legacy-assets.");
-	}
-
-	args.legacyAssets = args.legacyAssets ?? args.assets;
 
 	// use separate watchers for config file and assets directory since
 	// behaviour will be different between the two
@@ -471,7 +453,7 @@ export type AdditionalDevProps = {
 	showInteractiveDevSession?: boolean;
 };
 
-export type StartDevOptions = Omit<DevArguments, "assets"> &
+export type StartDevOptions = DevArguments &
 	// These options can be passed in directly when called with the `wrangler.dev()` API.
 	// They aren't exposed as CLI arguments.
 	AdditionalDevProps & {
@@ -808,6 +790,7 @@ export async function startDev(args: StartDevOptions) {
 					// only pass `experimentalAssetsOptions` if it came from args not from config
 					// otherwise config at startup ends up overriding future config changes in the
 					// ConfigController
+					// TODO @Carmen should `assets` still be under `experimental` here?
 					assets: args.experimentalAssets
 						? experimentalAssetsOptions
 						: undefined,

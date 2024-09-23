@@ -2242,32 +2242,35 @@ addEventListener('fetch', event => {});`
 				"deploy --legacy-assets assets --latest --name test-name"
 			);
 
-			expect(std).toMatchInlineSnapshot(`
-				Object {
-				  "debug": "",
-				  "err": "",
-				  "info": "Fetching list of already uploaded assets...
-				Building list of assets to upload...
-				 + file-1.2ca234f380.txt (uploading new version of file-1.txt)
-				 + file-2.5938485188.txt (uploading new version of file-2.txt)
-				Uploading 2 new assets...
-				Uploaded 100% [2 out of 2]",
-				  "out": "↗️  Done syncing assets
-				Total Upload: xx KiB / gzip: xx KiB
-				Worker Startup Time: 100 ms
-				Uploaded test-name (TIMINGS)
-				Deployed test-name triggers (TIMINGS)
-				  https://test-name.test-sub-domain.workers.dev
-				Current Version ID: Galaxy-Class",
-				  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --legacy-assets argument is experimental and may change or break at any time.[0m
+			expect(std.warn).toMatchInlineSnapshot(`
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --legacy-assets argument will be deprecated in the near future. Please use --experimental-assets instead.[0m
+
+				  To learn more about Workers with assets, visit our documentation at
+				  [4mhttps://developers.cloudflare.com/workers/frameworks/[0m.
 
 
 				[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mUsing the latest version of the Workers runtime. To silence this warning, please choose a specific version of the runtime with --compatibility-date, or add a compatibility_date to your wrangler.toml.[0m
 
 
 
-				",
-				}
+				"
+			`);
+			expect(std.info).toMatchInlineSnapshot(`
+				"Fetching list of already uploaded assets...
+				Building list of assets to upload...
+				 + file-1.2ca234f380.txt (uploading new version of file-1.txt)
+				 + file-2.5938485188.txt (uploading new version of file-2.txt)
+				Uploading 2 new assets...
+				Uploaded 100% [2 out of 2]"
+			`);
+			expect(std.out).toMatchInlineSnapshot(`
+				"↗️  Done syncing assets
+				Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
 			`);
 		});
 
@@ -2454,62 +2457,13 @@ addEventListener('fetch', event => {});`
 			await runWrangler("deploy --legacy-assets assets");
 
 			expect(std.warn).toMatchInlineSnapshot(`
-				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --legacy-assets argument is experimental and may change or break at any time.[0m
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --legacy-assets argument will be deprecated in the near future. Please use --experimental-assets instead.[0m
+
+				  To learn more about Workers with assets, visit our documentation at
+				  [4mhttps://developers.cloudflare.com/workers/frameworks/[0m.
 
 				"
 			`);
-			expect(std.out).toMatchInlineSnapshot(`
-				"↗️  Done syncing assets
-				Total Upload: xx KiB / gzip: xx KiB
-				Worker Startup Time: 100 ms
-				Uploaded test-name (TIMINGS)
-				Deployed test-name triggers (TIMINGS)
-				  https://test-name.test-sub-domain.workers.dev
-				Current Version ID: Galaxy-Class"
-			`);
-
-			expect(std.info).toMatchInlineSnapshot(`
-				"Fetching list of already uploaded assets...
-				Building list of assets to upload...
-				 + file-1.2ca234f380.txt (uploading new version of file-1.txt)
-				 + file-2.5938485188.txt (uploading new version of file-2.txt)
-				Uploading 2 new assets...
-				Uploaded 100% [2 out of 2]"
-			`);
-		});
-
-		it("should upload all the files in the directory specified by `--assets` as with `--legacy-assets`", async () => {
-			const assets = [
-				{ filePath: "file-1.txt", content: "Content of file-1" },
-				{ filePath: "file-2.txt", content: "Content of file-2" },
-			];
-			const kvNamespace = {
-				title: "__test-name-workers_sites_assets",
-				id: "__test-name-workers_sites_assets-id",
-			};
-			writeWranglerToml({
-				main: "./index.js",
-			});
-			writeWorkerSource();
-			writeAssets(assets);
-			mockUploadWorkerRequest({
-				expectedMainModule: "index.js",
-			});
-			mockSubDomainRequest();
-			mockListKVNamespacesRequest(kvNamespace);
-			mockKeyListRequest(kvNamespace.id, []);
-			mockUploadAssetsToKVRequest(kvNamespace.id, assets);
-			await runWrangler("deploy --assets assets");
-
-			expect(std.warn).toMatchInlineSnapshot(`
-				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --assets argument is experimental. We are going to be changing the behavior of this experimental command after August 15th.[0m
-
-				  Releases of wrangler after this date will no longer support current functionality.
-				  Please shift to the --legacy-assets command to preserve the current functionality.
-
-				"
-			`);
-
 			expect(std.out).toMatchInlineSnapshot(`
 				"↗️  Done syncing assets
 				Total Upload: xx KiB / gzip: xx KiB
@@ -2541,18 +2495,13 @@ addEventListener('fetch', event => {});`
 				`[Error: You cannot use the service-worker format with an \`assets\` directory yet. For information on how to migrate to the module-worker format, see: https://developers.cloudflare.com/workers/learning/migrating-to-module-workers/]`
 			);
 
-			expect(std).toMatchInlineSnapshot(`
-				Object {
-				  "debug": "",
-				  "err": "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mYou cannot use the service-worker format with an \`assets\` directory yet. For information on how to migrate to the module-worker format, see: https://developers.cloudflare.com/workers/learning/migrating-to-module-workers/[0m
+			expect(std.warn).toMatchInlineSnapshot(`
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --legacy-assets argument will be deprecated in the near future. Please use --experimental-assets instead.[0m
 
-				",
-				  "info": "",
-				  "out": "",
-				  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --legacy-assets argument is experimental and may change or break at any time.[0m
+				  To learn more about Workers with assets, visit our documentation at
+				  [4mhttps://developers.cloudflare.com/workers/frameworks/[0m.
 
-				",
-				}
+				"
 			`);
 		});
 
@@ -2567,18 +2516,18 @@ addEventListener('fetch', event => {});`
 				`[Error: Cannot use Legacy Assets and Workers Sites in the same Worker.]`
 			);
 
-			expect(std).toMatchInlineSnapshot(`
-				Object {
-				  "debug": "",
-				  "err": "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mCannot use Legacy Assets and Workers Sites in the same Worker.[0m
+			expect(std.warn).toMatchInlineSnapshot(`
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --legacy-assets argument will be deprecated in the near future. Please use --experimental-assets instead.[0m
 
-				",
-				  "info": "",
-				  "out": "",
-				  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --legacy-assets argument is experimental and may change or break at any time.[0m
+				  To learn more about Workers with assets, visit our documentation at
+				  [4mhttps://developers.cloudflare.com/workers/frameworks/[0m.
 
-				",
-				}
+				"
+			`);
+			expect(std.err).toMatchInlineSnapshot(`
+				"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mCannot use Legacy Assets and Workers Sites in the same Worker.[0m
+
+				"
 			`);
 		});
 
@@ -2596,18 +2545,13 @@ addEventListener('fetch', event => {});`
 				`[Error: Cannot use Legacy Assets and Workers Sites in the same Worker.]`
 			);
 
-			expect(std).toMatchInlineSnapshot(`
-				Object {
-				  "debug": "",
-				  "err": "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mCannot use Legacy Assets and Workers Sites in the same Worker.[0m
+			expect(std.warn).toMatchInlineSnapshot(`
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --legacy-assets argument will be deprecated in the near future. Please use --experimental-assets instead.[0m
 
-				",
-				  "info": "",
-				  "out": "",
-				  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --legacy-assets argument is experimental and may change or break at any time.[0m
+				  To learn more about Workers with assets, visit our documentation at
+				  [4mhttps://developers.cloudflare.com/workers/frameworks/[0m.
 
-				",
-				}
+				"
 			`);
 		});
 
@@ -2623,20 +2567,14 @@ addEventListener('fetch', event => {});`
 				`[Error: Cannot use Legacy Assets and Workers Sites in the same Worker.]`
 			);
 
-			expect(std).toMatchInlineSnapshot(`
-				Object {
-				  "debug": "",
-				  "err": "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mCannot use Legacy Assets and Workers Sites in the same Worker.[0m
+			expect(std.warn).toMatchInlineSnapshot(`
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
 
-				",
-				  "info": "",
-				  "out": "",
-				  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
+				    - [1mDeprecation[0m: \\"legacy_assets\\":
+				      The \`legacy_assets\` feature will be deprecated in the near future. Please use
+				  \`experimental_assets\` instead.
 
-				    - \\"legacy_assets\\" fields are experimental and may change or break at any time.
-
-				",
-				}
+				"
 			`);
 		});
 
@@ -2655,20 +2593,14 @@ addEventListener('fetch', event => {});`
 				`[Error: Cannot use Legacy Assets and Workers Sites in the same Worker.]`
 			);
 
-			expect(std).toMatchInlineSnapshot(`
-				Object {
-				  "debug": "",
-				  "err": "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mCannot use Legacy Assets and Workers Sites in the same Worker.[0m
+			expect(std.warn).toMatchInlineSnapshot(`
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
 
-				",
-				  "info": "",
-				  "out": "",
-				  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
+				    - [1mDeprecation[0m: \\"legacy_assets\\":
+				      The \`legacy_assets\` feature will be deprecated in the near future. Please use
+				  \`experimental_assets\` instead.
 
-				    - \\"legacy_assets\\" fields are experimental and may change or break at any time.
-
-				",
-				}
+				"
 			`);
 		});
 
@@ -2696,27 +2628,32 @@ addEventListener('fetch', event => {});`
 			mockUploadAssetsToKVRequest(kvNamespace.id, assets);
 
 			await runWrangler("deploy --legacy-assets ./assets");
-			expect(std).toMatchInlineSnapshot(`
-				Object {
-				  "debug": "",
-				  "err": "",
-				  "info": "Fetching list of already uploaded assets...
+
+			expect(std.warn).toMatchInlineSnapshot(`
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --legacy-assets argument will be deprecated in the near future. Please use --experimental-assets instead.[0m
+
+				  To learn more about Workers with assets, visit our documentation at
+				  [4mhttps://developers.cloudflare.com/workers/frameworks/[0m.
+
+				"
+			`);
+			expect(std.err).toMatchInlineSnapshot(`""`);
+			expect(std.info).toMatchInlineSnapshot(`
+				"Fetching list of already uploaded assets...
 				Building list of assets to upload...
 				 + subdir/file-1.2ca234f380.txt (uploading new version of subdir/file-1.txt)
 				 + subdir/file-2.5938485188.txt (uploading new version of subdir/file-2.txt)
 				Uploading 2 new assets...
-				Uploaded 100% [2 out of 2]",
-				  "out": "↗️  Done syncing assets
+				Uploaded 100% [2 out of 2]"
+			`);
+			expect(std.out).toMatchInlineSnapshot(`
+				"↗️  Done syncing assets
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
-				Current Version ID: Galaxy-Class",
-				  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --legacy-assets argument is experimental and may change or break at any time.[0m
-
-				",
-				}
+				Current Version ID: Galaxy-Class"
 			`);
 		});
 
@@ -2745,29 +2682,33 @@ addEventListener('fetch', event => {});`
 			mockUploadAssetsToKVRequest(kvNamespace.id, assets);
 
 			await runWrangler("deploy");
-			expect(std).toMatchInlineSnapshot(`
-				Object {
-				  "debug": "",
-				  "err": "",
-				  "info": "Fetching list of already uploaded assets...
+
+			expect(std.warn).toMatchInlineSnapshot(`
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
+
+				    - [1mDeprecation[0m: \\"legacy_assets\\":
+				      The \`legacy_assets\` feature will be deprecated in the near future. Please use
+				  \`experimental_assets\` instead.
+
+				"
+			`);
+			expect(std.err).toMatchInlineSnapshot(`""`);
+			expect(std.info).toMatchInlineSnapshot(`
+				"Fetching list of already uploaded assets...
 				Building list of assets to upload...
 				 + subdir/file-1.2ca234f380.txt (uploading new version of subdir/file-1.txt)
 				 + subdir/file-2.5938485188.txt (uploading new version of subdir/file-2.txt)
 				Uploading 2 new assets...
-				Uploaded 100% [2 out of 2]",
-				  "out": "↗️  Done syncing assets
+				Uploaded 100% [2 out of 2]"
+			`);
+			expect(std.out).toMatchInlineSnapshot(`
+				"↗️  Done syncing assets
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
-				Current Version ID: Galaxy-Class",
-				  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
-
-				    - \\"legacy_assets\\" fields are experimental and may change or break at any time.
-
-				",
-				}
+				Current Version ID: Galaxy-Class"
 			`);
 		});
 
@@ -3928,27 +3869,30 @@ addEventListener('fetch', event => {});`
 			process.chdir("./my-assets");
 			await runWrangler("deploy --legacy-assets .");
 
-			expect(std).toMatchInlineSnapshot(`
-				Object {
-				  "debug": "",
-				  "err": "",
-				  "info": "Fetching list of already uploaded assets...
+			expect(std.warn).toMatchInlineSnapshot(`
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --legacy-assets argument will be deprecated in the near future. Please use --experimental-assets instead.[0m
+
+				  To learn more about Workers with assets, visit our documentation at
+				  [4mhttps://developers.cloudflare.com/workers/frameworks/[0m.
+
+				"
+			`);
+			expect(std.info).toMatchInlineSnapshot(`
+				"Fetching list of already uploaded assets...
 				Building list of assets to upload...
 				 + file-1.2ca234f380.txt (uploading new version of file-1.txt)
 				 + file-2.5938485188.txt (uploading new version of file-2.txt)
 				Uploading 2 new assets...
-				Uploaded 100% [2 out of 2]",
-				  "out": "↗️  Done syncing assets
+				Uploaded 100% [2 out of 2]"
+			`);
+			expect(std.out).toMatchInlineSnapshot(`
+				"↗️  Done syncing assets
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
-				Current Version ID: Galaxy-Class",
-				  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --legacy-assets argument is experimental and may change or break at any time.[0m
-
-				",
-				}
+				Current Version ID: Galaxy-Class"
 			`);
 		});
 
@@ -9185,27 +9129,22 @@ addEventListener('fetch', event => {});`
 			);
 			expect(fs.existsSync("some-dir/index.js")).toBe(true);
 			expect(fs.existsSync("some-dir/index.js.map")).toBe(true);
-			expect(std).toMatchInlineSnapshot(`
-				Object {
-				  "debug": "",
-				  "err": "",
-				  "info": "Fetching list of already uploaded assets...
+			expect(std.info).toMatchInlineSnapshot(`
+				"Fetching list of already uploaded assets...
 				Building list of assets to upload...
 				 + file-1.2ca234f380.txt (uploading new version of file-1.txt)
 				 + file-2.5938485188.txt (uploading new version of file-2.txt)
 				Uploading 2 new assets...
-				Uploaded 100% [2 out of 2]",
-				  "out": "↗️  Done syncing assets
+				Uploaded 100% [2 out of 2]"
+			`);
+			expect(std.out).toMatchInlineSnapshot(`
+				"↗️  Done syncing assets
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
-				Current Version ID: Galaxy-Class",
-				  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --legacy-assets argument is experimental and may change or break at any time.[0m
-
-				",
-				}
+				Current Version ID: Galaxy-Class"
 			`);
 		});
 

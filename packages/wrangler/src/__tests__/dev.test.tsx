@@ -1354,7 +1354,6 @@ describe("wrangler dev", () => {
 				      --https-key-path                             Path to a custom certificate key  [string]
 				      --https-cert-path                            Path to a custom certificate  [string]
 				      --local-upstream                             Host to act as origin in local mode, defaults to dev.host or route  [string]
-				      --legacy-assets                              (Experimental) Static assets to be served  [string]
 				      --site                                       Root folder of static assets for Workers Sites  [string]
 				      --site-include                               Array of .gitignore-style patterns that match file or directory names from the sites directory. Only matched items will be uploaded.  [array]
 				      --site-exclude                               Array of .gitignore-style patterns that match file or directory names from the sites directory. Matched items will not be uploaded.  [array]
@@ -1452,29 +1451,6 @@ describe("wrangler dev", () => {
 			expect((Dev as Mock).mock.calls[2][0].isWorkersSite).toEqual(false);
 		});
 
-		it("should point to --legacy-assets if --assets is used", async () => {
-			writeWranglerToml({
-				main: "./index.js",
-			});
-			fs.writeFileSync("index.js", `export default {};`);
-
-			await runWrangler('dev --assets "./assets"');
-			expect(std).toMatchInlineSnapshot(`
-				Object {
-				  "debug": "",
-				  "err": "",
-				  "info": "",
-				  "out": "",
-				  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --assets argument is experimental. We are going to be changing the behavior of this experimental command after August 15th.[0m
-
-				  Releases of wrangler after this date will no longer support current functionality.
-				  Please shift to the --legacy-assets command to preserve the current functionality.
-
-				",
-				}
-			`);
-		});
-
 		it("should warn if --legacy-assets is used", async () => {
 			writeWranglerToml({
 				main: "./index.js",
@@ -1482,16 +1458,13 @@ describe("wrangler dev", () => {
 			fs.writeFileSync("index.js", `export default {};`);
 
 			await runWrangler('dev --legacy-assets "./assets"');
-			expect(std).toMatchInlineSnapshot(`
-				Object {
-				  "debug": "",
-				  "err": "",
-				  "info": "",
-				  "out": "",
-				  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --legacy-assets argument is experimental and may change or break at any time.[0m
+			expect(std.warn).toMatchInlineSnapshot(`
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --legacy-assets argument will be deprecated in the near future. Please use --experimental-assets instead.[0m
 
-				",
-				}
+				  To learn more about Workers with assets, visit our documentation at
+				  [4mhttps://developers.cloudflare.com/workers/frameworks/[0m.
+
+				"
 			`);
 		});
 
@@ -1500,6 +1473,19 @@ describe("wrangler dev", () => {
 				main: "./index.js",
 				legacy_assets: "./assets",
 			});
+
+			fs.writeFileSync("index.js", `export default {};`);
+
+			await runWrangler("dev");
+			expect(std.warn).toMatchInlineSnapshot(`
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
+
+				    - [1mDeprecation[0m: \\"legacy_assets\\":
+				      The \`legacy_assets\` feature will be deprecated in the near future. Please use
+				  \`experimental_assets\` instead.
+
+				"
+			`);
 		});
 	});
 

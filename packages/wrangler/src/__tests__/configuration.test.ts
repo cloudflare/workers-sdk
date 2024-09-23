@@ -506,7 +506,8 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - \\"legacy_assets\\" fields are experimental and may change or break at any time."
+					  - [1mDeprecation[0m: \\"legacy_assets\\":
+					    The \`legacy_assets\` feature will be deprecated in the near future. Please use \`experimental_assets\` instead."
 				`);
 			});
 
@@ -524,7 +525,8 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - \\"legacy_assets\\" fields are experimental and may change or break at any time."
+					  - [1mDeprecation[0m: \\"legacy_assets\\":
+					    The \`legacy_assets\` feature will be deprecated in the near future. Please use \`experimental_assets\` instead."
 				`);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
@@ -555,7 +557,8 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - \\"legacy_assets\\" fields are experimental and may change or break at any time."
+					  - [1mDeprecation[0m: \\"legacy_assets\\":
+					    The \`legacy_assets\` feature will be deprecated in the near future. Please use \`experimental_assets\` instead."
 				`);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
@@ -584,7 +587,8 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasWarnings()).toBe(true);
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - \\"legacy_assets\\" fields are experimental and may change or break at any time."
+					  - [1mDeprecation[0m: \\"legacy_assets\\":
+					    The \`legacy_assets\` feature will be deprecated in the near future. Please use \`experimental_assets\` instead."
 				`);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
@@ -594,55 +598,6 @@ describe("normalizeAndValidateConfig()", () => {
 					  - Expected \\"legacy_assets.exclude.[1]\\" to be of type string but got 555.
 					  - Expected \\"legacy_assets.browser_TTL\\" to be of type number but got \\"not valid\\".
 					  - Expected \\"legacy_assets.serve_single_page_app\\" to be of type boolean but got \\"INVALID\\"."
-				`);
-			});
-
-			it("saves `assets` values under `legacy_assets`", () => {
-				const { config, diagnostics } = normalizeAndValidateConfig(
-					{
-						assets: "path/to/assets",
-					} as unknown as RawConfig,
-					undefined,
-					{ env: undefined }
-				);
-
-				expect(config.legacy_assets).toMatchInlineSnapshot(`
-					Object {
-					  "browser_TTL": undefined,
-					  "bucket": "path/to/assets",
-					  "exclude": Array [],
-					  "include": Array [],
-					  "serve_single_page_app": false,
-					}
-				`);
-				expect(diagnostics.hasWarnings()).toBe(true);
-				expect(diagnostics.hasErrors()).toBe(false);
-
-				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-					"Processing wrangler configuration:
-					  - [1mBehavior change[0m: \\"assets\\":
-					    The \`assets\` feature is experimental. We are going to be changing its behavior after August 15th.
-					    Releases of wrangler after this date will no longer support current functionality.
-					    Please shift to \`legacy_assets\` to preserve the current functionality. "
-				`);
-			});
-
-			it("should error if `assets` and `legacy_assets` are both defined", () => {
-				const { diagnostics } = normalizeAndValidateConfig(
-					{
-						assets: "path/to/assets",
-						legacy_assets: "path/to/assets",
-					} as unknown as RawConfig,
-					undefined,
-					{ env: undefined }
-				);
-
-				expect(diagnostics.hasWarnings()).toBe(true);
-				expect(diagnostics.hasErrors()).toBe(true);
-
-				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-					"Processing wrangler configuration:
-					  - Expected only one of \`assets\` or \`legacy_assets\`."
 				`);
 			});
 		});

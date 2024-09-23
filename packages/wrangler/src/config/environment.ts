@@ -347,6 +347,8 @@ interface EnvironmentInheritable {
 	/**
 	 * Specify the directory of static assets to deploy/serve
 	 *
+	 * More details at https://developers.cloudflare.com/workers/frameworks/
+	 *
 	 * @inheritable
 	 */
 	experimental_assets: ExperimentalAssets | undefined;

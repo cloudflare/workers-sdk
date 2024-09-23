@@ -105,12 +105,7 @@ export function deployOptions(yargs: CommonYargsArgv) {
 				hidden: true,
 			})
 			.option("legacy-assets", {
-				describe: "(Experimental) Static assets to be served",
-				type: "string",
-				requiresArg: true,
-			})
-			.option("assets", {
-				describe: "(Experimental) Static assets to be served",
+				describe: "Static assets to be served",
 				type: "string",
 				requiresArg: true,
 				hidden: true,
@@ -246,25 +241,12 @@ export async function deployHandler(args: DeployArgs) {
 		);
 	}
 
-	if (args.assets) {
-		logger.warn(
-			`The --assets argument is experimental. We are going to be changing the behavior of this experimental command after August 15th.\n` +
-				`Releases of wrangler after this date will no longer support current functionality.\n` +
-				`Please shift to the --legacy-assets command to preserve the current functionality.`
-		);
-	}
-
 	if (args.legacyAssets) {
 		logger.warn(
-			`The --legacy-assets argument is experimental and may change or break at any time.`
+			`The --legacy-assets argument will be deprecated in the near future. Please use --experimental-assets instead.\n` +
+				`To learn more about Workers with assets, visit our documentation at https://developers.cloudflare.com/workers/frameworks/.`
 		);
 	}
-
-	if (args.legacyAssets && args.assets) {
-		throw new UserError("Cannot use both --assets and --legacy-assets.");
-	}
-
-	args.legacyAssets = args.legacyAssets ?? args.assets;
 
 	const configPath =
 		args.config || (args.script && findWranglerToml(path.dirname(args.script)));

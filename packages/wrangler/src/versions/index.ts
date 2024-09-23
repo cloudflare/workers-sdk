@@ -95,13 +95,7 @@ export function versionsUploadOptions(yargs: CommonYargsArgv) {
 				default: false,
 			})
 			.option("legacy-assets", {
-				describe: "(Experimental) Static assets to be served",
-				type: "string",
-				requiresArg: true,
-				hidden: true,
-			})
-			.option("assets", {
-				describe: "(Experimental) Static assets to be served",
+				describe: "Static assets to be served",
 				type: "string",
 				requiresArg: true,
 				hidden: true,
@@ -220,8 +214,6 @@ export async function versionsUploadHandler(
 			sendMetrics: config.send_metrics,
 		}
 	);
-
-	args.legacyAssets = args.legacyAssets ?? args.assets;
 
 	if (args.site || config.site) {
 		throw new UserError(
