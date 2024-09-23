@@ -40,6 +40,9 @@ jobs:
         env:
           NODE_ENV: "production"
           CI_OS: ${{ runner.os }}
+          # this is the "test/staging" key for sparrow analytics
+          # This is needed for create-cloudflare
+          SPARROW_SOURCE_KEY: "5adf183f94b3436ba78d67f506965998"
 
       - name: Check for errors
         run: pnpm run check

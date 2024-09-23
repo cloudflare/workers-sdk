@@ -33,6 +33,9 @@ jobs:
         run: pnpm run build
         env:
           CI_OS: ${{ runner.os }}
+          # This is the "production" key for sparrow analytics.
+          # This is needed for create-cloudflare
+          SPARROW_SOURCE_KEY: "50598e014ed44c739ec8074fdc16057c"
 
       - name: Create Version PR or Publish to NPM
         id: changesets
