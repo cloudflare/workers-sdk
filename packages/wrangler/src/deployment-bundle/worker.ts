@@ -222,7 +222,7 @@ export interface CfLogfwdrBinding {
 	destination: string;
 }
 
-export interface CfExperimentalAssetBinding {
+export interface CfAssetsBinding {
 	binding: string;
 }
 
@@ -335,7 +335,7 @@ export interface CfWorkerInit {
 		logfwdr: CfLogfwdr | undefined;
 		pipelines: CfPipeline[] | undefined;
 		unsafe: CfUnsafe | undefined;
-		assets: CfExperimentalAssetBinding | undefined;
+		assets: CfAssetsBinding | undefined;
 	};
 	/**
 	 * The raw bindings - this is basically never provided and it'll be the bindings above
