@@ -1526,7 +1526,10 @@ describe("wrangler dev", () => {
 			await expect(
 				runWrangler("dev")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: Cannot use Experimental Assets and Workers Sites in the same Worker.]`
+				`
+				[Error: Cannot use Experimental Assets and Workers Sites in the same Worker.
+				Please remove either the \`site\` or \`experimental_assets\` field from your configuration file.]
+			`
 			);
 		});
 
@@ -1542,7 +1545,10 @@ describe("wrangler dev", () => {
 			await expect(
 				runWrangler("dev --experimental-assets assets")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: Cannot use Experimental Assets and Workers Sites in the same Worker.]`
+				`
+				[Error: Cannot use Experimental Assets and Workers Sites in the same Worker.
+				Please remove either the \`site\` or \`experimental_assets\` field from your configuration file.]
+			`
 			);
 		});
 
@@ -1563,7 +1569,10 @@ describe("wrangler dev", () => {
 			await expect(
 				runWrangler("dev")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: Cannot use Experimental Assets and Legacy Assets in the same Worker.]`
+				`
+				[Error: Cannot use Experimental Assets and Legacy Assets in the same Worker.
+				Please remove either the \`site\` or \`experimental_assets\` field from your configuration file.]
+			`
 			);
 		});
 
@@ -1573,7 +1582,10 @@ describe("wrangler dev", () => {
 			await expect(
 				runWrangler("dev --experimental-assets assets --legacy-assets assets")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: Cannot use Experimental Assets and Legacy Assets in the same Worker.]`
+				`
+				[Error: Cannot use Experimental Assets and Legacy Assets in the same Worker.
+				Please remove either the \`site\` or \`experimental_assets\` field from your configuration file.]
+			`
 			);
 		});
 
@@ -1593,7 +1605,10 @@ describe("wrangler dev", () => {
 			await expect(
 				runWrangler("dev --experimental-assets assets")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: Cannot use Experimental Assets and Legacy Assets in the same Worker.]`
+				`
+				[Error: Cannot use Experimental Assets and Legacy Assets in the same Worker.
+				Please remove either the \`site\` or \`experimental_assets\` field from your configuration file.]
+			`
 			);
 		});
 
@@ -1609,7 +1624,10 @@ describe("wrangler dev", () => {
 			await expect(
 				runWrangler("dev --legacy-assets xyz")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: Cannot use Experimental Assets and Legacy Assets in the same Worker.]`
+				`
+				[Error: Cannot use Experimental Assets and Legacy Assets in the same Worker.
+				Please remove either the \`site\` or \`experimental_assets\` field from your configuration file.]
+			`
 			);
 		});
 
@@ -1620,7 +1638,10 @@ describe("wrangler dev", () => {
 			await expect(
 				runWrangler("dev")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: Cannot use Experimental Assets with a binding in a assets-only Worker.]`
+				`
+				[Error: Cannot use Experimental Assets with a binding in an assets-only Worker.
+				Please remove the asset binding from your configuration file, or provide a Worker script in your configuration file (\`main\`).]
+			`
 			);
 		});
 

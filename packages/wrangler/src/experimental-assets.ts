@@ -371,12 +371,11 @@ export function processExperimentalAssetsArg(
 }
 
 /**
- * Validate assets configuration after CLI args and config have been combined.
- *
- * Workers assets cannot be used in combination with a few other select
- * Workers features, such as: legacy assets, sites and tail consumers.
- *
- * An asset binding cannot be used in a Worker that only has assets.
+ * Validate assets configuration against the following requirements:
+ *     - assets cannot be used in combination with a few other select
+ *        Workers features, such as: legacy assets, sites and tail consumers
+ *     - an asset binding cannot be used in a Worker that only has assets
+ * and throw an appropriate error if invalid.
  */
 export function validateAssetsArgsAndConfig(
 	args:
@@ -399,7 +398,8 @@ export function validateAssetsArgsAndConfig(
 		(args.legacyAssets || config.legacy_assets)
 	) {
 		throw new UserError(
-			"Cannot use Experimental Assets and Legacy Assets in the same Worker."
+			"Cannot use Experimental Assets and Legacy Assets in the same Worker.\n" +
+				"Please remove either the `site` or `experimental_assets` field from your configuration file."
 		);
 	}
 
@@ -408,7 +408,8 @@ export function validateAssetsArgsAndConfig(
 		(args.site || config.site)
 	) {
 		throw new UserError(
-			"Cannot use Experimental Assets and Workers Sites in the same Worker."
+			"Cannot use Experimental Assets and Workers Sites in the same Worker.\n" +
+				"Please remove either the `site` or `experimental_assets` field from your configuration file."
 		);
 	}
 
@@ -423,7 +424,8 @@ export function validateAssetsArgsAndConfig(
 
 	if (!(args.script || config.main) && config.experimental_assets?.binding) {
 		throw new UserError(
-			"Cannot use Experimental Assets with a binding in an assets-only Worker."
+			"Cannot use Experimental Assets with a binding in an assets-only Worker.\n" +
+				"Please remove the asset binding from your configuration file, or provide a Worker script in your configuration file (`main`)."
 		);
 	}
 }
