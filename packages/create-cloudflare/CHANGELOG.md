@@ -1,5 +1,33 @@
 # create-cloudflare
 
+## 2.28.0
+
+### Minor Changes
+
+- [#6484](https://github.com/cloudflare/workers-sdk/pull/6484) [`5632968`](https://github.com/cloudflare/workers-sdk/commit/5632968383d9079bb1ae4dba5c83c10d43e72341) Thanks [@edmundhung](https://github.com/edmundhung)! - feat: telemetry collection
+
+  Cloudflare will collect telemetry about your usage of `create-cloudflare` to improve the experience.
+
+  If you would like to disable telemetry, you can run:
+
+  ```sh
+  npm create cloudflare telemetry disable
+  ```
+
+  Alternatively, you can set an environment variable:
+
+  ```sh
+  export CREATE_CLOUDFLARE_TELEMETRY_DISABLED=1
+  ```
+
+  Read more about our data policy at https://github.com/cloudflare/workers-sdk/blob/main/packages/create-cloudflare/telemetry.md.
+
+### Patch Changes
+
+- [#6760](https://github.com/cloudflare/workers-sdk/pull/6760) [`ba4ac82`](https://github.com/cloudflare/workers-sdk/commit/ba4ac8239589543372c53352c4c90db6071ca3d7) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: add missing experimental templates to C3 for asset Workers
+
+- [#6790](https://github.com/cloudflare/workers-sdk/pull/6790) [`9e44d88`](https://github.com/cloudflare/workers-sdk/commit/9e44d88ac047a021f86db851e926a14a5a01781c) Thanks [@penalosa](https://github.com/penalosa)! - fix: Remove `Env` from index.ts in the Hello World Durable Objects & Hello World Durable Objects w/ assets templates
+
 ## 2.27.3
 
 ### Patch Changes

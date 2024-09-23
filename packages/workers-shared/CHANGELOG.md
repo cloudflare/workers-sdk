@@ -1,5 +1,15 @@
 # @cloudflare/workers-shared
 
+## 0.5.4
+
+### Patch Changes
+
+- [#6728](https://github.com/cloudflare/workers-sdk/pull/6728) [`1ca313f`](https://github.com/cloudflare/workers-sdk/commit/1ca313f2041688cd13e25f0817e3b72dfc930bac) Thanks [@emily-shen](https://github.com/emily-shen)! - fix: remove filepath encoding on asset upload and handle sometimes-encoded characters
+
+  Some characters like [ ] @ are encoded by encodeURIComponent() but are often requested at an unencoded URL path.
+  This change will make assets with filenames with these characters accessible at both the encoded and unencoded paths,
+  but to use the encoded path as the canonical one, and to redirect requests to the canonical path if necessary.
+
 ## 0.5.3
 
 ### Patch Changes

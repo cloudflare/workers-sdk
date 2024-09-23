@@ -1,5 +1,23 @@
 # wrangler
 
+## 3.78.8
+
+### Patch Changes
+
+- [#6791](https://github.com/cloudflare/workers-sdk/pull/6791) [`74d719f`](https://github.com/cloudflare/workers-sdk/commit/74d719fb8d2ce1e877b3c70da2a495386084d892) Thanks [@penalosa](https://github.com/penalosa)! - fix: Add missing binding to `init --from-dash`
+
+- [#6728](https://github.com/cloudflare/workers-sdk/pull/6728) [`1ca313f`](https://github.com/cloudflare/workers-sdk/commit/1ca313f2041688cd13e25f0817e3b72dfc930bac) Thanks [@emily-shen](https://github.com/emily-shen)! - fix: remove filepath encoding on asset upload and handle sometimes-encoded characters
+
+  Some characters like [ ] @ are encoded by encodeURIComponent() but are often requested at an unencoded URL path.
+  This change will make assets with filenames with these characters accessible at both the encoded and unencoded paths,
+  but to use the encoded path as the canonical one, and to redirect requests to the canonical path if necessary.
+
+- [#6798](https://github.com/cloudflare/workers-sdk/pull/6798) [`7d7f19a`](https://github.com/cloudflare/workers-sdk/commit/7d7f19a2ca501d311c00d15c78ba3bec1a50353e) Thanks [@emily-shen](https://github.com/emily-shen)! - fix: error if an asset binding is provided without a Worker script
+
+- Updated dependencies [[`1ca313f`](https://github.com/cloudflare/workers-sdk/commit/1ca313f2041688cd13e25f0817e3b72dfc930bac)]:
+  - @cloudflare/workers-shared@0.5.4
+  - miniflare@3.20240909.5
+
 ## 3.78.7
 
 ### Patch Changes
