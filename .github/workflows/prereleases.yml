@@ -65,6 +65,8 @@ jobs:
         run: pnpm --filter create-cloudflare publish --tag beta
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_PUBLISH_TOKEN }}
+          # this is the "test/staging" key for sparrow analytics
+          SPARROW_SOURCE_KEY: "5adf183f94b3436ba78d67f506965998"
 
       - name: Publish workers-shared@beta to NPM
         run: pnpm --filter workers-shared publish --tag beta
