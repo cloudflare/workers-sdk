@@ -22,6 +22,7 @@ updates:
     labels:
       - "c3"
       - "dependencies"
+      - "skip-pr-description-validation"
   # Check for workerd & workers-types updates for Miniflare
   - package-ecosystem: "npm"
     # If you restrict the update to a directory that is not the root
@@ -43,6 +44,7 @@ updates:
     labels:
       - "miniflare"
       - "dependencies"
+      - "skip-pr-description-validation"
     allow:
       - dependency-name: "workerd"
       - dependency-name: "@cloudflare/workers-types"
