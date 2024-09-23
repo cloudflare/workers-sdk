@@ -22,8 +22,8 @@ export function cloudflare(options: CloudflareEnvironmentOptions): vite.Plugin {
 					return (
 						viteDevServer.environments.worker as CloudflareDevEnvironment
 					).dispatchFetch(context.request);
-				}
-				// { alwaysCallNext: false }
+				},
+				{ alwaysCallNext: false }
 			);
 
 			return () => {
