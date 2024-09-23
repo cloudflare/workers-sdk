@@ -24,7 +24,7 @@ import { startDevServer } from "./dev/start-server";
 import { UserError } from "./errors";
 import {
 	processExperimentalAssetsArg,
-	verifyMutuallyExclusiveAssetsArgsOrConfig,
+	validateAssetsArgsAndConfig,
 } from "./experimental-assets";
 import { run } from "./experimental-flags";
 import isInteractive from "./is-interactive";
@@ -621,7 +621,7 @@ export async function startDev(args: StartDevOptions) {
 			);
 		}
 
-		verifyMutuallyExclusiveAssetsArgsOrConfig(args, config);
+		validateAssetsArgsAndConfig(args, config);
 
 		let experimentalAssetsOptions = processExperimentalAssetsArg(args, config);
 		if (experimentalAssetsOptions) {

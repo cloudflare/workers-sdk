@@ -1613,6 +1613,17 @@ describe("wrangler dev", () => {
 			);
 		});
 
+		it("should error if an ASSET binding is provided without a user Worker", async () => {
+			writeWranglerToml({
+				experimental_assets: { directory: "assets", binding: "ASSETS" },
+			});
+			await expect(
+				runWrangler("dev")
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: Cannot use Experimental Assets with a binding in a assets-only Worker.]`
+			);
+		});
+
 		it("should error if directory specified by '--experimental-assets' command line argument does not exist", async () => {
 			writeWranglerToml({
 				main: "./index.js",

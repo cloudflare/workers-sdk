@@ -4385,6 +4385,20 @@ addEventListener('fetch', event => {});`
 			);
 		});
 
+		it("should error if an ASSET binding is provided without a user Worker", async () => {
+			writeWranglerToml({
+				experimental_assets: {
+					directory: "xyz",
+					binding: "ASSET",
+				},
+			});
+			await expect(
+				runWrangler("deploy")
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: Cannot use Experimental Assets with a binding in a assets-only Worker.]`
+			);
+		});
+
 		it("should be able to upload files with special characters in filepaths", async () => {
 			// NB windows will disallow these characters in file paths anyway < > : " / \ | ? *
 			const assets = [

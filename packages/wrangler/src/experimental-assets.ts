@@ -371,16 +371,23 @@ export function processExperimentalAssetsArg(
 }
 
 /**
+ * Validate assets configuration after CLI args and config have been combined.
+ *
  * Workers assets cannot be used in combination with a few other select
  * Workers features, such as: legacy assets, sites and tail consumers.
  *
- * This function ensures that if any of these mutually exclusive config
- * keys or command args are used together, an appropriate error is thrown.
+ * An asset binding cannot be used in a Worker that only has assets.
  */
-export function verifyMutuallyExclusiveAssetsArgsOrConfig(
+export function validateAssetsArgsAndConfig(
 	args:
-		| Pick<StartDevOptions, "legacyAssets" | "site" | "experimentalAssets">
-		| Pick<DeployArgs, "legacyAssets" | "site" | "experimentalAssets">,
+		| Pick<
+				StartDevOptions,
+				"legacyAssets" | "site" | "experimentalAssets" | "script"
+		  >
+		| Pick<
+				DeployArgs,
+				"legacyAssets" | "site" | "experimentalAssets" | "script"
+		  >,
 	config: Config
 ) {
 	/*
@@ -411,6 +418,12 @@ export function verifyMutuallyExclusiveAssetsArgsOrConfig(
 	) {
 		throw new UserError(
 			"Cannot use Experimental Assets and tail consumers in the same Worker. Tail Workers are not yet supported for Workers with assets."
+		);
+	}
+
+	if (!(args.script || config.main) && config.experimental_assets?.binding) {
+		throw new UserError(
+			"Cannot use Experimental Assets with a binding in a assets-only Worker."
 		);
 	}
 }

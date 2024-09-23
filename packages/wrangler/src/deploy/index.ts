@@ -5,7 +5,7 @@ import { getEntry } from "../deployment-bundle/entry";
 import { UserError } from "../errors";
 import {
 	processExperimentalAssetsArg,
-	verifyMutuallyExclusiveAssetsArgsOrConfig,
+	validateAssetsArgsAndConfig,
 } from "../experimental-assets";
 import {
 	getRules,
@@ -292,7 +292,7 @@ export async function deployHandler(args: DeployArgs) {
 		);
 	}
 
-	verifyMutuallyExclusiveAssetsArgsOrConfig(args, config);
+	validateAssetsArgsAndConfig(args, config);
 
 	const experimentalAssetsOptions = processExperimentalAssetsArg(args, config);
 
