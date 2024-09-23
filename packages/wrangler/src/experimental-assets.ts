@@ -399,7 +399,7 @@ export function validateAssetsArgsAndConfig(
 	) {
 		throw new UserError(
 			"Cannot use Experimental Assets and Legacy Assets in the same Worker.\n" +
-				"Please remove either the `site` or `experimental_assets` field from your configuration file."
+				"Please remove either the `legacy_assets` or `experimental_assets` field from your configuration file."
 		);
 	}
 
