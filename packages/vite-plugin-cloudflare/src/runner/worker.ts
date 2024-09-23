@@ -1,4 +1,5 @@
 import { ModuleRunner } from 'vite/module-runner';
+import { UNKNOWN_HOST, INIT_PATH } from '../shared.js';
 import type { FetchResult } from 'vite/module-runner';
 
 interface RunnerEnv {
@@ -10,9 +11,6 @@ interface RunnerEnv {
 		eval: (code: string, filename: string) => Function;
 	};
 }
-
-const UNKNOWN_HOST = 'http://localhost';
-const INIT_PATH = '/__vite_plugin_cloudflare_init__';
 
 function createModuleRunner(env: RunnerEnv, webSocket: WebSocket) {
 	return new ModuleRunner(

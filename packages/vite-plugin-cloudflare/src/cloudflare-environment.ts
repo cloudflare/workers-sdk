@@ -1,6 +1,7 @@
 import * as vite from 'vite';
 import { Miniflare, Response as MiniflareResponse } from 'miniflare';
 import { fileURLToPath } from 'node:url';
+import { UNKNOWN_HOST, INIT_PATH } from './shared';
 import type { FetchFunctionOptions } from 'vite/module-runner';
 
 export interface CloudflareEnvironmentOptions {
@@ -14,10 +15,6 @@ export interface CloudflareEnvironmentOptions {
 	overrides?: vite.EnvironmentOptions;
 }
 
-// Move to shared file
-const UNKNOWN_HOST = 'http://localhost';
-const INIT_PATH = '/__vite_plugin_cloudflare_init__';
-
 export class CloudflareDevEnvironment extends vite.DevEnvironment {
 	#options: CloudflareEnvironmentOptions;
 	#miniflare: Miniflare;
@@ -28,7 +25,7 @@ export class CloudflareDevEnvironment extends vite.DevEnvironment {
 		config: vite.ResolvedConfig,
 		options: CloudflareEnvironmentOptions
 	) {
-		super(name, config, { hot: vite.createServerHotChannel() });
+		super(name, config, { hot: false });
 		this.#options = options;
 		this.#miniflare = new Miniflare({
 			// ...workerOptions
