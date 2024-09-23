@@ -119,7 +119,7 @@ export interface ConfigFields<Dev extends RawDevConfig> {
 	 * without any additional code.
 	 * This can either be a string, or an object with additional config
 	 * fields.
-	 * Will be deprecated in the near future in favor of `experimental_assets`.
+	 * Will be deprecated in the near future in favor of `assets`.
 	 */
 	legacy_assets:
 		| {
@@ -375,7 +375,7 @@ export const defaultWranglerConfig: Config = {
 	logfwdr: { bindings: [] },
 	logpush: undefined,
 	upload_source_maps: undefined,
-	experimental_assets: undefined,
+	assets: undefined,
 	observability: { enabled: true },
 
 	/** NON-INHERITABLE ENVIRONMENT FIELDS **/

@@ -9,6 +9,7 @@ import {
 	getScriptName,
 	isLegacyEnv,
 } from "../..";
+import { processAssetsArg } from "../../assets";
 import { printBindings, readConfig } from "../../config";
 import { getEntry } from "../../deployment-bundle/entry";
 import {
@@ -21,7 +22,6 @@ import {
 import { getLocalPersistencePath } from "../../dev/get-local-persistence-path";
 import { getClassNamesWhichUseSQLite } from "../../dev/validate-dev-props";
 import { UserError } from "../../errors";
-import { processExperimentalAssetsArg } from "../../experimental-assets";
 import { logger } from "../../logger";
 import { getAccountId, requireApiToken } from "../../user";
 import { memoizeGetPort } from "../../utils/memoizeGetPort";
@@ -63,7 +63,7 @@ async function resolveDevConfig(
 			routes: input.triggers?.filter(
 				(t): t is Extract<Trigger, { type: "route" }> => t.type === "route"
 			),
-			experimentalAssets: input.experimental?.assets?.directory,
+			assets: input.experimental?.assets?.directory,
 		},
 		config
 	);
@@ -165,7 +165,7 @@ async function resolveTriggers(
 			routes: input.triggers?.filter(
 				(t): t is Extract<Trigger, { type: "route" }> => t.type === "route"
 			),
-			experimentalAssets: input.experimental?.assets?.directory,
+			assets: input.experimental?.assets?.directory,
 		},
 		config
 	);
@@ -209,10 +209,10 @@ async function resolveConfig(
 			legacyAssets: Boolean(legacyAssets),
 			script: input.entrypoint,
 			moduleRoot: input.build?.moduleRoot,
-			// getEntry only needs to know if experimental_assets was specified.
+			// getEntry only needs to know if assets was specified.
 			// The actualy value is not relevant here, which is why not passing
-			// the entire ExperimentalAssets object is fine.
-			experimentalAssets: input?.experimental?.assets?.directory,
+			// the entire Assets object is fine.
+			assets: input?.experimental?.assets?.directory,
 		},
 		config,
 		"dev"
@@ -222,9 +222,9 @@ async function resolveConfig(
 
 	const { bindings, unsafe } = await resolveBindings(config, input);
 
-	const experimentalAssetsOptions = processExperimentalAssetsArg(
+	const assetsOptions = processAssetsArg(
 		{
-			experimentalAssets: input?.experimental?.assets?.directory,
+			assets: input?.experimental?.assets?.directory,
 			script: input.entrypoint,
 		},
 		config
@@ -276,7 +276,7 @@ async function resolveConfig(
 			metadata: input.unsafe?.metadata ?? unsafe?.metadata,
 		},
 		experimental: {
-			assets: experimentalAssetsOptions,
+			assets: assetsOptions,
 		},
 	} satisfies StartDevWorkerOptions;
 
@@ -421,12 +421,12 @@ export class ConfigController extends Controller<ConfigControllerEventMap> {
 
 			void this.#ensureWatchingConfig(fileConfig.configPath);
 
-			const experimentalAssets = processExperimentalAssetsArg(
-				{ experimentalAssets: input.experimental?.assets?.directory },
+			const assets = processAssetsArg(
+				{ assets: input.experimental?.assets?.directory },
 				fileConfig
 			);
-			if (experimentalAssets) {
-				void this.#ensureWatchingAssets(experimentalAssets.directory);
+			if (assets) {
+				void this.#ensureWatchingAssets(assets.directory);
 			}
 
 			const resolvedConfig = await resolveConfig(fileConfig, input);

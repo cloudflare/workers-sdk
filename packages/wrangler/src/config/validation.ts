@@ -31,10 +31,10 @@ import {
 } from "./validation-helpers";
 import type { Config, DevConfig, RawConfig, RawDevConfig } from "./config";
 import type {
+	Assets,
 	DeprecatedUpload,
 	DispatchNamespaceOutbound,
 	Environment,
-	ExperimentalAssets,
 	Observability,
 	RawEnvironment,
 	Rule,
@@ -249,7 +249,7 @@ export function normalizeAndValidateConfig(
 		diagnostics,
 		rawConfig,
 		"legacy_assets",
-		`The \`legacy_assets\` feature will be deprecated in the near future. Please use \`experimental_assets\` instead.`,
+		`The \`legacy_assets\` feature will be deprecated in the near future. Please use \`assets\` instead.`,
 		false
 	);
 
@@ -1233,11 +1233,11 @@ function normalizeAndValidateEnvironment(
 			isObjectWith("crons"),
 			{ crons: [] }
 		),
-		experimental_assets: inheritable(
+		assets: inheritable(
 			diagnostics,
 			topLevelEnv,
 			rawEnv,
-			"experimental_assets",
+			"assets",
 			validateAssetsConfig,
 			undefined
 		),
@@ -2087,7 +2087,7 @@ const validateAssetsConfig: ValidatorFn = (diagnostics, field, value) => {
 			diagnostics,
 			field,
 			"directory",
-			(value as ExperimentalAssets).directory,
+			(value as Assets).directory,
 			"string"
 		) && isValid;
 
@@ -2095,7 +2095,7 @@ const validateAssetsConfig: ValidatorFn = (diagnostics, field, value) => {
 		isNonEmptyString(
 			diagnostics,
 			`${field}.directory`,
-			(value as ExperimentalAssets).directory,
+			(value as Assets).directory,
 			undefined
 		) && isValid;
 
@@ -2104,7 +2104,7 @@ const validateAssetsConfig: ValidatorFn = (diagnostics, field, value) => {
 			diagnostics,
 			field,
 			"binding",
-			(value as ExperimentalAssets).binding,
+			(value as Assets).binding,
 			"string"
 		) && isValid;
 
@@ -2113,7 +2113,7 @@ const validateAssetsConfig: ValidatorFn = (diagnostics, field, value) => {
 			diagnostics,
 			field,
 			"html_handling",
-			(value as ExperimentalAssets).html_handling,
+			(value as Assets).html_handling,
 			"string",
 			[
 				"auto-trailing-slash",
@@ -2128,7 +2128,7 @@ const validateAssetsConfig: ValidatorFn = (diagnostics, field, value) => {
 			diagnostics,
 			field,
 			"not_found_handling",
-			(value as ExperimentalAssets).not_found_handling,
+			(value as Assets).not_found_handling,
 			"string",
 			["single-page-application", "404-page", "none"]
 		) && isValid;

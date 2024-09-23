@@ -22,7 +22,7 @@ import { APIError } from "./parse";
 import { dedent } from "./utils/dedent";
 import { createPatternMatcher } from "./utils/filesystem";
 import type { Config } from "./config";
-import type { ExperimentalAssets } from "./config/environment";
+import type { Assets } from "./config/environment";
 import type { DeployArgs } from "./deploy";
 import type { StartDevOptions } from "./dev";
 import type { AssetConfig, RoutingConfig } from "@cloudflare/workers-shared";
@@ -44,7 +44,7 @@ const BULK_UPLOAD_CONCURRENCY = 3;
 const MAX_UPLOAD_ATTEMPTS = 5;
 const MAX_UPLOAD_GATEWAY_ERRORS = 5;
 
-export const syncExperimentalAssets = async (
+export const syncAssets = async (
 	accountId: string | undefined,
 	scriptName: string,
 	assetDirectory: string
@@ -296,70 +296,59 @@ function logAssetUpload(line: string, diffCount: number) {
 }
 
 /**
- * Returns the base path of the experimental assets to upload.
+ * Returns the base path of the assets to upload.
  *
  */
-export function getExperimentalAssetsBasePath(
+export function getAssetsBasePath(
 	config: Config,
-	experimentalAssetsCommandLineArg: string | undefined
+	assetsCommandLineArg: string | undefined
 ): string {
-	return experimentalAssetsCommandLineArg
+	return assetsCommandLineArg
 		? process.cwd()
 		: path.resolve(path.dirname(config.configPath ?? "wrangler.toml"));
 }
 
-export type ExperimentalAssetsOptions = Pick<
-	ExperimentalAssets,
-	"directory" | "binding"
-> & {
+export type AssetsOptions = Pick<Assets, "directory" | "binding"> & {
 	routingConfig: RoutingConfig;
 	assetConfig: AssetConfig;
 };
 
-export function processExperimentalAssetsArg(
-	args: { experimentalAssets: string | undefined; script?: string },
+export function processAssetsArg(
+	args: { assets: string | undefined; script?: string },
 	config: Config
-): ExperimentalAssetsOptions | undefined {
-	const experimentalAssets = args.experimentalAssets
-		? { directory: args.experimentalAssets }
-		: config.experimental_assets;
+): AssetsOptions | undefined {
+	const assets = args.assets ? { directory: args.assets } : config.assets;
 
-	if (!experimentalAssets) {
+	if (!assets) {
 		return;
 	}
 
-	const experimentalAssetsBasePath = getExperimentalAssetsBasePath(
-		config,
-		args.experimentalAssets
-	);
-	const resolvedExperimentalAssetsPath = path.resolve(
-		experimentalAssetsBasePath,
-		experimentalAssets.directory
-	);
+	const assetsBasePath = getAssetsBasePath(config, args.assets);
+	const resolvedAssetsPath = path.resolve(assetsBasePath, assets.directory);
 
-	if (!existsSync(resolvedExperimentalAssetsPath)) {
-		const sourceOfTruthMessage = args.experimentalAssets
-			? '"--experimental-assets" command line argument'
-			: '"experimental_assets.directory" field in your configuration file';
+	if (!existsSync(resolvedAssetsPath)) {
+		const sourceOfTruthMessage = args.assets
+			? '"--assets" command line argument'
+			: '"assets.directory" field in your configuration file';
 
 		throw new UserError(
 			`The directory specified by the ${sourceOfTruthMessage} does not exist:\n` +
-				`${resolvedExperimentalAssetsPath}`
+				`${resolvedAssetsPath}`
 		);
 	}
 
-	experimentalAssets.directory = resolvedExperimentalAssetsPath;
+	assets.directory = resolvedAssetsPath;
 	const routingConfig = {
 		has_user_worker: Boolean(args.script || config.main),
 	};
 	// defaults are set in asset worker
 	const assetConfig = {
-		html_handling: config.experimental_assets?.html_handling,
-		not_found_handling: config.experimental_assets?.not_found_handling,
+		html_handling: config.assets?.html_handling,
+		not_found_handling: config.assets?.not_found_handling,
 	};
 
 	return {
-		...experimentalAssets,
+		...assets,
 		routingConfig,
 		assetConfig,
 	};
@@ -374,14 +363,8 @@ export function processExperimentalAssetsArg(
  */
 export function validateAssetsArgsAndConfig(
 	args:
-		| Pick<
-				StartDevOptions,
-				"legacyAssets" | "site" | "experimentalAssets" | "script"
-		  >
-		| Pick<
-				DeployArgs,
-				"legacyAssets" | "site" | "experimentalAssets" | "script"
-		  >,
+		| Pick<StartDevOptions, "legacyAssets" | "site" | "assets" | "script">
+		| Pick<DeployArgs, "legacyAssets" | "site" | "assets" | "script">,
 	config: Config
 ) {
 	/*
@@ -389,37 +372,31 @@ export function validateAssetsArgsAndConfig(
 	 * - `args.legacyAssets` conflates `legacy-assets` and `assets`
 	 */
 	if (
-		(args.experimentalAssets || config.experimental_assets) &&
+		(args.assets || config.assets) &&
 		(args.legacyAssets || config.legacy_assets)
 	) {
 		throw new UserError(
-			"Cannot use Experimental Assets and Legacy Assets in the same Worker.\n" +
-				"Please remove either the `legacy_assets` or `experimental_assets` field from your configuration file."
+			"Cannot use assets and legacy assets in the same Worker.\n" +
+				"Please remove either the `legacy_assets` or `assets` field from your configuration file."
 		);
 	}
 
-	if (
-		(args.experimentalAssets || config.experimental_assets) &&
-		(args.site || config.site)
-	) {
+	if ((args.assets || config.assets) && (args.site || config.site)) {
 		throw new UserError(
-			"Cannot use Experimental Assets and Workers Sites in the same Worker.\n" +
-				"Please remove either the `site` or `experimental_assets` field from your configuration file."
+			"Cannot use assets and Workers Sites in the same Worker.\n" +
+				"Please remove either the `site` or `assets` field from your configuration file."
 		);
 	}
 
-	if (
-		(args.experimentalAssets || config.experimental_assets) &&
-		config.tail_consumers?.length
-	) {
+	if ((args.assets || config.assets) && config.tail_consumers?.length) {
 		throw new UserError(
-			"Cannot use Experimental Assets and tail consumers in the same Worker. Tail Workers are not yet supported for Workers with assets."
+			"Cannot use assets and tail consumers in the same Worker. Tail Workers are not yet supported for Workers with assets."
 		);
 	}
 
-	if (!(args.script || config.main) && config.experimental_assets?.binding) {
+	if (!(args.script || config.main) && config.assets?.binding) {
 		throw new UserError(
-			"Cannot use Experimental Assets with a binding in an assets-only Worker.\n" +
+			"Cannot use assets with a binding in an assets-only Worker.\n" +
 				"Please remove the asset binding from your configuration file, or provide a Worker script in your configuration file (`main`)."
 		);
 	}

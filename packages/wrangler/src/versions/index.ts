@@ -1,12 +1,9 @@
 import assert from "node:assert";
 import path from "node:path";
+import { processAssetsArg, validateAssetsArgsAndConfig } from "../assets";
 import { findWranglerToml, readConfig } from "../config";
 import { getEntry } from "../deployment-bundle/entry";
 import { UserError } from "../errors";
-import {
-	processExperimentalAssetsArg,
-	validateAssetsArgsAndConfig,
-} from "../experimental-assets";
 import {
 	getRules,
 	getScriptName,
@@ -100,12 +97,10 @@ export function versionsUploadOptions(yargs: CommonYargsArgv) {
 				requiresArg: true,
 				hidden: true,
 			})
-			.option("experimental-assets", {
+			.option("assets", {
 				describe: "Static assets to be served",
 				type: "string",
-				alias: "x-assets",
 				requiresArg: true,
-				hidden: true,
 			})
 			.option("site", {
 				describe: "Root folder of static assets for Workers Sites",
@@ -222,7 +217,7 @@ export async function versionsUploadHandler(
 	}
 	if (args.legacyAssets || config.legacy_assets) {
 		throw new UserError(
-			"Legacy Assets does not support uploading versions through `wrangler versions upload`. You must use `wrangler deploy` instead."
+			"Legacy assets does not support uploading versions through `wrangler versions upload`. You must use `wrangler deploy` instead."
 		);
 	}
 
@@ -233,13 +228,13 @@ export async function versionsUploadHandler(
 			// skip the corresponding mutual exclusivity validation
 			legacyAssets: undefined,
 			site: undefined,
-			experimentalAssets: args.experimentalAssets,
+			assets: args.assets,
 			script: args.script,
 		},
 		config
 	);
 
-	const experimentalAssetsOptions = processExperimentalAssetsArg(args, config);
+	const assetsOptions = processAssetsArg(args, config);
 
 	if (args.latest) {
 		logger.warn(
@@ -289,7 +284,7 @@ export async function versionsUploadHandler(
 		jsxFactory: args.jsxFactory,
 		jsxFragment: args.jsxFragment,
 		tsconfig: args.tsconfig,
-		experimentalAssetsOptions,
+		assetsOptions,
 		minify: args.minify,
 		uploadSourceMaps: args.uploadSourceMaps,
 		nodeCompat: args.nodeCompat,

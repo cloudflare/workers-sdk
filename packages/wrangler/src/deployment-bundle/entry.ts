@@ -37,7 +37,7 @@ export async function getEntry(
 		format?: CfScriptFormat | undefined;
 		legacyAssets?: string | undefined | boolean;
 		moduleRoot?: string;
-		experimentalAssets?: string | undefined;
+		assets?: string | undefined;
 	},
 	config: Config,
 	command: "dev" | "deploy" | "versions upload" | "types"
@@ -58,8 +58,8 @@ export async function getEntry(
 		} else if (
 			args.legacyAssets ||
 			config.legacy_assets ||
-			args.experimentalAssets ||
-			config.experimental_assets
+			args.assets ||
+			config.assets
 		) {
 			file = path.resolve(getBasePath(), "templates/no-op-worker.js");
 		} else {

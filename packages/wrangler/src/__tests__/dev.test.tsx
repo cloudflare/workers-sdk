@@ -324,7 +324,7 @@ describe("wrangler dev", () => {
 				Paths are not allowed in Custom Domains]
 			`);
 		});
-		it("should error on routes with paths if experimental assets are present", async () => {
+		it("should error on routes with paths if assets are present", async () => {
 			writeWranglerToml({
 				routes: [
 					"simple.co.uk/path",
@@ -341,7 +341,7 @@ describe("wrangler dev", () => {
 					{ pattern: "custom.co.uk/*", custom_domain: true },
 					{ pattern: "custom.co.uk", custom_domain: true },
 				],
-				experimental_assets: {
+				assets: {
 					directory: "assets",
 				},
 			});
@@ -1387,7 +1387,7 @@ describe("wrangler dev", () => {
 			await expect(
 				runWrangler("dev --legacy-assets abc --site xyz")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: Cannot use Legacy Assets and Workers Sites in the same Worker.]`
+				`[Error: Cannot use legacy assets and Workers Sites in the same Worker.]`
 			);
 		});
 
@@ -1402,7 +1402,7 @@ describe("wrangler dev", () => {
 			await expect(
 				runWrangler("dev --legacy-assets abc")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: Cannot use Legacy Assets and Workers Sites in the same Worker.]`
+				`[Error: Cannot use legacy assets and Workers Sites in the same Worker.]`
 			);
 		});
 
@@ -1415,7 +1415,7 @@ describe("wrangler dev", () => {
 			await expect(
 				runWrangler("dev --site xyz")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: Cannot use Legacy Assets and Workers Sites in the same Worker.]`
+				`[Error: Cannot use legacy assets and Workers Sites in the same Worker.]`
 			);
 		});
 
@@ -1431,7 +1431,7 @@ describe("wrangler dev", () => {
 			await expect(
 				runWrangler("dev --legacy-assets abc")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: Cannot use Legacy Assets and Workers Sites in the same Worker.]`
+				`[Error: Cannot use legacy assets and Workers Sites in the same Worker.]`
 			);
 		});
 
@@ -1459,7 +1459,7 @@ describe("wrangler dev", () => {
 
 			await runWrangler('dev --legacy-assets "./assets"');
 			expect(std.warn).toMatchInlineSnapshot(`
-				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --legacy-assets argument will be deprecated in the near future. Please use --experimental-assets instead.[0m
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --legacy-assets argument will be deprecated in the near future. Please use --assets instead.[0m
 
 				  To learn more about Workers with assets, visit our documentation at
 				  [4mhttps://developers.cloudflare.com/workers/frameworks/[0m.
@@ -1481,28 +1481,28 @@ describe("wrangler dev", () => {
 				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
 
 				    - [1mDeprecation[0m: \\"legacy_assets\\":
-				      The \`legacy_assets\` feature will be deprecated in the near future. Please use
-				  \`experimental_assets\` instead.
+				      The \`legacy_assets\` feature will be deprecated in the near future. Please use \`assets\`
+				  instead.
 
 				"
 			`);
 		});
 	});
 
-	describe("--experimental-assets", () => {
-		it("should not require entry point if using --experimental-assets", async () => {
+	describe("--assets", () => {
+		it("should not require entry point if using --assets", async () => {
 			fs.mkdirSync("assets");
 			writeWranglerToml({
-				experimental_assets: { directory: "assets" },
+				assets: { directory: "assets" },
 			});
 
 			await runWrangler("dev");
 		});
 
-		it("should error if config.site and config.experimental_assets are used together", async () => {
+		it("should error if config.site and config.assets are used together", async () => {
 			writeWranglerToml({
 				main: "./index.js",
-				experimental_assets: { directory: "assets" },
+				assets: { directory: "assets" },
 				site: {
 					bucket: "xyz",
 				},
@@ -1513,13 +1513,13 @@ describe("wrangler dev", () => {
 				runWrangler("dev")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
 				`
-				[Error: Cannot use Experimental Assets and Workers Sites in the same Worker.
-				Please remove either the \`site\` or \`experimental_assets\` field from your configuration file.]
+				[Error: Cannot use assets and Workers Sites in the same Worker.
+				Please remove either the \`site\` or \`assets\` field from your configuration file.]
 			`
 			);
 		});
 
-		it("should error if config.site and --experimental-assets are used together", async () => {
+		it("should error if config.site and --assets are used together", async () => {
 			writeWranglerToml({
 				main: "./index.js",
 				site: {
@@ -1529,19 +1529,19 @@ describe("wrangler dev", () => {
 			fs.writeFileSync("index.js", `export default {};`);
 			fs.mkdirSync("assets");
 			await expect(
-				runWrangler("dev --experimental-assets assets")
+				runWrangler("dev --assets assets")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
 				`
-				[Error: Cannot use Experimental Assets and Workers Sites in the same Worker.
-				Please remove either the \`site\` or \`experimental_assets\` field from your configuration file.]
+				[Error: Cannot use assets and Workers Sites in the same Worker.
+				Please remove either the \`site\` or \`assets\` field from your configuration file.]
 			`
 			);
 		});
 
-		it("should error if config.experimental_assets and config.legacy_assets are used together", async () => {
+		it("should error if config.assets and config.legacy_assets are used together", async () => {
 			writeWranglerToml({
 				main: "./index.js",
-				experimental_assets: { directory: "assets" },
+				assets: { directory: "assets" },
 				legacy_assets: {
 					bucket: "xyz",
 					include: [],
@@ -1556,26 +1556,26 @@ describe("wrangler dev", () => {
 				runWrangler("dev")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
 				`
-				[Error: Cannot use Experimental Assets and Legacy Assets in the same Worker.
-				Please remove either the \`legacy_assets\` or \`experimental_assets\` field from your configuration file.]
+				[Error: Cannot use assets and legacy assets in the same Worker.
+				Please remove either the \`legacy_assets\` or \`assets\` field from your configuration file.]
 			`
 			);
 		});
 
-		it("should error if --experimental-assets and --legacy-assets are used together", async () => {
+		it("should error if --assets and --legacy-assets are used together", async () => {
 			fs.writeFileSync("index.js", `export default {};`);
 			fs.mkdirSync("assets");
 			await expect(
-				runWrangler("dev --experimental-assets assets --legacy-assets assets")
+				runWrangler("dev --assets assets --legacy-assets assets")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
 				`
-				[Error: Cannot use Experimental Assets and Legacy Assets in the same Worker.
-				Please remove either the \`legacy_assets\` or \`experimental_assets\` field from your configuration file.]
+				[Error: Cannot use assets and legacy assets in the same Worker.
+				Please remove either the \`legacy_assets\` or \`assets\` field from your configuration file.]
 			`
 			);
 		});
 
-		it("should error if --experimental-assets and config.legacy_assets are used together", async () => {
+		it("should error if --assets and config.legacy_assets are used together", async () => {
 			writeWranglerToml({
 				main: "./index.js",
 				legacy_assets: {
@@ -1589,19 +1589,19 @@ describe("wrangler dev", () => {
 			fs.writeFileSync("index.js", `export default {};`);
 			fs.mkdirSync("assets");
 			await expect(
-				runWrangler("dev --experimental-assets assets")
+				runWrangler("dev --assets assets")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
 				`
-				[Error: Cannot use Experimental Assets and Legacy Assets in the same Worker.
-				Please remove either the \`legacy_assets\` or \`experimental_assets\` field from your configuration file.]
+				[Error: Cannot use assets and legacy assets in the same Worker.
+				Please remove either the \`legacy_assets\` or \`assets\` field from your configuration file.]
 			`
 			);
 		});
 
-		it("should error if config.experimental_assets and --legacy-assets are used together", async () => {
+		it("should error if config.assets and --legacy-assets are used together", async () => {
 			writeWranglerToml({
 				main: "./index.js",
-				experimental_assets: {
+				assets: {
 					directory: "xyz",
 				},
 			});
@@ -1611,98 +1611,96 @@ describe("wrangler dev", () => {
 				runWrangler("dev --legacy-assets xyz")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
 				`
-				[Error: Cannot use Experimental Assets and Legacy Assets in the same Worker.
-				Please remove either the \`legacy_assets\` or \`experimental_assets\` field from your configuration file.]
+				[Error: Cannot use assets and legacy assets in the same Worker.
+				Please remove either the \`legacy_assets\` or \`assets\` field from your configuration file.]
 			`
 			);
 		});
 
 		it("should error if an ASSET binding is provided without a user Worker", async () => {
 			writeWranglerToml({
-				experimental_assets: { directory: "assets", binding: "ASSETS" },
+				assets: { directory: "assets", binding: "ASSETS" },
 			});
 			await expect(
 				runWrangler("dev")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
 				`
-				[Error: Cannot use Experimental Assets with a binding in an assets-only Worker.
+				[Error: Cannot use assets with a binding in an assets-only Worker.
 				Please remove the asset binding from your configuration file, or provide a Worker script in your configuration file (\`main\`).]
 			`
 			);
 		});
 
-		it("should error if directory specified by '--experimental-assets' command line argument does not exist", async () => {
+		it("should error if directory specified by '--assets' command line argument does not exist", async () => {
 			writeWranglerToml({
 				main: "./index.js",
 			});
 			fs.writeFileSync("index.js", `export default {};`);
-			await expect(
-				runWrangler("dev --experimental-assets abc")
-			).rejects.toThrow(
+			await expect(runWrangler("dev --assets abc")).rejects.toThrow(
 				new RegExp(
-					'^The directory specified by the "--experimental-assets" command line argument does not exist:[Ss]*'
+					'^The directory specified by the "--assets" command line argument does not exist:[Ss]*'
 				)
 			);
 		});
 
-		it("should error if directory specified by '[experimental_assets]' configuration key does not exist", async () => {
+		it("should error if directory specified by '[assets]' configuration key does not exist", async () => {
 			writeWranglerToml({
 				main: "./index.js",
-				experimental_assets: {
+				assets: {
 					directory: "abc",
 				},
 			});
 			fs.writeFileSync("index.js", `export default {};`);
 			await expect(runWrangler("dev")).rejects.toThrow(
 				new RegExp(
-					'^The directory specified by the "experimental_assets.directory" field in your configuration file does not exist:[Ss]*'
+					'^The directory specified by the "assets.directory" field in your configuration file does not exist:[Ss]*'
 				)
 			);
 		});
 
-		it("should error if --experimental-assets and config.tail_consumers are used together", async () => {
+		it("should error if --assets and config.tail_consumers are used together", async () => {
 			writeWranglerToml({
 				tail_consumers: [{ service: "<TAIL_WORKER_NAME>" }],
 			});
 			fs.mkdirSync("public");
 			await expect(
-				runWrangler("dev --experimental-assets public")
+				runWrangler("dev --assets public")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: Cannot use Experimental Assets and tail consumers in the same Worker. Tail Workers are not yet supported for Workers with assets.]`
+				`[Error: Cannot use assets and tail consumers in the same Worker. Tail Workers are not yet supported for Workers with assets.]`
 			);
 		});
 
-		it("should error if config.experimental_assets and config.tail_consumers are used together", async () => {
+		it("should error if config.assets and config.tail_consumers are used together", async () => {
 			writeWranglerToml({
-				experimental_assets: { directory: "./public" },
+				assets: { directory: "./public" },
 				tail_consumers: [{ service: "<TAIL_WORKER_NAME>" }],
 			});
 			fs.mkdirSync("public");
 			await expect(
 				runWrangler("dev")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: Cannot use Experimental Assets and tail consumers in the same Worker. Tail Workers are not yet supported for Workers with assets.]`
+				`[Error: Cannot use assets and tail consumers in the same Worker. Tail Workers are not yet supported for Workers with assets.]`
 			);
 		});
 
-		it("should error if --experimental-assets and --remote are used together", async () => {
+		it("should error if --assets and --remote are used together", async () => {
 			fs.mkdirSync("public");
 			await expect(
-				runWrangler("dev --experimental-assets public --remote")
+				runWrangler("dev --assets public --remote")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: Cannot use Experimental Assets in remote mode. Workers with assets are only supported in local mode. Please use \`wrangler dev\`.]`
+				`[Error: Cannot use assets in remote mode. Workers with assets are only supported in local mode. Please use \`wrangler dev\`.]`
 			);
 		});
 
-		it("should error if config.experimental_assets and --remote are used together", async () => {
+		it("should error if config.assets and --remote are used together", async () => {
 			writeWranglerToml({
-				experimental_assets: { directory: "./public" },
+				assets: { directory: "./public" },
 			});
 			fs.mkdirSync("public");
 			await expect(
 				runWrangler("dev --remote")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: Cannot use Experimental Assets in remote mode. Workers with assets are only supported in local mode. Please use \`wrangler dev\`.]`
+				`[Error: Cannot use assets in remote mode. Workers with assets are only supported in local mode. Please use \`wrangler dev\`.]`
 			);
 		});
 	});

@@ -69,7 +69,7 @@ function createWorkerBundleFormData(
 		pipelines: undefined,
 		logfwdr: undefined,
 		unsafe: undefined,
-		experimental_assets: undefined,
+		assets: undefined,
 	};
 
 	// The upload API only accepts an empty string or no specified placement for the "off" mode.
@@ -96,7 +96,7 @@ function createWorkerBundleFormData(
 		placement: placement,
 		tail_consumers: undefined,
 		limits: config?.limits,
-		experimental_assets: undefined,
+		assets: undefined,
 		observability: undefined,
 	};
 

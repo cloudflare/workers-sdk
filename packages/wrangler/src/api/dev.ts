@@ -23,7 +23,7 @@ export interface UnstableDevOptions {
 	localProtocol?: "http" | "https"; // Protocol to listen to requests on, defaults to http.
 	httpsKeyPath?: string;
 	httpsCertPath?: string;
-	experimentalAssets?: string; // Static assets to be served
+	assets?: string; // Static assets to be served
 	legacyAssets?: string; // Static assets to be served
 	site?: string; // Root folder of static assets for Workers Sites
 	siteInclude?: string[]; // Array of .gitignore-style patterns that match file or directory names from the sites directory. Only matched items will be uploaded.
@@ -189,7 +189,7 @@ export async function unstable_dev(
 		localProtocol: options?.localProtocol,
 		httpsKeyPath: options?.httpsKeyPath,
 		httpsCertPath: options?.httpsCertPath,
-		experimentalAssets: undefined,
+		assets: undefined,
 		legacyAssets: options?.legacyAssets,
 		site: options?.site, // Root folder of static assets for Workers Sites
 		siteInclude: options?.siteInclude, // Array of .gitignore-style patterns that match file or directory names from the sites directory. Only matched items will be uploaded.

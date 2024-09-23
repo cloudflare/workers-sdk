@@ -10,6 +10,7 @@ import {
 	convertCfWorkerInitBindingstoBindings,
 	extractBindingsOfType,
 } from "./api/startDevWorker/utils";
+import { processAssetsArg, validateAssetsArgsAndConfig } from "./assets";
 import { findWranglerToml, printBindings, readConfig } from "./config";
 import { validateRoutes } from "./deploy/deploy";
 import { getEntry } from "./deployment-bundle/entry";
@@ -22,10 +23,6 @@ import registerDevHotKeys from "./dev/hotkeys";
 import { maybeRegisterLocalWorker } from "./dev/local";
 import { startDevServer } from "./dev/start-server";
 import { UserError } from "./errors";
-import {
-	processExperimentalAssetsArg,
-	validateAssetsArgsAndConfig,
-} from "./experimental-assets";
 import { run } from "./experimental-flags";
 import isInteractive from "./is-interactive";
 import { logger } from "./logger";
@@ -182,12 +179,10 @@ export function devOptions(yargs: CommonYargsArgv) {
 				requiresArg: true,
 				hidden: true,
 			})
-			.option("experimental-assets", {
+			.option("assets", {
 				describe: "Static assets to be served",
 				type: "string",
-				alias: "x-assets",
 				requiresArg: true,
-				hidden: true,
 			})
 			.option("public", {
 				describe: "(Deprecated) Static assets to be served",
@@ -376,7 +371,7 @@ This is currently not supported 😭, but we think that we'll get it to work soo
 
 	if (args.legacyAssets) {
 		logger.warn(
-			`The --legacy-assets argument will be deprecated in the near future. Please use --experimental-assets instead.\n` +
+			`The --legacy-assets argument will be deprecated in the near future. Please use --assets instead.\n` +
 				`To learn more about Workers with assets, visit our documentation at https://developers.cloudflare.com/workers/frameworks/.`
 		);
 	}
@@ -590,23 +585,20 @@ export async function startDev(args: StartDevOptions) {
 			(args.site || config.site)
 		) {
 			throw new UserError(
-				"Cannot use Legacy Assets and Workers Sites in the same Worker."
+				"Cannot use legacy assets and Workers Sites in the same Worker."
 			);
 		}
 
-		if (
-			(args.experimentalAssets || config.experimental_assets) &&
-			args.remote
-		) {
+		if ((args.assets || config.assets) && args.remote) {
 			throw new UserError(
-				"Cannot use Experimental Assets in remote mode. Workers with assets are only supported in local mode. Please use `wrangler dev`."
+				"Cannot use assets in remote mode. Workers with assets are only supported in local mode. Please use `wrangler dev`."
 			);
 		}
 
 		validateAssetsArgsAndConfig(args, config);
 
-		let experimentalAssetsOptions = processExperimentalAssetsArg(args, config);
-		if (experimentalAssetsOptions) {
+		let assetsOptions = processAssetsArg(args, config);
+		if (assetsOptions) {
 			args.forceLocal = true;
 		}
 
@@ -721,7 +713,7 @@ export async function startDev(args: StartDevOptions) {
 						pipelines: undefined,
 						logfwdr: undefined,
 						unsafe: undefined,
-						experimental_assets: undefined,
+						assets: undefined,
 					}),
 				},
 				dev: {
@@ -787,13 +779,11 @@ export async function startDev(args: StartDevOptions) {
 					enableServiceEnvironments: !(args.legacyEnv ?? true),
 				},
 				experimental: {
-					// only pass `experimentalAssetsOptions` if it came from args not from config
+					// only pass `assetsOptions` if it came from args not from config
 					// otherwise config at startup ends up overriding future config changes in the
 					// ConfigController
 					// TODO @Carmen should `assets` still be under `experimental` here?
-					assets: args.experimentalAssets
-						? experimentalAssetsOptions
-						: undefined,
+					assets: args.assets ? assetsOptions : undefined,
 				},
 			} satisfies StartDevWorkerInput);
 
@@ -834,35 +824,32 @@ export async function startDev(args: StartDevOptions) {
 							legacyAssets: args.legacyAssets,
 							script: args.script,
 							moduleRoot: args.moduleRoot,
-							experimentalAssets: args.experimentalAssets,
+							assets: args.assets,
 						},
 						config,
 						"dev"
 					);
 
-					experimentalAssetsOptions = processExperimentalAssetsArg(
-						args,
-						config
-					);
+					assetsOptions = processAssetsArg(args, config);
 
 					/*
-					 * Handle experimental assets watching on config file changes
+					 * Handle static assets watching on config file changes
 					 *
-					 * 1. if experimental assets was specified via CLI args, only config file
+					 * 1. if assets was specified via CLI args, only config file
 					 *    changes related to `main` will matter. In this case, re-running
-					 *    `processExperimentalAssetsArg` is enough (see above)
-					 * 2. if experimental_assets was not specififed via the configuration
+					 *    `processAssetsArg` is enough (see above)
+					 * 2. if assets was not specififed via the configuration
 					 *    file, but it is now, we should start watching the assets
 					 *    directory
-					 * 3. if experimental_assets was specified via the configuration
+					 * 3. if assets was specified via the configuration
 					 *    file, we should ensure we're still watching the correct
 					 *    directory
 					 */
-					if (experimentalAssetsOptions && !args.experimentalAssets) {
+					if (assetsOptions && !args.assets) {
 						await assetsWatcher?.close();
 
-						if (experimentalAssetsOptions) {
-							assetsWatcher = watch(experimentalAssetsOptions.directory, {
+						if (assetsOptions) {
+							assetsWatcher = watch(assetsOptions.directory, {
 								persistent: true,
 								ignoreInitial: true,
 							}).on("all", async (eventName, changedPath) => {
@@ -957,7 +944,7 @@ export async function startDev(args: StartDevOptions) {
 					}
 					legacyAssetPaths={legacyAssetPaths}
 					legacyAssetsConfig={configParam.legacy_assets}
-					experimentalAssets={experimentalAssetsOptions}
+					assets={assetsOptions}
 					initialPort={
 						args.port ?? configParam.dev.port ?? (await getLocalPort())
 					}
@@ -1000,8 +987,8 @@ export async function startDev(args: StartDevOptions) {
 		const devReactElement = render(await getDevReactElement(config));
 		rerender = devReactElement.rerender;
 
-		if (experimentalAssetsOptions && !args.experimentalDevEnv) {
-			assetsWatcher = watch(experimentalAssetsOptions.directory, {
+		if (assetsOptions && !args.experimentalDevEnv) {
+			assetsWatcher = watch(assetsOptions.directory, {
 				persistent: true,
 				ignoreInitial: true,
 			}).on("all", async (eventName, filePath) => {
@@ -1142,7 +1129,7 @@ export async function startApiDev(args: StartDevOptions) {
 				args.accountId ?? configParam.account_id ?? getAccountFromCache()?.id,
 			legacyAssetPaths: legacyAssetPaths,
 			legacyAssetsConfig: configParam.legacy_assets,
-			experimentalAssets: undefined,
+			assets: undefined,
 			//port can be 0, which means to use a random port
 			initialPort: args.port ?? configParam.dev.port ?? (await getLocalPort()),
 			initialIp: args.ip ?? configParam.dev.ip,
@@ -1223,13 +1210,13 @@ export function maskVars(
 
 export async function getHostAndRoutes(
 	args:
-		| Pick<StartDevOptions, "host" | "routes" | "experimentalAssets">
+		| Pick<StartDevOptions, "host" | "routes" | "assets">
 		| {
 				host?: string;
 				routes?: Extract<Trigger, { type: "route" }>[];
-				experimentalAssets?: string;
+				assets?: string;
 		  },
-	config: Pick<Config, "route" | "routes" | "experimental_assets"> & {
+	config: Pick<Config, "route" | "routes" | "assets"> & {
 		dev: Pick<Config["dev"], "host">;
 	}
 ) {
@@ -1252,10 +1239,7 @@ export async function getHostAndRoutes(
 		}
 	});
 	if (routes) {
-		validateRoutes(
-			routes,
-			Boolean(args.experimentalAssets || config.experimental_assets)
-		);
+		validateRoutes(routes, Boolean(args.assets || config.assets));
 	}
 	return { host, routes };
 }
@@ -1292,7 +1276,7 @@ export async function validateDevServerSettings(
 			legacyAssets: args.legacyAssets,
 			script: args.script,
 			moduleRoot: args.moduleRoot,
-			experimentalAssets: args.experimentalAssets,
+			assets: args.assets,
 		},
 		config,
 		"dev"
@@ -1588,8 +1572,8 @@ export function getBindings(
 		mtls_certificates: configParam.mtls_certificates,
 		pipelines: configParam.pipelines,
 		send_email: configParam.send_email,
-		experimental_assets: configParam.experimental_assets?.binding
-			? { binding: configParam.experimental_assets?.binding }
+		assets: configParam.assets?.binding
+			? { binding: configParam.assets?.binding }
 			: undefined,
 	};
 

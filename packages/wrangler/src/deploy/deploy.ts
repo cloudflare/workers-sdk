@@ -3,6 +3,7 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { URLSearchParams } from "node:url";
 import { cancel } from "@cloudflare/cli";
+import { syncAssets } from "../assets";
 import { fetchListResult, fetchResult } from "../cfetch";
 import { printBindings } from "../config";
 import { bundleWorker } from "../deployment-bundle/bundle";
@@ -26,7 +27,6 @@ import { loadSourceMaps } from "../deployment-bundle/source-maps";
 import { confirm } from "../dialogs";
 import { getMigrationsToUpload } from "../durable";
 import { UserError } from "../errors";
-import { syncExperimentalAssets } from "../experimental-assets";
 import { logger } from "../logger";
 import { getMetricsUsageHeaders } from "../metrics";
 import { isNavigatorDefined } from "../navigator-user-agent";
@@ -52,6 +52,7 @@ import {
 } from "../versions/api";
 import { confirmLatestDeploymentOverwrite } from "../versions/deploy";
 import { getZoneForRoute } from "../zones";
+import type { AssetsOptions } from "../assets";
 import type { Config } from "../config";
 import type {
 	CustomDomainRoute,
@@ -66,7 +67,6 @@ import type {
 	CfPlacement,
 	CfWorkerInit,
 } from "../deployment-bundle/worker";
-import type { ExperimentalAssetsOptions } from "../experimental-assets";
 import type { PostQueueBody, PostTypedConsumerBody } from "../queues/client";
 import type { LegacyAssetPaths } from "../sites";
 import type { RetrieveSourceMapFunction } from "../sourcemap";
@@ -82,7 +82,7 @@ type Props = {
 	compatibilityDate: string | undefined;
 	compatibilityFlags: string[] | undefined;
 	legacyAssetPaths: LegacyAssetPaths | undefined;
-	experimentalAssetsOptions: ExperimentalAssetsOptions | undefined;
+	assetsOptions: AssetsOptions | undefined;
 	vars: Record<string, string> | undefined;
 	defines: Record<string, string> | undefined;
 	alias: Record<string, string> | undefined;
@@ -171,10 +171,7 @@ function errIsStartupErr(err: unknown): err is ParseError & { code: 10021 } {
 	return false;
 }
 
-export const validateRoutes = (
-	routes: Route[],
-	hasExperimentalAssets: boolean
-) => {
+export const validateRoutes = (routes: Route[], hasAssets: boolean) => {
 	const invalidRoutes: Record<string, string[]> = {};
 	for (const route of routes) {
 		if (typeof route !== "string" && route.custom_domain) {
@@ -190,7 +187,7 @@ export const validateRoutes = (
 					`Paths are not allowed in Custom Domains`
 				);
 			}
-		} else if (hasExperimentalAssets) {
+		} else if (hasAssets) {
 			const pattern = typeof route === "string" ? route : route.pattern;
 			const components = pattern.split("/");
 
@@ -435,7 +432,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 	const routes =
 		props.routes ?? config.routes ?? (config.route ? [config.route] : []) ?? [];
-	validateRoutes(routes, Boolean(props.experimentalAssetsOptions));
+	validateRoutes(routes, Boolean(props.assetsOptions));
 
 	const jsxFactory = props.jsxFactory || config.jsx_factory;
 	const jsxFragment = props.jsxFragment || config.jsx_fragment;
@@ -630,14 +627,10 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 				})
 			: undefined;
 
-		// Upload assets if experimental assets is being used
-		const experimentalAssetsJwt =
-			props.experimentalAssetsOptions && !props.dryRun
-				? await syncExperimentalAssets(
-						accountId,
-						scriptName,
-						props.experimentalAssetsOptions.directory
-					)
+		// Upload assets if assets is being used
+		const assetsJwt =
+			props.assetsOptions && !props.dryRun
+				? await syncAssets(accountId, scriptName, props.assetsOptions.directory)
 				: undefined;
 
 		const legacyAssets = await syncLegacyAssets(
@@ -687,8 +680,8 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			mtls_certificates: config.mtls_certificates,
 			pipelines: config.pipelines,
 			logfwdr: config.logfwdr,
-			experimental_assets: config.experimental_assets?.binding
-				? { binding: config.experimental_assets.binding }
+			assets: config.assets?.binding
+				? { binding: config.assets.binding }
 				: undefined,
 			unsafe: {
 				bindings: config.unsafe.bindings,
@@ -736,12 +729,12 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			placement,
 			tail_consumers: config.tail_consumers,
 			limits: config.limits,
-			experimental_assets:
-				props.experimentalAssetsOptions && experimentalAssetsJwt
+			assets:
+				props.assetsOptions && assetsJwt
 					? {
-							jwt: experimentalAssetsJwt,
-							routingConfig: props.experimentalAssetsOptions.routingConfig,
-							assetConfig: props.experimentalAssetsOptions.assetConfig,
+							jwt: assetsJwt,
+							routingConfig: props.assetsOptions.routingConfig,
+							assetConfig: props.assetsOptions.assetConfig,
 						}
 					: undefined,
 			observability: config.observability,

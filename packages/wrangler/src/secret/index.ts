@@ -94,7 +94,7 @@ async function createDraftWorker({
 					mtls_certificates: [],
 					pipelines: [],
 					logfwdr: { bindings: [] },
-					experimental_assets: undefined,
+					assets: undefined,
 					unsafe: {
 						bindings: undefined,
 						metadata: undefined,
@@ -112,7 +112,7 @@ async function createDraftWorker({
 				placement: undefined,
 				tail_consumers: undefined,
 				limits: undefined,
-				experimental_assets: undefined,
+				assets: undefined,
 				observability: undefined,
 			}),
 		}

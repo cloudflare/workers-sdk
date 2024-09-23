@@ -44,6 +44,7 @@ import type {
 	StartDevWorkerOptions,
 	Trigger,
 } from "../api";
+import type { AssetsOptions } from "../assets";
 import type { Config } from "../config";
 import type { Route } from "../config/environment";
 import type { Entry } from "../deployment-bundle/entry";
@@ -51,7 +52,6 @@ import type { NodeJSCompatMode } from "../deployment-bundle/node-compat";
 import type { CfModule, CfWorkerInit } from "../deployment-bundle/worker";
 import type { StartDevOptions } from "../dev";
 import type { WorkerRegistry } from "../dev-registry";
-import type { ExperimentalAssetsOptions } from "../experimental-assets";
 import type { EnablePagesAssetsServiceBindingOptions } from "../miniflare-cli/types";
 import type { EphemeralDirectory } from "../paths";
 import type { LegacyAssetPaths } from "../sites";
@@ -238,7 +238,7 @@ export type DevProps = {
 	isWorkersSite: boolean;
 	legacyAssetPaths: LegacyAssetPaths | undefined;
 	legacyAssetsConfig: Config["legacy_assets"];
-	experimentalAssets: ExperimentalAssetsOptions | undefined;
+	assets: AssetsOptions | undefined;
 	compatibilityDate: string;
 	compatibilityFlags: string[] | undefined;
 	usageModel: "bundled" | "unbound" | undefined;
@@ -486,7 +486,7 @@ function DevSession(props: DevSessionProps) {
 				metadata: props.bindings.unsafe?.metadata,
 			},
 			experimental: {
-				assets: props.experimentalAssets,
+				assets: props.assets,
 			},
 		} satisfies StartDevWorkerOptions;
 	}, [
@@ -503,7 +503,7 @@ function DevSession(props: DevSessionProps) {
 		props.isWorkersSite,
 		props.local,
 		props.legacyAssetsConfig,
-		props.experimentalAssets,
+		props.assets,
 		props.processEntrypoint,
 		props.additionalModules,
 		props.env,
@@ -708,7 +708,7 @@ function DevSession(props: DevSessionProps) {
 			migrations={props.migrations}
 			workerDefinitions={workerDefinitions}
 			legacyAssetPaths={props.legacyAssetPaths}
-			experimentalAssets={props.experimentalAssets}
+			assets={props.assets}
 			initialPort={undefined} // hard-code for userworker, DevEnv-ProxyWorker now uses this prop value
 			initialIp={"127.0.0.1"} // hard-code for userworker, DevEnv-ProxyWorker now uses this prop value
 			rules={props.rules}

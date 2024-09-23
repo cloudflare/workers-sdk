@@ -943,7 +943,7 @@ describe("watch mode", () => {
 								name = "${workerName}"
 								compatibility_date = "2023-01-01"
 
-								[experimental_assets]
+								[assets]
 								directory = "./public"
 						`,
 					"public/index.html": dedent`
@@ -986,7 +986,7 @@ describe("watch mode", () => {
 								name = "${workerName}"
 								compatibility_date = "2023-01-01"
 
-								[experimental_assets]
+								[assets]
 								directory = "./public"
 						`,
 					"public/index.html": dedent`
@@ -1040,7 +1040,7 @@ describe("watch mode", () => {
 								name = "${workerName}"
 								compatibility_date = "2023-01-01"
 
-								[experimental_assets]
+								[assets]
 								directory = "./public"
 						`,
 					"public/index.html": dedent`
@@ -1090,7 +1090,7 @@ describe("watch mode", () => {
 								name = "${workerName}"
 								compatibility_date = "2023-01-01"
 
-								[experimental_assets]
+								[assets]
 								directory = "./public"
 						`,
 					"public/index.html": dedent`
@@ -1116,7 +1116,7 @@ describe("watch mode", () => {
 							name = "${workerName}"
 							compatibility_date = "2023-01-01"
 
-							[experimental_assets]
+							[assets]
 							directory = "./public2"
 					`,
 				});
@@ -1175,7 +1175,7 @@ describe("watch mode", () => {
 								name = "${workerName}"
 								compatibility_date = "2023-01-01"
 
-								[experimental_assets]
+								[assets]
 								directory = "./public"
 						`,
 					"public/index.html": dedent`
@@ -1244,7 +1244,7 @@ describe("watch mode", () => {
 								main = "src/index.ts"
 								compatibility_date = "2023-01-01"
 
-								[experimental_assets]
+								[assets]
 								directory = "./public"
 						`,
 					"public/index.html": dedent`
@@ -1284,7 +1284,7 @@ describe("watch mode", () => {
 								name = "${workerName}"
 								compatibility_date = "2023-01-01"
 
-								[experimental_assets]
+								[assets]
 								directory = "./public"
 						`,
 					"public/index.html": dedent`
@@ -1309,7 +1309,7 @@ describe("watch mode", () => {
 							main = "src/index.ts"
 							compatibility_date = "2023-01-01"
 
-							[experimental_assets]
+							[assets]
 							directory = "./public"
 					`,
 					"src/index.ts": dedent`
@@ -1341,7 +1341,7 @@ describe("watch mode", () => {
 							main = "src/index.ts"
 							compatibility_date = "2023-01-01"
 
-							[experimental_assets]
+							[assets]
 							directory = "./public"
 					`,
 					"public/index.html": dedent`
@@ -1372,7 +1372,7 @@ describe("watch mode", () => {
 								name = "${workerName}"
 								compatibility_date = "2023-01-01"
 
-								[experimental_assets]
+								[assets]
 								directory = "./public"
 						`,
 				});

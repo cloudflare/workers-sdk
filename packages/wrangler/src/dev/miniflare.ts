@@ -24,6 +24,7 @@ import { getSourceMappedString } from "../sourcemap";
 import { updateCheck } from "../update-check";
 import { getClassNamesWhichUseSQLite } from "./validate-dev-props";
 import type { ServiceFetch } from "../api";
+import type { AssetsOptions } from "../assets";
 import type { Config } from "../config";
 import type {
 	CfD1Database,
@@ -40,7 +41,6 @@ import type {
 	WorkerEntrypointsDefinition,
 	WorkerRegistry,
 } from "../dev-registry";
-import type { ExperimentalAssetsOptions } from "../experimental-assets";
 import type { LoggerLevel } from "../logger";
 import type { LegacyAssetPaths } from "../sites";
 import type { EsbuildBundle } from "./use-esbuild";
@@ -175,7 +175,7 @@ export interface ConfigBundle {
 	migrations: Config["migrations"] | undefined;
 	workerDefinitions: WorkerRegistry | undefined;
 	legacyAssetPaths: LegacyAssetPaths | undefined;
-	experimentalAssets: ExperimentalAssetsOptions | undefined;
+	assets: AssetsOptions | undefined;
 	initialPort: Port;
 	initialIp: string;
 	rules: Config["rules"];
@@ -379,7 +379,7 @@ type MiniflareBindingsConfig = Pick<
 	| "services"
 	| "serviceBindings"
 > &
-	Partial<Pick<ConfigBundle, "format" | "bundle" | "experimentalAssets">>;
+	Partial<Pick<ConfigBundle, "format" | "bundle" | "assets">>;
 
 // TODO(someday): would be nice to type these methods more, can we export types for
 //  each plugin options schema and use those
@@ -697,14 +697,14 @@ export function buildPersistOptions(
 }
 
 function buildAssetOptions(config: Omit<ConfigBundle, "rules">) {
-	if (config.experimentalAssets) {
+	if (config.assets) {
 		return {
 			assets: {
 				workerName: config.name,
-				path: config.experimentalAssets.directory,
-				bindingName: config.experimentalAssets.binding,
-				routingConfig: config.experimentalAssets.routingConfig,
-				assetConfig: config.experimentalAssets.assetConfig,
+				path: config.assets.directory,
+				bindingName: config.assets.binding,
+				routingConfig: config.assets.routingConfig,
+				assetConfig: config.assets.assetConfig,
 			},
 		};
 	}

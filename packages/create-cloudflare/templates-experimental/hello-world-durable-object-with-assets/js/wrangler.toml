@@ -2,7 +2,7 @@
 name = "<TBD>"
 main = "src/index.js"
 compatibility_date = "<TBD>"
-experimental_assets = { directory = "./public", binding = "ASSETS" }
+assets = { directory = "./public", binding = "ASSETS" }
 
 # Bind a Durable Object. Durable objects are a scale-to-zero compute primitive based on the actor model.
 # Durable Objects can live for as long as needed. Use these when you need a long-running "server", such as in realtime apps.

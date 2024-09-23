@@ -546,11 +546,11 @@ describe("versions deploy", { timeout: TIMEOUT }, () => {
 		});
 
 		const upload = await helper.run(
-			`wrangler versions upload --assets='./public'  --x-versions`
+			`wrangler versions upload --legacy-assets='./public'  --x-versions`
 		);
 
 		expect(normalize(upload.output)).toMatchInlineSnapshot(`
-			"X [ERROR] Legacy Assets does not support uploading versions through \`wrangler versions upload\`. You must use \`wrangler deploy\` instead.
+			"X [ERROR] Legacy assets does not support uploading versions through \`wrangler versions upload\`. You must use \`wrangler deploy\` instead.
 			🪵  Logs were written to "<LOG>""
 		`);
 	});
@@ -590,13 +590,13 @@ describe("versions deploy", { timeout: TIMEOUT }, () => {
 	});
 
 	// TODO: revisit once AUS stabilises/works
-	it.skip("currently fails to upload if using experimental assets", async () => {
+	it.skip("currently fails to upload if using assets", async () => {
 		await helper.seed({
 			"wrangler.toml": dedent`
 	            name = "${workerName}"
 	            compatibility_date = "2023-01-01"
 
-	            [experimental_assets]
+	            [assets]
 	            directory = "./public"
 	        `,
 			"public/asset.txt": `beep boop`,

@@ -351,7 +351,7 @@ interface EnvironmentInheritable {
 	 *
 	 * @inheritable
 	 */
-	experimental_assets: ExperimentalAssets | undefined;
+	assets: Assets | undefined;
 
 	/**
 	 * Specify the observability behavior of the Worker.
@@ -907,7 +907,7 @@ export interface UserLimits {
 	cpu_ms: number;
 }
 
-export type ExperimentalAssets = {
+export type Assets = {
 	/** Absolute path to assets directory */
 	directory: string;
 	binding?: string;

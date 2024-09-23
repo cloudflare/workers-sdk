@@ -141,7 +141,7 @@ export type WorkerMetadataPut = {
 	placement?: CfPlacement;
 	tail_consumers?: CfTailConsumer[];
 	limits?: CfUserLimits;
-	// experimental assets (EWC will expect 'assets')
+
 	assets?: {
 		jwt: string;
 		config?: AssetConfig;
@@ -180,25 +180,22 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 		limits,
 		annotations,
 		keep_assets,
-		experimental_assets,
+		assets,
 		observability,
 	} = worker;
 
 	const assetConfig = {
-		html_handling: experimental_assets?.assetConfig?.html_handling,
-		not_found_handling: experimental_assets?.assetConfig?.not_found_handling,
+		html_handling: assets?.assetConfig?.html_handling,
+		not_found_handling: assets?.assetConfig?.not_found_handling,
 	};
 
 	// short circuit if static assets upload only
-	if (
-		experimental_assets &&
-		!experimental_assets.routingConfig.has_user_worker
-	) {
+	if (assets && !assets.routingConfig.has_user_worker) {
 		formData.set(
 			"metadata",
 			JSON.stringify({
 				assets: {
-					jwt: experimental_assets.jwt,
+					jwt: assets.jwt,
 					config: assetConfig,
 				},
 				...(compatibility_date && { compatibility_date }),
@@ -397,9 +394,9 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 		});
 	}
 
-	if (bindings.experimental_assets !== undefined) {
+	if (bindings.assets !== undefined) {
 		metadataBindings.push({
-			name: bindings.experimental_assets.binding,
+			name: bindings.assets.binding,
 			type: "assets",
 		});
 	}
@@ -589,9 +586,9 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 		...(limits && { limits }),
 		...(annotations && { annotations }),
 		...(keep_assets !== undefined && { keep_assets }),
-		...(experimental_assets && {
+		...(assets && {
 			assets: {
-				jwt: experimental_assets.jwt,
+				jwt: assets.jwt,
 				config: assetConfig,
 			},
 		}),

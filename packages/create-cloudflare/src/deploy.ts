@@ -148,7 +148,7 @@ export const hasBinding = (node: unknown): boolean => {
 		return false;
 	}
 	for (const key of Object.keys(node)) {
-		if (key === "experimental_assets") {
+		if (key === "assets") {
 			// Properties called "binding" within "assets" do not count as bindings.
 			continue;
 		}

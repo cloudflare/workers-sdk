@@ -3,4 +3,4 @@ name = "<TBD>"
 main = "src/entry.py"
 compatibility_flags = ["python_workers"]
 compatibility_date = "<TBD>"
-experimental_assets = { directory = "./public", binding = "ASSETS" }
+assets = { directory = "./public", binding = "ASSETS" }

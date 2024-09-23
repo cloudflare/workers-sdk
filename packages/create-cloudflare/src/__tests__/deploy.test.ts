@@ -69,7 +69,7 @@ describe("deploy helpers", async () => {
 			const ctx = createTestContext();
 			// Can't deploy things with bindings (yet!)
 			vi.mocked(readFile).mockReturnValue(`
-				experimental_assets = { directory = "./dist", binding = "ASSETS" }
+				assets = { directory = "./dist", binding = "ASSETS" }
 
 				[[durable_objects.bindings]]
 				name = "MY_DURABLE_OBJECT"
@@ -85,7 +85,7 @@ describe("deploy helpers", async () => {
 		test("assets project is deployable (no other bindings)", async () => {
 			const ctx = createTestContext();
 			vi.mocked(readFile).mockReturnValue(`
-				experimental_assets = { directory = "./dist", binding = "ASSETS" }
+				assets = { directory = "./dist", binding = "ASSETS" }
 			`);
 			// mock the user selecting yes when asked to deploy
 			vi.mocked(inputPrompt).mockResolvedValueOnce(true);

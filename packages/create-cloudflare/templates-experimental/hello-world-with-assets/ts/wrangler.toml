@@ -3,4 +3,4 @@ name = "<TBD>"
 main = "src/index.ts"
 compatibility_date = "<TBD>"
 compatibility_flags = ["nodejs_compat"]
-experimental_assets = { directory = "./public", binding = "ASSETS" }
+assets = { directory = "./public", binding = "ASSETS" }

@@ -507,7 +507,7 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
 					  - [1mDeprecation[0m: \\"legacy_assets\\":
-					    The \`legacy_assets\` feature will be deprecated in the near future. Please use \`experimental_assets\` instead."
+					    The \`legacy_assets\` feature will be deprecated in the near future. Please use \`assets\` instead."
 				`);
 			});
 
@@ -526,7 +526,7 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
 					  - [1mDeprecation[0m: \\"legacy_assets\\":
-					    The \`legacy_assets\` feature will be deprecated in the near future. Please use \`experimental_assets\` instead."
+					    The \`legacy_assets\` feature will be deprecated in the near future. Please use \`assets\` instead."
 				`);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
@@ -558,7 +558,7 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
 					  - [1mDeprecation[0m: \\"legacy_assets\\":
-					    The \`legacy_assets\` feature will be deprecated in the near future. Please use \`experimental_assets\` instead."
+					    The \`legacy_assets\` feature will be deprecated in the near future. Please use \`assets\` instead."
 				`);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
@@ -588,7 +588,7 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
 					  - [1mDeprecation[0m: \\"legacy_assets\\":
-					    The \`legacy_assets\` feature will be deprecated in the near future. Please use \`experimental_assets\` instead."
+					    The \`legacy_assets\` feature will be deprecated in the near future. Please use \`assets\` instead."
 				`);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
@@ -1743,10 +1743,10 @@ describe("normalizeAndValidateConfig()", () => {
 			});
 		});
 
-		describe("[experimental_assets]", () => {
-			it("should override `experimental_assets` config defaults with provided values", () => {
+		describe("[assets]", () => {
+			it("should override `assets` config defaults with provided values", () => {
 				const expectedConfig: RawConfig = {
-					experimental_assets: {
+					assets: {
 						directory: "public/",
 						binding: "ASSETS",
 					},
@@ -1763,9 +1763,9 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasWarnings()).toBe(false);
 			});
 
-			it("should error on invalid `experimental_assets` values", () => {
+			it("should error on invalid `assets` values", () => {
 				const expectedConfig = {
-					experimental_assets: {
+					assets: {
 						binding: 2,
 						notAField: "boop",
 					},
@@ -1781,18 +1781,18 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasWarnings()).toBe(true);
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - Unexpected fields found in experimental_assets field: \\"notAField\\""
+					  - Unexpected fields found in assets field: \\"notAField\\""
 				`);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - \\"experimental_assets.directory\\" is a required field.
-					  - Expected \\"experimental_assets.binding\\" to be of type string but got 2."
+					  - \\"assets.directory\\" is a required field.
+					  - Expected \\"assets.binding\\" to be of type string but got 2."
 				`);
 			});
 
-			it("should error on invalid `experimental_assets` config values", () => {
+			it("should error on invalid `assets` config values", () => {
 				const expectedConfig = {
-					experimental_assets: {
+					assets: {
 						directory: "./public",
 						html_handling: "foo",
 						not_found_handling: "bar",
@@ -1813,14 +1813,14 @@ describe("normalizeAndValidateConfig()", () => {
 				`);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - Expected \\"experimental_assets.html_handling\\" field to be one of [\\"auto-trailing-slash\\",\\"force-trailing-slash\\",\\"drop-trailing-slash\\",\\"none\\"] but got \\"foo\\".
-					  - Expected \\"experimental_assets.not_found_handling\\" field to be one of [\\"single-page-application\\",\\"404-page\\",\\"none\\"] but got \\"bar\\"."
+					  - Expected \\"assets.html_handling\\" field to be one of [\\"auto-trailing-slash\\",\\"force-trailing-slash\\",\\"drop-trailing-slash\\",\\"none\\"] but got \\"foo\\".
+					  - Expected \\"assets.not_found_handling\\" field to be one of [\\"single-page-application\\",\\"404-page\\",\\"none\\"] but got \\"bar\\"."
 				`);
 			});
 
-			it("should accept valid `experimental_assets` config values", () => {
+			it("should accept valid `assets` config values", () => {
 				const expectedConfig: RawConfig = {
-					experimental_assets: {
+					assets: {
 						directory: "./public",
 						html_handling: "drop-trailing-slash",
 						not_found_handling: "404-page",
@@ -1840,7 +1840,7 @@ describe("normalizeAndValidateConfig()", () => {
 
 			it("should error if `directory` is an empty string", () => {
 				const expectedConfig = {
-					experimental_assets: {
+					assets: {
 						directory: "",
 					},
 				};
@@ -1855,7 +1855,7 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasWarnings()).toBeFalsy();
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - Expected \\"experimental_assets.directory\\" to be a non-empty string."
+					  - Expected \\"assets.directory\\" to be a non-empty string."
 				`);
 			});
 

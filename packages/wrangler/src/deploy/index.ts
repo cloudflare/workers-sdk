@@ -1,12 +1,9 @@
 import assert from "node:assert";
 import path from "node:path";
+import { processAssetsArg, validateAssetsArgsAndConfig } from "../assets";
 import { findWranglerToml, readConfig } from "../config";
 import { getEntry } from "../deployment-bundle/entry";
 import { UserError } from "../errors";
-import {
-	processExperimentalAssetsArg,
-	validateAssetsArgsAndConfig,
-} from "../experimental-assets";
 import {
 	getRules,
 	getScriptName,
@@ -110,12 +107,10 @@ export function deployOptions(yargs: CommonYargsArgv) {
 				requiresArg: true,
 				hidden: true,
 			})
-			.option("experimental-assets", {
+			.option("assets", {
 				describe: "Static assets to be served",
 				type: "string",
-				alias: "x-assets",
 				requiresArg: true,
-				hidden: true,
 			})
 			.option("site", {
 				describe: "Root folder of static assets for Workers Sites",
@@ -243,7 +238,7 @@ export async function deployHandler(args: DeployArgs) {
 
 	if (args.legacyAssets) {
 		logger.warn(
-			`The --legacy-assets argument will be deprecated in the near future. Please use --experimental-assets instead.\n` +
+			`The --legacy-assets argument will be deprecated in the near future. Please use --assets instead.\n` +
 				`To learn more about Workers with assets, visit our documentation at https://developers.cloudflare.com/workers/frameworks/.`
 		);
 	}
@@ -270,13 +265,13 @@ export async function deployHandler(args: DeployArgs) {
 		(args.site || config.site)
 	) {
 		throw new UserError(
-			"Cannot use Legacy Assets and Workers Sites in the same Worker."
+			"Cannot use legacy assets and Workers Sites in the same Worker."
 		);
 	}
 
 	validateAssetsArgsAndConfig(args, config);
 
-	const experimentalAssetsOptions = processExperimentalAssetsArg(args, config);
+	const assetsOptions = processAssetsArg(args, config);
 
 	if (args.latest) {
 		logger.warn(
@@ -338,7 +333,7 @@ export async function deployHandler(args: DeployArgs) {
 		jsxFragment: args.jsxFragment,
 		tsconfig: args.tsconfig,
 		routes: args.routes,
-		experimentalAssetsOptions,
+		assetsOptions,
 		legacyAssetPaths,
 		legacyEnv: isLegacyEnv(config),
 		minify: args.minify,
