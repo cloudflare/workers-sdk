@@ -68,12 +68,6 @@ export function versionsUploadOptions(yargs: CommonYargsArgv) {
 				type: "string",
 				requiresArg: true,
 			})
-			.option("format", {
-				choices: ["modules", "service-worker"] as const,
-				describe: "Choose an entry type",
-				deprecated: true,
-				hidden: true,
-			})
 			.option("compatibility-date", {
 				describe: "Date to use for compatibility checks",
 				type: "string",
@@ -91,16 +85,23 @@ export function versionsUploadOptions(yargs: CommonYargsArgv) {
 				type: "boolean",
 				default: false,
 			})
+			.option("assets", {
+				describe: "Static assets to be served. Replaces Workers Sites.",
+				type: "string",
+				requiresArg: true,
+			})
+			.option("format", {
+				choices: ["modules", "service-worker"] as const,
+				describe: "Choose an entry type",
+				deprecated: true,
+				hidden: true,
+			})
 			.option("legacy-assets", {
 				describe: "Static assets to be served",
 				type: "string",
 				requiresArg: true,
+				deprecated: true,
 				hidden: true,
-			})
-			.option("assets", {
-				describe: "Static assets to be served",
-				type: "string",
-				requiresArg: true,
 			})
 			.option("site", {
 				describe: "Root folder of static assets for Workers Sites",

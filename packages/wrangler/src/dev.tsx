@@ -85,6 +85,28 @@ export function devOptions(yargs: CommonYargsArgv) {
 				type: "string",
 				requiresArg: true,
 			})
+			.option("compatibility-date", {
+				describe: "Date to use for compatibility checks",
+				type: "string",
+				requiresArg: true,
+			})
+			.option("compatibility-flags", {
+				describe: "Flags to use for compatibility checks",
+				alias: "compatibility-flag",
+				type: "string",
+				requiresArg: true,
+				array: true,
+			})
+			.option("latest", {
+				describe: "Use the latest version of the worker runtime",
+				type: "boolean",
+				default: true,
+			})
+			.option("assets", {
+				describe: "Static assets to be served. Replaces Workers Sites.",
+				type: "string",
+				requiresArg: true,
+			})
 			// We want to have a --no-bundle flag, but yargs requires that
 			// we also have a --bundle flag (that it adds the --no to by itself)
 			// So we make a --bundle flag, but hide it, and then add a --no-bundle flag
@@ -104,23 +126,6 @@ export function devOptions(yargs: CommonYargsArgv) {
 				describe: "Choose an entry type",
 				hidden: true,
 				deprecated: true,
-			})
-			.option("compatibility-date", {
-				describe: "Date to use for compatibility checks",
-				type: "string",
-				requiresArg: true,
-			})
-			.option("compatibility-flags", {
-				describe: "Flags to use for compatibility checks",
-				alias: "compatibility-flag",
-				type: "string",
-				requiresArg: true,
-				array: true,
-			})
-			.option("latest", {
-				describe: "Use the latest version of the worker runtime",
-				type: "boolean",
-				default: true,
 			})
 			.option("ip", {
 				describe: "IP address to listen on",
@@ -177,13 +182,10 @@ export function devOptions(yargs: CommonYargsArgv) {
 				describe: "Static assets to be served",
 				type: "string",
 				requiresArg: true,
+				deprecated: true,
 				hidden: true,
 			})
-			.option("assets", {
-				describe: "Static assets to be served",
-				type: "string",
-				requiresArg: true,
-			})
+
 			.option("public", {
 				describe: "(Deprecated) Static assets to be served",
 				type: "string",
@@ -195,6 +197,7 @@ export function devOptions(yargs: CommonYargsArgv) {
 				describe: "Root folder of static assets for Workers Sites",
 				type: "string",
 				requiresArg: true,
+				hidden: true,
 			})
 			.option("site-include", {
 				describe:
@@ -202,6 +205,7 @@ export function devOptions(yargs: CommonYargsArgv) {
 				type: "string",
 				requiresArg: true,
 				array: true,
+				hidden: true,
 			})
 			.option("site-exclude", {
 				describe:
@@ -209,6 +213,7 @@ export function devOptions(yargs: CommonYargsArgv) {
 				type: "string",
 				requiresArg: true,
 				array: true,
+				hidden: true,
 			})
 			.option("upstream-protocol", {
 				describe: "Protocol to forward requests to host on, defaults to https.",
@@ -371,7 +376,7 @@ This is currently not supported 😭, but we think that we'll get it to work soo
 
 	if (args.legacyAssets) {
 		logger.warn(
-			`The --legacy-assets argument will be deprecated in the near future. Please use --assets instead.\n` +
+			`The --legacy-assets argument has been deprecated. Please use --assets instead.\n` +
 				`To learn more about Workers with assets, visit our documentation at https://developers.cloudflare.com/workers/frameworks/.`
 		);
 	}

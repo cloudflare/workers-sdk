@@ -1341,10 +1341,11 @@ describe("wrangler dev", () => {
 
 				OPTIONS
 				      --name                                       Name of the worker  [string]
-				      --no-bundle                                  Skip internal build steps and directly deploy script  [boolean] [default: false]
 				      --compatibility-date                         Date to use for compatibility checks  [string]
 				      --compatibility-flags, --compatibility-flag  Flags to use for compatibility checks  [array]
 				      --latest                                     Use the latest version of the worker runtime  [boolean] [default: true]
+				      --assets                                     Static assets to be served. Replaces Workers Sites.  [string]
+				      --no-bundle                                  Skip internal build steps and directly deploy script  [boolean] [default: false]
 				      --ip                                         IP address to listen on  [string]
 				      --port                                       Port to listen on  [number]
 				      --inspector-port                             Port for devtools to connect to  [number]
@@ -1354,9 +1355,6 @@ describe("wrangler dev", () => {
 				      --https-key-path                             Path to a custom certificate key  [string]
 				      --https-cert-path                            Path to a custom certificate  [string]
 				      --local-upstream                             Host to act as origin in local mode, defaults to dev.host or route  [string]
-				      --site                                       Root folder of static assets for Workers Sites  [string]
-				      --site-include                               Array of .gitignore-style patterns that match file or directory names from the sites directory. Only matched items will be uploaded.  [array]
-				      --site-exclude                               Array of .gitignore-style patterns that match file or directory names from the sites directory. Matched items will not be uploaded.  [array]
 				      --upstream-protocol                          Protocol to forward requests to host on, defaults to https.  [choices: \\"http\\", \\"https\\"]
 				      --var                                        A key-value pair to be injected into the script as a variable  [array]
 				      --define                                     A key-value pair to be substituted in the script  [array]
@@ -1459,7 +1457,7 @@ describe("wrangler dev", () => {
 
 			await runWrangler('dev --legacy-assets "./assets"');
 			expect(std.warn).toMatchInlineSnapshot(`
-				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --legacy-assets argument will be deprecated in the near future. Please use --assets instead.[0m
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --legacy-assets argument has been deprecated. Please use --assets instead.[0m
 
 				  To learn more about Workers with assets, visit our documentation at
 				  [4mhttps://developers.cloudflare.com/workers/frameworks/[0m.

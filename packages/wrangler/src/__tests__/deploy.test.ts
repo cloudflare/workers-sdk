@@ -2243,7 +2243,7 @@ addEventListener('fetch', event => {});`
 			);
 
 			expect(std.warn).toMatchInlineSnapshot(`
-				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --legacy-assets argument will be deprecated in the near future. Please use --assets instead.[0m
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --legacy-assets argument has been deprecated. Please use --assets instead.[0m
 
 				  To learn more about Workers with assets, visit our documentation at
 				  [4mhttps://developers.cloudflare.com/workers/frameworks/[0m.
@@ -2457,7 +2457,7 @@ addEventListener('fetch', event => {});`
 			await runWrangler("deploy --legacy-assets assets");
 
 			expect(std.warn).toMatchInlineSnapshot(`
-				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --legacy-assets argument will be deprecated in the near future. Please use --assets instead.[0m
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --legacy-assets argument has been deprecated. Please use --assets instead.[0m
 
 				  To learn more about Workers with assets, visit our documentation at
 				  [4mhttps://developers.cloudflare.com/workers/frameworks/[0m.
@@ -2496,7 +2496,7 @@ addEventListener('fetch', event => {});`
 			);
 
 			expect(std.warn).toMatchInlineSnapshot(`
-				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --legacy-assets argument will be deprecated in the near future. Please use --assets instead.[0m
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --legacy-assets argument has been deprecated. Please use --assets instead.[0m
 
 				  To learn more about Workers with assets, visit our documentation at
 				  [4mhttps://developers.cloudflare.com/workers/frameworks/[0m.
@@ -2517,7 +2517,7 @@ addEventListener('fetch', event => {});`
 			);
 
 			expect(std.warn).toMatchInlineSnapshot(`
-				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --legacy-assets argument will be deprecated in the near future. Please use --assets instead.[0m
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --legacy-assets argument has been deprecated. Please use --assets instead.[0m
 
 				  To learn more about Workers with assets, visit our documentation at
 				  [4mhttps://developers.cloudflare.com/workers/frameworks/[0m.
@@ -2546,7 +2546,7 @@ addEventListener('fetch', event => {});`
 			);
 
 			expect(std.warn).toMatchInlineSnapshot(`
-				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --legacy-assets argument will be deprecated in the near future. Please use --assets instead.[0m
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --legacy-assets argument has been deprecated. Please use --assets instead.[0m
 
 				  To learn more about Workers with assets, visit our documentation at
 				  [4mhttps://developers.cloudflare.com/workers/frameworks/[0m.
@@ -2630,7 +2630,7 @@ addEventListener('fetch', event => {});`
 			await runWrangler("deploy --legacy-assets ./assets");
 
 			expect(std.warn).toMatchInlineSnapshot(`
-				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --legacy-assets argument will be deprecated in the near future. Please use --assets instead.[0m
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --legacy-assets argument has been deprecated. Please use --assets instead.[0m
 
 				  To learn more about Workers with assets, visit our documentation at
 				  [4mhttps://developers.cloudflare.com/workers/frameworks/[0m.
@@ -3869,7 +3869,7 @@ addEventListener('fetch', event => {});`
 			await runWrangler("deploy --legacy-assets .");
 
 			expect(std.warn).toMatchInlineSnapshot(`
-				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --legacy-assets argument will be deprecated in the near future. Please use --assets instead.[0m
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --legacy-assets argument has been deprecated. Please use --assets instead.[0m
 
 				  To learn more about Workers with assets, visit our documentation at
 				  [4mhttps://developers.cloudflare.com/workers/frameworks/[0m.

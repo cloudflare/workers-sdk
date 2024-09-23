@@ -64,12 +64,6 @@ export function deployOptions(yargs: CommonYargsArgv) {
 				type: "string",
 				requiresArg: true,
 			})
-			.option("format", {
-				choices: ["modules", "service-worker"] as const,
-				describe: "Choose an entry type",
-				deprecated: true,
-				hidden: true,
-			})
 			.option("compatibility-date", {
 				describe: "Date to use for compatibility checks",
 				type: "string",
@@ -86,6 +80,17 @@ export function deployOptions(yargs: CommonYargsArgv) {
 				describe: "Use the latest version of the worker runtime",
 				type: "boolean",
 				default: false,
+			})
+			.option("assets", {
+				describe: "Static assets to be served. Replaces Workers Sites.",
+				type: "string",
+				requiresArg: true,
+			})
+			.option("format", {
+				choices: ["modules", "service-worker"] as const,
+				describe: "Choose an entry type",
+				deprecated: true,
+				hidden: true,
 			})
 			.option("experimental-public", {
 				describe: "(Deprecated) Static assets to be served",
@@ -105,17 +110,14 @@ export function deployOptions(yargs: CommonYargsArgv) {
 				describe: "Static assets to be served",
 				type: "string",
 				requiresArg: true,
+				deprecated: true,
 				hidden: true,
-			})
-			.option("assets", {
-				describe: "Static assets to be served",
-				type: "string",
-				requiresArg: true,
 			})
 			.option("site", {
 				describe: "Root folder of static assets for Workers Sites",
 				type: "string",
 				requiresArg: true,
+				hidden: true,
 			})
 			.option("site-include", {
 				describe:
@@ -123,6 +125,7 @@ export function deployOptions(yargs: CommonYargsArgv) {
 				type: "string",
 				requiresArg: true,
 				array: true,
+				hidden: true,
 			})
 			.option("site-exclude", {
 				describe:
@@ -130,6 +133,7 @@ export function deployOptions(yargs: CommonYargsArgv) {
 				type: "string",
 				requiresArg: true,
 				array: true,
+				hidden: true,
 			})
 			.option("var", {
 				describe:
@@ -238,7 +242,7 @@ export async function deployHandler(args: DeployArgs) {
 
 	if (args.legacyAssets) {
 		logger.warn(
-			`The --legacy-assets argument will be deprecated in the near future. Please use --assets instead.\n` +
+			`The --legacy-assets argument has been deprecated. Please use --assets instead.\n` +
 				`To learn more about Workers with assets, visit our documentation at https://developers.cloudflare.com/workers/frameworks/.`
 		);
 	}
