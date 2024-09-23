@@ -4,10 +4,18 @@
 
 feat: telemetry collection
 
-Cloudflare will collect telemetry about your usage of `create-cloudflare` to improve the experience. You can opt-out if you’d not like to share any information using the environment variable `CREATE_CLOUDFLARE_TELEMETRY_DISABLED=1` or the [telemetry subcommand](https://developers.cloudflare.com/pages/get-started/c3/#telemetry):
+Cloudflare will collect telemetry about your usage of `create-cloudflare` to improve the experience.
+
+If you would like to disable telemetry, you can run:
 
 ```sh
-npm create cloudflare@latest telemetry disable
+npm create cloudflare telemetry disable
 ```
 
-Read more about our data policy at [https://developers.cloudflare.com/workers/telemetry](https://developers.cloudflare.com/workers/telemetry).
+Alternatively, you can set an environment variable:
+
+```sh
+export CREATE_CLOUDFLARE_TELEMETRY_DISABLED=1
+```
+
+Read more about our data policy at https://github.com/cloudflare/workers-sdk/blob/main/packages/create-cloudflare/telemetry.md.
