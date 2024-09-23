@@ -4345,7 +4345,8 @@ addEventListener('fetch', event => {});`
 			await expect(
 				runWrangler("deploy")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: Cannot use Experimental Assets and Workers Sites in the same Worker.]`
+				dedent`[Error: Cannot use Experimental Assets and Workers Sites in the same Worker.
+				Please remove either the \`site\` or \`experimental_assets\` field from your configuration file.]`
 			);
 		});
 
@@ -4360,7 +4361,8 @@ addEventListener('fetch', event => {});`
 			await expect(
 				runWrangler("deploy --experimental-assets abc")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: Cannot use Experimental Assets and Workers Sites in the same Worker.]`
+				dedent`[Error: Cannot use Experimental Assets and Workers Sites in the same Worker.
+				Please remove either the \`site\` or \`experimental_assets\` field from your configuration file.]`
 			);
 		});
 
@@ -4383,6 +4385,20 @@ addEventListener('fetch', event => {});`
 					'^The directory specified by the "experimental_assets.directory" field in your configuration file does not exist:[Ss]*'
 				)
 			);
+		});
+
+		it("should error if an ASSET binding is provided without a user Worker", async () => {
+			writeWranglerToml({
+				experimental_assets: {
+					directory: "xyz",
+					binding: "ASSET",
+				},
+			});
+			await expect(runWrangler("deploy")).rejects
+				.toThrowErrorMatchingInlineSnapshot(`
+				[Error: Cannot use Experimental Assets with a binding in an assets-only Worker.
+				Please remove the asset binding from your configuration file, or provide a Worker script in your configuration file (\`main\`).]
+			`);
 		});
 
 		it("should be able to upload files with special characters in filepaths", async () => {

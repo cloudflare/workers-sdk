@@ -5,7 +5,7 @@ import { getEntry } from "../deployment-bundle/entry";
 import { UserError } from "../errors";
 import {
 	processExperimentalAssetsArg,
-	verifyMutuallyExclusiveAssetsArgsOrConfig,
+	validateAssetsArgsAndConfig,
 } from "../experimental-assets";
 import {
 	getRules,
@@ -234,7 +234,7 @@ export async function versionsUploadHandler(
 		);
 	}
 
-	verifyMutuallyExclusiveAssetsArgsOrConfig(
+	validateAssetsArgsAndConfig(
 		{
 			// given that legacyAssets and sites are not supported by
 			// `wrangler versions upload` pass them as undefined to
@@ -242,6 +242,7 @@ export async function versionsUploadHandler(
 			legacyAssets: undefined,
 			site: undefined,
 			experimentalAssets: args.experimentalAssets,
+			script: args.script,
 		},
 		config
 	);

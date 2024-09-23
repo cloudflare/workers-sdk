@@ -366,16 +366,22 @@ export function processExperimentalAssetsArg(
 }
 
 /**
- * Workers assets cannot be used in combination with a few other select
- * Workers features, such as: legacy assets, sites and tail consumers.
- *
- * This function ensures that if any of these mutually exclusive config
- * keys or command args are used together, an appropriate error is thrown.
+ * Validate assets configuration against the following requirements:
+ *     - assets cannot be used in combination with a few other select
+ *        Workers features, such as: legacy assets, sites and tail consumers
+ *     - an asset binding cannot be used in a Worker that only has assets
+ * and throw an appropriate error if invalid.
  */
-export function verifyMutuallyExclusiveAssetsArgsOrConfig(
+export function validateAssetsArgsAndConfig(
 	args:
-		| Pick<StartDevOptions, "legacyAssets" | "site" | "experimentalAssets">
-		| Pick<DeployArgs, "legacyAssets" | "site" | "experimentalAssets">,
+		| Pick<
+				StartDevOptions,
+				"legacyAssets" | "site" | "experimentalAssets" | "script"
+		  >
+		| Pick<
+				DeployArgs,
+				"legacyAssets" | "site" | "experimentalAssets" | "script"
+		  >,
 	config: Config
 ) {
 	/*
@@ -387,7 +393,8 @@ export function verifyMutuallyExclusiveAssetsArgsOrConfig(
 		(args.legacyAssets || config.legacy_assets)
 	) {
 		throw new UserError(
-			"Cannot use Experimental Assets and Legacy Assets in the same Worker."
+			"Cannot use Experimental Assets and Legacy Assets in the same Worker.\n" +
+				"Please remove either the `site` or `experimental_assets` field from your configuration file."
 		);
 	}
 
@@ -396,7 +403,8 @@ export function verifyMutuallyExclusiveAssetsArgsOrConfig(
 		(args.site || config.site)
 	) {
 		throw new UserError(
-			"Cannot use Experimental Assets and Workers Sites in the same Worker."
+			"Cannot use Experimental Assets and Workers Sites in the same Worker.\n" +
+				"Please remove either the `site` or `experimental_assets` field from your configuration file."
 		);
 	}
 
@@ -406,6 +414,13 @@ export function verifyMutuallyExclusiveAssetsArgsOrConfig(
 	) {
 		throw new UserError(
 			"Cannot use Experimental Assets and tail consumers in the same Worker. Tail Workers are not yet supported for Workers with assets."
+		);
+	}
+
+	if (!(args.script || config.main) && config.experimental_assets?.binding) {
+		throw new UserError(
+			"Cannot use Experimental Assets with a binding in an assets-only Worker.\n" +
+				"Please remove the asset binding from your configuration file, or provide a Worker script in your configuration file (`main`)."
 		);
 	}
 }
