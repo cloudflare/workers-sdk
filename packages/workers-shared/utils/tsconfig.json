@@ -4,7 +4,7 @@
 		"lib": ["es2021"],
 		"module": "NodeNext",
 		"moduleResolution": "nodenext",
-		"types": ["@cloudflare/workers-types/experimental"],
+		"types": ["@cloudflare/workers-types/experimental", "@types/node"],
 		"noEmit": true,
 		"isolatedModules": true,
 		"allowSyntheticDefaultImports": true,

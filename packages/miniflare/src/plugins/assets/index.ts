@@ -3,12 +3,12 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import {
 	CONTENT_HASH_OFFSET,
-	encodeFilePath,
 	ENTRY_SIZE,
 	getContentType,
 	HEADER_SIZE,
 	MAX_ASSET_COUNT,
 	MAX_ASSET_SIZE,
+	normalizeFilePath,
 	PATH_HASH_OFFSET,
 	PATH_HASH_SIZE,
 } from "@cloudflare/workers-shared";
@@ -239,10 +239,9 @@ const walk = async (dir: string) => {
 				 */
 
 				const [pathHash, contentHash] = await Promise.all([
-					hashPath(encodeFilePath(relativeFilepath, path.sep)),
-					hashPath(
-						encodeFilePath(filepath, path.sep) + filestat.mtimeMs.toString()
-					),
+					hashPath(normalizeFilePath(relativeFilepath)),
+					// used absolute filepath here so that changes to the enclosing asset folder will be registered
+					hashPath(filepath + filestat.mtimeMs.toString()),
 				]);
 				manifest.push({
 					pathHash,
