@@ -1,0 +1,11 @@
+{
+	"name": "@examples/worker",
+	"type": "module",
+	"scripts": {
+		"dev": "vite dev"
+	},
+	"dependencies": {
+		"@flarelabs-net/vite-plugin-cloudflare": "workspace:*",
+		"vite": "6.0.0-beta.1"
+	}
+}

@@ -13,9 +13,8 @@
 		"module": "Preserve",
 		"lib": ["ES2022"],
 		"declaration": true,
-		"composite": true,
-		"sourceMap": true,
 		"declarationMap": true,
 		"noEmit": true
-	}
+	},
+	"include": ["src"]
 }
