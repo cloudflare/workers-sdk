@@ -876,8 +876,10 @@ export const Handler = async (args: PagesDevArguments) => {
 		compatibilityFlags,
 		nodeCompat: nodejsCompatMode === "legacy",
 		vars,
+		// @ts-expect-error fixme
 		kv: kv_namespaces,
 		durableObjects: do_bindings,
+		// @ts-expect-error fixme
 		r2: r2_buckets,
 		services,
 		ai,

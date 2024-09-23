@@ -377,7 +377,9 @@ async function ensureBindingsExist(
 	name: string,
 	bindings: CfWorkerInit["bindings"]
 ): Promise<CfWorkerInit["bindings"]> {
-	if (dryRun) return bindings;
+	if (dryRun) {
+		return bindings;
+	}
 
 	assert(accountId, "Missing accountId");
 
@@ -389,8 +391,8 @@ async function ensureBindingsExist(
 		settings.bindings.map((b) => [b.name, b])
 	);
 
-	let creators = [];
-	let toCreate: CfWorkerInit["bindings"] = {
+	const creators = [];
+	const toCreate: CfWorkerInit["bindings"] = {
 		vars: undefined,
 		kv_namespaces: undefined,
 		send_email: undefined,

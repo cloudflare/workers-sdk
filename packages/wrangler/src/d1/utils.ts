@@ -18,6 +18,7 @@ export function getDatabaseInfoFromConfig(
 				uuid: d1Database.database_id,
 				previewDatabaseUuid: d1Database.preview_database_id,
 				binding: d1Database.binding,
+				// @ts-expect-error fixme
 				name: d1Database.database_name,
 				migrationsTableName:
 					d1Database.migrations_table || DEFAULT_MIGRATION_TABLE,

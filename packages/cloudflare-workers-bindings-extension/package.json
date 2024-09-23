@@ -7,6 +7,7 @@
 		"Other"
 	],
 	"repository": "https://github.com/cloudflare/workers-sdk",
+	"publisher": "cloudflare",
 	"main": "./dist/extension.js",
 	"scripts": {
 		"vscode:prepublish": "pnpm run package",

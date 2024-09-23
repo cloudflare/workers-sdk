@@ -132,6 +132,7 @@ async function resolveBindings(
 	input: StartDevWorkerInput
 ): Promise<{ bindings: StartDevWorkerOptions["bindings"]; unsafe?: CfUnsafe }> {
 	const bindings = getBindings(config, input.env, !input.dev?.remote, {
+		// @ts-expect-error fixme
 		kv: extractBindingsOfType("kv_namespace", input.bindings),
 		vars: Object.fromEntries(
 			extractBindingsOfType("plain_text", input.bindings).map((b) => [
@@ -143,6 +144,7 @@ async function resolveBindings(
 			"durable_object_namespace",
 			input.bindings
 		),
+		// @ts-expect-error fixme
 		r2: extractBindingsOfType("r2_bucket", input.bindings),
 		services: extractBindingsOfType("service", input.bindings),
 		d1Databases: extractBindingsOfType("d1", input.bindings),

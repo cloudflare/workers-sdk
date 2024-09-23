@@ -1,3 +1,5 @@
+#:schema node_modules/wrangler/config-schema.json
+
 name = "worker-ts"
 main = "src/index.ts"
 compatibility_date = "2023-05-04"
@@ -5,6 +7,11 @@ compatibility_date = "2023-05-04"
 [vars]
 HELLO="WORLD"
 
+[[d1_databases]]
+binding = "MY_DB"
 
 [[kv_namespaces]]
-binding = "SOME"
+binding = "MY_KV_NAMESPACE"
+
+[[r2_buckets]]
+binding = "MY_BUCKET"
