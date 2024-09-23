@@ -1,6 +1,6 @@
 import assert from "assert";
 import crypto from "crypto";
-import { Abortable } from "events";
+import { Abortable, once } from "events";
 import fs from "fs";
 import http from "http";
 import net from "net";
@@ -80,6 +80,7 @@ import {
 	Config,
 	Extension,
 	HttpOptions_Style,
+	isSocketIdentifier,
 	kInspectorSocket,
 	Runtime,
 	RuntimeOptions,
@@ -108,6 +109,7 @@ import {
 	Mutex,
 	SharedHeaders,
 	SiteBindings,
+	ValueOf,
 } from "./workers";
 import { formatZodError } from "./zod-format";
 import type {
@@ -134,11 +136,29 @@ function maybeGetLocallyAccessibleHost(
 	if (h === "::1") return "[::1]";
 }
 
-function getServerPort(server: http.Server) {
+function getServerPort(server: net.Server) {
 	const address = server.address();
 	// Note address would be string with unix socket
 	assert(address !== null && typeof address === "object");
 	return address.port;
+}
+
+/**
+ * Gets a random safe-to-bind-to port from the OS. Implemented by starting a
+ * server on port 0, reading the port, then stopping the server. Assuming the
+ * OS allocates ports sequentially, this port should be safe(ish) to use.
+ * Callers will need to handle a potential race condition if the same port is
+ * assigned, and retry port allocation in this case. This will be done
+ * automatically if the `retryPortAllocation` Miniflare option is enabled.
+ */
+async function getRandomPort() {
+	const server = net.createServer((socket) => socket.destroy());
+	const listeningPromise = once(server, "listening");
+	server.listen(0);
+	await listeningPromise;
+	const port = getServerPort(server);
+	server.close();
+	return port;
 }
 
 // ===== `Miniflare` User Options =====
@@ -695,6 +715,14 @@ function safeReadableStreamFrom(iterable: AsyncIterable<Uint8Array>) {
 	});
 }
 
+const PortBehaviour = {
+	// Use user-specified ports in the configuration
+	USE_REQUESTED: 0,
+	// Force all ports to be random
+	USE_RANDOM: 1,
+} as const;
+type PortBehaviour = ValueOf<typeof PortBehaviour>;
+
 // Maps `Miniflare` instances to stack traces for their construction. Used to identify un-`dispose()`d instances.
 let maybeInstanceRegistry:
 	| Map<Miniflare, string /* constructionStack */>
@@ -806,7 +834,7 @@ export class Miniflare {
 		this.#disposeController = new AbortController();
 		this.#runtimeMutex = new Mutex();
 		this.#initPromise = this.#runtimeMutex
-			.runWith(() => this.#assembleAndUpdateConfig())
+			.runWith(() => this.#assembleAndUpdateConfig(PortBehaviour.USE_REQUESTED))
 			.catch((e) => {
 				// If initialisation failed, attempting to `dispose()` this instance
 				// will too. Therefore, remove from the instance registry now, so we
@@ -1059,7 +1087,8 @@ export class Miniflare {
 		});
 	}
 
-	#getSocketAddress(
+	async #getSocketAddress(
+		behaviour: PortBehaviour,
 		id: SocketIdentifier,
 		previousRequestedPort: number | undefined,
 		host = DEFAULT_HOST,
@@ -1070,11 +1099,27 @@ export class Miniflare {
 		if (requestedPort === 0 && previousRequestedPort === 0) {
 			requestedPort = this.#socketPorts?.get(id);
 		}
-		// Otherwise, default to a new random port
-		return `${getURLSafeHost(host)}:${requestedPort ?? 0}`;
+		// Otherwise, we'll default to a new random port, unless we're forcing
+		// random allocation
+		if (requestedPort === undefined || behaviour === PortBehaviour.USE_RANDOM) {
+			requestedPort = 0;
+		}
+		// Ensures `address` doesn't match `localhost:0`. If it does, port 0 will be
+		// rewritten to an actual, non-zero, random port. When `workerd` is started
+		// on `localhost:0`, it will actually listen with different random ports on
+		// the IPv4 loopback (127.0.0.1) and IPv6 loopback (::1). Only the IPv4
+		// assigned port is reported, but Node 17+ will try to send requests to
+		// `::1` by default.
+		if (host === "localhost" && requestedPort === 0) {
+			requestedPort = await getRandomPort();
+		}
+		return `${getURLSafeHost(host)}:${requestedPort}`;
 	}
 
-	async #assembleConfig(loopbackPort: number): Promise<Config> {
+	async #assembleConfig(
+		portBehaviour: PortBehaviour,
+		loopbackPort: number
+	): Promise<Config> {
 		const allPreviousWorkerOpts = this.#previousWorkerOpts;
 		const allWorkerOpts = this.#workerOpts;
 		const sharedOpts = this.#sharedOpts;
@@ -1258,7 +1303,8 @@ export class Miniflare {
 				const directSocket = directSockets[j];
 				const entrypoint = directSocket.entrypoint ?? "default";
 				const name = getDirectSocketName(i, entrypoint);
-				const address = this.#getSocketAddress(
+				const address = await this.#getSocketAddress(
+					portBehaviour,
 					name,
 					previousDirectSocket?.port,
 					directSocket.host,
@@ -1324,19 +1370,19 @@ export class Miniflare {
 		return { services: servicesArray, sockets, extensions };
 	}
 
-	async #assembleAndUpdateConfig() {
+	async #assembleAndUpdateConfig(portBehaviour: PortBehaviour): Promise<void> {
 		// This function must be run with `#runtimeMutex` held
 		const initial = !this.#runtimeEntryURL;
 		assert(this.#runtime !== undefined);
 		const loopbackPort = await this.#getLoopbackPort();
-		const config = await this.#assembleConfig(loopbackPort);
+		const config = await this.#assembleConfig(portBehaviour, loopbackPort);
 		const configBuffer = serializeConfig(config);
 
 		// Get all socket names we expect to get ports for
 		assert(config.sockets !== undefined);
 		const requiredSockets: SocketIdentifier[] = config.sockets.map(
 			({ name }) => {
-				assert(name !== undefined);
+				assert(isSocketIdentifier(name));
 				return name;
 			}
 		);
@@ -1346,7 +1392,8 @@ export class Miniflare {
 
 		// Reload runtime
 		const configuredHost = this.#sharedOpts.core.host ?? DEFAULT_HOST;
-		const entryAddress = this.#getSocketAddress(
+		const entryAddress = await this.#getSocketAddress(
+			portBehaviour,
 			SOCKET_ENTRY,
 			this.#previousSharedOpts?.core.port,
 			configuredHost,
@@ -1354,7 +1401,8 @@ export class Miniflare {
 		);
 		let inspectorAddress: string | undefined;
 		if (this.#sharedOpts.core.inspectorPort !== undefined) {
-			inspectorAddress = this.#getSocketAddress(
+			inspectorAddress = await this.#getSocketAddress(
+				portBehaviour,
 				kInspectorSocket,
 				this.#previousSharedOpts?.core.inspectorPort,
 				"localhost",
@@ -1374,12 +1422,36 @@ export class Miniflare {
 			verbose: this.#sharedOpts.core.verbose,
 			handleRuntimeStdio: this.#sharedOpts.core.handleRuntimeStdio,
 		};
-		const maybeSocketPorts = await this.#runtime.updateConfig(
+		const { socketPorts, stderr } = await this.#runtime.updateConfig(
 			configBuffer,
 			runtimeOpts
 		);
 		if (this.#disposeController.signal.aborted) return;
-		if (maybeSocketPorts === undefined) {
+		if (socketPorts === undefined) {
+			// If this is an address-in-use error...
+			// (NOTE: on Windows, `workerd` will happily start two servers on the
+			// same port, with the first receiving all requests, this is being tracked
+			// here: https://github.com/cloudflare/workerd/issues/1664)
+			if (stderr.includes("Address already in use")) {
+				// If this is the first set of options, we're allowed to retry port
+				// allocation, and we haven't already tried...
+				if (
+					initial &&
+					this.#sharedOpts.core.unsafeRetryPortAllocation &&
+					portBehaviour === PortBehaviour.USE_REQUESTED
+				) {
+					// ...retry starting `workerd` with random ports
+					return this.#assembleAndUpdateConfig(PortBehaviour.USE_RANDOM);
+				}
+
+				throw new MiniflareCoreError(
+					"ERR_ADDRESS_IN_USE",
+					"The Workers runtime failed to start " +
+						"because a specified address was already in use."
+				);
+			}
+
+			// Otherwise, throw a generic failure message
 			throw new MiniflareCoreError(
 				"ERR_RUNTIME_FAILURE",
 				"The Workers runtime failed to start. " +
@@ -1389,19 +1461,19 @@ export class Miniflare {
 		// Note: `updateConfig()` doesn't resolve until ports for all required
 		// sockets have been recorded. At this point, `maybeSocketPorts` contains
 		// all of `requiredSockets` as keys.
-		this.#socketPorts = maybeSocketPorts;
+		this.#socketPorts = socketPorts;
 
 		const entrySocket = config.sockets?.[0];
 		const secure = entrySocket !== undefined && "https" in entrySocket;
 		const previousEntryURL = this.#runtimeEntryURL;
 
-		const entryPort = maybeSocketPorts.get(SOCKET_ENTRY);
+		const entryPort = socketPorts.get(SOCKET_ENTRY);
 		assert(entryPort !== undefined);
 
 		const maybeAccessibleHost = maybeGetLocallyAccessibleHost(configuredHost);
 		if (maybeAccessibleHost === undefined) {
 			// If the configured host wasn't locally accessible, we should've configured a 2nd local entry socket that is
-			const localEntryPort = maybeSocketPorts.get(SOCKET_ENTRY_LOCAL);
+			const localEntryPort = socketPorts.get(SOCKET_ENTRY_LOCAL);
 			assert(localEntryPort !== undefined, "Expected local entry socket port");
 			this.#runtimeEntryURL = new URL(`http://127.0.0.1:${localEntryPort}`);
 		} else {
@@ -1574,7 +1646,7 @@ export class Miniflare {
 		this.#log = this.#sharedOpts.core.log ?? this.#log;
 
 		// Send to runtime and wait for updates to process
-		await this.#assembleAndUpdateConfig();
+		await this.#assembleAndUpdateConfig(PortBehaviour.USE_REQUESTED);
 	}
 
 	setOptions(opts: MiniflareOptions): Promise<void> {

@@ -16,6 +16,7 @@ export class MiniflareError<
 
 export type MiniflareCoreErrorCode =
 	| "ERR_RUNTIME_FAILURE" // Runtime failed to start
+	| "ERR_ADDRESS_IN_USE" // Runtime failed to start because a specified address was already in use
 	| "ERR_DISPOSED" // Attempted to use Miniflare instance after calling dispose()
 	| "ERR_MODULE_PARSE" // SyntaxError when attempting to parse/locate modules
 	| "ERR_MODULE_STRING_SCRIPT" // Attempt to resolve module within string script

@@ -55,7 +55,7 @@
 		"birpc": "0.2.14",
 		"cjs-module-lexer": "^1.2.3",
 		"devalue": "^4.3.0",
-		"esbuild": "0.17.19",
+		"esbuild": "0.18.20",
 		"miniflare": "workspace:*",
 		"semver": "^7.5.1",
 		"wrangler": "workspace:*",
@@ -84,7 +84,13 @@
 	"volta": {
 		"extends": "../../package.json"
 	},
+	"engines": {
+		"node": ">=18"
+	},
 	"workers-sdk": {
 		"prerelease": true
+	},
+	"volta": {
+		"extends": "../../package.json"
 	}
 }

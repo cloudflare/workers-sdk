@@ -179,7 +179,7 @@ describe("wrangler", () => {
 			});
 
 			it("should create a namespace in an environment if configured to do so", async () => {
-				mockCreateRequest("worker-customEnv-UnitTestNamespace");
+				mockCreateRequest("customEnv-UnitTestNamespace");
 				await runWrangler(
 					"kv namespace create UnitTestNamespace --env customEnv"
 				);

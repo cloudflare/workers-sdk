@@ -166,7 +166,11 @@ describe("find_additional_modules deploy", () => {
 		const bundledEntryPath = path.join(outDir, "index.js");
 		const bundledEntry = await fs.readFile(bundledEntryPath, "utf8");
 		expect(bundledEntry).toMatchInlineSnapshot(`
-			"// src/index.ts
+			"// ../../packages/wrangler/templates/symbol-dispose.js
+			Symbol.dispose ??= Symbol("Symbol.dispose");
+			Symbol.asyncDispose ??= Symbol("Symbol.asyncDispose");
+
+			// src/index.ts
 			import common from "./common.cjs";
 
 			// src/dep.ts
