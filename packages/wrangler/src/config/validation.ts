@@ -3347,11 +3347,17 @@ const validateObservability: ValidatorFn = (diagnostics, field, value) => {
 			"number"
 		) && isValid;
 
+	isValid =
+		validateAdditionalProperties(diagnostics, field, Object.keys(val), [
+			"enabled",
+			"head_sampling_rate",
+		]) && isValid;
+
 	const samplingRate = val?.head_sampling_rate;
 
 	if (samplingRate && (samplingRate < 0 || samplingRate > 1)) {
 		diagnostics.errors.push(
-			`\`${field}.head_sampling_rate\` must be a value between 0 and 1.`
+			`"${field}.head_sampling_rate" must be a value between 0 and 1.`
 		);
 	}
 

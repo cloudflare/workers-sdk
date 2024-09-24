@@ -211,9 +211,9 @@ describe("normalizeAndValidateConfig()", () => {
 			expect("unexpected" in config).toBe(false);
 			expect(diagnostics.hasErrors()).toBe(false);
 			expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-			        "Processing wrangler configuration:
-			          - Unexpected fields found in top-level field: \\"unexpected\\""
-		      `);
+				"Processing wrangler configuration:
+				  - Unexpected fields found in top-level field: \\"unexpected\\""
+			`);
 		});
 
 		it("should report a deprecation warning if `miniflare` appears at the top level", () => {
@@ -702,9 +702,9 @@ describe("normalizeAndValidateConfig()", () => {
 
 			expect(normalizePath(diagnostics.renderWarnings()))
 				.toMatchInlineSnapshot(`
-			        "Processing project/wrangler.toml configuration:
-			          - Unexpected fields found in triggers field: \\"someOtherfield\\""
-		      `);
+					"Processing project/wrangler.toml configuration:
+					  - Unexpected fields found in triggers field: \\"someOtherfield\\""
+				`);
 		});
 
 		it("should error on invalid `wasm_modules` paths", () => {
@@ -1778,9 +1778,9 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(config).toEqual(expect.objectContaining(expectedConfig));
 				expect(diagnostics.hasErrors()).toBe(true);
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-			          "Processing wrangler configuration:
-			            - Unexpected fields found in migrations field: \\"unrecognized_field\\""
-		        `);
+					"Processing wrangler configuration:
+					  - Unexpected fields found in migrations field: \\"unrecognized_field\\""
+				`);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 			          "Processing wrangler configuration:
 			            - Expected \\"migrations[0].renamed_classes\\" to be an array of \\"{from: string, to: string}\\" objects but got [{\\"from\\":\\"FROM_CLASS\\",\\"to\\":\\"TO_CLASS\\"},{\\"a\\":\\"something\\",\\"b\\":\\"someone\\"}]."
@@ -1902,6 +1902,29 @@ describe("normalizeAndValidateConfig()", () => {
 					"Processing wrangler configuration:
 					  - Expected \\"experimental_assets.directory\\" to be a non-empty string."
 				`);
+			});
+
+			it("should error on invalid additional fields", () => {
+				const expectedConfig = {
+					experimental_assets: {
+						directory: "./public",
+						invalid_field_1: "this is invalid",
+						invalid_field_2: "this is invalid too",
+					},
+				};
+
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					expectedConfig as unknown as RawConfig,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(config).toEqual(expect.objectContaining(expectedConfig));
+				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - Unexpected fields found in experimental_assets field: \\"invalid_field_1\\",\\"invalid_field_2\\""
+				`);
+				expect(diagnostics.hasErrors()).toBeFalsy();
 			});
 		});
 
@@ -2452,11 +2475,11 @@ describe("normalizeAndValidateConfig()", () => {
 					{ env: undefined }
 				);
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-			"Processing wrangler configuration:
-			  - Unexpected fields found in d1_databases[2] field: \\"id\\"
-			  - Unexpected fields found in d1_databases[3] field: \\"id\\",\\"preview_id\\"
-			  - Unexpected fields found in d1_databases[4] field: \\"id\\""
-		`);
+					"Processing wrangler configuration:
+					  - Unexpected fields found in d1_databases[2] field: \\"id\\"
+					  - Unexpected fields found in d1_databases[3] field: \\"id\\",\\"preview_id\\"
+					  - Unexpected fields found in d1_databases[4] field: \\"id\\""
+				`);
 				expect(diagnostics.hasWarnings()).toBe(true);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 			"Processing wrangler configuration:
@@ -2555,9 +2578,9 @@ describe("normalizeAndValidateConfig()", () => {
 					{ env: undefined }
 				);
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-			"Processing wrangler configuration:
-			  - Unexpected fields found in hyperdrive[2] field: \\"project\\""
-		`);
+					"Processing wrangler configuration:
+					  - Unexpected fields found in hyperdrive[2] field: \\"project\\""
+				`);
 				expect(diagnostics.hasWarnings()).toBe(true);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 			"Processing wrangler configuration:
@@ -2657,10 +2680,10 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 				expect(diagnostics.hasWarnings()).toBe(true);
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-			"Processing wrangler configuration:
-			  - Unexpected fields found in queues field: \\"invalidField\\"
-			  - Unexpected fields found in queues.consumers[2] field: \\"invalidField\\""
-		`);
+					"Processing wrangler configuration:
+					  - Unexpected fields found in queues field: \\"invalidField\\"
+					  - Unexpected fields found in queues.consumers[2] field: \\"invalidField\\""
+				`);
 
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 			"Processing wrangler configuration:
@@ -3218,11 +3241,11 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-			"Processing wrangler configuration:
-			  - Unexpected fields found in mtls_certificates[3] field: \\"namespace\\"
-			  - Unexpected fields found in mtls_certificates[4] field: \\"id\\"
-			  - Unexpected fields found in mtls_certificates[7] field: \\"service\\""
-		`);
+					"Processing wrangler configuration:
+					  - Unexpected fields found in mtls_certificates[3] field: \\"namespace\\"
+					  - Unexpected fields found in mtls_certificates[4] field: \\"id\\"
+					  - Unexpected fields found in mtls_certificates[7] field: \\"service\\""
+				`);
 				expect(diagnostics.hasWarnings()).toBe(true);
 				expect(diagnostics.hasErrors()).toBe(true);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
@@ -3334,9 +3357,9 @@ describe("normalizeAndValidateConfig()", () => {
 					{ env: undefined }
 				);
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-			"Processing wrangler configuration:
-			  - Unexpected fields found in pipelines[2] field: \\"project\\""
-		`);
+					"Processing wrangler configuration:
+					  - Unexpected fields found in pipelines[2] field: \\"project\\""
+				`);
 				expect(diagnostics.hasWarnings()).toBe(true);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
@@ -5497,7 +5520,12 @@ describe("normalizeAndValidateConfig()", () => {
 					{ env: undefined }
 				);
 
-				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasWarnings()).toBe(true);
+				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - Unexpected fields found in observability field: \\"notEnabled\\""
+				`);
+
 				expect(diagnostics.hasErrors()).toBe(true);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
@@ -5522,7 +5550,28 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasErrors()).toBe(true);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - \`observability.head_sampling_rate\` must be a value between 0 and 1."
+					  - \\"observability.head_sampling_rate\\" must be a value between 0 and 1."
+				`);
+			});
+
+			it("should error on invalid additional fields", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						observability: {
+							enabled: true,
+							invalid_key_1: "hello world",
+							invalid_key_2: "hey there",
+						},
+					} as unknown as RawConfig,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(true);
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - Unexpected fields found in observability field: \\"invalid_key_1\\",\\"invalid_key_2\\""
 				`);
 			});
 		});
