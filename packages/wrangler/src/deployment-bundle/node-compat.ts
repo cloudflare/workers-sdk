@@ -107,7 +107,7 @@ export function getNodeCompatMode(
 
 	if (mode === "legacy") {
 		logger.warn(
-			"You are using `node_compat`, which is a legacy Node.js compatability option. Instead, use the `nodejs_compat` compatibility flag. This includes the functionality from legacy `node_compat` polyfills and natively implemented Node.js APIs."
+			"You are using `node_compat`, which is a legacy Node.js compatibility option. Instead, use the `nodejs_compat` compatibility flag. This includes the functionality from legacy `node_compat` polyfills and natively implemented Node.js APIs. See https://developers.cloudflare.com/workers/runtime-apis/nodejs for more information."
 		);
 	}
 
