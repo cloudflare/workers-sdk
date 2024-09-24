@@ -2,4 +2,4 @@
 "wrangler": patch
 ---
 
-Tweaks warning when using node_compat
+chore: tweaks warning when using node_compat
