@@ -4,3 +4,9 @@ compatibility_date = "<TBD>"
 compatibility_flags = ["nodejs_compat_v2"]
 main = "./dist/_worker.js"
 assets = { directory = "./dist", binding = "ASSETS" }
+
+# Workers Logs
+# Docs: https://rohin-observability-docs.cloudflare-docs-7ou.pages.dev/workers/observability/logs/workers-logs/
+# Configuration: https://rohin-observability-docs.cloudflare-docs-7ou.pages.dev/workers/observability/logs/workers-logs/#enable-workers-logs
+[observability]
+enabled = true

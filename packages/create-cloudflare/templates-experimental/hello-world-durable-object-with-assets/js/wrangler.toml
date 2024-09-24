@@ -17,3 +17,8 @@ class_name = "MyDurableObject"
 tag = "v1"
 new_classes = ["MyDurableObject"]
 
+# Workers Logs
+# Docs: https://rohin-observability-docs.cloudflare-docs-7ou.pages.dev/workers/observability/logs/workers-logs/
+# Configuration: https://rohin-observability-docs.cloudflare-docs-7ou.pages.dev/workers/observability/logs/workers-logs/#enable-workers-logs
+[observability]
+enabled = true
