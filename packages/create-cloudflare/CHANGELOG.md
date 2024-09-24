@@ -1,5 +1,11 @@
 # create-cloudflare
 
+## 2.28.1
+
+### Patch Changes
+
+- [#6815](https://github.com/cloudflare/workers-sdk/pull/6815) [`ffe8d10`](https://github.com/cloudflare/workers-sdk/commit/ffe8d10cb30c749616d61341501b8096ec0b99fe) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: experimental Angular template using Workers with Assets was broken
+
 ## 2.28.0
 
 ### Minor Changes
