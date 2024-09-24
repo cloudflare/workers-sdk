@@ -13,6 +13,7 @@ interface Env {
 	PROXY_CONTROLLER: Fetcher;
 	PROXY_CONTROLLER_AUTH_SECRET: string;
 	DURABLE_OBJECT: DurableObjectNamespace;
+	NAME: string;
 }
 
 // request.cf.hostMetadata is verbose to type using the workers-types Request -- this allows us to have Request correctly typed in this scope
@@ -35,7 +36,7 @@ export default {
 export class ProxyWorker implements DurableObject {
 	constructor(
 		readonly state: DurableObjectState,
-		readonly env: Env
+		public env: Env
 	) {}
 
 	proxyData?: ProxyData;
@@ -78,8 +79,8 @@ export class ProxyWorker implements DurableObject {
 		});
 	}
 
-	processProxyControllerRequest(request: Request) {
-		const event = request.cf?.hostMetadata;
+	async processProxyControllerRequest(request: Request) {
+		const event = await request.json<ProxyWorkerIncomingRequestBody>();
 		switch (event?.type) {
 			case "pause":
 				this.proxyData = undefined;

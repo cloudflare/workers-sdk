@@ -176,7 +176,8 @@ export async function unstable_dev(
 		onReady: (address, port, proxyData) => {
 			readyResolve({ address, port, proxyData });
 		},
-		config: options?.config,
+		// @ts-expect-error who cares
+		config: options?.config === undefined ? undefined : [options.config],
 		env: options?.env,
 		processEntrypoint,
 		additionalModules,
