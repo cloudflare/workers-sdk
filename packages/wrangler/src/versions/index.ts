@@ -108,6 +108,7 @@ export function versionsUploadOptions(yargs: CommonYargsArgv) {
 				type: "string",
 				requiresArg: true,
 				hidden: true,
+				deprecated: true,
 			})
 			.option("site-include", {
 				describe:
@@ -116,6 +117,7 @@ export function versionsUploadOptions(yargs: CommonYargsArgv) {
 				requiresArg: true,
 				array: true,
 				hidden: true,
+				deprecated: true,
 			})
 			.option("site-exclude", {
 				describe:
@@ -124,6 +126,7 @@ export function versionsUploadOptions(yargs: CommonYargsArgv) {
 				requiresArg: true,
 				array: true,
 				hidden: true,
+				deprecated: true,
 			})
 			.option("var", {
 				describe:

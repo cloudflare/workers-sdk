@@ -249,7 +249,7 @@ export function normalizeAndValidateConfig(
 		diagnostics,
 		rawConfig,
 		"legacy_assets",
-		`The \`legacy_assets\` feature will be deprecated in the near future. Please use \`assets\` instead.`,
+		`The \`legacy_assets\` feature has been deprecated. Please use \`assets\` instead.`,
 		false
 	);
 

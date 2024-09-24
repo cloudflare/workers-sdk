@@ -198,6 +198,7 @@ export function devOptions(yargs: CommonYargsArgv) {
 				type: "string",
 				requiresArg: true,
 				hidden: true,
+				deprecated: true,
 			})
 			.option("site-include", {
 				describe:
@@ -206,6 +207,7 @@ export function devOptions(yargs: CommonYargsArgv) {
 				requiresArg: true,
 				array: true,
 				hidden: true,
+				deprecated: true,
 			})
 			.option("site-exclude", {
 				describe:
@@ -214,6 +216,7 @@ export function devOptions(yargs: CommonYargsArgv) {
 				requiresArg: true,
 				array: true,
 				hidden: true,
+				deprecated: true,
 			})
 			.option("upstream-protocol", {
 				describe: "Protocol to forward requests to host on, defaults to https.",

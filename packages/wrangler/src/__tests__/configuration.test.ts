@@ -507,7 +507,7 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
 					  - [1mDeprecation[0m: \\"legacy_assets\\":
-					    The \`legacy_assets\` feature will be deprecated in the near future. Please use \`assets\` instead."
+					    The \`legacy_assets\` feature has been deprecated. Please use \`assets\` instead."
 				`);
 			});
 
@@ -526,7 +526,7 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
 					  - [1mDeprecation[0m: \\"legacy_assets\\":
-					    The \`legacy_assets\` feature will be deprecated in the near future. Please use \`assets\` instead."
+					    The \`legacy_assets\` feature has been deprecated. Please use \`assets\` instead."
 				`);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
@@ -558,7 +558,7 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
 					  - [1mDeprecation[0m: \\"legacy_assets\\":
-					    The \`legacy_assets\` feature will be deprecated in the near future. Please use \`assets\` instead."
+					    The \`legacy_assets\` feature has been deprecated. Please use \`assets\` instead."
 				`);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
@@ -588,7 +588,7 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
 					  - [1mDeprecation[0m: \\"legacy_assets\\":
-					    The \`legacy_assets\` feature will be deprecated in the near future. Please use \`assets\` instead."
+					    The \`legacy_assets\` feature has been deprecated. Please use \`assets\` instead."
 				`);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
@@ -1861,7 +1861,7 @@ describe("normalizeAndValidateConfig()", () => {
 
 			it("should error on invalid additional fields", () => {
 				const expectedConfig = {
-					experimental_assets: {
+					assets: {
 						directory: "./public",
 						invalid_field_1: "this is invalid",
 						invalid_field_2: "this is invalid too",
@@ -1877,7 +1877,7 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(config).toEqual(expect.objectContaining(expectedConfig));
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - Unexpected fields found in experimental_assets field: \\"invalid_field_1\\",\\"invalid_field_2\\""
+					  - Unexpected fields found in assets field: \\"invalid_field_1\\",\\"invalid_field_2\\""
 				`);
 				expect(diagnostics.hasErrors()).toBeFalsy();
 			});

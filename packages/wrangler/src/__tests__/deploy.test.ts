@@ -2571,8 +2571,7 @@ addEventListener('fetch', event => {});`
 				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
 
 				    - [1mDeprecation[0m: \\"legacy_assets\\":
-				      The \`legacy_assets\` feature will be deprecated in the near future. Please use \`assets\`
-				  instead.
+				      The \`legacy_assets\` feature has been deprecated. Please use \`assets\` instead.
 
 				"
 			`);
@@ -2597,8 +2596,7 @@ addEventListener('fetch', event => {});`
 				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
 
 				    - [1mDeprecation[0m: \\"legacy_assets\\":
-				      The \`legacy_assets\` feature will be deprecated in the near future. Please use \`assets\`
-				  instead.
+				      The \`legacy_assets\` feature has been deprecated. Please use \`assets\` instead.
 
 				"
 			`);
@@ -2687,8 +2685,7 @@ addEventListener('fetch', event => {});`
 				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
 
 				    - [1mDeprecation[0m: \\"legacy_assets\\":
-				      The \`legacy_assets\` feature will be deprecated in the near future. Please use \`assets\`
-				  instead.
+				      The \`legacy_assets\` feature has been deprecated. Please use \`assets\` instead.
 
 				"
 			`);
