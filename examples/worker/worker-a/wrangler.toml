@@ -1,0 +1,7 @@
+compatibility_date = "2024-09-09"
+
+[[kv_namespaces]]
+binding = "MY_KV"
+id = "xxxxx"
+
+# services = [{ binding = "WORKER_B", service = "worker_b" }]

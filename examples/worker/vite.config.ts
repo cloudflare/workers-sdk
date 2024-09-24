@@ -5,12 +5,14 @@ export default defineConfig({
 	plugins: [
 		cloudflare({
 			workerA: {
-				entrypoint: './src/worker-a.ts',
+				entrypoint: './worker-a/index.ts',
 				route: { path: '/worker-a' },
+				wranglerConfig: './worker-a/wrangler.toml',
 			},
 			workerB: {
-				entrypoint: './src/worker-b.ts',
+				entrypoint: './worker-b/index.ts',
 				route: { path: '/worker-b' },
+				wranglerConfig: './worker-b/wrangler.toml',
 			},
 		}),
 	],

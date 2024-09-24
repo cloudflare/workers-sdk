@@ -2,10 +2,16 @@
 	"name": "@examples/worker",
 	"type": "module",
 	"scripts": {
-		"dev": "vite dev"
+		"dev": "vite dev",
+		"typegen-a": "wrangler types -c ./worker-a/wrangler.toml ./worker-a",
+		"typegen-b": "wrangler types -c ./worker-b/wrangler.toml"
 	},
 	"dependencies": {
 		"@flarelabs-net/vite-plugin-cloudflare": "workspace:*",
 		"vite": "6.0.0-beta.1"
+	},
+	"devDependencies": {
+		"@cloudflare/workers-types": "^4.20240919.0",
+		"wrangler": "^3.78.8"
 	}
 }

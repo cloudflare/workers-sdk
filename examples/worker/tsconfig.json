@@ -1,6 +1,7 @@
 {
 	"compilerOptions": {
-		"strict": true
+		"strict": true,
+		"types": ["@cloudflare/workers-types"]
 	},
-	"include": ["src"]
+	"include": ["worker-a", "worker-b"]
 }

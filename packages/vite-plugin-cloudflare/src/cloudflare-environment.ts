@@ -1,11 +1,7 @@
 import * as vite from 'vite';
-import { Miniflare, Response as MiniflareResponse } from 'miniflare';
-import { fileURLToPath } from 'node:url';
 import { UNKNOWN_HOST, INIT_PATH } from './shared';
-import type { FetchFunctionOptions } from 'vite/module-runner';
 import type { ReplaceWorkersTypes } from 'miniflare';
 import type { Fetcher } from '@cloudflare/workers-types/experimental';
-// import type { ReplaceWorkersTypes } from 'miniflare';
 
 export interface CloudflareEnvironmentOptions {
 	entrypoint: string;
@@ -31,8 +27,8 @@ export class CloudflareDevEnvironment extends vite.DevEnvironment {
 		this.#options = options;
 	}
 
-	async initRunner(miniflare: Miniflare) {
-		this.#runner = await miniflare.getWorker(this.name);
+	async initRunner(runner: ReplaceWorkersTypes<Fetcher>) {
+		this.#runner = runner;
 
 		const response = await this.#runner.fetch(
 			new URL(INIT_PATH, UNKNOWN_HOST),

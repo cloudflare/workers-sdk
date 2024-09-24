@@ -1,7 +1,9 @@
 import * as vite from 'vite';
 import { createMiddleware } from '@hattip/adapter-node';
 import { Miniflare, Response as MiniflareResponse } from 'miniflare';
+import { unstable_getMiniflareWorkerOptions } from 'wrangler';
 import { fileURLToPath } from 'node:url';
+import * as path from 'node:path';
 import { createCloudflareEnvironment } from './cloudflare-environment';
 import type { FetchFunctionOptions } from 'vite/module-runner';
 import type {
@@ -33,8 +35,18 @@ export function cloudflare(
 		async configureServer(viteDevServer) {
 			const miniflare = new Miniflare({
 				workers: Object.entries(environments).map(([name, options]) => {
+					const miniflareOptions = unstable_getMiniflareWorkerOptions(
+						path.resolve(
+							resolvedConfig.root,
+							options.wranglerConfig ?? './wrangler.toml'
+						)
+					);
+
+					const { ratelimits, ...workerOptions } =
+						miniflareOptions.workerOptions;
+
 					return {
-						// ...workerOptions
+						...workerOptions,
 						name,
 						modulesRoot: '/',
 						modules: [
@@ -45,11 +57,11 @@ export function cloudflare(
 						],
 						unsafeEvalBinding: '__VITE_UNSAFE_EVAL__',
 						bindings: {
-							// ...bindings,
+							...workerOptions.bindings,
 							__VITE_ROOT__: resolvedConfig.root,
 						},
 						serviceBindings: {
-							// ...serviceBindings
+							...workerOptions.serviceBindings,
 							__VITE_FETCH_MODULE__: async (request) => {
 								const args = (await request.json()) as [
 									string,
@@ -80,11 +92,13 @@ export function cloudflare(
 			});
 
 			await Promise.all(
-				Object.keys(environments).map((name) =>
-					(
+				Object.keys(environments).map(async (name) => {
+					const runner = await miniflare.getWorker(name);
+
+					return (
 						viteDevServer.environments[name] as CloudflareDevEnvironment
-					).initRunner(miniflare)
-				)
+					).initRunner(runner);
+				})
 			);
 
 			const targets = Object.entries(environments)
