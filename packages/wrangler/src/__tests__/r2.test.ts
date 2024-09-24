@@ -96,7 +96,7 @@ describe("r2", () => {
 				  wrangler r2 bucket list           List R2 buckets
 				  wrangler r2 bucket delete <name>  Delete an R2 bucket
 				  wrangler r2 bucket sippy          Manage Sippy incremental migration on an R2 bucket
-				  wrangler r2 bucket notification   Manage event notification rules for an R2 bucket [open beta]
+				  wrangler r2 bucket notification   Manage event notification rules for an R2 bucket
 
 				GLOBAL FLAGS
 				  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
@@ -130,7 +130,7 @@ describe("r2", () => {
 				  wrangler r2 bucket list           List R2 buckets
 				  wrangler r2 bucket delete <name>  Delete an R2 bucket
 				  wrangler r2 bucket sippy          Manage Sippy incremental migration on an R2 bucket
-				  wrangler r2 bucket notification   Manage event notification rules for an R2 bucket [open beta]
+				  wrangler r2 bucket notification   Manage event notification rules for an R2 bucket
 
 				GLOBAL FLAGS
 				  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
@@ -902,7 +902,7 @@ describe("r2", () => {
 						"
 						wrangler r2 bucket notification list <bucket>
 
-						List event notification rules for a bucket [open beta]
+						List event notification rules for a bucket
 
 						POSITIONALS
 						  bucket  The name of the R2 bucket to get event notification rules for  [string] [required]
@@ -1008,7 +1008,7 @@ describe("r2", () => {
 						"
 						wrangler r2 bucket notification create <bucket>
 
-						Create an event notification rule for an R2 bucket [open beta]
+						Create an event notification rule for an R2 bucket
 
 						POSITIONALS
 						  bucket  The name of the R2 bucket to create an event notification rule for  [string] [required]
@@ -1165,7 +1165,7 @@ describe("r2", () => {
 						"
 						wrangler r2 bucket notification delete <bucket>
 
-						Delete an event notification rule from an R2 bucket [open beta]
+						Delete an event notification rule from an R2 bucket
 
 						POSITIONALS
 						  bucket  The name of the R2 bucket to delete an event notification rule for  [string] [required]
