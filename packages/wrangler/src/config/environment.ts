@@ -381,8 +381,6 @@ export type WorkflowBinding = {
 	class_name: string;
 	/** The script where the Workflow is defined (if it's external to this Worker) */
 	script_name?: string;
-	/** The service environment of the script_name to bind to */
-	environment?: string;
 };
 
 /**

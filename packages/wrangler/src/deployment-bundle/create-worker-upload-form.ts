@@ -78,11 +78,10 @@ export type WorkerMetadataBinding =
 	  }
 	| {
 			type: "workflow";
-			binding: string;
 			name: string;
+			workflow_name: string;
 			class_name: string;
 			script_name?: string;
-			environment?: string;
 	  }
 	| { type: "queue"; name: string; queue_name: string; delivery_delay?: number }
 	| {
@@ -255,19 +254,15 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 		}
 	);
 
-	// TODO: Add this back once API supports it
-	// bindings.workflows?.forEach(
-	// 	({ name, class_name, script_name, environment, binding }) => {
-	// 		metadataBindings.push({
-	// 			name,
-	// 			type: "workflow",
-	// 			class_name: class_name,
-	// 			binding,
-	// 			...(script_name && { script_name }),
-	// 			...(environment && { environment }),
-	// 		});
-	// 	}
-	// );
+	bindings.workflows?.forEach(({ binding, name, class_name, script_name }) => {
+		metadataBindings.push({
+			type: "workflow",
+			name: binding,
+			workflow_name: name,
+			class_name,
+			...(script_name && { script_name }),
+		});
+	});
 
 	bindings.queues?.forEach(({ binding, queue_name, delivery_delay }) => {
 		metadataBindings.push({

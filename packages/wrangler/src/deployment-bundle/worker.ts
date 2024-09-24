@@ -154,10 +154,9 @@ export interface CfDurableObject {
 
 export interface CfWorkflow {
 	name: string;
-	class_name: string; // not supported at the moment
+	class_name: string;
 	binding: string;
 	script_name?: string;
-	environment?: string; // not supported at the moment
 }
 
 export interface CfQueue {
