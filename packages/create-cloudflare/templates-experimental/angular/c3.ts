@@ -23,14 +23,11 @@ const configure = async (ctx: C3Context) => {
 };
 
 async function installCFWorker() {
-	await installPackages(
-		["@cloudflare/workers-types", "@miniflare/tre@next", "wrangler@beta"],
-		{
-			dev: true,
-			startText: "Installing adapter dependencies",
-			doneText: `${brandColor("installed")} ${dim(`via \`${npm} install\``)}`,
-		},
-	);
+	await installPackages(["@cloudflare/workers-types", "wrangler"], {
+		dev: true,
+		startText: "Installing adapter dependencies",
+		doneText: `${brandColor("installed")} ${dim(`via \`${npm} install\``)}`,
+	});
 }
 async function updateAppCode() {
 	const s = spinner();
@@ -93,8 +90,7 @@ const config: TemplateConfig = {
 		scripts: {
 			start: `${npm} run build && wrangler dev`,
 			build: `ng build && ${npm} run process`,
-			process:
-				"node ./tools/copy-files.mjs && node ./tools/alter-polyfills.mjs",
+			process: "node ./tools/alter-polyfills.mjs",
 			deploy: `${npm} run build && wrangler deploy`,
 		},
 	}),
