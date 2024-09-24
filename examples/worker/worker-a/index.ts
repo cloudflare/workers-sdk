@@ -1,8 +1,13 @@
 export default {
 	async fetch(request, env, ctx) {
+		const url = new URL(request.url);
 		const count = (await env.MY_KV.get('KEY')) ?? '0';
 		await env.MY_KV.put('KEY', `${Number(count) + 1}`);
 
-		return new Response(`This is Worker A. The count is ${count}.`);
+		return Response.json({
+			name: 'Worker A',
+			message: `The count is ${count}`,
+			pathname: url.pathname,
+		});
 	},
 } satisfies ExportedHandler<Env>;

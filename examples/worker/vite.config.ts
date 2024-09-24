@@ -6,7 +6,10 @@ export default defineConfig({
 		cloudflare({
 			workerA: {
 				entrypoint: './worker-a/index.ts',
-				route: { path: '/worker-a' },
+				route: {
+					path: '/worker-a',
+					// rewrite: (path) => path.replace(/^\/worker-a/, ''),
+				},
 				wranglerConfig: './worker-a/wrangler.toml',
 			},
 			workerB: {
