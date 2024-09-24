@@ -2,4 +2,4 @@
 name = "<TBD>"
 compatibility_date = "<TBD>"
 main = "./dist/server/server.mjs"
-experimental_assets = { directory = "./dist/browser", binding = "ASSETS" }
+assets = { directory = "./dist/browser", binding = "ASSETS" }
