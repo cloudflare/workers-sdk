@@ -10,12 +10,6 @@ To start a dev session you can run
 wrangler dev
 ```
 
-or
-
-```
-wrangler dev --experimental-assets=./public
-```
-
 ## Run tests
 
 ```

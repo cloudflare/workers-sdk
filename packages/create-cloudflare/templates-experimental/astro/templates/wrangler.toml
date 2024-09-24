@@ -3,4 +3,4 @@ name = "<TBD>"
 compatibility_date = "<TBD>"
 compatibility_flags = ["nodejs_compat_v2"]
 main = "./dist/_worker.js"
-experimental_assets = { directory = "./dist", binding = "ASSETS" }
+assets = { directory = "./dist", binding = "ASSETS" }

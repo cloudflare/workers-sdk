@@ -134,7 +134,7 @@ export async function typesHandler(
 		ai: config.ai,
 		version_metadata: config.version_metadata,
 		secrets,
-		experimental_assets: config.experimental_assets,
+		assets: config.assets,
 	};
 
 	await generateTypes(
@@ -407,10 +407,8 @@ async function generateTypes(
 		);
 	}
 
-	if (configToDTS.experimental_assets?.binding) {
-		envTypeStructure.push(
-			constructType(configToDTS.experimental_assets.binding, "Fetcher")
-		);
+	if (configToDTS.assets?.binding) {
+		envTypeStructure.push(constructType(configToDTS.assets.binding, "Fetcher"));
 	}
 
 	const modulesTypeStructure: string[] = [];

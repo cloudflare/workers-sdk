@@ -1,12 +1,9 @@
 import assert from "node:assert";
 import path from "node:path";
+import { processAssetsArg, validateAssetsArgsAndConfig } from "../assets";
 import { findWranglerToml, readConfig } from "../config";
 import { getEntry } from "../deployment-bundle/entry";
 import { UserError } from "../errors";
-import {
-	processExperimentalAssetsArg,
-	validateAssetsArgsAndConfig,
-} from "../experimental-assets";
 import {
 	getRules,
 	getScriptName,
@@ -71,12 +68,6 @@ export function versionsUploadOptions(yargs: CommonYargsArgv) {
 				type: "string",
 				requiresArg: true,
 			})
-			.option("format", {
-				choices: ["modules", "service-worker"] as const,
-				describe: "Choose an entry type",
-				deprecated: true,
-				hidden: true,
-			})
 			.option("compatibility-date", {
 				describe: "Date to use for compatibility checks",
 				type: "string",
@@ -94,23 +85,22 @@ export function versionsUploadOptions(yargs: CommonYargsArgv) {
 				type: "boolean",
 				default: false,
 			})
-			.option("legacy-assets", {
-				describe: "(Experimental) Static assets to be served",
-				type: "string",
-				requiresArg: true,
-				hidden: true,
-			})
 			.option("assets", {
-				describe: "(Experimental) Static assets to be served",
+				describe: "Static assets to be served. Replaces Workers Sites.",
 				type: "string",
 				requiresArg: true,
+			})
+			.option("format", {
+				choices: ["modules", "service-worker"] as const,
+				describe: "Choose an entry type",
+				deprecated: true,
 				hidden: true,
 			})
-			.option("experimental-assets", {
+			.option("legacy-assets", {
 				describe: "Static assets to be served",
 				type: "string",
-				alias: "x-assets",
 				requiresArg: true,
+				deprecated: true,
 				hidden: true,
 			})
 			.option("site", {
@@ -118,6 +108,7 @@ export function versionsUploadOptions(yargs: CommonYargsArgv) {
 				type: "string",
 				requiresArg: true,
 				hidden: true,
+				deprecated: true,
 			})
 			.option("site-include", {
 				describe:
@@ -126,6 +117,7 @@ export function versionsUploadOptions(yargs: CommonYargsArgv) {
 				requiresArg: true,
 				array: true,
 				hidden: true,
+				deprecated: true,
 			})
 			.option("site-exclude", {
 				describe:
@@ -134,6 +126,7 @@ export function versionsUploadOptions(yargs: CommonYargsArgv) {
 				requiresArg: true,
 				array: true,
 				hidden: true,
+				deprecated: true,
 			})
 			.option("var", {
 				describe:
@@ -221,8 +214,6 @@ export async function versionsUploadHandler(
 		}
 	);
 
-	args.legacyAssets = args.legacyAssets ?? args.assets;
-
 	if (args.site || config.site) {
 		throw new UserError(
 			"Workers Sites does not support uploading versions through `wrangler versions upload`. You must use `wrangler deploy` instead."
@@ -230,7 +221,7 @@ export async function versionsUploadHandler(
 	}
 	if (args.legacyAssets || config.legacy_assets) {
 		throw new UserError(
-			"Legacy Assets does not support uploading versions through `wrangler versions upload`. You must use `wrangler deploy` instead."
+			"Legacy assets does not support uploading versions through `wrangler versions upload`. You must use `wrangler deploy` instead."
 		);
 	}
 
@@ -241,13 +232,13 @@ export async function versionsUploadHandler(
 			// skip the corresponding mutual exclusivity validation
 			legacyAssets: undefined,
 			site: undefined,
-			experimentalAssets: args.experimentalAssets,
+			assets: args.assets,
 			script: args.script,
 		},
 		config
 	);
 
-	const experimentalAssetsOptions = processExperimentalAssetsArg(args, config);
+	const assetsOptions = processAssetsArg(args, config);
 
 	if (args.latest) {
 		logger.warn(
@@ -297,7 +288,7 @@ export async function versionsUploadHandler(
 		jsxFactory: args.jsxFactory,
 		jsxFragment: args.jsxFragment,
 		tsconfig: args.tsconfig,
-		experimentalAssetsOptions,
+		assetsOptions,
 		minify: args.minify,
 		uploadSourceMaps: args.uploadSourceMaps,
 		nodeCompat: args.nodeCompat,

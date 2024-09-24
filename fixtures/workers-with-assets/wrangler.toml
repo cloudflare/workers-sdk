@@ -1,7 +1,7 @@
-name = "worker-with-asset"
+name = "worker-with-assets"
 main = "src/index.ts"
 compatibility_date = "2024-01-01"
 
-[experimental_assets]
+[assets]
 directory = "./public"
 binding="ASSETS"

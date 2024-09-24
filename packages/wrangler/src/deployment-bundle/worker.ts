@@ -222,7 +222,7 @@ export interface CfLogfwdrBinding {
 	destination: string;
 }
 
-export interface CfExperimentalAssetBinding {
+export interface CfAssetsBinding {
 	binding: string;
 }
 
@@ -284,7 +284,7 @@ export interface CfUserLimits {
 	cpu_ms?: number;
 }
 
-export interface CfExperimentalAssets {
+export interface CfAssets {
 	jwt: string;
 	routingConfig: RoutingConfig;
 	assetConfig?: AssetConfig;
@@ -335,7 +335,7 @@ export interface CfWorkerInit {
 		logfwdr: CfLogfwdr | undefined;
 		pipelines: CfPipeline[] | undefined;
 		unsafe: CfUnsafe | undefined;
-		experimental_assets: CfExperimentalAssetBinding | undefined;
+		assets: CfAssetsBinding | undefined;
 	};
 	/**
 	 * The raw bindings - this is basically never provided and it'll be the bindings above
@@ -356,7 +356,7 @@ export interface CfWorkerInit {
 	limits: CfUserLimits | undefined;
 	annotations?: Record<string, string | undefined>;
 	keep_assets?: boolean | undefined;
-	experimental_assets: CfExperimentalAssets | undefined;
+	assets: CfAssets | undefined;
 	observability: Observability | undefined;
 }
 

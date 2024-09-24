@@ -10,6 +10,7 @@ import {
 	convertCfWorkerInitBindingstoBindings,
 	extractBindingsOfType,
 } from "./api/startDevWorker/utils";
+import { processAssetsArg, validateAssetsArgsAndConfig } from "./assets";
 import { findWranglerToml, printBindings, readConfig } from "./config";
 import { validateRoutes } from "./deploy/deploy";
 import { getEntry } from "./deployment-bundle/entry";
@@ -22,10 +23,6 @@ import registerDevHotKeys from "./dev/hotkeys";
 import { maybeRegisterLocalWorker } from "./dev/local";
 import { startDevServer } from "./dev/start-server";
 import { UserError } from "./errors";
-import {
-	processExperimentalAssetsArg,
-	validateAssetsArgsAndConfig,
-} from "./experimental-assets";
 import { run } from "./experimental-flags";
 import isInteractive from "./is-interactive";
 import { logger } from "./logger";
@@ -88,6 +85,28 @@ export function devOptions(yargs: CommonYargsArgv) {
 				type: "string",
 				requiresArg: true,
 			})
+			.option("compatibility-date", {
+				describe: "Date to use for compatibility checks",
+				type: "string",
+				requiresArg: true,
+			})
+			.option("compatibility-flags", {
+				describe: "Flags to use for compatibility checks",
+				alias: "compatibility-flag",
+				type: "string",
+				requiresArg: true,
+				array: true,
+			})
+			.option("latest", {
+				describe: "Use the latest version of the worker runtime",
+				type: "boolean",
+				default: true,
+			})
+			.option("assets", {
+				describe: "Static assets to be served. Replaces Workers Sites.",
+				type: "string",
+				requiresArg: true,
+			})
 			// We want to have a --no-bundle flag, but yargs requires that
 			// we also have a --bundle flag (that it adds the --no to by itself)
 			// So we make a --bundle flag, but hide it, and then add a --no-bundle flag
@@ -107,23 +126,6 @@ export function devOptions(yargs: CommonYargsArgv) {
 				describe: "Choose an entry type",
 				hidden: true,
 				deprecated: true,
-			})
-			.option("compatibility-date", {
-				describe: "Date to use for compatibility checks",
-				type: "string",
-				requiresArg: true,
-			})
-			.option("compatibility-flags", {
-				describe: "Flags to use for compatibility checks",
-				alias: "compatibility-flag",
-				type: "string",
-				requiresArg: true,
-				array: true,
-			})
-			.option("latest", {
-				describe: "Use the latest version of the worker runtime",
-				type: "boolean",
-				default: true,
 			})
 			.option("ip", {
 				describe: "IP address to listen on",
@@ -177,23 +179,13 @@ export function devOptions(yargs: CommonYargsArgv) {
 				hidden: true,
 			})
 			.option("legacy-assets", {
-				describe: "(Experimental) Static assets to be served",
-				type: "string",
-				requiresArg: true,
-			})
-			.option("assets", {
-				describe: "(Experimental) Static assets to be served",
-				type: "string",
-				requiresArg: true,
-				hidden: true,
-			})
-			.option("experimental-assets", {
 				describe: "Static assets to be served",
 				type: "string",
-				alias: "x-assets",
 				requiresArg: true,
+				deprecated: true,
 				hidden: true,
 			})
+
 			.option("public", {
 				describe: "(Deprecated) Static assets to be served",
 				type: "string",
@@ -205,6 +197,8 @@ export function devOptions(yargs: CommonYargsArgv) {
 				describe: "Root folder of static assets for Workers Sites",
 				type: "string",
 				requiresArg: true,
+				hidden: true,
+				deprecated: true,
 			})
 			.option("site-include", {
 				describe:
@@ -212,6 +206,8 @@ export function devOptions(yargs: CommonYargsArgv) {
 				type: "string",
 				requiresArg: true,
 				array: true,
+				hidden: true,
+				deprecated: true,
 			})
 			.option("site-exclude", {
 				describe:
@@ -219,6 +215,8 @@ export function devOptions(yargs: CommonYargsArgv) {
 				type: "string",
 				requiresArg: true,
 				array: true,
+				hidden: true,
+				deprecated: true,
 			})
 			.option("upstream-protocol", {
 				describe: "Protocol to forward requests to host on, defaults to https.",
@@ -379,25 +377,12 @@ This is currently not supported 😭, but we think that we'll get it to work soo
 		}
 	}
 
-	if (args.assets) {
-		logger.warn(
-			`The --assets argument is experimental. We are going to be changing the behavior of this experimental command after August 15th.\n` +
-				`Releases of wrangler after this date will no longer support current functionality.\n` +
-				`Please shift to the --legacy-assets command to preserve the current functionality.`
-		);
-	}
-
 	if (args.legacyAssets) {
 		logger.warn(
-			`The --legacy-assets argument is experimental and may change or break at any time.`
+			`The --legacy-assets argument has been deprecated. Please use --assets instead.\n` +
+				`To learn more about Workers with assets, visit our documentation at https://developers.cloudflare.com/workers/frameworks/.`
 		);
 	}
-
-	if (args.legacyAssets && args.assets) {
-		throw new UserError("Cannot use both --assets and --legacy-assets.");
-	}
-
-	args.legacyAssets = args.legacyAssets ?? args.assets;
 
 	// use separate watchers for config file and assets directory since
 	// behaviour will be different between the two
@@ -471,7 +456,7 @@ export type AdditionalDevProps = {
 	showInteractiveDevSession?: boolean;
 };
 
-export type StartDevOptions = Omit<DevArguments, "assets"> &
+export type StartDevOptions = DevArguments &
 	// These options can be passed in directly when called with the `wrangler.dev()` API.
 	// They aren't exposed as CLI arguments.
 	AdditionalDevProps & {
@@ -608,23 +593,20 @@ export async function startDev(args: StartDevOptions) {
 			(args.site || config.site)
 		) {
 			throw new UserError(
-				"Cannot use Legacy Assets and Workers Sites in the same Worker."
+				"Cannot use legacy assets and Workers Sites in the same Worker."
 			);
 		}
 
-		if (
-			(args.experimentalAssets || config.experimental_assets) &&
-			args.remote
-		) {
+		if ((args.assets || config.assets) && args.remote) {
 			throw new UserError(
-				"Cannot use Experimental Assets in remote mode. Workers with assets are only supported in local mode. Please use `wrangler dev`."
+				"Cannot use assets in remote mode. Workers with assets are only supported in local mode. Please use `wrangler dev`."
 			);
 		}
 
 		validateAssetsArgsAndConfig(args, config);
 
-		let experimentalAssetsOptions = processExperimentalAssetsArg(args, config);
-		if (experimentalAssetsOptions) {
+		let assetsOptions = processAssetsArg(args, config);
+		if (assetsOptions) {
 			args.forceLocal = true;
 		}
 
@@ -739,7 +721,7 @@ export async function startDev(args: StartDevOptions) {
 						pipelines: undefined,
 						logfwdr: undefined,
 						unsafe: undefined,
-						experimental_assets: undefined,
+						assets: undefined,
 					}),
 				},
 				dev: {
@@ -804,14 +786,10 @@ export async function startDev(args: StartDevOptions) {
 					legacyAssets: (configParam) => configParam.legacy_assets,
 					enableServiceEnvironments: !(args.legacyEnv ?? true),
 				},
-				experimental: {
-					// only pass `experimentalAssetsOptions` if it came from args not from config
-					// otherwise config at startup ends up overriding future config changes in the
-					// ConfigController
-					assets: args.experimentalAssets
-						? experimentalAssetsOptions
-						: undefined,
-				},
+				// only pass `assetsOptions` if it came from args not from config
+				// otherwise config at startup ends up overriding future config changes in the
+				// ConfigController
+				assets: args.assets ? assetsOptions : undefined,
 			} satisfies StartDevWorkerInput);
 
 			void metrics.sendMetricsEvent(
@@ -851,35 +829,32 @@ export async function startDev(args: StartDevOptions) {
 							legacyAssets: args.legacyAssets,
 							script: args.script,
 							moduleRoot: args.moduleRoot,
-							experimentalAssets: args.experimentalAssets,
+							assets: args.assets,
 						},
 						config,
 						"dev"
 					);
 
-					experimentalAssetsOptions = processExperimentalAssetsArg(
-						args,
-						config
-					);
+					assetsOptions = processAssetsArg(args, config);
 
 					/*
-					 * Handle experimental assets watching on config file changes
+					 * Handle static assets watching on config file changes
 					 *
-					 * 1. if experimental assets was specified via CLI args, only config file
+					 * 1. if assets was specified via CLI args, only config file
 					 *    changes related to `main` will matter. In this case, re-running
-					 *    `processExperimentalAssetsArg` is enough (see above)
-					 * 2. if experimental_assets was not specififed via the configuration
+					 *    `processAssetsArg` is enough (see above)
+					 * 2. if assets was not specififed via the configuration
 					 *    file, but it is now, we should start watching the assets
 					 *    directory
-					 * 3. if experimental_assets was specified via the configuration
+					 * 3. if assets was specified via the configuration
 					 *    file, we should ensure we're still watching the correct
 					 *    directory
 					 */
-					if (experimentalAssetsOptions && !args.experimentalAssets) {
+					if (assetsOptions && !args.assets) {
 						await assetsWatcher?.close();
 
-						if (experimentalAssetsOptions) {
-							assetsWatcher = watch(experimentalAssetsOptions.directory, {
+						if (assetsOptions) {
+							assetsWatcher = watch(assetsOptions.directory, {
 								persistent: true,
 								ignoreInitial: true,
 							}).on("all", async (eventName, changedPath) => {
@@ -974,7 +949,7 @@ export async function startDev(args: StartDevOptions) {
 					}
 					legacyAssetPaths={legacyAssetPaths}
 					legacyAssetsConfig={configParam.legacy_assets}
-					experimentalAssets={experimentalAssetsOptions}
+					assets={assetsOptions}
 					initialPort={
 						args.port ?? configParam.dev.port ?? (await getLocalPort())
 					}
@@ -1017,8 +992,8 @@ export async function startDev(args: StartDevOptions) {
 		const devReactElement = render(await getDevReactElement(config));
 		rerender = devReactElement.rerender;
 
-		if (experimentalAssetsOptions && !args.experimentalDevEnv) {
-			assetsWatcher = watch(experimentalAssetsOptions.directory, {
+		if (assetsOptions && !args.experimentalDevEnv) {
+			assetsWatcher = watch(assetsOptions.directory, {
 				persistent: true,
 				ignoreInitial: true,
 			}).on("all", async (eventName, filePath) => {
@@ -1159,7 +1134,7 @@ export async function startApiDev(args: StartDevOptions) {
 				args.accountId ?? configParam.account_id ?? getAccountFromCache()?.id,
 			legacyAssetPaths: legacyAssetPaths,
 			legacyAssetsConfig: configParam.legacy_assets,
-			experimentalAssets: undefined,
+			assets: undefined,
 			//port can be 0, which means to use a random port
 			initialPort: args.port ?? configParam.dev.port ?? (await getLocalPort()),
 			initialIp: args.ip ?? configParam.dev.ip,
@@ -1240,13 +1215,13 @@ export function maskVars(
 
 export async function getHostAndRoutes(
 	args:
-		| Pick<StartDevOptions, "host" | "routes" | "experimentalAssets">
+		| Pick<StartDevOptions, "host" | "routes" | "assets">
 		| {
 				host?: string;
 				routes?: Extract<Trigger, { type: "route" }>[];
-				experimentalAssets?: string;
+				assets?: string;
 		  },
-	config: Pick<Config, "route" | "routes" | "experimental_assets"> & {
+	config: Pick<Config, "route" | "routes" | "assets"> & {
 		dev: Pick<Config["dev"], "host">;
 	}
 ) {
@@ -1269,10 +1244,7 @@ export async function getHostAndRoutes(
 		}
 	});
 	if (routes) {
-		validateRoutes(
-			routes,
-			Boolean(args.experimentalAssets || config.experimental_assets)
-		);
+		validateRoutes(routes, Boolean(args.assets || config.assets));
 	}
 	return { host, routes };
 }
@@ -1309,7 +1281,7 @@ export async function validateDevServerSettings(
 			legacyAssets: args.legacyAssets,
 			script: args.script,
 			moduleRoot: args.moduleRoot,
-			experimentalAssets: args.experimentalAssets,
+			assets: args.assets,
 		},
 		config,
 		"dev"
@@ -1605,8 +1577,8 @@ export function getBindings(
 		mtls_certificates: configParam.mtls_certificates,
 		pipelines: configParam.pipelines,
 		send_email: configParam.send_email,
-		experimental_assets: configParam.experimental_assets?.binding
-			? { binding: configParam.experimental_assets?.binding }
+		assets: configParam.assets?.binding
+			? { binding: configParam.assets?.binding }
 			: undefined,
 	};
 

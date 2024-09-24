@@ -2,4 +2,4 @@
 name = "<TBD>"
 compatibility_date = "<TBD>"
 main = "./dist/cloudflare/_worker.js"
-experimental_assets = { directory = "./dist/cloudflare", binding = "ASSETS" }
+assets = { directory = "./dist/cloudflare", binding = "ASSETS" }

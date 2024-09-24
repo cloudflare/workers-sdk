@@ -218,7 +218,7 @@ const bindingsConfigMock: Omit<
 		{ type: "CompiledWasm", globs: ["**/*.wasm"], fallthrough: true },
 	],
 	pipelines: [],
-	experimental_assets: {
+	assets: {
 		binding: "ASSETS_BINDING",
 		directory: "/assets",
 	},

@@ -347,9 +347,11 @@ interface EnvironmentInheritable {
 	/**
 	 * Specify the directory of static assets to deploy/serve
 	 *
+	 * More details at https://developers.cloudflare.com/workers/frameworks/
+	 *
 	 * @inheritable
 	 */
-	experimental_assets: ExperimentalAssets | undefined;
+	assets: Assets | undefined;
 
 	/**
 	 * Specify the observability behavior of the Worker.
@@ -905,7 +907,7 @@ export interface UserLimits {
 	cpu_ms: number;
 }
 
-export type ExperimentalAssets = {
+export type Assets = {
 	/** Absolute path to assets directory */
 	directory: string;
 	binding?: string;

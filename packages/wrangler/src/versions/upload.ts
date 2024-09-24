@@ -1,6 +1,7 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { blue, gray } from "@cloudflare/cli/colors";
+import { syncAssets } from "../assets";
 import { fetchResult } from "../cfetch";
 import { printBindings } from "../config";
 import { bundleWorker } from "../deployment-bundle/bundle";
@@ -23,7 +24,6 @@ import { loadSourceMaps } from "../deployment-bundle/source-maps";
 import { confirm } from "../dialogs";
 import { getMigrationsToUpload } from "../durable";
 import { UserError } from "../errors";
-import { syncExperimentalAssets } from "../experimental-assets";
 import { logger } from "../logger";
 import { getMetricsUsageHeaders } from "../metrics";
 import { isNavigatorDefined } from "../navigator-user-agent";
@@ -35,11 +35,11 @@ import {
 	getSourceMappedString,
 	maybeRetrieveFileSourceMap,
 } from "../sourcemap";
+import type { AssetsOptions } from "../assets";
 import type { Config } from "../config";
 import type { Rule } from "../config/environment";
 import type { Entry } from "../deployment-bundle/entry";
 import type { CfPlacement, CfWorkerInit } from "../deployment-bundle/worker";
-import type { ExperimentalAssetsOptions } from "../experimental-assets";
 import type { RetrieveSourceMapFunction } from "../sourcemap";
 
 type Props = {
@@ -52,7 +52,7 @@ type Props = {
 	env: string | undefined;
 	compatibilityDate: string | undefined;
 	compatibilityFlags: string[] | undefined;
-	experimentalAssetsOptions: ExperimentalAssetsOptions | undefined;
+	assetsOptions: AssetsOptions | undefined;
 	vars: Record<string, string> | undefined;
 	defines: Record<string, string> | undefined;
 	alias: Record<string, string> | undefined;
@@ -348,14 +348,10 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 				})
 			: undefined;
 
-		// Upload assets if experimental assets is being used
-		const experimentalAssetsJwt =
-			props.experimentalAssetsOptions && !props.dryRun
-				? await syncExperimentalAssets(
-						accountId,
-						scriptName,
-						props.experimentalAssetsOptions.directory
-					)
+		// Upload assets if assets is being used
+		const assetsJwt =
+			props.assetsOptions && !props.dryRun
+				? await syncAssets(accountId, scriptName, props.assetsOptions.directory)
 				: undefined;
 
 		const bindings: CfWorkerInit["bindings"] = {
@@ -382,8 +378,8 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			mtls_certificates: config.mtls_certificates,
 			pipelines: config.pipelines,
 			logfwdr: config.logfwdr,
-			experimental_assets: config.experimental_assets?.binding
-				? { binding: config.experimental_assets?.binding }
+			assets: config.assets?.binding
+				? { binding: config.assets?.binding }
 				: undefined,
 			unsafe: {
 				bindings: config.unsafe.bindings,
@@ -425,12 +421,12 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 				"workers/message": props.message,
 				"workers/tag": props.tag,
 			},
-			experimental_assets:
-				props.experimentalAssetsOptions && experimentalAssetsJwt
+			assets:
+				props.assetsOptions && assetsJwt
 					? {
-							jwt: experimentalAssetsJwt,
-							routingConfig: props.experimentalAssetsOptions.routingConfig,
-							assetConfig: props.experimentalAssetsOptions.assetConfig,
+							jwt: assetsJwt,
+							routingConfig: props.assetsOptions.routingConfig,
+							assetConfig: props.assetsOptions.assetConfig,
 						}
 					: undefined,
 			logpush: undefined, // both logpush and observability are not supported in versions upload

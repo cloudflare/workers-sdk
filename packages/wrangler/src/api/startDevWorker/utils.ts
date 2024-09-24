@@ -240,7 +240,7 @@ export function convertCfWorkerInitBindingstoBindings(
 				}
 				break;
 			}
-			case "experimental_assets": {
+			case "assets": {
 				output[info["binding"]] = { type: "assets" };
 				break;
 			}
@@ -287,7 +287,7 @@ export async function convertBindingsToCfWorkerInitBindings(
 		mtls_certificates: undefined,
 		logfwdr: undefined,
 		unsafe: undefined,
-		experimental_assets: undefined,
+		assets: undefined,
 		pipelines: undefined,
 	};
 

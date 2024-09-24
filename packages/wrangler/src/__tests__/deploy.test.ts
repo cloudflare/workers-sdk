@@ -49,9 +49,9 @@ import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import { writeWorkerSource } from "./helpers/write-worker-source";
 import { writeWranglerToml } from "./helpers/write-wrangler-toml";
+import type { AssetManifest } from "../assets";
 import type { Config } from "../config";
 import type { CustomDomain, CustomDomainChangeset } from "../deploy/deploy";
-import type { AssetManifest } from "../experimental-assets";
 import type { KVNamespaceInfo } from "../kv/helpers";
 import type {
 	PostQueueBody,
@@ -1547,7 +1547,7 @@ Update them to point to this script instead?`,
 			});
 		});
 
-		it("should error on routes with paths if experimental assets are present", async () => {
+		it("should error on routes with paths if assets are present", async () => {
 			writeWranglerToml({
 				routes: [
 					"simple.co.uk/path",
@@ -1568,7 +1568,7 @@ Update them to point to this script instead?`,
 			writeWorkerSource();
 			writeAssets([{ filePath: "asset.txt", content: "Content of file-1" }]);
 
-			await expect(runWrangler(`deploy --experimental-assets="assets"`)).rejects
+			await expect(runWrangler(`deploy --assets="assets"`)).rejects
 				.toThrowErrorMatchingInlineSnapshot(`
 				[Error: Invalid Routes:
 				simple.co.uk/path:
@@ -1604,7 +1604,7 @@ Update them to point to this script instead?`,
 			`);
 		});
 
-		it("shouldn't error on routes with paths if there are no experimental assets", async () => {
+		it("shouldn't error on routes with paths if there are no assets", async () => {
 			writeWranglerToml({
 				routes: [
 					"simple.co.uk/path",
@@ -2242,32 +2242,35 @@ addEventListener('fetch', event => {});`
 				"deploy --legacy-assets assets --latest --name test-name"
 			);
 
-			expect(std).toMatchInlineSnapshot(`
-				Object {
-				  "debug": "",
-				  "err": "",
-				  "info": "Fetching list of already uploaded assets...
-				Building list of assets to upload...
-				 + file-1.2ca234f380.txt (uploading new version of file-1.txt)
-				 + file-2.5938485188.txt (uploading new version of file-2.txt)
-				Uploading 2 new assets...
-				Uploaded 100% [2 out of 2]",
-				  "out": "↗️  Done syncing assets
-				Total Upload: xx KiB / gzip: xx KiB
-				Worker Startup Time: 100 ms
-				Uploaded test-name (TIMINGS)
-				Deployed test-name triggers (TIMINGS)
-				  https://test-name.test-sub-domain.workers.dev
-				Current Version ID: Galaxy-Class",
-				  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --legacy-assets argument is experimental and may change or break at any time.[0m
+			expect(std.warn).toMatchInlineSnapshot(`
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --legacy-assets argument has been deprecated. Please use --assets instead.[0m
+
+				  To learn more about Workers with assets, visit our documentation at
+				  [4mhttps://developers.cloudflare.com/workers/frameworks/[0m.
 
 
 				[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mUsing the latest version of the Workers runtime. To silence this warning, please choose a specific version of the runtime with --compatibility-date, or add a compatibility_date to your wrangler.toml.[0m
 
 
 
-				",
-				}
+				"
+			`);
+			expect(std.info).toMatchInlineSnapshot(`
+				"Fetching list of already uploaded assets...
+				Building list of assets to upload...
+				 + file-1.2ca234f380.txt (uploading new version of file-1.txt)
+				 + file-2.5938485188.txt (uploading new version of file-2.txt)
+				Uploading 2 new assets...
+				Uploaded 100% [2 out of 2]"
+			`);
+			expect(std.out).toMatchInlineSnapshot(`
+				"↗️  Done syncing assets
+				Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
 			`);
 		});
 
@@ -2454,62 +2457,13 @@ addEventListener('fetch', event => {});`
 			await runWrangler("deploy --legacy-assets assets");
 
 			expect(std.warn).toMatchInlineSnapshot(`
-				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --legacy-assets argument is experimental and may change or break at any time.[0m
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --legacy-assets argument has been deprecated. Please use --assets instead.[0m
+
+				  To learn more about Workers with assets, visit our documentation at
+				  [4mhttps://developers.cloudflare.com/workers/frameworks/[0m.
 
 				"
 			`);
-			expect(std.out).toMatchInlineSnapshot(`
-				"↗️  Done syncing assets
-				Total Upload: xx KiB / gzip: xx KiB
-				Worker Startup Time: 100 ms
-				Uploaded test-name (TIMINGS)
-				Deployed test-name triggers (TIMINGS)
-				  https://test-name.test-sub-domain.workers.dev
-				Current Version ID: Galaxy-Class"
-			`);
-
-			expect(std.info).toMatchInlineSnapshot(`
-				"Fetching list of already uploaded assets...
-				Building list of assets to upload...
-				 + file-1.2ca234f380.txt (uploading new version of file-1.txt)
-				 + file-2.5938485188.txt (uploading new version of file-2.txt)
-				Uploading 2 new assets...
-				Uploaded 100% [2 out of 2]"
-			`);
-		});
-
-		it("should upload all the files in the directory specified by `--assets` as with `--legacy-assets`", async () => {
-			const assets = [
-				{ filePath: "file-1.txt", content: "Content of file-1" },
-				{ filePath: "file-2.txt", content: "Content of file-2" },
-			];
-			const kvNamespace = {
-				title: "__test-name-workers_sites_assets",
-				id: "__test-name-workers_sites_assets-id",
-			};
-			writeWranglerToml({
-				main: "./index.js",
-			});
-			writeWorkerSource();
-			writeAssets(assets);
-			mockUploadWorkerRequest({
-				expectedMainModule: "index.js",
-			});
-			mockSubDomainRequest();
-			mockListKVNamespacesRequest(kvNamespace);
-			mockKeyListRequest(kvNamespace.id, []);
-			mockUploadAssetsToKVRequest(kvNamespace.id, assets);
-			await runWrangler("deploy --assets assets");
-
-			expect(std.warn).toMatchInlineSnapshot(`
-				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --assets argument is experimental. We are going to be changing the behavior of this experimental command after August 15th.[0m
-
-				  Releases of wrangler after this date will no longer support current functionality.
-				  Please shift to the --legacy-assets command to preserve the current functionality.
-
-				"
-			`);
-
 			expect(std.out).toMatchInlineSnapshot(`
 				"↗️  Done syncing assets
 				Total Upload: xx KiB / gzip: xx KiB
@@ -2541,18 +2495,13 @@ addEventListener('fetch', event => {});`
 				`[Error: You cannot use the service-worker format with an \`assets\` directory yet. For information on how to migrate to the module-worker format, see: https://developers.cloudflare.com/workers/learning/migrating-to-module-workers/]`
 			);
 
-			expect(std).toMatchInlineSnapshot(`
-				Object {
-				  "debug": "",
-				  "err": "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mYou cannot use the service-worker format with an \`assets\` directory yet. For information on how to migrate to the module-worker format, see: https://developers.cloudflare.com/workers/learning/migrating-to-module-workers/[0m
+			expect(std.warn).toMatchInlineSnapshot(`
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --legacy-assets argument has been deprecated. Please use --assets instead.[0m
 
-				",
-				  "info": "",
-				  "out": "",
-				  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --legacy-assets argument is experimental and may change or break at any time.[0m
+				  To learn more about Workers with assets, visit our documentation at
+				  [4mhttps://developers.cloudflare.com/workers/frameworks/[0m.
 
-				",
-				}
+				"
 			`);
 		});
 
@@ -2564,21 +2513,21 @@ addEventListener('fetch', event => {});`
 			await expect(
 				runWrangler("deploy --legacy-assets abc --site xyz")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: Cannot use Legacy Assets and Workers Sites in the same Worker.]`
+				`[Error: Cannot use legacy assets and Workers Sites in the same Worker.]`
 			);
 
-			expect(std).toMatchInlineSnapshot(`
-				Object {
-				  "debug": "",
-				  "err": "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mCannot use Legacy Assets and Workers Sites in the same Worker.[0m
+			expect(std.warn).toMatchInlineSnapshot(`
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --legacy-assets argument has been deprecated. Please use --assets instead.[0m
 
-				",
-				  "info": "",
-				  "out": "",
-				  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --legacy-assets argument is experimental and may change or break at any time.[0m
+				  To learn more about Workers with assets, visit our documentation at
+				  [4mhttps://developers.cloudflare.com/workers/frameworks/[0m.
 
-				",
-				}
+				"
+			`);
+			expect(std.err).toMatchInlineSnapshot(`
+				"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mCannot use legacy assets and Workers Sites in the same Worker.[0m
+
+				"
 			`);
 		});
 
@@ -2593,21 +2542,16 @@ addEventListener('fetch', event => {});`
 			await expect(
 				runWrangler("deploy --legacy-assets abc")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: Cannot use Legacy Assets and Workers Sites in the same Worker.]`
+				`[Error: Cannot use legacy assets and Workers Sites in the same Worker.]`
 			);
 
-			expect(std).toMatchInlineSnapshot(`
-				Object {
-				  "debug": "",
-				  "err": "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mCannot use Legacy Assets and Workers Sites in the same Worker.[0m
+			expect(std.warn).toMatchInlineSnapshot(`
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --legacy-assets argument has been deprecated. Please use --assets instead.[0m
 
-				",
-				  "info": "",
-				  "out": "",
-				  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --legacy-assets argument is experimental and may change or break at any time.[0m
+				  To learn more about Workers with assets, visit our documentation at
+				  [4mhttps://developers.cloudflare.com/workers/frameworks/[0m.
 
-				",
-				}
+				"
 			`);
 		});
 
@@ -2620,23 +2564,16 @@ addEventListener('fetch', event => {});`
 			await expect(
 				runWrangler("deploy --site xyz")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: Cannot use Legacy Assets and Workers Sites in the same Worker.]`
+				`[Error: Cannot use legacy assets and Workers Sites in the same Worker.]`
 			);
 
-			expect(std).toMatchInlineSnapshot(`
-				Object {
-				  "debug": "",
-				  "err": "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mCannot use Legacy Assets and Workers Sites in the same Worker.[0m
+			expect(std.warn).toMatchInlineSnapshot(`
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
 
-				",
-				  "info": "",
-				  "out": "",
-				  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
+				    - [1mDeprecation[0m: \\"legacy_assets\\":
+				      The \`legacy_assets\` feature has been deprecated. Please use \`assets\` instead.
 
-				    - \\"legacy_assets\\" fields are experimental and may change or break at any time.
-
-				",
-				}
+				"
 			`);
 		});
 
@@ -2652,23 +2589,16 @@ addEventListener('fetch', event => {});`
 			await expect(
 				runWrangler("deploy")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: Cannot use Legacy Assets and Workers Sites in the same Worker.]`
+				`[Error: Cannot use legacy assets and Workers Sites in the same Worker.]`
 			);
 
-			expect(std).toMatchInlineSnapshot(`
-				Object {
-				  "debug": "",
-				  "err": "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mCannot use Legacy Assets and Workers Sites in the same Worker.[0m
+			expect(std.warn).toMatchInlineSnapshot(`
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
 
-				",
-				  "info": "",
-				  "out": "",
-				  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
+				    - [1mDeprecation[0m: \\"legacy_assets\\":
+				      The \`legacy_assets\` feature has been deprecated. Please use \`assets\` instead.
 
-				    - \\"legacy_assets\\" fields are experimental and may change or break at any time.
-
-				",
-				}
+				"
 			`);
 		});
 
@@ -2696,27 +2626,32 @@ addEventListener('fetch', event => {});`
 			mockUploadAssetsToKVRequest(kvNamespace.id, assets);
 
 			await runWrangler("deploy --legacy-assets ./assets");
-			expect(std).toMatchInlineSnapshot(`
-				Object {
-				  "debug": "",
-				  "err": "",
-				  "info": "Fetching list of already uploaded assets...
+
+			expect(std.warn).toMatchInlineSnapshot(`
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --legacy-assets argument has been deprecated. Please use --assets instead.[0m
+
+				  To learn more about Workers with assets, visit our documentation at
+				  [4mhttps://developers.cloudflare.com/workers/frameworks/[0m.
+
+				"
+			`);
+			expect(std.err).toMatchInlineSnapshot(`""`);
+			expect(std.info).toMatchInlineSnapshot(`
+				"Fetching list of already uploaded assets...
 				Building list of assets to upload...
 				 + subdir/file-1.2ca234f380.txt (uploading new version of subdir/file-1.txt)
 				 + subdir/file-2.5938485188.txt (uploading new version of subdir/file-2.txt)
 				Uploading 2 new assets...
-				Uploaded 100% [2 out of 2]",
-				  "out": "↗️  Done syncing assets
+				Uploaded 100% [2 out of 2]"
+			`);
+			expect(std.out).toMatchInlineSnapshot(`
+				"↗️  Done syncing assets
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
-				Current Version ID: Galaxy-Class",
-				  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --legacy-assets argument is experimental and may change or break at any time.[0m
-
-				",
-				}
+				Current Version ID: Galaxy-Class"
 			`);
 		});
 
@@ -2745,29 +2680,31 @@ addEventListener('fetch', event => {});`
 			mockUploadAssetsToKVRequest(kvNamespace.id, assets);
 
 			await runWrangler("deploy");
-			expect(std).toMatchInlineSnapshot(`
-				Object {
-				  "debug": "",
-				  "err": "",
-				  "info": "Fetching list of already uploaded assets...
+
+			expect(std.warn).toMatchInlineSnapshot(`
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
+
+				    - [1mDeprecation[0m: \\"legacy_assets\\":
+				      The \`legacy_assets\` feature has been deprecated. Please use \`assets\` instead.
+
+				"
+			`);
+			expect(std.info).toMatchInlineSnapshot(`
+				"Fetching list of already uploaded assets...
 				Building list of assets to upload...
 				 + subdir/file-1.2ca234f380.txt (uploading new version of subdir/file-1.txt)
 				 + subdir/file-2.5938485188.txt (uploading new version of subdir/file-2.txt)
 				Uploading 2 new assets...
-				Uploaded 100% [2 out of 2]",
-				  "out": "↗️  Done syncing assets
+				Uploaded 100% [2 out of 2]"
+			`);
+			expect(std.out).toMatchInlineSnapshot(`
+				"↗️  Done syncing assets
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
-				Current Version ID: Galaxy-Class",
-				  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
-
-				    - \\"legacy_assets\\" fields are experimental and may change or break at any time.
-
-				",
-				}
+				Current Version ID: Galaxy-Class"
 			`);
 		});
 
@@ -3928,27 +3865,30 @@ addEventListener('fetch', event => {});`
 			process.chdir("./my-assets");
 			await runWrangler("deploy --legacy-assets .");
 
-			expect(std).toMatchInlineSnapshot(`
-				Object {
-				  "debug": "",
-				  "err": "",
-				  "info": "Fetching list of already uploaded assets...
+			expect(std.warn).toMatchInlineSnapshot(`
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --legacy-assets argument has been deprecated. Please use --assets instead.[0m
+
+				  To learn more about Workers with assets, visit our documentation at
+				  [4mhttps://developers.cloudflare.com/workers/frameworks/[0m.
+
+				"
+			`);
+			expect(std.info).toMatchInlineSnapshot(`
+				"Fetching list of already uploaded assets...
 				Building list of assets to upload...
 				 + file-1.2ca234f380.txt (uploading new version of file-1.txt)
 				 + file-2.5938485188.txt (uploading new version of file-2.txt)
 				Uploading 2 new assets...
-				Uploaded 100% [2 out of 2]",
-				  "out": "↗️  Done syncing assets
+				Uploaded 100% [2 out of 2]"
+			`);
+			expect(std.out).toMatchInlineSnapshot(`
+				"↗️  Done syncing assets
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
-				Current Version ID: Galaxy-Class",
-				  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --legacy-assets argument is experimental and may change or break at any time.[0m
-
-				",
-				}
+				Current Version ID: Galaxy-Class"
 			`);
 		});
 
@@ -4298,7 +4238,7 @@ addEventListener('fetch', event => {});`
 		});
 	});
 
-	describe("--experimental-assets", () => {
+	describe("--assets", () => {
 		it("should use the directory specified in the CLI over wrangler.toml", async () => {
 			const cliAssets = [
 				{ filePath: "cliAsset.txt", content: "Content of file-1" },
@@ -4309,19 +4249,19 @@ addEventListener('fetch', event => {});`
 			];
 			writeAssets(configAssets, "config-assets");
 			writeWranglerToml({
-				experimental_assets: { directory: "config-assets" },
+				assets: { directory: "config-assets" },
 			});
 			const bodies: AssetManifest[] = [];
 			await mockAUSRequest(bodies);
 			mockSubDomainRequest();
 			mockUploadWorkerRequest({
-				expectedExperimentalAssets: {
+				expectedAssets: {
 					jwt: "<<aus-completion-token>>",
 					config: {},
 				},
 				expectedType: "none",
 			});
-			await runWrangler("deploy --experimental-assets cli-assets");
+			await runWrangler("deploy --assets cli-assets");
 			expect(bodies.length).toBe(1);
 			expect(bodies[0]).toEqual({
 				manifest: {
@@ -4333,10 +4273,10 @@ addEventListener('fetch', event => {});`
 			});
 		});
 
-		it("should error if config.site and config.experimental_assets are used together", async () => {
+		it("should error if config.site and config.assets are used together", async () => {
 			writeWranglerToml({
 				main: "./index.js",
-				experimental_assets: { directory: "abd" },
+				assets: { directory: "abd" },
 				site: {
 					bucket: "xyz",
 				},
@@ -4345,12 +4285,12 @@ addEventListener('fetch', event => {});`
 			await expect(
 				runWrangler("deploy")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				dedent`[Error: Cannot use Experimental Assets and Workers Sites in the same Worker.
-				Please remove either the \`site\` or \`experimental_assets\` field from your configuration file.]`
+				dedent`[Error: Cannot use assets and Workers Sites in the same Worker.
+				Please remove either the \`site\` or \`assets\` field from your configuration file.]`
 			);
 		});
 
-		it("should error if --experimental-assets and config.site are used together", async () => {
+		it("should error if --assets and config.site are used together", async () => {
 			writeWranglerToml({
 				main: "./index.js",
 				site: {
@@ -4359,44 +4299,42 @@ addEventListener('fetch', event => {});`
 			});
 			writeWorkerSource();
 			await expect(
-				runWrangler("deploy --experimental-assets abc")
+				runWrangler("deploy --assets abc")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				dedent`[Error: Cannot use Experimental Assets and Workers Sites in the same Worker.
-				Please remove either the \`site\` or \`experimental_assets\` field from your configuration file.]`
+				dedent`[Error: Cannot use assets and Workers Sites in the same Worker.
+				Please remove either the \`site\` or \`assets\` field from your configuration file.]`
 			);
 		});
 
-		it("should error if directory specified by flag --experimental-assets does not exist", async () => {
-			await expect(
-				runWrangler("deploy --experimental-assets abc")
-			).rejects.toThrow(
+		it("should error if directory specified by flag --assets does not exist", async () => {
+			await expect(runWrangler("deploy --assets abc")).rejects.toThrow(
 				new RegExp(
-					'^The directory specified by the "--experimental-assets" command line argument does not exist:[Ss]*'
+					'^The directory specified by the "--assets" command line argument does not exist:[Ss]*'
 				)
 			);
 		});
 
-		it("should error if directory specified by config experimental_assets does not exist", async () => {
+		it("should error if directory specified by config assets does not exist", async () => {
 			writeWranglerToml({
-				experimental_assets: { directory: "abc" },
+				assets: { directory: "abc" },
 			});
 			await expect(runWrangler("deploy")).rejects.toThrow(
 				new RegExp(
-					'^The directory specified by the "experimental_assets.directory" field in your configuration file does not exist:[Ss]*'
+					'^The directory specified by the "assets.directory" field in your configuration file does not exist:[Ss]*'
 				)
 			);
 		});
 
 		it("should error if an ASSET binding is provided without a user Worker", async () => {
 			writeWranglerToml({
-				experimental_assets: {
+				assets: {
 					directory: "xyz",
 					binding: "ASSET",
 				},
 			});
 			await expect(runWrangler("deploy")).rejects
 				.toThrowErrorMatchingInlineSnapshot(`
-				[Error: Cannot use Experimental Assets with a binding in an assets-only Worker.
+				[Error: Cannot use assets with a binding in an assets-only Worker.
 				Please remove the asset binding from your configuration file, or provide a Worker script in your configuration file (\`main\`).]
 			`);
 		});
@@ -4410,7 +4348,7 @@ addEventListener('fetch', event => {});`
 			];
 			writeAssets(assets);
 			writeWranglerToml({
-				experimental_assets: { directory: "assets" },
+				assets: { directory: "assets" },
 			});
 
 			const manifestBodies: AssetManifest[] = [];
@@ -4433,7 +4371,7 @@ addEventListener('fetch', event => {});`
 			);
 			mockSubDomainRequest();
 			mockUploadWorkerRequest({
-				expectedExperimentalAssets: {
+				expectedAssets: {
 					jwt: "<<aus-completion-token>>",
 					config: {},
 				},
@@ -4501,7 +4439,7 @@ addEventListener('fetch', event => {});`
 			writeAssets(assets, "some/path/assets");
 			writeWranglerToml(
 				{
-					experimental_assets: { directory: "assets" },
+					assets: { directory: "assets" },
 				},
 				"some/path/wrangler.toml"
 			);
@@ -4509,7 +4447,7 @@ addEventListener('fetch', event => {});`
 			await mockAUSRequest(bodies);
 			mockSubDomainRequest();
 			mockUploadWorkerRequest({
-				expectedExperimentalAssets: {
+				expectedAssets: {
 					jwt: "<<aus-completion-token>>",
 					config: {},
 				},
@@ -4539,7 +4477,7 @@ addEventListener('fetch', event => {});`
 			writeAssets(assets, "some/path/assets");
 			writeWranglerToml(
 				{
-					experimental_assets: { directory: "assets" },
+					assets: { directory: "assets" },
 				},
 				"some/path/wrangler.toml"
 			);
@@ -4547,7 +4485,7 @@ addEventListener('fetch', event => {});`
 			await mockAUSRequest(bodies);
 			mockSubDomainRequest();
 			mockUploadWorkerRequest({
-				expectedExperimentalAssets: {
+				expectedAssets: {
 					jwt: "<<aus-completion-token>>",
 					config: {},
 				},
@@ -4578,7 +4516,7 @@ addEventListener('fetch', event => {});`
 			writeAssets(assets, "some/path/assets");
 			writeWranglerToml(
 				{
-					experimental_assets: { directory: "assets" },
+					assets: { directory: "assets" },
 				},
 				"some/path/wrangler.toml"
 			);
@@ -4586,7 +4524,7 @@ addEventListener('fetch', event => {});`
 			await mockAUSRequest(bodies);
 			mockSubDomainRequest();
 			mockUploadWorkerRequest({
-				expectedExperimentalAssets: {
+				expectedAssets: {
 					jwt: "<<aus-completion-token>>",
 					config: {},
 				},
@@ -4615,7 +4553,7 @@ addEventListener('fetch', event => {});`
 			writeAssets(assets, "some/path/assets");
 			writeWranglerToml(
 				{
-					experimental_assets: { directory: "assets" },
+					assets: { directory: "assets" },
 				},
 				"some/path/wrangler.toml"
 			);
@@ -4623,7 +4561,7 @@ addEventListener('fetch', event => {});`
 			await mockAUSRequest(bodies);
 			mockSubDomainRequest();
 			mockUploadWorkerRequest({
-				expectedExperimentalAssets: {
+				expectedAssets: {
 					jwt: "<<aus-completion-token>>",
 					config: {},
 				},
@@ -4646,7 +4584,7 @@ addEventListener('fetch', event => {});`
 			writeAssets(assets, "some/path/assets");
 			writeWranglerToml(
 				{
-					experimental_assets: { directory: "assets" },
+					assets: { directory: "assets" },
 				},
 				"some/path/wrangler.toml"
 			);
@@ -4654,7 +4592,7 @@ addEventListener('fetch', event => {});`
 			await mockAUSRequest(bodies);
 			mockSubDomainRequest();
 			mockUploadWorkerRequest({
-				expectedExperimentalAssets: {
+				expectedAssets: {
 					jwt: "<<aus-completion-token>>",
 					config: {},
 				},
@@ -4685,7 +4623,7 @@ addEventListener('fetch', event => {});`
 			writeAssets(assets, "some/path/assets");
 			writeWranglerToml(
 				{
-					experimental_assets: { directory: "assets" },
+					assets: { directory: "assets" },
 				},
 				"some/path/wrangler.toml"
 			);
@@ -4693,7 +4631,7 @@ addEventListener('fetch', event => {});`
 			await mockAUSRequest(bodies);
 			mockSubDomainRequest();
 			mockUploadWorkerRequest({
-				expectedExperimentalAssets: {
+				expectedAssets: {
 					jwt: "<<aus-completion-token>>",
 					config: {},
 				},
@@ -4721,7 +4659,7 @@ addEventListener('fetch', event => {});`
 			await mockAUSRequest(bodies);
 			mockSubDomainRequest();
 			mockUploadWorkerRequest({
-				expectedExperimentalAssets: {
+				expectedAssets: {
 					jwt: "<<aus-completion-token>>",
 					config: {},
 				},
@@ -4729,7 +4667,7 @@ addEventListener('fetch', event => {});`
 			});
 			process.chdir("some/path");
 			await runWrangler(
-				"deploy --name test-name --compatibility-date 2024-07-31 --experimental-assets assets"
+				"deploy --name test-name --compatibility-date 2024-07-31 --assets assets"
 			);
 			expect(bodies.length).toBe(1);
 			expect(bodies[0]).toEqual({
@@ -4742,7 +4680,7 @@ addEventListener('fetch', event => {});`
 			});
 		});
 
-		it("should upload an asset manifest of the files in the directory specified by --experimental-assets", async () => {
+		it("should upload an asset manifest of the files in the directory specified by --assets", async () => {
 			const assets = [
 				{ filePath: "file-1.txt", content: "Content of file-1" },
 				{ filePath: "boop/file-2.txt", content: "Content of file-2" },
@@ -4753,14 +4691,14 @@ addEventListener('fetch', event => {});`
 			// skips asset uploading since empty buckets returned
 			mockSubDomainRequest();
 			mockUploadWorkerRequest({
-				expectedExperimentalAssets: {
+				expectedAssets: {
 					jwt: "<<aus-completion-token>>",
 					config: {},
 				},
 				expectedType: "none",
 			});
 			await runWrangler(
-				"deploy --name test-name --compatibility-date 2024-07-31 --experimental-assets assets"
+				"deploy --name test-name --compatibility-date 2024-07-31 --assets assets"
 			);
 			expect(bodies.length).toBe(1);
 			expect(bodies[0]).toStrictEqual({
@@ -4777,21 +4715,21 @@ addEventListener('fetch', event => {});`
 			});
 		});
 
-		it("should upload an asset manifest of the files in the directory specified by [experimental_assets] config", async () => {
+		it("should upload an asset manifest of the files in the directory specified by [assets] config", async () => {
 			const assets = [
 				{ filePath: "file-1.txt", content: "Content of file-1" },
 				{ filePath: "boop/file-2.txt", content: "Content of file-2" },
 			];
 			writeAssets(assets);
 			writeWranglerToml({
-				experimental_assets: { directory: "assets" },
+				assets: { directory: "assets" },
 			});
 			const bodies: AssetManifest[] = [];
 			await mockAUSRequest(bodies);
 			// skips asset uploading since empty buckets returned
 			mockSubDomainRequest();
 			mockUploadWorkerRequest({
-				expectedExperimentalAssets: {
+				expectedAssets: {
 					jwt: "<<aus-completion-token>>",
 					config: {},
 				},
@@ -4827,7 +4765,7 @@ addEventListener('fetch', event => {});`
 			];
 			writeAssets(assets);
 			writeWranglerToml({
-				experimental_assets: { directory: "assets" },
+				assets: { directory: "assets" },
 			});
 			const mockBuckets = [
 				[
@@ -4850,7 +4788,7 @@ addEventListener('fetch', event => {});`
 			);
 			mockSubDomainRequest();
 			mockUploadWorkerRequest({
-				expectedExperimentalAssets: {
+				expectedAssets: {
 					jwt: "<<aus-completion-token>>",
 					config: {},
 				},
@@ -4935,7 +4873,7 @@ addEventListener('fetch', event => {});`
 				main: "index.js",
 				compatibility_date: "2024-09-27",
 				compatibility_flags: ["nodejs_compat"],
-				experimental_assets: {
+				assets: {
 					directory: "assets",
 					binding: "ASSETS",
 					html_handling: "none",
@@ -4945,7 +4883,7 @@ addEventListener('fetch', event => {});`
 			await mockAUSRequest();
 			mockSubDomainRequest();
 			mockUploadWorkerRequest({
-				expectedExperimentalAssets: {
+				expectedAssets: {
 					jwt: "<<aus-completion-token>>",
 					config: { html_handling: "none", not_found_handling: "404-page" },
 				},
@@ -4967,7 +4905,7 @@ addEventListener('fetch', event => {});`
 			writeWranglerToml({
 				compatibility_date: "2024-09-27",
 				compatibility_flags: ["nodejs_compat"],
-				experimental_assets: {
+				assets: {
 					directory: "assets",
 					html_handling: "none",
 				},
@@ -4975,7 +4913,7 @@ addEventListener('fetch', event => {});`
 			await mockAUSRequest();
 			mockSubDomainRequest();
 			mockUploadWorkerRequest({
-				expectedExperimentalAssets: {
+				expectedAssets: {
 					jwt: "<<aus-completion-token>>",
 					config: { html_handling: "none" },
 				},
@@ -9185,27 +9123,22 @@ addEventListener('fetch', event => {});`
 			);
 			expect(fs.existsSync("some-dir/index.js")).toBe(true);
 			expect(fs.existsSync("some-dir/index.js.map")).toBe(true);
-			expect(std).toMatchInlineSnapshot(`
-				Object {
-				  "debug": "",
-				  "err": "",
-				  "info": "Fetching list of already uploaded assets...
+			expect(std.info).toMatchInlineSnapshot(`
+				"Fetching list of already uploaded assets...
 				Building list of assets to upload...
 				 + file-1.2ca234f380.txt (uploading new version of file-1.txt)
 				 + file-2.5938485188.txt (uploading new version of file-2.txt)
 				Uploading 2 new assets...
-				Uploaded 100% [2 out of 2]",
-				  "out": "↗️  Done syncing assets
+				Uploaded 100% [2 out of 2]"
+			`);
+			expect(std.out).toMatchInlineSnapshot(`
+				"↗️  Done syncing assets
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
-				Current Version ID: Galaxy-Class",
-				  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --legacy-assets argument is experimental and may change or break at any time.[0m
-
-				",
-				}
+				Current Version ID: Galaxy-Class"
 			`);
 		});
 

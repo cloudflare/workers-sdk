@@ -30,7 +30,7 @@ export function mockUploadWorkerRequest(
 		tag?: string;
 		expectedDispatchNamespace?: string;
 		expectedScriptName?: string;
-		expectedExperimentalAssets?: {
+		expectedAssets?: {
 			jwt: string;
 			config: AssetConfig;
 		};
@@ -112,8 +112,8 @@ export function mockUploadWorkerRequest(
 		if ("expectedLimits" in options) {
 			expect(metadata.limits).toEqual(expectedLimits);
 		}
-		if ("expectedExperimentalAssets" in options) {
-			expect(metadata.assets).toEqual(expectedExperimentalAssets);
+		if ("expectedAssets" in options) {
+			expect(metadata.assets).toEqual(expectedAssets);
 		}
 		if ("expectedObservability" in options) {
 			expect(metadata.observability).toEqual(expectedObservability);
@@ -158,9 +158,9 @@ export function mockUploadWorkerRequest(
 	const {
 		available_on_subdomain = true,
 		expectedEntry,
-		expectedExperimentalAssets,
+		expectedAssets,
 		// Allow setting expectedMainModule to undefined to test static-asset only uploads
-		expectedMainModule = expectedExperimentalAssets
+		expectedMainModule = expectedAssets
 			? options.expectedMainModule
 			: "index.js",
 		expectedType = "esm",

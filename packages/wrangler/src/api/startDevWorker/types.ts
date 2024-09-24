@@ -1,3 +1,4 @@
+import type { AssetsOptions } from "../../assets";
 import type { Config } from "../../config";
 import type {
 	CustomDomainRoute,
@@ -29,7 +30,6 @@ import type {
 import type { WorkerRegistry } from "../../dev-registry";
 import type { CfAccount } from "../../dev/create-worker-preview";
 import type { EsbuildBundle } from "../../dev/use-esbuild";
-import type { ExperimentalAssetsOptions } from "../../experimental-assets";
 import type { ConfigController } from "./ConfigController";
 import type {
 	DispatchFetch,
@@ -165,9 +165,7 @@ export interface StartDevWorkerInput {
 		enableServiceEnvironments?: boolean;
 	};
 	unsafe?: Omit<CfUnsafe, "bindings">;
-	experimental?: {
-		assets?: Omit<ExperimentalAssetsOptions, "bindings">;
-	};
+	assets?: Omit<AssetsOptions, "bindings">;
 }
 
 export type StartDevWorkerOptions = StartDevWorkerInput & {
