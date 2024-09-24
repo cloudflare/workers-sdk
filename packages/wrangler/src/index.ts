@@ -82,7 +82,7 @@ import type { Arguments } from "yargs";
 
 const resetColor = "\x1b[0m";
 const fgGreenColor = "\x1b[32m";
-const betaCmdColor = "#BD5B08";
+export const betaCmdColor = "#BD5B08";
 
 export const DEFAULT_LOCAL_PORT = 8787;
 export const DEFAULT_INSPECTOR_PORT = 9229;
@@ -612,13 +612,9 @@ export function createCLIParser(argv: string[]) {
 	});
 
 	// pipelines
-	wrangler.command(
-		"pipelines",
-		`🚰 Manage Worker Pipelines ${chalk.hex(betaCmdColor)("[open beta]")}\n`,
-		(pipelinesYargs) => {
-			return pipelines(pipelinesYargs.command(subHelp));
-		}
-	);
+	wrangler.command("pipelines", false, (pipelinesYargs) => {
+		return pipelines(pipelinesYargs.command(subHelp));
+	});
 
 	/******************** CMD GROUP ***********************/
 	// login

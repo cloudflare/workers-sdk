@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { File, FormData } from "undici";
 import { handleUnsafeCapnp } from "./capnp";
+import type { Observability } from "../config/environment";
 import type {
 	CfDurableObjectMigrations,
 	CfModuleType,
@@ -11,6 +12,7 @@ import type {
 	CfUserLimits,
 	CfWorkerInit,
 } from "./worker.js";
+import type { AssetConfig } from "@cloudflare/workers-shared";
 import type { Json } from "miniflare";
 
 const moduleTypeMimeType: { [type in CfModuleType]: string | undefined } = {
@@ -118,6 +120,7 @@ export type WorkerMetadataBinding =
 			};
 	  }
 	| { type: "mtls_certificate"; name: string; certificate_id: string }
+	| { type: "pipelines"; name: string; id: string }
 	| {
 			type: "logfwdr";
 			name: string;
@@ -146,8 +149,12 @@ export type WorkerMetadataPut = {
 	placement?: CfPlacement;
 	tail_consumers?: CfTailConsumer[];
 	limits?: CfUserLimits;
-	// experimental assets (EWC will expect 'assets')
-	assets?: string;
+
+	assets?: {
+		jwt: string;
+		config?: AssetConfig;
+	};
+	observability?: Observability | undefined;
 	// Allow unsafe.metadata to add arbitrary properties at runtime
 	[key: string]: unknown;
 };
@@ -180,14 +187,28 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 		tail_consumers,
 		limits,
 		annotations,
-		experimental_assets,
+		keep_assets,
+		assets,
+		observability,
 	} = worker;
 
+	const assetConfig = {
+		html_handling: assets?.assetConfig?.html_handling,
+		not_found_handling: assets?.assetConfig?.not_found_handling,
+	};
+
 	// short circuit if static assets upload only
-	if (experimental_assets && !experimental_assets.routingConfig.hasUserWorker) {
+	if (assets && !assets.routingConfig.has_user_worker) {
 		formData.set(
 			"metadata",
-			JSON.stringify({ assets: experimental_assets.jwt })
+			JSON.stringify({
+				assets: {
+					jwt: assets.jwt,
+					config: assetConfig,
+				},
+				...(compatibility_date && { compatibility_date }),
+				...(compatibility_flags && { compatibility_flags }),
+			})
 		);
 		return formData;
 	}
@@ -338,6 +359,14 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 		});
 	});
 
+	bindings.pipelines?.forEach(({ binding, pipeline }) => {
+		metadataBindings.push({
+			name: binding,
+			type: "pipelines",
+			id: pipeline,
+		});
+	});
+
 	bindings.logfwdr?.bindings.forEach(({ name, destination }) => {
 		metadataBindings.push({
 			name: name,
@@ -387,9 +416,9 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 		});
 	}
 
-	if (bindings.experimental_assets !== undefined) {
+	if (bindings.assets !== undefined) {
 		metadataBindings.push({
-			name: bindings.experimental_assets.binding,
+			name: bindings.assets.binding,
 			type: "assets",
 		});
 	}
@@ -578,7 +607,14 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 		...(tail_consumers && { tail_consumers }),
 		...(limits && { limits }),
 		...(annotations && { annotations }),
-		...(experimental_assets && { assets: experimental_assets.jwt }),
+		...(keep_assets !== undefined && { keep_assets }),
+		...(assets && {
+			assets: {
+				jwt: assets.jwt,
+				config: assetConfig,
+			},
+		}),
+		...(observability && { observability }),
 	};
 
 	if (bindings.unsafe?.metadata !== undefined) {

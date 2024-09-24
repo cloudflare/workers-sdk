@@ -1,12 +1,12 @@
 # Contributing
 
-Wrangler is an open source project and we welcome contributions from you. Thank you!
+Wrangler is an open-source project and we welcome contributions from you. Thank you!
 
 Below you can find some guidance on how to be most effective when contributing to the project.
 
 ## Before getting started
 
-We really appreciate your interest in making a contribution, and we want to make sure that the process is as smooth and transparent as possible! To this end, we note that the Workers team is actively doing development in this repository, and while we consistently strive to communicate status and current thinking around all open issues, there may be times when context surrounding certain items is not up to date. Therefore, **for non-trivial changes, please always engage on the issue or create a discussion or feature request issue first before writing your code.** This will give us opportunity to flag any considerations you should be aware of before you spend time developing. Of course for trivial changes, please feel free to go directly to filing a PR, with the understanding that the PR itself will serve as the place to discuss details of the change.
+We really appreciate your interest in making a contribution, and we want to make sure that the process is as smooth and transparent as possible! To this end, we note that the Workers team is actively doing development in this repository, and while we consistently strive to communicate status and current thinking around all open issues, there may be times when context surrounding certain items is not up to date. Therefore, **for non-trivial changes, please always engage on the issue or create a discussion or feature request issue first before writing your code.** This will give us opportunity to flag any considerations you should be aware of before you spend time developing. Of course, for trivial changes, please feel free to go directly to filing a PR, with the understanding that the PR itself will serve as the place to discuss details of the change.
 
 Thanks so much for helping us improve the [workers-sdk](https://github.com/cloudflare/workers-sdk), and we look forward to your contribution!
 
@@ -89,7 +89,7 @@ Workspaces in this project are mostly written in [TypeScript](https://www.typesc
   ```sh
   > pnpm run --filter wrangler start
   ```
-- Build a distributable for a specific workspace(e.g. wrangler)
+- Build a distributable for a specific workspace (e.g. wrangler)
   ```sh
   > pnpm run build --filter wrangler
   ```
@@ -103,7 +103,7 @@ The code in the repository is checked for type checking, formatting, linting and
   > pnpm run check
   ```
 
-When doing normal development you may want to run these checks individually.
+When doing normal development, you may want to run these checks individually.
 
 ### Type Checking
 
@@ -152,7 +152,11 @@ The code is checked for formatting errors by [Prettier](https://prettier.io/).
   ```sh
   > pnpm run check:format
   ```
-- The repository has a recommended VS Code plugin to run Prettier checks, and to automatically format using Prettier, while editing source code, providing immediate feedback.
+- The repository has a recommended VS Code plugin to run Prettier checks, and to automatically format using Prettier, while editing source code, providing immediate feedback
+- Use the following command to run prettier on the codebase
+  ```sh
+  > pnpm run prettify
+  ```
 
 ### Testing
 
@@ -252,7 +256,7 @@ $ WRANGLER="node ~/path/to/workers-sdk/packages/wrangler/wrangler-dist/cli.js" C
 ### Creating an API Token
 
 1. Go to ["My Profile" > "User API Tokens"](https://dash.cloudflare.com/profile/api-tokens)
-1. Click "Create API Token"
+1. Click "Create Token"
 1. Use the "Edit Cloudflare Workers" template
 1. Set "Account Resources" to "Include" "DevProd Testing" (you can use any account you have access to)
 1. Set "Zone Resources" to "All zones from an account" and the same account as above

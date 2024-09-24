@@ -10,7 +10,7 @@ import {
 	test,
 } from "vitest";
 import { version } from "../package.json";
-import { frameworkToTest } from "./frameworkToTest";
+import { getFrameworkToTest } from "./frameworkToTest";
 import {
 	createTestLogStream,
 	isQuarantineMode,
@@ -20,6 +20,8 @@ import {
 } from "./helpers";
 import type { WriteStream } from "fs";
 import type { Suite } from "vitest";
+
+const frameworkToTest = getFrameworkToTest({ experimental: false });
 
 // Note: skipIf(frameworkToTest) makes it so that all the basic C3 functionality
 //       tests are skipped in case we are testing a specific framework
@@ -92,7 +94,7 @@ describe.skipIf(frameworkToTest || isQuarantineMode())(
 						},
 						{
 							matcher: /Do you want to deploy your application/,
-							input: [keys.left, keys.enter],
+							input: [keys.enter],
 						},
 					],
 					logStream,
@@ -186,7 +188,7 @@ describe.skipIf(frameworkToTest || isQuarantineMode())(
 				const { output } = await runC3(
 					[
 						projectPath,
-						"--template=https://github.com/cloudflare/workers-sdk/tree/main/templates/worker-router",
+						"--template=https://github.com/cloudflare/templates/worker-router",
 						"--no-deploy",
 						"--git=false",
 					],
@@ -195,10 +197,10 @@ describe.skipIf(frameworkToTest || isQuarantineMode())(
 				);
 
 				expect(output).toContain(
-					`repository https://github.com/cloudflare/workers-sdk/tree/main/templates/worker-router`,
+					`repository https://github.com/cloudflare/templates/worker-router`,
 				);
 				expect(output).toContain(
-					`Cloning template from: github:cloudflare/workers-sdk/templates/worker-router`,
+					`Cloning template from: https://github.com/cloudflare/templates/worker-router`,
 				);
 				expect(output).toContain(`template cloned and validated`);
 			},

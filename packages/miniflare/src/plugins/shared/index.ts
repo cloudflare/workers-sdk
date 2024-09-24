@@ -44,6 +44,7 @@ export type DurableObjectClassNames = Map<
 	Map<
 		/* className */ string,
 		{
+			enableSql?: boolean;
 			unsafeUniqueKey?: UnsafeUniqueKey;
 			unsafePreventEviction?: boolean;
 		}

@@ -178,6 +178,126 @@ test("flushes partial and full batches", async (t) => {
 	batches = [];
 });
 
+test("supports declaring queue producers as a key-value pair -> queueProducers: { 'MY_QUEUE_BINDING': 'my-queue_name' }", async (t) => {
+	const promise = new DeferredPromise<z.infer<typeof MessageArraySchema>>();
+	const mf = new Miniflare({
+		verbose: true,
+		queueProducers: { MY_QUEUE_PRODUCER: "MY_QUEUE" },
+		queueConsumers: ["MY_QUEUE"],
+		serviceBindings: {
+			async REPORTER(request) {
+				promise.resolve(MessageArraySchema.parse(await request.json()));
+				return new Response();
+			},
+		},
+		modules: true,
+		script: `export default {
+      async fetch(request, env, ctx) {
+				await env.MY_QUEUE_PRODUCER.send("Hello world!");
+				await env.MY_QUEUE_PRODUCER.sendBatch([{ body: "Hola mundo!" }]);
+        return new Response(null, { status: 204 });
+      },
+      async queue(batch, env, ctx) {
+        await env.REPORTER.fetch("http://localhost", {
+          method: "POST",
+          body: JSON.stringify(batch.messages.map(({ id, body, attempts }) => ({ queue: batch.queue, id, body, attempts }))),
+        });
+      }
+    }`,
+	});
+	t.teardown(() => mf.dispose());
+	const object = await getControlStub(mf, "MY_QUEUE");
+
+	await mf.dispatchFetch("http://localhost");
+	await object.advanceFakeTime(1000);
+	await object.waitForFakeTasks();
+	const batch = await promise;
+	t.deepEqual(batch, [
+		{ queue: "MY_QUEUE", id: batch[0].id, body: "Hello world!", attempts: 1 },
+		{ queue: "MY_QUEUE", id: batch[1].id, body: "Hola mundo!", attempts: 1 },
+	]);
+});
+
+test("supports declaring queue producers as an array -> queueProducers: ['MY_QUEUE_BINDING']", async (t) => {
+	const promise = new DeferredPromise<z.infer<typeof MessageArraySchema>>();
+	const mf = new Miniflare({
+		verbose: true,
+		queueProducers: ["MY_QUEUE"],
+		queueConsumers: ["MY_QUEUE"],
+		serviceBindings: {
+			async REPORTER(request) {
+				promise.resolve(MessageArraySchema.parse(await request.json()));
+				return new Response();
+			},
+		},
+		modules: true,
+		script: `export default {
+      async fetch(request, env, ctx) {
+        await env.MY_QUEUE.send("Hello World!");
+				await env.MY_QUEUE.sendBatch([{ body: "Hola Mundo!" }]);
+        return new Response(null, { status: 204 });
+      },
+      async queue(batch, env, ctx) {
+        await env.REPORTER.fetch("http://localhost", {
+          method: "POST",
+          body: JSON.stringify(batch.messages.map(({ id, body, attempts }) => ({ queue: batch.queue, id, body, attempts }))),
+        });
+      }
+    }`,
+	});
+	t.teardown(() => mf.dispose());
+	const object = await getControlStub(mf, "MY_QUEUE");
+
+	await mf.dispatchFetch("http://localhost");
+	await object.advanceFakeTime(1000);
+	await object.waitForFakeTasks();
+	const batch = await promise;
+	t.deepEqual(batch, [
+		{ queue: "MY_QUEUE", id: batch[0].id, body: "Hello World!", attempts: 1 },
+		{ queue: "MY_QUEUE", id: batch[1].id, body: "Hola Mundo!", attempts: 1 },
+	]);
+});
+
+test("supports declaring queue producers as {MY_QUEUE_BINDING: {queueName: 'my-queue-name'}}", async (t) => {
+	const promise = new DeferredPromise<z.infer<typeof MessageArraySchema>>();
+	const mf = new Miniflare({
+		verbose: true,
+		queueProducers: { MY_QUEUE_PRODUCER: { queueName: "MY_QUEUE" } },
+		queueConsumers: ["MY_QUEUE"],
+		serviceBindings: {
+			async REPORTER(request) {
+				promise.resolve(MessageArraySchema.parse(await request.json()));
+				return new Response();
+			},
+		},
+		modules: true,
+		script: `export default {
+      async fetch(request, env, ctx) {
+        await env.MY_QUEUE_PRODUCER.send("Hello World!");
+				await env.MY_QUEUE_PRODUCER.sendBatch([{ body: "Hola Mundo!" }]);
+        return new Response(null, { status: 204 });
+      },
+      async queue(batch, env, ctx) {
+        await env.REPORTER.fetch("http://localhost", {
+          method: "POST",
+          body: JSON.stringify(batch.messages.map(({ id, body, attempts }) => ({ queue: batch.queue, id, body, attempts }))),
+        });
+      }
+    }`,
+	});
+	t.teardown(() => mf.dispose());
+	const object = await getControlStub(mf, "MY_QUEUE");
+
+	await mf.dispatchFetch("http://localhost");
+	await object.advanceFakeTime(1000);
+	await object.waitForFakeTasks();
+	const batch = await promise;
+	t.deepEqual(batch, [
+		{ queue: "MY_QUEUE", id: batch[0].id, body: "Hello World!", attempts: 1 },
+		{ queue: "MY_QUEUE", id: batch[1].id, body: "Hola Mundo!", attempts: 1 },
+	]);
+});
+
 test("sends all structured cloneable types", async (t) => {
 	const errorPromise = new DeferredPromise<string>();
 
@@ -804,7 +924,13 @@ test("supports message contentTypes", async (t) => {
 test("validates message size", async (t) => {
 	const mf = new Miniflare({
 		verbose: true,
-		queueProducers: ["QUEUE"],
+		queueProducers: { QUEUE: "MY_QUEUE" },
+		queueConsumers: {
+			MY_QUEUE: {
+				maxBatchSize: 100,
+				maxBatchTimeout: 0,
+			},
+		},
 		modules: true,
 		script: `export default {
       async fetch(request, env, ctx) {
@@ -832,152 +958,4 @@ test("validates message size", async (t) => {
 		message:
 			"Queue send failed: message length of 128001 bytes exceeds limit of 128000",
 	});
-});
-
-test("supports delivery delay", async (t) => {
-	let batches: string[][] = [];
-
-	const log = new TestLog(t);
-	const mf = new Miniflare({
-		log,
-		verbose: true,
-		queueProducers: { QUEUE: { queueName: "QUEUE", deliveryDelay: 2 } },
-		queueConsumers: {
-			QUEUE: {
-				maxBatchSize: 100,
-				maxBatchTimeout: 0,
-				maxRetires: 1,
-				retryDelay: 3,
-			},
-		},
-		serviceBindings: {
-			async REPORTER(request) {
-				const batch = StringArraySchema.parse(await request.json());
-				if (batch.length > 0) {
-					batches.push(batch);
-				}
-				return new Response();
-			},
-		},
-		modules: true,
-		script: `export default {
-      async fetch(request, env, ctx) {
-		const delay = request.headers.get("X-Msg-Delay-Secs");
-		const url = new URL(request.url);
-		const body = await request.json();
-
-		if (url.pathname === "/send") {
-			if (delay === null) {
-				await env.QUEUE.send(body);
-			} else {
-				await env.QUEUE.send(body, { delaySeconds: Number(delay) });
-			}
-		} else if (url.pathname === "/batch") {
-		  await env.QUEUE.sendBatch(body, { delaySeconds: Number(delay) });
-		}
-        return new Response(null, { status: 204 });
-      },
-      async queue(batch, env, ctx) {
-        delete Date.prototype.toJSON; // JSON.stringify calls .toJSON before the replacer
-        await env.REPORTER.fetch("http://localhost", {
-          method: "POST",
-		  body: JSON.stringify(batch.messages.map(({ id }) => id)),
-        });
-
-		let isBatch = true;
-		for (const message of batch.messages) {
-			if (message.body < 10) {
-				if (message.body % 2 == 0)  {
-					message.retry({ delaySeconds: 20 });
-				}
-				isBatch = false;
-			}
-		}
-		batch.retryAll(isBatch ? {} : { delaySeconds: 10 });
-      },
-    };`,
-	});
-	t.teardown(() => mf.dispose());
-	const object = await getControlStub(mf, "QUEUE");
-
-	// Test send.
-
-	async function send(delay: number, message: unknown) {
-		await mf.dispatchFetch("http://localhost/send", {
-			method: "POST",
-			headers: { "X-Msg-Delay-Secs": delay.toString() },
-			body: JSON.stringify(message),
-		});
-	}
-
-	// Send 10 messages.
-	for (let i = 0; i < 10; i++) {
-		send(i, i);
-	}
-
-	// Verify messages are delivered at the right times.
-	for (let i = 1; i <= 10; i++) {
-		await object.advanceFakeTime(1000);
-		await object.waitForFakeTasks();
-		t.is(batches.length, i);
-	}
-
-	batches = [];
-
-	// Verify messages are retried at the right times.
-	for (let i = 1; i <= 10; i++) {
-		await object.advanceFakeTime(2000);
-		await object.waitForFakeTasks();
-		t.is(batches.length, i);
-	}
-
-	batches = [];
-
-	// Test send batch.
-
-	async function sendBatch(delay: number, ...messages: unknown[]) {
-		await mf.dispatchFetch("http://localhost/batch", {
-			method: "POST",
-			headers: { "X-Msg-Delay-Secs": delay.toString() },
-			body: JSON.stringify(messages),
-		});
-	}
-
-	// Send batch of messages (default batch delay: 1 sec).
-	sendBatch(
-		1,
-		{ body: 10, delaySeconds: 0 },
-		{ body: 11 },
-		{ body: 12, delaySeconds: 2 }
-	);
-
-	// Verify messages are received at the right times.
-	for (let i = 1; i <= 3; i++) {
-		await object.advanceFakeTime(1000);
-		await object.waitForFakeTasks();
-		t.is(batches.length, i);
-	}
-
-	batches = [];
-
-	// Verify messages are retried at the right times.
-	for (let i = 1; i <= 3; i++) {
-		await object.advanceFakeTime(1000);
-		await object.waitForFakeTasks();
-		t.is(batches.length, i);
-	}
-
-	batches = [];
-
-	// Sending message with delivery delay set at the producer settings level.
-	await mf.dispatchFetch("http://localhost/send", {
-		method: "POST",
-		body: JSON.stringify("test"),
-	});
-	await object.advanceFakeTime(1000);
-	await object.waitForFakeTasks();
-	t.is(batches.length, 0);
-	await object.advanceFakeTime(1000);
-	await object.waitForFakeTasks();
-	t.is(batches.length, 1);
 });

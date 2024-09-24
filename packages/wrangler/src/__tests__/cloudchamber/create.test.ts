@@ -39,8 +39,8 @@ function mockDeploymentPost() {
 		http.post(
 			"*/deployments/v2",
 			async ({ request }) => {
-				expect(await request.text()).toMatchInlineSnapshot(
-					`"{\\"image\\":\\"hello:world\\",\\"location\\":\\"sfo06\\",\\"ssh_public_key_ids\\":[],\\"environment_variables\\":[{\\"name\\":\\"HELLO\\",\\"value\\":\\"WORLD\\"},{\\"name\\":\\"YOU\\",\\"value\\":\\"CONQUERED\\"}],\\"vcpu\\":3,\\"memory\\":\\"400GB\\",\\"network\\":{\\"assign_ipv4\\":\\"predefined\\"}}"`
+				expect(await request.text()).toBe(
+					`{"image":"hello:world","location":"sfo06","ssh_public_key_ids":[],"environment_variables":[{"name":"HELLO","value":"WORLD"},{"name":"YOU","value":"CONQUERED"}],"vcpu":3,"memory":"400GB","network":{"assign_ipv4":"predefined"}}`
 				);
 				return HttpResponse.json(MOCK_DEPLOYMENTS_COMPLEX[0]);
 			},

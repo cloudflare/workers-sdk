@@ -218,6 +218,11 @@ const bindingsConfigMock: Omit<
 		},
 		{ type: "CompiledWasm", globs: ["**/*.wasm"], fallthrough: true },
 	],
+	pipelines: [],
+	assets: {
+		binding: "ASSETS_BINDING",
+		directory: "/assets",
+	},
 };
 
 describe("generateTypes()", () => {
@@ -355,6 +360,7 @@ describe("generateTypes()", () => {
 			BROWSER_BINDING: Fetcher;
 			AI_BINDING: Ai;
 			VERSION_METADATA_BINDING: { id: string; tag: string };
+			ASSETS_BINDING: Fetcher;
 		}
 		declare module \\"*.txt\\" {
 			const value: string;

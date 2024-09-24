@@ -8,6 +8,7 @@ import {
 	buildMiniflareBindingOptions,
 	buildSitesOptions,
 } from "../../../dev/miniflare";
+import { getClassNamesWhichUseSQLite } from "../../../dev/validate-dev-props";
 import { run } from "../../../experimental-flags";
 import { getLegacyAssetPaths, getSiteAssetPaths } from "../../../sites";
 import { CacheStorage } from "./caches";
@@ -159,6 +160,7 @@ async function getMiniflareOptionsFromConfig(
 		queueConsumers: undefined,
 		services: rawConfig.services,
 		serviceBindings: {},
+		migrations: rawConfig.migrations,
 	});
 
 	const persistOptions = getMiniflarePersistOptions(options.persist);
@@ -264,6 +266,7 @@ export function unstable_getMiniflareWorkerOptions(
 		queueConsumers: config.queues.consumers,
 		services: [],
 		serviceBindings: {},
+		migrations: config.migrations,
 	});
 
 	// This function is currently only exported for the Workers Vitest pool.
@@ -282,11 +285,24 @@ export function unstable_getMiniflareWorkerOptions(
 		);
 	}
 	if (bindings.durable_objects !== undefined) {
+		type DurableObjectDefinition = NonNullable<
+			typeof bindingOptions.durableObjects
+		>[string];
+
+		const classNameToUseSQLite = getClassNamesWhichUseSQLite(config.migrations);
+
 		bindingOptions.durableObjects = Object.fromEntries(
-			bindings.durable_objects.bindings.map((binding) => [
-				binding.name,
-				{ className: binding.class_name, scriptName: binding.script_name },
-			])
+			bindings.durable_objects.bindings.map((binding) => {
+				const useSQLite = classNameToUseSQLite.get(binding.class_name);
+				return [
+					binding.name,
+					{
+						className: binding.class_name,
+						scriptName: binding.script_name,
+						useSQLite,
+					} satisfies DurableObjectDefinition,
+				];
+			})
 		);
 	}
 

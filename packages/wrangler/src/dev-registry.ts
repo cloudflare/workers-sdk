@@ -13,7 +13,6 @@ import net from "node:net";
 import path from "node:path";
 import bodyParser from "body-parser";
 import { watch } from "chokidar";
-import { subMinutes } from "date-fns";
 import express from "express";
 import { createHttpTerminator } from "http-terminator";
 import { fetch } from "undici";
@@ -75,8 +74,8 @@ async function loadWorkerDefinitions(): Promise<WorkerRegistry> {
 				"utf8"
 			);
 			const stats = await stat(path.join(DEV_REGISTRY_PATH, workerName));
-			// Cleanup old workers
-			if (stats.mtime < subMinutes(new Date(), 10)) {
+			// Cleanup existing workers older than 10 minutes
+			if (stats.mtime.getTime() < Date.now() - 600000) {
 				await unregisterWorker(workerName);
 			} else {
 				globalWorkers[workerName] = JSON.parse(file);

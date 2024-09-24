@@ -174,6 +174,7 @@ export interface Worker_Binding_MemoryCacheLimits {
 export type Worker_DurableObjectNamespace = {
 	className?: string;
 	preventEviction?: boolean;
+	enableSql?: boolean;
 } & ({ uniqueKey?: string } | { ephemeralLocal?: Void });
 
 export type ExternalServer = { address?: string } & (

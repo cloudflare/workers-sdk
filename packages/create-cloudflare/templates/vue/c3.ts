@@ -12,6 +12,7 @@ const generate = async (ctx: C3Context) => {
 const config: TemplateConfig = {
 	configVersion: 1,
 	id: "vue",
+	frameworkCli: "create-vue",
 	displayName: "Vue",
 	platform: "pages",
 	generate,

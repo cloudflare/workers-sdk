@@ -1,5 +1,49 @@
 # @cloudflare/pages-shared
 
+## 0.11.61
+
+### Patch Changes
+
+- Updated dependencies [[`1ca313f`](https://github.com/cloudflare/workers-sdk/commit/1ca313f2041688cd13e25f0817e3b72dfc930bac)]:
+  - miniflare@3.20240909.5
+
+## 0.11.60
+
+### Patch Changes
+
+- Updated dependencies [[`2ddbb65`](https://github.com/cloudflare/workers-sdk/commit/2ddbb65033e88dfc2127a093fc894ac91bd96369)]:
+  - miniflare@3.20240909.4
+
+## 0.11.59
+
+### Patch Changes
+
+- Updated dependencies [[`2407c41`](https://github.com/cloudflare/workers-sdk/commit/2407c41484f29845a64ccffd9368bc5d234eb831)]:
+  - miniflare@3.20240909.3
+
+## 0.11.58
+
+### Patch Changes
+
+- Updated dependencies [[`5b5dd95`](https://github.com/cloudflare/workers-sdk/commit/5b5dd9573b2c43023cbcba0fbcc3e374465e745e)]:
+  - miniflare@3.20240909.2
+
+## 0.11.57
+
+### Patch Changes
+
+- Updated dependencies [[`d68e8c9`](https://github.com/cloudflare/workers-sdk/commit/d68e8c996ba40eaaf4a3b237f89880bdaafd0113)]:
+  - miniflare@3.20240909.1
+
+## 0.11.56
+
+### Patch Changes
+
+- [#6680](https://github.com/cloudflare/workers-sdk/pull/6680) [`7579bd8`](https://github.com/cloudflare/workers-sdk/commit/7579bd8e53a30a5ae8e3dc606b46e575948c9ff1) Thanks [@WalshyDev](https://github.com/WalshyDev)! - fix: fix Pages redirects going to a hash location to be duped. This means if you have a rule like `/foo/bar /foo#bar` it will no longer result in `/foo#bar#bar` but the correct `/foo#bar`.
+
+- Updated dependencies [[`3f5b934`](https://github.com/cloudflare/workers-sdk/commit/3f5b9343a46dedcb80c8e216eb3ca9d7f687f6cf)]:
+  - miniflare@3.20240909.0
+
 ## 0.11.55
 
 ### Patch Changes

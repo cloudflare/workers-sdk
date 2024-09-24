@@ -16,6 +16,7 @@ import {
 } from "./delete";
 import { versionsSecretListHandler, versionsSecretsListOptions } from "./list";
 import { versionsSecretPutHandler, versionsSecretsPutOptions } from "./put";
+import type { Observability } from "../../config/environment";
 import type {
 	WorkerMetadata as CfWorkerMetadata,
 	WorkerMetadataBinding,
@@ -104,6 +105,7 @@ export interface VersionDetails {
 interface ScriptSettings {
 	logpush: boolean;
 	tail_consumers: CfTailConsumer[] | null;
+	observability: Observability;
 }
 
 interface CopyLatestWorkerVersionArgs {
@@ -207,7 +209,9 @@ export async function copyWorkerVersionWithNewSecrets({
 			"workers/message": versionMessage,
 			"workers/tag": versionTag,
 		},
-		experimental_assets: undefined,
+		keep_assets: true,
+		assets: undefined,
+		observability: scriptSettings.observability,
 	};
 
 	const body = createWorkerUploadForm(worker);
@@ -255,7 +259,7 @@ async function parseModules(
 		// Workers Sites is not supported
 		if (formData.get("__STATIC_CONTENT_MANIFEST") !== null) {
 			throw new UserError(
-				"Workers Sites and Legacy Assets do not support updating secrets through `wrangler versions secret put`. You must use `wrangler secret put` instead."
+				"Workers Sites and legacy assets do not support updating secrets through `wrangler versions secret put`. You must use `wrangler secret put` instead."
 			);
 		}
 

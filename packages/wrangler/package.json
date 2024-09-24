@@ -1,6 +1,6 @@
 {
 	"name": "wrangler",
-	"version": "3.76.0",
+	"version": "3.78.8",
 	"description": "Command-line interface for all things Cloudflare Workers",
 	"keywords": [
 		"wrangler",
@@ -75,18 +75,17 @@
 		"@esbuild-plugins/node-modules-polyfill": "^0.2.2",
 		"blake3-wasm": "^2.1.5",
 		"chokidar": "^3.5.3",
-		"date-fns": "^3.6.0",
 		"esbuild": "0.17.19",
 		"itty-time": "^1.0.6",
 		"miniflare": "workspace:*",
 		"nanoid": "^3.3.3",
-		"path-to-regexp": "^6.2.0",
+		"path-to-regexp": "^6.3.0",
 		"resolve": "^1.22.8",
 		"resolve.exports": "^2.0.2",
 		"selfsigned": "^2.0.1",
 		"source-map": "^0.6.1",
-		"unenv": "npm:unenv-nightly@2.0.0-1724863496.70db6f1",
-		"workerd": "1.20240821.1",
+		"unenv": "npm:unenv-nightly@2.0.0-20240919-125358-9a64854",
+		"workerd": "1.20240909.0",
 		"xxhash-wasm": "^1.0.1"
 	},
 	"devDependencies": {
@@ -95,7 +94,7 @@
 		"@cloudflare/pages-shared": "workspace:^",
 		"@cloudflare/types": "^6.18.4",
 		"@cloudflare/workers-tsconfig": "workspace:*",
-		"@cloudflare/workers-types": "^4.20240821.1",
+		"@cloudflare/workers-types": "^4.20240909.0",
 		"@cspotcode/source-map-support": "0.8.1",
 		"@iarna/toml": "^3.0.0",
 		"@microsoft/api-extractor": "^7.47.0",
@@ -170,7 +169,7 @@
 		"ts-json-schema-generator": "^1.5.0",
 		"undici": "^5.28.4",
 		"update-check": "^1.5.4",
-		"vitest": "^1.6.0",
+		"vitest": "catalog:default",
 		"vitest-websocket-mock": "^0.3.0",
 		"ws": "^8.17.1",
 		"xdg-app-paths": "^8.3.0",
@@ -178,7 +177,7 @@
 		"yoga-layout": "file:../../vendor/yoga-layout-2.0.0-beta.1.tgz"
 	},
 	"peerDependencies": {
-		"@cloudflare/workers-types": "^4.20240821.1"
+		"@cloudflare/workers-types": "^4.20240909.0"
 	},
 	"peerDependenciesMeta": {
 		"@cloudflare/workers-types": {

@@ -22,7 +22,9 @@ import { UserError } from "../errors";
 import { logger } from "../logger";
 import { getSourceMappedString } from "../sourcemap";
 import { updateCheck } from "../update-check";
+import { getClassNamesWhichUseSQLite } from "./validate-dev-props";
 import type { ServiceFetch } from "../api";
+import type { AssetsOptions } from "../assets";
 import type { Config } from "../config";
 import type {
 	CfD1Database,
@@ -39,7 +41,6 @@ import type {
 	WorkerEntrypointsDefinition,
 	WorkerRegistry,
 } from "../dev-registry";
-import type { ExperimentalAssetsOptions } from "../experimental-assets";
 import type { LoggerLevel } from "../logger";
 import type { LegacyAssetPaths } from "../sites";
 import type { EsbuildBundle } from "./use-esbuild";
@@ -171,9 +172,10 @@ export interface ConfigBundle {
 	compatibilityDate: string | undefined;
 	compatibilityFlags: string[] | undefined;
 	bindings: CfWorkerInit["bindings"];
+	migrations: Config["migrations"] | undefined;
 	workerDefinitions: WorkerRegistry | undefined;
 	legacyAssetPaths: LegacyAssetPaths | undefined;
-	experimentalAssets: ExperimentalAssetsOptions | undefined;
+	assets: AssetsOptions | undefined;
 	initialPort: Port;
 	initialIp: string;
 	rules: Config["rules"];
@@ -370,13 +372,14 @@ type WorkerOptionsBindings = Pick<
 type MiniflareBindingsConfig = Pick<
 	ConfigBundle,
 	| "bindings"
+	| "migrations"
 	| "workerDefinitions"
 	| "queueConsumers"
 	| "name"
 	| "services"
 	| "serviceBindings"
 > &
-	Partial<Pick<ConfigBundle, "format" | "bundle" | "experimentalAssets">>;
+	Partial<Pick<ConfigBundle, "format" | "bundle" | "assets">>;
 
 // TODO(someday): would be nice to type these methods more, can we export types for
 //  each plugin options schema and use those
@@ -494,6 +497,8 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 		}
 	}
 
+	const classNameToUseSQLite = getClassNamesWhichUseSQLite(config.migrations);
+
 	// Partition Durable Objects based on whether they're internal (defined by
 	// this session's worker), or external (defined by another session's worker
 	// registered in the dev registry)
@@ -511,10 +516,13 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 		// Bind all internal objects, so they're accessible by all other sessions
 		// that proxy requests for our objects to this worker
 		durableObjects: Object.fromEntries(
-			internalObjects.map(({ class_name }) => [
-				class_name,
-				{ className: class_name, scriptName: getName(config) },
-			])
+			internalObjects.map(({ class_name }) => {
+				const useSQLite = classNameToUseSQLite.get(class_name);
+				return [
+					class_name,
+					{ className: class_name, scriptName: getName(config), useSQLite },
+				];
+			})
 		),
 		// Use this worker instead of the user worker if the pathname is
 		// `/${EXTERNAL_SERVICE_WORKER_NAME}`
@@ -622,14 +630,25 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 		),
 
 		durableObjects: Object.fromEntries([
-			...internalObjects.map(({ name, class_name }) => [name, class_name]),
+			...internalObjects.map(({ name, class_name }) => {
+				const useSQLite = classNameToUseSQLite.get(class_name);
+				return [
+					name,
+					{
+						className: class_name,
+						useSQLite,
+					},
+				];
+			}),
 			...externalObjects.map(({ name, class_name, script_name }) => {
 				const identifier = getIdentifier(`do_${script_name}_${class_name}`);
+				const useSQLite = classNameToUseSQLite.get(class_name);
 				return [
 					name,
 					{
 						className: identifier,
 						scriptName: EXTERNAL_SERVICE_WORKER_NAME,
+						useSQLite,
 						// Matches the unique key Miniflare will generate for this object in
 						// the target session. We need to do this so workerd generates the
 						// same IDs it would if this were part of the same process. workerd
@@ -678,13 +697,14 @@ export function buildPersistOptions(
 }
 
 function buildAssetOptions(config: Omit<ConfigBundle, "rules">) {
-	if (config.experimentalAssets) {
+	if (config.assets) {
 		return {
 			assets: {
 				workerName: config.name,
-				path: config.experimentalAssets.directory,
-				bindingName: config.experimentalAssets.binding,
-				routingConfig: config.experimentalAssets.routingConfig,
+				path: config.assets.directory,
+				bindingName: config.assets.binding,
+				routingConfig: config.assets.routingConfig,
+				assetConfig: config.assets.assetConfig,
 			},
 		};
 	}

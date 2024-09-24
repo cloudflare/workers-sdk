@@ -229,6 +229,12 @@ export declare class Worker_Module extends __S {
     getPythonRequirement(): string;
     isPythonRequirement(): boolean;
     setPythonRequirement(value: string): void;
+    adoptNamedExports(value: capnp.Orphan<capnp.List<string>>): void;
+    disownNamedExports(): capnp.Orphan<capnp.List<string>>;
+    getNamedExports(): capnp.List<string>;
+    hasNamedExports(): boolean;
+    initNamedExports(length: number): capnp.List<string>;
+    setNamedExports(value: capnp.List<string>): void;
     toString(): string;
     which(): Worker_Module_Which;
 }
@@ -671,6 +677,8 @@ export declare class Worker_DurableObjectNamespace extends __S {
     setEphemeralLocal(): void;
     getPreventEviction(): boolean;
     setPreventEviction(value: boolean): void;
+    getEnableSql(): boolean;
+    setEnableSql(value: boolean): void;
     toString(): string;
     which(): Worker_DurableObjectNamespace_Which;
 }

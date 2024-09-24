@@ -89,3 +89,37 @@ export const getOutputFileDirectoryFromEnv = getEnvironmentVariableFactory({
 export const getOutputFilePathFromEnv = getEnvironmentVariableFactory({
 	variableName: "WRANGLER_OUTPUT_FILE_PATH",
 });
+
+/**
+ * `WRANGLER_CI_MATCH_TAG` specifies a worker tag
+ *
+ * If this is set, Wrangler will ensure the worker being targeted has this tag
+ */
+export const getCIMatchTag = getEnvironmentVariableFactory({
+	variableName: "WRANGLER_CI_MATCH_TAG",
+});
+
+/**
+ * `WRANGLER_BUILD_CONDITIONS` specifies the "build conditions" to use when importing packages at build time.
+ *
+ * See https://nodejs.org/api/packages.html#conditional-exports
+ * and https://esbuild.github.io/api/#how-conditions-work.
+ *
+ * If this is set, Wrangler will configure esbuild to use this list of conditions.
+ * The format is a string of comma separated conditions.
+ */
+export const getBuildConditionsFromEnv = getEnvironmentVariableFactory({
+	variableName: "WRANGLER_BUILD_CONDITIONS",
+});
+
+/**
+ * `WRANGLER_BUILD_PLATFORM` specifies the "build platform" to use when importing packages at build time.
+ *
+ * See https://esbuild.github.io/api/#platform
+ * and https://esbuild.github.io/api/#how-conditions-work.
+ *
+ * If this is set, Wrangler will configure esbuild to use this platform.
+ */
+export const getBuildPlatformFromEnv = getEnvironmentVariableFactory({
+	variableName: "WRANGLER_BUILD_PLATFORM",
+});

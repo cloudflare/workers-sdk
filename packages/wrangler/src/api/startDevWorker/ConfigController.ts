@@ -9,6 +9,7 @@ import {
 	getScriptName,
 	isLegacyEnv,
 } from "../..";
+import { processAssetsArg } from "../../assets";
 import { printBindings, readConfig } from "../../config";
 import { getEntry } from "../../deployment-bundle/entry";
 import {
@@ -19,8 +20,8 @@ import {
 	maskVars,
 } from "../../dev";
 import { getLocalPersistencePath } from "../../dev/get-local-persistence-path";
+import { getClassNamesWhichUseSQLite } from "../../dev/validate-dev-props";
 import { UserError } from "../../errors";
-import { processExperimentalAssetsArg } from "../../experimental-assets";
 import { logger } from "../../logger";
 import { getAccountId, requireApiToken } from "../../user";
 import { memoizeGetPort } from "../../utils/memoizeGetPort";
@@ -62,6 +63,7 @@ async function resolveDevConfig(
 			routes: input.triggers?.filter(
 				(t): t is Extract<Trigger, { type: "route" }> => t.type === "route"
 			),
+			assets: input?.assets?.directory,
 		},
 		config
 	);
@@ -163,6 +165,7 @@ async function resolveTriggers(
 			routes: input.triggers?.filter(
 				(t): t is Extract<Trigger, { type: "route" }> => t.type === "route"
 			),
+			assets: input?.assets?.directory,
 		},
 		config
 	);
@@ -206,10 +209,10 @@ async function resolveConfig(
 			legacyAssets: Boolean(legacyAssets),
 			script: input.entrypoint,
 			moduleRoot: input.build?.moduleRoot,
-			// getEntry only needs to know if experimental_assets was specified.
+			// getEntry only needs to know if assets was specified.
 			// The actualy value is not relevant here, which is why not passing
-			// the entire ExperimentalAssets object is fine.
-			experimentalAssets: input?.experimental?.assets?.directory,
+			// the entire Assets object is fine.
+			assets: input?.assets?.directory,
 		},
 		config,
 		"dev"
@@ -219,9 +222,9 @@ async function resolveConfig(
 
 	const { bindings, unsafe } = await resolveBindings(config, input);
 
-	const experimentalAssetsOptions = processExperimentalAssetsArg(
+	const assetsOptions = processAssetsArg(
 		{
-			experimentalAssets: input?.experimental?.assets?.directory,
+			assets: input?.assets?.directory,
 			script: input.entrypoint,
 		},
 		config
@@ -234,6 +237,7 @@ async function resolveConfig(
 		entrypoint: entry.file,
 		directory: entry.directory,
 		bindings,
+		migrations: input.migrations ?? config.migrations,
 		sendMetrics: input.sendMetrics ?? config.send_metrics,
 		triggers: await resolveTriggers(config, input),
 		env: input.env,
@@ -271,9 +275,7 @@ async function resolveConfig(
 			capnp: input.unsafe?.capnp ?? unsafe?.capnp,
 			metadata: input.unsafe?.metadata ?? unsafe?.metadata,
 		},
-		experimental: {
-			assets: experimentalAssetsOptions,
-		},
+		assets: assetsOptions,
 	} satisfies StartDevWorkerOptions;
 
 	if (resolved.legacy.legacyAssets && resolved.legacy.site) {
@@ -315,6 +317,18 @@ async function resolveConfig(
 			"Queues are currently in Beta and are not supported in wrangler dev remote mode."
 		);
 	}
+
+	// TODO(do) support remote wrangler dev
+	const classNamesWhichUseSQLite = getClassNamesWhichUseSQLite(
+		resolved.migrations
+	);
+	if (
+		resolved.dev.remote &&
+		Array.from(classNamesWhichUseSQLite.values()).some((v) => v)
+	) {
+		logger.warn("SQLite in Durable Objects is only supported in local mode.");
+	}
+
 	return resolved;
 }
 export class ConfigController extends Controller<ConfigControllerEventMap> {
@@ -405,12 +419,12 @@ export class ConfigController extends Controller<ConfigControllerEventMap> {
 
 			void this.#ensureWatchingConfig(fileConfig.configPath);
 
-			const experimentalAssets = processExperimentalAssetsArg(
-				{ experimentalAssets: input.experimental?.assets?.directory },
+			const assets = processAssetsArg(
+				{ assets: input?.assets?.directory },
 				fileConfig
 			);
-			if (experimentalAssets) {
-				void this.#ensureWatchingAssets(experimentalAssets.directory);
+			if (assets) {
+				void this.#ensureWatchingAssets(assets.directory);
 			}
 
 			const resolvedConfig = await resolveConfig(fileConfig, input);

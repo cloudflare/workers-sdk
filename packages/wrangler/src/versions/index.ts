@@ -1,8 +1,9 @@
+import assert from "node:assert";
 import path from "node:path";
+import { processAssetsArg, validateAssetsArgsAndConfig } from "../assets";
 import { findWranglerToml, readConfig } from "../config";
 import { getEntry } from "../deployment-bundle/entry";
 import { UserError } from "../errors";
-import { processExperimentalAssetsArg } from "../experimental-assets";
 import {
 	getRules,
 	getScriptName,
@@ -10,6 +11,7 @@ import {
 	printWranglerBanner,
 } from "../index";
 import { logger } from "../logger";
+import { verifyWorkerMatchesCITag } from "../match-tag";
 import * as metrics from "../metrics";
 import { writeOutput } from "../output";
 import { requireAuth } from "../user";
@@ -66,12 +68,6 @@ export function versionsUploadOptions(yargs: CommonYargsArgv) {
 				type: "string",
 				requiresArg: true,
 			})
-			.option("format", {
-				choices: ["modules", "service-worker"] as const,
-				describe: "Choose an entry type",
-				deprecated: true,
-				hidden: true,
-			})
 			.option("compatibility-date", {
 				describe: "Date to use for compatibility checks",
 				type: "string",
@@ -89,23 +85,22 @@ export function versionsUploadOptions(yargs: CommonYargsArgv) {
 				type: "boolean",
 				default: false,
 			})
-			.option("legacy-assets", {
-				describe: "(Experimental) Static assets to be served",
-				type: "string",
-				requiresArg: true,
-				hidden: true,
-			})
 			.option("assets", {
-				describe: "(Experimental) Static assets to be served",
+				describe: "Static assets to be served. Replaces Workers Sites.",
 				type: "string",
 				requiresArg: true,
+			})
+			.option("format", {
+				choices: ["modules", "service-worker"] as const,
+				describe: "Choose an entry type",
+				deprecated: true,
 				hidden: true,
 			})
-			.option("experimental-assets", {
+			.option("legacy-assets", {
 				describe: "Static assets to be served",
 				type: "string",
-				alias: "x-assets",
 				requiresArg: true,
+				deprecated: true,
 				hidden: true,
 			})
 			.option("site", {
@@ -113,6 +108,7 @@ export function versionsUploadOptions(yargs: CommonYargsArgv) {
 				type: "string",
 				requiresArg: true,
 				hidden: true,
+				deprecated: true,
 			})
 			.option("site-include", {
 				describe:
@@ -121,6 +117,7 @@ export function versionsUploadOptions(yargs: CommonYargsArgv) {
 				requiresArg: true,
 				array: true,
 				hidden: true,
+				deprecated: true,
 			})
 			.option("site-exclude", {
 				describe:
@@ -129,6 +126,7 @@ export function versionsUploadOptions(yargs: CommonYargsArgv) {
 				requiresArg: true,
 				array: true,
 				hidden: true,
+				deprecated: true,
 			})
 			.option("var", {
 				describe:
@@ -216,8 +214,6 @@ export async function versionsUploadHandler(
 		}
 	);
 
-	args.legacyAssets = args.legacyAssets ?? args.assets;
-
 	if (args.site || config.site) {
 		throw new UserError(
 			"Workers Sites does not support uploading versions through `wrangler versions upload`. You must use `wrangler deploy` instead."
@@ -225,11 +221,24 @@ export async function versionsUploadHandler(
 	}
 	if (args.legacyAssets || config.legacy_assets) {
 		throw new UserError(
-			"Legacy Assets does not support uploading versions through `wrangler versions upload`. You must use `wrangler deploy` instead."
+			"Legacy assets does not support uploading versions through `wrangler versions upload`. You must use `wrangler deploy` instead."
 		);
 	}
 
-	const experimentalAssetsOptions = processExperimentalAssetsArg(args, config);
+	validateAssetsArgsAndConfig(
+		{
+			// given that legacyAssets and sites are not supported by
+			// `wrangler versions upload` pass them as undefined to
+			// skip the corresponding mutual exclusivity validation
+			legacyAssets: undefined,
+			site: undefined,
+			assets: args.assets,
+			script: args.script,
+		},
+		config
+	);
+
+	const assetsOptions = processAssetsArg(args, config);
 
 	if (args.latest) {
 		logger.warn(
@@ -244,7 +253,23 @@ export async function versionsUploadHandler(
 	const accountId = args.dryRun ? undefined : await requireAuth(config);
 	const name = getScriptName(args, config);
 
-	await standardPricingWarning(config);
+	assert(
+		name,
+		'You need to provide a name when publishing a worker. Either pass it as a cli arg with `--name <name>` or in your config file as `name = "<name>"`'
+	);
+
+	if (!args.dryRun) {
+		assert(accountId, "Missing account ID");
+		await verifyWorkerMatchesCITag(
+			accountId,
+			name,
+			path.relative(entry.directory, config.configPath ?? "wrangler.toml")
+		);
+	}
+
+	if (!args.dryRun) {
+		await standardPricingWarning(config);
+	}
 	const { versionId, workerTag } = await versionsUpload({
 		config,
 		accountId,
@@ -263,7 +288,7 @@ export async function versionsUploadHandler(
 		jsxFactory: args.jsxFactory,
 		jsxFragment: args.jsxFragment,
 		tsconfig: args.tsconfig,
-		experimentalAssetsOptions,
+		assetsOptions,
 		minify: args.minify,
 		uploadSourceMaps: args.uploadSourceMaps,
 		nodeCompat: args.nodeCompat,

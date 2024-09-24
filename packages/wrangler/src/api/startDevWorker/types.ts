@@ -1,6 +1,8 @@
+import type { AssetsOptions } from "../../assets";
 import type { Config } from "../../config";
 import type {
 	CustomDomainRoute,
+	DurableObjectMigration,
 	Rule,
 	ZoneIdRoute,
 	ZoneNameRoute,
@@ -16,6 +18,7 @@ import type {
 	CfLogfwdrBinding,
 	CfModule,
 	CfMTlsCertificate,
+	CfPipeline,
 	CfQueue,
 	CfR2Bucket,
 	CfScriptFormat,
@@ -28,7 +31,6 @@ import type {
 import type { WorkerRegistry } from "../../dev-registry";
 import type { CfAccount } from "../../dev/create-worker-preview";
 import type { EsbuildBundle } from "../../dev/use-esbuild";
-import type { ExperimentalAssetsOptions } from "../../experimental-assets";
 import type { ConfigController } from "./ConfigController";
 import type {
 	DispatchFetch,
@@ -74,6 +76,7 @@ export interface StartDevWorkerInput {
 
 	/** The bindings available to the worker. The specified bindind type will be exposed to the worker on the `env` object under the same key. */
 	bindings?: Record<string, Binding>; // Type level constraint for bindings not sharing names
+	migrations?: DurableObjectMigration[];
 	/** The triggers which will cause the worker's exported default handlers to be called. */
 	triggers?: Trigger[];
 
@@ -163,9 +166,7 @@ export interface StartDevWorkerInput {
 		enableServiceEnvironments?: boolean;
 	};
 	unsafe?: Omit<CfUnsafe, "bindings">;
-	experimental?: {
-		assets?: Omit<ExperimentalAssetsOptions, "bindings">;
-	};
+	assets?: Omit<AssetsOptions, "bindings">;
 }
 
 export type StartDevWorkerOptions = StartDevWorkerInput & {
@@ -263,6 +264,7 @@ export type Binding =
 	| ({ type: "analytics_engine" } & Omit<CfAnalyticsEngineDataset, "binding">)
 	| ({ type: "dispatch_namespace" } & Omit<CfDispatchNamespace, "binding">)
 	| ({ type: "mtls_certificate" } & Omit<CfMTlsCertificate, "binding">)
+	| ({ type: "pipeline" } & Omit<CfPipeline, "binding">)
 	| ({ type: "logfwdr" } & Omit<CfLogfwdrBinding, "name">)
 	| { type: `unsafe_${string}` }
 	| { type: "assets" };

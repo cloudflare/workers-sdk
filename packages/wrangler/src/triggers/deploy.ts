@@ -8,12 +8,14 @@ import {
 	sleep,
 	updateQueueConsumers,
 	updateQueueProducers,
+	validateRoutes,
 } from "../deploy/deploy";
 import { UserError } from "../errors";
 import { logger } from "../logger";
 import { ensureQueuesExistByConfig } from "../queues/client";
 import { getWorkersDevSubdomain } from "../routes";
 import { getZoneForRoute } from "../zones";
+import type { AssetsOptions } from "../assets";
 import type { Config } from "../config";
 import type { Route } from "../config/environment";
 import type { RouteObject } from "../deploy/deploy";
@@ -28,6 +30,7 @@ type Props = {
 	legacyEnv: boolean | undefined;
 	dryRun: boolean | undefined;
 	experimentalVersions: boolean | undefined;
+	assetsOptions: AssetsOptions | undefined;
 };
 
 export default async function triggersDeploy(
@@ -40,18 +43,9 @@ export default async function triggersDeploy(
 		props.routes ?? config.routes ?? (config.route ? [config.route] : []) ?? [];
 	const routesOnly: Array<Route> = [];
 	const customDomainsOnly: Array<RouteObject> = [];
+	validateRoutes(routes, Boolean(props.assetsOptions));
 	for (const route of routes) {
 		if (typeof route !== "string" && route.custom_domain) {
-			if (route.pattern.includes("*")) {
-				throw new UserError(
-					`Cannot use "${route.pattern}" as a Custom Domain; wildcard operators (*) are not allowed`
-				);
-			}
-			if (route.pattern.includes("/")) {
-				throw new UserError(
-					`Cannot use "${route.pattern}" as a Custom Domain; paths are not allowed`
-				);
-			}
 			customDomainsOnly.push(route);
 		} else {
 			routesOnly.push(route);

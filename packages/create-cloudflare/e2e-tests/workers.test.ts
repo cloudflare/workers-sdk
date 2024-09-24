@@ -5,7 +5,7 @@ import { sleep } from "helpers/sleep";
 import { fetch } from "undici";
 import { beforeAll, beforeEach, describe, expect, test } from "vitest";
 import { deleteWorker } from "../scripts/common";
-import { frameworkToTest } from "./frameworkToTest";
+import { getFrameworkToTest } from "./frameworkToTest";
 import {
 	createTestLogStream,
 	isQuarantineMode,
@@ -63,7 +63,11 @@ const workerTemplates: WorkerTestConfig[] = [
 ];
 
 describe
-	.skipIf(frameworkToTest || isQuarantineMode() || process.platform === "win32")
+	.skipIf(
+		getFrameworkToTest({ experimental: false }) ||
+			isQuarantineMode() ||
+			process.platform === "win32",
+	)
 	.concurrent(`E2E: Workers templates`, () => {
 		let logStream: WriteStream;
 

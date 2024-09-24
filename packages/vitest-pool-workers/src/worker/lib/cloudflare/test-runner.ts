@@ -11,7 +11,7 @@ import {
 import { VitestTestRunner } from "vitest/runners";
 import workerdUnsafe from "workerd:unsafe";
 import type { CancelReason, Suite, Test } from "@vitest/runner";
-import type { ResolvedConfig, WorkerGlobalState, WorkerRPC } from "vitest";
+import type { SerializedConfig, WorkerGlobalState, WorkerRPC } from "vitest";
 
 // When `DEBUG` is `true`, runner operations will be logged and slowed down
 // TODO(soon): remove this
@@ -114,7 +114,7 @@ export default class WorkersTestRunner extends VitestTestRunner {
 	readonly state: WorkerGlobalState;
 	readonly isolatedStorage: boolean;
 
-	constructor(config: ResolvedConfig) {
+	constructor(config: SerializedConfig) {
 		super(config);
 
 		// @ts-expect-error `this.workerState` has "private" access, how quaint :D

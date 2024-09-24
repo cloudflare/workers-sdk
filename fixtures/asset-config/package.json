@@ -1,0 +1,24 @@
+{
+	"name": "workers-assets-config-test",
+	"private": true,
+	"scripts": {
+		"dev": "npx wrangler dev",
+		"test:ci": "run-script-os",
+		"test:ci:default": "true",
+		"test:ci:nix": "vitest run",
+		"test:watch": "vitest",
+		"type:tests": "tsc -p ./tsconfig.json"
+	},
+	"devDependencies": {
+		"@cloudflare/vitest-pool-workers": "workspace:*",
+		"@cloudflare/workers-tsconfig": "workspace:*",
+		"@cloudflare/workers-types": "^4.20240821.1",
+		"run-script-os": "^1.1.6",
+		"undici": "^5.28.4",
+		"vitest": "catalog:default",
+		"wrangler": "workspace:*"
+	},
+	"volta": {
+		"extends": "../../package.json"
+	}
+}

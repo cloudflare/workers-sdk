@@ -1,9 +1,9 @@
-import type { Route } from "../config/environment";
-import type { RoutingConfig } from "../experimental-assets";
+import type { Observability, Route } from "../config/environment";
 import type {
 	WorkerMetadata,
 	WorkerMetadataBinding,
 } from "./create-worker-upload-form";
+import type { AssetConfig, RoutingConfig } from "@cloudflare/workers-shared";
 import type { Json } from "miniflare";
 
 /**
@@ -230,8 +230,13 @@ export interface CfLogfwdrBinding {
 	destination: string;
 }
 
-export interface CfExperimentalAssetBinding {
+export interface CfAssetsBinding {
 	binding: string;
+}
+
+export interface CfPipeline {
+	binding: string;
+	pipeline: string;
 }
 
 export interface CfUnsafeBinding {
@@ -275,6 +280,7 @@ export interface CfDurableObjectMigrations {
 
 export interface CfPlacement {
 	mode: "smart";
+	hint?: string;
 }
 
 export interface CfTailConsumer {
@@ -286,9 +292,10 @@ export interface CfUserLimits {
 	cpu_ms?: number;
 }
 
-export interface CfExperimentalAssets {
+export interface CfAssets {
 	jwt: string;
 	routingConfig: RoutingConfig;
+	assetConfig?: AssetConfig;
 }
 /**
  * Options for creating a `CfWorker`.
@@ -335,8 +342,9 @@ export interface CfWorkerInit {
 		dispatch_namespaces: CfDispatchNamespace[] | undefined;
 		mtls_certificates: CfMTlsCertificate[] | undefined;
 		logfwdr: CfLogfwdr | undefined;
+		pipelines: CfPipeline[] | undefined;
 		unsafe: CfUnsafe | undefined;
-		experimental_assets: CfExperimentalAssetBinding | undefined;
+		assets: CfAssetsBinding | undefined;
 	};
 	/**
 	 * The raw bindings - this is basically never provided and it'll be the bindings above
@@ -356,7 +364,9 @@ export interface CfWorkerInit {
 	tail_consumers: CfTailConsumer[] | undefined;
 	limits: CfUserLimits | undefined;
 	annotations?: Record<string, string | undefined>;
-	experimental_assets: CfExperimentalAssets | undefined;
+	keep_assets?: boolean | undefined;
+	assets: CfAssets | undefined;
+	observability: Observability | undefined;
 }
 
 export interface CfWorkerContext {

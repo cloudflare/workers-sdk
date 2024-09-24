@@ -32,7 +32,10 @@ import { openInspector } from "./inspect";
 import { Local, maybeRegisterLocalWorker } from "./local";
 import { Remote } from "./remote";
 import { useEsbuild } from "./use-esbuild";
-import { validateDevProps } from "./validate-dev-props";
+import {
+	getClassNamesWhichUseSQLite,
+	validateDevProps,
+} from "./validate-dev-props";
 import type {
 	DevEnv,
 	ProxyData,
@@ -41,6 +44,7 @@ import type {
 	StartDevWorkerOptions,
 	Trigger,
 } from "../api";
+import type { AssetsOptions } from "../assets";
 import type { Config } from "../config";
 import type { Route } from "../config/environment";
 import type { Entry } from "../deployment-bundle/entry";
@@ -48,7 +52,6 @@ import type { NodeJSCompatMode } from "../deployment-bundle/node-compat";
 import type { CfModule, CfWorkerInit } from "../deployment-bundle/worker";
 import type { StartDevOptions } from "../dev";
 import type { WorkerRegistry } from "../dev-registry";
-import type { ExperimentalAssetsOptions } from "../experimental-assets";
 import type { EnablePagesAssetsServiceBindingOptions } from "../miniflare-cli/types";
 import type { EphemeralDirectory } from "../paths";
 import type { LegacyAssetPaths } from "../sites";
@@ -227,6 +230,7 @@ export type DevProps = {
 	localPersistencePath: string | null;
 	liveReload: boolean;
 	bindings: CfWorkerInit["bindings"];
+	migrations: Config["migrations"] | undefined;
 	define: Config["define"];
 	alias: Config["alias"];
 	crons: Config["triggers"]["crons"];
@@ -234,7 +238,7 @@ export type DevProps = {
 	isWorkersSite: boolean;
 	legacyAssetPaths: LegacyAssetPaths | undefined;
 	legacyAssetsConfig: Config["legacy_assets"];
-	experimentalAssets: ExperimentalAssetsOptions | undefined;
+	assets: AssetsOptions | undefined;
 	compatibilityDate: string;
 	compatibilityFlags: string[] | undefined;
 	usageModel: "bundled" | "unbound" | undefined;
@@ -413,7 +417,7 @@ function DevSession(props: DevSessionProps) {
 			entrypoint: props.entry.file,
 			directory: props.entry.directory,
 			bindings: convertCfWorkerInitBindingstoBindings(props.bindings),
-
+			migrations: props.migrations,
 			triggers: [...routes, ...queueConsumers, ...crons],
 			env: props.env,
 			build: {
@@ -481,9 +485,7 @@ function DevSession(props: DevSessionProps) {
 				capnp: props.bindings.unsafe?.capnp,
 				metadata: props.bindings.unsafe?.metadata,
 			},
-			experimental: {
-				assets: props.experimentalAssets,
-			},
+			assets: props.assets,
 		} satisfies StartDevWorkerOptions;
 	}, [
 		props.routes,
@@ -493,12 +495,13 @@ function DevSession(props: DevSessionProps) {
 		props.compatibilityDate,
 		props.compatibilityFlags,
 		props.bindings,
+		props.migrations,
 		props.entry,
 		props.legacyAssetPaths,
 		props.isWorkersSite,
 		props.local,
 		props.legacyAssetsConfig,
-		props.experimentalAssets,
+		props.assets,
 		props.processEntrypoint,
 		props.additionalModules,
 		props.env,
@@ -633,6 +636,17 @@ function DevSession(props: DevSessionProps) {
 		);
 	}
 
+	// TODO(do) support remote wrangler dev
+	const classNamesWhichUseSQLite = getClassNamesWhichUseSQLite(
+		props.migrations
+	);
+	if (
+		!props.local &&
+		Array.from(classNamesWhichUseSQLite.values()).some((v) => v)
+	) {
+		logger.warn("SQLite in Durable Objects is only supported in local mode.");
+	}
+
 	// this won't be called with props.experimentalDevEnv because useWorker is guarded with the same flag
 	const announceAndOnReady: typeof props.onReady = async (
 		finalIp,
@@ -690,9 +704,10 @@ function DevSession(props: DevSessionProps) {
 			compatibilityFlags={props.compatibilityFlags}
 			usageModel={props.usageModel}
 			bindings={props.bindings}
+			migrations={props.migrations}
 			workerDefinitions={workerDefinitions}
 			legacyAssetPaths={props.legacyAssetPaths}
-			experimentalAssets={props.experimentalAssets}
+			assets={props.assets}
 			initialPort={undefined} // hard-code for userworker, DevEnv-ProxyWorker now uses this prop value
 			initialIp={"127.0.0.1"} // hard-code for userworker, DevEnv-ProxyWorker now uses this prop value
 			rules={props.rules}

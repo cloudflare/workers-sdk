@@ -643,24 +643,24 @@ export function r2(r2Yargs: CommonYargsArgv, subHelp: SubHelp) {
 
 			r2BucketYargs.command(
 				"notification",
-				"Manage event notifications for an R2 bucket",
+				"Manage event notification rules for an R2 bucket",
 				(r2EvNotifyYargs) => {
 					return r2EvNotifyYargs
 						.command(
-							"get <bucket>",
-							"Get event notification configuration for a bucket",
-							Notification.GetOptions,
-							Notification.GetHandler
+							["list <bucket>", "get <bucket>"],
+							"List event notification rules for a bucket",
+							Notification.ListOptions,
+							Notification.ListHandler
 						)
 						.command(
 							"create <bucket>",
-							"Create new event notification configuration for an R2 bucket",
+							"Create an event notification rule for an R2 bucket",
 							Notification.CreateOptions,
 							Notification.CreateHandler
 						)
 						.command(
 							"delete <bucket>",
-							"Delete event notification configuration for an R2 bucket and queue",
+							"Delete an event notification rule from an R2 bucket",
 							Notification.DeleteOptions,
 							Notification.DeleteHandler
 						);

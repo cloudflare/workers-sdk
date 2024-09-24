@@ -3,6 +3,10 @@ import * as path from "node:path";
 import NodeGlobalsPolyfills from "@esbuild-plugins/node-globals-polyfill";
 import NodeModulesPolyfills from "@esbuild-plugins/node-modules-polyfill";
 import * as esbuild from "esbuild";
+import {
+	getBuildConditionsFromEnv,
+	getBuildPlatformFromEnv,
+} from "../environment-variables/misc-variables";
 import { UserError } from "../errors";
 import { getBasePath, getWranglerTmpDir } from "../paths";
 import { applyMiddlewareLoaderFacade } from "./apply-middleware";
@@ -46,8 +50,43 @@ export const COMMON_ESBUILD_OPTIONS = {
 	loader: { ".js": "jsx", ".mjs": "jsx", ".cjs": "jsx" },
 } as const;
 
-// build conditions used by esbuild, and when resolving custom `import` calls
-export const BUILD_CONDITIONS = ["workerd", "worker", "browser"];
+/**
+ * Get the custom build conditions used by esbuild, and when resolving custom `import` calls.
+ *
+ * If we do not override these in an env var, we will set them to "workerd", "worker" and "browser".
+ * If we override in env vars then these will be provided to esbuild instead.
+ *
+ * Whether or not we set custom conditions the `default` condition will always be active.
+ * If the Worker is using ESM syntax, then the `import` condition will also be active.
+ *
+ * Moreover the following applies:
+ * - if the platform is set to `browser` (the default) then the `browser` condition will be active.
+ * - if the platform is set to `node` then the `node` condition will be active.
+ *
+ * See https://esbuild.github.io/api/#how-conditions-work for more info.
+ */
+export function getBuildConditions() {
+	const envVar = getBuildConditionsFromEnv();
+	if (envVar !== undefined) {
+		return envVar.split(",");
+	} else {
+		return ["workerd", "worker", "browser"];
+	}
+}
+
+function getBuildPlatform(): esbuild.Platform {
+	const platform = getBuildPlatformFromEnv();
+	if (
+		platform !== undefined &&
+		!["browser", "node", "neutral"].includes(platform)
+	) {
+		throw new UserError(
+			"Invalid esbuild platform configuration defined in the WRANGLER_BUILD_PLATFORM environment variable.\n" +
+				"Valid platform values are: 'browser', 'node' and 'neutral'."
+		);
+	}
+	return platform as esbuild.Platform;
+}
 
 /**
  * Information about Wrangler's bundling process that needs passed through
@@ -372,7 +411,8 @@ export async function bundleWorker(
 		sourceRoot: destination,
 		minify,
 		metafile: true,
-		conditions: BUILD_CONDITIONS,
+		conditions: getBuildConditions(),
+		platform: getBuildPlatform(),
 		...(process.env.NODE_ENV && {
 			define: {
 				...(defineNavigatorUserAgent

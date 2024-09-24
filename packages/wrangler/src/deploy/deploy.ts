@@ -3,6 +3,7 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { URLSearchParams } from "node:url";
 import { cancel } from "@cloudflare/cli";
+import { syncAssets } from "../assets";
 import { fetchListResult, fetchResult } from "../cfetch";
 import { printBindings } from "../config";
 import { bundleWorker } from "../deployment-bundle/bundle";
@@ -26,7 +27,6 @@ import { loadSourceMaps } from "../deployment-bundle/source-maps";
 import { confirm } from "../dialogs";
 import { getMigrationsToUpload } from "../durable";
 import { UserError } from "../errors";
-import { syncExperimentalAssets } from "../experimental-assets";
 import { logger } from "../logger";
 import { getMetricsUsageHeaders } from "../metrics";
 import { isNavigatorDefined } from "../navigator-user-agent";
@@ -52,6 +52,7 @@ import {
 } from "../versions/api";
 import { confirmLatestDeploymentOverwrite } from "../versions/deploy";
 import { getZoneForRoute } from "../zones";
+import type { AssetsOptions } from "../assets";
 import type { Config } from "../config";
 import type {
 	CustomDomainRoute,
@@ -66,7 +67,6 @@ import type {
 	CfPlacement,
 	CfWorkerInit,
 } from "../deployment-bundle/worker";
-import type { ExperimentalAssetsOptions } from "../experimental-assets";
 import type { PostQueueBody, PostTypedConsumerBody } from "../queues/client";
 import type { LegacyAssetPaths } from "../sites";
 import type { RetrieveSourceMapFunction } from "../sourcemap";
@@ -77,12 +77,12 @@ type Props = {
 	accountId: string | undefined;
 	entry: Entry;
 	rules: Config["rules"];
-	name: string | undefined;
+	name: string;
 	env: string | undefined;
 	compatibilityDate: string | undefined;
 	compatibilityFlags: string[] | undefined;
 	legacyAssetPaths: LegacyAssetPaths | undefined;
-	experimentalAssetsOptions: ExperimentalAssetsOptions | undefined;
+	assetsOptions: AssetsOptions | undefined;
 	vars: Record<string, string> | undefined;
 	defines: Record<string, string> | undefined;
 	alias: Record<string, string> | undefined;
@@ -170,6 +170,55 @@ function errIsStartupErr(err: unknown): err is ParseError & { code: 10021 } {
 
 	return false;
 }
+
+export const validateRoutes = (routes: Route[], hasAssets: boolean) => {
+	const invalidRoutes: Record<string, string[]> = {};
+	for (const route of routes) {
+		if (typeof route !== "string" && route.custom_domain) {
+			if (route.pattern.includes("*")) {
+				invalidRoutes[route.pattern] ??= [];
+				invalidRoutes[route.pattern].push(
+					`Wildcard operators (*) are not allowed in Custom Domains`
+				);
+			}
+			if (route.pattern.includes("/")) {
+				invalidRoutes[route.pattern] ??= [];
+				invalidRoutes[route.pattern].push(
+					`Paths are not allowed in Custom Domains`
+				);
+			}
+		} else if (hasAssets) {
+			const pattern = typeof route === "string" ? route : route.pattern;
+			const components = pattern.split("/");
+
+			if (
+				// = ["route.com"]  bare domains are invalid as it would only match exactly that
+				components.length === 1 ||
+				// = ["route.com",""] as above
+				(components.length === 2 && components[1] === "")
+			) {
+				invalidRoutes[pattern] ??= [];
+				invalidRoutes[pattern].push(
+					`Workers which have static assets must end with a wildcard path. Update the route to end with /*`
+				);
+				// ie it doesn't match exactly "route.com/*" = [route.com, *]
+			} else if (!(components.length === 2 && components[1] === "*")) {
+				invalidRoutes[pattern] ??= [];
+				invalidRoutes[pattern].push(
+					`Workers which have static assets cannot be routed on a URL which has a path component. Update the route to replace /${components.slice(1).join("/")} with /*`
+				);
+			}
+		}
+	}
+	if (Object.keys(invalidRoutes).length > 0) {
+		throw new UserError(
+			`Invalid Routes:\n` +
+				Object.entries(invalidRoutes)
+					.map(([route, errors]) => `${route}:\n` + errors.join("\n"))
+					.join(`\n\n`)
+		);
+	}
+};
 
 export function renderRoute(route: Route): string {
 	let result = "";
@@ -325,7 +374,7 @@ export default async function deploy(props: Props): Promise<{
 
 	let workerExists: boolean = true;
 
-	if (!props.dispatchNamespace && accountId && name) {
+	if (!props.dispatchNamespace && accountId) {
 		try {
 			const serviceMetaData = await fetchResult<{
 				default_environment: {
@@ -383,20 +432,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 	const routes =
 		props.routes ?? config.routes ?? (config.route ? [config.route] : []) ?? [];
-	for (const route of routes) {
-		if (typeof route !== "string" && route.custom_domain) {
-			if (route.pattern.includes("*")) {
-				throw new UserError(
-					`Cannot use "${route.pattern}" as a Custom Domain; wildcard operators (*) are not allowed`
-				);
-			}
-			if (route.pattern.includes("/")) {
-				throw new UserError(
-					`Cannot use "${route.pattern}" as a Custom Domain; paths are not allowed`
-				);
-			}
-		}
-	}
+	validateRoutes(routes, Boolean(props.assetsOptions));
 
 	const jsxFactory = props.jsxFactory || config.jsx_factory;
 	const jsxFragment = props.jsxFragment || config.jsx_fragment;
@@ -419,10 +455,6 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 	}
 
 	const scriptName = props.name;
-	assert(
-		scriptName,
-		'You need to provide a name when publishing a worker. Either pass it as a cli arg with `--name <name>` or in your config file as `name = "<name>"`'
-	);
 
 	assert(
 		!config.site || config.site.bucket,
@@ -596,17 +628,10 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 				})
 			: undefined;
 
-		// Upload assets if experimental assets is being used
-		const experimentalAssetsOptions =
-			props.experimentalAssetsOptions && !props.dryRun
-				? {
-						routingConfig: props.experimentalAssetsOptions?.routingConfig,
-						jwt: await syncExperimentalAssets(
-							accountId,
-							scriptName,
-							props.experimentalAssetsOptions.directory
-						),
-					}
+		// Upload assets if assets is being used
+		const assetsJwt =
+			props.assetsOptions && !props.dryRun
+				? await syncAssets(accountId, scriptName, props.assetsOptions.directory)
 				: undefined;
 
 		const legacyAssets = await syncLegacyAssets(
@@ -655,9 +680,10 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			analytics_engine_datasets: config.analytics_engine_datasets,
 			dispatch_namespaces: config.dispatch_namespaces,
 			mtls_certificates: config.mtls_certificates,
+			pipelines: config.pipelines,
 			logfwdr: config.logfwdr,
-			experimental_assets: config.experimental_assets?.binding
-				? { binding: config.experimental_assets.binding }
+			assets: config.assets?.binding
+				? { binding: config.assets.binding }
 				: undefined,
 			unsafe: {
 				bindings: config.unsafe.bindings,
@@ -677,7 +703,9 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 		// The upload API only accepts an empty string or no specified placement for the "off" mode.
 		const placement: CfPlacement | undefined =
-			config.placement?.mode === "smart" ? { mode: "smart" } : undefined;
+			config.placement?.mode === "smart"
+				? { mode: "smart", hint: config.placement.hint }
+				: undefined;
 
 		const entryPointName = path.basename(resolvedEntryPointPath);
 		const main: CfModule = {
@@ -703,7 +731,15 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			placement,
 			tail_consumers: config.tail_consumers,
 			limits: config.limits,
-			experimental_assets: experimentalAssetsOptions,
+			assets:
+				props.assetsOptions && assetsJwt
+					? {
+							jwt: assetsJwt,
+							routingConfig: props.assetsOptions.routingConfig,
+							assetConfig: props.assetsOptions.assetConfig,
+						}
+					: undefined,
+			observability: config.observability,
 		};
 
 		sourceMapSize = worker.sourceMaps?.reduce(
@@ -788,10 +824,14 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 					versionMap.set(versionResult.id, 100);
 					await createDeployment(accountId, scriptName, versionMap, undefined);
 
-					// Update tail consumers and logpush settings
+					// Update tail consumers, logpush, and observability settings
 					await patchNonVersionedScriptSettings(accountId, scriptName, {
 						tail_consumers: worker.tail_consumers,
 						logpush: worker.logpush,
+						// If the user hasn't specified observability assume that they want it disabled if they have it on.
+						// This is a no-op in the event that they don't have observability enabled, but will remove observability
+						// if it has been removed from their wrangler.toml
+						observability: worker.observability ?? { enabled: false },
 					});
 
 					const { available_on_subdomain } = await fetchResult<{
@@ -836,6 +876,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 					logger.log("Worker Startup Time:", result.startup_time_ms, "ms");
 				}
 				bindingsPrinted = true;
+
 				printBindings({ ...withoutStaticAssets, vars: maskedVars });
 
 				versionId = parseNonHyphenedUuid(result.deployment_id);

@@ -336,6 +336,12 @@ class Worker_Module extends capnp_ts_1.Struct {
         capnp_ts_1.Struct.setUint16(0, 8, this);
         capnp_ts_1.Struct.setText(1, value, this);
     }
+    adoptNamedExports(value) { capnp_ts_1.Struct.adopt(value, capnp_ts_1.Struct.getPointer(2, this)); }
+    disownNamedExports() { return capnp_ts_1.Struct.disown(this.getNamedExports()); }
+    getNamedExports() { return capnp_ts_1.Struct.getList(2, capnp.TextList, this); }
+    hasNamedExports() { return !capnp_ts_1.Struct.isNull(capnp_ts_1.Struct.getPointer(2, this)); }
+    initNamedExports(length) { return capnp_ts_1.Struct.initList(2, capnp.TextList, length, this); }
+    setNamedExports(value) { capnp_ts_1.Struct.copyFrom(value, capnp_ts_1.Struct.getPointer(2, this)); }
     toString() { return "Worker_Module_" + super.toString(); }
     which() { return capnp_ts_1.Struct.getUint16(0, this); }
 }
@@ -349,7 +355,7 @@ Worker_Module.JSON = Worker_Module_Which.JSON;
 Worker_Module.NODE_JS_COMPAT_MODULE = Worker_Module_Which.NODE_JS_COMPAT_MODULE;
 Worker_Module.PYTHON_MODULE = Worker_Module_Which.PYTHON_MODULE;
 Worker_Module.PYTHON_REQUIREMENT = Worker_Module_Which.PYTHON_REQUIREMENT;
-Worker_Module._capnp = { displayName: "Module", id: "d9d87a63770a12f3", size: new capnp_ts_1.ObjectSize(8, 2) };
+Worker_Module._capnp = { displayName: "Module", id: "d9d87a63770a12f3", size: new capnp_ts_1.ObjectSize(8, 3) };
 var Worker_Binding_Type_Which;
 (function (Worker_Binding_Type_Which) {
     Worker_Binding_Type_Which[Worker_Binding_Type_Which["UNSPECIFIED"] = 0] = "UNSPECIFIED";
@@ -995,6 +1001,8 @@ class Worker_DurableObjectNamespace extends capnp_ts_1.Struct {
     setEphemeralLocal() { capnp_ts_1.Struct.setUint16(0, 1, this); }
     getPreventEviction() { return capnp_ts_1.Struct.getBit(16, this); }
     setPreventEviction(value) { capnp_ts_1.Struct.setBit(16, value, this); }
+    getEnableSql() { return capnp_ts_1.Struct.getBit(17, this); }
+    setEnableSql(value) { capnp_ts_1.Struct.setBit(17, value, this); }
     toString() { return "Worker_DurableObjectNamespace_" + super.toString(); }
     which() { return capnp_ts_1.Struct.getUint16(0, this); }
 }

@@ -16,14 +16,17 @@ CHANGELOG.md
 # In the C3 templates, in particular framework templates, we want to be able to
 # use any format that the framework authors prefer/use in their own templates,
 # so let's ignore all the c3 template files, exlcuding the c3.ts ones, and tests
-packages/create-cloudflare/templates/**/*.*
-!packages/create-cloudflare/templates/**/c3.ts
-!packages/create-cloudflare/templates/**/test/**/*.ts
-!packages/create-cloudflare/templates/**/test/**/*.js
+packages/create-cloudflare/templates*/**/*.*
+!packages/create-cloudflare/templates*/**/c3.ts
+!packages/create-cloudflare/templates*/**/test/**/*.ts
+!packages/create-cloudflare/templates*/**/test/**/*.js
 # Format the hello-world template (negate previous exclusion above) for best practices, since we control these
 # but still exclude the worker-configuration.d.ts file, since it's generated
-!packages/create-cloudflare/templates/hello-world/**/*.*
-packages/create-cloudflare/templates/hello-world/**/worker-configuration.d.ts
+!packages/create-cloudflare/templates*/hello-world/**/*.*
+packages/create-cloudflare/templates*/hello-world/**/worker-configuration.d.ts
+
+# dist-functions are generated in the fixtures/vitest-pool-workers-examples/pages-functions-unit-integration-self folder
+dist-functions
 
 vscode.d.ts
 vscode.*.d.ts
@@ -31,3 +34,5 @@ vscode.*.d.ts
 .e2e-logs
 templates/*/build
 templates/*/dist
+
+.github/pull_request_template.md

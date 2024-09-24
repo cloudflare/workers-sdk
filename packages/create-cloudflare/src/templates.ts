@@ -2,12 +2,12 @@ import { existsSync } from "fs";
 import { cp, mkdtemp, rename } from "fs/promises";
 import { tmpdir } from "os";
 import { basename, dirname, join, resolve } from "path";
-import { crash, shapes, updateStatus, warn } from "@cloudflare/cli";
-import { processArgument } from "@cloudflare/cli/args";
+import { shapes, updateStatus, warn } from "@cloudflare/cli";
 import { blue, brandColor, dim } from "@cloudflare/cli/colors";
 import { spinner } from "@cloudflare/cli/interactive";
 import deepmerge from "deepmerge";
 import degit from "degit";
+import { processArgument } from "helpers/args";
 import { C3_DEFAULTS } from "helpers/cli";
 import {
 	appendFile,
@@ -18,6 +18,39 @@ import {
 	writeFile,
 	writeJSON,
 } from "helpers/files";
+import angularTemplateExperimental from "templates-experimental/angular/c3";
+import astroTemplateExperimental from "templates-experimental/astro/c3";
+import docusaurusTemplateExperimental from "templates-experimental/docusaurus/c3";
+import gatsbyTemplateExperimental from "templates-experimental/gatsby/c3";
+import assetsOnlyTemplateExperimental from "templates-experimental/hello-world-assets-only/c3";
+import helloWorldWithDurableObjectAssetsTemplateExperimental from "templates-experimental/hello-world-durable-object-with-assets/c3";
+import helloWorldWithAssetsTemplateExperimental from "templates-experimental/hello-world-with-assets/c3";
+import nuxtTemplateExperimental from "templates-experimental/nuxt/c3";
+import qwikTemplateExperimental from "templates-experimental/qwik/c3";
+import remixTemplateExperimental from "templates-experimental/remix/c3";
+import solidTemplateExperimental from "templates-experimental/solid/c3";
+import svelteTemplateExperimental from "templates-experimental/svelte/c3";
+import analogTemplate from "templates/analog/c3";
+import angularTemplate from "templates/angular/c3";
+import astroTemplate from "templates/astro/c3";
+import commonTemplate from "templates/common/c3";
+import docusaurusTemplate from "templates/docusaurus/c3";
+import gatsbyTemplate from "templates/gatsby/c3";
+import helloWorldDurableObjectTemplate from "templates/hello-world-durable-object/c3";
+import helloWorldTemplate from "templates/hello-world/c3";
+import honoTemplate from "templates/hono/c3";
+import nextTemplate from "templates/next/c3";
+import nuxtTemplate from "templates/nuxt/c3";
+import openapiTemplate from "templates/openapi/c3";
+import preExistingTemplate from "templates/pre-existing/c3";
+import queuesTemplate from "templates/queues/c3";
+import qwikTemplate from "templates/qwik/c3";
+import reactTemplate from "templates/react/c3";
+import remixTemplate from "templates/remix/c3";
+import scheduledTemplate from "templates/scheduled/c3";
+import solidTemplate from "templates/solid/c3";
+import svelteTemplate from "templates/svelte/c3";
+import vueTemplate from "templates/vue/c3";
 import { isInsideGitRepo } from "./git";
 import { validateProjectDirectory, validateTemplateUrl } from "./validators";
 import type { Option } from "@cloudflare/cli/interactive";
@@ -37,6 +70,8 @@ export type TemplateConfig = {
 	description?: string;
 	/** The deployment platform for this template */
 	platform: "workers" | "pages";
+	/** The name of the framework cli tool that is used to generate this project or undefined if none. */
+	frameworkCli?: string;
 	/** When set to true, hides this template from the selection menu */
 	hidden?: boolean;
 	/** Specifies a set of files that will be copied to the project directory during creation.
@@ -121,39 +156,67 @@ const defaultSelectVariant = async (ctx: C3Context) => {
 	return ctx.args.lang;
 };
 
-export type FrameworkMap = Awaited<ReturnType<typeof getFrameworkMap>>;
-export type FrameworkName = keyof FrameworkMap;
+export type TemplateMap = Record<string, TemplateConfig>;
 
-export const getFrameworkMap = async () => ({
-	analog: (await import("../templates/analog/c3")).default,
-	angular: (await import("../templates/angular/c3")).default,
-	astro: (await import("../templates/astro/c3")).default,
-	docusaurus: (await import("../templates/docusaurus/c3")).default,
-	gatsby: (await import("../templates/gatsby/c3")).default,
-	hono: (await import("../templates/hono/c3")).default,
-	next: (await import("../templates/next/c3")).default,
-	nuxt: (await import("../templates/nuxt/c3")).default,
-	qwik: (await import("../templates/qwik/c3")).default,
-	react: (await import("../templates/react/c3")).default,
-	remix: (await import("../templates/remix/c3")).default,
-	solid: (await import("../templates/solid/c3")).default,
-	svelte: (await import("../templates/svelte/c3")).default,
-	vue: (await import("../templates/vue/c3")).default,
-});
+export function getFrameworkMap({ experimental = false }): TemplateMap {
+	if (experimental) {
+		return {
+			angular: angularTemplateExperimental,
+			astro: astroTemplateExperimental,
+			docusaurus: docusaurusTemplateExperimental,
+			gatsby: gatsbyTemplateExperimental,
+			nuxt: nuxtTemplateExperimental,
+			qwik: qwikTemplateExperimental,
+			remix: remixTemplateExperimental,
+			solid: solidTemplateExperimental,
+			svelte: svelteTemplateExperimental,
+		};
+	} else {
+		return {
+			analog: analogTemplate,
+			angular: angularTemplate,
+			astro: astroTemplate,
+			docusaurus: docusaurusTemplate,
+			gatsby: gatsbyTemplate,
+			hono: honoTemplate,
+			next: nextTemplate,
+			nuxt: nuxtTemplate,
+			qwik: qwikTemplate,
+			react: reactTemplate,
+			remix: remixTemplate,
+			solid: solidTemplate,
+			svelte: svelteTemplate,
+			vue: vueTemplate,
+		};
+	}
+}
 
-export const getTemplateMap = async () => {
-	return {
-		"hello-world": (await import("../templates/hello-world/c3")).default,
-		common: (await import("../templates/common/c3")).default,
-		scheduled: (await import("../templates/scheduled/c3")).default,
-		queues: (await import("../templates/queues/c3")).default,
-		"hello-world-durable-object": (
-			await import("../templates/hello-world-durable-object/c3")
-		).default,
-		openapi: (await import("../templates/openapi/c3")).default,
-		"pre-existing": (await import("../templates/pre-existing/c3")).default,
-	} as Record<string, TemplateConfig>;
-};
+export function getTemplateMap({ experimental = false }) {
+	if (experimental) {
+		return {
+			"hello-world-assets-only": assetsOnlyTemplateExperimental,
+			"hello-world-with-assets": helloWorldWithAssetsTemplateExperimental,
+			"hello-world-durable-object-with-assets":
+				helloWorldWithDurableObjectAssetsTemplateExperimental,
+		} as Record<string, TemplateConfig>;
+	} else {
+		return {
+			"hello-world": helloWorldTemplate,
+			common: commonTemplate,
+			scheduled: scheduledTemplate,
+			queues: queuesTemplate,
+			"hello-world-durable-object": helloWorldDurableObjectTemplate,
+			openapi: openapiTemplate,
+			"pre-existing": preExistingTemplate,
+		} as Record<string, TemplateConfig>;
+	}
+}
+
+export function getNamesAndDescriptions(templateMap: TemplateMap) {
+	return Array.from(Object.entries(templateMap)).map(
+		([name, { description }]) => ({ name, description }),
+	);
+}
 
 export const deriveCorrelatedArgs = (args: Partial<C3Args>) => {
 	// Derive the type based on the additional arguments provided
@@ -206,7 +269,7 @@ export const deriveCorrelatedArgs = (args: Partial<C3Args>) => {
 		const language = args.ts ? "ts" : "js";
 
 		if (args.lang !== undefined) {
-			crash(
+			throw new Error(
 				"The `--ts` argument cannot be specified in conjunction with the `--lang` argument",
 			);
 		}
@@ -224,28 +287,32 @@ export const createContext = async (
 	args: Partial<C3Args>,
 	prevArgs?: Partial<C3Args>,
 ): Promise<C3Context> => {
+	// Derive all correlated arguments first so we can skip some prompts
+	deriveCorrelatedArgs(args);
+
 	// Allows the users to go back to the previous step
 	// By moving the cursor up to a certain line and clearing the screen
 	const goBack = async (from: "type" | "framework" | "lang") => {
-		const newArgs = { ...args };
+		const currentArgs = { ...args };
 		let linesPrinted = 0;
 
 		switch (from) {
 			case "type":
 				linesPrinted = 9;
-				newArgs.category = undefined;
+				args.category = undefined;
 				break;
 			case "framework":
 				linesPrinted = 9;
-				newArgs.category = undefined;
+				args.category = undefined;
 				break;
 			case "lang":
 				linesPrinted = 12;
-				newArgs.type = undefined;
+				args.type = undefined;
 				break;
 		}
 
-		newArgs[from] = undefined;
+		// To remove the BACK_VALUE from the result args
+		currentArgs[from] = undefined;
 		args[from] = undefined;
 
 		if (process.stdout.isTTY) {
@@ -253,7 +320,7 @@ export const createContext = async (
 			process.stdout.clearScreenDown();
 		}
 
-		return await createContext(newArgs, args);
+		return await createContext(args, currentArgs);
 	};
 
 	// The option to go back to the previous step
@@ -266,7 +333,7 @@ export const createContext = async (
 	};
 
 	const defaultName = args.existingScript || C3_DEFAULTS.projectName;
-	const projectName = await processArgument<string>(args, "projectName", {
+	const projectName = await processArgument(args, "projectName", {
 		type: "text",
 		question: `In which directory do you want to create your application?`,
 		helpText: "also used as application name",
@@ -303,7 +370,7 @@ export const createContext = async (
 		{ label: "Others", value: "others", hidden: true },
 	];
 
-	const category = await processArgument<string>(args, "category", {
+	const category = await processArgument(args, "category", {
 		type: "select",
 		question: "What would you like to start with?",
 		label: "category",
@@ -314,7 +381,9 @@ export const createContext = async (
 	let template: TemplateConfig;
 
 	if (category === "web-framework") {
-		const frameworkMap = await getFrameworkMap();
+		const frameworkMap = getFrameworkMap({
+			experimental: args.experimental,
+		});
 		const frameworkOptions = Object.entries(frameworkMap).map(
 			([key, config]) => ({
 				label: config.displayName,
@@ -322,17 +391,13 @@ export const createContext = async (
 			}),
 		);
 
-		const framework = await processArgument<FrameworkName | typeof BACK_VALUE>(
-			args,
-			"framework",
-			{
-				type: "select",
-				label: "framework",
-				question: "Which development framework do you want to use?",
-				options: frameworkOptions.concat(backOption),
-				defaultValue: prevArgs?.framework ?? C3_DEFAULTS.framework,
-			},
-		);
+		const framework = await processArgument(args, "framework", {
+			type: "select",
+			label: "framework",
+			question: "Which development framework do you want to use?",
+			options: frameworkOptions.concat(backOption),
+			defaultValue: prevArgs?.framework ?? C3_DEFAULTS.framework,
+		});
 
 		if (framework === BACK_VALUE) {
 			return goBack("framework");
@@ -341,7 +406,7 @@ export const createContext = async (
 		const frameworkConfig = frameworkMap[framework];
 
 		if (!frameworkConfig) {
-			crash(`Unsupported framework: ${framework}`);
+			throw new Error(`Unsupported framework: ${framework}`);
 		}
 
 		template = {
@@ -352,7 +417,9 @@ export const createContext = async (
 	} else if (category === "remote-template") {
 		template = await processRemoteTemplate(args);
 	} else {
-		const templateMap = await getTemplateMap();
+		const templateMap = await getTemplateMap({
+			experimental: args.experimental,
+		});
 		const templateOptions: Option[] = Object.entries(templateMap).map(
 			([value, { displayName, description, hidden }]) => {
 				const isHelloWorldExample = value.startsWith("hello-world");
@@ -370,7 +437,7 @@ export const createContext = async (
 			},
 		);
 
-		const type = await processArgument<string>(args, "type", {
+		const type = await processArgument(args, "type", {
 			type: "select",
 			question: "Which template would you like to use?",
 			label: "type",
@@ -385,7 +452,7 @@ export const createContext = async (
 		template = templateMap[type];
 
 		if (!template) {
-			return crash(`Unknown application type provided: ${type}.`);
+			throw new Error(`Unknown application type provided: ${type}.`);
 		}
 	}
 
@@ -415,7 +482,7 @@ export const createContext = async (
 				{ label: "Python (beta)", value: "python" },
 			];
 
-			const lang = await processArgument<string>(args, "lang", {
+			const lang = await processArgument(args, "lang", {
 				type: "select",
 				question: "Which language do you want to use?",
 				label: "lang",
@@ -438,10 +505,9 @@ export const createContext = async (
 
 	return {
 		project: { name, path },
-		args: {
-			...args,
-			projectName,
-		},
+		// We need to maintain a reference to the original args
+		// To ensure that we send the latest args to Sparrow
+		args: Object.assign(args, { projectName }),
 		template,
 		originalCWD,
 		gitRepoAlreadyExisted: await isInsideGitRepo(directory),
@@ -469,7 +535,9 @@ export async function copyTemplateFiles(ctx: C3Context) {
 		const variantInfo = variant ? copyFiles.variants[variant] : null;
 
 		if (!variantInfo) {
-			crash(`Unknown variant provided: ${JSON.stringify(variant ?? "")}`);
+			throw new Error(
+				`Unknown variant provided: ${JSON.stringify(variant ?? "")}`,
+			);
 		}
 
 		srcdir = join(getTemplatePath(ctx), variantInfo.path);
@@ -494,7 +562,7 @@ export async function copyTemplateFiles(ctx: C3Context) {
 }
 
 export const processRemoteTemplate = async (args: Partial<C3Args>) => {
-	const templateUrl = await processArgument<string>(args, "template", {
+	const templateUrl = await processArgument(args, "template", {
 		type: "text",
 		question:
 			"What's the url of git repo containing the template you'd like to use?",
@@ -545,13 +613,17 @@ const validateTemplateSrcDirectory = (path: string, config: TemplateConfig) => {
 	if (config.platform === "workers") {
 		const wranglerTomlPath = resolve(path, "wrangler.toml");
 		if (!existsSync(wranglerTomlPath)) {
-			crash(`create-cloudflare templates must contain a "wrangler.toml" file.`);
+			throw new Error(
+				`create-cloudflare templates must contain a "wrangler.toml" file.`,
+			);
 		}
 	}
 
 	const pkgJsonPath = resolve(path, "package.json");
 	if (!existsSync(pkgJsonPath)) {
-		crash(`create-cloudflare templates must contain a "package.json" file.`);
+		throw new Error(
+			`create-cloudflare templates must contain a "package.json" file.`,
+		);
 	}
 };
 
@@ -611,7 +683,7 @@ export const downloadRemoteTemplate = async (src: string) => {
 		return tmpDir;
 	} catch (error) {
 		updateStatus(`${brandColor("template")} ${dim("failed")}`);
-		return crash(`Failed to clone remote template: ${src}`);
+		throw new Error(`Failed to clone remote template: ${src}`);
 	}
 };
 
@@ -655,7 +727,7 @@ export const updatePackageScripts = async (ctx: C3Context) => {
 
 export const getTemplatePath = (ctx: C3Context) => {
 	if (ctx.template.path) {
-		return ctx.template.path;
+		return resolve(__dirname, "..", ctx.template.path);
 	}
 
 	return resolve(__dirname, "..", "templates", ctx.template.id);

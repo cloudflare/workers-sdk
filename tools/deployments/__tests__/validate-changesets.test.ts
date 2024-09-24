@@ -95,21 +95,54 @@ describe("validateChangesets()", () => {
 					contents: dedent`
           ---
           "package-a": patch
-          ---`,
+          ---
+
+		  refactor: test`,
 				},
 				{
 					file: "valid-two.md",
 					contents: dedent`
           ---
           "package-b": minor
-          ---`,
+          ---
+
+		  feature: test`,
 				},
 				{
 					file: "valid-three.md",
 					contents: dedent`
           ---
           "package-c": major
-          ---`,
+          ---
+
+		  chore: test`,
+				},
+				{
+					file: "invalid-changetype-one.md",
+					contents: dedent`
+          ---
+          "package-a": patch
+          ---
+
+		  random: test`,
+				},
+				{
+					file: "invalid-changetype-two.md",
+					contents: dedent`
+          ---
+          "package-b": minor
+          ---
+
+		  change: test`,
+				},
+				{
+					file: "valid-three.md",
+					contents: dedent`
+          ---
+          "package-c": major
+          ---
+
+		  fix: test`,
 				},
 				{ file: "invalid-frontmatter.md", contents: "" },
 				{
@@ -117,19 +150,25 @@ describe("validateChangesets()", () => {
 					contents: dedent`
           ---
           "package-invalid": major
-          ---`,
+          ---
+
+		  feat: test`,
 				},
 				{
 					file: "invalid-type.md",
 					contents: dedent`
           ---
           "package-a": foo
-          ---`,
+          ---
+
+		  docs: test`,
 				},
 			]
 		);
 		expect(errors).toMatchInlineSnapshot(`
 			[
+			  "Invalid summary in changeset "invalid-changetype-one.md". It must start with one of "feat:", "fix:", "refactor:", "docs:", or "chore:"",
+			  "Invalid summary in changeset "invalid-changetype-two.md". It must start with one of "feat:", "fix:", "refactor:", "docs:", or "chore:"",
 			  "Error: could not parse changeset - invalid frontmatter: at file "invalid-frontmatter.md"",
 			  "Invalid package name "package-invalid" in changeset at "invalid-package.md".",
 			  "Invalid type "foo" for package "package-a" in changeset at "invalid-type.md".",

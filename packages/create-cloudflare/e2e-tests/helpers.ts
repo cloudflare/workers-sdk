@@ -1,3 +1,4 @@
+import assert from "assert";
 import {
 	createWriteStream,
 	mkdirSync,
@@ -284,6 +285,7 @@ export const waitForExit = async (
 export const createTestLogStream = (ctx: TaskContext) => {
 	// The .ansi extension allows for editor extensions that format ansi terminal codes
 	const fileName = `${normalizeTestName(ctx)}.ansi`;
+	assert(ctx.task.suite, "Suite must be defined");
 	return createWriteStream(path.join(getLogPath(ctx.task.suite), fileName), {
 		flags: "a",
 	});

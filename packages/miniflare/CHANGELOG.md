@@ -1,5 +1,56 @@
 # miniflare
 
+## 3.20240909.5
+
+### Patch Changes
+
+- [#6728](https://github.com/cloudflare/workers-sdk/pull/6728) [`1ca313f`](https://github.com/cloudflare/workers-sdk/commit/1ca313f2041688cd13e25f0817e3b72dfc930bac) Thanks [@emily-shen](https://github.com/emily-shen)! - fix: remove filepath encoding on asset upload and handle sometimes-encoded characters
+
+  Some characters like [ ] @ are encoded by encodeURIComponent() but are often requested at an unencoded URL path.
+  This change will make assets with filenames with these characters accessible at both the encoded and unencoded paths,
+  but to use the encoded path as the canonical one, and to redirect requests to the canonical path if necessary.
+
+## 3.20240909.4
+
+### Patch Changes
+
+- [#6736](https://github.com/cloudflare/workers-sdk/pull/6736) [`2ddbb65`](https://github.com/cloudflare/workers-sdk/commit/2ddbb65033e88dfc2127a093fc894ac91bd96369) Thanks [@emily-shen](https://github.com/emily-shen)! - fix: reflect file changes when using dev with workers + assets
+
+## 3.20240909.3
+
+### Patch Changes
+
+- [#6514](https://github.com/cloudflare/workers-sdk/pull/6514) [`2407c41`](https://github.com/cloudflare/workers-sdk/commit/2407c41484f29845a64ccffd9368bc5d234eb831) Thanks [@CarmenPopoviciu](https://github.com/CarmenPopoviciu)! - fix: Fix Miniflare regression introduced in #5570
+
+  PR #5570 introduced a regression in Miniflare, namely that declaring Queue Producers like `queueProducers: { "MY_QUEUE": "my-queue" }` no longer works. This commit fixes the issue.
+
+  Fixes #5908
+
+## 3.20240909.2
+
+### Patch Changes
+
+- [#6719](https://github.com/cloudflare/workers-sdk/pull/6719) [`5b5dd95`](https://github.com/cloudflare/workers-sdk/commit/5b5dd9573b2c43023cbcba0fbcc3e374465e745e) Thanks [@sdnts](https://github.com/sdnts)! - fix: Respect delivery delays for Queue consumers in local dev mode
+
+## 3.20240909.1
+
+### Minor Changes
+
+- [#6647](https://github.com/cloudflare/workers-sdk/pull/6647) [`d68e8c9`](https://github.com/cloudflare/workers-sdk/commit/d68e8c996ba40eaaf4a3b237f89880bdaafd0113) Thanks [@joshthoward](https://github.com/joshthoward)! - feat: Configure SQLite backed Durable Objects in local dev
+
+## 3.20240909.0
+
+### Patch Changes
+
+- [#6673](https://github.com/cloudflare/workers-sdk/pull/6673) [`3f5b934`](https://github.com/cloudflare/workers-sdk/commit/3f5b9343a46dedcb80c8e216eb3ca9d7f687f6cf) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | workerd                   | 1.20240821.1  | 1.20240909.0  |
+  | @cloudflare/workers-types | ^4.20240821.1 | ^4.20240909.0 |
+
 ## 3.20240821.2
 
 ### Patch Changes

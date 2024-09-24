@@ -2566,6 +2566,46 @@ describe("init", () => {
 						name: "UNSAFE_BINDING_TWO",
 						data: 1337,
 					},
+					{
+						type: "inherit",
+						name: "INHERIT_BINDING",
+					},
+					{
+						type: "pipelines",
+						name: "PIPELINE_BINDING",
+						id: "some-id",
+					},
+					{
+						type: "mtls_certificate",
+						name: "MTLS_BINDING",
+						certificate_id: "some-id",
+					},
+					{
+						type: "hyperdrive",
+						name: "HYPER_BINDING",
+						id: "some-id",
+					},
+					{
+						type: "vectorize",
+						name: "VECTOR_BINDING",
+						index_name: "some-name",
+					},
+					{
+						type: "queue",
+						name: "queue_BINDING",
+						queue_name: "some-name",
+						delivery_delay: 1,
+					},
+					{
+						type: "send_email",
+						name: "EMAIL_BINDING",
+						destination_address: "some@address.com",
+						allowed_destination_addresses: ["some2@address.com"],
+					},
+					{
+						type: "version_metadata",
+						name: "Version_BINDING",
+					},
 				],
 				routes = [
 					{
@@ -2611,6 +2651,7 @@ describe("init", () => {
 								limits,
 								compatibility_date,
 								tail_consumers: [{ service: "listener" }],
+								observability: { enabled: true, head_sampling_rate: 0.5 },
 							},
 						},
 						created_on: "1987-09-27",
@@ -2720,6 +2761,53 @@ describe("init", () => {
 							type: "another unsafe thing",
 							data: 1337,
 						},
+						{
+							name: "INHERIT_BINDING",
+							type: "inherit",
+						},
+					],
+				},
+				vectorize: [
+					{
+						binding: "VECTOR_BINDING",
+						index_name: "some-name",
+					},
+				],
+				send_email: [
+					{
+						allowed_destination_addresses: ["some2@address.com"],
+						destination_address: "some@address.com",
+						name: "EMAIL_BINDING",
+					},
+				],
+				version_metadata: {
+					binding: "Version_BINDING",
+				},
+				hyperdrive: [
+					{
+						binding: "HYPER_BINDING",
+						id: "some-id",
+					},
+				],
+				mtls_certificates: [
+					{
+						binding: "MTLS_BINDING",
+						certificate_id: "some-id",
+					},
+				],
+				pipelines: [
+					{
+						binding: "PIPELINE_BINDING",
+						pipeline: "some-id",
+					},
+				],
+				queues: {
+					producers: [
+						{
+							binding: "queue_BINDING",
+							delivery_delay: 1,
+							queue: "some-name",
+						},
 					],
 				},
 				wasm_modules: {
@@ -2747,6 +2835,7 @@ describe("init", () => {
 					],
 				},
 				tail_consumers: [{ service: "listener" }],
+				observability: { enabled: true, head_sampling_rate: 0.5 },
 			};
 
 			function mockSupportingDashRequests(expectedAccountId: string) {
@@ -3041,24 +3130,28 @@ describe("init", () => {
 				expect(
 					fs.readFileSync("./isolinear-optical-chip/wrangler.toml", "utf8")
 				).toMatchInlineSnapshot(`
-			"name = \\"isolinear-optical-chip\\"
-			main = \\"src/index.js\\"
-			compatibility_date = \\"1987-09-27\\"
-			workers_dev = false
+					"name = \\"isolinear-optical-chip\\"
+					main = \\"src/index.js\\"
+					compatibility_date = \\"1987-09-27\\"
+					workers_dev = false
 
-			[[routes]]
-			pattern = \\"delta.quadrant\\"
-			zone_name = \\"delta.quadrant\\"
+					[[routes]]
+					pattern = \\"delta.quadrant\\"
+					zone_name = \\"delta.quadrant\\"
 
-			[[routes]]
-			pattern = \\"random.host.name\\"
-			zone_name = \\"some-zone-name\\"
-			custom_domain = true
+					[[routes]]
+					pattern = \\"random.host.name\\"
+					zone_name = \\"some-zone-name\\"
+					custom_domain = true
 
-			[[tail_consumers]]
-			service = \\"listener\\"
-			"
-		`);
+					[[tail_consumers]]
+					service = \\"listener\\"
+
+					[observability]
+					enabled = true
+					head_sampling_rate = 0.5
+					"
+				`);
 			});
 
 			it("should download source script from dashboard w/ positional <name> in TypeScript project", async () => {
@@ -3176,6 +3269,10 @@ describe("init", () => {
 					[[tail_consumers]]
 					service = \\"listener\\"
 
+					[observability]
+					enabled = true
+					head_sampling_rate = 0.5
+
 					[vars]
 					ANOTHER-NAME = \\"thing-TEXT\\"
 
@@ -3240,6 +3337,39 @@ describe("init", () => {
 					  type = \\"another unsafe thing\\"
 					  name = \\"UNSAFE_BINDING_TWO\\"
 					  data = 1_337
+
+					  [[unsafe.bindings]]
+					  type = \\"inherit\\"
+					  name = \\"INHERIT_BINDING\\"
+
+					[[pipelines]]
+					binding = \\"PIPELINE_BINDING\\"
+					pipeline = \\"some-id\\"
+
+					[[mtls_certificates]]
+					binding = \\"MTLS_BINDING\\"
+					certificate_id = \\"some-id\\"
+
+					[[hyperdrive]]
+					binding = \\"HYPER_BINDING\\"
+					id = \\"some-id\\"
+
+					[[vectorize]]
+					binding = \\"VECTOR_BINDING\\"
+					index_name = \\"some-name\\"
+
+					[[queues.producers]]
+					binding = \\"queue_BINDING\\"
+					queue = \\"some-name\\"
+					delivery_delay = 1
+
+					[[send_email]]
+					name = \\"EMAIL_BINDING\\"
+					destination_address = \\"some@address.com\\"
+					allowed_destination_addresses = [ \\"some2@address.com\\" ]
+
+					[version_metadata]
+					binding = \\"Version_BINDING\\"
 					"
 				`);
 				expect(std.out).toContain("cd isolinear-optical-chip");
@@ -3456,6 +3586,10 @@ describe("init", () => {
 							workers_dev: true,
 							name: "isolinear-optical-chip",
 							tail_consumers: [{ service: "listener" }],
+							observability: {
+								enabled: true,
+								head_sampling_rate: 0.5,
+							},
 						}),
 					},
 				});

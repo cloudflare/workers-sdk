@@ -5,9 +5,8 @@ import { getLocalPersistencePath } from "../dev/get-local-persistence-path";
 import { buildPersistOptions } from "../dev/miniflare";
 import { UserError } from "../errors";
 import { logger } from "../logger";
-import { getQueue } from "../queues/client";
+import { getQueue, getQueueById } from "../queues/client";
 import type { Config } from "../config";
-import type { getQueueById } from "../queues/client";
 import type { ApiCredentials } from "../user";
 import type { R2Bucket } from "@cloudflare/workers-types/experimental";
 import type { ReplaceWorkersTypes } from "miniflare";
@@ -362,7 +361,9 @@ export const R2EventableOperations = [
 	"PutObject",
 	"DeleteObject",
 	"CompleteMultipartUpload",
+	"AbortMultipartUpload",
 	"CopyObject",
+	"LifecycleDeletion",
 ] as const;
 export type R2EventableOperation = (typeof R2EventableOperations)[number];
 
@@ -371,20 +372,29 @@ export const actionsForEventCategories: Record<
 	R2EventableOperation[]
 > = {
 	"object-create": ["PutObject", "CompleteMultipartUpload", "CopyObject"],
-	"object-delete": ["DeleteObject"],
+	"object-delete": ["DeleteObject", "LifecycleDeletion"],
 };
 export type R2EventType = keyof typeof actionsForEventCategories;
-export const eventCategoryByAction: Record<R2EventableOperation, R2EventType> =
-	{
-		PutObject: "object-create",
-		CompleteMultipartUpload: "object-create",
-		CopyObject: "object-create",
-		DeleteObject: "object-delete",
-	};
 type NotificationRule = {
 	prefix?: string;
 	suffix?: string;
 	actions: R2EventableOperation[];
+};
+type GetNotificationRule = {
+	ruleId: string;
+	createdAt?: string;
+	prefix?: string;
+	suffix?: string;
+	actions: R2EventableOperation[];
+};
+export type GetQueueDetail = {
+	queueId: string;
+	queueName: string;
+	rules: GetNotificationRule[];
+};
+export type GetNotificationConfigResponse = {
+	bucketName: string;
+	queues: GetQueueDetail[];
 };
 export type DetailID = string;
 type QueueID = string;
@@ -393,7 +403,8 @@ export type NotificationDetail = Record<
 	DetailID, // This is the detail ID that identifies this config
 	{ queue: QueueID; rules: NotificationRule[] }
 >;
-export type GetNotificationConfigResponse = Record<
+// Event Notifications API Backwards Compatibility
+export type GetNotificationConfigResponseOld = Record<
 	BucketName,
 	NotificationDetail
 >;
@@ -404,6 +415,11 @@ export type PutNotificationRequestBody = {
 	// with jurisdictions.
 	jurisdiction?: string;
 	rules: NotificationRule[];
+};
+
+// This type captures the shape of the data expected by EWC API.
+export type DeleteNotificationRequestBody = {
+	ruleIds?: string[];
 };
 
 export function eventNotificationHeaders(
@@ -422,14 +438,9 @@ export function eventNotificationHeaders(
 	return headers;
 }
 
-// Reformat the per-bucket get-notification response into a format
-// suitable for `logger.table()`
 export async function tableFromNotificationGetResponse(
 	config: Pick<Config, "account_id">,
-	response: GetNotificationConfigResponse[BucketName],
-	// We're injecting this parameter because it makes testing easier,
-	// relative to mocking.
-	queueIdentifier: typeof getQueueById
+	response: GetNotificationConfigResponse
 ): Promise<
 	{
 		queue_name: string;
@@ -438,23 +449,22 @@ export async function tableFromNotificationGetResponse(
 		event_type: string;
 	}[]
 > {
-	const reducer = async ([_, { queue, rules }]: [
-		DetailID,
-		NotificationDetail[DetailID],
-	]) => {
-		const queueResp = await queueIdentifier(config, queue);
+	const reducer = async (entry: GetQueueDetail) => {
 		const rows = [];
-		for (const { prefix = "", suffix = "", actions } of rules) {
+		for (const {
+			prefix = "",
+			suffix = "",
+			actions,
+			ruleId,
+			createdAt = "",
+		} of entry.rules) {
 			rows.push({
-				queue_name: queueResp.queue_name,
-				prefix,
-				suffix,
-				event_type: Array.from(
-					actions.reduce((acc, action) => {
-						acc.add(eventCategoryByAction[action]);
-						return acc;
-					}, new Set<R2EventType>())
-				).join(","),
+				rule_id: ruleId,
+				created_at: createdAt,
+				queue_name: entry.queueName,
+				prefix: prefix || "(all prefixes)",
+				suffix: suffix || "(all suffixes)",
+				event_type: actions.join(","),
 			});
 		}
 		return rows;
@@ -466,30 +476,59 @@ export async function tableFromNotificationGetResponse(
 		suffix: string;
 		event_type: string;
 	}[] = [];
-	for (const entry of Object.entries(response)) {
+	for (const entry of response.queues) {
 		const result = await reducer(entry);
 		tableOutput = tableOutput.concat(...result);
 	}
 	return tableOutput;
 }
 
-export async function getEventNotificationConfig(
+export async function listEventNotificationConfig(
 	apiCredentials: ApiCredentials,
 	accountId: string,
 	bucketName: string
 ): Promise<GetNotificationConfigResponse> {
 	const headers = eventNotificationHeaders(apiCredentials);
-	logger.log(`Fetching notification configuration for bucket ${bucketName}...`);
-	return await fetchResult<GetNotificationConfigResponse>(
+	logger.log(`Fetching notification rules for bucket ${bucketName}...`);
+	const res = await fetchResult<GetNotificationConfigResponse>(
 		`/accounts/${accountId}/event_notifications/r2/${bucketName}/configuration`,
 		{ method: "GET", headers }
 	);
+	if ("bucketName" in res && "queues" in res) {
+		return res;
+	}
+	// API response doesn't match new format. Trying the old format.
+	// Convert the old style payload to the new
+	// We can assume that the old payload has a single bucket entry
+	const oldResult = res as GetNotificationConfigResponseOld;
+	const [oldBucketName, oldDetail] = Object.entries(oldResult)[0];
+	const newResult: GetNotificationConfigResponse = {
+		bucketName: oldBucketName,
+		queues: await Promise.all(
+			Object.values(oldDetail).map(async (oldQueue) => {
+				const newQueue: GetQueueDetail = {
+					queueId: oldQueue.queue,
+					queueName: (await getQueueById(accountId, oldQueue.queue)).queue_name,
+					rules: oldQueue.rules.map((oldRule) => {
+						const newRule: GetNotificationRule = {
+							ruleId: "",
+							prefix: oldRule.prefix,
+							suffix: oldRule.suffix,
+							actions: oldRule.actions,
+						};
+						return newRule;
+					}),
+				};
+				return newQueue;
+			})
+		),
+	};
+	return newResult;
 }
 
 /** Construct & transmit notification configuration to EWC.
  *
- * On success, receive HTTP 200 response with a body like:
- * { event_notification_detail_id: string }
+ * On success, receive HTTP 200 response with no body
  *
  * Possible status codes on failure:
  * - 400 Bad Request - Either:
@@ -506,7 +545,7 @@ export async function putEventNotificationConfig(
 	eventTypes: R2EventType[],
 	prefix?: string,
 	suffix?: string
-): Promise<{ event_notification_detail_id: string }> {
+): Promise<void> {
 	const queue = await getQueue(config, queueName);
 	const headers = eventNotificationHeaders(apiCredentials);
 	let actions: R2EventableOperation[] = [];
@@ -526,7 +565,7 @@ export async function putEventNotificationConfig(
 			" and "
 		)} (${actions.join(",")})`
 	);
-	return await fetchResult<{ event_notification_detail_id: string }>(
+	return await fetchResult<void>(
 		`/accounts/${accountId}/event_notifications/r2/${bucketName}/configuration/queues/${queue.queue_id}`,
 		{ method: "PUT", body: JSON.stringify(body), headers }
 	);
@@ -537,17 +576,33 @@ export async function deleteEventNotificationConfig(
 	apiCredentials: ApiCredentials,
 	accountId: string,
 	bucketName: string,
-	queueName: string
+	queueName: string,
+	ruleId: string | undefined
 ): Promise<null> {
 	const queue = await getQueue(config, queueName);
 	const headers = eventNotificationHeaders(apiCredentials);
-	logger.log(
-		`Disabling event notifications for "${bucketName}" to queue ${queueName}...`
-	);
-	return await fetchResult<null>(
-		`/accounts/${accountId}/event_notifications/r2/${bucketName}/configuration/queues/${queue.queue_id}`,
-		{ method: "DELETE", headers }
-	);
+	if (ruleId !== undefined) {
+		logger.log(`Deleting event notifications rule "${ruleId}"...`);
+		const body: DeleteNotificationRequestBody =
+			ruleId !== undefined
+				? {
+						ruleIds: [ruleId],
+					}
+				: {};
+
+		return await fetchResult<null>(
+			`/accounts/${accountId}/event_notifications/r2/${bucketName}/configuration/queues/${queue.queue_id}`,
+			{ method: "DELETE", body: JSON.stringify(body), headers }
+		);
+	} else {
+		logger.log(
+			`Deleting event notification rules associated with queue ${queueName}...`
+		);
+		return await fetchResult<null>(
+			`/accounts/${accountId}/event_notifications/r2/${bucketName}/configuration/queues/${queue.queue_id}`,
+			{ method: "DELETE", headers }
+		);
+	}
 }
 
 /**

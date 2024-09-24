@@ -18,10 +18,13 @@
 	"devDependencies": {
 		"@cloudflare/eslint-config-worker": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
-		"@cloudflare/workers-types": "^4.20240821.1",
+		"@cloudflare/workers-types": "^4.20240909.0",
 		"wrangler": "workspace:*"
 	},
 	"volta": {
 		"extends": "../../package.json"
+	},
+	"workers-sdk": {
+		"deploy": true
 	}
 }

@@ -40,12 +40,11 @@ describe("[Workers + Assets] dynamic site", () => {
 		);
 	});
 
-	it("should not `/` resolve to `/index.html` ", async ({ expect }) => {
+	// html_handling defaults to 'auto-trailing-slash'
+	it("should `/` resolve to `/index.html` ", async ({ expect }) => {
 		const response = await fetch(`http://${ip}:${port}/`);
 		const text = await response.text();
-		expect(text).toContain(
-			"There were no assets at this route! Hello from the user Worker instead!"
-		);
+		expect(text).toContain("<h1>Hello Workers + Assets World 🚀!</h1>");
 	});
 
 	it("should handle content types correctly on asset routes", async ({
@@ -79,7 +78,7 @@ describe("[Workers + Assets] dynamic site", () => {
 		expect(response.headers.get("Content-Type")).toBe("image/jpeg");
 	});
 
-	it("should return 405 for non-GET requests on routes where assets exist", async ({
+	it("should return 405 for non-GET or HEAD requests on routes where assets exist", async ({
 		expect,
 	}) => {
 		// these should return the error and NOT be forwarded onto the user Worker
@@ -89,12 +88,6 @@ describe("[Workers + Assets] dynamic site", () => {
 		// excl. TRACE and CONNECT which are not supported
 
 		let response = await fetch(`http://${ip}:${port}/index.html`, {
-			method: "HEAD",
-		});
-		expect(response.status).toBe(405);
-		expect(response.statusText).toBe("Method Not Allowed");
-
-		response = await fetch(`http://${ip}:${port}/index.html`, {
 			method: "POST",
 		});
 		expect(response.status).toBe(405);
@@ -126,12 +119,29 @@ describe("[Workers + Assets] dynamic site", () => {
 	});
 
 	it("should work with encoded path names", async ({ expect }) => {
-		let response = await fetch(
-			`http://${ip}:${port}/about/%5Bf%C3%BCnky%5D.txt`
-		);
+		let response = await fetch(`http://${ip}:${port}/about/[fünky].txt`);
 		let text = await response.text();
 		expect(response.status).toBe(200);
+		expect(response.url).toBe(
+			`http://${ip}:${port}/about/%5Bf%C3%BCnky%5D.txt`
+		);
 		expect(text).toContain(`This should work.`);
+
+		response = await fetch(`http://${ip}:${port}/about/[boop]`);
+		text = await response.text();
+		expect(response.status).toBe(200);
+		expect(response.url).toBe(`http://${ip}:${port}/about/%5Bboop%5D`);
+		expect(text).toContain(`[boop].html`);
+
+		response = await fetch(`http://${ip}:${port}/about/%5Bboop%5D`);
+		text = await response.text();
+		expect(response.status).toBe(200);
+		expect(text).toContain(`[boop].html`);
+
+		response = await fetch(`http://${ip}:${port}/about/%255Bboop%255D`);
+		text = await response.text();
+		expect(response.status).toBe(200);
+		expect(text).toContain(`%5Bboop%5D.html`);
 	});
 
 	it("should forward all request types to the user Worker if there are *not* assets on that route", async ({

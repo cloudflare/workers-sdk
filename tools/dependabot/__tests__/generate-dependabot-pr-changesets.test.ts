@@ -159,10 +159,10 @@ describe("writeChangeSet()", () => {
 	`;
 		writeChangeSet("some-prefix", "1234", header, body);
 		expect(writeFileSync).toHaveBeenCalledOnce();
-		expect((writeFileSync as Mock).mock.lastCall[0]).toMatchInlineSnapshot(
+		expect((writeFileSync as Mock).mock.lastCall?.[0]).toMatchInlineSnapshot(
 			`".changeset/some-prefix-1234.md"`
 		);
-		expect((writeFileSync as Mock).mock.lastCall[1]).toMatchInlineSnapshot(`
+		expect((writeFileSync as Mock).mock.lastCall?.[1]).toMatchInlineSnapshot(`
 			"---
 			"package-name": patch
 			---

@@ -40,6 +40,25 @@ export type CloudchamberConfig = {
 };
 
 /**
+ * Configuration in wrangler for Durable Object Migrations
+ */
+export type DurableObjectMigration = {
+	/** A unique identifier for this migration. */
+	tag: string;
+	/** The new Durable Objects being defined. */
+	new_classes?: string[];
+	/** The new SQLite Durable Objects being defined. */
+	new_sqlite_classes?: string[];
+	/** The Durable Objects being renamed. */
+	renamed_classes?: {
+		from: string;
+		to: string;
+	}[];
+	/** The Durable Objects being removed. */
+	deleted_classes?: string[];
+};
+
+/**
  * The `EnvironmentInheritable` interface declares all the configuration fields for an environment
  * that can be inherited (and overridden) from the top-level environment.
  */
@@ -183,21 +202,7 @@ interface EnvironmentInheritable {
 	 * @default []
 	 * @inheritable
 	 */
-	migrations: {
-		/** A unique identifier for this migration. */
-		tag: string;
-		/** The new Durable Objects being defined. */
-		new_classes?: string[];
-		/** The new SQLite Durable Objects being defined. */
-		new_sqlite_classes?: string[];
-		/** The Durable Objects being renamed. */
-		renamed_classes?: {
-			from: string;
-			to: string;
-		}[];
-		/** The Durable Objects being removed. */
-		deleted_classes?: string[];
-	}[];
+	migrations: DurableObjectMigration[];
 
 	/**
 	 * "Cron" definitions to trigger a Worker's "scheduled" function.
@@ -337,14 +342,23 @@ interface EnvironmentInheritable {
 	 *
 	 * @inheritable
 	 */
-	placement: { mode: "off" | "smart" } | undefined;
+	placement: { mode: "off" | "smart"; hint?: string } | undefined;
 
 	/**
 	 * Specify the directory of static assets to deploy/serve
 	 *
+	 * More details at https://developers.cloudflare.com/workers/frameworks/
+	 *
 	 * @inheritable
 	 */
-	experimental_assets: ExperimentalAssets | undefined;
+	assets: Assets | undefined;
+
+	/**
+	 * Specify the observability behavior of the Worker.
+	 *
+	 * @inheritable
+	 */
+	observability: Observability | undefined;
 }
 
 export type DurableObjectBindings = {
@@ -778,6 +792,23 @@ export interface EnvironmentNonInheritable {
 		/** Details about the outbound Worker which will handle outbound requests from your namespace */
 		outbound?: DispatchNamespaceOutbound;
 	}[];
+
+	/**
+	 * Specifies list of Pipelines bound to this Worker environment
+	 *
+	 * NOTE: This field is not automatically inherited from the top level environment,
+	 * and so must be specified in every named environment.
+	 *
+	 * @default `[]`
+	 * @nonInheritable
+	 */
+	pipelines: {
+		/** The binding name used to refer to the bound service. */
+		binding: string;
+
+		/** Name of the Pipeline to bind */
+		pipeline: string;
+	}[];
 }
 
 /**
@@ -900,8 +931,21 @@ export interface UserLimits {
 	cpu_ms: number;
 }
 
-export type ExperimentalAssets = {
+export type Assets = {
 	/** Absolute path to assets directory */
 	directory: string;
 	binding?: string;
+	html_handling?:
+		| "auto-trailing-slash"
+		| "force-trailing-slash"
+		| "drop-trailing-slash"
+		| "none";
+	not_found_handling?: "single-page-application" | "404-page" | "none";
 };
+
+export interface Observability {
+	/** If observability is enabled for this Worker */
+	enabled: boolean;
+	/** The sampling rate */
+	head_sampling_rate?: number;
+}

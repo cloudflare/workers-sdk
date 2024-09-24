@@ -20,10 +20,12 @@ export function options(yargs: CommonYargsArgv) {
 			"origin-host": {
 				type: "string",
 				describe: "The host of the origin database",
+				implies: ["database", "origin-user", "origin-password"],
 			},
 			"origin-port": {
 				type: "number",
 				describe: "The port number of the origin database",
+				implies: ["origin-host", "database", "origin-user", "origin-password"],
 			},
 			"origin-scheme": {
 				type: "string",
@@ -33,28 +35,43 @@ export function options(yargs: CommonYargsArgv) {
 			database: {
 				type: "string",
 				describe: "The name of the database within the origin database",
+				implies: ["origin-host", "origin-user", "origin-password"],
 			},
 			"origin-user": {
 				type: "string",
 				describe: "The username used to connect to the origin database",
+				implies: ["origin-host", "database", "origin-password"],
 			},
 			"origin-password": {
 				type: "string",
 				describe: "The password used to connect to the origin database",
+				implies: ["origin-host", "database", "origin-user"],
 			},
 			"access-client-id": {
 				type: "string",
 				describe:
 					"The Client ID of the Access token to use when connecting to the origin database",
 				conflicts: ["origin-port"],
-				implies: ["access-client-secret"],
+				implies: [
+					"access-client-secret",
+					"origin-host",
+					"database",
+					"origin-user",
+					"origin-password",
+				],
 			},
 			"access-client-secret": {
 				type: "string",
 				describe:
 					"The Client Secret of the Access token to use when connecting to the origin database",
 				conflicts: ["origin-port"],
-				implies: ["access-client-id"],
+				implies: [
+					"access-client-id",
+					"origin-host",
+					"database",
+					"origin-user",
+					"origin-password",
+				],
 			},
 			"caching-disabled": {
 				type: "boolean",
@@ -74,17 +91,12 @@ export function options(yargs: CommonYargsArgv) {
 		});
 }
 
-const requiredOriginOptions = [
+const coreOriginOptions = [
 	"originHost",
 	"database",
 	"originUser",
 	"originPassword",
 ] as const;
-
-// utility for displaying the yargs options to the user when displaying the "all or nothing" error message
-function camelToKebab(str: string): string {
-	return str.replace(/([a-z0-9])([A-Z])/g, "$1-$2").toLowerCase();
-}
 
 function isOptionSet<T extends object>(args: T, key: keyof T): boolean {
 	return key in args && args[key] !== undefined;
@@ -94,23 +106,12 @@ export async function handler(
 	args: StrictYargsOptionsToInterface<typeof options>
 ) {
 	// check if all or none of the required origin fields are set, since we don't allow partial updates of the origin
-	const allOriginFieldsSet = requiredOriginOptions.every((field) =>
+	const coreOriginFieldsSet = coreOriginOptions.every((field) =>
 		isOptionSet(args, field)
 	);
-	const noOriginFieldSet = requiredOriginOptions.every(
-		(field) => !isOptionSet(args, field)
-	);
-
-	if (!allOriginFieldsSet && !noOriginFieldSet) {
-		throw new UserError(
-			`When updating the origin, all of the following must be set: ${requiredOriginOptions
-				.map((option) => camelToKebab(option))
-				.join(", ")}`
-		);
-	}
 
 	if (
-		allOriginFieldsSet &&
+		coreOriginFieldsSet &&
 		args.originPort === undefined &&
 		args.accessClientId === undefined &&
 		args.accessClientSecret === undefined
@@ -130,7 +131,7 @@ export async function handler(
 		database.name = args.name;
 	}
 
-	if (allOriginFieldsSet) {
+	if (coreOriginFieldsSet) {
 		if (args.accessClientId && args.accessClientSecret) {
 			database.origin = {
 				scheme: args.originScheme ?? "postgresql",

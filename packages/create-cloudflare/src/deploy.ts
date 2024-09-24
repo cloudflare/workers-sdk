@@ -1,6 +1,7 @@
-import { crash, startSection, updateStatus } from "@cloudflare/cli";
-import { processArgument } from "@cloudflare/cli/args";
+import { startSection, updateStatus } from "@cloudflare/cli";
 import { blue, brandColor, dim } from "@cloudflare/cli/colors";
+import TOML from "@iarna/toml";
+import { processArgument } from "helpers/args";
 import { C3_DEFAULTS, openInBrowser } from "helpers/cli";
 import { quoteShellArgs, runCommand } from "helpers/command";
 import { detectPackageManager } from "helpers/packageManagers";
@@ -45,7 +46,8 @@ export const offerToDeploy = async (ctx: C3Context) => {
 	// initialize a deployment object in context
 	ctx.deployment = {};
 
-	const loginSuccess = await wranglerLogin();
+	const loginSuccess = await wranglerLogin(ctx);
+
 	if (!loginSuccess) {
 		return false;
 	}
@@ -67,20 +69,18 @@ const isDeployable = async (ctx: C3Context) => {
 		return true;
 	}
 
-	const wranglerToml = readWranglerToml(ctx);
-	if (wranglerToml.match(/(?<!#\s*)bindings?\s*=.*/m)) {
-		return false;
-	}
+	const wranglerTomlStr = readWranglerToml(ctx);
 
-	return true;
+	const wranglerToml = TOML.parse(wranglerTomlStr.replace(/\r\n/g, "\n"));
+
+	return !hasBinding(wranglerToml);
 };
 
 export const runDeploy = async (ctx: C3Context) => {
 	const { npm, name: pm } = detectPackageManager();
 
 	if (!ctx.account?.id) {
-		crash("Failed to read Cloudflare account.");
-		return;
+		throw new Error("Failed to read Cloudflare account.");
 	}
 
 	const baseDeployCmd = [npm, "run", ctx.template.deployScript ?? "deploy"];
@@ -117,7 +117,7 @@ export const runDeploy = async (ctx: C3Context) => {
 	if (deployedUrlMatch) {
 		ctx.deployment.url = deployedUrlMatch[0];
 	} else {
-		crash("Failed to find deployment url.");
+		throw new Error("Failed to find deployment url.");
 	}
 
 	// if a pages url (<sha1>.<project>.pages.dev), remove the sha1
@@ -138,4 +138,24 @@ export const maybeOpenBrowser = async (ctx: C3Context) => {
 			}
 		}
 	}
+};
+
+/**
+ * Recursively search the properties of node for a binding.
+ */
+export const hasBinding = (node: unknown): boolean => {
+	if (typeof node !== "object" || node === null) {
+		return false;
+	}
+	for (const key of Object.keys(node)) {
+		if (key === "assets") {
+			// Properties called "binding" within "assets" do not count as bindings.
+			continue;
+		}
+		if (key === "binding" || key === "bindings") {
+			return true;
+		}
+		return hasBinding(node[key as keyof typeof node]);
+	}
+	return false;
 };

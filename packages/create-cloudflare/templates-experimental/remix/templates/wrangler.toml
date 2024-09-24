@@ -1,0 +1,5 @@
+#:schema node_modules/wrangler/config-schema.json
+name = "<TBD>"
+compatibility_date = "<TBD>"
+main = "./build/worker/index.js"
+assets = { directory = "./build/client" }

@@ -1,5 +1,29 @@
 # @cloudflare/quick-edit
 
+## 0.2.2
+
+### Patch Changes
+
+- [#6806](https://github.com/cloudflare/workers-sdk/pull/6806) [`4db75e1`](https://github.com/cloudflare/workers-sdk/commit/4db75e1eaf8eb088d869986efc28d5345789ff50) Thanks [@penalosa](https://github.com/penalosa)! - chore: Revert "fix(quick-edit): disable autosave"
+
+## 0.2.1
+
+### Patch Changes
+
+- [#6738](https://github.com/cloudflare/workers-sdk/pull/6738) [`d818634`](https://github.com/cloudflare/workers-sdk/commit/d8186341980ab2c02917852a9e790a7655f93a78) Thanks [@edmundhung](https://github.com/edmundhung)! - fix: set readOnly property when writing files
+
+## 0.2.0
+
+### Minor Changes
+
+- [#6708](https://github.com/cloudflare/workers-sdk/pull/6708) [`31bfd37`](https://github.com/cloudflare/workers-sdk/commit/31bfd374cf6764c1e8a4491518c58cb112010340) Thanks [@penalosa](https://github.com/penalosa)! - chore: Trigger a re-deploy
+
+## 0.1.1
+
+### Patch Changes
+
+- [#6624](https://github.com/cloudflare/workers-sdk/pull/6624) [`66f5b25`](https://github.com/cloudflare/workers-sdk/commit/66f5b259a760e4a5ebe0dac01a3d82df15aa3040) Thanks [@edmundhung](https://github.com/edmundhung)! - fix: quick editor deploy script setup
+
 ## 0.1.0
 
 ### Minor Changes

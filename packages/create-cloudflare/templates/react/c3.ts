@@ -1,5 +1,5 @@
 import { logRaw } from "@cloudflare/cli";
-import { processArgument } from "@cloudflare/cli/args";
+import { inputPrompt } from "@cloudflare/cli/interactive";
 import { runFrameworkGenerator } from "frameworks/index";
 import { detectPackageManager } from "helpers/packageManagers";
 import type { TemplateConfig } from "../../src/templates";
@@ -8,7 +8,7 @@ import type { C3Context } from "types";
 const { npm } = detectPackageManager();
 
 const generate = async (ctx: C3Context) => {
-	const variant = await processArgument<string>(ctx.args, "variant", {
+	const variant = await inputPrompt({
 		type: "select",
 		question: "Select a variant:",
 		label: "variant",
@@ -43,6 +43,8 @@ const variantsOptions = [
 const config: TemplateConfig = {
 	configVersion: 1,
 	id: "react",
+	// React's documentation now recommends using create-vite.
+	frameworkCli: "create-vite",
 	displayName: "React",
 	platform: "pages",
 	generate,

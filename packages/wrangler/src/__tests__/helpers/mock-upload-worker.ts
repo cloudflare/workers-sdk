@@ -3,6 +3,8 @@ import { createFetchResult, msw } from "./msw";
 import { serialize, toString } from "./serialize-form-data-entry";
 import type { WorkerMetadata } from "../../deployment-bundle/create-worker-upload-form";
 import type { CfWorkerInit } from "../../deployment-bundle/worker";
+import type { NonVersionedScriptSettings } from "../../versions/api";
+import type { AssetConfig } from "@cloudflare/workers-shared";
 import type { HttpResponseResolver } from "msw";
 
 /** Create a mock handler for the request to upload a worker script. */
@@ -28,8 +30,13 @@ export function mockUploadWorkerRequest(
 		tag?: string;
 		expectedDispatchNamespace?: string;
 		expectedScriptName?: string;
-		expectedExperimentalAssets?: boolean;
+		expectedAssets?: {
+			jwt: string;
+			config: AssetConfig;
+		};
 		useOldUploadApi?: boolean;
+		expectedObservability?: CfWorkerInit["observability"];
+		expectedSettingsPatch?: Partial<NonVersionedScriptSettings>;
 	} = {}
 ) {
 	const expectedScriptName = (options.expectedScriptName ??= "test-name");
@@ -105,8 +112,11 @@ export function mockUploadWorkerRequest(
 		if ("expectedLimits" in options) {
 			expect(metadata.limits).toEqual(expectedLimits);
 		}
-		if ("expectedExperimentalAssets" in options) {
-			expect(metadata.assets).toEqual("<<aus-completion-token>>");
+		if ("expectedAssets" in options) {
+			expect(metadata.assets).toEqual(expectedAssets);
+		}
+		if ("expectedObservability" in options) {
+			expect(metadata.observability).toEqual(expectedObservability);
 		}
 		if (expectedUnsafeMetaData !== undefined) {
 			Object.keys(expectedUnsafeMetaData).forEach((key) => {
@@ -148,7 +158,11 @@ export function mockUploadWorkerRequest(
 	const {
 		available_on_subdomain = true,
 		expectedEntry,
-		expectedMainModule = "index.js",
+		expectedAssets,
+		// Allow setting expectedMainModule to undefined to test static-asset only uploads
+		expectedMainModule = expectedAssets
+			? options.expectedMainModule
+			: "index.js",
 		expectedType = "esm",
 		expectedBindings,
 		expectedModules = {},
@@ -165,6 +179,8 @@ export function mockUploadWorkerRequest(
 		keepSecrets,
 		expectedDispatchNamespace,
 		useOldUploadApi,
+		expectedObservability,
+		expectedSettingsPatch,
 	} = options;
 	if (env && !legacyEnv) {
 		msw.use(
@@ -199,7 +215,15 @@ export function mockUploadWorkerRequest(
 			),
 			http.patch(
 				"*/accounts/:accountId/workers/scripts/:scriptName/script-settings",
-				() => HttpResponse.json(createFetchResult({}))
+				async ({ request }) => {
+					const body = await request.json();
+
+					if ("expectedSettingsPatch" in options) {
+						expect(body).toEqual(expectedSettingsPatch);
+					}
+
+					return HttpResponse.json(createFetchResult({}));
+				}
 			)
 		);
 	}

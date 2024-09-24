@@ -305,11 +305,23 @@ async function viteResolve(
 		if (workerdBuiltinModules.has(id)) {
 			return `/${id}`;
 		}
+		if (id.startsWith("node:")) {
+			throw new Error("Not found");
+		}
+
 		id = `node:${id}`;
 		if (workerdBuiltinModules.has(id)) {
 			return `/${id}`;
 		}
-		throw new Error("Not found");
+
+		// If we get this far, we have something that:
+		//  - looks like a built-in node module but wasn't imported with a `node:` prefix
+		//  - and isn't provided by workerd natively
+		// In that case, _try_ and load the identifier with a `node:` prefix.
+		// This will potentially load one of the Node.js polyfills provided by `vitest-pool-workers`
+		// Note: User imports should never get here! This is only meant to cater for Vitest internals
+		//       (Specifically, the "tinyrainbow" module imports `node:tty` as `tty`)
+		return id;
 	}
 	return resolved.id;
 }

@@ -1,5 +1,47 @@
 # @cloudflare/workers-shared
 
+## 0.5.4
+
+### Patch Changes
+
+- [#6728](https://github.com/cloudflare/workers-sdk/pull/6728) [`1ca313f`](https://github.com/cloudflare/workers-sdk/commit/1ca313f2041688cd13e25f0817e3b72dfc930bac) Thanks [@emily-shen](https://github.com/emily-shen)! - fix: remove filepath encoding on asset upload and handle sometimes-encoded characters
+
+  Some characters like [ ] @ are encoded by encodeURIComponent() but are often requested at an unencoded URL path.
+  This change will make assets with filenames with these characters accessible at both the encoded and unencoded paths,
+  but to use the encoded path as the canonical one, and to redirect requests to the canonical path if necessary.
+
+## 0.5.3
+
+### Patch Changes
+
+- [#6712](https://github.com/cloudflare/workers-sdk/pull/6712) [`7a8bb17`](https://github.com/cloudflare/workers-sdk/commit/7a8bb17a5f35e11cba336ca1bc5ea16413291bc7) Thanks [@penalosa](https://github.com/penalosa)! - fix: Use D&C token when deploying
+
+## 0.5.2
+
+### Patch Changes
+
+- [#6708](https://github.com/cloudflare/workers-sdk/pull/6708) [`31bfd37`](https://github.com/cloudflare/workers-sdk/commit/31bfd374cf6764c1e8a4491518c58cb112010340) Thanks [@penalosa](https://github.com/penalosa)! - fix: Use `pnpx` for `wrangler deploy`
+
+- [#6709](https://github.com/cloudflare/workers-sdk/pull/6709) [`5d8547e`](https://github.com/cloudflare/workers-sdk/commit/5d8547e26e9f5e2eb9516b17a096cd1ea9f63469) Thanks [@GregBrimble](https://github.com/GregBrimble)! - fix: Add missing config params to asset-worker and router-worker
+
+## 0.5.1
+
+### Patch Changes
+
+- [#6670](https://github.com/cloudflare/workers-sdk/pull/6670) [`fed1fda`](https://github.com/cloudflare/workers-sdk/commit/fed1fda90d1434b5ce214656249b0ad723ce48c1) Thanks [@GregBrimble](https://github.com/GregBrimble)! - chore: Rename asset-worker RPC methods as unstable\_\*
+
+  The Asset Worker is currently set up as a `WorkerEntrypoint` class so that it is able to accept RPC calls to any of its public methods. There are currently four such public methods defined on this Worker: `canFetch`, `getByETag`, `getByPathname` and `exists`. While we are stabilising the implementation details of these methods, we would like to prevent developers from having their Workers call these methods directly. To that end, we are adopting the `unstable_<method_name>` naming convention for all of the aforementioned methods, to indicate that they are still in flux and that they are not an established API contract.
+
+## 0.5.0
+
+### Minor Changes
+
+- [#6631](https://github.com/cloudflare/workers-sdk/pull/6631) [`59a0072`](https://github.com/cloudflare/workers-sdk/commit/59a0072740aa19f8d2b7524b993a7be35ba67fce) Thanks [@emily-shen](https://github.com/emily-shen)! - feat: Add asset config behaviour.
+
+  Add `html_handling` (e.g. /index.html -> /) with options `"auto-trailing-slash" | "force-trailing-slash" | "drop-trailing-slash" | "none"` to Asset Worker.
+
+  Add `not_found_handling` behaviour with options `"404-page" | "single-page-application" | "none"` to Asset Worker.
+
 ## 0.4.1
 
 ### Patch Changes
