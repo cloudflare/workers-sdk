@@ -5,15 +5,16 @@ import { openInspector } from "./inspect";
 import type { DevEnv } from "../api";
 
 export default function registerDevHotKeys(
-	devEnv: DevEnv,
+	devEnvs: DevEnv[],
 	args: { forceLocal?: boolean }
 ) {
+	const primaryDevEnv = devEnvs[0];
 	const unregisterHotKeys = registerHotKeys([
 		{
 			keys: ["b"],
 			label: "open a browser",
 			handler: async () => {
-				const { url } = await devEnv.proxy.ready.promise;
+				const { url } = await primaryDevEnv.proxy.ready.promise;
 				await openInBrowser(url.href);
 			},
 		},
@@ -21,12 +22,12 @@ export default function registerDevHotKeys(
 			keys: ["d"],
 			label: "open devtools",
 			handler: async () => {
-				const { inspectorUrl } = await devEnv.proxy.ready.promise;
+				const { inspectorUrl } = await primaryDevEnv.proxy.ready.promise;
 
 				// TODO: refactor this function to accept a whole URL (not just .port and assuming .hostname)
 				await openInspector(
 					parseInt(inspectorUrl.port),
-					devEnv.config.latestConfig?.name
+					primaryDevEnv.config.latestConfig?.name
 				);
 			},
 		},
@@ -34,12 +35,12 @@ export default function registerDevHotKeys(
 			keys: ["l"],
 			disabled: () => args.forceLocal ?? false,
 			label: () =>
-				`turn ${devEnv.config.latestConfig?.dev?.remote ? "on" : "off"} local mode`,
+				`turn ${primaryDevEnv.config.latestConfig?.dev?.remote ? "on" : "off"} local mode`,
 			handler: async () => {
-				await devEnv.config.patch({
+				await primaryDevEnv.config.patch({
 					dev: {
-						...devEnv.config.latestConfig?.dev,
-						remote: !devEnv.config.latestConfig?.dev?.remote,
+						...primaryDevEnv.config.latestConfig?.dev,
+						remote: !primaryDevEnv.config.latestConfig?.dev?.remote,
 					},
 				});
 			},
@@ -56,7 +57,7 @@ export default function registerDevHotKeys(
 			label: "to exit",
 			handler: async () => {
 				unregisterHotKeys();
-				await devEnv.teardown();
+				await Promise.allSettled(devEnvs.map((devEnv) => devEnv.teardown()));
 			},
 		},
 	]);

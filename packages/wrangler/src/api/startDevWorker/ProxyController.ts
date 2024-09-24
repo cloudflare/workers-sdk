@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import events from "node:events";
 import path from "node:path";
 import { LogLevel, Miniflare, Mutex, Response } from "miniflare";
+import { fetch } from "undici";
 import inspectorProxyWorkerPath from "worker:startDevWorker/InspectorProxyWorker";
 import proxyWorkerPath from "worker:startDevWorker/ProxyWorker";
 import WebSocket from "ws";
@@ -106,6 +107,7 @@ export class ProxyController extends Controller<ProxyControllerEventMap> {
 					},
 					bindings: {
 						PROXY_CONTROLLER_AUTH_SECRET: this.secret,
+						NAME: this.latestConfig.name ?? "",
 					},
 
 					// no need to use file-system, so don't
@@ -158,7 +160,7 @@ export class ProxyController extends Controller<ProxyControllerEventMap> {
 			log: new ProxyControllerLogger(castLogLevel(logger.loggerLevel), {
 				prefix:
 					// if debugging, log requests with specic ProxyWorker prefix
-					logger.loggerLevel === "debug" ? "wrangler-ProxyWorker" : "wrangler",
+					`wrangler-ProxyWorker-${this.latestConfig.name}`,
 			}),
 			handleRuntimeStdio,
 			liveReload: false,
@@ -286,20 +288,22 @@ export class ProxyController extends Controller<ProxyControllerEventMap> {
 
 		try {
 			await this.runtimeMessageMutex.runWith(async () => {
-				const { proxyWorker } = await this.ready.promise;
+				const { proxyWorker, url } = await this.ready.promise;
 
 				const ready = await proxyWorker.ready.catch(() => undefined);
 				if (!ready) {
 					return;
 				}
 
-				return proxyWorker.dispatchFetch(
-					`http://dummy/cdn-cgi/ProxyWorker/${message.type}`,
-					{
-						headers: { Authorization: this.secret },
-						cf: { hostMetadata: message },
-					}
+				const proxyWorkerUrl = new URL(
+					`/cdn-cgi/ProxyWorker/${message.type}`,
+					url
 				);
+				return fetch(proxyWorkerUrl, {
+					method: "POST",
+					headers: { Authorization: this.secret },
+					body: JSON.stringify(message),
+				});
 			});
 		} catch (cause) {
 			if (this._torndown) {
@@ -317,7 +321,7 @@ export class ProxyController extends Controller<ProxyControllerEventMap> {
 				error
 			);
 
-			throw error;
+			// throw error;
 		}
 	}
 	async sendMessageToInspectorProxyWorker(

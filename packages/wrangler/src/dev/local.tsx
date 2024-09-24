@@ -14,6 +14,7 @@ import type {
 	CfWorkerInit,
 } from "../deployment-bundle/worker";
 import type {
+	WorkerDefinition,
 	WorkerEntrypointsDefinition,
 	WorkerRegistry,
 } from "../dev-registry";
@@ -113,16 +114,12 @@ export async function localPropsToConfigBundle(
 	};
 }
 
-export function maybeRegisterLocalWorker(
+export function serializeWorkerRegistryDefinition(
 	url: URL,
-	name: string | undefined,
+	name: string,
 	internalDurableObjects: CfDurableObject[] | undefined,
 	entrypointAddresses: WorkerEntrypointsDefinition | undefined
-) {
-	if (name === undefined) {
-		return;
-	}
-
+): WorkerDefinition | undefined {
 	let protocol = url.protocol;
 	protocol = protocol.substring(0, url.protocol.length - 1);
 	if (protocol !== "http" && protocol !== "https") {
@@ -130,7 +127,7 @@ export function maybeRegisterLocalWorker(
 	}
 
 	const port = parseInt(url.port);
-	return registerWorker(name, {
+	return {
 		protocol,
 		mode: "local",
 		port,
@@ -142,7 +139,31 @@ export function maybeRegisterLocalWorker(
 		durableObjectsHost: url.hostname,
 		durableObjectsPort: port,
 		entrypointAddresses: entrypointAddresses,
-	});
+	};
+}
+
+export function maybeRegisterLocalWorker(
+	url: URL,
+	name: string | undefined,
+	internalDurableObjects: CfDurableObject[] | undefined,
+	entrypointAddresses: WorkerEntrypointsDefinition | undefined
+) {
+	if (name === undefined) {
+		return;
+	}
+
+	const definition = serializeWorkerRegistryDefinition(
+		url,
+		name,
+		internalDurableObjects,
+		entrypointAddresses
+	);
+
+	if (!definition) {
+		return;
+	}
+
+	return registerWorker(name, definition);
 }
 
 export function Local(props: LocalProps) {
