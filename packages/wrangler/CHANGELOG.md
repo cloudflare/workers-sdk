@@ -80,7 +80,7 @@
 
 - [#6714](https://github.com/cloudflare/workers-sdk/pull/6714) [`62082aa`](https://github.com/cloudflare/workers-sdk/commit/62082aa75b767368d0a5c8c59a24a5f91a1b0c73) Thanks [@OilyLime](https://github.com/OilyLime)! - fix: rough edges when creating and updating Hyperdrive over Access configs
 
-- [#6705](https://github.com/cloudflare/workers-sdk/pull/6705) [`ea60a52`](https://github.com/cloudflare/workers-sdk/commit/ea60a52a4e350b6c439d734618e3cd4187f3f2d5) Thanks [@emily-shen](https://github.com/emily-shen)! - fix: include compatability date in static-asset only uploads (experimental feature)
+- [#6705](https://github.com/cloudflare/workers-sdk/pull/6705) [`ea60a52`](https://github.com/cloudflare/workers-sdk/commit/ea60a52a4e350b6c439d734618e3cd4187f3f2d5) Thanks [@emily-shen](https://github.com/emily-shen)! - fix: include compatibility date in static-asset only uploads (experimental feature)
 
 ## 3.78.3
 
