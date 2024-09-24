@@ -836,6 +836,9 @@ export async function startDev(args: StartDevOptions) {
 						"dev"
 					);
 
+					// ensure we re-validate routes
+					await getHostAndRoutes(args, config);
+
 					assetsOptions = processAssetsArg(args, config);
 
 					/*
