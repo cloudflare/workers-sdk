@@ -1,5 +1,21 @@
 # wrangler
 
+## 3.78.9
+
+### Patch Changes
+
+- [#6753](https://github.com/cloudflare/workers-sdk/pull/6753) [`4e33f2c`](https://github.com/cloudflare/workers-sdk/commit/4e33f2cdc1d9ab59fdbd6fcc162632c91da9b21b) Thanks [@bluwy](https://github.com/bluwy)! - refactor: prevent bundling entire `package.json` in built code
+
+- [#6812](https://github.com/cloudflare/workers-sdk/pull/6812) [`f700d37`](https://github.com/cloudflare/workers-sdk/commit/f700d3704a4fca98f8c74549ae849dea8cc1013b) Thanks [@CarmenPopoviciu](https://github.com/CarmenPopoviciu)! - fix: Validate additional config properties for `[observability]`
+
+- [#6751](https://github.com/cloudflare/workers-sdk/pull/6751) [`638a550`](https://github.com/cloudflare/workers-sdk/commit/638a55063b5b74ad30dfe98f8ee2e23e86f2c25a) Thanks [@bluwy](https://github.com/bluwy)! - refactor: simplify date calculation and remove date-fns dependency
+
+- [#6809](https://github.com/cloudflare/workers-sdk/pull/6809) [`28cb0d7`](https://github.com/cloudflare/workers-sdk/commit/28cb0d759e5a0863b92576bbec0df3305806e4aa) Thanks [@smellercf](https://github.com/smellercf)! - fix: Remove Beta tag from r2 event notification wrangler command descriptions
+
+- [#6802](https://github.com/cloudflare/workers-sdk/pull/6802) [`17eb8a9`](https://github.com/cloudflare/workers-sdk/commit/17eb8a9f9e477fe064e5b0e7e716ba8b8ce0cccc) Thanks [@CarmenPopoviciu](https://github.com/CarmenPopoviciu)! - chore: rename `experimental_assets` to `assets`
+
+- [#6781](https://github.com/cloudflare/workers-sdk/pull/6781) [`0792fa0`](https://github.com/cloudflare/workers-sdk/commit/0792fa08fbda89d282b87be86cd05f961ca38df1) Thanks [@mikenomitch](https://github.com/mikenomitch)! - chore: tweaks warning when using node_compat
+
 ## 3.78.8
 
 ### Patch Changes
