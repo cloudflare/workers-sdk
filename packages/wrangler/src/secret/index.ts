@@ -6,15 +6,13 @@ import { readConfig } from "../config";
 import { createWorkerUploadForm } from "../deployment-bundle/create-worker-upload-form";
 import { confirm, prompt } from "../dialogs";
 import { FatalError, UserError } from "../errors";
-import {
-	getLegacyScriptName,
-	isLegacyEnv,
-	printWranglerBanner,
-} from "../index";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { APIError, parseJSON, readFileSync } from "../parse";
+import { printWranglerBanner } from "../update-check";
 import { requireAuth } from "../user";
+import { getLegacyScriptName } from "../utils/getLegacyScriptName";
+import { isLegacyEnv } from "../utils/isLegacyEnv";
 import { readFromStdin, trimTrailingWhitespace } from "../utils/std";
 import type { Config } from "../config";
 import type { WorkerMetadataBinding } from "../deployment-bundle/create-worker-upload-form";

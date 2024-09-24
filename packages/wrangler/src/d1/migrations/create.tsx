@@ -1,10 +1,10 @@
 import fs from "node:fs";
 import path from "path";
 import { Box, Text } from "ink";
-import { printWranglerBanner } from "../..";
 import { withConfig } from "../../config";
 import { UserError } from "../../errors";
 import { logger } from "../../logger";
+import { printWranglerBanner } from "../../update-check";
 import { renderToString } from "../../utils/render";
 import { DEFAULT_MIGRATION_PATH } from "../constants";
 import { Database } from "../options";

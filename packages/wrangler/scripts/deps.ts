@@ -21,6 +21,7 @@ export const EXTERNAL_DEPENDENCIES = [
 	// unenv must be external because it contains unenv/runtime code which needs to be resolved
 	// and read when we are bundling the worker application
 	"unenv",
+	"workerd",
 	"workerd/worker.mjs",
 ];
 

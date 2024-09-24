@@ -28,6 +28,7 @@ import isInteractive from "./is-interactive";
 import { logger } from "./logger";
 import * as metrics from "./metrics";
 import { getLegacyAssetPaths, getSiteAssetPaths } from "./sites";
+import { printWranglerBanner } from "./update-check";
 import {
 	getAccountFromCache,
 	loginOrRefreshIfRequired,
@@ -38,18 +39,14 @@ import {
 	collectKeyValues,
 	collectPlainTextVars,
 } from "./utils/collectKeyValues";
+import { DEFAULT_INSPECTOR_PORT, DEFAULT_LOCAL_PORT } from "./utils/constants";
+import { getDevCompatibilityDate } from "./utils/getDevCompatibilityDate";
+import { getRules } from "./utils/getRules";
+import { getScriptName } from "./utils/getScriptName";
+import { isLegacyEnv } from "./utils/isLegacyEnv";
 import { memoizeGetPort } from "./utils/memoizeGetPort";
 import { mergeWithOverride } from "./utils/mergeWithOverride";
 import { getHostFromRoute, getZoneIdForPreview } from "./zones";
-import {
-	DEFAULT_INSPECTOR_PORT,
-	DEFAULT_LOCAL_PORT,
-	getDevCompatibilityDate,
-	getRules,
-	getScriptName,
-	isLegacyEnv,
-	printWranglerBanner,
-} from "./index";
 import type {
 	ProxyData,
 	ReloadCompleteEvent,

@@ -3,12 +3,12 @@ import readline from "node:readline";
 import { fetchResult } from "../../cfetch";
 import { readConfig } from "../../config";
 import { UserError } from "../../errors";
-import { getLegacyScriptName } from "../../index";
 import { logger } from "../../logger";
 import { parseJSON, readFileSync } from "../../parse";
 import { validateJSONFileSecrets } from "../../secret";
 import { printWranglerBanner } from "../../update-check";
 import { requireAuth } from "../../user";
+import { getLegacyScriptName } from "../../utils/getLegacyScriptName";
 import { copyWorkerVersionWithNewSecrets } from "./index";
 import type {
 	CommonYargsArgv,

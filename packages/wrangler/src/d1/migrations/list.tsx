@@ -1,10 +1,10 @@
 import path from "path";
 import { Box, Text } from "ink";
 import Table from "ink-table";
-import { printWranglerBanner } from "../..";
 import { withConfig } from "../../config";
 import { UserError } from "../../errors";
 import { logger } from "../../logger";
+import { printWranglerBanner } from "../../update-check";
 import { requireAuth } from "../../user";
 import { renderToString } from "../../utils/render";
 import { DEFAULT_MIGRATION_PATH, DEFAULT_MIGRATION_TABLE } from "../constants";

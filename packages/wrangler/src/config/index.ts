@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import dotenv from "dotenv";
 import { findUpSync } from "find-up";
+import { resolveConfig } from "../api/startDevWorker/ConfigController";
 import { FatalError, UserError } from "../errors";
 import { getFlag } from "../experimental-flags";
 import { logger } from "../logger";
@@ -8,6 +9,7 @@ import { EXIT_CODE_INVALID_PAGES_CONFIG } from "../pages/errors";
 import { parseJSONC, parseTOML, readFileSync } from "../parse";
 import { isPagesConfig, normalizeAndValidateConfig } from "./validation";
 import { validatePagesConfig } from "./validation-pages";
+import type { StartDevWorkerOptions } from "../api";
 import type { CfWorkerInit } from "../deployment-bundle/worker";
 import type { CommonYargsOptions } from "../yargs-types";
 import type { Config, OnlyCamelCase, RawConfig } from "./config";
@@ -26,35 +28,54 @@ export type {
 	RawEnvironment,
 } from "./environment";
 
-type ReadConfigCommandArgs = NormalizeAndValidateConfigArgs & {
-	experimentalJsonConfig?: boolean | undefined;
-};
+async function resolveConfigForEnv(
+	configPath: string | undefined,
+	rawConfig: RawConfig,
+	env?: string | undefined
+) {
+	const fileConfig = parseRawConfig(
+		configPath,
+		rawConfig,
+		{
+			env: env,
+			"dispatch-namespace": undefined,
+			// No support for service environments
+			"legacy-env": true,
+			remote: false,
+		},
+		true
+	);
 
-/**
- * Get the Wrangler configuration; read it from the give `configPath` if available.
- */
-export function readConfig(
+	return await resolveConfig(fileConfig, {});
+}
+
+export async function readConfigForAPI(
+	options: {
+		configPath?: string;
+	} = {}
+): Promise<{
+	root: StartDevWorkerOptions;
+	envs: Record</* env */ string, StartDevWorkerOptions>;
+}> {
+	const rawConfig = getRawConfig(options.configPath, true);
+	const envNames = rawConfig.env ? Object.keys(rawConfig.env) : [];
+	const root = await resolveConfigForEnv(options.configPath, rawConfig);
+	const envs = Object.fromEntries(
+		await Promise.all(
+			envNames.map(async (e) => [
+				e,
+				await resolveConfigForEnv(options.configPath, rawConfig, e),
+			])
+		)
+	);
+	return { root, envs };
+}
+
+function getRawConfig(
 	configPath: string | undefined,
-	// Include command specific args as well as the wrangler global flags
-	args: ReadConfigCommandArgs,
-	requirePagesConfig: true
-): Omit<Config, "pages_build_output_dir"> & { pages_build_output_dir: string };
-export function readConfig(
-	configPath: string | undefined,
-	// Include command specific args as well as the wrangler global flags
-	args: ReadConfigCommandArgs,
-	requirePagesConfig?: boolean,
-	hideWarnings?: boolean
-): Config;
-export function readConfig(
-	configPath: string | undefined,
-	// Include command specific args as well as the wrangler global flags
-	args: ReadConfigCommandArgs,
-	requirePagesConfig?: boolean,
-	hideWarnings: boolean = false
-): Config {
-	const isJsonConfigEnabled =
-		getFlag("JSON_CONFIG_FILE") ?? args.experimentalJsonConfig;
+	isJsonConfigEnabled: boolean,
+	requirePagesConfig?: boolean
+) {
 	let rawConfig: RawConfig = {};
 
 	if (!configPath) {
@@ -82,7 +103,17 @@ export function readConfig(
 			throw e;
 		}
 	}
+	return rawConfig;
+}
 
+function parseRawConfig(
+	configPath: string | undefined,
+	rawConfig: RawConfig,
+	args: ReadConfigCommandArgs,
+	isJsonConfigEnabled: boolean,
+	requirePagesConfig?: boolean,
+	hideWarnings?: boolean
+) {
 	/**
 	 * Check if configuration file belongs to a Pages project.
 	 *
@@ -150,6 +181,53 @@ export function readConfig(
 	applyPythonConfig(config, args);
 
 	return config;
+}
+
+type ReadConfigCommandArgs = NormalizeAndValidateConfigArgs & {
+	experimentalJsonConfig?: boolean | undefined;
+};
+
+/**
+ * Get the Wrangler configuration; read it from the give `configPath` if available.
+ */
+export function readConfig(
+	configPath: string | undefined,
+	// Include command specific args as well as the wrangler global flags
+	args: ReadConfigCommandArgs,
+	requirePagesConfig: true
+): Omit<Config, "pages_build_output_dir"> & { pages_build_output_dir: string };
+export function readConfig(
+	configPath: string | undefined,
+	// Include command specific args as well as the wrangler global flags
+	args: ReadConfigCommandArgs,
+	requirePagesConfig?: boolean,
+	hideWarnings?: boolean
+): Config;
+export function readConfig(
+	configPath: string | undefined,
+	// Include command specific args as well as the wrangler global flags
+	args: ReadConfigCommandArgs,
+	requirePagesConfig?: boolean,
+	hideWarnings: boolean = false
+): Config {
+	const isJsonConfigEnabled = !!(
+		getFlag("JSON_CONFIG_FILE") ?? args.experimentalJsonConfig
+	);
+
+	const rawConfig = getRawConfig(
+		configPath,
+		isJsonConfigEnabled,
+		requirePagesConfig
+	);
+
+	return parseRawConfig(
+		configPath,
+		rawConfig,
+		args,
+		isJsonConfigEnabled,
+		requirePagesConfig,
+		hideWarnings
+	);
 }
 
 /**

@@ -1,6 +1,6 @@
-import { printWranglerBanner } from "../..";
 import { withConfig } from "../../config";
 import { logger } from "../../logger";
+import { printWranglerBanner } from "../../update-check";
 import { requireAuth } from "../../user";
 import { Database } from "../options";
 import { getDatabaseByNameOrBinding } from "../utils";

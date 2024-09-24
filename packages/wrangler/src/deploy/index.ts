@@ -4,19 +4,17 @@ import { processAssetsArg, validateAssetsArgsAndConfig } from "../assets";
 import { findWranglerToml, readConfig } from "../config";
 import { getEntry } from "../deployment-bundle/entry";
 import { UserError } from "../errors";
-import {
-	getRules,
-	getScriptName,
-	isLegacyEnv,
-	printWranglerBanner,
-} from "../index";
 import { logger } from "../logger";
 import { verifyWorkerMatchesCITag } from "../match-tag";
 import * as metrics from "../metrics";
 import { writeOutput } from "../output";
 import { getLegacyAssetPaths, getSiteAssetPaths } from "../sites";
+import { printWranglerBanner } from "../update-check";
 import { requireAuth } from "../user";
 import { collectKeyValues } from "../utils/collectKeyValues";
+import { getRules } from "../utils/getRules";
+import { getScriptName } from "../utils/getScriptName";
+import { isLegacyEnv } from "../utils/isLegacyEnv";
 import deploy from "./deploy";
 import type { Config } from "../config";
 import type {

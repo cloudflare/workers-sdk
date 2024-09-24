@@ -1,10 +1,10 @@
 import { readConfig } from "../config";
 import { sleep } from "../deploy/deploy";
 import { FatalError } from "../errors";
-import { printWranglerBanner } from "../index";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { APIError } from "../parse";
+import { printWranglerBanner } from "../update-check";
 import { requireAuth } from "../user";
 import {
 	createPipeline,

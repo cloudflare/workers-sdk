@@ -2,14 +2,12 @@ import { setTimeout } from "node:timers/promises";
 import onExit from "signal-exit";
 import { readConfig } from "../config";
 import { createFatalError, UserError } from "../errors";
-import {
-	getLegacyScriptName,
-	isLegacyEnv,
-	printWranglerBanner,
-} from "../index";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
+import { printWranglerBanner } from "../update-check";
 import { requireAuth } from "../user";
+import { getLegacyScriptName } from "../utils/getLegacyScriptName";
+import { isLegacyEnv } from "../utils/isLegacyEnv";
 import { getWorkerForZone } from "../zones";
 import {
 	createTail,

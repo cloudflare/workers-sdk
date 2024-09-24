@@ -2,10 +2,11 @@ import { fetchResult } from "../../cfetch";
 import { readConfig } from "../../config";
 import { confirm } from "../../dialogs";
 import { UserError } from "../../errors";
-import { getLegacyScriptName, isLegacyEnv } from "../../index";
 import { logger } from "../../logger";
 import { printWranglerBanner } from "../../update-check";
 import { requireAuth } from "../../user";
+import { getLegacyScriptName } from "../../utils/getLegacyScriptName";
+import { isLegacyEnv } from "../../utils/isLegacyEnv";
 import { copyWorkerVersionWithNewSecrets } from "./index";
 import type {
 	CommonYargsArgv,

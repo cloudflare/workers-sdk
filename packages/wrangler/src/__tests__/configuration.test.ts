@@ -1,8 +1,9 @@
 import path from "node:path";
-import { readConfig } from "../config";
+import { readConfig, readConfigForAPI } from "../config";
 import { normalizeAndValidateConfig } from "../config/validation";
 import { normalizeSlashes } from "./helpers/mock-console";
 import { runInTempDir } from "./helpers/run-in-tmp";
+import { writeWorkerSource } from "./helpers/write-worker-source";
 import { writeWranglerToml } from "./helpers/write-wrangler-toml";
 import type {
 	ConfigFields,
@@ -42,6 +43,72 @@ describe("readConfig()", () => {
 				`[Error: The \`python_workers\` compatibility flag is required to use Python.]`
 			);
 		}
+	});
+});
+
+describe("readConfigForAPI()", () => {
+	runInTempDir();
+	it("should return root with a basic config file", async () => {
+		writeWranglerToml({
+			main: "index.js",
+			name: "my-worker",
+		});
+		writeWorkerSource();
+		const config = await readConfigForAPI();
+		expect(config).toMatchObject({
+			root: expect.objectContaining({
+				name: "my-worker",
+			}),
+			envs: {},
+		});
+	});
+	it("should return root + envs with th", async () => {
+		writeWranglerToml({
+			main: "index.js",
+			name: "my-worker",
+			vars: { HELLO: "root" },
+			env: {
+				prod: {
+					vars: { HELLO: "prod" },
+				},
+				staging: {
+					vars: { HELLO: "staging" },
+				},
+			},
+		});
+		writeWorkerSource();
+		const config = await readConfigForAPI();
+		expect(config).toMatchObject({
+			root: expect.objectContaining({
+				name: "my-worker",
+				bindings: {
+					HELLO: {
+						type: "plain_text",
+						value: "root",
+					},
+				},
+			}),
+			envs: {
+				prod: {
+					name: "my-worker-prod",
+					bindings: {
+						HELLO: {
+							type: "plain_text",
+							value: "prod",
+						},
+					},
+				},
+				staging: {
+					name: "my-worker-staging",
+					bindings: {
+						HELLO: {
+							type: "plain_text",
+							value: "staging",
+						},
+					},
+				},
+			},
+		});
 	});
 });
 

@@ -2,10 +2,10 @@ import { fetchResult } from "../../cfetch";
 import { readConfig } from "../../config";
 import { prompt } from "../../dialogs";
 import { UserError } from "../../errors";
-import { getLegacyScriptName } from "../../index";
 import { logger } from "../../logger";
 import { printWranglerBanner } from "../../update-check";
 import { requireAuth } from "../../user";
+import { getLegacyScriptName } from "../../utils/getLegacyScriptName";
 import { readFromStdin, trimTrailingWhitespace } from "../../utils/std";
 import { copyWorkerVersionWithNewSecrets } from "./index";
 import type {

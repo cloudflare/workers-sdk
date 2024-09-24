@@ -5,11 +5,12 @@ import * as stream from "node:stream";
 import { ReadableStream } from "node:stream/web";
 import prettyBytes from "pretty-bytes";
 import { readConfig } from "../config";
-import { FatalError, UserError } from "../errors";
-import { CommandLineArgsError, printWranglerBanner } from "../index";
+import { CommandLineArgsError, FatalError, UserError } from "../errors";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
+import { printWranglerBanner } from "../update-check";
 import { requireAuth } from "../user";
+import { betaCmdColor } from "../utils/constants";
 import { MAX_UPLOAD_SIZE } from "./constants";
 import {
 	bucketAndKeyFromObjectPath,
