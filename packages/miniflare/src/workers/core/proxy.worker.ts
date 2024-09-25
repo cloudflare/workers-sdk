@@ -119,7 +119,17 @@ export class ProxyServer implements DurableObject {
 			// should only ever return `Object`, as none override `Symbol.toStringTag`
 			// https://tc39.es/ecma262/multipage/fundamental-objects.html#sec-object.prototype.tostring
 			const type = getType(value);
-			if ((type === "Object" && !isPlainObject(value)) || type === "Promise") {
+			const isTypeObject =
+				type !== "String" &&
+				type !== "Number" &&
+				type !== "Boolean" &&
+				type !== "Array" &&
+				type !== "Symbol" &&
+				type !== "Date" &&
+				type !== "Null" &&
+				type !== "Undefined";
+
+			if ((isTypeObject && !isPlainObject(value)) || type === "Promise") {
 				const address = this.nextHeapAddress++;
 				this.heap.set(address, value);
 				assert(value !== null);
