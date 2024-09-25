@@ -131,6 +131,9 @@ const detectPmMismatch = (ctx: C3Context) => {
 		case "pnpm":
 			return !existsSync(path.join(projectPath, "pnpm-lock.yaml"));
 		case "bun":
-			return !existsSync(path.join(projectPath, "bun.lockb"));
+			return (
+				!existsSync(path.join(projectPath, "bun.lockb")) &&
+				!existsSync(path.join(projectPath, "bun.lock"))
+			);
 	}
 };
