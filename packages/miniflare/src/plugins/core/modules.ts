@@ -7,6 +7,7 @@ import { TextDecoder, TextEncoder } from "util";
 import { parse } from "acorn";
 import { simple } from "acorn-walk";
 import { dim } from "kleur/colors";
+import { getNodeCompatMode, NodeJSCompatMode } from "miniflare";
 import { z } from "zod";
 import { Worker_Module } from "../../runtime";
 import { globsToRegExps, MiniflareCoreError, PathSchema } from "../../shared";
@@ -156,7 +157,7 @@ function getResolveErrorPrefix(referencingPath: string): string {
 
 export class ModuleLocator {
 	readonly #compiledRules: CompiledModuleRule[];
-	readonly #nodejsCompat: boolean;
+	readonly #nodejsCompat: NodeJSCompatMode;
 	readonly #visitedPaths = new Set<string>();
 	readonly modules: Worker_Module[] = [];
 
@@ -164,15 +165,16 @@ export class ModuleLocator {
 		private readonly modulesRoot: string,
 		private readonly additionalModuleNames: string[],
 		rules: ModuleRule[] = [],
+		compatibilityDate?: string,
 		compatibilityFlags?: string[]
 	) {
 		// Implicit shallow-copy to avoid mutating argument
 		rules = rules.concat(DEFAULT_MODULE_RULES);
 		this.#compiledRules = compileModuleRules(rules);
-		// `nodejs_compat` doesn't have a default-on date, so we know whether it's
-		// enabled just by looking at flags:
-		// https://github.com/cloudflare/workerd/blob/edcd0300bc7b8f56040d090177db947edd22f91b/src/workerd/io/compatibility-date.capnp#L237-L240
-		this.#nodejsCompat = compatibilityFlags?.includes("nodejs_compat") ?? false;
+		this.#nodejsCompat = getNodeCompatMode(
+			compatibilityDate,
+			compatibilityFlags ?? []
+		).mode;
 	}
 
 	visitEntrypoint(code: string, modulePath: string) {
@@ -289,14 +291,19 @@ ${dim(modulesConfig)}`;
 		}
 		const spec = specExpression.value;
 
-		// `node:` (assuming `nodejs_compat` flag enabled), `cloudflare:` and
-		// `workerd:` imports don't need to be included explicitly
 		const isNodeJsCompatModule = referencingType === "NodeJsCompatModule";
 		if (
-			(this.#nodejsCompat && spec.startsWith("node:")) ||
+			// `cloudflare:` and `workerd:` imports don't need to be included explicitly
 			spec.startsWith("cloudflare:") ||
 			spec.startsWith("workerd:") ||
-			(isNodeJsCompatModule && builtinModulesWithPrefix.includes(spec)) ||
+			// Node.js compat v1 requires imports to be prefixed with `node:`
+			(this.#nodejsCompat === "v1" && spec.startsWith("node:")) ||
+			// Node.js compat modules and v2 can also handle non-prefixed imports
+			((this.#nodejsCompat === "v2" || isNodeJsCompatModule) &&
+				builtinModulesWithPrefix.includes(spec)) ||
+			// Async Local Storage mode (node_als) only deals with `node:async_hooks` imports
+			(this.#nodejsCompat === "als" && spec === "node:async_hooks") ||
+			// Any "additional" external modules can be ignored
 			this.additionalModuleNames.includes(spec)
 		) {
 			return;
