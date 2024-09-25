@@ -11,10 +11,7 @@ import type {
 	CloudflareDevEnvironment,
 } from './cloudflare-environment';
 
-// const runnerPath = fileURLToPath(import.meta.resolve('./runner/worker.js'));
-const runnerPath = fileURLToPath(
-	import.meta.resolve('./runner/durable-object.js')
-);
+const runnerPath = fileURLToPath(import.meta.resolve('./runner/worker.js'));
 
 export function cloudflare(
 	environments: Record<string, CloudflareEnvironmentOptions>
@@ -84,6 +81,7 @@ export function cloudflare(
 
 									return new MiniflareResponse(JSON.stringify(result));
 								} catch (error) {
+									// TODO: check error handling
 									const result = {
 										externalize: args[0],
 										type: 'builtin',

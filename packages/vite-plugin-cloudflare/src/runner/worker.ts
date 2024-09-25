@@ -27,7 +27,7 @@ function createModuleRunner(env: RunnerEnv, webSocket: WebSocket) {
 					);
 
 					if (!response.ok) {
-						return { externalize: args[0] };
+						// TODO: add error handling
 					}
 
 					const result = await response.json();
@@ -40,7 +40,7 @@ function createModuleRunner(env: RunnerEnv, webSocket: WebSocket) {
 					isReady: () => true,
 					onUpdate(callback) {
 						webSocket.addEventListener('message', (event) => {
-							callback(JSON.parse(event.data));
+							callback(JSON.parse(event.data.toString()));
 						});
 					},
 					send(messages) {
@@ -86,11 +86,13 @@ export default {
 
 			entrypoint = entry;
 
-			const pair = new WebSocketPair();
+			const { 0: client, 1: server } = new WebSocketPair();
 
-			moduleRunner = createModuleRunner(env, pair[0]);
+			server.accept();
 
-			return new Response(null, { status: 101, webSocket: pair[1] });
+			moduleRunner = createModuleRunner(env, server);
+
+			return new Response(null, { status: 101, webSocket: client });
 		}
 
 		if (!moduleRunner || !entrypoint) {

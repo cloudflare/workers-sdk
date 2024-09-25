@@ -74,6 +74,7 @@ export class CloudflareDevEnvironment extends vite.DevEnvironment {
 		config: vite.ResolvedConfig,
 		options: CloudflareEnvironmentOptions
 	) {
+		// It would be good if we could avoid passing this object around and mutating it
 		const runner = {};
 		super(name, config, { hot: createHotChannel(runner) });
 		this.#options = options;
