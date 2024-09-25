@@ -18,11 +18,7 @@ import { logger } from "../logger";
 import { writeAuthConfigFile } from "../user";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockAuthDomain } from "./helpers/mock-auth-domain";
-import {
-	mockConsoleMethods,
-	normalizeSlashes,
-	normalizeTempDirs,
-} from "./helpers/mock-console";
+import { mockConsoleMethods } from "./helpers/mock-console";
 import { clearDialogs, mockConfirm } from "./helpers/mock-dialogs";
 import { mockGetZoneFromHostRequest } from "./helpers/mock-get-zone-from-host";
 import { useMockIsTTY } from "./helpers/mock-istty";
@@ -45,6 +41,7 @@ import {
 	mswSuccessUserHandlers,
 } from "./helpers/msw";
 import { mswListNewDeploymentsLatestFull } from "./helpers/msw/handlers/versions";
+import { normalizeString } from "./helpers/normalize";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import { writeWorkerSource } from "./helpers/write-worker-source";
@@ -2053,7 +2050,7 @@ addEventListener('fetch', event => {});`
 
 			        "
 		      `);
-			expect(normalizeSlashes(std.warn)).toMatchInlineSnapshot(`
+			expect(normalizeString(std.warn)).toMatchInlineSnapshot(`
 			        "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
 
 			            - Because you've defined a [site] configuration, we're defaulting to \\"workers-site\\" for the
@@ -2169,7 +2166,7 @@ addEventListener('fetch', event => {});`
 				Current Version ID: Galaxy-Class"
 			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
-			expect(normalizeSlashes(std.warn)).toMatchInlineSnapshot(`
+			expect(normalizeString(std.warn)).toMatchInlineSnapshot(`
 			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing my-site/wrangler.toml configuration:[0m
 
 			    - [1mDeprecation[0m: \\"site.entry-point\\":
@@ -5679,8 +5676,8 @@ addEventListener('fetch', event => {});`
 			mockUploadWorkerRequest();
 			await runWrangler("build");
 
-			const outFile = normalizeSlashes(
-				normalizeTempDirs(fs.readFileSync("dist/index.js", "utf-8"))
+			const outFile = normalizeString(
+				fs.readFileSync("dist/index.js", "utf-8")
 			);
 
 			// We don't check against the whole file as there is middleware being injected
@@ -5715,8 +5712,8 @@ addEventListener('fetch', event => {});`
 			mockUploadWorkerRequest();
 			await runWrangler("build --env staging");
 
-			const outFile = normalizeSlashes(
-				normalizeTempDirs(fs.readFileSync("dist/index.js", "utf-8"))
+			const outFile = normalizeString(
+				fs.readFileSync("dist/index.js", "utf-8")
 			);
 
 			// We don't check against the whole file as there is middleware being injected
@@ -9262,13 +9259,15 @@ export default{
 
 			await expect(
 				runWrangler("deploy index.js --dry-run").catch((e) =>
-					esbuild
-						.formatMessagesSync(e?.errors ?? [], { kind: "error" })
-						.join()
-						.trim()
+					normalizeString(
+						esbuild
+							.formatMessagesSync(e?.errors ?? [], { kind: "error" })
+							.join()
+							.trim()
+					)
 				)
 			).resolves.toMatchInlineSnapshot(`
-				"✘ [ERROR] Could not resolve \\"path\\"
+				"X [ERROR] Could not resolve \\"path\\"
 
 				    index.js:1:17:
 				      1 │ import path from 'path';
@@ -9287,13 +9286,15 @@ export default{
 
 			await expect(
 				runWrangler("deploy index.js --dry-run").catch((e) =>
-					esbuild
-						.formatMessagesSync(e?.errors ?? [], { kind: "error" })
-						.join()
-						.trim()
+					normalizeString(
+						esbuild
+							.formatMessagesSync(e?.errors ?? [], { kind: "error" })
+							.join()
+							.trim()
+					)
 				)
 			).resolves.toMatchInlineSnapshot(`
-				"✘ [ERROR] Could not resolve \\"path\\"
+				"X [ERROR] Could not resolve \\"path\\"
 
 				    index.js:1:17:
 				      1 │ import path from 'path';
@@ -9312,13 +9313,15 @@ export default{
 
 			await expect(
 				runWrangler("deploy index.js --dry-run").catch((e) =>
-					esbuild
-						.formatMessagesSync(e?.errors ?? [], { kind: "error" })
-						.join()
-						.trim()
+					normalizeString(
+						esbuild
+							.formatMessagesSync(e?.errors ?? [], { kind: "error" })
+							.join()
+							.trim()
+					)
 				)
 			).resolves.toMatchInlineSnapshot(`
-				"✘ [ERROR] Could not resolve \\"diagnostics_channel\\"
+				"X [ERROR] Could not resolve \\"diagnostics_channel\\"
 
 				    index.js:1:15:
 				      1 │ import fs from 'diagnostics_channel';
@@ -9338,13 +9341,15 @@ export default{
 
 			await expect(
 				runWrangler("deploy index.js --dry-run").catch((e) =>
-					esbuild
-						.formatMessagesSync(e?.errors ?? [], { kind: "error" })
-						.join()
-						.trim()
+					normalizeString(
+						esbuild
+							.formatMessagesSync(e?.errors ?? [], { kind: "error" })
+							.join()
+							.trim()
+					)
 				)
 			).resolves.toMatchInlineSnapshot(`
-				"✘ [ERROR] Could not resolve \\"path\\"
+				"X [ERROR] Could not resolve \\"path\\"
 
 				    index.js:1:15:
 				      1 │ import fs from 'path';
@@ -9364,13 +9369,15 @@ export default{
 
 			await expect(
 				runWrangler("deploy index.js --dry-run").catch((e) =>
-					esbuild
-						.formatMessagesSync(e?.errors ?? [], { kind: "error" })
-						.join()
-						.trim()
+					normalizeString(
+						esbuild
+							.formatMessagesSync(e?.errors ?? [], { kind: "error" })
+							.join()
+							.trim()
+					)
 				)
 			).resolves.toMatchInlineSnapshot(`
-				"✘ [ERROR] Could not resolve \\"path\\"
+				"X [ERROR] Could not resolve \\"path\\"
 
 				    index.js:1:15:
 				      1 │ import fs from 'path';
