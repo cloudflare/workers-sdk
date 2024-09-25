@@ -2,9 +2,9 @@ import * as fs from "node:fs";
 import { basename, dirname, extname, join, relative, resolve } from "node:path";
 import * as esmLexer from "es-module-lexer";
 import { findUpSync } from "find-up";
+import { getNodeCompat } from "miniflare";
 import { findWranglerToml, readConfig } from "../config";
 import { getEntry } from "../deployment-bundle/entry";
-import { getNodeCompatMode } from "../deployment-bundle/node-compat";
 import { getVarsForDev } from "../dev/dev-vars";
 import { UserError } from "../errors";
 import { CommandLineArgsError } from "../index";
@@ -92,10 +92,13 @@ export async function typesHandler(
 		const tsconfigPath =
 			config.tsconfig ?? join(dirname(configPath), "tsconfig.json");
 		const tsconfigTypes = readTsconfigTypes(tsconfigPath);
-		const mode = getNodeCompatMode(config.compatibility_flags, {
-			validateConfig: false,
-			nodeCompat: config.node_compat,
-		});
+		const { mode } = getNodeCompat(
+			config.compatibility_date,
+			config.compatibility_flags,
+			{
+				nodeCompat: config.node_compat,
+			}
+		);
 
 		logRuntimeTypesMessage(outFile, tsconfigTypes, mode !== null);
 	}

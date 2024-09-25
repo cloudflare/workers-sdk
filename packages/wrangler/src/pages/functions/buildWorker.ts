@@ -14,9 +14,9 @@ import { getBasePath } from "../../paths";
 import { getPagesProjectRoot, getPagesTmpDir } from "../utils";
 import type { BundleResult } from "../../deployment-bundle/bundle";
 import type { Entry } from "../../deployment-bundle/entry";
-import type { NodeJSCompatMode } from "../../deployment-bundle/node-compat";
 import type { CfModule } from "../../deployment-bundle/worker";
 import type { Plugin } from "esbuild";
+import type { NodeJSCompatMode } from "miniflare";
 
 export type Options = {
 	routesModule: string;
@@ -85,7 +85,6 @@ export function buildWorkerFromFunctions({
 		serveLegacyAssetsFromWorker: false,
 		checkFetch: local,
 		targetConsumer: local ? "dev" : "deploy",
-		forPages: true,
 		local,
 		projectRoot: getPagesProjectRoot(),
 		defineNavigatorUserAgent,
@@ -189,7 +188,6 @@ export function buildRawWorker({
 		serveLegacyAssetsFromWorker: false,
 		checkFetch: local,
 		targetConsumer: local ? "dev" : "deploy",
-		forPages: true,
 		local,
 		projectRoot: getPagesProjectRoot(),
 		defineNavigatorUserAgent,

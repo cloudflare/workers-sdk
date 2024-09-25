@@ -14,7 +14,7 @@ import { processAssetsArg, validateAssetsArgsAndConfig } from "./assets";
 import { findWranglerToml, printBindings, readConfig } from "./config";
 import { validateRoutes } from "./deploy/deploy";
 import { getEntry } from "./deployment-bundle/entry";
-import { getNodeCompatMode } from "./deployment-bundle/node-compat";
+import { validateNodeCompatMode } from "./deployment-bundle/node-compat";
 import { getBoundRegisteredWorkers } from "./dev-registry";
 import Dev, { devRegistry } from "./dev/dev";
 import { getVarsForDev } from "./dev/dev-vars";
@@ -685,7 +685,8 @@ export async function startDev(args: StartDevOptions) {
 					moduleRoot: args.moduleRoot,
 					moduleRules: args.rules,
 					nodejsCompatMode: (parsedConfig: Config) =>
-						getNodeCompatMode(
+						validateNodeCompatMode(
+							args.compatibilityDate ?? parsedConfig.compatibility_date,
 							args.compatibilityFlags ?? parsedConfig.compatibility_flags ?? [],
 							{
 								nodeCompat: args.nodeCompat ?? parsedConfig.node_compat,
@@ -889,7 +890,8 @@ export async function startDev(args: StartDevOptions) {
 			additionalModules,
 		} = devServerSettings;
 
-		const nodejsCompatMode = getNodeCompatMode(
+		const nodejsCompatMode = validateNodeCompatMode(
+			args.compatibilityDate ?? config.compatibility_date,
 			args.compatibilityFlags ?? config.compatibility_flags ?? [],
 			{
 				nodeCompat: args.nodeCompat ?? config.node_compat,
@@ -1050,7 +1052,8 @@ export async function startApiDev(args: StartDevOptions) {
 		additionalModules,
 	} = await validateDevServerSettings(args, config);
 
-	const nodejsCompatMode = getNodeCompatMode(
+	const nodejsCompatMode = validateNodeCompatMode(
+		args.compatibilityDate ?? config.compatibility_date,
 		args.compatibilityFlags ?? config.compatibility_flags,
 		{
 			nodeCompat: args.nodeCompat ?? config.node_compat,

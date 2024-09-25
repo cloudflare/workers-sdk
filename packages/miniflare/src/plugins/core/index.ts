@@ -807,7 +807,10 @@ export function getGlobalServices({
 }
 
 function getWorkerScript(
-	options: SourceOptions & { compatibilityFlags?: string[] },
+	options: SourceOptions & {
+		compatibilityDate?: string;
+		compatibilityFlags?: string[];
+	},
 	workerIndex: number,
 	additionalModuleNames: string[]
 ): { serviceWorkerScript: string } | { modules: Worker_Module[] } {
@@ -843,6 +846,7 @@ function getWorkerScript(
 			modulesRoot,
 			additionalModuleNames,
 			options.modulesRules,
+			options.compatibilityDate,
 			options.compatibilityFlags
 		);
 		// If `script` and `scriptPath` are set, resolve modules in `script`
@@ -862,3 +866,4 @@ export * from "./proxy";
 export * from "./constants";
 export * from "./modules";
 export * from "./services";
+export * from "./node-compat";
