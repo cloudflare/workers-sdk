@@ -125,9 +125,8 @@ export class ProxyServer implements DurableObject {
 			// should only ever return `Object`, as none override `Symbol.toStringTag`
 			// https://tc39.es/ecma262/multipage/fundamental-objects.html#sec-object.prototype.tostring
 			const type = getType(value);
-			const isInternalClass = isInternal(value);
 			if (
-				((type === "Object" || isInternalClass) && !isPlainObject(value)) ||
+				((type === "Object" || isInternal(value)) && !isPlainObject(value)) ||
 				type === "Promise"
 			) {
 				const address = this.nextHeapAddress++;
