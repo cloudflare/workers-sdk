@@ -1,12 +1,12 @@
 export default {
 	async fetch(request, env, ctx) {
 		const url = new URL(request.url);
-		const count = (await env.MY_KV.get('KEY')) ?? '0';
-		await env.MY_KV.put('KEY', `${Number(count) + 1}`);
+		const response = await env.WORKER_B.fetch(request);
+		const workerBJson = (await response.json()) as any;
 
 		return Response.json({
 			name: 'Worker A',
-			message: `The count is ${count}`,
+			worker_b_message: workerBJson.message,
 			pathname: url.pathname,
 		});
 	},

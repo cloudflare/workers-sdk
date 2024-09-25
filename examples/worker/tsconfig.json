@@ -12,7 +12,7 @@
 		"noImplicitOverride": true,
 		"module": "Preserve",
 		"lib": ["ES2022", "DOM"],
-		"types": ["@cloudflare/workers-types", "vite/client"],
+		"types": ["@cloudflare/workers-types/experimental", "vite/client"],
 		"declaration": true,
 		"declarationMap": true,
 		"noEmit": true

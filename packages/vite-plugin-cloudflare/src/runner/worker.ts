@@ -78,13 +78,13 @@ export default {
 				throw new Error('Runner already initialized');
 			}
 
-			const entry = request.headers.get('x-vite-entrypoint');
+			const main = request.headers.get('x-vite-main');
 
-			if (!entry) {
-				throw new Error('Missing x-vite-entrypoint header');
+			if (!main) {
+				throw new Error('Missing x-vite-main header');
 			}
 
-			entrypoint = entry;
+			entrypoint = main;
 
 			const { 0: client, 1: server } = new WebSocketPair();
 

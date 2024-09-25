@@ -3,6 +3,7 @@
 	"type": "module",
 	"scripts": {
 		"dev": "vite dev",
+		"typegen": "pnpm typegen-a && pnpm typegen-b",
 		"typegen-a": "wrangler types -c ./worker-a/wrangler.toml ./worker-a/worker-configuration.d.ts",
 		"typegen-b": "wrangler types -c ./worker-b/wrangler.toml ./worker-b/worker-configuration.d.ts"
 	},

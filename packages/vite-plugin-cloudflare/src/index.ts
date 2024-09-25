@@ -10,12 +10,17 @@ import type {
 	CloudflareEnvironmentOptions,
 	CloudflareDevEnvironment,
 } from './cloudflare-environment';
-
 const runnerPath = fileURLToPath(import.meta.resolve('./runner/worker.js'));
 
-export function cloudflare(
-	environments: Record<string, CloudflareEnvironmentOptions>
-): vite.Plugin {
+export function cloudflare<
+	T extends Record<string, CloudflareEnvironmentOptions>
+>({
+	environments,
+	entrypoint,
+}: {
+	environments: T;
+	entrypoint?: keyof T;
+}): vite.Plugin {
 	let resolvedConfig: vite.ResolvedConfig;
 
 	return {
@@ -29,8 +34,8 @@ export function cloudflare(
 				),
 			};
 		},
-		configResolved(config) {
-			resolvedConfig = config;
+		configResolved(viteConfig) {
+			resolvedConfig = viteConfig;
 		},
 		async configureServer(viteDevServer) {
 			const miniflare = new Miniflare({
@@ -109,44 +114,28 @@ export function cloudflare(
 				})
 			);
 
-			const targets = Object.entries(environments)
-				.filter(([_, options]) => options.route)
-				.map(([name, options]) => {
-					return {
-						route: options.route!,
-						middleware: createMiddleware((context) => {
-							return (
-								viteDevServer.environments[name] as CloudflareDevEnvironment
-							).dispatchFetch(context.request);
-						}),
-					};
+			const middleware =
+				entrypoint &&
+				createMiddleware((context) => {
+					return (
+						viteDevServer.environments[
+							entrypoint as string
+						] as CloudflareDevEnvironment
+					).dispatchFetch(context.request);
 				});
 
 			return () => {
 				viteDevServer.middlewares.use((req, res, next) => {
 					req.url = req.originalUrl;
 
-					if (!req.url) return;
-
-					for (const target of targets) {
-						if (routeMatchesUrl(target.route.path, req.url)) {
-							if (target.route.rewrite) {
-								req.url = target.route.rewrite(req.url);
-							}
-
-							target.middleware(req, res, next);
-
-							return;
-						}
+					if (!middleware) {
+						next();
+						return;
 					}
 
-					next();
+					middleware(req, res, next);
 				});
 			};
 		},
 	};
-}
-
-function routeMatchesUrl(route: string, url: string) {
-	return url && url.startsWith(route);
 }

@@ -4,19 +4,17 @@ import { cloudflare } from '@flarelabs-net/vite-plugin-cloudflare';
 export default defineConfig({
 	plugins: [
 		cloudflare({
-			workerA: {
-				entrypoint: './worker-a/index.ts',
-				route: {
-					path: '/worker-a',
-					// rewrite: (path) => path.replace(/^\/worker-a/, ''),
+			environments: {
+				workerA: {
+					main: './worker-a/index.ts',
+					wranglerConfig: './worker-a/wrangler.toml',
 				},
-				wranglerConfig: './worker-a/wrangler.toml',
+				workerB: {
+					main: './worker-b/index.ts',
+					wranglerConfig: './worker-b/wrangler.toml',
+				},
 			},
-			workerB: {
-				entrypoint: './worker-b/index.ts',
-				route: { path: '/worker-b' },
-				wranglerConfig: './worker-b/wrangler.toml',
-			},
+			entrypoint: 'workerA',
 		}),
 	],
 });

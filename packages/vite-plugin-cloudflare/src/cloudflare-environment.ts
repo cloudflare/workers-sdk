@@ -4,12 +4,7 @@ import type { ReplaceWorkersTypes, WebSocket, MessageEvent } from 'miniflare';
 import type { Fetcher } from '@cloudflare/workers-types/experimental';
 
 export interface CloudflareEnvironmentOptions {
-	entrypoint: string;
-	route?: {
-		path: string;
-		rewrite?: (path: string) => string;
-	};
-	// Defaults to "./wrangler.toml"
+	main: string;
 	wranglerConfig?: string;
 	overrides?: vite.EnvironmentOptions;
 }
@@ -89,7 +84,7 @@ export class CloudflareDevEnvironment extends vite.DevEnvironment {
 			{
 				headers: {
 					upgrade: 'websocket',
-					'x-vite-entrypoint': this.#options.entrypoint,
+					'x-vite-main': this.#options.main,
 				},
 			}
 		);
@@ -138,7 +133,7 @@ export function createCloudflareEnvironment(
 					return new vite.BuildEnvironment(name, config);
 				},
 				// Use the entrypoint for the 'build' command
-				ssr: options.entrypoint,
+				ssr: options.main,
 			},
 			webCompatible: true,
 		} satisfies vite.EnvironmentOptions,
