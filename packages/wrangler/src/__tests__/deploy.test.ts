@@ -9406,13 +9406,13 @@ export default{
 		`);
 		});
 
-		it('when present, should support any "external" `node:*` imports', async () => {
+		it('when present, should support "external" `node:*` imports', async () => {
 			writeWranglerToml();
 			fs.writeFileSync(
 				"index.js",
 				`
-      import AsyncHooks from 'node:async_hooks';
-      console.log(AsyncHooks);
+      import path from 'node:path';
+      console.log(path);
       export default {}
       `
 			);
@@ -9432,7 +9432,39 @@ export default{
 			}
 		`);
 			expect(fs.readFileSync("dist/index.js", { encoding: "utf-8" })).toContain(
-				`import AsyncHooks from "node:async_hooks";`
+				`import path from "node:path";`
+			);
+		});
+
+		it(`when present, and compat date is on or after 2024/09/23, should support "external" non-prefixed node imports`, async () => {
+			writeWranglerToml({
+				compatibility_date: "2024-09-23",
+			});
+			fs.writeFileSync(
+				"index.js",
+				`
+      import path from 'path';
+      console.log(path);
+      export default {}
+      `
+			);
+
+			await runWrangler(
+				"deploy index.js --dry-run --outdir=dist --compatibility-flag=nodejs_compat"
+			);
+
+			expect(std).toMatchInlineSnapshot(`
+			Object {
+			  "debug": "",
+			  "err": "",
+			  "info": "",
+			  "out": "Total Upload: xx KiB / gzip: xx KiB
+			--dry-run: exiting now.",
+			  "warn": "",
+			}
+		`);
+			expect(fs.readFileSync("dist/index.js", { encoding: "utf-8" })).toContain(
+				`import path from "path";`
 			);
 		});
 

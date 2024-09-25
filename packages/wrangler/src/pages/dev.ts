@@ -361,6 +361,7 @@ export const Handler = async (args: PagesDevArguments) => {
 	let scriptPath = "";
 
 	const nodejsCompatMode = getNodeCompatMode(
+		args.compatibilityDate ?? config.compatibility_date,
 		args.compatibilityFlags ?? config.compatibility_flags ?? [],
 		{
 			nodeCompat: args.nodeCompat,

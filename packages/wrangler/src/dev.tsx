@@ -686,6 +686,7 @@ export async function startDev(args: StartDevOptions) {
 					moduleRules: args.rules,
 					nodejsCompatMode: (parsedConfig: Config) =>
 						getNodeCompatMode(
+							args.compatibilityDate ?? parsedConfig.compatibility_date,
 							args.compatibilityFlags ?? parsedConfig.compatibility_flags ?? [],
 							{
 								nodeCompat: args.nodeCompat ?? parsedConfig.node_compat,
@@ -890,6 +891,7 @@ export async function startDev(args: StartDevOptions) {
 		} = devServerSettings;
 
 		const nodejsCompatMode = getNodeCompatMode(
+			args.compatibilityDate ?? config.compatibility_date,
 			args.compatibilityFlags ?? config.compatibility_flags ?? [],
 			{
 				nodeCompat: args.nodeCompat ?? config.node_compat,
@@ -1051,6 +1053,7 @@ export async function startApiDev(args: StartDevOptions) {
 	} = await validateDevServerSettings(args, config);
 
 	const nodejsCompatMode = getNodeCompatMode(
+		args.compatibilityDate ?? config.compatibility_date,
 		args.compatibilityFlags ?? config.compatibility_flags,
 		{
 			nodeCompat: args.nodeCompat ?? config.node_compat,

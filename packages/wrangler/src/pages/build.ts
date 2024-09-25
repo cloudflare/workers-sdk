@@ -438,10 +438,14 @@ const validateArgs = async (args: PagesBuildArgs): Promise<ValidatedArgs> => {
 	}
 
 	const { nodeCompat: node_compat, ...argsExceptNodeCompat } = args;
-	const nodejsCompatMode = getNodeCompatMode(args.compatibilityFlags ?? [], {
-		nodeCompat: node_compat,
-		noBundle: config?.no_bundle,
-	});
+	const nodejsCompatMode = getNodeCompatMode(
+		args.compatibilityDate ?? config?.compatibility_date,
+		args.compatibilityFlags ?? config?.compatibility_flags ?? [],
+		{
+			nodeCompat: node_compat,
+			noBundle: config?.no_bundle,
+		}
+	);
 
 	const defineNavigatorUserAgent = isNavigatorDefined(
 		args.compatibilityDate,

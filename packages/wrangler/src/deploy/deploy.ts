@@ -440,12 +440,18 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 	const minify = props.minify ?? config.minify;
 
+	const compatibilityDate =
+		props.compatibilityDate ?? config.compatibility_date;
 	const compatibilityFlags =
 		props.compatibilityFlags ?? config.compatibility_flags;
-	const nodejsCompatMode = getNodeCompatMode(compatibilityFlags, {
-		nodeCompat: props.nodeCompat ?? config.node_compat,
-		noBundle: props.noBundle ?? config.no_bundle,
-	});
+	const nodejsCompatMode = getNodeCompatMode(
+		compatibilityDate,
+		compatibilityFlags,
+		{
+			nodeCompat: props.nodeCompat ?? config.node_compat,
+			noBundle: props.noBundle ?? config.no_bundle,
+		}
+	);
 
 	// Warn if user tries minify with no-bundle
 	if (props.noBundle && minify) {

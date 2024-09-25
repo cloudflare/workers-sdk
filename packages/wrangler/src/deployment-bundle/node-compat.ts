@@ -20,6 +20,7 @@ export type NodeJSCompatMode = "legacy" | "als" | "v1" | "v2" | null;
  *
  * see `EnvironmentInheritable` for `nodeCompat` and `noBundle`.
  *
+ * @param compatibilityDateStr The compatibility date
  * @param compatibilityFlags The compatibility flags
  * @param validateConfig Whether to validate the config (logs and throws)
  * @param nodeCompat Whether to add polyfills for node builtin modules and globals
@@ -32,6 +33,7 @@ export type NodeJSCompatMode = "legacy" | "als" | "v1" | "v2" | null;
  *  - null: no Node.js compatibility
  */
 export function getNodeCompatMode(
+	compatibilityDateStr: string = "2000-01-01", // Default to some arbitrary old date
 	compatibilityFlags: string[],
 	{
 		validateConfig = true,
@@ -50,9 +52,19 @@ export function getNodeCompatMode(
 		hasExperimentalNodejsCompatV2Flag,
 	} = parseNodeCompatibilityFlags(compatibilityFlags);
 
+	const nodeCompatSwitchOverDate = new Date(2024, 8, 23); // 2024 Sept 23
+	const [compatYear, compatMonth, compatDay] = compatibilityDateStr.split("-");
+	const compatibilityDate = new Date(
+		Number(compatYear),
+		Number(compatMonth) - 1,
+		Number(compatDay)
+	);
 	const legacy = nodeCompat === true;
 	let mode: NodeJSCompatMode = null;
-	if (hasNodejsCompatV2Flag) {
+	if (
+		hasNodejsCompatV2Flag ||
+		(hasNodejsCompatFlag && compatibilityDate >= nodeCompatSwitchOverDate)
+	) {
 		mode = "v2";
 	} else if (hasNodejsCompatFlag) {
 		mode = "v1";

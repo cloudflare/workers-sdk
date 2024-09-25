@@ -186,6 +186,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 	const minify = props.minify ?? config.minify;
 
 	const nodejsCompatMode = getNodeCompatMode(
+		props.compatibilityDate ?? config.compatibility_date,
 		props.compatibilityFlags ?? config.compatibility_flags,
 		{
 			nodeCompat: props.nodeCompat ?? config.node_compat,
