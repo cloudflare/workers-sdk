@@ -12,11 +12,9 @@ export type NodeJSCompatMode = "legacy" | "als" | "v1" | "v2" | null;
 /**
  * Computes the Node.js compatibility mode we are running.
  *
- * NOTE:
- * Currently v2 mode is configured via `nodejs_compat_v2` compat flag.
- * At a future compatibility date, the use of `nodejs_compat` flag will imply `nodejs_compat_v2`.
- *
- * see `EnvironmentInheritable` for `nodeCompat` and `noBundle`.
+ * NOTES:
+ * - The v2 mode is configured via `nodejs_compat_v2` compat flag or via `nodejs_compat` plus a compatibility date of Sept 23rd. 2024 or later.
+ * - See `EnvironmentInheritable` for `nodeCompat` and `noBundle`.
  *
  * @param compatibilityDateStr The compatibility date
  * @param compatibilityFlags The compatibility flags
@@ -24,7 +22,7 @@ export type NodeJSCompatMode = "legacy" | "als" | "v1" | "v2" | null;
  * @returns the mode and flags to indicate specific configuration for validating.
  */
 export function getNodeCompatMode(
-	compatibilityDateStr: string = "2000-01-01", // Default to some arbitrary old date
+	compatibilityDate: string = "2000-01-01", // Default to some arbitrary old date
 	compatibilityFlags: string[],
 	opts?: {
 		nodeCompat?: boolean;
@@ -38,13 +36,7 @@ export function getNodeCompatMode(
 		hasExperimentalNodejsCompatV2Flag,
 	} = parseNodeCompatibilityFlags(compatibilityFlags);
 
-	const nodeCompatSwitchOverDate = new Date(2024, 8, 23); // 2024 Sept 23
-	const [compatYear, compatMonth, compatDay] = compatibilityDateStr.split("-");
-	const compatibilityDate = new Date(
-		Number(compatYear),
-		Number(compatMonth) - 1,
-		Number(compatDay)
-	);
+	const nodeCompatSwitchOverDate = "2024-08-23";
 	const legacy = nodeCompat === true;
 	let mode: NodeJSCompatMode = null;
 	if (
