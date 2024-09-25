@@ -9256,7 +9256,7 @@ export default{
 			`);
 		});
 
-		it("should recommend node compatibility flag mode when using node builtins and no node compat is enabled", async () => {
+		it("should recommend node compatibility flag when using node builtins and no node compat is enabled", async () => {
 			writeWranglerToml();
 			fs.writeFileSync("index.js", "import path from 'path';");
 
@@ -9279,7 +9279,7 @@ export default{
 			`);
 		});
 
-		it("should recommend node compatibility flag mode when using node builtins and node compat is set only to nodejs_als", async () => {
+		it("should recommend node compatibility flag when using node builtins and node compat is set only to nodejs_als", async () => {
 			writeWranglerToml({
 				compatibility_flags: ["nodejs_als"],
 			});
@@ -9304,7 +9304,7 @@ export default{
 			`);
 		});
 
-		it("should recommend node compatibility flag mode when using node builtins and `node_compat` is true", async () => {
+		it("should recommend node compatibility flag when using node builtins and `node_compat` is true", async () => {
 			writeWranglerToml({
 				node_compat: true,
 			});
@@ -9329,7 +9329,7 @@ export default{
 			`);
 		});
 
-		it("should recommend updating the compatibility date mode when using node builtins and the `nodejs_compat` flag", async () => {
+		it("should recommend updating the compatibility date when using node builtins and the `nodejs_compat` flag", async () => {
 			writeWranglerToml({
 				compatibility_date: "2024/09/01", // older than Sept 23rd, 2024
 				compatibility_flags: ["nodejs_compat"],
