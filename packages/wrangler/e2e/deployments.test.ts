@@ -225,24 +225,24 @@ const initialAssets = {
 `,
 };
 const checkAssets = async (testCases: AssetTestCase[], deployedUrl: string) => {
-	for (const page of testCases) {
+	for (const testCase of testCases) {
 		const { text, url } = await retry(
-			(s) => (page.content ? s.status !== 200 : s.status !== 404),
+			(s) => (testCase.content ? s.status !== 200 : s.status !== 404),
 			async () => {
-				const r = await fetch(new URL(page.path, deployedUrl));
+				const r = await fetch(new URL(testCase.path, deployedUrl));
 				return { text: await r.text(), status: r.status, url: r.url };
 			}
 		);
-		if (page.content) {
-			expect(text).toContain(page.content);
+		if (testCase.content) {
+			expect(text).toContain(testCase.content);
 		}
-		if (page.redirect) {
+		if (testCase.redirect) {
 			expect(new URL(url).pathname).toEqual(
-				new URL(page.redirect, deployedUrl).pathname
+				new URL(testCase.redirect, deployedUrl).pathname
 			);
 		} else {
 			expect(new URL(url).pathname).toEqual(
-				new URL(page.path, deployedUrl).pathname
+				new URL(testCase.path, deployedUrl).pathname
 			);
 		}
 	}
@@ -321,7 +321,7 @@ describe("Workers + Assets deployment", { timeout: TIMEOUT }, () => {
 		);
 		expect(text).toBeFalsy();
 	});
-	it("lets you add a user Worker", async () => {
+	it("deploys a Worker with static assets and user Worker", async () => {
 		await helper.seed({
 			"wrangler.toml": dedent`
 						name = "${workerName}"
