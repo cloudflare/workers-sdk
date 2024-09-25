@@ -3,8 +3,8 @@
 	"type": "module",
 	"scripts": {
 		"dev": "vite dev",
-		"typegen-a": "wrangler types -c ./worker-a/wrangler.toml ./worker-a",
-		"typegen-b": "wrangler types -c ./worker-b/wrangler.toml"
+		"typegen-a": "wrangler types -c ./worker-a/wrangler.toml ./worker-a/worker-configuration.d.ts",
+		"typegen-b": "wrangler types -c ./worker-b/wrangler.toml ./worker-b/worker-configuration.d.ts"
 	},
 	"dependencies": {
 		"@flarelabs-net/vite-plugin-cloudflare": "workspace:*",

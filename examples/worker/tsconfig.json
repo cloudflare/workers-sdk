@@ -1,7 +1,21 @@
 {
 	"compilerOptions": {
+		"esModuleInterop": false,
+		"skipLibCheck": true,
+		"target": "ES2022",
+		"resolveJsonModule": true,
+		"moduleDetection": "force",
+		"isolatedModules": true,
+		"verbatimModuleSyntax": true,
 		"strict": true,
-		"types": ["@cloudflare/workers-types"]
+		"noUncheckedIndexedAccess": true,
+		"noImplicitOverride": true,
+		"module": "Preserve",
+		"lib": ["ES2022", "DOM"],
+		"types": ["@cloudflare/workers-types", "vite/client"],
+		"declaration": true,
+		"declarationMap": true,
+		"noEmit": true
 	},
 	"include": ["worker-a", "worker-b"]
 }

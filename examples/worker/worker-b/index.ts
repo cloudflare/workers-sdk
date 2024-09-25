@@ -1,7 +1,7 @@
 export default {
 	async fetch(request, env, ctx) {
 		const url = new URL(request.url);
-		const response = await env.WORKER_B.fetch(request);
+		const response = await env.WORKER_A.fetch(request);
 		const workerAJson = (await response.json()) as any;
 
 		return Response.json({

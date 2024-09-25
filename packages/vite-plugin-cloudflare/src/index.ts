@@ -11,7 +11,10 @@ import type {
 	CloudflareDevEnvironment,
 } from './cloudflare-environment';
 
-const runnerPath = fileURLToPath(import.meta.resolve('./runner/worker.js'));
+// const runnerPath = fileURLToPath(import.meta.resolve('./runner/worker.js'));
+const runnerPath = fileURLToPath(
+	import.meta.resolve('./runner/durable-object.js')
+);
 
 export function cloudflare(
 	environments: Record<string, CloudflareEnvironmentOptions>
@@ -56,6 +59,9 @@ export function cloudflare(
 							},
 						],
 						unsafeEvalBinding: '__VITE_UNSAFE_EVAL__',
+						durableObjects: {
+							__CLOUDFLARE_WORKER_RUNNER__: 'CloudflareWorkerRunner',
+						},
 						bindings: {
 							...workerOptions.bindings,
 							__VITE_ROOT__: resolvedConfig.root,
@@ -91,13 +97,17 @@ export function cloudflare(
 				}),
 			});
 
+			viteDevServer.environments.workerA?.hot.on('event', (data) => {
+				console.log(data);
+			});
+
 			await Promise.all(
 				Object.keys(environments).map(async (name) => {
-					const runner = await miniflare.getWorker(name);
+					const worker = await miniflare.getWorker(name);
 
 					return (
 						viteDevServer.environments[name] as CloudflareDevEnvironment
-					).initRunner(runner);
+					).initRunner(worker);
 				})
 			);
 

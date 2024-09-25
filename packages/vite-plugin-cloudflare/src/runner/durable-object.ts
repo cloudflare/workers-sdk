@@ -1,3 +1,4 @@
+import { DurableObject } from 'cloudflare:workers';
 import { ModuleRunner } from 'vite/module-runner';
 import { UNKNOWN_HOST, INIT_PATH } from '../shared.js';
 import type { FetchResult } from 'vite/module-runner';
@@ -10,6 +11,7 @@ interface RunnerEnv {
 	__VITE_UNSAFE_EVAL__: {
 		eval: (code: string, filename: string) => Function;
 	};
+	__CLOUDFLARE_WORKER_RUNNER__: DurableObjectNamespace;
 }
 
 function createModuleRunner(env: RunnerEnv, webSocket: WebSocket) {
@@ -66,15 +68,15 @@ function createModuleRunner(env: RunnerEnv, webSocket: WebSocket) {
 	);
 }
 
-let moduleRunner: ModuleRunner;
-let entrypoint: string;
+export class CloudflareWorkerRunner extends DurableObject<RunnerEnv> {
+	#runner?: ModuleRunner;
+	#entrypoint?: string;
 
-export default {
-	async fetch(request, env, ctx) {
+	override async fetch(request: Request) {
 		const url = new URL(request.url);
 
 		if (url.pathname === INIT_PATH) {
-			if (moduleRunner) {
+			if (this.#runner) {
 				throw new Error('Runner already initialized');
 			}
 
@@ -84,20 +86,22 @@ export default {
 				throw new Error('Missing x-vite-entrypoint header');
 			}
 
-			entrypoint = entry;
+			this.#entrypoint = entry;
 
 			const pair = new WebSocketPair();
 
-			moduleRunner = createModuleRunner(env, pair[0]);
+			this.ctx.acceptWebSocket(pair[0]);
+
+			this.#runner = createModuleRunner(this.env, pair[0]);
 
 			return new Response(null, { status: 101, webSocket: pair[1] });
 		}
 
-		if (!moduleRunner || !entrypoint) {
+		if (!this.#runner || !this.#entrypoint) {
 			throw new Error('Runner not initialized');
 		}
 
-		const module = await moduleRunner.import(entrypoint);
+		const module = await this.#runner.import(this.#entrypoint);
 		const handler = module.default as ExportedHandler;
 
 		if (!handler.fetch) {
@@ -109,8 +113,19 @@ export default {
 			__VITE_FETCH_MODULE__,
 			__VITE_UNSAFE_EVAL__,
 			...filteredEnv
-		} = env;
+		} = this.env;
 
-		return handler.fetch(request, filteredEnv, ctx);
+		return handler.fetch(request, filteredEnv, this.ctx as any);
+	}
+}
+
+export default {
+	async fetch(request, env, ctx) {
+		const durableObject = env.__CLOUDFLARE_WORKER_RUNNER__.get(
+			env.__CLOUDFLARE_WORKER_RUNNER__.idFromName('')
+		);
+		const response = await durableObject.fetch(request);
+
+		return response;
 	},
 } satisfies ExportedHandler<RunnerEnv>;
