@@ -133,7 +133,6 @@ export type BundleOptions = {
 	sourcemap?: esbuild.CommonOptions["sourcemap"];
 	plugins?: esbuild.Plugin[];
 	isOutfile?: boolean;
-	forPages?: boolean;
 	local: boolean;
 	projectRoot: string | undefined;
 	defineNavigatorUserAgent: boolean;
@@ -172,7 +171,6 @@ export async function bundleWorker(
 		sourcemap,
 		plugins,
 		isOutfile,
-		forPages,
 		local,
 		projectRoot,
 		defineNavigatorUserAgent,
@@ -485,8 +483,8 @@ export async function bundleWorker(
 			};
 		}
 	} catch (e) {
-		if (nodejsCompatMode !== "legacy" && isBuildFailure(e)) {
-			rewriteNodeCompatBuildFailure(e.errors, forPages);
+		if (isBuildFailure(e)) {
+			rewriteNodeCompatBuildFailure(e.errors, nodejsCompatMode);
 		}
 		throw e;
 	}

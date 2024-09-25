@@ -9256,27 +9256,103 @@ export default{
 			`);
 		});
 
-		it("should recommend node compatibility mode when using node builtins and node-compat isn't enabled", async () => {
+		it("should recommend node compatibility flag mode when using node builtins and no node compat is enabled", async () => {
 			writeWranglerToml();
-			fs.writeFileSync(
-				"index.js",
-				`
-      import path from 'path';
-      console.log(path.join("some/path/to", "a/file.txt"));
-      export default {}
-      `
-			);
-			let err: esbuild.BuildFailure | undefined;
-			try {
-				await runWrangler("deploy index.js --dry-run"); // expecting this to throw, as node compatibility isn't enabled
-			} catch (e) {
-				err = e as esbuild.BuildFailure;
-			}
-			expect(
-				esbuild.formatMessagesSync(err?.errors ?? [], { kind: "error" }).join()
-			).toMatch(
-				/The package "path" wasn't found on the file system but is built into node\.\s+Add "node_compat = true" to your wrangler\.toml file and make sure to prefix the module name with "node:" to enable Node.js compatibility\./
-			);
+			fs.writeFileSync("index.js", "import path from 'path';");
+
+			await expect(
+				runWrangler("deploy index.js --dry-run").catch((e) =>
+					esbuild
+						.formatMessagesSync(e?.errors ?? [], { kind: "error" })
+						.join()
+						.trim()
+				)
+			).resolves.toMatchInlineSnapshot(`
+				"✘ [ERROR] Could not resolve \\"path\\"
+
+				    index.js:1:17:
+				      1 │ import path from 'path';
+				        ╵                  ~~~~~~
+
+				  The package \\"path\\" wasn't found on the file system but is built into node.
+				  - Add the \\"nodejs_compat\\" compatibility flag to your project."
+			`);
+		});
+
+		it("should recommend node compatibility flag mode when using node builtins and node compat is set only to nodejs_als", async () => {
+			writeWranglerToml({
+				compatibility_flags: ["nodejs_als"],
+			});
+			fs.writeFileSync("index.js", "import path from 'path';");
+
+			await expect(
+				runWrangler("deploy index.js --dry-run").catch((e) =>
+					esbuild
+						.formatMessagesSync(e?.errors ?? [], { kind: "error" })
+						.join()
+						.trim()
+				)
+			).resolves.toMatchInlineSnapshot(`
+				"✘ [ERROR] Could not resolve \\"path\\"
+
+				    index.js:1:17:
+				      1 │ import path from 'path';
+				        ╵                  ~~~~~~
+
+				  The package \\"path\\" wasn't found on the file system but is built into node.
+				  - Add the \\"nodejs_compat\\" compatibility flag to your project."
+			`);
+		});
+
+		it("should recommend node compatibility flag mode when using node builtins and `node_compat` is true", async () => {
+			writeWranglerToml({
+				node_compat: true,
+			});
+			fs.writeFileSync("index.js", "import fs from 'diagnostics_channel';");
+
+			await expect(
+				runWrangler("deploy index.js --dry-run").catch((e) =>
+					esbuild
+						.formatMessagesSync(e?.errors ?? [], { kind: "error" })
+						.join()
+						.trim()
+				)
+			).resolves.toMatchInlineSnapshot(`
+				"✘ [ERROR] Could not resolve \\"diagnostics_channel\\"
+
+				    index.js:1:15:
+				      1 │ import fs from 'diagnostics_channel';
+				        ╵                ~~~~~~~~~~~~~~~~~~~~~
+
+				  The package \\"diagnostics_channel\\" wasn't found on the file system but is built into node.
+				  - Try removing the legacy \\"node_compat\\" setting and add the \\"nodejs_compat\\" compatibility flag in your project"
+			`);
+		});
+
+		it("should recommend updating the compatibility date mode when using node builtins and the `nodejs_compat` flag", async () => {
+			writeWranglerToml({
+				compatibility_date: "2024/09/01", // older than Sept 23rd, 2024
+				compatibility_flags: ["nodejs_compat"],
+			});
+			fs.writeFileSync("index.js", "import fs from 'path';");
+
+			await expect(
+				runWrangler("deploy index.js --dry-run").catch((e) =>
+					esbuild
+						.formatMessagesSync(e?.errors ?? [], { kind: "error" })
+						.join()
+						.trim()
+				)
+			).resolves.toMatchInlineSnapshot(`
+				"✘ [ERROR] Could not resolve \\"path\\"
+
+				    index.js:1:15:
+				      1 │ import fs from 'path';
+				        ╵                ~~~~~~
+
+				  The package \\"path\\" wasn't found on the file system but is built into node.
+				  - Make sure to prefix the module name with \\"node:\\" or update your compatibility_date to 2024/09/23 or later."
+			`);
 		});
 
 		it("should polyfill node builtins when enabled", async () => {
