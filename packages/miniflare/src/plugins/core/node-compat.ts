@@ -36,7 +36,7 @@ export function getNodeCompatMode(
 		hasExperimentalNodejsCompatV2Flag,
 	} = parseNodeCompatibilityFlags(compatibilityFlags);
 
-	const nodeCompatSwitchOverDate = "2024-08-23";
+	const nodeCompatSwitchOverDate = "2024-09-23";
 	const legacy = nodeCompat === true;
 	let mode: NodeJSCompatMode = null;
 	if (
