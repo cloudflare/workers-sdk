@@ -7,11 +7,11 @@ import { TextDecoder, TextEncoder } from "util";
 import { parse } from "acorn";
 import { simple } from "acorn-walk";
 import { dim } from "kleur/colors";
-import { getNodeCompatMode, NodeJSCompatMode } from "miniflare";
 import { z } from "zod";
 import { Worker_Module } from "../../runtime";
 import { globsToRegExps, MiniflareCoreError, PathSchema } from "../../shared";
 import { MatcherRegExps, testRegExps } from "../../workers";
+import { getNodeCompatMode, NodeJSCompatMode } from "./node-compat";
 import type estree from "estree";
 
 const SUGGEST_BUNDLE =
