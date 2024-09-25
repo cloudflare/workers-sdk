@@ -48,7 +48,6 @@ import type { AssetsOptions } from "../assets";
 import type { Config } from "../config";
 import type { Route } from "../config/environment";
 import type { Entry } from "../deployment-bundle/entry";
-import type { NodeJSCompatMode } from "../deployment-bundle/node-compat";
 import type { CfModule, CfWorkerInit } from "../deployment-bundle/worker";
 import type { StartDevOptions } from "../dev";
 import type { WorkerRegistry } from "../dev-registry";
@@ -56,6 +55,7 @@ import type { EnablePagesAssetsServiceBindingOptions } from "../miniflare-cli/ty
 import type { EphemeralDirectory } from "../paths";
 import type { LegacyAssetPaths } from "../sites";
 import type { EsbuildBundle } from "./use-esbuild";
+import type { NodeJSCompatMode } from "miniflare";
 
 /**
  * This hooks establishes a connection with the dev registry,

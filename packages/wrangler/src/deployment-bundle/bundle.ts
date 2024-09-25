@@ -29,8 +29,8 @@ import type { DurableObjectBindings } from "../config/environment";
 import type { MiddlewareLoader } from "./apply-middleware";
 import type { Entry } from "./entry";
 import type { ModuleCollector } from "./module-collection";
-import type { NodeJSCompatMode } from "./node-compat";
 import type { CfModule, CfModuleType } from "./worker";
+import type { NodeJSCompatMode } from "miniflare";
 
 // Taken from https://stackoverflow.com/a/3561711
 // which is everything from the tc39 proposal, plus the following two characters: ^/

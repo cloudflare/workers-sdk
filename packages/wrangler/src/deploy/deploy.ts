@@ -22,7 +22,7 @@ import {
 	createModuleCollector,
 	getWrangler1xLegacyModuleReferences,
 } from "../deployment-bundle/module-collection";
-import { getNodeCompatMode } from "../deployment-bundle/node-compat";
+import { validateNodeCompatMode } from "../deployment-bundle/node-compat";
 import { loadSourceMaps } from "../deployment-bundle/source-maps";
 import { confirm } from "../dialogs";
 import { getMigrationsToUpload } from "../durable";
@@ -444,7 +444,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		props.compatibilityDate ?? config.compatibility_date;
 	const compatibilityFlags =
 		props.compatibilityFlags ?? config.compatibility_flags;
-	const nodejsCompatMode = getNodeCompatMode(
+	const nodejsCompatMode = validateNodeCompatMode(
 		compatibilityDate,
 		compatibilityFlags,
 		{

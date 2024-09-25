@@ -7,7 +7,6 @@ import type {
 	ZoneIdRoute,
 	ZoneNameRoute,
 } from "../../config/environment";
-import type { NodeJSCompatMode } from "../../deployment-bundle/node-compat";
 import type {
 	CfAnalyticsEngineDataset,
 	CfD1Database,
@@ -35,6 +34,7 @@ import type {
 	DispatchFetch,
 	Json,
 	Miniflare,
+	NodeJSCompatMode,
 	Request,
 	Response,
 } from "miniflare";

@@ -862,3 +862,4 @@ export * from "./proxy";
 export * from "./constants";
 export * from "./modules";
 export * from "./services";
+export * from "./node-compat";

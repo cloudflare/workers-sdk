@@ -2,9 +2,9 @@ import * as fs from "node:fs";
 import { basename, dirname, extname, join, relative, resolve } from "node:path";
 import * as esmLexer from "es-module-lexer";
 import { findUpSync } from "find-up";
+import { getNodeCompatMode } from "miniflare";
 import { findWranglerToml, readConfig } from "../config";
 import { getEntry } from "../deployment-bundle/entry";
-import { getNodeCompatMode } from "../deployment-bundle/node-compat";
 import { getVarsForDev } from "../dev/dev-vars";
 import { UserError } from "../errors";
 import { CommandLineArgsError } from "../index";
@@ -96,7 +96,6 @@ export async function typesHandler(
 			config.compatibility_date,
 			config.compatibility_flags,
 			{
-				validateConfig: false,
 				nodeCompat: config.node_compat,
 			}
 		);

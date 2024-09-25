@@ -39,12 +39,12 @@ import type { ProxyData, StartDevWorkerInput, Trigger } from "../api";
 import type { Config } from "../config";
 import type { DurableObjectBindings } from "../config/environment";
 import type { Entry } from "../deployment-bundle/entry";
-import type { NodeJSCompatMode } from "../deployment-bundle/node-compat";
 import type { CfModule } from "../deployment-bundle/worker";
 import type { WorkerRegistry } from "../dev-registry";
 import type { DevProps } from "./dev";
 import type { LocalProps } from "./local";
 import type { EsbuildBundle } from "./use-esbuild";
+import type { NodeJSCompatMode } from "miniflare";
 
 export async function startDevServer(
 	props: DevProps & {
