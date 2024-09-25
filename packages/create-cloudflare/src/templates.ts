@@ -25,6 +25,7 @@ import gatsbyTemplateExperimental from "templates-experimental/gatsby/c3";
 import assetsOnlyTemplateExperimental from "templates-experimental/hello-world-assets-only/c3";
 import helloWorldWithDurableObjectAssetsTemplateExperimental from "templates-experimental/hello-world-durable-object-with-assets/c3";
 import helloWorldWithAssetsTemplateExperimental from "templates-experimental/hello-world-with-assets/c3";
+import honoTemplateExperimental from "templates-experimental/hono/c3";
 import nuxtTemplateExperimental from "templates-experimental/nuxt/c3";
 import qwikTemplateExperimental from "templates-experimental/qwik/c3";
 import remixTemplateExperimental from "templates-experimental/remix/c3";
@@ -165,6 +166,7 @@ export function getFrameworkMap({ experimental = false }): TemplateMap {
 			astro: astroTemplateExperimental,
 			docusaurus: docusaurusTemplateExperimental,
 			gatsby: gatsbyTemplateExperimental,
+			hono: honoTemplateExperimental,
 			nuxt: nuxtTemplateExperimental,
 			qwik: qwikTemplateExperimental,
 			remix: remixTemplateExperimental,
