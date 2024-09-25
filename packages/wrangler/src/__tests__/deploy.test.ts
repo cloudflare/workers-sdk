@@ -9355,6 +9355,32 @@ export default{
 			`);
 		});
 
+		it("should recommend updating the compatibility date flag when using no_nodejs_compat and non-prefixed node builtins", async () => {
+			writeWranglerToml({
+				compatibility_date: "2024-09-23",
+				compatibility_flags: ["nodejs_compat", "no_nodejs_compat_v2"],
+			});
+			fs.writeFileSync("index.js", "import fs from 'path';");
+
+			await expect(
+				runWrangler("deploy index.js --dry-run").catch((e) =>
+					esbuild
+						.formatMessagesSync(e?.errors ?? [], { kind: "error" })
+						.join()
+						.trim()
+				)
+			).resolves.toMatchInlineSnapshot(`
+				"✘ [ERROR] Could not resolve \\"path\\"
+
+				    index.js:1:15:
+				      1 │ import fs from 'path';
+				        ╵                ~~~~~~
+
+				  The package \\"path\\" wasn't found on the file system but is built into node.
+				  - Make sure to prefix the module name with \\"node:\\" or update your compatibility_date to 2024-09-23 or later."
+			`);
+		});
+
 		it("should polyfill node builtins when enabled", async () => {
 			writeWranglerToml();
 			fs.writeFileSync(

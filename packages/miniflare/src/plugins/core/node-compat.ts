@@ -33,6 +33,7 @@ export function getNodeCompatMode(
 		hasNodejsAlsFlag,
 		hasNodejsCompatFlag,
 		hasNodejsCompatV2Flag,
+		hasNoNodejsCompatV2Flag,
 		hasExperimentalNodejsCompatV2Flag,
 	} = parseNodeCompatibilityFlags(compatibilityFlags);
 
@@ -41,7 +42,9 @@ export function getNodeCompatMode(
 	let mode: NodeJSCompatMode = null;
 	if (
 		hasNodejsCompatV2Flag ||
-		(hasNodejsCompatFlag && compatibilityDate >= nodeCompatSwitchOverDate)
+		(hasNodejsCompatFlag &&
+			compatibilityDate >= nodeCompatSwitchOverDate &&
+			!hasNoNodejsCompatV2Flag)
 	) {
 		mode = "v2";
 	} else if (hasNodejsCompatFlag) {
@@ -57,6 +60,7 @@ export function getNodeCompatMode(
 		hasNodejsAlsFlag,
 		hasNodejsCompatFlag,
 		hasNodejsCompatV2Flag,
+		hasNoNodejsCompatV2Flag,
 		hasExperimentalNodejsCompatV2Flag,
 	};
 }
@@ -66,6 +70,7 @@ function parseNodeCompatibilityFlags(compatibilityFlags: string[]) {
 		hasNodejsAlsFlag: compatibilityFlags.includes("nodejs_als"),
 		hasNodejsCompatFlag: compatibilityFlags.includes("nodejs_compat"),
 		hasNodejsCompatV2Flag: compatibilityFlags.includes("nodejs_compat_v2"),
+		hasNoNodejsCompatV2Flag: compatibilityFlags.includes("no_nodejs_compat_v2"),
 		hasExperimentalNodejsCompatV2Flag: compatibilityFlags.includes(
 			"experimental:nodejs_compat_v2"
 		),

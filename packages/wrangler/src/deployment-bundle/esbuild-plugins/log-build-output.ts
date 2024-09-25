@@ -22,7 +22,7 @@ export function logBuildOutput(
 			build.onEnd(async ({ errors, warnings }) => {
 				if (errors.length > 0) {
 					if (nodejsCompatMode !== "legacy") {
-						rewriteNodeCompatBuildFailure(errors);
+						rewriteNodeCompatBuildFailure(errors, nodejsCompatMode);
 					}
 					logBuildFailure(errors, warnings);
 					return;
