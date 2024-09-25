@@ -936,7 +936,7 @@ describe("watch mode", () => {
 	describe.each([{ cmd: "wrangler dev" }, { cmd: "wrangler dev --x-dev-env" }])(
 		"Workers + Assets watch mode: $cmd",
 		({ cmd }) => {
-			it(`supports modifying existing assets during dev session`, async () => {
+			it(`supports modifying existing assets during dev session and errors when invalid routes are added`, async () => {
 				const helper = new WranglerE2ETestHelper();
 				await helper.seed({
 					"wrangler.toml": dedent`
@@ -977,6 +977,19 @@ describe("watch mode", () => {
 				);
 				// expect a new eTag back because the content for this path has changed
 				expect(response.headers.get("etag")).not.toBe(originalETag);
+
+				// changes to routes should error while in watch mode
+				await helper.seed({
+					"wrangler.toml": dedent`
+								name = "${workerName}"
+								compatibility_date = "2023-01-01"
+								route = "example.com/path/*"
+
+								[assets]
+								directory = "./public"
+						`,
+				});
+				await worker.readUntil(/UserError: Invalid Routes:/);
 			});
 
 			it(`supports adding new assets during dev session`, async () => {
@@ -1395,7 +1408,7 @@ describe("watch mode", () => {
 		{ cmd: "wrangler dev --assets=dist" },
 		{ cmd: "wrangler dev --x-dev-env --assets=dist" },
 	])("Workers + Assets watch mode: $cmd", ({ cmd }) => {
-		it(`supports modifying assets during dev session`, async () => {
+		it(`supports modifying assets during dev session and errors when invalid routes are added`, async () => {
 			const helper = new WranglerE2ETestHelper();
 			await helper.seed({
 				"wrangler.toml": dedent`
@@ -1476,6 +1489,16 @@ describe("watch mode", () => {
 				}
 			));
 			expect(response.status).toBe(404);
+
+			// changes to routes should error while in watch mode
+			await helper.seed({
+				"wrangler.toml": dedent`
+								name = "${workerName}"
+								compatibility_date = "2023-01-01"
+								route = "example.com/path/*"
+						`,
+			});
+			await worker.readUntil(/UserError: Invalid Routes:/);
 		});
 
 		it(`supports switching from assets-only Workers to Workers with assets during the current dev session`, async () => {
