@@ -5,16 +5,16 @@ export default defineConfig({
 	plugins: [
 		cloudflare({
 			environments: {
-				workerA: {
+				worker_a: {
 					main: './worker-a/index.ts',
 					wranglerConfig: './worker-a/wrangler.toml',
 				},
-				workerB: {
+				worker_b: {
 					main: './worker-b/index.ts',
 					wranglerConfig: './worker-b/wrangler.toml',
 				},
 			},
-			entrypoint: 'workerA',
+			entrypoint: 'worker_a',
 		}),
 	],
 });

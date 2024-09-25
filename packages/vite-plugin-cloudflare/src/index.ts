@@ -13,7 +13,7 @@ import type {
 const runnerPath = fileURLToPath(import.meta.resolve('./runner/worker.js'));
 
 export function cloudflare<
-	T extends Record<string, CloudflareEnvironmentOptions>
+	T extends Record<string, CloudflareEnvironmentOptions>,
 >({
 	environments,
 	entrypoint,
@@ -30,7 +30,7 @@ export function cloudflare<
 				environments: Object.fromEntries(
 					Object.entries(environments).map(([name, options]) => {
 						return [name, createCloudflareEnvironment(options)];
-					})
+					}),
 				),
 			};
 		},
@@ -43,8 +43,8 @@ export function cloudflare<
 					const miniflareOptions = unstable_getMiniflareWorkerOptions(
 						path.resolve(
 							resolvedConfig.root,
-							options.wranglerConfig ?? './wrangler.toml'
-						)
+							options.wranglerConfig ?? './wrangler.toml',
+						),
 					);
 
 					const { ratelimits, ...workerOptions } =
@@ -74,7 +74,7 @@ export function cloudflare<
 								const args = (await request.json()) as [
 									string,
 									string,
-									FetchFunctionOptions
+									FetchFunctionOptions,
 								];
 
 								const devEnvironment = viteDevServer.environments[
@@ -100,10 +100,6 @@ export function cloudflare<
 				}),
 			});
 
-			viteDevServer.environments.workerA?.hot.on('event', (data) => {
-				console.log(data);
-			});
-
 			await Promise.all(
 				Object.keys(environments).map(async (name) => {
 					const worker = await miniflare.getWorker(name);
@@ -111,18 +107,21 @@ export function cloudflare<
 					return (
 						viteDevServer.environments[name] as CloudflareDevEnvironment
 					).initRunner(worker);
-				})
+				}),
 			);
 
 			const middleware =
 				entrypoint &&
-				createMiddleware((context) => {
-					return (
-						viteDevServer.environments[
-							entrypoint as string
-						] as CloudflareDevEnvironment
-					).dispatchFetch(context.request);
-				});
+				createMiddleware(
+					(context) => {
+						return (
+							viteDevServer.environments[
+								entrypoint as string
+							] as CloudflareDevEnvironment
+						).dispatchFetch(context.request);
+					},
+					{ alwaysCallNext: false },
+				);
 
 			return () => {
 				viteDevServer.middlewares.use((req, res, next) => {

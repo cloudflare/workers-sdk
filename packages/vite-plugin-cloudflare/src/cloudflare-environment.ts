@@ -9,12 +9,13 @@ export interface CloudflareEnvironmentOptions {
 	overrides?: vite.EnvironmentOptions;
 }
 
-interface Runner {
-	worker?: ReplaceWorkersTypes<Fetcher>;
+interface WebSocketContainer {
 	webSocket?: WebSocket;
 }
 
-function createHotChannel(runner: Runner): vite.HotChannel {
+function createHotChannel(
+	webSocketContainer: WebSocketContainer,
+): vite.HotChannel {
 	const listenersMap = new Map<string, Set<Function>>();
 
 	function onMessage(event: MessageEvent) {
@@ -41,7 +42,7 @@ function createHotChannel(runner: Runner): vite.HotChannel {
 				payload = args[0];
 			}
 
-			runner.webSocket?.send(JSON.stringify(payload));
+			webSocketContainer.webSocket?.send(JSON.stringify(payload));
 		},
 		on(event: string, listener: Function) {
 			const listeners = listenersMap.get(event) ?? new Set();
@@ -52,41 +53,42 @@ function createHotChannel(runner: Runner): vite.HotChannel {
 			listenersMap.get(event)?.delete(listener);
 		},
 		listen() {
-			runner.webSocket?.addEventListener('message', onMessage);
+			webSocketContainer.webSocket?.addEventListener('message', onMessage);
 		},
 		close() {
-			runner.webSocket?.removeEventListener('message', onMessage);
+			webSocketContainer.webSocket?.removeEventListener('message', onMessage);
 		},
 	};
 }
 
 export class CloudflareDevEnvironment extends vite.DevEnvironment {
 	#options: CloudflareEnvironmentOptions;
-	#runner: Runner;
+	#webSocketContainer: { webSocket?: WebSocket };
+	#runner?: ReplaceWorkersTypes<Fetcher>;
 
 	constructor(
 		name: string,
 		config: vite.ResolvedConfig,
-		options: CloudflareEnvironmentOptions
+		options: CloudflareEnvironmentOptions,
 	) {
 		// It would be good if we could avoid passing this object around and mutating it
-		const runner = {};
-		super(name, config, { hot: createHotChannel(runner) });
+		const webSocketContainer = {};
+		super(name, config, { hot: createHotChannel(webSocketContainer) });
 		this.#options = options;
-		this.#runner = runner;
+		this.#webSocketContainer = webSocketContainer;
 	}
 
 	async initRunner(worker: ReplaceWorkersTypes<Fetcher>) {
-		this.#runner.worker = worker;
+		this.#runner = worker;
 
-		const response = await this.#runner.worker.fetch(
+		const response = await this.#runner.fetch(
 			new URL(INIT_PATH, UNKNOWN_HOST),
 			{
 				headers: {
 					upgrade: 'websocket',
 					'x-vite-main': this.#options.main,
 				},
-			}
+			},
 		);
 
 		if (!response.ok) {
@@ -101,15 +103,15 @@ export class CloudflareDevEnvironment extends vite.DevEnvironment {
 
 		webSocket.accept();
 
-		this.#runner.webSocket = webSocket;
+		this.#webSocketContainer.webSocket = webSocket;
 	}
 
 	async dispatchFetch(request: Request) {
-		if (!this.#runner.worker) {
+		if (!this.#runner) {
 			throw new Error('Runner not initialized');
 		}
 
-		return this.#runner.worker.fetch(request.url, {
+		return this.#runner.fetch(request.url, {
 			method: request.method,
 			headers: [['accept-encoding', 'identity'], ...request.headers],
 			body: request.body,
@@ -119,7 +121,7 @@ export class CloudflareDevEnvironment extends vite.DevEnvironment {
 }
 
 export function createCloudflareEnvironment(
-	options: CloudflareEnvironmentOptions
+	options: CloudflareEnvironmentOptions,
 ): vite.EnvironmentOptions {
 	return vite.mergeConfig(
 		{
@@ -137,6 +139,6 @@ export function createCloudflareEnvironment(
 			},
 			webCompatible: true,
 		} satisfies vite.EnvironmentOptions,
-		options.overrides ?? {}
+		options.overrides ?? {},
 	);
 }

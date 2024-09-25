@@ -23,7 +23,7 @@ function createModuleRunner(env: RunnerEnv, webSocket: WebSocket) {
 						new Request(UNKNOWN_HOST, {
 							method: 'POST',
 							body: JSON.stringify(args),
-						})
+						}),
 					);
 
 					if (!response.ok) {
@@ -52,7 +52,7 @@ function createModuleRunner(env: RunnerEnv, webSocket: WebSocket) {
 		{
 			async runInlinedModule(context, transformed, id) {
 				const codeDefinition = `'use strict';async (${Object.keys(context).join(
-					','
+					',',
 				)})=>{{`;
 				const code = `${codeDefinition}${transformed}\n}}`;
 				const fn = env.__VITE_UNSAFE_EVAL__.eval(code, id);
@@ -62,7 +62,7 @@ function createModuleRunner(env: RunnerEnv, webSocket: WebSocket) {
 			async runExternalModule(file) {
 				return import(file);
 			},
-		}
+		},
 	);
 }
 
