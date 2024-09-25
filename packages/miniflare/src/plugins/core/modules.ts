@@ -11,7 +11,7 @@ import { z } from "zod";
 import { Worker_Module } from "../../runtime";
 import { globsToRegExps, MiniflareCoreError, PathSchema } from "../../shared";
 import { MatcherRegExps, testRegExps } from "../../workers";
-import { getNodeCompatMode, NodeJSCompatMode } from "./node-compat";
+import { getNodeCompat, NodeJSCompatMode } from "./node-compat";
 import type estree from "estree";
 
 const SUGGEST_BUNDLE =
@@ -157,7 +157,7 @@ function getResolveErrorPrefix(referencingPath: string): string {
 
 export class ModuleLocator {
 	readonly #compiledRules: CompiledModuleRule[];
-	readonly #nodejsCompat: NodeJSCompatMode;
+	readonly #nodejsCompatMode: NodeJSCompatMode;
 	readonly #visitedPaths = new Set<string>();
 	readonly modules: Worker_Module[] = [];
 
@@ -171,7 +171,7 @@ export class ModuleLocator {
 		// Implicit shallow-copy to avoid mutating argument
 		rules = rules.concat(DEFAULT_MODULE_RULES);
 		this.#compiledRules = compileModuleRules(rules);
-		this.#nodejsCompat = getNodeCompatMode(
+		this.#nodejsCompatMode = getNodeCompat(
 			compatibilityDate,
 			compatibilityFlags ?? []
 		).mode;
@@ -297,12 +297,12 @@ ${dim(modulesConfig)}`;
 			spec.startsWith("cloudflare:") ||
 			spec.startsWith("workerd:") ||
 			// Node.js compat v1 requires imports to be prefixed with `node:`
-			(this.#nodejsCompat === "v1" && spec.startsWith("node:")) ||
+			(this.#nodejsCompatMode === "v1" && spec.startsWith("node:")) ||
 			// Node.js compat modules and v2 can also handle non-prefixed imports
-			((this.#nodejsCompat === "v2" || isNodeJsCompatModule) &&
+			((this.#nodejsCompatMode === "v2" || isNodeJsCompatModule) &&
 				builtinModulesWithPrefix.includes(spec)) ||
 			// Async Local Storage mode (node_als) only deals with `node:async_hooks` imports
-			(this.#nodejsCompat === "als" && spec === "node:async_hooks") ||
+			(this.#nodejsCompatMode === "als" && spec === "node:async_hooks") ||
 			// Any "additional" external modules can be ignored
 			this.additionalModuleNames.includes(spec)
 		) {

@@ -1,4 +1,4 @@
-import { getNodeCompatMode } from "miniflare";
+import { getNodeCompat } from "miniflare";
 import { UserError } from "../errors";
 import { logger } from "../logger";
 import type { NodeJSCompatMode } from "miniflare";
@@ -32,7 +32,7 @@ import type { NodeJSCompatMode } from "miniflare";
 		hasNodejsCompatFlag,
 		hasNodejsCompatV2Flag,
 		hasExperimentalNodejsCompatV2Flag,
-	} = getNodeCompatMode(compatibilityDateStr, compatibilityFlags, {
+	} = getNodeCompat(compatibilityDateStr, compatibilityFlags, {
 		nodeCompat: legacy,
 	});
 

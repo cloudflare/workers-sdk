@@ -21,7 +21,7 @@ export type NodeJSCompatMode = "legacy" | "als" | "v1" | "v2" | null;
  * @param opts.nodeCompat Whether the legacy node_compat arg is being used
  * @returns the mode and flags to indicate specific configuration for validating.
  */
-export function getNodeCompatMode(
+export function getNodeCompat(
 	compatibilityDate: string = "2000-01-01", // Default to some arbitrary old date
 	compatibilityFlags: string[],
 	opts?: {

@@ -103,7 +103,7 @@ export {
 	ProxyClient,
 	getFreshSourceMapSupport,
 	kCurrentWorker,
-	getNodeCompatMode,
+	getNodeCompat,
 } from "./core";
 export type {
 	CompiledModuleRule,
