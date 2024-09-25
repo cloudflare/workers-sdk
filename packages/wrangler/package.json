@@ -84,7 +84,7 @@
 		"selfsigned": "^2.0.1",
 		"source-map": "^0.6.1",
 		"unenv": "npm:unenv-nightly@2.0.0-20240919-125358-9a64854",
-		"workerd": "1.20240909.0",
+		"workerd": "1.20240925.0",
 		"xxhash-wasm": "^1.0.1"
 	},
 	"devDependencies": {
@@ -93,7 +93,7 @@
 		"@cloudflare/pages-shared": "workspace:^",
 		"@cloudflare/types": "^6.18.4",
 		"@cloudflare/workers-tsconfig": "workspace:*",
-		"@cloudflare/workers-types": "^4.20240909.0",
+		"@cloudflare/workers-types": "^4.20240925.0",
 		"@cspotcode/source-map-support": "0.8.1",
 		"@iarna/toml": "^3.0.0",
 		"@microsoft/api-extractor": "^7.47.0",
@@ -176,7 +176,7 @@
 		"yoga-layout": "file:../../vendor/yoga-layout-2.0.0-beta.1.tgz"
 	},
 	"peerDependencies": {
-		"@cloudflare/workers-types": "^4.20240909.0"
+		"@cloudflare/workers-types": "^4.20240925.0"
 	},
 	"peerDependenciesMeta": {
 		"@cloudflare/workers-types": {
