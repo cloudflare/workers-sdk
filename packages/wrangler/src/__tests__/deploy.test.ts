@@ -9331,7 +9331,7 @@ export default{
 
 		it("should recommend updating the compatibility date when using node builtins and the `nodejs_compat` flag", async () => {
 			writeWranglerToml({
-				compatibility_date: "2024/09/01", // older than Sept 23rd, 2024
+				compatibility_date: "2024-09-01", // older than Sept 23rd, 2024
 				compatibility_flags: ["nodejs_compat"],
 			});
 			fs.writeFileSync("index.js", "import fs from 'path';");
@@ -9351,7 +9351,7 @@ export default{
 				        ╵                ~~~~~~
 
 				  The package \\"path\\" wasn't found on the file system but is built into node.
-				  - Make sure to prefix the module name with \\"node:\\" or update your compatibility_date to 2024/09/23 or later."
+				  - Make sure to prefix the module name with \\"node:\\" or update your compatibility_date to 2024-09-23 or later."
 			`);
 		});
 
@@ -9436,7 +9436,7 @@ export default{
 			);
 		});
 
-		it(`when present, and compat date is on or after 2024/09/23, should support "external" non-prefixed node imports`, async () => {
+		it(`when present, and compat date is on or after 2024-09-23, should support "external" non-prefixed node imports`, async () => {
 			writeWranglerToml({
 				compatibility_date: "2024-09-23",
 			});
