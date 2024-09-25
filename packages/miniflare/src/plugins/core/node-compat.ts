@@ -1,5 +1,5 @@
 /**
- * Wrangler can provide Node.js compatibility in a number of different modes:
+ * We can provide Node.js compatibility in a number of different modes:
  * - "legacy" - this mode adds compile-time polyfills that are not well maintained and cannot work with workerd runtime builtins.
  * - "als": this mode tells the workerd runtime to enable only the Async Local Storage builtin library (accessible via `node:async_hooks`).
  * - "v1" - this mode tells the workerd runtime to enable some Node.js builtin libraries (accessible only via `node:...` imports) but no globals.
