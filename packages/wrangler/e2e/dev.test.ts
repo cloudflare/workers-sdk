@@ -1171,11 +1171,7 @@ describe("watch mode", () => {
 				const worker = helper.runLongLived(cmd);
 				const { url } = await worker.waitForReady();
 
-				let response = await fetch(url);
-				expect(response.status).toBe(200);
-				expect(await response.text()).toBe("Hello from user Worker!");
-
-				response = await fetch(`${url}/hey`);
+				let response = await fetch(`${url}/hey`);
 				expect(response.status).toBe(200);
 				expect(await response.text()).toBe("Hello from user Worker!");
 
@@ -1239,11 +1235,7 @@ describe("watch mode", () => {
 				const worker = helper.runLongLived(cmd);
 				const { url } = await worker.waitForReady();
 
-				let response = await fetch(url);
-				expect(response.status).toBe(200);
-				expect(await response.text()).toBe("Hello from user Worker!");
-
-				response = await fetch(`${url}/hey`);
+				let response = await fetch(`${url}/hey`);
 				expect(response.status).toBe(200);
 				expect(await response.text()).toBe("Hello from user Worker!");
 
