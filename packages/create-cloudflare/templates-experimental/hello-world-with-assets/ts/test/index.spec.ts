@@ -16,7 +16,7 @@ describe('Hello World user worker', () => {
 
 		it('responds with "Hello, World!" (integration style)', async () => {
 			const request = new Request('http://example.com/message');
-			const response = await SELF.fetch(request, env);
+			const response = await SELF.fetch(request);
 			expect(await response.text()).toMatchInlineSnapshot(`"Hello, World!"`);
 		});
 	});
