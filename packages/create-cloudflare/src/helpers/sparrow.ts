@@ -16,17 +16,24 @@ export function hasSparrowSourceKey() {
 	return SPARROW_SOURCE_KEY !== "";
 }
 
-export async function sendEvent(payload: EventPayload) {
-	if (process.env.CREATE_CLOUDFLARE_TELEMETRY_DEBUG === "1") {
+export async function sendEvent(payload: EventPayload, enableLog?: boolean) {
+	if (enableLog) {
 		console.log("[telemetry]", JSON.stringify(payload, null, 2));
 	}
 
-	await fetch(`${SPARROW_URL}/api/v1/event`, {
-		method: "POST",
-		headers: {
-			"Content-Type": "application/json",
-			"Sparrow-Source-Key": SPARROW_SOURCE_KEY,
-		},
-		body: JSON.stringify(payload),
-	});
+	try {
+		await fetch(`${SPARROW_URL}/api/v1/event`, {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+				"Sparrow-Source-Key": SPARROW_SOURCE_KEY,
+			},
+			body: JSON.stringify(payload),
+		});
+	} catch (error) {
+		// Ignore any network errors
+		if (enableLog) {
+			console.log("[telemetry]", error);
+		}
+	}
 }

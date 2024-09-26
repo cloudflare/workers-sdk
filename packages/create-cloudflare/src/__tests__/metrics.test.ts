@@ -56,22 +56,25 @@ describe("createReporter", () => {
 			promise: () => deferred.promise,
 		});
 
-		expect(sendEvent).toBeCalledWith({
-			event: "c3 session started",
-			deviceId,
-			timestamp: now,
-			properties: {
-				c3Version,
-				platform,
-				packageManager,
-				isFirstUsage: false,
-				amplitude_session_id: now,
-				amplitude_event_id: 0,
-				args: {
-					projectName: "app",
+		expect(sendEvent).toBeCalledWith(
+			{
+				event: "c3 session started",
+				deviceId,
+				timestamp: now,
+				properties: {
+					c3Version,
+					platform,
+					packageManager,
+					isFirstUsage: false,
+					amplitude_session_id: now,
+					amplitude_event_id: 0,
+					args: {
+						projectName: "app",
+					},
 				},
 			},
-		});
+			false,
+		);
 		expect(sendEvent).toBeCalledTimes(1);
 
 		deferred.resolve("test result");
@@ -80,25 +83,95 @@ describe("createReporter", () => {
 
 		await expect(operation).resolves.toBe("test result");
 
-		expect(sendEvent).toBeCalledWith({
-			event: "c3 session completed",
-			deviceId,
-			timestamp: now + 1234,
-			properties: {
-				c3Version,
-				platform,
-				packageManager,
-				isFirstUsage: false,
-				amplitude_session_id: now,
-				amplitude_event_id: 1,
+		expect(sendEvent).toBeCalledWith(
+			{
+				event: "c3 session completed",
+				deviceId,
+				timestamp: now + 1234,
+				properties: {
+					c3Version,
+					platform,
+					packageManager,
+					isFirstUsage: false,
+					amplitude_session_id: now,
+					amplitude_event_id: 1,
+					args: {
+						projectName: "app",
+					},
+					durationMs: 1234,
+					durationSeconds: 1234 / 1000,
+					durationMinutes: 1234 / 1000 / 60,
+				},
+			},
+			false,
+		);
+		expect(sendEvent).toBeCalledTimes(2);
+	});
+
+	test("sends event with logs enabled if CREATE_CLOUDFLARE_TELEMETRY_DEBUG is set to `1`", async () => {
+		vi.stubEnv("CREATE_CLOUDFLARE_TELEMETRY_DEBUG", "1");
+
+		const deferred = promiseWithResolvers<string>();
+		const reporter = createReporter();
+		const operation = reporter.collectAsyncMetrics({
+			eventPrefix: "c3 session",
+			props: {
 				args: {
 					projectName: "app",
 				},
-				durationMs: 1234,
-				durationSeconds: 1234 / 1000,
-				durationMinutes: 1234 / 1000 / 60,
 			},
+			promise: () => deferred.promise,
 		});
+
+		expect(sendEvent).toBeCalledWith(
+			{
+				event: "c3 session started",
+				deviceId,
+				timestamp: now,
+				properties: {
+					c3Version,
+					platform,
+					packageManager,
+					isFirstUsage: false,
+					amplitude_session_id: now,
+					amplitude_event_id: 0,
+					args: {
+						projectName: "app",
+					},
+				},
+			},
+			true,
+		);
+		expect(sendEvent).toBeCalledTimes(1);
+
+		deferred.resolve("test result");
+
+		vi.advanceTimersByTime(1234);
+
+		await expect(operation).resolves.toBe("test result");
+
+		expect(sendEvent).toBeCalledWith(
+			{
+				event: "c3 session completed",
+				deviceId,
+				timestamp: now + 1234,
+				properties: {
+					c3Version,
+					platform,
+					packageManager,
+					isFirstUsage: false,
+					amplitude_session_id: now,
+					amplitude_event_id: 1,
+					args: {
+						projectName: "app",
+					},
+					durationMs: 1234,
+					durationSeconds: 1234 / 1000,
+					durationMinutes: 1234 / 1000 / 60,
+				},
+			},
+			true,
+		);
 		expect(sendEvent).toBeCalledTimes(2);
 	});
 
@@ -195,22 +268,25 @@ describe("createReporter", () => {
 			promise: () => deferred.promise,
 		});
 
-		expect(sendEvent).toBeCalledWith({
-			event: "c3 session started",
-			deviceId,
-			timestamp: now,
-			properties: {
-				amplitude_session_id: now,
-				amplitude_event_id: 0,
-				c3Version,
-				platform,
-				packageManager,
-				isFirstUsage: false,
-				args: {
-					projectName: "app",
+		expect(sendEvent).toBeCalledWith(
+			{
+				event: "c3 session started",
+				deviceId,
+				timestamp: now,
+				properties: {
+					amplitude_session_id: now,
+					amplitude_event_id: 0,
+					c3Version,
+					platform,
+					packageManager,
+					isFirstUsage: false,
+					args: {
+						projectName: "app",
+					},
 				},
 			},
-		});
+			false,
+		);
 		expect(sendEvent).toBeCalledTimes(1);
 
 		deferred.reject(new CancelError("test cancel"));
@@ -218,25 +294,28 @@ describe("createReporter", () => {
 
 		await expect(operation).rejects.toThrow(CancelError);
 
-		expect(sendEvent).toBeCalledWith({
-			event: "c3 session cancelled",
-			deviceId,
-			timestamp: now + 1234,
-			properties: {
-				amplitude_session_id: now,
-				amplitude_event_id: 1,
-				c3Version,
-				platform,
-				packageManager,
-				isFirstUsage: false,
-				args: {
-					projectName: "app",
+		expect(sendEvent).toBeCalledWith(
+			{
+				event: "c3 session cancelled",
+				deviceId,
+				timestamp: now + 1234,
+				properties: {
+					amplitude_session_id: now,
+					amplitude_event_id: 1,
+					c3Version,
+					platform,
+					packageManager,
+					isFirstUsage: false,
+					args: {
+						projectName: "app",
+					},
+					durationMs: 1234,
+					durationSeconds: 1234 / 1000,
+					durationMinutes: 1234 / 1000 / 60,
 				},
-				durationMs: 1234,
-				durationSeconds: 1234 / 1000,
-				durationMinutes: 1234 / 1000 / 60,
 			},
-		});
+			false,
+		);
 		expect(sendEvent).toBeCalledTimes(2);
 	});
 
@@ -251,22 +330,25 @@ describe("createReporter", () => {
 			promise: () => deferred.promise,
 		});
 
-		expect(sendEvent).toBeCalledWith({
-			event: "c3 session started",
-			deviceId,
-			timestamp: now,
-			properties: {
-				amplitude_session_id: now,
-				amplitude_event_id: 0,
-				c3Version,
-				platform,
-				packageManager,
-				isFirstUsage: false,
-				args: {
-					projectName: "app",
+		expect(sendEvent).toBeCalledWith(
+			{
+				event: "c3 session started",
+				deviceId,
+				timestamp: now,
+				properties: {
+					amplitude_session_id: now,
+					amplitude_event_id: 0,
+					c3Version,
+					platform,
+					packageManager,
+					isFirstUsage: false,
+					args: {
+						projectName: "app",
+					},
 				},
 			},
-		});
+			false,
+		);
 		expect(sendEvent).toBeCalledTimes(1);
 
 		deferred.reject(new Error("test error"));
@@ -274,29 +356,32 @@ describe("createReporter", () => {
 
 		await expect(process).rejects.toThrow(Error);
 
-		expect(sendEvent).toBeCalledWith({
-			event: "c3 session errored",
-			deviceId,
-			timestamp: now + 1234,
-			properties: {
-				amplitude_session_id: now,
-				amplitude_event_id: 1,
-				c3Version,
-				platform,
-				packageManager,
-				isFirstUsage: false,
-				args: {
-					projectName: "app",
-				},
-				durationMs: 1234,
-				durationSeconds: 1234 / 1000,
-				durationMinutes: 1234 / 1000 / 60,
-				error: {
-					message: "test error",
-					stack: expect.any(String),
+		expect(sendEvent).toBeCalledWith(
+			{
+				event: "c3 session errored",
+				deviceId,
+				timestamp: now + 1234,
+				properties: {
+					amplitude_session_id: now,
+					amplitude_event_id: 1,
+					c3Version,
+					platform,
+					packageManager,
+					isFirstUsage: false,
+					args: {
+						projectName: "app",
+					},
+					durationMs: 1234,
+					durationSeconds: 1234 / 1000,
+					durationMinutes: 1234 / 1000 / 60,
+					error: {
+						message: "test error",
+						stack: expect.any(String),
+					},
 				},
 			},
-		});
+			false,
+		);
 		expect(sendEvent).toBeCalledTimes(2);
 	});
 
@@ -314,22 +399,25 @@ describe("createReporter", () => {
 			promise: () => deferred.promise,
 		});
 
-		expect(sendEvent).toBeCalledWith({
-			event: "c3 session started",
-			deviceId,
-			timestamp: now,
-			properties: {
-				amplitude_session_id: now,
-				amplitude_event_id: 0,
-				c3Version,
-				platform,
-				packageManager,
-				isFirstUsage: false,
-				args: {
-					projectName: "app",
+		expect(sendEvent).toBeCalledWith(
+			{
+				event: "c3 session started",
+				deviceId,
+				timestamp: now,
+				properties: {
+					amplitude_session_id: now,
+					amplitude_event_id: 0,
+					c3Version,
+					platform,
+					packageManager,
+					isFirstUsage: false,
+					args: {
+						projectName: "app",
+					},
 				},
 			},
-		});
+			false,
+		);
 		expect(sendEvent).toBeCalledTimes(1);
 
 		process.emit("SIGINT", "SIGINT");
@@ -337,26 +425,29 @@ describe("createReporter", () => {
 
 		await expect(run).rejects.toThrow(CancelError);
 
-		expect(sendEvent).toBeCalledWith({
-			event: "c3 session cancelled",
-			deviceId,
-			timestamp: now + 1234,
-			properties: {
-				amplitude_session_id: now,
-				amplitude_event_id: 1,
-				c3Version,
-				platform,
-				packageManager,
-				isFirstUsage: false,
-				args: {
-					projectName: "app",
+		expect(sendEvent).toBeCalledWith(
+			{
+				event: "c3 session cancelled",
+				deviceId,
+				timestamp: now + 1234,
+				properties: {
+					amplitude_session_id: now,
+					amplitude_event_id: 1,
+					c3Version,
+					platform,
+					packageManager,
+					isFirstUsage: false,
+					args: {
+						projectName: "app",
+					},
+					signal: "SIGINT",
+					durationMs: 1234,
+					durationSeconds: 1234 / 1000,
+					durationMinutes: 1234 / 1000 / 60,
 				},
-				signal: "SIGINT",
-				durationMs: 1234,
-				durationSeconds: 1234 / 1000,
-				durationMinutes: 1234 / 1000 / 60,
 			},
-		});
+			false,
+		);
 		expect(sendEvent).toBeCalledTimes(2);
 	});
 
@@ -373,22 +464,25 @@ describe("createReporter", () => {
 			promise: () => deferred.promise,
 		});
 
-		expect(sendEvent).toBeCalledWith({
-			event: "c3 session started",
-			deviceId,
-			timestamp: now,
-			properties: {
-				amplitude_session_id: now,
-				amplitude_event_id: 0,
-				c3Version,
-				platform,
-				packageManager,
-				isFirstUsage: false,
-				args: {
-					projectName: "app",
+		expect(sendEvent).toBeCalledWith(
+			{
+				event: "c3 session started",
+				deviceId,
+				timestamp: now,
+				properties: {
+					amplitude_session_id: now,
+					amplitude_event_id: 0,
+					c3Version,
+					platform,
+					packageManager,
+					isFirstUsage: false,
+					args: {
+						projectName: "app",
+					},
 				},
 			},
-		});
+			false,
+		);
 		expect(sendEvent).toBeCalledTimes(1);
 
 		process.emit("SIGTERM", "SIGTERM");
@@ -396,26 +490,29 @@ describe("createReporter", () => {
 
 		await expect(run).rejects.toThrow(CancelError);
 
-		expect(sendEvent).toBeCalledWith({
-			event: "c3 session cancelled",
-			deviceId,
-			timestamp: now + 1234,
-			properties: {
-				amplitude_session_id: now,
-				amplitude_event_id: 1,
-				c3Version,
-				platform,
-				packageManager,
-				isFirstUsage: false,
-				args: {
-					projectName: "app",
+		expect(sendEvent).toBeCalledWith(
+			{
+				event: "c3 session cancelled",
+				deviceId,
+				timestamp: now + 1234,
+				properties: {
+					amplitude_session_id: now,
+					amplitude_event_id: 1,
+					c3Version,
+					platform,
+					packageManager,
+					isFirstUsage: false,
+					args: {
+						projectName: "app",
+					},
+					signal: "SIGTERM",
+					durationMs: 1234,
+					durationSeconds: 1234 / 1000,
+					durationMinutes: 1234 / 1000 / 60,
 				},
-				signal: "SIGTERM",
-				durationMs: 1234,
-				durationSeconds: 1234 / 1000,
-				durationMinutes: 1234 / 1000 / 60,
 			},
-		});
+			false,
+		);
 		expect(sendEvent).toBeCalledTimes(2);
 	});
 });
