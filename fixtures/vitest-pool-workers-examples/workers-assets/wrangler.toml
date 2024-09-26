@@ -1,0 +1,11 @@
+#:schema node_modules/wrangler/config-schema.json
+name = "workers-static-assets-with-user-worker"
+main = "src/index.ts"
+compatibility_date = "2024-09-19"
+compatibility_flags = ["nodejs_compat"]
+
+[assets]
+directory = "./public"
+binding = "ASSETS"
+html_handling = "auto-trailing-slash"
+not_found_handling = "none"
