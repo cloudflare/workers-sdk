@@ -81,7 +81,7 @@ export const syncAssets = async (
 	// 3. fill buckets and upload assets
 	const numberFilesToUpload = initializeAssetsResponse.buckets.flat().length;
 	logger.info(
-		`🌀 Found ${numberFilesToUpload} new or modified file${numberFilesToUpload > 1 ? "s" : ""} to upload. Proceeding with upload...`
+		`🌀 Found ${numberFilesToUpload} new or modified static asset${numberFilesToUpload > 1 ? "s" : ""} to upload. Proceeding with upload...`
 	);
 
 	// Create the buckets outside of doUpload so we can retry without losing track of potential duplicate files
