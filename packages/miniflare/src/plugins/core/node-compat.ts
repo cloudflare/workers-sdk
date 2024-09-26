@@ -33,19 +33,12 @@ export function getNodeCompat(
 		hasNodejsAlsFlag,
 		hasNodejsCompatFlag,
 		hasNodejsCompatV2Flag,
-		hasNoNodejsCompatV2Flag,
 		hasExperimentalNodejsCompatV2Flag,
-	} = parseNodeCompatibilityFlags(compatibilityFlags);
+	} = computeWorkerdCompatibilityFlags(compatibilityFlags, compatibilityDate);
 
-	const nodeCompatSwitchOverDate = "2024-09-23";
 	const legacy = nodeCompat === true;
 	let mode: NodeJSCompatMode = null;
-	if (
-		hasNodejsCompatV2Flag ||
-		(hasNodejsCompatFlag &&
-			compatibilityDate >= nodeCompatSwitchOverDate &&
-			!hasNoNodejsCompatV2Flag)
-	) {
+	if (hasNodejsCompatV2Flag) {
 		mode = "v2";
 	} else if (hasNodejsCompatFlag) {
 		mode = "v1";
@@ -60,19 +53,49 @@ export function getNodeCompat(
 		hasNodejsAlsFlag,
 		hasNodejsCompatFlag,
 		hasNodejsCompatV2Flag,
-		hasNoNodejsCompatV2Flag,
 		hasExperimentalNodejsCompatV2Flag,
 	};
 }
 
-function parseNodeCompatibilityFlags(compatibilityFlags: string[]) {
+function computeWorkerdCompatibilityFlags(
+	compatibilityFlags: string[],
+	compatibilityDate: string
+) {
+	const flags = new Flags(compatibilityFlags, compatibilityDate);
+	const nodejsCompatFlag = flags.get("nodejs_compat");
 	return {
-		hasNodejsAlsFlag: compatibilityFlags.includes("nodejs_als"),
-		hasNodejsCompatFlag: compatibilityFlags.includes("nodejs_compat"),
-		hasNodejsCompatV2Flag: compatibilityFlags.includes("nodejs_compat_v2"),
-		hasNoNodejsCompatV2Flag: compatibilityFlags.includes("no_nodejs_compat_v2"),
+		hasNodejsAlsFlag: flags.get("nodejs_als").value,
+		hasNodejsCompatFlag: nodejsCompatFlag.value,
+		hasNodejsCompatV2Flag: flags
+			.get("nodejs_compat_v2")
+			.impliedByAfterDate(nodejsCompatFlag, "2024-09-23").value,
 		hasExperimentalNodejsCompatV2Flag: compatibilityFlags.includes(
 			"experimental:nodejs_compat_v2"
 		),
 	};
+}
+
+type Flag = {
+	value: boolean;
+	impliedByAfterDate: (flag: Flag, date: string) => Flag;
+};
+
+class Flags {
+	constructor(
+		private flags: string[],
+		private compatibilityDate: string
+	) {}
+
+	get(name: string): Flag {
+		const noFlagName = `no_${name}`;
+
+		const flag = {
+			value: this.flags.includes(name) && !this.flags.includes(noFlagName),
+			impliedByAfterDate: (other: Flag, date: string) => {
+				flag.value ||= other.value && date >= this.compatibilityDate;
+				return flag;
+			},
+		};
+		return flag;
+	}
 }
