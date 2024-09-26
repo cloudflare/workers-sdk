@@ -10,6 +10,9 @@ inputs:
   quarantine:
     description: "Whether to run the tests in quarantine mode"
     required: false
+  experimental:
+    description: "Whether to run the tests in experimental mode"
+    required: false
   framework:
     description: "When specified, will only run tests for this framework"
     required: false
@@ -39,14 +42,7 @@ runs:
         git config --global user.email wrangler@cloudflare.com
         git config --global user.name 'Wrangler automated PR updater'
 
-    - name: Build
-      shell: bash
-      run: pnpm run build
-      env:
-        NODE_ENV: "production"
-        CI_OS: ${{ runner.os }}
-
-    - name: E2E Tests
+    - name: E2E Tests ${{inputs.experimental && '(experimental)' || ''}}
       id: run-e2e
       shell: bash
       run: pnpm run test:e2e --filter create-cloudflare
@@ -54,6 +50,7 @@ runs:
         CLOUDFLARE_API_TOKEN: ${{ inputs.apiToken }}
         CLOUDFLARE_ACCOUNT_ID: ${{ inputs.accountId }}
         E2E_QUARANTINE: ${{ inputs.quarantine }}
+        E2E_EXPERIMENTAL: ${{ inputs.experimental }}
         FRAMEWORK_CLI_TO_TEST: ${{ inputs.framework }}
         TEST_PM: ${{ inputs.packageManager }}
         TEST_PM_VERSION: ${{ inputs.packageManagerVersion }}
@@ -64,15 +61,15 @@ runs:
       uses: actions/upload-artifact@v3
       if: always()
       with:
-        name: e2e-logs-${{matrix.os}}
-        path: packages/create-cloudflare/.e2e-logs
+        name: e2e-logs${{inputs.experimental && '-experimental' || ''}}-${{matrix.os}}
+        path: packages/create-cloudflare/.e2e-logs${{inputs.experimental && '-experimental' || ''}}
 
     - name: Upload Framework Diffs
       if: ${{ steps.run-e2e.outcome == 'success' && inputs.saveDiffs == 'true' }}
       uses: actions/upload-artifact@v3
       with:
-        name: e2e-framework-diffs
-        path: packages/create-cloudflare/.e2e-diffs
+        name: e2e-framework-diffs${{inputs.experimental && '-experimental' || ''}}
+        path: packages/create-cloudflare/.e2e-diffs${{inputs.experimental && '-experimental' || ''}}
         overwrite: true
 
     - name: Fail if errors detected

@@ -21,11 +21,12 @@ import {
 import type { WriteStream } from "fs";
 import type { Suite } from "vitest";
 
+const experimental = Boolean(process.env.E2E_EXPERIMENTAL);
 const frameworkToTest = getFrameworkToTest({ experimental: false });
 
 // Note: skipIf(frameworkToTest) makes it so that all the basic C3 functionality
 //       tests are skipped in case we are testing a specific framework
-describe.skipIf(frameworkToTest || isQuarantineMode())(
+describe.skipIf(experimental || frameworkToTest || isQuarantineMode())(
 	"E2E: Basic C3 functionality ",
 	() => {
 		const tmpDirPath = realpathSync(mkdtempSync(join(tmpdir(), "c3-tests")));
@@ -33,12 +34,12 @@ describe.skipIf(frameworkToTest || isQuarantineMode())(
 		let logStream: WriteStream;
 
 		beforeAll((ctx) => {
-			recreateLogFolder(ctx as Suite);
+			recreateLogFolder({ experimental }, ctx as Suite);
 		});
 
 		beforeEach((ctx) => {
 			rmSync(projectPath, { recursive: true, force: true });
-			logStream = createTestLogStream(ctx);
+			logStream = createTestLogStream({ experimental }, ctx);
 		});
 
 		afterEach(() => {

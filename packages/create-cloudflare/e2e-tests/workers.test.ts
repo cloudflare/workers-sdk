@@ -25,46 +25,56 @@ type WorkerTestConfig = RunnerConfig & {
 	variants: string[];
 };
 
-const workerTemplates: WorkerTestConfig[] = [
-	{
-		template: "hello-world",
-		variants: ["TypeScript", "JavaScript", "Python"],
-		verifyDeploy: {
-			route: "/",
-			expectedText: "Hello World!",
-		},
-	},
-	{
-		template: "common",
-		variants: ["TypeScript", "JavaScript"],
-		verifyDeploy: {
-			route: "/",
-			expectedText: "Try making requests to:",
-		},
-	},
-	{
-		template: "queues",
-		variants: ["TypeScript", "JavaScript"],
-		// Skipped for now, since C3 does not yet support resource creation
-	},
-	{
-		template: "scheduled",
-		variants: ["TypeScript", "JavaScript"],
-		// Skipped for now, since it's not possible to test scheduled events on deployed Workers
-	},
-	{
-		template: "openapi",
-		variants: [],
-		verifyDeploy: {
-			route: "/",
-			expectedText: "SwaggerUI",
-		},
-	},
-];
+function getWorkerTests(opts: { experimental: boolean }): WorkerTestConfig[] {
+	if (opts.experimental) {
+		return [];
+	} else {
+		return [
+			{
+				template: "hello-world",
+				variants: ["TypeScript", "JavaScript", "Python"],
+				verifyDeploy: {
+					route: "/",
+					expectedText: "Hello World!",
+				},
+			},
+			{
+				template: "common",
+				variants: ["TypeScript", "JavaScript"],
+				verifyDeploy: {
+					route: "/",
+					expectedText: "Try making requests to:",
+				},
+			},
+			{
+				template: "queues",
+				variants: ["TypeScript", "JavaScript"],
+				// Skipped for now, since C3 does not yet support resource creation
+			},
+			{
+				template: "scheduled",
+				variants: ["TypeScript", "JavaScript"],
+				// Skipped for now, since it's not possible to test scheduled events on deployed Workers
+			},
+			{
+				template: "openapi",
+				variants: [],
+				verifyDeploy: {
+					route: "/",
+					expectedText: "SwaggerUI",
+				},
+			},
+		];
+	}
+}
+
+const experimental = Boolean(process.env.E2E_EXPERIMENTAL);
+const workerTests = getWorkerTests({ experimental });
 
 describe
 	.skipIf(
-		getFrameworkToTest({ experimental: false }) ||
+		experimental || // skip until we add tests for experimental workers templates
+			getFrameworkToTest({ experimental }) ||
 			isQuarantineMode() ||
 			process.platform === "win32",
 	)
@@ -72,14 +82,14 @@ describe
 		let logStream: WriteStream;
 
 		beforeAll((ctx) => {
-			recreateLogFolder(ctx as Suite);
+			recreateLogFolder({ experimental }, ctx as Suite);
 		});
 
 		beforeEach(async (ctx) => {
-			logStream = createTestLogStream(ctx);
+			logStream = createTestLogStream({ experimental }, ctx);
 		});
 
-		workerTemplates
+		workerTests
 			.flatMap<WorkerTestConfig>((template) =>
 				template.variants.length > 0
 					? template.variants.map((variant) => {
