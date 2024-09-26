@@ -45,7 +45,7 @@ jobs:
 
       - name: Deploy a local version of Wrangler
         run: |
-          pnpm --filter wrangler deploy ${{ github.workspace}}/temp/wrangler
+          pnpm --filter wrangler --prod deploy ${{ github.workspace}}/temp/wrangler
           rm ${{ github.workspace}}/temp/wrangler/templates/tsconfig.json
         env:
           NODE_ENV: "production"
