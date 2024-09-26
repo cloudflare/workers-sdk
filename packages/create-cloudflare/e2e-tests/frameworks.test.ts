@@ -567,6 +567,7 @@ const runCli = async (
 
 	const match = output.replaceAll("\n", "").match(deployedUrlRe);
 	if (!match || !match[1]) {
+		console.error(output);
 		expect(false, "Couldn't find deployment url in C3 output").toBe(true);
 		return "";
 	}
