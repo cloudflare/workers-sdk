@@ -42,13 +42,6 @@ runs:
         git config --global user.email wrangler@cloudflare.com
         git config --global user.name 'Wrangler automated PR updater'
 
-    - name: Build
-      shell: bash
-      run: pnpm run build
-      env:
-        NODE_ENV: "production"
-        CI_OS: ${{ runner.os }}
-
     - name: E2E Tests ${{inputs.experimental && '(experimental)' || ''}}
       id: run-e2e
       shell: bash
