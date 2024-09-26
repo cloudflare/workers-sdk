@@ -314,7 +314,7 @@ async function resolveConfig(
 			resolved.triggers?.some((t) => t.type === "queue-consumer"))
 	) {
 		logger.warn(
-			"Queues are currently in Beta and are not supported in wrangler dev remote mode."
+			"Queues are not yet supported in wrangler dev remote mode."
 		);
 	}
 
