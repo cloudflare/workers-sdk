@@ -17,3 +17,8 @@ class_name = "MyDurableObject"
 tag = "v1"
 new_classes = ["MyDurableObject"]
 
+# Workers Logs
+# Docs: https://developers.cloudflare.com/workers/observability/logs/workers-logs/
+# Configuration: https://developers.cloudflare.com/workers/observability/logs/workers-logs/#enable-workers-logs
+[observability]
+enabled = true
