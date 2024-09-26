@@ -83,6 +83,7 @@ function getFrameworkTests(opts: {
 					route: "/",
 					expectedText: "Create Next App",
 				},
+				unsupportedOSs: ["win32"],
 			},
 		};
 	} else {
@@ -409,6 +410,8 @@ describe.concurrent(
 		afterEach(async () => {
 			logStream.close();
 		});
+
+		test("dummy in case there are no frameworks to test", () => {});
 
 		Object.keys(frameworkTests).forEach((frameworkId) => {
 			const frameworkConfig = frameworkMap[frameworkId];
