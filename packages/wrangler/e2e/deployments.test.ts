@@ -259,7 +259,7 @@ describe("Workers + Assets deployment", { timeout: TIMEOUT }, () => {
 			"wrangler.toml": dedent`
 						name = "${workerName}"
 						compatibility_date = "2023-01-01"
-						[experimental_assets]
+						[assets]
 						directory = "public"
 				`,
 			...initialAssets,
@@ -327,7 +327,7 @@ describe("Workers + Assets deployment", { timeout: TIMEOUT }, () => {
 						name = "${workerName}"
 						main = "src/index.ts"
 						compatibility_date = "2023-01-01"
-						[experimental_assets]
+						[assets]
 						directory = "public"
 						binding = "ASSETS"
 						html_handling = "none"
