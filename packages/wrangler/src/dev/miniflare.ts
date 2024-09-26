@@ -700,9 +700,8 @@ function buildAssetOptions(config: Omit<ConfigBundle, "rules">) {
 	if (config.assets) {
 		return {
 			assets: {
-				workerName: config.name,
-				path: config.assets.directory,
-				bindingName: config.assets.binding,
+				directory: config.assets.directory,
+				binding: config.assets.binding,
 				routingConfig: config.assets.routingConfig,
 				assetConfig: config.assets.assetConfig,
 			},

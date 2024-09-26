@@ -33,6 +33,7 @@ import {
 	CoreHeaders,
 	viewToBuffer,
 } from "../../workers";
+import { ROUTER_SERVICE_NAME } from "../assets/constants";
 import { getCacheServiceName } from "../cache";
 import { DURABLE_OBJECTS_STORAGE_SERVICE_NAME } from "../do";
 import {
@@ -146,6 +147,9 @@ const CoreOptionsSchemaInput = z.intersection(
 
 		unsafeEvalBinding: z.string().optional(),
 		unsafeUseModuleFallbackService: z.boolean().optional(),
+
+		// TODO: find a better name ew
+		hasAssetsAndIsVitest: z.boolean().optional(),
 	})
 );
 export const CoreOptionsSchema = CoreOptionsSchemaInput.transform((value) => {
@@ -231,7 +235,9 @@ function getCustomServiceDesignator(
 	workerIndex: number,
 	kind: CustomServiceKind,
 	name: string,
-	service: z.infer<typeof ServiceDesignatorSchema>
+	service: z.infer<typeof ServiceDesignatorSchema>,
+	// override with router worker
+	hasAssetsAndIsVitest: boolean = false
 ): ServiceDesignator {
 	let serviceName: string;
 	let entrypoint: string | undefined;
@@ -239,8 +245,10 @@ function getCustomServiceDesignator(
 		// Custom `fetch` function
 		serviceName = getCustomServiceName(workerIndex, kind, name);
 	} else if (typeof service === "object") {
+		// Worker with entrypoint
 		if ("name" in service) {
 			if (service.name === kCurrentWorker) {
+				// self binding e.g. for Vitest
 				serviceName = getUserServiceName(refererName);
 			} else {
 				serviceName = getUserServiceName(service.name);
@@ -251,7 +259,12 @@ function getCustomServiceDesignator(
 			serviceName = getBuiltinServiceName(workerIndex, kind, name);
 		}
 	} else if (service === kCurrentWorker) {
-		serviceName = getUserServiceName(refererName);
+		// self binding e.g. for Vitest
+		// this is the one we want to change if assets
+		// if vitest,
+		serviceName = hasAssetsAndIsVitest
+			? ROUTER_SERVICE_NAME
+			: getUserServiceName(refererName);
 	} else {
 		// Regular user worker
 		serviceName = getUserServiceName(service);
@@ -393,7 +406,8 @@ export const CORE_PLUGIN: Plugin<
 							workerIndex,
 							CustomServiceKind.UNKNOWN,
 							name,
-							service
+							service,
+							options.hasAssetsAndIsVitest
 						),
 					};
 				})
@@ -651,7 +665,8 @@ export const CORE_PLUGIN: Plugin<
 									workerIndex,
 									CustomServiceKind.KNOWN,
 									CUSTOM_SERVICE_KNOWN_OUTBOUND,
-									options.outboundService
+									options.outboundService,
+									options.hasAssetsAndIsVitest
 								),
 					cacheApiOutbound: { name: getCacheServiceName(workerIndex) },
 					moduleFallback:

@@ -214,6 +214,19 @@ async function parseCustomPoolOptions(
 		options.defines = define;
 	}
 
+	// try to add in asset options
+	// there are some bits that need to be passed to miniflare,
+	// but preferably are hidden from most users
+	if (options.miniflare?.assets) {
+		// core plugin needs to know about assets womp
+		options.miniflare.hasAssetsAndIsVitest = true;
+		options.miniflare.assets = {
+			...options.miniflare.assets,
+			routingConfig: {
+				has_user_worker: Boolean(options.main),
+			},
+		};
+	}
 	return options;
 }
 

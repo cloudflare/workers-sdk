@@ -8,11 +8,12 @@ import { PathSchema } from "../../shared";
 export const AssetsOptionsSchema = z.object({
 	assets: z
 		.object({
+			// user worker name or vitest runner
 			workerName: z.string().optional(),
-			path: PathSchema,
-			bindingName: z.string().optional(),
-			routingConfig: RoutingConfigSchema,
-			assetConfig: AssetConfigSchema,
+			directory: PathSchema,
+			binding: z.string().optional(),
+			routingConfig: RoutingConfigSchema.optional(),
+			assetConfig: AssetConfigSchema.optional(),
 		})
 		.optional(),
 });
