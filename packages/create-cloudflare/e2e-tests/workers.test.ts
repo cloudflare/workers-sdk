@@ -73,7 +73,8 @@ const workerTests = getWorkerTests({ experimental });
 
 describe
 	.skipIf(
-		getFrameworkToTest({ experimental }) ||
+		experimental || // skip until we add tests for experimental workers templates
+			getFrameworkToTest({ experimental }) ||
 			isQuarantineMode() ||
 			process.platform === "win32",
 	)
