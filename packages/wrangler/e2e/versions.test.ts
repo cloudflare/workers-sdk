@@ -63,6 +63,7 @@ describe("versions deploy", { timeout: TIMEOUT }, () => {
 			Worker Startup Time: (TIMINGS)
 			Uploaded tmp-e2e-worker-00000000-0000-0000-0000-000000000000 (TIMINGS)
 			Worker Version ID: 00000000-0000-0000-0000-000000000000
+			Version Preview URL: https://tmp-e2e-worker-PREVIEW-URL.SUBDOMAIN.workers.dev
 			To deploy this version to production traffic use the command wrangler versions deploy
 			Changes to non-versioned settings (config properties 'logpush' or 'tail_consumers') take effect after your next deployment using the command wrangler versions deploy
 			Changes to triggers (routes, custom domains, cron schedules, etc) must be applied with the command wrangler triggers deploy"
@@ -178,6 +179,7 @@ describe("versions deploy", { timeout: TIMEOUT }, () => {
 			Worker Startup Time: (TIMINGS)
 			Uploaded tmp-e2e-worker-00000000-0000-0000-0000-000000000000 (TIMINGS)
 			Worker Version ID: 00000000-0000-0000-0000-000000000000
+			Version Preview URL: https://tmp-e2e-worker-PREVIEW-URL.SUBDOMAIN.workers.dev
 			To deploy this version to production traffic use the command wrangler versions deploy
 			Changes to non-versioned settings (config properties 'logpush' or 'tail_consumers') take effect after your next deployment using the command wrangler versions deploy
 			Changes to triggers (routes, custom domains, cron schedules, etc) must be applied with the command wrangler triggers deploy"
@@ -623,6 +625,7 @@ describe("versions deploy", { timeout: TIMEOUT }, () => {
 			Worker Startup Time: (TIMINGS)
 			Uploaded tmp-e2e-worker-00000000-0000-0000-0000-000000000000 (TIMINGS)
 			Worker Version ID: 00000000-0000-0000-0000-000000000000
+			Version Preview URL: https://tmp-e2e-worker-PREVIEW-URL.SUBDOMAIN.workers.dev
 			To deploy this version to production traffic use the command wrangler versions deploy
 			Changes to non-versioned settings (config properties 'logpush' or 'tail_consumers') take effect after your next deployment using the command wrangler versions deploy
 			Changes to triggers (routes, custom domains, cron schedules, etc) must be applied with the command wrangler triggers deploy"
