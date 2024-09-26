@@ -9,6 +9,7 @@ export function normalizeOutput(
 		removeStandardPricingWarning,
 		npmStripTimings,
 		removeWorkersDev,
+		removeWorkerPreviewUrl,
 		removeUUID,
 		normalizeErrorMarkers,
 		replaceByte,
@@ -43,6 +44,12 @@ function stripDevTimings(stdout: string): string {
 	return stdout.replace(/\(\dms\)/g, "(TIMINGS)");
 }
 
+function removeWorkerPreviewUrl(str: string) {
+	return str.replace(
+		/https:\/\/(?<sha>[a-f\d]+)-(?<workerName>.+)-(?<uuid>\w{8}-\w{4}-\w{4}-\w{4}-\w{12})\..+?\.workers\.dev/g,
+		"https://$2-PREVIEW-URL.SUBDOMAIN.workers.dev"
+	);
+}
 function removeWorkersDev(str: string) {
 	return str.replace(
 		/https:\/\/(.+?)\..+?\.workers\.dev/g,
