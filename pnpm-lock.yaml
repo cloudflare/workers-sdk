@@ -6,6 +6,12 @@ settings:
 
 catalogs:
   default:
+    '@vitest/runner':
+      specifier: ~2.1.1
+      version: 2.1.1
+    '@vitest/snapshot':
+      specifier: ~2.1.1
+      version: 2.1.1
     vitest:
       specifier: ~2.1.1
       version: 2.1.1
@@ -1299,6 +1305,9 @@ importers:
       concurrently:
         specifier: ^8.2.2
         version: 8.2.2
+      quick-edit-extension:
+        specifier: workspace:*
+        version: link:../quick-edit-extension
       tsx:
         specifier: ^3.12.8
         version: 3.12.10
