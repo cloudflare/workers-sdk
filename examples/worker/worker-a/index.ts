@@ -1,13 +1,12 @@
 export default {
 	async fetch(request, env, ctx) {
 		const url = new URL(request.url);
-		const response = await env.WORKER_B.fetch(request);
-		const workerBJson = (await response.json()) as any;
+		const result = await env.WORKER_B.add(4, 5);
 
 		return Response.json({
 			name: 'Worker A',
-			worker_b_message: workerBJson.message,
 			pathname: url.pathname,
+			worker_b_rpc_result: result,
 		});
 	},
 } satisfies ExportedHandler<Env>;

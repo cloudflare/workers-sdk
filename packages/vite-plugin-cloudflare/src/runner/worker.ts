@@ -1,3 +1,4 @@
+import { WorkerEntrypoint } from 'cloudflare:workers';
 import { ModuleRunner } from 'vite/module-runner';
 import { UNKNOWN_HOST, INIT_PATH } from '../shared.js';
 import type { FetchResult } from 'vite/module-runner';
@@ -69,41 +70,56 @@ function createModuleRunner(env: RunnerEnv, webSocket: WebSocket) {
 let moduleRunner: ModuleRunner;
 let entrypoint: string;
 
-export default {
-	async fetch(request, env, ctx) {
-		const url = new URL(request.url);
+export default class extends WorkerEntrypoint<RunnerEnv> {
+	constructor(ctx: ExecutionContext, env: RunnerEnv) {
+		super(ctx, env);
 
-		if (url.pathname === INIT_PATH) {
-			if (moduleRunner) {
-				throw new Error('Runner already initialized');
-			}
+		return new Proxy(this, {
+			get(target, prop) {
+				if (prop === 'fetch') {
+					return async (request: Request) => {
+						const url = new URL(request.url);
 
-			const main = request.headers.get('x-vite-main');
+						if (url.pathname === INIT_PATH) {
+							return target.#init.apply(target, [request]);
+						}
 
-			if (!main) {
-				throw new Error('Missing x-vite-main header');
-			}
+						return target.#fetch.apply(target, [request]);
+					};
+				} else {
+					return (...args: unknown[]) => {
+						return target.#rpc.apply(target, [prop, args]);
+					};
+				}
+			},
+		});
+	}
 
-			entrypoint = main;
-
-			const { 0: client, 1: server } = new WebSocketPair();
-
-			server.accept();
-
-			moduleRunner = createModuleRunner(env, server);
-
-			return new Response(null, { status: 101, webSocket: client });
+	#init(request: Request) {
+		if (moduleRunner) {
+			throw new Error('Runner already initialized');
 		}
 
+		const main = request.headers.get('x-vite-main');
+
+		if (!main) {
+			throw new Error('Missing x-vite-main header');
+		}
+
+		entrypoint = main;
+
+		const { 0: client, 1: server } = new WebSocketPair();
+
+		server.accept();
+
+		moduleRunner = createModuleRunner(this.env, server);
+
+		return new Response(null, { status: 101, webSocket: client });
+	}
+
+	async #fetch(request: Request) {
 		if (!moduleRunner || !entrypoint) {
 			throw new Error('Runner not initialized');
-		}
-
-		const module = await moduleRunner.import(entrypoint);
-		const handler = module.default as ExportedHandler;
-
-		if (!handler.fetch) {
-			throw new Error('Missing fetch handler');
 		}
 
 		const {
@@ -111,8 +127,63 @@ export default {
 			__VITE_FETCH_MODULE__,
 			__VITE_UNSAFE_EVAL__,
 			...filteredEnv
-		} = env;
+		} = this.env;
 
-		return handler.fetch(request, filteredEnv, ctx);
-	},
-} satisfies ExportedHandler<RunnerEnv>;
+		const module = await moduleRunner.import(entrypoint);
+		const handler = module.default;
+
+		// TODO: check that export extends WorkerEntrypoint?
+		if (typeof handler === 'function') {
+			const workerEntrypoint = new handler(this.ctx, filteredEnv);
+
+			if (!workerEntrypoint.fetch) {
+				throw new Error(
+					`The default export in '${entrypoint}' does not have a fetch handler`,
+				);
+			}
+
+			return workerEntrypoint.fetch(request);
+		}
+
+		if (!handler.fetch) {
+			throw new Error(
+				`The default export in '${entrypoint}' does not have a fetch handler`,
+			);
+		}
+
+		return handler.fetch(request, filteredEnv, this.ctx);
+	}
+
+	async #rpc(prop: string | symbol, args: unknown[]) {
+		if (!moduleRunner || !entrypoint) {
+			throw new Error('Runner not initialized');
+		}
+
+		const {
+			__VITE_ROOT__,
+			__VITE_FETCH_MODULE__,
+			__VITE_UNSAFE_EVAL__,
+			...filteredEnv
+		} = this.env;
+
+		const module = await moduleRunner.import(entrypoint);
+		const WorkerEntrypoint = module.default;
+
+		// TODO: check that export extends WorkerEntrypoint?
+		if (typeof WorkerEntrypoint !== 'function') {
+			throw new Error(
+				`The default export in '${entrypoint}' must be a class that extends WorkerEntrypoint`,
+			);
+		}
+
+		const workerEntrypoint = new WorkerEntrypoint(this.ctx, filteredEnv);
+
+		if (!workerEntrypoint[prop]) {
+			throw new Error(
+				`Method '${String(prop)}' does not exist on the default export in '${entrypoint}'`,
+			);
+		}
+
+		return workerEntrypoint[prop](...args);
+	}
+}
