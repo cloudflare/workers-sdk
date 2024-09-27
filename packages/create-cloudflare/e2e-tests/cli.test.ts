@@ -51,7 +51,6 @@ describe
 		test({ experimental }).skipIf(process.platform === "win32")(
 			"Using arrow keys + enter",
 			async ({ logStream, project }) => {
-				console.log(project);
 				const { output } = await runC3(
 					[project.path],
 					[
