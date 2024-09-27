@@ -77,6 +77,9 @@ async function expectedHostAndZone(
 					return route.pattern;
 				}
 			}),
+		env: undefined,
+		legacyEnv: undefined,
+		sendMetrics: undefined,
 	});
 
 	expect(ctx).toEqual(
