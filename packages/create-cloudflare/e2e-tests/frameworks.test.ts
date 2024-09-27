@@ -166,6 +166,7 @@ function getFrameworkTests(opts: {
 				testCommitMessage: true,
 				timeout: LONG_TIMEOUT,
 				unsupportedOSs: ["win32"],
+				unsupportedPms: ["bun"],
 				verifyDeploy: {
 					route: "/",
 					expectedText: "Congratulations! Your app is running.",
