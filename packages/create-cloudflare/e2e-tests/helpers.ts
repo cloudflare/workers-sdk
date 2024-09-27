@@ -43,7 +43,7 @@ const testEnv = {
 	// do not use the same global cache and accidentally hit race conditions.
 	YARN_CACHE_FOLDER: "./.yarn/cache",
 	YARN_ENABLE_GLOBAL_CACHE: "false",
-	// PNPM_HOME: "./.pnpm",
+	PNPM_HOME: "./.pnpm",
 	npm_config_cache: "./.npm/cache",
 	// unset the VITEST env variable as this causes e2e issues with some frameworks
 	VITEST: undefined,
