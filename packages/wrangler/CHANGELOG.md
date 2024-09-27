@@ -1,5 +1,11 @@
 # wrangler
 
+## 3.78.12
+
+### Patch Changes
+
+- [#6840](https://github.com/cloudflare/workers-sdk/pull/6840) [`5bfb75d`](https://github.com/cloudflare/workers-sdk/commit/5bfb75df8a81fc42f0eecd00fed5b84e5fab88d7) Thanks [@a-robinson](https://github.com/a-robinson)! - chore: update warning in `wrangler dev --remote` when using Queues to not mention beta status
+
 ## 3.78.11
 
 ### Patch Changes
