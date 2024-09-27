@@ -69,7 +69,7 @@ function getFrameworkTests(opts: {
 				},
 				verifyPreview: {
 					route: "/test",
-					expectedText: "C3_TEST",
+					expectedText: "Create Next App",
 				},
 				verifyDeploy: {
 					route: "/",
