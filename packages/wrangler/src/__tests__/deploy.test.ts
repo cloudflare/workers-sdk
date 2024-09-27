@@ -248,6 +248,40 @@ describe("deploy", () => {
 		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
 
+	it("should include serialised FormData in debug logs", async () => {
+		fs.mkdirSync("./my-worker", { recursive: true });
+		fs.writeFileSync(
+			"./my-worker/wrangler.toml",
+			TOML.stringify({
+				name: "test-worker",
+				compatibility_date: "2022-01-12",
+				vars: { xyz: 123 },
+			}),
+			"utf-8"
+		);
+		writeWorkerSource({ basePath: "./my-worker" });
+		mockUploadWorkerRequest({
+			expectedScriptName: "test-worker",
+			expectedBindings: [
+				{
+					json: 123,
+					name: "xyz",
+					type: "json",
+				},
+			],
+			expectedCompatibilityDate: "2022-01-12",
+		});
+		mockSubDomainRequest();
+
+		vi.stubEnv("WRANGLER_LOG", "debug");
+		vi.stubEnv("WRANGLER_LOG_SANITIZE", "false");
+
+		await runWrangler("deploy ./my-worker/index.js");
+		expect(std.debug).toContain(
+			`{"main_module":"index.js","bindings":[{"name":"xyz","type":"json","json":123}],"compatibility_date":"2022-01-12","compatibility_flags":[]}`
+		);
+	});
+
 	it("should support wrangler.jsonc", async () => {
 		fs.mkdirSync("./my-worker", { recursive: true });
 		fs.writeFileSync(

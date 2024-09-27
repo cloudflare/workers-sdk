@@ -54,7 +54,6 @@ export type TableRow<Keys extends string> = Record<Keys, string>;
 export class Logger {
 	constructor() {}
 
-	loggerLevel = getLoggerLevel();
 	columns = process.stdout.columns;
 
 	debug = (...args: unknown[]) => this.doLog("debug", args);
@@ -108,7 +107,7 @@ export class Logger {
 		}
 
 		// only send logs to the terminal if their level is at least the configured log-level
-		if (LOGGER_LEVELS[this.loggerLevel] >= LOGGER_LEVELS[messageLevel]) {
+		if (LOGGER_LEVELS[getLoggerLevel()] >= LOGGER_LEVELS[messageLevel]) {
 			Logger.#beforeLogHook?.();
 			console[messageLevel](message);
 			Logger.#afterLogHook?.();
