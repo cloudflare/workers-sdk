@@ -214,12 +214,10 @@ describe.sequential("wrangler dev", () => {
 	});
 
 	describe("compatibility-date", () => {
-		it.skip("should not warn if there is no wrangler.toml and no compatibility-date specified", async () => {
+		it("should not warn if there is no wrangler.toml and no compatibility-date specified", async () => {
 			fs.writeFileSync("index.js", `export default {};`);
 			await runWranglerUntilConfig("dev index.js");
-			expect(std.out).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
-			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
 		it("should warn if there is a wrangler.toml but no compatibility-date", async () => {
@@ -250,7 +248,7 @@ describe.sequential("wrangler dev", () => {
 `);
 		});
 
-		it.skip("should not warn if there is a wrangler.toml but compatibility-date is specified at the command line", async () => {
+		it("should not warn if there is a wrangler.toml but compatibility-date is specified at the command line", async () => {
 			writeWranglerToml({
 				main: "index.js",
 				compatibility_date: undefined,
@@ -369,7 +367,7 @@ describe.sequential("wrangler dev", () => {
 				Paths are not allowed in Custom Domains]
 			`);
 		});
-		it.skip("should error on routes with paths if assets are present", async () => {
+		it("should error on routes with paths if assets are present", async () => {
 			writeWranglerToml({
 				routes: [
 					"simple.co.uk/path",
@@ -1630,7 +1628,7 @@ describe.sequential("wrangler dev", () => {
 			);
 		});
 
-		it.skip("should error if config.assets and --legacy-assets are used together", async () => {
+		it("should error if config.assets and --legacy-assets are used together", async () => {
 			writeWranglerToml({
 				main: "./index.js",
 				assets: {

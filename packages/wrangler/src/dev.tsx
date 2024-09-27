@@ -636,134 +636,139 @@ export async function startDev(args: StartDevOptions) {
 				unregisterHotKeys = registerDevHotKeys(devEnv, args);
 			}
 
-			await devEnv.config.set({
-				name: args.name,
-				config: configPath,
-				entrypoint: args.script,
-				compatibilityDate: args.compatibilityDate,
-				compatibilityFlags: args.compatibilityFlags,
-				triggers: args.routes?.map<Extract<Trigger, { type: "route" }>>(
-					(r) => ({
-						type: "route",
-						pattern: r,
-					})
-				),
-				env: args.env,
-				build: {
-					bundle: args.bundle !== undefined ? args.bundle : undefined,
-					define: collectKeyValues(args.define),
-					jsxFactory: args.jsxFactory,
-					jsxFragment: args.jsxFragment,
-					tsconfig: args.tsconfig,
-					minify: args.minify,
-					processEntrypoint: args.processEntrypoint,
-					additionalModules: args.additionalModules,
-					moduleRoot: args.moduleRoot,
-					moduleRules: args.rules,
-					nodejsCompatMode: (parsedConfig: Config) =>
-						validateNodeCompatMode(
-							args.compatibilityDate ?? parsedConfig.compatibility_date,
-							args.compatibilityFlags ?? parsedConfig.compatibility_flags ?? [],
-							{
-								nodeCompat: args.nodeCompat ?? parsedConfig.node_compat,
-								noBundle: args.noBundle ?? parsedConfig.no_bundle,
-							}
-						),
-				},
-				bindings: {
-					...(await getPagesAssetsFetcher(
-						args.enablePagesAssetsServiceBinding
-					)),
-					...collectPlainTextVars(args.var),
-					...convertCfWorkerInitBindingstoBindings({
-						kv_namespaces: args.kv,
-						vars: args.vars,
-						send_email: undefined,
-						wasm_modules: undefined,
-						text_blobs: undefined,
-						browser: undefined,
-						ai: args.ai,
-						version_metadata: args.version_metadata,
-						data_blobs: undefined,
-						durable_objects: { bindings: args.durableObjects ?? [] },
-						queues: undefined,
-						r2_buckets: args.r2,
-						d1_databases: args.d1Databases,
-						vectorize: undefined,
-						hyperdrive: undefined,
-						services: args.services,
-						analytics_engine_datasets: undefined,
-						dispatch_namespaces: undefined,
-						mtls_certificates: undefined,
-						pipelines: undefined,
-						logfwdr: undefined,
-						unsafe: undefined,
-						assets: undefined,
-					}),
-				},
-				dev: {
-					auth: async () => {
-						let accountId = args.accountId;
-						if (!accountId) {
-							unregisterHotKeys?.();
-							accountId = await requireAuth({});
-							unregisterHotKeys = registerDevHotKeys(devEnv, args);
-						}
-						return {
-							accountId,
-							apiToken: requireApiToken(),
-						};
-					},
-					remote: !args.forceLocal && args.remote,
-					server: {
-						hostname: args.ip,
-						port: args.port,
-						secure:
-							args.localProtocol === undefined
-								? undefined
-								: args.localProtocol === "https",
-						httpsCertPath: args.httpsCertPath,
-						httpsKeyPath: args.httpsKeyPath,
-					},
-					inspector: {
-						port: args.inspectorPort,
-					},
-					origin: {
-						hostname: args.host ?? args.localUpstream,
-						secure:
-							args.upstreamProtocol === undefined
-								? undefined
-								: args.upstreamProtocol === "https",
-					},
-					persist: args.persistTo,
-					liveReload: args.liveReload,
-					testScheduled: args.testScheduled,
-					logLevel: args.logLevel,
-					registry: devEnv.config.latestConfig?.dev.registry,
-				},
-				legacy: {
-					site: (configParam) => {
-						const legacyAssetPaths = getResolvedLegacyAssetPaths(
-							args,
-							configParam
-						);
-						return Boolean(args.site || configParam.site) && legacyAssetPaths
-							? {
-									bucket: path.join(
-										legacyAssetPaths.baseDirectory,
-										legacyAssetPaths?.assetDirectory
-									),
-									include: legacyAssetPaths.includePatterns,
-									exclude: legacyAssetPaths.excludePatterns,
+			await devEnv.config.set(
+				{
+					name: args.name,
+					config: configPath,
+					entrypoint: args.script,
+					compatibilityDate: args.compatibilityDate,
+					compatibilityFlags: args.compatibilityFlags,
+					triggers: args.routes?.map<Extract<Trigger, { type: "route" }>>(
+						(r) => ({
+							type: "route",
+							pattern: r,
+						})
+					),
+					env: args.env,
+					build: {
+						bundle: args.bundle !== undefined ? args.bundle : undefined,
+						define: collectKeyValues(args.define),
+						jsxFactory: args.jsxFactory,
+						jsxFragment: args.jsxFragment,
+						tsconfig: args.tsconfig,
+						minify: args.minify,
+						processEntrypoint: args.processEntrypoint,
+						additionalModules: args.additionalModules,
+						moduleRoot: args.moduleRoot,
+						moduleRules: args.rules,
+						nodejsCompatMode: (parsedConfig: Config) =>
+							validateNodeCompatMode(
+								args.compatibilityDate ?? parsedConfig.compatibility_date,
+								args.compatibilityFlags ??
+									parsedConfig.compatibility_flags ??
+									[],
+								{
+									nodeCompat: args.nodeCompat ?? parsedConfig.node_compat,
+									noBundle: args.noBundle ?? parsedConfig.no_bundle,
 								}
-							: undefined;
+							),
 					},
-					legacyAssets: (configParam) =>
-						args.legacyAssets ?? configParam.legacy_assets,
-					enableServiceEnvironments: !(args.legacyEnv ?? true),
-				},
-				assets: args.assets,
-			} satisfies StartDevWorkerInput);
+					bindings: {
+						...(await getPagesAssetsFetcher(
+							args.enablePagesAssetsServiceBinding
+						)),
+						...collectPlainTextVars(args.var),
+						...convertCfWorkerInitBindingstoBindings({
+							kv_namespaces: args.kv,
+							vars: args.vars,
+							send_email: undefined,
+							wasm_modules: undefined,
+							text_blobs: undefined,
+							browser: undefined,
+							ai: args.ai,
+							version_metadata: args.version_metadata,
+							data_blobs: undefined,
+							durable_objects: { bindings: args.durableObjects ?? [] },
+							queues: undefined,
+							r2_buckets: args.r2,
+							d1_databases: args.d1Databases,
+							vectorize: undefined,
+							hyperdrive: undefined,
+							services: args.services,
+							analytics_engine_datasets: undefined,
+							dispatch_namespaces: undefined,
+							mtls_certificates: undefined,
+							pipelines: undefined,
+							logfwdr: undefined,
+							unsafe: undefined,
+							assets: undefined,
+						}),
+					},
+					dev: {
+						auth: async () => {
+							let accountId = args.accountId;
+							if (!accountId) {
+								unregisterHotKeys?.();
+								accountId = await requireAuth({});
+								unregisterHotKeys = registerDevHotKeys(devEnv, args);
+							}
+							return {
+								accountId,
+								apiToken: requireApiToken(),
+							};
+						},
+						remote: !args.forceLocal && args.remote,
+						server: {
+							hostname: args.ip,
+							port: args.port,
+							secure:
+								args.localProtocol === undefined
+									? undefined
+									: args.localProtocol === "https",
+							httpsCertPath: args.httpsCertPath,
+							httpsKeyPath: args.httpsKeyPath,
+						},
+						inspector: {
+							port: args.inspectorPort,
+						},
+						origin: {
+							hostname: args.host ?? args.localUpstream,
+							secure:
+								args.upstreamProtocol === undefined
+									? undefined
+									: args.upstreamProtocol === "https",
+						},
+						persist: args.persistTo,
+						liveReload: args.liveReload,
+						testScheduled: args.testScheduled,
+						logLevel: args.logLevel,
+						registry: devEnv.config.latestConfig?.dev.registry,
+					},
+					legacy: {
+						site: (configParam) => {
+							const legacyAssetPaths = getResolvedLegacyAssetPaths(
+								args,
+								configParam
+							);
+							return Boolean(args.site || configParam.site) && legacyAssetPaths
+								? {
+										bucket: path.join(
+											legacyAssetPaths.baseDirectory,
+											legacyAssetPaths?.assetDirectory
+										),
+										include: legacyAssetPaths.includePatterns,
+										exclude: legacyAssetPaths.excludePatterns,
+									}
+								: undefined;
+						},
+						legacyAssets: (configParam) =>
+							args.legacyAssets ?? configParam.legacy_assets,
+						enableServiceEnvironments: !(args.legacyEnv ?? true),
+					},
+					assets: args.assets,
+				} satisfies StartDevWorkerInput,
+				true
+			);
 
 			void metrics.sendMetricsEvent(
 				"run dev",
