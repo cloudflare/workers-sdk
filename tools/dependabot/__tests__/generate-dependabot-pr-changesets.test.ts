@@ -244,6 +244,8 @@ describe("commitAndPush()", () => {
 				args[0] === "push" ? new Error("Failed to push") : undefined;
 			return { output: [], error };
 		});
-		expect(() => gitPush()).toThrowErrorMatchingInlineSnapshot(`[Error: Failed to push]`);
+		expect(() => gitPush()).toThrowErrorMatchingInlineSnapshot(
+			`[Error: Failed to push]`
+		);
 	});
 });
