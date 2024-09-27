@@ -1,3 +1,4 @@
+import { WorkerEntrypoint } from 'cloudflare:workers';
 import { ModuleRunner } from 'vite/module-runner';
 import { UNKNOWN_HOST, INIT_PATH } from '../shared.js';
 import type { FetchResult } from 'vite/module-runner';
@@ -69,9 +70,7 @@ function createModuleRunner(env: RunnerEnv, webSocket: WebSocket) {
 let moduleRunner: ModuleRunner;
 let entrypoint: string;
 
-import { WorkerEntrypoint } from 'cloudflare:workers';
-
-class RunnerEntrypoint extends WorkerEntrypoint<RunnerEnv> {
+export default class extends WorkerEntrypoint<RunnerEnv> {
 	constructor(ctx: ExecutionContext, env: RunnerEnv) {
 		super(ctx, env);
 
@@ -133,18 +132,23 @@ class RunnerEntrypoint extends WorkerEntrypoint<RunnerEnv> {
 		const module = await moduleRunner.import(entrypoint);
 		const handler = module.default;
 
+		// TODO: check that export extends WorkerEntrypoint?
 		if (typeof handler === 'function') {
 			const workerEntrypoint = new handler(this.ctx, filteredEnv);
 
 			if (!workerEntrypoint.fetch) {
-				throw new Error('Missing fetch handler');
+				throw new Error(
+					`The default export in '${entrypoint}' does not have a fetch handler`,
+				);
 			}
 
 			return workerEntrypoint.fetch(request);
 		}
 
 		if (!handler.fetch) {
-			throw new Error('Missing fetch handler');
+			throw new Error(
+				`The default export in '${entrypoint}' does not have a fetch handler`,
+			);
 		}
 
 		return handler.fetch(request, filteredEnv, this.ctx);
@@ -165,18 +169,21 @@ class RunnerEntrypoint extends WorkerEntrypoint<RunnerEnv> {
 		const module = await moduleRunner.import(entrypoint);
 		const WorkerEntrypoint = module.default;
 
+		// TODO: check that export extends WorkerEntrypoint?
 		if (typeof WorkerEntrypoint !== 'function') {
-			throw new Error('RPC error 1');
+			throw new Error(
+				`The default export in '${entrypoint}' must be a class that extends WorkerEntrypoint`,
+			);
 		}
 
 		const workerEntrypoint = new WorkerEntrypoint(this.ctx, filteredEnv);
 
 		if (!workerEntrypoint[prop]) {
-			throw new Error('RPC error 2');
+			throw new Error(
+				`Method '${String(prop)}' does not exist on the default export in '${entrypoint}'`,
+			);
 		}
 
 		return workerEntrypoint[prop](...args);
 	}
 }
-
-export default RunnerEntrypoint;
