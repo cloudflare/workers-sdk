@@ -71,6 +71,7 @@ export function createReporter() {
 	const packageManager = detectPackageManager();
 	const platform = getPlatform();
 	const amplitude_session_id = Date.now();
+	const enableLog = process.env.CREATE_CLOUDFLARE_TELEMETRY_DEBUG === "1";
 
 	// The event id is an incrementing counter to distinguish events with the same `user_id` and timestamp from each other.
 	// @see https://amplitude.com/docs/apis/analytics/http-v2#event-array-keys
@@ -84,20 +85,23 @@ export function createReporter() {
 			return;
 		}
 
-		const request = sparrow.sendEvent({
-			event: name,
-			deviceId,
-			timestamp: Date.now(),
-			properties: {
-				amplitude_session_id,
-				amplitude_event_id: amplitude_event_id++,
-				platform,
-				c3Version,
-				isFirstUsage,
-				packageManager: packageManager.name,
-				...properties,
+		const request = sparrow.sendEvent(
+			{
+				event: name,
+				deviceId,
+				timestamp: Date.now(),
+				properties: {
+					amplitude_session_id,
+					amplitude_event_id: amplitude_event_id++,
+					platform,
+					c3Version,
+					isFirstUsage,
+					packageManager: packageManager.name,
+					...properties,
+				},
 			},
-		});
+			enableLog,
+		);
 
 		// TODO(consider): retry failed requests
 		// TODO(consider): add a timeout to avoid the process staying alive for too long
