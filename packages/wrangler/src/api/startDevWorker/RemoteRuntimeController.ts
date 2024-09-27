@@ -183,6 +183,7 @@ export class RemoteRuntimeController extends RuntimeController {
 				compatibilityDate: config.compatibilityDate,
 				compatibilityFlags: config.compatibilityFlags,
 				routes,
+				host: config.dev.origin?.hostname,
 			});
 
 			// If we received a new `bundleComplete` event before we were able to
