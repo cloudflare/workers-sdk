@@ -12,6 +12,7 @@ import { FatalError } from "../errors";
 import { CI } from "../is-ci";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
+import { useMockIsTTY } from "./helpers/mock-istty";
 import {
 	msw,
 	mswSuccessOauthHandlers,
@@ -110,7 +111,10 @@ async function expectedHostAndZone(
 describe.sequential("wrangler dev", () => {
 	let spy: MockInstance;
 	let setSpy: MockInstance;
+	const { setIsTTY } = useMockIsTTY();
+
 	beforeEach(() => {
+		setIsTTY(true);
 		setSpy = vi.spyOn(ConfigController.prototype, "set");
 		spy = vi
 			.spyOn(ConfigController.prototype, "emitConfigUpdateEvent")
