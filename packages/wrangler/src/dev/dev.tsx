@@ -630,9 +630,7 @@ function DevSession(props: DevSessionProps) {
 		!props.local &&
 		(props.bindings.queues?.length || props.queueConsumers?.length)
 	) {
-		logger.warn(
-			"Queues are currently in Beta and are not supported in wrangler dev remote mode."
-		);
+		logger.warn("Queues are not yet supported in wrangler dev remote mode.");
 	}
 
 	// TODO(do) support remote wrangler dev
