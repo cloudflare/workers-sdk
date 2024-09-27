@@ -1,5 +1,11 @@
 # wrangler
 
+## 3.78.11
+
+### Patch Changes
+
+- [#6819](https://github.com/cloudflare/workers-sdk/pull/6819) [`7ede181`](https://github.com/cloudflare/workers-sdk/commit/7ede1811376e4c08b9aba79c84b90ca2942ee87e) Thanks [@CarmenPopoviciu](https://github.com/CarmenPopoviciu)! - fix: Validate `[routes]` on configuration file changes
+
 ## 3.78.10
 
 ### Patch Changes
