@@ -14,6 +14,7 @@ export default defineConfig([
 		format: 'esm',
 		platform: 'neutral',
 		outDir: 'dist/runner',
+		external: ['cloudflare:workers'],
 		noExternal: ['vite/module-runner'],
 		tsconfig: 'tsconfig.runner.json',
 	},
