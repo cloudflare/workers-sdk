@@ -1,5 +1,11 @@
 # create-cloudflare
 
+## 2.29.1
+
+### Patch Changes
+
+- [#6836](https://github.com/cloudflare/workers-sdk/pull/6836) [`a67cdbf`](https://github.com/cloudflare/workers-sdk/commit/a67cdbfc4db2e9f94dd159481fc900b4d2e7d2cb) Thanks [@edmundhung](https://github.com/edmundhung)! - fix: prevent the cli from crashing by silently ignoring network errors during telemetry collection
+
 ## 2.29.0
 
 ### Minor Changes
