@@ -27,6 +27,7 @@ import { getAccountId, requireApiToken } from "../../user";
 import { memoizeGetPort } from "../../utils/memoizeGetPort";
 import { getZoneIdForPreview } from "../../zones";
 import { Controller } from "./BaseController";
+import { castErrorCause } from "./events";
 import {
 	convertCfWorkerInitBindingstoBindings,
 	extractBindingsOfType,
@@ -397,8 +398,8 @@ export class ConfigController extends Controller<ConfigControllerEventMap> {
 			});
 		}
 	}
-	public set(input: StartDevWorkerInput) {
-		return this.#updateConfig(input);
+	public set(input: StartDevWorkerInput, throwErrors = false) {
+		return this.#updateConfig(input, throwErrors);
 	}
 	public patch(input: Partial<StartDevWorkerInput>) {
 		assert(
@@ -414,48 +415,61 @@ export class ConfigController extends Controller<ConfigControllerEventMap> {
 		return this.#updateConfig(config);
 	}
 
-	async #updateConfig(input: StartDevWorkerInput) {
+	async #updateConfig(input: StartDevWorkerInput, throwErrors = false) {
 		this.#abortController?.abort();
 		this.#abortController = new AbortController();
 		const signal = this.#abortController.signal;
 		this.latestInput = input;
+		try {
+			const fileConfig = readConfig(input.config, {
+				env: input.env,
+				"dispatch-namespace": undefined,
+				"legacy-env": !input.legacy?.enableServiceEnvironments ?? true,
+				remote: input.dev?.remote,
+				upstreamProtocol:
+					input.dev?.origin?.secure === undefined
+						? undefined
+						: input.dev?.origin?.secure
+							? "https"
+							: "http",
+				localProtocol:
+					input.dev?.server?.secure === undefined
+						? undefined
+						: input.dev?.server?.secure
+							? "https"
+							: "http",
+			});
 
-		const fileConfig = readConfig(input.config, {
-			env: input.env,
-			"dispatch-namespace": undefined,
-			"legacy-env": !input.legacy?.enableServiceEnvironments ?? true,
-			remote: input.dev?.remote,
-			upstreamProtocol:
-				input.dev?.origin?.secure === undefined
-					? undefined
-					: input.dev?.origin?.secure
-						? "https"
-						: "http",
-			localProtocol:
-				input.dev?.server?.secure === undefined
-					? undefined
-					: input.dev?.server?.secure
-						? "https"
-						: "http",
-		});
+			if (typeof vitest === "undefined") {
+				void this.#ensureWatchingConfig(fileConfig.configPath);
+			}
 
-		if (typeof vitest === "undefined") {
-			void this.#ensureWatchingConfig(fileConfig.configPath);
+			const assets = processAssetsArg({ assets: input?.assets }, fileConfig);
+			if (assets && typeof vitest === "undefined") {
+				void this.#ensureWatchingAssets(assets.directory);
+			}
+
+			const resolvedConfig = await resolveConfig(fileConfig, input);
+			if (signal.aborted) {
+				return;
+			}
+			this.latestConfig = resolvedConfig;
+			this.emitConfigUpdateEvent(resolvedConfig);
+
+			return this.latestConfig;
+		} catch (err) {
+			if (throwErrors) {
+				throw err;
+			} else {
+				this.emitErrorEvent({
+					type: "error",
+					reason: "Error resolving config",
+					cause: castErrorCause(err),
+					source: "ConfigController",
+					data: undefined,
+				});
+			}
 		}
-
-		const assets = processAssetsArg({ assets: input?.assets }, fileConfig);
-		if (assets && typeof vitest === "undefined") {
-			void this.#ensureWatchingAssets(assets.directory);
-		}
-
-		const resolvedConfig = await resolveConfig(fileConfig, input);
-		if (signal.aborted) {
-			return;
-		}
-		this.latestConfig = resolvedConfig;
-		this.emitConfigUpdateEvent(resolvedConfig);
-
-		return this.latestConfig;
 	}
 
 	// ******************

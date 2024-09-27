@@ -1,6 +1,7 @@
 import assert from "node:assert";
 import { EventEmitter } from "node:events";
 import { logger } from "../../logger";
+import { formatMessage, ParseError } from "../../parse";
 import { BundlerController } from "./BundlerController";
 import { ConfigController } from "./ConfigController";
 import { LocalRuntimeController } from "./LocalRuntimeController";
@@ -139,6 +140,14 @@ export class DevEnv extends EventEmitter {
 		) {
 			logger.debug(`Error in ${ev.source}: ${ev.reason}\n`, ev.cause);
 			logger.debug("=> Error contextual data:", ev.data);
+		}
+		// Parse errors are recoverable by changing your `wrangler.toml` and saving
+		// All other errors from the ConfigController are non-recoverable
+		else if (
+			ev.source === "ConfigController" &&
+			ev.cause instanceof ParseError
+		) {
+			logger.log(formatMessage(ev.cause));
 		}
 		// if other knowable + recoverable errors occur, handle them here
 		else {
