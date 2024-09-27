@@ -4303,6 +4303,31 @@ addEventListener('fetch', event => {});`
 			);
 		});
 
+		it("should error if --assets and config.tail_consumers are used together", async () => {
+			writeWranglerToml({
+				tail_consumers: [{ service: "<TAIL_WORKER_NAME>" }],
+			});
+			fs.mkdirSync("public");
+			await expect(
+				runWrangler("deploy --assets public")
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: Cannot use assets and tail consumers in the same Worker. Tail Workers are not yet supported for Workers with assets.]`
+			);
+		});
+
+		it("should error if config.assets and config.tail_consumers are used together", async () => {
+			writeWranglerToml({
+				assets: { directory: "./public" },
+				tail_consumers: [{ service: "<TAIL_WORKER_NAME>" }],
+			});
+			fs.mkdirSync("public");
+			await expect(
+				runWrangler("deploy")
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: Cannot use assets and tail consumers in the same Worker. Tail Workers are not yet supported for Workers with assets.]`
+			);
+		});
+
 		it("should error if directory specified by flag --assets does not exist", async () => {
 			await expect(runWrangler("deploy --assets abc")).rejects.toThrow(
 				new RegExp(

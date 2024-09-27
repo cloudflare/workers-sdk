@@ -15,8 +15,8 @@ import { findWranglerToml, printBindings, readConfig } from "./config";
 import { validateRoutes } from "./deploy/deploy";
 import { getEntry } from "./deployment-bundle/entry";
 import { validateNodeCompatMode } from "./deployment-bundle/node-compat";
-import { getBoundRegisteredWorkers } from "./dev-registry";
-import Dev, { devRegistry } from "./dev/dev";
+import { devRegistry, getBoundRegisteredWorkers } from "./dev-registry";
+import Dev from "./dev/dev";
 import { getVarsForDev } from "./dev/dev-vars";
 import { getLocalPersistencePath } from "./dev/get-local-persistence-path";
 import registerDevHotKeys from "./dev/hotkeys";
@@ -546,11 +546,6 @@ export async function startDev(args: StartDevOptions) {
 	let assetsWatcher: ReturnType<typeof watch> | undefined;
 	let rerender: (node: React.ReactNode) => void | undefined;
 	try {
-		const configPath =
-			args.config ||
-			(args.script && findWranglerToml(path.dirname(args.script)));
-		let config = readConfig(configPath, args);
-
 		if (args.logLevel) {
 			logger.loggerLevel = args.logLevel;
 		}
@@ -588,36 +583,16 @@ export async function startDev(args: StartDevOptions) {
 			);
 		}
 
-		if (
-			(args.legacyAssets || config.legacy_assets) &&
-			(args.site || config.site)
-		) {
-			throw new UserError(
-				"Cannot use legacy assets and Workers Sites in the same Worker."
-			);
-		}
-
-		if ((args.assets || config.assets) && args.remote) {
-			throw new UserError(
-				"Cannot use assets in remote mode. Workers with assets are only supported in local mode. Please use `wrangler dev`."
-			);
-		}
-
-		validateAssetsArgsAndConfig(args, config);
-
-		let assetsOptions = processAssetsArg(args, config);
-		if (assetsOptions) {
-			args.forceLocal = true;
-		}
-
-		const projectRoot = configPath && path.dirname(configPath);
+		const configPath =
+			args.config ||
+			(args.script && findWranglerToml(path.dirname(args.script)));
 
 		const devEnv = new DevEnv();
 
 		if (args.experimentalDevEnv) {
 			// The ProxyWorker will have a stable host and port, so only listen for the first update
 			void devEnv.proxy.ready.promise.then(({ url }) => {
-				if (process.send) {
+				if (process.send && typeof vitest === "undefined") {
 					process.send(
 						JSON.stringify({
 							event: "DEV_SERVER_READY",
@@ -672,7 +647,7 @@ export async function startDev(args: StartDevOptions) {
 						pattern: r,
 					})
 				),
-
+				env: args.env,
 				build: {
 					bundle: args.bundle !== undefined ? args.bundle : undefined,
 					define: collectKeyValues(args.define),
@@ -733,7 +708,6 @@ export async function startDev(args: StartDevOptions) {
 							accountId = await requireAuth({});
 							unregisterHotKeys = registerDevHotKeys(devEnv, args);
 						}
-
 						return {
 							accountId,
 							apiToken: requireApiToken(),
@@ -772,7 +746,6 @@ export async function startDev(args: StartDevOptions) {
 							args,
 							configParam
 						);
-
 						return Boolean(args.site || configParam.site) && legacyAssetPaths
 							? {
 									bucket: path.join(
@@ -784,13 +757,11 @@ export async function startDev(args: StartDevOptions) {
 								}
 							: undefined;
 					},
-					legacyAssets: (configParam) => configParam.legacy_assets,
+					legacyAssets: (configParam) =>
+						args.legacyAssets ?? configParam.legacy_assets,
 					enableServiceEnvironments: !(args.legacyEnv ?? true),
 				},
-				// only pass `assetsOptions` if it came from args not from config
-				// otherwise config at startup ends up overriding future config changes in the
-				// ConfigController
-				assets: args.assets ? assetsOptions : undefined,
+				assets: args.assets,
 			} satisfies StartDevWorkerInput);
 
 			void metrics.sendMetricsEvent(
@@ -808,219 +779,251 @@ export async function startDev(args: StartDevOptions) {
 			);
 
 			return devEnv;
-		}
+		} else {
+			const projectRoot = configPath && path.dirname(configPath);
+			let config = readConfig(configPath, args);
 
-		if (config.configPath && !args.experimentalDevEnv) {
-			configFileWatcher = watch(config.configPath, {
-				persistent: true,
-			}).on("change", async (_event) => {
-				try {
-					// TODO: Do we need to handle different `_event` types differently?
-					// e.g. what if the file is deleted, or added?
-					config = readConfig(configPath, args);
-					if (!config.configPath) {
-						return;
-					}
-
-					logger.log(`${path.basename(config.configPath)} changed...`);
-
-					// ensure we reflect config changes in the `main` entry point
-					entry = await getEntry(
-						{
-							legacyAssets: args.legacyAssets,
-							script: args.script,
-							moduleRoot: args.moduleRoot,
-							assets: args.assets,
-						},
-						config,
-						"dev"
-					);
-
-					// ensure we re-validate routes
-					await getHostAndRoutes(args, config);
-
-					assetsOptions = processAssetsArg(args, config);
-
-					/*
-					 * Handle static assets watching on config file changes
-					 *
-					 * 1. if assets was specified via CLI args, only config file
-					 *    changes related to `main` will matter. In this case, re-running
-					 *    `processAssetsArg` is enough (see above)
-					 * 2. if assets was not specififed via the configuration
-					 *    file, but it is now, we should start watching the assets
-					 *    directory
-					 * 3. if assets was specified via the configuration
-					 *    file, we should ensure we're still watching the correct
-					 *    directory
-					 */
-					if (assetsOptions && !args.assets) {
-						await assetsWatcher?.close();
-
-						if (assetsOptions) {
-							assetsWatcher = watch(assetsOptions.directory, {
-								persistent: true,
-								ignoreInitial: true,
-							}).on("all", async (eventName, changedPath) => {
-								const message = getAssetChangeMessage(eventName, changedPath);
-
-								logger.log(`🌀 ${message}...`);
-								rerender(await getDevReactElement(config));
-							});
-						}
-					}
-
-					rerender(await getDevReactElement(config));
-				} catch (err) {
-					logger.error(err);
-				}
-			});
-		}
-
-		const devServerSettings = await validateDevServerSettings(args, config);
-		let { entry } = devServerSettings;
-		const {
-			upstreamProtocol,
-			host,
-			routes,
-			getLocalPort,
-			getInspectorPort,
-			getRuntimeInspectorPort,
-			cliDefines,
-			cliAlias,
-			localPersistencePath,
-			processEntrypoint,
-			additionalModules,
-		} = devServerSettings;
-
-		const nodejsCompatMode = validateNodeCompatMode(
-			args.compatibilityDate ?? config.compatibility_date,
-			args.compatibilityFlags ?? config.compatibility_flags ?? [],
-			{
-				nodeCompat: args.nodeCompat ?? config.node_compat,
-				noBundle: args.noBundle ?? config.no_bundle,
+			if (
+				(args.legacyAssets || config.legacy_assets) &&
+				(args.site || config.site)
+			) {
+				throw new UserError(
+					"Cannot use legacy assets and Workers Sites in the same Worker."
+				);
 			}
-		);
 
-		void metrics.sendMetricsEvent(
-			"run dev",
-			{
-				local: !args.remote,
-				usesTypeScript: /\.tsx?$/.test(entry.file),
-			},
-			{ sendMetrics: config.send_metrics, offline: !args.remote }
-		);
+			if ((args.assets || config.assets) && args.remote) {
+				throw new UserError(
+					"Cannot use assets in remote mode. Workers with assets are only supported in local mode. Please use `wrangler dev`."
+				);
+			}
 
-		// eslint-disable-next-line no-inner-declarations
-		async function getDevReactElement(configParam: Config) {
-			const { legacyAssetPaths, bindings } = getBindingsAndLegacyAssetPaths(
-				args,
-				configParam
+			validateAssetsArgsAndConfig(args, config);
+
+			let assetsOptions = processAssetsArg(args, config);
+			if (assetsOptions) {
+				args.forceLocal = true;
+			}
+
+			if (config.configPath && !args.experimentalDevEnv) {
+				configFileWatcher = watch(config.configPath, {
+					persistent: true,
+				}).on("change", async (_event) => {
+					try {
+						// TODO: Do we need to handle different `_event` types differently?
+						// e.g. what if the file is deleted, or added?
+						config = readConfig(configPath, args);
+						if (!config.configPath) {
+							return;
+						}
+
+						logger.log(`${path.basename(config.configPath)} changed...`);
+
+						// ensure we reflect config changes in the `main` entry point
+						entry = await getEntry(
+							{
+								legacyAssets: args.legacyAssets,
+								script: args.script,
+								moduleRoot: args.moduleRoot,
+								assets: args.assets,
+							},
+							config,
+							"dev"
+						);
+
+						// ensure we re-validate routes
+						await getHostAndRoutes(args, config);
+
+						assetsOptions = processAssetsArg(args, config);
+
+						/*
+						 * Handle static assets watching on config file changes
+						 *
+						 * 1. if assets was specified via CLI args, only config file
+						 *    changes related to `main` will matter. In this case, re-running
+						 *    `processAssetsArg` is enough (see above)
+						 * 2. if assets was not specififed via the configuration
+						 *    file, but it is now, we should start watching the assets
+						 *    directory
+						 * 3. if assets was specified via the configuration
+						 *    file, we should ensure we're still watching the correct
+						 *    directory
+						 */
+						if (assetsOptions && !args.assets) {
+							await assetsWatcher?.close();
+
+							if (assetsOptions) {
+								assetsWatcher = watch(assetsOptions.directory, {
+									persistent: true,
+									ignoreInitial: true,
+								}).on("all", async (eventName, changedPath) => {
+									const message = getAssetChangeMessage(eventName, changedPath);
+
+									logger.log(`🌀 ${message}...`);
+									rerender(await getDevReactElement(config));
+								});
+							}
+						}
+
+						rerender(await getDevReactElement(config));
+					} catch (err) {
+						logger.error(err);
+					}
+				});
+			}
+
+			const devServerSettings = await validateDevServerSettings(args, config);
+			let { entry } = devServerSettings;
+			const {
+				upstreamProtocol,
+				host,
+				routes,
+				getLocalPort,
+				getInspectorPort,
+				getRuntimeInspectorPort,
+				cliDefines,
+				cliAlias,
+				localPersistencePath,
+				processEntrypoint,
+				additionalModules,
+			} = devServerSettings;
+
+			const nodejsCompatMode = validateNodeCompatMode(
+				args.compatibilityDate ?? config.compatibility_date,
+				args.compatibilityFlags ?? config.compatibility_flags ?? [],
+				{
+					nodeCompat: args.nodeCompat ?? config.node_compat,
+					noBundle: args.noBundle ?? config.no_bundle,
+				}
 			);
 
-			return (
-				<Dev
-					name={getScriptName({ name: args.name, env: args.env }, configParam)}
-					noBundle={!(args.bundle ?? !configParam.no_bundle)}
-					findAdditionalModules={configParam.find_additional_modules}
-					entry={entry}
-					env={args.env}
-					host={host}
-					routes={routes}
-					processEntrypoint={processEntrypoint}
-					additionalModules={additionalModules}
-					rules={args.rules ?? getRules(configParam)}
-					legacyEnv={isLegacyEnv(configParam)}
-					minify={args.minify ?? configParam.minify}
-					nodejsCompatMode={nodejsCompatMode}
-					build={configParam.build || {}}
-					define={{ ...configParam.define, ...cliDefines }}
-					alias={{ ...configParam.alias, ...cliAlias }}
-					initialMode={args.remote ? "remote" : "local"}
-					jsxFactory={args.jsxFactory || configParam.jsx_factory}
-					jsxFragment={args.jsxFragment || configParam.jsx_fragment}
-					tsconfig={args.tsconfig ?? configParam.tsconfig}
-					upstreamProtocol={upstreamProtocol}
-					localProtocol={args.localProtocol || configParam.dev.local_protocol}
-					httpsKeyPath={args.httpsKeyPath}
-					httpsCertPath={args.httpsCertPath}
-					localUpstream={args.localUpstream ?? host ?? getInferredHost(routes)}
-					localPersistencePath={localPersistencePath}
-					liveReload={args.liveReload || false}
-					accountId={
-						args.accountId ??
-						configParam.account_id ??
-						getAccountFromCache()?.id
-					}
-					legacyAssetPaths={legacyAssetPaths}
-					legacyAssetsConfig={configParam.legacy_assets}
-					assets={assetsOptions}
-					initialPort={
-						args.port ?? configParam.dev.port ?? (await getLocalPort())
-					}
-					initialIp={args.ip || configParam.dev.ip}
-					inspectorPort={
-						args.inspectorPort ??
-						configParam.dev.inspector_port ??
-						(await getInspectorPort())
-					}
-					runtimeInspectorPort={await getRuntimeInspectorPort()}
-					isWorkersSite={Boolean(args.site || configParam.site)}
-					compatibilityDate={getDevCompatibilityDate(
-						configParam,
-						args.compatibilityDate
-					)}
-					compatibilityFlags={
-						args.compatibilityFlags || configParam.compatibility_flags
-					}
-					usageModel={configParam.usage_model}
-					bindings={bindings}
-					migrations={configParam.migrations}
-					crons={configParam.triggers.crons}
-					queueConsumers={configParam.queues.consumers}
-					onReady={args.onReady}
-					inspect={args.inspect ?? true}
-					showInteractiveDevSession={args.showInteractiveDevSession}
-					forceLocal={args.forceLocal}
-					enablePagesAssetsServiceBinding={args.enablePagesAssetsServiceBinding}
-					firstPartyWorker={configParam.first_party_worker}
-					sendMetrics={configParam.send_metrics}
-					testScheduled={args.testScheduled}
-					projectRoot={projectRoot}
-					rawArgs={args}
-					rawConfig={configParam}
-					devEnv={devEnv}
-				/>
+			void metrics.sendMetricsEvent(
+				"run dev",
+				{
+					local: !args.remote,
+					usesTypeScript: /\.tsx?$/.test(entry.file),
+				},
+				{ sendMetrics: config.send_metrics, offline: !args.remote }
 			);
+
+			// eslint-disable-next-line no-inner-declarations
+			async function getDevReactElement(configParam: Config) {
+				const { legacyAssetPaths, bindings } = getBindingsAndLegacyAssetPaths(
+					args,
+					configParam
+				);
+
+				return (
+					<Dev
+						name={getScriptName(
+							{ name: args.name, env: args.env },
+							configParam
+						)}
+						noBundle={!(args.bundle ?? !configParam.no_bundle)}
+						findAdditionalModules={configParam.find_additional_modules}
+						entry={entry}
+						env={args.env}
+						host={host}
+						routes={routes}
+						processEntrypoint={processEntrypoint}
+						additionalModules={additionalModules}
+						rules={args.rules ?? getRules(configParam)}
+						legacyEnv={isLegacyEnv(configParam)}
+						minify={args.minify ?? configParam.minify}
+						nodejsCompatMode={nodejsCompatMode}
+						build={configParam.build || {}}
+						define={{ ...configParam.define, ...cliDefines }}
+						alias={{ ...configParam.alias, ...cliAlias }}
+						initialMode={args.remote ? "remote" : "local"}
+						jsxFactory={args.jsxFactory || configParam.jsx_factory}
+						jsxFragment={args.jsxFragment || configParam.jsx_fragment}
+						tsconfig={args.tsconfig ?? configParam.tsconfig}
+						upstreamProtocol={upstreamProtocol}
+						localProtocol={args.localProtocol || configParam.dev.local_protocol}
+						httpsKeyPath={args.httpsKeyPath}
+						httpsCertPath={args.httpsCertPath}
+						localUpstream={
+							args.localUpstream ?? host ?? getInferredHost(routes)
+						}
+						localPersistencePath={localPersistencePath}
+						liveReload={args.liveReload || false}
+						accountId={
+							args.accountId ??
+							configParam.account_id ??
+							getAccountFromCache()?.id
+						}
+						legacyAssetPaths={legacyAssetPaths}
+						legacyAssetsConfig={configParam.legacy_assets}
+						assets={assetsOptions}
+						initialPort={
+							args.port ?? configParam.dev.port ?? (await getLocalPort())
+						}
+						initialIp={args.ip || configParam.dev.ip}
+						inspectorPort={
+							args.inspectorPort ??
+							configParam.dev.inspector_port ??
+							(await getInspectorPort())
+						}
+						runtimeInspectorPort={await getRuntimeInspectorPort()}
+						isWorkersSite={Boolean(args.site || configParam.site)}
+						compatibilityDate={getDevCompatibilityDate(
+							configParam,
+							args.compatibilityDate
+						)}
+						compatibilityFlags={
+							args.compatibilityFlags || configParam.compatibility_flags
+						}
+						usageModel={configParam.usage_model}
+						bindings={bindings}
+						migrations={configParam.migrations}
+						crons={configParam.triggers.crons}
+						queueConsumers={configParam.queues.consumers}
+						onReady={args.onReady}
+						inspect={args.inspect ?? true}
+						showInteractiveDevSession={args.showInteractiveDevSession}
+						forceLocal={args.forceLocal}
+						enablePagesAssetsServiceBinding={
+							args.enablePagesAssetsServiceBinding
+						}
+						firstPartyWorker={configParam.first_party_worker}
+						sendMetrics={configParam.send_metrics}
+						testScheduled={args.testScheduled}
+						projectRoot={projectRoot}
+						rawArgs={args}
+						rawConfig={configParam}
+						devEnv={devEnv}
+					/>
+				);
+			}
+
+			const devReactElement = render(await getDevReactElement(config));
+			rerender = devReactElement.rerender;
+
+			if (assetsOptions && !args.experimentalDevEnv) {
+				assetsWatcher = watch(assetsOptions.directory, {
+					persistent: true,
+					ignoreInitial: true,
+				}).on("all", async (eventName, filePath) => {
+					const message = getAssetChangeMessage(eventName, filePath);
+
+					logger.log(`🌀 ${message}...`);
+					rerender(await getDevReactElement(config));
+				});
+			}
+
+			return {
+				devReactElement,
+				configFileWatcher,
+				assetsWatcher,
+				stop: async () => {
+					devReactElement.unmount();
+					await Promise.allSettled([
+						configFileWatcher?.close(),
+						assetsWatcher?.close(),
+					]);
+				},
+			};
 		}
-
-		const devReactElement = render(await getDevReactElement(config));
-		rerender = devReactElement.rerender;
-
-		if (assetsOptions && !args.experimentalDevEnv) {
-			assetsWatcher = watch(assetsOptions.directory, {
-				persistent: true,
-				ignoreInitial: true,
-			}).on("all", async (eventName, filePath) => {
-				const message = getAssetChangeMessage(eventName, filePath);
-
-				logger.log(`🌀 ${message}...`);
-				rerender(await getDevReactElement(config));
-			});
-		}
-
-		return {
-			devReactElement,
-			configFileWatcher,
-			assetsWatcher,
-			stop: async () => {
-				devReactElement.unmount();
-				await Promise.allSettled([
-					configFileWatcher?.close(),
-					assetsWatcher?.close(),
-				]);
-			},
-		};
 	} catch (e) {
 		await Promise.allSettled([
 			configFileWatcher?.close(),

@@ -46,12 +46,7 @@ export class DevEnv extends EventEmitter {
 		});
 
 		this.on("error", (event: ErrorEvent) => {
-			// TODO: when we're are comfortable with StartDevWorker/DevEnv stability,
-			//       we can remove this handler and let the user handle the unknowable errors
-			//       or let the process crash. For now, log them to stderr
-			//       so we can identify knowable vs unknowable error candidates
-
-			logger.error(`Error in ${event.source}: ${event.reason}\n`, event.cause);
+			logger.debug(`Error in ${event.source}: ${event.reason}\n`, event.cause);
 			logger.debug("=> Error contextual data:", event.data);
 		});
 
