@@ -91,58 +91,6 @@ jobs:
       - name: Check the changesets
         run: node -r esbuild-register tools/deployments/validate-changesets.ts
 
-  fixtures:
-    timeout-minutes: 30
-    concurrency:
-      group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}-${{ matrix.filter }}-test
-      cancel-in-progress: true
-
-    name: "Tests"
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, windows-latest, macos-13]
-        filter: ["./fixtures/*"]
-    runs-on: ${{ matrix.os }}
-    if: github.head_ref == 'changeset-release/main' || contains(github.event.*.labels.*.name, 'fixtures' )
-    steps:
-      - name: Checkout Repo
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Install Dependencies
-        uses: ./.github/actions/install-dependencies
-        with:
-          turbo-api: ${{ secrets.TURBO_API }}
-          turbo-team: ${{ secrets.TURBO_TEAM }}
-          turbo-token: ${{ secrets.TURBO_TOKEN }}
-          turbo-signature: ${{ secrets.TURBO_REMOTE_CACHE_SIGNATURE_KEY }}
-
-      - name: Run tests
-        run: pnpm run test:ci --concurrency 1 --filter=${{ matrix.filter }}
-        env:
-          TMP_CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          TMP_CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          NODE_OPTIONS: "--max_old_space_size=8192"
-          WRANGLER_LOG_PATH: ${{ runner.temp }}/wrangler-debug-logs/
-          TEST_REPORT_PATH: ${{ runner.temp }}/test-report/index.html
-          CI_OS: ${{ runner.os }}
-
-      - name: Upload debug logs
-        if: always()
-        uses: actions/upload-artifact@v3
-        with:
-          name: e2e-test-debug-logs-${{ matrix.os }}-${{ matrix.node }}
-          path: ${{ runner.temp }}/wrangler-debug-logs/
-
-      - name: Upload test report
-        if: always()
-        uses: actions/upload-artifact@v3
-        with:
-          name: e2e-test-report-${{ matrix.os }}-${{ matrix.node }}
-          path: ${{ runner.temp }}/test-report/
-
   test:
     timeout-minutes: 30
     concurrency:
@@ -154,7 +102,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-13]
-        filter: ["./packages/*"]
+        filter: ["./packages/*", "./fixtures/*"]
         # Things in the tools folder are for running in CI, and so only need to run on linux
         include:
           - os: ubuntu-latest
