@@ -3,10 +3,11 @@ import { writeFileSync } from "fs";
 import dedent from "ts-dedent";
 import { beforeEach, describe, it, vitest } from "vitest";
 import {
-	commitAndPush,
 	generateChangesetHeader,
 	generateCommitMessage,
 	getPackageJsonDiff,
+	gitCommit,
+	gitPush,
 	parseDiffForChanges,
 	writeChangeSet,
 } from "../generate-dependabot-pr-changesets";
@@ -157,10 +158,10 @@ describe("writeChangeSet()", () => {
 		| some-package            | ^0.0.1 | ^0.0.2 |
 		| @namespace/some-package | 1.3.4  | 1.4.5  |
 	`;
-		writeChangeSet("some-prefix", "1234", header, body);
+		writeChangeSet("1234", "pkgName", header, body);
 		expect(writeFileSync).toHaveBeenCalledOnce();
 		expect((writeFileSync as Mock).mock.lastCall?.[0]).toMatchInlineSnapshot(
-			`".changeset/some-prefix-1234.md"`
+			`".changeset/dependabot-update-pkgName-1234.md"`
 		);
 		expect((writeFileSync as Mock).mock.lastCall?.[1]).toMatchInlineSnapshot(`
 			"---
@@ -190,7 +191,8 @@ describe("commitAndPush()", () => {
 			| ----------------------- | ------ | ------ |
 			| some-package            | ^0.0.1 | ^0.0.2 |
 			| @namespace/some-package | 1.3.4  | 1.4.5  |`;
-		commitAndPush(commitMessage);
+		gitCommit(commitMessage);
+		gitPush();
 		expect(spawnSync).toHaveBeenCalledTimes(3);
 		expect((spawnSync as Mock).mock.calls[0]).toMatchInlineSnapshot(`
 			[
@@ -242,8 +244,6 @@ describe("commitAndPush()", () => {
 				args[0] === "push" ? new Error("Failed to push") : undefined;
 			return { output: [], error };
 		});
-		expect(() =>
-			commitAndPush("commit message")
-		).toThrowErrorMatchingInlineSnapshot(`[Error: Failed to push]`);
+		expect(() => gitPush()).toThrowErrorMatchingInlineSnapshot(`[Error: Failed to push]`);
 	});
 });
