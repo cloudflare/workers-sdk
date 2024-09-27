@@ -313,9 +313,7 @@ async function resolveConfig(
 		(queues?.length ||
 			resolved.triggers?.some((t) => t.type === "queue-consumer"))
 	) {
-		logger.warn(
-			"Queues are not yet supported in wrangler dev remote mode."
-		);
+		logger.warn("Queues are not yet supported in wrangler dev remote mode.");
 	}
 
 	// TODO(do) support remote wrangler dev
