@@ -15,5 +15,4 @@ bindings = [
 [[migrations]]
 tag = "v1" # Should be unique for each entry
 new_classes = ["ChatRoom", "RateLimiter"]
-[ai]
-binding = "AI"
+
