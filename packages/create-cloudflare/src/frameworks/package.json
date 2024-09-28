@@ -9,7 +9,7 @@
 		"create-analog": "1.3.1",
 		"@angular/create": "18.2.0",
 		"create-docusaurus": "3.5.2",
-		"create-hono": "0.12.0",
+		"create-hono": "0.13.1",
 		"create-next-app": "14.2.5",
 		"create-qwik": "1.9.0",
 		"create-vite": "5.2.3",
