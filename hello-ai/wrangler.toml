@@ -113,4 +113,4 @@ enabled = true
 # binding = "MY_INDEX"
 # index_name = "my-index"
 #[ai]
-#binding = "JarvisX"
+#binding = "AI"
