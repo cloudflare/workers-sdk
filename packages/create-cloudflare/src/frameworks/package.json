@@ -18,6 +18,6 @@
 		"create-svelte": "6.3.8",
 		"create-vue": "3.10.4",
 		"gatsby": "5.13.7",
-		"nuxi": "3.12.0"
+		"nuxi": "3.14.0"
 	}
 }
