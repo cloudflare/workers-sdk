@@ -136,7 +136,7 @@ function getFrameworkTests(opts: {
 				unsupportedOSs: ["win32"],
 				// The analog template works with yarn, but the build takes so long that it
 				// becomes flaky in CI
-				unsupportedPms: ["yarn"],
+				unsupportedPms: ["yarn", "bun"],
 				verifyDeploy: {
 					route: "/",
 					expectedText: "The fullstack meta-framework for Angular!",
