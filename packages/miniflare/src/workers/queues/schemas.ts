@@ -21,15 +21,24 @@ export type QueueProducer = z.infer<typeof QueueProducerSchema>;
 export const QueueProducersSchema =
 	/* @__PURE__ */ z.record(QueueProducerSchema);
 
-export const QueueConsumerOptionsSchema = /* @__PURE__ */ z.object({
-	// https://developers.cloudflare.com/queues/platform/configuration/#consumer
-	// https://developers.cloudflare.com/queues/platform/limits/
-	maxBatchSize: z.number().min(0).max(100).optional(),
-	maxBatchTimeout: z.number().min(0).max(30).optional(), // seconds
-	maxRetires: z.number().min(0).max(100).optional(),
-	deadLetterQueue: z.ostring(),
-	retryDelay: QueueMessageDelaySchema,
-});
+export const QueueConsumerOptionsSchema = /* @__PURE__ */ z
+	.object({
+		// https://developers.cloudflare.com/queues/platform/configuration/#consumer
+		// https://developers.cloudflare.com/queues/platform/limits/
+		maxBatchSize: z.number().min(0).max(100).optional(),
+		maxBatchTimeout: z.number().min(0).max(30).optional(), // seconds
+		maxRetires: z.number().min(0).max(100).optional(), // deprecated
+		maxRetries: z.number().min(0).max(100).optional(),
+		deadLetterQueue: z.ostring(),
+		retryDelay: QueueMessageDelaySchema,
+	})
+	.transform((queue) => {
+		if (queue.maxRetires !== undefined) {
+			queue.maxRetries = queue.maxRetires;
+		}
+
+		return queue as Omit<typeof queue, "maxRetires">;
+	});
 export const QueueConsumerSchema = /* @__PURE__ */ z.intersection(
 	QueueConsumerOptionsSchema,
 	z.object({ workerName: z.string() })
