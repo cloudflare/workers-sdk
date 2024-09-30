@@ -80,7 +80,6 @@ describe("deploy", () => {
 		mockLastDeploymentRequest();
 		mockDeploymentsListRequest();
 		msw.use(...mswListNewDeploymentsLatestFull);
-		logger.loggerLevel = "log";
 	});
 
 	afterEach(() => {
