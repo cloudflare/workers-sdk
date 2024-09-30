@@ -103,6 +103,7 @@ export {
 	ProxyClient,
 	getFreshSourceMapSupport,
 	kCurrentWorker,
+	getNodeCompat,
 } from "./core";
 export type {
 	CompiledModuleRule,
@@ -111,6 +112,7 @@ export type {
 	ModuleDefinition,
 	GlobalServicesOptions,
 	SourceOptions,
+	NodeJSCompatMode,
 } from "./core";
 export type * from "./core/proxy/types";
 export * from "./d1";

@@ -1,5 +1,22 @@
 # miniflare
 
+## 3.20240925.0
+
+### Patch Changes
+
+- [#6826](https://github.com/cloudflare/workers-sdk/pull/6826) [`5e2e62c`](https://github.com/cloudflare/workers-sdk/commit/5e2e62c165166819c63998ad0c7caaaf57d7b988) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | workerd                   | 1.20240909.0  | 1.20240925.0  |
+  | @cloudflare/workers-types | ^4.20240909.0 | ^4.20240925.0 |
+
+- [#6824](https://github.com/cloudflare/workers-sdk/pull/6824) [`1c58a74`](https://github.com/cloudflare/workers-sdk/commit/1c58a7470757508e64003d05c76d9deb7f223763) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: teach Miniflare about node_compat version date switch
+
+  A compatibility of Sept 23, 2024 or later means that `nodejs_compat` is equivalent to `nodejs_compat_v2`.
+
 ## 3.20240909.5
 
 ### Patch Changes

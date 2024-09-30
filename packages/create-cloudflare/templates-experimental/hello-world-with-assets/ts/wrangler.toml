@@ -4,3 +4,9 @@ main = "src/index.ts"
 compatibility_date = "<TBD>"
 compatibility_flags = ["nodejs_compat"]
 assets = { directory = "./public", binding = "ASSETS" }
+
+# Workers Logs
+# Docs: https://developers.cloudflare.com/workers/observability/logs/workers-logs/
+# Configuration: https://developers.cloudflare.com/workers/observability/logs/workers-logs/#enable-workers-logs
+[observability]
+enabled = true

@@ -48,7 +48,6 @@ import type { AssetsOptions } from "../assets";
 import type { Config } from "../config";
 import type { Route } from "../config/environment";
 import type { Entry } from "../deployment-bundle/entry";
-import type { NodeJSCompatMode } from "../deployment-bundle/node-compat";
 import type { CfModule, CfWorkerInit } from "../deployment-bundle/worker";
 import type { StartDevOptions } from "../dev";
 import type { WorkerRegistry } from "../dev-registry";
@@ -56,6 +55,7 @@ import type { EnablePagesAssetsServiceBindingOptions } from "../miniflare-cli/ty
 import type { EphemeralDirectory } from "../paths";
 import type { LegacyAssetPaths } from "../sites";
 import type { EsbuildBundle } from "./use-esbuild";
+import type { NodeJSCompatMode } from "miniflare";
 
 /**
  * This hooks establishes a connection with the dev registry,
@@ -631,9 +631,7 @@ function DevSession(props: DevSessionProps) {
 		!props.local &&
 		(props.bindings.queues?.length || props.queueConsumers?.length)
 	) {
-		logger.warn(
-			"Queues are currently in Beta and are not supported in wrangler dev remote mode."
-		);
+		logger.warn("Queues are not yet supported in wrangler dev remote mode.");
 	}
 
 	// TODO(do) support remote wrangler dev

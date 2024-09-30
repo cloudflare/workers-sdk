@@ -1,5 +1,31 @@
 # create-cloudflare
 
+## 2.29.1
+
+### Patch Changes
+
+- [#6836](https://github.com/cloudflare/workers-sdk/pull/6836) [`a67cdbf`](https://github.com/cloudflare/workers-sdk/commit/a67cdbfc4db2e9f94dd159481fc900b4d2e7d2cb) Thanks [@edmundhung](https://github.com/edmundhung)! - fix: prevent the cli from crashing by silently ignoring network errors during telemetry collection
+
+## 2.29.0
+
+### Minor Changes
+
+- [#6820](https://github.com/cloudflare/workers-sdk/pull/6820) [`b098256`](https://github.com/cloudflare/workers-sdk/commit/b098256e9ed315aa265d52ab10c208049c16a8ca) Thanks [@zebp](https://github.com/zebp)! - chore: enable observability by default for Workers templates
+
+  Workers created with `create-cloudflare` will now have [Workers Observability](https://developers.cloudflare.com/workers/observability/logs/workers-logs) enabled by default.
+
+### Patch Changes
+
+- [#6827](https://github.com/cloudflare/workers-sdk/pull/6827) [`66ad6df`](https://github.com/cloudflare/workers-sdk/commit/66ad6dfdc110384cfab5a1b6923b7bfd621c3f97) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: add missing hono with assets experimental template
+
+- [#6830](https://github.com/cloudflare/workers-sdk/pull/6830) [`0195621`](https://github.com/cloudflare/workers-sdk/commit/01956212410d6cd43419754028b018cfa5039add) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - feat: add experimental Next.js, with Workers assets, template
+
+## 2.28.1
+
+### Patch Changes
+
+- [#6815](https://github.com/cloudflare/workers-sdk/pull/6815) [`ffe8d10`](https://github.com/cloudflare/workers-sdk/commit/ffe8d10cb30c749616d61341501b8096ec0b99fe) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: experimental Angular template using Workers with Assets was broken
+
 ## 2.28.0
 
 ### Minor Changes

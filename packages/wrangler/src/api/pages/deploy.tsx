@@ -6,7 +6,7 @@ import { cwd } from "node:process";
 import { File, FormData } from "undici";
 import { fetchResult } from "../../cfetch";
 import { readConfig } from "../../config";
-import { getNodeCompatMode } from "../../deployment-bundle/node-compat";
+import { validateNodeCompatMode } from "../../deployment-bundle/node-compat";
 import { FatalError } from "../../errors";
 import { logger } from "../../logger";
 import { isNavigatorDefined } from "../../navigator-user-agent";
@@ -174,7 +174,8 @@ export async function deploy({
 		}
 	}
 
-	const nodejsCompatMode = getNodeCompatMode(
+	const nodejsCompatMode = validateNodeCompatMode(
+		config?.compatibility_date ?? deploymentConfig.compatibility_date,
 		config?.compatibility_flags ?? deploymentConfig.compatibility_flags ?? [],
 		{
 			nodeCompat: false,

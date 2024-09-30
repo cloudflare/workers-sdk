@@ -1,5 +1,11 @@
 # @cloudflare/quick-edit
 
+## 0.2.3
+
+### Patch Changes
+
+- [#6850](https://github.com/cloudflare/workers-sdk/pull/6850) [`ce41da5`](https://github.com/cloudflare/workers-sdk/commit/ce41da555a9520382a1e16cd7269253f0b733d51) Thanks [@penalosa](https://github.com/penalosa)! - fix: Re-release Quick Edit to update included workers-types
+
 ## 0.2.2
 
 ### Patch Changes

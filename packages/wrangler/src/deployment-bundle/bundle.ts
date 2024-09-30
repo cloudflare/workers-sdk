@@ -32,8 +32,8 @@ import type {
 import type { MiddlewareLoader } from "./apply-middleware";
 import type { Entry } from "./entry";
 import type { ModuleCollector } from "./module-collection";
-import type { NodeJSCompatMode } from "./node-compat";
 import type { CfModule, CfModuleType } from "./worker";
+import type { NodeJSCompatMode } from "miniflare";
 
 // Taken from https://stackoverflow.com/a/3561711
 // which is everything from the tc39 proposal, plus the following two characters: ^/
@@ -137,7 +137,6 @@ export type BundleOptions = {
 	sourcemap?: esbuild.CommonOptions["sourcemap"];
 	plugins?: esbuild.Plugin[];
 	isOutfile?: boolean;
-	forPages?: boolean;
 	local: boolean;
 	projectRoot: string | undefined;
 	defineNavigatorUserAgent: boolean;
@@ -177,7 +176,6 @@ export async function bundleWorker(
 		sourcemap,
 		plugins,
 		isOutfile,
-		forPages,
 		local,
 		projectRoot,
 		defineNavigatorUserAgent,
@@ -490,8 +488,8 @@ export async function bundleWorker(
 			};
 		}
 	} catch (e) {
-		if (nodejsCompatMode !== "legacy" && isBuildFailure(e)) {
-			rewriteNodeCompatBuildFailure(e.errors, forPages);
+		if (isBuildFailure(e)) {
+			rewriteNodeCompatBuildFailure(e.errors, nodejsCompatMode);
 		}
 		throw e;
 	}

@@ -1,7 +1,7 @@
 import path from "node:path";
 import { readConfig } from "../config";
 import { normalizeAndValidateConfig } from "../config/validation";
-import { normalizeSlashes } from "./helpers/mock-console";
+import { normalizeString } from "./helpers/normalize";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { writeWranglerToml } from "./helpers/write-wrangler-toml";
 import type {
@@ -301,7 +301,7 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasErrors()).toBe(false);
 				expect(diagnostics.hasWarnings()).toBe(true);
 
-				expect(normalizeSlashes(diagnostics.renderWarnings()))
+				expect(normalizeString(diagnostics.renderWarnings()))
 					.toMatchInlineSnapshot(`
 			          "Processing wrangler configuration:
 			            - [1mDeprecation[0m: \\"site.entry-point\\":
@@ -332,7 +332,7 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasWarnings()).toBe(true);
 				expect(diagnostics.hasErrors()).toBe(true);
 
-				expect(normalizeSlashes(diagnostics.renderWarnings()))
+				expect(normalizeString(diagnostics.renderWarnings()))
 					.toMatchInlineSnapshot(`
 			          "Processing wrangler configuration:
 			            - [1mDeprecation[0m: \\"site.entry-point\\":
@@ -375,7 +375,7 @@ describe("normalizeAndValidateConfig()", () => {
 			            - Expected \\"site.entry-point\\" to be of type string but got 111."
 		        `);
 
-				expect(normalizeSlashes(diagnostics.renderWarnings()))
+				expect(normalizeString(diagnostics.renderWarnings()))
 					.toMatchInlineSnapshot(`
 			          "Processing wrangler configuration:
 			            - [1mDeprecation[0m: \\"site.entry-point\\":
@@ -409,7 +409,7 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasWarnings()).toBe(true);
 				expect(diagnostics.hasErrors()).toBe(false);
 
-				expect(normalizeSlashes(diagnostics.renderWarnings()))
+				expect(normalizeString(diagnostics.renderWarnings()))
 					.toMatchInlineSnapshot(`
 			          "Processing wrangler configuration:
 			            - [1mDeprecation[0m: \\"site.entry-point\\":
@@ -881,7 +881,7 @@ describe("normalizeAndValidateConfig()", () => {
 			expect(diagnostics.hasErrors()).toBe(false);
 			expect(diagnostics.hasWarnings()).toBe(true);
 
-			expect(normalizeSlashes(diagnostics.renderWarnings()))
+			expect(normalizeString(diagnostics.renderWarnings()))
 				.toMatchInlineSnapshot(`
 "Processing project/wrangler.toml configuration:
   - \\"unsafe\\" fields are experimental and may change or break at any time.

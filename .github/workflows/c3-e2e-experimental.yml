@@ -1,0 +1,64 @@
+# Runs c3 e2e tests on pull requests with c3 changes
+
+name: C3 E2E Tests (experimental)
+on:
+  pull_request:
+    paths:
+      - packages/create-cloudflare/**
+  push:
+    branches:
+      - main
+    paths:
+      - packages/create-cloudflare/**
+
+jobs:
+  e2e:
+    # Note: please keep this job in sync with the e2e-only-dependabot-bumped-framework one
+    #       in .github/workflows/c3-e2e-dependabot.yml
+    timeout-minutes: 45
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}-${{ matrix.pm.name }}-${{ matrix.pm.version }}
+      cancel-in-progress: true
+    name: ${{ format('Run experimental tests for {0}@{1} on {2}', matrix.pm.name, matrix.pm.version, matrix.os) }}
+    if: github.repository_owner == 'cloudflare' && github.event.pull_request.user.login != 'dependabot[bot]'
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+        pm:
+          [
+            { name: npm, version: "0.0.0" },
+            { name: pnpm, version: "9.10.0" },
+            { name: bun, version: "1.0.3" },
+            { name: yarn, version: "1.0.0" },
+          ]
+        # include a single windows test with pnpm
+        include:
+          - os: windows-latest
+            pm: { name: pnpm, version: "9.10.0" }
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install Dependencies
+        uses: ./.github/actions/install-dependencies
+        with:
+          turbo-api: ${{ secrets.TURBO_API }}
+          turbo-team: ${{ secrets.TURBO_TEAM }}
+          turbo-token: ${{ secrets.TURBO_TOKEN }}
+          turbo-signature: ${{ secrets.TURBO_REMOTE_CACHE_SIGNATURE_KEY }}
+
+      - name: E2E Tests
+        uses: ./.github/actions/run-c3-e2e
+        with:
+          packageManager: ${{ matrix.pm.name }}
+          packageManagerVersion: ${{ matrix.pm.version }}
+          quarantine: false
+          experimental: true
+          accountId: ${{ secrets.C3_TEST_CLOUDFLARE_ACCOUNT_ID }}
+          apiToken: ${{ secrets.C3_TEST_CLOUDFLARE_API_TOKEN }}
+          # We only need to do this once per-framework per-run, so avoid re-running for each package manager and os
+          saveDiffs: ${{ github.head_ref == 'changeset-release/main' && matrix.pm.name == 'pnpm' && matrix.os == 'ubuntu-latest'}}

@@ -282,18 +282,24 @@ export const waitForExit = async (
 	};
 };
 
-export const createTestLogStream = (ctx: TaskContext) => {
+export const createTestLogStream = (
+	opts: { experimental: boolean },
+	ctx: TaskContext,
+) => {
 	// The .ansi extension allows for editor extensions that format ansi terminal codes
 	const fileName = `${normalizeTestName(ctx)}.ansi`;
 	assert(ctx.task.suite, "Suite must be defined");
-	return createWriteStream(path.join(getLogPath(ctx.task.suite), fileName), {
-		flags: "a",
-	});
+	return createWriteStream(
+		path.join(getLogPath(opts, ctx.task.suite), fileName),
+		{
+			flags: "a",
+		},
+	);
 };
 
-export const recreateDiffsFolder = () => {
+export const recreateDiffsFolder = (opts: { experimental: boolean }) => {
 	// Recreate the diffs folder
-	const diffsPath = getDiffsPath();
+	const diffsPath = getDiffsPath(opts);
 	rmSync(diffsPath, {
 		recursive: true,
 		force: true,
@@ -301,21 +307,26 @@ export const recreateDiffsFolder = () => {
 	mkdirSync(diffsPath, { recursive: true });
 };
 
-export const getDiffsPath = () => {
-	return path.resolve("./.e2e-diffs");
+export const getDiffsPath = (opts: { experimental: boolean }) => {
+	return path.resolve(
+		"./.e2e-diffs" + (opts.experimental ? "-experimental" : ""),
+	);
 };
 
-export const recreateLogFolder = (suite: Suite) => {
+export const recreateLogFolder = (
+	opts: { experimental: boolean },
+	suite: Suite,
+) => {
 	// Clean the old folder if exists (useful for dev)
-	rmSync(getLogPath(suite), {
+	rmSync(getLogPath(opts, suite), {
 		recursive: true,
 		force: true,
 	});
 
-	mkdirSync(getLogPath(suite), { recursive: true });
+	mkdirSync(getLogPath(opts, suite), { recursive: true });
 };
 
-const getLogPath = (suite: Suite) => {
+const getLogPath = (opts: { experimental: boolean }, suite: Suite) => {
 	const { file } = suite;
 
 	const suiteFilename = file
@@ -323,7 +334,7 @@ const getLogPath = (suite: Suite) => {
 		: "unknown";
 
 	return path.join(
-		"./.e2e-logs/",
+		"./.e2e-logs" + (opts.experimental ? "-experimental" : ""),
 		process.env.TEST_PM as string,
 		suiteFilename,
 	);

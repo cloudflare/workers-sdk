@@ -17,9 +17,9 @@ import {
 import type { Config } from "../config";
 import type { SourceMapMetadata } from "../deployment-bundle/bundle";
 import type { Entry } from "../deployment-bundle/entry";
-import type { NodeJSCompatMode } from "../deployment-bundle/node-compat";
 import type { CfModule, CfModuleType } from "../deployment-bundle/worker";
 import type { Metafile } from "esbuild";
+import type { NodeJSCompatMode } from "miniflare";
 
 export type EsbuildBundle = {
 	id: number;

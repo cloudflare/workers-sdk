@@ -7,7 +7,7 @@ import { unstable_dev } from "../api";
 import { readConfig } from "../config";
 import { isBuildFailure } from "../deployment-bundle/build-failures";
 import { esbuildAliasExternalPlugin } from "../deployment-bundle/esbuild-plugins/alias-external";
-import { getNodeCompatMode } from "../deployment-bundle/node-compat";
+import { validateNodeCompatMode } from "../deployment-bundle/node-compat";
 import { FatalError } from "../errors";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
@@ -360,7 +360,8 @@ export const Handler = async (args: PagesDevArguments) => {
 
 	let scriptPath = "";
 
-	const nodejsCompatMode = getNodeCompatMode(
+	const nodejsCompatMode = validateNodeCompatMode(
+		args.compatibilityDate ?? config.compatibility_date,
 		args.compatibilityFlags ?? config.compatibility_flags ?? [],
 		{
 			nodeCompat: args.nodeCompat,
