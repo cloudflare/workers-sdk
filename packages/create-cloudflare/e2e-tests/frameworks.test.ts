@@ -156,7 +156,6 @@ function getFrameworkTests(opts: {
 					expectedText: "C3_TEST",
 				},
 				flags: ["--skipTailwind"],
-				quarantine: true,
 			},
 			angular: {
 				testCommitMessage: true,
