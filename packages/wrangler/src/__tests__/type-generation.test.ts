@@ -49,7 +49,7 @@ describe("constructTypeKey", () => {
 	});
 });
 
-describe.only("constructTSModuleGlob() should return a valid TS glob ", () => {
+describe("constructTSModuleGlob() should return a valid TS glob ", () => {
 	it.each([
 		["**/*.wasm", "*.wasm"],
 		["**/*.txt", "*.txt"],
