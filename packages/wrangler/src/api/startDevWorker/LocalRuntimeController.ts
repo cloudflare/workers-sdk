@@ -6,6 +6,7 @@ import * as MF from "../../dev/miniflare";
 import { logger } from "../../logger";
 import { RuntimeController } from "./BaseController";
 import { castErrorCause } from "./events";
+import { ProxyControllerLogger } from "./ProxyController";
 import { convertBindingsToCfWorkerInitBindings } from "./utils";
 import type { WorkerEntrypointsDefinition } from "../../dev-registry";
 import type {
@@ -146,12 +147,19 @@ export class LocalRuntimeController extends RuntimeController {
 
 	async #onBundleComplete(data: BundleCompleteEvent, id: number) {
 		try {
-			const { options, internalObjects, entrypointNames } =
+			// eslint-disable-next-line prefer-const
+			let { options, internalObjects, entrypointNames } =
 				await MF.buildMiniflareOptions(
 					this.#log,
 					await convertToConfigBundle(data),
 					this.#proxyToUserWorkerAuthenticationSecret
 				);
+			options = {
+				...options,
+				log: new ProxyControllerLogger(MF.castLogLevel(logger.loggerLevel), {
+					prefix: `wrangler-${data.config.name}`,
+				}),
+			};
 			options.liveReload = false; // TODO: set in buildMiniflareOptions once old code path is removed
 			if (this.#mf === undefined) {
 				logger.log(chalk.dim("⎔ Starting local server..."));

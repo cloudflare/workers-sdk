@@ -5,7 +5,7 @@ import util from "node:util";
 import { isWebContainer } from "@webcontainer/env";
 import { watch } from "chokidar";
 import { render } from "ink";
-import { DevEnv } from "./api";
+import { DevEnv, startMultiWorker } from "./api";
 import {
 	convertCfWorkerInitBindingstoBindings,
 	extractBindingsOfType,
@@ -65,6 +65,7 @@ import type {
 } from "./config/environment";
 import type { CfModule, CfWorkerInit } from "./deployment-bundle/worker";
 import type { WorkerRegistry } from "./dev-registry";
+import type { ExperimentalAssetsOptions } from "./experimental-assets";
 import type { LoggerLevel } from "./logger";
 import type { EnablePagesAssetsServiceBindingOptions } from "./miniflare-cli/types";
 import type {
@@ -77,6 +78,14 @@ import type React from "react";
 export function devOptions(yargs: CommonYargsArgv) {
 	return (
 		yargs
+			.option("config", {
+				alias: "c",
+				describe:
+					"Path to .toml configuration file. Set mutliple times for multi-worker support.",
+				type: "string",
+				array: true,
+				requiresArg: true,
+			})
 			.positional("script", {
 				describe: "The path to an entry point for your worker",
 				type: "string",
@@ -399,10 +408,16 @@ This is currently not supported 😭, but we think that we'll get it to work soo
 			() => startDev(args)
 		);
 		if (args.experimentalDevEnv) {
-			assert(devInstance instanceof DevEnv);
-			await events.once(devInstance, "teardown");
+			if (devInstance instanceof DevEnv) {
+				await events.once(devInstance, "teardown");
+			} else if (Array.isArray(devInstance)) {
+				await Promise.all(
+					devInstance.map((worker) => events.once(worker, "teardown"))
+				);
+			}
 		} else {
 			assert(!(devInstance instanceof DevEnv));
+			assert(!Array.isArray(devInstance));
 
 			configFileWatcher = devInstance.configFileWatcher;
 			assetsWatcher = devInstance.assetsWatcher;
@@ -468,7 +483,7 @@ export type StartDevOptions = DevArguments &
 		onReady?: (ip: string, port: number, proxyData: ProxyData) => void;
 	};
 
-async function updateDevEnvRegistry(
+export async function updateDevEnvRegistry(
 	devEnv: DevEnv,
 	registry: WorkerRegistry | undefined
 ) {
@@ -548,7 +563,7 @@ export async function startDev(args: StartDevOptions) {
 	let rerender: (node: React.ReactNode) => void | undefined;
 	try {
 		const configPath =
-			args.config ||
+			args.config?.[0] ||
 			(args.script && findWranglerToml(path.dirname(args.script)));
 		let config = readConfig(configPath, args);
 
@@ -655,13 +670,7 @@ export async function startDev(args: StartDevOptions) {
 					);
 				});
 			}
-
-			let unregisterHotKeys: () => void;
-			if (isInteractive() && args.showInteractiveDevSession !== false) {
-				unregisterHotKeys = registerDevHotKeys(devEnv, args);
-			}
-
-			await devEnv.config.set({
+			const startWorkerInput: StartDevWorkerInput = {
 				name: args.name,
 				config: configPath,
 				entrypoint: args.script,
@@ -732,7 +741,7 @@ export async function startDev(args: StartDevOptions) {
 						if (!accountId) {
 							unregisterHotKeys?.();
 							accountId = await requireAuth({});
-							unregisterHotKeys = registerDevHotKeys(devEnv, args);
+							unregisterHotKeys = registerDevHotKeys(devEnvs, args);
 						}
 
 						return {
@@ -792,7 +801,24 @@ export async function startDev(args: StartDevOptions) {
 				// otherwise config at startup ends up overriding future config changes in the
 				// ConfigController
 				assets: args.assets ? assetsOptions : undefined,
-			} satisfies StartDevWorkerInput);
+			};
+
+			assert(args.config);
+			logger.log(args.config);
+			const options = await Promise.all(
+				args.config.map((configPath1, workerIndex) =>
+					workerIndex === 0 ? startWorkerInput : { config: configPath1 }
+				)
+			);
+
+			const devEnvs = await startMultiWorker(options, devEnv);
+			args.disableDevRegistry = args.config.length === 1;
+			args.forceLocal ||= args.config.length > 1;
+
+			let unregisterHotKeys = () => {};
+			if (isInteractive() && args.showInteractiveDevSession !== false) {
+				unregisterHotKeys = registerDevHotKeys(devEnvs, args);
+			}
 
 			void metrics.sendMetricsEvent(
 				"run dev",
@@ -1045,7 +1071,8 @@ export async function startApiDev(args: StartDevOptions) {
 	}
 
 	const configPath =
-		args.config || (args.script && findWranglerToml(path.dirname(args.script)));
+		args.config?.[0] ||
+		(args.script && findWranglerToml(path.dirname(args.script)));
 	const projectRoot = configPath && path.dirname(configPath);
 	const config = readConfig(configPath, args);
 

@@ -1,0 +1,5 @@
+name = "worker-b"
+main = "src/index.ts"
+compatibility_date = "2024-09-22"
+
+dev.port = 8788
