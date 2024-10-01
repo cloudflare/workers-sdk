@@ -3,12 +3,12 @@ import {
 	defineAlias,
 	defineCommand,
 	defineNamespace,
-	DefinitionTreeNode,
 	DefinitionTreeRoot,
 } from "../../core/define-command";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
+import type { DefinitionTreeNode } from "../../core/define-command";
 
 describe("Command Registration", () => {
 	runInTempDir();
