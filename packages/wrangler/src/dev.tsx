@@ -27,6 +27,7 @@ import { run } from "./experimental-flags";
 import isInteractive from "./is-interactive";
 import { logger } from "./logger";
 import * as metrics from "./metrics";
+import { debounce } from "./pages/utils";
 import { getLegacyAssetPaths, getSiteAssetPaths } from "./sites";
 import {
 	getAccountFromCache,
@@ -858,6 +859,10 @@ export async function startDev(args: StartDevOptions) {
 						await assetsWatcher?.close();
 
 						if (assetsOptions) {
+							const debouncedRerender = debounce(async () => {
+								rerender(await getDevReactElement(config));
+							}, 100);
+
 							assetsWatcher = watch(assetsOptions.directory, {
 								persistent: true,
 								ignoreInitial: true,
@@ -865,7 +870,7 @@ export async function startDev(args: StartDevOptions) {
 								const message = getAssetChangeMessage(eventName, changedPath);
 
 								logger.log(`🌀 ${message}...`);
-								rerender(await getDevReactElement(config));
+								debouncedRerender();
 							});
 						}
 					}
@@ -998,6 +1003,10 @@ export async function startDev(args: StartDevOptions) {
 		rerender = devReactElement.rerender;
 
 		if (assetsOptions && !args.experimentalDevEnv) {
+			const debouncedRerender = debounce(async () => {
+				rerender(await getDevReactElement(config));
+			}, 100);
+
 			assetsWatcher = watch(assetsOptions.directory, {
 				persistent: true,
 				ignoreInitial: true,
@@ -1005,7 +1014,7 @@ export async function startDev(args: StartDevOptions) {
 				const message = getAssetChangeMessage(eventName, filePath);
 
 				logger.log(`🌀 ${message}...`);
-				rerender(await getDevReactElement(config));
+				debouncedRerender();
 			});
 		}
 
