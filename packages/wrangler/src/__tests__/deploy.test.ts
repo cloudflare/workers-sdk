@@ -8851,6 +8851,110 @@ addEventListener('fetch', event => {});`
 		});
 	});
 
+	describe("service worker format", () => {
+		it("should error if trying to import a cloudflare prefixed external when in service worker format", async () => {
+			writeWranglerToml();
+			fs.writeFileSync(
+				"dep-1.js",
+				dedent`
+					import sockets from 'cloudflare:sockets';
+					export const external = sockets;
+				`
+			);
+			fs.writeFileSync(
+				"dep-2.js",
+				dedent`
+					export const internal = 100;
+				`
+			);
+			fs.writeFileSync(
+				"index.js",
+				dedent`
+					import {external} from "./dep-1"; // will the external import check be transitive?
+					import {internal} from "./dep-2"; // ensure that we can still have a non-external import
+					let x = [external, internal]; // to ensure that esbuild doesn't tree shake the imports
+					// no default export making this a service worker format
+					addEventListener('fetch', (event) => {
+						event.respondWith(new Response(''));
+					});
+			`
+			);
+
+			await expect(
+				runWrangler("deploy index.js --dry-run").catch((e) =>
+					normalizeString(
+						esbuild
+							.formatMessagesSync(e?.errors ?? [], { kind: "error" })
+							.join()
+							.trim()
+					)
+				)
+			).resolves.toContain(
+				`X [ERROR] Unexpected import "cloudflare:sockets" which is not valid in a Service Worker format Worker. Are you missing a default export from your Worker? [plugin Cloudflare internal imports plugin]`
+			);
+		});
+
+		it("should error if importing a node.js library when in service worker format", async () => {
+			writeWranglerToml();
+			fs.writeFileSync(
+				"index.js",
+				dedent`
+					import stream from "node:stream";
+					let temp = stream;
+					addEventListener('fetch', (event) => {
+						event.respondWith(new Response(''));
+					});
+			`
+			);
+
+			await expect(
+				runWrangler("deploy index.js --dry-run").catch((e) =>
+					normalizeString(
+						esbuild
+							.formatMessagesSync(e?.errors ?? [], { kind: "error" })
+							.join()
+							.trim()
+					)
+				)
+			).resolves.toContain(
+				dedent`
+					X [ERROR] Unexpected import "node:stream" which is not valid in a Service Worker format Worker. Are you missing a default export from your Worker?
+					Imported from:
+					 - index.js
+					 [plugin nodejs_compat imports plugin]
+				`
+			);
+		});
+
+		it("should error if nodejs_compat (v2) is turned on when in service worker format", async () => {
+			writeWranglerToml({
+				compatibility_date: "2024-09-23", // Sept 23 to turn on nodejs compat v2 mode
+				compatibility_flags: ["nodejs_compat"],
+			});
+			fs.writeFileSync(
+				"index.js",
+				dedent`
+					addEventListener('fetch', (event) => {
+						event.respondWith(new Response(''));
+					});
+			`
+			);
+
+			await expect(
+				runWrangler("deploy index.js --dry-run").catch((e) =>
+					normalizeString(
+						esbuild
+							.formatMessagesSync(e?.errors ?? [], { kind: "error" })
+							.join()
+							.trim()
+					)
+				)
+			).resolves.toContain(
+				`X [ERROR] Unexpected import "node:stream" which is not valid in a Service Worker format Worker. Are you missing a default export from your Worker? [plugin unenv-cloudflare]`
+			);
+		});
+	});
+
 	describe("legacy module specifiers", () => {
 		it("should work with legacy module specifiers, with a deprecation warning (1)", async () => {
 			writeWranglerToml({

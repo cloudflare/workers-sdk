@@ -12,6 +12,7 @@ export const nodejsHybridPlugin: () => Plugin = () => {
 	return {
 		name: "unenv-cloudflare",
 		setup(build) {
+			errorOnServiceWorkerFormat(build);
 			handleRequireCallsToNodeJSBuiltins(build);
 			handleAliasedNodeJSPackages(build, alias, external);
 			handleNodeJSGlobals(build, inject);
@@ -19,15 +20,31 @@ export const nodejsHybridPlugin: () => Plugin = () => {
 	};
 };
 
+const NODEJS_MODULES_RE = new RegExp(`^(node:)?(${builtinModules.join("|")})$`);
+
+/**
+ * If we are bundling a "Service Worker" formatted Worker, imports of external modules,
+ * which won't be inlined/bundled by esbuild, are invalid.
+ *
+ * This `onResolve()` handler will error if it identifies node.js external imports.
+ */
+function errorOnServiceWorkerFormat(build: PluginBuild) {
+	build.onResolve({ filter: NODEJS_MODULES_RE }, (args) => {
+		if (build.initialOptions.format === "iife") {
+			throw new Error(
+				`Unexpected import "${args.path}" which is not valid in a Service Worker format Worker. Are you missing a default export from your Worker?`
+			);
+		}
+		return null;
+	});
+}
+
 /**
  * We must convert `require()` calls for Node.js to a virtual ES Module that can be imported avoiding the require calls.
  * We do this by creating a special virtual ES module that re-exports the library in an onLoad handler.
  * The onLoad handler is triggered by matching the "namespace" added to the resolve.
  */
 function handleRequireCallsToNodeJSBuiltins(build: PluginBuild) {
-	const NODEJS_MODULES_RE = new RegExp(
-		`^(node:)?(${builtinModules.join("|")})$`
-	);
 	build.onResolve({ filter: NODEJS_MODULES_RE }, (args) => {
 		if (args.kind === "require-call") {
 			return {
