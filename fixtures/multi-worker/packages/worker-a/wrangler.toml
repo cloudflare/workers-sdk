@@ -1,0 +1,7 @@
+name = "worker-a"
+main = "src/index.ts"
+compatibility_date = "2024-09-22"
+
+services = [
+  { binding = "WORKER_B", service = "worker-b", entrypoint = "default" }
+]
