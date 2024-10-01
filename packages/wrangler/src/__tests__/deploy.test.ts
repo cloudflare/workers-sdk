@@ -8881,17 +8881,23 @@ addEventListener('fetch', event => {});`
 			);
 
 			await expect(
-				runWrangler("deploy index.js --dry-run").catch((e) =>
-					normalizeString(
-						esbuild
-							.formatMessagesSync(e?.errors ?? [], { kind: "error" })
-							.join()
-							.trim()
-					)
+				runWrangler("deploy index.js --dry-run").catch(
+					(e) =>
+						normalizeString(
+							esbuild
+								.formatMessagesSync(e?.errors ?? [], { kind: "error" })
+								.join()
+								.trim()
+						).split("This error came from the")[0]
 				)
-			).resolves.toContain(
-				`X [ERROR] Unexpected import "cloudflare:sockets" which is not valid in a Service Worker format Worker. Are you missing \`export default { ... }\` from your Worker? [plugin Cloudflare internal imports plugin]`
-			);
+			).resolves.toMatchInlineSnapshot(`
+				"X [ERROR] Unexpected external import of \\"cloudflare:sockets\\". Imports are not valid in a Service Worker format Worker.
+				Did you mean to create a Module Worker?
+				If so, try adding \`export default { ... }\` in your entry-point.
+				See https://developers.cloudflare.com/workers/reference/migrate-to-module-workers/. [plugin Cloudflare internal imports plugin]
+
+				  "
+			`);
 		});
 
 		it("should error if importing a node.js library when in service worker format", async () => {
@@ -8908,22 +8914,25 @@ addEventListener('fetch', event => {});`
 			);
 
 			await expect(
-				runWrangler("deploy index.js --dry-run").catch((e) =>
-					normalizeString(
-						esbuild
-							.formatMessagesSync(e?.errors ?? [], { kind: "error" })
-							.join()
-							.trim()
-					)
+				runWrangler("deploy index.js --dry-run").catch(
+					(e) =>
+						normalizeString(
+							esbuild
+								.formatMessagesSync(e?.errors ?? [], { kind: "error" })
+								.join()
+								.trim()
+						).split("This error came from the")[0]
 				)
-			).resolves.toContain(
-				dedent`
-					X [ERROR] Unexpected import "node:stream" which is not valid in a Service Worker format Worker. Are you missing \`export default { ... }\` from your Worker?
-					Imported from:
-					 - index.js
-					 [plugin nodejs_compat imports plugin]
-				`
-			);
+			).resolves.toMatchInlineSnapshot(`
+				"X [ERROR]
+										Unexpected external import of \\"node:stream\\". Imports are not valid in a Service Worker format Worker.
+										Did you mean to create a Module Worker?
+										If so, try adding \`export default { ... }\` in your entry-point.
+										See https://developers.cloudflare.com/workers/reference/migrate-to-module-workers/.
+									 [plugin nodejs_compat imports plugin]
+
+				  "
+			`);
 		});
 
 		it("should error if nodejs_compat (v2) is turned on when in service worker format", async () => {
@@ -8941,17 +8950,23 @@ addEventListener('fetch', event => {});`
 			);
 
 			await expect(
-				runWrangler("deploy index.js --dry-run").catch((e) =>
-					normalizeString(
-						esbuild
-							.formatMessagesSync(e?.errors ?? [], { kind: "error" })
-							.join()
-							.trim()
-					)
+				runWrangler("deploy index.js --dry-run").catch(
+					(e) =>
+						normalizeString(
+							esbuild
+								.formatMessagesSync(e?.errors ?? [], { kind: "error" })
+								.join()
+								.trim()
+						).split("This error came from the")[0]
 				)
-			).resolves.toContain(
-				`X [ERROR] Unexpected import "node:stream" which is not valid in a Service Worker format Worker. Are you missing \`export default { ... }\` from your Worker? [plugin unenv-cloudflare]`
-			);
+			).resolves.toMatchInlineSnapshot(`
+				"X [ERROR] Unexpected external import of \\"node:stream\\" and \\"node:timers/promises\\". Imports are not valid in a Service Worker format Worker.
+				Did you mean to create a Module Worker?
+				If so, try adding \`export default { ... }\` in your entry-point.
+				See https://developers.cloudflare.com/workers/reference/migrate-to-module-workers/. [plugin unenv-cloudflare]
+
+				  "
+			`);
 		});
 	});
 

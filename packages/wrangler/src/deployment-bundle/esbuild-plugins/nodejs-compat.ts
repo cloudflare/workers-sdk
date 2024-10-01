@@ -66,6 +66,15 @@ export const nodejsCompatPlugin: (silenceWarnings: boolean) => Plugin = (
 				pluginBuild.initialOptions.format === "iife" &&
 				warnedPackaged.size > 0
 			) {
+				const paths = new Intl.ListFormat("en-US").format(
+					Array.from(warnedPackaged.keys()).map((p) => `"${p}"`)
+				);
+				throw new Error(`
+						Unexpected external import of ${paths}. Imports are not valid in a Service Worker format Worker.
+						Did you mean to create a Module Worker?
+						If so, try adding \`export default { ... }\` in your entry-point.
+						See https://developers.cloudflare.com/workers/reference/migrate-to-module-workers/.
+					`);
 				const errors = Array.from(warnedPackaged.entries()).map(
 					([path, importers]) =>
 						`Unexpected import "${path}" which is not valid in a Service Worker format Worker. Are you missing \`export default { ... }\` from your Worker?\n` +
