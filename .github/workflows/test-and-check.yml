@@ -2,7 +2,6 @@ name: Tests + Checks
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened, labeled, unlabeled]
 
 jobs:
   add-to-project:
