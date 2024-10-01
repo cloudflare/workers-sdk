@@ -180,6 +180,11 @@ export class LocalRuntimeController extends RuntimeController {
 				const port = parseInt(directUrl.port);
 				entrypointAddresses[name] = { host: directUrl.hostname, port };
 			}
+
+			if (this._torndown) {
+				return;
+			}
+
 			this.emitReloadCompleteEvent({
 				type: "reloadComplete",
 				config: data.config,
@@ -241,7 +246,10 @@ export class LocalRuntimeController extends RuntimeController {
 		// Ignored in local runtime
 	}
 
+	_torndown = false;
 	#teardown = async (): Promise<void> => {
+		this._torndown = true;
+
 		logger.debug("LocalRuntimeController teardown beginning...");
 
 		if (this.#mf) {
