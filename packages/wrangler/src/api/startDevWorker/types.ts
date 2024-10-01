@@ -165,10 +165,10 @@ export interface StartDevWorkerInput {
 		enableServiceEnvironments?: boolean;
 	};
 	unsafe?: Omit<CfUnsafe, "bindings">;
-	assets?: Omit<AssetsOptions, "bindings">;
+	assets?: string;
 }
 
-export type StartDevWorkerOptions = StartDevWorkerInput & {
+export type StartDevWorkerOptions = Omit<StartDevWorkerInput, "assets"> & {
 	/** A worker's directory. Usually where the wrangler.toml file is located */
 	directory: string;
 	build: StartDevWorkerInput["build"] & {
@@ -189,6 +189,7 @@ export type StartDevWorkerOptions = StartDevWorkerInput & {
 		persist: string;
 	};
 	entrypoint: string;
+	assets?: AssetsOptions;
 };
 
 export type HookValues = string | number | boolean | object | undefined | null;

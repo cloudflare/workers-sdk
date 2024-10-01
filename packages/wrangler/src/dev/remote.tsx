@@ -685,11 +685,11 @@ export async function createRemoteWorkerInit(props: {
 
 export async function getWorkerAccountAndContext(props: {
 	accountId: string;
-	env?: string;
-	legacyEnv?: boolean;
-	host?: string;
+	env: string | undefined;
+	legacyEnv: boolean | undefined;
+	host: string | undefined;
 	routes: Route[] | undefined;
-	sendMetrics?: boolean;
+	sendMetrics: boolean | undefined;
 }): Promise<{ workerAccount: CfAccount; workerContext: CfWorkerContext }> {
 	const workerAccount: CfAccount = {
 		accountId: props.accountId,

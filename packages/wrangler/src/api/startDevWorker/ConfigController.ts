@@ -9,7 +9,7 @@ import {
 	getScriptName,
 	isLegacyEnv,
 } from "../..";
-import { processAssetsArg } from "../../assets";
+import { processAssetsArg, validateAssetsArgsAndConfig } from "../../assets";
 import { printBindings, readConfig } from "../../config";
 import { getEntry } from "../../deployment-bundle/entry";
 import {
@@ -25,7 +25,9 @@ import { UserError } from "../../errors";
 import { logger } from "../../logger";
 import { getAccountId, requireApiToken } from "../../user";
 import { memoizeGetPort } from "../../utils/memoizeGetPort";
+import { getZoneIdForPreview } from "../../zones";
 import { Controller } from "./BaseController";
+import { castErrorCause } from "./events";
 import {
 	convertCfWorkerInitBindingstoBindings,
 	extractBindingsOfType,
@@ -52,6 +54,15 @@ async function resolveDevConfig(
 	config: Config,
 	input: StartDevWorkerInput
 ): Promise<StartDevWorkerOptions["dev"]> {
+	const auth =
+		input.dev?.auth ??
+		(async () => {
+			return {
+				accountId: await getAccountId(),
+				apiToken: requireApiToken(),
+			};
+		});
+
 	const localPersistencePath = getLocalPersistencePath(
 		input.dev?.persist,
 		config.configPath
@@ -63,24 +74,29 @@ async function resolveDevConfig(
 			routes: input.triggers?.filter(
 				(t): t is Extract<Trigger, { type: "route" }> => t.type === "route"
 			),
-			assets: input?.assets?.directory,
+			assets: input?.assets,
 		},
 		config
 	);
+
+	// TODO: Remove this hack once the React flow is removed
+	// This function throws if the zone ID can't be found given the provided host and routes
+	// However, it's called as part of initialising a preview session, which is nested deep within
+	// React/Ink and useEffect()s in `--no-x-dev-env` mode which swallow the error and turn it into a logged warning.
+	// Because it's a non-recoverable user error, we want it to exit the Wrangler process early to allow the user to fix it.
+	// Calling it here forces the error to be thrown where it will correctly exit the Wrangler process.
+	if (input.dev?.remote) {
+		const { accountId } = await unwrapHook(auth);
+		assert(accountId, "Account ID must be provided for remote dev");
+		await getZoneIdForPreview({ host, routes, accountId });
+	}
 
 	const initialIp = input.dev?.server?.hostname ?? config.dev.ip;
 
 	const initialIpListenCheck = initialIp === "*" ? "0.0.0.0" : initialIp;
 
 	return {
-		auth:
-			input.dev?.auth ??
-			(async () => {
-				return {
-					accountId: await getAccountId(),
-					apiToken: requireApiToken(),
-				};
-			}),
+		auth,
 		remote: input.dev?.remote,
 		server: {
 			hostname: input.dev?.server?.hostname || config.dev.ip,
@@ -89,7 +105,7 @@ async function resolveDevConfig(
 				config.dev.port ??
 				(await getLocalPort(initialIpListenCheck)),
 			secure:
-				input.dev?.server?.secure || config.dev.local_protocol === "https",
+				input.dev?.server?.secure ?? config.dev.local_protocol === "https",
 			httpsKeyPath: input.dev?.server?.httpsKeyPath,
 			httpsCertPath: input.dev?.server?.httpsCertPath,
 		},
@@ -101,7 +117,7 @@ async function resolveDevConfig(
 		},
 		origin: {
 			secure:
-				input.dev?.origin?.secure || config.dev.upstream_protocol === "https",
+				input.dev?.origin?.secure ?? config.dev.upstream_protocol === "https",
 			hostname: host ?? getInferredHost(routes),
 		},
 		liveReload: input.dev?.liveReload || false,
@@ -165,7 +181,7 @@ async function resolveTriggers(
 			routes: input.triggers?.filter(
 				(t): t is Extract<Trigger, { type: "route" }> => t.type === "route"
 			),
-			assets: input?.assets?.directory,
+			assets: input?.assets,
 		},
 		config
 	);
@@ -212,7 +228,7 @@ async function resolveConfig(
 			// getEntry only needs to know if assets was specified.
 			// The actualy value is not relevant here, which is why not passing
 			// the entire Assets object is fine.
-			assets: input?.assets?.directory,
+			assets: input?.assets,
 		},
 		config,
 		"dev"
@@ -224,7 +240,7 @@ async function resolveConfig(
 
 	const assetsOptions = processAssetsArg(
 		{
-			assets: input?.assets?.directory,
+			assets: input?.assets,
 			script: input.entrypoint,
 		},
 		config
@@ -280,9 +296,17 @@ async function resolveConfig(
 
 	if (resolved.legacy.legacyAssets && resolved.legacy.site) {
 		throw new UserError(
-			"Cannot use Assets and Workers Sites in the same Worker."
+			"Cannot use legacy assets and Workers Sites in the same Worker."
 		);
 	}
+
+	if (resolved.assets && resolved.dev.remote) {
+		throw new UserError(
+			"Cannot use assets in remote mode. Workers with assets are only supported in local mode. Please use `wrangler dev`."
+		);
+	}
+
+	validateAssetsArgsAndConfig(resolved);
 
 	const services = extractBindingsOfType("service", resolved.bindings);
 	if (services && services.length > 0) {
@@ -372,8 +396,8 @@ export class ConfigController extends Controller<ConfigControllerEventMap> {
 			});
 		}
 	}
-	public set(input: StartDevWorkerInput) {
-		return this.#updateConfig(input);
+	public set(input: StartDevWorkerInput, throwErrors = false) {
+		return this.#updateConfig(input, throwErrors);
 	}
 	public patch(input: Partial<StartDevWorkerInput>) {
 		assert(
@@ -389,12 +413,11 @@ export class ConfigController extends Controller<ConfigControllerEventMap> {
 		return this.#updateConfig(config);
 	}
 
-	async #updateConfig(input: StartDevWorkerInput) {
+	async #updateConfig(input: StartDevWorkerInput, throwErrors = false) {
 		this.#abortController?.abort();
 		this.#abortController = new AbortController();
 		const signal = this.#abortController.signal;
 		this.latestInput = input;
-
 		try {
 			const fileConfig = readConfig(input.config, {
 				env: input.env,
@@ -415,13 +438,12 @@ export class ConfigController extends Controller<ConfigControllerEventMap> {
 							: "http",
 			});
 
-			void this.#ensureWatchingConfig(fileConfig.configPath);
+			if (typeof vitest === "undefined") {
+				void this.#ensureWatchingConfig(fileConfig.configPath);
+			}
 
-			const assets = processAssetsArg(
-				{ assets: input?.assets?.directory },
-				fileConfig
-			);
-			if (assets) {
+			const assets = processAssetsArg({ assets: input?.assets }, fileConfig);
+			if (assets && typeof vitest === "undefined") {
 				void this.#ensureWatchingAssets(assets.directory);
 			}
 
@@ -431,9 +453,20 @@ export class ConfigController extends Controller<ConfigControllerEventMap> {
 			}
 			this.latestConfig = resolvedConfig;
 			this.emitConfigUpdateEvent(resolvedConfig);
+
 			return this.latestConfig;
 		} catch (err) {
-			logger.error(err);
+			if (throwErrors) {
+				throw err;
+			} else {
+				this.emitErrorEvent({
+					type: "error",
+					reason: "Error resolving config",
+					cause: castErrorCause(err),
+					source: "ConfigController",
+					data: undefined,
+				});
+			}
 		}
 	}
 

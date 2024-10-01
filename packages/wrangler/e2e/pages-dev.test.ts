@@ -8,7 +8,7 @@ import { fetchText } from "./helpers/fetch-text";
 import { normalizeOutput } from "./helpers/normalize";
 
 describe.each([
-	{ cmd: "wrangler pages dev" },
+	{ cmd: "wrangler pages dev --no-x-dev-env" },
 	{ cmd: "wrangler pages dev --x-dev-env" },
 ])("Pages $cmd", ({ cmd }) => {
 	it("should warn if no [--compatibility_date] command line arg was specified", async () => {
