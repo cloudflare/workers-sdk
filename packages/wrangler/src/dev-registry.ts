@@ -11,6 +11,7 @@ import {
 import { createServer } from "node:http";
 import net from "node:net";
 import path from "node:path";
+import * as util from "node:util";
 import bodyParser from "body-parser";
 import { watch } from "chokidar";
 import express from "express";
@@ -364,4 +365,69 @@ export async function getBoundRegisteredWorkers(
 		)
 	);
 	return filteredWorkers;
+}
+
+/**
+ * A react-free version of the above hook
+ */
+export async function devRegistry(
+	cb: (workers: WorkerRegistry | undefined) => void
+): Promise<(name?: string) => Promise<void>> {
+	let previousRegistry: WorkerRegistry | undefined;
+
+	let interval: ReturnType<typeof setInterval>;
+
+	let hasFailedToFetch = false;
+
+	// The new file based registry supports a much more performant listener callback
+	if (getFlag("FILE_BASED_REGISTRY")) {
+		await startWorkerRegistry(async (registry) => {
+			if (!util.isDeepStrictEqual(registry, previousRegistry)) {
+				previousRegistry = registry;
+				cb(registry);
+			}
+		});
+	} else {
+		try {
+			await startWorkerRegistry();
+		} catch (err) {
+			logger.error("failed to start worker registry", err);
+		}
+		// Else we need to fall back to a polling based approach
+		interval = setInterval(async () => {
+			try {
+				const registry = await getRegisteredWorkers();
+				if (!util.isDeepStrictEqual(registry, previousRegistry)) {
+					previousRegistry = registry;
+					cb(registry);
+				}
+			} catch (err) {
+				if (!hasFailedToFetch) {
+					hasFailedToFetch = true;
+					logger.warn("Failed to get worker definitions", err);
+				}
+			}
+		}, 300);
+	}
+
+	return async (name) => {
+		interval && clearInterval(interval);
+		try {
+			const [unregisterResult, stopRegistryResult] = await Promise.allSettled([
+				name ? unregisterWorker(name) : Promise.resolve(),
+				stopWorkerRegistry(),
+			]);
+			if (unregisterResult.status === "rejected") {
+				logger.error("Failed to unregister worker", unregisterResult.reason);
+			}
+			if (stopRegistryResult.status === "rejected") {
+				logger.error(
+					"Failed to stop worker registry",
+					stopRegistryResult.reason
+				);
+			}
+		} catch (err) {
+			logger.error("Failed to cleanup dev registry", err);
+		}
+	};
 }

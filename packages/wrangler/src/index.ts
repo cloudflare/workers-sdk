@@ -906,8 +906,26 @@ export async function main(argv: string[]): Promise<void> {
 			logBuildFailure(e.errors, e.warnings);
 			logger.error(e.message);
 		} else {
-			logger.error(e instanceof Error ? e.message : e);
-			if (!(e instanceof UserError)) {
+			let loggableException = e;
+			if (
+				// Is this a StartDevEnv error event? If so, unwrap the cause, which is usually the user-recognisable error
+				e &&
+				typeof e === "object" &&
+				"type" in e &&
+				e.type === "error" &&
+				"cause" in e &&
+				e.cause instanceof Error
+			) {
+				loggableException = e.cause;
+			}
+
+			logger.error(
+				loggableException instanceof Error
+					? loggableException.message
+					: loggableException
+			);
+
+			if (!(loggableException instanceof UserError)) {
 				await logPossibleBugMessage();
 			}
 		}
