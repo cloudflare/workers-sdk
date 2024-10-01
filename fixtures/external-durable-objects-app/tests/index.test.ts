@@ -22,6 +22,7 @@ describe.skip(
 				experimental: {
 					disableExperimentalWarning: true,
 					devEnv: true,
+					fileBasedRegistry: true,
 				},
 			});
 			await setTimeout(1000);
@@ -30,6 +31,7 @@ describe.skip(
 				experimental: {
 					disableExperimentalWarning: true,
 					devEnv: true,
+					fileBasedRegistry: true,
 				},
 			});
 			await setTimeout(1000);
@@ -38,6 +40,7 @@ describe.skip(
 				experimental: {
 					disableExperimentalWarning: true,
 					devEnv: true,
+					fileBasedRegistry: true,
 				},
 			});
 			await setTimeout(1000);

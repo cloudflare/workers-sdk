@@ -168,6 +168,7 @@ async function getWranglerInstance({
 			[
 				...(pages ? ["pages"] : []),
 				"dev",
+				"--x-dev-env",
 				"--x-registry",
 				...(pages ? ["public"] : ["index.ts"]),
 				"--local",
