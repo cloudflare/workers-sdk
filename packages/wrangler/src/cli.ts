@@ -58,3 +58,5 @@ const generateASSETSBinding: (
 	// eslint-disable-next-line @typescript-eslint/no-var-requires
 	require("./miniflare-cli/assets").default;
 export { generateASSETSBinding as unstable_generateASSETSBinding };
+
+export { readConfigForAPI as experimental_readConfig } from "./config";

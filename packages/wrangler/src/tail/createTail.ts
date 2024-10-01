@@ -2,7 +2,7 @@ import { HttpsProxyAgent } from "https-proxy-agent";
 import WebSocket from "ws";
 import { version as packageVersion } from "../../package.json";
 import { fetchResult } from "../cfetch";
-import { proxy } from "../index";
+import { proxy } from "../utils/constants";
 import type { Outcome, TailFilterMessage } from "./filters";
 import type { Request } from "undici";
 

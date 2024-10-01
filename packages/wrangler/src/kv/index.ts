@@ -3,16 +3,13 @@ import { arrayBuffer } from "node:stream/consumers";
 import { StringDecoder } from "node:string_decoder";
 import { readConfig } from "../config";
 import { confirm } from "../dialogs";
-import { UserError } from "../errors";
-import {
-	CommandLineArgsError,
-	demandOneOfOption,
-	printWranglerBanner,
-} from "../index";
+import { CommandLineArgsError, UserError } from "../errors";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { parseJSON, readFileSync, readFileSyncToBuffer } from "../parse";
+import { printWranglerBanner } from "../update-check";
 import { requireAuth } from "../user";
+import { demandOneOfOption } from "../utils/demandOneOfOption";
 import { getValidBindingName } from "../utils/getValidBindingName";
 import {
 	createKVNamespace,

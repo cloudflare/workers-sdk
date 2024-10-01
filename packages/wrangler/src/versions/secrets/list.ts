@@ -1,10 +1,10 @@
 import { fetchResult } from "../../cfetch";
 import { readConfig } from "../../config";
 import { UserError } from "../../errors";
-import { getLegacyScriptName } from "../../index";
 import { logger } from "../../logger";
 import { printWranglerBanner } from "../../update-check";
 import { requireAuth } from "../../user";
+import { getLegacyScriptName } from "../../utils/getLegacyScriptName";
 import { fetchDeploymentVersions, fetchLatestDeployment } from "../api";
 import type { VersionDetails } from ".";
 import type {

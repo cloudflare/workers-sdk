@@ -1,8 +1,8 @@
 import Table from "ink-table";
-import { printWranglerBanner } from "..";
 import { fetchResult } from "../cfetch";
 import { withConfig } from "../config";
 import { logger } from "../logger";
+import { printWranglerBanner } from "../update-check";
 import { requireAuth } from "../user";
 import { renderToString } from "../utils/render";
 import type {

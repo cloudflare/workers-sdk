@@ -28,6 +28,8 @@ export class FatalError extends UserError {
 	}
 }
 
+export class CommandLineArgsError extends UserError {}
+
 /**
  * JsonFriendlyFatalError is used to output JSON when wrangler crashes, useful for --json mode.
  *

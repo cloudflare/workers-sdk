@@ -1,8 +1,8 @@
-import { printWranglerBanner } from "..";
 import { readConfig } from "../config";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
 import openInBrowser from "../open-in-browser";
+import { printWranglerBanner } from "../update-check";
 import { runSearch } from "./helpers";
 import type {
 	CommonYargsArgv,

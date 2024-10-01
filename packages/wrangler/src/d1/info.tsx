@@ -1,9 +1,9 @@
 import Table from "ink-table";
 import prettyBytes from "pretty-bytes";
-import { printWranglerBanner } from "..";
 import { fetchGraphqlResult } from "../cfetch";
 import { withConfig } from "../config";
 import { logger } from "../logger";
+import { printWranglerBanner } from "../update-check";
 import { requireAuth } from "../user";
 import { renderToString } from "../utils/render";
 import { getDatabaseByNameOrBinding, getDatabaseInfoFromId } from "./utils";

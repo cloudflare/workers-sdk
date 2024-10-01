@@ -1,14 +1,6 @@
 import assert from "node:assert";
 import path from "node:path";
 import { watch } from "chokidar";
-import {
-	DEFAULT_INSPECTOR_PORT,
-	DEFAULT_LOCAL_PORT,
-	getDevCompatibilityDate,
-	getRules,
-	getScriptName,
-	isLegacyEnv,
-} from "../..";
 import { processAssetsArg } from "../../assets";
 import { printBindings, readConfig } from "../../config";
 import { getEntry } from "../../deployment-bundle/entry";
@@ -24,6 +16,14 @@ import { getClassNamesWhichUseSQLite } from "../../dev/validate-dev-props";
 import { UserError } from "../../errors";
 import { logger } from "../../logger";
 import { getAccountId, requireApiToken } from "../../user";
+import {
+	DEFAULT_INSPECTOR_PORT,
+	DEFAULT_LOCAL_PORT,
+} from "../../utils/constants";
+import { getDevCompatibilityDate } from "../../utils/getDevCompatibilityDate";
+import { getRules } from "../../utils/getRules";
+import { getScriptName } from "../../utils/getScriptName";
+import { isLegacyEnv } from "../../utils/isLegacyEnv";
 import { memoizeGetPort } from "../../utils/memoizeGetPort";
 import { Controller } from "./BaseController";
 import {
@@ -196,7 +196,7 @@ async function resolveTriggers(
 	return [...devRoutes, ...queueConsumers, ...crons];
 }
 
-async function resolveConfig(
+export async function resolveConfig(
 	config: Config,
 	input: StartDevWorkerInput
 ): Promise<StartDevWorkerOptions> {

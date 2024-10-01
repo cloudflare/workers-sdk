@@ -2,8 +2,8 @@ import { fetchResult } from "./cfetch";
 import { readConfig } from "./config";
 import { logger } from "./logger";
 import * as metrics from "./metrics";
+import { printWranglerBanner } from "./update-check";
 import { requireAuth } from "./user";
-import { printWranglerBanner } from ".";
 import type { CommonYargsArgv, CommonYargsOptions } from "./yargs-types";
 import type { CommandModule } from "yargs";
 

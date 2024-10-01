@@ -1,7 +1,7 @@
-import { printWranglerBanner } from "..";
 import { fetchGraphqlResult } from "../cfetch";
 import { withConfig } from "../config";
 import { logger } from "../logger";
+import { printWranglerBanner } from "../update-check";
 import { requireAuth } from "../user";
 import { getDatabaseByNameOrBinding, getDatabaseInfoFromId } from "./utils";
 import type {

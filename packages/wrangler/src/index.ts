@@ -1,6 +1,4 @@
-import module from "node:module";
 import os from "node:os";
-import TOML from "@iarna/toml";
 import chalk from "chalk";
 import { ProxyAgent, setGlobalDispatcher } from "undici";
 import makeCLI from "yargs";
@@ -34,7 +32,11 @@ import {
 import { devHandler, devOptions } from "./dev";
 import { workerNamespaceCommands } from "./dispatch-namespace";
 import { docsHandler, docsOptions } from "./docs";
-import { JsonFriendlyFatalError, UserError } from "./errors";
+import {
+	CommandLineArgsError,
+	JsonFriendlyFatalError,
+	UserError,
+} from "./errors";
 import { generateHandler, generateOptions } from "./generate";
 import { hyperdrive } from "./hyperdrive/index";
 import { initHandler, initOptions } from "./init";
@@ -59,7 +61,7 @@ import {
 import { tailHandler, tailOptions } from "./tail";
 import registerTriggersSubcommands from "./triggers";
 import { typesHandler, typesOptions } from "./type-generation";
-import { printWranglerBanner, updateCheck } from "./update-check";
+import { printWranglerBanner } from "./update-check";
 import {
 	getAuthFromEnv,
 	listScopes,
@@ -67,31 +69,17 @@ import {
 	logout,
 	validateScopeKeys,
 } from "./user";
+import { betaCmdColor, proxy } from "./utils/constants";
 import { debugLogFilepath } from "./utils/log-file";
+import { logPossibleBugMessage } from "./utils/logPossibleBugMessage";
 import { vectorize } from "./vectorize/index";
 import registerVersionsSubcommands from "./versions";
 import registerVersionsDeploymentsSubcommands from "./versions/deployments";
 import registerVersionsRollbackCommand from "./versions/rollback";
 import { whoami } from "./whoami";
 import { asJson } from "./yargs-types";
-import type { Config } from "./config";
 import type { LoggerLevel } from "./logger";
 import type { CommonYargsArgv, SubHelp } from "./yargs-types";
-import type { Arguments } from "yargs";
-
-const resetColor = "\x1b[0m";
-const fgGreenColor = "\x1b[32m";
-export const betaCmdColor = "#BD5B08";
-
-export const DEFAULT_LOCAL_PORT = 8787;
-export const DEFAULT_INSPECTOR_PORT = 9229;
-
-export const proxy =
-	process.env.https_proxy ||
-	process.env.HTTPS_PROXY ||
-	process.env.http_proxy ||
-	process.env.HTTP_PROXY ||
-	undefined;
 
 if (proxy) {
 	setGlobalDispatcher(new ProxyAgent(proxy));
@@ -99,90 +87,6 @@ if (proxy) {
 		`Proxy environment variables detected. We'll use your proxy for fetch requests.`
 	);
 }
-
-export function getRules(config: Config): Config["rules"] {
-	const rules = config.rules ?? config.build?.upload?.rules ?? [];
-
-	if (config.rules && config.build?.upload?.rules) {
-		throw new UserError(
-			`You cannot configure both [rules] and [build.upload.rules] in your wrangler.toml. Delete the \`build.upload\` section.`
-		);
-	}
-
-	if (config.build?.upload?.rules) {
-		logger.warn(
-			`Deprecation: The \`build.upload.rules\` config field is no longer used, the rules should be specified via the \`rules\` config field. Delete the \`build.upload\` field from the configuration file, and add this:
-
-${TOML.stringify({ rules: config.build.upload.rules })}`
-		);
-	}
-	return rules;
-}
-
-export function isLegacyEnv(config: Config): boolean {
-	// We only read from config here, because we've already accounted for
-	// args["legacy-env"] in https://github.com/cloudflare/workers-sdk/blob/b24aeb5722370c2e04bce97a84a1fa1e55725d79/packages/wrangler/src/config/validation.ts#L94-L98
-	return config.legacy_env;
-}
-
-export function getScriptName(
-	args: { name: string | undefined; env: string | undefined },
-	config: Config
-): string | undefined {
-	if (args.name && isLegacyEnv(config) && args.env) {
-		throw new CommandLineArgsError(
-			"In legacy environment mode you cannot use --name and --env together. If you want to specify a Worker name for a specific environment you can add the following to your wrangler.toml config:" +
-				`
-    [env.${args.env}]
-    name = "${args.name}"
-    `
-		);
-	}
-
-	return args.name ?? config.name;
-}
-
-/**
- * Alternative to the getScriptName() because special Legacy cases allowed
- * "name", and "env" together in Wrangler v1
- */
-export function getLegacyScriptName(
-	args: { name: string | undefined; env: string | undefined },
-	config: Config
-) {
-	return args.name && args.env && isLegacyEnv(config)
-		? `${args.name}-${args.env}`
-		: args.name ?? config.name;
-}
-
-/**
- * A helper to demand one of a set of options
- * via https://github.com/yargs/yargs/issues/1093#issuecomment-491299261
- */
-export function demandOneOfOption(...options: string[]) {
-	return function (argv: Arguments) {
-		const count = options.filter((option) => argv[option]).length;
-		const lastOption = options.pop();
-
-		if (count === 0) {
-			throw new CommandLineArgsError(
-				`Exactly one of the arguments ${options.join(
-					", "
-				)} and ${lastOption} is required`
-			);
-		} else if (count > 1) {
-			throw new CommandLineArgsError(
-				`Arguments ${options.join(
-					", "
-				)} and ${lastOption} are mutually exclusive`
-			);
-		}
-
-		return true;
-	};
-}
-
-export class CommandLineArgsError extends UserError {}
 
 export function createCLIParser(argv: string[]) {
 	const experimentalGradualRollouts =
@@ -950,44 +854,3 @@ export async function main(argv: string[]): Promise<void> {
 		}
 	}
 }
-
-export function getDevCompatibilityDate(
-	config: Config,
-	compatibilityDate = config.compatibility_date
-): string {
-	// Get the maximum compatibility date supported by the installed Miniflare
-	const miniflareEntry = require.resolve("miniflare");
-	const miniflareRequire = module.createRequire(miniflareEntry);
-	const miniflareWorkerd = miniflareRequire("workerd") as {
-		compatibilityDate: string;
-	};
-	const currentDate = miniflareWorkerd.compatibilityDate;
-
-	if (config.configPath !== undefined && compatibilityDate === undefined) {
-		logger.warn(
-			`No compatibility_date was specified. Using the installed Workers runtime's latest supported date: ${currentDate}.\n` +
-				`❯❯ Add one to your wrangler.toml file: compatibility_date = "${currentDate}", or\n` +
-				`❯❯ Pass it in your terminal: wrangler dev [<SCRIPT>] --compatibility-date=${currentDate}\n\n` +
-				"See https://developers.cloudflare.com/workers/platform/compatibility-dates/ for more information."
-		);
-	}
-	return compatibilityDate ?? currentDate;
-}
-
-/**
- * Write a message to the log that tells the user what they might do after we have reported an unexpected error.
- */
-export async function logPossibleBugMessage() {
-	logger.log(
-		`${fgGreenColor}%s${resetColor}`,
-		"If you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose"
-	);
-	const latestVersion = await updateCheck();
-	if (latestVersion) {
-		logger.log(
-			`Note that there is a newer version of Wrangler available (${latestVersion}). Consider checking whether upgrading resolves this error.`
-		);
-	}
-}
-
-export { printWranglerBanner };

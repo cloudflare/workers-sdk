@@ -1,9 +1,9 @@
 import { Box, Text } from "ink";
-import { printWranglerBanner } from "..";
 import { fetchResult } from "../cfetch";
 import { withConfig } from "../config";
 import { UserError } from "../errors";
 import { logger } from "../logger";
+import { printWranglerBanner } from "../update-check";
 import { requireAuth } from "../user";
 import { renderToString } from "../utils/render";
 import { LOCATION_CHOICES } from "./constants";
