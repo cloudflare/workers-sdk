@@ -44,7 +44,7 @@ describe("versions upload", () => {
 				({ params }) => {
 					if (flakeCount > 0) {
 						flakeCount--;
-						// return HttpResponse.error();
+						return HttpResponse.error();
 					}
 
 					expect(params.scriptName).toEqual("test-worker");
