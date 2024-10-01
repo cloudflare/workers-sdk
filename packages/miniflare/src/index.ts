@@ -1131,8 +1131,8 @@ export class Miniflare {
 			innerBindings: Worker_Binding[];
 		}[] = [];
 
-		// TODO: asset plugin needs this info but idk how else to pass it through
-		// rethink pls
+		// This will be the user worker or the vitest pool worker wrapping the user worker
+		// The asset plugin needs this so that it can set the binding between the router worker and the user worker
 		if (this.#workerOpts[0].assets.assets) {
 			this.#workerOpts[0].assets.assets.workerName =
 				this.#workerOpts[0].core.name;
@@ -1709,6 +1709,7 @@ export class Miniflare {
 		const workerIndex = this.#findAndAssertWorkerIndex(workerName);
 		const workerOpts = this.#workerOpts[workerIndex];
 		workerName = workerOpts.core.name ?? "";
+
 		// Populate bindings from each plugin
 		for (const [key, plugin] of PLUGIN_ENTRIES) {
 			// @ts-expect-error `CoreOptionsSchema` has required options which are

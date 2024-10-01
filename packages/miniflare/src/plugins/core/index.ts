@@ -148,7 +148,9 @@ const CoreOptionsSchemaInput = z.intersection(
 		unsafeEvalBinding: z.string().optional(),
 		unsafeUseModuleFallbackService: z.boolean().optional(),
 
-		// TODO: find a better name ew
+		/** Used to set the vitest pool worker SELF binding to point to the router worker if there are assets.
+		 (If there are assets but we're not using vitest, the miniflare entry worker can point directly to RW.)
+		 */
 		hasAssetsAndIsVitest: z.boolean().optional(),
 	})
 );
@@ -236,7 +238,6 @@ function getCustomServiceDesignator(
 	kind: CustomServiceKind,
 	name: string,
 	service: z.infer<typeof ServiceDesignatorSchema>,
-	// override with router worker
 	hasAssetsAndIsVitest: boolean = false
 ): ServiceDesignator {
 	let serviceName: string;
@@ -248,7 +249,8 @@ function getCustomServiceDesignator(
 		// Worker with entrypoint
 		if ("name" in service) {
 			if (service.name === kCurrentWorker) {
-				// self binding e.g. for Vitest
+				// SELF binding e.g. for Vitest
+				// This *shouldn't* point to the RW to reflect production behaviour,
 				serviceName = getUserServiceName(refererName);
 			} else {
 				serviceName = getUserServiceName(service.name);
@@ -259,9 +261,8 @@ function getCustomServiceDesignator(
 			serviceName = getBuiltinServiceName(workerIndex, kind, name);
 		}
 	} else if (service === kCurrentWorker) {
-		// self binding e.g. for Vitest
-		// this is the one we want to change if assets
-		// if vitest,
+		// Sets SELF binding to point to router worker instead if assets are present.
+		// If there are assets but we're not using vitest, the miniflare entry worker will point directly to RW.
 		serviceName = hasAssetsAndIsVitest
 			? ROUTER_SERVICE_NAME
 			: getUserServiceName(refererName);
