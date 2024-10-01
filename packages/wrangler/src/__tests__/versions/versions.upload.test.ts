@@ -37,11 +37,16 @@ describe("versions upload", () => {
 			)
 		);
 	}
-	function mockUploadVersion(has_preview: boolean) {
+	function mockUploadVersion(has_preview: boolean, flakeCount = 1) {
 		msw.use(
 			http.post(
 				`*/accounts/:accountId/workers/scripts/:scriptName/versions`,
 				({ params }) => {
+					if (flakeCount > 0) {
+						flakeCount--;
+						return HttpResponse.error();
+					}
+
 					expect(params.scriptName).toEqual("test-worker");
 
 					return HttpResponse.json(
@@ -53,8 +58,7 @@ describe("versions upload", () => {
 							},
 						})
 					);
-				},
-				{ once: true }
+				}
 			)
 		);
 	}

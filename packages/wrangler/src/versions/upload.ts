@@ -35,6 +35,7 @@ import {
 	getSourceMappedString,
 	maybeRetrieveFileSourceMap,
 } from "../sourcemap";
+import { retryOnError } from "../utils/retry";
 import type { AssetsOptions } from "../assets";
 import type { Config } from "../config";
 import type { Rule } from "../config/environment";
@@ -466,17 +467,19 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			try {
 				const body = createWorkerUploadForm(worker);
 
-				const result = await fetchResult<{
-					id: string;
-					startup_time_ms: number;
-					metadata: {
-						has_preview: boolean;
-					};
-				}>(`${workerUrl}/versions`, {
-					method: "POST",
-					body,
-					headers: await getMetricsUsageHeaders(config.send_metrics),
-				});
+				const result = await retryOnError(async () =>
+					fetchResult<{
+						id: string;
+						startup_time_ms: number;
+						metadata: {
+							has_preview: boolean;
+						};
+					}>(`${workerUrl}/versions`, {
+						method: "POST",
+						body,
+						headers: await getMetricsUsageHeaders(config.send_metrics),
+					})
+				);
 
 				logger.log("Worker Startup Time:", result.startup_time_ms, "ms");
 				bindingsPrinted = true;

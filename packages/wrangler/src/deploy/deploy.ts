@@ -46,6 +46,7 @@ import {
 	maybeRetrieveFileSourceMap,
 } from "../sourcemap";
 import triggersDeploy from "../triggers/deploy";
+import { retryOnError } from "../utils/retry";
 import {
 	createDeployment,
 	patchNonVersionedScriptSettings,
@@ -814,13 +815,15 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 				// If we're using the new APIs, first upload the version
 				if (canUseNewVersionsDeploymentsApi) {
 					// Upload new version
-					const versionResult = await fetchResult<ApiVersion>(
-						`/accounts/${accountId}/workers/scripts/${scriptName}/versions`,
-						{
-							method: "POST",
-							body: createWorkerUploadForm(worker),
-							headers: await getMetricsUsageHeaders(config.send_metrics),
-						}
+					const versionResult = await retryOnError(async () =>
+						fetchResult<ApiVersion>(
+							`/accounts/${accountId}/workers/scripts/${scriptName}/versions`,
+							{
+								method: "POST",
+								body: createWorkerUploadForm(worker),
+								headers: await getMetricsUsageHeaders(config.send_metrics),
+							}
+						)
 					);
 
 					// Deploy new version to 100%
@@ -852,27 +855,29 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 						startup_time_ms: versionResult.startup_time_ms,
 					};
 				} else {
-					result = await fetchResult<{
-						available_on_subdomain: boolean;
-						id: string | null;
-						etag: string | null;
-						pipeline_hash: string | null;
-						mutable_pipeline_id: string | null;
-						deployment_id: string | null;
-						startup_time_ms: number;
-					}>(
-						workerUrl,
-						{
-							method: "PUT",
-							body: createWorkerUploadForm(worker),
-							headers: await getMetricsUsageHeaders(config.send_metrics),
-						},
-						new URLSearchParams({
-							include_subdomain_availability: "true",
-							// pass excludeScript so the whole body of the
-							// script doesn't get included in the response
-							excludeScript: "true",
-						})
+					result = await retryOnError(async () =>
+						fetchResult<{
+							available_on_subdomain: boolean;
+							id: string | null;
+							etag: string | null;
+							pipeline_hash: string | null;
+							mutable_pipeline_id: string | null;
+							deployment_id: string | null;
+							startup_time_ms: number;
+						}>(
+							workerUrl,
+							{
+								method: "PUT",
+								body: createWorkerUploadForm(worker),
+								headers: await getMetricsUsageHeaders(config.send_metrics),
+							},
+							new URLSearchParams({
+								include_subdomain_availability: "true",
+								// pass excludeScript so the whole body of the
+								// script doesn't get included in the response
+								excludeScript: "true",
+							})
+						)
 					);
 				}
 
