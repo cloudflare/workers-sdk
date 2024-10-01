@@ -14,7 +14,7 @@ export const cloudflareInternalPlugin: Plugin = {
 				//  Throw an error if we identify `cloudflare:...` external imports.
 				//
 				throw new Error(
-					`Unexpected import "${args.path}" which is not valid in a Service Worker format Worker. Are you missing a default export from your Worker?`
+					`Unexpected import "${args.path}" which is not valid in a Service Worker format Worker. Are you missing \`export default { ... }\` from your Worker?`
 				);
 			}
 			return { external: true };

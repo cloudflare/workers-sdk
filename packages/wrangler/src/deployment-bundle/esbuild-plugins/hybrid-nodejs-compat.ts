@@ -32,7 +32,7 @@ function errorOnServiceWorkerFormat(build: PluginBuild) {
 	build.onResolve({ filter: NODEJS_MODULES_RE }, (args) => {
 		if (build.initialOptions.format === "iife") {
 			throw new Error(
-				`Unexpected import "${args.path}" which is not valid in a Service Worker format Worker. Are you missing a default export from your Worker?`
+				`Unexpected import "${args.path}" which is not valid in a Service Worker format Worker. Are you missing \`export default { ... }\` from your Worker?`
 			);
 		}
 		return null;

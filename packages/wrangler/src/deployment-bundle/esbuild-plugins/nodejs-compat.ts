@@ -68,7 +68,7 @@ export const nodejsCompatPlugin: (silenceWarnings: boolean) => Plugin = (
 			) {
 				const errors = Array.from(warnedPackaged.entries()).map(
 					([path, importers]) =>
-						`Unexpected import "${path}" which is not valid in a Service Worker format Worker. Are you missing a default export from your Worker?\n` +
+						`Unexpected import "${path}" which is not valid in a Service Worker format Worker. Are you missing \`export default { ... }\` from your Worker?\n` +
 						"Imported from:\n" +
 						toList(importers, pluginBuild.initialOptions.absWorkingDir) +
 						"\n"

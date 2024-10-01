@@ -8890,7 +8890,7 @@ addEventListener('fetch', event => {});`
 					)
 				)
 			).resolves.toContain(
-				`X [ERROR] Unexpected import "cloudflare:sockets" which is not valid in a Service Worker format Worker. Are you missing a default export from your Worker? [plugin Cloudflare internal imports plugin]`
+				`X [ERROR] Unexpected import "cloudflare:sockets" which is not valid in a Service Worker format Worker. Are you missing \`export default { ... }\` from your Worker? [plugin Cloudflare internal imports plugin]`
 			);
 		});
 
@@ -8918,7 +8918,7 @@ addEventListener('fetch', event => {});`
 				)
 			).resolves.toContain(
 				dedent`
-					X [ERROR] Unexpected import "node:stream" which is not valid in a Service Worker format Worker. Are you missing a default export from your Worker?
+					X [ERROR] Unexpected import "node:stream" which is not valid in a Service Worker format Worker. Are you missing \`export default { ... }\` from your Worker?
 					Imported from:
 					 - index.js
 					 [plugin nodejs_compat imports plugin]
@@ -8950,7 +8950,7 @@ addEventListener('fetch', event => {});`
 					)
 				)
 			).resolves.toContain(
-				`X [ERROR] Unexpected import "node:stream" which is not valid in a Service Worker format Worker. Are you missing a default export from your Worker? [plugin unenv-cloudflare]`
+				`X [ERROR] Unexpected import "node:stream" which is not valid in a Service Worker format Worker. Are you missing \`export default { ... }\` from your Worker? [plugin unenv-cloudflare]`
 			);
 		});
 	});
