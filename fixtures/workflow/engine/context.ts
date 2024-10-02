@@ -1,32 +1,46 @@
-import assert from "node:assert";
 import {
 	RpcTarget,
 	WorkflowSleepDuration,
 	WorkflowStepConfig,
 } from "cloudflare:workers";
 import { ms } from "itty-time";
+import { InstanceEvent, InstanceStatus } from "./instance";
+import { computeHash } from "./lib/cache";
 import {
-	INSTANCE_METADATA,
-	InstanceEvent,
-	InstanceStatus,
-	merge,
 	WorkflowFatalError,
 	WorkflowInternalError,
 	WorkflowTimeoutError,
-} from "shared";
-import { computeHash } from "./lib/cache";
+} from "./lib/errors";
 import { calcRetryDuration } from "./lib/retries";
 import { MAX_STEP_NAME_LENGTH, validateStepName } from "./lib/validators";
-import type { Engine } from ".";
-import type { InstanceMetadata, ResolvedStepConfig, StepState } from "shared";
+import type { DatabaseVersion, DatabaseWorkflow, Engine } from "./engine";
 
-const defaultConfig: WorkflowStepConfig = {
+export type ResolvedStepConfig = Required<WorkflowStepConfig>;
+
+export const INSTANCE_METADATA = `INSTANCE_METADATA`;
+
+const defaultConfig: Required<WorkflowStepConfig> = {
 	retries: {
 		limit: 5,
 		delay: 1000,
 		backoff: "constant",
 	},
 	timeout: "15 minutes",
+};
+
+export type InstanceMetadata = {
+	accountId: number;
+	workflow: DatabaseWorkflow;
+	version: DatabaseVersion;
+	instance: Instance;
+	event: {
+		payload: Record<string, unknown>;
+		timestamp: Date;
+	};
+};
+
+export type StepState = {
+	attemptedCount: number;
 };
 
 export class Context extends RpcTarget {
@@ -62,7 +76,14 @@ export class Context extends RpcTarget {
 			);
 		}
 
-		let config: ResolvedStepConfig = merge(defaultConfig, stepConfig);
+		let config: ResolvedStepConfig = {
+			...defaultConfig,
+			...stepConfig,
+			retries: {
+				...defaultConfig.retries,
+				...stepConfig.retries,
+			},
+		};
 
 		const hash = await computeHash(name);
 		const count = this.#getCount("run-" + name);
@@ -177,7 +198,9 @@ export class Context extends RpcTarget {
 
 			const instanceMetadata =
 				await this.#state.storage.get<InstanceMetadata>(INSTANCE_METADATA);
-			assert(instanceMetadata);
+			if (!instanceMetadata) {
+				throw new Error("instanceMetadata is undefined");
+			}
 			const { accountId, instance } = instanceMetadata;
 
 			try {
@@ -441,7 +464,9 @@ export class Context extends RpcTarget {
 		);
 		const instanceMetadata =
 			await this.#state.storage.get<InstanceMetadata>(INSTANCE_METADATA);
-		assert(instanceMetadata);
+		if (!instanceMetadata) {
+			throw new Error("instanceMetadata is undefined");
+		}
 
 		// TODO(lduarte): not sure of this order of operations
 		await this.#state.storage.put(sleepKey, true); // Any value will do for cache hit

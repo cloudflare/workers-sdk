@@ -1,6 +1,6 @@
 import { WorkflowSleepDuration } from "cloudflare:workers";
 import { ms } from "itty-time";
-import type { Engine } from "./engine";
+import type { Engine } from "../engine";
 
 export const ENGINE_TIMEOUT = ms("5 minutes" satisfies WorkflowSleepDuration);
 
@@ -57,10 +57,12 @@ export const startGracePeriod: GracePeriodCallback = async (
 		// 1. There should not be one already set
 		// 2. Or if there is, it should be in the past
 		if (
-			latestGracePeriodTimestamp === undefined ||
-			latestGracePeriodTimestamp < thisTimestamp
+			!(
+				latestGracePeriodTimestamp === undefined ||
+				latestGracePeriodTimestamp < thisTimestamp
+			)
 		) {
-			return new Error(
+			throw new Error(
 				"Can't start grace period since there is already an active one started on " +
 					latestGracePeriodTimestamp
 			);

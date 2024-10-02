@@ -1,7 +1,7 @@
 {
 	"compilerOptions": {
 		"target": "es2021",
-		"lib": ["es2021"],
+		"lib": ["es2022"],
 		"module": "es2022",
 		"types": ["@cloudflare/workers-types/experimental"],
 		"moduleResolution": "node",

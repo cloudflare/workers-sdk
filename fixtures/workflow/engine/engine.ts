@@ -1,23 +1,16 @@
 import { DurableObject, WorkerEntrypoint } from "cloudflare:workers";
-import type { GracePeriodSemaphore } from "./gracePeriodSemaphore";
 import type {
 	InstanceEvent,
 	InstanceLogsResponse,
+	InstanceStatus,
 	RawInstanceLog,
 } from "./instance";
-import type { TimePriorityQueue } from "./timePriorityQueue";
+import type { GracePeriodSemaphore } from "./lib/gracePeriodSemaphore";
+import type { TimePriorityQueue } from "./lib/timePriorityQueue";
 
 export interface Env {
 	INSTANCES: DurableObjectNamespace<Engine>;
-	// WAKERS: DurableObjectNamespace<Waker>;
-	// ACCOUNTS: DurableObjectNamespace<Account>;
-	// DISPATCHER: DynamicDispatcher;
-
-	// ANALYTICS: ReadyAnalytics;
-	// ANALYTICS_EXTERNAL: ReadyAnalytics;
 }
-
-const ANALYTICS_VERSION = 1;
 
 export type DatabaseWorkflow = {
 	name: string;
@@ -39,6 +32,8 @@ export type DatabaseVersion = {
 };
 
 export class Engine extends DurableObject<Env> {
+	logs: Array<unknown>;
+
 	isRunning: boolean = false;
 	accountId: number | undefined;
 	instanceId: string | undefined;
@@ -46,14 +41,23 @@ export class Engine extends DurableObject<Env> {
 	timeoutHandler: GracePeriodSemaphore;
 	priorityQueue: TimePriorityQueue | undefined;
 
-	constructor(state: DurableObjectState, env: Env) {}
+	constructor(state: DurableObjectState, env: Env) {
+		super(state, env);
+	}
 
 	writeLog(
 		event: InstanceEvent,
 		group: string | null,
 		target: string | null = null,
 		metadata: Record<string, unknown>
-	) {}
+	) {
+		this.logs.push({
+			event,
+			group,
+			target,
+			metadata,
+		});
+	}
 
 	readLogsFromStep(cacheKey: string): RawInstanceLog[] {}
 
