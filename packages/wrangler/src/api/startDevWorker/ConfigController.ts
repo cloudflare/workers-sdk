@@ -13,7 +13,6 @@ import { processAssetsArg, validateAssetsArgsAndConfig } from "../../assets";
 import { printBindings, readConfig } from "../../config";
 import { getEntry } from "../../deployment-bundle/entry";
 import {
-	getAssetChangeMessage,
 	getBindings,
 	getHostAndRoutes,
 	getInferredHost,
@@ -358,7 +357,6 @@ export class ConfigController extends Controller<ConfigControllerEventMap> {
 	latestConfig?: StartDevWorkerOptions;
 
 	#configWatcher?: ReturnType<typeof watch>;
-	#assetsWatcher?: ReturnType<typeof watch>;
 	#abortController?: AbortController;
 
 	async #ensureWatchingConfig(configPath: string | undefined) {
@@ -378,24 +376,6 @@ export class ConfigController extends Controller<ConfigControllerEventMap> {
 		}
 	}
 
-	async #ensureWatchingAssets(assetsPath: string | undefined) {
-		await this.#assetsWatcher?.close();
-
-		if (assetsPath) {
-			this.#assetsWatcher = watch(assetsPath, {
-				persistent: true,
-				ignoreInitial: true,
-			}).on("all", async (eventName, filePath) => {
-				const message = getAssetChangeMessage(eventName, filePath);
-				logger.debug(`🌀 ${message}...`);
-				assert(
-					this.latestInput,
-					"Cannot be watching config without having first set an input"
-				);
-				void this.#updateConfig(this.latestInput);
-			});
-		}
-	}
 	public set(input: StartDevWorkerInput, throwErrors = false) {
 		return this.#updateConfig(input, throwErrors);
 	}
@@ -442,11 +422,6 @@ export class ConfigController extends Controller<ConfigControllerEventMap> {
 				void this.#ensureWatchingConfig(fileConfig.configPath);
 			}
 
-			const assets = processAssetsArg({ assets: input?.assets }, fileConfig);
-			if (assets && typeof vitest === "undefined") {
-				void this.#ensureWatchingAssets(assets.directory);
-			}
-
 			const resolvedConfig = await resolveConfig(fileConfig, input);
 			if (signal.aborted) {
 				return;
@@ -476,10 +451,7 @@ export class ConfigController extends Controller<ConfigControllerEventMap> {
 
 	async teardown() {
 		logger.debug("ConfigController teardown beginning...");
-		await Promise.allSettled([
-			this.#configWatcher?.close(),
-			this.#assetsWatcher?.close(),
-		]);
+		await this.#configWatcher?.close();
 		logger.debug("ConfigController teardown complete");
 	}
 

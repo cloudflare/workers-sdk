@@ -877,6 +877,41 @@ describe("custom builds", () => {
 		text = await fetchText(url);
 		expect(text).toMatchInlineSnapshot(`"Hello, World!"`);
 	});
+
+	it("does not infinite-loop custom build with assets", async () => {
+		const helper = new WranglerE2ETestHelper();
+		await helper.seed({
+			"wrangler.toml": dedent`
+                    name = "${workerName}"
+                    compatibility_date = "2023-01-01"
+                    main = "src/index.ts"
+                    build.command = "echo 'hello' > ./public/index.html"
+
+                    [assets]
+                    directory = "./public"
+            `,
+			"src/index.ts": dedent`
+                export default {
+                    async fetch(request) {
+                        return new Response("Hello, World!")
+                    }
+                }
+            `,
+			"public/other.html": "ensure ./public exists",
+		});
+		const worker = helper.runLongLived("wrangler dev");
+
+		// first build on startup
+		await worker.readUntil(/Running custom build/, 5_000);
+		// second build for first watcher notification (can be optimised away, leaving as-is for now)
+		await worker.readUntil(/Running custom build/, 5_000);
+
+		// assert no more custom builds happen
+		// regression: https://github.com/cloudflare/workers-sdk/issues/6876
+		await expect(
+			worker.readUntil(/Running custom build:/, 5_000)
+		).rejects.toThrowError();
+	});
 });
 
 describe("watch mode", () => {
