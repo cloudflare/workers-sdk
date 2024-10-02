@@ -906,6 +906,13 @@ describe("custom builds", () => {
 		// second build for first watcher notification (can be optimised away, leaving as-is for now)
 		await worker.readUntil(/Running custom build/, 5_000);
 
+		// Need to get the url in this order because waitForReady calls readUntil
+		// which keeps track of where it's read up to so far,
+		// so the expect(waitUntil).reject assertion below
+		// will eat up the "Ready on http://localhost:8787" message if called before.
+		// This could cause a flake if eg the 2nd custom build starts after ready.
+		const { url } = await worker.waitForReady();
+
 		// assert no more custom builds happen
 		// regression: https://github.com/cloudflare/workers-sdk/issues/6876
 		await expect(
@@ -913,8 +920,6 @@ describe("custom builds", () => {
 		).rejects.toThrowError();
 
 		// now check assets are still fetchable, even after updates
-
-		const { url } = await worker.waitForReady();
 
 		const res = await fetch(url);
 		await expect(res.text()).resolves.toBe("hello\n");
