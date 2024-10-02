@@ -15,9 +15,9 @@ const frameworkToTest = getFrameworkToTest({ experimental: false });
 
 // Note: skipIf(frameworkToTest) makes it so that all the basic C3 functionality
 //       tests are skipped in case we are testing a specific framework
-describe
-	.skipIf(experimental || frameworkToTest || isQuarantineMode())
-	.concurrent("E2E: Basic C3 functionality ", () => {
+describe.skipIf(experimental || frameworkToTest || isQuarantineMode())(
+	"E2E: Basic C3 functionality ",
+	() => {
 		beforeAll((ctx) => {
 			recreateLogFolder({ experimental }, ctx as Suite);
 		});
@@ -337,4 +337,5 @@ describe
 				expect(output).toContain(`lang JavaScript`);
 			},
 		);
-	});
+	},
+);
