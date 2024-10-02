@@ -15,11 +15,11 @@ const runnerPath = fileURLToPath(import.meta.resolve('./runner/worker.js'));
 export function cloudflare<
 	T extends Record<string, CloudflareEnvironmentOptions>,
 >({
-	environments,
-	entrypoint,
+	workers,
+	entryWorker,
 }: {
-	environments: T;
-	entrypoint?: keyof T;
+	workers: T;
+	entryWorker?: keyof T;
 }): vite.Plugin {
 	let resolvedConfig: vite.ResolvedConfig;
 
@@ -28,7 +28,7 @@ export function cloudflare<
 		config() {
 			return {
 				environments: Object.fromEntries(
-					Object.entries(environments).map(([name, options]) => {
+					Object.entries(workers).map(([name, options]) => {
 						return [name, createCloudflareEnvironment(options)];
 					}),
 				),
@@ -39,7 +39,7 @@ export function cloudflare<
 		},
 		async configureServer(viteDevServer) {
 			const miniflare = new Miniflare({
-				workers: Object.entries(environments).map(([name, options]) => {
+				workers: Object.entries(workers).map(([name, options]) => {
 					const miniflareOptions = unstable_getMiniflareWorkerOptions(
 						path.resolve(
 							resolvedConfig.root,
@@ -101,7 +101,7 @@ export function cloudflare<
 			});
 
 			await Promise.all(
-				Object.keys(environments).map(async (name) => {
+				Object.keys(workers).map(async (name) => {
 					const worker = await miniflare.getWorker(name);
 
 					return (
@@ -111,12 +111,12 @@ export function cloudflare<
 			);
 
 			const middleware =
-				entrypoint &&
+				entryWorker &&
 				createMiddleware(
 					(context) => {
 						return (
 							viteDevServer.environments[
-								entrypoint as string
+								entryWorker as string
 							] as CloudflareDevEnvironment
 						).dispatchFetch(context.request);
 					},

@@ -4,7 +4,7 @@ import { cloudflare } from '@flarelabs-net/vite-plugin-cloudflare';
 export default defineConfig({
 	plugins: [
 		cloudflare({
-			environments: {
+			workers: {
 				worker_a: {
 					main: './worker-a/index.ts',
 					wranglerConfig: './worker-a/wrangler.toml',
@@ -14,7 +14,7 @@ export default defineConfig({
 					wranglerConfig: './worker-b/wrangler.toml',
 				},
 			},
-			entrypoint: 'worker_a',
+			entryWorker: 'worker_a',
 		}),
 	],
 });
