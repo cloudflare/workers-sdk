@@ -387,7 +387,7 @@ export class ConfigController extends Controller<ConfigControllerEventMap> {
 				ignoreInitial: true,
 			}).on("all", async (eventName, filePath) => {
 				const message = getAssetChangeMessage(eventName, filePath);
-				logger.log(`🌀 ${message}...`);
+				logger.debug(`🌀 ${message}...`);
 				assert(
 					this.latestInput,
 					"Cannot be watching config without having first set an input"
