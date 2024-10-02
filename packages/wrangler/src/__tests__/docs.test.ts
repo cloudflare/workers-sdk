@@ -25,12 +25,10 @@ describe("wrangler docs", () => {
 			http.post<Record<string, never>, { params: string | undefined }>(
 				`*/1/indexes/developers-cloudflare2/query`,
 				async ({ request }) => {
-					const json = await request.json();
-					const params = new URLSearchParams(json.params);
 					return HttpResponse.json({
 						hits: [
 							{
-								url: "FAKE_DOCS_URL?" + params.get("query"),
+								url: `FAKE_DOCS_URL:${await request.text()}`,
 							},
 						],
 					});
@@ -97,11 +95,13 @@ describe("wrangler docs", () => {
 			  "debug": "",
 			  "err": "",
 			  "info": "",
-			  "out": "Opening a link in your default browser: FAKE_DOCS_URL?dev",
+			  "out": "Opening a link in your default browser: FAKE_DOCS_URL:{\\"params\\":\\"query=dev&hitsPerPage=1&getRankingInfo=0\\"}",
 			  "warn": "",
 			}
 		`);
-		expect(openInBrowser).toHaveBeenCalledWith("FAKE_DOCS_URL?dev");
+		expect(openInBrowser).toHaveBeenCalledWith(
+			'FAKE_DOCS_URL:{"params":"query=dev&hitsPerPage=1&getRankingInfo=0"}'
+		);
 	});
 
 	test("opens a browser to Cloudflare docs when given multiple search terms", async ({
@@ -113,10 +113,12 @@ describe("wrangler docs", () => {
 			  "debug": "",
 			  "err": "",
 			  "info": "",
-			  "out": "Opening a link in your default browser: FAKE_DOCS_URL?foo bar",
+			  "out": "Opening a link in your default browser: FAKE_DOCS_URL:{\\"params\\":\\"query=foo+bar&hitsPerPage=1&getRankingInfo=0\\"}",
 			  "warn": "",
 			}
 		`);
-		expect(openInBrowser).toHaveBeenCalledWith("FAKE_DOCS_URL?foo bar");
+		expect(openInBrowser).toHaveBeenCalledWith(
+			'FAKE_DOCS_URL:{"params":"query=foo+bar&hitsPerPage=1&getRankingInfo=0"}'
+		);
 	});
 });
