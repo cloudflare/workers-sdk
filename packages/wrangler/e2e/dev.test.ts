@@ -911,6 +911,21 @@ describe("custom builds", () => {
 		await expect(
 			worker.readUntil(/Running custom build:/, 5_000)
 		).rejects.toThrowError();
+
+		// now check assets are still fetchable, even after updates
+
+		const { url } = await worker.waitForReady();
+
+		const res = await fetch(url);
+		await expect(res.text()).resolves.toBe("hello\n");
+
+		await helper.seed({
+			"public/index.html": "world",
+		});
+		await setTimeout(300);
+
+		const res2 = await fetch(url);
+		await expect(res2.text()).resolves.toBe("world");
 	});
 });
 
