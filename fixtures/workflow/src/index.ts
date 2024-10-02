@@ -32,9 +32,31 @@ export class DemoUserWorkflow extends WorkerEntrypoint {
 			};
 		});
 
+		const result3 = await Promise.all([
+			step.do("Third step", async function () {
+				if (Math.random() < 0.5) {
+					throw new Error("Random error");
+				}
+
+				return {
+					output: "Third step result",
+				};
+			}),
+			step.do("Fourth step", async function () {
+				return {
+					output: "Fourth step result",
+				};
+			}),
+		]);
+
+		step.do("Unawaited step", async function () {
+			throw new Error("Always error");
+		});
+
 		return {
 			result,
 			result2,
+			result3,
 			timestamp,
 			payload,
 		};

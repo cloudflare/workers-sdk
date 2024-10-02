@@ -262,7 +262,7 @@ export class Engine extends DurableObject<Env> {
 			// TODO: Trigger user script via binding
 			const target = this.env.USER_WORKFLOW;
 			const result = await target.run([event], stubStep as WorkflowStep);
-			console.log("completed");
+			console.log("completed", result);
 			// Since this gets written to sql as a JSON string, this will need
 			// to implement toJSON()
 			// That is different from step return values that only need to
