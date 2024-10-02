@@ -1,5 +1,6 @@
-const assert = require("node:assert");
-const { getNextMiniflareVersion } = require("./changeset-version.js");
+import { expect, it } from "vitest";
+// @ts-expect-error This is a JS file
+import { getNextMiniflareVersion } from "../../../.github/changeset-version";
 
 // prettier-ignore
 const miniflareVersionTestCases = [
@@ -14,24 +15,19 @@ const miniflareVersionTestCases = [
 	["1.20231008.0", "3.20231001.0", /* major */ "4.0.0",        "4.20231008.0"],
 ];
 
-for (const [
-	workerdVersion,
-	previousMiniflareVersion,
-	miniflareVersion,
-	correctMiniflareVersion,
-] of miniflareVersionTestCases) {
-	const actual = getNextMiniflareVersion(
+it.each(miniflareVersionTestCases)(
+	"changeset version",
+	(
 		workerdVersion,
 		previousMiniflareVersion,
-		miniflareVersion
-	);
-	assert.strictEqual(
-		actual,
-		correctMiniflareVersion,
-		`Expected "${correctMiniflareVersion}" with ${JSON.stringify({
+		miniflareVersion,
+		correctMiniflareVersion
+	) => {
+		const actual = getNextMiniflareVersion(
 			workerdVersion,
 			previousMiniflareVersion,
-			miniflareVersion,
-		})}, got "${actual}"`
-	);
-}
+			miniflareVersion
+		);
+		expect(actual).toEqual(correctMiniflareVersion);
+	}
+);
