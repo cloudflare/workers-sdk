@@ -20,7 +20,7 @@ const DURABLE_OBJECT_KEYS = [
 	'webSocketError',
 ] as const;
 
-interface RunnerEnv {
+interface WrapperEnv {
 	__VITE_ROOT__: string;
 	__VITE_FETCH_MODULE__: {
 		fetch: (request: Request) => Promise<Response>;
@@ -30,24 +30,7 @@ interface RunnerEnv {
 	};
 }
 
-type WorkerEntrypointConstructor = {
-	new (
-		...args: ConstructorParameters<typeof WorkerEntrypoint>
-	): WorkerEntrypoint;
-};
-
-function stripInternalEnv(internalEnv: RunnerEnv) {
-	const {
-		__VITE_ROOT__,
-		__VITE_FETCH_MODULE__,
-		__VITE_UNSAFE_EVAL__,
-		...userEnv
-	} = internalEnv;
-
-	return userEnv;
-}
-
-function createModuleRunner(env: RunnerEnv, webSocket: WebSocket) {
+function createModuleRunner(env: WrapperEnv, webSocket: WebSocket) {
 	return new ModuleRunner(
 		{
 			root: env.__VITE_ROOT__,
@@ -104,10 +87,25 @@ function createModuleRunner(env: RunnerEnv, webSocket: WebSocket) {
 let moduleRunner: ModuleRunner;
 let mainPath: string;
 
+interface WorkerEntrypointConstructor<T = unknown> {
+	new (
+		...args: ConstructorParameters<typeof WorkerEntrypoint<T>>
+	): WorkerEntrypoint<T>;
+}
+
+function stripInternalEnv(internalEnv: WrapperEnv) {
+	const {
+		__VITE_ROOT__,
+		__VITE_FETCH_MODULE__,
+		__VITE_UNSAFE_EVAL__,
+		...userEnv
+	} = internalEnv;
+
+	return userEnv;
+}
+
 async function getWorkerEntrypointExport(entrypoint: string) {
 	const module = await moduleRunner.import(mainPath);
-	// !!!
-	console.log(mainPath, 'here');
 	const entrypointValue =
 		typeof module === 'object' &&
 		module !== null &&
@@ -127,6 +125,7 @@ function getRpcProperty(
 	key: string,
 ) {
 	const prototypeHasKey = Reflect.has(ctor.prototype, key);
+
 	if (!prototypeHasKey) {
 		const instanceHasKey = Reflect.has(instance, key);
 
@@ -147,8 +146,8 @@ function getRpcProperty(
 	return Reflect.get(ctor.prototype, key, instance);
 }
 
-async function rpc(
-	this: WorkerEntrypoint<RunnerEnv>,
+async function getWorkerEntrypointRpcProperty(
+	this: WorkerEntrypoint<WrapperEnv>,
 	entrypoint: string,
 	key: string,
 ) {
@@ -156,8 +155,7 @@ async function rpc(
 		entrypoint,
 	)) as WorkerEntrypointConstructor;
 	const userEnv = stripInternalEnv(this.env);
-
-	const expectedWorkerEntrypointMessage = `Expected ${entrypoint} export of ${mainPath} to be a subclass of \`WorkerEntrypoint\` for RPC`;
+	const expectedWorkerEntrypointMessage = `Expected ${entrypoint} export of ${mainPath} to be a subclass of \`WorkerEntrypoint\` for RPC.`;
 
 	if (typeof ctor !== 'function') {
 		throw new Error(expectedWorkerEntrypointMessage);
@@ -169,8 +167,13 @@ async function rpc(
 		throw new Error(expectedWorkerEntrypointMessage);
 	}
 
-	const property = getRpcProperty(ctor, instance, key);
+	return getRpcProperty(ctor, instance, key);
+}
 
+function getRpcPropertyCallableThenable(
+	key: string,
+	property: Promise<unknown>,
+) {
 	const fn = async function (...args: unknown[]) {
 		const maybeFn = await property;
 
@@ -188,9 +191,11 @@ async function rpc(
 	return fn;
 }
 
-function createWorkerEntrypointWrapper(entrypoint: string) {
-	class Wrapper extends WorkerEntrypoint<RunnerEnv> {
-		constructor(ctx: ExecutionContext, env: RunnerEnv) {
+export function createWorkerEntrypointWrapper(
+	entrypoint: string,
+): WorkerEntrypointConstructor<WrapperEnv> {
+	class Wrapper extends WorkerEntrypoint<WrapperEnv> {
+		constructor(ctx: ExecutionContext, env: WrapperEnv) {
 			super(ctx, env);
 
 			return new Proxy(this, {
@@ -209,8 +214,13 @@ function createWorkerEntrypointWrapper(entrypoint: string) {
 						return;
 					}
 
-					// RPC
-					return rpc.call(target, entrypoint, key);
+					const property = getWorkerEntrypointRpcProperty.call(
+						target,
+						entrypoint,
+						key,
+					);
+
+					return getRpcPropertyCallableThenable(key, property);
 				},
 			});
 		}
@@ -290,4 +300,4 @@ function createWorkerEntrypointWrapper(entrypoint: string) {
 	return Wrapper;
 }
 
-export default createWorkerEntrypointWrapper('default') as any;
+export default createWorkerEntrypointWrapper('default');
