@@ -1,4 +1,5 @@
-import type { ResolvedStepConfig, Version, Workflow } from "./services";
+import { ResolvedStepConfig } from "./context";
+import { DatabaseInstance, DatabaseVersion, DatabaseWorkflow } from "./engine";
 
 export type Instance = {
 	id: string;
@@ -15,9 +16,9 @@ export const INSTANCE_METADATA = `INSTANCE_METADATA`;
 
 export type InstanceMetadata = {
 	accountId: number;
-	workflow: Workflow;
-	version: Version;
-	instance: Instance;
+	workflow: DatabaseWorkflow;
+	version: DatabaseVersion;
+	instance: DatabaseInstance;
 	event: {
 		payload: Record<string, unknown>;
 		timestamp: Date;
@@ -181,3 +182,11 @@ export type InstanceLogsResponse = {
 	error: { name: string; message: string } | null;
 	output: Rpc.Serializable;
 };
+
+export type WakerPriorityEntry = {
+	hash: string;
+	type: WakerPriorityType;
+	targetTimestamp: number;
+};
+
+export type WakerPriorityType = "sleep" | "retry" | "timeout";

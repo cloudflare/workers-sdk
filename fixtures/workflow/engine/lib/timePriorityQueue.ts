@@ -1,8 +1,14 @@
-import Heap from 'heap-js';
-import { InstanceMetadata, WakerPriorityEntry, WakerPriorityType } from 'shared';
-import { Env } from '..';
+import Heap from "heap-js";
+import {
+	InstanceMetadata,
+	WakerPriorityEntry,
+	WakerPriorityType,
+} from "../instance";
 
-const wakerPriorityEntryComparator = (a: WakerPriorityEntry, b: WakerPriorityEntry) => {
+const wakerPriorityEntryComparator = (
+	a: WakerPriorityEntry,
+	b: WakerPriorityEntry
+) => {
 	return a.targetTimestamp - b.targetTimestamp;
 };
 
@@ -28,13 +34,17 @@ type PriorityQueueDBEntry = {
 
 export class TimePriorityQueue {
 	#heap: Heap<WakerPriorityEntry> = new Heap(wakerPriorityEntryComparator);
-	#env: Env;
+	// #env: Env;
 	#ctx: DurableObjectState;
 	#instanceMetadata: InstanceMetadata;
 
-	constructor(ctx: DurableObjectState, env: Env, instanceMetadata: InstanceMetadata) {
+	constructor(
+		ctx: DurableObjectState,
+		// env: Env,
+		instanceMetadata: InstanceMetadata
+	) {
 		this.#ctx = ctx;
-		this.#env = env;
+		// this.#env = env;
 		this.#instanceMetadata = instanceMetadata;
 		this.#heap.init(this.getEntries());
 	}
@@ -75,10 +85,16 @@ export class TimePriorityQueue {
 	 */
 	async add(entry: WakerPriorityEntry) {
 		await this.#ctx.storage.transaction(async () => {
-			const waker = this.#env.WAKERS.idFromName(this.#instanceMetadata.instance.id);
-			const wakerStub = this.#env.WAKERS.get(waker);
+			// TODO: Handle this
+			// const waker = this.#env.WAKERS.idFromName(
+			// 	this.#instanceMetadata.instance.id
+			// );
+			// const wakerStub = this.#env.WAKERS.get(waker);
 			// We can optimise this by only calling it if time is sooner than any other
-			await wakerStub.wake(new Date(entry.targetTimestamp), this.#instanceMetadata);
+			// await wakerStub.wake(
+			// 	new Date(entry.targetTimestamp),
+			// 	this.#instanceMetadata
+			// );
 
 			this.#heap.add(entry);
 			this.addEntryDB(entry);
@@ -89,7 +105,7 @@ export class TimePriorityQueue {
 	 * `remove` is ran using a transaction so it's race condition free, if it's ran atomically
 	 * @param entry
 	 */
-	remove(entry: Omit<WakerPriorityEntry, 'targetTimestamp'>) {
+	remove(entry: Omit<WakerPriorityEntry, "targetTimestamp">) {
 		this.#ctx.storage.transactionSync(() => {
 			this.removeFirst((e) => {
 				if (e.hash === entry.hash && e.type === entry.type) {
@@ -112,12 +128,20 @@ export class TimePriorityQueue {
 		if (nextWakeCall === undefined) {
 			return;
 		}
-		const waker = this.#env.WAKERS.idFromName(this.#instanceMetadata.instance.id);
-		const wakerStub = this.#env.WAKERS.get(waker);
-		await wakerStub.wake(new Date(nextWakeCall.targetTimestamp), this.#instanceMetadata);
+		// TODO: Handle this
+		// const waker = this.#env.WAKERS.idFromName(
+		// 	this.#instanceMetadata.instance.id
+		// );
+		// const wakerStub = this.#env.WAKERS.get(waker);
+		// await wakerStub.wake(
+		// 	new Date(nextWakeCall.targetTimestamp),
+		// 	this.#instanceMetadata
+		// );
 	}
 
-	getFirst(callbackFn: (a: WakerPriorityEntry) => boolean): WakerPriorityEntry | undefined {
+	getFirst(
+		callbackFn: (a: WakerPriorityEntry) => boolean
+	): WakerPriorityEntry | undefined {
 		// clone it so that people cant just modify the entry on the PQ
 		return structuredClone(this.#heap.toArray().find(callbackFn));
 	}
@@ -153,7 +177,9 @@ export class TimePriorityQueue {
 	}
 
 	private getEntries() {
-		const entries = [...this.#ctx.storage.sql.exec('SELECT * FROM priority_queue ORDER BY id')] as PriorityQueueDBEntry[];
+		const entries = [
+			...this.#ctx.storage.sql.exec("SELECT * FROM priority_queue ORDER BY id"),
+		] as PriorityQueueDBEntry[];
 
 		const activeEntries: WakerPriorityEntry[] = [];
 
@@ -161,14 +187,20 @@ export class TimePriorityQueue {
 			const entryType = toWakerPriorityType(val.entryType);
 			// 0 - removed
 			if (val.action == 0) {
-				const index = activeEntries.findIndex((activeVal) => val.hash == activeVal.hash && entryType == activeVal.type);
+				const index = activeEntries.findIndex(
+					(activeVal) =>
+						val.hash == activeVal.hash && entryType == activeVal.type
+				);
 				// if it's found remove it from the active list
 				if (index !== -1) {
 					activeEntries.splice(index, 1);
 				}
 			} else {
 				// 1 - added
-				const index = activeEntries.findIndex((activeVal) => val.hash == activeVal.hash && entryType == activeVal.type);
+				const index = activeEntries.findIndex(
+					(activeVal) =>
+						val.hash == activeVal.hash && entryType == activeVal.type
+				);
 				// if it's found remove it from the active list
 				if (index === -1) {
 					activeEntries.push({
@@ -191,7 +223,7 @@ export class TimePriorityQueue {
 			entry.targetTimestamp,
 			SQLiteBoolean.FALSE,
 			fromWakerPriorityType(entry.type),
-			entry.hash,
+			entry.hash
 		);
 	}
 
@@ -204,7 +236,7 @@ export class TimePriorityQueue {
 			entry.targetTimestamp,
 			SQLiteBoolean.TRUE,
 			fromWakerPriorityType(entry.type),
-			entry.hash,
+			entry.hash
 		);
 	}
 }
@@ -212,21 +244,21 @@ export class TimePriorityQueue {
 const toWakerPriorityType = (entryType: EntryType): WakerPriorityType => {
 	switch (entryType) {
 		case EntryType.RETRY:
-			return 'retry';
+			return "retry";
 		case EntryType.SLEEP:
-			return 'sleep';
+			return "sleep";
 		case EntryType.TIMEOUT:
-			return 'timeout';
+			return "timeout";
 	}
 };
 
 const fromWakerPriorityType = (entryType: WakerPriorityType): EntryType => {
 	switch (entryType) {
-		case 'retry':
+		case "retry":
 			return EntryType.RETRY;
-		case 'sleep':
+		case "sleep":
 			return EntryType.SLEEP;
-		case 'timeout':
+		case "timeout":
 			return EntryType.TIMEOUT;
 		default:
 			throw new Error(`WakerPriorityType "${entryType}" has not been handled`);

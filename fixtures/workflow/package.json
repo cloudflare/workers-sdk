@@ -6,6 +6,7 @@
 		"start": "wrangler dev --x-dev-env"
 	},
 	"dependencies": {
+		"heap-js": "^2.5.0",
 		"itty-time": "^1.0.6"
 	},
 	"devDependencies": {

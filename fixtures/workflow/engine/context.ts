@@ -64,7 +64,6 @@ export class Context extends RpcTarget {
 		return val;
 	}
 
-	// return type is only useful for tests, mostly
 	async do<T>(
 		name: string,
 		closure: () => Promise<T>,

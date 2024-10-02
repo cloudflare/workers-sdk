@@ -773,6 +773,9 @@ importers:
 
   fixtures/workflow:
     dependencies:
+      heap-js:
+        specifier: ^2.5.0
+        version: 2.5.0
       itty-time:
         specifier: ^1.0.6
         version: 1.0.6
@@ -5822,6 +5825,10 @@ packages:
 
   headers-polyfill@4.0.3:
     resolution: {integrity: sha512-IScLbePpkvO846sIwOtOTDjutRMWdXdJmXdMvk6gCBHxFO8d+QKOQedyZSxFTTFYRSmlgSTDtXqqq4pcenBXLQ==}
+
+  heap-js@2.5.0:
+    resolution: {integrity: sha512-kUGoI3p7u6B41z/dp33G6OaL7J4DRqRYwVmeIlwLClx7yaaAy7hoDExnuejTKtuDwfcatGmddHDEOjf6EyIxtQ==}
+    engines: {node: '>=10.0.0'}
 
   hex2dec@1.1.2:
     resolution: {integrity: sha512-Yu+q/XWr2fFQ11tHxPq4p4EiNkb2y+lAacJNhAdRXVfRIcDH6gi7htWFnnlIzvqHMHoWeIsfXlNAjZInpAOJDA==}
@@ -13510,6 +13517,8 @@ snapshots:
       upper-case: 1.1.3
 
   headers-polyfill@4.0.3: {}
+
+  heap-js@2.5.0: {}
 
   hex2dec@1.1.2: {}
 
