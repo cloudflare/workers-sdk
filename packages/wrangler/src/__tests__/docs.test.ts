@@ -50,13 +50,13 @@ describe("wrangler docs", () => {
 
 		await expect(result).resolves.toBeUndefined();
 		expect(std.out).toMatchInlineSnapshot(`
-			"wrangler docs [command..]
+			"wrangler docs [search..]
 
 			📚 Open Wrangler's command documentation in your browser
 
 
 			POSITIONALS
-			  command  Enter the wrangler command you want to know more about  [array] [default: []]
+			  search  Enter search terms (e.g. the wrangler command) you want to know more about  [array] [default: []]
 
 			GLOBAL FLAGS
 			  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
