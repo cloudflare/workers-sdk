@@ -1,6 +1,10 @@
 import * as vite from 'vite';
 import { createMiddleware } from '@hattip/adapter-node';
-import { Miniflare, Response as MiniflareResponse } from 'miniflare';
+import {
+	Miniflare,
+	Response as MiniflareResponse,
+	kUnsafeEphemeralUniqueKey,
+} from 'miniflare';
 import { unstable_getMiniflareWorkerOptions } from 'wrangler';
 import { fileURLToPath } from 'node:url';
 import * as path from 'node:path';
@@ -10,7 +14,8 @@ import type {
 	CloudflareEnvironmentOptions,
 	CloudflareDevEnvironment,
 } from './cloudflare-environment';
-const runnerPath = fileURLToPath(import.meta.resolve('./runner/worker.js'));
+import { UNKNOWN_HOST } from './shared';
+const runnerPath = fileURLToPath(import.meta.resolve('./runner/index.js'));
 
 export function cloudflare<
 	T extends Record<string, CloudflareEnvironmentOptions>,
@@ -61,9 +66,6 @@ export function cloudflare<
 							},
 						],
 						unsafeEvalBinding: '__VITE_UNSAFE_EVAL__',
-						durableObjects: {
-							__CLOUDFLARE_WORKER_RUNNER__: 'CloudflareWorkerRunner',
-						},
 						bindings: {
 							...workerOptions.bindings,
 							__VITE_ROOT__: resolvedConfig.root,

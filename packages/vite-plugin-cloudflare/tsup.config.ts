@@ -10,7 +10,7 @@ export default defineConfig([
 		tsconfig: 'tsconfig.plugin.json',
 	},
 	{
-		entry: ['src/runner/worker.ts'],
+		entry: ['src/runner/index.ts'],
 		format: 'esm',
 		platform: 'neutral',
 		outDir: 'dist/runner',
