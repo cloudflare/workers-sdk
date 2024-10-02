@@ -1,5 +1,5 @@
 import { RpcTarget, WorkerEntrypoint } from "cloudflare:workers";
-import { instanceStatusName } from "./instance";
+import { InstanceEvent, instanceStatusName } from "./instance";
 import type {
 	DatabaseInstance,
 	DatabaseVersion,
@@ -70,6 +70,14 @@ export class WorkflowHandle extends RpcTarget implements Instance {
 
 	public async status(): Promise<InstanceStatus> {
 		const status = await this.stub.getStatus(0, this.id);
-		return { status: instanceStatusName(status) }; // output, error
+		const { logs } = await this.stub.readLogs();
+		// @ts-expect-error TODO: Fix this
+		const filteredLogs = logs.filter(
+			// @ts-expect-error TODO: Fix this
+			(log) => log.event === InstanceEvent.STEP_SUCCESS
+		);
+		// @ts-expect-error TODO: Fix this
+		const output = filteredLogs.map((log) => log.metadata.result);
+		return { status: instanceStatusName(status), output }; // output, error
 	}
 }

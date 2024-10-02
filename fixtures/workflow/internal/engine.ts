@@ -110,8 +110,10 @@ export class Engine extends DurableObject<Env> {
 	}
 
 	readLogs(): InstanceLogsResponse {
-		// TODO: Verify
-		throw new Error("Not required for local dev");
+		return {
+			// @ts-expect-error TODO: Fix this
+			logs: this.logs,
+		};
 	}
 
 	async getStatus(

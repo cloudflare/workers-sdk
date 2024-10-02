@@ -34,9 +34,9 @@ export class DemoUserWorkflow extends WorkerEntrypoint {
 
 		const result3 = await Promise.all([
 			step.do("Third step", async function () {
-				if (Math.random() < 0.5) {
-					throw new Error("Random error");
-				}
+				// if (Math.random() < 0.5) {
+				// 	throw new Error("Random error");
+				// }
 
 				return {
 					output: "Third step result",
@@ -49,9 +49,9 @@ export class DemoUserWorkflow extends WorkerEntrypoint {
 			}),
 		]);
 
-		step.do("Unawaited step", async function () {
-			throw new Error("Always error");
-		});
+		// step.do("Unawaited step", async function () {
+		// 	throw new Error("Always error");
+		// });
 
 		return {
 			result,
