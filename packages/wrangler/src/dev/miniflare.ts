@@ -696,7 +696,7 @@ export function buildPersistOptions(
 	}
 }
 
-function buildAssetOptions(config: Omit<ConfigBundle, "rules">) {
+export function buildAssetOptions(config: Pick<ConfigBundle, "assets">) {
 	if (config.assets) {
 		return {
 			assets: {

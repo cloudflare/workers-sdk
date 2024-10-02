@@ -5,14 +5,6 @@ export default defineWorkersProject({
 		poolOptions: {
 			workers: {
 				wrangler: { configPath: "./wrangler.toml" },
-				miniflare: {
-					assets: {
-						directory: "./public",
-						assetConfig: {
-							html_handling: "none",
-						},
-					},
-				},
 			},
 		},
 	},
