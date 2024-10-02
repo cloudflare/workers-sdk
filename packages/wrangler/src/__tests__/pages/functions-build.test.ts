@@ -104,12 +104,12 @@ describe("pages functions build", () => {
 			`Content-Disposition: form-data; name="metadata"`
 		);
 		expect(workerBundleWithConstantData).toContain(
-			`{"main_module":"functionsWorker-0.test.js"}`
+			`{"main_module":"pages-template-worker.js"}`
 		);
 
 		// check we appended the compiled Worker
 		expect(workerBundleWithConstantData).toContain(
-			`Content-Disposition: form-data; name="functionsWorker-0.test.js"; filename="functionsWorker-0.test.js"`
+			`Content-Disposition: form-data; name="pages-template-worker.js"; filename="pages-template-worker.js"`
 		);
 
 		// check we appended the wasm modules
@@ -218,29 +218,29 @@ export default {
 		);
 
 		expect(workerBundleWithConstantData).toMatchInlineSnapshot(`
-		"------formdata-undici-0.test
-		Content-Disposition: form-data; name=\\"metadata\\"
+			"------formdata-undici-0.test
+			Content-Disposition: form-data; name=\\"metadata\\"
 
-		{\\"main_module\\":\\"functionsWorker-0.test.js\\"}
-		------formdata-undici-0.test
-		Content-Disposition: form-data; name=\\"functionsWorker-0.test.js\\"; filename=\\"functionsWorker-0.test.js\\"
-		Content-Type: application/javascript+module
+			{\\"main_module\\":\\"_worker.js\\"}
+			------formdata-undici-0.test
+			Content-Disposition: form-data; name=\\"_worker.js\\"; filename=\\"_worker.js\\"
+			Content-Type: application/javascript+module
 
-		// ../utils/meaning-of-life.js
-		var MEANING_OF_LIFE = 21;
+			// ../utils/meaning-of-life.js
+			var MEANING_OF_LIFE = 21;
 
-		// _worker.js
-		var worker_default = {
-		  async fetch(request, env) {
-		    return new Response(\\"Hello from _worker.js. The meaning of life is \\" + MEANING_OF_LIFE);
-		  }
-		};
-		export {
-		  worker_default as default
-		};
+			// _worker.js
+			var worker_default = {
+			  async fetch(request, env) {
+			    return new Response(\\"Hello from _worker.js. The meaning of life is \\" + MEANING_OF_LIFE);
+			  }
+			};
+			export {
+			  worker_default as default
+			};
 
-		------formdata-undici-0.test--"
-	`);
+			------formdata-undici-0.test--"
+		`);
 		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
 
@@ -299,7 +299,7 @@ export default {
 			`Content-Disposition: form-data; name="metadata"`
 		);
 		expect(workerBundleWithConstantData).toContain(
-			`{"main_module":"functionsWorker-0.test.js"}`
+			`{"main_module":"_worker.js"}`
 		);
 
 		// check we appended the wasm modules
@@ -364,26 +364,26 @@ export default {
 		);
 
 		expect(workerBundleWithConstantData).toMatchInlineSnapshot(`
-		"------formdata-undici-0.test
-		Content-Disposition: form-data; name=\\"metadata\\"
+			"------formdata-undici-0.test
+			Content-Disposition: form-data; name=\\"metadata\\"
 
-		{\\"main_module\\":\\"functionsWorker-0.test.js\\"}
-		------formdata-undici-0.test
-		Content-Disposition: form-data; name=\\"functionsWorker-0.test.js\\"; filename=\\"functionsWorker-0.test.js\\"
-		Content-Type: application/javascript+module
+			{\\"main_module\\":\\"_worker.js\\"}
+			------formdata-undici-0.test
+			Content-Disposition: form-data; name=\\"_worker.js\\"; filename=\\"_worker.js\\"
+			Content-Type: application/javascript+module
 
-		// _worker.js
-		var worker_default = {
-		  async fetch(request, env) {
-		    return new Response(\\"Hello from _worker.js\\");
-		  }
-		};
-		export {
-		  worker_default as default
-		};
+			// _worker.js
+			var worker_default = {
+			  async fetch(request, env) {
+			    return new Response(\\"Hello from _worker.js\\");
+			  }
+			};
+			export {
+			  worker_default as default
+			};
 
-		------formdata-undici-0.test--"
-	`);
+			------formdata-undici-0.test--"
+		`);
 
 		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
@@ -496,41 +496,41 @@ export const cat = "dog";`
 		);
 
 		expect(workerBundleWithConstantData).toMatchInlineSnapshot(`
-		"------formdata-undici-0.test
-		Content-Disposition: form-data; name=\\"metadata\\"
+			"------formdata-undici-0.test
+			Content-Disposition: form-data; name=\\"metadata\\"
 
-		{\\"main_module\\":\\"bundledWorker-0.test.mjs\\"}
-		------formdata-undici-0.test
-		Content-Disposition: form-data; name=\\"bundledWorker-0.test.mjs\\"; filename=\\"bundledWorker-0.test.mjs\\"
-		Content-Type: application/javascript+module
+			{\\"main_module\\":\\"index.js\\"}
+			------formdata-undici-0.test
+			Content-Disposition: form-data; name=\\"index.js\\"; filename=\\"index.js\\"
+			Content-Type: application/javascript+module
 
-		// _worker.js/index.js
-		import { cat } from \\"./cat.js\\";
-		import { dog } from \\"./dog.mjs\\";
-		var worker_default = {
-		  async fetch(request, env) {
-		    return new Response(\\"Hello from _worker.js/index.js\\" + cat + dog);
-		  }
-		};
-		export {
-		  worker_default as default
-		};
-		//# sourceMappingURL=bundledWorker-0.test.mjs.map
+			// _worker.js/index.js
+			import { cat } from \\"./cat.js\\";
+			import { dog } from \\"./dog.mjs\\";
+			var worker_default = {
+			  async fetch(request, env) {
+			    return new Response(\\"Hello from _worker.js/index.js\\" + cat + dog);
+			  }
+			};
+			export {
+			  worker_default as default
+			};
+			//# sourceMappingURL=index.js.map
 
-		------formdata-undici-0.test
-		Content-Disposition: form-data; name=\\"cat.js\\"; filename=\\"cat.js\\"
-		Content-Type: application/javascript+module
-
-
-		export const cat = \\"cat\\";
-		------formdata-undici-0.test
-		Content-Disposition: form-data; name=\\"dog.mjs\\"; filename=\\"dog.mjs\\"
-		Content-Type: application/javascript+module
+			------formdata-undici-0.test
+			Content-Disposition: form-data; name=\\"cat.js\\"; filename=\\"cat.js\\"
+			Content-Type: application/javascript+module
 
 
-		export const cat = \\"dog\\";
-		------formdata-undici-0.test--"
-	`);
+			export const cat = \\"cat\\";
+			------formdata-undici-0.test
+			Content-Disposition: form-data; name=\\"dog.mjs\\"; filename=\\"dog.mjs\\"
+			Content-Type: application/javascript+module
+
+
+			export const cat = \\"dog\\";
+			------formdata-undici-0.test--"
+		`);
 
 		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
@@ -690,29 +690,29 @@ export default {
 		);
 
 		expect(workerBundleWithConstantData).toMatchInlineSnapshot(`
-		"------formdata-undici-0.test
-		Content-Disposition: form-data; name=\\"metadata\\"
+			"------formdata-undici-0.test
+			Content-Disposition: form-data; name=\\"metadata\\"
 
-		{\\"main_module\\":\\"functionsWorker-0.test.js\\",\\"bindings\\":[{\\"name\\":\\"TEST_JSON_PREVIEW\\",\\"type\\":\\"plain_text\\",\\"text\\":\\"{\\\\njson: \\\\\\"value\\\\\\"\\\\n}\\"},{\\"name\\":\\"TEST_PLAINTEXT_PREVIEW\\",\\"type\\":\\"plain_text\\",\\"text\\":\\"PLAINTEXT\\"},{\\"name\\":\\"KV_PREVIEW\\",\\"type\\":\\"kv_namespace\\",\\"namespace_id\\":\\"kv-id\\"},{\\"name\\":\\"KV_PREVIEW2\\",\\"type\\":\\"kv_namespace\\",\\"namespace_id\\":\\"kv-id\\"},{\\"name\\":\\"DO_PREVIEW\\",\\"type\\":\\"durable_object_namespace\\",\\"class_name\\":\\"some-class-do-id\\",\\"script_name\\":\\"some-script-do-id\\",\\"environment\\":\\"some-environment-do-id\\"},{\\"name\\":\\"DO_PREVIEW2\\",\\"type\\":\\"durable_object_namespace\\",\\"class_name\\":\\"some-class-do-id\\",\\"script_name\\":\\"some-script-do-id\\",\\"environment\\":\\"some-environment-do-id\\"},{\\"name\\":\\"DO_PREVIEW3\\",\\"type\\":\\"durable_object_namespace\\",\\"class_name\\":\\"do-class\\",\\"script_name\\":\\"do-s\\",\\"environment\\":\\"do-e\\"},{\\"type\\":\\"queue\\",\\"name\\":\\"QUEUE_PREVIEW\\",\\"queue_name\\":\\"q-id\\"},{\\"type\\":\\"queue\\",\\"name\\":\\"QUEUE_PREVIEW2\\",\\"queue_name\\":\\"q-id\\"},{\\"name\\":\\"R2_PREVIEW\\",\\"type\\":\\"r2_bucket\\",\\"bucket_name\\":\\"r2-name\\"},{\\"name\\":\\"R2_PREVIEW2\\",\\"type\\":\\"r2_bucket\\",\\"bucket_name\\":\\"r2-name\\"},{\\"name\\":\\"D1_PREVIEW\\",\\"type\\":\\"d1\\",\\"id\\":\\"d1-id\\"},{\\"name\\":\\"D1_PREVIEW2\\",\\"type\\":\\"d1\\",\\"id\\":\\"d1-id\\"},{\\"name\\":\\"SERVICE_PREVIEW\\",\\"type\\":\\"service\\",\\"service\\":\\"service\\",\\"environment\\":\\"production\\"},{\\"name\\":\\"SERVICE_PREVIEW2\\",\\"type\\":\\"service\\",\\"service\\":\\"service\\",\\"environment\\":\\"production\\"},{\\"name\\":\\"AE_PREVIEW\\",\\"type\\":\\"analytics_engine\\",\\"dataset\\":\\"data\\"},{\\"name\\":\\"AE_PREVIEW2\\",\\"type\\":\\"analytics_engine\\",\\"dataset\\":\\"data\\"},{\\"name\\":\\"AI_PREVIEW\\",\\"type\\":\\"ai\\"}],\\"compatibility_date\\":\\"2023-02-14\\",\\"compatibility_flags\\":[],\\"placement\\":{\\"mode\\":\\"smart\\"},\\"limits\\":{\\"cpu_ms\\":50}}
-		------formdata-undici-0.test
-		Content-Disposition: form-data; name=\\"functionsWorker-0.test.js\\"; filename=\\"functionsWorker-0.test.js\\"
-		Content-Type: application/javascript+module
+			{\\"main_module\\":\\"_worker.js\\",\\"bindings\\":[{\\"name\\":\\"TEST_JSON_PREVIEW\\",\\"type\\":\\"plain_text\\",\\"text\\":\\"{\\\\njson: \\\\\\"value\\\\\\"\\\\n}\\"},{\\"name\\":\\"TEST_PLAINTEXT_PREVIEW\\",\\"type\\":\\"plain_text\\",\\"text\\":\\"PLAINTEXT\\"},{\\"name\\":\\"KV_PREVIEW\\",\\"type\\":\\"kv_namespace\\",\\"namespace_id\\":\\"kv-id\\"},{\\"name\\":\\"KV_PREVIEW2\\",\\"type\\":\\"kv_namespace\\",\\"namespace_id\\":\\"kv-id\\"},{\\"name\\":\\"DO_PREVIEW\\",\\"type\\":\\"durable_object_namespace\\",\\"class_name\\":\\"some-class-do-id\\",\\"script_name\\":\\"some-script-do-id\\",\\"environment\\":\\"some-environment-do-id\\"},{\\"name\\":\\"DO_PREVIEW2\\",\\"type\\":\\"durable_object_namespace\\",\\"class_name\\":\\"some-class-do-id\\",\\"script_name\\":\\"some-script-do-id\\",\\"environment\\":\\"some-environment-do-id\\"},{\\"name\\":\\"DO_PREVIEW3\\",\\"type\\":\\"durable_object_namespace\\",\\"class_name\\":\\"do-class\\",\\"script_name\\":\\"do-s\\",\\"environment\\":\\"do-e\\"},{\\"type\\":\\"queue\\",\\"name\\":\\"QUEUE_PREVIEW\\",\\"queue_name\\":\\"q-id\\"},{\\"type\\":\\"queue\\",\\"name\\":\\"QUEUE_PREVIEW2\\",\\"queue_name\\":\\"q-id\\"},{\\"name\\":\\"R2_PREVIEW\\",\\"type\\":\\"r2_bucket\\",\\"bucket_name\\":\\"r2-name\\"},{\\"name\\":\\"R2_PREVIEW2\\",\\"type\\":\\"r2_bucket\\",\\"bucket_name\\":\\"r2-name\\"},{\\"name\\":\\"D1_PREVIEW\\",\\"type\\":\\"d1\\",\\"id\\":\\"d1-id\\"},{\\"name\\":\\"D1_PREVIEW2\\",\\"type\\":\\"d1\\",\\"id\\":\\"d1-id\\"},{\\"name\\":\\"SERVICE_PREVIEW\\",\\"type\\":\\"service\\",\\"service\\":\\"service\\",\\"environment\\":\\"production\\"},{\\"name\\":\\"SERVICE_PREVIEW2\\",\\"type\\":\\"service\\",\\"service\\":\\"service\\",\\"environment\\":\\"production\\"},{\\"name\\":\\"AE_PREVIEW\\",\\"type\\":\\"analytics_engine\\",\\"dataset\\":\\"data\\"},{\\"name\\":\\"AE_PREVIEW2\\",\\"type\\":\\"analytics_engine\\",\\"dataset\\":\\"data\\"},{\\"name\\":\\"AI_PREVIEW\\",\\"type\\":\\"ai\\"}],\\"compatibility_date\\":\\"2023-02-14\\",\\"compatibility_flags\\":[],\\"placement\\":{\\"mode\\":\\"smart\\"},\\"limits\\":{\\"cpu_ms\\":50}}
+			------formdata-undici-0.test
+			Content-Disposition: form-data; name=\\"_worker.js\\"; filename=\\"_worker.js\\"
+			Content-Type: application/javascript+module
 
-		// ../utils/meaning-of-life.js
-		var MEANING_OF_LIFE = 21;
+			// ../utils/meaning-of-life.js
+			var MEANING_OF_LIFE = 21;
 
-		// _worker.js
-		var worker_default = {
-		  async fetch(request, env) {
-		    return new Response(\\"Hello from _worker.js. The meaning of life is \\" + MEANING_OF_LIFE);
-		  }
-		};
-		export {
-		  worker_default as default
-		};
+			// _worker.js
+			var worker_default = {
+			  async fetch(request, env) {
+			    return new Response(\\"Hello from _worker.js. The meaning of life is \\" + MEANING_OF_LIFE);
+			  }
+			};
+			export {
+			  worker_default as default
+			};
 
-		------formdata-undici-0.test--"
-	`);
+			------formdata-undici-0.test--"
+		`);
 		const buildMetadataContents = readFileSync("build-metadata.json", "utf-8");
 		expect(buildMetadataContents).toMatchInlineSnapshot(
 			`"{\\"wrangler_config_hash\\":\\"75b267c678474945699c162b6d75e5e4a88fb8b491fc0650a390e097186031ab\\",\\"build_output_directory\\":\\"dist-test\\"}"`
@@ -859,29 +859,29 @@ export default {
 		);
 
 		expect(workerBundleWithConstantData).toMatchInlineSnapshot(`
-		"------formdata-undici-0.test
-		Content-Disposition: form-data; name=\\"metadata\\"
+			"------formdata-undici-0.test
+			Content-Disposition: form-data; name=\\"metadata\\"
 
-		{\\"main_module\\":\\"functionsWorker-0.test.js\\"}
-		------formdata-undici-0.test
-		Content-Disposition: form-data; name=\\"functionsWorker-0.test.js\\"; filename=\\"functionsWorker-0.test.js\\"
-		Content-Type: application/javascript+module
+			{\\"main_module\\":\\"_worker.js\\"}
+			------formdata-undici-0.test
+			Content-Disposition: form-data; name=\\"_worker.js\\"; filename=\\"_worker.js\\"
+			Content-Type: application/javascript+module
 
-		// ../utils/meaning-of-life.js
-		var MEANING_OF_LIFE = 21;
+			// ../utils/meaning-of-life.js
+			var MEANING_OF_LIFE = 21;
 
-		// _worker.js
-		var worker_default = {
-		  async fetch(request, env) {
-		    return new Response(\\"Hello from _worker.js. The meaning of life is \\" + MEANING_OF_LIFE);
-		  }
-		};
-		export {
-		  worker_default as default
-		};
+			// _worker.js
+			var worker_default = {
+			  async fetch(request, env) {
+			    return new Response(\\"Hello from _worker.js. The meaning of life is \\" + MEANING_OF_LIFE);
+			  }
+			};
+			export {
+			  worker_default as default
+			};
 
-		------formdata-undici-0.test--"
-	`);
+			------formdata-undici-0.test--"
+		`);
 		const buildMetadataExists = existsSync("build-metadata.json");
 		// build-metadata should not exist
 		expect(buildMetadataExists).toBeFalsy();
@@ -1026,29 +1026,29 @@ export default {
 		);
 
 		expect(workerBundleWithConstantData).toMatchInlineSnapshot(`
-		"------formdata-undici-0.test
-		Content-Disposition: form-data; name=\\"metadata\\"
+			"------formdata-undici-0.test
+			Content-Disposition: form-data; name=\\"metadata\\"
 
-		{\\"main_module\\":\\"functionsWorker-0.test.js\\"}
-		------formdata-undici-0.test
-		Content-Disposition: form-data; name=\\"functionsWorker-0.test.js\\"; filename=\\"functionsWorker-0.test.js\\"
-		Content-Type: application/javascript+module
+			{\\"main_module\\":\\"_worker.js\\"}
+			------formdata-undici-0.test
+			Content-Disposition: form-data; name=\\"_worker.js\\"; filename=\\"_worker.js\\"
+			Content-Type: application/javascript+module
 
-		// ../utils/meaning-of-life.js
-		var MEANING_OF_LIFE = 21;
+			// ../utils/meaning-of-life.js
+			var MEANING_OF_LIFE = 21;
 
-		// _worker.js
-		var worker_default = {
-		  async fetch(request, env) {
-		    return new Response(\\"Hello from _worker.js. The meaning of life is \\" + MEANING_OF_LIFE);
-		  }
-		};
-		export {
-		  worker_default as default
-		};
+			// _worker.js
+			var worker_default = {
+			  async fetch(request, env) {
+			    return new Response(\\"Hello from _worker.js. The meaning of life is \\" + MEANING_OF_LIFE);
+			  }
+			};
+			export {
+			  worker_default as default
+			};
 
-		------formdata-undici-0.test--"
-	`);
+			------formdata-undici-0.test--"
+		`);
 		const buildMetadataExists = existsSync("build-metadata.json");
 		// build-metadata should not exist
 		expect(buildMetadataExists).toBeFalsy();
@@ -1114,29 +1114,29 @@ export default {
 		);
 
 		expect(workerBundleWithConstantData).toMatchInlineSnapshot(`
-		"------formdata-undici-0.test
-		Content-Disposition: form-data; name=\\"metadata\\"
+			"------formdata-undici-0.test
+			Content-Disposition: form-data; name=\\"metadata\\"
 
-		{\\"main_module\\":\\"functionsWorker-0.test.js\\"}
-		------formdata-undici-0.test
-		Content-Disposition: form-data; name=\\"functionsWorker-0.test.js\\"; filename=\\"functionsWorker-0.test.js\\"
-		Content-Type: application/javascript+module
+			{\\"main_module\\":\\"_worker.js\\"}
+			------formdata-undici-0.test
+			Content-Disposition: form-data; name=\\"_worker.js\\"; filename=\\"_worker.js\\"
+			Content-Type: application/javascript+module
 
-		// ../utils/meaning-of-life.js
-		var MEANING_OF_LIFE = 21;
+			// ../utils/meaning-of-life.js
+			var MEANING_OF_LIFE = 21;
 
-		// _worker.js
-		var worker_default = {
-		  async fetch(request, env) {
-		    return new Response(\\"Hello from _worker.js. The meaning of life is \\" + MEANING_OF_LIFE);
-		  }
-		};
-		export {
-		  worker_default as default
-		};
+			// _worker.js
+			var worker_default = {
+			  async fetch(request, env) {
+			    return new Response(\\"Hello from _worker.js. The meaning of life is \\" + MEANING_OF_LIFE);
+			  }
+			};
+			export {
+			  worker_default as default
+			};
 
-		------formdata-undici-0.test--"
-	`);
+			------formdata-undici-0.test--"
+		`);
 		const buildMetadataExists = existsSync("build-metadata.json");
 		// build-metadata should not exist
 		expect(buildMetadataExists).toBeFalsy();

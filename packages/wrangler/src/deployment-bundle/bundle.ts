@@ -15,7 +15,7 @@ import {
 	rewriteNodeCompatBuildFailure,
 } from "./build-failures";
 import { dedupeModulesByName } from "./dedupe-modules";
-import { getEntryPointFromMetafile } from "./entry-point-from-metafile";
+import { getEntryPointFromSplitBundleMetafile } from "./entry-point-from-metafile";
 import { asyncLocalStoragePlugin } from "./esbuild-plugins/als-external";
 import { cloudflareInternalPlugin } from "./esbuild-plugins/cloudflare-internal";
 import { configProviderPlugin } from "./esbuild-plugins/config-provider";
@@ -44,7 +44,13 @@ const escapeRegex = (str: string) => {
 export const COMMON_ESBUILD_OPTIONS = {
 	// Our workerd runtime uses the same V8 version as recent Chrome, which is highly ES2022 compliant: https://kangax.github.io/compat-table/es2016plus/
 	target: "es2022",
-	loader: { ".js": "jsx", ".mjs": "jsx", ".cjs": "jsx" },
+	loader: {
+		".js": "jsx",
+		".mjs": "jsx",
+		".cjs": "jsx",
+		".wasm": "binary",
+		".DS_Store": "text",
+	},
 } as const;
 
 /**
@@ -383,15 +389,15 @@ export async function bundleWorker(
 		entryPoints: [entry.file],
 		bundle,
 		absWorkingDir: entry.directory,
-		outdir: destination,
+		outdir: isOutfile ? path.dirname(destination) : destination,
 		entryNames: entryName || path.parse(entryFile).name,
-		...(isOutfile
-			? {
-					outdir: undefined,
-					outfile: destination,
-					entryNames: undefined,
-				}
-			: {}),
+		// ...(isOutfile
+		// 	? {
+		// 			outdir: undefined,
+		// 			outfile: destination,
+		// 			entryNames: undefined,
+		// 		}
+		// 	: {}),
 		inject,
 		external: bundle
 			? ["__STATIC_CONTENT_MANIFEST", ...(external ? external : [])]
@@ -402,6 +408,7 @@ export async function bundleWorker(
 		// Include a reference to the output folder in the sourcemap.
 		// This is omitted by default, but we need it to properly resolve source paths in error output.
 		sourceRoot: destination,
+		splitting: entry.format === "modules" ? true : false,
 		minify,
 		metafile: true,
 		conditions: getBuildConditions(),
@@ -463,6 +470,7 @@ export async function bundleWorker(
 	let stop: BundleResult["stop"];
 	try {
 		if (watch) {
+			// CHECK
 			const ctx = await esbuild.context(buildOptions);
 			await ctx.watch();
 			result = await initialBuildResultPromise;
@@ -475,6 +483,7 @@ export async function bundleWorker(
 				await ctx.dispose();
 			};
 		} else {
+			// CHECK
 			result = await esbuild.build(buildOptions);
 			// Even when we're not watching, we still want some way of cleaning up the
 			// temporary directory when we don't need it anymore
@@ -489,7 +498,12 @@ export async function bundleWorker(
 		throw e;
 	}
 
-	const entryPoint = getEntryPointFromMetafile(entryFile, result.metafile);
+	const entryPoint = getEntryPointFromSplitBundleMetafile(
+		entry.file,
+		entry.directory,
+		result.metafile
+	);
+
 	const notExportedDOs = doBindings
 		.filter((x) => !x.script_name && !entryPoint.exports.includes(x.class_name))
 		.map((x) => x.class_name);
@@ -518,6 +532,17 @@ export async function bundleWorker(
 	const modules = dedupeModulesByName([
 		...moduleCollector.modules,
 		...additionalModules,
+		...Object.entries(result.metafile.outputs)
+			.filter(([name]) => {
+				return !name.endsWith(".map") && name !== entryPoint.relativePath;
+			})
+			// TODO: this is a hack to see what CI says
+			.map(([name, _output]) => ({
+				name: path.relative(path.dirname(entryPoint.relativePath), name),
+				content: fs.readFileSync(name),
+				type: "esm" as const,
+				filePath: path.resolve(name),
+			})),
 	]);
 
 	await writeAdditionalModules(modules, path.dirname(resolvedEntryPointPath));

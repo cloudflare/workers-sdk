@@ -3,7 +3,7 @@ import * as esbuild from "esbuild";
 import { UserError } from "../errors";
 import { logger } from "../logger";
 import { COMMON_ESBUILD_OPTIONS } from "./bundle";
-import { getEntryPointFromMetafile } from "./entry-point-from-metafile";
+import { getEntryPointFromSimpleMetafile } from "./entry-point-from-metafile";
 import type { CfScriptFormat } from "./worker";
 
 /**
@@ -45,7 +45,7 @@ export default async function guessWorkerFormat(
 	// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
 	const metafile = result.metafile!;
 
-	const { exports } = getEntryPointFromMetafile(entryFile, metafile);
+	const { exports } = getEntryPointFromSimpleMetafile(entryFile, metafile);
 	let guessedWorkerFormat: CfScriptFormat;
 	if (exports.length > 0) {
 		if (exports.includes("default")) {
