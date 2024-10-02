@@ -869,7 +869,7 @@ export async function startDev(args: StartDevOptions) {
 								}).on("all", async (eventName, changedPath) => {
 									const message = getAssetChangeMessage(eventName, changedPath);
 
-									logger.log(`🌀 ${message}...`);
+									logger.debug(`🌀 ${message}...`);
 									debouncedRerender();
 								});
 							}
@@ -1020,7 +1020,7 @@ export async function startDev(args: StartDevOptions) {
 				}).on("all", async (eventName, filePath) => {
 					const message = getAssetChangeMessage(eventName, filePath);
 
-					logger.log(`🌀 ${message}...`);
+					logger.debug(`🌀 ${message}...`);
 					debouncedRerender();
 				});
 			}
