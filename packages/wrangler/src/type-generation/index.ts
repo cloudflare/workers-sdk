@@ -165,6 +165,19 @@ export function constructTypeKey(key: string) {
 	return `"${key}"`;
 }
 
+export function constructTSModuleGlob(glob: string) {
+	// Exact module reference, don't transform
+	if (!glob.includes("*")) {
+		return glob;
+		// Usually something like **/*.wasm. Turn into *.wasm
+	} else if (glob.includes(".")) {
+		return `*.${glob.split(".").at(-1)}`;
+	} else {
+		// Replace common patterns
+		return glob.replace("**/*", "*").replace("**/", "*/").replace("/**", "/*");
+	}
+}
+
 /**
  * Generate a import specifier from one module to another
  */
@@ -426,9 +439,7 @@ async function generateTypes(
 				moduleTypeMap[ruleObject.type as keyof typeof moduleTypeMap];
 			if (typeScriptType !== undefined) {
 				ruleObject.globs.forEach((glob) => {
-					modulesTypeStructure.push(`declare module "*.${glob
-						.split(".")
-						.at(-1)}" {
+					modulesTypeStructure.push(`declare module "${constructTSModuleGlob(glob)}" {
 	const value: ${typeScriptType};
 	export default value;
 }`);
