@@ -1,4 +1,4 @@
-import { WorkerEntrypoint } from "cloudflare:workers";
+import { RpcTarget, WorkerEntrypoint } from "cloudflare:workers";
 import { instanceStatusName } from "./instance";
 import type {
 	DatabaseInstance,
@@ -20,7 +20,7 @@ export class WorkflowBinding extends WorkerEntrypoint<Env> implements Workflow {
 		const stubId = this.env.ENGINE.idFromName(id);
 		const stub = this.env.ENGINE.get(stubId);
 
-		await stub.init(
+		void stub.init(
 			0, // accountId: number,
 			{} as DatabaseWorkflow, // workflow: DatabaseWorkflow,
 			{} as DatabaseVersion, // version: DatabaseVersion,
@@ -41,11 +41,13 @@ export class WorkflowBinding extends WorkerEntrypoint<Env> implements Workflow {
 	}
 }
 
-export class WorkflowHandle implements Instance {
+export class WorkflowHandle extends RpcTarget implements Instance {
 	constructor(
 		public id: string,
 		private stub: DurableObjectStub<Engine>
-	) {}
+	) {
+		super();
+	}
 
 	public async pause(): Promise<void> {
 		// Look for instance in namespace

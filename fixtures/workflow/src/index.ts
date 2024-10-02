@@ -4,12 +4,18 @@ import {
 	WorkflowEvent,
 	WorkflowStep,
 } from "cloudflare:workers";
-import { WorkflowBinding } from "../engine/binding";
+import type { WorkflowBinding } from "../internal/binding";
 
+export { WorkflowBinding } from "../internal/binding";
+export { Engine } from "../internal/engine";
+
+type Env = {
+	WORKFLOW: WorkflowBinding;
+};
 type Params = {
 	name: string;
 };
-export class Demo extends WorkflowEntrypoint<{}, Params> {
+export class DemoUserWorkflow extends WorkerEntrypoint {
 	async run(events: Array<WorkflowEvent<Params>>, step: WorkflowStep) {
 		const { timestamp, payload } = events[0];
 		const result = await step.do("First step", async function () {
@@ -18,7 +24,7 @@ export class Demo extends WorkflowEntrypoint<{}, Params> {
 			};
 		});
 
-		await step.sleep("Wait", "1 minute");
+		await step.sleep("Wait", "3 seconds");
 
 		const result2 = await step.do("Second step", async function () {
 			return {
@@ -35,13 +41,14 @@ export class Demo extends WorkflowEntrypoint<{}, Params> {
 	}
 }
 
-type Env = {
-	WORKFLOW: WorkflowBinding;
-};
 export default class extends WorkerEntrypoint<Env> {
-	async fetch() {
+	async fetch(req: Request) {
+		if (new URL(req.url).pathname !== "/") return Response.json({});
 		const handle = await this.env.WORKFLOW.create(crypto.randomUUID(), {});
-		await handle.pause();
+		console.log("before", await handle.status());
+		await scheduler.wait(5_000);
+		console.log("after", await handle.status());
+		// await handle.pause();
 		return new Response();
 	}
 }

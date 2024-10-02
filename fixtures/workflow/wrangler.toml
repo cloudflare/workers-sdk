@@ -4,7 +4,16 @@ main = "src/index.ts"
 compatibility_date = "2024-09-02"
 compatibility_flags = ["experimental"]
 
+services = [
+  { binding = "WORKFLOW", service = "my-workflow-demo", entrypoint = "WorkflowBinding" },
+  { binding = "USER_WORKFLOW", service = "my-workflow-demo", entrypoint = "DemoUserWorkflow" },
+]
+
+durable_objects.bindings = [
+  { name = "ENGINE", script_name = "my-workflow-demo", class_name = "Engine" },
+]
+
 [[workflows]]
 binding = "WORKFLOW"
 name = "my-workflow"
-class_name = "Demo"
+class_name = "DemoUserWorkflow"

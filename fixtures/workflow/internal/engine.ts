@@ -67,6 +67,24 @@ export class Engine extends DurableObject<Env> {
 
 	constructor(state: DurableObjectState, env: Env) {
 		super(state, env);
+
+		void this.ctx.blockConcurrencyWhile(async () => {
+			this.ctx.storage.transactionSync(() => {
+				this.ctx.storage.sql.exec(`
+                    CREATE TABLE IF NOT EXISTS priority_queue (
+                        id INTEGER PRIMARY KEY NOT NULL,
+                        created_on TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        target_timestamp INTEGER NOT NULL,
+                        action INTEGER NOT NULL, -- should only be 0 or 1 (1 for added, 0 for deleted),
+                        entryType INTEGER NOT NULL,
+                        hash TEXT NOT NULL,
+                        CHECK (action IN (0, 1)), -- guararentee that action can only be 0 or 1
+                        UNIQUE (action, entryType, hash)
+                    )
+                `);
+			});
+		});
+
 		this.timeoutHandler = new GracePeriodSemaphore(
 			startGracePeriod,
 			ENGINE_TIMEOUT
@@ -244,6 +262,7 @@ export class Engine extends DurableObject<Env> {
 			// TODO: Trigger user script via binding
 			const target = this.env.USER_WORKFLOW;
 			const result = await target.run([event], stubStep as WorkflowStep);
+			console.log("completed");
 			// Since this gets written to sql as a JSON string, this will need
 			// to implement toJSON()
 			// That is different from step return values that only need to
