@@ -2,4 +2,4 @@
 "create-cloudflare": patch
 ---
 
-Capitalises GitHub correctly
+chore: Capitalises GitHub correctly
