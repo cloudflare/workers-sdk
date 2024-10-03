@@ -136,7 +136,7 @@ export function createWorkerEntrypointWrapper(
 					}
 
 					const property = getWorkerEntrypointRpcProperty.call(
-						target,
+						receiver,
 						entrypoint,
 						key,
 					);
