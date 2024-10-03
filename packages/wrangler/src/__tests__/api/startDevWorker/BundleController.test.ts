@@ -91,14 +91,18 @@ describe("BundleController", () => {
 			let ev = await waitForBundleComplete(controller);
 			expect(findSourceFile(ev.bundle.entrypointSource, "index.ts"))
 				.toMatchInlineSnapshot(`
-				"// index.ts
-				var src_default = {
-				  fetch(request, env, ctx) {
-				    return new Response(\\"hello world\\");
-				  }
-				};
-				"
-			`);
+					"// index.ts
+					var src_exports = {};
+					__export(src_exports, {
+					  default: () => src_default
+					});
+					var src_default = {
+					  fetch(request, env, ctx) {
+					    return new Response(\\"hello world\\");
+					  }
+					};
+					"
+				`);
 			await seed({
 				"src/index.ts": dedent/* javascript */ `
 					export default {
@@ -112,14 +116,18 @@ describe("BundleController", () => {
 			ev = await waitForBundleComplete(controller);
 			expect(findSourceFile(ev.bundle.entrypointSource, "index.ts"))
 				.toMatchInlineSnapshot(`
-				"// index.ts
-				var src_default = {
-				  fetch(request, env, ctx) {
-				    return new Response(\\"hello world 2\\");
-				  }
-				};
-				"
-			`);
+					"// index.ts
+					var src_exports = {};
+					__export(src_exports, {
+					  default: () => src_default
+					});
+					var src_default = {
+					  fetch(request, env, ctx) {
+					    return new Response(\\"hello world 2\\");
+					  }
+					};
+					"
+				`);
 		});
 
 		test("multiple ts source files", async ({ controller }) => {
@@ -170,14 +178,13 @@ describe("BundleController", () => {
 			`);
 			expect(findSourceFile(ev.bundle.entrypointSource, "index.ts"))
 				.toMatchInlineSnapshot(`
-				"// index.ts
-				var src_default = {
-				  fetch(request, env, ctx) {
-				    return new Response(\\"hello world\\" + other_default);
-				  }
-				};
-				"
-			`);
+					"// index.ts
+					var src_exports = {};
+					__export(src_exports, {
+					  default: () => src_default
+					});
+					"
+				`);
 			await seed({
 				"src/other.ts": dedent/* javascript */ `
 					export default "someone else"
@@ -233,14 +240,18 @@ describe("BundleController", () => {
 			let ev = await waitForBundleComplete(controller);
 			expect(findSourceFile(ev.bundle.entrypointSource, "out.ts"))
 				.toMatchInlineSnapshot(`
-				"// out.ts
-				var out_default = {
-				  fetch(request, env, ctx) {
-				    return new Response(\\"hello custom build\\");
-				  }
-				};
-				"
-			`);
+					"// out.ts
+					var out_exports = {};
+					__export(out_exports, {
+					  default: () => out_default
+					});
+					var out_default = {
+					  fetch(request, env, ctx) {
+					    return new Response(\\"hello custom build\\");
+					  }
+					};
+					"
+				`);
 			await seed({
 				"random_dir/index.ts": dedent/* javascript */ `
 					export default {
@@ -254,14 +265,18 @@ describe("BundleController", () => {
 			ev = await waitForBundleComplete(controller);
 			expect(findSourceFile(ev.bundle.entrypointSource, "out.ts"))
 				.toMatchInlineSnapshot(`
-				"// out.ts
-				var out_default = {
-				  fetch(request, env, ctx) {
-				    return new Response(\\"hello custom build 2\\");
-				  }
-				};
-				"
-			`);
+					"// out.ts
+					var out_exports = {};
+					__export(out_exports, {
+					  default: () => out_default
+					});
+					var out_default = {
+					  fetch(request, env, ctx) {
+					    return new Response(\\"hello custom build 2\\");
+					  }
+					};
+					"
+				`);
 		});
 	});
 
@@ -369,14 +384,18 @@ describe("BundleController", () => {
 			const ev = await waitForBundleComplete(controller);
 			expect(findSourceFile(ev.bundle.entrypointSource, "index.ts"))
 				.toMatchInlineSnapshot(`
-				"// index.ts
-				var src_default = {
-				  fetch(request, env, ctx) {
-				    return new Response(\\"hello world\\");
-				  }
-				};
-				"
-			`);
+					"// index.ts
+					var src_exports = {};
+					__export(src_exports, {
+					  default: () => src_default
+					});
+					var src_default = {
+					  fetch(request, env, ctx) {
+					    return new Response(\\"hello world\\");
+					  }
+					};
+					"
+				`);
 
 			await seed({
 				"random_dir/index.ts": dedent/* javascript */ `
@@ -418,14 +437,18 @@ describe("BundleController", () => {
 			let evCustom = await waitForBundleComplete(controller);
 			expect(findSourceFile(evCustom.bundle.entrypointSource, "out.ts"))
 				.toMatchInlineSnapshot(`
-				"// out.ts
-				var out_default = {
-				  fetch(request, env, ctx) {
-				    return new Response(\\"hello custom build\\");
-				  }
-				};
-				"
-			`);
+					"// out.ts
+					var out_exports = {};
+					__export(out_exports, {
+					  default: () => out_default
+					});
+					var out_default = {
+					  fetch(request, env, ctx) {
+					    return new Response(\\"hello custom build\\");
+					  }
+					};
+					"
+				`);
 			// Make sure custom builds can reload after switching to them
 			await seed({
 				"random_dir/index.ts": dedent/* javascript */ `
@@ -440,14 +463,18 @@ describe("BundleController", () => {
 			evCustom = await waitForBundleComplete(controller);
 			expect(findSourceFile(evCustom.bundle.entrypointSource, "out.ts"))
 				.toMatchInlineSnapshot(`
-				"// out.ts
-				var out_default = {
-				  fetch(request, env, ctx) {
-				    return new Response(\\"hello custom build 2\\");
-				  }
-				};
-				"
-			`);
+					"// out.ts
+					var out_exports = {};
+					__export(out_exports, {
+					  default: () => out_default
+					});
+					var out_default = {
+					  fetch(request, env, ctx) {
+					    return new Response(\\"hello custom build 2\\");
+					  }
+					};
+					"
+				`);
 		});
 
 		test("custom builds -> esbuild", async ({ controller }) => {
@@ -491,14 +518,18 @@ describe("BundleController", () => {
 			const evCustom = await waitForBundleComplete(controller);
 			expect(findSourceFile(evCustom.bundle.entrypointSource, "out.ts"))
 				.toMatchInlineSnapshot(`
-				"// out.ts
-				var out_default = {
-				  fetch(request, env, ctx) {
-				    return new Response(\\"hello custom build\\");
-				  }
-				};
-				"
-			`);
+					"// out.ts
+					var out_exports = {};
+					__export(out_exports, {
+					  default: () => out_default
+					});
+					var out_default = {
+					  fetch(request, env, ctx) {
+					    return new Response(\\"hello custom build\\");
+					  }
+					};
+					"
+				`);
 			await seed({
 				"src/index.ts": dedent/* javascript */ `
 						export default {
@@ -537,14 +568,18 @@ describe("BundleController", () => {
 			let ev = await waitForBundleComplete(controller);
 			expect(findSourceFile(ev.bundle.entrypointSource, "index.ts"))
 				.toMatchInlineSnapshot(`
-				"// index.ts
-				var src_default = {
-				  fetch(request, env, ctx) {
-				    return new Response(\\"hello world\\");
-				  }
-				};
-				"
-			`);
+					"// index.ts
+					var src_exports = {};
+					__export(src_exports, {
+					  default: () => src_default
+					});
+					var src_default = {
+					  fetch(request, env, ctx) {
+					    return new Response(\\"hello world\\");
+					  }
+					};
+					"
+				`);
 			await seed({
 				"src/index.ts": dedent/* javascript */ `
 						export default {
@@ -558,14 +593,18 @@ describe("BundleController", () => {
 			ev = await waitForBundleComplete(controller);
 			expect(findSourceFile(ev.bundle.entrypointSource, "index.ts"))
 				.toMatchInlineSnapshot(`
-				"// index.ts
-				var src_default = {
-				  fetch(request, env, ctx) {
-				    return new Response(\\"hello world 2\\");
-				  }
-				};
-				"
-			`);
+					"// index.ts
+					var src_exports = {};
+					__export(src_exports, {
+					  default: () => src_default
+					});
+					var src_default = {
+					  fetch(request, env, ctx) {
+					    return new Response(\\"hello world 2\\");
+					  }
+					};
+					"
+				`);
 		});
 	});
 });

@@ -74,7 +74,7 @@
 		"blake3-wasm": "^2.1.5",
 		"chokidar": "^4.0.1",
 		"date-fns": "^4.1.0",
-		"esbuild": "0.17.19",
+		"esbuild": "0.24.0",
 		"itty-time": "^1.0.6",
 		"miniflare": "workspace:*",
 		"nanoid": "^3.3.3",

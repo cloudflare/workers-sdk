@@ -874,6 +874,18 @@ describe("middleware", () => {
 				var __name = (target, value) => __defProp(target, \\"name\\", { value, configurable: true });
 
 
+				var __defProp = Object.defineProperty;
+				var __export = (target, all) => {
+				  for (var name in all)
+				    __defProp(target, name, { get: all[name], enumerable: true });
+				};
+
+
+				var src_exports = {};
+				__export(src_exports, {
+				  DurableObjectExample: () => DurableObjectExample,
+				  default: () => src_default
+				});
 				var src_default = {
 				  async fetch(request, env) {
 				    return Response.json(env);
@@ -889,8 +901,9 @@ describe("middleware", () => {
 				__name(DurableObjectExample, \\"DurableObjectExample\\");
 
 
+				var MIDDLEWARE_TEST_INJECT = \\"__INJECT_FOR_TESTING_WRANGLER_MIDDLEWARE__\\";
 				var __INTERNAL_WRANGLER_MIDDLEWARE__ = [
-				  ...void 0 ?? []
+				  ...src_exports[MIDDLEWARE_TEST_INJECT] ?? []
 				];
 				var middleware_insertion_facade_default = src_default;
 
@@ -920,7 +933,7 @@ describe("middleware", () => {
 				__name(__facade_invoke__, \\"__facade_invoke__\\");
 
 
-				var __Facade_ScheduledController__ = class {
+				var __Facade_ScheduledController__ = class ___Facade_ScheduledController__ {
 				  constructor(scheduledTime, cron, noRetry) {
 				    this.scheduledTime = scheduledTime;
 				    this.cron = cron;
@@ -928,7 +941,7 @@ describe("middleware", () => {
 				  }
 				  #noRetry;
 				  noRetry() {
-				    if (!(this instanceof __Facade_ScheduledController__)) {
+				    if (!(this instanceof ___Facade_ScheduledController__)) {
 				      throw new TypeError(\\"Illegal invocation\\");
 				    }
 				    this.#noRetry();
