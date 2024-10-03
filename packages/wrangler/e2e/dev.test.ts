@@ -877,6 +877,66 @@ describe("custom builds", () => {
 		text = await fetchText(url);
 		expect(text).toMatchInlineSnapshot(`"Hello, World!"`);
 	});
+
+	it("does not infinite-loop custom build with assets", async () => {
+		const helper = new WranglerE2ETestHelper();
+		await helper.seed({
+			"wrangler.toml": dedent`
+                    name = "${workerName}"
+                    compatibility_date = "2023-01-01"
+                    main = "src/index.ts"
+                    build.command = "echo 'hello' > ./public/index.html"
+
+                    [assets]
+                    directory = "./public"
+            `,
+			"src/index.ts": dedent`
+                export default {
+                    async fetch(request) {
+                        return new Response("Hello, World!")
+                    }
+                }
+            `,
+			"public/other.html": "ensure ./public exists",
+		});
+		const worker = helper.runLongLived("wrangler dev");
+
+		// first build on startup
+		await worker.readUntil(/Running custom build/, 5_000);
+		// second build for first watcher notification (can be optimised away, leaving as-is for now)
+		await worker.readUntil(/Running custom build/, 5_000);
+
+		// Need to get the url in this order because waitForReady calls readUntil
+		// which keeps track of where it's read up to so far,
+		// so the expect(waitUntil).reject assertion below
+		// will eat up the "Ready on http://localhost:8787" message if called before.
+		// This could cause a flake if eg the 2nd custom build starts after ready.
+		const { url } = await worker.waitForReady();
+
+		// assert no more custom builds happen
+		// regression: https://github.com/cloudflare/workers-sdk/issues/6876
+		await expect(
+			worker.readUntil(/Running custom build:/, 5_000)
+		).rejects.toThrowError();
+
+		// now check assets are still fetchable, even after updates
+
+		const res = await fetch(url);
+		await expect(res.text()).resolves.toBe("hello\n");
+
+		await helper.seed({
+			"public/index.html": "world",
+		});
+
+		const resText = await retry(
+			(text) => text === "hello\n",
+			async () => {
+				const res2 = await fetch(url);
+				return res2.text();
+			}
+		);
+		await expect(resText).toBe("world");
+	});
 });
 
 describe("watch mode", () => {
