@@ -1,7 +1,7 @@
 {
 	"name": "cloudflare-workers-bindings-extension",
-	"displayName": "cloudflare-workers-bindings-extension",
-	"version": "0.0.3",
+	"displayName": "Cloudflare Workers",
+	"version": "0.0.5",
 	"description": "Manage your Cloudflare Worker's bindings",
 	"categories": [
 		"Other"
@@ -20,7 +20,8 @@
 		"watch-tests": "tsc -p . -w --outDir out",
 		"check-types": "tsc --noEmit",
 		"lint": "eslint src --ext ts",
-		"build": "vsce package"
+		"build": "vsce package",
+		"deploy": "vsce publish --pre-release"
 	},
 	"contributes": {
 		"commands": [
@@ -123,6 +124,7 @@
 	"engines": {
 		"vscode": "^1.92.0"
 	},
+	"icon": "media/cf-workers-logo.png",
 	"vsce": {
 		"dependencies": false
 	},
