@@ -1,7 +1,5 @@
 ---
 "@cloudflare/vitest-pool-workers": patch
-"miniflare": patch
-"wrangler": patch
 ---
 
 feature: enable asset routing in the vitest integration for Workers + static assets
