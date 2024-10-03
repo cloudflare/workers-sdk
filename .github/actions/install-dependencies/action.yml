@@ -18,7 +18,7 @@ runs:
     - name: Install pnpm
       uses: pnpm/action-setup@v4
       with:
-        version: 9.10.0
+        version: 9.12.0
 
     - name: Install Node.js ${{ inputs.node-version }}
       uses: actions/setup-node@v4
