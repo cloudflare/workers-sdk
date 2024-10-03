@@ -47,14 +47,14 @@ jobs:
         pm:
           [
             { name: npm, version: "0.0.0" },
-            { name: pnpm, version: "9.10.0" },
+            { name: pnpm, version: "9.12.0" },
             { name: bun, version: "1.0.3" },
             { name: yarn, version: "1.0.0" },
           ]
         # include a single windows test with pnpm
         include:
           - os: windows-latest
-            pm: { name: pnpm, version: "9.10.0" }
+            pm: { name: pnpm, version: "9.12.0" }
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout Repo
