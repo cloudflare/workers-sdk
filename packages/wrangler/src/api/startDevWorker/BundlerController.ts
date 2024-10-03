@@ -263,7 +263,6 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 	#assetsWatcher?: ReturnType<typeof watch>;
 	async #ensureWatchingAssets(config: StartDevWorkerOptions) {
 		await this.#assetsWatcher?.close();
-		console.log(config.assets?.directory);
 
 		if (config.assets?.directory) {
 			this.#assetsWatcher = watch(config.assets.directory, {

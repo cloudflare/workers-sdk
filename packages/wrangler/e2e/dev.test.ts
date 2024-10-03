@@ -927,10 +927,15 @@ describe("custom builds", () => {
 		await helper.seed({
 			"public/index.html": "world",
 		});
-		await setTimeout(300);
 
-		const res2 = await fetch(url);
-		await expect(res2.text()).resolves.toBe("world");
+		const resText = await retry(
+			(text) => text === "hello\n",
+			async () => {
+				const res2 = await fetch(url);
+				return res2.text();
+			}
+		);
+		await expect(resText).toBe("world");
 	});
 });
 
