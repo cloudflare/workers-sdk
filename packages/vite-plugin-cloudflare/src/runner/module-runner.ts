@@ -40,19 +40,19 @@ export function createModuleRunner(env: WrapperEnv, webSocket: WebSocket) {
 							callback(JSON.parse(event.data.toString()));
 						});
 					},
-					send(messages) {
-						webSocket.send(messages);
+					send(payload) {
+						webSocket.send(JSON.stringify(payload));
 					},
 				},
 			},
 		},
 		{
-			async runInlinedModule(context, transformed, id) {
+			async runInlinedModule(context, transformed, module) {
 				const codeDefinition = `'use strict';async (${Object.keys(context).join(
 					',',
 				)})=>{{`;
 				const code = `${codeDefinition}${transformed}\n}}`;
-				const fn = env.__VITE_UNSAFE_EVAL__.eval(code, id);
+				const fn = env.__VITE_UNSAFE_EVAL__.eval(code, module.id);
 				await fn(...Object.values(context));
 				Object.freeze(context.__vite_ssr_exports__);
 			},

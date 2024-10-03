@@ -11,6 +11,7 @@ import type {
 	CloudflareDevEnvironment,
 } from './cloudflare-environment';
 
+const wrapperPath = '__VITE_WRAPPER_PATH__';
 const runnerPath = fileURLToPath(import.meta.resolve('./runner/index.js'));
 
 export function cloudflare<
@@ -63,7 +64,7 @@ export function cloudflare<
 						modules: [
 							{
 								type: 'ESModule',
-								path: '/b',
+								path: wrapperPath,
 								contents: wrappers.join('\n'),
 							},
 							{
