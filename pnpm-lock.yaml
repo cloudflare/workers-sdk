@@ -6,6 +6,12 @@ settings:
 
 catalogs:
   default:
+    '@vitest/runner':
+      specifier: ~2.1.1
+      version: 2.1.1
+    '@vitest/snapshot':
+      specifier: ~2.1.1
+      version: 2.1.1
     vitest:
       specifier: ~2.1.1
       version: 2.1.1
@@ -107,7 +113,7 @@ importers:
         version: 5.0.12(@types/node@20.8.3)
       vitest:
         specifier: catalog:default
-        version: 2.1.1(@types/node@20.8.3)(@vitest/ui@1.6.0)(msw@2.3.0(typescript@5.5.4))(supports-color@9.2.2)
+        version: 2.1.1(@types/node@20.8.3)
 
   fixtures/additional-modules:
     devDependencies:
@@ -155,7 +161,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.1(@types/node@20.8.3)(@vitest/ui@1.6.0)(msw@2.3.0(typescript@5.5.4))(supports-color@9.2.2)
+        version: 2.1.1(@types/node@20.8.3)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -698,7 +704,7 @@ importers:
         version: 5.5.2
       vitest:
         specifier: catalog:default
-        version: 2.1.1(@types/node@20.8.3)(@vitest/ui@1.6.0)(msw@2.3.0(typescript@5.5.4))(supports-color@9.2.2)
+        version: 2.1.1(@types/node@20.8.3)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -809,13 +815,13 @@ importers:
     devDependencies:
       '@types/mocha':
         specifier: ^10.0.7
-        version: 10.0.7
+        version: 10.0.8
       '@types/node':
         specifier: 20.x
         version: 20.8.3
       '@types/vscode':
         specifier: ^1.92.0
-        version: 1.92.0
+        version: 1.93.0
       '@typescript-eslint/eslint-plugin':
         specifier: ^7.14.1
         version: 7.18.0(@typescript-eslint/parser@7.18.0(eslint@8.57.0)(typescript@5.5.4))(eslint@8.57.0)(typescript@5.5.4)
@@ -1022,19 +1028,7 @@ importers:
         version: 8.49.0
       eslint-config-turbo:
         specifier: latest
-<<<<<<< HEAD
-<<<<<<< HEAD
         version: 2.1.3(eslint@8.49.0)
-||||||| parent of e6d310e4e (update lockfile)
-        version: 2.1.0(eslint@8.49.0)
-=======
-        version: 2.0.14(eslint@8.49.0)
->>>>>>> e6d310e4e (update lockfile)
-||||||| parent of 7cb41802e (sdk)
-        version: 2.0.14(eslint@8.49.0)
-=======
-        version: 2.1.1(eslint@8.49.0)
->>>>>>> 7cb41802e (sdk)
       eslint-plugin-import:
         specifier: 2.26.x
         version: 2.26.0(@typescript-eslint/parser@6.10.0(eslint@8.49.0)(typescript@5.5.4))(eslint@8.49.0)
@@ -1465,7 +1459,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.1(@types/node@20.8.3)(@vitest/ui@1.6.0)(msw@2.3.0(typescript@5.5.4))(supports-color@9.2.2)
+        version: 2.1.1(@types/node@20.8.3)
 
   packages/workers-editor-shared:
     dependencies:
@@ -1678,7 +1672,7 @@ importers:
         version: 5.5.4
       vitest:
         specifier: catalog:default
-        version: 2.1.1(@types/node@20.8.3)(@vitest/ui@1.6.0)(msw@2.3.0(typescript@5.5.4))(supports-color@9.2.2)
+        version: 2.1.1(@types/node@20.8.3)
 
   packages/workers-tsconfig: {}
 
@@ -1701,7 +1695,7 @@ importers:
         version: 5.5.2
       vitest:
         specifier: catalog:default
-        version: 2.1.1(@types/node@20.8.3)(@vitest/ui@1.6.0)(msw@2.3.0(typescript@5.5.4))(supports-color@9.2.2)
+        version: 2.1.1(@types/node@20.8.3)
       wrangler:
         specifier: workspace:*
         version: link:../wrangler
@@ -1726,19 +1720,9 @@ importers:
       chokidar:
         specifier: ^3.5.3
         version: 3.5.3
-<<<<<<< HEAD
-||||||| parent of 7cb41802e (sdk)
-      date-fns:
-        specifier: ^3.6.0
-        version: 3.6.0
-=======
       cloudflare:
         specifier: ^3.5.0
         version: 3.5.0(encoding@0.1.13)
-      date-fns:
-        specifier: ^3.6.0
-        version: 3.6.0
->>>>>>> 7cb41802e (sdk)
       esbuild:
         specifier: 0.17.19
         version: 0.17.19
@@ -3972,8 +3956,8 @@ packages:
   '@types/minimist@1.2.2':
     resolution: {integrity: sha512-jhuKLIRrhvCPLqwPcx6INqmKeiA5EWrsCOPhrlFSrbrmU4ZMPjj5Ul/oLCMDO98XRUIwVm78xICz4EPCektzeQ==}
 
-  '@types/mocha@10.0.7':
-    resolution: {integrity: sha512-GN8yJ1mNTcFcah/wKEFIJckJx9iJLoMSzWcfRRuxz/Jk+U6KQNnml+etbtxFK8lPjzOw3zp4Ha/kjSst9fsHYw==}
+  '@types/mocha@10.0.8':
+    resolution: {integrity: sha512-HfMcUmy9hTMJh66VNcmeC9iVErIZJli2bszuXc6julh5YGuRb/W5OnkHjwLNYdFlMis0sY3If5SEAp+PktdJjw==}
 
   '@types/ms@0.7.31':
     resolution: {integrity: sha512-iiUgKzV9AuaEkZqkOLDIvlQiL6ltuZd9tGcW3gwpnX8JbuiuhFlEGmmFXEXkN50Cvq7Os88IY2v0dkDqXYWVgA==}
@@ -3990,8 +3974,8 @@ packages:
   '@types/node@12.20.47':
     resolution: {integrity: sha512-BzcaRsnFuznzOItW1WpQrDHM7plAa7GIDMZ6b5pnMbkqEtM/6WCOhvZar39oeMQP79gwvFUWjjptE7/KGcNqFg==}
 
-  '@types/node@18.19.48':
-    resolution: {integrity: sha512-7WevbG4ekUcRQSZzOwxWgi5dZmTak7FaxXDoW7xVxPBmKx1rTzfmRLkeCgJzcbBnOV2dkhAPc8cCeT6agocpjg==}
+  '@types/node@18.19.54':
+    resolution: {integrity: sha512-+BRgt0G5gYjTvdLac9sIeE0iZcJxi4Jc4PV5EUzqi+88jmQLr+fRZdv2tCTV7IHKSGxM6SaLoOXQWWUiLUItMw==}
 
   '@types/node@20.12.12':
     resolution: {integrity: sha512-eWLDGF/FOSPtAvEqeRAQ4C8LSA7M1I7i0ky1I8U7kD1J5ITyW3AsRhQrKVoWf5pFKZ2kILsEGJhsI9r93PYnOw==}
@@ -4078,8 +4062,8 @@ packages:
   '@types/uuid@9.0.4':
     resolution: {integrity: sha512-zAuJWQflfx6dYJM62vna+Sn5aeSWhh3OB+wfUEACNcqUSc0AGc5JKl+ycL1vrH7frGTXhJchYjE1Hak8L819dA==}
 
-  '@types/vscode@1.92.0':
-    resolution: {integrity: sha512-DcZoCj17RXlzB4XJ7IfKdPTcTGDLYvTOcTNkvtjXWF+K2TlKzHHkBEXNWQRpBIXixNEUgx39cQeTFunY0E2msw==}
+  '@types/vscode@1.93.0':
+    resolution: {integrity: sha512-kUK6jAHSR5zY8ps42xuW89NLcBpw1kOabah7yv38J8MyiYuOHxLQBi0e7zeXbQgVefDy/mZZetqEFC+Fl5eIEQ==}
 
   '@types/which-pm-runs@1.0.0':
     resolution: {integrity: sha512-BXfdlYLWvRhngJbih4N57DjO+63Z7AxiFiip8yq3rD46U7V4I2W538gngPvBsZiMehhD8sfGf4xLI6k7TgXvNw==}
@@ -5635,24 +5619,8 @@ packages:
     peerDependencies:
       eslint: '>=7.0.0'
 
-<<<<<<< HEAD
-<<<<<<< HEAD
   eslint-config-turbo@2.1.3:
     resolution: {integrity: sha512-smdkhd01V/e/I4EjJxaZA1kxZ1vdFCHpyryolxLtRBP0bZTrHDYh1H6NAyZ3Fy1jkhsQzXw+L+6m17ygROvNFw==}
-||||||| parent of e6d310e4e (update lockfile)
-  eslint-config-turbo@2.1.0:
-    resolution: {integrity: sha512-3SeE2OCWnkA/84adGJXABm++966LNGxRdXtXKBcplJdIe4PmERkov1z6Kzp2PrPKT13wGu/bwoLV5h1rm7v9ug==}
-=======
-  eslint-config-turbo@2.0.14:
-    resolution: {integrity: sha512-VkzAH/AR1/fjMsqzuurfWkEgyGVTTzfZQB1umDB8dMWzFhqo8p/2KEWbvRQLEvSFxjVfeJl5ErQAJ7h7DYglxg==}
->>>>>>> e6d310e4e (update lockfile)
-||||||| parent of 7cb41802e (sdk)
-  eslint-config-turbo@2.0.14:
-    resolution: {integrity: sha512-VkzAH/AR1/fjMsqzuurfWkEgyGVTTzfZQB1umDB8dMWzFhqo8p/2KEWbvRQLEvSFxjVfeJl5ErQAJ7h7DYglxg==}
-=======
-  eslint-config-turbo@2.1.1:
-    resolution: {integrity: sha512-JJF8SZErmgKCGkt124WUmTt0sQ5YLvPo2YxDsfzn9avGJC7/BQIa+3FZoDb3zeYYsZx91pZ6htQAJaKK8NQQAg==}
->>>>>>> 7cb41802e (sdk)
     peerDependencies:
       eslint: '>6.6.0'
 
@@ -5726,24 +5694,8 @@ packages:
     peerDependencies:
       eslint: ^3 || ^4 || ^5 || ^6 || ^7 || ^8
 
-<<<<<<< HEAD
-<<<<<<< HEAD
   eslint-plugin-turbo@2.1.3:
     resolution: {integrity: sha512-I9vPArzyOSYa6bm0iMCgD07MgdExc1VK2wGuVz21g4BUdj83w7mDKyCXR2rwOtCEW+wemFwgxanJ81imQZijNg==}
-||||||| parent of e6d310e4e (update lockfile)
-  eslint-plugin-turbo@2.1.0:
-    resolution: {integrity: sha512-+CWVY29y7Qa+gvrKSzP+TOYrHAlNLCh/97K5VtDdnpH54h/JFmnd3U0aSG6WANe0HgAK8NHQfeWFDdRzfDqbKA==}
-=======
-  eslint-plugin-turbo@2.0.14:
-    resolution: {integrity: sha512-E++MSAEeWZTU0FYARrfakMPq+7XeltqeY4JBDQTzbGEWG3kgYJPeYBMWsypcvBujVihQLlMu0S6ImnfV692mHg==}
->>>>>>> e6d310e4e (update lockfile)
-||||||| parent of 7cb41802e (sdk)
-  eslint-plugin-turbo@2.0.14:
-    resolution: {integrity: sha512-E++MSAEeWZTU0FYARrfakMPq+7XeltqeY4JBDQTzbGEWG3kgYJPeYBMWsypcvBujVihQLlMu0S6ImnfV692mHg==}
-=======
-  eslint-plugin-turbo@2.1.1:
-    resolution: {integrity: sha512-E/34kdQd0n3RP18+e0DSV0f3YTSCOojUh1p4X0Xrho2PBYmJ3umSnNo9FhkZt6UDACl+nBQcYTFkRHMz76lJdw==}
->>>>>>> 7cb41802e (sdk)
     peerDependencies:
       eslint: '>6.6.0'
 
@@ -6396,21 +6348,9 @@ packages:
     resolution: {integrity: sha512-nZXjEF2nbo7lIw3mgYjItAfgQXog3OjJogSbKa2CQIIvSGWcKgeJnQlNXip6NglNzYH45nSRiEVimMvYL8DDqQ==}
     engines: {node: '>=14.18.0'}
 
-<<<<<<< HEAD
-||||||| parent of 7cb41802e (sdk)
-  human-signals@5.0.0:
-    resolution: {integrity: sha512-AXcZb6vzzrFAUE61HnN4mpLqd/cSIwNQjtNWR0euPm6y0iqx3G4gOXaIDdtdDwZmhwe82LA6+zinmW4UBWVePQ==}
-    engines: {node: '>=16.17.0'}
-
-=======
-  human-signals@5.0.0:
-    resolution: {integrity: sha512-AXcZb6vzzrFAUE61HnN4mpLqd/cSIwNQjtNWR0euPm6y0iqx3G4gOXaIDdtdDwZmhwe82LA6+zinmW4UBWVePQ==}
-    engines: {node: '>=16.17.0'}
-
   humanize-ms@1.2.1:
     resolution: {integrity: sha512-Fl70vYtsAFb/C06PTS9dZBo7ihau+Tu/DNCk/OyHhea07S+aeMWpFFkUaXRa8fI+ScZbEI8dfSxwY7gxZ9SAVQ==}
 
->>>>>>> 7cb41802e (sdk)
   hyphenate-style-name@1.0.4:
     resolution: {integrity: sha512-ygGZLjmXfPHj+ZWh6LwbC37l43MhfztxetbFCoYTM2VjkIUpeHgSNn7QIyVFj7YQ1Wl9Cbw5sholVJPzWvC2MQ==}
 
@@ -7410,34 +7350,13 @@ packages:
     resolution: {integrity: sha512-CPMcGa+y33xuL1E0TcNIu4YyaZCxnnvkVaEXrsosR3FxN+fV8xvb7Mzpb7IgKler10qeMkE6+Dp8qJhpzdq35g==}
     engines: {node: '>=10'}
 
-<<<<<<< HEAD
-||||||| parent of e6d310e4e (update lockfile)
-<<<<<<< HEAD
-||||||| parent of 1f4b8314e (first pass)
-  node-fetch-native@1.6.4:
-    resolution: {integrity: sha512-IhOigYzAKHd244OC0JIMIUrjzctirCmPkaIfhDeGcEETWof5zKYUW7e7MYvChGWh/4CJeXEgsRyGzuF334rOOQ==}
-
-=======
   node-addon-api@4.3.0:
     resolution: {integrity: sha512-73sE9+3UaLYYFmDsFZnqCInzPyh3MqIwZO9cw58yIqAZhONrrabrYyYe3TuIqtIiOuTXVhsGau8hcrhhwSsDIQ==}
 
-<<<<<<< HEAD
-  node-fetch-native@1.6.4:
-    resolution: {integrity: sha512-IhOigYzAKHd244OC0JIMIUrjzctirCmPkaIfhDeGcEETWof5zKYUW7e7MYvChGWh/4CJeXEgsRyGzuF334rOOQ==}
-
->>>>>>> 1f4b8314e (first pass)
-=======
-  node-addon-api@4.3.0:
-    resolution: {integrity: sha512-73sE9+3UaLYYFmDsFZnqCInzPyh3MqIwZO9cw58yIqAZhONrrabrYyYe3TuIqtIiOuTXVhsGau8hcrhhwSsDIQ==}
-
->>>>>>> e6d310e4e (update lockfile)
-||||||| parent of 7cb41802e (sdk)
-=======
   node-domexception@1.0.0:
     resolution: {integrity: sha512-/jKZoMpw0F8GRwl4/eLROPA3cfcXtLApP0QzLmUT/HuPCZWyB7IY9ZrMeKw2O/nFIqPQB3PVM9aYm0F312AXDQ==}
     engines: {node: '>=10.5.0'}
 
->>>>>>> 7cb41802e (sdk)
   node-fetch@2.6.11:
     resolution: {integrity: sha512-4I6pdBY1EthSqDmJkiNk3JIT8cswwR9nfeW/cPdUagJYEQG7R95WRH74wpz7ma8Gh/9dI9FP+OU+0E4FvtA55w==}
     engines: {node: 4.x || >=6.0.0}
@@ -8269,8 +8188,8 @@ packages:
     resolution: {integrity: sha512-0SutC3pNudRKgquxGoRGIz946MZVHqbNfPjBdxeOhBrdgDKlRoXmYLQN9xRbrR09ZXWeGAdPuif7egofn6v5LA==}
     engines: {node: '>= 0.4'}
 
-  regexp.prototype.flags@1.5.2:
-    resolution: {integrity: sha512-NcDiDkTLuPR+++OCKB0nWafEmhg/Da8aUPLPMQbK+bxKKCm1/S5he+AqYa4PlMCVBalb4/yxIRub6qkEx5yJbw==}
+  regexp.prototype.flags@1.5.3:
+    resolution: {integrity: sha512-vqlC04+RQoFalODCbCumG2xIOvapzVMHwsyIGM/SIE8fRhFFsXeH8/QQ+s0T0kDAhKc4k30s73/0ydkHQz6HlQ==}
     engines: {node: '>= 0.4'}
 
   regexpp@3.2.0:
@@ -8533,6 +8452,10 @@ packages:
 
   set-function-name@2.0.1:
     resolution: {integrity: sha512-tMNCiqYVkXIZgc2Hnoy2IvC/f8ezc5koaRFkCjrpWzGpCd3qbZXPzVy9MAZzK1ch/X0jvSkojys3oqJN0qCmdA==}
+    engines: {node: '>= 0.4'}
+
+  set-function-name@2.0.2:
+    resolution: {integrity: sha512-7PGFlmtwsEADb0WYyvCMa1t+yke6daIG4Wirafur5kcf+MhUnPms1UeR0CKQdTZD81yESwMHbtn+TR+dMviakQ==}
     engines: {node: '>= 0.4'}
 
   setimmediate@1.0.5:
@@ -9217,30 +9140,11 @@ packages:
     engines: {node: '>=14.17'}
     hasBin: true
 
-<<<<<<< HEAD
-  ufo@1.5.4:
-    resolution: {integrity: sha512-UsUk3byDzKd04EyoZ7U4DOlxQaD14JUKQl6/P7wiX4FNvUfm3XL246n9W5AmqwW5RSFJ27NAuM0iLscAOYUiGQ==}
-||||||| parent of e6d310e4e (update lockfile)
-<<<<<<< HEAD
-  ufo@1.5.4:
-    resolution: {integrity: sha512-UsUk3byDzKd04EyoZ7U4DOlxQaD14JUKQl6/P7wiX4FNvUfm3XL246n9W5AmqwW5RSFJ27NAuM0iLscAOYUiGQ==}
-||||||| parent of 1f4b8314e (first pass)
-  ufo@1.5.3:
-    resolution: {integrity: sha512-Y7HYmWaFwPUmkoQCUIAYpKqkOf+SbVj/2fJJZ4RJMCfZp0rTGwRbzQD+HghfnhKOjL9E01okqz+ncJskGYfBNw==}
-=======
-  uc.micro@1.0.6:
-    resolution: {integrity: sha512-8Y75pvTYkLJW2hWQHXxoqRgV7qb9B+9vFEtidML+7koHUFapnVJAZ6cKs+Qjz5Aw3aZWHMC6u0wJE3At+nSGwA==}
-
-  ufo@1.5.3:
-    resolution: {integrity: sha512-Y7HYmWaFwPUmkoQCUIAYpKqkOf+SbVj/2fJJZ4RJMCfZp0rTGwRbzQD+HghfnhKOjL9E01okqz+ncJskGYfBNw==}
->>>>>>> 1f4b8314e (first pass)
-=======
   uc.micro@1.0.6:
     resolution: {integrity: sha512-8Y75pvTYkLJW2hWQHXxoqRgV7qb9B+9vFEtidML+7koHUFapnVJAZ6cKs+Qjz5Aw3aZWHMC6u0wJE3At+nSGwA==}
 
   ufo@1.5.4:
     resolution: {integrity: sha512-UsUk3byDzKd04EyoZ7U4DOlxQaD14JUKQl6/P7wiX4FNvUfm3XL246n9W5AmqwW5RSFJ27NAuM0iLscAOYUiGQ==}
->>>>>>> e6d310e4e (update lockfile)
 
   uglify-js@3.17.4:
     resolution: {integrity: sha512-T9q82TJI9e/C1TAxYvfb16xO120tMVFZrGA3f9/P4424DNu6ypK103y0GPFVa17yotwSyZW5iYXgjYHkGrJW/g==}
@@ -9264,48 +9168,12 @@ packages:
     resolution: {integrity: sha512-72RFADWFqKmUb2hmmvNODKL3p9hcB6Gt2DOQMis1SEBaV6a4MH8soBvzg+95CYhCKPFedut2JY9bMfrDl9D23g==}
     engines: {node: '>=14.0'}
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-  unenv-nightly@2.0.0-20240919-125358-9a64854:
-    resolution: {integrity: sha512-XjsgUTrTHR7iw+k/SRTNjh6EQgwpC9voygnoCJo5kh4hKqsSDHUW84MhL9EsHTNfLctvVBHaSw8e2k3R2fKXsQ==}
-||||||| parent of 3b59747bc (first pass)
-  unenv-nightly@2.0.0-1724863496.70db6f1:
-    resolution: {integrity: sha512-r+VIl1gnsI4WQxluruSQhy8alpAf1AsLRLm4sEKp3otCyTIVD6I6wHEYzeQnwsyWgaD4+3BD4A/eqrgOpdTzhw==}
-=======
-<<<<<<< HEAD
-  unenv-nightly@2.0.0-1724863496.70db6f1:
-    resolution: {integrity: sha512-r+VIl1gnsI4WQxluruSQhy8alpAf1AsLRLm4sEKp3otCyTIVD6I6wHEYzeQnwsyWgaD4+3BD4A/eqrgOpdTzhw==}
-||||||| parent of 1f4b8314e (first pass)
-  unenv-nightly@1.10.0-1717606461.a117952:
-    resolution: {integrity: sha512-u3TfBX02WzbHTpaEfWEKwDijDSFAHcgXkayUZ+MVDrjhLFvgAJzFGTSTmwlEhwWi2exyRQey23ah9wELMM6etg==}
-=======
-||||||| parent of e6d310e4e (update lockfile)
-<<<<<<< HEAD
-  unenv-nightly@2.0.0-1724863496.70db6f1:
-    resolution: {integrity: sha512-r+VIl1gnsI4WQxluruSQhy8alpAf1AsLRLm4sEKp3otCyTIVD6I6wHEYzeQnwsyWgaD4+3BD4A/eqrgOpdTzhw==}
-||||||| parent of 1f4b8314e (first pass)
-  unenv-nightly@1.10.0-1717606461.a117952:
-    resolution: {integrity: sha512-u3TfBX02WzbHTpaEfWEKwDijDSFAHcgXkayUZ+MVDrjhLFvgAJzFGTSTmwlEhwWi2exyRQey23ah9wELMM6etg==}
-=======
-=======
->>>>>>> e6d310e4e (update lockfile)
   undici@6.19.8:
     resolution: {integrity: sha512-U8uCCl2x9TK3WANvmBavymRzxbfFYG+tAu+fgx3zxQy3qdagQqBLwJVrdyO1TBfUXvfKveMKJZhpvUYoOjM+4g==}
     engines: {node: '>=18.17'}
 
-<<<<<<< HEAD
-  unenv-nightly@1.10.0-1717606461.a117952:
-    resolution: {integrity: sha512-u3TfBX02WzbHTpaEfWEKwDijDSFAHcgXkayUZ+MVDrjhLFvgAJzFGTSTmwlEhwWi2exyRQey23ah9wELMM6etg==}
->>>>>>> 1f4b8314e (first pass)
->>>>>>> 3b59747bc (first pass)
-||||||| parent of e6d310e4e (update lockfile)
-  unenv-nightly@1.10.0-1717606461.a117952:
-    resolution: {integrity: sha512-u3TfBX02WzbHTpaEfWEKwDijDSFAHcgXkayUZ+MVDrjhLFvgAJzFGTSTmwlEhwWi2exyRQey23ah9wELMM6etg==}
->>>>>>> 1f4b8314e (first pass)
-=======
-  unenv-nightly@2.0.0-1724863496.70db6f1:
-    resolution: {integrity: sha512-r+VIl1gnsI4WQxluruSQhy8alpAf1AsLRLm4sEKp3otCyTIVD6I6wHEYzeQnwsyWgaD4+3BD4A/eqrgOpdTzhw==}
->>>>>>> e6d310e4e (update lockfile)
+  unenv-nightly@2.0.0-20240919-125358-9a64854:
+    resolution: {integrity: sha512-XjsgUTrTHR7iw+k/SRTNjh6EQgwpC9voygnoCJo5kh4hKqsSDHUW84MhL9EsHTNfLctvVBHaSw8e2k3R2fKXsQ==}
 
   unicorn-magic@0.1.0:
     resolution: {integrity: sha512-lRfVq8fE8gz6QMBuDM6a+LO3IAzTi05H6gCVaUpir2E1Rwpo4ZUog45KpNXKC/Mn3Yb9UDuHumeFTo9iV/D9FQ==}
@@ -10979,7 +10847,7 @@ snapshots:
   '@eslint/eslintrc@2.1.2':
     dependencies:
       ajv: 6.12.6
-      debug: 4.3.5
+      debug: 4.3.6(supports-color@8.1.1)
       espree: 9.6.1
       globals: 13.20.0
       ignore: 5.3.1
@@ -11018,7 +10886,7 @@ snapshots:
   '@humanwhocodes/config-array@0.11.11':
     dependencies:
       '@humanwhocodes/object-schema': 1.2.1
-      debug: 4.3.5
+      debug: 4.3.6(supports-color@8.1.1)
       minimatch: 3.1.2
     transitivePeerDependencies:
       - supports-color
@@ -11927,7 +11795,7 @@ snapshots:
 
   '@types/minimist@1.2.2': {}
 
-  '@types/mocha@10.0.7': {}
+  '@types/mocha@10.0.8': {}
 
   '@types/ms@0.7.31': {}
 
@@ -11944,7 +11812,7 @@ snapshots:
 
   '@types/node@12.20.47': {}
 
-  '@types/node@18.19.48':
+  '@types/node@18.19.54':
     dependencies:
       undici-types: 5.26.5
 
@@ -12028,7 +11896,7 @@ snapshots:
 
   '@types/uuid@9.0.4': {}
 
-  '@types/vscode@1.92.0': {}
+  '@types/vscode@1.93.0': {}
 
   '@types/which-pm-runs@1.0.0': {}
 
@@ -12163,7 +12031,7 @@ snapshots:
     dependencies:
       '@typescript-eslint/typescript-estree': 6.10.0(typescript@5.5.4)
       '@typescript-eslint/utils': 6.10.0(eslint@8.49.0)(typescript@5.5.4)
-      debug: 4.3.5
+      debug: 4.3.6(supports-color@8.1.1)
       eslint: 8.49.0
       ts-api-utils: 1.0.3(typescript@5.5.4)
     optionalDependencies:
@@ -12175,7 +12043,7 @@ snapshots:
     dependencies:
       '@typescript-eslint/typescript-estree': 6.10.0(typescript@5.5.4)
       '@typescript-eslint/utils': 6.10.0(eslint@8.57.0)(typescript@5.5.4)
-      debug: 4.3.5
+      debug: 4.3.6(supports-color@8.1.1)
       eslint: 8.57.0
       ts-api-utils: 1.0.3(typescript@5.5.4)
     optionalDependencies:
@@ -12351,33 +12219,7 @@ snapshots:
       pathe: 1.1.1
       picocolors: 1.0.1
       sirv: 2.0.4
-<<<<<<< HEAD
-<<<<<<< HEAD
       vitest: 2.1.1(@types/node@20.8.3)(@vitest/ui@1.6.0)(msw@2.3.0(typescript@5.5.4))(supports-color@9.2.2)
-||||||| parent of 3b59747bc (first pass)
-      vitest: 1.6.0(@types/node@20.12.12)(@vitest/ui@1.6.0)(supports-color@9.2.2)
-
-  '@vitest/utils@1.5.0':
-    dependencies:
-      diff-sequences: 29.6.3
-      estree-walker: 3.0.3
-      loupe: 2.3.7
-      pretty-format: 29.7.0
-=======
-      vitest: 1.6.0(@types/node@20.8.3)(@vitest/ui@1.6.0)
-||||||| parent of e6d310e4e (update lockfile)
-      vitest: 1.6.0(@types/node@20.8.3)(@vitest/ui@1.6.0)
-=======
-      vitest: 1.6.0(@types/node@20.12.12)(@vitest/ui@1.6.0)(supports-color@9.2.2)
->>>>>>> e6d310e4e (update lockfile)
-
-  '@vitest/utils@1.5.0':
-    dependencies:
-      diff-sequences: 29.6.3
-      estree-walker: 3.0.3
-      loupe: 2.3.7
-      pretty-format: 29.7.0
->>>>>>> 3b59747bc (first pass)
 
   '@vitest/utils@1.6.0':
     dependencies:
@@ -12418,7 +12260,7 @@ snapshots:
 
   '@vscode/test-cli@0.0.9':
     dependencies:
-      '@types/mocha': 10.0.7
+      '@types/mocha': 10.0.8
       c8: 9.1.0
       chokidar: 3.5.3
       enhanced-resolve: 5.17.1
@@ -12655,7 +12497,7 @@ snapshots:
   archiver-utils@3.0.4:
     dependencies:
       glob: 7.2.3
-      graceful-fs: 4.2.10
+      graceful-fs: 4.2.9
       lazystream: 1.0.1
       lodash.defaults: 4.2.0
       lodash.difference: 4.5.0
@@ -13284,7 +13126,7 @@ snapshots:
 
   cloudflare@3.5.0(encoding@0.1.13):
     dependencies:
-      '@types/node': 18.19.48
+      '@types/node': 18.19.54
       '@types/node-fetch': 2.6.11
       '@types/qs': 6.9.7
       abort-controller: 3.0.0
@@ -13884,7 +13726,7 @@ snapshots:
       object-inspect: 1.13.2
       object-keys: 1.1.1
       object.assign: 4.1.5
-      regexp.prototype.flags: 1.5.2
+      regexp.prototype.flags: 1.5.3
       safe-array-concat: 1.1.2
       safe-regex-test: 1.0.3
       string.prototype.trim: 1.2.9
@@ -14085,46 +13927,10 @@ snapshots:
     dependencies:
       eslint: 8.57.0
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
   eslint-config-turbo@2.1.3(eslint@8.49.0):
-||||||| parent of 3b59747bc (first pass)
-  eslint-config-turbo@2.0.14(eslint@8.49.0):
-=======
-  eslint-config-turbo@2.1.0(eslint@8.49.0):
->>>>>>> 3b59747bc (first pass)
-||||||| parent of e6d310e4e (update lockfile)
-  eslint-config-turbo@2.1.0(eslint@8.49.0):
-=======
-  eslint-config-turbo@2.0.14(eslint@8.49.0):
->>>>>>> e6d310e4e (update lockfile)
-||||||| parent of 7cb41802e (sdk)
-  eslint-config-turbo@2.0.14(eslint@8.49.0):
-=======
-  eslint-config-turbo@2.1.1(eslint@8.49.0):
->>>>>>> 7cb41802e (sdk)
     dependencies:
       eslint: 8.49.0
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
       eslint-plugin-turbo: 2.1.3(eslint@8.49.0)
-||||||| parent of 3b59747bc (first pass)
-      eslint-plugin-turbo: 2.0.14(eslint@8.49.0)
-=======
-      eslint-plugin-turbo: 2.1.0(eslint@8.49.0)
->>>>>>> 3b59747bc (first pass)
-||||||| parent of e6d310e4e (update lockfile)
-      eslint-plugin-turbo: 2.1.0(eslint@8.49.0)
-=======
-      eslint-plugin-turbo: 2.0.14(eslint@8.49.0)
->>>>>>> e6d310e4e (update lockfile)
-||||||| parent of 7cb41802e (sdk)
-      eslint-plugin-turbo: 2.0.14(eslint@8.49.0)
-=======
-      eslint-plugin-turbo: 2.1.1(eslint@8.49.0)
->>>>>>> 7cb41802e (sdk)
 
   eslint-import-resolver-node@0.3.7:
     dependencies:
@@ -14241,25 +14047,7 @@ snapshots:
       semver: 6.3.1
       string.prototype.matchall: 4.0.8
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
   eslint-plugin-turbo@2.1.3(eslint@8.49.0):
-||||||| parent of 3b59747bc (first pass)
-  eslint-plugin-turbo@2.0.14(eslint@8.49.0):
-=======
-  eslint-plugin-turbo@2.1.0(eslint@8.49.0):
->>>>>>> 3b59747bc (first pass)
-||||||| parent of e6d310e4e (update lockfile)
-  eslint-plugin-turbo@2.1.0(eslint@8.49.0):
-=======
-  eslint-plugin-turbo@2.0.14(eslint@8.49.0):
->>>>>>> e6d310e4e (update lockfile)
-||||||| parent of 7cb41802e (sdk)
-  eslint-plugin-turbo@2.0.14(eslint@8.49.0):
-=======
-  eslint-plugin-turbo@2.1.1(eslint@8.49.0):
->>>>>>> 7cb41802e (sdk)
     dependencies:
       dotenv: 16.0.3
       eslint: 8.49.0
@@ -15148,18 +14936,10 @@ snapshots:
 
   human-signals@4.3.1: {}
 
-<<<<<<< HEAD
-||||||| parent of 7cb41802e (sdk)
-  human-signals@5.0.0: {}
-
-=======
-  human-signals@5.0.0: {}
-
   humanize-ms@1.2.1:
     dependencies:
       ms: 2.1.3
 
->>>>>>> 7cb41802e (sdk)
   hyphenate-style-name@1.0.4: {}
 
   iconv-lite@0.4.24:
@@ -16332,7 +16112,7 @@ snapshots:
     dependencies:
       chalk: 3.0.0
       cli-cursor: 3.1.0
-      cli-spinners: 2.9.2
+      cli-spinners: 2.6.1
       is-interactive: 1.0.0
       log-symbols: 3.0.0
       mute-stream: 0.0.8
@@ -16344,7 +16124,7 @@ snapshots:
       bl: 4.1.0
       chalk: 4.1.2
       cli-cursor: 3.1.0
-      cli-spinners: 2.9.2
+      cli-spinners: 2.6.1
       is-interactive: 1.0.0
       is-unicode-supported: 0.1.0
       log-symbols: 4.1.0
@@ -17040,12 +16820,12 @@ snapshots:
       define-properties: 1.2.1
       functions-have-names: 1.2.3
 
-  regexp.prototype.flags@1.5.2:
+  regexp.prototype.flags@1.5.3:
     dependencies:
       call-bind: 1.0.7
       define-properties: 1.2.1
       es-errors: 1.3.0
-      set-function-name: 2.0.1
+      set-function-name: 2.0.2
 
   regexpp@3.2.0: {}
 
@@ -17344,6 +17124,13 @@ snapshots:
       define-data-property: 1.1.0
       functions-have-names: 1.2.3
       has-property-descriptors: 1.0.0
+
+  set-function-name@2.0.2:
+    dependencies:
+      define-data-property: 1.1.4
+      es-errors: 1.3.0
+      functions-have-names: 1.2.3
+      has-property-descriptors: 1.0.2
 
   setimmediate@1.0.5: {}
 
@@ -18064,37 +17851,9 @@ snapshots:
     dependencies:
       '@fastify/busboy': 2.1.1
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-  unenv-nightly@2.0.0-20240919-125358-9a64854:
-||||||| parent of 3b59747bc (first pass)
-  unenv-nightly@2.0.0-1724863496.70db6f1:
-=======
-<<<<<<< HEAD
-  unenv-nightly@2.0.0-1724863496.70db6f1:
-||||||| parent of 1f4b8314e (first pass)
-  unenv-nightly@1.10.0-1717606461.a117952:
-=======
-||||||| parent of e6d310e4e (update lockfile)
-<<<<<<< HEAD
-  unenv-nightly@2.0.0-1724863496.70db6f1:
-||||||| parent of 1f4b8314e (first pass)
-  unenv-nightly@1.10.0-1717606461.a117952:
-=======
-=======
->>>>>>> e6d310e4e (update lockfile)
   undici@6.19.8: {}
 
-<<<<<<< HEAD
-  unenv-nightly@1.10.0-1717606461.a117952:
->>>>>>> 1f4b8314e (first pass)
->>>>>>> 3b59747bc (first pass)
-||||||| parent of e6d310e4e (update lockfile)
-  unenv-nightly@1.10.0-1717606461.a117952:
->>>>>>> 1f4b8314e (first pass)
-=======
-  unenv-nightly@2.0.0-1724863496.70db6f1:
->>>>>>> e6d310e4e (update lockfile)
+  unenv-nightly@2.0.0-20240919-125358-9a64854:
     dependencies:
       defu: 6.1.4
       ohash: 1.1.4
@@ -18204,10 +17963,26 @@ snapshots:
 
   vary@1.1.2: {}
 
+  vite-node@2.1.1(@types/node@20.8.3):
+    dependencies:
+      cac: 6.7.14
+      debug: 4.3.6(supports-color@8.1.1)
+      pathe: 1.1.2
+      vite: 5.0.12(@types/node@20.8.3)
+    transitivePeerDependencies:
+      - '@types/node'
+      - less
+      - lightningcss
+      - sass
+      - stylus
+      - sugarss
+      - supports-color
+      - terser
+
   vite-node@2.1.1(@types/node@20.8.3)(supports-color@9.2.2):
     dependencies:
       cac: 6.7.14
-      debug: 4.3.5
+      debug: 4.3.6(supports-color@9.2.2)
       pathe: 1.1.2
       vite: 5.0.12(@types/node@20.8.3)
     transitivePeerDependencies:
@@ -18220,112 +17995,6 @@ snapshots:
       - supports-color
       - terser
 
-<<<<<<< HEAD
-||||||| parent of e6d310e4e (update lockfile)
-  vite-node@1.6.0(@types/node@20.12.12)(supports-color@9.2.2):
-    dependencies:
-      cac: 6.7.14
-      debug: 4.3.6(supports-color@9.2.2)
-      pathe: 1.1.2
-      picocolors: 1.0.1
-      vite: 5.0.12(@types/node@20.12.12)
-    transitivePeerDependencies:
-      - '@types/node'
-      - less
-      - lightningcss
-      - sass
-      - stylus
-      - sugarss
-      - supports-color
-      - terser
-
-  vite-node@1.6.0(@types/node@20.8.3):
-    dependencies:
-      cac: 6.7.14
-      debug: 4.3.6(supports-color@9.2.2)
-      pathe: 1.1.2
-      picocolors: 1.0.1
-      vite: 5.0.12(@types/node@20.8.3)
-    transitivePeerDependencies:
-      - '@types/node'
-      - less
-      - lightningcss
-      - sass
-      - stylus
-      - sugarss
-      - supports-color
-      - terser
-
-  vite-node@2.0.5(@types/node@20.12.12):
-    dependencies:
-      cac: 6.7.14
-      debug: 4.3.6(supports-color@9.2.2)
-      pathe: 1.1.2
-      tinyrainbow: 1.2.0
-      vite: 5.0.12(@types/node@20.12.12)
-    transitivePeerDependencies:
-      - '@types/node'
-      - less
-      - lightningcss
-      - sass
-      - stylus
-      - sugarss
-      - supports-color
-      - terser
-
-=======
-  vite-node@1.6.0(@types/node@20.12.12)(supports-color@9.2.2):
-    dependencies:
-      cac: 6.7.14
-      debug: 4.3.6(supports-color@9.2.2)
-      pathe: 1.1.2
-      picocolors: 1.0.1
-      vite: 5.0.12(@types/node@20.12.12)
-    transitivePeerDependencies:
-      - '@types/node'
-      - less
-      - lightningcss
-      - sass
-      - stylus
-      - sugarss
-      - supports-color
-      - terser
-
-  vite-node@1.6.0(@types/node@20.8.3):
-    dependencies:
-      cac: 6.7.14
-      debug: 4.3.6(supports-color@8.1.1)
-      pathe: 1.1.2
-      picocolors: 1.0.1
-      vite: 5.0.12(@types/node@20.8.3)
-    transitivePeerDependencies:
-      - '@types/node'
-      - less
-      - lightningcss
-      - sass
-      - stylus
-      - sugarss
-      - supports-color
-      - terser
-
-  vite-node@2.0.5(@types/node@20.12.12):
-    dependencies:
-      cac: 6.7.14
-      debug: 4.3.6(supports-color@8.1.1)
-      pathe: 1.1.2
-      tinyrainbow: 1.2.0
-      vite: 5.0.12(@types/node@20.12.12)
-    transitivePeerDependencies:
-      - '@types/node'
-      - less
-      - lightningcss
-      - sass
-      - stylus
-      - sugarss
-      - supports-color
-      - terser
-
->>>>>>> e6d310e4e (update lockfile)
   vite-plugin-dts@4.0.1(@types/node@20.12.12)(rollup@4.9.6)(typescript@5.5.4)(vite@5.0.12(@types/node@20.12.12)):
     dependencies:
       '@microsoft/api-extractor': 7.47.4(@types/node@20.12.12)
@@ -18386,6 +18055,39 @@ snapshots:
       mock-socket: 9.3.1
       vitest: 2.1.1(@types/node@20.8.3)(@vitest/ui@1.6.0)(msw@2.3.0(typescript@5.5.4))(supports-color@9.2.2)
 
+  vitest@2.1.1(@types/node@20.8.3):
+    dependencies:
+      '@vitest/expect': 2.1.1
+      '@vitest/mocker': 2.1.1(@vitest/spy@2.1.1)(msw@2.3.0(typescript@5.5.4))(vite@5.0.12(@types/node@20.8.3))
+      '@vitest/pretty-format': 2.1.1
+      '@vitest/runner': 2.1.1
+      '@vitest/snapshot': 2.1.1
+      '@vitest/spy': 2.1.1
+      '@vitest/utils': 2.1.1
+      chai: 5.1.1
+      debug: 4.3.6(supports-color@8.1.1)
+      magic-string: 0.30.11
+      pathe: 1.1.2
+      std-env: 3.7.0
+      tinybench: 2.9.0
+      tinyexec: 0.3.0
+      tinypool: 1.0.1
+      tinyrainbow: 1.2.0
+      vite: 5.0.12(@types/node@20.8.3)
+      vite-node: 2.1.1(@types/node@20.8.3)
+      why-is-node-running: 2.3.0
+    optionalDependencies:
+      '@types/node': 20.8.3
+    transitivePeerDependencies:
+      - less
+      - lightningcss
+      - msw
+      - sass
+      - stylus
+      - sugarss
+      - supports-color
+      - terser
+
   vitest@2.1.1(@types/node@20.8.3)(@vitest/ui@1.6.0)(msw@2.3.0(typescript@5.5.4))(supports-color@9.2.2):
     dependencies:
       '@vitest/expect': 2.1.1
@@ -18396,15 +18098,7 @@ snapshots:
       '@vitest/spy': 2.1.1
       '@vitest/utils': 2.1.1
       chai: 5.1.1
-<<<<<<< HEAD
       debug: 4.3.6(supports-color@9.2.2)
-||||||| parent of e6d310e4e (update lockfile)
-      debug: 4.3.6(supports-color@9.2.2)
-      execa: 8.0.1
-=======
-      debug: 4.3.6(supports-color@8.1.1)
-      execa: 8.0.1
->>>>>>> e6d310e4e (update lockfile)
       magic-string: 0.30.11
       pathe: 1.1.2
       std-env: 3.7.0
