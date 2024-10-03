@@ -24,7 +24,7 @@ const configure = async () => {
 	await installPackages(["wrangler@latest"], {
 		dev: true,
 		startText: "Updating the Wrangler version",
-		doneText: `${brandColor(`updateed`)} ${dim("wrangler@latest")}`,
+		doneText: `${brandColor(`updated`)} ${dim("wrangler@latest")}`,
 	});
 
 	const typeDefsPath = "load-context.ts";
