@@ -366,7 +366,7 @@ export const createContext = async (
 				"Select from a range of starter applications using various Cloudflare products",
 		},
 		{
-			label: "Template from a Github repo",
+			label: "Template from a GitHub repo",
 			value: "remote-template",
 			description: "Start from an existing GitHub repo link",
 		},

@@ -80,7 +80,7 @@ export const cliDefinition: ArgumentsDefinition = {
 						{ name: "demo", description: "Application Starter" },
 						{
 							name: "remote-template",
-							description: "Template from a Github repo",
+							description: "Template from a GitHub repo",
 						},
 					];
 				}
