@@ -4138,7 +4138,9 @@ addEventListener('fetch', event => {});`
 			});
 
 			it("debug log level", async () => {
-				logger.loggerLevel = "debug";
+				vi.stubEnv("WRANGLER_LOG", "debug");
+				vi.stubEnv("WRANGLER_LOG_SANITIZE", "false");
+
 				await runWrangler("deploy");
 
 				const diffRegexp = /^ [+=-]/;

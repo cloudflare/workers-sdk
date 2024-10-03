@@ -31,6 +31,17 @@ const getLogLevelFromEnv = getEnvironmentVariableFactory({
 	variableName: "WRANGLER_LOG",
 });
 
+const warnOnce = (() => {
+	let logged = false;
+
+	return (...args: Parameters<typeof console.warn>) => {
+		if (!logged) {
+			console.warn(...args);
+			logged = true;
+		}
+	};
+})();
+
 function getLoggerLevel(): LoggerLevel {
 	const fromEnv = getLogLevelFromEnv()?.toLowerCase();
 	if (fromEnv !== undefined) {
@@ -40,7 +51,7 @@ function getLoggerLevel(): LoggerLevel {
 		const expected = Object.keys(LOGGER_LEVELS)
 			.map((level) => `"${level}"`)
 			.join(" | ");
-		console.warn(
+		warnOnce(
 			`Unrecognised WRANGLER_LOG value ${JSON.stringify(
 				fromEnv
 			)}, expected ${expected}, defaulting to "log"...`
