@@ -1,10 +1,6 @@
 import * as vite from 'vite';
 import { createMiddleware } from '@hattip/adapter-node';
-import {
-	Miniflare,
-	Response as MiniflareResponse,
-	kUnsafeEphemeralUniqueKey,
-} from 'miniflare';
+import { Miniflare, Response as MiniflareResponse } from 'miniflare';
 import { unstable_getMiniflareWorkerOptions } from 'wrangler';
 import { fileURLToPath } from 'node:url';
 import * as path from 'node:path';
@@ -14,7 +10,7 @@ import type {
 	CloudflareEnvironmentOptions,
 	CloudflareDevEnvironment,
 } from './cloudflare-environment';
-import { UNKNOWN_HOST } from './shared';
+
 const runnerPath = fileURLToPath(import.meta.resolve('./runner/index.js'));
 
 export function cloudflare<
@@ -55,11 +51,21 @@ export function cloudflare<
 					const { ratelimits, ...workerOptions } =
 						miniflareOptions.workerOptions;
 
+					const wrappers = [
+						`import { createWorkerEntrypointWrapper } from '${runnerPath}';`,
+						`export default createWorkerEntrypointWrapper('default');`,
+					];
+
 					return {
 						...workerOptions,
 						name,
 						modulesRoot: '/',
 						modules: [
+							{
+								type: 'ESModule',
+								path: '/b',
+								contents: wrappers.join('\n'),
+							},
 							{
 								type: 'ESModule',
 								path: runnerPath,
@@ -69,6 +75,7 @@ export function cloudflare<
 						bindings: {
 							...workerOptions.bindings,
 							__VITE_ROOT__: resolvedConfig.root,
+							__VITE_ENTRY_PATH__: options.main,
 						},
 						serviceBindings: {
 							...workerOptions.serviceBindings,

@@ -1,7 +1,13 @@
 import { WorkerEntrypoint } from 'cloudflare:workers';
-import { ModuleRunner } from 'vite/module-runner';
-import { UNKNOWN_HOST, INIT_PATH } from '../shared.js';
-import type { FetchResult } from 'vite/module-runner';
+import { createModuleRunner, getWorkerEntrypointExport } from './module-runner';
+import { INIT_PATH } from '../shared';
+import type { WrapperEnv } from './env';
+
+interface WorkerEntrypointConstructor<T = unknown> {
+	new (
+		...args: ConstructorParameters<typeof WorkerEntrypoint<T>>
+	): WorkerEntrypoint<T>;
+}
 
 const WORKER_ENTRYPOINT_KEYS = [
 	'fetch',
@@ -20,103 +26,16 @@ const DURABLE_OBJECT_KEYS = [
 	'webSocketError',
 ] as const;
 
-interface WrapperEnv {
-	__VITE_ROOT__: string;
-	__VITE_FETCH_MODULE__: {
-		fetch: (request: Request) => Promise<Response>;
-	};
-	__VITE_UNSAFE_EVAL__: {
-		eval: (code: string, filename: string) => Function;
-	};
-}
-
-function createModuleRunner(env: WrapperEnv, webSocket: WebSocket) {
-	return new ModuleRunner(
-		{
-			root: env.__VITE_ROOT__,
-			sourcemapInterceptor: 'prepareStackTrace',
-			transport: {
-				async fetchModule(...args) {
-					const response = await env.__VITE_FETCH_MODULE__.fetch(
-						new Request(UNKNOWN_HOST, {
-							method: 'POST',
-							body: JSON.stringify(args),
-						}),
-					);
-
-					if (!response.ok) {
-						// TODO: add error handling
-					}
-
-					const result = await response.json();
-
-					return result as FetchResult;
-				},
-			},
-			hmr: {
-				connection: {
-					isReady: () => true,
-					onUpdate(callback) {
-						webSocket.addEventListener('message', (event) => {
-							callback(JSON.parse(event.data.toString()));
-						});
-					},
-					send(messages) {
-						webSocket.send(messages);
-					},
-				},
-			},
-		},
-		{
-			async runInlinedModule(context, transformed, id) {
-				const codeDefinition = `'use strict';async (${Object.keys(context).join(
-					',',
-				)})=>{{`;
-				const code = `${codeDefinition}${transformed}\n}}`;
-				const fn = env.__VITE_UNSAFE_EVAL__.eval(code, id);
-				await fn(...Object.values(context));
-				Object.freeze(context.__vite_ssr_exports__);
-			},
-			async runExternalModule(file) {
-				return import(file);
-			},
-		},
-	);
-}
-
-let moduleRunner: ModuleRunner;
-let mainPath: string;
-
-interface WorkerEntrypointConstructor<T = unknown> {
-	new (
-		...args: ConstructorParameters<typeof WorkerEntrypoint<T>>
-	): WorkerEntrypoint<T>;
-}
-
 function stripInternalEnv(internalEnv: WrapperEnv) {
 	const {
 		__VITE_ROOT__,
+		__VITE_ENTRY_PATH__,
 		__VITE_FETCH_MODULE__,
 		__VITE_UNSAFE_EVAL__,
 		...userEnv
 	} = internalEnv;
 
 	return userEnv;
-}
-
-async function getWorkerEntrypointExport(entrypoint: string) {
-	const module = await moduleRunner.import(mainPath);
-	const entrypointValue =
-		typeof module === 'object' &&
-		module !== null &&
-		entrypoint in module &&
-		module[entrypoint];
-
-	if (!entrypointValue) {
-		throw new Error(`${mainPath} does not export a ${entrypoint} entrypoint.`);
-	}
-
-	return entrypointValue;
 }
 
 function getRpcProperty(
@@ -151,11 +70,13 @@ async function getWorkerEntrypointRpcProperty(
 	entrypoint: string,
 	key: string,
 ) {
+	const entryPath = this.env.__VITE_ENTRY_PATH__;
 	const ctor = (await getWorkerEntrypointExport(
+		entryPath,
 		entrypoint,
 	)) as WorkerEntrypointConstructor;
 	const userEnv = stripInternalEnv(this.env);
-	const expectedWorkerEntrypointMessage = `Expected ${entrypoint} export of ${mainPath} to be a subclass of \`WorkerEntrypoint\` for RPC.`;
+	const expectedWorkerEntrypointMessage = `Expected ${entrypoint} export of ${entryPath} to be a subclass of \`WorkerEntrypoint\` for RPC.`;
 
 	if (typeof ctor !== 'function') {
 		throw new Error(expectedWorkerEntrypointMessage);
@@ -206,11 +127,11 @@ export function createWorkerEntrypointWrapper(
 						return value;
 					}
 
-					if (key === 'self' || typeof key === 'symbol') {
-						return;
-					}
-
-					if ((DURABLE_OBJECT_KEYS as readonly string[]).includes(key)) {
+					if (
+						key === 'self' ||
+						typeof key === 'symbol' ||
+						(DURABLE_OBJECT_KEYS as readonly string[]).includes(key)
+					) {
 						return;
 					}
 
@@ -228,34 +149,27 @@ export function createWorkerEntrypointWrapper(
 
 	for (const key of WORKER_ENTRYPOINT_KEYS) {
 		Wrapper.prototype[key] = async function (this: Wrapper, arg) {
+			const entryPath = this.env.__VITE_ENTRY_PATH__;
+
 			if (key === 'fetch') {
 				const request = arg as Request;
 				const url = new URL(request.url);
 
 				if (url.pathname === INIT_PATH) {
-					if (moduleRunner) {
-						throw new Error('Runner already initialized');
-					}
-
-					const mainHeader = request.headers.get('x-vite-main');
-
-					if (!mainHeader) {
-						throw new Error('Missing x-vite-main header');
-					}
-
-					mainPath = mainHeader;
-
 					const { 0: client, 1: server } = new WebSocketPair();
 
 					server.accept();
 
-					moduleRunner = createModuleRunner(this.env, server);
+					createModuleRunner(this.env, server);
 
 					return new Response(null, { status: 101, webSocket: client });
 				}
 			}
 
-			const entrypointValue = await getWorkerEntrypointExport(entrypoint);
+			const entrypointValue = await getWorkerEntrypointExport(
+				entryPath,
+				entrypoint,
+			);
 			const userEnv = stripInternalEnv(this.env);
 
 			if (typeof entrypointValue === 'object' && entrypointValue !== null) {
@@ -264,7 +178,7 @@ export function createWorkerEntrypointWrapper(
 
 				if (typeof maybeFn !== 'function') {
 					throw new Error(
-						`Expected ${entrypoint} export of ${mainPath} to define a \`${key}()\` function`,
+						`Expected ${entrypoint} export of ${entryPath} to define a \`${key}()\` function`,
 					);
 				}
 
@@ -276,7 +190,7 @@ export function createWorkerEntrypointWrapper(
 
 				if (!(instance instanceof WorkerEntrypoint)) {
 					throw new Error(
-						`Expected ${entrypoint} export of ${mainPath} to be a subclass of \`WorkerEntrypoint\``,
+						`Expected ${entrypoint} export of ${entryPath} to be a subclass of \`WorkerEntrypoint\``,
 					);
 				}
 
@@ -284,14 +198,14 @@ export function createWorkerEntrypointWrapper(
 
 				if (typeof maybeFn !== 'function') {
 					throw new Error(
-						`Expected ${entrypoint} export of ${mainPath} to define a \`${key}()\` method`,
+						`Expected ${entrypoint} export of ${entryPath} to define a \`${key}()\` method`,
 					);
 				}
 
 				return (maybeFn as (arg: unknown) => unknown).call(instance, arg);
 			} else {
 				return new Error(
-					`Expected ${entrypoint} export of ${mainPath} to be an object or a class. Got ${entrypointValue}.`,
+					`Expected ${entrypoint} export of ${entryPath} to be an object or a class. Got ${entrypointValue}.`,
 				);
 			}
 		};
@@ -299,5 +213,3 @@ export function createWorkerEntrypointWrapper(
 
 	return Wrapper;
 }
-
-export default createWorkerEntrypointWrapper('default');

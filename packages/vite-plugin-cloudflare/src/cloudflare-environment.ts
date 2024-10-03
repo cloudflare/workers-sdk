@@ -62,19 +62,13 @@ function createHotChannel(
 }
 
 export class CloudflareDevEnvironment extends vite.DevEnvironment {
-	#options: CloudflareEnvironmentOptions;
 	#webSocketContainer: { webSocket?: WebSocket };
 	#worker?: ReplaceWorkersTypes<Fetcher>;
 
-	constructor(
-		name: string,
-		config: vite.ResolvedConfig,
-		options: CloudflareEnvironmentOptions,
-	) {
+	constructor(name: string, config: vite.ResolvedConfig) {
 		// It would be good if we could avoid passing this object around and mutating it
 		const webSocketContainer = {};
 		super(name, config, { hot: createHotChannel(webSocketContainer) });
-		this.#options = options;
 		this.#webSocketContainer = webSocketContainer;
 	}
 
@@ -86,7 +80,6 @@ export class CloudflareDevEnvironment extends vite.DevEnvironment {
 			{
 				headers: {
 					upgrade: 'websocket',
-					'x-vite-main': this.#options.main,
 				},
 			},
 		);
@@ -127,7 +120,7 @@ export function createCloudflareEnvironment(
 		{
 			dev: {
 				createEnvironment(name, config) {
-					return new CloudflareDevEnvironment(name, config, options);
+					return new CloudflareDevEnvironment(name, config);
 				},
 			},
 			build: {
