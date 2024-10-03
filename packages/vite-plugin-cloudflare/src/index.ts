@@ -10,7 +10,9 @@ import type {
 	CloudflareEnvironmentOptions,
 	CloudflareDevEnvironment,
 } from './cloudflare-environment';
-const runnerPath = fileURLToPath(import.meta.resolve('./runner/worker.js'));
+
+const wrapperPath = '__VITE_WRAPPER_PATH__';
+const runnerPath = fileURLToPath(import.meta.resolve('./runner/index.js'));
 
 export function cloudflare<
 	T extends Record<string, CloudflareEnvironmentOptions>,
@@ -50,6 +52,11 @@ export function cloudflare<
 					const { ratelimits, ...workerOptions } =
 						miniflareOptions.workerOptions;
 
+					const wrappers = [
+						`import { createWorkerEntrypointWrapper } from '${runnerPath}';`,
+						`export default createWorkerEntrypointWrapper('default');`,
+					];
+
 					return {
 						...workerOptions,
 						name,
@@ -57,16 +64,19 @@ export function cloudflare<
 						modules: [
 							{
 								type: 'ESModule',
+								path: wrapperPath,
+								contents: wrappers.join('\n'),
+							},
+							{
+								type: 'ESModule',
 								path: runnerPath,
 							},
 						],
 						unsafeEvalBinding: '__VITE_UNSAFE_EVAL__',
-						durableObjects: {
-							__CLOUDFLARE_WORKER_RUNNER__: 'CloudflareWorkerRunner',
-						},
 						bindings: {
 							...workerOptions.bindings,
 							__VITE_ROOT__: resolvedConfig.root,
+							__VITE_ENTRY_PATH__: options.main,
 						},
 						serviceBindings: {
 							...workerOptions.serviceBindings,

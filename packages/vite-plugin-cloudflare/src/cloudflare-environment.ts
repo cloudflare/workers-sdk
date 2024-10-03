@@ -62,31 +62,24 @@ function createHotChannel(
 }
 
 export class CloudflareDevEnvironment extends vite.DevEnvironment {
-	#options: CloudflareEnvironmentOptions;
 	#webSocketContainer: { webSocket?: WebSocket };
-	#runner?: ReplaceWorkersTypes<Fetcher>;
+	#worker?: ReplaceWorkersTypes<Fetcher>;
 
-	constructor(
-		name: string,
-		config: vite.ResolvedConfig,
-		options: CloudflareEnvironmentOptions,
-	) {
+	constructor(name: string, config: vite.ResolvedConfig) {
 		// It would be good if we could avoid passing this object around and mutating it
 		const webSocketContainer = {};
 		super(name, config, { hot: createHotChannel(webSocketContainer) });
-		this.#options = options;
 		this.#webSocketContainer = webSocketContainer;
 	}
 
 	async initRunner(worker: ReplaceWorkersTypes<Fetcher>) {
-		this.#runner = worker;
+		this.#worker = worker;
 
-		const response = await this.#runner.fetch(
+		const response = await this.#worker.fetch(
 			new URL(INIT_PATH, UNKNOWN_HOST),
 			{
 				headers: {
 					upgrade: 'websocket',
-					'x-vite-main': this.#options.main,
 				},
 			},
 		);
@@ -107,11 +100,11 @@ export class CloudflareDevEnvironment extends vite.DevEnvironment {
 	}
 
 	async dispatchFetch(request: Request) {
-		if (!this.#runner) {
+		if (!this.#worker) {
 			throw new Error('Runner not initialized');
 		}
 
-		return this.#runner.fetch(request.url, {
+		return this.#worker.fetch(request.url, {
 			method: request.method,
 			headers: [['accept-encoding', 'identity'], ...request.headers],
 			body: request.body,
@@ -127,7 +120,7 @@ export function createCloudflareEnvironment(
 		{
 			dev: {
 				createEnvironment(name, config) {
-					return new CloudflareDevEnvironment(name, config, options);
+					return new CloudflareDevEnvironment(name, config);
 				},
 			},
 			build: {

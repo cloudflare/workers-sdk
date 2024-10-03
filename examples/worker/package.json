@@ -9,7 +9,7 @@
 	},
 	"dependencies": {
 		"@flarelabs-net/vite-plugin-cloudflare": "workspace:*",
-		"vite": "6.0.0-beta.1"
+		"vite": "6.0.0-beta.2"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-types": "^4.20240919.0",

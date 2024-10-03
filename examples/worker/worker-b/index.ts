@@ -8,3 +8,9 @@ export default class extends WorkerEntrypoint<Env> {
 		return a + b;
 	}
 }
+
+export class NamedEntrypoint extends WorkerEntrypoint<any> {
+	multiply(a: number, b: number) {
+		return a * b;
+	}
+}
