@@ -418,7 +418,8 @@ async function ensureBindingsExist(
 		mtls_certificates: undefined,
 		logfwdr: undefined,
 		unsafe: undefined,
-		experimental_assets: undefined,
+		assets: undefined,
+		pipelines: undefined,
 	};
 
 	// First, figure out what bindings we need to create
@@ -846,14 +847,15 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 				dispatch_namespaces: config.dispatch_namespaces,
 				mtls_certificates: config.mtls_certificates,
 				logfwdr: config.logfwdr,
-				experimental_assets: config.experimental_assets?.binding
-					? { binding: config.experimental_assets.binding }
+				assets: config.assets?.binding
+					? { binding: config.assets.binding }
 					: undefined,
 				unsafe: {
 					bindings: config.unsafe.bindings,
 					metadata: config.unsafe.metadata,
 					capnp: config.unsafe.capnp,
 				},
+				pipelines: config.pipelines,
 			}
 		);
 
