@@ -382,10 +382,14 @@ async function ensureBindingsExist(
 	}
 
 	assert(accountId, "Missing accountId");
-
-	const settings = await fetchResult<{
+	let settings: {
 		bindings: { name: string }[];
-	}>(`/accounts/${accountId}/workers/scripts/${name}/settings`);
+	} = { bindings: [] };
+	try {
+		settings = await fetchResult<{
+			bindings: { name: string }[];
+		}>(`/accounts/${accountId}/workers/scripts/${name}/settings`);
+	} catch {}
 
 	const existingBindings = Object.fromEntries(
 		settings.bindings.map((b) => [b.name, b])
