@@ -67,7 +67,9 @@ export const nodejsCompatPlugin: (silenceWarnings: boolean) => Plugin = (
 				warnedPackaged.size > 0
 			) {
 				const paths = new Intl.ListFormat("en-US").format(
-					Array.from(warnedPackaged.keys()).map((p) => `"${p}"`)
+					Array.from(warnedPackaged.keys())
+						.map((p) => `"${p}"`)
+						.sort()
 				);
 				throw new Error(`
 						Unexpected external import of ${paths}. Imports are not valid in a Service Worker format Worker.
