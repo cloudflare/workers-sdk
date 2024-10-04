@@ -929,13 +929,13 @@ describe("custom builds", () => {
 		});
 
 		const resText = await retry(
-			(text) => text === "hello\n",
+			(text) => text.includes("hello"),
 			async () => {
 				const res2 = await fetch(url);
 				return res2.text();
 			}
 		);
-		await expect(resText).toContain("world");
+		await expect(resText).toBe("world");
 	});
 });
 
