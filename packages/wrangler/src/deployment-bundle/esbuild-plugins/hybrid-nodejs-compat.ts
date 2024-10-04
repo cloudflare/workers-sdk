@@ -38,7 +38,9 @@ function errorOnServiceWorkerFormat(build: PluginBuild) {
 	build.onEnd(() => {
 		if (build.initialOptions.format === "iife" && paths.size > 0) {
 			const pathList = new Intl.ListFormat("en-US").format(
-				Array.from(paths.keys()).map((p) => `"${p}"`)
+				Array.from(paths.keys())
+					.map((p) => `"${p}"`)
+					.sort()
 			);
 			throw new Error(
 				dedent`
