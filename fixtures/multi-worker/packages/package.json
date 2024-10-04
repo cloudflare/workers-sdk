@@ -1,7 +1,0 @@
-{
-	"name": "multi-worker",
-	"workspaces": [
-		"worker-a",
-		"worker-b"
-	]
-}

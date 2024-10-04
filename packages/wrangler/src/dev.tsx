@@ -64,7 +64,6 @@ import type {
 } from "./config/environment";
 import type { CfModule, CfWorkerInit } from "./deployment-bundle/worker";
 import type { WorkerRegistry } from "./dev-registry";
-import type { ExperimentalAssetsOptions } from "./experimental-assets";
 import type { LoggerLevel } from "./logger";
 import type { EnablePagesAssetsServiceBindingOptions } from "./miniflare-cli/types";
 import type {
@@ -630,6 +629,10 @@ export async function startDev(args: StartDevOptions) {
 		const devEnv = new DevEnv();
 
 		if (args.experimentalDevEnv) {
+			assert(args.config);
+			args.disableDevRegistry = args.config.length > 1;
+			args.forceLocal ||= args.config.length > 1;
+
 			// The ProxyWorker will have a stable host and port, so only listen for the first update
 			void devEnv.proxy.ready.promise.then(({ url }) => {
 				if (process.send) {
@@ -801,7 +804,6 @@ export async function startDev(args: StartDevOptions) {
 				assets: args.assets ? assetsOptions : undefined,
 			};
 
-			assert(args.config);
 			logger.log(args.config);
 			const options = await Promise.all(
 				args.config.map((configPath1, workerIndex) =>
@@ -810,8 +812,6 @@ export async function startDev(args: StartDevOptions) {
 			);
 
 			const devEnvs = await startMultiWorker(options, devEnv);
-			args.disableDevRegistry = args.config.length === 1;
-			args.forceLocal ||= args.config.length > 1;
 
 			let unregisterHotKeys = () => {};
 			if (isInteractive() && args.showInteractiveDevSession !== false) {

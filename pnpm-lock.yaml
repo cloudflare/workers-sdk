@@ -303,6 +303,12 @@ importers:
         specifier: workspace:*
         version: link:../../packages/wrangler
 
+  fixtures/multi-worker:
+    devDependencies:
+      wrangler:
+        specifier: workspace:*
+        version: link:../../packages/wrangler
+
   fixtures/no-bundle-import:
     devDependencies:
       get-port:
