@@ -25,13 +25,28 @@ export async function runWranglerPagesDev(
 ) {
 	if (publicPath) {
 		return runLongLivedWrangler(
-			["pages", "dev", publicPath, "--x-dev-env", "--ip=127.0.0.1", ...options],
+			[
+				"pages",
+				"dev",
+				publicPath,
+				"--x-dev-env",
+				"--x-registry",
+				"--ip=127.0.0.1",
+				...options,
+			],
 			cwd,
 			env
 		);
 	} else {
 		return runLongLivedWrangler(
-			["pages", "dev", "--x-dev-env", "--ip=127.0.0.1", ...options],
+			[
+				"pages",
+				"dev",
+				"--x-dev-env",
+				"--x-registry",
+				"--ip=127.0.0.1",
+				...options,
+			],
 			cwd,
 			env
 		);
@@ -52,7 +67,7 @@ export async function runWranglerDev(
 	env?: NodeJS.ProcessEnv
 ) {
 	return runLongLivedWrangler(
-		["dev", "--x-dev-env", "--ip=127.0.0.1", ...options],
+		["dev", "--x-dev-env", "--x-registry", "--ip=127.0.0.1", ...options],
 		cwd,
 		env
 	);
