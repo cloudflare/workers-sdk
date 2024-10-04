@@ -249,7 +249,7 @@ function getCustomServiceDesignator(
 		// Worker with entrypoint
 		if ("name" in service) {
 			if (service.name === kCurrentWorker) {
-				// TODO when RPC with assets is fixed in dev: point this router worker if assets are present.
+				// TODO when fetch on WorkerEntrypoints with assets is fixed in dev: point this router worker if assets are present.
 				serviceName = getUserServiceName(refererName);
 			} else {
 				serviceName = getUserServiceName(service.name);
