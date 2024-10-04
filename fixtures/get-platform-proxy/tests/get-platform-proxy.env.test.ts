@@ -1,6 +1,6 @@
 import { readdir } from "fs/promises";
-import * as nodeNet from "node:net";
 import path from "path";
+import { setTimeout } from "timers/promises";
 import {
 	D1Database,
 	DurableObjectNamespace,
@@ -400,19 +400,26 @@ describe("getPlatformProxy - env", () => {
 async function startWorkers(): Promise<UnstableDevWorker[]> {
 	const workersDirPath = path.join(__dirname, "..", "workers");
 	const workers = await readdir(workersDirPath);
-	return await Promise.all(
-		workers.map((workerName) => {
-			const workerPath = path.join(workersDirPath, workerName);
-			return unstable_dev(path.join(workerPath, "index.ts"), {
+	const result: UnstableDevWorker[] = [];
+
+	for (const workerName of workers) {
+		const workerPath = path.join(workersDirPath, workerName);
+		const unstableDevWorker = await unstable_dev(
+			path.join(workerPath, "index.ts"),
+			{
 				config: path.join(workerPath, "wrangler.toml"),
 				ip: "127.0.0.1",
 				experimental: {
 					devEnv: true,
 					fileBasedRegistry: true,
 				},
-			});
-		})
-	);
+			}
+		);
+		await setTimeout(1000);
+		result.push(unstableDevWorker);
+	}
+
+	return result;
 }
 
 async function testServiceBinding(binding: Fetcher, expectedResponse: string) {
