@@ -1,0 +1,9 @@
+{
+	"name": "multi-worker",
+	"workspaces": [
+		"packages/*"
+	],
+	"devDependencies": {
+		"wrangler": "workspace:*"
+	}
+}
