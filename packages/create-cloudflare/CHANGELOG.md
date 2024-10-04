@@ -1,5 +1,21 @@
 # create-cloudflare
 
+## 2.29.2
+
+### Patch Changes
+
+- [#6848](https://github.com/cloudflare/workers-sdk/pull/6848) [`291e5f3`](https://github.com/cloudflare/workers-sdk/commit/291e5f33584e73ceb90a9b7b74e08454b7b55fda) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency    | From  | To    |
+  | ------------- | ----- | ----- |
+  | create-analog | 1.3.1 | 1.8.1 |
+
+- [#6839](https://github.com/cloudflare/workers-sdk/pull/6839) [`b0d514e`](https://github.com/cloudflare/workers-sdk/commit/b0d514ea5c43ad2325709a6576c6b39b67e81ca4) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: remove invalid `ctx` import from hello-world experimental templates
+
+- [#6882](https://github.com/cloudflare/workers-sdk/pull/6882) [`20a1750`](https://github.com/cloudflare/workers-sdk/commit/20a17502b2b091b24189e9b32d309c088487fcf6) Thanks [@andyjessop](https://github.com/andyjessop)! - chore: Capitalises GitHub correctly
+
 ## 2.29.1
 
 ### Patch Changes
