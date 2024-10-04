@@ -46,361 +46,351 @@ type Env = {
 
 const wranglerTomlFilePath = path.join(__dirname, "..", "wrangler.toml");
 
-describe(
-	"getPlatformProxy - env",
-	() => {
-		let devWorkers: UnstableDevWorker[];
+describe("getPlatformProxy - env", () => {
+	let devWorkers: UnstableDevWorker[];
 
-		beforeEach(() => {
-			// Hide stdout messages from the test logs
-			vi.spyOn(console, "log").mockImplementation(() => {});
-		});
+	beforeEach(() => {
+		// Hide stdout messages from the test logs
+		vi.spyOn(console, "log").mockImplementation(() => {});
+	});
 
-		beforeAll(async () => {
-			devWorkers = await startWorkers();
-		});
+	beforeAll(async () => {
+		devWorkers = await startWorkers();
+	});
 
-		afterAll(async () => {
-			await Promise.allSettled(devWorkers.map((i) => i.stop()));
-		});
+	afterAll(async () => {
+		await Promise.allSettled(devWorkers.map((i) => i.stop()));
+	});
 
-		describe("var bindings", () => {
-			it("correctly obtains var bindings from both wrangler.toml and .dev.vars", async () => {
-				const { env, dispose } = await getPlatformProxy<Env>({
-					configPath: wranglerTomlFilePath,
-				});
-				try {
-					const { MY_VAR, MY_JSON_VAR, MY_DEV_VAR } = env;
-					expect(MY_VAR).toEqual("my-var-value");
-					expect(MY_JSON_VAR).toEqual({
-						test: true,
-					});
-					expect(MY_DEV_VAR).toEqual("my-dev-var-value");
-				} finally {
-					await dispose();
-				}
-			});
-
-			it("correctly makes vars from .dev.vars override the ones in wrangler.toml", async () => {
-				const { env, dispose } = await getPlatformProxy<Env>({
-					configPath: wranglerTomlFilePath,
-				});
-				try {
-					const { MY_VAR_A } = env;
-					expect(MY_VAR_A).not.toEqual("my-var-a"); // if this fails, the value was read from wrangler.toml – not .dev.vars
-					expect(MY_VAR_A).toEqual("my-dev-var-a");
-				} finally {
-					await dispose();
-				}
-			});
-
-			it("correctly makes vars from .dev.vars not override bindings of the same name from wrangler.toml", async () => {
-				const { env, dispose } = await getPlatformProxy<Env>({
-					configPath: wranglerTomlFilePath,
-				});
-				try {
-					const { MY_KV } = env;
-					expect(MY_KV).not.toEqual("my-dev-kv");
-					["get", "delete", "list", "put", "getWithMetadata"].every(
-						(methodName) =>
-							expect(
-								typeof (MY_KV as unknown as Record<string, unknown>)[methodName]
-							).toBe("function")
-					);
-				} finally {
-					await dispose();
-				}
-			});
-
-			it("correctly reads a toml from a custom path alongside with its .dev.vars", async () => {
-				const { env, dispose } = await getPlatformProxy<Env>({
-					configPath: path.join(
-						__dirname,
-						"..",
-						"custom-toml",
-						"path",
-						"test-toml"
-					),
-				});
-				try {
-					const { MY_VAR, MY_JSON_VAR, MY_DEV_VAR } = env;
-					expect(MY_VAR).toEqual("my-var-value-from-a-custom-toml");
-					expect(MY_JSON_VAR).toEqual({
-						test: true,
-						customToml: true,
-					});
-					expect(MY_DEV_VAR).toEqual("my-dev-var-value-from-a-custom-location");
-				} finally {
-					await dispose();
-				}
-			});
-		});
-
-		it("correctly reads a json config file", async () => {
+	describe("var bindings", () => {
+		it("correctly obtains var bindings from both wrangler.toml and .dev.vars", async () => {
 			const { env, dispose } = await getPlatformProxy<Env>({
-				configPath: path.join(__dirname, "..", "wrangler.json"),
+				configPath: wranglerTomlFilePath,
 			});
 			try {
-				const { MY_VAR, MY_JSON_VAR } = env;
-				expect(MY_VAR).toEqual("my-var-value-from-a-json-config-file");
+				const { MY_VAR, MY_JSON_VAR, MY_DEV_VAR } = env;
+				expect(MY_VAR).toEqual("my-var-value");
 				expect(MY_JSON_VAR).toEqual({
 					test: true,
-					fromJson: true,
 				});
+				expect(MY_DEV_VAR).toEqual("my-dev-var-value");
 			} finally {
 				await dispose();
 			}
 		});
 
-		it("provides service bindings to external local workers", async () => {
+		it("correctly makes vars from .dev.vars override the ones in wrangler.toml", async () => {
 			const { env, dispose } = await getPlatformProxy<Env>({
 				configPath: wranglerTomlFilePath,
 			});
 			try {
-				const { MY_SERVICE_A, MY_SERVICE_B } = env;
-				await testServiceBinding(
-					MY_SERVICE_A,
-					"Hello World from hello-worker-a"
-				);
-				await testServiceBinding(
-					MY_SERVICE_B,
-					"Hello World from hello-worker-b"
+				const { MY_VAR_A } = env;
+				expect(MY_VAR_A).not.toEqual("my-var-a"); // if this fails, the value was read from wrangler.toml – not .dev.vars
+				expect(MY_VAR_A).toEqual("my-dev-var-a");
+			} finally {
+				await dispose();
+			}
+		});
+
+		it("correctly makes vars from .dev.vars not override bindings of the same name from wrangler.toml", async () => {
+			const { env, dispose } = await getPlatformProxy<Env>({
+				configPath: wranglerTomlFilePath,
+			});
+			try {
+				const { MY_KV } = env;
+				expect(MY_KV).not.toEqual("my-dev-kv");
+				["get", "delete", "list", "put", "getWithMetadata"].every(
+					(methodName) =>
+						expect(
+							typeof (MY_KV as unknown as Record<string, unknown>)[methodName]
+						).toBe("function")
 				);
 			} finally {
 				await dispose();
 			}
 		});
 
-		type EntrypointService = Service<
-			Omit<NamedEntrypoint, "getCounter" | "getHelloWorldFn" | "getHelloFn"> &
-				Rpc.WorkerEntrypointBranded
-		> & {
-			getCounter: () => Promise<
-				Promise<{
-					value: Promise<number>;
-					increment: (amount: number) => Promise<number>;
-				}>
-			>;
-			getHelloWorldFn: () => Promise<() => Promise<string>>;
-			getHelloFn: () => Promise<
-				(
-					greet: string,
-					name: string,
-					options?: {
-						suffix?: string;
-						capitalize?: boolean;
-					}
-				) => Promise<string>
-			>;
-		};
-
-		describe("provides rpc service bindings to external local workers", () => {
-			let rpc: EntrypointService;
-			beforeEach(async () => {
-				const { env, dispose } = await getPlatformProxy<Env>({
-					configPath: wranglerTomlFilePath,
-				});
-				rpc = env.MY_RPC as unknown as EntrypointService;
-				return dispose;
-			});
-			it("can call RPC methods returning a string", async () => {
-				expect(await rpc.sum([1, 2, 3])).toMatchInlineSnapshot(`6`);
-			});
-			it("can call RPC methods returning an object", async () => {
-				expect(await rpc.sumObj([1, 2, 3, 5])).toEqual({
-					isObject: true,
-					value: 11,
-				});
-			});
-			it("can call RPC methods returning a Response", async () => {
-				const resp = await rpc.asJsonResponse([1, 2, 3]);
-				expect(resp.status).toMatchInlineSnapshot(`200`);
-				expect(await resp.text()).toMatchInlineSnapshot(`"[1,2,3]"`);
-			});
-			it("can obtain and interact with RpcStubs", async () => {
-				const counter = await rpc.getCounter();
-				expect(await counter.value).toMatchInlineSnapshot(`0`);
-				expect(await counter.increment(4)).toMatchInlineSnapshot(`4`);
-				expect(await counter.increment(8)).toMatchInlineSnapshot(`12`);
-				expect(await counter.value).toMatchInlineSnapshot(`12`);
-			});
-			it("can obtain and interact with returned functions", async () => {
-				const helloWorldFn = await rpc.getHelloWorldFn();
-				expect(helloWorldFn()).toEqual("Hello World!");
-
-				const helloFn = await rpc.getHelloFn();
-				expect(await helloFn("hi", "world")).toEqual("hi world");
-				expect(
-					await helloFn("hi", "world", {
-						capitalize: true,
-					})
-				).toEqual("HI WORLD");
-				expect(
-					await helloFn("Sup", "world", {
-						capitalize: true,
-						suffix: "?!",
-					})
-				).toEqual("SUP WORLD?!");
-			});
-		});
-
-		it("correctly obtains functioning KV bindings", async () => {
+		it("correctly reads a toml from a custom path alongside with its .dev.vars", async () => {
 			const { env, dispose } = await getPlatformProxy<Env>({
-				configPath: wranglerTomlFilePath,
+				configPath: path.join(
+					__dirname,
+					"..",
+					"custom-toml",
+					"path",
+					"test-toml"
+				),
 			});
-			const { MY_KV } = env;
-			let numOfKeys = (await MY_KV.list()).keys.length;
-			expect(numOfKeys).toBe(0);
-			await MY_KV.put("my-key", "my-value");
-			numOfKeys = (await MY_KV.list()).keys.length;
-			expect(numOfKeys).toBe(1);
-			const value = await MY_KV.get("my-key");
-			expect(value).toBe("my-value");
+			try {
+				const { MY_VAR, MY_JSON_VAR, MY_DEV_VAR } = env;
+				expect(MY_VAR).toEqual("my-var-value-from-a-custom-toml");
+				expect(MY_JSON_VAR).toEqual({
+					test: true,
+					customToml: true,
+				});
+				expect(MY_DEV_VAR).toEqual("my-dev-var-value-from-a-custom-location");
+			} finally {
+				await dispose();
+			}
+		});
+	});
+
+	it("correctly reads a json config file", async () => {
+		const { env, dispose } = await getPlatformProxy<Env>({
+			configPath: path.join(__dirname, "..", "wrangler.json"),
+		});
+		try {
+			const { MY_VAR, MY_JSON_VAR } = env;
+			expect(MY_VAR).toEqual("my-var-value-from-a-json-config-file");
+			expect(MY_JSON_VAR).toEqual({
+				test: true,
+				fromJson: true,
+			});
+		} finally {
 			await dispose();
+		}
+	});
+
+	it("provides service bindings to external local workers", async () => {
+		const { env, dispose } = await getPlatformProxy<Env>({
+			configPath: wranglerTomlFilePath,
 		});
+		try {
+			const { MY_SERVICE_A, MY_SERVICE_B } = env;
+			await testServiceBinding(MY_SERVICE_A, "Hello World from hello-worker-a");
+			await testServiceBinding(MY_SERVICE_B, "Hello World from hello-worker-b");
+		} finally {
+			await dispose();
+		}
+	});
 
-		it("correctly obtains functioning DO bindings (provided by external local workers)", async () => {
-			const { env, dispose } = await getPlatformProxy<Env>({
-				configPath: wranglerTomlFilePath,
-			});
-			try {
-				const { MY_DO_A, MY_DO_B } = env;
-				await testDoBinding(MY_DO_A, "Hello from DurableObject A");
-				await testDoBinding(MY_DO_B, "Hello from DurableObject B");
-			} finally {
-				await dispose();
-			}
-		});
-
-		it("correctly obtains functioning R2 bindings", async () => {
-			const { env, dispose } = await getPlatformProxy<Env>({
-				configPath: wranglerTomlFilePath,
-			});
-			try {
-				const { MY_BUCKET } = env;
-				let numOfObjects = (await MY_BUCKET.list()).objects.length;
-				expect(numOfObjects).toBe(0);
-				await MY_BUCKET.put("my-object", "my-value");
-				numOfObjects = (await MY_BUCKET.list()).objects.length;
-				expect(numOfObjects).toBe(1);
-				const value = await MY_BUCKET.get("my-object");
-				expect(await value?.text()).toBe("my-value");
-			} finally {
-				await dispose();
-			}
-		});
-
-		it("correctly obtains functioning D1 bindings", async () => {
-			const { env, dispose } = await getPlatformProxy<Env>({
-				configPath: wranglerTomlFilePath,
-			});
-			try {
-				const { MY_D1 } = env;
-				await MY_D1.exec(
-					`CREATE TABLE IF NOT EXISTS users ( id integer PRIMARY KEY AUTOINCREMENT, name text NOT NULL )`
-				);
-				const stmt = MY_D1.prepare("insert into users (name) values (?1)");
-				await MY_D1.batch([
-					stmt.bind("userA"),
-					stmt.bind("userB"),
-					stmt.bind("userC"),
-				]);
-				const { results } = await MY_D1.prepare(
-					"SELECT name FROM users LIMIT 5"
-				).all();
-				expect(results).toEqual([
-					{ name: "userA" },
-					{ name: "userB" },
-					{ name: "userC" },
-				]);
-			} finally {
-				await dispose();
-			}
-		});
-
-		// Important: the hyperdrive values are passthrough ones since the workerd specific hyperdrive values only make sense inside
-		//            workerd itself and would simply not work in a node.js process
-		it("correctly obtains passthrough Hyperdrive bindings", async () => {
-			const { env, dispose } = await getPlatformProxy<Env>({
-				configPath: wranglerTomlFilePath,
-			});
-			try {
-				const { MY_HYPERDRIVE } = env;
-				expect(MY_HYPERDRIVE.connectionString).toEqual(
-					"postgres://user:pass@127.0.0.1:1234/db"
-				);
-				expect(MY_HYPERDRIVE.database).toEqual("db");
-				expect(MY_HYPERDRIVE.host).toEqual("127.0.0.1");
-				expect(MY_HYPERDRIVE.user).toEqual("user");
-				expect(MY_HYPERDRIVE.password).toEqual("pass");
-				expect(MY_HYPERDRIVE.port).toEqual(1234);
-			} finally {
-				await dispose();
-			}
-		});
-
-		describe("with a target environment", () => {
-			it("should provide bindings targeting a specified environment and also inherit top-level ones", async () => {
-				const { env, dispose } = await getPlatformProxy<Env>({
-					configPath: wranglerTomlFilePath,
-					environment: "production",
-				});
-				try {
-					expect(env.MY_VAR).not.toBe("my-var-value");
-					expect(env.MY_VAR).toBe("my-PRODUCTION-var-value");
-					expect(env.MY_JSON_VAR).toEqual({ test: true, production: true });
-
-					expect(env.MY_KV).toBeTruthy();
-					expect(env.MY_KV_PROD).toBeTruthy();
-				} finally {
-					await dispose();
+	type EntrypointService = Service<
+		Omit<NamedEntrypoint, "getCounter" | "getHelloWorldFn" | "getHelloFn"> &
+			Rpc.WorkerEntrypointBranded
+	> & {
+		getCounter: () => Promise<
+			Promise<{
+				value: Promise<number>;
+				increment: (amount: number) => Promise<number>;
+			}>
+		>;
+		getHelloWorldFn: () => Promise<() => Promise<string>>;
+		getHelloFn: () => Promise<
+			(
+				greet: string,
+				name: string,
+				options?: {
+					suffix?: string;
+					capitalize?: boolean;
 				}
+			) => Promise<string>
+		>;
+	};
+
+	describe("provides rpc service bindings to external local workers", () => {
+		let rpc: EntrypointService;
+		beforeEach(async () => {
+			const { env, dispose } = await getPlatformProxy<Env>({
+				configPath: wranglerTomlFilePath,
 			});
-
-			it("should not provide bindings targeting an environment when none was specified", async () => {
-				const { env, dispose } = await getPlatformProxy<Env>({
-					configPath: wranglerTomlFilePath,
-				});
-				try {
-					expect(env.MY_VAR).not.toBe("my-PRODUCTION-var-value");
-					expect(env.MY_VAR).toBe("my-var-value");
-					expect(env.MY_JSON_VAR).toEqual({ test: true });
-
-					expect(env.MY_KV).toBeTruthy();
-					expect(env.MY_KV_PROD).toBeFalsy();
-				} finally {
-					await dispose();
-				}
-			});
-
-			it("should provide secrets targeting a specified environment", async () => {
-				const { env, dispose } = await getPlatformProxy<Env>({
-					configPath: wranglerTomlFilePath,
-					environment: "production",
-				});
-				try {
-					const { MY_DEV_VAR } = env;
-					expect(MY_DEV_VAR).not.toEqual("my-dev-var-value");
-					expect(MY_DEV_VAR).toEqual("my-PRODUCTION-dev-var-value");
-				} finally {
-					await dispose();
-				}
-			});
-
-			it("should error if a non-existent environment is provided", async () => {
-				await expect(
-					getPlatformProxy({
-						configPath: wranglerTomlFilePath,
-						environment: "non-existent-environment",
-					})
-				).rejects.toThrow(
-					/No environment found in configuration with name "non-existent-environment"/
-				);
+			rpc = env.MY_RPC as unknown as EntrypointService;
+			return dispose;
+		});
+		it("can call RPC methods returning a string", async () => {
+			expect(await rpc.sum([1, 2, 3])).toMatchInlineSnapshot(`6`);
+		});
+		it("can call RPC methods returning an object", async () => {
+			expect(await rpc.sumObj([1, 2, 3, 5])).toEqual({
+				isObject: true,
+				value: 11,
 			});
 		});
-	},
-	{ repeats: 10 }
-);
+		it("can call RPC methods returning a Response", async () => {
+			const resp = await rpc.asJsonResponse([1, 2, 3]);
+			expect(resp.status).toMatchInlineSnapshot(`200`);
+			expect(await resp.text()).toMatchInlineSnapshot(`"[1,2,3]"`);
+		});
+		it("can obtain and interact with RpcStubs", async () => {
+			const counter = await rpc.getCounter();
+			expect(await counter.value).toMatchInlineSnapshot(`0`);
+			expect(await counter.increment(4)).toMatchInlineSnapshot(`4`);
+			expect(await counter.increment(8)).toMatchInlineSnapshot(`12`);
+			expect(await counter.value).toMatchInlineSnapshot(`12`);
+		});
+		it("can obtain and interact with returned functions", async () => {
+			const helloWorldFn = await rpc.getHelloWorldFn();
+			expect(helloWorldFn()).toEqual("Hello World!");
+
+			const helloFn = await rpc.getHelloFn();
+			expect(await helloFn("hi", "world")).toEqual("hi world");
+			expect(
+				await helloFn("hi", "world", {
+					capitalize: true,
+				})
+			).toEqual("HI WORLD");
+			expect(
+				await helloFn("Sup", "world", {
+					capitalize: true,
+					suffix: "?!",
+				})
+			).toEqual("SUP WORLD?!");
+		});
+	});
+
+	it("correctly obtains functioning KV bindings", async () => {
+		const { env, dispose } = await getPlatformProxy<Env>({
+			configPath: wranglerTomlFilePath,
+		});
+		const { MY_KV } = env;
+		let numOfKeys = (await MY_KV.list()).keys.length;
+		expect(numOfKeys).toBe(0);
+		await MY_KV.put("my-key", "my-value");
+		numOfKeys = (await MY_KV.list()).keys.length;
+		expect(numOfKeys).toBe(1);
+		const value = await MY_KV.get("my-key");
+		expect(value).toBe("my-value");
+		await dispose();
+	});
+
+	it("correctly obtains functioning DO bindings (provided by external local workers)", async () => {
+		const { env, dispose } = await getPlatformProxy<Env>({
+			configPath: wranglerTomlFilePath,
+		});
+		try {
+			const { MY_DO_A, MY_DO_B } = env;
+			await testDoBinding(MY_DO_A, "Hello from DurableObject A");
+			await testDoBinding(MY_DO_B, "Hello from DurableObject B");
+		} finally {
+			await dispose();
+		}
+	});
+
+	it("correctly obtains functioning R2 bindings", async () => {
+		const { env, dispose } = await getPlatformProxy<Env>({
+			configPath: wranglerTomlFilePath,
+		});
+		try {
+			const { MY_BUCKET } = env;
+			let numOfObjects = (await MY_BUCKET.list()).objects.length;
+			expect(numOfObjects).toBe(0);
+			await MY_BUCKET.put("my-object", "my-value");
+			numOfObjects = (await MY_BUCKET.list()).objects.length;
+			expect(numOfObjects).toBe(1);
+			const value = await MY_BUCKET.get("my-object");
+			expect(await value?.text()).toBe("my-value");
+		} finally {
+			await dispose();
+		}
+	});
+
+	it("correctly obtains functioning D1 bindings", async () => {
+		const { env, dispose } = await getPlatformProxy<Env>({
+			configPath: wranglerTomlFilePath,
+		});
+		try {
+			const { MY_D1 } = env;
+			await MY_D1.exec(
+				`CREATE TABLE IF NOT EXISTS users ( id integer PRIMARY KEY AUTOINCREMENT, name text NOT NULL )`
+			);
+			const stmt = MY_D1.prepare("insert into users (name) values (?1)");
+			await MY_D1.batch([
+				stmt.bind("userA"),
+				stmt.bind("userB"),
+				stmt.bind("userC"),
+			]);
+			const { results } = await MY_D1.prepare(
+				"SELECT name FROM users LIMIT 5"
+			).all();
+			expect(results).toEqual([
+				{ name: "userA" },
+				{ name: "userB" },
+				{ name: "userC" },
+			]);
+		} finally {
+			await dispose();
+		}
+	});
+
+	// Important: the hyperdrive values are passthrough ones since the workerd specific hyperdrive values only make sense inside
+	//            workerd itself and would simply not work in a node.js process
+	it("correctly obtains passthrough Hyperdrive bindings", async () => {
+		const { env, dispose } = await getPlatformProxy<Env>({
+			configPath: wranglerTomlFilePath,
+		});
+		try {
+			const { MY_HYPERDRIVE } = env;
+			expect(MY_HYPERDRIVE.connectionString).toEqual(
+				"postgres://user:pass@127.0.0.1:1234/db"
+			);
+			expect(MY_HYPERDRIVE.database).toEqual("db");
+			expect(MY_HYPERDRIVE.host).toEqual("127.0.0.1");
+			expect(MY_HYPERDRIVE.user).toEqual("user");
+			expect(MY_HYPERDRIVE.password).toEqual("pass");
+			expect(MY_HYPERDRIVE.port).toEqual(1234);
+		} finally {
+			await dispose();
+		}
+	});
+
+	describe("with a target environment", () => {
+		it("should provide bindings targeting a specified environment and also inherit top-level ones", async () => {
+			const { env, dispose } = await getPlatformProxy<Env>({
+				configPath: wranglerTomlFilePath,
+				environment: "production",
+			});
+			try {
+				expect(env.MY_VAR).not.toBe("my-var-value");
+				expect(env.MY_VAR).toBe("my-PRODUCTION-var-value");
+				expect(env.MY_JSON_VAR).toEqual({ test: true, production: true });
+
+				expect(env.MY_KV).toBeTruthy();
+				expect(env.MY_KV_PROD).toBeTruthy();
+			} finally {
+				await dispose();
+			}
+		});
+
+		it("should not provide bindings targeting an environment when none was specified", async () => {
+			const { env, dispose } = await getPlatformProxy<Env>({
+				configPath: wranglerTomlFilePath,
+			});
+			try {
+				expect(env.MY_VAR).not.toBe("my-PRODUCTION-var-value");
+				expect(env.MY_VAR).toBe("my-var-value");
+				expect(env.MY_JSON_VAR).toEqual({ test: true });
+
+				expect(env.MY_KV).toBeTruthy();
+				expect(env.MY_KV_PROD).toBeFalsy();
+			} finally {
+				await dispose();
+			}
+		});
+
+		it("should provide secrets targeting a specified environment", async () => {
+			const { env, dispose } = await getPlatformProxy<Env>({
+				configPath: wranglerTomlFilePath,
+				environment: "production",
+			});
+			try {
+				const { MY_DEV_VAR } = env;
+				expect(MY_DEV_VAR).not.toEqual("my-dev-var-value");
+				expect(MY_DEV_VAR).toEqual("my-PRODUCTION-dev-var-value");
+			} finally {
+				await dispose();
+			}
+		});
+
+		it("should error if a non-existent environment is provided", async () => {
+			await expect(
+				getPlatformProxy({
+					configPath: wranglerTomlFilePath,
+					environment: "non-existent-environment",
+				})
+			).rejects.toThrow(
+				/No environment found in configuration with name "non-existent-environment"/
+			);
+		});
+	});
+});
 
 /**
  * Starts all the workers present in the `workers` directory using `unstable_dev`
