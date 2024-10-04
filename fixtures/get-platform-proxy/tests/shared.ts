@@ -9,5 +9,6 @@ export function getPlatformProxy<T>(
 	return originalGetPlatformProxy({
 		...options,
 		persist: false,
+		experimentalRegistry: true,
 	});
 }
