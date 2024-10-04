@@ -468,7 +468,11 @@ export async function bundleWorker(
 			await ctx.watch();
 			result = await initialBuildResultPromise;
 			if (result.errors.length > 0) {
-				throw new UserError("Failed to build");
+				throw new BuildFailure(
+					"Initial build failed.",
+					result.errors,
+					result.warnings
+				);
 			}
 
 			stop = async function () {
@@ -535,4 +539,14 @@ export async function bundleWorker(
 			entryDirectory: entry.directory,
 		},
 	};
+}
+
+class BuildFailure extends Error {
+	constructor(
+		message: string,
+		readonly errors: esbuild.Message[],
+		readonly warnings: esbuild.Message[]
+	) {
+		super(message);
+	}
 }

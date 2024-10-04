@@ -190,9 +190,13 @@ export function logBuildWarnings(warnings: Message[]) {
  * style esbuild would.
  */
 export function logBuildFailure(errors: Message[], warnings: Message[]) {
-	const logs = formatMessagesSync(errors, { kind: "error", color: true });
-	for (const log of logs) {
-		logger.console("error", log);
+	if (errors.length > 0) {
+		const logs = formatMessagesSync(errors, { kind: "error", color: true });
+		const errorStr = errors.length > 1 ? "errors" : "error";
+		logger.error(
+			`Build failed with ${errors.length} ${errorStr}:\n` + logs.join("\n")
+		);
 	}
+
 	logBuildWarnings(warnings);
 }

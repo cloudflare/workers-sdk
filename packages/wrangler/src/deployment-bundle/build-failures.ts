@@ -55,3 +55,17 @@ export function isBuildFailure(err: unknown): err is esbuild.BuildFailure {
 		"warnings" in err
 	);
 }
+
+/**
+ * Returns true if the error has a cause that is like an esbuild BuildFailure object.
+ */
+export function isBuildFailureFromCause(
+	err: unknown
+): err is { cause: esbuild.BuildFailure } {
+	return (
+		typeof err === "object" &&
+		err !== null &&
+		"cause" in err &&
+		isBuildFailure(err.cause)
+	);
+}
