@@ -1,5 +1,43 @@
 # wrangler
 
+## 3.80.0
+
+### Minor Changes
+
+- [#6408](https://github.com/cloudflare/workers-sdk/pull/6408) [`3fa846e`](https://github.com/cloudflare/workers-sdk/commit/3fa846ec205a1f4e91bc1f69640dfd6e0a7b6a77) Thanks [@RamIdeas](https://github.com/RamIdeas)! - feat: update the `--experimental-dev-env` (shorthand: `--x-dev-env`) flag to on-by-default
+
+  If you experience any issues, you can disable the flag with `--x-dev-env=false`. Please also let us know by opening an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose.
+
+### Patch Changes
+
+- [#6854](https://github.com/cloudflare/workers-sdk/pull/6854) [`04a8fed`](https://github.com/cloudflare/workers-sdk/commit/04a8feda8ee1e855ac9935b2395db4eed20b99b7) Thanks [@penalosa](https://github.com/penalosa)! - chore: Include serialised `FormData` in debug logs
+
+- [#6879](https://github.com/cloudflare/workers-sdk/pull/6879) [`b27d8cb`](https://github.com/cloudflare/workers-sdk/commit/b27d8cbad4d2bcf435e7ac87891b17db1997cd4e) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: the docs command should not crash if given search terms
+
+  Fixes a regression accidentally introduced by #3735.
+
+- [#6873](https://github.com/cloudflare/workers-sdk/pull/6873) [`b123f43`](https://github.com/cloudflare/workers-sdk/commit/b123f43c6946fa97f49bc10532c924b9c58548b6) Thanks [@zwily](https://github.com/zwily)! - fix: reduce logging noise during wrangler dev with static assets
+
+  Updates to static assets are accessible by passing in --log-level="debug" but otherwise hidden.
+
+- [#6881](https://github.com/cloudflare/workers-sdk/pull/6881) [`7ca37bc`](https://github.com/cloudflare/workers-sdk/commit/7ca37bcbb274e88709fc14aea6f62c003ddc1b92) Thanks [@RamIdeas](https://github.com/RamIdeas)! - fix: custom builds outputting files in assets watched directory no longer cause the custom build to run again in an infinite loop
+
+- [#6872](https://github.com/cloudflare/workers-sdk/pull/6872) [`b2d094e`](https://github.com/cloudflare/workers-sdk/commit/b2d094e52b519decf8fdef1bb8dcd42d3e4ac2ad) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: render a helpful build error if a Service Worker mode Worker has imports
+
+  A common mistake is to forget to export from the entry-point of a Worker, which causes
+  Wrangler to infer that we are in "Service Worker" mode.
+
+  In this mode, imports to external modules are not allowed.
+  Currently this only fails at runtime, because our esbuild step converts these imports to an internal `__require()` call that throws an error.
+  The error message is misleading and does not help the user identify the cause of the problem.
+  This is particularly tricky where the external imports are added by a library or our own node.js polyfills.
+
+  Fixes #6648
+
+- [#6792](https://github.com/cloudflare/workers-sdk/pull/6792) [`27e8385`](https://github.com/cloudflare/workers-sdk/commit/27e8385167a4ef6eff9bb91cf0203184fbd16915) Thanks [@penalosa](https://github.com/penalosa)! - fix: Handle more module declaration cases
+
+- [#6838](https://github.com/cloudflare/workers-sdk/pull/6838) [`7dbd0c8`](https://github.com/cloudflare/workers-sdk/commit/7dbd0c82a52ba772f46081ccd4b39d59b1f4c8bf) Thanks [@GregBrimble](https://github.com/GregBrimble)! - fix: Improve static asset upload messaging
+
 ## 3.79.0
 
 ### Minor Changes
