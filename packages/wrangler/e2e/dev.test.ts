@@ -878,7 +878,7 @@ describe("custom builds", () => {
 		expect(text).toMatchInlineSnapshot(`"Hello, World!"`);
 	});
 
-	it.only("does not infinite-loop custom build with assets", async () => {
+	it("does not infinite-loop custom build with assets", async () => {
 		const helper = new WranglerE2ETestHelper();
 		await helper.seed({
 			"wrangler.toml": dedent`
