@@ -1,15 +1,12 @@
 import * as vite from 'vite';
 import { createMiddleware } from '@hattip/adapter-node';
-import {
-	Miniflare,
-	Response as MiniflareResponse,
-	type WorkerOptions,
-} from 'miniflare';
+import { Miniflare, Response as MiniflareResponse } from 'miniflare';
 import { unstable_getMiniflareWorkerOptions } from 'wrangler';
 import { fileURLToPath } from 'node:url';
 import * as path from 'node:path';
 import { createCloudflareEnvironment } from './cloudflare-environment';
 import type { FetchFunctionOptions } from 'vite/module-runner';
+import type { WorkerOptions } from 'miniflare';
 import type {
 	CloudflareEnvironmentOptions,
 	CloudflareDevEnvironment,
@@ -21,7 +18,7 @@ const runnerPath = fileURLToPath(import.meta.resolve('./runner/index.js'));
 export function cloudflare<
 	T extends Record<string, CloudflareEnvironmentOptions>,
 >(pluginConfig: { workers: T; entryWorker?: keyof T }): vite.Plugin {
-	let resolvedConfig: vite.ResolvedConfig;
+	let viteConfig: vite.ResolvedConfig;
 
 	return {
 		name: 'vite-plugin-cloudflare',
@@ -34,15 +31,15 @@ export function cloudflare<
 				),
 			};
 		},
-		configResolved(viteConfig) {
-			resolvedConfig = viteConfig;
+		configResolved(resolvedConfig) {
+			viteConfig = resolvedConfig;
 		},
 		async configureServer(viteDevServer) {
 			const workers = Object.entries(pluginConfig.workers).map(
 				([name, options]) => {
 					const miniflareOptions = unstable_getMiniflareWorkerOptions(
 						path.resolve(
-							resolvedConfig.root,
+							viteConfig.root,
 							options.wranglerConfig ?? './wrangler.toml',
 						),
 					);
@@ -57,7 +54,7 @@ export function cloudflare<
 						unsafeEvalBinding: '__VITE_UNSAFE_EVAL__',
 						bindings: {
 							...workerOptions.bindings,
-							__VITE_ROOT__: resolvedConfig.root,
+							__VITE_ROOT__: viteConfig.root,
 							__VITE_ENTRY_PATH__: options.main,
 						},
 					} satisfies Partial<WorkerOptions>;
