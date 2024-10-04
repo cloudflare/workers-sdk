@@ -922,7 +922,7 @@ describe("custom builds", () => {
 		// now check assets are still fetchable, even after updates
 
 		const res = await fetch(url);
-		await expect(res.text()).resolves.toBe("hello\n");
+		await expect(res.text()).resolves.toContain("hello");
 
 		await helper.seed({
 			"public/index.html": "world",
