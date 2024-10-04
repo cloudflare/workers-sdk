@@ -74,11 +74,11 @@ export async function startDevServer(
 
 	//start the worker registry
 	logger.log("disableDevRegistry: ", props.disableDevRegistry);
-	if (!props.disableDevRegistry && !props.experimentalDevEnv) {
+	if (!props.disableDevRegistry) {
 		try {
-			await startWorkerRegistry();
+			startWorkerRegistry();
 			if (props.local) {
-				const boundRegisteredWorkers = await getBoundRegisteredWorkers({
+				const boundRegisteredWorkers = getBoundRegisteredWorkers({
 					name: props.name,
 					services: props.bindings.services,
 					durableObjects: props.bindings.durable_objects,

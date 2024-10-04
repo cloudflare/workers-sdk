@@ -147,7 +147,7 @@ async function getMiniflareOptionsFromConfig(
 ): Promise<Partial<MiniflareOptions>> {
 	const bindings = getBindings(rawConfig, env, true, {});
 
-	const workerDefinitions = await getBoundRegisteredWorkers({
+	const workerDefinitions = getBoundRegisteredWorkers({
 		name: rawConfig.name,
 		services: bindings.services,
 		durableObjects: rawConfig["durable_objects"],

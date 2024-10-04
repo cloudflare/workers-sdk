@@ -70,70 +70,70 @@ function useDevRegistry(
 
 	const hasFailedToFetch = useRef(false);
 
-	useEffect(() => {
-		// Let's try to start registry
-		// TODO: we should probably call this in a loop
-		// in case the registry dies elsewhere
-		startWorkerRegistry().catch((err) => {
-			logger.error("failed to start worker registry", err);
-		});
+	// useEffect(() => {
+	// 	// Let's try to start registry
+	// 	// TODO: we should probably call this in a loop
+	// 	// in case the registry dies elsewhere
+	// 	startWorkerRegistry().catch((err) => {
+	// 		logger.error("failed to start worker registry", err);
+	// 	});
 
-		const interval =
-			// TODO: enable this for remote mode as well
-			// https://github.com/cloudflare/workers-sdk/issues/1182
-			mode === "local"
-				? setInterval(() => {
-						getBoundRegisteredWorkers({
-							name,
-							services,
-							durableObjects,
-						}).then(
-							(boundRegisteredWorkers: WorkerRegistry | undefined) => {
-								setWorkers((prevWorkers) => {
-									if (
-										!util.isDeepStrictEqual(boundRegisteredWorkers, prevWorkers)
-									) {
-										return boundRegisteredWorkers || {};
-									}
-									return prevWorkers;
-								});
-							},
-							(err) => {
-								if (!hasFailedToFetch.current) {
-									hasFailedToFetch.current = true;
-									logger.warn("Failed to get worker definitions", err);
-								}
-							}
-						);
-					}, 300)
-				: undefined;
+	// 	const interval =
+	// 		// TODO: enable this for remote mode as well
+	// 		// https://github.com/cloudflare/workers-sdk/issues/1182
+	// 		mode === "local"
+	// 			? setInterval(() => {
+	// 					getBoundRegisteredWorkers({
+	// 						name,
+	// 						services,
+	// 						durableObjects,
+	// 					}).then(
+	// 						(boundRegisteredWorkers: WorkerRegistry | undefined) => {
+	// 							setWorkers((prevWorkers) => {
+	// 								if (
+	// 									!util.isDeepStrictEqual(boundRegisteredWorkers, prevWorkers)
+	// 								) {
+	// 									return boundRegisteredWorkers || {};
+	// 								}
+	// 								return prevWorkers;
+	// 							});
+	// 						},
+	// 						(err) => {
+	// 							if (!hasFailedToFetch.current) {
+	// 								hasFailedToFetch.current = true;
+	// 								logger.warn("Failed to get worker definitions", err);
+	// 							}
+	// 						}
+	// 					);
+	// 				}, 300)
+	// 			: undefined;
 
-		return () => {
-			interval && clearInterval(interval);
-			Promise.allSettled([
-				name ? unregisterWorker(name) : Promise.resolve(),
-				stopWorkerRegistry(),
-			]).then(
-				([unregisterResult, stopRegistryResult]) => {
-					if (unregisterResult.status === "rejected") {
-						logger.error(
-							"Failed to unregister worker",
-							unregisterResult.reason
-						);
-					}
-					if (stopRegistryResult.status === "rejected") {
-						logger.error(
-							"Failed to stop worker registry",
-							stopRegistryResult.reason
-						);
-					}
-				},
-				(err) => {
-					logger.error("Failed to clear dev registry effect", err);
-				}
-			);
-		};
-	}, [name, services, durableObjects, mode]);
+	// 	return () => {
+	// 		interval && clearInterval(interval);
+	// 		Promise.allSettled([
+	// 			name ? unregisterWorker(name) : Promise.resolve(),
+	// 			stopWorkerRegistry(),
+	// 		]).then(
+	// 			([unregisterResult, stopRegistryResult]) => {
+	// 				if (unregisterResult.status === "rejected") {
+	// 					logger.error(
+	// 						"Failed to unregister worker",
+	// 						unregisterResult.reason
+	// 					);
+	// 				}
+	// 				if (stopRegistryResult.status === "rejected") {
+	// 					logger.error(
+	// 						"Failed to stop worker registry",
+	// 						stopRegistryResult.reason
+	// 					);
+	// 				}
+	// 			},
+	// 			(err) => {
+	// 				logger.error("Failed to clear dev registry effect", err);
+	// 			}
+	// 		);
+	// 	};
+	// }, [name, services, durableObjects, mode]);
 
 	return workers;
 }

@@ -1,5 +1,12 @@
 import events from "node:events";
-import { utimesSync } from "node:fs";
+import {
+	mkdirSync,
+	readdirSync,
+	readFileSync,
+	statSync,
+	utimesSync,
+	writeFileSync,
+} from "node:fs";
 import {
 	mkdir,
 	readdir,
@@ -63,21 +70,21 @@ export type WorkerDefinition = {
 	durableObjectsPort?: number;
 };
 
-async function loadWorkerDefinitions(): Promise<WorkerRegistry> {
-	await mkdir(DEV_REGISTRY_PATH, { recursive: true });
+function loadWorkerDefinitions(): WorkerRegistry {
+	mkdirSync(DEV_REGISTRY_PATH, { recursive: true });
 	globalWorkers ??= {};
 	const newWorkers = new Set<string>();
-	const workerDefinitions = await readdir(DEV_REGISTRY_PATH);
-	for (const workerName of workerDefinitions) {
+	const workerNames = readdirSync(DEV_REGISTRY_PATH);
+	for (const workerName of workerNames) {
 		try {
-			const file = await readFile(
+			const file = readFileSync(
 				path.join(DEV_REGISTRY_PATH, workerName),
 				"utf8"
 			);
-			const stats = await stat(path.join(DEV_REGISTRY_PATH, workerName));
+			const stats = statSync(path.join(DEV_REGISTRY_PATH, workerName));
 			// Cleanup existing workers older than 10 minutes
 			if (stats.mtime.getTime() < Date.now() - 600000) {
-				await unregisterWorker(workerName);
+				// await unregisterWorker(workerName);
 			} else {
 				globalWorkers[workerName] = JSON.parse(file);
 				newWorkers.add(workerName);
@@ -160,41 +167,41 @@ export async function startWorkerRegistryServer(port: number) {
  * that exposes endpoints for registering and unregistering
  * services, as well as getting the state of the registry.
  */
-export async function startWorkerRegistry(
+export function startWorkerRegistry(
 	listener?: (registry: WorkerRegistry | undefined) => void
 ) {
-	if (getFlag("FILE_BASED_REGISTRY")) {
-		globalWatcher ??= watch(DEV_REGISTRY_PATH, {
-			persistent: true,
-		}).on("all", async () => {
-			await loadWorkerDefinitions();
-			listener?.({ ...globalWorkers });
-		});
-		return;
-	}
-	if ((await isPortAvailable()) && !globalServer) {
-		const result = await startWorkerRegistryServer(DEV_REGISTRY_PORT);
-		globalServer = result.server;
-		globalTerminator = result.terminator;
+	// if (getFlag("FILE_BASED_REGISTRY")) {
+	globalWatcher ??= watch(DEV_REGISTRY_PATH, {
+		persistent: true,
+	}).on("all", () => {
+		loadWorkerDefinitions();
+		listener?.({ ...globalWorkers });
+	});
+	// 	return;
+	// }
+	// if ((await isPortAvailable()) && !globalServer) {
+	// 	const result = await startWorkerRegistryServer(DEV_REGISTRY_PORT);
+	// 	globalServer = result.server;
+	// 	globalTerminator = result.terminator;
 
-		/**
-		 * The registry server may have already been started by another wrangler process.
-		 * If wrangler processes are run in parallel, isPortAvailable() can return true
-		 * while another process spins up the server
-		 */
-		globalServer.once("error", (err) => {
-			if ((err as unknown as { code: string }).code !== "EADDRINUSE") {
-				throw err;
-			}
-		});
+	// 	/**
+	// 	 * The registry server may have already been started by another wrangler process.
+	// 	 * If wrangler processes are run in parallel, isPortAvailable() can return true
+	// 	 * while another process spins up the server
+	// 	 */
+	// 	globalServer.once("error", (err) => {
+	// 		if ((err as unknown as { code: string }).code !== "EADDRINUSE") {
+	// 			throw err;
+	// 		}
+	// 	});
 
-		/**
-		 * The registry server may close. Reset the server to null for restart.
-		 */
-		globalServer.on("close", () => {
-			globalServer = null;
-		});
-	}
+	// 	/**
+	// 	 * The registry server may close. Reset the server to null for restart.
+	// 	 */
+	// 	globalServer.on("close", () => {
+	// 		globalServer = null;
+	// 	});
+	// }
 }
 
 /**
@@ -215,54 +222,51 @@ export async function stopWorkerRegistry() {
 /**
  * Register a worker in the registry.
  */
-export async function registerWorker(
-	name: string,
-	definition: WorkerDefinition
-) {
-	if (getFlag("FILE_BASED_REGISTRY")) {
-		const existingHeartbeat = heartbeats.get(name);
-		if (existingHeartbeat) {
-			clearInterval(existingHeartbeat);
-		}
-		await mkdir(DEV_REGISTRY_PATH, { recursive: true });
-		await writeFile(
-			path.join(DEV_REGISTRY_PATH, name),
-			// We don't currently do anything with the stored Wrangler version,
-			// but if we need to make breaking changes to this format in the future
-			// we can use this field to present useful messaging
-			JSON.stringify({ ...definition, wranglerVersion }, null, 2)
-		);
-		heartbeats.set(
-			name,
-			setInterval(() => {
-				utimesSync(path.join(DEV_REGISTRY_PATH, name), new Date(), new Date());
-			}, 30_000)
-		);
-		return;
+export function registerWorker(name: string, definition: WorkerDefinition) {
+	// if (getFlag("FILE_BASED_REGISTRY")) {
+	const existingHeartbeat = heartbeats.get(name);
+	if (existingHeartbeat) {
+		clearInterval(existingHeartbeat);
 	}
-	/**
-	 * Prevent the dev registry be closed.
-	 */
-	await startWorkerRegistry();
-	try {
-		return await fetch(`${DEV_REGISTRY_HOST}/workers/${name}`, {
-			method: "POST",
-			headers: {
-				"Content-Type": "application/json",
-			},
-			body: JSON.stringify(definition),
-		});
-	} catch (e) {
-		if (
-			!["ECONNRESET", "ECONNREFUSED"].includes(
-				(e as unknown as { cause?: { code?: string } }).cause?.code || "___"
-			)
-		) {
-			logger.error("Failed to register worker in local service registry", e);
-		} else {
-			logger.debug("Failed to register worker in local service registry", e);
-		}
-	}
+	mkdirSync(DEV_REGISTRY_PATH, { recursive: true });
+	writeFileSync(
+		path.join(DEV_REGISTRY_PATH, name),
+		// We don't currently do anything with the stored Wrangler version,
+		// but if we need to make breaking changes to this format in the future
+		// we can use this field to present useful messaging
+		JSON.stringify({ ...definition, wranglerVersion }, null, 2)
+	);
+	heartbeats.set(
+		name,
+		setInterval(() => {
+			utimesSync(path.join(DEV_REGISTRY_PATH, name), new Date(), new Date());
+		}, 30_000)
+	);
+	// 	return;
+	// }
+	// /**
+	//  * Prevent the dev registry be closed.
+	//  */
+	// await startWorkerRegistry();
+	// try {
+	// 	return await fetch(`${DEV_REGISTRY_HOST}/workers/${name}`, {
+	// 		method: "POST",
+	// 		headers: {
+	// 			"Content-Type": "application/json",
+	// 		},
+	// 		body: JSON.stringify(definition),
+	// 	});
+	// } catch (e) {
+	// 	if (
+	// 		!["ECONNRESET", "ECONNREFUSED"].includes(
+	// 			(e as unknown as { cause?: { code?: string } }).cause?.code || "___"
+	// 		)
+	// 	) {
+	// 		logger.error("Failed to register worker in local service registry", e);
+	// 	} else {
+	// 		logger.debug("Failed to register worker in local service registry", e);
+	// 	}
+	// }
 }
 
 /**
@@ -300,33 +304,31 @@ export async function unregisterWorker(name: string) {
 /**
  * Get the state of the service registry.
  */
-export async function getRegisteredWorkers(): Promise<
-	WorkerRegistry | undefined
-> {
-	if (getFlag("FILE_BASED_REGISTRY")) {
-		globalWorkers = await loadWorkerDefinitions();
-		return { ...globalWorkers };
-	}
+export function getRegisteredWorkers(): WorkerRegistry | undefined {
+	// if (getFlag("FILE_BASED_REGISTRY")) {
+	globalWorkers = loadWorkerDefinitions();
+	return { ...globalWorkers };
+	// }
 
-	try {
-		const response = await fetch(`${DEV_REGISTRY_HOST}/workers`);
-		return (await response.json()) as WorkerRegistry;
-	} catch (e) {
-		if (
-			!["ECONNRESET", "ECONNREFUSED"].includes(
-				(e as unknown as { cause?: { code?: string } }).cause?.code || "___"
-			)
-		) {
-			throw e;
-		}
-	}
+	// try {
+	// 	const response = await fetch(`${DEV_REGISTRY_HOST}/workers`);
+	// 	return (await response.json()) as WorkerRegistry;
+	// } catch (e) {
+	// 	if (
+	// 		!["ECONNRESET", "ECONNREFUSED"].includes(
+	// 			(e as unknown as { cause?: { code?: string } }).cause?.code || "___"
+	// 		)
+	// 	) {
+	// 		throw e;
+	// 	}
+	// }
 }
 
 /**
  * a function that takes your serviceNames and durableObjectNames and returns a
  * list of the running workers that we're bound to
  */
-export async function getBoundRegisteredWorkers(
+export function getBoundRegisteredWorkers(
 	{
 		name,
 		services,
@@ -343,7 +345,7 @@ export async function getBoundRegisteredWorkers(
 			| undefined;
 	},
 	existingWorkerDefinitions?: WorkerRegistry | undefined
-): Promise<WorkerRegistry | undefined> {
+): WorkerRegistry | undefined {
 	const serviceNames = (services || []).map(
 		(serviceBinding) => serviceBinding.service
 	);
@@ -354,8 +356,7 @@ export async function getBoundRegisteredWorkers(
 	if (serviceNames.length === 0 && durableObjectServices.length === 0) {
 		return {};
 	}
-	const workerDefinitions =
-		existingWorkerDefinitions ?? (await getRegisteredWorkers());
+	const workerDefinitions = existingWorkerDefinitions ?? getRegisteredWorkers();
 
 	const filteredWorkers = Object.fromEntries(
 		Object.entries(workerDefinitions || {}).filter(
@@ -370,64 +371,64 @@ export async function getBoundRegisteredWorkers(
 /**
  * A react-free version of the above hook
  */
-export async function devRegistry(
+export function devRegistry(
 	cb: (workers: WorkerRegistry | undefined) => void
-): Promise<(name?: string) => Promise<void>> {
+): void {
 	let previousRegistry: WorkerRegistry | undefined;
 
-	let interval: ReturnType<typeof setInterval>;
+	// let interval: ReturnType<typeof setInterval>;
 
-	let hasFailedToFetch = false;
+	// let hasFailedToFetch = false;
 
 	// The new file based registry supports a much more performant listener callback
-	if (getFlag("FILE_BASED_REGISTRY")) {
-		await startWorkerRegistry(async (registry) => {
-			if (!util.isDeepStrictEqual(registry, previousRegistry)) {
-				previousRegistry = registry;
-				cb(registry);
-			}
-		});
-	} else {
-		try {
-			await startWorkerRegistry();
-		} catch (err) {
-			logger.error("failed to start worker registry", err);
+	// if (getFlag("FILE_BASED_REGISTRY")) {
+	startWorkerRegistry(async (registry) => {
+		if (!util.isDeepStrictEqual(registry, previousRegistry)) {
+			previousRegistry = registry;
+			cb(registry);
 		}
-		// Else we need to fall back to a polling based approach
-		interval = setInterval(async () => {
-			try {
-				const registry = await getRegisteredWorkers();
-				if (!util.isDeepStrictEqual(registry, previousRegistry)) {
-					previousRegistry = registry;
-					cb(registry);
-				}
-			} catch (err) {
-				if (!hasFailedToFetch) {
-					hasFailedToFetch = true;
-					logger.warn("Failed to get worker definitions", err);
-				}
-			}
-		}, 300);
-	}
+	});
+	// } else {
+	// 	try {
+	// 		await startWorkerRegistry();
+	// 	} catch (err) {
+	// 		logger.error("failed to start worker registry", err);
+	// 	}
+	// 	// Else we need to fall back to a polling based approach
+	// 	interval = setInterval(async () => {
+	// 		try {
+	// 			const registry = await getRegisteredWorkers();
+	// 			if (!util.isDeepStrictEqual(registry, previousRegistry)) {
+	// 				previousRegistry = registry;
+	// 				cb(registry);
+	// 			}
+	// 		} catch (err) {
+	// 			if (!hasFailedToFetch) {
+	// 				hasFailedToFetch = true;
+	// 				logger.warn("Failed to get worker definitions", err);
+	// 			}
+	// 		}
+	// 	}, 300);
+	// }
 
-	return async (name) => {
-		interval && clearInterval(interval);
-		try {
-			const [unregisterResult, stopRegistryResult] = await Promise.allSettled([
-				name ? unregisterWorker(name) : Promise.resolve(),
-				stopWorkerRegistry(),
-			]);
-			if (unregisterResult.status === "rejected") {
-				logger.error("Failed to unregister worker", unregisterResult.reason);
-			}
-			if (stopRegistryResult.status === "rejected") {
-				logger.error(
-					"Failed to stop worker registry",
-					stopRegistryResult.reason
-				);
-			}
-		} catch (err) {
-			logger.error("Failed to cleanup dev registry", err);
-		}
-	};
+	// return async (name) => {
+	// 	interval && clearInterval(interval);
+	// 	try {
+	// 		const [unregisterResult, stopRegistryResult] = await Promise.allSettled([
+	// 			name ? unregisterWorker(name) : Promise.resolve(),
+	// 			stopWorkerRegistry(),
+	// 		]);
+	// 		if (unregisterResult.status === "rejected") {
+	// 			logger.error("Failed to unregister worker", unregisterResult.reason);
+	// 		}
+	// 		if (stopRegistryResult.status === "rejected") {
+	// 			logger.error(
+	// 				"Failed to stop worker registry",
+	// 				stopRegistryResult.reason
+	// 			);
+	// 		}
+	// 	} catch (err) {
+	// 		logger.error("Failed to cleanup dev registry", err);
+	// 	}
+	// };
 }

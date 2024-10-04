@@ -864,6 +864,7 @@ export const Handler = async (args: PagesDevArguments) => {
 		}
 	}
 
+	console.log("pages dev", { fileBasedRegistry: args.experimentalRegistry });
 	const { stop, waitUntilExit } = await unstable_dev(scriptEntrypoint, {
 		env: undefined,
 		ip,

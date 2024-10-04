@@ -133,6 +133,8 @@ export async function unstable_dev(
 		enablePagesAssetsServiceBinding,
 	} = experimentalOptions;
 
+	console.log("unstable_dev", { fileBasedRegistry });
+
 	if (apiOptions) {
 		logger.error(
 			"unstable_dev's third argument (apiOptions) has been deprecated in favor of an `experimental` property within the second argument (options).\nPlease update your code from:\n`await unstable_dev('...', {...}, {...});`\nto:\n`await unstable_dev('...', {..., experimental: {...}});`"

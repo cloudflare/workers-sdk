@@ -8,7 +8,7 @@ import type { UnstableDevWorker } from "wrangler";
 
 // TODO: reenable when https://github.com/cloudflare/workers-sdk/pull/4241 lands
 // and improves reliability of this test.
-describe.skip("Pages Functions", () => {
+describe("Pages Functions", () => {
 	let a: UnstableDevWorker;
 	let b: UnstableDevWorker;
 	let c: UnstableDevWorker;
@@ -20,6 +20,7 @@ describe.skip("Pages Functions", () => {
 			experimental: {
 				disableExperimentalWarning: true,
 				devEnv: true,
+				fileBasedRegistry: true,
 			},
 		});
 		await setTimeout(1000);
@@ -28,6 +29,7 @@ describe.skip("Pages Functions", () => {
 			experimental: {
 				disableExperimentalWarning: true,
 				devEnv: true,
+				fileBasedRegistry: true,
 			},
 		});
 		await setTimeout(1000);
@@ -36,6 +38,7 @@ describe.skip("Pages Functions", () => {
 			experimental: {
 				disableExperimentalWarning: true,
 				devEnv: true,
+				fileBasedRegistry: true,
 			},
 		});
 		await setTimeout(1000);
@@ -52,6 +55,7 @@ describe.skip("Pages Functions", () => {
 	});
 
 	afterAll(async () => {
+		console.log(d.getOutput());
 		await a.stop();
 		await b.stop();
 		await c.stop();

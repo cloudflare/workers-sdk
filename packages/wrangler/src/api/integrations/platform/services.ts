@@ -101,7 +101,7 @@ function getServiceBindingProxyFetch({
 
 async function maybeGetRegisteredWorkers() {
 	try {
-		return await getRegisteredWorkers();
+		return getRegisteredWorkers();
 	} catch {
 		return undefined;
 	}

@@ -23,7 +23,7 @@ import registerDevHotKeys from "./dev/hotkeys";
 import { maybeRegisterLocalWorker } from "./dev/local";
 import { startDevServer } from "./dev/start-server";
 import { UserError } from "./errors";
-import { run } from "./experimental-flags";
+import { getFlag, run } from "./experimental-flags";
 import isInteractive from "./is-interactive";
 import { logger } from "./logger";
 import * as metrics from "./metrics";
@@ -472,7 +472,7 @@ async function updateDevEnvRegistry(
 	devEnv: DevEnv,
 	registry: WorkerRegistry | undefined
 ) {
-	let boundWorkers = await getBoundRegisteredWorkers(
+	let boundWorkers = getBoundRegisteredWorkers(
 		{
 			name: devEnv.config.latestConfig?.name,
 			services: extractBindingsOfType(
@@ -605,13 +605,11 @@ export async function startDev(args: StartDevOptions) {
 			});
 
 			if (!args.disableDevRegistry) {
-				const teardownRegistryPromise = devRegistry((registry) =>
-					updateDevEnvRegistry(devEnv, registry)
-				);
-				devEnv.once("teardown", async () => {
-					const teardownRegistry = await teardownRegistryPromise;
-					await teardownRegistry(devEnv.config.latestConfig?.name);
-				});
+				devRegistry((registry) => updateDevEnvRegistry(devEnv, registry));
+				// devEnv.once("teardown", async () => {
+				// 	const teardownRegistry = await teardownRegistryPromise;
+				// 	await teardownRegistry(devEnv.config.latestConfig?.name);
+				// });
 				devEnv.runtimes.forEach((runtime) => {
 					runtime.on(
 						"reloadComplete",
@@ -1048,6 +1046,8 @@ export async function startDev(args: StartDevOptions) {
 }
 
 export async function startApiDev(args: StartDevOptions) {
+	console.log("startApiDev", { fileBasedRegistry: args.experimentalRegistry });
+
 	if (args.logLevel) {
 		logger.loggerLevel = args.logLevel;
 	}
@@ -1089,13 +1089,11 @@ export async function startApiDev(args: StartDevOptions) {
 
 	const devEnv = new DevEnv();
 	if (!args.disableDevRegistry && args.experimentalDevEnv) {
-		const teardownRegistryPromise = devRegistry((registry) =>
-			updateDevEnvRegistry(devEnv, registry)
-		);
-		devEnv.once("teardown", async () => {
-			const teardownRegistry = await teardownRegistryPromise;
-			await teardownRegistry(devEnv.config.latestConfig?.name);
-		});
+		devRegistry((registry) => updateDevEnvRegistry(devEnv, registry));
+		// devEnv.once("teardown", async () => {
+		// 	const teardownRegistry = await teardownRegistryPromise;
+		// 	await teardownRegistry(devEnv.config.latestConfig?.name);
+		// });
 		devEnv.runtimes.forEach((runtime) => {
 			runtime.on("reloadComplete", async (reloadEvent: ReloadCompleteEvent) => {
 				if (!reloadEvent.config.dev?.remote) {
@@ -1115,6 +1113,8 @@ export async function startApiDev(args: StartDevOptions) {
 
 	// eslint-disable-next-line no-inner-declarations
 	async function getDevServer(configParam: Config) {
+		logger.log({ FILE_BASED_REGISTRY: getFlag("FILE_BASED_REGISTRY") });
+
 		const { legacyAssetPaths, bindings } = getBindingsAndLegacyAssetPaths(
 			args,
 			configParam
