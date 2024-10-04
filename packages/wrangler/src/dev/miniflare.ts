@@ -22,6 +22,11 @@ import { UserError } from "../errors";
 import { logger } from "../logger";
 import { getSourceMappedString } from "../sourcemap";
 import { updateCheck } from "../update-check";
+import {
+	EXTERNAL_VECTORIZE_WORKER_NAME,
+	EXTERNAL_VECTORIZE_WORKER_SCRIPT,
+	MakeVectorizeFetcher,
+} from "../vectorize/fetcher";
 import { getClassNamesWhichUseSQLite } from "./validate-dev-props";
 import type { ServiceFetch } from "../api";
 import type { AssetsOptions } from "../assets";
@@ -277,12 +282,12 @@ async function buildSourceOptions(
 			? {
 					entrypointSource: config.bundle.entrypointSource,
 					modules: config.bundle.modules,
-				}
+			  }
 			: withSourceURLs(
 					scriptPath,
 					config.bundle.entrypointSource,
 					config.bundle.modules
-				);
+			  );
 
 		const entrypointNames = isPython
 			? []
@@ -596,6 +601,36 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 		wrappedBindings[bindings.ai.binding] = {
 			scriptName: EXTERNAL_AI_WORKER_NAME,
 		};
+	}
+
+	if (bindings.vectorize) {
+		for (const vectorizeBinding of bindings.vectorize) {
+			const bindingName = vectorizeBinding.binding;
+			const indexName = vectorizeBinding.index_name;
+			const indexVersion = "v2"; // TODO: support v1?
+
+			externalWorkers.push({
+				name: EXTERNAL_VECTORIZE_WORKER_NAME + bindingName,
+				modules: [
+					{
+						type: "ESModule",
+						path: "index.mjs",
+						contents: EXTERNAL_VECTORIZE_WORKER_SCRIPT,
+					},
+				],
+				serviceBindings: {
+					FETCHER: MakeVectorizeFetcher(indexName, indexVersion),
+				},
+				bindings: {
+					INDEX_ID: indexName,
+					INDEX_VERSION: indexVersion,
+				},
+			});
+
+			wrappedBindings[bindingName] = {
+				scriptName: EXTERNAL_VECTORIZE_WORKER_NAME + bindingName,
+			};
+		}
 	}
 
 	const bindingOptions = {
