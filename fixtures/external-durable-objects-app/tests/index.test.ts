@@ -68,19 +68,29 @@ describe(
 					"X-Reset-Count": "true",
 				},
 			});
-			const dataA = (await responseA.json()) as { count: number; id: string };
+			const dataAText = await responseA.text();
+			console.log(dataAText);
+			const dataA = JSON.parse(dataAText) as { count: number; id: string };
 			expect(dataA.count).toEqual(1);
 			const responseB = await b.fetch(`/`);
-			const dataB = (await responseB.json()) as { count: number; id: string };
+			const dataBText = await responseB.text();
+			console.log(dataBText);
+			const dataB = JSON.parse(dataBText) as { count: number; id: string };
 			expect(dataB.count).toEqual(2);
 			const responseC = await c.fetch(`/`);
-			const dataC = (await responseC.json()) as { count: number; id: string };
+			const dataCText = await responseC.text();
+			console.log(dataCText);
+			const dataC = JSON.parse(dataCText) as { count: number; id: string };
 			expect(dataC.count).toEqual(3);
 			const responseD = await fetch(`http://${d.ip}:${d.port}/`);
-			const dataD = (await responseD.json()) as { count: number; id: string };
+			const dataDText = await responseD.text();
+			console.log(dataDText);
+			const dataD = JSON.parse(dataDText) as { count: number; id: string };
 			expect(dataD.count).toEqual(4);
 			const responseA2 = await a.fetch(`/`);
-			const dataA2 = (await responseA2.json()) as { count: number; id: string };
+			const dataA2Text = await responseA2.text();
+			console.log(dataA2Text);
+			const dataA2 = JSON.parse(dataA2Text) as { count: number; id: string };
 			expect(dataA2.count).toEqual(5);
 			expect(dataA.id).toEqual(dataB.id);
 			expect(dataA.id).toEqual(dataC.id);
