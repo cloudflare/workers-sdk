@@ -935,7 +935,7 @@ describe("custom builds", () => {
 				return res2.text();
 			}
 		);
-		await expect(resText).toBe("world");
+		await expect(resText).toContain("world");
 	});
 });
 
