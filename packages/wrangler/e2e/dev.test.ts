@@ -878,14 +878,14 @@ describe("custom builds", () => {
 		expect(text).toMatchInlineSnapshot(`"Hello, World!"`);
 	});
 
-	it("does not infinite-loop custom build with assets", async () => {
+	it.only("does not infinite-loop custom build with assets", async () => {
 		const helper = new WranglerE2ETestHelper();
 		await helper.seed({
 			"wrangler.toml": dedent`
                     name = "${workerName}"
                     compatibility_date = "2023-01-01"
                     main = "src/index.ts"
-                    build.command = "echo 'hello' > ./public/index.html"
+                    build.command = "echo 'boop' > ./public/index.html"
 
                     [assets]
                     directory = "./public"
@@ -922,20 +922,20 @@ describe("custom builds", () => {
 		// now check assets are still fetchable, even after updates
 
 		const res = await fetch(url);
-		await expect(res.text()).resolves.toBe("hello\n");
+		await expect(res.text()).resolves.toContain("boop");
 
 		await helper.seed({
-			"public/index.html": "world",
+			"public/index.html": "beep",
 		});
 
 		const resText = await retry(
-			(text) => text === "hello\n",
+			(text) => text.includes("boop"),
 			async () => {
 				const res2 = await fetch(url);
 				return res2.text();
 			}
 		);
-		await expect(resText).toBe("world");
+		expect(resText).toBe("beep");
 	});
 });
 

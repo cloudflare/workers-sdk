@@ -6,6 +6,12 @@ settings:
 
 catalogs:
   default:
+    '@vitest/runner':
+      specifier: ~2.1.1
+      version: 2.1.1
+    '@vitest/snapshot':
+      specifier: ~2.1.1
+      version: 2.1.1
     vitest:
       specifier: ~2.1.1
       version: 2.1.1
@@ -1951,7 +1957,7 @@ importers:
         version: 2.1.1(@types/node@20.8.3)(@vitest/ui@1.6.0)(msw@2.3.0(typescript@5.5.4))(supports-color@9.2.2)
       vitest-websocket-mock:
         specifier: ^0.3.0
-        version: 0.3.0(vitest@2.1.1(@types/node@20.8.3)(@vitest/ui@1.6.0)(msw@2.3.0(typescript@5.5.4))(supports-color@9.2.2))
+        version: 0.3.0(vitest@2.1.1)
       ws:
         specifier: ^8.17.1
         version: 8.17.1
@@ -16297,7 +16303,7 @@ snapshots:
       '@types/node': 20.8.3
       fsevents: 2.3.3
 
-  vitest-websocket-mock@0.3.0(vitest@2.1.1(@types/node@20.8.3)(@vitest/ui@1.6.0)(msw@2.3.0(typescript@5.5.4))(supports-color@9.2.2)):
+  vitest-websocket-mock@0.3.0(vitest@2.1.1):
     dependencies:
       jest-diff: 29.7.0
       mock-socket: 9.3.1
