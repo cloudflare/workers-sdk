@@ -126,7 +126,8 @@ function main() {
 	}
 
 	// 4. Update the lockfile
-	execSync("pnpm install --lockfile-only", { stdio: "inherit" });
+	// (do not use `--lockfile-only` because this causes pnpm catalog entries to get messed up.)
+	execSync("pnpm install --frozen-lockfile=false", { stdio: "inherit" });
 }
 
 if (require.main === module) main();
