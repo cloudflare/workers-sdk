@@ -2,4 +2,5 @@
 
 interface Env {
 	WORKER_B: Fetcher;
+	NAMED_ENTRYPOINT: Fetcher;
 }
