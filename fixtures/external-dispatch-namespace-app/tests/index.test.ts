@@ -40,6 +40,7 @@ describe("external-dispatch-namespace-app", () => {
 			path.join(__dirname, "../dispatchee/index.ts"),
 			{
 				config: path.join(__dirname, "../dispatchee/wrangler.toml"),
+				dispatchNamespace: "my-namespace",
 			}
 		);
 		outbound = await unstable_dev(
@@ -87,7 +88,7 @@ describe("external-dispatch-namespace-app", () => {
 			pagesDispatcherResponse.headers.get("parameter2")
 		).toMatchInlineSnapshot(`"p2"`);
 		expect(await pagesDispatcherResponse.text()).toMatchInlineSnapshot(
-			`"{\"x-foo\":\"bar\"}"`
+			`"{\"accept\":\"*/*\",\"accept-encoding\":\"br, gzip\",\"accept-language\":\"*\",\"host\":\"localhost:${outbound.port}\",\"sec-fetch-mode\":\"cors\",\"user-agent\":\"undici\",\"x-foo\":\"bar\"}"`
 		);
 	});
 
@@ -106,7 +107,7 @@ describe("external-dispatch-namespace-app", () => {
 			`"p2"`
 		);
 		expect(await dispatcherResponse.text()).toMatchInlineSnapshot(
-			`"{\"x-foo\":\"bar\"}"`
+			`"{\"accept\":\"*/*\",\"accept-encoding\":\"br, gzip\",\"accept-language\":\"*\",\"host\":\"localhost:${outbound.port}\",\"sec-fetch-mode\":\"cors\",\"user-agent\":\"undici\",\"x-foo\":\"bar\"}"`
 		);
 	});
 });
