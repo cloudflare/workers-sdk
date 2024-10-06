@@ -257,6 +257,7 @@ async function resolveConfig(
 		triggers: await resolveTriggers(config, input),
 		env: input.env,
 		build: {
+			alias: input.build?.alias ?? config.alias,
 			additionalModules: input.build?.additionalModules ?? [],
 			processEntrypoint: Boolean(input.build?.processEntrypoint),
 			bundle: input.build?.bundle ?? !config.no_bundle,
