@@ -384,6 +384,7 @@ export async function bundleWorker(
 		bundle,
 		absWorkingDir: entry.directory,
 		outdir: destination,
+		keepNames: true,
 		entryNames: entryName || path.parse(entryFile).name,
 		...(isOutfile
 			? {
