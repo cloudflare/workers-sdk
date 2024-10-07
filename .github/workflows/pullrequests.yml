@@ -78,8 +78,8 @@ jobs:
           cache: "npm" # cache ~/.npm in case 'npm ci' needs to run
 
       - name: Fix node-gyp
-        # See https://github.com/nodejs/node-gyp/issues/2869#issuecomment-1769572922
-        run: python3 -m pip install packaging
+        if: runner.os == 'macOS'
+        run: brew install python-setuptools
 
       - name: Install workerd Dependencies
         if: ${{ runner.os == 'Linux' }}
