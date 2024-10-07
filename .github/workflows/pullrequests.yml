@@ -63,7 +63,7 @@ jobs:
     name: "Tests"
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        os: [ubuntu-20.04, windows-2022, macos-13]
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout Repo
@@ -76,6 +76,10 @@ jobs:
         with:
           node-version: ${{ env.node-version }}
           cache: "npm" # cache ~/.npm in case 'npm ci' needs to run
+
+      - name: Fix node-gyp
+        # See https://github.com/nodejs/node-gyp/issues/2869#issuecomment-1769572922
+        run: python3 -m pip install packaging
 
       - name: Install workerd Dependencies
         if: ${{ runner.os == 'Linux' }}
