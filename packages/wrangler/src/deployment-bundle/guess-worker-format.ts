@@ -4,7 +4,6 @@ import { UserError } from "../errors";
 import { logger } from "../logger";
 import { COMMON_ESBUILD_OPTIONS } from "./bundle";
 import { getEntryPointFromMetafile } from "./entry-point-from-metafile";
-import { logBuildOutput } from "./esbuild-plugins/log-build-output";
 import type { CfScriptFormat } from "./worker";
 
 /**
@@ -41,11 +40,6 @@ export default async function guessWorkerFormat(
 		write: false,
 		...(tsconfig && { tsconfig }),
 		logLevel: "silent",
-		plugins: [
-			logBuildOutput(
-				/* bundle: false means the NodeJS compat mode is irrelevant in the context of this build */ undefined
-			),
-		],
 	});
 
 	// result.metafile is defined because of the `metafile: true` option above.
