@@ -1040,7 +1040,6 @@ export function getBindings(
 		data_blobs: configParam.data_blobs,
 
 		// inheritable fields
-		dispatch_namespaces: configParam.dispatch_namespaces,
 		logfwdr: configParam.logfwdr,
 
 		// non-inheritable fields
@@ -1064,7 +1063,7 @@ export function getBindings(
 		browser: configParam.browser,
 		ai: args.ai || configParam.ai,
 		version_metadata: args.version_metadata || configParam.version_metadata,
-		dispatchNamespaces: mergedDispatchBindings,
+		dispatch_namespaces: mergedDispatchBindings,
 		unsafe: {
 			bindings: configParam.unsafe.bindings,
 			metadata: configParam.unsafe.metadata,
