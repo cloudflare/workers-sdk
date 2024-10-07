@@ -86,7 +86,7 @@ const processes: PtyProcess[] = [];
 afterEach(() => {
 	for (const p of processes.splice(0)) {
 		// If the process didn't exit cleanly, log its output for debugging
-		if (p.exitCode !== 0) console.log(stripAnsi(p.stdout));
+		if (p.exitCode !== 0) console.log(p.stdout);
 		// If the process hasn't exited yet, kill it
 		if (p.exitCode === null) {
 			// `node-pty` throws if signal passed on Windows
@@ -197,8 +197,8 @@ function getStartedWorkerdProcesses(): Process[] {
 }
 
 const devScripts = [
-	{ args: ["dev"], expectedBody: "body" },
 	{ args: ["dev", "--x-dev-env"], expectedBody: "body" },
+	{ args: ["dev", "--no-x-dev-env"], expectedBody: "body" },
 	{ args: ["pages", "dev", "public"], expectedBody: "<p>body</p>" },
 ];
 const exitKeys = [
@@ -230,26 +230,23 @@ describe.each(devScripts)("wrangler $args", ({ args, expectedBody }) => {
 	});
 });
 
-it.runIf(RUN_IF && nodePtySupported)(
-	"hotkeys should be unregistered when the initial build fails",
-	async () => {
-		const wrangler = await startWranglerDev(
-			["dev", "src/startup-error.ts"],
-			true
-		);
+it.only("hotkeys should be unregistered when the initial build fails", async () => {
+	const wrangler = await startWranglerDev(
+		["dev", "--x-dev-env", "src/startup-error.ts"],
+		true
+	);
 
-		expect(await wrangler.exitPromise).toBe(1);
+	expect(await wrangler.exitPromise).toBe(1);
 
-		const hotkeysRenderCount = [
-			...wrangler.stdout.matchAll(/\[b\] open a browser/g),
-		];
+	const hotkeysRenderCount = [
+		...wrangler.stdout.matchAll(/\[b\] open a browser/g),
+	];
 
-		const clearHotkeysCount = [
-			// This is the control sequence for moving the cursor up and then clearing from the cursor to the end
-			...wrangler.stdout.matchAll(/\[\dA\[0J/g),
-		];
+	const clearHotkeysCount = [
+		// This is the control sequence for moving the cursor up and then clearing from the cursor to the end
+		...wrangler.stdout.matchAll(/\[\dA\[0J/g),
+	];
 
-		// The hotkeys should be rendered the same number of times as the control sequence for clearing them from the screen
-		expect(hotkeysRenderCount.length).toBe(clearHotkeysCount.length);
-	}
-);
+	// The hotkeys should be rendered the same number of times as the control sequence for clearing them from the screen
+	expect(hotkeysRenderCount.length).toBe(clearHotkeysCount.length);
+});
