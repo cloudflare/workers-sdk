@@ -188,7 +188,6 @@ export function DeleteOptions(yargs: CommonYargsArgv) {
 	return yargs
 		.positional("project-name", {
 			type: "string",
-			demandOption: true,
 			description: "The name of your Pages project",
 		})
 		.options({
@@ -197,7 +196,8 @@ export function DeleteOptions(yargs: CommonYargsArgv) {
 				type: "boolean",
 				description: 'Answer "yes" to confirm project deletion',
 			},
-		});
+		})
+		.demandOption("project-name");
 }
 
 export async function DeleteHandler(
