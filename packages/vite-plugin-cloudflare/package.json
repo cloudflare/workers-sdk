@@ -13,7 +13,8 @@
 	"sideEffects": false,
 	"scripts": {
 		"build": "tsup",
-		"watch": "tsup --watch"
+		"watch": "tsup --watch",
+		"test": "vitest run"
 	},
 	"peerDependencies": {
 		"vite": "6.0.0-beta.2",
@@ -29,6 +30,7 @@
 		"tsup": "^8.3.0",
 		"typescript": "^5.6.2",
 		"vite": "6.0.0-beta.2",
+		"vitest": "^2.1.2",
 		"wrangler": "^3.78.8"
 	}
 }

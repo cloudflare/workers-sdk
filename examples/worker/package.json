@@ -7,12 +7,10 @@
 		"typegen-a": "wrangler types -c ./worker-a/wrangler.toml ./worker-a/worker-configuration.d.ts",
 		"typegen-b": "wrangler types -c ./worker-b/wrangler.toml ./worker-b/worker-configuration.d.ts"
 	},
-	"dependencies": {
-		"@flarelabs-net/vite-plugin-cloudflare": "workspace:*",
-		"vite": "6.0.0-beta.2"
-	},
 	"devDependencies": {
 		"@cloudflare/workers-types": "^4.20240919.0",
+		"@flarelabs-net/vite-plugin-cloudflare": "workspace:*",
+		"vite": "6.0.0-beta.2",
 		"wrangler": "^3.78.8"
 	}
 }
