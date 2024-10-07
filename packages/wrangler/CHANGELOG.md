@@ -1,5 +1,11 @@
 # wrangler
 
+## 2.21.2
+
+### Patch Changes
+
+- [#6915](https://github.com/cloudflare/workers-sdk/pull/6915) [`e9a45766c`](https://github.com/cloudflare/workers-sdk/commit/e9a45766c60422d168b50b0c4ab81fd58ef31987) Thanks [@penalosa](https://github.com/penalosa)! - chore: Bump Miniflare v2 in Wrangler v2
+
 ## 2.21.1
 
 ### Patch Changes
