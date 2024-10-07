@@ -63,8 +63,11 @@ ${message}
 			// TODO(consider): recommend opening an issue with the contents of this file?
 			if (hasSeenErrorMessage) {
 				// use console.*warn* here so not to pollute stdout -- some commands print json to stdout
-				// use *console*.warn here so not to have include the *very* visible bright-yellow [WARNING] indicator
-				console.warn(`🪵  Logs were written to "${debugLogFilepath}"`);
+				// use logger.*console*("warn", ...) here so not to have include the *very* visible bright-yellow [WARNING] indicator
+				logger.console(
+					"warn",
+					`🪵  Logs were written to "${debugLogFilepath}"`
+				);
 			}
 		});
 	}

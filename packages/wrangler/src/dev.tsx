@@ -546,6 +546,8 @@ export async function startDev(args: StartDevOptions) {
 	let configFileWatcher: ReturnType<typeof watch> | undefined;
 	let assetsWatcher: ReturnType<typeof watch> | undefined;
 	let rerender: (node: React.ReactNode) => void | undefined;
+	const devEnv = new DevEnv();
+
 	try {
 		if (args.logLevel) {
 			logger.loggerLevel = args.logLevel;
@@ -588,8 +590,6 @@ export async function startDev(args: StartDevOptions) {
 			args.config ||
 			(args.script && findWranglerToml(path.dirname(args.script)));
 
-		const devEnv = new DevEnv();
-
 		if (args.experimentalDevEnv) {
 			// The ProxyWorker will have a stable host and port, so only listen for the first update
 			void devEnv.proxy.ready.promise.then(({ url }) => {
@@ -604,14 +604,12 @@ export async function startDev(args: StartDevOptions) {
 				}
 			});
 
+			let teardownRegistryPromise: Promise<(name?: string) => Promise<void>>;
 			if (!args.disableDevRegistry) {
-				const teardownRegistryPromise = devRegistry((registry) =>
+				teardownRegistryPromise = devRegistry((registry) =>
 					updateDevEnvRegistry(devEnv, registry)
 				);
-				devEnv.once("teardown", async () => {
-					const teardownRegistry = await teardownRegistryPromise;
-					await teardownRegistry(devEnv.config.latestConfig?.name);
-				});
+
 				devEnv.runtimes.forEach((runtime) => {
 					runtime.on(
 						"reloadComplete",
@@ -635,6 +633,12 @@ export async function startDev(args: StartDevOptions) {
 			if (isInteractive() && args.showInteractiveDevSession !== false) {
 				unregisterHotKeys = registerDevHotKeys(devEnv, args);
 			}
+
+			devEnv.once("teardown", async () => {
+				const teardownRegistry = await teardownRegistryPromise;
+				await teardownRegistry(devEnv.config.latestConfig?.name);
+				unregisterHotKeys();
+			});
 
 			await devEnv.config.set(
 				{
@@ -1042,6 +1046,7 @@ export async function startDev(args: StartDevOptions) {
 		await Promise.allSettled([
 			configFileWatcher?.close(),
 			assetsWatcher?.close(),
+			devEnv.teardown(),
 		]);
 		throw e;
 	}
