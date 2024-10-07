@@ -1,5 +1,13 @@
 # miniflare
 
+## 3.20240925.1
+
+### Patch Changes
+
+- [#6835](https://github.com/cloudflare/workers-sdk/pull/6835) [`5c50949`](https://github.com/cloudflare/workers-sdk/commit/5c509494807a1c0418be83c47a459ec80126848e) Thanks [@emily-shen](https://github.com/emily-shen)! - fix: rename asset plugin options slightly to match wrangler.toml better
+
+  Renamed `path` -> `directory`, `bindingName` -> `binding`.
+
 ## 3.20240925.0
 
 ### Patch Changes

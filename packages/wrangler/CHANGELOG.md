@@ -1,5 +1,26 @@
 # wrangler
 
+## 3.80.1
+
+### Patch Changes
+
+- [#6908](https://github.com/cloudflare/workers-sdk/pull/6908) [`d696850`](https://github.com/cloudflare/workers-sdk/commit/d6968507b7eab36abdc4d6c2ffe183788857d08c) Thanks [@penalosa](https://github.com/penalosa)! - fix: debounce restarting worker on assets dir file changes when `--x-dev-env` is enabled.
+
+- [#6902](https://github.com/cloudflare/workers-sdk/pull/6902) [`dc92af2`](https://github.com/cloudflare/workers-sdk/commit/dc92af28c572e3f7a03b84afd53f10a40ee2a5f8) Thanks [@threepointone](https://github.com/threepointone)! - fix: enable esbuild's keepNames: true to set .name on functions/classes
+
+- [#6909](https://github.com/cloudflare/workers-sdk/pull/6909) [`82180a7`](https://github.com/cloudflare/workers-sdk/commit/82180a7a7680028f2ea24ae8b1c8479d39627826) Thanks [@penalosa](https://github.com/penalosa)! - fix: Various fixes for logging in `--x-dev-env`, primarily to ensure the hotkeys don't wipe useful output and are cleaned up correctly
+
+- [#6903](https://github.com/cloudflare/workers-sdk/pull/6903) [`54924a4`](https://github.com/cloudflare/workers-sdk/commit/54924a430354c0e427770ee4289217660141c72e) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: ensure that `alias` config gets passed through to the bundler when using new `--x-dev-env`
+
+  Fixes #6898
+
+- [#6911](https://github.com/cloudflare/workers-sdk/pull/6911) [`30b7328`](https://github.com/cloudflare/workers-sdk/commit/30b7328073c86ff9adebd594015bca6844da7163) Thanks [@emily-shen](https://github.com/emily-shen)! - fix: infer experimentalJsonConfig from file extension
+
+  Fixes [#5768](https://github.com/cloudflare/workers-sdk/issues/5768) - issue with vitest and Pages projects with wrangler.toml
+
+- Updated dependencies [[`5c50949`](https://github.com/cloudflare/workers-sdk/commit/5c509494807a1c0418be83c47a459ec80126848e)]:
+  - miniflare@3.20240925.1
+
 ## 3.80.0
 
 ### Minor Changes
