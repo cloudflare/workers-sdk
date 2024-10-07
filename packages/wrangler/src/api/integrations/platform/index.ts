@@ -247,8 +247,15 @@ export function unstable_getMiniflareWorkerOptions(
 	define: Record<string, string>;
 	main?: string;
 } {
+	// experimental json is usually enabled via a cli arg,
+	// so it cannot be passed to the vitest integration.
+	// instead we infer it from the config path (instead of setting a default)
+	// because wrangler.json is not compatible with pages.
+	const isJsonConfigFile =
+		configPath.endsWith(".json") || configPath.endsWith(".jsonc");
+
 	const config = readConfig(configPath, {
-		experimentalJsonConfig: true,
+		experimentalJsonConfig: isJsonConfigFile,
 		env,
 	});
 
