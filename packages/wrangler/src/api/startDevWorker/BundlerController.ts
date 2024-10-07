@@ -14,6 +14,7 @@ import { getAssetChangeMessage } from "../../dev";
 import { runBuild } from "../../dev/use-esbuild";
 import { logger } from "../../logger";
 import { isNavigatorDefined } from "../../navigator-user-agent";
+import { debounce } from "../../pages/utils";
 import { getWranglerTmpDir } from "../../paths";
 import { Controller } from "./BaseController";
 import { castErrorCause } from "./events";
@@ -264,16 +265,23 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 	async #ensureWatchingAssets(config: StartDevWorkerOptions) {
 		await this.#assetsWatcher?.close();
 
+		const debouncedRefreshBundle = debounce(() => {
+			if (this.#currentBundle) {
+				this.emitBundleCompleteEvent(config, this.#currentBundle);
+			}
+		});
+
 		if (config.assets?.directory) {
 			this.#assetsWatcher = watch(config.assets.directory, {
 				persistent: true,
 				ignoreInitial: true,
 			}).on("all", async (eventName, filePath) => {
 				const message = getAssetChangeMessage(eventName, filePath);
-				logger.debug(`🌀 ${message}...`);
-				if (this.#currentBundle) {
-					this.emitBundleCompleteEvent(config, this.#currentBundle);
-				}
+				logger.log(`🌀 ${message}...`);
+				debouncedRefreshBundle();
+				// if (this.#currentBundle) {
+				// 	this.emitBundleCompleteEvent(config, this.#currentBundle);
+				// }
 			});
 		}
 	}
