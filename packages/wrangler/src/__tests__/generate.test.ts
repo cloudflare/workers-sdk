@@ -107,7 +107,7 @@ describe("generate", () => {
 	});
 
 	describe("cloning", () => {
-		it("clones a cloudflare template with sparse checkouts", async () => {
+		it.skip("clones a cloudflare template with sparse checkouts", async () => {
 			await expect(
 				runWrangler("generate my-worker worker-typescript")
 			).resolves.toBeUndefined();

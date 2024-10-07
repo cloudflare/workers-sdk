@@ -43,11 +43,11 @@
 		]
 	},
 	"dependencies": {
-		"@miniflare/core": "2.14.2"
+		"@miniflare/core": "2.14.4"
 	},
 	"devDependencies": {
-		"@miniflare/cache": "2.14.2",
-		"@miniflare/html-rewriter": "2.14.2",
+		"@miniflare/cache": "2.14.4",
+		"@miniflare/html-rewriter": "2.14.4",
 		"@types/service-worker-mock": "^2.0.1",
 		"concurrently": "^7.3.0",
 		"glob": "^8.0.3",
