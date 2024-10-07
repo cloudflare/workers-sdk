@@ -16,9 +16,9 @@ Follow these steps to triage an issue.
 
 ### Step 0: Is this a Pages or Wrangler issue?
 
-If the issue refers only to Pages commands then apply the `pages` label and add the issue to the [Pages](https://github.com/orgs/cloudflare/projects/2) Github project.
+If the issue refers only to Pages commands then apply the `pages` label and add the issue to the [Pages](https://github.com/orgs/cloudflare/projects/2) GitHub project.
 
-Otherwise, add the issue to the [Wrangler](https://github.com/orgs/cloudflare/projects/1) Github project, set its status to `Untriaged`, and continue to step 1.
+Otherwise, add the issue to the [Wrangler](https://github.com/orgs/cloudflare/projects/1) GitHub project, set its status to `Untriaged`, and continue to step 1.
 
 ### Step 1: Does the issue have enough information?
 
