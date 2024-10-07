@@ -923,9 +923,8 @@ export async function buildMiniflareOptions(
 	if (config.bindings.vectorize?.length) {
 		if (!didWarnMiniflareVectorizeSupport) {
 			didWarnMiniflareVectorizeSupport = true;
-			// TODO: add local support for Vectorize bindings (https://github.com/cloudflare/workers-sdk/issues/4360)
 			logger.warn(
-				"Vectorize bindings are not currently supported in local mode. Please use --remote if you are working with them."
+				"Using Vectorize always accesses your Cloudflare account in order to run queries. It will make changes and incur usage charges even in local development."
 			);
 		}
 	}
