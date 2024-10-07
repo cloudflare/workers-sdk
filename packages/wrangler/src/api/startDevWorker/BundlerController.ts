@@ -277,7 +277,7 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 				ignoreInitial: true,
 			}).on("all", async (eventName, filePath) => {
 				const message = getAssetChangeMessage(eventName, filePath);
-				logger.log(`🌀 ${message}...`);
+				logger.debug(`🌀 ${message}...`);
 				debouncedRefreshBundle();
 			});
 		}
