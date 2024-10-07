@@ -279,9 +279,6 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 				const message = getAssetChangeMessage(eventName, filePath);
 				logger.log(`🌀 ${message}...`);
 				debouncedRefreshBundle();
-				// if (this.#currentBundle) {
-				// 	this.emitBundleCompleteEvent(config, this.#currentBundle);
-				// }
 			});
 		}
 	}
