@@ -604,7 +604,9 @@ export async function startDev(args: StartDevOptions) {
 				}
 			});
 
-			let teardownRegistryPromise: Promise<(name?: string) => Promise<void>>;
+			let teardownRegistryPromise:
+				| Promise<(name?: string) => Promise<void>>
+				| undefined;
 			if (!args.disableDevRegistry) {
 				teardownRegistryPromise = devRegistry((registry) =>
 					updateDevEnvRegistry(devEnv, registry)
@@ -629,15 +631,17 @@ export async function startDev(args: StartDevOptions) {
 				});
 			}
 
-			let unregisterHotKeys: () => void;
+			let unregisterHotKeys: (() => void) | undefined;
 			if (isInteractive() && args.showInteractiveDevSession !== false) {
 				unregisterHotKeys = registerDevHotKeys(devEnv, args);
 			}
 
 			devEnv.once("teardown", async () => {
-				const teardownRegistry = await teardownRegistryPromise;
-				await teardownRegistry(devEnv.config.latestConfig?.name);
-				unregisterHotKeys();
+				if (teardownRegistryPromise) {
+					const teardownRegistry = await teardownRegistryPromise;
+					await teardownRegistry(devEnv.config.latestConfig?.name);
+				}
+				unregisterHotKeys?.();
 			});
 
 			await devEnv.config.set(
