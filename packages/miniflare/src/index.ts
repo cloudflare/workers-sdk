@@ -1131,6 +1131,13 @@ export class Miniflare {
 			innerBindings: Worker_Binding[];
 		}[] = [];
 
+		// This will be the user worker or the vitest pool worker wrapping the user worker
+		// The asset plugin needs this so that it can set the binding between the router worker and the user worker
+		if (this.#workerOpts[0].assets.assets) {
+			this.#workerOpts[0].assets.assets.workerName =
+				this.#workerOpts[0].core.name;
+		}
+
 		for (let i = 0; i < allWorkerOpts.length; i++) {
 			const previousWorkerOpts = allPreviousWorkerOpts?.[i];
 			const workerOpts = allWorkerOpts[i];
@@ -1283,10 +1290,15 @@ export class Miniflare {
 		const globalServices = getGlobalServices({
 			sharedOptions: sharedOpts.core,
 			allWorkerRoutes,
-			// if Workers + Assets project, point to router Worker service rather than user Worker
-			fallbackWorkerName: this.#workerOpts[0].assets.assets
-				? ROUTER_SERVICE_NAME
-				: getUserServiceName(this.#workerOpts[0].core.name),
+			// if Workers + Assets project but NOT Vitest, point to router Worker instead
+			// if Vitest with assets, the self binding on the test runner will point to RW
+			fallbackWorkerName:
+				this.#workerOpts[0].assets.assets &&
+				!this.#workerOpts[0].core.name?.startsWith(
+					"vitest-pool-workers-runner-"
+				)
+					? ROUTER_SERVICE_NAME
+					: getUserServiceName(this.#workerOpts[0].core.name),
 			loopbackPort,
 			log: this.#log,
 			proxyBindings,

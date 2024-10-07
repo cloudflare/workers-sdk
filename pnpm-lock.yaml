@@ -689,7 +689,7 @@ importers:
         version: file:fixtures/vitest-pool-workers-examples/internal-module-resolution/vendor/ext-dep
       jose:
         specifier: ^5.2.2
-        version: 5.2.2
+        version: 5.9.3
       miniflare:
         specifier: workspace:*
         version: link:../../packages/miniflare
@@ -701,7 +701,7 @@ importers:
         version: 3.3.1(patch_hash=b5gffumfuckaq3c77sda2gdfuq)
       typescript:
         specifier: ^5.5.2
-        version: 5.5.2
+        version: 5.5.4
       vitest:
         specifier: catalog:default
         version: 2.1.1(@types/node@20.8.3)(@vitest/ui@1.6.0)(msw@2.3.0(typescript@5.5.4))(supports-color@9.2.2)
@@ -6238,8 +6238,8 @@ packages:
   jju@1.4.0:
     resolution: {integrity: sha512-8wb9Yw966OSxApiCt0K3yNJL8pnNeIv+OEq2YMidz4FKP6nonSRoOXc80iXY4JaN2FC11B9qsNmDsm+ZOfMROA==}
 
-  jose@5.2.2:
-    resolution: {integrity: sha512-/WByRr4jDcsKlvMd1dRJnPfS1GVO3WuKyaurJ/vvXcOaUQO8rnNObCQMlv/5uCceVQIq5Q4WLF44ohsdiTohdg==}
+  jose@5.9.3:
+    resolution: {integrity: sha512-egLIoYSpcd+QUF+UHgobt5YzI2Pkw/H39ou9suW687MY6PmCwPmkNV/4TNjn1p2tX5xO3j0d0sq5hiYE24bSlg==}
 
   js-string-escape@1.0.1:
     resolution: {integrity: sha512-Smw4xcfIQ5LVjAOuJCvN/zIodzA/BBSsluuoSykP+lUvScIi4U6RJLfwHet5cxFnCswUjISV8oAXaqaJDY3chg==}
@@ -13922,7 +13922,7 @@ snapshots:
 
   jju@1.4.0: {}
 
-  jose@5.2.2: {}
+  jose@5.9.3: {}
 
   js-string-escape@1.0.1: {}
 
