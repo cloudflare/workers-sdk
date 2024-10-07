@@ -399,11 +399,15 @@ This is currently not supported 😭, but we think that we'll get it to work soo
 			() => startDev(args)
 		);
 		if (args.experimentalDevEnv) {
-			assert(devInstance instanceof DevEnv);
-			await events.once(devInstance, "teardown");
+			assert(devInstance.devEnv !== undefined);
+			await events.once(devInstance.devEnv, "teardown");
+			if (devInstance.teardownRegistryPromise) {
+				const teardownRegistry = await devInstance.teardownRegistryPromise;
+				await teardownRegistry(devInstance.devEnv.config.latestConfig?.name);
+			}
+			devInstance.unregisterHotKeys?.();
 		} else {
-			assert(!(devInstance instanceof DevEnv));
-
+			assert(devInstance.devEnv === undefined);
 			configFileWatcher = devInstance.configFileWatcher;
 			assetsWatcher = devInstance.assetsWatcher;
 
@@ -546,6 +550,12 @@ export async function startDev(args: StartDevOptions) {
 	let configFileWatcher: ReturnType<typeof watch> | undefined;
 	let assetsWatcher: ReturnType<typeof watch> | undefined;
 	let rerender: (node: React.ReactNode) => void | undefined;
+	const devEnv = new DevEnv();
+	let teardownRegistryPromise:
+		| Promise<(name?: string) => Promise<void>>
+		| undefined;
+
+	let unregisterHotKeys: (() => void) | undefined;
 	try {
 		if (args.logLevel) {
 			logger.loggerLevel = args.logLevel;
@@ -588,8 +598,6 @@ export async function startDev(args: StartDevOptions) {
 			args.config ||
 			(args.script && findWranglerToml(path.dirname(args.script)));
 
-		const devEnv = new DevEnv();
-
 		if (args.experimentalDevEnv) {
 			// The ProxyWorker will have a stable host and port, so only listen for the first update
 			void devEnv.proxy.ready.promise.then(({ url }) => {
@@ -605,13 +613,10 @@ export async function startDev(args: StartDevOptions) {
 			});
 
 			if (!args.disableDevRegistry) {
-				const teardownRegistryPromise = devRegistry((registry) =>
+				teardownRegistryPromise = devRegistry((registry) =>
 					updateDevEnvRegistry(devEnv, registry)
 				);
-				devEnv.once("teardown", async () => {
-					const teardownRegistry = await teardownRegistryPromise;
-					await teardownRegistry(devEnv.config.latestConfig?.name);
-				});
+
 				devEnv.runtimes.forEach((runtime) => {
 					runtime.on(
 						"reloadComplete",
@@ -631,7 +636,6 @@ export async function startDev(args: StartDevOptions) {
 				});
 			}
 
-			let unregisterHotKeys: () => void;
 			if (isInteractive() && args.showInteractiveDevSession !== false) {
 				unregisterHotKeys = registerDevHotKeys(devEnv, args);
 			}
@@ -784,7 +788,7 @@ export async function startDev(args: StartDevOptions) {
 				}
 			);
 
-			return devEnv;
+			return { devEnv, unregisterHotKeys, teardownRegistryPromise };
 		} else {
 			const projectRoot = configPath && path.dirname(configPath);
 			let config = readConfig(configPath, args);
@@ -1042,6 +1046,14 @@ export async function startDev(args: StartDevOptions) {
 		await Promise.allSettled([
 			configFileWatcher?.close(),
 			assetsWatcher?.close(),
+			devEnv.teardown(),
+			(async () => {
+				if (teardownRegistryPromise) {
+					const teardownRegistry = await teardownRegistryPromise;
+					await teardownRegistry(devEnv.config.latestConfig?.name);
+				}
+				unregisterHotKeys?.();
+			})(),
 		]);
 		throw e;
 	}

@@ -247,7 +247,7 @@ export async function fetchWorker(
 	});
 
 	if (!response.ok || !response.body) {
-		console.error(response.ok, response.body);
+		logger.error(response.ok, response.body);
 		throw new Error(
 			`Failed to fetch ${resource} - ${response.status}: ${response.statusText});`
 		);
