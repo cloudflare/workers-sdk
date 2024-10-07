@@ -14,6 +14,7 @@ export default function (env) {
         fetcher: env.FETCHER,
         indexId: env.INDEX_ID,
         indexVersion: env.INDEX_VERSION,
+        useNdJson: true,
     });
 }
 `;
