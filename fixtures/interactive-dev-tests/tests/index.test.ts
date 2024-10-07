@@ -230,7 +230,7 @@ describe.each(devScripts)("wrangler $args", ({ args, expectedBody }) => {
 	});
 });
 
-it.only("hotkeys should be unregistered when the initial build fails", async () => {
+it("hotkeys should be unregistered when the initial build fails", async () => {
 	const wrangler = await startWranglerDev(
 		["dev", "src/startup-error.ts"],
 		true
