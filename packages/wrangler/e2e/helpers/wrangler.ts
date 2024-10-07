@@ -39,9 +39,10 @@ export class WranglerLongLivedCommand extends LongLivedCommand {
 		return match.groups as { url: string };
 	}
 
-	async waitForReload(): Promise<void> {
+	async waitForReload(readTimeout?: number): Promise<void> {
 		await this.readUntil(
-			/Detected changes, restarted server|Reloading local server\.\.\./
+			/Detected changes, restarted server|Reloading local server\.\.\./,
+			readTimeout
 		);
 	}
 }

@@ -1452,6 +1452,53 @@ describe("watch mode", () => {
 			response = await fetch(`${url}/hey`);
 			expect(response.status).toBe(404);
 		});
+
+		it("debounces runtime restarts when assets are modified", async () => {
+			const helper = new WranglerE2ETestHelper();
+			await helper.seed({
+				"wrangler.toml": dedent`
+						name = "${workerName}"
+						compatibility_date = "2023-01-01"
+						main = "src/index.ts"
+
+						[assets]
+						directory = "./public"
+				`,
+				"src/index.ts": dedent`
+					export default {
+						async fetch(request) {
+							return new Response("Hello, World!")
+						}
+					}
+				`,
+				"public/index.html": "Hello from Assets",
+			});
+			const worker = helper.runLongLived("wrangler dev");
+
+			const { url } = await worker.waitForReady();
+
+			// Modify assets multiple times in quick succession
+
+			await helper.seed({
+				"public/a.html": "a",
+			});
+
+			await helper.seed({
+				"public/b.html": "b",
+			});
+
+			await helper.seed({
+				"public/c.html": "c",
+			});
+
+			await worker.waitForReload();
+
+			// The three changes should be debounced, so only one reload should occur
+			await expect(worker.waitForReload(5_000)).rejects.toThrowError();
+
+			// now check assets are still fetchable
+			await expect(fetchText(url)).resolves.toBe("Hello from Assets");
+		});
 	});
 
 	describe.each([
