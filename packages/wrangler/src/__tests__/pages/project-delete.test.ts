@@ -102,4 +102,37 @@ describe("pages project delete", () => {
 		Successfully deleted some-project-name"
 	`);
 	});
+
+	it("should override cached accountId with CLOUDFLARE_ACCOUNT_ID environmental variable if provided", async () => {
+		msw.use(
+			http.delete(
+				"*/accounts/:accountId/pages/projects/:projectName",
+				async ({ params }) => {
+					expect(params.accountId).toEqual("new-account-id");
+					return HttpResponse.json(
+						{
+							result: null,
+							success: true,
+							errors: [],
+							messages: [],
+						},
+						{ status: 200 }
+					);
+				},
+				{ once: true }
+			)
+		);
+		mockConfirm({
+			text: `Are you sure you want to delete "an-existing-project"? This action cannot be undone.`,
+			result: true,
+		});
+		vi.mock("getConfigCache", () => {
+			return {
+				account_id: "original-account-id",
+				project_name: "an-existing-project",
+			};
+		});
+		vi.stubEnv("CLOUDFLARE_ACCOUNT_ID", "new-account-id");
+		await runWrangler("pages project delete an-existing-project");
+	});
 });

@@ -8,6 +8,7 @@ import { FatalError } from "../errors";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { requireAuth } from "../user";
+import { getCloudflareAccountIdFromEnv } from "../user/auth-variables";
 import { renderToString } from "../utils/render";
 import { PAGES_CONFIG_CACHE_FILENAME } from "./constants";
 import type {
@@ -23,7 +24,8 @@ export function ListOptions(yargs: CommonYargsArgv) {
 export async function ListHandler() {
 	const config = getConfigCache<PagesConfigCache>(PAGES_CONFIG_CACHE_FILENAME);
 
-	const accountId = await requireAuth(config);
+	const accountId =
+		getCloudflareAccountIdFromEnv() ?? (await requireAuth(config));
 
 	const projects: Array<Project> = await listProjects({ accountId });
 
@@ -106,7 +108,8 @@ export async function CreateHandler({
 	projectName,
 }: StrictYargsOptionsToInterface<typeof CreateOptions>) {
 	const config = getConfigCache<PagesConfigCache>(PAGES_CONFIG_CACHE_FILENAME);
-	const accountId = await requireAuth(config);
+	const accountId =
+		getCloudflareAccountIdFromEnv() ?? (await requireAuth(config));
 
 	const isInteractive = process.stdin.isTTY;
 	if (!projectName && isInteractive) {
@@ -204,7 +207,8 @@ export async function DeleteHandler(
 	args: StrictYargsOptionsToInterface<typeof DeleteOptions>
 ) {
 	const config = getConfigCache<PagesConfigCache>(PAGES_CONFIG_CACHE_FILENAME);
-	const accountId = await requireAuth(config);
+	const accountId =
+		getCloudflareAccountIdFromEnv() ?? (await requireAuth(config));
 
 	const confirmed =
 		args.yes ||
