@@ -1,5 +1,11 @@
 # wrangler
 
+## 3.80.2
+
+### Patch Changes
+
+- [#6923](https://github.com/cloudflare/workers-sdk/pull/6923) [`1320f20`](https://github.com/cloudflare/workers-sdk/commit/1320f20b38d7b4623fe21d38118bdc9fb8514a99) Thanks [@andyjessop](https://github.com/andyjessop)! - chore: adds eslint-disable for ESLint error on empty typescript interface in workers-configuration.d.ts
+
 ## 3.80.1
 
 ### Patch Changes
