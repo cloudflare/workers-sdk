@@ -282,12 +282,12 @@ async function buildSourceOptions(
 			? {
 					entrypointSource: config.bundle.entrypointSource,
 					modules: config.bundle.modules,
-			  }
+				}
 			: withSourceURLs(
 					scriptPath,
 					config.bundle.entrypointSource,
 					config.bundle.modules
-			  );
+				);
 
 		const entrypointNames = isPython
 			? []

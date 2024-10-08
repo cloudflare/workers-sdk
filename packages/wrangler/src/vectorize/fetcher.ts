@@ -74,7 +74,7 @@ export function MakeVectorizeFetcher(indexId: string, indexVersion: string) {
 			: {
 					error: apiResponse.errors[0].message,
 					code: apiResponse.errors[0].code,
-			  };
+				};
 
 		return new Response(JSON.stringify(newResponse), {
 			status: res.status,

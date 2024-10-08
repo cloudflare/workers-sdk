@@ -500,6 +500,69 @@ describe.sequential.each(RUNTIMES)("Bindings: $flags", ({ runtime, flags }) => {
 		}
 	});
 
+	it("exposes Vectorize bindings", async () => {
+		const name = await helper.vectorize(32, "euclidean");
+
+		await helper.seed({
+			"wrangler.toml": dedent`
+				name = "${workerName}"
+				main = "src/index.ts"
+				compatibility_date = "2024-08-01"
+				[[vectorize]]
+				binding = "VECTORIZE"
+				index_name = "${name}"
+				`,
+			"samples.ndjson": dedent`
+				{
+					id: "1",
+					values: [
+					0.12, 0.45, 0.67, 0.89, 0.23, 0.56, 0.34, 0.78, 0.12, 0.9, 0.24, 0.67,
+					0.89, 0.35, 0.48, 0.7, 0.22, 0.58, 0.74, 0.33, 0.88, 0.66, 0.45, 0.27,
+					0.81, 0.54, 0.39, 0.76, 0.41, 0.29, 0.83, 0.55,
+					],
+					metadata: { url: "/products/sku/13913913" },
+				}
+				{
+					id: "2",
+					values: [
+					0.14, 0.23, 0.36, 0.51, 0.62, 0.47, 0.59, 0.74, 0.33, 0.89, 0.41, 0.53,
+					0.68, 0.29, 0.77, 0.45, 0.24, 0.66, 0.71, 0.34, 0.86, 0.57, 0.62, 0.48,
+					0.78, 0.52, 0.37, 0.61, 0.69, 0.28, 0.8, 0.53,
+					],
+					metadata: { url: "/products/sku/10148191" },
+				}
+			`,
+			"src/index.ts": dedent`
+				export interface Env {
+					VECTORIZE: Vectorize;
+				}
+				export default {
+					async fetch(request: Request, env: Env, ctx: any) {
+						const queryVector: Array<number> = [
+							0.13, 0.25, 0.44, 0.53, 0.62, 0.41, 0.59, 0.68, 0.29, 0.82, 0.37, 0.5,
+							0.74, 0.46, 0.57, 0.64, 0.28, 0.61, 0.73, 0.35, 0.78, 0.58, 0.42, 0.32,
+							0.77, 0.65, 0.49, 0.54, 0.31, 0.29, 0.71, 0.57,
+						]; // vector of dimension 32
+						const matches = await env.VECTORIZE.query(queryVector, {
+							topK: 3,
+							returnValues: true,
+							returnMetadata: "all",
+						});
+						return Response.json({matches});
+					}
+				}
+				`,
+		});
+
+		await helper.run(`wrangler vectorize insert ${name} --file samples.ndjson`);
+
+		const worker = helper.runLongLived(`wrangler dev ${flags}`);
+		const { url } = await worker.waitForReady();
+		const res = await fetch(url);
+
+		expect(await res.json()).toEqual({ todo: "" });
+	});
+
 	it.skipIf(!isLocal)("exposes queue producer/consumer bindings", async () => {
 		const queueName = generateResourceName("queue");
 
@@ -579,7 +642,6 @@ describe.sequential.each(RUNTIMES)("Bindings: $flags", ({ runtime, flags }) => {
 	it.skipIf(isLocal).todo("exposes send email bindings");
 	it.skipIf(isLocal).todo("exposes browser bindings");
 	it.skipIf(isLocal).todo("exposes Workers AI bindings");
-	it.skipIf(isLocal).todo("exposes Vectorize bindings");
 	it.skipIf(isLocal).todo("exposes Analytics Engine bindings");
 	it.skipIf(isLocal).todo("exposes dispatch namespace bindings");
 	it.skipIf(isLocal).todo("exposes mTLS bindings");
