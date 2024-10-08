@@ -1,0 +1,39 @@
+# This workflow cleans up any leftover projects created by e2e runs.
+
+name: Run CI on behalf of External Forks
+on:
+  workflow_dispatch:
+    inputs:
+      pr-number:
+        description: "The PR number to run CI on behalf of"
+        required: true
+      reviewed:
+        description: "Confirm that the PR has been reviewed for use/leakage of secrets"
+        type: boolean
+        required: true
+jobs:
+  create-draft-pr:
+    if: ${{ inputs.reviewed == true }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check user for team affiliation
+        uses: tspascoal/get-user-teams-membership@v2
+        id: teamAffiliation
+        with:
+          GITHUB_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
+          username: ${{ github.actor }}
+          team: wrangler
+      - name: Stop workflow if user is no member
+        if: ${{ steps.teamAffiliation.outputs.isTeamMember == false }}
+        run: |
+          echo "You have must be on the "wrangler" team to trigger this job."
+          exit 1
+
+      - name: "Checkout PR"
+        run: gh pr checkout ${{ inputs.pr-number }}
+
+      - name: "Create Draft PR"
+        run: git checkout -b run-ci-on-hehalf-of-${{ inputs.pr-number }}
+          gh pr create --draft --label "e2e" --title "Run CI on behalf of \#${{ inputs.pr-number }}" --body "This PR is created to run CI on behalf of \#${{ inputs.pr-number }}. It can be closed after the CI run is complete."
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
