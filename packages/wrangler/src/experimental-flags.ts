@@ -14,6 +14,9 @@ export const run = <V>(flagValues: ExperimentalFlags, cb: () => V) =>
 	flags.run(flagValues, cb);
 
 export const getFlag = <F extends keyof ExperimentalFlags>(flag: F) => {
+	if (flag === "FILE_BASED_REGISTRY") {
+		return true;
+	}
 	const store = flags.getStore();
 	if (store === undefined) {
 		logger.debug("No experimental flag store instantiated");
