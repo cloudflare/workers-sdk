@@ -513,24 +513,8 @@ describe.sequential.each(RUNTIMES)("Bindings: $flags", ({ runtime, flags }) => {
 				index_name = "${name}"
 				`,
 			"samples.ndjson": dedent`
-				{
-					id: "1",
-					values: [
-					0.12, 0.45, 0.67, 0.89, 0.23, 0.56, 0.34, 0.78, 0.12, 0.9, 0.24, 0.67,
-					0.89, 0.35, 0.48, 0.7, 0.22, 0.58, 0.74, 0.33, 0.88, 0.66, 0.45, 0.27,
-					0.81, 0.54, 0.39, 0.76, 0.41, 0.29, 0.83, 0.55,
-					],
-					metadata: { url: "/products/sku/13913913" },
-				}
-				{
-					id: "2",
-					values: [
-					0.14, 0.23, 0.36, 0.51, 0.62, 0.47, 0.59, 0.74, 0.33, 0.89, 0.41, 0.53,
-					0.68, 0.29, 0.77, 0.45, 0.24, 0.66, 0.71, 0.34, 0.86, 0.57, 0.62, 0.48,
-					0.78, 0.52, 0.37, 0.61, 0.69, 0.28, 0.8, 0.53,
-					],
-					metadata: { url: "/products/sku/10148191" },
-				}
+				{"id":"b0daca4a-ffd8-4865-926b-e24800af2a2d","values":[0.2331,1.0125,0.6131,0.9421,0.9661,0.8121,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"metadata":{"text":"She sells seashells by the seashore"}}
+				{"id":"a44706aa-a366-48bc-8cc1-3feffd87d548","values":[0.2321,0.8121,0.6315,0.6151,0.4121,0.1512,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"metadata":{"text":"Peter Piper picked a peck of pickled peppers"}}
 			`,
 			"src/index.ts": dedent`
 				export interface Env {
@@ -560,7 +544,13 @@ describe.sequential.each(RUNTIMES)("Bindings: $flags", ({ runtime, flags }) => {
 		const { url } = await worker.waitForReady();
 		const res = await fetch(url);
 
-		expect(await res.json()).toEqual({ todo: "" });
+		const text = await res.text();
+		console.log(text);
+		const obj = JSON.parse(text) as any;
+
+		const count = obj.matches.count;
+
+		expect(count).toBe(2);
 	});
 
 	it.skipIf(!isLocal)("exposes queue producer/consumer bindings", async () => {
