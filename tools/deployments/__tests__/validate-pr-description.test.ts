@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { validateDescription } from "../validate-pr-description";
 
-
 describe("validateDescription()", () => {
 	it("should skip validation with the `skip-pr-description-validation` label", () => {
 		expect(
