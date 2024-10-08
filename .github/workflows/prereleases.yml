@@ -56,5 +56,5 @@ jobs:
         working-directory: packages/wrangler
 
       - name: Get Package Version
-        run: echo "WRANGLER_VERSION=$(npm view wrangler@beta version)" >> $GITHUB_ENV
+        run: echo "WRANGLER_VERSION=$(npm view wrangler@legacy-beta version)" >> $GITHUB_ENV
         working-directory: packages/wrangler

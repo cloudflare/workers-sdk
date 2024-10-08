@@ -27,6 +27,10 @@ jobs:
           node-version: 16.13
           cache: "npm" # cache ~/.npm in case 'npm ci' needs to run
 
+      - name: Fix node-gyp
+        if: runner.os == 'macOS'
+        run: brew install python-setuptools
+
       - name: Install workerd Dependencies
         if: ${{ runner.os == 'Linux' }}
         run: |
