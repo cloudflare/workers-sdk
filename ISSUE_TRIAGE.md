@@ -16,7 +16,7 @@ Follow these steps to triage an issue.
 
 ### Step 0: Is this a Pages or Wrangler issue?
 
-If the issue refers only to Pages commands then apply the `pages` label and add the issue to the [Pages](https://github.com/orgs/cloudflare/projects/2) Github project.
+If the issue refers only to Pages commands, then apply the `pages` label and add the issue to the [Pages](https://github.com/orgs/cloudflare/projects/2) Github project.
 
 Otherwise, add the issue to the [Wrangler](https://github.com/orgs/cloudflare/projects/1) Github project, set its status to `Untriaged`, and continue to step 1.
 
@@ -26,7 +26,7 @@ Gauge whether the issue has enough information to act upon.
 This typically includes the version of Wrangler being used and steps to reproduce.
 
 - If the issue may be legitimate but needs more information, add the `needs clarification` label.
-- If the issue does not provide clear steps to reproduce the problem then add the `needs reproduction` label.
+- If the issue does not provide clear steps to reproduce the problem, then add the `needs reproduction` label.
 
 These labels can be revisited if the author can provide further clarification.
 You can see a list of issues that need revisiting by filtering on ["needs reproduction" and "needs clarification"](https://github.com/cloudflare/workers-sdk/issues?q=is%3Aopen+is%3Aissue+project%3Acloudflare%2F1+label%3A%22needs+clarification%22).
