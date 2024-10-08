@@ -1,4 +1,5 @@
 {
+	"$schema": "https://json.schemastore.org/tsconfig",
 	"compilerOptions": {
 		"esModuleInterop": false,
 		"skipLibCheck": true,
@@ -12,10 +13,8 @@
 		"noImplicitOverride": true,
 		"module": "Preserve",
 		"lib": ["ES2022"],
-		"types": ["@cloudflare/workers-types/experimental", "vite/client"],
 		"declaration": true,
 		"declarationMap": true,
 		"noEmit": true
-	},
-	"include": ["**/*"]
+	}
 }

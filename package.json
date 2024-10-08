@@ -5,6 +5,7 @@
 		"postinstall": "pnpm --filter @flarelabs-net/vite-plugin-cloudflare build"
 	},
 	"devDependencies": {
-		"prettier": "^3.3.3"
+		"prettier": "^3.3.3",
+		"syncpack": "^13.0.0"
 	}
 }

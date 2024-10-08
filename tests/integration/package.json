@@ -1,18 +1,17 @@
 {
-	"name": "@examples/worker",
+	"name": "@tests/integration",
 	"private": true,
 	"type": "module",
 	"scripts": {
-		"dev": "vite dev",
-		"typegen": "pnpm typegen-a && pnpm typegen-b",
-		"typegen-a": "wrangler types -c ./worker-a/wrangler.toml ./worker-a/worker-configuration.d.ts",
-		"typegen-b": "wrangler types -c ./worker-b/wrangler.toml ./worker-b/worker-configuration.d.ts"
+		"test": "vitest run"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-types": "^4.20240919.0",
 		"@flarelabs-net/vite-plugin-cloudflare": "workspace:*",
 		"@vite-plugin-cloudflare/typescript-config": "workspace:*",
+		"typescript": "^5.6.2",
 		"vite": "6.0.0-beta.2",
+		"vitest": "^2.1.2",
 		"wrangler": "^3.78.8"
 	}
 }

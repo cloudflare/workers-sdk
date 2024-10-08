@@ -1,21 +1,4 @@
 {
-	"compilerOptions": {
-		"esModuleInterop": false,
-		"skipLibCheck": true,
-		"target": "ES2022",
-		"resolveJsonModule": true,
-		"moduleDetection": "force",
-		"isolatedModules": true,
-		"verbatimModuleSyntax": true,
-		"strict": true,
-		"noUncheckedIndexedAccess": true,
-		"noImplicitOverride": true,
-		"module": "Preserve",
-		"lib": ["ES2022"],
-		"types": ["@cloudflare/workers-types/experimental", "vite/client"],
-		"declaration": true,
-		"declarationMap": true,
-		"noEmit": true
-	},
+	"extends": "@vite-plugin-cloudflare/typescript-config/worker.json",
 	"include": ["src/runner"]
 }
