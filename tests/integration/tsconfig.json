@@ -1,0 +1,7 @@
+{
+	"files": [],
+	"references": [
+		{ "path": "./tsconfig.integration.json" },
+		{ "path": "./tsconfig.fixtures.json" }
+	]
+}
