@@ -19,12 +19,35 @@ export default function (env) {
 }
 `;
 
+const ALLOWED_OPS = ["query", "getByIds", "list", "info"];
+
+interface VectorizeAPIResponse {
+	result: object;
+	success: boolean;
+	errors: {
+		code: number;
+		message: string;
+	}[];
+}
+
 export function MakeVectorizeFetcher(indexId: string, indexVersion: string) {
 	return async function (request: Request): Promise<Response> {
 		const accountId = await getAccountId();
 
 		request.headers.delete("Host");
 		request.headers.delete("Content-Length");
+
+		const op = request.url.split("/").pop() || "";
+		if (!ALLOWED_OPS.includes(op)) {
+			return new Response(
+				JSON.stringify({
+					code: 1003,
+					error:
+						"Invalid operation: Only read operations are allowed in local dev mode; pass `--remote` to wrangler dev to use write operations.",
+				}),
+				{ status: 403 }
+			);
+		}
 
 		const url = request.url.replace(
 			"http://vector-search/",
@@ -44,6 +67,18 @@ export function MakeVectorizeFetcher(indexId: string, indexVersion: string) {
 		respHeaders.delete("Host");
 		respHeaders.delete("Content-Length");
 
-		return new Response(res.body, { status: res.status, headers: respHeaders });
+		// APIv4 has a different response structure than local bindings, so we make a simple conversion here
+		const apiResponse = (await res.json()) as VectorizeAPIResponse;
+		const newResponse = apiResponse.success
+			? apiResponse.result
+			: {
+					error: apiResponse.errors[0].message,
+					code: apiResponse.errors[0].code,
+			  };
+
+		return new Response(JSON.stringify(newResponse), {
+			status: res.status,
+			headers: respHeaders,
+		});
 	};
 }

@@ -924,7 +924,7 @@ export async function buildMiniflareOptions(
 		if (!didWarnMiniflareVectorizeSupport) {
 			didWarnMiniflareVectorizeSupport = true;
 			logger.warn(
-				"Using Vectorize always accesses your Cloudflare account in order to run queries. It will make changes and incur usage charges even in local development."
+				"Using Vectorize always accesses your Cloudflare account in order to run queries and may incur usage charges even in local development. Write operations are also not enabled in local development; use `--remote` if write operations are needed."
 			);
 		}
 	}
