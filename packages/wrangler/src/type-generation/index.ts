@@ -490,6 +490,10 @@ function writeDTSFile({
 
 	let combinedTypeStrings = "";
 	if (formatType === "modules") {
+		if (envTypeStructure.length === 0) {
+			combinedTypeStrings +=
+				"// eslint-disable-next-line @typescript-eslint/no-empty-interface,@typescript-eslint/no-empty-object-type\n";
+		}
 		combinedTypeStrings += `interface ${envInterface} {${envTypeStructure
 			.map((value) => `\n\t${value}`)
 			.join("")}\n}\n${modulesTypeStructure.join("\n")}`;
