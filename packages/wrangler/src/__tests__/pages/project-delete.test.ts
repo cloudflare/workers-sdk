@@ -63,6 +63,14 @@ describe("pages project delete", () => {
 	`);
 	});
 
+	it("should error if no project name is specified", async () => {
+		await expect(
+			runWrangler("pages project delete")
+		).rejects.toThrowErrorMatchingInlineSnapshot(
+			`[Error: Missing required argument: project-name]`
+		);
+	});
+
 	it("should not delete a project if confirmation refused", async () => {
 		mockConfirm({
 			text: `Are you sure you want to delete "some-project-name-2"? This action cannot be undone.`,
