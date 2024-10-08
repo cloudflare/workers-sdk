@@ -444,8 +444,9 @@ describe("generateTypes()", () => {
 			);
 
 			await runWrangler("types");
-			expect(fs.readFileSync("./worker-configuration.d.ts", "utf-8")).toMatch(
-				/interface Env \{\s*\}/
+
+			expect(fs.readFileSync("./worker-configuration.d.ts", "utf-8")).toContain(
+				`// eslint-disable-next-line @typescript-eslint/no-empty-interface,@typescript-eslint/no-empty-object-type\ninterface Env {\n}`
 			);
 			expect(std.out).toMatchInlineSnapshot(`
 			"Generating project types...
