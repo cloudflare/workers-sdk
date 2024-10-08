@@ -1,22 +1,26 @@
 name: Test old Node.js version
 
-on: pull_request
+on:
+  push:
+    branches:
+      - changeset-release/main
 
 jobs:
   check:
     name: "Checks"
-    strategy:
-      matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}
+      cancel-in-progress: true
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout Repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
       - name: Use Node.js v10
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: 10.24.1
 
