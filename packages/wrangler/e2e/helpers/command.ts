@@ -1,6 +1,7 @@
 import assert from "node:assert";
 import { spawn, spawnSync } from "node:child_process";
 import events from "node:events";
+import path from "node:path";
 import rl from "node:readline";
 import { PassThrough } from "node:stream";
 import { ReadableStream } from "node:stream/web";
@@ -106,9 +107,7 @@ export class LongLivedCommand {
 			start: (controller) => {
 				lineInterface.on("line", (line) => {
 					// eslint-disable-next-line turbo/no-undeclared-env-vars
-					// if (process.env.VITEST_MODE === "WATCH") {
-					console.log(`[${cwd}]`, line);
-					// }
+					console.log(`[${path.basename(cwd ?? "/unknown")}]`, line);
 					this.lines.push(line);
 					try {
 						controller.enqueue(line);
