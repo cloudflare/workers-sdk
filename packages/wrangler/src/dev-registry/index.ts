@@ -3,6 +3,13 @@ import { FileRegistry } from "./file-registry";
 import { ServerRegistry } from "./server-registry";
 import type { Binding } from "../api";
 import type { Config } from "../config";
+import type {
+	WorkerDefinition,
+	WorkerEntrypointsDefinition,
+	WorkerRegistry,
+} from "./types";
+
+export type { WorkerDefinition, WorkerRegistry, WorkerEntrypointsDefinition };
 
 // Safety of `!`: `parseInt(undefined)` is NaN
 // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
@@ -10,25 +17,6 @@ let DEV_REGISTRY_PORT = parseInt(process.env.WRANGLER_WORKER_REGISTRY_PORT!);
 if (Number.isNaN(DEV_REGISTRY_PORT)) {
 	DEV_REGISTRY_PORT = 6284;
 }
-
-export type WorkerRegistry = Record<string, WorkerDefinition>;
-
-export type WorkerEntrypointsDefinition = Record<
-	/* name */ "default" | string,
-	{ host: string; port: number } | undefined
->;
-
-export type WorkerDefinition = {
-	port: number | undefined;
-	protocol: "http" | "https" | undefined;
-	host: string | undefined;
-	mode: "local" | "remote";
-	headers?: Record<string, string>;
-	entrypointAddresses?: WorkerEntrypointsDefinition;
-	durableObjects: { name: string; className: string }[];
-	durableObjectsHost?: string;
-	durableObjectsPort?: number;
-};
 
 export const startWorkerRegistryServer =
 	ServerRegistry.startWorkerRegistryServer;

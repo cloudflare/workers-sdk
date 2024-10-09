@@ -514,8 +514,6 @@ async function updateDevEnvRegistry(
 		return;
 	}
 
-	// [Ask Samuel] Shouldn't we be awaiting this? What if another updateDevEnvRegistry call happens, then we
-	// will have a race condition.
 	void devEnv.config.patch({
 		dev: {
 			...devEnv.config.latestConfig?.dev,
