@@ -199,39 +199,6 @@ importers:
         specifier: workspace:*
         version: link:../../packages/wrangler
 
-  fixtures/external-durable-objects-app:
-    devDependencies:
-      '@cloudflare/workers-tsconfig':
-        specifier: workspace:*
-        version: link:../../packages/workers-tsconfig
-      '@cloudflare/workers-types':
-        specifier: ^4.20241004.0
-        version: 4.20241004.0
-      undici:
-        specifier: ^5.28.4
-        version: 5.28.4
-      wrangler:
-        specifier: workspace:*
-        version: link:../../packages/wrangler
-
-  fixtures/external-service-bindings-app:
-    devDependencies:
-      '@cloudflare/workers-tsconfig':
-        specifier: workspace:*
-        version: link:../../packages/workers-tsconfig
-      '@cloudflare/workers-types':
-        specifier: ^4.20241004.0
-        version: 4.20241004.0
-      concurrently:
-        specifier: ^8.2.2
-        version: 8.2.2
-      undici:
-        specifier: ^5.28.4
-        version: 5.28.4
-      wrangler:
-        specifier: workspace:*
-        version: link:../../packages/wrangler
-
   fixtures/get-platform-proxy:
     devDependencies:
       '@cloudflare/workers-tsconfig':

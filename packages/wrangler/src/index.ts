@@ -929,6 +929,9 @@ export async function main(argv: string[]): Promise<void> {
 					? loggableException.message
 					: loggableException
 			);
+			if (loggableException instanceof Error) {
+				logger.log(loggableException.stack);
+			}
 
 			if (!(loggableException instanceof UserError)) {
 				await logPossibleBugMessage();
