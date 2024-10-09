@@ -1,5 +1,5 @@
 import { getFlag } from "../experimental-flags";
-import { FileBasedRegistry } from "./file-registry";
+import { FileRegistry } from "./file-registry";
 import { ServerRegistry } from "./server-registry";
 import type { Binding } from "../api";
 import type { Config } from "../config";
@@ -42,7 +42,7 @@ export async function startWorkerRegistry(
 	listener?: (registry: WorkerRegistry | undefined) => void
 ) {
 	if (getFlag("FILE_BASED_REGISTRY")) {
-		return FileBasedRegistry.startWorkerRegistry(listener);
+		return FileRegistry.startWorkerRegistry(listener);
 	}
 
 	return ServerRegistry.startWorkerRegistry();
@@ -53,7 +53,7 @@ export async function startWorkerRegistry(
  */
 export async function stopWorkerRegistry() {
 	if (getFlag("FILE_BASED_REGISTRY")) {
-		return FileBasedRegistry.stopWorkerRegistry();
+		return FileRegistry.stopWorkerRegistry();
 	}
 	return ServerRegistry.stopWorkerRegistry();
 }
@@ -66,7 +66,7 @@ export async function registerWorker(
 	definition: WorkerDefinition
 ) {
 	if (getFlag("FILE_BASED_REGISTRY")) {
-		return FileBasedRegistry.registerWorker(name, definition);
+		return FileRegistry.registerWorker(name, definition);
 	}
 	return ServerRegistry.registerWorker(name, definition);
 }
@@ -76,7 +76,7 @@ export async function registerWorker(
  */
 export async function unregisterWorker(name: string) {
 	if (getFlag("FILE_BASED_REGISTRY")) {
-		return FileBasedRegistry.unregisterWorker(name);
+		return FileRegistry.unregisterWorker(name);
 	}
 	return ServerRegistry.unregisterWorker(name);
 }
@@ -88,7 +88,7 @@ export async function getRegisteredWorkers(): Promise<
 	WorkerRegistry | undefined
 > {
 	if (getFlag("FILE_BASED_REGISTRY")) {
-		return FileBasedRegistry.getRegisteredWorkers();
+		return FileRegistry.getRegisteredWorkers();
 	}
 
 	return ServerRegistry.getRegisteredWorkers();
@@ -143,7 +143,7 @@ export async function devRegistry(
 	cb: (workers: WorkerRegistry | undefined) => void
 ): Promise<(name?: string) => Promise<void>> {
 	if (getFlag("FILE_BASED_REGISTRY")) {
-		return FileBasedRegistry.devRegistry(cb);
+		return FileRegistry.devRegistry(cb);
 	}
 
 	return ServerRegistry.devRegistry(cb);

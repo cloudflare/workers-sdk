@@ -20,7 +20,7 @@ const heartbeats = new Map<string, NodeJS.Timeout>();
 let globalWorkers: WorkerRegistry | undefined;
 let globalWatcher: ReturnType<typeof watch> | undefined;
 
-export const FileBasedRegistry = {
+export const FileRegistry = {
 	devRegistry,
 	getRegisteredWorkers,
 	registerWorker,
@@ -29,9 +29,6 @@ export const FileBasedRegistry = {
 	unregisterWorker,
 };
 
-/**
- * A react-free version of the above hook
- */
 async function devRegistry(
 	cb: (workers: WorkerRegistry | undefined) => void
 ): Promise<(name?: string) => Promise<void>> {
