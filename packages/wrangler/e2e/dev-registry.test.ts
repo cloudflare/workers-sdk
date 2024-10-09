@@ -21,6 +21,7 @@ async function fetchJson<T>(url: string, info?: RequestInit): Promise<T> {
 		{ timeout: 5_000, interval: 250 }
 	);
 }
+
 describe.each([
 	{ cmd: "wrangler dev --x-registry" },
 	{ cmd: "wrangler dev --no-x-registry" },
