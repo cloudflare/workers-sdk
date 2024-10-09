@@ -106,9 +106,9 @@ export class LongLivedCommand {
 			start: (controller) => {
 				lineInterface.on("line", (line) => {
 					// eslint-disable-next-line turbo/no-undeclared-env-vars
-					if (process.env.VITEST_MODE === "WATCH") {
-						console.log(line);
-					}
+					// if (process.env.VITEST_MODE === "WATCH") {
+					console.log(line);
+					// }
 					this.lines.push(line);
 					try {
 						controller.enqueue(line);
