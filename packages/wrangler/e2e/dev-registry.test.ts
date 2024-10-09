@@ -25,7 +25,7 @@ async function fetchJson<T>(url: string, info?: RequestInit): Promise<T> {
 describe.each([
 	{ cmd: "wrangler dev --x-registry" },
 	{ cmd: "wrangler dev --no-x-registry" },
-])("basic dev registry", ({ cmd }) => {
+])("dev registry $cmd", ({ cmd }) => {
 	let workerName: string;
 	let workerName2: string;
 	let workerName3: string;
@@ -172,7 +172,7 @@ describe.each([
 			const workerA = helper.runLongLived(cmd, { cwd: a });
 			const { url } = await workerA.waitForReady();
 
-			await workerA.waitForReload();
+			await workerA.readUntil(/- BEE: 🟢/);
 			// Give the dev registry some time to settle
 			await setTimeout(500);
 
@@ -186,7 +186,7 @@ describe.each([
 			const workerB = helper.runLongLived(cmd, { cwd: b });
 			await workerB.waitForReady();
 
-			await workerA.waitForReload();
+			await workerA.readUntil(/- BEE: 🟢/);
 			// Give the dev registry some time to settle
 			await setTimeout(500);
 
@@ -217,7 +217,7 @@ describe.each([
 			const workerA = helper.runLongLived(cmd, { cwd: a });
 			const { url } = await workerA.waitForReady();
 
-			await workerA.waitForReload();
+			await workerA.readUntil(/- CEE: 🟢/);
 			// Give the dev registry some time to settle
 			await setTimeout(500);
 
@@ -233,7 +233,7 @@ describe.each([
 			const workerC = helper.runLongLived(cmd, { cwd: c });
 			await workerC.waitForReady();
 
-			await workerA.waitForReload();
+			await workerA.readUntil(/- CEE: 🟢/);
 			// Give the dev registry some time to settle
 			await setTimeout(500);
 
@@ -287,7 +287,7 @@ describe.each([
 			const workerA = helper.runLongLived(cmd, { cwd: a });
 			await workerA.waitForReady();
 
-			await workerA.waitForReload();
+			await workerB.readUntil(/defined in 🟢/);
 
 			// Give the dev registry some time to settle
 			await setTimeout(500);
@@ -308,7 +308,7 @@ describe.each([
 			const workerB = helper.runLongLived(cmd, { cwd: b });
 			const { url } = await workerB.waitForReady();
 
-			await workerA.waitForReload();
+			await workerB.readUntil(/defined in 🟢/);
 			// Give the dev registry some time to settle
 			await setTimeout(500);
 
