@@ -26,15 +26,18 @@ describe.each([
 	{ cmd: "wrangler dev --x-registry" },
 	{ cmd: "wrangler dev --no-x-registry" },
 ])("basic dev registry", ({ cmd }) => {
+	let workerName: string;
+	let workerName2: string;
+	let workerName3: string;
 	let a: string;
 	let b: string;
 	let c: string;
 	let helper: WranglerE2ETestHelper;
 
 	beforeEach(async () => {
-		const workerName = generateResourceName("worker");
-		const workerName2 = generateResourceName("worker");
-		const workerName3 = generateResourceName("worker");
+		workerName = generateResourceName("worker");
+		workerName2 = generateResourceName("worker");
+		workerName3 = generateResourceName("worker");
 		helper = new WranglerE2ETestHelper();
 		a = await makeRoot();
 		await baseSeed(a, {
@@ -42,23 +45,6 @@ describe.each([
 					name = "${workerName}"
 					main = "src/index.ts"
 					compatibility_date = "2023-01-01"
-
-					[[services]]
-					binding = "BEE"
-					service = '${workerName2}'
-
-                    [[services]]
-					binding = "CEE"
-					service = '${workerName3}'
-
-                    [durable_objects]
-                    bindings = [
-                        { name = "MY_DO", class_name = "MyDurableObject" }
-                    ]
-
-                    [[migrations]]
-                    tag = "v1"
-                    new_classes = ["MyDurableObject"]
 			`,
 			"src/index.ts": dedent/* javascript */ `
 				export default {
@@ -154,128 +140,185 @@ describe.each([
 		});
 	});
 
-	it("can fetch b", async () => {
-		const worker = helper.runLongLived(cmd, { cwd: b });
+	describe("module workers", () => {
+		beforeEach(async () => {
+			await baseSeed(a, {
+				"wrangler.toml": dedent`
+						name = "${workerName}"
+						main = "src/index.ts"
+						compatibility_date = "2023-01-01"
 
-		const { url } = await worker.waitForReady();
+						[[services]]
+						binding = "BEE"
+						service = '${workerName2}'
+				`,
+			});
+		});
+		it("can fetch b", async () => {
+			const worker = helper.runLongLived(cmd, { cwd: b });
 
-		await expect(fetch(url).then((r) => r.text())).resolves.toBe("hello world");
+			const { url } = await worker.waitForReady();
+
+			await expect(fetch(url).then((r) => r.text())).resolves.toBe(
+				"hello world"
+			);
+		});
+
+		it("can fetch b through a (start b, start a)", async () => {
+			const workerB = helper.runLongLived(cmd, { cwd: b });
+			// We don't need b's URL, but ensure that b starts up before a
+			await workerB.waitForReady();
+
+			const workerA = helper.runLongLived(cmd, { cwd: a });
+			const { url } = await workerA.waitForReady();
+
+			await workerA.waitForReload();
+			// Give the dev registry some time to settle
+			await setTimeout(500);
+
+			await expect(fetchText(url)).resolves.toBe("hello world");
+		});
+
+		it("can fetch b through a (start a, start b)", async () => {
+			const workerA = helper.runLongLived(cmd, { cwd: a });
+			const { url } = await workerA.waitForReady();
+
+			const workerB = helper.runLongLived(cmd, { cwd: b });
+			await workerB.waitForReady();
+
+			await workerA.waitForReload();
+			// Give the dev registry some time to settle
+			await setTimeout(500);
+
+			await expect(fetchText(url)).resolves.toBe("hello world");
+		});
 	});
 
-	it("can fetch b through a (start b, start a)", async () => {
-		const workerB = helper.runLongLived(cmd, { cwd: b });
-		// We don't need b's URL, but ensure that b starts up before a
-		await workerB.waitForReady();
+	describe("service workers", () => {
+		beforeEach(async () => {
+			await baseSeed(a, {
+				"wrangler.toml": dedent`
+					name = "${workerName}"
+					main = "src/index.ts"
+					compatibility_date = "2023-01-01"
 
-		const workerA = helper.runLongLived(cmd, { cwd: a });
-		const { url } = await workerA.waitForReady();
+                    [[services]]
+					binding = "CEE"
+					service = '${workerName3}'
+			`,
+			});
+		});
 
-		await workerA.waitForReload();
-		// Give the dev registry some time to settle
-		await setTimeout(500);
+		it("can fetch service worker c through a (start c, start a)", async () => {
+			const workerC = helper.runLongLived(cmd, { cwd: c });
+			// We don't need c's URL, but ensure that c starts up before a
+			await workerC.waitForReady();
 
-		await expect(fetchText(url)).resolves.toBe("hello world");
+			const workerA = helper.runLongLived(cmd, { cwd: a });
+			const { url } = await workerA.waitForReady();
+
+			await workerA.waitForReload();
+			// Give the dev registry some time to settle
+			await setTimeout(500);
+
+			await expect(fetchText(`${url}/service`)).resolves.toBe(
+				"Hello from service worker"
+			);
+		});
+
+		it("can fetch service worker c through a (start a, start c)", async () => {
+			const workerA = helper.runLongLived(cmd, { cwd: a });
+			const { url } = await workerA.waitForReady();
+
+			const workerC = helper.runLongLived(cmd, { cwd: c });
+			await workerC.waitForReady();
+
+			await workerA.waitForReload();
+			// Give the dev registry some time to settle
+			await setTimeout(500);
+
+			await expect(fetchText(`${url}/service`)).resolves.toBe(
+				"Hello from service worker"
+			);
+		});
 	});
 
-	it("can fetch b through a (start a, start b)", async () => {
-		const workerA = helper.runLongLived(cmd, { cwd: a });
-		const { url } = await workerA.waitForReady();
+	describe("durable objects", () => {
+		beforeEach(async () => {
+			await baseSeed(a, {
+				"wrangler.toml": dedent`
+						name = "${workerName}"
+						main = "src/index.ts"
+						compatibility_date = "2023-01-01"
 
-		const workerB = helper.runLongLived(cmd, { cwd: b });
-		await workerB.waitForReady();
+						[[services]]
+						binding = "BEE"
+						service = '${workerName2}'
 
-		await workerA.waitForReload();
-		// Give the dev registry some time to settle
-		await setTimeout(500);
+						[durable_objects]
+						bindings = [
+							{ name = "MY_DO", class_name = "MyDurableObject" }
+						]
 
-		await expect(fetchText(url)).resolves.toBe("hello world");
-	});
+						[[migrations]]
+						tag = "v1"
+						new_classes = ["MyDurableObject"]
+				`,
+			});
+		});
+		it("can fetch DO through a", async () => {
+			const worker = helper.runLongLived(cmd, { cwd: a });
 
-	it("can fetch service worker c through a (start c, start a)", async () => {
-		const workerC = helper.runLongLived(cmd, { cwd: c });
-		// We don't need c's URL, but ensure that c starts up before a
-		await workerC.waitForReady();
+			const { url } = await worker.waitForReady();
 
-		const workerA = helper.runLongLived(cmd, { cwd: a });
-		const { url } = await workerA.waitForReady();
+			await expect(
+				fetchJson(`${url}/do`, {
+					headers: {
+						"X-Reset-Count": "true",
+					},
+				})
+			).resolves.toMatchObject({ count: 1 });
+		});
 
-		await workerA.waitForReload();
-		// Give the dev registry some time to settle
-		await setTimeout(500);
+		it("can fetch remote DO attached to a through b (start b, start a)", async () => {
+			const workerB = helper.runLongLived(cmd, { cwd: b });
+			const { url } = await workerB.waitForReady();
 
-		await expect(fetchText(`${url}/service`)).resolves.toBe(
-			"Hello from service worker"
-		);
-	});
+			const workerA = helper.runLongLived(cmd, { cwd: a });
+			await workerA.waitForReady();
 
-	it("can fetch service worker c through a (start a, start c)", async () => {
-		const workerA = helper.runLongLived(cmd, { cwd: a });
-		const { url } = await workerA.waitForReady();
+			await workerA.waitForReload();
 
-		const workerC = helper.runLongLived(cmd, { cwd: c });
-		await workerC.waitForReady();
+			// Give the dev registry some time to settle
+			await setTimeout(500);
 
-		await workerA.waitForReload();
-		// Give the dev registry some time to settle
-		await setTimeout(500);
+			await expect(
+				fetchJson(`${url}/do`, {
+					headers: {
+						"X-Reset-Count": "true",
+					},
+				})
+			).resolves.toMatchObject({ count: 1 });
+		});
 
-		await expect(fetchText(`${url}/service`)).resolves.toBe(
-			"Hello from service worker"
-		);
-	});
+		it("can fetch remote DO attached to a through b (start a, start b)", async () => {
+			const workerA = helper.runLongLived(cmd, { cwd: a });
+			await workerA.waitForReady();
 
-	it("can fetch DO through a", async () => {
-		const worker = helper.runLongLived(cmd, { cwd: a });
+			const workerB = helper.runLongLived(cmd, { cwd: b });
+			const { url } = await workerB.waitForReady();
 
-		const { url } = await worker.waitForReady();
+			await workerA.waitForReload();
+			// Give the dev registry some time to settle
+			await setTimeout(500);
 
-		await expect(
-			fetchJson(`${url}/do`, {
-				headers: {
-					"X-Reset-Count": "true",
-				},
-			})
-		).resolves.toMatchObject({ count: 1 });
-	});
-
-	it("can fetch remote DO attached to a through b (start b, start a)", async () => {
-		const workerB = helper.runLongLived(cmd, { cwd: b });
-		const { url } = await workerB.waitForReady();
-
-		const workerA = helper.runLongLived(cmd, { cwd: a });
-		await workerA.waitForReady();
-
-		await workerA.waitForReload();
-
-		// Give the dev registry some time to settle
-		await setTimeout(500);
-
-		await expect(
-			fetchJson(`${url}/do`, {
-				headers: {
-					"X-Reset-Count": "true",
-				},
-			})
-		).resolves.toMatchObject({ count: 1 });
-	});
-
-	it("can fetch remote DO attached to a through b (start a, start b)", async () => {
-		const workerA = helper.runLongLived(cmd, { cwd: a });
-		await workerA.waitForReady();
-
-		const workerB = helper.runLongLived(cmd, { cwd: b });
-		const { url } = await workerB.waitForReady();
-
-		await workerA.waitForReload();
-		// Give the dev registry some time to settle
-		await setTimeout(500);
-
-		await expect(
-			fetch(`${url}/do`, {
-				headers: {
-					"X-Reset-Count": "true",
-				},
-			}).then((r) => r.json())
-		).resolves.toMatchObject({ count: 1 });
+			await expect(
+				fetch(`${url}/do`, {
+					headers: {
+						"X-Reset-Count": "true",
+					},
+				}).then((r) => r.json())
+			).resolves.toMatchObject({ count: 1 });
+		});
 	});
 });
