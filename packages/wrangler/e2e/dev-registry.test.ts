@@ -1,11 +1,12 @@
 import { setTimeout } from "node:timers/promises";
 import dedent from "ts-dedent";
-import { fetch, RequestInit } from "undici";
+import { fetch } from "undici";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { WranglerE2ETestHelper } from "./helpers/e2e-wrangler-test";
 import { fetchText } from "./helpers/fetch-text";
 import { generateResourceName } from "./helpers/generate-resource-name";
 import { seed as baseSeed, makeRoot } from "./helpers/setup";
+import type { RequestInit } from "undici";
 
 async function fetchJson<T>(url: string, info?: RequestInit): Promise<T> {
 	return vi.waitFor(
