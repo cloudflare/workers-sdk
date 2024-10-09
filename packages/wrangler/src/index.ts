@@ -930,7 +930,7 @@ export async function main(argv: string[]): Promise<void> {
 					: loggableException
 			);
 			if (loggableException instanceof Error) {
-				logger.log(loggableException.stack);
+				logger.debug(loggableException.stack);
 			}
 
 			if (!(loggableException instanceof UserError)) {
