@@ -26,8 +26,8 @@ export default {
 				return testPostgresLibrary(env, ctx);
 			case "/test-x509-certificate":
 				return testX509Certificate();
-			case "/test-require-npm":
-				return testRequireNpmAlias();
+			case "/test-require-alias":
+				return testRequireUenvAliasedPackages();
 		}
 
 		return new Response(
@@ -35,13 +35,13 @@ export default {
 				'<a href="test-process">Test process global</a> | ' +
 				'<a href="test-random">Test getRandomValues()</a> | ' +
 				'<a href="test-x509-certificate">Test X509Certificate</a>' +
-				'<a href="test-require-npm">Test require aliased npm package</a>',
+				'<a href="test-require-alias">Test require unenv aliased packages</a>',
 			{ headers: { "Content-Type": "text/html; charset=utf-8" } }
 		);
 	},
 };
 
-function testRequireNpmAlias() {
+function testRequireUenvAliasedPackages() {
 	const fetch = require("cross-fetch");
 	const supportsDefaultExports = typeof fetch === "function";
 	const supportsNamedExports = typeof fetch.Headers === "function";

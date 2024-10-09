@@ -64,13 +64,13 @@ describe("nodejs compat", () => {
 		}
 	});
 
-	test("import aliased npm packages", async ({ expect }) => {
+	test("import unenv aliased packages", async ({ expect }) => {
 		const { ip, port, stop } = await runWranglerDev(
 			resolve(__dirname, "../src"),
 			["--port=0", "--inspector-port=0"]
 		);
 		try {
-			const response = await fetch(`http://${ip}:${port}/test-require-npm`);
+			const response = await fetch(`http://${ip}:${port}/test-require-alias`);
 			await expect(response.text()).resolves.toBe(`"OK!"`);
 		} finally {
 			await stop();
