@@ -3,7 +3,6 @@ import { fetch } from "undici";
 import { describe, it, test } from "vitest";
 import { runWranglerDev } from "../../shared/src/run-wrangler-long-lived";
 
-
 describe("nodejs compat", () => {
 	it("should work when running code requiring polyfills", async ({
 		expect,
