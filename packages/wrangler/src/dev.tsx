@@ -503,6 +503,8 @@ async function updateDevEnvRegistry(
 		await events.once(devEnv, "configUpdate");
 	}
 
+	// If the current bound workers in the registry are exactly the same as the workers defined in the config,
+	// then we don't need to update anything.
 	if (
 		util.isDeepStrictEqual(
 			boundWorkers,
@@ -512,6 +514,8 @@ async function updateDevEnvRegistry(
 		return;
 	}
 
+	// [Ask Samuel] Shouldn't we be awaiting this? What if another updateDevEnvRegistry call happens, then we
+	// will have a race condition.
 	void devEnv.config.patch({
 		dev: {
 			...devEnv.config.latestConfig?.dev,
