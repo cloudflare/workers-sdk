@@ -4,7 +4,7 @@ This package contains a Workers specific version of Chrome Devtools that is used
 
 ## Deployment
 
-Deployments are managed by Github Actions:
+Deployments are managed by GitHub Actions:
 
 - deploy-pages-previews.yml:
   - Runs on any PR that has the `preview:wrangler-devtools` label.
