@@ -107,7 +107,7 @@ export class LongLivedCommand {
 				lineInterface.on("line", (line) => {
 					// eslint-disable-next-line turbo/no-undeclared-env-vars
 					// if (process.env.VITEST_MODE === "WATCH") {
-					console.log(line);
+					console.log(`[${cwd}]`, line);
 					// }
 					this.lines.push(line);
 					try {
