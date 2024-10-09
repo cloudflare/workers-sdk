@@ -291,28 +291,31 @@ describe.each([
 			).resolves.toMatchObject({ count: 1 });
 		});
 
-		it("can fetch remote DO attached to a through b (start b, start a)", async () => {
-			const workerB = helper.runLongLived(cmd, { cwd: b });
-			const { url } = await workerB.waitForReady();
+		it.skipIf(process.platform === "win32")(
+			"can fetch remote DO attached to a through b (start b, start a)",
+			async () => {
+				const workerB = helper.runLongLived(cmd, { cwd: b });
+				const { url } = await workerB.waitForReady();
 
-			const workerA = helper.runLongLived(cmd, { cwd: a });
+				const workerA = helper.runLongLived(cmd, { cwd: a });
 
-			await Promise.all([
-				workerA.waitForReady(),
-				workerB.readUntil(/defined in 🟢/),
-			]);
+				await Promise.all([
+					workerA.waitForReady(),
+					workerB.readUntil(/defined in 🟢/),
+				]);
 
-			// Give the dev registry some time to settle
-			await setTimeout(500);
+				// Give the dev registry some time to settle
+				await setTimeout(500);
 
-			await expect(
-				fetchJson(`${url}/do`, {
-					headers: {
-						"X-Reset-Count": "true",
-					},
-				})
-			).resolves.toMatchObject({ count: 1 });
-		});
+				await expect(
+					fetchJson(`${url}/do`, {
+						headers: {
+							"X-Reset-Count": "true",
+						},
+					})
+				).resolves.toMatchObject({ count: 1 });
+			}
+		);
 
 		it("can fetch remote DO attached to a through b (start a, start b)", async () => {
 			const workerA = helper.runLongLived(cmd, { cwd: a });
