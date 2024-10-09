@@ -134,7 +134,9 @@ export class LongLivedCommand {
 		regexp: RegExp,
 		readTimeout?: number
 	): Promise<RegExpMatchArray> {
-		return readUntil(this.stream, regexp, readTimeout);
+		const copies = this.stream.tee();
+		this.stream = copies[0];
+		return readUntil(copies[1], regexp, readTimeout);
 	}
 
 	// Return a snapshot of the output so far
