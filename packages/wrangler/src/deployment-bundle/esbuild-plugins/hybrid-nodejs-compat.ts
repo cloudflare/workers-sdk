@@ -89,21 +89,17 @@ function handleUnenvAliasedPackages(
 	external: string[]
 ) {
 	// esbuild expects alias paths to be absolute
-	const aliasAbsolute = Object.fromEntries(
-		Object.entries(alias)
-			.map(([key, value]) => {
-				let resolvedAliasPath;
-				try {
-					resolvedAliasPath = require.resolve(value);
-				} catch (e) {
-					// this is an alias for package that is not installed in the current app => ignore
-					resolvedAliasPath = "";
-				}
+	const aliasAbsolute: Record<string, string> = {};
+	for (const [module, unresolvedAlias] of Object.entries(alias)) {
+		try {
+			aliasAbsolute[module] = require
+				.resolve(unresolvedAlias)
+				.replace(/\.cjs$/, ".mjs");
+		} catch (e) {
+			// this is an alias for package that is not installed in the current app => ignore
+		}
+	}
 
-				return [key, resolvedAliasPath.replace(/\.cjs$/, ".mjs")];
-			})
-			.filter((entry) => entry[1] !== "")
-	);
 	const UNENV_ALIAS_RE = new RegExp(
 		`^(${Object.keys(aliasAbsolute).join("|")})$`
 	);
