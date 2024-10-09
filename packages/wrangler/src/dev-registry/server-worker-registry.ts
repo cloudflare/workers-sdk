@@ -7,6 +7,8 @@ import express from "express";
 import { createHttpTerminator } from "http-terminator";
 import { fetch } from "undici";
 import { logger } from "../logger";
+import type { Binding } from "../api";
+import type { Config } from "../config";
 import type { WorkerDefinition, WorkerRegistry } from "./types";
 import type { watch } from "chokidar";
 import type { HttpTerminator } from "http-terminator";
@@ -24,8 +26,9 @@ let globalTerminator: HttpTerminator;
 let globalWatcher: ReturnType<typeof watch> | undefined;
 const heartbeats = new Map<string, ReturnType<typeof setTimeout>>();
 
-export const ServerRegistry = {
+export const serverWorkerRegistry = {
 	devRegistry,
+	getBoundRegisteredWorkers,
 	getRegisteredWorkers,
 	registerWorker,
 	startWorkerRegistry,
@@ -81,6 +84,47 @@ async function devRegistry(
 			logger.error("Failed to cleanup dev registry", err);
 		}
 	};
+}
+
+export async function getBoundRegisteredWorkers(
+	{
+		name,
+		services,
+		durableObjects,
+	}: {
+		name: string | undefined;
+		services:
+			| Config["services"]
+			| Extract<Binding, { type: "service" }>[]
+			| undefined;
+		durableObjects:
+			| Config["durable_objects"]
+			| { bindings: Extract<Binding, { type: "durable_object_namespace" }>[] }
+			| undefined;
+	},
+	existingWorkerDefinitions?: WorkerRegistry | undefined
+): Promise<WorkerRegistry | undefined> {
+	const serviceNames = (services || []).map(
+		(serviceBinding) => serviceBinding.service
+	);
+	const durableObjectServices = (
+		durableObjects || { bindings: [] }
+	).bindings.map((durableObjectBinding) => durableObjectBinding.script_name);
+
+	if (serviceNames.length === 0 && durableObjectServices.length === 0) {
+		return {};
+	}
+	const workerDefinitions =
+		existingWorkerDefinitions ?? (await getRegisteredWorkers());
+
+	const filteredWorkers = Object.fromEntries(
+		Object.entries(workerDefinitions || {}).filter(
+			([key, _value]) =>
+				key !== name && // Always exclude current worker to avoid infinite loops
+				(serviceNames.includes(key) || durableObjectServices.includes(key))
+		)
+	);
+	return filteredWorkers;
 }
 
 /**

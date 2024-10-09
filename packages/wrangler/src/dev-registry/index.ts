@@ -1,6 +1,9 @@
+import path from "path";
 import { getFlag } from "../experimental-flags";
-import { FileRegistry } from "./file-registry";
-import { ServerRegistry } from "./server-registry";
+import { getGlobalWranglerConfigPath } from "../global-wrangler-config-path";
+import { logger } from "../logger";
+import { FilesystemWorkerRegistry } from "./FilesystemWorkerRegistry";
+import { serverWorkerRegistry } from "./server-worker-registry";
 import type { Binding } from "../api";
 import type { Config } from "../config";
 import type {
@@ -11,15 +14,13 @@ import type {
 
 export type { WorkerDefinition, WorkerRegistry, WorkerEntrypointsDefinition };
 
-// Safety of `!`: `parseInt(undefined)` is NaN
-// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-let DEV_REGISTRY_PORT = parseInt(process.env.WRANGLER_WORKER_REGISTRY_PORT!);
-if (Number.isNaN(DEV_REGISTRY_PORT)) {
-	DEV_REGISTRY_PORT = 6284;
-}
+const filesystemWorkerRegistry = new FilesystemWorkerRegistry(
+	path.join(getGlobalWranglerConfigPath(), "registry"),
+	logger
+);
 
 export const startWorkerRegistryServer =
-	ServerRegistry.startWorkerRegistryServer;
+	serverWorkerRegistry.startWorkerRegistryServer;
 
 /**
  * Start the service registry. It's a simple server
@@ -30,10 +31,10 @@ export async function startWorkerRegistry(
 	listener?: (registry: WorkerRegistry | undefined) => void
 ) {
 	if (getFlag("FILE_BASED_REGISTRY")) {
-		return FileRegistry.startWorkerRegistry(listener);
+		return filesystemWorkerRegistry.startRegistryWatcher(listener);
 	}
 
-	return ServerRegistry.startWorkerRegistry();
+	return serverWorkerRegistry.startWorkerRegistry();
 }
 
 /**
@@ -41,9 +42,9 @@ export async function startWorkerRegistry(
  */
 export async function stopWorkerRegistry() {
 	if (getFlag("FILE_BASED_REGISTRY")) {
-		return FileRegistry.stopWorkerRegistry();
+		return filesystemWorkerRegistry.stopRegistryWatcher();
 	}
-	return ServerRegistry.stopWorkerRegistry();
+	return serverWorkerRegistry.stopWorkerRegistry();
 }
 
 /**
@@ -54,9 +55,9 @@ export async function registerWorker(
 	definition: WorkerDefinition
 ) {
 	if (getFlag("FILE_BASED_REGISTRY")) {
-		return FileRegistry.registerWorker(name, definition);
+		return filesystemWorkerRegistry.registerWorker(name, definition);
 	}
-	return ServerRegistry.registerWorker(name, definition);
+	return serverWorkerRegistry.registerWorker(name, definition);
 }
 
 /**
@@ -66,22 +67,18 @@ export async function getRegisteredWorkers(): Promise<
 	WorkerRegistry | undefined
 > {
 	if (getFlag("FILE_BASED_REGISTRY")) {
-		return FileRegistry.getRegisteredWorkers();
+		return filesystemWorkerRegistry.getRegisteredWorkers();
 	}
 
-	return ServerRegistry.getRegisteredWorkers();
+	return serverWorkerRegistry.getRegisteredWorkers();
 }
 
 /**
- * a function that takes your serviceNames and durableObjectNames and returns a
- * list of the running workers that we're bound to
+ * A function that takes your serviceNames and durableObjectNames and returns a
+ * list of the running workers that we're bound to.
  */
 export async function getBoundRegisteredWorkers(
-	{
-		name,
-		services,
-		durableObjects,
-	}: {
+	worker: {
 		name: string | undefined;
 		services:
 			| Config["services"]
@@ -94,35 +91,37 @@ export async function getBoundRegisteredWorkers(
 	},
 	existingWorkerDefinitions?: WorkerRegistry | undefined
 ): Promise<WorkerRegistry | undefined> {
-	const serviceNames = (services || []).map(
-		(serviceBinding) => serviceBinding.service
-	);
-	const durableObjectServices = (
-		durableObjects || { bindings: [] }
-	).bindings.map((durableObjectBinding) => durableObjectBinding.script_name);
-
-	if (serviceNames.length === 0 && durableObjectServices.length === 0) {
-		return {};
+	if (getFlag("FILE_BASED_REGISTRY")) {
+		return filesystemWorkerRegistry.getBoundRegisteredWorkers(
+			worker,
+			existingWorkerDefinitions
+		);
 	}
-	const workerDefinitions =
-		existingWorkerDefinitions ?? (await getRegisteredWorkers());
 
-	const filteredWorkers = Object.fromEntries(
-		Object.entries(workerDefinitions || {}).filter(
-			([key, _value]) =>
-				key !== name && // Always exclude current worker to avoid infinite loops
-				(serviceNames.includes(key) || durableObjectServices.includes(key))
-		)
+	return serverWorkerRegistry.getBoundRegisteredWorkers(
+		worker,
+		existingWorkerDefinitions
 	);
-	return filteredWorkers;
 }
 
+/**
+ * A managed way to start and stop watchers on the registry.
+ * Starts the watcher when called, and returns a cleanup function that stops the watcher and
+ * unregisters the worker that is provided to it.
+ *
+ * @example
+ * const cleanup = await devRegistry(onRegistryChangeCallback);
+ *
+ * ...
+ *
+ * cleanup('worker-name');
+ */
 export async function devRegistry(
 	cb: (workers: WorkerRegistry | undefined) => void
 ): Promise<(name?: string) => Promise<void>> {
 	if (getFlag("FILE_BASED_REGISTRY")) {
-		return FileRegistry.devRegistry(cb);
+		return filesystemWorkerRegistry.devRegistry(cb);
 	}
 
-	return ServerRegistry.devRegistry(cb);
+	return serverWorkerRegistry.devRegistry(cb);
 }
