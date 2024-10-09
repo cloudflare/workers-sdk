@@ -7,6 +7,7 @@ import { Context } from "vm";
 import { Client } from "pg";
 import { s } from "./dep.cjs";
 
+
 testBasicNodejsProperties();
 
 export default {
@@ -26,17 +27,25 @@ export default {
 				return testPostgresLibrary(env, ctx);
 			case "/test-x509-certificate":
 				return testX509Certificate();
+			case "/test-require-npm":
+				return testRequireNpmAlias();
 		}
 
 		return new Response(
 			'<a href="query">Postgres query</a> | ' +
 				'<a href="test-process">Test process global</a> | ' +
 				'<a href="test-random">Test getRandomValues()</a> | ' +
-				'<a href="test-x509-certificate">Test X509Certificate</a>',
+				'<a href="test-x509-certificate">Test X509Certificate</a>' +
+				'<a href="test-require-npm">Test require aliased npm package</a>',
 			{ headers: { "Content-Type": "text/html; charset=utf-8" } }
 		);
 	},
 };
+
+function testRequireNpmAlias() {
+	const inherits = require("inherits");
+	return new Response(typeof inherits === "function" ? `"OK!"` : `"KO!"`);
+}
 
 function testX509Certificate() {
 	try {

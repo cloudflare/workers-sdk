@@ -5,7 +5,9 @@ import { cloudflare, env, nodeless } from "unenv";
 import { getBasePath } from "../../paths";
 import type { Plugin, PluginBuild } from "esbuild";
 
+
 const REQUIRED_NODE_BUILT_IN_NAMESPACE = "node-built-in-modules";
+const REQUIRED_NPM_PACKAGE_NAMESPACE = "required-npm-package";
 
 export const nodejsHybridPlugin: () => Plugin = () => {
 	const { alias, inject, external } = env(nodeless, cloudflare);
@@ -14,7 +16,7 @@ export const nodejsHybridPlugin: () => Plugin = () => {
 		setup(build) {
 			errorOnServiceWorkerFormat(build);
 			handleRequireCallsToNodeJSBuiltins(build);
-			handleAliasedNodeJSPackages(build, alias, external);
+			handleUnenvAliasedPackages(build, alias, external);
 			handleNodeJSGlobals(build, inject);
 		},
 	};
@@ -55,7 +57,7 @@ function errorOnServiceWorkerFormat(build: PluginBuild) {
 }
 
 /**
- * We must convert `require()` calls for Node.js to a virtual ES Module that can be imported avoiding the require calls.
+ * We must convert `require()` calls for Node.js modules to a virtual ES Module that can be imported avoiding the require calls.
  * We do this by creating a special virtual ES module that re-exports the library in an onLoad handler.
  * The onLoad handler is triggered by matching the "namespace" added to the resolve.
  */
@@ -81,7 +83,7 @@ function handleRequireCallsToNodeJSBuiltins(build: PluginBuild) {
 	);
 }
 
-function handleAliasedNodeJSPackages(
+function handleUnenvAliasedPackages(
 	build: PluginBuild,
 	alias: Record<string, string>,
 	external: string[]
@@ -107,12 +109,35 @@ function handleAliasedNodeJSPackages(
 	);
 
 	build.onResolve({ filter: UNENV_ALIAS_RE }, (args) => {
+		// Convert `require()` calls for NPM packages to a virtual ES Module that can be imported avoiding the require calls.
+		// Note: Only applies to npm aliases as node package are handled in `handleRequireCallsToNodeJSBuiltins`
+		if (
+			args.kind === "require-call" &&
+			alias[args.path].startsWith("unenv/runtime/npm")
+		) {
+			return {
+				path: args.path,
+				namespace: REQUIRED_NPM_PACKAGE_NAMESPACE,
+			};
+		}
 		// Resolve the alias to its absolute path and potentially mark it as external
 		return {
 			path: aliasAbsolute[args.path],
 			external: external.includes(alias[args.path]),
 		};
 	});
+
+	build.onLoad(
+		{ filter: /.*/, namespace: REQUIRED_NPM_PACKAGE_NAMESPACE },
+		({ path }) => {
+			return {
+				contents: dedent`
+        import * as all from '${path}';
+        module.exports = 'default' in all ? all.default : all;`,
+				loader: "js",
+			};
+		}
+	);
 }
 
 /**
