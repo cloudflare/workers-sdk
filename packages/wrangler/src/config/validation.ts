@@ -2387,10 +2387,7 @@ const validateKVBinding: ValidatorFn = (diagnostics, field, value) => {
 		);
 		isValid = false;
 	}
-	if (
-		!isRequiredProperty(value, "id", "string") ||
-		(value as { id: string }).id.length === 0
-	) {
+	if (!isOptionalProperty(value, "id", "string")) {
 		diagnostics.errors.push(
 			`"${field}" bindings should have a string "id" field but got ${JSON.stringify(
 				value
@@ -2549,10 +2546,7 @@ const validateR2Binding: ValidatorFn = (diagnostics, field, value) => {
 		);
 		isValid = false;
 	}
-	if (
-		!isRequiredProperty(value, "bucket_name", "string") ||
-		(value as { bucket_name: string }).bucket_name.length === 0
-	) {
+	if (!isOptionalProperty(value, "bucket_name", "string")) {
 		diagnostics.errors.push(
 			`"${field}" bindings should have a string "bucket_name" field but got ${JSON.stringify(
 				value
@@ -2610,7 +2604,7 @@ const validateD1Binding: ValidatorFn = (diagnostics, field, value) => {
 	if (
 		// TODO: allow name only, where we look up the ID dynamically
 		// !isOptionalProperty(value, "database_name", "string") &&
-		!isRequiredProperty(value, "database_id", "string")
+		!isOptionalProperty(value, "database_id", "string")
 	) {
 		diagnostics.errors.push(
 			`"${field}" bindings must have a "database_id" field but got ${JSON.stringify(

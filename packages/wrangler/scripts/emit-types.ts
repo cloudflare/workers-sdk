@@ -14,7 +14,9 @@ const packageJson = JSON.parse(
 const configObject = ExtractorConfig.loadFile(configObjectFullPath);
 
 // include the dependencies we want to bundle
-configObject.bundledPackages = BUNDLED_DEPENDENCIES;
+configObject.bundledPackages = BUNDLED_DEPENDENCIES.filter(
+	(d) => d !== "cloudflare" && d !== "@iarna/toml"
+);
 
 const pkgRoot = path.resolve(__dirname, "..");
 
