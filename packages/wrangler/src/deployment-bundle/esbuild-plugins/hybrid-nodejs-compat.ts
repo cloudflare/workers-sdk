@@ -6,7 +6,7 @@ import { getBasePath } from "../../paths";
 import type { Plugin, PluginBuild } from "esbuild";
 
 const REQUIRED_NODE_BUILT_IN_NAMESPACE = "node-built-in-modules";
-const REQUIRED_NPM_PACKAGE_NAMESPACE = "required-npm-package";
+const REQUIRED_UNENV_ALIAS_NAMESPACE = "required-unenv-alias";
 
 export const nodejsHybridPlugin: () => Plugin = () => {
 	const { alias, inject, external } = env(nodeless, cloudflare);
@@ -109,11 +109,12 @@ function handleUnenvAliasedPackages(
 		// Note: Does not apply to Node.js packages that are handled in `handleRequireCallsToNodeJSBuiltins`
 		if (
 			args.kind === "require-call" &&
-			(unresolvedAlias.startsWith("unenv/runtime/npm/") || unresolvedAlias.startsWith("unenv/runtime/mock/"))
+			(unresolvedAlias.startsWith("unenv/runtime/npm/") ||
+				unresolvedAlias.startsWith("unenv/runtime/mock/"))
 		) {
 			return {
 				path: args.path,
-				namespace: REQUIRED_NPM_PACKAGE_NAMESPACE,
+				namespace: REQUIRED_UNENV_ALIAS_NAMESPACE,
 			};
 		}
 		// Resolve the alias to its absolute path and potentially mark it as external
@@ -123,13 +124,30 @@ function handleUnenvAliasedPackages(
 		};
 	});
 
+	build.initialOptions.banner = { js: "", ...build.initialOptions.banner };
+	build.initialOptions.banner.js += dedent`
+		function __cf_cjs(esm) {
+		  const cjs = 'default' in esm ? esm.default : {};
+			for (const [k, v] of Object.entries(esm)) {
+				if (k !== 'default') {
+					Object.defineProperty(cjs, k, {
+						enumerable: true,
+						value: v,
+					});
+				}
+			}
+			return cjs;
+		}
+		`;
+
 	build.onLoad(
-		{ filter: /.*/, namespace: REQUIRED_NPM_PACKAGE_NAMESPACE },
+		{ filter: /.*/, namespace: REQUIRED_UNENV_ALIAS_NAMESPACE },
 		({ path }) => {
 			return {
 				contents: dedent`
-        import * as all from '${path}';
-        module.exports = 'default' in all ? all.default : all;`,
+        import * as esm from '${path}';
+				module.exports = __cf_cjs(esm);
+				`,
 				loader: "js",
 			};
 		}

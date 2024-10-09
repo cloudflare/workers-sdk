@@ -42,8 +42,12 @@ export default {
 };
 
 function testRequireNpmAlias() {
-	const inherits = require("inherits");
-	return new Response(typeof inherits === "function" ? `"OK!"` : `"KO!"`);
+	const fetch = require("cross-fetch");
+	const supportsDefaultExports = typeof fetch === "function";
+	const supportsNamedExports = typeof fetch.Headers === "function";
+	return new Response(
+		supportsDefaultExports && supportsNamedExports ? `"OK!"` : `"KO!"`
+	);
 }
 
 function testX509Certificate() {
