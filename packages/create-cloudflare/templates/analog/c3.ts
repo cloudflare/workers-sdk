@@ -3,7 +3,6 @@ import { brandColor, dim } from "@cloudflare/cli/colors";
 import { spinner } from "@cloudflare/cli/interactive";
 import { runFrameworkGenerator } from "frameworks/index";
 import { loadTemplateSnippets, transformFile } from "helpers/codemod";
-import { getLatestTypesEntrypoint } from "helpers/compatDate";
 import { readFile, writeFile } from "helpers/files";
 import { detectPackageManager } from "helpers/packageManagers";
 import { installPackages } from "helpers/packages";
@@ -43,7 +42,7 @@ const configure = async (ctx: C3Context) => {
 	updateEnvTypes(ctx);
 };
 
-const updateEnvTypes = (ctx: C3Context) => {
+const updateEnvTypes = (_ctx: C3Context) => {
 	const filepath = "env.d.ts";
 
 	const s = spinner();
@@ -51,11 +50,7 @@ const updateEnvTypes = (ctx: C3Context) => {
 
 	let file = readFile(filepath);
 
-	let typesEntrypoint = `@cloudflare/workers-types`;
-	const latestEntrypoint = getLatestTypesEntrypoint(ctx);
-	if (latestEntrypoint) {
-		typesEntrypoint += `/${latestEntrypoint}`;
-	}
+	const typesEntrypoint = `@cloudflare/workers-types/experimental`;
 
 	// Replace placeholder with actual types entrypoint
 	file = file.replace("WORKERS_TYPES_ENTRYPOINT", typesEntrypoint);

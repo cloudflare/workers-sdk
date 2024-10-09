@@ -35,7 +35,7 @@ export async function getWorkerdCompatibilityDate() {
 		}
 	} catch {}
 
-	const fallbackDate = "2023-05-18";
+	const fallbackDate = "2024-10-04";
 
 	s.stop(
 		`${brandColor("compatibility date")} ${dim(
