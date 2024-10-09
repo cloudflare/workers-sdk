@@ -5,6 +5,7 @@ import { mockConsoleMethods } from "./helpers/mock-console";
 import { msw } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
+import { writeWranglerToml } from "./helpers/write-wrangler-toml";
 
 describe("logout", () => {
 	runInTempDir();
@@ -49,5 +50,35 @@ describe("logout", () => {
 		expect(std.out).toMatchInlineSnapshot(`"Successfully logged out."`);
 		expect(fs.existsSync(config)).toBeFalsy();
 		expect(counter).toBe(1);
+	});
+
+	it("should not warn on invalid wrangler.toml when logging out", async () => {
+		writeAuthConfigFile({
+			oauth_token: "some-oauth-tok",
+			refresh_token: "some-refresh-tok",
+		});
+		const config = getAuthConfigFilePath();
+
+		msw.use(
+			http.post(
+				"*/oauth2/revoke",
+				async () => {
+					return HttpResponse.text("");
+				},
+				{ once: true }
+			)
+		);
+
+		expect(fs.existsSync(config)).toBeTruthy();
+
+		// @ts-expect-error - intentionally invalid
+		writeWranglerToml({ invalid: true });
+
+		await runWrangler("logout");
+
+		expect(std.out).toMatchInlineSnapshot(`"Successfully logged out."`);
+		expect(std.warn).toMatchInlineSnapshot(`""`);
+		expect(std.err).toMatchInlineSnapshot(`""`);
+		expect(fs.existsSync(config)).toBeFalsy();
 	});
 });
