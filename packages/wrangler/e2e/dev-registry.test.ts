@@ -170,9 +170,11 @@ describe.each([
 			await workerB.waitForReady();
 
 			const workerA = helper.runLongLived(cmd, { cwd: a });
-			const { url } = await workerA.waitForReady();
+			const [{ url }] = await Promise.all([
+				workerA.waitForReady(),
+				workerA.readUntil(/- BEE: 🟢/),
+			]);
 
-			await workerA.readUntil(/- BEE: 🟢/);
 			// Give the dev registry some time to settle
 			await setTimeout(500);
 
@@ -184,9 +186,10 @@ describe.each([
 			const { url } = await workerA.waitForReady();
 
 			const workerB = helper.runLongLived(cmd, { cwd: b });
-			await workerB.waitForReady();
-
-			await workerA.readUntil(/- BEE: 🟢/);
+			await Promise.all([
+				workerB.waitForReady(),
+				workerA.readUntil(/- BEE: 🟢/),
+			]);
 			// Give the dev registry some time to settle
 			await setTimeout(500);
 
@@ -215,9 +218,11 @@ describe.each([
 			await workerC.waitForReady();
 
 			const workerA = helper.runLongLived(cmd, { cwd: a });
-			const { url } = await workerA.waitForReady();
 
-			await workerA.readUntil(/- CEE: 🟢/);
+			const [{ url }] = await Promise.all([
+				workerA.waitForReady(),
+				workerA.readUntil(/- CEE: 🟢/),
+			]);
 			// Give the dev registry some time to settle
 			await setTimeout(500);
 
@@ -231,9 +236,11 @@ describe.each([
 			const { url } = await workerA.waitForReady();
 
 			const workerC = helper.runLongLived(cmd, { cwd: c });
-			await workerC.waitForReady();
 
-			await workerA.readUntil(/- CEE: 🟢/);
+			await Promise.all([
+				workerC.waitForReady(),
+				workerA.readUntil(/- CEE: 🟢/),
+			]);
 			// Give the dev registry some time to settle
 			await setTimeout(500);
 
@@ -285,9 +292,11 @@ describe.each([
 			const { url } = await workerB.waitForReady();
 
 			const workerA = helper.runLongLived(cmd, { cwd: a });
-			await workerA.waitForReady();
 
-			await workerB.readUntil(/defined in 🟢/);
+			await Promise.all([
+				workerA.waitForReady(),
+				workerB.readUntil(/defined in 🟢/),
+			]);
 
 			// Give the dev registry some time to settle
 			await setTimeout(500);
@@ -306,9 +315,12 @@ describe.each([
 			await workerA.waitForReady();
 
 			const workerB = helper.runLongLived(cmd, { cwd: b });
-			const { url } = await workerB.waitForReady();
 
-			await workerB.readUntil(/defined in 🟢/);
+			const [{ url }] = await Promise.all([
+				workerB.waitForReady(),
+				workerB.readUntil(/defined in 🟢/),
+			]);
+
 			// Give the dev registry some time to settle
 			await setTimeout(500);
 
