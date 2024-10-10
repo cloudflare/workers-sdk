@@ -156,7 +156,7 @@ describe.each([
 		it("can fetch b", async () => {
 			const worker = helper.runLongLived(cmd, { cwd: b });
 
-			const { url } = await worker.waitForReady(5_000, true);
+			const { url } = await worker.waitForReady(5_000);
 
 			await expect(fetch(url).then((r) => r.text())).resolves.toBe(
 				"hello world"
@@ -166,10 +166,10 @@ describe.each([
 		it("can fetch b through a (start b, start a)", async () => {
 			const workerB = helper.runLongLived(cmd, { cwd: b });
 			// We don't need b's URL, but ensure that b starts up before a
-			await workerB.waitForReady(5_000, true);
+			await workerB.waitForReady(5_000);
 
 			const workerA = helper.runLongLived(cmd, { cwd: a });
-			const { url } = await workerA.waitForReady(5_000, true);
+			const { url } = await workerA.waitForReady(5_000);
 
 			await vi.waitFor(
 				async () => await expect(fetchText(url)).resolves.toBe("hello world"),
@@ -179,10 +179,10 @@ describe.each([
 
 		it("can fetch b through a (start a, start b)", async () => {
 			const workerA = helper.runLongLived(cmd, { cwd: a });
-			const { url } = await workerA.waitForReady(5_000, true);
+			const { url } = await workerA.waitForReady(5_000);
 
 			const workerB = helper.runLongLived(cmd, { cwd: b });
-			await workerB.waitForReady(5_000, true);
+			await workerB.waitForReady(5_000);
 
 			await vi.waitFor(
 				async () => await expect(fetchText(url)).resolves.toBe("hello world"),
@@ -209,11 +209,11 @@ describe.each([
 		it("can fetch service worker c through a (start c, start a)", async () => {
 			const workerC = helper.runLongLived(cmd, { cwd: c });
 			// We don't need c's URL, but ensure that c starts up before a
-			await workerC.waitForReady(5_000, true);
+			await workerC.waitForReady(5_000);
 
 			const workerA = helper.runLongLived(cmd, { cwd: a });
 
-			const { url } = await workerA.waitForReady(5_000, true);
+			const { url } = await workerA.waitForReady(5_000);
 
 			await vi.waitFor(
 				async () =>
@@ -229,11 +229,11 @@ describe.each([
 			"can fetch service worker c through a (start a, start c)",
 			async () => {
 				const workerA = helper.runLongLived(cmd, { cwd: a });
-				const { url } = await workerA.waitForReady(5_000, true);
+				const { url } = await workerA.waitForReady(5_000);
 
 				const workerC = helper.runLongLived(cmd, { cwd: c });
 
-				await workerC.waitForReady(5_000, true);
+				await workerC.waitForReady(5_000);
 
 				await vi.waitFor(
 					async () =>
@@ -272,7 +272,7 @@ describe.each([
 		it("can fetch DO through a", async () => {
 			const worker = helper.runLongLived(cmd, { cwd: a });
 
-			const { url } = await worker.waitForReady(5_000, true);
+			const { url } = await worker.waitForReady(5_000);
 
 			await expect(
 				fetchJson(`${url}/do`, {
@@ -287,11 +287,11 @@ describe.each([
 			"can fetch remote DO attached to a through b (start b, start a)",
 			async () => {
 				const workerB = helper.runLongLived(cmd, { cwd: b });
-				const { url } = await workerB.waitForReady(5_000, true);
+				const { url } = await workerB.waitForReady(5_000);
 
 				const workerA = helper.runLongLived(cmd, { cwd: a });
 
-				await workerA.waitForReady(5_000, true);
+				await workerA.waitForReady(5_000);
 
 				await vi.waitFor(
 					async () =>
@@ -309,11 +309,11 @@ describe.each([
 
 		it("can fetch remote DO attached to a through b (start a, start b)", async () => {
 			const workerA = helper.runLongLived(cmd, { cwd: a });
-			await workerA.waitForReady(5_000, true);
+			await workerA.waitForReady(5_000);
 
 			const workerB = helper.runLongLived(cmd, { cwd: b });
 
-			const { url } = await workerB.waitForReady(5_000, true);
+			const { url } = await workerB.waitForReady(5_000);
 
 			await vi.waitFor(
 				async () =>

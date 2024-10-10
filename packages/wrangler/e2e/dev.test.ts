@@ -796,9 +796,9 @@ describe("custom builds", () => {
 		const worker = helper.runLongLived("wrangler dev");
 
 		// first build on startup
-		await worker.readUntil(/Running custom build/, 5_000, false);
+		await worker.readUntil(/Running custom build/, 5_000);
 		// second build for first watcher notification (can be optimised away, leaving as-is for now)
-		await worker.readUntil(/Running custom build/, 5_000, false);
+		await worker.readUntil(/Running custom build/, 5_000);
 
 		// Need to get the url in this order because waitForReady calls readUntil
 		// which keeps track of where it's read up to so far,
@@ -810,7 +810,7 @@ describe("custom builds", () => {
 		// assert no more custom builds happen
 		// regression: https://github.com/cloudflare/workers-sdk/issues/6876
 		await expect(
-			worker.readUntil(/Running custom build:/, 5_000, false)
+			worker.readUntil(/Running custom build:/, 5_000)
 		).rejects.toThrowError();
 
 		// now check assets are still fetchable, even after updates

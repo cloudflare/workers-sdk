@@ -128,16 +128,9 @@ export class LongLivedCommand {
 	// Wait for changes in the output of this process.
 	async readUntil(
 		regexp: RegExp,
-		readTimeout?: number,
-		tee = false
+		readTimeout?: number
 	): Promise<RegExpMatchArray> {
-		if (tee) {
-			const copies = this.stream.tee();
-			this.stream = copies[0];
-			return readUntil(copies[1], regexp, readTimeout);
-		} else {
-			return readUntil(this.stream, regexp, readTimeout);
-		}
+		return readUntil(this.stream, regexp, readTimeout);
 	}
 
 	// Return a snapshot of the output so far
