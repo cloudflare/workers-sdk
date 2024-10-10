@@ -41,15 +41,13 @@ export function runCommand(
 			encoding: "utf8",
 			timeout,
 		});
-		// eslint-disable-next-line turbo/no-undeclared-env-vars
-		if (process.env.VITEST_MODE === "WATCH") {
-			if (stdout.length) {
-				console.log(stdout);
-			}
-			if (stderr.length) {
-				console.error(stderr);
-			}
+		if (stdout.length) {
+			console.log(`[${path.basename(cwd ?? "/unknown")}]`, stdout);
 		}
+		if (stderr.length) {
+			console.error(`[${path.basename(cwd ?? "/unknown")}]`, stderr);
+		}
+
 		return {
 			status,
 			stdout,
@@ -106,7 +104,6 @@ export class LongLivedCommand {
 		this.stream = new ReadableStream<string>({
 			start: (controller) => {
 				lineInterface.on("line", (line) => {
-					// eslint-disable-next-line turbo/no-undeclared-env-vars
 					console.log(`[${path.basename(cwd ?? "/unknown")}]`, line);
 					this.lines.push(line);
 					try {
