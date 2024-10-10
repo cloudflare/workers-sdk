@@ -254,8 +254,10 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 			},
 			(cb) => {
 				const newBundle = cb(this.#currentBundle);
-				this.emitBundleCompleteEvent(config, newBundle);
-				this.#currentBundle = newBundle;
+				if (!buildAborter.signal.aborted) {
+					this.emitBundleCompleteEvent(config, newBundle);
+					this.#currentBundle = newBundle;
+				}
 			},
 			(err) => {
 				if (!buildAborter.signal.aborted) {
