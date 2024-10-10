@@ -38,6 +38,7 @@ export function registerKvSubcommands(
 	subHelp: SubHelp
 ) {
 	return kvYargs
+		.command(subHelp)
 		.command(
 			"namespace",
 			`Interact with your Workers KV Namespaces`,
@@ -63,6 +64,7 @@ export function registerKvSubcommands(
 
 export function kvNamespace(kvYargs: CommonYargsArgv) {
 	return kvYargs
+		.demandCommand()
 		.command(
 			"create <namespace>",
 			"Create a new namespace",
@@ -201,6 +203,7 @@ export function kvNamespace(kvYargs: CommonYargsArgv) {
 
 export const kvKey = (kvYargs: CommonYargsArgv) => {
 	return kvYargs
+		.demandCommand()
 		.command(
 			"put <key> [value]",
 			"Write a single key/value pair to the given namespace",
@@ -542,6 +545,7 @@ export const kvKey = (kvYargs: CommonYargsArgv) => {
 
 export const kvBulk = (kvYargs: CommonYargsArgv) => {
 	return kvYargs
+		.demandCommand()
 		.command(
 			"put <filename>",
 			"Upload multiple key-value pairs to a namespace",
