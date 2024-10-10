@@ -1,5 +1,11 @@
 # wrangler
 
+## 3.80.4
+
+### Patch Changes
+
+- [#6937](https://github.com/cloudflare/workers-sdk/pull/6937) [`51aedd4`](https://github.com/cloudflare/workers-sdk/commit/51aedd4333cce9ffa4f6834cdf19e22148dab7e9) Thanks [@lrapoport-cf](https://github.com/lrapoport-cf)! - fix: show help when kv commands are run without parameters
+
 ## 3.80.3
 
 ### Patch Changes
