@@ -5,10 +5,24 @@ import type { WrapperEnv } from './env';
 
 let moduleRunner: ModuleRunner;
 
-export function createModuleRunner(env: WrapperEnv, webSocket: WebSocket) {
+// TODO: node modules using process.env don't find `process` in the global scope for some reason
+//       for now we just create a `process` in the global scope but a proper solution needs to be
+//       implemented (see: https://github.com/flarelabs-net/vite-plugin-cloudflare/issues/22)
+(globalThis as Record<string, unknown>).process = { env: {} };
+
+export async function createModuleRunner(
+	env: WrapperEnv,
+	webSocket: WebSocket,
+) {
 	if (moduleRunner) {
 		throw new Error('Runner already initialized');
 	}
+
+	// we store the custom import file path in a variable to skip esbuild's import resolution
+	const workerdReqImport = '/__workerd-custom-import.cjs';
+	const { default: workerdCustomImport } = await (import(
+		workerdReqImport
+	) as Promise<{ default: (...args: unknown[]) => Promise<unknown> }>);
 
 	moduleRunner = new ModuleRunner(
 		{
@@ -56,8 +70,9 @@ export function createModuleRunner(env: WrapperEnv, webSocket: WebSocket) {
 				await fn(...Object.values(context));
 				Object.freeze(context.__vite_ssr_exports__);
 			},
-			async runExternalModule(file) {
-				return import(file);
+			async runExternalModule(filepath) {
+				filepath = filepath.replace(/^file:\/\//, '');
+				return workerdCustomImport(filepath);
 			},
 		},
 	);

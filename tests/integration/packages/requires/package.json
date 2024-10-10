@@ -1,0 +1,19 @@
+{
+  "name": "@cloudflare-dev-module-resolution/requires",
+  "description": "a packages which has require calls of different types each used in its own entrypoint",
+  "version": "1.0.0",
+  "exports": {
+    "./ext": {
+      "default": "./ext.js",
+      "types": "./ext.d.ts"
+    },
+    "./no-ext": {
+      "default": "./no-ext.js",
+      "types": "./no-ext.d.ts"
+    },
+    "./json": {
+      "default": "./json.js",
+      "types": "./json.d.ts"
+    }
+  }
+}

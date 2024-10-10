@@ -11,9 +11,12 @@ import type {
 	CloudflareEnvironmentOptions,
 	CloudflareDevEnvironment,
 } from './cloudflare-environment';
+import { getModuleFallbackHandler } from './module-fallback';
+import type { ResolveIdFunction } from './module-fallback';
 
 const wrapperPath = '__VITE_WRAPPER_PATH__';
 const runnerPath = fileURLToPath(new URL('./runner/index.js', import.meta.url));
+const workerdCustomImportPath = '/__workerd-custom-import.cjs';
 
 export function cloudflare<
 	T extends Record<string, CloudflareEnvironmentOptions>,
@@ -83,6 +86,40 @@ export function cloudflare<
 				}
 			}
 
+			const esmResolveId = vite.createIdResolver(viteConfig, {});
+
+			// for `require` calls we want a resolver that prioritized node/cjs modules
+			const cjsResolveId = vite.createIdResolver(viteConfig, {
+				conditions: ['node'],
+				mainFields: ['main'],
+				webCompatible: false,
+				isRequire: true,
+				extensions: ['.cjs', '.cts', '.js', '.ts', '.jsx', '.tsx', '.json'],
+			});
+
+			const resolveId: ResolveIdFunction = (
+				id,
+				importer,
+				{ resolveMethod } = {
+					resolveMethod: 'import',
+				},
+			) => {
+				const resolveIdFn =
+					resolveMethod === 'import' ? esmResolveId : cjsResolveId;
+
+				// TODO: we only have a single module resolution strategy shared across all workers
+				//       (generated using the first worker's dev environment)
+				//       we should investigate and ideally have potential different resolutions per worker
+				//       see: https://github.com/flarelabs-net/vite-plugin-cloudflare/issues/19
+				const firstWorkerName = Object.keys(pluginConfig.workers)[0]!;
+
+				const devEnv = viteDevServer.environments[
+					firstWorkerName
+				] as CloudflareDevEnvironment;
+
+				return resolveIdFn(devEnv, id, importer);
+			};
+
 			const miniflare = new Miniflare({
 				workers: workers.map((workerOptions) => {
 					const wrappers = [
@@ -100,6 +137,7 @@ export function cloudflare<
 
 					return {
 						...workerOptions,
+						unsafeUseModuleFallbackService: true,
 						modules: [
 							{
 								type: 'ESModule',
@@ -110,37 +148,54 @@ export function cloudflare<
 								type: 'ESModule',
 								path: runnerPath,
 							},
+							{
+								// we declare the workerd-custom-import as a CommonJS module, thanks to this
+								// require is made available in the module and we are able to handle cjs imports
+								type: 'CommonJS',
+								path: workerdCustomImportPath,
+								contents: 'module.exports = path => import(path)',
+							},
 						],
 						serviceBindings: {
 							...workerOptions.serviceBindings,
 							__VITE_FETCH_MODULE__: async (request) => {
-								const args = (await request.json()) as [
-									string,
-									string,
-									FetchFunctionOptions,
-								];
+								const [moduleId, imported, options] =
+									(await request.json()) as [
+										string,
+										string,
+										FetchFunctionOptions,
+									];
 
 								const devEnvironment = viteDevServer.environments[
 									workerOptions.name
 								] as CloudflareDevEnvironment;
 
 								try {
-									const result = await devEnvironment.fetchModule(...args);
+									const result = await devEnvironment.fetchModule(
+										moduleId,
+										imported,
+										options,
+									);
 
 									return new MiniflareResponse(JSON.stringify(result));
 								} catch (error) {
-									// TODO: check error handling
-									const result = {
-										externalize: args[0],
-										type: 'builtin',
-									} satisfies vite.FetchResult;
+									if (moduleId.startsWith('cloudflare:')) {
+										const result = {
+											externalize: moduleId,
+											type: 'module',
+										} satisfies vite.FetchResult;
 
-									return new MiniflareResponse(JSON.stringify(result));
+										return new MiniflareResponse(JSON.stringify(result));
+									}
+									throw new Error(
+										`Unexpected Error, failed to get module: ${moduleId}`,
+									);
 								}
 							},
 						},
 					};
 				}),
+				unsafeModuleFallbackService: getModuleFallbackHandler(resolveId),
 			});
 
 			await Promise.all(
