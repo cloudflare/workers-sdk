@@ -121,7 +121,7 @@ describe.each([
 			`
 			Your worker has access to the following bindings:
 			- Durable Objects:
-			  - TEST_DO: TestDurableObject (defined in a)
+			  - TEST_DO: TestDurableObject (defined in 🔴 a)
 			- KV Namespaces:
 			  - TEST_KV: TEST_KV
 			- D1 Databases:
@@ -129,7 +129,7 @@ describe.each([
 			- R2 Buckets:
 			  - TEST_R2: TEST_R2
 			- Services:
-			  - TEST_SERVICE: test-worker
+			  - TEST_SERVICE: 🔴 test-worker
 		`.replace(/\s/g, "")
 		);
 	});

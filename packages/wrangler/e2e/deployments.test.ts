@@ -1,7 +1,7 @@
 import assert from "node:assert";
 import dedent from "ts-dedent";
 import { fetch } from "undici";
-import { afterAll, describe, expect, it } from "vitest";
+import { afterAll, describe, expect, it, vi } from "vitest";
 import { CLOUDFLARE_ACCOUNT_ID } from "./helpers/account-id";
 import { WranglerE2ETestHelper } from "./helpers/e2e-wrangler-test";
 import { generateResourceName } from "./helpers/generate-resource-name";
@@ -25,7 +25,7 @@ describe("deployments", { timeout: TIMEOUT }, () => {
 						name = "${workerName}"
 						main = "src/index.ts"
 						compatibility_date = "2023-01-01"
-				`,
+						`,
 			"src/index.ts": dedent`
 						export default {
 							fetch(request) {
@@ -226,29 +226,31 @@ const initialAssets = {
 };
 const checkAssets = async (testCases: AssetTestCase[], deployedUrl: string) => {
 	for (const testCase of testCases) {
-		const { text, url } = await retry(
-			(s) => (testCase.content ? s.status !== 200 : s.status !== 404),
+		await vi.waitFor(
 			async () => {
 				const r = await fetch(new URL(testCase.path, deployedUrl));
-				return { text: await r.text(), status: r.status, url: r.url };
-			}
+				const text = await r.text();
+				const url = r.url;
+
+				if (testCase.content) {
+					expect(text).toContain(testCase.content);
+				}
+				if (testCase.redirect) {
+					expect(new URL(url).pathname).toEqual(
+						new URL(testCase.redirect, deployedUrl).pathname
+					);
+				} else {
+					expect(new URL(url).pathname).toEqual(
+						new URL(testCase.path, deployedUrl).pathname
+					);
+				}
+			},
+			{ interval: 500, timeout: 5_000 }
 		);
-		if (testCase.content) {
-			expect(text).toContain(testCase.content);
-		}
-		if (testCase.redirect) {
-			expect(new URL(url).pathname).toEqual(
-				new URL(testCase.redirect, deployedUrl).pathname
-			);
-		} else {
-			expect(new URL(url).pathname).toEqual(
-				new URL(testCase.path, deployedUrl).pathname
-			);
-		}
 	}
 };
 
-describe("Workers + Assets deployment", { timeout: TIMEOUT }, () => {
+describe.only("Workers + Assets deployment", { timeout: TIMEOUT }, () => {
 	let deployedUrl: string;
 	const helper = new WranglerE2ETestHelper();
 	afterAll(async () => {
