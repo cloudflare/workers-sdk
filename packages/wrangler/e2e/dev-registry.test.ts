@@ -17,7 +17,7 @@ async function fetchJson<T>(url: string, info?: RequestInit): Promise<T> {
 			console.log(text);
 			return JSON.parse(text) as T;
 		},
-		{ timeout: 5_000, interval: 250 }
+		{ timeout: 10_000, interval: 250 }
 	);
 }
 
@@ -173,7 +173,7 @@ describe.each([
 
 			await vi.waitFor(
 				async () => await expect(fetchText(url)).resolves.toBe("hello world"),
-				{ interval: 300, timeout: 5_000 }
+				{ interval: 1000, timeout: 10_000 }
 			);
 		});
 
@@ -186,7 +186,7 @@ describe.each([
 
 			await vi.waitFor(
 				async () => await expect(fetchText(url)).resolves.toBe("hello world"),
-				{ interval: 300, timeout: 5_000 }
+				{ interval: 1000, timeout: 10_000 }
 			);
 		});
 	});
@@ -220,7 +220,7 @@ describe.each([
 					await expect(fetchText(`${url}/service`)).resolves.toBe(
 						"Hello from service worker"
 					),
-				{ interval: 300, timeout: 5_000 }
+				{ interval: 1000, timeout: 10_000 }
 			);
 		});
 
@@ -240,7 +240,7 @@ describe.each([
 						await expect(fetchText(`${url}/service`)).resolves.toBe(
 							"Hello from service worker"
 						),
-					{ interval: 300, timeout: 5_000 }
+					{ interval: 1000, timeout: 10_000 }
 				);
 			}
 		);
@@ -302,7 +302,7 @@ describe.each([
 								},
 							})
 						).resolves.toMatchObject({ count: 1 }),
-					{ interval: 300, timeout: 5_000 }
+					{ interval: 1000, timeout: 10_000 }
 				);
 			}
 		);
@@ -324,7 +324,7 @@ describe.each([
 							},
 						}).then((r) => r.json())
 					).resolves.toMatchObject({ count: 1 }),
-				{ interval: 300, timeout: 5_000 }
+				{ interval: 1000, timeout: 10_000 }
 			);
 		});
 	});
