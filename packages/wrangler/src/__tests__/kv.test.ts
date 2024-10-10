@@ -53,6 +53,20 @@ describe("wrangler", () => {
 		`);
 	});
 
+    it("should show help when no argument is passed", async () => {
+		await runWrangler("kv");
+		expect(std.out).toMatchInlineSnapshot();
+	});
+
+	it("should show help when an invalid argument is passed", async () => {
+		await expect(() => runWrangler("kv asdf")).rejects.toThrow(
+			"Unknown argument: asdf"
+		);
+		expect(std.err).toMatchInlineSnapshot();
+		expect(std.out).toMatchInlineSnapshot();
+	});
+
+
 	describe("kv namespace", () => {
 		describe("create", () => {
 			function mockCreateRequest(expectedTitle: string) {
