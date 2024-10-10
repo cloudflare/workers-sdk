@@ -250,6 +250,18 @@ describe.skipIf(experimental || frameworkToTest || isQuarantineMode())(
 							matcher: /What would you like to start with\?/,
 							input: {
 								type: "select",
+								target: "Go back",
+							},
+						},
+						{
+							matcher:
+								/In which directory do you want to create your application/,
+							input: [`${project.path}-test`, keys.enter],
+						},
+						{
+							matcher: /What would you like to start with\?/,
+							input: {
+								type: "select",
 								target: "Application Starter",
 							},
 						},
@@ -332,7 +344,7 @@ describe.skipIf(experimental || frameworkToTest || isQuarantineMode())(
 					logStream,
 				);
 
-				expect(project.path).toExist();
+				expect(`${project.path}-test`).toExist();
 				expect(output).toContain(`type Hello World Worker`);
 				expect(output).toContain(`lang JavaScript`);
 			},
