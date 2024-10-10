@@ -34,15 +34,23 @@ export class WranglerLongLivedCommand extends LongLivedCommand {
 		super(getWranglerCommand(wranglerCommand), getOptions(options));
 	}
 
-	async waitForReady(): Promise<{ url: string }> {
-		const match = await this.readUntil(/Ready on (?<url>https?:\/\/.*)/, 5_000);
+	async waitForReady(
+		readTimeout = 5_000,
+		tee?: boolean
+	): Promise<{ url: string }> {
+		const match = await this.readUntil(
+			/Ready on (?<url>https?:\/\/.*)/,
+			readTimeout,
+			tee
+		);
 		return match.groups as { url: string };
 	}
 
-	async waitForReload(readTimeout?: number): Promise<void> {
+	async waitForReload(readTimeout = 5_000, tee?: boolean): Promise<void> {
 		await this.readUntil(
 			/Detected changes, restarted server|Reloading local server\.\.\./,
-			readTimeout
+			readTimeout,
+			tee
 		);
 	}
 }
