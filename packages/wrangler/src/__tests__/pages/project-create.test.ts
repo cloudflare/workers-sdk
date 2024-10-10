@@ -155,7 +155,6 @@ describe("pages project create", () => {
 				"*/accounts/:accountId/pages/projects",
 				async ({ request, params }) => {
 					const body = (await request.json()) as Record<string, unknown>;
-					console.dir(request.url);
 					expect(params.accountId).toEqual("new-account-id");
 					return HttpResponse.json(
 						{
