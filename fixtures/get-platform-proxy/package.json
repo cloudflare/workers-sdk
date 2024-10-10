@@ -5,7 +5,7 @@
 	"scripts": {
 		"test:ci": "vitest run",
 		"test:watch": "vitest",
-		"type:tests": "tsc --noEmit"
+		"type:tests": "tsc --noEmit -p tests/tsconfig.json"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-tsconfig": "workspace:*",

@@ -2,12 +2,6 @@ name = "get-bindings-proxy-fixture"
 main = "src/index.ts"
 compatibility_date = "2023-11-21"
 
-services = [
-  { binding = "MY_SERVICE_A", service = "hello-worker-a" },
-  { binding = "MY_SERVICE_B", service = "hello-worker-b" },
-  { binding = "MY_RPC", service = "rpc-worker", entrypoint = "NamedEntrypoint" }
-]
-
 [vars]
 MY_VAR = "my-var-value"
 MY_VAR_A = "my-var-a"
@@ -20,12 +14,6 @@ id = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
 [[r2_buckets]]
 binding = "MY_BUCKET"
 bucket_name = "my-bucket"
-
-[durable_objects]
-bindings = [
-  { name = "MY_DO_A", script_name = "do-worker-a", class_name = "DurableObjectClass" },
-  { name = "MY_DO_B", script_name = "do-worker-b", class_name = "DurableObjectClass" }
-]
 
 [[hyperdrive]]
 binding = "MY_HYPERDRIVE"

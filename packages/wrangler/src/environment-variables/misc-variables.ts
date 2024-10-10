@@ -1,3 +1,5 @@
+import path from "node:path";
+import { getGlobalWranglerConfigPath } from "../global-wrangler-config-path";
 import { getEnvironmentVariableFactory } from "./factory";
 
 /**
@@ -122,4 +124,14 @@ export const getBuildConditionsFromEnv = getEnvironmentVariableFactory({
  */
 export const getBuildPlatformFromEnv = getEnvironmentVariableFactory({
 	variableName: "WRANGLER_BUILD_PLATFORM",
+});
+
+/**
+ * `WRANGLER_REGISTRY_PATH` specifies the file based dev registry folder
+ */
+export const getRegistryPath = getEnvironmentVariableFactory({
+	variableName: "WRANGLER_REGISTRY_PATH",
+	defaultValue() {
+		return path.join(getGlobalWranglerConfigPath(), "registry");
+	},
 });

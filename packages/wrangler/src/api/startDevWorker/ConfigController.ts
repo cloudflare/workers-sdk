@@ -156,10 +156,13 @@ async function resolveBindings(
 	const maskedVars = maskVars(bindings, config);
 
 	// now log all available bindings into the terminal
-	printBindings({
-		...bindings,
-		vars: maskedVars,
-	});
+	printBindings(
+		{
+			...bindings,
+			vars: maskedVars,
+		},
+		input.dev?.registry
+	);
 
 	return {
 		bindings: {
