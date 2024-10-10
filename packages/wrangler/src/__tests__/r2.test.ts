@@ -912,7 +912,10 @@ describe("r2", () => {
 						  -c, --config                    Path to .toml configuration file  [string]
 						  -e, --env                       Environment to use for operations and .env files  [string]
 						  -h, --help                      Show help  [boolean]
-						  -v, --version                   Show version number  [boolean]"
+						  -v, --version                   Show version number  [boolean]
+
+						OPTIONS
+						  -J, --jurisdiction  The jurisdiction where the bucket exists  [string]"
 					`);
 				});
 			});
@@ -1024,7 +1027,8 @@ describe("r2", () => {
 						      --event-types, --event-type  The type of event(s) that will emit event notifications  [array] [required] [choices: \\"object-create\\", \\"object-delete\\"]
 						      --prefix                     The prefix that an object must match to emit event notifications (note: regular expressions not supported)  [string]
 						      --suffix                     The suffix that an object must match to emit event notifications (note: regular expressions not supported)  [string]
-						      --queue                      The name of the queue that will receive event notification messages  [string] [required]"
+						      --queue                      The name of the queue that will receive event notification messages  [string] [required]
+						  -J, --jurisdiction               The jurisdiction where the bucket exists  [string]"
 					`);
 				});
 			});
@@ -1178,8 +1182,10 @@ describe("r2", () => {
 						  -v, --version                   Show version number  [boolean]
 
 						OPTIONS
-						      --queue  The name of the queue that corresponds to the event notification rule. If no rule is provided, all event notification rules associated with the bucket and queue will be deleted  [string] [required]
-						      --rule   The ID of the event notification rule to delete  [string]"
+						      --queue         The name of the queue that corresponds to the event notification rule. If no rule is provided, all event notification rules associated with the bucket and queue will be deleted  [string] [required]
+						      --rule          The ID of the event notification rule to delete  [string]
+						  -J, --jurisdiction  The jurisdiction where the bucket exists  [string]"
+
 					`);
 				});
 			});
