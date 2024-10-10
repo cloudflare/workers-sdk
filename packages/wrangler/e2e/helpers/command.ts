@@ -132,7 +132,7 @@ export class LongLivedCommand {
 	async readUntil(
 		regexp: RegExp,
 		readTimeout?: number,
-		tee = true
+		tee = false
 	): Promise<RegExpMatchArray> {
 		if (tee) {
 			const copies = this.stream.tee();

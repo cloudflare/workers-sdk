@@ -157,7 +157,7 @@ describe.each([
 		it("can fetch b", async () => {
 			const worker = helper.runLongLived(cmd, { cwd: b });
 
-			const { url } = await worker.waitForReady();
+			const { url } = await worker.waitForReady(5_000, true);
 
 			await expect(fetch(url).then((r) => r.text())).resolves.toBe(
 				"hello world"
@@ -167,12 +167,12 @@ describe.each([
 		it("can fetch b through a (start b, start a)", async () => {
 			const workerB = helper.runLongLived(cmd, { cwd: b });
 			// We don't need b's URL, but ensure that b starts up before a
-			await workerB.waitForReady();
+			await workerB.waitForReady(5_000, true);
 
 			const workerA = helper.runLongLived(cmd, { cwd: a });
 			const [{ url }] = await Promise.all([
-				workerA.waitForReady(),
-				workerA.readUntil(/- BEE: 🟢/),
+				workerA.waitForReady(5_000, true),
+				workerA.readUntil(/- BEE: 🟢/, 5_000, true),
 			]);
 
 			// Give the dev registry some time to settle
@@ -183,12 +183,12 @@ describe.each([
 
 		it("can fetch b through a (start a, start b)", async () => {
 			const workerA = helper.runLongLived(cmd, { cwd: a });
-			const { url } = await workerA.waitForReady();
+			const { url } = await workerA.waitForReady(5_000, true);
 
 			const workerB = helper.runLongLived(cmd, { cwd: b });
 			await Promise.all([
-				workerB.waitForReady(),
-				workerA.readUntil(/- BEE: 🟢/),
+				workerB.waitForReady(5_000, true),
+				workerA.readUntil(/- BEE: 🟢/, 5_000, true),
 			]);
 			// Give the dev registry some time to settle
 			await setTimeout(500);
@@ -215,13 +215,13 @@ describe.each([
 		it("can fetch service worker c through a (start c, start a)", async () => {
 			const workerC = helper.runLongLived(cmd, { cwd: c });
 			// We don't need c's URL, but ensure that c starts up before a
-			await workerC.waitForReady();
+			await workerC.waitForReady(5_000, true);
 
 			const workerA = helper.runLongLived(cmd, { cwd: a });
 
 			const [{ url }] = await Promise.all([
-				workerA.waitForReady(),
-				workerA.readUntil(/- CEE: 🟢/),
+				workerA.waitForReady(5_000, true),
+				workerA.readUntil(/- CEE: 🟢/, 5_000, true),
 			]);
 			// Give the dev registry some time to settle
 			await setTimeout(500);
@@ -236,13 +236,13 @@ describe.each([
 			"can fetch service worker c through a (start a, start c)",
 			async () => {
 				const workerA = helper.runLongLived(cmd, { cwd: a });
-				const { url } = await workerA.waitForReady();
+				const { url } = await workerA.waitForReady(5_000, true);
 
 				const workerC = helper.runLongLived(cmd, { cwd: c });
 
 				await Promise.all([
-					workerC.waitForReady(),
-					workerA.readUntil(/- CEE: 🟢/),
+					workerC.waitForReady(5_000, true),
+					workerA.readUntil(/- CEE: 🟢/, 5_000, true),
 				]);
 				// Give the dev registry some time to settle
 				await setTimeout(500);
@@ -280,7 +280,7 @@ describe.each([
 		it("can fetch DO through a", async () => {
 			const worker = helper.runLongLived(cmd, { cwd: a });
 
-			const { url } = await worker.waitForReady();
+			const { url } = await worker.waitForReady(5_000, true);
 
 			await expect(
 				fetchJson(`${url}/do`, {
@@ -295,13 +295,13 @@ describe.each([
 			"can fetch remote DO attached to a through b (start b, start a)",
 			async () => {
 				const workerB = helper.runLongLived(cmd, { cwd: b });
-				const { url } = await workerB.waitForReady();
+				const { url } = await workerB.waitForReady(5_000, true);
 
 				const workerA = helper.runLongLived(cmd, { cwd: a });
 
 				await Promise.all([
-					workerA.waitForReady(),
-					workerB.readUntil(/defined in 🟢/),
+					workerA.waitForReady(5_000, true),
+					workerB.readUntil(/defined in 🟢/, 5_000, true),
 				]);
 
 				// Give the dev registry some time to settle
@@ -319,13 +319,13 @@ describe.each([
 
 		it("can fetch remote DO attached to a through b (start a, start b)", async () => {
 			const workerA = helper.runLongLived(cmd, { cwd: a });
-			await workerA.waitForReady();
+			await workerA.waitForReady(5_000, true);
 
 			const workerB = helper.runLongLived(cmd, { cwd: b });
 
 			const [{ url }] = await Promise.all([
-				workerB.waitForReady(),
-				workerB.readUntil(/defined in 🟢/),
+				workerB.waitForReady(5_000, true),
+				workerB.readUntil(/defined in 🟢/, 5_000, true),
 			]);
 
 			// Give the dev registry some time to settle
