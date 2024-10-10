@@ -250,7 +250,7 @@ const checkAssets = async (testCases: AssetTestCase[], deployedUrl: string) => {
 	}
 };
 
-describe.only("Workers + Assets deployment", { timeout: TIMEOUT }, () => {
+describe("Workers + Assets deployment", { timeout: TIMEOUT }, () => {
 	let deployedUrl: string;
 	const helper = new WranglerE2ETestHelper();
 	afterAll(async () => {
