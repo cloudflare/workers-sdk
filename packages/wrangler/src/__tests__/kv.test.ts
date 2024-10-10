@@ -13,6 +13,7 @@ import type {
 	KVNamespaceInfo,
 	NamespaceKeyInfo,
 } from "../kv/helpers";
+import { endEventLoop } from "./helpers/end-event-loop";
 
 describe("wrangler", () => {
 	mockAccountId();
@@ -55,15 +56,53 @@ describe("wrangler", () => {
 
     it("should show help when no argument is passed", async () => {
 		await runWrangler("kv");
-		expect(std.out).toMatchInlineSnapshot();
+        await endEventLoop();
+		expect(std.out).toMatchInlineSnapshot(`
+			"wrangler kv
+
+			🗂️  Manage Workers KV Namespaces
+
+			COMMANDS
+			  wrangler kv namespace  Interact with your Workers KV Namespaces
+			  wrangler kv key        Individually manage Workers KV key-value pairs
+			  wrangler kv bulk       Interact with multiple Workers KV key-value pairs at once
+
+			GLOBAL FLAGS
+			  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
+			  -c, --config                    Path to .toml configuration file  [string]
+			  -e, --env                       Environment to use for operations and .env files  [string]
+			  -h, --help                      Show help  [boolean]
+			  -v, --version                   Show version number  [boolean]"
+		`);
 	});
 
 	it("should show help when an invalid argument is passed", async () => {
 		await expect(() => runWrangler("kv asdf")).rejects.toThrow(
 			"Unknown argument: asdf"
 		);
-		expect(std.err).toMatchInlineSnapshot();
-		expect(std.out).toMatchInlineSnapshot();
+		expect(std.err).toMatchInlineSnapshot(`
+			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mUnknown argument: asdf[0m
+
+			"
+		`);
+		expect(std.out).toMatchInlineSnapshot(`
+			"
+			wrangler kv
+
+			🗂️  Manage Workers KV Namespaces
+
+			COMMANDS
+			  wrangler kv namespace  Interact with your Workers KV Namespaces
+			  wrangler kv key        Individually manage Workers KV key-value pairs
+			  wrangler kv bulk       Interact with multiple Workers KV key-value pairs at once
+
+			GLOBAL FLAGS
+			  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
+			  -c, --config                    Path to .toml configuration file  [string]
+			  -e, --env                       Environment to use for operations and .env files  [string]
+			  -h, --help                      Show help  [boolean]
+			  -v, --version                   Show version number  [boolean]"
+		`);
 	});
 
 
