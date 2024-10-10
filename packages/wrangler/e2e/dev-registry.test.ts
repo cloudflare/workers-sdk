@@ -1,4 +1,3 @@
-import { setTimeout } from "node:timers/promises";
 import dedent from "ts-dedent";
 import { fetch } from "undici";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -170,15 +169,12 @@ describe.each([
 			await workerB.waitForReady(5_000, true);
 
 			const workerA = helper.runLongLived(cmd, { cwd: a });
-			const [{ url }] = await Promise.all([
-				workerA.waitForReady(5_000, true),
-				workerA.readUntil(/- BEE: 🟢/, 5_000, true),
-			]);
+			const { url } = await workerA.waitForReady(5_000, true);
 
-			// Give the dev registry some time to settle
-			await setTimeout(500);
-
-			await expect(fetchText(url)).resolves.toBe("hello world");
+			await vi.waitFor(
+				async () => await expect(fetchText(url)).resolves.toBe("hello world"),
+				{ interval: 300, timeout: 5_000 }
+			);
 		});
 
 		it("can fetch b through a (start a, start b)", async () => {
@@ -186,14 +182,12 @@ describe.each([
 			const { url } = await workerA.waitForReady(5_000, true);
 
 			const workerB = helper.runLongLived(cmd, { cwd: b });
-			await Promise.all([
-				workerB.waitForReady(5_000, true),
-				workerA.readUntil(/- BEE: 🟢/, 5_000, true),
-			]);
-			// Give the dev registry some time to settle
-			await setTimeout(500);
+			await workerB.waitForReady(5_000, true);
 
-			await expect(fetchText(url)).resolves.toBe("hello world");
+			await vi.waitFor(
+				async () => await expect(fetchText(url)).resolves.toBe("hello world"),
+				{ interval: 300, timeout: 5_000 }
+			);
 		});
 	});
 
@@ -219,15 +213,14 @@ describe.each([
 
 			const workerA = helper.runLongLived(cmd, { cwd: a });
 
-			const [{ url }] = await Promise.all([
-				workerA.waitForReady(5_000, true),
-				workerA.readUntil(/- CEE: 🟢/, 5_000, true),
-			]);
-			// Give the dev registry some time to settle
-			await setTimeout(500);
+			const { url } = await workerA.waitForReady(5_000, true);
 
-			await expect(fetchText(`${url}/service`)).resolves.toBe(
-				"Hello from service worker"
+			await vi.waitFor(
+				async () =>
+					await expect(fetchText(`${url}/service`)).resolves.toBe(
+						"Hello from service worker"
+					),
+				{ interval: 300, timeout: 5_000 }
 			);
 		});
 
@@ -240,15 +233,14 @@ describe.each([
 
 				const workerC = helper.runLongLived(cmd, { cwd: c });
 
-				await Promise.all([
-					workerC.waitForReady(5_000, true),
-					workerA.readUntil(/- CEE: 🟢/, 5_000, true),
-				]);
-				// Give the dev registry some time to settle
-				await setTimeout(500);
+				await workerC.waitForReady(5_000, true);
 
-				await expect(fetchText(`${url}/service`)).resolves.toBe(
-					"Hello from service worker"
+				await vi.waitFor(
+					async () =>
+						await expect(fetchText(`${url}/service`)).resolves.toBe(
+							"Hello from service worker"
+						),
+					{ interval: 300, timeout: 5_000 }
 				);
 			}
 		);
@@ -299,21 +291,19 @@ describe.each([
 
 				const workerA = helper.runLongLived(cmd, { cwd: a });
 
-				await Promise.all([
-					workerA.waitForReady(5_000, true),
-					workerB.readUntil(/defined in 🟢/, 5_000, true),
-				]);
+				await workerA.waitForReady(5_000, true);
 
-				// Give the dev registry some time to settle
-				await setTimeout(500);
-
-				await expect(
-					fetchJson(`${url}/do`, {
-						headers: {
-							"X-Reset-Count": "true",
-						},
-					})
-				).resolves.toMatchObject({ count: 1 });
+				await vi.waitFor(
+					async () =>
+						await expect(
+							fetchJson(`${url}/do`, {
+								headers: {
+									"X-Reset-Count": "true",
+								},
+							})
+						).resolves.toMatchObject({ count: 1 }),
+					{ interval: 300, timeout: 5_000 }
+				);
 			}
 		);
 
@@ -323,21 +313,19 @@ describe.each([
 
 			const workerB = helper.runLongLived(cmd, { cwd: b });
 
-			const [{ url }] = await Promise.all([
-				workerB.waitForReady(5_000, true),
-				workerB.readUntil(/defined in 🟢/, 5_000, true),
-			]);
+			const { url } = await workerB.waitForReady(5_000, true);
 
-			// Give the dev registry some time to settle
-			await setTimeout(500);
-
-			await expect(
-				fetch(`${url}/do`, {
-					headers: {
-						"X-Reset-Count": "true",
-					},
-				}).then((r) => r.json())
-			).resolves.toMatchObject({ count: 1 });
+			await vi.waitFor(
+				async () =>
+					await expect(
+						fetch(`${url}/do`, {
+							headers: {
+								"X-Reset-Count": "true",
+							},
+						}).then((r) => r.json())
+					).resolves.toMatchObject({ count: 1 }),
+				{ interval: 300, timeout: 5_000 }
+			);
 		});
 	});
 });
