@@ -10,7 +10,6 @@ import { fetchText } from "./helpers/fetch-text";
 import { fetchWithETag } from "./helpers/fetch-with-etag";
 import { generateResourceName } from "./helpers/generate-resource-name";
 import { retry } from "./helpers/retry";
-import { seed as baseSeed, makeRoot } from "./helpers/setup";
 
 /**
  * We use the same workerName for all of the tests in this suite in hopes of reducing flakes.
@@ -21,10 +20,6 @@ import { seed as baseSeed, makeRoot } from "./helpers/setup";
  * when multiple PRs have jobs running at the same time (or the same PR has the tests run across multiple OSes).
  */
 const workerName = generateResourceName();
-/**
- * Some tests require a 2nd worker to bind to. Let's create that here too.
- */
-const workerName2 = generateResourceName();
 
 it("can import URL from 'url' in node_compat mode", async () => {
 	const helper = new WranglerE2ETestHelper();

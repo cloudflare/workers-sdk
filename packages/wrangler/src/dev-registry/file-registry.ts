@@ -11,11 +11,11 @@ import path from "node:path";
 import * as util from "node:util";
 import { watch } from "chokidar";
 import { version as wranglerVersion } from "../../package.json";
-import { getGlobalWranglerConfigPath } from "../global-wrangler-config-path";
+import { getRegistryPath } from "../environment-variables/misc-variables";
 import { logger } from "../logger";
 import type { WorkerDefinition, WorkerRegistry } from "./types";
 
-const DEV_REGISTRY_PATH = path.join(getGlobalWranglerConfigPath(), "registry");
+const DEV_REGISTRY_PATH = getRegistryPath();
 const heartbeats = new Map<string, NodeJS.Timeout>();
 let globalWorkers: WorkerRegistry | undefined;
 let globalWatcher: ReturnType<typeof watch> | undefined;
