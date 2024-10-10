@@ -22,6 +22,11 @@ import { UserError } from "../errors";
 import { logger } from "../logger";
 import { getSourceMappedString } from "../sourcemap";
 import { updateCheck } from "../update-check";
+import {
+	EXTERNAL_VECTORIZE_WORKER_NAME,
+	EXTERNAL_VECTORIZE_WORKER_SCRIPT,
+	MakeVectorizeFetcher,
+} from "../vectorize/fetcher";
 import { getClassNamesWhichUseSQLite } from "./validate-dev-props";
 import type { ServiceFetch } from "../api";
 import type { AssetsOptions } from "../assets";
@@ -598,6 +603,36 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 		};
 	}
 
+	if (bindings.vectorize) {
+		for (const vectorizeBinding of bindings.vectorize) {
+			const bindingName = vectorizeBinding.binding;
+			const indexName = vectorizeBinding.index_name;
+			const indexVersion = "v2"; // TODO: support v1?
+
+			externalWorkers.push({
+				name: EXTERNAL_VECTORIZE_WORKER_NAME + bindingName,
+				modules: [
+					{
+						type: "ESModule",
+						path: "index.mjs",
+						contents: EXTERNAL_VECTORIZE_WORKER_SCRIPT,
+					},
+				],
+				serviceBindings: {
+					FETCHER: MakeVectorizeFetcher(indexName, indexVersion),
+				},
+				bindings: {
+					INDEX_ID: indexName,
+					INDEX_VERSION: indexVersion,
+				},
+			});
+
+			wrappedBindings[bindingName] = {
+				scriptName: EXTERNAL_VECTORIZE_WORKER_NAME + bindingName,
+			};
+		}
+	}
+
 	const bindingOptions = {
 		bindings: {
 			...bindings.vars,
@@ -888,9 +923,8 @@ export async function buildMiniflareOptions(
 	if (config.bindings.vectorize?.length) {
 		if (!didWarnMiniflareVectorizeSupport) {
 			didWarnMiniflareVectorizeSupport = true;
-			// TODO: add local support for Vectorize bindings (https://github.com/cloudflare/workers-sdk/issues/4360)
 			logger.warn(
-				"Vectorize bindings are not currently supported in local mode. Please use --remote if you are working with them."
+				"Using Vectorize always accesses your Cloudflare account in order to run queries and may incur usage charges even in local development. Write operations are also not enabled in local development; use `--remote` if write operations are needed."
 			);
 		}
 	}

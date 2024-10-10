@@ -495,6 +495,59 @@ describe.sequential.each(RUNTIMES)("Bindings: $flags", ({ runtime, flags }) => {
 		expect(result.stdout).toContain("value2");
 	});
 
+	it("exposes Vectorize bindings", async () => {
+		const name = await helper.vectorize(32, "euclidean");
+
+		await helper.seed({
+			"wrangler.toml": dedent`
+				name = "${workerName}"
+				main = "src/index.ts"
+				compatibility_date = "2024-08-01"
+				[[vectorize]]
+				binding = "VECTORIZE"
+				index_name = "${name}"
+				`,
+			"samples.ndjson": dedent`
+				{"id":"b0daca4a-ffd8-4865-926b-e24800af2a2d","values":[0.2331,1.0125,0.6131,0.9421,0.9661,0.8121,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"metadata":{"text":"She sells seashells by the seashore"}}
+				{"id":"a44706aa-a366-48bc-8cc1-3feffd87d548","values":[0.2321,0.8121,0.6315,0.6151,0.4121,0.1512,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"metadata":{"text":"Peter Piper picked a peck of pickled peppers"}}
+			`,
+			"src/index.ts": dedent`
+				export interface Env {
+					VECTORIZE: Vectorize;
+				}
+				export default {
+					async fetch(request: Request, env: Env, ctx: any) {
+						const queryVector: Array<number> = [
+							0.13, 0.25, 0.44, 0.53, 0.62, 0.41, 0.59, 0.68, 0.29, 0.82, 0.37, 0.5,
+							0.74, 0.46, 0.57, 0.64, 0.28, 0.61, 0.73, 0.35, 0.78, 0.58, 0.42, 0.32,
+							0.77, 0.65, 0.49, 0.54, 0.31, 0.29, 0.71, 0.57,
+						]; // vector of dimension 32
+						const matches = await env.VECTORIZE.query(queryVector, {
+							topK: 3,
+							returnValues: true,
+							returnMetadata: "all",
+						});
+						return Response.json({matches});
+					}
+				}
+				`,
+		});
+
+		await helper.run(`wrangler vectorize insert ${name} --file samples.ndjson`);
+
+		const worker = helper.runLongLived(`wrangler dev ${flags}`);
+		const { url } = await worker.waitForReady();
+		const res = await fetch(url);
+
+		const text = await res.text();
+		console.log(text);
+		const obj = JSON.parse(text) as any;
+
+		const count = obj.matches.count;
+
+		expect(count).toBe(2);
+	});
+
 	it.skipIf(!isLocal)("exposes queue producer/consumer bindings", async () => {
 		const queueName = generateResourceName("queue");
 
@@ -533,7 +586,6 @@ describe.sequential.each(RUNTIMES)("Bindings: $flags", ({ runtime, flags }) => {
 	it.skipIf(isLocal).todo("exposes send email bindings");
 	it.skipIf(isLocal).todo("exposes browser bindings");
 	it.skipIf(isLocal).todo("exposes Workers AI bindings");
-	it.skipIf(isLocal).todo("exposes Vectorize bindings");
 	it.skipIf(isLocal).todo("exposes Analytics Engine bindings");
 	it.skipIf(isLocal).todo("exposes dispatch namespace bindings");
 	it.skipIf(isLocal).todo("exposes mTLS bindings");
