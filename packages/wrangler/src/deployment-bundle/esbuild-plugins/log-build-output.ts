@@ -20,22 +20,27 @@ export function logBuildOutput(
 				onStart?.();
 			});
 			build.onEnd(async ({ errors, warnings }) => {
-				if (errors.length > 0) {
-					if (nodejsCompatMode !== "legacy") {
-						rewriteNodeCompatBuildFailure(errors, nodejsCompatMode);
-					}
-					logBuildFailure(errors, warnings);
-					return;
-				}
-
-				if (warnings.length > 0) {
-					logBuildWarnings(warnings);
-				}
-
 				if (!bundled) {
-					// First bundle, no need to update bundle
+					// First bundle, no need to update bundle or log errors
 					bundled = true;
+
+					// But we still want to log warnings as these are not repeated in first-time build failures
+					if (warnings.length > 0) {
+						logBuildWarnings(warnings);
+					}
 				} else {
+					if (errors.length > 0) {
+						if (nodejsCompatMode !== "legacy") {
+							rewriteNodeCompatBuildFailure(errors, nodejsCompatMode);
+						}
+						logBuildFailure(errors, warnings);
+						return;
+					}
+
+					if (warnings.length > 0) {
+						logBuildWarnings(warnings);
+					}
+
 					await updateBundle?.();
 				}
 			});

@@ -7,7 +7,7 @@ export function esbuildAliasExternalPlugin(
 	aliases: Record<string, string>
 ): Plugin {
 	return {
-		name: "external alias imports plugin",
+		name: "external-alias-imports",
 		setup(build) {
 			build.onResolve({ filter: /.*/g }, (args) => {
 				// If it's the entrypoint, let it be as is

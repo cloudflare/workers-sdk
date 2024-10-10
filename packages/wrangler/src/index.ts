@@ -12,7 +12,10 @@ import { d1 } from "./d1";
 import { deleteHandler, deleteOptions } from "./delete";
 import { deployHandler, deployOptions } from "./deploy";
 import { isAuthenticationError } from "./deploy/deploy";
-import { isBuildFailure } from "./deployment-bundle/build-failures";
+import {
+	isBuildFailure,
+	isBuildFailureFromCause,
+} from "./deployment-bundle/build-failures";
 import {
 	commonDeploymentCMDSetup,
 	deployments,
@@ -904,7 +907,9 @@ export async function main(argv: string[]): Promise<void> {
 		} else if (isBuildFailure(e)) {
 			mayReport = false;
 			logBuildFailure(e.errors, e.warnings);
-			logger.error(e.message);
+		} else if (isBuildFailureFromCause(e)) {
+			mayReport = false;
+			logBuildFailure(e.cause.errors, e.cause.warnings);
 		} else {
 			let loggableException = e;
 			if (

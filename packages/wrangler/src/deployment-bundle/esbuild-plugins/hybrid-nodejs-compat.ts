@@ -11,7 +11,7 @@ const REQUIRED_UNENV_ALIAS_NAMESPACE = "required-unenv-alias";
 export const nodejsHybridPlugin: () => Plugin = () => {
 	const { alias, inject, external } = env(nodeless, cloudflare);
 	return {
-		name: "unenv-cloudflare",
+		name: "hybrid-nodejs_compat",
 		setup(build) {
 			errorOnServiceWorkerFormat(build);
 			handleRequireCallsToNodeJSBuiltins(build);
@@ -43,14 +43,19 @@ function errorOnServiceWorkerFormat(build: PluginBuild) {
 					.map((p) => `"${p}"`)
 					.sort()
 			);
-			throw new Error(
-				dedent`
-					Unexpected external import of ${pathList}. Imports are not valid in a Service Worker format Worker.
-					Did you mean to create a Module Worker?
-					If so, try adding \`export default { ... }\` in your entry-point.
-					See https://developers.cloudflare.com/workers/reference/migrate-to-module-workers/.
-				`
-			);
+			return {
+				errors: [
+					{
+						text: dedent`
+							Unexpected external import of ${pathList}.
+							Your worker has no default export, which means it is assumed to be a Service Worker format Worker.
+							Did you mean to create a ES Module format Worker?
+							If so, try adding \`export default { ... }\` in your entry-point.
+							See https://developers.cloudflare.com/workers/reference/migrate-to-module-workers/.
+						`,
+					},
+				],
+			};
 		}
 	});
 }
