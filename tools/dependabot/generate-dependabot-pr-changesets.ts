@@ -24,9 +24,7 @@ if (require.main === module) {
 
 type Args = {
 	prNumber: string;
-	packageName: string;
-	packageJSONPath: string;
-	changesetPrefix: string;
+	packageNames: string[];
 };
 
 function processArgs(): Args {
@@ -48,33 +46,30 @@ function processArgs(): Args {
 	}
 	return {
 		prNumber: args[0],
-		packageName: args[1],
-		packageJSONPath: args[2],
-		changesetPrefix: args[3],
+		packageNames: args.slice(1),
 	};
 }
 
-function main({
-	prNumber,
-	packageName,
-	packageJSONPath,
-	changesetPrefix,
-}: Args): void {
-	const diffLines = getPackageJsonDiff(resolve(packageJSONPath));
-	const changes = parseDiffForChanges(diffLines);
-	if (changes.size === 0) {
-		console.warn(dedent`
+function main({ prNumber, packageNames }: Args): void {
+	for (const packageName of packageNames) {
+		const packageJSONPath = `packages/${packageName}/package.json`;
+		const diffLines = getPackageJsonDiff(resolve(packageJSONPath));
+		const changes = parseDiffForChanges(diffLines);
+		if (changes.size === 0) {
+			console.warn(dedent`
 			WARN: No dependency changes detected for "${packageName}".
 			`);
-		return;
-	}
-	const changesetHeader = generateChangesetHeader(packageName);
-	const commitMessage = generateCommitMessage(packageName, changes);
-	console.log(dedent`
+			return;
+		}
+		const changesetHeader = generateChangesetHeader(packageName);
+		const commitMessage = generateCommitMessage(packageName, changes);
+		console.log(dedent`
 		INFO: Writing changeset with the following commit message
 		${commitMessage}`);
-	writeChangeSet(changesetPrefix, prNumber, changesetHeader, commitMessage);
-	commitAndPush(commitMessage);
+		writeChangeSet(prNumber, packageName, changesetHeader, commitMessage);
+		gitCommit(commitMessage);
+	}
+	gitPush();
 }
 
 export function getPackageJsonDiff(packageJSONPath: string): string[] {
@@ -158,20 +153,22 @@ export function generateCommitMessage(
 }
 
 export function writeChangeSet(
-	changesetPrefix: string,
 	prNumber: string,
+	packageName: string,
 	changesetHeader: string,
 	commitMessage: string
 ): void {
 	writeFileSync(
-		`.changeset/${changesetPrefix}-${prNumber}.md`,
+		`.changeset/dependabot-update-${packageName}-${prNumber}.md`,
 		changesetHeader + "\n\n" + commitMessage + "\n"
 	);
 }
 
-export function commitAndPush(commitMessage: string): void {
+export function gitCommit(commitMessage: string): void {
 	executeCommand("git", ["add", ".changeset"]);
 	executeCommand("git", ["commit", "-m", commitMessage]);
+}
+export function gitPush(): void {
 	executeCommand("git", ["push"]);
 }
 
