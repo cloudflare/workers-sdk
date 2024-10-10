@@ -641,4 +641,26 @@ describe("versions deploy", { timeout: TIMEOUT }, () => {
 			Successfully deleted tmp-e2e-worker-00000000-0000-0000-0000-000000000000"
 		`);
 	});
+
+	it("should skip version selection prompt when version is specified in args", async () => {
+		// Upload a new version first
+		const upload = await helper.run(
+			`wrangler versions upload --message "Upload for prompt test" --tag "e2e-prompt-test" --x-versions`
+		);
+		const newVersionId = matchVersionId(upload.stdout);
+
+		// Deploy the specified version
+		const deploy = await helper.run(
+			`wrangler versions deploy ${newVersionId}@100% --message "Deploy without prompt" --yes --x-versions`
+		);
+
+		expect(deploy.stdout).toContain(`Worker Version 1: ${newVersionId}`);
+		expect(deploy.stdout).toContain("100% of traffic");
+		expect(deploy.stdout).toContain("SUCCESS");
+
+		// Verify that the "Which version(s) do you want to deploy?" prompt is not present
+		expect(deploy.stdout).not.toContain(
+			"Which version(s) do you want to deploy?"
+		);
+	});
 });
