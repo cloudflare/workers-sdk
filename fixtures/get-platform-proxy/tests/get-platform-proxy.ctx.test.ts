@@ -61,7 +61,7 @@ describe("getPlatformProxy - ctx", () => {
 			} = await getPlatformProxy();
 			try {
 				expect(() => {
-					waitUntil(() => {});
+					waitUntil(new Promise(() => {}));
 				}).toThrowError("Illegal invocation");
 
 				expect(() => {
@@ -79,7 +79,7 @@ describe("getPlatformProxy - ctx", () => {
 
 			try {
 				expect(() => {
-					waitUntil(() => {});
+					waitUntil(new Promise(() => {}));
 				}).toThrowError("Illegal invocation");
 
 				expect(() => {
@@ -97,7 +97,7 @@ describe("getPlatformProxy - ctx", () => {
 
 			try {
 				expect(() => {
-					waitUntil(() => {});
+					waitUntil(new Promise(() => {}));
 				}).not.toThrowError("Illegal invocation");
 
 				expect(() => {
@@ -119,7 +119,7 @@ describe("getPlatformProxy - ctx", () => {
 
 			try {
 				expect(() => {
-					waitUntil(() => {});
+					waitUntil(new Promise(() => {}));
 				}).toThrowError("Illegal invocation");
 
 				expect(() => {
@@ -127,7 +127,7 @@ describe("getPlatformProxy - ctx", () => {
 				}).toThrowError("Illegal invocation");
 
 				expect(() => {
-					passThroughOnException.call(new Boolean(), []);
+					passThroughOnException.call(new Boolean());
 				}).toThrowError("Illegal invocation");
 			} finally {
 				await dispose();

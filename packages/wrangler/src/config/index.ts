@@ -402,7 +402,12 @@ export function printBindings(
 				}
 
 				const registryDefinition = registry?.[service];
-				if (registryDefinition) {
+				if (
+					registryDefinition &&
+					(entrypoint
+						? registryDefinition.entrypointAddresses?.[entrypoint]
+						: true)
+				) {
 					value = `🟢 ` + value;
 				} else {
 					value = `🔴 ` + value;
