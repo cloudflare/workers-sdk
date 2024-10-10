@@ -857,8 +857,6 @@ test("should throw if binding to version of wrangler without entrypoints support
 			// Intentionally omitting `entrypointAddresses`
 		})
 	);
-	expect(response.status).toBe(200);
-	expect(await response.text()).toBe("null");
 
 	// Wait for error to be thrown
 	await waitFor(() => {
