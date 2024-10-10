@@ -245,7 +245,7 @@ const checkAssets = async (testCases: AssetTestCase[], deployedUrl: string) => {
 					);
 				}
 			},
-			{ interval: 500, timeout: 5_000 }
+			{ interval: 1_000, timeout: 30_000 }
 		);
 	}
 };
