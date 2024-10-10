@@ -1,5 +1,6 @@
 import { writeFileSync } from "node:fs";
 import { http, HttpResponse } from "msw";
+import { endEventLoop } from "./helpers/end-event-loop";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { clearDialogs, mockConfirm } from "./helpers/mock-dialogs";
@@ -13,7 +14,6 @@ import type {
 	KVNamespaceInfo,
 	NamespaceKeyInfo,
 } from "../kv/helpers";
-import { endEventLoop } from "./helpers/end-event-loop";
 
 describe("wrangler", () => {
 	mockAccountId();
@@ -54,9 +54,9 @@ describe("wrangler", () => {
 		`);
 	});
 
-    it("should show help when no argument is passed", async () => {
+	it("should show help when no argument is passed", async () => {
 		await runWrangler("kv");
-        await endEventLoop();
+		await endEventLoop();
 		expect(std.out).toMatchInlineSnapshot(`
 			"wrangler kv
 
@@ -104,7 +104,6 @@ describe("wrangler", () => {
 			  -v, --version                   Show version number  [boolean]"
 		`);
 	});
-
 
 	describe("kv namespace", () => {
 		describe("create", () => {
