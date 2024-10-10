@@ -25,7 +25,10 @@ import { standardURLPlugin } from "./esbuild-plugins/standard-url";
 import { writeAdditionalModules } from "./find-additional-modules";
 import { noopModuleCollector } from "./module-collection";
 import type { Config } from "../config";
-import type { DurableObjectBindings } from "../config/environment";
+import type {
+	DurableObjectBindings,
+	WorkflowBinding,
+} from "../config/environment";
 import type { MiddlewareLoader } from "./apply-middleware";
 import type { Entry } from "./entry";
 import type { ModuleCollector } from "./module-collection";
@@ -115,6 +118,7 @@ export type BundleOptions = {
 	legacyAssets?: Config["legacy_assets"];
 	bypassAssetCache?: boolean;
 	doBindings: DurableObjectBindings;
+	workflowBindings: WorkflowBinding[];
 	jsxFactory?: string;
 	jsxFragment?: string;
 	entryName?: string;
@@ -151,6 +155,7 @@ export async function bundleWorker(
 		additionalModules = [],
 		serveLegacyAssetsFromWorker,
 		doBindings,
+		workflowBindings,
 		jsxFactory,
 		jsxFragment,
 		entryName,
@@ -502,6 +507,18 @@ export async function bundleWorker(
 		const relativePath = path.relative(process.cwd(), entryFile);
 		throw new UserError(
 			`Your Worker depends on the following Durable Objects, which are not exported in your entrypoint file: ${notExportedDOs.join(
+				", "
+			)}.\nYou should export these objects from your entrypoint, ${relativePath}.`
+		);
+	}
+
+	const notExportedWorkflows = workflowBindings
+		.filter((x) => !x.script_name && !entryPoint.exports.includes(x.class_name))
+		.map((x) => x.class_name);
+	if (notExportedWorkflows.length) {
+		const relativePath = path.relative(process.cwd(), entryFile);
+		throw new UserError(
+			`Your Worker depends on the following Workflows, which are not exported in your entrypoint file: ${notExportedWorkflows.join(
 				", "
 			)}.\nYou should export these objects from your entrypoint, ${relativePath}.`
 		);

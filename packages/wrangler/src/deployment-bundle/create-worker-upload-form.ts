@@ -76,6 +76,13 @@ export type WorkerMetadataBinding =
 			script_name?: string;
 			environment?: string;
 	  }
+	| {
+			type: "workflow";
+			name: string;
+			workflow_name: string;
+			class_name: string;
+			script_name?: string;
+	  }
 	| { type: "queue"; name: string; queue_name: string; delivery_delay?: number }
 	| {
 			type: "r2_bucket";
@@ -246,6 +253,16 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 			});
 		}
 	);
+
+	bindings.workflows?.forEach(({ binding, name, class_name, script_name }) => {
+		metadataBindings.push({
+			type: "workflow",
+			name: binding,
+			workflow_name: name,
+			class_name,
+			...(script_name && { script_name }),
+		});
+	});
 
 	bindings.queues?.forEach(({ binding, queue_name, delivery_delay }) => {
 		metadataBindings.push({

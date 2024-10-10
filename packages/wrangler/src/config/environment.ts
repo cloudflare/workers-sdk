@@ -372,6 +372,17 @@ export type DurableObjectBindings = {
 	environment?: string;
 }[];
 
+export type WorkflowBinding = {
+	/** The name of the binding used to refer to the Workflow */
+	binding: string;
+	/** The name of the Workflow */
+	name: string;
+	/** The exported class name of the Workflow */
+	class_name: string;
+	/** The script where the Workflow is defined (if it's external to this Worker) */
+	script_name?: string;
+};
+
 /**
  * The `EnvironmentNonInheritable` interface declares all the configuration fields for an environment
  * that cannot be inherited from the top-level environment, and must be defined specifically.
@@ -416,6 +427,17 @@ export interface EnvironmentNonInheritable {
 	durable_objects: {
 		bindings: DurableObjectBindings;
 	};
+
+	/**
+	 * A list of workflows that your Worker should be bound to.
+	 *
+	 * NOTE: This field is not automatically inherited from the top level environment,
+	 * and so must be specified in every named environment.
+	 *
+	 * @default `[]`
+	 * @nonInheritable
+	 */
+	workflows: WorkflowBinding[];
 
 	/**
 	 * Cloudchamber configuration

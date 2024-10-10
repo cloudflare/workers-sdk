@@ -213,6 +213,7 @@ export function printBindings(bindings: CfWorkerInit["bindings"]) {
 	const {
 		data_blobs,
 		durable_objects,
+		workflows,
 		kv_namespaces,
 		send_email,
 		queues,
@@ -264,6 +265,23 @@ export function printBindings(bindings: CfWorkerInit["bindings"]) {
 					};
 				}
 			),
+		});
+	}
+
+	if (workflows !== undefined && workflows.length > 0) {
+		output.push({
+			type: "Workflows",
+			entries: workflows.map(({ class_name, script_name, binding }) => {
+				let value = class_name;
+				if (script_name) {
+					value += ` (defined in ${script_name})`;
+				}
+
+				return {
+					key: binding,
+					value,
+				};
+			}),
 		});
 	}
 
