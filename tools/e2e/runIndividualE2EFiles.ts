@@ -9,15 +9,14 @@
  * an individual task for each Wrangler e2e test file, using `execSync`.
  */
 import { execSync } from "child_process";
-
-// import { readdirSync } from "fs";
+import { readdirSync } from "fs";
 
 // Get a list of e2e test files, each of which should have an associated script
-// const e2eTests = readdirSync("packages/wrangler/e2e");
+const e2eTests = readdirSync("packages/wrangler/e2e");
 
 const tasks = new Set<string>();
 
-for (const file of ["dev-registry.test.ts", "get-platform-proxy.test.ts"]) {
+for (const file of e2eTests) {
 	// Ignore other files in the e2e directory (the README, for instance)
 	if (file.endsWith(".test.ts")) {
 		tasks.add(
