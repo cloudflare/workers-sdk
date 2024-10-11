@@ -94,6 +94,11 @@ export function CreateOptions(yargs: CommonYargsArgv) {
 			alias: "J",
 			requiresArg: true,
 			type: "string",
+		})
+		.option("description", {
+			describe:
+				"A description that can be used to identify the event notification rule after creation",
+			type: "string",
 		});
 }
 
@@ -111,6 +116,7 @@ export async function CreateHandler(
 		prefix = "",
 		suffix = "",
 		jurisdiction = "",
+		description,
 	} = args;
 	await putEventNotificationConfig(
 		config,
@@ -121,7 +127,8 @@ export async function CreateHandler(
 		queue,
 		eventTypes as R2EventType[],
 		prefix,
-		suffix
+		suffix,
+		description
 	);
 	logger.log("Event notification rule created successfully!");
 }
