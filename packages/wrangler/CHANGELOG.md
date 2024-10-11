@@ -1,5 +1,15 @@
 # wrangler
 
+## 3.80.4
+
+### Patch Changes
+
+- [#6937](https://github.com/cloudflare/workers-sdk/pull/6937) [`51aedd4`](https://github.com/cloudflare/workers-sdk/commit/51aedd4333cce9ffa4f6834cdf19e22148dab7e9) Thanks [@lrapoport-cf](https://github.com/lrapoport-cf)! - fix: show help when kv commands are run without parameters
+
+- Updated dependencies [[`c863183`](https://github.com/cloudflare/workers-sdk/commit/c86318354f1a6c0f5c096d6b2a884de740552a19), [`fd43068`](https://github.com/cloudflare/workers-sdk/commit/fd430687ec1431be6c3af1b7420278b636c36e59)]:
+  - miniflare@3.20241004.0
+  - @cloudflare/workers-shared@0.6.0
+
 ## 3.80.3
 
 ### Patch Changes

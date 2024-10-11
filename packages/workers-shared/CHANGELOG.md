@@ -1,5 +1,11 @@
 # @cloudflare/workers-shared
 
+## 0.6.0
+
+### Minor Changes
+
+- [#6941](https://github.com/cloudflare/workers-sdk/pull/6941) [`fd43068`](https://github.com/cloudflare/workers-sdk/commit/fd430687ec1431be6c3af1b7420278b636c36e59) Thanks [@WillTaylorDev](https://github.com/WillTaylorDev)! - feat: Add observability to router-worker
+
 ## 0.5.4
 
 ### Patch Changes
