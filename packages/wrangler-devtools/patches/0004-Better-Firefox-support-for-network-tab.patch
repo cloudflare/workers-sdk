@@ -1,4 +1,4 @@
-From 83b63469d06e2318f880c417c168f5494edf89fa Mon Sep 17 00:00:00 2001
+From f934a19a84288b4ae8cb556ccadff26d3ae17588 Mon Sep 17 00:00:00 2001
 From: Samuel Macleod <smacleod@cloudflare.com>
 Date: Thu, 19 Jan 2023 15:47:52 +0000
 Subject: [PATCH 04/15] Better Firefox support for network tab
@@ -9,23 +9,23 @@ Subject: [PATCH 04/15] Better Firefox support for network tab
  2 files changed, 7 insertions(+)
 
 diff --git a/front_end/entrypoints/js_app/js_app.ts b/front_end/entrypoints/js_app/js_app.ts
-index ef5c568e96..f6a3a1641f 100644
+index 64fa67a316..25a459f122 100644
 --- a/front_end/entrypoints/js_app/js_app.ts
 +++ b/front_end/entrypoints/js_app/js_app.ts
-@@ -25,6 +25,8 @@ const i18nString = i18n.i18n.getLocalizedString.bind(undefined, str_);
- 
- let jsMainImplInstance: JsMainImpl;
- 
+@@ -44,6 +44,8 @@ async function loadSourcesModule(): Promise<typeof Sources> {
+   }
+   return loadedSourcesModule;
+ }
 +// This is not supported in Firefox: https://developer.mozilla.org/en-US/docs/Web/API/Element/scrollIntoView
 +Element.prototype.scrollIntoViewIfNeeded = Element.prototype.scrollIntoView;
  export class JsMainImpl implements Common.Runnable.Runnable {
    static instance(opts: {forceNew: boolean|null} = {forceNew: null}): JsMainImpl {
      const {forceNew} = opts;
 diff --git a/front_end/ui/legacy/components/data_grid/DataGrid.ts b/front_end/ui/legacy/components/data_grid/DataGrid.ts
-index 88c258f54f..0648649ccf 100644
+index 93a117e746..5c667b6b77 100644
 --- a/front_end/ui/legacy/components/data_grid/DataGrid.ts
 +++ b/front_end/ui/legacy/components/data_grid/DataGrid.ts
-@@ -218,6 +218,8 @@ export class DataGridImpl<T> extends Common.ObjectWrapper.ObjectWrapper<EventTyp
+@@ -217,6 +217,8 @@ export class DataGridImpl<T> extends Common.ObjectWrapper.ObjectWrapper<EventTyp
      this.headerRow = this.dataTableHeadInternal.createChild('tr');
  
      this.dataTableBody = this.dataTable.createChild('tbody');
@@ -34,7 +34,7 @@ index 88c258f54f..0648649ccf 100644
      this.topFillerRow = (this.dataTableBody.createChild('tr', 'data-grid-filler-row revealed') as HTMLElement);
      UI.ARIAUtils.setHidden(this.topFillerRow, true);
      this.bottomFillerRow = (this.dataTableBody.createChild('tr', 'data-grid-filler-row revealed') as HTMLElement);
-@@ -500,6 +502,9 @@ export class DataGridImpl<T> extends Common.ObjectWrapper.ObjectWrapper<EventTyp
+@@ -505,6 +507,9 @@ export class DataGridImpl<T> extends Common.ObjectWrapper.ObjectWrapper<EventTyp
    protected setVerticalPadding(top: number, bottom: number, isConstructorTime: boolean = false): void {
      const topPx = top + 'px';
      const bottomPx = (top || bottom) ? bottom + 'px' : 'auto';
@@ -45,5 +45,5 @@ index 88c258f54f..0648649ccf 100644
        return;
      }
 -- 
-2.39.3 (Apple Git-145)
+2.39.5 (Apple Git-154)
 

@@ -1,4 +1,4 @@
-From 95b2dc1f6cf0f02c3c52da17c0cec1f6fdbf6035 Mon Sep 17 00:00:00 2001
+From efaafbbe11191f5a5f1cf2c071fb532a512e1565 Mon Sep 17 00:00:00 2001
 From: Workers DevProd <workers-devprod@cloudflare.com>
 Date: Mon, 2 Oct 2023 18:22:08 +0100
 Subject: [PATCH 03/15] Support previewing subrequest responses
@@ -10,10 +10,10 @@ Subject: [PATCH 03/15] Support previewing subrequest responses
  3 files changed, 8 insertions(+), 1 deletion(-)
 
 diff --git a/front_end/core/sdk/NetworkManager.ts b/front_end/core/sdk/NetworkManager.ts
-index c8aa624961..6201d73bba 100644
+index e9d60c5b49..e1ae8c3f13 100644
 --- a/front_end/core/sdk/NetworkManager.ts
 +++ b/front_end/core/sdk/NetworkManager.ts
-@@ -705,7 +705,7 @@ export class NetworkDispatcher implements ProtocolProxyApi.NetworkDispatcher {
+@@ -794,7 +794,7 @@ export class NetworkDispatcher implements ProtocolProxyApi.NetworkDispatcher {
      this.updateNetworkRequest(networkRequest);
    }
  
@@ -22,7 +22,7 @@ index c8aa624961..6201d73bba 100644
      let networkRequest: NetworkRequest|null|undefined = this.#requestsById.get(requestId);
      if (!networkRequest) {
        networkRequest = this.maybeAdoptMainResourceRequest(requestId);
-@@ -714,6 +714,11 @@ export class NetworkDispatcher implements ProtocolProxyApi.NetworkDispatcher {
+@@ -803,6 +803,11 @@ export class NetworkDispatcher implements ProtocolProxyApi.NetworkDispatcher {
        return;
      }
      this.getExtraInfoBuilder(requestId).finished();
@@ -35,29 +35,29 @@ index c8aa624961..6201d73bba 100644
      this.#manager.dispatchEventToListeners(Events.LoadingFinished, networkRequest);
    }
 diff --git a/front_end/entrypoints/js_app/BUILD.gn b/front_end/entrypoints/js_app/BUILD.gn
-index a917511e25..f811d117b1 100644
+index c44a7a352b..2ee6e03a03 100644
 --- a/front_end/entrypoints/js_app/BUILD.gn
 +++ b/front_end/entrypoints/js_app/BUILD.gn
 @@ -15,6 +15,7 @@ devtools_entrypoint("entrypoint") {
      "../../generated:protocol",
-     "../../panels/js_profiler:meta",
+     "../../panels/js_timeline:meta",
      "../../panels/mobile_throttling:meta",
 +    "../../panels/network:meta",
      "../../ui/legacy/components/utils:bundle",
      "../main:bundle",
      "../shell",
 diff --git a/front_end/entrypoints/js_app/js_app.ts b/front_end/entrypoints/js_app/js_app.ts
-index 213ca7fecd..ef5c568e96 100644
+index 39a4b237b7..64fa67a316 100644
 --- a/front_end/entrypoints/js_app/js_app.ts
 +++ b/front_end/entrypoints/js_app/js_app.ts
-@@ -2,6 +2,7 @@
- // Use of this source code is governed by a BSD-style license that can be
- // found in the LICENSE file.
+@@ -4,6 +4,7 @@
+ 
  import '../shell/shell.js';
+ import '../../panels/js_timeline/js_timeline-meta.js';
 +import '../../panels/network/network-meta.js';
  import '../../panels/mobile_throttling/mobile_throttling-meta.js';
- import '../../panels/js_profiler/js_profiler-meta.js';
  
+ import * as Common from '../../core/common/common.js';
 -- 
-2.39.3 (Apple Git-145)
+2.39.5 (Apple Git-154)
 

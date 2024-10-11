@@ -1,4 +1,4 @@
-From 3c9b2a24e6afefffe5485516fab7bfb38107c9d6 Mon Sep 17 00:00:00 2001
+From 2bb0613935ab2d1412e456e13cca620b515d0710 Mon Sep 17 00:00:00 2001
 From: bcoll <bcoll@cloudflare.com>
 Date: Thu, 26 Jan 2023 15:30:34 +0000
 Subject: [PATCH 10/15] Hide unsupported settings UI
@@ -15,10 +15,10 @@ Subject: [PATCH 10/15] Hide unsupported settings UI
  3 files changed, 9 insertions(+), 4 deletions(-)
 
 diff --git a/front_end/panels/console/ConsoleView.ts b/front_end/panels/console/ConsoleView.ts
-index eb61914002..f7b9f0a912 100644
+index 3ae38d9fcd..80bbaf3ce1 100644
 --- a/front_end/panels/console/ConsoleView.ts
 +++ b/front_end/panels/console/ConsoleView.ts
-@@ -468,14 +468,10 @@ export class ConsoleView extends UI.Widget.VBox implements
+@@ -460,14 +460,10 @@ export class ConsoleView extends UI.Widget.VBox implements
          i18nString(UIStrings.onlyShowMessagesFromTheCurrentContext), i18nString(UIStrings.selectedContextOnly));
      ConsoleView.appendSettingsCheckboxToToolbar(
          settingsToolbarLeft, this.groupSimilarSetting, i18nString(UIStrings.groupSimilarMessagesInConsole));
@@ -31,13 +31,13 @@ index eb61914002..f7b9f0a912 100644
 -    ConsoleView.appendSettingsCheckboxToToolbar(
 -        settingsToolbarRight, monitoringXHREnabledSetting, i18nString(UIStrings.logXMLHttpRequests));
      ConsoleView.appendSettingsCheckboxToToolbar(
-         settingsToolbarRight, 'consoleEagerEval', i18nString(UIStrings.eagerlyEvaluateTextInThePrompt));
+         settingsToolbarRight, 'console-eager-eval', i18nString(UIStrings.eagerlyEvaluateTextInThePrompt));
      ConsoleView.appendSettingsCheckboxToToolbar(
 diff --git a/front_end/panels/settings/SettingsScreen.ts b/front_end/panels/settings/SettingsScreen.ts
-index a1c443c74e..3648b2d74a 100644
+index f0c1693232..7d7eea90e0 100644
 --- a/front_end/panels/settings/SettingsScreen.ts
 +++ b/front_end/panels/settings/SettingsScreen.ts
-@@ -379,6 +379,10 @@ export class GenericSettingsTab extends SettingsTab {
+@@ -377,6 +377,10 @@ export class GenericSettingsTab extends SettingsTab {
      const uiSectionName = Common.Settings.getLocalizedSettingsCategory(category);
      const sectionElement = this.appendSection(uiSectionName);
      for (const settingRegistration of settings) {
@@ -49,10 +49,10 @@ index a1c443c74e..3648b2d74a 100644
        const settingControl = UI.SettingsUI.createControlForSetting(setting);
        if (settingControl) {
 diff --git a/front_end/panels/settings/settingsScreen.css b/front_end/panels/settings/settingsScreen.css
-index 583c2e345e..e574de5002 100644
+index 37a79572c0..96dde853c7 100644
 --- a/front_end/panels/settings/settingsScreen.css
 +++ b/front_end/panels/settings/settingsScreen.css
-@@ -238,3 +238,8 @@ label {
+@@ -243,3 +243,8 @@ label {
      color: HighlightText;
    }
  }
@@ -62,5 +62,5 @@ index 583c2e345e..e574de5002 100644
 +  display: none;
 +}
 -- 
-2.39.3 (Apple Git-145)
+2.39.5 (Apple Git-154)
 
