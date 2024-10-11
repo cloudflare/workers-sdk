@@ -5,7 +5,7 @@ import * as vite from 'vite';
 import { cloudflare } from '@flarelabs-net/vite-plugin-cloudflare';
 import { assertIsFetchableDevEnvironment, UNKNOWN_HOST } from './utils';
 
-const root = fileURLToPath(new URL('./', import.meta.url));
+const root = fileURLToPath(new URL('.', import.meta.url));
 
 describe('service bindings', async () => {
 	const fixtureRoot = path.join(root, './fixtures/service-bindings');

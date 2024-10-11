@@ -15,7 +15,25 @@ importers:
         specifier: ^13.0.0
         version: 13.0.0(typescript@5.6.2)
 
-  examples/worker:
+  examples/durable-object:
+    devDependencies:
+      '@cloudflare/workers-types':
+        specifier: ^4.20240919.0
+        version: 4.20240919.0
+      '@flarelabs-net/vite-plugin-cloudflare':
+        specifier: workspace:*
+        version: link:../../packages/vite-plugin-cloudflare
+      '@vite-plugin-cloudflare/typescript-config':
+        specifier: workspace:*
+        version: link:../../packages/typescript-config
+      vite:
+        specifier: 6.0.0-beta.2
+        version: 6.0.0-beta.2(@types/node@22.5.5)
+      wrangler:
+        specifier: ^3.78.8
+        version: 3.78.8(@cloudflare/workers-types@4.20240919.0)
+
+  examples/multi-worker:
     devDependencies:
       '@cloudflare/workers-types':
         specifier: ^4.20240919.0

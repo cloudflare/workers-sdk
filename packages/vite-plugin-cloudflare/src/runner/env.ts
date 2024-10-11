@@ -8,3 +8,15 @@ export interface WrapperEnv {
 		eval: (code: string, filename: string) => Function;
 	};
 }
+
+export function stripInternalEnv(internalEnv: WrapperEnv) {
+	const {
+		__VITE_ROOT__,
+		__VITE_ENTRY_PATH__,
+		__VITE_FETCH_MODULE__,
+		__VITE_UNSAFE_EVAL__,
+		...userEnv
+	} = internalEnv;
+
+	return userEnv;
+}

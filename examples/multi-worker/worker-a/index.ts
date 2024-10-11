@@ -1,3 +1,11 @@
+import type WorkerB from '../worker-b';
+import type { NamedEntrypoint } from '../worker-b';
+
+interface Env {
+	WORKER_B: Fetcher<WorkerB>;
+	NAMED_ENTRYPOINT: Fetcher<NamedEntrypoint>;
+}
+
 export default {
 	async fetch(request, env, ctx) {
 		const url = new URL(request.url);

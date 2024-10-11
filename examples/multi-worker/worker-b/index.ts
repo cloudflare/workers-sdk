@@ -1,7 +1,7 @@
 import { WorkerEntrypoint } from 'cloudflare:workers';
 
-export default class extends WorkerEntrypoint<Env> {
-	override fetch(request: Request) {
+export default class extends WorkerEntrypoint {
+	override fetch() {
 		return Response.json({ name: 'Worker B' });
 	}
 	add(a: number, b: number) {
@@ -9,7 +9,7 @@ export default class extends WorkerEntrypoint<Env> {
 	}
 }
 
-export class NamedEntrypoint extends WorkerEntrypoint<Env> {
+export class NamedEntrypoint extends WorkerEntrypoint {
 	multiply(a: number, b: number) {
 		return a * b;
 	}

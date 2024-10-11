@@ -76,10 +76,7 @@ export async function createModuleRunner(
 	);
 }
 
-export async function getWorkerEntrypointExport(
-	path: string,
-	entrypoint: string,
-) {
+export async function getWorkerEntryExport(path: string, entrypoint: string) {
 	const module = await moduleRunner.import(path);
 	const entrypointValue =
 		typeof module === 'object' &&
