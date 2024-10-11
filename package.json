@@ -2,7 +2,11 @@
 	"name": "vite-plugin-cloudflare",
 	"license": "MIT",
 	"scripts": {
-		"postinstall": "pnpm --filter @flarelabs-net/vite-plugin-cloudflare build"
+		"types:check": "pnpm -r types:check",
+		"prettier:check": "prettier --check .",
+		"prettier:fix": "prettier --write .",
+		"test": "pnpm -r test",
+		"postinstall": "pnpm -r build"
 	},
 	"devDependencies": {
 		"prettier": "^3.3.3",

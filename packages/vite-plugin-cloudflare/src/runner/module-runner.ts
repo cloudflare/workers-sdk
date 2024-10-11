@@ -1,5 +1,5 @@
 import { ModuleRunner } from 'vite/module-runner';
-import { UNKNOWN_HOST } from '../shared';
+import { UNKNOWN_HOST, WORKERD_CUSTOM_IMPORT_PATH } from '../shared';
 import type { FetchResult } from 'vite/module-runner';
 import type { WrapperEnv } from './env';
 
@@ -18,10 +18,8 @@ export async function createModuleRunner(
 		throw new Error('Runner already initialized');
 	}
 
-	// we store the custom import file path in a variable to skip esbuild's import resolution
-	const workerdReqImport = '/__workerd-custom-import.cjs';
 	const { default: workerdCustomImport } = await (import(
-		workerdReqImport
+		`/${WORKERD_CUSTOM_IMPORT_PATH}`
 	) as Promise<{ default: (...args: unknown[]) => Promise<unknown> }>);
 
 	moduleRunner = new ModuleRunner(

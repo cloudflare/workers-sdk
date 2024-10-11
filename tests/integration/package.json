@@ -3,7 +3,8 @@
 	"private": true,
 	"type": "module",
 	"scripts": {
-		"test": "vitest run"
+		"test": "vitest run",
+		"types:check": "tsc"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-types": "^4.20240919.0",

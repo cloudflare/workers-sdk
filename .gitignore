@@ -3,3 +3,4 @@ pnpm-debug.log*
 dist
 .vscode
 .DS_Store
+**/*.tsbuildinfo
