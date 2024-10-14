@@ -5,8 +5,9 @@ describe("validateDescription()", () => {
 	it("should skip validation with the `skip-pr-description-validation` label", () => {
 		expect(
 			validateDescription("", "", '["skip-pr-description-validation"]')
-		).toMatchInlineSnapshot(`[]`);
+		).toHaveLength(0);
 	});
+
 	it("should show errors with default template + TODOs checked", () => {
 		expect(
 			validateDescription(
@@ -76,7 +77,7 @@ Fixes [AA-000](https://jira.cfdata.org/browse/AA-000).
 `,
 				"[]"
 			)
-		).toMatchInlineSnapshot(`[]`);
+		).toHaveLength(0);
 	});
 
 	it("should not accept e2e unknown", () => {
@@ -151,6 +152,7 @@ Fixes [AA-000](https://jira.cfdata.org/browse/AA-000).
 			]
 		`);
 	});
+
 	it("should accept e2e with e2e label", () => {
 		expect(
 			validateDescription(
@@ -180,6 +182,38 @@ Fixes [AA-000](https://jira.cfdata.org/browse/AA-000).
 `,
 				'["e2e"]'
 			)
-		).toMatchInlineSnapshot(`[]`);
+		).toHaveLength(0);
+	});
+
+	it("should accept e2e with e2e label - uppercase X", () => {
+		expect(
+			validateDescription(
+				"",
+				`## What this PR solves / how to test
+
+Fixes [AA-000](https://jira.cfdata.org/browse/AA-000).
+
+## Author has addressed the following
+
+- Tests
+  - [ ] TODO (before merge)
+  - [X] Tests included
+  - [ ] Tests not necessary because:
+- E2E Tests CI Job required? (Use "e2e" label or ask maintainer to run separately)
+  - [ ] I don't know
+  - [X] Required
+  - [ ] Not required because: test
+- Changeset ([Changeset guidelines](https://github.com/cloudflare/workers-sdk/blob/main/CONTRIBUTING.md#changesets))
+  - [ ] TODO (before merge)
+  - [X] Changeset included
+  - [ ] Changeset not necessary because:
+- Public documentation
+  - [ ] TODO (before merge)
+  - [X] Cloudflare docs PR(s): https://github.com/cloudflare/cloudflare-docs/pull/123
+  - [ ] Documentation not necessary because:
+`,
+				'["e2e"]'
+			)
+		).toHaveLength(0);
 	});
 });

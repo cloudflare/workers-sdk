@@ -31,7 +31,7 @@ export function validateDescription(
 		return [];
 	}
 
-	if (/- \[x\] TODO \(before merge\)/.test(body)) {
+	if (/- \[x\] TODO \(before merge\)/i.test(body)) {
 		errors.push(
 			"All TODO checkboxes in your PR description must be unchecked before merging"
 		);
@@ -39,8 +39,8 @@ export function validateDescription(
 
 	if (
 		!(
-			/- \[x\] Tests included/.test(body) ||
-			/- \[x\] Tests not necessary because: .+/.test(body)
+			/- \[x\] Tests included/i.test(body) ||
+			/- \[x\] Tests not necessary because: .+/i.test(body)
 		)
 	) {
 		errors.push(
@@ -48,7 +48,7 @@ export function validateDescription(
 		);
 	}
 
-	if (/- \[x\] I don't know/.test(body)) {
+	if (/- \[x\] I don't know/i.test(body)) {
 		errors.push(
 			"Your PR cannot be merged with a status of `I don't know` for e2e tests. When your PR is reviewed by the Wrangler team they'll decide whether e2e tests need to be run"
 		);
@@ -56,8 +56,8 @@ export function validateDescription(
 
 	if (
 		!(
-			/- \[x\] Required/.test(body) ||
-			/- \[x\] Not required because: .+/.test(body)
+			/- \[x\] Required/i.test(body) ||
+			/- \[x\] Not required because: .+/i.test(body)
 		)
 	) {
 		errors.push(
@@ -65,7 +65,7 @@ export function validateDescription(
 		);
 	}
 
-	if (/- \[x\] Required/.test(body) && !parsedLabels.includes("e2e")) {
+	if (/- \[x\] Required/i.test(body) && !parsedLabels.includes("e2e")) {
 		errors.push(
 			"Since your PR requires E2E tests to be run, it needs to have the `e2e` label applied on GitHub"
 		);
@@ -73,8 +73,8 @@ export function validateDescription(
 
 	if (
 		!(
-			/- \[x\] Changeset included/.test(body) ||
-			/- \[x\] Changeset not necessary because: .+/.test(body)
+			/- \[x\] Changeset included/i.test(body) ||
+			/- \[x\] Changeset not necessary because: .+/i.test(body)
 		)
 	) {
 		errors.push(
@@ -84,9 +84,9 @@ export function validateDescription(
 
 	if (
 		!(
-			/- \[x\] Cloudflare docs PR\(s\): https:\/\/github\.com\/cloudflare\/cloudflare-docs\/(pull|issues)\/\d+/.test(
+			/- \[x\] Cloudflare docs PR\(s\): https:\/\/github\.com\/cloudflare\/cloudflare-docs\/(pull|issues)\/\d+/i.test(
 				body
-			) || /- \[x\] Documentation not necessary because: .+/.test(body)
+			) || /- \[x\] Documentation not necessary because: .+/i.test(body)
 		)
 	) {
 		errors.push(
