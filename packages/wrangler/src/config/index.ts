@@ -404,9 +404,7 @@ export function printBindings(
 				const registryDefinition = registry?.[service];
 				if (
 					registryDefinition &&
-					(entrypoint
-						? registryDefinition.entrypointAddresses?.[entrypoint]
-						: true)
+					(!entrypoint || registryDefinition.entrypointAddresses?.[entrypoint])
 				) {
 					value = `🟢 ` + value;
 				} else {
