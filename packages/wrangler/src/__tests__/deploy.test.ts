@@ -6102,7 +6102,7 @@ addEventListener('fetch', event => {});`
 				Worker Startup Time: 100 ms
 				Your worker has access to the following bindings:
 				- Durable Objects:
-				  - SOMENAME: SomeClass (defined in some-script)
+				  - SOMENAME: SomeClass (defined in 🔴 some-script)
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
@@ -6797,8 +6797,8 @@ addEventListener('fetch', event => {});`
 				  - DATA_BLOB_ONE: some-data-blob.bin
 				  - DATA_BLOB_TWO: more-data-blob.bin
 				- Durable Objects:
-				  - DURABLE_OBJECT_ONE: SomeDurableObject (defined in some-durable-object-worker)
-				  - DURABLE_OBJECT_TWO: AnotherDurableObject (defined in another-durable-object-worker) - staging
+				  - DURABLE_OBJECT_ONE: SomeDurableObject (defined in 🔴 some-durable-object-worker)
+				  - DURABLE_OBJECT_TWO: AnotherDurableObject (defined in 🔴 another-durable-object-worker)
 				- KV Namespaces:
 				  - KV_NAMESPACE_ONE: kv-ns-one-id
 				  - KV_NAMESPACE_TWO: kv-ns-two-id
@@ -7894,7 +7894,7 @@ addEventListener('fetch', event => {});`
 					Worker Startup Time: 100 ms
 					Your worker has access to the following bindings:
 					- Durable Objects:
-					  - EXAMPLE_DO_BINDING: ExampleDurableObject (defined in example-do-binding-worker)
+					  - EXAMPLE_DO_BINDING: ExampleDurableObject (defined in 🔴 example-do-binding-worker)
 					Uploaded test-name (TIMINGS)
 					Deployed test-name triggers (TIMINGS)
 					  https://test-name.test-sub-domain.workers.dev
@@ -8064,7 +8064,7 @@ addEventListener('fetch', event => {});`
 					Worker Startup Time: 100 ms
 					Your worker has access to the following bindings:
 					- Services:
-					  - FOO: foo-service - production
+					  - FOO: 🔴 foo-service
 					Uploaded test-name (TIMINGS)
 					Deployed test-name triggers (TIMINGS)
 					  https://test-name.test-sub-domain.workers.dev
@@ -8105,7 +8105,7 @@ addEventListener('fetch', event => {});`
 					Worker Startup Time: 100 ms
 					Your worker has access to the following bindings:
 					- Services:
-					  - FOO: foo-service - production (#MyHandler)
+					  - FOO: 🔴 foo-service#MyHandler
 					Uploaded test-name (TIMINGS)
 					Deployed test-name triggers (TIMINGS)
 					  https://test-name.test-sub-domain.workers.dev

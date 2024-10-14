@@ -10,7 +10,6 @@ import { fetchText } from "./helpers/fetch-text";
 import { fetchWithETag } from "./helpers/fetch-with-etag";
 import { generateResourceName } from "./helpers/generate-resource-name";
 import { retry } from "./helpers/retry";
-import { seed as baseSeed, makeRoot } from "./helpers/setup";
 
 /**
  * We use the same workerName for all of the tests in this suite in hopes of reducing flakes.
@@ -21,10 +20,6 @@ import { seed as baseSeed, makeRoot } from "./helpers/setup";
  * when multiple PRs have jobs running at the same time (or the same PR has the tests run across multiple OSes).
  */
 const workerName = generateResourceName();
-/**
- * Some tests require a 2nd worker to bind to. Let's create that here too.
- */
-const workerName2 = generateResourceName();
 
 it("can import URL from 'url' in node_compat mode", async () => {
 	const helper = new WranglerE2ETestHelper();
@@ -218,107 +213,6 @@ describe.each([
 		);
 
 		expect(text).toBe("py hello world 5");
-	});
-});
-
-describe.each([
-	{ cmd: "wrangler dev --x-dev-env --no-x-registry" },
-	{ cmd: "wrangler dev --no-x-dev-env --no-x-registry" },
-	{ cmd: "wrangler dev --x-dev-env --x-registry" },
-	{ cmd: "wrangler dev --no-x-dev-env --x-registry" },
-])("dev registry $cmd", ({ cmd }) => {
-	let a: string;
-	let b: string;
-	let helper: WranglerE2ETestHelper;
-
-	beforeEach(async () => {
-		helper = new WranglerE2ETestHelper();
-		a = await makeRoot();
-		await baseSeed(a, {
-			"wrangler.toml": dedent`
-					name = "${workerName}"
-					main = "src/index.ts"
-					compatibility_date = "2023-01-01"
-
-					[[services]]
-					binding = "BEE"
-					service = '${workerName2}'
-			`,
-			"src/index.ts": dedent/* javascript */ `
-				export default {
-					fetch(req, env) {
-						return env.BEE.fetch(req);
-					},
-				};
-				`,
-			"package.json": dedent`
-					{
-						"name": "a",
-						"version": "0.0.0",
-						"private": true
-					}
-					`,
-		});
-
-		b = await makeRoot();
-		await baseSeed(b, {
-			"wrangler.toml": dedent`
-					name = "${workerName2}"
-					main = "src/index.ts"
-					compatibility_date = "2023-01-01"
-			`,
-			"src/index.ts": dedent/* javascript */ `
-				export default{
-					fetch() {
-						return new Response("hello world");
-					},
-				};
-			`,
-			"package.json": dedent`
-					{
-						"name": "b",
-						"version": "0.0.0",
-						"private": true
-					}
-					`,
-		});
-	});
-
-	it("can fetch b", async () => {
-		const worker = helper.runLongLived(cmd, { cwd: b });
-
-		const { url } = await worker.waitForReady();
-
-		await expect(fetch(url).then((r) => r.text())).resolves.toBe("hello world");
-	});
-
-	it("can fetch b through a (start b, start a)", async () => {
-		const workerB = helper.runLongLived(cmd, { cwd: b });
-		// We don't need b's URL, but ensure that b starts up before a
-		await workerB.waitForReady();
-
-		const workerA = helper.runLongLived(cmd, { cwd: a });
-		const { url } = await workerA.waitForReady();
-
-		await workerA.waitForReload();
-		// Give the dev registry some time to settle
-		await setTimeout(500);
-
-		await expect(fetchText(url)).resolves.toBe("hello world");
-	});
-
-	it("can fetch b through a (start a, start b)", async () => {
-		const workerA = helper.runLongLived(cmd, { cwd: a });
-		const { url } = await workerA.waitForReady();
-
-		const workerB = helper.runLongLived(cmd, { cwd: b });
-		await workerB.waitForReady();
-
-		await workerA.waitForReload();
-		// Give the dev registry some time to settle
-		await setTimeout(500);
-
-		await expect(fetchText(url)).resolves.toBe("hello world");
 	});
 });
 

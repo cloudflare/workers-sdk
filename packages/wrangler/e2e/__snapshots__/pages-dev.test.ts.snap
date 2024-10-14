@@ -10,9 +10,9 @@ exports[`Pages 'wrangler pages dev --no-x-dev-env' > should merge (with override
 ▲ [WARNING] This worker is bound to live services: SERVICE_BINDING_1_TOML (SERVICE_NAME_1_TOML), SERVICE_BINDING_2_TOML (SERVICE_NAME_2_TOML)
 Your worker has access to the following bindings:
 - Durable Objects:
-  - DO_BINDING_1_TOML: NEW_DO_1 (defined in NEW_DO_SCRIPT_1)
-  - DO_BINDING_2_TOML: DO_2_TOML (defined in DO_SCRIPT_2_TOML)
-  - DO_BINDING_3_ARGS: DO_3_ARGS (defined in DO_SCRIPT_3_ARGS)
+  - DO_BINDING_1_TOML: NEW_DO_1 (defined in 🔴 NEW_DO_SCRIPT_1)
+  - DO_BINDING_2_TOML: DO_2_TOML (defined in 🔴 DO_SCRIPT_2_TOML)
+  - DO_BINDING_3_ARGS: DO_3_ARGS (defined in 🔴 DO_SCRIPT_3_ARGS)
 - KV Namespaces:
   - KV_BINDING_1_TOML: NEW_KV_ID_1
   - KV_BINDING_2_TOML: KV_ID_2_TOML
@@ -26,9 +26,9 @@ Your worker has access to the following bindings:
   - R2_BINDING_2_TOML: R2_BUCKET_2_TOML
   - R2_BINDING_3_TOML: R2_BUCKET_3_ARGS
 - Services:
-  - SERVICE_BINDING_1_TOML: NEW_SERVICE_NAME_1
-  - SERVICE_BINDING_2_TOML: SERVICE_NAME_2_TOML
-  - SERVICE_BINDING_3_TOML: SERVICE_NAME_3_ARGS
+  - SERVICE_BINDING_1_TOML: 🔴 NEW_SERVICE_NAME_1
+  - SERVICE_BINDING_2_TOML: 🔴 SERVICE_NAME_2_TOML
+  - SERVICE_BINDING_3_TOML: 🔴 SERVICE_NAME_3_ARGS
 - AI:
   - Name: AI_BINDING_2_TOML
 - Vars:
@@ -49,9 +49,9 @@ exports[`Pages 'wrangler pages dev --x-dev-env' > should merge (with override) \
   - {"name":"DO_BINDING_2_TOML","class_name":"DO_2_TOML","script_name":"DO_SCRIPT_2_TOML"}
 Your worker has access to the following bindings:
 - Durable Objects:
-  - DO_BINDING_1_TOML: NEW_DO_1 (defined in NEW_DO_SCRIPT_1)
-  - DO_BINDING_2_TOML: DO_2_TOML (defined in DO_SCRIPT_2_TOML)
-  - DO_BINDING_3_ARGS: DO_3_ARGS (defined in DO_SCRIPT_3_ARGS)
+  - DO_BINDING_1_TOML: NEW_DO_1 (defined in 🔴 NEW_DO_SCRIPT_1)
+  - DO_BINDING_2_TOML: DO_2_TOML (defined in 🔴 DO_SCRIPT_2_TOML)
+  - DO_BINDING_3_ARGS: DO_3_ARGS (defined in 🔴 DO_SCRIPT_3_ARGS)
 - KV Namespaces:
   - KV_BINDING_1_TOML: NEW_KV_ID_1
   - KV_BINDING_2_TOML: KV_ID_2_TOML
@@ -65,9 +65,9 @@ Your worker has access to the following bindings:
   - R2_BINDING_2_TOML: R2_BUCKET_2_TOML
   - R2_BINDING_3_TOML: R2_BUCKET_3_ARGS
 - Services:
-  - SERVICE_BINDING_1_TOML: NEW_SERVICE_NAME_1
-  - SERVICE_BINDING_2_TOML: SERVICE_NAME_2_TOML
-  - SERVICE_BINDING_3_TOML: SERVICE_NAME_3_ARGS
+  - SERVICE_BINDING_1_TOML: 🔴 NEW_SERVICE_NAME_1
+  - SERVICE_BINDING_2_TOML: 🔴 SERVICE_NAME_2_TOML
+  - SERVICE_BINDING_3_TOML: 🔴 SERVICE_NAME_3_ARGS
 - AI:
   - Name: AI_BINDING_2_TOML
 - Vars:

@@ -9,6 +9,7 @@ import { parseJSONC, parseTOML, readFileSync } from "../parse";
 import { isPagesConfig, normalizeAndValidateConfig } from "./validation";
 import { validatePagesConfig } from "./validation-pages";
 import type { CfWorkerInit } from "../deployment-bundle/worker";
+import type { WorkerRegistry } from "../dev-registry";
 import type { CommonYargsOptions } from "../yargs-types";
 import type { Config, OnlyCamelCase, RawConfig } from "./config";
 import type { NormalizeAndValidateConfigArgs } from "./validation";
@@ -194,7 +195,10 @@ export function findWranglerToml(
 /**
  * Print all the bindings a worker using a given config would have access to
  */
-export function printBindings(bindings: CfWorkerInit["bindings"]) {
+export function printBindings(
+	bindings: CfWorkerInit["bindings"],
+	registry?: WorkerRegistry
+) {
 	const truncate = (item: string | Record<string, unknown>) => {
 		const s = typeof item === "string" ? item : JSON.stringify(item);
 		const maxLength = 40;
@@ -249,13 +253,20 @@ export function printBindings(bindings: CfWorkerInit["bindings"]) {
 		output.push({
 			type: "Durable Objects",
 			entries: durable_objects.bindings.map(
-				({ name, class_name, script_name, environment }) => {
+				({ name, class_name, script_name }) => {
 					let value = class_name;
 					if (script_name) {
-						value += ` (defined in ${script_name})`;
-					}
-					if (environment) {
-						value += ` - ${environment}`;
+						const registryDefinition = registry?.[script_name];
+						if (
+							registryDefinition &&
+							registryDefinition.durableObjects.some(
+								(d) => d.className === class_name
+							)
+						) {
+							value += ` (defined in 🟢 ${script_name})`;
+						} else {
+							value += ` (defined in 🔴 ${script_name})`;
+						}
 					}
 
 					return {
@@ -384,12 +395,21 @@ export function printBindings(bindings: CfWorkerInit["bindings"]) {
 	if (services !== undefined && services.length > 0) {
 		output.push({
 			type: "Services",
-			entries: services.map(({ binding, service, environment, entrypoint }) => {
+			entries: services.map(({ binding, service, entrypoint }) => {
 				let value = service;
-				if (environment) {
-					value += ` - ${environment}${entrypoint ? ` (#${entrypoint})` : ""}`;
+				if (entrypoint) {
+					value += `#${entrypoint}`;
 				}
 
+				const registryDefinition = registry?.[service];
+				if (
+					registryDefinition &&
+					(!entrypoint || registryDefinition.entrypointAddresses?.[entrypoint])
+				) {
+					value = `🟢 ` + value;
+				} else {
+					value = `🔴 ` + value;
+				}
 				return {
 					key: binding,
 					value,
