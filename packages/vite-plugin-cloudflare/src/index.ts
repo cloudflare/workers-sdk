@@ -10,16 +10,14 @@ import {
 	getWorkerToWorkerEntrypointNamesMap,
 	getWorkerToDurableObjectClassNamesMap,
 } from './utils';
-import { invariant } from './shared';
+import { getResolveId, getModuleFallbackHandler } from './module-fallback';
+import { WORKERD_CUSTOM_IMPORT_PATH, invariant } from './shared';
 import type { FetchFunctionOptions } from 'vite/module-runner';
 import type { WorkerOptions } from 'miniflare';
 import type {
 	CloudflareEnvironmentOptions,
 	CloudflareDevEnvironment,
 } from './cloudflare-environment';
-import { getModuleFallbackHandler } from './module-fallback';
-import type { ResolveIdFunction } from './module-fallback';
-import { WORKERD_CUSTOM_IMPORT_PATH } from './shared';
 
 // We want module names to be their absolute path without the leading slash
 // (i.e. the modules root should be the root directory). On Windows, we need
@@ -29,27 +27,8 @@ import { WORKERD_CUSTOM_IMPORT_PATH } from './shared';
 // to paths ensures correct names. This requires us to specify `contents` in
 // the miniflare module definitions though, as the new paths don't exist.
 const miniflareModulesRoot = process.platform === 'win32' ? 'Z:\\' : '/';
-
-const wrapperPath = path.join(miniflareModulesRoot, '__VITE_WRAPPER_PATH__');
-
-const relativeRunnerPathSegments = ['runner', 'index.js'];
-const runnerPath = path.join(
-	miniflareModulesRoot,
-	...relativeRunnerPathSegments,
-);
-
-/**
- * Note: workerd requires standard unix paths, so without the potential `Z:` prefix (and not created with `path.join`
- *       which in theory can use the windows path separator), that's why this path is constructed in the way it is
- */
-const relativeRunnerWorkerdPath = ['.', ...relativeRunnerPathSegments].join(
-	'/',
-);
-
-const workerdCustomImportPath = path.join(
-	miniflareModulesRoot,
-	WORKERD_CUSTOM_IMPORT_PATH,
-);
+const WRAPPER_PATH = '__VITE_WORKER_ENTRY__';
+const RUNNER_PATH = './runner/index.js';
 
 export function cloudflare<
 	T extends Record<string, CloudflareEnvironmentOptions>,
@@ -102,44 +81,20 @@ export function cloudflare<
 			const workerToDurableObjectClassNamesMap =
 				getWorkerToDurableObjectClassNamesMap(workers);
 
-			const esmResolveId = vite.createIdResolver(viteConfig, {});
-
-			// for `require` calls we want a resolver that prioritized node/cjs modules
-			const cjsResolveId = vite.createIdResolver(viteConfig, {
-				conditions: ['node'],
-				mainFields: ['main'],
-				webCompatible: false,
-				isRequire: true,
-				extensions: ['.cjs', '.cts', '.js', '.ts', '.jsx', '.tsx', '.json'],
-			});
-
-			const resolveId: ResolveIdFunction = (
-				id,
-				importer,
-				{ resolveMethod } = {
-					resolveMethod: 'import',
-				},
-			) => {
-				const resolveIdFn =
-					resolveMethod === 'import' ? esmResolveId : cjsResolveId;
-
-				// TODO: we only have a single module resolution strategy shared across all workers
-				//       (generated using the first worker's dev environment)
-				//       we should investigate and ideally have potential different resolutions per worker
-				//       see: https://github.com/flarelabs-net/vite-plugin-cloudflare/issues/19
-				const firstWorkerName = Object.keys(pluginConfig.workers)[0]!;
-
-				const devEnv = viteDevServer.environments[
-					firstWorkerName
-				] as CloudflareDevEnvironment;
-
-				return resolveIdFn(devEnv, id, importer);
-			};
+			// TODO: we only have a single module resolution strategy shared across all workers
+			//       (generated using the first worker's dev environment)
+			//       we should investigate and ideally have potential different resolutions per worker
+			//       see: https://github.com/flarelabs-net/vite-plugin-cloudflare/issues/19
+			const firstWorkerName = workers[0]?.name;
+			invariant(firstWorkerName, 'First worker name not found');
+			const devEnvironment = viteDevServer.environments[firstWorkerName];
+			invariant(devEnvironment, 'First worker dev environment not found');
+			const resolveId = getResolveId(viteConfig, devEnvironment);
 
 			const miniflare = new Miniflare({
 				workers: workers.map((workerOptions) => {
 					const wrappers = [
-						`import { createWorkerEntrypointWrapper, createDurableObjectWrapper } from '${relativeRunnerWorkerdPath}';`,
+						`import { createWorkerEntrypointWrapper, createDurableObjectWrapper } from '${RUNNER_PATH}';`,
 						`export default createWorkerEntrypointWrapper('default');`,
 					];
 
@@ -177,27 +132,23 @@ export function cloudflare<
 						modules: [
 							{
 								type: 'ESModule',
-								path: wrapperPath,
+								path: path.join(miniflareModulesRoot, WRAPPER_PATH),
 								contents: wrappers.join('\n'),
 							},
 							{
 								type: 'ESModule',
-								path: runnerPath,
+								path: path.join(miniflareModulesRoot, RUNNER_PATH),
 								contents: fs.readFileSync(
-									fileURLToPath(
-										new URL(
-											path.join(...relativeRunnerPathSegments),
-											import.meta.url,
-										),
-									),
-									'utf8',
+									fileURLToPath(new URL(RUNNER_PATH, import.meta.url)),
 								),
 							},
 							{
-								// we declare the workerd-custom-import as a CommonJS module, thanks to this
-								// require is made available in the module and we are able to handle cjs imports
+								// Declared as a CommonJS module so that `require` is made available and we are able to handle cjs imports
 								type: 'CommonJS',
-								path: workerdCustomImportPath,
+								path: path.join(
+									miniflareModulesRoot,
+									WORKERD_CUSTOM_IMPORT_PATH,
+								),
 								contents: 'module.exports = path => import(path)',
 							},
 						],

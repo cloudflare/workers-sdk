@@ -1,17 +1,40 @@
+import * as vite from 'vite';
 import { Request, Response } from 'miniflare';
-
 import { readFile, stat } from 'node:fs/promises';
-
 import { init as initCjsModuleLexer, parse } from 'cjs-module-lexer';
 import { dirname, resolve } from 'node:path';
 
-export type ResolveIdFunction = (
+type ResolveIdFunction = (
 	id: string,
 	importer?: string,
 	options?: {
 		resolveMethod: 'require' | 'import';
 	},
 ) => Promise<string | undefined>;
+
+export function getResolveId(
+	viteConfig: vite.ResolvedConfig,
+	devEnvironment: vite.DevEnvironment,
+): ResolveIdFunction {
+	const esmResolveId = vite.createIdResolver(viteConfig, {});
+
+	// for `require` calls we want a resolver that prioritized node/cjs modules
+	const cjsResolveId = vite.createIdResolver(viteConfig, {
+		conditions: ['node'],
+		mainFields: ['main'],
+		webCompatible: false,
+		isRequire: true,
+		extensions: ['.cjs', '.cts', '.js', '.ts', '.jsx', '.tsx', '.json'],
+	});
+
+	return function resolveId(id, importer, options) {
+		const resolveMethod = options?.resolveMethod ?? 'import';
+		const resolveIdFn =
+			resolveMethod === 'import' ? esmResolveId : cjsResolveId;
+
+		return resolveIdFn(devEnvironment, id, importer);
+	};
+}
 
 export function getModuleFallbackHandler(
 	resolveId: ResolveIdFunction,
