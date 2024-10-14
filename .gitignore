@@ -229,3 +229,9 @@ runtime-versions.md
 .e2e-test-report/
 
 .dev.vars
+
+# Devtools build artefacts
+.gclient
+.gclient_entries
+.gclient_previous_sync_commits
+.gcs_entries
