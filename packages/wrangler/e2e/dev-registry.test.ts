@@ -14,8 +14,13 @@ async function fetchJson<T>(url: string, info?: RequestInit): Promise<T> {
 				headers: { "MF-Disable-Pretty-Error": "true" },
 				...info,
 			}).then((r) => r.text());
-			console.log(text);
-			return JSON.parse(text) as T;
+			try {
+				return JSON.parse(text) as T;
+			} catch(cause) {
+				const err = new Error(`Failed to parse JSON from:\n${text}`);
+				err.cause = cause;
+				throw err;
+			}
 		},
 		{ timeout: 10_000, interval: 250 }
 	);
