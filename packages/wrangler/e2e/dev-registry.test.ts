@@ -16,7 +16,7 @@ async function fetchJson<T>(url: string, info?: RequestInit): Promise<T> {
 			}).then((r) => r.text());
 			try {
 				return JSON.parse(text) as T;
-			} catch(cause) {
+			} catch (cause) {
 				const err = new Error(`Failed to parse JSON from:\n${text}`);
 				err.cause = cause;
 				throw err;
