@@ -75,7 +75,7 @@ index 42a2e17f07..9713c169a0 100644
    async loadView() {
      const Sources = await loadSourcesModule();
 -    return new Sources.SourcesNavigator.FilesNavigatorView();
-+    return Sources.SourcesNavigator.NetworkNavigatorView.instance();
++    return new Sources.SourcesNavigator.NetworkNavigatorView();
    },
  });
 
