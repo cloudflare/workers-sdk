@@ -22,6 +22,7 @@ describe('service bindings', async () => {
 						wranglerConfig: path.join(fixtureRoot, 'worker-b', 'wrangler.toml'),
 					},
 				},
+				persistTo: false,
 			}),
 		],
 	});

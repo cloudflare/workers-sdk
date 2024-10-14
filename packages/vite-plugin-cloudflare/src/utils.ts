@@ -1,5 +1,36 @@
+import * as path from 'node:path';
 import { invariant } from './shared';
-import type { WorkerOptions } from 'miniflare';
+import type { SharedOptions, WorkerOptions } from 'miniflare';
+
+const DEFAULT_PERSIST_PATH = '.wrangler/state/v3';
+
+type PersistOptions = Pick<
+	SharedOptions,
+	| 'cachePersist'
+	| 'd1Persist'
+	| 'durableObjectsPersist'
+	| 'kvPersist'
+	| 'r2Persist'
+>;
+
+export function getPersistence(
+	persistTo: string | false | undefined,
+	root: string,
+): PersistOptions {
+	if (persistTo === false) {
+		return {};
+	}
+
+	const rootPersistPath = path.resolve(root, persistTo ?? DEFAULT_PERSIST_PATH);
+
+	return {
+		cachePersist: path.join(rootPersistPath, 'cache'),
+		d1Persist: path.join(rootPersistPath, 'd1'),
+		durableObjectsPersist: path.join(rootPersistPath, 'do'),
+		kvPersist: path.join(rootPersistPath, 'kv'),
+		r2Persist: path.join(rootPersistPath, 'r2'),
+	};
+}
 
 function missingWorkerErrorMessage(workerName: string) {
 	return `${workerName} does not match a worker name.`;

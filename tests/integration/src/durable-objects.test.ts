@@ -24,6 +24,7 @@ describe('durable objects', () => {
 							),
 						},
 					},
+					persistTo: false,
 				}),
 			],
 		});
@@ -51,6 +52,7 @@ describe('durable objects', () => {
 							),
 						},
 					},
+					persistTo: false,
 				}),
 			],
 		});
@@ -94,6 +96,7 @@ describe('durable objects', () => {
 							),
 						},
 					},
+					persistTo: false,
 				}),
 			],
 		});
@@ -144,6 +147,7 @@ describe('durable objects', () => {
 							),
 						},
 					},
+					persistTo: false,
 				}),
 			],
 		});

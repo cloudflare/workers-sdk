@@ -26,6 +26,7 @@ describe('module resolution', async () => {
 						},
 					},
 				},
+				persistTo: false,
 			}),
 		],
 	});

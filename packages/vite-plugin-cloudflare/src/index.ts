@@ -9,6 +9,7 @@ import { createCloudflareEnvironment } from './cloudflare-environment';
 import {
 	getWorkerToWorkerEntrypointNamesMap,
 	getWorkerToDurableObjectClassNamesMap,
+	getPersistence,
 } from './utils';
 import { getResolveId, getModuleFallbackHandler } from './module-fallback';
 import { WORKERD_CUSTOM_IMPORT_PATH, invariant } from './shared';
@@ -30,9 +31,15 @@ const miniflareModulesRoot = process.platform === 'win32' ? 'Z:\\' : '/';
 const WRAPPER_PATH = '__VITE_WORKER_ENTRY__';
 const RUNNER_PATH = './runner/index.js';
 
+interface PluginConfig<T extends Record<string, CloudflareEnvironmentOptions>> {
+	workers: T;
+	entryWorker?: keyof T;
+	persistTo?: string | false;
+}
+
 export function cloudflare<
 	T extends Record<string, CloudflareEnvironmentOptions>,
->(pluginConfig: { workers: T; entryWorker?: keyof T }): vite.Plugin {
+>(pluginConfig: PluginConfig<T>): vite.Plugin {
 	let viteConfig: vite.ResolvedConfig;
 
 	return {
@@ -92,6 +99,7 @@ export function cloudflare<
 			const resolveId = getResolveId(viteConfig, devEnvironment);
 
 			const miniflare = new Miniflare({
+				...getPersistence(pluginConfig.persistTo, viteConfig.root),
 				workers: workers.map((workerOptions) => {
 					const wrappers = [
 						`import { createWorkerEntrypointWrapper, createDurableObjectWrapper } from '${RUNNER_PATH}';`,
