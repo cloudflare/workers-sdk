@@ -28,7 +28,7 @@ index e9d60c5b49..e1ae8c3f13 100644
      this.getExtraInfoBuilder(requestId).finished();
 +    if (cfResponse !== undefined) {
 +      networkRequest.setContentDataProvider(async () => {
-+        return { error: null, content: cfResponse.body, encoded: cfResponse.base64Encoded };
++        return { error: '', content: cfResponse.body, encoded: cfResponse.base64Encoded };
 +      });
 +    }
      this.finishNetworkRequest(networkRequest, finishTime, encodedDataLength);

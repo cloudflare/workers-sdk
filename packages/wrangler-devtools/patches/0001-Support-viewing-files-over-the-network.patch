@@ -19,7 +19,7 @@ index f5f812b001..76b67ea20b 100644
          this.#capabilitiesMask = Capability.TARGET | Capability.TRACING;
          break;
 +      case Type.CLOUDFLARE:
-+        this.#capabilitiesMask = Capability.JS | Capability.Network;
++        this.#capabilitiesMask = Capability.JS | Capability.NETWORK;
 +        break;
      }
      this.#typeInternal = type;
