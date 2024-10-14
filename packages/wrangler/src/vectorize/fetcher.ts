@@ -19,8 +19,6 @@ export default function (env) {
 }
 `;
 
-const ALLOWED_OPS = ["query", "getByIds", "list", "info"];
-
 interface VectorizeAPIResponse {
 	result: object;
 	success: boolean;
@@ -30,6 +28,15 @@ interface VectorizeAPIResponse {
 	}[];
 }
 
+const URL_SUBSTITUTIONS = new Map<string, string>([
+	["getByIds", "get_by_ids"],
+	["deleteByIds", "delete_by_ids"],
+]);
+
+function toNdJson(arr: object[]): string {
+	return arr.reduce((acc, o) => acc + JSON.stringify(o) + "\n", "").trim();
+}
+
 export function MakeVectorizeFetcher(indexId: string, indexVersion: string) {
 	return async function (request: Request): Promise<Response> {
 		const accountId = await getAccountId();
@@ -37,27 +44,14 @@ export function MakeVectorizeFetcher(indexId: string, indexVersion: string) {
 		request.headers.delete("Host");
 		request.headers.delete("Content-Length");
 
-		const op = request.url.split("/").pop() || "";
-		if (!ALLOWED_OPS.includes(op)) {
-			return new Response(
-				JSON.stringify({
-					code: 1003,
-					error:
-						"Invalid operation: Only read operations are allowed in local dev mode; pass `--remote` to wrangler dev to use write operations.",
-				}),
-				{ status: 403 }
-			);
-		}
+		let op = request.url.split("/").pop() || "";
+		op = URL_SUBSTITUTIONS.get(op) || op;
+		const base = `/accounts/${accountId}/vectorize/v2/indexes/${indexId}/`;
 
-		const url = request.url.replace(
-			"http://vector-search/",
-			`/accounts/${accountId}/vectorize/${indexVersion}/indexes/${indexId}/`
-		);
-
-		// TODO: v1 endpoints have a different format
+		const url = base + op;
 
 		const res = await performApiFetch(url, {
-			method: "POST",
+			method: request.method,
 			headers: Object.fromEntries(request.headers.entries()),
 			body: request.body,
 			duplex: "half",
@@ -74,7 +68,7 @@ export function MakeVectorizeFetcher(indexId: string, indexVersion: string) {
 			: {
 					error: apiResponse.errors[0].message,
 					code: apiResponse.errors[0].code,
-				};
+			  };
 
 		return new Response(JSON.stringify(newResponse), {
 			status: res.status,

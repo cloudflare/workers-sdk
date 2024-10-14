@@ -282,12 +282,12 @@ async function buildSourceOptions(
 			? {
 					entrypointSource: config.bundle.entrypointSource,
 					modules: config.bundle.modules,
-				}
+			  }
 			: withSourceURLs(
 					scriptPath,
 					config.bundle.entrypointSource,
 					config.bundle.modules
-				);
+			  );
 
 		const entrypointNames = isPython
 			? []
@@ -607,7 +607,7 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 		for (const vectorizeBinding of bindings.vectorize) {
 			const bindingName = vectorizeBinding.binding;
 			const indexName = vectorizeBinding.index_name;
-			const indexVersion = "v2"; // TODO: support v1?
+			const indexVersion = "v2";
 
 			externalWorkers.push({
 				name: EXTERNAL_VECTORIZE_WORKER_NAME + bindingName,
@@ -924,7 +924,7 @@ export async function buildMiniflareOptions(
 		if (!didWarnMiniflareVectorizeSupport) {
 			didWarnMiniflareVectorizeSupport = true;
 			logger.warn(
-				"Using Vectorize always accesses your Cloudflare account in order to run queries and may incur usage charges even in local development. Write operations are also not enabled in local development; use `--remote` if write operations are needed."
+				"Using Vectorize always accesses your Cloudflare account. It may incur usage charges and modify your databases even in local development. "
 			);
 		}
 	}
