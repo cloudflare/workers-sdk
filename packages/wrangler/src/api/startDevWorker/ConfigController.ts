@@ -53,14 +53,16 @@ async function resolveDevConfig(
 	config: Config,
 	input: StartDevWorkerInput
 ): Promise<StartDevWorkerOptions["dev"]> {
-	const auth =
-		input.dev?.auth ??
-		(async () => {
-			return {
-				accountId: await getAccountId(),
-				apiToken: requireApiToken(),
-			};
-		});
+	const auth = async () => {
+		if (input.dev?.auth) {
+			return unwrapHook(input.dev.auth, config);
+		}
+
+		return {
+			accountId: config.account_id ?? (await getAccountId()),
+			apiToken: requireApiToken(),
+		};
+	};
 
 	const localPersistencePath = getLocalPersistencePath(
 		input.dev?.persist,
@@ -85,7 +87,7 @@ async function resolveDevConfig(
 	// Because it's a non-recoverable user error, we want it to exit the Wrangler process early to allow the user to fix it.
 	// Calling it here forces the error to be thrown where it will correctly exit the Wrangler process.
 	if (input.dev?.remote) {
-		const { accountId } = await unwrapHook(auth);
+		const { accountId } = await unwrapHook(auth, config);
 		assert(accountId, "Account ID must be provided for remote dev");
 		await getZoneIdForPreview({ host, routes, accountId });
 	}

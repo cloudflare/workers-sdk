@@ -711,11 +711,11 @@ export async function startDev(args: StartDevOptions) {
 						}),
 					},
 					dev: {
-						auth: async () => {
+						auth: async (config) => {
 							let accountId = args.accountId;
 							if (!accountId) {
 								unregisterHotKeys?.();
-								accountId = await requireAuth({});
+								accountId = await requireAuth(config);
 								unregisterHotKeys = registerDevHotKeys(devEnv, args);
 							}
 							return {
