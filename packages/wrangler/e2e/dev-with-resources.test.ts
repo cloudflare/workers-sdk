@@ -549,7 +549,9 @@ describe.sequential.each(RUNTIMES)("Bindings: $flags", ({ runtime, flags }) => {
 
 		await helper.run(`wrangler vectorize insert ${name} --file samples.ndjson`);
 
-		const worker = helper.runLongLived(`wrangler dev ${flags}`);
+		const worker = helper.runLongLived(
+			`wrangler dev ${flags} --experimental-vectorize-bind-to-prod`
+		);
 		const { url } = await worker.waitForReady();
 		const res = await fetch(url);
 

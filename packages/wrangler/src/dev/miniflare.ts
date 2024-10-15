@@ -197,6 +197,7 @@ export interface ConfigBundle {
 	inspect: boolean;
 	services: Config["services"] | undefined;
 	serviceBindings: Record<string, ServiceFetch>;
+	bindVectorizeToProd: boolean;
 }
 
 export class WranglerLog extends Log {
@@ -918,6 +919,13 @@ export async function buildMiniflareOptions(
 				"Using Workers AI always accesses your Cloudflare account in order to run AI models, and so will incur usage charges even in local development."
 			);
 		}
+	}
+
+	if (!config.bindVectorizeToProd && config.bindings.vectorize?.length) {
+		logger.warn(
+			"Vectorize local bindings are not supported yet. You may use the `--experimental-vectorize-bind-to-prod` flag to bind to your production index in local dev mode."
+		);
+		config.bindings.vectorize = [];
 	}
 
 	if (config.bindings.vectorize?.length) {
