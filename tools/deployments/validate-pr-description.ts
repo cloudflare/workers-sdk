@@ -25,8 +25,7 @@ export function validateDescription(
 
 	console.log("PR:", title);
 
-	console.log(changedFilesJson);
-	const parsedLabels = JSON.parse(labels);
+	const parsedLabels = JSON.parse(labels) as string[];
 
 	if (parsedLabels.includes("skip-pr-description-validation")) {
 		console.log(
@@ -75,14 +74,14 @@ export function validateDescription(
 		);
 	}
 
-	if (
-		!(
-			/- \[x\] Changeset included/i.test(body) ||
-			/- \[x\] Changeset not necessary because: .+/i.test(body)
-		)
-	) {
+	const changedFiles = JSON.parse(changedFilesJson) as string[];
+	const changesetIncluded = changedFiles.some((f) =>
+		f.startsWith(".changeset/")
+	);
+
+	if (!changesetIncluded && !parsedLabels.includes("no-changeset-required")) {
 		errors.push(
-			"Your PR must include a changeset, or provide justification for why no changesets are required"
+			"Your PR doesn't include a changeset. Either include one (following the instructions in CONTRIBUTING.md) or add the 'no-changeset-required' label to bypass this check. Most PRs should have a changeset, so only bypass this check if your change should not cause a release of any packages."
 		);
 	}
 
