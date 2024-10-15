@@ -1686,8 +1686,8 @@ importers:
         specifier: workspace:^
         version: link:../pages-shared
       '@cloudflare/types':
-        specifier: ^6.18.4
-        version: 6.23.6(react@18.3.1)
+        specifier: 6.18.4
+        version: 6.18.4(react@18.3.1)
       '@cloudflare/workers-tsconfig':
         specifier: workspace:*
         version: link:../workers-tsconfig
@@ -2349,6 +2349,11 @@ packages:
     peerDependencies:
       '@cloudflare/style-const': ^5.3.14
       '@cloudflare/style-container': ^7.10.0
+      react: ^15.0.0-0 || ^16.0.0-0 || ^17.0.0-0
+
+  '@cloudflare/types@6.18.4':
+    resolution: {integrity: sha512-Cgf6xjaHhQmf/MnSJ8zGat661oWmUI45qD/ClHf9uc++B5gh5128s0kuqaFed243PDhGgjdhQfk/ZGBjz+gf+w==}
+    peerDependencies:
       react: ^15.0.0-0 || ^16.0.0-0 || ^17.0.0-0
 
   '@cloudflare/types@6.23.6':
@@ -9114,6 +9119,12 @@ snapshots:
       react: 18.3.1
       react-fela: 11.7.0(fela@11.7.0)(react@18.3.1)
       react-test-renderer: 17.0.2(react@18.3.1)
+
+  '@cloudflare/types@6.18.4(react@18.3.1)':
+    dependencies:
+      '@cloudflare/intl-types': 1.5.1(react@18.3.1)
+      '@cloudflare/util-en-garde': 8.0.10
+      react: 18.3.1
 
   '@cloudflare/types@6.23.6(react@18.3.1)':
     dependencies:
