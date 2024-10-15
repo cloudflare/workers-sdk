@@ -163,8 +163,7 @@ async function resolveBindings(
 			...bindings,
 			vars: maskedVars,
 		},
-		input.dev?.registry,
-		!input.dev?.remote
+		{ registry: input.dev?.registry, local: !input.dev?.remote }
 	);
 
 	return {
