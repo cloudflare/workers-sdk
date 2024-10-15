@@ -999,7 +999,6 @@ export function getBindings(
 		data_blobs: configParam.data_blobs,
 
 		// inheritable fields
-		dispatch_namespaces: mergedDispatchBindings,
 		logfwdr: configParam.logfwdr,
 
 		// non-inheritable fields
@@ -1025,6 +1024,7 @@ export function getBindings(
 		ai: args.ai || configParam.ai,
 		images: configParam.images,
 		version_metadata: args.version_metadata || configParam.version_metadata,
+		dispatch_namespaces: mergedDispatchBindings,
 		unsafe: {
 			bindings: configParam.unsafe.bindings,
 			metadata: configParam.unsafe.metadata,

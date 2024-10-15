@@ -29,8 +29,8 @@ export default function (env) {
     return {
 			get(name, args, options) {
 				return {
-					fetch(request) {
-						request = new Request(request);
+					fetch(input, init) {
+						const request = new Request(input, init);
 						request.headers.set(HEADER_SCRIPT_NAME, name);
 						request.headers.set(HEADER_URL, request.url);
 						request.headers.set(HEADER_PARAMETERS, JSON.stringify(Object.fromEntries(Object.entries(options?.outbound ?? {}).filter(([key]) => ALLOWED_PARAMETERS.includes(key)))));
