@@ -1,0 +1,9 @@
+name = "puppeteer"
+main = "./src/index.ts"
+compatibility_date = "2024-10-14"
+compatibility_flags = ["nodejs_compat"]
+
+[assets]
+directory = "./public/"
+binding = "ASSETS"
+not_found_handling = "404-page"

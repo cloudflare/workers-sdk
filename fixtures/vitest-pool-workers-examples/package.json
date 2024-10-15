@@ -5,18 +5,23 @@
 	"scripts": {
 		"check:type": "node tsc-all.mjs",
 		"list": "vitest --config vitest.workers.config.ts list",
+		"puppeteer:initialize": "pnpx puppeteer browsers install chrome",
+		"pretest": "npm run puppeteer:initialize",
 		"test": "vitest --config vitest.workers.config.ts --reporter basic",
+		"pretest:ci": "npm run puppeteer:initialize",
 		"test:ci": "run-script-os",
 		"test:ci:default": "vitest run --config vitest.workers.config.ts --reporter basic",
 		"test:ci:win32": "vitest run --config vitest.workers.config.ts --reporter basic --exclude test/sqlite-in-do.test.ts"
 	},
 	"devDependencies": {
+		"@cloudflare/puppeteer": "^0.0.14",
 		"@cloudflare/vitest-pool-workers": "workspace:*",
 		"@cloudflare/workers-types": "^4.20241004.0",
 		"@types/node": "20.8.3",
 		"ext-dep": "file:./internal-module-resolution/vendor/ext-dep",
 		"jose": "^5.2.2",
 		"miniflare": "workspace:*",
+		"puppeteer": "^23.5.3",
 		"run-script-os": "^1.1.6",
 		"toucan-js": "^3.3.1",
 		"typescript": "^5.5.2",
