@@ -85,7 +85,7 @@
 		"eslint-plugin-import": "2.26.x",
 		"eslint-plugin-prettier": "^5.0.1",
 		"expect-type": "^0.15.0",
-		"http-cache-semantics": "^4.1.0",
+		"http-cache-semantics": "^4.1.1",
 		"kleur": "^4.1.5",
 		"mime": "^3.0.0",
 		"pretty-bytes": "^6.0.0",
