@@ -7,7 +7,7 @@
 		"types:check": "tsc --build"
 	},
 	"devDependencies": {
-		"@cloudflare/workers-types": "^4.20240919.0",
+		"@cloudflare/workers-types": "^4.20241004.0",
 		"@cloudflare-dev-module-resolution/cloudflare-imports": "file:./packages/cloudflare-imports",
 		"@cloudflare-dev-module-resolution/requires": "file:./packages/requires",
 		"@flarelabs-net/vite-plugin-cloudflare": "workspace:*",

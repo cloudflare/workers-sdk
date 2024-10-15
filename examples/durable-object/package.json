@@ -6,7 +6,7 @@
 		"dev": "vite dev"
 	},
 	"devDependencies": {
-		"@cloudflare/workers-types": "^4.20240919.0",
+		"@cloudflare/workers-types": "^4.20241004.0",
 		"@flarelabs-net/vite-plugin-cloudflare": "workspace:*",
 		"@vite-plugin-cloudflare/typescript-config": "workspace:*",
 		"vite": "6.0.0-beta.2",
