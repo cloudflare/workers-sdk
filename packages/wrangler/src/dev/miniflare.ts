@@ -283,12 +283,12 @@ async function buildSourceOptions(
 			? {
 					entrypointSource: config.bundle.entrypointSource,
 					modules: config.bundle.modules,
-			  }
+				}
 			: withSourceURLs(
 					scriptPath,
 					config.bundle.entrypointSource,
 					config.bundle.modules
-			  );
+				);
 
 		const entrypointNames = isPython
 			? []
@@ -620,7 +620,7 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 					},
 				],
 				serviceBindings: {
-					FETCHER: MakeVectorizeFetcher(indexName, indexVersion),
+					FETCHER: MakeVectorizeFetcher(indexName),
 				},
 				bindings: {
 					INDEX_ID: indexName,

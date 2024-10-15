@@ -353,9 +353,9 @@ export function devOptions(yargs: CommonYargsArgv) {
 				default: false,
 			})
 			.option("experimental-vectorize-bind-to-prod", {
-				alias: ["x-vectorize-bind-to-prod"],
 				type: "boolean",
-				describe: "Bind to production Vectorize indexes in local development mode",
+				describe:
+					"Bind to production Vectorize indexes in local development mode",
 				default: false,
 			})
 	);
