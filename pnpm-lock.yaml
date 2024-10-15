@@ -1272,6 +1272,9 @@ importers:
       concurrently:
         specifier: ^8.2.2
         version: 8.2.2
+      quick-edit-extension:
+        specifier: workspace:*
+        version: link:../quick-edit-extension
       tsx:
         specifier: ^3.12.8
         version: 3.12.10
