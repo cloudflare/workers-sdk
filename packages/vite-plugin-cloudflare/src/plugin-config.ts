@@ -1,5 +1,5 @@
-import * as vite from 'vite';
 import * as path from 'node:path';
+import * as vite from 'vite';
 
 export interface WorkerOptions {
 	main: string;

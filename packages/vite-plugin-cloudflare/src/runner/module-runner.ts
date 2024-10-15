@@ -1,7 +1,7 @@
 import { ModuleRunner } from 'vite/module-runner';
 import { UNKNOWN_HOST, WORKERD_CUSTOM_IMPORT_PATH } from '../shared';
-import type { FetchResult } from 'vite/module-runner';
 import type { WrapperEnv } from './env';
+import type { FetchResult } from 'vite/module-runner';
 
 let moduleRunner: ModuleRunner;
 

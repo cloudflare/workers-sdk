@@ -1,14 +1,14 @@
-import * as vite from 'vite';
 import { createMiddleware } from '@hattip/adapter-node';
 import { Miniflare } from 'miniflare';
+import * as vite from 'vite';
 import {
 	createCloudflareEnvironment,
 	initRunners,
 } from './cloudflare-environment';
-import { normalizePluginConfig } from './plugin-config';
 import { getMiniflareOptions } from './miniflare-options';
-import type { WorkerOptions, PluginConfig } from './plugin-config';
+import { normalizePluginConfig } from './plugin-config';
 import type { CloudflareDevEnvironment } from './cloudflare-environment';
+import type { PluginConfig, WorkerOptions } from './plugin-config';
 
 export function cloudflare<T extends Record<string, WorkerOptions>>(
 	pluginConfig: PluginConfig<T>,

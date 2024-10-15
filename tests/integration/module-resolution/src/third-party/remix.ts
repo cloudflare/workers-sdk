@@ -1,4 +1,4 @@
-import { json, createCookie } from '@remix-run/cloudflare';
+import { createCookie, json } from '@remix-run/cloudflare';
 
 export default {
 	'(remix) typeof cloudflare json({})': typeof json({}),

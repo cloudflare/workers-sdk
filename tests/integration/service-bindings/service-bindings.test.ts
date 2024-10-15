@@ -1,3 +1,7 @@
+import * as path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { cloudflare } from '@flarelabs-net/vite-plugin-cloudflare';
+import * as vite from 'vite';
 import {
 	beforeEach,
 	describe,
@@ -6,16 +10,8 @@ import {
 	onTestFinished,
 	test,
 } from 'vitest';
-import { fileURLToPath } from 'node:url';
-import * as path from 'node:path';
-import * as vite from 'vite';
-import { cloudflare } from '@flarelabs-net/vite-plugin-cloudflare';
-import {
-	getWorker,
-	MockLogger,
-	UNKNOWN_HOST,
-	type FetchableDevEnvironment,
-} from '../test-helpers/src/utils';
+import { getWorker, MockLogger, UNKNOWN_HOST } from '../test-helpers/src/utils';
+import type { FetchableDevEnvironment } from '../test-helpers/src/utils';
 
 const root = fileURLToPath(new URL('.', import.meta.url));
 let server: vite.ViteDevServer;

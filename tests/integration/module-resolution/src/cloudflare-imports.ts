@@ -1,5 +1,5 @@
-import { DurableObject, WorkerEntrypoint } from 'cloudflare:workers';
 import { connect } from 'cloudflare:sockets';
+import { DurableObject, WorkerEntrypoint } from 'cloudflare:workers';
 
 export default {
 	'(cloudflare:workers) WorkerEntrypoint.name': WorkerEntrypoint.name,

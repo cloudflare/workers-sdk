@@ -3,7 +3,7 @@
 //       issues.
 //       Note that in the readme itself: https://github.com/Snazzah/slash-create?tab=readme-ov-file#using-webservers
 //       they say to use /web, so I do think that this is good enough (should the standard import also work?)
-import { VERSION, SlashCreator, Collection } from 'slash-create/web';
+import { Collection, SlashCreator, VERSION } from 'slash-create/web';
 
 const slashCreatorInstance = new SlashCreator({
 	applicationID: 'xxx',

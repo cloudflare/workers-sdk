@@ -1,6 +1,6 @@
 import {
-	helloWorldExt,
 	helloCjs,
+	helloWorldExt,
 	worldJs,
 } from '@cloudflare-dev-module-resolution/requires/ext';
 

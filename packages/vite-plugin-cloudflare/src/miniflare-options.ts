@@ -1,16 +1,15 @@
-import { Log, LogLevel } from 'miniflare';
+import * as fs from 'node:fs';
+import * as path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { Log, LogLevel, Response as MiniflareResponse } from 'miniflare';
 import * as vite from 'vite';
 import { unstable_getMiniflareWorkerOptions } from 'wrangler';
-import { Response as MiniflareResponse } from 'miniflare';
-import * as path from 'node:path';
-import * as fs from 'node:fs';
-import { fileURLToPath } from 'node:url';
+import { getModuleFallbackHandler, getResolveId } from './module-fallback';
 import { invariant, WORKERD_CUSTOM_IMPORT_PATH } from './shared';
-import { getResolveId, getModuleFallbackHandler } from './module-fallback';
-import type { SharedOptions, WorkerOptions, MiniflareOptions } from 'miniflare';
-import type { FetchFunctionOptions } from 'vite/module-runner';
-import type { NormalizedPluginConfig } from './plugin-config';
 import type { CloudflareDevEnvironment } from './cloudflare-environment';
+import type { NormalizedPluginConfig } from './plugin-config';
+import type { MiniflareOptions, SharedOptions, WorkerOptions } from 'miniflare';
+import type { FetchFunctionOptions } from 'vite/module-runner';
 
 type PersistOptions = Pick<
 	SharedOptions,

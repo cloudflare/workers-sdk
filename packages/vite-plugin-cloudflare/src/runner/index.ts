@@ -1,7 +1,7 @@
-import { WorkerEntrypoint, DurableObject } from 'cloudflare:workers';
-import { createModuleRunner, getWorkerEntryExport } from './module-runner';
-import { stripInternalEnv } from './env';
+import { DurableObject, WorkerEntrypoint } from 'cloudflare:workers';
 import { INIT_PATH } from '../shared';
+import { stripInternalEnv } from './env';
+import { createModuleRunner, getWorkerEntryExport } from './module-runner';
 import type { WrapperEnv } from './env';
 
 interface WorkerEntrypointConstructor<T = unknown> {

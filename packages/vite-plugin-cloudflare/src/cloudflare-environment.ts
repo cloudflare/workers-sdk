@@ -1,13 +1,13 @@
 import * as vite from 'vite';
-import { UNKNOWN_HOST, INIT_PATH, invariant } from './shared';
+import { INIT_PATH, invariant, UNKNOWN_HOST } from './shared';
+import type { NormalizedPluginConfig, WorkerOptions } from './plugin-config';
+import type { Fetcher } from '@cloudflare/workers-types/experimental';
 import type {
-	ReplaceWorkersTypes,
-	WebSocket,
 	MessageEvent,
 	Miniflare,
+	ReplaceWorkersTypes,
+	WebSocket,
 } from 'miniflare';
-import type { Fetcher } from '@cloudflare/workers-types/experimental';
-import type { NormalizedPluginConfig, WorkerOptions } from './plugin-config';
 
 interface WebSocketContainer {
 	webSocket?: WebSocket;

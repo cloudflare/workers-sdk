@@ -1,8 +1,8 @@
-import { describe, expect, test } from 'vitest';
-import { fileURLToPath } from 'node:url';
 import * as path from 'node:path';
-import * as vite from 'vite';
+import { fileURLToPath } from 'node:url';
 import { cloudflare } from '@flarelabs-net/vite-plugin-cloudflare';
+import * as vite from 'vite';
+import { describe, expect, test } from 'vitest';
 import { getWorker, MockLogger, UNKNOWN_HOST } from '../test-helpers/src/utils';
 
 const root = fileURLToPath(new URL('.', import.meta.url));

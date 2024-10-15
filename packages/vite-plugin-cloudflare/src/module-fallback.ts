@@ -1,8 +1,8 @@
-import * as vite from 'vite';
-import { Request, Response } from 'miniflare';
 import { readFile, stat } from 'node:fs/promises';
-import { init as initCjsModuleLexer, parse } from 'cjs-module-lexer';
 import { dirname, resolve } from 'node:path';
+import { init as initCjsModuleLexer, parse } from 'cjs-module-lexer';
+import { Request, Response } from 'miniflare';
+import * as vite from 'vite';
 
 type ResolveIdFunction = (
 	id: string,

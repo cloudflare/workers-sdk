@@ -1,7 +1,7 @@
 {
 	"name": "@cloudflare-dev-module-resolution/cloudflare-imports",
-	"description": "a packages which imports from cloudflare:",
 	"version": "1.0.0",
+	"description": "a packages which imports from cloudflare:",
 	"type": "module",
 	"exports": {
 		".": {
