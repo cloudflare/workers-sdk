@@ -214,6 +214,7 @@ As a reviewer, it's important to be thoughtful about the proposed changes and co
 ## PR Tests
 
 Every PR should include tests for the functionality that's being added. Most changes will be to [Wrangler](packages/wrangler/src/__tests__) (using Vitest), [Miniflare](packages/miniflare/test) (using Ava), or [C3](packages/create-cloudflare/src/__tests__) (using Vitest), and should include unit tests within the testing harness of those packages. For documentation on how these testing frameworks work, see:
+
 - Vitest: https://vitest.dev/guide
 - Ava: https://github.com/avajs/ava?tab=readme-ov-file#documentation
 
