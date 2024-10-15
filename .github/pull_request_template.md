@@ -1,17 +1,13 @@
 Fixes #[insert GH or internal issue link(s)].
 
 - Tests
-  - [ ] TODO (before merge) 
+  - [ ] TODO (before merge)
   - [ ] Tests included
   - [ ] Tests not necessary because:
 - E2E Tests CI Job required? (Use "e2e" label or ask maintainer to run separately)
   - [ ] I don't know
   - [ ] Required
   - [ ] Not required because:
-- Changeset ([Changeset guidelines](https://github.com/cloudflare/workers-sdk/blob/main/CONTRIBUTING.md#changesets))
-  - [ ] TODO (before merge)
-  - [ ] Changeset included
-  - [ ] Changeset not necessary because:
 - Public documentation
   - [ ] TODO (before merge)
   - [ ] Cloudflare docs PR(s): <!--e.g. <https://github.com/cloudflare/cloudflare-docs/pull/>...-->
