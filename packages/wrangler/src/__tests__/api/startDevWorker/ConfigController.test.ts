@@ -56,6 +56,41 @@ describe("ConfigController", () => {
 		});
 	});
 
+	it("should apply module root to parent if main is nested from base_dir", async () => {
+		const controller = new ConfigController();
+		const event = waitForConfigUpdate(controller);
+		await seed({
+			"some/base_dir/nested/index.js": dedent/* javascript */ `
+				export default {
+					fetch(request, env, ctx) {
+						return new Response("hello world")
+					}
+				}
+			`,
+			"wrangler.toml": dedent`
+				main = \"./some/base_dir/nested/index.js\"
+base_dir = \"./some/base_dir\"`,
+		});
+
+		const config: StartDevWorkerInput = {};
+
+		await controller.set(config);
+
+		await expect(event).resolves.toMatchObject({
+			type: "configUpdate",
+			config: {
+				build: {
+					additionalModules: [],
+					define: {},
+					format: "modules",
+					moduleRoot: path.join(process.cwd(), "./some/base_dir"),
+					moduleRules: [],
+				},
+				directory: process.cwd(),
+				entrypoint: path.join(process.cwd(), "./some/base_dir/nested/index.js"),
+			},
+		});
+	});
 	it("should shallow merge patched config", async () => {
 		const controller = new ConfigController();
 		const event1 = waitForConfigUpdate(controller);
