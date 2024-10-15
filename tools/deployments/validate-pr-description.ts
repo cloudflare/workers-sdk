@@ -3,7 +3,7 @@ if (require.main === module) {
 	const errors = validateDescription(
 		process.env.TITLE as string,
 		process.env.BODY as string,
-		process.env.LABELS as string
+		process.env.LABELS as string,
 		process.env.FILES as string
 	);
 	if (errors.length > 0) {
@@ -25,7 +25,7 @@ export function validateDescription(
 
 	console.log("PR:", title);
 
-	console.log(changedFilesJson)
+	console.log(changedFilesJson);
 	const parsedLabels = JSON.parse(labels);
 
 	if (parsedLabels.includes("skip-pr-description-validation")) {
