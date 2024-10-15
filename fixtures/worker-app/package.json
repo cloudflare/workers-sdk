@@ -12,7 +12,7 @@
 		"type:tests": "tsc -p ./tests/tsconfig.json"
 	},
 	"dependencies": {
-		"cookie": "^0.6.0",
+		"cookie": "^1.0.1",
 		"isomorphic-random-example": "workspace:^"
 	},
 	"devDependencies": {
