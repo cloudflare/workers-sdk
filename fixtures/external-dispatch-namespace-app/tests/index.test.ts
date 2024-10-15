@@ -5,10 +5,13 @@ import { fetch } from "undici";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { unstable_dev } from "wrangler";
 import type { ChildProcess } from "child_process";
-import type { Response, RequestInfo, RequestInit } from "undici";
+import type { RequestInfo, RequestInit, Response } from "undici";
 import type { UnstableDevWorker } from "wrangler";
 
-const waitUntilReady = async (input: RequestInfo, init?: RequestInit): Promise<Response> => {
+const waitUntilReady = async (
+	input: RequestInfo,
+	init?: RequestInit
+): Promise<Response> => {
 	let response: Response | undefined = undefined;
 
 	while (response === undefined) {
@@ -75,10 +78,11 @@ describe("external-dispatch-namespace-app", () => {
 
 	it("dispatches from a Pages project", async () => {
 		const pagesDispatcherResponse = await waitUntilReady(
-			`http://127.0.0.1:${pagesDispatcher.port}/`, {
+			`http://127.0.0.1:${pagesDispatcher.port}/`,
+			{
 				headers: {
-					"x-foo": "bar"
-				}
+					"x-foo": "bar",
+				},
 			}
 		);
 		expect(
@@ -94,10 +98,11 @@ describe("external-dispatch-namespace-app", () => {
 
 	it("dispatches from a Worker", async () => {
 		const dispatcherResponse = await waitUntilReady(
-			`http://127.0.0.1:${dispatcher.port}/`, {
+			`http://127.0.0.1:${dispatcher.port}/`,
+			{
 				headers: {
-					"x-foo": "bar"
-				}
+					"x-foo": "bar",
+				},
 			}
 		);
 		expect(dispatcherResponse.headers.get("parameter1")).toMatchInlineSnapshot(

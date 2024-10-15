@@ -23,7 +23,12 @@ const outbound: Middleware = async (request, env, _ctx, middlewareCtx) => {
 		env[key] = value;
 	}
 
-	request = new Request(url, { ...request, cf, method: request.method, headers: request.headers });
+	request = new Request(url, {
+		...request,
+		cf,
+		method: request.method,
+		headers: request.headers,
+	});
 
 	request.headers.delete(HEADER_OUTBOUND_URL);
 	request.headers.delete(HEADER_CF_BLOB);

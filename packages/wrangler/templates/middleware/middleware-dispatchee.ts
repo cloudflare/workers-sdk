@@ -23,7 +23,12 @@ const dispatchee: Middleware = async (request, env, _ctx, middlewareCtx) => {
 	const outboundProxyUrl = request.headers.get(HEADER_OUTBOUND_PROXY_URL);
 	const parameters = request.headers.get(HEADER_PARAMETERS);
 
-	request = new Request(url, { ...request, cf, method: request.method, headers: request.headers });
+	request = new Request(url, {
+		...request,
+		cf,
+		method: request.method,
+		headers: request.headers,
+	});
 
 	request.headers.delete(HEADER_URL);
 	request.headers.delete(HEADER_OUTBOUND_PROXY_URL);
