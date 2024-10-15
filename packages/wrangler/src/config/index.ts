@@ -197,7 +197,8 @@ export function findWranglerToml(
  */
 export function printBindings(
 	bindings: CfWorkerInit["bindings"],
-	registry?: WorkerRegistry
+	registry?: WorkerRegistry,
+	local?: boolean
 ) {
 	const truncate = (item: string | Record<string, unknown>) => {
 		const s = typeof item === "string" ? item : JSON.stringify(item);
@@ -302,7 +303,7 @@ export function printBindings(
 			entries: kv_namespaces.map(({ binding, id }) => {
 				return {
 					key: binding,
-					value: id,
+					value: `${id}${local ? " (local)" : ""}`,
 				};
 			}),
 		});
@@ -331,7 +332,7 @@ export function printBindings(
 			entries: queues.map(({ binding, queue_name }) => {
 				return {
 					key: binding,
-					value: queue_name,
+					value: `${queue_name}${local ? " (local)" : ""}`,
 				};
 			}),
 		});
@@ -352,7 +353,7 @@ export function printBindings(
 					}
 					return {
 						key: binding,
-						value: databaseValue,
+						value: `${databaseValue}${local ? " (local)" : ""}`,
 					};
 				}
 			),
@@ -365,7 +366,7 @@ export function printBindings(
 			entries: vectorize.map(({ binding, index_name }) => {
 				return {
 					key: binding,
-					value: index_name,
+					value: `${index_name}${local ? " (local)" : ""}`,
 				};
 			}),
 		});
@@ -377,7 +378,7 @@ export function printBindings(
 			entries: hyperdrive.map(({ binding, id }) => {
 				return {
 					key: binding,
-					value: id,
+					value: `${id}${local ? " (local)" : ""}`,
 				};
 			}),
 		});
@@ -392,7 +393,7 @@ export function printBindings(
 				}
 				return {
 					key: binding,
-					value: bucket_name,
+					value: `${bucket_name}${local ? " (local)" : ""}`,
 				};
 			}),
 		});
@@ -478,7 +479,7 @@ export function printBindings(
 
 		output.push({
 			type: "AI",
-			entries: entries,
+			entries,
 		});
 	}
 
@@ -541,7 +542,7 @@ export function printBindings(
 
 	if (dispatch_namespaces !== undefined && dispatch_namespaces.length > 0) {
 		output.push({
-			type: "dispatch namespaces",
+			type: "Dispatch Namespaces",
 			entries: dispatch_namespaces.map(({ binding, namespace, outbound }) => {
 				return {
 					key: binding,
