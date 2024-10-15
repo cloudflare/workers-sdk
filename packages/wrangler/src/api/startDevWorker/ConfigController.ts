@@ -22,7 +22,7 @@ import { getLocalPersistencePath } from "../../dev/get-local-persistence-path";
 import { getClassNamesWhichUseSQLite } from "../../dev/validate-dev-props";
 import { UserError } from "../../errors";
 import { logger } from "../../logger";
-import { getAccountId, requireApiToken } from "../../user";
+import { requireApiToken, requireAuth } from "../../user";
 import { memoizeGetPort } from "../../utils/memoizeGetPort";
 import { getZoneIdForPreview } from "../../zones";
 import { Controller } from "./BaseController";
@@ -59,7 +59,7 @@ async function resolveDevConfig(
 		}
 
 		return {
-			accountId: config.account_id ?? (await getAccountId()),
+			accountId: await requireAuth(config),
 			apiToken: requireApiToken(),
 		};
 	};
