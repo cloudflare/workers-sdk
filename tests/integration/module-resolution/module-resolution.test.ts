@@ -1,45 +1,61 @@
-import { describe, expect, test } from 'vitest';
+import { afterEach, beforeEach, describe, expect, test } from 'vitest';
 import { fileURLToPath } from 'node:url';
 import * as path from 'node:path';
 import * as vite from 'vite';
 import { cloudflare } from '@flarelabs-net/vite-plugin-cloudflare';
-import { assertIsFetchableDevEnvironment, UNKNOWN_HOST } from './utils';
+import {
+	getFallbackErrors,
+	getWorker,
+	MockLogger,
+	UNKNOWN_HOST,
+} from '../test-helpers/src/utils';
 
 const root = fileURLToPath(new URL('./', import.meta.url));
 
+let server: vite.ViteDevServer;
+let customLogger: MockLogger;
+
 describe('module resolution', async () => {
-	const fixtureRoot = path.join(root, 'fixtures', 'module-resolution');
-	const server = await vite.createServer({
-		plugins: [
-			cloudflare({
-				workers: {
-					worker: {
-						main: path.join(fixtureRoot, 'index.ts'),
-						wranglerConfig: path.join(fixtureRoot, 'wrangler.toml'),
-						overrides: {
-							resolve: {
-								// We're testing module resolution for external modules, so let's treat everything as external
-								// (if we were not to do this all the packages in cloudflare-dev-module-resolution/packages
-								// wouldn't be treated as such)
-								external: true,
+	beforeEach(async ({ onTestFinished }) => {
+		customLogger = new MockLogger();
+		server = await vite.createServer({
+			customLogger,
+			plugins: [
+				cloudflare({
+					workers: {
+						worker: {
+							main: path.join(root, 'index.ts'),
+							wranglerConfig: path.join(root, 'wrangler.toml'),
+							overrides: {
+								resolve: {
+									// We're testing module resolution for external modules, so let's treat everything as external
+									// (if we were not to do this all the packages in cloudflare-dev-module-resolution/packages
+									// wouldn't be treated as such)
+									external: true,
+								},
 							},
 						},
 					},
-				},
-				persistTo: false,
-			}),
-		],
+					persistTo: false,
+				}),
+			],
+		});
+		onTestFinished(() => server.close());
 	});
-
-	const worker = server.environments.worker;
-	assertIsFetchableDevEnvironment(worker);
 
 	describe('basic module resolution', () => {
 		test('`require` js/cjs files with specifying their file extension', async () => {
-			const response = await worker.dispatchFetch(
+			const response = await getWorker(server).dispatchFetch(
 				new Request(new URL('/require-ext', UNKNOWN_HOST)),
 			);
 			const result = await response.json();
+
+			expect(getFallbackErrors(customLogger)).toMatchInlineSnapshot(`
+				[
+				  ".%2Fhello.cjs",
+				  ".%2Fworld.js",
+				]
+			`);
 
 			expect(result).toEqual({
 				'(requires/ext) hello.cjs (wrong-extension)': null,
@@ -49,7 +65,7 @@ describe('module resolution', async () => {
 		});
 
 		test('`require` js/cjs files without specifying their file extension', async () => {
-			const response = await worker.dispatchFetch(
+			const response = await getWorker(server).dispatchFetch(
 				new Request(new URL('/require-no-ext', UNKNOWN_HOST)),
 			);
 			const result = await response.json();
@@ -60,7 +76,7 @@ describe('module resolution', async () => {
 		});
 
 		test('`require` json files', async () => {
-			const response = await worker.dispatchFetch(
+			const response = await getWorker(server).dispatchFetch(
 				new Request(new URL('/require-json', UNKNOWN_HOST)),
 			);
 			const result = await response.json();
@@ -75,7 +91,7 @@ describe('module resolution', async () => {
 
 	describe('Cloudflare specific module resolution', () => {
 		test('internal imports from `cloudflare:*`', async () => {
-			const response = await worker.dispatchFetch(
+			const response = await getWorker(server).dispatchFetch(
 				new Request(new URL('/cloudflare-imports', UNKNOWN_HOST)),
 			);
 			const result = await response.json();
@@ -88,7 +104,7 @@ describe('module resolution', async () => {
 		});
 
 		test('external imports from `cloudflare:*`', async () => {
-			const response = await worker.dispatchFetch(
+			const response = await getWorker(server).dispatchFetch(
 				new Request(new URL('/external-cloudflare-imports', UNKNOWN_HOST)),
 			);
 			const result = await response.json();
@@ -108,7 +124,7 @@ describe('module resolution', async () => {
 	 */
 	describe('third party packages resolutions', () => {
 		test('react', async () => {
-			const response = await worker.dispatchFetch(
+			const response = await getWorker(server).dispatchFetch(
 				new Request(new URL('/third-party/react', UNKNOWN_HOST)),
 			);
 			const result = await response.json();
@@ -121,7 +137,7 @@ describe('module resolution', async () => {
 		});
 
 		test('@remix-run/cloudflare', async () => {
-			const response = await worker.dispatchFetch(
+			const response = await getWorker(server).dispatchFetch(
 				new Request(new URL('/third-party/remix', UNKNOWN_HOST)),
 			);
 			const result = await response.json();
@@ -134,7 +150,7 @@ describe('module resolution', async () => {
 		});
 
 		test('discord-api-types/v10', async () => {
-			const response = await worker.dispatchFetch(
+			const response = await getWorker(server).dispatchFetch(
 				new Request(new URL('/third-party/discord-api-types', UNKNOWN_HOST)),
 			);
 			const result = await response.json();
@@ -146,7 +162,7 @@ describe('module resolution', async () => {
 		});
 
 		test('slash-create', async () => {
-			const response = await worker.dispatchFetch(
+			const response = await getWorker(server).dispatchFetch(
 				new Request(new URL('/third-party/slash-create', UNKNOWN_HOST)),
 			);
 			const result = await response.json();

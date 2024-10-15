@@ -1,3 +1,4 @@
+import { Log, LogLevel } from 'miniflare';
 import * as vite from 'vite';
 import { unstable_getMiniflareWorkerOptions } from 'wrangler';
 import { Response as MiniflareResponse } from 'miniflare';
@@ -155,7 +156,13 @@ export function getMiniflareOptions(
 	invariant(devEnvironment, 'First worker dev environment not found');
 	const resolveId = getResolveId(viteConfig, devEnvironment);
 
+	const logger = new ViteMiniflareLogger(viteConfig);
 	return {
+		log: logger,
+		handleRuntimeStdio(stdout, stderr) {
+			stdout.forEach((data) => logger.info(data));
+			stderr.forEach((error) => logger.error(error));
+		},
 		...getPersistence(normalizedPluginConfig.persistPath),
 		workers: workers.map((workerOptions) => {
 			const wrappers = [
@@ -254,4 +261,41 @@ export function getMiniflareOptions(
 		}),
 		unsafeModuleFallbackService: getModuleFallbackHandler(resolveId),
 	};
+}
+
+/**
+ * A Miniflare logger that forwards messages onto a Vite logger.
+ */
+class ViteMiniflareLogger extends Log {
+	private logger: vite.Logger;
+	constructor(config: vite.ResolvedConfig) {
+		super(miniflareLogLevelFromViteLogLevel(config.logLevel));
+		this.logger = config.logger;
+	}
+
+	override logWithLevel(level: LogLevel, message: string) {
+		switch (level) {
+			case LogLevel.ERROR:
+				return this.logger.error(message);
+			case LogLevel.WARN:
+				return this.logger.warn(message);
+			case LogLevel.INFO:
+				return this.logger.info(message);
+		}
+	}
+}
+
+function miniflareLogLevelFromViteLogLevel(
+	level: vite.LogLevel = 'info',
+): LogLevel {
+	switch (level) {
+		case 'error':
+			return LogLevel.ERROR;
+		case 'warn':
+			return LogLevel.WARN;
+		case 'info':
+			return LogLevel.INFO;
+		case 'silent':
+			return LogLevel.NONE;
+	}
 }

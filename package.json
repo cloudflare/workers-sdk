@@ -5,6 +5,8 @@
 		"types:check": "pnpm -r types:check",
 		"prettier:check": "prettier --check .",
 		"prettier:fix": "prettier --write .",
+		"check": "pnpm run types:check && pnpm run prettier:check",
+		"fix": "pnpm run prettier:fix",
 		"test": "pnpm -r test",
 		"postinstall": "pnpm -r build"
 	},

@@ -1,19 +1,19 @@
 {
-	"name": "@tests/integration",
+	"name": "@tests/integration-module-resolution",
 	"private": true,
 	"type": "module",
 	"scripts": {
 		"test": "vitest run",
-		"types:check": "tsc --build --noEmit"
+		"types:check": "tsc --build"
 	},
 	"devDependencies": {
-		"@cloudflare-dev-module-resolution/cloudflare-imports": "workspace:*",
-		"@cloudflare-dev-module-resolution/requires": "workspace:*",
 		"@cloudflare/workers-types": "^4.20240919.0",
+		"@cloudflare-dev-module-resolution/cloudflare-imports": "file:./packages/cloudflare-imports",
+		"@cloudflare-dev-module-resolution/requires": "file:./packages/requires",
 		"@flarelabs-net/vite-plugin-cloudflare": "workspace:*",
 		"@remix-run/cloudflare": "2.12.0",
-		"@types/react": "^18.3.11",
 		"@vite-plugin-cloudflare/typescript-config": "workspace:*",
+		"@types/react": "^18.3.11",
 		"discord-api-types": "0.37.98",
 		"react": "18.3.1",
 		"slash-create": "6.2.1",

@@ -1,34 +1,51 @@
-import { describe, expect, test } from 'vitest';
+import {
+	beforeEach,
+	describe,
+	expect,
+	onTestFailed,
+	onTestFinished,
+	test,
+} from 'vitest';
 import { fileURLToPath } from 'node:url';
 import * as path from 'node:path';
 import * as vite from 'vite';
 import { cloudflare } from '@flarelabs-net/vite-plugin-cloudflare';
-import { assertIsFetchableDevEnvironment, UNKNOWN_HOST } from './utils';
+import {
+	getWorker,
+	MockLogger,
+	UNKNOWN_HOST,
+	type FetchableDevEnvironment,
+} from '../test-helpers/src/utils';
 
 const root = fileURLToPath(new URL('.', import.meta.url));
+let server: vite.ViteDevServer;
+let customLogger: MockLogger;
+let workerA: FetchableDevEnvironment;
 
 describe('service bindings', async () => {
-	const fixtureRoot = path.join(root, './fixtures/service-bindings');
-	const server = await vite.createServer({
-		plugins: [
-			cloudflare({
-				workers: {
-					worker_a: {
-						main: path.join(fixtureRoot, 'worker-a', 'index.ts'),
-						wranglerConfig: path.join(fixtureRoot, 'worker-a', 'wrangler.toml'),
+	beforeEach(async ({ onTestFinished }) => {
+		customLogger = new MockLogger();
+		server = await vite.createServer({
+			customLogger,
+			plugins: [
+				cloudflare({
+					workers: {
+						worker_a: {
+							main: path.join(root, 'worker-a/index.ts'),
+							wranglerConfig: path.join(root, 'worker-a/wrangler.toml'),
+						},
+						worker_b: {
+							main: path.join(root, 'worker-b/index.ts'),
+							wranglerConfig: path.join(root, 'worker-b/wrangler.toml'),
+						},
 					},
-					worker_b: {
-						main: path.join(fixtureRoot, 'worker-b', 'index.ts'),
-						wranglerConfig: path.join(fixtureRoot, 'worker-b', 'wrangler.toml'),
-					},
-				},
-				persistTo: false,
-			}),
-		],
+					persistTo: false,
+				}),
+			],
+		});
+		workerA = getWorker(server, 'worker_a');
+		onTestFinished(() => server.close());
 	});
-
-	const workerA = server.environments.worker_a;
-	assertIsFetchableDevEnvironment(workerA);
 
 	test('returns a response from another worker', async () => {
 		const response = await workerA.dispatchFetch(

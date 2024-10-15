@@ -3,25 +3,21 @@ import { fileURLToPath } from 'node:url';
 import * as path from 'node:path';
 import * as vite from 'vite';
 import { cloudflare } from '@flarelabs-net/vite-plugin-cloudflare';
-import { assertIsFetchableDevEnvironment, UNKNOWN_HOST } from './utils';
+import { getWorker, MockLogger, UNKNOWN_HOST } from '../test-helpers/src/utils';
 
 const root = fileURLToPath(new URL('.', import.meta.url));
 
 describe('durable objects', () => {
-	const fixtureRoot = path.join(root, './fixtures/durable-objects');
-
 	test('retains in-memory state', async () => {
+		const customLogger = new MockLogger();
 		const server = await vite.createServer({
+			customLogger,
 			plugins: [
 				cloudflare({
 					workers: {
 						worker: {
-							main: path.join(fixtureRoot, 'worker-a', 'index.ts'),
-							wranglerConfig: path.join(
-								fixtureRoot,
-								'worker-a',
-								'wrangler.toml',
-							),
+							main: path.join(root, 'worker-a/index.ts'),
+							wranglerConfig: path.join(root, 'worker-a/wrangler.toml'),
 						},
 					},
 					persistTo: false,
@@ -29,9 +25,7 @@ describe('durable objects', () => {
 			],
 		});
 
-		const worker = server.environments.worker;
-		assertIsFetchableDevEnvironment(worker);
-
+		const worker = getWorker(server);
 		const response = await worker.dispatchFetch(new Request(UNKNOWN_HOST));
 		const result = await response.json();
 
@@ -39,17 +33,15 @@ describe('durable objects', () => {
 	});
 
 	test('can access `ctx.storage`', async () => {
+		const customLogger = new MockLogger();
 		const server = await vite.createServer({
+			customLogger,
 			plugins: [
 				cloudflare({
 					workers: {
 						worker: {
-							main: path.join(fixtureRoot, 'worker-b', 'index.ts'),
-							wranglerConfig: path.join(
-								fixtureRoot,
-								'worker-b',
-								'wrangler.toml',
-							),
+							main: path.join(root, 'worker-b/index.ts'),
+							wranglerConfig: path.join(root, 'worker-b/wrangler.toml'),
 						},
 					},
 					persistTo: false,
@@ -57,9 +49,7 @@ describe('durable objects', () => {
 			],
 		});
 
-		const worker = server.environments.worker;
-		assertIsFetchableDevEnvironment(worker);
-
+		const worker = getWorker(server);
 		const responseA = await worker.dispatchFetch(
 			new Request(new URL('?name=A', UNKNOWN_HOST)),
 		);
@@ -83,17 +73,15 @@ describe('durable objects', () => {
 	});
 
 	test('isolates Durable Object instances', async () => {
+		const customLogger = new MockLogger();
 		const server = await vite.createServer({
+			customLogger,
 			plugins: [
 				cloudflare({
 					workers: {
 						worker: {
-							main: path.join(fixtureRoot, 'worker-b', 'index.ts'),
-							wranglerConfig: path.join(
-								fixtureRoot,
-								'worker-b',
-								'wrangler.toml',
-							),
+							main: path.join(root, 'worker-b/index.ts'),
+							wranglerConfig: path.join(root, 'worker-b/wrangler.toml'),
 						},
 					},
 					persistTo: false,
@@ -101,9 +89,7 @@ describe('durable objects', () => {
 			],
 		});
 
-		const worker = server.environments.worker;
-		assertIsFetchableDevEnvironment(worker);
-
+		const worker = getWorker(server);
 		await worker.dispatchFetch(
 			new Request(new URL('increment?name=A', UNKNOWN_HOST)),
 		);
@@ -126,25 +112,19 @@ describe('durable objects', () => {
 	});
 
 	test('can use `scriptName` to bind to a Durable Object defined in another Worker', async () => {
+		const customLogger = new MockLogger();
 		const server = await vite.createServer({
+			customLogger,
 			plugins: [
 				cloudflare({
 					workers: {
 						worker_b: {
-							main: path.join(fixtureRoot, 'worker-b', 'index.ts'),
-							wranglerConfig: path.join(
-								fixtureRoot,
-								'worker-b',
-								'wrangler.toml',
-							),
+							main: path.join(root, 'worker-b/index.ts'),
+							wranglerConfig: path.join(root, 'worker-b/wrangler.toml'),
 						},
 						worker_c: {
-							main: path.join(fixtureRoot, 'worker-c', 'index.ts'),
-							wranglerConfig: path.join(
-								fixtureRoot,
-								'worker-c',
-								'wrangler.toml',
-							),
+							main: path.join(root, 'worker-c/index.ts'),
+							wranglerConfig: path.join(root, 'worker-c/wrangler.toml'),
 						},
 					},
 					persistTo: false,
@@ -152,9 +132,7 @@ describe('durable objects', () => {
 			],
 		});
 
-		const workerC = server.environments.worker_c;
-		assertIsFetchableDevEnvironment(workerC);
-
+		const workerC = getWorker(server, 'worker_c');
 		const response = await workerC.dispatchFetch(
 			new Request(new URL('?name=A', UNKNOWN_HOST)),
 		);

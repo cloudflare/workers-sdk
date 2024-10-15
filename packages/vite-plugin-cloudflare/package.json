@@ -15,7 +15,7 @@
 		"build": "tsup",
 		"watch": "tsup --watch",
 		"test": "vitest run --passWithNoTests",
-		"types:check": "tsc --build --noEmit"
+		"types:check": "tsc --build"
 	},
 	"peerDependencies": {
 		"vite": "6.0.0-beta.2",

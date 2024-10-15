@@ -29,13 +29,9 @@ jobs:
         shell: bash
         run: pnpm install --frozen-lockfile
 
-      - name: Check formatting
+      - name: Running checks
         shell: bash
-        run: pnpm prettier:check
-
-      - name: Check types
-        shell: bash
-        run: pnpm types:check
+        run: pnpm check
 
       - name: Run tests
         shell: bash
