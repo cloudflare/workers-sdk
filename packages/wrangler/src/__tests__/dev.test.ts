@@ -229,7 +229,7 @@ describe.sequential("wrangler dev", () => {
 
 			const options = await runWranglerUntilConfig("dev");
 
-			expect(unwrapHook(options.dev.auth)).resolves.toMatchObject({
+			await expect(unwrapHook(options.dev.auth)).resolves.toMatchObject({
 				accountId: "12345",
 			});
 		});
@@ -244,7 +244,7 @@ describe.sequential("wrangler dev", () => {
 
 			const options = await runWranglerUntilConfig("dev");
 
-			expect(unwrapHook(options.dev.auth)).resolves.toMatchObject({
+			await expect(unwrapHook(options.dev.auth)).resolves.toMatchObject({
 				accountId: "some-account-id",
 			});
 		});
