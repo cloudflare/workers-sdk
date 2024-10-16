@@ -159,8 +159,11 @@ export function getMiniflareOptions(
 	return {
 		log: logger,
 		handleRuntimeStdio(stdout, stderr) {
-			stdout.forEach((data) => logger.info(data));
-			stderr.forEach((error) => logger.error(error));
+			const decoder = new TextDecoder();
+			stdout.forEach((data) => logger.info(decoder.decode(data)));
+			stderr.forEach((error) =>
+				logger.logWithLevel(LogLevel.ERROR, decoder.decode(error)),
+			);
 		},
 		...getPersistence(normalizedPluginConfig.persistPath),
 		workers: workers.map((workerOptions) => {
@@ -273,6 +276,9 @@ class ViteMiniflareLogger extends Log {
 	}
 
 	override logWithLevel(level: LogLevel, message: string) {
+		if (/^Ready on http/.test(message)) {
+			level = LogLevel.DEBUG;
+		}
 		switch (level) {
 			case LogLevel.ERROR:
 				return this.logger.error(message);

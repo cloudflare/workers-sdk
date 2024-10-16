@@ -51,6 +51,13 @@ export class MockLogger implements vite.Logger {
 	hasErrorLogged(error: Error | vite.Rollup.RollupError): boolean {
 		throw new Error('Not implemented');
 	}
+
+	getLogs(type: string) {
+		return this.logs
+			.filter((log) => log[0] === type)
+			.map((log) => log[1]?.trim())
+			.join('\n');
+	}
 }
 
 export function getFallbackErrors(logger: MockLogger) {
