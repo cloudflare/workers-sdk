@@ -1,5 +1,20 @@
 # miniflare
 
+## 3.20241011.0
+
+### Patch Changes
+
+- [#6961](https://github.com/cloudflare/workers-sdk/pull/6961) [`5761020`](https://github.com/cloudflare/workers-sdk/commit/5761020cb41270ce872ad6c555b263597949c06d) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | workerd                   | 1.20241004.0  | 1.20241011.1  |
+  | @cloudflare/workers-types | ^4.20241004.0 | ^4.20241011.0 |
+
+- [#6943](https://github.com/cloudflare/workers-sdk/pull/6943) [`7859a04`](https://github.com/cloudflare/workers-sdk/commit/7859a04bcd4b2f1cafe67c371bd236acaf7a2d91) Thanks [@sdnts](https://github.com/sdnts)! - fix: local queues now respect consumer max delays and retry delays properly
+
 ## 3.20241004.0
 
 ### Patch Changes

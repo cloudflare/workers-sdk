@@ -1,5 +1,12 @@
 # wrangler
 
+## 3.80.5
+
+### Patch Changes
+
+- Updated dependencies [[`5761020`](https://github.com/cloudflare/workers-sdk/commit/5761020cb41270ce872ad6c555b263597949c06d), [`7859a04`](https://github.com/cloudflare/workers-sdk/commit/7859a04bcd4b2f1cafe67c371bd236acaf7a2d91)]:
+  - miniflare@3.20241011.0
+
 ## 3.80.4
 
 ### Patch Changes
