@@ -1,5 +1,11 @@
 # @cloudflare/quick-edit
 
+## 0.3.0
+
+### Minor Changes
+
+- [#6962](https://github.com/cloudflare/workers-sdk/pull/6962) [`a204747`](https://github.com/cloudflare/workers-sdk/commit/a204747e04afa7592d0cbb5d9fb35d9cd0b2cd49) Thanks [@edmundhung](https://github.com/edmundhung)! - feat: lower autosave delay to 200ms
+
 ## 0.2.3
 
 ### Patch Changes

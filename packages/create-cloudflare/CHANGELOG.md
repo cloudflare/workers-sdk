@@ -1,5 +1,35 @@
 # create-cloudflare
 
+## 2.29.3
+
+### Patch Changes
+
+- [#6880](https://github.com/cloudflare/workers-sdk/pull/6880) [`be88a62`](https://github.com/cloudflare/workers-sdk/commit/be88a62ad147c5e33da5a295d35693a62eef7943) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency   | From   | To     |
+  | ------------ | ------ | ------ |
+  | create-solid | 0.5.12 | 0.5.13 |
+
+- [#6977](https://github.com/cloudflare/workers-sdk/pull/6977) [`3555cdb`](https://github.com/cloudflare/workers-sdk/commit/3555cdb8122912955f2cc71a37a9de4f88eb26aa) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency    | From  | To    |
+  | ------------- | ----- | ----- |
+  | create-svelte | 6.3.8 | 6.4.0 |
+
+- [#6978](https://github.com/cloudflare/workers-sdk/pull/6978) [`26b32fa`](https://github.com/cloudflare/workers-sdk/commit/26b32fa8d5cd6f47527298427e50cad3c8c03abe) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From   | To     |
+  | --------------- | ------ | ------ |
+  | @angular/create | 18.2.0 | 18.2.8 |
+
+- [#6957](https://github.com/cloudflare/workers-sdk/pull/6957) [`f996409`](https://github.com/cloudflare/workers-sdk/commit/f99640948bb8d37224ab934da70ac973f2d7e5cf) Thanks [@vicb](https://github.com/vicb)! - refactor: simplify tsconfig.json templates
+
 ## 2.29.2
 
 ### Patch Changes
