@@ -2,7 +2,7 @@ import { stringify } from "@iarna/toml";
 import { readConfig } from "../config";
 import { logger } from "../logger";
 import { createIndex } from "./client";
-import { deprecatedV1DefaultFlag, vectorizeBetaWarning } from "./common";
+import { deprecatedV1DefaultFlag, vectorizeGABanner } from "./common";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
@@ -62,7 +62,7 @@ export function options(yargs: CommonYargsArgv) {
 			describe:
 				"Create a deprecated Vectorize V1 index. This is not recommended and indexes created with this option need all other Vectorize operations to have this option enabled.",
 		})
-		.epilogue(vectorizeBetaWarning);
+		.epilogue(vectorizeGABanner);
 }
 
 export async function handler(
