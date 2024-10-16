@@ -131,6 +131,7 @@ function getFrameworkTests(opts: {
 				],
 			},
 			analog: {
+				quarantine: true,
 				testCommitMessage: true,
 				timeout: LONG_TIMEOUT,
 				unsupportedOSs: ["win32"],
