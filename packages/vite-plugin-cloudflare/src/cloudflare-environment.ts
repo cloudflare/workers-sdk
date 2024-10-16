@@ -131,8 +131,15 @@ export function createCloudflareEnvironment(
 				createEnvironment(name, config) {
 					return new vite.BuildEnvironment(name, config);
 				},
-				// Use the entrypoint for the 'build' command
-				ssr: options.main,
+				ssr: true,
+				rollupOptions: {
+					input: options.main,
+					external: [
+						'cloudflare:email',
+						'cloudflare:sockets',
+						'cloudflare:workers',
+					],
+				},
 			},
 			webCompatible: true,
 		} satisfies vite.EnvironmentOptions,
