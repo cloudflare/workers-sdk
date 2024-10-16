@@ -67,7 +67,7 @@ const command = defineCommand({
 });
 ```
 
-2. Command specific (named + positional) args vs Shared args vs Global args
+2. Command-specific (named + positional) args vs shared args vs global args
 
 - Command-specific args are defined in the `args` field of the command definition. Command handlers receive these as a typed object automatically. To make any of these positional, add the key to the `positionalArgs` array.
 - You can share args between commands by declaring a separate object and spreading it into the `args` field. Feel free to import from another file.
