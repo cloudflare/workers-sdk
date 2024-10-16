@@ -58,6 +58,8 @@ export function cloudflare<T extends Record<string, WorkerOptions>>(
 			const { normalizedPluginConfig, wranglerConfigPaths } =
 				normalizePluginConfig(pluginConfig, viteConfig);
 
+			let error: unknown;
+
 			const miniflare = new Miniflare(
 				getMiniflareOptions(normalizedPluginConfig, viteConfig, viteDevServer),
 			);
@@ -69,15 +71,23 @@ export function cloudflare<T extends Record<string, WorkerOptions>>(
 					return;
 				}
 
-				await miniflare.setOptions(
-					getMiniflareOptions(
-						normalizedPluginConfig,
-						viteConfig,
-						viteDevServer,
-					),
-				);
+				try {
+					await miniflare.setOptions(
+						getMiniflareOptions(
+							normalizedPluginConfig,
+							viteConfig,
+							viteDevServer,
+						),
+					);
 
-				await initRunners(normalizedPluginConfig, miniflare, viteDevServer);
+					await initRunners(normalizedPluginConfig, miniflare, viteDevServer);
+
+					error = undefined;
+					viteDevServer.environments.client.hot.send({ type: 'full-reload' });
+				} catch (err) {
+					error = err;
+					viteDevServer.environments.client.hot.send({ type: 'full-reload' });
+				}
 			});
 
 			const middleware =
@@ -95,6 +105,10 @@ export function cloudflare<T extends Record<string, WorkerOptions>>(
 
 			return () => {
 				viteDevServer.middlewares.use((req, res, next) => {
+					if (error) {
+						throw error;
+					}
+
 					req.url = req.originalUrl;
 
 					if (!middleware) {
