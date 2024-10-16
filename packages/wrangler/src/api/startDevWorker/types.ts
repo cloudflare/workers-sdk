@@ -129,7 +129,7 @@ export interface StartDevWorkerInput {
 		/** Whether the worker runs on the edge or locally. */
 		remote?: boolean;
 		/** Cloudflare Account credentials. Can be provided upfront or as a function which will be called only when required. */
-		auth?: AsyncHook<CfAccount>;
+		auth?: AsyncHook<CfAccount, [Pick<Config, "account_id">]>; // provide config.account_id as a hook param
 		/** Whether local storage (KV, Durable Objects, R2, D1, etc) is persisted. You can also specify the directory to persist data to. */
 		persist?: string;
 		/** Controls which logs are logged 🤙. */
@@ -187,6 +187,7 @@ export type StartDevWorkerOptions = Omit<StartDevWorkerInput, "assets"> & {
 	};
 	dev: StartDevWorkerInput["dev"] & {
 		persist: string;
+		auth?: AsyncHook<CfAccount>; // redefine without config.account_id hook param (can only be provided by ConfigController with access to wrangler.toml, not by other controllers eg RemoteRuntimeContoller)
 	};
 	entrypoint: string;
 	assets?: AssetsOptions;

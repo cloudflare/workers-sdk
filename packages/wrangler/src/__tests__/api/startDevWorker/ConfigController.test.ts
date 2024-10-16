@@ -3,6 +3,7 @@ import path from "node:path";
 import dedent from "ts-dedent";
 import { describe, it } from "vitest";
 import { ConfigController } from "../../../api/startDevWorker/ConfigController";
+import { unwrapHook } from "../../../api/startDevWorker/utils";
 import { mockAccountId, mockApiToken } from "../../helpers/mock-account-id";
 import { mockConsoleMethods } from "../../helpers/mock-console";
 import { runInTempDir } from "../../helpers/run-in-tmp";
@@ -182,6 +183,44 @@ base_dir = \"./some/base_dir\"`,
 					origin: { hostname: "myexample.com" },
 				},
 			},
+		});
+	});
+
+	it("should use account_id from config file before env var", async () => {
+		const controller = new ConfigController();
+		await seed({
+			"src/index.ts": dedent/* javascript */ `
+                export default {}
+            `,
+			"wrangler.toml": dedent/* toml */ `
+                name = "my-worker"
+                main = "src/index.ts"
+            `,
+		});
+
+		const event = waitForConfigUpdate(controller);
+		await controller.set({ config: "./wrangler.toml" });
+
+		const { config } = await event;
+		await expect(unwrapHook(config.dev.auth)).resolves.toMatchObject({
+			accountId: "some-account-id",
+			apiToken: { apiToken: "some-api-token" },
+		});
+
+		const event2 = waitForConfigUpdate(controller);
+		await seed({
+			"wrangler.toml": dedent/* toml */ `
+                name = "my-worker"
+                main = "src/index.ts"
+                account_id = "1234567890"
+            `,
+		});
+		await controller.set({ config: "./wrangler.toml" }); // no file watching during tests
+
+		const { config: config2 } = await event2;
+		await expect(unwrapHook(config2.dev.auth)).resolves.toMatchObject({
+			accountId: "1234567890",
+			apiToken: { apiToken: "some-api-token" },
 		});
 	});
 });
