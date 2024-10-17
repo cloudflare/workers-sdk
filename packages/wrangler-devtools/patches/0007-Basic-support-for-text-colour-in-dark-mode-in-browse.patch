@@ -1,22 +1,22 @@
-From 4f06ecdab94922e227b3f4d098d0875efbb724a1 Mon Sep 17 00:00:00 2001
+From 5e40473a7009bad90b590caafaeab4127447c4ce Mon Sep 17 00:00:00 2001
 From: Samuel Macleod <smacleod@cloudflare.com>
 Date: Mon, 23 Jan 2023 15:12:38 +0000
 Subject: [PATCH 08/15] Basic support for text colour in dark mode in browsers
  that don't implement :host-context
 
 ---
- front_end/entrypoint_template.html | 38 ++++++++++++++++++++++++------
- 1 file changed, 31 insertions(+), 7 deletions(-)
+ front_end/entrypoint_template.html | 36 +++++++++++++++++++++++++-----
+ 1 file changed, 30 insertions(+), 6 deletions(-)
 
 diff --git a/front_end/entrypoint_template.html b/front_end/entrypoint_template.html
-index 945aa6d816..14d3e0071b 100644
+index ad217ee787..0a5b249376 100644
 --- a/front_end/entrypoint_template.html
 +++ b/front_end/entrypoint_template.html
-@@ -13,8 +13,34 @@
+@@ -13,6 +13,32 @@
        background-color: rgb(41 42 45);
      }
    }
-+  
++
 +  .platform-mac {
 +    --monospace-font-size: 11px;
 +    --monospace-font-family: menlo, monospace;
@@ -43,11 +43,8 @@ index 945aa6d816..14d3e0071b 100644
 +    --override-text-color: rgb(189 198 207);
 +  }
  </style>
--<meta http-equiv="Content-Security-Policy" content="object-src 'none'; script-src 'sha256-7cSoIgLSn2W/Jf+ovCaVMDQtS5K1xhtFhl5WQtvvAaQ=' 'self' 'unsafe-eval' https://chrome-devtools-frontend.appspot.com">
-+<meta http-equiv="Content-Security-Policy" content="object-src 'none'; script-src 'sha256-nR3ouvAaRD5oAvx24d8aFSv1EH9XKi9uVvoOsvVuW8U=' 'self' 'unsafe-eval' https://chrome-devtools-frontend.appspot.com">
+ <meta http-equiv="Content-Security-Policy" content="object-src 'none'; script-src 'self' https://chrome-devtools-frontend.appspot.com">
  <meta name="referrer" content="no-referrer">
- <script>
-   var supportsCustomElements = false;
 @@ -29,15 +55,13 @@
      });
    }
@@ -69,5 +66,5 @@ index 945aa6d816..14d3e0071b 100644
 +
  <body class="undocked" id="-blink-dev-tools">
 -- 
-2.39.3 (Apple Git-145)
+2.39.5 (Apple Git-154)
 

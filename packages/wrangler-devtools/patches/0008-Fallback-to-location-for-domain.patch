@@ -1,4 +1,4 @@
-From 597f5cee506058efa09d952b94e7b9a2ad384e9d Mon Sep 17 00:00:00 2001
+From a492efbba38d75efcd9bc640fdd8add43fd86160 Mon Sep 17 00:00:00 2001
 From: Samuel Macleod <smacleod@cloudflare.com>
 Date: Thu, 26 Jan 2023 15:27:04 +0000
 Subject: [PATCH 09/15] Fallback to location for domain
@@ -8,10 +8,10 @@ Subject: [PATCH 09/15] Fallback to location for domain
  1 file changed, 2 insertions(+), 1 deletion(-)
 
 diff --git a/front_end/panels/sources/NavigatorView.ts b/front_end/panels/sources/NavigatorView.ts
-index 01532aa06a..72c037d297 100644
+index 6f4c52f3e7..e0599125fe 100644
 --- a/front_end/panels/sources/NavigatorView.ts
 +++ b/front_end/panels/sources/NavigatorView.ts
-@@ -792,7 +792,8 @@ export class NavigatorView extends UI.Widget.VBox implements SDK.TargetManager.O
+@@ -796,7 +796,8 @@ export class NavigatorView extends UI.Widget.VBox implements SDK.TargetManager.O
      }
  
      if (!projectOrigin) {
@@ -22,5 +22,5 @@ index 01532aa06a..72c037d297 100644
  
      const parsedURL = new Common.ParsedURL.ParsedURL(projectOrigin);
 -- 
-2.39.3 (Apple Git-145)
+2.39.5 (Apple Git-154)
 
