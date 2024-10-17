@@ -79,6 +79,10 @@ export function CreateOptions(yargs: CommonYargsArgv) {
 			demandOption: true,
 			requiresArg: true,
 			type: "string",
+		})
+		.option("description", {
+			describe: "Description of the rule",
+			type: "string",
 		});
 }
 
@@ -89,7 +93,14 @@ export async function CreateHandler(
 	const config = readConfig(args.config, args);
 	const accountId = await requireAuth(config);
 	const apiCreds = requireApiToken();
-	const { bucket, queue, eventTypes, prefix = "", suffix = "" } = args;
+	const {
+		bucket,
+		queue,
+		eventTypes,
+		prefix = "",
+		suffix = "",
+		description,
+	} = args;
 	await putEventNotificationConfig(
 		config,
 		apiCreds,
@@ -98,7 +109,8 @@ export async function CreateHandler(
 		queue,
 		eventTypes as R2EventType[],
 		prefix,
-		suffix
+		suffix,
+		description
 	);
 	logger.log("Event notification rule created successfully!");
 }
