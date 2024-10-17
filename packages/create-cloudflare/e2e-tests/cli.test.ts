@@ -244,7 +244,7 @@ describe.skipIf(experimental || frameworkToTest || isQuarantineMode())(
 			"Going back and forth between the category, type, framework and lang prompts",
 			async ({ logStream, project }) => {
 				const { output } = await runC3(
-					[project.path, "--git=false", "--no-deploy"],
+					["/invalid-project-name", "--git=false", "--no-deploy"],
 					[
 						{
 							matcher: /What would you like to start with\?/,
@@ -256,7 +256,7 @@ describe.skipIf(experimental || frameworkToTest || isQuarantineMode())(
 						{
 							matcher:
 								/In which directory do you want to create your application/,
-							input: [`${project.path}-test`, keys.enter],
+							input: [project.path, keys.enter],
 						},
 						{
 							matcher: /What would you like to start with\?/,
@@ -344,7 +344,7 @@ describe.skipIf(experimental || frameworkToTest || isQuarantineMode())(
 					logStream,
 				);
 
-				expect(`${project.path}-test`).toExist();
+				expect(project.path).toExist();
 				expect(output).toContain(`type Hello World Worker`);
 				expect(output).toContain(`lang JavaScript`);
 			},
