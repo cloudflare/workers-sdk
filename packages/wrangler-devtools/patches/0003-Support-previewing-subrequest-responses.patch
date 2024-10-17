@@ -17,7 +17,7 @@ index 8735116e61..9becdef6cf 100644
 @@ -794,7 +794,7 @@ export class NetworkDispatcher implements ProtocolProxyApi.NetworkDispatcher {
      this.updateNetworkRequest(networkRequest);
    }
- 
+
 -  loadingFinished({requestId, timestamp: finishTime, encodedDataLength}: Protocol.Network.LoadingFinishedEvent): void {
 +  loadingFinished({requestId, timestamp: finishTime, encodedDataLength, cfResponse}: Protocol.Network.LoadingFinishedEvent & { cfResponse?: Omit<Protocol.Network.GetResponseBodyResponse, 'getError'> }): void {
      let networkRequest: NetworkRequest|null|undefined = this.#requestsById.get(requestId);
@@ -29,7 +29,7 @@ index 8735116e61..9becdef6cf 100644
      this.getExtraInfoBuilder(requestId).finished();
 +    if (cfResponse !== undefined) {
 +      networkRequest.setContentDataProvider(async () => {
-+        return { error: null, content: cfResponse.body, encoded: cfResponse.base64Encoded };
++        return { error: '', content: cfResponse.body, encoded: cfResponse.base64Encoded };
 +      });
 +    }
      this.finishNetworkRequest(networkRequest, finishTime, encodedDataLength);
@@ -52,16 +52,16 @@ index 39a4b237b7..2883727e35 100644
 --- a/front_end/entrypoints/js_app/js_app.ts
 +++ b/front_end/entrypoints/js_app/js_app.ts
 @@ -4,6 +4,7 @@
- 
+
  import '../shell/shell.js';
  import '../../panels/js_timeline/js_timeline-meta.js';
 +import '../../panels/network/network-meta.js';
  import '../../panels/mobile_throttling/mobile_throttling-meta.js';
- 
+
  import * as Common from '../../core/common/common.js';
 @@ -16,6 +17,10 @@ import * as UI from '../../ui/legacy/legacy.js';
  import * as Main from '../main/main.js';
- 
+
  const UIStrings = {
 +  /**
 +  *@description Title of the 'Cloudflare' tool in the Cloudflare Navigator View, which is part of the Sources tool
@@ -99,6 +99,6 @@ index 6870dde217..42a2e17f07 100644
    /**
     *@description Command for showing the 'Search' tool
     */
--- 
+--
 2.39.5 (Apple Git-154)
 
