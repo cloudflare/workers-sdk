@@ -1886,6 +1886,13 @@ describe.sequential("wrangler dev", () => {
 			);
 		});
 	});
+
+	it("should error helpfully if pages_build_output_dir is set", async () => {
+		writeWranglerToml({ pages_build_output_dir: "dist", name: "test" });
+		await expect(runWrangler("dev")).rejects.toThrowErrorMatchingInlineSnapshot(
+			`[Error: This command is for Workers, for Pages please run \`wrangler pages dev\`.]`
+		);
+	});
 });
 
 function mockGetZones(domain: string, zones: { id: string }[] = []) {
