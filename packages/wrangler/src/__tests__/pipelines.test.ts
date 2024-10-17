@@ -7,7 +7,7 @@ import { mockConsoleMethods } from "./helpers/mock-console";
 import { msw } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
-import type { Pipeline, PipelineEntry } from "../pipelines/client";
+import type { HttpSource, Pipeline, PipelineEntry } from "../pipelines/client";
 
 describe("pipelines", () => {
 	const std = mockConsoleMethods();
@@ -39,7 +39,7 @@ describe("pipelines", () => {
 			},
 		},
 		endpoint: "https://0001.pipelines.cloudflarestorage.com",
-	};
+	} satisfies Pipeline;
 
 	function mockCreateR2Token(bucket: string) {
 		const requests = { count: 0 };
@@ -145,7 +145,10 @@ describe("pipelines", () => {
 		status: number = 200,
 		error?: object
 	) {
-		const requests = { count: 0 };
+		const requests: { count: number; body: Pipeline | null } = {
+			count: 0,
+			body: null,
+		};
 		msw.use(
 			http.post(
 				"*/accounts/:accountId/pipelines",
@@ -153,6 +156,7 @@ describe("pipelines", () => {
 					expect(params.accountId).toEqual("some-account-id");
 					const config = (await request.json()) as Pipeline;
 					expect(config.name).toEqual(name);
+					requests.body = config;
 					requests.count++;
 					const pipeline: Pipeline = {
 						...config,
@@ -167,7 +171,7 @@ describe("pipelines", () => {
 							messages: [],
 							result: pipeline,
 						},
-						{ status: status }
+						{ status }
 					);
 				},
 				{ once: true }
@@ -329,6 +333,53 @@ describe("pipelines", () => {
 		`);
 	});
 
+	it("shows create usage details", async () => {
+		await runWrangler("pipelines create -h");
+		await endEventLoop();
+
+		expect(std.err).toMatchInlineSnapshot(`""`);
+		expect(std.out).toMatchInlineSnapshot(`
+			"wrangler pipelines create <pipeline>
+
+			Create a new pipeline
+
+			POSITIONALS
+			  pipeline  The name of the new pipeline  [string] [required]
+
+			GLOBAL FLAGS
+			  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
+			  -c, --config                    Path to .toml configuration file  [string]
+			  -e, --env                       Environment to use for operations and .env files  [string]
+			  -h, --help                      Show help  [boolean]
+			  -v, --version                   Show version number  [boolean]
+
+			OPTIONS
+			      --secret-access-key  The R2 service token Access Key to write data  [string]
+			      --access-key-id      The R2 service token Secret Key to write data  [string]
+			      --batch-max-mb       The approximate maximum size of a batch before flush in megabytes
+			                           Default: 10  [number]
+			      --batch-max-rows     The approximate maximum size of a batch before flush in rows
+			                           Default: 10000  [number]
+			      --batch-max-seconds  The approximate maximum duration of a batch before flush in seconds
+			                           Default: 15  [number]
+			      --transform          The worker and entrypoint of the PipelineTransform implementation in the format \\"worker.entrypoint\\"
+			                           Default: No transformation worker  [string]
+			      --compression        Sets the compression format of output files
+			                           Default: gzip  [string] [choices: \\"none\\", \\"gzip\\", \\"deflate\\"]
+			      --filepath           The path to store files in the destination bucket
+			                           Default: event_date=\${date}/hr=\${hr}  [string]
+			      --filename           The name of the file in the bucket. Must contain \\"\${slug}\\". File extension is optional
+			                           Default: \${slug}-\${hr}.json  [string]
+			      --binding            Enable Worker binding to this pipeline
+			                           Default: true  [boolean]
+			      --http               Enable HTTPS endpoint to send data to this pipeline
+			                           Default: true  [boolean]
+			      --authentication     Require authentication (Cloudflare API Token) to send data to the HTTPS endpoint
+			                           Default: false  [boolean]
+			      --r2                 Destination R2 bucket name  [string] [required]"
+		`);
+	});
+
 	it("create - should create a pipeline", async () => {
 		const tokenReq = mockCreateR2Token("test-bucket");
 		const requests = mockCreateRequest("my-pipeline");
@@ -359,6 +410,32 @@ describe("pipelines", () => {
 		`);
 		expect(std.out).toMatchInlineSnapshot(`""`);
 		expect(requests.count).toEqual(1);
+	});
+
+	it("create - should create a pipeline with auth", async () => {
+		const requests = mockCreateRequest("my-pipeline");
+		await runWrangler(
+			"pipelines create my-pipeline --authentication --r2 test-bucket --access-key-id my-key --secret-access-key my-secret"
+		);
+		expect(requests.count).toEqual(1);
+
+		// contain http source and include auth
+		expect(requests.body?.source[1].type).toEqual("http");
+		expect(
+			(requests.body?.source[1] as HttpSource).config?.authentication
+		).toEqual(true);
+	});
+
+	it("create - should create a pipeline without http", async () => {
+		const requests = mockCreateRequest("my-pipeline");
+		await runWrangler(
+			"pipelines create my-pipeline --http=false --r2 test-bucket --access-key-id my-key --secret-access-key my-secret"
+		);
+		expect(requests.count).toEqual(1);
+
+		// only contains binding source
+		expect(requests.body?.source.length).toEqual(1);
+		expect(requests.body?.source[0].type).toEqual("binding");
 	});
 
 	it("list - should list pipelines", async () => {
@@ -491,6 +568,34 @@ describe("pipelines", () => {
 		);
 
 		expect(updateReq.count).toEqual(1);
+	});
+
+	it("update - should update a pipeline with source changes http auth", async () => {
+		const pipeline: Pipeline = samplePipeline;
+		mockShowRequest(pipeline.name, pipeline);
+
+		const update = JSON.parse(JSON.stringify(pipeline));
+		update.source = [
+			{
+				type: "http",
+				format: "json",
+				config: {
+					authenticated: true,
+				},
+			},
+		];
+		const updateReq = mockUpdateRequest(update.name, update);
+
+		await runWrangler(
+			"pipelines update my-pipeline --binding=false --http --authentication --r2 new-bucket --access-key-id new-key --secret-access-key new-secret"
+		);
+
+		expect(updateReq.count).toEqual(1);
+		expect(updateReq.body?.source.length).toEqual(1);
+		expect(updateReq.body?.source[0].type).toEqual("http");
+		expect(
+			(updateReq.body?.source[0] as HttpSource).config?.authentication
+		).toEqual(true);
 	});
 
 	it("update - should fail a missing pipeline", async () => {

@@ -17,7 +17,12 @@ import {
 	updatePipeline,
 } from "./client";
 import type { CommonYargsArgv, CommonYargsOptions } from "../yargs-types";
-import type { PipelineUserConfig } from "./client";
+import type {
+	BindingSource,
+	HttpSource,
+	PipelineUserConfig,
+	Source,
+} from "./client";
 import type { Argv } from "yargs";
 
 // flag to skip delays for tests
@@ -136,9 +141,20 @@ function addCreateAndUpdateOptions(yargs: Argv<CommonYargsOptions>) {
 			type: "string",
 			demandOption: false,
 		})
+		.option("binding", {
+			describe: "Enable Worker binding to this pipeline\nDefault: true",
+			type: "boolean",
+			demandOption: false,
+		})
+		.option("http", {
+			describe:
+				"Enable HTTPS endpoint to send data to this pipeline\nDefault: true",
+			type: "boolean",
+			demandOption: false,
+		})
 		.option("authentication", {
 			describe:
-				"Enabling authentication means that data can only be sent to the pipeline via the binding \nDefault: false",
+				"Require authentication (Cloudflare API Token) to send data to the HTTPS endpoint\nDefault: false",
 			type: "boolean",
 			demandOption: false,
 		});
@@ -186,16 +202,7 @@ export function pipelines(pipelineYargs: CommonYargsArgv) {
 				const pipelineConfig: PipelineUserConfig = {
 					name: name,
 					metadata: {},
-					source: [
-						{
-							type: "http",
-							format: "json",
-						},
-						{
-							type: "binding",
-							format: "json",
-						},
-					],
+					source: [],
 					transforms: [],
 					destination: {
 						type: "r2",
@@ -237,13 +244,27 @@ export function pipelines(pipelineYargs: CommonYargsArgv) {
 					throw new FatalError("Requires a r2 secret access key");
 				}
 
-				if (args.authentication) {
-					pipelineConfig.source = [
-						{
-							type: "binding",
-							format: "json",
+				// add binding source (default to add)
+				if (args.binding === undefined || args.binding) {
+					pipelineConfig.source.push({
+						type: "binding",
+						format: "json",
+					} satisfies BindingSource);
+				}
+
+				// add http source (possibly authenticated), default to add
+				if (args.http === undefined || args.http) {
+					pipelineConfig.source.push({
+						type: "http",
+						format: "json",
+						config: {
+							authentication:
+								args.authentication !== undefined && args.authentication,
 						},
-					];
+					} satisfies HttpSource);
+				}
+				if (pipelineConfig.source.length < 1) {
+					throw new FatalError("At leat one source should be specified");
 				}
 
 				if (args.transform !== undefined) {
@@ -393,18 +414,47 @@ export function pipelines(pipelineYargs: CommonYargsArgv) {
 					}
 				}
 
-				if (args.authentication !== undefined) {
-					// strip off existing http source
-					pipelineConfig.source = pipelineConfig.source.filter(
-						(s) => s.type == "http"
+				if (args.binding !== undefined) {
+					// strip off old source & keep if necessary
+					const source = pipelineConfig.source.find(
+						(s: Source) => s.type == "binding"
 					);
+					pipelineConfig.source = pipelineConfig.source.filter(
+						(s: Source) => s.type != "binding"
+					);
+					if (args.binding) {
+						// add back only if specified
+						pipelineConfig.source.push({
+							type: "binding",
+							format: "json",
+							...source,
+						});
+					}
+				}
 
-					// add back only if unauthenticated
-					if (!args.authentication) {
+				if (args.http !== undefined) {
+					// strip off old source & keep if necessary
+					const source = pipelineConfig.source.find(
+						(s: Source) => s.type == "http"
+					);
+					pipelineConfig.source = pipelineConfig.source.filter(
+						(s: Source) => s.type != "http"
+					);
+					if (args.http) {
+						// add back if specified
 						pipelineConfig.source.push({
 							type: "http",
 							format: "json",
-						});
+							...source,
+							config: {
+								authentication:
+									args.authentication !== undefined
+										? // if auth specified, use it
+											args.authentication
+										: // if auth not specified, use previos value or default(false)
+											source?.config?.authentication || false,
+							},
+						} satisfies HttpSource);
 					}
 				}
 
