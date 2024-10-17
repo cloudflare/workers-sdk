@@ -37,8 +37,8 @@ index 0b3f0f9def..ac6565f9ca 100644
        case Type.TAB:
          this.#capabilitiesMask = Capability.TARGET | Capability.TRACING;
          break;
-+      case Type.Cloudflare:
-+        this.#capabilitiesMask = Capability.JS | Capability.Network;
++      case Type.CLOUDFLARE:
++        this.#capabilitiesMask = Capability.JS | Capability.NETWORK;
 +        break;
      }
      this.#typeInternal = type;
@@ -49,7 +49,7 @@ index 0b3f0f9def..ac6565f9ca 100644
    TAB = 'tab',
 +  CLOUDFLARE = 'cloudflare',
  }
- 
+
  export const enum Capability {
 diff --git a/front_end/entrypoints/js_app/js_app.ts b/front_end/entrypoints/js_app/js_app.ts
 index 45028f436a..39a4b237b7 100644
@@ -114,6 +114,6 @@ index b3be02e26b..811051314d 100644
 +    "third_party/**/*.ts"
    ]
  }
--- 
+--
 2.39.5 (Apple Git-154)
 
