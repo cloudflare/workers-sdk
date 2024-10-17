@@ -1,7 +1,7 @@
-From 8a98ae9d046cc405a30be831e2918e66d017fcc7 Mon Sep 17 00:00:00 2001
+From 9c08db34087cad21bdcef72128bb23be9846ddb0 Mon Sep 17 00:00:00 2001
 From: Workers DevProd <workers-devprod@cloudflare.com>
 Date: Mon, 2 Oct 2023 18:13:34 +0100
-Subject: [PATCH 01/15] Support viewing files over the network
+Subject: [PATCH 01/14] Support viewing files over the network
 
 ---
  front_end/core/sdk/Target.ts             |  4 ++++
@@ -11,7 +11,7 @@ Subject: [PATCH 01/15] Support viewing files over the network
  4 files changed, 15 insertions(+), 5 deletions(-)
 
 diff --git a/front_end/core/sdk/Target.ts b/front_end/core/sdk/Target.ts
-index f5f812b001..76b67ea20b 100644
+index f5f812b001..07072175b7 100644
 --- a/front_end/core/sdk/Target.ts
 +++ b/front_end/core/sdk/Target.ts
 @@ -85,6 +85,9 @@ export class Target extends ProtocolClient.InspectorBackend.TargetBase {
@@ -30,7 +30,7 @@ index f5f812b001..76b67ea20b 100644
    TAB = 'tab',
 +  CLOUDFLARE = 'cloudflare',
  }
-
+ 
  export const enum Capability {
 diff --git a/front_end/entrypoints/js_app/js_app.ts b/front_end/entrypoints/js_app/js_app.ts
 index 45028f436a..39a4b237b7 100644
@@ -62,7 +62,7 @@ index 42a2e17f07..9713c169a0 100644
     *@description Command for showing the 'Search' tool
     */
 @@ -497,14 +502,14 @@ UI.ViewManager.registerViewExtension({
-
+ 
  UI.ViewManager.registerViewExtension({
    location: UI.ViewManager.ViewLocationValues.NAVIGATOR_VIEW,
 -  id: 'navigator-files',
@@ -78,7 +78,7 @@ index 42a2e17f07..9713c169a0 100644
 +    return Sources.SourcesNavigator.NetworkNavigatorView.instance();
    },
  });
-
+ 
 diff --git a/tsconfig.json b/tsconfig.json
 index b3be02e26b..811051314d 100644
 --- a/tsconfig.json
@@ -92,6 +92,6 @@ index b3be02e26b..811051314d 100644
 +    "third_party/**/*.ts"
    ]
  }
---
+-- 
 2.39.5 (Apple Git-154)
 

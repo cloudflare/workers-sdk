@@ -1,7 +1,7 @@
-From a22c7f26faf4bb485cd0682af8d93a76520e2998 Mon Sep 17 00:00:00 2001
+From 6cab942ba84bbfe9543a9479744eec4b80637eca Mon Sep 17 00:00:00 2001
 From: Workers DevProd <workers-devprod@cloudflare.com>
 Date: Mon, 2 Oct 2023 18:30:44 +0100
-Subject: [PATCH 12/15] Support sourcemaps:
+Subject: [PATCH 12/14] Support sourcemaps:
 
     * Recognise `wrangler://` URLs as "special", and always load them with Network.loadNetworkResource
 

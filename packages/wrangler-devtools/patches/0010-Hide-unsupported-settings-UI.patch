@@ -1,7 +1,7 @@
-From 2bb0613935ab2d1412e456e13cca620b515d0710 Mon Sep 17 00:00:00 2001
+From e0938ea8c876580bd1f5642b080a96fbdb4bba0d Mon Sep 17 00:00:00 2001
 From: bcoll <bcoll@cloudflare.com>
 Date: Thu, 26 Jan 2023 15:30:34 +0000
-Subject: [PATCH 10/15] Hide unsupported settings UI
+Subject: [PATCH 10/14] Hide unsupported settings UI
 
 - Show CORS errors in console setting
 - Show XHR requests in console setting

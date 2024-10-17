@@ -1,7 +1,7 @@
-From efaafbbe11191f5a5f1cf2c071fb532a512e1565 Mon Sep 17 00:00:00 2001
+From c70d702b20aefb940d7108b348265123403ef7d0 Mon Sep 17 00:00:00 2001
 From: Workers DevProd <workers-devprod@cloudflare.com>
 Date: Mon, 2 Oct 2023 18:22:08 +0100
-Subject: [PATCH 03/15] Support previewing subrequest responses
+Subject: [PATCH 03/14] Support previewing subrequest responses
 
 ---
  front_end/core/sdk/NetworkManager.ts   | 7 ++++++-
@@ -10,7 +10,7 @@ Subject: [PATCH 03/15] Support previewing subrequest responses
  3 files changed, 8 insertions(+), 1 deletion(-)
 
 diff --git a/front_end/core/sdk/NetworkManager.ts b/front_end/core/sdk/NetworkManager.ts
-index e9d60c5b49..e1ae8c3f13 100644
+index e9d60c5b49..734a39f9bc 100644
 --- a/front_end/core/sdk/NetworkManager.ts
 +++ b/front_end/core/sdk/NetworkManager.ts
 @@ -794,7 +794,7 @@ export class NetworkDispatcher implements ProtocolProxyApi.NetworkDispatcher {

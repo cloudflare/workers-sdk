@@ -1,7 +1,7 @@
-From 1f4f5cf67ac5fdb060564f93f5a756950c619f34 Mon Sep 17 00:00:00 2001
+From f6926ce33293c392fa769b19c831ec7fbfd2b2da Mon Sep 17 00:00:00 2001
 From: Workers DevProd <workers-devprod@cloudflare.com>
 Date: Thu, 5 Oct 2023 16:37:38 +0100
-Subject: [PATCH 15/15] Basic support for Safari
+Subject: [PATCH 13/14] Basic support for Safari
 
 ---
  front_end/core/dom_extension/DOMExtension.ts |  2 +-

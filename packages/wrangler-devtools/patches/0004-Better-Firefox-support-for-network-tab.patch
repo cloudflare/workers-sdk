@@ -1,7 +1,7 @@
-From f934a19a84288b4ae8cb556ccadff26d3ae17588 Mon Sep 17 00:00:00 2001
+From 2932b512ce27c800e5f3bf956d8c920ca1839221 Mon Sep 17 00:00:00 2001
 From: Samuel Macleod <smacleod@cloudflare.com>
 Date: Thu, 19 Jan 2023 15:47:52 +0000
-Subject: [PATCH 04/15] Better Firefox support for network tab
+Subject: [PATCH 04/14] Better Firefox support for network tab
 
 ---
  front_end/entrypoints/js_app/js_app.ts               | 2 ++
