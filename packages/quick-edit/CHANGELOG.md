@@ -1,5 +1,11 @@
 # @cloudflare/quick-edit
 
+## 0.3.1
+
+### Patch Changes
+
+- [#6998](https://github.com/cloudflare/workers-sdk/pull/6998) [`720a91d`](https://github.com/cloudflare/workers-sdk/commit/720a91d501ca04f677ab75f9da8f4b8b6d24a56f) Thanks [@edmundhung](https://github.com/edmundhung)! - chore: fix build config
+
 ## 0.3.0
 
 ### Minor Changes

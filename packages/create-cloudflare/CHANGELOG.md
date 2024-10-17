@@ -1,5 +1,47 @@
 # create-cloudflare
 
+## 2.30.0
+
+### Minor Changes
+
+- [#6846](https://github.com/cloudflare/workers-sdk/pull/6846) [`ae4bfea`](https://github.com/cloudflare/workers-sdk/commit/ae4bfead3ad9911823ec154476cb1c49ea3a02bf) Thanks [@edmundhung](https://github.com/edmundhung)! - feat: allow users going back to the project name prompt
+
+### Patch Changes
+
+- [#6993](https://github.com/cloudflare/workers-sdk/pull/6993) [`616801c`](https://github.com/cloudflare/workers-sdk/commit/616801cc387e2e6a0a20c752a3c420767140442e) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency  | From  | To    |
+  | ----------- | ----- | ----- |
+  | create-vite | 5.2.3 | 5.5.3 |
+
+- [#6994](https://github.com/cloudflare/workers-sdk/pull/6994) [`ef3af25`](https://github.com/cloudflare/workers-sdk/commit/ef3af253dfde6c0b1bb34e572a5c0f41cb44ddbf) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency  | From  | To    |
+  | ----------- | ----- | ----- |
+  | create-qwik | 1.9.0 | 1.9.1 |
+
+- [#7006](https://github.com/cloudflare/workers-sdk/pull/7006) [`284c962`](https://github.com/cloudflare/workers-sdk/commit/284c962fdbd92d3a9f05ac9c5727ae9067948476) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency  | From   | To     |
+  | ----------- | ------ | ------ |
+  | create-hono | 0.12.0 | 0.14.1 |
+
+- [#7007](https://github.com/cloudflare/workers-sdk/pull/7007) [`cebc9ea`](https://github.com/cloudflare/workers-sdk/commit/cebc9ea58bc4b4b1a7e56de92e9d08100c0da27b) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency   | From   | To     |
+  | ------------ | ------ | ------ |
+  | create-remix | 2.12.0 | 2.13.1 |
+
+- [#6982](https://github.com/cloudflare/workers-sdk/pull/6982) [`59c66a4`](https://github.com/cloudflare/workers-sdk/commit/59c66a49b845c8734ed11cd17351ac2531e2bf7e) Thanks [@emily-shen](https://github.com/emily-shen)! - fix: astro + Workers static assets template now has the correct `main` file in wrangler.toml
+
 ## 2.29.3
 
 ### Patch Changes
