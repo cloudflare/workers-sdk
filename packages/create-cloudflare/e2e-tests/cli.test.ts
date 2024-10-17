@@ -244,8 +244,20 @@ describe.skipIf(experimental || frameworkToTest || isQuarantineMode())(
 			"Going back and forth between the category, type, framework and lang prompts",
 			async ({ logStream, project }) => {
 				const { output } = await runC3(
-					[project.path, "--git=false", "--no-deploy"],
+					["/invalid-project-name", "--git=false", "--no-deploy"],
 					[
+						{
+							matcher: /What would you like to start with\?/,
+							input: {
+								type: "select",
+								target: "Go back",
+							},
+						},
+						{
+							matcher:
+								/In which directory do you want to create your application/,
+							input: [project.path, keys.enter],
+						},
 						{
 							matcher: /What would you like to start with\?/,
 							input: {
