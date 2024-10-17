@@ -138,6 +138,7 @@ export async function typesHandler(
 		version_metadata: config.version_metadata,
 		secrets,
 		assets: config.assets,
+		workflows: config.workflows,
 	};
 
 	await generateTypes(
@@ -425,6 +426,12 @@ async function generateTypes(
 
 	if (configToDTS.assets?.binding) {
 		envTypeStructure.push(constructType(configToDTS.assets.binding, "Fetcher"));
+	}
+
+	if (configToDTS.workflows) {
+		for (const workflow of configToDTS.workflows) {
+			envTypeStructure.push(constructType(workflow.binding, "Workflow"));
+		}
 	}
 
 	const modulesTypeStructure: string[] = [];
