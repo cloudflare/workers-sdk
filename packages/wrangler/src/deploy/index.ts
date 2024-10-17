@@ -254,6 +254,12 @@ export async function deployHandler(args: DeployArgs) {
 		args.config || (args.script && findWranglerToml(path.dirname(args.script)));
 	const projectRoot = configPath && path.dirname(configPath);
 	const config = readConfig(configPath, args);
+	if (config.pages_build_output_dir) {
+		throw new UserError(
+			"This command is for Workers, for Pages please run `wrangler pages deploy`."
+		);
+	}
+
 	const entry = await getEntry(args, config, "deploy");
 
 	if (args.public) {
