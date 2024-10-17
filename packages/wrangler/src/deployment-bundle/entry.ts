@@ -66,6 +66,12 @@ export async function getEntry(
 	) {
 		paths = resolveEntryWithAssets();
 	} else {
+		if (config.pages_build_output_dir && command === "dev") {
+			throw new UserError(
+				"It looks like you've run a Workers-specific command in a Pages project.\n" +
+					"For Pages, please run `wrangler pages dev` instead."
+			);
+		}
 		throw new UserError(
 			`Missing entry-point: The entry-point should be specified via the command line (e.g. \`wrangler ${command} path/to/script\`) or the \`main\` config field.`
 		);

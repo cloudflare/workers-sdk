@@ -377,6 +377,21 @@ describe("deploy", () => {
 	`);
 	});
 
+	it("should error helpfully if pages_build_output_dir is set in wrangler.toml", async () => {
+		writeWranglerToml({
+			pages_build_output_dir: "public",
+			name: "test-name",
+		});
+		await expect(
+			runWrangler("deploy")
+		).rejects.toThrowErrorMatchingInlineSnapshot(
+			`
+			[Error: It looks like you've run a Workers-specific command in a Pages project.
+			For Pages, please run \`wrangler pages deploy\` instead.]
+		`
+		);
+	});
+
 	describe("output additional script information", () => {
 		it("for first party workers, it should print worker information at log level", async () => {
 			setIsTTY(false);

@@ -97,6 +97,12 @@ export async function deleteHandler(args: DeleteArgs) {
 	const configPath =
 		args.config || (args.script && findWranglerToml(path.dirname(args.script)));
 	const config = readConfig(configPath, args);
+	if (config.pages_build_output_dir) {
+		throw new UserError(
+			"It looks like you've run a Workers-specific command in a Pages project.\n" +
+				"For Pages, please run `wrangler pages project delete` instead."
+		);
+	}
 	await metrics.sendMetricsEvent(
 		"delete worker script",
 		{},
