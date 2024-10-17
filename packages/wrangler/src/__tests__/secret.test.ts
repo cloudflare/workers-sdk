@@ -83,6 +83,22 @@ describe("wrangler secret", () => {
 			);
 		}
 
+		it("should error helpfully if pages_build_output_dir is set", async () => {
+			fs.writeFileSync(
+				"wrangler.toml",
+				TOML.stringify({
+					pages_build_output_dir: "public",
+					name: "script-name",
+				}),
+				"utf-8"
+			);
+			await expect(
+				runWrangler("secret put secret-name")
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: This command is for Workers, for Pages please run \`wrangler pages secret put\`.]`
+			);
+		});
+
 		describe("interactive", () => {
 			beforeEach(() => {
 				setIsTTY(true);
@@ -389,6 +405,22 @@ describe("wrangler secret", () => {
 			);
 		}
 
+		it("should error helpfully if pages_build_output_dir is set", async () => {
+			fs.writeFileSync(
+				"wrangler.toml",
+				TOML.stringify({
+					pages_build_output_dir: "public",
+					name: "script-name",
+				}),
+				"utf-8"
+			);
+			await expect(
+				runWrangler("secret delete secret-name")
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: This command is for Workers, for Pages please run \`wrangler pages secret delete\`.]`
+			);
+		});
+
 		it("should delete a secret", async () => {
 			mockDeleteRequest({ scriptName: "script-name", secretName: "the-key" });
 			mockConfirm({
@@ -499,6 +531,22 @@ describe("wrangler secret", () => {
 			);
 		}
 
+		it("should error helpfully if pages_build_output_dir is set", async () => {
+			fs.writeFileSync(
+				"wrangler.toml",
+				TOML.stringify({
+					pages_build_output_dir: "public",
+					name: "script-name",
+				}),
+				"utf-8"
+			);
+			await expect(
+				runWrangler("secret list")
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: This command is for Workers, for Pages please run \`wrangler pages secret list\`.]`
+			);
+		});
+
 		it("should list secrets", async () => {
 			mockListRequest({ scriptName: "script-name" });
 			await runWrangler("secret list --name script-name");
@@ -565,6 +613,22 @@ describe("wrangler secret", () => {
 	});
 
 	describe("bulk", () => {
+		it("should error helpfully if pages_build_output_dir is set", async () => {
+			fs.writeFileSync(
+				"wrangler.toml",
+				TOML.stringify({
+					pages_build_output_dir: "public",
+					name: "script-name",
+				}),
+				"utf-8"
+			);
+			await expect(
+				runWrangler("secret bulk")
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: This command is for Workers, for Pages please run \`wrangler pages secret bulk\`.]`
+			);
+		});
+
 		it("should fail secret bulk w/ no pipe or JSON input", async () => {
 			vi.spyOn(readline, "createInterface").mockImplementation(
 				() => null as unknown as Interface

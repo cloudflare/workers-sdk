@@ -144,6 +144,11 @@ export const secret = (secretYargs: CommonYargsArgv) => {
 			async (args) => {
 				await printWranglerBanner();
 				const config = readConfig(args.config, args);
+				if (config.pages_build_output_dir) {
+					throw new UserError(
+						"This command is for Workers, for Pages please run `wrangler pages secret put`."
+					);
+				}
 
 				const scriptName = getLegacyScriptName(args, config);
 				if (!scriptName) {
@@ -243,6 +248,11 @@ export const secret = (secretYargs: CommonYargsArgv) => {
 			},
 			async (args) => {
 				const config = readConfig(args.config, args);
+				if (config.pages_build_output_dir) {
+					throw new UserError(
+						"This command is for Workers, for Pages please run `wrangler pages secret delete`."
+					);
+				}
 
 				const scriptName = getLegacyScriptName(args, config);
 				if (!scriptName) {
@@ -299,6 +309,11 @@ export const secret = (secretYargs: CommonYargsArgv) => {
 			},
 			async (args) => {
 				const config = readConfig(args.config, args);
+				if (config.pages_build_output_dir) {
+					throw new UserError(
+						"This command is for Workers, for Pages please run `wrangler pages secret list`."
+					);
+				}
 
 				const scriptName = getLegacyScriptName(args, config);
 				if (!scriptName) {
@@ -360,6 +375,11 @@ type SecretBulkArgs = StrictYargsOptionsToInterface<typeof secretBulkOptions>;
 export const secretBulkHandler = async (secretBulkArgs: SecretBulkArgs) => {
 	await printWranglerBanner();
 	const config = readConfig(secretBulkArgs.config, secretBulkArgs);
+	if (config.pages_build_output_dir) {
+		throw new UserError(
+			"This command is for Workers, for Pages please run `wrangler pages secret bulk`."
+		);
+	}
 
 	if (secretBulkArgs._.includes("secret:bulk")) {
 		logger.warn(
