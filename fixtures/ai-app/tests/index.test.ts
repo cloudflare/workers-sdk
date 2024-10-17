@@ -31,6 +31,7 @@ describe("'wrangler dev' correctly renders pages", () => {
 		const response = await fetch(`http://${ip}:${port}/`);
 		const content = await response.json();
 		expect((content as Record<string, object>).binding).toEqual({
+			aiGatewayLogId: null,
 			fetcher: {},
 			lastRequestId: null,
 			logs: [],

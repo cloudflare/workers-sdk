@@ -345,7 +345,7 @@ function queueConsumerEntry(consumer: QueueConsumer) {
 	const options = {
 		maxBatchSize: consumer.max_batch_size,
 		maxBatchTimeout: consumer.max_batch_timeout,
-		maxRetires: consumer.max_retries,
+		maxRetries: consumer.max_retries,
 		deadLetterQueue: consumer.dead_letter_queue,
 		retryDelay: consumer.retry_delay,
 	};
@@ -696,13 +696,12 @@ export function buildPersistOptions(
 	}
 }
 
-function buildAssetOptions(config: Omit<ConfigBundle, "rules">) {
+export function buildAssetOptions(config: Pick<ConfigBundle, "assets">) {
 	if (config.assets) {
 		return {
 			assets: {
-				workerName: config.name,
-				path: config.assets.directory,
-				bindingName: config.assets.binding,
+				directory: config.assets.directory,
+				binding: config.assets.binding,
 				routingConfig: config.assets.routingConfig,
 				assetConfig: config.assets.assetConfig,
 			},

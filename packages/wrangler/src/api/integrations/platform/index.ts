@@ -1,10 +1,12 @@
 import { kCurrentWorker, Miniflare } from "miniflare";
+import { processAssetsArg } from "../../../assets";
 import { readConfig } from "../../../config";
 import { DEFAULT_MODULE_RULES } from "../../../deployment-bundle/rules";
 import { getBindings } from "../../../dev";
 import { getBoundRegisteredWorkers } from "../../../dev-registry";
 import { getVarsForDev } from "../../../dev/dev-vars";
 import {
+	buildAssetOptions,
 	buildMiniflareBindingOptions,
 	buildSitesOptions,
 } from "../../../dev/miniflare";
@@ -245,8 +247,15 @@ export function unstable_getMiniflareWorkerOptions(
 	define: Record<string, string>;
 	main?: string;
 } {
+	// experimental json is usually enabled via a cli arg,
+	// so it cannot be passed to the vitest integration.
+	// instead we infer it from the config path (instead of setting a default)
+	// because wrangler.json is not compatible with pages.
+	const isJsonConfigFile =
+		configPath.endsWith(".json") || configPath.endsWith(".jsonc");
+
 	const config = readConfig(configPath, {
-		experimentalJsonConfig: true,
+		experimentalJsonConfig: isJsonConfigFile,
 		env,
 	});
 
@@ -310,6 +319,10 @@ export function unstable_getMiniflareWorkerOptions(
 		? getLegacyAssetPaths(config, undefined)
 		: getSiteAssetPaths(config);
 	const sitesOptions = buildSitesOptions({ legacyAssetPaths });
+	const processedAssetOptions = processAssetsArg({ assets: undefined }, config);
+	const assetOptions = processedAssetOptions
+		? buildAssetOptions({ assets: processedAssetOptions })
+		: {};
 
 	const workerOptions: SourcelessWorkerOptions = {
 		compatibilityDate: config.compatibility_date,
@@ -318,6 +331,7 @@ export function unstable_getMiniflareWorkerOptions(
 
 		...bindingOptions,
 		...sitesOptions,
+		...assetOptions,
 	};
 
 	return { workerOptions, define: config.define, main: config.main };

@@ -1,6 +1,7 @@
 import fs, { existsSync, statSync } from "fs";
 import { join } from "path";
 import TOML from "@iarna/toml";
+import type { JsonMap } from "@iarna/toml";
 import type { C3Context } from "types";
 
 export const copyFile = (path: string, dest: string) => {
@@ -62,11 +63,15 @@ export const readJSON = (path: string) => {
 
 export const readToml = (path: string) => {
 	const contents = readFile(path);
-	return contents ? TOML.parse(contents) : contents;
+	return contents ? TOML.parse(contents) : {};
 };
 
 export const writeJSON = (path: string, object: object, stringifySpace = 2) => {
 	writeFile(path, JSON.stringify(object, null, stringifySpace));
+};
+
+export const writeToml = (path: string, object: JsonMap) => {
+	writeFile(path, TOML.stringify(object));
 };
 
 // Probes a list of paths and returns the first one that exists or null if none does

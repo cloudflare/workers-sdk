@@ -1,4 +1,4 @@
-import { env, ctx, createExecutionContext, waitOnExecutionContext, SELF } from 'cloudflare:test';
+import { env, createExecutionContext, waitOnExecutionContext, SELF } from 'cloudflare:test';
 import { describe, it, expect } from 'vitest';
 import worker from '../src';
 
@@ -16,7 +16,7 @@ describe('Hello World user worker', () => {
 
 		it('responds with "Hello, World!" (integration style)', async () => {
 			const request = new Request('http://example.com/message');
-			const response = await SELF.fetch(request, env, ctx);
+			const response = await SELF.fetch(request);
 			expect(await response.text()).toMatchInlineSnapshot(`"Hello, World!"`);
 		});
 	});
@@ -34,7 +34,7 @@ describe('Hello World user worker', () => {
 
 		it('responds with a random UUID (integration style)', async () => {
 			const request = new Request('http://example.com/random');
-			const response = await SELF.fetch(request, env, ctx);
+			const response = await SELF.fetch(request);
 			expect(await response.text()).toMatch(/[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}/);
 		});
 	});

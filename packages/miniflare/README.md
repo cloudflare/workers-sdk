@@ -574,6 +574,17 @@ parameter in module format Workers.
   have at most one consumer. If a `string[]` of queue names is specified,
   default consumer options will be used.
 
+#### Assets
+
+- `directory?: string`
+  Path to serve Workers static asset files from.
+
+- `binding?: string`
+  Binding name to inject as a `Fetcher` binding to allow access to static assets from within the Worker.
+
+- `assetOptions?: { html_handling?: HTMLHandlingOptions, not_found_handling?: NotFoundHandlingOptions}`
+  Configuration for file-based asset routing - see [docs](https://developers.cloudflare.com/workers/static-assets/routing/#routing-configuration) for options
+
 #### Analytics Engine, Sending Email, Vectorize and Workers for Platforms
 
 _Not yet supported_

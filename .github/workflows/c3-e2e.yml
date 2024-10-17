@@ -5,11 +5,6 @@ on:
   pull_request:
     paths:
       - packages/create-cloudflare/**
-  push:
-    branches:
-      - main
-    paths:
-      - packages/create-cloudflare/**
 
 jobs:
   e2e:
@@ -20,7 +15,7 @@ jobs:
       group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}-${{ matrix.pm.name }}-${{ matrix.pm.version }}
       cancel-in-progress: true
     name: ${{ format('Run tests for {0}@{1} on {2}', matrix.pm.name, matrix.pm.version, matrix.os) }}
-    if: github.repository_owner == 'cloudflare' && github.event.pull_request.user.login != 'dependabot[bot]'
+    if: github.event.pull_request.head.repo.owner.login == 'cloudflare' && github.event.pull_request.user.login != 'dependabot[bot]'
     strategy:
       fail-fast: false
       matrix:
@@ -28,14 +23,14 @@ jobs:
         pm:
           [
             { name: npm, version: "0.0.0" },
-            { name: pnpm, version: "9.10.0" },
+            { name: pnpm, version: "9.12.0" },
             { name: bun, version: "1.0.3" },
             { name: yarn, version: "1.0.0" },
           ]
         # include a single windows test with pnpm
         include:
           - os: windows-latest
-            pm: { name: pnpm, version: "9.10.0" }
+            pm: { name: pnpm, version: "9.12.0" }
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout Repo
@@ -43,7 +38,15 @@ jobs:
         with:
           fetch-depth: 0
 
+      - uses: dorny/paths-filter@v3
+        id: changes
+        with:
+          filters: |
+            everything_but_markdown:
+              - '!**/*.md'
+
       - name: Install Dependencies
+        if: steps.changes.outputs.everything_but_markdown == 'true'
         uses: ./.github/actions/install-dependencies
         with:
           turbo-api: ${{ secrets.TURBO_API }}
@@ -52,6 +55,7 @@ jobs:
           turbo-signature: ${{ secrets.TURBO_REMOTE_CACHE_SIGNATURE_KEY }}
 
       - name: E2E Tests
+        if: steps.changes.outputs.everything_but_markdown == 'true'
         uses: ./.github/actions/run-c3-e2e
         with:
           packageManager: ${{ matrix.pm.name }}

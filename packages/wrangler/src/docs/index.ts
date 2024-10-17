@@ -11,8 +11,9 @@ import type {
 
 export function docsOptions(yargs: CommonYargsArgv) {
 	return yargs
-		.positional("command", {
-			describe: "Enter the wrangler command you want to know more about",
+		.positional("search", {
+			describe:
+				"Enter search terms (e.g. the wrangler command) you want to know more about",
 			type: "string",
 			array: true,
 		})
@@ -29,12 +30,12 @@ export async function docsHandler(
 	//if no command is provided, open the docs homepage
 	//or, if a command IS provided, but we can't find anything, open the docs homepage
 	let urlToOpen =
-		args.yes || !args.command || args.command.length === 0
+		args.yes || !args.search || args.search.length === 0
 			? "https://developers.cloudflare.com/workers/wrangler/commands/"
 			: "";
 
-	if (args.command && args.command.length > 0) {
-		const searchTerm = args.command.join(" ");
+	if (args.search && args.search.length > 0) {
+		const searchTerm = args.search.join(" ");
 		const searchResult = await runSearch(searchTerm);
 
 		urlToOpen = searchResult ?? urlToOpen;

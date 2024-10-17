@@ -13,6 +13,9 @@ workers_dev = false
 main = "src/index.ts"
 compatibility_date = "2024-07-31"
 
+[version_metadata]
+binding = "VERSION_METADATA"
+
 [[unsafe.bindings]]
 name = "CONFIG"
 type = "param"
@@ -30,3 +33,7 @@ type = "origin"
 [unsafe.metadata.build_options]
 stable_id = "cloudflare/cf_router_worker"
 networks = ["cf","jdc"]
+
+[[unsafe.bindings]]
+name = "workers-router-worker"
+type = "internal_capability_grants"

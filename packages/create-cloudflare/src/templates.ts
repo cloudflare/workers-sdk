@@ -296,11 +296,15 @@ export const createContext = async (
 
 	// Allows the users to go back to the previous step
 	// By moving the cursor up to a certain line and clearing the screen
-	const goBack = async (from: "type" | "framework" | "lang") => {
+	const goBack = async (from: "category" | "type" | "framework" | "lang") => {
 		const currentArgs = { ...args };
 		let linesPrinted = 0;
 
 		switch (from) {
+			case "category":
+				linesPrinted = 6;
+				args.projectName = undefined;
+				break;
 			case "type":
 				linesPrinted = 9;
 				args.category = undefined;
@@ -341,7 +345,7 @@ export const createContext = async (
 		type: "text",
 		question: `In which directory do you want to create your application?`,
 		helpText: "also used as application name",
-		defaultValue: defaultName,
+		defaultValue: prevArgs?.projectName ?? defaultName,
 		label: "dir",
 		validate: (value) =>
 			validateProjectDirectory(String(value) || C3_DEFAULTS.projectName, args),
@@ -366,12 +370,13 @@ export const createContext = async (
 				"Select from a range of starter applications using various Cloudflare products",
 		},
 		{
-			label: "Template from a Github repo",
+			label: "Template from a GitHub repo",
 			value: "remote-template",
 			description: "Start from an existing GitHub repo link",
 		},
 		// This is used only if the type is `pre-existing`
 		{ label: "Others", value: "others", hidden: true },
+		backOption,
 	];
 
 	const category = await processArgument(args, "category", {
@@ -381,6 +386,10 @@ export const createContext = async (
 		options: categoryOptions,
 		defaultValue: prevArgs?.category ?? C3_DEFAULTS.category,
 	});
+
+	if (category === BACK_VALUE) {
+		return goBack("category");
+	}
 
 	let template: TemplateConfig;
 

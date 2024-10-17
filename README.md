@@ -36,7 +36,11 @@
 To get started quickly with a new project, run the command below:
 
 ```bash
-npx create-cloudflare@latest
+npm create cloudflare@latest
+# or
+pnpm create cloudflare@latest
+# or
+yarn create cloudflare@latest
 ```
 
 For more info, visit our [Getting Started](https://developers.cloudflare.com/workers/get-started/guide/) guide.

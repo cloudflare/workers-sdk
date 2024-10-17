@@ -22,7 +22,7 @@ jobs:
         pm:
           [
             { name: npm, version: "0.0.0" },
-            { name: pnpm, version: "9.10.0" },
+            { name: pnpm, version: "9.12.0" },
             { name: bun, version: "1.0.3" },
           ]
     runs-on: ${{ matrix.os }}

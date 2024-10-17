@@ -63,4 +63,17 @@ describe("nodejs compat", () => {
 			await stop();
 		}
 	});
+
+	test("import unenv aliased packages", async ({ expect }) => {
+		const { ip, port, stop } = await runWranglerDev(
+			resolve(__dirname, "../src"),
+			["--port=0", "--inspector-port=0"]
+		);
+		try {
+			const response = await fetch(`http://${ip}:${port}/test-require-alias`);
+			await expect(response.text()).resolves.toBe(`"OK!"`);
+		} finally {
+			await stop();
+		}
+	});
 });

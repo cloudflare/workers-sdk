@@ -19,8 +19,10 @@ import { logger, LOGGER_LEVELS } from "./logger";
 import { hashFile } from "./pages/hash";
 import { isJwtExpired } from "./pages/upload";
 import { APIError } from "./parse";
+import { getBasePath } from "./paths";
 import { dedent } from "./utils/dedent";
 import { createPatternMatcher } from "./utils/filesystem";
+import type { StartDevWorkerOptions } from "./api";
 import type { Config } from "./config";
 import type { Assets } from "./config/environment";
 import type { DeployArgs } from "./deploy";
@@ -81,7 +83,7 @@ export const syncAssets = async (
 	// 3. fill buckets and upload assets
 	const numberFilesToUpload = initializeAssetsResponse.buckets.flat().length;
 	logger.info(
-		`🌀 Found ${numberFilesToUpload} new or modified file${numberFilesToUpload > 1 ? "s" : ""} to upload. Proceeding with upload...`
+		`🌀 Found ${numberFilesToUpload} new or modified static asset${numberFilesToUpload > 1 ? "s" : ""} to upload. Proceeding with upload...`
 	);
 
 	// Create the buckets outside of doUpload so we can retry without losing track of potential duplicate files
@@ -362,18 +364,30 @@ export function processAssetsArg(
  * and throw an appropriate error if invalid.
  */
 export function validateAssetsArgsAndConfig(
+	args: Pick<StartDevWorkerOptions, "legacy" | "assets" | "entrypoint">
+): void;
+export function validateAssetsArgsAndConfig(
 	args:
 		| Pick<StartDevOptions, "legacyAssets" | "site" | "assets" | "script">
 		| Pick<DeployArgs, "legacyAssets" | "site" | "assets" | "script">,
 	config: Config
-) {
+): void;
+export function validateAssetsArgsAndConfig(
+	args:
+		| Pick<StartDevOptions, "legacyAssets" | "site" | "assets" | "script">
+		| Pick<DeployArgs, "legacyAssets" | "site" | "assets" | "script">
+		| Pick<StartDevWorkerOptions, "legacy" | "assets" | "entrypoint">,
+	config?: Config
+): void {
 	/*
 	 * - `config.legacy_assets` conflates `legacy_assets` and `assets`
 	 * - `args.legacyAssets` conflates `legacy-assets` and `assets`
 	 */
 	if (
-		(args.assets || config.assets) &&
-		(args.legacyAssets || config.legacy_assets)
+		"legacy" in args
+			? args.assets && args.legacy.legacyAssets
+			: (args.assets || config?.assets) &&
+				(args?.legacyAssets || config?.legacy_assets)
 	) {
 		throw new UserError(
 			"Cannot use assets and legacy assets in the same Worker.\n" +
@@ -381,20 +395,34 @@ export function validateAssetsArgsAndConfig(
 		);
 	}
 
-	if ((args.assets || config.assets) && (args.site || config.site)) {
+	if (
+		"legacy" in args
+			? args.assets && args.legacy.site
+			: (args.assets || config?.assets) && (args.site || config?.site)
+	) {
 		throw new UserError(
 			"Cannot use assets and Workers Sites in the same Worker.\n" +
 				"Please remove either the `site` or `assets` field from your configuration file."
 		);
 	}
 
-	if ((args.assets || config.assets) && config.tail_consumers?.length) {
+	// tail_consumers don't exist in dev, so ignore SDW here
+	if ((args.assets || config?.assets) && config?.tail_consumers?.length) {
 		throw new UserError(
 			"Cannot use assets and tail consumers in the same Worker. Tail Workers are not yet supported for Workers with assets."
 		);
 	}
 
-	if (!(args.script || config.main) && config.assets?.binding) {
+	const noOpEntrypoint = path.resolve(
+		getBasePath(),
+		"templates/no-op-worker.js"
+	);
+
+	if (
+		"legacy" in args
+			? args.entrypoint === noOpEntrypoint && args.assets?.binding
+			: !(args.script || config?.main) && config?.assets?.binding
+	) {
 		throw new UserError(
 			"Cannot use assets with a binding in an assets-only Worker.\n" +
 				"Please remove the asset binding from your configuration file, or provide a Worker script in your configuration file (`main`)."

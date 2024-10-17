@@ -448,6 +448,16 @@ ${failureMessage}`,
 		url: deploymentResponse.url,
 	});
 
+	writeOutput({
+		type: "pages-deploy-detailed",
+		version: 1,
+		pages_project: deploymentResponse.project_name,
+		deployment_id: deploymentResponse.id,
+		url: deploymentResponse.url,
+		alias,
+		environment: deploymentResponse.environment,
+	});
+
 	await metrics.sendMetricsEvent("create pages deployment");
 };
 

@@ -39,6 +39,7 @@ export default async function guessWorkerFormat(
 		bundle: false,
 		write: false,
 		...(tsconfig && { tsconfig }),
+		logLevel: "silent",
 	});
 
 	// result.metafile is defined because of the `metafile: true` option above.

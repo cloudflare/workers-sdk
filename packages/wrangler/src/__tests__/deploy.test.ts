@@ -14,7 +14,6 @@ import {
 	printBundleSize,
 	printOffendingDependencies,
 } from "../deployment-bundle/bundle-reporter";
-import { logger } from "../logger";
 import { writeAuthConfigFile } from "../user";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockAuthDomain } from "./helpers/mock-auth-domain";
@@ -80,7 +79,6 @@ describe("deploy", () => {
 		mockLastDeploymentRequest();
 		mockDeploymentsListRequest();
 		msw.use(...mswListNewDeploymentsLatestFull);
-		logger.loggerLevel = "log";
 	});
 
 	afterEach(() => {
@@ -248,6 +246,40 @@ describe("deploy", () => {
 		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
 
+	it("should include serialised FormData in debug logs", async () => {
+		fs.mkdirSync("./my-worker", { recursive: true });
+		fs.writeFileSync(
+			"./my-worker/wrangler.toml",
+			TOML.stringify({
+				name: "test-worker",
+				compatibility_date: "2022-01-12",
+				vars: { xyz: 123 },
+			}),
+			"utf-8"
+		);
+		writeWorkerSource({ basePath: "./my-worker" });
+		mockUploadWorkerRequest({
+			expectedScriptName: "test-worker",
+			expectedBindings: [
+				{
+					json: 123,
+					name: "xyz",
+					type: "json",
+				},
+			],
+			expectedCompatibilityDate: "2022-01-12",
+		});
+		mockSubDomainRequest();
+
+		vi.stubEnv("WRANGLER_LOG", "debug");
+		vi.stubEnv("WRANGLER_LOG_SANITIZE", "false");
+
+		await runWrangler("deploy ./my-worker/index.js");
+		expect(std.debug).toContain(
+			`{"main_module":"index.js","bindings":[{"name":"xyz","type":"json","json":123}],"compatibility_date":"2022-01-12","compatibility_flags":[]}`
+		);
+	});
+
 	it("should support wrangler.jsonc", async () => {
 		fs.mkdirSync("./my-worker", { recursive: true });
 		fs.writeFileSync(
@@ -343,6 +375,21 @@ describe("deploy", () => {
 		└───────────────┴────────────┘
 		🔓 To see token permissions visit https://dash.cloudflare.com/profile/api-tokens."
 	`);
+	});
+
+	it("should error helpfully if pages_build_output_dir is set in wrangler.toml", async () => {
+		writeWranglerToml({
+			pages_build_output_dir: "public",
+			name: "test-name",
+		});
+		await expect(
+			runWrangler("deploy")
+		).rejects.toThrowErrorMatchingInlineSnapshot(
+			`
+			[Error: It looks like you've run a Workers-specific command in a Pages project.
+			For Pages, please run \`wrangler pages deploy\` instead.]
+		`
+		);
 	});
 
 	describe("output additional script information", () => {
@@ -4105,7 +4152,9 @@ addEventListener('fetch', event => {});`
 			});
 
 			it("debug log level", async () => {
-				logger.loggerLevel = "debug";
+				vi.stubEnv("WRANGLER_LOG", "debug");
+				vi.stubEnv("WRANGLER_LOG_SANITIZE", "false");
+
 				await runWrangler("deploy");
 
 				const diffRegexp = /^ [+=-]/;
@@ -4300,6 +4349,31 @@ addEventListener('fetch', event => {});`
 			).rejects.toThrowErrorMatchingInlineSnapshot(
 				dedent`[Error: Cannot use assets and Workers Sites in the same Worker.
 				Please remove either the \`site\` or \`assets\` field from your configuration file.]`
+			);
+		});
+
+		it("should error if --assets and config.tail_consumers are used together", async () => {
+			writeWranglerToml({
+				tail_consumers: [{ service: "<TAIL_WORKER_NAME>" }],
+			});
+			fs.mkdirSync("public");
+			await expect(
+				runWrangler("deploy --assets public")
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: Cannot use assets and tail consumers in the same Worker. Tail Workers are not yet supported for Workers with assets.]`
+			);
+		});
+
+		it("should error if config.assets and config.tail_consumers are used together", async () => {
+			writeWranglerToml({
+				assets: { directory: "./public" },
+				tail_consumers: [{ service: "<TAIL_WORKER_NAME>" }],
+			});
+			fs.mkdirSync("public");
+			await expect(
+				runWrangler("deploy")
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: Cannot use assets and tail consumers in the same Worker. Tail Workers are not yet supported for Workers with assets.]`
 			);
 		});
 
@@ -6043,7 +6117,7 @@ addEventListener('fetch', event => {});`
 				Worker Startup Time: 100 ms
 				Your worker has access to the following bindings:
 				- Durable Objects:
-				  - SOMENAME: SomeClass (defined in some-script)
+				  - SOMENAME: SomeClass (defined in 🔴 some-script)
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
@@ -6738,8 +6812,8 @@ addEventListener('fetch', event => {});`
 				  - DATA_BLOB_ONE: some-data-blob.bin
 				  - DATA_BLOB_TWO: more-data-blob.bin
 				- Durable Objects:
-				  - DURABLE_OBJECT_ONE: SomeDurableObject (defined in some-durable-object-worker)
-				  - DURABLE_OBJECT_TWO: AnotherDurableObject (defined in another-durable-object-worker) - staging
+				  - DURABLE_OBJECT_ONE: SomeDurableObject (defined in 🔴 some-durable-object-worker)
+				  - DURABLE_OBJECT_TWO: AnotherDurableObject (defined in 🔴 another-durable-object-worker)
 				- KV Namespaces:
 				  - KV_NAMESPACE_ONE: kv-ns-one-id
 				  - KV_NAMESPACE_TWO: kv-ns-two-id
@@ -7835,7 +7909,7 @@ addEventListener('fetch', event => {});`
 					Worker Startup Time: 100 ms
 					Your worker has access to the following bindings:
 					- Durable Objects:
-					  - EXAMPLE_DO_BINDING: ExampleDurableObject (defined in example-do-binding-worker)
+					  - EXAMPLE_DO_BINDING: ExampleDurableObject (defined in 🔴 example-do-binding-worker)
 					Uploaded test-name (TIMINGS)
 					Deployed test-name triggers (TIMINGS)
 					  https://test-name.test-sub-domain.workers.dev
@@ -8005,7 +8079,7 @@ addEventListener('fetch', event => {});`
 					Worker Startup Time: 100 ms
 					Your worker has access to the following bindings:
 					- Services:
-					  - FOO: foo-service - production
+					  - FOO: 🔴 foo-service
 					Uploaded test-name (TIMINGS)
 					Deployed test-name triggers (TIMINGS)
 					  https://test-name.test-sub-domain.workers.dev
@@ -8046,7 +8120,7 @@ addEventListener('fetch', event => {});`
 					Worker Startup Time: 100 ms
 					Your worker has access to the following bindings:
 					- Services:
-					  - FOO: foo-service - production (#MyHandler)
+					  - FOO: 🔴 foo-service#MyHandler
 					Uploaded test-name (TIMINGS)
 					Deployed test-name triggers (TIMINGS)
 					  https://test-name.test-sub-domain.workers.dev
@@ -8848,6 +8922,117 @@ addEventListener('fetch', event => {});`
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
+		});
+	});
+
+	describe("service worker format", () => {
+		it("should error if trying to import a cloudflare prefixed external when in service worker format", async () => {
+			writeWranglerToml();
+			fs.writeFileSync(
+				"dep-1.js",
+				dedent`
+					import sockets from 'cloudflare:sockets';
+					export const external = sockets;
+				`
+			);
+			fs.writeFileSync(
+				"dep-2.js",
+				dedent`
+					export const internal = 100;
+				`
+			);
+			fs.writeFileSync(
+				"index.js",
+				dedent`
+					import {external} from "./dep-1"; // will the external import check be transitive?
+					import {internal} from "./dep-2"; // ensure that we can still have a non-external import
+					let x = [external, internal]; // to ensure that esbuild doesn't tree shake the imports
+					// no default export making this a service worker format
+					addEventListener('fetch', (event) => {
+						event.respondWith(new Response(''));
+					});
+			`
+			);
+
+			await expect(
+				runWrangler("deploy index.js --dry-run").catch((e) =>
+					normalizeString(
+						esbuild
+							.formatMessagesSync(e?.errors ?? [], { kind: "error" })
+							.join()
+							.trim()
+					)
+				)
+			).resolves.toMatchInlineSnapshot(`
+				"X [ERROR] Unexpected external import of \\"cloudflare:sockets\\".
+				Your worker has no default export, which means it is assumed to be a Service Worker format Worker.
+				Did you mean to create a ES Module format Worker?
+				If so, try adding \`export default { ... }\` in your entry-point.
+				See https://developers.cloudflare.com/workers/reference/migrate-to-module-workers/. [plugin cloudflare-internal-imports]"
+			`);
+		});
+
+		it("should error if importing a node.js library when in service worker format", async () => {
+			writeWranglerToml();
+			fs.writeFileSync(
+				"index.js",
+				dedent`
+					import stream from "node:stream";
+					let temp = stream;
+					addEventListener('fetch', (event) => {
+						event.respondWith(new Response(''));
+					});
+			`
+			);
+
+			await expect(
+				runWrangler("deploy index.js --dry-run").catch((e) =>
+					normalizeString(
+						esbuild
+							.formatMessagesSync(e?.errors ?? [], { kind: "error" })
+							.join()
+							.trim()
+					)
+				)
+			).resolves.toMatchInlineSnapshot(`
+				"X [ERROR] Unexpected external import of \\"node:stream\\".
+				Your worker has no default export, which means it is assumed to be a Service Worker format Worker.
+				Did you mean to create a ES Module format Worker?
+				If so, try adding \`export default { ... }\` in your entry-point.
+				See https://developers.cloudflare.com/workers/reference/migrate-to-module-workers/. [plugin nodejs_compat-imports]"
+			`);
+		});
+
+		it("should error if nodejs_compat (v2) is turned on when in service worker format", async () => {
+			writeWranglerToml({
+				compatibility_date: "2024-09-23", // Sept 23 to turn on nodejs compat v2 mode
+				compatibility_flags: ["nodejs_compat"],
+			});
+			fs.writeFileSync(
+				"index.js",
+				dedent`
+					addEventListener('fetch', (event) => {
+						event.respondWith(new Response(''));
+					});
+			`
+			);
+
+			await expect(
+				runWrangler("deploy index.js --dry-run").catch((e) =>
+					normalizeString(
+						esbuild
+							.formatMessagesSync(e?.errors ?? [], { kind: "error" })
+							.join()
+							.trim()
+					)
+				)
+			).resolves.toMatchInlineSnapshot(`
+				"X [ERROR] Unexpected external import of \\"node:stream\\" and \\"node:timers/promises\\".
+				Your worker has no default export, which means it is assumed to be a Service Worker format Worker.
+				Did you mean to create a ES Module format Worker?
+				If so, try adding \`export default { ... }\` in your entry-point.
+				See https://developers.cloudflare.com/workers/reference/migrate-to-module-workers/. [plugin hybrid-nodejs_compat]"
+			`);
 		});
 	});
 

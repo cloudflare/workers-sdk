@@ -32,24 +32,24 @@ import { AssetsOptionsSchema } from "./schema";
 export const ASSETS_PLUGIN: Plugin<typeof AssetsOptionsSchema> = {
 	options: AssetsOptionsSchema,
 	async getBindings(options: z.infer<typeof AssetsOptionsSchema>) {
-		if (!options.assets?.bindingName) {
+		if (!options.assets?.binding) {
 			return [];
 		}
 		return [
 			{
 				// binding between User Worker and Asset Worker
-				name: options.assets.bindingName,
+				name: options.assets.binding,
 				service: { name: ASSETS_SERVICE_NAME },
 			},
 		];
 	},
 
 	async getNodeBindings(options) {
-		if (!options.assets?.bindingName) {
+		if (!options.assets?.binding) {
 			return {};
 		}
 		return {
-			[options.assets.bindingName]: new ProxyNodeBinding(),
+			[options.assets.binding]: new ProxyNodeBinding(),
 		};
 	},
 
@@ -61,11 +61,11 @@ export const ASSETS_PLUGIN: Plugin<typeof AssetsOptionsSchema> = {
 		const storageServiceName = `${ASSETS_PLUGIN_NAME}:storage`;
 		const storageService: Service = {
 			name: storageServiceName,
-			disk: { path: options.assets.path, writable: true },
+			disk: { path: options.assets.directory, writable: true },
 		};
 
 		const { encodedAssetManifest, assetsReverseMap } = await buildAssetManifest(
-			options.assets.path
+			options.assets.directory
 		);
 
 		const namespaceService: Service = {
@@ -113,7 +113,7 @@ export const ASSETS_PLUGIN: Plugin<typeof AssetsOptionsSchema> = {
 					},
 					{
 						name: "CONFIG",
-						json: JSON.stringify(options.assets.assetConfig),
+						json: JSON.stringify(options.assets.assetConfig ?? {}),
 					},
 				],
 			},
