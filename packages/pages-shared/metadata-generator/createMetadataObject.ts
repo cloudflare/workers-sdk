@@ -10,6 +10,7 @@ import type { MetadataStaticRedirects } from "../asset-server/metadata";
 import type {
 	Logger,
 	Metadata,
+	MetadataHeaderEntry,
 	MetadataHeaders,
 	MetadataRedirects,
 	ParsedHeaders,
@@ -182,14 +183,16 @@ function constructHeaders({
 
 	const rules: MetadataHeaders = {};
 	for (const rule of headers.rules) {
-		rules[rule.path] = {};
+		const entry: MetadataHeaderEntry = {};
 
 		if (Object.keys(rule.headers).length) {
-			rules[rule.path].set = rule.headers;
+			entry.set = rule.headers;
 		}
 		if (rule.unsetHeaders.length) {
-			rules[rule.path].unset = rule.unsetHeaders;
+			entry.unset = rule.unsetHeaders;
 		}
+
+		rules[rule.path] = entry;
 	}
 
 	return {

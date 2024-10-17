@@ -5,10 +5,10 @@ export const ROUTES_JSON_VERSION = 1;
 
 export const PERMITTED_STATUS_CODES = new Set([200, 301, 302, 303, 307, 308]);
 export const HEADER_SEPARATOR = ":";
-export const MAX_LINE_LENGTH = 2000;
-export const MAX_HEADER_RULES = 100;
-export const MAX_DYNAMIC_REDIRECT_RULES = 100;
-export const MAX_STATIC_REDIRECT_RULES = 2000;
+export const DEFAULT_MAX_LINE_LENGTH = 2000;
+export const DEFAULT_MAX_HEADER_RULES = 100;
+export const DEFAULT_MAX_DYNAMIC_REDIRECT_RULES = 100;
+export const DEFAULT_MAX_STATIC_REDIRECT_RULES = 2000;
 export const UNSET_OPERATOR = "! ";
 
 export const SPLAT_REGEX = /\*/g;
