@@ -1,4 +1,4 @@
-From 0ccfb994361f1fa467f7ea441131f4a079cea607 Mon Sep 17 00:00:00 2001
+From 995c40d11eb8a110121e24c97db943e58960460f Mon Sep 17 00:00:00 2001
 From: Workers DevProd <workers-devprod@cloudflare.com>
 Date: Mon, 2 Oct 2023 18:18:45 +0100
 Subject: [PATCH 02/15] Show fallback image on Safari
@@ -7,15 +7,15 @@ Subject: [PATCH 02/15] Show fallback image on Safari
  config/gni/devtools_grd_files.gni   |   1 +
  config/gni/devtools_image_files.gni |   1 +
  front_end/Images/fake.png           | Bin 0 -> 100371 bytes
- front_end/entrypoint_template.html  |  27 +++++++++++++++++++++++++--
- 4 files changed, 27 insertions(+), 2 deletions(-)
+ front_end/entrypoint_template.html  |  25 ++++++++++++++++++++++++-
+ 4 files changed, 26 insertions(+), 1 deletion(-)
  create mode 100644 front_end/Images/fake.png
 
 diff --git a/config/gni/devtools_grd_files.gni b/config/gni/devtools_grd_files.gni
-index f0007ac34b..5e2281b2e7 100644
+index c8c5ae23cf..d28e41a143 100644
 --- a/config/gni/devtools_grd_files.gni
 +++ b/config/gni/devtools_grd_files.gni
-@@ -58,6 +58,7 @@ grd_files_release_sources = [
+@@ -64,6 +64,7 @@ grd_files_release_sources = [
    "front_end/Images/check-circle.svg",
    "front_end/Images/check-double.svg",
    "front_end/Images/checker.svg",
@@ -24,7 +24,7 @@ index f0007ac34b..5e2281b2e7 100644
    "front_end/Images/chevron-double-right.svg",
    "front_end/Images/chevron-down.svg",
 diff --git a/config/gni/devtools_image_files.gni b/config/gni/devtools_image_files.gni
-index 042be12dfd..7439a30ab7 100644
+index 57bac6fd37..a76ca8f37b 100644
 --- a/config/gni/devtools_image_files.gni
 +++ b/config/gni/devtools_image_files.gni
 @@ -8,6 +8,7 @@ devtools_image_files = [
@@ -1778,15 +1778,12 @@ literal 0
 HcmV?d00001
 
 diff --git a/front_end/entrypoint_template.html b/front_end/entrypoint_template.html
-index 1edaec9604..945aa6d816 100644
+index 8e0e11ca35..ad217ee787 100644
 --- a/front_end/entrypoint_template.html
 +++ b/front_end/entrypoint_template.html
-@@ -14,7 +14,30 @@
-     }
-   }
+@@ -16,5 +16,28 @@
  </style>
--<meta http-equiv="Content-Security-Policy" content="object-src 'none'; script-src 'self' 'unsafe-eval' https://chrome-devtools-frontend.appspot.com">
-+<meta http-equiv="Content-Security-Policy" content="object-src 'none'; script-src 'sha256-7cSoIgLSn2W/Jf+ovCaVMDQtS5K1xhtFhl5WQtvvAaQ=' 'self' 'unsafe-eval' https://chrome-devtools-frontend.appspot.com">
+ <meta http-equiv="Content-Security-Policy" content="object-src 'none'; script-src 'self' https://chrome-devtools-frontend.appspot.com">
  <meta name="referrer" content="no-referrer">
 -<script type="module" src="./entrypoints/%ENTRYPOINT_NAME%/%ENTRYPOINT_NAME%.js"></script>
 +<script>
@@ -1815,5 +1812,5 @@ index 1edaec9604..945aa6d816 100644
 +</script>
  <body class="undocked" id="-blink-dev-tools">
 -- 
-2.39.3 (Apple Git-145)
+2.39.5 (Apple Git-154)
 
