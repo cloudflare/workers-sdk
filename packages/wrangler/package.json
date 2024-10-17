@@ -83,7 +83,7 @@
 		"resolve.exports": "^2.0.2",
 		"selfsigned": "^2.0.1",
 		"source-map": "^0.6.1",
-		"unenv": "npm:unenv-nightly@2.0.0-20241009-125958-e8ea22f",
+		"unenv": "npm:unenv-nightly@2.0.0-20241017-155854-ca691c4",
 		"workerd": "1.20241011.1",
 		"xxhash-wasm": "^1.0.1"
 	},
