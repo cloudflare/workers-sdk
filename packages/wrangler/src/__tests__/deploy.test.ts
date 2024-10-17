@@ -8189,7 +8189,7 @@ addEventListener('fetch', event => {});`
 					"Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
 					Your worker has access to the following bindings:
-					- dispatch namespaces:
+					- Dispatch Namespaces:
 					  - foo: Foo
 					Uploaded test-name (TIMINGS)
 					Deployed test-name triggers (TIMINGS)
@@ -8247,7 +8247,7 @@ addEventListener('fetch', event => {});`
 					"Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
 					Your worker has access to the following bindings:
-					- dispatch namespaces:
+					- Dispatch Namespaces:
 					  - foo: Foo (outbound -> foo_outbound)
 					  - bar: Bar (outbound -> bar_outbound)
 					Uploaded test-name (TIMINGS)
@@ -8304,7 +8304,7 @@ addEventListener('fetch', event => {});`
 					"Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
 					Your worker has access to the following bindings:
-					- dispatch namespaces:
+					- Dispatch Namespaces:
 					  - foo: Foo (outbound -> foo_outbound)
 					Uploaded test-name (TIMINGS)
 					Deployed test-name triggers (TIMINGS)

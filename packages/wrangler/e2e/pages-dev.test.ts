@@ -117,20 +117,19 @@ describe.each([
 			`${cmd} . --port ${port} --service TEST_SERVICE=test-worker --kv TEST_KV --do TEST_DO=TestDurableObject@a --d1 TEST_D1 --r2 TEST_R2`
 		);
 		await worker.waitForReady();
-		expect(normalizeOutput(worker.currentOutput).replace(/\s/g, "")).toContain(
-			`
-			Your worker has access to the following bindings:
-			- Durable Objects:
-			  - TEST_DO: TestDurableObject (defined in 🔴 a)
-			- KV Namespaces:
-			  - TEST_KV: TEST_KV
-			- D1 Databases:
-			  - TEST_D1: local-TEST_D1 (TEST_D1)
-			- R2 Buckets:
-			  - TEST_R2: TEST_R2
-			- Services:
-			  - TEST_SERVICE: 🔴 test-worker
-		`.replace(/\s/g, "")
+		expect(normalizeOutput(worker.currentOutput)).toContain(
+			dedent`Your worker has access to the following bindings:
+					- Durable Objects:
+					  - TEST_DO: TestDurableObject (defined in 🔴 a)
+					- KV Namespaces:
+					  - TEST_KV: TEST_KV (local)
+					- D1 Databases:
+					  - TEST_D1: local-TEST_D1 (TEST_D1) (local)
+					- R2 Buckets:
+					  - TEST_R2: TEST_R2 (local)
+					- Services:
+					  - TEST_SERVICE: 🔴 test-worker
+		`
 		);
 	});
 
@@ -320,14 +319,13 @@ describe.each([
 		const text = await fetchText(url);
 
 		expect(text).toBe("⚡️ Pages ⚡️ supports wrangler.toml");
-		expect(normalizeOutput(worker.currentOutput).replace(/\s/g, "")).toContain(
-			`
-					Your worker has access to the following bindings:
+		expect(normalizeOutput(worker.currentOutput)).toContain(
+			dedent`Your worker has access to the following bindings:
 					- KV Namespaces:
-						- KV_BINDING_TOML: KV_ID_TOML
+					  - KV_BINDING_TOML: KV_ID_TOML (local)
 					- Vars:
-						- PAGES: "⚡️ Pages ⚡️"
-				`.replace(/\s/g, "")
+					  - PAGES: "⚡️ Pages ⚡️"
+				`
 		);
 	});
 

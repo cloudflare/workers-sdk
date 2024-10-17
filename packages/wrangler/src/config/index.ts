@@ -192,12 +192,19 @@ export function findWranglerToml(
 	return findUpSync(`wrangler.toml`, { cwd: referencePath });
 }
 
+function addLocalSuffix(id: string, local: boolean = false) {
+	return `${id}${local ? " (local)" : ""}`;
+}
+
 /**
  * Print all the bindings a worker using a given config would have access to
  */
 export function printBindings(
 	bindings: CfWorkerInit["bindings"],
-	registry?: WorkerRegistry
+	context: {
+		registry?: WorkerRegistry;
+		local?: boolean;
+	} = {}
 ) {
 	const truncate = (item: string | Record<string, unknown>) => {
 		const s = typeof item === "string" ? item : JSON.stringify(item);
@@ -256,7 +263,7 @@ export function printBindings(
 				({ name, class_name, script_name }) => {
 					let value = class_name;
 					if (script_name) {
-						const registryDefinition = registry?.[script_name];
+						const registryDefinition = context.registry?.[script_name];
 						if (
 							registryDefinition &&
 							registryDefinition.durableObjects.some(
@@ -284,7 +291,7 @@ export function printBindings(
 			entries: kv_namespaces.map(({ binding, id }) => {
 				return {
 					key: binding,
-					value: id,
+					value: addLocalSuffix(id, context.local),
 				};
 			}),
 		});
@@ -313,7 +320,7 @@ export function printBindings(
 			entries: queues.map(({ binding, queue_name }) => {
 				return {
 					key: binding,
-					value: queue_name,
+					value: addLocalSuffix(queue_name, context.local),
 				};
 			}),
 		});
@@ -334,7 +341,7 @@ export function printBindings(
 					}
 					return {
 						key: binding,
-						value: databaseValue,
+						value: addLocalSuffix(databaseValue, context.local),
 					};
 				}
 			),
@@ -347,7 +354,7 @@ export function printBindings(
 			entries: vectorize.map(({ binding, index_name }) => {
 				return {
 					key: binding,
-					value: index_name,
+					value: addLocalSuffix(index_name, context.local),
 				};
 			}),
 		});
@@ -359,7 +366,7 @@ export function printBindings(
 			entries: hyperdrive.map(({ binding, id }) => {
 				return {
 					key: binding,
-					value: id,
+					value: addLocalSuffix(id, context.local),
 				};
 			}),
 		});
@@ -374,7 +381,7 @@ export function printBindings(
 				}
 				return {
 					key: binding,
-					value: bucket_name,
+					value: addLocalSuffix(bucket_name, context.local),
 				};
 			}),
 		});
@@ -401,7 +408,7 @@ export function printBindings(
 					value += `#${entrypoint}`;
 				}
 
-				const registryDefinition = registry?.[service];
+				const registryDefinition = context.registry?.[service];
 				if (
 					registryDefinition &&
 					(!entrypoint || registryDefinition.entrypointAddresses?.[entrypoint])
@@ -460,7 +467,7 @@ export function printBindings(
 
 		output.push({
 			type: "AI",
-			entries: entries,
+			entries,
 		});
 	}
 
@@ -523,7 +530,7 @@ export function printBindings(
 
 	if (dispatch_namespaces !== undefined && dispatch_namespaces.length > 0) {
 		output.push({
-			type: "dispatch namespaces",
+			type: "Dispatch Namespaces",
 			entries: dispatch_namespaces.map(({ binding, namespace, outbound }) => {
 				return {
 					key: binding,

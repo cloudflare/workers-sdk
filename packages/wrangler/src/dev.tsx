@@ -1413,10 +1413,13 @@ export function getResolvedBindings(
 
 	const maskedVars = maskVars(bindings, configParam);
 
-	printBindings({
-		...bindings,
-		vars: maskedVars,
-	});
+	printBindings(
+		{
+			...bindings,
+			vars: maskedVars,
+		},
+		{ local: !args.remote }
+	);
 
 	return bindings;
 }
