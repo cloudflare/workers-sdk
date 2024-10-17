@@ -1,6 +1,6 @@
 name: "\U0001F680 Feature Request"
 description: Have a suggestion for how to improve wrangler? Let us know!
-title: "\U0001F680 Feature Request:"
+title: "\U0001F680 Feature:"
 labels: ["enhancement"]
 
 body:
