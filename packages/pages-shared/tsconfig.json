@@ -1,7 +1,9 @@
 {
 	"extends": "@cloudflare/workers-tsconfig/tsconfig.json",
 	"compilerOptions": {
-		"module": "CommonJS"
+		"module": "CommonJS",
+		"strict": true,
+		"noUncheckedIndexedAccess": true
 	},
 	"include": ["**/*.ts"],
 	"exclude": []
