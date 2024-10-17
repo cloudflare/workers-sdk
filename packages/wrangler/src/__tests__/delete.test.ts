@@ -229,6 +229,14 @@ describe("delete", () => {
 	`);
 	});
 
+	it("should error helpfully if pages_build_output_dir is set", async () => {
+		writeWranglerToml({ pages_build_output_dir: "dist", name: "test" });
+		await expect(
+			runWrangler("delete")
+		).rejects.toThrowErrorMatchingInlineSnapshot(
+			`[Error: This command is for Workers, for Pages please run \`wrangler pages project delete\`.]`
+		);
+	});
 	describe("force deletes", () => {
 		it("should prompt for extra confirmation when service is depended on and use force", async () => {
 			mockConfirm({
