@@ -352,6 +352,12 @@ export function devOptions(yargs: CommonYargsArgv) {
 					"Use the experimental file based dev registry for multi-worker development",
 				default: false,
 			})
+			.option("experimental-vectorize-bind-to-prod", {
+				alias: ["x-vectorize-bind-to-prod"],
+				type: "boolean",
+				describe: "Bind to production Vectorize indexes in local development mode",
+				default: false,
+			})
 	);
 }
 
@@ -747,6 +753,7 @@ export async function startDev(args: StartDevOptions) {
 						testScheduled: args.testScheduled,
 						logLevel: args.logLevel,
 						registry: devEnv.config.latestConfig?.dev.registry,
+						bindVectorizeToProd: args.experimentalVectorizeBindToProd,
 					},
 					legacy: {
 						site: (configParam) => {
@@ -1006,6 +1013,7 @@ export async function startDev(args: StartDevOptions) {
 						rawArgs={args}
 						rawConfig={configParam}
 						devEnv={devEnv}
+						bindVectorizeToProd={args.experimentalVectorizeBindToProd}
 					/>
 				);
 			}
@@ -1205,6 +1213,7 @@ export async function startApiDev(args: StartDevOptions) {
 			rawArgs: args,
 			rawConfig: configParam,
 			devEnv,
+			bindVectorizeToProd: args.experimentalVectorizeBindToProd,
 		});
 	}
 
