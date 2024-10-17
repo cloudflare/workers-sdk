@@ -741,7 +741,7 @@ importers:
   fixtures/workflow:
     devDependencies:
       '@cloudflare/workers-types':
-        specifier: ^4.20240909.0
+        specifier: ^4.20241011.0
         version: 4.20241011.0
       wrangler:
         specifier: workspace:*
