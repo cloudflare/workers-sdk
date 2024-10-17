@@ -26,7 +26,7 @@ index 832d76c19c..968439ade4 100644
 +        trimmedHref.startsWith('mailto:') || trimmedHref.startsWith('wrangler:')) {
        return href as Platform.DevToolsPath.UrlString;
      }
- 
+
 diff --git a/front_end/core/sdk/PageResourceLoader.ts b/front_end/core/sdk/PageResourceLoader.ts
 index 7b11de87c2..e11fbf3010 100644
 --- a/front_end/core/sdk/PageResourceLoader.ts
@@ -52,25 +52,15 @@ index 978092dea5..174cda16c3 100644
        ...(Root.Runtime.Runtime.queryParam('isChromeForTesting') ? ['protocol-monitor'] : []),
 +      'sourceOrderViewer',
 +      'cssTypeComponentLength',
-+      Root.Runtime.ExperimentName.PRECISE_CHANGES,
-+      ...('EyeDropper' in window ? [Root.Runtime.ExperimentName.EYEDROPPER_COLOR_PICKER] : []),
 +      'keyboardShortcutEditor',
 +      'sourcesPrettyPrint',
 +      'setAllBreakpointsEagerly',
-+      Root.Runtime.ExperimentName.DISABLE_COLOR_FORMAT_SETTING,
-+      Root.Runtime.ExperimentName.TIMELINE_AS_CONSOLE_PROFILE_RESULT_PANEL,
-+      Root.Runtime.ExperimentName.WASM_DWARF_DEBUGGING,
 +      Root.Runtime.ExperimentName.HEADER_OVERRIDES,
-+      Root.Runtime.ExperimentName.OUTERMOST_TARGET_SELECTOR,
 +      Root.Runtime.ExperimentName.AUTHORED_DEPLOYED_GROUPING,
 +      Root.Runtime.ExperimentName.JUST_MY_CODE,
-+    ]);
-+
-+    Root.Runtime.experiments.setNonConfigurableExperiments([
-+      ...(!('EyeDropper' in window) ? [Root.Runtime.ExperimentName.EYEDROPPER_COLOR_PICKER] : []),
      ]);
- 
+
      Root.Runtime.experiments.cleanUpStaleExperiments();
--- 
+--
 2.39.5 (Apple Git-154)
 
