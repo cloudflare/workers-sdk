@@ -1,5 +1,21 @@
 # wrangler
 
+## 3.81.0
+
+### Minor Changes
+
+- [#6990](https://github.com/cloudflare/workers-sdk/pull/6990) [`586c253`](https://github.com/cloudflare/workers-sdk/commit/586c253f7de36360cab275cb1ebf9a2373fd4f4c) Thanks [@courtney-sims](https://github.com/courtney-sims)! - feat: Adds new detailed pages deployment output type
+
+### Patch Changes
+
+- [#6963](https://github.com/cloudflare/workers-sdk/pull/6963) [`a5ac45d`](https://github.com/cloudflare/workers-sdk/commit/a5ac45d7d5aa7a6b82de18a8cf14e6eabdd22e9e) Thanks [@RamIdeas](https://github.com/RamIdeas)! - fix: make `wrangler dev --remote` respect wrangler.toml's `account_id` property.
+
+  This was a regression in the `--x-dev-env` flow recently turned on by default.
+
+- [#6996](https://github.com/cloudflare/workers-sdk/pull/6996) [`b8ab809`](https://github.com/cloudflare/workers-sdk/commit/b8ab8093b9011b5d7d47bcd31fa69cefa6c8fe2a) Thanks [@emily-shen](https://github.com/emily-shen)! - fix: improve error messaging when accidentally using Workers commands in Pages project
+
+  If we detect a Workers command used with a Pages project (i.e. wrangler.toml contains `pages_output_build_dir`), error with Pages version of command rather than "missing entry-point" etc.
+
 ## 3.80.5
 
 ### Patch Changes
