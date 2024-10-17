@@ -283,6 +283,83 @@ describe("normalizeAndValidateConfig()", () => {
 		`);
 		});
 
+		describe("compatibility_date", () => {
+			it("should allow valid values", () => {
+				const expectedConfig: RawConfig = {
+					compatibility_date: "2024-10-01",
+				};
+
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					expectedConfig,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(config).toEqual(expect.objectContaining(expectedConfig));
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(false);
+			});
+
+			it("should error for en-dashes and em-dashes", () => {
+				let expectedConfig: RawConfig = {
+					compatibility_date: "2024–10-01", // en-dash
+				};
+
+				let result = normalizeAndValidateConfig(expectedConfig, undefined, {
+					env: undefined,
+				});
+
+				expect(result.config).toEqual(expect.objectContaining(expectedConfig));
+				expect(result.diagnostics.hasWarnings()).toBe(false);
+				expect(result.diagnostics.hasErrors()).toBe(true);
+
+				expect(normalizeString(result.diagnostics.renderErrors()))
+					.toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - Hyphens (-) should be used rather than en-dashes (—) or em-dashes (–) in the \\"compatibility_date\\" field."
+				`);
+
+				expectedConfig = {
+					compatibility_date: "2024—10-01", // em-dash
+				};
+
+				result = normalizeAndValidateConfig(expectedConfig, undefined, {
+					env: undefined,
+				});
+
+				expect(result.config).toEqual(expect.objectContaining(expectedConfig));
+				expect(result.diagnostics.hasWarnings()).toBe(false);
+				expect(result.diagnostics.hasErrors()).toBe(true);
+
+				expect(normalizeString(result.diagnostics.renderErrors()))
+					.toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - Hyphens (-) should be used rather than en-dashes (—) or em-dashes (–) in the \\"compatibility_date\\" field."
+				`);
+			});
+
+			it("should error for invalid date values", () => {
+				const expectedConfig: RawConfig = {
+					compatibility_date: "abc",
+				};
+
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					expectedConfig,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(config).toEqual(expect.objectContaining(expectedConfig));
+				expect(diagnostics.hasErrors()).toBe(true);
+
+				expect(normalizeString(diagnostics.renderErrors()))
+					.toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - \\"compatibility_date\\" should be a valid ISO-8601 date (YYYY-MM-DD), but got \\"abc\\"."
+				`);
+			});
+		});
+
 		describe("[site]", () => {
 			it("should override `site` config defaults with provided values", () => {
 				const expectedConfig: RawConfig = {
