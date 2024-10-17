@@ -166,7 +166,7 @@ describe("Command Registration", () => {
 			"wrangler
 
 			COMMANDS
-			  wrangler docs [command]                  📚 Open Wrangler's command documentation in your browser
+			  wrangler docs [search..]                 📚 Open Wrangler's command documentation in your browser
 
 			  wrangler init [name]                     📥 Initialize a basic Worker
 			  wrangler dev [script]                    👂 Start a local server for developing your Worker
