@@ -1,12 +1,13 @@
 import { readConfig } from "../config";
 import { logger } from "../logger";
-import { queryIndex } from "./client";
+import { queryIndexByVector, queryIndexByVectorId } from "./client";
 import { vectorizeBetaWarning } from "./common";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
 } from "../yargs-types";
 import type {
+	VectorizeMatches,
 	VectorizeMetadataFilterInnerValue,
 	VectorizeMetadataFilterValue,
 	VectorizeMetadataRetrievalLevel,
@@ -26,7 +27,6 @@ export function options(yargs: CommonYargsArgv) {
 		.options({
 			vector: {
 				type: "array",
-				demandOption: true,
 				describe: "Vector to query the Vectorize Index",
 				coerce: (arg: unknown[]) =>
 					arg
@@ -37,6 +37,11 @@ export function options(yargs: CommonYargsArgv) {
 							(value): value is number =>
 								typeof value === "number" && !isNaN(value)
 						),
+			},
+			"vector-id": {
+				type: "string",
+				describe:
+					"Identifier for a vector in the index against which the index should be queried",
 			},
 			"top-k": {
 				type: "number",
@@ -114,10 +119,35 @@ export async function handler(
 		}
 	}
 
-	logger.log(`📋 Searching for relevant vectors...`);
-	const res = await queryIndex(config, args.name, args.vector, queryOptions);
+	if (
+		(args.vector === undefined && args.vectorId === undefined) ||
+		(args.vector !== undefined && args.vectorId !== undefined)
+	) {
+		logger.error(
+			"🚨 Either vector or vector-id param must be provided, but not both."
+		);
+		return;
+	}
 
-	if (res.count === 0) {
+	logger.log(`📋 Searching for relevant vectors...`);
+	let res: VectorizeMatches | undefined;
+	if (args.vector !== undefined) {
+		res = await queryIndexByVector(
+			config,
+			args.name,
+			args.vector,
+			queryOptions
+		);
+	} else if (args.vectorId !== undefined) {
+		res = await queryIndexByVectorId(
+			config,
+			args.name,
+			args.vectorId,
+			queryOptions
+		);
+	}
+
+	if (res === undefined || res.count === 0) {
 		logger.warn(`Could not find any relevant vectors`);
 		return;
 	}

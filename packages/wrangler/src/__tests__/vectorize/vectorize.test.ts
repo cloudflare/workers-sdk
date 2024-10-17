@@ -170,7 +170,8 @@ describe("vectorize help", () => {
 			  -v, --version                   Show version number  [boolean]
 
 			OPTIONS
-			      --vector           Vector to query the Vectorize Index  [array] [required]
+			      --vector           Vector to query the Vectorize Index  [array]
+			      --vector-id        Identifier for a vector in the index against which the index should be queried  [string]
 			      --top-k            The number of results (nearest neighbors) to return  [number] [default: 5]
 			      --return-values    Specify if the vector values should be included in the results  [boolean] [default: false]
 			      --return-metadata  Specify if the vector metadata should be included in the results  [string] [choices: \\"all\\", \\"indexed\\", \\"none\\"] [default: \\"none\\"]
@@ -514,43 +515,17 @@ describe("vectorize commands", () => {
 		await runWrangler(
 			"vectorize query test-index --vector 1 2 3 '4' 1.5 '2.6' a 'b' null 7 abc 8 undefined"
 		);
-		expect(std.out).toMatchInlineSnapshot(`
-			"📋 Searching for relevant vectors...
-{
-  \\"count\\": 2,
-  \\"matches\\": [
-    {
-      \\"id\\": \\"a\\",
-      \\"score\\": 0.5,
-      \\"values\\": [
-        1,
-        2,
-        3,
-        4
-      ],
-      \\"namespace\\": \\"abcd\\",
-      \\"metadata\\": {
-        \\"a\\": true,
-        \\"b\\": 123
-      }
-    },
-    {
-      \\"id\\": \\"b\\",
-      \\"score\\": 0.75,
-      \\"values\\": [
-        5,
-        6,
-        7,
-        8
-      ],
-      \\"metadata\\": {
-        \\"c\\": false,
-        \\"b\\": \\"123\\"
-      }
-    }
-  ]
-}"
-		`);
+		expect(std.out).toMatchInlineSnapshot(querySnapshot);
+	});
+
+	it("should handle a query with a vector-id", async () => {
+		mockVectorizeV2Request();
+		await runWrangler("vectorize query test-index --vector-id some-vector-id");
+		expect(std.out).toMatchInlineSnapshot(querySnapshot);
+
+		// No warning or error
+		expect(std.warn).toMatchInlineSnapshot(`""`);
+		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
 
 	it("should handle a query on a vectorize index with all options", async () => {
@@ -558,43 +533,7 @@ describe("vectorize commands", () => {
 		await runWrangler(
 			`vectorize query test-index --vector 1 2 3 '4' --top-k=2 --return-values=true --return-metadata=indexed --namespace=abc --filter '{ "p1": "abc", "p2": { "$ne": true }, "p3": 10, "p4": false, "nested.p5": "abcd" }'`
 		);
-		expect(std.out).toMatchInlineSnapshot(`
-			"📋 Searching for relevant vectors...
-{
-  \\"count\\": 2,
-  \\"matches\\": [
-    {
-      \\"id\\": \\"a\\",
-      \\"score\\": 0.5,
-      \\"values\\": [
-        1,
-        2,
-        3,
-        4
-      ],
-      \\"namespace\\": \\"abcd\\",
-      \\"metadata\\": {
-        \\"a\\": true,
-        \\"b\\": 123
-      }
-    },
-    {
-      \\"id\\": \\"b\\",
-      \\"score\\": 0.75,
-      \\"values\\": [
-        5,
-        6,
-        7,
-        8
-      ],
-      \\"metadata\\": {
-        \\"c\\": false,
-        \\"b\\": \\"123\\"
-      }
-    }
-  ]
-}"
-		`);
+		expect(std.out).toMatchInlineSnapshot(querySnapshot);
 
 		// No warning > Valid filter
 		expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -605,43 +544,7 @@ describe("vectorize commands", () => {
 		await runWrangler(
 			"vectorize query test-index --vector 1 2 3 '4' --filter='{ 'p1': [1,2,3] }'"
 		);
-		expect(std.out).toMatchInlineSnapshot(`
-			"📋 Searching for relevant vectors...
-{
-  \\"count\\": 2,
-  \\"matches\\": [
-    {
-      \\"id\\": \\"a\\",
-      \\"score\\": 0.5,
-      \\"values\\": [
-        1,
-        2,
-        3,
-        4
-      ],
-      \\"namespace\\": \\"abcd\\",
-      \\"metadata\\": {
-        \\"a\\": true,
-        \\"b\\": 123
-      }
-    },
-    {
-      \\"id\\": \\"b\\",
-      \\"score\\": 0.75,
-      \\"values\\": [
-        5,
-        6,
-        7,
-        8
-      ],
-      \\"metadata\\": {
-        \\"c\\": false,
-        \\"b\\": \\"123\\"
-      }
-    }
-  ]
-}"
-		`);
+		expect(std.out).toMatchInlineSnapshot(querySnapshot);
 
 		expect(std.warn).toMatchInlineSnapshot(`
 		"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m🚨 Invalid query filter. Please use the recommended format.[0m
@@ -659,6 +562,34 @@ describe("vectorize commands", () => {
 
 		expect(std.warn).toMatchInlineSnapshot(`
 			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mCould not find any relevant vectors[0m
+
+"
+		`);
+	});
+
+	it("should fail query when neither vector nor vector-id is provided", async () => {
+		mockVectorizeV2RequestError();
+		await runWrangler(
+			"vectorize query test-index --top-k=2 --return-values=true"
+		);
+		expect(std.out).toMatchInlineSnapshot(`""`);
+
+		expect(std.err).toMatchInlineSnapshot(`
+			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1m🚨 Either vector or vector-id param must be provided, but not both.[0m
+
+"
+		`);
+	});
+
+	it("should fail query when both vector and vector-id are provided", async () => {
+		mockVectorizeV2RequestError();
+		await runWrangler(
+			"vectorize query test-index --vector 1 2 3 '4' --vector-id some-vector-id"
+		);
+		expect(std.out).toMatchInlineSnapshot(`""`);
+
+		expect(std.err).toMatchInlineSnapshot(`
+			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1m🚨 Either vector or vector-id param must be provided, but not both.[0m
 
 "
 		`);
@@ -856,6 +787,43 @@ describe("vectorize query filter", () => {
 		]);
 	});
 });
+
+const querySnapshot = `
+			"📋 Searching for relevant vectors...
+{
+  \\"count\\": 2,
+  \\"matches\\": [
+    {
+      \\"id\\": \\"a\\",
+      \\"score\\": 0.5,
+      \\"values\\": [
+        1,
+        2,
+        3,
+        4
+      ],
+      \\"namespace\\": \\"abcd\\",
+      \\"metadata\\": {
+        \\"a\\": true,
+        \\"b\\": 123
+      }
+    },
+    {
+      \\"id\\": \\"b\\",
+      \\"score\\": 0.75,
+      \\"values\\": [
+        5,
+        6,
+        7,
+        8
+      ],
+      \\"metadata\\": {
+        \\"c\\": false,
+        \\"b\\": \\"123\\"
+      }
+    }
+  ]
+}"`;
 
 /** Create a mock handler for the Vectorize API */
 function mockVectorizeRequest() {
