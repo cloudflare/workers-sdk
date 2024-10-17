@@ -93,6 +93,11 @@ export async function tailHandler(args: TailArgs) {
 		await printWranglerBanner();
 	}
 	const config = readConfig(args.config, args);
+	if (config.pages_build_output_dir) {
+		throw new UserError(
+			"This command is for Workers, for Pages please run `wrangler pages deployment tail`."
+		);
+	}
 	await metrics.sendMetricsEvent("begin log stream", {
 		sendMetrics: config.send_metrics,
 	});

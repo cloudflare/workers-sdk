@@ -10,6 +10,7 @@ import { MockWebSocket } from "./helpers/mock-web-socket";
 import { createFetchResult, msw, mswSucessScriptHandlers } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
+import { writeWranglerToml } from "./helpers/write-wrangler-toml";
 import type {
 	AlarmEvent,
 	EmailEvent,
@@ -842,6 +843,18 @@ describe("tail", () => {
 			);
 			await api.closeHelper();
 		});
+	});
+
+	it("should error helpfully if pages_build_output_dir is set in wrangler.toml", async () => {
+		writeWranglerToml({
+			pages_build_output_dir: "public",
+			name: "test-name",
+		});
+		await expect(
+			runWrangler("tail")
+		).rejects.toThrowErrorMatchingInlineSnapshot(
+			`[Error: This command is for Workers, for Pages please run \`wrangler pages deployment tail\`.]`
+		);
 	});
 });
 
