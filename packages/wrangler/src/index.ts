@@ -77,6 +77,7 @@ import registerVersionsSubcommands from "./versions";
 import registerVersionsDeploymentsSubcommands from "./versions/deployments";
 import registerVersionsRollbackCommand from "./versions/rollback";
 import { whoami } from "./whoami";
+import { workflows } from "./workflows/workflows";
 import { asJson } from "./yargs-types";
 import type { Config } from "./config";
 import type { LoggerLevel } from "./logger";
@@ -606,6 +607,11 @@ export function createCLIParser(argv: string[]) {
 	// ai
 	wrangler.command("ai", "🤖 Manage AI models", (aiYargs) => {
 		return ai(aiYargs.command(subHelp));
+	});
+
+	// workflows
+	wrangler.command("workflows", false, (workflowArgs) => {
+		return workflows(workflowArgs.command(subHelp), subHelp);
 	});
 
 	// pipelines

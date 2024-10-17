@@ -164,6 +164,12 @@ export function convertCfWorkerInitBindingstoBindings(
 				}
 				break;
 			}
+			case "workflows": {
+				for (const { binding, ...x } of info) {
+					output[binding] = { type: "workflow", ...x };
+				}
+				break;
+			}
 			case "queues": {
 				for (const { binding, ...x } of info) {
 					output[binding] = { type: "queue", ...x };
@@ -278,6 +284,7 @@ export async function convertBindingsToCfWorkerInitBindings(
 		durable_objects: undefined,
 		queues: undefined,
 		r2_buckets: undefined,
+		workflows: undefined,
 		d1_databases: undefined,
 		vectorize: undefined,
 		hyperdrive: undefined,

@@ -1248,6 +1248,19 @@ export async function mapBindings(
 							metadata: configObj.unsafe?.metadata ?? undefined,
 						};
 						break;
+					case "workflow":
+						{
+							configObj.workflows = [
+								...(configObj.workflows ?? []),
+								{
+									binding: binding.name,
+									name: binding.workflow_name,
+									class_name: binding.class_name,
+									script_name: binding.script_name,
+								},
+							];
+						}
+						break;
 					default: {
 						configObj.unsafe = {
 							bindings: [...(configObj.unsafe?.bindings ?? []), binding],

@@ -543,6 +543,7 @@ function DevSession(props: DevSessionProps) {
 		mockAnalyticsEngineDatasets: props.bindings.analytics_engine_datasets ?? [],
 		legacyAssets: props.legacyAssetsConfig,
 		durableObjects: props.bindings.durable_objects || { bindings: [] },
+		workflows: props.bindings.workflows ?? [],
 		local: props.local,
 		// Enable the bundling to know whether we are using dev or deploy
 		targetConsumer: "dev",

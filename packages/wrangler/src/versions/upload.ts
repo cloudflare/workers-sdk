@@ -298,6 +298,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 						moduleCollector,
 						serveLegacyAssetsFromWorker: false,
 						doBindings: config.durable_objects.bindings,
+						workflowBindings: config.workflows,
 						jsxFactory,
 						jsxFragment,
 						tsconfig: props.tsconfig ?? config.tsconfig,
@@ -367,6 +368,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			text_blobs: config.text_blobs,
 			data_blobs: config.data_blobs,
 			durable_objects: config.durable_objects,
+			workflows: config.workflows,
 			queues: config.queues.producers?.map((producer) => {
 				return { binding: producer.binding, queue_name: producer.queue };
 			}),
