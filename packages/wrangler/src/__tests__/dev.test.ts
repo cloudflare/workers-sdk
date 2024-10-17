@@ -1890,7 +1890,10 @@ describe.sequential("wrangler dev", () => {
 	it("should error helpfully if pages_build_output_dir is set", async () => {
 		writeWranglerToml({ pages_build_output_dir: "dist", name: "test" });
 		await expect(runWrangler("dev")).rejects.toThrowErrorMatchingInlineSnapshot(
-			`[Error: This command is for Workers, for Pages please run \`wrangler pages dev\`.]`
+			`
+			[Error: It looks like you've run a Workers-specific command in a Pages project.
+			For Pages, please run \`wrangler pages dev\` instead.]
+		`
 		);
 	});
 });

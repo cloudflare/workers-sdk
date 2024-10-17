@@ -68,7 +68,8 @@ export async function getEntry(
 	} else {
 		if (config.pages_build_output_dir && command === "dev") {
 			throw new UserError(
-				"This command is for Workers, for Pages please run `wrangler pages dev`."
+				"It looks like you've run a Workers-specific command in a Pages project.\n" +
+					"For Pages, please run `wrangler pages dev` instead."
 			);
 		}
 		throw new UserError(

@@ -853,7 +853,10 @@ describe("tail", () => {
 		await expect(
 			runWrangler("tail")
 		).rejects.toThrowErrorMatchingInlineSnapshot(
-			`[Error: This command is for Workers, for Pages please run \`wrangler pages deployment tail\`.]`
+			`
+			[Error: It looks like you've run a Workers-specific command in a Pages project.
+			For Pages, please run \`wrangler pages deployment tail\` instead.]
+		`
 		);
 	});
 });

@@ -256,7 +256,8 @@ export async function deployHandler(args: DeployArgs) {
 	const config = readConfig(configPath, args);
 	if (config.pages_build_output_dir) {
 		throw new UserError(
-			"This command is for Workers, for Pages please run `wrangler pages deploy`."
+			"It looks like you've run a Workers-specific command in a Pages project.\n" +
+				"For Pages, please run `wrangler pages deploy` instead."
 		);
 	}
 

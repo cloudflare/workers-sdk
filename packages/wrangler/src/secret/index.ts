@@ -146,7 +146,8 @@ export const secret = (secretYargs: CommonYargsArgv) => {
 				const config = readConfig(args.config, args);
 				if (config.pages_build_output_dir) {
 					throw new UserError(
-						"This command is for Workers, for Pages please run `wrangler pages secret put`."
+						"It looks like you've run a Workers-specific command in a Pages project.\n" +
+							"For Pages, please run `wrangler pages secret put` instead."
 					);
 				}
 
@@ -250,7 +251,8 @@ export const secret = (secretYargs: CommonYargsArgv) => {
 				const config = readConfig(args.config, args);
 				if (config.pages_build_output_dir) {
 					throw new UserError(
-						"This command is for Workers, for Pages please run `wrangler pages secret delete`."
+						"It looks like you've run a Workers-specific command in a Pages project.\n" +
+							"For Pages, please run `wrangler pages secret delete` instead."
 					);
 				}
 
@@ -311,7 +313,8 @@ export const secret = (secretYargs: CommonYargsArgv) => {
 				const config = readConfig(args.config, args);
 				if (config.pages_build_output_dir) {
 					throw new UserError(
-						"This command is for Workers, for Pages please run `wrangler pages secret list`."
+						"It looks like you've run a Workers-specific command in a Pages project.\n" +
+							"For Pages, please run `wrangler pages secret list` instead."
 					);
 				}
 
@@ -377,7 +380,8 @@ export const secretBulkHandler = async (secretBulkArgs: SecretBulkArgs) => {
 	const config = readConfig(secretBulkArgs.config, secretBulkArgs);
 	if (config.pages_build_output_dir) {
 		throw new UserError(
-			"This command is for Workers, for Pages please run `wrangler pages secret bulk`."
+			"It looks like you've run a Workers-specific command in a Pages project.\n" +
+				"For Pages, please run `wrangler pages secret bulk` instead."
 		);
 	}
 

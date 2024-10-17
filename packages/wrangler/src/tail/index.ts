@@ -95,7 +95,8 @@ export async function tailHandler(args: TailArgs) {
 	const config = readConfig(args.config, args);
 	if (config.pages_build_output_dir) {
 		throw new UserError(
-			"This command is for Workers, for Pages please run `wrangler pages deployment tail`."
+			"It looks like you've run a Workers-specific command in a Pages project.\n" +
+				"For Pages, please run `wrangler pages deployment tail` instead."
 		);
 	}
 	await metrics.sendMetricsEvent("begin log stream", {

@@ -385,7 +385,10 @@ describe("deploy", () => {
 		await expect(
 			runWrangler("deploy")
 		).rejects.toThrowErrorMatchingInlineSnapshot(
-			`[Error: This command is for Workers, for Pages please run \`wrangler pages deploy\`.]`
+			`
+			[Error: It looks like you've run a Workers-specific command in a Pages project.
+			For Pages, please run \`wrangler pages deploy\` instead.]
+		`
 		);
 	});
 

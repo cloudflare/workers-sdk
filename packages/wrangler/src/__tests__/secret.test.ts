@@ -95,7 +95,10 @@ describe("wrangler secret", () => {
 			await expect(
 				runWrangler("secret put secret-name")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: This command is for Workers, for Pages please run \`wrangler pages secret put\`.]`
+				`
+				[Error: It looks like you've run a Workers-specific command in a Pages project.
+				For Pages, please run \`wrangler pages secret put\` instead.]
+			`
 			);
 		});
 
@@ -417,7 +420,10 @@ describe("wrangler secret", () => {
 			await expect(
 				runWrangler("secret delete secret-name")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: This command is for Workers, for Pages please run \`wrangler pages secret delete\`.]`
+				`
+				[Error: It looks like you've run a Workers-specific command in a Pages project.
+				For Pages, please run \`wrangler pages secret delete\` instead.]
+			`
 			);
 		});
 
@@ -543,7 +549,10 @@ describe("wrangler secret", () => {
 			await expect(
 				runWrangler("secret list")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: This command is for Workers, for Pages please run \`wrangler pages secret list\`.]`
+				`
+				[Error: It looks like you've run a Workers-specific command in a Pages project.
+				For Pages, please run \`wrangler pages secret list\` instead.]
+			`
 			);
 		});
 
@@ -625,7 +634,10 @@ describe("wrangler secret", () => {
 			await expect(
 				runWrangler("secret bulk")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: This command is for Workers, for Pages please run \`wrangler pages secret bulk\`.]`
+				`
+				[Error: It looks like you've run a Workers-specific command in a Pages project.
+				For Pages, please run \`wrangler pages secret bulk\` instead.]
+			`
 			);
 		});
 
