@@ -528,6 +528,47 @@ describe.sequential.each(RUNTIMES)("Bindings: $flags", ({ runtime, flags }) => {
 		await worker.readUntil(/✉️/);
 	});
 
+	// TODO: enable for remove dev once realish preview supports it
+	// TODO: enable for local dev once implemented
+	it.skip("exposes Workflow bindings", async () => {
+		await helper.seed({
+			"wrangler.toml": dedent`
+                name = "my-workflow-demo"
+                main = "src/index.ts"
+                compatibility_date = "2024-10-11"
+
+                [[workflows]]
+                binding = "WORKFLOW"
+                name = "my-workflow"
+                class_name = "Demo"
+            `,
+			"src/index.ts": dedent`
+                import { WorkflowEntrypoint } from "cloudflare:workers";
+
+                export default {
+                    async fetch(request, env, ctx) {
+                        if (env.WORKFLOW === undefined) {
+                            return new Response("env.WORKFLOW is undefined");
+                        }
+
+                        return new Response("env.WORKFLOW is available");
+                    }
+                }
+
+                export class Demo extends WorkflowEntrypoint {
+                    run() {
+                        // blank
+                    }
+                }
+            `,
+		});
+		const worker = helper.runLongLived(`wrangler dev ${flags}`);
+		const { url } = await worker.waitForReady();
+		const res = await fetch(url);
+
+		await expect(res.text()).resolves.toBe("env.WORKFLOW is available");
+	});
+
 	// TODO(soon): implement E2E tests for other bindings
 	it.todo("exposes hyperdrive bindings");
 	it.skipIf(isLocal).todo("exposes send email bindings");

@@ -25,6 +25,7 @@ import type {
 	CfService,
 	CfUnsafe,
 	CfVectorize,
+	CfWorkflow,
 } from "../../deployment-bundle/worker";
 import type { WorkerRegistry } from "../../dev-registry";
 import type { CfAccount } from "../../dev/create-worker-preview";
@@ -254,6 +255,7 @@ export type Binding =
 	| { type: "version_metadata" }
 	| { type: "data_blob"; source: BinaryFile }
 	| ({ type: "durable_object_namespace" } & BindingOmit<CfDurableObject>)
+	| ({ type: "workflow" } & BindingOmit<CfWorkflow>)
 	| ({ type: "queue" } & BindingOmit<CfQueue>)
 	| ({ type: "r2_bucket" } & BindingOmit<CfR2Bucket>)
 	| ({ type: "d1" } & Omit<CfD1Database, "binding">)
