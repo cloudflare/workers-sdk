@@ -22,6 +22,7 @@ import { APIError } from "./parse";
 import { getBasePath } from "./paths";
 import { dedent } from "./utils/dedent";
 import { createPatternMatcher } from "./utils/filesystem";
+import { alsAttemptCounter } from "./utils/retry";
 import type { StartDevWorkerOptions } from "./api";
 import type { Config } from "./config";
 import type { Assets } from "./config/environment";
@@ -173,7 +174,7 @@ export const syncAssets = async (
 					} else {
 						attempts++;
 					}
-					return doUpload();
+					return alsAttemptCounter.run(attempts + gatewayErrors, doUpload);
 				} else if (isJwtExpired(initializeAssetsResponse.jwt)) {
 					throw new FatalError(
 						`Upload took too long.\n` +
@@ -187,7 +188,7 @@ export const syncAssets = async (
 		};
 		// add to queue and run it if we haven't reached concurrency limit
 		void queue.add(() =>
-			doUpload().then((res) => {
+			alsAttemptCounter.run(attempts + gatewayErrors, doUpload).then((res) => {
 				completionJwt = res.jwt || completionJwt;
 			})
 		);

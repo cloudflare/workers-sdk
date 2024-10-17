@@ -6,6 +6,7 @@ import { UserError } from "../errors";
 import { logger } from "../logger";
 import { APIError, parseJSON } from "../parse";
 import { loginOrRefreshIfRequired, requireApiToken } from "../user";
+import { alsAttemptCounter } from "../utils/retry";
 import type { ApiCredentials } from "../user";
 import type { URLSearchParams } from "node:url";
 import type { HeadersInit, RequestInit } from "undici";
@@ -31,6 +32,7 @@ export async function performApiFetch(
 	const headers = cloneHeaders(init.headers);
 	addAuthorizationHeaderIfUnspecified(headers, apiToken);
 	addUserAgent(headers);
+	addAttemptCountHeader(headers);
 
 	const queryString = queryParams ? `?${queryParams.toString()}` : "";
 	logger.debug(
@@ -160,6 +162,13 @@ function addUserAgent(headers: Record<string, string>): void {
 	headers["User-Agent"] = `wrangler/${wranglerVersion}`;
 }
 
+function addAttemptCountHeader(headers: Record<string, string>): void {
+	const attempt = alsAttemptCounter.getStore();
+	if (attempt !== undefined && attempt > 1) {
+		headers["X-Attempt-Count"] = attempt.toString();
+	}
+}
+
 /**
  * The implementation for fetching a kv value from the cloudflare API.
  * We special-case this one call, because it's the only API call that
@@ -179,6 +188,8 @@ export async function fetchKVGetValue(
 	const auth = requireApiToken();
 	const headers: Record<string, string> = {};
 	addAuthorizationHeaderIfUnspecified(headers, auth);
+	addUserAgent(headers);
+	addAttemptCountHeader(headers);
 	const resource = `${getCloudflareApiBaseUrl()}/accounts/${accountId}/storage/kv/namespaces/${namespaceId}/values/${key}`;
 	const response = await fetch(resource, {
 		method: "GET",
@@ -211,6 +222,7 @@ export async function fetchR2Objects(
 	const headers = cloneHeaders(bodyInit.headers);
 	addAuthorizationHeaderIfUnspecified(headers, auth);
 	addUserAgent(headers);
+	addAttemptCountHeader(headers);
 
 	const response = await fetch(`${getCloudflareApiBaseUrl()}${resource}`, {
 		...bodyInit,
@@ -240,6 +252,7 @@ export async function fetchWorker(
 	const headers = cloneHeaders(bodyInit.headers);
 	addAuthorizationHeaderIfUnspecified(headers, auth);
 	addUserAgent(headers);
+	addAttemptCountHeader(headers);
 
 	let response = await fetch(`${getCloudflareApiBaseUrl()}${resource}`, {
 		...bodyInit,

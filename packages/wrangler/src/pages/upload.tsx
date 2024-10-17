@@ -8,6 +8,7 @@ import { FatalError } from "../errors";
 import isInteractive from "../is-interactive";
 import { logger } from "../logger";
 import { APIError } from "../parse";
+import { alsAttemptCounter } from "../utils/retry";
 import {
 	BULK_UPLOAD_CONCURRENCY,
 	MAX_BUCKET_FILE_COUNT,
@@ -257,7 +258,7 @@ export const upload = async (
 						// Only count as a failed attempt if the error _wasn't_ an expired JWT
 						attempts++;
 					}
-					return doUpload();
+					return alsAttemptCounter.run(attempts + gatewayErrors, doUpload);
 				} else {
 					logger.debug("failed:", e);
 					throw e;
@@ -266,7 +267,7 @@ export const upload = async (
 		};
 
 		void queue.add(() =>
-			doUpload().then(
+			alsAttemptCounter.run(attempts + gatewayErrors, doUpload).then(
 				() => {
 					counter += bucket.files.length;
 					rerender(counter, args.fileMap.size);
