@@ -9,19 +9,45 @@ export type HyperdriveConfig = {
 	caching: CachingOptions;
 };
 
-export type PublicOrigin = {
-	host?: string;
-	port?: number;
-	scheme?: string;
-	database?: string;
-	user?: string;
-	access_client_id?: string;
+export type OriginCommon = {
+	host: string;
+	scheme: string;
+	database: string;
+	user: string;
 };
 
-export type OriginWithSecrets = PublicOrigin & {
-	password?: string;
-	access_client_secret?: string;
+export type OriginCommonWithSecrets = OriginCommon & {
+	password: string;
 };
+
+export type OriginHoA = OriginCommon & {
+	access_client_id: string;
+	access_client_secret?: never;
+	port?: never;
+};
+
+export type OriginHoAWithSecrets = OriginCommonWithSecrets & {
+	access_client_id: string;
+	access_client_secret: string;
+	port?: never;
+};
+
+export type OriginHostAndPort = OriginCommon & {
+	access_client_id?: never;
+	access_client_secret?: never;
+	port: number;
+};
+
+export type OriginHostAndPortWithSecrets = OriginCommonWithSecrets & {
+	access_client_id?: never;
+	access_client_secret?: never;
+	port: number;
+};
+
+export type PublicOrigin = OriginHostAndPort | OriginHoA;
+export type OriginWithSecrets =
+	| OriginHostAndPortWithSecrets
+	| OriginHoAWithSecrets;
 
 export type CachingOptions = {
 	disabled?: boolean;
