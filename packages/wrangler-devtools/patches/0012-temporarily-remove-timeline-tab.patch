@@ -1,16 +1,18 @@
-From 3609552acaf29f9b3c0b242537eed67e1b6fb750 Mon Sep 17 00:00:00 2001
+From 288a41aaee7222005396ac1a842ff4d27361180f Mon Sep 17 00:00:00 2001
 From: Workers DevProd <workers-devprod@cloudflare.com>
 Date: Fri, 18 Oct 2024 14:10:29 +0200
 Subject: [PATCH 12/12] temporarily remove timeline tab
 
 fix network manager bug
+
+fix network tab
 ---
  front_end/core/sdk/NetworkManager.ts   | 3 ++-
  front_end/entrypoints/js_app/js_app.ts | 1 -
  2 files changed, 2 insertions(+), 2 deletions(-)
 
 diff --git a/front_end/core/sdk/NetworkManager.ts b/front_end/core/sdk/NetworkManager.ts
-index 9fb18d84cf..953d3fc7b1 100644
+index 9fb18d84cf..612a46b868 100644
 --- a/front_end/core/sdk/NetworkManager.ts
 +++ b/front_end/core/sdk/NetworkManager.ts
 @@ -34,6 +34,7 @@
@@ -26,7 +28,7 @@ index 9fb18d84cf..953d3fc7b1 100644
      if (cfResponse !== undefined) {
        networkRequest.setContentDataProvider(async () => {
 -        return { error: '', content: cfResponse.body, encoded: cfResponse.base64Encoded };
-+        return new ContentData(cfResponse.body, cfResponse.base64Encoded, networkRequest.mimeType);
++        return { content: cfResponse.body, encoded: cfResponse.base64Encoded } as unknown as ContentData;
        });
      }
      this.finishNetworkRequest(networkRequest, finishTime, encodedDataLength);
