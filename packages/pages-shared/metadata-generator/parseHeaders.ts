@@ -1,7 +1,7 @@
 import {
+	DEFAULT_MAX_HEADER_RULES,
+	DEFAULT_MAX_LINE_LENGTH,
 	HEADER_SEPARATOR,
-	MAX_HEADER_RULES,
-	MAX_LINE_LENGTH,
 	UNSET_OPERATOR,
 } from "./constants";
 import { validateUrl } from "./validateURL";
@@ -12,7 +12,13 @@ import type { HeadersRule, InvalidHeadersRule, ParsedHeaders } from "./types";
 // We do the proper validation in `validateUrl` anyway :)
 const LINE_IS_PROBABLY_A_PATH = new RegExp(/^([^\s]+:\/\/|^\/)/);
 
-export function parseHeaders(input: string): ParsedHeaders {
+export function parseHeaders(
+	input: string,
+	{
+		maxLineLength = DEFAULT_MAX_LINE_LENGTH,
+		maxHeaderRules = DEFAULT_MAX_HEADER_RULES,
+	}: { maxLineLength?: number; maxHeaderRules?: number } = {}
+): ParsedHeaders {
 	const lines = input.split("\n");
 	const rules: HeadersRule[] = [];
 	const invalid: InvalidHeadersRule[] = [];
@@ -20,24 +26,24 @@ export function parseHeaders(input: string): ParsedHeaders {
 	let rule: (HeadersRule & { line: string }) | undefined = undefined;
 
 	for (let i = 0; i < lines.length; i++) {
-		const line = lines[i].trim();
+		const line = lines[i]?.trim() || "";
 		if (line.length === 0 || line.startsWith("#")) {
 			continue;
 		}
 
-		if (line.length > MAX_LINE_LENGTH) {
+		if (line.length > maxLineLength) {
 			invalid.push({
 				message: `Ignoring line ${
 					i + 1
-				} as it exceeds the maximum allowed length of ${MAX_LINE_LENGTH}.`,
+				} as it exceeds the maximum allowed length of ${maxLineLength}.`,
 			});
 			continue;
 		}
 
 		if (LINE_IS_PROBABLY_A_PATH.test(line)) {
-			if (rules.length >= MAX_HEADER_RULES) {
+			if (rules.length >= maxHeaderRules) {
 				invalid.push({
-					message: `Maximum number of rules supported is ${MAX_HEADER_RULES}. Skipping remaining ${
+					message: `Maximum number of rules supported is ${maxHeaderRules}. Skipping remaining ${
 						lines.length - i
 					} lines of file.`,
 				});
@@ -103,7 +109,7 @@ export function parseHeaders(input: string): ParsedHeaders {
 		}
 
 		const [rawName, ...rawValue] = line.split(HEADER_SEPARATOR);
-		const name = rawName.trim().toLowerCase();
+		const name = (rawName?.trim() || "").toLowerCase();
 
 		if (name.includes(" ")) {
 			invalid.push({
