@@ -615,7 +615,7 @@ export function createCLIParser(argv: string[]) {
 	});
 
 	// workflows
-	wrangler.command("workflows", false, (workflowArgs) => {
+	wrangler.command("workflows", "🧑‍🍳 Manage Workflows", (workflowArgs) => {
 		return workflows(workflowArgs.command(subHelp), subHelp);
 	});
 
