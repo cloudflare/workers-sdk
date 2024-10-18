@@ -1,62 +1,59 @@
 import { logRaw } from "@cloudflare/cli";
 import { white } from "@cloudflare/cli/colors";
 import { fetchResult } from "../../cfetch";
-import { readConfig } from "../../config";
-import { printWranglerBanner } from "../../update-check";
+import { defineCommand } from "../../core";
 import { requireAuth } from "../../user";
 import formatLabelledValues from "../../utils/render-labelled-values";
-import {
-	type CommonYargsArgv,
-	type StrictYargsOptionsToInterface,
-} from "../../yargs-types";
 import type { Version, Workflow } from "../types";
 
-export const workflowDescribeOptions = (args: CommonYargsArgv) => {
-	return args.positional("name", {
-		describe: "Name of the workflow",
-		type: "string",
-		demandOption: true,
-	});
-};
+defineCommand({
+	command: "wrangler workflows describe",
+	metadata: {
+		description: "Describe Workflow resource",
+		owner: "Product: Workflows",
+		status: "open-beta",
+	},
+	args: {
+		name: {
+			describe: "Name of the workflow",
+			type: "string",
+			demandOption: true,
+		},
+	},
+	positionalArgs: ["name"],
+	async handler(args, { config }) {
+		const accountId = await requireAuth(config);
 
-type HandlerOptions = StrictYargsOptionsToInterface<
-	typeof workflowDescribeOptions
->;
-export const workflowDescribeHandler = async (args: HandlerOptions) => {
-	await printWranglerBanner();
+		const workflow = await fetchResult<Workflow>(
+			`/accounts/${accountId}/workflows/${args.name}`
+		);
 
-	const config = readConfig(args.config, args);
-	const accountId = await requireAuth(config);
+		const versions = await fetchResult<Version[]>(
+			`/accounts/${accountId}/workflows/${args.name}/versions`
+		);
 
-	const workflow = await fetchResult<Workflow>(
-		`/accounts/${accountId}/workflows/${args.name}`
-	);
+		const latestVersion = versions[0];
 
-	const versions = await fetchResult<Version[]>(
-		`/accounts/${accountId}/workflows/${args.name}/versions`
-	);
-
-	const latestVersion = versions[0];
-
-	logRaw(
-		formatLabelledValues({
-			Name: workflow.name,
-			Id: workflow.id,
-			"Script Name": workflow.script_name,
-			"Class Name": workflow.class_name,
-			"Created On": workflow.created_on,
-			"Modified On": workflow.modified_on,
-		})
-	);
-	logRaw(white("Latest Version:"));
-	logRaw(
-		formatLabelledValues(
-			{
-				Id: latestVersion.id,
+		logRaw(
+			formatLabelledValues({
+				Name: workflow.name,
+				Id: workflow.id,
+				"Script Name": workflow.script_name,
+				"Class Name": workflow.class_name,
 				"Created On": workflow.created_on,
 				"Modified On": workflow.modified_on,
-			},
-			{ indentationCount: 2 }
-		)
-	);
-};
+			})
+		);
+		logRaw(white("Latest Version:"));
+		logRaw(
+			formatLabelledValues(
+				{
+					Id: latestVersion.id,
+					"Created On": workflow.created_on,
+					"Modified On": workflow.modified_on,
+				},
+				{ indentationCount: 2 }
+			)
+		);
+	},
+});

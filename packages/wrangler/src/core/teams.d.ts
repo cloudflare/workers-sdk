@@ -14,4 +14,5 @@ export type Teams =
 	| "Product: AI"
 	| "Product: Hyperdrive"
 	| "Product: Vectorize"
+	| "Product: Workflows"
 	| "Product: Cloudchamber";

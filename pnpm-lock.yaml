@@ -1647,9 +1647,15 @@ importers:
       chokidar:
         specifier: ^3.5.3
         version: 3.5.3
+      date-fns:
+        specifier: ^4.1.0
+        version: 4.1.0
       esbuild:
         specifier: 0.17.19
         version: 0.17.19
+      itty-time:
+        specifier: ^1.0.6
+        version: 1.0.6
       miniflare:
         specifier: workspace:*
         version: link:../miniflare
@@ -4593,6 +4599,9 @@ packages:
     resolution: {integrity: sha512-fnULvOpxnC5/Vg3NCiWelDsLiUc9bRwAPs/+LfTLNvetFCtCTN+yQz15C/fs4AwX1R9K5GLtLfn8QW+dWisaAw==}
     engines: {node: '>=0.11'}
 
+  date-fns@4.1.0:
+    resolution: {integrity: sha512-Ukq0owbQXxa/U3EGtsdVBkR1w7KOQ5gIBqdH2hkvknzZPYvBxb/aa6E8L7tmjFtkwZBu3UXBbjIgPo/Ez4xaNg==}
+
   date-time@3.1.0:
     resolution: {integrity: sha512-uqCUKXE5q1PNBXjPqvwhwJf9SwMoAHBgWJ6DcrnS5o+W2JOiIILl0JEdVD8SGujrNS02GGxgwAg2PN2zONgtjg==}
     engines: {node: '>=6'}
@@ -5917,6 +5926,9 @@ packages:
 
   itty-router@4.0.17:
     resolution: {integrity: sha512-Fu/GO3MFX6Hwd+QF1/BFjoFpPQKh2Bu4DtBdse5kECcUwldNBrZqgwq0IariLrP67iADGlzkHIlOWwJ8F4SJ4A==}
+
+  itty-time@1.0.6:
+    resolution: {integrity: sha512-+P8IZaLLBtFv8hCkIjcymZOp4UJ+xW6bSlQsXGqrkmJh7vSiMFSlNne0mCYagEE0N7HDNR5jJBRxwN0oYv61Rw==}
 
   jackspeak@2.3.6:
     resolution: {integrity: sha512-N3yCS/NegsOBokc8GAdM8UcmfsKiSS8cipheD/nivzr700H+nsMOxJjQnvwOcRYVuFkdH0wGUvW2WbXGmrZGbQ==}
@@ -11548,6 +11560,8 @@ snapshots:
     dependencies:
       '@babel/runtime': 7.22.5
 
+  date-fns@4.1.0: {}
+
   date-time@3.1.0:
     dependencies:
       time-zone: 1.0.0
@@ -13112,6 +13126,8 @@ snapshots:
       set-function-name: 2.0.1
 
   itty-router@4.0.17: {}
+
+  itty-time@1.0.6: {}
 
   jackspeak@2.3.6:
     dependencies:

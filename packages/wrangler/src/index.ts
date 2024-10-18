@@ -43,6 +43,7 @@ import { generateHandler, generateOptions } from "./generate";
 import { hyperdrive } from "./hyperdrive/index";
 import { initHandler, initOptions } from "./init";
 import "./kv";
+import "./workflows";
 import { logBuildFailure, logger, LOGGER_LEVELS } from "./logger";
 import * as metrics from "./metrics";
 import { mTlsCertificateCommands } from "./mtls-certificate/cli";
@@ -77,7 +78,6 @@ import registerVersionsSubcommands from "./versions";
 import registerVersionsDeploymentsSubcommands from "./versions/deployments";
 import registerVersionsRollbackCommand from "./versions/rollback";
 import { whoami } from "./whoami";
-import { workflows } from "./workflows/workflows";
 import { asJson } from "./yargs-types";
 import type { Config } from "./config";
 import type { LoggerLevel } from "./logger";
@@ -609,14 +609,12 @@ export function createCLIParser(argv: string[]) {
 		return ai(aiYargs.command(subHelp));
 	});
 
+	// workflows
+	register.registerNamespace("workflows");
+
 	// pipelines
 	wrangler.command("pipelines", false, (pipelinesYargs) => {
 		return pipelines(pipelinesYargs.command(subHelp));
-	});
-
-	// workflows
-	wrangler.command("workflows", "🧑‍🍳 Manage Workflows", (workflowArgs) => {
-		return workflows(workflowArgs.command(subHelp), subHelp);
 	});
 
 	/******************** CMD GROUP ***********************/

@@ -7,9 +7,8 @@ import {
 } from "date-fns";
 import { ms } from "itty-time";
 import { fetchResult } from "../../../cfetch";
-import { readConfig } from "../../../config";
+import { defineCommand } from "../../../core";
 import { logger } from "../../../logger";
-import { printWranglerBanner } from "../../../update-check";
 import { requireAuth } from "../../../user";
 import formatLabelledValues from "../../../utils/render-labelled-values";
 import {
@@ -18,10 +17,6 @@ import {
 	emojifyStepType,
 } from "../../utils";
 import type {
-	CommonYargsArgv,
-	StrictYargsOptionsToInterface,
-} from "../../../yargs-types";
-import type {
 	Instance,
 	InstanceSleepLog,
 	InstanceStatusAndLogs,
@@ -29,122 +24,126 @@ import type {
 	InstanceTerminateLog,
 } from "../../types";
 
-export const instancesDescribeOptions = (args: CommonYargsArgv) => {
-	return args
-		.positional("name", {
+const command = defineCommand({
+	command: "wrangler workflows instances describe",
+
+	metadata: {
+		description:
+			"Describe a workflow instance - see its logs, retries and errors",
+		owner: "Product: Workflows",
+		status: "open-beta",
+	},
+
+	positionalArgs: ["name", "id"],
+	args: {
+		name: {
 			describe: "Name of the workflow",
 			type: "string",
 			demandOption: true,
-		})
-		.positional("id", {
+		},
+		id: {
 			describe:
 				"ID of the instance - instead of an UUID you can type 'latest' to get the latest instance and describe it",
 			type: "string",
 			demandOption: true,
-		})
-		.option("step-output", {
+		},
+		"step-output": {
 			describe:
 				"Don't output the step output since it might clutter the terminal",
 			type: "boolean",
 			default: true,
-		})
-		.option("truncate-output-limit", {
+		},
+		"truncate-output-limit": {
 			describe: "Truncate step output after x characters",
 			type: "number",
 			default: 5000,
-		});
-};
+		},
+	},
 
-type HandlerOptions = StrictYargsOptionsToInterface<
-	typeof instancesDescribeOptions
->;
+	async handler(args, { config }) {
+		const accountId = await requireAuth(config);
 
-export const instancesDescribeHandler = async (args: HandlerOptions) => {
-	await printWranglerBanner();
+		let id = args.id;
 
-	const config = readConfig(args.config, args);
-	const accountId = await requireAuth(config);
+		if (id == "latest") {
+			const instances = (
+				await fetchResult<Instance[]>(
+					`/accounts/${accountId}/workflows/${args.name}/instances`
+				)
+			).sort((a, b) => b.created_on.localeCompare(a.created_on));
 
-	let id = args.id;
+			if (instances.length == 0) {
+				logger.error(
+					`There are no deployed instances in workflow "${args.name}".`
+				);
+				return;
+			}
 
-	if (id == "latest") {
-		const instances = (
-			await fetchResult<Instance[]>(
-				`/accounts/${accountId}/workflows/${args.name}/instances`
-			)
-		).sort((a, b) => b.created_on.localeCompare(a.created_on));
-
-		if (instances.length == 0) {
-			logger.error(
-				`There are no deployed instances in workflow "${args.name}".`
-			);
-			return;
+			id = instances[0].id;
 		}
 
-		id = instances[0].id;
-	}
-
-	const instance = await fetchResult<InstanceStatusAndLogs>(
-		`/accounts/${accountId}/workflows/${args.name}/instances/${id}`
-	);
-
-	const formattedInstance: Record<string, string> = {
-		"Workflow Name": args.name,
-		"Instance Id": id,
-		"Version Id": instance.versionId,
-		Status: emojifyInstanceStatus(instance.status),
-		Trigger: emojifyInstanceTriggerName(instance.trigger.source),
-		Queued: new Date(instance.queued).toLocaleString(),
-	};
-
-	if (instance.success != null) {
-		formattedInstance.Success = instance.success ? "✅ Yes" : "❌ No";
-	}
-
-	// date related stuff, if the workflow is still running assume duration until now
-	if (instance.start != undefined) {
-		formattedInstance.Start = new Date(instance.start).toLocaleString();
-	}
-
-	if (instance.end != undefined) {
-		formattedInstance.End = new Date(instance.end).toLocaleString();
-	}
-
-	if (instance.start != null && instance.end != null) {
-		formattedInstance.Duration = formatDistanceStrict(
-			new Date(instance.end),
-			new Date(instance.start)
+		const instance = await fetchResult<InstanceStatusAndLogs>(
+			`/accounts/${accountId}/workflows/${args.name}/instances/${id}`
 		);
-	} else if (instance.start != null) {
-		// Convert current date to UTC
-		formattedInstance.Duration = formatDistanceStrict(
-			new Date(instance.start),
-			new Date(new Date().toUTCString().slice(0, -4))
-		);
-	}
 
-	const lastSuccessfulStepName = getLastSuccessfulStep(instance);
-	if (lastSuccessfulStepName != null) {
-		formattedInstance["Last Successful Step"] = lastSuccessfulStepName;
-	}
+		const formattedInstance: Record<string, string> = {
+			"Workflow Name": args.name,
+			"Instance Id": id,
+			"Version Id": instance.versionId,
+			Status: emojifyInstanceStatus(instance.status),
+			Trigger: emojifyInstanceTriggerName(instance.trigger.source),
+			Queued: new Date(instance.queued).toLocaleString(),
+		};
 
-	// display the error if the instance errored out
-	if (instance.error != null) {
-		formattedInstance.Error = red(
-			`${instance.error.name}: ${instance.error.message}`
-		);
-	}
+		if (instance.success != null) {
+			formattedInstance.Success = instance.success ? "✅ Yes" : "❌ No";
+		}
 
-	logRaw(formatLabelledValues(formattedInstance));
-	logRaw(white("Steps:"));
+		// date related stuff, if the workflow is still running assume duration until now
+		if (instance.start != undefined) {
+			formattedInstance.Start = new Date(instance.start).toLocaleString();
+		}
 
-	instance.steps.forEach(logStep.bind(false, args));
-};
+		if (instance.end != undefined) {
+			formattedInstance.End = new Date(instance.end).toLocaleString();
+		}
 
-const logStep = (
-	args: HandlerOptions,
+		if (instance.start != null && instance.end != null) {
+			formattedInstance.Duration = formatDistanceStrict(
+				new Date(instance.end),
+				new Date(instance.start)
+			);
+		} else if (instance.start != null) {
+			// Convert current date to UTC
+			formattedInstance.Duration = formatDistanceStrict(
+				new Date(instance.start),
+				new Date(new Date().toUTCString().slice(0, -4))
+			);
+		}
+
+		const lastSuccessfulStepName = getLastSuccessfulStep(instance);
+		if (lastSuccessfulStepName != null) {
+			formattedInstance["Last Successful Step"] = lastSuccessfulStepName;
+		}
+
+		// display the error if the instance errored out
+		if (instance.error != null) {
+			formattedInstance.Error = red(
+				`${instance.error.name}: ${instance.error.message}`
+			);
+		}
+
+		logRaw(formatLabelledValues(formattedInstance));
+		logRaw(white("Steps:"));
+
+		instance.steps.forEach(logStep.bind(false, args));
+	},
+});
+
+function logStep(
+	args: typeof command.args,
 	step: InstanceStepLog | InstanceSleepLog | InstanceTerminateLog
-) => {
+) {
 	logRaw("");
 	const formattedStep: Record<string, string> = {};
 
@@ -254,9 +253,9 @@ const logStep = (
 
 		logger.table(prettyAttempts);
 	}
-};
+}
 
-const getLastSuccessfulStep = (logs: InstanceStatusAndLogs): string | null => {
+function getLastSuccessfulStep(logs: InstanceStatusAndLogs): string | null {
 	let lastSuccessfulStepName: string | null = null;
 
 	for (const step of logs.steps) {
@@ -277,4 +276,4 @@ const getLastSuccessfulStep = (logs: InstanceStatusAndLogs): string | null => {
 	}
 
 	return lastSuccessfulStepName;
-};
+}

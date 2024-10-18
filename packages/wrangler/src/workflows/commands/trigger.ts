@@ -1,57 +1,56 @@
 import { fetchResult } from "../../cfetch";
-import { readConfig } from "../../config";
-import { logger } from "../../logger";
-import { printWranglerBanner } from "../../update-check";
+import { defineCommand } from "../../core";
 import { requireAuth } from "../../user";
-import type {
-	CommonYargsArgv,
-	StrictYargsOptionsToInterface,
-} from "../../yargs-types";
 import type { InstanceWithoutDates } from "../types";
 
-export const workflowTriggerOptions = (args: CommonYargsArgv) => {
-	return args
-		.positional("name", {
+defineCommand({
+	command: "wrangler workflows trigger",
+
+	metadata: {
+		description:
+			"Trigger a workflow, creating a new instance. Can optionally take a JSON string to pass a parameter into the workflow instance.",
+		owner: "Product: Workflows",
+		status: "open-beta",
+	},
+
+	args: {
+		name: {
 			describe: "Name of the workflow",
 			type: "string",
 			demandOption: true,
-		})
-		.positional("params", {
+		},
+		params: {
 			describe: "Params for the workflow instance, encoded as a JSON string",
 			type: "string",
 			default: "",
-		});
-};
+		},
+	},
+	positionalArgs: ["name", "params"],
 
-type HandlerOptions = StrictYargsOptionsToInterface<
-	typeof workflowTriggerOptions
->;
-export const workflowTriggerHandler = async (args: HandlerOptions) => {
-	await printWranglerBanner();
+	async handler(args, { config, logger }) {
+		const accountId = await requireAuth(config);
 
-	const config = readConfig(args.config, args);
-	const accountId = await requireAuth(config);
-
-	if (args.params.length != 0) {
-		try {
-			JSON.parse(args.params);
-		} catch (e) {
-			logger.error(
-				`Error while parsing instance parameters: "${args.params}" with ${e}' `
-			);
-			return;
+		if (args.params.length != 0) {
+			try {
+				JSON.parse(args.params);
+			} catch (e) {
+				logger.error(
+					`Error while parsing instance parameters: "${args.params}" with ${e}' `
+				);
+				return;
+			}
 		}
-	}
 
-	const response = await fetchResult<InstanceWithoutDates>(
-		`/accounts/${accountId}/workflows/${args.name}/instances`,
-		{
-			method: "POST",
-			body: args.params.length != 0 ? args.params : undefined,
-		}
-	);
+		const response = await fetchResult<InstanceWithoutDates>(
+			`/accounts/${accountId}/workflows/${args.name}/instances`,
+			{
+				method: "POST",
+				body: args.params.length != 0 ? args.params : undefined,
+			}
+		);
 
-	logger.info(
-		`🚀 Workflow instance "${response.id}" has been queued successfully`
-	);
-};
+		logger.info(
+			`🚀 Workflow instance "${response.id}" has been queued successfully`
+		);
+	},
+});
