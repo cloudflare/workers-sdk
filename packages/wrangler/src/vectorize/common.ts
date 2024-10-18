@@ -1,10 +1,11 @@
 import { logger } from "../logger";
 import type { Interface as RLInterface } from "node:readline";
 
-export const vectorizeBetaWarning = `--------------------
-📣 Vectorize is currently in open beta
+export const vectorizeGABanner = `--------------------
+📣 Vectorize is now Generally Available.
 📣 Please use the '--deprecated-v1' flag to create, get, list, delete and insert vectors into legacy Vectorize indexes
-📣 See the Vectorize docs for how to get started and known issues: https://developers.cloudflare.com/vectorize
+📣 Creation of legacy Vectorize indexes will be blocked by December 2024. Other operations will continue to function
+📣 See the Vectorize docs to get started: https://developers.cloudflare.com/vectorize
 📣 Please report any bugs to https://github.com/cloudflare/workers-sdk/issues/new/choose
 📣 To give feedback, visit https://discord.cloudflare.com/
 --------------------

@@ -1,4 +1,4 @@
-import { vectorizeBetaWarning } from "./common";
+import { vectorizeGABanner } from "./common";
 import { handler as createHandler, options as createOptions } from "./create";
 import {
 	handler as createMetadataIndexHandler,
@@ -104,5 +104,5 @@ export function vectorize(yargs: CommonYargsArgv) {
 			deleteMetadataIndexOptions,
 			deleteMetadataIndexHandler
 		)
-		.epilogue(vectorizeBetaWarning);
+		.epilogue(vectorizeGABanner);
 }
