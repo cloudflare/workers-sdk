@@ -118,6 +118,7 @@ async function convertToConfigBundle(
 		inspect: true,
 		services: bindings.services,
 		serviceBindings: fetchers,
+		bindVectorizeToProd: event.config.dev?.bindVectorizeToProd ?? false,
 	};
 }
 
