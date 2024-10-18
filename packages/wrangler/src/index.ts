@@ -43,6 +43,7 @@ import { generateHandler, generateOptions } from "./generate";
 import { hyperdrive } from "./hyperdrive/index";
 import { initHandler, initOptions } from "./init";
 import "./kv";
+import "./workflows";
 import { logBuildFailure, logger, LOGGER_LEVELS } from "./logger";
 import * as metrics from "./metrics";
 import { mTlsCertificateCommands } from "./mtls-certificate/cli";
@@ -607,6 +608,9 @@ export function createCLIParser(argv: string[]) {
 	wrangler.command("ai", "🤖 Manage AI models", (aiYargs) => {
 		return ai(aiYargs.command(subHelp));
 	});
+
+	// workflows
+	register.registerNamespace("workflows");
 
 	// pipelines
 	wrangler.command("pipelines", false, (pipelinesYargs) => {
