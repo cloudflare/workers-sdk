@@ -33,12 +33,12 @@ defineCommand({
 		},
 		page: {
 			describe:
-				'Show a sepecific page from the listing, can configure page size using "per-page".',
+				'Show a sepecific page from the listing, can configure page size using "per-page"',
 			type: "number",
 			default: 1,
 		},
 		"per-page": {
-			describe: "Configure the maximum number of instances to show per page.",
+			describe: "Configure the maximum number of instances to show per page",
 			type: "number",
 		},
 	},

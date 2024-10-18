@@ -8,7 +8,7 @@ defineCommand({
 
 	metadata: {
 		description:
-			"Trigger a workflow, creating a new instance. Can optionally take a JSON string to pass a parameter into the workflow instance.",
+			"Trigger a workflow, creating a new instance. Can optionally take a JSON string to pass a parameter into the workflow instance",
 		owner: "Product: Workflows",
 		status: "open-beta",
 	},

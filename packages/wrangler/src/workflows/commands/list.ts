@@ -14,12 +14,12 @@ defineCommand({
 	args: {
 		page: {
 			describe:
-				'Show a sepecific page from the listing, can configure page size using "per-page".',
+				'Show a sepecific page from the listing, can configure page size using "per-page"',
 			type: "number",
 			default: 1,
 		},
 		"per-page": {
-			describe: "Configure the maximum number of workflows to show per page.",
+			describe: "Configure the maximum number of workflows to show per page",
 			type: "number",
 		},
 	},
@@ -41,7 +41,7 @@ defineCommand({
 		);
 
 		if (workflows.length === 0) {
-			logger.warn("There are no deployed Workflows in this account.");
+			logger.warn("There are no deployed Workflows in this account");
 		} else {
 			// TODO(lduarte): can we improve this message once pagination is deployed
 			logger.info(

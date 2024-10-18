@@ -74,7 +74,7 @@ const command = defineCommand({
 
 			if (instances.length == 0) {
 				logger.error(
-					`There are no deployed instances in workflow "${args.name}".`
+					`There are no deployed instances in workflow "${args.name}"`
 				);
 				return;
 			}

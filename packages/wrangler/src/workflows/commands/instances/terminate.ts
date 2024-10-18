@@ -42,7 +42,7 @@ defineCommand({
 
 			if (instances.length == 0) {
 				logger.error(
-					`There are no deployed instances in workflow "${args.name}".`
+					`There are no deployed instances in workflow "${args.name}"`
 				);
 				return;
 			}
@@ -58,7 +58,7 @@ defineCommand({
 		);
 
 		logger.info(
-			`🥷 The instance "${id}" from ${args.name} was terminated successfully.`
+			`🥷 The instance "${id}" from ${args.name} was terminated successfully`
 		);
 	},
 });
