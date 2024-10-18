@@ -451,7 +451,7 @@ describe.sequential.each(RUNTIMES)("Bindings: $flags", ({ runtime, flags }) => {
 		);
 	});
 
-	it.only("exposes D1 database bindings", async () => {
+	it("exposes D1 database bindings", async () => {
 		const { id, name } = await helper.d1(isLocal);
 
 		await helper.seed({
