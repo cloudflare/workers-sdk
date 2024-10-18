@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { DurableObject, RpcTarget, WorkerEntrypoint } from "cloudflare:workers";
 
 export class MyDurableObject extends DurableObject {
@@ -30,35 +29,43 @@ interface Env {
 }
 
 export class MockDurableObjectEntrypoint extends WorkerEntrypoint<Env> {
-	idFromName(...args): DOSyncResult {
+	idFromName(...args) {
+		console.log("idFromName", { args });
 		return new DOSyncResult("idFromName", args);
 	}
 
-	get(...args): DOSyncResult {
+	get(...args) {
 		const syncResult = new DOSyncResult("get", args);
+		console.log("get", { args });
 		const stub = syncResult.resolve(this.env.USER_DO);
 
-		return new ProxyDurableObjectRpcTarget(stub);
+		return new ProxyDurableObjectStub(stub);
 	}
 }
 
 class ProxyDurableObjectStub extends RpcTarget {
-	constructor(private stub: DurableObjectStub<MyDurableObject>) {
+	constructor(protected stub: DurableObjectStub<MyDurableObject>) {
 		super();
 	}
 }
 
 for (const method of Object.keys(MyDurableObject.prototype)) {
-	ProxyDurableObjectStub[method] = function (...args) {
-		return this.stub[method](...args); // ERROR: this is returning a promise which throws: "Could not serialize object of type "JsRpcPromise". This type does not support serialization."
-	};
+	Object.defineProperty(
+		ProxyDurableObjectStub.prototype,
+		method,
+		function (this: ProxyDurableObjectStub, ...args) {
+			return this.stub[method](...args);
+		}
+	);
 }
 
 class DOSyncResult extends RpcTarget {
 	constructor(
 		public method: string,
 		public args: unknown[]
-	) {}
+	) {
+		super();
+	}
 
 	resolve(binding) {
 		const args = this.args.map((arg) =>

@@ -8,15 +8,19 @@ export default {
 	 * @returns The response to be sent back to the client
 	 */
 	async fetch(request, env, ctx): Promise<Response> {
+		console.log({ env });
+
 		// We will create a `DurableObjectId` using the pathname from the Worker request
 		// This id refers to a unique instance of our 'MyDurableObject' class above
 		let id: DurableObjectId = env.MY_DURABLE_OBJECT.idFromName(
 			new URL(request.url).pathname
 		);
+		console.log({ id });
 
 		// This stub creates a communication channel with the Durable Object instance
 		// The Durable Object constructor will be invoked upon the first call for a given id
 		let stub = env.MY_DURABLE_OBJECT.get(id);
+		console.log({ stub });
 
 		// We call the `sayHello()` RPC method on the stub to invoke the method on the remote
 		// Durable Object instance
