@@ -18,5 +18,5 @@ and export an entrypoint (e.g. `MyDemoWorkflow`) in your script:
 ```typescript
 import { WorkflowEntrypoint } from "cloudflare:workers";
 
-export class MyDemoWorkflow extends WorkflowEntrypoint<{}, Params> {...}
+export class MyDemoWorkflow extends WorkflowEntrypoint<Env, Params> {...}
 ```
