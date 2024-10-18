@@ -1,7 +1,7 @@
-From e6dbeb7ff28613d20ea4de9f4d48170840a7457c Mon Sep 17 00:00:00 2001
+From a61bf3ddf62a22aa4f70d61858f4f3cddb1fda44 Mon Sep 17 00:00:00 2001
 From: Workers DevProd <workers-devprod@cloudflare.com>
 Date: Mon, 2 Oct 2023 18:13:34 +0100
-Subject: [PATCH 01/15] Support viewing files over the network
+Subject: [PATCH 02/13] Support viewing files over the network
 
 ---
  build                                    | 2 +-
@@ -30,7 +30,7 @@ index d1850bb09e..50c348906c 160000
 -Subproject commit d1850bb09e7916134a5364ede6025a62c34ad113
 +Subproject commit 50c348906cbd450e031bc3123b657f833f8455b7
 diff --git a/front_end/core/sdk/Target.ts b/front_end/core/sdk/Target.ts
-index 0b3f0f9def..ac6565f9ca 100644
+index 0b3f0f9def..ee384b197e 100644
 --- a/front_end/core/sdk/Target.ts
 +++ b/front_end/core/sdk/Target.ts
 @@ -86,6 +86,9 @@ export class Target extends ProtocolClient.InspectorBackend.TargetBase {
@@ -49,7 +49,7 @@ index 0b3f0f9def..ac6565f9ca 100644
    TAB = 'tab',
 +  CLOUDFLARE = 'cloudflare',
  }
-
+ 
  export const enum Capability {
 diff --git a/front_end/entrypoints/js_app/js_app.ts b/front_end/entrypoints/js_app/js_app.ts
 index 45028f436a..39a4b237b7 100644
@@ -114,6 +114,6 @@ index b3be02e26b..811051314d 100644
 +    "third_party/**/*.ts"
    ]
  }
---
+-- 
 2.39.5 (Apple Git-154)
 

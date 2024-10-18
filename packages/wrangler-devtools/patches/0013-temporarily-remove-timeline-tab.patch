@@ -1,0 +1,24 @@
+From 1a4eab0713777db5b5dc577b66a115a6f5583a5c Mon Sep 17 00:00:00 2001
+From: Workers DevProd <workers-devprod@cloudflare.com>
+Date: Fri, 18 Oct 2024 14:10:29 +0200
+Subject: [PATCH 13/13] temporarily remove timeline tab
+
+---
+ front_end/entrypoints/js_app/js_app.ts | 1 -
+ 1 file changed, 1 deletion(-)
+
+diff --git a/front_end/entrypoints/js_app/js_app.ts b/front_end/entrypoints/js_app/js_app.ts
+index 0281b38548..26702fdcbc 100644
+--- a/front_end/entrypoints/js_app/js_app.ts
++++ b/front_end/entrypoints/js_app/js_app.ts
+@@ -3,7 +3,6 @@
+ // found in the LICENSE file.
+ 
+ import '../shell/shell.js';
+-import '../../panels/js_timeline/js_timeline-meta.js';
+ import '../../panels/network/network-meta.js';
+ import '../../panels/mobile_throttling/mobile_throttling-meta.js';
+ 
+-- 
+2.39.5 (Apple Git-154)
+

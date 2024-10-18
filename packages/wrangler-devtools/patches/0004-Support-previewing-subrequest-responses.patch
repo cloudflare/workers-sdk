@@ -1,7 +1,7 @@
-From aadb4eae195b267715abacf8d1678c8e20b7af7b Mon Sep 17 00:00:00 2001
+From 080100c769f5e8b2a8f70691912a4183c2da6955 Mon Sep 17 00:00:00 2001
 From: Workers DevProd <workers-devprod@cloudflare.com>
 Date: Mon, 2 Oct 2023 18:22:08 +0100
-Subject: [PATCH 03/15] Support previewing subrequest responses
+Subject: [PATCH 04/13] Support previewing subrequest responses
 
 ---
  front_end/core/sdk/NetworkManager.ts     |  7 ++++++-
@@ -11,13 +11,13 @@ Subject: [PATCH 03/15] Support previewing subrequest responses
  4 files changed, 15 insertions(+), 9 deletions(-)
 
 diff --git a/front_end/core/sdk/NetworkManager.ts b/front_end/core/sdk/NetworkManager.ts
-index 8735116e61..9becdef6cf 100644
+index 8735116e61..9fb18d84cf 100644
 --- a/front_end/core/sdk/NetworkManager.ts
 +++ b/front_end/core/sdk/NetworkManager.ts
 @@ -794,7 +794,7 @@ export class NetworkDispatcher implements ProtocolProxyApi.NetworkDispatcher {
      this.updateNetworkRequest(networkRequest);
    }
-
+ 
 -  loadingFinished({requestId, timestamp: finishTime, encodedDataLength}: Protocol.Network.LoadingFinishedEvent): void {
 +  loadingFinished({requestId, timestamp: finishTime, encodedDataLength, cfResponse}: Protocol.Network.LoadingFinishedEvent & { cfResponse?: Omit<Protocol.Network.GetResponseBodyResponse, 'getError'> }): void {
      let networkRequest: NetworkRequest|null|undefined = this.#requestsById.get(requestId);
@@ -52,16 +52,16 @@ index 39a4b237b7..2883727e35 100644
 --- a/front_end/entrypoints/js_app/js_app.ts
 +++ b/front_end/entrypoints/js_app/js_app.ts
 @@ -4,6 +4,7 @@
-
+ 
  import '../shell/shell.js';
  import '../../panels/js_timeline/js_timeline-meta.js';
 +import '../../panels/network/network-meta.js';
  import '../../panels/mobile_throttling/mobile_throttling-meta.js';
-
+ 
  import * as Common from '../../core/common/common.js';
 @@ -16,6 +17,10 @@ import * as UI from '../../ui/legacy/legacy.js';
  import * as Main from '../main/main.js';
-
+ 
  const UIStrings = {
 +  /**
 +  *@description Title of the 'Cloudflare' tool in the Cloudflare Navigator View, which is part of the Sources tool
@@ -99,6 +99,6 @@ index 6870dde217..42a2e17f07 100644
    /**
     *@description Command for showing the 'Search' tool
     */
---
+-- 
 2.39.5 (Apple Git-154)
 
