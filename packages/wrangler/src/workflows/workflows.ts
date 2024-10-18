@@ -14,8 +14,7 @@ import {
 	workflowTriggerOptions,
 } from "./commands/trigger";
 
-const workflowsEpilog =
-	"🚨 'wrangler workflows ...' commands are currently in private beta. If your account isn't authorized, your commands will fail.";
+const workflowsEpilog = "🚨 Workflows is currently in Open Beta.";
 
 export const workflows = (yargs: CommonYargsArgv, subHelp: SubHelp) => {
 	return yargs
