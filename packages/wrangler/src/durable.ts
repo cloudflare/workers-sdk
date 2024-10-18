@@ -15,6 +15,7 @@ export async function getMigrationsToUpload(
 		config: Config;
 		legacyEnv: boolean | undefined;
 		env: string | undefined;
+		dispatchNamespace: string | undefined;
 	}
 ): Promise<CfWorkerInit["migrations"]> {
 	const { config, accountId } = props;
@@ -26,39 +27,42 @@ export async function getMigrationsToUpload(
 		// get current migration tag
 		type ScriptData = { id: string; migration_tag?: string };
 		let script: ScriptData | undefined;
-		if (!props.legacyEnv) {
+		if (props.dispatchNamespace) {
 			try {
-				if (props.env) {
-					const scriptData = await fetchResult<{
-						script: ScriptData;
-					}>(
-						`/accounts/${accountId}/workers/services/${scriptName}/environments/${props.env}`
-					);
-					script = scriptData.script;
-				} else {
-					const scriptData = await fetchResult<{
-						default_environment: {
-							script: ScriptData;
-						};
-					}>(`/accounts/${accountId}/workers/services/${scriptName}`);
-					script = scriptData.default_environment.script;
-				}
+				const scriptData = await fetchResult<{ script: ScriptData }>(
+					`/accounts/${accountId}/workers/dispatch/namespaces/${props.dispatchNamespace}/scripts/${scriptName}`
+				);
+				script = scriptData.script;
 			} catch (err) {
-				if (
-					![
-						10090, // corresponds to workers.api.error.service_not_found, so the script wasn't previously published at all
-						10092, // workers.api.error.environment_not_found, so the script wasn't published to this environment yet
-					].includes((err as { code: number }).code)
-				) {
-					throw err;
-				}
-				// else it's a 404, no script found, and we can proceed
+				suppressNotFoundError(err);
 			}
 		} else {
-			const scripts = await fetchResult<ScriptData[]>(
-				`/accounts/${accountId}/workers/scripts`
-			);
-			script = scripts.find(({ id }) => id === scriptName);
+			if (!props.legacyEnv) {
+				try {
+					if (props.env) {
+						const scriptData = await fetchResult<{
+							script: ScriptData;
+						}>(
+							`/accounts/${accountId}/workers/services/${scriptName}/environments/${props.env}`
+						);
+						script = scriptData.script;
+					} else {
+						const scriptData = await fetchResult<{
+							default_environment: {
+								script: ScriptData;
+							};
+						}>(`/accounts/${accountId}/workers/services/${scriptName}`);
+						script = scriptData.default_environment.script;
+					}
+				} catch (err) {
+					suppressNotFoundError(err);
+				}
+			} else {
+				const scripts = await fetchResult<ScriptData[]>(
+					`/accounts/${accountId}/workers/scripts`
+				);
+				script = scripts.find(({ id }) => id === scriptName);
+			}
 		}
 
 		if (script?.migration_tag) {
@@ -100,3 +104,15 @@ export async function getMigrationsToUpload(
 	}
 	return migrations;
 }
+
+const suppressNotFoundError = (err: unknown) => {
+	if (
+		![
+			10090, // corresponds to workers.api.error.service_not_found, so the script wasn't previously published at all
+			10092, // workers.api.error.environment_not_found, so the script wasn't published to this environment yet
+		].includes((err as { code: number }).code)
+	) {
+		throw err;
+	}
+	// else it's a 404, no script found, and we can proceed
+};
