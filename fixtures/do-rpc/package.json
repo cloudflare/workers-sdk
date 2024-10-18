@@ -1,0 +1,13 @@
+{
+	"name": "do-rpc",
+	"private": true,
+	"description": "",
+	"license": "ISC",
+	"author": "",
+	"devDependencies": {
+		"wrangler": "workspace:*"
+	},
+	"volta": {
+		"extends": "../../package.json"
+	}
+}

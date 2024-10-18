@@ -1,7 +1,6 @@
 // @ts-nocheck
 import { DurableObject, RpcTarget, WorkerEntrypoint } from "cloudflare:workers";
 
-
 export class MyDurableObject extends DurableObject {
 	/**
 	 * The constructor is invoked once upon creation of the Durable Object, i.e. the first call to
@@ -30,52 +29,44 @@ interface Env {
 	USER_DO: DurableObjectNamespace<MyDurableObject>;
 }
 
-
-
-class MockDurableObjectEntrypoint extends WorkerEntrypoint<Env> {
-	constructor() {
-
-	}
-
+export class MockDurableObjectEntrypoint extends WorkerEntrypoint<Env> {
 	idFromName(...args): DOSyncResult {
-		return new DOSyncResult("idFromName", ...args)
+		return new DOSyncResult("idFromName", args);
 	}
+
 	get(...args): DOSyncResult {
-		return new DOSyncResult("get", ...args)
+		const syncResult = new DOSyncResult("get", args);
+		const stub = syncResult.resolve(this.env.USER_DO);
+
+		return new ProxyDurableObjectRpcTarget(stub);
 	}
 }
 
-
-for( const method of Object.keys(MyDurableObject.prototype) ) {
-	MockDurableObjectEntrypoint[method] = function (syncResult, ...args) {
-		mockDurableObjectEntrypointMethod(this.env.USER_DO, method, syncResult, ...args);
+class ProxyDurableObjectStub extends RpcTarget {
+	constructor(private stub: DurableObjectStub<MyDurableObject>) {
+		super();
 	}
 }
 
-async function mockDurableObjectEntrypointMethod(binding, method, syncResult: DOSyncResult, ...args) {
-	const stub = syncResult.resolve(binding);
-	return stub[method](...args);
+for (const method of Object.keys(MyDurableObject.prototype)) {
+	ProxyDurableObjectStub[method] = function (...args) {
+		return this.stub[method](...args); // ERROR: this is returning a promise which throws: "Could not serialize object of type "JsRpcPromise". This type does not support serialization."
+	};
 }
-
-// eg DOSyncCallStack = [
-// 	["idFromName”, “name arg”],
-// 	[“get”, Promise<RpcTarget>]
-// ]
-// eg DOSyncCallStack = [
-// 	DoSyncTemp<“idFromName”, “name arg”>,
-// 	DoSyncTemp<“get”, DoSyncTemp<“idFromName”, “name arg”>>
-// ]
 
 class DOSyncResult extends RpcTarget {
-	constructor(public method: string, public ...args: unknown[]) {
-	}
+	constructor(
+		public method: string,
+		public args: unknown[]
+	) {}
 
 	resolve(binding) {
-		const args = this.args.map( arg => arg instanceof DOSyncResult ? arg.resolve(binding) : arg);
+		const args = this.args.map((arg) =>
+			arg instanceof DOSyncResult ? arg.resolve(binding) : arg
+		);
 		return binding[this.method](...args);
 	}
 }
-
 
 export default {
 	/**
@@ -89,7 +80,9 @@ export default {
 	async fetch(request, env, ctx): Promise<Response> {
 		// We will create a `DurableObjectId` using the pathname from the Worker request
 		// This id refers to a unique instance of our 'MyDurableObject' class above
-		let id: DurableObjectId = env.MY_DURABLE_OBJECT.idFromName(new URL(request.url).pathname);
+		let id: DurableObjectId = env.MY_DURABLE_OBJECT.idFromName(
+			new URL(request.url).pathname
+		);
 
 		// This stub creates a communication channel with the Durable Object instance
 		// The Durable Object constructor will be invoked upon the first call for a given id

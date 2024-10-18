@@ -1,0 +1,8 @@
+#:schema node_modules/wrangler/config-schema.json
+name = "worker"
+main = "index.ts"
+
+[[services]]
+binding = "MY_DURABLE_OBJECT"
+service = "do-worker"
+entrypoint = "MockDurableObjectEntrypoint"
