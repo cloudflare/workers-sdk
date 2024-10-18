@@ -5,7 +5,7 @@ import { ServiceContext } from "./QuickEditor";
 import type React from "react";
 
 function getDevtoolsIframeUrl(inspectorUrl: string) {
-	const url = new URL(`https://386c45b9.cloudflare-devtools.pages.dev/js_app`);
+	const url = new URL(`https://devtools.devprod.cloudflare.dev/js_app`);
 	url.searchParams.set("wss", inspectorUrl.slice(5));
 
 	url.searchParams.set("theme", "systemPreferred");
