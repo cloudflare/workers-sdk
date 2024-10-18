@@ -235,7 +235,6 @@ export const secret = (secretYargs: CommonYargsArgv) => {
 			"delete <key>",
 			"Delete a secret variable from a Worker",
 			async (yargs) => {
-				await printWranglerBanner();
 				return yargs
 					.positional("key", {
 						describe: "The variable name to be accessible in the Worker",
@@ -248,6 +247,7 @@ export const secret = (secretYargs: CommonYargsArgv) => {
 					});
 			},
 			async (args) => {
+				await printWranglerBanner();
 				const config = readConfig(args.config, args);
 				if (config.pages_build_output_dir) {
 					throw new UserError(
