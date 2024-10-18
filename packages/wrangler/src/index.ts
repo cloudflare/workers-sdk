@@ -186,6 +186,26 @@ export function demandOneOfOption(...options: string[]) {
 	};
 }
 
+/**
+ * A helper to ensure that an argument only receives a single value.
+ *
+ * This is a workaround for a limitation in yargs where non-array arguments can still receive multiple values
+ * even though the inferred type is not an array.
+ *
+ * @see https://github.com/yargs/yargs/issues/1318
+ */
+export function demandSingleValue(key: string) {
+	return function (argv: { [key: string]: unknown }) {
+		if (Array.isArray(argv[key])) {
+			throw new CommandLineArgsError(
+				`The argument '--${key}' expects a single value, but received multiple: ${JSON.stringify(argv[key])}.`
+			);
+		}
+
+		return true;
+	};
+}
+
 export class CommandLineArgsError extends UserError {}
 
 export function createCLIParser(argv: string[]) {
@@ -236,6 +256,7 @@ export function createCLIParser(argv: string[]) {
 			type: "string",
 			requiresArg: true,
 		})
+		.check(demandSingleValue("env"))
 		.option("experimental-json-config", {
 			alias: "j",
 			describe: `Experimental: support wrangler.json`,
