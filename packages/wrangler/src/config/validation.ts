@@ -1286,6 +1286,16 @@ function normalizeAndValidateEnvironment(
 				bindings: [],
 			}
 		),
+		workflows: notInheritable(
+			diagnostics,
+			topLevelEnv,
+			rawConfig,
+			rawEnv,
+			envName,
+			"workflows",
+			validateBindingArray(envName, validateWorkflowBinding),
+			[]
+		),
 		migrations: inheritable(
 			diagnostics,
 			topLevelEnv,
@@ -2006,6 +2016,15 @@ const validateDurableObjectBinding: ValidatorFn = (
 	]);
 
 	return isValid;
+};
+
+/**
+ * Check that the given field is a valid "workflow" binding object.
+ */
+const validateWorkflowBinding: ValidatorFn = (_diagnostics, _field, _value) => {
+	// TODO
+
+	return true;
 };
 
 const validateCflogfwdrObject: (env: string) => ValidatorFn =

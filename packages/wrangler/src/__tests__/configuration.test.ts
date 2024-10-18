@@ -131,6 +131,7 @@ describe("normalizeAndValidateConfig()", () => {
 			placement: undefined,
 			tail_consumers: undefined,
 			pipelines: [],
+			workflows: [],
 		});
 		expect(diagnostics.hasErrors()).toBe(false);
 		expect(diagnostics.hasWarnings()).toBe(false);

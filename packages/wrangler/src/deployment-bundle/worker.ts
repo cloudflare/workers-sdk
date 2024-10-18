@@ -152,6 +152,13 @@ export interface CfDurableObject {
 	environment?: string;
 }
 
+export interface CfWorkflow {
+	name: string;
+	class_name: string;
+	binding: string;
+	script_name?: string;
+}
+
 export interface CfQueue {
 	binding: string;
 	queue_name: string;
@@ -323,6 +330,7 @@ export interface CfWorkerInit {
 		version_metadata: CfVersionMetadataBinding | undefined;
 		data_blobs: CfDataBlobBindings | undefined;
 		durable_objects: { bindings: CfDurableObject[] } | undefined;
+		workflows: CfWorkflow[] | undefined;
 		queues: CfQueue[] | undefined;
 		r2_buckets: CfR2Bucket[] | undefined;
 		d1_databases: CfD1Database[] | undefined;

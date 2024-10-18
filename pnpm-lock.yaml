@@ -738,6 +738,15 @@ importers:
         specifier: workspace:*
         version: link:../../packages/wrangler
 
+  fixtures/workflow:
+    devDependencies:
+      '@cloudflare/workers-types':
+        specifier: ^4.20241011.0
+        version: 4.20241011.0
+      wrangler:
+        specifier: workspace:*
+        version: link:../../packages/wrangler
+
   packages/cli:
     devDependencies:
       '@clack/core':
@@ -7767,8 +7776,8 @@ packages:
     resolution: {integrity: sha512-weEDEq7Z5eTHPDh4xjX789+fHfF+P8boiFB+0vbWzpbnbsEr/GRaohi/uMKxg8RZMXnl1ItAi/IUHWMsjDV7kQ==}
     engines: {node: '>=14.0.0'}
 
-  tinyspy@3.0.2:
-    resolution: {integrity: sha512-n1cw8k1k0x4pgA2+9XrOkFydTerNcJ1zWCO5Nn9scWHTD+5tp8dghT2x1uduQePZTZgd3Tupf+x9BxJjeJi77Q==}
+  tinyspy@3.0.0:
+    resolution: {integrity: sha512-q5nmENpTHgiPVd1cJDDc9cVoYN5x4vCvwT3FMilvKPKneCBZAxn2YWQjDF0UMcE9k0Cay1gBiDfTMU0g+mPMQA==}
     engines: {node: '>=14.0.0'}
 
   title-case@2.1.1:
@@ -10575,7 +10584,7 @@ snapshots:
 
   '@vitest/spy@2.1.1':
     dependencies:
-      tinyspy: 3.0.2
+      tinyspy: 3.0.0
 
   '@vitest/ui@1.6.0(vitest@2.1.1)':
     dependencies:
@@ -15029,7 +15038,7 @@ snapshots:
 
   tinyrainbow@1.2.0: {}
 
-  tinyspy@3.0.2: {}
+  tinyspy@3.0.0: {}
 
   title-case@2.1.1:
     dependencies:
