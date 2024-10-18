@@ -1,12 +1,35 @@
-From 1a4eab0713777db5b5dc577b66a115a6f5583a5c Mon Sep 17 00:00:00 2001
+From 3609552acaf29f9b3c0b242537eed67e1b6fb750 Mon Sep 17 00:00:00 2001
 From: Workers DevProd <workers-devprod@cloudflare.com>
 Date: Fri, 18 Oct 2024 14:10:29 +0200
-Subject: [PATCH 13/13] temporarily remove timeline tab
+Subject: [PATCH 12/12] temporarily remove timeline tab
 
+fix network manager bug
 ---
+ front_end/core/sdk/NetworkManager.ts   | 3 ++-
  front_end/entrypoints/js_app/js_app.ts | 1 -
- 1 file changed, 1 deletion(-)
+ 2 files changed, 2 insertions(+), 2 deletions(-)
 
+diff --git a/front_end/core/sdk/NetworkManager.ts b/front_end/core/sdk/NetworkManager.ts
+index 9fb18d84cf..953d3fc7b1 100644
+--- a/front_end/core/sdk/NetworkManager.ts
++++ b/front_end/core/sdk/NetworkManager.ts
+@@ -34,6 +34,7 @@
+ 
+ import type * as ProtocolProxyApi from '../../generated/protocol-proxy-api.js';
+ import * as Protocol from '../../generated/protocol.js';
++import { ContentData } from '../../models/text_utils/ContentData.js';
+ import * as TextUtils from '../../models/text_utils/text_utils.js';
+ import * as Common from '../common/common.js';
+ import type {Serializer} from '../common/Settings.js';
+@@ -805,7 +806,7 @@ export class NetworkDispatcher implements ProtocolProxyApi.NetworkDispatcher {
+     this.getExtraInfoBuilder(requestId).finished();
+     if (cfResponse !== undefined) {
+       networkRequest.setContentDataProvider(async () => {
+-        return { error: '', content: cfResponse.body, encoded: cfResponse.base64Encoded };
++        return new ContentData(cfResponse.body, cfResponse.base64Encoded, networkRequest.mimeType);
+       });
+     }
+     this.finishNetworkRequest(networkRequest, finishTime, encodedDataLength);
 diff --git a/front_end/entrypoints/js_app/js_app.ts b/front_end/entrypoints/js_app/js_app.ts
 index 0281b38548..26702fdcbc 100644
 --- a/front_end/entrypoints/js_app/js_app.ts
