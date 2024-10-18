@@ -18,6 +18,11 @@
 # C3 ownership
 /packages/create-cloudflare/ @cloudflare/c3 @cloudflare/wrangler
 
+# Workers KV ownership
+/packages/wrangler/src/kv @cloudflare/kv @cloudflare/wrangler
+/packages/wrangler/src/__tests__/kv.local.test.ts @cloudflare/kv @cloudflare/wrangler
+/packages/wrangler/src/__tests__/kv.test.ts @cloudflare/kv @cloudflare/wrangler
+
 # kv-asset-handler ownership
 /packages/kv-asset-handler/ @cloudflare/wrangler
 
