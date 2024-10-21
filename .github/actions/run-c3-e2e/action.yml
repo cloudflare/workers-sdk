@@ -22,9 +22,6 @@ inputs:
   apiToken:
     description: "The api token of the test account"
     required: true
-  saveDiffs:
-    description: "Whether to retain diffs of framework templates during run"
-    required: true
 
 runs:
   using: "composite"
@@ -54,7 +51,6 @@ runs:
         FRAMEWORK_CLI_TO_TEST: ${{ inputs.framework }}
         TEST_PM: ${{ inputs.packageManager }}
         TEST_PM_VERSION: ${{ inputs.packageManagerVersion }}
-        SAVE_DIFFS: ${{ inputs.saveDiffs }}
         CI_OS: ${{ runner.os }}
 
     - name: Upload Logs
@@ -63,14 +59,6 @@ runs:
       with:
         name: e2e-logs${{inputs.experimental && '-experimental' || ''}}-${{matrix.os}}
         path: packages/create-cloudflare/.e2e-logs${{inputs.experimental && '-experimental' || ''}}
-
-    - name: Upload Framework Diffs
-      if: ${{ steps.run-e2e.outcome == 'success' && inputs.saveDiffs == 'true' }}
-      uses: actions/upload-artifact@v3
-      with:
-        name: e2e-framework-diffs${{inputs.experimental && '-experimental' || ''}}
-        path: packages/create-cloudflare/.e2e-diffs${{inputs.experimental && '-experimental' || ''}}
-        overwrite: true
 
     - name: Fail if errors detected
       shell: bash

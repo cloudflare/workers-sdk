@@ -12,11 +12,9 @@ import { deleteProject, deleteWorker } from "../scripts/common";
 import { getFrameworkMap } from "../src/templates";
 import { getFrameworkToTest } from "./frameworkToTest";
 import {
-	getDiffsPath,
 	isQuarantineMode,
 	keys,
 	kill,
-	recreateDiffsFolder,
 	recreateLogFolder,
 	runC3,
 	spawnWithLogging,
@@ -417,7 +415,6 @@ describe.concurrent(
 	() => {
 		beforeAll(async (ctx) => {
 			recreateLogFolder({ experimental }, ctx);
-			recreateDiffsFolder({ experimental });
 		});
 
 		Object.keys(frameworkTests).forEach((frameworkId) => {
@@ -486,7 +483,6 @@ describe.concurrent(
 						);
 						await verifyBuildCfTypesScript(testConfig, project.path, logStream);
 						await verifyBuildScript(testConfig, project.path, logStream);
-						await storeDiff(frameworkId, project.path, { experimental });
 					} catch (e) {
 						console.error("ERROR", e);
 						expect.fail(
@@ -510,25 +506,6 @@ describe.concurrent(
 	},
 );
 
-const storeDiff = async (
-	framework: string,
-	projectPath: string,
-	opts: { experimental: boolean },
-) => {
-	if (!process.env.SAVE_DIFFS) {
-		return;
-	}
-
-	const outputPath = join(getDiffsPath(opts), `${framework}.diff`);
-
-	const output = await runCommand(["git", "diff"], {
-		silent: true,
-		cwd: projectPath,
-	});
-
-	writeFile(outputPath, output);
-};
-
 const runCli = async (
 	framework: string,
 	projectPath: string,
@@ -546,7 +523,7 @@ const runCli = async (
 		framework,
 		NO_DEPLOY ? "--no-deploy" : "--deploy",
 		"--no-open",
-		process.env.SAVE_DIFFS ? "--git" : "--no-git",
+		"--no-git",
 	];
 
 	args.push(...argv);

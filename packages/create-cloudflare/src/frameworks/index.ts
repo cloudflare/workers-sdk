@@ -47,23 +47,4 @@ export const runFrameworkGenerator = async (ctx: C3Context, args: string[]) => {
 	logRaw("");
 
 	await runCommand(cmd, { env });
-
-	// When running e2e tests, commit the result of the scaffolding tool to facilitate
-	// diffing what new code is added by C3 as part of the process
-	if (process.env.SAVE_DIFFS) {
-		const cmdEnv = {
-			silent: true,
-			cwd: ctx.project.path,
-		};
-
-		// Certain framework scaffolders commit by default, which implies that they initialize a git repo.
-		// If that's the case and we are in a repo, so we should skip this step.
-		if (!isInsideGitRepo(ctx.project.path)) {
-			await runCommand(["git", "init"], cmdEnv);
-			await runCommand(["git", "add", "."], cmdEnv);
-
-			const commitMessage = `Initial commit by ${cli}`;
-			await runCommand(["git", "commit", "-m", commitMessage], cmdEnv);
-		}
-	}
 };
