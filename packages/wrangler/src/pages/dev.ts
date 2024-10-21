@@ -1000,6 +1000,11 @@ async function spawnProxyProcess({
 			`Specifying a \`-- <command>\` or \`--proxy\` is deprecated and will be removed in a future version of Wrangler.\nBuild your application to a directory and run the \`wrangler pages dev <directory>\` instead.\nThis results in a more faithful emulation of production behavior.`
 		);
 	}
+	if (port !== undefined) {
+		logger.warn(
+			"On Node.js 17+, wrangler will default to fetching only the IPv6 address. Please ensure that the process listening on the port specified via `--proxy` is configured for IPv6."
+		);
+	}
 	if (command.length === 0) {
 		if (port !== undefined) {
 			return port;
