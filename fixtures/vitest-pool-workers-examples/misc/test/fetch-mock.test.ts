@@ -1,8 +1,21 @@
 import { fetchMock } from "cloudflare:test";
-import { afterEach, beforeAll, expect, it } from "vitest";
+import {
+	afterAll,
+	afterEach,
+	beforeAll,
+	beforeEach,
+	describe,
+	expect,
+	it,
+	vi,
+} from "vitest";
+import type { MockInstance } from "vitest";
 
-beforeAll(() => fetchMock.activate());
-afterEach(() => fetchMock.assertNoPendingInterceptors());
+beforeEach(() => fetchMock.activate());
+afterEach(() => {
+	fetchMock.assertNoPendingInterceptors();
+	fetchMock.deactivate();
+});
 
 it("falls through to global fetch() if unmatched", async () => {
 	fetchMock
@@ -17,4 +30,105 @@ it("falls through to global fetch() if unmatched", async () => {
 	response = await fetch("https://example.com/bad");
 	expect(response.url).toEqual("https://example.com/bad");
 	expect(await response.text()).toBe("fallthrough:GET https://example.com/bad");
+});
+
+describe("AbortSignal", () => {
+	let abortSignalTimeoutMock: MockInstance;
+
+	beforeAll(() => {
+		// Fake Timers does not mock AbortSignal.timeout
+		abortSignalTimeoutMock = vi
+			.spyOn(AbortSignal, "timeout")
+			.mockImplementation((ms: number) => {
+				const controller = new AbortController();
+				setTimeout(() => {
+					controller.abort();
+				}, ms);
+				return controller.signal;
+			});
+	});
+
+	afterAll(() => abortSignalTimeoutMock.mockRestore());
+
+	beforeEach(() => vi.useFakeTimers());
+
+	afterEach(() => vi.useRealTimers());
+
+	it("aborts if an AbortSignal timeout is exceeded", async () => {
+		fetchMock
+			.get("https://example.com")
+			.intercept({ path: "/" })
+			.reply(200, async () => {
+				await new Promise((resolve) => setTimeout(resolve, 5000));
+				return "Delayed response";
+			});
+
+		const fetchPromise = fetch("https://example.com", {
+			signal: AbortSignal.timeout(2000),
+		});
+
+		vi.advanceTimersByTime(10_000);
+		await expect(fetchPromise).rejects.toThrowErrorMatchingInlineSnapshot(
+			`[AbortError: The operation was aborted]`
+		);
+	});
+
+	it("does not abort if an AbortSignal timeout is not exceeded", async () => {
+		fetchMock
+			.get("https://example.com")
+			.intercept({ path: "/" })
+			.reply(200, async () => {
+				await new Promise((resolve) => setTimeout(resolve, 1000));
+				return "Delayed response";
+			});
+
+		const fetchPromise = fetch("https://example.com", {
+			signal: AbortSignal.timeout(2000),
+		});
+
+		vi.advanceTimersByTime(1500);
+		const response = await fetchPromise;
+		expect(response.status).toStrictEqual(200);
+		expect(await response.text()).toMatchInlineSnapshot(`"Delayed response"`);
+	});
+
+	it("aborts if an AbortSignal is already aborted", async () => {
+		const controller = new AbortController();
+		controller.abort();
+
+		fetchMock
+			.get("https://example.com")
+			.intercept({ path: "/" })
+			.reply(200, async () => {
+				return "Delayed response";
+			});
+
+		const fetchPromise = fetch("https://example.com", {
+			signal: controller.signal,
+		});
+
+		await expect(fetchPromise).rejects.toThrowErrorMatchingInlineSnapshot(
+			`[AbortError: The operation was aborted]`
+		);
+	});
+
+	it("aborts if an AbortSignal is already aborted", async () => {
+		const controller = new AbortController();
+		controller.abort();
+
+		fetchMock
+			.get("https://example.com")
+			.intercept({ path: "/" })
+			.reply(200, async () => {
+				return "Delayed response";
+			});
+
+		const fetchPromise = fetch("https://example.com", {
+			signal: controller.signal,
+		});
+
+		await expect(fetchPromise).rejects.toThrowErrorMatchingInlineSnapshot(
+			`[AbortError: The operation was aborted]`
+		);
+	});
 });
