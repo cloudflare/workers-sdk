@@ -1,7 +1,7 @@
-From 080100c769f5e8b2a8f70691912a4183c2da6955 Mon Sep 17 00:00:00 2001
+From a60dc90ac6ac6d0b36edb29230322209ea1d5bce Mon Sep 17 00:00:00 2001
 From: Workers DevProd <workers-devprod@cloudflare.com>
 Date: Mon, 2 Oct 2023 18:22:08 +0100
-Subject: [PATCH 03/12] Support previewing subrequest responses
+Subject: [PATCH 03/13] Support previewing subrequest responses
 
 ---
  front_end/core/sdk/NetworkManager.ts     |  7 ++++++-

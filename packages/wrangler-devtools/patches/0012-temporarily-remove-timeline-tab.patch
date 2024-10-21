@@ -1,38 +1,19 @@
-From 26a194c2d9d2a3768fbd37e12e19147264f79dae Mon Sep 17 00:00:00 2001
+From c9c251a85abbb9fce615dae8c3dc4a61829f9603 Mon Sep 17 00:00:00 2001
 From: Workers DevProd <workers-devprod@cloudflare.com>
 Date: Fri, 18 Oct 2024 14:10:29 +0200
-Subject: [PATCH 12/12] Temporarily remove timeline tab
+Subject: [PATCH 12/13] Temporarily remove timeline tab
 
 ---
- build                                  | 2 +-
- buildtools                             | 2 +-
  front_end/core/sdk/NetworkManager.ts   | 3 ++-
  front_end/entrypoints/js_app/js_app.ts | 1 -
- third_party/clang-format/script        | 2 +-
- third_party/depot_tools                | 2 +-
- third_party/inspector_protocol         | 2 +-
- 7 files changed, 7 insertions(+), 7 deletions(-)
+ 2 files changed, 2 insertions(+), 2 deletions(-)
 
-diff --git a/build b/build
-index c6c3b541f7..354468d2ec 160000
---- a/build
-+++ b/build
-@@ -1 +1 @@
--Subproject commit c6c3b541f7cb285315077cb41eccac2d78202e4c
-+Subproject commit 354468d2ec3b0700a6812f2ec596b730bcd6bfd3
-diff --git a/buildtools b/buildtools
-index 50c348906c..d1850bb09e 160000
---- a/buildtools
-+++ b/buildtools
-@@ -1 +1 @@
--Subproject commit 50c348906cbd450e031bc3123b657f833f8455b7
-+Subproject commit d1850bb09e7916134a5364ede6025a62c34ad113
 diff --git a/front_end/core/sdk/NetworkManager.ts b/front_end/core/sdk/NetworkManager.ts
 index 9fb18d84cf..f30583805f 100644
 --- a/front_end/core/sdk/NetworkManager.ts
 +++ b/front_end/core/sdk/NetworkManager.ts
 @@ -34,6 +34,7 @@
- 
+
  import type * as ProtocolProxyApi from '../../generated/protocol-proxy-api.js';
  import * as Protocol from '../../generated/protocol.js';
 +import { ContentData, ContentDataOrError } from '../../models/text_utils/ContentData.js';
@@ -54,33 +35,12 @@ index 0281b38548..26702fdcbc 100644
 +++ b/front_end/entrypoints/js_app/js_app.ts
 @@ -3,7 +3,6 @@
  // found in the LICENSE file.
- 
+
  import '../shell/shell.js';
 -import '../../panels/js_timeline/js_timeline-meta.js';
  import '../../panels/network/network-meta.js';
  import '../../panels/mobile_throttling/mobile_throttling-meta.js';
- 
-diff --git a/third_party/clang-format/script b/third_party/clang-format/script
-index e5337933f2..3c0acd2d4e 160000
---- a/third_party/clang-format/script
-+++ b/third_party/clang-format/script
-@@ -1 +1 @@
--Subproject commit e5337933f2951cacd3aeacd238ce4578163ca0b9
-+Subproject commit 3c0acd2d4e73dd911309d9e970ba09d58bf23a62
-diff --git a/third_party/depot_tools b/third_party/depot_tools
-index 90a30a5b53..c4d75a1519 160000
---- a/third_party/depot_tools
-+++ b/third_party/depot_tools
-@@ -1 +1 @@
--Subproject commit 90a30a5b5357636fa05bb315c393275be7ca705c
-+Subproject commit c4d75a151973a872ec74e33afb90acde64c48644
-diff --git a/third_party/inspector_protocol b/third_party/inspector_protocol
-index 916f43c554..ccf6613682 160000
---- a/third_party/inspector_protocol
-+++ b/third_party/inspector_protocol
-@@ -1 +1 @@
--Subproject commit 916f43c554c65ebf4ccd896b0f4e2ac99a67c434
-+Subproject commit ccf6613682a24413db28656da6f9c52948331bad
--- 
+
+--
 2.39.5 (Apple Git-154)
 

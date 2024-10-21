@@ -1,34 +1,14 @@
-From a61bf3ddf62a22aa4f70d61858f4f3cddb1fda44 Mon Sep 17 00:00:00 2001
+From fa36035a788add2d77b254ca4cebab5a820bd5b1 Mon Sep 17 00:00:00 2001
 From: Workers DevProd <workers-devprod@cloudflare.com>
 Date: Mon, 2 Oct 2023 18:13:34 +0100
-Subject: [PATCH 01/12] Support viewing files over the network
+Subject: [PATCH 01/13] Support viewing files over the network
 
 ---
- build                                    | 2 +-
- buildtools                               | 2 +-
  front_end/core/sdk/Target.ts             | 4 ++++
  front_end/entrypoints/js_app/js_app.ts   | 2 +-
  front_end/panels/sources/sources-meta.ts | 5 +++++
- third_party/clang-format/script          | 2 +-
- third_party/depot_tools                  | 2 +-
- third_party/inspector_protocol           | 2 +-
- tsconfig.json                            | 3 ++-
- 9 files changed, 17 insertions(+), 7 deletions(-)
+ 3 files changed, 10 insertions(+), 1 deletions(-)
 
-diff --git a/build b/build
-index 354468d2ec..c6c3b541f7 160000
---- a/build
-+++ b/build
-@@ -1 +1 @@
--Subproject commit 354468d2ec3b0700a6812f2ec596b730bcd6bfd3
-+Subproject commit c6c3b541f7cb285315077cb41eccac2d78202e4c
-diff --git a/buildtools b/buildtools
-index d1850bb09e..50c348906c 160000
---- a/buildtools
-+++ b/buildtools
-@@ -1 +1 @@
--Subproject commit d1850bb09e7916134a5364ede6025a62c34ad113
-+Subproject commit 50c348906cbd450e031bc3123b657f833f8455b7
 diff --git a/front_end/core/sdk/Target.ts b/front_end/core/sdk/Target.ts
 index 0b3f0f9def..ee384b197e 100644
 --- a/front_end/core/sdk/Target.ts
@@ -49,7 +29,7 @@ index 0b3f0f9def..ee384b197e 100644
    TAB = 'tab',
 +  CLOUDFLARE = 'cloudflare',
  }
- 
+
  export const enum Capability {
 diff --git a/front_end/entrypoints/js_app/js_app.ts b/front_end/entrypoints/js_app/js_app.ts
 index 45028f436a..39a4b237b7 100644
@@ -80,40 +60,6 @@ index 42a2e17f07..6870dde217 100644
    /**
     *@description Command for showing the 'Search' tool
     */
-diff --git a/third_party/clang-format/script b/third_party/clang-format/script
-index 3c0acd2d4e..e5337933f2 160000
---- a/third_party/clang-format/script
-+++ b/third_party/clang-format/script
-@@ -1 +1 @@
--Subproject commit 3c0acd2d4e73dd911309d9e970ba09d58bf23a62
-+Subproject commit e5337933f2951cacd3aeacd238ce4578163ca0b9
-diff --git a/third_party/depot_tools b/third_party/depot_tools
-index c4d75a1519..90a30a5b53 160000
---- a/third_party/depot_tools
-+++ b/third_party/depot_tools
-@@ -1 +1 @@
--Subproject commit c4d75a151973a872ec74e33afb90acde64c48644
-+Subproject commit 90a30a5b5357636fa05bb315c393275be7ca705c
-diff --git a/third_party/inspector_protocol b/third_party/inspector_protocol
-index ccf6613682..916f43c554 160000
---- a/third_party/inspector_protocol
-+++ b/third_party/inspector_protocol
-@@ -1 +1 @@
--Subproject commit ccf6613682a24413db28656da6f9c52948331bad
-+Subproject commit 916f43c554c65ebf4ccd896b0f4e2ac99a67c434
-diff --git a/tsconfig.json b/tsconfig.json
-index b3be02e26b..811051314d 100644
---- a/tsconfig.json
-+++ b/tsconfig.json
-@@ -17,6 +17,7 @@
-     "inspector_overlay"
-   ],
-   "exclude": [
--    "front_end/**/*-legacy.ts"
-+    "front_end/**/*-legacy.ts",
-+    "third_party/**/*.ts"
-   ]
- }
--- 
+--
 2.39.5 (Apple Git-154)
 
