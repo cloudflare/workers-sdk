@@ -9,7 +9,7 @@
 	},
 	"dependencies": {
 		"from-xml": "^0.1.7",
-		"hono": "^3.2.5"
+		"hono": "^4.6.5"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-types": "^4.20230518.0 ",

@@ -54,7 +54,7 @@
 		"@tailwindcss/aspect-ratio": "^0.3.0",
 		"@tailwindcss/forms": "^0.3.4",
 		"autoprefixer": "^9.8.8",
-		"postcss": "^7.0.39",
+		"postcss": "^8.4.47",
 		"tailwindcss": "npm:@tailwindcss/postcss7-compat@^2.2.17",
 		"wrangler": "^3.0.0"
 	}
