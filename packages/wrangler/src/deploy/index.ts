@@ -228,6 +228,11 @@ export function deployOptions(yargs: CommonYargsArgv) {
 					"Name of a dispatch namespace to deploy the Worker to (Workers for Platforms)",
 				type: "string",
 			})
+			.option("experimental-workflows", {
+				alias: "x-workflows",
+				describe: "Enable the deployment of Workflows",
+				type: "boolean",
+			})
 	);
 }
 
@@ -280,6 +285,12 @@ export async function deployHandler(args: DeployArgs) {
 	) {
 		throw new UserError(
 			"Cannot use legacy assets and Workers Sites in the same Worker."
+		);
+	}
+
+	if (!args.experimentalWorkflows && config.workflows?.length) {
+		throw new UserError(
+			"To deploy Workflows, you must use the --experimental-workflows flag (or --x-workflows)."
 		);
 	}
 
@@ -363,6 +374,7 @@ export async function deployHandler(args: DeployArgs) {
 		projectRoot,
 		dispatchNamespace: args.dispatchNamespace,
 		experimentalVersions: args.experimentalVersions,
+		experimentalWorkflows: args.experimentalWorkflows,
 	});
 
 	writeOutput({

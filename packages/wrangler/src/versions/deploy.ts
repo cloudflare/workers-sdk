@@ -97,6 +97,11 @@ export function versionsDeployOptions(yargs: CommonYargsArgv) {
 			describe: "Maximum allowed versions to select",
 			type: "number",
 			default: 2, // (when server-side limitation is lifted, we can update this default or just remove the option entirely)
+		})
+		.option("experimental-workflows", {
+			alias: "x-workflows",
+			describe: "Enable the deployment of Workflows",
+			type: "boolean",
 		});
 }
 
@@ -118,6 +123,12 @@ export async function versionsDeployHandler(args: VersionsDeployArgs) {
 	if (workerName === undefined) {
 		throw new UserError(
 			'You need to provide a name of your worker. Either pass it as a cli arg with `--name <name>` or in your config file as `name = "<name>"`'
+		);
+	}
+
+	if (!args.experimentalWorkflows && config.workflows?.length) {
+		throw new UserError(
+			"To deploy Workflows, you must use the --experimental-workflows flag (or --x-workflows)"
 		);
 	}
 

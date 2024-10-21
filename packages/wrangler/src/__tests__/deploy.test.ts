@@ -11322,6 +11322,102 @@ export default{
 			`);
 		});
 	});
+
+	describe("workflows", () => {
+		function mockDeployWorkflow(expectedWorkflowName?: string) {
+			const handler = http.put(
+				"*/accounts/:accountId/workflows/:workflowName",
+				({ params }) => {
+					if (expectedWorkflowName) {
+						expect(params.workflowName).toBe(expectedWorkflowName);
+					}
+					return HttpResponse.json(
+						createFetchResult({ id: "mock-new-workflow-id" })
+					);
+				}
+			);
+			msw.use(handler);
+		}
+
+		it("should allow uploading workers with workflows with --x-workflows flag", async () => {
+			writeWranglerToml({
+				main: "index.js",
+				workflows: [
+					{
+						binding: "WORKFLOW",
+						name: "my-workflow",
+						class_name: "MyWorkflow",
+					},
+				],
+			});
+			await fs.promises.writeFile(
+				"index.js",
+				`
+                import { WorkflowEntrypoint } from 'cloudflare:workers';
+                export default {};
+                export class MyWorkflow extends WorkflowEntrypoint {};
+            `
+			);
+
+			mockDeployWorkflow("my-workflow");
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedBindings: [
+					{
+						type: "workflow",
+						name: "WORKFLOW",
+						workflow_name: "my-workflow",
+						class_name: "MyWorkflow",
+					},
+				],
+			});
+
+			await runWrangler("deploy --x-workflows");
+
+			expect(std.out).toMatchInlineSnapshot(`
+				"Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Your worker has access to the following bindings:
+				- Workflows:
+				  - WORKFLOW: MyWorkflow
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				  workflow: my-workflow
+				Current Version ID: Galaxy-Class"
+			`);
+		});
+
+		it("should disallow uploading workers with workflows without --x-workflows flag", async () => {
+			writeWranglerToml({
+				main: "index.js",
+				workflows: [
+					{
+						binding: "WORKFLOW",
+						name: "my-workflow",
+						class_name: "MyWorkflow",
+					},
+				],
+			});
+			await fs.promises.writeFile(
+				"index.js",
+				`
+                import { WorkflowEntrypoint } from 'cloudflare:workers';
+                export default {};
+                export class MyWorkflow extends WorkflowEntrypoint {};
+            `
+			);
+
+			mockSubDomainRequest();
+			mockUploadWorkerRequest();
+
+			const result = runWrangler("deploy"); // no --x-workflows flag
+
+			expect(result).rejects.toMatchInlineSnapshot(
+				`[Error: To deploy Workflows, you must use the --experimental-workflows flag (or --x-workflows).]`
+			);
+		});
+	});
 });
 
 /** Write mock assets to the file system so they can be uploaded. */

@@ -49,6 +49,11 @@ export function triggersDeployOptions(yargs: CommonYargsArgv) {
 			type: "boolean",
 			describe: "Use legacy environments",
 			hidden: true,
+		})
+		.option("experimental-workflows", {
+			alias: "x-workflows",
+			describe: "Enable the deployment of Workflows",
+			type: "boolean",
 		});
 }
 
@@ -78,7 +83,8 @@ export async function triggersDeployHandler(
 		routes: args.routes,
 		legacyEnv: isLegacyEnv(config),
 		dryRun: args.dryRun,
-		experimentalVersions: args.experimentalJsonConfig,
 		assetsOptions,
+		experimentalVersions: args.experimentalVersions,
+		experimentalWorkflows: args.experimentalWorkflows,
 	});
 }

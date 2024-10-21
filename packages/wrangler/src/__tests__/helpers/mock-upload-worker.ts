@@ -90,6 +90,9 @@ export function mockUploadWorkerRequest(
 		}
 
 		if ("expectedBindings" in options) {
+			console.dir(metadata.bindings);
+			console.dir(expectedBindings);
+
 			expect(metadata.bindings).toEqual(expectedBindings);
 		}
 		if ("expectedCompatibilityDate" in options) {

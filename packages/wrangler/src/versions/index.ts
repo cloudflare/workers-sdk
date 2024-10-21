@@ -191,6 +191,11 @@ export function versionsUploadOptions(yargs: CommonYargsArgv) {
 				type: "string",
 				requiresArg: true,
 			})
+			.option("experimental-workflows", {
+				alias: "x-workflows",
+				describe: "Enable the deployment of Workflows",
+				type: "boolean",
+			})
 	);
 }
 
@@ -222,6 +227,12 @@ export async function versionsUploadHandler(
 	if (args.legacyAssets || config.legacy_assets) {
 		throw new UserError(
 			"Legacy assets does not support uploading versions through `wrangler versions upload`. You must use `wrangler deploy` instead."
+		);
+	}
+
+	if (!args.experimentalWorkflows && config.workflows?.length) {
+		throw new UserError(
+			"To include Workflows in your Worker Versions upload, you must use the --experimental-workflows flag (or --x-workflows)."
 		);
 	}
 

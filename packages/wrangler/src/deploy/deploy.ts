@@ -106,6 +106,7 @@ type Props = {
 	projectRoot: string | undefined;
 	dispatchNamespace: string | undefined;
 	experimentalVersions: boolean | undefined;
+	experimentalWorkflows: boolean | undefined;
 };
 
 export type RouteObject = ZoneIdRoute | ZoneNameRoute | CustomDomainRoute;

@@ -29,8 +29,9 @@ type Props = {
 	routes: string[] | undefined;
 	legacyEnv: boolean | undefined;
 	dryRun: boolean | undefined;
-	experimentalVersions: boolean | undefined;
 	assetsOptions: AssetsOptions | undefined;
+	experimentalVersions: boolean | undefined;
+	experimentalWorkflows: boolean | undefined;
 };
 
 export default async function triggersDeploy(
@@ -240,7 +241,12 @@ export default async function triggersDeploy(
 		deployments.push(...updateConsumers);
 	}
 
-	if (config.workflows?.length) {
+	if (!props.experimentalWorkflows && config.workflows?.length) {
+		throw new UserError(
+			"To deploy Workflows, you must use the --experimental-workflows flag (or --x-workflows)"
+		);
+	}
+	if (props.experimentalWorkflows && config.workflows?.length) {
 		for (const workflow of config.workflows) {
 			deployments.push(
 				fetchResult(`/accounts/${accountId}/workflows/${workflow.name}`, {
