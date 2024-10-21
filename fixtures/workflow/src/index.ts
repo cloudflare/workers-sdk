@@ -1,6 +1,6 @@
 import {
 	WorkerEntrypoint,
-	Workflow,
+	WorkflowEntrypoint,
 	WorkflowEvent,
 	WorkflowStep,
 } from "cloudflare:workers";
@@ -8,9 +8,9 @@ import {
 type Params = {
 	name: string;
 };
-export class Demo extends Workflow<{}, Params> {
-	async run(events: Array<WorkflowEvent<Params>>, step: WorkflowStep) {
-		const { timestamp, payload } = events[0];
+export class Demo extends WorkflowEntrypoint<{}, Params> {
+	async run(event: WorkflowEvent<Params>, step: WorkflowStep) {
+		const { timestamp, payload } = event;
 		const result = await step.do("First step", async function () {
 			return {
 				output: "First step result",
@@ -35,16 +35,14 @@ export class Demo extends Workflow<{}, Params> {
 }
 
 type Env = {
-	WORKFLOW: {
-		create: (id: string) => {
-			pause: () => {};
-		};
-	};
+	WORKFLOW: Workflow;
 };
 export default class extends WorkerEntrypoint<Env> {
 	async fetch() {
-		const handle = await this.env.WORKFLOW.create(crypto.randomUUID());
-		await handle.pause();
-		return new Response();
+		const handle = await this.env.WORKFLOW.create({
+			name: crypto.randomUUID(),
+		});
+		// await handle.pause();
+		return Response.json(await handle.status());
 	}
 }
