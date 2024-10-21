@@ -576,7 +576,7 @@ export function shouldCheckFetch(
 	compatibilityDate: string = "2000-01-01", // Default to some arbitrary old date
 	compatibilityFlags: string[] = []
 ): boolean {
-	// Yes, the logic can be less verbose than this but doing it this way makes is very clear.
+	// Yes, the logic can be less verbose than this but doing it this way makes it very clear.
 	if (compatibilityFlags.includes("ignore_custom_ports")) {
 		return true;
 	}
