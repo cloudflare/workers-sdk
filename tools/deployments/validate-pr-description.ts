@@ -81,7 +81,7 @@ export function validateDescription(
 
 	if (!changesetIncluded && !parsedLabels.includes("no-changeset-required")) {
 		errors.push(
-			"Your PR doesn't include a changeset. Either include one (following the instructions in CONTRIBUTING.md) or add the 'no-changeset-required' label to bypass this check. Most PRs should have a changeset, so only bypass this check if your change should not cause a release of any packages."
+			"Your PR doesn't include a changeset. Either include one (following the instructions in CONTRIBUTING.md) or add the 'no-changeset-required' label to bypass this check. Most PRs should have a changeset, so only bypass this check if you're sure that your change doesn't need one: see https://github.com/cloudflare/workers-sdk/blob/main/CONTRIBUTING.md#changesets for more details."
 		);
 	}
 
