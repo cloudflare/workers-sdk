@@ -16,10 +16,14 @@ import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import type { Interface } from "node:readline";
 
-function createFetchResult(result: unknown, success = true) {
+function createFetchResult(
+	result: unknown,
+	success = true,
+	errors: { code: number; message: string }[] = []
+) {
 	return {
 		success,
-		errors: [],
+		errors,
 		messages: [],
 		result,
 	};
@@ -342,17 +346,14 @@ describe("wrangler secret", () => {
 						expect(params.scriptName).toEqual(scriptName);
 
 						// Return our error
-						return HttpResponse.json({
-							success: false,
-							errors: [
+						return HttpResponse.json(
+							createFetchResult(null, false, [
 								{
 									code: VERSION_NOT_DEPLOYED_ERR_CODE,
 									message: "latest is not deployed",
 								},
-							],
-							messages: [],
-							result: null,
-						});
+							])
+						);
 					},
 					{ once: true }
 				)
@@ -622,6 +623,27 @@ describe("wrangler secret", () => {
 	});
 
 	describe("bulk", () => {
+		const mockBulkRequest = (returnNetworkError = false) => {
+			msw.use(
+				http.get(
+					`*/accounts/:accountId/workers/scripts/:scriptName/settings`,
+					({ params }) => {
+						expect(params.accountId).toEqual("some-account-id");
+
+						return HttpResponse.json(createFetchResult({ bindings: [] }));
+					}
+				),
+				http.patch(
+					`*/accounts/:accountId/workers/scripts/:scriptName/settings`,
+					({ params }) => {
+						expect(params.accountId).toEqual("some-account-id");
+						return HttpResponse.json(
+							returnNetworkError ? null : createFetchResult(null)
+						);
+					}
+				)
+			);
+		};
 		it("should error helpfully if pages_build_output_dir is set", async () => {
 			fs.writeFileSync(
 				"wrangler.toml",
@@ -666,27 +688,7 @@ describe("wrangler secret", () => {
 						password: "hunter2",
 					}) as unknown as Interface
 			);
-
-			msw.use(
-				http.get(
-					`*/accounts/:accountId/workers/scripts/:scriptName/settings`,
-					({ params }) => {
-						expect(params.accountId).toEqual("some-account-id");
-
-						return HttpResponse.json(createFetchResult({ bindings: [] }));
-					}
-				)
-			);
-			msw.use(
-				http.patch(
-					`*/accounts/:accountId/workers/scripts/:scriptName/settings`,
-					({ params }) => {
-						expect(params.accountId).toEqual("some-account-id");
-
-						return HttpResponse.json(createFetchResult(null));
-					}
-				)
-			);
+			mockBulkRequest();
 
 			await runWrangler(`secret bulk --name script-name`);
 			expect(std.out).toMatchInlineSnapshot(`
@@ -710,26 +712,7 @@ describe("wrangler secret", () => {
 				})
 			);
 
-			msw.use(
-				http.get(
-					`*/accounts/:accountId/workers/scripts/:scriptName/settings`,
-					({ params }) => {
-						expect(params.accountId).toEqual("some-account-id");
-
-						return HttpResponse.json(createFetchResult({ bindings: [] }));
-					}
-				)
-			);
-			msw.use(
-				http.patch(
-					`*/accounts/:accountId/workers/scripts/:scriptName/settings`,
-					({ params }) => {
-						expect(params.accountId).toEqual("some-account-id");
-
-						return HttpResponse.json(createFetchResult(null));
-					}
-				)
-			);
+			mockBulkRequest();
 
 			await runWrangler("secret bulk ./secret.json --name script-name");
 
@@ -783,27 +766,7 @@ describe("wrangler secret", () => {
 					"secret-name-7": "secret_text",
 				})
 			);
-
-			msw.use(
-				http.get(
-					`*/accounts/:accountId/workers/scripts/:scriptName/settings`,
-					({ params }) => {
-						expect(params.accountId).toEqual("some-account-id");
-
-						return HttpResponse.json(createFetchResult({ bindings: [] }));
-					}
-				)
-			);
-			msw.use(
-				http.patch(
-					`*/accounts/:accountId/workers/scripts/:scriptName/settings`,
-					({ params }) => {
-						expect(params.accountId).toEqual("some-account-id");
-
-						return HttpResponse.json(null);
-					}
-				)
-			);
+			mockBulkRequest(true);
 
 			await expect(async () => {
 				await runWrangler("secret bulk ./secret.json --name script-name");
@@ -835,27 +798,7 @@ describe("wrangler secret", () => {
 					"secret-name-2": "secret_text",
 				})
 			);
-
-			msw.use(
-				http.get(
-					`*/accounts/:accountId/workers/scripts/:scriptName/settings`,
-					({ params }) => {
-						expect(params.accountId).toEqual("some-account-id");
-
-						return HttpResponse.json(createFetchResult({ bindings: [] }));
-					}
-				)
-			);
-			msw.use(
-				http.patch(
-					`*/accounts/:accountId/workers/scripts/:scriptName/settings`,
-					({ params }) => {
-						expect(params.accountId).toEqual("some-account-id");
-
-						return HttpResponse.json(null);
-					}
-				)
-			);
+			mockBulkRequest(true);
 
 			await expect(async () => {
 				await runWrangler("secret bulk ./secret.json --name script-name");
