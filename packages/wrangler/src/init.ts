@@ -12,7 +12,7 @@ import { readConfig } from "./config";
 import { getDatabaseInfoFromId } from "./d1/utils";
 import { confirm, select } from "./dialogs";
 import { getC3CommandFromEnv } from "./environment-variables/misc-variables";
-import { FatalError, UserError } from "./errors";
+import { CommandLineArgsError, FatalError, UserError } from "./errors";
 import { getGitVersioon, initializeGit, isInsideGitRepo } from "./git-client";
 import { logger } from "./logger";
 import { getPackageManager } from "./package-manager";
@@ -21,7 +21,7 @@ import { getBasePath } from "./paths";
 import { requireAuth } from "./user";
 import { createBatches } from "./utils/create-batches";
 import * as shellquote from "./utils/shell-quote";
-import { CommandLineArgsError, printWranglerBanner } from "./index";
+import { printWranglerBanner } from "./index";
 import type { RawConfig } from "./config";
 import type {
 	CustomDomainRoute,

@@ -3,10 +3,10 @@ import chalk from "chalk";
 import { fetchResult } from "../cfetch";
 import { readConfig } from "../config";
 import { FatalError, UserError } from "../errors";
-import { demandSingleValue } from "../index";
 import { logger } from "../logger";
 import { printWranglerBanner } from "../update-check";
 import { CommandRegistrationError, DefinitionTreeRoot } from "./define-command";
+import { demandSingleValue } from "./helpers";
 import type { CommonYargsArgv, SubHelp } from "../yargs-types";
 import type {
 	Command,
