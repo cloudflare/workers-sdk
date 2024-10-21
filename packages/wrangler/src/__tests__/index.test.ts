@@ -147,6 +147,12 @@ describe("wrangler", () => {
 			).rejects.toThrowErrorMatchingInlineSnapshot(
 				`[Error: The argument "--env" expects a single value, but received multiple: ["prod","prod"].]`
 			);
+
+			await expect(
+				runWrangler("--config=wrangler.toml -c example")
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: The argument "--config" expects a single value, but received multiple: ["wrangler.toml","example"].]`
+			);
 		});
 	});
 
