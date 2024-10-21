@@ -23,7 +23,7 @@
 		"dist"
 	],
 	"scripts": {
-		"build": "esbuild ./src/worker.ts --format=esm --bundle --outfile=dist/local-binding.mjs --sourcemap=external --external:cloudflare:*",
+		"build": "esbuild ./src/local-binding-worker.ts --format=esm --bundle --outfile=dist/local-binding-worker.mjs --sourcemap=external --external:cloudflare:*",
 		"check:lint": "eslint . --max-warnings=0",
 		"check:type": "pnpm run check:type:tests && tsc",
 		"check:type:tests": "tsc -p ./tests/tsconfig.json",
@@ -33,6 +33,7 @@
 		"test:ci": "vitest run"
 	},
 	"dependencies": {
+		"heap-js": "^2.5.0",
 		"itty-time": "^1.0.6",
 		"mime": "^3.0.0",
 		"zod": "^3.22.3"

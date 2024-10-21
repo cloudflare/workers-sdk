@@ -56,11 +56,11 @@ export class Context extends RpcTarget {
 		return val;
 	}
 
-	async do<T>(
+	async do<T extends Rpc.Serializable<T>>(
 		name: string,
-		closure: () => Promise<T>,
-		stepConfig: WorkflowStepConfig = {}
-	): Promise<T | void | undefined> {
+		stepConfig: WorkflowStepConfig,
+		callback: () => Promise<T>
+	): Promise<T | void> {
 		if (!validateStepName(name)) {
 			throw new WorkflowFatalError(
 				`Step name "${name}" exceeds max length (${MAX_STEP_NAME_LENGTH} chars) or invalid characters found`
@@ -148,9 +148,7 @@ export class Context extends RpcTarget {
 			await this.#state.storage.put(stepStateKey, stepState);
 		}
 
-		const doWrapper = async <T>(
-			closure: () => Promise<T>
-		): Promise<T | void | undefined> => {
+		const doWrapper = async (closure: () => Promise<T>): Promise<T | void> => {
 			const stepState = ((await this.#state.storage.get(
 				stepStateKey
 			)) as StepState) ?? {
@@ -268,7 +266,7 @@ export class Context extends RpcTarget {
 
 						await this.#engine.setStatus(
 							accountId,
-							instance.id,
+							instance.name,
 							InstanceStatus.Errored
 						);
 						await this.#engine.timeoutHandler.release(this.#engine);
@@ -324,7 +322,7 @@ export class Context extends RpcTarget {
 
 					await this.#engine.setStatus(
 						accountId,
-						instance.id,
+						instance.name,
 						InstanceStatus.Errored
 					);
 					await this.#engine.timeoutHandler.release(this.#engine);
@@ -368,7 +366,7 @@ export class Context extends RpcTarget {
 						type: "retry",
 					});
 
-					return doWrapper(closure);
+					return doWrapper(callback);
 				} else {
 					await this.#engine.timeoutHandler.release(this.#engine);
 					this.#engine.writeLog(
@@ -385,7 +383,7 @@ export class Context extends RpcTarget {
 					);
 					await this.#engine.setStatus(
 						accountId,
-						instance.id,
+						instance.name,
 						InstanceStatus.Errored
 					);
 					throw error;
@@ -405,7 +403,7 @@ export class Context extends RpcTarget {
 			return result;
 		};
 
-		return doWrapper(closure);
+		return doWrapper(callback);
 	}
 
 	async sleep(name: string, duration: WorkflowSleepDuration): Promise<void> {
@@ -479,5 +477,21 @@ export class Context extends RpcTarget {
 		await this.#state.storage.put(sleepLogWrittenKey, true);
 
 		this.#engine.priorityQueue!.remove({ hash: cacheKey, type: "sleep" });
+	}
+
+	async sleepUntil(name: string, timestamp: Date | number): Promise<void> {
+		if (timestamp instanceof Date) {
+			timestamp = timestamp.valueOf();
+		}
+
+		const now = Date.now();
+		// timestamp needs to be in the future, throw if not
+		if (timestamp < now) {
+			throw new Error(
+				"You can't sleep until a time in the past, time-traveler"
+			);
+		}
+
+		return this.sleep(name, timestamp - now);
 	}
 }

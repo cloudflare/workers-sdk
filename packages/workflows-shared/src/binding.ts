@@ -1,4 +1,4 @@
-import { RpcTarget, WorkerEntrypoint } from "cloudflare:workers";
+import { RpcTarget, WorkerEntrypoint, WorkflowEvent } from "cloudflare:workers";
 import { InstanceEvent, instanceStatusName } from "./instance";
 import type {
 	DatabaseInstance,
@@ -13,25 +13,25 @@ type Env = {
 
 // this.env.WORKFLOW is WorkflowBinding
 export class WorkflowBinding extends WorkerEntrypoint<Env> implements Workflow {
-	public async create(
-		id: string,
-		params: Record<string, unknown>
-	): Promise<Instance> {
-		const stubId = this.env.ENGINE.idFromName(id);
+	public async create({
+		name = "defaultWorkflow",
+		params,
+	}: WorkflowInstanceCreateOptions): Promise<Instance> {
+		const stubId = this.env.ENGINE.idFromName(name);
 		const stub = this.env.ENGINE.get(stubId);
 
 		void stub.init(
 			0, // accountId: number,
 			{} as DatabaseWorkflow, // workflow: DatabaseWorkflow,
 			{} as DatabaseVersion, // version: DatabaseVersion,
-			{ id } as DatabaseInstance, // instance: DatabaseInstance,
+			{ name } as DatabaseInstance, // instance: DatabaseInstance,
 			{
 				timestamp: new Date(),
-				payload: params,
+				payload: params as Readonly<typeof params>,
 			}
 		);
 
-		return new WorkflowHandle(id, stub);
+		return new WorkflowHandle(name, stub);
 	}
 
 	public async get(id: string): Promise<Instance> {
