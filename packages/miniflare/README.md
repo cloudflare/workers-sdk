@@ -725,6 +725,10 @@ Options shared between all Workers/"nanoservices".
 
   Where to persist data stored in D1 databases. See docs for `Persistence`.
 
+- `workflowsPersist?: Persistence`
+
+Where to persist data stored in Workflows. See docs for `Persistence`.
+
 #### Analytics Engine, Browser Rendering, Sending Email, Vectorize, Workers AI and Workers for Platforms
 
 _Not yet supported_
