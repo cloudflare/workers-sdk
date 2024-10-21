@@ -1,5 +1,4 @@
 ---
-"quick-edit-extension": patch
 "@cloudflare/quick-edit": patch
 ---
 
