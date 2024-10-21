@@ -2749,7 +2749,7 @@ const validateBindingsHaveUniqueNames = (
 
 	const bindingNamesArray = Object.entries(friendlyBindingNames) as [
 		keyof CfWorkerInit["bindings"],
-		string
+		string,
 	][];
 
 	const bindingsGroupedByType = Object.fromEntries(
@@ -2762,8 +2762,6 @@ const validateBindingsHaveUniqueNames = (
 			),
 		])
 	);
-
-	console.log(bindingsGroupedByType);
 
 	const bindingsGroupedByName: Record<string, string[]> = {};
 

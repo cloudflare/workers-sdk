@@ -207,7 +207,6 @@ export const friendlyBindingNames: Record<
 	queues: "Queues",
 	d1_databases: "D1 Databases",
 	vectorize: "Vectorize Indexes",
-	constellation: "Constellation Projects",
 	hyperdrive: "Hyperdrive Configs",
 	r2_buckets: "R2 Buckets",
 	logfwdr: "logfwdr",
@@ -217,11 +216,14 @@ export const friendlyBindingNames: Record<
 	browser: "Browser",
 	ai: "AI",
 	version_metadata: "Worker Version Metadata",
-	unsafe: "Unsafe",
+	unsafe: "Unsafe Metadata",
 	vars: "Vars",
 	wasm_modules: "Wasm Modules",
 	dispatch_namespaces: "Dispatch Namespaces",
 	mtls_certificates: "mTLS Certificates",
+	workflows: "Workflows",
+	pipelines: "Pipelines",
+	assets: "Assets",
 } as const;
 
 /**
@@ -316,7 +318,7 @@ export function printBindings(
 
 	if (workflows !== undefined && workflows.length > 0) {
 		output.push({
-			type: "Workflows",
+			name: friendlyBindingNames.workflows,
 			entries: workflows.map(({ class_name, script_name, binding }) => {
 				let value = class_name;
 				if (script_name) {
@@ -519,7 +521,7 @@ export function printBindings(
 
 	if (pipelines?.length) {
 		output.push({
-			type: "Pipelines",
+			name: friendlyBindingNames.pipelines,
 			entries: pipelines.map(({ binding, pipeline }) => ({
 				key: binding,
 				value: pipeline,
