@@ -5,13 +5,11 @@ import { brandColor, dim } from "@cloudflare/cli/colors";
 import { processArgument } from "helpers/args";
 import { runCommand } from "helpers/command";
 import { detectPackageManager } from "helpers/packageManagers";
-import { chooseAccount } from "../../src/wrangler/accounts";
+import { chooseAccount, wranglerLogin } from "../../src/wrangler/accounts";
 import type { C3Context } from "types";
 
 export async function copyExistingWorkerFiles(ctx: C3Context) {
 	const { dlx } = detectPackageManager();
-
-	await chooseAccount(ctx);
 
 	if (ctx.args.existingScript === undefined) {
 		ctx.args.existingScript = await processArgument(
@@ -75,6 +73,14 @@ export default {
 		path: "./js",
 	},
 	configure: async (ctx: C3Context) => {
+		const loginSuccess = await wranglerLogin(ctx);
+
+		if (!loginSuccess) {
+			throw new Error("Failed to login to Cloudflare");
+		}
+
+		await chooseAccount(ctx);
+
 		await copyExistingWorkerFiles(ctx);
 
 		// Force no-deploy since the worker is already deployed
