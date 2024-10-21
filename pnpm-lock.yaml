@@ -1627,6 +1627,43 @@ importers:
         specifier: workspace:*
         version: link:../wrangler
 
+  packages/workflows-shared:
+    dependencies:
+      itty-time:
+        specifier: ^1.0.6
+        version: 1.0.6
+      mime:
+        specifier: ^3.0.0
+        version: 3.0.0
+      zod:
+        specifier: ^3.22.3
+        version: 3.22.3
+    devDependencies:
+      '@cloudflare/eslint-config-worker':
+        specifier: workspace:*
+        version: link:../eslint-config-worker
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:*
+        version: link:../workers-tsconfig
+      '@cloudflare/workers-types':
+        specifier: ^4.20241018.0
+        version: 4.20241018.0
+      '@types/mime':
+        specifier: ^3.0.4
+        version: 3.0.4
+      esbuild:
+        specifier: 0.17.19
+        version: 0.17.19
+      rimraf:
+        specifier: ^6.0.1
+        version: 6.0.1
+      typescript:
+        specifier: ^5.5.4
+        version: 5.5.4
+      vitest:
+        specifier: catalog:default
+        version: 2.1.1(@types/node@20.8.3)(@vitest/ui@1.6.0)(msw@2.3.0(typescript@5.5.4))(supports-color@9.2.2)
+
   packages/wrangler:
     dependencies:
       '@cloudflare/kv-asset-handler':

@@ -1,0 +1,60 @@
+{
+	"name": "@cloudflare/workflows-shared",
+	"version": "0.5.4",
+	"description": "Package that is used at Cloudflare to power some internal features of Cloudflare Workers.",
+	"keywords": [
+		"cloudflare",
+		"workers",
+		"cloudflare workers"
+	],
+	"homepage": "https://github.com/cloudflare/workers-sdk/tree/main/packages/workers-shared#readme",
+	"bugs": {
+		"url": "https://github.com/cloudflare/workers-sdk/issues"
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/cloudflare/workers-sdk.git",
+		"directory": "packages/workers-shared"
+	},
+	"license": "MIT OR Apache-2.0",
+	"author": "wrangler@cloudflare.com",
+	"types": "./dist",
+	"files": [
+		"dist"
+	],
+	"scripts": {
+		"build": "esbuild ./src/worker.ts --format=esm --bundle --outfile=dist/local-binding.mjs --sourcemap=external --external:cloudflare:*",
+		"check:lint": "eslint . --max-warnings=0",
+		"check:type": "pnpm run check:type:tests && tsc",
+		"check:type:tests": "tsc -p ./tests/tsconfig.json",
+		"clean": "rimraf dist",
+		"dev": "pnpm run bundle:local-binding --watch",
+		"test": "vitest",
+		"test:ci": "vitest run"
+	},
+	"dependencies": {
+		"itty-time": "^1.0.6",
+		"mime": "^3.0.0",
+		"zod": "^3.22.3"
+	},
+	"devDependencies": {
+		"@cloudflare/eslint-config-worker": "workspace:*",
+		"@cloudflare/workers-tsconfig": "workspace:*",
+		"@cloudflare/workers-types": "^4.20241018.0",
+		"@types/mime": "^3.0.4",
+		"esbuild": "0.17.19",
+		"rimraf": "^6.0.1",
+		"typescript": "^5.5.4",
+		"vitest": "catalog:default"
+	},
+	"engines": {
+		"node": ">=16.7.0"
+	},
+	"volta": {
+		"extends": "../../package.json"
+	},
+	"workers-sdk": {
+		"prerelease": true,
+		"deploy": true
+	}
+}
