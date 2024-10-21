@@ -43,6 +43,44 @@ export function mockGetMemberships(
 	);
 }
 
+function mockNoWorkerFound(isBulk = false) {
+	if (isBulk) {
+		msw.use(
+			http.get(
+				"*/accounts/:accountId/workers/scripts/:scriptName/settings",
+				async () => {
+					return HttpResponse.json(
+						createFetchResult(null, false, [
+							{
+								code: 10007,
+								message: "This Worker does not exist on your account.",
+							},
+						])
+					);
+				},
+				{ once: true }
+			)
+		);
+	} else {
+		msw.use(
+			http.put(
+				"*/accounts/:accountId/workers/scripts/:scriptName/secrets",
+				async () => {
+					return HttpResponse.json(
+						createFetchResult(null, false, [
+							{
+								code: 10007,
+								message: "This Worker does not exist on your account.",
+							},
+						])
+					);
+				},
+				{ once: true }
+			)
+		);
+	}
+}
+
 describe("wrangler secret", () => {
 	const std = mockConsoleMethods();
 	const { setIsTTY } = useMockIsTTY();
@@ -57,7 +95,8 @@ describe("wrangler secret", () => {
 		function mockPutRequest(
 			input: { name: string; text: string },
 			env?: string,
-			legacyEnv = false
+			legacyEnv = false,
+			expectedScriptName = "script-name"
 		) {
 			const servicesOrScripts = env && !legacyEnv ? "services" : "scripts";
 			const environment = env && !legacyEnv ? "/environments/:envName" : "";
@@ -67,7 +106,9 @@ describe("wrangler secret", () => {
 					async ({ request, params }) => {
 						expect(params.accountId).toEqual("some-account-id");
 						expect(params.scriptName).toEqual(
-							legacyEnv && env ? `script-name-${env}` : "script-name"
+							legacyEnv && env
+								? `${expectedScriptName}-${env}`
+								: expectedScriptName
 						);
 						if (!legacyEnv) {
 							expect(params.envName).toEqual(env);
@@ -207,6 +248,27 @@ describe("wrangler secret", () => {
 					`[Error: Required Worker name missing. Please specify the Worker name in wrangler.toml, or pass it as an argument with \`--name <worker-name>\`]`
 				);
 			});
+
+			it("should ask to create a new worker if no worker is found under the provided name", async () => {
+				mockPrompt({
+					text: "Enter a secret value:",
+					options: { isSecret: true },
+					result: `hunter2
+				  `,
+				});
+				mockNoWorkerFound();
+				mockConfirm({
+					text: `No Worker called "non-existent-worker" appears to exist. Do you want to create a new Worker and add secrets to it?`,
+					result: false,
+				});
+				expect(
+					await runWrangler("secret put the-key --name non-existent-worker")
+				);
+				expect(std.out).toMatchInlineSnapshot(`
+					"🌀 Creating the secret for the Worker \\"non-existent-worker\\"
+					Aborting. No secrets added."
+				`);
+			});
 		});
 
 		describe("non-interactive", () => {
@@ -262,6 +324,35 @@ describe("wrangler secret", () => {
 			          [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m"
 		        `);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
+			});
+
+			it("should create a new worker if no worker is found under the provided name", async () => {
+				mockStdIn.send("hunter2");
+				mockNoWorkerFound();
+				msw.use(
+					http.put(
+						"*/accounts/:accountId/workers/scripts/:name",
+						async ({ params }) => {
+							expect(params.name).toEqual("non-existent-worker");
+							return HttpResponse.json(
+								createFetchResult({ name: params.name })
+							);
+						}
+					)
+				);
+				mockPutRequest(
+					{ name: "the-key", text: "hunter2" },
+					undefined,
+					undefined,
+					"non-existent-worker"
+				);
+				expect(
+					await runWrangler("secret put the-key --name non-existent-worker")
+				);
+				expect(std.out).toMatchInlineSnapshot(`
+					"🌀 Creating the secret for the Worker \\"non-existent-worker\\"
+					✨ Success! Uploaded secret the-key"
+				`);
 			});
 
 			describe("with accountId", () => {
@@ -909,6 +1000,58 @@ describe("wrangler secret", () => {
 			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
+		});
+
+		it("should, in interactive mode, ask to create a new worker if no worker is found under the provided name", async () => {
+			writeFileSync(
+				"secret.json",
+				JSON.stringify({
+					"secret-name-1": "secret_text",
+					"secret-name-2": "secret_text",
+				})
+			);
+			mockNoWorkerFound(true);
+			mockConfirm({
+				text: `No Worker called "non-existent-worker" appears to exist. Do you want to create a new Worker and add secrets to it?`,
+				result: false,
+			});
+
+			await runWrangler("secret bulk ./secret.json --name non-existent-worker");
+			expect(std.out).toMatchInlineSnapshot(`
+				"🌀 Creating the secrets for the Worker \\"non-existent-worker\\"
+				Aborting. No secrets added."
+			`);
+		});
+
+		it("should, in non-interactive mode, create a new worker if no worker is found under the provided name", async () => {
+			writeFileSync(
+				"secret.json",
+				JSON.stringify({
+					"secret-name-1": "secret_text",
+					"secret-name-2": "secret_text",
+				})
+			);
+			mockNoWorkerFound();
+			msw.use(
+				http.put(
+					"*/accounts/:accountId/workers/scripts/:name",
+					async ({ params }) => {
+						expect(params.name).toEqual("non-existent-worker");
+						return HttpResponse.json(createFetchResult({ name: params.name }));
+					}
+				)
+			);
+			mockBulkRequest();
+
+			await runWrangler("secret bulk ./secret.json --name script-name");
+			expect(std.out).toMatchInlineSnapshot(`
+				"🌀 Creating the secrets for the Worker \\"script-name\\"
+				✨ Successfully created secret for key: secret-name-1
+				✨ Successfully created secret for key: secret-name-2
+
+				Finished processing secrets JSON file:
+				✨ 2 secrets successfully uploaded"
+			`);
 		});
 	});
 
