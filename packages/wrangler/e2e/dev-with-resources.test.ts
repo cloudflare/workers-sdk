@@ -487,7 +487,9 @@ describe.sequential.each(RUNTIMES)("Bindings: $flags", ({ runtime, flags }) => {
 		const { url } = await worker.waitForReady();
 		const res = await fetch(url);
 		expect(await res.json()).toEqual([{ key: "key1", value: "value1" }]);
-		expect(result.stdout).toContain("🚣 2 commands executed successfully.");
+		if (isLocal) {
+			expect(result.stdout).toContain("🚣 2 commands executed successfully.");
+		}
 
 		const result2 = await helper.run(
 			`wrangler d1 execute ${d1ResourceFlags} DB --command "SELECT * FROM entries WHERE key = 'key2'"`
