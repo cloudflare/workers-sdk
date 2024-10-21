@@ -264,16 +264,21 @@ export function printBindings(
 				({ name, class_name, script_name }) => {
 					let value = class_name;
 					if (script_name) {
-						const registryDefinition = context.registry?.[script_name];
-						if (
-							registryDefinition &&
-							registryDefinition.durableObjects.some(
-								(d) => d.className === class_name
-							)
-						) {
-							value += ` (defined in 🟢 ${script_name})`;
+						if (context.local) {
+							const registryDefinition = context.registry?.[script_name];
+
+							if (
+								registryDefinition &&
+								registryDefinition.durableObjects.some(
+									(d) => d.className === class_name
+								)
+							) {
+								value += ` (defined in 🟢 ${script_name})`;
+							} else {
+								value += ` (defined in 🔴 ${script_name})`;
+							}
 						} else {
-							value += ` (defined in 🔴 ${script_name})`;
+							value += ` (defined in ${script_name})`;
 						}
 					}
 
@@ -426,14 +431,17 @@ export function printBindings(
 					value += `#${entrypoint}`;
 				}
 
-				const registryDefinition = context.registry?.[service];
-				if (
-					registryDefinition &&
-					(!entrypoint || registryDefinition.entrypointAddresses?.[entrypoint])
-				) {
-					value = `🟢 ` + value;
-				} else {
-					value = `🔴 ` + value;
+				if (context.local) {
+					const registryDefinition = context.registry?.[service];
+					if (
+						registryDefinition &&
+						(!entrypoint ||
+							registryDefinition.entrypointAddresses?.[entrypoint])
+					) {
+						value = `🟢 ` + value;
+					} else {
+						value = `🔴 ` + value;
+					}
 				}
 				return {
 					key: binding,
