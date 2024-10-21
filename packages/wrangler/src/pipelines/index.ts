@@ -256,14 +256,14 @@ export function pipelines(pipelineYargs: CommonYargsArgv) {
 
 				// add http source (possibly authenticated), default to add
 				if (args.http === undefined || args.http) {
-					pipelineConfig.source.push({
+					const source: HttpSource = {
 						type: "http",
 						format: "json",
-						config: {
-							authentication:
-								args.authentication !== undefined && args.authentication,
-						},
-					} satisfies HttpSource);
+					};
+					if (args.authentication !== undefined) {
+						source.authentication = args.authentication;
+					}
+					pipelineConfig.source.push(source);
 				}
 				if (pipelineConfig.source.length < 1) {
 					throw new UserError(
@@ -450,14 +450,12 @@ export function pipelines(pipelineYargs: CommonYargsArgv) {
 							type: "http",
 							format: "json",
 							...source,
-							config: {
-								authentication:
-									args.authentication !== undefined
-										? // if auth specified, use it
-											args.authentication
-										: // if auth not specified, use previos value or default(false)
-											source?.config?.authentication || false,
-							},
+							authentication:
+								args.authentication !== undefined
+									? // if auth specified, use it
+										args.authentication
+									: // if auth not specified, use previos value or default(false)
+										source?.authentication,
 						} satisfies HttpSource);
 					}
 				}

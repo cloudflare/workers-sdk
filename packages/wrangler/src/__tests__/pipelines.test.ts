@@ -419,9 +419,9 @@ describe("pipelines", () => {
 
 			// contain http source and include auth
 			expect(requests.body?.source[1].type).toEqual("http");
-			expect(
-				(requests.body?.source[1] as HttpSource).config?.authentication
-			).toEqual(true);
+			expect((requests.body?.source[1] as HttpSource).authentication).toEqual(
+				true
+			);
 		});
 
 		it("should create a pipeline without http", async () => {
@@ -581,23 +581,21 @@ describe("pipelines", () => {
 				{
 					type: "http",
 					format: "json",
-					config: {
-						authenticated: true,
-					},
+					authenticated: true,
 				},
 			];
 			const updateReq = mockUpdateRequest(update.name, update);
 
 			await runWrangler(
-				"pipelines update my-pipeline --binding=false --http --authentication --r2 new-bucket --access-key-id new-key --secret-access-key new-secret"
+				"pipelines update my-pipeline --binding=false --http --authentication"
 			);
 
 			expect(updateReq.count).toEqual(1);
 			expect(updateReq.body?.source.length).toEqual(1);
 			expect(updateReq.body?.source[0].type).toEqual("http");
-			expect(
-				(updateReq.body?.source[0] as HttpSource).config?.authentication
-			).toEqual(true);
+			expect((updateReq.body?.source[0] as HttpSource).authentication).toEqual(
+				true
+			);
 		});
 
 		it("should fail a missing pipeline", async () => {

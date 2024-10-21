@@ -18,9 +18,7 @@ export type HttpSource = {
 	type: "http";
 	format: string;
 	schema?: string;
-	config?: {
-		authentication: boolean;
-	};
+	authentication?: boolean;
 };
 export type BindingSource = {
 	type: "binding";
