@@ -1131,9 +1131,10 @@ export class Miniflare {
 			innerBindings: Worker_Binding[];
 		}[] = [];
 
-		// This will be the user worker or the vitest pool worker wrapping the user worker
-		// The asset plugin needs this so that it can set the binding between the router worker and the user worker
 		if (this.#workerOpts[0].assets.assets) {
+			// This will be the UserWorker, or the vitest pool worker wrapping the UserWorker
+			// The asset plugin needs this so that it can set the binding between the RouterWorker and the UserWorker
+			// TODO: apply this to ever this.#workerOpts, not just the first (i.e this.#workerOpts[0])
 			this.#workerOpts[0].assets.assets.workerName =
 				this.#workerOpts[0].core.name;
 		}
@@ -1143,6 +1144,14 @@ export class Miniflare {
 			const workerOpts = allWorkerOpts[i];
 			const workerName = workerOpts.core.name ?? "";
 			const isModulesWorker = Boolean(workerOpts.core.modules);
+
+			if (workerOpts.workflows.workflows) {
+				for (const workflow of Object.values(workerOpts.workflows.workflows)) {
+					// This will be the UserWorker, or the vitest pool worker wrapping the UserWorker
+					// The workflows plugin needs this so that it can set the binding between the Engine and the UserWorker
+					workflow.scriptName ??= this.#workerOpts[0].core.name;
+				}
+			}
 
 			// Collect all bindings from this worker
 			const workerBindings: Worker_Binding[] = [];
