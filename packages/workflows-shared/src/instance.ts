@@ -180,7 +180,7 @@ export type InstanceLogsResponse = {
 	steps: (InstanceStepLog | InstanceSleepLog | InstanceTerminateLog)[];
 	success: boolean | null;
 	error: { name: string; message: string } | null;
-	output: Rpc.Serializable;
+	output: Rpc.Serializable<unknown>;
 };
 
 export type WakerPriorityEntry = {

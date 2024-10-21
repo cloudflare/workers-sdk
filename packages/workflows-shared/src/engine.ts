@@ -1,6 +1,7 @@
 import {
 	DurableObject,
-	Workflow as WorkflowEntrypoint,
+	WorkflowEntrypoint,
+	WorkflowEvent,
 	WorkflowStep,
 } from "cloudflare:workers";
 import { Context } from "./context";
@@ -44,7 +45,7 @@ export type DatabaseVersion = {
 };
 
 export type DatabaseInstance = {
-	id: string;
+	name: string;
 	created_on: string;
 	modified_on: string;
 	workflow_id: string;
@@ -142,10 +143,7 @@ export class Engine extends DurableObject<Env> {
 		workflow: DatabaseWorkflow,
 		version: DatabaseVersion,
 		instance: DatabaseInstance,
-		event: {
-			timestamp: Date;
-			payload: Record<string, unknown>;
-		}
+		event: WorkflowEvent<unknown>
 	) {
 		if (this.priorityQueue === undefined) {
 			this.priorityQueue = new TimePriorityQueue(
@@ -169,10 +167,10 @@ export class Engine extends DurableObject<Env> {
 
 		// We are not running and are possibly starting a new lifetime
 		this.accountId = accountId;
-		this.instanceId = instance.id;
+		this.instanceId = instance.name;
 		this.workflowName = workflow.name;
 
-		const status = await this.getStatus(accountId, instance.id);
+		const status = await this.getStatus(accountId, instance.name);
 		if (
 			[
 				InstanceStatus.Errored, // TODO (WOR-85): Remove this once upgrade story is done
@@ -255,7 +253,7 @@ export class Engine extends DurableObject<Env> {
 			await this.ctx.storage.transaction(async () => {
 				// manually start the grace period
 				// startGracePeriod(this, this.timeoutHandler.timeoutMs);
-				await this.setStatus(accountId, instance.id, InstanceStatus.Running);
+				await this.setStatus(accountId, instance.name, InstanceStatus.Running);
 			});
 		};
 		this.isRunning = true;
@@ -263,7 +261,8 @@ export class Engine extends DurableObject<Env> {
 		try {
 			// TODO: Trigger user script via binding
 			const target = this.env.USER_WORKFLOW;
-			const result = await target.run([event], stubStep as WorkflowStep);
+			// @ts-ignore TODO: fix do() overload definitions
+			const result = await target.run(event, stubStep);
 			console.log("completed", result);
 			// Since this gets written to sql as a JSON string, this will need
 			// to implement toJSON()
@@ -278,7 +277,7 @@ export class Engine extends DurableObject<Env> {
 			// NOTE(lduarte): we want to run this in a transaction to guarentee ordering with running setstatus call
 			// in case that it returns immediately
 			await this.ctx.storage.transaction(async () => {
-				await this.setStatus(accountId, instance.id, InstanceStatus.Complete);
+				await this.setStatus(accountId, instance.name, InstanceStatus.Complete);
 			});
 			this.isRunning = false;
 		} catch (err) {
@@ -304,13 +303,13 @@ export class Engine extends DurableObject<Env> {
 			// NOTE(lduarte): we want to run this in a transaction to guarentee ordering with running setstatus call
 			// in case that it throws immediately
 			await this.ctx.storage.transaction(async () => {
-				await this.setStatus(accountId, instance.id, InstanceStatus.Errored);
+				await this.setStatus(accountId, instance.name, InstanceStatus.Errored);
 			});
 			this.isRunning = false;
 		}
 
 		return {
-			id: instance.id,
+			id: instance.name,
 		};
 	}
 }
