@@ -1003,6 +1003,7 @@ describe("wrangler secret", () => {
 		});
 
 		it("should, in interactive mode, ask to create a new worker if no worker is found under the provided name", async () => {
+			setIsTTY(true);
 			writeFileSync(
 				"secret.json",
 				JSON.stringify({
@@ -1024,6 +1025,7 @@ describe("wrangler secret", () => {
 		});
 
 		it("should, in non-interactive mode, create a new worker if no worker is found under the provided name", async () => {
+			setIsTTY(false);
 			writeFileSync(
 				"secret.json",
 				JSON.stringify({
