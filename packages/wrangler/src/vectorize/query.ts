@@ -124,7 +124,7 @@ export async function handler(
 		(args.vector !== undefined && args.vectorId !== undefined)
 	) {
 		logger.error(
-			"🚨 Either vector or vector-id param must be provided, but not both."
+			"🚨 Either vector or vector-id parameter must be provided, but not both."
 		);
 		return;
 	}
