@@ -58,13 +58,15 @@ async function createDraftWorker({
 	scriptName: string;
 }) {
 	const confirmation = await confirm(
-		`No Worker called "${scriptName}" appears to exist. Do you want to create a new Worker and add secrets to it?`,
+		`There doesn't seem to be a Worker called "${scriptName}". Do you want to create a new Worker with that name and add secrets to it?`,
 		// we want to default to true in non-interactive/CI contexts to preserve existing behaviour
 		{ defaultValue: true, fallbackValue: true }
 	);
 	if (!confirmation) {
 		logger.log("Aborting. No secrets added.");
 		return null;
+	} else {
+		logger.log(`🌀 Creating new Worker "${scriptName}"...`);
 	}
 	await fetchResult(
 		!isLegacyEnv(config) && args.env

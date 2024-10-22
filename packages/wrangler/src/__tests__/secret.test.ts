@@ -249,16 +249,15 @@ describe("wrangler secret", () => {
 				);
 			});
 
-			it("should ask to create a new worker if no worker is found under the provided name", async () => {
+			it("should ask to create a new Worker if no Worker is found under the provided name and abort if declined", async () => {
 				mockPrompt({
 					text: "Enter a secret value:",
 					options: { isSecret: true },
-					result: `hunter2
-				  `,
+					result: `hunter2`,
 				});
 				mockNoWorkerFound();
 				mockConfirm({
-					text: `No Worker called "non-existent-worker" appears to exist. Do you want to create a new Worker and add secrets to it?`,
+					text: `There doesn't seem to be a Worker called "non-existent-worker". Do you want to create a new Worker with that name and add secrets to it?`,
 					result: false,
 				});
 				expect(
@@ -1002,7 +1001,7 @@ describe("wrangler secret", () => {
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should, in interactive mode, ask to create a new worker if no worker is found under the provided name", async () => {
+		it("should, in interactive mode, ask to create a new Worker if no Worker is found under the provided name", async () => {
 			setIsTTY(true);
 			writeFileSync(
 				"secret.json",
@@ -1013,7 +1012,7 @@ describe("wrangler secret", () => {
 			);
 			mockNoWorkerFound(true);
 			mockConfirm({
-				text: `No Worker called "non-existent-worker" appears to exist. Do you want to create a new Worker and add secrets to it?`,
+				text: `There doesn't seem to be a Worker called "non-existent-worker". Do you want to create a new Worker with that name and add secrets to it?`,
 				result: false,
 			});
 
