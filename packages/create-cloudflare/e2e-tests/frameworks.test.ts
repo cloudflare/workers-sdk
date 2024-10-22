@@ -1,8 +1,7 @@
 import { existsSync } from "fs";
 import { cp } from "fs/promises";
 import { join } from "path";
-import { runCommand } from "helpers/command";
-import { readFile, readToml, writeFile, writeToml } from "helpers/files";
+import { readFile, readToml, writeToml } from "helpers/files";
 import { detectPackageManager } from "helpers/packageManagers";
 import { retry } from "helpers/retry";
 import { sleep } from "helpers/sleep";

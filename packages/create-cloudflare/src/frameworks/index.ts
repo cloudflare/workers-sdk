@@ -2,7 +2,6 @@ import { logRaw, updateStatus } from "@cloudflare/cli";
 import { dim } from "@cloudflare/cli/colors";
 import { quoteShellArgs, runCommand } from "helpers/command";
 import { detectPackageManager } from "helpers/packageManagers";
-import { isInsideGitRepo } from "../git";
 import frameworksPackageJson from "./package.json";
 import type { C3Context } from "types";
 
