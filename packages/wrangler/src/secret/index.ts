@@ -57,7 +57,17 @@ async function createDraftWorker({
 	accountId: string;
 	scriptName: string;
 }) {
-	// TODO: log a warning
+	const confirmation = await confirm(
+		`There doesn't seem to be a Worker called "${scriptName}". Do you want to create a new Worker with that name and add secrets to it?`,
+		// we want to default to true in non-interactive/CI contexts to preserve existing behaviour
+		{ defaultValue: true, fallbackValue: true }
+	);
+	if (!confirmation) {
+		logger.log("Aborting. No secrets added.");
+		return null;
+	} else {
+		logger.log(`🌀 Creating new Worker "${scriptName}"...`);
+	}
 	await fetchResult(
 		!isLegacyEnv(config) && args.env
 			? `/accounts/${accountId}/workers/services/${scriptName}/environments/${args.env}`
@@ -216,12 +226,15 @@ export const secret = (secretYargs: CommonYargsArgv) => {
 				} catch (e) {
 					if (isMissingWorkerError(e)) {
 						// create a draft worker and try again
-						await createDraftWorker({
+						const result = await createDraftWorker({
 							config,
 							args,
 							accountId,
 							scriptName,
 						});
+						if (result === null) {
+							return;
+						}
 						await submitSecret();
 						// TODO: delete the draft worker if this failed too?
 					} else {
@@ -477,12 +490,15 @@ export const secretBulkHandler = async (secretBulkArgs: SecretBulkArgs) => {
 	} catch (e) {
 		if (isMissingWorkerError(e)) {
 			// create a draft worker before patching
-			await createDraftWorker({
+			const result = await createDraftWorker({
 				config,
 				args: secretBulkArgs,
 				accountId,
 				scriptName,
 			});
+			if (result === null) {
+				return;
+			}
 			existingBindings = [];
 		} else {
 			throw e;
