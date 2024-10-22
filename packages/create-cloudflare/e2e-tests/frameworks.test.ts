@@ -131,13 +131,12 @@ function getFrameworkTests(opts: {
 				],
 			},
 			analog: {
-				quarantine: true,
 				testCommitMessage: true,
 				timeout: LONG_TIMEOUT,
 				unsupportedOSs: ["win32"],
 				// The analog template works with yarn, but the build takes so long that it
 				// becomes flaky in CI
-				unsupportedPms: ["yarn", "bun"],
+				unsupportedPms: ["yarn"],
 				verifyDeploy: {
 					route: "/",
 					expectedText: "The fullstack meta-framework for Angular!",
