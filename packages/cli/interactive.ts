@@ -47,6 +47,8 @@ export type BasePromptConfig = {
 	helpText?: string;
 	// The value to use by default
 	defaultValue?: Arg;
+	// The error message to display if the initial value is invalid
+	initialError?: string | null;
 	// Accept the initialValue/defaultValue as if the user pressed ENTER when prompted
 	acceptDefault?: boolean;
 	// The status label to be shown after submitting
@@ -141,7 +143,14 @@ export const inputPrompt = async <T = string>(
 
 	// Looks up the needed renderer by the current state ('initial', 'submitted', etc.)
 	const dispatchRender = (props: RenderProps, p: Prompt): string | void => {
-		const renderedLines = renderers[props.state](props, p);
+		let state = props.state;
+
+		if (state === "initial" && promptConfig.initialError) {
+			state = "error";
+			props.error = promptConfig.initialError;
+		}
+
+		const renderedLines = renderers[state](props, p);
 		return renderedLines.join("\n");
 	};
 
@@ -222,7 +231,7 @@ export const inputPrompt = async <T = string>(
 
 		prompt = new TextPrompt({
 			...promptConfig,
-			initialValue: promptConfig.initialValue,
+			initialValue: promptConfig.initialValue ?? initialValue,
 			defaultValue: String(promptConfig.defaultValue ?? ""),
 			render() {
 				return dispatchRender(this, prompt);
