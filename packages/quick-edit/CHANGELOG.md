@@ -1,5 +1,11 @@
 # @cloudflare/quick-edit
 
+## 0.3.2
+
+### Patch Changes
+
+- [#7040](https://github.com/cloudflare/workers-sdk/pull/7040) [`44c954b`](https://github.com/cloudflare/workers-sdk/commit/44c954b98ac86e9ea98f6e589c419d40c5d7f122) Thanks [@penalosa](https://github.com/penalosa)! - Try and ensure the `d.ts` types are definitely the ones loaded in `quick-edit-extension`
+
 ## 0.3.1
 
 ### Patch Changes
