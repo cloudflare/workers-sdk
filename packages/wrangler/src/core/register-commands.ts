@@ -6,6 +6,7 @@ import { FatalError, UserError } from "../errors";
 import { logger } from "../logger";
 import { printWranglerBanner } from "../update-check";
 import { CommandRegistrationError, DefinitionTreeRoot } from "./define-command";
+import { demandSingleValue } from "./helpers";
 import type { CommonYargsArgv, SubHelp } from "../yargs-types";
 import type {
 	Command,
@@ -124,6 +125,17 @@ function walkTreeAndRegister(
 		function builder(subYargs) {
 			if (def.type === "command") {
 				yargs.options(def.args);
+
+				// Yargs offers an `array: true` option that will always coerces the value to an array
+				// e.g. `--name foo` becomes `{ name: ["foo"] }` instead of `{ name: "foo" }`
+				// However, non-array arguments can still receives multiple values
+				// e.g. `--name foo --name bar` becomes `{ name: ["foo", "bar"] }` regardless of the `array` setting
+				// @see https://github.com/yargs/yargs/issues/1318
+				for (const [key, opt] of Object.entries(def.args)) {
+					if (!opt.array) {
+						yargs.check(demandSingleValue(key));
+					}
+				}
 
 				for (const key of def.positionalArgs ?? []) {
 					yargs.positional(key, def.args[key]);
