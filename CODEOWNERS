@@ -1,5 +1,8 @@
 * @cloudflare/wrangler
 
+# D&C ownership
+/packages/workers-shared @cloudflare/deploy-config @cloudflare/wrangler
+
 # Pages ownership
 /packages/pages-shared/ @cloudflare/pages @cloudflare/wrangler
 /packages/wrangler/pages/ @cloudflare/pages @cloudflare/wrangler
