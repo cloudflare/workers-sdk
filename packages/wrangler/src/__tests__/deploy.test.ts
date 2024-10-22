@@ -6831,7 +6831,7 @@ addEventListener('fetch', event => {});`
 				- Text Blobs:
 				  - TEXT_BLOB_ONE: my-entire-app-depends-on-this.cfg
 				  - TEXT_BLOB_TWO: the-entirety-of-human-knowledge.txt
-				- Unsafe:
+				- Unsafe Metadata:
 				  - some unsafe thing: UNSAFE_BINDING_ONE
 				  - another unsafe thing: UNSAFE_BINDING_TWO
 				- Vars:
@@ -6939,27 +6939,28 @@ addEventListener('fetch', event => {});`
 			await expect(runWrangler("deploy index.js")).rejects
 				.toMatchInlineSnapshot(`
 				[Error: Processing wrangler.toml configuration:
-				  - CONFLICTING_NAME_ONE assigned to Durable Object, KV Namespace, and R2 Bucket bindings.
-				  - CONFLICTING_NAME_TWO assigned to Durable Object and KV Namespace bindings.
-				  - CONFLICTING_NAME_THREE assigned to R2 Bucket, Text Blob, Unsafe, Environment Variable, WASM Module, and Data Blob bindings.
-				  - CONFLICTING_NAME_FOUR assigned to Analytics Engine Dataset, Text Blob, and Unsafe bindings.
+				  - CONFLICTING_NAME_THREE assigned to Data Blobs, R2 Buckets, Text Blobs, Unsafe Metadata, Vars, and Wasm Modules bindings.
+				  - CONFLICTING_NAME_ONE assigned to Durable Objects, KV Namespaces, and R2 Buckets bindings.
+				  - CONFLICTING_NAME_TWO assigned to Durable Objects and KV Namespaces bindings.
+				  - CONFLICTING_NAME_FOUR assigned to Analytics Engine Datasets, Text Blobs, and Unsafe Metadata bindings.
 				  - Bindings must have unique names, so that they can all be referenced in the worker.
 				    Please change your bindings to have unique names.]
 			`);
 			expect(std.out).toMatchInlineSnapshot(`""`);
 			expect(std.err).toMatchInlineSnapshot(`
-			        "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mProcessing wrangler.toml configuration:[0m
+				"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mProcessing wrangler.toml configuration:[0m
 
-			            - CONFLICTING_NAME_ONE assigned to Durable Object, KV Namespace, and R2 Bucket bindings.
-			            - CONFLICTING_NAME_TWO assigned to Durable Object and KV Namespace bindings.
-			            - CONFLICTING_NAME_THREE assigned to R2 Bucket, Text Blob, Unsafe, Environment Variable, WASM
-			          Module, and Data Blob bindings.
-			            - CONFLICTING_NAME_FOUR assigned to Analytics Engine Dataset, Text Blob, and Unsafe bindings.
-			            - Bindings must have unique names, so that they can all be referenced in the worker.
-			              Please change your bindings to have unique names.
+				    - CONFLICTING_NAME_THREE assigned to Data Blobs, R2 Buckets, Text Blobs, Unsafe Metadata, Vars,
+				  and Wasm Modules bindings.
+				    - CONFLICTING_NAME_ONE assigned to Durable Objects, KV Namespaces, and R2 Buckets bindings.
+				    - CONFLICTING_NAME_TWO assigned to Durable Objects and KV Namespaces bindings.
+				    - CONFLICTING_NAME_FOUR assigned to Analytics Engine Datasets, Text Blobs, and Unsafe Metadata
+				  bindings.
+				    - Bindings must have unique names, so that they can all be referenced in the worker.
+				      Please change your bindings to have unique names.
 
-			        "
-		      `);
+				"
+			`);
 			expect(std.warn).toMatchInlineSnapshot(`
 			        "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
 
@@ -7046,28 +7047,28 @@ addEventListener('fetch', event => {});`
 			await expect(runWrangler("deploy index.js")).rejects
 				.toMatchInlineSnapshot(`
 				[Error: Processing wrangler.toml configuration:
-				  - CONFLICTING_DURABLE_OBJECT_NAME assigned to multiple Durable Object bindings.
-				  - CONFLICTING_KV_NAMESPACE_NAME assigned to multiple KV Namespace bindings.
-				  - CONFLICTING_R2_BUCKET_NAME assigned to multiple R2 Bucket bindings.
-				  - CONFLICTING_AE_DATASET_NAME assigned to multiple Analytics Engine Dataset bindings.
-				  - CONFLICTING_UNSAFE_NAME assigned to multiple Unsafe bindings.
+				  - CONFLICTING_DURABLE_OBJECT_NAME assigned to multiple Durable Objects bindings.
+				  - CONFLICTING_KV_NAMESPACE_NAME assigned to multiple KV Namespaces bindings.
+				  - CONFLICTING_R2_BUCKET_NAME assigned to multiple R2 Buckets bindings.
+				  - CONFLICTING_AE_DATASET_NAME assigned to multiple Analytics Engine Datasets bindings.
+				  - CONFLICTING_UNSAFE_NAME assigned to multiple Unsafe Metadata bindings.
 				  - Bindings must have unique names, so that they can all be referenced in the worker.
 				    Please change your bindings to have unique names.]
 			`);
 			expect(std.out).toMatchInlineSnapshot(`""`);
 			expect(std.err).toMatchInlineSnapshot(`
-			        "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mProcessing wrangler.toml configuration:[0m
+				"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mProcessing wrangler.toml configuration:[0m
 
-			            - CONFLICTING_DURABLE_OBJECT_NAME assigned to multiple Durable Object bindings.
-			            - CONFLICTING_KV_NAMESPACE_NAME assigned to multiple KV Namespace bindings.
-			            - CONFLICTING_R2_BUCKET_NAME assigned to multiple R2 Bucket bindings.
-			            - CONFLICTING_AE_DATASET_NAME assigned to multiple Analytics Engine Dataset bindings.
-			            - CONFLICTING_UNSAFE_NAME assigned to multiple Unsafe bindings.
-			            - Bindings must have unique names, so that they can all be referenced in the worker.
-			              Please change your bindings to have unique names.
+				    - CONFLICTING_DURABLE_OBJECT_NAME assigned to multiple Durable Objects bindings.
+				    - CONFLICTING_KV_NAMESPACE_NAME assigned to multiple KV Namespaces bindings.
+				    - CONFLICTING_R2_BUCKET_NAME assigned to multiple R2 Buckets bindings.
+				    - CONFLICTING_AE_DATASET_NAME assigned to multiple Analytics Engine Datasets bindings.
+				    - CONFLICTING_UNSAFE_NAME assigned to multiple Unsafe Metadata bindings.
+				    - Bindings must have unique names, so that they can all be referenced in the worker.
+				      Please change your bindings to have unique names.
 
-			        "
-		      `);
+				"
+			`);
 			expect(std.warn).toMatchInlineSnapshot(`
 			        "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
 
@@ -7196,34 +7197,34 @@ addEventListener('fetch', event => {});`
 			await expect(runWrangler("deploy index.js")).rejects
 				.toMatchInlineSnapshot(`
 				[Error: Processing wrangler.toml configuration:
-				  - CONFLICTING_DURABLE_OBJECT_NAME assigned to multiple Durable Object bindings.
-				  - CONFLICTING_KV_NAMESPACE_NAME assigned to multiple KV Namespace bindings.
-				  - CONFLICTING_R2_BUCKET_NAME assigned to multiple R2 Bucket bindings.
-				  - CONFLICTING_NAME_THREE assigned to R2 Bucket, Analytics Engine Dataset, Text Blob, Unsafe, Environment Variable, WASM Module, and Data Blob bindings.
-				  - CONFLICTING_NAME_FOUR assigned to R2 Bucket, Analytics Engine Dataset, Text Blob, and Unsafe bindings.
-				  - CONFLICTING_AE_DATASET_NAME assigned to multiple Analytics Engine Dataset bindings.
-				  - CONFLICTING_UNSAFE_NAME assigned to multiple Unsafe bindings.
+				  - CONFLICTING_NAME_THREE assigned to Data Blobs, R2 Buckets, Analytics Engine Datasets, Text Blobs, Unsafe Metadata, Vars, and Wasm Modules bindings.
+				  - CONFLICTING_DURABLE_OBJECT_NAME assigned to multiple Durable Objects bindings.
+				  - CONFLICTING_KV_NAMESPACE_NAME assigned to multiple KV Namespaces bindings.
+				  - CONFLICTING_R2_BUCKET_NAME assigned to multiple R2 Buckets bindings.
+				  - CONFLICTING_NAME_FOUR assigned to R2 Buckets, Analytics Engine Datasets, Text Blobs, and Unsafe Metadata bindings.
+				  - CONFLICTING_AE_DATASET_NAME assigned to multiple Analytics Engine Datasets bindings.
+				  - CONFLICTING_UNSAFE_NAME assigned to multiple Unsafe Metadata bindings.
 				  - Bindings must have unique names, so that they can all be referenced in the worker.
 				    Please change your bindings to have unique names.]
 			`);
 			expect(std.out).toMatchInlineSnapshot(`""`);
 			expect(std.err).toMatchInlineSnapshot(`
-			        "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mProcessing wrangler.toml configuration:[0m
+				"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mProcessing wrangler.toml configuration:[0m
 
-			            - CONFLICTING_DURABLE_OBJECT_NAME assigned to multiple Durable Object bindings.
-			            - CONFLICTING_KV_NAMESPACE_NAME assigned to multiple KV Namespace bindings.
-			            - CONFLICTING_R2_BUCKET_NAME assigned to multiple R2 Bucket bindings.
-			            - CONFLICTING_NAME_THREE assigned to R2 Bucket, Analytics Engine Dataset, Text Blob, Unsafe,
-			          Environment Variable, WASM Module, and Data Blob bindings.
-			            - CONFLICTING_NAME_FOUR assigned to R2 Bucket, Analytics Engine Dataset, Text Blob, and Unsafe
-			          bindings.
-			            - CONFLICTING_AE_DATASET_NAME assigned to multiple Analytics Engine Dataset bindings.
-			            - CONFLICTING_UNSAFE_NAME assigned to multiple Unsafe bindings.
-			            - Bindings must have unique names, so that they can all be referenced in the worker.
-			              Please change your bindings to have unique names.
+				    - CONFLICTING_NAME_THREE assigned to Data Blobs, R2 Buckets, Analytics Engine Datasets, Text
+				  Blobs, Unsafe Metadata, Vars, and Wasm Modules bindings.
+				    - CONFLICTING_DURABLE_OBJECT_NAME assigned to multiple Durable Objects bindings.
+				    - CONFLICTING_KV_NAMESPACE_NAME assigned to multiple KV Namespaces bindings.
+				    - CONFLICTING_R2_BUCKET_NAME assigned to multiple R2 Buckets bindings.
+				    - CONFLICTING_NAME_FOUR assigned to R2 Buckets, Analytics Engine Datasets, Text Blobs, and
+				  Unsafe Metadata bindings.
+				    - CONFLICTING_AE_DATASET_NAME assigned to multiple Analytics Engine Datasets bindings.
+				    - CONFLICTING_UNSAFE_NAME assigned to multiple Unsafe Metadata bindings.
+				    - Bindings must have unique names, so that they can all be referenced in the worker.
+				      Please change your bindings to have unique names.
 
-			        "
-		      `);
+				"
+			`);
 			expect(std.warn).toMatchInlineSnapshot(`
 			        "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
 
@@ -8395,7 +8396,7 @@ addEventListener('fetch', event => {});`
 						"Total Upload: xx KiB / gzip: xx KiB
 						Worker Startup Time: 100 ms
 						Your worker has access to the following bindings:
-						- Unsafe:
+						- Unsafe Metadata:
 						  - binding-type: my-binding
 						Uploaded test-name (TIMINGS)
 						Deployed test-name triggers (TIMINGS)
@@ -8442,7 +8443,7 @@ addEventListener('fetch', event => {});`
 						"Total Upload: xx KiB / gzip: xx KiB
 						Worker Startup Time: 100 ms
 						Your worker has access to the following bindings:
-						- Unsafe:
+						- Unsafe Metadata:
 						  - plain_text: my-binding
 						Uploaded test-name (TIMINGS)
 						Deployed test-name triggers (TIMINGS)
