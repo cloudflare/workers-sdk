@@ -1,5 +1,5 @@
 ---
-"wrangler": minor
+"wrangler": patch
 ---
 
 Add support for Workflow bindings (in deployments, not yet in local dev)
