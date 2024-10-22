@@ -575,7 +575,7 @@ describe("vectorize commands", () => {
 		expect(std.out).toMatchInlineSnapshot(`""`);
 
 		expect(std.err).toMatchInlineSnapshot(`
-			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1m🚨 Either vector or vector-id param must be provided, but not both.[0m
+			"�[31mX �[41;31m[�[41;97mERROR�[41;31m]�[0m �[1m🚨 Either vector or vector-id parameter must be provided, but not both.�[0m
 
 "
 		`);
@@ -589,7 +589,7 @@ describe("vectorize commands", () => {
 		expect(std.out).toMatchInlineSnapshot(`""`);
 
 		expect(std.err).toMatchInlineSnapshot(`
-			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1m🚨 Either vector or vector-id param must be provided, but not both.[0m
+			"�[31mX �[41;31m[�[41;97mERROR�[41;31m]�[0m �[1m🚨 Either vector or vector-id parameter must be provided, but not both.�[0m
 
 "
 		`);
