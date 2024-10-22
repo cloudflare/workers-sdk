@@ -72,18 +72,31 @@ export default {
 	copyFiles: {
 		path: "./js",
 	},
-	configure: async (ctx: C3Context) => {
-		const loginSuccess = await wranglerLogin(ctx);
+	configure: buildConfigure({
+		login: wranglerLogin,
+		chooseAccount,
+		copyFiles: copyExistingWorkerFiles,
+	}),
+};
+
+export interface ConfigureParams {
+	login: (ctx: C3Context) => Promise<boolean>;
+	chooseAccount: (ctx: C3Context) => Promise<void>;
+	copyFiles: (ctx: C3Context) => Promise<void>;
+}
+
+export function buildConfigure(params: ConfigureParams) {
+	return async function configure(ctx: C3Context) {
+		const loginSuccess = await params.login(ctx);
 
 		if (!loginSuccess) {
 			throw new Error("Failed to login to Cloudflare");
 		}
 
-		await chooseAccount(ctx);
-
-		await copyExistingWorkerFiles(ctx);
+		await params.chooseAccount(ctx);
+		await params.copyFiles(ctx);
 
 		// Force no-deploy since the worker is already deployed
 		ctx.args.deploy = false;
-	},
-};
+	};
+}
