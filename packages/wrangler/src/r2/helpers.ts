@@ -423,7 +423,8 @@ export type DeleteNotificationRequestBody = {
 };
 
 export function eventNotificationHeaders(
-	apiCredentials: ApiCredentials
+	apiCredentials: ApiCredentials,
+	jurisdiction: string
 ): HeadersInit {
 	const headers: HeadersInit = {
 		"Content-Type": "application/json",
@@ -434,6 +435,9 @@ export function eventNotificationHeaders(
 	} else {
 		headers["X-Auth-Key"] = apiCredentials.authKey;
 		headers["X-Auth-Email"] = apiCredentials.authEmail;
+	}
+	if (jurisdiction !== "") {
+		headers["cf-r2-jurisdiction"] = jurisdiction;
 	}
 	return headers;
 }
@@ -486,9 +490,10 @@ export async function tableFromNotificationGetResponse(
 export async function listEventNotificationConfig(
 	apiCredentials: ApiCredentials,
 	accountId: string,
-	bucketName: string
+	bucketName: string,
+	jurisdiction: string
 ): Promise<GetNotificationConfigResponse> {
-	const headers = eventNotificationHeaders(apiCredentials);
+	const headers = eventNotificationHeaders(apiCredentials, jurisdiction);
 	logger.log(`Fetching notification rules for bucket ${bucketName}...`);
 	const res = await fetchResult<GetNotificationConfigResponse>(
 		`/accounts/${accountId}/event_notifications/r2/${bucketName}/configuration`,
@@ -541,13 +546,14 @@ export async function putEventNotificationConfig(
 	apiCredentials: ApiCredentials,
 	accountId: string,
 	bucketName: string,
+	jurisdiction: string,
 	queueName: string,
 	eventTypes: R2EventType[],
 	prefix?: string,
 	suffix?: string
 ): Promise<void> {
 	const queue = await getQueue(config, queueName);
-	const headers = eventNotificationHeaders(apiCredentials);
+	const headers = eventNotificationHeaders(apiCredentials, jurisdiction);
 	let actions: R2EventableOperation[] = [];
 
 	for (const et of eventTypes) {
@@ -576,11 +582,12 @@ export async function deleteEventNotificationConfig(
 	apiCredentials: ApiCredentials,
 	accountId: string,
 	bucketName: string,
+	jurisdiction: string,
 	queueName: string,
 	ruleId: string | undefined
 ): Promise<null> {
 	const queue = await getQueue(config, queueName);
-	const headers = eventNotificationHeaders(apiCredentials);
+	const headers = eventNotificationHeaders(apiCredentials, jurisdiction);
 	if (ruleId !== undefined) {
 		logger.log(`Deleting event notifications rule "${ruleId}"...`);
 		const body: DeleteNotificationRequestBody =
