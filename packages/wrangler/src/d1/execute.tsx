@@ -315,7 +315,7 @@ async function executeLocally({
 		await mf.dispose();
 	}
 	assert(Array.isArray(results));
-	return results.map<QueryResult>((result) => ({
+	const allResults = results.map<QueryResult>((result) => ({
 		results: (result.results ?? []).map((row) =>
 			Object.fromEntries(
 				Object.entries(row).map(([key, value]) => {
@@ -332,6 +332,12 @@ async function executeLocally({
 		success: result.success,
 		meta: { duration: result.meta?.duration },
 	}));
+	if (allResults.every((r) => r.success)) {
+		logger.log(
+			`🚣 ${allResults.length} command${allResults.length === 1 ? "" : "s"} executed successfully.`
+		);
+	}
+	return allResults;
 }
 
 async function executeRemotely({
@@ -580,7 +586,7 @@ async function d1ApiPost<T>(
 function logResult(r: QueryResult | QueryResult[]) {
 	logger.log(
 		`🚣 Executed ${
-			Array.isArray(r) ? `${r.length} commands` : "1 command"
+			Array.isArray(r) && r.length !== 1 ? `${r.length} commands` : "1 command"
 		} in ${
 			Array.isArray(r)
 				? r
