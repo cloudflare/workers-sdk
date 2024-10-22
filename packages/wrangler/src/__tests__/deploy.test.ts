@@ -11413,7 +11413,7 @@ export default{
 
 			const result = runWrangler("deploy"); // no --x-workflows flag
 
-			expect(result).rejects.toMatchInlineSnapshot(
+			await expect(result).rejects.toMatchInlineSnapshot(
 				`[Error: To deploy Workflows, you must use the --experimental-workflows flag (or --x-workflows).]`
 			);
 		});
