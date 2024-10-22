@@ -30,7 +30,7 @@
 		"bootstrap.js"
 	],
 	"scripts": {
-		"build": "node scripts/build.mjs && pnpm run types:build",
+		"build": "node scripts/build.mjs",
 		"capnp:workerd": "capnpc -o ts src/runtime/config/workerd.capnp",
 		"check:lint": "eslint --max-warnings=0 \"{src,test}/**/*.ts\" \"scripts/**/*.{js,mjs}\" \"types/**/*.ts\"",
 		"check:type": "tsc",

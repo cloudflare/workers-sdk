@@ -1,13 +1,13 @@
 {
 	"compilerOptions": {
-		"target": "es2021",
-		"lib": ["es2021"],
-		"module": "es2022",
-		"types": ["@cloudflare/workers-types/experimental"],
+		"target": "ES2020",
+		"module": "CommonJS",
+		"lib": ["ES2020"],
+		"types": ["@cloudflare/workers-types"],
+		"moduleResolution": "node",
 		"noEmit": true,
-		"isolatedModules": true,
-		"forceConsistentCasingInFileNames": true,
-		"strict": true,
 		"skipLibCheck": true
-	}
+	},
+	"include": ["**/*.ts"],
+	"exclude": ["tests"]
 }
