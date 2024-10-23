@@ -932,7 +932,7 @@ export async function buildMiniflareOptions(
 		if (!didWarnMiniflareVectorizeSupport) {
 			didWarnMiniflareVectorizeSupport = true;
 			logger.warn(
-				"Using Vectorize always accesses your Cloudflare account. It may incur usage charges and modify your databases even in local development. "
+				"You are using a mixed-mode binding for Vectorize (through `--experimental-vectorize-bind-to-prod`). It may incur usage charges and modify your databases even in local development. "
 			);
 		}
 	}
