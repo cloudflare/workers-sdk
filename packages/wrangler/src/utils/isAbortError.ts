@@ -12,3 +12,11 @@ export function isAbortError(err: unknown) {
 
 	return legacyAbortErroCheck || abortErrorCheck;
 }
+
+/**
+ * Mutate an Error instance so it passes either of the checks in isAbortError
+ */
+export function castAsAbortError(err: Error) {
+	(err as Error & { code: string }).code = "ABORT_ERR";
+	err.name = "AbortError";
+}
