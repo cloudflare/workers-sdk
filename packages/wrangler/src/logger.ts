@@ -31,17 +31,6 @@ const getLogLevelFromEnv = getEnvironmentVariableFactory({
 	variableName: "WRANGLER_LOG",
 });
 
-const warnOnce = (() => {
-	let logged = false;
-
-	return (...args: Parameters<typeof console.warn>) => {
-		if (!logged) {
-			console.warn(...args);
-			logged = true;
-		}
-	};
-})();
-
 function getLoggerLevel(): LoggerLevel {
 	const fromEnv = getLogLevelFromEnv()?.toLowerCase();
 	if (fromEnv !== undefined) {
@@ -51,7 +40,7 @@ function getLoggerLevel(): LoggerLevel {
 		const expected = Object.keys(LOGGER_LEVELS)
 			.map((level) => `"${level}"`)
 			.join(" | ");
-		warnOnce(
+		logger.warnOnce(
 			`Unrecognised WRANGLER_LOG value ${JSON.stringify(
 				fromEnv
 			)}, expected ${expected}, defaulting to "log"...`
@@ -116,6 +105,17 @@ export class Logger {
 		Logger.#beforeLogHook?.();
 		(console[method] as (...args: unknown[]) => unknown).apply(console, args);
 		Logger.#afterLogHook?.();
+	}
+
+	static warnOnceHistory = new Set();
+	warnOnce(message: string) {
+		// using this.constructor.warnOnceHistory, instead of hard-coding Logger.warnOnceHistory, allows for subclassing
+		const { warnOnceHistory } = this.constructor as typeof Logger;
+
+		if (!warnOnceHistory.has(message)) {
+			warnOnceHistory.add(message);
+			this.warn(message);
+		}
 	}
 
 	private doLog(messageLevel: Exclude<LoggerLevel, "none">, args: unknown[]) {

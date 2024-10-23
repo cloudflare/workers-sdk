@@ -11323,6 +11323,77 @@ export default{
 			`);
 		});
 	});
+
+	describe("workflows", () => {
+		function mockDeployWorkflow(expectedWorkflowName?: string) {
+			const handler = http.put(
+				"*/accounts/:accountId/workflows/:workflowName",
+				({ params }) => {
+					if (expectedWorkflowName) {
+						expect(params.workflowName).toBe(expectedWorkflowName);
+					}
+					return HttpResponse.json(
+						createFetchResult({ id: "mock-new-workflow-id" })
+					);
+				}
+			);
+			msw.use(handler);
+		}
+
+		it("should log open-beta warning when deploying a workflow", async () => {
+			writeWranglerToml({
+				main: "index.js",
+				workflows: [
+					{
+						binding: "WORKFLOW",
+						name: "my-workflow",
+						class_name: "MyWorkflow",
+					},
+				],
+			});
+			await fs.promises.writeFile(
+				"index.js",
+				`
+                import { WorkflowEntrypoint } from 'cloudflare:workers';
+                export default {};
+                export class MyWorkflow extends WorkflowEntrypoint {};
+            `
+			);
+
+			mockDeployWorkflow("my-workflow");
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedBindings: [
+					{
+						type: "workflow",
+						name: "WORKFLOW",
+						workflow_name: "my-workflow",
+						class_name: "MyWorkflow",
+					},
+				],
+			});
+
+			await runWrangler("deploy");
+
+			expect(std.warn).toMatchInlineSnapshot(`
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mWorkflows is currently in open beta.[0m
+
+				"
+			`);
+			expect(std.out).toMatchInlineSnapshot(`
+				"Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Your worker has access to the following bindings:
+				- Workflows:
+				  - WORKFLOW: MyWorkflow
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				  workflow: my-workflow
+				Current Version ID: Galaxy-Class"
+			`);
+		});
+	});
 });
 
 /** Write mock assets to the file system so they can be uploaded. */

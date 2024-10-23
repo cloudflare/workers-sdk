@@ -241,6 +241,8 @@ export default async function triggersDeploy(
 	}
 
 	if (config.workflows?.length) {
+		logger.warnOnce("Workflows is currently in open beta.");
+
 		for (const workflow of config.workflows) {
 			deployments.push(
 				fetchResult(`/accounts/${accountId}/workflows/${workflow.name}`, {

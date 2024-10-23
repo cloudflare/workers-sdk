@@ -225,6 +225,10 @@ export async function versionsUploadHandler(
 		);
 	}
 
+	if (config.workflows?.length) {
+		logger.warnOnce("Workflows is currently in open beta.");
+	}
+
 	validateAssetsArgsAndConfig(
 		{
 			// given that legacyAssets and sites are not supported by
