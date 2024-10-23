@@ -9,7 +9,7 @@
 		"db:query": "wrangler d1 execute UPDATE_THIS_FOR_REMOTE_USE --local --command='SELECT * FROM Customers'",
 		"db:query-json": "wrangler d1 execute UPDATE_THIS_FOR_REMOTE_USE --local --command='SELECT * FROM Customers' --json",
 		"db:reset": "wrangler d1 execute UPDATE_THIS_FOR_REMOTE_USE --local --file=./schema.sql",
-		"start": "wrangler dev --x-dev-env --local"
+		"start": "wrangler dev --local"
 	},
 	"devDependencies": {
 		"wrangler": "workspace:*"

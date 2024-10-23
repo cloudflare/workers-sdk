@@ -1,14 +1,12 @@
 import { URLSearchParams } from "node:url";
-import { logger } from "../logger";
 import { APIError } from "../parse";
 import { maybeThrowFriendlyError } from "./errors";
-import { fetchInternal, performApiFetch } from "./internal";
+import { fetchInternal } from "./internal";
 import type { FetchError } from "./errors";
 import type { RequestInit } from "undici";
 
 // Check out https://api.cloudflare.com/ for API docs.
 
-export type { FetchError };
 export interface FetchResult<ResponseType = unknown> {
 	success: boolean;
 	result: ResponseType;
@@ -211,42 +209,4 @@ function renderError(err: FetchError, level = 0): string {
 		(err.code ? `${err.message} [code: ${err.code}]` : err.message) +
 		chainedMessages
 	);
-}
-
-/**
- * Fetch the raw script content of a Worker
- * Note, this will concatenate the files of multi-module workers
- */
-export async function fetchScriptContent(
-	resource: string,
-	init: RequestInit = {},
-	queryParams?: URLSearchParams,
-	abortSignal?: AbortSignal
-): Promise<string> {
-	const response = await performApiFetch(
-		resource,
-		init,
-		queryParams,
-		abortSignal
-	);
-
-	logger.debug(
-		"-- START CF API RESPONSE:",
-		response.statusText,
-		response.status
-	);
-
-	logger.debug("HEADERS:", { ...response.headers });
-	// logger.debug("RESPONSE:", text);
-	logger.debug("-- END CF API RESPONSE");
-	const contentType = response.headers.get("content-type");
-
-	const usesModules = contentType?.startsWith("multipart");
-	if (usesModules && contentType) {
-		const form = await response.formData();
-		const entries = Array.from(form.entries());
-		return entries.map((e) => e[1]).join("\n");
-	} else {
-		return await response.text();
-	}
 }

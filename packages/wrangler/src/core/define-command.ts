@@ -16,7 +16,7 @@ import type {
 export class CommandRegistrationError extends Error {}
 
 type StringKeyOf<T> = Extract<keyof T, string>;
-export type DeepFlatten<T> = T extends object
+type DeepFlatten<T> = T extends object
 	? { [K in keyof T]: DeepFlatten<T[K]> }
 	: T;
 

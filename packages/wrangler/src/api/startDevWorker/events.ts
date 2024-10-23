@@ -4,9 +4,6 @@ import type { DevToolsEvent } from "./devtools";
 import type { Bundle, StartDevWorkerOptions } from "./types";
 import type { Miniflare } from "miniflare";
 
-export type TeardownEvent = {
-	type: "teardown";
-};
 export type ErrorEvent =
 	| BaseErrorEvent<
 			| "ConfigController"
@@ -24,7 +21,7 @@ export type ErrorEvent =
 			"BundlerController",
 			{ config?: StartDevWorkerOptions; filePath?: string }
 	  >;
-export type BaseErrorEvent<Source = string, Data = undefined> = {
+type BaseErrorEvent<Source = string, Data = undefined> = {
 	type: "error";
 	reason: string;
 	cause: Error | SerializedError;

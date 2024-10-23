@@ -31,7 +31,7 @@ import type {
 } from "./events";
 import type { StartDevWorkerOptions } from "./types";
 
-export type BundlerControllerEventMap = ControllerEventMap & {
+type BundlerControllerEventMap = ControllerEventMap & {
 	bundleStart: [BundleStartEvent];
 	bundleComplete: [BundleCompleteEvent];
 };

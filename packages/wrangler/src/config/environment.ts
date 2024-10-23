@@ -10,7 +10,7 @@ export interface Environment
 	extends EnvironmentInheritable,
 		EnvironmentNonInheritable {}
 
-export type SimpleRoute = string;
+type SimpleRoute = string;
 export type ZoneIdRoute = {
 	pattern: string;
 	zone_id: string;

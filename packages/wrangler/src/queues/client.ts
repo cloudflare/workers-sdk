@@ -10,7 +10,7 @@ export interface PostQueueBody {
 	settings?: QueueSettings;
 }
 
-export interface WorkerService {
+interface WorkerService {
 	id: string;
 	default_environment: {
 		environment: string;
@@ -117,10 +117,7 @@ export async function deleteQueue(
 	return deleteQueueById(config, queue.queue_id);
 }
 
-export async function deleteQueueById(
-	config: Config,
-	queueId: string
-): Promise<void> {
+async function deleteQueueById(config: Config, queueId: string): Promise<void> {
 	const accountId = await requireAuth(config);
 	return fetchResult(queuesUrl(accountId, queueId), {
 		method: "DELETE",
@@ -144,7 +141,7 @@ export async function listQueues(
 	return fetchResult(queuesUrl(accountId), {}, params);
 }
 
-export async function listAllQueues(
+async function listAllQueues(
 	config: Config,
 	queueNames: string[]
 ): Promise<QueueResponse[]> {
@@ -219,7 +216,7 @@ export async function putQueue(
 	return putQueueById(config, queue.queue_id, body);
 }
 
-export async function putQueueById(
+async function putQueueById(
 	config: Config,
 	queueId: string,
 	body: PostQueueBody
@@ -240,7 +237,7 @@ export async function postConsumer(
 	return postConsumerById(config, queue.queue_id, body);
 }
 
-export async function postConsumerById(
+async function postConsumerById(
 	config: Config,
 	queueId: string,
 	body: PostTypedConsumerBody
@@ -335,7 +332,7 @@ async function resolveWorkerConsumerByName(
 	return consumers[0];
 }
 
-export async function deleteConsumerById(
+async function deleteConsumerById(
 	config: Config,
 	queueId: string,
 	consumerId: string

@@ -103,7 +103,7 @@ export function getVersionSource(version: {
 		: formatTrigger(version.annotations["workers/triggered_by"]);
 }
 
-export function formatSource(source: string): string {
+function formatSource(source: string): string {
 	switch (source) {
 		case "api":
 			return "API 📡";
@@ -117,7 +117,7 @@ export function formatSource(source: string): string {
 			return `Other (${source})`;
 	}
 }
-export function formatTrigger(trigger: string): string {
+function formatTrigger(trigger: string): string {
 	switch (trigger) {
 		case "upload":
 			return "Upload";

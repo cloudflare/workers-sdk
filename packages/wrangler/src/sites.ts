@@ -422,7 +422,7 @@ function validateAssetKey(assetKey: string) {
  *
  * Primarily this involves converting Windows backslashes to forward slashes.
  */
-export function urlSafe(filePath: string): string {
+function urlSafe(filePath: string): string {
 	return filePath.replace(/\\/g, "/");
 }
 

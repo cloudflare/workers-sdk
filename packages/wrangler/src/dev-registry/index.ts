@@ -60,16 +60,6 @@ export async function registerWorker(
 }
 
 /**
- * Unregister a worker from the registry.
- */
-export async function unregisterWorker(name: string) {
-	if (getFlag("FILE_BASED_REGISTRY")) {
-		return FileRegistry.unregisterWorker(name);
-	}
-	return ServerRegistry.unregisterWorker(name);
-}
-
-/**
  * Get the state of the service registry.
  */
 export async function getRegisteredWorkers(): Promise<

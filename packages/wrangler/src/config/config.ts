@@ -31,7 +31,7 @@ export type RawConfig = Partial<ConfigFields<RawDevConfig>> &
 	EnvironmentMap & { $schema?: string };
 
 // Pages-specific configuration fields
-export interface PagesConfigFields {
+interface PagesConfigFields {
 	/**
 	 * The directory of static assets to serve.
 	 *
@@ -185,7 +185,7 @@ export interface ConfigFields<Dev extends RawDevConfig> {
 }
 
 // Pages-specific configuration fields
-export interface PagesConfigFields {
+interface PagesConfigFields {
 	/**
 	 * The directory of static assets to serve.
 	 *
@@ -243,7 +243,7 @@ export interface DevConfig {
 
 export type RawDevConfig = Partial<DevConfig>;
 
-export interface DeprecatedConfigFields {
+interface DeprecatedConfigFields {
 	/**
 	 * The project "type". A holdover from Wrangler v1.x.
 	 * Valid values were "webpack", "javascript", and "rust".

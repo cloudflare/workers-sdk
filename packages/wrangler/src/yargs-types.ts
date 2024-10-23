@@ -15,7 +15,7 @@ export interface CommonYargsOptions {
 /**
  * Yargs options included in every wrangler command.
  */
-export type CommonYargsOptionsJSON = {
+type CommonYargsOptionsJSON = {
 	json: boolean;
 } & CommonYargsOptions;
 
@@ -25,9 +25,6 @@ export type CommonYargsArgvSanitizedJSON<P = CommonYargsOptionsJSON> =
 	OnlyCamelCase<RemoveIndex<ArgumentsCamelCase<P>>>;
 
 export type CommonYargsArgv = Argv<CommonYargsOptions>;
-
-export type YargvToInterface<T> =
-	T extends Argv<infer P> ? ArgumentsCamelCase<P> : never;
 
 // See http://stackoverflow.com/questions/51465182/how-to-remove-index-signature-using-mapped-types
 export type RemoveIndex<T> = {

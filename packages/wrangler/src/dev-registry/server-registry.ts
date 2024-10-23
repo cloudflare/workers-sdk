@@ -86,9 +86,7 @@ async function devRegistry(
 /**
  * Get the state of the service registry.
  */
-export async function getRegisteredWorkers(): Promise<
-	WorkerRegistry | undefined
-> {
+async function getRegisteredWorkers(): Promise<WorkerRegistry | undefined> {
 	try {
 		const response = await fetch(`${DEV_REGISTRY_HOST}/workers`);
 		return (await response.json()) as WorkerRegistry;
@@ -106,10 +104,7 @@ export async function getRegisteredWorkers(): Promise<
 /**
  * Register a worker in the registry.
  */
-export async function registerWorker(
-	name: string,
-	definition: WorkerDefinition
-) {
+async function registerWorker(name: string, definition: WorkerDefinition) {
 	/**
 	 * Prevent the dev registry be closed.
 	 */
@@ -140,7 +135,7 @@ export async function registerWorker(
  * that exposes endpoints for registering and unregistering
  * services, as well as getting the state of the registry.
  */
-export async function startWorkerRegistry() {
+async function startWorkerRegistry() {
 	if ((await isPortAvailable()) && !globalServer) {
 		const result = await startWorkerRegistryServer(DEV_REGISTRY_PORT);
 		globalServer = result.server;
@@ -166,7 +161,7 @@ export async function startWorkerRegistry() {
 	}
 }
 
-export async function startWorkerRegistryServer(port: number) {
+async function startWorkerRegistryServer(port: number) {
 	const app = express();
 
 	let workers: WorkerRegistry = {};
@@ -200,7 +195,7 @@ export async function startWorkerRegistryServer(port: number) {
 /**
  * Stop the service registry.
  */
-export async function stopWorkerRegistry() {
+async function stopWorkerRegistry() {
 	if (globalWatcher) {
 		await globalWatcher?.close();
 		for (const heartbeat of heartbeats) {
@@ -215,7 +210,7 @@ export async function stopWorkerRegistry() {
 /**
  * Unregister a worker from the registry.
  */
-export async function unregisterWorker(name: string) {
+async function unregisterWorker(name: string) {
 	try {
 		await fetch(`${DEV_REGISTRY_HOST}/workers/${name}`, {
 			method: "DELETE",

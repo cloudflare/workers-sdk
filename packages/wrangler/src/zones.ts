@@ -123,7 +123,7 @@ export async function getZoneIdForPreview(from: {
  * For each domain-like part of the host (e.g. w.x.y.z) try to get a zone id for it by
  * lopping off subdomains until we get a hit from the API.
  */
-export async function getZoneIdFromHost(from: {
+async function getZoneIdFromHost(from: {
 	host: string;
 	accountId: string;
 }): Promise<string> {
@@ -161,7 +161,7 @@ interface WorkerRoute {
 /**
  * Given a zone within the user's account, return a list of all assigned worker routes
  */
-export async function getRoutesForZone(zone: string): Promise<WorkerRoute[]> {
+async function getRoutesForZone(zone: string): Promise<WorkerRoute[]> {
 	const routes = await fetchListResult<WorkerRoute>(
 		`/zones/${zone}/workers/routes`
 	);
@@ -198,7 +198,7 @@ function distanceBetween(a: string, b: string, cache = new Map()): number {
 /**
  * Given an invalid route, sort the valid routes by closeness to the invalid route (levenstein distance)
  */
-export function findClosestRoute(
+function findClosestRoute(
 	providedRoute: string,
 	assignedRoutes: WorkerRoute[]
 ): WorkerRoute[] {

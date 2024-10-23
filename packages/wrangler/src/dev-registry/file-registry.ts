@@ -124,7 +124,7 @@ async function unregisterWorker(name: string) {
 	return;
 }
 
-export async function loadWorkerDefinitions(): Promise<WorkerRegistry> {
+async function loadWorkerDefinitions(): Promise<WorkerRegistry> {
 	await mkdir(DEV_REGISTRY_PATH, { recursive: true });
 	globalWorkers ??= {};
 	const newWorkers = new Set<string>();

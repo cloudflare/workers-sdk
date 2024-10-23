@@ -308,7 +308,7 @@ interface AuthTokens {
  * The path to the config file that holds user authentication data,
  * relative to the user's home directory.
  */
-export const USER_AUTH_CONFIG_PATH = "config";
+const USER_AUTH_CONFIG_PATH = "config";
 
 /**
  * The data that may be read from the `USER_CONFIG_FILE`.
@@ -661,7 +661,7 @@ function isReturningFromAuthServer(query: ParsedUrlQuery): boolean {
 	return true;
 }
 
-export async function getAuthURL(scopes = DefaultScopeKeys): Promise<string> {
+async function getAuthURL(scopes = DefaultScopeKeys): Promise<string> {
 	const { codeChallenge, codeVerifier } = await generatePKCECodes();
 	const stateQueryParam = generateRandomState(RECOMMENDED_STATE_LENGTH);
 
@@ -1224,10 +1224,7 @@ export function requireApiToken(): ApiCredentials {
 /**
  * Save the given account details to a cache
  */
-export function saveAccountToCache(account: {
-	id: string;
-	name: string;
-}): void {
+function saveAccountToCache(account: { id: string; name: string }): void {
 	saveToConfigCache<{ account: { id: string; name: string } }>(
 		"wrangler-account.json",
 		{ account }

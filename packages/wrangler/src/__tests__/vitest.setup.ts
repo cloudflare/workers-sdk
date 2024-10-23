@@ -2,9 +2,7 @@
 import { resolve } from "path";
 import { PassThrough } from "stream";
 import chalk from "chalk";
-import { useApp } from "ink";
 import { passthrough } from "msw";
-import { useEffect } from "react";
 import { afterAll, afterEach, beforeAll, vi } from "vitest";
 import { msw } from "./helpers/msw";
 
@@ -110,18 +108,6 @@ afterEach(() => {
 	msw.resetHandlers();
 });
 afterAll(() => msw.close());
-
-vi.mock("../dev/dev", () => {
-	return {
-		default: vi.fn().mockImplementation(() => {
-			const { exit } = useApp();
-			useEffect(() => {
-				exit();
-			});
-			return null;
-		}),
-	};
-});
 
 // Make sure that we don't accidentally try to open a browser window when running tests.
 // We will actually provide a mock implementation for `openInBrowser()` within relevant tests.

@@ -240,9 +240,8 @@ export function Options(yargs: CommonYargsArgv) {
 			"experimental-dev-env": {
 				alias: ["x-dev-env"],
 				type: "boolean",
-				describe:
-					"Use the experimental DevEnv instantiation (unified across wrangler dev and unstable_dev)",
 				default: false,
+				hidden: true,
 			},
 			"experimental-registry": {
 				alias: ["x-registry"],
@@ -262,6 +261,12 @@ export const Handler = async (args: PagesDevArguments) => {
 	}
 
 	await printWranglerBanner();
+
+	if (args.experimentalDevEnv) {
+		logger.warn(
+			"--x-dev-env is no longer required and will be removed in a future version.\n`wrangler dev` now uses the unified dev server by default. 🎉"
+		);
+	}
 
 	if (args.experimentalLocal) {
 		logger.warn(
@@ -908,7 +913,7 @@ export const Handler = async (args: PagesDevArguments) => {
 			testMode: false,
 			watch: true,
 			fileBasedRegistry: args.experimentalRegistry,
-			devEnv: args.experimentalDevEnv,
+			enableIpc: true,
 		},
 	});
 	await metrics.sendMetricsEvent("run pages dev");
