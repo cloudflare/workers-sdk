@@ -1,8 +1,9 @@
-name: "Miniflare - Generate changesets for dependabot PRs"
+name: "Generate changesets for dependabot PRs"
 on:
   pull_request_target:
     paths:
       - "packages/miniflare/package.json"
+      - "packages/quick-edit-extension/package.json"
 
 jobs:
   generate-changeset:
@@ -25,5 +26,5 @@ jobs:
           git config --global user.email wrangler@cloudflare.com
           git config --global user.name 'Wrangler automated PR updater'
 
-      - name: Generate Miniflare changesets
-        run: node -r esbuild-register tools/dependabot/generate-dependabot-pr-changesets.ts ${{ github.event.number }} miniflare packages/miniflare/package.json dependabot-update
+      - name: Generate Miniflare changeset
+        run: node -r esbuild-register tools/dependabot/generate-dependabot-pr-changesets.ts ${{ github.event.number }} miniflare quick-edit-extension

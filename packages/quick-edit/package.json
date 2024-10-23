@@ -23,6 +23,7 @@
 	"devDependencies": {
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"concurrently": "^8.2.2",
+		"quick-edit-extension": "workspace:*",
 		"tsx": "^3.12.8",
 		"wrangler": "workspace:*"
 	},
