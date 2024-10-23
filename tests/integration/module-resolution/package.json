@@ -7,7 +7,7 @@
 		"test": "vitest run"
 	},
 	"devDependencies": {
-		"@cloudflare-dev-module-resolution/cloudflare-imports": "file:./packages/cloudflare-imports",
+		"@cloudflare-dev-module-resolution/imports": "file:./packages/imports",
 		"@cloudflare-dev-module-resolution/requires": "file:./packages/requires",
 		"@cloudflare/workers-types": "catalog:default",
 		"@flarelabs-net/vite-plugin-cloudflare": "workspace:*",

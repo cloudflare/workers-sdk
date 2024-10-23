@@ -4,7 +4,6 @@ import { fileURLToPath } from 'node:url';
 import { Log, LogLevel, Response as MiniflareResponse } from 'miniflare';
 import * as vite from 'vite';
 import { unstable_getMiniflareWorkerOptions } from 'wrangler';
-import { getModuleFallbackHandler, getResolveId } from './module-fallback';
 import { invariant, WORKERD_CUSTOM_IMPORT_PATH } from './shared';
 import type { CloudflareDevEnvironment } from './cloudflare-environment';
 import type { NormalizedPluginConfig } from './plugin-config';
@@ -145,16 +144,6 @@ export function getMiniflareOptions(
 	const workerToDurableObjectClassNamesMap =
 		getWorkerToDurableObjectClassNamesMap(workers);
 
-	// TODO: we only have a single module resolution strategy shared across all workers
-	//       (generated using the first worker's dev environment)
-	//       we should investigate and ideally have potential different resolutions per worker
-	//       see: https://github.com/flarelabs-net/vite-plugin-cloudflare/issues/19
-	const firstWorkerName = workers[0]?.name;
-	invariant(firstWorkerName, 'First worker name not found');
-	const devEnvironment = viteDevServer.environments[firstWorkerName];
-	invariant(devEnvironment, 'First worker dev environment not found');
-	const resolveId = getResolveId(viteConfig, devEnvironment);
-
 	const logger = new ViteMiniflareLogger(viteConfig);
 	return {
 		log: logger,
@@ -261,7 +250,6 @@ export function getMiniflareOptions(
 				},
 			};
 		}),
-		unsafeModuleFallbackService: getModuleFallbackHandler(resolveId),
 	};
 }
 
