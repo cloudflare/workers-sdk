@@ -1149,7 +1149,7 @@ export class Miniflare {
 				for (const workflow of Object.values(workerOpts.workflows.workflows)) {
 					// This will be the UserWorker, or the vitest pool worker wrapping the UserWorker
 					// The workflows plugin needs this so that it can set the binding between the Engine and the UserWorker
-					workflow.scriptName ??= this.#workerOpts[0].core.name;
+					workflow.scriptName ??= workerOpts.core.name;
 				}
 			}
 

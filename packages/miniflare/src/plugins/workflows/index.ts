@@ -26,7 +26,7 @@ export const WorkflowsSharedOptionsSchema = z.object({
 });
 
 export const WORKFLOWS_PLUGIN_NAME = "workflows";
-export const WORKFLOWS_STORAGE_SERVICE_NAME = "workflows:storage";
+export const WORKFLOWS_STORAGE_SERVICE_NAME = `${WORKFLOWS_PLUGIN_NAME}:storage`;
 
 export const WORKFLOWS_PLUGIN: Plugin<
 	typeof WorkflowsOptionsSchema,
@@ -39,7 +39,7 @@ export const WORKFLOWS_PLUGIN: Plugin<
 			([bindingName, workflow]) => ({
 				name: bindingName,
 				service: {
-					name: `workflows:${workflow.name}`,
+					name: `${WORKFLOWS_PLUGIN_NAME}:${workflow.name}`,
 					entrypoint: "WorkflowBinding",
 				},
 			})
@@ -72,7 +72,7 @@ export const WORKFLOWS_PLUGIN: Plugin<
 				const uniqueKey = `miniflare-workflows`;
 
 				const workflowsBinding: Service = {
-					name: `workflows:${workflow.name}`,
+					name: `${WORKFLOWS_PLUGIN_NAME}:${workflow.name}`,
 					worker: {
 						compatibilityDate: "2024-10-22",
 						modules: [
