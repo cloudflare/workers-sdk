@@ -420,12 +420,3 @@ export function extractBindingsOfType<
 		/* ugh why durable objects :( */ name: string;
 	})[];
 }
-
-// DO NOT USE!
-// StartDevWorkerInput and StartDevWorkerOptions are not generally assignable to each other, but they're assignable _enough_ to make the faking of events work when --x-dev-env is turned off
-// Typescript needs some help to figure this out though
-export function fakeResolvedInput(
-	input: StartDevWorkerInput
-): StartDevWorkerOptions {
-	return input as StartDevWorkerOptions;
-}
