@@ -62,6 +62,5 @@ export {
 	mswGetVersion,
 	mswListNewDeployments,
 	mswListVersions,
-	
 	mswPatchNonVersionedScriptSettings,
 };

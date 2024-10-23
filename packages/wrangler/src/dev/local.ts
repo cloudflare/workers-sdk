@@ -1,10 +1,6 @@
 import { registerWorker } from "../dev-registry";
-import type {
-	CfDurableObject,
-} from "../deployment-bundle/worker";
-import type {
-	WorkerEntrypointsDefinition,
-} from "../dev-registry";
+import type { CfDurableObject } from "../deployment-bundle/worker";
+import type { WorkerEntrypointsDefinition } from "../dev-registry";
 
 export function maybeRegisterLocalWorker(
 	url: URL,

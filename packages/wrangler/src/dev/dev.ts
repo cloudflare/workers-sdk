@@ -1,5 +1,3 @@
-
-
 import type { DevEnv, ProxyData } from "../api";
 import type { AssetsOptions } from "../assets";
 import type { Config } from "../config";

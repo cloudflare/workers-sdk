@@ -260,10 +260,7 @@ async function shouldPromptForNewSSHKeyAppear(
 	}
 }
 
-async function handleListSSHKeysCommand(
-	_args: unknown,
-	_config: Config
-) {
+async function handleListSSHKeysCommand(_args: unknown, _config: Config) {
 	startSection("SSH Keys", "", false);
 	const { start, stop } = spinner();
 	start("Loading your ssh keys");

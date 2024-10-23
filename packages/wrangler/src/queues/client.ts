@@ -117,10 +117,7 @@ export async function deleteQueue(
 	return deleteQueueById(config, queue.queue_id);
 }
 
-async function deleteQueueById(
-	config: Config,
-	queueId: string
-): Promise<void> {
+async function deleteQueueById(config: Config, queueId: string): Promise<void> {
 	const accountId = await requireAuth(config);
 	return fetchResult(queuesUrl(accountId, queueId), {
 		method: "DELETE",

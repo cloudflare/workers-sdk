@@ -125,10 +125,7 @@ function parseConfig(config: Config, baseDir: string) {
 	return { routes, importMap };
 }
 
-function generateRoutesModule(
-	importMap: ImportMap,
-	routes: RoutesCollection
-) {
+function generateRoutesModule(importMap: ImportMap, routes: RoutesCollection) {
 	return `${[...importMap.values()]
 		.map(
 			({ filepath, name, identifier }) =>

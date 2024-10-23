@@ -28,9 +28,7 @@ import {
 } from "./utils/collectKeyValues";
 import { mergeWithOverride } from "./utils/mergeWithOverride";
 import { getHostFromRoute } from "./zones";
-import {
-	printWranglerBanner,
-} from "./index";
+import { printWranglerBanner } from "./index";
 import type { ReloadCompleteEvent, StartDevWorkerInput, Trigger } from "./api";
 import type { Config, Environment } from "./config";
 import type {

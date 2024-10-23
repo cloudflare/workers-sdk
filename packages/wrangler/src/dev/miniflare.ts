@@ -29,9 +29,7 @@ import type {
 	CfUnsafeBinding,
 	CfWorkerInit,
 } from "../deployment-bundle/worker";
-import type {
-	WorkerRegistry,
-} from "../dev-registry";
+import type { WorkerRegistry } from "../dev-registry";
 import type { LoggerLevel } from "../logger";
 import type { LegacyAssetPaths } from "../sites";
 import type { EsbuildBundle } from "./use-esbuild";

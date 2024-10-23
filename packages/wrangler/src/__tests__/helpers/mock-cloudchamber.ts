@@ -1,7 +1,5 @@
 import { DeploymentType, NodeGroup } from "../../cloudchamber/client";
-import type {
-	DeploymentV2,
-} from "../../cloudchamber/client";
+import type { DeploymentV2 } from "../../cloudchamber/client";
 
 export const MOCK_DEPLOYMENTS_COMPLEX: DeploymentV2[] = [
 	{
