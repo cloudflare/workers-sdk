@@ -1,15 +1,6 @@
-import {
-	RpcTarget,
-	WorkflowSleepDuration,
-	WorkflowStepConfig,
-} from "cloudflare:workers";
+import { RpcTarget } from "cloudflare:workers";
 import { ms } from "itty-time";
-import {
-	INSTANCE_METADATA,
-	InstanceEvent,
-	InstanceMetadata,
-	InstanceStatus,
-} from "./instance";
+import { INSTANCE_METADATA, InstanceEvent, InstanceStatus } from "./instance";
 import { computeHash } from "./lib/cache";
 import {
 	WorkflowFatalError,
@@ -19,6 +10,11 @@ import {
 import { calcRetryDuration } from "./lib/retries";
 import { MAX_STEP_NAME_LENGTH, validateStepName } from "./lib/validators";
 import type { Engine } from "./engine";
+import type { InstanceMetadata } from "./instance";
+import type {
+	WorkflowSleepDuration,
+	WorkflowStepConfig,
+} from "cloudflare:workers";
 
 export type ResolvedStepConfig = Required<WorkflowStepConfig>;
 
@@ -30,6 +26,10 @@ const defaultConfig: Required<WorkflowStepConfig> = {
 	},
 	timeout: "15 minutes",
 };
+
+export interface UserErrorField {
+	isUserError?: boolean;
+}
 
 export type StepState = {
 	attemptedCount: number;
@@ -56,15 +56,38 @@ export class Context extends RpcTarget {
 		return val;
 	}
 
-	async do<T extends Rpc.Serializable<T>>(
+	do(name: string, callback: () => Promise<unknown>): Promise<unknown>;
+	do(
 		name: string,
-		stepConfig: WorkflowStepConfig,
-		callback: () => Promise<T>
-	): Promise<T | void> {
+		config: WorkflowStepConfig,
+		callback: () => Promise<unknown>
+	): Promise<unknown>;
+
+	async do<T>(
+		name: string,
+		configOrCallback: WorkflowStepConfig | (() => Promise<T>),
+		callback?: () => Promise<T>
+	): Promise<unknown | void | undefined> {
+		let closure, stepConfig;
+		// If a user passes in a config, we'd like it to be the second arg so the callback is always last
+		if (callback) {
+			closure = callback;
+			stepConfig = configOrCallback as WorkflowStepConfig;
+		} else {
+			closure = configOrCallback as () => Promise<T>;
+			stepConfig = {};
+		}
+
 		if (!validateStepName(name)) {
-			throw new WorkflowFatalError(
+			// NOTE(lduarte): marking errors as user error allows the observability layer to avoid leaking
+			// user errors to sentry while making everything more observable. `isUserError` is not serialized
+			// into userland code due to how workerd serialzises errors over RPC - we also set it as undefined
+			// in the obs layer in case changes to workerd happen
+			const error = new WorkflowFatalError(
 				`Step name "${name}" exceeds max length (${MAX_STEP_NAME_LENGTH} chars) or invalid characters found`
-			);
+			) as Error & UserErrorField;
+			error.isUserError = true;
+			throw error;
 		}
 
 		let config: ResolvedStepConfig = {
@@ -125,12 +148,15 @@ export class Context extends RpcTarget {
 			};
 
 			const priorityQueueHash = `${cacheKey}-${stepState.attemptedCount}`;
-			const timeoutEntryPQ = this.#engine.priorityQueue!.getFirst(
+
+			// @ts-expect-error priorityQueue is initiated in init
+			const timeoutEntryPQ = this.#engine.priorityQueue.getFirst(
 				(a) => a.hash === priorityQueueHash && a.type === "timeout"
 			);
 			// if there's a timeout on the PQ we pop it, because we wont need it
 			if (timeoutEntryPQ !== undefined) {
-				this.#engine.priorityQueue!.remove(timeoutEntryPQ);
+				// @ts-expect-error priorityQueue is initiated in init
+				this.#engine.priorityQueue.remove(timeoutEntryPQ);
 			}
 			this.#engine.writeLog(
 				InstanceEvent.ATTEMPT_FAILURE,
@@ -148,7 +174,9 @@ export class Context extends RpcTarget {
 			await this.#state.storage.put(stepStateKey, stepState);
 		}
 
-		const doWrapper = async (closure: () => Promise<T>): Promise<T | void> => {
+		const doWrapper = async (
+			doWrapperClosure: () => Promise<unknown>
+		): Promise<unknown | void | undefined> => {
 			const stepState = ((await this.#state.storage.get(
 				stepStateKey
 			)) as StepState) ?? {
@@ -168,7 +196,8 @@ export class Context extends RpcTarget {
 			} else {
 				// in case the engine dies while retrying and wakes up before the retry period
 				const priorityQueueHash = `${cacheKey}-${stepState.attemptedCount}`;
-				const retryEntryPQ = this.#engine.priorityQueue!.getFirst(
+				// @ts-expect-error priorityQueue is initiated in init
+				const retryEntryPQ = this.#engine.priorityQueue.getFirst(
 					(a) => a.hash === priorityQueueHash && a.type === "retry"
 				);
 				// complete sleep if it didn't finish for some reason
@@ -176,14 +205,15 @@ export class Context extends RpcTarget {
 					await this.#engine.timeoutHandler.release(this.#engine);
 					await scheduler.wait(retryEntryPQ.targetTimestamp - Date.now());
 					await this.#engine.timeoutHandler.acquire(this.#engine);
-					this.#engine.priorityQueue!.remove({
+					// @ts-expect-error priorityQueue is initiated in init
+					this.#engine.priorityQueue.remove({
 						hash: priorityQueueHash,
 						type: "retry",
 					});
 				}
 			}
 
-			let result: T;
+			let result;
 
 			const instanceMetadata =
 				await this.#state.storage.get<InstanceMetadata>(INSTANCE_METADATA);
@@ -196,7 +226,8 @@ export class Context extends RpcTarget {
 				const timeoutPromise = async () => {
 					const priorityQueueHash = `${cacheKey}-${stepState.attemptedCount}`;
 					const timeout = ms(config.timeout);
-					await this.#engine.priorityQueue!.add({
+					// @ts-expect-error priorityQueue is initiated in init
+					await this.#engine.priorityQueue.add({
 						hash: priorityQueueHash,
 						targetTimestamp: Date.now() + timeout,
 						type: "timeout",
@@ -204,7 +235,8 @@ export class Context extends RpcTarget {
 					await scheduler.wait(timeout);
 					// if we reach here, means that we can try to delete the timeout from the PQ
 					// because we managed to wait in the same lifetime
-					await this.#engine.priorityQueue!.remove({
+					// @ts-expect-error priorityQueue is initiated in init
+					await this.#engine.priorityQueue.remove({
 						hash: priorityQueueHash,
 						type: "timeout",
 					});
@@ -225,10 +257,11 @@ export class Context extends RpcTarget {
 				await this.#state.storage.put(stepStateKey, stepState);
 				const priorityQueueHash = `${cacheKey}-${stepState.attemptedCount}`;
 
-				result = await Promise.race([closure(), timeoutPromise()]);
+				result = await Promise.race([doWrapperClosure(), timeoutPromise()]);
 
 				// if we reach here, means that the clouse ran successfully and we can remove the timeout from the PQ
-				await this.#engine.priorityQueue!.remove({
+				// @ts-expect-error priorityQueue is initiated in init
+				await this.#engine.priorityQueue.remove({
 					hash: priorityQueueHash,
 					type: "timeout",
 				});
@@ -266,7 +299,7 @@ export class Context extends RpcTarget {
 
 						await this.#engine.setStatus(
 							accountId,
-							instance.name,
+							instance.id,
 							InstanceStatus.Errored
 						);
 						await this.#engine.timeoutHandler.release(this.#engine);
@@ -291,7 +324,8 @@ export class Context extends RpcTarget {
 			} catch (e) {
 				const error = e as Error;
 				// if we reach here, means that the clouse ran but errored out and we can remove the timeout from the PQ
-				this.#engine.priorityQueue!.remove({
+				// @ts-expect-error priorityQueue is initiated in init
+				this.#engine.priorityQueue.remove({
 					hash: `${cacheKey}-${stepState.attemptedCount}`,
 					type: "timeout",
 				});
@@ -322,7 +356,7 @@ export class Context extends RpcTarget {
 
 					await this.#engine.setStatus(
 						accountId,
-						instance.name,
+						instance.id,
 						InstanceStatus.Errored
 					);
 					await this.#engine.timeoutHandler.release(this.#engine);
@@ -351,7 +385,8 @@ export class Context extends RpcTarget {
 					const durationMs = calcRetryDuration(config, stepState);
 
 					const priorityQueueHash = `${cacheKey}-${stepState.attemptedCount}`;
-					await this.#engine.priorityQueue!.add({
+					// @ts-expect-error priorityQueue is initiated in init
+					await this.#engine.priorityQueue.add({
 						hash: priorityQueueHash,
 						targetTimestamp: Date.now() + durationMs,
 						type: "retry",
@@ -361,12 +396,13 @@ export class Context extends RpcTarget {
 					await scheduler.wait(durationMs);
 
 					// if it ever reaches here, we can try to remove it from the priority queue since it's no longer useful
-					this.#engine.priorityQueue!.remove({
+					// @ts-expect-error priorityQueue is initiated in init
+					this.#engine.priorityQueue.remove({
 						hash: priorityQueueHash,
 						type: "retry",
 					});
 
-					return doWrapper(callback);
+					return doWrapper(doWrapperClosure);
 				} else {
 					await this.#engine.timeoutHandler.release(this.#engine);
 					this.#engine.writeLog(
@@ -383,7 +419,7 @@ export class Context extends RpcTarget {
 					);
 					await this.#engine.setStatus(
 						accountId,
-						instance.name,
+						instance.id,
 						InstanceStatus.Errored
 					);
 					throw error;
@@ -403,7 +439,7 @@ export class Context extends RpcTarget {
 			return result;
 		};
 
-		return doWrapper(callback);
+		return doWrapper(closure);
 	}
 
 	async sleep(name: string, duration: WorkflowSleepDuration): Promise<void> {
@@ -421,13 +457,15 @@ export class Context extends RpcTarget {
 		const maybeResult = await this.#state.storage.get(sleepKey);
 
 		if (maybeResult != undefined) {
-			const entryPQ = this.#engine.priorityQueue!.getFirst(
+			// @ts-expect-error priorityQueue is initiated in init
+			const entryPQ = this.#engine.priorityQueue.getFirst(
 				(a) => a.hash === cacheKey && a.type === "sleep"
 			);
 			// in case the engine dies while sleeping and wakes up before the retry period
 			if (entryPQ !== undefined) {
 				await scheduler.wait(entryPQ.targetTimestamp - Date.now());
-				this.#engine.priorityQueue!.remove({ hash: cacheKey, type: "sleep" });
+				// @ts-expect-error priorityQueue is initiated in init
+				this.#engine.priorityQueue.remove({ hash: cacheKey, type: "sleep" });
 			}
 			const shouldWriteLog =
 				(await this.#state.storage.get(sleepLogWrittenKey)) == undefined;
@@ -460,7 +498,8 @@ export class Context extends RpcTarget {
 		// TODO(lduarte): not sure of this order of operations
 		await this.#state.storage.put(sleepKey, true); // Any value will do for cache hit
 
-		await this.#engine.priorityQueue!.add({
+		// @ts-expect-error priorityQueue is initiated in init
+		await this.#engine.priorityQueue.add({
 			hash: cacheKey,
 			targetTimestamp: Date.now() + duration,
 			type: "sleep",
@@ -476,7 +515,8 @@ export class Context extends RpcTarget {
 		);
 		await this.#state.storage.put(sleepLogWrittenKey, true);
 
-		this.#engine.priorityQueue!.remove({ hash: cacheKey, type: "sleep" });
+		// @ts-expect-error priorityQueue is initiated in init
+		this.#engine.priorityQueue.remove({ hash: cacheKey, type: "sleep" });
 	}
 
 	async sleepUntil(name: string, timestamp: Date | number): Promise<void> {

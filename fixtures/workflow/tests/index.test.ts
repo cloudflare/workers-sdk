@@ -44,7 +44,8 @@ describe("Workflows", () => {
 		await expect(
 			fetchJson(`http://${ip}:${port}/create?workflowName=test`)
 		).resolves.toEqual({
-			test: 1,
+			status: "running",
+			output: [],
 		});
 
 		await vi.waitFor(

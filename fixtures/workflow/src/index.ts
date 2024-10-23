@@ -13,7 +13,7 @@ export class Demo extends WorkflowEntrypoint<{}, Params> {
 	async run(event: WorkflowEvent<Params>, step: WorkflowStep) {
 		const { timestamp, payload } = event;
 
-		const result = await step.do("First step", {}, async function () {
+		const result = await step.do("First step", async function () {
 			return {
 				output: "First step result",
 			};
@@ -21,7 +21,7 @@ export class Demo extends WorkflowEntrypoint<{}, Params> {
 
 		await step.sleep("Wait", "5 seconds");
 
-		const result2 = await step.do("Second step", {}, async function () {
+		const result2 = await step.do("Second step", async function () {
 			return {
 				output: "Second step result",
 			};
@@ -42,18 +42,17 @@ type Env = {
 export default class extends WorkerEntrypoint<Env> {
 	async fetch(req: Request) {
 		const url = new URL(req.url);
-		const name = url.searchParams.get("workflowName");
+		const id = url.searchParams.get("workflowName");
 
 		if (url.pathname === "/favicon.ico") {
 			return new Response(null, { status: 404 });
 		}
 
-		let handle: Instance;
+		let handle: WorkflowInstance;
 		if (url.pathname === "/create") {
-			handle = await this.env.WORKFLOW.create({ name });
+			handle = await this.env.WORKFLOW.create({ id });
 		} else {
-			// @ts-ignore getByName exists in the next version of workerd
-			handle = await this.env.WORKFLOW.getByName(name);
+			handle = await this.env.WORKFLOW.get(id);
 		}
 
 		return Response.json(await handle.status());
