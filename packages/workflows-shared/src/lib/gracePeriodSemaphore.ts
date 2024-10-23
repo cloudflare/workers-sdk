@@ -1,6 +1,6 @@
-import { WorkflowSleepDuration } from "cloudflare:workers";
 import { ms } from "itty-time";
 import type { Engine } from "../engine";
+import type { WorkflowSleepDuration } from "cloudflare:workers";
 
 export const ENGINE_TIMEOUT = ms("5 minutes" satisfies WorkflowSleepDuration);
 
@@ -80,7 +80,7 @@ export const startGracePeriod: GracePeriodCallback = async (
 		// before init finishes where it is set
 
 		// Ensure next alarm is set before we abort
-		await engine.priorityQueue!.handleNextAlarm();
+		await engine.priorityQueue?.handleNextAlarm();
 		await engine.abort("Grace period complete");
 	};
 	void gracePeriodHandler();

@@ -1,5 +1,5 @@
 import Heap from "heap-js";
-import {
+import type {
 	InstanceMetadata,
 	WakerPriorityEntry,
 	WakerPriorityType,
@@ -58,6 +58,7 @@ export class TimePriorityQueue {
 		const currentTimestamp = new Date().valueOf();
 		// heap-js does not have a ordered iterator that doesn't consume the input so we
 		// peek the first one, and pop if it's old until it's empty or in the future
+		// eslint-disable-next-line no-constant-condition
 		while (true) {
 			const element = this.#heap.peek();
 			if (element === undefined) {

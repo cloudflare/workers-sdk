@@ -1,5 +1,9 @@
-import { ResolvedStepConfig } from "./context";
-import { DatabaseInstance, DatabaseVersion, DatabaseWorkflow } from "./engine";
+import type { ResolvedStepConfig } from "./context";
+import type {
+	DatabaseInstance,
+	DatabaseVersion,
+	DatabaseWorkflow,
+} from "./engine";
 
 export type Instance = {
 	id: string;
