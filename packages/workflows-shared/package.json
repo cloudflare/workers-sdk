@@ -29,6 +29,7 @@
 		"check:type": "pnpm run check:type:tests && tsc",
 		"check:type:tests": "tsc -p ./tests/tsconfig.json",
 		"clean": "rimraf dist",
+		"deploy": "echo 'no deploy'",
 		"dev": "pnpm run bundle:local-binding --watch",
 		"test:ci": "echo 'no tests'"
 	},
