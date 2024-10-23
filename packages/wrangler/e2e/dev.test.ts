@@ -51,16 +51,13 @@ it("can import URL from 'url' in node_compat mode", async () => {
 	);
 });
 
-describe.each([
-	{ cmd: "wrangler dev --no-x-dev-env" },
-	{ cmd: "wrangler dev --remote --no-x-dev-env" },
-	{ cmd: "wrangler dev --x-dev-env" },
-	{ cmd: "wrangler dev --remote --x-dev-env" },
-])("basic js dev: $cmd", ({ cmd }) => {
-	it(`can modify worker during ${cmd}`, async () => {
-		const helper = new WranglerE2ETestHelper();
-		await helper.seed({
-			"wrangler.toml": dedent`
+describe.each([{ cmd: "wrangler dev" }, { cmd: "wrangler dev --remote" }])(
+	"basic js dev: $cmd",
+	({ cmd }) => {
+		it(`can modify worker during ${cmd}`, async () => {
+			const helper = new WranglerE2ETestHelper();
+			await helper.seed({
+				"wrangler.toml": dedent`
 							name = "${workerName}"
 							main = "src/index.ts"
 							compatibility_date = "2023-01-01"
@@ -69,44 +66,44 @@ describe.each([
 							[vars]
 							KEY = "value"
 					`,
-			"src/index.ts": dedent`
+				"src/index.ts": dedent`
 							export default {
 								fetch(request) {
 									return new Response("Hello World!")
 								}
 							}`,
-			"package.json": dedent`
+				"package.json": dedent`
 							{
 								"name": "worker",
 								"version": "0.0.0",
 								"private": true
 							}
 							`,
-		});
-		const worker = helper.runLongLived(cmd);
+			});
+			const worker = helper.runLongLived(cmd);
 
-		const { url } = await worker.waitForReady();
+			const { url } = await worker.waitForReady();
 
-		await expect(fetch(url).then((r) => r.text())).resolves.toMatchSnapshot();
+			await expect(fetch(url).then((r) => r.text())).resolves.toMatchSnapshot();
 
-		await helper.seed({
-			"src/index.ts": dedent`
+			await helper.seed({
+				"src/index.ts": dedent`
 						export default {
 							fetch(request, env) {
 								return new Response("Updated Worker! " + env.KEY)
 							}
 						}`,
+			});
+
+			await worker.waitForReload();
+
+			await expect(fetchText(url)).resolves.toMatchSnapshot();
 		});
 
-		await worker.waitForReload();
-
-		await expect(fetchText(url)).resolves.toMatchSnapshot();
-	});
-
-	it(`hotkeys can be disabled with ${cmd}`, async () => {
-		const helper = new WranglerE2ETestHelper();
-		await helper.seed({
-			"wrangler.toml": dedent`
+		it(`hotkeys can be disabled with ${cmd}`, async () => {
+			const helper = new WranglerE2ETestHelper();
+			await helper.seed({
+				"wrangler.toml": dedent`
 							name = "${workerName}"
 							main = "src/index.ts"
 							compatibility_date = "2023-01-01"
@@ -115,143 +112,145 @@ describe.each([
 							[vars]
 							KEY = "value"
 					`,
-			"src/index.ts": dedent`
+				"src/index.ts": dedent`
 							export default {
 								fetch(request) {
 									return new Response("Hello World!")
 								}
 							}`,
-			"package.json": dedent`
+				"package.json": dedent`
 							{
 								"name": "worker",
 								"version": "0.0.0",
 								"private": true
 							}
 							`,
+			});
+			const worker = helper.runLongLived(
+				`${cmd} --show-interactive-dev-session=false`
+			);
+
+			const { url } = await worker.waitForReady();
+
+			await expect(fetch(url).then((r) => r.text())).resolves.toMatchSnapshot();
+
+			await expect(worker.currentOutput).not.toContain("[b] open a browser");
 		});
-		const worker = helper.runLongLived(
-			`${cmd} --show-interactive-dev-session=false`
-		);
-
-		const { url } = await worker.waitForReady();
-
-		await expect(fetch(url).then((r) => r.text())).resolves.toMatchSnapshot();
-
-		await expect(worker.currentOutput).not.toContain("[b] open a browser");
-	});
-});
+	}
+);
 
 // Skipping remote python tests because they consistently flake with timeouts
 // Unskip once remote dev with python workers is more stable
-describe.each([
-	{ cmd: "wrangler dev --no-x-dev-env" },
-	{ cmd: "wrangler dev --x-dev-env" },
-])("basic python dev: $cmd", { timeout: 90_000 }, ({ cmd }) => {
-	it(`can modify entrypoint during ${cmd}`, async () => {
-		const helper = new WranglerE2ETestHelper();
-		await helper.seed({
-			"wrangler.toml": dedent`
+describe.each([{ cmd: "wrangler dev" }])(
+	"basic python dev: $cmd",
+	{ timeout: 90_000 },
+	({ cmd }) => {
+		it(`can modify entrypoint during ${cmd}`, async () => {
+			const helper = new WranglerE2ETestHelper();
+			await helper.seed({
+				"wrangler.toml": dedent`
 					name = "${workerName}"
 					main = "index.py"
 					compatibility_date = "2023-01-01"
 					compatibility_flags = ["python_workers"]
 			`,
-			"arithmetic.py": dedent`
+				"arithmetic.py": dedent`
 					def mul(a,b):
 						return a*b`,
-			"index.py": dedent`
+				"index.py": dedent`
 					from arithmetic import mul
 
 					from js import Response
 					def on_fetch(request):
 						return Response.new(f"py hello world {mul(2,3)}")`,
-			"package.json": dedent`
+				"package.json": dedent`
 					{
 						"name": "worker",
 						"version": "0.0.0",
 						"private": true
 					}
 					`,
-		});
-		const worker = helper.runLongLived(cmd);
+			});
+			const worker = helper.runLongLived(cmd);
 
-		const { url } = await worker.waitForReady();
+			const { url } = await worker.waitForReady();
 
-		await expect(fetchText(url)).resolves.toBe("py hello world 6");
+			await expect(fetchText(url)).resolves.toBe("py hello world 6");
 
-		await helper.seed({
-			"index.py": dedent`
+			await helper.seed({
+				"index.py": dedent`
 					from js import Response
 					def on_fetch(request):
 						return Response.new('Updated Python Worker value')`,
+			});
+
+			await worker.waitForReload();
+
+			// TODO(soon): work out why python workers need this retry before returning new content
+			const { text } = await retry(
+				(s) => s.status !== 200 || s.text === "py hello world 6",
+				async () => {
+					const r = await fetch(url);
+					return { text: await r.text(), status: r.status };
+				}
+			);
+
+			expect(text).toBe("Updated Python Worker value");
 		});
 
-		await worker.waitForReload();
-
-		// TODO(soon): work out why python workers need this retry before returning new content
-		const { text } = await retry(
-			(s) => s.status !== 200 || s.text === "py hello world 6",
-			async () => {
-				const r = await fetch(url);
-				return { text: await r.text(), status: r.status };
-			}
-		);
-
-		expect(text).toBe("Updated Python Worker value");
-	});
-
-	it(`can modify imports during ${cmd}`, async () => {
-		const helper = new WranglerE2ETestHelper();
-		await helper.seed({
-			"wrangler.toml": dedent`
+		it(`can modify imports during ${cmd}`, async () => {
+			const helper = new WranglerE2ETestHelper();
+			await helper.seed({
+				"wrangler.toml": dedent`
 					name = "${workerName}"
 					main = "index.py"
 					compatibility_date = "2023-01-01"
 					compatibility_flags = ["python_workers"]
 			`,
-			"arithmetic.py": dedent`
+				"arithmetic.py": dedent`
 					def mul(a,b):
 						return a*b`,
-			"index.py": dedent`
+				"index.py": dedent`
 					from arithmetic import mul
 
 					from js import Response
 					def on_fetch(request):
 						return Response.new(f"py hello world {mul(2,3)}")`,
-			"package.json": dedent`
+				"package.json": dedent`
 					{
 						"name": "worker",
 						"version": "0.0.0",
 						"private": true
 					}
 					`,
-		});
-		const worker = helper.runLongLived(cmd);
+			});
+			const worker = helper.runLongLived(cmd);
 
-		const { url } = await worker.waitForReady();
+			const { url } = await worker.waitForReady();
 
-		await expect(fetchText(url)).resolves.toBe("py hello world 6");
+			await expect(fetchText(url)).resolves.toBe("py hello world 6");
 
-		await helper.seed({
-			"arithmetic.py": dedent`
+			await helper.seed({
+				"arithmetic.py": dedent`
 					def mul(a,b):
 						return a+b`,
+			});
+
+			await worker.waitForReload();
+
+			// TODO(soon): work out why python workers need this retry before returning new content
+			const { text } = await retry(
+				(s) => s.status !== 200 || s.text === "py hello world 6",
+				async () => {
+					const r = await fetch(url);
+					return { text: await r.text(), status: r.status };
+				}
+			);
+
+			expect(text).toBe("py hello world 5");
 		});
-
-		await worker.waitForReload();
-
-		// TODO(soon): work out why python workers need this retry before returning new content
-		const { text } = await retry(
-			(s) => s.status !== 200 || s.text === "py hello world 6",
-			async () => {
-				const r = await fetch(url);
-				return { text: await r.text(), status: r.status };
-			}
-		);
-
-		expect(text).toBe("py hello world 5");
-	});
-});
+	}
+);
 
 describe("hyperdrive dev tests", () => {
 	let server: nodeNet.Server;
@@ -533,17 +532,14 @@ describe("writes debug logs to hidden file", () => {
 });
 
 describe("analytics engine", () => {
-	describe.each([
-		{ cmd: "wrangler dev" },
-		{ cmd: "wrangler dev --x-dev-env" },
-		{ cmd: "wrangler dev --remote" },
-		{ cmd: "wrangler dev --remote --x-dev-env" },
-	])("mock analytics engine datasets: $cmd", ({ cmd }) => {
-		describe("module worker", () => {
-			it("analytics engine datasets are mocked in dev", async () => {
-				const helper = new WranglerE2ETestHelper();
-				await helper.seed({
-					"wrangler.toml": dedent`
+	describe.each([{ cmd: "wrangler dev" }, { cmd: "wrangler dev --remote" }])(
+		"mock analytics engine datasets: $cmd",
+		({ cmd }) => {
+			describe("module worker", () => {
+				it("analytics engine datasets are mocked in dev", async () => {
+					const helper = new WranglerE2ETestHelper();
+					await helper.seed({
+						"wrangler.toml": dedent`
 				name = "${workerName}"
 				main = "src/index.ts"
 				compatibility_date = "2024-08-08"
@@ -552,7 +548,7 @@ describe("analytics engine", () => {
 				binding = "ANALYTICS_BINDING"
 				dataset = "ANALYTICS_DATASET"
 			`,
-					"src/index.ts": dedent`
+						"src/index.ts": dedent`
 				export default {
 					fetch(request, env) {
 						// let's make an analytics call
@@ -565,30 +561,30 @@ describe("analytics engine", () => {
 						return new Response("successfully wrote datapoint from module worker");
 					}
 				}`,
-					"package.json": dedent`
+						"package.json": dedent`
 				{
 					"name": "worker",
 					"version": "0.0.0",
 					"private": true
 				}
 				`,
+					});
+					const worker = helper.runLongLived(cmd);
+
+					const { url } = await worker.waitForReady();
+
+					const text = await fetchText(url);
+					expect(text).toContain(
+						`successfully wrote datapoint from module worker`
+					);
 				});
-				const worker = helper.runLongLived(cmd);
-
-				const { url } = await worker.waitForReady();
-
-				const text = await fetchText(url);
-				expect(text).toContain(
-					`successfully wrote datapoint from module worker`
-				);
 			});
-		});
 
-		describe("service worker", async () => {
-			it("analytics engine datasets are mocked in dev", async () => {
-				const helper = new WranglerE2ETestHelper();
-				await helper.seed({
-					"wrangler.toml": dedent`
+			describe("service worker", async () => {
+				it("analytics engine datasets are mocked in dev", async () => {
+					const helper = new WranglerE2ETestHelper();
+					await helper.seed({
+						"wrangler.toml": dedent`
 				name = "${workerName}"
 				main = "src/index.ts"
 				compatibility_date = "2024-08-08"
@@ -597,7 +593,7 @@ describe("analytics engine", () => {
 				binding = "ANALYTICS_BINDING"
 				dataset = "ANALYTICS_DATASET"
 			`,
-					"src/index.ts": dedent`
+						"src/index.ts": dedent`
 							addEventListener("fetch", (event) => {
 								// let's make an analytics call
 								ANALYTICS_BINDING.writeDataPoint({
@@ -609,25 +605,26 @@ describe("analytics engine", () => {
 								event.respondWith(new Response("successfully wrote datapoint from service worker"));
 							});
 				`,
-					"package.json": dedent`
+						"package.json": dedent`
 				{
 					"name": "worker",
 					"version": "0.0.0",
 					"private": true
 				}
 				`,
+					});
+					const worker = helper.runLongLived(cmd);
+
+					const { url } = await worker.waitForReady();
+
+					const text = await fetchText(url);
+					expect(text).toContain(
+						`successfully wrote datapoint from service worker`
+					);
 				});
-				const worker = helper.runLongLived(cmd);
-
-				const { url } = await worker.waitForReady();
-
-				const text = await fetchText(url);
-				expect(text).toContain(
-					`successfully wrote datapoint from service worker`
-				);
 			});
-		});
-	});
+		}
+	);
 });
 
 describe("zone selection", () => {
@@ -1432,200 +1429,200 @@ describe("watch mode", () => {
 		});
 	});
 
-	describe.each([
-		{ cmd: "wrangler dev --assets=dist" },
-		{ cmd: "wrangler dev --x-dev-env --assets=dist" },
-	])("Workers + Assets watch mode: $cmd", ({ cmd }) => {
-		it(`supports modifying assets during dev session and errors when invalid routes are added`, async () => {
-			const helper = new WranglerE2ETestHelper();
-			await helper.seed({
-				"wrangler.toml": dedent`
+	describe.each([{ cmd: "wrangler dev --assets=dist" }])(
+		"Workers + Assets watch mode: $cmd",
+		({ cmd }) => {
+			it(`supports modifying assets during dev session and errors when invalid routes are added`, async () => {
+				const helper = new WranglerE2ETestHelper();
+				await helper.seed({
+					"wrangler.toml": dedent`
 								name = "${workerName}"
 								compatibility_date = "2023-01-01"
 						`,
-				"dist/index.html": dedent`
+					"dist/index.html": dedent`
 								<h1>Hello Workers + Assets</h1>`,
-				"dist/about.html": dedent`
+					"dist/about.html": dedent`
 								<h1>Read more about Workers + Assets</h1>`,
-			});
+				});
 
-			const worker = helper.runLongLived(cmd);
-			const { url } = await worker.waitForReady();
+				const worker = helper.runLongLived(cmd);
+				const { url } = await worker.waitForReady();
 
-			let { response, cachedETags } = await fetchWithETag(
-				`${url}/index.html`,
-				{}
-			);
-			const originalETag = response.headers.get("etag");
-			expect(await response.text()).toBe("<h1>Hello Workers + Assets</h1>");
+				let { response, cachedETags } = await fetchWithETag(
+					`${url}/index.html`,
+					{}
+				);
+				const originalETag = response.headers.get("etag");
+				expect(await response.text()).toBe("<h1>Hello Workers + Assets</h1>");
 
-			({ response, cachedETags } = await fetchWithETag(
-				`${url}/about.html`,
-				cachedETags
-			));
-			expect(await response.text()).toBe(
-				"<h1>Read more about Workers + Assets</h1>"
-			);
+				({ response, cachedETags } = await fetchWithETag(
+					`${url}/about.html`,
+					cachedETags
+				));
+				expect(await response.text()).toBe(
+					"<h1>Read more about Workers + Assets</h1>"
+				);
 
-			// change + add
-			await helper.seed({
-				"dist/index.html": dedent`
+				// change + add
+				await helper.seed({
+					"dist/index.html": dedent`
 							<h1>Hello Updated Workers + Assets</h1>`,
-				"dist/hello.html": dedent`
+					"dist/hello.html": dedent`
 							<h1>Hya Workers!</h1>`,
-			});
+				});
 
-			await worker.waitForReload();
+				await worker.waitForReload();
 
-			// re-calculating the asset manifest / reverse assets map might not be
-			// done at this point, so retry until they are available
-			({ response, cachedETags } = await retry(
-				(s) => s.response.status !== 200,
-				async () => {
-					return await fetchWithETag(`${url}/hello.html`, cachedETags);
-				}
-			));
-			expect(await response.text()).toBe("<h1>Hya Workers!</h1>");
+				// re-calculating the asset manifest / reverse assets map might not be
+				// done at this point, so retry until they are available
+				({ response, cachedETags } = await retry(
+					(s) => s.response.status !== 200,
+					async () => {
+						return await fetchWithETag(`${url}/hello.html`, cachedETags);
+					}
+				));
+				expect(await response.text()).toBe("<h1>Hya Workers!</h1>");
 
-			({ response, cachedETags } = await fetchWithETag(
-				`${url}/index.html`,
-				cachedETags
-			));
-			expect(await response.text()).toBe(
-				"<h1>Hello Updated Workers + Assets</h1>"
-			);
-			expect(response.headers.get("etag")).not.toBe(originalETag);
+				({ response, cachedETags } = await fetchWithETag(
+					`${url}/index.html`,
+					cachedETags
+				));
+				expect(await response.text()).toBe(
+					"<h1>Hello Updated Workers + Assets</h1>"
+				);
+				expect(response.headers.get("etag")).not.toBe(originalETag);
 
-			// unchanged -> expect 304
-			({ response, cachedETags } = await fetchWithETag(
-				`${url}/about.html`,
-				cachedETags
-			));
-			expect(response.status).toBe(304);
+				// unchanged -> expect 304
+				({ response, cachedETags } = await fetchWithETag(
+					`${url}/about.html`,
+					cachedETags
+				));
+				expect(response.status).toBe(304);
 
-			// remove
-			await helper.removeFiles(["dist/about.html"]);
+				// remove
+				await helper.removeFiles(["dist/about.html"]);
 
-			await worker.waitForReload();
+				await worker.waitForReload();
 
-			// re-calculating the asset manifest / reverse assets map might not be
-			// done at this point, so retry until they are available
-			({ response, cachedETags } = await retry(
-				(s) => s.response.status !== 404,
-				async () => {
-					return await fetchWithETag(`${url}/about.html`, cachedETags);
-				}
-			));
-			expect(response.status).toBe(404);
+				// re-calculating the asset manifest / reverse assets map might not be
+				// done at this point, so retry until they are available
+				({ response, cachedETags } = await retry(
+					(s) => s.response.status !== 404,
+					async () => {
+						return await fetchWithETag(`${url}/about.html`, cachedETags);
+					}
+				));
+				expect(response.status).toBe(404);
 
-			// changes to routes should error while in watch mode
-			await helper.seed({
-				"wrangler.toml": dedent`
+				// changes to routes should error while in watch mode
+				await helper.seed({
+					"wrangler.toml": dedent`
 								name = "${workerName}"
 								compatibility_date = "2023-01-01"
 								route = "example.com/path/*"
 						`,
+				});
+				await worker.readUntil(/Invalid Routes:/);
 			});
-			await worker.readUntil(/Invalid Routes:/);
-		});
 
-		it(`supports switching from assets-only Workers to Workers with assets during the current dev session`, async () => {
-			const helper = new WranglerE2ETestHelper();
-			await helper.seed({
-				"wrangler.toml": dedent`
+			it(`supports switching from assets-only Workers to Workers with assets during the current dev session`, async () => {
+				const helper = new WranglerE2ETestHelper();
+				await helper.seed({
+					"wrangler.toml": dedent`
 							name = "${workerName}"
 							compatibility_date = "2023-01-01"
 					`,
-				"dist/index.html": dedent`
+					"dist/index.html": dedent`
 					<h1>Hello Workers + Assets</h1>`,
-				"src/index.ts": dedent`
+					"src/index.ts": dedent`
 					export default {
 						fetch(request) {
 							return new Response("Hello from user Worker!")
 						}
 					}`,
-			});
-			const worker = helper.runLongLived(cmd);
-			const { url } = await worker.waitForReady();
+				});
+				const worker = helper.runLongLived(cmd);
+				const { url } = await worker.waitForReady();
 
-			// verify response from Asset Worker
-			let response = await fetch(`${url}/index.html`);
-			expect(response.status).toBe(200);
-			expect(await response.text()).toBe("<h1>Hello Workers + Assets</h1>");
+				// verify response from Asset Worker
+				let response = await fetch(`${url}/index.html`);
+				expect(response.status).toBe(200);
+				expect(await response.text()).toBe("<h1>Hello Workers + Assets</h1>");
 
-			// verify no response from route that will be handled by the
-			// User Worker in the future
-			response = await fetch(`${url}/hey`);
-			expect(response.status).toBe(404);
+				// verify no response from route that will be handled by the
+				// User Worker in the future
+				response = await fetch(`${url}/hey`);
+				expect(response.status).toBe(404);
 
-			await helper.seed({
-				"wrangler.toml": dedent`
+				await helper.seed({
+					"wrangler.toml": dedent`
 						name = "${workerName}"
 						main = "src/index.ts"
 						compatibility_date = "2023-01-01"
 				`,
+				});
+
+				await worker.waitForReload();
+
+				// verify response from Asset Worker
+				response = await fetch(`${url}/index.html`);
+				expect(response.status).toBe(200);
+				expect(await response.text()).toBe("<h1>Hello Workers + Assets</h1>");
+
+				// verify response from User Worker
+				response = await fetch(`${url}/hey`);
+				expect(response.status).toBe(200);
+				expect(await response.text()).toBe("Hello from user Worker!");
 			});
 
-			await worker.waitForReload();
-
-			// verify response from Asset Worker
-			response = await fetch(`${url}/index.html`);
-			expect(response.status).toBe(200);
-			expect(await response.text()).toBe("<h1>Hello Workers + Assets</h1>");
-
-			// verify response from User Worker
-			response = await fetch(`${url}/hey`);
-			expect(response.status).toBe(200);
-			expect(await response.text()).toBe("Hello from user Worker!");
-		});
-
-		it(`supports switching from Workers with assets to assets-only Workers during the current dev session`, async () => {
-			const helper = new WranglerE2ETestHelper();
-			await helper.seed({
-				"wrangler.toml": dedent`
+			it(`supports switching from Workers with assets to assets-only Workers during the current dev session`, async () => {
+				const helper = new WranglerE2ETestHelper();
+				await helper.seed({
+					"wrangler.toml": dedent`
 							name = "${workerName}"
 							main = "src/index.ts"
 							compatibility_date = "2023-01-01"
 					`,
-				"dist/index.html": dedent`
+					"dist/index.html": dedent`
 					<h1>Hello Workers + Assets</h1>`,
-				"src/index.ts": dedent`
+					"src/index.ts": dedent`
 					export default {
 						fetch(request) {
 							return new Response("Hello from user Worker!")
 						}
 					}`,
-			});
-			const worker = helper.runLongLived(cmd);
-			const { url } = await worker.waitForReady();
+				});
+				const worker = helper.runLongLived(cmd);
+				const { url } = await worker.waitForReady();
 
-			// verify response from Asset Worker
-			let response = await fetch(`${url}/index.html`);
-			expect(response.status).toBe(200);
-			expect(await response.text()).toBe("<h1>Hello Workers + Assets</h1>");
+				// verify response from Asset Worker
+				let response = await fetch(`${url}/index.html`);
+				expect(response.status).toBe(200);
+				expect(await response.text()).toBe("<h1>Hello Workers + Assets</h1>");
 
-			// verify response from User Worker
-			response = await fetch(`${url}/hey`);
-			expect(response.status).toBe(200);
-			expect(await response.text()).toBe("Hello from user Worker!");
+				// verify response from User Worker
+				response = await fetch(`${url}/hey`);
+				expect(response.status).toBe(200);
+				expect(await response.text()).toBe("Hello from user Worker!");
 
-			await helper.seed({
-				"wrangler.toml": dedent`
+				await helper.seed({
+					"wrangler.toml": dedent`
 						name = "${workerName}"
 						compatibility_date = "2023-01-01"
 				`,
+				});
+
+				await worker.waitForReload();
+
+				response = await fetch(`${url}/index.html`);
+				// verify response from Asset
+				expect(response.status).toBe(200);
+				expect(await response.text()).toBe("<h1>Hello Workers + Assets</h1>");
+
+				// verify no response from User Worker
+				response = await fetch(`${url}/hey`);
+				expect(response.status).toBe(404);
 			});
-
-			await worker.waitForReload();
-
-			response = await fetch(`${url}/index.html`);
-			// verify response from Asset
-			expect(response.status).toBe(200);
-			expect(await response.text()).toBe("<h1>Hello Workers + Assets</h1>");
-
-			// verify no response from User Worker
-			response = await fetch(`${url}/hey`);
-			expect(response.status).toBe(404);
-		});
-	});
+		}
+	);
 });

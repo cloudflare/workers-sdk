@@ -7,10 +7,7 @@ import { WranglerE2ETestHelper } from "./helpers/e2e-wrangler-test";
 import { fetchText } from "./helpers/fetch-text";
 import { normalizeOutput } from "./helpers/normalize";
 
-describe.each([
-	{ cmd: "wrangler pages dev --no-x-dev-env" },
-	{ cmd: "wrangler pages dev --x-dev-env" },
-])("Pages $cmd", ({ cmd }) => {
+describe.each([{ cmd: "wrangler pages dev" }])("Pages $cmd", ({ cmd }) => {
 	it("should warn if no [--compatibility_date] command line arg was specified", async () => {
 		const helper = new WranglerE2ETestHelper();
 		await helper.seed({
