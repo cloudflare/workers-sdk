@@ -214,7 +214,7 @@ Options for an individual Worker/"nanoservice". All bindings are accessible on
 the global scope in service-worker format Workers, or via the 2nd `env`
 parameter in module format Workers.
 
-### `interface WorkflowsOptions`
+### `interface WorkflowOptions`
 
 - `name: string`
 
@@ -601,7 +601,7 @@ parameter in module format Workers.
 
 #### Workflows
 
-- `workflows?: WorkflowsOptions[]`
+- `workflows?: WorkflowOptions[]`
   Configuration for one or more Workflows in your project.
 
 #### Analytics Engine, Sending Email, Vectorize and Workers for Platforms
