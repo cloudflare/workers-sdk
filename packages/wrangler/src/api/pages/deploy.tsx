@@ -6,6 +6,7 @@ import { cwd } from "node:process";
 import { File, FormData } from "undici";
 import { fetchResult } from "../../cfetch";
 import { readConfig } from "../../config";
+import { shouldCheckFetch } from "../../deployment-bundle/bundle";
 import { validateNodeCompatMode } from "../../deployment-bundle/node-compat";
 import { FatalError } from "../../errors";
 import { logger } from "../../logger";
@@ -186,6 +187,10 @@ export async function deploy({
 		config?.compatibility_date ?? deploymentConfig.compatibility_date,
 		config?.compatibility_flags ?? deploymentConfig.compatibility_flags
 	);
+	const checkFetch = shouldCheckFetch(
+		config?.compatibility_date ?? deploymentConfig.compatibility_date,
+		config?.compatibility_flags ?? deploymentConfig.compatibility_flags
+	);
 
 	/**
 	 * Evaluate if this is an Advanced Mode or Pages Functions project. If Advanced Mode, we'll
@@ -221,6 +226,7 @@ export async function deploy({
 				local: false,
 				nodejsCompatMode,
 				defineNavigatorUserAgent,
+				checkFetch,
 			});
 
 			builtFunctions = readFileSync(
@@ -319,6 +325,7 @@ export async function deploy({
 			buildOutputDirectory: directory,
 			nodejsCompatMode,
 			defineNavigatorUserAgent,
+			checkFetch,
 			sourceMaps: sourceMaps,
 		});
 	} else if (_workerJS) {
@@ -337,6 +344,7 @@ export async function deploy({
 				onEnd: () => {},
 				nodejsCompatMode,
 				defineNavigatorUserAgent,
+				checkFetch,
 			});
 		} else {
 			await checkRawWorker(_workerPath, nodejsCompatMode, () => {});

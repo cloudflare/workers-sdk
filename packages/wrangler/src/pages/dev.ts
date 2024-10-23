@@ -6,6 +6,7 @@ import * as esbuild from "esbuild";
 import { unstable_dev } from "../api";
 import { readConfig } from "../config";
 import { isBuildFailure } from "../deployment-bundle/build-failures";
+import { shouldCheckFetch } from "../deployment-bundle/bundle";
 import { esbuildAliasExternalPlugin } from "../deployment-bundle/esbuild-plugins/alias-external";
 import { validateNodeCompatMode } from "../deployment-bundle/node-compat";
 import { FatalError } from "../errors";
@@ -373,6 +374,9 @@ export const Handler = async (args: PagesDevArguments) => {
 		compatibilityDate,
 		compatibilityFlags
 	);
+
+	const checkFetch = shouldCheckFetch(compatibilityDate, compatibilityFlags);
+
 	let modules: CfModule[] = [];
 
 	if (usingWorkerDirectory) {
@@ -383,6 +387,7 @@ export const Handler = async (args: PagesDevArguments) => {
 				buildOutputDirectory: directory ?? ".",
 				nodejsCompatMode,
 				defineNavigatorUserAgent,
+				checkFetch,
 				sourceMaps: config?.upload_source_maps ?? false,
 			});
 			modules = bundleResult.modules;
@@ -451,6 +456,7 @@ export const Handler = async (args: PagesDevArguments) => {
 					watch: false,
 					onEnd: () => scriptReadyResolve(),
 					defineNavigatorUserAgent,
+					checkFetch,
 				});
 
 				/*
@@ -621,6 +627,7 @@ export const Handler = async (args: PagesDevArguments) => {
 				local: true,
 				routesModule,
 				defineNavigatorUserAgent,
+				checkFetch,
 			});
 
 			/*

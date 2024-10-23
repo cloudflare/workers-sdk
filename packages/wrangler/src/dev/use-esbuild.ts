@@ -60,6 +60,7 @@ export type EsbuildBundleProps = {
 	onStart: () => void;
 	onComplete: (bundle: EsbuildBundle) => void;
 	defineNavigatorUserAgent: boolean;
+	checkFetch: boolean;
 };
 
 export function runBuild(
@@ -89,6 +90,7 @@ export function runBuild(
 		projectRoot,
 		onStart,
 		defineNavigatorUserAgent,
+		checkFetch,
 	}: {
 		entry: Entry;
 		destination: string | undefined;
@@ -115,6 +117,7 @@ export function runBuild(
 		projectRoot: string | undefined;
 		onStart: () => void;
 		defineNavigatorUserAgent: boolean;
+		checkFetch: boolean;
 	},
 	setBundle: (
 		cb: (previous: EsbuildBundle | undefined) => EsbuildBundle
@@ -189,7 +192,6 @@ export function runBuild(
 						workflowBindings: workflows,
 						alias,
 						define,
-						checkFetch: true,
 						mockAnalyticsEngineDatasets,
 						legacyAssets,
 						// disable the cache in dev
@@ -200,6 +202,7 @@ export function runBuild(
 						local,
 						projectRoot,
 						defineNavigatorUserAgent,
+						checkFetch,
 					})
 				: undefined;
 
@@ -282,6 +285,7 @@ export function useEsbuild({
 	onStart,
 	onComplete,
 	defineNavigatorUserAgent,
+	checkFetch,
 }: EsbuildBundleProps): EsbuildBundle | undefined {
 	const [bundle, setBundle] = useState<EsbuildBundle>();
 	const { exit } = useApp();
@@ -313,6 +317,7 @@ export function useEsbuild({
 				projectRoot,
 				onStart,
 				defineNavigatorUserAgent,
+				checkFetch,
 			},
 			setBundle,
 			(err) => exit(err)
@@ -348,6 +353,7 @@ export function useEsbuild({
 		projectRoot,
 		onStart,
 		defineNavigatorUserAgent,
+		checkFetch,
 	]);
 
 	useEffect(() => {

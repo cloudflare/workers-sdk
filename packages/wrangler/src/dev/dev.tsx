@@ -14,6 +14,7 @@ import {
 	createDeferred,
 	fakeResolvedInput,
 } from "../api/startDevWorker/utils";
+import { shouldCheckFetch } from "../deployment-bundle/bundle";
 import { runCustomBuild } from "../deployment-bundle/run-custom-build";
 import {
 	getBoundRegisteredWorkers,
@@ -552,6 +553,10 @@ function DevSession(props: DevSessionProps) {
 		onStart: onEsbuildStart,
 		onComplete: onBundleComplete,
 		defineNavigatorUserAgent: isNavigatorDefined(
+			props.compatibilityDate,
+			props.compatibilityFlags
+		),
+		checkFetch: shouldCheckFetch(
 			props.compatibilityDate,
 			props.compatibilityFlags
 		),

@@ -3,7 +3,7 @@ import { readFileSync, realpathSync, writeFileSync } from "fs";
 import path from "path";
 import { watch } from "chokidar";
 import { noBundleWorker } from "../../deploy/deploy";
-import { bundleWorker } from "../../deployment-bundle/bundle";
+import { bundleWorker, shouldCheckFetch } from "../../deployment-bundle/bundle";
 import { getBundleType } from "../../deployment-bundle/bundle-type";
 import {
 	createModuleCollector,
@@ -116,7 +116,10 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 						minify: config.build.minify,
 						nodejsCompatMode: config.build.nodejsCompatMode,
 						define: config.build.define,
-						checkFetch: true,
+						checkFetch: shouldCheckFetch(
+							config.compatibilityDate,
+							config.compatibilityFlags
+						),
 						mockAnalyticsEngineDatasets:
 							bindings.analytics_engine_datasets ?? [],
 						alias: config.build.alias,
@@ -249,6 +252,10 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 				onStart: () => {
 					this.emitBundleStartEvent(config);
 				},
+				checkFetch: shouldCheckFetch(
+					config.compatibilityDate,
+					config.compatibilityFlags
+				),
 				defineNavigatorUserAgent: isNavigatorDefined(
 					config.compatibilityDate,
 					config.compatibilityFlags

@@ -39,6 +39,7 @@ export async function buildFunctions({
 		`./functionsRoutes-${Math.random()}.mjs`
 	),
 	defineNavigatorUserAgent,
+	checkFetch,
 	external,
 }: Partial<
 	Pick<
@@ -64,6 +65,7 @@ export async function buildFunctions({
 	// temporary directory each time
 	routesModule?: string;
 	defineNavigatorUserAgent: boolean;
+	checkFetch: boolean;
 }) {
 	RUNNING_BUILDERS.forEach(
 		(runningBuilder) => runningBuilder.stop && runningBuilder.stop()
@@ -121,6 +123,7 @@ export async function buildFunctions({
 			functionsDirectory: absoluteFunctionsDirectory,
 			local,
 			defineNavigatorUserAgent,
+			checkFetch,
 			external,
 		});
 	} else {
@@ -138,6 +141,7 @@ export async function buildFunctions({
 			buildOutputDirectory,
 			nodejsCompatMode,
 			defineNavigatorUserAgent,
+			checkFetch,
 			external,
 		});
 	}
