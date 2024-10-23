@@ -132,14 +132,19 @@ export async function versionsDeployHandler(args: VersionsDeployArgs) {
 
 	await printLatestDeployment(accountId, workerName, versionCache);
 
+	// Get a list of version ids that have been specified in the args, either with `--version-id` or with `<version-id>@<percentage>`
+	const argsVersions = getSpecifiedVersions(args);
+
 	// prompt to confirm or change the versionIds from the args
-	const confirmedVersionsToDeploy = await promptVersionsToDeploy(
-		accountId,
-		workerName,
-		[...optionalVersionTraffic.keys()],
-		versionCache,
-		args.yes
-	);
+	const confirmedVersionsToDeploy = argsVersions.length
+		? argsVersions
+		: await promptVersionsToDeploy(
+				accountId,
+				workerName,
+				[...optionalVersionTraffic.keys()],
+				versionCache,
+				args.yes
+			);
 
 	// validate we have at least 1 version
 	if (confirmedVersionsToDeploy.length === 0) {
@@ -737,4 +742,25 @@ export function validateTrafficSubtotal(
 			`Sum of specified percentages (${subtotal}%) must be at least ${min}%`
 		);
 	}
+}
+
+function getSpecifiedVersions(args: VersionsDeployArgs): string[] {
+	const versions: Set<string> = new Set();
+
+	// Add versions specified with --version-id
+	if (args.versionId && Array.isArray(args.versionId)) {
+		args.versionId.forEach((version) => versions.add(version));
+	}
+
+	// Add versions specified in shorthand notation
+	if (args.versionSpecs && Array.isArray(args.versionSpecs)) {
+		args.versionSpecs.forEach((spec) => {
+			const [versionId] = spec.split("@");
+			if (versionId) {
+				versions.add(versionId);
+			}
+		});
+	}
+
+	return Array.from(versions);
 }
