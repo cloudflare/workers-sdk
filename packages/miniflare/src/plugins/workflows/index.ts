@@ -67,6 +67,7 @@ export const WORKFLOWS_PLUGIN: Plugin<
 			disk: { path: persistPath, writable: true },
 		};
 
+		// this creates one miniflare service per workflow that the user's script has. we should dedupe engine definition later
 		const services = Object.entries(options.workflows ?? {}).map<Service>(
 			([bindingName, workflow]) => {
 				const uniqueKey = `miniflare-workflows`;
@@ -89,6 +90,7 @@ export const WORKFLOWS_PLUGIN: Plugin<
 								preventEviction: true,
 							},
 						],
+						// this might conflict between workflows
 						durableObjectStorage: { localDisk: WORKFLOWS_STORAGE_SERVICE_NAME },
 						bindings: [
 							{
