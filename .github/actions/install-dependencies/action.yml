@@ -39,4 +39,6 @@ runs:
 
     - name: Install NPM Dependencies
       shell: bash
-      run: pnpm install --frozen-lockfile
+      run: |
+        pnpm store prune
+        pnpm install --frozen-lockfile
