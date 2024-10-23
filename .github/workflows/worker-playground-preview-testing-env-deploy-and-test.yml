@@ -24,7 +24,7 @@ jobs:
   e2e-test:
     if: github.repository_owner == 'cloudflare' && (github.event_name != 'pull_request' || contains(github.event.*.labels.*.name, 'playground-worker'))
     name: "Deploy Playground Preview Worker (testing)"
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     steps:
       - name: Checkout repo

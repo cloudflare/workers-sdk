@@ -11,7 +11,7 @@ jobs:
       cancel-in-progress: true
     timeout-minutes: 30
     name: Add PR to project
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - run: curl -X POST https://devprod-status-bot.devprod.workers.dev/pr-project/workers-sdk/${{ github.event.number }}
 
@@ -62,7 +62,7 @@ jobs:
       cancel-in-progress: true
 
     name: "Checks"
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v4
@@ -100,11 +100,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-13]
+        os: [ubuntu-22.04, windows-latest, macos-13]
         filter: ["./packages/*", "./fixtures/*"]
         # Things in the tools folder are for running in CI, and so only need to run on linux
         include:
-          - os: ubuntu-latest
+          - os: ubuntu-22.04
             filter: "./tools"
     runs-on: ${{ matrix.os }}
     steps:
