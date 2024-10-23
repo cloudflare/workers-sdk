@@ -1,4 +1,4 @@
-import { writeFile } from "node:fs/promises";
+import fs from "node:fs/promises";
 import path from "node:path";
 import * as esbuild from "esbuild";
 import { EXTERNAL_DEPENDENCIES } from "./deps";
@@ -34,7 +34,6 @@ async function buildMain(flags: BuildFlags = {}) {
 		entryPoints: ["./src/cli.ts"],
 		bundle: true,
 		outdir,
-		metafile: true,
 		platform: "node",
 		format: "cjs",
 		external: EXTERNAL_DEPENDENCIES,
@@ -66,9 +65,20 @@ async function buildMain(flags: BuildFlags = {}) {
 		const ctx = await esbuild.context(options);
 		await ctx.watch();
 	} else {
-		const b = await esbuild.build(options);
-		await writeFile("metafile.json", JSON.stringify(b.metafile));
+		await esbuild.build(options);
 	}
+
+	// Copy `yoga-layout` `.wasm` file
+	const yogaLayoutEntrypoint = require.resolve("yoga-layout");
+	const wasmSrc = path.resolve(
+		yogaLayoutEntrypoint,
+		"..",
+		"..",
+		"build",
+		"wasm-sync.wasm"
+	);
+	const wasmDst = path.resolve(outdir, "wasm-sync.wasm");
+	await fs.copyFile(wasmSrc, wasmDst);
 }
 
 const workersContexts = new Map<string, BuildContext>();
