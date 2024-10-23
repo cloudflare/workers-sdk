@@ -31,7 +31,7 @@ export const updateWranglerToml = async (ctx: C3Context) => {
 		}
 	} else {
 		newToml.prepend(
-			`compatibility_date = "${await getWorkerdCompatibilityDate()}"`,
+			`compatibility_date = "${await getWorkerdCompatibilityDate()}"\n`
 		);
 	}
 
@@ -39,7 +39,7 @@ export const updateWranglerToml = async (ctx: C3Context) => {
 	if (wranglerToml.match(nameRe)) {
 		newToml.replace(nameRe, `name = "${ctx.project.name}"`);
 	} else {
-		newToml.prepend(`name = "${ctx.project.name}"`);
+		newToml.prepend(`name = "${ctx.project.name}"\n`);
 	}
 
 	writeWranglerToml(ctx, newToml.toString());
