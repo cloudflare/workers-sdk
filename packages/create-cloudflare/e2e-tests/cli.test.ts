@@ -157,13 +157,7 @@ describe.skipIf(experimental || frameworkToTest || isQuarantineMode())(
 									/In which directory do you want to create your application/,
 								input: {
 									type: "text",
-									chunks: [
-										// To delete the existing project name
-										keys.backspace.repeat(existingProjectName.length),
-										// And then type the correct project name
-										projectName,
-										keys.enter,
-									],
+									chunks: [project.path, keys.enter],
 									assertErrorMessage: `ERROR  Directory \`${existingProjectPath}\` already exists and contains files that might conflict. Please choose a new name.`,
 								},
 							},
@@ -282,8 +276,9 @@ describe.skipIf(experimental || frameworkToTest || isQuarantineMode())(
 		test({ experimental }).skipIf(process.platform === "win32")(
 			"Going back and forth between the category, type, framework and lang prompts",
 			async ({ logStream, project }) => {
+				const testProjectPath = "/test-project-path";
 				const { output } = await runC3(
-					["/invalid-project-name", "--git=false", "--no-deploy"],
+					[testProjectPath, "--git=false", "--no-deploy"],
 					[
 						{
 							matcher: /What would you like to start with\?/,

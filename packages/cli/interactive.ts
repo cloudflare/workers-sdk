@@ -231,7 +231,7 @@ export const inputPrompt = async <T = string>(
 
 		prompt = new TextPrompt({
 			...promptConfig,
-			initialValue: promptConfig.initialValue ?? initialValue,
+			initialValue: promptConfig.initialValue,
 			defaultValue: String(promptConfig.defaultValue ?? ""),
 			render() {
 				return dispatchRender(this, prompt);
