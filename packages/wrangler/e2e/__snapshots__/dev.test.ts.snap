@@ -4,6 +4,10 @@ exports[`basic js dev: 'wrangler dev --remote' > can modify worker during wrangl
 
 exports[`basic js dev: 'wrangler dev --remote' > can modify worker during wrangler dev --remote 2`] = `"Updated Worker! value"`;
 
+exports[`basic js dev: 'wrangler dev --remote' > hotkeys can be disabled with wrangler dev --remote 1`] = `"Hello World!"`;
+
 exports[`basic js dev: 'wrangler dev' > can modify worker during wrangler dev 1`] = `"Hello World!"`;
 
 exports[`basic js dev: 'wrangler dev' > can modify worker during wrangler dev 2`] = `"Updated Worker! value"`;
+
+exports[`basic js dev: 'wrangler dev' > hotkeys can be disabled with wrangler dev 1`] = `"Hello World!"`;
