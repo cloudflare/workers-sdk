@@ -26,7 +26,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-latest, macos-13]
+        os: [windows-latest, macos-15]
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout Repo
@@ -100,7 +100,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-13]
+        os: [ubuntu-latest, windows-latest, macos-15]
         filter: ["./packages/*", "./fixtures/*"]
         # Things in the tools folder are for running in CI, and so only need to run on linux
         include:
