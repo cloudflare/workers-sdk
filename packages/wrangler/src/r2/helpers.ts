@@ -379,6 +379,7 @@ type NotificationRule = {
 	prefix?: string;
 	suffix?: string;
 	actions: R2EventableOperation[];
+	description?: string;
 };
 type GetNotificationRule = {
 	ruleId: string;
@@ -550,7 +551,8 @@ export async function putEventNotificationConfig(
 	queueName: string,
 	eventTypes: R2EventType[],
 	prefix?: string,
-	suffix?: string
+	suffix?: string,
+	description?: string
 ): Promise<void> {
 	const queue = await getQueue(config, queueName);
 	const headers = eventNotificationHeaders(apiCredentials, jurisdiction);
@@ -560,9 +562,14 @@ export async function putEventNotificationConfig(
 		actions = actions.concat(actionsForEventCategories[et]);
 	}
 
-	const body: PutNotificationRequestBody = {
-		rules: [{ prefix, suffix, actions }],
-	};
+	const body: PutNotificationRequestBody =
+		description === undefined
+			? {
+					rules: [{ prefix, suffix, actions }],
+				}
+			: {
+					rules: [{ prefix, suffix, actions, description }],
+				};
 	const ruleFor = eventTypes.map((et) =>
 		et === "object-create" ? "creation" : "deletion"
 	);
