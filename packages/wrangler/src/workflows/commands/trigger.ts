@@ -24,6 +24,12 @@ defineCommand({
 			type: "string",
 			default: "",
 		},
+		id: {
+			describe:
+				"Custom instance ID, if not provided it will default to a random UUIDv4",
+			type: "string",
+			default: undefined,
+		},
 	},
 	positionalArgs: ["name", "params"],
 
@@ -45,7 +51,11 @@ defineCommand({
 			`/accounts/${accountId}/workflows/${args.name}/instances`,
 			{
 				method: "POST",
-				body: args.params.length != 0 ? args.params : undefined,
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({
+					instance_id: args.id,
+					params: args.params.length != 0 ? args.params : undefined,
+				}),
 			}
 		);
 
