@@ -74,7 +74,7 @@ export const WORKFLOWS_PLUGIN: Plugin<
 				const workflowsBinding: Service = {
 					name: `workflows:${workflow.name}`,
 					worker: {
-						compatibilityDate: "2024-10-18",
+						compatibilityDate: "2024-10-22",
 						modules: [
 							{
 								name: "workflows.mjs",

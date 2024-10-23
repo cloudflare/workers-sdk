@@ -3,14 +3,7 @@
 	"extends": ["//"],
 	"pipeline": {
 		"build": {
-			"inputs": [
-				"asset-worker/**",
-				"router-worker/**",
-				"utils/**",
-				"*.js",
-				"*.ts",
-				"*.json"
-			],
+			"inputs": ["src/**", "*.js", "*.ts", "*.json"],
 			"outputs": ["dist/**"]
 		}
 	}

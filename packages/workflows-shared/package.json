@@ -1,11 +1,11 @@
 {
 	"name": "@cloudflare/workflows-shared",
 	"version": "0.5.4",
-	"description": "Package that is used at Cloudflare to power some internal features of Cloudflare Workers.",
+	"description": "Package that is used at Cloudflare to power some internal features of Cloudflare Workflows.",
 	"keywords": [
 		"cloudflare",
-		"workers",
-		"cloudflare workers"
+		"workflows",
+		"cloudflare workflows"
 	],
 	"homepage": "https://github.com/cloudflare/workers-sdk/tree/main/packages/workflows-shared#readme",
 	"bugs": {
@@ -40,7 +40,7 @@
 	"devDependencies": {
 		"@cloudflare/eslint-config-worker": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
-		"@cloudflare/workers-types": "^4.20241018.0",
+		"@cloudflare/workers-types": "^4.20241022.0",
 		"@types/mime": "^3.0.4",
 		"esbuild": "0.17.19",
 		"rimraf": "^6.0.1",
