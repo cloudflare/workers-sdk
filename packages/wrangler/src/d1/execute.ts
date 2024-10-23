@@ -3,12 +3,10 @@ import assert from "node:assert";
 import path from "node:path";
 import { spinnerWhile } from "@cloudflare/cli/interactive";
 import chalk from "chalk";
-import { Static, Text } from "ink";
-import Table from "ink-table";
 import md5File from "md5-file";
 import { Miniflare } from "miniflare";
 import { fetch } from "undici";
-import { printWranglerBanner } from "../";
+import { printWranglerBanner } from "..";
 import { fetchResult } from "../cfetch";
 import { readConfig } from "../config";
 import { getLocalPersistencePath } from "../dev/get-local-persistence-path";
@@ -18,7 +16,6 @@ import { logger } from "../logger";
 import { APIError, readFileSync } from "../parse";
 import { readableRelative } from "../paths";
 import { requireAuth } from "../user";
-import { renderToString } from "../utils/render";
 import * as options from "./options";
 import splitSqlQuery from "./splitter";
 import { getDatabaseByNameOrBinding, getDatabaseInfoFromConfig } from "./utils";
@@ -144,29 +141,25 @@ export const Handler = async (args: HandlerOptions): Promise<void> => {
 		}
 
 		if (isInteractive && !json) {
-			// Render table if single result
-			logger.log(
-				renderToString(
-					<Static items={response}>
-						{(result) => {
-							// batch results
-							if (!Array.isArray(result)) {
-								const { results, query } = result;
+			for (const result of response) {
+				if (!Array.isArray(result)) {
+					const { results, query } = result;
 
-								if (Array.isArray(results) && results.length > 0) {
-									const shortQuery = shorten(query, 48);
-									return (
-										<>
-											{shortQuery ? <Text dimColor>{shortQuery}</Text> : null}
-											<Table data={results}></Table>
-										</>
-									);
-								}
-							}
-						}}
-					</Static>
-				)
-			);
+					if (Array.isArray(results) && results.length > 0) {
+						const shortQuery = shorten(query, 48);
+						if (shortQuery) {
+							logger.log(chalk.dim(shortQuery));
+						}
+						logger.table(
+							results.map((r) =>
+								Object.fromEntries(
+									Object.entries(r).map(([k, v]) => [k, String(v)])
+								)
+							)
+						);
+					}
+				}
+			}
 		} else {
 			// set loggerLevel back to what it was before to actually output the JSON in stdout
 			logger.loggerLevel = existingLogLevel;

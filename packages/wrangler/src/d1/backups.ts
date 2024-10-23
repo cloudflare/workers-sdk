@@ -1,12 +1,10 @@
 import fs from "node:fs/promises";
 import * as path from "path";
-import Table from "ink-table";
 import { fetchResult } from "../cfetch";
 import { performApiFetch } from "../cfetch/internal";
 import { withConfig } from "../config";
 import { logger } from "../logger";
 import { requireAuth } from "../user";
-import { renderToString } from "../utils/render";
 import { formatBytes, formatTimeAgo } from "./formatTimeAgo";
 import { Name } from "./options";
 import { getDatabaseByNameOrBinding } from "./utils";
@@ -32,13 +30,13 @@ export const ListHandler = withConfig<ListHandlerOptions>(
 		);
 
 		const backups: Backup[] = await listBackups(accountId, db.uuid);
-		logger.log(
-			renderToString(
-				<Table
-					data={backups}
-					columns={["created_at", "id", "num_tables", "size"]}
-				></Table>
-			)
+		logger.table(
+			backups.map((b) => ({
+				created_at: b.created_at,
+				id: b.id,
+				num_tables: String(b.num_tables),
+				size: b.size ?? "",
+			}))
 		);
 	}
 );
@@ -95,13 +93,13 @@ export const CreateHandler = withConfig<CreateHandlerOptions>(
 		);
 
 		const backup: Backup = await createBackup(accountId, db.uuid);
-		logger.log(
-			renderToString(
-				<Table
-					data={[backup]}
-					columns={["created_at", "id", "num_tables", "size", "state"]}
-				></Table>
-			)
+		logger.table(
+			[backup].map((b) => ({
+				created_at: b.created_at,
+				id: b.id,
+				num_tables: String(b.num_tables),
+				size: b.size ?? "",
+			}))
 		);
 	}
 );
