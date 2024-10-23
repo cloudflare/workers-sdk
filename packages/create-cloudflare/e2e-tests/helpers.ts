@@ -54,6 +54,11 @@ export type PromptHandler = {
 	input:
 		| string[]
 		| {
+				type: "text";
+				chunks: string[];
+				assertErrorMessage?: string;
+		  }
+		| {
 				type: "select";
 				target: RegExp | string;
 				assertDefaultSelection?: string;
@@ -115,6 +120,22 @@ export const runC3 = async (
 		if (Array.isArray(currentDialog.input)) {
 			// keyboard input prompt handler
 			currentDialog.input.forEach((keystroke) => {
+				proc.stdin.write(keystroke);
+			});
+		} else if (currentDialog.input.type === "text") {
+			// text prompt handler
+			const { assertErrorMessage, chunks } = currentDialog.input;
+
+			if (
+				assertErrorMessage !== undefined &&
+				!text.includes(assertErrorMessage)
+			) {
+				throw new Error(
+					`The error message does not match; Expected "${assertErrorMessage}" but found "${text}".`,
+				);
+			}
+
+			chunks.forEach((keystroke) => {
 				proc.stdin.write(keystroke);
 			});
 		} else if (currentDialog.input.type === "select") {
