@@ -19,7 +19,7 @@ export class Demo extends WorkflowEntrypoint<{}, Params> {
 			};
 		});
 
-		await step.sleep("Wait", "5 seconds");
+		await step.sleep("Wait", "1 second");
 
 		const result2 = await step.do("Second step", async function () {
 			return {
