@@ -86,9 +86,7 @@ async function devRegistry(
 /**
  * Get the state of the service registry.
  */
-async function getRegisteredWorkers(): Promise<
-	WorkerRegistry | undefined
-> {
+async function getRegisteredWorkers(): Promise<WorkerRegistry | undefined> {
 	try {
 		const response = await fetch(`${DEV_REGISTRY_HOST}/workers`);
 		return (await response.json()) as WorkerRegistry;
@@ -106,10 +104,7 @@ async function getRegisteredWorkers(): Promise<
 /**
  * Register a worker in the registry.
  */
-async function registerWorker(
-	name: string,
-	definition: WorkerDefinition
-) {
+async function registerWorker(name: string, definition: WorkerDefinition) {
 	/**
 	 * Prevent the dev registry be closed.
 	 */
