@@ -39,3 +39,5 @@ templates/*/dist
 
 # This file intentionally has a syntax error
 fixtures/interactive-dev-tests/src/startup-error.ts
+
+packages/wrangler-devtools/devtools-frontend
