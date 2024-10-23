@@ -642,7 +642,7 @@ export function createCLIParser(argv: string[]) {
 				return;
 			}
 			await login({ browser: args.browser });
-			const config = readConfig(args.config, args);
+			const config = readConfig(args.config, args, undefined, true);
 			await metrics.sendMetricsEvent("login user", {
 				sendMetrics: config.send_metrics,
 			});
@@ -662,7 +662,7 @@ export function createCLIParser(argv: string[]) {
 		async (args) => {
 			await printWranglerBanner();
 			await logout();
-			const config = readConfig(undefined, args);
+			const config = readConfig(undefined, args, undefined, true);
 			await metrics.sendMetricsEvent("logout user", {
 				sendMetrics: config.send_metrics,
 			});
