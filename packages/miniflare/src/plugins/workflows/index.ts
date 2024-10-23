@@ -69,7 +69,7 @@ export const WORKFLOWS_PLUGIN: Plugin<
 
 		// this creates one miniflare service per workflow that the user's script has. we should dedupe engine definition later
 		const services = Object.entries(options.workflows ?? {}).map<Service>(
-			([bindingName, workflow]) => {
+			([_bindingName, workflow]) => {
 				const uniqueKey = `miniflare-workflows`;
 
 				const workflowsBinding: Service = {
