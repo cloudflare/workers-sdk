@@ -1,6 +1,5 @@
 import * as fs from "node:fs";
 import { basename, dirname, extname, join, relative, resolve } from "node:path";
-import * as esmLexer from "es-module-lexer";
 import { findUpSync } from "find-up";
 import { getNodeCompat } from "miniflare";
 import { findWranglerToml, readConfig } from "../config";
@@ -288,14 +287,9 @@ async function generateTypes(
 			? generateImportSpecifier(fullOutputPath, entrypoint.file)
 			: undefined;
 
-		await esmLexer.init;
-		const entrypointExports = entrypoint
-			? esmLexer.parse(fs.readFileSync(entrypoint.file, "utf-8"))[1]
-			: undefined;
-
 		for (const durableObject of configToDTS.durable_objects.bindings) {
-			const exportExists = entrypointExports?.some(
-				(e) => e.n === durableObject.class_name
+			const exportExists = entrypoint?.exports?.some(
+				(e) => e === durableObject.class_name
 			);
 
 			let typeName: string;

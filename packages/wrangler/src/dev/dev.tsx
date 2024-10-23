@@ -372,6 +372,7 @@ function DevSession(props: DevSessionProps) {
 				nodejsCompatMode: props.nodejsCompatMode ?? null,
 				format: props.entry.format,
 				moduleRoot: props.entry.moduleRoot,
+				exports: props.entry.exports,
 			},
 			dev: {
 				auth: async () => {

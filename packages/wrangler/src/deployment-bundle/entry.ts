@@ -31,6 +31,9 @@ export type Entry = {
 	 * A worker's name
 	 */
 	name?: string | undefined;
+
+	/** Export from a Worker's entrypoint */
+	exports: string[];
 };
 
 /**
@@ -78,7 +81,7 @@ export async function getEntry(
 	}
 	await runCustomBuild(paths.absolutePath, paths.relativePath, config.build);
 
-	const format = await guessWorkerFormat(
+	const { format, exports } = await guessWorkerFormat(
 		paths.absolutePath,
 		directory,
 		args.format ?? config.build?.upload?.format,
@@ -119,6 +122,7 @@ export async function getEntry(
 		moduleRoot:
 			args.moduleRoot ?? config.base_dir ?? path.dirname(paths.absolutePath),
 		name: config.name ?? "worker",
+		exports,
 	};
 }
 

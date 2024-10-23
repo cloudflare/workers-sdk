@@ -179,6 +179,7 @@ export type StartDevWorkerOptions = Omit<StartDevWorkerInput, "assets"> & {
 		moduleRules: Rule[];
 		define: Record<string, string>;
 		additionalModules: CfModule[];
+		exports: string[];
 
 		processEntrypoint: boolean;
 	};

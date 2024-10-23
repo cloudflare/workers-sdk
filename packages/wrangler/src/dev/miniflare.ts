@@ -1,7 +1,6 @@
 import assert from "node:assert";
 import { randomUUID } from "node:crypto";
 import path from "node:path";
-import * as esmLexer from "es-module-lexer";
 import {
 	CoreHeaders,
 	HttpOptions_Style,
@@ -258,14 +257,6 @@ export function buildLog(): Log {
 	return new WranglerLog(level, { prefix: "wrangler-UserWorker" });
 }
 
-async function getEntrypointNames(entrypointSource: string) {
-	await esmLexer.init;
-	const [_imports, exports] = esmLexer.parse(entrypointSource);
-	// TODO(soon): support `export * from "...";` with `--no-bundle`. Without
-	//  `--no-bundle`, `esbuild` will bundle these, so they'll be picked up here.
-	return exports.map(({ n }) => n);
-}
-
 async function buildSourceOptions(
 	config: Omit<ConfigBundle, "rules">
 ): Promise<{ sourceOptions: SourceOptions; entrypointNames: string[] }> {
@@ -284,9 +275,7 @@ async function buildSourceOptions(
 					config.bundle.modules
 				);
 
-		const entrypointNames = isPython
-			? []
-			: await getEntrypointNames(entrypointSource);
+		const entrypointNames = isPython ? [] : config.bundle.entry.exports;
 
 		const modulesRoot = path.dirname(scriptPath);
 		const sourceOptions: SourceOptions = {
