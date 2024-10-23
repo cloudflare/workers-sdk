@@ -6,7 +6,7 @@
 	"main": "index.js",
 	"dependencies": {
 		"@typescript-eslint/parser": "^6.9.0",
-		"eslint": "^8.49.0",
+		"eslint": "catalog:default",
 		"eslint-config-turbo": "latest",
 		"eslint-plugin-import": "2.26.x",
 		"eslint-plugin-no-only-tests": "^3.1.0",

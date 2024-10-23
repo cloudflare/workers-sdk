@@ -65,15 +65,15 @@
 		"@cloudflare/eslint-config-worker": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-types": "^4.20241022.0",
-		"@types/node": "20.8.3",
+		"@types/node": "catalog:default",
 		"@types/semver": "^7.5.1",
 		"@vitest/runner": "catalog:default",
 		"@vitest/snapshot": "catalog:default",
 		"capnp-ts": "^0.7.0",
 		"capnpc-ts": "^0.7.0",
 		"ts-dedent": "^2.2.0",
-		"typescript": "^5.5.2",
-		"undici": "^5.28.4",
+		"typescript": "catalog:default",
+		"undici": "catalog:default",
 		"vitest": "catalog:default"
 	},
 	"peerDependencies": {

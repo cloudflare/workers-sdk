@@ -408,7 +408,7 @@ export class ConfigController extends Controller<ConfigControllerEventMap> {
 			const fileConfig = readConfig(input.config, {
 				env: input.env,
 				"dispatch-namespace": undefined,
-				"legacy-env": !input.legacy?.enableServiceEnvironments ?? true,
+				"legacy-env": !input.legacy?.enableServiceEnvironments,
 				remote: input.dev?.remote,
 				upstreamProtocol:
 					input.dev?.origin?.secure === undefined

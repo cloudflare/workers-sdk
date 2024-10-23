@@ -13,13 +13,13 @@
 	"devDependencies": {
 		"@cloudflare/vitest-pool-workers": "workspace:*",
 		"@cloudflare/workers-types": "^4.20241022.0",
-		"@types/node": "20.8.3",
+		"@types/node": "catalog:default",
 		"ext-dep": "file:./internal-module-resolution/vendor/ext-dep",
 		"jose": "^5.2.2",
 		"miniflare": "workspace:*",
 		"run-script-os": "^1.1.6",
 		"toucan-js": "^3.3.1",
-		"typescript": "^5.5.2",
+		"typescript": "catalog:default",
 		"vitest": "catalog:default",
 		"wrangler": "workspace:*"
 	},

@@ -14,7 +14,7 @@
 		"hono": "^4.4.7"
 	},
 	"devDependencies": {
-		"@types/node": "20.8.3",
+		"@types/node": "catalog:default",
 		"@types/service-worker-mock": "^2.0.1",
 		"wrangler": "^3.60.3"
 	}

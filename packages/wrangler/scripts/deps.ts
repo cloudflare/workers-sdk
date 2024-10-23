@@ -9,7 +9,6 @@ export const EXTERNAL_DEPENDENCIES = [
 	"esbuild",
 	"blake3-wasm",
 	"miniflare",
-	// todo - bundle miniflare too
 	"selfsigned",
 	"source-map",
 	"@esbuild-plugins/node-globals-polyfill",
@@ -22,6 +21,8 @@ export const EXTERNAL_DEPENDENCIES = [
 	// and read when we are bundling the worker application
 	"unenv",
 	"workerd",
+	// This is a dev dep of ink
+	"react-devtools-core",
 ];
 
 const pathToPackageJson = path.resolve(__dirname, "..", "package.json");
