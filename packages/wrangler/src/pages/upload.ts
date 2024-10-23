@@ -386,15 +386,13 @@ function renderProgress(done: number, total: number) {
 	if (isInteractive()) {
 		s.start(`Uploading... (${done}/${total})\n`);
 		return {
-			update: (done: number, total: number) =>
-				s.update(`Uploading... (${done}/${total})\n`),
+			update: (d: number, t: number) => s.update(`Uploading... (${d}/${t})\n`),
 			stop: s.stop,
 		};
 	} else {
 		logger.log(`Uploading... (${done}/${total})`);
 		return {
-			update: (done: number, total: number) =>
-				logger.log(`Uploading... (${done}/${total})`),
+			update: (d: number, t: number) => logger.log(`Uploading... (${d}/${t})`),
 			stop: () => {},
 		};
 	}
