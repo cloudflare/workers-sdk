@@ -1,8 +1,6 @@
 import assert from "node:assert";
 import fs from "node:fs";
 import path from "path";
-import { Box, Text } from "ink";
-import Table from "ink-table";
 import { printWranglerBanner } from "../..";
 import { withConfig } from "../../config";
 import { confirm } from "../../dialogs";
@@ -11,7 +9,6 @@ import { CI } from "../../is-ci";
 import isInteractive from "../../is-interactive";
 import { logger } from "../../logger";
 import { requireAuth } from "../../user";
-import { renderToString } from "../../utils/render";
 import { createBackup } from "../backups";
 import { DEFAULT_MIGRATION_PATH, DEFAULT_MIGRATION_TABLE } from "../constants";
 import { executeSql } from "../execute";
@@ -112,17 +109,12 @@ export const ApplyHandler = withConfig<ApplyHandlerOptions>(
 			});
 
 		if (unappliedMigrations.length === 0) {
-			logger.log(renderToString(<Text>✅ No migrations to apply!</Text>));
+			logger.log("✅ No migrations to apply!");
 			return;
 		}
-		logger.log(
-			renderToString(
-				<Box flexDirection="column">
-					<Text>Migrations to be applied:</Text>
-					<Table data={unappliedMigrations} columns={["name"]}></Table>
-				</Box>
-			)
-		);
+		logger.log("Migrations to be applied:");
+		logger.table(unappliedMigrations.map((m) => ({ name: m.name })));
+
 		const ok = await confirm(
 			`About to apply ${unappliedMigrations.length} migration(s)
 Your database may not be available to serve requests during the migration, continue?`
@@ -140,7 +132,7 @@ Your database may not be available to serve requests during the migration, conti
 			const accountId = await requireAuth(config);
 			const dbInfo = await getDatabaseInfoFromId(accountId, databaseInfo?.uuid);
 			if (dbInfo.version === "alpha") {
-				logger.log(renderToString(<Text>🕒 Creating backup...</Text>));
+				logger.log("🕒 Creating backup...");
 				await createBackup(accountId, databaseInfo.uuid);
 			}
 		}
@@ -202,24 +194,14 @@ Your database may not be available to serve requests during the migration, conti
 
 			migration.status = success ? "✅" : "❌";
 
-			logger.log(
-				renderToString(
-					<Box flexDirection="column">
-						<Table data={unappliedMigrations} columns={["name", "status"]} />
-						{errorNotes.length > 0 && (
-							<Box flexDirection="column">
-								<Text>&nbsp;</Text>
-								<Text>
-									❌ Migration {migration.name}{" "}
-									{errorNotes.length > 0
-										? "failed with the following errors:"
-										: ""}
-								</Text>
-							</Box>
-						)}
-					</Box>
-				)
+			logger.table(
+				unappliedMigrations.map((m) => ({ name: m.name, status: m.status }))
 			);
+			if (errorNotes.length > 0) {
+				logger.error(
+					`Migration ${migration.name} failed with the following errors:`
+				);
+			}
 
 			if (errorNotes.length > 0) {
 				throw new UserError(

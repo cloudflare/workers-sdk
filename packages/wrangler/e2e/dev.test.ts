@@ -102,6 +102,43 @@ describe.each([
 
 		await expect(fetchText(url)).resolves.toMatchSnapshot();
 	});
+
+	it(`hotkeys can be disabled with ${cmd}`, async () => {
+		const helper = new WranglerE2ETestHelper();
+		await helper.seed({
+			"wrangler.toml": dedent`
+							name = "${workerName}"
+							main = "src/index.ts"
+							compatibility_date = "2023-01-01"
+							compatibility_flags = ["nodejs_compat"]
+
+							[vars]
+							KEY = "value"
+					`,
+			"src/index.ts": dedent`
+							export default {
+								fetch(request) {
+									return new Response("Hello World!")
+								}
+							}`,
+			"package.json": dedent`
+							{
+								"name": "worker",
+								"version": "0.0.0",
+								"private": true
+							}
+							`,
+		});
+		const worker = helper.runLongLived(
+			`${cmd} --show-interactive-dev-session=false`
+		);
+
+		const { url } = await worker.waitForReady();
+
+		await expect(fetch(url).then((r) => r.text())).resolves.toMatchSnapshot();
+
+		await expect(worker.currentOutput).not.toContain("[b] open a browser");
+	});
 });
 
 // Skipping remote python tests because they consistently flake with timeouts

@@ -6534,6 +6534,109 @@ addEventListener('fetch', event => {});`
 				`);
 			});
 		});
+
+		describe("dispatch namespaces", () => {
+			it("should deploy all migrations on first deploy", async () => {
+				writeWranglerToml({
+					durable_objects: {
+						bindings: [
+							{ name: "SOMENAME", class_name: "SomeClass" },
+							{ name: "SOMEOTHERNAME", class_name: "SomeOtherClass" },
+						],
+					},
+					migrations: [
+						{ tag: "v1", new_classes: ["SomeClass"] },
+						{ tag: "v2", new_classes: ["SomeOtherClass"] },
+					],
+				});
+				fs.writeFileSync(
+					"index.js",
+					`export class SomeClass{}; export class SomeOtherClass{}; export default {};`
+				);
+				mockSubDomainRequest();
+				mockServiceScriptData({
+					dispatchNamespace: "test-namespace",
+				}); // no scripts at all
+				mockUploadWorkerRequest({
+					expectedMigrations: {
+						new_tag: "v2",
+						steps: [
+							{ new_classes: ["SomeClass"] },
+							{ new_classes: ["SomeOtherClass"] },
+						],
+					},
+					useOldUploadApi: true,
+					expectedDispatchNamespace: "test-namespace",
+				});
+
+				await runWrangler(
+					"deploy index.js --dispatch-namespace test-namespace"
+				);
+				expect(std.out).toMatchInlineSnapshot(`
+					"Total Upload: xx KiB / gzip: xx KiB
+					Worker Startup Time: 100 ms
+					Your worker has access to the following bindings:
+					- Durable Objects:
+					  - SOMENAME: SomeClass
+					  - SOMEOTHERNAME: SomeOtherClass
+					Uploaded test-name (TIMINGS)
+					  Dispatch Namespace: test-namespace
+					Current Version ID: Galaxy-Class"
+				`);
+			});
+
+			it("should use a script's current migration tag when publishing migrations", async () => {
+				writeWranglerToml({
+					durable_objects: {
+						bindings: [
+							{ name: "SOMENAME", class_name: "SomeClass" },
+							{ name: "SOMEOTHERNAME", class_name: "SomeOtherClass" },
+						],
+					},
+					migrations: [
+						{ tag: "v1", new_classes: ["SomeClass"] },
+						{ tag: "v2", new_classes: ["SomeOtherClass"] },
+					],
+				});
+				fs.writeFileSync(
+					"index.js",
+					`export class SomeClass{}; export class SomeOtherClass{}; export default {};`
+				);
+				mockSubDomainRequest();
+				mockServiceScriptData({
+					script: { id: "test-name", migration_tag: "v1" },
+					dispatchNamespace: "test-namespace",
+				});
+				mockUploadWorkerRequest({
+					expectedMigrations: {
+						old_tag: "v1",
+						new_tag: "v2",
+						steps: [
+							{
+								new_classes: ["SomeOtherClass"],
+							},
+						],
+					},
+					useOldUploadApi: true,
+					expectedDispatchNamespace: "test-namespace",
+				});
+
+				await runWrangler(
+					"deploy index.js --dispatch-namespace test-namespace"
+				);
+				expect(std.out).toMatchInlineSnapshot(`
+					"Total Upload: xx KiB / gzip: xx KiB
+					Worker Startup Time: 100 ms
+					Your worker has access to the following bindings:
+					- Durable Objects:
+					  - SOMENAME: SomeClass
+					  - SOMEOTHERNAME: SomeOtherClass
+					Uploaded test-name (TIMINGS)
+					  Dispatch Namespace: test-namespace
+					Current Version ID: Galaxy-Class"
+				`);
+			});
+		});
 	});
 
 	describe("tail consumers", () => {
@@ -11323,6 +11426,77 @@ export default{
 			`);
 		});
 	});
+
+	describe("workflows", () => {
+		function mockDeployWorkflow(expectedWorkflowName?: string) {
+			const handler = http.put(
+				"*/accounts/:accountId/workflows/:workflowName",
+				({ params }) => {
+					if (expectedWorkflowName) {
+						expect(params.workflowName).toBe(expectedWorkflowName);
+					}
+					return HttpResponse.json(
+						createFetchResult({ id: "mock-new-workflow-id" })
+					);
+				}
+			);
+			msw.use(handler);
+		}
+
+		it("should log open-beta warning when deploying a workflow", async () => {
+			writeWranglerToml({
+				main: "index.js",
+				workflows: [
+					{
+						binding: "WORKFLOW",
+						name: "my-workflow",
+						class_name: "MyWorkflow",
+					},
+				],
+			});
+			await fs.promises.writeFile(
+				"index.js",
+				`
+                import { WorkflowEntrypoint } from 'cloudflare:workers';
+                export default {};
+                export class MyWorkflow extends WorkflowEntrypoint {};
+            `
+			);
+
+			mockDeployWorkflow("my-workflow");
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedBindings: [
+					{
+						type: "workflow",
+						name: "WORKFLOW",
+						workflow_name: "my-workflow",
+						class_name: "MyWorkflow",
+					},
+				],
+			});
+
+			await runWrangler("deploy");
+
+			expect(std.warn).toMatchInlineSnapshot(`
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mWorkflows is currently in open beta.[0m
+
+				"
+			`);
+			expect(std.out).toMatchInlineSnapshot(`
+				"Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Your worker has access to the following bindings:
+				- Workflows:
+				  - WORKFLOW: MyWorkflow
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				  workflow: my-workflow
+				Current Version ID: Galaxy-Class"
+			`);
+		});
+	});
 });
 
 /** Write mock assets to the file system so they can be uploaded. */
@@ -11746,13 +11920,14 @@ function mockServiceScriptData(options: {
 	script?: DurableScriptInfo;
 	scriptName?: string;
 	env?: string;
+	dispatchNamespace?: string;
 }) {
 	const { script } = options;
-	if (options.env) {
+	if (options.dispatchNamespace) {
 		if (!script) {
 			msw.use(
 				http.get(
-					"*/accounts/:accountId/workers/services/:scriptName/environments/:envName",
+					"*/accounts/:accountId/workers/dispatch/namespaces/:dispatchNamespace/scripts/:scriptName",
 					() => {
 						return HttpResponse.json({
 							success: false,
@@ -11773,11 +11948,11 @@ function mockServiceScriptData(options: {
 		}
 		msw.use(
 			http.get(
-				"*/accounts/:accountId/workers/services/:scriptName/environments/:envName",
+				"*/accounts/:accountId/workers/dispatch/namespaces/:dispatchNamespace/scripts/:scriptName",
 				({ params }) => {
 					expect(params.accountId).toEqual("some-account-id");
 					expect(params.scriptName).toEqual(options.scriptName || "test-name");
-					expect(params.envName).toEqual(options.env);
+					expect(params.dispatchNamespace).toEqual(options.dispatchNamespace);
 					return HttpResponse.json({
 						success: true,
 						errors: [],
@@ -11789,44 +11964,90 @@ function mockServiceScriptData(options: {
 			)
 		);
 	} else {
-		if (!script) {
+		if (options.env) {
+			if (!script) {
+				msw.use(
+					http.get(
+						"*/accounts/:accountId/workers/services/:scriptName/environments/:envName",
+						() => {
+							return HttpResponse.json({
+								success: false,
+								errors: [
+									{
+										code: 10092,
+										message: "workers.api.error.environment_not_found",
+									},
+								],
+								messages: [],
+								result: null,
+							});
+						},
+						{ once: true }
+					)
+				);
+				return;
+			}
 			msw.use(
 				http.get(
-					"*/accounts/:accountId/workers/services/:scriptName",
-					() => {
+					"*/accounts/:accountId/workers/services/:scriptName/environments/:envName",
+					({ params }) => {
+						expect(params.accountId).toEqual("some-account-id");
+						expect(params.scriptName).toEqual(
+							options.scriptName || "test-name"
+						);
+						expect(params.envName).toEqual(options.env);
 						return HttpResponse.json({
-							success: false,
-							errors: [
-								{
-									code: 10090,
-									message: "workers.api.error.service_not_found",
-								},
-							],
+							success: true,
+							errors: [],
 							messages: [],
-							result: null,
+							result: { script },
 						});
 					},
 					{ once: true }
 				)
 			);
-			return;
+		} else {
+			if (!script) {
+				msw.use(
+					http.get(
+						"*/accounts/:accountId/workers/services/:scriptName",
+						() => {
+							return HttpResponse.json({
+								success: false,
+								errors: [
+									{
+										code: 10090,
+										message: "workers.api.error.service_not_found",
+									},
+								],
+								messages: [],
+								result: null,
+							});
+						},
+						{ once: true }
+					)
+				);
+				return;
+			}
+			msw.use(
+				http.get(
+					"*/accounts/:accountId/workers/services/:scriptName",
+					({ params }) => {
+						expect(params.accountId).toEqual("some-account-id");
+						expect(params.scriptName).toEqual(
+							options.scriptName || "test-name"
+						);
+						return HttpResponse.json({
+							success: true,
+							errors: [],
+							messages: [],
+							result: { default_environment: { script } },
+						});
+					},
+					{ once: true }
+				)
+			);
 		}
-		msw.use(
-			http.get(
-				"*/accounts/:accountId/workers/services/:scriptName",
-				({ params }) => {
-					expect(params.accountId).toEqual("some-account-id");
-					expect(params.scriptName).toEqual(options.scriptName || "test-name");
-					return HttpResponse.json({
-						success: true,
-						errors: [],
-						messages: [],
-						result: { default_environment: { script } },
-					});
-				},
-				{ once: true }
-			)
-		);
 	}
 }
 

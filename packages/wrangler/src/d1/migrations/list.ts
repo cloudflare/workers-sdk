@@ -1,12 +1,9 @@
 import path from "path";
-import { Box, Text } from "ink";
-import Table from "ink-table";
 import { printWranglerBanner } from "../..";
 import { withConfig } from "../../config";
 import { UserError } from "../../errors";
 import { logger } from "../../logger";
 import { requireAuth } from "../../user";
-import { renderToString } from "../../utils/render";
 import { DEFAULT_MIGRATION_PATH, DEFAULT_MIGRATION_TABLE } from "../constants";
 import { getDatabaseInfoFromConfig } from "../utils";
 import {
@@ -89,17 +86,10 @@ export const ListHandler = withConfig<ListHandlerOptions>(
 		});
 
 		if (unappliedMigrations.length === 0) {
-			logger.log(renderToString(<Text>✅ No migrations to apply!</Text>));
+			logger.log("✅ No migrations to apply!");
 			return;
 		}
-
-		logger.log(
-			renderToString(
-				<Box flexDirection="column">
-					<Text>Migrations to be applied:</Text>
-					<Table data={unappliedMigrations} columns={["Name"]}></Table>
-				</Box>
-			)
-		);
+		logger.log("Migrations to be applied:");
+		logger.table(unappliedMigrations.map((m) => ({ Name: m.Name })));
 	}
 );
