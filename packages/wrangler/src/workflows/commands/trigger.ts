@@ -54,7 +54,7 @@ defineCommand({
 				headers: { "Content-Type": "application/json" },
 				body: JSON.stringify({
 					instance_id: args.id,
-					params: args.params.length != 0 ? args.params : undefined,
+					params: args.params.length != 0 ? JSON.parse(args.params) : undefined,
 				}),
 			}
 		);
