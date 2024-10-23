@@ -1,11 +1,9 @@
-import Table from "ink-table";
 import prettyBytes from "pretty-bytes";
 import { printWranglerBanner } from "..";
 import { fetchGraphqlResult } from "../cfetch";
 import { withConfig } from "../config";
 import { logger } from "../logger";
 import { requireAuth } from "../user";
-import { renderToString } from "../utils/render";
 import { getDatabaseByNameOrBinding, getDatabaseInfoFromId } from "./utils";
 import type {
 	CommonYargsArgv,
@@ -132,7 +130,7 @@ export const Handler = withConfig<HandlerOptions>(
 				) {
 					value = v.toLocaleString();
 				} else {
-					value = v;
+					value = String(v);
 				}
 				return {
 					[db.binding || ""]: k,
@@ -141,7 +139,7 @@ export const Handler = withConfig<HandlerOptions>(
 			});
 
 			await printWranglerBanner();
-			logger.log(renderToString(<Table data={data} />));
+			logger.table(data);
 		}
 	}
 );

@@ -1,11 +1,9 @@
 import { execSync } from "node:child_process";
-import { render, Text } from "ink";
-import SelectInput from "ink-select-input";
 import { deploy } from "../api/pages/deploy";
 import { fetchResult } from "../cfetch";
 import { findWranglerToml, readConfig } from "../config";
 import { getConfigCache, saveToConfigCache } from "../config-cache";
-import { prompt } from "../dialogs";
+import { prompt, select } from "../dialogs";
 import { FatalError } from "../errors";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
@@ -471,18 +469,7 @@ function promptSelectExistingOrNewProject(
 	message: string,
 	items: NewOrExistingItem[]
 ): Promise<"new" | "existing"> {
-	return new Promise<"new" | "existing">((resolve) => {
-		const { unmount } = render(
-			<>
-				<Text>{message}</Text>
-				<SelectInput
-					items={items}
-					onSelect={async (selected) => {
-						resolve(selected.value as "new" | "existing");
-						unmount();
-					}}
-				/>
-			</>
-		);
+	return select(message, {
+		choices: items.map((i) => ({ title: i.label, value: i.value })),
 	});
 }

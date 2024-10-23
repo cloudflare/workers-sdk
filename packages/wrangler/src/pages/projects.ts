@@ -1,5 +1,4 @@
 import { execSync } from "node:child_process";
-import Table from "ink-table";
 import { format as timeagoFormat } from "timeago.js";
 import { fetchResult } from "../cfetch";
 import { getConfigCache, saveToConfigCache } from "../config-cache";
@@ -9,7 +8,6 @@ import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { requireAuth } from "../user";
 import { getCloudflareAccountIdFromEnv } from "../user/auth-variables";
-import { renderToString } from "../utils/render";
 import { PAGES_CONFIG_CACHE_FILENAME } from "./constants";
 import type {
 	CommonYargsArgv,
@@ -44,7 +42,7 @@ export async function ListHandler() {
 		account_id: accountId,
 	});
 
-	logger.log(renderToString(<Table data={data}></Table>));
+	logger.table(data);
 	await metrics.sendMetricsEvent("list pages projects");
 }
 

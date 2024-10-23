@@ -1,7 +1,6 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
-import { render, Text } from "ink";
-import Spinner from "ink-spinner";
+import { spinner } from "@cloudflare/cli/interactive";
 import PQueue from "p-queue";
 import { fetchResult } from "../cfetch";
 import { FatalError } from "../errors";
@@ -189,7 +188,7 @@ export const upload = async (
 	}
 
 	let counter = args.fileMap.size - sortedFiles.length;
-	const { rerender, unmount } = renderProgress(counter, args.fileMap.size);
+	const { update, stop } = renderProgress(counter, args.fileMap.size);
 
 	const queue = new PQueue({ concurrency: BULK_UPLOAD_CONCURRENCY });
 
@@ -269,7 +268,7 @@ export const upload = async (
 			doUpload().then(
 				() => {
 					counter += bucket.files.length;
-					rerender(counter, args.fileMap.size);
+					update(counter, args.fileMap.size);
 				},
 				(error) => {
 					return Promise.reject(
@@ -287,7 +286,7 @@ export const upload = async (
 
 	await queue.onIdle();
 
-	unmount();
+	stop();
 
 	const uploadMs = Date.now() - start;
 
@@ -383,34 +382,18 @@ function formatTime(duration: number) {
 }
 
 function renderProgress(done: number, total: number) {
+	const s = spinner();
 	if (isInteractive()) {
-		const { rerender, unmount } = render(
-			<Progress done={done} total={total} />
-		);
+		s.start(`Uploading... (${done}/${total})\n`);
 		return {
-			// eslint-disable-next-line @typescript-eslint/no-shadow
-			rerender(done: number, total: number) {
-				rerender(<Progress done={done} total={total} />);
-			},
-			unmount,
+			update: (d: number, t: number) => s.update(`Uploading... (${d}/${t})\n`),
+			stop: s.stop,
 		};
 	} else {
-		// eslint-disable-next-line @typescript-eslint/no-shadow
-		const rerender = (done: number, total: number) => {
-			logger.log(`Uploading... (${done}/${total})`);
+		logger.log(`Uploading... (${done}/${total})`);
+		return {
+			update: (d: number, t: number) => logger.log(`Uploading... (${d}/${t})`),
+			stop: () => {},
 		};
-		rerender(done, total);
-		return { rerender, unmount() {} };
 	}
-}
-
-function Progress({ done, total }: { done: number; total: number }) {
-	return (
-		<>
-			<Text>
-				{isInteractive() ? <Spinner type="earth" /> : null}
-				{` Uploading... (${done}/${total})\n`}
-			</Text>
-		</>
-	);
 }

@@ -1,4 +1,3 @@
-import Table from "ink-table";
 import { format as timeagoFormat } from "timeago.js";
 import { fetchResult } from "../cfetch";
 import { getConfigCache, saveToConfigCache } from "../config-cache";
@@ -6,7 +5,6 @@ import { FatalError } from "../errors";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { requireAuth } from "../user";
-import { renderToString } from "../utils/render";
 import { PAGES_CONFIG_CACHE_FILENAME } from "./constants";
 import { promptSelectProject } from "./prompt-select-project";
 import type {
@@ -79,6 +77,6 @@ export async function ListHandler({ projectName }: ListArgs) {
 		account_id: accountId,
 	});
 
-	logger.log(renderToString(<Table data={data}></Table>));
+	logger.table(data);
 	await metrics.sendMetricsEvent("list pages deployments");
 }
