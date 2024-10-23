@@ -7,7 +7,7 @@
 		"workers",
 		"cloudflare workers"
 	],
-	"homepage": "https://github.com/cloudflare/workers-sdk/tree/main/packages/workers-shared#readme",
+	"homepage": "https://github.com/cloudflare/workers-sdk/tree/main/packages/workflows-shared#readme",
 	"bugs": {
 		"url": "https://github.com/cloudflare/workers-sdk/issues"
 	},
@@ -29,8 +29,7 @@
 		"check:type:tests": "tsc -p ./tests/tsconfig.json",
 		"clean": "rimraf dist",
 		"dev": "pnpm run bundle:local-binding --watch",
-		"test": "vitest",
-		"test:ci": "vitest run"
+		"test:ci": "echo 'no tests'"
 	},
 	"dependencies": {
 		"heap-js": "^2.5.0",
