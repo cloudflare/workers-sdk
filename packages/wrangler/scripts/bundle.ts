@@ -1,4 +1,3 @@
-import fs from "node:fs/promises";
 import path from "node:path";
 import * as esbuild from "esbuild";
 import { EXTERNAL_DEPENDENCIES } from "./deps";

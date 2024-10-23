@@ -507,7 +507,7 @@ function createStreamHandler(
 /**
  * A helper function that waits for a port to be available.
  */
-export async function waitForPortToBeAvailable(
+async function waitForPortToBeAvailable(
 	port: number,
 	host: string,
 	options: { retryPeriod: number; timeout: number; abortSignal: AbortSignal }

@@ -1,7 +1,7 @@
 import { pathToFileURL } from "url";
 import type { CfModule } from "./worker";
 
-export function withSourceURL(source: string, sourcePath: string) {
+function withSourceURL(source: string, sourcePath: string) {
 	return `${source}\n//# sourceURL=${pathToFileURL(sourcePath)}`;
 }
 

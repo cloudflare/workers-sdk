@@ -206,7 +206,7 @@ function clipPublicSSHKey(value: string): string {
 /**
  * Does a really simple check to see if the SSH key exist prompt in wrangler cloudchamber create should appear
  */
-export async function shouldPromptForNewSSHKeyAppear(
+async function shouldPromptForNewSSHKeyAppear(
 	keys: ListSSHPublicKeys | undefined = undefined
 ): Promise<[SSHPublicKeyID | undefined, boolean]> {
 	try {
@@ -260,7 +260,7 @@ export async function shouldPromptForNewSSHKeyAppear(
 	}
 }
 
-export async function handleListSSHKeysCommand(
+async function handleListSSHKeysCommand(
 	_args: unknown,
 	_config: Config
 ) {
@@ -300,7 +300,7 @@ export async function handleListSSHKeysCommand(
  * Will try to assume defaults to showcase to the user so they can add it faster.
  *
  */
-export async function handleCreateSSHPublicKeyCommand(
+async function handleCreateSSHPublicKeyCommand(
 	args: StrictYargsOptionsToInterfaceJSON<
 		typeof createSSHPublicKeyOptionalYargs
 	>
@@ -321,7 +321,7 @@ export async function handleCreateSSHPublicKeyCommand(
 	);
 }
 
-export async function promptForSSHKey(
+async function promptForSSHKey(
 	args: StrictYargsOptionsToInterfaceJSON<
 		typeof createSSHPublicKeyOptionalYargs
 	>

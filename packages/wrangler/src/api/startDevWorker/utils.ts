@@ -8,7 +8,6 @@ import type {
 	Hook,
 	HookValues,
 	ServiceFetch,
-	StartDevWorkerInput,
 	StartDevWorkerOptions,
 } from "./types";
 
@@ -66,7 +65,7 @@ export function unwrapHook<
 	return typeof hook === "function" ? hook(...args) : hook;
 }
 
-export async function getBinaryFileContents(file: File<string | Uint8Array>) {
+async function getBinaryFileContents(file: File<string | Uint8Array>) {
 	if ("contents" in file) {
 		if (file.contents instanceof Buffer) {
 			return file.contents;
@@ -74,19 +73,6 @@ export async function getBinaryFileContents(file: File<string | Uint8Array>) {
 		return Buffer.from(file.contents);
 	}
 	return readFile(file.path);
-}
-
-export async function getTextFileContents(file: File<string | Uint8Array>) {
-	if ("contents" in file) {
-		if (typeof file.contents === "string") {
-			return file.contents;
-		}
-		if (file.contents instanceof Buffer) {
-			return file.contents.toString();
-		}
-		return Buffer.from(file.contents).toString();
-	}
-	return readFile(file.path, "utf8");
 }
 
 export function convertCfWorkerInitBindingstoBindings(

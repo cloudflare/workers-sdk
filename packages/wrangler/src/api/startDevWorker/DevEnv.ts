@@ -157,7 +157,7 @@ export class DevEnv extends EventEmitter {
 	}
 }
 
-export function createWorkerObject(devEnv: DevEnv): Worker {
+function createWorkerObject(devEnv: DevEnv): Worker {
 	return {
 		get ready() {
 			return devEnv.proxy.ready.promise.then(() => undefined);

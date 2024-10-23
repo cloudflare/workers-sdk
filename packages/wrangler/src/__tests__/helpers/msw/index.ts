@@ -12,7 +12,6 @@ import { mswR2handlers } from "./handlers/r2";
 import { default as mswSucessScriptHandlers } from "./handlers/script";
 import { mswSuccessUserHandlers } from "./handlers/user";
 import {
-	mswGetNonVersionedScriptSettings,
 	mswGetVersion,
 	mswListNewDeployments,
 	mswListVersions,
@@ -63,6 +62,6 @@ export {
 	mswGetVersion,
 	mswListNewDeployments,
 	mswListVersions,
-	mswGetNonVersionedScriptSettings,
+	
 	mswPatchNonVersionedScriptSettings,
 };

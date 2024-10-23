@@ -1,6 +1,5 @@
 import assert from "node:assert";
 import path from "node:path";
-import { helpIfErrorIsSizeOrScriptStartup } from "../deploy/deploy";
 import { printBundleSize } from "../deployment-bundle/bundle-reporter";
 import { getBundleType } from "../deployment-bundle/bundle-type";
 import { withSourceURLs } from "../deployment-bundle/source-url";
@@ -8,20 +7,9 @@ import { getInferredHost } from "../dev";
 import { UserError } from "../errors";
 import { logger } from "../logger";
 import { syncLegacyAssets } from "../sites";
-import {
-	getAccountChoices,
-	requireApiToken,
-	saveAccountToCache,
-} from "../user";
-import { getAccessToken } from "../user/access";
+import { requireApiToken } from "../user";
 import { isAbortError } from "../utils/isAbortError";
 import { getZoneIdForPreview } from "../zones";
-import {
-	createPreviewSession,
-	createWorkerPreview,
-} from "./create-worker-preview";
-import { startPreviewServer } from "./proxy";
-import type { ProxyData } from "../api";
 import type { Route } from "../config/environment";
 import type {
 	CfModule,
@@ -89,193 +77,6 @@ export function handlePreviewSessionCreationError(
 	else if (isAbortError(err)) {
 		logger.error("Error while creating remote dev session:", err);
 	}
-}
-
-interface RemoteProps {
-	name: string | undefined;
-	bundle: EsbuildBundle | undefined;
-	format: CfScriptFormat | undefined;
-	isWorkersSite: boolean;
-	legacyAssetPaths: LegacyAssetPaths | undefined;
-	port: number;
-	ip: string;
-	localProtocol: "https" | "http";
-	httpsKeyPath: string | undefined;
-	httpsCertPath: string | undefined;
-	inspect: boolean;
-	inspectorPort: number;
-	accountId: string | undefined;
-	bindings: CfWorkerInit["bindings"];
-	compatibilityDate: string;
-	compatibilityFlags: string[] | undefined;
-	usageModel: "bundled" | "unbound" | undefined;
-	env: string | undefined;
-	legacyEnv: boolean | undefined;
-	host: string | undefined;
-	routes: Route[] | undefined;
-	onReady?:
-		| ((ip: string, port: number, proxyData: ProxyData) => void)
-		| undefined;
-	sourceMapPath: string | undefined;
-	sendMetrics: boolean | undefined;
-
-	setAccountId: (accountId: string) => void;
-}
-
-export async function startRemoteServer(props: RemoteProps) {
-	let accountId = props.accountId;
-	if (accountId === undefined) {
-		const accountChoices = await getAccountChoices();
-		if (accountChoices.length === 1) {
-			saveAccountToCache({
-				id: accountChoices[0].id,
-				name: accountChoices[0].name,
-			});
-			accountId = accountChoices[0].id;
-		} else {
-			const error = new UserError(
-				"In a non-interactive environment, it is mandatory to specify an account ID, either by assigning its value to CLOUDFLARE_ACCOUNT_ID, or as `account_id` in your `wrangler.toml` file."
-			);
-			logger.error(error.message);
-			throw error;
-		}
-	}
-
-	const previewToken = await getRemotePreviewToken({
-		...props,
-		accountId: accountId,
-	});
-
-	if (previewToken === undefined) {
-		const error = new Error("Failed to get a previewToken");
-		logger.error(error.message);
-		throw error;
-	}
-	// start our proxy server
-	const previewServer = await startPreviewServer({
-		previewToken,
-		assetDirectory: props.isWorkersSite
-			? undefined
-			: props.legacyAssetPaths?.assetDirectory,
-		localProtocol: props.localProtocol,
-		customHttpsKeyPath: props.httpsKeyPath,
-		customHttpsCertPath: props.httpsCertPath,
-		localPort: props.port,
-		ip: props.ip,
-		onReady: async (ip, port) => {
-			const accessToken = await getAccessToken(previewToken.host);
-
-			const proxyData: ProxyData = {
-				userWorkerUrl: {
-					protocol: "https:",
-					hostname: previewToken.host,
-					port: "443",
-				},
-				userWorkerInspectorUrl: {
-					protocol: previewToken.inspectorUrl.protocol,
-					hostname: previewToken.inspectorUrl.hostname,
-					port: previewToken.inspectorUrl.port.toString(),
-					pathname: previewToken.inspectorUrl.pathname,
-				},
-				userWorkerInnerUrlOverrides: {
-					hostname: props.host,
-					port: props.port.toString(),
-				},
-				headers: {
-					"cf-workers-preview-token": previewToken.value,
-					...(accessToken ? { Cookie: `CF_Authorization=${accessToken}` } : {}),
-				},
-				liveReload: false, // liveReload currently disabled in remote-mode, but will be supported with startDevWorker
-				proxyLogsToController: true,
-				entrypointAddresses: undefined,
-			};
-
-			props.onReady?.(ip, port, proxyData);
-		},
-	});
-	if (!previewServer) {
-		const error = new Error("Failed to start remote server");
-		logger.error(error);
-		throw error;
-	}
-	return { stop: previewServer.stop };
-}
-
-/**
- * getRemotePreviewToken is a react-free version of `useWorker`.
- * It returns a preview token, which we then use in our proxy server
- */
-export async function getRemotePreviewToken(props: RemoteProps) {
-	//setup the preview session
-	async function start() {
-		if (props.accountId === undefined) {
-			const error = new Error("no accountId provided");
-			logger.error(error.message);
-			throw error;
-		}
-		const abortController = new AbortController();
-		const { workerAccount, workerContext } = await getWorkerAccountAndContext({
-			accountId: props.accountId,
-			env: props.env,
-			legacyEnv: props.legacyEnv,
-			host: props.host,
-			routes: props.routes,
-			sendMetrics: props.sendMetrics,
-		});
-		const session = await createPreviewSession(
-			workerAccount,
-			workerContext,
-			abortController.signal
-		);
-		//use the session to upload the worker, and create a preview
-
-		if (session === undefined) {
-			const error = new Error("Failed to start a session");
-			logger.error(error.message);
-			throw error;
-		}
-		if (!props.bundle || !props.format) {
-			return;
-		}
-
-		const init = await createRemoteWorkerInit({
-			bundle: props.bundle,
-			modules: props.bundle ? props.bundle.modules : [],
-			accountId: props.accountId,
-			name: props.name,
-			legacyEnv: props.legacyEnv,
-			env: props.env,
-			isWorkersSite: props.isWorkersSite,
-			legacyAssetPaths: props.legacyAssetPaths,
-			format: props.format,
-			bindings: props.bindings,
-			compatibilityDate: props.compatibilityDate,
-			compatibilityFlags: props.compatibilityFlags,
-		});
-		const workerPreviewToken = await createWorkerPreview(
-			init,
-			workerAccount,
-			workerContext,
-			session,
-			abortController.signal
-		);
-		return workerPreviewToken;
-	}
-	return start().catch((err) => {
-		// we want to log the error, but not end the process
-		// since it could recover after the developer fixes whatever's wrong
-		// instead of logging the raw API error to the user,
-		// give them friendly instructions
-		if (isAbortError(err)) {
-			// code 10049 happens when the preview token expires
-			if (err.code === 10049) {
-				logger.log("Preview token expired, restart server to fetch a new one");
-			} else if (!handleUserFriendlyError(err, props.accountId)) {
-				helpIfErrorIsSizeOrScriptStartup(err, props.bundle?.dependencies || {});
-				logger.error("Error on remote worker:", err);
-			}
-		}
-	});
 }
 
 export async function createRemoteWorkerInit(props: {
@@ -407,7 +208,7 @@ export async function getWorkerAccountAndContext(props: {
  * messages, does not perform any logic other than logging errors.
  * @returns if the error was handled or not
  */
-export function handleUserFriendlyError(error: ParseError, accountId?: string) {
+function handleUserFriendlyError(error: ParseError, accountId?: string) {
 	switch ((error as unknown as { code: number }).code) {
 		// code 10021 is a validation error
 		case 10021: {

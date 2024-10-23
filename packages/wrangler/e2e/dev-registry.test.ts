@@ -32,11 +32,9 @@ describe("unstable_dev()", () => {
 	let parent: string;
 	let child: string;
 	let workerName: string;
-	let helper: WranglerE2ETestHelper;
 
 	beforeEach(async () => {
 		workerName = generateResourceName("worker");
-		helper = new WranglerE2ETestHelper();
 
 		parent = makeRoot();
 

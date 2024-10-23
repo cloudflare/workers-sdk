@@ -42,7 +42,7 @@ import type {
 	Trigger,
 } from "./types";
 
-export type ConfigControllerEventMap = ControllerEventMap & {
+type ConfigControllerEventMap = ControllerEventMap & {
 	configUpdate: [ConfigUpdateEvent];
 };
 

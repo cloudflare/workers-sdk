@@ -8,7 +8,6 @@ import type { Rule } from "../config/environment";
 import type { CfModule } from "../deployment-bundle/worker";
 import type { StartDevOptions } from "../dev";
 import type { EnablePagesAssetsServiceBindingOptions } from "../miniflare-cli/types";
-import type { ProxyData } from "./startDevWorker";
 import type { Json } from "miniflare";
 import type { RequestInfo, RequestInit, Response } from "undici";
 

@@ -357,7 +357,7 @@ export async function putR2Sippy(
 	);
 }
 
-export const R2EventableOperations = [
+const R2EventableOperations = [
 	"PutObject",
 	"DeleteObject",
 	"CompleteMultipartUpload",
@@ -397,10 +397,10 @@ export type GetNotificationConfigResponse = {
 	bucketName: string;
 	queues: GetQueueDetail[];
 };
-export type DetailID = string;
+type DetailID = string;
 type QueueID = string;
 type BucketName = string;
-export type NotificationDetail = Record<
+type NotificationDetail = Record<
 	DetailID, // This is the detail ID that identifies this config
 	{ queue: QueueID; rules: NotificationRule[] }
 >;

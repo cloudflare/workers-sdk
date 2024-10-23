@@ -150,11 +150,6 @@ type CronTriggersRes = {
 	];
 };
 
-export type StandardRes = {
-	standard: boolean;
-	reason: string;
-};
-
 function isNpm(packageManager: PackageManager) {
 	return packageManager.type === "npm";
 }

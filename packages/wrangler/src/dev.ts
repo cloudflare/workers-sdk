@@ -8,13 +8,11 @@ import {
 	convertCfWorkerInitBindingstoBindings,
 	extractBindingsOfType,
 } from "./api/startDevWorker/utils";
-import { findWranglerToml, printBindings, readConfig } from "./config";
+import { findWranglerToml } from "./config";
 import { validateRoutes } from "./deploy/deploy";
-import { getEntry } from "./deployment-bundle/entry";
 import { validateNodeCompatMode } from "./deployment-bundle/node-compat";
 import { devRegistry, getBoundRegisteredWorkers } from "./dev-registry";
 import { getVarsForDev } from "./dev/dev-vars";
-import { getLocalPersistencePath } from "./dev/get-local-persistence-path";
 import registerDevHotKeys from "./dev/hotkeys";
 import { maybeRegisterLocalWorker } from "./dev/local";
 import { UserError } from "./errors";
@@ -28,12 +26,9 @@ import {
 	collectKeyValues,
 	collectPlainTextVars,
 } from "./utils/collectKeyValues";
-import { memoizeGetPort } from "./utils/memoizeGetPort";
 import { mergeWithOverride } from "./utils/mergeWithOverride";
-import { getHostFromRoute, getZoneIdForPreview } from "./zones";
+import { getHostFromRoute } from "./zones";
 import {
-	DEFAULT_INSPECTOR_PORT,
-	DEFAULT_LOCAL_PORT,
 	printWranglerBanner,
 } from "./index";
 import type { ReloadCompleteEvent, StartDevWorkerInput, Trigger } from "./api";
@@ -854,124 +849,7 @@ export function getInferredHost(routes: Route[] | undefined) {
 	}
 }
 
-export async function validateDevServerSettings(
-	args: StartDevOptions,
-	config: Config
-) {
-	const entry = await getEntry(
-		{
-			legacyAssets: args.legacyAssets,
-			script: args.script,
-			moduleRoot: args.moduleRoot,
-			assets: args.assets,
-		},
-		config,
-		"dev"
-	);
-	const { host, routes } = await getHostAndRoutes(args, config);
-	// TODO: Remove this hack
-	// This function throws if the zone ID can't be found given the provided host and routes
-	// However, it's called as part of initialising a preview session, which is nested deep within
-	// React/Ink and useEffect()s, which swallow the error and turn it into a logw. Because it's a non-recoverable user error,
-	// we want it to exit the Wrangler process early to allow the user to fix it. Calling it here forces
-	// the error to be thrown where it will correctly exit the Wrangler process
-	if (args.remote) {
-		const accountId = await requireAuth({
-			account_id: args.accountId ?? config.account_id,
-		});
-		assert(accountId, "Account ID must be provided for remote dev");
-		await getZoneIdForPreview({ host, routes, accountId });
-	}
-	const initialIp = args.ip || config.dev.ip;
-	const initialIpListenCheck = initialIp === "*" ? "0.0.0.0" : initialIp;
-	const getLocalPort = memoizeGetPort(DEFAULT_LOCAL_PORT, initialIpListenCheck);
-	const getInspectorPort = memoizeGetPort(DEFAULT_INSPECTOR_PORT, "127.0.0.1");
-
-	// Our inspector proxy server will be binding to the result of
-	// `getInspectorPort`. If we attempted to bind workerd to the same inspector
-	// port, we'd get a port already in use error. Therefore, generate a new port
-	// for our runtime to bind its inspector service to.
-	const getRuntimeInspectorPort = memoizeGetPort(0, "127.0.0.1");
-
-	if (config.services && config.services.length > 0) {
-		logger.warn(
-			`This worker is bound to live services: ${config.services
-				.map(
-					(service) =>
-						`${service.binding} (${service.service}${
-							service.environment ? `@${service.environment}` : ""
-						}${service.entrypoint ? `#${service.entrypoint}` : ""})`
-				)
-				.join(", ")}`
-		);
-	}
-
-	const upstreamProtocol =
-		args.upstreamProtocol ?? config.dev.upstream_protocol;
-	if (upstreamProtocol === "http" && args.remote) {
-		logger.warn(
-			"Setting upstream-protocol to http is not currently supported for remote mode.\n" +
-				"If this is required in your project, please add your use case to the following issue:\n" +
-				"https://github.com/cloudflare/workers-sdk/issues/583."
-		);
-	}
-
-	const localPersistencePath = getLocalPersistencePath(
-		args.persistTo,
-		config.configPath
-	);
-
-	const cliDefines = collectKeyValues(args.define);
-	const cliAlias = collectKeyValues(args.alias);
-
-	return {
-		entry,
-		upstreamProtocol,
-		getLocalPort,
-		getInspectorPort,
-		getRuntimeInspectorPort,
-		host,
-		routes,
-		cliDefines,
-		cliAlias,
-		localPersistencePath,
-		processEntrypoint: !!args.processEntrypoint,
-		additionalModules: args.additionalModules ?? [],
-	};
-}
-
-export function getResolvedBindings(
-	args: StartDevOptions,
-	configParam: Config
-) {
-	const cliVars = collectKeyValues(args.var);
-
-	// now log all available bindings into the terminal
-	const bindings = getBindings(configParam, args.env, !args.remote, {
-		kv: args.kv,
-		vars: { ...args.vars, ...cliVars },
-		durableObjects: args.durableObjects,
-		r2: args.r2,
-		services: args.services,
-		d1Databases: args.d1Databases,
-		ai: args.ai,
-		version_metadata: args.version_metadata,
-	});
-
-	const maskedVars = maskVars(bindings, configParam);
-
-	printBindings(
-		{
-			...bindings,
-			vars: maskedVars,
-		},
-		{ local: !args.remote }
-	);
-
-	return bindings;
-}
-
-export function getResolvedLegacyAssetPaths(
+function getResolvedLegacyAssetPaths(
 	args: StartDevOptions,
 	configParam: Config
 ) {
@@ -985,16 +863,6 @@ export function getResolvedLegacyAssetPaths(
 					args.siteExclude
 				);
 	return legacyAssetPaths;
-}
-
-export function getBindingsAndLegacyAssetPaths(
-	args: StartDevOptions,
-	configParam: Config
-) {
-	return {
-		bindings: getResolvedBindings(args, configParam),
-		legacyAssetPaths: getResolvedLegacyAssetPaths(args, configParam),
-	};
 }
 
 export function getBindings(

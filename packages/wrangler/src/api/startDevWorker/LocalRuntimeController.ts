@@ -39,7 +39,7 @@ async function getTextFileContents(file: File<string | Uint8Array>) {
 	return readFile(file.path, "utf8");
 }
 
-export const DEFAULT_WORKER_NAME = "worker";
+const DEFAULT_WORKER_NAME = "worker";
 function getName(config: StartDevWorkerOptions) {
 	return config.name ?? DEFAULT_WORKER_NAME;
 }

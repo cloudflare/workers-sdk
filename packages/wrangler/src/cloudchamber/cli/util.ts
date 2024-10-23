@@ -17,18 +17,3 @@ export function statusToColored(status?: Status): string {
 
 	return mappings[status](status.toUpperCase());
 }
-
-export function fakeWait<T = Record<string, unknown>>(
-	ms: number,
-	object: T,
-	reject = false
-) {
-	return new Promise<typeof object>((res, rej) => {
-		setTimeout(() => {
-			if (reject) {
-				return rej(object);
-			}
-			res(object);
-		}, ms);
-	});
-}
