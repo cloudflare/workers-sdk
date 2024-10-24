@@ -8,7 +8,7 @@
 	"devDependencies": {
 		"fixtures-shared": "workspace:*",
 		"strip-ansi": "^7.1.0",
-		"undici": "^5.28.4"
+		"undici": "catalog:default"
 	},
 	"optionalDependencies": {
 		"@cdktf/node-pty-prebuilt-multiarch": "0.10.1-pre.11"

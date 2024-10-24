@@ -31,7 +31,7 @@
 		"chalk": "^5.2.0",
 		"esbuild": "0.17.19",
 		"log-update": "^5.0.1",
-		"undici": "^5.28.4"
+		"undici": "catalog:default"
 	},
 	"volta": {
 		"extends": "../../package.json"
