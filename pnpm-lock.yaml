@@ -6,6 +6,12 @@ settings:
 
 catalogs:
   default:
+    '@vitest/runner':
+      specifier: ~2.1.1
+      version: 2.1.1
+    '@vitest/snapshot':
+      specifier: ~2.1.1
+      version: 2.1.1
     vitest:
       specifier: ~2.1.1
       version: 2.1.1
@@ -1721,8 +1727,8 @@ importers:
         specifier: ^0.6.1
         version: 0.6.1
       unenv:
-        specifier: npm:unenv-nightly@2.0.0-20241018-011344-e666fcf
-        version: unenv-nightly@2.0.0-20241018-011344-e666fcf
+        specifier: npm:unenv-nightly@2.0.0-20241024-111401-d4156ac
+        version: unenv-nightly@2.0.0-20241024-111401-d4156ac
       workerd:
         specifier: 1.20241022.0
         version: 1.20241022.0
@@ -8110,8 +8116,8 @@ packages:
     resolution: {integrity: sha512-AjQF1QsmqfJys+LXfGTNum+qw4S88CojRInG/6t31W/1fk6G59s92bnAvGz5Cmur+kQv2SURXEvvudLmbrE8QA==}
     engines: {node: '>=18.17'}
 
-  unenv-nightly@2.0.0-20241018-011344-e666fcf:
-    resolution: {integrity: sha512-D00bYn8rzkCBOlLx+k1iHQlc69jvtJRT7Eek4yIGQ6461a2tUBjngGZdRpqsoXAJCz/qBW0NgPting7Zvg+ysg==}
+  unenv-nightly@2.0.0-20241024-111401-d4156ac:
+    resolution: {integrity: sha512-xJO1hfY+Te+/XnfCYrCbFbRcgu6XEODND1s5wnVbaBCkuQX7JXF7fHEXPrukFE2j8EOH848P8QN19VO47XN8hw==}
 
   unicorn-magic@0.1.0:
     resolution: {integrity: sha512-lRfVq8fE8gz6QMBuDM6a+LO3IAzTi05H6gCVaUpir2E1Rwpo4ZUog45KpNXKC/Mn3Yb9UDuHumeFTo9iV/D9FQ==}
@@ -15358,7 +15364,7 @@ snapshots:
 
   undici@6.20.1: {}
 
-  unenv-nightly@2.0.0-20241018-011344-e666fcf:
+  unenv-nightly@2.0.0-20241024-111401-d4156ac:
     dependencies:
       defu: 6.1.4
       ohash: 1.1.4
