@@ -14,7 +14,7 @@
 	],
 	"scripts": {
 		"check:lint": "eslint . --max-warnings=0",
-		"check:type": "tsc",
+		"check:type": "tsc asset-server/*",
 		"test": "vitest run",
 		"test:ci": "vitest run"
 	},

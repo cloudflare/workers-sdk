@@ -180,18 +180,7 @@ export async function generateHandler<
 			: {};
 
 	const staticRedirectsMatcher = () => {
-		const withHostMatch = staticRules[`https://${host}${pathname}`];
-		const withoutHostMatch = staticRules[pathname];
-
-		if (withHostMatch && withoutHostMatch) {
-			if (withHostMatch.lineNumber < withoutHostMatch.lineNumber) {
-				return withHostMatch;
-			} else {
-				return withoutHostMatch;
-			}
-		}
-
-		return withHostMatch || withoutHostMatch;
+		return staticRules[pathname];
 	};
 
 	const generateRedirectsMatcher = () =>
@@ -385,6 +374,7 @@ export async function generateHandler<
 											element(element) {
 												for (const [attributeName] of element.attributes) {
 													if (
+														!attributeName ||
 														!ALLOWED_EARLY_HINT_LINK_ATTRIBUTES.includes(
 															attributeName.toLowerCase()
 														)
@@ -448,8 +438,8 @@ export async function generateHandler<
 			headerRules,
 			({ set = {}, unset = [] }, replacements) => {
 				const replacedSet: Record<string, string> = {};
-				Object.keys(set).forEach((key) => {
-					replacedSet[key] = replacer(set[key], replacements);
+				Object.entries(set).forEach(([key, value]) => {
+					replacedSet[key] = replacer(value, replacements);
 				});
 				return {
 					set: replacedSet,
@@ -468,11 +458,11 @@ export async function generateHandler<
 			unset.forEach((key) => {
 				headers.delete(key);
 			});
-			Object.keys(set).forEach((key) => {
+			Object.entries(set).forEach(([key, value]) => {
 				if (setMap.has(key.toLowerCase())) {
-					headers.append(key, set[key]);
+					headers.append(key, value);
 				} else {
-					headers.set(key, set[key]);
+					headers.set(key, value);
 					setMap.add(key.toLowerCase());
 				}
 			});
@@ -747,6 +737,9 @@ export function parseQualityWeightedList(list = "") {
 		.split(",")
 		.forEach((el) => {
 			const [item, weight] = el.split(";q=");
+			if (!item) {
+				return;
+			}
 			items[item] = weight ? parseFloat(weight) : 1;
 		});
 
