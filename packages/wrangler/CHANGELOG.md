@@ -1,5 +1,13 @@
 # wrangler
 
+## 3.83.1
+
+### Patch Changes
+
+- [#7080](https://github.com/cloudflare/workers-sdk/pull/7080) [`924ec18`](https://github.com/cloudflare/workers-sdk/commit/924ec18c249f49700d070e725be675fd5f99259b) Thanks [@vicb](https://github.com/vicb)! - chore(wrangler): update unenv dependency version
+
+- [#7073](https://github.com/cloudflare/workers-sdk/pull/7073) [`656a444`](https://github.com/cloudflare/workers-sdk/commit/656a444fc7d363c1b7154fdf73eed0a81b003882) Thanks [@penalosa](https://github.com/penalosa)! - Internal refactor to remove `es-module-lexer` and support `wrangler types` for Workers with Durable Objects & JSX
+
 ## 3.83.0
 
 ### Minor Changes
