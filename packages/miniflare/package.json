@@ -51,7 +51,7 @@
 		"stoppable": "^1.1.0",
 		"undici": "catalog:default",
 		"workerd": "1.20241022.0",
-		"ws": "^8.17.1",
+		"ws": "^8.18.0",
 		"youch": "^3.2.2",
 		"zod": "^3.22.3"
 	},

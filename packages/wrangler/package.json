@@ -171,7 +171,7 @@
 		"update-check": "^1.5.4",
 		"vitest": "catalog:default",
 		"vitest-websocket-mock": "^0.3.0",
-		"ws": "^8.17.1",
+		"ws": "^8.18.0",
 		"xdg-app-paths": "^8.3.0",
 		"yargs": "^17.7.2",
 		"yoga-layout": "file:../../vendor/yoga-layout-2.0.0-beta.1.tgz"
