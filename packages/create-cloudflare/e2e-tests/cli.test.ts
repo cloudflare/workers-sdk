@@ -1,3 +1,5 @@
+import fs from "node:fs";
+import { basename } from "node:path";
 import { beforeAll, describe, expect } from "vitest";
 import { version } from "../package.json";
 import { getFrameworkToTest } from "./frameworkToTest";
@@ -133,30 +135,61 @@ describe.skipIf(experimental || frameworkToTest || isQuarantineMode())(
 		test({ experimental }).skipIf(process.platform === "win32")(
 			"Mixed args and interactive",
 			async ({ logStream, project }) => {
-				const { output } = await runC3(
-					[project.path, "--ts", "--no-deploy"],
-					[
-						{
-							matcher: /What would you like to start with\?/,
-							input: [keys.enter],
-						},
-						{
-							matcher: /Which template would you like to use\?/,
-							input: [keys.enter],
-						},
-						{
-							matcher: /Do you want to use git for version control/,
-							input: ["n"],
-						},
-					],
-					logStream,
+				const projectName = basename(project.path);
+				const existingProjectName = Array.from(projectName).reverse().join("");
+				const existingProjectPath = project.path.replace(
+					projectName,
+					existingProjectName,
 				);
+				const existingFilePath = `${existingProjectPath}/example.json`;
 
-				expect(project.path).toExist();
-				expect(output).toContain(`type Hello World Worker`);
-				expect(output).toContain(`lang TypeScript`);
-				expect(output).toContain(`no git`);
-				expect(output).toContain(`no deploy`);
+				try {
+					// Prepare an existing project with a file
+					fs.mkdirSync(existingProjectPath, { recursive: true });
+					fs.writeFileSync(existingFilePath, `"Hello World"`);
+
+					const { output } = await runC3(
+						[existingProjectPath, "--ts", "--no-deploy"],
+						[
+							// c3 will ask for a new project name as the provided one already exists
+							{
+								matcher:
+									/In which directory do you want to create your application/,
+								input: {
+									type: "text",
+									chunks: [project.path, keys.enter],
+									assertErrorMessage: `ERROR  Directory \`${existingProjectPath}\` already exists and contains files that might conflict. Please choose a new name.`,
+								},
+							},
+							{
+								matcher: /What would you like to start with\?/,
+								input: [keys.enter],
+							},
+							{
+								matcher: /Which template would you like to use\?/,
+								input: [keys.enter],
+							},
+							{
+								matcher: /Do you want to use git for version control/,
+								input: ["n"],
+							},
+						],
+						logStream,
+					);
+
+					expect(project.path).toExist();
+					expect(output).toContain(`type Hello World Worker`);
+					expect(output).toContain(`lang TypeScript`);
+					expect(output).toContain(`no git`);
+					expect(output).toContain(`no deploy`);
+				} finally {
+					fs.rmSync(existingFilePath, {
+						recursive: true,
+						force: true,
+						maxRetries: 10,
+						retryDelay: 100,
+					});
+				}
 			},
 		);
 
@@ -243,8 +276,9 @@ describe.skipIf(experimental || frameworkToTest || isQuarantineMode())(
 		test({ experimental }).skipIf(process.platform === "win32")(
 			"Going back and forth between the category, type, framework and lang prompts",
 			async ({ logStream, project }) => {
+				const testProjectPath = "/test-project-path";
 				const { output } = await runC3(
-					["/invalid-project-name", "--git=false", "--no-deploy"],
+					[testProjectPath, "--git=false", "--no-deploy"],
 					[
 						{
 							matcher: /What would you like to start with\?/,
