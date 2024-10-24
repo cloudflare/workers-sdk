@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import events from "node:events";
 import { readFile } from "node:fs/promises";
 import chalk from "chalk";
 import { Miniflare, Mutex } from "miniflare";
@@ -139,6 +140,15 @@ export class LocalRuntimeController extends RuntimeController {
 	// wrap updates in a mutex, so they're always applied in invocation order.
 	#mutex = new Mutex();
 	#mf?: Miniflare;
+	async getMiniflareInstance() {
+		await events.once(this, "reloadComplete");
+
+		if (!this.#mf) {
+			throw new Error("Miniflare instance is not available after reload");
+		}
+
+		return this.#mf;
+	}
 
 	onBundleStart(_: BundleStartEvent) {
 		// Ignored in local runtime
