@@ -1,8 +1,7 @@
 {
 	"$schema": "http://turbo.build/schema.json",
 	"extends": ["//"],
-
-	"pipeline": {
+	"tasks": {
 		"test:ci": {
 			"inputs": ["../packages/*/package.json"],
 			"dependsOn": ["build"]

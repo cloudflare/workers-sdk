@@ -26,7 +26,7 @@ for (const p of paths) {
 			console.log("Failed to read turbo.json for", pkg.name);
 			process.exit(1);
 		}
-		const buildOutputs = turboConfig.pipeline.build.outputs;
+		const buildOutputs = turboConfig.tasks.build.outputs;
 		assert(buildOutputs.length > 0);
 	}
 
