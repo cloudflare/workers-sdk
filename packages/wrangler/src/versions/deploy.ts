@@ -588,7 +588,7 @@ async function maybePatchSettings(
 		},
 	});
 
-	let observability = [];
+	const observability = [];
 	if (patchedSettings.observability) {
 		observability.push(`enabled: ${patchedSettings.observability.enabled}`);
 		if (patchedSettings.observability.head_sampling_rate) {
