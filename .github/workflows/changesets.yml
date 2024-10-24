@@ -9,7 +9,7 @@ jobs:
   release:
     if: ${{ github.repository_owner == 'cloudflare' }}
     name: Handle Changesets
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v4
