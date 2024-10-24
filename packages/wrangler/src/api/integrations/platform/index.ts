@@ -1,24 +1,20 @@
-import { kCurrentWorker, Miniflare } from "miniflare";
+import { kCurrentWorker } from "miniflare";
 import { processAssetsArg } from "../../../assets";
 import { readConfig } from "../../../config";
 import { DEFAULT_MODULE_RULES } from "../../../deployment-bundle/rules";
 import { getBindings } from "../../../dev";
-import { getBoundRegisteredWorkers } from "../../../dev-registry";
-import { getVarsForDev } from "../../../dev/dev-vars";
 import {
 	buildAssetOptions,
 	buildMiniflareBindingOptions,
 	buildSitesOptions,
 } from "../../../dev/miniflare";
 import { getClassNamesWhichUseSQLite } from "../../../dev/validate-dev-props";
-import { run } from "../../../experimental-flags";
 import { getLegacyAssetPaths, getSiteAssetPaths } from "../../../sites";
+import { startWorker } from "../../startDevWorker";
 import { CacheStorage } from "./caches";
 import { ExecutionContext } from "./executionContext";
-import { getServiceBindings } from "./services";
-import type { Config } from "../../../config";
 import type { IncomingRequestCfProperties } from "@cloudflare/workers-types/experimental";
-import type { MiniflareOptions, ModuleRule, WorkerOptions } from "miniflare";
+import type { ModuleRule, WorkerOptions } from "miniflare";
 
 /**
  * Options for the `getPlatformProxy` utility
@@ -96,136 +92,47 @@ export type PlatformProxy<
  * @returns An Object containing the generated proxies alongside other related utilities
  */
 export async function getPlatformProxy<
-	Env = Record<string, unknown>,
+	Env extends Record<string, unknown> = Record<string, unknown>,
 	CfProperties extends Record<string, unknown> = IncomingRequestCfProperties,
 >(
 	options: GetPlatformProxyOptions = {}
 ): Promise<PlatformProxy<Env, CfProperties>> {
-	const env = options.environment;
+	// TODO: Allow skipping custom build
 
-	const rawConfig = readConfig(options.configPath, {
-		experimentalJsonConfig: options.experimentalJsonConfig,
-		env,
-	});
-
-	const miniflareOptions = await run(
-		{
-			FILE_BASED_REGISTRY: Boolean(options.experimentalRegistry),
-			DEV_ENV: false,
-			JSON_CONFIG_FILE: Boolean(options.experimentalJsonConfig),
+	const worker = await startWorker({
+		config: options.configPath,
+		env: options.environment,
+		dev: {
+			inspector: {
+				port: 0,
+			},
+			server: {
+				port: 0,
+			},
+			logLevel: "none",
+			liveReload: false,
+			watch: false,
+			persist:
+				typeof options.persist === "object"
+					? options.persist.path
+					: options.persist
+						? ".wrangler/state/v3"
+						: undefined,
 		},
-		() => getMiniflareOptionsFromConfig(rawConfig, env, options)
-	);
-
-	const mf = new Miniflare({
-		script: "",
-		modules: true,
-		...(miniflareOptions as Record<string, unknown>),
 	});
 
+	const mf = await worker.getLocalMiniflareInstance();
 	const bindings: Env = await mf.getBindings();
-
-	const vars = getVarsForDev(rawConfig, env);
-
 	const cf = await mf.getCf();
+
 	deepFreeze(cf);
 
 	return {
-		env: {
-			...vars,
-			...bindings,
-		},
+		env: bindings,
 		cf: cf as CfProperties,
 		ctx: new ExecutionContext(),
 		caches: new CacheStorage(),
-		dispose: () => mf.dispose(),
-	};
-}
-
-async function getMiniflareOptionsFromConfig(
-	rawConfig: Config,
-	env: string | undefined,
-	options: GetPlatformProxyOptions
-): Promise<Partial<MiniflareOptions>> {
-	const bindings = getBindings(rawConfig, env, true, {});
-
-	const workerDefinitions = await getBoundRegisteredWorkers({
-		name: rawConfig.name,
-		services: bindings.services,
-		durableObjects: rawConfig["durable_objects"],
-	});
-
-	const { bindingOptions, externalWorkers } = buildMiniflareBindingOptions({
-		name: undefined,
-		bindings,
-		workerDefinitions,
-		queueConsumers: undefined,
-		services: rawConfig.services,
-		serviceBindings: {},
-		migrations: rawConfig.migrations,
-	});
-
-	const persistOptions = getMiniflarePersistOptions(options.persist);
-
-	const serviceBindings = await getServiceBindings(bindings.services);
-
-	const miniflareOptions: MiniflareOptions = {
-		workers: [
-			{
-				script: "",
-				modules: true,
-				...bindingOptions,
-				serviceBindings: {
-					...serviceBindings,
-					...bindingOptions.serviceBindings,
-				},
-			},
-			...externalWorkers,
-		],
-		...persistOptions,
-	};
-
-	return miniflareOptions;
-}
-
-/**
- * Get the persist option properties to pass to miniflare
- *
- * @param persist The user provided persistence option
- * @returns an object containing the properties to pass to miniflare
- */
-function getMiniflarePersistOptions(
-	persist: GetPlatformProxyOptions["persist"]
-): Pick<
-	MiniflareOptions,
-	| "kvPersist"
-	| "durableObjectsPersist"
-	| "r2Persist"
-	| "d1Persist"
-	| "workflowsPersist"
-> {
-	if (persist === false) {
-		// the user explicitly asked for no persistance
-		return {
-			kvPersist: false,
-			durableObjectsPersist: false,
-			r2Persist: false,
-			d1Persist: false,
-			workflowsPersist: false,
-		};
-	}
-
-	const defaultPersistPath = ".wrangler/state/v3";
-
-	const persistPath =
-		typeof persist === "object" ? persist.path : defaultPersistPath;
-
-	return {
-		kvPersist: `${persistPath}/kv`,
-		durableObjectsPersist: `${persistPath}/do`,
-		r2Persist: `${persistPath}/r2`,
-		d1Persist: `${persistPath}/d1`,
-		workflowsPersist: `${persistPath}/workflows`,
+		dispose: () => worker.dispose(),
 	};
 }
 

@@ -28,7 +28,7 @@ export type BindingsProxy<
  * @returns An Object containing the generated proxies alongside other related utilities
  */
 export async function getBindingsProxy<
-	Bindings = Record<string, unknown>,
+	Bindings extends Record<string, unknown> = Record<string, unknown>,
 	CfProperties extends Record<string, unknown> = IncomingRequestCfProperties,
 >(
 	options: GetBindingsProxyOptions = {}
