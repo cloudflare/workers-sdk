@@ -4476,8 +4476,7 @@ addEventListener('fetch', event => {});`
 					["Q29udGVudCBvZiBmaWxlLTM="],
 					"ff5016e92f039aa743a4ff7abb3180fa",
 					{
-						// TODO: this should be "text/plain; charset=utf-8", but msw? is stripping the charset part
-						type: "text/plain",
+						type: "text/plain; charset=utf-8",
 					}
 				)
 			);
@@ -4488,7 +4487,7 @@ addEventListener('fetch', event => {});`
 					["Q29udGVudCBvZiBmaWxlLTI="],
 					"7574a8cd3094a050388ac9663af1c1d6",
 					{
-						type: "text/plain",
+						type: "text/plain; charset=utf-8",
 					}
 				)
 			);
@@ -4499,7 +4498,7 @@ addEventListener('fetch', event => {});`
 					["Q29udGVudCBvZiBmaWxlLTE="],
 					"0de3dd5df907418e9730fd2bd747bd5e",
 					{
-						type: "text/plain",
+						type: "text/plain; charset=utf-8",
 					}
 				)
 			);
@@ -4893,7 +4892,7 @@ addEventListener('fetch', event => {});`
 					["Q29udGVudCBvZiBmaWxlLTE="],
 					"0de3dd5df907418e9730fd2bd747bd5e",
 					{
-						type: "text/plain",
+						type: "text/plain; charset=utf-8",
 					}
 				)
 			);
@@ -4904,8 +4903,7 @@ addEventListener('fetch', event => {});`
 					["Q29udGVudCBvZiBmaWxlLTI="],
 					"7574a8cd3094a050388ac9663af1c1d6",
 					{
-						// TODO: this should be "text/plain; charset=utf-8", but msw? is stripping the charset part
-						type: "text/plain",
+						type: "text/plain; charset=utf-8",
 					}
 				)
 			);
@@ -4916,7 +4914,7 @@ addEventListener('fetch', event => {});`
 					["Q29udGVudCBvZiBmaWxlLTM="],
 					"ff5016e92f039aa743a4ff7abb3180fa",
 					{
-						type: "text/plain",
+						type: "text/plain; charset=utf-8",
 					}
 				)
 			);
@@ -4927,7 +4925,7 @@ addEventListener('fetch', event => {});`
 					["Q29udGVudCBvZiBmaWxlLTU="],
 					"f05e28a3d0bdb90d3cf4bdafe592488f",
 					{
-						type: "text/plain",
+						type: "text/plain; charset=utf-8",
 					}
 				)
 			);

@@ -149,7 +149,7 @@
 		"mime": "^3.0.0",
 		"minimatch": "^5.1.0",
 		"mock-socket": "^9.3.1",
-		"msw": "^2.5.0",
+		"msw": "^2.5.1",
 		"open": "^8.4.0",
 		"p-queue": "^7.2.0",
 		"patch-console": "^1.0.0",

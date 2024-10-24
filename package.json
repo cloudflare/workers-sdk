@@ -78,8 +78,7 @@
 			"@cloudflare/elements>@types/react": "^18",
 			"capnpc-ts>typescript": "4.2.4",
 			"vitest>@types/node": "$@types/node",
-			"vite>@types/node": "$@types/node",
-			"ink>ws": "catalog:default"
+			"vite>@types/node": "$@types/node"
 		},
 		"patchedDependencies": {
 			"ink@3.2.0": "patches/ink@3.2.0.patch",
