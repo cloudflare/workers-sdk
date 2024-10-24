@@ -14,7 +14,7 @@
 		"@cloudflare/workers-types": "^4.20241022.0",
 		"@types/node": "20.8.3",
 		"miniflare": "workspace:*",
-		"typescript": "^5.5.2",
+		"typescript": "catalog:default",
 		"vitest": "catalog:default",
 		"wrangler": "workspace:*"
 	},

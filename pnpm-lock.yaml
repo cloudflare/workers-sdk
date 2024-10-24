@@ -12,6 +12,9 @@ catalogs:
     '@vitest/snapshot':
       specifier: ~2.1.1
       version: 2.1.1
+    typescript:
+      specifier: ~5.5.4
+      version: 5.5.4
     undici:
       specifier: ^5.28.4
       version: 5.28.4
@@ -109,7 +112,7 @@ importers:
         specifier: ^2.2.3
         version: 2.2.3
       typescript:
-        specifier: ^5.5.2
+        specifier: catalog:default
         version: 5.5.4
       vite:
         specifier: ^5.0.12
@@ -670,7 +673,7 @@ importers:
         specifier: ^3.3.1
         version: 3.3.1(patch_hash=b5gffumfuckaq3c77sda2gdfuq)
       typescript:
-        specifier: ^5.5.2
+        specifier: catalog:default
         version: 5.5.4
       vitest:
         specifier: catalog:default
@@ -1394,7 +1397,7 @@ importers:
         specifier: ^2.2.0
         version: 2.2.0
       typescript:
-        specifier: ^5.5.2
+        specifier: catalog:default
         version: 5.5.4
       undici:
         specifier: catalog:default
@@ -1607,7 +1610,7 @@ importers:
         specifier: ^3.3.1
         version: 3.3.1(patch_hash=b5gffumfuckaq3c77sda2gdfuq)
       typescript:
-        specifier: ^5.5.4
+        specifier: catalog:default
         version: 5.5.4
       vitest:
         specifier: catalog:default
@@ -1630,7 +1633,7 @@ importers:
         specifier: workspace:*
         version: link:../miniflare
       typescript:
-        specifier: ^5.5.2
+        specifier: catalog:default
         version: 5.5.4
       vitest:
         specifier: catalog:default
@@ -1673,7 +1676,7 @@ importers:
         specifier: ^6.0.1
         version: 6.0.1
       typescript:
-        specifier: ^5.5.4
+        specifier: catalog:default
         version: 5.5.4
       vitest:
         specifier: catalog:default
