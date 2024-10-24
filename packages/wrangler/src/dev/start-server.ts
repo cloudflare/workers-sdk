@@ -150,6 +150,7 @@ export async function startDevServer(
 			persist: props.localPersistencePath ?? undefined,
 			testScheduled: props.testScheduled,
 			registry: workerDefinitions,
+			bindVectorizeToProd: props.bindVectorizeToProd,
 		},
 		build: {
 			bundle: !props.noBundle,
@@ -321,6 +322,7 @@ export async function startDevServer(
 			sourceMapPath: bundle?.sourceMapPath,
 			services: props.bindings.services,
 			experimentalDevEnv: props.experimentalDevEnv,
+			bindVectorizeToProd: props.bindVectorizeToProd,
 		});
 
 		return {

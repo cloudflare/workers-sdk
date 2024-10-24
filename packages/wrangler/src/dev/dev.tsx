@@ -196,6 +196,7 @@ export type DevProps = {
 	rawConfig: Config;
 	rawArgs: StartDevOptions;
 	devEnv: DevEnv;
+	bindVectorizeToProd: boolean;
 };
 
 export function DevImplementation(props: DevProps): JSX.Element {
@@ -399,6 +400,7 @@ function DevSession(props: DevSessionProps) {
 				liveReload: props.liveReload,
 				testScheduled: props.testScheduled,
 				persist: "",
+				bindVectorizeToProd: props.bindVectorizeToProd,
 			},
 			legacy: {
 				site:
@@ -459,6 +461,7 @@ function DevSession(props: DevSessionProps) {
 		props.localUpstream,
 		props.liveReload,
 		props.testScheduled,
+		props.bindVectorizeToProd,
 		accountIdDeferred,
 	]);
 
@@ -657,6 +660,7 @@ function DevSession(props: DevSessionProps) {
 			enablePagesAssetsServiceBinding={props.enablePagesAssetsServiceBinding}
 			sourceMapPath={bundle?.sourceMapPath}
 			services={props.bindings.services}
+			bindVectorizeToProd={props.bindVectorizeToProd}
 		/>
 	) : (
 		<Remote
