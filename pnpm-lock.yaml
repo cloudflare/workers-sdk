@@ -12,6 +12,9 @@ catalogs:
     '@vitest/snapshot':
       specifier: ~2.1.1
       version: 2.1.1
+    undici:
+      specifier: ^5.28.4
+      version: 5.28.4
     vitest:
       specifier: ~2.1.1
       version: 2.1.1
@@ -124,7 +127,7 @@ importers:
         specifier: ^4.20241022.0
         version: 4.20241022.0
       undici:
-        specifier: ^5.28.4
+        specifier: catalog:default
         version: 5.28.4
       wrangler:
         specifier: workspace:*
@@ -136,7 +139,7 @@ importers:
         specifier: workspace:^
         version: link:../../packages/workers-tsconfig
       undici:
-        specifier: ^5.28.4
+        specifier: catalog:default
         version: 5.28.4
       wrangler:
         specifier: workspace:*
@@ -157,7 +160,7 @@ importers:
         specifier: ^1.1.6
         version: 1.1.6
       undici:
-        specifier: ^5.28.4
+        specifier: catalog:default
         version: 5.28.4
       vitest:
         specifier: catalog:default
@@ -178,7 +181,7 @@ importers:
         specifier: workspace:^
         version: link:../../packages/workers-tsconfig
       undici:
-        specifier: ^5.28.4
+        specifier: catalog:default
         version: 5.28.4
       wrangler:
         specifier: workspace:*
@@ -193,7 +196,7 @@ importers:
         specifier: ^2.2.0
         version: 2.2.0
       undici:
-        specifier: ^5.28.4
+        specifier: catalog:default
         version: 5.28.4
       wrangler:
         specifier: workspace:*
@@ -208,7 +211,7 @@ importers:
         specifier: ^4.20241022.0
         version: 4.20241022.0
       undici:
-        specifier: ^5.28.4
+        specifier: catalog:default
         version: 5.28.4
       wrangler:
         specifier: workspace:*
@@ -224,7 +227,7 @@ importers:
         specifier: workspace:^
         version: link:../../packages/workers-tsconfig
       undici:
-        specifier: ^5.28.4
+        specifier: catalog:default
         version: 5.28.4
       wrangler:
         specifier: workspace:*
@@ -245,7 +248,7 @@ importers:
         specifier: ^7.1.0
         version: 7.1.0
       undici:
-        specifier: ^5.28.4
+        specifier: catalog:default
         version: 5.28.4
 
   fixtures/isomorphic-random-example: {}
@@ -292,7 +295,7 @@ importers:
         specifier: ^4.20241022.0
         version: 4.20241022.0
       undici:
-        specifier: ^5.28.4
+        specifier: catalog:default
         version: 5.28.4
       wrangler:
         specifier: workspace:*
@@ -307,7 +310,7 @@ importers:
         specifier: ^4.20241022.0
         version: 4.20241022.0
       undici:
-        specifier: ^5.28.4
+        specifier: catalog:default
         version: 5.28.4
       wrangler:
         specifier: workspace:*
@@ -331,7 +334,7 @@ importers:
         specifier: ^1.1.1
         version: 1.1.1
       undici:
-        specifier: ^5.28.4
+        specifier: catalog:default
         version: 5.28.4
       wrangler:
         specifier: workspace:*
@@ -343,7 +346,7 @@ importers:
         specifier: workspace:*
         version: link:../../packages/workers-tsconfig
       undici:
-        specifier: ^5.28.4
+        specifier: catalog:default
         version: 5.28.4
       wrangler:
         specifier: workspace:*
@@ -358,7 +361,7 @@ importers:
         specifier: ^4.20241022.0
         version: 4.20241022.0
       undici:
-        specifier: ^5.28.4
+        specifier: catalog:default
         version: 5.28.4
       wrangler:
         specifier: workspace:*
@@ -380,7 +383,7 @@ importers:
         specifier: workspace:*
         version: link:../pages-plugin-example
       undici:
-        specifier: ^5.28.4
+        specifier: catalog:default
         version: 5.28.4
       wrangler:
         specifier: workspace:*
@@ -392,7 +395,7 @@ importers:
         specifier: workspace:*
         version: link:../../packages/workers-tsconfig
       undici:
-        specifier: ^5.28.4
+        specifier: catalog:default
         version: 5.28.4
       wrangler:
         specifier: workspace:*
@@ -404,7 +407,7 @@ importers:
         specifier: workspace:*
         version: link:../../packages/workers-tsconfig
       undici:
-        specifier: ^5.28.4
+        specifier: catalog:default
         version: 5.28.4
       wrangler:
         specifier: workspace:*
@@ -419,7 +422,7 @@ importers:
         specifier: ^4.20241022.0
         version: 4.20241022.0
       undici:
-        specifier: ^5.28.4
+        specifier: catalog:default
         version: 5.28.4
       wrangler:
         specifier: workspace:*
@@ -431,7 +434,7 @@ importers:
         specifier: workspace:^
         version: link:../../packages/workers-tsconfig
       undici:
-        specifier: ^5.28.4
+        specifier: catalog:default
         version: 5.28.4
       wrangler:
         specifier: workspace:*
@@ -462,7 +465,7 @@ importers:
         specifier: workspace:*
         version: link:../pages-plugin-example
       undici:
-        specifier: ^5.28.4
+        specifier: catalog:default
         version: 5.28.4
       wrangler:
         specifier: workspace:*
@@ -477,7 +480,7 @@ importers:
         specifier: workspace:*
         version: link:../../packages/miniflare
       undici:
-        specifier: ^5.28.4
+        specifier: catalog:default
         version: 5.28.4
       wrangler:
         specifier: workspace:*
@@ -492,7 +495,7 @@ importers:
         specifier: ^4.20241022.0
         version: 4.20241022.0
       undici:
-        specifier: ^5.28.4
+        specifier: catalog:default
         version: 5.28.4
       wrangler:
         specifier: workspace:*
@@ -504,7 +507,7 @@ importers:
         specifier: workspace:*
         version: link:../../packages/workers-tsconfig
       undici:
-        specifier: ^5.28.4
+        specifier: catalog:default
         version: 5.28.4
       wrangler:
         specifier: workspace:*
@@ -516,7 +519,7 @@ importers:
         specifier: workspace:^
         version: link:../../packages/workers-tsconfig
       undici:
-        specifier: ^5.28.4
+        specifier: catalog:default
         version: 5.28.4
       wrangler:
         specifier: workspace:*
@@ -528,7 +531,7 @@ importers:
         specifier: workspace:*
         version: link:../../packages/workers-tsconfig
       undici:
-        specifier: ^5.28.4
+        specifier: catalog:default
         version: 5.28.4
       wrangler:
         specifier: workspace:*
@@ -540,7 +543,7 @@ importers:
         specifier: workspace:*
         version: link:../../packages/workers-tsconfig
       undici:
-        specifier: ^5.28.4
+        specifier: catalog:default
         version: 5.28.4
       wrangler:
         specifier: workspace:*
@@ -552,7 +555,7 @@ importers:
         specifier: workspace:*
         version: link:../../packages/workers-tsconfig
       undici:
-        specifier: ^5.28.4
+        specifier: catalog:default
         version: 5.28.4
       wrangler:
         specifier: workspace:*
@@ -564,7 +567,7 @@ importers:
         specifier: workspace:*
         version: link:../../packages/workers-tsconfig
       undici:
-        specifier: ^5.28.4
+        specifier: catalog:default
         version: 5.28.4
       wrangler:
         specifier: workspace:*
@@ -591,7 +594,7 @@ importers:
         specifier: workspace:^
         version: link:../../packages/workers-tsconfig
       undici:
-        specifier: ^5.28.4
+        specifier: catalog:default
         version: 5.28.4
       wrangler:
         specifier: workspace:*
@@ -610,7 +613,7 @@ importers:
         specifier: ^8.2.2
         version: 8.2.2
       undici:
-        specifier: ^5.28.4
+        specifier: catalog:default
         version: 5.28.4
       wrangler:
         specifier: workspace:*
@@ -691,7 +694,7 @@ importers:
         specifier: workspace:^
         version: link:../../packages/workers-tsconfig
       undici:
-        specifier: ^5.28.4
+        specifier: catalog:default
         version: 5.28.4
       wrangler:
         specifier: workspace:*
@@ -717,7 +720,7 @@ importers:
         specifier: ^4.20241022.0
         version: 4.20241022.0
       undici:
-        specifier: ^5.28.4
+        specifier: catalog:default
         version: 5.28.4
       wrangler:
         specifier: workspace:*
@@ -732,7 +735,7 @@ importers:
         specifier: ^4.20241022.0
         version: 4.20241022.0
       undici:
-        specifier: ^5.28.4
+        specifier: catalog:default
         version: 5.28.4
       wrangler:
         specifier: workspace:*
@@ -744,8 +747,8 @@ importers:
         specifier: ^4.20241022.0
         version: 4.20241022.0
       undici:
-        specifier: ^6.20.1
-        version: 6.20.1
+        specifier: catalog:default
+        version: 5.28.4
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -780,7 +783,7 @@ importers:
         specifier: ^5.0.1
         version: 5.0.1
       undici:
-        specifier: ^5.28.4
+        specifier: catalog:default
         version: 5.28.4
 
   packages/create-cloudflare:
@@ -894,7 +897,7 @@ importers:
         specifier: ^7.5.1
         version: 7.5.4
       undici:
-        specifier: ^5.28.4
+        specifier: catalog:default
         version: 5.28.4
       vite-tsconfig-paths:
         specifier: ^4.0.8
@@ -1061,7 +1064,7 @@ importers:
         specifier: ^1.1.0
         version: 1.1.0
       undici:
-        specifier: ^5.28.4
+        specifier: catalog:default
         version: 5.28.4
       workerd:
         specifier: 1.20241022.0
@@ -1253,7 +1256,7 @@ importers:
         specifier: ^3.3.1
         version: 3.3.1(patch_hash=b5gffumfuckaq3c77sda2gdfuq)
       undici:
-        specifier: ^5.28.4
+        specifier: catalog:default
         version: 5.28.4
       wrangler:
         specifier: workspace:*
@@ -1394,7 +1397,7 @@ importers:
         specifier: ^5.5.2
         version: 5.5.4
       undici:
-        specifier: ^5.28.4
+        specifier: catalog:default
         version: 5.28.4
       vitest:
         specifier: catalog:default
@@ -1561,7 +1564,7 @@ importers:
         specifier: ^3.12.8
         version: 3.12.10
       undici:
-        specifier: ^5.28.4
+        specifier: catalog:default
         version: 5.28.4
       vite-plugin-rewrite-all:
         specifier: ^1.0.1
@@ -1972,7 +1975,7 @@ importers:
         specifier: ^1.5.0
         version: 1.5.0
       undici:
-        specifier: ^5.28.4
+        specifier: catalog:default
         version: 5.28.4
       update-check:
         specifier: ^1.5.4
@@ -2026,7 +2029,7 @@ importers:
         specifier: ^2.2.0
         version: 2.2.0
       undici:
-        specifier: ^5.28.4
+        specifier: catalog:default
         version: 5.28.4
 
 packages:
@@ -8105,10 +8108,6 @@ packages:
   undici@5.28.4:
     resolution: {integrity: sha512-72RFADWFqKmUb2hmmvNODKL3p9hcB6Gt2DOQMis1SEBaV6a4MH8soBvzg+95CYhCKPFedut2JY9bMfrDl9D23g==}
     engines: {node: '>=14.0'}
-
-  undici@6.20.1:
-    resolution: {integrity: sha512-AjQF1QsmqfJys+LXfGTNum+qw4S88CojRInG/6t31W/1fk6G59s92bnAvGz5Cmur+kQv2SURXEvvudLmbrE8QA==}
-    engines: {node: '>=18.17'}
 
   unenv-nightly@2.0.0-20241024-111401-d4156ac:
     resolution: {integrity: sha512-xJO1hfY+Te+/XnfCYrCbFbRcgu6XEODND1s5wnVbaBCkuQX7JXF7fHEXPrukFE2j8EOH848P8QN19VO47XN8hw==}
@@ -15353,8 +15352,6 @@ snapshots:
   undici@5.28.4:
     dependencies:
       '@fastify/busboy': 2.1.1
-
-  undici@6.20.1: {}
 
   unenv-nightly@2.0.0-20241024-111401-d4156ac:
     dependencies:

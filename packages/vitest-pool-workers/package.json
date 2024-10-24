@@ -73,7 +73,7 @@
 		"capnpc-ts": "^0.7.0",
 		"ts-dedent": "^2.2.0",
 		"typescript": "^5.5.2",
-		"undici": "^5.28.4",
+		"undici": "catalog:default",
 		"vitest": "catalog:default"
 	},
 	"peerDependencies": {
