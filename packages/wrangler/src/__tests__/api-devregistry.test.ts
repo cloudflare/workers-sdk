@@ -54,7 +54,7 @@ describe("multi-worker testing", () => {
 		}
 	});
 
-	it("parentWorker and childWorker should be added devRegistry", async () => {
+	it.skip("parentWorker and childWorker should be added devRegistry", async () => {
 		const resp = await fetch("http://127.0.0.1:6284/workers");
 		if (resp) {
 			const parsedResp = (await resp.json()) as {

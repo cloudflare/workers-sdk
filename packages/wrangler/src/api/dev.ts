@@ -127,7 +127,7 @@ export async function unstable_dev(
 		testMode,
 		testScheduled,
 		devEnv = false,
-		fileBasedRegistry = false,
+		fileBasedRegistry = true,
 		// 2. options for alpha/beta products/libs
 		d1Databases,
 		enablePagesAssetsServiceBinding,

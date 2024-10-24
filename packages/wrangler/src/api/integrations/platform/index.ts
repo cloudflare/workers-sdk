@@ -110,7 +110,7 @@ export async function getPlatformProxy<
 
 	const miniflareOptions = await run(
 		{
-			FILE_BASED_REGISTRY: Boolean(options.experimentalRegistry),
+			FILE_BASED_REGISTRY: Boolean(options.experimentalRegistry ?? true),
 			DEV_ENV: false,
 			JSON_CONFIG_FILE: Boolean(options.experimentalJsonConfig),
 		},
