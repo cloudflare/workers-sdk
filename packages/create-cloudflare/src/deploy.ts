@@ -108,7 +108,7 @@ export const runDeploy = async (ctx: C3Context) => {
 		"output.json",
 	);
 
-	const result = await runCommand(deployCmd, {
+	await runCommand(deployCmd, {
 		cwd: ctx.project.path,
 		env: {
 			CLOUDFLARE_ACCOUNT_ID: ctx.account.id,
