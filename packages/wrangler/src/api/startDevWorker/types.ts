@@ -53,6 +53,7 @@ export interface Worker {
 	scheduled: MiniflareWorker["scheduled"];
 	queue: MiniflareWorker["queue"];
 	dispose(): Promise<void>;
+	getLocalMiniflareInstance(): Promise<Miniflare>;
 }
 
 export interface StartDevWorkerInput {
