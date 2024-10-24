@@ -588,8 +588,8 @@ importers:
         specifier: workspace:*
         version: link:../../packages/wrangler
       ws:
-        specifier: ^8.17.1
-        version: 8.17.1
+        specifier: ^8.18.0
+        version: 8.18.0
 
   fixtures/ratelimit-app:
     devDependencies:
@@ -1073,8 +1073,8 @@ importers:
         specifier: 1.20241022.0
         version: 1.20241022.0
       ws:
-        specifier: ^8.17.1
-        version: 8.17.1
+        specifier: ^8.18.0
+        version: 8.18.0
       youch:
         specifier: ^3.2.2
         version: 3.2.3
@@ -1990,8 +1990,8 @@ importers:
         specifier: ^0.3.0
         version: 0.3.0(vitest@2.1.1)
       ws:
-        specifier: ^8.17.1
-        version: 8.17.1
+        specifier: ^8.18.0
+        version: 8.18.0
       xdg-app-paths:
         specifier: ^8.3.0
         version: 8.3.0
@@ -3620,8 +3620,8 @@ packages:
   '@types/node-polyglot@2.4.2':
     resolution: {integrity: sha512-Tfx3TU/PBK8vW/BG1TK793EHlVpGnoHUj+DGxOwNOYwZiueLeu7FgksvDdpEyFSw4+AKKiEuiMm8EGUHUR4o6g==}
 
-  '@types/node@12.20.47':
-    resolution: {integrity: sha512-BzcaRsnFuznzOItW1WpQrDHM7plAa7GIDMZ6b5pnMbkqEtM/6WCOhvZar39oeMQP79gwvFUWjjptE7/KGcNqFg==}
+  '@types/node@12.20.55':
+    resolution: {integrity: sha512-J8xLz7q2OFulZ2cyGTLE1TbbZcjpno7FaN6zdJNrgAdrJ+DZzh/uFR6YrTb4C+nXakvud8Q4+rbhoIWlYQbUFQ==}
 
   '@types/node@20.12.12':
     resolution: {integrity: sha512-eWLDGF/FOSPtAvEqeRAQ4C8LSA7M1I7i0ky1I8U7kD1J5ITyW3AsRhQrKVoWf5pFKZ2kILsEGJhsI9r93PYnOw==}
@@ -8414,8 +8414,8 @@ packages:
     resolution: {integrity: sha512-+QU2zd6OTD8XWIJCbffaiQeH9U73qIqafo1x6V1snCWYGJf6cVE0cDR4D8xRzcEnfI21IFrUPzPGtcPf8AC+Rw==}
     engines: {node: ^14.17.0 || ^16.13.0 || >=18.0.0}
 
-  ws@7.5.6:
-    resolution: {integrity: sha512-6GLgCqo2cy2A2rjCNFlxQS6ZljG/coZfZXclldI8FB/1G3CCI36Zd8xy2HrFVACi8tfk5XrgLQEk+P0Tnz9UcA==}
+  ws@7.5.10:
+    resolution: {integrity: sha512-+dbF1tHwZpXcbOJdVOkzLDxZP1ailvSxM6ZweXTegylPny803bFhA+vqBYw4s31NSAk4S2Qz+AKXK9a4wkdjcQ==}
     engines: {node: '>=8.3.0'}
     peerDependencies:
       bufferutil: ^4.0.1
@@ -8426,8 +8426,8 @@ packages:
       utf-8-validate:
         optional: true
 
-  ws@8.17.1:
-    resolution: {integrity: sha512-6XQFvXTkbfUOZOKKILFG1PDK2NDQs4azKQl26T0YS5CxqWLgXajbPZ+h4gZekJyRqFU8pvnbAbbs/3TgRPy+GQ==}
+  ws@8.18.0:
+    resolution: {integrity: sha512-8VbfWfHLbbwu3+N6OKsOMpBdT4kXPDDB9cJk2bJ6mh9ucxdlnNvH1e+roYkKmN9Nxw2yjz7VzeO9oOz2zJ04Pw==}
     engines: {node: '>=10.0.0'}
     peerDependencies:
       bufferutil: ^4.0.1
@@ -9616,7 +9616,7 @@ snapshots:
   '@manypkg/find-root@1.1.0':
     dependencies:
       '@babel/runtime': 7.22.5
-      '@types/node': 12.20.47
+      '@types/node': 12.20.55
       find-up: 4.1.0
       fs-extra: 8.1.0
 
@@ -10402,7 +10402,7 @@ snapshots:
 
   '@types/node-polyglot@2.4.2': {}
 
-  '@types/node@12.20.47': {}
+  '@types/node@12.20.55': {}
 
   '@types/node@20.12.12':
     dependencies:
@@ -12922,7 +12922,7 @@ snapshots:
       type-fest: 0.12.0
       widest-line: 3.1.0
       wrap-ansi: 6.2.0
-      ws: 7.5.6
+      ws: 7.5.10
       yoga-layout-prebuilt: 1.10.0
     optionalDependencies:
       '@types/react': 18.3.3
@@ -14310,7 +14310,7 @@ snapshots:
   react-devtools-core@4.23.0:
     dependencies:
       shell-quote: 1.8.1
-      ws: 7.5.6
+      ws: 7.5.10
     transitivePeerDependencies:
       - bufferutil
       - utf-8-validate
@@ -15703,9 +15703,9 @@ snapshots:
       imurmurhash: 0.1.4
       signal-exit: 4.1.0
 
-  ws@7.5.6: {}
+  ws@7.5.10: {}
 
-  ws@8.17.1: {}
+  ws@8.18.0: {}
 
   xdg-app-paths@8.3.0:
     dependencies:
