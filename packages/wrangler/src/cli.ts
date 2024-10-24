@@ -35,6 +35,7 @@ export { unstable_dev, unstable_pages, unstable_DevEnv, unstable_startWorker };
 export type { UnstableDevWorker, UnstableDevOptions };
 
 export * from "./api/integrations";
+export * from "./api/types";
 
 // Export internal APIs required by the Vitest integration as `unstable_`
 export { default as unstable_splitSqlQuery } from "./d1/splitter";
