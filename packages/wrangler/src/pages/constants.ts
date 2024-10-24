@@ -5,7 +5,7 @@ const isWindows = process.platform === "win32";
 export const MAX_ASSET_COUNT = 20_000;
 export const MAX_ASSET_SIZE = 25 * 1024 * 1024;
 export const PAGES_CONFIG_CACHE_FILENAME = "pages.json";
-export const MAX_BUCKET_SIZE = 40 * 1024 * 1024;
+export const MAX_BUCKET_SIZE = 30 * 1024 * 1024;
 // Reduce the maximum number of files in a bucket on Windows
 // This helps to avoid EMFILE errors when reading them into memory.
 export const MAX_BUCKET_FILE_COUNT = isWindows ? 1000 : 2000;
