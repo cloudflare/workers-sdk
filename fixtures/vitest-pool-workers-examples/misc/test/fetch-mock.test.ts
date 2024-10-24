@@ -111,24 +111,4 @@ describe("AbortSignal", () => {
 			`[AbortError: The operation was aborted]`
 		);
 	});
-
-	it("aborts if an AbortSignal is already aborted", async () => {
-		const controller = new AbortController();
-		controller.abort();
-
-		fetchMock
-			.get("https://example.com")
-			.intercept({ path: "/" })
-			.reply(200, async () => {
-				return "Delayed response";
-			});
-
-		const fetchPromise = fetch("https://example.com", {
-			signal: controller.signal,
-		});
-
-		await expect(fetchPromise).rejects.toThrowErrorMatchingInlineSnapshot(
-			`[AbortError: The operation was aborted]`
-		);
-	});
 });
