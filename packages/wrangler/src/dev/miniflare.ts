@@ -36,6 +36,7 @@ import type {
 	CfScriptFormat,
 	CfUnsafeBinding,
 	CfWorkerInit,
+	CfWorkflow,
 } from "../deployment-bundle/worker";
 import type {
 	WorkerEntrypointsDefinition,
@@ -337,6 +338,18 @@ function queueProducerEntry(
 function hyperdriveEntry(hyperdrive: CfHyperdrive): [string, string] {
 	return [hyperdrive.binding, hyperdrive.localConnectionString ?? ""];
 }
+function workflowEntry(
+	workflow: CfWorkflow
+): [string, { name: string; className: string; scriptName?: string }] {
+	return [
+		workflow.binding,
+		{
+			name: workflow.name,
+			className: workflow.class_name,
+			scriptName: workflow.script_name,
+		},
+	];
+}
 function ratelimitEntry(ratelimit: CfUnsafeBinding): [string, object] {
 	return [ratelimit.name, ratelimit];
 }
@@ -366,6 +379,7 @@ type WorkerOptionsBindings = Pick<
 	| "hyperdrives"
 	| "durableObjects"
 	| "serviceBindings"
+	| "workflows"
 	| "wrappedBindings"
 >;
 
@@ -628,6 +642,7 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 		hyperdrives: Object.fromEntries(
 			bindings.hyperdrive?.map(hyperdriveEntry) ?? []
 		),
+		workflows: Object.fromEntries(bindings.workflows?.map(workflowEntry) ?? []),
 
 		durableObjects: Object.fromEntries([
 			...internalObjects.map(({ name, class_name }) => {
@@ -692,6 +707,7 @@ export function buildPersistOptions(
 			kvPersist: path.join(v3Path, "kv"),
 			r2Persist: path.join(v3Path, "r2"),
 			d1Persist: path.join(v3Path, "d1"),
+			workflowsPersist: path.join(v3Path, "workflows"),
 		};
 	}
 }

@@ -1,5 +1,27 @@
 # create-cloudflare
 
+## 2.30.1
+
+### Patch Changes
+
+- [#7016](https://github.com/cloudflare/workers-sdk/pull/7016) [`381d04f`](https://github.com/cloudflare/workers-sdk/commit/381d04f8c2f1e56c686e36d86c1fce7cdc4046dd) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | create-vue | 3.10.4 | 3.11.1 |
+
+- [#7052](https://github.com/cloudflare/workers-sdk/pull/7052) [`7874ed2`](https://github.com/cloudflare/workers-sdk/commit/7874ed2cdffe52548f5d139bcae8255e8942406d) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency  | From   | To     |
+  | ----------- | ------ | ------ |
+  | create-hono | 0.14.1 | 0.14.2 |
+
+- [#7034](https://github.com/cloudflare/workers-sdk/pull/7034) [`0e91d42`](https://github.com/cloudflare/workers-sdk/commit/0e91d420ab2f2c2bf0cb629737a6cc2ec68ebbe0) Thanks [@andyjessop](https://github.com/andyjessop)! - fix: ensure that user is logged in before trying to choose account during pre-existing Worker C3 flow
+
 ## 2.30.0
 
 ### Minor Changes

@@ -484,6 +484,17 @@ describe("Command Registration", () => {
 				`[Error: Missing namespace definition for 'wrangler missing-namespace']`
 			);
 		});
+
+		test("throws upon duplicated arguments on non-array options", async () => {
+			await expect(
+				runWrangler(
+					"my-test-command --str foo --str bar --num 123 --bool --arr first second --str baz"
+				)
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: The argument "--str" expects a single value, but received multiple: ["foo","bar","baz"].]`
+			);
+		});
+
 		test("throws upon alias to undefined command", async () => {
 			defineAlias({
 				command: "wrangler my-alias-command",

@@ -192,12 +192,49 @@ export function findWranglerToml(
 	return findUpSync(`wrangler.toml`, { cwd: referencePath });
 }
 
+function addLocalSuffix(id: string, local: boolean = false) {
+	return `${id}${local ? " (local)" : ""}`;
+}
+
+export const friendlyBindingNames: Record<
+	keyof CfWorkerInit["bindings"],
+	string
+> = {
+	data_blobs: "Data Blobs",
+	durable_objects: "Durable Objects",
+	kv_namespaces: "KV Namespaces",
+	send_email: "Send Email",
+	queues: "Queues",
+	d1_databases: "D1 Databases",
+	vectorize: "Vectorize Indexes",
+	hyperdrive: "Hyperdrive Configs",
+	r2_buckets: "R2 Buckets",
+	logfwdr: "logfwdr",
+	services: "Services",
+	analytics_engine_datasets: "Analytics Engine Datasets",
+	text_blobs: "Text Blobs",
+	browser: "Browser",
+	ai: "AI",
+	version_metadata: "Worker Version Metadata",
+	unsafe: "Unsafe Metadata",
+	vars: "Vars",
+	wasm_modules: "Wasm Modules",
+	dispatch_namespaces: "Dispatch Namespaces",
+	mtls_certificates: "mTLS Certificates",
+	workflows: "Workflows",
+	pipelines: "Pipelines",
+	assets: "Assets",
+} as const;
+
 /**
  * Print all the bindings a worker using a given config would have access to
  */
 export function printBindings(
 	bindings: CfWorkerInit["bindings"],
-	registry?: WorkerRegistry
+	context: {
+		registry?: WorkerRegistry;
+		local?: boolean;
+	} = {}
 ) {
 	const truncate = (item: string | Record<string, unknown>) => {
 		const s = typeof item === "string" ? item : JSON.stringify(item);
@@ -210,7 +247,7 @@ export function printBindings(
 	};
 
 	const output: {
-		type: string;
+		name: string;
 		entries: { key: string; value: string | boolean }[];
 	}[] = [];
 
@@ -242,7 +279,7 @@ export function printBindings(
 
 	if (data_blobs !== undefined && Object.keys(data_blobs).length > 0) {
 		output.push({
-			type: "Data Blobs",
+			name: friendlyBindingNames.data_blobs,
 			entries: Object.entries(data_blobs).map(([key, value]) => ({
 				key,
 				value: typeof value === "string" ? truncate(value) : "<Buffer>",
@@ -252,21 +289,26 @@ export function printBindings(
 
 	if (durable_objects !== undefined && durable_objects.bindings.length > 0) {
 		output.push({
-			type: "Durable Objects",
+			name: friendlyBindingNames.durable_objects,
 			entries: durable_objects.bindings.map(
 				({ name, class_name, script_name }) => {
 					let value = class_name;
 					if (script_name) {
-						const registryDefinition = registry?.[script_name];
-						if (
-							registryDefinition &&
-							registryDefinition.durableObjects.some(
-								(d) => d.className === class_name
-							)
-						) {
-							value += ` (defined in 🟢 ${script_name})`;
+						if (context.local) {
+							const registryDefinition = context.registry?.[script_name];
+
+							if (
+								registryDefinition &&
+								registryDefinition.durableObjects.some(
+									(d) => d.className === class_name
+								)
+							) {
+								value += ` (defined in 🟢 ${script_name})`;
+							} else {
+								value += ` (defined in 🔴 ${script_name})`;
+							}
 						} else {
-							value += ` (defined in 🔴 ${script_name})`;
+							value += ` (defined in ${script_name})`;
 						}
 					}
 
@@ -281,7 +323,7 @@ export function printBindings(
 
 	if (workflows !== undefined && workflows.length > 0) {
 		output.push({
-			type: "Workflows",
+			name: friendlyBindingNames.workflows,
 			entries: workflows.map(({ class_name, script_name, binding }) => {
 				let value = class_name;
 				if (script_name) {
@@ -298,11 +340,11 @@ export function printBindings(
 
 	if (kv_namespaces !== undefined && kv_namespaces.length > 0) {
 		output.push({
-			type: "KV Namespaces",
+			name: friendlyBindingNames.kv_namespaces,
 			entries: kv_namespaces.map(({ binding, id }) => {
 				return {
 					key: binding,
-					value: id,
+					value: addLocalSuffix(id, context.local),
 				};
 			}),
 		});
@@ -310,7 +352,7 @@ export function printBindings(
 
 	if (send_email !== undefined && send_email.length > 0) {
 		output.push({
-			type: "Send Email",
+			name: friendlyBindingNames.send_email,
 			entries: send_email.map(
 				({ name, destination_address, allowed_destination_addresses }) => {
 					return {
@@ -327,11 +369,11 @@ export function printBindings(
 
 	if (queues !== undefined && queues.length > 0) {
 		output.push({
-			type: "Queues",
+			name: friendlyBindingNames.queues,
 			entries: queues.map(({ binding, queue_name }) => {
 				return {
 					key: binding,
-					value: queue_name,
+					value: addLocalSuffix(queue_name, context.local),
 				};
 			}),
 		});
@@ -339,7 +381,7 @@ export function printBindings(
 
 	if (d1_databases !== undefined && d1_databases.length > 0) {
 		output.push({
-			type: "D1 Databases",
+			name: friendlyBindingNames.d1_databases,
 			entries: d1_databases.map(
 				({ binding, database_name, database_id, preview_database_id }) => {
 					let databaseValue = `${database_id}`;
@@ -352,7 +394,7 @@ export function printBindings(
 					}
 					return {
 						key: binding,
-						value: databaseValue,
+						value: addLocalSuffix(databaseValue, context.local),
 					};
 				}
 			),
@@ -361,11 +403,11 @@ export function printBindings(
 
 	if (vectorize !== undefined && vectorize.length > 0) {
 		output.push({
-			type: "Vectorize Indexes",
+			name: friendlyBindingNames.vectorize,
 			entries: vectorize.map(({ binding, index_name }) => {
 				return {
 					key: binding,
-					value: index_name,
+					value: addLocalSuffix(index_name, context.local),
 				};
 			}),
 		});
@@ -373,11 +415,11 @@ export function printBindings(
 
 	if (hyperdrive !== undefined && hyperdrive.length > 0) {
 		output.push({
-			type: "Hyperdrive Configs",
+			name: friendlyBindingNames.hyperdrive,
 			entries: hyperdrive.map(({ binding, id }) => {
 				return {
 					key: binding,
-					value: id,
+					value: addLocalSuffix(id, context.local),
 				};
 			}),
 		});
@@ -385,14 +427,14 @@ export function printBindings(
 
 	if (r2_buckets !== undefined && r2_buckets.length > 0) {
 		output.push({
-			type: "R2 Buckets",
+			name: friendlyBindingNames.r2_buckets,
 			entries: r2_buckets.map(({ binding, bucket_name, jurisdiction }) => {
 				if (jurisdiction !== undefined) {
 					bucket_name += ` (${jurisdiction})`;
 				}
 				return {
 					key: binding,
-					value: bucket_name,
+					value: addLocalSuffix(bucket_name, context.local),
 				};
 			}),
 		});
@@ -400,7 +442,7 @@ export function printBindings(
 
 	if (logfwdr !== undefined && logfwdr.bindings.length > 0) {
 		output.push({
-			type: "logfwdr",
+			name: friendlyBindingNames.logfwdr,
 			entries: logfwdr.bindings.map((binding) => {
 				return {
 					key: binding.name,
@@ -412,21 +454,24 @@ export function printBindings(
 
 	if (services !== undefined && services.length > 0) {
 		output.push({
-			type: "Services",
+			name: friendlyBindingNames.services,
 			entries: services.map(({ binding, service, entrypoint }) => {
 				let value = service;
 				if (entrypoint) {
 					value += `#${entrypoint}`;
 				}
 
-				const registryDefinition = registry?.[service];
-				if (
-					registryDefinition &&
-					(!entrypoint || registryDefinition.entrypointAddresses?.[entrypoint])
-				) {
-					value = `🟢 ` + value;
-				} else {
-					value = `🔴 ` + value;
+				if (context.local) {
+					const registryDefinition = context.registry?.[service];
+					if (
+						registryDefinition &&
+						(!entrypoint ||
+							registryDefinition.entrypointAddresses?.[entrypoint])
+					) {
+						value = `🟢 ` + value;
+					} else {
+						value = `🔴 ` + value;
+					}
 				}
 				return {
 					key: binding,
@@ -441,7 +486,7 @@ export function printBindings(
 		analytics_engine_datasets.length > 0
 	) {
 		output.push({
-			type: "Analytics Engine Datasets",
+			name: friendlyBindingNames.analytics_engine_datasets,
 			entries: analytics_engine_datasets.map(({ binding, dataset }) => {
 				return {
 					key: binding,
@@ -453,7 +498,7 @@ export function printBindings(
 
 	if (text_blobs !== undefined && Object.keys(text_blobs).length > 0) {
 		output.push({
-			type: "Text Blobs",
+			name: friendlyBindingNames.text_blobs,
 			entries: Object.entries(text_blobs).map(([key, value]) => ({
 				key,
 				value: truncate(value),
@@ -463,7 +508,7 @@ export function printBindings(
 
 	if (browser !== undefined) {
 		output.push({
-			type: "Browser",
+			name: friendlyBindingNames.browser,
 			entries: [{ key: "Name", value: browser.binding }],
 		});
 	}
@@ -477,14 +522,14 @@ export function printBindings(
 		}
 
 		output.push({
-			type: "AI",
+			name: friendlyBindingNames.ai,
 			entries: entries,
 		});
 	}
 
 	if (pipelines?.length) {
 		output.push({
-			type: "Pipelines",
+			name: friendlyBindingNames.pipelines,
 			entries: pipelines.map(({ binding, pipeline }) => ({
 				key: binding,
 				value: pipeline,
@@ -494,14 +539,14 @@ export function printBindings(
 
 	if (version_metadata !== undefined) {
 		output.push({
-			type: "Worker Version Metadata",
+			name: friendlyBindingNames.version_metadata,
 			entries: [{ key: "Name", value: version_metadata.binding }],
 		});
 	}
 
 	if (unsafe?.bindings !== undefined && unsafe.bindings.length > 0) {
 		output.push({
-			type: "Unsafe",
+			name: friendlyBindingNames.unsafe,
 			entries: unsafe.bindings.map(({ name, type }) => ({
 				key: type,
 				value: name,
@@ -511,7 +556,7 @@ export function printBindings(
 
 	if (vars !== undefined && Object.keys(vars).length > 0) {
 		output.push({
-			type: "Vars",
+			name: friendlyBindingNames.vars,
 			entries: Object.entries(vars).map(([key, value]) => {
 				let parsedValue;
 				if (typeof value === "string") {
@@ -531,7 +576,7 @@ export function printBindings(
 
 	if (wasm_modules !== undefined && Object.keys(wasm_modules).length > 0) {
 		output.push({
-			type: "Wasm Modules",
+			name: friendlyBindingNames.wasm_modules,
 			entries: Object.entries(wasm_modules).map(([key, value]) => ({
 				key,
 				value: typeof value === "string" ? truncate(value) : "<Wasm>",
@@ -541,7 +586,7 @@ export function printBindings(
 
 	if (dispatch_namespaces !== undefined && dispatch_namespaces.length > 0) {
 		output.push({
-			type: "dispatch namespaces",
+			name: friendlyBindingNames.dispatch_namespaces,
 			entries: dispatch_namespaces.map(({ binding, namespace, outbound }) => {
 				return {
 					key: binding,
@@ -555,7 +600,7 @@ export function printBindings(
 
 	if (mtls_certificates !== undefined && mtls_certificates.length > 0) {
 		output.push({
-			type: "mTLS Certificates",
+			name: friendlyBindingNames.mtls_certificates,
 			entries: mtls_certificates.map(({ binding, certificate_id }) => {
 				return {
 					key: binding,
@@ -567,7 +612,7 @@ export function printBindings(
 
 	if (unsafe?.metadata !== undefined) {
 		output.push({
-			type: "Unsafe Metadata",
+			name: friendlyBindingNames.unsafe,
 			entries: Object.entries(unsafe.metadata).map(([key, value]) => ({
 				key,
 				value: JSON.stringify(value),
@@ -584,7 +629,7 @@ export function printBindings(
 		...output
 			.map((bindingGroup) => {
 				return [
-					`- ${bindingGroup.type}:`,
+					`- ${bindingGroup.name}:`,
 					bindingGroup.entries.map(({ key, value }) => `  - ${key}: ${value}`),
 				];
 			})

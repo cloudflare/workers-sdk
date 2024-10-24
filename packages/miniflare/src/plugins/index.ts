@@ -11,6 +11,7 @@ import { KV_PLUGIN, KV_PLUGIN_NAME } from "./kv";
 import { QUEUES_PLUGIN, QUEUES_PLUGIN_NAME } from "./queues";
 import { R2_PLUGIN, R2_PLUGIN_NAME } from "./r2";
 import { RATELIMIT_PLUGIN, RATELIMIT_PLUGIN_NAME } from "./ratelimit";
+import { WORKFLOWS_PLUGIN, WORKFLOWS_PLUGIN_NAME } from "./workflows";
 
 export const PLUGINS = {
 	[CORE_PLUGIN_NAME]: CORE_PLUGIN,
@@ -23,6 +24,7 @@ export const PLUGINS = {
 	[HYPERDRIVE_PLUGIN_NAME]: HYPERDRIVE_PLUGIN,
 	[RATELIMIT_PLUGIN_NAME]: RATELIMIT_PLUGIN,
 	[ASSETS_PLUGIN_NAME]: ASSETS_PLUGIN,
+	[WORKFLOWS_PLUGIN_NAME]: WORKFLOWS_PLUGIN,
 };
 export type Plugins = typeof PLUGINS;
 
@@ -70,13 +72,15 @@ export type WorkerOptions = z.input<typeof CORE_PLUGIN.options> &
 	z.input<typeof R2_PLUGIN.options> &
 	z.input<typeof HYPERDRIVE_PLUGIN.options> &
 	z.input<typeof RATELIMIT_PLUGIN.options> &
-	z.input<typeof ASSETS_PLUGIN.options>;
+	z.input<typeof ASSETS_PLUGIN.options> &
+	z.input<typeof WORKFLOWS_PLUGIN.options>;
 export type SharedOptions = z.input<typeof CORE_PLUGIN.sharedOptions> &
 	z.input<typeof CACHE_PLUGIN.sharedOptions> &
 	z.input<typeof D1_PLUGIN.sharedOptions> &
 	z.input<typeof DURABLE_OBJECTS_PLUGIN.sharedOptions> &
 	z.input<typeof KV_PLUGIN.sharedOptions> &
-	z.input<typeof R2_PLUGIN.sharedOptions>;
+	z.input<typeof R2_PLUGIN.sharedOptions> &
+	z.input<typeof WORKFLOWS_PLUGIN.sharedOptions>;
 
 export const PLUGIN_ENTRIES = Object.entries(PLUGINS) as [
 	keyof Plugins,
@@ -124,3 +128,4 @@ export * from "./hyperdrive";
 export * from "./ratelimit";
 export * from "./assets";
 export * from "./assets/schema";
+export * from "./workflows";

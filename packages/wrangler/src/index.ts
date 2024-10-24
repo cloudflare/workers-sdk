@@ -38,12 +38,17 @@ import {
 import { devHandler, devOptions } from "./dev";
 import { workerNamespaceCommands } from "./dispatch-namespace";
 import { docsHandler, docsOptions } from "./docs";
-import { JsonFriendlyFatalError, UserError } from "./errors";
+import {
+	CommandLineArgsError,
+	JsonFriendlyFatalError,
+	UserError,
+} from "./errors";
 import { generateHandler, generateOptions } from "./generate";
 import { hyperdrive } from "./hyperdrive/index";
 import { initHandler, initOptions } from "./init";
 import "./kv";
 import "./workflows";
+import { demandSingleValue } from "./core";
 import { logBuildFailure, logger, LOGGER_LEVELS } from "./logger";
 import * as metrics from "./metrics";
 import { mTlsCertificateCommands } from "./mtls-certificate/cli";
@@ -159,35 +164,6 @@ export function getLegacyScriptName(
 		: args.name ?? config.name;
 }
 
-/**
- * A helper to demand one of a set of options
- * via https://github.com/yargs/yargs/issues/1093#issuecomment-491299261
- */
-export function demandOneOfOption(...options: string[]) {
-	return function (argv: { [key: string]: unknown }) {
-		const count = options.filter((option) => argv[option]).length;
-		const lastOption = options.pop();
-
-		if (count === 0) {
-			throw new CommandLineArgsError(
-				`Exactly one of the arguments ${options.join(
-					", "
-				)} and ${lastOption} is required`
-			);
-		} else if (count > 1) {
-			throw new CommandLineArgsError(
-				`Arguments ${options.join(
-					", "
-				)} and ${lastOption} are mutually exclusive`
-			);
-		}
-
-		return true;
-	};
-}
-
-export class CommandLineArgsError extends UserError {}
-
 export function createCLIParser(argv: string[]) {
 	const experimentalGradualRollouts =
 		// original flag -- using internal product name (Gradual Rollouts) -- kept for temp back-compat
@@ -230,12 +206,14 @@ export function createCLIParser(argv: string[]) {
 			type: "string",
 			requiresArg: true,
 		})
+		.check(demandSingleValue("config"))
 		.option("env", {
 			alias: "e",
 			describe: "Environment to use for operations and .env files",
 			type: "string",
 			requiresArg: true,
 		})
+		.check(demandSingleValue("env"))
 		.option("experimental-json-config", {
 			alias: "j",
 			describe: `Experimental: support wrangler.json`,

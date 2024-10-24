@@ -1,14 +1,9 @@
+import { PerformanceTimer } from "../../utils/performance";
 import { setupSentry } from "../../utils/sentry";
 import { Analytics, DISPATCH_TYPE } from "./analytics";
-import { PerformanceTimer } from "./performance";
 import type AssetWorker from "../../asset-worker/src/index";
-import type { RoutingConfig } from "../../utils/types";
-import type {
-	ColoMetadata,
-	Environment,
-	ReadyAnalytics,
-	UnsafePerformanceTimer,
-} from "./types";
+import type { RoutingConfig, UnsafePerformanceTimer } from "../../utils/types";
+import type { ColoMetadata, Environment, ReadyAnalytics } from "./types";
 
 interface Env {
 	ASSET_WORKER: Service<AssetWorker>;

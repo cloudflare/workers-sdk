@@ -29,6 +29,8 @@ import {
 	validateRequiredProperty,
 	validateTypedArray,
 } from "./validation-helpers";
+import { friendlyBindingNames } from ".";
+import type { CfWorkerInit } from "../deployment-bundle/worker";
 import type { Config, DevConfig, RawConfig, RawDevConfig } from "./config";
 import type {
 	Assets,
@@ -2741,37 +2743,25 @@ const validateHyperdriveBinding: ValidatorFn = (diagnostics, field, value) => {
  */
 const validateBindingsHaveUniqueNames = (
 	diagnostics: Diagnostics,
-	{
-		durable_objects,
-		kv_namespaces,
-		r2_buckets,
-		analytics_engine_datasets,
-		text_blobs,
-		browser,
-		ai,
-		unsafe,
-		vars,
-		define,
-		wasm_modules,
-		data_blobs,
-	}: Partial<Config>
+	config: Partial<Config>
 ): boolean => {
 	let hasDuplicates = false;
 
-	const bindingsGroupedByType = {
-		"Durable Object": getBindingNames(durable_objects),
-		"KV Namespace": getBindingNames(kv_namespaces),
-		"R2 Bucket": getBindingNames(r2_buckets),
-		"Analytics Engine Dataset": getBindingNames(analytics_engine_datasets),
-		"Text Blob": getBindingNames(text_blobs),
-		Browser: getBindingNames(browser),
-		AI: getBindingNames(ai),
-		Unsafe: getBindingNames(unsafe),
-		"Environment Variable": getBindingNames(vars),
-		Definition: getBindingNames(define),
-		"WASM Module": getBindingNames(wasm_modules),
-		"Data Blob": getBindingNames(data_blobs),
-	} as Record<string, string[]>;
+	const bindingNamesArray = Object.entries(friendlyBindingNames) as [
+		keyof CfWorkerInit["bindings"],
+		string,
+	][];
+
+	const bindingsGroupedByType = Object.fromEntries(
+		bindingNamesArray.map(([bindingType, binding]) => [
+			binding,
+			getBindingNames(
+				bindingType === "queues"
+					? config[bindingType]?.producers
+					: config[bindingType]
+			),
+		])
+	);
 
 	const bindingsGroupedByName: Record<string, string[]> = {};
 

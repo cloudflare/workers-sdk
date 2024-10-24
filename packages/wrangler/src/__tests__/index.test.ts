@@ -140,6 +140,22 @@ describe("wrangler", () => {
 		});
 	});
 
+	describe("global options", () => {
+		it("should display an error if duplicated --env or --config arguments are provided", async () => {
+			await expect(
+				runWrangler("--env prod -e prod")
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: The argument "--env" expects a single value, but received multiple: ["prod","prod"].]`
+			);
+
+			await expect(
+				runWrangler("--config=wrangler.toml -c example")
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: The argument "--config" expects a single value, but received multiple: ["wrangler.toml","example"].]`
+			);
+		});
+	});
+
 	describe("preview", () => {
 		it("should throw an error if the deprecated command is used with positional arguments", async () => {
 			await expect(runWrangler("preview GET")).rejects

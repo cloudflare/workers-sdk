@@ -1,10 +1,8 @@
-import Table from "ink-table";
 import { printWranglerBanner } from "..";
 import { fetchResult } from "../cfetch";
 import { withConfig } from "../config";
 import { logger } from "../logger";
 import { requireAuth } from "../user";
-import { renderToString } from "../utils/render";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
@@ -29,7 +27,13 @@ export const Handler = withConfig<HandlerOptions>(
 			logger.log(JSON.stringify(dbs, null, 2));
 		} else {
 			await printWranglerBanner();
-			logger.log(renderToString(<Table data={dbs}></Table>));
+			logger.table(
+				dbs.map((db) =>
+					Object.fromEntries(
+						Object.entries(db).map(([k, v]) => [k, String(v ?? "")])
+					)
+				)
+			);
 		}
 	}
 );

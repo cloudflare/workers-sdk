@@ -51,9 +51,13 @@ defineCommand({
 		}
 
 		await fetchResult(
-			`/accounts/${accountId}/workflows/${args.name}/instances/${id}`,
+			`/accounts/${accountId}/workflows/${args.name}/instances/${id}/status`,
 			{
-				method: "DELETE",
+				method: "PATCH",
+				headers: {
+					"Content-Type": "application/json",
+				},
+				body: JSON.stringify({ status: "terminate" }),
 			}
 		);
 

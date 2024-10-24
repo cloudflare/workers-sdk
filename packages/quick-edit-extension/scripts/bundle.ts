@@ -1,4 +1,6 @@
+import assert from "assert";
 import { readFile } from "fs/promises";
+import path from "path";
 import * as esbuild from "esbuild";
 
 type BuildFlags = {
@@ -18,12 +20,11 @@ async function buildMain(flags: BuildFlags = {}) {
 				name: "workers-types",
 				setup(build) {
 					build.onResolve({ filter: /^raw:.*/ }, async (args) => {
-						const result = await build.resolve(args.path.slice(4), {
-							kind: "import-statement",
-							resolveDir: args.resolveDir,
-						});
+						const result = path.resolve(
+							"node_modules/@cloudflare/workers-types/experimental/index.d.ts"
+						);
 						return {
-							path: result.path,
+							path: result,
 							namespace: "raw-file",
 						};
 					});
@@ -32,6 +33,11 @@ async function buildMain(flags: BuildFlags = {}) {
 						{ filter: /.*/, namespace: "raw-file" },
 						async (args) => {
 							const contents = await readFile(args.path);
+							// Make sure we're loading the .d.ts and not the .ts version of the types.
+							// Occasionally the wrong version has been loaded in CI, causing spurious typing errors
+							// for users in the playground & quick edit.
+							// The .d.ts file should not include `export declare` anywhere, while the .ts does
+							assert(!/export declare/.test(contents.toString()));
 							return { contents, loader: "text" };
 						}
 					);

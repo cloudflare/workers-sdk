@@ -1,6 +1,6 @@
 {
 	"name": "wrangler",
-	"version": "3.81.0",
+	"version": "3.83.0",
 	"description": "Command-line interface for all things Cloudflare Workers",
 	"keywords": [
 		"wrangler",
@@ -86,7 +86,7 @@
 		"selfsigned": "^2.0.1",
 		"source-map": "^0.6.1",
 		"unenv": "npm:unenv-nightly@2.0.0-20241018-011344-e666fcf",
-		"workerd": "1.20241011.1",
+		"workerd": "1.20241022.0",
 		"xxhash-wasm": "^1.0.1"
 	},
 	"devDependencies": {
@@ -95,7 +95,7 @@
 		"@cloudflare/pages-shared": "workspace:^",
 		"@cloudflare/types": "6.18.4",
 		"@cloudflare/workers-tsconfig": "workspace:*",
-		"@cloudflare/workers-types": "^4.20241011.0",
+		"@cloudflare/workers-types": "^4.20241022.0",
 		"@cspotcode/source-map-support": "0.8.1",
 		"@iarna/toml": "^3.0.0",
 		"@microsoft/api-extractor": "^7.47.0",
@@ -178,7 +178,7 @@
 		"yoga-layout": "file:../../vendor/yoga-layout-2.0.0-beta.1.tgz"
 	},
 	"peerDependencies": {
-		"@cloudflare/workers-types": "^4.20241011.0"
+		"@cloudflare/workers-types": "^4.20241022.0"
 	},
 	"peerDependenciesMeta": {
 		"@cloudflare/workers-types": {

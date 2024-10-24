@@ -2,10 +2,14 @@ import { Blob } from "node:buffer";
 import { arrayBuffer } from "node:stream/consumers";
 import { StringDecoder } from "node:string_decoder";
 import { readConfig } from "../config";
-import { defineAlias, defineCommand, defineNamespace } from "../core";
+import {
+	defineAlias,
+	defineCommand,
+	defineNamespace,
+	demandOneOfOption,
+} from "../core";
 import { confirm } from "../dialogs";
-import { UserError } from "../errors";
-import { CommandLineArgsError, demandOneOfOption } from "../index";
+import { CommandLineArgsError, UserError } from "../errors";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { parseJSON, readFileSync, readFileSyncToBuffer } from "../parse";

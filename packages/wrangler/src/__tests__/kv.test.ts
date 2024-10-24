@@ -1479,8 +1479,8 @@ describe("wrangler", () => {
 							expect(params.namespaceId).toEqual(expectedNamespaceId);
 							expect(await request.json()).toEqual(
 								expectedKeyValues.slice(
-									(requests.count - 1) * 5000,
-									requests.count * 5000
+									(requests.count - 1) * 1000,
+									requests.count * 1000
 								)
 							);
 							return HttpResponse.json(createFetchResult(null), {
@@ -1510,7 +1510,7 @@ describe("wrangler", () => {
 				expect(std.err).toMatchInlineSnapshot(`""`);
 			});
 
-			it("should put the key-values in batches of 5000 parsed from a file", async () => {
+			it("should put the key-values in batches of 1000 parsed from a file", async () => {
 				const keyValues: KeyValue[] = new Array(12000).fill({
 					key: "someKey1",
 					value: "someValue1",
@@ -1520,14 +1520,23 @@ describe("wrangler", () => {
 				await runWrangler(
 					`kv bulk put --namespace-id some-namespace-id keys.json`
 				);
-				expect(requests.count).toEqual(3);
+				expect(requests.count).toEqual(12);
 				expect(std.out).toMatchInlineSnapshot(`
-			          "Uploaded 0% (0 out of 12,000)
-			          Uploaded 41% (5,000 out of 12,000)
-			          Uploaded 83% (10,000 out of 12,000)
-			          Uploaded 100% (12,000 out of 12,000)
-			          Success!"
-		        `);
+					"Uploaded 0% (0 out of 12,000)
+					Uploaded 8% (1,000 out of 12,000)
+					Uploaded 16% (2,000 out of 12,000)
+					Uploaded 25% (3,000 out of 12,000)
+					Uploaded 33% (4,000 out of 12,000)
+					Uploaded 41% (5,000 out of 12,000)
+					Uploaded 50% (6,000 out of 12,000)
+					Uploaded 58% (7,000 out of 12,000)
+					Uploaded 66% (8,000 out of 12,000)
+					Uploaded 75% (9,000 out of 12,000)
+					Uploaded 83% (10,000 out of 12,000)
+					Uploaded 91% (11,000 out of 12,000)
+					Uploaded 100% (12,000 out of 12,000)
+					Success!"
+				`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 			});
@@ -1629,8 +1638,8 @@ describe("wrangler", () => {
 							);
 							expect(await request.json()).toEqual(
 								expectedKeys.slice(
-									(requests.count - 1) * 5000,
-									requests.count * 5000
+									(requests.count - 1) * 1000,
+									requests.count * 1000
 								)
 							);
 							return HttpResponse.json(createFetchResult(null), {
@@ -1670,14 +1679,23 @@ describe("wrangler", () => {
 				await runWrangler(
 					`kv bulk delete --namespace-id some-namespace-id keys.json`
 				);
-				expect(requests.count).toEqual(3);
+				expect(requests.count).toEqual(12);
 				expect(std.out).toMatchInlineSnapshot(`
-			"Deleted 0% (0 out of 12,000)
-			Deleted 41% (5,000 out of 12,000)
-			Deleted 83% (10,000 out of 12,000)
-			Deleted 100% (12,000 out of 12,000)
-			Success!"
-		`);
+					"Deleted 0% (0 out of 12,000)
+					Deleted 8% (1,000 out of 12,000)
+					Deleted 16% (2,000 out of 12,000)
+					Deleted 25% (3,000 out of 12,000)
+					Deleted 33% (4,000 out of 12,000)
+					Deleted 41% (5,000 out of 12,000)
+					Deleted 50% (6,000 out of 12,000)
+					Deleted 58% (7,000 out of 12,000)
+					Deleted 66% (8,000 out of 12,000)
+					Deleted 75% (9,000 out of 12,000)
+					Deleted 83% (10,000 out of 12,000)
+					Deleted 91% (11,000 out of 12,000)
+					Deleted 100% (12,000 out of 12,000)
+					Success!"
+				`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 			});

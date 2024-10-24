@@ -1,5 +1,33 @@
 # miniflare
 
+## 3.20241022.0
+
+### Patch Changes
+
+- [#7066](https://github.com/cloudflare/workers-sdk/pull/7066) [`760e43f`](https://github.com/cloudflare/workers-sdk/commit/760e43ffa197597de5625b96bc91376161f5027a) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | workerd                   | 1.20241018.1  | 1.20241022.0  |
+  | @cloudflare/workers-types | ^4.20241018.0 | ^4.20241022.0 |
+
+- [#7045](https://github.com/cloudflare/workers-sdk/pull/7045) [`5ef6231`](https://github.com/cloudflare/workers-sdk/commit/5ef6231a5cefbaaef123e6e8ee899fb81fc69e3e) Thanks [@RamIdeas](https://github.com/RamIdeas)! - Add preliminary support for Workflows in wrangler dev
+
+## 3.20241018.0
+
+### Patch Changes
+
+- [#7035](https://github.com/cloudflare/workers-sdk/pull/7035) [`809193e`](https://github.com/cloudflare/workers-sdk/commit/809193e05ad80c32086acf18646d0bd436cf2bfd) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | workerd                   | 1.20241011.1  | 1.20241018.1  |
+  | @cloudflare/workers-types | ^4.20241011.0 | ^4.20241018.0 |
+
 ## 3.20241011.0
 
 ### Patch Changes

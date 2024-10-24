@@ -1,11 +1,10 @@
-import { Box, Text } from "ink";
+import TOML from "@iarna/toml";
 import { printWranglerBanner } from "..";
 import { fetchResult } from "../cfetch";
 import { withConfig } from "../config";
 import { UserError } from "../errors";
 import { logger } from "../logger";
 import { requireAuth } from "../user";
-import { renderToString } from "../utils/render";
 import { LOCATION_CHOICES } from "./constants";
 import type {
 	CommonYargsArgv,
@@ -63,26 +62,21 @@ export const Handler = withConfig<HandlerOptions>(
 		}
 
 		logger.log(
-			renderToString(
-				<Box flexDirection="column">
-					<Text>
-						✅ Successfully created DB &apos;{db.name}&apos;
-						{db.created_in_region
-							? ` in region ${db.created_in_region}`
-							: location
-								? ` using primary location hint ${location}`
-								: ``}
-					</Text>
-					<Text>Created your new D1 database.</Text>
-					<Text>&nbsp;</Text>
-					<Text>[[d1_databases]]</Text>
-					<Text>
-						binding = &quot;DB&quot; # i.e. available in your Worker on env.DB
-					</Text>
-					<Text>database_name = &quot;{db.name}&quot;</Text>
-					<Text>database_id = &quot;{db.uuid}&quot;</Text>
-				</Box>
-			)
+			`✅ Successfully created DB '${db.name}'${
+				db.created_in_region
+					? ` in region ${db.created_in_region}`
+					: location
+						? ` using primary location hint ${location}`
+						: ``
+			}`
+		);
+		logger.log("Created your new D1 database.\n");
+		logger.log(
+			TOML.stringify({
+				d1_databases: [
+					{ binding: "DB", database_name: db.name, database_id: db.uuid },
+				],
+			})
 		);
 	}
 );

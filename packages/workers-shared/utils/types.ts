@@ -20,3 +20,8 @@ export const AssetConfigSchema = z.object({
 
 export type RoutingConfig = z.infer<typeof RoutingConfigSchema>;
 export type AssetConfig = z.infer<typeof AssetConfigSchema>;
+
+export interface UnsafePerformanceTimer {
+	readonly timeOrigin: number;
+	now: () => number;
+}

@@ -1,11 +1,9 @@
 import fs from "node:fs";
 import path from "path";
-import { Box, Text } from "ink";
 import { printWranglerBanner } from "../..";
 import { withConfig } from "../../config";
 import { UserError } from "../../errors";
 import { logger } from "../../logger";
-import { renderToString } from "../../utils/render";
 import { DEFAULT_MIGRATION_PATH } from "../constants";
 import { Database } from "../options";
 import { getDatabaseInfoFromConfig } from "../utils";
@@ -55,20 +53,9 @@ export const CreateHandler = withConfig<CreateHandlerOptions>(
 			`-- Migration number: ${nextMigrationNumber} \t ${new Date().toISOString()}\n`
 		);
 
-		logger.log(
-			renderToString(
-				<Box flexDirection="column">
-					<Text>
-						✅ Successfully created Migration &apos;{newMigrationName}&apos;!
-					</Text>
-					<Text>&nbsp;</Text>
-					<Text>The migration is available for editing here</Text>
-					<Text>
-						{migrationsPath}/{newMigrationName}
-					</Text>
-				</Box>
-			)
-		);
+		logger.log(`✅ Successfully created Migration '${newMigrationName}'!\n`);
+		logger.log(`The migration is available for editing here`);
+		logger.log(`${migrationsPath}/{newMigrationName}`);
 	}
 );
 

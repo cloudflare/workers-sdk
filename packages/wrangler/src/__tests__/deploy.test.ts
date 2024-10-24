@@ -6117,7 +6117,7 @@ addEventListener('fetch', event => {});`
 				Worker Startup Time: 100 ms
 				Your worker has access to the following bindings:
 				- Durable Objects:
-				  - SOMENAME: SomeClass (defined in 🔴 some-script)
+				  - SOMENAME: SomeClass (defined in some-script)
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
@@ -6534,6 +6534,109 @@ addEventListener('fetch', event => {});`
 				`);
 			});
 		});
+
+		describe("dispatch namespaces", () => {
+			it("should deploy all migrations on first deploy", async () => {
+				writeWranglerToml({
+					durable_objects: {
+						bindings: [
+							{ name: "SOMENAME", class_name: "SomeClass" },
+							{ name: "SOMEOTHERNAME", class_name: "SomeOtherClass" },
+						],
+					},
+					migrations: [
+						{ tag: "v1", new_classes: ["SomeClass"] },
+						{ tag: "v2", new_classes: ["SomeOtherClass"] },
+					],
+				});
+				fs.writeFileSync(
+					"index.js",
+					`export class SomeClass{}; export class SomeOtherClass{}; export default {};`
+				);
+				mockSubDomainRequest();
+				mockServiceScriptData({
+					dispatchNamespace: "test-namespace",
+				}); // no scripts at all
+				mockUploadWorkerRequest({
+					expectedMigrations: {
+						new_tag: "v2",
+						steps: [
+							{ new_classes: ["SomeClass"] },
+							{ new_classes: ["SomeOtherClass"] },
+						],
+					},
+					useOldUploadApi: true,
+					expectedDispatchNamespace: "test-namespace",
+				});
+
+				await runWrangler(
+					"deploy index.js --dispatch-namespace test-namespace"
+				);
+				expect(std.out).toMatchInlineSnapshot(`
+					"Total Upload: xx KiB / gzip: xx KiB
+					Worker Startup Time: 100 ms
+					Your worker has access to the following bindings:
+					- Durable Objects:
+					  - SOMENAME: SomeClass
+					  - SOMEOTHERNAME: SomeOtherClass
+					Uploaded test-name (TIMINGS)
+					  Dispatch Namespace: test-namespace
+					Current Version ID: Galaxy-Class"
+				`);
+			});
+
+			it("should use a script's current migration tag when publishing migrations", async () => {
+				writeWranglerToml({
+					durable_objects: {
+						bindings: [
+							{ name: "SOMENAME", class_name: "SomeClass" },
+							{ name: "SOMEOTHERNAME", class_name: "SomeOtherClass" },
+						],
+					},
+					migrations: [
+						{ tag: "v1", new_classes: ["SomeClass"] },
+						{ tag: "v2", new_classes: ["SomeOtherClass"] },
+					],
+				});
+				fs.writeFileSync(
+					"index.js",
+					`export class SomeClass{}; export class SomeOtherClass{}; export default {};`
+				);
+				mockSubDomainRequest();
+				mockServiceScriptData({
+					script: { id: "test-name", migration_tag: "v1" },
+					dispatchNamespace: "test-namespace",
+				});
+				mockUploadWorkerRequest({
+					expectedMigrations: {
+						old_tag: "v1",
+						new_tag: "v2",
+						steps: [
+							{
+								new_classes: ["SomeOtherClass"],
+							},
+						],
+					},
+					useOldUploadApi: true,
+					expectedDispatchNamespace: "test-namespace",
+				});
+
+				await runWrangler(
+					"deploy index.js --dispatch-namespace test-namespace"
+				);
+				expect(std.out).toMatchInlineSnapshot(`
+					"Total Upload: xx KiB / gzip: xx KiB
+					Worker Startup Time: 100 ms
+					Your worker has access to the following bindings:
+					- Durable Objects:
+					  - SOMENAME: SomeClass
+					  - SOMEOTHERNAME: SomeOtherClass
+					Uploaded test-name (TIMINGS)
+					  Dispatch Namespace: test-namespace
+					Current Version ID: Galaxy-Class"
+				`);
+			});
+		});
 	});
 
 	describe("tail consumers", () => {
@@ -6812,8 +6915,8 @@ addEventListener('fetch', event => {});`
 				  - DATA_BLOB_ONE: some-data-blob.bin
 				  - DATA_BLOB_TWO: more-data-blob.bin
 				- Durable Objects:
-				  - DURABLE_OBJECT_ONE: SomeDurableObject (defined in 🔴 some-durable-object-worker)
-				  - DURABLE_OBJECT_TWO: AnotherDurableObject (defined in 🔴 another-durable-object-worker)
+				  - DURABLE_OBJECT_ONE: SomeDurableObject (defined in some-durable-object-worker)
+				  - DURABLE_OBJECT_TWO: AnotherDurableObject (defined in another-durable-object-worker)
 				- KV Namespaces:
 				  - KV_NAMESPACE_ONE: kv-ns-one-id
 				  - KV_NAMESPACE_TWO: kv-ns-two-id
@@ -6831,7 +6934,7 @@ addEventListener('fetch', event => {});`
 				- Text Blobs:
 				  - TEXT_BLOB_ONE: my-entire-app-depends-on-this.cfg
 				  - TEXT_BLOB_TWO: the-entirety-of-human-knowledge.txt
-				- Unsafe:
+				- Unsafe Metadata:
 				  - some unsafe thing: UNSAFE_BINDING_ONE
 				  - another unsafe thing: UNSAFE_BINDING_TWO
 				- Vars:
@@ -6939,27 +7042,28 @@ addEventListener('fetch', event => {});`
 			await expect(runWrangler("deploy index.js")).rejects
 				.toMatchInlineSnapshot(`
 				[Error: Processing wrangler.toml configuration:
-				  - CONFLICTING_NAME_ONE assigned to Durable Object, KV Namespace, and R2 Bucket bindings.
-				  - CONFLICTING_NAME_TWO assigned to Durable Object and KV Namespace bindings.
-				  - CONFLICTING_NAME_THREE assigned to R2 Bucket, Text Blob, Unsafe, Environment Variable, WASM Module, and Data Blob bindings.
-				  - CONFLICTING_NAME_FOUR assigned to Analytics Engine Dataset, Text Blob, and Unsafe bindings.
+				  - CONFLICTING_NAME_THREE assigned to Data Blobs, R2 Buckets, Text Blobs, Unsafe Metadata, Vars, and Wasm Modules bindings.
+				  - CONFLICTING_NAME_ONE assigned to Durable Objects, KV Namespaces, and R2 Buckets bindings.
+				  - CONFLICTING_NAME_TWO assigned to Durable Objects and KV Namespaces bindings.
+				  - CONFLICTING_NAME_FOUR assigned to Analytics Engine Datasets, Text Blobs, and Unsafe Metadata bindings.
 				  - Bindings must have unique names, so that they can all be referenced in the worker.
 				    Please change your bindings to have unique names.]
 			`);
 			expect(std.out).toMatchInlineSnapshot(`""`);
 			expect(std.err).toMatchInlineSnapshot(`
-			        "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mProcessing wrangler.toml configuration:[0m
+				"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mProcessing wrangler.toml configuration:[0m
 
-			            - CONFLICTING_NAME_ONE assigned to Durable Object, KV Namespace, and R2 Bucket bindings.
-			            - CONFLICTING_NAME_TWO assigned to Durable Object and KV Namespace bindings.
-			            - CONFLICTING_NAME_THREE assigned to R2 Bucket, Text Blob, Unsafe, Environment Variable, WASM
-			          Module, and Data Blob bindings.
-			            - CONFLICTING_NAME_FOUR assigned to Analytics Engine Dataset, Text Blob, and Unsafe bindings.
-			            - Bindings must have unique names, so that they can all be referenced in the worker.
-			              Please change your bindings to have unique names.
+				    - CONFLICTING_NAME_THREE assigned to Data Blobs, R2 Buckets, Text Blobs, Unsafe Metadata, Vars,
+				  and Wasm Modules bindings.
+				    - CONFLICTING_NAME_ONE assigned to Durable Objects, KV Namespaces, and R2 Buckets bindings.
+				    - CONFLICTING_NAME_TWO assigned to Durable Objects and KV Namespaces bindings.
+				    - CONFLICTING_NAME_FOUR assigned to Analytics Engine Datasets, Text Blobs, and Unsafe Metadata
+				  bindings.
+				    - Bindings must have unique names, so that they can all be referenced in the worker.
+				      Please change your bindings to have unique names.
 
-			        "
-		      `);
+				"
+			`);
 			expect(std.warn).toMatchInlineSnapshot(`
 			        "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
 
@@ -7046,28 +7150,28 @@ addEventListener('fetch', event => {});`
 			await expect(runWrangler("deploy index.js")).rejects
 				.toMatchInlineSnapshot(`
 				[Error: Processing wrangler.toml configuration:
-				  - CONFLICTING_DURABLE_OBJECT_NAME assigned to multiple Durable Object bindings.
-				  - CONFLICTING_KV_NAMESPACE_NAME assigned to multiple KV Namespace bindings.
-				  - CONFLICTING_R2_BUCKET_NAME assigned to multiple R2 Bucket bindings.
-				  - CONFLICTING_AE_DATASET_NAME assigned to multiple Analytics Engine Dataset bindings.
-				  - CONFLICTING_UNSAFE_NAME assigned to multiple Unsafe bindings.
+				  - CONFLICTING_DURABLE_OBJECT_NAME assigned to multiple Durable Objects bindings.
+				  - CONFLICTING_KV_NAMESPACE_NAME assigned to multiple KV Namespaces bindings.
+				  - CONFLICTING_R2_BUCKET_NAME assigned to multiple R2 Buckets bindings.
+				  - CONFLICTING_AE_DATASET_NAME assigned to multiple Analytics Engine Datasets bindings.
+				  - CONFLICTING_UNSAFE_NAME assigned to multiple Unsafe Metadata bindings.
 				  - Bindings must have unique names, so that they can all be referenced in the worker.
 				    Please change your bindings to have unique names.]
 			`);
 			expect(std.out).toMatchInlineSnapshot(`""`);
 			expect(std.err).toMatchInlineSnapshot(`
-			        "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mProcessing wrangler.toml configuration:[0m
+				"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mProcessing wrangler.toml configuration:[0m
 
-			            - CONFLICTING_DURABLE_OBJECT_NAME assigned to multiple Durable Object bindings.
-			            - CONFLICTING_KV_NAMESPACE_NAME assigned to multiple KV Namespace bindings.
-			            - CONFLICTING_R2_BUCKET_NAME assigned to multiple R2 Bucket bindings.
-			            - CONFLICTING_AE_DATASET_NAME assigned to multiple Analytics Engine Dataset bindings.
-			            - CONFLICTING_UNSAFE_NAME assigned to multiple Unsafe bindings.
-			            - Bindings must have unique names, so that they can all be referenced in the worker.
-			              Please change your bindings to have unique names.
+				    - CONFLICTING_DURABLE_OBJECT_NAME assigned to multiple Durable Objects bindings.
+				    - CONFLICTING_KV_NAMESPACE_NAME assigned to multiple KV Namespaces bindings.
+				    - CONFLICTING_R2_BUCKET_NAME assigned to multiple R2 Buckets bindings.
+				    - CONFLICTING_AE_DATASET_NAME assigned to multiple Analytics Engine Datasets bindings.
+				    - CONFLICTING_UNSAFE_NAME assigned to multiple Unsafe Metadata bindings.
+				    - Bindings must have unique names, so that they can all be referenced in the worker.
+				      Please change your bindings to have unique names.
 
-			        "
-		      `);
+				"
+			`);
 			expect(std.warn).toMatchInlineSnapshot(`
 			        "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
 
@@ -7196,34 +7300,34 @@ addEventListener('fetch', event => {});`
 			await expect(runWrangler("deploy index.js")).rejects
 				.toMatchInlineSnapshot(`
 				[Error: Processing wrangler.toml configuration:
-				  - CONFLICTING_DURABLE_OBJECT_NAME assigned to multiple Durable Object bindings.
-				  - CONFLICTING_KV_NAMESPACE_NAME assigned to multiple KV Namespace bindings.
-				  - CONFLICTING_R2_BUCKET_NAME assigned to multiple R2 Bucket bindings.
-				  - CONFLICTING_NAME_THREE assigned to R2 Bucket, Analytics Engine Dataset, Text Blob, Unsafe, Environment Variable, WASM Module, and Data Blob bindings.
-				  - CONFLICTING_NAME_FOUR assigned to R2 Bucket, Analytics Engine Dataset, Text Blob, and Unsafe bindings.
-				  - CONFLICTING_AE_DATASET_NAME assigned to multiple Analytics Engine Dataset bindings.
-				  - CONFLICTING_UNSAFE_NAME assigned to multiple Unsafe bindings.
+				  - CONFLICTING_NAME_THREE assigned to Data Blobs, R2 Buckets, Analytics Engine Datasets, Text Blobs, Unsafe Metadata, Vars, and Wasm Modules bindings.
+				  - CONFLICTING_DURABLE_OBJECT_NAME assigned to multiple Durable Objects bindings.
+				  - CONFLICTING_KV_NAMESPACE_NAME assigned to multiple KV Namespaces bindings.
+				  - CONFLICTING_R2_BUCKET_NAME assigned to multiple R2 Buckets bindings.
+				  - CONFLICTING_NAME_FOUR assigned to R2 Buckets, Analytics Engine Datasets, Text Blobs, and Unsafe Metadata bindings.
+				  - CONFLICTING_AE_DATASET_NAME assigned to multiple Analytics Engine Datasets bindings.
+				  - CONFLICTING_UNSAFE_NAME assigned to multiple Unsafe Metadata bindings.
 				  - Bindings must have unique names, so that they can all be referenced in the worker.
 				    Please change your bindings to have unique names.]
 			`);
 			expect(std.out).toMatchInlineSnapshot(`""`);
 			expect(std.err).toMatchInlineSnapshot(`
-			        "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mProcessing wrangler.toml configuration:[0m
+				"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mProcessing wrangler.toml configuration:[0m
 
-			            - CONFLICTING_DURABLE_OBJECT_NAME assigned to multiple Durable Object bindings.
-			            - CONFLICTING_KV_NAMESPACE_NAME assigned to multiple KV Namespace bindings.
-			            - CONFLICTING_R2_BUCKET_NAME assigned to multiple R2 Bucket bindings.
-			            - CONFLICTING_NAME_THREE assigned to R2 Bucket, Analytics Engine Dataset, Text Blob, Unsafe,
-			          Environment Variable, WASM Module, and Data Blob bindings.
-			            - CONFLICTING_NAME_FOUR assigned to R2 Bucket, Analytics Engine Dataset, Text Blob, and Unsafe
-			          bindings.
-			            - CONFLICTING_AE_DATASET_NAME assigned to multiple Analytics Engine Dataset bindings.
-			            - CONFLICTING_UNSAFE_NAME assigned to multiple Unsafe bindings.
-			            - Bindings must have unique names, so that they can all be referenced in the worker.
-			              Please change your bindings to have unique names.
+				    - CONFLICTING_NAME_THREE assigned to Data Blobs, R2 Buckets, Analytics Engine Datasets, Text
+				  Blobs, Unsafe Metadata, Vars, and Wasm Modules bindings.
+				    - CONFLICTING_DURABLE_OBJECT_NAME assigned to multiple Durable Objects bindings.
+				    - CONFLICTING_KV_NAMESPACE_NAME assigned to multiple KV Namespaces bindings.
+				    - CONFLICTING_R2_BUCKET_NAME assigned to multiple R2 Buckets bindings.
+				    - CONFLICTING_NAME_FOUR assigned to R2 Buckets, Analytics Engine Datasets, Text Blobs, and
+				  Unsafe Metadata bindings.
+				    - CONFLICTING_AE_DATASET_NAME assigned to multiple Analytics Engine Datasets bindings.
+				    - CONFLICTING_UNSAFE_NAME assigned to multiple Unsafe Metadata bindings.
+				    - Bindings must have unique names, so that they can all be referenced in the worker.
+				      Please change your bindings to have unique names.
 
-			        "
-		      `);
+				"
+			`);
 			expect(std.warn).toMatchInlineSnapshot(`
 			        "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
 
@@ -7909,7 +8013,7 @@ addEventListener('fetch', event => {});`
 					Worker Startup Time: 100 ms
 					Your worker has access to the following bindings:
 					- Durable Objects:
-					  - EXAMPLE_DO_BINDING: ExampleDurableObject (defined in 🔴 example-do-binding-worker)
+					  - EXAMPLE_DO_BINDING: ExampleDurableObject (defined in example-do-binding-worker)
 					Uploaded test-name (TIMINGS)
 					Deployed test-name triggers (TIMINGS)
 					  https://test-name.test-sub-domain.workers.dev
@@ -8079,7 +8183,7 @@ addEventListener('fetch', event => {});`
 					Worker Startup Time: 100 ms
 					Your worker has access to the following bindings:
 					- Services:
-					  - FOO: 🔴 foo-service
+					  - FOO: foo-service
 					Uploaded test-name (TIMINGS)
 					Deployed test-name triggers (TIMINGS)
 					  https://test-name.test-sub-domain.workers.dev
@@ -8120,7 +8224,7 @@ addEventListener('fetch', event => {});`
 					Worker Startup Time: 100 ms
 					Your worker has access to the following bindings:
 					- Services:
-					  - FOO: 🔴 foo-service#MyHandler
+					  - FOO: foo-service#MyHandler
 					Uploaded test-name (TIMINGS)
 					Deployed test-name triggers (TIMINGS)
 					  https://test-name.test-sub-domain.workers.dev
@@ -8189,7 +8293,7 @@ addEventListener('fetch', event => {});`
 					"Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
 					Your worker has access to the following bindings:
-					- dispatch namespaces:
+					- Dispatch Namespaces:
 					  - foo: Foo
 					Uploaded test-name (TIMINGS)
 					Deployed test-name triggers (TIMINGS)
@@ -8247,7 +8351,7 @@ addEventListener('fetch', event => {});`
 					"Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
 					Your worker has access to the following bindings:
-					- dispatch namespaces:
+					- Dispatch Namespaces:
 					  - foo: Foo (outbound -> foo_outbound)
 					  - bar: Bar (outbound -> bar_outbound)
 					Uploaded test-name (TIMINGS)
@@ -8304,7 +8408,7 @@ addEventListener('fetch', event => {});`
 					"Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
 					Your worker has access to the following bindings:
-					- dispatch namespaces:
+					- Dispatch Namespaces:
 					  - foo: Foo (outbound -> foo_outbound)
 					Uploaded test-name (TIMINGS)
 					Deployed test-name triggers (TIMINGS)
@@ -8395,7 +8499,7 @@ addEventListener('fetch', event => {});`
 						"Total Upload: xx KiB / gzip: xx KiB
 						Worker Startup Time: 100 ms
 						Your worker has access to the following bindings:
-						- Unsafe:
+						- Unsafe Metadata:
 						  - binding-type: my-binding
 						Uploaded test-name (TIMINGS)
 						Deployed test-name triggers (TIMINGS)
@@ -8442,7 +8546,7 @@ addEventListener('fetch', event => {});`
 						"Total Upload: xx KiB / gzip: xx KiB
 						Worker Startup Time: 100 ms
 						Your worker has access to the following bindings:
-						- Unsafe:
+						- Unsafe Metadata:
 						  - plain_text: my-binding
 						Uploaded test-name (TIMINGS)
 						Deployed test-name triggers (TIMINGS)
@@ -11322,6 +11426,77 @@ export default{
 			`);
 		});
 	});
+
+	describe("workflows", () => {
+		function mockDeployWorkflow(expectedWorkflowName?: string) {
+			const handler = http.put(
+				"*/accounts/:accountId/workflows/:workflowName",
+				({ params }) => {
+					if (expectedWorkflowName) {
+						expect(params.workflowName).toBe(expectedWorkflowName);
+					}
+					return HttpResponse.json(
+						createFetchResult({ id: "mock-new-workflow-id" })
+					);
+				}
+			);
+			msw.use(handler);
+		}
+
+		it("should log open-beta warning when deploying a workflow", async () => {
+			writeWranglerToml({
+				main: "index.js",
+				workflows: [
+					{
+						binding: "WORKFLOW",
+						name: "my-workflow",
+						class_name: "MyWorkflow",
+					},
+				],
+			});
+			await fs.promises.writeFile(
+				"index.js",
+				`
+                import { WorkflowEntrypoint } from 'cloudflare:workers';
+                export default {};
+                export class MyWorkflow extends WorkflowEntrypoint {};
+            `
+			);
+
+			mockDeployWorkflow("my-workflow");
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedBindings: [
+					{
+						type: "workflow",
+						name: "WORKFLOW",
+						workflow_name: "my-workflow",
+						class_name: "MyWorkflow",
+					},
+				],
+			});
+
+			await runWrangler("deploy");
+
+			expect(std.warn).toMatchInlineSnapshot(`
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mWorkflows is currently in open beta.[0m
+
+				"
+			`);
+			expect(std.out).toMatchInlineSnapshot(`
+				"Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Your worker has access to the following bindings:
+				- Workflows:
+				  - WORKFLOW: MyWorkflow
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				  workflow: my-workflow
+				Current Version ID: Galaxy-Class"
+			`);
+		});
+	});
 });
 
 /** Write mock assets to the file system so they can be uploaded. */
@@ -11745,13 +11920,14 @@ function mockServiceScriptData(options: {
 	script?: DurableScriptInfo;
 	scriptName?: string;
 	env?: string;
+	dispatchNamespace?: string;
 }) {
 	const { script } = options;
-	if (options.env) {
+	if (options.dispatchNamespace) {
 		if (!script) {
 			msw.use(
 				http.get(
-					"*/accounts/:accountId/workers/services/:scriptName/environments/:envName",
+					"*/accounts/:accountId/workers/dispatch/namespaces/:dispatchNamespace/scripts/:scriptName",
 					() => {
 						return HttpResponse.json({
 							success: false,
@@ -11772,11 +11948,11 @@ function mockServiceScriptData(options: {
 		}
 		msw.use(
 			http.get(
-				"*/accounts/:accountId/workers/services/:scriptName/environments/:envName",
+				"*/accounts/:accountId/workers/dispatch/namespaces/:dispatchNamespace/scripts/:scriptName",
 				({ params }) => {
 					expect(params.accountId).toEqual("some-account-id");
 					expect(params.scriptName).toEqual(options.scriptName || "test-name");
-					expect(params.envName).toEqual(options.env);
+					expect(params.dispatchNamespace).toEqual(options.dispatchNamespace);
 					return HttpResponse.json({
 						success: true,
 						errors: [],
@@ -11788,44 +11964,90 @@ function mockServiceScriptData(options: {
 			)
 		);
 	} else {
-		if (!script) {
+		if (options.env) {
+			if (!script) {
+				msw.use(
+					http.get(
+						"*/accounts/:accountId/workers/services/:scriptName/environments/:envName",
+						() => {
+							return HttpResponse.json({
+								success: false,
+								errors: [
+									{
+										code: 10092,
+										message: "workers.api.error.environment_not_found",
+									},
+								],
+								messages: [],
+								result: null,
+							});
+						},
+						{ once: true }
+					)
+				);
+				return;
+			}
 			msw.use(
 				http.get(
-					"*/accounts/:accountId/workers/services/:scriptName",
-					() => {
+					"*/accounts/:accountId/workers/services/:scriptName/environments/:envName",
+					({ params }) => {
+						expect(params.accountId).toEqual("some-account-id");
+						expect(params.scriptName).toEqual(
+							options.scriptName || "test-name"
+						);
+						expect(params.envName).toEqual(options.env);
 						return HttpResponse.json({
-							success: false,
-							errors: [
-								{
-									code: 10090,
-									message: "workers.api.error.service_not_found",
-								},
-							],
+							success: true,
+							errors: [],
 							messages: [],
-							result: null,
+							result: { script },
 						});
 					},
 					{ once: true }
 				)
 			);
-			return;
+		} else {
+			if (!script) {
+				msw.use(
+					http.get(
+						"*/accounts/:accountId/workers/services/:scriptName",
+						() => {
+							return HttpResponse.json({
+								success: false,
+								errors: [
+									{
+										code: 10090,
+										message: "workers.api.error.service_not_found",
+									},
+								],
+								messages: [],
+								result: null,
+							});
+						},
+						{ once: true }
+					)
+				);
+				return;
+			}
+			msw.use(
+				http.get(
+					"*/accounts/:accountId/workers/services/:scriptName",
+					({ params }) => {
+						expect(params.accountId).toEqual("some-account-id");
+						expect(params.scriptName).toEqual(
+							options.scriptName || "test-name"
+						);
+						return HttpResponse.json({
+							success: true,
+							errors: [],
+							messages: [],
+							result: { default_environment: { script } },
+						});
+					},
+					{ once: true }
+				)
+			);
 		}
-		msw.use(
-			http.get(
-				"*/accounts/:accountId/workers/services/:scriptName",
-				({ params }) => {
-					expect(params.accountId).toEqual("some-account-id");
-					expect(params.scriptName).toEqual(options.scriptName || "test-name");
-					return HttpResponse.json({
-						success: true,
-						errors: [],
-						messages: [],
-						result: { default_environment: { script } },
-					});
-				},
-				{ once: true }
-			)
-		);
 	}
 }
 
