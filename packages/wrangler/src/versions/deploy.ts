@@ -558,11 +558,12 @@ async function promptPercentages(
 async function maybePatchSettings(
 	accountId: string,
 	workerName: string,
-	config: Pick<Config, "logpush" | "tail_consumers">
+	config: Pick<Config, "logpush" | "tail_consumers" | "observability">
 ) {
 	const maybeUndefinedSettings = {
 		logpush: config.logpush,
 		tail_consumers: config.tail_consumers,
+		observability: config.observability, // TODO reconcile with how regular deploy handles empty state
 	};
 	const definedSettings = Object.fromEntries(
 		Object.entries(maybeUndefinedSettings).filter(
@@ -587,9 +588,19 @@ async function maybePatchSettings(
 		},
 	});
 
+	const observability = [];
+	if (patchedSettings.observability) {
+		observability.push(`enabled: ${patchedSettings.observability.enabled}`);
+		if (patchedSettings.observability.head_sampling_rate) {
+			observability.push(
+				`head_sampling_rate: ${patchedSettings.observability.head_sampling_rate}`
+			);
+		}
+	}
 	const formattedSettings = formatLabelledValues(
 		{
 			logpush: String(patchedSettings.logpush ?? "<skipped>"),
+			observability: observability.join("\n") ?? "<skipped>",
 			tail_consumers:
 				patchedSettings.tail_consumers
 					?.map((tc) =>
