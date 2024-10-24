@@ -1,7 +1,7 @@
 import { mkdtemp } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { crash, startSection, updateStatus } from "@cloudflare/cli";
+import { startSection, updateStatus } from "@cloudflare/cli";
 import { blue, brandColor, dim } from "@cloudflare/cli/colors";
 import TOML from "@iarna/toml";
 import { processArgument } from "helpers/args";
@@ -136,10 +136,10 @@ export const runDeploy = async (ctx: C3Context) => {
 		if (deployedUrlMatch) {
 			ctx.deployment.url = deployedUrlMatch[0];
 		} else {
-			crash("Failed to find deployment url.");
+			throw new Error("Failed to find deployment url.");
 		}
 	} catch {
-		crash("Failed to find deployment url.");
+		throw new Error("Failed to find deployment url.");
 	}
 
 	// if a pages url (<sha1>.<project>.pages.dev), remove the sha1
