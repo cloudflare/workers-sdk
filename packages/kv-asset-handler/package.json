@@ -44,7 +44,7 @@
 		"@ava/typescript": "^4.1.0",
 		"@cloudflare/workers-types": "^4.20241022.0",
 		"@types/mime": "^3.0.4",
-		"@types/node": "20.8.3",
+		"@types/node": "catalog:default",
 		"@types/service-worker-mock": "^2.0.1",
 		"ava": "^6.0.1",
 		"service-worker-mock": "^2.0.5"

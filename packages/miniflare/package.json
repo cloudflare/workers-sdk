@@ -67,7 +67,7 @@
 		"@types/glob-to-regexp": "^0.4.1",
 		"@types/http-cache-semantics": "^4.0.1",
 		"@types/mime": "^3.0.4",
-		"@types/node": "20.8.3",
+		"@types/node": "catalog:default",
 		"@types/rimraf": "^4.0.5",
 		"@types/stoppable": "^1.1.1",
 		"@types/which": "^2.0.1",

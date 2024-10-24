@@ -37,7 +37,7 @@
 		"@ianvs/prettier-plugin-sort-imports": "4.2.1",
 		"@manypkg/cli": "^0.21.4",
 		"@turbo/gen": "^1.10.13",
-		"@types/node": "20.8.3",
+		"@types/node": "catalog:default",
 		"@vue/compiler-sfc": "^3.3.4",
 		"cross-env": "^7.0.3",
 		"dotenv-cli": "^7.3.0",
@@ -77,7 +77,7 @@
 			"@types/react-transition-group>@types/react": "^18",
 			"@cloudflare/elements>@types/react": "^18",
 			"capnpc-ts>typescript": "4.2.4",
-			"vitest>@types/node": "$@types/node"
+			"@types/node": "$@types/node"
 		},
 		"patchedDependencies": {
 			"ink@3.2.0": "patches/ink@3.2.0.patch",
