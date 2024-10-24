@@ -31,6 +31,7 @@ export function buildPluginFromFunctions({
 		directory: functionsDirectory,
 		format: "modules",
 		moduleRoot: functionsDirectory,
+		exports: [],
 	};
 	const moduleCollector = createModuleCollector({
 		entry,

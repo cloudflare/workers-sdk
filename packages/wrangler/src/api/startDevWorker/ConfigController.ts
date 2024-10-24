@@ -284,6 +284,7 @@ async function resolveConfig(
 			jsxFactory: input.build?.jsxFactory || config.jsx_factory,
 			jsxFragment: input.build?.jsxFragment || config.jsx_fragment,
 			tsconfig: input.build?.tsconfig ?? config.tsconfig,
+			exports: entry.exports,
 		},
 		dev: await resolveDevConfig(config, input),
 		legacy: {

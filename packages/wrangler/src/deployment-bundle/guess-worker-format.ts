@@ -19,7 +19,7 @@ export default async function guessWorkerFormat(
 	entryWorkingDirectory: string,
 	hint: CfScriptFormat | undefined,
 	tsconfig?: string | undefined
-): Promise<CfScriptFormat> {
+): Promise<{ format: CfScriptFormat; exports: string[] }> {
 	const parsedEntryPath = path.parse(entryFile);
 	if (parsedEntryPath.ext == ".py") {
 		logger.warn(
@@ -28,7 +28,7 @@ export default async function guessWorkerFormat(
 				entryFile
 			)} defines a Python worker, support for Python workers is currently experimental. Python workers with a requirements.txt file can only be run locally and cannot be deployed.`
 		);
-		return "modules";
+		return { format: "modules", exports: [] };
 	}
 
 	const result = await esbuild.build({
@@ -77,5 +77,5 @@ export default async function guessWorkerFormat(
 			}
 		}
 	}
-	return guessedWorkerFormat;
+	return { format: guessedWorkerFormat, exports };
 }
