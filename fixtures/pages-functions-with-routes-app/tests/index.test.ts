@@ -42,7 +42,9 @@ describe("Pages Functions with custom _routes.json", () => {
 		// matches /greeting/* include rule
 		response = await fetch(`http://${ip}:${port}/greeting/hello`);
 		text = await response.text();
-		expect(text).toEqual("[/functions/greeting/hello]: Bonjour le monde!");
+		expect(text).toEqual(
+			"[/functions/greeting/hello]: [/functions/api/greet]: Bonjour le monde!"
+		);
 
 		// matches /greeting/* include rule
 		response = await fetch(`http://${ip}:${port}/greeting/bye`);
