@@ -107,6 +107,7 @@ describe("findDeployablePackageNames()", () => {
 			  "workers-playground",
 			  "@cloudflare/workers-shared",
 			  "workers.new",
+			  "@cloudflare/workflows-shared",
 			  "@cloudflare/wrangler-devtools",
 			}
 		`);

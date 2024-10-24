@@ -29,6 +29,9 @@
 # kv-asset-handler ownership
 /packages/kv-asset-handler/ @cloudflare/wrangler
 
+# Workflows ownership
+/packages/workflows-shared/ @cloudflare/workflows @cloudflare/wrangler
+
 # Owners intentionally left blank on these shared directories / files
 # to avoid noisy review requests
 /.changeset/

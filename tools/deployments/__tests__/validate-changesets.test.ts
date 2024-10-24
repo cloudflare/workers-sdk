@@ -38,6 +38,7 @@ describe("findPackageNames()", () => {
 			  "workers-playground",
 			  "@cloudflare/workers-shared",
 			  "workers.new",
+			  "@cloudflare/workflows-shared",
 			  "wrangler",
 			  "@cloudflare/wrangler-devtools",
 			}
