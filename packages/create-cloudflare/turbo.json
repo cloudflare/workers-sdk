@@ -23,7 +23,8 @@
 				"E2E_PROJECT_PATH",
 				"E2E_RETRIES",
 				"E2E_NO_DEPLOY",
-				"E2E_EXPERIMENTAL"
+				"E2E_EXPERIMENTAL",
+				"TEST_PM"
 			],
 			"dependsOn": ["build"]
 		}
