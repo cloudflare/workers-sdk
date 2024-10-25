@@ -94,11 +94,11 @@ export const printSummary = (ctx: C3Context) => {
 		`📖 Explore Documentation`,
 		`${blue.underline(hyperlink(documentationUrl))}`,
 		``,
-		`💬 Join our Community`,
-		`${blue.underline(hyperlink(discordUrl))}`,
-        ``,
         `🐛 Report an Issue`,
 		`${blue.underline(hyperlink(reportIssueUrl))}`,
+        ``,
+		`💬 Join our Community`,
+		`${blue.underline(hyperlink(discordUrl))}`,
 	);
 
 	const dialog = createDialog(lines);
