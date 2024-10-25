@@ -323,6 +323,9 @@ export async function syncLegacyAssets(
 				}
 				throw e;
 			}
+			if (controller.signal.aborted) {
+				break;
+			}
 			uploadedCount += nextBucket.length;
 			const percent = Math.floor((100 * uploadedCount) / uploadCount);
 			logger.info(
