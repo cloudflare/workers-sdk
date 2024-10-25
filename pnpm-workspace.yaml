@@ -8,5 +8,5 @@ catalog:
   "@vitest/runner": ~2.1.1
   "@vitest/snapshot": ~2.1.1
   undici: "^5.28.4"
-  typescript: "~5.5.4"
+  typescript: "~5.6.3"
   "@types/node": "^18.19.59"
