@@ -38,6 +38,7 @@ import type {
 	CfWorkflow,
 } from "../deployment-bundle/worker";
 import type {
+	WorkerDefinition,
 	WorkerEntrypointsDefinition,
 	WorkerRegistry,
 } from "../dev-registry";
@@ -102,25 +103,31 @@ function createProxyPrototypeClass(handlerSuperKlass, getUnknownPrototypeKey) {
 	return klass;
 }
 
-function createDurableObjectClass({ className, proxyUrl }) {
-	const klass = createProxyPrototypeClass(DurableObject, (key) => {
-		throw new Error(\`Cannot access \\\`\${className}#\${key}\\\` as Durable Object RPC is not yet supported between multiple \\\`wrangler dev\\\` sessions.\`);
-	});
+function createDurableObjectClass({ externalBindingName, internalBindingName }) {
+	return class extends DurableObject {
 
-	// Forward regular HTTP requests to the other "wrangler dev" session
-	klass.prototype.fetch = function(request) {
-		if (proxyUrl === undefined) {
-			return new Response(\`\${className} \${proxyUrl}[wrangler] Couldn't find \\\`wrangler dev\\\` session for class "\${className}" to proxy to\`, { status: 503 });
-		}
-		const proxyRequest = new Request(proxyUrl, request);
-		proxyRequest.headers.set(HEADER_URL, request.url);
-		proxyRequest.headers.set(HEADER_NAME, className);
-		proxyRequest.headers.set(HEADER_ID, this.ctx.id.toString());
-		proxyRequest.headers.set(HEADER_CF_BLOB, JSON.stringify(request.cf ?? {}));
-		return fetch(proxyRequest);
-	};
+        constructor(ctx, env) {
+            super(ctx, env);
 
-	return klass;
+            return new Proxy(this, {
+                get(target, key, receiver) {
+                    const value = Reflect.get(target, key, receiver);
+                    if (value !== undefined) return value;
+                    if (HANDLER_RESERVED_KEYS.has(key)) return;
+
+                    // assuming a method
+                    return (...args) => {
+                        return env[internalBindingName].proxyMethod({
+                            bindingName: externalBindingName,
+                            doId: ctx.id,
+                            method: key,
+                            args,
+                        });
+                    }
+                }
+            });
+        }
+    }
 }
 
 function createNotFoundWorkerEntrypointClass({ service }) {
@@ -136,25 +143,18 @@ function createNotFoundWorkerEntrypointClass({ service }) {
 
 	return klass;
 }
+`;
 
-export default {
-	async fetch(request, env) {
-		const originalUrl = request.headers.get(HEADER_URL);
-		const className = request.headers.get(HEADER_NAME);
-		const idString = request.headers.get(HEADER_ID);
-		const cf = JSON.parse(request.headers.get(HEADER_CF_BLOB));
-		if (originalUrl === null || className === null || idString === null) {
-			return new Response("[wrangler] Received Durable Object proxy request with missing headers", { status: 400 });
-		}
-		request = new Request(originalUrl, request);
-		request.headers.delete(HEADER_URL);
-		request.headers.delete(HEADER_NAME);
-		request.headers.delete(HEADER_ID);
-		request.headers.delete(HEADER_CF_BLOB);
-		const ns = env[className];
-		const id = ns.idFromString(idString);
-		const stub = ns.get(id);
-		return stub.fetch(request, { cf });
+const EXTERNAL_SERVICE_RECEIVER_NAME =
+	"__Wrangler__LocalOnly__ExternalDurableObjectsReceiver";
+const EXTERNAL_SERVICE_RECEIVER_SCRIPT = `
+\n;; ${/* this script needs to be concatenated with the user's script :( -- use this to avoid ASI syntax errors*/ ""}
+import { WorkerEntrypoint as __Wrangler__LocalOnly__WorkerEntrypoint } from "cloudflare:workers";
+export class ${EXTERNAL_SERVICE_RECEIVER_NAME} extends __Wrangler__LocalOnly__WorkerEntrypoint {
+    async proxyMethod({ bindingName, doId, method, args }) {
+        const ns = this.env[bindingName];
+        const stub = ns.get(ns.idFromString(doId));
+        return stub[method](...args);
 	}
 }
 `;
@@ -265,7 +265,7 @@ async function buildSourceOptions(
 	if (config.format === "modules") {
 		const isPython = config.bundle.type === "python";
 
-		const { entrypointSource, modules } = isPython
+		const sourceData = isPython
 			? {
 					entrypointSource: config.bundle.entrypointSource,
 					modules: config.bundle.modules,
@@ -275,8 +275,14 @@ async function buildSourceOptions(
 					config.bundle.entrypointSource,
 					config.bundle.modules
 				);
+		let { entrypointSource } = sourceData;
+		const { modules } = sourceData;
+		let entrypointNames = isPython ? [] : config.bundle.entry.exports;
 
-		const entrypointNames = isPython ? [] : config.bundle.entry.exports;
+		if (config.bindings.durable_objects?.bindings?.length) {
+			entrypointSource += EXTERNAL_SERVICE_RECEIVER_SCRIPT;
+			entrypointNames = [...entrypointNames, EXTERNAL_SERVICE_RECEIVER_NAME];
+		}
 
 		const modulesRoot = path.dirname(scriptPath);
 		const sourceOptions: SourceOptions = {
@@ -384,6 +390,79 @@ type MiniflareBindingsConfig = Pick<
 > &
 	Partial<Pick<ConfigBundle, "format" | "bundle" | "assets">>;
 
+function createExternalServiceBinding(
+	service: NonNullable<MiniflareBindingsConfig["services"]>[0],
+	config: MiniflareBindingsConfig,
+	notFoundServices: Set<string> | undefined
+) {
+	const target = config.workerDefinitions?.[service.service];
+	if (target?.host === undefined || target.port === undefined) {
+		// If the target isn't in the registry, always return an error response
+		notFoundServices?.add(service.service);
+		return {
+			name: EXTERNAL_SERVICE_WORKER_NAME,
+			entrypoint: getIdentifier(`service_${service.service}`),
+		};
+	} else {
+		// Otherwise, try to build an `external` service to it. `external`
+		// services support JSRPC over HTTP CONNECT using a special hostname.
+		// Refer to https://github.com/cloudflare/workerd/pull/1757 for details.
+		let address: `${string}:${number}`;
+		let style = HttpOptions_Style.PROXY;
+		if (service.entrypoint !== undefined) {
+			// If the user has requested a named entrypoint...
+			if (target.entrypointAddresses === undefined) {
+				// ...but the "server" `wrangler` hasn't provided any because it's too
+				// old, throw.
+				throw new UserError(
+					`The \`wrangler dev\` session for service "${service.service}" does not support proxying entrypoints. Please upgrade "${service.service}"'s \`wrangler\` version.`
+				);
+			}
+			const entrypointAddress = target.entrypointAddresses[service.entrypoint];
+			if (entrypointAddress === undefined) {
+				// ...but the named entrypoint doesn't exist, throw
+				throw new UserError(
+					`The \`wrangler dev\` session for service "${service.service}" does not export an entrypoint named "${service.entrypoint}"`
+				);
+			}
+			address = `${entrypointAddress.host}:${entrypointAddress.port}`;
+		} else {
+			// Otherwise, if the user hasn't specified a named entrypoint, assume
+			// they meant to bind to the `default` entrypoint.
+			const defaultEntrypointAddress = target.entrypointAddresses?.["default"];
+			if (defaultEntrypointAddress === undefined) {
+				// If the "server" `wrangler` is too old to provide direct entrypoint
+				// addresses (or uses service-worker syntax), fallback to sending requests directly to the target...
+				if (target.protocol === "https") {
+					// ...unless the target is listening on HTTPS, in which case throw.
+					// We can't support this as `workerd` requires us to explicitly
+					// configure allowed self-signed certificates. These aren't stored
+					// in the registry. There's no blanket `rejectUnauthorized: false`
+					// option like in Node.
+					throw new UserError(
+						`Cannot proxy to \`wrangler dev\` session for service "${service.service}" because it uses HTTPS. Please upgrade "${service.service}"'s \`wrangler\` version, or remove the \`--local-protocol\`/\`dev.local_protocol\` option.`
+					);
+				}
+				address = `${target.host}:${target.port}`;
+				// Removing this line causes `Internal Service Error` responses from service-worker syntax workers, since they don't seem to support the PROXY protocol
+				style = HttpOptions_Style.HOST;
+			} else {
+				address = `${defaultEntrypointAddress.host}:${defaultEntrypointAddress.port}`;
+			}
+		}
+
+		return {
+			external: {
+				address,
+				http: {
+					style,
+					cfBlobHeader: CoreHeaders.CF_BLOB,
+				},
+			},
+		};
+	}
+}
+
 // TODO(someday): would be nice to type these methods more, can we export types for
 //  each plugin options schema and use those
 export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
@@ -430,74 +509,12 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 			continue;
 		}
 
-		const target = config.workerDefinitions?.[service.service];
-		if (target?.host === undefined || target.port === undefined) {
-			// If the target isn't in the registry, always return an error response
-			notFoundServices.add(service.service);
-			serviceBindings[service.binding] = {
-				name: EXTERNAL_SERVICE_WORKER_NAME,
-				entrypoint: getIdentifier(`service_${service.service}`),
-			};
-		} else {
-			// Otherwise, try to build an `external` service to it. `external`
-			// services support JSRPC over HTTP CONNECT using a special hostname.
-			// Refer to https://github.com/cloudflare/workerd/pull/1757 for details.
-			let address: `${string}:${number}`;
-			let style = HttpOptions_Style.PROXY;
-			if (service.entrypoint !== undefined) {
-				// If the user has requested a named entrypoint...
-				if (target.entrypointAddresses === undefined) {
-					// ...but the "server" `wrangler` hasn't provided any because it's too
-					// old, throw.
-					throw new UserError(
-						`The \`wrangler dev\` session for service "${service.service}" does not support proxying entrypoints. Please upgrade "${service.service}"'s \`wrangler\` version.`
-					);
-				}
-				const entrypointAddress =
-					target.entrypointAddresses[service.entrypoint];
-				if (entrypointAddress === undefined) {
-					// ...but the named entrypoint doesn't exist, throw
-					throw new UserError(
-						`The \`wrangler dev\` session for service "${service.service}" does not export an entrypoint named "${service.entrypoint}"`
-					);
-				}
-				address = `${entrypointAddress.host}:${entrypointAddress.port}`;
-			} else {
-				// Otherwise, if the user hasn't specified a named entrypoint, assume
-				// they meant to bind to the `default` entrypoint.
-				const defaultEntrypointAddress =
-					target.entrypointAddresses?.["default"];
-				if (defaultEntrypointAddress === undefined) {
-					// If the "server" `wrangler` is too old to provide direct entrypoint
-					// addresses (or uses service-worker syntax), fallback to sending requests directly to the target...
-					if (target.protocol === "https") {
-						// ...unless the target is listening on HTTPS, in which case throw.
-						// We can't support this as `workerd` requires us to explicitly
-						// configure allowed self-signed certificates. These aren't stored
-						// in the registry. There's no blanket `rejectUnauthorized: false`
-						// option like in Node.
-						throw new UserError(
-							`Cannot proxy to \`wrangler dev\` session for service "${service.service}" because it uses HTTPS. Please upgrade "${service.service}"'s \`wrangler\` version, or remove the \`--local-protocol\`/\`dev.local_protocol\` option.`
-						);
-					}
-					address = `${target.host}:${target.port}`;
-					// Removing this line causes `Internal Service Error` responses from service-worker syntax workers, since they don't seem to support the PROXY protocol
-					style = HttpOptions_Style.HOST;
-				} else {
-					address = `${defaultEntrypointAddress.host}:${defaultEntrypointAddress.port}`;
-				}
-			}
-
-			serviceBindings[service.binding] = {
-				external: {
-					address,
-					http: {
-						style,
-						cfBlobHeader: CoreHeaders.CF_BLOB,
-					},
-				},
-			};
-		}
+		// USE THIS CODE TO BIND TO EXTERNAL DURABLE OBJECTS AS ENTRYPOINTS
+		serviceBindings[service.binding] = createExternalServiceBinding(
+			service,
+			config,
+			notFoundServices
+		);
 	}
 
 	const classNameToUseSQLite = getClassNamesWhichUseSQLite(config.migrations);
@@ -514,72 +531,79 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 		(internal ? internalObjects : externalObjects).push(binding);
 	}
 	// Setup Durable Object bindings and proxy worker
-	false &&
-		externalWorkers.push({
-			name: EXTERNAL_SERVICE_WORKER_NAME,
-			// Bind all internal objects, so they're accessible by all other sessions
-			// that proxy requests for our objects to this worker
-			durableObjects: Object.fromEntries(
-				internalObjects.map(({ class_name }) => {
-					const useSQLite = classNameToUseSQLite.get(class_name);
-					return [
-						class_name,
-						{ className: class_name, scriptName: getName(config), useSQLite },
-					];
+	externalWorkers.push({
+		name: EXTERNAL_SERVICE_WORKER_NAME,
+		compatibilityFlags: ["rpc"],
+		// Bind all internal objects, so they're accessible by all other sessions
+		// that proxy requests for our objects to this worker
+		durableObjects: Object.fromEntries(
+			internalObjects.map(({ class_name }) => {
+				const useSQLite = classNameToUseSQLite.get(class_name);
+				return [
+					class_name,
+					{ className: class_name, scriptName: getName(config), useSQLite },
+				];
+			})
+		),
+		serviceBindings: Object.fromEntries(
+			externalObjects.map(({ class_name, script_name }) => {
+				const svcBindingName = getIdentifier(
+					`svc_${script_name}_${class_name}`
+				);
+				assert(script_name); // script_name is, by definition, defined for external objects
+
+				return [
+					svcBindingName,
+					createExternalServiceBinding(
+						{
+							binding: svcBindingName,
+							service: script_name,
+							entrypoint: EXTERNAL_SERVICE_RECEIVER_NAME,
+						},
+						config,
+						undefined
+					),
+				];
+			})
+		),
+		// Use this worker instead of the user worker if the pathname is
+		// `/${EXTERNAL_SERVICE_WORKER_NAME}`
+		routes: [`*/${EXTERNAL_SERVICE_WORKER_NAME}`],
+		// Use in-memory storage for the stub object classes *declared* by this
+		// script. They don't need to persist anything, and would end up using the
+		// incorrect unsafe unique key.
+		unsafeEphemeralDurableObjects: true,
+		compatibilityDate: "2024-01-01",
+		modules: true,
+		script:
+			EXTERNAL_SERVICE_WORKER_SCRIPT +
+			// Add stub object classes that proxy requests to the correct session
+			externalObjects
+				.map(({ class_name, script_name }) => {
+					assert(script_name !== undefined);
+					const target = config.workerDefinitions?.[script_name];
+
+					const proxyDOClassName = getIdentifier(
+						`do_${script_name}_${class_name}`
+					);
+					const svcBindingName = getIdentifier(
+						`svc_${script_name}_${class_name}`
+					);
+					const internalBindingName = getIdentifier(
+						`__Wrangler__LocalOnly__DurableObject__${class_name}`
+					);
+
+					return `export const ${proxyDOClassName} = createDurableObjectClass({ externalBindingName: "${internalBindingName}", internalBindingName: "${svcBindingName}" });`;
 				})
-			),
-			// Use this worker instead of the user worker if the pathname is
-			// `/${EXTERNAL_SERVICE_WORKER_NAME}`
-			routes: [`*/${EXTERNAL_SERVICE_WORKER_NAME}`],
-			// Use in-memory storage for the stub object classes *declared* by this
-			// script. They don't need to persist anything, and would end up using the
-			// incorrect unsafe unique key.
-			unsafeEphemeralDurableObjects: true,
-			compatibilityDate: "2024-01-01",
-			modules: true,
-			script:
-				EXTERNAL_SERVICE_WORKER_SCRIPT +
-				// Add stub object classes that proxy requests to the correct session
-				externalObjects
-					.map(({ class_name, script_name }) => {
-						assert(script_name !== undefined);
-						const target = config.workerDefinitions?.[script_name];
-						const targetHasClass = target?.durableObjects.some(
-							({ className }) => className === class_name
-						);
-
-						const identifier = getIdentifier(`do_${script_name}_${class_name}`);
-						const classNameJson = JSON.stringify(class_name);
-
-						if (
-							target?.host === undefined ||
-							target.port === undefined ||
-							!targetHasClass
-						) {
-							// If we couldn't find the target or the class, create a stub object
-							// that just returns `503 Service Unavailable` responses.
-							return `export const ${identifier} = createDurableObjectClass({ className: ${classNameJson} });`;
-						} else if (target.protocol === "https") {
-							throw new UserError(
-								`Cannot proxy to \`wrangler dev\` session for class ${classNameJson} because it uses HTTPS. Please remove the \`--local-protocol\`/\`dev.local_protocol\` option.`
-							);
-						} else {
-							// Otherwise, create a stub object that proxies request to the
-							// target session at `${hostname}:${port}`.
-							const proxyUrl = `http://${target.host}:${target.port}/${EXTERNAL_SERVICE_WORKER_NAME}`;
-							const proxyUrlJson = JSON.stringify(proxyUrl);
-							return `export const ${identifier} = createDurableObjectClass({ className: ${classNameJson}, proxyUrl: ${proxyUrlJson} });`;
-						}
-					})
-					.join("\n") +
-				Array.from(notFoundServices)
-					.map((service) => {
-						const identifier = getIdentifier(`service_${service}`);
-						const serviceJson = JSON.stringify(service);
-						return `export const ${identifier} = createNotFoundWorkerEntrypointClass({ service: ${serviceJson} });`;
-					})
-					.join("\n"),
-		});
+				.join("\n") +
+			Array.from(notFoundServices)
+				.map((service) => {
+					const identifier = getIdentifier(`service_${service}`);
+					const serviceJson = JSON.stringify(service);
+					return `export const ${identifier} = createNotFoundWorkerEntrypointClass({ service: ${serviceJson} });`;
+				})
+				.join("\n"),
+	});
 
 	const wrappedBindings: WorkerOptions["wrappedBindings"] = {};
 	if (bindings.ai?.binding) {
@@ -635,37 +659,52 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 		workflows: Object.fromEntries(bindings.workflows?.map(workflowEntry) ?? []),
 
 		durableObjects: Object.fromEntries([
-			...internalObjects
-				.concat(externalObjects)
-				.map(({ name, class_name, script_name }) => {
-					const useSQLite = classNameToUseSQLite.get(class_name);
-					return [
-						name,
-						{
-							className: class_name,
-							useSQLite,
-							script_name,
-						},
-					];
-				}),
-			// ...externalObjects.map(({ name, class_name, script_name }) => {
-			// 	const identifier = getIdentifier(`do_${script_name}_${class_name}`);
-			// 	const useSQLite = classNameToUseSQLite.get(class_name);
-			// 	return [
-			// 		name,
-			// 		{
-			// 			className: identifier,
-			// 			scriptName: EXTERNAL_SERVICE_WORKER_NAME,
-			// 			useSQLite,
-			// 			// Matches the unique key Miniflare will generate for this object in
-			// 			// the target session. We need to do this so workerd generates the
-			// 			// same IDs it would if this were part of the same process. workerd
-			// 			// doesn't allow IDs from Durable Objects with different unique keys
-			// 			// to be used with each other.
-			// 			unsafeUniqueKey: `${script_name}-${class_name}`,
-			// 		},
-			// 	];
-			// }),
+			...internalObjects.map(({ name, class_name, script_name }) => {
+				const useSQLite = classNameToUseSQLite.get(class_name);
+				return [
+					name,
+					{
+						className: class_name,
+						useSQLite,
+						script_name,
+					},
+				];
+			}),
+			// redeclare internal durable object bindings for use by __Wrangler__LocalOnly__ExternalDurableObjectsReceiver
+			...internalObjects.map(({ class_name, script_name }) => {
+				const useSQLite = classNameToUseSQLite.get(class_name);
+				const bindingName = getIdentifier(
+					`__Wrangler__LocalOnly__DurableObject__${class_name}`
+				);
+				return [
+					bindingName,
+					{
+						className: class_name,
+						useSQLite,
+						script_name,
+					},
+				];
+			}),
+			...externalObjects.map(({ name, class_name, script_name }) => {
+				const proxyDOClassName = getIdentifier(
+					`do_${script_name}_${class_name}`
+				);
+				const useSQLite = classNameToUseSQLite.get(class_name);
+				return [
+					name,
+					{
+						className: proxyDOClassName,
+						scriptName: EXTERNAL_SERVICE_WORKER_NAME,
+						useSQLite,
+						// Matches the unique key Miniflare will generate for this object in
+						// the target session. We need to do this so workerd generates the
+						// same IDs it would if this were part of the same process. workerd
+						// doesn't allow IDs from Durable Objects with different unique keys
+						// to be used with each other.
+						unsafeUniqueKey: `${script_name}-${class_name}`,
+					},
+				];
+			}),
 		]),
 
 		ratelimits: Object.fromEntries(

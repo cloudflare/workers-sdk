@@ -19,6 +19,6 @@ export default defineConfig({
 		restoreMocks: true,
 		// A lot of the fixture tests are extremely flaky because of the dev registry
 		// Retry tests by default so that only real errors are reported
-		retry: 2,
+		retry: 0,
 	},
 });

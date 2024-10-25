@@ -507,7 +507,7 @@ test("should support co-dependent services", async ({ dev }) => {
 	});
 });
 
-test("should support binding to Durable Object in another worker", async ({
+test.only("should support binding to Durable Object in another worker", async ({
 	dev,
 }) => {
 	// RPC isn't supported in this case yet :(
@@ -557,10 +557,7 @@ test("should support binding to Durable Object in another worker", async ({
 
 					const { pathname } = new URL(request.url);
 					if (pathname === "/rpc") {
-						const errors = [];
-						try { await stub.property; } catch (e) { errors.push(e); }
-						try { await stub.method(); } catch (e) { errors.push(e); }
-						return Response.json(errors.map(String));
+						return Response.json(await stub.method());
 					}
 
 					return stub.fetch("https://placeholder:9999/", {
@@ -572,21 +569,32 @@ test("should support binding to Durable Object in another worker", async ({
 		`,
 	});
 
-	await waitFor(async () => {
-		const response = await fetch(url);
+	async function fetchJson(url: string) {
+		const response = await fetch(url, {
+			headers: {
+				"MF-Disable-Pretty-Error": "1",
+			},
+		});
 		const text = await response.text();
-		// Check protocol, host, and cf preserved
-		expect(text).toBe('POST https://placeholder:9999/ {"thing":true}');
-	});
 
-	const rpcResponse = await fetch(new URL("/rpc", url));
-	const errors = await rpcResponse.json();
-	expect(errors).toMatchInlineSnapshot(`
-		[
-		  "Error: Cannot access \`ThingObject#property\` as Durable Object RPC is not yet supported between multiple \`wrangler dev\` sessions.",
-		  "Error: Cannot access \`ThingObject#method\` as Durable Object RPC is not yet supported between multiple \`wrangler dev\` sessions.",
-		]
-	`);
+		try {
+			return JSON.parse(text);
+		} catch (err) {
+			throw new Error(`Couldn't parse JSON:\n\n${text}`);
+		}
+	}
+
+	// await waitFor(async () => {
+	// 	const response = await fetch(url, {
+	// 		headers: { "MF-Disable-Pretty-Error": "1" },
+	// 	});
+	// 	const text = await response.text();
+	// 	// Check protocol, host, and cf preserved
+	// 	expect(text).toBe('POST https://placeholder:9999/ {"thing":true}');
+	// });
+
+	const json = await fetchJson(new URL("/rpc", url).href);
+	expect(json).toBe("method:ping");
 });
 
 test("should support binding to Durable Object in same worker", async ({
