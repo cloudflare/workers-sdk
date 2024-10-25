@@ -77,6 +77,7 @@ export function initOptions(yargs: CommonYargsArgv) {
 			type: "boolean",
 			hidden: true,
 			default: true,
+			alias: "c3",
 		});
 }
 
@@ -196,10 +197,6 @@ export async function initHandler(args: InitArgs) {
 	let accountId = "";
 
 	// If --from-dash, check that script actually exists
-	/*
-    Even though the init command is now deprecated and replaced by Create Cloudflare CLI (C3),
-    run this first so, if the script doesn't exist, we can fail early
-  */
 	if (fromDashWorkerName) {
 		const c3Arguments = [
 			...shellquote.parse(getC3CommandFromEnv()),
@@ -214,17 +211,12 @@ export async function initHandler(args: InitArgs) {
 			c3Arguments.push("--wrangler-defaults");
 		}
 
-		// Deprecate the `init --from-dash` command
 		const replacementC3Command = `\`${packageManager.type} ${c3Arguments.join(
 			" "
 		)}\``;
-		logger.warn(
-			`The \`init --from-dash\` command is no longer supported. Please use ${replacementC3Command} instead.\nThe \`init\` command will be removed in a future version.`
-		);
-
 		// C3 will run wrangler with the --do-not-delegate flag to communicate with the API
 		if (args.delegateC3) {
-			logger.log(`Running ${replacementC3Command}...`);
+			logger.log(`🌀 Running ${replacementC3Command}...`);
 
 			await execa(packageManager.type, c3Arguments, { stdio: "inherit" });
 
@@ -261,9 +253,6 @@ export async function initHandler(args: InitArgs) {
 			return;
 		}
 	} else {
-		// Deprecate the `init` command
-		//    if a wrangler.toml file does not exist (C3 expects to scaffold *new* projects)
-		//    and if --from-dash is not set (C3 will run wrangler to communicate with the API)
 		if (!fromDashWorkerName) {
 			const c3Arguments: string[] = [];
 
@@ -285,17 +274,15 @@ export async function initHandler(args: InitArgs) {
 
 			c3Arguments.unshift(...shellquote.parse(getC3CommandFromEnv()));
 
-			// Deprecate the `init --from-dash` command
 			const replacementC3Command = `\`${packageManager.type} ${shellquote.quote(
 				c3Arguments
 			)}\``;
 
-			logger.warn(
-				`The \`init\` command is no longer supported. Please use ${replacementC3Command} instead.\nThe \`init\` command will be removed in a future version.`
-			);
-
 			if (args.delegateC3) {
-				logger.log(`Running ${replacementC3Command}...`);
+				logger.log(
+					`The \`init\` command now delegates to \`create-cloudflare\` instead. You can use the \`--no-c3\` flag to access the old implementation.\n`
+				);
+				logger.log(`🌀 Running ${replacementC3Command}...`);
 
 				await execa(packageManager.type, c3Arguments, {
 					stdio: "inherit",
