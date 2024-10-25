@@ -1201,6 +1201,10 @@ importers:
         version: 2.0.2
 
   packages/pages-shared:
+    dependencies:
+      miniflare:
+        specifier: workspace:*
+        version: link:../miniflare
     devDependencies:
       '@cloudflare/workers-tsconfig':
         specifier: workspace:*
