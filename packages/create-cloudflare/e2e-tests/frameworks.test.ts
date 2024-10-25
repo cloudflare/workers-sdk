@@ -369,7 +369,8 @@ function getFrameworkTests(opts: {
 						input: [keys.enter],
 					},
 					{
-						matcher: /Which package manager do you want to install dependencies with/,
+						matcher:
+							/Which package manager do you want to install dependencies with/,
 						input: [keys.enter],
 					},
 				],
