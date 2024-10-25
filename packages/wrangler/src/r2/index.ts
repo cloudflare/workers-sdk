@@ -11,13 +11,12 @@ import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { requireAuth } from "../user";
 import { MAX_UPLOAD_SIZE } from "./constants";
+import * as Create from "./create";
 import {
 	bucketAndKeyFromObjectPath,
-	createR2Bucket,
 	deleteR2Bucket,
 	deleteR2Object,
 	getR2Object,
-	isValidR2BucketName,
 	listR2Buckets,
 	putR2Object,
 	updateR2BucketStorageClass,
@@ -434,66 +433,8 @@ export function r2(r2Yargs: CommonYargsArgv, subHelp: SubHelp) {
 			r2BucketYargs.command(
 				"create <name>",
 				"Create a new R2 bucket",
-				(yargs) => {
-					return yargs
-						.positional("name", {
-							describe: "The name of the new bucket",
-							type: "string",
-							demandOption: true,
-						})
-						.option("jurisdiction", {
-							describe: "The jurisdiction where the new bucket will be created",
-							alias: "J",
-							requiresArg: true,
-							type: "string",
-						})
-						.option("storage-class", {
-							describe:
-								"The default storage class for objects uploaded to this bucket",
-							alias: "s",
-							requiresArg: false,
-							type: "string",
-						});
-				},
-				async (args) => {
-					await printWranglerBanner();
-
-					if (!isValidR2BucketName(args.name)) {
-						throw new CommandLineArgsError(
-							`The bucket name "${args.name}" is invalid. Bucket names can only have alphanumeric and - characters.`
-						);
-					}
-
-					const config = readConfig(args.config, args);
-
-					const accountId = await requireAuth(config);
-
-					let fullBucketName = `${args.name}`;
-					if (args.jurisdiction !== undefined) {
-						fullBucketName += ` (${args.jurisdiction})`;
-					}
-
-					let defaultStorageClass = ` with default storage class set to `;
-					if (args.storageClass !== undefined) {
-						defaultStorageClass += args.storageClass;
-					} else {
-						defaultStorageClass += "Standard";
-					}
-
-					logger.log(
-						`Creating bucket ${fullBucketName}${defaultStorageClass}.`
-					);
-					await createR2Bucket(
-						accountId,
-						args.name,
-						args.jurisdiction,
-						args.storageClass
-					);
-					logger.log(`Created bucket ${fullBucketName}${defaultStorageClass}.`);
-					await metrics.sendMetricsEvent("create r2 bucket", {
-						sendMetrics: config.send_metrics,
-					});
-				}
+				Create.Options,
+				Create.Handler
 			);
 
 			r2BucketYargs.command("update", "Update bucket state", (updateYargs) => {

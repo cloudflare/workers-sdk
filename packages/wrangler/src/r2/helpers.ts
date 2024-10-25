@@ -48,6 +48,7 @@ export async function listR2Buckets(
 export async function createR2Bucket(
 	accountId: string,
 	bucketName: string,
+	location?: string,
 	jurisdiction?: string,
 	storageClass?: string
 ): Promise<void> {
@@ -60,6 +61,7 @@ export async function createR2Bucket(
 		body: JSON.stringify({
 			name: bucketName,
 			...(storageClass !== undefined && { storageClass }),
+			...(location !== undefined && { locationHint: location }),
 		}),
 		headers,
 	});
