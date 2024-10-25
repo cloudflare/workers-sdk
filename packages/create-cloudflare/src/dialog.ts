@@ -68,6 +68,7 @@ export const printSummary = (ctx: C3Context) => {
 	]);
 	const documentationUrl = `https://developers.cloudflare.com/${ctx.template.platform}`;
 	const discordUrl = `https://discord.cloudflare.com`;
+    const reportIssueUrl = "https://github.com/cloudflare/workers-sdk/issues/new/choose";
 
 	// Prepare the dialog
 	const lines = [
@@ -95,6 +96,9 @@ export const printSummary = (ctx: C3Context) => {
 		``,
 		`💬 Join our Community`,
 		`${blue.underline(hyperlink(discordUrl))}`,
+        ``,
+        `🐛 Report an Issue`,
+		`${blue.underline(hyperlink(reportIssueUrl))}`,
 	);
 
 	const dialog = createDialog(lines);
