@@ -1234,7 +1234,7 @@ export async function mapBindings(
 							...(configObj.pipelines ?? []),
 							{
 								binding: binding.name,
-								pipeline: binding.id,
+								pipeline: binding.pipeline,
 							},
 						];
 						break;
