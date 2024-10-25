@@ -8,3 +8,8 @@ crons = ["1 * * * *"]
 
 [version_metadata]
 binding = "METADATA"
+
+[durable_objects]
+bindings = [
+    { name = "REMOTE_RPC", class_name = "ThingObject", script_name = "worker-ts" }
+]

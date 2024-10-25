@@ -1,6 +1,6 @@
-name = "worker-ts"
-main = "src/index.ts"
-compatibility_date = "2023-05-04"
+
+name = "do-bound"
+main = "index.ts"
 
 [durable_objects]
 bindings = [

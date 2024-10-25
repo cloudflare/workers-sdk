@@ -172,6 +172,18 @@ importers:
         specifier: workspace:*
         version: link:../../packages/wrangler
 
+  fixtures/do-bound:
+    devDependencies:
+      wrangler:
+        specifier: workspace:*
+        version: link:../../packages/wrangler
+
+  fixtures/do-entry:
+    devDependencies:
+      wrangler:
+        specifier: workspace:*
+        version: link:../../packages/wrangler
+
   fixtures/durable-objects-app:
     devDependencies:
       '@cloudflare/workers-tsconfig':

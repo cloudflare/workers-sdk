@@ -1,0 +1,8 @@
+
+name = "do-entry"
+main = "index.ts"
+
+[durable_objects]
+bindings = [
+    { name = "OBJECT", class_name = "ThingObject", script_name = "do-bound" }
+]

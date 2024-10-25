@@ -1,0 +1,14 @@
+{
+	"name": "do-entry",
+	"private": true,
+	"scripts": {
+		"test:ci": "vitest run",
+		"test:watch": "vitest"
+	},
+	"devDependencies": {
+		"wrangler": "workspace:*"
+	},
+	"volta": {
+		"extends": "../../package.json"
+	}
+}

@@ -3,12 +3,12 @@ import { randomBytes } from "isomorphic-random-example";
 import { now } from "./dep";
 import { logErrors } from "./log";
 
-console.log("startup log");
+// console.log("startup log");
 
-console.log("The following error is a fake for testing");
-console.error(
-	"*** Received structured exception #0xc0000005: access violation; stack: 7ffe71872f57 7ff7834b643b 7ff7834b643b"
-);
+// console.log("The following error is a fake for testing");
+// console.error(
+// 	"*** Received structured exception #0xc0000005: access violation; stack: 7ffe71872f57 7ff7834b643b 7ff7834b643b"
+// );
 
 /** @param {Uint8Array} array */
 function hexEncode(array) {
@@ -19,6 +19,8 @@ function hexEncode(array) {
 
 export default {
 	async fetch(request, env) {
+		return Response.json(env.REMOTE_RPC.method());
+
 		console.log("request log");
 
 		const { pathname, origin, hostname, host } = new URL(request.url);

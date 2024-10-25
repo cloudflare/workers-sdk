@@ -1,3 +1,5 @@
+import { DurableObject } from "cloudflare:workers";
+
 /**
  * Welcome to Cloudflare Workers! This is your first worker.
  *
@@ -32,3 +34,15 @@ export default {
 		return new Response("Hello World!");
 	},
 };
+
+export class ThingObject extends DurableObject {
+	fetch() {
+		return new Response("hello");
+	}
+	get property() {
+		return "property:ping";
+	}
+	method() {
+		return "method:ping";
+	}
+}
