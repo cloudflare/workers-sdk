@@ -10,7 +10,7 @@
 	},
 	"devDependencies": {
 		"itty-router": "^3.0.12",
-		"typescript": "catalog:default",
+		"typescript": "^5.5.2",
 		"wrangler": "^3.60.3"
 	}
 }
