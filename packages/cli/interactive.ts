@@ -48,7 +48,7 @@ export type BasePromptConfig = {
 	// The value to use by default
 	defaultValue?: Arg;
 	// The error message to display if the initial value is invalid
-	initialError?: string | null;
+	initialErrorMessage?: string | null;
 	// Accept the initialValue/defaultValue as if the user pressed ENTER when prompted
 	acceptDefault?: boolean;
 	// The status label to be shown after submitting
@@ -145,9 +145,9 @@ export const inputPrompt = async <T = string>(
 	const dispatchRender = (props: RenderProps, p: Prompt): string | void => {
 		let state = props.state;
 
-		if (state === "initial" && promptConfig.initialError) {
+		if (state === "initial" && promptConfig.initialErrorMessage) {
 			state = "error";
-			props.error = promptConfig.initialError;
+			props.error = promptConfig.initialErrorMessage;
 		}
 
 		const renderedLines = renderers[state](props, p);
