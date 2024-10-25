@@ -204,8 +204,9 @@ describe("r2", () => {
 					  -v, --version                   Show version number  [boolean]
 
 					OPTIONS
-					  -J, --jurisdiction   The jurisdiction where the new bucket will be created  [string]
-					  -s, --storage-class  The default storage class for objects uploaded to this bucket  [string]"
+					      --location       The optional location hint that determines geographic placement of the R2 bucket  [string] [choices: \\"weur\\", \\"eeur\\", \\"apac\\", \\"wnam\\", \\"enam\\"]
+					  -s, --storage-class  The default storage class for objects uploaded to this bucket  [string]
+					  -J, --jurisdiction   The jurisdiction where the new bucket will be created  [string]"
 				`);
 				expect(std.err).toMatchInlineSnapshot(`
 				            "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNot enough non-option arguments: got 0, need at least 1[0m
@@ -221,24 +222,25 @@ describe("r2", () => {
 					`[Error: Unknown arguments: def, ghi]`
 				);
 				expect(std.out).toMatchInlineSnapshot(`
-					"
-					wrangler r2 bucket create <name>
+  				"
+  				wrangler r2 bucket create <name>
 
-					Create a new R2 bucket
+  				Create a new R2 bucket
 
-					POSITIONALS
-					  name  The name of the new bucket  [string] [required]
+  				POSITIONALS
+  				  name  The name of the new bucket  [string] [required]
 
-					GLOBAL FLAGS
-					  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
-					  -c, --config                    Path to .toml configuration file  [string]
-					  -e, --env                       Environment to use for operations and .env files  [string]
-					  -h, --help                      Show help  [boolean]
-					  -v, --version                   Show version number  [boolean]
+  				GLOBAL FLAGS
+  				  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
+  				  -c, --config                    Path to .toml configuration file  [string]
+  				  -e, --env                       Environment to use for operations and .env files  [string]
+  				  -h, --help                      Show help  [boolean]
+  				  -v, --version                   Show version number  [boolean]
 
-					OPTIONS
-					  -J, --jurisdiction   The jurisdiction where the new bucket will be created  [string]
-					  -s, --storage-class  The default storage class for objects uploaded to this bucket  [string]"
+  				OPTIONS
+  				      --location       The optional location hint that determines geographic placement of the R2 bucket  [string] [choices: \\"weur\\", \\"eeur\\", \\"apac\\", \\"wnam\\", \\"enam\\"]
+  				  -s, --storage-class  The default storage class for objects uploaded to this bucket  [string]
+  				  -J, --jurisdiction   The jurisdiction where the new bucket will be created  [string]"
 				`);
 				expect(std.err).toMatchInlineSnapshot(`
 				            "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mUnknown arguments: def, ghi[0m
@@ -262,8 +264,8 @@ describe("r2", () => {
 				);
 				await runWrangler("r2 bucket create testBucket");
 				expect(std.out).toMatchInlineSnapshot(`
-				            "Creating bucket testBucket with default storage class set to Standard.
-				            Created bucket testBucket with default storage class set to Standard."
+				            "Creating bucket 'testBucket'...
+				            ✅ Created bucket 'testBucket' with default storage class of Standard."
 			          `);
 			});
 
@@ -283,16 +285,16 @@ describe("r2", () => {
 				);
 				await runWrangler("r2 bucket create testBucket -J eu");
 				expect(std.out).toMatchInlineSnapshot(`
-				            "Creating bucket testBucket (eu) with default storage class set to Standard.
-				            Created bucket testBucket (eu) with default storage class set to Standard."
+				            "Creating bucket 'testBucket (eu)'...
+				            ✅ Created bucket 'testBucket (eu)' with default storage class of Standard."
 			          `);
 			});
 
 			it("should create a bucket with the expected default storage class", async () => {
 				await runWrangler("r2 bucket create testBucket -s InfrequentAccess");
 				expect(std.out).toMatchInlineSnapshot(`
-				            "Creating bucket testBucket with default storage class set to InfrequentAccess.
-				            Created bucket testBucket with default storage class set to InfrequentAccess."
+				            "Creating bucket 'testBucket'...
+				            ✅ Created bucket 'testBucket' with default storage class of InfrequentAccess."
 			          `);
 			});
 
@@ -303,7 +305,7 @@ describe("r2", () => {
 					`[APIError: A request to the Cloudflare API (/accounts/some-account-id/r2/buckets) failed.]`
 				);
 				expect(std.out).toMatchInlineSnapshot(`
-				"Creating bucket testBucket with default storage class set to Foo.
+				"Creating bucket 'testBucket'...
 
 				[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/accounts/some-account-id/r2/buckets) failed.[0m
 
@@ -314,6 +316,28 @@ describe("r2", () => {
 
 				"
 		`);
+			});
+			it("should create a bucket with the expected location hint", async () => {
+				msw.use(
+					http.post(
+						"*/accounts/:accountId/r2/buckets",
+						async ({ request, params }) => {
+							const { accountId } = params;
+							expect(accountId).toEqual("some-account-id");
+							expect(await request.json()).toEqual({
+								name: "testBucket",
+								locationHint: "weur",
+							});
+							return HttpResponse.json(createFetchResult({}));
+						},
+						{ once: true }
+					)
+				);
+				await runWrangler("r2 bucket create testBucket --location weur");
+				expect(std.out).toMatchInlineSnapshot(`
+				            "Creating bucket 'testBucket'...
+				            ✅ Created bucket 'testBucket' with location hint weur and default storage class of Standard."
+			          `);
 			});
 		});
 
