@@ -518,9 +518,12 @@ describe.sequential.each(RUNTIMES)("Bindings: $flags", ({ runtime, flags }) => {
 				}
 
 				async function waitForMutation(env: Env, mutationId: string) {
+					let count = 0;
 					while((await env.VECTORIZE.describe()).processedUpToMutation != mutationId) {
 						await new Promise(resolve => setTimeout(resolve, 2000));
+						count++;
 					}
+					console.log("describe() called " + count + " times");
 				}
 
 				export default {
