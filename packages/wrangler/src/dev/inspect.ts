@@ -271,22 +271,7 @@ export const openInspector = async (
 			braveBrowser = "brave";
 	}
 
-	const childProcess = await open(url, {
-		app: [
-			{
-				name: open.apps.chrome,
-			},
-			{
-				name: braveBrowser,
-			},
-			{
-				name: open.apps.edge,
-			},
-			{
-				name: open.apps.firefox,
-			},
-		],
-	});
+	const childProcess = await open(url);
 	childProcess.on("error", () => {
 		logger.warn(errorMessage);
 	});
