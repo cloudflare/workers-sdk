@@ -1,5 +1,111 @@
 # wrangler
 
+## 3.83.0
+
+### Minor Changes
+
+- [#7000](https://github.com/cloudflare/workers-sdk/pull/7000) [`1de309b`](https://github.com/cloudflare/workers-sdk/commit/1de309ba2222d7a73cefacef8d3eb60e8afdf5b4) Thanks [@jkoe-cf](https://github.com/jkoe-cf)! - feature: allowing users to specify a description when creating an event notification rule
+
+### Patch Changes
+
+- [#7011](https://github.com/cloudflare/workers-sdk/pull/7011) [`cef32c8`](https://github.com/cloudflare/workers-sdk/commit/cef32c88ee75a84267c1007608c042deb220a30b) Thanks [@GregBrimble](https://github.com/GregBrimble)! - fix: Correctly apply Durable Object migrations for namespaced scripts
+
+- [#7067](https://github.com/cloudflare/workers-sdk/pull/7067) [`4aa35c5`](https://github.com/cloudflare/workers-sdk/commit/4aa35c562f976e59016f395af208d05bbab3e408) Thanks [@LuisDuarte1](https://github.com/LuisDuarte1)! - Change trigger command to comply with the current workflows endpoint.
+
+  This also adds an id option to allow users to optionally customize the new instance id.
+
+- [#7082](https://github.com/cloudflare/workers-sdk/pull/7082) [`3f1d79c`](https://github.com/cloudflare/workers-sdk/commit/3f1d79c690e123ffb23cc22db64c07030fb3eb46) Thanks [@LuisDuarte1](https://github.com/LuisDuarte1)! - Change to new terminate instance workflow endpoint
+
+- [#7036](https://github.com/cloudflare/workers-sdk/pull/7036) [`e7ea600`](https://github.com/cloudflare/workers-sdk/commit/e7ea6005c1f283bbdfe7a6803d41403e5ebc13e5) Thanks [@penalosa](https://github.com/penalosa)! - Reduce KV bulk upload bucket size to 1000 (from the previous 5000)
+
+- [#7068](https://github.com/cloudflare/workers-sdk/pull/7068) [`a2afcf1`](https://github.com/cloudflare/workers-sdk/commit/a2afcf13ff4b6a9f72fdca108b3c7e493185adf6) Thanks [@RamIdeas](https://github.com/RamIdeas)! - log warning of Workflows open-beta status when running deploying a Worker that contains a Workflow binding
+
+- [#7065](https://github.com/cloudflare/workers-sdk/pull/7065) [`b219296`](https://github.com/cloudflare/workers-sdk/commit/b2192965e50602f8148c8bd9a6f10fdb059aefd3) Thanks [@penalosa](https://github.com/penalosa)! - Internal refactor to remove React/ink from all non-`wrangler dev` flows
+
+- [#7064](https://github.com/cloudflare/workers-sdk/pull/7064) [`a90980c`](https://github.com/cloudflare/workers-sdk/commit/a90980cadafb51c3ff60404d832bd11fc2b4e18b) Thanks [@penalosa](https://github.com/penalosa)! - Fix `wrangler dev --remote --show-interactive-dev-session=false` by only enabling hotkeys after account selection if hotkeys were previously enabled
+
+- [#7045](https://github.com/cloudflare/workers-sdk/pull/7045) [`5ef6231`](https://github.com/cloudflare/workers-sdk/commit/5ef6231a5cefbaaef123e6e8ee899fb81fc69e3e) Thanks [@RamIdeas](https://github.com/RamIdeas)! - Add preliminary support for Workflows in wrangler dev
+
+- [#7075](https://github.com/cloudflare/workers-sdk/pull/7075) [`80e5bc6`](https://github.com/cloudflare/workers-sdk/commit/80e5bc6887965a35ca1ab2794e4e4a96c0ef7a1e) Thanks [@LuisDuarte1](https://github.com/LuisDuarte1)! - Fix params serialization when send the trigger workflow API
+
+  Previously, wrangler did not parse the params sending it as a string to workflow's services.
+
+- Updated dependencies [[`760e43f`](https://github.com/cloudflare/workers-sdk/commit/760e43ffa197597de5625b96bc91376161f5027a), [`8dc2b7d`](https://github.com/cloudflare/workers-sdk/commit/8dc2b7d739239411ac29e419c22d22c291777042), [`5ef6231`](https://github.com/cloudflare/workers-sdk/commit/5ef6231a5cefbaaef123e6e8ee899fb81fc69e3e)]:
+  - miniflare@3.20241022.0
+  - @cloudflare/workers-shared@0.7.0
+
+## 3.82.0
+
+### Minor Changes
+
+- [#6945](https://github.com/cloudflare/workers-sdk/pull/6945) [`6b97353`](https://github.com/cloudflare/workers-sdk/commit/6b9735389fcb57dd8abb778439dd5e11f593b264) Thanks [@bthwaites](https://github.com/bthwaites)! - Add jurisdiction option to R2 event notification wrangler actions
+
+### Patch Changes
+
+- [#5737](https://github.com/cloudflare/workers-sdk/pull/5737) [`9bf51d6`](https://github.com/cloudflare/workers-sdk/commit/9bf51d656f5c7cd6ef744ebc1cebe85b29f05187) Thanks [@penalosa](https://github.com/penalosa)! - Validate duplicate bindings across all binding types
+
+- [#7010](https://github.com/cloudflare/workers-sdk/pull/7010) [`1f6ff8b`](https://github.com/cloudflare/workers-sdk/commit/1f6ff8b696671cd1f7918c0549cc7e6660a71e5b) Thanks [@vicb](https://github.com/vicb)! - chore: update unenv dependency version
+
+- [#7012](https://github.com/cloudflare/workers-sdk/pull/7012) [`244aa57`](https://github.com/cloudflare/workers-sdk/commit/244aa57a9f38b9dedbae6d4bb3949dd63840c82c) Thanks [@RamIdeas](https://github.com/RamIdeas)! - Add support for Workflow bindings (in deployments, not yet in local dev)
+
+  To bind to a workflow, add a `workflows` section in your wrangler.toml:
+
+  ```toml
+  [[workflows]]
+  binding = "WORKFLOW"
+  name = "my-workflow"
+  class_name = "MyDemoWorkflow"
+  ```
+
+  and export an entrypoint (e.g. `MyDemoWorkflow`) in your script:
+
+  ```typescript
+  import { WorkflowEntrypoint } from "cloudflare:workers";
+
+  export class MyDemoWorkflow extends WorkflowEntrypoint<Env, Params> {...}
+  ```
+
+- [#7039](https://github.com/cloudflare/workers-sdk/pull/7039) [`e44f496`](https://github.com/cloudflare/workers-sdk/commit/e44f496a84ba1c4c87abd5ea6302735cf84d525f) Thanks [@penalosa](https://github.com/penalosa)! - Only show dev registry connection status in local dev
+
+- [#7037](https://github.com/cloudflare/workers-sdk/pull/7037) [`e1b93dc`](https://github.com/cloudflare/workers-sdk/commit/e1b93dcf6fc8b707d2d12b9e1a76e20f7450f025) Thanks [@emily-shen](https://github.com/emily-shen)! - fix: ask for confirmation before creating a new Worker when uploading secrets
+
+  Previously, `wrangler secret put KEY --name non-existent-worker` would automatically create a new Worker with the name `non-existent-worker`. This fix asks for confirmation before doing so (if running in an interactive context). Behaviour in non-interactive/CI contexts should be unchanged.
+
+- [#7015](https://github.com/cloudflare/workers-sdk/pull/7015) [`48152d6`](https://github.com/cloudflare/workers-sdk/commit/48152d69ee1440764b99e1d9b17656aaa1c1b20e) Thanks [@RamIdeas](https://github.com/RamIdeas)! - add `wrangler workflows ...` commands
+
+- [#7041](https://github.com/cloudflare/workers-sdk/pull/7041) [`045787b`](https://github.com/cloudflare/workers-sdk/commit/045787bc435dd84c3554adecc9ae8ddaf8a7a1ce) Thanks [@CarmenPopoviciu](https://github.com/CarmenPopoviciu)! - Show `wrangler pages dev --proxy` warning
+
+  On Node.js 17+, wrangler will default to fetching only the IPv6 address. With these changes we warn users that the process listening on the port specified via `--proxy` should be configured for IPv6.
+
+- [#7018](https://github.com/cloudflare/workers-sdk/pull/7018) [`127615a`](https://github.com/cloudflare/workers-sdk/commit/127615afc29c95fa602d3ca63611fff2848556c1) Thanks [@emily-shen](https://github.com/emily-shen)! - fix: log successful runs of `d1 execute` in local
+
+- [#6970](https://github.com/cloudflare/workers-sdk/pull/6970) [`a8ca700`](https://github.com/cloudflare/workers-sdk/commit/a8ca7005d09533f76b67c571859aa4c19519bec4) Thanks [@oliy](https://github.com/oliy)! - Add HTTP authentication options for Workers Pipelines
+
+- [#7005](https://github.com/cloudflare/workers-sdk/pull/7005) [`6131ef5`](https://github.com/cloudflare/workers-sdk/commit/6131ef5a3d166176b98f2f2d4e8710c980ba6843) Thanks [@edmundhung](https://github.com/edmundhung)! - fix: prevent users from passing multiple arguments to non array options
+
+- [#7046](https://github.com/cloudflare/workers-sdk/pull/7046) [`f9d5fdb`](https://github.com/cloudflare/workers-sdk/commit/f9d5fdb0fdb4d0ed52264d64938d55eddd82ed8d) Thanks [@oliy](https://github.com/oliy)! - Minor change to 3rd party API shape for Workers Pipelines
+
+- [#6972](https://github.com/cloudflare/workers-sdk/pull/6972) [`c794935`](https://github.com/cloudflare/workers-sdk/commit/c794935143e98af1829682fb4f34dec6efa7077a) Thanks [@penalosa](https://github.com/penalosa)! - Add ` (local)` indicator to bindings using local data
+
+- Updated dependencies [[`809193e`](https://github.com/cloudflare/workers-sdk/commit/809193e05ad80c32086acf18646d0bd436cf2bfd)]:
+  - miniflare@3.20241018.0
+
+## 3.81.0
+
+### Minor Changes
+
+- [#6990](https://github.com/cloudflare/workers-sdk/pull/6990) [`586c253`](https://github.com/cloudflare/workers-sdk/commit/586c253f7de36360cab275cb1ebf9a2373fd4f4c) Thanks [@courtney-sims](https://github.com/courtney-sims)! - feat: Adds new detailed pages deployment output type
+
+### Patch Changes
+
+- [#6963](https://github.com/cloudflare/workers-sdk/pull/6963) [`a5ac45d`](https://github.com/cloudflare/workers-sdk/commit/a5ac45d7d5aa7a6b82de18a8cf14e6eabdd22e9e) Thanks [@RamIdeas](https://github.com/RamIdeas)! - fix: make `wrangler dev --remote` respect wrangler.toml's `account_id` property.
+
+  This was a regression in the `--x-dev-env` flow recently turned on by default.
+
+- [#6996](https://github.com/cloudflare/workers-sdk/pull/6996) [`b8ab809`](https://github.com/cloudflare/workers-sdk/commit/b8ab8093b9011b5d7d47bcd31fa69cefa6c8fe2a) Thanks [@emily-shen](https://github.com/emily-shen)! - fix: improve error messaging when accidentally using Workers commands in Pages project
+
+  If we detect a Workers command used with a Pages project (i.e. wrangler.toml contains `pages_output_build_dir`), error with Pages version of command rather than "missing entry-point" etc.
+
 ## 3.80.5
 
 ### Patch Changes

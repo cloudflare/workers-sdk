@@ -20,6 +20,14 @@ describe("Pages dev with proxy and a script file", () => {
 					"Specifying a `-- <command>` or `--proxy` is deprecated and will be removed in a future version of Wrangler."
 				)
 		).toBeTruthy();
+
+		expect(
+			process
+				.getOutput()
+				.includes(
+					"On Node.js 17+, wrangler will default to fetching only the IPv6 address. Please ensure that the process listening on the port specified via `--proxy` is configured for IPv6."
+				)
+		).toBeTruthy();
 	});
 
 	it("should handle requests using a script from a custom script path", async () => {

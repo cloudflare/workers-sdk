@@ -126,6 +126,7 @@ async function resolveDevConfig(
 		// absolute resolved path
 		persist: localPersistencePath,
 		registry: input.dev?.registry,
+		bindVectorizeToProd: input.dev?.bindVectorizeToProd ?? false,
 	} satisfies StartDevWorkerOptions["dev"];
 }
 
@@ -163,7 +164,7 @@ async function resolveBindings(
 			...bindings,
 			vars: maskedVars,
 		},
-		input.dev?.registry
+		{ registry: input.dev?.registry, local: !input.dev?.remote }
 	);
 
 	return {
@@ -284,6 +285,7 @@ async function resolveConfig(
 			jsxFactory: input.build?.jsxFactory || config.jsx_factory,
 			jsxFragment: input.build?.jsxFragment || config.jsx_fragment,
 			tsconfig: input.build?.tsconfig ?? config.tsconfig,
+			exports: entry.exports,
 		},
 		dev: await resolveDevConfig(config, input),
 		legacy: {

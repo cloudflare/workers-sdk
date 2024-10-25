@@ -56,6 +56,7 @@ export function buildWorkerFromFunctions({
 		directory: functionsDirectory,
 		format: "modules",
 		moduleRoot: functionsDirectory,
+		exports: [],
 	};
 	const moduleCollector = createModuleCollector({
 		entry,
@@ -79,6 +80,7 @@ export function buildWorkerFromFunctions({
 		},
 		alias: {},
 		doBindings: [], // Pages functions don't support internal Durable Objects
+		workflowBindings: [], // Pages functions don't support internal Workflows
 		external,
 		plugins: [buildNotifierPlugin(onEnd), assetsPlugin(buildOutputDirectory)],
 		isOutfile: !outdir,
@@ -141,6 +143,7 @@ export function buildRawWorker({
 		directory: resolve(directory),
 		format: "modules",
 		moduleRoot: resolve(directory),
+		exports: [],
 	};
 	const moduleCollector = externalModules
 		? noopModuleCollector
@@ -159,6 +162,7 @@ export function buildRawWorker({
 		define: {},
 		alias: {},
 		doBindings: [], // Pages functions don't support internal Durable Objects
+		workflowBindings: [], // Pages functions don't support internal Workflows
 		external,
 		plugins: [
 			...plugins,
@@ -217,6 +221,7 @@ export async function produceWorkerBundleForWorkerJSDirectory({
 			directory: resolve(workerJSDirectory),
 			format: "modules",
 			moduleRoot: resolve(workerJSDirectory),
+			exports: [],
 		},
 		[
 			{

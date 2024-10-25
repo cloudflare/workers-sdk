@@ -196,6 +196,7 @@ export type DevProps = {
 	rawConfig: Config;
 	rawArgs: StartDevOptions;
 	devEnv: DevEnv;
+	bindVectorizeToProd: boolean;
 };
 
 export function DevImplementation(props: DevProps): JSX.Element {
@@ -372,6 +373,7 @@ function DevSession(props: DevSessionProps) {
 				nodejsCompatMode: props.nodejsCompatMode ?? null,
 				format: props.entry.format,
 				moduleRoot: props.entry.moduleRoot,
+				exports: props.entry.exports,
 			},
 			dev: {
 				auth: async () => {
@@ -398,6 +400,7 @@ function DevSession(props: DevSessionProps) {
 				liveReload: props.liveReload,
 				testScheduled: props.testScheduled,
 				persist: "",
+				bindVectorizeToProd: props.bindVectorizeToProd,
 			},
 			legacy: {
 				site:
@@ -458,6 +461,7 @@ function DevSession(props: DevSessionProps) {
 		props.localUpstream,
 		props.liveReload,
 		props.testScheduled,
+		props.bindVectorizeToProd,
 		accountIdDeferred,
 	]);
 
@@ -543,6 +547,7 @@ function DevSession(props: DevSessionProps) {
 		mockAnalyticsEngineDatasets: props.bindings.analytics_engine_datasets ?? [],
 		legacyAssets: props.legacyAssetsConfig,
 		durableObjects: props.bindings.durable_objects || { bindings: [] },
+		workflows: props.bindings.workflows ?? [],
 		local: props.local,
 		// Enable the bundling to know whether we are using dev or deploy
 		targetConsumer: "dev",
@@ -655,6 +660,7 @@ function DevSession(props: DevSessionProps) {
 			enablePagesAssetsServiceBinding={props.enablePagesAssetsServiceBinding}
 			sourceMapPath={bundle?.sourceMapPath}
 			services={props.bindings.services}
+			bindVectorizeToProd={props.bindVectorizeToProd}
 		/>
 	) : (
 		<Remote

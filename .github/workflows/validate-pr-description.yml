@@ -26,6 +26,11 @@ jobs:
             everything_but_markdown:
               - '!**/*.md'
 
+      - uses: Ana06/get-changed-files@v1.2
+        id: files
+        with:
+          format: "json"
+
       - name: Install Dependencies
         if: steps.changes.outputs.everything_but_markdown == 'true'
         uses: ./.github/actions/install-dependencies
@@ -41,3 +46,4 @@ jobs:
           TITLE: ${{ github.event.pull_request.title }}
           BODY: ${{ github.event.pull_request.body }}
           LABELS: ${{ toJson(github.event.pull_request.labels.*.name) }}
+          FILES: ${{ steps.files.outputs.all }}

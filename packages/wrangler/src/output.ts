@@ -70,7 +70,8 @@ export type OutputEntry =
 	| OutputEntryDeployment
 	| OutputEntryPagesDeployment
 	| OutputEntryVersionUpload
-	| OutputEntryVersionDeployment;
+	| OutputEntryVersionDeployment
+	| OutputEntryPagesDeploymentDetailed;
 
 export type StampedOutputEntry = { timestamp: string } & OutputEntry;
 
@@ -106,6 +107,21 @@ export interface OutputEntryPagesDeployment
 	deployment_id: string | null;
 	/** The URL associated with this deployment */
 	url: string | undefined;
+}
+
+export interface OutputEntryPagesDeploymentDetailed
+	extends OutputEntryBase<"pages-deploy-detailed"> {
+	version: 1;
+	/** The name of the Pages project. */
+	pages_project: string | null;
+	/** A GUID that identifies this Pages deployment. */
+	deployment_id: string | null;
+	/** The URL associated with this deployment */
+	url: string | undefined;
+	/** The Alias url, if it exists */
+	alias: string | undefined;
+	/** The environment being deployed to */
+	environment: "production" | "preview";
 }
 
 export interface OutputEntryVersionUpload

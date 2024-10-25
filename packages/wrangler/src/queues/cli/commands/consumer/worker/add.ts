@@ -1,5 +1,5 @@
 import { readConfig } from "../../../../../config";
-import { CommandLineArgsError } from "../../../../../index";
+import { CommandLineArgsError } from "../../../../../errors";
 import { logger } from "../../../../../logger";
 import { postConsumer } from "../../../../client";
 import type {

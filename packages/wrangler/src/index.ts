@@ -8,6 +8,7 @@ import { version as wranglerVersion } from "../package.json";
 import { ai } from "./ai";
 import { cloudchamber } from "./cloudchamber";
 import { loadDotEnv, readConfig } from "./config";
+import { createCommandRegister } from "./core/register-commands";
 import { d1 } from "./d1";
 import { deleteHandler, deleteOptions } from "./delete";
 import { deployHandler, deployOptions } from "./deploy";
@@ -37,11 +38,17 @@ import {
 import { devHandler, devOptions } from "./dev";
 import { workerNamespaceCommands } from "./dispatch-namespace";
 import { docsHandler, docsOptions } from "./docs";
-import { JsonFriendlyFatalError, UserError } from "./errors";
+import {
+	CommandLineArgsError,
+	JsonFriendlyFatalError,
+	UserError,
+} from "./errors";
 import { generateHandler, generateOptions } from "./generate";
 import { hyperdrive } from "./hyperdrive/index";
 import { initHandler, initOptions } from "./init";
-import { kvBulk, kvKey, kvNamespace, registerKvSubcommands } from "./kv";
+import "./kv";
+import "./workflows";
+import { demandSingleValue } from "./core";
 import { logBuildFailure, logger, LOGGER_LEVELS } from "./logger";
 import * as metrics from "./metrics";
 import { mTlsCertificateCommands } from "./mtls-certificate/cli";
@@ -80,7 +87,6 @@ import { asJson } from "./yargs-types";
 import type { Config } from "./config";
 import type { LoggerLevel } from "./logger";
 import type { CommonYargsArgv, SubHelp } from "./yargs-types";
-import type { Arguments } from "yargs";
 
 const resetColor = "\x1b[0m";
 const fgGreenColor = "\x1b[32m";
@@ -158,35 +164,6 @@ export function getLegacyScriptName(
 		: args.name ?? config.name;
 }
 
-/**
- * A helper to demand one of a set of options
- * via https://github.com/yargs/yargs/issues/1093#issuecomment-491299261
- */
-export function demandOneOfOption(...options: string[]) {
-	return function (argv: Arguments) {
-		const count = options.filter((option) => argv[option]).length;
-		const lastOption = options.pop();
-
-		if (count === 0) {
-			throw new CommandLineArgsError(
-				`Exactly one of the arguments ${options.join(
-					", "
-				)} and ${lastOption} is required`
-			);
-		} else if (count > 1) {
-			throw new CommandLineArgsError(
-				`Arguments ${options.join(
-					", "
-				)} and ${lastOption} are mutually exclusive`
-			);
-		}
-
-		return true;
-	};
-}
-
-export class CommandLineArgsError extends UserError {}
-
 export function createCLIParser(argv: string[]) {
 	const experimentalGradualRollouts =
 		// original flag -- using internal product name (Gradual Rollouts) -- kept for temp back-compat
@@ -229,12 +206,14 @@ export function createCLIParser(argv: string[]) {
 			type: "string",
 			requiresArg: true,
 		})
+		.check(demandSingleValue("config"))
 		.option("env", {
 			alias: "e",
 			describe: "Environment to use for operations and .env files",
 			type: "string",
 			requiresArg: true,
 		})
+		.check(demandSingleValue("env"))
 		.option("experimental-json-config", {
 			alias: "j",
 			describe: `Experimental: support wrangler.json`,
@@ -322,6 +301,8 @@ export function createCLIParser(argv: string[]) {
 			}
 		}
 	);
+
+	const register = createCommandRegister(wrangler, subHelp);
 
 	/*
 	 * You will note that we use the form for all commands where we use the builder function
@@ -525,9 +506,7 @@ export function createCLIParser(argv: string[]) {
 
 	/******************** CMD GROUP ***********************/
 	// kv
-	wrangler.command("kv", `🗂️  Manage Workers KV Namespaces`, (kvYargs) => {
-		return registerKvSubcommands(kvYargs, subHelp);
-	});
+	register.registerNamespace("kv");
 
 	// queues
 	wrangler.command("queues", "🇶  Manage Workers Queues", (queuesYargs) => {
@@ -607,6 +586,9 @@ export function createCLIParser(argv: string[]) {
 	wrangler.command("ai", "🤖 Manage AI models", (aiYargs) => {
 		return ai(aiYargs.command(subHelp));
 	});
+
+	// workflows
+	register.registerNamespace("workflows");
 
 	// pipelines
 	wrangler.command("pipelines", false, (pipelinesYargs) => {
@@ -753,45 +735,6 @@ export function createCLIParser(argv: string[]) {
 		secretBulkHandler
 	);
 
-	// [DEPRECATED] kv:namespace
-	wrangler.command(
-		"kv:namespace",
-		false, // deprecated, don't show
-		(namespaceYargs) => {
-			logger.warn(
-				"The `wrangler kv:namespace` command is deprecated and will be removed in a future major version. Please use `wrangler kv namespace` instead which behaves the same."
-			);
-
-			return kvNamespace(namespaceYargs.command(subHelp));
-		}
-	);
-
-	// [DEPRECATED] kv:key
-	wrangler.command(
-		"kv:key",
-		false, // deprecated, don't show
-		(keyYargs) => {
-			logger.warn(
-				"The `wrangler kv:key` command is deprecated and will be removed in a future major version. Please use `wrangler kv key` instead which behaves the same."
-			);
-
-			return kvKey(keyYargs.command(subHelp));
-		}
-	);
-
-	// [DEPRECATED] kv:bulk
-	wrangler.command(
-		"kv:bulk",
-		false, // deprecated, don't show
-		(bulkYargs) => {
-			logger.warn(
-				"The `wrangler kv:bulk` command is deprecated and will be removed in a future major version. Please use `wrangler kv bulk` instead which behaves the same."
-			);
-
-			return kvBulk(bulkYargs.command(subHelp));
-		}
-	);
-
 	// [DEPRECATED] generate
 	wrangler.command(
 		"generate [name] [template]",
@@ -820,6 +763,8 @@ export function createCLIParser(argv: string[]) {
 			);
 		}
 	);
+
+	register.registerAll();
 
 	wrangler.exitProcess(false);
 

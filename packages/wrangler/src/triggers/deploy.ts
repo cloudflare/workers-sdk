@@ -240,6 +240,25 @@ export default async function triggersDeploy(
 		deployments.push(...updateConsumers);
 	}
 
+	if (config.workflows?.length) {
+		logger.warnOnce("Workflows is currently in open beta.");
+
+		for (const workflow of config.workflows) {
+			deployments.push(
+				fetchResult(`/accounts/${accountId}/workflows/${workflow.name}`, {
+					method: "PUT",
+					body: JSON.stringify({
+						script_name: scriptName,
+						class_name: workflow.class_name,
+					}),
+					headers: {
+						"Content-Type": "application/json",
+					},
+				}).then(() => [`workflow: ${workflow.name}`])
+			);
+		}
+	}
+
 	const targets = await Promise.all(deployments);
 	const deployMs = Date.now() - start - uploadMs;
 

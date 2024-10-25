@@ -9,14 +9,14 @@
 		"create-analog": "1.8.1",
 		"@angular/create": "18.2.8",
 		"create-docusaurus": "3.5.2",
-		"create-hono": "0.12.0",
+		"create-hono": "0.14.2",
 		"create-next-app": "14.2.5",
 		"create-qwik": "1.9.1",
-		"create-vite": "5.2.3",
-		"create-remix": "2.12.0",
+		"create-vite": "5.5.4",
+		"create-remix": "2.13.1",
 		"create-solid": "0.5.13",
 		"create-svelte": "6.4.0",
-		"create-vue": "3.10.4",
+		"create-vue": "3.11.1",
 		"gatsby": "5.13.7",
 		"nuxi": "3.12.0"
 	}

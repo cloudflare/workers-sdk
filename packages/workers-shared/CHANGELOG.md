@@ -1,5 +1,11 @@
 # @cloudflare/workers-shared
 
+## 0.7.0
+
+### Minor Changes
+
+- [#7053](https://github.com/cloudflare/workers-sdk/pull/7053) [`8dc2b7d`](https://github.com/cloudflare/workers-sdk/commit/8dc2b7d739239411ac29e419c22d22c291777042) Thanks [@WillTaylorDev](https://github.com/WillTaylorDev)! - Adds analytics to asset-worker
+
 ## 0.6.0
 
 ### Minor Changes

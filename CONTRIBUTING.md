@@ -297,30 +297,26 @@ Each changeset is a file that describes the change being merged. This file is us
 To help maintain consistency in the changelog, changesets should have the following format:
 
 ```
-<TYPE>: <TITLE>
+<TITLE>
 
 <BODY>
-
-[BREAKING CHANGES <BREAKING_CHANGE_NOTES>]
 ```
 
-- `TYPE` should be a single word describing the "type" of the change. For example, one of `feature`, `fix`, `refactor`, `docs` or `chore`.
 - `TITLE` should be a single sentence containing an imperative description of the change.
 - `BODY` should be one or more paragraphs that go into more detail about the reason for the change and anything notable about the approach taken.
-- `BREAKING_CHANGE_NOTES` (optional) should be one or more paragraphs describing how this change breaks current usage and how to migrate to the new usage.
 
 ### Changeset file example
 
 The generated changeset file will contain the package name and type of change (eg. `patch`, `minor`, or `major`), followed by our changeset format described above.
 
-Here's an example of a `patch` to the `wrangler` package, which provides a `fix`:
+Here's an example of a `patch` to the `wrangler` package:
 
 ```
 ---
 "wrangler": patch
 ---
 
-fix: replace the word "publish" with "deploy" everywhere.
+Replace the word "publish" with "deploy" everywhere.
 
 We should be consistent with the word that describes how we get a worker to the edge. The command is `deploy`, so let's use that everywhere.
 ```
@@ -339,4 +335,4 @@ When contributing to Wrangler, please refer to the [`STYLEGUIDE.md file`](https:
 
 ## Releases
 
-We generally cut Wrangler releases at the start of each week. If you need a release cut outside of the regular cadence, please reach out to the [@cloudflare/wrangler-admins](https://github.com/orgs/cloudflare/teams/wrangler-admins) team.
+We generally cut Wrangler releases on Tuesday & Thursday each week. If you need a release cut outside of the regular cadence, please reach out to the [@cloudflare/wrangler-admins](https://github.com/orgs/cloudflare/teams/wrangler-admins) team.

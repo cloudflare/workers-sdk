@@ -1,5 +1,7 @@
 import { WorkerEntrypoint } from "cloudflare:workers";
+import { PerformanceTimer } from "../../utils/performance";
 import { setupSentry } from "../../utils/sentry";
+import { Analytics } from "./analytics";
 import { AssetsManifest } from "./assets-manifest";
 import { applyConfigurationDefaults } from "./configuration";
 import { decodePath, getIntent, handleRequest } from "./handler";
@@ -8,7 +10,8 @@ import {
 	MethodNotAllowedResponse,
 } from "./responses";
 import { getAssetWithMetadataFromKV } from "./utils/kv";
-import type { AssetConfig } from "../../utils/types";
+import type { AssetConfig, UnsafePerformanceTimer } from "../../utils/types";
+import type { ColoMetadata, Environment, ReadyAnalytics } from "./types";
 
 type Env = {
 	/*
@@ -29,6 +32,12 @@ type Env = {
 
 	SENTRY_ACCESS_CLIENT_ID: string;
 	SENTRY_ACCESS_CLIENT_SECRET: string;
+
+	ENVIRONMENT: Environment;
+	ANALYTICS: ReadyAnalytics;
+	COLO_METADATA: ColoMetadata;
+	UNSAFE_PERFORMANCE: UnsafePerformanceTimer;
+	VERSION_METADATA: WorkerVersionMetadata;
 };
 
 /*
@@ -45,6 +54,10 @@ type Env = {
 export default class extends WorkerEntrypoint<Env> {
 	async fetch(request: Request): Promise<Response> {
 		let sentry: ReturnType<typeof setupSentry> | undefined;
+		const analytics = new Analytics(this.env.ANALYTICS);
+		const performance = new PerformanceTimer(this.env.UNSAFE_PERFORMANCE);
+		const startTimeMs = performance.now();
+
 		try {
 			sentry = setupSentry(
 				request,
@@ -54,9 +67,34 @@ export default class extends WorkerEntrypoint<Env> {
 				this.env.SENTRY_ACCESS_CLIENT_SECRET
 			);
 
+			const config = applyConfigurationDefaults(this.env.CONFIG);
+			const userAgent = request.headers.get("user-agent") ?? "UA UNKNOWN";
+
+			if (sentry) {
+				const colo = this.env.COLO_METADATA.coloId;
+				sentry.setTag("colo", this.env.COLO_METADATA.coloId);
+				sentry.setTag("metal", this.env.COLO_METADATA.metalId);
+				sentry.setUser({ userAgent: userAgent, colo: colo });
+			}
+
+			if (this.env.COLO_METADATA && this.env.VERSION_METADATA) {
+				const url = new URL(request.url);
+				analytics.setData({
+					coloId: this.env.COLO_METADATA.coloId,
+					metalId: this.env.COLO_METADATA.metalId,
+					coloTier: this.env.COLO_METADATA.coloTier,
+					coloRegion: this.env.COLO_METADATA.coloRegion,
+					version: this.env.VERSION_METADATA.id,
+					hostname: url.hostname,
+					htmlHandling: config.html_handling,
+					notFoundHandling: config.not_found_handling,
+					userAgent: userAgent,
+				});
+			}
+
 			return handleRequest(
 				request,
-				applyConfigurationDefaults(this.env.CONFIG),
+				config,
 				this.unstable_exists.bind(this),
 				this.unstable_getByETag.bind(this)
 			);
@@ -68,7 +106,14 @@ export default class extends WorkerEntrypoint<Env> {
 				sentry.captureException(err);
 			}
 
+			if (err instanceof Error) {
+				analytics.setData({ error: err.message });
+			}
+
 			return response;
+		} finally {
+			analytics.setData({ requestTime: performance.now() - startTimeMs });
+			analytics.write();
 		}
 	}
 

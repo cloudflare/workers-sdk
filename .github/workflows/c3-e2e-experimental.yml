@@ -64,5 +64,3 @@ jobs:
           experimental: true
           accountId: ${{ secrets.C3_TEST_CLOUDFLARE_ACCOUNT_ID }}
           apiToken: ${{ secrets.C3_TEST_CLOUDFLARE_API_TOKEN }}
-          # We only need to do this once per-framework per-run, so avoid re-running for each package manager and os
-          saveDiffs: ${{ github.head_ref == 'changeset-release/main' && matrix.pm.name == 'pnpm' && matrix.os == 'ubuntu-latest'}}

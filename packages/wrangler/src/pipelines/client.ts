@@ -14,14 +14,22 @@ export type TransformConfig = {
 	script: string;
 	entrypoint: string;
 };
+export type HttpSource = {
+	type: "http";
+	format: string;
+	schema?: string;
+	authentication?: boolean;
+};
+export type BindingSource = {
+	type: "binding";
+	format: string;
+	schema?: string;
+};
+export type Source = HttpSource | BindingSource;
 export type PipelineUserConfig = {
 	name: string;
 	metadata: { [x: string]: string };
-	source: {
-		type: string;
-		format: string;
-		schema?: string;
-	}[];
+	source: Source[];
 	transforms: TransformConfig[];
 	destination: {
 		type: string;

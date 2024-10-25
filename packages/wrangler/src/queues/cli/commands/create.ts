@@ -1,5 +1,5 @@
 import { readConfig } from "../../../config";
-import { CommandLineArgsError } from "../../../index";
+import { CommandLineArgsError } from "../../../errors";
 import { logger } from "../../../logger";
 import { createQueue } from "../../client";
 import { handleFetchError } from "../../utils";

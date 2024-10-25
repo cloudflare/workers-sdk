@@ -229,6 +229,17 @@ describe("delete", () => {
 	`);
 	});
 
+	it("should error helpfully if pages_build_output_dir is set", async () => {
+		writeWranglerToml({ pages_build_output_dir: "dist", name: "test" });
+		await expect(
+			runWrangler("delete")
+		).rejects.toThrowErrorMatchingInlineSnapshot(
+			`
+			[Error: It looks like you've run a Workers-specific command in a Pages project.
+			For Pages, please run \`wrangler pages project delete\` instead.]
+		`
+		);
+	});
 	describe("force deletes", () => {
 		it("should prompt for extra confirmation when service is depended on and use force", async () => {
 			mockConfirm({

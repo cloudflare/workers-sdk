@@ -352,6 +352,12 @@ export function devOptions(yargs: CommonYargsArgv) {
 					"Use the experimental file based dev registry for multi-worker development",
 				default: false,
 			})
+			.option("experimental-vectorize-bind-to-prod", {
+				type: "boolean",
+				describe:
+					"Bind to production Vectorize indexes in local development mode",
+				default: false,
+			})
 	);
 }
 
@@ -693,6 +699,7 @@ export async function startDev(args: StartDevOptions) {
 							version_metadata: args.version_metadata,
 							data_blobs: undefined,
 							durable_objects: { bindings: args.durableObjects ?? [] },
+							workflows: undefined,
 							queues: undefined,
 							r2_buckets: args.r2,
 							d1_databases: args.d1Databases,
@@ -710,11 +717,14 @@ export async function startDev(args: StartDevOptions) {
 					},
 					dev: {
 						auth: async (config) => {
+							const hotkeysDisplayed = !!unregisterHotKeys;
 							let accountId = args.accountId;
 							if (!accountId) {
 								unregisterHotKeys?.();
 								accountId = await requireAuth(config);
-								unregisterHotKeys = registerDevHotKeys(devEnv, args);
+								if (hotkeysDisplayed) {
+									unregisterHotKeys = registerDevHotKeys(devEnv, args);
+								}
 							}
 							return {
 								accountId,
@@ -747,6 +757,7 @@ export async function startDev(args: StartDevOptions) {
 						testScheduled: args.testScheduled,
 						logLevel: args.logLevel,
 						registry: devEnv.config.latestConfig?.dev.registry,
+						bindVectorizeToProd: args.experimentalVectorizeBindToProd,
 					},
 					legacy: {
 						site: (configParam) => {
@@ -1006,6 +1017,7 @@ export async function startDev(args: StartDevOptions) {
 						rawArgs={args}
 						rawConfig={configParam}
 						devEnv={devEnv}
+						bindVectorizeToProd={args.experimentalVectorizeBindToProd}
 					/>
 				);
 			}
@@ -1205,6 +1217,7 @@ export async function startApiDev(args: StartDevOptions) {
 			rawArgs: args,
 			rawConfig: configParam,
 			devEnv,
+			bindVectorizeToProd: args.experimentalVectorizeBindToProd,
 		});
 	}
 
@@ -1413,10 +1426,13 @@ export function getResolvedBindings(
 
 	const maskedVars = maskVars(bindings, configParam);
 
-	printBindings({
-		...bindings,
-		vars: maskedVars,
-	});
+	printBindings(
+		{
+			...bindings,
+			vars: maskedVars,
+		},
+		{ local: !args.remote }
+	);
 
 	return bindings;
 }
@@ -1574,7 +1590,7 @@ export function getBindings(
 		}),
 	];
 
-	const bindings = {
+	const bindings: CfWorkerInit["bindings"] = {
 		// top-level fields
 		wasm_modules: configParam.wasm_modules,
 		text_blobs: configParam.text_blobs,
@@ -1593,6 +1609,7 @@ export function getBindings(
 		durable_objects: {
 			bindings: mergedDOBindings,
 		},
+		workflows: configParam.workflows,
 		kv_namespaces: mergedKVBindings,
 		queues: queuesBindings,
 		r2_buckets: mergedR2Bindings,

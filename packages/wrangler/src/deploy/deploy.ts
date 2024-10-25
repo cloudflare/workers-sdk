@@ -580,6 +580,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 						serveLegacyAssetsFromWorker:
 							!props.isWorkersSite && Boolean(props.legacyAssetPaths),
 						doBindings: config.durable_objects.bindings,
+						workflowBindings: config.workflows ?? [],
 						jsxFactory,
 						jsxFragment,
 						tsconfig: props.tsconfig ?? config.tsconfig,
@@ -631,6 +632,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 					config,
 					legacyEnv: props.legacyEnv,
 					env: props.env,
+					dispatchNamespace: props.dispatchNamespace,
 				})
 			: undefined;
 
@@ -674,6 +676,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			},
 			data_blobs: config.data_blobs,
 			durable_objects: config.durable_objects,
+			workflows: config.workflows,
 			queues: config.queues.producers?.map((producer) => {
 				return { binding: producer.binding, queue_name: producer.queue };
 			}),

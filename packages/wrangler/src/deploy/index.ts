@@ -254,6 +254,13 @@ export async function deployHandler(args: DeployArgs) {
 		args.config || (args.script && findWranglerToml(path.dirname(args.script)));
 	const projectRoot = configPath && path.dirname(configPath);
 	const config = readConfig(configPath, args);
+	if (config.pages_build_output_dir) {
+		throw new UserError(
+			"It looks like you've run a Workers-specific command in a Pages project.\n" +
+				"For Pages, please run `wrangler pages deploy` instead."
+		);
+	}
+
 	const entry = await getEntry(args, config, "deploy");
 
 	if (args.public) {
@@ -274,6 +281,10 @@ export async function deployHandler(args: DeployArgs) {
 		throw new UserError(
 			"Cannot use legacy assets and Workers Sites in the same Worker."
 		);
+	}
+
+	if (config.workflows?.length) {
+		logger.warnOnce("Workflows is currently in open beta.");
 	}
 
 	validateAssetsArgsAndConfig(args, config);

@@ -77,6 +77,7 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 				directory: config.directory,
 				format: config.build.format,
 				moduleRoot: config.build.moduleRoot,
+				exports: config.build.exports,
 			};
 
 			const entryDirectory = path.dirname(config.entrypoint);
@@ -108,6 +109,7 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 						serveLegacyAssetsFromWorker: Boolean(
 							config.legacy?.legacyAssets && !config.dev?.remote
 						),
+						workflowBindings: bindings?.workflows ?? [],
 						doBindings: bindings?.durable_objects?.bindings ?? [],
 						jsxFactory: config.build.jsxFactory,
 						jsxFragment: config.build.jsxFactory,
@@ -213,6 +215,7 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 			directory: config.directory,
 			format: config.build.format,
 			moduleRoot: config.build.moduleRoot,
+			exports: config.build.exports,
 		};
 		const { bindings } = await convertBindingsToCfWorkerInitBindings(
 			config.bindings
@@ -238,6 +241,7 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 				noBundle: !config.build?.bundle,
 				findAdditionalModules: config.build?.findAdditionalModules,
 				durableObjects: bindings?.durable_objects ?? { bindings: [] },
+				workflows: bindings?.workflows ?? [],
 				mockAnalyticsEngineDatasets: bindings.analytics_engine_datasets ?? [],
 				local: !config.dev?.remote,
 				// startDevWorker only applies to "dev"

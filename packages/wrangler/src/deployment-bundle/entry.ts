@@ -31,6 +31,9 @@ export type Entry = {
 	 * A worker's name
 	 */
 	name?: string | undefined;
+
+	/** Export from a Worker's entrypoint */
+	exports: string[];
 };
 
 /**
@@ -66,13 +69,19 @@ export async function getEntry(
 	) {
 		paths = resolveEntryWithAssets();
 	} else {
+		if (config.pages_build_output_dir && command === "dev") {
+			throw new UserError(
+				"It looks like you've run a Workers-specific command in a Pages project.\n" +
+					"For Pages, please run `wrangler pages dev` instead."
+			);
+		}
 		throw new UserError(
 			`Missing entry-point: The entry-point should be specified via the command line (e.g. \`wrangler ${command} path/to/script\`) or the \`main\` config field.`
 		);
 	}
 	await runCustomBuild(paths.absolutePath, paths.relativePath, config.build);
 
-	const format = await guessWorkerFormat(
+	const { format, exports } = await guessWorkerFormat(
 		paths.absolutePath,
 		directory,
 		args.format ?? config.build?.upload?.format,
@@ -113,6 +122,7 @@ export async function getEntry(
 		moduleRoot:
 			args.moduleRoot ?? config.base_dir ?? path.dirname(paths.absolutePath),
 		name: config.name ?? "worker",
+		exports,
 	};
 }
 

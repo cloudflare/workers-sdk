@@ -46,9 +46,10 @@ describe("vectorize help", () => {
 				  -v, --version                   Show version number  [boolean]
 
 				--------------------
-				📣 Vectorize is currently in open beta
+				📣 Vectorize is now Generally Available.
 				📣 Please use the '--deprecated-v1' flag to create, get, list, delete and insert vectors into legacy Vectorize indexes
-				📣 See the Vectorize docs for how to get started and known issues: https://developers.cloudflare.com/vectorize
+				📣 Creation of legacy Vectorize indexes will be blocked by December 2024. Other operations will continue to function
+				📣 See the Vectorize docs to get started: https://developers.cloudflare.com/vectorize
 				📣 Please report any bugs to https://github.com/cloudflare/workers-sdk/issues/new/choose
 				📣 To give feedback, visit https://discord.cloudflare.com/
 				--------------------"
@@ -94,9 +95,10 @@ describe("vectorize help", () => {
 				  -v, --version                   Show version number  [boolean]
 
 				--------------------
-				📣 Vectorize is currently in open beta
+				📣 Vectorize is now Generally Available.
 				📣 Please use the '--deprecated-v1' flag to create, get, list, delete and insert vectors into legacy Vectorize indexes
-				📣 See the Vectorize docs for how to get started and known issues: https://developers.cloudflare.com/vectorize
+				📣 Creation of legacy Vectorize indexes will be blocked by December 2024. Other operations will continue to function
+				📣 See the Vectorize docs to get started: https://developers.cloudflare.com/vectorize
 				📣 Please report any bugs to https://github.com/cloudflare/workers-sdk/issues/new/choose
 				📣 To give feedback, visit https://discord.cloudflare.com/
 				--------------------"
@@ -134,9 +136,10 @@ describe("vectorize help", () => {
 				      --deprecated-v1  Fetch a deprecated V1 Vectorize index. This must be enabled if the index was created with V1 option.  [boolean] [default: false]
 
 				--------------------
-				📣 Vectorize is currently in open beta
+				📣 Vectorize is now Generally Available.
 				📣 Please use the '--deprecated-v1' flag to create, get, list, delete and insert vectors into legacy Vectorize indexes
-				📣 See the Vectorize docs for how to get started and known issues: https://developers.cloudflare.com/vectorize
+				📣 Creation of legacy Vectorize indexes will be blocked by December 2024. Other operations will continue to function
+				📣 See the Vectorize docs to get started: https://developers.cloudflare.com/vectorize
 				📣 Please report any bugs to https://github.com/cloudflare/workers-sdk/issues/new/choose
 				📣 To give feedback, visit https://discord.cloudflare.com/
 				--------------------"
@@ -187,9 +190,10 @@ describe("vectorize help", () => {
 			     Filter the query results.
 
 			--------------------
-			📣 Vectorize is currently in open beta
+			📣 Vectorize is now Generally Available.
 			📣 Please use the '--deprecated-v1' flag to create, get, list, delete and insert vectors into legacy Vectorize indexes
-			📣 See the Vectorize docs for how to get started and known issues: https://developers.cloudflare.com/vectorize
+			📣 Creation of legacy Vectorize indexes will be blocked by December 2024. Other operations will continue to function
+			📣 See the Vectorize docs to get started: https://developers.cloudflare.com/vectorize
 			📣 Please report any bugs to https://github.com/cloudflare/workers-sdk/issues/new/choose
 			📣 To give feedback, visit https://discord.cloudflare.com/
 			--------------------"
@@ -222,6 +226,11 @@ describe("vectorize commands", () => {
 		await runWrangler(
 			"vectorize create some-index --dimensions=768 --metric=cosine --deprecated-v1=true"
 		);
+		expect(std.warn).toMatchInlineSnapshot(`
+			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mCreation of legacy Vectorize indexes will be blocked by December 2024[0m
+
+"
+		`);
 		expect(std.out).toMatchInlineSnapshot(`
 				"🚧 Creating index: 'some-index'
 				✅ Successfully created a new Vectorize index: 'test-index'

@@ -61,6 +61,7 @@ describe("wrangler", () => {
 				  wrangler pubsub                 📮 Manage Pub/Sub brokers [private beta]
 				  wrangler dispatch-namespace     🏗️  Manage dispatch namespaces
 				  wrangler ai                     🤖 Manage AI models
+				  wrangler workflows              🔁 Manage Workflows [open-beta]
 				  wrangler login                  🔓 Login to Cloudflare
 				  wrangler logout                 🚪 Logout from Cloudflare
 				  wrangler whoami                 🕵️  Retrieve your user information
@@ -117,6 +118,7 @@ describe("wrangler", () => {
 				  wrangler pubsub                 📮 Manage Pub/Sub brokers [private beta]
 				  wrangler dispatch-namespace     🏗️  Manage dispatch namespaces
 				  wrangler ai                     🤖 Manage AI models
+				  wrangler workflows              🔁 Manage Workflows [open-beta]
 				  wrangler login                  🔓 Login to Cloudflare
 				  wrangler logout                 🚪 Logout from Cloudflare
 				  wrangler whoami                 🕵️  Retrieve your user information
@@ -135,6 +137,22 @@ describe("wrangler", () => {
 
 			        "
 		      `);
+		});
+	});
+
+	describe("global options", () => {
+		it("should display an error if duplicated --env or --config arguments are provided", async () => {
+			await expect(
+				runWrangler("--env prod -e prod")
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: The argument "--env" expects a single value, but received multiple: ["prod","prod"].]`
+			);
+
+			await expect(
+				runWrangler("--config=wrangler.toml -c example")
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: The argument "--config" expects a single value, but received multiple: ["wrangler.toml","example"].]`
+			);
 		});
 	});
 

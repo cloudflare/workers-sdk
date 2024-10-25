@@ -304,22 +304,6 @@ export const createTestLogStream = (
 	});
 };
 
-export const recreateDiffsFolder = (opts: { experimental: boolean }) => {
-	// Recreate the diffs folder
-	const diffsPath = getDiffsPath(opts);
-	rmSync(diffsPath, {
-		recursive: true,
-		force: true,
-	});
-	mkdirSync(diffsPath, { recursive: true });
-};
-
-export const getDiffsPath = (opts: { experimental: boolean }) => {
-	return path.resolve(
-		"./.e2e-diffs" + (opts.experimental ? "-experimental" : ""),
-	);
-};
-
 export const recreateLogFolder = (
 	opts: { experimental: boolean },
 	suite: Suite,

@@ -16,7 +16,6 @@
 		},
 		"test:e2e": {
 			"env": [
-				"SAVE_DIFFS",
 				"CLOUDFLARE_ACCOUNT_ID",
 				"CLOUDFLARE_API_TOKEN",
 				"FRAMEWORK_CLI_TO_TEST",

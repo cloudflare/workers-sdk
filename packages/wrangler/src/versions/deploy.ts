@@ -13,6 +13,7 @@ import { findWranglerToml, readConfig } from "../config";
 import { UserError } from "../errors";
 import { CI } from "../is-ci";
 import isInteractive from "../is-interactive";
+import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { writeOutput } from "../output";
 import { APIError } from "../parse";
@@ -119,6 +120,10 @@ export async function versionsDeployHandler(args: VersionsDeployArgs) {
 		throw new UserError(
 			'You need to provide a name of your worker. Either pass it as a cli arg with `--name <name>` or in your config file as `name = "<name>"`'
 		);
+	}
+
+	if (config.workflows?.length) {
+		logger.warnOnce("Workflows is currently in open beta.");
 	}
 
 	const versionCache: VersionCache = new Map();

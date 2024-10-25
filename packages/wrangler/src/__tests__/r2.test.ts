@@ -912,7 +912,10 @@ describe("r2", () => {
 						  -c, --config                    Path to .toml configuration file  [string]
 						  -e, --env                       Environment to use for operations and .env files  [string]
 						  -h, --help                      Show help  [boolean]
-						  -v, --version                   Show version number  [boolean]"
+						  -v, --version                   Show version number  [boolean]
+
+						OPTIONS
+						  -J, --jurisdiction  The jurisdiction where the bucket exists  [string]"
 					`);
 				});
 			});
@@ -998,6 +1001,258 @@ describe("r2", () => {
 			`);
 				});
 
+				it("follows happy path as expected with prefix", async () => {
+					const eventTypes: R2EventType[] = ["object-create", "object-delete"];
+					const actions: R2EventableOperation[] = [];
+					const bucketName = "my-bucket";
+					const queue = "my-queue";
+
+					const config: PutNotificationRequestBody = {
+						rules: [
+							{
+								actions: eventTypes.reduce(
+									(acc, et) => acc.concat(actionsForEventCategories[et]),
+									actions
+								),
+								prefix: "ruleprefix",
+							},
+						],
+					};
+					msw.use(
+						http.put(
+							"*/accounts/:accountId/event_notifications/r2/:bucketName/configuration/queues/:queueUUID",
+							async ({ request, params }) => {
+								const { accountId } = params;
+								expect(accountId).toEqual("some-account-id");
+								expect(await request.json()).toEqual({
+									...config,
+									// We fill in `prefix` & `suffix` with empty strings if not
+									// provided
+									rules: [{ ...config.rules[0], suffix: "" }],
+								});
+								expect(request.headers.get("authorization")).toEqual(
+									"Bearer some-api-token"
+								);
+								return HttpResponse.json(createFetchResult({}));
+							},
+							{ once: true }
+						),
+						http.get(
+							"*/accounts/:accountId/queues?*",
+							async ({ request, params }) => {
+								const url = new URL(request.url);
+								const { accountId } = params;
+								const nameParams = url.searchParams.getAll("name");
+
+								expect(accountId).toEqual("some-account-id");
+								expect(nameParams[0]).toEqual(queue);
+								expect(request.headers.get("authorization")).toEqual(
+									"Bearer some-api-token"
+								);
+								return HttpResponse.json({
+									success: true,
+									errors: [],
+									messages: [],
+									result: [
+										{
+											queue_id: "queue-id",
+											queue_name: queue,
+											created_on: "",
+											producers: [],
+											consumers: [],
+											producers_total_count: 1,
+											consumers_total_count: 0,
+											modified_on: "",
+										},
+									],
+								});
+							},
+							{ once: true }
+						)
+					);
+					await expect(
+						runWrangler(
+							`r2 bucket notification create ${bucketName} --queue ${queue} --event-types ${eventTypes.join(
+								" "
+							)} --prefix "ruleprefix"`
+						)
+					).resolves.toBe(undefined);
+					expect(std.out).toMatchInlineSnapshot(`
+				"Creating event notification rule for object creation and deletion (PutObject,CompleteMultipartUpload,CopyObject,DeleteObject,LifecycleDeletion)
+				Event notification rule created successfully!"
+			`);
+				});
+
+				it("follows happy path as expected with suffix", async () => {
+					const eventTypes: R2EventType[] = ["object-create", "object-delete"];
+					const actions: R2EventableOperation[] = [];
+					const bucketName = "my-bucket";
+					const queue = "my-queue";
+
+					const config: PutNotificationRequestBody = {
+						rules: [
+							{
+								actions: eventTypes.reduce(
+									(acc, et) => acc.concat(actionsForEventCategories[et]),
+									actions
+								),
+								suffix: "rulesuffix",
+							},
+						],
+					};
+					msw.use(
+						http.put(
+							"*/accounts/:accountId/event_notifications/r2/:bucketName/configuration/queues/:queueUUID",
+							async ({ request, params }) => {
+								const { accountId } = params;
+								expect(accountId).toEqual("some-account-id");
+								expect(await request.json()).toEqual({
+									...config,
+									// We fill in `prefix` & `suffix` with empty strings if not
+									// provided
+									rules: [{ ...config.rules[0], prefix: "" }],
+								});
+								expect(request.headers.get("authorization")).toEqual(
+									"Bearer some-api-token"
+								);
+								return HttpResponse.json(createFetchResult({}));
+							},
+							{ once: true }
+						),
+						http.get(
+							"*/accounts/:accountId/queues?*",
+							async ({ request, params }) => {
+								const url = new URL(request.url);
+								const { accountId } = params;
+								const nameParams = url.searchParams.getAll("name");
+
+								expect(accountId).toEqual("some-account-id");
+								expect(nameParams[0]).toEqual(queue);
+								expect(request.headers.get("authorization")).toEqual(
+									"Bearer some-api-token"
+								);
+								return HttpResponse.json({
+									success: true,
+									errors: [],
+									messages: [],
+									result: [
+										{
+											queue_id: "queue-id",
+											queue_name: queue,
+											created_on: "",
+											producers: [],
+											consumers: [],
+											producers_total_count: 1,
+											consumers_total_count: 0,
+											modified_on: "",
+										},
+									],
+								});
+							},
+							{ once: true }
+						)
+					);
+					await expect(
+						runWrangler(
+							`r2 bucket notification create ${bucketName} --queue ${queue} --event-types ${eventTypes.join(
+								" "
+							)} --suffix "rulesuffix"`
+						)
+					).resolves.toBe(undefined);
+					expect(std.out).toMatchInlineSnapshot(`
+				"Creating event notification rule for object creation and deletion (PutObject,CompleteMultipartUpload,CopyObject,DeleteObject,LifecycleDeletion)
+				Event notification rule created successfully!"
+			`);
+				});
+
+				it("follows happy path as expected with description", async () => {
+					const eventTypes: R2EventType[] = ["object-create", "object-delete"];
+					const actions: R2EventableOperation[] = [];
+					const bucketName = "my-bucket";
+					const queue = "my-queue";
+
+					const config: PutNotificationRequestBody = {
+						rules: [
+							{
+								actions: eventTypes.reduce(
+									(acc, et) => acc.concat(actionsForEventCategories[et]),
+									actions
+								),
+								description: "rule description",
+							},
+						],
+					};
+					msw.use(
+						http.put(
+							"*/accounts/:accountId/event_notifications/r2/:bucketName/configuration/queues/:queueUUID",
+							async ({ request, params }) => {
+								const { accountId } = params;
+								expect(accountId).toEqual("some-account-id");
+								expect(await request.json()).toEqual({
+									...config,
+									// We fill in `prefix` & `suffix` with empty strings if not
+									// provided
+									rules: [
+										{
+											...config.rules[0],
+											prefix: "",
+											suffix: "",
+										},
+									],
+								});
+								expect(request.headers.get("authorization")).toEqual(
+									"Bearer some-api-token"
+								);
+								return HttpResponse.json(createFetchResult({}));
+							},
+							{ once: true }
+						),
+						http.get(
+							"*/accounts/:accountId/queues?*",
+							async ({ request, params }) => {
+								const url = new URL(request.url);
+								const { accountId } = params;
+								const nameParams = url.searchParams.getAll("name");
+
+								expect(accountId).toEqual("some-account-id");
+								expect(nameParams[0]).toEqual(queue);
+								expect(request.headers.get("authorization")).toEqual(
+									"Bearer some-api-token"
+								);
+								return HttpResponse.json({
+									success: true,
+									errors: [],
+									messages: [],
+									result: [
+										{
+											queue_id: "queue-id",
+											queue_name: queue,
+											created_on: "",
+											producers: [],
+											consumers: [],
+											producers_total_count: 1,
+											consumers_total_count: 0,
+											modified_on: "",
+										},
+									],
+								});
+							},
+							{ once: true }
+						)
+					);
+					await expect(
+						runWrangler(
+							`r2 bucket notification create ${bucketName} --queue ${queue} --event-types ${eventTypes.join(
+								" "
+							)} --description "rule description"`
+						)
+					).resolves.toBe(undefined);
+					expect(std.out).toMatchInlineSnapshot(`
+				"Creating event notification rule for object creation and deletion (PutObject,CompleteMultipartUpload,CopyObject,DeleteObject,LifecycleDeletion)
+				Event notification rule created successfully!"
+			`);
+				});
+
 				it("errors if required options are not provided", async () => {
 					await expect(
 						runWrangler("r2 bucket notification create notification-test-001")
@@ -1024,7 +1279,9 @@ describe("r2", () => {
 						      --event-types, --event-type  The type of event(s) that will emit event notifications  [array] [required] [choices: \\"object-create\\", \\"object-delete\\"]
 						      --prefix                     The prefix that an object must match to emit event notifications (note: regular expressions not supported)  [string]
 						      --suffix                     The suffix that an object must match to emit event notifications (note: regular expressions not supported)  [string]
-						      --queue                      The name of the queue that will receive event notification messages  [string] [required]"
+						      --queue                      The name of the queue that will receive event notification messages  [string] [required]
+						  -J, --jurisdiction               The jurisdiction where the bucket exists  [string]
+						      --description                A description that can be used to identify the event notification rule after creation  [string]"
 					`);
 				});
 			});
@@ -1178,8 +1435,10 @@ describe("r2", () => {
 						  -v, --version                   Show version number  [boolean]
 
 						OPTIONS
-						      --queue  The name of the queue that corresponds to the event notification rule. If no rule is provided, all event notification rules associated with the bucket and queue will be deleted  [string] [required]
-						      --rule   The ID of the event notification rule to delete  [string]"
+						      --queue         The name of the queue that corresponds to the event notification rule. If no rule is provided, all event notification rules associated with the bucket and queue will be deleted  [string] [required]
+						      --rule          The ID of the event notification rule to delete  [string]
+						  -J, --jurisdiction  The jurisdiction where the bucket exists  [string]"
+
 					`);
 				});
 			});

@@ -1,0 +1,17 @@
+{
+	"name": "my-workflow",
+	"private": true,
+	"scripts": {
+		"deploy": "wrangler deploy",
+		"start": "wrangler dev --x-dev-env",
+		"test:ci": "vitest"
+	},
+	"devDependencies": {
+		"@cloudflare/workers-types": "^4.20241022.0",
+		"undici": "^6.20.1",
+		"wrangler": "workspace:*"
+	},
+	"volta": {
+		"extends": "../../package.json"
+	}
+}

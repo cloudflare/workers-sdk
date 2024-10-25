@@ -13,9 +13,9 @@ import type { ReplaceWorkersTypes } from "miniflare";
 
 /** The largest number of kv items we can pass to the API in a single request. */
 const API_MAX = 10000;
-// The const below are halved from the API's true capacity to help avoid
+// The const below are lowered from the API's true capacity to help avoid
 // hammering it with large requests.
-export const BATCH_KEY_MAX = API_MAX / 2;
+export const BATCH_KEY_MAX = API_MAX / 10;
 
 type KvArgs = {
 	binding?: string;

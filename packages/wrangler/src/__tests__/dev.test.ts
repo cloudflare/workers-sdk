@@ -1420,7 +1420,8 @@ describe.sequential("wrangler dev", () => {
 				      --log-level                                  Specify logging level  [choices: \\"debug\\", \\"info\\", \\"log\\", \\"warn\\", \\"error\\", \\"none\\"] [default: \\"log\\"]
 				      --show-interactive-dev-session               Show interactive dev session  (defaults to true if the terminal supports interactivity)  [boolean]
 				      --experimental-dev-env, --x-dev-env          Use the experimental DevEnv instantiation (unified across wrangler dev and unstable_dev)  [boolean] [default: true]
-				      --experimental-registry, --x-registry        Use the experimental file based dev registry for multi-worker development  [boolean] [default: false]",
+				      --experimental-registry, --x-registry        Use the experimental file based dev registry for multi-worker development  [boolean] [default: false]
+				      --experimental-vectorize-bind-to-prod        Bind to production Vectorize indexes in local development mode  [boolean] [default: false]",
 				  "warn": "",
 				}
 			`);
@@ -1885,6 +1886,16 @@ describe.sequential("wrangler dev", () => {
 				`[Error: The \`nodejs_compat\` compatibility flag cannot be used in conjunction with the legacy \`--node-compat\` flag. If you want to use the Workers \`nodejs_compat\` compatibility flag, please remove the \`--node-compat\` argument from your CLI command or \`node_compat = true\` from your config file.]`
 			);
 		});
+	});
+
+	it("should error helpfully if pages_build_output_dir is set", async () => {
+		writeWranglerToml({ pages_build_output_dir: "dist", name: "test" });
+		await expect(runWrangler("dev")).rejects.toThrowErrorMatchingInlineSnapshot(
+			`
+			[Error: It looks like you've run a Workers-specific command in a Pages project.
+			For Pages, please run \`wrangler pages dev\` instead.]
+		`
+		);
 	});
 });
 
