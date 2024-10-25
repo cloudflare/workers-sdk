@@ -393,7 +393,7 @@ type MiniflareBindingsConfig = Pick<
 function createExternalServiceBinding(
 	service: NonNullable<MiniflareBindingsConfig["services"]>[0],
 	config: MiniflareBindingsConfig,
-	notFoundServices: Set<string> | undefined
+	notFoundServices: Set<string>
 ) {
 	const target = config.workerDefinitions?.[service.service];
 	if (target?.host === undefined || target.port === undefined) {
@@ -561,7 +561,7 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 							entrypoint: EXTERNAL_SERVICE_RECEIVER_NAME,
 						},
 						config,
-						undefined
+						notFoundServices
 					),
 				];
 			})
@@ -580,9 +580,6 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 			// Add stub object classes that proxy requests to the correct session
 			externalObjects
 				.map(({ class_name, script_name }) => {
-					assert(script_name !== undefined);
-					const target = config.workerDefinitions?.[script_name];
-
 					const proxyDOClassName = getIdentifier(
 						`do_${script_name}_${class_name}`
 					);
