@@ -56,6 +56,7 @@ export interface LocalProps {
 	testScheduled?: boolean;
 	sourceMapPath: string | undefined;
 	services: Config["services"] | undefined;
+	bindVectorizeToProd: boolean;
 }
 
 // TODO(soon): we should be able to remove this function when we fully migrate
@@ -110,6 +111,7 @@ export async function localPropsToConfigBundle(
 		inspect: props.inspect,
 		services: props.services,
 		serviceBindings,
+		bindVectorizeToProd: props.bindVectorizeToProd,
 	};
 }
 

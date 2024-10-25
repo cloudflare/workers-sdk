@@ -159,6 +159,9 @@ export interface StartDevWorkerInput {
 		registry?: WorkerRegistry;
 
 		testScheduled?: boolean;
+
+		/** Whether to use Vectorize mixed mode -- the worker is run locally but accesses to Vectorize are made remotely */
+		bindVectorizeToProd?: boolean;
 	};
 	legacy?: {
 		site?: Hook<Config["site"], [Config]>;

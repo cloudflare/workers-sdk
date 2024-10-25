@@ -21,6 +21,11 @@ import { UserError } from "../errors";
 import { logger } from "../logger";
 import { getSourceMappedString } from "../sourcemap";
 import { updateCheck } from "../update-check";
+import {
+	EXTERNAL_VECTORIZE_WORKER_NAME,
+	EXTERNAL_VECTORIZE_WORKER_SCRIPT,
+	MakeVectorizeFetcher,
+} from "../vectorize/fetcher";
 import { getClassNamesWhichUseSQLite } from "./validate-dev-props";
 import type { ServiceFetch } from "../api";
 import type { AssetsOptions } from "../assets";
@@ -192,6 +197,7 @@ export interface ConfigBundle {
 	inspect: boolean;
 	services: Config["services"] | undefined;
 	serviceBindings: Record<string, ServiceFetch>;
+	bindVectorizeToProd: boolean;
 }
 
 export class WranglerLog extends Log {
@@ -601,6 +607,36 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 		};
 	}
 
+	if (bindings.vectorize) {
+		for (const vectorizeBinding of bindings.vectorize) {
+			const bindingName = vectorizeBinding.binding;
+			const indexName = vectorizeBinding.index_name;
+			const indexVersion = "v2";
+
+			externalWorkers.push({
+				name: EXTERNAL_VECTORIZE_WORKER_NAME + bindingName,
+				modules: [
+					{
+						type: "ESModule",
+						path: "index.mjs",
+						contents: EXTERNAL_VECTORIZE_WORKER_SCRIPT,
+					},
+				],
+				serviceBindings: {
+					FETCHER: MakeVectorizeFetcher(indexName),
+				},
+				bindings: {
+					INDEX_ID: indexName,
+					INDEX_VERSION: indexVersion,
+				},
+			});
+
+			wrappedBindings[bindingName] = {
+				scriptName: EXTERNAL_VECTORIZE_WORKER_NAME + bindingName,
+			};
+		}
+	}
+
 	const bindingOptions = {
 		bindings: {
 			...bindings.vars,
@@ -890,12 +926,18 @@ export async function buildMiniflareOptions(
 		}
 	}
 
+	if (!config.bindVectorizeToProd && config.bindings.vectorize?.length) {
+		logger.warn(
+			"Vectorize local bindings are not supported yet. You may use the `--experimental-vectorize-bind-to-prod` flag to bind to your production index in local dev mode."
+		);
+		config.bindings.vectorize = [];
+	}
+
 	if (config.bindings.vectorize?.length) {
 		if (!didWarnMiniflareVectorizeSupport) {
 			didWarnMiniflareVectorizeSupport = true;
-			// TODO: add local support for Vectorize bindings (https://github.com/cloudflare/workers-sdk/issues/4360)
 			logger.warn(
-				"Vectorize bindings are not currently supported in local mode. Please use --remote if you are working with them."
+				"You are using a mixed-mode binding for Vectorize (through `--experimental-vectorize-bind-to-prod`). It may incur usage charges and modify your databases even in local development. "
 			);
 		}
 	}

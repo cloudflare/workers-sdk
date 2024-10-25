@@ -126,6 +126,7 @@ async function resolveDevConfig(
 		// absolute resolved path
 		persist: localPersistencePath,
 		registry: input.dev?.registry,
+		bindVectorizeToProd: input.dev?.bindVectorizeToProd ?? false,
 	} satisfies StartDevWorkerOptions["dev"];
 }
 
