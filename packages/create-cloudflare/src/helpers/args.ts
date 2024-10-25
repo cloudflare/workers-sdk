@@ -422,7 +422,7 @@ export const processArgument = async <Key extends keyof C3Args>(
 				acceptDefault:
 					promptConfig.acceptDefault ?? (value !== undefined && !error),
 				defaultValue: value ?? promptConfig.defaultValue,
-				initialError: error,
+				initialErrorMessage: error,
 				throwOnError: true,
 			});
 
