@@ -1,17 +1,17 @@
-From 7a89fa220afe0c4e6a879ba43a8463945cd06729 Mon Sep 17 00:00:00 2001
+From 01012531546fccc62536fba7d1bfde6c5cc1a6c2 Mon Sep 17 00:00:00 2001
 From: Workers DevProd <workers-devprod@cloudflare.com>
-Date: Mon, 2 Oct 2023 18:26:03 +0100
-Subject: [PATCH 05/13] Remove unsupported profiler UI
+Date: Fri, 25 Oct 2024 16:07:24 +0100
+Subject: [PATCH 7/8] Limit heap profiling modes available
 
 ---
- front_end/panels/profiler/HeapProfilerPanel.ts | 10 +++-------
- 1 file changed, 3 insertions(+), 7 deletions(-)
+ front_end/panels/profiler/HeapProfilerPanel.ts | 8 ++------
+ 1 file changed, 2 insertions(+), 6 deletions(-)
 
 diff --git a/front_end/panels/profiler/HeapProfilerPanel.ts b/front_end/panels/profiler/HeapProfilerPanel.ts
-index c5670bd8e4..211eeaca95 100644
+index c5670bd8e4..cbb63b9a8a 100644
 --- a/front_end/panels/profiler/HeapProfilerPanel.ts
 +++ b/front_end/panels/profiler/HeapProfilerPanel.ts
-@@ -25,13 +25,9 @@ export class HeapProfilerPanel extends ProfilesPanel implements UI.ContextMenu.P
+@@ -25,12 +25,8 @@ export class HeapProfilerPanel extends ProfilesPanel implements UI.ContextMenu.P
                                                                  UI.ActionRegistration.ActionDelegate {
    constructor() {
      const registry = instance;
@@ -21,13 +21,11 @@ index c5670bd8e4..211eeaca95 100644
 -      registry.samplingHeapProfileType,
 -      registry.detachedElementProfileType,
 -    ];
--    super('heap-profiler', profileTypes as ProfileType[], 'profiler.heap-toggle-recording');
 +    const profileTypes =
 +        [registry.heapSnapshotProfileType];
-+    super('heap_profiler', profileTypes as ProfileType[], 'profiler.heap-toggle-recording');
+     super('heap-profiler', profileTypes as ProfileType[], 'profiler.heap-toggle-recording');
    }
  
-   static instance(): HeapProfilerPanel {
 -- 
 2.39.5 (Apple Git-154)
 

@@ -1,13 +1,12 @@
-From fa36035a788add2d77b254ca4cebab5a820bd5b1 Mon Sep 17 00:00:00 2001
+From 6fbdae0bba47eeb10a779fbfbb15bbe6f17fa798 Mon Sep 17 00:00:00 2001
 From: Workers DevProd <workers-devprod@cloudflare.com>
-Date: Mon, 2 Oct 2023 18:13:34 +0100
-Subject: [PATCH 01/13] Support viewing files over the network
+Date: Fri, 25 Oct 2024 16:06:06 +0100
+Subject: [PATCH 2/8] Setup Cloudflare devtools target type
 
 ---
- front_end/core/sdk/Target.ts             | 4 ++++
- front_end/entrypoints/js_app/js_app.ts   | 2 +-
- front_end/panels/sources/sources-meta.ts | 5 +++++
- 3 files changed, 10 insertions(+), 1 deletions(-)
+ front_end/core/sdk/Target.ts           | 4 ++++
+ front_end/entrypoints/js_app/js_app.ts | 2 +-
+ 2 files changed, 5 insertions(+), 1 deletion(-)
 
 diff --git a/front_end/core/sdk/Target.ts b/front_end/core/sdk/Target.ts
 index 0b3f0f9def..ee384b197e 100644
@@ -29,13 +28,13 @@ index 0b3f0f9def..ee384b197e 100644
    TAB = 'tab',
 +  CLOUDFLARE = 'cloudflare',
  }
-
+ 
  export const enum Capability {
 diff --git a/front_end/entrypoints/js_app/js_app.ts b/front_end/entrypoints/js_app/js_app.ts
-index 45028f436a..39a4b237b7 100644
+index 6a154030b6..1a6644df92 100644
 --- a/front_end/entrypoints/js_app/js_app.ts
 +++ b/front_end/entrypoints/js_app/js_app.ts
-@@ -57,7 +57,7 @@ export class JsMainImpl implements Common.Runnable.Runnable {
+@@ -60,7 +60,7 @@ export class JsMainImpl implements Common.Runnable.Runnable {
      Host.userMetrics.actionTaken(Host.UserMetrics.Action.ConnectToNodeJSDirectly);
      void SDK.Connections.initMainConnection(async () => {
        const target = SDK.TargetManager.TargetManager.instance().createTarget(
@@ -44,22 +43,6 @@ index 45028f436a..39a4b237b7 100644
        void target.runtimeAgent().invoke_runIfWaitingForDebugger();
      }, Components.TargetDetachedDialog.TargetDetachedDialog.webSocketConnectionLost);
    }
-diff --git a/front_end/panels/sources/sources-meta.ts b/front_end/panels/sources/sources-meta.ts
-index 42a2e17f07..6870dde217 100644
---- a/front_end/panels/sources/sources-meta.ts
-+++ b/front_end/panels/sources/sources-meta.ts
-@@ -40,6 +40,11 @@ const UIStrings = {
-    *@description Title of the 'Snippets' tool in the Snippets Navigator View, which is part of the Sources tool
-    */
-   snippets: 'Snippets',
-+  /**
-+  *@description Title of the 'Cloudflare' tool in the Cloudflare Navigator View, which is part of the Sources tool
-+  */
-+  cloudflare: 'Cloudflare',
-+  /**
-   /**
-    *@description Command for showing the 'Search' tool
-    */
---
+-- 
 2.39.5 (Apple Git-154)
 
