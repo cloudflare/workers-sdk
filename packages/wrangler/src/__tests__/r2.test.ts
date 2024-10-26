@@ -97,6 +97,7 @@ describe("r2", () => {
 				  wrangler r2 bucket delete <name>  Delete an R2 bucket
 				  wrangler r2 bucket sippy          Manage Sippy incremental migration on an R2 bucket
 				  wrangler r2 bucket notification   Manage event notification rules for an R2 bucket
+				  wrangler r2 bucket domain         Manage custom domains for an R2 bucket
 
 				GLOBAL FLAGS
 				  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
@@ -131,6 +132,7 @@ describe("r2", () => {
 				  wrangler r2 bucket delete <name>  Delete an R2 bucket
 				  wrangler r2 bucket sippy          Manage Sippy incremental migration on an R2 bucket
 				  wrangler r2 bucket notification   Manage event notification rules for an R2 bucket
+				  wrangler r2 bucket domain         Manage custom domains for an R2 bucket
 
 				GLOBAL FLAGS
 				  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
@@ -1464,6 +1466,187 @@ describe("r2", () => {
 						  -J, --jurisdiction  The jurisdiction where the bucket exists  [string]"
 
 					`);
+				});
+			});
+		});
+		describe("domain", () => {
+			mockAccountId();
+			mockApiToken();
+			describe("add", () => {
+				it("should add custom domain to the bucket as expected", async () => {
+					const bucketName = "my-bucket";
+					const domainName = "example.com";
+					const zoneId = "zone-id-123";
+					msw.use(
+						http.post(
+							"*/accounts/:accountId/r2/buckets/:bucketName/domains/custom",
+							async ({ request, params }) => {
+								const { accountId, bucketName: bucketParam } = params;
+								expect(accountId).toEqual("some-account-id");
+								expect(bucketName).toEqual(bucketParam);
+								const requestBody = await request.json();
+								expect(requestBody).toEqual({
+									domain: domainName,
+									zoneId: zoneId,
+									enabled: true,
+									minTLS: "1.0",
+								});
+								return HttpResponse.json(createFetchResult({}));
+							},
+							{ once: true }
+						)
+					);
+					await runWrangler(
+						`r2 bucket domain add ${bucketName} --domain ${domainName} --zone-id ${zoneId}`
+					);
+					expect(std.out).toMatchInlineSnapshot(`
+				"Connecting custom domain 'example.com' to bucket 'my-bucket'...
+				✨ Custom domain 'example.com' connected successfully."
+			  `);
+				});
+
+				it("should error if domain and zone-id are not provided", async () => {
+					const bucketName = "my-bucket";
+					await expect(
+						runWrangler(`r2 bucket domain add ${bucketName}`)
+					).rejects.toThrowErrorMatchingInlineSnapshot(
+						`[Error: Missing required arguments: domain, zone-id]`
+					);
+					expect(std.err).toMatchInlineSnapshot(`
+				"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mMissing required arguments: domain, zone-id[0m
+
+				"
+			  `);
+				});
+			});
+			describe("list", () => {
+				it("should list custom domains for a bucket as expected", async () => {
+					const bucketName = "my-bucket";
+					const mockDomains = [
+						{
+							domain: "example.com",
+							enabled: true,
+							status: {
+								ownership: "verified",
+								ssl: "active",
+							},
+							minTLS: "1.2",
+							zoneId: "zone-id-123",
+							zoneName: "example-zone",
+						},
+						{
+							domain: "test.com",
+							enabled: false,
+							status: {
+								ownership: "pending",
+								ssl: "pending",
+							},
+							minTLS: "1.0",
+							zoneId: "zone-id-456",
+							zoneName: "test-zone",
+						},
+					];
+					msw.use(
+						http.get(
+							"*/accounts/:accountId/r2/buckets/:bucketName/domains/custom",
+							async ({ params }) => {
+								const { accountId, bucketName: bucketParam } = params;
+								expect(accountId).toEqual("some-account-id");
+								expect(bucketParam).toEqual(bucketName);
+								return HttpResponse.json(
+									createFetchResult({
+										domains: mockDomains,
+									})
+								);
+							},
+							{ once: true }
+						)
+					);
+					await runWrangler(`r2 bucket domain list ${bucketName}`);
+					expect(std.out).toMatchInlineSnapshot(`
+				"Listing custom domains connected to bucket 'my-bucket'...
+				domain:            example.com
+				enabled:           Yes
+				ownership_status:  verified
+				ssl_status:        active
+				min_tls_version:   1.2
+				zone_id:           zone-id-123
+				zone_name:         example-zone
+
+				domain:            test.com
+				enabled:           No
+				ownership_status:  pending
+				ssl_status:        pending
+				min_tls_version:   1.0
+				zone_id:           zone-id-456
+				zone_name:         test-zone"
+			  `);
+				});
+			});
+			describe("remove", () => {
+				it("should remove a custom domain as expected", async () => {
+					const bucketName = "my-bucket";
+					const domainName = "example.com";
+					msw.use(
+						http.delete(
+							"*/accounts/:accountId/r2/buckets/:bucketName/domains/custom/:domainName",
+							async ({ params }) => {
+								const {
+									accountId,
+									bucketName: bucketParam,
+									domainName: domainParam,
+								} = params;
+								expect(accountId).toEqual("some-account-id");
+								expect(bucketParam).toEqual(bucketName);
+								expect(domainParam).toEqual(domainName);
+								return HttpResponse.json(createFetchResult({}));
+							},
+							{ once: true }
+						)
+					);
+					await runWrangler(
+						`r2 bucket domain remove ${bucketName} --domain ${domainName}`
+					);
+					expect(std.out).toMatchInlineSnapshot(`
+				"Removing custom domain 'example.com' from bucket 'my-bucket'...
+				Custom domain 'example.com' removed successfully."
+			  `);
+				});
+			});
+			describe("update", () => {
+				it("should update a custom domain as expected", async () => {
+					const bucketName = "my-bucket";
+					const domainName = "example.com";
+					msw.use(
+						http.put(
+							"*/accounts/:accountId/r2/buckets/:bucketName/domains/custom/:domainName",
+							async ({ request, params }) => {
+								const {
+									accountId,
+									bucketName: bucketParam,
+									domainName: domainParam,
+								} = params;
+								expect(accountId).toEqual("some-account-id");
+								expect(bucketParam).toEqual(bucketName);
+								expect(domainParam).toEqual(domainName);
+								const requestBody = await request.json();
+								expect(requestBody).toEqual({
+									domain: domainName,
+									enabled: false,
+									minTLS: "1.3",
+								});
+								return HttpResponse.json(createFetchResult({}));
+							},
+							{ once: true }
+						)
+					);
+					await runWrangler(
+						`r2 bucket domain update ${bucketName} --domain ${domainName} --enabled false --min-tls 1.3`
+					);
+					expect(std.out).toMatchInlineSnapshot(`
+				"Updating custom domain 'example.com' for bucket 'my-bucket'...
+				✨ Custom domain 'example.com' updated successfully."
+			  `);
 				});
 			});
 		});

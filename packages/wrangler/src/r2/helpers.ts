@@ -445,19 +445,18 @@ export function eventNotificationHeaders(
 	return headers;
 }
 
-export async function tableFromNotificationGetResponse(
-	config: Pick<Config, "account_id">,
+export function tableFromNotificationGetResponse(
 	response: GetNotificationConfigResponse
-): Promise<
-	{
-		queue_name: string;
-		prefix: string;
-		suffix: string;
-		event_type: string;
-	}[]
-> {
-	const reducer = async (entry: GetQueueDetail) => {
-		const rows = [];
+): {
+	rule_id: string;
+	created_at: string;
+	queue_name: string;
+	prefix: string;
+	suffix: string;
+	event_type: string;
+}[] {
+	const rows = [];
+	for (const entry of response.queues) {
 		for (const {
 			prefix = "",
 			suffix = "",
@@ -474,20 +473,8 @@ export async function tableFromNotificationGetResponse(
 				event_type: actions.join(","),
 			});
 		}
-		return rows;
-	};
-
-	let tableOutput: {
-		queue_name: string;
-		prefix: string;
-		suffix: string;
-		event_type: string;
-	}[] = [];
-	for (const entry of response.queues) {
-		const result = await reducer(entry);
-		tableOutput = tableOutput.concat(...result);
 	}
-	return tableOutput;
+	return rows;
 }
 
 export async function listEventNotificationConfig(
@@ -619,6 +606,138 @@ export async function deleteEventNotificationConfig(
 			{ method: "DELETE", headers }
 		);
 	}
+}
+
+export interface CustomDomainConfig {
+	domain: string;
+	enabled?: boolean;
+	minTLS?: string;
+	zoneId?: string;
+}
+
+export interface CustomDomainInfo {
+	domain: string;
+	enabled: boolean;
+	status: {
+		ownership: string;
+		ssl: string;
+	};
+	minTLS: string;
+	zoneId: string;
+	zoneName: string;
+}
+
+export async function attachCustomDomainToBucket(
+	accountId: string,
+	bucketName: string,
+	config: CustomDomainConfig,
+	jurisdiction?: string
+): Promise<void> {
+	const headers: HeadersInit = {
+		"Content-Type": "application/json",
+	};
+	if (jurisdiction) {
+		headers["cf-r2-jurisdiction"] = jurisdiction;
+	}
+
+	await fetchResult(
+		`/accounts/${accountId}/r2/buckets/${bucketName}/domains/custom`,
+		{
+			method: "POST",
+			headers,
+			body: JSON.stringify(config),
+		}
+	);
+}
+
+export async function removeCustomDomainFromBucket(
+	accountId: string,
+	bucketName: string,
+	domainName: string,
+	jurisdiction?: string
+): Promise<void> {
+	const headers: HeadersInit = {};
+	if (jurisdiction) {
+		headers["cf-r2-jurisdiction"] = jurisdiction;
+	}
+
+	await fetchResult(
+		`/accounts/${accountId}/r2/buckets/${bucketName}/domains/custom/${domainName}`,
+		{
+			method: "DELETE",
+			headers,
+		}
+	);
+}
+
+export function tableFromCustomDomainListResponse(
+	domains: CustomDomainInfo[]
+): {
+	domain: string;
+	enabled: string;
+	ownership_status: string;
+	ssl_status: string;
+	min_tls_version: string;
+	zone_id: string;
+	zone_name: string;
+}[] {
+	const rows = [];
+	for (const domainInfo of domains) {
+		rows.push({
+			domain: domainInfo.domain,
+			enabled: domainInfo.enabled ? "Yes" : "No",
+			ownership_status: domainInfo.status.ownership || "(unknown)",
+			ssl_status: domainInfo.status.ssl || "(unknown)",
+			min_tls_version: domainInfo.minTLS || "1.0",
+			zone_id: domainInfo.zoneId || "(none)",
+			zone_name: domainInfo.zoneName || "(none)",
+		});
+	}
+	return rows;
+}
+
+export async function listCustomDomainsOfBucket(
+	accountId: string,
+	bucketName: string,
+	jurisdiction?: string
+): Promise<CustomDomainInfo[]> {
+	const headers: HeadersInit = {};
+	if (jurisdiction) {
+		headers["cf-r2-jurisdiction"] = jurisdiction;
+	}
+
+	const result = await fetchResult<{
+		domains: CustomDomainInfo[];
+	}>(`/accounts/${accountId}/r2/buckets/${bucketName}/domains/custom`, {
+		method: "GET",
+		headers,
+	});
+
+	return result.domains;
+}
+
+export async function configureCustomDomainSettings(
+	accountId: string,
+	bucketName: string,
+	domainName: string,
+	config: CustomDomainConfig,
+	jurisdiction?: string
+): Promise<void> {
+	const headers: HeadersInit = {
+		"Content-Type": "application/json",
+	};
+	if (jurisdiction) {
+		headers["cf-r2-jurisdiction"] = jurisdiction;
+	}
+
+	await fetchResult(
+		`/accounts/${accountId}/r2/buckets/${bucketName}/domains/custom/${domainName}`,
+		{
+			method: "PUT",
+			headers,
+			body: JSON.stringify(config),
+		}
+	);
 }
 
 /**
