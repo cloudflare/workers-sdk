@@ -1,4 +1,5 @@
 import { readConfig } from "../config";
+import { confirm } from "../dialogs";
 import { logger } from "../logger";
 import { printWranglerBanner } from "../update-check";
 import { requireAuth } from "../user";
@@ -142,6 +143,12 @@ export function RemoveOptions(yargs: CommonYargsArgv) {
 			alias: "J",
 			requiresArg: true,
 			type: "string",
+		})
+		.option("force", {
+			describe: "Skip confirmation",
+			type: "boolean",
+			alias: "y",
+			default: false,
 		});
 }
 
@@ -152,8 +159,17 @@ export async function RemoveHandler(
 	const config = readConfig(args.config, args);
 	const accountId = await requireAuth(config);
 
-	const { bucket, domain, jurisdiction } = args;
+	const { bucket, domain, jurisdiction, force } = args;
 
+	if (!force) {
+		const confirmedRemoval = await confirm(
+			`Are you sure you want to remove the custom domain '${domain}' from bucket '${bucket}'? Your bucket will no longer be available from 'https://${domain}'`
+		);
+		if (!confirmedRemoval) {
+			logger.log("Removal cancelled.");
+			return;
+		}
+	}
 	logger.log(`Removing custom domain '${domain}' from bucket '${bucket}'...`);
 
 	await removeCustomDomainFromBucket(accountId, bucket, domain, jurisdiction);

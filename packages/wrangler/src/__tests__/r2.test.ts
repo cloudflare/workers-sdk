@@ -1605,7 +1605,7 @@ describe("r2", () => {
 						)
 					);
 					await runWrangler(
-						`r2 bucket domain remove ${bucketName} --domain ${domainName}`
+						`r2 bucket domain remove ${bucketName} --domain ${domainName} --force`
 					);
 					expect(std.out).toMatchInlineSnapshot(`
 				"Removing custom domain 'example.com' from bucket 'my-bucket'...
