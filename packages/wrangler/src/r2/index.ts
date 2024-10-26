@@ -12,6 +12,7 @@ import * as metrics from "../metrics";
 import { requireAuth } from "../user";
 import { MAX_UPLOAD_SIZE } from "./constants";
 import * as Create from "./create";
+import * as Domain from "./domain";
 import {
 	bucketAndKeyFromObjectPath,
 	deleteR2Bucket,
@@ -604,6 +605,38 @@ export function r2(r2Yargs: CommonYargsArgv, subHelp: SubHelp) {
 							"Delete an event notification rule from an R2 bucket",
 							Notification.DeleteOptions,
 							Notification.DeleteHandler
+						);
+				}
+			);
+
+			r2BucketYargs.command(
+				"domain",
+				"Manage custom domains for an R2 bucket",
+				(domainYargs) => {
+					return domainYargs
+						.command(
+							"list <bucket>",
+							"List custom domains for an R2 bucket",
+							Domain.ListOptions,
+							Domain.ListHandler
+						)
+						.command(
+							"add <bucket>",
+							"Connect a custom domain to an R2 bucket",
+							Domain.AddOptions,
+							Domain.AddHandler
+						)
+						.command(
+							"remove <bucket>",
+							"Remove a custom domain from an R2 bucket",
+							Domain.RemoveOptions,
+							Domain.RemoveHandler
+						)
+						.command(
+							"update <bucket>",
+							"Update settings for a custom domain connected to an R2 bucket",
+							Domain.UpdateOptions,
+							Domain.UpdateHandler
 						);
 				}
 			);
