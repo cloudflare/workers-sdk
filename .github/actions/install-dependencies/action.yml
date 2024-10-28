@@ -36,6 +36,7 @@ runs:
         echo TURBO_TEAM=${{ inputs.turbo-team }} >> .env
         echo TURBO_TOKEN=${{ inputs.turbo-token }} >> .env
         echo TURBO_REMOTE_CACHE_SIGNATURE_KEY=${{ inputs.turbo-signature }} >> .env
+        echo TURBO_ENV_MODE=loose >> .env
 
     - name: Install NPM Dependencies
       shell: bash
