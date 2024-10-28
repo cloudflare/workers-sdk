@@ -74,11 +74,6 @@ export function AddOptions(yargs: CommonYargsArgv) {
 			type: "string",
 			demandOption: true,
 		})
-		.option("enabled", {
-			describe:
-				"Whether to enable public access at the custom domain (default is enabled)",
-			type: "boolean",
-		})
 		.option("min-tls", {
 			describe:
 				"Set the minimum TLS version for the custom domain (defaults to 1.0 if not set)",
@@ -90,6 +85,12 @@ export function AddOptions(yargs: CommonYargsArgv) {
 			alias: "J",
 			requiresArg: true,
 			type: "string",
+		})
+		.option("force", {
+			describe: "Skip confirmation",
+			type: "boolean",
+			alias: "y",
+			default: false,
 		});
 }
 
@@ -100,14 +101,18 @@ export async function AddHandler(
 	const config = readConfig(args.config, args);
 	const accountId = await requireAuth(config);
 
-	const {
-		bucket,
-		domain,
-		zoneId,
-		enabled = true,
-		minTls = "1.0",
-		jurisdiction,
-	} = args;
+	const { bucket, domain, zoneId, minTls = "1.0", jurisdiction, force } = args;
+
+	if (!force) {
+		const confirmedAdd = await confirm(
+			`Are you sure you want to add the custom domain '${domain}' to bucket '${bucket}'? ` +
+				`The contents of your bucket will be made publicly available at 'https://${domain}'`
+		);
+		if (!confirmedAdd) {
+			logger.log("Add cancelled.");
+			return;
+		}
+	}
 
 	logger.log(`Connecting custom domain '${domain}' to bucket '${bucket}'...`);
 
@@ -117,7 +122,6 @@ export async function AddHandler(
 		{
 			domain,
 			zoneId,
-			enabled,
 			minTLS: minTls,
 		},
 		jurisdiction
@@ -163,7 +167,8 @@ export async function RemoveHandler(
 
 	if (!force) {
 		const confirmedRemoval = await confirm(
-			`Are you sure you want to remove the custom domain '${domain}' from bucket '${bucket}'? Your bucket will no longer be available from 'https://${domain}'`
+			`Are you sure you want to remove the custom domain '${domain}' from bucket '${bucket}'? ` +
+				`Your bucket will no longer be available from 'https://${domain}'`
 		);
 		if (!confirmedRemoval) {
 			logger.log("Removal cancelled.");
@@ -190,10 +195,6 @@ export function UpdateOptions(yargs: CommonYargsArgv) {
 			type: "string",
 			demandOption: true,
 		})
-		.option("enabled", {
-			describe: "Enable or disable public access at the custom domain",
-			type: "boolean",
-		})
 		.option("min-tls", {
 			describe: "Update the minimum TLS version for the custom domain",
 			choices: ["1.0", "1.1", "1.2", "1.3"],
@@ -214,7 +215,7 @@ export async function UpdateHandler(
 	const config = readConfig(args.config, args);
 	const accountId = await requireAuth(config);
 
-	const { bucket, domain, enabled, minTls, jurisdiction } = args;
+	const { bucket, domain, minTls, jurisdiction } = args;
 
 	logger.log(`Updating custom domain '${domain}' for bucket '${bucket}'...`);
 
@@ -224,7 +225,6 @@ export async function UpdateHandler(
 		domain,
 		{
 			domain,
-			enabled,
 			minTLS: minTls,
 		},
 		jurisdiction
