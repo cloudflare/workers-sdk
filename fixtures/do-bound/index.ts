@@ -1,4 +1,4 @@
-import { DurableObject } from "cloudflare:workers";
+import { DurableObject, RpcTarget } from "cloudflare:workers";
 
 export class ThingObject extends DurableObject {
 	fetch(request) {
@@ -7,9 +7,24 @@ export class ThingObject extends DurableObject {
 	get property() {
 		return "property:ping";
 	}
+	get prop1() {
+		return new Deep1();
+	}
 	method() {
 		return "method:ping";
 	}
 }
+
+class Deep1 extends RpcTarget {
+	get prop2() {
+		return "deep:prop2";
+	}
+}
+
+// class Deep2 extends RpcTarget {
+// 	get prop3() {
+// 		return "deep property";
+// 	}
+// }
 
 export default {}; // Required to treat as modules format worker

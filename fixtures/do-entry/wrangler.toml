@@ -1,6 +1,7 @@
 
 name = "do-entry"
 main = "index.ts"
+compatibility_date = "2024-10-28"
 
 [durable_objects]
 bindings = [

@@ -16,6 +16,14 @@ export default {
 			return Response.json(await stub.property);
 		}
 
+		if (pathname === "/deep-1") {
+			return Response.json(await stub.prop1.prop2);
+		}
+
+		if (pathname === "/deep-2") {
+			return Response.json(await stub.prop1.prop2.prop3);
+		}
+
 		return stub.fetch("https://placeholder:9999/", {
 			method: "POST",
 			cf: { thing: true },

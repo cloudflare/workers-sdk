@@ -58,7 +58,7 @@ import type { Readable } from "node:stream";
 const EXTERNAL_SERVICE_WORKER_NAME =
 	"__WRANGLER_EXTERNAL_DURABLE_OBJECTS_WORKER";
 const EXTERNAL_SERVICE_WORKER_SCRIPT = `
-import { DurableObject, WorkerEntrypoint } from "cloudflare:workers";
+import { DurableObject, WorkerEntrypoint, RpcStub, RpcTarget } from "cloudflare:workers";
 
 const HEADER_URL = "X-Miniflare-Durable-Object-URL";
 const HEADER_NAME = "X-Miniflare-Durable-Object-Name";
@@ -109,63 +109,112 @@ function createDurableObjectClass({ externalBindingName, internalBindingName }) 
             super(ctx, env);
 
             return new Proxy(this, {
-                get(target, key, receiver) {
-                    const value = Reflect.get(target, key, receiver);
+                get(target, prop1, receiver) {
+                    console.log('get', { prop1 });
+                    const value = Reflect.get(target, prop1, receiver);
                     if (value !== undefined) return value;
-                    if (HANDLER_RESERVED_KEYS.has(key)) return;
+                    if (HANDLER_RESERVED_KEYS.has(prop1)) return;
 
+                    return new Proxy(() => {}, {
+                        get: (target, prop2, receiver) => {
+                            console.log('sub get', { prop2 });
 
-					return env[internalBindingName].proxyProperty({
-									bindingName: externalBindingName,
-									doId: ctx.id,
-									property: key,
-								});
+                            const topLevelPropAccessPromise = env[internalBindingName].proxyProperty({
+                                bindingName: externalBindingName,
+                                doId: ctx.id,
+                                property: prop1,
+                            });
 
+                            if (prop2 === "then" || prop2 === "catch" || prop2 === "finally") {
+                                return (...args) => topLevelPropAccessPromise[prop2](...args);
+                            }
 
+                            return new Proxy(() => {}, {
+                                get: (target, prop3, receiver) => {
 
-					return new Proxy({}, {
-						get(_target, key) {
-							if(key === "then"){
-								return () => env[internalBindingName].proxyProperty({
-									bindingName: externalBindingName,
-									doId: ctx.id,
-									property: key,
-								});
-							}
+                                    const subPropAccessPromise = topLevelPropAccessPromise.then(value => {
+                                        return value[prop2];
+                                    });
 
+                                    if (prop3 === "then" || prop3 === "catch" || prop3 === "finally") {
+                                        console.log('subPropAccessPromise then', { prop3 });
+                                        return (...args) => subPropAccessPromise[prop3](...args);
+                                    }
 
-						},
-						apply(target, thisArg, args) {
-							return env[internalBindingName].proxyMethod({
-								bindingName: externalBindingName,
-								doId: ctx.id,
-								method: key,
-								args,
-							});
-						},
-					});
+                                    // return new Proxy(() => {}, {
+                                    //     get: (target, key, receiver) => {
 
-                    //     get:
-                    //         "then" returns a function which returns a promise
-                    //         optionally "catch" returns a function which returns a promise
-                    //         optionally "finally" returns a function which returns a promise
-                    //         return recursive proxy
-                    //     apply:
-                    //         call the method async
-                    //         return the promise
-                    // });
-					// assuming a method
-                    // return (...args) => {
-					// 	console.log("about to call proxy method", key	)
+                                    //         if (key === "then" || key === "catch" || key === "finally") {
+                                    //             return (...args) => subPropAccessPromise[key](...args);
+                                    //         }
 
-                    //     return env[internalBindingName].proxyMethod({
-                    //         bindingName: externalBindingName,
-                    //         doId: ctx.id,
-                    //         method: key,
-                    //         args,
-                    //     });
-                    // }
+                                    //         const subPropAccessPromise = topLevelPropAccessPromise.then(value => {
+                                    //             return value[key];
+                                    //         });
 
+                                    //         return subPropAccessPromise;
+                                    //     },
+                                    //     getPrototypeOf: (target) => {
+                                    //         console.log('sub getPrototypeOf', { });
+                                    //         return new RpcTarget();
+                                    //     },
+                                    //     getOwnPropertyDescriptor: (target, key) => {
+                                    //         const x = Reflect.getOwnPropertyDescriptor(target, key);
+                                    //         console.log('sub getOwnPropertyDescriptor', { key, x });
+
+                                    //         return { configurable: true, enumerable: true, value: 5 };
+                                    //     },
+                                    // });
+                                },
+                                getPrototypeOf: (target) => {
+                                    console.log('sub getPrototypeOf', { });
+                                    return new RpcTarget();
+                                },
+                                getOwnPropertyDescriptor: (target, key) => {
+                                    const x = Reflect.getOwnPropertyDescriptor(target, key);
+                                    console.log('sub getOwnPropertyDescriptor', { key, x });
+
+                                    return { configurable: true, enumerable: true, value: 5 };
+                                },
+                            });
+                        },
+
+                        apply(target, thisArg, args) {
+                            console.log('sub apply', { prop1 });
+                            return env[internalBindingName].proxyMethod({
+                                bindingName: externalBindingName,
+                                doId: ctx.id,
+                                method: prop1,
+                                args,
+                            });
+                        },
+
+                        getPrototypeOf: (target) => {
+                            console.log('sub getPrototypeOf', { });
+                            return new RpcTarget();
+                        },
+                        getOwnPropertyDescriptor: (target, key) => {
+                            const x = Reflect.getOwnPropertyDescriptor(target, key);
+                            console.log('sub getOwnPropertyDescriptor', { key, x });
+
+                            return { configurable: true, enumerable: true, value: 5 };
+                        },
+
+                        // traps for all other traps that just console.log
+
+                        set: (target, key, value, receiver) => {
+                            console.log('sub set', { key, value });
+                            return Reflect.set(target, key, value, receiver);
+                        },
+                        has: (target, key) => {
+                            console.log('sub has', { key });
+                            return Reflect.has(target, key);
+                        },
+                        ownKeys: (target) => {
+                            console.log('sub ownKeys', { });
+                            return Reflect.ownKeys(target);
+                        },
+                    });
                 }
             });
         }
@@ -223,11 +272,13 @@ export class ${EXTERNAL_SERVICE_RECEIVER_NAME} extends __Wrangler__LocalOnly__Wo
         const stub = ns.get(ns.idFromString(idString));
 		return stub.fetch(request, { cf });
 	}
+
     async proxyMethod({ bindingName, doId, method, args }) {
         const ns = this.env[bindingName];
         const stub = ns.get(ns.idFromString(doId));
         return stub[method](...args);
 	}
+
 	async proxyProperty({ bindingName, doId, property }) {
         const ns = this.env[bindingName];
         const stub = ns.get(ns.idFromString(doId));

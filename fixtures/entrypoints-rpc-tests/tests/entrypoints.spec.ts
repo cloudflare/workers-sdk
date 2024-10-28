@@ -557,6 +557,7 @@ test.only("should support binding to Durable Object in another worker", async ({
 
 					const { pathname } = new URL(request.url);
 					if (pathname === "/rpc") {
+						return Response.json(await stub.property);
 						return Response.json(await stub.method());
 					}
 

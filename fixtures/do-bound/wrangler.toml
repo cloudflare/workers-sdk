@@ -1,8 +1,13 @@
 
 name = "do-bound"
 main = "index.ts"
+compatibility_date = "2024-10-28"
 
 [durable_objects]
 bindings = [
     { name = "OBJECT", class_name = "ThingObject" }
 ]
+
+[[migrations]]
+tag = "v1" # Should be unique for each
+new_classes = ["ThingObject"]
