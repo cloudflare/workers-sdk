@@ -114,8 +114,17 @@ function createDurableObjectClass({ externalBindingName, internalBindingName }) 
                     const value = Reflect.get(target, key, receiver);
                     if (value !== undefined) return value;
                     if (HANDLER_RESERVED_KEYS.has(key)) return;
-
-                    // assuming a method
+					if (key === "fetch"){
+						return (request) => {
+							const proxyRequest = new Request(request);
+							proxyRequest.headers.set(HEADER_URL, request.url);
+							proxyRequest.headers.set(HEADER_NAME,externalBindingName);
+							proxyRequest.headers.set(HEADER_ID, ctx.id.toString());
+							proxyRequest.headers.set(HEADER_CF_BLOB, JSON.stringify(request.cf ?? {}));
+							return env[internalBindingName].fetch(proxyRequest);
+						}
+					}
+					// assuming a method
                     return (...args) => {
                         return env[internalBindingName].proxyMethod({
                             bindingName: externalBindingName,
@@ -150,7 +159,29 @@ const EXTERNAL_SERVICE_RECEIVER_NAME =
 const EXTERNAL_SERVICE_RECEIVER_SCRIPT = `
 \n;; ${/* this script needs to be concatenated with the user's script :( -- use this to avoid ASI syntax errors*/ ""}
 import { WorkerEntrypoint as __Wrangler__LocalOnly__WorkerEntrypoint } from "cloudflare:workers";
+const HEADER_URL = "X-Miniflare-Durable-Object-URL";
+const HEADER_NAME = "X-Miniflare-Durable-Object-Name";
+const HEADER_ID = "X-Miniflare-Durable-Object-Id";
+const HEADER_CF_BLOB = "X-Miniflare-Durable-Object-Cf-Blob";
 export class ${EXTERNAL_SERVICE_RECEIVER_NAME} extends __Wrangler__LocalOnly__WorkerEntrypoint {
+	async fetch(request, env) {
+		const originalUrl = request.headers.get(HEADER_URL);
+		const className = request.headers.get(HEADER_NAME);
+		const idString = request.headers.get(HEADER_ID);
+		const cf = JSON.parse(request.headers.get(HEADER_CF_BLOB));
+		if (originalUrl === null || className === null || idString === null) {
+			return new Response("[wrangler] Received Durable Object proxy request with missing headers", { status: 400 });
+		}
+		request = new Request(originalUrl, request);
+		request.headers.delete(HEADER_URL);
+		request.headers.delete(HEADER_NAME);
+		request.headers.delete(HEADER_ID);
+		request.headers.delete(HEADER_CF_BLOB);
+
+		const ns = this.env[className];
+        const stub = ns.get(ns.idFromString(idString));
+		return stub.fetch(request, { cf });
+	}
     async proxyMethod({ bindingName, doId, method, args }) {
         const ns = this.env[bindingName];
         const stub = ns.get(ns.idFromString(doId));
@@ -586,11 +617,12 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 					const svcBindingName = getIdentifier(
 						`svc_${script_name}_${class_name}`
 					);
-					const internalBindingName = getIdentifier(
+					// Entrypoint to external DO
+					const externalBindingName = getIdentifier(
 						`__Wrangler__LocalOnly__DurableObject__${class_name}`
 					);
 
-					return `export const ${proxyDOClassName} = createDurableObjectClass({ externalBindingName: "${internalBindingName}", internalBindingName: "${svcBindingName}" });`;
+					return `export const ${proxyDOClassName} = createDurableObjectClass({ externalBindingName: "${externalBindingName}", internalBindingName: "${svcBindingName}" });`;
 				})
 				.join("\n") +
 			Array.from(notFoundServices)
