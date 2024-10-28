@@ -54,11 +54,12 @@ runs:
         CI_OS: ${{ runner.os }}
 
     - name: Upload Logs
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
-        name: e2e-logs${{inputs.experimental && '-experimental' || ''}}-${{matrix.os}}
+        name: e2e-logs${{inputs.quarantine && '-quarantine' || ''}}${{inputs.experimental && '-experimental' || ''}}-${{runner.os}}-${{inputs.packageManager}}
         path: packages/create-cloudflare/.e2e-logs${{inputs.experimental && '-experimental' || ''}}
+        include-hidden-files: true
 
     - name: Fail if errors detected
       shell: bash
