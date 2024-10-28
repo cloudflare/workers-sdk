@@ -38,7 +38,6 @@ import type {
 	CfWorkflow,
 } from "../deployment-bundle/worker";
 import type {
-	WorkerDefinition,
 	WorkerEntrypointsDefinition,
 	WorkerRegistry,
 } from "../dev-registry";
@@ -114,28 +113,70 @@ function createDurableObjectClass({ externalBindingName, internalBindingName }) 
                     const value = Reflect.get(target, key, receiver);
                     if (value !== undefined) return value;
                     if (HANDLER_RESERVED_KEYS.has(key)) return;
-					if (key === "fetch"){
-						return (request) => {
-							const proxyRequest = new Request(request);
-							proxyRequest.headers.set(HEADER_URL, request.url);
-							proxyRequest.headers.set(HEADER_NAME,externalBindingName);
-							proxyRequest.headers.set(HEADER_ID, ctx.id.toString());
-							proxyRequest.headers.set(HEADER_CF_BLOB, JSON.stringify(request.cf ?? {}));
-							return env[internalBindingName].fetch(proxyRequest);
-						}
-					}
+
+
+					return env[internalBindingName].proxyProperty({
+									bindingName: externalBindingName,
+									doId: ctx.id,
+									property: key,
+								});
+
+
+
+					return new Proxy({}, {
+						get(_target, key) {
+							if(key === "then"){
+								return () => env[internalBindingName].proxyProperty({
+									bindingName: externalBindingName,
+									doId: ctx.id,
+									property: key,
+								});
+							}
+
+
+						},
+						apply(target, thisArg, args) {
+							return env[internalBindingName].proxyMethod({
+								bindingName: externalBindingName,
+								doId: ctx.id,
+								method: key,
+								args,
+							});
+						},
+					});
+
+                    //     get:
+                    //         "then" returns a function which returns a promise
+                    //         optionally "catch" returns a function which returns a promise
+                    //         optionally "finally" returns a function which returns a promise
+                    //         return recursive proxy
+                    //     apply:
+                    //         call the method async
+                    //         return the promise
+                    // });
 					// assuming a method
-                    return (...args) => {
-                        return env[internalBindingName].proxyMethod({
-                            bindingName: externalBindingName,
-                            doId: ctx.id,
-                            method: key,
-                            args,
-                        });
-                    }
+                    // return (...args) => {
+					// 	console.log("about to call proxy method", key	)
+
+                    //     return env[internalBindingName].proxyMethod({
+                    //         bindingName: externalBindingName,
+                    //         doId: ctx.id,
+                    //         method: key,
+                    //         args,
+                    //     });
+                    // }
+
                 }
             });
         }
+		fetch(request) {
+			const proxyRequest = new Request(request);
+			proxyRequest.headers.set(HEADER_URL, request.url);
+			proxyRequest.headers.set(HEADER_NAME, externalBindingName);
+			proxyRequest.headers.set(HEADER_ID, this.ctx.id.toString());
+			proxyRequest.headers.set(HEADER_CF_BLOB, JSON.stringify(request.cf ?? {}));
+			return this.env[internalBindingName].fetch(proxyRequest);
+		}
     }
 }
 
@@ -186,6 +227,11 @@ export class ${EXTERNAL_SERVICE_RECEIVER_NAME} extends __Wrangler__LocalOnly__Wo
         const ns = this.env[bindingName];
         const stub = ns.get(ns.idFromString(doId));
         return stub[method](...args);
+	}
+	async proxyProperty({ bindingName, doId, property }) {
+        const ns = this.env[bindingName];
+        const stub = ns.get(ns.idFromString(doId));
+        return stub[property];
 	}
 }
 `;
