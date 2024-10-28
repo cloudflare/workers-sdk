@@ -610,7 +610,6 @@ export async function deleteEventNotificationConfig(
 
 export interface CustomDomainConfig {
 	domain: string;
-	enabled?: boolean;
 	minTLS?: string;
 	zoneId?: string;
 }
@@ -645,7 +644,10 @@ export async function attachCustomDomainToBucket(
 		{
 			method: "POST",
 			headers,
-			body: JSON.stringify(config),
+			body: JSON.stringify({
+				...config,
+				enabled: true,
+			}),
 		}
 	);
 }

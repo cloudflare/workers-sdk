@@ -1497,7 +1497,7 @@ describe("r2", () => {
 						)
 					);
 					await runWrangler(
-						`r2 bucket domain add ${bucketName} --domain ${domainName} --zone-id ${zoneId}`
+						`r2 bucket domain add ${bucketName} --domain ${domainName} --zone-id ${zoneId} --force`
 					);
 					expect(std.out).toMatchInlineSnapshot(`
 				"Connecting custom domain 'example.com' to bucket 'my-bucket'...
@@ -1508,7 +1508,7 @@ describe("r2", () => {
 				it("should error if domain and zone-id are not provided", async () => {
 					const bucketName = "my-bucket";
 					await expect(
-						runWrangler(`r2 bucket domain add ${bucketName}`)
+						runWrangler(`r2 bucket domain add ${bucketName} --force`)
 					).rejects.toThrowErrorMatchingInlineSnapshot(
 						`[Error: Missing required arguments: domain, zone-id]`
 					);
@@ -1632,7 +1632,6 @@ describe("r2", () => {
 								const requestBody = await request.json();
 								expect(requestBody).toEqual({
 									domain: domainName,
-									enabled: false,
 									minTLS: "1.3",
 								});
 								return HttpResponse.json(createFetchResult({}));
@@ -1641,7 +1640,7 @@ describe("r2", () => {
 						)
 					);
 					await runWrangler(
-						`r2 bucket domain update ${bucketName} --domain ${domainName} --enabled false --min-tls 1.3`
+						`r2 bucket domain update ${bucketName} --domain ${domainName} --min-tls 1.3`
 					);
 					expect(std.out).toMatchInlineSnapshot(`
 				"Updating custom domain 'example.com' for bucket 'my-bucket'...
