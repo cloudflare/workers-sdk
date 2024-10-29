@@ -104,9 +104,9 @@ describe("hyperdrive commands", () => {
 		);
 
 		await expect(reqProm).resolves.toMatchInlineSnapshot(`
-			{
+			Object {
 			  "name": "test123",
-			  "origin": {
+			  "origin": Object {
 			    "database": "neondb",
 			    "host": "example.com",
 			    "password": "password",
@@ -121,14 +121,14 @@ describe("hyperdrive commands", () => {
 			"🚧 Creating 'test123'
 			✅ Created new Hyperdrive config
 			 {
-			  "id": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
-			  "name": "test123",
-			  "origin": {
-			    "host": "example.com",
-			    "port": 12345,
-			    "database": "neondb",
-			    "scheme": "postgresql",
-			    "user": "test"
+			  \\"id\\": \\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\\",
+			  \\"name\\": \\"test123\\",
+			  \\"origin\\": {
+			    \\"host\\": \\"example.com\\",
+			    \\"port\\": 12345,
+			    \\"database\\": \\"neondb\\",
+			    \\"scheme\\": \\"postgresql\\",
+			    \\"user\\": \\"test\\"
 			  }
 			}"
 		`);
@@ -141,9 +141,9 @@ describe("hyperdrive commands", () => {
 		);
 
 		await expect(reqProm).resolves.toMatchInlineSnapshot(`
-			{
+			Object {
 			  "name": "test123",
-			  "origin": {
+			  "origin": Object {
 			    "database": "neondb",
 			    "host": "example.com",
 			    "password": "password",
@@ -157,14 +157,14 @@ describe("hyperdrive commands", () => {
 			"🚧 Creating 'test123'
 			✅ Created new Hyperdrive config
 			 {
-			  "id": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
-			  "name": "test123",
-			  "origin": {
-			    "host": "example.com",
-			    "port": 5432,
-			    "database": "neondb",
-			    "scheme": "postgresql",
-			    "user": "test"
+			  \\"id\\": \\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\\",
+			  \\"name\\": \\"test123\\",
+			  \\"origin\\": {
+			    \\"host\\": \\"example.com\\",
+			    \\"port\\": 5432,
+			    \\"database\\": \\"neondb\\",
+			    \\"scheme\\": \\"postgresql\\",
+			    \\"user\\": \\"test\\"
 			  }
 			}"
 		`);
@@ -177,13 +177,13 @@ describe("hyperdrive commands", () => {
 		);
 
 		await expect(reqProm).resolves.toMatchInlineSnapshot(`
-			{
-			  "caching": {
+			Object {
+			  "caching": Object {
 			    "max_age": 30,
 			    "stale_while_revalidate": 15,
 			  },
 			  "name": "test123",
-			  "origin": {
+			  "origin": Object {
 			    "database": "neondb",
 			    "host": "example.com",
 			    "password": "password",
@@ -197,18 +197,18 @@ describe("hyperdrive commands", () => {
 			"🚧 Creating 'test123'
 			✅ Created new Hyperdrive config
 			 {
-			  "id": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
-			  "name": "test123",
-			  "origin": {
-			    "host": "example.com",
-			    "port": 12345,
-			    "database": "neondb",
-			    "scheme": "postgresql",
-			    "user": "test"
+			  \\"id\\": \\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\\",
+			  \\"name\\": \\"test123\\",
+			  \\"origin\\": {
+			    \\"host\\": \\"example.com\\",
+			    \\"port\\": 12345,
+			    \\"database\\": \\"neondb\\",
+			    \\"scheme\\": \\"postgresql\\",
+			    \\"user\\": \\"test\\"
 			  },
-			  "caching": {
-			    "max_age": 30,
-			    "stale_while_revalidate": 15
+			  \\"caching\\": {
+			    \\"max_age\\": 30,
+			    \\"stale_while_revalidate\\": 15
 			  }
 			}"
 		`);
@@ -221,9 +221,9 @@ describe("hyperdrive commands", () => {
 		);
 
 		await expect(reqProm).resolves.toMatchInlineSnapshot(`
-			{
+			Object {
 			  "name": "test123",
-			  "origin": {
+			  "origin": Object {
 			    "database": "neondb",
 			    "host": "example.com",
 			    "password": "password",
@@ -237,14 +237,14 @@ describe("hyperdrive commands", () => {
 			"🚧 Creating 'test123'
 			✅ Created new Hyperdrive config
 			 {
-			  "id": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
-			  "name": "test123",
-			  "origin": {
-			    "host": "example.com",
-			    "port": 5432,
-			    "database": "neondb",
-			    "scheme": "postgresql",
-			    "user": "user:name"
+			  \\"id\\": \\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\\",
+			  \\"name\\": \\"test123\\",
+			  \\"origin\\": {
+			    \\"host\\": \\"example.com\\",
+			    \\"port\\": 5432,
+			    \\"database\\": \\"neondb\\",
+			    \\"scheme\\": \\"postgresql\\",
+			    \\"user\\": \\"user:name\\"
 			  }
 			}"
 		`);
@@ -257,9 +257,9 @@ describe("hyperdrive commands", () => {
 		);
 
 		await expect(reqProm).resolves.toMatchInlineSnapshot(`
-			{
+			Object {
 			  "name": "test123",
-			  "origin": {
+			  "origin": Object {
 			    "database": "neondb",
 			    "host": "example.com",
 			    "password": "a#?81n(7",
@@ -273,14 +273,14 @@ describe("hyperdrive commands", () => {
 			"🚧 Creating 'test123'
 			✅ Created new Hyperdrive config
 			 {
-			  "id": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
-			  "name": "test123",
-			  "origin": {
-			    "host": "example.com",
-			    "port": 5432,
-			    "database": "neondb",
-			    "scheme": "postgresql",
-			    "user": "test"
+			  \\"id\\": \\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\\",
+			  \\"name\\": \\"test123\\",
+			  \\"origin\\": {
+			    \\"host\\": \\"example.com\\",
+			    \\"port\\": 5432,
+			    \\"database\\": \\"neondb\\",
+			    \\"scheme\\": \\"postgresql\\",
+			    \\"user\\": \\"test\\"
 			  }
 			}"
 		`);
@@ -293,10 +293,10 @@ describe("hyperdrive commands", () => {
 		);
 
 		await expect(reqProm).resolves.toMatchInlineSnapshot(`
-			{
+			Object {
 			  "name": "test123",
-			  "origin": {
-			    "database": ""weird" dbname",
+			  "origin": Object {
+			    "database": "\\"weird\\" dbname",
 			    "host": "example.com",
 			    "password": "password",
 			    "port": 5432,
@@ -309,14 +309,14 @@ describe("hyperdrive commands", () => {
 			"🚧 Creating 'test123'
 			✅ Created new Hyperdrive config
 			 {
-			  "id": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
-			  "name": "test123",
-			  "origin": {
-			    "host": "example.com",
-			    "port": 5432,
-			    "database": "/"weird/" dbname",
-			    "scheme": "postgresql",
-			    "user": "test"
+			  \\"id\\": \\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\\",
+			  \\"name\\": \\"test123\\",
+			  \\"origin\\": {
+			    \\"host\\": \\"example.com\\",
+			    \\"port\\": 5432,
+			    \\"database\\": \\"/\\"weird/\\" dbname\\",
+			    \\"scheme\\": \\"postgresql\\",
+			    \\"user\\": \\"test\\"
 			  }
 			}"
 		`);
@@ -329,9 +329,9 @@ describe("hyperdrive commands", () => {
 		);
 
 		await expect(reqProm).resolves.toMatchInlineSnapshot(`
-			{
+			Object {
 			  "name": "test123",
-			  "origin": {
+			  "origin": Object {
 			    "database": "neondb",
 			    "host": "example.com",
 			    "password": "password",
@@ -345,14 +345,14 @@ describe("hyperdrive commands", () => {
 			"🚧 Creating 'test123'
 			✅ Created new Hyperdrive config
 			 {
-			  "id": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
-			  "name": "test123",
-			  "origin": {
-			    "host": "example.com",
-			    "port": 5432,
-			    "database": "neondb",
-			    "scheme": "postgresql",
-			    "user": "test"
+			  \\"id\\": \\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\\",
+			  \\"name\\": \\"test123\\",
+			  \\"origin\\": {
+			    \\"host\\": \\"example.com\\",
+			    \\"port\\": 5432,
+			    \\"database\\": \\"neondb\\",
+			    \\"scheme\\": \\"postgresql\\",
+			    \\"user\\": \\"test\\"
 			  }
 			}"
 		`);
@@ -365,9 +365,9 @@ describe("hyperdrive commands", () => {
 		);
 
 		await expect(reqProm).resolves.toMatchInlineSnapshot(`
-			{
+			Object {
 			  "name": "test123",
-			  "origin": {
+			  "origin": Object {
 			    "database": "neondb",
 			    "host": "example.com",
 			    "password": "password",
@@ -381,14 +381,14 @@ describe("hyperdrive commands", () => {
 			"🚧 Creating 'test123'
 			✅ Created new Hyperdrive config
 			 {
-			  "id": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
-			  "name": "test123",
-			  "origin": {
-			    "host": "example.com",
-			    "port": 1234,
-			    "database": "neondb",
-			    "scheme": "postgresql",
-			    "user": "test"
+			  \\"id\\": \\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\\",
+			  \\"name\\": \\"test123\\",
+			  \\"origin\\": {
+			    \\"host\\": \\"example.com\\",
+			    \\"port\\": 1234,
+			    \\"database\\": \\"neondb\\",
+			    \\"scheme\\": \\"postgresql\\",
+			    \\"user\\": \\"test\\"
 			  }
 			}"
 		`);
@@ -426,9 +426,9 @@ describe("hyperdrive commands", () => {
 			"hyperdrive create test123 --host=example.com --database=neondb --user=test --password=password --access-client-id=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.access --access-client-secret=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
 		);
 		await expect(reqProm).resolves.toMatchInlineSnapshot(`
-			{
+			Object {
 			  "name": "test123",
-			  "origin": {
+			  "origin": Object {
 			    "access_client_id": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.access",
 			    "access_client_secret": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
 			    "database": "neondb",
@@ -443,14 +443,14 @@ describe("hyperdrive commands", () => {
 			"🚧 Creating 'test123'
 			✅ Created new Hyperdrive config
 			 {
-			  "id": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
-			  "name": "test123",
-			  "origin": {
-			    "host": "example.com",
-			    "database": "neondb",
-			    "scheme": "postgresql",
-			    "user": "test",
-			    "access_client_id": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.access"
+			  \\"id\\": \\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\\",
+			  \\"name\\": \\"test123\\",
+			  \\"origin\\": {
+			    \\"host\\": \\"example.com\\",
+			    \\"database\\": \\"neondb\\",
+			    \\"scheme\\": \\"postgresql\\",
+			    \\"user\\": \\"test\\",
+			    \\"access_client_id\\": \\"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.access\\"
 			  }
 			}"
 		`);
@@ -462,9 +462,9 @@ describe("hyperdrive commands", () => {
 			"hyperdrive create test123 --host=example.com/database --database=neondb --user=test --password=password --access-client-id=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.access --access-client-secret=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
 		);
 		await expect(reqProm).resolves.toMatchInlineSnapshot(`
-			{
+			Object {
 			  "name": "test123",
-			  "origin": {
+			  "origin": Object {
 			    "access_client_id": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.access",
 			    "access_client_secret": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
 			    "database": "neondb",
@@ -479,14 +479,14 @@ describe("hyperdrive commands", () => {
 			"🚧 Creating 'test123'
 			✅ Created new Hyperdrive config
 			 {
-			  "id": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
-			  "name": "test123",
-			  "origin": {
-			    "host": "example.com/database",
-			    "database": "neondb",
-			    "scheme": "postgresql",
-			    "user": "test",
-			    "access_client_id": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.access"
+			  \\"id\\": \\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\\",
+			  \\"name\\": \\"test123\\",
+			  \\"origin\\": {
+			    \\"host\\": \\"example.com/database\\",
+			    \\"database\\": \\"neondb\\",
+			    \\"scheme\\": \\"postgresql\\",
+			    \\"user\\": \\"test\\",
+			    \\"access_client_id\\": \\"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.access\\"
 			  }
 			}"
 		`);
@@ -530,7 +530,7 @@ describe("hyperdrive commands", () => {
 			├──────────────────────────────────────┼─────────┼────────┼────────────────┼──────┼──────────┼───────────────────┤
 			│ xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx │ test123 │ test   │ example.com    │ 5432 │ neondb   │                   │
 			├──────────────────────────────────────┼─────────┼────────┼────────────────┼──────┼──────────┼───────────────────┤
-			│ yyyyyyyy-yyyy-yyyy-yyyy-yyyyyyyyyyyy │ new-db  │ dbuser │ www.google.com │ 3211 │ mydb     │ {"disabled":true} │
+			│ yyyyyyyy-yyyy-yyyy-yyyy-yyyyyyyyyyyy │ new-db  │ dbuser │ www.google.com │ 3211 │ mydb     │ {\\"disabled\\":true} │
 			└──────────────────────────────────────┴─────────┴────────┴────────────────┴──────┴──────────┴───────────────────┘"
 		`);
 	});
@@ -540,14 +540,14 @@ describe("hyperdrive commands", () => {
 		await runWrangler("hyperdrive get xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx");
 		expect(std.out).toMatchInlineSnapshot(`
 			"{
-			  "id": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
-			  "name": "test123",
-			  "origin": {
-			    "scheme": "postgresql",
-			    "host": "example.com",
-			    "port": 5432,
-			    "database": "neondb",
-			    "user": "test"
+			  \\"id\\": \\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\\",
+			  \\"name\\": \\"test123\\",
+			  \\"origin\\": {
+			    \\"scheme\\": \\"postgresql\\",
+			    \\"host\\": \\"example.com\\",
+			    \\"port\\": 5432,
+			    \\"database\\": \\"neondb\\",
+			    \\"user\\": \\"test\\"
 			  }
 			}"
 		`);
@@ -568,8 +568,8 @@ describe("hyperdrive commands", () => {
 			"hyperdrive update xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx --origin-host=example.com --origin-port=1234"
 		);
 		await expect(reqProm).resolves.toMatchInlineSnapshot(`
-			{
-			  "origin": {
+			Object {
+			  "origin": Object {
 			    "host": "example.com",
 			    "port": 1234,
 			  },
@@ -579,14 +579,14 @@ describe("hyperdrive commands", () => {
 			"🚧 Updating 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'
 			✅ Updated xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx Hyperdrive config
 			 {
-			  "id": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
-			  "name": "test123",
-			  "origin": {
-			    "scheme": "postgresql",
-			    "host": "example.com",
-			    "port": 1234,
-			    "database": "neondb",
-			    "user": "test"
+			  \\"id\\": \\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\\",
+			  \\"name\\": \\"test123\\",
+			  \\"origin\\": {
+			    \\"scheme\\": \\"postgresql\\",
+			    \\"host\\": \\"example.com\\",
+			    \\"port\\": 1234,
+			    \\"database\\": \\"neondb\\",
+			    \\"user\\": \\"test\\"
 			  }
 			}"
 		`);
@@ -598,8 +598,8 @@ describe("hyperdrive commands", () => {
 			"hyperdrive update xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx --origin-user=newuser --origin-password='passw0rd!'"
 		);
 		await expect(reqProm).resolves.toMatchInlineSnapshot(`
-			{
-			  "origin": {
+			Object {
+			  "origin": Object {
 			    "password": "passw0rd!",
 			    "user": "newuser",
 			  },
@@ -609,14 +609,14 @@ describe("hyperdrive commands", () => {
 			"🚧 Updating 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'
 			✅ Updated xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx Hyperdrive config
 			 {
-			  "id": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
-			  "name": "test123",
-			  "origin": {
-			    "scheme": "postgresql",
-			    "host": "example.com",
-			    "port": 5432,
-			    "database": "neondb",
-			    "user": "newuser"
+			  \\"id\\": \\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\\",
+			  \\"name\\": \\"test123\\",
+			  \\"origin\\": {
+			    \\"scheme\\": \\"postgresql\\",
+			    \\"host\\": \\"example.com\\",
+			    \\"port\\": 5432,
+			    \\"database\\": \\"neondb\\",
+			    \\"user\\": \\"newuser\\"
 			  }
 			}"
 		`);
@@ -656,8 +656,8 @@ describe("hyperdrive commands", () => {
 			"hyperdrive update xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx --max-age=30 --swr=15"
 		);
 		await expect(reqProm).resolves.toMatchInlineSnapshot(`
-			{
-			  "caching": {
+			Object {
+			  "caching": Object {
 			    "max_age": 30,
 			    "stale_while_revalidate": 15,
 			  },
@@ -667,18 +667,18 @@ describe("hyperdrive commands", () => {
 			"🚧 Updating 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'
 			✅ Updated xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx Hyperdrive config
 			 {
-			  "id": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
-			  "name": "test123",
-			  "origin": {
-			    "scheme": "postgresql",
-			    "host": "example.com",
-			    "port": 5432,
-			    "database": "neondb",
-			    "user": "test"
+			  \\"id\\": \\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\\",
+			  \\"name\\": \\"test123\\",
+			  \\"origin\\": {
+			    \\"scheme\\": \\"postgresql\\",
+			    \\"host\\": \\"example.com\\",
+			    \\"port\\": 5432,
+			    \\"database\\": \\"neondb\\",
+			    \\"user\\": \\"test\\"
 			  },
-			  "caching": {
-			    "max_age": 30,
-			    "stale_while_revalidate": 15
+			  \\"caching\\": {
+			    \\"max_age\\": 30,
+			    \\"stale_while_revalidate\\": 15
 			  }
 			}"
 		`);
@@ -691,8 +691,8 @@ describe("hyperdrive commands", () => {
 		);
 
 		await expect(reqProm).resolves.toMatchInlineSnapshot(`
-			{
-			  "caching": {
+			Object {
+			  "caching": Object {
 			    "disabled": true,
 			  },
 			}
@@ -701,17 +701,17 @@ describe("hyperdrive commands", () => {
 			"🚧 Updating 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'
 			✅ Updated xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx Hyperdrive config
 			 {
-			  "id": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
-			  "name": "test123",
-			  "origin": {
-			    "scheme": "postgresql",
-			    "host": "example.com",
-			    "port": 5432,
-			    "database": "neondb",
-			    "user": "test"
+			  \\"id\\": \\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\\",
+			  \\"name\\": \\"test123\\",
+			  \\"origin\\": {
+			    \\"scheme\\": \\"postgresql\\",
+			    \\"host\\": \\"example.com\\",
+			    \\"port\\": 5432,
+			    \\"database\\": \\"neondb\\",
+			    \\"user\\": \\"test\\"
 			  },
-			  "caching": {
-			    "disabled": true
+			  \\"caching\\": {
+			    \\"disabled\\": true
 			  }
 			}"
 		`);
@@ -724,7 +724,7 @@ describe("hyperdrive commands", () => {
 		);
 
 		await expect(reqProm).resolves.toMatchInlineSnapshot(`
-			{
+			Object {
 			  "name": "new-name",
 			}
 		`);
@@ -732,14 +732,14 @@ describe("hyperdrive commands", () => {
 			"🚧 Updating 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'
 			✅ Updated xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx Hyperdrive config
 			 {
-			  "id": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
-			  "name": "new-name",
-			  "origin": {
-			    "scheme": "postgresql",
-			    "host": "example.com",
-			    "port": 5432,
-			    "database": "neondb",
-			    "user": "test"
+			  \\"id\\": \\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\\",
+			  \\"name\\": \\"new-name\\",
+			  \\"origin\\": {
+			    \\"scheme\\": \\"postgresql\\",
+			    \\"host\\": \\"example.com\\",
+			    \\"port\\": 5432,
+			    \\"database\\": \\"neondb\\",
+			    \\"user\\": \\"test\\"
 			  }
 			}"
 		`);
@@ -752,8 +752,8 @@ describe("hyperdrive commands", () => {
 		);
 
 		await expect(reqProm).resolves.toMatchInlineSnapshot(`
-			{
-			  "origin": {
+			Object {
+			  "origin": Object {
 			    "access_client_id": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.access",
 			    "access_client_secret": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
 			    "database": "mydb",
@@ -767,14 +767,14 @@ describe("hyperdrive commands", () => {
 			"🚧 Updating 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'
 			✅ Updated xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx Hyperdrive config
 			 {
-			  "id": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
-			  "name": "test123",
-			  "origin": {
-			    "scheme": "postgresql",
-			    "host": "example.com",
-			    "database": "mydb",
-			    "user": "newuser",
-			    "access_client_id": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.access"
+			  \\"id\\": \\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\\",
+			  \\"name\\": \\"test123\\",
+			  \\"origin\\": {
+			    \\"scheme\\": \\"postgresql\\",
+			    \\"host\\": \\"example.com\\",
+			    \\"database\\": \\"mydb\\",
+			    \\"user\\": \\"newuser\\",
+			    \\"access_client_id\\": \\"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.access\\"
 			  }
 			}"
 		`);
