@@ -154,7 +154,6 @@ export function getOriginFromArgs<
 ): PartialUpdate extends true ? OriginConfig | undefined : OriginConfig {
 	if (args.connectionString) {
 		const url = new URL(args.connectionString);
-		const errorMessages = [];
 		if (
 			url.port === "" &&
 			(url.protocol == "postgresql:" || url.protocol == "postgres:")
@@ -163,7 +162,7 @@ export function getOriginFromArgs<
 		}
 
 		if (url.protocol === "") {
-			errorMessages.push(
+			throw new UserError(
 				"You must specify the database protocol - e.g. 'postgresql'."
 			);
 		} else if (url.protocol !== "postgresql:" && url.protocol !== "postgres:") {
