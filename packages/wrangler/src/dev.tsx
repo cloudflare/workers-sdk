@@ -10,26 +10,24 @@ import {
 	convertCfWorkerInitBindingstoBindings,
 	extractBindingsOfType,
 } from "./api/startDevWorker/utils";
+import { processAssetsArg, validateAssetsArgsAndConfig } from "./assets";
 import { findWranglerToml, printBindings, readConfig } from "./config";
 import { validateRoutes } from "./deploy/deploy";
 import { getEntry } from "./deployment-bundle/entry";
-import { getNodeCompatMode } from "./deployment-bundle/node-compat";
-import { getBoundRegisteredWorkers } from "./dev-registry";
-import Dev, { devRegistry } from "./dev/dev";
+import { validateNodeCompatMode } from "./deployment-bundle/node-compat";
+import { devRegistry, getBoundRegisteredWorkers } from "./dev-registry";
+import Dev from "./dev/dev";
 import { getVarsForDev } from "./dev/dev-vars";
 import { getLocalPersistencePath } from "./dev/get-local-persistence-path";
 import registerDevHotKeys from "./dev/hotkeys";
 import { maybeRegisterLocalWorker } from "./dev/local";
 import { startDevServer } from "./dev/start-server";
 import { UserError } from "./errors";
-import {
-	processExperimentalAssetsArg,
-	verifyMutuallyExclusiveAssetsArgsOrConfig,
-} from "./experimental-assets";
 import { run } from "./experimental-flags";
 import isInteractive from "./is-interactive";
 import { logger } from "./logger";
 import * as metrics from "./metrics";
+import { debounce } from "./pages/utils";
 import { getLegacyAssetPaths, getSiteAssetPaths } from "./sites";
 import {
 	getAccountFromCache,
@@ -88,6 +86,28 @@ export function devOptions(yargs: CommonYargsArgv) {
 				type: "string",
 				requiresArg: true,
 			})
+			.option("compatibility-date", {
+				describe: "Date to use for compatibility checks",
+				type: "string",
+				requiresArg: true,
+			})
+			.option("compatibility-flags", {
+				describe: "Flags to use for compatibility checks",
+				alias: "compatibility-flag",
+				type: "string",
+				requiresArg: true,
+				array: true,
+			})
+			.option("latest", {
+				describe: "Use the latest version of the worker runtime",
+				type: "boolean",
+				default: true,
+			})
+			.option("assets", {
+				describe: "Static assets to be served. Replaces Workers Sites.",
+				type: "string",
+				requiresArg: true,
+			})
 			// We want to have a --no-bundle flag, but yargs requires that
 			// we also have a --bundle flag (that it adds the --no to by itself)
 			// So we make a --bundle flag, but hide it, and then add a --no-bundle flag
@@ -107,23 +127,6 @@ export function devOptions(yargs: CommonYargsArgv) {
 				describe: "Choose an entry type",
 				hidden: true,
 				deprecated: true,
-			})
-			.option("compatibility-date", {
-				describe: "Date to use for compatibility checks",
-				type: "string",
-				requiresArg: true,
-			})
-			.option("compatibility-flags", {
-				describe: "Flags to use for compatibility checks",
-				alias: "compatibility-flag",
-				type: "string",
-				requiresArg: true,
-				array: true,
-			})
-			.option("latest", {
-				describe: "Use the latest version of the worker runtime",
-				type: "boolean",
-				default: true,
 			})
 			.option("ip", {
 				describe: "IP address to listen on",
@@ -177,23 +180,13 @@ export function devOptions(yargs: CommonYargsArgv) {
 				hidden: true,
 			})
 			.option("legacy-assets", {
-				describe: "(Experimental) Static assets to be served",
-				type: "string",
-				requiresArg: true,
-			})
-			.option("assets", {
-				describe: "(Experimental) Static assets to be served",
-				type: "string",
-				requiresArg: true,
-				hidden: true,
-			})
-			.option("experimental-assets", {
 				describe: "Static assets to be served",
 				type: "string",
-				alias: "x-assets",
 				requiresArg: true,
+				deprecated: true,
 				hidden: true,
 			})
+
 			.option("public", {
 				describe: "(Deprecated) Static assets to be served",
 				type: "string",
@@ -205,6 +198,8 @@ export function devOptions(yargs: CommonYargsArgv) {
 				describe: "Root folder of static assets for Workers Sites",
 				type: "string",
 				requiresArg: true,
+				hidden: true,
+				deprecated: true,
 			})
 			.option("site-include", {
 				describe:
@@ -212,6 +207,8 @@ export function devOptions(yargs: CommonYargsArgv) {
 				type: "string",
 				requiresArg: true,
 				array: true,
+				hidden: true,
+				deprecated: true,
 			})
 			.option("site-exclude", {
 				describe:
@@ -219,6 +216,8 @@ export function devOptions(yargs: CommonYargsArgv) {
 				type: "string",
 				requiresArg: true,
 				array: true,
+				hidden: true,
+				deprecated: true,
 			})
 			.option("upstream-protocol", {
 				describe: "Protocol to forward requests to host on, defaults to https.",
@@ -344,13 +343,19 @@ export function devOptions(yargs: CommonYargsArgv) {
 				type: "boolean",
 				describe:
 					"Use the experimental DevEnv instantiation (unified across wrangler dev and unstable_dev)",
-				default: false,
+				default: true,
 			})
 			.option("experimental-registry", {
 				alias: ["x-registry"],
 				type: "boolean",
 				describe:
 					"Use the experimental file based dev registry for multi-worker development",
+				default: false,
+			})
+			.option("experimental-vectorize-bind-to-prod", {
+				type: "boolean",
+				describe:
+					"Bind to production Vectorize indexes in local development mode",
 				default: false,
 			})
 	);
@@ -379,25 +384,12 @@ This is currently not supported 😭, but we think that we'll get it to work soo
 		}
 	}
 
-	if (args.assets) {
-		logger.warn(
-			`The --assets argument is experimental. We are going to be changing the behavior of this experimental command after August 15th.\n` +
-				`Releases of wrangler after this date will no longer support current functionality.\n` +
-				`Please shift to the --legacy-assets command to preserve the current functionality.`
-		);
-	}
-
 	if (args.legacyAssets) {
 		logger.warn(
-			`The --legacy-assets argument is experimental and may change or break at any time.`
+			`The --legacy-assets argument has been deprecated. Please use --assets instead.\n` +
+				`To learn more about Workers with assets, visit our documentation at https://developers.cloudflare.com/workers/frameworks/.`
 		);
 	}
-
-	if (args.legacyAssets && args.assets) {
-		throw new UserError("Cannot use both --assets and --legacy-assets.");
-	}
-
-	args.legacyAssets = args.legacyAssets ?? args.assets;
 
 	// use separate watchers for config file and assets directory since
 	// behaviour will be different between the two
@@ -413,11 +405,15 @@ This is currently not supported 😭, but we think that we'll get it to work soo
 			() => startDev(args)
 		);
 		if (args.experimentalDevEnv) {
-			assert(devInstance instanceof DevEnv);
-			await events.once(devInstance, "teardown");
+			assert(devInstance.devEnv !== undefined);
+			await events.once(devInstance.devEnv, "teardown");
+			if (devInstance.teardownRegistryPromise) {
+				const teardownRegistry = await devInstance.teardownRegistryPromise;
+				await teardownRegistry(devInstance.devEnv.config.latestConfig?.name);
+			}
+			devInstance.unregisterHotKeys?.();
 		} else {
-			assert(!(devInstance instanceof DevEnv));
-
+			assert(devInstance.devEnv === undefined);
 			configFileWatcher = devInstance.configFileWatcher;
 			assetsWatcher = devInstance.assetsWatcher;
 
@@ -471,7 +467,7 @@ export type AdditionalDevProps = {
 	showInteractiveDevSession?: boolean;
 };
 
-export type StartDevOptions = Omit<DevArguments, "assets"> &
+export type StartDevOptions = DevArguments &
 	// These options can be passed in directly when called with the `wrangler.dev()` API.
 	// They aren't exposed as CLI arguments.
 	AdditionalDevProps & {
@@ -486,6 +482,11 @@ async function updateDevEnvRegistry(
 	devEnv: DevEnv,
 	registry: WorkerRegistry | undefined
 ) {
+	// Make sure we're not patching an empty config
+	if (!devEnv.config.latestConfig) {
+		await events.once(devEnv.config, "configUpdate");
+	}
+
 	let boundWorkers = await getBoundRegisteredWorkers(
 		{
 			name: devEnv.config.latestConfig?.name,
@@ -506,11 +507,6 @@ async function updateDevEnvRegistry(
 	// Normalise an empty registry to undefined
 	if (boundWorkers && Object.keys(boundWorkers).length === 0) {
 		boundWorkers = undefined;
-	}
-
-	// Make sure we're not patching an empty config
-	if (!devEnv.config.latestConfig) {
-		await events.once(devEnv, "configUpdate");
 	}
 
 	if (
@@ -560,12 +556,13 @@ export async function startDev(args: StartDevOptions) {
 	let configFileWatcher: ReturnType<typeof watch> | undefined;
 	let assetsWatcher: ReturnType<typeof watch> | undefined;
 	let rerender: (node: React.ReactNode) => void | undefined;
-	try {
-		const configPath =
-			args.config ||
-			(args.script && findWranglerToml(path.dirname(args.script)));
-		let config = readConfig(configPath, args);
+	const devEnv = new DevEnv();
+	let teardownRegistryPromise:
+		| Promise<(name?: string) => Promise<void>>
+		| undefined;
 
+	let unregisterHotKeys: (() => void) | undefined;
+	try {
 		if (args.logLevel) {
 			logger.loggerLevel = args.logLevel;
 		}
@@ -603,30 +600,14 @@ export async function startDev(args: StartDevOptions) {
 			);
 		}
 
-		if (
-			(args.legacyAssets || config.legacy_assets) &&
-			(args.site || config.site)
-		) {
-			throw new UserError(
-				"Cannot use Legacy Assets and Workers Sites in the same Worker."
-			);
-		}
-
-		verifyMutuallyExclusiveAssetsArgsOrConfig(args, config);
-
-		let experimentalAssetsOptions = processExperimentalAssetsArg(args, config);
-		if (experimentalAssetsOptions) {
-			args.forceLocal = true;
-		}
-
-		const projectRoot = configPath && path.dirname(configPath);
-
-		const devEnv = new DevEnv();
+		const configPath =
+			args.config ||
+			(args.script && findWranglerToml(path.dirname(args.script)));
 
 		if (args.experimentalDevEnv) {
 			// The ProxyWorker will have a stable host and port, so only listen for the first update
 			void devEnv.proxy.ready.promise.then(({ url }) => {
-				if (process.send) {
+				if (process.send && typeof vitest === "undefined") {
 					process.send(
 						JSON.stringify({
 							event: "DEV_SERVER_READY",
@@ -638,13 +619,10 @@ export async function startDev(args: StartDevOptions) {
 			});
 
 			if (!args.disableDevRegistry) {
-				const teardownRegistryPromise = devRegistry((registry) =>
+				teardownRegistryPromise = devRegistry((registry) =>
 					updateDevEnvRegistry(devEnv, registry)
 				);
-				devEnv.once("teardown", async () => {
-					const teardownRegistry = await teardownRegistryPromise;
-					await teardownRegistry(devEnv.config.latestConfig?.name);
-				});
+
 				devEnv.runtimes.forEach((runtime) => {
 					runtime.on(
 						"reloadComplete",
@@ -664,146 +642,148 @@ export async function startDev(args: StartDevOptions) {
 				});
 			}
 
-			let unregisterHotKeys: () => void;
 			if (isInteractive() && args.showInteractiveDevSession !== false) {
 				unregisterHotKeys = registerDevHotKeys(devEnv, args);
 			}
 
-			await devEnv.config.set({
-				name: args.name,
-				config: configPath,
-				entrypoint: args.script,
-				compatibilityDate: args.compatibilityDate,
-				compatibilityFlags: args.compatibilityFlags,
-				triggers: args.routes?.map<Extract<Trigger, { type: "route" }>>(
-					(r) => ({
-						type: "route",
-						pattern: r,
-					})
-				),
-
-				build: {
-					bundle: args.bundle !== undefined ? args.bundle : undefined,
-					define: collectKeyValues(args.define),
-					jsxFactory: args.jsxFactory,
-					jsxFragment: args.jsxFragment,
-					tsconfig: args.tsconfig,
-					minify: args.minify,
-					processEntrypoint: args.processEntrypoint,
-					additionalModules: args.additionalModules,
-					moduleRoot: args.moduleRoot,
-					moduleRules: args.rules,
-					nodejsCompatMode: (parsedConfig: Config) =>
-						getNodeCompatMode(
-							args.compatibilityFlags ?? parsedConfig.compatibility_flags ?? [],
-							{
-								nodeCompat: args.nodeCompat ?? parsedConfig.node_compat,
-								noBundle: args.noBundle ?? parsedConfig.no_bundle,
-							}
-						),
-				},
-				bindings: {
-					...(await getPagesAssetsFetcher(
-						args.enablePagesAssetsServiceBinding
-					)),
-					...collectPlainTextVars(args.var),
-					...convertCfWorkerInitBindingstoBindings({
-						kv_namespaces: args.kv,
-						vars: args.vars,
-						send_email: undefined,
-						wasm_modules: undefined,
-						text_blobs: undefined,
-						browser: undefined,
-						ai: args.ai,
-						version_metadata: args.version_metadata,
-						data_blobs: undefined,
-						durable_objects: { bindings: args.durableObjects ?? [] },
-						queues: undefined,
-						r2_buckets: args.r2,
-						d1_databases: args.d1Databases,
-						vectorize: undefined,
-						hyperdrive: undefined,
-						services: args.services,
-						analytics_engine_datasets: undefined,
-						dispatch_namespaces: undefined,
-						mtls_certificates: undefined,
-						pipelines: undefined,
-						logfwdr: undefined,
-						unsafe: undefined,
-						experimental_assets: undefined,
-					}),
-				},
-				dev: {
-					auth: async () => {
-						let accountId = args.accountId;
-						if (!accountId) {
-							unregisterHotKeys?.();
-							accountId = await requireAuth({});
-							unregisterHotKeys = registerDevHotKeys(devEnv, args);
-						}
-
-						return {
-							accountId,
-							apiToken: requireApiToken(),
-						};
-					},
-					remote: !args.forceLocal && args.remote,
-					server: {
-						hostname: args.ip,
-						port: args.port,
-						secure:
-							args.localProtocol === undefined
-								? undefined
-								: args.localProtocol === "https",
-						httpsCertPath: args.httpsCertPath,
-						httpsKeyPath: args.httpsKeyPath,
-					},
-					inspector: {
-						port: args.inspectorPort,
-					},
-					origin: {
-						hostname: args.host ?? args.localUpstream,
-						secure:
-							args.upstreamProtocol === undefined
-								? undefined
-								: args.upstreamProtocol === "https",
-					},
-					persist: args.persistTo,
-					liveReload: args.liveReload,
-					testScheduled: args.testScheduled,
-					logLevel: args.logLevel,
-					registry: devEnv.config.latestConfig?.dev.registry,
-				},
-				legacy: {
-					site: (configParam) => {
-						const legacyAssetPaths = getResolvedLegacyAssetPaths(
-							args,
-							configParam
-						);
-
-						return Boolean(args.site || configParam.site) && legacyAssetPaths
-							? {
-									bucket: path.join(
-										legacyAssetPaths.baseDirectory,
-										legacyAssetPaths?.assetDirectory
-									),
-									include: legacyAssetPaths.includePatterns,
-									exclude: legacyAssetPaths.excludePatterns,
+			await devEnv.config.set(
+				{
+					name: args.name,
+					config: configPath,
+					entrypoint: args.script,
+					compatibilityDate: args.compatibilityDate,
+					compatibilityFlags: args.compatibilityFlags,
+					triggers: args.routes?.map<Extract<Trigger, { type: "route" }>>(
+						(r) => ({
+							type: "route",
+							pattern: r,
+						})
+					),
+					env: args.env,
+					build: {
+						bundle: args.bundle !== undefined ? args.bundle : undefined,
+						define: collectKeyValues(args.define),
+						jsxFactory: args.jsxFactory,
+						jsxFragment: args.jsxFragment,
+						tsconfig: args.tsconfig,
+						minify: args.minify,
+						processEntrypoint: args.processEntrypoint,
+						additionalModules: args.additionalModules,
+						moduleRoot: args.moduleRoot,
+						moduleRules: args.rules,
+						nodejsCompatMode: (parsedConfig: Config) =>
+							validateNodeCompatMode(
+								args.compatibilityDate ?? parsedConfig.compatibility_date,
+								args.compatibilityFlags ??
+									parsedConfig.compatibility_flags ??
+									[],
+								{
+									nodeCompat: args.nodeCompat ?? parsedConfig.node_compat,
+									noBundle: args.noBundle ?? parsedConfig.no_bundle,
 								}
-							: undefined;
+							),
 					},
-					legacyAssets: (configParam) => configParam.legacy_assets,
-					enableServiceEnvironments: !(args.legacyEnv ?? true),
-				},
-				experimental: {
-					// only pass `experimentalAssetsOptions` if it came from args not from config
-					// otherwise config at startup ends up overriding future config changes in the
-					// ConfigController
-					assets: args.experimentalAssets
-						? experimentalAssetsOptions
-						: undefined,
-				},
-			} satisfies StartDevWorkerInput);
+					bindings: {
+						...(await getPagesAssetsFetcher(
+							args.enablePagesAssetsServiceBinding
+						)),
+						...collectPlainTextVars(args.var),
+						...convertCfWorkerInitBindingstoBindings({
+							kv_namespaces: args.kv,
+							vars: args.vars,
+							send_email: undefined,
+							wasm_modules: undefined,
+							text_blobs: undefined,
+							browser: undefined,
+							ai: args.ai,
+							version_metadata: args.version_metadata,
+							data_blobs: undefined,
+							durable_objects: { bindings: args.durableObjects ?? [] },
+							workflows: undefined,
+							queues: undefined,
+							r2_buckets: args.r2,
+							d1_databases: args.d1Databases,
+							vectorize: undefined,
+							hyperdrive: undefined,
+							services: args.services,
+							analytics_engine_datasets: undefined,
+							dispatch_namespaces: undefined,
+							mtls_certificates: undefined,
+							pipelines: undefined,
+							logfwdr: undefined,
+							unsafe: undefined,
+							assets: undefined,
+						}),
+					},
+					dev: {
+						auth: async (config) => {
+							const hotkeysDisplayed = !!unregisterHotKeys;
+							let accountId = args.accountId;
+							if (!accountId) {
+								unregisterHotKeys?.();
+								accountId = await requireAuth(config);
+								if (hotkeysDisplayed) {
+									unregisterHotKeys = registerDevHotKeys(devEnv, args);
+								}
+							}
+							return {
+								accountId,
+								apiToken: requireApiToken(),
+							};
+						},
+						remote: !args.forceLocal && args.remote,
+						server: {
+							hostname: args.ip,
+							port: args.port,
+							secure:
+								args.localProtocol === undefined
+									? undefined
+									: args.localProtocol === "https",
+							httpsCertPath: args.httpsCertPath,
+							httpsKeyPath: args.httpsKeyPath,
+						},
+						inspector: {
+							port: args.inspectorPort,
+						},
+						origin: {
+							hostname: args.host ?? args.localUpstream,
+							secure:
+								args.upstreamProtocol === undefined
+									? undefined
+									: args.upstreamProtocol === "https",
+						},
+						persist: args.persistTo,
+						liveReload: args.liveReload,
+						testScheduled: args.testScheduled,
+						logLevel: args.logLevel,
+						registry: devEnv.config.latestConfig?.dev.registry,
+						bindVectorizeToProd: args.experimentalVectorizeBindToProd,
+					},
+					legacy: {
+						site: (configParam) => {
+							const legacyAssetPaths = getResolvedLegacyAssetPaths(
+								args,
+								configParam
+							);
+							return Boolean(args.site || configParam.site) && legacyAssetPaths
+								? {
+										bucket: path.join(
+											legacyAssetPaths.baseDirectory,
+											legacyAssetPaths?.assetDirectory
+										),
+										include: legacyAssetPaths.includePatterns,
+										exclude: legacyAssetPaths.excludePatterns,
+									}
+								: undefined;
+						},
+						legacyAssets: (configParam) =>
+							args.legacyAssets ?? configParam.legacy_assets,
+						enableServiceEnvironments: !(args.legacyEnv ?? true),
+					},
+					assets: args.assets,
+				} satisfies StartDevWorkerInput,
+				true
+			);
 
 			void metrics.sendMetricsEvent(
 				"run dev",
@@ -819,211 +799,273 @@ export async function startDev(args: StartDevOptions) {
 				}
 			);
 
-			return devEnv;
-		}
+			return { devEnv, unregisterHotKeys, teardownRegistryPromise };
+		} else {
+			const projectRoot = configPath && path.dirname(configPath);
+			let config = readConfig(configPath, args);
 
-		if (config.configPath && !args.experimentalDevEnv) {
-			configFileWatcher = watch(config.configPath, {
-				persistent: true,
-			}).on("change", async (_event) => {
-				try {
-					// TODO: Do we need to handle different `_event` types differently?
-					// e.g. what if the file is deleted, or added?
-					config = readConfig(configPath, args);
-					if (!config.configPath) {
-						return;
-					}
+			if (
+				(args.legacyAssets || config.legacy_assets) &&
+				(args.site || config.site)
+			) {
+				throw new UserError(
+					"Cannot use legacy assets and Workers Sites in the same Worker."
+				);
+			}
 
-					logger.log(`${path.basename(config.configPath)} changed...`);
+			if ((args.assets || config.assets) && args.remote) {
+				throw new UserError(
+					"Cannot use assets in remote mode. Workers with assets are only supported in local mode. Please use `wrangler dev`."
+				);
+			}
 
-					/*
-					 * Handle experimental assets watching on config file changes
-					 *
-					 * 1. if experimental assets was specified via CLI args, config file
-					 *    changes shouldn't affect anything
-					 * 2. if experimental_assets was not specififed via the configuration
-					 *    file, but it is now, we should start watching the assets
-					 *    directory
-					 * 3. if experimental_assets was specified via the configuration
-					 *    file, we should ensure we're still watching the correct
-					 *    directory
-					 */
-					if (experimentalAssetsOptions && !args.experimentalAssets) {
-						await assetsWatcher?.close();
+			validateAssetsArgsAndConfig(args, config);
 
-						// this gets passed into the Dev React element, so ensure we don't
-						// block scope this var
-						experimentalAssetsOptions = processExperimentalAssetsArg(
-							args,
-							config
+			let assetsOptions = processAssetsArg(args, config);
+			if (assetsOptions) {
+				args.forceLocal = true;
+			}
+
+			if (config.configPath && !args.experimentalDevEnv) {
+				configFileWatcher = watch(config.configPath, {
+					persistent: true,
+				}).on("change", async (_event) => {
+					try {
+						// TODO: Do we need to handle different `_event` types differently?
+						// e.g. what if the file is deleted, or added?
+						config = readConfig(configPath, args);
+						if (!config.configPath) {
+							return;
+						}
+
+						logger.log(`${path.basename(config.configPath)} changed...`);
+
+						// ensure we reflect config changes in the `main` entry point
+						entry = await getEntry(
+							{
+								legacyAssets: args.legacyAssets,
+								script: args.script,
+								moduleRoot: args.moduleRoot,
+								assets: args.assets,
+							},
+							config,
+							"dev"
 						);
 
-						if (experimentalAssetsOptions) {
-							assetsWatcher = watch(experimentalAssetsOptions.directory, {
-								persistent: true,
-								ignoreInitial: true,
-							}).on("all", async (eventName, changedPath) => {
-								const message = getAssetChangeMessage(eventName, changedPath);
+						// ensure we re-validate routes
+						await getHostAndRoutes(args, config);
 
-								logger.log(`🌀 ${message}...`);
-								rerender(await getDevReactElement(config));
-							});
+						assetsOptions = processAssetsArg(args, config);
+
+						/*
+						 * Handle static assets watching on config file changes
+						 *
+						 * 1. if assets was specified via CLI args, only config file
+						 *    changes related to `main` will matter. In this case, re-running
+						 *    `processAssetsArg` is enough (see above)
+						 * 2. if assets was not specififed via the configuration
+						 *    file, but it is now, we should start watching the assets
+						 *    directory
+						 * 3. if assets was specified via the configuration
+						 *    file, we should ensure we're still watching the correct
+						 *    directory
+						 */
+						if (assetsOptions && !args.assets) {
+							await assetsWatcher?.close();
+
+							if (assetsOptions) {
+								const debouncedRerender = debounce(async () => {
+									rerender(await getDevReactElement(config));
+								}, 100);
+
+								assetsWatcher = watch(assetsOptions.directory, {
+									persistent: true,
+									ignoreInitial: true,
+								}).on("all", async (eventName, changedPath) => {
+									const message = getAssetChangeMessage(eventName, changedPath);
+
+									logger.debug(`🌀 ${message}...`);
+									debouncedRerender();
+								});
+							}
 						}
+
+						rerender(await getDevReactElement(config));
+					} catch (err) {
+						logger.error(err);
 					}
-
-					rerender(await getDevReactElement(config));
-				} catch (err) {
-					logger.error(err);
-				}
-			});
-		}
-
-		const {
-			entry,
-			upstreamProtocol,
-			host,
-			routes,
-			getLocalPort,
-			getInspectorPort,
-			getRuntimeInspectorPort,
-			cliDefines,
-			cliAlias,
-			localPersistencePath,
-			processEntrypoint,
-			additionalModules,
-		} = await validateDevServerSettings(args, config);
-
-		const nodejsCompatMode = getNodeCompatMode(
-			args.compatibilityFlags ?? config.compatibility_flags ?? [],
-			{
-				nodeCompat: args.nodeCompat ?? config.node_compat,
-				noBundle: args.noBundle ?? config.no_bundle,
+				});
 			}
-		);
 
-		void metrics.sendMetricsEvent(
-			"run dev",
-			{
-				local: !args.remote,
-				usesTypeScript: /\.tsx?$/.test(entry.file),
-			},
-			{ sendMetrics: config.send_metrics, offline: !args.remote }
-		);
+			const devServerSettings = await validateDevServerSettings(args, config);
+			let { entry } = devServerSettings;
+			const {
+				upstreamProtocol,
+				host,
+				routes,
+				getLocalPort,
+				getInspectorPort,
+				getRuntimeInspectorPort,
+				cliDefines,
+				cliAlias,
+				localPersistencePath,
+				processEntrypoint,
+				additionalModules,
+			} = devServerSettings;
 
-		// eslint-disable-next-line no-inner-declarations
-		async function getDevReactElement(configParam: Config) {
-			const { legacyAssetPaths, bindings } = getBindingsAndLegacyAssetPaths(
-				args,
-				configParam
+			const nodejsCompatMode = validateNodeCompatMode(
+				args.compatibilityDate ?? config.compatibility_date,
+				args.compatibilityFlags ?? config.compatibility_flags ?? [],
+				{
+					nodeCompat: args.nodeCompat ?? config.node_compat,
+					noBundle: args.noBundle ?? config.no_bundle,
+				}
 			);
 
-			return (
-				<Dev
-					name={getScriptName({ name: args.name, env: args.env }, configParam)}
-					noBundle={!(args.bundle ?? !configParam.no_bundle)}
-					findAdditionalModules={configParam.find_additional_modules}
-					entry={entry}
-					env={args.env}
-					host={host}
-					routes={routes}
-					processEntrypoint={processEntrypoint}
-					additionalModules={additionalModules}
-					rules={args.rules ?? getRules(configParam)}
-					legacyEnv={isLegacyEnv(configParam)}
-					minify={args.minify ?? configParam.minify}
-					nodejsCompatMode={nodejsCompatMode}
-					build={configParam.build || {}}
-					define={{ ...configParam.define, ...cliDefines }}
-					alias={{ ...configParam.alias, ...cliAlias }}
-					initialMode={args.remote ? "remote" : "local"}
-					jsxFactory={args.jsxFactory || configParam.jsx_factory}
-					jsxFragment={args.jsxFragment || configParam.jsx_fragment}
-					tsconfig={args.tsconfig ?? configParam.tsconfig}
-					upstreamProtocol={upstreamProtocol}
-					localProtocol={args.localProtocol || configParam.dev.local_protocol}
-					httpsKeyPath={args.httpsKeyPath}
-					httpsCertPath={args.httpsCertPath}
-					localUpstream={args.localUpstream ?? host ?? getInferredHost(routes)}
-					localPersistencePath={localPersistencePath}
-					liveReload={args.liveReload || false}
-					accountId={
-						args.accountId ??
-						configParam.account_id ??
-						getAccountFromCache()?.id
-					}
-					legacyAssetPaths={legacyAssetPaths}
-					legacyAssetsConfig={configParam.legacy_assets}
-					experimentalAssets={experimentalAssetsOptions}
-					initialPort={
-						args.port ?? configParam.dev.port ?? (await getLocalPort())
-					}
-					initialIp={args.ip || configParam.dev.ip}
-					inspectorPort={
-						args.inspectorPort ??
-						configParam.dev.inspector_port ??
-						(await getInspectorPort())
-					}
-					runtimeInspectorPort={await getRuntimeInspectorPort()}
-					isWorkersSite={Boolean(args.site || configParam.site)}
-					compatibilityDate={getDevCompatibilityDate(
-						configParam,
-						args.compatibilityDate
-					)}
-					compatibilityFlags={
-						args.compatibilityFlags || configParam.compatibility_flags
-					}
-					usageModel={configParam.usage_model}
-					bindings={bindings}
-					migrations={configParam.migrations}
-					crons={configParam.triggers.crons}
-					queueConsumers={configParam.queues.consumers}
-					onReady={args.onReady}
-					inspect={args.inspect ?? true}
-					showInteractiveDevSession={args.showInteractiveDevSession}
-					forceLocal={args.forceLocal}
-					enablePagesAssetsServiceBinding={args.enablePagesAssetsServiceBinding}
-					firstPartyWorker={configParam.first_party_worker}
-					sendMetrics={configParam.send_metrics}
-					testScheduled={args.testScheduled}
-					projectRoot={projectRoot}
-					rawArgs={args}
-					rawConfig={configParam}
-					devEnv={devEnv}
-				/>
+			void metrics.sendMetricsEvent(
+				"run dev",
+				{
+					local: !args.remote,
+					usesTypeScript: /\.tsx?$/.test(entry.file),
+				},
+				{ sendMetrics: config.send_metrics, offline: !args.remote }
 			);
+
+			// eslint-disable-next-line no-inner-declarations
+			async function getDevReactElement(configParam: Config) {
+				const { legacyAssetPaths, bindings } = getBindingsAndLegacyAssetPaths(
+					args,
+					configParam
+				);
+
+				return (
+					<Dev
+						name={getScriptName(
+							{ name: args.name, env: args.env },
+							configParam
+						)}
+						noBundle={!(args.bundle ?? !configParam.no_bundle)}
+						findAdditionalModules={configParam.find_additional_modules}
+						entry={entry}
+						env={args.env}
+						host={host}
+						routes={routes}
+						processEntrypoint={processEntrypoint}
+						additionalModules={additionalModules}
+						rules={args.rules ?? getRules(configParam)}
+						legacyEnv={isLegacyEnv(configParam)}
+						minify={args.minify ?? configParam.minify}
+						nodejsCompatMode={nodejsCompatMode}
+						build={configParam.build || {}}
+						define={{ ...configParam.define, ...cliDefines }}
+						alias={{ ...configParam.alias, ...cliAlias }}
+						initialMode={args.remote ? "remote" : "local"}
+						jsxFactory={args.jsxFactory || configParam.jsx_factory}
+						jsxFragment={args.jsxFragment || configParam.jsx_fragment}
+						tsconfig={args.tsconfig ?? configParam.tsconfig}
+						upstreamProtocol={upstreamProtocol}
+						localProtocol={args.localProtocol || configParam.dev.local_protocol}
+						httpsKeyPath={args.httpsKeyPath}
+						httpsCertPath={args.httpsCertPath}
+						localUpstream={
+							args.localUpstream ?? host ?? getInferredHost(routes)
+						}
+						localPersistencePath={localPersistencePath}
+						liveReload={args.liveReload || false}
+						accountId={
+							args.accountId ??
+							configParam.account_id ??
+							getAccountFromCache()?.id
+						}
+						legacyAssetPaths={legacyAssetPaths}
+						legacyAssetsConfig={configParam.legacy_assets}
+						assets={assetsOptions}
+						initialPort={
+							args.port ?? configParam.dev.port ?? (await getLocalPort())
+						}
+						initialIp={args.ip || configParam.dev.ip}
+						inspectorPort={
+							args.inspectorPort ??
+							configParam.dev.inspector_port ??
+							(await getInspectorPort())
+						}
+						runtimeInspectorPort={await getRuntimeInspectorPort()}
+						isWorkersSite={Boolean(args.site || configParam.site)}
+						compatibilityDate={getDevCompatibilityDate(
+							configParam,
+							args.compatibilityDate
+						)}
+						compatibilityFlags={
+							args.compatibilityFlags || configParam.compatibility_flags
+						}
+						usageModel={configParam.usage_model}
+						bindings={bindings}
+						migrations={configParam.migrations}
+						crons={configParam.triggers.crons}
+						queueConsumers={configParam.queues.consumers}
+						onReady={args.onReady}
+						inspect={args.inspect ?? true}
+						showInteractiveDevSession={args.showInteractiveDevSession}
+						forceLocal={args.forceLocal}
+						enablePagesAssetsServiceBinding={
+							args.enablePagesAssetsServiceBinding
+						}
+						firstPartyWorker={configParam.first_party_worker}
+						sendMetrics={configParam.send_metrics}
+						testScheduled={args.testScheduled}
+						projectRoot={projectRoot}
+						rawArgs={args}
+						rawConfig={configParam}
+						devEnv={devEnv}
+						bindVectorizeToProd={args.experimentalVectorizeBindToProd}
+					/>
+				);
+			}
+
+			const devReactElement = render(await getDevReactElement(config));
+			rerender = devReactElement.rerender;
+
+			if (assetsOptions && !args.experimentalDevEnv) {
+				const debouncedRerender = debounce(async () => {
+					rerender(await getDevReactElement(config));
+				}, 100);
+
+				assetsWatcher = watch(assetsOptions.directory, {
+					persistent: true,
+					ignoreInitial: true,
+				}).on("all", async (eventName, filePath) => {
+					const message = getAssetChangeMessage(eventName, filePath);
+
+					logger.debug(`🌀 ${message}...`);
+					debouncedRerender();
+				});
+			}
+
+			return {
+				devReactElement,
+				configFileWatcher,
+				assetsWatcher,
+				stop: async () => {
+					devReactElement.unmount();
+					await Promise.allSettled([
+						configFileWatcher?.close(),
+						assetsWatcher?.close(),
+					]);
+				},
+			};
 		}
-
-		const devReactElement = render(await getDevReactElement(config));
-		rerender = devReactElement.rerender;
-
-		if (experimentalAssetsOptions && !args.experimentalDevEnv) {
-			assetsWatcher = watch(experimentalAssetsOptions.directory, {
-				persistent: true,
-				ignoreInitial: true,
-			}).on("all", async (eventName, filePath) => {
-				const message = getAssetChangeMessage(eventName, filePath);
-
-				logger.log(`🌀 ${message}...`);
-				rerender(await getDevReactElement(config));
-			});
-		}
-
-		return {
-			devReactElement,
-			configFileWatcher,
-			assetsWatcher,
-			stop: async () => {
-				devReactElement.unmount();
-				await Promise.allSettled([
-					configFileWatcher?.close(),
-					assetsWatcher?.close(),
-				]);
-			},
-		};
 	} catch (e) {
 		await Promise.allSettled([
 			configFileWatcher?.close(),
 			assetsWatcher?.close(),
+			devEnv.teardown(),
+			(async () => {
+				if (teardownRegistryPromise) {
+					const teardownRegistry = await teardownRegistryPromise;
+					await teardownRegistry(devEnv.config.latestConfig?.name);
+				}
+				unregisterHotKeys?.();
+			})(),
 		]);
 		throw e;
 	}
@@ -1054,7 +1096,8 @@ export async function startApiDev(args: StartDevOptions) {
 		additionalModules,
 	} = await validateDevServerSettings(args, config);
 
-	const nodejsCompatMode = getNodeCompatMode(
+	const nodejsCompatMode = validateNodeCompatMode(
+		args.compatibilityDate ?? config.compatibility_date,
 		args.compatibilityFlags ?? config.compatibility_flags,
 		{
 			nodeCompat: args.nodeCompat ?? config.node_compat,
@@ -1138,7 +1181,7 @@ export async function startApiDev(args: StartDevOptions) {
 				args.accountId ?? configParam.account_id ?? getAccountFromCache()?.id,
 			legacyAssetPaths: legacyAssetPaths,
 			legacyAssetsConfig: configParam.legacy_assets,
-			experimentalAssets: undefined,
+			assets: undefined,
 			//port can be 0, which means to use a random port
 			initialPort: args.port ?? configParam.dev.port ?? (await getLocalPort()),
 			initialIp: args.ip ?? configParam.dev.ip,
@@ -1174,6 +1217,7 @@ export async function startApiDev(args: StartDevOptions) {
 			rawArgs: args,
 			rawConfig: configParam,
 			devEnv,
+			bindVectorizeToProd: args.experimentalVectorizeBindToProd,
 		});
 	}
 
@@ -1219,13 +1263,13 @@ export function maskVars(
 
 export async function getHostAndRoutes(
 	args:
-		| Pick<StartDevOptions, "host" | "routes" | "experimentalAssets">
+		| Pick<StartDevOptions, "host" | "routes" | "assets">
 		| {
 				host?: string;
 				routes?: Extract<Trigger, { type: "route" }>[];
-				experimentalAssets?: string;
+				assets?: string;
 		  },
-	config: Pick<Config, "route" | "routes" | "experimental_assets"> & {
+	config: Pick<Config, "route" | "routes" | "assets"> & {
 		dev: Pick<Config["dev"], "host">;
 	}
 ) {
@@ -1248,10 +1292,7 @@ export async function getHostAndRoutes(
 		}
 	});
 	if (routes) {
-		validateRoutes(
-			routes,
-			Boolean(args.experimentalAssets || config.experimental_assets)
-		);
+		validateRoutes(routes, Boolean(args.assets || config.assets));
 	}
 	return { host, routes };
 }
@@ -1288,7 +1329,7 @@ export async function validateDevServerSettings(
 			legacyAssets: args.legacyAssets,
 			script: args.script,
 			moduleRoot: args.moduleRoot,
-			experimentalAssets: args.experimentalAssets,
+			assets: args.assets,
 		},
 		config,
 		"dev"
@@ -1385,10 +1426,13 @@ export function getResolvedBindings(
 
 	const maskedVars = maskVars(bindings, configParam);
 
-	printBindings({
-		...bindings,
-		vars: maskedVars,
-	});
+	printBindings(
+		{
+			...bindings,
+			vars: maskedVars,
+		},
+		{ local: !args.remote }
+	);
 
 	return bindings;
 }
@@ -1546,7 +1590,7 @@ export function getBindings(
 		}),
 	];
 
-	const bindings = {
+	const bindings: CfWorkerInit["bindings"] = {
 		// top-level fields
 		wasm_modules: configParam.wasm_modules,
 		text_blobs: configParam.text_blobs,
@@ -1565,6 +1609,7 @@ export function getBindings(
 		durable_objects: {
 			bindings: mergedDOBindings,
 		},
+		workflows: configParam.workflows,
 		kv_namespaces: mergedKVBindings,
 		queues: queuesBindings,
 		r2_buckets: mergedR2Bindings,
@@ -1584,8 +1629,8 @@ export function getBindings(
 		mtls_certificates: configParam.mtls_certificates,
 		pipelines: configParam.pipelines,
 		send_email: configParam.send_email,
-		experimental_assets: configParam.experimental_assets?.binding
-			? { binding: configParam.experimental_assets?.binding }
+		assets: configParam.assets?.binding
+			? { binding: configParam.assets?.binding }
 			: undefined,
 	};
 

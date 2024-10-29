@@ -15,10 +15,10 @@ import { logger } from "../logger";
 import { ensureQueuesExistByConfig } from "../queues/client";
 import { getWorkersDevSubdomain } from "../routes";
 import { getZoneForRoute } from "../zones";
+import type { AssetsOptions } from "../assets";
 import type { Config } from "../config";
 import type { Route } from "../config/environment";
 import type { RouteObject } from "../deploy/deploy";
-import type { ExperimentalAssetsOptions } from "../experimental-assets";
 
 type Props = {
 	config: Config;
@@ -30,7 +30,7 @@ type Props = {
 	legacyEnv: boolean | undefined;
 	dryRun: boolean | undefined;
 	experimentalVersions: boolean | undefined;
-	experimentalAssetsOptions: ExperimentalAssetsOptions | undefined;
+	assetsOptions: AssetsOptions | undefined;
 };
 
 export default async function triggersDeploy(
@@ -43,7 +43,7 @@ export default async function triggersDeploy(
 		props.routes ?? config.routes ?? (config.route ? [config.route] : []) ?? [];
 	const routesOnly: Array<Route> = [];
 	const customDomainsOnly: Array<RouteObject> = [];
-	validateRoutes(routes, Boolean(props.experimentalAssetsOptions));
+	validateRoutes(routes, Boolean(props.assetsOptions));
 	for (const route of routes) {
 		if (typeof route !== "string" && route.custom_domain) {
 			customDomainsOnly.push(route);
@@ -238,6 +238,25 @@ export default async function triggersDeploy(
 		const updateConsumers = await updateQueueConsumers(scriptName, config);
 
 		deployments.push(...updateConsumers);
+	}
+
+	if (config.workflows?.length) {
+		logger.warnOnce("Workflows is currently in open beta.");
+
+		for (const workflow of config.workflows) {
+			deployments.push(
+				fetchResult(`/accounts/${accountId}/workflows/${workflow.name}`, {
+					method: "PUT",
+					body: JSON.stringify({
+						script_name: scriptName,
+						class_name: workflow.class_name,
+					}),
+					headers: {
+						"Content-Type": "application/json",
+					},
+				}).then(() => [`workflow: ${workflow.name}`])
+			);
+		}
 	}
 
 	const targets = await Promise.all(deployments);

@@ -17,11 +17,18 @@ import type {
 import type { R2EventType } from "./helpers";
 
 export function ListOptions(yargs: CommonYargsArgv) {
-	return yargs.positional("bucket", {
-		describe: "The name of the R2 bucket to get event notification rules for",
-		type: "string",
-		demandOption: true,
-	});
+	return yargs
+		.positional("bucket", {
+			describe: "The name of the R2 bucket to get event notification rules for",
+			type: "string",
+			demandOption: true,
+		})
+		.option("jurisdiction", {
+			describe: "The jurisdiction where the bucket exists",
+			alias: "J",
+			requiresArg: true,
+			type: "string",
+		});
 }
 
 export async function ListHandler(
@@ -37,10 +44,12 @@ export async function ListHandler(
 	const config = readConfig(args.config, args);
 	const accountId = await requireAuth(config);
 	const apiCreds = requireApiToken();
+	const { bucket, jurisdiction = "" } = args;
 	const resp = await listEventNotificationConfig(
 		apiCreds,
 		accountId,
-		`${args.bucket}`
+		bucket,
+		jurisdiction
 	);
 	const tableOutput = await tableFromNotificationGetResponse(config, resp);
 	logger.log(tableOutput.map((x) => formatLabelledValues(x)).join("\n\n"));
@@ -79,6 +88,17 @@ export function CreateOptions(yargs: CommonYargsArgv) {
 			demandOption: true,
 			requiresArg: true,
 			type: "string",
+		})
+		.option("jurisdiction", {
+			describe: "The jurisdiction where the bucket exists",
+			alias: "J",
+			requiresArg: true,
+			type: "string",
+		})
+		.option("description", {
+			describe:
+				"A description that can be used to identify the event notification rule after creation",
+			type: "string",
 		});
 }
 
@@ -89,16 +109,26 @@ export async function CreateHandler(
 	const config = readConfig(args.config, args);
 	const accountId = await requireAuth(config);
 	const apiCreds = requireApiToken();
-	const { bucket, queue, eventTypes, prefix = "", suffix = "" } = args;
+	const {
+		bucket,
+		queue,
+		eventTypes,
+		prefix = "",
+		suffix = "",
+		jurisdiction = "",
+		description,
+	} = args;
 	await putEventNotificationConfig(
 		config,
 		apiCreds,
 		accountId,
 		bucket,
+		jurisdiction,
 		queue,
 		eventTypes as R2EventType[],
 		prefix,
-		suffix
+		suffix,
+		description
 	);
 	logger.log("Event notification rule created successfully!");
 }
@@ -122,6 +152,12 @@ export function DeleteOptions(yargs: CommonYargsArgv) {
 			describe: "The ID of the event notification rule to delete",
 			requiresArg: false,
 			type: "string",
+		})
+		.option("jurisdiction", {
+			describe: "The jurisdiction where the bucket exists",
+			alias: "J",
+			requiresArg: true,
+			type: "string",
 		});
 }
 
@@ -132,12 +168,13 @@ export async function DeleteHandler(
 	const config = readConfig(args.config, args);
 	const accountId = await requireAuth(config);
 	const apiCreds = requireApiToken();
-	const { bucket, queue, rule } = args;
+	const { bucket, queue, rule, jurisdiction = "" } = args;
 	await deleteEventNotificationConfig(
 		config,
 		apiCreds,
 		accountId,
 		bucket,
+		jurisdiction,
 		queue,
 		rule
 	);

@@ -189,16 +189,35 @@ describe("logger", () => {
 			expect(std.debug).toMatchInlineSnapshot(`""`);
 			expect(std.out).toMatchInlineSnapshot(`"This is a log message"`);
 			expect(std.warn).toMatchInlineSnapshot(`
-        "Unrecognised WRANGLER_LOG value \\"everything\\", expected \\"none\\" | \\"error\\" | \\"warn\\" | \\"info\\" | \\"log\\" | \\"debug\\", defaulting to \\"log\\"...
-        [33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThis is a warn message[0m
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mUnrecognised WRANGLER_LOG value \\"everything\\", expected \\"none\\" | \\"error\\" | \\"warn\\" | \\"info\\" | \\"log\\" | \\"debug\\", defaulting to \\"log\\"...[0m
 
-        "
-      `);
+
+				[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThis is a warn message[0m
+
+				"
+			`);
 			expect(std.err).toMatchInlineSnapshot(`
         "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mThis is a error message[0m
 
         "
       `);
+		});
+	});
+
+	describe("warnOnce", () => {
+		it("should only log the same message once", () => {
+			const logger = new Logger();
+			logger.warnOnce("This is a warnOnce message");
+			logger.warnOnce("This is a warnOnce message");
+			logger.warnOnce("This is a warnOnce message");
+			logger.warnOnce("This is a warnOnce message");
+			logger.warnOnce("This is a warnOnce message");
+
+			expect(std.warn).toMatchInlineSnapshot(`
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThis is a warnOnce message[0m
+
+				"
+			`);
 		});
 	});
 });

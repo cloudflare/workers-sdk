@@ -1,6 +1,6 @@
 {
 	"name": "@cloudflare/workers-shared",
-	"version": "0.5.3",
+	"version": "0.7.0",
 	"description": "Package that is used at Cloudflare to power some internal features of Cloudflare Workers.",
 	"keywords": [
 		"cloudflare",
@@ -37,7 +37,7 @@
 		"deploy:router-worker": "CLOUDFLARE_API_TOKEN=$WORKERS_DEPLOY_AND_CONFIG_CLOUDFLARE_API_TOKEN pnpx wrangler versions upload --experimental-versions -c router-worker/wrangler.toml",
 		"dev": "pnpm run clean && concurrently -n bundle:asset-worker,bundle:router-worker -c blue,magenta \"pnpm run bundle:asset-worker --watch\" \"pnpm run bundle:router-worker --watch\"",
 		"test": "vitest",
-		"test:ci": "pnpm run test",
+		"test:ci": "vitest run",
 		"types:emit": "tsc index.ts --declaration --emitDeclarationOnly --declarationDir ./dist"
 	},
 	"dependencies": {
@@ -47,13 +47,13 @@
 	"devDependencies": {
 		"@cloudflare/eslint-config-worker": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
-		"@cloudflare/workers-types": "^4.20240909.0",
+		"@cloudflare/workers-types": "^4.20241022.0",
 		"@types/mime": "^3.0.4",
 		"concurrently": "^8.2.2",
 		"esbuild": "0.17.19",
 		"rimraf": "^6.0.1",
 		"toucan-js": "^3.3.1",
-		"typescript": "^5.5.4",
+		"typescript": "catalog:default",
 		"vitest": "catalog:default"
 	},
 	"engines": {

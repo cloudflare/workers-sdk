@@ -620,7 +620,7 @@ export async function createRemoteWorkerInit(props: {
 		props.modules
 	);
 
-	const assets = await syncLegacyAssets(
+	const legacyAssets = await syncLegacyAssets(
 		props.accountId,
 		// When we're using the newer service environments, we wouldn't
 		// have added the env name on to the script name. However, we must
@@ -633,11 +633,11 @@ export async function createRemoteWorkerInit(props: {
 		undefined
 	); // TODO: cancellable?
 
-	if (assets.manifest) {
+	if (legacyAssets.manifest) {
 		modules.push({
 			name: "__STATIC_CONTENT_MANIFEST",
 			filePath: undefined,
-			content: JSON.stringify(assets.manifest),
+			content: JSON.stringify(legacyAssets.manifest),
 			type: "text",
 		});
 	}
@@ -654,13 +654,13 @@ export async function createRemoteWorkerInit(props: {
 		bindings: {
 			...props.bindings,
 			kv_namespaces: (props.bindings.kv_namespaces || []).concat(
-				assets.namespace
-					? { binding: "__STATIC_CONTENT", id: assets.namespace }
+				legacyAssets.namespace
+					? { binding: "__STATIC_CONTENT", id: legacyAssets.namespace }
 					: []
 			),
 			text_blobs: {
 				...props.bindings.text_blobs,
-				...(assets.manifest &&
+				...(legacyAssets.manifest &&
 					props.format === "service-worker" && {
 						__STATIC_CONTENT_MANIFEST: "__STATIC_CONTENT_MANIFEST",
 					}),
@@ -676,7 +676,7 @@ export async function createRemoteWorkerInit(props: {
 		placement: undefined, // no placement in dev
 		tail_consumers: undefined, // no tail consumers in dev - TODO revisit?
 		limits: undefined, // no limits in preview - not supported yet but can be added
-		experimental_assets: undefined, // no remote mode for assets
+		assets: undefined, // no remote mode for assets
 		observability: undefined, // no observability in dev
 	};
 
@@ -685,11 +685,11 @@ export async function createRemoteWorkerInit(props: {
 
 export async function getWorkerAccountAndContext(props: {
 	accountId: string;
-	env?: string;
-	legacyEnv?: boolean;
-	host?: string;
+	env: string | undefined;
+	legacyEnv: boolean | undefined;
+	host: string | undefined;
 	routes: Route[] | undefined;
-	sendMetrics?: boolean;
+	sendMetrics: boolean | undefined;
 }): Promise<{ workerAccount: CfAccount; workerContext: CfWorkerContext }> {
 	const workerAccount: CfAccount = {
 		accountId: props.accountId,

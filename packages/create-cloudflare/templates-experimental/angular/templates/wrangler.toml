@@ -1,5 +1,11 @@
 #:schema node_modules/wrangler/config-schema.json
 name = "<TBD>"
 compatibility_date = "<TBD>"
-main = "./dist/cloudflare/_worker.js"
-experimental_assets = { directory = "./dist/cloudflare", binding = "ASSETS" }
+main = "./dist/server/server.mjs"
+assets = { directory = "./dist/browser", binding = "ASSETS" }
+
+# Workers Logs
+# Docs: https://developers.cloudflare.com/workers/observability/logs/workers-logs/
+# Configuration: https://developers.cloudflare.com/workers/observability/logs/workers-logs/#enable-workers-logs
+[observability]
+enabled = true

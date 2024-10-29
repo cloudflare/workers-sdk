@@ -42,6 +42,7 @@ describe("traverse module graph", () => {
 				directory: process.cwd(),
 				format: "modules",
 				moduleRoot: process.cwd(),
+				exports: [],
 			},
 			[]
 		);
@@ -77,6 +78,7 @@ describe("traverse module graph", () => {
 				directory: process.cwd(),
 				format: "modules",
 				moduleRoot: process.cwd(),
+				exports: [],
 			},
 			[{ type: type as ConfigModuleRuleType, globs: ["**/*.js"] }]
 		);
@@ -111,6 +113,7 @@ describe("traverse module graph", () => {
 				format: "modules",
 				// The default module root is dirname(file)
 				moduleRoot: path.join(process.cwd(), "./src/nested"),
+				exports: [],
 			},
 			[{ type: "ESModule", globs: ["**/*.js"] }]
 		);
@@ -145,6 +148,7 @@ describe("traverse module graph", () => {
 				format: "modules",
 				// The default module root is dirname(file)
 				moduleRoot: path.join(process.cwd(), "./src"),
+				exports: [],
 			},
 			[{ type: "ESModule", globs: ["**/*.js"] }]
 		);
@@ -179,6 +183,7 @@ describe("traverse module graph", () => {
 				format: "modules",
 				// The default module root is dirname(file)
 				moduleRoot: path.join(process.cwd(), "./src"),
+				exports: [],
 			},
 			[{ type: "ESModule", globs: ["**/*.mjs"] }]
 		);
@@ -213,6 +218,7 @@ describe("traverse module graph", () => {
 				format: "modules",
 				// The default module root is dirname(file)
 				moduleRoot: path.join(process.cwd(), "./src"),
+				exports: [],
 			},
 			[]
 		);
@@ -247,6 +253,7 @@ describe("traverse module graph", () => {
 					format: "modules",
 					// The default module root is dirname(file)
 					moduleRoot: path.join(process.cwd(), "./src"),
+					exports: [],
 				},
 				[
 					{ type: "Text", globs: ["**/*.txt"] },

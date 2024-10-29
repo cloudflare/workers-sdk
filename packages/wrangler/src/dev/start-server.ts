@@ -37,14 +37,17 @@ import { startRemoteServer } from "./remote";
 import { validateDevProps } from "./validate-dev-props";
 import type { ProxyData, StartDevWorkerInput, Trigger } from "../api";
 import type { Config } from "../config";
-import type { DurableObjectBindings } from "../config/environment";
+import type {
+	DurableObjectBindings,
+	WorkflowBinding,
+} from "../config/environment";
 import type { Entry } from "../deployment-bundle/entry";
-import type { NodeJSCompatMode } from "../deployment-bundle/node-compat";
 import type { CfModule } from "../deployment-bundle/worker";
 import type { WorkerRegistry } from "../dev-registry";
 import type { DevProps } from "./dev";
 import type { LocalProps } from "./local";
 import type { EsbuildBundle } from "./use-esbuild";
+import type { NodeJSCompatMode } from "miniflare";
 
 export async function startDevServer(
 	props: DevProps & {
@@ -147,6 +150,7 @@ export async function startDevServer(
 			persist: props.localPersistencePath ?? undefined,
 			testScheduled: props.testScheduled,
 			registry: workerDefinitions,
+			bindVectorizeToProd: props.bindVectorizeToProd,
 		},
 		build: {
 			bundle: !props.noBundle,
@@ -244,6 +248,7 @@ export async function startDevServer(
 		testScheduled: props.testScheduled,
 		local: props.local,
 		doBindings: props.bindings.durable_objects?.bindings ?? [],
+		workflowBindings: props.bindings.workflows ?? [],
 		mockAnalyticsEngineDatasets: props.bindings.analytics_engine_datasets ?? [],
 		projectRoot: props.projectRoot,
 		defineNavigatorUserAgent: isNavigatorDefined(
@@ -268,7 +273,7 @@ export async function startDevServer(
 			bindings: props.bindings,
 			migrations: props.migrations,
 			legacyAssetPaths: props.legacyAssetPaths,
-			experimentalAssets: props.experimentalAssets,
+			assets: props.assets,
 			initialPort: undefined, // hard-code for userworker, DevEnv-ProxyWorker now uses this prop value
 			initialIp: "127.0.0.1", // hard-code for userworker, DevEnv-ProxyWorker now uses this prop value
 			rules: props.rules,
@@ -317,6 +322,7 @@ export async function startDevServer(
 			sourceMapPath: bundle?.sourceMapPath,
 			services: props.bindings.services,
 			experimentalDevEnv: props.experimentalDevEnv,
+			bindVectorizeToProd: props.bindVectorizeToProd,
 		});
 
 		return {
@@ -418,6 +424,7 @@ async function runEsbuild({
 	testScheduled,
 	local,
 	doBindings,
+	workflowBindings,
 	mockAnalyticsEngineDatasets,
 	projectRoot,
 	defineNavigatorUserAgent,
@@ -441,6 +448,7 @@ async function runEsbuild({
 	testScheduled?: boolean;
 	local: boolean;
 	doBindings: DurableObjectBindings;
+	workflowBindings: WorkflowBinding[];
 	mockAnalyticsEngineDatasets: Config["analytics_engine_datasets"];
 	projectRoot: string | undefined;
 	defineNavigatorUserAgent: boolean;
@@ -488,6 +496,7 @@ async function runEsbuild({
 					local,
 					testScheduled,
 					doBindings,
+					workflowBindings,
 					projectRoot,
 					defineNavigatorUserAgent,
 				})

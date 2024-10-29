@@ -4,7 +4,7 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-import workersTypes from "raw:@cloudflare/workers-types/experimental/index.d.ts";
+import workersTypes from "raw:workers-types";
 import {
 	Disposable,
 	EventEmitter,

@@ -48,6 +48,7 @@ export async function listR2Buckets(
 export async function createR2Bucket(
 	accountId: string,
 	bucketName: string,
+	location?: string,
 	jurisdiction?: string,
 	storageClass?: string
 ): Promise<void> {
@@ -60,6 +61,7 @@ export async function createR2Bucket(
 		body: JSON.stringify({
 			name: bucketName,
 			...(storageClass !== undefined && { storageClass }),
+			...(location !== undefined && { locationHint: location }),
 		}),
 		headers,
 	});
@@ -379,6 +381,7 @@ type NotificationRule = {
 	prefix?: string;
 	suffix?: string;
 	actions: R2EventableOperation[];
+	description?: string;
 };
 type GetNotificationRule = {
 	ruleId: string;
@@ -423,7 +426,8 @@ export type DeleteNotificationRequestBody = {
 };
 
 export function eventNotificationHeaders(
-	apiCredentials: ApiCredentials
+	apiCredentials: ApiCredentials,
+	jurisdiction: string
 ): HeadersInit {
 	const headers: HeadersInit = {
 		"Content-Type": "application/json",
@@ -434,6 +438,9 @@ export function eventNotificationHeaders(
 	} else {
 		headers["X-Auth-Key"] = apiCredentials.authKey;
 		headers["X-Auth-Email"] = apiCredentials.authEmail;
+	}
+	if (jurisdiction !== "") {
+		headers["cf-r2-jurisdiction"] = jurisdiction;
 	}
 	return headers;
 }
@@ -486,9 +493,10 @@ export async function tableFromNotificationGetResponse(
 export async function listEventNotificationConfig(
 	apiCredentials: ApiCredentials,
 	accountId: string,
-	bucketName: string
+	bucketName: string,
+	jurisdiction: string
 ): Promise<GetNotificationConfigResponse> {
-	const headers = eventNotificationHeaders(apiCredentials);
+	const headers = eventNotificationHeaders(apiCredentials, jurisdiction);
 	logger.log(`Fetching notification rules for bucket ${bucketName}...`);
 	const res = await fetchResult<GetNotificationConfigResponse>(
 		`/accounts/${accountId}/event_notifications/r2/${bucketName}/configuration`,
@@ -541,22 +549,29 @@ export async function putEventNotificationConfig(
 	apiCredentials: ApiCredentials,
 	accountId: string,
 	bucketName: string,
+	jurisdiction: string,
 	queueName: string,
 	eventTypes: R2EventType[],
 	prefix?: string,
-	suffix?: string
+	suffix?: string,
+	description?: string
 ): Promise<void> {
 	const queue = await getQueue(config, queueName);
-	const headers = eventNotificationHeaders(apiCredentials);
+	const headers = eventNotificationHeaders(apiCredentials, jurisdiction);
 	let actions: R2EventableOperation[] = [];
 
 	for (const et of eventTypes) {
 		actions = actions.concat(actionsForEventCategories[et]);
 	}
 
-	const body: PutNotificationRequestBody = {
-		rules: [{ prefix, suffix, actions }],
-	};
+	const body: PutNotificationRequestBody =
+		description === undefined
+			? {
+					rules: [{ prefix, suffix, actions }],
+				}
+			: {
+					rules: [{ prefix, suffix, actions, description }],
+				};
 	const ruleFor = eventTypes.map((et) =>
 		et === "object-create" ? "creation" : "deletion"
 	);
@@ -576,11 +591,12 @@ export async function deleteEventNotificationConfig(
 	apiCredentials: ApiCredentials,
 	accountId: string,
 	bucketName: string,
+	jurisdiction: string,
 	queueName: string,
 	ruleId: string | undefined
 ): Promise<null> {
 	const queue = await getQueue(config, queueName);
-	const headers = eventNotificationHeaders(apiCredentials);
+	const headers = eventNotificationHeaders(apiCredentials, jurisdiction);
 	if (ruleId !== undefined) {
 		logger.log(`Deleting event notifications rule "${ruleId}"...`);
 		const body: DeleteNotificationRequestBody =

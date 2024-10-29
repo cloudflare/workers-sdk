@@ -8,7 +8,7 @@ import {
 	getBatchFromFile,
 	VECTORIZE_MAX_BATCH_SIZE,
 	VECTORIZE_MAX_UPSERT_VECTOR_RECORDS,
-	vectorizeBetaWarning,
+	vectorizeGABanner,
 } from "./common";
 import type {
 	CommonYargsArgv,
@@ -41,7 +41,7 @@ export function options(yargs: CommonYargsArgv) {
 				default: false,
 			},
 		})
-		.epilogue(vectorizeBetaWarning);
+		.epilogue(vectorizeGABanner);
 }
 
 export async function handler(

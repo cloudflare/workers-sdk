@@ -9,8 +9,8 @@ import { WranglerE2ETestHelper } from "./helpers/e2e-wrangler-test";
 import { generateResourceName } from "./helpers/generate-resource-name";
 
 const RUNTIMES = [
-	{ flags: "", runtime: "local" },
-	{ flags: "--remote", runtime: "remote" },
+	{ flags: "--no-x-dev-env", runtime: "local" },
+	{ flags: "--remote --no-x-dev-env", runtime: "remote" },
 	{ flags: "--x-dev-env", runtime: "local" },
 	{ flags: "--remote --x-dev-env", runtime: "remote" },
 ] as const;
@@ -479,20 +479,86 @@ describe.sequential.each(RUNTIMES)("Bindings: $flags", ({ runtime, flags }) => {
 			`,
 		});
 
-		// D1 defaults to `--local`, so we deliberately use `flags`, not `resourceFlags`
-		await helper.run(
+		const result = await helper.run(
 			`wrangler d1 execute ${d1ResourceFlags} DB --file schema.sql`
 		);
-
+		// D1 defaults to `--local`, so we deliberately use `flags`, not `resourceFlags`
 		const worker = helper.runLongLived(`wrangler dev ${flags}`);
 		const { url } = await worker.waitForReady();
 		const res = await fetch(url);
 		expect(await res.json()).toEqual([{ key: "key1", value: "value1" }]);
+		if (isLocal) {
+			expect(result.stdout).toContain("🚣 2 commands executed successfully.");
+		}
 
-		const result = await helper.run(
+		const result2 = await helper.run(
 			`wrangler d1 execute ${d1ResourceFlags} DB --command "SELECT * FROM entries WHERE key = 'key2'"`
 		);
-		expect(result.stdout).toContain("value2");
+		expect(result2.stdout).toContain("value2");
+		if (isLocal) {
+			expect(result2.stdout).toContain("🚣 1 command executed successfully.");
+		}
+	});
+
+	it("exposes Vectorize bindings", async () => {
+		const name = await helper.vectorize(32, "euclidean");
+
+		await helper.seed({
+			"wrangler.toml": dedent`
+				name = "${workerName}"
+				main = "src/index.ts"
+				compatibility_date = "2024-08-01"
+				[[vectorize]]
+				binding = "VECTORIZE"
+				index_name = "${name}"
+				`,
+			"src/index.ts": dedent`
+				export interface Env {
+					VECTORIZE: Vectorize;
+				}
+
+				async function waitForMutation(env: Env, mutationId: string) {
+					while((await env.VECTORIZE.describe()).processedUpToMutation != mutationId) {
+						await new Promise(resolve => setTimeout(resolve, 2000));
+					}
+				}
+
+				export default {
+					async fetch(request: Request, env: Env, ctx: any) {
+						await waitForMutation(env, (await env.VECTORIZE.insert([{"id":"a44706aa-a366-48bc-8cc1-3feffd87d548","values":[0.2321,0.8121,0.6315,0.6151,0.4121,0.1512,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"metadata":{"text":"Peter Piper picked a peck of pickled peppers"}}])).mutationId);
+						await waitForMutation(env, (await env.VECTORIZE.insert([{"id":"b0daca4a-ffd8-4865-926b-e24800af2a2d","values":[0.2331,1.0125,0.6131,0.9421,0.9661,0.8121,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"metadata":{"text":"She sells seashells by the sea"}}])).mutationId);
+						await waitForMutation(env, (await env.VECTORIZE.upsert([{"id":"b0daca4a-ffd8-4865-926b-e24800af2a2d","values":[0.2331,1.0125,0.6131,0.9421,0.9661,0.8121,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"metadata":{"text":"She sells seashells by the seashore"}}])).mutationId);
+
+						let response = "";
+						response += JSON.stringify(await env.VECTORIZE.getByIds(["a44706aa-a366-48bc-8cc1-3feffd87d548"]));
+
+						const queryVector: Array<number> = [
+							0.13, 0.25, 0.44, 0.53, 0.62, 0.41, 0.59, 0.68, 0.29, 0.82, 0.37, 0.5,
+							0.74, 0.46, 0.57, 0.64, 0.28, 0.61, 0.73, 0.35, 0.78, 0.58, 0.42, 0.32,
+							0.77, 0.65, 0.49, 0.54, 0.31, 0.29, 0.71, 0.57,
+						]; // vector of dimension 32
+						const matches = await env.VECTORIZE.query(queryVector, {
+							topK: 3,
+							returnValues: true,
+							returnMetadata: "all",
+						});
+						response += " " + matches.count;
+
+						return new Response(response);
+					}
+				}
+				`,
+		});
+
+		const worker = helper.runLongLived(
+			`wrangler dev ${flags} --experimental-vectorize-bind-to-prod`
+		);
+		const { url } = await worker.waitForReady();
+		const res = await fetch(url);
+
+		await expect(res.text()).resolves.toBe(
+			`[{"id":"a44706aa-a366-48bc-8cc1-3feffd87d548","namespace":null,"metadata":{"text":"Peter Piper picked a peck of pickled peppers"},"values":[0.2321,0.8121,0.6315,0.6151,0.4121,0.1512,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]}] 2`
+		);
 	});
 
 	it.skipIf(!isLocal)("exposes queue producer/consumer bindings", async () => {
@@ -528,12 +594,52 @@ describe.sequential.each(RUNTIMES)("Bindings: $flags", ({ runtime, flags }) => {
 		await worker.readUntil(/✉️/);
 	});
 
+	// TODO: enable for remove dev once realish preview supports it
+	// TODO: enable for local dev once implemented
+	it.skip("exposes Workflow bindings", async () => {
+		await helper.seed({
+			"wrangler.toml": dedent`
+                name = "my-workflow-demo"
+                main = "src/index.ts"
+                compatibility_date = "2024-10-11"
+
+                [[workflows]]
+                binding = "WORKFLOW"
+                name = "my-workflow"
+                class_name = "Demo"
+            `,
+			"src/index.ts": dedent`
+                import { WorkflowEntrypoint } from "cloudflare:workers";
+
+                export default {
+                    async fetch(request, env, ctx) {
+                        if (env.WORKFLOW === undefined) {
+                            return new Response("env.WORKFLOW is undefined");
+                        }
+
+                        return new Response("env.WORKFLOW is available");
+                    }
+                }
+
+                export class Demo extends WorkflowEntrypoint {
+                    run() {
+                        // blank
+                    }
+                }
+            `,
+		});
+		const worker = helper.runLongLived(`wrangler dev ${flags}`);
+		const { url } = await worker.waitForReady();
+		const res = await fetch(url);
+
+		await expect(res.text()).resolves.toBe("env.WORKFLOW is available");
+	});
+
 	// TODO(soon): implement E2E tests for other bindings
 	it.todo("exposes hyperdrive bindings");
 	it.skipIf(isLocal).todo("exposes send email bindings");
 	it.skipIf(isLocal).todo("exposes browser bindings");
 	it.skipIf(isLocal).todo("exposes Workers AI bindings");
-	it.skipIf(isLocal).todo("exposes Vectorize bindings");
 	it.skipIf(isLocal).todo("exposes Analytics Engine bindings");
 	it.skipIf(isLocal).todo("exposes dispatch namespace bindings");
 	it.skipIf(isLocal).todo("exposes mTLS bindings");

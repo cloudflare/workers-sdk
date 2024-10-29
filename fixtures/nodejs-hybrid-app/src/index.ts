@@ -16,26 +16,62 @@ export default {
 		ctx: ExecutionContext
 	): Promise<Response> {
 		const url = new URL(request.url);
-		if (url.pathname === "/test-random") {
-			return testGetRandomValues();
-		}
 
-		if (url.pathname === "/test-process") {
-			return testProcessBehaviour();
-		}
-
-		if (url.pathname === "/query") {
-			return testPostgresLibrary(env, ctx);
+		switch (url.pathname) {
+			case "/test-random":
+				return testGetRandomValues();
+			case "/test-process":
+				return testProcessBehaviour();
+			case "/query":
+				return testPostgresLibrary(env, ctx);
+			case "/test-x509-certificate":
+				return testX509Certificate();
+			case "/test-require-alias":
+				return testRequireUenvAliasedPackages();
 		}
 
 		return new Response(
 			'<a href="query">Postgres query</a> | ' +
 				'<a href="test-process">Test process global</a> | ' +
-				'<a href="test-random">Test getRandomValues()</a> | ',
+				'<a href="test-random">Test getRandomValues()</a> | ' +
+				'<a href="test-x509-certificate">Test X509Certificate</a>' +
+				'<a href="test-require-alias">Test require unenv aliased packages</a>',
 			{ headers: { "Content-Type": "text/html; charset=utf-8" } }
 		);
 	},
 };
+
+function testRequireUenvAliasedPackages() {
+	const fetch = require("cross-fetch");
+	const supportsDefaultExports = typeof fetch === "function";
+	const supportsNamedExports = typeof fetch.Headers === "function";
+	return new Response(
+		supportsDefaultExports && supportsNamedExports ? `"OK!"` : `"KO!"`
+	);
+}
+
+function testX509Certificate() {
+	try {
+		new nodeCrypto.X509Certificate(`-----BEGIN CERTIFICATE-----
+MIICZjCCAc+gAwIBAgIUOsv8Y+x40C+gdNuu40N50KpGUhEwDQYJKoZIhvcNAQEL
+BQAwRTELMAkGA1UEBhMCQVUxEzARBgNVBAgMClNvbWUtU3RhdGUxITAfBgNVBAoM
+GEludGVybmV0IFdpZGdpdHMgUHR5IEx0ZDAeFw0yNDA5MjAwOTA4MTNaFw0yNTA5
+MjAwOTA4MTNaMEUxCzAJBgNVBAYTAkFVMRMwEQYDVQQIDApTb21lLVN0YXRlMSEw
+HwYDVQQKDBhJbnRlcm5ldCBXaWRnaXRzIFB0eSBMdGQwgZ8wDQYJKoZIhvcNAQEB
+BQADgY0AMIGJAoGBALpJn3dUrNmZhZV02RbjZKTd5j3hpgTncF4lG4Y3sQA18k0l
+7pt6xpZuXYSFH7v2zTAxYy+uYyYwX2NZur48dZc76FSzIeuQdoTCkT0NacwFRTR5
+fEEqPvvB85ozYuyk8Bl3vSsonivOH3WftEDp9mjkHROQzS4wAZbIj7Cp+is/AgMB
+AAGjUzBRMB0GA1UdDgQWBBSzFJSiPAw2tJOg8oUXrFBdqWI6zDAfBgNVHSMEGDAW
+gBSzFJSiPAw2tJOg8oUXrFBdqWI6zDAPBgNVHRMBAf8EBTADAQH/MA0GCSqGSIb3
+DQEBCwUAA4GBACbto0+Ds40F7faRFFMwg5nPyh7gsiX+ZK3FYcrO3oxh5ejfzwow
+DKOOje4Ncaw0rIkVpxacPyjg+wANuK2Nv/Z4CVAD3mneE4gwgRdn38q8IYN9AtSv
+GzEf4UxiLBbUB6WRBgyVyquGfUMlKl/tnm4q0yeYQloYKSoHpGeHVJuN
+-----END CERTIFICATE-----`);
+		return new Response(`"OK!"`);
+	} catch {
+		return new Response(`"KO!"`);
+	}
+}
 
 function testGetRandomValues() {
 	assert(

@@ -6,6 +6,7 @@ import { registerWorker } from "../dev-registry";
 import { logger } from "../logger";
 import { DEFAULT_WORKER_NAME, MiniflareServer } from "./miniflare";
 import type { ProxyData } from "../api";
+import type { AssetsOptions } from "../assets";
 import type { Config } from "../config";
 import type {
 	CfDurableObject,
@@ -16,7 +17,6 @@ import type {
 	WorkerEntrypointsDefinition,
 	WorkerRegistry,
 } from "../dev-registry";
-import type { ExperimentalAssetsOptions } from "../experimental-assets";
 import type { EnablePagesAssetsServiceBindingOptions } from "../miniflare-cli/types";
 import type { LegacyAssetPaths } from "../sites";
 import type { ConfigBundle } from "./miniflare";
@@ -33,7 +33,7 @@ export interface LocalProps {
 	migrations: Config["migrations"] | undefined;
 	workerDefinitions: WorkerRegistry | undefined;
 	legacyAssetPaths: LegacyAssetPaths | undefined;
-	experimentalAssets: ExperimentalAssetsOptions | undefined;
+	assets: AssetsOptions | undefined;
 	initialPort: number | undefined;
 	initialIp: string;
 	rules: Config["rules"];
@@ -56,6 +56,7 @@ export interface LocalProps {
 	testScheduled?: boolean;
 	sourceMapPath: string | undefined;
 	services: Config["services"] | undefined;
+	bindVectorizeToProd: boolean;
 }
 
 // TODO(soon): we should be able to remove this function when we fully migrate
@@ -94,7 +95,7 @@ export async function localPropsToConfigBundle(
 		migrations: props.migrations,
 		workerDefinitions: props.workerDefinitions,
 		legacyAssetPaths: props.legacyAssetPaths,
-		experimentalAssets: props.experimentalAssets,
+		assets: props.assets,
 		initialPort: props.initialPort,
 		initialIp: props.initialIp,
 		rules: props.rules,
@@ -110,6 +111,7 @@ export async function localPropsToConfigBundle(
 		inspect: props.inspect,
 		services: props.services,
 		serviceBindings,
+		bindVectorizeToProd: props.bindVectorizeToProd,
 	};
 }
 

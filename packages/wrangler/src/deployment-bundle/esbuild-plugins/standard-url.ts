@@ -4,7 +4,7 @@ import type { Plugin } from "esbuild";
  * An esbuild plugin that will export URL from the url polyfill
  */
 export const standardURLPlugin: () => Plugin = () => ({
-	name: "standard URL plugin",
+	name: "standard-URL",
 	setup(pluginBuild) {
 		pluginBuild.onResolve({ filter: /^node:url$|^url$/ }, ({ importer }) => {
 			if (importer === "standard-url-plugin") {

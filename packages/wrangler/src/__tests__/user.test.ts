@@ -9,7 +9,7 @@ import {
 	requireAuth,
 	writeAuthConfigFile,
 } from "../user";
-import { mockConsoleMethods, normalizeSlashes } from "./helpers/mock-console";
+import { mockConsoleMethods } from "./helpers/mock-console";
 import { useMockIsTTY } from "./helpers/mock-istty";
 import {
 	mockExchangeRefreshTokenForAccessToken,
@@ -20,6 +20,7 @@ import {
 	mswSuccessOauthHandlers,
 	mswSuccessUserHandlers,
 } from "./helpers/msw";
+import { normalizeString } from "./helpers/normalize";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import type { Config } from "../config";
@@ -109,8 +110,8 @@ describe("User", () => {
 				Successfully logged in."
 			`);
 
-			expect(normalizeSlashes(getAuthConfigFilePath())).toBe(
-				normalizeSlashes(`${getGlobalWranglerConfigPath()}/config/staging.toml`)
+			expect(normalizeString(getAuthConfigFilePath())).toBe(
+				normalizeString(`${getGlobalWranglerConfigPath()}/config/staging.toml`)
 			);
 			expect(readAuthConfigFile()).toEqual<UserAuthConfig>({
 				api_token: undefined,
@@ -174,8 +175,8 @@ describe("User", () => {
 			refresh_token: "Order 66",
 		});
 
-		expect(normalizeSlashes(getAuthConfigFilePath())).toBe(
-			normalizeSlashes(`${getGlobalWranglerConfigPath()}/config/staging.toml`)
+		expect(normalizeString(getAuthConfigFilePath())).toBe(
+			normalizeString(`${getGlobalWranglerConfigPath()}/config/staging.toml`)
 		);
 	});
 });

@@ -7,7 +7,7 @@ import { sync as resolveSync } from "resolve";
 import { exports as resolveExports } from "resolve.exports";
 import { UserError } from "../errors";
 import { logger } from "../logger";
-import { BUILD_CONDITIONS } from "./bundle";
+import { getBuildConditions } from "./bundle";
 import {
 	findAdditionalModules,
 	findAdditionalModuleWatchDirs,
@@ -309,7 +309,7 @@ export function createModuleCollector(props: {
 											packageJson,
 											args.path.replace(`${packageName}/`, ""),
 											{
-												conditions: BUILD_CONDITIONS,
+												conditions: getBuildConditions(),
 											}
 										);
 										if (testResolved) {

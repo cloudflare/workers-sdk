@@ -17,9 +17,9 @@ import {
 import type { Config } from "../config";
 import type { SourceMapMetadata } from "../deployment-bundle/bundle";
 import type { Entry } from "../deployment-bundle/entry";
-import type { NodeJSCompatMode } from "../deployment-bundle/node-compat";
 import type { CfModule, CfModuleType } from "../deployment-bundle/worker";
 import type { Metafile } from "esbuild";
+import type { NodeJSCompatMode } from "miniflare";
 
 export type EsbuildBundle = {
 	id: number;
@@ -51,6 +51,7 @@ export type EsbuildBundleProps = {
 	noBundle: boolean;
 	findAdditionalModules: boolean | undefined;
 	durableObjects: Config["durable_objects"];
+	workflows: Config["workflows"];
 	mockAnalyticsEngineDatasets: Config["analytics_engine_datasets"];
 	local: boolean;
 	targetConsumer: "dev" | "deploy";
@@ -81,6 +82,7 @@ export function runBuild(
 		findAdditionalModules,
 		mockAnalyticsEngineDatasets,
 		durableObjects,
+		workflows,
 		local,
 		targetConsumer,
 		testScheduled,
@@ -105,6 +107,7 @@ export function runBuild(
 		noBundle: boolean;
 		findAdditionalModules: boolean | undefined;
 		durableObjects: Config["durable_objects"];
+		workflows: Config["workflows"];
 		mockAnalyticsEngineDatasets: Config["analytics_engine_datasets"];
 		local: boolean;
 		targetConsumer: "dev" | "deploy";
@@ -183,6 +186,7 @@ export function runBuild(
 						minify,
 						nodejsCompatMode,
 						doBindings: durableObjects.bindings,
+						workflowBindings: workflows,
 						alias,
 						define,
 						checkFetch: true,
@@ -270,6 +274,7 @@ export function useEsbuild({
 	findAdditionalModules,
 	mockAnalyticsEngineDatasets,
 	durableObjects,
+	workflows,
 	local,
 	targetConsumer,
 	testScheduled,
@@ -300,6 +305,7 @@ export function useEsbuild({
 				noBundle,
 				findAdditionalModules,
 				durableObjects,
+				workflows,
 				mockAnalyticsEngineDatasets,
 				local,
 				targetConsumer,
@@ -335,6 +341,7 @@ export function useEsbuild({
 		legacyAssets,
 		mockAnalyticsEngineDatasets,
 		durableObjects,
+		workflows,
 		local,
 		targetConsumer,
 		testScheduled,

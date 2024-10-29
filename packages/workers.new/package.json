@@ -7,14 +7,14 @@
 		"deploy": "CLOUDFLARE_ACCOUNT_ID=$WORKERS_NEW_CLOUDFLARE_ACCOUNT_ID CLOUDFLARE_API_TOKEN=$WORKERS_NEW_CLOUDFLARE_API_TOKEN wrangler deploy",
 		"dev": "wrangler dev",
 		"test": "vitest -c tests/vitest.config.mts",
-		"test:ci": "vitest -c tests/vitest.config.mts"
+		"test:ci": "vitest run -c tests/vitest.config.mts"
 	},
 	"devDependencies": {
 		"@cloudflare/vitest-pool-workers": "workspace:*",
-		"@cloudflare/workers-types": "^4.20240909.0",
-		"@types/node": "20.8.3",
+		"@cloudflare/workers-types": "^4.20241022.0",
+		"@types/node": "catalog:default",
 		"miniflare": "workspace:*",
-		"typescript": "^5.5.2",
+		"typescript": "catalog:default",
 		"vitest": "catalog:default",
 		"wrangler": "workspace:*"
 	},

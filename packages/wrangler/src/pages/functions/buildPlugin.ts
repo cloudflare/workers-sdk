@@ -31,6 +31,7 @@ export function buildPluginFromFunctions({
 		directory: functionsDirectory,
 		format: "modules",
 		moduleRoot: functionsDirectory,
+		exports: [],
 	};
 	const moduleCollector = createModuleCollector({
 		entry,
@@ -52,6 +53,7 @@ export function buildPluginFromFunctions({
 		define: {},
 		alias: {},
 		doBindings: [], // Pages functions don't support internal Durable Objects
+		workflowBindings: [], // Pages functions don't support internal Workflows
 		external,
 		plugins: [
 			buildNotifierPlugin(onEnd),
@@ -109,7 +111,6 @@ export function buildPluginFromFunctions({
 		// TODO: mock AE datasets in Pages functions for dev
 		mockAnalyticsEngineDatasets: [],
 		targetConsumer: local ? "dev" : "deploy",
-		forPages: true,
 		local,
 		projectRoot: getPagesProjectRoot(),
 		defineNavigatorUserAgent,

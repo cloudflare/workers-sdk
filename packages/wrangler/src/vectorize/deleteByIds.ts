@@ -1,7 +1,7 @@
 import { readConfig } from "../config";
 import { logger } from "../logger";
 import { deleteByIds } from "./client";
-import { vectorizeBetaWarning } from "./common";
+import { vectorizeGABanner } from "./common";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
@@ -24,7 +24,7 @@ export function options(yargs: CommonYargsArgv) {
 				coerce: (arg: unknown[]) => arg.map((a) => a?.toString() ?? ""),
 			},
 		})
-		.epilogue(vectorizeBetaWarning);
+		.epilogue(vectorizeGABanner);
 }
 
 export async function handler(

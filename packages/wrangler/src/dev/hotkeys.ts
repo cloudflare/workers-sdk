@@ -55,7 +55,6 @@ export default function registerDevHotKeys(
 			keys: ["x", "q", "ctrl+c"],
 			label: "to exit",
 			handler: async () => {
-				unregisterHotKeys();
 				await devEnv.teardown();
 			},
 		},

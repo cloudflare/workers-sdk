@@ -5,13 +5,14 @@ import TOML from "@iarna/toml";
 import { execa } from "execa";
 import { findUp } from "find-up";
 import { version as wranglerVersion } from "../package.json";
+import { assertNever } from "./api/startDevWorker/utils";
 import { fetchResult } from "./cfetch";
 import { fetchWorker } from "./cfetch/internal";
 import { readConfig } from "./config";
 import { getDatabaseInfoFromId } from "./d1/utils";
 import { confirm, select } from "./dialogs";
 import { getC3CommandFromEnv } from "./environment-variables/misc-variables";
-import { UserError } from "./errors";
+import { CommandLineArgsError, FatalError, UserError } from "./errors";
 import { getGitVersioon, initializeGit, isInsideGitRepo } from "./git-client";
 import { logger } from "./logger";
 import { getPackageManager } from "./package-manager";
@@ -20,7 +21,7 @@ import { getBasePath } from "./paths";
 import { requireAuth } from "./user";
 import { createBatches } from "./utils/create-batches";
 import * as shellquote from "./utils/shell-quote";
-import { CommandLineArgsError, printWranglerBanner } from "./index";
+import { printWranglerBanner } from "./index";
 import type { RawConfig } from "./config";
 import type {
 	CustomDomainRoute,
@@ -76,6 +77,7 @@ export function initOptions(yargs: CommonYargsArgv) {
 			type: "boolean",
 			hidden: true,
 			default: true,
+			alias: "c3",
 		});
 }
 
@@ -195,10 +197,6 @@ export async function initHandler(args: InitArgs) {
 	let accountId = "";
 
 	// If --from-dash, check that script actually exists
-	/*
-    Even though the init command is now deprecated and replaced by Create Cloudflare CLI (C3),
-    run this first so, if the script doesn't exist, we can fail early
-  */
 	if (fromDashWorkerName) {
 		const c3Arguments = [
 			...shellquote.parse(getC3CommandFromEnv()),
@@ -213,17 +211,12 @@ export async function initHandler(args: InitArgs) {
 			c3Arguments.push("--wrangler-defaults");
 		}
 
-		// Deprecate the `init --from-dash` command
 		const replacementC3Command = `\`${packageManager.type} ${c3Arguments.join(
 			" "
 		)}\``;
-		logger.warn(
-			`The \`init --from-dash\` command is no longer supported. Please use ${replacementC3Command} instead.\nThe \`init\` command will be removed in a future version.`
-		);
-
 		// C3 will run wrangler with the --do-not-delegate flag to communicate with the API
 		if (args.delegateC3) {
-			logger.log(`Running ${replacementC3Command}...`);
+			logger.log(`🌀 Running ${replacementC3Command}...`);
 
 			await execa(packageManager.type, c3Arguments, { stdio: "inherit" });
 
@@ -260,9 +253,6 @@ export async function initHandler(args: InitArgs) {
 			return;
 		}
 	} else {
-		// Deprecate the `init` command
-		//    if a wrangler.toml file does not exist (C3 expects to scaffold *new* projects)
-		//    and if --from-dash is not set (C3 will run wrangler to communicate with the API)
 		if (!fromDashWorkerName) {
 			const c3Arguments: string[] = [];
 
@@ -284,17 +274,15 @@ export async function initHandler(args: InitArgs) {
 
 			c3Arguments.unshift(...shellquote.parse(getC3CommandFromEnv()));
 
-			// Deprecate the `init --from-dash` command
 			const replacementC3Command = `\`${packageManager.type} ${shellquote.quote(
 				c3Arguments
 			)}\``;
 
-			logger.warn(
-				`The \`init\` command is no longer supported. Please use ${replacementC3Command} instead.\nThe \`init\` command will be removed in a future version.`
-			);
-
 			if (args.delegateC3) {
-				logger.log(`Running ${replacementC3Command}...`);
+				logger.log(
+					`The \`init\` command now delegates to \`create-cloudflare\` instead. You can use the \`--no-c3\` flag to access the old implementation.\n`
+				);
+				logger.log(`🌀 Running ${replacementC3Command}...`);
 
 				await execa(packageManager.type, c3Arguments, {
 					stdio: "inherit",
@@ -1167,16 +1155,105 @@ export async function mapBindings(
 							};
 						}
 						break;
-					default: {
-						// If we don't know what the type is, its an unsafe binding
-						// eslint-disable-next-line @typescript-eslint/no-explicit-any
-						if (!(binding as any)?.type) {
-							break;
+					case "secret_text":
+						// Ignore secrets
+						break;
+					case "version_metadata": {
+						{
+							configObj.version_metadata = {
+								binding: binding.name,
+							};
 						}
+						break;
+					}
+					case "send_email": {
+						configObj.send_email = [
+							...(configObj.send_email ?? []),
+							{
+								name: binding.name,
+								destination_address: binding.destination_address,
+								allowed_destination_addresses:
+									binding.allowed_destination_addresses,
+							},
+						];
+						break;
+					}
+					case "queue":
+						configObj.queues ??= { producers: [] };
+						configObj.queues.producers = [
+							...(configObj.queues.producers ?? []),
+							{
+								binding: binding.name,
+								queue: binding.queue_name,
+								delivery_delay: binding.delivery_delay,
+							},
+						];
+						break;
+					case "vectorize":
+						configObj.vectorize = [
+							...(configObj.vectorize ?? []),
+							{
+								binding: binding.name,
+								index_name: binding.index_name,
+							},
+						];
+						break;
+					case "hyperdrive":
+						configObj.hyperdrive = [
+							...(configObj.hyperdrive ?? []),
+							{
+								binding: binding.name,
+								id: binding.id,
+							},
+						];
+						break;
+					case "mtls_certificate":
+						configObj.mtls_certificates = [
+							...(configObj.mtls_certificates ?? []),
+							{
+								binding: binding.name,
+								certificate_id: binding.certificate_id,
+							},
+						];
+						break;
+					case "pipelines":
+						configObj.pipelines = [
+							...(configObj.pipelines ?? []),
+							{
+								binding: binding.name,
+								pipeline: binding.id,
+							},
+						];
+						break;
+					case "assets":
+						throw new FatalError(
+							"`wrangler init --from-dash` is not yet supported for Workers with Assets"
+						);
+					case "inherit":
 						configObj.unsafe = {
 							bindings: [...(configObj.unsafe?.bindings ?? []), binding],
 							metadata: configObj.unsafe?.metadata ?? undefined,
 						};
+						break;
+					case "workflow":
+						{
+							configObj.workflows = [
+								...(configObj.workflows ?? []),
+								{
+									binding: binding.name,
+									name: binding.workflow_name,
+									class_name: binding.class_name,
+									script_name: binding.script_name,
+								},
+							];
+						}
+						break;
+					default: {
+						configObj.unsafe = {
+							bindings: [...(configObj.unsafe?.bindings ?? []), binding],
+							metadata: configObj.unsafe?.metadata ?? undefined,
+						};
+						assertNever(binding);
 					}
 				}
 

@@ -46,13 +46,7 @@ describe("generate", () => {
 			expect(std.out).toMatchInlineSnapshot(
 				`"✨ Created no-template/wrangler.toml"`
 			);
-			expect(std.warn).toMatchInlineSnapshot(`
-			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare/@/^2.5.0 no-template\` instead.[0m
-
-			  The \`init\` command will be removed in a future version.
-
-			"
-		`);
+			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
 
 		it("delegates to create cloudflare if Cloudflare template path is given", async () => {

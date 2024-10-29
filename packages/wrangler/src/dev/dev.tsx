@@ -17,12 +17,10 @@ import {
 import { runCustomBuild } from "../deployment-bundle/run-custom-build";
 import {
 	getBoundRegisteredWorkers,
-	getRegisteredWorkers,
 	startWorkerRegistry,
 	stopWorkerRegistry,
 	unregisterWorker,
 } from "../dev-registry";
-import { getFlag } from "../experimental-flags";
 import { logger } from "../logger";
 import { isNavigatorDefined } from "../navigator-user-agent";
 import openInBrowser from "../open-in-browser";
@@ -44,18 +42,18 @@ import type {
 	StartDevWorkerOptions,
 	Trigger,
 } from "../api";
+import type { AssetsOptions } from "../assets";
 import type { Config } from "../config";
 import type { Route } from "../config/environment";
 import type { Entry } from "../deployment-bundle/entry";
-import type { NodeJSCompatMode } from "../deployment-bundle/node-compat";
 import type { CfModule, CfWorkerInit } from "../deployment-bundle/worker";
 import type { StartDevOptions } from "../dev";
 import type { WorkerRegistry } from "../dev-registry";
-import type { ExperimentalAssetsOptions } from "../experimental-assets";
 import type { EnablePagesAssetsServiceBindingOptions } from "../miniflare-cli/types";
 import type { EphemeralDirectory } from "../paths";
 import type { LegacyAssetPaths } from "../sites";
 import type { EsbuildBundle } from "./use-esbuild";
+import type { NodeJSCompatMode } from "miniflare";
 
 /**
  * This hooks establishes a connection with the dev registry,
@@ -140,71 +138,6 @@ function useDevRegistry(
 	return workers;
 }
 
-/**
- * A react-free version of the above hook
- */
-export async function devRegistry(
-	cb: (workers: WorkerRegistry | undefined) => void
-): Promise<(name?: string) => Promise<void>> {
-	let previousRegistry: WorkerRegistry | undefined;
-
-	let interval: ReturnType<typeof setInterval>;
-
-	let hasFailedToFetch = false;
-
-	// The new file based registry supports a much more performant listener callback
-	if (getFlag("FILE_BASED_REGISTRY")) {
-		await startWorkerRegistry(async (registry) => {
-			if (!util.isDeepStrictEqual(registry, previousRegistry)) {
-				previousRegistry = registry;
-				cb(registry);
-			}
-		});
-	} else {
-		try {
-			await startWorkerRegistry();
-		} catch (err) {
-			logger.error("failed to start worker registry", err);
-		}
-		// Else we need to fall back to a polling based approach
-		interval = setInterval(async () => {
-			try {
-				const registry = await getRegisteredWorkers();
-				if (!util.isDeepStrictEqual(registry, previousRegistry)) {
-					previousRegistry = registry;
-					cb(registry);
-				}
-			} catch (err) {
-				if (!hasFailedToFetch) {
-					hasFailedToFetch = true;
-					logger.warn("Failed to get worker definitions", err);
-				}
-			}
-		}, 300);
-	}
-
-	return async (name) => {
-		interval && clearInterval(interval);
-		try {
-			const [unregisterResult, stopRegistryResult] = await Promise.allSettled([
-				name ? unregisterWorker(name) : Promise.resolve(),
-				stopWorkerRegistry(),
-			]);
-			if (unregisterResult.status === "rejected") {
-				logger.error("Failed to unregister worker", unregisterResult.reason);
-			}
-			if (stopRegistryResult.status === "rejected") {
-				logger.error(
-					"Failed to stop worker registry",
-					stopRegistryResult.reason
-				);
-			}
-		} catch (err) {
-			logger.error("Failed to cleanup dev registry", err);
-		}
-	};
-}
-
 export type DevProps = {
 	name: string | undefined;
 	noBundle: boolean;
@@ -238,7 +171,7 @@ export type DevProps = {
 	isWorkersSite: boolean;
 	legacyAssetPaths: LegacyAssetPaths | undefined;
 	legacyAssetsConfig: Config["legacy_assets"];
-	experimentalAssets: ExperimentalAssetsOptions | undefined;
+	assets: AssetsOptions | undefined;
 	compatibilityDate: string;
 	compatibilityFlags: string[] | undefined;
 	usageModel: "bundled" | "unbound" | undefined;
@@ -263,6 +196,7 @@ export type DevProps = {
 	rawConfig: Config;
 	rawArgs: StartDevOptions;
 	devEnv: DevEnv;
+	bindVectorizeToProd: boolean;
 };
 
 export function DevImplementation(props: DevProps): JSX.Element {
@@ -439,6 +373,7 @@ function DevSession(props: DevSessionProps) {
 				nodejsCompatMode: props.nodejsCompatMode ?? null,
 				format: props.entry.format,
 				moduleRoot: props.entry.moduleRoot,
+				exports: props.entry.exports,
 			},
 			dev: {
 				auth: async () => {
@@ -465,6 +400,7 @@ function DevSession(props: DevSessionProps) {
 				liveReload: props.liveReload,
 				testScheduled: props.testScheduled,
 				persist: "",
+				bindVectorizeToProd: props.bindVectorizeToProd,
 			},
 			legacy: {
 				site:
@@ -485,9 +421,6 @@ function DevSession(props: DevSessionProps) {
 				capnp: props.bindings.unsafe?.capnp,
 				metadata: props.bindings.unsafe?.metadata,
 			},
-			experimental: {
-				assets: props.experimentalAssets,
-			},
 		} satisfies StartDevWorkerOptions;
 	}, [
 		props.routes,
@@ -503,7 +436,6 @@ function DevSession(props: DevSessionProps) {
 		props.isWorkersSite,
 		props.local,
 		props.legacyAssetsConfig,
-		props.experimentalAssets,
 		props.processEntrypoint,
 		props.additionalModules,
 		props.env,
@@ -529,6 +461,7 @@ function DevSession(props: DevSessionProps) {
 		props.localUpstream,
 		props.liveReload,
 		props.testScheduled,
+		props.bindVectorizeToProd,
 		accountIdDeferred,
 	]);
 
@@ -614,6 +547,7 @@ function DevSession(props: DevSessionProps) {
 		mockAnalyticsEngineDatasets: props.bindings.analytics_engine_datasets ?? [],
 		legacyAssets: props.legacyAssetsConfig,
 		durableObjects: props.bindings.durable_objects || { bindings: [] },
+		workflows: props.bindings.workflows ?? [],
 		local: props.local,
 		// Enable the bundling to know whether we are using dev or deploy
 		targetConsumer: "dev",
@@ -632,9 +566,7 @@ function DevSession(props: DevSessionProps) {
 		!props.local &&
 		(props.bindings.queues?.length || props.queueConsumers?.length)
 	) {
-		logger.warn(
-			"Queues are currently in Beta and are not supported in wrangler dev remote mode."
-		);
+		logger.warn("Queues are not yet supported in wrangler dev remote mode.");
 	}
 
 	// TODO(do) support remote wrangler dev
@@ -708,7 +640,7 @@ function DevSession(props: DevSessionProps) {
 			migrations={props.migrations}
 			workerDefinitions={workerDefinitions}
 			legacyAssetPaths={props.legacyAssetPaths}
-			experimentalAssets={props.experimentalAssets}
+			assets={props.assets}
 			initialPort={undefined} // hard-code for userworker, DevEnv-ProxyWorker now uses this prop value
 			initialIp={"127.0.0.1"} // hard-code for userworker, DevEnv-ProxyWorker now uses this prop value
 			rules={props.rules}
@@ -728,6 +660,7 @@ function DevSession(props: DevSessionProps) {
 			enablePagesAssetsServiceBinding={props.enablePagesAssetsServiceBinding}
 			sourceMapPath={bundle?.sourceMapPath}
 			services={props.bindings.services}
+			bindVectorizeToProd={props.bindVectorizeToProd}
 		/>
 	) : (
 		<Remote

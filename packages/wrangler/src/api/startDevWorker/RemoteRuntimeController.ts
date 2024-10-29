@@ -86,6 +86,7 @@ export class RemoteRuntimeController extends RuntimeController {
 					legacyEnv: props.legacyEnv,
 					host: props.host,
 					routes: props.routes,
+					sendMetrics: props.sendMetrics,
 				}
 			);
 			if (!this.#session) {
@@ -155,6 +156,7 @@ export class RemoteRuntimeController extends RuntimeController {
 				legacyEnv: !config.legacy?.enableServiceEnvironments, // wrangler environment -- just pass it through for now
 				host: config.dev.origin?.hostname,
 				routes,
+				sendMetrics: config.sendMetrics,
 			});
 
 			const bindings = (
@@ -183,6 +185,8 @@ export class RemoteRuntimeController extends RuntimeController {
 				compatibilityDate: config.compatibilityDate,
 				compatibilityFlags: config.compatibilityFlags,
 				routes,
+				host: config.dev.origin?.hostname,
+				sendMetrics: config.sendMetrics,
 			});
 
 			// If we received a new `bundleComplete` event before we were able to

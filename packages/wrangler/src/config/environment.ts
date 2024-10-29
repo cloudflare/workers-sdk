@@ -347,9 +347,11 @@ interface EnvironmentInheritable {
 	/**
 	 * Specify the directory of static assets to deploy/serve
 	 *
+	 * More details at https://developers.cloudflare.com/workers/frameworks/
+	 *
 	 * @inheritable
 	 */
-	experimental_assets: ExperimentalAssets | undefined;
+	assets: Assets | undefined;
 
 	/**
 	 * Specify the observability behavior of the Worker.
@@ -369,6 +371,17 @@ export type DurableObjectBindings = {
 	/** The service environment of the script_name to bind to */
 	environment?: string;
 }[];
+
+export type WorkflowBinding = {
+	/** The name of the binding used to refer to the Workflow */
+	binding: string;
+	/** The name of the Workflow */
+	name: string;
+	/** The exported class name of the Workflow */
+	class_name: string;
+	/** The script where the Workflow is defined (if it's external to this Worker) */
+	script_name?: string;
+};
 
 /**
  * The `EnvironmentNonInheritable` interface declares all the configuration fields for an environment
@@ -414,6 +427,17 @@ export interface EnvironmentNonInheritable {
 	durable_objects: {
 		bindings: DurableObjectBindings;
 	};
+
+	/**
+	 * A list of workflows that your Worker should be bound to.
+	 *
+	 * NOTE: This field is not automatically inherited from the top level environment,
+	 * and so must be specified in every named environment.
+	 *
+	 * @default `[]`
+	 * @nonInheritable
+	 */
+	workflows: WorkflowBinding[];
 
 	/**
 	 * Cloudchamber configuration
@@ -905,7 +929,7 @@ export interface UserLimits {
 	cpu_ms: number;
 }
 
-export type ExperimentalAssets = {
+export type Assets = {
 	/** Absolute path to assets directory */
 	directory: string;
 	binding?: string;

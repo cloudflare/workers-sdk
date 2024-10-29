@@ -82,7 +82,7 @@ describe("event notifications", () => {
 			authEmail: "test@example.com",
 			authKey: "some-big-secret",
 		};
-		const result = eventNotificationHeaders(creds);
+		const result = eventNotificationHeaders(creds, "");
 		expect(result).toMatchObject({
 			"X-Auth-Key": creds.authKey,
 			"X-Auth-Email": creds.authEmail,
@@ -91,9 +91,10 @@ describe("event notifications", () => {
 
 	test("API token eventNotificationHeaders", () => {
 		const creds: ApiCredentials = { apiToken: "some-api-token" };
-		const result = eventNotificationHeaders(creds);
+		const result = eventNotificationHeaders(creds, "eu");
 		expect(result).toMatchObject({
 			Authorization: `Bearer ${creds.apiToken}`,
+			"cf-r2-jurisdiction": "eu",
 		});
 	});
 });

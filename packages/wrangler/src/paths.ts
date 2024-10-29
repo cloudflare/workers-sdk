@@ -99,7 +99,13 @@ export function getWranglerTmpDir(
 	const tmpPrefix = path.join(tmpRoot, `${prefix}-`);
 	const tmpDir = fs.realpathSync(fs.mkdtempSync(tmpPrefix));
 
-	const removeDir = () => fs.rmSync(tmpDir, { recursive: true, force: true });
+	const removeDir = () => {
+		try {
+			return fs.rmSync(tmpDir, { recursive: true, force: true });
+		} catch (e) {
+			// This sometimes fails on Windows with EBUSY
+		}
+	};
 	const removeExitListener = onExit(removeDir);
 
 	return {

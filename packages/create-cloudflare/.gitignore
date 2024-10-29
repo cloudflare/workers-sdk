@@ -1,18 +1,17 @@
 node_modules
 /dist
 create-cloudflare-*.tgz
-/.e2e-logs/*
-/.e2e-diffs/*
+/.e2e-logs*/*
 
 .DS_Store
 
 # template lock files (the npm/yarn/pnpm/etc install step will create these for the user)
-templates/**/package-lock.json
-templates/**/yarn.lock
-templates/**/pnpm-lock.yaml
+templates*/**/package-lock.json
+templates*/**/yarn.lock
+templates*/**/pnpm-lock.yaml
 
 # the build step renames .gitignore files to __dot__gitignore
-templates/**/__dot__gitignore
+templates*/**/__dot__gitignore
 
 scripts/snippets
 !scripts/snippets/.gitkeep

@@ -2,4 +2,10 @@
 name = "<TBD>"
 compatibility_date = "<TBD>"
 main = "./build/worker/index.js"
-experimental_assets = { directory = "./build/client" }
+assets = { directory = "./build/client" }
+
+# Workers Logs
+# Docs: https://developers.cloudflare.com/workers/observability/logs/workers-logs/
+# Configuration: https://developers.cloudflare.com/workers/observability/logs/workers-logs/#enable-workers-logs
+[observability]
+enabled = true

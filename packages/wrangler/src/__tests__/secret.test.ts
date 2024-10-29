@@ -16,10 +16,14 @@ import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import type { Interface } from "node:readline";
 
-function createFetchResult(result: unknown, success = true) {
+function createFetchResult(
+	result: unknown,
+	success = true,
+	errors: { code: number; message: string }[] = []
+) {
 	return {
 		success,
-		errors: [],
+		errors,
 		messages: [],
 		result,
 	};
@@ -39,6 +43,44 @@ export function mockGetMemberships(
 	);
 }
 
+function mockNoWorkerFound(isBulk = false) {
+	if (isBulk) {
+		msw.use(
+			http.get(
+				"*/accounts/:accountId/workers/scripts/:scriptName/settings",
+				async () => {
+					return HttpResponse.json(
+						createFetchResult(null, false, [
+							{
+								code: 10007,
+								message: "This Worker does not exist on your account.",
+							},
+						])
+					);
+				},
+				{ once: true }
+			)
+		);
+	} else {
+		msw.use(
+			http.put(
+				"*/accounts/:accountId/workers/scripts/:scriptName/secrets",
+				async () => {
+					return HttpResponse.json(
+						createFetchResult(null, false, [
+							{
+								code: 10007,
+								message: "This Worker does not exist on your account.",
+							},
+						])
+					);
+				},
+				{ once: true }
+			)
+		);
+	}
+}
+
 describe("wrangler secret", () => {
 	const std = mockConsoleMethods();
 	const { setIsTTY } = useMockIsTTY();
@@ -53,7 +95,8 @@ describe("wrangler secret", () => {
 		function mockPutRequest(
 			input: { name: string; text: string },
 			env?: string,
-			legacyEnv = false
+			legacyEnv = false,
+			expectedScriptName = "script-name"
 		) {
 			const servicesOrScripts = env && !legacyEnv ? "services" : "scripts";
 			const environment = env && !legacyEnv ? "/environments/:envName" : "";
@@ -63,7 +106,9 @@ describe("wrangler secret", () => {
 					async ({ request, params }) => {
 						expect(params.accountId).toEqual("some-account-id");
 						expect(params.scriptName).toEqual(
-							legacyEnv && env ? `script-name-${env}` : "script-name"
+							legacyEnv && env
+								? `${expectedScriptName}-${env}`
+								: expectedScriptName
 						);
 						if (!legacyEnv) {
 							expect(params.envName).toEqual(env);
@@ -82,6 +127,25 @@ describe("wrangler secret", () => {
 				)
 			);
 		}
+
+		it("should error helpfully if pages_build_output_dir is set", async () => {
+			fs.writeFileSync(
+				"wrangler.toml",
+				TOML.stringify({
+					pages_build_output_dir: "public",
+					name: "script-name",
+				}),
+				"utf-8"
+			);
+			await expect(
+				runWrangler("secret put secret-name")
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`
+				[Error: It looks like you've run a Workers-specific command in a Pages project.
+				For Pages, please run \`wrangler pages secret put\` instead.]
+			`
+			);
+		});
 
 		describe("interactive", () => {
 			beforeEach(() => {
@@ -184,6 +248,26 @@ describe("wrangler secret", () => {
 					`[Error: Required Worker name missing. Please specify the Worker name in wrangler.toml, or pass it as an argument with \`--name <worker-name>\`]`
 				);
 			});
+
+			it("should ask to create a new Worker if no Worker is found under the provided name and abort if declined", async () => {
+				mockPrompt({
+					text: "Enter a secret value:",
+					options: { isSecret: true },
+					result: `hunter2`,
+				});
+				mockNoWorkerFound();
+				mockConfirm({
+					text: `There doesn't seem to be a Worker called "non-existent-worker". Do you want to create a new Worker with that name and add secrets to it?`,
+					result: false,
+				});
+				expect(
+					await runWrangler("secret put the-key --name non-existent-worker")
+				);
+				expect(std.out).toMatchInlineSnapshot(`
+					"🌀 Creating the secret for the Worker \\"non-existent-worker\\"
+					Aborting. No secrets added."
+				`);
+			});
 		});
 
 		describe("non-interactive", () => {
@@ -239,6 +323,35 @@ describe("wrangler secret", () => {
 			          [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m"
 		        `);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
+			});
+
+			it("should create a new worker if no worker is found under the provided name", async () => {
+				mockStdIn.send("hunter2");
+				mockNoWorkerFound();
+				msw.use(
+					http.put(
+						"*/accounts/:accountId/workers/scripts/:name",
+						async ({ params }) => {
+							expect(params.name).toEqual("non-existent-worker");
+							return HttpResponse.json(
+								createFetchResult({ name: params.name })
+							);
+						}
+					)
+				);
+				mockPutRequest(
+					{ name: "the-key", text: "hunter2" },
+					undefined,
+					undefined,
+					"non-existent-worker"
+				);
+				expect(
+					await runWrangler("secret put the-key --name non-existent-worker")
+				);
+				expect(std.out).toMatchInlineSnapshot(`
+					"🌀 Creating the secret for the Worker \\"non-existent-worker\\"
+					✨ Success! Uploaded secret the-key"
+				`);
 			});
 
 			describe("with accountId", () => {
@@ -323,17 +436,14 @@ describe("wrangler secret", () => {
 						expect(params.scriptName).toEqual(scriptName);
 
 						// Return our error
-						return HttpResponse.json({
-							success: false,
-							errors: [
+						return HttpResponse.json(
+							createFetchResult(null, false, [
 								{
 									code: VERSION_NOT_DEPLOYED_ERR_CODE,
 									message: "latest is not deployed",
 								},
-							],
-							messages: [],
-							result: null,
-						});
+							])
+						);
 					},
 					{ once: true }
 				)
@@ -388,6 +498,25 @@ describe("wrangler secret", () => {
 				)
 			);
 		}
+
+		it("should error helpfully if pages_build_output_dir is set", async () => {
+			fs.writeFileSync(
+				"wrangler.toml",
+				TOML.stringify({
+					pages_build_output_dir: "public",
+					name: "script-name",
+				}),
+				"utf-8"
+			);
+			await expect(
+				runWrangler("secret delete secret-name")
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`
+				[Error: It looks like you've run a Workers-specific command in a Pages project.
+				For Pages, please run \`wrangler pages secret delete\` instead.]
+			`
+			);
+		});
 
 		it("should delete a secret", async () => {
 			mockDeleteRequest({ scriptName: "script-name", secretName: "the-key" });
@@ -499,6 +628,25 @@ describe("wrangler secret", () => {
 			);
 		}
 
+		it("should error helpfully if pages_build_output_dir is set", async () => {
+			fs.writeFileSync(
+				"wrangler.toml",
+				TOML.stringify({
+					pages_build_output_dir: "public",
+					name: "script-name",
+				}),
+				"utf-8"
+			);
+			await expect(
+				runWrangler("secret list")
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`
+				[Error: It looks like you've run a Workers-specific command in a Pages project.
+				For Pages, please run \`wrangler pages secret list\` instead.]
+			`
+			);
+		});
+
 		it("should list secrets", async () => {
 			mockListRequest({ scriptName: "script-name" });
 			await runWrangler("secret list --name script-name");
@@ -565,6 +713,46 @@ describe("wrangler secret", () => {
 	});
 
 	describe("bulk", () => {
+		const mockBulkRequest = (returnNetworkError = false) => {
+			msw.use(
+				http.get(
+					`*/accounts/:accountId/workers/scripts/:scriptName/settings`,
+					({ params }) => {
+						expect(params.accountId).toEqual("some-account-id");
+
+						return HttpResponse.json(createFetchResult({ bindings: [] }));
+					}
+				),
+				http.patch(
+					`*/accounts/:accountId/workers/scripts/:scriptName/settings`,
+					({ params }) => {
+						expect(params.accountId).toEqual("some-account-id");
+						return HttpResponse.json(
+							returnNetworkError ? null : createFetchResult(null)
+						);
+					}
+				)
+			);
+		};
+		it("should error helpfully if pages_build_output_dir is set", async () => {
+			fs.writeFileSync(
+				"wrangler.toml",
+				TOML.stringify({
+					pages_build_output_dir: "public",
+					name: "script-name",
+				}),
+				"utf-8"
+			);
+			await expect(
+				runWrangler("secret bulk")
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`
+				[Error: It looks like you've run a Workers-specific command in a Pages project.
+				For Pages, please run \`wrangler pages secret bulk\` instead.]
+			`
+			);
+		});
+
 		it("should fail secret bulk w/ no pipe or JSON input", async () => {
 			vi.spyOn(readline, "createInterface").mockImplementation(
 				() => null as unknown as Interface
@@ -590,27 +778,7 @@ describe("wrangler secret", () => {
 						password: "hunter2",
 					}) as unknown as Interface
 			);
-
-			msw.use(
-				http.get(
-					`*/accounts/:accountId/workers/scripts/:scriptName/settings`,
-					({ params }) => {
-						expect(params.accountId).toEqual("some-account-id");
-
-						return HttpResponse.json(createFetchResult({ bindings: [] }));
-					}
-				)
-			);
-			msw.use(
-				http.patch(
-					`*/accounts/:accountId/workers/scripts/:scriptName/settings`,
-					({ params }) => {
-						expect(params.accountId).toEqual("some-account-id");
-
-						return HttpResponse.json(createFetchResult(null));
-					}
-				)
-			);
+			mockBulkRequest();
 
 			await runWrangler(`secret bulk --name script-name`);
 			expect(std.out).toMatchInlineSnapshot(`
@@ -634,26 +802,7 @@ describe("wrangler secret", () => {
 				})
 			);
 
-			msw.use(
-				http.get(
-					`*/accounts/:accountId/workers/scripts/:scriptName/settings`,
-					({ params }) => {
-						expect(params.accountId).toEqual("some-account-id");
-
-						return HttpResponse.json(createFetchResult({ bindings: [] }));
-					}
-				)
-			);
-			msw.use(
-				http.patch(
-					`*/accounts/:accountId/workers/scripts/:scriptName/settings`,
-					({ params }) => {
-						expect(params.accountId).toEqual("some-account-id");
-
-						return HttpResponse.json(createFetchResult(null));
-					}
-				)
-			);
+			mockBulkRequest();
 
 			await runWrangler("secret bulk ./secret.json --name script-name");
 
@@ -707,27 +856,7 @@ describe("wrangler secret", () => {
 					"secret-name-7": "secret_text",
 				})
 			);
-
-			msw.use(
-				http.get(
-					`*/accounts/:accountId/workers/scripts/:scriptName/settings`,
-					({ params }) => {
-						expect(params.accountId).toEqual("some-account-id");
-
-						return HttpResponse.json(createFetchResult({ bindings: [] }));
-					}
-				)
-			);
-			msw.use(
-				http.patch(
-					`*/accounts/:accountId/workers/scripts/:scriptName/settings`,
-					({ params }) => {
-						expect(params.accountId).toEqual("some-account-id");
-
-						return HttpResponse.json(null);
-					}
-				)
-			);
+			mockBulkRequest(true);
 
 			await expect(async () => {
 				await runWrangler("secret bulk ./secret.json --name script-name");
@@ -759,27 +888,7 @@ describe("wrangler secret", () => {
 					"secret-name-2": "secret_text",
 				})
 			);
-
-			msw.use(
-				http.get(
-					`*/accounts/:accountId/workers/scripts/:scriptName/settings`,
-					({ params }) => {
-						expect(params.accountId).toEqual("some-account-id");
-
-						return HttpResponse.json(createFetchResult({ bindings: [] }));
-					}
-				)
-			);
-			msw.use(
-				http.patch(
-					`*/accounts/:accountId/workers/scripts/:scriptName/settings`,
-					({ params }) => {
-						expect(params.accountId).toEqual("some-account-id");
-
-						return HttpResponse.json(null);
-					}
-				)
-			);
+			mockBulkRequest(true);
 
 			await expect(async () => {
 				await runWrangler("secret bulk ./secret.json --name script-name");
@@ -890,6 +999,60 @@ describe("wrangler secret", () => {
 			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
+		});
+
+		it("should, in interactive mode, ask to create a new Worker if no Worker is found under the provided name", async () => {
+			setIsTTY(true);
+			writeFileSync(
+				"secret.json",
+				JSON.stringify({
+					"secret-name-1": "secret_text",
+					"secret-name-2": "secret_text",
+				})
+			);
+			mockNoWorkerFound(true);
+			mockConfirm({
+				text: `There doesn't seem to be a Worker called "non-existent-worker". Do you want to create a new Worker with that name and add secrets to it?`,
+				result: false,
+			});
+
+			await runWrangler("secret bulk ./secret.json --name non-existent-worker");
+			expect(std.out).toMatchInlineSnapshot(`
+				"🌀 Creating the secrets for the Worker \\"non-existent-worker\\"
+				Aborting. No secrets added."
+			`);
+		});
+
+		it("should, in non-interactive mode, create a new worker if no worker is found under the provided name", async () => {
+			setIsTTY(false);
+			writeFileSync(
+				"secret.json",
+				JSON.stringify({
+					"secret-name-1": "secret_text",
+					"secret-name-2": "secret_text",
+				})
+			);
+			mockNoWorkerFound();
+			msw.use(
+				http.put(
+					"*/accounts/:accountId/workers/scripts/:name",
+					async ({ params }) => {
+						expect(params.name).toEqual("non-existent-worker");
+						return HttpResponse.json(createFetchResult({ name: params.name }));
+					}
+				)
+			);
+			mockBulkRequest();
+
+			await runWrangler("secret bulk ./secret.json --name script-name");
+			expect(std.out).toMatchInlineSnapshot(`
+				"🌀 Creating the secrets for the Worker \\"script-name\\"
+				✨ Successfully created secret for key: secret-name-1
+				✨ Successfully created secret for key: secret-name-2
+
+				Finished processing secrets JSON file:
+				✨ 2 secrets successfully uploaded"
+			`);
 		});
 	});
 

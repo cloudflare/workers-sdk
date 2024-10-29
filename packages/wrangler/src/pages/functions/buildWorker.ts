@@ -14,9 +14,9 @@ import { getBasePath } from "../../paths";
 import { getPagesProjectRoot, getPagesTmpDir } from "../utils";
 import type { BundleResult } from "../../deployment-bundle/bundle";
 import type { Entry } from "../../deployment-bundle/entry";
-import type { NodeJSCompatMode } from "../../deployment-bundle/node-compat";
 import type { CfModule } from "../../deployment-bundle/worker";
 import type { Plugin } from "esbuild";
+import type { NodeJSCompatMode } from "miniflare";
 
 export type Options = {
 	routesModule: string;
@@ -56,6 +56,7 @@ export function buildWorkerFromFunctions({
 		directory: functionsDirectory,
 		format: "modules",
 		moduleRoot: functionsDirectory,
+		exports: [],
 	};
 	const moduleCollector = createModuleCollector({
 		entry,
@@ -79,13 +80,13 @@ export function buildWorkerFromFunctions({
 		},
 		alias: {},
 		doBindings: [], // Pages functions don't support internal Durable Objects
+		workflowBindings: [], // Pages functions don't support internal Workflows
 		external,
 		plugins: [buildNotifierPlugin(onEnd), assetsPlugin(buildOutputDirectory)],
 		isOutfile: !outdir,
 		serveLegacyAssetsFromWorker: false,
 		checkFetch: local,
 		targetConsumer: local ? "dev" : "deploy",
-		forPages: true,
 		local,
 		projectRoot: getPagesProjectRoot(),
 		defineNavigatorUserAgent,
@@ -142,6 +143,7 @@ export function buildRawWorker({
 		directory: resolve(directory),
 		format: "modules",
 		moduleRoot: resolve(directory),
+		exports: [],
 	};
 	const moduleCollector = externalModules
 		? noopModuleCollector
@@ -160,6 +162,7 @@ export function buildRawWorker({
 		define: {},
 		alias: {},
 		doBindings: [], // Pages functions don't support internal Durable Objects
+		workflowBindings: [], // Pages functions don't support internal Workflows
 		external,
 		plugins: [
 			...plugins,
@@ -189,7 +192,6 @@ export function buildRawWorker({
 		serveLegacyAssetsFromWorker: false,
 		checkFetch: local,
 		targetConsumer: local ? "dev" : "deploy",
-		forPages: true,
 		local,
 		projectRoot: getPagesProjectRoot(),
 		defineNavigatorUserAgent,
@@ -219,6 +221,7 @@ export async function produceWorkerBundleForWorkerJSDirectory({
 			directory: resolve(workerJSDirectory),
 			format: "modules",
 			moduleRoot: resolve(workerJSDirectory),
+			exports: [],
 		},
 		[
 			{

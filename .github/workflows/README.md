@@ -1,4 +1,4 @@
-# Github Actions
+# GitHub Actions
 
 See below for a summary of this repo's Actions
 
@@ -14,7 +14,7 @@ See below for a summary of this repo's Actions
   - Builds all the packages.
   - Runs formatting, linting and type checks.
   - Runs fixture tests, Wrangler unit tests, C3 unit tests, Miniflare unit tests, and ESLint + Prettier checks.
-  - Adds the PR to a Github project
+  - Adds the PR to a GitHub project
 
 ### E2E tests (e2e.yml)
 
@@ -62,7 +62,7 @@ See below for a summary of this repo's Actions
 - Triggers
   - Updates to issues.
 - Actions
-  - Add the issue to a Github project.
+  - Add the issue to a GitHub project.
 
 ### Generate changesets for dependabot PRs (c3-dependabot-versioning-prs.yml and miniflare-dependabot-versioning-prs.yml)
 

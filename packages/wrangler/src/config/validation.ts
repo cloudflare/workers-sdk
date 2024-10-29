@@ -29,12 +29,14 @@ import {
 	validateRequiredProperty,
 	validateTypedArray,
 } from "./validation-helpers";
+import { friendlyBindingNames } from ".";
+import type { CfWorkerInit } from "../deployment-bundle/worker";
 import type { Config, DevConfig, RawConfig, RawDevConfig } from "./config";
 import type {
+	Assets,
 	DeprecatedUpload,
 	DispatchNamespaceOutbound,
 	Environment,
-	ExperimentalAssets,
 	Observability,
 	RawEnvironment,
 	Rule,
@@ -248,21 +250,10 @@ export function normalizeAndValidateConfig(
 	deprecated(
 		diagnostics,
 		rawConfig,
-		"assets",
-		`The \`assets\` feature is experimental. We are going to be changing its behavior after August 15th.\n` +
-			`Releases of wrangler after this date will no longer support current functionality.\n` +
-			`Please shift to \`legacy_assets\` to preserve the current functionality. `,
-		false,
-		"Behavior change"
+		"legacy_assets",
+		`The \`legacy_assets\` feature has been deprecated. Please use \`assets\` instead.`,
+		false
 	);
-
-	experimental(diagnostics, rawConfig, "legacy_assets");
-
-	if (rawConfig.assets && rawConfig.legacy_assets) {
-		diagnostics.errors.push(
-			"Expected only one of `assets` or `legacy_assets`."
-		);
-	}
 
 	// Process the top-level default environment configuration.
 	const config: Config = {
@@ -314,7 +305,7 @@ export function normalizeAndValidateConfig(
 		diagnostics,
 		"top-level",
 		Object.keys(rawConfig),
-		[...Object.keys(config), "env", "$schema", "assets"]
+		[...Object.keys(config), "env", "$schema"]
 	);
 
 	return { config, diagnostics };
@@ -682,15 +673,14 @@ function normalizeAndValidateLegacyAssets(
 	configPath: string | undefined,
 	rawConfig: RawConfig
 ): Config["legacy_assets"] {
-	// So that the final config object only has the one legacy_assets property
-	const mergedAssetsConfig = rawConfig["legacy_assets"] ?? rawConfig["assets"];
+	const legacyAssetsConfig = rawConfig["legacy_assets"];
 
 	// Even though the type doesn't say it,
 	// we allow for a string input in the config,
 	// so let's normalise it
-	if (typeof mergedAssetsConfig === "string") {
+	if (typeof legacyAssetsConfig === "string") {
 		return {
-			bucket: mergedAssetsConfig,
+			bucket: legacyAssetsConfig,
 			include: [],
 			exclude: [],
 			browser_TTL: undefined,
@@ -698,15 +688,13 @@ function normalizeAndValidateLegacyAssets(
 		};
 	}
 
-	if (mergedAssetsConfig === undefined) {
+	if (legacyAssetsConfig === undefined) {
 		return undefined;
 	}
 
-	const fieldName = rawConfig["assets"] ? "assets" : "legacy_assets";
-
-	if (typeof mergedAssetsConfig !== "object") {
+	if (typeof legacyAssetsConfig !== "object") {
 		diagnostics.errors.push(
-			`Expected the \`${fieldName}\` field to be a string or an object, but got ${typeof mergedAssetsConfig}.`
+			`Expected the \`legacy_assets\` field to be a string or an object, but got ${typeof legacyAssetsConfig}.`
 		);
 		return undefined;
 	}
@@ -718,17 +706,28 @@ function normalizeAndValidateLegacyAssets(
 		browser_TTL,
 		serve_single_page_app,
 		...rest
-	} = mergedAssetsConfig;
+	} = legacyAssetsConfig;
 
-	validateAdditionalProperties(diagnostics, fieldName, Object.keys(rest), []);
+	validateAdditionalProperties(
+		diagnostics,
+		"legacy_assets",
+		Object.keys(rest),
+		[]
+	);
 
-	validateRequiredProperty(diagnostics, fieldName, "bucket", bucket, "string");
-	validateTypedArray(diagnostics, `${fieldName}.include`, include, "string");
-	validateTypedArray(diagnostics, `${fieldName}.exclude`, exclude, "string");
+	validateRequiredProperty(
+		diagnostics,
+		"legacy_assets",
+		"bucket",
+		bucket,
+		"string"
+	);
+	validateTypedArray(diagnostics, `legacy_assets.include`, include, "string");
+	validateTypedArray(diagnostics, `legacy_assets.exclude`, exclude, "string");
 
 	validateOptionalProperty(
 		diagnostics,
-		fieldName,
+		"legacy_assets",
 		"browser_TTL",
 		browser_TTL,
 		"number"
@@ -736,7 +735,7 @@ function normalizeAndValidateLegacyAssets(
 
 	validateOptionalProperty(
 		diagnostics,
-		fieldName,
+		"legacy_assets",
 		"serve_single_page_app",
 		serve_single_page_app,
 		"boolean"
@@ -1236,11 +1235,11 @@ function normalizeAndValidateEnvironment(
 			isObjectWith("crons"),
 			{ crons: [] }
 		),
-		experimental_assets: inheritable(
+		assets: inheritable(
 			diagnostics,
 			topLevelEnv,
 			rawEnv,
-			"experimental_assets",
+			"assets",
 			validateAssetsConfig,
 			undefined
 		),
@@ -1288,6 +1287,16 @@ function normalizeAndValidateEnvironment(
 			{
 				bindings: [],
 			}
+		),
+		workflows: notInheritable(
+			diagnostics,
+			topLevelEnv,
+			rawConfig,
+			rawEnv,
+			envName,
+			"workflows",
+			validateBindingArray(envName, validateWorkflowBinding),
+			[]
 		),
 		migrations: inheritable(
 			diagnostics,
@@ -2011,6 +2020,15 @@ const validateDurableObjectBinding: ValidatorFn = (
 	return isValid;
 };
 
+/**
+ * Check that the given field is a valid "workflow" binding object.
+ */
+const validateWorkflowBinding: ValidatorFn = (_diagnostics, _field, _value) => {
+	// TODO
+
+	return true;
+};
+
 const validateCflogfwdrObject: (env: string) => ValidatorFn =
 	(envName) => (diagnostics, field, value, topLevelEnv) => {
 		//validate the bindings property first, as this also validates that it's an object, etc.
@@ -2090,7 +2108,7 @@ const validateAssetsConfig: ValidatorFn = (diagnostics, field, value) => {
 			diagnostics,
 			field,
 			"directory",
-			(value as ExperimentalAssets).directory,
+			(value as Assets).directory,
 			"string"
 		) && isValid;
 
@@ -2098,7 +2116,7 @@ const validateAssetsConfig: ValidatorFn = (diagnostics, field, value) => {
 		isNonEmptyString(
 			diagnostics,
 			`${field}.directory`,
-			(value as ExperimentalAssets).directory,
+			(value as Assets).directory,
 			undefined
 		) && isValid;
 
@@ -2107,7 +2125,7 @@ const validateAssetsConfig: ValidatorFn = (diagnostics, field, value) => {
 			diagnostics,
 			field,
 			"binding",
-			(value as ExperimentalAssets).binding,
+			(value as Assets).binding,
 			"string"
 		) && isValid;
 
@@ -2116,7 +2134,7 @@ const validateAssetsConfig: ValidatorFn = (diagnostics, field, value) => {
 			diagnostics,
 			field,
 			"html_handling",
-			(value as ExperimentalAssets).html_handling,
+			(value as Assets).html_handling,
 			"string",
 			[
 				"auto-trailing-slash",
@@ -2131,7 +2149,7 @@ const validateAssetsConfig: ValidatorFn = (diagnostics, field, value) => {
 			diagnostics,
 			field,
 			"not_found_handling",
-			(value as ExperimentalAssets).not_found_handling,
+			(value as Assets).not_found_handling,
 			"string",
 			["single-page-application", "404-page", "none"]
 		) && isValid;
@@ -2725,37 +2743,25 @@ const validateHyperdriveBinding: ValidatorFn = (diagnostics, field, value) => {
  */
 const validateBindingsHaveUniqueNames = (
 	diagnostics: Diagnostics,
-	{
-		durable_objects,
-		kv_namespaces,
-		r2_buckets,
-		analytics_engine_datasets,
-		text_blobs,
-		browser,
-		ai,
-		unsafe,
-		vars,
-		define,
-		wasm_modules,
-		data_blobs,
-	}: Partial<Config>
+	config: Partial<Config>
 ): boolean => {
 	let hasDuplicates = false;
 
-	const bindingsGroupedByType = {
-		"Durable Object": getBindingNames(durable_objects),
-		"KV Namespace": getBindingNames(kv_namespaces),
-		"R2 Bucket": getBindingNames(r2_buckets),
-		"Analytics Engine Dataset": getBindingNames(analytics_engine_datasets),
-		"Text Blob": getBindingNames(text_blobs),
-		Browser: getBindingNames(browser),
-		AI: getBindingNames(ai),
-		Unsafe: getBindingNames(unsafe),
-		"Environment Variable": getBindingNames(vars),
-		Definition: getBindingNames(define),
-		"WASM Module": getBindingNames(wasm_modules),
-		"Data Blob": getBindingNames(data_blobs),
-	} as Record<string, string[]>;
+	const bindingNamesArray = Object.entries(friendlyBindingNames) as [
+		keyof CfWorkerInit["bindings"],
+		string,
+	][];
+
+	const bindingsGroupedByType = Object.fromEntries(
+		bindingNamesArray.map(([bindingType, binding]) => [
+			binding,
+			getBindingNames(
+				bindingType === "queues"
+					? config[bindingType]?.producers
+					: config[bindingType]
+			),
+		])
+	);
 
 	const bindingsGroupedByName: Record<string, string[]> = {};
 
@@ -3347,11 +3353,17 @@ const validateObservability: ValidatorFn = (diagnostics, field, value) => {
 			"number"
 		) && isValid;
 
+	isValid =
+		validateAdditionalProperties(diagnostics, field, Object.keys(val), [
+			"enabled",
+			"head_sampling_rate",
+		]) && isValid;
+
 	const samplingRate = val?.head_sampling_rate;
 
 	if (samplingRate && (samplingRate < 0 || samplingRate > 1)) {
 		diagnostics.errors.push(
-			`\`${field}.head_sampling_rate\` must be a value between 0 and 1.`
+			`"${field}.head_sampling_rate" must be a value between 0 and 1.`
 		);
 	}
 

@@ -79,6 +79,7 @@ describe("BundleController", () => {
 					define: {},
 					format: "modules",
 					moduleRoot: path.resolve("src"),
+					exports: [],
 				},
 			};
 
@@ -151,6 +152,7 @@ describe("BundleController", () => {
 					define: {},
 					format: "modules",
 					moduleRoot: path.resolve("src"),
+					exports: [],
 				},
 			};
 
@@ -219,6 +221,7 @@ describe("BundleController", () => {
 					define: {},
 					format: "modules",
 					moduleRoot: path.resolve("."),
+					exports: [],
 				},
 			};
 
@@ -295,6 +298,7 @@ describe("BundleController", () => {
 				define: {},
 				format: "modules",
 				moduleRoot: path.resolve("src"),
+				exports: [],
 			},
 		});
 
@@ -353,6 +357,7 @@ describe("BundleController", () => {
 					define: {},
 					format: "modules",
 					moduleRoot: path.resolve("src"),
+					exports: [],
 				},
 			};
 
@@ -400,6 +405,7 @@ describe("BundleController", () => {
 					define: {},
 					format: "modules",
 					moduleRoot: process.cwd(),
+					exports: [],
 				},
 				legacy: {},
 			};
@@ -473,6 +479,7 @@ describe("BundleController", () => {
 					define: {},
 					format: "modules",
 					moduleRoot: process.cwd(),
+					exports: [],
 				},
 			};
 
@@ -518,6 +525,7 @@ describe("BundleController", () => {
 					define: {},
 					format: "modules",
 					moduleRoot: path.resolve("src"),
+					exports: [],
 				},
 			};
 

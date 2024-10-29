@@ -107,6 +107,7 @@ describe("defineNavigatorUserAgent is respected", () => {
 				directory: process.cwd(),
 				format: "modules",
 				moduleRoot: path.dirname(path.resolve("src/index.js")),
+				exports: [],
 			},
 			path.resolve("dist"),
 			{
@@ -116,6 +117,7 @@ describe("defineNavigatorUserAgent is respected", () => {
 				serveLegacyAssetsFromWorker: false,
 				mockAnalyticsEngineDatasets: [],
 				doBindings: [],
+				workflowBindings: [],
 				define: {},
 				alias: {},
 				checkFetch: false,
@@ -167,6 +169,7 @@ describe("defineNavigatorUserAgent is respected", () => {
 				directory: process.cwd(),
 				format: "modules",
 				moduleRoot: path.dirname(path.resolve("src/index.js")),
+				exports: [],
 			},
 			path.resolve("dist"),
 			{
@@ -175,6 +178,7 @@ describe("defineNavigatorUserAgent is respected", () => {
 				moduleCollector: noopModuleCollector,
 				serveLegacyAssetsFromWorker: false,
 				doBindings: [],
+				workflowBindings: [],
 				define: {},
 				alias: {},
 				mockAnalyticsEngineDatasets: [],
