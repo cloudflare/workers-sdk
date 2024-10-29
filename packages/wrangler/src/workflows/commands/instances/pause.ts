@@ -22,7 +22,7 @@ defineCommand({
 		},
 		id: {
 			describe:
-				"ID of the instance - instead of an UUID you can type 'latest' to get the latest instance and describe it",
+				"ID of the instance - instead of an UUID you can type 'latest' to get the latest instance and pause it",
 			type: "string",
 			demandOption: true,
 		},
