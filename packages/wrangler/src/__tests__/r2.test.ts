@@ -5,6 +5,7 @@ import { actionsForEventCategories } from "../r2/helpers";
 import { endEventLoop } from "./helpers/end-event-loop";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
+import { mockConfirm } from "./helpers/mock-dialogs";
 import { useMockIsTTY } from "./helpers/mock-istty";
 import { createFetchResult, msw, mswR2handlers } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
@@ -1470,6 +1471,7 @@ describe("r2", () => {
 			});
 		});
 		describe("domain", () => {
+			const { setIsTTY } = useMockIsTTY();
 			mockAccountId();
 			mockApiToken();
 			describe("add", () => {
@@ -1477,6 +1479,15 @@ describe("r2", () => {
 					const bucketName = "my-bucket";
 					const domainName = "example.com";
 					const zoneId = "zone-id-123";
+
+					setIsTTY(true);
+					mockConfirm({
+						text:
+							`Are you sure you want to add the custom domain '${domainName}' to bucket '${bucketName}'? ` +
+							`The contents of your bucket will be made publicly available at 'https://${domainName}'`,
+						result: true,
+					});
+
 					msw.use(
 						http.post(
 							"*/accounts/:accountId/r2/buckets/:bucketName/domains/custom",
@@ -1497,12 +1508,12 @@ describe("r2", () => {
 						)
 					);
 					await runWrangler(
-						`r2 bucket domain add ${bucketName} --domain ${domainName} --zone-id ${zoneId} --force`
+						`r2 bucket domain add ${bucketName} --domain ${domainName} --zone-id ${zoneId}`
 					);
 					expect(std.out).toMatchInlineSnapshot(`
-				"Connecting custom domain 'example.com' to bucket 'my-bucket'...
-				✨ Custom domain 'example.com' connected successfully."
-			  `);
+						"Connecting custom domain 'example.com' to bucket 'my-bucket'...
+						✨ Custom domain 'example.com' connected successfully."
+					`);
 				});
 
 				it("should error if domain and zone-id are not provided", async () => {
