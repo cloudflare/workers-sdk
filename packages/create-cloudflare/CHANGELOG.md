@@ -1,5 +1,33 @@
 # create-cloudflare
 
+## 2.31.0
+
+### Minor Changes
+
+- [#7031](https://github.com/cloudflare/workers-sdk/pull/7031) [`eec2a70`](https://github.com/cloudflare/workers-sdk/commit/eec2a707492d563df62f0b126c1e7ddf354d46b3) Thanks [@codenoid](https://github.com/codenoid)! - create-svelte is soon be deprecated, use the new official replacement npx sv instead.
+
+- [#7055](https://github.com/cloudflare/workers-sdk/pull/7055) [`a034aa1`](https://github.com/cloudflare/workers-sdk/commit/a034aa1f60c62c30be7ee878b222899b67d2935c) Thanks [@edmundhung](https://github.com/edmundhung)! - feat: prompt user to correct the answer if the arg value is invalid
+
+### Patch Changes
+
+- [#7085](https://github.com/cloudflare/workers-sdk/pull/7085) [`3e7cafc`](https://github.com/cloudflare/workers-sdk/commit/3e7cafc743c03faf7c219e789ef54fea22efacf1) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency  | From  | To    |
+  | ----------- | ----- | ----- |
+  | create-vite | 5.5.3 | 5.5.4 |
+
+- [#7126](https://github.com/cloudflare/workers-sdk/pull/7126) [`07b5b25`](https://github.com/cloudflare/workers-sdk/commit/07b5b25f9564d73d14e706243e400cbbd5306ac4) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From  | To     |
+  | ---------- | ----- | ------ |
+  | sv         | 0.5.7 | 0.5.11 |
+
+- [#7093](https://github.com/cloudflare/workers-sdk/pull/7093) [`6cf64de`](https://github.com/cloudflare/workers-sdk/commit/6cf64de0c72f15acc4f4a8c001666aed4db0c55a) Thanks [@lrapoport-cf](https://github.com/lrapoport-cf)! - Added link to where to file issues
+
 ## 2.30.1
 
 ### Patch Changes
