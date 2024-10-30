@@ -24,7 +24,6 @@ packages/create-cloudflare/templates*/**/*.*
 # but still exclude the worker-configuration.d.ts file, since it's generated
 !packages/create-cloudflare/templates*/hello-world/**/*.*
 packages/create-cloudflare/templates*/hello-world/**/worker-configuration.d.ts
-packages/wrangler-devtools/devtools-frontend
 
 # dist-functions are generated in the fixtures/vitest-pool-workers-examples/pages-functions-unit-integration-self folder
 dist-functions

@@ -1,0 +1,79 @@
+From f2c4fc2bd919c743124df81d0b7ca9dc19cd2787 Mon Sep 17 00:00:00 2001
+From: Workers DevProd <workers-devprod@cloudflare.com>
+Date: Mon, 2 Oct 2023 18:24:46 +0100
+Subject: [PATCH 05/15] Remove unsupported network UI
+
+---
+ front_end/panels/network/NetworkPanel.ts | 35 ------------------------
+ 1 file changed, 35 deletions(-)
+
+diff --git a/front_end/panels/network/NetworkPanel.ts b/front_end/panels/network/NetworkPanel.ts
+index 65f0094c36..edad7d4781 100644
+--- a/front_end/panels/network/NetworkPanel.ts
++++ b/front_end/panels/network/NetworkPanel.ts
+@@ -42,7 +42,6 @@ import * as Logs from '../../models/logs/logs.js';
+ import * as TraceEngine from '../../models/trace/trace.js';
+ import * as Workspace from '../../models/workspace/workspace.js';
+ import * as NetworkForward from '../../panels/network/forward/forward.js';
+-import * as IconButton from '../../ui/components/icon_button/icon_button.js';
+ import * as PerfUI from '../../ui/legacy/components/perf_ui/perf_ui.js';
+ import * as UI from '../../ui/legacy/legacy.js';
+ import * as MobileThrottling from '../mobile_throttling/mobile_throttling.js';
+@@ -74,14 +73,6 @@ const UIStrings = {
+    *@description Text to preserve the log after refreshing
+    */
+   preserveLog: 'Preserve log',
+-  /**
+-   *@description Text to disable cache while DevTools is open
+-   */
+-  disableCacheWhileDevtoolsIsOpen: 'Disable cache (while DevTools is open)',
+-  /**
+-   *@description Text in Network Config View of the Network panel
+-   */
+-  disableCache: 'Disable cache',
+   /**
+    *@description Tooltip text that appears when hovering over the largeicon settings gear in show settings pane setting in network panel of the network panel
+    */
+@@ -150,10 +141,6 @@ const UIStrings = {
+    *@description Text in Network Panel of the Network panel
+    */
+   fetchingFrames: 'Fetching frames...',
+-  /**
+-   * @description Text of a button in the Network panel's toolbar that open Network Conditions panel in the drawer.
+-   */
+-  moreNetworkConditions: 'More network conditions…',
+ };
+ const str_ = i18n.i18n.registerUIStrings('panels/network/NetworkPanel.ts', UIStrings);
+ const i18nString = i18n.i18n.getLocalizedString.bind(undefined, str_);
+@@ -414,28 +401,6 @@ export class NetworkPanel extends UI.Panel.Panel implements UI.ContextMenu.Provi
+     this.panelToolbar.appendToolbarItem(new UI.Toolbar.ToolbarSettingCheckbox(
+         this.preserveLogSetting, i18nString(UIStrings.doNotClearLogOnPageReload), i18nString(UIStrings.preserveLog)));
+ 
+-    this.panelToolbar.appendSeparator();
+-    const disableCacheCheckbox = new UI.Toolbar.ToolbarSettingCheckbox(
+-        Common.Settings.Settings.instance().moduleSetting('cacheDisabled'),
+-        i18nString(UIStrings.disableCacheWhileDevtoolsIsOpen), i18nString(UIStrings.disableCache));
+-    this.panelToolbar.appendToolbarItem(disableCacheCheckbox);
+-
+-    this.panelToolbar.appendToolbarItem(this.throttlingSelect);
+-
+-    const networkConditionsIcon = new IconButton.Icon.Icon();
+-    networkConditionsIcon.data = {
+-      iconName: 'network-settings',
+-      color: 'var(--icon-default)',
+-      width: '20px',
+-      height: '20px',
+-    };
+-    const networkConditionsButton =
+-        new UI.Toolbar.ToolbarButton(i18nString(UIStrings.moreNetworkConditions), networkConditionsIcon);
+-    networkConditionsButton.addEventListener(UI.Toolbar.ToolbarButton.Events.Click, () => {
+-      void UI.ViewManager.ViewManager.instance().showView('network.config');
+-    }, this);
+-    this.panelToolbar.appendToolbarItem(networkConditionsButton);
+-
+     this.rightToolbar.appendToolbarItem(new UI.Toolbar.ToolbarItem(this.progressBarContainer));
+     this.rightToolbar.appendSeparator();
+     this.rightToolbar.appendToolbarItem(new UI.Toolbar.ToolbarSettingToggle(
+-- 
+2.39.3 (Apple Git-145)
+

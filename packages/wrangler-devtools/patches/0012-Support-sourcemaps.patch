@@ -1,0 +1,60 @@
+From 85b0de956a4c57150c9b43fd1e6096074809df27 Mon Sep 17 00:00:00 2001
+From: Workers DevProd <workers-devprod@cloudflare.com>
+Date: Mon, 2 Oct 2023 18:30:44 +0100
+Subject: [PATCH 12/15] Support sourcemaps:
+
+    * Recognise `wrangler://` URLs as "special", and always load them with Network.loadNetworkResource
+
+    * Support a `text` property on the response to `Network.loadNetworkResource` to support providing a raw response, rather than a response stream
+
+    * Enable the experimental `AUTHORED_DEPLOYED_GROUPING` and `JUST_MY_CODE` by default, for a better splitting of sourcemapped/deployed Worker code
+---
+ front_end/core/common/ParsedURL.ts       | 2 +-
+ front_end/core/sdk/PageResourceLoader.ts | 4 +++-
+ front_end/entrypoints/main/MainImpl.ts   | 2 ++
+ 3 files changed, 6 insertions(+), 2 deletions(-)
+
+diff --git a/front_end/core/common/ParsedURL.ts b/front_end/core/common/ParsedURL.ts
+index 7e667fc467..d4719f900d 100644
+--- a/front_end/core/common/ParsedURL.ts
++++ b/front_end/core/common/ParsedURL.ts
+@@ -358,7 +358,7 @@ export class ParsedURL {
+     // Return special URLs as-is.
+     const trimmedHref = href.trim();
+     if (trimmedHref.startsWith('data:') || trimmedHref.startsWith('blob:') || trimmedHref.startsWith('javascript:') ||
+-        trimmedHref.startsWith('mailto:')) {
++        trimmedHref.startsWith('mailto:') || trimmedHref.startsWith('wrangler:')) {
+       return href as Platform.DevToolsPath.UrlString;
+     }
+ 
+diff --git a/front_end/core/sdk/PageResourceLoader.ts b/front_end/core/sdk/PageResourceLoader.ts
+index be22f944c1..190b4c3891 100644
+--- a/front_end/core/sdk/PageResourceLoader.ts
++++ b/front_end/core/sdk/PageResourceLoader.ts
+@@ -338,7 +338,9 @@ export class PageResourceLoader extends Common.ObjectWrapper.ObjectWrapper<Event
+     const disableCache = Common.Settings.Settings.instance().moduleSetting('cacheDisabled').get();
+     const resource = await networkManager.loadNetworkResource(frameId, url, {disableCache, includeCredentials: true});
+     try {
+-      const content = resource.stream ? await ioModel.readToString(resource.stream) : '';
++      // @ts-expect-error Property 'text' does not exist on type 'LoadNetworkResourcePageResult'.
++      // Cloudflare custom extension to load network data without streams
++      const content = resource.stream ? await ioModel.readToString(resource.stream) : (resource.text ?? '');
+       return {
+         success: resource.success,
+         content,
+diff --git a/front_end/entrypoints/main/MainImpl.ts b/front_end/entrypoints/main/MainImpl.ts
+index 23fd311406..e4d10c442a 100644
+--- a/front_end/entrypoints/main/MainImpl.ts
++++ b/front_end/entrypoints/main/MainImpl.ts
+@@ -437,6 +437,8 @@ export class MainImpl {
+       Root.Runtime.ExperimentName.WASM_DWARF_DEBUGGING,
+       Root.Runtime.ExperimentName.HEADER_OVERRIDES,
+       Root.Runtime.ExperimentName.OUTERMOST_TARGET_SELECTOR,
++      Root.Runtime.ExperimentName.AUTHORED_DEPLOYED_GROUPING,
++      Root.Runtime.ExperimentName.JUST_MY_CODE,
+     ]);
+ 
+     Root.Runtime.experiments.setNonConfigurableExperiments([
+-- 
+2.39.3 (Apple Git-145)
+

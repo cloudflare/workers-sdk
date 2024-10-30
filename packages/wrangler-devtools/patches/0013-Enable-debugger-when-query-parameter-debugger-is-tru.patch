@@ -1,0 +1,138 @@
+From d3add591e59cefa45458a29341185824df9334b2 Mon Sep 17 00:00:00 2001
+From: Workers DevProd <workers-devprod@cloudflare.com>
+Date: Wed, 4 Oct 2023 00:57:43 +0100
+Subject: [PATCH 13/15] Enable debugger when query parameter `debugger` is true
+
+---
+ front_end/panels/sources/DebuggerPlugin.ts |  7 +++-
+ front_end/panels/sources/SourcesPanel.ts   | 18 +++++---
+ front_end/panels/sources/sources-meta.ts   | 49 ++++++++++++----------
+ 3 files changed, 44 insertions(+), 30 deletions(-)
+
+diff --git a/front_end/panels/sources/DebuggerPlugin.ts b/front_end/panels/sources/DebuggerPlugin.ts
+index c403f0e37f..d7f8798497 100644
+--- a/front_end/panels/sources/DebuggerPlugin.ts
++++ b/front_end/panels/sources/DebuggerPlugin.ts
+@@ -253,10 +253,13 @@ export class DebuggerPlugin extends Plugin {
+     this.scriptsPanel = SourcesPanel.instance();
+     this.breakpointManager = Breakpoints.BreakpointManager.BreakpointManager.instance();
+ 
+-    this.breakpointManager.addEventListener(
++    const debuggerEnabled = Root.Runtime.Runtime.queryParam('debugger') === 'true';
++    if (debuggerEnabled) {
++      this.breakpointManager.addEventListener(
+         Breakpoints.BreakpointManager.Events.BreakpointAdded, this.breakpointChange, this);
+-    this.breakpointManager.addEventListener(
++      this.breakpointManager.addEventListener(
+         Breakpoints.BreakpointManager.Events.BreakpointRemoved, this.breakpointChange, this);
++    }
+ 
+     this.uiSourceCode.addEventListener(Workspace.UISourceCode.Events.WorkingCopyChanged, this.workingCopyChanged, this);
+     this.uiSourceCode.addEventListener(
+diff --git a/front_end/panels/sources/SourcesPanel.ts b/front_end/panels/sources/SourcesPanel.ts
+index 8a06b6c6e9..10f2c33c86 100644
+--- a/front_end/panels/sources/SourcesPanel.ts
++++ b/front_end/panels/sources/SourcesPanel.ts
+@@ -242,6 +242,11 @@ export class SourcesPanel extends UI.Panel.Panel implements UI.ContextMenu.Provi
+     this.splitWidget.enableShowModeSaving();
+     this.splitWidget.show(this.element);
+ 
++    const debuggerEnabled = Root.Runtime.Runtime.queryParam('debugger') === 'true';
++    if (!debuggerEnabled) {
++      this.splitWidget.hideSidebar(false);
++    }
++
+     // Create scripts navigator
+     const initialNavigatorWidth = 225;
+     this.editorView =
+@@ -347,12 +352,15 @@ export class SourcesPanel extends UI.Panel.Panel implements UI.ContextMenu.Provi
+       panel.splitWidget.installResizer(panel.sourcesViewInternal.toolbarContainerElement());
+     }
+     if (!isInWrapper) {
+-      panel.sourcesViewInternal.leftToolbar().appendToolbarItem(panel.toggleNavigatorSidebarButton);
+-      if (panel.splitWidget.isVertical()) {
+-        panel.sourcesViewInternal.rightToolbar().appendToolbarItem(panel.toggleDebuggerSidebarButton);
+-      } else {
+-        panel.sourcesViewInternal.bottomToolbar().appendToolbarItem(panel.toggleDebuggerSidebarButton);
++      const debuggerEnabled = Root.Runtime.Runtime.queryParam('debugger') === 'true';
++      if (debuggerEnabled) {
++        if (panel.splitWidget.isVertical()) {
++          panel.sourcesViewInternal.rightToolbar().appendToolbarItem(panel.toggleDebuggerSidebarButton);
++        } else {
++          panel.sourcesViewInternal.bottomToolbar().appendToolbarItem(panel.toggleDebuggerSidebarButton);
++        }
+       }
++      panel.sourcesViewInternal.leftToolbar().appendToolbarItem(panel.toggleNavigatorSidebarButton);
+     }
+   }
+ 
+diff --git a/front_end/panels/sources/sources-meta.ts b/front_end/panels/sources/sources-meta.ts
+index 4b8244ea69..749065fdeb 100644
+--- a/front_end/panels/sources/sources-meta.ts
++++ b/front_end/panels/sources/sources-meta.ts
+@@ -609,6 +609,32 @@ UI.ActionRegistration.registerActionExtension({
+   ],
+ });
+ 
++const debuggerEnabled = Root.Runtime.Runtime.queryParam('debugger') === 'true';
++if (debuggerEnabled) {
++  UI.ActionRegistration.registerActionExtension({
++    actionId: 'sources.toggle-debugger-sidebar',
++    category: UI.ActionRegistration.ActionCategory.SOURCES,
++    title: i18nLazyString(UIStrings.toggleDebuggerSidebar),
++    async loadActionDelegate() {
++      const Sources = await loadSourcesModule();
++      return Sources.SourcesPanel.ActionDelegate.instance();
++    },
++    contextTypes() {
++      return maybeRetrieveContextTypes(Sources => [Sources.SourcesView.SourcesView]);
++    },
++    bindings: [
++      {
++        platform: UI.ActionRegistration.Platforms.WindowsLinux,
++        shortcut: 'Ctrl+Shift+h',
++      },
++      {
++        platform: UI.ActionRegistration.Platforms.Mac,
++        shortcut: 'Meta+Shift+h',
++      },
++    ],
++  });
++}
++
+ UI.ActionRegistration.registerActionExtension({
+   category: UI.ActionRegistration.ActionCategory.DEBUGGER,
+   actionId: 'debugger.step-over',
+@@ -1399,29 +1425,6 @@ UI.ActionRegistration.registerActionExtension({
+   ],
+ });
+ 
+-UI.ActionRegistration.registerActionExtension({
+-  actionId: 'sources.toggle-debugger-sidebar',
+-  category: UI.ActionRegistration.ActionCategory.SOURCES,
+-  title: i18nLazyString(UIStrings.toggleDebuggerSidebar),
+-  async loadActionDelegate() {
+-    const Sources = await loadSourcesModule();
+-    return Sources.SourcesPanel.ActionDelegate.instance();
+-  },
+-  contextTypes() {
+-    return maybeRetrieveContextTypes(Sources => [Sources.SourcesView.SourcesView]);
+-  },
+-  bindings: [
+-    {
+-      platform: UI.ActionRegistration.Platforms.WindowsLinux,
+-      shortcut: 'Ctrl+Shift+h',
+-    },
+-    {
+-      platform: UI.ActionRegistration.Platforms.Mac,
+-      shortcut: 'Meta+Shift+h',
+-    },
+-  ],
+-});
+-
+ Common.Settings.registerSettingExtension({
+   settingName: 'navigatorGroupByFolder',
+   settingType: Common.Settings.SettingType.BOOLEAN,
+-- 
+2.39.3 (Apple Git-145)
+

@@ -1,0 +1,45 @@
+From 8b11e3150fbb5b70d328888664475ca9ebec39fa Mon Sep 17 00:00:00 2001
+From: Samuel Macleod <smacleod@cloudflare.com>
+Date: Fri, 20 Jan 2023 19:19:37 +0000
+Subject: [PATCH 07/15] Support theme= url parameter for forcing the theme from
+ outside
+
+---
+ .../ui/legacy/theme_support/theme_support_impl.ts  | 14 ++++++++------
+ 1 file changed, 8 insertions(+), 6 deletions(-)
+
+diff --git a/front_end/ui/legacy/theme_support/theme_support_impl.ts b/front_end/ui/legacy/theme_support/theme_support_impl.ts
+index a16673168f..04bac851d3 100644
+--- a/front_end/ui/legacy/theme_support/theme_support_impl.ts
++++ b/front_end/ui/legacy/theme_support/theme_support_impl.ts
+@@ -134,19 +134,21 @@ export class ThemeSupport extends EventTarget {
+   }
+ 
+   applyTheme(document: Document): void {
++    const currentSetting = this.setting.get()
++    // Get theme from url, to allow for theme inheritance from the Cloudflare dashboard
++    const urlParams = new URLSearchParams(document.location.search);
++    const theme = urlParams.get("theme") ?? 'systemPreferred'
+     const isForcedColorsMode = window.matchMedia('(forced-colors: active)').matches;
+     const systemPreferredTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'default';
+ 
+-    const useSystemPreferred = this.setting.get() === 'systemPreferred' || isForcedColorsMode;
+-    this.themeNameInternal = useSystemPreferred ? systemPreferredTheme : this.setting.get();
++    const useSystemPreferred = theme === 'systemPreferred' || isForcedColorsMode;
++    this.themeNameInternal = useSystemPreferred ? systemPreferredTheme : theme;
+ 
+-    const wasDarkThemed = document.documentElement.classList.contains('-theme-with-dark-background');
+     document.documentElement.classList.toggle('-theme-with-dark-background', this.themeNameInternal === 'dark');
+ 
+-    const isDarkThemed = document.documentElement.classList.contains('-theme-with-dark-background');
+-
++    this.setting.set(theme)
+     // In the event the theme changes we need to clear caches and notify subscribers.
+-    if (wasDarkThemed !== isDarkThemed) {
++    if (currentSetting !== theme) {
+       themeValuesCache.clear();
+       this.customSheets.clear();
+       this.dispatchEvent(new ThemeChangeEvent());
+-- 
+2.39.3 (Apple Git-145)
+
