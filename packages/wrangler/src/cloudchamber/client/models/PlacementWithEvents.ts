@@ -20,4 +20,5 @@ export type PlacementWithEvents = {
 	terminate: boolean;
 	status: PlacementStatus;
 	events: PlacementEvents;
+	last_update?: ISO8601Timestamp;
 };

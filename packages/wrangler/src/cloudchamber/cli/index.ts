@@ -21,9 +21,10 @@ import type {
 	DeploymentV2,
 	ListSSHPublicKeys,
 	PlacementEvent,
+	PlacementStatusHealth,
 	PlacementWithEvents,
 } from "../client";
-import type { EventName, Status } from "../enums";
+import type { EventName } from "../enums";
 
 export function pollRegistriesUntilCondition(
 	onRegistries: (registries: Array<CustomerImageRegistry>) => boolean
@@ -184,11 +185,11 @@ async function waitForEvent(
 				eventName.includes(e.name as EventName)
 			);
 			if (!event) {
-				if ((p.status["health"] as Status) === "failed") {
+				if ((p.status["health"] as PlacementStatusHealth) === "failed") {
 					return true;
 				}
 
-				if ((p.status["health"] as Status) == "stopped") {
+				if ((p.status["health"] as PlacementStatusHealth) == "stopped") {
 					return true;
 				}
 

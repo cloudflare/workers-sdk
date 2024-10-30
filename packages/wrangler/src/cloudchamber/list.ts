@@ -20,7 +20,11 @@ import type {
 	CommonYargsArgvJSON,
 	StrictYargsOptionsToInterfaceJSON,
 } from "../yargs-types";
-import type { PlacementEvent, PlacementWithEvents, State } from "./client";
+import type {
+	DeploymentPlacementState,
+	PlacementEvent,
+	PlacementWithEvents,
+} from "./client";
 import type { EventName } from "./enums";
 
 export function listDeploymentsYargs(args: CommonYargsArgvJSON) {
@@ -77,7 +81,7 @@ export async function listCommand(
 				undefined,
 				deploymentArgs.location,
 				deploymentArgs.image,
-				deploymentArgs.state as State,
+				deploymentArgs.state as DeploymentPlacementState,
 				deploymentArgs.ipv4,
 				deploymentArgs.label
 			)
