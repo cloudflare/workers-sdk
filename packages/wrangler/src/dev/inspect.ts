@@ -242,6 +242,10 @@ export function maybeHandleNetworkLoadResource(
 	}
 }
 
+// This URL is hard-coded to ensure specific versions of wrangler use specific versions of cloudflare-devtools -- enabling rollbacks to work as expected
+// Change the hash subdomain to a specific deployment from https://dash.cloudflare.com/e35fd947284363a46fd7061634477114/pages/view/cloudflare-devtools
+const devtoolsHost = "https://3e6204c5.devtools.devprod.cloudflare.dev";
+
 /**
  * Opens the chrome debugger
  */
@@ -256,7 +260,7 @@ export const openInspector = async (
 		query.set("domain", worker);
 	}
 	query.set("debugger", "true");
-	const url = `https://devtools.devprod.cloudflare.dev/js_app?${query.toString()}`;
+	const url = `${devtoolsHost}/js_app?${query.toString()}`;
 	const errorMessage =
 		"Failed to open inspector.\nInspector depends on having a Chromium-based browser installed, maybe you need to install one?";
 

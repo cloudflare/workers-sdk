@@ -23,7 +23,7 @@ import type {
 
 const ALLOWED_HOST_HOSTNAMES = ["127.0.0.1", "[::1]", "localhost"];
 const ALLOWED_ORIGIN_HOSTNAMES = [
-	"devtools.devprod.cloudflare.dev",
+	/^([a-z0-9]+\.)?devtools\.devprod\.cloudflare\.dev$/,
 	"cloudflare-devtools.pages.dev",
 	/^[a-z0-9]+\.cloudflare-devtools\.pages\.dev$/,
 	"127.0.0.1",
@@ -58,6 +58,10 @@ function isDevToolsEvent<Method extends DevToolsEvents["method"]>(
 		event.method === name
 	);
 }
+
+// This URL is hard-coded to ensure specific versions of wrangler use specific versions of cloudflare-devtools -- enabling rollbacks to work as expected
+// Change the hash subdomain to a specific deployment from https://dash.cloudflare.com/e35fd947284363a46fd7061634477114/pages/view/cloudflare-devtools
+const devtoolsHost = "https://3e6204c5.devtools.devprod.cloudflare.dev";
 
 export class InspectorProxyWorker implements DurableObject {
 	constructor(
@@ -451,7 +455,7 @@ export class InspectorProxyWorker implements DurableObject {
 		if (url.pathname === "/json" || url.pathname === "/json/list") {
 			// TODO: can we remove the `/ws` here if we only have a single worker?
 			const localHost = `${url.host}/ws`;
-			const devtoolsFrontendUrl = `https://devtools.devprod.cloudflare.dev/js_app?theme=systemPreferred&debugger=true&ws=${localHost}`;
+			const devtoolsFrontendUrl = `${devtoolsHost}/js_app?theme=systemPreferred&debugger=true&ws=${localHost}`;
 
 			return Response.json([
 				{
