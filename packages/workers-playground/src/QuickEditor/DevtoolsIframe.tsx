@@ -4,8 +4,12 @@ import FrameErrorBoundary from "./FrameErrorBoundary";
 import { ServiceContext } from "./QuickEditor";
 import type React from "react";
 
+// This URL is hard-coded to ensure specific versions of playground use specific versions of cloudflare-devtools -- enabling rollbacks to work as expected
+// Change the hash subdomain to a specific deployment from https://dash.cloudflare.com/e35fd947284363a46fd7061634477114/pages/view/cloudflare-devtools
+const devtoolsHost = "https://3e6204c5.devtools.devprod.cloudflare.dev";
+
 function getDevtoolsIframeUrl(inspectorUrl: string) {
-	const url = new URL(`https://devtools.devprod.cloudflare.dev/js_app`);
+	const url = new URL(`${devtoolsHost}/js_app`);
 	url.searchParams.set("wss", inspectorUrl.slice(5));
 
 	url.searchParams.set("theme", "systemPreferred");
