@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { Log, LogLevel, Response as MiniflareResponse } from 'miniflare';
 import * as vite from 'vite';
 import { unstable_getMiniflareWorkerOptions } from 'wrangler';
-import { invariant, WORKERD_CUSTOM_IMPORT_PATH } from './shared';
+import { invariant } from './shared';
 import type { CloudflareDevEnvironment } from './cloudflare-environment';
 import type { NormalizedPluginConfig } from './plugin-config';
 import type { MiniflareOptions, SharedOptions, WorkerOptions } from 'miniflare';
@@ -191,7 +191,6 @@ export function getMiniflareOptions(
 
 			return {
 				...workerOptions,
-				unsafeUseModuleFallbackService: true,
 				modules: [
 					{
 						type: 'ESModule',
@@ -204,12 +203,6 @@ export function getMiniflareOptions(
 						contents: fs.readFileSync(
 							fileURLToPath(new URL(RUNNER_PATH, import.meta.url)),
 						),
-					},
-					{
-						// Declared as a CommonJS module so that `require` is made available and we are able to handle cjs imports
-						type: 'CommonJS',
-						path: path.join(miniflareModulesRoot, WORKERD_CUSTOM_IMPORT_PATH),
-						contents: 'module.exports = path => import(path)',
 					},
 				],
 				serviceBindings: {

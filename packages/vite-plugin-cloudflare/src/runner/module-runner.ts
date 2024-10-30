@@ -1,14 +1,9 @@
 import { ModuleRunner } from 'vite/module-runner';
-import { UNKNOWN_HOST, WORKERD_CUSTOM_IMPORT_PATH } from '../shared';
+import { UNKNOWN_HOST } from '../shared';
 import type { WrapperEnv } from './env';
 import type { FetchResult } from 'vite/module-runner';
 
 let moduleRunner: ModuleRunner;
-
-// TODO: node modules using process.env don't find `process` in the global scope for some reason
-//       for now we just create a `process` in the global scope but a proper solution needs to be
-//       implemented (see: https://github.com/flarelabs-net/vite-plugin-cloudflare/issues/22)
-(globalThis as Record<string, unknown>).process = { env: {} };
 
 export async function createModuleRunner(
 	env: WrapperEnv,
@@ -17,10 +12,6 @@ export async function createModuleRunner(
 	if (moduleRunner) {
 		throw new Error('Runner already initialized');
 	}
-
-	const { default: workerdCustomImport } = await (import(
-		`/${WORKERD_CUSTOM_IMPORT_PATH}`
-	) as Promise<{ default: (...args: unknown[]) => Promise<unknown> }>);
 
 	moduleRunner = new ModuleRunner(
 		{
@@ -70,7 +61,7 @@ export async function createModuleRunner(
 			},
 			async runExternalModule(filepath) {
 				filepath = filepath.replace(/^file:\/\//, '');
-				return workerdCustomImport(filepath);
+				return import(filepath);
 			},
 		},
 	);

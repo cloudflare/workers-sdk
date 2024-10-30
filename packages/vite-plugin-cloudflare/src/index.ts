@@ -1,9 +1,8 @@
-import * as path from 'node:path';
 import { createMiddleware } from '@hattip/adapter-node';
 import { Miniflare } from 'miniflare';
 import * as vite from 'vite';
 import {
-	createCloudflareEnvironment,
+	createCloudflareEnvironmentOptions,
 	initRunners,
 } from './cloudflare-environment';
 import { getMiniflareOptions } from './miniflare-options';
@@ -38,17 +37,13 @@ export function cloudflare<T extends Record<string, WorkerOptions>>(
 						);
 					},
 				},
+				// Ensure there is an environment for each worker
 				environments: Object.fromEntries(
-					Object.entries(pluginConfig.workers).map(([name, options]) => {
-						return [name, createCloudflareEnvironment(options)];
-					}),
+					Object.entries(pluginConfig.workers).map(([name, workerOptions]) => [
+						name,
+						createCloudflareEnvironmentOptions(name, workerOptions),
+					]),
 				),
-			};
-		},
-		configEnvironment(name, options) {
-			options.build = {
-				outDir: path.join('dist', name),
-				...options.build,
 			};
 		},
 		configResolved(resolvedConfig) {
