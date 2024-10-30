@@ -12,7 +12,7 @@ import {
 import { inputPrompt, spinner } from "@cloudflare/cli/interactive";
 import isInteractive from "../is-interactive";
 import { listDeploymentsAndChoose, loadDeployments } from "./cli/deployments";
-import { statusToColored } from "./cli/util";
+import { capitalize, statusToColored } from "./cli/util";
 import { DeploymentsService, PlacementsService } from "./client";
 import { loadAccountSpinner, promiseSpinner } from "./common";
 import type { Config } from "../config";
@@ -115,6 +115,7 @@ export async function listCommand(
  */
 function eventMessage(event: PlacementEvent, lastEvent: boolean): string {
 	let { message } = event;
+	message = capitalize(message);
 	const name = event.name as EventName;
 	const health = event.statusChange["health"];
 	if (health === "failed") {

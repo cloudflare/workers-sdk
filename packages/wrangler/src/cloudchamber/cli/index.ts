@@ -16,6 +16,7 @@ import {
 } from "../client";
 import { wrap } from "../helpers/wrap";
 import { idToLocationName } from "../locations";
+import { capitalize } from "./util";
 import type {
 	CustomerImageRegistry,
 	DeploymentV2,
@@ -213,7 +214,6 @@ async function waitForImagePull(deployment: DeploymentV2) {
 	s.stop();
 	if (err) {
 		crash(err.message);
-		return;
 	}
 
 	if (
@@ -226,13 +226,19 @@ async function waitForImagePull(deployment: DeploymentV2) {
 	}
 
 	if (eventPlacement.event.name == "ImagePullError") {
-		crash(
-			"Your container image couldn't be pulled, (404 not found). Did you specify the correct URL?",
-			`Run ${brandColor(
-				process.argv0 + " cloudchamber modify " + deployment.id
-			)} to change the deployment image`
-		);
-		return;
+		// TODO: We should really report here something more specific when it's not found.
+		// For now, the cloudchamber API always returns a 404 in the message when the
+		// image is not found.
+		if (eventPlacement.event.message.includes("404")) {
+			crash(
+				"Your container image couldn't be pulled, (404 not found). Did you specify the correct URL?",
+				`Run ${brandColor(
+					process.argv0 + " cloudchamber modify " + deployment.id
+				)} to change the deployment image`
+			);
+		}
+
+		crash(capitalize(eventPlacement.event.message));
 	}
 
 	updateStatus("Pulled your image");
@@ -265,7 +271,6 @@ async function waitForVMToStart(deployment: DeploymentV2) {
 	s.stop();
 	if (err) {
 		crash(err.message);
-		return;
 	}
 
 	if (!eventPlacement.event) {
@@ -326,7 +331,6 @@ async function waitForPlacementInstance(deployment: DeploymentV2) {
 
 	if (err) {
 		crash(err.message);
-		return;
 	}
 
 	updateStatus(

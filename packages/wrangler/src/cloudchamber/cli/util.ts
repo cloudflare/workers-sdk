@@ -1,5 +1,11 @@
 import { bgGreen, bgRed, bgYellow } from "@cloudflare/cli/colors";
-import { PlacementStatusHealth } from "../client";
+import { type PlacementStatusHealth } from "../client";
+
+export function capitalize<S extends string>(str: S): Capitalize<S> {
+	return (
+		str.length > 0 ? str[0].toUpperCase() + str.substring(1) : str
+	) as Capitalize<S>;
+}
 
 export function statusToColored(status?: PlacementStatusHealth): string {
 	if (!status) {
