@@ -7,8 +7,7 @@ import { version as wranglerVersion } from "../../package.json";
 import { readConfig } from "../config";
 import { getConfigCache, purgeConfigCaches } from "../config-cache";
 import { getCloudflareApiBaseUrl } from "../environment-variables/misc-variables";
-import { CI } from "../is-ci";
-import isInteractive from "../is-interactive";
+import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import {
 	DefaultScopeKeys,
@@ -227,7 +226,7 @@ export async function fillOpenAPIConfiguration(config: Config, json: boolean) {
 }
 
 export function interactWithUser(config: { json?: boolean }): boolean {
-	return !config.json && isInteractive() && !CI.isCI();
+	return !config.json && !isNonInteractiveOrCI();
 }
 
 type NonObject = undefined | null | boolean | string | number;

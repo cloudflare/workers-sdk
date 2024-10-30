@@ -23,6 +23,9 @@ import {
 import type { OptionWithDetails } from "./select-list";
 import type { Prompt } from "@clack/core";
 
+// logUpdate writes text to a TTY (it uses escape sequences to move the cursor
+// and clear lines). This function should not be used when running
+// non-interactively.
 const logUpdate = createLogUpdate(stdout);
 
 export type Arg = string | boolean | string[] | undefined | number;
@@ -644,7 +647,10 @@ export const spinner = (
 		start(msg: string, helpText?: string) {
 			helpText ||= ``;
 			currentMsg = msg;
-			startMsg = `${currentMsg} ${dim(helpText)}`;
+			startMsg = currentMsg;
+			if (helpText !== undefined && helpText.length > 0) {
+				startMsg += ` ${dim(helpText)}`;
+			}
 
 			if (isInteractive()) {
 				let index = 0;
@@ -660,7 +666,7 @@ export const spinner = (
 					}
 				}, frameRate);
 			} else {
-				logUpdate(`${leftT} ${startMsg}`);
+				logRaw(`${leftT} ${startMsg}`);
 			}
 		},
 		update(msg: string) {
@@ -678,7 +684,7 @@ export const spinner = (
 				clearLoop();
 			} else {
 				if (msg !== undefined) {
-					logUpdate(`\n${grayBar} ${msg}`);
+					logRaw(`${grayBar} ${msg}`);
 				}
 				newline();
 			}
@@ -710,6 +716,13 @@ export const spinnerWhile = async <T>(opts: {
 	}
 };
 
-export const isInteractive = () => {
-	return process.stdin.isTTY;
-};
+/**
+ * Test whether the process is "interactive".
+ */
+export function isInteractive(): boolean {
+	try {
+		return Boolean(process.stdin.isTTY && process.stdout.isTTY);
+	} catch {
+		return false;
+	}
+}
