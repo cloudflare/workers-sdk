@@ -3,7 +3,11 @@
 	"version": "1.0.0",
 	"private": true,
 	"type": "module",
+	"scripts": {
+		"check:types": "tsc --build"
+	},
 	"devDependencies": {
-		"@vite-plugin-cloudflare/typescript-config": "workspace:*"
+		"@vite-plugin-cloudflare/typescript-config": "workspace:*",
+		"typescript": "catalog:default"
 	}
 }

@@ -4,12 +4,14 @@
 	"type": "module",
 	"scripts": {
 		"build": "vite build --app",
+		"check:types": "tsc --build",
 		"dev": "vite dev"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-types": "catalog:default",
 		"@flarelabs-net/vite-plugin-cloudflare": "workspace:*",
 		"@vite-plugin-cloudflare/typescript-config": "workspace:*",
+		"typescript": "catalog:default",
 		"vite": "catalog:default",
 		"wrangler": "catalog:default"
 	}

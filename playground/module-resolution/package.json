@@ -4,6 +4,7 @@
 	"type": "module",
 	"scripts": {
 		"build": "vite build --app",
+		"check:types": "tsc --build",
 		"dev": "vite dev"
 	},
 	"devDependencies": {
