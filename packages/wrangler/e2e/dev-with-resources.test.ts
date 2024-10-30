@@ -573,8 +573,6 @@ describe.sequential.each(RUNTIMES)("Bindings: $flags", ({ runtime, flags }) => {
 				pipeline = "my-pipeline"
 			`,
 			"src/index.ts": dedent`
-				import { Pipeline } from "cloudflare:workers";
-
 				export default {
 					async fetch(request, env, ctx) {
 						if (env.PIPELINE === undefined) {
