@@ -1,0 +1,9 @@
+{
+	"name": "@vite-plugin-cloudflare/playground",
+	"version": "1.0.0",
+	"private": true,
+	"type": "module",
+	"devDependencies": {
+		"@vite-plugin-cloudflare/typescript-config": "workspace:*"
+	}
+}

@@ -1,6 +1,7 @@
 {
-	"name": "vite-plugin-cloudflare",
+	"name": "@vite-plugin-cloudflare/root",
 	"license": "MIT",
+	"type": "module",
 	"scripts": {
 		"check": "pnpm run check:types && pnpm run check:prettier",
 		"check:prettier": "prettier --check .",
@@ -8,16 +9,22 @@
 		"fix": "pnpm run fix:prettier",
 		"fix:prettier": "prettier --write .",
 		"postinstall": "pnpm -r build",
-		"test": "pnpm -r test"
+		"test": "pnpm test-unit && pnpm test-serve && pnpm test-build",
+		"test-build": "cross-env VITE_TEST_BUILD=1 vitest run -c vitest.config.e2e.ts",
+		"test-serve": "vitest run -c vitest.config.e2e.ts",
+		"test-serve:watch": "vitest -c vitest.config.e2e.ts",
+		"test-unit": "vitest run",
+		"test-unit:watch": "vitest"
+	},
+	"dependencies": {
+		"cross-env": "^7.0.3"
 	},
 	"devDependencies": {
 		"@ianvs/prettier-plugin-sort-imports": "^4.3.1",
+		"playwright-chromium": "^1.48.1",
 		"prettier": "^3.3.3",
-		"prettier-plugin-packagejson": "^2.5.3"
-	},
-	"pnpm": {
-		"overrides": {
-			"vite": "https://pkg.pr.new/vite@main"
-		}
+		"prettier-plugin-packagejson": "^2.5.3",
+		"vite": "catalog:default",
+		"vitest": "^2.1.3"
 	}
 }

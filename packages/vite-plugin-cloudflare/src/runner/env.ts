@@ -7,6 +7,7 @@ export interface WrapperEnv {
 	__VITE_UNSAFE_EVAL__: {
 		eval: (code: string, filename: string) => Function;
 	};
+	[key: string]: unknown;
 }
 
 export function stripInternalEnv(internalEnv: WrapperEnv) {

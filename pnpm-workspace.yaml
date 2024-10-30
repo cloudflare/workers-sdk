@@ -1,11 +1,10 @@
 packages:
   - 'packages/*'
-  - 'examples/*'
-  - 'tests/integration/*'
+  - 'playground'
+  - 'playground/*'
 
 catalog:
   '@cloudflare/workers-types': ^4.20240919.0
   'typescript': ^5.6.2
-  'vite': '6.0.0-beta.2'
-  'vitest': '^2.1.2'
+  'vite': '6.0.0-beta.4'
   'wrangler': '^3.80.4'

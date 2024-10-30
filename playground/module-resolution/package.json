@@ -1,0 +1,24 @@
+{
+	"name": "@playground/module-resolution",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"build": "vite build --app",
+		"dev": "vite dev"
+	},
+	"devDependencies": {
+		"@cloudflare-dev-module-resolution/imports": "file:./packages/imports",
+		"@cloudflare-dev-module-resolution/requires": "file:./packages/requires",
+		"@cloudflare/workers-types": "catalog:default",
+		"@flarelabs-net/vite-plugin-cloudflare": "workspace:*",
+		"@remix-run/cloudflare": "2.12.0",
+		"@types/react": "^18.3.11",
+		"@vite-plugin-cloudflare/typescript-config": "workspace:*",
+		"discord-api-types": "0.37.98",
+		"react": "18.3.1",
+		"slash-create": "6.2.1",
+		"typescript": "catalog:default",
+		"vite": "catalog:default",
+		"wrangler": "catalog:default"
+	}
+}

@@ -29,7 +29,6 @@
 		"tsup": "^8.3.0",
 		"typescript": "catalog:default",
 		"vite": "catalog:default",
-		"vitest": "catalog:default",
 		"wrangler": "catalog:default"
 	},
 	"peerDependencies": {

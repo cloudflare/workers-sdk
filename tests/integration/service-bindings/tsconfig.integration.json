@@ -1,4 +1,0 @@
-{
-	"extends": "@vite-plugin-cloudflare/typescript-config/base.json",
-	"include": ["*.test.ts"]
-}
