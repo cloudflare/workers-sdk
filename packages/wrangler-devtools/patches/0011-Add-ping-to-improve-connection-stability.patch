@@ -1,31 +1,30 @@
-From 233ae8633d7a84f662ebdea564070fcbee2f42d4 Mon Sep 17 00:00:00 2001
-From: Workers DevProd <workers-devprod@cloudflare.com>
-Date: Fri, 25 Oct 2024 15:04:17 +0100
-Subject: [PATCH 3/8] Add ping to improve connection stability. Without this,
- we see frequent "Devtools disconnected" messages in the dash and Workers
- Playground
+From b2e4d126f70ba0a96163411c7bd60c2fe7af4872 Mon Sep 17 00:00:00 2001
+From: Samuel Macleod <smacleod@cloudflare.com>
+Date: Thu, 4 May 2023 03:21:58 +0100
+Subject: [PATCH 11/15] Add ping to improve connection stability
 
 ---
- front_end/core/protocol_client/InspectorBackend.ts | 8 ++++++++
- 1 file changed, 8 insertions(+)
+ front_end/core/protocol_client/InspectorBackend.ts | 9 +++++++++
+ 1 file changed, 9 insertions(+)
 
 diff --git a/front_end/core/protocol_client/InspectorBackend.ts b/front_end/core/protocol_client/InspectorBackend.ts
-index ad2d1fe357..d7af79ede5 100644
+index 99e6b17d14..1263a56cc7 100644
 --- a/front_end/core/protocol_client/InspectorBackend.ts
 +++ b/front_end/core/protocol_client/InspectorBackend.ts
-@@ -259,6 +259,7 @@ export class SessionRouter {
+@@ -259,6 +259,8 @@ export class SessionRouter {
      proxyConnection: ((Connection | undefined)|null),
    }>;
    #pendingScripts: (() => void)[];
 +  #pingInterval: ReturnType<typeof setInterval>;
++
  
    constructor(connection: Connection) {
      this.#connectionInternal = connection;
-@@ -276,11 +277,18 @@ export class SessionRouter {
+@@ -276,11 +278,18 @@ export class SessionRouter {
      this.#connectionInternal.setOnMessage(this.onMessage.bind(this));
  
      this.#connectionInternal.setOnDisconnect(reason => {
-+      clearInterval(this.#pingInterval);
++      clearInterval(this.#pingInterval)
        const session = this.#sessions.get('');
        if (session) {
          session.target.dispose(reason);
@@ -33,7 +32,7 @@ index ad2d1fe357..d7af79ede5 100644
      });
 +    this.#pingInterval = setInterval(() => {
 +      this.#connectionInternal.sendRawMessage(JSON.stringify({
-+        method: 'Runtime.getIsolateId',
++        method: "Runtime.getIsolateId",
 +        id: this.nextMessageId(),
 +      }));
 +    }, 10_000);
@@ -41,5 +40,5 @@ index ad2d1fe357..d7af79ede5 100644
  
    registerSession(target: TargetBase, sessionId: string, proxyConnection?: Connection|null): void {
 -- 
-2.39.5 (Apple Git-154)
+2.39.3 (Apple Git-145)
 

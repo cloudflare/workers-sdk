@@ -190,10 +190,6 @@ packages/quick-edit/web
 packages/wrangler/config-schema.json
 packages/wrangler-devtools/built-devtools
 packages/wrangler-devtools/.cipd
-packages/wrangler-devtools/.gclient
-packages/wrangler-devtools/.gclient_entries
-packages/wrangler-devtools/.gclient_previous_sync_commits
-packages/wrangler-devtools/.gcs_entries
 packages/wrangler-devtools/depot
 packages/wrangler-devtools/devtools-frontend
 packages/miniflare/dist-types/
