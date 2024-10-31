@@ -263,7 +263,9 @@ export function createModuleCollector(props: {
 								// and if so, validate the import against the package.json exports
 								// and resolve the file path to the correct file.
 								try {
-									filePath = require.resolve(args.path, { paths: [args.resolveDir] });
+									filePath = require.resolve(args.path, {
+										paths: [args.resolveDir],
+									});
 								} catch (ex) {
 									// We tried, now it'll just fall-through to the previous behaviour
 									// and ENOENT if the absolute file path doesn't exist.
