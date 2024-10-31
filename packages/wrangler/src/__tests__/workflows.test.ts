@@ -1,4 +1,5 @@
 import { http, HttpResponse } from "msw";
+import { endEventLoop } from "./helpers/end-event-loop";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { clearDialogs } from "./helpers/mock-dialogs";
@@ -6,7 +7,7 @@ import { msw } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import { writeWranglerToml } from "./helpers/write-wrangler-toml";
-import type { Instance } from "../workflows/types";
+import type { Instance, Workflow } from "../workflows/types";
 
 describe("wrangler workflows", () => {
 	const std = mockConsoleMethods();
@@ -17,29 +18,380 @@ describe("wrangler workflows", () => {
 		clearDialogs();
 	});
 
-	describe("instances pause", () => {
-		const mockGetInstances = async (instances: Instance[]) => {
+	const mockGetInstances = async (instances: Instance[]) => {
+		msw.use(
+			http.get(
+				`*/accounts/:accountId/workflows/some-workflow/instances`,
+				async () => {
+					return HttpResponse.json({
+						success: true,
+						errors: [],
+						messages: [],
+						result: instances,
+					});
+				},
+				{ once: true }
+			)
+		);
+	};
+
+	const mockPatchRequest = async (expectedInstance: string) => {
+		msw.use(
+			http.patch(
+				`*/accounts/:accountId/workflows/some-workflow/instances/:instanceId/status`,
+				async ({ params }) => {
+					expect(params.instanceId).toEqual(expectedInstance);
+					return HttpResponse.json({
+						success: true,
+						errors: [],
+						messages: [],
+						result: {},
+					});
+				},
+				{ once: true }
+			)
+		);
+	};
+
+	describe("help", () => {
+		it("should show help when no argument is passed", async () => {
+			writeWranglerToml();
+
+			await runWrangler(`workflows`);
+			await endEventLoop();
+
+			expect(std.out).toMatchInlineSnapshot(
+				`"wrangler workflows
+
+🔁 Manage Workflows [open-beta]
+
+COMMANDS
+  wrangler workflows list                     List Workflows associated to account [open-beta]
+  wrangler workflows describe <name>          Describe Workflow resource [open-beta]
+  wrangler workflows delete <name>            Delete workflow - when deleting a workflow, it will also delete it's own instances [open-beta]
+  wrangler workflows trigger <name> [params]  Trigger a workflow, creating a new instance. Can optionally take a JSON string to pass a parameter into the workflow instance [open-beta]
+  wrangler workflows instances                Manage Workflow instances [open-beta]
+
+GLOBAL FLAGS
+  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
+  -c, --config                    Path to .toml configuration file  [string]
+  -e, --env                       Environment to use for operations and .env files  [string]
+  -h, --help                      Show help  [boolean]
+  -v, --version                   Show version number  [boolean]"`
+			);
+		});
+	});
+
+	describe("instances help", () => {
+		it("should show instance help when no argument is passed", async () => {
+			writeWranglerToml();
+
+			await runWrangler(`workflows instances`);
+			await endEventLoop();
+
+			expect(std.out).toMatchInlineSnapshot(
+				`"wrangler workflows instances
+
+Manage Workflow instances [open-beta]
+
+COMMANDS
+  wrangler workflows instances list <name>            Instance related commands (list, describe, terminate, pause, resume) [open-beta]
+  wrangler workflows instances describe <name> <id>   Describe a workflow instance - see its logs, retries and errors [open-beta]
+  wrangler workflows instances terminate <name> <id>  Terminate a workflow instance [open-beta]
+  wrangler workflows instances pause <name> <id>      Pause a workflow instance [open-beta]
+  wrangler workflows instances resume <name> <id>     Resume a workflow instance [open-beta]
+
+GLOBAL FLAGS
+  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
+  -c, --config                    Path to .toml configuration file  [string]
+  -e, --env                       Environment to use for operations and .env files  [string]
+  -h, --help                      Show help  [boolean]
+  -v, --version                   Show version number  [boolean]"`
+			);
+		});
+	});
+
+	describe("list", () => {
+		const mockWorkflows: Workflow[] = [
+			{
+				class_name: "wf_class_1",
+				created_on: "2021-01-01T00:00:00Z",
+				id: "wf_id_1",
+				modified_on: "2021-01-01T00:00:00Z",
+				name: "wf_1",
+				script_name: "wf_script_1",
+			},
+			{
+				class_name: "wf_class_2",
+				created_on: "2022-01-01T00:00:00Z",
+				id: "wf_id_2",
+				modified_on: "2022-01-01T00:00:00Z",
+				name: "wf_2",
+				script_name: "wf_script_2",
+			},
+		];
+
+		const mockGetWorkflows = async (workflows: Workflow[]) => {
 			msw.use(
 				http.get(
-					`*/accounts/:accountId/workflows/some-workflow/instances`,
+					`*/accounts/:accountId/workflows`,
 					async () => {
 						return HttpResponse.json({
 							success: true,
 							errors: [],
 							messages: [],
-							result: instances,
+							result: workflows,
 						});
 					},
 					{ once: true }
 				)
 			);
 		};
-		const mockPauseRequest = async (expectedInstance: string) => {
+
+		it("should get the list of workflows", async () => {
+			writeWranglerToml();
+			await mockGetWorkflows(mockWorkflows);
+
+			await runWrangler(`workflows list`);
+			expect(std.info).toMatchInlineSnapshot(`"Showing last 2 workflows:"`);
+			expect(std.out).toMatchInlineSnapshot(
+				`"┌──────┬─────────────┬────────────┬───────────────────────┬───────────────────────┐
+│ Name │ Script name │ Class name │ Created               │ Modified              │
+├──────┼─────────────┼────────────┼───────────────────────┼───────────────────────┤
+│ wf_1 │ wf_script_1 │ wf_class_1 │ 1/1/2021, 12:00:00 AM │ 1/1/2021, 12:00:00 AM │
+├──────┼─────────────┼────────────┼───────────────────────┼───────────────────────┤
+│ wf_2 │ wf_script_2 │ wf_class_2 │ 1/1/2022, 12:00:00 AM │ 1/1/2022, 12:00:00 AM │
+└──────┴─────────────┴────────────┴───────────────────────┴───────────────────────┘"`
+			);
+		});
+	});
+
+	describe("instances list", () => {
+		const mockInstances: Instance[] = [
+			{
+				id: "foo",
+				created_on: "2021-01-01T00:00:00Z",
+				modified_on: "2021-01-01T00:00:00Z",
+				workflow_id: "b",
+				version_id: "c",
+				status: "running",
+			},
+			{
+				id: "bar",
+				created_on: "2022-01-01T00:00:00Z",
+				modified_on: "2022-01-01T00:00:00Z",
+				workflow_id: "b",
+				version_id: "c",
+				status: "running",
+			},
+		];
+
+		it("should get the list of instances given a name", async () => {
+			writeWranglerToml();
+			await mockGetInstances(mockInstances);
+
+			await runWrangler(`workflows instances list some-workflow`);
+			console.log(std);
+			expect(std.info).toMatchInlineSnapshot(
+				`"Showing 2 instances from page 1:"`
+			);
+			expect(std.out).toMatchInlineSnapshot(
+				`"┌─────┬─────────┬───────────────────────┬───────────────────────┬───────────┐
+│ Id  │ Version │ Created               │ Modified              │ Status    │
+├─────┼─────────┼───────────────────────┼───────────────────────┼───────────┤
+│ bar │ c       │ 1/1/2022, 12:00:00 AM │ 1/1/2022, 12:00:00 AM │ ▶ Running │
+├─────┼─────────┼───────────────────────┼───────────────────────┼───────────┤
+│ foo │ c       │ 1/1/2021, 12:00:00 AM │ 1/1/2021, 12:00:00 AM │ ▶ Running │
+└─────┴─────────┴───────────────────────┴───────────────────────┴───────────┘
+{
+  debug: [Getter],
+  out: [Getter],
+  info: [Getter],
+  err: [Getter],
+  warn: [Getter]
+}"`
+			);
+		});
+	});
+
+	describe("instances describe", () => {
+		const mockDescribeInstances = async () => {
+			const mockResponse = {
+				end: "2019-08-24T14:15:22Z",
+				output: "string",
+				params: {},
+				queued: "2019-08-24T14:15:22Z",
+				start: "2019-08-24T14:15:22Z",
+				status: "queued",
+				success: true,
+				trigger: {
+					source: "unknown",
+				},
+				versionId: "14707576-2549-4848-82ed-f68f8a1b47c7",
+				steps: [
+					{
+						attempts: [
+							{
+								end: "2019-08-24T14:15:22Z",
+								error: {
+									message: "string",
+									name: "string",
+								},
+								start: "2019-08-24T14:15:22Z",
+								success: true,
+							},
+						],
+						config: {
+							retries: {
+								backoff: "constant",
+								delay: "string",
+								limit: 0,
+							},
+							timeout: "string",
+						},
+						end: "2019-08-24T14:15:22Z",
+						name: "string",
+						output: {},
+						start: "2019-08-24T14:15:22Z",
+						success: true,
+						type: "step",
+					},
+				],
+			};
+
 			msw.use(
-				http.patch(
-					`*/accounts/:accountId/workflows/some-workflow/instances/:instanceId/status`,
-					async ({ params }) => {
-						expect(params.instanceId).toEqual(expectedInstance);
+				http.get(
+					`*/accounts/:accountId/workflows/some-workflow/instances/:instanceId`,
+					async () => {
+						return HttpResponse.json({
+							success: true,
+							errors: [],
+							messages: [],
+							result: mockResponse,
+						});
+					},
+					{ once: true }
+				)
+			);
+		};
+
+		it("should describe the bar instance given a name", async () => {
+			writeWranglerToml();
+			await mockDescribeInstances();
+
+			await runWrangler(`workflows instances describe some-workflow bar`);
+			expect(std.out).toMatchInlineSnapshot(
+				`"┌───────────────────────┬───────────────────────┬───────────┬────────────┬────────────────┐
+│ Start                 │ End                   │ Duration  │ State      │ Error          │
+├───────────────────────┼───────────────────────┼───────────┼────────────┼────────────────┤
+│ 8/24/2019, 3:15:22 PM │ 8/24/2019, 3:15:22 PM │ 0 seconds │ ✅ Success │ string: string │
+└───────────────────────┴───────────────────────┴───────────┴────────────┴────────────────┘"`
+			);
+		});
+	});
+
+	describe("instances pause", () => {
+		const mockInstances: Instance[] = [
+			{
+				id: "foo",
+				created_on: "2021-01-01T00:00:00Z",
+				modified_on: "2021-01-01T00:00:00Z",
+				workflow_id: "b",
+				version_id: "c",
+				status: "running",
+			},
+			{
+				id: "bar",
+				created_on: "2022-01-01T00:00:00Z",
+				modified_on: "2022-01-01T00:00:00Z",
+				workflow_id: "b",
+				version_id: "c",
+				status: "running",
+			},
+		];
+
+		it("should get and pause the bar instance given a name", async () => {
+			writeWranglerToml();
+			await mockGetInstances(mockInstances);
+			await mockPatchRequest("bar");
+
+			await runWrangler(`workflows instances pause some-workflow bar`);
+			expect(std.info).toMatchInlineSnapshot(
+				`"⏸️ The instance \\"bar\\" from some-workflow was paused successfully"`
+			);
+		});
+	});
+
+	describe("instances resume", () => {
+		const mockInstances: Instance[] = [
+			{
+				id: "foo",
+				created_on: "2021-01-01T00:00:00Z",
+				modified_on: "2021-01-01T00:00:00Z",
+				workflow_id: "b",
+				version_id: "c",
+				status: "running",
+			},
+			{
+				id: "bar",
+				created_on: "2022-01-01T00:00:00Z",
+				modified_on: "2022-01-01T00:00:00Z",
+				workflow_id: "b",
+				version_id: "c",
+				status: "paused",
+			},
+		];
+
+		it("should get and resume the bar instance given a name", async () => {
+			writeWranglerToml();
+			await mockGetInstances(mockInstances);
+			await mockPatchRequest("bar");
+
+			await runWrangler(`workflows instances resume some-workflow bar`);
+			expect(std.info).toMatchInlineSnapshot(
+				`"🔄 The instance \\"bar\\" from some-workflow was resumed successfully"`
+			);
+		});
+	});
+
+	describe("instances terminate", () => {
+		const mockInstances: Instance[] = [
+			{
+				id: "foo",
+				created_on: "2021-01-01T00:00:00Z",
+				modified_on: "2021-01-01T00:00:00Z",
+				workflow_id: "b",
+				version_id: "c",
+				status: "running",
+			},
+			{
+				id: "bar",
+				created_on: "2022-01-01T00:00:00Z",
+				modified_on: "2022-01-01T00:00:00Z",
+				workflow_id: "b",
+				version_id: "c",
+				status: "running",
+			},
+		];
+
+		it("should get and terminate the bar instance given a name", async () => {
+			writeWranglerToml();
+			await mockGetInstances(mockInstances);
+			await mockPatchRequest("bar");
+
+			await runWrangler(`workflows instances terminate some-workflow bar`);
+			expect(std.info).toMatchInlineSnapshot(
+				`"🥷 The instance \\"bar\\" from some-workflow was terminated successfully"`
+			);
+		});
+	});
+
+	describe("trigger", () => {
+		const mockTriggerWorkflow = async () => {
+			msw.use(
+				http.post(
+					`*/accounts/:accountId/workflows/some-workflow/instances`,
+					async () => {
 						return HttpResponse.json({
 							success: true,
 							errors: [],
@@ -52,32 +404,27 @@ describe("wrangler workflows", () => {
 			);
 		};
 
-		it("should get and pause the latest instance given a name", async () => {
+		it("should trigger a workflow given a name", async () => {
 			writeWranglerToml();
-			const mockInstances: Instance[] = [
-				{
-					id: "earliest",
-					created_on: "2021-01-01T00:00:00Z",
-					modified_on: "2021-01-01T00:00:00Z",
-					workflow_id: "b",
-					version_id: "c",
-					status: "running",
-				},
-				{
-					id: "latest",
-					created_on: "2022-01-01T00:00:00Z",
-					modified_on: "2022-01-01T00:00:00Z",
-					workflow_id: "b",
-					version_id: "c",
-					status: "running",
-				},
-			];
-			await mockGetInstances(mockInstances);
-			await mockPauseRequest("latest");
+			await mockTriggerWorkflow();
 
-			await runWrangler(`workflows instances pause some-workflow latest`);
+			await runWrangler(`workflows trigger some-workflow`);
+			expect(std.info).toMatchInlineSnapshot(
+				`"🚀 Workflow instance \\"undefined\\" has been queued successfully"`
+			);
+		});
+	});
+
+	describe("delete", () => {
+		it("should delete a workflow - check not implemented", async () => {
+			writeWranglerToml();
+
+			await runWrangler(`workflows delete some-workflow`);
 			expect(std.out).toMatchInlineSnapshot(
-				`"⏸️ The instance \\"latest\\" from some-workflow was paused successfully"`
+				`"🚫 Workflow \\"some-workflow\\" NOT removed"`
+			);
+			expect(std.info).toMatchInlineSnapshot(
+				`"🚫 delete command not yet implement"`
 			);
 		});
 	});

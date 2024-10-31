@@ -61,7 +61,7 @@ defineCommand({
 			}
 		);
 
-		logger.log(
+		logger.info(
 			`⏸️ The instance "${id}" from ${args.name} was paused successfully`
 		);
 	},

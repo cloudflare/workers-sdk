@@ -1,7 +1,5 @@
-import { fetchResult } from "../../cfetch";
 import { defineCommand } from "../../core";
 import { logger } from "../../logger";
-import { requireAuth } from "../../user";
 
 defineCommand({
 	command: "wrangler workflows delete",
@@ -21,13 +19,8 @@ defineCommand({
 	},
 	positionalArgs: ["name"],
 
-	async handler(args, { config }) {
-		const accountId = await requireAuth(config);
-
-		await fetchResult(`/accounts/${accountId}/workflows/${args.name}`, {
-			method: "DELETE",
-		});
-
-		logger.info(`Workflow "${args.name}" was successfully removed`);
+	async handler(args) {
+		logger.info("🚫 delete command not yet implement");
+		logger.log(`🚫 Workflow "${args.name}" NOT removed`);
 	},
 });
