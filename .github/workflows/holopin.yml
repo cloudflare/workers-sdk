@@ -8,7 +8,7 @@ on:
 jobs:
   issue_lava_lamp_holobyte:
     name: Issue Lava Lamp Holobyte
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     if: ${{ github.event.pull_request.merged }}
     steps:
       - id: check_if_contributor_is_external
@@ -26,7 +26,7 @@ jobs:
           LABELS: contribution
   issue_global_contribution_badge:
     name: Issue Global Contribution badge
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     if: github.event.label.name == 'outstanding contribution'
     steps:
       - name: Issue Global Contribution badge
