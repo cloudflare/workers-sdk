@@ -38,8 +38,7 @@ We perform quarterly updates to stay current with upstream Chrome DevTools. The 
 4. Regenerating patches
 5. Thorough testing across all integration points
 
-**For detailed instructions on updating DevTools, please refer to our internal documentation at:
-https://wiki.cfdata.org/display/WX/Keeping+DevTools+up-to-date**
+**For detailed instructions on updating DevTools, please refer to our internal documentation on keeping devtools up-to-date.**
 
 ## Testing
 
