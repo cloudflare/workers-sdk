@@ -155,13 +155,15 @@ GLOBAL FLAGS
 			await runWrangler(`workflows list`);
 			expect(std.info).toMatchInlineSnapshot(`"Showing last 2 workflows:"`);
 			expect(std.out).toMatchInlineSnapshot(
-				`"┌──────┬─────────────┬────────────┬───────────────────────┬───────────────────────┐
+				`
+"┌──────┬─────────────┬────────────┬───────────────────────┬───────────────────────┐
 │ Name │ Script name │ Class name │ Created               │ Modified              │
 ├──────┼─────────────┼────────────┼───────────────────────┼───────────────────────┤
 │ wf_1 │ wf_script_1 │ wf_class_1 │ 1/1/2021, 12:00:00 AM │ 1/1/2021, 12:00:00 AM │
 ├──────┼─────────────┼────────────┼───────────────────────┼───────────────────────┤
 │ wf_2 │ wf_script_2 │ wf_class_2 │ 1/1/2022, 12:00:00 AM │ 1/1/2022, 12:00:00 AM │
-└──────┴─────────────┴────────────┴───────────────────────┴───────────────────────┘"`
+└──────┴─────────────┴────────────┴───────────────────────┴───────────────────────┘"
+			`
 			);
 		});
 	});
@@ -196,7 +198,8 @@ GLOBAL FLAGS
 				`"Showing 2 instances from page 1:"`
 			);
 			expect(std.out).toMatchInlineSnapshot(
-				`"┌─────┬─────────┬───────────────────────┬───────────────────────┬───────────┐
+				`
+"┌─────┬─────────┬───────────────────────┬───────────────────────┬───────────┐
 │ Id  │ Version │ Created               │ Modified              │ Status    │
 ├─────┼─────────┼───────────────────────┼───────────────────────┼───────────┤
 │ bar │ c       │ 1/1/2022, 12:00:00 AM │ 1/1/2022, 12:00:00 AM │ ▶ Running │
@@ -209,7 +212,8 @@ GLOBAL FLAGS
   info: [Getter],
   err: [Getter],
   warn: [Getter]
-}"`
+}"
+			`
 			);
 		});
 	});
@@ -217,11 +221,11 @@ GLOBAL FLAGS
 	describe("instances describe", () => {
 		const mockDescribeInstances = async () => {
 			const mockResponse = {
-				end: "2019-08-24T14:15:22Z",
+				end: "2021-01-01T00:00:00Z",
 				output: "string",
 				params: {},
-				queued: "2019-08-24T14:15:22Z",
-				start: "2019-08-24T14:15:22Z",
+				queued: "2021-01-01T00:00:00Z",
+				start: "2021-01-01T00:00:00Z",
 				status: "queued",
 				success: true,
 				trigger: {
@@ -232,12 +236,12 @@ GLOBAL FLAGS
 					{
 						attempts: [
 							{
-								end: "2019-08-24T14:15:22Z",
+								end: "2021-01-01T00:00:00Z",
 								error: {
 									message: "string",
 									name: "string",
 								},
-								start: "2019-08-24T14:15:22Z",
+								start: "2021-01-01T00:00:00Z",
 								success: true,
 							},
 						],
@@ -249,10 +253,10 @@ GLOBAL FLAGS
 							},
 							timeout: "string",
 						},
-						end: "2019-08-24T14:15:22Z",
+						end: "2021-01-01T00:00:00Z",
 						name: "string",
 						output: {},
-						start: "2019-08-24T14:15:22Z",
+						start: "2021-01-01T00:00:00Z",
 						success: true,
 						type: "step",
 					},
@@ -280,13 +284,13 @@ GLOBAL FLAGS
 			await mockDescribeInstances();
 
 			await runWrangler(`workflows instances describe some-workflow bar`);
-			expect(std.out).toMatchInlineSnapshot(
-				`"┌───────────────────────┬───────────────────────┬───────────┬────────────┬────────────────┐
+			expect(std.out).toMatchInlineSnapshot(`
+"┌───────────────────────┬───────────────────────┬───────────┬────────────┬────────────────┐
 │ Start                 │ End                   │ Duration  │ State      │ Error          │
 ├───────────────────────┼───────────────────────┼───────────┼────────────┼────────────────┤
-│ 8/24/2019, 3:15:22 PM │ 8/24/2019, 3:15:22 PM │ 0 seconds │ ✅ Success │ string: string │
-└───────────────────────┴───────────────────────┴───────────┴────────────┴────────────────┘"`
-			);
+│ 1/1/2021, 12:00:00 AM │ 1/1/2021, 12:00:00 AM │ 0 seconds │ ✅ Success │ string: string │
+└───────────────────────┴───────────────────────┴───────────┴────────────┴────────────────┘"
+			`);
 		});
 	});
 
