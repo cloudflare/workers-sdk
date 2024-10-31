@@ -5,7 +5,9 @@ const drainBody: Middleware = async (request, env, _ctx, middlewareCtx) => {
 		return await middlewareCtx.next(request, env);
 	} finally {
 		try {
+			console.log("drainBody middleware");
 			if (request.body !== null && !request.bodyUsed) {
+				console.log("!bodyUsed");
 				const reader = request.body.getReader();
 				while (!(await reader.read()).done) {}
 			}
