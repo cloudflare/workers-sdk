@@ -1,5 +1,17 @@
 # create-cloudflare
 
+## 2.31.1
+
+### Patch Changes
+
+- [#7139](https://github.com/cloudflare/workers-sdk/pull/7139) [`2222578`](https://github.com/cloudflare/workers-sdk/commit/222257826073360a403e6026c472c716985785f1) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency  | From  | To    |
+  | ----------- | ----- | ----- |
+  | create-vite | 5.5.4 | 5.5.5 |
+
 ## 2.31.0
 
 ### Minor Changes

@@ -1,5 +1,13 @@
 # wrangler
 
+## 3.84.1
+
+### Patch Changes
+
+- [#7141](https://github.com/cloudflare/workers-sdk/pull/7141) [`d938bb3`](https://github.com/cloudflare/workers-sdk/commit/d938bb395d77e2be9ab708eb4ace722fc39153e8) Thanks [@emily-shen](https://github.com/emily-shen)! - fix: throw a better error if there is an "ASSETS" user binding in a Pages projects
+
+- [#7124](https://github.com/cloudflare/workers-sdk/pull/7124) [`f8ebdd1`](https://github.com/cloudflare/workers-sdk/commit/f8ebdd1b2ba7cdc30a17c19dc66aed064213b2a6) Thanks [@skepticfx](https://github.com/skepticfx)! - fix: Modify Cloudchamber deployment labels in interactive mode
+
 ## 3.84.0
 
 ### Minor Changes
