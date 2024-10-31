@@ -767,5 +767,47 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 			});
 		});
+
+		it("should error if there is a user binding named ASSETS at the top-level", () => {
+			const { diagnostics } = normalizeAndValidateConfig(
+				{
+					...pagesRawConfig,
+					kv_namespaces: [
+						{
+							binding: "ASSETS",
+							id: "1234",
+						},
+					],
+				},
+				undefined,
+				{ env: undefined }
+			);
+
+			expect(diagnostics.errors).toEqual([
+				"The name 'ASSETS' is reserved in Pages projects. Please use a different name for your KV Namespaces binding.",
+			]);
+		});
+
+		it("should error if there is a user binding named ASSETS in a named environment", () => {
+			const { diagnostics } = normalizeAndValidateConfig(
+				{
+					...pagesRawConfig,
+					env: {
+						preview: {
+							...pagesRawConfig.env?.preview,
+							vars: { ASSETS: "test_value" },
+						},
+					},
+				},
+				undefined,
+				{
+					env: "preview",
+				}
+			);
+
+			expect(diagnostics.errors).toEqual([
+				"The name 'ASSETS' is reserved in Pages projects. Please use a different name for your Vars binding.",
+			]);
+		});
 	});
 });
