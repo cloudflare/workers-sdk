@@ -3,6 +3,7 @@ import { readdirSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import globToRegExp from "glob-to-regexp";
+import { sync as resolveSync } from "resolve";
 import { UserError } from "../errors";
 import { logger } from "../logger";
 import {
@@ -267,6 +268,17 @@ export function createModuleCollector(props: {
 										paths: [args.resolveDir],
 									});
 								} catch (ex) {
+									// We tried, now it'll just fall-through to the previous behaviour
+									// and ENOENT if the absolute file path doesn't exist.
+								}
+
+								// Next try to resolve using the node module resolution algorithm
+								try {
+									const resolved = resolveSync(args.path, {
+										basedir: args.resolveDir,
+									});
+									filePath = resolved;
+								} catch (e) {
 									// We tried, now it'll just fall-through to the previous behaviour
 									// and ENOENT if the absolute file path doesn't exist.
 								}
