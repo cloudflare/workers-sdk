@@ -22,3 +22,6 @@ host = "preview.devprod.cloudflare.dev"
 binding = "TOKEN_LOOKUP"
 id = "76afd4161617490b9d2addc59b1e22e4"
 preview_id = "76afd4161617490b9d2addc59b1e22e4"
+
+[observability]
+enabled = true
