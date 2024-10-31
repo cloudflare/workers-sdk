@@ -8,6 +8,7 @@ defineCommand({
 			"Delete workflow - when deleting a workflow, it will also delete it's own instances",
 		owner: "Product: Workflows",
 		status: "open-beta",
+		hidden: true,
 	},
 
 	args: {

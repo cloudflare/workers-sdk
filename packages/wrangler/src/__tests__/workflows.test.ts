@@ -68,7 +68,6 @@ describe("wrangler workflows", () => {
 COMMANDS
   wrangler workflows list                     List Workflows associated to account [open-beta]
   wrangler workflows describe <name>          Describe Workflow resource [open-beta]
-  wrangler workflows delete <name>            Delete workflow - when deleting a workflow, it will also delete it's own instances [open-beta]
   wrangler workflows trigger <name> [params]  Trigger a workflow, creating a new instance. Can optionally take a JSON string to pass a parameter into the workflow instance [open-beta]
   wrangler workflows instances                Manage Workflow instances [open-beta]
 
