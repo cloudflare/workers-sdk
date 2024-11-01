@@ -11239,7 +11239,7 @@ export default{
 				pipelines: [
 					{
 						binding: "MY_PIPELINE",
-						pipeline: "0123456789ABCDEF0123456789ABCDEF",
+						pipeline: "my-pipeline",
 					},
 				],
 			});
@@ -11250,7 +11250,7 @@ export default{
 					{
 						type: "pipelines",
 						name: "MY_PIPELINE",
-						id: "0123456789ABCDEF0123456789ABCDEF",
+						pipeline: "my-pipeline",
 					},
 				],
 			});
@@ -11261,7 +11261,7 @@ export default{
 			Worker Startup Time: 100 ms
 			Your worker has access to the following bindings:
 			- Pipelines:
-			  - MY_PIPELINE: 0123456789ABCDEF0123456789ABCDEF
+			  - MY_PIPELINE: my-pipeline
 			Uploaded test-name (TIMINGS)
 			Deployed test-name triggers (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev

@@ -561,6 +561,37 @@ describe.sequential.each(RUNTIMES)("Bindings: $flags", ({ runtime, flags }) => {
 		);
 	});
 
+	it.skipIf(!isLocal)("exposes Pipelines bindings", async () => {
+		await helper.seed({
+			"wrangler.toml": dedent`
+				name = "${workerName}"
+				main = "src/index.ts"
+				compatibility_date = "2024-10-20"
+
+				[[pipelines]]
+				binding = "PIPELINE"
+				pipeline = "my-pipeline"
+			`,
+			"src/index.ts": dedent`
+				export default {
+					async fetch(request, env, ctx) {
+						if (env.PIPELINE === undefined) {
+							return new Response("env.PIPELINE is undefined");
+						}
+
+						return new Response("env.PIPELINE is available");
+					}
+				}
+			`,
+		});
+
+		const worker = helper.runLongLived(`wrangler dev ${flags}`);
+		const { url } = await worker.waitForReady();
+		const res = await fetch(url);
+
+		await expect(res.text()).resolves.toBe("env.PIPELINE is available");
+	});
+
 	it.skipIf(!isLocal)("exposes queue producer/consumer bindings", async () => {
 		const queueName = generateResourceName("queue");
 

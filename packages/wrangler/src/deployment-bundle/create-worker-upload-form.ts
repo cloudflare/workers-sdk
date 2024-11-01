@@ -119,7 +119,7 @@ export type WorkerMetadataBinding =
 			};
 	  }
 	| { type: "mtls_certificate"; name: string; certificate_id: string }
-	| { type: "pipelines"; name: string; id: string }
+	| { type: "pipelines"; name: string; pipeline: string }
 	| {
 			type: "logfwdr";
 			name: string;
@@ -358,7 +358,7 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 		metadataBindings.push({
 			name: binding,
 			type: "pipelines",
-			id: pipeline,
+			pipeline: pipeline,
 		});
 	});
 
