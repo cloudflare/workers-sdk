@@ -266,6 +266,10 @@ app.get(`${previewDomain}/.update-preview-token`, (c) => {
 });
 
 app.all(`${previewDomain}/*`, async (c) => {
+	const url = new URL(c.req.url);
+	if (c.req.headers.has("cf-raw-http")) {
+		return handleRawHttp(c.req.raw, url, c.env);
+	}
 	if (c.req.method === "OPTIONS") {
 		return new Response(null, {
 			headers: {
@@ -278,10 +282,6 @@ app.all(`${previewDomain}/*`, async (c) => {
 				Vary: "Origin, Access-Control-Request-Headers",
 			},
 		});
-	}
-	const url = new URL(c.req.url);
-	if (c.req.headers.has("cf-raw-http")) {
-		return handleRawHttp(c.req.raw, url, c.env);
 	}
 	const token = getCookie(c, "token");
 	if (!token) {
