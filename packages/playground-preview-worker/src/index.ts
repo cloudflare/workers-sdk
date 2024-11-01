@@ -39,6 +39,43 @@ const app = new Hono<{
 const rootDomain = ROOT;
 const previewDomain = PREVIEW;
 
+function createResponseHeaders(
+	request: Request,
+	responseHeaders?: Headers
+): Headers {
+	const headers = new Headers({
+		"Access-Control-Allow-Origin": request.headers.get("Origin") ?? "",
+		"Access-Control-Allow-Methods": "*",
+		"Access-Control-Allow-Credentials": "true",
+		"Access-Control-Expose-Headers": "*",
+		Vary: "Origin",
+	});
+
+	if (request.method === "OPTIONS") {
+		headers.set(
+			"Access-Control-Allow-Headers",
+			request.headers.get("Access-Control-Request-Headers") ?? "x-cf-token"
+		);
+		headers.set("Vary", "Origin, Access-Control-Request-Headers");
+	}
+
+	if (responseHeaders) {
+		// The client needs the raw headers from the worker
+		// Prefix them with `cf-ew-raw-`, so that response headers from _this_ worker don't interfere
+		const setCookieHeader = responseHeaders.getSetCookie();
+		for (const cookie of setCookieHeader) {
+			headers.append("cf-ew-raw-set-cookie", cookie);
+		}
+		responseHeaders.delete("Set-Cookie");
+
+		for (const [key, value] of responseHeaders.entries()) {
+			headers.append(`cf-ew-raw-${key}`, value);
+		}
+	}
+
+	return headers;
+}
+
 /**
  * Given a preview token, this endpoint allows for raw http calls to be inspected
  *
@@ -87,29 +124,9 @@ async function handleRawHttp(request: Request, url: URL, env: Env) {
 
 	const responseHeaders = new Headers(workerResponse.headers);
 
-	const rawHeaders = new Headers({
-		"Access-Control-Allow-Origin": request.headers.get("Origin") ?? "",
-		"Access-Control-Allow-Methods": "*",
-		"Access-Control-Allow-Credentials": "true",
-		"cf-ew-status": workerResponse.status.toString(),
-		"Access-Control-Expose-Headers": "*",
-		Vary: "Origin",
-	});
-
-	// The client needs the raw headers from the worker
-	// Prefix them with `cf-ew-raw-`, so that response headers from _this_ worker don't interfere
-	const setCookieHeader = responseHeaders.getSetCookie();
-	for (const cookie of setCookieHeader) {
-		rawHeaders.append("cf-ew-raw-set-cookie", cookie);
-	}
-	responseHeaders.delete("Set-Cookie");
-	for (const header of responseHeaders.entries()) {
-		rawHeaders.set(`cf-ew-raw-${header[0]}`, header[1]);
-	}
-
 	return new Response(workerResponse.body, {
 		...workerResponse,
-		headers: rawHeaders,
+		headers: createResponseHeaders(request, responseHeaders),
 	});
 }
 
@@ -272,15 +289,7 @@ app.all(`${previewDomain}/*`, async (c) => {
 	}
 	if (c.req.method === "OPTIONS") {
 		return new Response(null, {
-			headers: {
-				"Access-Control-Allow-Origin": c.req.headers.get("Origin") ?? "",
-				"Access-Control-Allow-Methods": "*",
-				"Access-Control-Allow-Credentials": "true",
-				"Access-Control-Allow-Headers":
-					c.req.headers.get("Access-Control-Request-Headers") ?? "x-cf-token",
-				"Access-Control-Expose-Headers": "*",
-				Vary: "Origin, Access-Control-Request-Headers",
-			},
+			headers: createResponseHeaders(c.req.raw),
 		});
 	}
 	const token = getCookie(c, "token");
