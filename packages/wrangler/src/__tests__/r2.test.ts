@@ -99,6 +99,7 @@ describe("r2", () => {
 				  wrangler r2 bucket sippy          Manage Sippy incremental migration on an R2 bucket
 				  wrangler r2 bucket notification   Manage event notification rules for an R2 bucket
 				  wrangler r2 bucket domain         Manage custom domains for an R2 bucket
+				  wrangler r2 bucket dev-url        Manage public access via the r2.dev URL for an R2 bucket
 
 				GLOBAL FLAGS
 				  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
@@ -134,6 +135,7 @@ describe("r2", () => {
 				  wrangler r2 bucket sippy          Manage Sippy incremental migration on an R2 bucket
 				  wrangler r2 bucket notification   Manage event notification rules for an R2 bucket
 				  wrangler r2 bucket domain         Manage custom domains for an R2 bucket
+				  wrangler r2 bucket dev-url        Manage public access via the r2.dev URL for an R2 bucket
 
 				GLOBAL FLAGS
 				  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
@@ -1510,9 +1512,9 @@ describe("r2", () => {
 						`r2 bucket domain add ${bucketName} --domain ${domainName} --zone-id ${zoneId}`
 					);
 					expect(std.out).toMatchInlineSnapshot(`
-				"Connecting custom domain 'example.com' to bucket 'my-bucket'...
-				✨ Custom domain 'example.com' connected successfully."
-			  `);
+						"Connecting custom domain 'example.com' to bucket 'my-bucket'...
+						✨ Custom domain 'example.com' connected successfully."
+					  `);
 				});
 
 				it("should error if domain and zone-id are not provided", async () => {
@@ -1523,10 +1525,10 @@ describe("r2", () => {
 						`[Error: Missing required arguments: domain, zone-id]`
 					);
 					expect(std.err).toMatchInlineSnapshot(`
-				"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mMissing required arguments: domain, zone-id[0m
+						"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mMissing required arguments: domain, zone-id[0m
 
-				"
-			  `);
+						"
+					  `);
 				});
 			});
 			describe("list", () => {
@@ -1574,23 +1576,23 @@ describe("r2", () => {
 					);
 					await runWrangler(`r2 bucket domain list ${bucketName}`);
 					expect(std.out).toMatchInlineSnapshot(`
-				"Listing custom domains connected to bucket 'my-bucket'...
-				domain:            example.com
-				enabled:           Yes
-				ownership_status:  verified
-				ssl_status:        active
-				min_tls_version:   1.2
-				zone_id:           zone-id-123
-				zone_name:         example-zone
+						"Listing custom domains connected to bucket 'my-bucket'...
+						domain:            example.com
+						enabled:           Yes
+						ownership_status:  verified
+						ssl_status:        active
+						min_tls_version:   1.2
+						zone_id:           zone-id-123
+						zone_name:         example-zone
 
-				domain:            test.com
-				enabled:           No
-				ownership_status:  pending
-				ssl_status:        pending
-				min_tls_version:   1.0
-				zone_id:           zone-id-456
-				zone_name:         test-zone"
-			  `);
+						domain:            test.com
+						enabled:           No
+						ownership_status:  pending
+						ssl_status:        pending
+						min_tls_version:   1.0
+						zone_id:           zone-id-456
+						zone_name:         test-zone"
+					  `);
 				});
 			});
 			describe("remove", () => {
@@ -1625,9 +1627,9 @@ describe("r2", () => {
 						`r2 bucket domain remove ${bucketName} --domain ${domainName}`
 					);
 					expect(std.out).toMatchInlineSnapshot(`
-				"Removing custom domain 'example.com' from bucket 'my-bucket'...
-				Custom domain 'example.com' removed successfully."
-			  `);
+						"Removing custom domain 'example.com' from bucket 'my-bucket'...
+						Custom domain 'example.com' removed successfully."
+					  `);
 				});
 			});
 			describe("update", () => {
@@ -1660,9 +1662,141 @@ describe("r2", () => {
 						`r2 bucket domain update ${bucketName} --domain ${domainName} --min-tls 1.3`
 					);
 					expect(std.out).toMatchInlineSnapshot(`
-				"Updating custom domain 'example.com' for bucket 'my-bucket'...
-				✨ Custom domain 'example.com' updated successfully."
-			  `);
+						"Updating custom domain 'example.com' for bucket 'my-bucket'...
+						✨ Custom domain 'example.com' updated successfully."
+					  `);
+				});
+			});
+		});
+		describe("dev-url", () => {
+			const { setIsTTY } = useMockIsTTY();
+			mockAccountId();
+			mockApiToken();
+			describe("get", () => {
+				it("should retrieve the r2.dev URL of a bucket when public access is enabled", async () => {
+					const bucketName = "my-bucket";
+					const domainInfo = {
+						bucketId: "bucket-id-123",
+						domain: "pub-bucket-id-123.r2.dev",
+						enabled: true,
+					};
+					msw.use(
+						http.get(
+							"*/accounts/:accountId/r2/buckets/:bucketName/domains/managed",
+							async ({ params }) => {
+								const { accountId, bucketName: bucketParam } = params;
+								expect(accountId).toEqual("some-account-id");
+								expect(bucketParam).toEqual(bucketName);
+								return HttpResponse.json(createFetchResult({ ...domainInfo }));
+							},
+							{ once: true }
+						)
+					);
+					await runWrangler(`r2 bucket dev-url get ${bucketName}`);
+					expect(std.out).toMatchInlineSnapshot(`
+						"Public access is enabled at 'https://pub-bucket-id-123.r2.dev'."
+					  `);
+				});
+
+				it("should show that public access is disabled when it is disabled", async () => {
+					const bucketName = "my-bucket";
+					const domainInfo = {
+						bucketId: "bucket-id-123",
+						domain: "pub-bucket-id-123.r2.dev",
+						enabled: false,
+					};
+					msw.use(
+						http.get(
+							"*/accounts/:accountId/r2/buckets/:bucketName/domains/managed",
+							async ({ params }) => {
+								const { accountId, bucketName: bucketParam } = params;
+								expect(accountId).toEqual("some-account-id");
+								expect(bucketParam).toEqual(bucketName);
+								return HttpResponse.json(createFetchResult({ ...domainInfo }));
+							},
+							{ once: true }
+						)
+					);
+					await runWrangler(`r2 bucket dev-url get ${bucketName}`);
+					expect(std.out).toMatchInlineSnapshot(`
+						"Public access via the r2.dev URL is disabled."
+					  `);
+				});
+			});
+
+			describe("enable", () => {
+				it("should enable public access", async () => {
+					const bucketName = "my-bucket";
+					const domainInfo = {
+						bucketId: "bucket-id-123",
+						domain: "pub-bucket-id-123.r2.dev",
+						enabled: true,
+					};
+
+					setIsTTY(true);
+					mockConfirm({
+						text:
+							`Are you sure you enable public access for bucket '${bucketName}'? ` +
+							`The contents of your bucket will be made publicly available at its r2.dev URL`,
+						result: true,
+					});
+					msw.use(
+						http.put(
+							"*/accounts/:accountId/r2/buckets/:bucketName/domains/managed",
+							async ({ request, params }) => {
+								const { accountId, bucketName: bucketParam } = params;
+								expect(accountId).toEqual("some-account-id");
+								expect(bucketParam).toEqual(bucketName);
+								const requestBody = await request.json();
+								expect(requestBody).toEqual({ enabled: true });
+								return HttpResponse.json(createFetchResult({ ...domainInfo }));
+							},
+							{ once: true }
+						)
+					);
+					await runWrangler(`r2 bucket dev-url enable ${bucketName}`);
+					expect(std.out).toMatchInlineSnapshot(`
+						"Enabling public access for bucket 'my-bucket'...
+						✨ Public access enabled at 'https://pub-bucket-id-123.r2.dev'."
+					  `);
+				});
+			});
+
+			describe("disable", () => {
+				it("should disable public access", async () => {
+					const bucketName = "my-bucket";
+					const domainInfo = {
+						bucketId: "bucket-id-123",
+						domain: "pub-bucket-id-123.r2.dev",
+						enabled: false,
+					};
+
+					setIsTTY(true);
+					mockConfirm({
+						text:
+							`Are you sure you disable public access for bucket '${bucketName}'? ` +
+							`The contents of your bucket will no longer be publicly available at its r2.dev URL`,
+						result: true,
+					});
+					msw.use(
+						http.put(
+							"*/accounts/:accountId/r2/buckets/:bucketName/domains/managed",
+							async ({ request, params }) => {
+								const { accountId, bucketName: bucketParam } = params;
+								expect(accountId).toEqual("some-account-id");
+								expect(bucketParam).toEqual(bucketName);
+								const requestBody = await request.json();
+								expect(requestBody).toEqual({ enabled: false });
+								return HttpResponse.json(createFetchResult({ ...domainInfo }));
+							},
+							{ once: true }
+						)
+					);
+					await runWrangler(`r2 bucket dev-url disable ${bucketName}`);
+					expect(std.out).toMatchInlineSnapshot(`
+						"Disabling public access for bucket 'my-bucket'...
+						Public access disabled at 'https://pub-bucket-id-123.r2.dev'."
+					  `);
 				});
 			});
 		});

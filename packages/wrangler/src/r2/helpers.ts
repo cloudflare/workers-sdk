@@ -742,6 +742,56 @@ export async function configureCustomDomainSettings(
 	);
 }
 
+export interface R2DevDomainInfo {
+	bucketId: string;
+	domain: string;
+	enabled: boolean;
+}
+
+export async function getR2DevDomain(
+	accountId: string,
+	bucketName: string,
+	jurisdiction?: string
+): Promise<R2DevDomainInfo> {
+	const headers: HeadersInit = {};
+	if (jurisdiction) {
+		headers["cf-r2-jurisdiction"] = jurisdiction;
+	}
+
+	const result = await fetchResult<R2DevDomainInfo>(
+		`/accounts/${accountId}/r2/buckets/${bucketName}/domains/managed`,
+		{
+			method: "GET",
+			headers,
+		}
+	);
+	return result;
+}
+
+export async function updateR2DevDomain(
+	accountId: string,
+	bucketName: string,
+	enabled: boolean,
+	jurisdiction?: string
+): Promise<R2DevDomainInfo> {
+	const headers: HeadersInit = {
+		"Content-Type": "application/json",
+	};
+	if (jurisdiction) {
+		headers["cf-r2-jurisdiction"] = jurisdiction;
+	}
+
+	const result = await fetchResult<R2DevDomainInfo>(
+		`/accounts/${accountId}/r2/buckets/${bucketName}/domains/managed`,
+		{
+			method: "PUT",
+			headers,
+			body: JSON.stringify({ enabled }),
+		}
+	);
+	return result;
+}
+
 /**
  * R2 bucket names must only contain alphanumeric and - characters.
  */
