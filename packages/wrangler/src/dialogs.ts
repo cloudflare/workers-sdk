@@ -130,3 +130,28 @@ export async function select<Values extends string>(
 	});
 	return value;
 }
+
+export async function multiselect<Values extends string>(
+	text: string,
+	options: SelectOptions<Values>
+): Promise<Values[]> {
+	if (isNonInteractiveOrCI()) {
+		throw new NoDefaultValueProvided();
+	}
+	const { value } = await prompts({
+		type: "multiselect",
+		name: "value",
+		message: text,
+		choices: options.choices,
+		instructions: false,
+		hint: "- Space to select. Return to submit",
+		onState: (state) => {
+			if (state.aborted) {
+				process.nextTick(() => {
+					process.exit(1);
+				});
+			}
+		},
+	});
+	return value;
+}

@@ -23,6 +23,7 @@ import {
 	usingLocalBucket,
 } from "./helpers";
 import * as Info from "./info";
+import * as Lifecycle from "./lifecycle";
 import * as List from "./list";
 import * as Notification from "./notification";
 import * as PublicDevUrl from "./public-dev-url";
@@ -648,6 +649,37 @@ export function r2(r2Yargs: CommonYargsArgv, subHelp: SubHelp) {
 							"Get the r2.dev URL and status for an R2 bucket",
 							PublicDevUrl.GetOptions,
 							PublicDevUrl.GetHandler
+						);
+				}
+			);
+			r2BucketYargs.command(
+				"lifecycle",
+				"Manage lifecycle rules for an R2 bucket",
+				(lifecycleYargs) => {
+					return lifecycleYargs
+						.command(
+							"list <bucket>",
+							"List lifecycle rules for a bucket",
+							Lifecycle.ListOptions,
+							Lifecycle.ListHandler
+						)
+						.command(
+							"add <bucket>",
+							"Add a lifecycle rule to an R2 bucket",
+							Lifecycle.AddOptions,
+							Lifecycle.AddHandler
+						)
+						.command(
+							"remove <bucket>",
+							"Remove a lifecycle rule from an R2 bucket",
+							Lifecycle.RemoveOptions,
+							Lifecycle.RemoveHandler
+						)
+						.command(
+							"set <bucket>",
+							"Set the lifecycle configuration for an R2 bucket from a JSON file",
+							Lifecycle.SetOptions,
+							Lifecycle.SetHandler
 						);
 				}
 			);
