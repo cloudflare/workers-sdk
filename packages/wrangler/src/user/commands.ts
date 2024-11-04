@@ -6,7 +6,6 @@ import { listScopes, login, logout, validateScopeKeys } from "./user";
 import { whoami } from "./whoami";
 
 defineCommand({
-	// this needs scopes as an option?
 	command: "wrangler login",
 	metadata: {
 		description: "🔓 Login to Cloudflare",
@@ -49,7 +48,7 @@ defineCommand({
 			return;
 		}
 		await login({ browser: args.browser });
-		const config = readConfig(args.config, args);
+		const config = readConfig(args.config, args, undefined, true);
 		await metrics.sendMetricsEvent("login user", {
 			sendMetrics: config.send_metrics,
 		});
@@ -67,10 +66,9 @@ defineCommand({
 		owner: "Workers: Authoring and Testing",
 		status: "stable",
 	},
-	args: {},
 	async handler(args) {
 		await logout();
-		const config = readConfig(undefined, args);
+		const config = readConfig(args.config, args, undefined, true);
 		await metrics.sendMetricsEvent("logout user", {
 			sendMetrics: config.send_metrics,
 		});
@@ -93,7 +91,7 @@ defineCommand({
 	},
 	async handler(args) {
 		await whoami(args.account);
-		const config = readConfig(undefined, args);
+		const config = readConfig(args.config, args, undefined, true);
 		await metrics.sendMetricsEvent("view accounts", {
 			sendMetrics: config.send_metrics,
 		});
