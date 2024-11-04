@@ -392,11 +392,11 @@ GLOBAL FLAGS
 							errors: [],
 							messages: [],
 							result: {
-								"id": "3c70754a-8435-4498-92ad-22e2e2c90853",
-								"status": "queued",
-								"version_id": "9e94c502-ca41-4342-a7f7-af96b444512c",
-								"workflow_id": "03e70e31-d7a4-4401-a629-6a4b6096cdfe"
-							  },
+								id: "3c70754a-8435-4498-92ad-22e2e2c90853",
+								status: "queued",
+								version_id: "9e94c502-ca41-4342-a7f7-af96b444512c",
+								workflow_id: "03e70e31-d7a4-4401-a629-6a4b6096cdfe",
+							},
 						});
 					},
 					{ once: true }
