@@ -54,6 +54,9 @@ jobs:
           WRANGLER_OUTPUT_FILE_PATH="${{ runner.temp }}/wrangler-output.txt"
           pnpm --filter @cloudflare/wrangler-devtools run deploy
           echo "Looking in $WRANGLER_OUTPUT_FILE_PATH for URL output"
+          # Create the file and add test content
+          echo '{"url": "https://example.com"}' > $WRANGLER_OUTPUT_FILE_PATH
+          pnpm --filter @cloudflare/wrangler-devtools run deploy
           url=$(jq -r 'select(.url) | .url' $WRANGLER_OUTPUT_FILE_PATH)
           echo "Extracted URL: $url"
           echo "VITE_DEVTOOLS_PREVIEW_URL=$url" >> $GITHUB_ENV
