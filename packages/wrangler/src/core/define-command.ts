@@ -107,7 +107,7 @@ export type CommandDefinition<
 	 * A plain key-value object describing the CLI args for this command.
 	 * Shared args can be defined as another plain object and spread into this.
 	 */
-	args: NamedArgDefs;
+	args?: NamedArgDefs;
 	/**
 	 * Optionally declare some of the named args as positional args.
 	 * The order of this array is the order they are expected in the command.
