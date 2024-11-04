@@ -28,7 +28,6 @@ import type {
 	Project,
 	UnifiedDeploymentLogMessages,
 } from "@cloudflare/types";
-import { writeFileSync } from "fs";
 
 type PagesDeployArgs = StrictYargsOptionsToInterface<typeof Options>;
 
