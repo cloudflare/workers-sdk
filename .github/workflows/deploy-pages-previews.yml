@@ -51,6 +51,7 @@ jobs:
       - name: Deploy Wrangler DevTools preview
         if: contains(github.event.*.labels.*.name, 'preview:wrangler-devtools')
         run: |
+          WRANGLER_OUTPUT_FILE_PATH="${{ runner.temp }}/wrangler-output.txt"
           pnpm --filter @cloudflare/wrangler-devtools run deploy
           echo "Looking in $WRANGLER_OUTPUT_FILE_PATH for URL output"
           url=$(jq -r 'select(.url) | .url' $WRANGLER_OUTPUT_FILE_PATH)
