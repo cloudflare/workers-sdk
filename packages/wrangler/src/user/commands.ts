@@ -1,4 +1,3 @@
-import { readConfig } from "../config";
 import { defineCommand } from "../core/define-command";
 import { CommandLineArgsError } from "../errors";
 import * as metrics from "../metrics";
@@ -11,6 +10,9 @@ defineCommand({
 		description: "🔓 Login to Cloudflare",
 		owner: "Workers: Authoring and Testing",
 		status: "stable",
+	},
+	behaviour: {
+		printConfigWarnings: false,
 	},
 	args: {
 		"scopes-list": {
@@ -28,7 +30,7 @@ defineCommand({
 			requiresArg: true,
 		},
 	},
-	async handler(args) {
+	async handler(args, { config }) {
 		if (args.scopesList) {
 			listScopes();
 			return;
@@ -48,7 +50,6 @@ defineCommand({
 			return;
 		}
 		await login({ browser: args.browser });
-		const config = readConfig(args.config, args, undefined, true);
 		await metrics.sendMetricsEvent("login user", {
 			sendMetrics: config.send_metrics,
 		});
@@ -66,9 +67,11 @@ defineCommand({
 		owner: "Workers: Authoring and Testing",
 		status: "stable",
 	},
-	async handler(args) {
+	behaviour: {
+		printConfigWarnings: false,
+	},
+	async handler(_, { config }) {
 		await logout();
-		const config = readConfig(args.config, args, undefined, true);
 		await metrics.sendMetricsEvent("logout user", {
 			sendMetrics: config.send_metrics,
 		});
@@ -82,6 +85,9 @@ defineCommand({
 		owner: "Workers: Authoring and Testing",
 		status: "stable",
 	},
+	behaviour: {
+		printConfigWarnings: false,
+	},
 	args: {
 		account: {
 			type: "string",
@@ -89,9 +95,8 @@ defineCommand({
 				"Show membership information for the given account (id or name).",
 		},
 	},
-	async handler(args) {
+	async handler(args, { config }) {
 		await whoami(args.account);
-		const config = readConfig(args.config, args, undefined, true);
 		await metrics.sendMetricsEvent("view accounts", {
 			sendMetrics: config.send_metrics,
 		});

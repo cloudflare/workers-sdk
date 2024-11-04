@@ -182,7 +182,12 @@ function createHandler(def: CommandDefinition) {
 			await def.validateArgs?.(args);
 
 			await def.handler(args, {
-				config: readConfig(args.config, args),
+				config: readConfig(
+					args.config,
+					args,
+					undefined,
+					!(def.behaviour?.printConfigWarnings ?? true)
+				),
 				errors: { UserError, FatalError },
 				logger,
 				fetchResult,
