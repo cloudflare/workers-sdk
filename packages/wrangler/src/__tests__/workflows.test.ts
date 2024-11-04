@@ -192,7 +192,6 @@ GLOBAL FLAGS
 			await mockGetInstances(mockInstances);
 
 			await runWrangler(`workflows instances list some-workflow`);
-			console.log(std);
 			expect(std.info).toMatchInlineSnapshot(
 				`"Showing 2 instances from page 1:"`
 			);
