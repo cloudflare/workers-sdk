@@ -591,7 +591,6 @@ export function createCLIParser(argv: string[]) {
 
 	/******************** CMD GROUP ***********************/
 
-	// user
 	register.registerNamespace("login");
 	register.registerNamespace("logout");
 	register.registerNamespace("whoami");
