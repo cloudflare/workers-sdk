@@ -28,6 +28,7 @@ import type {
 	Project,
 	UnifiedDeploymentLogMessages,
 } from "@cloudflare/types";
+import { writeFileSync } from "fs";
 
 type PagesDeployArgs = StrictYargsOptionsToInterface<typeof Options>;
 
@@ -412,6 +413,12 @@ export const Handler = async (args: PagesDeployArgs) => {
 			`✨ Deployment complete! Take a peek over at ${deploymentResponse.url}` +
 				(alias ? `\n✨ Deployment alias URL: ${alias}` : "")
 		);
+
+		const deploymentUrlOutputFile = process.env.DEPLOYMENT_URL_OUTPUT_FILE;
+		if (deploymentUrlOutputFile) {
+			writeFileSync(deploymentUrlOutputFile, deploymentResponse.url);
+			logger.log(`✅ Deployment URL written to ${deploymentUrlOutputFile}`);
+		}
 	} else if (
 		latestDeploymentStage?.name === "deploy" &&
 		latestDeploymentStage?.status === "failure"
