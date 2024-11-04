@@ -52,7 +52,9 @@ jobs:
         if: contains(github.event.*.labels.*.name, 'preview:wrangler-devtools')
         run: |
           pnpm --filter @cloudflare/wrangler-devtools run deploy
+          echo "Looking in $WRANGLER_OUTPUT_FILE_PATH for URL output"
           url=$(jq -r 'select(.url) | .url' $WRANGLER_OUTPUT_FILE_PATH)
+          echo "Extracted URL: $url"
           echo "VITE_DEVTOOLS_PREVIEW_URL=$url" >> $GITHUB_ENV
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
