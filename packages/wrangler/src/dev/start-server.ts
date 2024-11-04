@@ -499,6 +499,16 @@ async function runEsbuild({
 					workflowBindings,
 					projectRoot,
 					defineNavigatorUserAgent,
+
+					// Pages specific options used by wrangler pages commands
+					entryName: undefined,
+					inject: undefined,
+					isOutfile: undefined,
+					external: undefined,
+
+					watch: undefined,
+					sourcemap: undefined,
+					plugins: undefined,
 				})
 			: undefined;
 
