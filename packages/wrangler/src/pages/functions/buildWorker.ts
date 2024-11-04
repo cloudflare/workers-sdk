@@ -68,7 +68,7 @@ export function buildWorkerFromFunctions({
 		additionalModules: [],
 		moduleCollector,
 		inject: [routesModule],
-		...(outdir ? { entryName: "index" } : {}),
+		...(outdir ? { entryName: "index" } : { entryName: undefined }),
 		minify,
 		sourcemap,
 		watch,
@@ -97,7 +97,6 @@ export function buildWorkerFromFunctions({
 		jsxFragment: undefined,
 		tsconfig: undefined,
 		testScheduled: undefined,
-		entryName: undefined,
 	});
 }
 
