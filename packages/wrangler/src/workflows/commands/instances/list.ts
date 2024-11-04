@@ -9,7 +9,8 @@ defineCommand({
 	command: "wrangler workflows instances list",
 
 	metadata: {
-		description: "Instance related commands (list, describe, terminate...)",
+		description:
+			"Instance related commands (list, describe, terminate, pause, resume)",
 		owner: "Product: Workflows",
 		status: "open-beta",
 	},

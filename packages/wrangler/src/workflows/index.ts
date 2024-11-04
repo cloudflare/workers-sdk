@@ -6,6 +6,8 @@ import "./commands/trigger";
 import "./commands/instances/list";
 import "./commands/instances/describe";
 import "./commands/instances/terminate";
+import "./commands/instances/pause";
+import "./commands/instances/resume";
 
 defineNamespace({
 	command: "wrangler workflows",
