@@ -129,7 +129,7 @@ export interface OutputEntryVersionUpload
 	version: 1;
 	/** The name of the Worker. */
 	worker_name: string | null;
-	/** The GUID that identifies the Worker. This never changes even if the name is changed. */
+	/** The GUID tha™t identifies the Worker. This never changes even if the name is changed. */
 	worker_tag: string | null;
 	/** A GUID that identifies this uploaded, but not yet deployed, version of the Worker. This version will need to be "deployed" to receive traffic. */
 	version_id: string | null;
