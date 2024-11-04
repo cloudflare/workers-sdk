@@ -13,7 +13,6 @@ describe("event notifications", () => {
 
 	test("tableFromNotificationsGetResponse", async () => {
 		const bucketName = "my-bucket";
-		const config = { account_id: "my-account" };
 		const response: GetNotificationConfigResponse = {
 			bucketName,
 			queues: [
@@ -48,10 +47,7 @@ describe("event notifications", () => {
 				},
 			],
 		};
-		const tableOutput = await tableFromNotificationGetResponse(
-			config,
-			response
-		);
+		const tableOutput = tableFromNotificationGetResponse(response);
 		logger.log(tableOutput.map((x) => formatLabelledValues(x)).join("\n\n"));
 
 		await expect(std.out).toMatchInlineSnapshot(`
