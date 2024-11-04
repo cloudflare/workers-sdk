@@ -1,4 +1,8 @@
-import { DeploymentType, NodeGroup } from "../../cloudchamber/client";
+import {
+	DeploymentType,
+	NodeGroup,
+	PlacementStatusHealth,
+} from "../../cloudchamber/client";
 import type {
 	DeploymentV2,
 	PlacementWithEvents,
@@ -42,7 +46,7 @@ export const MOCK_DEPLOYMENTS: DeploymentV2[] = [
 		},
 		current_placement: {
 			deployment_version: 2,
-			status: { health: "running" },
+			status: { health: PlacementStatusHealth.RUNNING },
 			deployment_id: "2",
 			terminate: false,
 			created_at: "123",
@@ -91,7 +95,7 @@ export const MOCK_DEPLOYMENTS_COMPLEX: DeploymentV2[] = [
 		},
 		current_placement: {
 			deployment_version: 2,
-			status: { health: "running" },
+			status: { health: PlacementStatusHealth.RUNNING },
 			deployment_id: "2",
 			terminate: false,
 			created_at: "123",
@@ -137,7 +141,7 @@ export const MOCK_DEPLOYMENTS_COMPLEX: DeploymentV2[] = [
 		},
 		current_placement: {
 			deployment_version: 2,
-			status: { health: "running" },
+			status: { health: PlacementStatusHealth.RUNNING },
 			deployment_id: "2",
 			terminate: false,
 			created_at: "123",
@@ -156,7 +160,7 @@ export const MOCK_PLACEMENTS: PlacementWithEvents[] = [
 		deployment_version: 2,
 		terminate: false,
 		events: [],
-		status: { health: "stopped" },
+		status: { health: PlacementStatusHealth.STOPPED },
 	},
 	{
 		id: "3",
@@ -165,7 +169,7 @@ export const MOCK_PLACEMENTS: PlacementWithEvents[] = [
 		deployment_version: 3,
 		terminate: false,
 		events: [],
-		status: { health: "failed" },
+		status: { health: PlacementStatusHealth.FAILED },
 	},
 	{
 		id: "1",
@@ -174,6 +178,6 @@ export const MOCK_PLACEMENTS: PlacementWithEvents[] = [
 		deployment_version: 4,
 		terminate: false,
 		events: [],
-		status: { health: "running" },
+		status: { health: PlacementStatusHealth.RUNNING },
 	},
 ];

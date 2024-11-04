@@ -7,9 +7,12 @@ import { DeploymentsService } from "../client";
 import { wrap } from "../helpers/wrap";
 import { idToLocationName } from "../locations";
 import { statusToColored } from "./util";
-import type { Placement, State } from "../client";
+import type {
+	DeploymentPlacementState,
+	Placement,
+	PlacementStatusHealth,
+} from "../client";
 import type { DeploymentV2 } from "../client/models/DeploymentV2";
-import type { Status } from "../enums";
 
 function ipv6(placement: Placement | undefined) {
 	if (!placement) {
@@ -52,12 +55,14 @@ function version(deployment: DeploymentV2) {
 
 function health(placement?: Placement) {
 	if (!placement) {
-		return statusToColored("placing");
+		return statusToColored();
 	}
+
 	if (!placement.status["health"]) {
-		return statusToColored("placing");
+		return statusToColored();
 	}
-	return statusToColored(placement.status["health"] as Status);
+
+	return statusToColored(placement.status["health"] as PlacementStatusHealth);
 }
 
 /**
@@ -81,7 +86,7 @@ export async function loadDeployments(
 			undefined,
 			deploymentsParams?.location,
 			deploymentsParams?.image,
-			deploymentsParams?.state as State,
+			deploymentsParams?.state as DeploymentPlacementState | undefined,
 			deploymentsParams?.state
 		)
 	);
