@@ -9,7 +9,6 @@ function getDevtoolsIframeUrl(inspectorUrl: string) {
 		? `${import.meta.env.VITE_DEVTOOLS_PREVIEW_URL}/js_app`
 		: "https://devtools.devprod.cloudflare.dev/js_app";
 
-
 	const url = new URL(devToolsUrl);
 	url.searchParams.set("wss", inspectorUrl.slice(5));
 
