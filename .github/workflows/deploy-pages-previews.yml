@@ -48,9 +48,6 @@ jobs:
           NODE_ENV: "production"
           CI_OS: ${{ runner.os }}
 
-      # As well as actually deploying the preview, this step also sets the deployment URL as an environment variable.
-      # This allows subsequent steps (the Deploy Workers Playground preview) to link to the new preview for testing.
-      # Note that the DevTools preview url uses the VITE_ prefix, as it is used in the UI of the a Vite project.
       - name: Deploy Wrangler DevTools preview
         if: contains(github.event.*.labels.*.name, 'preview:wrangler-devtools')
         run: |
@@ -74,4 +71,4 @@ jobs:
         run: pnpm --filter workers-playground run build:testing && pnpm --filter workers-playground run deploy
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          DEVTOOLS_PREVIEW_URL: ${{ env.VITE_DEVTOOLS_PREVIEW_URL }}
+          VITE_DEVTOOLS_PREVIEW_URL: ${{ env.VITE_DEVTOOLS_PREVIEW_URL }}
