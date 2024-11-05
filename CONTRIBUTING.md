@@ -207,9 +207,18 @@ Changes should be committed to a new local branch, which then gets pushed to you
 
 ## PR Review
 
-PR review is a critical and required step in the process for landing changes. This is an opportunity to catch potential issues, improve the quality of the work, celebrate good design, and learn from each other.
+PR review is a critical and required step in the process for landing changes. This is an opportunity to catch potential issues, improve the quality of the work, celebrate good design, and learn from each other. As a reviewer, it's important to be thoughtful about the proposed changes and communicate any feedback.
 
-As a reviewer, it's important to be thoughtful about the proposed changes and communicate any feedback. Examples of PR reviews that the community has identified as particularly high-caliber are labeled with the `highlight pr review` label. Please feel empowered to use these as a learning resource.
+## PR Previews
+
+Every PR will have an associated pre-release build for all releaseable packages within the repository, powered by our [prerelease registry](packages/prerelease-registry). You can find links to prereleases for each package in a comment automatically posted by GitHub Actions on each opened PR ([for example](https://github.com/cloudflare/workers-sdk/pull/7172#issuecomment-2457244715)).
+
+It's also possible to generate preview builds for the applications in the repository. These aren't generated automatically because they're pretty slow CI jobs, but you can trigger preview builds by adding one of the following labels to your PR:
+- `preview:wrangler-devtools` for deploying [wrangler-devtools](packages/wrangler-devtools)
+- `preview:workers-playground` for deploying [workers-playground](packages/workers-playground)
+- `preview:quick-edit` for deploying [quick-edit](packages/quick-edit)
+
+Once built, you can find the preview link for these applications in the [Deploy Pages Previews](.github/workflows/deploy-pages-previews.yml) action output
 
 ## PR Tests
 
