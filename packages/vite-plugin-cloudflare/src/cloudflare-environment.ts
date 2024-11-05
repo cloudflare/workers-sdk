@@ -119,6 +119,12 @@ export class CloudflareDevEnvironment extends vite.DevEnvironment {
 	}
 }
 
+const cloudflareBuiltInModules = [
+	'cloudflare:email',
+	'cloudflare:sockets',
+	'cloudflare:workers',
+];
+
 export function createCloudflareEnvironmentOptions(
 	name: string,
 	options: WorkerOptions,
@@ -138,6 +144,7 @@ export function createCloudflareEnvironmentOptions(
 					// Note: ssr pre-bundling is opt-in, and we need to enabled it by setting noDiscovery to false
 					noDiscovery: false,
 					exclude: [
+						...cloudflareBuiltInModules,
 						...builtinModules.concat(builtinModules.map((m) => `node:${m}`)),
 					],
 					esbuildOptions: {
@@ -168,11 +175,7 @@ export function createCloudflareEnvironmentOptions(
 					//       dev pre-bundling crawling (were we not to set this input field we'd have to appropriately set
 					//       optimizeDeps.entries in the dev config)
 					input: options.main,
-					external: [
-						'cloudflare:email',
-						'cloudflare:sockets',
-						'cloudflare:workers',
-					],
+					external: [...cloudflareBuiltInModules],
 				},
 			},
 			webCompatible: true,
