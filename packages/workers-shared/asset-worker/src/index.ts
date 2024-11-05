@@ -117,9 +117,8 @@ export default class extends WorkerEntrypoint<Env> {
 		}
 	}
 
-	async unstable_canFetch(request: Request): Promise<boolean | Response> {
+	async unstable_canFetch(request: Request): Promise<boolean> {
 		const url = new URL(request.url);
-		const method = request.method.toUpperCase();
 		const decodedPathname = decodePath(url.pathname);
 		const intent = await getIntent(
 			decodedPathname,
@@ -129,10 +128,6 @@ export default class extends WorkerEntrypoint<Env> {
 			},
 			this.unstable_exists.bind(this)
 		);
-		// if asset exists but non GET/HEAD method, 405
-		if (intent && ["GET", "HEAD"].includes(method)) {
-			return new MethodNotAllowedResponse();
-		}
 		if (intent === null) {
 			return false;
 		}
