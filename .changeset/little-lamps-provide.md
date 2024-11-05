@@ -1,5 +1,5 @@
 ---
-"create-cloudflare": minor
+"create-cloudflare": patch
 ---
 
-fix cloudflare pages command for solid
+fix invalid preset config on the experimental solid template
