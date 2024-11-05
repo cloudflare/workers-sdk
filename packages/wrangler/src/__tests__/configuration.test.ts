@@ -5490,6 +5490,31 @@ describe("normalizeAndValidateConfig()", () => {
 				`);
 			});
 
+			it("should error on invalid observability.logs", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						observability: {
+							enabled: true,
+							logs: "enabled",
+						},
+					} as unknown as RawConfig,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					"
+				`);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - Expected \\"observability.logs\\" to be of type object but got \\"enabled\\"."
+				`);
+			});
+
 			it("should error on a sampling rate out of range", () => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
