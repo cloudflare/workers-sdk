@@ -14,7 +14,8 @@ export const handleRequest = async (
 	request: Request,
 	configuration: Required<AssetConfig>,
 	exists: typeof EntrypointType.prototype.unstable_exists,
-	getByETag: typeof EntrypointType.prototype.unstable_getByETag
+	getByETag: typeof EntrypointType.prototype.unstable_getByETag,
+	skipIfNoneMatchHeaderHandling: boolean
 ) => {
 	const { pathname, search } = new URL(request.url);
 
@@ -55,7 +56,10 @@ export const handleRequest = async (
 	const strongETag = `"${intent.asset.eTag}"`;
 	const weakETag = `W/${strongETag}`;
 	const ifNoneMatch = request.headers.get("If-None-Match") || "";
-	if ([weakETag, strongETag].includes(ifNoneMatch)) {
+	if (
+		[weakETag, strongETag].includes(ifNoneMatch) &&
+		!skipIfNoneMatchHeaderHandling
+	) {
 		return new NotModifiedResponse(null, { headers });
 	}
 
