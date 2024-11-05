@@ -1,9 +1,9 @@
 import chalk from "chalk";
-import { fetchPagedListResult, fetchResult } from "./cfetch";
-import { isAuthenticationError } from "./deploy/deploy";
-import { logger } from "./logger";
-import { getAPIToken, getAuthFromEnv, getScopes } from "./user";
-import { fetchMembershipRoles } from "./user/membership";
+import { fetchPagedListResult, fetchResult } from "../cfetch";
+import { isAuthenticationError } from "../deploy/deploy";
+import { logger } from "../logger";
+import { fetchMembershipRoles } from "./membership";
+import { getAPIToken, getAuthFromEnv, getScopes } from ".";
 
 export async function whoami(accountFilter?: string) {
 	logger.log("Getting User settings...");
