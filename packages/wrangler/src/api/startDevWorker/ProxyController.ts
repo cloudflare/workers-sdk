@@ -351,8 +351,6 @@ export class ProxyController extends Controller<ProxyControllerEventMap> {
 				)}`,
 				error
 			);
-
-			throw error;
 		}
 	}
 
