@@ -54,8 +54,11 @@ jobs:
           WRANGLER_OUTPUT_FILE_PATH="${{ runner.temp }}/wrangler-output.json"
           echo '{}' > $WRANGLER_OUTPUT_FILE_PATH
           pnpm --filter @cloudflare/wrangler-devtools run deploy
+          echo "Extracting deployed URL from output file $WRANGLER_OUTPUT_FILE_PATH"
+          echo "$WRANGLER_OUTPUT_FILE_PATH contents:"
+          cat $WRANGLER_OUTPUT_FILE_PATH
           url=$(jq -r 'select(.url) | .url' $WRANGLER_OUTPUT_FILE_PATH)
-          echo "Deployed URL extracted from output file $WRANGLER_OUTPUT_FILE_PATH: $url"
+          echo "Extracted URL: $url"
           echo "VITE_DEVTOOLS_PREVIEW_URL=$url" >> $GITHUB_ENV
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
