@@ -10,7 +10,8 @@
 	"license": "BSD-3-Clause",
 	"author": "workers-devprod@cloudflare.com",
 	"scripts": {
-		"deploy": "CLOUDFLARE_ACCOUNT_ID=e35fd947284363a46fd7061634477114 WRANGLER_OUTPUT_FILE_PATH=$WRANGLER_OUTPUT_FILE_PATH make publish"
+		"deploy": "CLOUDFLARE_ACCOUNT_ID=e35fd947284363a46fd7061634477114 WRANGLER_OUTPUT_FILE_PATH=$WRANGLER_OUTPUT_FILE_PATH make publish",
+		"testenv": "make testenv"
 	},
 	"devDependencies": {
 		"patch-package": "^6.5.1",

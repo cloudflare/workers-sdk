@@ -28,3 +28,6 @@ cleanup:
 
 test:
 	git -C devtools-frontend am $(PATCHES)
+
+testenv:
+	echo $(TEST_ENV)
