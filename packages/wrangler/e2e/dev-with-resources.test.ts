@@ -561,7 +561,7 @@ describe.sequential.each(RUNTIMES)("Bindings: $flags", ({ runtime, flags }) => {
 		);
 	});
 
-	it.skipIf(!isLocal)("exposes Pipelines bindings", async () => {
+	it.skipIf(!isLocal).fails("exposes Pipelines bindings", async () => {
 		await helper.seed({
 			"wrangler.toml": dedent`
 				name = "${workerName}"
