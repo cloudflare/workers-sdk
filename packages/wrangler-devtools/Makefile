@@ -28,3 +28,4 @@ cleanup:
 
 test:
 	git -C devtools-frontend am $(PATCHES)
+	
