@@ -14,9 +14,11 @@ import { ensureDirectoryExistsSync } from "./utils/filesystem";
  * `WRANGLER_OUTPUT_FILE_DIRECTORY` or `WRANGLER_OUTPUT_FILE_PATH`.
  */
 export function writeOutput(entry: OutputEntry) {
+	console.log(outputFilePath);
 	if (outputFilePath === undefined) {
 		outputFilePath = getOutputFilePath();
 	}
+	console.log(outputFilePath);
 	if (outputFilePath !== null) {
 		ensureDirectoryExistsSync(outputFilePath);
 		const entryJSON = JSON.stringify({
