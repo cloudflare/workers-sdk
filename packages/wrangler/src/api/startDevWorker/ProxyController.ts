@@ -177,7 +177,9 @@ export class ProxyController extends Controller<ProxyControllerEventMap> {
 		if (proxyWorkerOptionsChanged) {
 			logger.debug("ProxyWorker miniflare options changed, reinstantiating...");
 
-			void this.proxyWorker.setOptions(proxyWorkerOptions);
+			void this.proxyWorker.setOptions(proxyWorkerOptions).catch((error) => {
+				this.emitErrorEvent("Failed to start ProxyWorker", error);
+			});
 
 			// this creates a new .ready promise that will be resolved when both ProxyWorkers are ready
 			// it also respects any await-ers of the existing .ready promise
@@ -316,8 +318,6 @@ export class ProxyController extends Controller<ProxyControllerEventMap> {
 				`Failed to send message to ProxyWorker: ${JSON.stringify(message)}`,
 				error
 			);
-
-			throw error;
 		}
 	}
 	async sendMessageToInspectorProxyWorker(
