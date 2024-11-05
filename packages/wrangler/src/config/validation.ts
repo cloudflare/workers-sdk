@@ -1326,6 +1326,16 @@ function normalizeAndValidateEnvironment(
 			validateCloudchamberConfig,
 			{}
 		),
+		container_app: notInheritable(
+			diagnostics,
+			topLevelEnv,
+			rawConfig,
+			rawEnv,
+			envName,
+			"container_app",
+			validateContainerAppConfig,
+			[]
+		),
 		send_email: notInheritable(
 			diagnostics,
 			topLevelEnv,
@@ -2357,6 +2367,17 @@ const validateBindingArray =
 		}
 		return isValid;
 	};
+
+const validateContainerAppConfig: ValidatorFn = (diagnostics, field, value) => {
+	if (!Array.isArray(value)) {
+		diagnostics.errors.push(
+			`"container_app" should be an array, but got ${JSON.stringify(value)}`
+		);
+		return false;
+	}
+
+	return true;
+};
 
 const validateCloudchamberConfig: ValidatorFn = (diagnostics, field, value) => {
 	if (typeof value !== "object" || value === null || Array.isArray(value)) {

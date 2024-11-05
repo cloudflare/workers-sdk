@@ -1,3 +1,4 @@
+import { CreateApplicationRequest } from "../cloudchamber/client";
 import type { Json } from "miniflare";
 
 /**
@@ -38,6 +39,11 @@ export type CloudchamberConfig = {
 	memory?: string;
 	ipv4?: boolean;
 };
+
+/**
+ * Configuration for a container application
+ */
+export type ContainerApp = CreateApplicationRequest;
 
 /**
  * Configuration in wrangler for Durable Object Migrations
@@ -449,6 +455,17 @@ export interface EnvironmentNonInheritable {
 	 * @nonInheritable
 	 */
 	cloudchamber: CloudchamberConfig;
+
+	/**
+	 * Container app configuration
+	 *
+	 * NOTE: This field is not automatically inherited from the top level environment,
+	 * and so must be specified in every named environment.
+	 *
+	 * @default `{}`
+	 * @nonInheritable
+	 */
+	container_app: ContainerApp[];
 
 	/**
 	 * These specify any Workers KV Namespaces you want to
