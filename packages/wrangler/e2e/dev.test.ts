@@ -209,7 +209,7 @@ function getStartedWorkerdProcesses(cwd: string): Process[] {
 		.filter((c) => getProcessCwd(c.pid).includes(cwd));
 }
 
-it.only(`leaves no orphaned workerd processes with port conflict`, async () => {
+it(`leaves no orphaned workerd processes with port conflict`, async () => {
 	const initial = new WranglerE2ETestHelper();
 	await initial.seed({
 		"wrangler.toml": dedent`
