@@ -246,6 +246,7 @@ describe("Preview Worker", () => {
 	});
 	it("should forward OPTIONS raw HTTP request", async () => {
 		const resp = await fetch(`${PREVIEW_REMOTE}/method`, {
+			method: "OPTIONS",
 			headers: {
 				"X-CF-Token": defaultUserToken,
 				"CF-Raw-HTTP": "true",
