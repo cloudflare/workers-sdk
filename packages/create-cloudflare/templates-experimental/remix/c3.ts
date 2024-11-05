@@ -14,7 +14,7 @@ const generate = async (ctx: C3Context) => {
 	await runFrameworkGenerator(ctx, [
 		ctx.project.name,
 		"--template",
-		"https://github.com/remix-run/remix/tree/main/templates/cloudflare",
+		"https://github.com/remix-run/remix/tree/main/templates/cloudflare-workers",
 	]);
 
 	logRaw(""); // newline
@@ -26,27 +26,6 @@ const configure = async () => {
 		startText: "Updating the Wrangler version",
 		doneText: `${brandColor(`updated`)} ${dim("wrangler@latest")}`,
 	});
-
-	const typeDefsPath = "load-context.ts";
-
-	const s = spinner();
-	s.start(`Updating \`${typeDefsPath}\``);
-
-	// Remove the empty Env declaration from the template to allow the type from
-	// worker-configuration.d.ts to take over
-	transformFile(typeDefsPath, {
-		visitTSInterfaceDeclaration(n) {
-			if (n.node.id.type === "Identifier" && n.node.id.name !== "Env") {
-				return this.traverse(n);
-			}
-
-			// Removes the node
-			n.replace();
-			return false;
-		},
-	});
-
-	s.stop(`${brandColor("updated")} \`${dim(typeDefsPath)}\``);
 };
 
 const config: TemplateConfig = {
@@ -63,9 +42,6 @@ const config: TemplateConfig = {
 	configure,
 	transformPackageJson: async () => ({
 		scripts: {
-			build:
-				"remix vite:build && wrangler pages functions build --outdir build/worker",
-			deploy: `${npm} run build && wrangler deploy`,
 			preview: `${npm} run build && wrangler dev`,
 			"cf-typegen": `wrangler types`,
 		},
