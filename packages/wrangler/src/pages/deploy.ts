@@ -438,8 +438,6 @@ ${failureMessage}`,
 		);
 	}
 
-	logger.log(process.env.WRANGLER_OUTPUT_FILE_PATH);
-	logger.log(`writeOutput`);
 	writeOutput({
 		type: "pages-deploy",
 		version: 1,
