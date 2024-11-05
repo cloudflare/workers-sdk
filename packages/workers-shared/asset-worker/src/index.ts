@@ -5,10 +5,7 @@ import { Analytics } from "./analytics";
 import { AssetsManifest } from "./assets-manifest";
 import { applyConfigurationDefaults } from "./configuration";
 import { decodePath, getIntent, handleRequest } from "./handler";
-import {
-	InternalServerErrorResponse,
-	MethodNotAllowedResponse,
-} from "./responses";
+import { InternalServerErrorResponse } from "./responses";
 import { getAssetWithMetadataFromKV } from "./utils/kv";
 import type { AssetConfig, UnsafePerformanceTimer } from "../../utils/types";
 import type { ColoMetadata, Environment, ReadyAnalytics } from "./types";
