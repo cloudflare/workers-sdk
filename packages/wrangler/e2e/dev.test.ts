@@ -205,7 +205,7 @@ function getProcessCwd(pid: string | number) {
 }
 function getStartedWorkerdProcesses(cwd: string): Process[] {
 	return getProcesses()
-		.filter(({ cmd, pid }) => cmd.includes("workerd"))
+		.filter(({ cmd }) => cmd.includes("workerd"))
 		.filter((c) => getProcessCwd(c.pid).includes(cwd));
 }
 
