@@ -209,70 +209,75 @@ function getStartedWorkerdProcesses(cwd: string): Process[] {
 		.filter((c) => getProcessCwd(c.pid).includes(cwd));
 }
 
-it(`leaves no orphaned workerd processes with port conflict`, async () => {
-	const initial = new WranglerE2ETestHelper();
-	await initial.seed({
-		"wrangler.toml": dedent`
+it.runIf(process.platform !== "win32" || windowsProcessCwdSupported)(
+	`leaves no orphaned workerd processes with port conflict`,
+	async () => {
+		const initial = new WranglerE2ETestHelper();
+		await initial.seed({
+			"wrangler.toml": dedent`
 						name = "${workerName}"
 						main = "src/index.ts"
 						compatibility_date = "2023-01-01"
 				`,
-		"src/index.ts": dedent`
+			"src/index.ts": dedent`
 						export default {
 							fetch(request) {
 								return new Response("Hello World!")
 							}
 						}`,
-		"package.json": dedent`
+			"package.json": dedent`
 						{
 							"name": "worker",
 							"version": "0.0.0",
 							"private": true
 						}
 						`,
-	});
-	const initialWorker = initial.runLongLived(`wrangler dev`);
+		});
+		const initialWorker = initial.runLongLived(`wrangler dev`);
 
-	const { url: initialWorkerUrl } = await initialWorker.waitForReady();
+		const { url: initialWorkerUrl } = await initialWorker.waitForReady();
 
-	const port = new URL(initialWorkerUrl).port;
+		const port = new URL(initialWorkerUrl).port;
 
-	const helper = new WranglerE2ETestHelper();
-	await helper.seed({
-		"wrangler.toml": dedent`
+		const helper = new WranglerE2ETestHelper();
+		await helper.seed({
+			"wrangler.toml": dedent`
 						name = "${workerName}"
 						main = "src/index.ts"
 						compatibility_date = "2023-01-01"
 				`,
-		"src/index.ts": dedent`
+			"src/index.ts": dedent`
 						export default {
 							fetch(request) {
 								return new Response("Hello World!")
 							}
 						}`,
-		"package.json": dedent`
+			"package.json": dedent`
 						{
 							"name": "worker",
 							"version": "0.0.0",
 							"private": true
 						}
 						`,
-	});
-	const beginProcesses = getStartedWorkerdProcesses(helper.tmpPath);
-	// If a port isn't specified, Wrangler will start up on a different random port. In this test we want to force an address-in-use error
-	const worker = helper.runLongLived(`wrangler dev --port ${port}`);
+		});
+		const beginProcesses = getStartedWorkerdProcesses(helper.tmpPath);
+		// If a port isn't specified, Wrangler will start up on a different random port. In this test we want to force an address-in-use error
+		const worker = helper.runLongLived(`wrangler dev --port ${port}`);
 
-	const exitCode = await worker.exitCode;
+		const exitCode = await worker.exitCode;
 
-	expect(exitCode).not.toBe(0);
+		expect(exitCode).not.toBe(0);
 
-	const endProcesses = getStartedWorkerdProcesses(helper.tmpPath);
+		const endProcesses = getStartedWorkerdProcesses(helper.tmpPath);
 
-	// Check no hanging workerd processes
-	if (process.platform !== "win32" || windowsProcessCwdSupported) {
-		expect(beginProcesses.length).toBe(endProcesses.length);
+		// Check no hanging workerd processes
+
+		assert(process.platform !== "win32" || windowsProcessCwdSupported);
+
+		expect(beginProcesses.length).toBe(0);
+		expect(endProcesses.length).toBe(0);
 	}
-});
+);
 
 // Skipping remote python tests because they consistently flake with timeouts
 // Unskip once remote dev with python workers is more stable
