@@ -123,7 +123,7 @@ export async function versionsDeployHandler(args: VersionsDeployArgs) {
 	}
 
 	if (config.workflows?.length) {
-		logger.warnOnce("Workflows is currently in open beta.");
+		logger.once.warn("Workflows is currently in open beta.");
 	}
 
 	const versionCache: VersionCache = new Map();

@@ -1,4 +1,5 @@
 import fs from "node:fs";
+import chalk from "chalk";
 import dotenv from "dotenv";
 import { findUpSync } from "find-up";
 import { FatalError, UserError } from "../errors";
@@ -236,6 +237,7 @@ export function printBindings(
 		local?: boolean;
 	} = {}
 ) {
+	let someConnectionStatus = false;
 	const truncate = (item: string | Record<string, unknown>) => {
 		const s = typeof item === "string" ? item : JSON.stringify(item);
 		const maxLength = 40;
@@ -297,15 +299,16 @@ export function printBindings(
 						if (context.local) {
 							const registryDefinition = context.registry?.[script_name];
 
+							someConnectionStatus = true;
 							if (
 								registryDefinition &&
 								registryDefinition.durableObjects.some(
 									(d) => d.className === class_name
 								)
 							) {
-								value += ` (defined in 🟢 ${script_name})`;
+								value += ` (defined in ${script_name} ${chalk.green("connected")})`;
 							} else {
-								value += ` (defined in 🔴 ${script_name})`;
+								value += ` (defined in ${script_name} ${chalk.red("not connected")})`;
 							}
 						} else {
 							value += ` (defined in ${script_name})`;
@@ -463,14 +466,16 @@ export function printBindings(
 
 				if (context.local) {
 					const registryDefinition = context.registry?.[service];
+					someConnectionStatus = true;
+
 					if (
 						registryDefinition &&
 						(!entrypoint ||
 							registryDefinition.entrypointAddresses?.[entrypoint])
 					) {
-						value = `🟢 ` + value;
+						value = value + " " + chalk.green("connected");
 					} else {
-						value = `🔴 ` + value;
+						value = value + " " + chalk.red("not connected");
 					}
 				}
 				return {
@@ -637,6 +642,12 @@ export function printBindings(
 	].join("\n");
 
 	logger.log(message);
+
+	if (someConnectionStatus) {
+		logger.once.info(
+			`\nService bindings & durable object bindings connect to other \`wrangler dev\` processes running locally, with their connection status indicated by ${chalk.green("connected")} or ${chalk.red("not connected")}. For more details, refer to https://developers.cloudflare.com/workers/runtime-apis/bindings/service-bindings/#local-development\n`
+		);
+	}
 }
 
 export function withConfig<T>(
