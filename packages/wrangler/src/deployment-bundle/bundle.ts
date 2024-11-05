@@ -115,32 +115,31 @@ export type BundleOptions = {
 	// A module collector enables you to observe what modules are in the Worker.
 	moduleCollector: ModuleCollector;
 	serveLegacyAssetsFromWorker: boolean;
-	legacyAssets?: Config["legacy_assets"];
-	bypassAssetCache?: boolean;
+	legacyAssets: Config["legacy_assets"] | undefined;
+	bypassAssetCache: boolean | undefined;
 	doBindings: DurableObjectBindings;
 	workflowBindings: WorkflowBinding[];
-	jsxFactory?: string;
-	jsxFragment?: string;
-	entryName?: string;
-	watch?: boolean;
-	tsconfig?: string;
-	minify?: boolean;
-	nodejsCompatMode?: NodeJSCompatMode;
+	jsxFactory: string | undefined;
+	jsxFragment: string | undefined;
+	entryName: string | undefined;
+	watch: boolean | undefined;
+	tsconfig: string | undefined;
+	minify: boolean | undefined;
+	nodejsCompatMode: NodeJSCompatMode | undefined;
 	define: Config["define"];
 	alias: Config["alias"];
 	checkFetch: boolean;
 	mockAnalyticsEngineDatasets: Config["analytics_engine_datasets"];
 	targetConsumer: "dev" | "deploy";
-	testScheduled?: boolean;
-	inject?: string[];
-	loader?: Record<string, string>;
-	sourcemap?: esbuild.CommonOptions["sourcemap"];
-	plugins?: esbuild.Plugin[];
-	isOutfile?: boolean;
+	testScheduled: boolean | undefined;
+	inject: string[] | undefined;
+	sourcemap: esbuild.CommonOptions["sourcemap"] | undefined;
+	plugins: esbuild.Plugin[] | undefined;
+	isOutfile: boolean | undefined;
 	local: boolean;
 	projectRoot: string | undefined;
 	defineNavigatorUserAgent: boolean;
-	external?: string[];
+	external: string[] | undefined;
 };
 
 /**
@@ -172,7 +171,6 @@ export async function bundleWorker(
 		targetConsumer,
 		testScheduled,
 		inject: injectOption,
-		loader,
 		sourcemap,
 		plugins,
 		isOutfile,
@@ -424,10 +422,7 @@ export async function bundleWorker(
 				...define,
 			},
 		}),
-		loader: {
-			...COMMON_ESBUILD_OPTIONS.loader,
-			...(loader || {}),
-		},
+		loader: COMMON_ESBUILD_OPTIONS.loader,
 		plugins: [
 			aliasPlugin,
 			moduleCollector.plugin,

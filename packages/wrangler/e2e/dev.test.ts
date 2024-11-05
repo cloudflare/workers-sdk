@@ -139,6 +139,76 @@ describe.each([
 
 		await expect(worker.currentOutput).not.toContain("[b] open a browser");
 	});
+
+	describe(`--test-scheduled works with ${cmd}`, async () => {
+		it("custom build", async () => {
+			const helper = new WranglerE2ETestHelper();
+			await helper.seed({
+				"wrangler.toml": dedent`
+								name = "${workerName}"
+								main = "src/index.ts"
+								compatibility_date = "2023-01-01"
+								[build]
+								command = "true"
+						`,
+				"src/index.ts": dedent`
+								export default {
+									scheduled(event) {
+										console.log("Event triggered")
+									}
+								}`,
+				"package.json": dedent`
+								{
+									"name": "worker",
+									"version": "0.0.0",
+									"private": true
+								}
+								`,
+			});
+			const worker = helper.runLongLived(`${cmd} --test-scheduled`);
+
+			const { url } = await worker.waitForReady();
+
+			await expect(
+				fetch(`${url}/__scheduled`).then((r) => r.text())
+			).resolves.toMatchSnapshot();
+
+			await worker.readUntil(/Event triggered/);
+		});
+
+		it("no custom build", async () => {
+			const helper = new WranglerE2ETestHelper();
+			await helper.seed({
+				"wrangler.toml": dedent`
+								name = "${workerName}"
+								main = "src/index.ts"
+								compatibility_date = "2023-01-01"
+						`,
+				"src/index.ts": dedent`
+								export default {
+									scheduled(event) {
+										console.log("Event triggered")
+									}
+								}`,
+				"package.json": dedent`
+								{
+									"name": "worker",
+									"version": "0.0.0",
+									"private": true
+								}
+								`,
+			});
+			const worker = helper.runLongLived(`${cmd} --test-scheduled`);
+
+			const { url } = await worker.waitForReady();
+
+			await expect(
+				fetch(`${url}/__scheduled`).then((r) => r.text())
+			).resolves.toMatchSnapshot();
+
+			await worker.readUntil(/Event triggered/);
+		});
+	});
 });
 
 // Skipping remote python tests because they consistently flake with timeouts

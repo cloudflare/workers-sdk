@@ -112,6 +112,7 @@ export async function localPropsToConfigBundle(
 		services: props.services,
 		serviceBindings,
 		bindVectorizeToProd: props.bindVectorizeToProd,
+		testScheduled: !!props.testScheduled,
 	};
 }
 
