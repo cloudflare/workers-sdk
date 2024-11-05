@@ -51,6 +51,7 @@ function createResponseHeaders(
 		Vary: "Origin",
 	});
 
+	console.log(`Creating response header for method ${request.method}`);
 	if (request.method === "OPTIONS") {
 		headers.set(
 			"Access-Control-Allow-Headers",
@@ -284,7 +285,7 @@ app.get(`${previewDomain}/.update-preview-token`, (c) => {
 
 app.all(`${previewDomain}/*`, async (c) => {
 	const url = new URL(c.req.url);
-	if (c.req.headers.has("cf-raw-http")) {
+	if (c.req.raw.headers.has("cf-raw-http")) {
 		return handleRawHttp(c.req.raw, url, c.env);
 	}
 	if (c.req.method === "OPTIONS") {
