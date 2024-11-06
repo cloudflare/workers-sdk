@@ -237,7 +237,7 @@ export function printBindings(
 		local?: boolean;
 	} = {}
 ) {
-	let someConnectionStatus = false;
+	let hasConnectionStatus = false;
 	const truncate = (item: string | Record<string, unknown>) => {
 		const s = typeof item === "string" ? item : JSON.stringify(item);
 		const maxLength = 40;
@@ -299,7 +299,7 @@ export function printBindings(
 						if (context.local) {
 							const registryDefinition = context.registry?.[script_name];
 
-							someConnectionStatus = true;
+							hasConnectionStatus = true;
 							if (
 								registryDefinition &&
 								registryDefinition.durableObjects.some(
@@ -466,7 +466,7 @@ export function printBindings(
 
 				if (context.local) {
 					const registryDefinition = context.registry?.[service];
-					someConnectionStatus = true;
+					hasConnectionStatus = true;
 
 					if (
 						registryDefinition &&
@@ -643,7 +643,7 @@ export function printBindings(
 
 	logger.log(message);
 
-	if (someConnectionStatus) {
+	if (hasConnectionStatus) {
 		logger.once.info(
 			`\nService bindings & durable object bindings connect to other \`wrangler dev\` processes running locally, with their connection status indicated by ${chalk.green("connected")} or ${chalk.red("not connected")}. For more details, refer to https://developers.cloudflare.com/workers/runtime-apis/bindings/service-bindings/#local-development\n`
 		);
