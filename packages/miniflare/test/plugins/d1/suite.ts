@@ -165,9 +165,12 @@ test("D1PreparedStatement: bind", async (t) => {
 		)
 		.bind("green")
 		.all<ColourRow>();
+
+	// workerd changed the error message here. Miniflare's tests should pass with either version of workerd
 	await t.throwsAsync(colourResultsPromise, {
 		instanceOf: Error,
-		message: /A prepared SQL statement must contain only one statement/,
+		message:
+			/A prepared SQL statement must contain only one statement|When executing multiple SQL statements in a single call, only the last statement can have parameters./,
 	});
 
 	// Check with numbered parameters (execute and query)
@@ -201,10 +204,23 @@ test("D1PreparedStatement: first", async (t) => {
 			`SELECT * FROM ${tableColours} WHERE name = 'none'; SELECT * FROM ${tableColours} WHERE id = 1;`
 		)
 		.first();
-	await t.throwsAsync(resultPromise, {
-		instanceOf: Error,
-		message: /A prepared SQL statement must contain only one statement/,
-	});
+
+	// workerd changed it's behaviour from throwing to returning the last result. Miniflare's tests should pass with either version of workerd
+	try {
+		const d1Result = await resultPromise;
+		t.deepEqual(d1Result, {
+			id: 1,
+			name: "red",
+			rgb: 16711680,
+		});
+	} catch (e) {
+		t.truthy(e instanceof Error);
+		t.assert(
+			/A prepared SQL statement must contain only one statement/.test(
+				(e as Error).message
+			)
+		);
+	}
 
 	// Check with write statement (should actually execute statement)
 	result = await db
@@ -275,10 +291,33 @@ test("D1PreparedStatement: run", async (t) => {
 			`INSERT INTO ${tableKitchenSink} (id) VALUES (1); INSERT INTO ${tableKitchenSink} (id) VALUES (2);`
 		)
 		.run();
-	await t.throwsAsync(resultPromise, {
-		instanceOf: Error,
-		message: /A prepared SQL statement must contain only one statement/,
-	});
+
+	// workerd changed it's behaviour from throwing to returning the last result. Miniflare's tests should pass with either version of workerd
+	try {
+		result = await resultPromise;
+		t.deepEqual(result, {
+			meta: {
+				changed_db: true,
+				changes: 2,
+				// Don't know duration, so just match on returned value asserted > 0
+				duration: result.meta.duration,
+				last_row_id: result.meta.last_row_id,
+				rows_read: 1,
+				rows_written: 1,
+				served_by: "miniflare.db",
+				size_after: result.meta.size_after,
+			},
+			results: [],
+			success: true,
+		});
+	} catch (e) {
+		t.truthy(e instanceof Error);
+		t.assert(
+			/A prepared SQL statement must contain only one statement/.test(
+				(e as Error).message
+			)
+		);
+	}
 
 	// Check with write statement
 	result = await db
@@ -337,10 +376,39 @@ test("D1PreparedStatement: all", async (t) => {
 			`SELECT * FROM ${tableColours} WHERE id = 1; SELECT * FROM ${tableColours} WHERE id = 3;`
 		)
 		.all<ColourRow>();
-	await t.throwsAsync(resultPromise, {
-		instanceOf: Error,
-		message: /A prepared SQL statement must contain only one statement/,
-	});
+
+	// workerd changed it's behaviour from throwing to returning the last result. Miniflare's tests should pass with either version of workerd
+	try {
+		result = await resultPromise;
+		t.deepEqual(result, {
+			meta: {
+				changed_db: false,
+				changes: 0,
+				// Don't know duration, so just match on returned value asserted > 0
+				duration: result.meta.duration,
+				last_row_id: result.meta.last_row_id,
+				rows_read: 1,
+				rows_written: 0,
+				served_by: "miniflare.db",
+				size_after: result.meta.size_after,
+			},
+			results: [
+				{
+					id: 3,
+					name: "blue",
+					rgb: 255,
+				},
+			],
+			success: true,
+		});
+	} catch (e) {
+		t.truthy(e instanceof Error);
+		t.assert(
+			/A prepared SQL statement must contain only one statement/.test(
+				(e as Error).message
+			)
+		);
+	}
 
 	// Check with write statement (should actually execute, but return nothing)
 	result = await db
@@ -387,10 +455,19 @@ test("D1PreparedStatement: raw", async (t) => {
 			`SELECT * FROM ${tableColours} WHERE id = 1; SELECT * FROM ${tableColours} WHERE id = 3;`
 		)
 		.raw<RawColourRow>();
-	await t.throwsAsync(resultPromise, {
-		instanceOf: Error,
-		message: /A prepared SQL statement must contain only one statement/,
-	});
+
+	// workerd changed it's behaviour from throwing to returning the last result. Miniflare's tests should pass with either version of workerd
+	try {
+		const result = await resultPromise;
+		t.deepEqual(result, [[3, "blue", 0x0000ff]]);
+	} catch (e) {
+		t.truthy(e instanceof Error);
+		t.assert(
+			/A prepared SQL statement must contain only one statement/.test(
+				(e as Error).message
+			)
+		);
+	}
 
 	// Check with write statement (should actually execute, but return nothing)
 	results = await db
