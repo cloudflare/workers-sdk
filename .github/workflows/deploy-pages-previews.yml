@@ -50,7 +50,12 @@ jobs:
 
       - name: Deploy Wrangler DevTools preview
         if: contains(github.event.*.labels.*.name, 'preview:wrangler-devtools')
-        run: pnpm --filter @cloudflare/wrangler-devtools run deploy
+        run: |
+          output=$(pnpm --filter @cloudflare/wrangler-devtools run deploy)
+          echo "Extracting deployed URL from command output"
+          url=$(echo "$output" | grep -oP 'Take a peek over at \K\S+')
+          echo "Extracted URL: $url"
+          echo "VITE_DEVTOOLS_PREVIEW_URL=$url" >> $GITHUB_ENV
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
 
@@ -64,6 +69,21 @@ jobs:
 
       - name: Deploy Workers Playground preview
         if: contains(github.event.*.labels.*.name, 'preview:workers-playground')
-        run: pnpm --filter workers-playground run build:testing && pnpm --filter workers-playground run deploy
+        run: |
+          output=$(pnpm --filter workers-playground run build:testing && pnpm --filter workers-playground run deploy)
+          echo "Extracting deployed URL from command output"
+          url=$(echo "$output" | grep -oP 'Take a peek over at \K\S+')
+          echo "Extracted URL: $url"
+          echo "PLAYGROUND_URL=$url" >> $GITHUB_ENV
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          VITE_DEVTOOLS_PREVIEW_URL: ${{ env.VITE_DEVTOOLS_PREVIEW_URL }}
+
+      - name: "Comment on PR with Workers Playground Link"
+        if: contains(github.event.*.labels.*.name, 'preview:wrangler-devtools') && contains(github.event.*.labels.*.name, 'preview:workers-playground')
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          number: ${{ steps.finder.outputs.pr }}
+          message: |
+            The Wrangler DevTools and Workers Playground previews are now live. The Playground preview embeds the DevTools preview, so you can see them working together at:
+            ${{ env.PLAYGROUND_URL }}/playground
