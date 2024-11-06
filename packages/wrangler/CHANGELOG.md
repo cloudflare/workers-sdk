@@ -1,5 +1,29 @@
 # wrangler
 
+## 3.85.0
+
+### Minor Changes
+
+- [#7105](https://github.com/cloudflare/workers-sdk/pull/7105) [`a5f1779`](https://github.com/cloudflare/workers-sdk/commit/a5f177945cc512e1e4dc889c09efa67e5af8ff2b) Thanks [@jonesphillip](https://github.com/jonesphillip)! - Added the ability to list, add, remove, and update R2 bucket custom domains.
+
+- [#7132](https://github.com/cloudflare/workers-sdk/pull/7132) [`89f6274`](https://github.com/cloudflare/workers-sdk/commit/89f627426bc30b5c76039c9e78a9aab14dcd40c9) Thanks [@gabivlj](https://github.com/gabivlj)! - Event messages are capitalized, images of wrong architectures properly show the error in `cloudchamber create`
+  When a new "health" enum is introduced, `wrangler cloudchamber list` won't crash anymore.
+  Update Cloudchamber schemas.
+
+- [#7121](https://github.com/cloudflare/workers-sdk/pull/7121) [`2278616`](https://github.com/cloudflare/workers-sdk/commit/2278616b517e17dede77a675d5d2dc6847489f50) Thanks [@bruxodasilva](https://github.com/bruxodasilva)! - Added pause and resume commands to manage Workflows and hidded unimplemented delete command
+
+### Patch Changes
+
+- [#7134](https://github.com/cloudflare/workers-sdk/pull/7134) [`3ee1353`](https://github.com/cloudflare/workers-sdk/commit/3ee1353d317c0e137a14f3091b32eecd575cc7a4) Thanks [@cmackenzie1](https://github.com/cmackenzie1)! - Change Pipelines to use name instead of ID
+
+- [#7020](https://github.com/cloudflare/workers-sdk/pull/7020) [`e1d2fd6`](https://github.com/cloudflare/workers-sdk/commit/e1d2fd668678dadcd46a1a9ca7da17e1627be807) Thanks [@KianNH](https://github.com/KianNH)! - chore: move printWranglerBanner for secret delete into handler
+
+- [#7150](https://github.com/cloudflare/workers-sdk/pull/7150) [`6380d86`](https://github.com/cloudflare/workers-sdk/commit/6380d864d6c771f3cc81d6a3cd00a8559a6d4839) Thanks [@emily-shen](https://github.com/emily-shen)! - refactor: improve login/logout/whoami setup with the new internal registration utils
+
+- [#6756](https://github.com/cloudflare/workers-sdk/pull/6756) [`49ef163`](https://github.com/cloudflare/workers-sdk/commit/49ef163e5d91ac5123cd6ccc29b5f98e0c92d7df) Thanks [@WalshyDev](https://github.com/WalshyDev)! - chore: disable wrangler.toml warnings when doing `wrangler login` & `wrangler logout`
+
+- [#7164](https://github.com/cloudflare/workers-sdk/pull/7164) [`1bd4885`](https://github.com/cloudflare/workers-sdk/commit/1bd4885b5dcba981c0ccf13aa1228262b9101783) Thanks [@penalosa](https://github.com/penalosa)! - Fix `--test-scheduled` with custom builds & `--x-dev-env`
+
 ## 3.84.1
 
 ### Patch Changes

@@ -1,5 +1,61 @@
 # create-cloudflare
 
+## 2.31.2
+
+### Patch Changes
+
+- [#6973](https://github.com/cloudflare/workers-sdk/pull/6973) [`afe9850`](https://github.com/cloudflare/workers-sdk/commit/afe9850931b7730989e005a612ea74887f5d5e72) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency   | From  | To     |
+  | ------------ | ----- | ------ |
+  | create-astro | 4.8.0 | 4.10.0 |
+
+- [#7146](https://github.com/cloudflare/workers-sdk/pull/7146) [`d31a902`](https://github.com/cloudflare/workers-sdk/commit/d31a9021681b0d053bd441826849510dc97c5321) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | create-vue | 3.11.1 | 3.11.2 |
+
+- [#7148](https://github.com/cloudflare/workers-sdk/pull/7148) [`f46330a`](https://github.com/cloudflare/workers-sdk/commit/f46330a4dc8b6a21b0dc629682148e0ed399e8ae) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | nuxi       | 3.12.0 | 3.15.0 |
+
+- [#7161](https://github.com/cloudflare/workers-sdk/pull/7161) [`6948b70`](https://github.com/cloudflare/workers-sdk/commit/6948b7045d40dcd40ad0bc88d480056f2a9c9732) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To    |
+  | ---------- | ------ | ----- |
+  | sv         | 0.5.11 | 0.6.1 |
+
+- [#7167](https://github.com/cloudflare/workers-sdk/pull/7167) [`251e49a`](https://github.com/cloudflare/workers-sdk/commit/251e49a7a325e8d4fad8e01f693391e9cb101e37) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | create-vue | 3.11.2 | 3.12.0 |
+
+- [#7177](https://github.com/cloudflare/workers-sdk/pull/7177) [`f992c90`](https://github.com/cloudflare/workers-sdk/commit/f992c90311d400669f5c451b24fd732d77c1667d) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From   | To      |
+  | --------------- | ------ | ------- |
+  | @angular/create | 18.2.8 | 18.2.11 |
+
+- [#7171](https://github.com/cloudflare/workers-sdk/pull/7171) [`5a712e7`](https://github.com/cloudflare/workers-sdk/commit/5a712e70ffa7aac02ae0765d4b2c2b0b38621b11) Thanks [@edmundhung](https://github.com/edmundhung)! - fix: missing nodejs_compact flag on astro template
+
+- [#7155](https://github.com/cloudflare/workers-sdk/pull/7155) [`edef523`](https://github.com/cloudflare/workers-sdk/commit/edef523b71d1efd123d7b3e9743cd30f4e396855) Thanks [@flashblaze](https://github.com/flashblaze)! - fix invalid preset config on the experimental solid template
+
 ## 2.31.1
 
 ### Patch Changes
