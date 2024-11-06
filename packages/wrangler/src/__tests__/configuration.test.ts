@@ -1167,6 +1167,7 @@ describe("normalizeAndValidateConfig()", () => {
 				  - Expected \\"logpush\\" to be of type boolean but got \\"INVALID\\".
 				  - Expected \\"upload_source_maps\\" to be of type boolean but got \\"INVALID\\".
 				  - Expected \\"observability.enabled\\" to be of type boolean but got \\"INVALID\\".
+				  - Expected \\"observability.logs.enabled\\" to be of type boolean but got undefined.
 				  - Expected \\"observability.head_sampling_rate\\" to be of type number but got \\"INVALID\\"."
 			`);
 		});
@@ -5485,7 +5486,7 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasErrors()).toBe(true);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - \\"observability.enabled\\" is a required field.
+					  - \\"observability.enabled\\" or \\"observability.logs.enabled\\" is required.
 					  - Expected \\"observability.head_sampling_rate\\" to be of type number but got true."
 				`);
 			});
@@ -5515,6 +5516,27 @@ describe("normalizeAndValidateConfig()", () => {
 				`);
 			});
 
+			it("should not error on nested [observability.logs] config only", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						observability: {
+							logs: {
+								enabled: true
+							},
+						},
+					} as unknown as RawConfig,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					"
+				`);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+			});
 			it("should error on a sampling rate out of range", () => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{

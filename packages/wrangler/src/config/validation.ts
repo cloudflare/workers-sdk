@@ -24,6 +24,7 @@ import {
 	isValidName,
 	notInheritable,
 	validateAdditionalProperties,
+	validateAtLeastOnePropertyRequired,
 	validateOptionalProperty,
 	validateOptionalTypedArray,
 	validateRequiredProperty,
@@ -3341,19 +3342,28 @@ const validateObservability: ValidatorFn = (diagnostics, field, value) => {
 	const val = value as Observability;
 	let isValid = true;
 
-	isValid =
-		validateRequiredProperty(
-			diagnostics,
-			field,
-			"enabled",
-			val.enabled,
-			"boolean"
-		) && isValid;
+
+	/**
+	 * One of observability.enabled or observability.logs.enabled must be defined
+	 */
+	isValid = validateAtLeastOnePropertyRequired(
+		diagnostics,
+		field,
+		[{
+			key: "enabled",
+			value: val.enabled,
+			type: "boolean",
+		},{
+			key: "logs.enabled",
+			value: val.logs?.enabled,
+			type: "boolean",
+		}]
+	) && isValid;
 
 	isValid =
 		validateOptionalProperty(
 			diagnostics,
-			field,
+			field,                  
 			"head_sampling_rate",
 			val.head_sampling_rate,
 			"number"
