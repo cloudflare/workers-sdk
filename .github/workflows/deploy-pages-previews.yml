@@ -85,5 +85,5 @@ jobs:
         with:
           number: ${{ steps.finder.outputs.pr }}
           message: |
-            As you have selected both the Wrangler DevTools and Workers Playground previews both have been deployed, and DevTools preview is embedded into the Playground at this URL:
+            The Wrangler DevTools and Workers Playground previews are now live. The Playground preview embeds the DevTools preview, so you can see them working together at:
             ${{ env.PLAYGROUND_URL }}/playground
