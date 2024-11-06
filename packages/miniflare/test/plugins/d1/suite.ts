@@ -205,7 +205,7 @@ test("D1PreparedStatement: first", async (t) => {
 		)
 		.first();
 
-	// workerd changed it's behaviour from throwing to returning the last result. Miniflare's tests should pass with either version of workerd
+	// workerd changed its behaviour from throwing to returning the last result. Miniflare's tests should pass with either version of workerd
 	try {
 		const d1Result = await resultPromise;
 		t.deepEqual(d1Result, {
@@ -292,7 +292,7 @@ test("D1PreparedStatement: run", async (t) => {
 		)
 		.run();
 
-	// workerd changed it's behaviour from throwing to returning the last result. Miniflare's tests should pass with either version of workerd
+	// workerd changed its behaviour from throwing to returning the last result. Miniflare's tests should pass with either version of workerd
 	try {
 		result = await resultPromise;
 		t.deepEqual(result, {
@@ -377,7 +377,7 @@ test("D1PreparedStatement: all", async (t) => {
 		)
 		.all<ColourRow>();
 
-	// workerd changed it's behaviour from throwing to returning the last result. Miniflare's tests should pass with either version of workerd
+	// workerd changed its behaviour from throwing to returning the last result. Miniflare's tests should pass with either version of workerd
 	try {
 		result = await resultPromise;
 		t.deepEqual(result, {
@@ -456,7 +456,7 @@ test("D1PreparedStatement: raw", async (t) => {
 		)
 		.raw<RawColourRow>();
 
-	// workerd changed it's behaviour from throwing to returning the last result. Miniflare's tests should pass with either version of workerd
+	// workerd changed its behaviour from throwing to returning the last result. Miniflare's tests should pass with either version of workerd
 	try {
 		const result = await resultPromise;
 		t.deepEqual(result, [[3, "blue", 0x0000ff]]);
