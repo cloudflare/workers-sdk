@@ -1,7 +1,9 @@
-import { describe, expect, test } from 'vitest';
-import { getJsonResponse, isBuild } from '../../__test-utils__';
+import { afterAll, describe, expect, test } from 'vitest';
+import { getJsonResponse, isBuild, serverLogs } from '../../__test-utils__';
 
 describe.runIf(!isBuild)('module resolution', async () => {
+	afterAll(() => expect(serverLogs.errors).toEqual([]));
+
 	describe('basic module resolution', () => {
 		test('`require` js/cjs files with specifying their file extension', async () => {
 			const result = await getJsonResponse('/require-ext');
