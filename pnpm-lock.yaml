@@ -1705,6 +1705,9 @@ importers:
       deep-diff:
         specifier: ^1.0.2
         version: 1.0.2
+      diff:
+        specifier: ^1.1.1
+        version: 1.4.0
       esbuild:
         specifier: 0.17.19
         version: 0.17.19
@@ -4882,6 +4885,10 @@ packages:
 
   devtools-protocol@0.0.1182435:
     resolution: {integrity: sha512-EmlkWb62wSbQNE1gRZZsi4KZYRaF5Skpp183LhRU7+sadKR06O1dHCjZmFSEG6Kv7P6S/UYLxcY3NlYwqKM99w==}
+
+  diff@1.4.0:
+    resolution: {integrity: sha512-VzVc42hMZbYU9Sx/ltb7KYuQ6pqAw+cbFWVy4XKdkuEL2CFaRLGEnISPs7YdzaUGpi+CpIqvRmu7hPQ4T7EQ5w==}
+    engines: {node: '>=0.3.1'}
 
   diff@4.0.2:
     resolution: {integrity: sha512-58lmxKSA4BNyLz+HHMUzlOEpg09FV+ev6ZMe3vJihgdxzgcwZ8VoEEPmALCZG9LmqfVoNMMKpttIYTVG6uDY7A==}
@@ -11933,6 +11940,8 @@ snapshots:
   devalue@4.3.2: {}
 
   devtools-protocol@0.0.1182435: {}
+
+  diff@1.4.0: {}
 
   diff@4.0.2: {}
 
