@@ -1229,9 +1229,9 @@ describe.sequential("wrangler dev", () => {
 				"Your worker has access to the following bindings:
 				- Durable Objects:
 				  - NAME_1: CLASS_1
-				  - NAME_2: CLASS_2 (defined in SCRIPT_A not connected)
+				  - NAME_2: CLASS_2 (defined in SCRIPT_A [not connected])
 				  - NAME_3: CLASS_3
-				  - NAME_4: CLASS_4 (defined in SCRIPT_B not connected)
+				  - NAME_4: CLASS_4 (defined in SCRIPT_B [not connected])
 				"
 			`);
 			expect(std.warn).toMatchInlineSnapshot(`
@@ -1809,8 +1809,8 @@ describe.sequential("wrangler dev", () => {
 			expect(std.out).toMatchInlineSnapshot(`
 				"Your worker has access to the following bindings:
 				- Services:
-				  - WorkerA: A not connected
-				  - WorkerB: B not connected
+				  - WorkerA: A [not connected]
+				  - WorkerB: B [not connected]
 				"
 			`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -1830,8 +1830,8 @@ describe.sequential("wrangler dev", () => {
 			expect(std.out).toMatchInlineSnapshot(`
 				"Your worker has access to the following bindings:
 				- Services:
-				  - WorkerA: A not connected
-				  - WorkerB: B not connected
+				  - WorkerA: A [not connected]
+				  - WorkerB: B [not connected]
 				"
 			`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);

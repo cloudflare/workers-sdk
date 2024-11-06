@@ -120,7 +120,7 @@ describe.each([
 		expect(normalizeOutput(worker.currentOutput)).toContain(
 			dedent`Your worker has access to the following bindings:
 					- Durable Objects:
-					  - TEST_DO: TestDurableObject (defined in a not connected)
+					  - TEST_DO: TestDurableObject (defined in a [not connected])
 					- KV Namespaces:
 					  - TEST_KV: TEST_KV (local)
 					- D1 Databases:
@@ -128,7 +128,7 @@ describe.each([
 					- R2 Buckets:
 					  - TEST_R2: TEST_R2 (local)
 					- Services:
-					  - TEST_SERVICE: test-worker not connected
+					  - TEST_SERVICE: test-worker [not connected]
 		`
 		);
 	});

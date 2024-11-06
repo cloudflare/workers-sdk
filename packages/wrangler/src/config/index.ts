@@ -306,9 +306,9 @@ export function printBindings(
 									(d) => d.className === class_name
 								)
 							) {
-								value += ` (defined in ${script_name} ${chalk.green("connected")})`;
+								value += ` (defined in ${script_name} ${chalk.green("[connected]")})`;
 							} else {
-								value += ` (defined in ${script_name} ${chalk.red("not connected")})`;
+								value += ` (defined in ${script_name} ${chalk.red("[not connected]")})`;
 							}
 						} else {
 							value += ` (defined in ${script_name})`;
@@ -473,9 +473,9 @@ export function printBindings(
 						(!entrypoint ||
 							registryDefinition.entrypointAddresses?.[entrypoint])
 					) {
-						value = value + " " + chalk.green("connected");
+						value = value + " " + chalk.green("[connected]");
 					} else {
-						value = value + " " + chalk.red("not connected");
+						value = value + " " + chalk.red("[not connected]");
 					}
 				}
 				return {
@@ -645,7 +645,7 @@ export function printBindings(
 
 	if (hasConnectionStatus) {
 		logger.once.info(
-			`\nService bindings & durable object bindings connect to other \`wrangler dev\` processes running locally, with their connection status indicated by ${chalk.green("connected")} or ${chalk.red("not connected")}. For more details, refer to https://developers.cloudflare.com/workers/runtime-apis/bindings/service-bindings/#local-development\n`
+			`\nService bindings & durable object bindings connect to other \`wrangler dev\` processes running locally, with their connection status indicated by ${chalk.green("[connected]")} or ${chalk.red("[not connected]")}. For more details, refer to https://developers.cloudflare.com/workers/runtime-apis/bindings/service-bindings/#local-development\n`
 		);
 	}
 }
