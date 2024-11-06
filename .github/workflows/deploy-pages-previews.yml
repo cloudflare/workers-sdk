@@ -84,4 +84,6 @@ jobs:
         uses: marocchino/sticky-pull-request-comment@v2
         with:
           number: ${{ steps.finder.outputs.pr }}
-          message: ${{ env.PLAYGROUND_URL }}/playground
+          message: |
+            As you have selected both the Wrangler DevTools and Workers Playground previews both have been deployed, and DevTools preview is embedded into the Playground at this URL:
+            ${{ env.PLAYGROUND_URL }}/playground
