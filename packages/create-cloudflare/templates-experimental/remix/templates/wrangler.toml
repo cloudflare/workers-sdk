@@ -1,7 +1,7 @@
 #:schema node_modules/wrangler/config-schema.json
 name = "<TBD>"
 compatibility_date = "<TBD>"
-main = "./build/worker/index.js"
+main = "./server.ts"
 assets = { directory = "./build/client" }
 
 # Workers Logs
