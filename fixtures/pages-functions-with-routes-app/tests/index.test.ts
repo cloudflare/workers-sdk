@@ -12,7 +12,6 @@ describe("Pages Functions with custom _routes.json", () => {
 			"public",
 			["--port=0", "--inspector-port=0"]
 		));
-		console.log(ip, port);
 	});
 
 	afterAll(async () => {
