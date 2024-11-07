@@ -144,286 +144,283 @@ defineCommand({
 	},
 });
 
+defineCommand({
+	command: "wrangler r2 object put",
+	metadata: {
+		description: "Create an object in an R2 bucket",
+		status: "stable",
+		owner: "Product: R2",
+	},
+	positionalArgs: ["objectPath"],
+	args: {
+		objectPath: {
+			describe: "The destination object path in the form of {bucket}/{key}",
+			type: "string",
+		},
+		file: {
+			describe: "The path of the file to upload",
+			alias: "f",
+			conflicts: "pipe",
+			requiresArg: true,
+			type: "string",
+		},
+		pipe: {
+			describe:
+				"Enables the file to be piped in, rather than specified with the --file option",
+			alias: "p",
+			conflicts: "file",
+			type: "boolean",
+		},
+		"content-type": {
+			describe: "A standard MIME type describing the format of the object data",
+			alias: "ct",
+			requiresArg: true,
+			type: "string",
+		},
+		"content-disposition": {
+			describe: "Specifies presentational information for the object",
+			alias: "cd",
+			requiresArg: true,
+			type: "string",
+		},
+		"content-encoding": {
+			describe:
+				"Specifies what content encodings have been applied to the object and thus what decoding mechanisms must be applied to obtain the media-type referenced by the Content-Type header field",
+			alias: "ce",
+			requiresArg: true,
+			type: "string",
+		},
+		"content-language": {
+			describe: "The language the content is in",
+			alias: "cl",
+			requiresArg: true,
+			type: "string",
+		},
+		"cache-control": {
+			describe: "Specifies caching behavior along the request/reply chain",
+			alias: "cc",
+			requiresArg: true,
+			type: "string",
+		},
+		expires: {
+			describe: "The date and time at which the object is no longer cacheable",
+			alias: "e",
+			requiresArg: true,
+			type: "string",
+		},
+		local: {
+			type: "boolean",
+			describe: "Interact with local storage",
+		},
+		"persist-to": {
+			type: "string",
+			describe: "Directory for local persistence",
+		},
+		jurisdiction: {
+			describe: "The jurisdiction where the object will be created",
+			alias: "J",
+			requiresArg: true,
+			type: "string",
+		},
+		"storage-class": {
+			describe: "The storage class of the object to be created",
+			alias: "s",
+			requiresArg: false,
+			type: "string",
+		},
+	},
+	async handler(objectPutYargs, { config }) {
+		await printWranglerBanner();
+
+		const {
+			objectPath,
+			file,
+			pipe,
+			local,
+			persistTo,
+			jurisdiction,
+			storageClass,
+			...options
+		} = objectPutYargs;
+		const { bucket, key } = bucketAndKeyFromObjectPath(objectPath);
+		if (!file && !pipe) {
+			throw new CommandLineArgsError(
+				"Either the --file or --pipe options are required."
+			);
+		}
+		let object: ReadableStream;
+		let objectSize: number;
+		if (file) {
+			object = await createFileReadableStream(file);
+			const stats = fs.statSync(file);
+			objectSize = stats.size;
+		} else {
+			const buffer = await new Promise<Buffer>((resolve, reject) => {
+				const stdin = process.stdin;
+				const chunks = Array<Buffer>();
+				stdin.on("data", (chunk) => chunks.push(chunk));
+				stdin.on("end", () => resolve(Buffer.concat(chunks)));
+				stdin.on("error", (err) =>
+					reject(
+						new CommandLineArgsError(`Could not pipe. Reason: "${err.message}"`)
+					)
+				);
+			});
+			const blob = new Blob([buffer]);
+			object = blob.stream();
+			objectSize = blob.size;
+		}
+
+		if (objectSize > MAX_UPLOAD_SIZE && !local) {
+			throw new FatalError(
+				`Error: Wrangler only supports uploading files up to ${prettyBytes(
+					MAX_UPLOAD_SIZE,
+					{ binary: true }
+				)} in size\n${key} is ${prettyBytes(objectSize, {
+					binary: true,
+				})} in size`,
+				1
+			);
+		}
+
+		let fullBucketName = bucket;
+		if (jurisdiction !== undefined) {
+			fullBucketName += ` (${jurisdiction})`;
+		}
+
+		let storageClassLog = ``;
+		if (storageClass !== undefined) {
+			storageClassLog = ` with ${storageClass} storage class`;
+		}
+
+		logger.log(
+			`Creating object "${key}"${storageClassLog} in bucket "${fullBucketName}".`
+		);
+
+		if (local) {
+			await usingLocalBucket(
+				persistTo,
+				config.configPath,
+				bucket,
+				async (r2Bucket, mf) => {
+					const putOptions: R2PutOptions = {
+						httpMetadata: {
+							contentType: options.contentType,
+							contentDisposition: options.contentDisposition,
+							contentEncoding: options.contentEncoding,
+							contentLanguage: options.contentLanguage,
+							cacheControl: options.cacheControl,
+							// @ts-expect-error `@cloudflare/workers-types` is wrong
+							//  here, `number`'s are allowed for `Date`s
+							// TODO(now): fix
+							cacheExpiry:
+								options.expires === undefined
+									? undefined
+									: parseInt(options.expires),
+						},
+						customMetadata: undefined,
+						sha1: undefined,
+						sha256: undefined,
+						onlyIf: undefined,
+						md5: undefined,
+						sha384: undefined,
+						sha512: undefined,
+					};
+					// We can't use `r2Bucket.put()` here as `R2Bucket#put()`
+					// requires a known length stream, and Miniflare's magic proxy
+					// currently doesn't support sending these. Instead,
+					// `usingLocalBucket()` provides a single `PUT` endpoint
+					// for writing to a local bucket.
+					await mf.dispatchFetch(`http://localhost/${key}`, {
+						method: "PUT",
+						body: object,
+						duplex: "half",
+						headers: {
+							"Content-Length": objectSize.toString(),
+							"Wrangler-R2-Put-Options": JSON.stringify(putOptions),
+						},
+					});
+				}
+			);
+		} else {
+			const accountId = await requireAuth(config);
+			await putR2Object(
+				accountId,
+				bucket,
+				key,
+				object,
+				{
+					...options,
+					"content-length": `${objectSize}`,
+				},
+				jurisdiction,
+				storageClass
+			);
+		}
+
+		logger.log("Upload complete.");
+	},
+});
+
 export function r2(r2Yargs: CommonYargsArgv, subHelp: SubHelp) {
 	return r2Yargs
 		.command(subHelp)
 		.command("object", "Manage R2 objects", (r2ObjectYargs) => {
-			return r2ObjectYargs
-				.demandCommand()
-				.command(
-					"put <objectPath>",
-					"Create an object in an R2 bucket",
-					(Objectyargs) => {
-						return Objectyargs.positional("objectPath", {
+			return r2ObjectYargs.demandCommand().command(
+				"delete <objectPath>",
+				"Delete an object in an R2 bucket",
+				(objectDeleteYargs) => {
+					return objectDeleteYargs
+						.positional("objectPath", {
 							describe:
 								"The destination object path in the form of {bucket}/{key}",
 							type: "string",
 						})
-							.option("file", {
-								describe: "The path of the file to upload",
-								alias: "f",
-								conflicts: "pipe",
-								requiresArg: true,
-								type: "string",
-							})
-							.option("pipe", {
-								describe:
-									"Enables the file to be piped in, rather than specified with the --file option",
-								alias: "p",
-								conflicts: "file",
-								type: "boolean",
-							})
-							.option("content-type", {
-								describe:
-									"A standard MIME type describing the format of the object data",
-								alias: "ct",
-								requiresArg: true,
-								type: "string",
-							})
-							.option("content-disposition", {
-								describe: "Specifies presentational information for the object",
-								alias: "cd",
-								requiresArg: true,
-								type: "string",
-							})
-							.option("content-encoding", {
-								describe:
-									"Specifies what content encodings have been applied to the object and thus what decoding mechanisms must be applied to obtain the media-type referenced by the Content-Type header field",
-								alias: "ce",
-								requiresArg: true,
-								type: "string",
-							})
-							.option("content-language", {
-								describe: "The language the content is in",
-								alias: "cl",
-								requiresArg: true,
-								type: "string",
-							})
-							.option("cache-control", {
-								describe:
-									"Specifies caching behavior along the request/reply chain",
-								alias: "cc",
-								requiresArg: true,
-								type: "string",
-							})
-							.option("expires", {
-								describe:
-									"The date and time at which the object is no longer cacheable",
-								alias: "e",
-								requiresArg: true,
-								type: "string",
-							})
-							.option("local", {
-								type: "boolean",
-								describe: "Interact with local storage",
-							})
-							.option("persist-to", {
-								type: "string",
-								describe: "Directory for local persistence",
-							})
-							.option("jurisdiction", {
-								describe: "The jurisdiction where the object will be created",
-								alias: "J",
-								requiresArg: true,
-								type: "string",
-							})
-							.option("storage-class", {
-								describe: "The storage class of the object to be created",
-								alias: "s",
-								requiresArg: false,
-								type: "string",
-							});
-					},
-					async (objectPutYargs) => {
-						await printWranglerBanner();
+						.option("local", {
+							type: "boolean",
+							describe: "Interact with local storage",
+						})
+						.option("persist-to", {
+							type: "string",
+							describe: "Directory for local persistence",
+						})
+						.option("jurisdiction", {
+							describe: "The jurisdiction where the object exists",
+							alias: "J",
+							requiresArg: true,
+							type: "string",
+						});
+				},
+				async (args) => {
+					const { objectPath, jurisdiction } = args;
+					await printWranglerBanner();
 
-						const config = readConfig(objectPutYargs.config, objectPutYargs);
-						const {
-							objectPath,
-							file,
-							pipe,
-							local,
-							persistTo,
-							jurisdiction,
-							storageClass,
-							...options
-						} = objectPutYargs;
-						const { bucket, key } = bucketAndKeyFromObjectPath(objectPath);
-						if (!file && !pipe) {
-							throw new CommandLineArgsError(
-								"Either the --file or --pipe options are required."
-							);
-						}
-						let object: ReadableStream;
-						let objectSize: number;
-						if (file) {
-							object = await createFileReadableStream(file);
-							const stats = fs.statSync(file);
-							objectSize = stats.size;
-						} else {
-							const buffer = await new Promise<Buffer>((resolve, reject) => {
-								const stdin = process.stdin;
-								const chunks = Array<Buffer>();
-								stdin.on("data", (chunk) => chunks.push(chunk));
-								stdin.on("end", () => resolve(Buffer.concat(chunks)));
-								stdin.on("error", (err) =>
-									reject(
-										new CommandLineArgsError(
-											`Could not pipe. Reason: "${err.message}"`
-										)
-									)
-								);
-							});
-							const blob = new Blob([buffer]);
-							object = blob.stream();
-							objectSize = blob.size;
-						}
-
-						if (objectSize > MAX_UPLOAD_SIZE && !local) {
-							throw new FatalError(
-								`Error: Wrangler only supports uploading files up to ${prettyBytes(
-									MAX_UPLOAD_SIZE,
-									{ binary: true }
-								)} in size\n${key} is ${prettyBytes(objectSize, {
-									binary: true,
-								})} in size`,
-								1
-							);
-						}
-
-						let fullBucketName = bucket;
-						if (jurisdiction !== undefined) {
-							fullBucketName += ` (${jurisdiction})`;
-						}
-
-						let storageClassLog = ``;
-						if (storageClass !== undefined) {
-							storageClassLog = ` with ${storageClass} storage class`;
-						}
-
-						logger.log(
-							`Creating object "${key}"${storageClassLog} in bucket "${fullBucketName}".`
-						);
-
-						if (local) {
-							await usingLocalBucket(
-								persistTo,
-								config.configPath,
-								bucket,
-								async (r2Bucket, mf) => {
-									const putOptions: R2PutOptions = {
-										httpMetadata: {
-											contentType: options.contentType,
-											contentDisposition: options.contentDisposition,
-											contentEncoding: options.contentEncoding,
-											contentLanguage: options.contentLanguage,
-											cacheControl: options.cacheControl,
-											// @ts-expect-error `@cloudflare/workers-types` is wrong
-											//  here, `number`'s are allowed for `Date`s
-											// TODO(now): fix
-											cacheExpiry:
-												options.expires === undefined
-													? undefined
-													: parseInt(options.expires),
-										},
-										customMetadata: undefined,
-										sha1: undefined,
-										sha256: undefined,
-										onlyIf: undefined,
-										md5: undefined,
-										sha384: undefined,
-										sha512: undefined,
-									};
-									// We can't use `r2Bucket.put()` here as `R2Bucket#put()`
-									// requires a known length stream, and Miniflare's magic proxy
-									// currently doesn't support sending these. Instead,
-									// `usingLocalBucket()` provides a single `PUT` endpoint
-									// for writing to a local bucket.
-									await mf.dispatchFetch(`http://localhost/${key}`, {
-										method: "PUT",
-										body: object,
-										duplex: "half",
-										headers: {
-											"Content-Length": objectSize.toString(),
-											"Wrangler-R2-Put-Options": JSON.stringify(putOptions),
-										},
-									});
-								}
-							);
-						} else {
-							const accountId = await requireAuth(config);
-							await putR2Object(
-								accountId,
-								bucket,
-								key,
-								object,
-								{
-									...options,
-									"content-length": `${objectSize}`,
-								},
-								jurisdiction,
-								storageClass
-							);
-						}
-
-						logger.log("Upload complete.");
+					const config = readConfig(args.config, args);
+					const { bucket, key } = bucketAndKeyFromObjectPath(objectPath);
+					let fullBucketName = bucket;
+					if (jurisdiction !== undefined) {
+						fullBucketName += ` (${jurisdiction})`;
 					}
-				)
-				.command(
-					"delete <objectPath>",
-					"Delete an object in an R2 bucket",
-					(objectDeleteYargs) => {
-						return objectDeleteYargs
-							.positional("objectPath", {
-								describe:
-									"The destination object path in the form of {bucket}/{key}",
-								type: "string",
-							})
-							.option("local", {
-								type: "boolean",
-								describe: "Interact with local storage",
-							})
-							.option("persist-to", {
-								type: "string",
-								describe: "Directory for local persistence",
-							})
-							.option("jurisdiction", {
-								describe: "The jurisdiction where the object exists",
-								alias: "J",
-								requiresArg: true,
-								type: "string",
-							});
-					},
-					async (args) => {
-						const { objectPath, jurisdiction } = args;
-						await printWranglerBanner();
 
-						const config = readConfig(args.config, args);
-						const { bucket, key } = bucketAndKeyFromObjectPath(objectPath);
-						let fullBucketName = bucket;
-						if (jurisdiction !== undefined) {
-							fullBucketName += ` (${jurisdiction})`;
-						}
+					logger.log(
+						`Deleting object "${key}" from bucket "${fullBucketName}".`
+					);
 
-						logger.log(
-							`Deleting object "${key}" from bucket "${fullBucketName}".`
+					if (args.local) {
+						await usingLocalBucket(
+							args.persistTo,
+							config.configPath,
+							bucket,
+							(r2Bucket) => r2Bucket.delete(key)
 						);
-
-						if (args.local) {
-							await usingLocalBucket(
-								args.persistTo,
-								config.configPath,
-								bucket,
-								(r2Bucket) => r2Bucket.delete(key)
-							);
-						} else {
-							const accountId = await requireAuth(config);
-							await deleteR2Object(accountId, bucket, key, jurisdiction);
-						}
-
-						logger.log("Delete complete.");
+					} else {
+						const accountId = await requireAuth(config);
+						await deleteR2Object(accountId, bucket, key, jurisdiction);
 					}
-				);
+
+					logger.log("Delete complete.");
+				}
+			);
 		})
 
 		.command("bucket", "Manage R2 buckets", (r2BucketYargs) => {
