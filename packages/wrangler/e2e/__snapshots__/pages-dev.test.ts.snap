@@ -10,9 +10,9 @@ exports[`Pages 'wrangler pages dev --no-x-dev-env' > should merge (with override
 ▲ [WARNING] This worker is bound to live services: SERVICE_BINDING_1_TOML (SERVICE_NAME_1_TOML), SERVICE_BINDING_2_TOML (SERVICE_NAME_2_TOML)
 Your worker has access to the following bindings:
 - Durable Objects:
-  - DO_BINDING_1_TOML: NEW_DO_1 (defined in 🔴 NEW_DO_SCRIPT_1)
-  - DO_BINDING_2_TOML: DO_2_TOML (defined in 🔴 DO_SCRIPT_2_TOML)
-  - DO_BINDING_3_ARGS: DO_3_ARGS (defined in 🔴 DO_SCRIPT_3_ARGS)
+  - DO_BINDING_1_TOML: NEW_DO_1 (defined in NEW_DO_SCRIPT_1 [not connected])
+  - DO_BINDING_2_TOML: DO_2_TOML (defined in DO_SCRIPT_2_TOML [not connected])
+  - DO_BINDING_3_ARGS: DO_3_ARGS (defined in DO_SCRIPT_3_ARGS [not connected])
 - KV Namespaces:
   - KV_BINDING_1_TOML: NEW_KV_ID_1 (local)
   - KV_BINDING_2_TOML: KV_ID_2_TOML (local)
@@ -26,15 +26,16 @@ Your worker has access to the following bindings:
   - R2_BINDING_2_TOML: R2_BUCKET_2_TOML (local)
   - R2_BINDING_3_TOML: R2_BUCKET_3_ARGS (local)
 - Services:
-  - SERVICE_BINDING_1_TOML: 🔴 NEW_SERVICE_NAME_1
-  - SERVICE_BINDING_2_TOML: 🔴 SERVICE_NAME_2_TOML
-  - SERVICE_BINDING_3_TOML: 🔴 SERVICE_NAME_3_ARGS
+  - SERVICE_BINDING_1_TOML: NEW_SERVICE_NAME_1 [not connected]
+  - SERVICE_BINDING_2_TOML: SERVICE_NAME_2_TOML [not connected]
+  - SERVICE_BINDING_3_TOML: SERVICE_NAME_3_ARGS [not connected]
 - AI:
   - Name: AI_BINDING_2_TOML
 - Vars:
   - VAR1: "(hidden)"
   - VAR2: "VAR_2_TOML"
   - VAR3: "(hidden)"
+Service bindings & durable object bindings connect to other \`wrangler dev\` processes running locally, with their connection status indicated by [connected] or [not connected]. For more details, refer to https://developers.cloudflare.com/workers/runtime-apis/bindings/service-bindings/#local-development
 ▲ [WARNING] ⎔ Support for service bindings in local mode is experimental and may change.
 ▲ [WARNING] ⎔ Support for external Durable Objects in local mode is experimental and may change.
 "
@@ -49,9 +50,9 @@ exports[`Pages 'wrangler pages dev --x-dev-env' > should merge (with override) \
   - {"name":"DO_BINDING_2_TOML","class_name":"DO_2_TOML","script_name":"DO_SCRIPT_2_TOML"}
 Your worker has access to the following bindings:
 - Durable Objects:
-  - DO_BINDING_1_TOML: NEW_DO_1 (defined in 🔴 NEW_DO_SCRIPT_1)
-  - DO_BINDING_2_TOML: DO_2_TOML (defined in 🔴 DO_SCRIPT_2_TOML)
-  - DO_BINDING_3_ARGS: DO_3_ARGS (defined in 🔴 DO_SCRIPT_3_ARGS)
+  - DO_BINDING_1_TOML: NEW_DO_1 (defined in NEW_DO_SCRIPT_1 [not connected])
+  - DO_BINDING_2_TOML: DO_2_TOML (defined in DO_SCRIPT_2_TOML [not connected])
+  - DO_BINDING_3_ARGS: DO_3_ARGS (defined in DO_SCRIPT_3_ARGS [not connected])
 - KV Namespaces:
   - KV_BINDING_1_TOML: NEW_KV_ID_1 (local)
   - KV_BINDING_2_TOML: KV_ID_2_TOML (local)
@@ -65,16 +66,16 @@ Your worker has access to the following bindings:
   - R2_BINDING_2_TOML: R2_BUCKET_2_TOML (local)
   - R2_BINDING_3_TOML: R2_BUCKET_3_ARGS (local)
 - Services:
-  - SERVICE_BINDING_1_TOML: 🔴 NEW_SERVICE_NAME_1
-  - SERVICE_BINDING_2_TOML: 🔴 SERVICE_NAME_2_TOML
-  - SERVICE_BINDING_3_TOML: 🔴 SERVICE_NAME_3_ARGS
+  - SERVICE_BINDING_1_TOML: NEW_SERVICE_NAME_1 [not connected]
+  - SERVICE_BINDING_2_TOML: SERVICE_NAME_2_TOML [not connected]
+  - SERVICE_BINDING_3_TOML: SERVICE_NAME_3_ARGS [not connected]
 - AI:
   - Name: AI_BINDING_2_TOML
 - Vars:
   - VAR1: "(hidden)"
   - VAR2: "VAR_2_TOML"
   - VAR3: "(hidden)"
-▲ [WARNING] This worker is bound to live services: SERVICE_BINDING_1_TOML (NEW_SERVICE_NAME_1), SERVICE_BINDING_3_TOML (SERVICE_NAME_3_ARGS), SERVICE_BINDING_2_TOML (SERVICE_NAME_2_TOML)
+Service bindings & durable object bindings connect to other \`wrangler dev\` processes running locally, with their connection status indicated by [connected] or [not connected]. For more details, refer to https://developers.cloudflare.com/workers/runtime-apis/bindings/service-bindings/#local-development
 ▲ [WARNING] Using Workers AI always accesses your Cloudflare account in order to run AI models, and so will incur usage charges even in local development.
 "
 `;
