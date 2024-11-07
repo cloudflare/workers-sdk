@@ -142,66 +142,28 @@ describe.each([
 	});
 });
 
-// Windows doesn't have a built-in way to get the CWD of a process by its ID.
-// This functionality is provided by the Windows Driver Kit which is installed
-// on GitHub actions Windows runners.
-const tlistPath =
-	"C:\\Program Files (x86)\\Windows Kits\\10\\Debuggers\\x86\\tlist.exe";
-let windowsProcessCwdSupported = true;
-if (process.platform === "win32" && !existsSync(tlistPath)) {
-	windowsProcessCwdSupported = false;
-	const message = [
-		"=".repeat(80),
-		"Unable to find Windows Driver Kit, skipping zombie process tests... :(",
-		"=".repeat(80),
-	].join("\n");
-	console.error(message);
-}
-
 interface Process {
 	pid: string;
 	cmd: string;
 }
+
 function getProcesses(): Process[] {
-	if (process.platform === "win32") {
-		return childProcess
-			.execSync("tasklist /fo csv", { encoding: "utf8" })
-			.trim()
-			.split("\r\n")
-			.slice(1)
-			.map((line) => {
-				const [cmd, pid] = line.replaceAll('"', "").split(",");
-				return { pid, cmd };
-			});
-	} else {
-		return childProcess
-			.execSync("ps -e | awk '{print $1,$4}'", { encoding: "utf8" })
-			.trim()
-			.split("\n")
-			.map((line) => {
-				const [pid, cmd] = line.split(" ");
-				return { pid, cmd };
-			});
-	}
+	return childProcess
+		.execSync("ps -e | awk '{print $1,$4}'", { encoding: "utf8" })
+		.trim()
+		.split("\n")
+		.map((line) => {
+			const [pid, cmd] = line.split(" ");
+			return { pid, cmd };
+		});
 }
+
 function getProcessCwd(pid: string | number) {
-	if (process.platform === "win32") {
-		if (windowsProcessCwdSupported) {
-			return (
-				childProcess
-					.spawnSync(tlistPath, [String(pid)], { encoding: "utf8" })
-					.stdout.match(/^\s*CWD:\s*(.+)\\$/m)?.[1] ?? ""
-			);
-		} else {
-			return "";
-		}
-	} else {
-		return childProcess
-			.execSync(`lsof -p ${pid} | awk '$4=="cwd" {print $9}'`, {
-				encoding: "utf8",
-			})
-			.trim();
-	}
+	return childProcess
+		.execSync(`lsof -p ${pid} | awk '$4=="cwd" {print $9}'`, {
+			encoding: "utf8",
+		})
+		.trim();
 }
 function getStartedWorkerdProcesses(cwd: string): Process[] {
 	return getProcesses()
@@ -209,7 +171,8 @@ function getStartedWorkerdProcesses(cwd: string): Process[] {
 		.filter((c) => getProcessCwd(c.pid).includes(cwd));
 }
 
-it.runIf(process.platform !== "win32" || windowsProcessCwdSupported)(
+// This fails on Windows because of https://github.com/cloudflare/workerd/issues/1664
+it.runIf(process.platform !== "win32")(
 	`leaves no orphaned workerd processes with port conflict`,
 	async () => {
 		const initial = new WranglerE2ETestHelper();
@@ -269,10 +232,6 @@ it.runIf(process.platform !== "win32" || windowsProcessCwdSupported)(
 		expect(exitCode).not.toBe(0);
 
 		const endProcesses = getStartedWorkerdProcesses(helper.tmpPath);
-
-		// Check no hanging workerd processes
-
-		assert(process.platform !== "win32" || windowsProcessCwdSupported);
 
 		expect(beginProcesses.length).toBe(0);
 		expect(endProcesses.length).toBe(0);
