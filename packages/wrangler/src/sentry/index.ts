@@ -103,6 +103,8 @@ export function setupSentry() {
 				);
 			},
 			beforeSend(event) {
+				const before = { ...event };
+
 				delete event.server_name; // Computer name may contain PII
 				// Culture contains timezone and locale
 				if (event.contexts !== undefined) {
@@ -127,7 +129,9 @@ export function setupSentry() {
 					}
 				}
 
-				return event;
+				console.log("Sentry: Event", { before, after: event });
+				// Test only - Do not send it out
+				return null;
 			},
 		});
 	}

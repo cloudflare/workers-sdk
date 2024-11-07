@@ -40,6 +40,7 @@ import { workerNamespaceCommands } from "./dispatch-namespace";
 import { docsHandler, docsOptions } from "./docs";
 import {
 	CommandLineArgsError,
+	FatalError,
 	JsonFriendlyFatalError,
 	UserError,
 } from "./errors";
@@ -692,6 +693,8 @@ export async function main(argv: string[]): Promise<void> {
 		// `args._` doesn't include any positional arguments (e.g. script name,
 		// key to fetch) or flags
 		addBreadcrumb(`wrangler ${args._.join(" ")}`);
+
+		throw new FatalError("Test sentry events");
 	}, /* applyBeforeValidation */ true);
 
 	let cliHandlerThrew = false;
