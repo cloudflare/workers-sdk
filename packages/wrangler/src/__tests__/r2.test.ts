@@ -267,9 +267,15 @@ describe("r2", () => {
 				);
 				await runWrangler("r2 bucket create testBucket");
 				expect(std.out).toMatchInlineSnapshot(`
-				            "Creating bucket 'testBucket'...
-				            ✅ Created bucket 'testBucket' with default storage class of Standard."
-			          `);
+"Creating bucket 'testBucket'...
+✅ Created bucket 'testBucket' with default storage class of Standard.
+
+Configure your Worker to write objects to this bucket:
+
+[[r2_buckets]]
+bucket_name = \\"testBucket\\"
+binding = \\"testBucket\\""
+			  `);
 			});
 
 			it("should create a bucket with the expected jurisdiction", async () => {
@@ -288,17 +294,29 @@ describe("r2", () => {
 				);
 				await runWrangler("r2 bucket create testBucket -J eu");
 				expect(std.out).toMatchInlineSnapshot(`
-				            "Creating bucket 'testBucket (eu)'...
-				            ✅ Created bucket 'testBucket (eu)' with default storage class of Standard."
-			          `);
+"Creating bucket 'testBucket (eu)'...
+✅ Created bucket 'testBucket (eu)' with default storage class of Standard.
+
+Configure your Worker to write objects to this bucket:
+
+[[r2_buckets]]
+bucket_name = \\"testBucket\\"
+binding = \\"testBucket\\""
+			  `);
 			});
 
 			it("should create a bucket with the expected default storage class", async () => {
 				await runWrangler("r2 bucket create testBucket -s InfrequentAccess");
 				expect(std.out).toMatchInlineSnapshot(`
-				            "Creating bucket 'testBucket'...
-				            ✅ Created bucket 'testBucket' with default storage class of InfrequentAccess."
-			          `);
+"Creating bucket 'testBucket'...
+✅ Created bucket 'testBucket' with default storage class of InfrequentAccess.
+
+Configure your Worker to write objects to this bucket:
+
+[[r2_buckets]]
+bucket_name = \\"testBucket\\"
+binding = \\"testBucket\\""
+			  `);
 			});
 
 			it("should error if storage class is invalid", async () => {
@@ -338,9 +356,15 @@ describe("r2", () => {
 				);
 				await runWrangler("r2 bucket create testBucket --location weur");
 				expect(std.out).toMatchInlineSnapshot(`
-				            "Creating bucket 'testBucket'...
-				            ✅ Created bucket 'testBucket' with location hint weur and default storage class of Standard."
-			          `);
+"Creating bucket 'testBucket'...
+✅ Created bucket 'testBucket' with location hint weur and default storage class of Standard.
+
+Configure your Worker to write objects to this bucket:
+
+[[r2_buckets]]
+bucket_name = \\"testBucket\\"
+binding = \\"testBucket\\""
+				`);
 			});
 		});
 
