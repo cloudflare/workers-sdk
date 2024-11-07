@@ -1276,6 +1276,22 @@ function normalizeAndValidateEnvironment(
 			validateDefines(envName),
 			{}
 		),
+		dotenv: inheritable(
+			diagnostics,
+			topLevelEnv,
+			rawEnv,
+			"dotenv",
+			isBoolean,
+			undefined
+		),
+		env_file: inheritable(
+			diagnostics,
+			topLevelEnv,
+			rawEnv,
+			"env_file",
+			isString,
+			undefined
+		),
 		durable_objects: notInheritable(
 			diagnostics,
 			topLevelEnv,

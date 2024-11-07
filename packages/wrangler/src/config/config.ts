@@ -347,6 +347,8 @@ export const defaultWranglerConfig: Config = {
 	data_blobs: undefined,
 	keep_vars: undefined,
 	alias: undefined,
+	dotenv: false,
+	env_file: undefined,
 
 	/** INHERITABLE ENVIRONMENT FIELDS **/
 	account_id: undefined,
