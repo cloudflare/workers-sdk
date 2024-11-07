@@ -11,7 +11,7 @@ import {
 	VECTORIZE_MAX_UPSERT_VECTOR_RECORDS,
 	VECTORIZE_UPSERT_BATCH_SIZE,
 	VECTORIZE_V1_MAX_BATCH_SIZE,
-	vectorizeBetaWarning,
+	vectorizeGABanner,
 } from "./common";
 import type {
 	CommonYargsArgv,
@@ -50,7 +50,7 @@ export function options(yargs: CommonYargsArgv) {
 					"Insert into a deprecated V1 Vectorize index. This must be enabled if the index was created with the V1 option.",
 			},
 		})
-		.epilogue(vectorizeBetaWarning);
+		.epilogue(vectorizeGABanner);
 }
 
 export async function handler(

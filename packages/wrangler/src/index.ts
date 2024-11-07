@@ -7,7 +7,7 @@ import makeCLI from "yargs";
 import { version as wranglerVersion } from "../package.json";
 import { ai } from "./ai";
 import { cloudchamber } from "./cloudchamber";
-import { loadDotEnv, readConfig } from "./config";
+import { loadDotEnv } from "./config";
 import { createCommandRegister } from "./core/register-commands";
 import { d1 } from "./d1";
 import { deleteHandler, deleteOptions } from "./delete";
@@ -48,9 +48,9 @@ import { hyperdrive } from "./hyperdrive/index";
 import { initHandler, initOptions } from "./init";
 import "./kv";
 import "./workflows";
+import "./user/commands";
 import { demandSingleValue } from "./core";
 import { logBuildFailure, logger, LOGGER_LEVELS } from "./logger";
-import * as metrics from "./metrics";
 import { mTlsCertificateCommands } from "./mtls-certificate/cli";
 import { writeOutput } from "./output";
 import { pages } from "./pages";
@@ -70,19 +70,13 @@ import { tailHandler, tailOptions } from "./tail";
 import registerTriggersSubcommands from "./triggers";
 import { typesHandler, typesOptions } from "./type-generation";
 import { printWranglerBanner, updateCheck } from "./update-check";
-import {
-	getAuthFromEnv,
-	listScopes,
-	login,
-	logout,
-	validateScopeKeys,
-} from "./user";
+import { getAuthFromEnv } from "./user";
+import { whoami } from "./user/whoami";
 import { debugLogFilepath } from "./utils/log-file";
 import { vectorize } from "./vectorize/index";
 import registerVersionsSubcommands from "./versions";
 import registerVersionsDeploymentsSubcommands from "./versions/deployments";
 import registerVersionsRollbackCommand from "./versions/rollback";
-import { whoami } from "./whoami";
 import { asJson } from "./yargs-types";
 import type { Config } from "./config";
 import type { LoggerLevel } from "./logger";
@@ -596,99 +590,10 @@ export function createCLIParser(argv: string[]) {
 	});
 
 	/******************** CMD GROUP ***********************/
-	// login
-	wrangler.command(
-		// this needs scopes as an option?
-		"login",
-		"🔓 Login to Cloudflare",
-		(yargs) => {
-			// TODO: This needs some copy editing
-			// I mean, this entire app does, but this too.
-			return yargs
-				.option("scopes-list", {
-					describe: "List all the available OAuth scopes with descriptions",
-				})
-				.option("browser", {
-					default: true,
-					type: "boolean",
-					describe: "Automatically open the OAuth link in a browser",
-				})
-				.option("scopes", {
-					describe: "Pick the set of applicable OAuth scopes when logging in",
-					array: true,
-					type: "string",
-					requiresArg: true,
-				});
-			// TODO: scopes
-		},
-		async (args) => {
-			await printWranglerBanner();
-			if (args["scopes-list"]) {
-				listScopes();
-				return;
-			}
-			if (args.scopes) {
-				if (args.scopes.length === 0) {
-					// don't allow no scopes to be passed, that would be weird
-					listScopes();
-					return;
-				}
-				if (!validateScopeKeys(args.scopes)) {
-					throw new CommandLineArgsError(
-						`One of ${args.scopes} is not a valid authentication scope. Run "wrangler login --scopes-list" to see the valid scopes.`
-					);
-				}
-				await login({ scopes: args.scopes, browser: args.browser });
-				return;
-			}
-			await login({ browser: args.browser });
-			const config = readConfig(args.config, args);
-			await metrics.sendMetricsEvent("login user", {
-				sendMetrics: config.send_metrics,
-			});
 
-			// TODO: would be nice if it optionally saved login
-			// credentials inside node_modules/.cache or something
-			// this way you could have multiple users on a single machine
-		}
-	);
-
-	// logout
-	wrangler.command(
-		// this needs scopes as an option?
-		"logout",
-		"🚪 Logout from Cloudflare",
-		() => {},
-		async (args) => {
-			await printWranglerBanner();
-			await logout();
-			const config = readConfig(undefined, args);
-			await metrics.sendMetricsEvent("logout user", {
-				sendMetrics: config.send_metrics,
-			});
-		}
-	);
-
-	// whoami
-	wrangler.command(
-		"whoami",
-		"🕵️  Retrieve your user information",
-		(yargs) => {
-			return yargs.option("account", {
-				type: "string",
-				describe:
-					"Show membership information for the given account (id or name).",
-			});
-		},
-		async (args) => {
-			await printWranglerBanner();
-			await whoami(args.account);
-			const config = readConfig(undefined, args);
-			await metrics.sendMetricsEvent("view accounts", {
-				sendMetrics: config.send_metrics,
-			});
-		}
-	);
+	register.registerNamespace("login");
+	register.registerNamespace("logout");
+	register.registerNamespace("whoami");
 
 	/******************************************************/
 	/*               DEPRECATED COMMANDS                  */

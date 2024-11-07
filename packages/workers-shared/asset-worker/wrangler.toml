@@ -32,3 +32,10 @@ type = "internal_assets"
 [unsafe.metadata.build_options]
 stable_id = "cloudflare/cf_asset_worker"
 networks = ["cf","jdc"]
+
+[version_metadata]
+binding = "VERSION_METADATA"
+
+[[unsafe.bindings]]
+name = "workers-asset-worker"
+type = "internal_capability_grants"

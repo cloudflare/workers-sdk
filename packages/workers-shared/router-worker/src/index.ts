@@ -1,14 +1,9 @@
+import { PerformanceTimer } from "../../utils/performance";
 import { setupSentry } from "../../utils/sentry";
 import { Analytics, DISPATCH_TYPE } from "./analytics";
-import { PerformanceTimer } from "./performance";
 import type AssetWorker from "../../asset-worker/src/index";
-import type { RoutingConfig } from "../../utils/types";
-import type {
-	ColoMetadata,
-	Environment,
-	ReadyAnalytics,
-	UnsafePerformanceTimer,
-} from "./types";
+import type { RoutingConfig, UnsafePerformanceTimer } from "../../utils/types";
+import type { ColoMetadata, Environment, ReadyAnalytics } from "./types";
 
 interface Env {
 	ASSET_WORKER: Service<AssetWorker>;
@@ -29,7 +24,7 @@ interface Env {
 export default {
 	async fetch(request: Request, env: Env, ctx: ExecutionContext) {
 		let sentry: ReturnType<typeof setupSentry> | undefined;
-		const analytics = new Analytics();
+		const analytics = new Analytics(env.ANALYTICS);
 		const performance = new PerformanceTimer(env.UNSAFE_PERFORMANCE);
 		const startTimeMs = performance.now();
 
@@ -85,7 +80,7 @@ export default {
 			throw err;
 		} finally {
 			analytics.setData({ requestTime: performance.now() - startTimeMs });
-			analytics.write(env.ENVIRONMENT, env.ANALYTICS);
+			analytics.write();
 		}
 	},
 };

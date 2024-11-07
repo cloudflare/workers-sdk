@@ -95,6 +95,9 @@ describe("dialog helpers", () => {
 				📖 Explore Documentation
 				https://developers.cloudflare.com/workers
 
+				🐛 Report an Issue
+				https://github.com/cloudflare/workers-sdk/issues/new/choose
+
 				💬 Join our Community
 				https://discord.cloudflare.com
 				────────────────────────────────────────────────────────────
@@ -126,6 +129,9 @@ describe("dialog helpers", () => {
 
 				📖 Explore Documentation
 				https://developers.cloudflare.com/pages
+
+				🐛 Report an Issue
+				https://github.com/cloudflare/workers-sdk/issues/new/choose
 
 				💬 Join our Community
 				https://discord.cloudflare.com

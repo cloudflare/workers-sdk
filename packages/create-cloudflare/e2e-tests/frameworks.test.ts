@@ -357,15 +357,20 @@ function getFrameworkTests(opts: {
 			svelte: {
 				promptHandlers: [
 					{
-						matcher: /Which Svelte app template/,
+						matcher: /Which template would you like/,
 						input: [keys.enter],
 					},
 					{
-						matcher: /Add type checking with TypeScript/,
+						matcher: /Add type checking with Typescript/,
 						input: [keys.down, keys.enter],
 					},
 					{
-						matcher: /Select additional options/,
+						matcher: /What would you like to add to your project/,
+						input: [keys.enter],
+					},
+					{
+						matcher:
+							/Which package manager do you want to install dependencies with/,
 						input: [keys.enter],
 					},
 				],

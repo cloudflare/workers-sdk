@@ -1,7 +1,7 @@
 import { readConfig } from "../config";
 import { logger } from "../logger";
 import { createMetadataIndex } from "./client";
-import { vectorizeBetaWarning } from "./common";
+import { vectorizeGABanner } from "./common";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
@@ -30,7 +30,7 @@ export function options(yargs: CommonYargsArgv) {
 			description:
 				"The type of metadata property to index. Valid types are 'string', 'number' and 'boolean'.",
 		})
-		.epilogue(vectorizeBetaWarning);
+		.epilogue(vectorizeGABanner);
 }
 
 export async function handler(

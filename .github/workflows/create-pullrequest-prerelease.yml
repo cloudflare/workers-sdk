@@ -6,7 +6,7 @@ jobs:
   build:
     if: ${{ github.repository_owner == 'cloudflare' }}
     name: Build & Publish a Prerelease to the Adhoc Registry
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}
       cancel-in-progress: true

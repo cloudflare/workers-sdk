@@ -51,7 +51,7 @@ export async function ListHandler(
 		bucket,
 		jurisdiction
 	);
-	const tableOutput = await tableFromNotificationGetResponse(config, resp);
+	const tableOutput = tableFromNotificationGetResponse(resp);
 	logger.log(tableOutput.map((x) => formatLabelledValues(x)).join("\n\n"));
 }
 

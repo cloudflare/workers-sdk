@@ -197,7 +197,11 @@ function getMiniflarePersistOptions(
 	persist: GetPlatformProxyOptions["persist"]
 ): Pick<
 	MiniflareOptions,
-	"kvPersist" | "durableObjectsPersist" | "r2Persist" | "d1Persist"
+	| "kvPersist"
+	| "durableObjectsPersist"
+	| "r2Persist"
+	| "d1Persist"
+	| "workflowsPersist"
 > {
 	if (persist === false) {
 		// the user explicitly asked for no persistance
@@ -206,6 +210,7 @@ function getMiniflarePersistOptions(
 			durableObjectsPersist: false,
 			r2Persist: false,
 			d1Persist: false,
+			workflowsPersist: false,
 		};
 	}
 
@@ -219,6 +224,7 @@ function getMiniflarePersistOptions(
 		durableObjectsPersist: `${persistPath}/do`,
 		r2Persist: `${persistPath}/r2`,
 		d1Persist: `${persistPath}/d1`,
+		workflowsPersist: `${persistPath}/workflows`,
 	};
 }
 

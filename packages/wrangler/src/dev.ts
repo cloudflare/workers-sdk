@@ -324,6 +324,12 @@ export function devOptions(yargs: CommonYargsArgv) {
 					"Use the experimental file based dev registry for multi-worker development",
 				default: false,
 			})
+			.option("experimental-vectorize-bind-to-prod", {
+				type: "boolean",
+				describe:
+					"Bind to production Vectorize indexes in local development mode",
+				default: false,
+			})
 	);
 }
 
@@ -713,6 +719,7 @@ export async function startDev(args: StartDevOptions) {
 					testScheduled: args.testScheduled,
 					logLevel: args.logLevel,
 					registry: devEnv.config.latestConfig?.dev.registry,
+					bindVectorizeToProd: args.experimentalVectorizeBindToProd,
 				},
 				legacy: {
 					site: (configParam) => {
@@ -770,6 +777,177 @@ export async function startDev(args: StartDevOptions) {
 		]);
 		throw e;
 	}
+}
+
+export async function startApiDev(args: StartDevOptions) {
+	if (args.logLevel) {
+		logger.loggerLevel = args.logLevel;
+	}
+
+	const configPath =
+		args.config || (args.script && findWranglerToml(path.dirname(args.script)));
+	const projectRoot = configPath && path.dirname(configPath);
+	const config = readConfig(configPath, args);
+
+	const {
+		entry,
+		upstreamProtocol,
+		host,
+		routes,
+		getLocalPort,
+		getInspectorPort,
+		getRuntimeInspectorPort,
+		cliDefines,
+		cliAlias,
+		localPersistencePath,
+		processEntrypoint,
+		additionalModules,
+	} = await validateDevServerSettings(args, config);
+
+	const nodejsCompatMode = validateNodeCompatMode(
+		args.compatibilityDate ?? config.compatibility_date,
+		args.compatibilityFlags ?? config.compatibility_flags,
+		{
+			nodeCompat: args.nodeCompat ?? config.node_compat,
+			noBundle: args.noBundle ?? config.no_bundle,
+		}
+	);
+
+	await metrics.sendMetricsEvent(
+		"run dev (api)",
+		{ local: !args.remote },
+		{ sendMetrics: config.send_metrics, offline: !args.remote }
+	);
+
+	const devEnv = new DevEnv();
+	if (!args.disableDevRegistry && args.experimentalDevEnv) {
+		const teardownRegistryPromise = devRegistry((registry) =>
+			updateDevEnvRegistry(devEnv, registry)
+		);
+		devEnv.once("teardown", async () => {
+			const teardownRegistry = await teardownRegistryPromise;
+			await teardownRegistry(devEnv.config.latestConfig?.name);
+		});
+		devEnv.runtimes.forEach((runtime) => {
+			runtime.on("reloadComplete", async (reloadEvent: ReloadCompleteEvent) => {
+				if (!reloadEvent.config.dev?.remote) {
+					assert(devEnv.proxy.proxyWorker);
+					const url = await devEnv.proxy.proxyWorker.ready;
+
+					await maybeRegisterLocalWorker(
+						url,
+						reloadEvent.config.name,
+						reloadEvent.proxyData.internalDurableObjects,
+						reloadEvent.proxyData.entrypointAddresses
+					);
+				}
+			});
+		});
+	}
+
+	// eslint-disable-next-line no-inner-declarations
+	async function getDevServer(configParam: Config) {
+		const { legacyAssetPaths, bindings } = getBindingsAndLegacyAssetPaths(
+			args,
+			configParam
+		);
+
+		//if args.bundle is on, don't disable bundling
+		//if there's no args.bundle, and configParam.no_bundle is on, disable bundling
+		//otherwise, enable bundling
+		const enableBundling = args.bundle ?? !configParam.no_bundle;
+		return await startDevServer({
+			name: getScriptName({ name: args.name, env: args.env }, configParam),
+			noBundle: !enableBundling,
+			findAdditionalModules: configParam.find_additional_modules,
+			entry: entry,
+			env: args.env,
+			host: host,
+			routes: routes,
+			processEntrypoint,
+			additionalModules,
+			rules: args.rules ?? getRules(configParam),
+			legacyEnv: isLegacyEnv(configParam),
+			minify: args.minify ?? configParam.minify,
+			nodejsCompatMode: nodejsCompatMode,
+			build: configParam.build || {},
+			define: { ...config.define, ...cliDefines },
+			alias: { ...config.alias, ...cliAlias },
+			initialMode: args.remote ? "remote" : "local",
+			jsxFactory: args.jsxFactory ?? configParam.jsx_factory,
+			jsxFragment: args.jsxFragment ?? configParam.jsx_fragment,
+			tsconfig: args.tsconfig ?? configParam.tsconfig,
+			upstreamProtocol: upstreamProtocol,
+			localProtocol: args.localProtocol ?? configParam.dev.local_protocol,
+			httpsKeyPath: args.httpsKeyPath,
+			httpsCertPath: args.httpsCertPath,
+			localUpstream: args.localUpstream ?? host ?? getInferredHost(routes),
+			local: args.local ?? !args.remote,
+			localPersistencePath,
+			liveReload: args.liveReload ?? false,
+			accountId:
+				args.accountId ?? configParam.account_id ?? getAccountFromCache()?.id,
+			legacyAssetPaths: legacyAssetPaths,
+			legacyAssetsConfig: configParam.legacy_assets,
+			assets: undefined,
+			//port can be 0, which means to use a random port
+			initialPort: args.port ?? configParam.dev.port ?? (await getLocalPort()),
+			initialIp: args.ip ?? configParam.dev.ip,
+			inspectorPort:
+				args.inspectorPort ??
+				configParam.dev.inspector_port ??
+				(await getInspectorPort()),
+			runtimeInspectorPort: await getRuntimeInspectorPort(),
+			isWorkersSite: Boolean(args.site || configParam.site),
+			compatibilityDate: getDevCompatibilityDate(
+				config,
+				// Only `compatibilityDate` will be set when using `unstable_dev`
+				args.compatibilityDate
+			),
+			compatibilityFlags:
+				args.compatibilityFlags ?? configParam.compatibility_flags,
+			usageModel: configParam.usage_model,
+			bindings: bindings,
+			migrations: configParam.migrations,
+			crons: configParam.triggers.crons,
+			queueConsumers: configParam.queues.consumers,
+			onReady: args.onReady,
+			inspect: args.inspect ?? true,
+			showInteractiveDevSession: args.showInteractiveDevSession,
+			forceLocal: args.forceLocal,
+			enablePagesAssetsServiceBinding: args.enablePagesAssetsServiceBinding,
+			firstPartyWorker: configParam.first_party_worker,
+			sendMetrics: configParam.send_metrics,
+			testScheduled: args.testScheduled,
+			disableDevRegistry: args.disableDevRegistry ?? false,
+			projectRoot,
+			experimentalDevEnv: args.experimentalDevEnv,
+			rawArgs: args,
+			rawConfig: configParam,
+			devEnv,
+			bindVectorizeToProd: args.experimentalVectorizeBindToProd,
+		});
+	}
+
+	const devServer = await run(
+		{
+			DEV_ENV: args.experimentalDevEnv,
+			FILE_BASED_REGISTRY: args.experimentalRegistry,
+			JSON_CONFIG_FILE: Boolean(args.experimentalJsonConfig),
+		},
+		() => getDevServer(config)
+	);
+	if (!devServer) {
+		const error = new Error("Failed to start dev server.");
+		logger.error(error.message);
+		throw error;
+	}
+
+	return {
+		stop: async () => {
+			await devServer.stop();
+		},
+	};
 }
 
 /**

@@ -1,5 +1,109 @@
 # wrangler
 
+## 3.85.0
+
+### Minor Changes
+
+- [#7105](https://github.com/cloudflare/workers-sdk/pull/7105) [`a5f1779`](https://github.com/cloudflare/workers-sdk/commit/a5f177945cc512e1e4dc889c09efa67e5af8ff2b) Thanks [@jonesphillip](https://github.com/jonesphillip)! - Added the ability to list, add, remove, and update R2 bucket custom domains.
+
+- [#7132](https://github.com/cloudflare/workers-sdk/pull/7132) [`89f6274`](https://github.com/cloudflare/workers-sdk/commit/89f627426bc30b5c76039c9e78a9aab14dcd40c9) Thanks [@gabivlj](https://github.com/gabivlj)! - Event messages are capitalized, images of wrong architectures properly show the error in `cloudchamber create`
+  When a new "health" enum is introduced, `wrangler cloudchamber list` won't crash anymore.
+  Update Cloudchamber schemas.
+
+- [#7121](https://github.com/cloudflare/workers-sdk/pull/7121) [`2278616`](https://github.com/cloudflare/workers-sdk/commit/2278616b517e17dede77a675d5d2dc6847489f50) Thanks [@bruxodasilva](https://github.com/bruxodasilva)! - Added pause and resume commands to manage Workflows and hidded unimplemented delete command
+
+### Patch Changes
+
+- [#7134](https://github.com/cloudflare/workers-sdk/pull/7134) [`3ee1353`](https://github.com/cloudflare/workers-sdk/commit/3ee1353d317c0e137a14f3091b32eecd575cc7a4) Thanks [@cmackenzie1](https://github.com/cmackenzie1)! - Change Pipelines to use name instead of ID
+
+- [#7020](https://github.com/cloudflare/workers-sdk/pull/7020) [`e1d2fd6`](https://github.com/cloudflare/workers-sdk/commit/e1d2fd668678dadcd46a1a9ca7da17e1627be807) Thanks [@KianNH](https://github.com/KianNH)! - chore: move printWranglerBanner for secret delete into handler
+
+- [#7150](https://github.com/cloudflare/workers-sdk/pull/7150) [`6380d86`](https://github.com/cloudflare/workers-sdk/commit/6380d864d6c771f3cc81d6a3cd00a8559a6d4839) Thanks [@emily-shen](https://github.com/emily-shen)! - refactor: improve login/logout/whoami setup with the new internal registration utils
+
+- [#6756](https://github.com/cloudflare/workers-sdk/pull/6756) [`49ef163`](https://github.com/cloudflare/workers-sdk/commit/49ef163e5d91ac5123cd6ccc29b5f98e0c92d7df) Thanks [@WalshyDev](https://github.com/WalshyDev)! - chore: disable wrangler.toml warnings when doing `wrangler login` & `wrangler logout`
+
+- [#7164](https://github.com/cloudflare/workers-sdk/pull/7164) [`1bd4885`](https://github.com/cloudflare/workers-sdk/commit/1bd4885b5dcba981c0ccf13aa1228262b9101783) Thanks [@penalosa](https://github.com/penalosa)! - Fix `--test-scheduled` with custom builds & `--x-dev-env`
+
+## 3.84.1
+
+### Patch Changes
+
+- [#7141](https://github.com/cloudflare/workers-sdk/pull/7141) [`d938bb3`](https://github.com/cloudflare/workers-sdk/commit/d938bb395d77e2be9ab708eb4ace722fc39153e8) Thanks [@emily-shen](https://github.com/emily-shen)! - fix: throw a better error if there is an "ASSETS" user binding in a Pages projects
+
+- [#7124](https://github.com/cloudflare/workers-sdk/pull/7124) [`f8ebdd1`](https://github.com/cloudflare/workers-sdk/commit/f8ebdd1b2ba7cdc30a17c19dc66aed064213b2a6) Thanks [@skepticfx](https://github.com/skepticfx)! - fix: Modify Cloudchamber deployment labels in interactive mode
+
+## 3.84.0
+
+### Minor Changes
+
+- [#6999](https://github.com/cloudflare/workers-sdk/pull/6999) [`0111edb`](https://github.com/cloudflare/workers-sdk/commit/0111edb9da466184885085be5e755ceb4970a486) Thanks [@garvit-gupta](https://github.com/garvit-gupta)! - docs: Vectorize GA Announcement Banner
+
+- [#6916](https://github.com/cloudflare/workers-sdk/pull/6916) [`a33a133`](https://github.com/cloudflare/workers-sdk/commit/a33a133f884741d347f85f059631ae6461c46fdd) Thanks [@garrettgu10](https://github.com/garrettgu10)! - Local development now supports Vectorize bindings
+
+- [#7004](https://github.com/cloudflare/workers-sdk/pull/7004) [`15ef013`](https://github.com/cloudflare/workers-sdk/commit/15ef013f1bd006915d01477e9e65f8ac51e7dce9) Thanks [@garvit-gupta](https://github.com/garvit-gupta)! - feat: Enable Vectorize query by id via Wrangler
+
+- [#7092](https://github.com/cloudflare/workers-sdk/pull/7092) [`038fdd9`](https://github.com/cloudflare/workers-sdk/commit/038fdd97aaab9db3b6a76cd0e0d9cf7a786f9ac8) Thanks [@jonesphillip](https://github.com/jonesphillip)! - Added location hint option for the Wrangler R2 bucket create command
+
+- [#7024](https://github.com/cloudflare/workers-sdk/pull/7024) [`bd66d51`](https://github.com/cloudflare/workers-sdk/commit/bd66d511a90dd7a635ec94e95f806be7de569212) Thanks [@xortive](https://github.com/xortive)! - feature: allow using a connection string when updating hyperdrive configs
+
+  both `hyperdrive create` and `hyperdrive update` now support updating configs with connection strings.
+
+### Patch Changes
+
+- [#7091](https://github.com/cloudflare/workers-sdk/pull/7091) [`68a2a84`](https://github.com/cloudflare/workers-sdk/commit/68a2a8460375cfa0fba8c7c7384b0168e5e4415d) Thanks [@taylorlee](https://github.com/taylorlee)! - fix: synchronize observability settings during `wrangler versions deploy`
+
+  When running `wrangler versions deploy`, Wrangler will now update `observability` settings in addition to `logpush` and `tail_consumers`. Unlike `wrangler deploy`, it will not disable observability when `observability` is undefined in `wrangler.toml`.
+
+- [#7080](https://github.com/cloudflare/workers-sdk/pull/7080) [`924ec18`](https://github.com/cloudflare/workers-sdk/commit/924ec18c249f49700d070e725be675fd5f99259b) Thanks [@vicb](https://github.com/vicb)! - chore(wrangler): update unenv dependency version
+
+- [#7097](https://github.com/cloudflare/workers-sdk/pull/7097) [`8ca4b32`](https://github.com/cloudflare/workers-sdk/commit/8ca4b327443c38df55236509e2a782c6496ba89d) Thanks [@emily-shen](https://github.com/emily-shen)! - fix: remove deprecation warnings for `wrangler init`
+
+  We will not be removing `wrangler init` (it just delegates to create-cloudflare now). These warnings were causing confusion for users as it `wrangler init` is still recommended in many places.
+
+- [#7073](https://github.com/cloudflare/workers-sdk/pull/7073) [`656a444`](https://github.com/cloudflare/workers-sdk/commit/656a444fc7d363c1b7154fdf73eed0a81b003882) Thanks [@penalosa](https://github.com/penalosa)! - Internal refactor to remove `es-module-lexer` and support `wrangler types` for Workers with Durable Objects & JSX
+
+- [#7024](https://github.com/cloudflare/workers-sdk/pull/7024) [`bd66d51`](https://github.com/cloudflare/workers-sdk/commit/bd66d511a90dd7a635ec94e95f806be7de569212) Thanks [@xortive](https://github.com/xortive)! - fix: make individual parameters work for `wrangler hyperdrive create` when not using HoA
+
+  `wrangler hyperdrive create` individual parameters were not setting the database name correctly when calling the api.
+
+- [#7024](https://github.com/cloudflare/workers-sdk/pull/7024) [`bd66d51`](https://github.com/cloudflare/workers-sdk/commit/bd66d511a90dd7a635ec94e95f806be7de569212) Thanks [@xortive](https://github.com/xortive)! - refactor: use same param parsing code for `wrangler hyperdrive create` and `wrangler hyperdrive update`
+
+  ensures that going forward, both commands support the same features and have the same names for config flags
+
+## 3.83.0
+
+### Minor Changes
+
+- [#7000](https://github.com/cloudflare/workers-sdk/pull/7000) [`1de309b`](https://github.com/cloudflare/workers-sdk/commit/1de309ba2222d7a73cefacef8d3eb60e8afdf5b4) Thanks [@jkoe-cf](https://github.com/jkoe-cf)! - feature: allowing users to specify a description when creating an event notification rule
+
+### Patch Changes
+
+- [#7011](https://github.com/cloudflare/workers-sdk/pull/7011) [`cef32c8`](https://github.com/cloudflare/workers-sdk/commit/cef32c88ee75a84267c1007608c042deb220a30b) Thanks [@GregBrimble](https://github.com/GregBrimble)! - fix: Correctly apply Durable Object migrations for namespaced scripts
+
+- [#7067](https://github.com/cloudflare/workers-sdk/pull/7067) [`4aa35c5`](https://github.com/cloudflare/workers-sdk/commit/4aa35c562f976e59016f395af208d05bbab3e408) Thanks [@LuisDuarte1](https://github.com/LuisDuarte1)! - Change trigger command to comply with the current workflows endpoint.
+
+  This also adds an id option to allow users to optionally customize the new instance id.
+
+- [#7082](https://github.com/cloudflare/workers-sdk/pull/7082) [`3f1d79c`](https://github.com/cloudflare/workers-sdk/commit/3f1d79c690e123ffb23cc22db64c07030fb3eb46) Thanks [@LuisDuarte1](https://github.com/LuisDuarte1)! - Change to new terminate instance workflow endpoint
+
+- [#7036](https://github.com/cloudflare/workers-sdk/pull/7036) [`e7ea600`](https://github.com/cloudflare/workers-sdk/commit/e7ea6005c1f283bbdfe7a6803d41403e5ebc13e5) Thanks [@penalosa](https://github.com/penalosa)! - Reduce KV bulk upload bucket size to 1000 (from the previous 5000)
+
+- [#7068](https://github.com/cloudflare/workers-sdk/pull/7068) [`a2afcf1`](https://github.com/cloudflare/workers-sdk/commit/a2afcf13ff4b6a9f72fdca108b3c7e493185adf6) Thanks [@RamIdeas](https://github.com/RamIdeas)! - log warning of Workflows open-beta status when running deploying a Worker that contains a Workflow binding
+
+- [#7065](https://github.com/cloudflare/workers-sdk/pull/7065) [`b219296`](https://github.com/cloudflare/workers-sdk/commit/b2192965e50602f8148c8bd9a6f10fdb059aefd3) Thanks [@penalosa](https://github.com/penalosa)! - Internal refactor to remove React/ink from all non-`wrangler dev` flows
+
+- [#7064](https://github.com/cloudflare/workers-sdk/pull/7064) [`a90980c`](https://github.com/cloudflare/workers-sdk/commit/a90980cadafb51c3ff60404d832bd11fc2b4e18b) Thanks [@penalosa](https://github.com/penalosa)! - Fix `wrangler dev --remote --show-interactive-dev-session=false` by only enabling hotkeys after account selection if hotkeys were previously enabled
+
+- [#7045](https://github.com/cloudflare/workers-sdk/pull/7045) [`5ef6231`](https://github.com/cloudflare/workers-sdk/commit/5ef6231a5cefbaaef123e6e8ee899fb81fc69e3e) Thanks [@RamIdeas](https://github.com/RamIdeas)! - Add preliminary support for Workflows in wrangler dev
+
+- [#7075](https://github.com/cloudflare/workers-sdk/pull/7075) [`80e5bc6`](https://github.com/cloudflare/workers-sdk/commit/80e5bc6887965a35ca1ab2794e4e4a96c0ef7a1e) Thanks [@LuisDuarte1](https://github.com/LuisDuarte1)! - Fix params serialization when send the trigger workflow API
+
+  Previously, wrangler did not parse the params sending it as a string to workflow's services.
+
+- Updated dependencies [[`760e43f`](https://github.com/cloudflare/workers-sdk/commit/760e43ffa197597de5625b96bc91376161f5027a), [`8dc2b7d`](https://github.com/cloudflare/workers-sdk/commit/8dc2b7d739239411ac29e419c22d22c291777042), [`5ef6231`](https://github.com/cloudflare/workers-sdk/commit/5ef6231a5cefbaaef123e6e8ee899fb81fc69e3e)]:
+  - miniflare@3.20241022.0
+  - @cloudflare/workers-shared@0.7.0
+
 ## 3.82.0
 
 ### Minor Changes

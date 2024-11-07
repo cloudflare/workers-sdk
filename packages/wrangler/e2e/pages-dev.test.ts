@@ -117,7 +117,7 @@ describe.each([{ cmd: "wrangler pages dev" }])("Pages $cmd", ({ cmd }) => {
 		expect(normalizeOutput(worker.currentOutput)).toContain(
 			dedent`Your worker has access to the following bindings:
 					- Durable Objects:
-					  - TEST_DO: TestDurableObject (defined in 🔴 a)
+					  - TEST_DO: TestDurableObject (defined in a [not connected])
 					- KV Namespaces:
 					  - TEST_KV: TEST_KV (local)
 					- D1 Databases:
@@ -125,7 +125,7 @@ describe.each([{ cmd: "wrangler pages dev" }])("Pages $cmd", ({ cmd }) => {
 					- R2 Buckets:
 					  - TEST_R2: TEST_R2 (local)
 					- Services:
-					  - TEST_SERVICE: 🔴 test-worker
+					  - TEST_SERVICE: test-worker [not connected]
 		`
 		);
 	});

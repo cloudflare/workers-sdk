@@ -12,7 +12,7 @@ import {
 import { inputPrompt, spinner } from "@cloudflare/cli/interactive";
 import isInteractive from "../is-interactive";
 import { listDeploymentsAndChoose, loadDeployments } from "./cli/deployments";
-import { statusToColored } from "./cli/util";
+import { capitalize, statusToColored } from "./cli/util";
 import { DeploymentsService, PlacementsService } from "./client";
 import { loadAccountSpinner, promiseSpinner } from "./common";
 import type { Config } from "../config";
@@ -20,7 +20,11 @@ import type {
 	CommonYargsArgvJSON,
 	StrictYargsOptionsToInterfaceJSON,
 } from "../yargs-types";
-import type { PlacementEvent, PlacementWithEvents, State } from "./client";
+import type {
+	DeploymentPlacementState,
+	PlacementEvent,
+	PlacementWithEvents,
+} from "./client";
 import type { EventName } from "./enums";
 
 export function listDeploymentsYargs(args: CommonYargsArgvJSON) {
@@ -77,7 +81,7 @@ export async function listCommand(
 				undefined,
 				deploymentArgs.location,
 				deploymentArgs.image,
-				deploymentArgs.state as State,
+				deploymentArgs.state as DeploymentPlacementState,
 				deploymentArgs.ipv4,
 				deploymentArgs.label
 			)
@@ -111,6 +115,7 @@ export async function listCommand(
  */
 function eventMessage(event: PlacementEvent, lastEvent: boolean): string {
 	let { message } = event;
+	message = capitalize(message);
 	const name = event.name as EventName;
 	const health = event.statusChange["health"];
 	if (health === "failed") {

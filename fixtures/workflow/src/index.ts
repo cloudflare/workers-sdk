@@ -1,6 +1,6 @@
 import {
 	WorkerEntrypoint,
-	Workflow,
+	WorkflowEntrypoint,
 	WorkflowEvent,
 	WorkflowStep,
 } from "cloudflare:workers";
@@ -8,16 +8,18 @@ import {
 type Params = {
 	name: string;
 };
-export class Demo extends Workflow<{}, Params> {
-	async run(events: Array<WorkflowEvent<Params>>, step: WorkflowStep) {
-		const { timestamp, payload } = events[0];
+
+export class Demo extends WorkflowEntrypoint<{}, Params> {
+	async run(event: WorkflowEvent<Params>, step: WorkflowStep) {
+		const { timestamp, payload } = event;
+
 		const result = await step.do("First step", async function () {
 			return {
 				output: "First step result",
 			};
 		});
 
-		await step.sleep("Wait", "1 minute");
+		await step.sleep("Wait", "1 second");
 
 		const result2 = await step.do("Second step", async function () {
 			return {
@@ -25,26 +27,29 @@ export class Demo extends Workflow<{}, Params> {
 			};
 		});
 
-		return {
-			result,
-			result2,
-			timestamp,
-			payload,
-		};
+		return [result, result2, timestamp, payload];
 	}
 }
 
 type Env = {
-	WORKFLOW: {
-		create: (id: string) => {
-			pause: () => {};
-		};
-	};
+	WORKFLOW: Workflow;
 };
 export default class extends WorkerEntrypoint<Env> {
-	async fetch() {
-		const handle = await this.env.WORKFLOW.create(crypto.randomUUID());
-		await handle.pause();
-		return new Response();
+	async fetch(req: Request) {
+		const url = new URL(req.url);
+		const id = url.searchParams.get("workflowName");
+
+		if (url.pathname === "/favicon.ico") {
+			return new Response(null, { status: 404 });
+		}
+
+		let handle: WorkflowInstance;
+		if (url.pathname === "/create") {
+			handle = await this.env.WORKFLOW.create({ id });
+		} else {
+			handle = await this.env.WORKFLOW.get(id);
+		}
+
+		return Response.json(await handle.status());
 	}
 }

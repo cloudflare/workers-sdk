@@ -77,6 +77,7 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 				directory: config.directory,
 				format: config.build.format,
 				moduleRoot: config.build.moduleRoot,
+				exports: config.build.exports,
 			};
 
 			const entryDirectory = path.dirname(config.entrypoint);
@@ -132,6 +133,20 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 							config.compatibilityDate,
 							config.compatibilityFlags
 						),
+						testScheduled: config.dev.testScheduled,
+						plugins: undefined,
+
+						// Pages specific options used by wrangler pages commands
+						entryName: undefined,
+						inject: undefined,
+						isOutfile: undefined,
+						external: undefined,
+
+						// We don't use esbuild watching for custom builds
+						watch: undefined,
+
+						// sourcemap defaults to true in dev
+						sourcemap: undefined,
 					});
 			if (buildAborter.signal.aborted) {
 				return;
@@ -214,6 +229,7 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 			directory: config.directory,
 			format: config.build.format,
 			moduleRoot: config.build.moduleRoot,
+			exports: config.build.exports,
 		};
 		const { bindings } = await convertBindingsToCfWorkerInitBindings(
 			config.bindings

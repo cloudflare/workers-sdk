@@ -3,10 +3,12 @@
 	"private": true,
 	"scripts": {
 		"deploy": "wrangler deploy",
-		"start": "wrangler dev"
+		"start": "wrangler dev",
+		"test:ci": "vitest"
 	},
 	"devDependencies": {
-		"@cloudflare/workers-types": "^4.20241022.0",
+		"@cloudflare/workers-types": "^4.20241106.0",
+		"undici": "catalog:default",
 		"wrangler": "workspace:*"
 	},
 	"volta": {

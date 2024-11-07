@@ -20,8 +20,8 @@ describe("r2", () => {
 		const output = await helper.run(`wrangler r2 bucket create ${bucketName}`);
 
 		expect(normalize(output.stdout)).toMatchInlineSnapshot(`
-			"Creating bucket tmp-e2e-r2-00000000-0000-0000-0000-000000000000 with default storage class set to Standard.
-			Created bucket tmp-e2e-r2-00000000-0000-0000-0000-000000000000 with default storage class set to Standard."
+			"Creating bucket 'tmp-e2e-r2-00000000-0000-0000-0000-000000000000'...
+			✅ Created bucket 'tmp-e2e-r2-00000000-0000-0000-0000-000000000000' with default storage class of Standard."
 		`);
 	});
 

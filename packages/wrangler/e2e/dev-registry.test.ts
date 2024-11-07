@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { WranglerE2ETestHelper } from "./helpers/e2e-wrangler-test";
 import { fetchText } from "./helpers/fetch-text";
 import { generateResourceName } from "./helpers/generate-resource-name";
+import { normalizeOutput } from "./helpers/normalize";
 import { seed as baseSeed, makeRoot, seed } from "./helpers/setup";
 import { WRANGLER_IMPORT } from "./helpers/wrangler";
 import type { RequestInit } from "undici";
@@ -289,6 +290,10 @@ describe.each([
 			await vi.waitFor(
 				async () => await expect(fetchText(url)).resolves.toBe("hello world"),
 				{ interval: 1000, timeout: 10_000 }
+			);
+
+			expect(normalizeOutput(workerA.currentOutput)).toContain(
+				"bindings connect to other `wrangler dev` processes running locally"
 			);
 		});
 

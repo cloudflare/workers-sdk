@@ -3,6 +3,9 @@
 /* eslint-disable */
 
 import type { Command } from "./Command";
+import type { DeploymentCheckRequestBody } from "./DeploymentCheckRequestBody";
+import type { DeploymentSecretMap } from "./DeploymentSecretMap";
+import type { Disk } from "./Disk";
 import type { DNSConfiguration } from "./DNSConfiguration";
 import type { Entrypoint } from "./Entrypoint";
 import type { EnvironmentVariable } from "./EnvironmentVariable";
@@ -27,6 +30,10 @@ export type ModifyDeploymentV2RequestBody = {
 	 */
 	ssh_public_key_ids?: Array<SSHPublicKeyID>;
 	/**
+	 * A list of objects with secret names and the their access types from the account
+	 */
+	secrets?: Array<DeploymentSecretMap>;
+	/**
 	 * The new vcpu that the deployment will have from now on
 	 */
 	vcpu?: number;
@@ -34,6 +41,10 @@ export type ModifyDeploymentV2RequestBody = {
 	 * The new memory that the deployment will have from now on
 	 */
 	memory?: MemorySizeWithUnit;
+	/**
+	 * The disk configuration for this deployment
+	 */
+	disk?: Disk;
 	/**
 	 * Container environment variables
 	 */
@@ -45,4 +56,8 @@ export type ModifyDeploymentV2RequestBody = {
 	command?: Command;
 	entrypoint?: Entrypoint;
 	dns?: DNSConfiguration;
+	/**
+	 * Health and readiness checks for this deployment.
+	 */
+	checks?: Array<DeploymentCheckRequestBody>;
 };

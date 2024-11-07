@@ -81,6 +81,7 @@ export interface UnstableDevOptions {
 		watch?: boolean; // unstable_dev doesn't support watch-mode yet in testMode
 		devEnv?: boolean;
 		fileBasedRegistry?: boolean;
+		vectorizeBindToProd?: boolean;
 		enableIpc?: boolean;
 	};
 }
@@ -125,6 +126,7 @@ export async function unstable_dev(
 		testMode,
 		testScheduled,
 		fileBasedRegistry = false,
+		vectorizeBindToProd,
 		// 2. options for alpha/beta products/libs
 		d1Databases,
 		enablePagesAssetsServiceBinding,
@@ -219,6 +221,7 @@ export async function unstable_dev(
 		experimentalVersions: undefined,
 		experimentalDevEnv: undefined,
 		experimentalRegistry: fileBasedRegistry,
+		experimentalVectorizeBindToProd: vectorizeBindToProd ?? false,
 		enableIpc: options?.experimental?.enableIpc,
 	};
 

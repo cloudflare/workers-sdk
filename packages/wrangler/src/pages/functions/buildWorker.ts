@@ -56,6 +56,7 @@ export function buildWorkerFromFunctions({
 		directory: functionsDirectory,
 		format: "modules",
 		moduleRoot: functionsDirectory,
+		exports: [],
 	};
 	const moduleCollector = createModuleCollector({
 		entry,
@@ -67,7 +68,7 @@ export function buildWorkerFromFunctions({
 		additionalModules: [],
 		moduleCollector,
 		inject: [routesModule],
-		...(outdir ? { entryName: "index" } : {}),
+		...(outdir ? { entryName: "index" } : { entryName: undefined }),
 		minify,
 		sourcemap,
 		watch,
@@ -89,6 +90,13 @@ export function buildWorkerFromFunctions({
 		local,
 		projectRoot: getPagesProjectRoot(),
 		defineNavigatorUserAgent,
+
+		legacyAssets: undefined,
+		bypassAssetCache: undefined,
+		jsxFactory: undefined,
+		jsxFragment: undefined,
+		tsconfig: undefined,
+		testScheduled: undefined,
 	});
 }
 
@@ -142,6 +150,7 @@ export function buildRawWorker({
 		directory: resolve(directory),
 		format: "modules",
 		moduleRoot: resolve(directory),
+		exports: [],
 	};
 	const moduleCollector = externalModules
 		? noopModuleCollector
@@ -193,6 +202,15 @@ export function buildRawWorker({
 		local,
 		projectRoot: getPagesProjectRoot(),
 		defineNavigatorUserAgent,
+
+		legacyAssets: undefined,
+		bypassAssetCache: undefined,
+		jsxFactory: undefined,
+		jsxFragment: undefined,
+		tsconfig: undefined,
+		testScheduled: undefined,
+		entryName: undefined,
+		inject: undefined,
 	});
 }
 
@@ -219,6 +237,7 @@ export async function produceWorkerBundleForWorkerJSDirectory({
 			directory: resolve(workerJSDirectory),
 			format: "modules",
 			moduleRoot: resolve(workerJSDirectory),
+			exports: [],
 		},
 		[
 			{

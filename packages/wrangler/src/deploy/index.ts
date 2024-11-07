@@ -283,6 +283,10 @@ export async function deployHandler(args: DeployArgs) {
 		);
 	}
 
+	if (config.workflows?.length) {
+		logger.once.warn("Workflows is currently in open beta.");
+	}
+
 	validateAssetsArgsAndConfig(args, config);
 
 	const assetsOptions = processAssetsArg(args, config);

@@ -13,6 +13,7 @@ import { findWranglerToml, readConfig } from "../config";
 import { UserError } from "../errors";
 import { CI } from "../is-ci";
 import isInteractive from "../is-interactive";
+import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { writeOutput } from "../output";
 import { APIError } from "../parse";
@@ -119,6 +120,10 @@ export async function versionsDeployHandler(args: VersionsDeployArgs) {
 		throw new UserError(
 			'You need to provide a name of your worker. Either pass it as a cli arg with `--name <name>` or in your config file as `name = "<name>"`'
 		);
+	}
+
+	if (config.workflows?.length) {
+		logger.once.warn("Workflows is currently in open beta.");
 	}
 
 	const versionCache: VersionCache = new Map();
@@ -553,11 +558,12 @@ async function promptPercentages(
 async function maybePatchSettings(
 	accountId: string,
 	workerName: string,
-	config: Pick<Config, "logpush" | "tail_consumers">
+	config: Pick<Config, "logpush" | "tail_consumers" | "observability">
 ) {
 	const maybeUndefinedSettings = {
 		logpush: config.logpush,
 		tail_consumers: config.tail_consumers,
+		observability: config.observability, // TODO reconcile with how regular deploy handles empty state
 	};
 	const definedSettings = Object.fromEntries(
 		Object.entries(maybeUndefinedSettings).filter(
@@ -582,9 +588,22 @@ async function maybePatchSettings(
 		},
 	});
 
+	const observability: Record<string, string> = {};
+	if (patchedSettings.observability) {
+		observability["enabled"] = String(patchedSettings.observability.enabled);
+		if (patchedSettings.observability.head_sampling_rate) {
+			observability["head_sampling_rate"] = String(
+				patchedSettings.observability.head_sampling_rate
+			);
+		}
+	}
 	const formattedSettings = formatLabelledValues(
 		{
 			logpush: String(patchedSettings.logpush ?? "<skipped>"),
+			observability:
+				Object.keys(observability).length > 0
+					? formatLabelledValues(observability)
+					: "<skipped>",
 			tail_consumers:
 				patchedSettings.tail_consumers
 					?.map((tc) =>

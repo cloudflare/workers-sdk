@@ -5,6 +5,7 @@ import { OpenAPI } from "../core/OpenAPI";
 import { request as __request } from "../core/request";
 import type { CancelablePromise } from "../core/CancelablePromise";
 import type { CreateSSHPublicKeyRequestBody } from "../models/CreateSSHPublicKeyRequestBody";
+import type { EmptyResponse } from "../models/EmptyResponse";
 import type { ListSSHPublicKeys } from "../models/ListSSHPublicKeys";
 import type { SSHPublicKeyItem } from "../models/SSHPublicKeyItem";
 
@@ -44,6 +45,30 @@ export class SshPublicKeysService {
 			errors: {
 				401: `Unauthorized`,
 				500: `List SSH Public keys error`,
+			},
+		});
+	}
+
+	/**
+	 * Delete SSH public key from the account
+	 * Delete an SSH public key from an account.
+	 * @param sshPublicKeyName
+	 * @returns EmptyResponse SSH Public key was removed successfully
+	 * @throws ApiError
+	 */
+	public static deleteSshPublicKey(
+		sshPublicKeyName: string
+	): CancelablePromise<EmptyResponse> {
+		return __request(OpenAPI, {
+			method: "DELETE",
+			url: "/ssh-public-keys/{sshPublicKeyName}",
+			path: {
+				sshPublicKeyName: sshPublicKeyName,
+			},
+			errors: {
+				401: `Unauthorized`,
+				404: `Response body when the SSH public key that is trying to be found does not exist`,
+				500: `There has been an internal error`,
 			},
 		});
 	}

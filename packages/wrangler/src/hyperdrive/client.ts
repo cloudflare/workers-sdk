@@ -6,22 +6,62 @@ export type HyperdriveConfig = {
 	id: string;
 	name: string;
 	origin: PublicOrigin;
-	caching: CachingOptions;
+	caching?: CachingOptions;
 };
 
-export type PublicOrigin = {
-	host?: string;
-	port?: number;
-	scheme?: string;
-	database?: string;
-	user?: string;
-	access_client_id?: string;
+export type OriginDatabase = {
+	scheme: string;
+	database: string;
+	user: string;
+
+	// ensure password not set, must use OriginCommonWithSecrets
+	password?: never;
 };
 
-export type OriginWithSecrets = PublicOrigin & {
-	password?: string;
-	access_client_secret?: string;
+export type OriginDatabaseWithSecrets = Omit<OriginDatabase, "password"> & {
+	password: string;
 };
+
+export type NetworkOriginHoA = {
+	host: string;
+	access_client_id: string;
+
+	// Ensure post is not set, and secrets are not set
+	port?: never;
+	access_client_secret?: never;
+};
+
+export type NetworkOriginHoAWithSecrets = Omit<
+	NetworkOriginHoA,
+	"access_client_secret"
+> & {
+	access_client_secret: string;
+};
+
+export type NetworkOriginHostAndPort = {
+	host: string;
+	port: number;
+
+	// Ensure HoA fields are not set
+	access_client_id?: never;
+	access_client_secret?: never;
+};
+
+// NetworkOrigin is never partial in the API, it must be submitted in it's entirety
+export type NetworkOrigin = NetworkOriginHoA | NetworkOriginHostAndPort;
+export type NetworkOriginWithSecrets =
+	| NetworkOriginHoAWithSecrets
+	| NetworkOriginHostAndPort;
+
+// Public responses of the full PublicOrigin type are never partial in the API
+export type PublicOrigin = OriginDatabase & NetworkOrigin;
+
+// But the OriginWithSecrets has a partial variant for updates, that is only partial for fields in OriginDatabaseWithSecrets -- we always require a full NetworkOriginWithSecrets
+export type OriginWithSecrets = OriginDatabaseWithSecrets &
+	NetworkOriginWithSecrets;
+export type OriginWithSecretsPartial =
+	| (Partial<OriginDatabaseWithSecrets> & NetworkOriginWithSecrets)
+	| Partial<OriginDatabaseWithSecrets>;
 
 export type CachingOptions = {
 	disabled?: boolean;
@@ -32,12 +72,12 @@ export type CachingOptions = {
 export type CreateUpdateHyperdriveBody = {
 	name: string;
 	origin: OriginWithSecrets;
-	caching: CachingOptions;
+	caching?: CachingOptions;
 };
 
 export type PatchHyperdriveBody = {
 	name?: string;
-	origin?: OriginWithSecrets;
+	origin?: OriginWithSecretsPartial;
 	caching?: CachingOptions;
 };
 

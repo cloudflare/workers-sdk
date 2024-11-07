@@ -159,6 +159,9 @@ export interface StartDevWorkerInput {
 		registry?: WorkerRegistry;
 
 		testScheduled?: boolean;
+
+		/** Whether to use Vectorize mixed mode -- the worker is run locally but accesses to Vectorize are made remotely */
+		bindVectorizeToProd?: boolean;
 	};
 	legacy?: {
 		site?: Hook<Config["site"], [Config]>;
@@ -179,6 +182,7 @@ export type StartDevWorkerOptions = Omit<StartDevWorkerInput, "assets"> & {
 		moduleRules: Rule[];
 		define: Record<string, string>;
 		additionalModules: CfModule[];
+		exports: string[];
 
 		processEntrypoint: boolean;
 	};
@@ -222,19 +226,20 @@ export type Trigger =
 	| { type: "cron"; cron: string }
 	| ({ type: "queue-consumer" } & QueueConsumer);
 
-type BindingOmit<T> = Omit<T, "binding" | "name">;
+type BindingOmit<T> = Omit<T, "binding">;
+type NameOmit<T> = Omit<T, "name">;
 export type Binding =
 	| { type: "plain_text"; value: string }
 	| { type: "json"; value: Json }
 	| ({ type: "kv_namespace" } & BindingOmit<CfKvNamespace>)
-	| ({ type: "send_email" } & BindingOmit<CfSendEmailBindings>)
+	| ({ type: "send_email" } & NameOmit<CfSendEmailBindings>)
 	| { type: "wasm_module"; source: BinaryFile }
 	| { type: "text_blob"; source: File }
 	| { type: "browser" }
 	| { type: "ai" }
 	| { type: "version_metadata" }
 	| { type: "data_blob"; source: BinaryFile }
-	| ({ type: "durable_object_namespace" } & BindingOmit<CfDurableObject>)
+	| ({ type: "durable_object_namespace" } & NameOmit<CfDurableObject>)
 	| ({ type: "workflow" } & BindingOmit<CfWorkflow>)
 	| ({ type: "queue" } & BindingOmit<CfQueue>)
 	| ({ type: "r2_bucket" } & BindingOmit<CfR2Bucket>)
@@ -247,7 +252,7 @@ export type Binding =
 	| ({ type: "dispatch_namespace" } & Omit<CfDispatchNamespace, "binding">)
 	| ({ type: "mtls_certificate" } & Omit<CfMTlsCertificate, "binding">)
 	| ({ type: "pipeline" } & Omit<CfPipeline, "binding">)
-	| ({ type: "logfwdr" } & Omit<CfLogfwdrBinding, "name">)
+	| ({ type: "logfwdr" } & NameOmit<CfLogfwdrBinding>)
 	| { type: `unsafe_${string}` }
 	| { type: "assets" };
 

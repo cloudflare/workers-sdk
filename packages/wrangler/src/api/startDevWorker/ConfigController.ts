@@ -126,6 +126,7 @@ async function resolveDevConfig(
 		// absolute resolved path
 		persist: localPersistencePath,
 		registry: input.dev?.registry,
+		bindVectorizeToProd: input.dev?.bindVectorizeToProd ?? false,
 	} satisfies StartDevWorkerOptions["dev"];
 }
 
@@ -284,6 +285,7 @@ async function resolveConfig(
 			jsxFactory: input.build?.jsxFactory || config.jsx_factory,
 			jsxFragment: input.build?.jsxFragment || config.jsx_fragment,
 			tsconfig: input.build?.tsconfig ?? config.tsconfig,
+			exports: entry.exports,
 		},
 		dev: await resolveDevConfig(config, input),
 		legacy: {
@@ -314,7 +316,7 @@ async function resolveConfig(
 	validateAssetsArgsAndConfig(resolved);
 
 	const services = extractBindingsOfType("service", resolved.bindings);
-	if (services && services.length > 0) {
+	if (services && services.length > 0 && resolved.dev?.remote) {
 		logger.warn(
 			`This worker is bound to live services: ${services
 				.map(
@@ -408,7 +410,7 @@ export class ConfigController extends Controller<ConfigControllerEventMap> {
 			const fileConfig = readConfig(input.config, {
 				env: input.env,
 				"dispatch-namespace": undefined,
-				"legacy-env": !input.legacy?.enableServiceEnvironments ?? true,
+				"legacy-env": !input.legacy?.enableServiceEnvironments,
 				remote: input.dev?.remote,
 				upstreamProtocol:
 					input.dev?.origin?.secure === undefined

@@ -18,4 +18,5 @@ export type Placement = {
 	deployment_version: DeploymentVersion;
 	terminate: boolean;
 	status: PlacementStatus;
+	last_update?: ISO8601Timestamp;
 };

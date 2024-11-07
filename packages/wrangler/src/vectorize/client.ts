@@ -131,7 +131,7 @@ export async function upsertIntoIndex(
 	);
 }
 
-export async function queryIndex(
+export async function queryIndexByVector(
 	config: Config,
 	indexName: string,
 	vector: VectorFloatArray | number[],
@@ -148,6 +148,28 @@ export async function queryIndex(
 			body: JSON.stringify({
 				...options,
 				vector: Array.isArray(vector) ? vector : Array.from(vector),
+			}),
+		}
+	);
+}
+
+export async function queryIndexByVectorId(
+	config: Config,
+	indexName: string,
+	vectorId: string,
+	options: VectorizeQueryOptions
+): Promise<VectorizeMatches> {
+	const accountId = await requireAuth(config);
+	return await fetchResult(
+		`/accounts/${accountId}/vectorize/v2/indexes/${indexName}/query`,
+		{
+			method: "POST",
+			headers: {
+				"content-type": jsonContentType,
+			},
+			body: JSON.stringify({
+				...options,
+				vectorId,
 			}),
 		}
 	);

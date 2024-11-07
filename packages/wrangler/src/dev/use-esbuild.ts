@@ -169,6 +169,15 @@ export function runBuild(
 						local,
 						projectRoot,
 						defineNavigatorUserAgent,
+
+						// Pages specific options used by wrangler pages commands
+						entryName: undefined,
+						inject: undefined,
+						isOutfile: undefined,
+						external: undefined,
+
+						// sourcemap defaults to true in dev
+						sourcemap: undefined,
 					})
 				: undefined;
 
