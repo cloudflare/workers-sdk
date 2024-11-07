@@ -1,5 +1,10 @@
 import { afterAll, describe, expect, test } from 'vitest';
-import { getJsonResponse, isBuild, serverLogs } from '../../__test-utils__';
+import {
+	getJsonResponse,
+	getTextResponse,
+	isBuild,
+	serverLogs,
+} from '../../__test-utils__';
 
 describe.runIf(!isBuild)('module resolution', async () => {
 	afterAll(() => expect(serverLogs.errors).toEqual([]));
@@ -28,18 +33,6 @@ describe.runIf(!isBuild)('module resolution', async () => {
 					'@playground/module-resolution-requires',
 				'(requires/json) package version': '1.0.0',
 			});
-		});
-	});
-
-	test('node built-ins (both from userland and external dependencies)', async () => {
-		const result = await getJsonResponse('/node-builtins');
-		expect(result).toEqual({
-			'(internal import) buffer.constants.MAX_LENGTH': 2147483647,
-			'(internal import) node:buffer.constants.MAX_LENGTH': 2147483647,
-			'(external require) buffer.constants.MAX_LENGTH': 2147483647,
-			'(external require) node:buffer.constants.MAX_LENGTH': 2147483647,
-			'(external import) buffer.constants.MAX_LENGTH': 2147483647,
-			'(external import) node:buffer.constants.MAX_LENGTH': 2147483647,
 		});
 	});
 
@@ -105,6 +98,13 @@ describe.runIf(!isBuild)('module resolution', async () => {
 				'(slash-create/web) slashCreatorInstance is instance of SlashCreator':
 					true,
 			});
+		});
+	});
+
+	describe('user aliases', () => {
+		test('imports from an aliased package', async () => {
+			const result = await getTextResponse('/@alias/test');
+			expect(result).toBe('OK!');
 		});
 	});
 });

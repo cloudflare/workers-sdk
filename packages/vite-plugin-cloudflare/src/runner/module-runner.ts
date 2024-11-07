@@ -27,7 +27,7 @@ export async function createModuleRunner(
 					);
 
 					if (!response.ok) {
-						// TODO: add error handling
+						throw new Error(await response.text());
 					}
 
 					const result = await response.json();
@@ -55,9 +55,15 @@ export async function createModuleRunner(
 					',',
 				)})=>{{`;
 				const code = `${codeDefinition}${transformed}\n}}`;
-				const fn = env.__VITE_UNSAFE_EVAL__.eval(code, module.id);
-				await fn(...Object.values(context));
-				Object.freeze(context.__vite_ssr_exports__);
+				try {
+					const fn = env.__VITE_UNSAFE_EVAL__.eval(code, module.id);
+					await fn(...Object.values(context));
+					Object.freeze(context.__vite_ssr_exports__);
+				} catch (e) {
+					console.error('error running', module.id);
+					console.error(e instanceof Error ? e.stack : e);
+					throw e;
+				}
 			},
 			async runExternalModule(filepath) {
 				filepath = filepath.replace(/^file:\/\//, '');

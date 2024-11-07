@@ -1,5 +1,7 @@
 import * as path from 'node:path';
 import * as vite from 'vite';
+import { unstable_getMiniflareWorkerOptions } from 'wrangler';
+import type { SourcelessWorkerOptions } from 'wrangler';
 
 export interface WorkerOptions {
 	main: string;
@@ -20,13 +22,18 @@ export interface PluginConfig<
 }
 
 export interface NormalizedPluginConfig {
-	workers: Array<{
-		name: string;
-		entryPath: string;
-		wranglerConfigPath: string;
-	}>;
+	workers: Record<
+		string,
+		{
+			name: string;
+			entryPath: string;
+			wranglerConfigPath: string;
+			workerOptions: SourcelessWorkerOptions;
+		}
+	>;
 	entryWorkerName?: string;
 	persistPath: string | false;
+	wranglerConfigPaths: Set<string>;
 }
 
 const DEFAULT_PERSIST_PATH = '.wrangler/state/v3';
@@ -34,13 +41,10 @@ const DEFAULT_PERSIST_PATH = '.wrangler/state/v3';
 export function normalizePluginConfig(
 	pluginConfig: PluginConfig,
 	viteConfig: vite.ResolvedConfig,
-): {
-	normalizedPluginConfig: NormalizedPluginConfig;
-	wranglerConfigPaths: Set<string>;
-} {
+): NormalizedPluginConfig {
 	const wranglerConfigPaths = new Set<string>();
-	const workers = Object.entries(pluginConfig.workers).map(
-		([name, options]) => {
+	const workers = Object.fromEntries(
+		Object.entries(pluginConfig.workers).map(([name, options]) => {
 			const wranglerConfigPath = path.resolve(
 				viteConfig.root,
 				options.wranglerConfig ?? './wrangler.toml',
@@ -54,12 +58,19 @@ export function normalizePluginConfig(
 
 			wranglerConfigPaths.add(wranglerConfigPath);
 
-			return {
+			const { workerOptions } =
+				unstable_getMiniflareWorkerOptions(wranglerConfigPath);
+
+			return [
 				name,
-				entryPath: options.main,
-				wranglerConfigPath,
-			};
-		},
+				{
+					name,
+					entryPath: options.main,
+					wranglerConfigPath,
+					workerOptions,
+				},
+			];
+		}),
 	);
 
 	const persistPath =
@@ -71,11 +82,9 @@ export function normalizePluginConfig(
 				);
 
 	return {
-		normalizedPluginConfig: {
-			workers,
-			entryWorkerName: pluginConfig.entryWorker,
-			persistPath,
-		},
+		workers,
+		entryWorkerName: pluginConfig.entryWorker,
+		persistPath,
 		wranglerConfigPaths,
 	};
 }

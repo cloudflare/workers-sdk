@@ -190,7 +190,7 @@ export function initRunners(
 	viteDevServer: vite.ViteDevServer,
 ): Promise<void[]> {
 	return Promise.all(
-		normalizedPluginConfig.workers.map(async ({ name }) => {
+		Object.keys(normalizedPluginConfig.workers).map(async (name) => {
 			const worker = await miniflare.getWorker(name);
 
 			return (

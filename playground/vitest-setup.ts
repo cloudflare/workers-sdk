@@ -183,18 +183,23 @@ beforeAll(async (s) => {
 
 async function loadConfig(configEnv: ConfigEnv) {
 	let config: UserConfig | null = null;
+	let cacheDir = 'node_modules/.vite';
 
 	// config file named by convention as the *.spec.ts folder
 	const variantName = path.basename(path.dirname(testPath));
 	if (variantName !== '__tests__') {
-		const configVariantPath = path.resolve(
-			rootDir,
-			`vite.config-${variantName}.js`,
-		);
-		if (fs.existsSync(configVariantPath)) {
-			const res = await loadConfigFromFile(configEnv, configVariantPath);
-			if (res) {
-				config = res.config;
+		cacheDir += '/' + variantName;
+		for (const extension of ['js', 'ts', 'mjs', 'cjs', 'mts', 'cts']) {
+			const configVariantPath = path.resolve(
+				rootDir,
+				`vite.config-${variantName}.${extension}`,
+			);
+			if (fs.existsSync(configVariantPath)) {
+				const res = await loadConfigFromFile(configEnv, configVariantPath);
+				if (res) {
+					config = res.config;
+					break;
+				}
 			}
 		}
 	}
@@ -207,6 +212,7 @@ async function loadConfig(configEnv: ConfigEnv) {
 	}
 
 	const options: InlineConfig = {
+		cacheDir,
 		root: rootDir,
 		logLevel: 'silent',
 		configFile: false,

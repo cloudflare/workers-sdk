@@ -6,20 +6,36 @@ import {
 	initRunners,
 } from './cloudflare-environment';
 import { getMiniflareOptions } from './miniflare-options';
+import {
+	getNodeCompatAliases,
+	injectGlobalCode,
+	resolveNodeAliases,
+} from './node-js-compat';
 import { normalizePluginConfig } from './plugin-config';
 import { invariant } from './shared';
 import type { CloudflareDevEnvironment } from './cloudflare-environment';
-import type { PluginConfig, WorkerOptions } from './plugin-config';
+import type {
+	NormalizedPluginConfig,
+	PluginConfig,
+	WorkerOptions,
+} from './plugin-config';
 
 export function cloudflare<T extends Record<string, WorkerOptions>>(
 	pluginConfig: PluginConfig<T>,
 ): vite.Plugin {
 	let viteConfig: vite.ResolvedConfig;
 
+	let normalizedPluginConfig: NormalizedPluginConfig;
+
 	return {
 		name: 'vite-plugin-cloudflare',
 		config() {
 			return {
+				resolve: {
+					alias: getNodeCompatAliases(),
+					// We want to use `workerd` package exports if available (e.g. for postgres).
+					conditions: ['workerd'],
+				},
 				appType: 'custom',
 				builder: {
 					async buildApp(builder) {
@@ -48,11 +64,27 @@ export function cloudflare<T extends Record<string, WorkerOptions>>(
 		},
 		configResolved(resolvedConfig) {
 			viteConfig = resolvedConfig;
+			normalizedPluginConfig = normalizePluginConfig(
+				pluginConfig,
+				resolvedConfig,
+			);
+		},
+		resolveId(source) {
+			const worker = normalizedPluginConfig.workers[this.environment.name];
+			if (worker) {
+				return resolveNodeAliases(source, worker.workerOptions);
+			}
+		},
+		async transform(code, id) {
+			const worker = normalizedPluginConfig.workers[this.environment.name];
+			if (worker) {
+				const rId = await this.resolve(worker.entryPath);
+				if (id === rId?.id) {
+					return injectGlobalCode(id, code, worker.workerOptions);
+				}
+			}
 		},
 		async configureServer(viteDevServer) {
-			const { normalizedPluginConfig, wranglerConfigPaths } =
-				normalizePluginConfig(pluginConfig, viteConfig);
-
 			let error: unknown;
 
 			const miniflare = new Miniflare(
@@ -62,7 +94,7 @@ export function cloudflare<T extends Record<string, WorkerOptions>>(
 			await initRunners(normalizedPluginConfig, miniflare, viteDevServer);
 
 			viteDevServer.watcher.on('all', async (_, path) => {
-				if (!wranglerConfigPaths.has(path)) {
+				if (!normalizedPluginConfig.wranglerConfigPaths.has(path)) {
 					return;
 				}
 

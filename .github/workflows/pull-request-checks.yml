@@ -29,6 +29,10 @@ jobs:
         shell: bash
         run: pnpm install --frozen-lockfile
 
+      - name: Install Playwright extras
+        shell: bash
+        run: pnpm playwright install
+
       - name: Running checks
         shell: bash
         run: pnpm check

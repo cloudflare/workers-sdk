@@ -8,3 +8,5 @@ catalog:
   'typescript': ^5.6.2
   'vite': '6.0.0-beta.4'
   'wrangler': '^3.80.4'
+  '@types/node': '^22.8.7'
+  'unenv': 'npm:unenv-nightly@2.0.0-20241024-111401-d4156ac'

@@ -3,7 +3,6 @@ import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Log, LogLevel, Response as MiniflareResponse } from 'miniflare';
 import * as vite from 'vite';
-import { unstable_getMiniflareWorkerOptions } from 'wrangler';
 import { invariant } from './shared';
 import type { CloudflareDevEnvironment } from './cloudflare-environment';
 import type { NormalizedPluginConfig } from './plugin-config';
@@ -119,25 +118,23 @@ export function getMiniflareOptions(
 	viteConfig: vite.ResolvedConfig,
 	viteDevServer: vite.ViteDevServer,
 ): MiniflareOptions {
-	const workers = normalizedPluginConfig.workers.map((worker) => {
-		const miniflareOptions = unstable_getMiniflareWorkerOptions(
-			worker.wranglerConfigPath,
-		);
+	const workers = Object.values(normalizedPluginConfig.workers).map(
+		(worker) => {
+			const { ratelimits, ...workerOptions } = worker.workerOptions;
 
-		const { ratelimits, ...workerOptions } = miniflareOptions.workerOptions;
-
-		return {
-			...workerOptions,
-			name: worker.name,
-			modulesRoot: miniflareModulesRoot,
-			unsafeEvalBinding: '__VITE_UNSAFE_EVAL__',
-			bindings: {
-				...workerOptions.bindings,
-				__VITE_ROOT__: viteConfig.root,
-				__VITE_ENTRY_PATH__: worker.entryPath,
-			},
-		} satisfies Partial<WorkerOptions>;
-	});
+			return {
+				...workerOptions,
+				name: worker.name,
+				modulesRoot: miniflareModulesRoot,
+				unsafeEvalBinding: '__VITE_UNSAFE_EVAL__',
+				bindings: {
+					...workerOptions.bindings,
+					__VITE_ROOT__: viteConfig.root,
+					__VITE_ENTRY_PATH__: worker.entryPath,
+				},
+			} satisfies Partial<WorkerOptions>;
+		},
+	);
 
 	const workerToWorkerEntrypointNamesMap =
 		getWorkerToWorkerEntrypointNamesMap(workers);
@@ -214,6 +211,17 @@ export function getMiniflareOptions(
 							FetchFunctionOptions,
 						];
 
+						// For some reason we need this here for cloudflare built-ins (e.g. `cloudflare:workers`) but not for node built-ins (e.g. `node:path`)
+						// See https://github.com/flarelabs-net/vite-plugin-cloudflare/issues/46
+						if (moduleId.startsWith('cloudflare:')) {
+							const result = {
+								externalize: moduleId,
+								type: 'module',
+							} satisfies vite.FetchResult;
+
+							return new MiniflareResponse(JSON.stringify(result));
+						}
+
 						const devEnvironment = viteDevServer.environments[
 							workerOptions.name
 						] as CloudflareDevEnvironment;
@@ -227,16 +235,9 @@ export function getMiniflareOptions(
 
 							return new MiniflareResponse(JSON.stringify(result));
 						} catch (error) {
-							if (moduleId.startsWith('cloudflare:')) {
-								const result = {
-									externalize: moduleId,
-									type: 'module',
-								} satisfies vite.FetchResult;
-
-								return new MiniflareResponse(JSON.stringify(result));
-							}
-							throw new Error(
-								`Unexpected Error, failed to get module: ${moduleId}`,
+							return new MiniflareResponse(
+								`Unexpected Error, failed to get module: ${moduleId}\n${error}`,
+								{ status: 404 },
 							);
 						}
 					},
