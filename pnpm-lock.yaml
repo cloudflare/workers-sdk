@@ -607,21 +607,6 @@ importers:
 
   fixtures/rules-app: {}
 
-  fixtures/service-bindings-app:
-    devDependencies:
-      '@cloudflare/workers-tsconfig':
-        specifier: workspace:*
-        version: link:../../packages/workers-tsconfig
-      concurrently:
-        specifier: ^8.2.2
-        version: 8.2.2
-      undici:
-        specifier: catalog:default
-        version: 5.28.4
-      wrangler:
-        specifier: workspace:*
-        version: link:../../packages/wrangler
-
   fixtures/shared:
     devDependencies:
       wrangler:
@@ -7114,12 +7099,6 @@ packages:
   react-lifecycles-compat@3.0.4:
     resolution: {integrity: sha512-fBASbA6LnOU9dOU2eW7aQ8xmYBSXUIWr+UmF9b1efZBazGNO+rcXT/icdKnYm2pTwcRylVUYwW7H1PHfLekVzA==}
 
-  react-reconciler@0.26.2:
-    resolution: {integrity: sha512-nK6kgY28HwrMNwDnMui3dvm3rCFjZrcGiuwLc5COUipBK5hWHLOxMJhSnSomirqWwjPBJKV1QcbkI0VJr7Gl1Q==}
-    engines: {node: '>=0.10.0'}
-    peerDependencies:
-      react: ^17.0.2
-
   react-refresh@0.14.2:
     resolution: {integrity: sha512-jCvmsr+1IUSMUyzOkRcvnVbX3ZYC6g9TDrDbFuFmRDq7PD4yaGbLKNQL6k2jnArV8hjYxh7hVhAZB6s9HDGpZA==}
     engines: {node: '>=0.10.0'}
@@ -8370,18 +8349,6 @@ packages:
     resolution: {integrity: sha512-+QU2zd6OTD8XWIJCbffaiQeH9U73qIqafo1x6V1snCWYGJf6cVE0cDR4D8xRzcEnfI21IFrUPzPGtcPf8AC+Rw==}
     engines: {node: ^14.17.0 || ^16.13.0 || >=18.0.0}
 
-  ws@7.5.10:
-    resolution: {integrity: sha512-+dbF1tHwZpXcbOJdVOkzLDxZP1ailvSxM6ZweXTegylPny803bFhA+vqBYw4s31NSAk4S2Qz+AKXK9a4wkdjcQ==}
-    engines: {node: '>=8.3.0'}
-    peerDependencies:
-      bufferutil: ^4.0.1
-      utf-8-validate: ^5.0.2
-    peerDependenciesMeta:
-      bufferutil:
-        optional: true
-      utf-8-validate:
-        optional: true
-
   ws@8.18.0:
     resolution: {integrity: sha512-8VbfWfHLbbwu3+N6OKsOMpBdT4kXPDDB9cJk2bJ6mh9ucxdlnNvH1e+roYkKmN9Nxw2yjz7VzeO9oOz2zJ04Pw==}
     engines: {node: '>=10.0.0'}
@@ -8473,14 +8440,6 @@ packages:
   yoctocolors-cjs@2.1.2:
     resolution: {integrity: sha512-cYVsTjKl8b+FrnidjibDWskAv7UKOfcwaVZdp/it9n1s9fU3IkgDbhdIRKCW4JDsAlECJY0ytoVPT3sK6kideA==}
     engines: {node: '>=18'}
-
-  yoga-layout-prebuilt@1.10.0:
-    resolution: {integrity: sha512-YnOmtSbv4MTf7RGJMK0FvZ+KD8OEe/J5BNnR0GHhD8J/XcG/Qvxgszm0Un6FTHWW4uHlTgP0IztiXQnGyIR45g==}
-    engines: {node: '>=8'}
-
-  yoga-layout@file:vendor/yoga-layout-2.0.0-beta.1.tgz:
-    resolution: {integrity: sha512-cHunx1nKVIoOxUw9pJE/3mu5NCUMRmWRgzrrSPfjXXAMMzkxQGDbzP/r6Iv4tdWR20p08kgKBG7n/dmbf6FG1w==, tarball: file:vendor/yoga-layout-2.0.0-beta.1.tgz}
-    version: 2.0.0-beta.1
 
   youch@3.2.3:
     resolution: {integrity: sha512-ZBcWz/uzZaQVdCvfV4uk616Bbpf2ee+F/AvuKDR5EwX/Y4v06xWdtMluqTD7+KlZdM93lLm9gMZYo0sKBS0pgw==}
@@ -10536,8 +10495,6 @@ snapshots:
   '@types/yargs@17.0.24':
     dependencies:
       '@types/yargs-parser': 20.2.1
-
-  '@types/yoga-layout@1.9.2': {}
 
   '@typescript-eslint/eslint-plugin@6.10.0(@typescript-eslint/parser@6.10.0(eslint@8.57.0)(typescript@5.6.3))(eslint@8.57.0)(typescript@5.6.3)':
     dependencies:
@@ -12893,58 +12850,6 @@ snapshots:
 
   ini@1.3.8: {}
 
-  ink-select-input@4.2.1(ink@3.2.0(patch_hash=iiwbcf44d6ccmi6a27ljqs7qce)(@types/react@18.3.3)(react@18.3.1))(react@18.3.1):
-    dependencies:
-      arr-rotate: 1.0.0
-      figures: 3.2.0
-      ink: 3.2.0(patch_hash=iiwbcf44d6ccmi6a27ljqs7qce)(@types/react@18.3.3)(react@18.3.1)
-      lodash.isequal: 4.5.0
-      react: 18.3.1
-
-  ink-spinner@4.0.3(ink@3.2.0(patch_hash=iiwbcf44d6ccmi6a27ljqs7qce)(@types/react@18.3.3)(react@18.3.1))(react@18.3.1):
-    dependencies:
-      cli-spinners: 2.9.2
-      ink: 3.2.0(patch_hash=iiwbcf44d6ccmi6a27ljqs7qce)(@types/react@18.3.3)(react@18.3.1)
-      react: 18.3.1
-
-  ink-table@3.0.0(ink@3.2.0(patch_hash=iiwbcf44d6ccmi6a27ljqs7qce)(@types/react@18.3.3)(react@18.3.1))(react@18.3.1):
-    dependencies:
-      ink: 3.2.0(patch_hash=iiwbcf44d6ccmi6a27ljqs7qce)(@types/react@18.3.3)(react@18.3.1)
-      object-hash: 2.2.0
-      react: 18.3.1
-
-  ink@3.2.0(patch_hash=iiwbcf44d6ccmi6a27ljqs7qce)(@types/react@18.3.3)(react@18.3.1):
-    dependencies:
-      ansi-escapes: 4.3.2
-      auto-bind: 4.0.0
-      chalk: 4.1.2
-      cli-boxes: 2.2.1
-      cli-cursor: 3.1.0
-      cli-truncate: 2.1.0
-      code-excerpt: 3.0.0
-      indent-string: 4.0.0
-      is-ci: 2.0.0
-      lodash: 4.17.21
-      patch-console: 1.0.0
-      react: 18.3.1
-      react-devtools-core: 4.23.0
-      react-reconciler: 0.26.2(react@18.3.1)
-      scheduler: 0.20.2
-      signal-exit: 3.0.7
-      slice-ansi: 3.0.0
-      stack-utils: 2.0.6
-      string-width: 4.2.3
-      type-fest: 0.12.0
-      widest-line: 3.1.0
-      wrap-ansi: 6.2.0
-      ws: 7.5.10
-      yoga-layout-prebuilt: 1.10.0
-    optionalDependencies:
-      '@types/react': 18.3.3
-    transitivePeerDependencies:
-      - bufferutil
-      - utf-8-validate
-
   inline-style-prefixer@5.1.2:
     dependencies:
       css-in-js-utils: 2.0.1
@@ -14309,14 +14214,6 @@ snapshots:
     dependencies:
       object-assign: 4.1.1
 
-  react-devtools-core@4.23.0:
-    dependencies:
-      shell-quote: 1.8.1
-      ws: 7.5.10
-    transitivePeerDependencies:
-      - bufferutil
-      - utf-8-validate
-
   react-display-name@0.2.5: {}
 
   react-dom@18.3.1(react@18.3.1):
@@ -14340,13 +14237,6 @@ snapshots:
   react-is@18.2.0: {}
 
   react-lifecycles-compat@3.0.4: {}
-
-  react-reconciler@0.26.2(react@18.3.1):
-    dependencies:
-      loose-envify: 1.4.0
-      object-assign: 4.1.1
-      react: 18.3.1
-      scheduler: 0.20.2
 
   react-refresh@0.14.2: {}
 
@@ -15695,8 +15585,6 @@ snapshots:
       imurmurhash: 0.1.4
       signal-exit: 4.1.0
 
-  ws@7.5.10: {}
-
   ws@8.18.0: {}
 
   xdg-app-paths@8.3.0:
@@ -15774,12 +15662,6 @@ snapshots:
   yocto-queue@1.0.0: {}
 
   yoctocolors-cjs@2.1.2: {}
-
-  yoga-layout-prebuilt@1.10.0:
-    dependencies:
-      '@types/yoga-layout': 1.9.2
-
-  yoga-layout@file:vendor/yoga-layout-2.0.0-beta.1.tgz: {}
 
   youch@3.2.3:
     dependencies:
