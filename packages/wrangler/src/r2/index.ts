@@ -2,9 +2,9 @@ import { Blob } from "node:buffer";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import * as stream from "node:stream";
-import { ReadableStream } from "node:stream/web";
 import prettyBytes from "pretty-bytes";
 import { readConfig } from "../config";
+import { defineNamespace } from "../core";
 import { CommandLineArgsError, FatalError, UserError } from "../errors";
 import { printWranglerBanner } from "../index";
 import { logger } from "../logger";
@@ -15,6 +15,7 @@ import * as Create from "./create";
 import * as Domain from "./domain";
 import {
 	bucketAndKeyFromObjectPath,
+	createFileReadableStream,
 	deleteR2Bucket,
 	deleteR2Object,
 	getR2Object,
@@ -31,28 +32,14 @@ import * as Sippy from "./sippy";
 import type { CommonYargsArgv, SubHelp } from "../yargs-types";
 import type { R2PutOptions } from "@cloudflare/workers-types/experimental";
 
-const CHUNK_SIZE = 1024;
-async function createFileReadableStream(filePath: string) {
-	// Based off https://streams.spec.whatwg.org/#example-rs-pull
-	const handle = await fs.promises.open(filePath, "r");
-	let position = 0;
-	return new ReadableStream({
-		async pull(controller) {
-			const buffer = new Uint8Array(CHUNK_SIZE);
-			const { bytesRead } = await handle.read(buffer, 0, CHUNK_SIZE, position);
-			if (bytesRead === 0) {
-				await handle.close();
-				controller.close();
-			} else {
-				position += bytesRead;
-				controller.enqueue(buffer.subarray(0, bytesRead));
-			}
-		},
-		cancel() {
-			return handle.close();
-		},
-	});
-}
+defineNamespace({
+	command: "wrangler r2",
+	metadata: {
+		description: "📦 Manage R2 buckets & objects",
+		status: "stable",
+		owner: "Product: R2",
+	},
+});
 
 export function r2(r2Yargs: CommonYargsArgv, subHelp: SubHelp) {
 	return r2Yargs

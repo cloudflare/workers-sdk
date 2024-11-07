@@ -1,3 +1,5 @@
+import * as fs from "node:fs";
+import { ReadableStream } from "node:stream/web";
 import { Miniflare } from "miniflare";
 import prettyBytes from "pretty-bytes";
 import { fetchGraphqlResult, fetchResult } from "../cfetch";
@@ -12,7 +14,6 @@ import type { ApiCredentials } from "../user";
 import type { R2Bucket } from "@cloudflare/workers-types/experimental";
 import type { ReplaceWorkersTypes } from "miniflare";
 import type { Readable } from "node:stream";
-import type { ReadableStream } from "node:stream/web";
 import type { HeadersInit } from "undici";
 
 /**
@@ -1088,4 +1089,27 @@ export function isNonNegativeNumber(str: string): boolean {
  */
 export function isValidR2BucketName(name: string | undefined): name is string {
 	return typeof name === "string" && /^[a-zA-Z][a-zA-Z0-9-]*$/.test(name);
+}
+
+const CHUNK_SIZE = 1024;
+export async function createFileReadableStream(filePath: string) {
+	// Based off https://streams.spec.whatwg.org/#example-rs-pull
+	const handle = await fs.promises.open(filePath, "r");
+	let position = 0;
+	return new ReadableStream({
+		async pull(controller) {
+			const buffer = new Uint8Array(CHUNK_SIZE);
+			const { bytesRead } = await handle.read(buffer, 0, CHUNK_SIZE, position);
+			if (bytesRead === 0) {
+				await handle.close();
+				controller.close();
+			} else {
+				position += bytesRead;
+				controller.enqueue(buffer.subarray(0, bytesRead));
+			}
+		},
+		cancel() {
+			return handle.close();
+		},
+	});
 }
