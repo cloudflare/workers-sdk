@@ -1,4 +1,5 @@
 import assert from "node:assert";
+import childProcess from "node:child_process";
 import { existsSync } from "node:fs";
 import * as nodeNet from "node:net";
 import { setTimeout } from "node:timers/promises";
@@ -210,6 +211,102 @@ describe.each([
 		});
 	});
 });
+
+interface Process {
+	pid: string;
+	cmd: string;
+}
+
+function getProcesses(): Process[] {
+	return childProcess
+		.execSync("ps -e | awk '{print $1,$4}'", { encoding: "utf8" })
+		.trim()
+		.split("\n")
+		.map((line) => {
+			const [pid, cmd] = line.split(" ");
+			return { pid, cmd };
+		});
+}
+
+function getProcessCwd(pid: string | number) {
+	return childProcess
+		.execSync(`lsof -p ${pid} | awk '$4=="cwd" {print $9}'`, {
+			encoding: "utf8",
+		})
+		.trim();
+}
+function getStartedWorkerdProcesses(cwd: string): Process[] {
+	return getProcesses()
+		.filter(({ cmd }) => cmd.includes("workerd"))
+		.filter((c) => getProcessCwd(c.pid).includes(cwd));
+}
+
+// This fails on Windows because of https://github.com/cloudflare/workerd/issues/1664
+it.runIf(process.platform !== "win32")(
+	`leaves no orphaned workerd processes with port conflict`,
+	async () => {
+		const initial = new WranglerE2ETestHelper();
+		await initial.seed({
+			"wrangler.toml": dedent`
+						name = "${workerName}"
+						main = "src/index.ts"
+						compatibility_date = "2023-01-01"
+				`,
+			"src/index.ts": dedent`
+						export default {
+							fetch(request) {
+								return new Response("Hello World!")
+							}
+						}`,
+			"package.json": dedent`
+						{
+							"name": "worker",
+							"version": "0.0.0",
+							"private": true
+						}
+						`,
+		});
+		const initialWorker = initial.runLongLived(`wrangler dev`);
+
+		const { url: initialWorkerUrl } = await initialWorker.waitForReady();
+
+		const port = new URL(initialWorkerUrl).port;
+
+		const helper = new WranglerE2ETestHelper();
+		await helper.seed({
+			"wrangler.toml": dedent`
+						name = "${workerName}"
+						main = "src/index.ts"
+						compatibility_date = "2023-01-01"
+				`,
+			"src/index.ts": dedent`
+						export default {
+							fetch(request) {
+								return new Response("Hello World!")
+							}
+						}`,
+			"package.json": dedent`
+						{
+							"name": "worker",
+							"version": "0.0.0",
+							"private": true
+						}
+						`,
+		});
+		const beginProcesses = getStartedWorkerdProcesses(helper.tmpPath);
+		// If a port isn't specified, Wrangler will start up on a different random port. In this test we want to force an address-in-use error
+		const worker = helper.runLongLived(`wrangler dev --port ${port}`);
+
+		const exitCode = await worker.exitCode;
+
+		expect(exitCode).not.toBe(0);
+
+		const endProcesses = getStartedWorkerdProcesses(helper.tmpPath);
+
+		expect(beginProcesses.length).toBe(0);
+		expect(endProcesses.length).toBe(0);
+	}
+);
 
 // Skipping remote python tests because they consistently flake with timeouts
 // Unskip once remote dev with python workers is more stable
