@@ -24,7 +24,7 @@ interface Env {
 export default {
 	async fetch(request: Request, env: Env, ctx: ExecutionContext) {
 		let sentry: ReturnType<typeof setupSentry> | undefined;
-		const analytics = new Analytics();
+		const analytics = new Analytics(env.ANALYTICS);
 		const performance = new PerformanceTimer(env.UNSAFE_PERFORMANCE);
 		const startTimeMs = performance.now();
 
@@ -80,7 +80,7 @@ export default {
 			throw err;
 		} finally {
 			analytics.setData({ requestTime: performance.now() - startTimeMs });
-			analytics.write(env.ENVIRONMENT, env.ANALYTICS);
+			analytics.write();
 		}
 	},
 };
