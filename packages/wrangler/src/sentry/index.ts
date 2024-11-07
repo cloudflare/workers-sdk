@@ -130,6 +130,10 @@ export function setupSentry() {
 				}
 
 				console.log("Sentry: Event", { before, after: event });
+				console.log("Sentry: Event (JSON)", {
+					before: JSON.stringify(before, null, 2),
+					after: JSON.stringify(event, null, 2),
+				});
 				// Test only - Do not send it out
 				return null;
 			},
