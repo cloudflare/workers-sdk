@@ -4,7 +4,7 @@ import * as path from "node:path";
 import * as stream from "node:stream";
 import prettyBytes from "pretty-bytes";
 import { readConfig } from "../config";
-import { defineNamespace } from "../core";
+import { defineCommand, defineNamespace } from "../core";
 import { CommandLineArgsError, FatalError, UserError } from "../errors";
 import { printWranglerBanner } from "../index";
 import { logger } from "../logger";
@@ -39,108 +39,115 @@ defineNamespace({
 	},
 });
 
+defineNamespace({
+	command: "wrangler r2 object",
+	metadata: {
+		description: `Manage R2 objects`,
+		status: "stable",
+		owner: "Product: R2",
+	},
+});
+
+defineCommand({
+	command: "wrangler r2 object get",
+	metadata: {
+		description: "Fetch an object from an R2 bucket",
+		status: "stable",
+		owner: "Product: R2",
+	},
+	args: {
+		objectPath: {
+			describe: "The source object path in the form of {bucket}/{key}",
+			type: "string",
+		},
+		file: {
+			describe: "The destination file to create",
+			alias: "f",
+			conflicts: "pipe",
+			requiresArg: true,
+			type: "string",
+		},
+		pipe: {
+			describe:
+				"Enables the file to be piped to a destination, rather than specified with the --file option",
+			alias: "p",
+			conflicts: "file",
+			type: "boolean",
+		},
+		local: {
+			type: "boolean",
+			describe: "Interact with local storage",
+		},
+		"persist-to": {
+			type: "string",
+			describe: "Directory for local persistence",
+		},
+		jurisdiction: {
+			describe: "The jurisdiction where the object exists",
+			alias: "J",
+			requiresArg: true,
+			type: "string",
+		},
+	},
+	positionalArgs: ["objectPath"],
+	async handler(objectGetYargs, { config }) {
+		const { objectPath, pipe, jurisdiction } = objectGetYargs;
+		const { bucket, key } = bucketAndKeyFromObjectPath(objectPath);
+		let fullBucketName = bucket;
+		if (jurisdiction !== undefined) {
+			fullBucketName += ` (${jurisdiction})`;
+		}
+
+		let file = objectGetYargs.file;
+		if (!file && !pipe) {
+			file = key;
+		}
+		if (!pipe) {
+			await printWranglerBanner();
+			logger.log(`Downloading "${key}" from "${fullBucketName}".`);
+		}
+
+		let output: stream.Writable;
+		if (file) {
+			fs.mkdirSync(path.dirname(file), { recursive: true });
+			output = fs.createWriteStream(file);
+		} else {
+			output = process.stdout;
+		}
+		if (objectGetYargs.local) {
+			await usingLocalBucket(
+				objectGetYargs.persistTo,
+				config.configPath,
+				bucket,
+				async (r2Bucket) => {
+					const object = await r2Bucket.get(key);
+					if (object === null) {
+						throw new UserError("The specified key does not exist.");
+					}
+					// Note `object.body` is only valid inside this closure
+					await stream.promises.pipeline(object.body, output);
+				}
+			);
+		} else {
+			const accountId = await requireAuth(config);
+			const input = await getR2Object(accountId, bucket, key, jurisdiction);
+			if (input === null) {
+				throw new UserError("The specified key does not exist.");
+			}
+			await stream.promises.pipeline(input, output);
+		}
+		if (!pipe) {
+			logger.log("Download complete.");
+		}
+	},
+});
+
 export function r2(r2Yargs: CommonYargsArgv, subHelp: SubHelp) {
 	return r2Yargs
 		.command(subHelp)
 		.command("object", "Manage R2 objects", (r2ObjectYargs) => {
 			return r2ObjectYargs
 				.demandCommand()
-				.command(
-					"get <objectPath>",
-					"Fetch an object from an R2 bucket",
-					(objectArgs) => {
-						return objectArgs
-							.positional("objectPath", {
-								describe:
-									"The source object path in the form of {bucket}/{key}",
-								type: "string",
-							})
-							.option("file", {
-								describe: "The destination file to create",
-								alias: "f",
-								conflicts: "pipe",
-								requiresArg: true,
-								type: "string",
-							})
-							.option("pipe", {
-								describe:
-									"Enables the file to be piped to a destination, rather than specified with the --file option",
-								alias: "p",
-								conflicts: "file",
-								type: "boolean",
-							})
-							.option("local", {
-								type: "boolean",
-								describe: "Interact with local storage",
-							})
-							.option("persist-to", {
-								type: "string",
-								describe: "Directory for local persistence",
-							})
-							.option("jurisdiction", {
-								describe: "The jurisdiction where the object exists",
-								alias: "J",
-								requiresArg: true,
-								type: "string",
-							});
-					},
-					async (objectGetYargs) => {
-						const config = readConfig(objectGetYargs.config, objectGetYargs);
-						const { objectPath, pipe, jurisdiction } = objectGetYargs;
-						const { bucket, key } = bucketAndKeyFromObjectPath(objectPath);
-						let fullBucketName = bucket;
-						if (jurisdiction !== undefined) {
-							fullBucketName += ` (${jurisdiction})`;
-						}
-
-						let file = objectGetYargs.file;
-						if (!file && !pipe) {
-							file = key;
-						}
-						if (!pipe) {
-							await printWranglerBanner();
-							logger.log(`Downloading "${key}" from "${fullBucketName}".`);
-						}
-
-						let output: stream.Writable;
-						if (file) {
-							fs.mkdirSync(path.dirname(file), { recursive: true });
-							output = fs.createWriteStream(file);
-						} else {
-							output = process.stdout;
-						}
-						if (objectGetYargs.local) {
-							await usingLocalBucket(
-								objectGetYargs.persistTo,
-								config.configPath,
-								bucket,
-								async (r2Bucket) => {
-									const object = await r2Bucket.get(key);
-									if (object === null) {
-										throw new UserError("The specified key does not exist.");
-									}
-									// Note `object.body` is only valid inside this closure
-									await stream.promises.pipeline(object.body, output);
-								}
-							);
-						} else {
-							const accountId = await requireAuth(config);
-							const input = await getR2Object(
-								accountId,
-								bucket,
-								key,
-								jurisdiction
-							);
-							if (input === null) {
-								throw new UserError("The specified key does not exist.");
-							}
-							await stream.promises.pipeline(input, output);
-						}
-						if (!pipe) {
-							logger.log("Download complete.");
-						}
-					}
-				)
 				.command(
 					"put <objectPath>",
 					"Create an object in an R2 bucket",
