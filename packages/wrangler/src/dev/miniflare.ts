@@ -1,15 +1,7 @@
 import assert from "node:assert";
 import { randomUUID } from "node:crypto";
 import path from "node:path";
-import {
-	CoreHeaders,
-	HttpOptions_Style,
-	Log,
-	LogLevel,
-	Miniflare,
-	Mutex,
-	TypedEventTarget,
-} from "miniflare";
+import { CoreHeaders, HttpOptions_Style, Log, LogLevel } from "miniflare";
 import {
 	AIFetcher,
 	EXTERNAL_AI_WORKER_NAME,
