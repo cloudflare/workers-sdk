@@ -629,19 +629,12 @@ export function r2(r2Yargs: CommonYargsArgv, subHelp: SubHelp) {
 		.command("bucket", "Manage R2 buckets", (r2BucketYargs) => {
 			r2BucketYargs.demandCommand();
 			r2BucketYargs.command("dev-url", "", (devUrlYargs) => {
-				return devUrlYargs
-					.command(
-						"enable <bucket>",
-						"Enable public access via the r2.dev URL for an R2 bucket",
-						PublicDevUrl.EnableOptions,
-						PublicDevUrl.EnableHandler
-					)
-					.command(
-						"disable <bucket>",
-						"Disable public access via the r2.dev URL for an R2 bucket",
-						PublicDevUrl.DisableOptions,
-						PublicDevUrl.DisableHandler
-					);
+				return devUrlYargs.command(
+					"disable <bucket>",
+					"Disable public access via the r2.dev URL for an R2 bucket",
+					PublicDevUrl.DisableOptions,
+					PublicDevUrl.DisableHandler
+				);
 			});
 			return r2BucketYargs;
 		});
