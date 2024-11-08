@@ -1,4 +1,5 @@
 import { readConfig } from "../config";
+import { defineNamespace } from "../core";
 import { logger } from "../logger";
 import { printWranglerBanner } from "../update-check";
 import { requireApiToken, requireAuth } from "../user";
@@ -15,6 +16,15 @@ import type {
 	StrictYargsOptionsToInterface,
 } from "../yargs-types";
 import type { R2EventType } from "./helpers";
+
+defineNamespace({
+	command: "wrangler r2 bucket notification",
+	metadata: {
+		description: "Manage event notification rules for an R2 bucket",
+		status: "stable",
+		owner: "Product: R2",
+	},
+});
 
 export function ListOptions(yargs: CommonYargsArgv) {
 	return yargs
