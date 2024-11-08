@@ -1,4 +1,5 @@
 import { readConfig } from "../config";
+import { defineNamespace } from "../core";
 import { confirm } from "../dialogs";
 import { logger } from "../logger";
 import { printWranglerBanner } from "../update-check";
@@ -15,6 +16,15 @@ import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
 } from "../yargs-types";
+
+defineNamespace({
+	command: "wrangler r2 bucket domain",
+	metadata: {
+		description: "Manage custom domains for an R2 bucket",
+		status: "stable",
+		owner: "Product: R2",
+	},
+});
 
 export function ListOptions(yargs: CommonYargsArgv) {
 	return yargs
