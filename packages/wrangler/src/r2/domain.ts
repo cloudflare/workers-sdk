@@ -155,57 +155,61 @@ defineCommand({
 	},
 });
 
-export function RemoveOptions(yargs: CommonYargsArgv) {
-	return yargs
-		.positional("bucket", {
+defineCommand({
+	command: "wrangler r2 bucket domain remove",
+	metadata: {
+		description: "Remove a custom domain from an R2 bucket",
+		status: "stable",
+		owner: "Product: R2",
+	},
+	positionalArgs: ["bucket"],
+	args: {
+		bucket: {
 			describe: "The name of the R2 bucket to remove the custom domain from",
 			type: "string",
 			demandOption: true,
-		})
-		.option("domain", {
+		},
+		domain: {
 			describe: "The custom domain to remove from the R2 bucket",
 			type: "string",
 			demandOption: true,
-		})
-		.option("jurisdiction", {
+		},
+		jurisdiction: {
 			describe: "The jurisdiction where the bucket exists",
 			alias: "J",
 			requiresArg: true,
 			type: "string",
-		})
-		.option("force", {
+		},
+		force: {
 			describe: "Skip confirmation",
 			type: "boolean",
 			alias: "y",
 			default: false,
-		});
-}
+		},
+	},
+	async handler(args, { config }) {
+		await printWranglerBanner();
+		const accountId = await requireAuth(config);
 
-export async function RemoveHandler(
-	args: StrictYargsOptionsToInterface<typeof RemoveOptions>
-) {
-	await printWranglerBanner();
-	const config = readConfig(args.config, args);
-	const accountId = await requireAuth(config);
+		const { bucket, domain, jurisdiction, force } = args;
 
-	const { bucket, domain, jurisdiction, force } = args;
-
-	if (!force) {
-		const confirmedRemoval = await confirm(
-			`Are you sure you want to remove the custom domain '${domain}' from bucket '${bucket}'? ` +
-				`Your bucket will no longer be available from 'https://${domain}'`
-		);
-		if (!confirmedRemoval) {
-			logger.log("Removal cancelled.");
-			return;
+		if (!force) {
+			const confirmedRemoval = await confirm(
+				`Are you sure you want to remove the custom domain '${domain}' from bucket '${bucket}'? ` +
+					`Your bucket will no longer be available from 'https://${domain}'`
+			);
+			if (!confirmedRemoval) {
+				logger.log("Removal cancelled.");
+				return;
+			}
 		}
-	}
-	logger.log(`Removing custom domain '${domain}' from bucket '${bucket}'...`);
+		logger.log(`Removing custom domain '${domain}' from bucket '${bucket}'...`);
 
-	await removeCustomDomainFromBucket(accountId, bucket, domain, jurisdiction);
+		await removeCustomDomainFromBucket(accountId, bucket, domain, jurisdiction);
 
-	logger.log(`Custom domain '${domain}' removed successfully.`);
-}
+		logger.log(`Custom domain '${domain}' removed successfully.`);
+	},
+});
 
 export function UpdateOptions(yargs: CommonYargsArgv) {
 	return yargs
