@@ -496,64 +496,72 @@ defineCommand({
 	},
 });
 
+defineNamespace({
+	command: "wrangler r2 bucket update",
+	metadata: {
+		description: "Update bucket state",
+		status: "stable",
+		owner: "Product: R2",
+	},
+});
+
+defineCommand({
+	command: "wrangler r2 bucket update storage-class",
+	metadata: {
+		description: "Update the default storage class of an existing R2 bucket",
+		status: "stable",
+		owner: "Product: R2",
+	},
+	positionalArgs: ["name"],
+	args: {
+		name: {
+			describe: "The name of the existing bucket",
+			type: "string",
+			demandOption: true,
+		},
+		jurisdiction: {
+			describe: "The jurisdiction of the bucket to be updated",
+			alias: "J",
+			requiresArg: true,
+			type: "string",
+		},
+		"storage-class": {
+			describe: "The new default storage class for this bucket",
+			alias: "s",
+			demandOption: true,
+			requiresArg: true,
+			type: "string",
+		},
+	},
+	async handler(args, { config }) {
+		await printWranglerBanner();
+
+		const accountId = await requireAuth(config);
+
+		let fullBucketName = `${args.name}`;
+		if (args.jurisdiction !== undefined) {
+			fullBucketName += ` (${args.jurisdiction})`;
+		}
+		logger.log(
+			`Updating bucket ${fullBucketName} to ${args.storageClass} default storage class.`
+		);
+		await updateR2BucketStorageClass(
+			accountId,
+			args.name,
+			args.storageClass,
+			args.jurisdiction
+		);
+		logger.log(
+			`Updated bucket ${fullBucketName} to ${args.storageClass} default storage class.`
+		);
+	},
+});
+
 export function r2(r2Yargs: CommonYargsArgv, subHelp: SubHelp) {
 	return r2Yargs
 		.command(subHelp)
 		.command("bucket", "Manage R2 buckets", (r2BucketYargs) => {
 			r2BucketYargs.demandCommand();
-
-			r2BucketYargs.command("update", "Update bucket state", (updateYargs) => {
-				updateYargs.command(
-					"storage-class <name>",
-					"Update the default storage class of an existing R2 bucket",
-					(yargs) => {
-						return yargs
-							.positional("name", {
-								describe: "The name of the existing bucket",
-								type: "string",
-								demandOption: true,
-							})
-							.option("jurisdiction", {
-								describe: "The jurisdiction of the bucket to be updated",
-								alias: "J",
-								requiresArg: true,
-								type: "string",
-							})
-							.option("storage-class", {
-								describe: "The new default storage class for this bucket",
-								alias: "s",
-								demandOption: true,
-								requiresArg: true,
-								type: "string",
-							});
-					},
-					async (args) => {
-						await printWranglerBanner();
-
-						const config = readConfig(args.config, args);
-
-						const accountId = await requireAuth(config);
-
-						let fullBucketName = `${args.name}`;
-						if (args.jurisdiction !== undefined) {
-							fullBucketName += ` (${args.jurisdiction})`;
-						}
-						logger.log(
-							`Updating bucket ${fullBucketName} to ${args.storageClass} default storage class.`
-						);
-						await updateR2BucketStorageClass(
-							accountId,
-							args.name,
-							args.storageClass,
-							args.jurisdiction
-						);
-						logger.log(
-							`Updated bucket ${fullBucketName} to ${args.storageClass} default storage class.`
-						);
-					}
-				);
-			});
-
 			r2BucketYargs.command(
 				"list",
 				"List R2 buckets",
