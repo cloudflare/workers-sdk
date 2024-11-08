@@ -1,5 +1,5 @@
 ---
-"@cloudflare/wrangler-devtools": patch
+"@cloudflare/wrangler-devtools": minor
 ---
 
 feat: update devtools patches for release
