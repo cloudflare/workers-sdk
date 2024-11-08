@@ -642,19 +642,12 @@ export function r2(r2Yargs: CommonYargsArgv, subHelp: SubHelp) {
 				"sippy",
 				"Manage Sippy incremental migration on an R2 bucket",
 				(sippyYargs) => {
-					return sippyYargs
-						.command(
-							"disable <name>",
-							"Disable Sippy on an R2 bucket",
-							Sippy.DisableOptions,
-							Sippy.DisableHandler
-						)
-						.command(
-							"get <name>",
-							"Check the status of Sippy on an R2 bucket",
-							Sippy.GetOptions,
-							Sippy.GetHandler
-						);
+					return sippyYargs.command(
+						"get <name>",
+						"Check the status of Sippy on an R2 bucket",
+						Sippy.GetOptions,
+						Sippy.GetHandler
+					);
 				}
 			);
 
