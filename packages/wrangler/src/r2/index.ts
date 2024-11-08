@@ -629,18 +629,6 @@ export function r2(r2Yargs: CommonYargsArgv, subHelp: SubHelp) {
 		.command("bucket", "Manage R2 buckets", (r2BucketYargs) => {
 			r2BucketYargs.demandCommand();
 			r2BucketYargs.command(
-				"domain",
-				"Manage custom domains for an R2 bucket",
-				(domainYargs) => {
-					return domainYargs.command(
-						"update <bucket>",
-						"Update settings for a custom domain connected to an R2 bucket",
-						Domain.UpdateOptions,
-						Domain.UpdateHandler
-					);
-				}
-			);
-			r2BucketYargs.command(
 				"dev-url",
 				"Manage public access via the r2.dev URL for an R2 bucket",
 				(devUrlYargs) => {
