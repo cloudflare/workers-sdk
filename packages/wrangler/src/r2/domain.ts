@@ -71,78 +71,89 @@ defineCommand({
 	},
 });
 
-export function AddOptions(yargs: CommonYargsArgv) {
-	return yargs
-		.positional("bucket", {
+defineCommand({
+	command: "wrangler r2 bucket domain add",
+	metadata: {
+		description: "Connect a custom domain to an R2 bucket",
+		status: "stable",
+		owner: "Product: R2",
+	},
+	positionalArgs: ["bucket"],
+	args: {
+		bucket: {
 			describe: "The name of the R2 bucket to connect a custom domain to",
 			type: "string",
 			demandOption: true,
-		})
-		.option("domain", {
+		},
+		domain: {
 			describe: "The custom domain to connect to the R2 bucket",
 			type: "string",
 			demandOption: true,
-		})
-		.option("zone-id", {
+		},
+		"zone-id": {
 			describe: "The zone ID associated with the custom domain",
 			type: "string",
 			demandOption: true,
-		})
-		.option("min-tls", {
+		},
+		"min-tls": {
 			describe:
 				"Set the minimum TLS version for the custom domain (defaults to 1.0 if not set)",
 			choices: ["1.0", "1.1", "1.2", "1.3"],
 			type: "string",
-		})
-		.option("jurisdiction", {
+		},
+		jurisdiction: {
 			describe: "The jurisdiction where the bucket exists",
 			alias: "J",
 			requiresArg: true,
 			type: "string",
-		})
-		.option("force", {
+		},
+		force: {
 			describe: "Skip confirmation",
 			type: "boolean",
 			alias: "y",
 			default: false,
-		});
-}
+		},
+	},
+	async handler(args, { config }) {
+		await printWranglerBanner();
+		const accountId = await requireAuth(config);
 
-export async function AddHandler(
-	args: StrictYargsOptionsToInterface<typeof AddOptions>
-) {
-	await printWranglerBanner();
-	const config = readConfig(args.config, args);
-	const accountId = await requireAuth(config);
-
-	const { bucket, domain, zoneId, minTls = "1.0", jurisdiction, force } = args;
-
-	if (!force) {
-		const confirmedAdd = await confirm(
-			`Are you sure you want to add the custom domain '${domain}' to bucket '${bucket}'? ` +
-				`The contents of your bucket will be made publicly available at 'https://${domain}'`
-		);
-		if (!confirmedAdd) {
-			logger.log("Add cancelled.");
-			return;
-		}
-	}
-
-	logger.log(`Connecting custom domain '${domain}' to bucket '${bucket}'...`);
-
-	await attachCustomDomainToBucket(
-		accountId,
-		bucket,
-		{
+		const {
+			bucket,
 			domain,
 			zoneId,
-			minTLS: minTls,
-		},
-		jurisdiction
-	);
+			minTls = "1.0",
+			jurisdiction,
+			force,
+		} = args;
 
-	logger.log(`✨ Custom domain '${domain}' connected successfully.`);
-}
+		if (!force) {
+			const confirmedAdd = await confirm(
+				`Are you sure you want to add the custom domain '${domain}' to bucket '${bucket}'? ` +
+					`The contents of your bucket will be made publicly available at 'https://${domain}'`
+			);
+			if (!confirmedAdd) {
+				logger.log("Add cancelled.");
+				return;
+			}
+		}
+
+		logger.log(`Connecting custom domain '${domain}' to bucket '${bucket}'...`);
+
+		await attachCustomDomainToBucket(
+			accountId,
+			bucket,
+			{
+				domain,
+				zoneId,
+				minTLS: minTls,
+			},
+			jurisdiction
+		);
+
+		logger.log(`✨ Custom domain '${domain}' connected successfully.`);
+	},
+});
 
 export function RemoveOptions(yargs: CommonYargsArgv) {
 	return yargs
