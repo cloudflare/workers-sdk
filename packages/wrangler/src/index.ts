@@ -47,6 +47,7 @@ import { generateHandler, generateOptions } from "./generate";
 import { hyperdrive } from "./hyperdrive/index";
 import { initHandler, initOptions } from "./init";
 import "./kv";
+import "./r2";
 import "./workflows";
 import "./user/commands";
 import { demandSingleValue } from "./core";
