@@ -1,5 +1,5 @@
 import { readConfig } from "../config";
-import { defineNamespace } from "../core";
+import { defineAlias, defineCommand, defineNamespace } from "../core";
 import { logger } from "../logger";
 import { printWranglerBanner } from "../update-check";
 import { requireApiToken, requireAuth } from "../user";
@@ -26,44 +26,53 @@ defineNamespace({
 	},
 });
 
-export function ListOptions(yargs: CommonYargsArgv) {
-	return yargs
-		.positional("bucket", {
+defineAlias({
+	command: "wrangler r2 bucket notification get",
+	aliasOf: "wrangler r2 bucket notification list",
+});
+
+defineCommand({
+	command: "wrangler r2 bucket notification list",
+	metadata: {
+		description: "List event notification rules for a bucket",
+		status: "stable",
+		owner: "Product: R2",
+	},
+	positionalArgs: ["bucket"],
+	args: {
+		bucket: {
 			describe: "The name of the R2 bucket to get event notification rules for",
 			type: "string",
 			demandOption: true,
-		})
-		.option("jurisdiction", {
+		},
+		jurisdiction: {
 			describe: "The jurisdiction where the bucket exists",
 			alias: "J",
 			requiresArg: true,
 			type: "string",
-		});
-}
-
-export async function ListHandler(
-	args: StrictYargsOptionsToInterface<typeof ListOptions>
-) {
-	await printWranglerBanner();
-	// Check for deprecated `wrangler pages publish` command
-	if (args._[3] === "get") {
-		logger.warn(
-			"`wrangler r2 bucket notification get` is deprecated and will be removed in an upcoming release.\nPlease use `wrangler r2 bucket notification list` instead."
+		},
+	},
+	async handler(args, { config }) {
+		await printWranglerBanner();
+		// Check for deprecated `wrangler pages publish` command
+		if (args._[3] === "get") {
+			logger.warn(
+				"`wrangler r2 bucket notification get` is deprecated and will be removed in an upcoming release.\nPlease use `wrangler r2 bucket notification list` instead."
+			);
+		}
+		const accountId = await requireAuth(config);
+		const apiCreds = requireApiToken();
+		const { bucket, jurisdiction = "" } = args;
+		const resp = await listEventNotificationConfig(
+			apiCreds,
+			accountId,
+			bucket,
+			jurisdiction
 		);
-	}
-	const config = readConfig(args.config, args);
-	const accountId = await requireAuth(config);
-	const apiCreds = requireApiToken();
-	const { bucket, jurisdiction = "" } = args;
-	const resp = await listEventNotificationConfig(
-		apiCreds,
-		accountId,
-		bucket,
-		jurisdiction
-	);
-	const tableOutput = tableFromNotificationGetResponse(resp);
-	logger.log(tableOutput.map((x) => formatLabelledValues(x)).join("\n\n"));
-}
+		const tableOutput = tableFromNotificationGetResponse(resp);
+		logger.log(tableOutput.map((x) => formatLabelledValues(x)).join("\n\n"));
+	},
+});
 
 export function CreateOptions(yargs: CommonYargsArgv) {
 	return yargs

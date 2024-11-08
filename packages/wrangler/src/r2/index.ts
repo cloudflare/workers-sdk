@@ -634,12 +634,6 @@ export function r2(r2Yargs: CommonYargsArgv, subHelp: SubHelp) {
 				(r2EvNotifyYargs) => {
 					return r2EvNotifyYargs
 						.command(
-							["list <bucket>", "get <bucket>"],
-							"List event notification rules for a bucket",
-							Notification.ListOptions,
-							Notification.ListHandler
-						)
-						.command(
 							"create <bucket>",
 							"Create an event notification rule for an R2 bucket",
 							Notification.CreateOptions,
