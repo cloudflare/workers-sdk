@@ -419,6 +419,15 @@ defineCommand({
 	},
 });
 
+defineNamespace({
+	command: "wrangler r2 bucket",
+	metadata: {
+		description: "Manage R2 buckets",
+		status: "stable",
+		owner: "Product: R2",
+	},
+});
+
 export function r2(r2Yargs: CommonYargsArgv, subHelp: SubHelp) {
 	return r2Yargs
 		.command(subHelp)
