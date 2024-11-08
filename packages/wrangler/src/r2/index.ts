@@ -642,19 +642,12 @@ export function r2(r2Yargs: CommonYargsArgv, subHelp: SubHelp) {
 				"domain",
 				"Manage custom domains for an R2 bucket",
 				(domainYargs) => {
-					return domainYargs
-						.command(
-							"remove <bucket>",
-							"Remove a custom domain from an R2 bucket",
-							Domain.RemoveOptions,
-							Domain.RemoveHandler
-						)
-						.command(
-							"update <bucket>",
-							"Update settings for a custom domain connected to an R2 bucket",
-							Domain.UpdateOptions,
-							Domain.UpdateHandler
-						);
+					return domainYargs.command(
+						"update <bucket>",
+						"Update settings for a custom domain connected to an R2 bucket",
+						Domain.UpdateOptions,
+						Domain.UpdateHandler
+					);
 				}
 			);
 			r2BucketYargs.command(
