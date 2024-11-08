@@ -1,4 +1,3 @@
-import { readConfig } from "../config";
 import { defineCommand, defineNamespace } from "../core";
 import { confirm } from "../dialogs";
 import { logger } from "../logger";
@@ -12,10 +11,6 @@ import {
 	removeCustomDomainFromBucket,
 	tableFromCustomDomainListResponse,
 } from "./helpers";
-import type {
-	CommonYargsArgv,
-	StrictYargsOptionsToInterface,
-} from "../yargs-types";
 
 defineNamespace({
 	command: "wrangler r2 bucket domain",
@@ -211,53 +206,58 @@ defineCommand({
 	},
 });
 
-export function UpdateOptions(yargs: CommonYargsArgv) {
-	return yargs
-		.positional("bucket", {
+defineCommand({
+	command: "wrangler r2 bucket domain update",
+	metadata: {
+		description:
+			"Update settings for a custom domain connected to an R2 bucket",
+		status: "stable",
+		owner: "Product: R2",
+	},
+	positionalArgs: ["bucket"],
+	args: {
+		bucket: {
 			describe:
 				"The name of the R2 bucket associated with the custom domain to update",
 			type: "string",
 			demandOption: true,
-		})
-		.option("domain", {
+		},
+		domain: {
 			describe: "The custom domain whose settings will be updated",
 			type: "string",
 			demandOption: true,
-		})
-		.option("min-tls", {
+		},
+		"min-tls": {
 			describe: "Update the minimum TLS version for the custom domain",
 			choices: ["1.0", "1.1", "1.2", "1.3"],
 			type: "string",
-		})
-		.option("jurisdiction", {
+		},
+		jurisdiction: {
 			describe: "The jurisdiction where the bucket exists",
 			alias: "J",
 			requiresArg: true,
 			type: "string",
-		});
-}
-
-export async function UpdateHandler(
-	args: StrictYargsOptionsToInterface<typeof UpdateOptions>
-) {
-	await printWranglerBanner();
-	const config = readConfig(args.config, args);
-	const accountId = await requireAuth(config);
-
-	const { bucket, domain, minTls, jurisdiction } = args;
-
-	logger.log(`Updating custom domain '${domain}' for bucket '${bucket}'...`);
-
-	await configureCustomDomainSettings(
-		accountId,
-		bucket,
-		domain,
-		{
-			domain,
-			minTLS: minTls,
 		},
-		jurisdiction
-	);
+	},
+	async handler(args, { config }) {
+		await printWranglerBanner();
+		const accountId = await requireAuth(config);
 
-	logger.log(`✨ Custom domain '${domain}' updated successfully.`);
-}
+		const { bucket, domain, minTls, jurisdiction } = args;
+
+		logger.log(`Updating custom domain '${domain}' for bucket '${bucket}'...`);
+
+		await configureCustomDomainSettings(
+			accountId,
+			bucket,
+			domain,
+			{
+				domain,
+				minTLS: minTls,
+			},
+			jurisdiction
+		);
+
+		logger.log(`✨ Custom domain '${domain}' updated successfully.`);
+	},
+});
