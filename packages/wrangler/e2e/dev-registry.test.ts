@@ -96,9 +96,9 @@ describe("unstable_dev()", () => {
 					import { setTimeout } from "node:timers/promises";
 
 					const childWorker = await unstable_dev(
-						"${child}/src/index.ts",
+						"${child.replaceAll("\\", "/")}/src/index.ts",
 						{
-							configPath: "${child}/wrangler.toml",
+							configPath: "${child.replaceAll("\\", "/")}/wrangler.toml",
 							experimental: {
 								disableExperimentalWarning: true,
 							},
