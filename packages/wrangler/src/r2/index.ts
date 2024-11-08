@@ -644,12 +644,6 @@ export function r2(r2Yargs: CommonYargsArgv, subHelp: SubHelp) {
 				(domainYargs) => {
 					return domainYargs
 						.command(
-							"list <bucket>",
-							"List custom domains for an R2 bucket",
-							Domain.ListOptions,
-							Domain.ListHandler
-						)
-						.command(
 							"add <bucket>",
 							"Connect a custom domain to an R2 bucket",
 							Domain.AddOptions,

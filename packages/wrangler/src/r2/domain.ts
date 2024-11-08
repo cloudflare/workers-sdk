@@ -1,5 +1,5 @@
 import { readConfig } from "../config";
-import { defineNamespace } from "../core";
+import { defineCommand, defineNamespace } from "../core";
 import { confirm } from "../dialogs";
 import { logger } from "../logger";
 import { printWranglerBanner } from "../update-check";
@@ -26,46 +26,50 @@ defineNamespace({
 	},
 });
 
-export function ListOptions(yargs: CommonYargsArgv) {
-	return yargs
-		.positional("bucket", {
+defineCommand({
+	command: "wrangler r2 bucket domain list",
+	metadata: {
+		description: "List custom domains for an R2 bucket",
+		status: "stable",
+		owner: "Product: R2",
+	},
+	positionalArgs: ["bucket"],
+	args: {
+		bucket: {
 			describe:
 				"The name of the R2 bucket whose connected custom domains will be listed",
 			type: "string",
 			demandOption: true,
-		})
-		.option("jurisdiction", {
+		},
+		jurisdiction: {
 			describe: "The jurisdiction where the bucket exists",
 			alias: "J",
 			requiresArg: true,
 			type: "string",
-		});
-}
+		},
+	},
+	async handler(args, { config }) {
+		await printWranglerBanner();
+		const accountId = await requireAuth(config);
 
-export async function ListHandler(
-	args: StrictYargsOptionsToInterface<typeof ListOptions>
-) {
-	await printWranglerBanner();
-	const config = readConfig(args.config, args);
-	const accountId = await requireAuth(config);
+		const { bucket, jurisdiction } = args;
 
-	const { bucket, jurisdiction } = args;
+		logger.log(`Listing custom domains connected to bucket '${bucket}'...`);
 
-	logger.log(`Listing custom domains connected to bucket '${bucket}'...`);
+		const domains = await listCustomDomainsOfBucket(
+			accountId,
+			bucket,
+			jurisdiction
+		);
 
-	const domains = await listCustomDomainsOfBucket(
-		accountId,
-		bucket,
-		jurisdiction
-	);
-
-	if (domains.length === 0) {
-		logger.log("There are no custom domains connected to this bucket.");
-	} else {
-		const tableOutput = tableFromCustomDomainListResponse(domains);
-		logger.log(tableOutput.map((x) => formatLabelledValues(x)).join("\n\n"));
-	}
-}
+		if (domains.length === 0) {
+			logger.log("There are no custom domains connected to this bucket.");
+		} else {
+			const tableOutput = tableFromCustomDomainListResponse(domains);
+			logger.log(tableOutput.map((x) => formatLabelledValues(x)).join("\n\n"));
+		}
+	},
+});
 
 export function AddOptions(yargs: CommonYargsArgv) {
 	return yargs
