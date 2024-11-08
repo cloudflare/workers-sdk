@@ -1,5 +1,5 @@
 import { readConfig } from "../config";
-import { defineNamespace } from "../core";
+import { defineCommand, defineNamespace } from "../core";
 import { confirm } from "../dialogs";
 import { logger } from "../logger";
 import { printWranglerBanner } from "../update-check";
@@ -19,38 +19,42 @@ defineNamespace({
 	},
 });
 
-export function GetOptions(yargs: CommonYargsArgv) {
-	return yargs
-		.positional("bucket", {
+defineCommand({
+	command: "wrangler r2 bucket dev-url get",
+	metadata: {
+		description: "Get the r2.dev URL and status for an R2 bucket",
+		status: "stable",
+		owner: "Product: R2",
+	},
+	positionalArgs: ["bucket"],
+	args: {
+		bucket: {
 			describe: "The name of the R2 bucket whose r2.dev URL status to retrieve",
 			type: "string",
 			demandOption: true,
-		})
-		.option("jurisdiction", {
+		},
+		jurisdiction: {
 			describe: "The jurisdiction where the bucket exists",
 			alias: "J",
 			requiresArg: true,
 			type: "string",
-		});
-}
+		},
+	},
+	async handler(args, { config }) {
+		await printWranglerBanner();
+		const accountId = await requireAuth(config);
 
-export async function GetHandler(
-	args: StrictYargsOptionsToInterface<typeof GetOptions>
-) {
-	await printWranglerBanner();
-	const config = readConfig(args.config, args);
-	const accountId = await requireAuth(config);
+		const { bucket, jurisdiction } = args;
 
-	const { bucket, jurisdiction } = args;
+		const devDomain = await getR2DevDomain(accountId, bucket, jurisdiction);
 
-	const devDomain = await getR2DevDomain(accountId, bucket, jurisdiction);
-
-	if (devDomain.enabled) {
-		logger.log(`Public access is enabled at 'https://${devDomain.domain}'.`);
-	} else {
-		logger.log(`Public access via the r2.dev URL is disabled.`);
-	}
-}
+		if (devDomain.enabled) {
+			logger.log(`Public access is enabled at 'https://${devDomain.domain}'.`);
+		} else {
+			logger.log(`Public access via the r2.dev URL is disabled.`);
+		}
+	},
+});
 
 export function EnableOptions(yargs: CommonYargsArgv) {
 	return yargs
