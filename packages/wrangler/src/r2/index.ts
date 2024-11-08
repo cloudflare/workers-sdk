@@ -634,12 +634,6 @@ export function r2(r2Yargs: CommonYargsArgv, subHelp: SubHelp) {
 				(sippyYargs) => {
 					return sippyYargs
 						.command(
-							"enable <name>",
-							"Enable Sippy on an R2 bucket",
-							Sippy.EnableOptions,
-							Sippy.EnableHandler
-						)
-						.command(
 							"disable <name>",
 							"Disable Sippy on an R2 bucket",
 							Sippy.DisableOptions,
