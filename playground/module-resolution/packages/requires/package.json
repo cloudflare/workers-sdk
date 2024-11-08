@@ -11,10 +11,6 @@
 			"default": "./no-ext.js",
 			"types": "./no-ext.d.ts"
 		},
-		"./node-builtins": {
-			"default": "./node-builtins.js",
-			"types": "./node-builtins.d.ts"
-		},
 		"./json": {
 			"default": "./json.js",
 			"types": "./json.d.ts"

@@ -7,10 +7,6 @@
 		"./cloudflare-builtins": {
 			"default": "./cloudflare-builtins.js",
 			"types": "./cloudflare-builtins.d.ts"
-		},
-		"./node-builtins": {
-			"default": "./node-builtins.js",
-			"types": "./node-builtins.d.ts"
 		}
 	}
 }
