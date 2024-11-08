@@ -362,67 +362,66 @@ defineCommand({
 	},
 });
 
+defineCommand({
+	command: "wrangler r2 object delete",
+	metadata: {
+		description: "Delete an object in an R2 bucket",
+		status: "stable",
+		owner: "Product: R2",
+	},
+	positionalArgs: ["objectPath"],
+	args: {
+		objectPath: {
+			describe: "The destination object path in the form of {bucket}/{key}",
+			type: "string",
+		},
+		local: {
+			type: "boolean",
+			describe: "Interact with local storage",
+		},
+		"persist-to": {
+			type: "string",
+			describe: "Directory for local persistence",
+		},
+		jurisdiction: {
+			describe: "The jurisdiction where the object exists",
+			alias: "J",
+			requiresArg: true,
+			type: "string",
+		},
+	},
+	async handler(args) {
+		const { objectPath, jurisdiction } = args;
+		await printWranglerBanner();
+
+		const config = readConfig(args.config, args);
+		const { bucket, key } = bucketAndKeyFromObjectPath(objectPath);
+		let fullBucketName = bucket;
+		if (jurisdiction !== undefined) {
+			fullBucketName += ` (${jurisdiction})`;
+		}
+
+		logger.log(`Deleting object "${key}" from bucket "${fullBucketName}".`);
+
+		if (args.local) {
+			await usingLocalBucket(
+				args.persistTo,
+				config.configPath,
+				bucket,
+				(r2Bucket) => r2Bucket.delete(key)
+			);
+		} else {
+			const accountId = await requireAuth(config);
+			await deleteR2Object(accountId, bucket, key, jurisdiction);
+		}
+
+		logger.log("Delete complete.");
+	},
+});
+
 export function r2(r2Yargs: CommonYargsArgv, subHelp: SubHelp) {
 	return r2Yargs
 		.command(subHelp)
-		.command("object", "Manage R2 objects", (r2ObjectYargs) => {
-			return r2ObjectYargs.demandCommand().command(
-				"delete <objectPath>",
-				"Delete an object in an R2 bucket",
-				(objectDeleteYargs) => {
-					return objectDeleteYargs
-						.positional("objectPath", {
-							describe:
-								"The destination object path in the form of {bucket}/{key}",
-							type: "string",
-						})
-						.option("local", {
-							type: "boolean",
-							describe: "Interact with local storage",
-						})
-						.option("persist-to", {
-							type: "string",
-							describe: "Directory for local persistence",
-						})
-						.option("jurisdiction", {
-							describe: "The jurisdiction where the object exists",
-							alias: "J",
-							requiresArg: true,
-							type: "string",
-						});
-				},
-				async (args) => {
-					const { objectPath, jurisdiction } = args;
-					await printWranglerBanner();
-
-					const config = readConfig(args.config, args);
-					const { bucket, key } = bucketAndKeyFromObjectPath(objectPath);
-					let fullBucketName = bucket;
-					if (jurisdiction !== undefined) {
-						fullBucketName += ` (${jurisdiction})`;
-					}
-
-					logger.log(
-						`Deleting object "${key}" from bucket "${fullBucketName}".`
-					);
-
-					if (args.local) {
-						await usingLocalBucket(
-							args.persistTo,
-							config.configPath,
-							bucket,
-							(r2Bucket) => r2Bucket.delete(key)
-						);
-					} else {
-						const accountId = await requireAuth(config);
-						await deleteR2Object(accountId, bucket, key, jurisdiction);
-					}
-
-					logger.log("Delete complete.");
-				}
-			);
-		})
-
 		.command("bucket", "Manage R2 buckets", (r2BucketYargs) => {
 			r2BucketYargs.demandCommand();
 			r2BucketYargs.command(
