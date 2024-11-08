@@ -12,6 +12,7 @@ import * as metrics from "../metrics";
 import { requireAuth } from "../user";
 import { LOCATION_CHOICES, MAX_UPLOAD_SIZE } from "./constants";
 import "./sippy";
+import "./notification";
 import "./domain";
 import {
 	bucketAndKeyFromObjectPath,
@@ -28,7 +29,6 @@ import {
 } from "./helpers";
 import * as Info from "./info";
 import * as Lifecycle from "./lifecycle";
-import * as Notification from "./notification";
 import * as PublicDevUrl from "./public-dev-url";
 import type { CommonYargsArgv, SubHelp } from "../yargs-types";
 import type { R2PutOptions } from "@cloudflare/workers-types/experimental";
@@ -636,19 +636,6 @@ export function r2(r2Yargs: CommonYargsArgv, subHelp: SubHelp) {
 				"Get information about an R2 bucket",
 				Info.InfoOptions,
 				Info.InfoHandler
-			);
-
-			r2BucketYargs.command(
-				"notification",
-				"Manage event notification rules for an R2 bucket",
-				(r2EvNotifyYargs) => {
-					return r2EvNotifyYargs.command(
-						"delete <bucket>",
-						"Delete an event notification rule from an R2 bucket",
-						Notification.DeleteOptions,
-						Notification.DeleteHandler
-					);
-				}
 			);
 
 			r2BucketYargs.command(
