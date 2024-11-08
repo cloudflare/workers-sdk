@@ -1,4 +1,3 @@
-import { readConfig } from "../config";
 import { defineAlias, defineCommand, defineNamespace } from "../core";
 import { logger } from "../logger";
 import { printWranglerBanner } from "../update-check";
@@ -11,10 +10,6 @@ import {
 	putEventNotificationConfig,
 	tableFromNotificationGetResponse,
 } from "./helpers";
-import type {
-	CommonYargsArgv,
-	StrictYargsOptionsToInterface,
-} from "../yargs-types";
 import type { R2EventType } from "./helpers";
 
 defineNamespace({
@@ -156,50 +151,54 @@ defineCommand({
 	},
 });
 
-export function DeleteOptions(yargs: CommonYargsArgv) {
-	return yargs
-		.positional("bucket", {
+defineCommand({
+	command: "wrangler r2 bucket notification delete",
+	metadata: {
+		description: "Delete an event notification rule from an R2 bucket",
+		status: "stable",
+		owner: "Product: R2",
+	},
+	positionalArgs: ["bucket"],
+	args: {
+		bucket: {
 			describe:
 				"The name of the R2 bucket to delete an event notification rule for",
 			type: "string",
 			demandOption: true,
-		})
-		.option("queue", {
+		},
+		queue: {
 			describe:
 				"The name of the queue that corresponds to the event notification rule. If no rule is provided, all event notification rules associated with the bucket and queue will be deleted",
 			demandOption: true,
 			requiresArg: true,
 			type: "string",
-		})
-		.option("rule", {
+		},
+		rule: {
 			describe: "The ID of the event notification rule to delete",
 			requiresArg: false,
 			type: "string",
-		})
-		.option("jurisdiction", {
+		},
+		jurisdiction: {
 			describe: "The jurisdiction where the bucket exists",
 			alias: "J",
 			requiresArg: true,
 			type: "string",
-		});
-}
-
-export async function DeleteHandler(
-	args: StrictYargsOptionsToInterface<typeof DeleteOptions>
-) {
-	await printWranglerBanner();
-	const config = readConfig(args.config, args);
-	const accountId = await requireAuth(config);
-	const apiCreds = requireApiToken();
-	const { bucket, queue, rule, jurisdiction = "" } = args;
-	await deleteEventNotificationConfig(
-		config,
-		apiCreds,
-		accountId,
-		bucket,
-		jurisdiction,
-		queue,
-		rule
-	);
-	logger.log("Event notification rule deleted successfully!");
-}
+		},
+	},
+	async handler(args, { config }) {
+		await printWranglerBanner();
+		const accountId = await requireAuth(config);
+		const apiCreds = requireApiToken();
+		const { bucket, queue, rule, jurisdiction = "" } = args;
+		await deleteEventNotificationConfig(
+			config,
+			apiCreds,
+			accountId,
+			bucket,
+			jurisdiction,
+			queue,
+			rule
+		);
+		logger.log("Event notification rule deleted successfully!");
+	},
+});
