@@ -19,36 +19,10 @@ describe("[Asset Worker] `handleRequest`", () => {
 			new Request("https://example.com/"),
 			configuration,
 			exists,
-			getByETag,
-			false
+			getByETag
 		);
 
 		expect(response.headers.get("ETag")).toBe(`"${eTag}"`);
-	});
-
-	it("suppresses 304 Not Modified responses when `skipIfNoneMatchHeaderHandling` is set to true", async () => {
-		const configuration: Required<AssetConfig> = {
-			html_handling: "none",
-			not_found_handling: "none",
-		};
-		const eTag = "some-etag";
-		const exists = vi.fn().mockReturnValue(eTag);
-		const getByETag = vi.fn().mockReturnValue({
-			readableStream: new ReadableStream(),
-			contentType: "text/html",
-		});
-
-		const response = await handleRequest(
-			new Request("https://example.com/", {
-				headers: { "If-None-Match": `"${eTag}"` },
-			}),
-			configuration,
-			exists,
-			getByETag,
-			true
-		);
-
-		expect(response.status).toBe(200);
 	});
 
 	it("returns 304 Not Modified responses for a valid strong ETag in If-None-Match", async () => {
@@ -69,8 +43,7 @@ describe("[Asset Worker] `handleRequest`", () => {
 			}),
 			configuration,
 			exists,
-			getByETag,
-			false
+			getByETag
 		);
 
 		expect(response.status).toBe(304);
@@ -94,8 +67,7 @@ describe("[Asset Worker] `handleRequest`", () => {
 			}),
 			configuration,
 			exists,
-			getByETag,
-			false
+			getByETag
 		);
 
 		expect(response.status).toBe(304);
@@ -119,8 +91,7 @@ describe("[Asset Worker] `handleRequest`", () => {
 			}),
 			configuration,
 			exists,
-			getByETag,
-			false
+			getByETag
 		);
 
 		expect(response.status).toBe(200);

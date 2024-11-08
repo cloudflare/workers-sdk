@@ -96,8 +96,7 @@ export default class extends WorkerEntrypoint<Env> {
 				request,
 				config,
 				this.unstable_exists.bind(this),
-				this.unstable_getByETag.bind(this),
-				false
+				this.unstable_getByETag.bind(this)
 			);
 		} catch (err) {
 			const response = new InternalServerErrorResponse(err as Error);
