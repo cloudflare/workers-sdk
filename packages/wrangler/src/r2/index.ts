@@ -10,15 +10,16 @@ import { printWranglerBanner } from "../index";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { requireAuth } from "../user";
-import { MAX_UPLOAD_SIZE } from "./constants";
-import * as Create from "./create";
+import { LOCATION_CHOICES, MAX_UPLOAD_SIZE } from "./constants";
 import * as Domain from "./domain";
 import {
 	bucketAndKeyFromObjectPath,
 	createFileReadableStream,
+	createR2Bucket,
 	deleteR2Bucket,
 	deleteR2Object,
 	getR2Object,
+	isValidR2BucketName,
 	listR2Buckets,
 	putR2Object,
 	updateR2BucketStorageClass,
@@ -426,17 +427,80 @@ defineNamespace({
 	},
 });
 
+defineCommand({
+	command: "wrangler r2 bucket create",
+	metadata: {
+		description: "Create a new R2 bucket",
+		status: "stable",
+		owner: "Product: R2",
+	},
+	positionalArgs: ["name"],
+	args: {
+		name: {
+			describe: "The name of the new bucket",
+			type: "string",
+			demandOption: true,
+		},
+		location: {
+			describe:
+				"The optional location hint that determines geographic placement of the R2 bucket",
+			choices: LOCATION_CHOICES,
+			requiresArg: true,
+			type: "string",
+		},
+		"storage-class": {
+			describe: "The default storage class for objects uploaded to this bucket",
+			alias: "s",
+			requiresArg: false,
+			type: "string",
+		},
+		jurisdiction: {
+			describe: "The jurisdiction where the new bucket will be created",
+			alias: "J",
+			requiresArg: true,
+			type: "string",
+		},
+	},
+	async handler(args, { config }) {
+		await printWranglerBanner();
+		const accountId = await requireAuth(config);
+		const { name, location, storageClass, jurisdiction } = args;
+
+		if (!isValidR2BucketName(name)) {
+			throw new UserError(
+				`The bucket name "${name}" is invalid. Bucket names can only have alphanumeric and - characters.`
+			);
+		}
+
+		if (jurisdiction && location) {
+			throw new UserError(
+				"Provide either a jurisdiction or location hint - not both."
+			);
+		}
+
+		let fullBucketName = `${name}`;
+		if (jurisdiction !== undefined) {
+			fullBucketName += ` (${jurisdiction})`;
+		}
+
+		logger.log(`Creating bucket '${fullBucketName}'...`);
+		await createR2Bucket(accountId, name, location, jurisdiction, storageClass);
+		logger.log(
+			`✅ Created bucket '${fullBucketName}' with${
+				location ? ` location hint ${location} and` : ``
+			} default storage class of ${storageClass ? storageClass : `Standard`}.`
+		);
+		await metrics.sendMetricsEvent("create r2 bucket", {
+			sendMetrics: config.send_metrics,
+		});
+	},
+});
+
 export function r2(r2Yargs: CommonYargsArgv, subHelp: SubHelp) {
 	return r2Yargs
 		.command(subHelp)
 		.command("bucket", "Manage R2 buckets", (r2BucketYargs) => {
 			r2BucketYargs.demandCommand();
-			r2BucketYargs.command(
-				"create <name>",
-				"Create a new R2 bucket",
-				Create.Options,
-				Create.Handler
-			);
 
 			r2BucketYargs.command("update", "Update bucket state", (updateYargs) => {
 				updateYargs.command(
