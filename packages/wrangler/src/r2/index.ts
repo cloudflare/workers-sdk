@@ -584,48 +584,50 @@ defineCommand({
 	},
 });
 
+defineCommand({
+	command: "wrangler r2 bucket delete",
+	metadata: {
+		description: "Delete an R2 bucket",
+		status: "stable",
+		owner: "Product: R2",
+	},
+	positionalArgs: ["name"],
+	args: {
+		name: {
+			describe: "The name of the bucket to delete",
+			type: "string",
+			demandOption: true,
+		},
+		jurisdiction: {
+			describe: "The jurisdiction where the bucket exists",
+			alias: "J",
+			requiresArg: true,
+			type: "string",
+		},
+	},
+	async handler(args, { config }) {
+		await printWranglerBanner();
+
+		const accountId = await requireAuth(config);
+
+		let fullBucketName = `${args.name}`;
+		if (args.jurisdiction !== undefined) {
+			fullBucketName += ` (${args.jurisdiction})`;
+		}
+		logger.log(`Deleting bucket ${fullBucketName}.`);
+		await deleteR2Bucket(accountId, args.name, args.jurisdiction);
+		logger.log(`Deleted bucket ${fullBucketName}.`);
+		await metrics.sendMetricsEvent("delete r2 bucket", {
+			sendMetrics: config.send_metrics,
+		});
+	},
+});
+
 export function r2(r2Yargs: CommonYargsArgv, subHelp: SubHelp) {
 	return r2Yargs
 		.command(subHelp)
 		.command("bucket", "Manage R2 buckets", (r2BucketYargs) => {
 			r2BucketYargs.demandCommand();
-			r2BucketYargs.command(
-				"delete <name>",
-				"Delete an R2 bucket",
-				(yargs) => {
-					return yargs
-						.positional("name", {
-							describe: "The name of the bucket to delete",
-							type: "string",
-							demandOption: true,
-						})
-						.option("jurisdiction", {
-							describe: "The jurisdiction where the bucket exists",
-							alias: "J",
-							requiresArg: true,
-							type: "string",
-						});
-				},
-				async (args) => {
-					await printWranglerBanner();
-
-					const config = readConfig(args.config, args);
-
-					const accountId = await requireAuth(config);
-
-					let fullBucketName = `${args.name}`;
-					if (args.jurisdiction !== undefined) {
-						fullBucketName += ` (${args.jurisdiction})`;
-					}
-					logger.log(`Deleting bucket ${fullBucketName}.`);
-					await deleteR2Bucket(accountId, args.name, args.jurisdiction);
-					logger.log(`Deleted bucket ${fullBucketName}.`);
-					await metrics.sendMetricsEvent("delete r2 bucket", {
-						sendMetrics: config.send_metrics,
-					});
-				}
-			);
-
 			r2BucketYargs.command(
 				"sippy",
 				"Manage Sippy incremental migration on an R2 bucket",
