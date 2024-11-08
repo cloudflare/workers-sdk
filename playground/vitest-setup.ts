@@ -192,7 +192,7 @@ async function loadConfig(configEnv: ConfigEnv) {
 		for (const extension of ['js', 'ts', 'mjs', 'cjs', 'mts', 'cts']) {
 			const configVariantPath = path.resolve(
 				rootDir,
-				`vite.config-${variantName}.${extension}`,
+				`vite.config.${variantName}.${extension}`,
 			);
 			if (fs.existsSync(configVariantPath)) {
 				const res = await loadConfigFromFile(configEnv, configVariantPath);
