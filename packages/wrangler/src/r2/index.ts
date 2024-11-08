@@ -11,7 +11,8 @@ import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { requireAuth } from "../user";
 import { LOCATION_CHOICES, MAX_UPLOAD_SIZE } from "./constants";
-import * as Domain from "./domain";
+import "./sippy";
+import "./domain";
 import {
 	bucketAndKeyFromObjectPath,
 	createFileReadableStream,
@@ -27,7 +28,6 @@ import {
 } from "./helpers";
 import * as Notification from "./notification";
 import * as PublicDevUrl from "./public-dev-url";
-import * as Sippy from "./sippy";
 import type { CommonYargsArgv, SubHelp } from "../yargs-types";
 import type { R2PutOptions } from "@cloudflare/workers-types/experimental";
 
@@ -628,19 +628,6 @@ export function r2(r2Yargs: CommonYargsArgv, subHelp: SubHelp) {
 		.command(subHelp)
 		.command("bucket", "Manage R2 buckets", (r2BucketYargs) => {
 			r2BucketYargs.demandCommand();
-			r2BucketYargs.command(
-				"sippy",
-				"Manage Sippy incremental migration on an R2 bucket",
-				(sippyYargs) => {
-					return sippyYargs.command(
-						"get <name>",
-						"Check the status of Sippy on an R2 bucket",
-						Sippy.GetOptions,
-						Sippy.GetHandler
-					);
-				}
-			);
-
 			r2BucketYargs.command(
 				"notification",
 				"Manage event notification rules for an R2 bucket",
