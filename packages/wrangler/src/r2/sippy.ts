@@ -1,4 +1,3 @@
-import { readConfig } from "../config";
 import { defineCommand, defineNamespace } from "../core";
 import { prompt } from "../dialogs";
 import { UserError } from "../errors";
@@ -6,10 +5,6 @@ import { logger } from "../logger";
 import { APIError, readFileSync } from "../parse";
 import { requireAuth } from "../user";
 import { deleteR2Sippy, getR2Sippy, putR2Sippy } from "./helpers";
-import type {
-	CommonYargsArgv,
-	StrictYargsOptionsToInterface,
-} from "../yargs-types";
 import type { SippyPutParams } from "./helpers";
 
 const NO_SUCH_OBJECT_KEY = 10007;
@@ -286,39 +281,49 @@ defineCommand({
 	},
 });
 
-export function GetOptions(yargs: CommonYargsArgv) {
-	return yargs
-		.positional("name", {
+defineCommand({
+	command: "wrangler r2 bucket sippy get",
+	metadata: {
+		description: "Check the status of Sippy on an R2 bucket",
+		status: "stable",
+		owner: "Product: R2",
+	},
+	positionalArgs: ["name"],
+	args: {
+		name: {
 			describe: "The name of the bucket",
 			type: "string",
 			demandOption: true,
-		})
-		.option("jurisdiction", {
+		},
+		jurisdiction: {
 			describe: "The jurisdiction where the bucket exists",
 			alias: "J",
 			requiresArg: true,
 			type: "string",
-		});
-}
+		},
+	},
+	async handler(args, { config }) {
+		const accountId = await requireAuth(config);
 
-export async function GetHandler(
-	args: StrictYargsOptionsToInterface<typeof GetOptions>
-) {
-	const config = readConfig(args.config, args);
-	const accountId = await requireAuth(config);
-
-	try {
-		const sippyConfig = await getR2Sippy(
-			accountId,
-			args.name,
-			args.jurisdiction
-		);
-		logger.log("Sippy configuration:", sippyConfig);
-	} catch (e) {
-		if (e instanceof APIError && "code" in e && e.code === NO_SUCH_OBJECT_KEY) {
-			logger.log(`No Sippy configuration found for the '${args.name}' bucket.`);
-		} else {
-			throw e;
+		try {
+			const sippyConfig = await getR2Sippy(
+				accountId,
+				args.name,
+				args.jurisdiction
+			);
+			logger.log("Sippy configuration:", sippyConfig);
+		} catch (e) {
+			if (
+				e instanceof APIError &&
+				"code" in e &&
+				e.code === NO_SUCH_OBJECT_KEY
+			) {
+				logger.log(
+					`No Sippy configuration found for the '${args.name}' bucket.`
+				);
+			} else {
+				throw e;
+			}
 		}
-	}
-}
+	},
+});
