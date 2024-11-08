@@ -29,8 +29,8 @@ import {
 } from "./helpers";
 import * as Info from "./info";
 import * as Lifecycle from "./lifecycle";
-import * as PublicDevUrl from "./public-dev-url";
 import type { CommonYargsArgv, SubHelp } from "../yargs-types";
+import "./public-dev-url";
 import type { R2PutOptions } from "@cloudflare/workers-types/experimental";
 
 defineNamespace({
@@ -638,18 +638,6 @@ export function r2(r2Yargs: CommonYargsArgv, subHelp: SubHelp) {
 				Info.InfoHandler
 			);
 
-			r2BucketYargs.command(
-				"dev-url",
-				"Manage public access via the r2.dev URL for an R2 bucket",
-				(devUrlYargs) => {
-					return devUrlYargs.command(
-						"disable <bucket>",
-						"Disable public access via the r2.dev URL for an R2 bucket",
-						PublicDevUrl.DisableOptions,
-						PublicDevUrl.DisableHandler
-					);
-				}
-			);
 			r2BucketYargs.command(
 				"lifecycle",
 				"Manage lifecycle rules for an R2 bucket",
