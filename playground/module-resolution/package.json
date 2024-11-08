@@ -4,8 +4,10 @@
 	"type": "module",
 	"scripts": {
 		"build": "vite build --app",
+		"build:no-prebundling": "vite build --app -c ./vite.config-no-prebundling.ts",
 		"check:types": "tsc --build",
-		"dev": "vite dev"
+		"dev": "vite dev",
+		"dev:no-prebundling": "vite dev -c ./vite.config-no-prebundling.ts"
 	},
 	"devDependencies": {
 		"@cloudflare-dev-module-resolution/imports": "file:./packages/imports",

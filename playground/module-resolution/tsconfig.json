@@ -3,7 +3,8 @@
 	"include": ["**/*"],
 	"compilerOptions": {
 		"paths": {
-			"@alias/test": ["./src/aliasing.ts"]
+			"@alias/test": ["./src/aliasing.ts"],
+			"@non-existing/pkg": ["./src/aliasing.ts"]
 		}
 	}
 }

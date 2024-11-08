@@ -3,11 +3,18 @@ import {
 	getJsonResponse,
 	getTextResponse,
 	isBuild,
+	page,
 	serverLogs,
+	viteTestUrl,
 } from '../../__test-utils__';
 
 describe.runIf(!isBuild)('module resolution', async () => {
-	afterAll(() => expect(serverLogs.errors).toEqual([]));
+	afterAll(() => {
+		const unexpectedErrors = serverLogs.errors.filter(
+			(error) => !error.includes('@non-existing/pkg'),
+		);
+		expect(unexpectedErrors).toEqual([]);
+	});
 
 	describe('basic module resolution', () => {
 		test('`require` js/cjs files with specifying their file extension', async () => {
@@ -105,6 +112,16 @@ describe.runIf(!isBuild)('module resolution', async () => {
 		test('imports from an aliased package', async () => {
 			const result = await getTextResponse('/@alias/test');
 			expect(result).toBe('OK!');
+		});
+	});
+
+	describe('user errors', () => {
+		test('imports from a non existing package', async () => {
+			await page.goto(`${viteTestUrl}/@non-existing/pkg`);
+			const errorText = await page
+				.locator('vite-error-overlay pre.message')
+				.textContent();
+			expect(errorText).toContain("Cannot find module '@non-existing/pkg'");
 		});
 	});
 });
