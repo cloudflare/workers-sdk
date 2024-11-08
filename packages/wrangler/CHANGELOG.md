@@ -1,5 +1,25 @@
 # wrangler
 
+## 3.86.0
+
+### Minor Changes
+
+- [#7154](https://github.com/cloudflare/workers-sdk/pull/7154) [`ef7c0b3`](https://github.com/cloudflare/workers-sdk/commit/ef7c0b3641925e2deceb7e5323f86b769de54405) Thanks [@jonesphillip](https://github.com/jonesphillip)! - Added the ability to enable, disable, and get r2.dev public access URLs for R2 buckets.
+
+### Patch Changes
+
+- [#7169](https://github.com/cloudflare/workers-sdk/pull/7169) [`9098a3b`](https://github.com/cloudflare/workers-sdk/commit/9098a3b03f82bbfb1fb8c8c531fafbfe26a49e59) Thanks [@penalosa](https://github.com/penalosa)! - Ensure `workerd` processes are cleaned up after address-in-use errors
+
+- [#7172](https://github.com/cloudflare/workers-sdk/pull/7172) [`3dce388`](https://github.com/cloudflare/workers-sdk/commit/3dce3881bdaf373aa9b2e52483e340ab8193151c) Thanks [@penalosa](https://github.com/penalosa)! - Clarify dev registry messaging around locally connected services. The connection status of local service bindings & durable object bindings is now indicated by `connected` or `not connected` next to their entry in the bindings summary. For more details, refer to https://developers.cloudflare.com/workers/runtime-apis/bindings/service-bindings/#local-development
+
+- [#7193](https://github.com/cloudflare/workers-sdk/pull/7193) [`ad51d1d`](https://github.com/cloudflare/workers-sdk/commit/ad51d1d77483bf0b4dc73fd392f5cdefe4ddf5d8) Thanks [@sdnts](https://github.com/sdnts)! - Output suggested wrangler.toml changes after creating an R2 bucket
+
+- [#7191](https://github.com/cloudflare/workers-sdk/pull/7191) [`1d5bc6d`](https://github.com/cloudflare/workers-sdk/commit/1d5bc6d3530e98db117af3f6b16b43ff6c069f94) Thanks [@sdnts](https://github.com/sdnts)! - Output suggested wrangler.toml changes after creating a Queue
+
+- Updated dependencies [[`1db7846`](https://github.com/cloudflare/workers-sdk/commit/1db7846ec5c356f6b59cddf5f48b16b3e7c73d66), [`08c6580`](https://github.com/cloudflare/workers-sdk/commit/08c6580494e702373d17ff7485988a8fae9af59e)]:
+  - miniflare@3.20241106.0
+  - @cloudflare/workers-shared@0.7.1
+
 ## 3.85.0
 
 ### Minor Changes

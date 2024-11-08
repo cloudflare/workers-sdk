@@ -1,5 +1,33 @@
 # create-cloudflare
 
+## 2.32.0
+
+### Minor Changes
+
+- [#7170](https://github.com/cloudflare/workers-sdk/pull/7170) [`f292294`](https://github.com/cloudflare/workers-sdk/commit/f292294ba2e545742d8801f2f3060763547b7ccb) Thanks [@edmundhung](https://github.com/edmundhung)! - feat: update experimental remix template to be based on its worker template
+
+### Patch Changes
+
+- [#7179](https://github.com/cloudflare/workers-sdk/pull/7179) [`a4f5647`](https://github.com/cloudflare/workers-sdk/commit/a4f5647a368c3d6857fa425bee2827493eda2dd1) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency        | From  | To    |
+  | ----------------- | ----- | ----- |
+  | create-docusaurus | 3.5.2 | 3.6.0 |
+
+- [#7188](https://github.com/cloudflare/workers-sdk/pull/7188) [`28edf9b`](https://github.com/cloudflare/workers-sdk/commit/28edf9b2eb08a978e016bc1d320459f33d5590b8) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | gatsby     | 5.13.7 | 5.14.0 |
+
+- [#7109](https://github.com/cloudflare/workers-sdk/pull/7109) [`492533f`](https://github.com/cloudflare/workers-sdk/commit/492533f19e4840b8f93d9e29c0c267ce742f2fc5) Thanks [@jsparkdev](https://github.com/jsparkdev)! - Rename the framework name
+
+  The name currently displayed in the CLI is `Svelte`. However, all of the options actually create a `SvelteKit` app, and the name `SvelteKit` is also used in the [documentation](https://developers.cloudflare.com/pages/framework-guides/deploy-a-svelte-site/).
+
 ## 2.31.2
 
 ### Patch Changes
