@@ -21,7 +21,6 @@ export default defineConfig({
 			// see the full string to help figure out why the assertion failed
 			truncateThreshold: 1e6,
 		},
-		retry: 1,
 		setupFiles: ["./e2e/vitest.setup.ts"],
 	},
 });
