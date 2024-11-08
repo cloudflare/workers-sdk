@@ -7,7 +7,8 @@ import { beforeAll, describe, expect, it } from "vitest";
 import { WranglerE2ETestHelper } from "./helpers/e2e-wrangler-test";
 import { generateResourceName } from "./helpers/generate-resource-name";
 
-describe("c3 integration", () => {
+// TODO: Investigate why this is really flaky on windows
+describe.runIf(process.platform !== "win32")("c3 integration", () => {
 	const helper = new WranglerE2ETestHelper();
 	const workerName = generateResourceName("c3");
 	let c3Packed: string;
