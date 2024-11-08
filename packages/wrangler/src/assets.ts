@@ -406,13 +406,6 @@ export function validateAssetsArgsAndConfig(
 		);
 	}
 
-	// tail_consumers don't exist in dev, so ignore SDW here
-	if ((args.assets || config?.assets) && config?.tail_consumers?.length) {
-		throw new UserError(
-			"Cannot use assets and tail consumers in the same Worker. Tail Workers are not yet supported for Workers with assets."
-		);
-	}
-
 	const noOpEntrypoint = path.resolve(
 		getBasePath(),
 		"templates/no-op-worker.js"
