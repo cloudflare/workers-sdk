@@ -27,8 +27,7 @@ import {
 	updateR2BucketStorageClass,
 	usingLocalBucket,
 } from "./helpers";
-import * as PublicDevUrl from "./public-dev-url";
-import type { CommonYargsArgv, SubHelp } from "../yargs-types";
+import "./public-dev-url";
 import type { R2PutOptions } from "@cloudflare/workers-types/experimental";
 
 defineNamespace({
@@ -622,20 +621,3 @@ defineCommand({
 		});
 	},
 });
-
-export function r2(r2Yargs: CommonYargsArgv, subHelp: SubHelp) {
-	return r2Yargs
-		.command(subHelp)
-		.command("bucket", "Manage R2 buckets", (r2BucketYargs) => {
-			r2BucketYargs.demandCommand();
-			r2BucketYargs.command("dev-url", "", (devUrlYargs) => {
-				return devUrlYargs.command(
-					"disable <bucket>",
-					"Disable public access via the r2.dev URL for an R2 bucket",
-					PublicDevUrl.DisableOptions,
-					PublicDevUrl.DisableHandler
-				);
-			});
-			return r2BucketYargs;
-		});
-}
