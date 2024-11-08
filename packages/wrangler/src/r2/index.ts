@@ -641,12 +641,6 @@ export function r2(r2Yargs: CommonYargsArgv, subHelp: SubHelp) {
 						"Disable public access via the r2.dev URL for an R2 bucket",
 						PublicDevUrl.DisableOptions,
 						PublicDevUrl.DisableHandler
-					)
-					.command(
-						"get <bucket>",
-						"Get the r2.dev URL and status for an R2 bucket",
-						PublicDevUrl.GetOptions,
-						PublicDevUrl.GetHandler
 					);
 			});
 			return r2BucketYargs;
