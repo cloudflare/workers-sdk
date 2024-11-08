@@ -1,6 +1,6 @@
 import assert from "node:assert";
 import { execSync } from "node:child_process";
-import { existsSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fetch } from "undici";
 import { beforeAll, describe, expect, it } from "vitest";
@@ -39,8 +39,11 @@ describe("c3 integration", () => {
 		});
 
 		expect(
-			existsSync(path.join(helper.tmpPath, workerName, "wrangler.toml"))
-		).toBe(true);
+			readFileSync(
+				path.join(helper.tmpPath, workerName, "wrangler.toml"),
+				"utf8"
+			)
+		).not.toContain("<TBD>");
 	});
 
 	it("can run `wrangler dev` on generated worker", async () => {
