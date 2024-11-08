@@ -74,83 +74,87 @@ defineCommand({
 	},
 });
 
-export function CreateOptions(yargs: CommonYargsArgv) {
-	return yargs
-		.positional("bucket", {
+defineCommand({
+	command: "wrangler r2 bucket notification create",
+	metadata: {
+		description: "Create an event notification rule for an R2 bucket",
+		status: "stable",
+		owner: "Product: R2",
+	},
+	positionalArgs: ["bucket"],
+	args: {
+		bucket: {
 			describe:
 				"The name of the R2 bucket to create an event notification rule for",
 			type: "string",
 			demandOption: true,
-		})
-		.option("event-types", {
+		},
+		"event-types": {
 			describe: "The type of event(s) that will emit event notifications",
 			alias: "event-type",
 			choices: Object.keys(actionsForEventCategories),
 			demandOption: true,
 			requiresArg: true,
-			type: "array",
-		})
-		.option("prefix", {
+			array: true,
+		},
+		prefix: {
 			describe:
 				"The prefix that an object must match to emit event notifications (note: regular expressions not supported)",
 			requiresArg: false,
 			type: "string",
-		})
-		.option("suffix", {
+		},
+		suffix: {
 			describe:
 				"The suffix that an object must match to emit event notifications (note: regular expressions not supported)",
 			type: "string",
-		})
-		.option("queue", {
+		},
+		queue: {
 			describe:
 				"The name of the queue that will receive event notification messages",
 			demandOption: true,
 			requiresArg: true,
 			type: "string",
-		})
-		.option("jurisdiction", {
+		},
+		jurisdiction: {
 			describe: "The jurisdiction where the bucket exists",
 			alias: "J",
 			requiresArg: true,
 			type: "string",
-		})
-		.option("description", {
+		},
+		description: {
 			describe:
 				"A description that can be used to identify the event notification rule after creation",
 			type: "string",
-		});
-}
-
-export async function CreateHandler(
-	args: StrictYargsOptionsToInterface<typeof CreateOptions>
-) {
-	await printWranglerBanner();
-	const config = readConfig(args.config, args);
-	const accountId = await requireAuth(config);
-	const apiCreds = requireApiToken();
-	const {
-		bucket,
-		queue,
-		eventTypes,
-		prefix = "",
-		suffix = "",
-		jurisdiction = "",
-		description,
-	} = args;
-	await putEventNotificationConfig(
-		config,
-		apiCreds,
-		accountId,
-		bucket,
-		jurisdiction,
-		queue,
-		eventTypes as R2EventType[],
-		prefix,
-		suffix,
-		description
-	);
-	logger.log("Event notification rule created successfully!");
-}
+		},
+	},
+	async handler(args, { config }) {
+		await printWranglerBanner();
+		const accountId = await requireAuth(config);
+		const apiCreds = requireApiToken();
+		const {
+			bucket,
+			queue,
+			eventTypes,
+			prefix = "",
+			suffix = "",
+			jurisdiction = "",
+			description,
+		} = args;
+		await putEventNotificationConfig(
+			config,
+			apiCreds,
+			accountId,
+			bucket,
+			jurisdiction,
+			queue,
+			eventTypes as R2EventType[],
+			prefix,
+			suffix,
+			description
+		);
+		logger.log("Event notification rule created successfully!");
+	},
+});
 
 export function DeleteOptions(yargs: CommonYargsArgv) {
 	return yargs

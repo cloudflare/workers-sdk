@@ -642,19 +642,12 @@ export function r2(r2Yargs: CommonYargsArgv, subHelp: SubHelp) {
 				"notification",
 				"Manage event notification rules for an R2 bucket",
 				(r2EvNotifyYargs) => {
-					return r2EvNotifyYargs
-						.command(
-							"create <bucket>",
-							"Create an event notification rule for an R2 bucket",
-							Notification.CreateOptions,
-							Notification.CreateHandler
-						)
-						.command(
-							"delete <bucket>",
-							"Delete an event notification rule from an R2 bucket",
-							Notification.DeleteOptions,
-							Notification.DeleteHandler
-						);
+					return r2EvNotifyYargs.command(
+						"delete <bucket>",
+						"Delete an event notification rule from an R2 bucket",
+						Notification.DeleteOptions,
+						Notification.DeleteHandler
+					);
 				}
 			);
 
