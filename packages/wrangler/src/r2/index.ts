@@ -557,41 +557,38 @@ defineCommand({
 	},
 });
 
+defineCommand({
+	command: "wrangler r2 bucket list",
+	metadata: {
+		description: "List R2 buckets",
+		status: "stable",
+		owner: "Product: R2",
+	},
+	args: {
+		jurisdiction: {
+			describe: "The jurisdiction to list",
+			alias: "J",
+			requiresArg: true,
+			type: "string",
+		},
+	},
+	async handler(args, { config }) {
+		const accountId = await requireAuth(config);
+
+		logger.log(
+			JSON.stringify(await listR2Buckets(accountId, args.jurisdiction), null, 2)
+		);
+		await metrics.sendMetricsEvent("list r2 buckets", {
+			sendMetrics: config.send_metrics,
+		});
+	},
+});
+
 export function r2(r2Yargs: CommonYargsArgv, subHelp: SubHelp) {
 	return r2Yargs
 		.command(subHelp)
 		.command("bucket", "Manage R2 buckets", (r2BucketYargs) => {
 			r2BucketYargs.demandCommand();
-			r2BucketYargs.command(
-				"list",
-				"List R2 buckets",
-				(listArgs) => {
-					return listArgs.option("jurisdiction", {
-						describe: "The jurisdiction to list",
-						alias: "J",
-						requiresArg: true,
-						type: "string",
-					});
-				},
-				async (args) => {
-					const config = readConfig(args.config, args);
-					const { jurisdiction } = args;
-
-					const accountId = await requireAuth(config);
-
-					logger.log(
-						JSON.stringify(
-							await listR2Buckets(accountId, jurisdiction),
-							null,
-							2
-						)
-					);
-					await metrics.sendMetricsEvent("list r2 buckets", {
-						sendMetrics: config.send_metrics,
-					});
-				}
-			);
-
 			r2BucketYargs.command(
 				"delete <name>",
 				"Delete an R2 bucket",
