@@ -256,6 +256,36 @@ defineCommand({
 	},
 });
 
+defineCommand({
+	command: "wrangler r2 bucket sippy disable",
+	metadata: {
+		description: "Disable Sippy on an R2 bucket",
+		status: "stable",
+		owner: "Product: R2",
+	},
+	positionalArgs: ["name"],
+	args: {
+		name: {
+			describe: "The name of the bucket",
+			type: "string",
+			demandOption: true,
+		},
+		jurisdiction: {
+			describe: "The jurisdiction where the bucket exists",
+			alias: "J",
+			requiresArg: true,
+			type: "string",
+		},
+	},
+	async handler(args, { config }) {
+		const accountId = await requireAuth(config);
+
+		await deleteR2Sippy(accountId, args.name, args.jurisdiction);
+
+		logger.log(`✨ Successfully disabled Sippy on the '${args.name}' bucket.`);
+	},
+});
+
 export function GetOptions(yargs: CommonYargsArgv) {
 	return yargs
 		.positional("name", {
@@ -291,30 +321,4 @@ export async function GetHandler(
 			throw e;
 		}
 	}
-}
-
-export function DisableOptions(yargs: CommonYargsArgv) {
-	return yargs
-		.positional("name", {
-			describe: "The name of the bucket",
-			type: "string",
-			demandOption: true,
-		})
-		.option("jurisdiction", {
-			describe: "The jurisdiction where the bucket exists",
-			alias: "J",
-			requiresArg: true,
-			type: "string",
-		});
-}
-
-export async function DisableHandler(
-	args: StrictYargsOptionsToInterface<typeof DisableOptions>
-) {
-	const config = readConfig(args.config, args);
-	const accountId = await requireAuth(config);
-
-	await deleteR2Sippy(accountId, args.name, args.jurisdiction);
-
-	logger.log(`✨ Successfully disabled Sippy on the '${args.name}' bucket.`);
 }
