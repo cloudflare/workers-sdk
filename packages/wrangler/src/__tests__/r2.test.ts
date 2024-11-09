@@ -12,7 +12,6 @@ import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import type {
 	PutNotificationRequestBody,
-	R2BucketInfo,
 	R2EventableOperation,
 	R2EventType,
 } from "../r2/helpers";
@@ -92,14 +91,15 @@ describe("r2", () => {
 				Manage R2 buckets
 
 				COMMANDS
-				  wrangler r2 bucket create <name>  Create a new R2 bucket
-				  wrangler r2 bucket update         Update bucket state
-				  wrangler r2 bucket list           List R2 buckets
-				  wrangler r2 bucket delete <name>  Delete an R2 bucket
-				  wrangler r2 bucket sippy          Manage Sippy incremental migration on an R2 bucket
-				  wrangler r2 bucket notification   Manage event notification rules for an R2 bucket
-				  wrangler r2 bucket domain         Manage custom domains for an R2 bucket
-				  wrangler r2 bucket dev-url        Manage public access via the r2.dev URL for an R2 bucket
+				  wrangler r2 bucket create <name>    Create a new R2 bucket
+				  wrangler r2 bucket update           Update bucket state
+				  wrangler r2 bucket list             List R2 buckets
+				  wrangler r2 bucket info <bucket>    Get information about an R2 bucket
+				  wrangler r2 bucket delete <bucket>  Delete an R2 bucket
+				  wrangler r2 bucket sippy            Manage Sippy incremental migration on an R2 bucket
+				  wrangler r2 bucket notification     Manage event notification rules for an R2 bucket
+				  wrangler r2 bucket domain           Manage custom domains for an R2 bucket
+				  wrangler r2 bucket dev-url          Manage public access via the r2.dev URL for an R2 bucket
 
 				GLOBAL FLAGS
 				  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
@@ -128,14 +128,15 @@ describe("r2", () => {
 				Manage R2 buckets
 
 				COMMANDS
-				  wrangler r2 bucket create <name>  Create a new R2 bucket
-				  wrangler r2 bucket update         Update bucket state
-				  wrangler r2 bucket list           List R2 buckets
-				  wrangler r2 bucket delete <name>  Delete an R2 bucket
-				  wrangler r2 bucket sippy          Manage Sippy incremental migration on an R2 bucket
-				  wrangler r2 bucket notification   Manage event notification rules for an R2 bucket
-				  wrangler r2 bucket domain         Manage custom domains for an R2 bucket
-				  wrangler r2 bucket dev-url        Manage public access via the r2.dev URL for an R2 bucket
+				  wrangler r2 bucket create <name>    Create a new R2 bucket
+				  wrangler r2 bucket update           Update bucket state
+				  wrangler r2 bucket list             List R2 buckets
+				  wrangler r2 bucket info <bucket>    Get information about an R2 bucket
+				  wrangler r2 bucket delete <bucket>  Delete an R2 bucket
+				  wrangler r2 bucket sippy            Manage Sippy incremental migration on an R2 bucket
+				  wrangler r2 bucket notification     Manage event notification rules for an R2 bucket
+				  wrangler r2 bucket domain           Manage custom domains for an R2 bucket
+				  wrangler r2 bucket dev-url          Manage public access via the r2.dev URL for an R2 bucket
 
 				GLOBAL FLAGS
 				  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
@@ -148,9 +149,15 @@ describe("r2", () => {
 
 		describe("list", () => {
 			it("should list buckets & check request inputs", async () => {
-				const expectedBuckets: R2BucketInfo[] = [
-					{ name: "bucket-1-local-once", creation_date: "01-01-2001" },
-					{ name: "bucket-2-local-once", creation_date: "01-01-2001" },
+				const mockBuckets = [
+					{
+						name: "bucket-1-local-once",
+						creation_date: "01-01-2001",
+					},
+					{
+						name: "bucket-2-local-once",
+						creation_date: "01-01-2001",
+					},
 				];
 				msw.use(
 					http.get(
@@ -161,27 +168,65 @@ describe("r2", () => {
 							expect(await request.text()).toEqual("");
 							return HttpResponse.json(
 								createFetchResult({
-									buckets: [
-										{
-											name: "bucket-1-local-once",
-											creation_date: "01-01-2001",
-										},
-										{
-											name: "bucket-2-local-once",
-											creation_date: "01-01-2001",
-										},
-									],
+									buckets: mockBuckets,
 								})
 							);
 						},
 						{ once: true }
 					)
 				);
-				await runWrangler("r2 bucket list");
 
-				expect(std.err).toMatchInlineSnapshot(`""`);
-				const buckets = JSON.parse(std.out);
-				expect(buckets).toEqual(expectedBuckets);
+				await runWrangler(`r2 bucket list`);
+				expect(std.out).toMatchInlineSnapshot(`
+					"Listing buckets...
+					name:           bucket-1-local-once
+					creation_date:  01-01-2001
+
+					name:           bucket-2-local-once
+					creation_date:  01-01-2001"
+				  `);
+			});
+		});
+
+		describe("info", () => {
+			it("should get information for the given bucket", async () => {
+				const bucketName = "my-bucket";
+				const bucketInfo = {
+					name: bucketName,
+					creation_date: "01-01-2001",
+					location: "WNAM",
+					storage_class: "Standard",
+				};
+
+				msw.use(
+					http.get(
+						"*/accounts/:accountId/r2/buckets/:bucketName",
+						async ({ params }) => {
+							const { accountId, bucketName: bucketParam } = params;
+							expect(accountId).toEqual("some-account-id");
+							expect(bucketParam).toEqual(bucketName);
+							return HttpResponse.json(
+								createFetchResult({
+									...bucketInfo,
+								})
+							);
+						},
+						{ once: true }
+					),
+					http.post("*/graphql", async () => {
+						return HttpResponse.json(createFetchResult({}));
+					})
+				);
+				await runWrangler(`r2 bucket info ${bucketName}`);
+				expect(std.out).toMatchInlineSnapshot(`
+						"Getting info for 'my-bucket'...
+						name:                   my-bucket
+						created:                01-01-2001
+						location:               WNAM
+						default_storage_class:  Standard
+						object_count:           0
+						bucket_size:            0 B"
+					  `);
 			});
 		});
 
@@ -475,12 +520,12 @@ binding = \\"testBucket\\""
 				);
 				expect(std.out).toMatchInlineSnapshot(`
 					"
-					wrangler r2 bucket delete <name>
+					wrangler r2 bucket delete <bucket>
 
 					Delete an R2 bucket
 
 					POSITIONALS
-					  name  The name of the bucket to delete  [string] [required]
+					  bucket  The name of the bucket to delete  [string] [required]
 
 					GLOBAL FLAGS
 					  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
@@ -515,12 +560,12 @@ binding = \\"testBucket\\""
 				);
 				expect(std.out).toMatchInlineSnapshot(`
 					"
-					wrangler r2 bucket delete <name>
+					wrangler r2 bucket delete <bucket>
 
 					Delete an R2 bucket
 
 					POSITIONALS
-					  name  The name of the bucket to delete  [string] [required]
+					  bucket  The name of the bucket to delete  [string] [required]
 
 					GLOBAL FLAGS
 					  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
