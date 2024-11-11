@@ -270,7 +270,7 @@ export const Handler = async (args: PagesDevArguments) => {
 
 	if (args.experimentalDevEnv) {
 		logger.warn(
-			"--x-dev-env is no longer required and will be removed in a future version.\n`wrangler dev` now uses the unified dev server by default. 🎉"
+			"--x-dev-env is now on by default and will be removed in a future version."
 		);
 	}
 
