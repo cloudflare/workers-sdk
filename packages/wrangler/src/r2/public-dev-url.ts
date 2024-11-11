@@ -1,7 +1,6 @@
 import { defineCommand, defineNamespace } from "../core";
 import { confirm } from "../dialogs";
 import { logger } from "../logger";
-import { printWranglerBanner } from "../update-check";
 import { requireAuth } from "../user";
 import { getR2DevDomain, updateR2DevDomain } from "./helpers";
 

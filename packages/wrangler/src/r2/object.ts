@@ -6,7 +6,6 @@ import prettyBytes from "pretty-bytes";
 import { readConfig } from "../config";
 import { defineCommand, defineNamespace } from "../core";
 import { CommandLineArgsError, FatalError, UserError } from "../errors";
-import { printWranglerBanner } from "../index";
 import { logger } from "../logger";
 import { requireAuth } from "../user";
 import { MAX_UPLOAD_SIZE } from "./constants";

@@ -1,6 +1,5 @@
 import { defineCommand, defineNamespace } from "../core";
 import { UserError } from "../errors";
-import { printWranglerBanner } from "../index";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { requireAuth } from "../user";

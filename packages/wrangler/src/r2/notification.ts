@@ -1,6 +1,5 @@
 import { defineAlias, defineCommand, defineNamespace } from "../core";
 import { logger } from "../logger";
-import { printWranglerBanner } from "../update-check";
 import { requireApiToken, requireAuth } from "../user";
 import formatLabelledValues from "../utils/render-labelled-values";
 import {
