@@ -45,6 +45,7 @@ defineCommand({
 		objectPath: {
 			describe: "The source object path in the form of {bucket}/{key}",
 			type: "string",
+			demandOption: true,
 		},
 		file: {
 			describe: "The destination file to create",
@@ -140,6 +141,7 @@ defineCommand({
 		objectPath: {
 			describe: "The destination object path in the form of {bucket}/{key}",
 			type: "string",
+			demandOption: true,
 		},
 		file: {
 			describe: "The path of the file to upload",
@@ -358,6 +360,7 @@ defineCommand({
 		objectPath: {
 			describe: "The destination object path in the form of {bucket}/{key}",
 			type: "string",
+			demandOption: true,
 		},
 		local: {
 			type: "boolean",
