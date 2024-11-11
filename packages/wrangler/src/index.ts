@@ -50,6 +50,7 @@ import "./kv";
 import "./workflows";
 import "./user/commands";
 import "./type-generation";
+import "./tail";
 import { demandSingleValue } from "./core";
 import { logBuildFailure, logger, LOGGER_LEVELS } from "./logger";
 import { mTlsCertificateCommands } from "./mtls-certificate/cli";
@@ -67,7 +68,6 @@ import {
 	closeSentry,
 	setupSentry,
 } from "./sentry";
-import { tailHandler, tailOptions } from "./tail";
 import registerTriggersSubcommands from "./triggers";
 import { printWranglerBanner, updateCheck } from "./update-check";
 import { getAuthFromEnv } from "./user";
@@ -464,12 +464,7 @@ export function createCLIParser(argv: string[]) {
 	);
 
 	// tail
-	wrangler.command(
-		"tail [worker]",
-		"🦚 Start a log tailing session for a Worker",
-		tailOptions,
-		tailHandler
-	);
+	register.registerNamespace("tail");
 
 	// secret
 	wrangler.command(
