@@ -58,7 +58,6 @@ defineCommand({
 		},
 	},
 	async handler(args, { config }) {
-		await printWranglerBanner();
 		const accountId = await requireAuth(config);
 		const { name, location, storageClass, jurisdiction } = args;
 
@@ -135,8 +134,6 @@ defineCommand({
 		},
 	},
 	async handler(args, { config }) {
-		await printWranglerBanner();
-
 		const accountId = await requireAuth(config);
 
 		let fullBucketName = `${args.name}`;
@@ -207,8 +204,6 @@ defineCommand({
 		},
 	},
 	async handler(args, { config }) {
-		await printWranglerBanner();
-
 		const accountId = await requireAuth(config);
 
 		let fullBucketName = `${args.name}`;

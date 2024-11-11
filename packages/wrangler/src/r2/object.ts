@@ -90,7 +90,6 @@ defineCommand({
 			file = key;
 		}
 		if (!pipe) {
-			await printWranglerBanner();
 			logger.log(`Downloading "${key}" from "${fullBucketName}".`);
 		}
 
@@ -216,8 +215,6 @@ defineCommand({
 		},
 	},
 	async handler(objectPutYargs, { config }) {
-		await printWranglerBanner();
-
 		const {
 			objectPath,
 			file,
@@ -379,8 +376,6 @@ defineCommand({
 	},
 	async handler(args) {
 		const { objectPath, jurisdiction } = args;
-		await printWranglerBanner();
-
 		const config = readConfig(args.config, args);
 		const { bucket, key } = bucketAndKeyFromObjectPath(objectPath);
 		let fullBucketName = bucket;

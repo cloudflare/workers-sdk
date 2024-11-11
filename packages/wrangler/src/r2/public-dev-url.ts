@@ -36,7 +36,6 @@ defineCommand({
 		},
 	},
 	async handler(args, { config }) {
-		await printWranglerBanner();
 		const accountId = await requireAuth(config);
 
 		const { bucket, jurisdiction } = args;
@@ -80,7 +79,6 @@ defineCommand({
 		},
 	},
 	async handler(args, { config }) {
-		await printWranglerBanner();
 		const accountId = await requireAuth(config);
 
 		const { bucket, jurisdiction, force } = args;
@@ -138,7 +136,6 @@ defineCommand({
 		},
 	},
 	async handler(args, { config }) {
-		await printWranglerBanner();
 		const accountId = await requireAuth(config);
 
 		const { bucket, jurisdiction, force } = args;
