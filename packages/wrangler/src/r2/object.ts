@@ -6,7 +6,6 @@ import prettyBytes from "pretty-bytes";
 import { readConfig } from "../config";
 import { defineCommand, defineNamespace } from "../core";
 import { CommandLineArgsError, FatalError, UserError } from "../errors";
-import { printWranglerBanner } from "../index";
 import { logger } from "../logger";
 import { requireAuth } from "../user";
 import { MAX_UPLOAD_SIZE } from "./constants";
@@ -85,7 +84,6 @@ defineCommand({
 			file = key;
 		}
 		if (!pipe) {
-			await printWranglerBanner();
 			logger.log(`Downloading "${key}" from "${fullBucketName}".`);
 		}
 
@@ -211,8 +209,6 @@ defineCommand({
 		},
 	},
 	async handler(objectPutYargs, { config }) {
-		await printWranglerBanner();
-
 		const {
 			objectPath,
 			file,
@@ -374,8 +370,6 @@ defineCommand({
 	},
 	async handler(args) {
 		const { objectPath, jurisdiction } = args;
-		await printWranglerBanner();
-
 		const config = readConfig(args.config, args);
 		const { bucket, key } = bucketAndKeyFromObjectPath(objectPath);
 		let fullBucketName = bucket;

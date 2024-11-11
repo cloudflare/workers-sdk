@@ -1,6 +1,5 @@
 import { defineAlias, defineCommand, defineNamespace } from "../core";
 import { logger } from "../logger";
-import { printWranglerBanner } from "../update-check";
 import { requireApiToken, requireAuth } from "../user";
 import formatLabelledValues from "../utils/render-labelled-values";
 import {
@@ -48,7 +47,6 @@ defineCommand({
 		},
 	},
 	async handler(args, { config }) {
-		await printWranglerBanner();
 		// Check for deprecated `wrangler pages publish` command
 		if (args._[3] === "get") {
 			logger.warn(
@@ -123,7 +121,6 @@ defineCommand({
 		},
 	},
 	async handler(args, { config }) {
-		await printWranglerBanner();
 		const accountId = await requireAuth(config);
 		const apiCreds = requireApiToken();
 		const {
@@ -186,7 +183,6 @@ defineCommand({
 		},
 	},
 	async handler(args, { config }) {
-		await printWranglerBanner();
 		const accountId = await requireAuth(config);
 		const apiCreds = requireApiToken();
 		const { bucket, queue, rule, jurisdiction = "" } = args;
