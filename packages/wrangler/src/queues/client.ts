@@ -34,7 +34,7 @@ export interface QueueResponse {
 	queue_name: string;
 	created_on: string;
 	modified_on: string;
-	producers: ScriptReference[];
+	producers: Producer[];
 	producers_total_count: number;
 	consumers: Consumer[];
 	consumers_total_count: number;
@@ -46,6 +46,10 @@ export interface ScriptReference {
 	script?: string;
 	service?: string;
 	environment?: string;
+}
+
+export type Producer = ScriptReference & {
+	type: string
 }
 
 export type Consumer = ScriptReference & {

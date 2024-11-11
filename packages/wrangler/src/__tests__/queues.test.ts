@@ -29,6 +29,7 @@ describe("wrangler", () => {
 				  wrangler queues list           List Queues
 				  wrangler queues create <name>  Create a Queue
 				  wrangler queues delete <name>  Delete a Queue
+				  wrangler queues info <name>    Get Queue information
 				  wrangler queues consumer       Configure Queue consumers
 
 				GLOBAL FLAGS
@@ -1413,5 +1414,100 @@ describe("wrangler", () => {
 				});
 			});
 		});
+
+		describe('info', () => {
+			const mockQueue = {
+				queue_id: "1234567",
+				queue_name: expectedQueueName,
+				created_on: "2024-05-20T14:43:56.70498Z",
+				producers: [{namespace: "testnamespace", script: "test-producer1", type: "worker"}, {namespace: "testnamespace", script: "test-producer2", type: "worker"} ],
+				consumers: [{ dead_letter_queue: "testdlq",
+					settings: {batch_size: 10},
+					consumer_id: "111",
+					type: "worker",
+					script: "test-consumer"
+			}],
+				producers_total_count: 2,
+				consumers_total_count: 1,
+				modified_on: "2024-07-19T14:43:56.70498Z",
+			}
+			// COPIED, probably not needed
+			// function mockInfoRequest(queues: QueueResponse[]) {
+			// 	const requests = { count: 0 };
+			// 	msw.use(
+			// 		http.get(
+			// 			"*/accounts/:accountId/queues?*",
+			// 			async ({ request }) => {
+			// 				const url = new URL(request.url);
+
+			// 				requests.count += 1;
+			// 				const query = url.searchParams;
+			// 				expect(await request.text()).toEqual("");
+			// 				return HttpResponse.json({
+			// 					success: true,
+			// 					errors: [],
+			// 					messages: [],
+			// 					result: queues,
+			// 				});
+			// 			},
+			// 			{ once: true }
+			// 		)
+			// 	);
+			// 	return requests;
+			// }
+
+			it('should return the documentation for the info command when using the --help param', async () => {
+				await runWrangler("queues info --help")
+				expect(std.err).toMatchInlineSnapshot(`""`);
+					expect(std.out).toMatchInlineSnapshot(`
+						"wrangler queues info <name>
+
+						Get Queue information
+
+						POSITIONALS
+						  name  The name of the queue  [string] [required]
+
+						GLOBAL FLAGS
+						  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
+						  -c, --config                    Path to .toml configuration file  [string]
+						  -e, --env                       Environment to use for operations and .env files  [string]
+						  -h, --help                      Show help  [boolean]
+						  -v, --version                   Show version number  [boolean]"
+					`);
+			})
+			it('should return a table of queue info', async () => {
+				mockGetQueueByNameRequest(expectedQueueName, mockQueue);
+				await runWrangler("queues info testQueue")
+				expect(std.out).toMatchInlineSnapshot(`
+					"Queue Name: testQueue
+					Queue ID: 1234567
+					Created On: 2024-05-20T14:43:56.70498Z
+					Last Modified: 2024-07-19T14:43:56.70498Z
+					Number of Producers: 2
+					Producers worker:test-producer1worker:test-producer2
+					Number of Consumers: 1
+					Consumers: Consumer: worker:test-consumer"
+				`)
+			})
+			it('should return "http consumer" when the consumer type is not worker', async () => {
+				const mockHTTPPullQueue = { ...mockQueue, consumers: [{ type: "http_pull"}]}
+				mockGetQueueByNameRequest(expectedQueueName, mockHTTPPullQueue);
+				await runWrangler("queues info testQueue")
+				expect(std.out).toMatchInlineSnapshot(`
+					"Queue Name: testQueue
+					Queue ID: 1234567
+					Created On: 2024-05-20T14:43:56.70498Z
+					Last Modified: 2024-07-19T14:43:56.70498Z
+					Number of Producers: 2
+					Producers worker:test-producer1worker:test-producer2
+					Number of Consumers: 1
+					Consumers: HTTP Pull Consumer
+					curl \\"https://api.cloudflare.com/client/v4/accounts/12345/queues/1234567/messages/pull\\"
+						--header \\"Authorization: Bearer <api key>\\"
+						--header \\"Content-Type: application/json\\"
+						--data '{ \\"visibility_timeout\\": 10000, \\"batch_size\\": 2 }'"
+				`)
+			})
+		})
 	});
 });
