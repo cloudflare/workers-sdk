@@ -1,6 +1,6 @@
 import { defineNamespace } from "../core";
-import "./bucket";
 import "./object";
+import "./bucket";
 import "./sippy";
 import "./notification";
 import "./domain";
