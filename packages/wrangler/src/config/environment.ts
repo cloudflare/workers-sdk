@@ -149,6 +149,15 @@ interface EnvironmentInheritable {
 	workers_dev: boolean | undefined;
 
 	/**
+	 * Whether we use <version>-<name>.<subdomain>.workers.dev to
+	 * serve Preview URLs for your Worker.
+	 *
+	 * @default `true`
+	 * @inheritable
+	 */
+	workers_dev_previews: boolean | undefined;
+
+	/**
 	 * A list of routes that your Worker should be published to.
 	 * Only one of `routes` or `route` is required.
 	 *

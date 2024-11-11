@@ -355,6 +355,7 @@ export const defaultWranglerConfig: Config = {
 	preserve_file_names: undefined,
 	base_dir: undefined,
 	workers_dev: undefined,
+	workers_dev_previews: true,
 	route: undefined,
 	routes: undefined,
 	tsconfig: undefined,

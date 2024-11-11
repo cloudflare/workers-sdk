@@ -120,6 +120,7 @@ describe("normalizeAndValidateConfig()", () => {
 			wasm_modules: undefined,
 			data_blobs: undefined,
 			workers_dev: undefined,
+			workers_dev_previews: true,
 			zone_id: undefined,
 			no_bundle: undefined,
 			minify: undefined,
