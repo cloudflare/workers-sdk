@@ -14,7 +14,7 @@ describe("pages dev", () => {
 		await expect(
 			runWrangler("pages dev")
 		).rejects.toThrowErrorMatchingInlineSnapshot(
-			`[Error: Pages does not support \`wrangler.json\`]`
+			`[Error: Must specify a directory of static assets to serve, or a command to run, or a proxy port, or configure \`pages_build_output_dir\` in \`wrangler.toml\`.]`
 		);
 	});
 
@@ -22,7 +22,7 @@ describe("pages dev", () => {
 		await expect(
 			runWrangler("pages dev public -- yarn dev")
 		).rejects.toThrowErrorMatchingInlineSnapshot(
-			`[Error: Pages does not support \`wrangler.json\`]`
+			`[Error: Specify either a directory OR a proxy command, not both.]`
 		);
 	});
 
@@ -38,7 +38,11 @@ describe("pages dev", () => {
 		await expect(
 			runWrangler("pages dev public --experimental-json-config")
 		).rejects.toThrowErrorMatchingInlineSnapshot(
-			`[Error: Pages does not support \`wrangler.json\`]`
+			`
+			[Error: Cannot find module './miniflare-cli/assets'
+			Require stack:
+			- /Users/penalosa/dev/wrangler2/packages/wrangler/src/dev.ts]
+		`
 		);
 	});
 
@@ -46,7 +50,7 @@ describe("pages dev", () => {
 		await expect(
 			runWrangler("pages dev public --env=production")
 		).rejects.toThrowErrorMatchingInlineSnapshot(
-			`[Error: Pages does not support \`wrangler.json\`]`
+			`[Error: Pages does not support targeting an environment with the --env flag. Use the --branch flag to target your production or preview branch]`
 		);
 	});
 });

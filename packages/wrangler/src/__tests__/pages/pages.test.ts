@@ -201,19 +201,39 @@ describe("pages", () => {
 			await expect(
 				runWrangler("pages dev -- echo 'hi'")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: Pages does not support \`wrangler.json\`]`
+				`[Error: Could not automatically determine proxy port. Please specify the proxy port with --proxy.]`
 			);
 
-			expect(std.warn).toMatchInlineSnapshot(`""`);
+			expect(std.warn).toMatchInlineSnapshot(`
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mSpecifying a \`-- <command>\` or \`--proxy\` is deprecated and will be removed in a future version of Wrangler.[0m
+
+				  Build your application to a directory and run the \`wrangler pages dev <directory>\` instead.
+				  This results in a more faithful emulation of production behavior.
+
+				"
+			`);
 		});
 		it("should display for 'pages dev --script-path'", async () => {
 			await expect(
 				runWrangler("pages dev --script-path=_worker.js -- echo 'hi'")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: Pages does not support \`wrangler.json\`]`
+				`[Error: Could not automatically determine proxy port. Please specify the proxy port with --proxy.]`
 			);
 
-			expect(std.warn).toMatchInlineSnapshot(`""`);
+			expect(std.warn).toMatchInlineSnapshot(`
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m\`--script-path\` is deprecated and will be removed in a future version of Wrangler.[0m
+
+				  The Worker script should be named \`_worker.js\` and located in the build output directory of your
+				  project (specified with \`wrangler pages dev <directory>\`).
+
+
+				[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mSpecifying a \`-- <command>\` or \`--proxy\` is deprecated and will be removed in a future version of Wrangler.[0m
+
+				  Build your application to a directory and run the \`wrangler pages dev <directory>\` instead.
+				  This results in a more faithful emulation of production behavior.
+
+				"
+			`);
 		});
 	});
 
@@ -222,7 +242,7 @@ describe("pages", () => {
 			await expect(
 				runWrangler("pages dev")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: Pages does not support \`wrangler.json\`]`
+				`[Error: Must specify a directory of static assets to serve, or a command to run, or a proxy port, or configure \`pages_build_output_dir\` in \`wrangler.toml\`.]`
 			);
 
 			expect(std.out).toMatchInlineSnapshot(`""`);
