@@ -61,22 +61,24 @@ describe("wrangler workflows", () => {
 			await endEventLoop();
 
 			expect(std.out).toMatchInlineSnapshot(
-				`"wrangler workflows
+				`
+				"wrangler workflows
 
-🔁 Manage Workflows [open-beta]
+				🔁 Manage Workflows [open-beta]
 
-COMMANDS
-  wrangler workflows list                     List Workflows associated to account [open-beta]
-  wrangler workflows describe <name>          Describe Workflow resource [open-beta]
-  wrangler workflows trigger <name> [params]  Trigger a workflow, creating a new instance. Can optionally take a JSON string to pass a parameter into the workflow instance [open-beta]
-  wrangler workflows instances                Manage Workflow instances [open-beta]
+				COMMANDS
+				  wrangler workflows list                     List Workflows associated to account [open-beta]
+				  wrangler workflows describe <name>          Describe Workflow resource [open-beta]
+				  wrangler workflows trigger <name> [params]  Trigger a workflow, creating a new instance. Can optionally take a JSON string to pass a parameter into the workflow instance [open-beta]
+				  wrangler workflows instances                Manage Workflow instances [open-beta]
 
-GLOBAL FLAGS
-  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
-  -c, --config                    Path to .toml configuration file  [string]
-  -e, --env                       Environment to use for operations and .env files  [string]
-  -h, --help                      Show help  [boolean]
-  -v, --version                   Show version number  [boolean]"`
+				GLOBAL FLAGS
+				  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean] [default: true]
+				  -c, --config                    Path to .toml configuration file  [string]
+				  -e, --env                       Environment to use for operations and .env files  [string]
+				  -h, --help                      Show help  [boolean]
+				  -v, --version                   Show version number  [boolean]"
+			`
 			);
 		});
 	});
@@ -89,23 +91,25 @@ GLOBAL FLAGS
 			await endEventLoop();
 
 			expect(std.out).toMatchInlineSnapshot(
-				`"wrangler workflows instances
+				`
+				"wrangler workflows instances
 
-Manage Workflow instances [open-beta]
+				Manage Workflow instances [open-beta]
 
-COMMANDS
-  wrangler workflows instances list <name>            Instance related commands (list, describe, terminate, pause, resume) [open-beta]
-  wrangler workflows instances describe <name> <id>   Describe a workflow instance - see its logs, retries and errors [open-beta]
-  wrangler workflows instances terminate <name> <id>  Terminate a workflow instance [open-beta]
-  wrangler workflows instances pause <name> <id>      Pause a workflow instance [open-beta]
-  wrangler workflows instances resume <name> <id>     Resume a workflow instance [open-beta]
+				COMMANDS
+				  wrangler workflows instances list <name>            Instance related commands (list, describe, terminate, pause, resume) [open-beta]
+				  wrangler workflows instances describe <name> <id>   Describe a workflow instance - see its logs, retries and errors [open-beta]
+				  wrangler workflows instances terminate <name> <id>  Terminate a workflow instance [open-beta]
+				  wrangler workflows instances pause <name> <id>      Pause a workflow instance [open-beta]
+				  wrangler workflows instances resume <name> <id>     Resume a workflow instance [open-beta]
 
-GLOBAL FLAGS
-  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
-  -c, --config                    Path to .toml configuration file  [string]
-  -e, --env                       Environment to use for operations and .env files  [string]
-  -h, --help                      Show help  [boolean]
-  -v, --version                   Show version number  [boolean]"`
+				GLOBAL FLAGS
+				  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean] [default: true]
+				  -c, --config                    Path to .toml configuration file  [string]
+				  -e, --env                       Environment to use for operations and .env files  [string]
+				  -h, --help                      Show help  [boolean]
+				  -v, --version                   Show version number  [boolean]"
+			`
 			);
 		});
 	});

@@ -86,7 +86,7 @@ describe("cloudchamber create", () => {
 			Create a new deployment
 
 			GLOBAL FLAGS
-			  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
+			  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean] [default: true]
 			  -c, --config                    Path to .toml configuration file  [string]
 			  -e, --env                       Environment to use for operations and .env files  [string]
 			  -h, --help                      Show help  [boolean]

@@ -229,7 +229,7 @@ export async function unstable_dev(
 	const devServer = await run(
 		{
 			FILE_BASED_REGISTRY: fileBasedRegistry,
-			JSON_CONFIG_FILE: Boolean(devOptions.experimentalJsonConfig),
+			JSON_CONFIG_FILE: Boolean(devOptions.experimentalJsonConfig ?? true),
 		},
 		() => startDev(devOptions)
 	);

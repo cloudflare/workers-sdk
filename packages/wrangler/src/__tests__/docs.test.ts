@@ -57,7 +57,7 @@ describe("wrangler docs", () => {
 			  search  Enter search terms (e.g. the wrangler command) you want to know more about  [array] [default: []]
 
 			GLOBAL FLAGS
-			  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
+			  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean] [default: true]
 			  -c, --config                    Path to .toml configuration file  [string]
 			  -e, --env                       Environment to use for operations and .env files  [string]
 			  -h, --help                      Show help  [boolean]

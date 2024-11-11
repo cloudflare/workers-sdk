@@ -14,7 +14,7 @@ describe("pages dev", () => {
 		await expect(
 			runWrangler("pages dev")
 		).rejects.toThrowErrorMatchingInlineSnapshot(
-			`[Error: Must specify a directory of static assets to serve, or a command to run, or a proxy port, or configure \`pages_build_output_dir\` in \`wrangler.toml\`.]`
+			`[Error: Pages does not support \`wrangler.json\`]`
 		);
 	});
 
@@ -22,7 +22,7 @@ describe("pages dev", () => {
 		await expect(
 			runWrangler("pages dev public -- yarn dev")
 		).rejects.toThrowErrorMatchingInlineSnapshot(
-			`[Error: Specify either a directory OR a proxy command, not both.]`
+			`[Error: Pages does not support \`wrangler.json\`]`
 		);
 	});
 
@@ -46,7 +46,7 @@ describe("pages dev", () => {
 		await expect(
 			runWrangler("pages dev public --env=production")
 		).rejects.toThrowErrorMatchingInlineSnapshot(
-			`[Error: Pages does not support targeting an environment with the --env flag. Use the --branch flag to target your production or preview branch]`
+			`[Error: Pages does not support \`wrangler.json\`]`
 		);
 	});
 });

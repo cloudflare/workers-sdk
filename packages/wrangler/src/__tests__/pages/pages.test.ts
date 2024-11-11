@@ -31,8 +31,9 @@ describe("pages", () => {
 			  wrangler pages download                        Download settings from your project
 
 			GLOBAL FLAGS
-			  -h, --help     Show help  [boolean]
-			  -v, --version  Show version number  [boolean]"
+			  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean] [default: true]
+			  -h, --help                      Show help  [boolean]
+			  -v, --version                   Show version number  [boolean]"
 		`);
 	});
 
@@ -50,8 +51,9 @@ describe("pages", () => {
 			  command    The proxy command to run  [deprecated]  [string]
 
 			GLOBAL FLAGS
-			  -h, --help     Show help  [boolean]
-			  -v, --version  Show version number  [boolean]
+			  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean] [default: true]
+			  -h, --help                      Show help  [boolean]
+			  -v, --version                   Show version number  [boolean]
 
 			OPTIONS
 			      --compatibility-date                         Date to use for compatibility checks  [string]
@@ -97,8 +99,9 @@ describe("pages", () => {
 			  wrangler pages project delete [project-name]  Delete a Cloudflare Pages project
 
 			GLOBAL FLAGS
-			  -h, --help     Show help  [boolean]
-			  -v, --version  Show version number  [boolean]"
+			  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean] [default: true]
+			  -h, --help                      Show help  [boolean]
+			  -v, --version                   Show version number  [boolean]"
 		`);
 	});
 
@@ -117,8 +120,9 @@ describe("pages", () => {
 			  wrangler pages deployment tail [deployment]   Start a tailing session for a project's deployment and livestream logs from your Functions
 
 			GLOBAL FLAGS
-			  -h, --help     Show help  [boolean]
-			  -v, --version  Show version number  [boolean]"
+			  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean] [default: true]
+			  -h, --help                      Show help  [boolean]
+			  -v, --version                   Show version number  [boolean]"
 		`);
 	});
 
@@ -135,8 +139,9 @@ describe("pages", () => {
 			  directory  The directory of static files to upload  [string]
 
 			GLOBAL FLAGS
-			  -h, --help     Show help  [boolean]
-			  -v, --version  Show version number  [boolean]
+			  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean] [default: true]
+			  -h, --help                      Show help  [boolean]
+			  -v, --version                   Show version number  [boolean]
 
 			OPTIONS
 			      --project-name        The name of the project you want to deploy to  [string]
@@ -166,8 +171,9 @@ describe("pages", () => {
 			  wrangler pages secret list          List all secrets for a Pages project
 
 			GLOBAL FLAGS
-			  -h, --help     Show help  [boolean]
-			  -v, --version  Show version number  [boolean]"
+			  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean] [default: true]
+			  -h, --help                      Show help  [boolean]
+			  -v, --version                   Show version number  [boolean]"
 		`);
 	});
 
@@ -184,8 +190,9 @@ describe("pages", () => {
 			  wrangler pages download config [projectName]  Experimental: Download your Pages project config as a wrangler.toml file
 
 			GLOBAL FLAGS
-			  -h, --help     Show help  [boolean]
-			  -v, --version  Show version number  [boolean]"
+			  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean] [default: true]
+			  -h, --help                      Show help  [boolean]
+			  -v, --version                   Show version number  [boolean]"
 		`);
 	});
 
@@ -194,39 +201,19 @@ describe("pages", () => {
 			await expect(
 				runWrangler("pages dev -- echo 'hi'")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: Could not automatically determine proxy port. Please specify the proxy port with --proxy.]`
+				`[Error: Pages does not support \`wrangler.json\`]`
 			);
 
-			expect(std.warn).toMatchInlineSnapshot(`
-			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mSpecifying a \`-- <command>\` or \`--proxy\` is deprecated and will be removed in a future version of Wrangler.[0m
-
-			  Build your application to a directory and run the \`wrangler pages dev <directory>\` instead.
-			  This results in a more faithful emulation of production behavior.
-
-			"
-		`);
+			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
 		it("should display for 'pages dev --script-path'", async () => {
 			await expect(
 				runWrangler("pages dev --script-path=_worker.js -- echo 'hi'")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: Could not automatically determine proxy port. Please specify the proxy port with --proxy.]`
+				`[Error: Pages does not support \`wrangler.json\`]`
 			);
 
-			expect(std.warn).toMatchInlineSnapshot(`
-			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m\`--script-path\` is deprecated and will be removed in a future version of Wrangler.[0m
-
-			  The Worker script should be named \`_worker.js\` and located in the build output directory of your
-			  project (specified with \`wrangler pages dev <directory>\`).
-
-
-			[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mSpecifying a \`-- <command>\` or \`--proxy\` is deprecated and will be removed in a future version of Wrangler.[0m
-
-			  Build your application to a directory and run the \`wrangler pages dev <directory>\` instead.
-			  This results in a more faithful emulation of production behavior.
-
-			"
-		`);
+			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
 	});
 
@@ -235,7 +222,7 @@ describe("pages", () => {
 			await expect(
 				runWrangler("pages dev")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: Must specify a directory of static assets to serve, or a command to run, or a proxy port, or configure \`pages_build_output_dir\` in \`wrangler.toml\`.]`
+				`[Error: Pages does not support \`wrangler.json\`]`
 			);
 
 			expect(std.out).toMatchInlineSnapshot(`""`);

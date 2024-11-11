@@ -364,7 +364,7 @@ const command = defineCommand({
 		const devInstance = await run(
 			{
 				FILE_BASED_REGISTRY: args.experimentalRegistry,
-				JSON_CONFIG_FILE: Boolean(args.experimentalJsonConfig),
+				JSON_CONFIG_FILE: Boolean(args.experimentalJsonConfig ?? true),
 			},
 			() => startDev(args)
 		);

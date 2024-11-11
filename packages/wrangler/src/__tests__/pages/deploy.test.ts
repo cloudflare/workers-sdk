@@ -60,8 +60,9 @@ describe("pages deploy", () => {
 			  directory  The directory of static files to upload  [string]
 
 			GLOBAL FLAGS
-			  -h, --help     Show help  [boolean]
-			  -v, --version  Show version number  [boolean]
+			  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean] [default: true]
+			  -h, --help                      Show help  [boolean]
+			  -v, --version                   Show version number  [boolean]
 
 			OPTIONS
 			      --project-name        The name of the project you want to deploy to  [string]
@@ -103,7 +104,7 @@ describe("pages deploy", () => {
 		await expect(
 			runWrangler("pages deploy public --experimental-json-config")
 		).rejects.toThrowErrorMatchingInlineSnapshot(
-			`[Error: Pages does not support \`wrangler.json\`]`
+			`[Error: Must specify a project name.]`
 		);
 	});
 

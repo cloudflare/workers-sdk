@@ -102,18 +102,6 @@ export function readConfig(
 			EXIT_CODE_INVALID_PAGES_CONFIG
 		);
 	}
-	if (
-		isPagesConfigFile &&
-		(configPath?.endsWith("json") ||
-			configPath?.endsWith("jsonc") ||
-			isJsonConfigEnabled)
-	) {
-		throw new UserError(
-			`Pages doesn't currently support JSON formatted config \`${
-				configPath ?? "wrangler.json"
-			}\`. Please use wrangler.toml instead.`
-		);
-	}
 
 	// Process the top-level configuration. This is common for both
 	// Workers and Pages

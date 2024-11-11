@@ -32,7 +32,7 @@ describe("wrangler", () => {
 				  wrangler queues consumer       Configure Queue consumers
 
 				GLOBAL FLAGS
-				  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
+				  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean] [default: true]
 				  -c, --config                    Path to .toml configuration file  [string]
 				  -e, --env                       Environment to use for operations and .env files  [string]
 				  -h, --help                      Show help  [boolean]
@@ -106,7 +106,7 @@ describe("wrangler", () => {
 					List Queues
 
 					GLOBAL FLAGS
-					  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
+					  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean] [default: true]
 					  -c, --config                    Path to .toml configuration file  [string]
 					  -e, --env                       Environment to use for operations and .env files  [string]
 					  -h, --help                      Show help  [boolean]
@@ -243,7 +243,7 @@ describe("wrangler", () => {
 					  name  The name of the queue  [string] [required]
 
 					GLOBAL FLAGS
-					  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
+					  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean] [default: true]
 					  -c, --config                    Path to .toml configuration file  [string]
 					  -e, --env                       Environment to use for operations and .env files  [string]
 					  -h, --help                      Show help  [boolean]
@@ -386,7 +386,7 @@ describe("wrangler", () => {
 					  name  The name of the queue  [string] [required]
 
 					GLOBAL FLAGS
-					  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
+					  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean] [default: true]
 					  -c, --config                    Path to .toml configuration file  [string]
 					  -e, --env                       Environment to use for operations and .env files  [string]
 					  -h, --help                      Show help  [boolean]
@@ -455,7 +455,7 @@ describe("wrangler", () => {
 					  wrangler queues consumer worker                             Configure Queue Worker Consumers
 
 					GLOBAL FLAGS
-					  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
+					  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean] [default: true]
 					  -c, --config                    Path to .toml configuration file  [string]
 					  -e, --env                       Environment to use for operations and .env files  [string]
 					  -h, --help                      Show help  [boolean]
@@ -503,7 +503,7 @@ describe("wrangler", () => {
 						  script-name  Name of the consumer script  [string] [required]
 
 						GLOBAL FLAGS
-						  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
+						  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean] [default: true]
 						  -c, --config                    Path to .toml configuration file  [string]
 						  -e, --env                       Environment to use for operations and .env files  [string]
 						  -h, --help                      Show help  [boolean]
@@ -825,7 +825,7 @@ describe("wrangler", () => {
 						  script-name  Name of the consumer script  [string] [required]
 
 						GLOBAL FLAGS
-						  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
+						  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean] [default: true]
 						  -c, --config                    Path to .toml configuration file  [string]
 						  -e, --env                       Environment to use for operations and .env files  [string]
 						  -h, --help                      Show help  [boolean]
@@ -1213,7 +1213,7 @@ describe("wrangler", () => {
 					  wrangler queues consumer http remove <queue-name>  Remove a Queue HTTP Pull Consumer
 
 					GLOBAL FLAGS
-					  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
+					  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean] [default: true]
 					  -c, --config                    Path to .toml configuration file  [string]
 					  -e, --env                       Environment to use for operations and .env files  [string]
 					  -h, --help                      Show help  [boolean]
@@ -1260,7 +1260,7 @@ describe("wrangler", () => {
 						  queue-name  Name of the queue for the consumer  [string] [required]
 
 						GLOBAL FLAGS
-						  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
+						  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean] [default: true]
 						  -c, --config                    Path to .toml configuration file  [string]
 						  -e, --env                       Environment to use for operations and .env files  [string]
 						  -h, --help                      Show help  [boolean]
@@ -1391,7 +1391,7 @@ describe("wrangler", () => {
 						  queue-name  Name of the queue for the consumer  [string] [required]
 
 						GLOBAL FLAGS
-						  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
+						  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean] [default: true]
 						  -c, --config                    Path to .toml configuration file  [string]
 						  -e, --env                       Environment to use for operations and .env files  [string]
 						  -h, --help                      Show help  [boolean]

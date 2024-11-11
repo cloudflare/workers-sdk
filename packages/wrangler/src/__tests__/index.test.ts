@@ -67,7 +67,7 @@ describe("wrangler", () => {
 				  wrangler whoami                 🕵️  Retrieve your user information
 
 				GLOBAL FLAGS
-				  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
+				  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean] [default: true]
 				  -c, --config                    Path to .toml configuration file  [string]
 				  -e, --env                       Environment to use for operations and .env files  [string]
 				  -h, --help                      Show help  [boolean]
@@ -124,7 +124,7 @@ describe("wrangler", () => {
 				  wrangler whoami                 🕵️  Retrieve your user information
 
 				GLOBAL FLAGS
-				  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
+				  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean] [default: true]
 				  -c, --config                    Path to .toml configuration file  [string]
 				  -e, --env                       Environment to use for operations and .env files  [string]
 				  -h, --help                      Show help  [boolean]
@@ -191,7 +191,7 @@ describe("wrangler", () => {
 				  wrangler secret bulk [json]   Bulk upload secrets for a Worker
 
 				GLOBAL FLAGS
-				  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
+				  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean] [default: true]
 				  -c, --config                    Path to .toml configuration file  [string]
 				  -e, --env                       Environment to use for operations and .env files  [string]
 				  -h, --help                      Show help  [boolean]
@@ -213,7 +213,7 @@ describe("wrangler", () => {
 				  wrangler kv namespace delete              Delete a given namespace.
 
 				GLOBAL FLAGS
-				  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
+				  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean] [default: true]
 				  -c, --config                    Path to .toml configuration file  [string]
 				  -e, --env                       Environment to use for operations and .env files  [string]
 				  -h, --help                      Show help  [boolean]
@@ -236,7 +236,7 @@ describe("wrangler", () => {
 				  wrangler kv key delete <key>       Remove a single key value pair from the given namespace
 
 				GLOBAL FLAGS
-				  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
+				  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean] [default: true]
 				  -c, --config                    Path to .toml configuration file  [string]
 				  -e, --env                       Environment to use for operations and .env files  [string]
 				  -h, --help                      Show help  [boolean]
@@ -257,7 +257,7 @@ describe("wrangler", () => {
 				  wrangler kv bulk delete <filename>  Delete multiple key-value pairs from a namespace
 
 				GLOBAL FLAGS
-				  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
+				  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean] [default: true]
 				  -c, --config                    Path to .toml configuration file  [string]
 				  -e, --env                       Environment to use for operations and .env files  [string]
 				  -h, --help                      Show help  [boolean]
@@ -278,7 +278,7 @@ describe("wrangler", () => {
 				  wrangler r2 bucket  Manage R2 buckets
 
 				GLOBAL FLAGS
-				  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
+				  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean] [default: true]
 				  -c, --config                    Path to .toml configuration file  [string]
 				  -e, --env                       Environment to use for operations and .env files  [string]
 				  -h, --help                      Show help  [boolean]

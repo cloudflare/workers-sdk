@@ -19,41 +19,41 @@ describe("vectorize help", () => {
 		await endEventLoop();
 
 		expect(std.out).toMatchInlineSnapshot(`
-				"wrangler vectorize
+			"wrangler vectorize
 
-				🧮 Manage Vectorize indexes [open beta]
+			🧮 Manage Vectorize indexes [open beta]
 
-				COMMANDS
-				  wrangler vectorize create <name>                 Create a Vectorize index
-				  wrangler vectorize delete <name>                 Delete a Vectorize index
-				  wrangler vectorize get <name>                    Get a Vectorize index by name
-				  wrangler vectorize list                          List your Vectorize indexes
-				  wrangler vectorize query <name>                  Query a Vectorize index
-				  wrangler vectorize insert <name>                 Insert vectors into a Vectorize index
-				  wrangler vectorize upsert <name>                 Upsert vectors into a Vectorize index
-				  wrangler vectorize get-vectors <name>            Get vectors from a Vectorize index
-				  wrangler vectorize delete-vectors <name>         Delete vectors in a Vectorize index
-				  wrangler vectorize info <name>                   Get additional details about the index
-				  wrangler vectorize create-metadata-index <name>  Enable metadata filtering on the specified property
-				  wrangler vectorize list-metadata-index <name>    List metadata properties on which metadata filtering is enabled
-				  wrangler vectorize delete-metadata-index <name>  Delete metadata indexes
+			COMMANDS
+			  wrangler vectorize create <name>                 Create a Vectorize index
+			  wrangler vectorize delete <name>                 Delete a Vectorize index
+			  wrangler vectorize get <name>                    Get a Vectorize index by name
+			  wrangler vectorize list                          List your Vectorize indexes
+			  wrangler vectorize query <name>                  Query a Vectorize index
+			  wrangler vectorize insert <name>                 Insert vectors into a Vectorize index
+			  wrangler vectorize upsert <name>                 Upsert vectors into a Vectorize index
+			  wrangler vectorize get-vectors <name>            Get vectors from a Vectorize index
+			  wrangler vectorize delete-vectors <name>         Delete vectors in a Vectorize index
+			  wrangler vectorize info <name>                   Get additional details about the index
+			  wrangler vectorize create-metadata-index <name>  Enable metadata filtering on the specified property
+			  wrangler vectorize list-metadata-index <name>    List metadata properties on which metadata filtering is enabled
+			  wrangler vectorize delete-metadata-index <name>  Delete metadata indexes
 
-				GLOBAL FLAGS
-				  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
-				  -c, --config                    Path to .toml configuration file  [string]
-				  -e, --env                       Environment to use for operations and .env files  [string]
-				  -h, --help                      Show help  [boolean]
-				  -v, --version                   Show version number  [boolean]
+			GLOBAL FLAGS
+			  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean] [default: true]
+			  -c, --config                    Path to .toml configuration file  [string]
+			  -e, --env                       Environment to use for operations and .env files  [string]
+			  -h, --help                      Show help  [boolean]
+			  -v, --version                   Show version number  [boolean]
 
-				--------------------
-				📣 Vectorize is now Generally Available.
-				📣 Please use the '--deprecated-v1' flag to create, get, list, delete and insert vectors into legacy Vectorize indexes
-				📣 Creation of legacy Vectorize indexes will be blocked by December 2024. Other operations will continue to function
-				📣 See the Vectorize docs to get started: https://developers.cloudflare.com/vectorize
-				📣 Please report any bugs to https://github.com/cloudflare/workers-sdk/issues/new/choose
-				📣 To give feedback, visit https://discord.cloudflare.com/
-				--------------------"
-			`);
+			--------------------
+			📣 Vectorize is now Generally Available.
+			📣 Please use the '--deprecated-v1' flag to create, get, list, delete and insert vectors into legacy Vectorize indexes
+			📣 Creation of legacy Vectorize indexes will be blocked by December 2024. Other operations will continue to function
+			📣 See the Vectorize docs to get started: https://developers.cloudflare.com/vectorize
+			📣 Please report any bugs to https://github.com/cloudflare/workers-sdk/issues/new/choose
+			📣 To give feedback, visit https://discord.cloudflare.com/
+			--------------------"
+		`);
 	});
 
 	it("should show help when an invalid argument is passed", async () => {
@@ -67,42 +67,42 @@ describe("vectorize help", () => {
 			"
 		`);
 		expect(std.out).toMatchInlineSnapshot(`
-				"
-				wrangler vectorize
+			"
+			wrangler vectorize
 
-				🧮 Manage Vectorize indexes [open beta]
+			🧮 Manage Vectorize indexes [open beta]
 
-				COMMANDS
-				  wrangler vectorize create <name>                 Create a Vectorize index
-				  wrangler vectorize delete <name>                 Delete a Vectorize index
-				  wrangler vectorize get <name>                    Get a Vectorize index by name
-				  wrangler vectorize list                          List your Vectorize indexes
-				  wrangler vectorize query <name>                  Query a Vectorize index
-				  wrangler vectorize insert <name>                 Insert vectors into a Vectorize index
-				  wrangler vectorize upsert <name>                 Upsert vectors into a Vectorize index
-				  wrangler vectorize get-vectors <name>            Get vectors from a Vectorize index
-				  wrangler vectorize delete-vectors <name>         Delete vectors in a Vectorize index
-				  wrangler vectorize info <name>                   Get additional details about the index
-				  wrangler vectorize create-metadata-index <name>  Enable metadata filtering on the specified property
-				  wrangler vectorize list-metadata-index <name>    List metadata properties on which metadata filtering is enabled
-				  wrangler vectorize delete-metadata-index <name>  Delete metadata indexes
+			COMMANDS
+			  wrangler vectorize create <name>                 Create a Vectorize index
+			  wrangler vectorize delete <name>                 Delete a Vectorize index
+			  wrangler vectorize get <name>                    Get a Vectorize index by name
+			  wrangler vectorize list                          List your Vectorize indexes
+			  wrangler vectorize query <name>                  Query a Vectorize index
+			  wrangler vectorize insert <name>                 Insert vectors into a Vectorize index
+			  wrangler vectorize upsert <name>                 Upsert vectors into a Vectorize index
+			  wrangler vectorize get-vectors <name>            Get vectors from a Vectorize index
+			  wrangler vectorize delete-vectors <name>         Delete vectors in a Vectorize index
+			  wrangler vectorize info <name>                   Get additional details about the index
+			  wrangler vectorize create-metadata-index <name>  Enable metadata filtering on the specified property
+			  wrangler vectorize list-metadata-index <name>    List metadata properties on which metadata filtering is enabled
+			  wrangler vectorize delete-metadata-index <name>  Delete metadata indexes
 
-				GLOBAL FLAGS
-				  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
-				  -c, --config                    Path to .toml configuration file  [string]
-				  -e, --env                       Environment to use for operations and .env files  [string]
-				  -h, --help                      Show help  [boolean]
-				  -v, --version                   Show version number  [boolean]
+			GLOBAL FLAGS
+			  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean] [default: true]
+			  -c, --config                    Path to .toml configuration file  [string]
+			  -e, --env                       Environment to use for operations and .env files  [string]
+			  -h, --help                      Show help  [boolean]
+			  -v, --version                   Show version number  [boolean]
 
-				--------------------
-				📣 Vectorize is now Generally Available.
-				📣 Please use the '--deprecated-v1' flag to create, get, list, delete and insert vectors into legacy Vectorize indexes
-				📣 Creation of legacy Vectorize indexes will be blocked by December 2024. Other operations will continue to function
-				📣 See the Vectorize docs to get started: https://developers.cloudflare.com/vectorize
-				📣 Please report any bugs to https://github.com/cloudflare/workers-sdk/issues/new/choose
-				📣 To give feedback, visit https://discord.cloudflare.com/
-				--------------------"
-			`);
+			--------------------
+			📣 Vectorize is now Generally Available.
+			📣 Please use the '--deprecated-v1' flag to create, get, list, delete and insert vectors into legacy Vectorize indexes
+			📣 Creation of legacy Vectorize indexes will be blocked by December 2024. Other operations will continue to function
+			📣 See the Vectorize docs to get started: https://developers.cloudflare.com/vectorize
+			📣 Please report any bugs to https://github.com/cloudflare/workers-sdk/issues/new/choose
+			📣 To give feedback, visit https://discord.cloudflare.com/
+			--------------------"
+		`);
 	});
 
 	it("should show help when the get command is passed without an index", async () => {
@@ -116,34 +116,34 @@ describe("vectorize help", () => {
 			"
 		`);
 		expect(std.out).toMatchInlineSnapshot(`
-				"
-				wrangler vectorize get <name>
+			"
+			wrangler vectorize get <name>
 
-				Get a Vectorize index by name
+			Get a Vectorize index by name
 
-				POSITIONALS
-				  name  The name of the Vectorize index.  [string] [required]
+			POSITIONALS
+			  name  The name of the Vectorize index.  [string] [required]
 
-				GLOBAL FLAGS
-				  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
-				  -c, --config                    Path to .toml configuration file  [string]
-				  -e, --env                       Environment to use for operations and .env files  [string]
-				  -h, --help                      Show help  [boolean]
-				  -v, --version                   Show version number  [boolean]
+			GLOBAL FLAGS
+			  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean] [default: true]
+			  -c, --config                    Path to .toml configuration file  [string]
+			  -e, --env                       Environment to use for operations and .env files  [string]
+			  -h, --help                      Show help  [boolean]
+			  -v, --version                   Show version number  [boolean]
 
-				OPTIONS
-				      --json           return output as clean JSON  [boolean] [default: false]
-				      --deprecated-v1  Fetch a deprecated V1 Vectorize index. This must be enabled if the index was created with V1 option.  [boolean] [default: false]
+			OPTIONS
+			      --json           return output as clean JSON  [boolean] [default: false]
+			      --deprecated-v1  Fetch a deprecated V1 Vectorize index. This must be enabled if the index was created with V1 option.  [boolean] [default: false]
 
-				--------------------
-				📣 Vectorize is now Generally Available.
-				📣 Please use the '--deprecated-v1' flag to create, get, list, delete and insert vectors into legacy Vectorize indexes
-				📣 Creation of legacy Vectorize indexes will be blocked by December 2024. Other operations will continue to function
-				📣 See the Vectorize docs to get started: https://developers.cloudflare.com/vectorize
-				📣 Please report any bugs to https://github.com/cloudflare/workers-sdk/issues/new/choose
-				📣 To give feedback, visit https://discord.cloudflare.com/
-				--------------------"
-			`);
+			--------------------
+			📣 Vectorize is now Generally Available.
+			📣 Please use the '--deprecated-v1' flag to create, get, list, delete and insert vectors into legacy Vectorize indexes
+			📣 Creation of legacy Vectorize indexes will be blocked by December 2024. Other operations will continue to function
+			📣 See the Vectorize docs to get started: https://developers.cloudflare.com/vectorize
+			📣 Please report any bugs to https://github.com/cloudflare/workers-sdk/issues/new/choose
+			📣 To give feedback, visit https://discord.cloudflare.com/
+			--------------------"
+		`);
 	});
 
 	it("should show help when the query command is passed without an argument", async () => {
@@ -166,7 +166,7 @@ describe("vectorize help", () => {
 			  name  The name of the Vectorize index  [string] [required]
 
 			GLOBAL FLAGS
-			  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
+			  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean] [default: true]
 			  -c, --config                    Path to .toml configuration file  [string]
 			  -e, --env                       Environment to use for operations and .env files  [string]
 			  -h, --help                      Show help  [boolean]
