@@ -9,5 +9,3 @@ const text = await resp.text();
 console.log("Invoked worker: ", text);
 
 await worker.stop();
-
-process.exit(0);
