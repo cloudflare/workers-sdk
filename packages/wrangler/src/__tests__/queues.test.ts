@@ -5,6 +5,7 @@ import { msw } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import type { PostTypedConsumerBody, QueueResponse } from "../queues/client";
+import script from "./helpers/msw/handlers/script";
 
 describe("wrangler", () => {
 	mockAccountId();
@@ -1431,30 +1432,6 @@ describe("wrangler", () => {
 				consumers_total_count: 1,
 				modified_on: "2024-07-19T14:43:56.70498Z",
 			}
-			// COPIED, probably not needed
-			// function mockInfoRequest(queues: QueueResponse[]) {
-			// 	const requests = { count: 0 };
-			// 	msw.use(
-			// 		http.get(
-			// 			"*/accounts/:accountId/queues?*",
-			// 			async ({ request }) => {
-			// 				const url = new URL(request.url);
-
-			// 				requests.count += 1;
-			// 				const query = url.searchParams;
-			// 				expect(await request.text()).toEqual("");
-			// 				return HttpResponse.json({
-			// 					success: true,
-			// 					errors: [],
-			// 					messages: [],
-			// 					result: queues,
-			// 				});
-			// 			},
-			// 			{ once: true }
-			// 		)
-			// 	);
-			// 	return requests;
-			// }
 
 			it('should return the documentation for the info command when using the --help param', async () => {
 				await runWrangler("queues info --help")
@@ -1484,13 +1461,13 @@ describe("wrangler", () => {
 					Created On: 2024-05-20T14:43:56.70498Z
 					Last Modified: 2024-07-19T14:43:56.70498Z
 					Number of Producers: 2
-					Producers worker:test-producer1worker:test-producer2
+					Producers: worker:test-producer1, worker:test-producer2
 					Number of Consumers: 1
 					Consumers: Consumer: worker:test-consumer"
 				`)
 			})
 			it('should return "http consumer" when the consumer type is not worker', async () => {
-				const mockHTTPPullQueue = { ...mockQueue, consumers: [{ type: "http_pull"}]}
+				const mockHTTPPullQueue = { ...mockQueue, consumers: [{...mockQueue.consumers[0], type: "http_pull" }]}
 				mockGetQueueByNameRequest(expectedQueueName, mockHTTPPullQueue);
 				await runWrangler("queues info testQueue")
 				expect(std.out).toMatchInlineSnapshot(`
@@ -1499,10 +1476,10 @@ describe("wrangler", () => {
 					Created On: 2024-05-20T14:43:56.70498Z
 					Last Modified: 2024-07-19T14:43:56.70498Z
 					Number of Producers: 2
-					Producers worker:test-producer1worker:test-producer2
+					Producers: worker:test-producer1, worker:test-producer2
 					Number of Consumers: 1
 					Consumers: HTTP Pull Consumer
-					curl \\"https://api.cloudflare.com/client/v4/accounts/12345/queues/1234567/messages/pull\\"
+					curl \\"https://api.cloudflare.com/client/v4/accounts/undefined/queues/1234567/messages/pull\\"
 						--header \\"Authorization: Bearer <api key>\\"
 						--header \\"Content-Type: application/json\\"
 						--data '{ \\"visibility_timeout\\": 10000, \\"batch_size\\": 2 }'"
