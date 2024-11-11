@@ -33,8 +33,6 @@ export function cloudflare<T extends Record<string, WorkerOptions>>(
 			return {
 				resolve: {
 					alias: getNodeCompatAliases(),
-					// We want to use `workerd` package exports if available (e.g. for postgres).
-					conditions: ['workerd'],
 				},
 				appType: 'custom',
 				builder: {

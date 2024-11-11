@@ -1,0 +1,27 @@
+diff --git a/dist/node/chunks/dep-Ddvoc4zx.js b/dist/node/chunks/dep-Ddvoc4zx.js
+index d498dd784abc7dfb318bb790a5e25ef4db8bfc6c..aeb95fcf3d34f9a49936c1d6570c6df282f0d4f9 100644
+--- a/dist/node/chunks/dep-Ddvoc4zx.js
++++ b/dist/node/chunks/dep-Ddvoc4zx.js
+@@ -18906,7 +18906,21 @@ async function prepareEsbuildOptimizerRun(environment, depsInfo, processingCache
+       process.env.NODE_ENV || environment.config.mode
+     )
+   };
+-  const platform = environment.config.consumer === "client" ? "browser" : "node";
++  //////////////////////////////////////////////////////////////////////////////////
++  // THIS PATCH IS A TEMPORARY ONE, THIS EXACT FIX HAS BEEN ADDED UPSTREAM ALREADY:
++  //  https://github.com/vitejs/vite/pull/18611
++  //
++  // AND IT SHOULD BE AVAILABE FROM THE v6.0.0-beta.10 RELEASE
++  //////////////////////////////////////////////////////////////////////////////////
++  const platform =
++    optimizeDeps2.esbuildOptions?.platform ??
++    // We generally don't want to use platform 'neutral', as esbuild has custom handling
++    // when the platform is 'node' or 'browser' that can't be emulated by using mainFields
++    // and conditions
++    (environment.config.consumer === 'client' ||
++    environment.config.ssr.target === 'webworker'
++      ? 'browser'
++      : 'node')
+   const external = [...optimizeDeps2?.exclude ?? []];
+   const plugins = [...pluginsFromConfig];
+   if (external.length) {
