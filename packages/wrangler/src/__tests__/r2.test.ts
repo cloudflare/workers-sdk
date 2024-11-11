@@ -81,8 +81,7 @@ describe("r2", () => {
 			await runWrangler("r2 bucket");
 			await endEventLoop();
 			expect(std.out).toMatchInlineSnapshot(`
-				"
-				wrangler r2 bucket
+				"wrangler r2 bucket
 
 				Manage R2 buckets
 
@@ -1826,8 +1825,7 @@ binding = \\"testBucket\\""
 			await runWrangler("r2 object");
 			await endEventLoop();
 			expect(std.out).toMatchInlineSnapshot(`
-				"
-				wrangler r2 object
+				"wrangler r2 object
 
 				Manage R2 objects
 

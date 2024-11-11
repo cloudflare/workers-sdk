@@ -9,11 +9,6 @@ import { CommandLineArgsError, FatalError, UserError } from "../errors";
 import { logger } from "../logger";
 import { requireAuth } from "../user";
 import { MAX_UPLOAD_SIZE } from "./constants";
-import "./object";
-import "./sippy";
-import "./notification";
-import "./domain";
-import "./public-dev-url";
 import {
 	bucketAndKeyFromObjectPath,
 	createFileReadableStream,
