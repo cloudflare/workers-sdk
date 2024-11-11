@@ -49,6 +49,7 @@ import "./dev";
 import "./kv";
 import "./workflows";
 import "./user/commands";
+import "./type-generation";
 import { demandSingleValue } from "./core";
 import { logBuildFailure, logger, LOGGER_LEVELS } from "./logger";
 import { mTlsCertificateCommands } from "./mtls-certificate/cli";
@@ -68,7 +69,6 @@ import {
 } from "./sentry";
 import { tailHandler, tailOptions } from "./tail";
 import registerTriggersSubcommands from "./triggers";
-import { typesHandler, typesOptions } from "./type-generation";
 import { printWranglerBanner, updateCheck } from "./update-check";
 import { getAuthFromEnv } from "./user";
 import { whoami } from "./user/whoami";
@@ -481,12 +481,7 @@ export function createCLIParser(argv: string[]) {
 	);
 
 	// types
-	wrangler.command(
-		"types [path]",
-		"📝 Generate types from bindings and module rules in configuration\n",
-		typesOptions,
-		typesHandler
-	);
+	register.registerNamespace("types");
 
 	/******************** CMD GROUP ***********************/
 	// kv

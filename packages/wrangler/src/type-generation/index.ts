@@ -2,150 +2,141 @@ import * as fs from "node:fs";
 import { basename, dirname, extname, join, relative, resolve } from "node:path";
 import { findUpSync } from "find-up";
 import { getNodeCompat } from "miniflare";
-import { findWranglerToml, readConfig } from "../config";
+import { findWranglerToml } from "../config";
+import { defineCommand } from "../core";
 import { getEntry } from "../deployment-bundle/entry";
 import { getVarsForDev } from "../dev/dev-vars";
 import { CommandLineArgsError, UserError } from "../errors";
 import { logger } from "../logger";
 import { parseJSONC } from "../parse";
-import { printWranglerBanner } from "../update-check";
 import { generateRuntimeTypes } from "./runtime";
 import { logRuntimeTypesMessage } from "./runtime/log-runtime-types-message";
 import type { Config } from "../config";
 import type { CfScriptFormat } from "../deployment-bundle/worker";
-import type {
-	CommonYargsArgv,
-	StrictYargsOptionsToInterface,
-} from "../yargs-types";
 
-export function typesOptions(yargs: CommonYargsArgv) {
-	return yargs
-		.positional("path", {
-			describe: "The path to the declaration file to generate",
+defineCommand({
+	command: "wrangler types",
+	metadata: {
+		description:
+			"📝 Generate types from bindings and module rules in configuration\n",
+		owner: "Workers: Authoring and Testing",
+		status: "stable",
+	},
+	args: {
+		path: {
 			type: "string",
+			describe: "The path to the declaration file to generate",
 			default: "worker-configuration.d.ts",
 			demandOption: false,
-		})
-		.option("env-interface", {
+		},
+		"env-interface": {
 			type: "string",
 			default: "Env",
 			describe: "The name of the generated environment interface",
 			requiresArg: true,
-		})
-		.option("experimental-include-runtime", {
+		},
+		"experimental-include-runtime": {
 			alias: "x-include-runtime",
 			type: "string",
 			describe: "The path of the generated runtime types file",
 			demandOption: false,
-		});
-}
-
-export async function typesHandler(
-	args: StrictYargsOptionsToInterface<typeof typesOptions>
-) {
-	const { envInterface, path: outputPath } = args;
-
-	const validInterfaceRegex = /^[a-zA-Z][a-zA-Z0-9_]*$/;
-
-	if (!validInterfaceRegex.test(envInterface)) {
-		throw new CommandLineArgsError(
-			`The provided env-interface value ("${envInterface}") does not satisfy the validation regex: ${validInterfaceRegex}`
-		);
-	}
-
-	if (!outputPath.endsWith(".d.ts")) {
-		throw new CommandLineArgsError(
-			`The provided path value ("${outputPath}") does not point to a declaration file (please use the 'd.ts' extension)`
-		);
-	}
-
-	await printWranglerBanner();
-
-	const configPath =
-		args.config ?? findWranglerToml(process.cwd(), args.experimentalJsonConfig);
-	if (
-		!configPath ||
-		!fs.existsSync(configPath) ||
-		fs.statSync(configPath).isDirectory()
-	) {
-		logger.warn(
-			`No config file detected${
-				args.config ? ` (at ${args.config})` : ""
-			}, aborting`
-		);
-		return;
-	}
-
-	const config = readConfig(configPath, args);
-
-	// args.xRuntime will be a string if the user passes "--x-include-runtime" or "--x-include-runtime=..."
-	if (typeof args.experimentalIncludeRuntime === "string") {
-		logger.log(`Generating runtime types...`);
-
-		const { outFile } = await generateRuntimeTypes({
-			config,
-			outFile: args.experimentalIncludeRuntime || undefined,
-		});
-
-		const tsconfigPath =
-			config.tsconfig ?? join(dirname(configPath), "tsconfig.json");
-		const tsconfigTypes = readTsconfigTypes(tsconfigPath);
-		const { mode } = getNodeCompat(
-			config.compatibility_date,
-			config.compatibility_flags,
-			{
-				nodeCompat: config.node_compat,
-			}
-		);
-
-		logRuntimeTypesMessage(outFile, tsconfigTypes, mode !== null);
-	}
-
-	const secrets = getVarsForDev(
-		{ configPath, vars: {} },
-		args.env,
-		true
-	) as Record<string, string>;
-
-	const configBindingsWithSecrets: Partial<Config> & {
-		secrets: Record<string, string>;
-	} = {
-		kv_namespaces: config.kv_namespaces ?? [],
-		vars: { ...config.vars },
-		wasm_modules: config.wasm_modules,
-		text_blobs: {
-			...config.text_blobs,
 		},
-		data_blobs: config.data_blobs,
-		durable_objects: config.durable_objects,
-		r2_buckets: config.r2_buckets,
-		d1_databases: config.d1_databases,
-		services: config.services,
-		analytics_engine_datasets: config.analytics_engine_datasets,
-		dispatch_namespaces: config.dispatch_namespaces,
-		logfwdr: config.logfwdr,
-		unsafe: config.unsafe,
-		rules: config.rules,
-		queues: config.queues,
-		send_email: config.send_email,
-		vectorize: config.vectorize,
-		hyperdrive: config.hyperdrive,
-		mtls_certificates: config.mtls_certificates,
-		browser: config.browser,
-		ai: config.ai,
-		version_metadata: config.version_metadata,
-		secrets,
-		assets: config.assets,
-		workflows: config.workflows,
-	};
+	},
+	positionalArgs: ["path"],
+	async handler(args, { config }) {
+		const { envInterface, path: outputPath } = args;
 
-	await generateTypes(
-		configBindingsWithSecrets,
-		config,
-		envInterface,
-		outputPath
-	);
-}
+		const validInterfaceRegex = /^[a-zA-Z][a-zA-Z0-9_]*$/;
+
+		if (!validInterfaceRegex.test(envInterface)) {
+			throw new CommandLineArgsError(
+				`The provided env-interface value ("${envInterface}") does not satisfy the validation regex: ${validInterfaceRegex}`
+			);
+		}
+
+		if (!outputPath.endsWith(".d.ts")) {
+			throw new CommandLineArgsError(
+				`The provided path value ("${outputPath}") does not point to a declaration file (please use the 'd.ts' extension)`
+			);
+		}
+
+		const configPath =
+			args.config ??
+			findWranglerToml(process.cwd(), args.experimentalJsonConfig);
+		if (!configPath) {
+			logger.error(`No config file detected, aborting`);
+			return;
+		}
+
+		// args.xRuntime will be a string if the user passes "--x-include-runtime" or "--x-include-runtime=..."
+		if (typeof args.experimentalIncludeRuntime === "string") {
+			logger.log(`Generating runtime types...`);
+
+			const { outFile } = await generateRuntimeTypes({
+				config,
+				outFile: args.experimentalIncludeRuntime || undefined,
+			});
+
+			const tsconfigPath =
+				config.tsconfig ?? join(dirname(configPath), "tsconfig.json");
+			const tsconfigTypes = readTsconfigTypes(tsconfigPath);
+			const { mode } = getNodeCompat(
+				config.compatibility_date,
+				config.compatibility_flags,
+				{
+					nodeCompat: config.node_compat,
+				}
+			);
+
+			logRuntimeTypesMessage(outFile, tsconfigTypes, mode !== null);
+		}
+
+		const secrets = getVarsForDev(
+			{ configPath, vars: {} },
+			args.env,
+			true
+		) as Record<string, string>;
+
+		const configBindingsWithSecrets: Partial<Config> & {
+			secrets: Record<string, string>;
+		} = {
+			kv_namespaces: config.kv_namespaces ?? [],
+			vars: { ...config.vars },
+			wasm_modules: config.wasm_modules,
+			text_blobs: {
+				...config.text_blobs,
+			},
+			data_blobs: config.data_blobs,
+			durable_objects: config.durable_objects,
+			r2_buckets: config.r2_buckets,
+			d1_databases: config.d1_databases,
+			services: config.services,
+			analytics_engine_datasets: config.analytics_engine_datasets,
+			dispatch_namespaces: config.dispatch_namespaces,
+			logfwdr: config.logfwdr,
+			unsafe: config.unsafe,
+			rules: config.rules,
+			queues: config.queues,
+			send_email: config.send_email,
+			vectorize: config.vectorize,
+			hyperdrive: config.hyperdrive,
+			mtls_certificates: config.mtls_certificates,
+			browser: config.browser,
+			ai: config.ai,
+			version_metadata: config.version_metadata,
+			secrets,
+			assets: config.assets,
+			workflows: config.workflows,
+		};
+
+		await generateTypes(
+			configBindingsWithSecrets,
+			config,
+			envInterface,
+			outputPath
+		);
+	},
+});
 
 /**
  * Check if a string is a valid TypeScript identifier. This is a naive check and doesn't cover all cases
