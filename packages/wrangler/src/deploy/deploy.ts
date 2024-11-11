@@ -1021,7 +1021,7 @@ function deployWfpUserWorker(
 	logger.log("Current Version ID:", versionId);
 }
 
-export function helpIfErrorIsSizeOrScriptStartup(
+function helpIfErrorIsSizeOrScriptStartup(
 	err: unknown,
 	dependencies: { [path: string]: { bytesInOutput: number } }
 ) {

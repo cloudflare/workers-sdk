@@ -594,7 +594,7 @@ Changes to triggers (routes, custom domains, cron schedules, etc) must be applie
 	return { versionId, workerTag };
 }
 
-export function helpIfErrorIsSizeOrScriptStartup(
+function helpIfErrorIsSizeOrScriptStartup(
 	err: unknown,
 	dependencies: { [path: string]: { bytesInOutput: number } }
 ) {
@@ -617,10 +617,6 @@ export function helpIfErrorIsSizeOrScriptStartup(
 
 function formatTime(duration: number) {
 	return `(${(duration / 1000).toFixed(2)} sec)`;
-}
-
-export function isAuthenticationError(e: unknown): e is ParseError {
-	return e instanceof ParseError && (e as { code?: number }).code === 10000;
 }
 
 async function noBundleWorker(

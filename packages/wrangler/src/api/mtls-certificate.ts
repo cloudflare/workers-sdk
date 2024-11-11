@@ -45,12 +45,12 @@ export interface MTlsCertificateListFilter {
 /**
  * indicates that looking up a certificate by name failed due to zero matching results
  */
-export class ErrorMTlsCertificateNameNotFound extends UserError {}
+class ErrorMTlsCertificateNameNotFound extends UserError {}
 
 /**
  * indicates that looking up a certificate by name failed due to more than one matching results
  */
-export class ErrorMTlsCertificateManyNamesMatch extends UserError {}
+class ErrorMTlsCertificateManyNamesMatch extends UserError {}
 
 /**
  * reads an mTLS certificate and private key pair from disk and uploads it to the account mTLS certificate store

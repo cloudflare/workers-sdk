@@ -43,7 +43,7 @@ import type { StartDevWorkerOptions } from "./types";
 import type { DeferredPromise } from "./utils";
 import type { MiniflareOptions } from "miniflare";
 
-export type ProxyControllerEventMap = ControllerEventMap & {
+type ProxyControllerEventMap = ControllerEventMap & {
 	ready: [ReadyEvent];
 	previewTokenExpired: [PreviewTokenExpiredEvent];
 };
@@ -546,7 +546,7 @@ export class ProxyController extends Controller<ProxyControllerEventMap> {
 	}
 }
 
-export class ProxyControllerLogger extends WranglerLog {
+class ProxyControllerLogger extends WranglerLog {
 	log(message: string) {
 		// filter out request logs being handled by the ProxyWorker
 		// the requests log remaining are handled by the UserWorker

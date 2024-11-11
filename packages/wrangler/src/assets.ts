@@ -218,7 +218,7 @@ export const syncAssets = async (
 	return completionJwt;
 };
 
-export const buildAssetManifest = async (dir: string) => {
+const buildAssetManifest = async (dir: string) => {
 	const files = await readdir(dir, { recursive: true });
 	const manifest: AssetManifest = {};
 	let counter = 0;
@@ -301,7 +301,7 @@ function logAssetUpload(line: string, diffCount: number) {
  * Returns the base path of the assets to upload.
  *
  */
-export function getAssetsBasePath(
+function getAssetsBasePath(
 	config: Config,
 	assetsCommandLineArg: string | undefined
 ): string {

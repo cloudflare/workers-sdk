@@ -1,5 +1,6 @@
+import events from "node:events";
 import { fetch, Request } from "undici";
-import { startApiDev, startDev } from "../dev";
+import { startDev } from "../dev";
 import { run } from "../experimental-flags";
 import { logger } from "../logger";
 import type { Environment } from "../config";
@@ -7,9 +8,6 @@ import type { Rule } from "../config/environment";
 import type { CfModule } from "../deployment-bundle/worker";
 import type { StartDevOptions } from "../dev";
 import type { EnablePagesAssetsServiceBindingOptions } from "../miniflare-cli/types";
-import type { ProxyData } from "./startDevWorker";
-import type { FSWatcher } from "chokidar";
-import type { Instance } from "ink";
 import type { Json } from "miniflare";
 import type { RequestInfo, RequestInit, Response } from "undici";
 
@@ -84,13 +82,13 @@ export interface UnstableDevOptions {
 		devEnv?: boolean;
 		fileBasedRegistry?: boolean;
 		vectorizeBindToProd?: boolean;
+		enableIpc?: boolean;
 	};
 }
 
 export interface UnstableDevWorker {
 	port: number;
 	address: string;
-	proxyData: ProxyData;
 	stop: () => Promise<void>;
 	fetch: (input?: RequestInfo, init?: RequestInit) => Promise<Response>;
 	waitUntilExit: () => Promise<void>;
@@ -127,7 +125,6 @@ export async function unstable_dev(
 		showInteractiveDevSession,
 		testMode,
 		testScheduled,
-		devEnv = false,
 		fileBasedRegistry = false,
 		vectorizeBindToProd,
 		// 2. options for alpha/beta products/libs
@@ -150,7 +147,6 @@ export async function unstable_dev(
 	type ReadyInformation = {
 		address: string;
 		port: number;
-		proxyData: ProxyData;
 	};
 	let readyResolve: (info: ReadyInformation) => void;
 	const readyPromise = new Promise<ReadyInformation>((resolve) => {
@@ -175,8 +171,8 @@ export async function unstable_dev(
 		forceLocal,
 		liveReload,
 		showInteractiveDevSession,
-		onReady: (address, port, proxyData) => {
-			readyResolve({ address, port, proxyData });
+		onReady: (address, port) => {
+			readyResolve({ address, port });
 		},
 		config: options?.config,
 		env: options?.env,
@@ -223,74 +219,41 @@ export async function unstable_dev(
 		logLevel: options?.logLevel ?? defaultLogLevel,
 		port: options?.port ?? 0,
 		experimentalVersions: undefined,
-		experimentalDevEnv: devEnv,
+		experimentalDevEnv: undefined,
 		experimentalRegistry: fileBasedRegistry,
 		experimentalVectorizeBindToProd: vectorizeBindToProd ?? false,
+		enableIpc: options?.experimental?.enableIpc,
 	};
 
-	//due to Pages adoption of unstable_dev, we can't *just* disable rebuilds and watching. instead, we'll have two versions of startDev, which will converge.
-	if (testMode) {
-		// in testMode, we can run multiple wranglers in parallel, but rebuilds might not work out of the box
-		// once the devServer is ready for requests, we resolve the ready promise
-		const devServer = await startApiDev(devOptions);
-		const { port, address, proxyData } = await readyPromise;
-		return {
-			port,
-			address,
-			proxyData,
-			stop: devServer.stop,
-			fetch: async (input?: RequestInfo, init?: RequestInit) => {
-				return await fetch(
-					...parseRequestInput(
-						address,
-						port,
-						input,
-						init,
-						options?.localProtocol
-					)
-				);
-			},
-			//no-op, does nothing in tests
-			waitUntilExit: async () => {
-				return;
-			},
-		};
-	} else {
-		//outside of test mode, rebuilds work fine, but only one instance of wrangler will work at a time
-		const devServer = (await run(
-			{
-				DEV_ENV: false,
-				FILE_BASED_REGISTRY: fileBasedRegistry,
-				JSON_CONFIG_FILE: Boolean(devOptions.experimentalJsonConfig),
-			},
-			() => startDev(devOptions)
-		)) as {
-			devReactElement: Instance;
-			configFileWatcher: FSWatcher | undefined;
-			assetsWatcher: FSWatcher | undefined;
-			stop: () => Promise<void>;
-		};
-		const { port, address, proxyData } = await readyPromise;
+	//outside of test mode, rebuilds work fine, but only one instance of wrangler will work at a time
+	const devServer = await run(
+		{
+			FILE_BASED_REGISTRY: fileBasedRegistry,
+			JSON_CONFIG_FILE: Boolean(devOptions.experimentalJsonConfig),
+		},
+		() => startDev(devOptions)
+	);
+	const { port, address } = await readyPromise;
 
-		return {
-			port,
-			address,
-			proxyData,
-			stop: devServer.stop,
-			fetch: async (input?: RequestInfo, init?: RequestInit) => {
-				return await fetch(
-					...parseRequestInput(
-						address,
-						port,
-						input,
-						init,
-						options?.localProtocol
-					)
-				);
-			},
-			waitUntilExit: devServer.devReactElement.waitUntilExit,
-		};
-	}
+	return {
+		port,
+		address,
+		stop: async () => {
+			await devServer.devEnv.teardown.bind(devServer.devEnv)();
+			const teardownRegistry = await devServer.teardownRegistryPromise;
+			await teardownRegistry?.(devServer.devEnv.config.latestConfig?.name);
+
+			devServer.unregisterHotKeys?.();
+		},
+		fetch: async (input?: RequestInfo, init?: RequestInit) => {
+			return await fetch(
+				...parseRequestInput(address, port, input, init, options?.localProtocol)
+			);
+		},
+		waitUntilExit: async () => {
+			await events.once(devServer.devEnv, "teardown");
+		},
+	};
 }
 
 export function parseRequestInput(

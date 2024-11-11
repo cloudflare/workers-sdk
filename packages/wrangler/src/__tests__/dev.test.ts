@@ -1419,7 +1419,6 @@ describe.sequential("wrangler dev", () => {
 				      --test-scheduled                             Test scheduled events by visiting /__scheduled in browser  [boolean] [default: false]
 				      --log-level                                  Specify logging level  [choices: \\"debug\\", \\"info\\", \\"log\\", \\"warn\\", \\"error\\", \\"none\\"] [default: \\"log\\"]
 				      --show-interactive-dev-session               Show interactive dev session  (defaults to true if the terminal supports interactivity)  [boolean]
-				      --experimental-dev-env, --x-dev-env          Use the experimental DevEnv instantiation (unified across wrangler dev and unstable_dev)  [boolean] [default: true]
 				      --experimental-registry, --x-registry        Use the experimental file based dev registry for multi-worker development  [boolean] [default: false]
 				      --experimental-vectorize-bind-to-prod        Bind to production Vectorize indexes in local development mode  [boolean] [default: false]",
 				  "warn": "",

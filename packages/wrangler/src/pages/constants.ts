@@ -16,7 +16,6 @@ export const MAX_DEPLOYMENT_ATTEMPTS = 3;
 export const MAX_DEPLOYMENT_STATUS_ATTEMPTS = 5;
 export const MAX_CHECK_MISSING_ATTEMPTS = 5;
 export const SECONDS_TO_WAIT_FOR_PROXY = 5;
-export const isInPagesCI = !!process.env.CF_PAGES;
 /** Max number of rules in _routes.json */
 export const MAX_FUNCTIONS_ROUTES_RULES = 100;
 /** Max char length of each rule in _routes.json */

@@ -41,7 +41,7 @@ export const ListHandler = withConfig<ListHandlerOptions>(
 	}
 );
 
-export const listBackups = async (
+const listBackups = async (
 	accountId: string,
 	uuid: string
 ): Promise<Array<Backup>> => {
@@ -146,7 +146,7 @@ export const RestoreHandler = withConfig<RestoreHandlerOptions>(
 	}
 );
 
-export const restoreBackup = async (
+const restoreBackup = async (
 	accountId: string,
 	uuid: string,
 	backupId: string
@@ -205,7 +205,7 @@ export const DownloadHandler = withConfig<DownloadHandlerOptions>(
 	}
 );
 
-export const getBackupResponse = async (
+const getBackupResponse = async (
 	accountId: string,
 	uuid: string,
 	backupId: string
