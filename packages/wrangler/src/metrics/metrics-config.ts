@@ -108,6 +108,7 @@ export async function getMetricsConfig({
 	}
 
 	// Otherwise, let's ask the user and store the result in the metrics config.
+	// TODO: remove this and default to true.
 	const enabled = await confirm(
 		"Would you like to help improve Wrangler by sending usage metrics to Cloudflare?"
 	);
@@ -121,6 +122,7 @@ export async function getMetricsConfig({
 			"   - to enable sending metrics for a project: `send_metrics = true`"
 	);
 	writeMetricsConfig({
+		...config,
 		permission: {
 			enabled,
 			date: CURRENT_METRICS_DATE,
@@ -159,6 +161,19 @@ export function readMetricsConfig(): MetricsConfigFile {
 	}
 }
 
+export function updateMetricsPermission(enabled: boolean) {
+	const config = readMetricsConfig();
+	if (config.permission?.enabled === enabled) {
+		// Do nothing if the enabled state is the same
+		return;
+	}
+	config.permission = {
+		enabled,
+		date: CURRENT_METRICS_DATE,
+	};
+	writeMetricsConfig(config);
+}
+
 /**
  * Get the path to the metrics config file.
  */
@@ -172,6 +187,12 @@ function getMetricsConfigPath(): string {
 export interface MetricsConfigFile {
 	permission?: {
 		/** True if Wrangler should send metrics to Cloudflare. */
+		enabled: boolean;
+		/** The date that this permission was set. */
+		date: Date;
+	};
+	c3permission?: {
+		/** True if c3 should send metrics to Cloudflare. */
 		enabled: boolean;
 		/** The date that this permission was set. */
 		date: Date;

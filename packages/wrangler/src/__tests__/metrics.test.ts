@@ -18,6 +18,7 @@ import { clearDialogs, mockConfirm } from "./helpers/mock-dialogs";
 import { useMockIsTTY } from "./helpers/mock-istty";
 import { msw, mswSuccessOauthHandlers } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
+import { runWrangler } from "./helpers/run-wrangler";
 import type { MockInstance } from "vitest";
 
 declare const global: { SPARROW_SOURCE_KEY: string | undefined };
@@ -431,6 +432,98 @@ describe("metrics", () => {
 				});
 				expect(userId).toBe(undefined);
 				expect(userRequests.count).toBe(0);
+			});
+		});
+	});
+
+	describe("telemetry commands", () => {
+		it("prints the current telemetry status when `wrangler telemetry status` is run", async () => {
+			writeMetricsConfig({
+				permission: {
+					enabled: true,
+					date: new Date(2022, 6, 4),
+				},
+			});
+			await runWrangler("telemetry status");
+			expect(std.out).toMatchInlineSnapshot(`
+				"Status: Enabled
+				"
+			`);
+			writeMetricsConfig({
+				permission: {
+					enabled: false,
+					date: new Date(2022, 6, 4),
+				},
+			});
+			await runWrangler("telemetry status");
+			expect(std.out).toMatchInlineSnapshot(`
+				"Status: Enabled
+
+				Status: Disabled
+				"
+			`);
+		});
+
+		it("disables telemetry when `wrangler telemetry disable` is run", async () => {
+			writeMetricsConfig({
+				permission: {
+					enabled: true,
+					date: new Date(2022, 6, 4),
+				},
+			});
+			await runWrangler("telemetry disable");
+			expect(std.out).toMatchInlineSnapshot(`
+				"Status: Disabled
+
+				Wrangler is no longer collecting telemetry about your usage.
+				"
+			`);
+			expect(await getMetricsConfig({})).toMatchObject({
+				enabled: false,
+			});
+		});
+
+		it("enables telemetry when `wrangler telemetry enable` is run", async () => {
+			writeMetricsConfig({
+				permission: {
+					enabled: false,
+					date: new Date(2022, 6, 4),
+				},
+			});
+			await runWrangler("telemetry enable");
+			expect(std.out).toMatchInlineSnapshot(`
+				"Status: Enabled
+
+				Wrangler is now collecting telemetry about your usage. Thank you for helping make Wrangler better 🧡
+				"
+			`);
+			expect(await getMetricsConfig({})).toMatchObject({
+				enabled: true,
+			});
+		});
+
+		it("doesn't overwrite c3 telemetry config", async () => {
+			writeMetricsConfig({
+				c3permission: {
+					enabled: false,
+					date: new Date(2022, 6, 4),
+				},
+			});
+			await runWrangler("telemetry enable");
+			expect(std.out).toMatchInlineSnapshot(`
+				"Status: Enabled
+
+				Wrangler is now collecting telemetry about your usage. Thank you for helping make Wrangler better 🧡
+				"
+			`);
+			const config = readMetricsConfig();
+			expect(config).toMatchObject({
+				c3permission: {
+					enabled: false,
+				},
+				permission: {
+					enabled: true,
+				},
 			});
 		});
 	});
