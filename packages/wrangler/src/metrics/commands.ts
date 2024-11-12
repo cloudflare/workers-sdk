@@ -1,7 +1,7 @@
 import chalk from "chalk";
 import { defineCommand, defineNamespace } from "../core";
 import { logger } from "../logger";
-import { getMetricsConfig, updateMetricsPermission } from "./metrics-config";
+import { readMetricsConfig, updateMetricsPermission } from "./metrics-config";
 
 defineNamespace({
 	command: "wrangler telemetry",
@@ -26,7 +26,6 @@ defineCommand({
 		logger.log(
 			"Wrangler is no longer collecting telemetry about your usage.\n"
 		);
-		return;
 	},
 });
 
@@ -43,7 +42,6 @@ defineCommand({
 		logger.log(
 			"Wrangler is now collecting telemetry about your usage. Thank you for helping make Wrangler better 🧡\n"
 		);
-		return;
 	},
 });
 
@@ -55,11 +53,19 @@ defineCommand({
 		status: "stable",
 	},
 	async handler(_, { config }) {
-		const metricsConfig = await getMetricsConfig({
-			sendMetrics: config.send_metrics,
-		});
-		logTelemetryStatus(metricsConfig.enabled);
-		return;
+		const savedConfig = readMetricsConfig();
+		if (config.send_metrics !== undefined) {
+			// TODO: update this to fallback to true
+			const globalPermission = savedConfig.permission?.enabled ?? false;
+			const projectPermission = config.send_metrics;
+			logger.log(
+				`Global status: ${globalPermission ? chalk.green("Enabled") : chalk.red("Disabled")}\n` +
+					`Project status: ${projectPermission ? chalk.green("Enabled") : chalk.red("Disabled")}\n`
+			);
+		} else {
+			// TODO: update this to fallback to true
+			logTelemetryStatus(savedConfig.permission?.enabled ?? false);
+		}
 	},
 });
 

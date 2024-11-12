@@ -18,6 +18,7 @@ import { useMockIsTTY } from "./helpers/mock-istty";
 import { msw, mswSuccessOauthHandlers } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
+import { writeWranglerToml } from "./helpers/write-wrangler-toml";
 import type { MockInstance } from "vitest";
 
 declare const global: { SPARROW_SOURCE_KEY: string | undefined };
@@ -469,6 +470,22 @@ describe("metrics", () => {
 				"Status: Enabled
 
 				Status: Disabled
+				"
+			`);
+		});
+
+		it("prints a global and project status if a wrangler.toml with send_metrics is present", async () => {
+			writeMetricsConfig({
+				permission: {
+					enabled: true,
+					date: new Date(2022, 6, 4),
+				},
+			});
+			writeWranglerToml({ send_metrics: false });
+			await runWrangler("telemetry status");
+			expect(std.out).toMatchInlineSnapshot(`
+				"Global status: Enabled
+				Project status: Disabled
 				"
 			`);
 		});
