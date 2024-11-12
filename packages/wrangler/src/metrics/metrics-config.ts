@@ -125,7 +125,7 @@ export async function getMetricsConfig({
 		...config,
 		permission: {
 			enabled,
-			date: CURRENT_METRICS_DATE,
+			date: new Date(),
 		},
 		deviceId,
 	});
@@ -163,13 +163,9 @@ export function readMetricsConfig(): MetricsConfigFile {
 
 export function updateMetricsPermission(enabled: boolean) {
 	const config = readMetricsConfig();
-	if (config.permission?.enabled === enabled) {
-		// Do nothing if the enabled state is the same
-		return;
-	}
 	config.permission = {
 		enabled,
-		date: CURRENT_METRICS_DATE,
+		date: new Date(),
 	};
 	writeMetricsConfig(config);
 }

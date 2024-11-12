@@ -7,7 +7,6 @@ import { CI } from "../is-ci";
 import { logger } from "../logger";
 import { getMetricsConfig, getMetricsDispatcher } from "../metrics";
 import {
-	CURRENT_METRICS_DATE,
 	readMetricsConfig,
 	USER_ID_CACHE_PATH,
 	writeMetricsConfig,
@@ -341,6 +340,8 @@ describe("metrics", () => {
 			});
 
 			it("should ignore the config if the permission date is older than the current metrics date", async () => {
+				vi.useFakeTimers();
+				vi.setSystemTime(new Date(2024, 11, 12));
 				mockConfirm({
 					text: "Would you like to help improve Wrangler by sending usage metrics to Cloudflare?",
 					result: false,
@@ -360,7 +361,7 @@ describe("metrics", () => {
 				const { permission } = await readMetricsConfig();
 				expect(permission?.enabled).toBe(false);
 				// The date should be updated to today's date
-				expect(permission?.date).toEqual(CURRENT_METRICS_DATE);
+				expect(permission?.date).toEqual(new Date(2024, 11, 12));
 
 				expect(std.out).toMatchInlineSnapshot(`
 			"Usage metrics tracking has changed since you last granted permission.
@@ -371,6 +372,7 @@ describe("metrics", () => {
 			   - to disable sending metrics for a project: \`send_metrics = false\`
 			   - to enable sending metrics for a project: \`send_metrics = true\`"
 		`);
+				vi.useRealTimers();
 			});
 		});
 
@@ -437,6 +439,13 @@ describe("metrics", () => {
 	});
 
 	describe("telemetry commands", () => {
+		beforeEach(() => {
+			vi.useFakeTimers();
+			vi.setSystemTime(new Date(2024, 11, 12));
+		});
+		afterEach(() => {
+			vi.useRealTimers();
+		});
 		it("prints the current telemetry status when `wrangler telemetry status` is run", async () => {
 			writeMetricsConfig({
 				permission: {
@@ -478,8 +487,11 @@ describe("metrics", () => {
 				Wrangler is no longer collecting telemetry about your usage.
 				"
 			`);
-			expect(await getMetricsConfig({})).toMatchObject({
-				enabled: false,
+			expect(readMetricsConfig()).toMatchObject({
+				permission: {
+					enabled: false,
+					date: new Date(2024, 11, 12),
+				},
 			});
 		});
 
@@ -497,8 +509,11 @@ describe("metrics", () => {
 				Wrangler is now collecting telemetry about your usage. Thank you for helping make Wrangler better 🧡
 				"
 			`);
-			expect(await getMetricsConfig({})).toMatchObject({
-				enabled: true,
+			expect(readMetricsConfig()).toMatchObject({
+				permission: {
+					enabled: true,
+					date: new Date(2024, 11, 12),
+				},
 			});
 		});
 
@@ -520,9 +535,11 @@ describe("metrics", () => {
 			expect(config).toMatchObject({
 				c3permission: {
 					enabled: false,
+					date: new Date(2022, 6, 4),
 				},
 				permission: {
 					enabled: true,
+					date: new Date(2024, 11, 12),
 				},
 			});
 		});
