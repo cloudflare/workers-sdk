@@ -48,6 +48,7 @@ export async function listR2Buckets(
 export async function createR2Bucket(
 	accountId: string,
 	bucketName: string,
+	location?: string,
 	jurisdiction?: string,
 	storageClass?: string
 ): Promise<void> {
@@ -60,6 +61,7 @@ export async function createR2Bucket(
 		body: JSON.stringify({
 			name: bucketName,
 			...(storageClass !== undefined && { storageClass }),
+			...(location !== undefined && { locationHint: location }),
 		}),
 		headers,
 	});
@@ -357,7 +359,7 @@ export async function putR2Sippy(
 	);
 }
 
-export const R2EventableOperations = [
+const R2EventableOperations = [
 	"PutObject",
 	"DeleteObject",
 	"CompleteMultipartUpload",
@@ -379,6 +381,7 @@ type NotificationRule = {
 	prefix?: string;
 	suffix?: string;
 	actions: R2EventableOperation[];
+	description?: string;
 };
 type GetNotificationRule = {
 	ruleId: string;
@@ -396,10 +399,10 @@ export type GetNotificationConfigResponse = {
 	bucketName: string;
 	queues: GetQueueDetail[];
 };
-export type DetailID = string;
+type DetailID = string;
 type QueueID = string;
 type BucketName = string;
-export type NotificationDetail = Record<
+type NotificationDetail = Record<
 	DetailID, // This is the detail ID that identifies this config
 	{ queue: QueueID; rules: NotificationRule[] }
 >;
@@ -423,7 +426,8 @@ export type DeleteNotificationRequestBody = {
 };
 
 export function eventNotificationHeaders(
-	apiCredentials: ApiCredentials
+	apiCredentials: ApiCredentials,
+	jurisdiction: string
 ): HeadersInit {
 	const headers: HeadersInit = {
 		"Content-Type": "application/json",
@@ -435,22 +439,24 @@ export function eventNotificationHeaders(
 		headers["X-Auth-Key"] = apiCredentials.authKey;
 		headers["X-Auth-Email"] = apiCredentials.authEmail;
 	}
+	if (jurisdiction !== "") {
+		headers["cf-r2-jurisdiction"] = jurisdiction;
+	}
 	return headers;
 }
 
-export async function tableFromNotificationGetResponse(
-	config: Pick<Config, "account_id">,
+export function tableFromNotificationGetResponse(
 	response: GetNotificationConfigResponse
-): Promise<
-	{
-		queue_name: string;
-		prefix: string;
-		suffix: string;
-		event_type: string;
-	}[]
-> {
-	const reducer = async (entry: GetQueueDetail) => {
-		const rows = [];
+): {
+	rule_id: string;
+	created_at: string;
+	queue_name: string;
+	prefix: string;
+	suffix: string;
+	event_type: string;
+}[] {
+	const rows = [];
+	for (const entry of response.queues) {
 		for (const {
 			prefix = "",
 			suffix = "",
@@ -462,34 +468,23 @@ export async function tableFromNotificationGetResponse(
 				rule_id: ruleId,
 				created_at: createdAt,
 				queue_name: entry.queueName,
-				prefix,
-				suffix,
+				prefix: prefix || "(all prefixes)",
+				suffix: suffix || "(all suffixes)",
 				event_type: actions.join(","),
 			});
 		}
-		return rows;
-	};
-
-	let tableOutput: {
-		queue_name: string;
-		prefix: string;
-		suffix: string;
-		event_type: string;
-	}[] = [];
-	for (const entry of response.queues) {
-		const result = await reducer(entry);
-		tableOutput = tableOutput.concat(...result);
 	}
-	return tableOutput;
+	return rows;
 }
 
-export async function getEventNotificationConfig(
+export async function listEventNotificationConfig(
 	apiCredentials: ApiCredentials,
 	accountId: string,
-	bucketName: string
+	bucketName: string,
+	jurisdiction: string
 ): Promise<GetNotificationConfigResponse> {
-	const headers = eventNotificationHeaders(apiCredentials);
-	logger.log(`Fetching notification configuration for bucket ${bucketName}...`);
+	const headers = eventNotificationHeaders(apiCredentials, jurisdiction);
+	logger.log(`Fetching notification rules for bucket ${bucketName}...`);
 	const res = await fetchResult<GetNotificationConfigResponse>(
 		`/accounts/${accountId}/event_notifications/r2/${bucketName}/configuration`,
 		{ method: "GET", headers }
@@ -541,22 +536,29 @@ export async function putEventNotificationConfig(
 	apiCredentials: ApiCredentials,
 	accountId: string,
 	bucketName: string,
+	jurisdiction: string,
 	queueName: string,
 	eventTypes: R2EventType[],
 	prefix?: string,
-	suffix?: string
+	suffix?: string,
+	description?: string
 ): Promise<void> {
 	const queue = await getQueue(config, queueName);
-	const headers = eventNotificationHeaders(apiCredentials);
+	const headers = eventNotificationHeaders(apiCredentials, jurisdiction);
 	let actions: R2EventableOperation[] = [];
 
 	for (const et of eventTypes) {
 		actions = actions.concat(actionsForEventCategories[et]);
 	}
 
-	const body: PutNotificationRequestBody = {
-		rules: [{ prefix, suffix, actions }],
-	};
+	const body: PutNotificationRequestBody =
+		description === undefined
+			? {
+					rules: [{ prefix, suffix, actions }],
+				}
+			: {
+					rules: [{ prefix, suffix, actions, description }],
+				};
 	const ruleFor = eventTypes.map((et) =>
 		et === "object-create" ? "creation" : "deletion"
 	);
@@ -576,26 +578,218 @@ export async function deleteEventNotificationConfig(
 	apiCredentials: ApiCredentials,
 	accountId: string,
 	bucketName: string,
+	jurisdiction: string,
 	queueName: string,
 	ruleId: string | undefined
 ): Promise<null> {
 	const queue = await getQueue(config, queueName);
-	const headers = eventNotificationHeaders(apiCredentials);
-	logger.log(
-		`Disabling event notifications for "${bucketName}" to queue ${queueName}...`
-	);
+	const headers = eventNotificationHeaders(apiCredentials, jurisdiction);
+	if (ruleId !== undefined) {
+		logger.log(`Deleting event notifications rule "${ruleId}"...`);
+		const body: DeleteNotificationRequestBody =
+			ruleId !== undefined
+				? {
+						ruleIds: [ruleId],
+					}
+				: {};
 
-	const body: DeleteNotificationRequestBody =
-		ruleId !== undefined
-			? {
-					ruleIds: [ruleId],
-				}
-			: {};
+		return await fetchResult<null>(
+			`/accounts/${accountId}/event_notifications/r2/${bucketName}/configuration/queues/${queue.queue_id}`,
+			{ method: "DELETE", body: JSON.stringify(body), headers }
+		);
+	} else {
+		logger.log(
+			`Deleting event notification rules associated with queue ${queueName}...`
+		);
+		return await fetchResult<null>(
+			`/accounts/${accountId}/event_notifications/r2/${bucketName}/configuration/queues/${queue.queue_id}`,
+			{ method: "DELETE", headers }
+		);
+	}
+}
 
-	return await fetchResult<null>(
-		`/accounts/${accountId}/event_notifications/r2/${bucketName}/configuration/queues/${queue.queue_id}`,
-		{ method: "DELETE", body: JSON.stringify(body), headers }
+export interface CustomDomainConfig {
+	domain: string;
+	minTLS?: string;
+	zoneId?: string;
+}
+
+export interface CustomDomainInfo {
+	domain: string;
+	enabled: boolean;
+	status: {
+		ownership: string;
+		ssl: string;
+	};
+	minTLS: string;
+	zoneId: string;
+	zoneName: string;
+}
+
+export async function attachCustomDomainToBucket(
+	accountId: string,
+	bucketName: string,
+	config: CustomDomainConfig,
+	jurisdiction?: string
+): Promise<void> {
+	const headers: HeadersInit = {
+		"Content-Type": "application/json",
+	};
+	if (jurisdiction) {
+		headers["cf-r2-jurisdiction"] = jurisdiction;
+	}
+
+	await fetchResult(
+		`/accounts/${accountId}/r2/buckets/${bucketName}/domains/custom`,
+		{
+			method: "POST",
+			headers,
+			body: JSON.stringify({
+				...config,
+				enabled: true,
+			}),
+		}
 	);
+}
+
+export async function removeCustomDomainFromBucket(
+	accountId: string,
+	bucketName: string,
+	domainName: string,
+	jurisdiction?: string
+): Promise<void> {
+	const headers: HeadersInit = {};
+	if (jurisdiction) {
+		headers["cf-r2-jurisdiction"] = jurisdiction;
+	}
+
+	await fetchResult(
+		`/accounts/${accountId}/r2/buckets/${bucketName}/domains/custom/${domainName}`,
+		{
+			method: "DELETE",
+			headers,
+		}
+	);
+}
+
+export function tableFromCustomDomainListResponse(
+	domains: CustomDomainInfo[]
+): {
+	domain: string;
+	enabled: string;
+	ownership_status: string;
+	ssl_status: string;
+	min_tls_version: string;
+	zone_id: string;
+	zone_name: string;
+}[] {
+	const rows = [];
+	for (const domainInfo of domains) {
+		rows.push({
+			domain: domainInfo.domain,
+			enabled: domainInfo.enabled ? "Yes" : "No",
+			ownership_status: domainInfo.status.ownership || "(unknown)",
+			ssl_status: domainInfo.status.ssl || "(unknown)",
+			min_tls_version: domainInfo.minTLS || "1.0",
+			zone_id: domainInfo.zoneId || "(none)",
+			zone_name: domainInfo.zoneName || "(none)",
+		});
+	}
+	return rows;
+}
+
+export async function listCustomDomainsOfBucket(
+	accountId: string,
+	bucketName: string,
+	jurisdiction?: string
+): Promise<CustomDomainInfo[]> {
+	const headers: HeadersInit = {};
+	if (jurisdiction) {
+		headers["cf-r2-jurisdiction"] = jurisdiction;
+	}
+
+	const result = await fetchResult<{
+		domains: CustomDomainInfo[];
+	}>(`/accounts/${accountId}/r2/buckets/${bucketName}/domains/custom`, {
+		method: "GET",
+		headers,
+	});
+
+	return result.domains;
+}
+
+export async function configureCustomDomainSettings(
+	accountId: string,
+	bucketName: string,
+	domainName: string,
+	config: CustomDomainConfig,
+	jurisdiction?: string
+): Promise<void> {
+	const headers: HeadersInit = {
+		"Content-Type": "application/json",
+	};
+	if (jurisdiction) {
+		headers["cf-r2-jurisdiction"] = jurisdiction;
+	}
+
+	await fetchResult(
+		`/accounts/${accountId}/r2/buckets/${bucketName}/domains/custom/${domainName}`,
+		{
+			method: "PUT",
+			headers,
+			body: JSON.stringify(config),
+		}
+	);
+}
+
+export interface R2DevDomainInfo {
+	bucketId: string;
+	domain: string;
+	enabled: boolean;
+}
+
+export async function getR2DevDomain(
+	accountId: string,
+	bucketName: string,
+	jurisdiction?: string
+): Promise<R2DevDomainInfo> {
+	const headers: HeadersInit = {};
+	if (jurisdiction) {
+		headers["cf-r2-jurisdiction"] = jurisdiction;
+	}
+
+	const result = await fetchResult<R2DevDomainInfo>(
+		`/accounts/${accountId}/r2/buckets/${bucketName}/domains/managed`,
+		{
+			method: "GET",
+			headers,
+		}
+	);
+	return result;
+}
+
+export async function updateR2DevDomain(
+	accountId: string,
+	bucketName: string,
+	enabled: boolean,
+	jurisdiction?: string
+): Promise<R2DevDomainInfo> {
+	const headers: HeadersInit = {
+		"Content-Type": "application/json",
+	};
+	if (jurisdiction) {
+		headers["cf-r2-jurisdiction"] = jurisdiction;
+	}
+
+	const result = await fetchResult<R2DevDomainInfo>(
+		`/accounts/${accountId}/r2/buckets/${bucketName}/domains/managed`,
+		{
+			method: "PUT",
+			headers,
+			body: JSON.stringify({ enabled }),
+		}
+	);
+	return result;
 }
 
 /**

@@ -2,9 +2,11 @@
 /* tslint:disable */
 /* eslint-disable */
 
-import type { Label } from "./Label";
-import type { NetworkParameters } from "./NetworkParameters";
+import type { ApplicationAffinities } from "./ApplicationAffinities";
+import type { ApplicationConstraints } from "./ApplicationConstraints";
+import type { ApplicationJobsConfig } from "./ApplicationJobsConfig";
 import type { SchedulingPolicy } from "./SchedulingPolicy";
+import type { UserDeploymentConfiguration } from "./UserDeploymentConfiguration";
 
 /**
  * Create a new application object for dynamic scheduling
@@ -14,18 +16,17 @@ export type CreateApplicationRequest = {
 	 * The name for this application
 	 */
 	name: string;
-	/**
-	 * The image to be dynamically scheduled
-	 */
-	image: string;
-	network?: NetworkParameters;
 	scheduling_policy: SchedulingPolicy;
 	/**
 	 * Number of deployments to create
 	 */
 	instances: number;
+	constraints?: ApplicationConstraints;
 	/**
-	 * Deployment labels
+	 * The deployment configuration of all deployments created by this application.
+	 *
 	 */
-	labels?: Array<Label>;
+	configuration: UserDeploymentConfiguration;
+	jobs?: ApplicationJobsConfig;
+	affinities?: ApplicationAffinities;
 };

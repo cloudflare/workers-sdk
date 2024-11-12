@@ -1,5 +1,41 @@
 # @cloudflare/quick-edit
 
+## 0.3.2
+
+### Patch Changes
+
+- [#7040](https://github.com/cloudflare/workers-sdk/pull/7040) [`44c954b`](https://github.com/cloudflare/workers-sdk/commit/44c954b98ac86e9ea98f6e589c419d40c5d7f122) Thanks [@penalosa](https://github.com/penalosa)! - Try and ensure the `d.ts` types are definitely the ones loaded in `quick-edit-extension`
+
+## 0.3.1
+
+### Patch Changes
+
+- [#6998](https://github.com/cloudflare/workers-sdk/pull/6998) [`720a91d`](https://github.com/cloudflare/workers-sdk/commit/720a91d501ca04f677ab75f9da8f4b8b6d24a56f) Thanks [@edmundhung](https://github.com/edmundhung)! - chore: fix build config
+
+## 0.3.0
+
+### Minor Changes
+
+- [#6962](https://github.com/cloudflare/workers-sdk/pull/6962) [`a204747`](https://github.com/cloudflare/workers-sdk/commit/a204747e04afa7592d0cbb5d9fb35d9cd0b2cd49) Thanks [@edmundhung](https://github.com/edmundhung)! - feat: lower autosave delay to 200ms
+
+## 0.2.3
+
+### Patch Changes
+
+- [#6850](https://github.com/cloudflare/workers-sdk/pull/6850) [`ce41da5`](https://github.com/cloudflare/workers-sdk/commit/ce41da555a9520382a1e16cd7269253f0b733d51) Thanks [@penalosa](https://github.com/penalosa)! - fix: Re-release Quick Edit to update included workers-types
+
+## 0.2.2
+
+### Patch Changes
+
+- [#6806](https://github.com/cloudflare/workers-sdk/pull/6806) [`4db75e1`](https://github.com/cloudflare/workers-sdk/commit/4db75e1eaf8eb088d869986efc28d5345789ff50) Thanks [@penalosa](https://github.com/penalosa)! - chore: Revert "fix(quick-edit): disable autosave"
+
+## 0.2.1
+
+### Patch Changes
+
+- [#6738](https://github.com/cloudflare/workers-sdk/pull/6738) [`d818634`](https://github.com/cloudflare/workers-sdk/commit/d8186341980ab2c02917852a9e790a7655f93a78) Thanks [@edmundhung](https://github.com/edmundhung)! - fix: set readOnly property when writing files
+
 ## 0.2.0
 
 ### Minor Changes

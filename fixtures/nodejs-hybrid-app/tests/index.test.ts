@@ -1,6 +1,6 @@
 import { resolve } from "node:path";
 import { fetch } from "undici";
-import { describe, it } from "vitest";
+import { describe, it, test } from "vitest";
 import { runWranglerDev } from "../../shared/src/run-wrangler-long-lived";
 
 describe("nodejs compat", () => {
@@ -23,6 +23,55 @@ describe("nodejs compat", () => {
 			// console.log(body);
 			// const result = JSON.parse(body) as { id: string };
 			// expect(result.id).toEqual("1");
+		} finally {
+			await stop();
+		}
+	});
+
+	it("should be able to call `getRandomValues()` bound to any object", async ({
+		expect,
+	}) => {
+		const { ip, port, stop } = await runWranglerDev(
+			resolve(__dirname, "../src"),
+			["--port=0", "--inspector-port=0"]
+		);
+		try {
+			const response = await fetch(`http://${ip}:${port}/test-random`);
+			const body = await response.json();
+			expect(body).toEqual([
+				expect.any(String),
+				expect.any(String),
+				expect.any(String),
+				expect.any(String),
+			]);
+		} finally {
+			await stop();
+		}
+	});
+
+	test("crypto.X509Certificate is implemented", async ({ expect }) => {
+		const { ip, port, stop } = await runWranglerDev(
+			resolve(__dirname, "../src"),
+			["--port=0", "--inspector-port=0"]
+		);
+		try {
+			const response = await fetch(
+				`http://${ip}:${port}/test-x509-certificate`
+			);
+			await expect(response.text()).resolves.toBe(`"OK!"`);
+		} finally {
+			await stop();
+		}
+	});
+
+	test("import unenv aliased packages", async ({ expect }) => {
+		const { ip, port, stop } = await runWranglerDev(
+			resolve(__dirname, "../src"),
+			["--port=0", "--inspector-port=0"]
+		);
+		try {
+			const response = await fetch(`http://${ip}:${port}/test-require-alias`);
+			await expect(response.text()).resolves.toBe(`"OK!"`);
 		} finally {
 			await stop();
 		}

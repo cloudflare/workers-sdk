@@ -1,6 +1,6 @@
 import { http, HttpResponse } from "msw";
 import { writeAuthConfigFile } from "../user";
-import { getUserInfo } from "../whoami";
+import { getUserInfo } from "../user/whoami";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { useMockIsTTY } from "./helpers/mock-istty";
 import {

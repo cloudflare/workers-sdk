@@ -1,20 +1,12 @@
+import { isAbsolute, sep } from "node:path";
 import { getType } from "mime";
 
-/** normalises sep for windows, and encodes each segment */
-export const encodeFilePath = (filePath: string, sep: string) => {
-	const encodedPath = filePath
-		.split(sep)
-		.map((segment) => encodeURIComponent(segment))
-		.join("/");
-	return "/" + encodedPath;
-};
-
-/** reverses encodeFilePath for accessing from file system */
-export const decodeFilePath = (filePath: string, sep: string) => {
-	return filePath
-		.split("/")
-		.map((segment) => decodeURIComponent(segment))
-		.join(sep);
+/** normalises sep for windows and prefix with `/` */
+export const normalizeFilePath = (relativeFilepath: string) => {
+	if (isAbsolute(relativeFilepath)) {
+		throw new Error(`Expected relative path`);
+	}
+	return "/" + relativeFilepath.split(sep).join("/");
 };
 
 export const getContentType = (absFilePath: string) => {

@@ -57,7 +57,17 @@ async function createDraftWorker({
 	accountId: string;
 	scriptName: string;
 }) {
-	// TODO: log a warning
+	const confirmation = await confirm(
+		`There doesn't seem to be a Worker called "${scriptName}". Do you want to create a new Worker with that name and add secrets to it?`,
+		// we want to default to true in non-interactive/CI contexts to preserve existing behaviour
+		{ defaultValue: true, fallbackValue: true }
+	);
+	if (!confirmation) {
+		logger.log("Aborting. No secrets added.");
+		return null;
+	} else {
+		logger.log(`🌀 Creating new Worker "${scriptName}"...`);
+	}
 	await fetchResult(
 		!isLegacyEnv(config) && args.env
 			? `/accounts/${accountId}/workers/services/${scriptName}/environments/${args.env}`
@@ -77,6 +87,7 @@ async function createDraftWorker({
 					send_email: [],
 					vars: {},
 					durable_objects: { bindings: [] },
+					workflows: [],
 					queues: [],
 					r2_buckets: [],
 					d1_databases: [],
@@ -94,7 +105,7 @@ async function createDraftWorker({
 					mtls_certificates: [],
 					pipelines: [],
 					logfwdr: { bindings: [] },
-					experimental_assets: undefined,
+					assets: undefined,
 					unsafe: {
 						bindings: undefined,
 						metadata: undefined,
@@ -112,7 +123,7 @@ async function createDraftWorker({
 				placement: undefined,
 				tail_consumers: undefined,
 				limits: undefined,
-				experimental_assets: undefined,
+				assets: undefined,
 				observability: undefined,
 			}),
 		}
@@ -144,6 +155,12 @@ export const secret = (secretYargs: CommonYargsArgv) => {
 			async (args) => {
 				await printWranglerBanner();
 				const config = readConfig(args.config, args);
+				if (config.pages_build_output_dir) {
+					throw new UserError(
+						"It looks like you've run a Workers-specific command in a Pages project.\n" +
+							"For Pages, please run `wrangler pages secret put` instead."
+					);
+				}
 
 				const scriptName = getLegacyScriptName(args, config);
 				if (!scriptName) {
@@ -209,12 +226,15 @@ export const secret = (secretYargs: CommonYargsArgv) => {
 				} catch (e) {
 					if (isMissingWorkerError(e)) {
 						// create a draft worker and try again
-						await createDraftWorker({
+						const result = await createDraftWorker({
 							config,
 							args,
 							accountId,
 							scriptName,
 						});
+						if (result === null) {
+							return;
+						}
 						await submitSecret();
 						// TODO: delete the draft worker if this failed too?
 					} else {
@@ -229,7 +249,6 @@ export const secret = (secretYargs: CommonYargsArgv) => {
 			"delete <key>",
 			"Delete a secret variable from a Worker",
 			async (yargs) => {
-				await printWranglerBanner();
 				return yargs
 					.positional("key", {
 						describe: "The variable name to be accessible in the Worker",
@@ -242,7 +261,14 @@ export const secret = (secretYargs: CommonYargsArgv) => {
 					});
 			},
 			async (args) => {
+				await printWranglerBanner();
 				const config = readConfig(args.config, args);
+				if (config.pages_build_output_dir) {
+					throw new UserError(
+						"It looks like you've run a Workers-specific command in a Pages project.\n" +
+							"For Pages, please run `wrangler pages secret delete` instead."
+					);
+				}
 
 				const scriptName = getLegacyScriptName(args, config);
 				if (!scriptName) {
@@ -299,6 +325,12 @@ export const secret = (secretYargs: CommonYargsArgv) => {
 			},
 			async (args) => {
 				const config = readConfig(args.config, args);
+				if (config.pages_build_output_dir) {
+					throw new UserError(
+						"It looks like you've run a Workers-specific command in a Pages project.\n" +
+							"For Pages, please run `wrangler pages secret list` instead."
+					);
+				}
 
 				const scriptName = getLegacyScriptName(args, config);
 				if (!scriptName) {
@@ -360,6 +392,12 @@ type SecretBulkArgs = StrictYargsOptionsToInterface<typeof secretBulkOptions>;
 export const secretBulkHandler = async (secretBulkArgs: SecretBulkArgs) => {
 	await printWranglerBanner();
 	const config = readConfig(secretBulkArgs.config, secretBulkArgs);
+	if (config.pages_build_output_dir) {
+		throw new UserError(
+			"It looks like you've run a Workers-specific command in a Pages project.\n" +
+				"For Pages, please run `wrangler pages secret bulk` instead."
+		);
+	}
 
 	if (secretBulkArgs._.includes("secret:bulk")) {
 		logger.warn(
@@ -452,12 +490,15 @@ export const secretBulkHandler = async (secretBulkArgs: SecretBulkArgs) => {
 	} catch (e) {
 		if (isMissingWorkerError(e)) {
 			// create a draft worker before patching
-			await createDraftWorker({
+			const result = await createDraftWorker({
 				config,
 				args: secretBulkArgs,
 				accountId,
 				scriptName,
 			});
+			if (result === null) {
+				return;
+			}
 			existingBindings = [];
 		} else {
 			throw e;

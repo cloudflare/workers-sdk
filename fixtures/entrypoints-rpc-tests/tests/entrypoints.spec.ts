@@ -43,7 +43,7 @@ function waitFor<T>(callback: Parameters<typeof vi.waitFor<T>>[0]) {
 
 const test = baseTest.extend<{
 	tmpPath: string;
-	isolatedDevRegistryPort: number;
+	isolatedDevRegistryPath: string;
 	dev: StartDevSession;
 }>({
 	// Fixture for creating a temporary directory
@@ -53,17 +53,14 @@ const test = baseTest.extend<{
 		await fs.rm(tmpPath, { recursive: true, maxRetries: 10 });
 	},
 	// Fixture for starting an isolated dev registry server on a random port
-	async isolatedDevRegistryPort({}, use) {
-		// Start a standalone dev registry server for each test
-		const result = await unstable_startWorkerRegistryServer(0);
-		const address = result.server.address();
-		assert(typeof address === "object" && address !== null);
-		await use(address.port);
-		await result.terminator.terminate();
+	async isolatedDevRegistryPath({}, use) {
+		const tmpPath = await fs.realpath(await fs.mkdtemp(tmpPathBase));
+		await use(tmpPath);
+		await fs.rm(tmpPath, { recursive: true, maxRetries: 10 });
 	},
 	// Fixture for starting a worker in a temporary directory, using the test's
 	// isolated dev registry
-	async dev({ tmpPath, isolatedDevRegistryPort }, use) {
+	async dev({ tmpPath, isolatedDevRegistryPath }, use) {
 		const workerTmpPathBase = path.join(tmpPath, "worker-");
 		const cleanups: (() => Promise<unknown>)[] = [];
 
@@ -77,13 +74,13 @@ const test = baseTest.extend<{
 					workerPath,
 					pagesPublicPath,
 					["--port=0", "--inspector-port=0", ...(flags ?? [])],
-					{ WRANGLER_WORKER_REGISTRY_PORT: String(isolatedDevRegistryPort) }
+					{ WRANGLER_REGISTRY_PATH: String(isolatedDevRegistryPath) }
 				);
 			} else {
 				session = await runWranglerDev(
 					workerPath,
 					["--port=0", "--inspector-port=0", ...(flags ?? [])],
-					{ WRANGLER_WORKER_REGISTRY_PORT: String(isolatedDevRegistryPort) }
+					{ WRANGLER_REGISTRY_PATH: String(isolatedDevRegistryPath) }
 				);
 			}
 
@@ -664,7 +661,7 @@ test("should support binding to Durable Object in same worker with explicit scri
 
 test("should throw if binding to named entrypoint exported by version of wrangler without entrypoints support", async ({
 	dev,
-	isolatedDevRegistryPort,
+	isolatedDevRegistryPath,
 }) => {
 	// Start entry worker first, so the server starts with a stubbed service not
 	// found binding
@@ -692,26 +689,19 @@ test("should throw if binding to named entrypoint exported by version of wrangle
 		'[wrangler] Couldn\'t find `wrangler dev` session for service "bound" to proxy to'
 	);
 
-	// Simulate starting up the bound worker with an old version of Wrangler
-	response = await fetch(
-		`http://127.0.0.1:${isolatedDevRegistryPort}/workers/bound`,
-		{
-			method: "POST",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({
-				protocol: "http",
-				mode: "local",
-				port: 0,
-				host: "localhost",
-				durableObjects: [],
-				durableObjectsHost: "localhost",
-				durableObjectsPort: 0,
-				// Intentionally omitting `entrypointAddresses`
-			}),
-		}
+	await writeFile(
+		path.join(isolatedDevRegistryPath, "bound"),
+		JSON.stringify({
+			protocol: "http",
+			mode: "local",
+			port: 0,
+			host: "localhost",
+			durableObjects: [],
+			durableObjectsHost: "localhost",
+			durableObjectsPort: 0,
+			// Intentionally omitting `entrypointAddresses`
+		})
 	);
-	expect(response.status).toBe(200);
-	expect(await response.text()).toBe("null");
 
 	// Wait for error to be thrown
 	await waitFor(() => {
@@ -828,7 +818,7 @@ test("should support binding to wrangler session listening on HTTPS", async ({
 
 test("should throw if binding to version of wrangler without entrypoints support over HTTPS", async ({
 	dev,
-	isolatedDevRegistryPort,
+	isolatedDevRegistryPath,
 }) => {
 	// Start entry worker first, so the server starts with a stubbed service not
 	// found binding
@@ -854,26 +844,19 @@ test("should throw if binding to version of wrangler without entrypoints support
 		'[wrangler] Couldn\'t find `wrangler dev` session for service "bound" to proxy to'
 	);
 
-	// Simulate starting up the bound worker using HTTPS with an old version of Wrangler
-	response = await fetch(
-		`http://127.0.0.1:${isolatedDevRegistryPort}/workers/bound`,
-		{
-			method: "POST",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({
-				protocol: "https",
-				mode: "local",
-				port: 0,
-				host: "localhost",
-				durableObjects: [],
-				durableObjectsHost: "localhost",
-				durableObjectsPort: 0,
-				// Intentionally omitting `entrypointAddresses`
-			}),
-		}
+	await writeFile(
+		path.join(isolatedDevRegistryPath, "bound"),
+		JSON.stringify({
+			protocol: "https",
+			mode: "local",
+			port: 0,
+			host: "localhost",
+			durableObjects: [],
+			durableObjectsHost: "localhost",
+			durableObjectsPort: 0,
+			// Intentionally omitting `entrypointAddresses`
+		})
 	);
-	expect(response.status).toBe(200);
-	expect(await response.text()).toBe("null");
 
 	// Wait for error to be thrown
 	await waitFor(() => {

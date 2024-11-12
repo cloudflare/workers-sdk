@@ -1,6 +1,7 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { blue, gray } from "@cloudflare/cli/colors";
+import { syncAssets } from "../assets";
 import { fetchResult } from "../cfetch";
 import { printBindings } from "../config";
 import { bundleWorker } from "../deployment-bundle/bundle";
@@ -10,6 +11,7 @@ import {
 } from "../deployment-bundle/bundle-reporter";
 import { getBundleType } from "../deployment-bundle/bundle-type";
 import { createWorkerUploadForm } from "../deployment-bundle/create-worker-upload-form";
+import { logBuildOutput } from "../deployment-bundle/esbuild-plugins/log-build-output";
 import {
 	findAdditionalModules,
 	writeAdditionalModules,
@@ -18,12 +20,11 @@ import {
 	createModuleCollector,
 	getWrangler1xLegacyModuleReferences,
 } from "../deployment-bundle/module-collection";
-import { getNodeCompatMode } from "../deployment-bundle/node-compat";
+import { validateNodeCompatMode } from "../deployment-bundle/node-compat";
 import { loadSourceMaps } from "../deployment-bundle/source-maps";
 import { confirm } from "../dialogs";
 import { getMigrationsToUpload } from "../durable";
 import { UserError } from "../errors";
-import { syncExperimentalAssets } from "../experimental-assets";
 import { logger } from "../logger";
 import { getMetricsUsageHeaders } from "../metrics";
 import { isNavigatorDefined } from "../navigator-user-agent";
@@ -35,11 +36,12 @@ import {
 	getSourceMappedString,
 	maybeRetrieveFileSourceMap,
 } from "../sourcemap";
+import { retryOnError } from "../utils/retry";
+import type { AssetsOptions } from "../assets";
 import type { Config } from "../config";
 import type { Rule } from "../config/environment";
 import type { Entry } from "../deployment-bundle/entry";
 import type { CfPlacement, CfWorkerInit } from "../deployment-bundle/worker";
-import type { ExperimentalAssetsOptions } from "../experimental-assets";
 import type { RetrieveSourceMapFunction } from "../sourcemap";
 
 type Props = {
@@ -52,7 +54,7 @@ type Props = {
 	env: string | undefined;
 	compatibilityDate: string | undefined;
 	compatibilityFlags: string[] | undefined;
-	experimentalAssetsOptions: ExperimentalAssetsOptions | undefined;
+	assetsOptions: AssetsOptions | undefined;
 	vars: Record<string, string> | undefined;
 	defines: Record<string, string> | undefined;
 	alias: Record<string, string> | undefined;
@@ -185,7 +187,8 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 	const minify = props.minify ?? config.minify;
 
-	const nodejsCompatMode = getNodeCompatMode(
+	const nodejsCompatMode = validateNodeCompatMode(
+		props.compatibilityDate ?? config.compatibility_date,
 		props.compatibilityFlags ?? config.compatibility_flags,
 		{
 			nodeCompat: props.nodeCompat ?? config.node_compat,
@@ -296,6 +299,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 						moduleCollector,
 						serveLegacyAssetsFromWorker: false,
 						doBindings: config.durable_objects.bindings,
+						workflowBindings: config.workflows,
 						jsxFactory,
 						jsxFragment,
 						tsconfig: props.tsconfig ?? config.tsconfig,
@@ -318,6 +322,17 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 							props.compatibilityDate ?? config.compatibility_date,
 							props.compatibilityFlags ?? config.compatibility_flags
 						),
+						plugins: [logBuildOutput(nodejsCompatMode)],
+
+						// Pages specific options used by wrangler pages commands
+						entryName: undefined,
+						inject: undefined,
+						isOutfile: undefined,
+						external: undefined,
+
+						// These options are dev-only
+						testScheduled: undefined,
+						watch: undefined,
 					}
 				);
 
@@ -345,17 +360,14 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 					config,
 					legacyEnv: props.legacyEnv,
 					env: props.env,
+					dispatchNamespace: undefined,
 				})
 			: undefined;
 
-		// Upload assets if experimental assets is being used
-		const experimentalAssetsJwt =
-			props.experimentalAssetsOptions && !props.dryRun
-				? await syncExperimentalAssets(
-						accountId,
-						scriptName,
-						props.experimentalAssetsOptions.directory
-					)
+		// Upload assets if assets is being used
+		const assetsJwt =
+			props.assetsOptions && !props.dryRun
+				? await syncAssets(accountId, scriptName, props.assetsOptions.directory)
 				: undefined;
 
 		const bindings: CfWorkerInit["bindings"] = {
@@ -369,6 +381,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			text_blobs: config.text_blobs,
 			data_blobs: config.data_blobs,
 			durable_objects: config.durable_objects,
+			workflows: config.workflows,
 			queues: config.queues.producers?.map((producer) => {
 				return { binding: producer.binding, queue_name: producer.queue };
 			}),
@@ -382,8 +395,8 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			mtls_certificates: config.mtls_certificates,
 			pipelines: config.pipelines,
 			logfwdr: config.logfwdr,
-			experimental_assets: config.experimental_assets?.binding
-				? { binding: config.experimental_assets?.binding }
+			assets: config.assets?.binding
+				? { binding: config.assets?.binding }
 				: undefined,
 			unsafe: {
 				bindings: config.unsafe.bindings,
@@ -425,12 +438,12 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 				"workers/message": props.message,
 				"workers/tag": props.tag,
 			},
-			experimental_assets:
-				props.experimentalAssetsOptions && experimentalAssetsJwt
+			assets:
+				props.assetsOptions && assetsJwt
 					? {
-							jwt: experimentalAssetsJwt,
-							routingConfig: props.experimentalAssetsOptions.routingConfig,
-							assetConfig: props.experimentalAssetsOptions.assetConfig,
+							jwt: assetsJwt,
+							routingConfig: props.assetsOptions.routingConfig,
+							assetConfig: props.assetsOptions.assetConfig,
 						}
 					: undefined,
 			logpush: undefined, // both logpush and observability are not supported in versions upload
@@ -469,17 +482,19 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			try {
 				const body = createWorkerUploadForm(worker);
 
-				const result = await fetchResult<{
-					id: string;
-					startup_time_ms: number;
-					metadata: {
-						has_preview: boolean;
-					};
-				}>(`${workerUrl}/versions`, {
-					method: "POST",
-					body,
-					headers: await getMetricsUsageHeaders(config.send_metrics),
-				});
+				const result = await retryOnError(async () =>
+					fetchResult<{
+						id: string;
+						startup_time_ms: number;
+						metadata: {
+							has_preview: boolean;
+						};
+					}>(`${workerUrl}/versions`, {
+						method: "POST",
+						body,
+						headers: await getMetricsUsageHeaders(config.send_metrics),
+					})
+				);
 
 				logger.log("Worker Startup Time:", result.startup_time_ms, "ms");
 				bindingsPrinted = true;
@@ -579,7 +594,7 @@ Changes to triggers (routes, custom domains, cron schedules, etc) must be applie
 	return { versionId, workerTag };
 }
 
-export function helpIfErrorIsSizeOrScriptStartup(
+function helpIfErrorIsSizeOrScriptStartup(
 	err: unknown,
 	dependencies: { [path: string]: { bytesInOutput: number } }
 ) {
@@ -602,10 +617,6 @@ export function helpIfErrorIsSizeOrScriptStartup(
 
 function formatTime(duration: number) {
 	return `(${(duration / 1000).toFixed(2)} sec)`;
-}
-
-export function isAuthenticationError(e: unknown): e is ParseError {
-	return e instanceof ParseError && (e as { code?: number }).code === 10000;
 }
 
 async function noBundleWorker(

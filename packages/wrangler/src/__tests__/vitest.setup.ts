@@ -2,9 +2,7 @@
 import { resolve } from "path";
 import { PassThrough } from "stream";
 import chalk from "chalk";
-import { useApp } from "ink";
 import { passthrough } from "msw";
-import { useEffect } from "react";
 import { afterAll, afterEach, beforeAll, vi } from "vitest";
 import { msw } from "./helpers/msw";
 
@@ -76,10 +74,10 @@ vi.mock("undici", async (importOriginal) => {
 		 * - MSW makes it difficult to use custom interceptors, and _really_ wants you to use globalThis.fetch. In particular, it doesn't support intercepting undici.fetch
 		 * Because Wrangler supports Node v16, we have to use undici's fetch directly rather than using globalThis.fetch. We'd also like to intercept requests with MSW
 		 * Therefore, we mock undici in tests to replace the imported fetch with globalThis.fetch (which MSW will replace with a mocked version—hence the getter, so that we always get the up to date mocked version)
-		 * We're able to delegate to globalThis.fetch in our tests because we run our test in Node v16
+		 * We're able to delegate to globalThis.fetch in our tests because we run our test in Node v18
 		 */
 		get fetch() {
-			// @ts-expect-error Here be dragons (see above)
+			// Here be dragons (see above)
 			return globalThis.fetch;
 		},
 	};
@@ -110,18 +108,6 @@ afterEach(() => {
 	msw.resetHandlers();
 });
 afterAll(() => msw.close());
-
-vi.mock("../dev/dev", () => {
-	return {
-		default: vi.fn().mockImplementation(() => {
-			const { exit } = useApp();
-			useEffect(() => {
-				exit();
-			});
-			return null;
-		}),
-	};
-});
 
 // Make sure that we don't accidentally try to open a browser window when running tests.
 // We will actually provide a mock implementation for `openInBrowser()` within relevant tests.

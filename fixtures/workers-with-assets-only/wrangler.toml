@@ -1,5 +1,5 @@
-name = "worker-with-asset-only"
+name = "worker-with-assets-only"
 compatibility_date = "2024-01-01"
 
-[experimental_assets]
+[assets]
 directory = "./public"

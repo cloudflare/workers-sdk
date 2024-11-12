@@ -2,8 +2,6 @@ import assert from "node:assert";
 import { readFileSync, realpathSync } from "node:fs";
 import path from "node:path";
 import { watch } from "chokidar";
-import { useApp } from "ink";
-import { useEffect, useState } from "react";
 import { bundleWorker } from "../deployment-bundle/bundle";
 import { getBundleType } from "../deployment-bundle/bundle-type";
 import { dedupeModulesByName } from "../deployment-bundle/dedupe-modules";
@@ -17,9 +15,9 @@ import {
 import type { Config } from "../config";
 import type { SourceMapMetadata } from "../deployment-bundle/bundle";
 import type { Entry } from "../deployment-bundle/entry";
-import type { NodeJSCompatMode } from "../deployment-bundle/node-compat";
 import type { CfModule, CfModuleType } from "../deployment-bundle/worker";
 import type { Metafile } from "esbuild";
+import type { NodeJSCompatMode } from "miniflare";
 
 export type EsbuildBundle = {
 	id: number;
@@ -31,34 +29,6 @@ export type EsbuildBundle = {
 	dependencies: Metafile["outputs"][string]["inputs"];
 	sourceMapPath: string | undefined;
 	sourceMapMetadata: SourceMapMetadata | undefined;
-};
-
-export type EsbuildBundleProps = {
-	entry: Entry;
-	destination: string | undefined;
-	jsxFactory: string | undefined;
-	jsxFragment: string | undefined;
-	processEntrypoint: boolean;
-	additionalModules: CfModule[];
-	rules: Config["rules"];
-	legacyAssets: Config["legacy_assets"];
-	define: Config["define"];
-	alias: Config["alias"];
-	serveLegacyAssetsFromWorker: boolean;
-	tsconfig: string | undefined;
-	minify: boolean | undefined;
-	nodejsCompatMode: NodeJSCompatMode | undefined;
-	noBundle: boolean;
-	findAdditionalModules: boolean | undefined;
-	durableObjects: Config["durable_objects"];
-	mockAnalyticsEngineDatasets: Config["analytics_engine_datasets"];
-	local: boolean;
-	targetConsumer: "dev" | "deploy";
-	testScheduled: boolean;
-	projectRoot: string | undefined;
-	onStart: () => void;
-	onComplete: (bundle: EsbuildBundle) => void;
-	defineNavigatorUserAgent: boolean;
 };
 
 export function runBuild(
@@ -81,6 +51,7 @@ export function runBuild(
 		findAdditionalModules,
 		mockAnalyticsEngineDatasets,
 		durableObjects,
+		workflows,
 		local,
 		targetConsumer,
 		testScheduled,
@@ -105,6 +76,7 @@ export function runBuild(
 		noBundle: boolean;
 		findAdditionalModules: boolean | undefined;
 		durableObjects: Config["durable_objects"];
+		workflows: Config["workflows"];
 		mockAnalyticsEngineDatasets: Config["analytics_engine_datasets"];
 		local: boolean;
 		targetConsumer: "dev" | "deploy";
@@ -183,6 +155,7 @@ export function runBuild(
 						minify,
 						nodejsCompatMode,
 						doBindings: durableObjects.bindings,
+						workflowBindings: workflows,
 						alias,
 						define,
 						checkFetch: true,
@@ -196,6 +169,15 @@ export function runBuild(
 						local,
 						projectRoot,
 						defineNavigatorUserAgent,
+
+						// Pages specific options used by wrangler pages commands
+						entryName: undefined,
+						inject: undefined,
+						isOutfile: undefined,
+						external: undefined,
+
+						// sourcemap defaults to true in dev
+						sourcemap: undefined,
 					})
 				: undefined;
 
@@ -249,105 +231,4 @@ export function runBuild(
 	});
 
 	return () => stopWatching?.();
-}
-
-export function useEsbuild({
-	entry,
-	destination,
-	jsxFactory,
-	jsxFragment,
-	processEntrypoint,
-	additionalModules,
-	rules,
-	legacyAssets,
-	serveLegacyAssetsFromWorker,
-	tsconfig,
-	minify,
-	nodejsCompatMode,
-	alias,
-	define,
-	noBundle,
-	findAdditionalModules,
-	mockAnalyticsEngineDatasets,
-	durableObjects,
-	local,
-	targetConsumer,
-	testScheduled,
-	projectRoot,
-	onStart,
-	onComplete,
-	defineNavigatorUserAgent,
-}: EsbuildBundleProps): EsbuildBundle | undefined {
-	const [bundle, setBundle] = useState<EsbuildBundle>();
-	const { exit } = useApp();
-	useEffect(() => {
-		const stopWatching = runBuild(
-			{
-				entry,
-				destination,
-				jsxFactory,
-				jsxFragment,
-				processEntrypoint,
-				additionalModules,
-				rules,
-				legacyAssets,
-				serveLegacyAssetsFromWorker,
-				tsconfig,
-				minify,
-				nodejsCompatMode,
-				alias,
-				define,
-				noBundle,
-				findAdditionalModules,
-				durableObjects,
-				mockAnalyticsEngineDatasets,
-				local,
-				targetConsumer,
-				testScheduled,
-				projectRoot,
-				onStart,
-				defineNavigatorUserAgent,
-			},
-			setBundle,
-			(err) => exit(err)
-		);
-
-		return () => {
-			void stopWatching();
-		};
-	}, [
-		entry,
-		destination,
-		jsxFactory,
-		jsxFragment,
-		serveLegacyAssetsFromWorker,
-		processEntrypoint,
-		additionalModules,
-		rules,
-		tsconfig,
-		exit,
-		noBundle,
-		findAdditionalModules,
-		minify,
-		nodejsCompatMode,
-		alias,
-		define,
-		legacyAssets,
-		mockAnalyticsEngineDatasets,
-		durableObjects,
-		local,
-		targetConsumer,
-		testScheduled,
-		projectRoot,
-		onStart,
-		defineNavigatorUserAgent,
-	]);
-
-	useEffect(() => {
-		if (bundle) {
-			onComplete(bundle);
-		}
-	}, [onComplete, bundle]);
-
-	return bundle;
 }

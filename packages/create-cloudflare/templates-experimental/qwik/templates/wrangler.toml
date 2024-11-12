@@ -3,4 +3,10 @@ name = "<TBD>"
 compatibility_date = "<TBD>"
 compatibility_flags = ["nodejs_compat"]
 main = "./dist/_worker.js"
-experimental_assets = { directory = "./dist", binding = "ASSET" }
+assets = { directory = "./dist", binding = "ASSET" }
+
+# Workers Logs
+# Docs: https://developers.cloudflare.com/workers/observability/logs/workers-logs/
+# Configuration: https://developers.cloudflare.com/workers/observability/logs/workers-logs/#enable-workers-logs
+[observability]
+enabled = true

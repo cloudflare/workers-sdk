@@ -39,7 +39,7 @@ async function getTextFileContents(file: File<string | Uint8Array>) {
 	return readFile(file.path, "utf8");
 }
 
-export const DEFAULT_WORKER_NAME = "worker";
+const DEFAULT_WORKER_NAME = "worker";
 function getName(config: StartDevWorkerOptions) {
 	return config.name ?? DEFAULT_WORKER_NAME;
 }
@@ -101,7 +101,7 @@ async function convertToConfigBundle(
 					includePatterns: event.config.legacy?.site?.include ?? [],
 				}
 			: undefined,
-		experimentalAssets: event.config.experimental?.assets,
+		assets: event.config?.assets,
 		initialPort: undefined,
 		initialIp: "127.0.0.1",
 		rules: [],
@@ -118,6 +118,8 @@ async function convertToConfigBundle(
 		inspect: true,
 		services: bindings.services,
 		serviceBindings: fetchers,
+		bindVectorizeToProd: event.config.dev?.bindVectorizeToProd ?? false,
+		testScheduled: !!event.config.dev.testScheduled,
 	};
 }
 

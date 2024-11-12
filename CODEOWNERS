@@ -1,5 +1,8 @@
 * @cloudflare/wrangler
 
+# D&C ownership
+/packages/workers-shared @cloudflare/deploy-config @cloudflare/wrangler
+
 # Pages ownership
 /packages/pages-shared/ @cloudflare/pages @cloudflare/wrangler
 /packages/wrangler/pages/ @cloudflare/pages @cloudflare/wrangler
@@ -18,8 +21,16 @@
 # C3 ownership
 /packages/create-cloudflare/ @cloudflare/c3 @cloudflare/wrangler
 
+# Workers KV ownership
+/packages/wrangler/src/kv @cloudflare/kv @cloudflare/wrangler
+/packages/wrangler/src/__tests__/kv.local.test.ts @cloudflare/kv @cloudflare/wrangler
+/packages/wrangler/src/__tests__/kv.test.ts @cloudflare/kv @cloudflare/wrangler
+
 # kv-asset-handler ownership
 /packages/kv-asset-handler/ @cloudflare/wrangler
+
+# Workflows ownership
+/packages/workflows-shared/ @cloudflare/workflows @cloudflare/wrangler
 
 # Owners intentionally left blank on these shared directories / files
 # to avoid noisy review requests

@@ -1,6 +1,6 @@
 {
 	"name": "@cloudflare/wrangler-devtools",
-	"version": "0.0.1",
+	"version": "0.1.0",
 	"private": true,
 	"description": "Chrome Devtools hosted for easy use with Wrangler",
 	"homepage": "https://github.com/cloudflare/workers-sdk#readme",
@@ -10,7 +10,8 @@
 	"license": "BSD-3-Clause",
 	"author": "workers-devprod@cloudflare.com",
 	"scripts": {
-		"deploy": "CLOUDFLARE_ACCOUNT_ID=e35fd947284363a46fd7061634477114 make publish"
+		"deploy": "CLOUDFLARE_ACCOUNT_ID=e35fd947284363a46fd7061634477114 make publish",
+		"testenv": "make testenv"
 	},
 	"devDependencies": {
 		"patch-package": "^6.5.1",

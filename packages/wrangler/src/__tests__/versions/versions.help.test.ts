@@ -14,7 +14,7 @@ describe("versions --help", () => {
 			"wrangler
 
 			COMMANDS
-			  wrangler docs [command]            📚 Open Wrangler's command documentation in your browser
+			  wrangler docs [search..]           📚 Open Wrangler's command documentation in your browser
 
 			  wrangler init [name]               📥 Initialize a basic Worker
 			  wrangler dev [script]              👂 Start a local server for developing your Worker
@@ -37,6 +37,7 @@ describe("versions --help", () => {
 			  wrangler pubsub                    📮 Manage Pub/Sub brokers [private beta]
 			  wrangler dispatch-namespace        🏗️  Manage dispatch namespaces
 			  wrangler ai                        🤖 Manage AI models
+			  wrangler workflows                 🔁 Manage Workflows [open-beta]
 			  wrangler login                     🔓 Login to Cloudflare
 			  wrangler logout                    🚪 Logout from Cloudflare
 			  wrangler whoami                    🕵️  Retrieve your user information

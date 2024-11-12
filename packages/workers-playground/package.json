@@ -1,6 +1,6 @@
 {
 	"name": "workers-playground",
-	"version": "0.1.0",
+	"version": "0.2.0",
 	"private": true,
 	"type": "module",
 	"scripts": {
@@ -32,7 +32,6 @@
 		"@cloudflare/style-container": "7.12.2",
 		"@cloudflare/style-provider": "^3.1.0",
 		"@cloudflare/util-en-garde": "^8.0.10",
-		"@cloudflare/util-hooks": "^1.2.0",
 		"@cloudflare/workers-editor-shared": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"glob-to-regexp": "^0.4.1",
@@ -50,11 +49,10 @@
 		"@types/uuid": "^9.0.2",
 		"@typescript-eslint/eslint-plugin": "^6.9.0",
 		"@typescript-eslint/parser": "^6.9.0",
-		"@vitejs/plugin-react": "^4.0.1",
+		"@vitejs/plugin-react": "^4.3.3",
 		"eslint": "^8.49.0",
 		"tsx": "^3.12.8",
-		"undici": "^5.28.4",
-		"vite-plugin-rewrite-all": "^1.0.1",
+		"undici": "catalog:default",
 		"wrangler": "workspace:^"
 	},
 	"volta": {

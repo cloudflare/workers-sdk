@@ -1,10 +1,11 @@
 name: Tests + Checks
 
-on: pull_request
+on:
+  pull_request:
 
 jobs:
   add-to-project:
-    if: github.ref != 'refs/heads/changeset-release/main'
+    if: github.head_ref != 'changeset-release/main'
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}-add-pr
       cancel-in-progress: true
@@ -15,7 +16,7 @@ jobs:
       - run: curl -X POST https://devprod-status-bot.devprod.workers.dev/pr-project/workers-sdk/${{ github.event.number }}
 
   check-non-linux:
-    if: github.ref == 'refs/heads/changeset-release/main'
+    if: github.head_ref == 'changeset-release/main'
     timeout-minutes: 30
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}-checks
@@ -90,7 +91,7 @@ jobs:
         run: node -r esbuild-register tools/deployments/validate-changesets.ts
 
   test:
-    timeout-minutes: 60
+    timeout-minutes: 30
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}-${{ matrix.filter }}-test
       cancel-in-progress: true
@@ -100,7 +101,11 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-13]
-        filter: ["./fixtures/*", "./packages/*", "./tools"]
+        filter: ["./packages/*", "./fixtures/*"]
+        # Things in the tools folder are for running in CI, and so only need to run on linux
+        include:
+          - os: ubuntu-latest
+            filter: "./tools"
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout Repo
@@ -108,7 +113,15 @@ jobs:
         with:
           fetch-depth: 0
 
+      - uses: dorny/paths-filter@v3
+        id: changes
+        with:
+          filters: |
+            everything_but_markdown:
+              - '!**/*.md'
+
       - name: Install Dependencies
+        if: steps.changes.outputs.everything_but_markdown == 'true'
         uses: ./.github/actions/install-dependencies
         with:
           turbo-api: ${{ secrets.TURBO_API }}
@@ -117,6 +130,7 @@ jobs:
           turbo-signature: ${{ secrets.TURBO_REMOTE_CACHE_SIGNATURE_KEY }}
 
       - name: Run tests
+        if: steps.changes.outputs.everything_but_markdown == 'true'
         run: pnpm run test:ci --concurrency 1 --filter=${{ matrix.filter }}
         env:
           TMP_CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -125,9 +139,6 @@ jobs:
           WRANGLER_LOG_PATH: ${{ runner.temp }}/wrangler-debug-logs/
           TEST_REPORT_PATH: ${{ runner.temp }}/test-report/index.html
           CI_OS: ${{ runner.os }}
-
-      - name: Run changeset version tests
-        run: node .github/changeset-version.test.js
 
       - name: Upload debug logs
         if: always()

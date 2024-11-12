@@ -1,5 +1,20 @@
 # workers-playground
 
+## 0.2.0
+
+### Minor Changes
+
+- [#6962](https://github.com/cloudflare/workers-sdk/pull/6962) [`a204747`](https://github.com/cloudflare/workers-sdk/commit/a204747e04afa7592d0cbb5d9fb35d9cd0b2cd49) Thanks [@edmundhung](https://github.com/edmundhung)! - feat: delay preview environment setup until user interaction
+
+  The preview environment will now be set up after the user clicks the send or go button.
+
+## 0.1.1
+
+### Patch Changes
+
+- Updated dependencies [[`7c95836`](https://github.com/cloudflare/workers-sdk/commit/7c9583695c61903838d62023402df3f9fc36f7cb)]:
+  - @cloudflare/workers-editor-shared@0.1.1
+
 ## 0.1.0
 
 ### Minor Changes

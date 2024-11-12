@@ -1,6 +1,7 @@
 import { readConfig } from "../../../config";
-import { CommandLineArgsError } from "../../../index";
+import { CommandLineArgsError } from "../../../errors";
 import { logger } from "../../../logger";
+import { getValidBindingName } from "../../../utils/getValidBindingName";
 import { createQueue } from "../../client";
 import { handleFetchError } from "../../utils";
 import type {
@@ -53,9 +54,18 @@ export async function handler(
 	const config = readConfig(args.config, args);
 	const body = createBody(args);
 	try {
-		logger.log(`Creating queue ${args.name}.`);
+		logger.log(`🌀 Creating queue '${args.name}'`);
 		await createQueue(config, body);
-		logger.log(`Created queue ${args.name}.`);
+		logger.log(
+			`✅ Created queue '${args.name}'\n\n` +
+				"Configure your Worker to send messages to this queue:\n\n" +
+				"[[queues.producers]]\n" +
+				`queue = "${args.name}"\n` +
+				`binding = "${getValidBindingName(args.name, "queue")}"\n\n` +
+				"Configure your Worker to consume messages from this queue:\n\n" +
+				"[[queues.consumers]]\n" +
+				`queue = "${args.name}"`
+		);
 	} catch (e) {
 		handleFetchError(e as { code?: number });
 	}

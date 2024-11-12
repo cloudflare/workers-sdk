@@ -6,7 +6,7 @@ import formatLabelledValues from "../utils/render-labelled-values";
 import {
 	actionsForEventCategories,
 	deleteEventNotificationConfig,
-	getEventNotificationConfig,
+	listEventNotificationConfig,
 	putEventNotificationConfig,
 	tableFromNotificationGetResponse,
 } from "./helpers";
@@ -16,27 +16,42 @@ import type {
 } from "../yargs-types";
 import type { R2EventType } from "./helpers";
 
-export function GetOptions(yargs: CommonYargsArgv) {
-	return yargs.positional("bucket", {
-		describe: "The name of the bucket for which notifications will be emitted",
-		type: "string",
-		demandOption: true,
-	});
+export function ListOptions(yargs: CommonYargsArgv) {
+	return yargs
+		.positional("bucket", {
+			describe: "The name of the R2 bucket to get event notification rules for",
+			type: "string",
+			demandOption: true,
+		})
+		.option("jurisdiction", {
+			describe: "The jurisdiction where the bucket exists",
+			alias: "J",
+			requiresArg: true,
+			type: "string",
+		});
 }
 
-export async function GetHandler(
-	args: StrictYargsOptionsToInterface<typeof GetOptions>
+export async function ListHandler(
+	args: StrictYargsOptionsToInterface<typeof ListOptions>
 ) {
 	await printWranglerBanner();
+	// Check for deprecated `wrangler pages publish` command
+	if (args._[3] === "get") {
+		logger.warn(
+			"`wrangler r2 bucket notification get` is deprecated and will be removed in an upcoming release.\nPlease use `wrangler r2 bucket notification list` instead."
+		);
+	}
 	const config = readConfig(args.config, args);
 	const accountId = await requireAuth(config);
 	const apiCreds = requireApiToken();
-	const resp = await getEventNotificationConfig(
+	const { bucket, jurisdiction = "" } = args;
+	const resp = await listEventNotificationConfig(
 		apiCreds,
 		accountId,
-		`${args.bucket}`
+		bucket,
+		jurisdiction
 	);
-	const tableOutput = await tableFromNotificationGetResponse(config, resp);
+	const tableOutput = tableFromNotificationGetResponse(resp);
 	logger.log(tableOutput.map((x) => formatLabelledValues(x)).join("\n\n"));
 }
 
@@ -44,13 +59,12 @@ export function CreateOptions(yargs: CommonYargsArgv) {
 	return yargs
 		.positional("bucket", {
 			describe:
-				"The name of the bucket for which notifications will be emitted",
+				"The name of the R2 bucket to create an event notification rule for",
 			type: "string",
 			demandOption: true,
 		})
 		.option("event-types", {
-			describe:
-				"Specify the kinds of object events to emit notifications for. ex. '--event-types object-create object-delete'",
+			describe: "The type of event(s) that will emit event notifications",
 			alias: "event-type",
 			choices: Object.keys(actionsForEventCategories),
 			demandOption: true,
@@ -59,20 +73,31 @@ export function CreateOptions(yargs: CommonYargsArgv) {
 		})
 		.option("prefix", {
 			describe:
-				"only actions on objects with this prefix will emit notifications",
+				"The prefix that an object must match to emit event notifications (note: regular expressions not supported)",
 			requiresArg: false,
 			type: "string",
 		})
 		.option("suffix", {
 			describe:
-				"only actions on objects with this suffix will emit notifications",
+				"The suffix that an object must match to emit event notifications (note: regular expressions not supported)",
 			type: "string",
 		})
 		.option("queue", {
 			describe:
-				"The name of the queue to which event notifications will be sent. ex '--queue my-queue'",
+				"The name of the queue that will receive event notification messages",
 			demandOption: true,
 			requiresArg: true,
+			type: "string",
+		})
+		.option("jurisdiction", {
+			describe: "The jurisdiction where the bucket exists",
+			alias: "J",
+			requiresArg: true,
+			type: "string",
+		})
+		.option("description", {
+			describe:
+				"A description that can be used to identify the event notification rule after creation",
 			type: "string",
 		});
 }
@@ -84,39 +109,54 @@ export async function CreateHandler(
 	const config = readConfig(args.config, args);
 	const accountId = await requireAuth(config);
 	const apiCreds = requireApiToken();
-	const { bucket, queue, eventTypes, prefix = "", suffix = "" } = args;
+	const {
+		bucket,
+		queue,
+		eventTypes,
+		prefix = "",
+		suffix = "",
+		jurisdiction = "",
+		description,
+	} = args;
 	await putEventNotificationConfig(
 		config,
 		apiCreds,
 		accountId,
 		bucket,
+		jurisdiction,
 		queue,
 		eventTypes as R2EventType[],
 		prefix,
-		suffix
+		suffix,
+		description
 	);
-	logger.log("Configuration created successfully!");
+	logger.log("Event notification rule created successfully!");
 }
 
 export function DeleteOptions(yargs: CommonYargsArgv) {
 	return yargs
 		.positional("bucket", {
 			describe:
-				"The name of the bucket for which notifications will be emitted",
+				"The name of the R2 bucket to delete an event notification rule for",
 			type: "string",
 			demandOption: true,
 		})
 		.option("queue", {
 			describe:
-				"The name of the queue that is configured to receive notifications. ex '--queue my-queue'",
+				"The name of the queue that corresponds to the event notification rule. If no rule is provided, all event notification rules associated with the bucket and queue will be deleted",
 			demandOption: true,
 			requiresArg: true,
 			type: "string",
 		})
 		.option("rule", {
-			describe:
-				"The id of the rule to delete. If no rule is specified, all rules for the bucket/queue configuration will be deleted.",
+			describe: "The ID of the event notification rule to delete",
 			requiresArg: false,
+			type: "string",
+		})
+		.option("jurisdiction", {
+			describe: "The jurisdiction where the bucket exists",
+			alias: "J",
+			requiresArg: true,
 			type: "string",
 		});
 }
@@ -128,14 +168,15 @@ export async function DeleteHandler(
 	const config = readConfig(args.config, args);
 	const accountId = await requireAuth(config);
 	const apiCreds = requireApiToken();
-	const { bucket, queue, rule } = args;
+	const { bucket, queue, rule, jurisdiction = "" } = args;
 	await deleteEventNotificationConfig(
 		config,
 		apiCreds,
 		accountId,
 		bucket,
+		jurisdiction,
 		queue,
 		rule
 	);
-	logger.log("Configuration deleted successfully!");
+	logger.log("Event notification rule deleted successfully!");
 }

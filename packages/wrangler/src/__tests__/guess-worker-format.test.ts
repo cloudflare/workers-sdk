@@ -16,7 +16,7 @@ describe("guess worker format", () => {
 			process.cwd(),
 			undefined
 		);
-		expect(guess).toBe("modules");
+		expect(guess.format).toBe("modules");
 	});
 
 	it('should detect a "service-worker" worker', async () => {
@@ -29,7 +29,7 @@ describe("guess worker format", () => {
 			process.cwd(),
 			undefined
 		);
-		expect(guess).toBe("service-worker");
+		expect(guess.format).toBe("service-worker");
 	});
 
 	it('should detect a "service-worker" worker using `typeof module`', async () => {
@@ -39,7 +39,7 @@ describe("guess worker format", () => {
 			process.cwd(),
 			undefined
 		);
-		expect(guess).toBe("service-worker");
+		expect(guess.format).toBe("service-worker");
 	});
 
 	it('should detect a "service-worker" worker using imports', async () => {
@@ -64,7 +64,7 @@ describe("guess worker format", () => {
 			process.cwd(),
 			undefined
 		);
-		expect(guess).toBe("service-worker");
+		expect(guess.format).toBe("service-worker");
 	});
 
 	it("should throw an error when the hint doesn't match the guess (modules - service-worker)", async () => {
@@ -100,7 +100,7 @@ describe("guess worker format", () => {
 			process.cwd(),
 			undefined
 		);
-		expect(guess).toBe("service-worker");
+		expect(guess.format).toBe("service-worker");
 	});
 
 	it("logs a warning when a worker has exports, but not a default one", async () => {
@@ -110,11 +110,26 @@ describe("guess worker format", () => {
 			process.cwd(),
 			undefined
 		);
-		expect(guess).toBe("service-worker");
+		expect(guess.format).toBe("service-worker");
 		expect(std.warn).toMatchInlineSnapshot(`
       "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe entrypoint index.ts has exports like an ES Module, but hasn't defined a default export like a module worker normally would. Building the worker using \\"service-worker\\" format...[0m
 
       "
     `);
+	});
+
+	it("should list exports", async () => {
+		await writeFile(
+			"./index.ts",
+			"export default {}; export const Hello ='world'"
+		);
+		// Note that this isn't actually a valid worker, because it's missing
+		// a fetch handler. Regardless, our heuristic is simply to check for exports.
+		const guess = await guessWorkerFormat(
+			path.join(process.cwd(), "./index.ts"),
+			process.cwd(),
+			undefined
+		);
+		expect(guess.exports).toStrictEqual(["Hello", "default"]);
 	});
 });

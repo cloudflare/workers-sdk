@@ -9,7 +9,7 @@ import {
 	requireAuth,
 	writeAuthConfigFile,
 } from "../user";
-import { mockConsoleMethods, normalizeSlashes } from "./helpers/mock-console";
+import { mockConsoleMethods } from "./helpers/mock-console";
 import { useMockIsTTY } from "./helpers/mock-istty";
 import {
 	mockExchangeRefreshTokenForAccessToken,
@@ -20,8 +20,10 @@ import {
 	mswSuccessOauthHandlers,
 	mswSuccessUserHandlers,
 } from "./helpers/msw";
+import { normalizeString } from "./helpers/normalize";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
+import { writeWranglerToml } from "./helpers/write-wrangler-toml";
 import type { Config } from "../config";
 import type { UserAuthConfig } from "../user";
 import type { MockInstance } from "vitest";
@@ -109,8 +111,8 @@ describe("User", () => {
 				Successfully logged in."
 			`);
 
-			expect(normalizeSlashes(getAuthConfigFilePath())).toBe(
-				normalizeSlashes(`${getGlobalWranglerConfigPath()}/config/staging.toml`)
+			expect(normalizeString(getAuthConfigFilePath())).toBe(
+				normalizeString(`${getGlobalWranglerConfigPath()}/config/staging.toml`)
 			);
 			expect(readAuthConfigFile()).toEqual<UserAuthConfig>({
 				api_token: undefined,
@@ -174,8 +176,51 @@ describe("User", () => {
 			refresh_token: "Order 66",
 		});
 
-		expect(normalizeSlashes(getAuthConfigFilePath())).toBe(
-			normalizeSlashes(`${getGlobalWranglerConfigPath()}/config/staging.toml`)
+		expect(normalizeString(getAuthConfigFilePath())).toBe(
+			normalizeString(`${getGlobalWranglerConfigPath()}/config/staging.toml`)
 		);
+	});
+
+	it("should not warn on invalid wrangler.toml when logging in", async () => {
+		mockOAuthServerCallback("success");
+
+		let counter = 0;
+		msw.use(
+			http.post(
+				"*/oauth2/token",
+				async () => {
+					counter += 1;
+
+					return HttpResponse.json({
+						access_token: "test-access-token",
+						expires_in: 100000,
+						refresh_token: "test-refresh-token",
+						scope: "account:read",
+					});
+				},
+				{ once: true }
+			)
+		);
+
+		// @ts-expect-error - intentionally invalid
+		writeWranglerToml({ invalid: true });
+
+		await runWrangler("login");
+
+		expect(counter).toBe(1);
+		expect(std.out).toMatchInlineSnapshot(`
+			"Attempting to login via OAuth...
+			Opening a link in your default browser: https://dash.cloudflare.com/oauth2/auth?response_type=code&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20ai%3Awrite%20queues%3Awrite%20pipelines%3Awrite%20offline_access&state=MOCK_STATE_PARAM&code_challenge=MOCK_CODE_CHALLENGE&code_challenge_method=S256
+			Successfully logged in."
+		`);
+		expect(std.warn).toMatchInlineSnapshot(`""`);
+		expect(std.err).toMatchInlineSnapshot(`""`);
+		expect(readAuthConfigFile()).toEqual<UserAuthConfig>({
+			api_token: undefined,
+			oauth_token: "test-access-token",
+			refresh_token: "test-refresh-token",
+			expiration_time: expect.any(String),
+			scopes: ["account:read"],
+		});
 	});
 });

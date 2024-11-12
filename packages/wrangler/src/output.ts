@@ -70,12 +70,10 @@ export type OutputEntry =
 	| OutputEntryDeployment
 	| OutputEntryPagesDeployment
 	| OutputEntryVersionUpload
-	| OutputEntryVersionDeployment;
+	| OutputEntryVersionDeployment
+	| OutputEntryPagesDeploymentDetailed;
 
-export type StampedOutputEntry = { timestamp: string } & OutputEntry;
-
-export interface OutputEntrySession
-	extends OutputEntryBase<"wrangler-session"> {
+interface OutputEntrySession extends OutputEntryBase<"wrangler-session"> {
 	version: 1;
 	/** The semver version string taken from Wrangler's package.json. */
 	wrangler_version: string;
@@ -85,7 +83,7 @@ export interface OutputEntrySession
 	log_file_path: string;
 }
 
-export interface OutputEntryDeployment extends OutputEntryBase<"deploy"> {
+interface OutputEntryDeployment extends OutputEntryBase<"deploy"> {
 	version: 1;
 	/** The name of the Worker. */
 	worker_name: string | null;
@@ -97,8 +95,7 @@ export interface OutputEntryDeployment extends OutputEntryBase<"deploy"> {
 	targets: string[] | undefined;
 }
 
-export interface OutputEntryPagesDeployment
-	extends OutputEntryBase<"pages-deploy"> {
+interface OutputEntryPagesDeployment extends OutputEntryBase<"pages-deploy"> {
 	version: 1;
 	/** The name of the Pages project. */
 	pages_project: string | null;
@@ -108,8 +105,22 @@ export interface OutputEntryPagesDeployment
 	url: string | undefined;
 }
 
-export interface OutputEntryVersionUpload
-	extends OutputEntryBase<"version-upload"> {
+interface OutputEntryPagesDeploymentDetailed
+	extends OutputEntryBase<"pages-deploy-detailed"> {
+	version: 1;
+	/** The name of the Pages project. */
+	pages_project: string | null;
+	/** A GUID that identifies this Pages deployment. */
+	deployment_id: string | null;
+	/** The URL associated with this deployment */
+	url: string | undefined;
+	/** The Alias url, if it exists */
+	alias: string | undefined;
+	/** The environment being deployed to */
+	environment: "production" | "preview";
+}
+
+interface OutputEntryVersionUpload extends OutputEntryBase<"version-upload"> {
 	version: 1;
 	/** The name of the Worker. */
 	worker_name: string | null;
@@ -119,7 +130,7 @@ export interface OutputEntryVersionUpload
 	version_id: string | null;
 }
 
-export interface OutputEntryVersionDeployment
+interface OutputEntryVersionDeployment
 	extends OutputEntryBase<"version-deploy"> {
 	version: 1;
 	/** The name of the Worker. */

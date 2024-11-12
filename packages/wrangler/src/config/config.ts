@@ -31,7 +31,7 @@ export type RawConfig = Partial<ConfigFields<RawDevConfig>> &
 	EnvironmentMap & { $schema?: string };
 
 // Pages-specific configuration fields
-export interface PagesConfigFields {
+interface PagesConfigFields {
 	/**
 	 * The directory of static assets to serve.
 	 *
@@ -115,9 +115,11 @@ export interface ConfigFields<Dev extends RawDevConfig> {
 		| undefined;
 
 	/**
-	 * Serve a folder of static assets with your Worker, without any additional code.
-	 * This can either be a string, or an object with additional config fields.
-	 * Only one of assets and legacy_assets can be used.
+	 * Old behaviour of serving a folder of static assets with your Worker,
+	 * without any additional code.
+	 * This can either be a string, or an object with additional config
+	 * fields.
+	 * Will be deprecated in the near future in favor of `assets`.
 	 */
 	legacy_assets:
 		| {
@@ -183,7 +185,7 @@ export interface ConfigFields<Dev extends RawDevConfig> {
 }
 
 // Pages-specific configuration fields
-export interface PagesConfigFields {
+interface PagesConfigFields {
 	/**
 	 * The directory of static assets to serve.
 	 *
@@ -241,7 +243,7 @@ export interface DevConfig {
 
 export type RawDevConfig = Partial<DevConfig>;
 
-export interface DeprecatedConfigFields {
+interface DeprecatedConfigFields {
 	/**
 	 * The project "type". A holdover from Wrangler v1.x.
 	 * Valid values were "webpack", "javascript", and "rust".
@@ -265,22 +267,6 @@ export interface DeprecatedConfigFields {
 	 * @deprecated
 	 */
 	miniflare?: unknown;
-
-	/**
-	 * Serve a folder of static assets with your Worker, without any additional code.
-	 * This can either be a string, or an object with additional config fields.
-	 * Only one of assets and legacy_assets can be used.
-	 */
-	assets?:
-		| {
-				bucket: string;
-				include: string[];
-				exclude: string[];
-				browser_TTL: number | undefined;
-				serve_single_page_app: boolean;
-		  }
-		| string
-		| undefined;
 }
 
 interface EnvironmentMap {
@@ -342,6 +328,7 @@ export const defaultWranglerConfig: Config = {
 	d1_databases: [],
 	vectorize: [],
 	hyperdrive: [],
+	workflows: [],
 	services: [],
 	analytics_engine_datasets: [],
 	ai: undefined,
@@ -389,7 +376,7 @@ export const defaultWranglerConfig: Config = {
 	logfwdr: { bindings: [] },
 	logpush: undefined,
 	upload_source_maps: undefined,
-	experimental_assets: undefined,
+	assets: undefined,
 	observability: { enabled: true },
 
 	/** NON-INHERITABLE ENVIRONMENT FIELDS **/

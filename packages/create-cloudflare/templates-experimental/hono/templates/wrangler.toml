@@ -1,0 +1,5 @@
+#:schema node_modules/wrangler/config-schema.json
+name = "<TBD>"
+main = "src/index.ts"
+compatibility_date = "<TBD>"
+assets = { directory = "./public", binding = "ASSETS" }

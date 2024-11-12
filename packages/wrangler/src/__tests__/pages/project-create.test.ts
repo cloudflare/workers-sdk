@@ -148,4 +148,39 @@ describe("pages project create", () => {
             To deploy a folder of assets, run 'wrangler pages deploy [directory]'."
         `);
 	});
+
+	it("should override cached accountId with CLOUDFLARE_ACCOUNT_ID environmental variable if provided", async () => {
+		msw.use(
+			http.post(
+				"*/accounts/:accountId/pages/projects",
+				async ({ request, params }) => {
+					const body = (await request.json()) as Record<string, unknown>;
+					expect(params.accountId).toEqual("new-account-id");
+					return HttpResponse.json(
+						{
+							success: true,
+							errors: [],
+							messages: [],
+							result: {
+								...body,
+								subdomain: "an-existing-project.pages.dev",
+							},
+						},
+						{ status: 200 }
+					);
+				},
+				{ once: true }
+			)
+		);
+		vi.mock("getConfigCache", () => {
+			return {
+				account_id: "original-account-id",
+				project_name: "an-existing-project",
+			};
+		});
+		vi.stubEnv("CLOUDFLARE_ACCOUNT_ID", "new-account-id");
+		await runWrangler(
+			"pages project create an-existing-project --production-branch=main --compatibility-date 2022-03-08"
+		);
+	});
 });

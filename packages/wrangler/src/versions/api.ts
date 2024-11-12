@@ -125,7 +125,7 @@ export async function createDeployment(
 	);
 }
 
-type NonVersionedScriptSettings = {
+export type NonVersionedScriptSettings = {
 	logpush: boolean;
 	tail_consumers: TailConsumer[];
 	observability: Observability;
@@ -146,18 +146,6 @@ export async function patchNonVersionedScriptSettings(
 	);
 
 	// TODO: handle specific errors
-
-	return res;
-}
-
-export async function fetchNonVersionedScriptSettings(
-	accountId: string,
-	workerName: string
-): Promise<NonVersionedScriptSettings> {
-	const res = await fetchResult<NonVersionedScriptSettings>(
-		`/accounts/${accountId}/workers/scripts/${workerName}/script-settings`,
-		{ method: "GET" }
-	);
 
 	return res;
 }

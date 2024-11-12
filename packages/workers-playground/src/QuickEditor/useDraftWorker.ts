@@ -1,7 +1,6 @@
 import { eg } from "@cloudflare/util-en-garde";
-import { useDebounce } from "@cloudflare/util-hooks";
 import lzstring from "lz-string";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import useSWR from "swr";
 import { v4 } from "uuid";
 import { getPlaygroundWorker } from "./getPlaygroundWorker";
@@ -139,14 +138,9 @@ async function compressWorker(worker: FormData) {
 	);
 }
 
-async function updatePreviewHash(
-	content: Worker,
-	updateWorkerHash: (hash: string) => void
-): Promise<PreviewHash> {
+async function updatePreviewHash(content: Worker): Promise<PreviewHash> {
 	const worker = serialiseWorker(content);
 	const serialised = await compressWorker(worker);
-	const playgroundUrl = `/playground#${serialised}`;
-	updateWorkerHash(playgroundUrl);
 
 	const res = await fetch("/playground/api/worker", {
 		method: "POST",
@@ -170,16 +164,13 @@ async function updatePreviewHash(
 	};
 }
 
-const DEBOUNCE_TIMEOUT = 1000;
-
-export function useDraftWorker(
-	initialHash: string,
-	updateWorkerHash: (hash: string) => void
-): {
+export function useDraftWorker(initialHash: string): {
 	isLoading: boolean;
 	service: Worker | null;
+	previewService: Worker | null;
 	devtoolsUrl: string | undefined;
-	preview: (content: Pick<Worker, "entrypoint" | "modules">) => void;
+	updateDraft: (content: Pick<Worker, "entrypoint" | "modules">) => void;
+	preview: () => void;
 	previewHash: PreviewHash | undefined;
 	previewError: string | undefined;
 	parseError: string | undefined;
@@ -191,30 +182,23 @@ export function useDraftWorker(
 		data: worker,
 		isLoading,
 		error,
-	} = useSWR(initialHash, getPlaygroundWorker);
+	} = useSWR(initialHash, getPlaygroundWorker, {
+		// There is no need to revalidate playground worker as it is rarely updated
+		revalidateOnFocus: false,
+	});
 
 	const [draftWorker, setDraftWorker] =
 		useState<Pick<Worker, "entrypoint" | "modules">>();
-
+	const [previewWorker, setPreviewWorker] = useState(draftWorker);
 	const [previewHash, setPreviewHash] = useState<PreviewHash>();
 	const [previewError, setPreviewError] = useState<string>();
 	const [devtoolsUrl, setDevtoolsUrl] = useState<string>();
 
-	const updatePreview = useDebounce(
-		async (wk?: Pick<Worker, "entrypoint" | "modules">) => {
-			setDraftWorker(wk);
-			if (worker === undefined) {
-				return;
-			}
+	useEffect(() => {
+		async function updatePreview(content: Worker) {
 			try {
 				setIsPreviewUpdating(true);
-				const hash = await updatePreviewHash(
-					{
-						...worker,
-						...(wk ?? draftWorker),
-					},
-					updateWorkerHash
-				);
+				const hash = await updatePreviewHash(content);
 				setPreviewHash(hash);
 				setDevtoolsUrl(hash.devtoolsUrl);
 			} catch (e: unknown) {
@@ -225,28 +209,27 @@ export function useDraftWorker(
 			} finally {
 				setIsPreviewUpdating(false);
 			}
-		},
-		DEBOUNCE_TIMEOUT
-	);
-
-	const initialPreview = useRef(false);
-	useEffect(() => {
-		if (worker && !initialPreview.current) {
-			initialPreview.current = true;
-			setIsPreviewUpdating(true);
-			void updatePreview(worker).then(() => setIsPreviewUpdating(false));
 		}
-	}, [updatePreview, worker]);
+
+		if (worker) {
+			void updatePreview({
+				...worker,
+				...previewWorker,
+			});
+		}
+	}, [worker, previewWorker]);
 
 	return {
 		isLoading,
 		service: worker ? { ...worker, ...draftWorker } : null,
-		preview: (...args) => {
-			// updatePreview is debounced, so call setPreviewHash outside of it
-			setPreviewHash(undefined);
-			setPreviewError(undefined);
-			void updatePreview(...args);
+		previewService: worker ? { ...worker, ...previewWorker } : null,
+		preview: () => {
+			if (previewWorker !== draftWorker) {
+				setPreviewHash(undefined);
+				setPreviewWorker(draftWorker);
+			}
 		},
+		updateDraft: setDraftWorker,
 		devtoolsUrl,
 		previewHash,
 		isPreviewUpdating,

@@ -22,7 +22,7 @@ jobs:
         pm:
           [
             { name: npm, version: "0.0.0" },
-            { name: pnpm, version: "9.10.0" },
+            { name: pnpm, version: "9.12.0" },
             { name: bun, version: "1.0.3" },
           ]
     runs-on: ${{ matrix.os }}
@@ -48,4 +48,3 @@ jobs:
           quarantine: true
           accountId: ${{ secrets.C3_TEST_CLOUDFLARE_ACCOUNT_ID }}
           apiToken: ${{ secrets.C3_TEST_CLOUDFLARE_API_TOKEN }}
-          saveDiffs: false

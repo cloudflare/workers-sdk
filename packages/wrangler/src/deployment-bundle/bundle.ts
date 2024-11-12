@@ -3,6 +3,10 @@ import * as path from "node:path";
 import NodeGlobalsPolyfills from "@esbuild-plugins/node-globals-polyfill";
 import NodeModulesPolyfills from "@esbuild-plugins/node-modules-polyfill";
 import * as esbuild from "esbuild";
+import {
+	getBuildConditionsFromEnv,
+	getBuildPlatformFromEnv,
+} from "../environment-variables/misc-variables";
 import { UserError } from "../errors";
 import { getBasePath, getWranglerTmpDir } from "../paths";
 import { applyMiddlewareLoaderFacade } from "./apply-middleware";
@@ -21,12 +25,15 @@ import { standardURLPlugin } from "./esbuild-plugins/standard-url";
 import { writeAdditionalModules } from "./find-additional-modules";
 import { noopModuleCollector } from "./module-collection";
 import type { Config } from "../config";
-import type { DurableObjectBindings } from "../config/environment";
+import type {
+	DurableObjectBindings,
+	WorkflowBinding,
+} from "../config/environment";
 import type { MiddlewareLoader } from "./apply-middleware";
 import type { Entry } from "./entry";
 import type { ModuleCollector } from "./module-collection";
-import type { NodeJSCompatMode } from "./node-compat";
 import type { CfModule, CfModuleType } from "./worker";
+import type { NodeJSCompatMode } from "miniflare";
 
 // Taken from https://stackoverflow.com/a/3561711
 // which is everything from the tc39 proposal, plus the following two characters: ^/
@@ -43,8 +50,43 @@ export const COMMON_ESBUILD_OPTIONS = {
 	loader: { ".js": "jsx", ".mjs": "jsx", ".cjs": "jsx" },
 } as const;
 
-// build conditions used by esbuild, and when resolving custom `import` calls
-export const BUILD_CONDITIONS = ["workerd", "worker", "browser"];
+/**
+ * Get the custom build conditions used by esbuild, and when resolving custom `import` calls.
+ *
+ * If we do not override these in an env var, we will set them to "workerd", "worker" and "browser".
+ * If we override in env vars then these will be provided to esbuild instead.
+ *
+ * Whether or not we set custom conditions the `default` condition will always be active.
+ * If the Worker is using ESM syntax, then the `import` condition will also be active.
+ *
+ * Moreover the following applies:
+ * - if the platform is set to `browser` (the default) then the `browser` condition will be active.
+ * - if the platform is set to `node` then the `node` condition will be active.
+ *
+ * See https://esbuild.github.io/api/#how-conditions-work for more info.
+ */
+export function getBuildConditions() {
+	const envVar = getBuildConditionsFromEnv();
+	if (envVar !== undefined) {
+		return envVar.split(",");
+	} else {
+		return ["workerd", "worker", "browser"];
+	}
+}
+
+function getBuildPlatform(): esbuild.Platform {
+	const platform = getBuildPlatformFromEnv();
+	if (
+		platform !== undefined &&
+		!["browser", "node", "neutral"].includes(platform)
+	) {
+		throw new UserError(
+			"Invalid esbuild platform configuration defined in the WRANGLER_BUILD_PLATFORM environment variable.\n" +
+				"Valid platform values are: 'browser', 'node' and 'neutral'."
+		);
+	}
+	return platform as esbuild.Platform;
+}
 
 /**
  * Information about Wrangler's bundling process that needs passed through
@@ -73,32 +115,31 @@ export type BundleOptions = {
 	// A module collector enables you to observe what modules are in the Worker.
 	moduleCollector: ModuleCollector;
 	serveLegacyAssetsFromWorker: boolean;
-	legacyAssets?: Config["legacy_assets"];
-	bypassAssetCache?: boolean;
+	legacyAssets: Config["legacy_assets"] | undefined;
+	bypassAssetCache: boolean | undefined;
 	doBindings: DurableObjectBindings;
-	jsxFactory?: string;
-	jsxFragment?: string;
-	entryName?: string;
-	watch?: boolean;
-	tsconfig?: string;
-	minify?: boolean;
-	nodejsCompatMode?: NodeJSCompatMode;
+	workflowBindings: WorkflowBinding[];
+	jsxFactory: string | undefined;
+	jsxFragment: string | undefined;
+	entryName: string | undefined;
+	watch: boolean | undefined;
+	tsconfig: string | undefined;
+	minify: boolean | undefined;
+	nodejsCompatMode: NodeJSCompatMode | undefined;
 	define: Config["define"];
 	alias: Config["alias"];
 	checkFetch: boolean;
 	mockAnalyticsEngineDatasets: Config["analytics_engine_datasets"];
 	targetConsumer: "dev" | "deploy";
-	testScheduled?: boolean;
-	inject?: string[];
-	loader?: Record<string, string>;
-	sourcemap?: esbuild.CommonOptions["sourcemap"];
-	plugins?: esbuild.Plugin[];
-	isOutfile?: boolean;
-	forPages?: boolean;
+	testScheduled: boolean | undefined;
+	inject: string[] | undefined;
+	sourcemap: esbuild.CommonOptions["sourcemap"] | undefined;
+	plugins: esbuild.Plugin[] | undefined;
+	isOutfile: boolean | undefined;
 	local: boolean;
 	projectRoot: string | undefined;
 	defineNavigatorUserAgent: boolean;
-	external?: string[];
+	external: string[] | undefined;
 };
 
 /**
@@ -113,6 +154,7 @@ export async function bundleWorker(
 		additionalModules = [],
 		serveLegacyAssetsFromWorker,
 		doBindings,
+		workflowBindings,
 		jsxFactory,
 		jsxFragment,
 		entryName,
@@ -129,11 +171,9 @@ export async function bundleWorker(
 		targetConsumer,
 		testScheduled,
 		inject: injectOption,
-		loader,
 		sourcemap,
 		plugins,
 		isOutfile,
-		forPages,
 		local,
 		projectRoot,
 		defineNavigatorUserAgent,
@@ -347,6 +387,7 @@ export async function bundleWorker(
 		bundle,
 		absWorkingDir: entry.directory,
 		outdir: destination,
+		keepNames: true,
 		entryNames: entryName || path.parse(entryFile).name,
 		...(isOutfile
 			? {
@@ -367,7 +408,8 @@ export async function bundleWorker(
 		sourceRoot: destination,
 		minify,
 		metafile: true,
-		conditions: BUILD_CONDITIONS,
+		conditions: getBuildConditions(),
+		platform: getBuildPlatform(),
 		...(process.env.NODE_ENV && {
 			define: {
 				...(defineNavigatorUserAgent
@@ -380,10 +422,7 @@ export async function bundleWorker(
 				...define,
 			},
 		}),
-		loader: {
-			...COMMON_ESBUILD_OPTIONS.loader,
-			...(loader || {}),
-		},
+		loader: COMMON_ESBUILD_OPTIONS.loader,
 		plugins: [
 			aliasPlugin,
 			moduleCollector.plugin,
@@ -429,7 +468,11 @@ export async function bundleWorker(
 			await ctx.watch();
 			result = await initialBuildResultPromise;
 			if (result.errors.length > 0) {
-				throw new UserError("Failed to build");
+				throw new BuildFailure(
+					"Initial build failed.",
+					result.errors,
+					result.warnings
+				);
 			}
 
 			stop = async function () {
@@ -445,8 +488,8 @@ export async function bundleWorker(
 			};
 		}
 	} catch (e) {
-		if (nodejsCompatMode !== "legacy" && isBuildFailure(e)) {
-			rewriteNodeCompatBuildFailure(e.errors, forPages);
+		if (isBuildFailure(e)) {
+			rewriteNodeCompatBuildFailure(e.errors, nodejsCompatMode);
 		}
 		throw e;
 	}
@@ -459,6 +502,18 @@ export async function bundleWorker(
 		const relativePath = path.relative(process.cwd(), entryFile);
 		throw new UserError(
 			`Your Worker depends on the following Durable Objects, which are not exported in your entrypoint file: ${notExportedDOs.join(
+				", "
+			)}.\nYou should export these objects from your entrypoint, ${relativePath}.`
+		);
+	}
+
+	const notExportedWorkflows = workflowBindings
+		.filter((x) => !x.script_name && !entryPoint.exports.includes(x.class_name))
+		.map((x) => x.class_name);
+	if (notExportedWorkflows.length) {
+		const relativePath = path.relative(process.cwd(), entryFile);
+		throw new UserError(
+			`Your Worker depends on the following Workflows, which are not exported in your entrypoint file: ${notExportedWorkflows.join(
 				", "
 			)}.\nYou should export these objects from your entrypoint, ${relativePath}.`
 		);
@@ -496,4 +551,14 @@ export async function bundleWorker(
 			entryDirectory: entry.directory,
 		},
 	};
+}
+
+class BuildFailure extends Error {
+	constructor(
+		message: string,
+		readonly errors: esbuild.Message[],
+		readonly warnings: esbuild.Message[]
+	) {
+		super(message);
+	}
 }

@@ -1,6 +1,6 @@
 import { main } from "../../index";
 import * as shellquote from "../../utils/shell-quote";
-import { normalizeSlashes, stripTimings } from "./mock-console";
+import { normalizeString } from "./normalize";
 
 /**
  * A helper to 'run' wrangler commands for tests.
@@ -16,7 +16,7 @@ export async function runWrangler(
 		await main(argv);
 	} catch (err) {
 		if (err instanceof Error) {
-			err.message = normalizeSlashes(stripTimings(err.message));
+			err.message = normalizeString(err.message);
 		}
 		throw err;
 	} finally {

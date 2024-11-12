@@ -13,7 +13,7 @@ import type { C3Context, PackageJson } from "types";
 const { npm } = detectPackageManager();
 
 const generate = async (ctx: C3Context) => {
-	await runFrameworkGenerator(ctx, [ctx.project.name]);
+	await runFrameworkGenerator(ctx, ["create", ctx.project.name]);
 
 	logRaw("");
 };
@@ -97,8 +97,8 @@ const updateTypeDefinitions = (ctx: C3Context) => {
 const config: TemplateConfig = {
 	configVersion: 1,
 	id: "svelte",
-	frameworkCli: "create-svelte",
-	displayName: "Svelte",
+	frameworkCli: "sv",
+	displayName: "SvelteKit",
 	platform: "pages",
 	copyFiles: {
 		variants: {

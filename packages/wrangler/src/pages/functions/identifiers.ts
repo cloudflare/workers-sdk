@@ -1,4 +1,4 @@
-export const RESERVED_KEYWORDS = [
+const RESERVED_KEYWORDS = [
 	"do",
 	"if",
 	"in",
@@ -52,18 +52,12 @@ export const RESERVED_KEYWORDS = [
 	"undefined",
 ];
 
-export const reservedKeywordRegex = new RegExp(
-	`^${RESERVED_KEYWORDS.join("|")}$`
-);
+const reservedKeywordRegex = new RegExp(`^${RESERVED_KEYWORDS.join("|")}$`);
 
-export const identifierStartRegex = /[$_\p{ID_Start}]/u;
-
-export const identifierPartRegex = /[$_\u200C\u200D\p{ID_Continue}]/u;
-
-export const identifierNameRegex =
+const identifierNameRegex =
 	/^(?:[$_\p{ID_Start}])(?:[$_\u200C\u200D\p{ID_Continue}])*$/u;
 
-export const validIdentifierRegex = new RegExp(
+const validIdentifierRegex = new RegExp(
 	`(?!(${reservedKeywordRegex.source})$)${identifierNameRegex.source}`,
 	"u"
 );

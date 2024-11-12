@@ -10,7 +10,7 @@ import path, {
 import { createUploadWorkerBundleContents } from "../api/pages/create-worker-bundle-contents";
 import { readConfig } from "../config";
 import { writeAdditionalModules } from "../deployment-bundle/find-additional-modules";
-import { getNodeCompatMode } from "../deployment-bundle/node-compat";
+import { validateNodeCompatMode } from "../deployment-bundle/node-compat";
 import { FatalError } from "../errors";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
@@ -29,11 +29,11 @@ import {
 } from "./functions/buildWorker";
 import type { Config } from "../config";
 import type { BundleResult } from "../deployment-bundle/bundle";
-import type { NodeJSCompatMode } from "../deployment-bundle/node-compat";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
 } from "../yargs-types";
+import type { NodeJSCompatMode } from "miniflare";
 
 export type PagesBuildArgs = StrictYargsOptionsToInterface<typeof Options>;
 
@@ -438,10 +438,14 @@ const validateArgs = async (args: PagesBuildArgs): Promise<ValidatedArgs> => {
 	}
 
 	const { nodeCompat: node_compat, ...argsExceptNodeCompat } = args;
-	const nodejsCompatMode = getNodeCompatMode(args.compatibilityFlags ?? [], {
-		nodeCompat: node_compat,
-		noBundle: config?.no_bundle,
-	});
+	const nodejsCompatMode = validateNodeCompatMode(
+		args.compatibilityDate ?? config?.compatibility_date,
+		args.compatibilityFlags ?? config?.compatibility_flags ?? [],
+		{
+			nodeCompat: node_compat,
+			noBundle: config?.no_bundle,
+		}
+	);
 
 	const defineNavigatorUserAgent = isNavigatorDefined(
 		args.compatibilityDate,

@@ -1,0 +1,45 @@
+From 233ae8633d7a84f662ebdea564070fcbee2f42d4 Mon Sep 17 00:00:00 2001
+From: Workers DevProd <workers-devprod@cloudflare.com>
+Date: Fri, 25 Oct 2024 15:04:17 +0100
+Subject: [PATCH 3/8] Add ping to improve connection stability. Without this,
+ we see frequent "Devtools disconnected" messages in the dash and Workers
+ Playground
+
+---
+ front_end/core/protocol_client/InspectorBackend.ts | 8 ++++++++
+ 1 file changed, 8 insertions(+)
+
+diff --git a/front_end/core/protocol_client/InspectorBackend.ts b/front_end/core/protocol_client/InspectorBackend.ts
+index ad2d1fe357..d7af79ede5 100644
+--- a/front_end/core/protocol_client/InspectorBackend.ts
++++ b/front_end/core/protocol_client/InspectorBackend.ts
+@@ -259,6 +259,7 @@ export class SessionRouter {
+     proxyConnection: ((Connection | undefined)|null),
+   }>;
+   #pendingScripts: (() => void)[];
++  #pingInterval: ReturnType<typeof setInterval>;
+ 
+   constructor(connection: Connection) {
+     this.#connectionInternal = connection;
+@@ -276,11 +277,18 @@ export class SessionRouter {
+     this.#connectionInternal.setOnMessage(this.onMessage.bind(this));
+ 
+     this.#connectionInternal.setOnDisconnect(reason => {
++      clearInterval(this.#pingInterval);
+       const session = this.#sessions.get('');
+       if (session) {
+         session.target.dispose(reason);
+       }
+     });
++    this.#pingInterval = setInterval(() => {
++      this.#connectionInternal.sendRawMessage(JSON.stringify({
++        method: 'Runtime.getIsolateId',
++        id: this.nextMessageId(),
++      }));
++    }, 10_000);
+   }
+ 
+   registerSession(target: TargetBase, sessionId: string, proxyConnection?: Connection|null): void {
+-- 
+2.39.5 (Apple Git-154)
+

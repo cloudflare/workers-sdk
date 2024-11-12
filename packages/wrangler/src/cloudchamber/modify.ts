@@ -187,27 +187,22 @@ async function handleModifyCommand(
 
 	const keys = await handleSSH(args, config, deployment);
 	const givenImage = args.image ?? config.cloudchamber.image;
-	const imagePrompt = await processArgument<string>(
-		{ image: givenImage },
-		"image",
-		{
-			question: modifyImageQuestion,
-			label: "",
-			validate: (value) => {
-				if (typeof value !== "string") {
-					return "unknown error";
-				}
-				if (value.endsWith(":latest")) {
-					return "we don't allow :latest tags";
-				}
-			},
-			defaultValue: givenImage ?? "",
-			initialValue: givenImage ?? "",
-			helpText: "if you don't want to modify the image, press return",
-			type: "text",
-		}
-	);
-	const image = !imagePrompt ? undefined : imagePrompt;
+	const image = await processArgument<string>({ image: givenImage }, "image", {
+		question: modifyImageQuestion,
+		label: "",
+		validate: (value) => {
+			if (typeof value !== "string") {
+				return "unknown error";
+			}
+			if (value.endsWith(":latest")) {
+				return "we don't allow :latest tags";
+			}
+		},
+		defaultValue: givenImage ?? deployment.image,
+		initialValue: givenImage ?? deployment.image,
+		helpText: "Press Return to leave unchanged",
+		type: "text",
+	});
 
 	const locationPick = await getLocation(
 		{ location: args.location ?? config.cloudchamber.location },
@@ -234,7 +229,7 @@ async function handleModifyCommand(
 	);
 
 	renderDeploymentConfiguration("modify", {
-		image: image ?? deployment.image,
+		image,
 		location: location ?? deployment.location.name,
 		vcpu: args.vcpu ?? config.cloudchamber.vcpu ?? deployment.vcpu,
 		memory: args.memory ?? config.cloudchamber.memory ?? deployment.memory,
@@ -247,7 +242,7 @@ async function handleModifyCommand(
 	});
 
 	const yesOrNo = await inputPrompt({
-		question: "Want to go ahead and modify the deployment?",
+		question: "Modify the deployment?",
 		label: "",
 		type: "confirm",
 	});
@@ -267,6 +262,7 @@ async function handleModifyCommand(
 			location,
 			ssh_public_key_ids: keys,
 			environment_variables: selectedEnvironmentVariables,
+			labels: selectedLabels,
 			vcpu: args.vcpu ?? config.cloudchamber.vcpu,
 			memory: args.memory ?? config.cloudchamber.memory,
 		})
@@ -280,5 +276,4 @@ async function handleModifyCommand(
 	await waitForPlacement(newDeployment);
 }
 
-const modifyImageQuestion =
-	"Insert the image url you want to change your deployment to";
+const modifyImageQuestion = "URL of the image to use in your deployment";

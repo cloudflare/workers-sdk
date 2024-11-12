@@ -1,16 +1,7 @@
 import assert from "node:assert";
 import { randomUUID } from "node:crypto";
 import path from "node:path";
-import * as esmLexer from "es-module-lexer";
-import {
-	CoreHeaders,
-	HttpOptions_Style,
-	Log,
-	LogLevel,
-	Miniflare,
-	Mutex,
-	TypedEventTarget,
-} from "miniflare";
+import { CoreHeaders, HttpOptions_Style, Log, LogLevel } from "miniflare";
 import {
 	AIFetcher,
 	EXTERNAL_AI_WORKER_NAME,
@@ -22,8 +13,14 @@ import { UserError } from "../errors";
 import { logger } from "../logger";
 import { getSourceMappedString } from "../sourcemap";
 import { updateCheck } from "../update-check";
+import {
+	EXTERNAL_VECTORIZE_WORKER_NAME,
+	EXTERNAL_VECTORIZE_WORKER_SCRIPT,
+	MakeVectorizeFetcher,
+} from "../vectorize/fetcher";
 import { getClassNamesWhichUseSQLite } from "./validate-dev-props";
 import type { ServiceFetch } from "../api";
+import type { AssetsOptions } from "../assets";
 import type { Config } from "../config";
 import type {
 	CfD1Database,
@@ -35,18 +32,14 @@ import type {
 	CfScriptFormat,
 	CfUnsafeBinding,
 	CfWorkerInit,
+	CfWorkflow,
 } from "../deployment-bundle/worker";
-import type {
-	WorkerEntrypointsDefinition,
-	WorkerRegistry,
-} from "../dev-registry";
-import type { ExperimentalAssetsOptions } from "../experimental-assets";
+import type { WorkerRegistry } from "../dev-registry";
 import type { LoggerLevel } from "../logger";
 import type { LegacyAssetPaths } from "../sites";
 import type { EsbuildBundle } from "./use-esbuild";
 import type { MiniflareOptions, SourceOptions, WorkerOptions } from "miniflare";
 import type { UUID } from "node:crypto";
-import type { Abortable } from "node:events";
 import type { Readable } from "node:stream";
 
 // This worker proxies all external Durable Objects to the Wrangler session
@@ -175,7 +168,7 @@ export interface ConfigBundle {
 	migrations: Config["migrations"] | undefined;
 	workerDefinitions: WorkerRegistry | undefined;
 	legacyAssetPaths: LegacyAssetPaths | undefined;
-	experimentalAssets: ExperimentalAssetsOptions | undefined;
+	assets: AssetsOptions | undefined;
 	initialPort: Port;
 	initialIp: string;
 	rules: Config["rules"];
@@ -192,6 +185,8 @@ export interface ConfigBundle {
 	inspect: boolean;
 	services: Config["services"] | undefined;
 	serviceBindings: Record<string, ServiceFetch>;
+	bindVectorizeToProd: boolean;
+	testScheduled: boolean;
 }
 
 export class WranglerLog extends Log {
@@ -229,7 +224,7 @@ export class WranglerLog extends Log {
 	}
 }
 
-export const DEFAULT_WORKER_NAME = "worker";
+const DEFAULT_WORKER_NAME = "worker";
 function getName(config: Pick<ConfigBundle, "name">) {
 	return config.name ?? DEFAULT_WORKER_NAME;
 }
@@ -258,14 +253,6 @@ export function buildLog(): Log {
 	return new WranglerLog(level, { prefix: "wrangler-UserWorker" });
 }
 
-async function getEntrypointNames(entrypointSource: string) {
-	await esmLexer.init;
-	const [_imports, exports] = esmLexer.parse(entrypointSource);
-	// TODO(soon): support `export * from "...";` with `--no-bundle`. Without
-	//  `--no-bundle`, `esbuild` will bundle these, so they'll be picked up here.
-	return exports.map(({ n }) => n);
-}
-
 async function buildSourceOptions(
 	config: Omit<ConfigBundle, "rules">
 ): Promise<{ sourceOptions: SourceOptions; entrypointNames: string[] }> {
@@ -284,9 +271,7 @@ async function buildSourceOptions(
 					config.bundle.modules
 				);
 
-		const entrypointNames = isPython
-			? []
-			: await getEntrypointNames(entrypointSource);
+		const entrypointNames = isPython ? [] : config.bundle.entry.exports;
 
 		const modulesRoot = path.dirname(scriptPath);
 		const sourceOptions: SourceOptions = {
@@ -337,6 +322,18 @@ function queueProducerEntry(
 function hyperdriveEntry(hyperdrive: CfHyperdrive): [string, string] {
 	return [hyperdrive.binding, hyperdrive.localConnectionString ?? ""];
 }
+function workflowEntry(
+	workflow: CfWorkflow
+): [string, { name: string; className: string; scriptName?: string }] {
+	return [
+		workflow.binding,
+		{
+			name: workflow.name,
+			className: workflow.class_name,
+			scriptName: workflow.script_name,
+		},
+	];
+}
 function ratelimitEntry(ratelimit: CfUnsafeBinding): [string, object] {
 	return [ratelimit.name, ratelimit];
 }
@@ -345,7 +342,7 @@ function queueConsumerEntry(consumer: QueueConsumer) {
 	const options = {
 		maxBatchSize: consumer.max_batch_size,
 		maxBatchTimeout: consumer.max_batch_timeout,
-		maxRetires: consumer.max_retries,
+		maxRetries: consumer.max_retries,
 		deadLetterQueue: consumer.dead_letter_queue,
 		retryDelay: consumer.retry_delay,
 	};
@@ -366,6 +363,7 @@ type WorkerOptionsBindings = Pick<
 	| "hyperdrives"
 	| "durableObjects"
 	| "serviceBindings"
+	| "workflows"
 	| "wrappedBindings"
 >;
 
@@ -379,7 +377,7 @@ type MiniflareBindingsConfig = Pick<
 	| "services"
 	| "serviceBindings"
 > &
-	Partial<Pick<ConfigBundle, "format" | "bundle" | "experimentalAssets">>;
+	Partial<Pick<ConfigBundle, "format" | "bundle" | "assets">>;
 
 // TODO(someday): would be nice to type these methods more, can we export types for
 //  each plugin options schema and use those
@@ -598,6 +596,36 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 		};
 	}
 
+	if (bindings.vectorize) {
+		for (const vectorizeBinding of bindings.vectorize) {
+			const bindingName = vectorizeBinding.binding;
+			const indexName = vectorizeBinding.index_name;
+			const indexVersion = "v2";
+
+			externalWorkers.push({
+				name: EXTERNAL_VECTORIZE_WORKER_NAME + bindingName,
+				modules: [
+					{
+						type: "ESModule",
+						path: "index.mjs",
+						contents: EXTERNAL_VECTORIZE_WORKER_SCRIPT,
+					},
+				],
+				serviceBindings: {
+					FETCHER: MakeVectorizeFetcher(indexName),
+				},
+				bindings: {
+					INDEX_ID: indexName,
+					INDEX_VERSION: indexVersion,
+				},
+			});
+
+			wrappedBindings[bindingName] = {
+				scriptName: EXTERNAL_VECTORIZE_WORKER_NAME + bindingName,
+			};
+		}
+	}
+
 	const bindingOptions = {
 		bindings: {
 			...bindings.vars,
@@ -628,6 +656,7 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 		hyperdrives: Object.fromEntries(
 			bindings.hyperdrive?.map(hyperdriveEntry) ?? []
 		),
+		workflows: Object.fromEntries(bindings.workflows?.map(workflowEntry) ?? []),
 
 		durableObjects: Object.fromEntries([
 			...internalObjects.map(({ name, class_name }) => {
@@ -692,19 +721,19 @@ export function buildPersistOptions(
 			kvPersist: path.join(v3Path, "kv"),
 			r2Persist: path.join(v3Path, "r2"),
 			d1Persist: path.join(v3Path, "d1"),
+			workflowsPersist: path.join(v3Path, "workflows"),
 		};
 	}
 }
 
-function buildAssetOptions(config: Omit<ConfigBundle, "rules">) {
-	if (config.experimentalAssets) {
+export function buildAssetOptions(config: Pick<ConfigBundle, "assets">) {
+	if (config.assets) {
 		return {
 			assets: {
-				workerName: config.name,
-				path: config.experimentalAssets.directory,
-				bindingName: config.experimentalAssets.binding,
-				routingConfig: config.experimentalAssets.routingConfig,
-				assetConfig: config.experimentalAssets.assetConfig,
+				directory: config.assets.directory,
+				binding: config.assets.binding,
+				routingConfig: config.assets.routingConfig,
+				assetConfig: config.assets.assetConfig,
 			},
 		};
 	}
@@ -868,7 +897,7 @@ export async function buildMiniflareOptions(
 	internalObjects: CfDurableObject[];
 	entrypointNames: string[];
 }> {
-	if (config.crons.length > 0) {
+	if (config.crons.length > 0 && !config.testScheduled) {
 		if (!didWarnMiniflareCronSupport) {
 			didWarnMiniflareCronSupport = true;
 			log.warn(
@@ -886,12 +915,18 @@ export async function buildMiniflareOptions(
 		}
 	}
 
+	if (!config.bindVectorizeToProd && config.bindings.vectorize?.length) {
+		logger.warn(
+			"Vectorize local bindings are not supported yet. You may use the `--experimental-vectorize-bind-to-prod` flag to bind to your production index in local dev mode."
+		);
+		config.bindings.vectorize = [];
+	}
+
 	if (config.bindings.vectorize?.length) {
 		if (!didWarnMiniflareVectorizeSupport) {
 			didWarnMiniflareVectorizeSupport = true;
-			// TODO: add local support for Vectorize bindings (https://github.com/cloudflare/workers-sdk/issues/4360)
 			logger.warn(
-				"Vectorize bindings are not currently supported in local mode. Please use --remote if you are working with them."
+				"You are using a mixed-mode binding for Vectorize (through `--experimental-vectorize-bind-to-prod`). It may incur usage charges and modify your databases even in local development. "
 			);
 		}
 	}
@@ -943,116 +978,4 @@ export async function buildMiniflareOptions(
 		],
 	};
 	return { options, internalObjects, entrypointNames };
-}
-
-export interface ReloadedEventOptions {
-	url: URL;
-	internalDurableObjects: CfDurableObject[];
-	entrypointAddresses: WorkerEntrypointsDefinition;
-	proxyToUserWorkerAuthenticationSecret: UUID;
-}
-export class ReloadedEvent extends Event implements ReloadedEventOptions {
-	readonly url: URL;
-	readonly internalDurableObjects: CfDurableObject[];
-	readonly entrypointAddresses: WorkerEntrypointsDefinition;
-	readonly proxyToUserWorkerAuthenticationSecret: UUID;
-
-	constructor(type: "reloaded", options: ReloadedEventOptions) {
-		super(type);
-		this.url = options.url;
-		this.internalDurableObjects = options.internalDurableObjects;
-		this.entrypointAddresses = options.entrypointAddresses;
-		this.proxyToUserWorkerAuthenticationSecret =
-			options.proxyToUserWorkerAuthenticationSecret;
-	}
-}
-
-export interface ErrorEventOptions {
-	error: unknown;
-}
-export class ErrorEvent extends Event implements ErrorEventOptions {
-	readonly error: unknown;
-
-	constructor(type: "error", options: ErrorEventOptions) {
-		super(type);
-		this.error = options.error;
-	}
-}
-
-export type MiniflareServerEventMap = {
-	reloaded: ReloadedEvent;
-	error: ErrorEvent;
-};
-export class MiniflareServer extends TypedEventTarget<MiniflareServerEventMap> {
-	#log = buildLog();
-	#mf?: Miniflare;
-	// This is given as a shared secret to the Proxy and User workers
-	// so that the User Worker can trust aspects of HTTP requests from the Proxy Worker
-	// if it provides the secret in a `MF-Proxy-Shared-Secret` header.
-	#proxyToUserWorkerAuthenticationSecret = randomUUID();
-
-	// `buildMiniflareOptions()` is asynchronous, meaning if multiple bundle
-	// updates were submitted, the second may apply before the first. Therefore,
-	// wrap updates in a mutex, so they're always applied in invocation order.
-	#mutex = new Mutex();
-
-	async #onBundleUpdate(config: ConfigBundle, opts?: Abortable): Promise<void> {
-		if (opts?.signal?.aborted) {
-			return;
-		}
-		try {
-			const { options, internalObjects, entrypointNames } =
-				await buildMiniflareOptions(
-					this.#log,
-					config,
-					this.#proxyToUserWorkerAuthenticationSecret
-				);
-
-			if (opts?.signal?.aborted) {
-				return;
-			}
-
-			if (this.#mf === undefined) {
-				this.#mf = new Miniflare(options);
-			} else {
-				await this.#mf.setOptions(options);
-			}
-			const url = await this.#mf.ready;
-
-			// Get entrypoint addresses
-			const entrypointAddresses: WorkerEntrypointsDefinition = {};
-			for (const name of entrypointNames) {
-				const directUrl = await this.#mf.unsafeGetDirectURL(undefined, name);
-				const port = parseInt(directUrl.port);
-				entrypointAddresses[name] = { host: directUrl.hostname, port };
-			}
-
-			if (opts?.signal?.aborted) {
-				return;
-			}
-
-			const event = new ReloadedEvent("reloaded", {
-				url,
-				internalDurableObjects: internalObjects,
-				proxyToUserWorkerAuthenticationSecret:
-					this.#proxyToUserWorkerAuthenticationSecret,
-				entrypointAddresses,
-			});
-			this.dispatchEvent(event);
-		} catch (error: unknown) {
-			this.dispatchEvent(new ErrorEvent("error", { error }));
-		}
-	}
-
-	onBundleUpdate(config: ConfigBundle, opts?: Abortable): Promise<void> {
-		return this.#mutex.runWith(() => this.#onBundleUpdate(config, opts));
-	}
-
-	#onDispose = async (): Promise<void> => {
-		await this.#mf?.dispose();
-		this.#mf = undefined;
-	};
-	onDispose(): Promise<void> {
-		return this.#mutex.runWith(this.#onDispose);
-	}
 }
