@@ -119,7 +119,7 @@ export const rectifyPmMismatch = async (ctx: C3Context) => {
 	});
 };
 
-const detectPmMismatch = (ctx: C3Context) => {
+export const detectPmMismatch = (ctx: C3Context) => {
 	const { npm } = detectPackageManager();
 	const projectPath = ctx.project.path;
 
