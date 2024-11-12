@@ -54,7 +54,7 @@ Two methods are available for testing updates:
 
 - Add `preview:wrangler-devtools` label to PRs
 - Use deployed preview URL for testing
-- Verify functionality in Playground
+- If you want to see this preview working in Playground, you can also add the `preview:wrangler-playground` label to deploy the Playground with the DevTools preview enabled.
 
 ## Acceptance Criteria
 
