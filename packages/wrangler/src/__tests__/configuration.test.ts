@@ -1,9 +1,13 @@
 import path from "node:path";
 import { readConfig } from "../config";
 import { normalizeAndValidateConfig } from "../config/validation";
+import { mockConsoleMethods } from "./helpers/mock-console";
 import { normalizeString } from "./helpers/normalize";
 import { runInTempDir } from "./helpers/run-in-tmp";
-import { writeWranglerToml } from "./helpers/write-wrangler-toml";
+import {
+	writeExtraJson,
+	writeWranglerToml,
+} from "./helpers/write-wrangler-toml";
 import type {
 	ConfigFields,
 	RawConfig,
@@ -12,6 +16,7 @@ import type {
 } from "../config";
 
 describe("readConfig()", () => {
+	const std = mockConsoleMethods();
 	runInTempDir();
 	it("should not error if a python entrypoint is used with the right compatibility_flag", () => {
 		writeWranglerToml({
@@ -42,6 +47,194 @@ describe("readConfig()", () => {
 				`[Error: The \`python_workers\` compatibility flag is required to use Python.]`
 			);
 		}
+	});
+
+	describe("extended configuration", () => {
+		it("should extend the user config with config from .wrangler/config/extra.json", () => {
+			const main = "src/index.ts";
+			const resolvedMain = path.resolve(process.cwd(), main);
+
+			writeWranglerToml({
+				main,
+			});
+			writeExtraJson({
+				compatibility_date: "2024-11-01",
+				compatibility_flags: ["nodejs_compat"],
+			});
+
+			const config = readConfig("wrangler.toml", {});
+			expect(config).toEqual(
+				expect.objectContaining({
+					compatibility_date: "2024-11-01",
+					compatibility_flags: ["nodejs_compat"],
+					configPath: "wrangler.toml",
+					main: resolvedMain,
+				})
+			);
+
+			expect(std).toMatchInlineSnapshot(`
+				Object {
+				  "debug": "",
+				  "err": "",
+				  "info": "Extending with configuration found in .wrangler/config/extra.json.",
+				  "out": "",
+				  "warn": "",
+				}
+			`);
+		});
+
+		it("should overwrite config with matching properties from .wrangler/config/extra.json", () => {
+			writeWranglerToml({
+				main: "src/index.js",
+				compatibility_date: "2021-01-01",
+			});
+
+			// Note that paths are relative ot the extra.json file.
+			const main = "../../dist/index.ts";
+			const resolvedMain = path.resolve(
+				process.cwd(),
+				".wrangler/config",
+				main
+			);
+
+			writeExtraJson({
+				main,
+				compatibility_date: "2024-11-01",
+				compatibility_flags: ["nodejs_compat"],
+			});
+
+			const config = readConfig("wrangler.toml", {});
+			expect(config).toEqual(
+				expect.objectContaining({
+					compatibility_date: "2024-11-01",
+					compatibility_flags: ["nodejs_compat"],
+					main: resolvedMain,
+				})
+			);
+		});
+
+		it("should concatenate array-based config with matching properties from .wrangler/config/extra.json", () => {
+			writeWranglerToml({
+				main: "src/index.js",
+				compatibility_flags: ["allow_custom_ports"],
+			});
+
+			writeExtraJson({
+				compatibility_flags: ["nodejs_compat"],
+			});
+
+			const config = readConfig("wrangler.toml", {});
+			expect(config).toEqual(
+				expect.objectContaining({
+					compatibility_flags: ["nodejs_compat", "allow_custom_ports"],
+				})
+			);
+		});
+
+		it("should merge object-based config with matching properties from .wrangler/config/extra.json", () => {
+			writeWranglerToml({
+				main: "src/index.js",
+				assets: {
+					directory: "./public",
+					not_found_handling: "404-page",
+				},
+			});
+
+			writeExtraJson({
+				assets: {
+					// Note that Environment validation and typings require that directory exists,
+					// so the extra.json would always have to provide this property
+					// even if it just wanted to augment the rest of the object with extra properties.
+					directory: "./public",
+					binding: "ASSETS",
+				},
+			});
+
+			const config = readConfig("wrangler.toml", {});
+			expect(config).toEqual(
+				expect.objectContaining({
+					assets: {
+						binding: "ASSETS",
+						directory: "./public",
+						not_found_handling: "404-page",
+					},
+				})
+			);
+		});
+
+		it("should error and warn if the extra config is not valid Environment config", () => {
+			writeWranglerToml({});
+			writeExtraJson({
+				compatibility_date: 2021,
+				unexpected_property: true,
+			} as unknown as RawEnvironment);
+
+			expect(() => readConfig("wrangler.toml", {}))
+				.toThrowErrorMatchingInlineSnapshot(`
+				[Error: Extending with configuration found in .wrangler/config/extra.json.
+				  - Expected "compatibility_date" to be of type string but got 2021.]
+			`);
+			expect(std).toMatchInlineSnapshot(`
+				Object {
+				  "debug": "",
+				  "err": "",
+				  "info": "",
+				  "out": "",
+				  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mExtending with configuration found in .wrangler/config/extra.json.[0m
+
+				    - Unexpected fields found in extended config field: \\"unexpected_property\\"
+
+				",
+				}
+			`);
+		});
+
+		it("should override the selected named environment", () => {
+			const main = "src/index.ts";
+			const resolvedMain = path.resolve(process.cwd(), main);
+
+			writeWranglerToml({
+				main,
+				env: {
+					prod: {
+						compatibility_date: "2021-01-01",
+						logpush: true,
+					},
+					dev: {
+						compatibility_date: "2022-02-02",
+						no_bundle: true,
+					},
+				},
+			});
+			writeExtraJson({
+				compatibility_date: "2024-11-01",
+				compatibility_flags: ["nodejs_compat"],
+				no_bundle: true,
+			});
+
+			const prodConfig = readConfig("wrangler.toml", { env: "prod" });
+			expect(prodConfig).toEqual(
+				expect.objectContaining({
+					compatibility_date: "2024-11-01",
+					compatibility_flags: ["nodejs_compat"],
+					configPath: "wrangler.toml",
+					main: resolvedMain,
+					logpush: true,
+					no_bundle: true,
+				})
+			);
+
+			const devConfig = readConfig("wrangler.toml", { env: "dev" });
+			expect(devConfig).toEqual(
+				expect.objectContaining({
+					compatibility_date: "2024-11-01",
+					compatibility_flags: ["nodejs_compat"],
+					configPath: "wrangler.toml",
+					main: resolvedMain,
+					no_bundle: true,
+				})
+			);
+		});
 	});
 });
 

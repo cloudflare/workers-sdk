@@ -1028,7 +1028,7 @@ const validateTailConsumers: ValidatorFn = (diagnostics, field, value) => {
 /**
  * Validate top-level environment configuration and return the normalized values.
  */
-function normalizeAndValidateEnvironment(
+export function normalizeAndValidateEnvironment(
 	diagnostics: Diagnostics,
 	configPath: string | undefined,
 	topLevelEnv: RawEnvironment,
@@ -1037,7 +1037,7 @@ function normalizeAndValidateEnvironment(
 /**
  * Validate the named environment configuration and return the normalized values.
  */
-function normalizeAndValidateEnvironment(
+export function normalizeAndValidateEnvironment(
 	diagnostics: Diagnostics,
 	configPath: string | undefined,
 	rawEnv: RawEnvironment,
@@ -1050,7 +1050,7 @@ function normalizeAndValidateEnvironment(
 /**
  * Validate the named environment configuration and return the normalized values.
  */
-function normalizeAndValidateEnvironment(
+export function normalizeAndValidateEnvironment(
 	diagnostics: Diagnostics,
 	configPath: string | undefined,
 	rawEnv: RawEnvironment,
@@ -1060,7 +1060,7 @@ function normalizeAndValidateEnvironment(
 	isLegacyEnv?: boolean,
 	rawConfig?: RawConfig
 ): Environment;
-function normalizeAndValidateEnvironment(
+export function normalizeAndValidateEnvironment(
 	diagnostics: Diagnostics,
 	configPath: string | undefined,
 	rawEnv: RawEnvironment,

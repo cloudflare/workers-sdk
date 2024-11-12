@@ -7,6 +7,7 @@ import { getFlag } from "../experimental-flags";
 import { logger } from "../logger";
 import { EXIT_CODE_INVALID_PAGES_CONFIG } from "../pages/errors";
 import { parseJSONC, parseTOML, readFileSync } from "../parse";
+import { extendConfiguration } from "./extra";
 import { isPagesConfig, normalizeAndValidateConfig } from "./validation";
 import { validatePagesConfig } from "./validation-pages";
 import type { CfWorkerInit } from "../deployment-bundle/worker";
@@ -151,7 +152,7 @@ export function readConfig(
 
 	applyPythonConfig(config, args);
 
-	return config;
+	return extendConfiguration(configPath, config, hideWarnings);
 }
 
 /**

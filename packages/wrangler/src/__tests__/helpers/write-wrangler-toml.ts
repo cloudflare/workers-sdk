@@ -1,6 +1,7 @@
 import * as fs from "fs";
 import TOML from "@iarna/toml";
-import type { RawConfig } from "../../config";
+import { ensureDirectoryExistsSync } from "../../utils/filesystem";
+import type { RawConfig, RawEnvironment } from "../../config";
 
 /** Write a mock wrangler.toml file to disk. */
 export function writeWranglerToml(
@@ -32,4 +33,12 @@ export function writeWranglerJson(
 
 		"utf-8"
 	);
+}
+
+export function writeExtraJson(
+	config: RawEnvironment = {},
+	path = "./.wrangler/config/extra.json"
+) {
+	ensureDirectoryExistsSync(path);
+	fs.writeFileSync(path, JSON.stringify(config), "utf-8");
 }

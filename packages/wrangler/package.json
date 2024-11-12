@@ -125,6 +125,7 @@
 		"cmd-shim": "^4.1.0",
 		"command-exists": "^1.2.9",
 		"concurrently": "^8.2.2",
+		"defu": "^6.1.4",
 		"devtools-protocol": "^0.0.1182435",
 		"dotenv": "^16.0.0",
 		"execa": "^6.1.0",
