@@ -128,6 +128,8 @@ interface OutputEntryVersionUpload extends OutputEntryBase<"version-upload"> {
 	worker_tag: string | null;
 	/** A GUID that identifies this uploaded, but not yet deployed, version of the Worker. This version will need to be "deployed" to receive traffic. */
 	version_id: string | null;
+	/** The preview URL associated with this version upload */
+	preview_url: string | undefined;
 }
 
 interface OutputEntryVersionDeployment
