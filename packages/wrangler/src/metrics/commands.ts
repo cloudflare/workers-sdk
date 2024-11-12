@@ -55,16 +55,14 @@ defineCommand({
 	async handler(_, { config }) {
 		const savedConfig = readMetricsConfig();
 		if (config.send_metrics !== undefined) {
-			// TODO: update this to fallback to true
-			const globalPermission = savedConfig.permission?.enabled ?? false;
+			const globalPermission = savedConfig.permission?.enabled ?? true;
 			const projectPermission = config.send_metrics;
 			logger.log(
 				`Global status: ${globalPermission ? chalk.green("Enabled") : chalk.red("Disabled")}\n` +
 					`Project status: ${projectPermission ? chalk.green("Enabled") : chalk.red("Disabled")}\n`
 			);
 		} else {
-			// TODO: update this to fallback to true
-			logTelemetryStatus(savedConfig.permission?.enabled ?? false);
+			logTelemetryStatus(savedConfig.permission?.enabled ?? true);
 		}
 	},
 });

@@ -13,7 +13,7 @@ import {
 } from "../metrics/metrics-config";
 import { writeAuthConfigFile } from "../user";
 import { mockConsoleMethods } from "./helpers/mock-console";
-import { clearDialogs, mockConfirm } from "./helpers/mock-dialogs";
+import { clearDialogs } from "./helpers/mock-dialogs";
 import { useMockIsTTY } from "./helpers/mock-istty";
 import { msw, mswSuccessOauthHandlers } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
@@ -271,7 +271,7 @@ describe("metrics", () => {
 			});
 
 			it("should return enabled true if the user on this device previously agreed to send metrics", async () => {
-				await writeMetricsConfig({
+				writeMetricsConfig({
 					permission: {
 						enabled: true,
 						date: new Date(2022, 6, 4),
@@ -288,7 +288,7 @@ describe("metrics", () => {
 			});
 
 			it("should return enabled false if the user on this device previously refused to send metrics", async () => {
-				await writeMetricsConfig({
+				writeMetricsConfig({
 					permission: {
 						enabled: false,
 						date: new Date(2022, 6, 4),
@@ -304,51 +304,11 @@ describe("metrics", () => {
 				});
 			});
 
-			it("should accept and store permission granting to send metrics if the user agrees", async () => {
-				mockConfirm({
-					text: "Would you like to help improve Wrangler by sending usage metrics to Cloudflare?",
-					result: true,
-				});
-				expect(
-					await getMetricsConfig({
-						sendMetrics: undefined,
-						offline: false,
-					})
-				).toMatchObject({
-					enabled: true,
-				});
-				expect((await readMetricsConfig()).permission).toMatchObject({
-					enabled: true,
-				});
-			});
-
-			it("should accept and store permission declining to send metrics if the user declines", async () => {
-				mockConfirm({
-					text: "Would you like to help improve Wrangler by sending usage metrics to Cloudflare?",
-					result: false,
-				});
-				expect(
-					await getMetricsConfig({
-						sendMetrics: undefined,
-						offline: false,
-					})
-				).toMatchObject({
-					enabled: false,
-				});
-				expect((await readMetricsConfig()).permission).toMatchObject({
-					enabled: false,
-				});
-			});
-
-			it("should ignore the config if the permission date is older than the current metrics date", async () => {
+			it("should print a message if the permission date is older than the current metrics date", async () => {
 				vi.useFakeTimers();
 				vi.setSystemTime(new Date(2024, 11, 12));
-				mockConfirm({
-					text: "Would you like to help improve Wrangler by sending usage metrics to Cloudflare?",
-					result: false,
-				});
 				const OLD_DATE = new Date(2000);
-				await writeMetricsConfig({
+				writeMetricsConfig({
 					permission: { enabled: true, date: OLD_DATE },
 				});
 				expect(
@@ -357,21 +317,15 @@ describe("metrics", () => {
 						offline: false,
 					})
 				).toMatchObject({
-					enabled: false,
+					enabled: true,
 				});
-				const { permission } = await readMetricsConfig();
-				expect(permission?.enabled).toBe(false);
+				const { permission } = readMetricsConfig();
+				expect(permission?.enabled).toBe(true);
 				// The date should be updated to today's date
 				expect(permission?.date).toEqual(new Date(2024, 11, 12));
 
 				expect(std.out).toMatchInlineSnapshot(`
-			"Usage metrics tracking has changed since you last granted permission.
-			Your choice has been saved in the following file: test-xdg-config/metrics.json.
-
-			  You can override the user level setting for a project in \`wrangler.toml\`:
-
-			   - to disable sending metrics for a project: \`send_metrics = false\`
-			   - to enable sending metrics for a project: \`send_metrics = true\`"
+			"Usage metrics tracking has changed since you last granted permission."
 		`);
 				vi.useRealTimers();
 			});
@@ -379,17 +333,17 @@ describe("metrics", () => {
 
 		describe("deviceId", () => {
 			it("should return a deviceId found in the config file", async () => {
-				await writeMetricsConfig({ deviceId: "XXXX-YYYY-ZZZZ" });
+				writeMetricsConfig({ deviceId: "XXXX-YYYY-ZZZZ" });
 				const { deviceId } = await getMetricsConfig({
 					sendMetrics: true,
 					offline: false,
 				});
 				expect(deviceId).toEqual("XXXX-YYYY-ZZZZ");
-				expect((await readMetricsConfig()).deviceId).toEqual(deviceId);
+				expect(readMetricsConfig().deviceId).toEqual(deviceId);
 			});
 
 			it("should create and store a new deviceId if none is found in the config file", async () => {
-				await writeMetricsConfig({});
+				writeMetricsConfig({});
 				const { deviceId } = await getMetricsConfig({
 					sendMetrics: true,
 					offline: false,
@@ -397,14 +351,14 @@ describe("metrics", () => {
 				expect(deviceId).toMatch(
 					/[0-9a-fA-F]{8}-([0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}/
 				);
-				expect((await readMetricsConfig()).deviceId).toEqual(deviceId);
+				expect(readMetricsConfig().deviceId).toEqual(deviceId);
 			});
 		});
 
 		describe("userId", () => {
 			const userRequests = mockUserRequest();
 			it("should return a userId found in a cache file", async () => {
-				await saveToConfigCache(USER_ID_CACHE_PATH, {
+				saveToConfigCache(USER_ID_CACHE_PATH, {
 					userId: "CACHED_USER_ID",
 				});
 				const { userId } = await getMetricsConfig({
