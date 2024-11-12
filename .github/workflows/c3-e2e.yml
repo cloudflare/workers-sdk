@@ -3,8 +3,6 @@
 name: C3 E2E Tests
 on:
   pull_request:
-    paths:
-      - packages/create-cloudflare/**
 
 jobs:
   e2e:
@@ -15,7 +13,6 @@ jobs:
       group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}-${{ matrix.pm.name }}-${{ matrix.pm.version }}
       cancel-in-progress: true
     name: ${{ format('Run tests for {0}@{1} on {2}', matrix.pm.name, matrix.pm.version, matrix.os) }}
-    if: github.event.pull_request.head.repo.owner.login == 'cloudflare' && github.event.pull_request.user.login != 'dependabot[bot]'
     strategy:
       fail-fast: false
       matrix:
