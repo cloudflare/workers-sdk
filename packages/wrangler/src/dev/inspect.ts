@@ -1,12 +1,13 @@
 import { readFileSync } from "fs";
+import os from "node:os";
 import { fileURLToPath, URL } from "node:url";
 import path from "path";
+import open from "open";
 import {
 	isAllowedSourceMapPath,
 	isAllowedSourcePath,
 } from "../api/startDevWorker/bundle-allowed-paths";
 import { logger } from "../logger";
-import openInBrowser from "../open-in-browser";
 import { getSourceMappedString } from "../sourcemap";
 import type { EsbuildBundle } from "../dev/use-esbuild";
 import type Protocol from "devtools-protocol";
@@ -256,6 +257,37 @@ export const openInspector = async (
 	}
 	query.set("debugger", "true");
 	const url = `https://devtools.devprod.cloudflare.dev/js_app?${query.toString()}`;
+	const errorMessage =
+		"Failed to open inspector.\nInspector depends on having a Chromium-based browser installed, maybe you need to install one?";
 
-	await openInBrowser(url);
+	// see: https://github.com/sindresorhus/open/issues/177#issue-610016699
+	let braveBrowser: string;
+	switch (os.platform()) {
+		case "darwin":
+		case "win32":
+			braveBrowser = "Brave";
+			break;
+		default:
+			braveBrowser = "brave";
+	}
+
+	const childProcess = await open(url, {
+		app: [
+			{
+				name: open.apps.chrome,
+			},
+			{
+				name: braveBrowser,
+			},
+			{
+				name: open.apps.edge,
+			},
+			{
+				name: open.apps.firefox,
+			},
+		],
+	});
+	childProcess.on("error", () => {
+		logger.warn(errorMessage);
+	});
 };
