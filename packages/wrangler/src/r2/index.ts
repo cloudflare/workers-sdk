@@ -18,11 +18,12 @@ import {
 	deleteR2Bucket,
 	deleteR2Object,
 	getR2Object,
-	listR2Buckets,
 	putR2Object,
 	updateR2BucketStorageClass,
 	usingLocalBucket,
 } from "./helpers";
+import * as Info from "./info";
+import * as List from "./list";
 import * as Notification from "./notification";
 import * as PublicDevUrl from "./public-dev-url";
 import * as Sippy from "./sippy";
@@ -494,39 +495,23 @@ export function r2(r2Yargs: CommonYargsArgv, subHelp: SubHelp) {
 			r2BucketYargs.command(
 				"list",
 				"List R2 buckets",
-				(listArgs) => {
-					return listArgs.option("jurisdiction", {
-						describe: "The jurisdiction to list",
-						alias: "J",
-						requiresArg: true,
-						type: "string",
-					});
-				},
-				async (args) => {
-					const config = readConfig(args.config, args);
-					const { jurisdiction } = args;
-
-					const accountId = await requireAuth(config);
-
-					logger.log(
-						JSON.stringify(
-							await listR2Buckets(accountId, jurisdiction),
-							null,
-							2
-						)
-					);
-					await metrics.sendMetricsEvent("list r2 buckets", {
-						sendMetrics: config.send_metrics,
-					});
-				}
+				List.ListOptions,
+				List.ListHandler
 			);
 
 			r2BucketYargs.command(
-				"delete <name>",
+				"info <bucket>",
+				"Get information about an R2 bucket",
+				Info.InfoOptions,
+				Info.InfoHandler
+			);
+
+			r2BucketYargs.command(
+				"delete <bucket>",
 				"Delete an R2 bucket",
 				(yargs) => {
 					return yargs
-						.positional("name", {
+						.positional("bucket", {
 							describe: "The name of the bucket to delete",
 							type: "string",
 							demandOption: true,
@@ -545,12 +530,12 @@ export function r2(r2Yargs: CommonYargsArgv, subHelp: SubHelp) {
 
 					const accountId = await requireAuth(config);
 
-					let fullBucketName = `${args.name}`;
+					let fullBucketName = `${args.bucket}`;
 					if (args.jurisdiction !== undefined) {
 						fullBucketName += ` (${args.jurisdiction})`;
 					}
 					logger.log(`Deleting bucket ${fullBucketName}.`);
-					await deleteR2Bucket(accountId, args.name, args.jurisdiction);
+					await deleteR2Bucket(accountId, args.bucket, args.jurisdiction);
 					logger.log(`Deleted bucket ${fullBucketName}.`);
 					await metrics.sendMetricsEvent("delete r2 bucket", {
 						sendMetrics: config.send_metrics,
