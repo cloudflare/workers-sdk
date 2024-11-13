@@ -37,7 +37,6 @@ import {
 } from "./deprecated";
 import { devHandler, devOptions } from "./dev";
 import { workerNamespaceCommands } from "./dispatch-namespace";
-import { docsHandler, docsOptions } from "./docs";
 import {
 	CommandLineArgsError,
 	JsonFriendlyFatalError,
@@ -49,6 +48,7 @@ import { initHandler, initOptions } from "./init";
 import "./kv";
 import "./workflows";
 import "./user/commands";
+import "./docs";
 import { demandSingleValue } from "./core";
 import { logBuildFailure, logger, LOGGER_LEVELS } from "./logger";
 import { mTlsCertificateCommands } from "./mtls-certificate/cli";
@@ -317,12 +317,7 @@ export function createCLIParser(argv: string[]) {
 	/*                 WRANGLER COMMANDS                  */
 	/******************************************************/
 	// docs
-	wrangler.command(
-		"docs [search..]",
-		"📚 Open Wrangler's command documentation in your browser\n",
-		docsOptions,
-		docsHandler
-	);
+	register.registerNamespace("docs");
 
 	/******************** CMD GROUP ***********************/
 	// init
