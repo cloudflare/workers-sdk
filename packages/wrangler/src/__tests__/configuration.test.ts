@@ -5521,7 +5521,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{
 						observability: {
 							logs: {
-								enabled: true
+								enabled: true,
 							},
 						},
 					} as unknown as RawConfig,

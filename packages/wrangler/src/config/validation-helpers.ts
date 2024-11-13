@@ -441,22 +441,24 @@ export const validateAtLeastOnePropertyRequired = (
 	diagnostics: Diagnostics,
 	container: string,
 	properties: {
-		key: string,
-		value: unknown,
-		type: TypeofType
+		key: string;
+		value: unknown;
+		type: TypeofType;
 	}[]
 ): boolean => {
 	if (container) {
 		container += ".";
 	}
-	if(properties.every((property) => property.value === undefined)) {
-		diagnostics.errors.push(`${properties.map(({key}) => `"${container}${key}"`).join(' or ')} is required.`);
+	if (properties.every((property) => property.value === undefined)) {
+		diagnostics.errors.push(
+			`${properties.map(({ key }) => `"${container}${key}"`).join(" or ")} is required.`
+		);
 		return false;
 	}
 
-	const errors = []
-	for(const prop of properties) {
-		if(typeof prop.value === prop.type) {
+	const errors = [];
+	for (const prop of properties) {
+		if (typeof prop.value === prop.type) {
 			return true;
 		}
 		errors.push(
@@ -464,12 +466,11 @@ export const validateAtLeastOnePropertyRequired = (
 				prop.value
 			)}.`
 		);
-
 	}
 
 	diagnostics.errors.push(...errors);
-	return false
-}
+	return false;
+};
 
 /**
  * Validate that, if the optional field exists, then it has the expected type.
