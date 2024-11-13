@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/consistent-type-imports */
+import assert from "node:assert";
 import { resolve } from "path";
 import { PassThrough } from "stream";
 import chalk from "chalk";
@@ -22,8 +23,10 @@ chalk.level = 0;
 	global as unknown as { __RELATIVE_PACKAGE_PATH__: string }
 ).__RELATIVE_PACKAGE_PATH__ = "..";
 
-// Set `LC_ALL` to fix the language as English for the messages thrown by Yargs.
-process.env.LC_ALL = "en";
+assert(
+	process.env.LC_ALL === "C",
+	"Expected `LC_ALL` env var to be 'C' in order get deterministic localized messages in tests"
+);
 
 vi.mock("ansi-escapes", () => {
 	return {
