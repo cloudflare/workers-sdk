@@ -45,10 +45,10 @@ import {
 import { generateHandler, generateOptions } from "./generate";
 import { hyperdrive } from "./hyperdrive/index";
 import { initHandler, initOptions } from "./init";
+import "./docs";
 import "./kv";
 import "./workflows";
 import "./user/commands";
-import "./docs";
 import { demandSingleValue } from "./core";
 import { logBuildFailure, logger, LOGGER_LEVELS } from "./logger";
 import { mTlsCertificateCommands } from "./mtls-certificate/cli";

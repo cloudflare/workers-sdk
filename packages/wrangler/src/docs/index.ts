@@ -1,5 +1,6 @@
 import { defineCommand } from "../core";
 import { logger } from "../logger";
+import * as metrics from "../metrics";
 import openInBrowser from "../open-in-browser";
 import { runSearch } from "./helpers";
 
@@ -24,7 +25,7 @@ defineCommand({
 		},
 	},
 	positionalArgs: ["search"],
-	async handler(args) {
+	async handler(args, { config }) {
 		//if no command is provided, open the docs homepage
 		//or, if a command IS provided, but we can't find anything, open the docs homepage
 		let urlToOpen =
@@ -45,5 +46,8 @@ defineCommand({
 
 		logger.log(`Opening a link in your default browser: ${urlToOpen}`);
 		await openInBrowser(urlToOpen);
+		await metrics.sendMetricsEvent("view docs", {
+			sendMetrics: config.send_metrics,
+		});
 	},
 });
