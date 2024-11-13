@@ -35,7 +35,6 @@ import {
 	subdomainHandler,
 	subdomainOptions,
 } from "./deprecated";
-import { devHandler, devOptions } from "./dev";
 import { workerNamespaceCommands } from "./dispatch-namespace";
 import {
 	CommandLineArgsError,
@@ -49,6 +48,7 @@ import "./docs";
 import "./kv";
 import "./workflows";
 import "./user/commands";
+import "./dev";
 import { demandSingleValue } from "./core";
 import { logBuildFailure, logger, LOGGER_LEVELS } from "./logger";
 import { mTlsCertificateCommands } from "./mtls-certificate/cli";
@@ -329,12 +329,7 @@ export function createCLIParser(argv: string[]) {
 	);
 
 	// dev
-	wrangler.command(
-		"dev [script]",
-		"👂 Start a local server for developing your Worker",
-		devOptions,
-		devHandler
-	);
+	register.registerNamespace("dev");
 
 	// deploy
 	wrangler.command(
