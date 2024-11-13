@@ -15,7 +15,7 @@
 	},
 	"devDependencies": {
 		"@cloudflare/workers-tsconfig": "workspace:*",
-		"@cloudflare/workers-types": "^4.20241106.0",
+		"@cloudflare/workers-types": "^4.20241112.0",
 		"pages-plugin-example": "workspace:*",
 		"undici": "catalog:default",
 		"wrangler": "workspace:*"
