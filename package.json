@@ -8,7 +8,7 @@
 		"check:types": "pnpm -r check:types",
 		"fix": "pnpm run fix:prettier",
 		"fix:prettier": "prettier --write .",
-		"postinstall": "pnpm -r build",
+		"postinstall": "pnpm -F @flarelabs-net/vite-plugin-cloudflare build",
 		"test": "pnpm test-unit && pnpm test-serve && pnpm test-build",
 		"test-build": "cross-env VITE_TEST_BUILD=1 vitest run -c vitest.config.e2e.ts",
 		"test-serve": "vitest run -c vitest.config.e2e.ts",

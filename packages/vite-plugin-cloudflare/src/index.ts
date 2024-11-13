@@ -1,3 +1,4 @@
+import path from 'node:path';
 import { createMiddleware } from '@hattip/adapter-node';
 import { Miniflare } from 'miniflare';
 import * as vite from 'vite';
@@ -55,9 +56,15 @@ export function cloudflare<T extends Record<string, WorkerOptions>>(
 				environments: Object.fromEntries(
 					Object.entries(pluginConfig.workers).map(([name, workerOptions]) => [
 						name,
-						createCloudflareEnvironmentOptions(name, workerOptions),
+						createCloudflareEnvironmentOptions(workerOptions),
 					]),
 				),
+			};
+		},
+		configEnvironment(name, options) {
+			options.build = {
+				outDir: path.join('dist', name),
+				...options.build,
 			};
 		},
 		configResolved(resolvedConfig) {
@@ -67,10 +74,17 @@ export function cloudflare<T extends Record<string, WorkerOptions>>(
 				resolvedConfig,
 			);
 		},
-		resolveId(source) {
+		async resolveId(source) {
 			const worker = normalizedPluginConfig.workers[this.environment.name];
 			if (worker) {
-				return resolveNodeAliases(source, worker.workerOptions);
+				const aliased = resolveNodeAliases(source, worker.workerOptions);
+				if (aliased) {
+					if (aliased.external) {
+						return aliased.id;
+					} else {
+						return await this.resolve(aliased.id);
+					}
+				}
 			}
 		},
 		async transform(code, id) {

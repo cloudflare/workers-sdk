@@ -216,7 +216,18 @@ export function getMiniflareOptions(
 						if (moduleId.startsWith('cloudflare:')) {
 							const result = {
 								externalize: moduleId,
-								type: 'module',
+								type: 'builtin',
+							} satisfies vite.FetchResult;
+
+							return new MiniflareResponse(JSON.stringify(result));
+						}
+
+						// Sometimes Vite fails to resolve built-ins and converts them to "url-friendly" ids
+						// that start with `/@id/...`.
+						if (moduleId.startsWith('/@id/')) {
+							const result = {
+								externalize: moduleId.slice('/@id/'.length),
+								type: 'builtin',
 							} satisfies vite.FetchResult;
 
 							return new MiniflareResponse(JSON.stringify(result));

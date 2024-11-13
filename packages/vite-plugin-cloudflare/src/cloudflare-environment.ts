@@ -1,6 +1,6 @@
 import { builtinModules } from 'node:module';
-import * as path from 'node:path';
 import * as vite from 'vite';
+import { getNodeCompatExternals } from './node-js-compat';
 import { INIT_PATH, invariant, UNKNOWN_HOST } from './shared';
 import type { NormalizedPluginConfig, WorkerOptions } from './plugin-config';
 import type { Fetcher } from '@cloudflare/workers-types/experimental';
@@ -126,7 +126,6 @@ const cloudflareBuiltInModules = [
 ];
 
 export function createCloudflareEnvironmentOptions(
-	name: string,
 	options: WorkerOptions,
 ): vite.EnvironmentOptions {
 	return vite.mergeConfig(
@@ -147,7 +146,6 @@ export function createCloudflareEnvironmentOptions(
 				createEnvironment(name, config) {
 					return new vite.BuildEnvironment(name, config);
 				},
-				outDir: path.join('dist', name),
 				ssr: true,
 				rollupOptions: {
 					// Note: vite starts dev pre-bundling crawling from either optimizeDeps.entries or rollupOptions.input
@@ -155,7 +153,7 @@ export function createCloudflareEnvironmentOptions(
 					//       dev pre-bundling crawling (were we not to set this input field we'd have to appropriately set
 					//       optimizeDeps.entries in the dev config)
 					input: options.main,
-					external: [...cloudflareBuiltInModules],
+					external: [...cloudflareBuiltInModules, ...getNodeCompatExternals()],
 				},
 			},
 			optimizeDeps: {
@@ -163,6 +161,7 @@ export function createCloudflareEnvironmentOptions(
 				noDiscovery: false,
 				exclude: [
 					...cloudflareBuiltInModules,
+					// we have to exclude all node modules to work in dev-mode not just the unenv externals...
 					...builtinModules.concat(builtinModules.map((m) => `node:${m}`)),
 				],
 				esbuildOptions: {
