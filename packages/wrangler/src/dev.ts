@@ -43,7 +43,7 @@ import type { EnablePagesAssetsServiceBindingOptions } from "./miniflare-cli/typ
 import type { watch } from "chokidar";
 import type { Json } from "miniflare";
 
-defineCommand({
+const command = defineCommand({
 	command: "wrangler dev",
 	behaviour: {
 		printConfigWarnings: false,
@@ -268,7 +268,7 @@ defineCommand({
 		},
 		"persist-to": {
 			describe:
-				"Specify directory to use for local persistence (defaults to .wrangler/state,",
+				"Specify directory to use for local persistence (defaults to .wrangler/state)",
 			type: "string",
 			requiresArg: true,
 		},
@@ -415,6 +415,8 @@ export type AdditionalDevProps = {
 	rules?: Rule[];
 	showInteractiveDevSession?: boolean;
 };
+
+type DevArguments = (typeof command)["args"];
 
 export type StartDevOptions = DevArguments &
 	// These options can be passed in directly when called with the `wrangler.dev()` API.
