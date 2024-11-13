@@ -55,6 +55,7 @@ Two methods are available for testing updates:
 On any pull request to the repo on GitHub, you can add labels to trigger preview builds of both the DevTools frontend, and the Playground. This is useful because it will allow you to manually test your changes in a live environment, and with one-click.
 
 There are two labels you can use:
+
 - `preview:wrangler-devtools` - this will trigger the DevTools preview
 - `preview:wrangler-playground` - this will trigger the Playground preview
 
