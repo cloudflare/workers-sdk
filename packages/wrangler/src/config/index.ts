@@ -233,8 +233,9 @@ export const friendlyBindingNames: Record<
 export function printBindings(
 	bindings: CfWorkerInit["bindings"],
 	context: {
-		registry?: WorkerRegistry;
+		registry?: WorkerRegistry | null;
 		local?: boolean;
+		name?: string;
 	} = {}
 ) {
 	let hasConnectionStatus = false;
@@ -296,7 +297,7 @@ export function printBindings(
 				({ name, class_name, script_name }) => {
 					let value = class_name;
 					if (script_name) {
-						if (context.local) {
+						if (context.local && context.registry !== null) {
 							const registryDefinition = context.registry?.[script_name];
 
 							hasConnectionStatus = true;
@@ -464,7 +465,7 @@ export function printBindings(
 					value += `#${entrypoint}`;
 				}
 
-				if (context.local) {
+				if (context.local && context.registry !== null) {
 					const registryDefinition = context.registry?.[service];
 					hasConnectionStatus = true;
 
@@ -630,7 +631,7 @@ export function printBindings(
 	}
 
 	const message = [
-		`Your worker has access to the following bindings:`,
+		`${context.name && getFlag("MULTIWORKER") ? chalk.blue(context.name) : "Your worker"} has access to the following bindings:`,
 		...output
 			.map((bindingGroup) => {
 				return [

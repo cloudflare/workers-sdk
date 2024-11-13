@@ -230,6 +230,7 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 			format: config.build.format,
 			moduleRoot: config.build.moduleRoot,
 			exports: config.build.exports,
+			name: config.name,
 		};
 		const { bindings } = await convertBindingsToCfWorkerInitBindings(
 			config.bindings

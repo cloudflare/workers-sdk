@@ -156,12 +156,15 @@ export interface StartDevWorkerInput {
 		mockFetch?: undici.MockAgent;
 
 		/** Describes the registry of other Workers running locally */
-		registry?: WorkerRegistry;
+		registry?: WorkerRegistry | null;
 
 		testScheduled?: boolean;
 
 		/** Whether to use Vectorize mixed mode -- the worker is run locally but accesses to Vectorize are made remotely */
 		bindVectorizeToProd?: boolean;
+
+		/** Treat this as the primary worker in a multiworker setup (i.e. the first Worker in Miniflare's options) */
+		multiworkerPrimary?: boolean;
 	};
 	legacy?: {
 		site?: Hook<Config["site"], [Config]>;
@@ -196,6 +199,7 @@ export type StartDevWorkerOptions = Omit<StartDevWorkerInput, "assets"> & {
 	};
 	entrypoint: string;
 	assets?: AssetsOptions;
+	name: string;
 };
 
 export type HookValues = string | number | boolean | object | undefined | null;

@@ -127,6 +127,7 @@ async function resolveDevConfig(
 		persist: localPersistencePath,
 		registry: input.dev?.registry,
 		bindVectorizeToProd: input.dev?.bindVectorizeToProd ?? false,
+		multiworkerPrimary: input.dev?.multiworkerPrimary,
 	} satisfies StartDevWorkerOptions["dev"];
 }
 
@@ -164,7 +165,11 @@ async function resolveBindings(
 			...bindings,
 			vars: maskedVars,
 		},
-		{ registry: input.dev?.registry, local: !input.dev?.remote }
+		{
+			registry: input.dev?.registry,
+			local: !input.dev?.remote,
+			name: config.name,
+		}
 	);
 
 	return {

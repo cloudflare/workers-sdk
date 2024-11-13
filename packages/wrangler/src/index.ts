@@ -131,7 +131,7 @@ export function isLegacyEnv(config: Config): boolean {
 export function getScriptName(
 	args: { name: string | undefined; env: string | undefined },
 	config: Config
-): string | undefined {
+): string {
 	if (args.name && isLegacyEnv(config) && args.env) {
 		throw new CommandLineArgsError(
 			"In legacy environment mode you cannot use --name and --env together. If you want to specify a Worker name for a specific environment you can add the following to your wrangler.toml config:" +
@@ -142,7 +142,7 @@ export function getScriptName(
 		);
 	}
 
-	return args.name ?? config.name;
+	return args.name ?? config.name ?? "worker";
 }
 
 /**
@@ -200,7 +200,9 @@ export function createCLIParser(argv: string[]) {
 			type: "string",
 			requiresArg: true,
 		})
-		.check(demandSingleValue("config"))
+		.check(
+			demandSingleValue("config", (configArgv) => configArgv["_"][0] === "dev")
+		)
 		.option("env", {
 			alias: "e",
 			describe: "Environment to use for operations and .env files",

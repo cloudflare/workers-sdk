@@ -4,6 +4,8 @@ import path from "node:path";
 import util from "node:util";
 import { isWebContainer } from "@webcontainer/env";
 import { DevEnv } from "./api";
+import { MultiworkerRuntimeController } from "./api/startDevWorker/MultiworkerRuntimeController";
+import { NoOpProxyController } from "./api/startDevWorker/NoOpProxyController";
 import {
 	convertCfWorkerInitBindingstoBindings,
 	extractBindingsOfType,
@@ -29,7 +31,12 @@ import {
 import { mergeWithOverride } from "./utils/mergeWithOverride";
 import { getHostFromRoute } from "./zones";
 import { printWranglerBanner } from "./index";
-import type { ReloadCompleteEvent, StartDevWorkerInput, Trigger } from "./api";
+import type {
+	AsyncHook,
+	ReloadCompleteEvent,
+	StartDevWorkerInput,
+	Trigger,
+} from "./api";
 import type { Config, Environment } from "./config";
 import type {
 	EnvironmentNonInheritable,
@@ -38,6 +45,7 @@ import type {
 } from "./config/environment";
 import type { CfModule, CfWorkerInit } from "./deployment-bundle/worker";
 import type { WorkerRegistry } from "./dev-registry";
+import type { CfAccount } from "./dev/create-worker-preview";
 import type { LoggerLevel } from "./logger";
 import type { EnablePagesAssetsServiceBindingOptions } from "./miniflare-cli/types";
 import type {
@@ -373,6 +381,7 @@ This is currently not supported 😭, but we think that we'll get it to work soo
 		{
 			FILE_BASED_REGISTRY: args.experimentalRegistry,
 			JSON_CONFIG_FILE: Boolean(args.experimentalJsonConfig),
+			MULTIWORKER: Array.isArray(args.config),
 		},
 		() => startDev(args)
 	);
@@ -510,10 +519,140 @@ async function getPagesAssetsFetcher(
 	}
 }
 
+async function setupDevEnv(
+	devEnv: DevEnv,
+	configPath: string | undefined,
+	auth: AsyncHook<CfAccount, [Pick<Config, "account_id">]>,
+	args: Partial<StartDevOptions> & { multiworkerPrimary?: boolean }
+) {
+	await devEnv.config.set(
+		{
+			name: args.name,
+			config: configPath,
+			entrypoint: args.script,
+			compatibilityDate: args.compatibilityDate,
+			compatibilityFlags: args.compatibilityFlags,
+			triggers: args.routes?.map<Extract<Trigger, { type: "route" }>>((r) => ({
+				type: "route",
+				pattern: r,
+			})),
+			env: args.env,
+			build: {
+				bundle: args.bundle !== undefined ? args.bundle : undefined,
+				define: collectKeyValues(args.define),
+				jsxFactory: args.jsxFactory,
+				jsxFragment: args.jsxFragment,
+				tsconfig: args.tsconfig,
+				minify: args.minify,
+				processEntrypoint: args.processEntrypoint,
+				additionalModules: args.additionalModules,
+				moduleRoot: args.moduleRoot,
+				moduleRules: args.rules,
+				nodejsCompatMode: (parsedConfig: Config) =>
+					validateNodeCompatMode(
+						args.compatibilityDate ?? parsedConfig.compatibility_date,
+						args.compatibilityFlags ?? parsedConfig.compatibility_flags ?? [],
+						{
+							nodeCompat: args.nodeCompat ?? parsedConfig.node_compat,
+							noBundle: args.noBundle ?? parsedConfig.no_bundle,
+						}
+					),
+			},
+			bindings: {
+				...(await getPagesAssetsFetcher(args.enablePagesAssetsServiceBinding)),
+				...collectPlainTextVars(args.var),
+				...convertCfWorkerInitBindingstoBindings({
+					kv_namespaces: args.kv,
+					vars: args.vars,
+					send_email: undefined,
+					wasm_modules: undefined,
+					text_blobs: undefined,
+					browser: undefined,
+					ai: args.ai,
+					version_metadata: args.version_metadata,
+					data_blobs: undefined,
+					durable_objects: { bindings: args.durableObjects ?? [] },
+					workflows: undefined,
+					queues: undefined,
+					r2_buckets: args.r2,
+					d1_databases: args.d1Databases,
+					vectorize: undefined,
+					hyperdrive: undefined,
+					services: args.services,
+					analytics_engine_datasets: undefined,
+					dispatch_namespaces: undefined,
+					mtls_certificates: undefined,
+					pipelines: undefined,
+					logfwdr: undefined,
+					unsafe: undefined,
+					assets: undefined,
+				}),
+			},
+			dev: {
+				auth,
+				remote: !args.forceLocal && args.remote,
+				server: {
+					hostname: args.ip,
+					port: args.port,
+					secure:
+						args.localProtocol === undefined
+							? undefined
+							: args.localProtocol === "https",
+					httpsCertPath: args.httpsCertPath,
+					httpsKeyPath: args.httpsKeyPath,
+				},
+				inspector: {
+					port: args.inspectorPort,
+				},
+				origin: {
+					hostname: args.host ?? args.localUpstream,
+					secure:
+						args.upstreamProtocol === undefined
+							? undefined
+							: args.upstreamProtocol === "https",
+				},
+				persist: args.persistTo,
+				liveReload: args.liveReload,
+				testScheduled: args.testScheduled,
+				logLevel: args.logLevel,
+				registry: args.disableDevRegistry
+					? null
+					: devEnv.config.latestConfig?.dev.registry,
+				bindVectorizeToProd: args.experimentalVectorizeBindToProd,
+				multiworkerPrimary: args.multiworkerPrimary,
+			},
+			legacy: {
+				site: (configParam) => {
+					const legacyAssetPaths = getResolvedLegacyAssetPaths(
+						args,
+						configParam
+					);
+					return Boolean(args.site || configParam.site) && legacyAssetPaths
+						? {
+								bucket: path.join(
+									legacyAssetPaths.baseDirectory,
+									legacyAssetPaths?.assetDirectory
+								),
+								include: legacyAssetPaths.includePatterns,
+								exclude: legacyAssetPaths.excludePatterns,
+							}
+						: undefined;
+				},
+				legacyAssets: (configParam) =>
+					args.legacyAssets ?? configParam.legacy_assets,
+				enableServiceEnvironments: !(args.legacyEnv ?? true),
+			},
+			assets: args.assets,
+		} satisfies StartDevWorkerInput,
+		true
+	);
+	return devEnv;
+}
+
 export async function startDev(args: StartDevOptions) {
 	let configFileWatcher: ReturnType<typeof watch> | undefined;
 	let assetsWatcher: ReturnType<typeof watch> | undefined;
-	const devEnv = new DevEnv();
+	let devEnv: DevEnv | DevEnv[] | undefined;
 	let teardownRegistryPromise:
 		| Promise<(name?: string) => Promise<void>>
 		| undefined;
@@ -561,216 +700,156 @@ export async function startDev(args: StartDevOptions) {
 			args.config ||
 			(args.script && findWranglerToml(path.dirname(args.script)));
 
-		// The ProxyWorker will have a stable host and port, so only listen for the first update
-		void devEnv.proxy.ready.promise.then(({ url }) => {
-			if (args.onReady) {
-				args.onReady(url.hostname, parseInt(url.port));
+		const authHook: AsyncHook<CfAccount, [Pick<Config, "account_id">]> = async (
+			config
+		) => {
+			const hotkeysDisplayed = !!unregisterHotKeys;
+			let accountId = args.accountId;
+			if (!accountId) {
+				unregisterHotKeys?.();
+				accountId = await requireAuth(config);
+				if (hotkeysDisplayed) {
+					assert(devEnv !== undefined);
+					unregisterHotKeys = registerDevHotKeys(
+						Array.isArray(devEnv) ? devEnv[0] : devEnv,
+						args
+					);
+				}
 			}
+			return {
+				accountId,
+				apiToken: requireApiToken(),
+			};
+		};
 
-			if (
-				(args.enableIpc || !args.onReady) &&
-				process.send &&
-				typeof vitest === "undefined"
-			) {
-				process.send(
-					JSON.stringify({
-						event: "DEV_SERVER_READY",
-						ip: url.hostname,
-						port: parseInt(url.port),
+		if (Array.isArray(configPath)) {
+			const runtime = new MultiworkerRuntimeController();
+
+			// Set up the primary DevEnv (the one that the ProxyController will connect to)
+			devEnv = [
+				await setupDevEnv(
+					new DevEnv({ runtimes: [runtime] }),
+					configPath[0],
+					authHook,
+					{ ...args, disableDevRegistry: true, multiworkerPrimary: true }
+				),
+			];
+
+			// Set up all auxiliary DevEnvs
+			devEnv.push(
+				...(await Promise.all(
+					(configPath as string[]).slice(1).map((c) => {
+						return setupDevEnv(
+							new DevEnv({
+								runtimes: [runtime],
+								proxy: new NoOpProxyController(),
+							}),
+							c,
+							authHook,
+							{
+								disableDevRegistry: true,
+							}
+						);
 					})
-				);
-			}
-		});
-
-		if (!args.disableDevRegistry) {
-			teardownRegistryPromise = devRegistry((registry) =>
-				updateDevEnvRegistry(devEnv, registry)
+				))
 			);
 
-			devEnv.runtimes.forEach((runtime) => {
-				runtime.on(
-					"reloadComplete",
-					async (reloadEvent: ReloadCompleteEvent) => {
-						if (!reloadEvent.config.dev?.remote) {
-							const { url } = await devEnv.proxy.ready.promise;
-
-							await maybeRegisterLocalWorker(
-								url,
-								reloadEvent.config.name,
-								reloadEvent.proxyData.internalDurableObjects,
-								reloadEvent.proxyData.entrypointAddresses
-							);
-						}
-					}
-				);
+			// Hook up teardowns
+			devEnv[0].on("teardown", () => {
+				assert(Array.isArray(devEnv));
+				devEnv.slice(1).map((d) => d.teardown());
 			});
-		}
 
-		if (isInteractive() && args.showInteractiveDevSession !== false) {
-			unregisterHotKeys = registerDevHotKeys(devEnv, args);
-		}
+			if (isInteractive() && args.showInteractiveDevSession !== false) {
+				unregisterHotKeys = registerDevHotKeys(devEnv[0], args);
+			}
+		} else {
+			devEnv = new DevEnv();
+			await setupDevEnv(devEnv, configPath, authHook, args);
 
-		await devEnv.config.set(
-			{
-				name: args.name,
-				config: configPath,
-				entrypoint: args.script,
-				compatibilityDate: args.compatibilityDate,
-				compatibilityFlags: args.compatibilityFlags,
-				triggers: args.routes?.map<Extract<Trigger, { type: "route" }>>(
-					(r) => ({
-						type: "route",
-						pattern: r,
-					})
-				),
-				env: args.env,
-				build: {
-					bundle: args.bundle !== undefined ? args.bundle : undefined,
-					define: collectKeyValues(args.define),
-					jsxFactory: args.jsxFactory,
-					jsxFragment: args.jsxFragment,
-					tsconfig: args.tsconfig,
-					minify: args.minify,
-					processEntrypoint: args.processEntrypoint,
-					additionalModules: args.additionalModules,
-					moduleRoot: args.moduleRoot,
-					moduleRules: args.rules,
-					nodejsCompatMode: (parsedConfig: Config) =>
-						validateNodeCompatMode(
-							args.compatibilityDate ?? parsedConfig.compatibility_date,
-							args.compatibilityFlags ?? parsedConfig.compatibility_flags ?? [],
-							{
-								nodeCompat: args.nodeCompat ?? parsedConfig.node_compat,
-								noBundle: args.noBundle ?? parsedConfig.no_bundle,
-							}
-						),
-				},
-				bindings: {
-					...(await getPagesAssetsFetcher(
-						args.enablePagesAssetsServiceBinding
-					)),
-					...collectPlainTextVars(args.var),
-					...convertCfWorkerInitBindingstoBindings({
-						kv_namespaces: args.kv,
-						vars: args.vars,
-						send_email: undefined,
-						wasm_modules: undefined,
-						text_blobs: undefined,
-						browser: undefined,
-						ai: args.ai,
-						version_metadata: args.version_metadata,
-						data_blobs: undefined,
-						durable_objects: { bindings: args.durableObjects ?? [] },
-						workflows: undefined,
-						queues: undefined,
-						r2_buckets: args.r2,
-						d1_databases: args.d1Databases,
-						vectorize: undefined,
-						hyperdrive: undefined,
-						services: args.services,
-						analytics_engine_datasets: undefined,
-						dispatch_namespaces: undefined,
-						mtls_certificates: undefined,
-						pipelines: undefined,
-						logfwdr: undefined,
-						unsafe: undefined,
-						assets: undefined,
-					}),
-				},
-				dev: {
-					auth: async (config) => {
-						const hotkeysDisplayed = !!unregisterHotKeys;
-						let accountId = args.accountId;
-						if (!accountId) {
-							unregisterHotKeys?.();
-							accountId = await requireAuth(config);
-							if (hotkeysDisplayed) {
-								unregisterHotKeys = registerDevHotKeys(devEnv, args);
+			// The ProxyWorker will have a stable host and port, so only listen for the first update
+			void devEnv.proxy.ready.promise.then(({ url }) => {
+				if (args.onReady) {
+					args.onReady(url.hostname, parseInt(url.port));
+				}
+
+				if (
+					(args.enableIpc || !args.onReady) &&
+					process.send &&
+					typeof vitest === "undefined"
+				) {
+					process.send(
+						JSON.stringify({
+							event: "DEV_SERVER_READY",
+							ip: url.hostname,
+							port: parseInt(url.port),
+						})
+					);
+				}
+			});
+
+			if (!args.disableDevRegistry) {
+				teardownRegistryPromise = devRegistry((registry) => {
+					assert(devEnv !== undefined && !Array.isArray(devEnv));
+					void updateDevEnvRegistry(devEnv, registry);
+				});
+
+				devEnv.runtimes.forEach((runtime) => {
+					runtime.on(
+						"reloadComplete",
+						async (reloadEvent: ReloadCompleteEvent) => {
+							if (!reloadEvent.config.dev?.remote) {
+								assert(devEnv !== undefined && !Array.isArray(devEnv));
+								const { url } = await devEnv.proxy.ready.promise;
+
+								await maybeRegisterLocalWorker(
+									url,
+									reloadEvent.config.name,
+									reloadEvent.proxyData.internalDurableObjects,
+									reloadEvent.proxyData.entrypointAddresses
+								);
 							}
 						}
-						return {
-							accountId,
-							apiToken: requireApiToken(),
-						};
-					},
-					remote: !args.forceLocal && args.remote,
-					server: {
-						hostname: args.ip,
-						port: args.port,
-						secure:
-							args.localProtocol === undefined
-								? undefined
-								: args.localProtocol === "https",
-						httpsCertPath: args.httpsCertPath,
-						httpsKeyPath: args.httpsKeyPath,
-					},
-					inspector: {
-						port: args.inspectorPort,
-					},
-					origin: {
-						hostname: args.host ?? args.localUpstream,
-						secure:
-							args.upstreamProtocol === undefined
-								? undefined
-								: args.upstreamProtocol === "https",
-					},
-					persist: args.persistTo,
-					liveReload: args.liveReload,
-					testScheduled: args.testScheduled,
-					logLevel: args.logLevel,
-					registry: devEnv.config.latestConfig?.dev.registry,
-					bindVectorizeToProd: args.experimentalVectorizeBindToProd,
-				},
-				legacy: {
-					site: (configParam) => {
-						const legacyAssetPaths = getResolvedLegacyAssetPaths(
-							args,
-							configParam
-						);
-						return Boolean(args.site || configParam.site) && legacyAssetPaths
-							? {
-									bucket: path.join(
-										legacyAssetPaths.baseDirectory,
-										legacyAssetPaths?.assetDirectory
-									),
-									include: legacyAssetPaths.includePatterns,
-									exclude: legacyAssetPaths.excludePatterns,
-								}
-							: undefined;
-					},
-					legacyAssets: (configParam) =>
-						args.legacyAssets ?? configParam.legacy_assets,
-					enableServiceEnvironments: !(args.legacyEnv ?? true),
-				},
-				assets: args.assets,
-			} satisfies StartDevWorkerInput,
-			true
-		);
+					);
+				});
+			}
+
+			if (isInteractive() && args.showInteractiveDevSession !== false) {
+				unregisterHotKeys = registerDevHotKeys(devEnv, args);
+			}
+		}
 
 		void metrics.sendMetricsEvent(
 			"run dev",
 			{
 				local: !args.remote,
-				usesTypeScript: /\.tsx?$/.test(
-					devEnv.config.latestConfig?.entrypoint as string
-				),
+				// usesTypeScript: /\.tsx?$/.test(
+				// 	devEnv.config.latestConfig?.entrypoint as string
+				// ),
 			},
 			{
-				sendMetrics: devEnv.config.latestConfig?.sendMetrics,
+				// sendMetrics: devEnv.config.latestConfig?.sendMetrics,
 				offline: !args.remote,
 			}
 		);
 
-		return { devEnv, unregisterHotKeys, teardownRegistryPromise };
+		return {
+			devEnv: Array.isArray(devEnv) ? devEnv[0] : devEnv,
+			unregisterHotKeys,
+			teardownRegistryPromise,
+		};
 	} catch (e) {
 		await Promise.allSettled([
 			configFileWatcher?.close(),
 			assetsWatcher?.close(),
-			devEnv.teardown(),
+			...(Array.isArray(devEnv)
+				? devEnv.map((d) => d.teardown())
+				: [devEnv?.teardown()]),
 			(async () => {
 				if (teardownRegistryPromise) {
+					assert(devEnv === undefined || !Array.isArray(devEnv));
 					const teardownRegistry = await teardownRegistryPromise;
-					await teardownRegistry(devEnv.config.latestConfig?.name);
+					await teardownRegistry(devEnv?.config.latestConfig?.name);
 				}
 				unregisterHotKeys?.();
 			})(),
@@ -858,7 +937,7 @@ export function getInferredHost(routes: Route[] | undefined) {
 }
 
 function getResolvedLegacyAssetPaths(
-	args: StartDevOptions,
+	args: Partial<StartDevOptions>,
 	configParam: Config
 ) {
 	const legacyAssetPaths =
