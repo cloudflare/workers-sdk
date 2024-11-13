@@ -55,7 +55,7 @@ export const CreateHandler = withConfig<CreateHandlerOptions>(
 
 		logger.log(`✅ Successfully created Migration '${newMigrationName}'!\n`);
 		logger.log(`The migration is available for editing here`);
-		logger.log(`${migrationsPath}/{newMigrationName}`);
+		logger.log(`${migrationsPath}/${newMigrationName}`);
 	}
 );
 
