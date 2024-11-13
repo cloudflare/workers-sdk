@@ -1,13 +1,12 @@
 import { existsSync } from "node:fs";
 import { dirname, relative, resolve } from "node:path";
 import { defu } from "defu";
-import { UserError } from "../errors";
 import { logger } from "../logger";
 import { parseJSONC, readFileSync } from "../parse";
 import { Diagnostics } from "./diagnostics";
 import { normalizeAndValidateEnvironment } from "./validation";
 import { validateAdditionalProperties } from "./validation-helpers";
-import type { Config } from "./config";
+import type { Config, PagesConfigFields } from "./config";
 import type { Environment } from "./environment";
 
 /**
@@ -17,26 +16,25 @@ import type { Environment } from "./environment";
 export function extendConfiguration(
 	configPath: string | undefined,
 	userConfig: Config,
-	hideWarnings: boolean
-): Config {
+	hideMessages: boolean
+): { config: Config; diagnostics: Diagnostics } {
 	// Handle extending the user configuration
 	const extraPath = getExtraConfigPath(configPath && dirname(configPath));
 	const extra = loadExtraConfig(extraPath);
 	if (extra === undefined) {
-		return userConfig;
+		return { config: userConfig, diagnostics: new Diagnostics("") };
 	}
 
-	const { config, diagnostics } = extra;
-	if (!hideWarnings && !diagnostics.hasWarnings() && !diagnostics.hasErrors()) {
-		logger.info(diagnostics.description);
+	if (!hideMessages) {
+		logger.info(
+			`Loading additional configuration from ${relative(process.cwd(), extraPath)}.`
+		);
 	}
-	if (diagnostics.hasWarnings() && !hideWarnings) {
-		logger.warn(diagnostics.renderWarnings());
-	}
-	if (diagnostics.hasErrors()) {
-		throw new UserError(diagnostics.renderErrors());
-	}
-	return defu<Config, [Config]>(config, userConfig);
+
+	return {
+		config: defu<Config, [Config]>(extra.config, userConfig),
+		diagnostics: extra.diagnostics,
+	};
 }
 
 /**
@@ -53,7 +51,7 @@ function getExtraConfigPath(projectRoot: string | undefined): string {
  */
 function loadExtraConfig(configPath: string):
 	| {
-			config: Environment;
+			config: Environment & PagesConfigFields;
 			diagnostics: Diagnostics;
 	  }
 	| undefined {
@@ -62,9 +60,12 @@ function loadExtraConfig(configPath: string):
 	}
 
 	const diagnostics = new Diagnostics(
-		`Extending with configuration found in ${relative(process.cwd(), configPath)}.`
+		`Processing extra configuration found in ${relative(process.cwd(), configPath)}.`
 	);
-	const raw = parseJSONC<Environment>(readFileSync(configPath), configPath);
+	const raw = parseJSONC<Environment & PagesConfigFields>(
+		readFileSync(configPath),
+		configPath
+	);
 	const config = normalizeAndValidateEnvironment(
 		diagnostics,
 		configPath,
@@ -76,8 +77,11 @@ function loadExtraConfig(configPath: string):
 		diagnostics,
 		"extended config",
 		Object.keys(raw),
-		[...Object.keys(config)]
+		[...Object.keys(config), "pages_build_output_dir"]
 	);
 
-	return { config, diagnostics };
+	return {
+		config: { ...config, pages_build_output_dir: raw.pages_build_output_dir },
+		diagnostics,
+	};
 }

@@ -86,6 +86,18 @@ export function readConfig(
 		}
 	}
 
+	// Process the top-level configuration. This is common for both
+	// Workers and Pages
+	let { config, diagnostics } = normalizeAndValidateConfig(
+		rawConfig,
+		configPath,
+		args
+	);
+
+	const extra = extendConfiguration(configPath, config, hideWarnings);
+	config = extra.config;
+	diagnostics.addChild(extra.diagnostics);
+
 	/**
 	 * Check if configuration file belongs to a Pages project.
 	 *
@@ -116,14 +128,6 @@ export function readConfig(
 		);
 	}
 
-	// Process the top-level configuration. This is common for both
-	// Workers and Pages
-	const { config, diagnostics } = normalizeAndValidateConfig(
-		rawConfig,
-		configPath,
-		args
-	);
-
 	if (diagnostics.hasWarnings() && !hideWarnings) {
 		logger.warn(diagnostics.renderWarnings());
 	}
@@ -152,7 +156,7 @@ export function readConfig(
 
 	applyPythonConfig(config, args);
 
-	return extendConfiguration(configPath, config, hideWarnings);
+	return config;
 }
 
 /**

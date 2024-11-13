@@ -76,7 +76,7 @@ describe("readConfig()", () => {
 				Object {
 				  "debug": "",
 				  "err": "",
-				  "info": "Extending with configuration found in .wrangler/config/extra.json.",
+				  "info": "Loading additional configuration from .wrangler/config/extra.json.",
 				  "out": "",
 				  "warn": "",
 				}
@@ -177,19 +177,23 @@ describe("readConfig()", () => {
 			}
 
 			expect(error.toString().replaceAll("\\", "/")).toMatchInlineSnapshot(`
-				"Error: Extending with configuration found in .wrangler/config/extra.json.
-				  - Expected \\"compatibility_date\\" to be of type string but got 2021."
+				"Error: Processing wrangler.toml configuration:
+
+				  - Processing extra configuration found in .wrangler/config/extra.json.
+				    - Expected \\"compatibility_date\\" to be of type string but got 2021."
 			`);
 
 			expect(std).toMatchInlineSnapshot(`
 				Object {
 				  "debug": "",
 				  "err": "",
-				  "info": "",
+				  "info": "Loading additional configuration from .wrangler/config/extra.json.",
 				  "out": "",
-				  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mExtending with configuration found in .wrangler/config/extra.json.[0m
+				  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
 
-				    - Unexpected fields found in extended config field: \\"unexpected_property\\"
+
+				    - Processing extra configuration found in .wrangler/config/extra.json.
+				      - Unexpected fields found in extended config field: \\"unexpected_property\\"
 
 				",
 				}
@@ -241,6 +245,32 @@ describe("readConfig()", () => {
 					no_bundle: true,
 				})
 			);
+		});
+
+		it("should support extending with a Pages output directory property", () => {
+			const pages_build_output_dir = "./public";
+
+			writeWranglerToml({});
+			writeExtraJson({
+				pages_build_output_dir,
+			});
+
+			const config = readConfig("wrangler.toml", {});
+			expect(config).toEqual(
+				expect.objectContaining({
+					pages_build_output_dir: "./public",
+				})
+			);
+
+			expect(std).toMatchInlineSnapshot(`
+				Object {
+				  "debug": "",
+				  "err": "",
+				  "info": "Loading additional configuration from .wrangler/config/extra.json.",
+				  "out": "",
+				  "warn": "",
+				}
+			`);
 		});
 	});
 });

@@ -1,5 +1,6 @@
 import * as fs from "fs";
 import TOML from "@iarna/toml";
+import { PagesConfigFields } from "../../config/config";
 import { ensureDirectoryExistsSync } from "../../utils/filesystem";
 import type { RawConfig, RawEnvironment } from "../../config";
 
@@ -36,7 +37,7 @@ export function writeWranglerJson(
 }
 
 export function writeExtraJson(
-	config: RawEnvironment = {},
+	config: RawEnvironment & Partial<PagesConfigFields> = {},
 	path = "./.wrangler/config/extra.json"
 ) {
 	ensureDirectoryExistsSync(path);
