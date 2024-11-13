@@ -169,11 +169,18 @@ describe("readConfig()", () => {
 				unexpected_property: true,
 			} as unknown as RawEnvironment);
 
-			expect(() => readConfig("wrangler.toml", {}))
-				.toThrowErrorMatchingInlineSnapshot(`
-				[Error: Extending with configuration found in .wrangler/config/extra.json.
-				  - Expected "compatibility_date" to be of type string but got 2021.]
+			let error = new Error("Missing expected error");
+			try {
+				readConfig("wrangler.toml", {});
+			} catch (e) {
+				error = e as Error;
+			}
+
+			expect(error.toString().replaceAll("\\", "/")).toMatchInlineSnapshot(`
+				"Error: Extending with configuration found in .wrangler/config/extra.json.
+				  - Expected \\"compatibility_date\\" to be of type string but got 2021."
 			`);
+
 			expect(std).toMatchInlineSnapshot(`
 				Object {
 				  "debug": "",
