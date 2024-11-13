@@ -52,9 +52,15 @@ Two methods are available for testing updates:
 
 **Preview Builds:**
 
-- Add `preview:wrangler-devtools` label to PRs
-- Use deployed preview URL for testing
-- If you want to see this preview working in Playground, you can also add the `preview:wrangler-playground` label to deploy the Playground with the DevTools preview enabled.
+On any pull request to the repo on GitHub, you can add labels to trigger preview builds of both the DevTools frontend, and the Playground. This is useful because it will allow you to manually test your changes in a live environment, and with one-click.
+
+There are two labels you can use:
+- `preview:wrangler-devtools` - this will trigger the DevTools preview
+- `preview:wrangler-playground` - this will trigger the Playground preview
+
+If you add **both** labels, Playground will embed the DevTools preview, so you can test them together.
+
+Once the previews are built, you will see a comment on the PR with links to the live URLs.
 
 ## Acceptance Criteria
 
