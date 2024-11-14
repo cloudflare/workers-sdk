@@ -7,7 +7,7 @@ import {
 	isLegacyEnv,
 	printWranglerBanner,
 } from "../index";
-import { isNonInteractiveOrCI } from "../is-interactive";
+import isInteractive, { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { requireAuth } from "../user";
@@ -92,10 +92,12 @@ defineCommand({
 	behaviour: {
 		printBanner: false,
 	},
-	async handler(args, { config }) {
-		if (isNonInteractiveOrCI() && !args.format) {
+	validateArgs(args) {
+		if (isNonInteractiveOrCI()) {
 			args.format = "json";
 		}
+	},
+	async handler(args, { config }) {
 		if (args.format === "pretty") {
 			await printWranglerBanner();
 		}
