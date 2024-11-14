@@ -11420,6 +11420,43 @@ export default{
 			`);
 		});
 
+		it("should allow uploading workers with nested observability logs setting", async () => {
+			writeWranglerToml({
+				observability: {
+					enabled: true,
+					head_sampling_rate: 0.5,
+					logs: {
+						enabled: true,
+						head_sampling_rate: 0.3,
+						invocation_logs: false,
+					},
+				},
+			});
+			await fs.promises.writeFile("index.js", `export default {};`);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedObservability: {
+					enabled: true,
+					head_sampling_rate: 0.5,
+					logs: {
+						enabled: true,
+						head_sampling_rate: 0.3,
+						invocation_logs: false,
+					},
+				},
+			});
+
+			await runWrangler("publish index.js");
+			expect(std.out).toMatchInlineSnapshot(`
+				"Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
+		});
+
 		it("should disable observability if not explicitly defined", async () => {
 			writeWranglerToml({});
 			await fs.promises.writeFile("index.js", `export default {};`);
