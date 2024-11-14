@@ -44,10 +44,7 @@ export class WorkflowBinding extends WorkerEntrypoint<Env> implements Workflow {
 export class WorkflowHandle extends RpcTarget implements WorkflowInstance {
 	#id: string;
 	private stub: DurableObjectStub<Engine>;
-	constructor(
-		id: string,
-		stub: DurableObjectStub<Engine>
-	) {
+	constructor(id: string, stub: DurableObjectStub<Engine>) {
 		super();
 		this.#id = id;
 		this.stub = stub;
