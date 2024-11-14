@@ -12,6 +12,7 @@ export type ConnectionBinding = {
 	name: string;
 	target_script: string;
 	entrypoint: string;
+	args?: Record<string, unknown>;
 };
 
 export async function listProviderNamespaces(accountId: string) {
@@ -96,6 +97,20 @@ export async function listConsumerConnections(accountId: string) {
 		`/accounts/${accountId}/workers/connections/consumer`,
 		{
 			method: "GET",
+		}
+	);
+}
+
+export async function updateHooks(
+	accountId: string,
+	alias: string,
+	hooks: ConnectionBinding[]
+) {
+	return await fetchResult<ConnectionEntry[]>(
+		`/accounts/${accountId}/workers/connections/consumer/${alias}/hooks`,
+		{
+			method: "POST",
+			body: JSON.stringify(hooks),
 		}
 	);
 }
