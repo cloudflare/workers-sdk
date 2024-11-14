@@ -45,13 +45,10 @@ export default class extends WorkerEntrypoint<Env> {
 
 		let handle: WorkflowInstance;
 		if (url.pathname === "/create") {
-			handle = await this.env.WORKFLOW.create();
+			handle = await this.env.WORKFLOW.create({ id });
 		} else {
 			handle = await this.env.WORKFLOW.get(id);
 		}
-
-		// .id is available on handle
-		console.log(handle.id);
 
 		return Response.json(await handle.status());
 	}
