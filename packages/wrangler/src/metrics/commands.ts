@@ -1,5 +1,6 @@
 import chalk from "chalk";
 import { defineCommand, defineNamespace } from "../core";
+import { getWranglerSendMetricsFromEnv } from "../environment-variables/misc-variables";
 import { logger } from "../logger";
 import { readMetricsConfig, updateMetricsPermission } from "./metrics-config";
 
@@ -54,16 +55,22 @@ defineCommand({
 	},
 	async handler(_, { config }) {
 		const savedConfig = readMetricsConfig();
-		if (config.send_metrics !== undefined) {
-			const globalPermission = savedConfig.permission?.enabled ?? true;
-			const projectPermission = config.send_metrics;
+		const sendMetricsEnv = getWranglerSendMetricsFromEnv();
+		if (config.send_metrics !== undefined || sendMetricsEnv !== undefined) {
+			const resolvedPermission =
+				sendMetricsEnv !== undefined
+					? sendMetricsEnv === "true"
+					: config.send_metrics;
 			logger.log(
-				`Global status: ${globalPermission ? chalk.green("Enabled") : chalk.red("Disabled")}\n` +
-					`Project status: ${projectPermission ? chalk.green("Enabled") : chalk.red("Disabled")}\n`
+				`Status: ${resolvedPermission ? chalk.green("Enabled") : chalk.red("Disabled")} (set by ${sendMetricsEnv !== undefined ? "environment variable" : "wrangler.toml"})\n`
 			);
 		} else {
 			logTelemetryStatus(savedConfig.permission?.enabled ?? true);
 		}
+		logger.log(
+			"To configure telemetry globally on this machine, you can run `wrangler telemetry disable / enable`.\n" +
+				"You can override this for individual projects with the environment variable `WRANGLER_SEND_METRICS=true/false`.\n"
+		);
 	},
 });
 
