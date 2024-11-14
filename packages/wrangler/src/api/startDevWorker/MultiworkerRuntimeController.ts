@@ -11,7 +11,37 @@ import {
 } from "./LocalRuntimeController";
 import type { BundleCompleteEvent } from "./events";
 
+// Ensure DO references from other workers have the same SQL setting as the DO definition in it's original Worker
+function ensureMatchingSql(options: MF.Options) {
+	const sameWorkerDOSqlEnabled = new Map<string, boolean | undefined>();
+
+	for (const worker of options.workers) {
+		for (const designator of Object.values(worker.durableObjects ?? {})) {
+			const isObject = typeof designator === "object";
+			const className = isObject ? designator.className : designator;
+			const enableSql = isObject ? designator.useSQLite : undefined;
+
+			if (!isObject || designator.scriptName === undefined) {
+				sameWorkerDOSqlEnabled.set(className, enableSql);
+			}
+		}
+	}
+
+	for (const worker of options.workers) {
+		for (const designator of Object.values(worker.durableObjects ?? {})) {
+			const isObject = typeof designator === "object";
+
+			if (isObject && designator.scriptName !== undefined) {
+				designator.useSQLite = sameWorkerDOSqlEnabled.get(designator.className);
+			}
+		}
+	}
+	return options;
+}
 export class MultiworkerRuntimeController extends LocalRuntimeController {
+	constructor(private numWorkers: number) {
+		super();
+	}
 	// ******************
 	//   Event Handlers
 	// ******************
@@ -32,8 +62,11 @@ export class MultiworkerRuntimeController extends LocalRuntimeController {
 
 	#options = new Map<string, { options: MF.Options; primary: boolean }>();
 
-	#hasPrimaryWorker() {
-		return [...this.#options.values()].some((o) => o.primary);
+	#canStartMiniflare() {
+		return (
+			[...this.#options.values()].some((o) => o.primary) &&
+			[...this.#options.values()].length === this.numWorkers
+		);
 	}
 
 	#mergedMfOptions(): MF.Options {
@@ -70,8 +103,8 @@ export class MultiworkerRuntimeController extends LocalRuntimeController {
 				primary: Boolean(data.config.dev.multiworkerPrimary),
 			});
 
-			if (this.#hasPrimaryWorker()) {
-				const mergedMfOptions = this.#mergedMfOptions();
+			if (this.#canStartMiniflare()) {
+				const mergedMfOptions = ensureMatchingSql(this.#mergedMfOptions());
 
 				if (this.#mf === undefined) {
 					logger.log(chalk.dim("⎔ Starting local server..."));

@@ -723,7 +723,7 @@ export async function startDev(args: StartDevOptions) {
 		};
 
 		if (Array.isArray(configPath)) {
-			const runtime = new MultiworkerRuntimeController();
+			const runtime = new MultiworkerRuntimeController(configPath.length);
 
 			const primaryDevEnv = new DevEnv({ runtimes: [runtime] });
 

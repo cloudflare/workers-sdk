@@ -505,9 +505,7 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 	const externalWorkers: WorkerOptions[] = [];
 	for (const binding of bindings.durable_objects?.bindings ?? []) {
 		const internal =
-			binding.script_name === undefined ||
-			binding.script_name === config.name ||
-			config.workerDefinitions === null;
+			binding.script_name === undefined || binding.script_name === config.name;
 		(internal ? internalObjects : externalObjects).push(binding);
 	}
 
@@ -677,20 +675,28 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 			...externalObjects.map(({ name, class_name, script_name }) => {
 				const identifier = getIdentifier(`do_${script_name}_${class_name}`);
 				const useSQLite = classNameToUseSQLite.get(class_name);
-				return [
-					name,
-					{
-						className: identifier,
-						scriptName: EXTERNAL_SERVICE_WORKER_NAME,
-						useSQLite,
-						// Matches the unique key Miniflare will generate for this object in
-						// the target session. We need to do this so workerd generates the
-						// same IDs it would if this were part of the same process. workerd
-						// doesn't allow IDs from Durable Objects with different unique keys
-						// to be used with each other.
-						unsafeUniqueKey: `${script_name}-${class_name}`,
-					},
-				];
+				return config.workerDefinitions === null
+					? [
+							name,
+							{
+								className: class_name,
+								scriptName: script_name,
+							},
+						]
+					: [
+							name,
+							{
+								className: identifier,
+								scriptName: EXTERNAL_SERVICE_WORKER_NAME,
+								useSQLite,
+								// Matches the unique key Miniflare will generate for this object in
+								// the target session. We need to do this so workerd generates the
+								// same IDs it would if this were part of the same process. workerd
+								// doesn't allow IDs from Durable Objects with different unique keys
+								// to be used with each other.
+								unsafeUniqueKey: `${script_name}-${class_name}`,
+							},
+						];
 			}),
 		]),
 
