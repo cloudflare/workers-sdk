@@ -34,7 +34,7 @@ defineCommand({
 			type: "string",
 		},
 		format: {
-			default: "pretty",
+			default: process.stdout.isTTY ? "pretty" : "json",
 			choices: ["json", "pretty"],
 			describe: "The format of log entries",
 		},
@@ -92,9 +92,6 @@ defineCommand({
 		printBanner: false,
 	},
 	async handler(args, { config }) {
-		if (!process.stdout.isTTY) {
-			args.format = "json";
-		}
 		if (args.format === "pretty") {
 			await printWranglerBanner();
 		}
