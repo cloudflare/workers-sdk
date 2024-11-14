@@ -189,7 +189,6 @@ async function sendStartThreadMessage(pat: string, webhookUrl: string, ai: Ai) {
 				pr.user &&
 				[
 					"penalosa",
-					"RamIdeas",
 					"lrapoport-cf",
 					"petebacondarwin",
 					"CarmenPopoviciu",

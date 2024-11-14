@@ -165,7 +165,7 @@ function unexpectedLastEvent(placement: PlacementWithEvents) {
 	);
 }
 
-export class WaitForAnotherPlacement extends Error {
+class WaitForAnotherPlacement extends Error {
 	constructor(message: string) {
 		super(message);
 	}

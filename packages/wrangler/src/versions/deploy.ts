@@ -123,7 +123,7 @@ export async function versionsDeployHandler(args: VersionsDeployArgs) {
 	}
 
 	if (config.workflows?.length) {
-		logger.warnOnce("Workflows is currently in open beta.");
+		logger.once.warn("Workflows is currently in open beta.");
 	}
 
 	const versionCache: VersionCache = new Map();
@@ -305,7 +305,7 @@ export async function printLatestDeployment(
 	);
 }
 
-export async function printDeployment(
+async function printDeployment(
 	accountId: string,
 	workerName: string,
 	deployment: ApiDeployment | undefined,
@@ -333,7 +333,7 @@ export function printVersions(
 	cli.newline();
 }
 
-export function formatVersions(
+function formatVersions(
 	versions: ApiVersion[],
 	traffic: Map<VersionId, Percentage>
 ) {

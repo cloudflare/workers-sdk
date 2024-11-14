@@ -1,9 +1,13 @@
+import { mkdtemp } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { startSection, updateStatus } from "@cloudflare/cli";
 import { blue, brandColor, dim } from "@cloudflare/cli/colors";
 import TOML from "@iarna/toml";
 import { processArgument } from "helpers/args";
 import { C3_DEFAULTS, openInBrowser } from "helpers/cli";
 import { quoteShellArgs, runCommand } from "helpers/command";
+import { readFile } from "helpers/files";
 import { detectPackageManager } from "helpers/packageManagers";
 import { poll } from "helpers/poll";
 import { isInsideGitRepo } from "./git";
@@ -99,12 +103,17 @@ export const runDeploy = async (ctx: C3Context) => {
 			: []),
 	];
 
-	const result = await runCommand(deployCmd, {
-		silent: true,
+	const outputFile = join(
+		await mkdtemp(join(tmpdir(), "c3-wrangler-deploy-")),
+		"output.json",
+	);
+
+	await runCommand(deployCmd, {
 		cwd: ctx.project.path,
 		env: {
 			CLOUDFLARE_ACCOUNT_ID: ctx.account.id,
 			NODE_ENV: "production",
+			WRANGLER_OUTPUT_FILE_PATH: outputFile,
 		},
 		startText: "Deploying your application",
 		doneText: `${brandColor("deployed")} ${dim(
@@ -112,11 +121,24 @@ export const runDeploy = async (ctx: C3Context) => {
 		)}`,
 	});
 
-	const deployedUrlRegex = /https:\/\/.+\.(pages|workers)\.dev/;
-	const deployedUrlMatch = result.match(deployedUrlRegex);
-	if (deployedUrlMatch) {
-		ctx.deployment.url = deployedUrlMatch[0];
-	} else {
+	try {
+		const contents = readFile(outputFile);
+
+		const entries = contents
+			.split("\n")
+			.filter(Boolean)
+			.map((entry) => JSON.parse(entry));
+		const url: string | undefined =
+			entries.find((entry) => entry.type === "deploy")?.targets?.[0] ??
+			entries.find((entry) => entry.type === "pages-deploy")?.url;
+		const deployedUrlRegex = /https:\/\/.+\.(pages|workers)\.dev/;
+		const deployedUrlMatch = url?.match(deployedUrlRegex);
+		if (deployedUrlMatch) {
+			ctx.deployment.url = deployedUrlMatch[0];
+		} else {
+			throw new Error("Failed to find deployment url.");
+		}
+	} catch {
 		throw new Error("Failed to find deployment url.");
 	}
 

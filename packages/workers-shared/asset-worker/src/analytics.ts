@@ -48,7 +48,7 @@ export class Analytics {
 		return this.data[key];
 	}
 
-	write(hostname?: string) {
+	write() {
 		if (!this.readyAnalytics) {
 			return;
 		}
@@ -56,7 +56,7 @@ export class Analytics {
 		this.readyAnalytics.logEvent({
 			version: VERSION,
 			accountId: 0, // TODO: need to plumb through
-			indexId: hostname,
+			indexId: this.data.hostname?.substring(0, 96),
 			doubles: [
 				this.data.requestTime ?? -1, // double1
 				this.data.coloId ?? -1, // double2

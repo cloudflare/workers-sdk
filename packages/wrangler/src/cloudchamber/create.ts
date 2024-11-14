@@ -225,7 +225,7 @@ async function askWhichSSHKeysDoTheyWantToAdd(
 	return [];
 }
 
-export async function handleCreateCommand(
+async function handleCreateCommand(
 	args: StrictYargsOptionsToInterfaceJSON<typeof createCommandOptionalYargs>,
 	config: Config,
 	environmentVariables: EnvironmentVariable[] | undefined,

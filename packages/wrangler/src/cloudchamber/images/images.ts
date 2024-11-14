@@ -231,7 +231,7 @@ async function handleListImageRegistriesCommand(
 	endSection("");
 }
 
-export async function handleConfigureImageRegistryCommand(
+async function handleConfigureImageRegistryCommand(
 	args: StrictYargsOptionsToInterfaceJSON<
 		typeof configureImageRegistryOptionalYargs
 	>,

@@ -197,8 +197,7 @@ function getStartedWorkerdProcesses(): Process[] {
 }
 
 const devScripts = [
-	{ args: ["dev", "--x-dev-env"], expectedBody: "body" },
-	{ args: ["dev", "--no-x-dev-env"], expectedBody: "body" },
+	{ args: ["dev"], expectedBody: "body" },
 	{ args: ["pages", "dev", "public"], expectedBody: "<p>body</p>" },
 ];
 const exitKeys = [
@@ -234,7 +233,7 @@ it.runIf(RUN_IF && nodePtySupported)(
 	"hotkeys should be unregistered when the initial build fails",
 	async () => {
 		const wrangler = await startWranglerDev(
-			["dev", "--x-dev-env", "src/startup-error.ts"],
+			["dev", "src/startup-error.ts"],
 			true
 		);
 

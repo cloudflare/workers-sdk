@@ -130,8 +130,10 @@ describe("deploy helpers", async () => {
 			ctx.template.platform = "pages";
 			ctx.commitMessage = commitMsg;
 			mockInsideGitRepo(false);
-			vi.mocked(runCommand).mockResolvedValueOnce(deployedUrl);
-
+			vi.mocked(runCommand).mockResolvedValueOnce("");
+			vi.mocked(readFile).mockImplementationOnce(
+				() => `{"type":"deploy", "targets":["${deployedUrl}"]}`,
+			);
 			await runDeploy(ctx);
 			expect(runCommand).toHaveBeenCalledWith(
 				["npm", "run", "deploy", "--", "--commit-message", `"${commitMsg}"`],

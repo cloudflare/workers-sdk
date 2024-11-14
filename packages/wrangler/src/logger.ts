@@ -40,7 +40,7 @@ function getLoggerLevel(): LoggerLevel {
 		const expected = Object.keys(LOGGER_LEVELS)
 			.map((level) => `"${level}"`)
 			.join(" | ");
-		logger.warnOnce(
+		logger.once.warn(
 			`Unrecognised WRANGLER_LOG value ${JSON.stringify(
 				fromEnv
 			)}, expected ${expected}, defaulting to "log"...`
@@ -107,14 +107,24 @@ export class Logger {
 		Logger.#afterLogHook?.();
 	}
 
-	static warnOnceHistory = new Set();
-	warnOnce(message: string) {
-		// using this.constructor.warnOnceHistory, instead of hard-coding Logger.warnOnceHistory, allows for subclassing
-		const { warnOnceHistory } = this.constructor as typeof Logger;
+	static onceHistory = new Set();
+	get once() {
+		return {
+			info: (...args: unknown[]) => this.doLogOnce("info", args),
+			log: (...args: unknown[]) => this.doLogOnce("log", args),
+			warn: (...args: unknown[]) => this.doLogOnce("warn", args),
+			error: (...args: unknown[]) => this.doLogOnce("error", args),
+		};
+	}
+	doLogOnce(messageLevel: Exclude<LoggerLevel, "none">, args: unknown[]) {
+		// using this.constructor.onceHistory, instead of hard-coding Logger.onceHistory, allows for subclassing
+		const { onceHistory } = this.constructor as typeof Logger;
 
-		if (!warnOnceHistory.has(message)) {
-			warnOnceHistory.add(message);
-			this.warn(message);
+		const cacheKey = `${messageLevel}: ${args.join(" ")}`;
+
+		if (!onceHistory.has(cacheKey)) {
+			onceHistory.add(cacheKey);
+			this.doLog(messageLevel, args);
 		}
 	}
 
