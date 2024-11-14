@@ -42,15 +42,19 @@ export class WorkflowBinding extends WorkerEntrypoint<Env> implements Workflow {
 }
 
 export class WorkflowHandle extends RpcTarget implements WorkflowInstance {
-	public id: string;
+	#id: string;
 	private stub: DurableObjectStub<Engine>;
 	constructor(
 		id: string,
 		stub: DurableObjectStub<Engine>
 	) {
 		super();
-		this.id = id;
+		this.#id = id;
 		this.stub = stub;
+	}
+
+	get id() {
+		return this.#id;
 	}
 
 	public async pause(): Promise<void> {
@@ -73,7 +77,7 @@ export class WorkflowHandle extends RpcTarget implements WorkflowInstance {
 	}
 
 	public async status(): Promise<InstanceStatus> {
-		const status = await this.stub.getStatus(0, this.id);
+		const status = await this.stub.getStatus(0, this.#id);
 		const { logs } = await this.stub.readLogs();
 		// @ts-expect-error TODO: Fix this
 		const filteredLogs = logs.filter(
