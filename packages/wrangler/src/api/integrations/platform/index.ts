@@ -20,6 +20,8 @@ import type { Config } from "../../../config";
 import type { IncomingRequestCfProperties } from "@cloudflare/workers-types/experimental";
 import type { MiniflareOptions, ModuleRule, WorkerOptions } from "miniflare";
 
+export type { RawConfig, RawEnvironment } from "../../../config";
+
 /**
  * Options for the `getPlatformProxy` utility
  */
