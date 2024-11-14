@@ -31,27 +31,48 @@ export class WorkflowBinding extends WorkerEntrypoint<Env> implements Workflow {
 			}
 		);
 
-		return new WorkflowHandle(id, stub);
+		const handle = new WorkflowHandle(id, stub);
+		return {
+			id: id,
+			pause: handle.pause.bind(handle),
+			resume: handle.resume.bind(handle),
+			terminate: handle.terminate.bind(handle),
+			restart: handle.restart.bind(handle),
+			status: handle.status.bind(handle),
+		}
+
 	}
 
 	public async get(id: string): Promise<WorkflowInstance> {
-		const stubId = this.env.ENGINE.idFromName(id);
-		const stub = this.env.ENGINE.get(stubId);
-		return new WorkflowHandle(id, stub);
+		const engineStubId = this.env.ENGINE.idFromName(id);
+		const engineStub = this.env.ENGINE.get(engineStubId);
+
+		const handle = new WorkflowHandle(id, engineStub)
+
+		try {
+			await handle.status()
+		} catch (e) {
+			throw new Error('instance.not_found')
+		}
+
+		return {
+			id: id,
+			pause: handle.pause.bind(handle),
+			resume: handle.resume.bind(handle),
+			terminate: handle.terminate.bind(handle),
+			restart: handle.restart.bind(handle),
+			status: handle.status.bind(handle),
+		}
 	}
 }
 
 export class WorkflowHandle extends RpcTarget implements WorkflowInstance {
-	#id: string;
+	public id: string;
 	private stub: DurableObjectStub<Engine>;
 	constructor(id: string, stub: DurableObjectStub<Engine>) {
-		super();
-		this.#id = id;
+		super()
+		this.id = id;
 		this.stub = stub;
-	}
-
-	get id() {
-		return this.#id;
 	}
 
 	public async pause(): Promise<void> {
@@ -74,7 +95,7 @@ export class WorkflowHandle extends RpcTarget implements WorkflowInstance {
 	}
 
 	public async status(): Promise<InstanceStatus> {
-		const status = await this.stub.getStatus(0, this.#id);
+		const status = await this.stub.getStatus(0, this.id);
 		const { logs } = await this.stub.readLogs();
 		// @ts-expect-error TODO: Fix this
 		const filteredLogs = logs.filter(
