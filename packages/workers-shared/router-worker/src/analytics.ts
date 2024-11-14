@@ -1,4 +1,4 @@
-import type { Environment, ReadyAnalytics } from "./types";
+import type { ReadyAnalytics } from "./types";
 
 // This will allow us to make breaking changes to the analytic schema
 const VERSION = 1;
@@ -35,6 +35,11 @@ type Data = {
 
 export class Analytics {
 	private data: Data = {};
+	private readyAnalytics?: ReadyAnalytics;
+
+	constructor(readyAnalytics?: ReadyAnalytics) {
+		this.readyAnalytics = readyAnalytics;
+	}
 
 	setData(newData: Partial<Data>) {
 		this.data = { ...this.data, ...newData };
@@ -44,15 +49,15 @@ export class Analytics {
 		return this.data[key];
 	}
 
-	write(env: Environment, readyAnalytics?: ReadyAnalytics, hostname?: string) {
-		if (!readyAnalytics) {
+	write() {
+		if (!this.readyAnalytics) {
 			return;
 		}
 
-		readyAnalytics.logEvent({
+		this.readyAnalytics.logEvent({
 			version: VERSION,
 			accountId: 0, // TODO: need to plumb through
-			indexId: hostname,
+			indexId: this.data.hostname?.substring(0, 96),
 			doubles: [
 				this.data.requestTime ?? -1, // double1
 				this.data.coloId ?? -1, // double2

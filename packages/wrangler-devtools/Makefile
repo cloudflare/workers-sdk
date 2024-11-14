@@ -1,7 +1,7 @@
 ROOT = $(realpath .)
 PATH_WITH_DEPOT = $(PATH):$(ROOT)/depot/
 # The upstream devtools commit upon which our patches are based
-HEAD = 64208f10b3efe06a92c58d345bd828832d09c4a7
+HEAD = 279239c4c670edbde12345aca4fadb7f07d503e8
 PATCHES = $(shell ls ${PWD}/patches/*.patch)
 depot:
 	git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git depot
@@ -20,7 +20,7 @@ devtools-frontend/out/Default/gen/front_end: devtools-frontend
 	cd devtools-frontend && PATH="$(PATH_WITH_DEPOT)" $(ROOT)/depot/gn gen out/Default
 	cd devtools-frontend && PATH="$(PATH_WITH_DEPOT)" $(ROOT)/depot/autoninja -C out/Default
 
-publish: devtools-frontend/out/Default/gen/front_end
+publish: cleanup devtools-frontend/out/Default/gen/front_end
 	npx wrangler pages deploy --project-name cloudflare-devtools devtools-frontend/out/Default/gen/front_end
 
 cleanup:

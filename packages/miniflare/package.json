@@ -1,6 +1,6 @@
 {
 	"name": "miniflare",
-	"version": "3.20241022.0",
+	"version": "3.20241106.0",
 	"description": "Fun, full-featured, fully-local simulator for Cloudflare Workers",
 	"keywords": [
 		"cloudflare",
@@ -50,7 +50,7 @@
 		"glob-to-regexp": "^0.4.1",
 		"stoppable": "^1.1.0",
 		"undici": "catalog:default",
-		"workerd": "1.20241022.0",
+		"workerd": "1.20241106.1",
 		"ws": "^8.18.0",
 		"youch": "^3.2.2",
 		"zod": "^3.22.3"
@@ -59,7 +59,7 @@
 		"@ava/typescript": "^4.1.0",
 		"@cloudflare/kv-asset-handler": "workspace:*",
 		"@cloudflare/workers-shared": "workspace:*",
-		"@cloudflare/workers-types": "^4.20241022.0",
+		"@cloudflare/workers-types": "^4.20241106.0",
 		"@cloudflare/workflows-shared": "workspace:*",
 		"@microsoft/api-extractor": "^7.47.0",
 		"@types/debug": "^4.1.7",

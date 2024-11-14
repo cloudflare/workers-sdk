@@ -42,7 +42,7 @@ import type {
 	Trigger,
 } from "./types";
 
-export type ConfigControllerEventMap = ControllerEventMap & {
+type ConfigControllerEventMap = ControllerEventMap & {
 	configUpdate: [ConfigUpdateEvent];
 };
 
@@ -316,7 +316,7 @@ async function resolveConfig(
 	validateAssetsArgsAndConfig(resolved);
 
 	const services = extractBindingsOfType("service", resolved.bindings);
-	if (services && services.length > 0) {
+	if (services && services.length > 0 && resolved.dev?.remote) {
 		logger.warn(
 			`This worker is bound to live services: ${services
 				.map(

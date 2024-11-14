@@ -5,18 +5,18 @@
 		"so that we can use dependabot to update these dependencies automatically."
 	],
 	"dependencies": {
-		"create-astro": "4.8.0",
+		"create-astro": "4.10.0",
 		"create-analog": "1.8.1",
-		"@angular/create": "18.2.8",
-		"create-docusaurus": "3.5.2",
+		"@angular/create": "18.2.11",
+		"create-docusaurus": "3.6.1",
 		"create-hono": "0.14.2",
 		"create-next-app": "14.2.5",
 		"create-qwik": "1.9.1",
 		"create-vite": "5.5.5",
-		"create-remix": "2.13.1",
+		"create-remix": "2.14.0",
 		"create-solid": "0.5.13",
-		"create-vue": "3.11.2",
-		"gatsby": "5.13.7",
+		"create-vue": "3.12.1",
+		"gatsby": "5.14.0",
 		"nuxi": "3.15.0",
 		"sv": "0.6.1"
 	}

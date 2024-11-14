@@ -4,6 +4,10 @@ _Describe your change..._
 
 ---
 
+<!--
+The following selections do not need to be completed if this PR only contains changes to .md files
+-->
+
 - Tests
   - [ ] TODO (before merge)
   - [ ] Tests included
