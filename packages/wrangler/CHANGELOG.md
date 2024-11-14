@@ -1,5 +1,11 @@
 # wrangler
 
+## 3.86.1
+
+### Patch Changes
+
+- [#7069](https://github.com/cloudflare/workers-sdk/pull/7069) [`b499b74`](https://github.com/cloudflare/workers-sdk/commit/b499b743e2720ca57e9f156f3e945a7d7afe98ac) Thanks [@penalosa](https://github.com/penalosa)! - Internal refactor to remove the non `--x-dev-env` flow from `wrangler dev`
+
 ## 3.86.0
 
 ### Minor Changes

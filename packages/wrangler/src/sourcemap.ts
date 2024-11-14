@@ -250,7 +250,7 @@ function lineMatchToCallSite(lineMatch: RegExpMatchArray): CallSite {
 	});
 }
 
-export interface CallSiteOptions {
+interface CallSiteOptions {
 	typeName: string | null;
 	functionName: string | null;
 	methodName: string | null;
@@ -263,7 +263,7 @@ export interface CallSiteOptions {
 // https://v8.dev/docs/stack-trace-api#customizing-stack-traces
 // This class supports the subset of options implemented by `node-stack-trace`:
 // https://github.com/felixge/node-stack-trace/blob/4c41a4526e74470179b3b6dd5d75191ca8c56c17/index.js
-export class CallSite implements NodeJS.CallSite {
+class CallSite implements NodeJS.CallSite {
 	constructor(private readonly opts: CallSiteOptions) {}
 
 	getThis(): unknown {

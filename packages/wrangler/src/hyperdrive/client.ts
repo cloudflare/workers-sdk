@@ -116,18 +116,6 @@ export async function listConfigs(config: Config): Promise<HyperdriveConfig[]> {
 	});
 }
 
-export async function updateConfig(
-	config: Config,
-	id: string,
-	body: CreateUpdateHyperdriveBody
-): Promise<HyperdriveConfig> {
-	const accountId = await requireAuth(config);
-	return await fetchResult(`/accounts/${accountId}/hyperdrive/configs/${id}`, {
-		method: "PUT",
-		body: JSON.stringify(body),
-	});
-}
-
 export async function patchConfig(
 	config: Config,
 	id: string,

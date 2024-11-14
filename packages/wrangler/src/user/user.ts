@@ -223,8 +223,7 @@ import { NoDefaultValueProvided, select } from "../dialogs";
 import { getCloudflareApiEnvironmentFromEnv } from "../environment-variables/misc-variables";
 import { UserError } from "../errors";
 import { getGlobalWranglerConfigPath } from "../global-wrangler-config-path";
-import { CI } from "../is-ci";
-import isInteractive from "../is-interactive";
+import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import openInBrowser from "../open-in-browser";
 import { parseTOML, readFileSync } from "../parse";
@@ -308,7 +307,7 @@ interface AuthTokens {
  * The path to the config file that holds user authentication data,
  * relative to the user's home directory.
  */
-export const USER_AUTH_CONFIG_PATH = "config";
+const USER_AUTH_CONFIG_PATH = "config";
 
 /**
  * The data that may be read from the `USER_CONFIG_FILE`.
@@ -661,7 +660,7 @@ function isReturningFromAuthServer(query: ParsedUrlQuery): boolean {
 	return true;
 }
 
-export async function getAuthURL(scopes = DefaultScopeKeys): Promise<string> {
+async function getAuthURL(scopes = DefaultScopeKeys): Promise<string> {
 	const { codeChallenge, codeVerifier } = await generatePKCECodes();
 	const stateQueryParam = generateRandomState(RECOMMENDED_STATE_LENGTH);
 
@@ -919,11 +918,10 @@ export async function loginOrRefreshIfRequired(
 ): Promise<boolean> {
 	// TODO: if there already is a token, then try refreshing
 	// TODO: ask permission before opening browser
-	const { isCI } = CI;
 	if (!getAPIToken()) {
 		// Not logged in.
 		// If we are not interactive, we cannot ask the user to login
-		return isInteractive() && !isCI() && (await login(props));
+		return !isNonInteractiveOrCI() && (await login(props));
 	} else if (isAccessTokenExpired()) {
 		// We're logged in, but the refresh token seems to have expired,
 		// so let's try to refresh it
@@ -933,7 +931,7 @@ export async function loginOrRefreshIfRequired(
 			return true;
 		} else {
 			// If the refresh token isn't valid, then we ask the user to login again
-			return isInteractive() && !isCI() && (await login(props));
+			return !isNonInteractiveOrCI() && (await login(props));
 		}
 	} else {
 		return true;
@@ -1193,7 +1191,7 @@ export async function requireAuth(config: {
 }): Promise<string> {
 	const loggedIn = await loginOrRefreshIfRequired();
 	if (!loggedIn) {
-		if (!isInteractive() || CI.isCI()) {
+		if (isNonInteractiveOrCI()) {
 			throw new UserError(
 				"In a non-interactive environment, it's necessary to set a CLOUDFLARE_API_TOKEN environment variable for wrangler to work. Please go to https://developers.cloudflare.com/fundamentals/api/get-started/create-token/ for instructions on how to create an api token, and assign its value to CLOUDFLARE_API_TOKEN."
 			);
@@ -1224,10 +1222,7 @@ export function requireApiToken(): ApiCredentials {
 /**
  * Save the given account details to a cache
  */
-export function saveAccountToCache(account: {
-	id: string;
-	name: string;
-}): void {
+function saveAccountToCache(account: { id: string; name: string }): void {
 	saveToConfigCache<{ account: { id: string; name: string } }>(
 		"wrangler-account.json",
 		{ account }

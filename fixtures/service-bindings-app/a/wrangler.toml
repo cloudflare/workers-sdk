@@ -1,6 +1,0 @@
-name = 'a'
-main = 'index.ts'
-
-[[services]]
-binding = "BEE"
-service = 'b'
