@@ -71,7 +71,7 @@ const monkeypatchedSetTimeout = (...args: Parameters<typeof setTimeout>) => {
 	const [callback, delay, ...restArgs] = args;
 	const callbackName = args[0]?.name ?? "";
 	const callerFileName = getCallerFileName(monkeypatchedSetTimeout);
-	const fromVitest = callerFileName?.includes("/node_modules/vitest/");
+	const fromVitest = callerFileName?.includes("/vitest");
 
 	// If this `setTimeout()` isn't from Vitest, or has a non-zero delay,
 	// just call the original function
