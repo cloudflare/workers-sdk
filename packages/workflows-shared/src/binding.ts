@@ -13,10 +13,10 @@ type Env = {
 
 // this.env.WORKFLOW is WorkflowBinding
 export class WorkflowBinding extends WorkerEntrypoint<Env> implements Workflow {
-	public async create(
-		{ id = crypto.randomUUID(), params = {}}: WorkflowInstanceCreateOptions
-	): Promise<WorkflowInstance> {
-
+	public async create({
+		id = crypto.randomUUID(),
+		params = {},
+	}: WorkflowInstanceCreateOptions): Promise<WorkflowInstance> {
 		const stubId = this.env.ENGINE.idFromName(id);
 		const stub = this.env.ENGINE.get(stubId);
 
