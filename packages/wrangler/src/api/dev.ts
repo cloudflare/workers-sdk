@@ -230,6 +230,8 @@ export async function unstable_dev(
 		{
 			FILE_BASED_REGISTRY: fileBasedRegistry,
 			JSON_CONFIG_FILE: Boolean(devOptions.experimentalJsonConfig),
+			// TODO: can we make this work?
+			MULTIWORKER: false,
 		},
 		() => startDev(devOptions)
 	);

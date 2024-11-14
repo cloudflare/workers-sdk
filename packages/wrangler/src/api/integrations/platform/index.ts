@@ -112,6 +112,7 @@ export async function getPlatformProxy<
 		{
 			FILE_BASED_REGISTRY: Boolean(options.experimentalRegistry),
 			JSON_CONFIG_FILE: Boolean(options.experimentalJsonConfig),
+			MULTIWORKER: false,
 		},
 		() => getMiniflareOptionsFromConfig(rawConfig, env, options)
 	);

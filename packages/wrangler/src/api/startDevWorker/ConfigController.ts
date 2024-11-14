@@ -257,7 +257,8 @@ async function resolveConfig(
 	);
 
 	const resolved = {
-		name: getScriptName({ name: input.name, env: input.env }, config),
+		name:
+			getScriptName({ name: input.name, env: input.env }, config) ?? "worker",
 		compatibilityDate: getDevCompatibilityDate(config, input.compatibilityDate),
 		compatibilityFlags: input.compatibilityFlags ?? config.compatibility_flags,
 		entrypoint: entry.file,

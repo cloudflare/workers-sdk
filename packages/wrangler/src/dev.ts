@@ -725,14 +725,19 @@ export async function startDev(args: StartDevOptions) {
 		if (Array.isArray(configPath)) {
 			const runtime = new MultiworkerRuntimeController();
 
+			const primaryDevEnv = new DevEnv({ runtimes: [runtime] });
+
+			if (isInteractive() && args.showInteractiveDevSession !== false) {
+				unregisterHotKeys = registerDevHotKeys(primaryDevEnv, args);
+			}
+
 			// Set up the primary DevEnv (the one that the ProxyController will connect to)
 			devEnv = [
-				await setupDevEnv(
-					new DevEnv({ runtimes: [runtime] }),
-					configPath[0],
-					authHook,
-					{ ...args, disableDevRegistry: true, multiworkerPrimary: true }
-				),
+				await setupDevEnv(primaryDevEnv, configPath[0], authHook, {
+					...args,
+					disableDevRegistry: true,
+					multiworkerPrimary: true,
+				}),
 			];
 
 			// Set up all auxiliary DevEnvs
@@ -755,17 +760,12 @@ export async function startDev(args: StartDevOptions) {
 			);
 
 			// Hook up teardowns
-			devEnv[0].on("teardown", () => {
+			primaryDevEnv.on("teardown", () => {
 				assert(Array.isArray(devEnv));
 				devEnv.slice(1).map((d) => d.teardown());
 			});
-
-			if (isInteractive() && args.showInteractiveDevSession !== false) {
-				unregisterHotKeys = registerDevHotKeys(devEnv[0], args);
-			}
 		} else {
 			devEnv = new DevEnv();
-			await setupDevEnv(devEnv, configPath, authHook, args);
 
 			// The ProxyWorker will have a stable host and port, so only listen for the first update
 			void devEnv.proxy.ready.promise.then(({ url }) => {
@@ -817,6 +817,8 @@ export async function startDev(args: StartDevOptions) {
 			if (isInteractive() && args.showInteractiveDevSession !== false) {
 				unregisterHotKeys = registerDevHotKeys(devEnv, args);
 			}
+
+			await setupDevEnv(devEnv, configPath, authHook, args);
 		}
 
 		void metrics.sendMetricsEvent(

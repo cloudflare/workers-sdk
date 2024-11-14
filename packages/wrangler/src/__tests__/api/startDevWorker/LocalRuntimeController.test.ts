@@ -126,6 +126,7 @@ function configDefaults(
 	config: Partial<StartDevWorkerOptions>
 ): StartDevWorkerOptions {
 	return {
+		name: "test-worker",
 		entrypoint: "NOT_REAL",
 		directory: "NOT_REAL",
 		build: unusable<StartDevWorkerOptions["build"]>(),

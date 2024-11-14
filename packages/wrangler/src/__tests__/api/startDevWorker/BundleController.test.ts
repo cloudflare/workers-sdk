@@ -39,6 +39,7 @@ function configDefaults(
 ): StartDevWorkerOptions {
 	const persist = path.join(process.cwd(), ".wrangler/persist");
 	return {
+		name: "test-worker",
 		entrypoint: "NOT_REAL",
 		directory: "NOT_REAL",
 		build: unusable<StartDevWorkerOptions["build"]>(),
