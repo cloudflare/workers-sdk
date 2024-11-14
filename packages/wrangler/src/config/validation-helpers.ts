@@ -446,12 +446,11 @@ export const validateAtLeastOnePropertyRequired = (
 		type: TypeofType;
 	}[]
 ): boolean => {
-	if (container) {
-		container += ".";
-	}
+	const containerPath = container ? `${container}.` : "";
+
 	if (properties.every((property) => property.value === undefined)) {
 		diagnostics.errors.push(
-			`${properties.map(({ key }) => `"${container}${key}"`).join(" or ")} is required.`
+			`${properties.map(({ key }) => `"${containerPath}${key}"`).join(" or ")} is required.`
 		);
 		return false;
 	}
@@ -462,7 +461,7 @@ export const validateAtLeastOnePropertyRequired = (
 			return true;
 		}
 		errors.push(
-			`Expected "${container}${prop.key}" to be of type ${prop.type} but got ${JSON.stringify(
+			`Expected "${containerPath}${prop.key}" to be of type ${prop.type} but got ${JSON.stringify(
 				prop.value
 			)}.`
 		);
