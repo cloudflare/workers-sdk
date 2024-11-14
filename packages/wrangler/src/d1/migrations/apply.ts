@@ -5,8 +5,7 @@ import { printWranglerBanner } from "../..";
 import { withConfig } from "../../config";
 import { confirm } from "../../dialogs";
 import { UserError } from "../../errors";
-import { CI } from "../../is-ci";
-import isInteractive from "../../is-interactive";
+import { isNonInteractiveOrCI } from "../../is-interactive";
 import { logger } from "../../logger";
 import { requireAuth } from "../../user";
 import { createBackup } from "../backups";
@@ -155,7 +154,7 @@ Your database may not be available to serve requests during the migration, conti
 					remote,
 					config,
 					name: database,
-					shouldPrompt: isInteractive() && !CI.isCI(),
+					shouldPrompt: !isNonInteractiveOrCI(),
 					persistTo,
 					command: query,
 					file: undefined,
