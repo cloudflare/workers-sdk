@@ -7,7 +7,7 @@ import {
 	isLegacyEnv,
 	printWranglerBanner,
 } from "../index";
-import isInteractive, { isNonInteractiveOrCI } from "../is-interactive";
+import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { requireAuth } from "../user";
