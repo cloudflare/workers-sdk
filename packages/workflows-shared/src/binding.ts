@@ -39,20 +39,19 @@ export class WorkflowBinding extends WorkerEntrypoint<Env> implements Workflow {
 			terminate: handle.terminate.bind(handle),
 			restart: handle.restart.bind(handle),
 			status: handle.status.bind(handle),
-		}
-
+		};
 	}
 
 	public async get(id: string): Promise<WorkflowInstance> {
 		const engineStubId = this.env.ENGINE.idFromName(id);
 		const engineStub = this.env.ENGINE.get(engineStubId);
 
-		const handle = new WorkflowHandle(id, engineStub)
+		const handle = new WorkflowHandle(id, engineStub);
 
 		try {
-			await handle.status()
+			await handle.status();
 		} catch (e) {
-			throw new Error('instance.not_found')
+			throw new Error("instance.not_found");
 		}
 
 		return {
@@ -62,7 +61,7 @@ export class WorkflowBinding extends WorkerEntrypoint<Env> implements Workflow {
 			terminate: handle.terminate.bind(handle),
 			restart: handle.restart.bind(handle),
 			status: handle.status.bind(handle),
-		}
+		};
 	}
 }
 
@@ -70,7 +69,7 @@ export class WorkflowHandle extends RpcTarget implements WorkflowInstance {
 	public id: string;
 	private stub: DurableObjectStub<Engine>;
 	constructor(id: string, stub: DurableObjectStub<Engine>) {
-		super()
+		super();
 		this.id = id;
 		this.stub = stub;
 	}
