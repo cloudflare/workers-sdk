@@ -93,7 +93,7 @@ defineCommand({
 		printBanner: false,
 	},
 	async handler(args, { config }) {
-		if (isNonInteractiveOrCI()) {
+		if (isNonInteractiveOrCI() && !args.format) {
 			args.format = "json";
 		}
 		if (args.format === "pretty") {
