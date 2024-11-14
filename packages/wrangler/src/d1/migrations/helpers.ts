@@ -2,8 +2,7 @@ import fs from "node:fs";
 import path from "path";
 import { confirm } from "../../dialogs";
 import { UserError } from "../../errors";
-import { CI } from "../../is-ci";
-import isInteractive from "../../is-interactive";
+import { isNonInteractiveOrCI } from "../../is-interactive";
 import { logger } from "../../logger";
 import { DEFAULT_MIGRATION_PATH } from "../constants";
 import { executeSql } from "../execute";
@@ -110,7 +109,7 @@ const listAppliedMigrations = async ({
 		remote,
 		config,
 		name,
-		shouldPrompt: isInteractive() && !CI.isCI(),
+		shouldPrompt: !isNonInteractiveOrCI(),
 		persistTo,
 		command: `SELECT *
 		FROM ${migrationsTableName}
@@ -178,7 +177,7 @@ export const initMigrationsTable = async ({
 		remote,
 		config,
 		name,
-		shouldPrompt: isInteractive() && !CI.isCI(),
+		shouldPrompt: !isNonInteractiveOrCI(),
 		persistTo,
 		command: `CREATE TABLE IF NOT EXISTS ${migrationsTableName}(
 		id         INTEGER PRIMARY KEY AUTOINCREMENT,
