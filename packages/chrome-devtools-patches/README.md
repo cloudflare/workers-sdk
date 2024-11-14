@@ -1,6 +1,6 @@
-# Wrangler Devtools Pages Project
+# Workers Devtools Pages Project
 
-This package contains a Workers specific version of Chrome Devtools that is used by the Wrangler dev command. It is a customized fork of Chrome DevTools specifically tailored for debugging Cloudflare Workers. This package provides Worker-specific functionality through carefully maintained patches on top of Chrome DevTools.
+This package contains a Workers specific version of Chrome Devtools that is used by the Wrangler dev command and other applications. It is a customized fork of Chrome DevTools specifically tailored for debugging Cloudflare Workers. This package provides Worker-specific functionality through carefully maintained patches on top of Chrome DevTools.
 
 ## Overview
 
@@ -56,8 +56,8 @@ On any pull request to the repo on GitHub, you can add labels to trigger preview
 
 There are two labels you can use:
 
-- `preview:wrangler-devtools` - this will trigger the DevTools preview
-- `preview:wrangler-playground` - this will trigger the Playground preview
+- `preview:chrome-devtools-patches` - this will trigger the DevTools preview
+- `preview:workers-playground` - this will trigger the Playground preview
 
 If you add **both** labels, Playground will embed the DevTools preview, so you can test them together.
 
@@ -86,7 +86,7 @@ When making changes:
 Deployments are managed by GitHub Actions:
 
 - deploy-pages-previews.yml:
-  - Runs on any PR that has the `preview:wrangler-devtools` label.
+  - Runs on any PR that has the `preview:chrome-devtools-patches` label.
   - Deploys a preview, which can then be accessed via [https://<SHA>.cloudflare-devtools.pages.dev/].
 - changesets.yml:
   - Runs when a "Version Packages" PR, containing a changeset that touches this package, is merged to `main`.
