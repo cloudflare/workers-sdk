@@ -7,6 +7,7 @@ import {
 	isLegacyEnv,
 	printWranglerBanner,
 } from "../index";
+import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { requireAuth } from "../user";
@@ -34,7 +35,7 @@ defineCommand({
 			type: "string",
 		},
 		format: {
-			default: process.stdout.isTTY ? "pretty" : "json",
+			default: "pretty",
 			choices: ["json", "pretty"],
 			describe: "The format of log entries",
 		},
@@ -92,6 +93,9 @@ defineCommand({
 		printBanner: false,
 	},
 	async handler(args, { config }) {
+		if (isNonInteractiveOrCI()) {
+			args.format = "json";
+		}
 		if (args.format === "pretty") {
 			await printWranglerBanner();
 		}
