@@ -35,7 +35,6 @@ defineCommand({
 			type: "string",
 		},
 		format: {
-			default: "pretty",
 			choices: ["json", "pretty"],
 			describe: "The format of log entries",
 		},
@@ -93,8 +92,8 @@ defineCommand({
 		printBanner: false,
 	},
 	validateArgs(args) {
-		if (isNonInteractiveOrCI()) {
-			args.format = "json";
+		if (!args.format) {
+			args.format = isNonInteractiveOrCI() ? "json" : "pretty";
 		}
 	},
 	async handler(args, { config }) {
