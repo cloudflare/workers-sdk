@@ -323,7 +323,7 @@ const command = defineCommand({
 			default: false,
 		},
 	},
-	async handler(args) {
+	async validateArgs(args) {
 		if (args.liveReload && args.remote) {
 			throw new UserError(
 				"--live-reload is only supported in local mode. Please just use one of either --remote or --live-reload."
@@ -359,7 +359,8 @@ const command = defineCommand({
 					`To learn more about Workers with assets, visit our documentation at https://developers.cloudflare.com/workers/frameworks/.`
 			);
 		}
-
+	},
+	async handler(args) {
 		const devInstance = await run(
 			{
 				FILE_BASED_REGISTRY: args.experimentalRegistry,
