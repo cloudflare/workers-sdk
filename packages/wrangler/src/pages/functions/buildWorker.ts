@@ -68,7 +68,7 @@ export function buildWorkerFromFunctions({
 		additionalModules: [],
 		moduleCollector,
 		inject: [routesModule],
-		...(outdir ? { entryName: "index" } : {}),
+		...(outdir ? { entryName: "index" } : { entryName: undefined }),
 		minify,
 		sourcemap,
 		watch,
@@ -90,6 +90,13 @@ export function buildWorkerFromFunctions({
 		local,
 		projectRoot: getPagesProjectRoot(),
 		defineNavigatorUserAgent,
+
+		legacyAssets: undefined,
+		bypassAssetCache: undefined,
+		jsxFactory: undefined,
+		jsxFragment: undefined,
+		tsconfig: undefined,
+		testScheduled: undefined,
 	});
 }
 
@@ -195,6 +202,15 @@ export function buildRawWorker({
 		local,
 		projectRoot: getPagesProjectRoot(),
 		defineNavigatorUserAgent,
+
+		legacyAssets: undefined,
+		bypassAssetCache: undefined,
+		jsxFactory: undefined,
+		jsxFragment: undefined,
+		tsconfig: undefined,
+		testScheduled: undefined,
+		entryName: undefined,
+		inject: undefined,
 	});
 }
 

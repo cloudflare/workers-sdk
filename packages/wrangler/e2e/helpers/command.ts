@@ -77,7 +77,7 @@ export function runCommand(
 export class LongLivedCommand {
 	private lines: string[] = [];
 	private stream: ReadableStream;
-	private exitPromise: Promise<unknown>;
+	private exitPromise: Promise<[number, unknown]>;
 	private commandProcess: ChildProcessWithoutNullStreams;
 
 	constructor(
@@ -93,7 +93,9 @@ export class LongLivedCommand {
 			signal,
 		});
 
-		this.exitPromise = events.once(this.commandProcess, "exit");
+		this.exitPromise = events.once(this.commandProcess, "exit") as Promise<
+			[number, unknown]
+		>;
 
 		// Merge the stdout and stderr into a single output stream
 		const output = new PassThrough();
@@ -143,7 +145,7 @@ export class LongLivedCommand {
 	}
 
 	get exitCode() {
-		return this.exitPromise;
+		return this.exitPromise.then((e) => e[0]);
 	}
 
 	async stop() {

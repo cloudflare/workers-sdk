@@ -49,7 +49,7 @@ const configure = async (ctx: C3Context) => {
 							// preset: "cloudflare-pages"
 							b.objectProperty(
 								b.identifier("preset"),
-								b.stringLiteral("./cloudflare-pages"),
+								b.stringLiteral("cloudflare-pages"),
 							),
 							// output: {
 							// 	dir: "{{ rootDir }}/dist",

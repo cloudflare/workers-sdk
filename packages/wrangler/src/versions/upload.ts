@@ -11,6 +11,7 @@ import {
 } from "../deployment-bundle/bundle-reporter";
 import { getBundleType } from "../deployment-bundle/bundle-type";
 import { createWorkerUploadForm } from "../deployment-bundle/create-worker-upload-form";
+import { logBuildOutput } from "../deployment-bundle/esbuild-plugins/log-build-output";
 import {
 	findAdditionalModules,
 	writeAdditionalModules,
@@ -321,6 +322,17 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 							props.compatibilityDate ?? config.compatibility_date,
 							props.compatibilityFlags ?? config.compatibility_flags
 						),
+						plugins: [logBuildOutput(nodejsCompatMode)],
+
+						// Pages specific options used by wrangler pages commands
+						entryName: undefined,
+						inject: undefined,
+						isOutfile: undefined,
+						external: undefined,
+
+						// These options are dev-only
+						testScheduled: undefined,
+						watch: undefined,
 					}
 				);
 
@@ -582,7 +594,7 @@ Changes to triggers (routes, custom domains, cron schedules, etc) must be applie
 	return { versionId, workerTag };
 }
 
-export function helpIfErrorIsSizeOrScriptStartup(
+function helpIfErrorIsSizeOrScriptStartup(
 	err: unknown,
 	dependencies: { [path: string]: { bytesInOutput: number } }
 ) {
@@ -605,10 +617,6 @@ export function helpIfErrorIsSizeOrScriptStartup(
 
 function formatTime(duration: number) {
 	return `(${(duration / 1000).toFixed(2)} sec)`;
-}
-
-export function isAuthenticationError(e: unknown): e is ParseError {
-	return e instanceof ParseError && (e as { code?: number }).code === 10000;
 }
 
 async function noBundleWorker(

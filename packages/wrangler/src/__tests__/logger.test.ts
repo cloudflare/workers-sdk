@@ -204,20 +204,38 @@ describe("logger", () => {
 		});
 	});
 
-	describe("warnOnce", () => {
+	describe("once", () => {
 		it("should only log the same message once", () => {
 			const logger = new Logger();
-			logger.warnOnce("This is a warnOnce message");
-			logger.warnOnce("This is a warnOnce message");
-			logger.warnOnce("This is a warnOnce message");
-			logger.warnOnce("This is a warnOnce message");
-			logger.warnOnce("This is a warnOnce message");
+			logger.once.warn("This is a once.warn message");
+			logger.once.warn("This is a once.warn message");
+			logger.once.warn("This is a once.warn message");
+			logger.once.warn("This is a once.warn message");
+			logger.once.warn("This is a once.warn message");
 
 			expect(std.warn).toMatchInlineSnapshot(`
-				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThis is a warnOnce message[0m
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThis is a once.warn message[0m
 
 				"
 			`);
+		});
+
+		it("should log once per log level", () => {
+			const logger = new Logger();
+			logger.once.warn("This is a once message");
+			logger.once.info("This is a once message");
+			logger.once.warn("This is a once message");
+			logger.once.warn("This is a once message");
+			logger.once.info("This is a once message");
+			logger.once.info("This is a once message");
+			logger.once.warn("This is a once message");
+
+			expect(std.warn).toMatchInlineSnapshot(`
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThis is a once message[0m
+
+				"
+			`);
+			expect(std.info).toMatchInlineSnapshot(`"This is a once message"`);
 		});
 	});
 });

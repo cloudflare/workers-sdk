@@ -1,10 +1,13 @@
+import { execSync } from "child_process";
 import dedent from "ts-dedent";
 import { fetch } from "undici";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { WranglerE2ETestHelper } from "./helpers/e2e-wrangler-test";
 import { fetchText } from "./helpers/fetch-text";
 import { generateResourceName } from "./helpers/generate-resource-name";
-import { seed as baseSeed, makeRoot } from "./helpers/setup";
+import { normalizeOutput } from "./helpers/normalize";
+import { seed as baseSeed, makeRoot, seed } from "./helpers/setup";
+import { WRANGLER_IMPORT } from "./helpers/wrangler";
 import type { RequestInit } from "undici";
 
 async function fetchJson<T>(url: string, info?: RequestInit): Promise<T> {
@@ -25,6 +28,114 @@ async function fetchJson<T>(url: string, info?: RequestInit): Promise<T> {
 		{ timeout: 10_000, interval: 250 }
 	);
 }
+
+describe("unstable_dev()", () => {
+	let parent: string;
+	let child: string;
+	let workerName: string;
+
+	beforeEach(async () => {
+		workerName = generateResourceName("worker");
+
+		parent = makeRoot();
+
+		await seed(parent, {
+			"wrangler.toml": dedent`
+					name = "app"
+					compatibility_date = "2023-01-01"
+					compatibility_flags = ["nodejs_compat"]
+
+					[[services]]
+					binding = "WORKER"
+					service = '${workerName}'
+			`,
+			"src/index.ts": dedent/* javascript */ `
+					export default {
+						async fetch(req, env) {
+							return new Response("Hello from Parent!" + await env.WORKER.fetch(req).then(r => r.text()))
+						},
+					};
+					`,
+			"package.json": dedent`
+					{
+						"name": "app",
+						"version": "0.0.0",
+						"private": true
+					}
+					`,
+		});
+
+		child = await makeRoot();
+		await seed(child, {
+			"wrangler.toml": dedent`
+						name = "${workerName}"
+						main = "src/index.ts"
+						compatibility_date = "2023-01-01"
+				`,
+			"src/index.ts": dedent/* javascript */ `
+					export default {
+						fetch(req, env) {
+							return new Response("Hello from Child!")
+						},
+					};
+					`,
+			"package.json": dedent`
+						{
+							"name": "${workerName}",
+							"version": "0.0.0",
+							"private": true
+						}
+						`,
+		});
+	});
+
+	async function runInNode() {
+		await seed(parent, {
+			"index.mjs": dedent/*javascript*/ `
+					import { unstable_dev } from "${WRANGLER_IMPORT}"
+					import { setTimeout } from "node:timers/promises";
+
+					const childWorker = await unstable_dev(
+						"${child.replaceAll("\\", "/")}/src/index.ts",
+						{
+							configPath: "${child.replaceAll("\\", "/")}/wrangler.toml",
+							experimental: {
+								disableExperimentalWarning: true,
+							},
+						}
+					);
+
+					const parentWorker = await unstable_dev(
+						"src/index.ts",
+						{
+							configPath: "wrangler.toml",
+							experimental: {
+								disableExperimentalWarning: true,
+							},
+						}
+					);
+
+					await setTimeout(2000)
+
+					console.log(await parentWorker.fetch("/").then(r => r.text()))
+
+					process.exit(0);
+					`,
+		});
+		const stdout = execSync(`node index.mjs`, {
+			cwd: parent,
+			encoding: "utf-8",
+		});
+		return stdout;
+	}
+
+	it("can fetch child", async () => {
+		await expect(runInNode()).resolves.toMatchInlineSnapshot(`
+			"Hello from Parent!Hello from Child!
+			"
+		`);
+	});
+});
 
 describe.each([
 	{ cmd: "wrangler dev --x-registry" },
@@ -179,6 +290,10 @@ describe.each([
 			await vi.waitFor(
 				async () => await expect(fetchText(url)).resolves.toBe("hello world"),
 				{ interval: 1000, timeout: 10_000 }
+			);
+
+			expect(normalizeOutput(workerA.currentOutput)).toContain(
+				"bindings connect to other `wrangler dev` processes running locally"
 			);
 		});
 

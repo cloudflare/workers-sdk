@@ -12,17 +12,20 @@ import * as metrics from "../metrics";
 import { requireAuth } from "../user";
 import { MAX_UPLOAD_SIZE } from "./constants";
 import * as Create from "./create";
+import * as Domain from "./domain";
 import {
 	bucketAndKeyFromObjectPath,
 	deleteR2Bucket,
 	deleteR2Object,
 	getR2Object,
-	listR2Buckets,
 	putR2Object,
 	updateR2BucketStorageClass,
 	usingLocalBucket,
 } from "./helpers";
+import * as Info from "./info";
+import * as List from "./list";
 import * as Notification from "./notification";
+import * as PublicDevUrl from "./public-dev-url";
 import * as Sippy from "./sippy";
 import type { CommonYargsArgv, SubHelp } from "../yargs-types";
 import type { R2PutOptions } from "@cloudflare/workers-types/experimental";
@@ -492,39 +495,23 @@ export function r2(r2Yargs: CommonYargsArgv, subHelp: SubHelp) {
 			r2BucketYargs.command(
 				"list",
 				"List R2 buckets",
-				(listArgs) => {
-					return listArgs.option("jurisdiction", {
-						describe: "The jurisdiction to list",
-						alias: "J",
-						requiresArg: true,
-						type: "string",
-					});
-				},
-				async (args) => {
-					const config = readConfig(args.config, args);
-					const { jurisdiction } = args;
-
-					const accountId = await requireAuth(config);
-
-					logger.log(
-						JSON.stringify(
-							await listR2Buckets(accountId, jurisdiction),
-							null,
-							2
-						)
-					);
-					await metrics.sendMetricsEvent("list r2 buckets", {
-						sendMetrics: config.send_metrics,
-					});
-				}
+				List.ListOptions,
+				List.ListHandler
 			);
 
 			r2BucketYargs.command(
-				"delete <name>",
+				"info <bucket>",
+				"Get information about an R2 bucket",
+				Info.InfoOptions,
+				Info.InfoHandler
+			);
+
+			r2BucketYargs.command(
+				"delete <bucket>",
 				"Delete an R2 bucket",
 				(yargs) => {
 					return yargs
-						.positional("name", {
+						.positional("bucket", {
 							describe: "The name of the bucket to delete",
 							type: "string",
 							demandOption: true,
@@ -543,12 +530,12 @@ export function r2(r2Yargs: CommonYargsArgv, subHelp: SubHelp) {
 
 					const accountId = await requireAuth(config);
 
-					let fullBucketName = `${args.name}`;
+					let fullBucketName = `${args.bucket}`;
 					if (args.jurisdiction !== undefined) {
 						fullBucketName += ` (${args.jurisdiction})`;
 					}
 					logger.log(`Deleting bucket ${fullBucketName}.`);
-					await deleteR2Bucket(accountId, args.name, args.jurisdiction);
+					await deleteR2Bucket(accountId, args.bucket, args.jurisdiction);
 					logger.log(`Deleted bucket ${fullBucketName}.`);
 					await metrics.sendMetricsEvent("delete r2 bucket", {
 						sendMetrics: config.send_metrics,
@@ -604,6 +591,63 @@ export function r2(r2Yargs: CommonYargsArgv, subHelp: SubHelp) {
 							"Delete an event notification rule from an R2 bucket",
 							Notification.DeleteOptions,
 							Notification.DeleteHandler
+						);
+				}
+			);
+
+			r2BucketYargs.command(
+				"domain",
+				"Manage custom domains for an R2 bucket",
+				(domainYargs) => {
+					return domainYargs
+						.command(
+							"list <bucket>",
+							"List custom domains for an R2 bucket",
+							Domain.ListOptions,
+							Domain.ListHandler
+						)
+						.command(
+							"add <bucket>",
+							"Connect a custom domain to an R2 bucket",
+							Domain.AddOptions,
+							Domain.AddHandler
+						)
+						.command(
+							"remove <bucket>",
+							"Remove a custom domain from an R2 bucket",
+							Domain.RemoveOptions,
+							Domain.RemoveHandler
+						)
+						.command(
+							"update <bucket>",
+							"Update settings for a custom domain connected to an R2 bucket",
+							Domain.UpdateOptions,
+							Domain.UpdateHandler
+						);
+				}
+			);
+			r2BucketYargs.command(
+				"dev-url",
+				"Manage public access via the r2.dev URL for an R2 bucket",
+				(devUrlYargs) => {
+					return devUrlYargs
+						.command(
+							"enable <bucket>",
+							"Enable public access via the r2.dev URL for an R2 bucket",
+							PublicDevUrl.EnableOptions,
+							PublicDevUrl.EnableHandler
+						)
+						.command(
+							"disable <bucket>",
+							"Disable public access via the r2.dev URL for an R2 bucket",
+							PublicDevUrl.DisableOptions,
+							PublicDevUrl.DisableHandler
+						)
+						.command(
+							"get <bucket>",
+							"Get the r2.dev URL and status for an R2 bucket",
+							PublicDevUrl.GetOptions,
+							PublicDevUrl.GetHandler
 						);
 				}
 			);

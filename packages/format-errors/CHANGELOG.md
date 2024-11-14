@@ -1,5 +1,11 @@
 # format-errors
 
+## 0.0.3
+
+### Patch Changes
+
+- [#7143](https://github.com/cloudflare/workers-sdk/pull/7143) [`4d7ce6f`](https://github.com/cloudflare/workers-sdk/commit/4d7ce6fd9fc80a0920a97dae14726c79012337b1) Thanks [@emily-shen](https://github.com/emily-shen)! - chore: enable observability on our internal infra Workers + bots
+
 ## 0.0.2
 
 ### Patch Changes

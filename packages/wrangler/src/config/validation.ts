@@ -2773,6 +2773,12 @@ const validateBindingsHaveUniqueNames = (
 				bindingsGroupedByName[bindingName] = [];
 			}
 
+			if (bindingName === "ASSETS" && isPagesConfig(config)) {
+				diagnostics.errors.push(
+					`The name 'ASSETS' is reserved in Pages projects. Please use a different name for your ${bindingType} binding.`
+				);
+			}
+
 			bindingsGroupedByName[bindingName].push(bindingType);
 		}
 	}

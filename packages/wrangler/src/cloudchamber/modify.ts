@@ -262,6 +262,7 @@ async function handleModifyCommand(
 			location,
 			ssh_public_key_ids: keys,
 			environment_variables: selectedEnvironmentVariables,
+			labels: selectedLabels,
 			vcpu: args.vcpu ?? config.cloudchamber.vcpu,
 			memory: args.memory ?? config.cloudchamber.memory,
 		})

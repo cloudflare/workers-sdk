@@ -151,11 +151,6 @@ type CronTriggersRes = {
 	];
 };
 
-export type StandardRes = {
-	standard: boolean;
-	reason: string;
-};
-
 function isNpm(packageManager: PackageManager) {
 	return packageManager.type === "npm";
 }
@@ -1221,7 +1216,7 @@ export async function mapBindings(
 							...(configObj.pipelines ?? []),
 							{
 								binding: binding.name,
-								pipeline: binding.id,
+								pipeline: binding.pipeline,
 							},
 						];
 						break;

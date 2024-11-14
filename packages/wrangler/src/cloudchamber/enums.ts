@@ -1,11 +1,3 @@
-export type Status =
-	| "placing"
-	| "running"
-	| "stopped"
-	| "stopping"
-	| "failed"
-	| "placed";
-
 export const EventName = {
 	SchedulerPlaced: true,
 	ImagePulled: true,

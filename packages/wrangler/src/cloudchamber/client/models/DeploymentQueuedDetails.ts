@@ -11,5 +11,6 @@ export type DeploymentQueuedDetails = {
 	gpu?: DeploymentQueuedReason;
 	cpu?: DeploymentQueuedReason;
 	memory?: DeploymentQueuedReason;
+	disk?: DeploymentQueuedReason;
 	unknown?: DeploymentQueuedReason;
 };

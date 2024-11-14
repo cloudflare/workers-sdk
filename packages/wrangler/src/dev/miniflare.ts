@@ -1,15 +1,7 @@
 import assert from "node:assert";
 import { randomUUID } from "node:crypto";
 import path from "node:path";
-import {
-	CoreHeaders,
-	HttpOptions_Style,
-	Log,
-	LogLevel,
-	Miniflare,
-	Mutex,
-	TypedEventTarget,
-} from "miniflare";
+import { CoreHeaders, HttpOptions_Style, Log, LogLevel } from "miniflare";
 import {
 	AIFetcher,
 	EXTERNAL_AI_WORKER_NAME,
@@ -42,16 +34,12 @@ import type {
 	CfWorkerInit,
 	CfWorkflow,
 } from "../deployment-bundle/worker";
-import type {
-	WorkerEntrypointsDefinition,
-	WorkerRegistry,
-} from "../dev-registry";
+import type { WorkerRegistry } from "../dev-registry";
 import type { LoggerLevel } from "../logger";
 import type { LegacyAssetPaths } from "../sites";
 import type { EsbuildBundle } from "./use-esbuild";
 import type { MiniflareOptions, SourceOptions, WorkerOptions } from "miniflare";
 import type { UUID } from "node:crypto";
-import type { Abortable } from "node:events";
 import type { Readable } from "node:stream";
 
 // This worker proxies all external Durable Objects to the Wrangler session
@@ -198,6 +186,7 @@ export interface ConfigBundle {
 	services: Config["services"] | undefined;
 	serviceBindings: Record<string, ServiceFetch>;
 	bindVectorizeToProd: boolean;
+	testScheduled: boolean;
 }
 
 export class WranglerLog extends Log {
@@ -235,7 +224,7 @@ export class WranglerLog extends Log {
 	}
 }
 
-export const DEFAULT_WORKER_NAME = "worker";
+const DEFAULT_WORKER_NAME = "worker";
 function getName(config: Pick<ConfigBundle, "name">) {
 	return config.name ?? DEFAULT_WORKER_NAME;
 }
@@ -908,7 +897,7 @@ export async function buildMiniflareOptions(
 	internalObjects: CfDurableObject[];
 	entrypointNames: string[];
 }> {
-	if (config.crons.length > 0) {
+	if (config.crons.length > 0 && !config.testScheduled) {
 		if (!didWarnMiniflareCronSupport) {
 			didWarnMiniflareCronSupport = true;
 			log.warn(
@@ -989,116 +978,4 @@ export async function buildMiniflareOptions(
 		],
 	};
 	return { options, internalObjects, entrypointNames };
-}
-
-export interface ReloadedEventOptions {
-	url: URL;
-	internalDurableObjects: CfDurableObject[];
-	entrypointAddresses: WorkerEntrypointsDefinition;
-	proxyToUserWorkerAuthenticationSecret: UUID;
-}
-export class ReloadedEvent extends Event implements ReloadedEventOptions {
-	readonly url: URL;
-	readonly internalDurableObjects: CfDurableObject[];
-	readonly entrypointAddresses: WorkerEntrypointsDefinition;
-	readonly proxyToUserWorkerAuthenticationSecret: UUID;
-
-	constructor(type: "reloaded", options: ReloadedEventOptions) {
-		super(type);
-		this.url = options.url;
-		this.internalDurableObjects = options.internalDurableObjects;
-		this.entrypointAddresses = options.entrypointAddresses;
-		this.proxyToUserWorkerAuthenticationSecret =
-			options.proxyToUserWorkerAuthenticationSecret;
-	}
-}
-
-export interface ErrorEventOptions {
-	error: unknown;
-}
-export class ErrorEvent extends Event implements ErrorEventOptions {
-	readonly error: unknown;
-
-	constructor(type: "error", options: ErrorEventOptions) {
-		super(type);
-		this.error = options.error;
-	}
-}
-
-export type MiniflareServerEventMap = {
-	reloaded: ReloadedEvent;
-	error: ErrorEvent;
-};
-export class MiniflareServer extends TypedEventTarget<MiniflareServerEventMap> {
-	#log = buildLog();
-	#mf?: Miniflare;
-	// This is given as a shared secret to the Proxy and User workers
-	// so that the User Worker can trust aspects of HTTP requests from the Proxy Worker
-	// if it provides the secret in a `MF-Proxy-Shared-Secret` header.
-	#proxyToUserWorkerAuthenticationSecret = randomUUID();
-
-	// `buildMiniflareOptions()` is asynchronous, meaning if multiple bundle
-	// updates were submitted, the second may apply before the first. Therefore,
-	// wrap updates in a mutex, so they're always applied in invocation order.
-	#mutex = new Mutex();
-
-	async #onBundleUpdate(config: ConfigBundle, opts?: Abortable): Promise<void> {
-		if (opts?.signal?.aborted) {
-			return;
-		}
-		try {
-			const { options, internalObjects, entrypointNames } =
-				await buildMiniflareOptions(
-					this.#log,
-					config,
-					this.#proxyToUserWorkerAuthenticationSecret
-				);
-
-			if (opts?.signal?.aborted) {
-				return;
-			}
-
-			if (this.#mf === undefined) {
-				this.#mf = new Miniflare(options);
-			} else {
-				await this.#mf.setOptions(options);
-			}
-			const url = await this.#mf.ready;
-
-			// Get entrypoint addresses
-			const entrypointAddresses: WorkerEntrypointsDefinition = {};
-			for (const name of entrypointNames) {
-				const directUrl = await this.#mf.unsafeGetDirectURL(undefined, name);
-				const port = parseInt(directUrl.port);
-				entrypointAddresses[name] = { host: directUrl.hostname, port };
-			}
-
-			if (opts?.signal?.aborted) {
-				return;
-			}
-
-			const event = new ReloadedEvent("reloaded", {
-				url,
-				internalDurableObjects: internalObjects,
-				proxyToUserWorkerAuthenticationSecret:
-					this.#proxyToUserWorkerAuthenticationSecret,
-				entrypointAddresses,
-			});
-			this.dispatchEvent(event);
-		} catch (error: unknown) {
-			this.dispatchEvent(new ErrorEvent("error", { error }));
-		}
-	}
-
-	onBundleUpdate(config: ConfigBundle, opts?: Abortable): Promise<void> {
-		return this.#mutex.runWith(() => this.#onBundleUpdate(config, opts));
-	}
-
-	#onDispose = async (): Promise<void> => {
-		await this.#mf?.dispose();
-		this.#mf = undefined;
-	};
-	onDispose(): Promise<void> {
-		return this.#mutex.runWith(this.#onDispose);
-	}
 }

@@ -605,6 +605,16 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 							props.compatibilityFlags ?? config.compatibility_flags
 						),
 						plugins: [logBuildOutput(nodejsCompatMode)],
+
+						// Pages specific options used by wrangler pages commands
+						entryName: undefined,
+						inject: undefined,
+						isOutfile: undefined,
+						external: undefined,
+
+						// These options are dev-only
+						testScheduled: undefined,
+						watch: undefined,
 					}
 				);
 
@@ -803,10 +813,8 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			let bindingsPrinted = false;
 
 			// Upload the script so it has time to propagate.
-			// We can also now tell whether available_on_subdomain is set
 			try {
 				let result: {
-					available_on_subdomain: boolean;
 					id: string | null;
 					etag: string | null;
 					pipeline_hash: string | null;
@@ -844,12 +852,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 						observability: worker.observability ?? { enabled: false },
 					});
 
-					const { available_on_subdomain } = await fetchResult<{
-						available_on_subdomain: boolean;
-					}>(`/accounts/${accountId}/workers/scripts/${scriptName}/subdomain`);
-
 					result = {
-						available_on_subdomain,
 						id: null, // fpw - ignore
 						etag: versionResult.resources.script.etag,
 						pipeline_hash: null, // fpw - ignore
@@ -860,7 +863,6 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 				} else {
 					result = await retryOnError(async () =>
 						fetchResult<{
-							available_on_subdomain: boolean;
 							id: string | null;
 							etag: string | null;
 							pipeline_hash: string | null;
@@ -875,7 +877,6 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 								headers: await getMetricsUsageHeaders(config.send_metrics),
 							},
 							new URLSearchParams({
-								include_subdomain_availability: "true",
 								// pass excludeScript so the whole body of the
 								// script doesn't get included in the response
 								excludeScript: "true",
@@ -1011,7 +1012,7 @@ function deployWfpUserWorker(
 	logger.log("Current Version ID:", versionId);
 }
 
-export function helpIfErrorIsSizeOrScriptStartup(
+function helpIfErrorIsSizeOrScriptStartup(
 	err: unknown,
 	dependencies: { [path: string]: { bytesInOutput: number } }
 ) {

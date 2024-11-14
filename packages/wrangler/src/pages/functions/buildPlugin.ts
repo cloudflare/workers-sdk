@@ -114,5 +114,13 @@ export function buildPluginFromFunctions({
 		local,
 		projectRoot: getPagesProjectRoot(),
 		defineNavigatorUserAgent,
+
+		legacyAssets: undefined,
+		bypassAssetCache: undefined,
+		jsxFactory: undefined,
+		jsxFragment: undefined,
+		tsconfig: undefined,
+		testScheduled: undefined,
+		isOutfile: undefined,
 	});
 }

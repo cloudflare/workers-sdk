@@ -8,18 +8,19 @@ import type { IPAllocationPlacement } from "./IPAllocationPlacement";
 import type { IPType } from "./IPType";
 
 /**
- * An allocation of ips to a specific node
+ * Representation of an IP mapping in the Cloudchamber API. Contains all the necessary information to see if this IP belongs to a deployment or account IP pool, and if it's allocated.
  */
 export type IPAllocation = {
-	configuration?: IPAllocationConfiguration;
-	allocation?: IPAllocationPlacement;
-	flexibleAllocation: boolean;
 	/**
-	 * the number that defines the ipv6 ID of this IP
+	 * If not assigned to a deployment, or not belonging to a pool, will be undefined.
 	 */
-	ipv6Counter?: number;
+	configuration?: IPAllocationConfiguration;
 	/**
-	 * the subnet mask that this IP belogns to
+	 * If not allocated, this will be undefined.
+	 */
+	allocation?: IPAllocationPlacement;
+	/**
+	 * the subnet mask that this IP belongs to
 	 */
 	subnetMask: number;
 	ip: IP;

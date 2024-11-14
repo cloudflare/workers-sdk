@@ -5,13 +5,13 @@ import { actionsForEventCategories } from "../r2/helpers";
 import { endEventLoop } from "./helpers/end-event-loop";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
+import { mockConfirm } from "./helpers/mock-dialogs";
 import { useMockIsTTY } from "./helpers/mock-istty";
 import { createFetchResult, msw, mswR2handlers } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import type {
 	PutNotificationRequestBody,
-	R2BucketInfo,
 	R2EventableOperation,
 	R2EventType,
 } from "../r2/helpers";
@@ -91,12 +91,15 @@ describe("r2", () => {
 				Manage R2 buckets
 
 				COMMANDS
-				  wrangler r2 bucket create <name>  Create a new R2 bucket
-				  wrangler r2 bucket update         Update bucket state
-				  wrangler r2 bucket list           List R2 buckets
-				  wrangler r2 bucket delete <name>  Delete an R2 bucket
-				  wrangler r2 bucket sippy          Manage Sippy incremental migration on an R2 bucket
-				  wrangler r2 bucket notification   Manage event notification rules for an R2 bucket
+				  wrangler r2 bucket create <name>    Create a new R2 bucket
+				  wrangler r2 bucket update           Update bucket state
+				  wrangler r2 bucket list             List R2 buckets
+				  wrangler r2 bucket info <bucket>    Get information about an R2 bucket
+				  wrangler r2 bucket delete <bucket>  Delete an R2 bucket
+				  wrangler r2 bucket sippy            Manage Sippy incremental migration on an R2 bucket
+				  wrangler r2 bucket notification     Manage event notification rules for an R2 bucket
+				  wrangler r2 bucket domain           Manage custom domains for an R2 bucket
+				  wrangler r2 bucket dev-url          Manage public access via the r2.dev URL for an R2 bucket
 
 				GLOBAL FLAGS
 				  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
@@ -125,12 +128,15 @@ describe("r2", () => {
 				Manage R2 buckets
 
 				COMMANDS
-				  wrangler r2 bucket create <name>  Create a new R2 bucket
-				  wrangler r2 bucket update         Update bucket state
-				  wrangler r2 bucket list           List R2 buckets
-				  wrangler r2 bucket delete <name>  Delete an R2 bucket
-				  wrangler r2 bucket sippy          Manage Sippy incremental migration on an R2 bucket
-				  wrangler r2 bucket notification   Manage event notification rules for an R2 bucket
+				  wrangler r2 bucket create <name>    Create a new R2 bucket
+				  wrangler r2 bucket update           Update bucket state
+				  wrangler r2 bucket list             List R2 buckets
+				  wrangler r2 bucket info <bucket>    Get information about an R2 bucket
+				  wrangler r2 bucket delete <bucket>  Delete an R2 bucket
+				  wrangler r2 bucket sippy            Manage Sippy incremental migration on an R2 bucket
+				  wrangler r2 bucket notification     Manage event notification rules for an R2 bucket
+				  wrangler r2 bucket domain           Manage custom domains for an R2 bucket
+				  wrangler r2 bucket dev-url          Manage public access via the r2.dev URL for an R2 bucket
 
 				GLOBAL FLAGS
 				  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
@@ -143,9 +149,15 @@ describe("r2", () => {
 
 		describe("list", () => {
 			it("should list buckets & check request inputs", async () => {
-				const expectedBuckets: R2BucketInfo[] = [
-					{ name: "bucket-1-local-once", creation_date: "01-01-2001" },
-					{ name: "bucket-2-local-once", creation_date: "01-01-2001" },
+				const mockBuckets = [
+					{
+						name: "bucket-1-local-once",
+						creation_date: "01-01-2001",
+					},
+					{
+						name: "bucket-2-local-once",
+						creation_date: "01-01-2001",
+					},
 				];
 				msw.use(
 					http.get(
@@ -156,27 +168,65 @@ describe("r2", () => {
 							expect(await request.text()).toEqual("");
 							return HttpResponse.json(
 								createFetchResult({
-									buckets: [
-										{
-											name: "bucket-1-local-once",
-											creation_date: "01-01-2001",
-										},
-										{
-											name: "bucket-2-local-once",
-											creation_date: "01-01-2001",
-										},
-									],
+									buckets: mockBuckets,
 								})
 							);
 						},
 						{ once: true }
 					)
 				);
-				await runWrangler("r2 bucket list");
 
-				expect(std.err).toMatchInlineSnapshot(`""`);
-				const buckets = JSON.parse(std.out);
-				expect(buckets).toEqual(expectedBuckets);
+				await runWrangler(`r2 bucket list`);
+				expect(std.out).toMatchInlineSnapshot(`
+					"Listing buckets...
+					name:           bucket-1-local-once
+					creation_date:  01-01-2001
+
+					name:           bucket-2-local-once
+					creation_date:  01-01-2001"
+				  `);
+			});
+		});
+
+		describe("info", () => {
+			it("should get information for the given bucket", async () => {
+				const bucketName = "my-bucket";
+				const bucketInfo = {
+					name: bucketName,
+					creation_date: "01-01-2001",
+					location: "WNAM",
+					storage_class: "Standard",
+				};
+
+				msw.use(
+					http.get(
+						"*/accounts/:accountId/r2/buckets/:bucketName",
+						async ({ params }) => {
+							const { accountId, bucketName: bucketParam } = params;
+							expect(accountId).toEqual("some-account-id");
+							expect(bucketParam).toEqual(bucketName);
+							return HttpResponse.json(
+								createFetchResult({
+									...bucketInfo,
+								})
+							);
+						},
+						{ once: true }
+					),
+					http.post("*/graphql", async () => {
+						return HttpResponse.json(createFetchResult({}));
+					})
+				);
+				await runWrangler(`r2 bucket info ${bucketName}`);
+				expect(std.out).toMatchInlineSnapshot(`
+						"Getting info for 'my-bucket'...
+						name:                   my-bucket
+						created:                01-01-2001
+						location:               WNAM
+						default_storage_class:  Standard
+						object_count:           0
+						bucket_size:            0 B"
+					  `);
 			});
 		});
 
@@ -264,9 +314,15 @@ describe("r2", () => {
 				);
 				await runWrangler("r2 bucket create testBucket");
 				expect(std.out).toMatchInlineSnapshot(`
-				            "Creating bucket 'testBucket'...
-				            ✅ Created bucket 'testBucket' with default storage class of Standard."
-			          `);
+"Creating bucket 'testBucket'...
+✅ Created bucket 'testBucket' with default storage class of Standard.
+
+Configure your Worker to write objects to this bucket:
+
+[[r2_buckets]]
+bucket_name = \\"testBucket\\"
+binding = \\"testBucket\\""
+			  `);
 			});
 
 			it("should create a bucket with the expected jurisdiction", async () => {
@@ -285,17 +341,29 @@ describe("r2", () => {
 				);
 				await runWrangler("r2 bucket create testBucket -J eu");
 				expect(std.out).toMatchInlineSnapshot(`
-				            "Creating bucket 'testBucket (eu)'...
-				            ✅ Created bucket 'testBucket (eu)' with default storage class of Standard."
-			          `);
+"Creating bucket 'testBucket (eu)'...
+✅ Created bucket 'testBucket (eu)' with default storage class of Standard.
+
+Configure your Worker to write objects to this bucket:
+
+[[r2_buckets]]
+bucket_name = \\"testBucket\\"
+binding = \\"testBucket\\""
+			  `);
 			});
 
 			it("should create a bucket with the expected default storage class", async () => {
 				await runWrangler("r2 bucket create testBucket -s InfrequentAccess");
 				expect(std.out).toMatchInlineSnapshot(`
-				            "Creating bucket 'testBucket'...
-				            ✅ Created bucket 'testBucket' with default storage class of InfrequentAccess."
-			          `);
+"Creating bucket 'testBucket'...
+✅ Created bucket 'testBucket' with default storage class of InfrequentAccess.
+
+Configure your Worker to write objects to this bucket:
+
+[[r2_buckets]]
+bucket_name = \\"testBucket\\"
+binding = \\"testBucket\\""
+			  `);
 			});
 
 			it("should error if storage class is invalid", async () => {
@@ -335,9 +403,15 @@ describe("r2", () => {
 				);
 				await runWrangler("r2 bucket create testBucket --location weur");
 				expect(std.out).toMatchInlineSnapshot(`
-				            "Creating bucket 'testBucket'...
-				            ✅ Created bucket 'testBucket' with location hint weur and default storage class of Standard."
-			          `);
+"Creating bucket 'testBucket'...
+✅ Created bucket 'testBucket' with location hint weur and default storage class of Standard.
+
+Configure your Worker to write objects to this bucket:
+
+[[r2_buckets]]
+bucket_name = \\"testBucket\\"
+binding = \\"testBucket\\""
+				`);
 			});
 		});
 
@@ -446,12 +520,12 @@ describe("r2", () => {
 				);
 				expect(std.out).toMatchInlineSnapshot(`
 					"
-					wrangler r2 bucket delete <name>
+					wrangler r2 bucket delete <bucket>
 
 					Delete an R2 bucket
 
 					POSITIONALS
-					  name  The name of the bucket to delete  [string] [required]
+					  bucket  The name of the bucket to delete  [string] [required]
 
 					GLOBAL FLAGS
 					  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
@@ -486,12 +560,12 @@ describe("r2", () => {
 				);
 				expect(std.out).toMatchInlineSnapshot(`
 					"
-					wrangler r2 bucket delete <name>
+					wrangler r2 bucket delete <bucket>
 
 					Delete an R2 bucket
 
 					POSITIONALS
-					  name  The name of the bucket to delete  [string] [required]
+					  bucket  The name of the bucket to delete  [string] [required]
 
 					GLOBAL FLAGS
 					  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
@@ -1464,6 +1538,334 @@ describe("r2", () => {
 						  -J, --jurisdiction  The jurisdiction where the bucket exists  [string]"
 
 					`);
+				});
+			});
+		});
+		describe("domain", () => {
+			const { setIsTTY } = useMockIsTTY();
+			mockAccountId();
+			mockApiToken();
+			describe("add", () => {
+				it("should add custom domain to the bucket as expected", async () => {
+					const bucketName = "my-bucket";
+					const domainName = "example.com";
+					const zoneId = "zone-id-123";
+
+					setIsTTY(true);
+					mockConfirm({
+						text:
+							`Are you sure you want to add the custom domain '${domainName}' to bucket '${bucketName}'? ` +
+							`The contents of your bucket will be made publicly available at 'https://${domainName}'`,
+						result: true,
+					});
+					msw.use(
+						http.post(
+							"*/accounts/:accountId/r2/buckets/:bucketName/domains/custom",
+							async ({ request, params }) => {
+								const { accountId, bucketName: bucketParam } = params;
+								expect(accountId).toEqual("some-account-id");
+								expect(bucketName).toEqual(bucketParam);
+								const requestBody = await request.json();
+								expect(requestBody).toEqual({
+									domain: domainName,
+									zoneId: zoneId,
+									enabled: true,
+									minTLS: "1.0",
+								});
+								return HttpResponse.json(createFetchResult({}));
+							},
+							{ once: true }
+						)
+					);
+					await runWrangler(
+						`r2 bucket domain add ${bucketName} --domain ${domainName} --zone-id ${zoneId}`
+					);
+					expect(std.out).toMatchInlineSnapshot(`
+						"Connecting custom domain 'example.com' to bucket 'my-bucket'...
+						✨ Custom domain 'example.com' connected successfully."
+					  `);
+				});
+
+				it("should error if domain and zone-id are not provided", async () => {
+					const bucketName = "my-bucket";
+					await expect(
+						runWrangler(`r2 bucket domain add ${bucketName}`)
+					).rejects.toThrowErrorMatchingInlineSnapshot(
+						`[Error: Missing required arguments: domain, zone-id]`
+					);
+					expect(std.err).toMatchInlineSnapshot(`
+						"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mMissing required arguments: domain, zone-id[0m
+
+						"
+					  `);
+				});
+			});
+			describe("list", () => {
+				it("should list custom domains for a bucket as expected", async () => {
+					const bucketName = "my-bucket";
+					const mockDomains = [
+						{
+							domain: "example.com",
+							enabled: true,
+							status: {
+								ownership: "verified",
+								ssl: "active",
+							},
+							minTLS: "1.2",
+							zoneId: "zone-id-123",
+							zoneName: "example-zone",
+						},
+						{
+							domain: "test.com",
+							enabled: false,
+							status: {
+								ownership: "pending",
+								ssl: "pending",
+							},
+							minTLS: "1.0",
+							zoneId: "zone-id-456",
+							zoneName: "test-zone",
+						},
+					];
+					msw.use(
+						http.get(
+							"*/accounts/:accountId/r2/buckets/:bucketName/domains/custom",
+							async ({ params }) => {
+								const { accountId, bucketName: bucketParam } = params;
+								expect(accountId).toEqual("some-account-id");
+								expect(bucketParam).toEqual(bucketName);
+								return HttpResponse.json(
+									createFetchResult({
+										domains: mockDomains,
+									})
+								);
+							},
+							{ once: true }
+						)
+					);
+					await runWrangler(`r2 bucket domain list ${bucketName}`);
+					expect(std.out).toMatchInlineSnapshot(`
+						"Listing custom domains connected to bucket 'my-bucket'...
+						domain:            example.com
+						enabled:           Yes
+						ownership_status:  verified
+						ssl_status:        active
+						min_tls_version:   1.2
+						zone_id:           zone-id-123
+						zone_name:         example-zone
+
+						domain:            test.com
+						enabled:           No
+						ownership_status:  pending
+						ssl_status:        pending
+						min_tls_version:   1.0
+						zone_id:           zone-id-456
+						zone_name:         test-zone"
+					  `);
+				});
+			});
+			describe("remove", () => {
+				it("should remove a custom domain as expected", async () => {
+					const bucketName = "my-bucket";
+					const domainName = "example.com";
+					setIsTTY(true);
+					mockConfirm({
+						text:
+							`Are you sure you want to remove the custom domain '${domainName}' from bucket '${bucketName}'? ` +
+							`Your bucket will no longer be available from 'https://${domainName}'`,
+						result: true,
+					});
+					msw.use(
+						http.delete(
+							"*/accounts/:accountId/r2/buckets/:bucketName/domains/custom/:domainName",
+							async ({ params }) => {
+								const {
+									accountId,
+									bucketName: bucketParam,
+									domainName: domainParam,
+								} = params;
+								expect(accountId).toEqual("some-account-id");
+								expect(bucketParam).toEqual(bucketName);
+								expect(domainParam).toEqual(domainName);
+								return HttpResponse.json(createFetchResult({}));
+							},
+							{ once: true }
+						)
+					);
+					await runWrangler(
+						`r2 bucket domain remove ${bucketName} --domain ${domainName}`
+					);
+					expect(std.out).toMatchInlineSnapshot(`
+						"Removing custom domain 'example.com' from bucket 'my-bucket'...
+						Custom domain 'example.com' removed successfully."
+					  `);
+				});
+			});
+			describe("update", () => {
+				it("should update a custom domain as expected", async () => {
+					const bucketName = "my-bucket";
+					const domainName = "example.com";
+					msw.use(
+						http.put(
+							"*/accounts/:accountId/r2/buckets/:bucketName/domains/custom/:domainName",
+							async ({ request, params }) => {
+								const {
+									accountId,
+									bucketName: bucketParam,
+									domainName: domainParam,
+								} = params;
+								expect(accountId).toEqual("some-account-id");
+								expect(bucketParam).toEqual(bucketName);
+								expect(domainParam).toEqual(domainName);
+								const requestBody = await request.json();
+								expect(requestBody).toEqual({
+									domain: domainName,
+									minTLS: "1.3",
+								});
+								return HttpResponse.json(createFetchResult({}));
+							},
+							{ once: true }
+						)
+					);
+					await runWrangler(
+						`r2 bucket domain update ${bucketName} --domain ${domainName} --min-tls 1.3`
+					);
+					expect(std.out).toMatchInlineSnapshot(`
+						"Updating custom domain 'example.com' for bucket 'my-bucket'...
+						✨ Custom domain 'example.com' updated successfully."
+					  `);
+				});
+			});
+		});
+		describe("dev-url", () => {
+			const { setIsTTY } = useMockIsTTY();
+			mockAccountId();
+			mockApiToken();
+			describe("get", () => {
+				it("should retrieve the r2.dev URL of a bucket when public access is enabled", async () => {
+					const bucketName = "my-bucket";
+					const domainInfo = {
+						bucketId: "bucket-id-123",
+						domain: "pub-bucket-id-123.r2.dev",
+						enabled: true,
+					};
+					msw.use(
+						http.get(
+							"*/accounts/:accountId/r2/buckets/:bucketName/domains/managed",
+							async ({ params }) => {
+								const { accountId, bucketName: bucketParam } = params;
+								expect(accountId).toEqual("some-account-id");
+								expect(bucketParam).toEqual(bucketName);
+								return HttpResponse.json(createFetchResult({ ...domainInfo }));
+							},
+							{ once: true }
+						)
+					);
+					await runWrangler(`r2 bucket dev-url get ${bucketName}`);
+					expect(std.out).toMatchInlineSnapshot(`
+						"Public access is enabled at 'https://pub-bucket-id-123.r2.dev'."
+					  `);
+				});
+
+				it("should show that public access is disabled when it is disabled", async () => {
+					const bucketName = "my-bucket";
+					const domainInfo = {
+						bucketId: "bucket-id-123",
+						domain: "pub-bucket-id-123.r2.dev",
+						enabled: false,
+					};
+					msw.use(
+						http.get(
+							"*/accounts/:accountId/r2/buckets/:bucketName/domains/managed",
+							async ({ params }) => {
+								const { accountId, bucketName: bucketParam } = params;
+								expect(accountId).toEqual("some-account-id");
+								expect(bucketParam).toEqual(bucketName);
+								return HttpResponse.json(createFetchResult({ ...domainInfo }));
+							},
+							{ once: true }
+						)
+					);
+					await runWrangler(`r2 bucket dev-url get ${bucketName}`);
+					expect(std.out).toMatchInlineSnapshot(`
+						"Public access via the r2.dev URL is disabled."
+					  `);
+				});
+			});
+
+			describe("enable", () => {
+				it("should enable public access", async () => {
+					const bucketName = "my-bucket";
+					const domainInfo = {
+						bucketId: "bucket-id-123",
+						domain: "pub-bucket-id-123.r2.dev",
+						enabled: true,
+					};
+
+					setIsTTY(true);
+					mockConfirm({
+						text:
+							`Are you sure you enable public access for bucket '${bucketName}'? ` +
+							`The contents of your bucket will be made publicly available at its r2.dev URL`,
+						result: true,
+					});
+					msw.use(
+						http.put(
+							"*/accounts/:accountId/r2/buckets/:bucketName/domains/managed",
+							async ({ request, params }) => {
+								const { accountId, bucketName: bucketParam } = params;
+								expect(accountId).toEqual("some-account-id");
+								expect(bucketParam).toEqual(bucketName);
+								const requestBody = await request.json();
+								expect(requestBody).toEqual({ enabled: true });
+								return HttpResponse.json(createFetchResult({ ...domainInfo }));
+							},
+							{ once: true }
+						)
+					);
+					await runWrangler(`r2 bucket dev-url enable ${bucketName}`);
+					expect(std.out).toMatchInlineSnapshot(`
+						"Enabling public access for bucket 'my-bucket'...
+						✨ Public access enabled at 'https://pub-bucket-id-123.r2.dev'."
+					  `);
+				});
+			});
+
+			describe("disable", () => {
+				it("should disable public access", async () => {
+					const bucketName = "my-bucket";
+					const domainInfo = {
+						bucketId: "bucket-id-123",
+						domain: "pub-bucket-id-123.r2.dev",
+						enabled: false,
+					};
+
+					setIsTTY(true);
+					mockConfirm({
+						text:
+							`Are you sure you disable public access for bucket '${bucketName}'? ` +
+							`The contents of your bucket will no longer be publicly available at its r2.dev URL`,
+						result: true,
+					});
+					msw.use(
+						http.put(
+							"*/accounts/:accountId/r2/buckets/:bucketName/domains/managed",
+							async ({ request, params }) => {
+								const { accountId, bucketName: bucketParam } = params;
+								expect(accountId).toEqual("some-account-id");
+								expect(bucketParam).toEqual(bucketName);
+								const requestBody = await request.json();
+								expect(requestBody).toEqual({ enabled: false });
+								return HttpResponse.json(createFetchResult({ ...domainInfo }));
+							},
+							{ once: true }
+						)
+					);
+					await runWrangler(`r2 bucket dev-url disable ${bucketName}`);
+					expect(std.out).toMatchInlineSnapshot(`
+						"Disabling public access for bucket 'my-bucket'...
+						Public access disabled at 'https://pub-bucket-id-123.r2.dev'."
+					  `);
 				});
 			});
 		});

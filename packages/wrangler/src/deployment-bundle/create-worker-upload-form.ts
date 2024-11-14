@@ -26,7 +26,7 @@ const moduleTypeMimeType: { [type in CfModuleType]: string | undefined } = {
 	"nodejs-compat-module": undefined,
 };
 
-export function toMimeType(type: CfModuleType): string {
+function toMimeType(type: CfModuleType): string {
 	const mimeType = moduleTypeMimeType[type];
 	if (mimeType === undefined) {
 		throw new TypeError("Unsupported module: " + type);
@@ -119,7 +119,7 @@ export type WorkerMetadataBinding =
 			};
 	  }
 	| { type: "mtls_certificate"; name: string; certificate_id: string }
-	| { type: "pipelines"; name: string; id: string }
+	| { type: "pipelines"; name: string; pipeline: string }
 	| {
 			type: "logfwdr";
 			name: string;
@@ -128,7 +128,7 @@ export type WorkerMetadataBinding =
 	| { type: "assets"; name: string };
 
 // for PUT /accounts/:accountId/workers/scripts/:scriptName
-export type WorkerMetadataPut = {
+type WorkerMetadataPut = {
 	/** The name of the entry point module. Only exists when the worker is in the ES module format */
 	main_module?: string;
 	/** The name of the entry point module. Only exists when the worker is in the service-worker format */
@@ -159,7 +159,7 @@ export type WorkerMetadataPut = {
 };
 
 // for POST /accounts/:accountId/workers/:workerName/versions
-export type WorkerMetadataVersionsPost = WorkerMetadataPut & {
+type WorkerMetadataVersionsPost = WorkerMetadataPut & {
 	annotations?: Record<string, string>;
 };
 
@@ -358,7 +358,7 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 		metadataBindings.push({
 			name: binding,
 			type: "pipelines",
-			id: pipeline,
+			pipeline: pipeline,
 		});
 	});
 

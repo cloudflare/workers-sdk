@@ -110,6 +110,7 @@ describe("defineNavigatorUserAgent is respected", () => {
 				exports: [],
 			},
 			path.resolve("dist"),
+			// @ts-expect-error Ignore the requirement for passing undefined values
 			{
 				bundle: true,
 				additionalModules: [],
@@ -172,6 +173,7 @@ describe("defineNavigatorUserAgent is respected", () => {
 				exports: [],
 			},
 			path.resolve("dist"),
+			// @ts-expect-error Ignore the requirement for passing undefined values
 			{
 				bundle: true,
 				additionalModules: [],

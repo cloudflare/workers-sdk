@@ -31,7 +31,7 @@ import type {
 } from "./events";
 import type { StartDevWorkerOptions } from "./types";
 
-export type BundlerControllerEventMap = ControllerEventMap & {
+type BundlerControllerEventMap = ControllerEventMap & {
 	bundleStart: [BundleStartEvent];
 	bundleComplete: [BundleCompleteEvent];
 };
@@ -133,6 +133,20 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 							config.compatibilityDate,
 							config.compatibilityFlags
 						),
+						testScheduled: config.dev.testScheduled,
+						plugins: undefined,
+
+						// Pages specific options used by wrangler pages commands
+						entryName: undefined,
+						inject: undefined,
+						isOutfile: undefined,
+						external: undefined,
+
+						// We don't use esbuild watching for custom builds
+						watch: undefined,
+
+						// sourcemap defaults to true in dev
+						sourcemap: undefined,
 					});
 			if (buildAborter.signal.aborted) {
 				return;

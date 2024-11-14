@@ -3,13 +3,13 @@
 	"private": true,
 	"scripts": {
 		"build": "wrangler deploy --dry-run --outdir=./dist",
-		"dev": "wrangler dev --x-dev-env",
+		"dev": "wrangler dev",
 		"test:ci": "vitest run",
 		"test:watch": "vitest"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-tsconfig": "workspace:*",
-		"@cloudflare/workers-types": "^4.20241022.0",
+		"@cloudflare/workers-types": "^4.20241106.0",
 		"undici": "catalog:default",
 		"wrangler": "workspace:*"
 	}

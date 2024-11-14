@@ -39,8 +39,6 @@ import type {
 import type { Arg } from "@cloudflare/cli/interactive";
 
 export type CommonCloudchamberConfiguration = { json: boolean };
-export type CloudchamberCommandConfiguration = CommonCloudchamberConfiguration &
-	CommonYargsOptions & { wranglerConfig: Config };
 
 /**
  * Wrapper that parses wrangler configuration and authentication.
@@ -127,7 +125,7 @@ export async function promiseSpinner<T>(
 	return t;
 }
 
-export async function fillOpenAPIConfiguration(config: Config, json: boolean) {
+async function fillOpenAPIConfiguration(config: Config, json: boolean) {
 	const headers: Record<string, string> =
 		OpenAPI.HEADERS !== undefined ? { ...OpenAPI.HEADERS } : {};
 
@@ -393,9 +391,7 @@ export function renderDeploymentMutationError(
 	crash(details["reason"] ?? errorEnumToErrorMessage[errorEnum]());
 }
 
-export function sortEnvironmentVariables(
-	environmentVariables: EnvironmentVariable[]
-) {
+function sortEnvironmentVariables(environmentVariables: EnvironmentVariable[]) {
 	environmentVariables.sort((a, b) => a.name.localeCompare(b.name));
 }
 
@@ -504,7 +500,7 @@ export async function promptForEnvironmentVariables(
 	return [];
 }
 
-export function sortLabels(labels: Label[]) {
+function sortLabels(labels: Label[]) {
 	labels.sort((a, b) => a.name.localeCompare(b.name));
 }
 
