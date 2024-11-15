@@ -717,7 +717,6 @@ export async function main(argv: string[]): Promise<void> {
 
 		logger.log(""); // Just adds a bit of space
 		if (e instanceof CommandLineArgsError) {
-			errorType = "CommandLineArgsError";
 			logger.error(e.message);
 			// We are not able to ask the `wrangler` CLI parser to show help for a subcommand programmatically.
 			// The workaround is to re-run the parsing with an additional `--help` flag, which will result in the correct help message being displayed.
@@ -737,13 +736,11 @@ export async function main(argv: string[]): Promise<void> {
 			const accountTag = (e as APIError)?.accountTag;
 			await whoami(accountTag);
 		} else if (e instanceof ParseError) {
-			errorType = "ParseError";
 			e.notes.push({
 				text: "\nIf you think this is a bug, please open an issue at: https://github.com/cloudflare/workers-sdk/issues/new/choose",
 			});
 			logger.log(formatMessage(e));
 		} else if (e instanceof JsonFriendlyFatalError) {
-			errorType = "FatalError";
 			logger.log(e.message);
 		} else if (
 			e instanceof Error &&
@@ -828,7 +825,8 @@ export async function main(argv: string[]): Promise<void> {
 			durationMs,
 			durationSeconds: durationMs / 1000,
 			durationMinutes: durationMs / 1000 / 60,
-			errorType,
+			errorType:
+				errorType ?? (e instanceof Error ? e.constructor.name : undefined),
 		});
 
 		throw e;
