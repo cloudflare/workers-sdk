@@ -61,28 +61,9 @@ export async function getMetricsDispatcher(options: MetricsConfigOptions) {
 		name: string;
 		properties: Properties;
 	}): Promise<void> {
-		if (!SPARROW_SOURCE_KEY) {
-			logger.debug(
-				"Metrics dispatcher: Source Key not provided. Be sure to initialize before sending events.",
-				event
-			);
-			return;
-		}
-
-		// Lazily get the config for this dispatcher only when an event is being dispatched.
-		// We must await this since it might trigger user interaction that would break other UI
-		// in Wrangler if it was allowed to run in parallel.
+		// TODO: make not async
 		const metricsConfig = await getMetricsConfig(options);
-		if (!metricsConfig.enabled) {
-			logger.debug(
-				`Metrics dispatcher: Dispatching disabled - would have sent ${JSON.stringify(
-					event
-				)}.`
-			);
-			return;
-		}
 
-		logger.debug(`Metrics dispatcher: Posting data ${JSON.stringify(event)}`);
 		const commonEventProperties: CommonEventProperties = {
 			amplitude_session_id,
 			amplitude_event_id: amplitude_event_id++,
@@ -91,7 +72,7 @@ export async function getMetricsDispatcher(options: MetricsConfigOptions) {
 			packageManager,
 			isFirstUsage,
 		};
-		const body = JSON.stringify({
+		const body = {
 			deviceId: metricsConfig.deviceId,
 			event: event.name,
 			timestamp: Date.now(),
@@ -99,7 +80,26 @@ export async function getMetricsDispatcher(options: MetricsConfigOptions) {
 				...commonEventProperties,
 				...event.properties,
 			},
-		});
+		};
+
+		if (!metricsConfig.enabled) {
+			logger.debug(
+				`Metrics dispatcher: Dispatching disabled - would have sent ${JSON.stringify(
+					body
+				)}.`
+			);
+			return;
+		}
+
+		if (!SPARROW_SOURCE_KEY) {
+			logger.debug(
+				"Metrics dispatcher: Source Key not provided. Be sure to initialize before sending events.",
+				event
+			);
+			return;
+		}
+
+		logger.debug(`Metrics dispatcher: Posting data ${JSON.stringify(body)}`);
 
 		// Do not await this fetch call.
 		// Just fire-and-forget, otherwise we might slow down the rest of Wrangler.
@@ -112,7 +112,7 @@ export async function getMetricsDispatcher(options: MetricsConfigOptions) {
 			},
 			mode: "cors",
 			keepalive: true,
-			body,
+			body: JSON.stringify(body),
 		}).catch((e) => {
 			logger.debug(
 				"Metrics dispatcher: Failed to send request:",
