@@ -39,6 +39,7 @@ const supportedPagesConfigFields = [
 	// normalizeAndValidateConfig() sets this value
 	"configPath",
 	"upload_source_maps",
+	"observability",
 ] as const;
 
 export function validatePagesConfig(
