@@ -1,5 +1,6 @@
 import assert from "node:assert";
 import path from "node:path";
+import { AssetsOptions, syncAssets } from "../assets";
 import { printBundleSize } from "../deployment-bundle/bundle-reporter";
 import { getBundleType } from "../deployment-bundle/bundle-type";
 import { withSourceURLs } from "../deployment-bundle/source-url";
@@ -87,6 +88,7 @@ export async function createRemoteWorkerInit(props: {
 	legacyEnv: boolean | undefined;
 	env: string | undefined;
 	isWorkersSite: boolean;
+	assets: AssetsOptions | undefined;
 	legacyAssetPaths: LegacyAssetPaths | undefined;
 	format: CfScriptFormat;
 	bindings: CfWorkerInit["bindings"];
@@ -130,6 +132,16 @@ export async function createRemoteWorkerInit(props: {
 		});
 	}
 
+	// TODO Carmen we shouldn't be doing this
+	// props.name as string
+	const assetsJwt = props.assets
+		? await syncAssets(
+				props.accountId,
+				props.name as string,
+				props.assets.directory
+			)
+		: undefined;
+
 	const init: CfWorkerInit = {
 		name: props.name,
 		main: {
@@ -161,10 +173,17 @@ export async function createRemoteWorkerInit(props: {
 		keepSecrets: true,
 		logpush: false,
 		sourceMaps: undefined,
+		assets:
+			props.assets && assetsJwt
+				? {
+						jwt: assetsJwt,
+						routingConfig: props.assets.routingConfig,
+						assetConfig: props.assets.assetConfig,
+					}
+				: undefined,
 		placement: undefined, // no placement in dev
 		tail_consumers: undefined, // no tail consumers in dev - TODO revisit?
 		limits: undefined, // no limits in preview - not supported yet but can be added
-		assets: undefined, // no remote mode for assets
 		observability: undefined, // no observability in dev
 	};
 

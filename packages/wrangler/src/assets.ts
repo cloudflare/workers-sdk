@@ -53,6 +53,8 @@ export const syncAssets = async (
 ): Promise<string> => {
 	assert(accountId, "Missing accountId");
 
+	console.time("REMOTE_assetsUpload");
+
 	// 1. generate asset manifest
 	logger.info("🌀 Building list of assets...");
 	const manifest = await buildAssetManifest(assetDirectory);
@@ -77,6 +79,7 @@ export const syncAssets = async (
 			);
 		}
 		logger.info(`No files to upload. Proceeding with deployment...`);
+		console.timeEnd("REMOTE_assetsUpload");
 		return initializeAssetsResponse.jwt;
 	}
 
@@ -214,6 +217,7 @@ export const syncAssets = async (
 	logger.log(
 		`✨ Success! Uploaded ${numberFilesToUpload} file${numberFilesToUpload > 1 ? "s" : ""} ${skippedMessage}${formatTime(uploadMs)}\n`
 	);
+	console.timeEnd("REMOTE_assetsUpload");
 
 	return completionJwt;
 };
