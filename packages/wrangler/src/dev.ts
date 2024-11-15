@@ -56,11 +56,11 @@ const command = defineCommand({
 	positionalArgs: ["script"],
 	args: {
 		script: {
-			describe: "The path to an entry point for your worker",
+			describe: "The path to an entry point for your Worker",
 			type: "string",
 		},
 		name: {
-			describe: "Name of the worker",
+			describe: "Name of the Worker",
 			type: "string",
 			requiresArg: true,
 		},
@@ -77,7 +77,7 @@ const command = defineCommand({
 			array: true,
 		},
 		latest: {
-			describe: "Use the latest version of the worker runtime",
+			describe: "Use the latest version of the Workers runtime",
 			type: "boolean",
 			default: true,
 		},
@@ -300,7 +300,7 @@ const command = defineCommand({
 		},
 		"show-interactive-dev-session": {
 			describe:
-				"Show interactive dev session  (defaults to true if the terminal supports interactivity)",
+				"Show interactive dev session (defaults to true if the terminal supports interactivity)",
 			type: "boolean",
 		},
 		"experimental-dev-env": {
