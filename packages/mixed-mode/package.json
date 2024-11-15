@@ -1,0 +1,21 @@
+{
+	"name": "@cloudflare/mixed-mode",
+	"version": "0.0.0",
+	"private": true,
+	"scripts": {
+		"cf-typegen": "wrangler types",
+		"deploy": "wrangler deploy",
+		"dev": "wrangler dev",
+		"start": "wrangler dev",
+		"test": "vitest"
+	},
+	"devDependencies": {
+		"@cloudflare/vitest-pool-workers": "^0.5.2",
+		"@cloudflare/workers-types": "^4.20241112.0",
+		"@types/node": "20.8.3",
+		"devalue": "^4.3.2",
+		"typescript": "^5.5.2",
+		"vitest": "2.0.5",
+		"wrangler": "^3.60.3"
+	}
+}

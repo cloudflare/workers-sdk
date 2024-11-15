@@ -7,6 +7,7 @@
 	},
 	"devDependencies": {
 		"@cloudflare/workers-types": "^4.20241106.0",
+		"devalue": "^4.3.0",
 		"wrangler": "workspace:*"
 	},
 	"volta": {

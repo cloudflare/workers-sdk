@@ -2428,11 +2428,20 @@ const validateKVBinding: ValidatorFn = (diagnostics, field, value) => {
 		);
 		isValid = false;
 	}
+	if (!isOptionalProperty(value, "remote", "boolean")) {
+		diagnostics.errors.push(
+			`"${field}" bindings should, optionally, have a boolean "remote" field but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		isValid = false;
+	}
 
 	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
 		"binding",
 		"id",
 		"preview_id",
+		"remote",
 	]);
 
 	return isValid;
@@ -2604,6 +2613,7 @@ const validateR2Binding: ValidatorFn = (diagnostics, field, value) => {
 		"bucket_name",
 		"preview_bucket_name",
 		"jurisdiction",
+		"remote",
 	]);
 
 	return isValid;

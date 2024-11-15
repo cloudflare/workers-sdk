@@ -193,8 +193,8 @@ export function findWranglerToml(
 	return findUpSync(`wrangler.toml`, { cwd: referencePath });
 }
 
-function addLocalSuffix(id: string, local: boolean = false) {
-	return `${id}${local ? " (local)" : ""}`;
+function addSuffix(id: string, local: boolean = false, remote = false) {
+	return `${id}${local ? (remote ? " (remote)" : " (local)") : ""}`;
 }
 
 export const friendlyBindingNames: Record<
@@ -344,10 +344,10 @@ export function printBindings(
 	if (kv_namespaces !== undefined && kv_namespaces.length > 0) {
 		output.push({
 			name: friendlyBindingNames.kv_namespaces,
-			entries: kv_namespaces.map(({ binding, id }) => {
+			entries: kv_namespaces.map(({ binding, id, remote }) => {
 				return {
 					key: binding,
-					value: addLocalSuffix(id, context.local),
+					value: addSuffix(id, context.local, remote),
 				};
 			}),
 		});
@@ -376,7 +376,7 @@ export function printBindings(
 			entries: queues.map(({ binding, queue_name }) => {
 				return {
 					key: binding,
-					value: addLocalSuffix(queue_name, context.local),
+					value: addSuffix(queue_name, context.local),
 				};
 			}),
 		});
@@ -397,7 +397,7 @@ export function printBindings(
 					}
 					return {
 						key: binding,
-						value: addLocalSuffix(databaseValue, context.local),
+						value: addSuffix(databaseValue, context.local),
 					};
 				}
 			),
@@ -410,7 +410,7 @@ export function printBindings(
 			entries: vectorize.map(({ binding, index_name }) => {
 				return {
 					key: binding,
-					value: addLocalSuffix(index_name, context.local),
+					value: addSuffix(index_name, context.local),
 				};
 			}),
 		});
@@ -422,7 +422,7 @@ export function printBindings(
 			entries: hyperdrive.map(({ binding, id }) => {
 				return {
 					key: binding,
-					value: addLocalSuffix(id, context.local),
+					value: addSuffix(id, context.local),
 				};
 			}),
 		});
@@ -431,15 +431,17 @@ export function printBindings(
 	if (r2_buckets !== undefined && r2_buckets.length > 0) {
 		output.push({
 			name: friendlyBindingNames.r2_buckets,
-			entries: r2_buckets.map(({ binding, bucket_name, jurisdiction }) => {
-				if (jurisdiction !== undefined) {
-					bucket_name += ` (${jurisdiction})`;
+			entries: r2_buckets.map(
+				({ binding, bucket_name, jurisdiction, remote }) => {
+					if (jurisdiction !== undefined) {
+						bucket_name += ` (${jurisdiction})`;
+					}
+					return {
+						key: binding,
+						value: addSuffix(bucket_name, context.local, remote),
+					};
 				}
-				return {
-					key: binding,
-					value: addLocalSuffix(bucket_name, context.local),
-				};
-			}),
+			),
 		});
 	}
 

@@ -58,6 +58,7 @@ export function runBuild(
 		projectRoot,
 		onStart,
 		defineNavigatorUserAgent,
+		remoteBindings,
 	}: {
 		entry: Entry;
 		destination: string | undefined;
@@ -84,6 +85,7 @@ export function runBuild(
 		projectRoot: string | undefined;
 		onStart: () => void;
 		defineNavigatorUserAgent: boolean;
+		remoteBindings: string[];
 	},
 	setBundle: (
 		cb: (previous: EsbuildBundle | undefined) => EsbuildBundle
@@ -169,6 +171,7 @@ export function runBuild(
 						local,
 						projectRoot,
 						defineNavigatorUserAgent,
+						remoteBindings,
 
 						// Pages specific options used by wrangler pages commands
 						entryName: undefined,

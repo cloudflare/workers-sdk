@@ -1,34 +1,50 @@
-/**
- * Welcome to Cloudflare Workers! This is your first worker.
- *
- * - Run `wrangler dev src/index.ts` in your terminal to start a development server
- * - Open a browser tab at http://localhost:8787/ to see your worker in action
- * - Run `wrangler deploy src/index.ts --name my-worker` to deploy your worker
- *
- * Learn more at https://developers.cloudflare.com/workers/
- */
-export interface Env {
-	// Example binding to KV. Learn more at https://developers.cloudflare.com/workers/runtime-apis/kv/
-	// MY_KV_NAMESPACE: KVNamespace;
-	//
-	// Example binding to Durable Object. Learn more at https://developers.cloudflare.com/workers/runtime-apis/durable-objects/
-	// MY_DURABLE_OBJECT: DurableObjectNamespace;
-	//
-	// Example binding to R2. Learn more at https://developers.cloudflare.com/workers/runtime-apis/r2/
-	// MY_BUCKET: R2Bucket;
-	//
-	// Example binding to a Service. Learn more at https://developers.cloudflare.com/workers/runtime-apis/service-bindings/
-	// MY_SERVICE: Fetcher;
+// import { getEnv } from "../../../packages/mixed-mode/lib/get-env";
+
+export class MyDurableObject {}
+
+interface Env {
+	// MY_DO: DurableObjectNamespace;
+	TODOS: KVNamespace;
 }
 
+//
 export default {
-	async fetch(
-		request: Request,
-		env: Env,
-		ctx: ExecutionContext
-	): Promise<Response> {
-		const url = new URL(request.url);
-		if (url.pathname === "/error") throw new Error("Hello Error");
-		return new Response("Hello World!");
+	async fetch(request, env): Promise<Response> {
+		// 	MY_DO: DurableObjectNamespace;
+		// 	TODOS: KVNamespace;
+		// }>(_env, ["MY_DO", "TODOS"]);
+		// const id = env.MY_DO.idFromName("/pathname");
+
+		// const stub = env.MY_DO.get(id);
+		// // console.log('stub', await stub);
+
+		// // console.log('stub', stub);
+		// const n = await stub.add(1, 2);
+		// console.log(n);
+		// const counter = await stub.newOtherCounter();
+		// // await f(2); // returns 2
+		// // await f(1); // returns 3
+		// // const count = await f(-5); // returns -2
+		// // console.log(counter.increment(2)[ChainSymbol]);
+
+		// await counter.increment(2); // returns 2
+		// await counter.increment(1); // returns 3
+		// // await counter.increment(-5); // returns -2
+
+		// const count = await counter.value; // returns -2
+
+		// return new Response(count);
+
+		// const obj = await env.TODOS.put("hello", "world");
+
+		const object = await env.TODOS.get("hello");
+
+		console.log(object);
+
+		// if (object === null) {
+		// 	return new Response('Object Not Found', { status: 404 });
+		// }
+
+		return new Response(object);
 	},
-};
+} satisfies ExportedHandler<Env>;

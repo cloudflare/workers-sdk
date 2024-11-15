@@ -98,6 +98,7 @@ const embedWorkersPlugin: Plugin = {
 					metafile: true,
 					entryPoints: [args.path],
 					outdir: build.initialOptions.outdir,
+					external: ["cloudflare:workers"],
 				}));
 			const result = await ctx.rebuild();
 			workersContexts.set(args.path, ctx);

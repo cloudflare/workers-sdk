@@ -470,6 +470,8 @@ export interface EnvironmentNonInheritable {
 		id: string;
 		/** The ID of the KV namespace used during `wrangler dev` */
 		preview_id?: string;
+
+		remote?: boolean;
 	}[];
 
 	/**
@@ -561,6 +563,8 @@ export interface EnvironmentNonInheritable {
 		preview_bucket_name?: string;
 		/** The jurisdiction that the bucket exists in. Default if not present. */
 		jurisdiction?: string;
+
+		remote?: boolean;
 	}[];
 
 	/**

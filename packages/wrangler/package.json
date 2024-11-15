@@ -92,6 +92,7 @@
 	"devDependencies": {
 		"@cloudflare/cli": "workspace:*",
 		"@cloudflare/eslint-config-worker": "workspace:*",
+		"@cloudflare/mixed-mode": "workspace:*",
 		"@cloudflare/pages-shared": "workspace:^",
 		"@cloudflare/types": "6.18.4",
 		"@cloudflare/workers-tsconfig": "workspace:*",

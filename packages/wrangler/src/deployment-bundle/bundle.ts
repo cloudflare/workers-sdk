@@ -8,6 +8,7 @@ import {
 	getBuildPlatformFromEnv,
 } from "../environment-variables/misc-variables";
 import { UserError } from "../errors";
+import { getFlag } from "../experimental-flags";
 import { getBasePath, getWranglerTmpDir } from "../paths";
 import { applyMiddlewareLoaderFacade } from "./apply-middleware";
 import {
@@ -140,6 +141,7 @@ export type BundleOptions = {
 	projectRoot: string | undefined;
 	defineNavigatorUserAgent: boolean;
 	external: string[] | undefined;
+	remoteBindings?: string[];
 };
 
 /**
@@ -178,6 +180,7 @@ export async function bundleWorker(
 		projectRoot,
 		defineNavigatorUserAgent,
 		external,
+		remoteBindings,
 	}: BundleOptions
 ): Promise<BundleResult> {
 	// We create a temporary directory for any one-off files we
@@ -202,6 +205,17 @@ export async function bundleWorker(
 				bindings: mockAnalyticsEngineDatasets.map(({ binding }) => binding),
 			},
 			supports: ["modules", "service-worker"],
+		});
+	}
+
+	if (targetConsumer === "dev" && (remoteBindings?.length ?? 0) > 0) {
+		middlewareToLoad.push({
+			name: "mixed-mode",
+			path: "templates/middleware/middleware-mixed-mode.ts",
+			config: {
+				remoteBindings: remoteBindings ?? [],
+			},
+			supports: ["modules"],
 		});
 	}
 

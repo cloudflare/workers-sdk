@@ -324,6 +324,12 @@ export function devOptions(yargs: CommonYargsArgv) {
 					"Use the experimental file based dev registry for multi-worker development",
 				default: false,
 			})
+			.option("remote-data", {
+				alias: ["mixed"],
+				type: "boolean",
+				describe: "Experimental mixed mode",
+				default: false,
+			})
 			.option("experimental-vectorize-bind-to-prod", {
 				type: "boolean",
 				describe:
@@ -391,6 +397,7 @@ export type AdditionalDevProps = {
 		binding: string;
 		id: string;
 		preview_id?: string;
+		remote?: boolean;
 	}[];
 	durableObjects?: {
 		name: string;
@@ -887,7 +894,7 @@ export function getBindings(
 	 */
 	// merge KV bindings
 	const kvConfig = (configParam.kv_namespaces || []).map(
-		({ binding, preview_id, id }) => {
+		({ binding, preview_id, id, remote }) => {
 			// In remote `dev`, we make folks use a separate kv namespace called
 			// `preview_id` instead of `id` so that they don't
 			// break production data. So here we check that a `preview_id`
@@ -904,6 +911,7 @@ export function getBindings(
 			return {
 				binding,
 				id: preview_id ?? id,
+				...(remote !== undefined ? { remote } : {}),
 			};
 		}
 	);
@@ -938,7 +946,7 @@ export function getBindings(
 	// merge R2 bindings
 	const r2Config: EnvironmentNonInheritable["r2_buckets"] =
 		configParam.r2_buckets?.map(
-			({ binding, preview_bucket_name, bucket_name, jurisdiction }) => {
+			({ binding, preview_bucket_name, bucket_name, jurisdiction, remote }) => {
 				// same idea as kv namespace preview id,
 				// same copy-on-write TODO
 				if (!preview_bucket_name && !local) {
@@ -950,6 +958,7 @@ export function getBindings(
 					binding,
 					bucket_name: preview_bucket_name ?? bucket_name,
 					jurisdiction,
+					...(remote !== undefined ? { remote } : {}),
 				};
 			}
 		) || [];

@@ -82,6 +82,7 @@ export interface CfVars {
 export interface CfKvNamespace {
 	binding: string;
 	id: string;
+	remote?: boolean;
 }
 
 /**
@@ -169,6 +170,7 @@ export interface CfR2Bucket {
 	binding: string;
 	bucket_name: string;
 	jurisdiction?: string;
+	remote?: boolean;
 }
 
 // TODO: figure out if this is duplicated in packages/wrangler/src/config/environment.ts

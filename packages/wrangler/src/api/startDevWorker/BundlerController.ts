@@ -96,6 +96,11 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 			const bindings = (
 				await convertBindingsToCfWorkerInitBindings(config.bindings)
 			).bindings;
+
+			const remoteBindings = Object.entries(config.bindings ?? [])
+				.filter(([_name, val]) => ("remote" in val ? val.remote : false))
+				.map(([name]) => name);
+
 			const bundleResult: Omit<BundleResult, "stop"> = !config.build?.bundle
 				? await noBundleWorker(
 						entry,
@@ -135,6 +140,7 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 						),
 						testScheduled: config.dev.testScheduled,
 						plugins: undefined,
+						remoteBindings,
 
 						// Pages specific options used by wrangler pages commands
 						entryName: undefined,
@@ -234,6 +240,10 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 		const { bindings } = await convertBindingsToCfWorkerInitBindings(
 			config.bindings
 		);
+		const remoteBindings = Object.entries(config.bindings ?? [])
+			.filter(([_name, val]) => ("remote" in val ? val.remote : false))
+			.map(([name]) => name);
+
 		this.#bundlerCleanup = runBuild(
 			{
 				entry,
@@ -262,6 +272,7 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 				targetConsumer: "dev",
 				testScheduled: Boolean(config.dev?.testScheduled),
 				projectRoot: config.directory,
+				remoteBindings,
 				onStart: () => {
 					this.emitBundleStartEvent(config);
 				},

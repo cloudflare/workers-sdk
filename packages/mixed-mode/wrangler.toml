@@ -1,0 +1,19 @@
+#:schema node_modules/wrangler/config-schema.json
+name = "wrangler-mixed-mode-proxy"
+main = "src/index.ts"
+compatibility_date = "2024-05-04"
+compatibility_flags = ["nodejs_compat"]
+
+kv_namespaces = [
+  { binding = "TODOS", id="d191a944163e486aa07cd5d88a52933a", preview_id = "d191a944163e486aa07cd5d88a52933a" }
+]
+
+[durable_objects]
+bindings = [
+	{ name = "SINGLETON", class_name = "ProxySingleton" }
+]
+
+[[migrations]]
+tag = "v1"
+new_classes = ["ProxySingleton"]
+

@@ -1,12 +1,18 @@
+import assert from "node:assert";
 import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
+import { spinner, spinnerWhile } from "@cloudflare/cli/interactive";
 import chalk from "chalk";
-import { Miniflare, Mutex } from "miniflare";
+import { Json, Miniflare, Mutex } from "miniflare";
+import mixedModeServer from "worker:MixedModeWorker.ts";
+import { fetchResult } from "../../cfetch";
+import { createWorkerUploadForm } from "../../deployment-bundle/create-worker-upload-form";
+import { CfWorkerInit } from "../../deployment-bundle/worker";
 import * as MF from "../../dev/miniflare";
 import { logger } from "../../logger";
 import { RuntimeController } from "./BaseController";
 import { castErrorCause } from "./events";
-import { convertBindingsToCfWorkerInitBindings } from "./utils";
+import { convertBindingsToCfWorkerInitBindings, unwrapHook } from "./utils";
 import type { WorkerEntrypointsDefinition } from "../../dev-registry";
 import type {
 	BundleCompleteEvent,
@@ -15,7 +21,7 @@ import type {
 	ReloadCompleteEvent,
 	ReloadStartEvent,
 } from "./events";
-import type { File, StartDevWorkerOptions } from "./types";
+import type { Binding, File, StartDevWorkerOptions } from "./types";
 
 async function getBinaryFileContents(file: File<string | Uint8Array>) {
 	if ("contents" in file) {
@@ -146,15 +152,119 @@ export class LocalRuntimeController extends RuntimeController {
 		// Ignored in local runtime
 	}
 
+	#previousRemoteBindings?: {
+		hash: string;
+		url?: string;
+		headers?: Record<string, string>;
+	};
+
+	async ensureMixedModeProxyRunning(config: StartDevWorkerOptions) {
+		const remoteBindings = Object.fromEntries(
+			Object.entries(config.bindings ?? []).filter(([_name, val]) =>
+				"remote" in val ? val.remote : false
+			)
+		);
+
+		if (
+			Object.keys(remoteBindings).length === 0 ||
+			this.#previousRemoteBindings?.hash === JSON.stringify(remoteBindings)
+		) {
+			return {
+				url: this.#previousRemoteBindings?.url,
+				headers: this.#previousRemoteBindings?.headers,
+			};
+		}
+		logger.log("Setting up remote data access");
+
+		this.#previousRemoteBindings = { hash: JSON.stringify(remoteBindings) };
+
+		const auth = await unwrapHook(config.dev.auth);
+
+		assert(auth, "Auth is required for mixed mode");
+
+		const workerUrl = `/accounts/${auth.accountId}/workers/scripts/wrangler-mixed-mode-proxy`;
+
+		const worker: CfWorkerInit = {
+			name: "wrangler-mixed-mode-proxy",
+			main: {
+				name: "index.js",
+				content: await readFile(mixedModeServer, "utf-8"),
+				filePath: mixedModeServer,
+				type: "esm",
+			},
+			bindings: (
+				await convertBindingsToCfWorkerInitBindings({
+					...remoteBindings,
+					SINGLETON: {
+						type: "durable_object_namespace",
+						class_name: "ProxySingleton",
+					},
+				})
+			).bindings,
+			modules: [],
+			compatibility_date: "2024-01-01",
+			compatibility_flags: ["nodejs_compat"],
+			keepVars: false,
+			sourceMaps: undefined,
+			keepSecrets: false,
+			logpush: undefined,
+			placement: undefined,
+			tail_consumers: undefined,
+			limits: undefined,
+			assets: undefined,
+			observability: undefined,
+		};
+
+		const body = createWorkerUploadForm(worker);
+
+		const result = await fetchResult<{
+			id: string;
+			startup_time_ms: number;
+			metadata: {
+				has_preview: boolean;
+			};
+		}>(workerUrl, {
+			method: "PUT",
+			body,
+		});
+		this.#previousRemoteBindings.url =
+			"https://wrangler-mixed-mode-proxy.s.workers.dev";
+		this.#previousRemoteBindings.headers = {
+			"X-Token": "ajofuviueqrgo8iquehisadcvsdivcbiu",
+		};
+
+		return {
+			url: this.#previousRemoteBindings.url,
+			headers: this.#previousRemoteBindings.headers,
+		};
+	}
+
 	async #onBundleComplete(data: BundleCompleteEvent, id: number) {
 		try {
+			const { url, headers } = await this.ensureMixedModeProxyRunning(
+				data.config
+			);
+
 			const { options, internalObjects, entrypointNames } =
 				await MF.buildMiniflareOptions(
 					this.#log,
-					await convertToConfigBundle(data),
+					await convertToConfigBundle({
+						...data,
+						config: {
+							...data.config,
+							bindings: {
+								...data.config.bindings,
+								MIXED_MODE_SETTINGS: {
+									type: "json",
+									value: url ? { url, headers } : null,
+								},
+							},
+						},
+					}),
 					this.#proxyToUserWorkerAuthenticationSecret
 				);
 			options.liveReload = false; // TODO: set in buildMiniflareOptions once old code path is removed
+
 			if (this.#mf === undefined) {
 				logger.log(chalk.dim("⎔ Starting local server..."));
 				this.#mf = new Miniflare(options);
