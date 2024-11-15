@@ -7,17 +7,18 @@ import { CI } from "../is-ci";
 import { logger } from "../logger";
 import { getMetricsConfig, getMetricsDispatcher } from "../metrics";
 import {
-	CURRENT_METRICS_DATE,
 	readMetricsConfig,
 	USER_ID_CACHE_PATH,
 	writeMetricsConfig,
 } from "../metrics/metrics-config";
 import { writeAuthConfigFile } from "../user";
 import { mockConsoleMethods } from "./helpers/mock-console";
-import { clearDialogs, mockConfirm } from "./helpers/mock-dialogs";
+import { clearDialogs } from "./helpers/mock-dialogs";
 import { useMockIsTTY } from "./helpers/mock-istty";
 import { msw, mswSuccessOauthHandlers } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
+import { runWrangler } from "./helpers/run-wrangler";
+import { writeWranglerToml } from "./helpers/write-wrangler-toml";
 import type { MockInstance } from "vitest";
 
 declare const global: { SPARROW_SOURCE_KEY: string | undefined };
@@ -270,7 +271,7 @@ describe("metrics", () => {
 			});
 
 			it("should return enabled true if the user on this device previously agreed to send metrics", async () => {
-				await writeMetricsConfig({
+				writeMetricsConfig({
 					permission: {
 						enabled: true,
 						date: new Date(2022, 6, 4),
@@ -287,7 +288,7 @@ describe("metrics", () => {
 			});
 
 			it("should return enabled false if the user on this device previously refused to send metrics", async () => {
-				await writeMetricsConfig({
+				writeMetricsConfig({
 					permission: {
 						enabled: false,
 						date: new Date(2022, 6, 4),
@@ -303,49 +304,11 @@ describe("metrics", () => {
 				});
 			});
 
-			it("should accept and store permission granting to send metrics if the user agrees", async () => {
-				mockConfirm({
-					text: "Would you like to help improve Wrangler by sending usage metrics to Cloudflare?",
-					result: true,
-				});
-				expect(
-					await getMetricsConfig({
-						sendMetrics: undefined,
-						offline: false,
-					})
-				).toMatchObject({
-					enabled: true,
-				});
-				expect((await readMetricsConfig()).permission).toMatchObject({
-					enabled: true,
-				});
-			});
-
-			it("should accept and store permission declining to send metrics if the user declines", async () => {
-				mockConfirm({
-					text: "Would you like to help improve Wrangler by sending usage metrics to Cloudflare?",
-					result: false,
-				});
-				expect(
-					await getMetricsConfig({
-						sendMetrics: undefined,
-						offline: false,
-					})
-				).toMatchObject({
-					enabled: false,
-				});
-				expect((await readMetricsConfig()).permission).toMatchObject({
-					enabled: false,
-				});
-			});
-
-			it("should ignore the config if the permission date is older than the current metrics date", async () => {
-				mockConfirm({
-					text: "Would you like to help improve Wrangler by sending usage metrics to Cloudflare?",
-					result: false,
-				});
+			it("should print a message if the permission date is older than the current metrics date", async () => {
+				vi.useFakeTimers();
+				vi.setSystemTime(new Date(2024, 11, 12));
 				const OLD_DATE = new Date(2000);
-				await writeMetricsConfig({
+				writeMetricsConfig({
 					permission: { enabled: true, date: OLD_DATE },
 				});
 				expect(
@@ -354,38 +317,33 @@ describe("metrics", () => {
 						offline: false,
 					})
 				).toMatchObject({
-					enabled: false,
+					enabled: true,
 				});
-				const { permission } = await readMetricsConfig();
-				expect(permission?.enabled).toBe(false);
+				const { permission } = readMetricsConfig();
+				expect(permission?.enabled).toBe(true);
 				// The date should be updated to today's date
-				expect(permission?.date).toEqual(CURRENT_METRICS_DATE);
+				expect(permission?.date).toEqual(new Date(2024, 11, 12));
 
 				expect(std.out).toMatchInlineSnapshot(`
-			"Usage metrics tracking has changed since you last granted permission.
-			Your choice has been saved in the following file: test-xdg-config/metrics.json.
-
-			  You can override the user level setting for a project in \`wrangler.toml\`:
-
-			   - to disable sending metrics for a project: \`send_metrics = false\`
-			   - to enable sending metrics for a project: \`send_metrics = true\`"
+			"Usage metrics tracking has changed since you last granted permission."
 		`);
+				vi.useRealTimers();
 			});
 		});
 
 		describe("deviceId", () => {
 			it("should return a deviceId found in the config file", async () => {
-				await writeMetricsConfig({ deviceId: "XXXX-YYYY-ZZZZ" });
+				writeMetricsConfig({ deviceId: "XXXX-YYYY-ZZZZ" });
 				const { deviceId } = await getMetricsConfig({
 					sendMetrics: true,
 					offline: false,
 				});
 				expect(deviceId).toEqual("XXXX-YYYY-ZZZZ");
-				expect((await readMetricsConfig()).deviceId).toEqual(deviceId);
+				expect(readMetricsConfig().deviceId).toEqual(deviceId);
 			});
 
 			it("should create and store a new deviceId if none is found in the config file", async () => {
-				await writeMetricsConfig({});
+				writeMetricsConfig({});
 				const { deviceId } = await getMetricsConfig({
 					sendMetrics: true,
 					offline: false,
@@ -393,14 +351,14 @@ describe("metrics", () => {
 				expect(deviceId).toMatch(
 					/[0-9a-fA-F]{8}-([0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}/
 				);
-				expect((await readMetricsConfig()).deviceId).toEqual(deviceId);
+				expect(readMetricsConfig().deviceId).toEqual(deviceId);
 			});
 		});
 
 		describe("userId", () => {
 			const userRequests = mockUserRequest();
 			it("should return a userId found in a cache file", async () => {
-				await saveToConfigCache(USER_ID_CACHE_PATH, {
+				saveToConfigCache(USER_ID_CACHE_PATH, {
 					userId: "CACHED_USER_ID",
 				});
 				const { userId } = await getMetricsConfig({
@@ -431,6 +389,191 @@ describe("metrics", () => {
 				});
 				expect(userId).toBe(undefined);
 				expect(userRequests.count).toBe(0);
+			});
+		});
+	});
+
+	describe("telemetry commands", () => {
+		beforeEach(() => {
+			vi.useFakeTimers();
+			vi.setSystemTime(new Date(2024, 11, 12));
+		});
+		afterEach(() => {
+			vi.useRealTimers();
+		});
+		describe("wrangler telemetry status", () => {
+			it("prints the current telemetry status based on the cached metrics config", async () => {
+				writeMetricsConfig({
+					permission: {
+						enabled: true,
+						date: new Date(2022, 6, 4),
+					},
+				});
+				await runWrangler("telemetry status");
+				expect(std.out).toMatchInlineSnapshot(`
+					"Status: Enabled
+
+					To configure telemetry globally on this machine, you can run \`wrangler telemetry disable / enable\`.
+					You can override this for individual projects with the environment variable \`WRANGLER_SEND_METRICS=true/false\`.
+					"
+				`);
+				writeMetricsConfig({
+					permission: {
+						enabled: false,
+						date: new Date(2022, 6, 4),
+					},
+				});
+				await runWrangler("telemetry status");
+				expect(std.out).toMatchInlineSnapshot(`
+					"Status: Enabled
+
+					To configure telemetry globally on this machine, you can run \`wrangler telemetry disable / enable\`.
+					You can override this for individual projects with the environment variable \`WRANGLER_SEND_METRICS=true/false\`.
+
+					Status: Disabled
+
+					To configure telemetry globally on this machine, you can run \`wrangler telemetry disable / enable\`.
+					You can override this for individual projects with the environment variable \`WRANGLER_SEND_METRICS=true/false\`.
+					"
+				`);
+			});
+
+			it("shows wrangler.toml as the source with send_metrics is present", async () => {
+				writeMetricsConfig({
+					permission: {
+						enabled: true,
+						date: new Date(2022, 6, 4),
+					},
+				});
+				writeWranglerToml({ send_metrics: false });
+				await runWrangler("telemetry status");
+				expect(std.out).toMatchInlineSnapshot(`
+					"Status: Disabled (set by wrangler.toml)
+
+					To configure telemetry globally on this machine, you can run \`wrangler telemetry disable / enable\`.
+					You can override this for individual projects with the environment variable \`WRANGLER_SEND_METRICS=true/false\`.
+					"
+				`);
+			});
+
+			it("shows environment variable as the source if used", async () => {
+				writeMetricsConfig({
+					permission: {
+						enabled: true,
+						date: new Date(2022, 6, 4),
+					},
+				});
+				vi.stubEnv("WRANGLER_SEND_METRICS", "false");
+				await runWrangler("telemetry status");
+				expect(std.out).toMatchInlineSnapshot(`
+					"Status: Disabled (set by environment variable)
+
+					To configure telemetry globally on this machine, you can run \`wrangler telemetry disable / enable\`.
+					You can override this for individual projects with the environment variable \`WRANGLER_SEND_METRICS=true/false\`.
+					"
+				`);
+			});
+
+			it("defaults to enabled if metrics config is not set", async () => {
+				writeMetricsConfig({});
+				await runWrangler("telemetry status");
+				expect(std.out).toMatchInlineSnapshot(`
+					"Status: Enabled
+
+					To configure telemetry globally on this machine, you can run \`wrangler telemetry disable / enable\`.
+					You can override this for individual projects with the environment variable \`WRANGLER_SEND_METRICS=true/false\`.
+					"
+				`);
+			});
+
+			it("prioritises environment variable over send_metrics", async () => {
+				writeMetricsConfig({
+					permission: {
+						enabled: true,
+						date: new Date(2022, 6, 4),
+					},
+				});
+				writeWranglerToml({ send_metrics: true });
+				vi.stubEnv("WRANGLER_SEND_METRICS", "false");
+				await runWrangler("telemetry status");
+				expect(std.out).toMatchInlineSnapshot(`
+					"Status: Disabled (set by environment variable)
+
+					To configure telemetry globally on this machine, you can run \`wrangler telemetry disable / enable\`.
+					You can override this for individual projects with the environment variable \`WRANGLER_SEND_METRICS=true/false\`.
+					"
+				`);
+			});
+		});
+
+		it("disables telemetry when `wrangler telemetry disable` is run", async () => {
+			writeMetricsConfig({
+				permission: {
+					enabled: true,
+					date: new Date(2022, 6, 4),
+				},
+			});
+			await runWrangler("telemetry disable");
+			expect(std.out).toMatchInlineSnapshot(`
+				"Status: Disabled
+
+				Wrangler is no longer collecting telemetry about your usage.
+				"
+			`);
+			expect(readMetricsConfig()).toMatchObject({
+				permission: {
+					enabled: false,
+					date: new Date(2024, 11, 12),
+				},
+			});
+		});
+
+		it("enables telemetry when `wrangler telemetry enable` is run", async () => {
+			writeMetricsConfig({
+				permission: {
+					enabled: false,
+					date: new Date(2022, 6, 4),
+				},
+			});
+			await runWrangler("telemetry enable");
+			expect(std.out).toMatchInlineSnapshot(`
+				"Status: Enabled
+
+				Wrangler is now collecting telemetry about your usage. Thank you for helping make Wrangler better 🧡
+				"
+			`);
+			expect(readMetricsConfig()).toMatchObject({
+				permission: {
+					enabled: true,
+					date: new Date(2024, 11, 12),
+				},
+			});
+		});
+
+		it("doesn't overwrite c3 telemetry config", async () => {
+			writeMetricsConfig({
+				c3permission: {
+					enabled: false,
+					date: new Date(2022, 6, 4),
+				},
+			});
+			await runWrangler("telemetry enable");
+			expect(std.out).toMatchInlineSnapshot(`
+				"Status: Enabled
+
+				Wrangler is now collecting telemetry about your usage. Thank you for helping make Wrangler better 🧡
+				"
+			`);
+			const config = readMetricsConfig();
+			expect(config).toMatchObject({
+				c3permission: {
+					enabled: false,
+					date: new Date(2022, 6, 4),
+				},
+				permission: {
+					enabled: true,
+					date: new Date(2024, 11, 12),
+				},
 			});
 		});
 	});

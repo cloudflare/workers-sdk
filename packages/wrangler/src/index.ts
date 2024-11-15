@@ -49,6 +49,7 @@ import "./dev";
 import "./kv";
 import "./workflows";
 import "./user/commands";
+import "./metrics/commands";
 import { demandSingleValue } from "./core";
 import { logBuildFailure, logger, LOGGER_LEVELS } from "./logger";
 import { mTlsCertificateCommands } from "./mtls-certificate/cli";
@@ -584,6 +585,7 @@ export function createCLIParser(argv: string[]) {
 	register.registerNamespace("login");
 	register.registerNamespace("logout");
 	register.registerNamespace("whoami");
+	register.registerNamespace("telemetry");
 
 	/******************************************************/
 	/*               DEPRECATED COMMANDS                  */
