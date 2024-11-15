@@ -127,22 +127,18 @@ export type CommonEventProperties = {
 	/**
 	 * The platform that the wrangler client is running on.
 	 */
-	platform: "MacOS" | "Windows" | "Linux";
+	platform: string;
 	/**
 	 * The package manager that the wrangler client is using.
 	 */
-	packageManager: "npm" | "yarn" | "pnpm" | "bun";
+	packageManager: string | undefined;
 	/**
 	 * Whether this is the first time the user has used the wrangler client.
 	 */
 	isFirstUsage: boolean;
-	/**
-	 * The timestamp of the event.
-	 */
-	timestamp: string;
 
-	amplitude_session_id: string;
-	amplitude_event_id: string;
+	amplitude_session_id: number;
+	amplitude_event_id: number;
 };
 
 export type Events =
