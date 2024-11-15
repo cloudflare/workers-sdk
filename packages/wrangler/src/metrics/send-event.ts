@@ -170,19 +170,3 @@ export type Events =
 				errorType: string | undefined;
 			};
 	  };
-
-export async function sendNewMetricsEvent<EventName extends Events["name"]>(
-	event: EventName,
-	properties: Omit<
-		Extract<Events, { name: EventName }>["properties"],
-		keyof CommonEventProperties
-	>,
-	options?: MetricsConfigOptions
-): Promise<void> {
-	try {
-		const metricsDispatcher = await getMetricsDispatcher(options ?? {});
-		await metricsDispatcher.sendEvent(event, properties);
-	} catch (err) {
-		logger.debug("Error sending metrics event", err);
-	}
-}

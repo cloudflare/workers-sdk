@@ -4,7 +4,7 @@ import { version as wranglerVersion } from "../../package.json";
 import { logger } from "../logger";
 import { getMetricsConfig, readMetricsConfig } from "./metrics-config";
 import type { MetricsConfigOptions } from "./metrics-config";
-import type { CommonEventProperties } from "./send-event";
+import type { CommonEventProperties, Events } from "./send-event";
 
 // The SPARROW_SOURCE_KEY is provided at esbuild time as a `define` for production and beta
 // releases. Otherwise it is left undefined, which automatically disables metrics requests.
@@ -26,7 +26,7 @@ function getPlatform() {
 	}
 }
 
-export async function getMetricsDispatcher(options: MetricsConfigOptions) {
+export function getMetricsDispatcher(options: MetricsConfigOptions) {
 	const platform = getPlatform();
 	const packageManager = whichPmRuns()?.name;
 	const isFirstUsage = readMetricsConfig().permission === undefined;
@@ -54,6 +54,15 @@ export async function getMetricsDispatcher(options: MetricsConfigOptions) {
 		async identify(properties: Properties): Promise<void> {
 			await dispatch({ type: "identify", name: "identify", properties });
 		},
+		async sendNewEvent<EventName extends Events["name"]>(
+			name: EventName,
+			properties: Omit<
+				Extract<Events, { name: EventName }>["properties"],
+				keyof CommonEventProperties
+			>
+		): Promise<void> {
+			await dispatch({ type: "event", name, properties });
+		},
 	};
 
 	async function dispatch(event: {
@@ -61,8 +70,7 @@ export async function getMetricsDispatcher(options: MetricsConfigOptions) {
 		name: string;
 		properties: Properties;
 	}): Promise<void> {
-		// TODO: make not async
-		const metricsConfig = await getMetricsConfig(options);
+		const metricsConfig = getMetricsConfig(options);
 
 		const commonEventProperties: CommonEventProperties = {
 			amplitude_session_id,

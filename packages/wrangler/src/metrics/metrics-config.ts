@@ -52,9 +52,9 @@ export interface MetricsConfig {
  * If the current process is not interactive then we will cannot prompt the user and just assume
  * we cannot send metrics if there is no cached or project-level preference available.
  */
-export async function getMetricsConfig({
+export function getMetricsConfig({
 	sendMetrics,
-}: MetricsConfigOptions): Promise<MetricsConfig> {
+}: MetricsConfigOptions): MetricsConfig {
 	const config = readMetricsConfig();
 	const deviceId = getDeviceId(config);
 
