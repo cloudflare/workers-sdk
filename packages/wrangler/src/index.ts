@@ -52,6 +52,7 @@ import "./user/commands";
 import "./metrics/commands";
 import { demandSingleValue } from "./core";
 import { logBuildFailure, logger, LOGGER_LEVELS } from "./logger";
+import { sendNewMetricsEvent } from "./metrics/send-event";
 import { mTlsCertificateCommands } from "./mtls-certificate/cli";
 import { writeOutput } from "./output";
 import { pages } from "./pages";
@@ -671,7 +672,10 @@ export function createCLIParser(argv: string[]) {
 export async function main(argv: string[]): Promise<void> {
 	setupSentry();
 
+	const startTime = Date.now();
 	const wrangler = createCLIParser(argv);
+	let command: string | undefined;
+	let metricsArgs: Record<string, unknown> | undefined;
 
 	// Register Yargs middleware to record command as Sentry breadcrumb
 	let recordedCommand = false;
@@ -683,18 +687,37 @@ export async function main(argv: string[]): Promise<void> {
 		recordedCommand = true;
 		// `args._` doesn't include any positional arguments (e.g. script name,
 		// key to fetch) or flags
-		addBreadcrumb(`wrangler ${args._.join(" ")}`);
+
+		command = `wrangler ${args._.join(" ")}`;
+		metricsArgs = args;
+		addBreadcrumb(command);
+		void sendNewMetricsEvent("wrangler command started", {
+			command,
+			args,
+		});
 	}, /* applyBeforeValidation */ true);
 
 	let cliHandlerThrew = false;
 	try {
 		await wranglerWithMiddleware.parse();
+
+		const durationMs = Date.now() - startTime;
+
+		void sendNewMetricsEvent("wrangler command completed", {
+			command,
+			args: metricsArgs,
+			durationMs,
+			durationSeconds: durationMs / 1000,
+			durationMinutes: durationMs / 1000 / 60,
+		});
 	} catch (e) {
 		cliHandlerThrew = true;
 		let mayReport = true;
+		let errorType: string | undefined;
 
 		logger.log(""); // Just adds a bit of space
 		if (e instanceof CommandLineArgsError) {
+			errorType = "CommandLineArgsError";
 			logger.error(e.message);
 			// We are not able to ask the `wrangler` CLI parser to show help for a subcommand programmatically.
 			// The workaround is to re-run the parsing with an additional `--help` flag, which will result in the correct help message being displayed.
@@ -702,6 +725,7 @@ export async function main(argv: string[]): Promise<void> {
 			await createCLIParser([...argv, "--help"]).parse();
 		} else if (isAuthenticationError(e)) {
 			mayReport = false;
+			errorType = "AuthenticationError";
 			logger.log(formatMessage(e));
 			const envAuth = getAuthFromEnv();
 			if (envAuth !== undefined && "apiToken" in envAuth) {
@@ -713,11 +737,13 @@ export async function main(argv: string[]): Promise<void> {
 			const accountTag = (e as APIError)?.accountTag;
 			await whoami(accountTag);
 		} else if (e instanceof ParseError) {
+			errorType = "ParseError";
 			e.notes.push({
 				text: "\nIf you think this is a bug, please open an issue at: https://github.com/cloudflare/workers-sdk/issues/new/choose",
 			});
 			logger.log(formatMessage(e));
 		} else if (e instanceof JsonFriendlyFatalError) {
+			errorType = "FatalError";
 			logger.log(e.message);
 		} else if (
 			e instanceof Error &&
@@ -748,9 +774,12 @@ export async function main(argv: string[]): Promise<void> {
 			);
 		} else if (isBuildFailure(e)) {
 			mayReport = false;
+			errorType = "BuildFailure";
+
 			logBuildFailure(e.errors, e.warnings);
 		} else if (isBuildFailureFromCause(e)) {
 			mayReport = false;
+			errorType = "BuildFailure";
 			logBuildFailure(e.cause.errors, e.cause.warnings);
 		} else {
 			let loggableException = e;
@@ -790,6 +819,17 @@ export async function main(argv: string[]): Promise<void> {
 		) {
 			await captureGlobalException(e);
 		}
+
+		const durationMs = Date.now() - startTime;
+
+		void sendNewMetricsEvent("wrangler command errored", {
+			command,
+			args: metricsArgs,
+			durationMs,
+			durationSeconds: durationMs / 1000,
+			durationMinutes: durationMs / 1000 / 60,
+			errorType,
+		});
 
 		throw e;
 	} finally {
