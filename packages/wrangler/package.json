@@ -86,6 +86,7 @@
 		"selfsigned": "^2.0.1",
 		"source-map": "^0.6.1",
 		"unenv": "npm:unenv-nightly@2.0.0-20241024-111401-d4156ac",
+		"which-pm-runs": "^1.1.0",
 		"workerd": "1.20241106.1",
 		"xxhash-wasm": "^1.0.1"
 	},
@@ -115,6 +116,7 @@
 		"@types/shell-quote": "^1.7.2",
 		"@types/signal-exit": "^3.0.1",
 		"@types/supports-color": "^8.1.1",
+		"@types/which-pm-runs": "^1.0.0",
 		"@types/ws": "^8.5.7",
 		"@types/yargs": "^17.0.22",
 		"@vitest/ui": "catalog:default",
