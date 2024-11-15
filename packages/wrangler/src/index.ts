@@ -7,7 +7,7 @@ import makeCLI from "yargs";
 import { version as wranglerVersion } from "../package.json";
 import { ai } from "./ai";
 import { cloudchamber } from "./cloudchamber";
-import { loadDotEnv } from "./config";
+import { loadDotEnv, parseConfig } from "./config";
 import { createCommandRegister } from "./core/register-commands";
 import { d1 } from "./d1";
 import { deleteHandler, deleteOptions } from "./delete";
@@ -52,7 +52,7 @@ import "./user/commands";
 import "./metrics/commands";
 import { demandSingleValue } from "./core";
 import { logBuildFailure, logger, LOGGER_LEVELS } from "./logger";
-import { sendNewMetricsEvent } from "./metrics/send-event";
+import { getMetricsDispatcher } from "./metrics";
 import { mTlsCertificateCommands } from "./mtls-certificate/cli";
 import { writeOutput } from "./output";
 import { pages } from "./pages";
@@ -676,7 +676,7 @@ export async function main(argv: string[]): Promise<void> {
 	const wrangler = createCLIParser(argv);
 	let command: string | undefined;
 	let metricsArgs: Record<string, unknown> | undefined;
-
+	let dispatcher: ReturnType<typeof getMetricsDispatcher> | undefined;
 	// Register Yargs middleware to record command as Sentry breadcrumb
 	let recordedCommand = false;
 	const wranglerWithMiddleware = wrangler.middleware((args) => {
@@ -688,10 +688,12 @@ export async function main(argv: string[]): Promise<void> {
 		// `args._` doesn't include any positional arguments (e.g. script name,
 		// key to fetch) or flags
 
+		const { rawConfig } = parseConfig(args.config, args, false);
+		dispatcher = getMetricsDispatcher({ sendMetrics: rawConfig.send_metrics });
 		command = `wrangler ${args._.join(" ")}`;
 		metricsArgs = args;
 		addBreadcrumb(command);
-		void sendNewMetricsEvent("wrangler command started", {
+		void dispatcher.sendNewEvent("wrangler command started", {
 			command,
 			args,
 		});
@@ -703,7 +705,7 @@ export async function main(argv: string[]): Promise<void> {
 
 		const durationMs = Date.now() - startTime;
 
-		void sendNewMetricsEvent("wrangler command completed", {
+		void dispatcher?.sendNewEvent("wrangler command completed", {
 			command,
 			args: metricsArgs,
 			durationMs,
@@ -819,7 +821,7 @@ export async function main(argv: string[]): Promise<void> {
 
 		const durationMs = Date.now() - startTime;
 
-		void sendNewMetricsEvent("wrangler command errored", {
+		void dispatcher?.sendNewEvent("wrangler command errored", {
 			command,
 			args: metricsArgs,
 			durationMs,
