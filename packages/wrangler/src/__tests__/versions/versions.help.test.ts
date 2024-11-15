@@ -18,7 +18,7 @@ describe("versions --help", () => {
 
 			  wrangler init [name]               📥 Initialize a basic Worker
 			  wrangler dev [script]              👂 Start a local server for developing your Worker
-			  wrangler deploy [script]           🆙 Deploy a Worker to Cloudflare  [aliases: publish]
+			  wrangler deploy [script]           🆙 Deploy a Worker to Cloudflare
 			  wrangler deployments               🚢 List and view the current and past deployments for your Worker
 			  wrangler rollback [deployment-id]  🔙 Rollback a deployment for a Worker
 			  wrangler delete [script]           🗑  Delete a Worker from Cloudflare

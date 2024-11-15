@@ -1,7 +1,8 @@
 import assert from "node:assert";
+import path from "node:path";
 import chalk from "chalk";
 import { fetchResult } from "../cfetch";
-import { readConfig } from "../config";
+import { findWranglerToml, readConfig } from "../config";
 import { FatalError, UserError } from "../errors";
 import { logger } from "../logger";
 import { printWranglerBanner } from "../update-check";
@@ -181,9 +182,14 @@ function createHandler(def: CommandDefinition) {
 
 			await def.validateArgs?.(args);
 
+			const configPath =
+				args.config ||
+				// @ts-expect-error args types only includes global args?
+				(args.script && findWranglerToml(path.dirname(args.script)));
+
 			await def.handler(args, {
 				config: readConfig(
-					args.config,
+					configPath,
 					args,
 					undefined,
 					!(def.behaviour?.printConfigWarnings ?? true)
