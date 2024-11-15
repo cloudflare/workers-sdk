@@ -62,7 +62,6 @@ export async function getMetricsDispatcher(options: MetricsConfigOptions) {
 		logger.debug(`Metrics dispatcher: Posting data ${JSON.stringify(event)}`);
 		const body = JSON.stringify({
 			deviceId: metricsConfig.deviceId,
-			userId: metricsConfig.userId,
 			event: event.name,
 			properties: {
 				category: "Workers",
