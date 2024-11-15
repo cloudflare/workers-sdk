@@ -120,3 +120,73 @@ export async function sendMetricsEvent(
 		logger.debug("Error sending metrics event", err);
 	}
 }
+
+export type CommonEventProperties = {
+	/** The version of the wrangler client that is sending the event. */
+	wranglerVersion: string;
+	/**
+	 * The platform that the wrangler client is running on.
+	 */
+	platform: "MacOS" | "Windows" | "Linux";
+	/**
+	 * The package manager that the wrangler client is using.
+	 */
+	packageManager: "npm" | "yarn" | "pnpm" | "bun";
+	/**
+	 * Whether this is the first time the user has used the wrangler client.
+	 */
+	isFirstUsage: boolean;
+	/**
+	 * The timestamp of the event.
+	 */
+	timestamp: string;
+
+	amplitude_session_id: string;
+	amplitude_event_id: string;
+};
+
+export type Events =
+	| {
+			name: "wrangler command started";
+			properties: CommonEventProperties & {
+				command: string;
+				args: Record<string, unknown>;
+			};
+	  }
+	| {
+			name: "wrangler command completed";
+			properties: CommonEventProperties & {
+				command: string | undefined;
+				args: Record<string, unknown> | undefined;
+				durationMs: number;
+				durationMinutes: number;
+				durationSeconds: number;
+			};
+	  }
+	| {
+			name: "wrangler command errored";
+			properties: CommonEventProperties & {
+				command: string | undefined;
+				args: Record<string, unknown> | undefined;
+				durationMs: number;
+				durationMinutes: number;
+				durationSeconds: number;
+				errorType: string | undefined;
+			};
+	  };
+
+export async function sendNewMetricsEvent<EventName extends Events["name"]>(
+	event: EventName,
+	properties: Omit<
+		Extract<Events, { name: EventName }>["properties"],
+		keyof CommonEventProperties
+	>,
+	options?: MetricsConfigOptions
+): Promise<void> {
+	try {
+		const metricsDispatcher = await getMetricsDispatcher(options ?? {});
+		await metricsDispatcher.sendEvent(event, properties);
+	} catch (err) {
+		logger.debug("Error sending metrics event", err);
+	}
+}
