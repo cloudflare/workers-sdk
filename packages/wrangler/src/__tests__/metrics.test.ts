@@ -2,16 +2,14 @@ import { mkdirSync } from "node:fs";
 import { http, HttpResponse } from "msw";
 import { vi } from "vitest";
 import { version as wranglerVersion } from "../../package.json";
-import { purgeConfigCaches, saveToConfigCache } from "../config-cache";
+import { purgeConfigCaches } from "../config-cache";
 import { CI } from "../is-ci";
 import { logger } from "../logger";
 import { getMetricsConfig, getMetricsDispatcher } from "../metrics";
 import {
 	readMetricsConfig,
-	USER_ID_CACHE_PATH,
 	writeMetricsConfig,
 } from "../metrics/metrics-config";
-import { writeAuthConfigFile } from "../user";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { clearDialogs } from "./helpers/mock-dialogs";
 import { useMockIsTTY } from "./helpers/mock-istty";
@@ -45,7 +43,6 @@ describe("metrics", () => {
 		const MOCK_DISPATCHER_OPTIONS = {
 			// By setting this to true we avoid the `getMetricsConfig()` logic in these tests.
 			sendMetrics: true,
-			offline: false,
 		};
 
 		// These tests should never hit the `/user` API endpoint.
@@ -246,14 +243,10 @@ describe("metrics", () => {
 			});
 
 			it("should return the sendMetrics argument for enabled if it is defined", async () => {
-				expect(
-					await getMetricsConfig({ sendMetrics: false, offline: false })
-				).toMatchObject({
+				expect(await getMetricsConfig({ sendMetrics: false })).toMatchObject({
 					enabled: false,
 				});
-				expect(
-					await getMetricsConfig({ sendMetrics: true, offline: false })
-				).toMatchObject({
+				expect(await getMetricsConfig({ sendMetrics: true })).toMatchObject({
 					enabled: true,
 				});
 			});
@@ -263,7 +256,6 @@ describe("metrics", () => {
 				expect(
 					await getMetricsConfig({
 						sendMetrics: undefined,
-						offline: false,
 					})
 				).toMatchObject({
 					enabled: false,
@@ -280,7 +272,6 @@ describe("metrics", () => {
 				expect(
 					await getMetricsConfig({
 						sendMetrics: undefined,
-						offline: false,
 					})
 				).toMatchObject({
 					enabled: true,
@@ -297,7 +288,6 @@ describe("metrics", () => {
 				expect(
 					await getMetricsConfig({
 						sendMetrics: undefined,
-						offline: false,
 					})
 				).toMatchObject({
 					enabled: false,
@@ -314,7 +304,6 @@ describe("metrics", () => {
 				expect(
 					await getMetricsConfig({
 						sendMetrics: undefined,
-						offline: false,
 					})
 				).toMatchObject({
 					enabled: true,
@@ -336,7 +325,6 @@ describe("metrics", () => {
 				writeMetricsConfig({ deviceId: "XXXX-YYYY-ZZZZ" });
 				const { deviceId } = await getMetricsConfig({
 					sendMetrics: true,
-					offline: false,
 				});
 				expect(deviceId).toEqual("XXXX-YYYY-ZZZZ");
 				expect(readMetricsConfig().deviceId).toEqual(deviceId);
@@ -346,49 +334,11 @@ describe("metrics", () => {
 				writeMetricsConfig({});
 				const { deviceId } = await getMetricsConfig({
 					sendMetrics: true,
-					offline: false,
 				});
 				expect(deviceId).toMatch(
 					/[0-9a-fA-F]{8}-([0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}/
 				);
 				expect(readMetricsConfig().deviceId).toEqual(deviceId);
-			});
-		});
-
-		describe("userId", () => {
-			const userRequests = mockUserRequest();
-			it("should return a userId found in a cache file", async () => {
-				saveToConfigCache(USER_ID_CACHE_PATH, {
-					userId: "CACHED_USER_ID",
-				});
-				const { userId } = await getMetricsConfig({
-					sendMetrics: true,
-					offline: false,
-				});
-				expect(userId).toEqual("CACHED_USER_ID");
-				expect(userRequests.count).toBe(0);
-			});
-
-			it("should fetch the userId from Cloudflare and store it in a cache file", async () => {
-				writeAuthConfigFile({ oauth_token: "DUMMY_TOKEN" });
-				const { userId } = await getMetricsConfig({
-					sendMetrics: true,
-					offline: false,
-				});
-				await flushPromises();
-
-				expect(userId).toEqual("MOCK_USER_ID");
-				expect(userRequests.count).toBe(1);
-			});
-
-			it("should not fetch the userId from Cloudflare if running in `offline` mode", async () => {
-				writeAuthConfigFile({ oauth_token: "DUMMY_TOKEN" });
-				const { userId } = await getMetricsConfig({
-					sendMetrics: true,
-					offline: true,
-				});
-				expect(userId).toBe(undefined);
-				expect(userRequests.count).toBe(0);
 			});
 		});
 	});
