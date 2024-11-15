@@ -954,6 +954,14 @@ describe.sequential("wrangler dev", () => {
 				const output = fs.readFileSync("var.txt", "utf8");
 				expect(output).toMatch("custom");
 			});
+			it("should show reasonable debug output if `.env` does not exist", async () => {
+				fs.rmSync(".env");
+				writeWranglerToml({
+					main: "index.js",
+				});
+				await runWranglerUntilConfig("dev --log-level debug");
+				expect(std.debug).toContain(".env file not found at");
+			});
 		});
 	});
 

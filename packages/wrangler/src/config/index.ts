@@ -684,7 +684,11 @@ function tryLoadDotEnv(path: string): DotEnv | undefined {
 		const parsed = dotenv.parse(fs.readFileSync(path));
 		return { path, parsed };
 	} catch (e) {
-		logger.debug(`Failed to load .env file "${path}":`, e);
+		if((e as { code: string }).code === "ENOENT") {
+			logger.debug(`.env file not found at "${path}"`);
+		} else {
+			logger.debug(`Failed to load .env file "${path}":`, e);
+		}
 	}
 }
 
