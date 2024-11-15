@@ -3,7 +3,6 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fetchResult } from "../cfetch";
 import { getConfigCache, saveToConfigCache } from "../config-cache";
-import { confirm } from "../dialogs";
 import { getWranglerSendMetricsFromEnv } from "../environment-variables/misc-variables";
 import { getGlobalWranglerConfigPath } from "../global-wrangler-config-path";
 import { isNonInteractiveOrCI } from "../is-interactive";
@@ -106,27 +105,16 @@ export async function getMetricsConfig({
 		return { enabled: false, deviceId, userId };
 	}
 
-	// Otherwise, let's ask the user and store the result in the metrics config.
-	const enabled = await confirm(
-		"Would you like to help improve Wrangler by sending usage metrics to Cloudflare?"
-	);
-	logger.log(
-		`Your choice has been saved in the following file: ${path.relative(
-			process.cwd(),
-			getMetricsConfigPath()
-		)}.\n\n` +
-			"  You can override the user level setting for a project in `wrangler.toml`:\n\n" +
-			"   - to disable sending metrics for a project: `send_metrics = false`\n" +
-			"   - to enable sending metrics for a project: `send_metrics = true`"
-	);
+	// Otherwise, default to true
 	writeMetricsConfig({
+		...config,
 		permission: {
-			enabled,
-			date: CURRENT_METRICS_DATE,
+			enabled: true,
+			date: new Date(),
 		},
 		deviceId,
 	});
-	return { enabled, deviceId, userId };
+	return { enabled: true, deviceId, userId };
 }
 
 /**
@@ -158,6 +146,15 @@ export function readMetricsConfig(): MetricsConfigFile {
 	}
 }
 
+export function updateMetricsPermission(enabled: boolean) {
+	const config = readMetricsConfig();
+	config.permission = {
+		enabled,
+		date: new Date(),
+	};
+	writeMetricsConfig(config);
+}
+
 /**
  * Get the path to the metrics config file.
  */
@@ -171,6 +168,12 @@ function getMetricsConfigPath(): string {
 export interface MetricsConfigFile {
 	permission?: {
 		/** True if Wrangler should send metrics to Cloudflare. */
+		enabled: boolean;
+		/** The date that this permission was set. */
+		date: Date;
+	};
+	c3permission?: {
+		/** True if c3 should send metrics to Cloudflare. */
 		enabled: boolean;
 		/** The date that this permission was set. */
 		date: Date;
