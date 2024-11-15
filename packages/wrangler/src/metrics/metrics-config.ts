@@ -1,14 +1,9 @@
 import { randomUUID } from "node:crypto";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { fetchResult } from "../cfetch";
-import { getConfigCache, saveToConfigCache } from "../config-cache";
-import { confirm } from "../dialogs";
 import { getWranglerSendMetricsFromEnv } from "../environment-variables/misc-variables";
 import { getGlobalWranglerConfigPath } from "../global-wrangler-config-path";
-import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
-import { getAPIToken } from "../user";
 
 /**
  * The date that the metrics being gathered was last updated in a way that would require
@@ -20,7 +15,6 @@ import { getAPIToken } from "../user";
  * gathering.
  */
 export const CURRENT_METRICS_DATE = new Date(2022, 6, 4);
-export const USER_ID_CACHE_PATH = "user-id.json";
 
 export interface MetricsConfigOptions {
 	/**
@@ -30,9 +24,9 @@ export interface MetricsConfigOptions {
 	 */
 	sendMetrics?: boolean;
 	/**
-	 * When true, do not make any CF API requests.
+	 * Path to wrangler configuration file, if it exists. Used for configFileType property
 	 */
-	offline?: boolean;
+	configPath?: string | undefined;
 }
 
 /**
@@ -43,8 +37,6 @@ export interface MetricsConfig {
 	enabled: boolean;
 	/** A UID that identifies this user and machine pair for Wrangler. */
 	deviceId: string;
-	/** The currently logged in user - undefined if not logged in. */
-	userId: string | undefined;
 }
 
 /**
@@ -56,20 +48,14 @@ export interface MetricsConfig {
  * The permissions define whether we can send metrics or not. They can come from a variety of places:
  * - the `send_metrics` setting in `wrangler.toml`
  * - a cached response from the current user
- * - prompting the user to opt-in to metrics
+ * - the `WRANGLER_SEND_METRICS` environment variable
  *
- * If the user was prompted to opt-in, then their response is cached in the metrics config file.
- *
- * If the current process is not interactive then we will cannot prompt the user and just assume
- * we cannot send metrics if there is no cached or project-level preference available.
  */
-export async function getMetricsConfig({
+export function getMetricsConfig({
 	sendMetrics,
-	offline = false,
-}: MetricsConfigOptions): Promise<MetricsConfig> {
+}: MetricsConfigOptions): MetricsConfig {
 	const config = readMetricsConfig();
 	const deviceId = getDeviceId(config);
-	const userId = await getUserId(offline);
 
 	// If the WRANGLER_SEND_METRICS environment variable has been set use that
 	// and ignore everything else.
@@ -78,21 +64,20 @@ export async function getMetricsConfig({
 		return {
 			enabled: sendMetricsEnv.toLowerCase() === "true",
 			deviceId,
-			userId,
 		};
 	}
 
 	// If the project is explicitly set the `send_metrics` options in `wrangler.toml`
 	// then use that and ignore any user preference.
 	if (sendMetrics !== undefined) {
-		return { enabled: sendMetrics, deviceId, userId };
+		return { enabled: sendMetrics, deviceId };
 	}
 
 	// Get the user preference from the metrics config.
 	const permission = config.permission;
 	if (permission !== undefined) {
 		if (new Date(permission.date) >= CURRENT_METRICS_DATE) {
-			return { enabled: permission.enabled, deviceId, userId };
+			return { enabled: permission.enabled, deviceId };
 		} else if (permission.enabled) {
 			logger.log(
 				"Usage metrics tracking has changed since you last granted permission."
@@ -100,33 +85,16 @@ export async function getMetricsConfig({
 		}
 	}
 
-	// We couldn't get the metrics permission from the project-level nor the user-level config.
-	// If we are not interactive or in a CI build then just bail out.
-	if (isNonInteractiveOrCI()) {
-		return { enabled: false, deviceId, userId };
-	}
-
-	// Otherwise, let's ask the user and store the result in the metrics config.
-	const enabled = await confirm(
-		"Would you like to help improve Wrangler by sending usage metrics to Cloudflare?"
-	);
-	logger.log(
-		`Your choice has been saved in the following file: ${path.relative(
-			process.cwd(),
-			getMetricsConfigPath()
-		)}.\n\n` +
-			"  You can override the user level setting for a project in `wrangler.toml`:\n\n" +
-			"   - to disable sending metrics for a project: `send_metrics = false`\n" +
-			"   - to enable sending metrics for a project: `send_metrics = true`"
-	);
+	// Otherwise, default to true
 	writeMetricsConfig({
+		...config,
 		permission: {
-			enabled,
-			date: CURRENT_METRICS_DATE,
+			enabled: true,
+			date: new Date(),
 		},
 		deviceId,
 	});
-	return { enabled, deviceId, userId };
+	return { enabled: true, deviceId };
 }
 
 /**
@@ -158,6 +126,15 @@ export function readMetricsConfig(): MetricsConfigFile {
 	}
 }
 
+export function updateMetricsPermission(enabled: boolean) {
+	const config = readMetricsConfig();
+	config.permission = {
+		enabled,
+		date: new Date(),
+	};
+	writeMetricsConfig(config);
+}
+
 /**
  * Get the path to the metrics config file.
  */
@@ -171,6 +148,14 @@ function getMetricsConfigPath(): string {
 export interface MetricsConfigFile {
 	permission?: {
 		/** True if Wrangler should send metrics to Cloudflare. */
+		enabled: boolean;
+		/** The date that this permission was set. */
+		date: Date;
+		/** Version number the banner was last shown - only show on version update */
+		bannerLastShown?: string;
+	};
+	c3permission?: {
+		/** True if c3 should send metrics to Cloudflare. */
 		enabled: boolean;
 		/** The date that this permission was set. */
 		date: Date;
@@ -192,43 +177,4 @@ function getDeviceId(config: MetricsConfigFile) {
 		writeMetricsConfig({ ...config, deviceId });
 	}
 	return deviceId;
-}
-
-/**
- * Returns the ID of the current user, which will be sent with each event.
- *
- * The ID is retrieved from the CF API `/user` endpoint if the user is authenticated and then
- * stored in the `node_modules/.cache`.
- *
- * If it is not possible to retrieve the ID (perhaps the user is not logged in) then we just use
- * `undefined`.
- */
-async function getUserId(offline: boolean) {
-	// Get the userId from the cache.
-	// If it has not been found in the cache and we are not offline then make an API call to get it.
-	// If we can't work in out then just use `anonymous`.
-	let userId = getConfigCache<{ userId: string }>(USER_ID_CACHE_PATH).userId;
-	if (userId === undefined && !offline) {
-		userId = await fetchUserId();
-		if (userId !== undefined) {
-			saveToConfigCache(USER_ID_CACHE_PATH, { userId });
-		}
-	}
-	return userId;
-}
-
-/**
- * Ask the Cloudflare API for the User ID of the current user.
- *
- * We will only do this if we are not "offline", e.g. not running `wrangler dev --local`.
- * Quietly return undefined if anything goes wrong.
- */
-async function fetchUserId(): Promise<string | undefined> {
-	try {
-		return getAPIToken()
-			? (await fetchResult<{ id: string }>("/user")).id
-			: undefined;
-	} catch (e) {
-		return undefined;
-	}
 }

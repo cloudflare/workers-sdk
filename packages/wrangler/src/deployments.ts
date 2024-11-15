@@ -55,7 +55,7 @@ export async function deployments(
 	scriptName: string | undefined,
 	{ send_metrics: sendMetrics }: { send_metrics?: Config["send_metrics"] } = {}
 ) {
-	await metrics.sendMetricsEvent(
+	metrics.sendMetricsEvent(
 		"view deployments",
 		{ view: scriptName ? "single" : "all" },
 		{
@@ -197,7 +197,7 @@ export async function rollbackDeployment(
 		rollbackMessage
 	);
 
-	await metrics.sendMetricsEvent(
+	metrics.sendMetricsEvent(
 		"rollback deployments",
 		{ view: scriptName ? "single" : "all" },
 		{
@@ -240,7 +240,7 @@ export async function viewDeployment(
 	{ send_metrics: sendMetrics }: { send_metrics?: Config["send_metrics"] } = {},
 	deploymentId: string | undefined
 ) {
-	await metrics.sendMetricsEvent(
+	metrics.sendMetricsEvent(
 		"view deployments",
 		{ view: scriptName ? "single" : "all" },
 		{

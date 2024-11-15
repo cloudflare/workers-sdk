@@ -1,0 +1,73 @@
+# Wrangler CLI Telemetry
+
+Cloudflare gathers non-user identifying telemetry data about usage of [Wrangler](https://www.npmjs.com/package/wrangler), the command-line interface for building and deploying Workers and Pages applications.
+
+You can [opt out of sharing telemetry data](#how-can-i-configure-wrangler-telemetry) at any time.
+
+## Why are we collecting telemetry data?
+
+Telemetry in Wrangler allows us to better identify bugs and gain visibility on usage of features across all users. It also helps us to make data-informed decisions like adding, improving or removing features. We monitor and analyze this data to ensure Wrangler’s consistent growth, stability, usability and developer experience. For instance, if certain errors are hit more frequently, those bug fixes will be prioritized in future releases
+
+## What telemetry data is Cloudflare collecting?
+
+- What command is being run (e.g. `wrangler deploy`, `wrangler dev`)
+- Anonymized arguments and flags given to Wrangler (e.g. `wrangler deploy ./src/index.ts --dry-run=true --outdir=dist` would be sent as `wrangler deploy REDACTED --dry-run=true --outdir=REDACTED`)
+- The version of the Wrangler client that is sending the event
+- The package manager that the Wrangler client is using. (e.g. npm, yarn)
+- The major version of Node.js that the Wrangler client is running on
+- Whether this is the first time the user has used the Wrangler client
+- The format of the Wrangler configuration file (e.g. `toml`, `jsonc`)
+- Total session duration of the command run (e.g. 3 seconds, etc.)
+- Whether the Wrangler client is running in CI or in an interactive instance
+- Error _type_, if one occurs (e.g. `APIError` or `UserError`. No raw error logs or stack traces will be collected.)
+- General machine information such as OS and OS Version
+
+Cloudflare will receive the IP address associated with your machine and such information is handled in accordance with Cloudflare’s [Privacy Policy](https://www.cloudflare.com/privacypolicy/).
+
+**Note**: This list is regularly audited to ensure its accuracy.
+
+## What happens with sensitive data?
+
+Cloudflare takes your privacy seriously and does not collect any sensitive information including: any usernames, raw error logs and stack traces, file names/paths and content of files, and environment variables. Data is never shared with third parties.
+
+## How can I view analytics data?
+
+To view what is being collected while using Wrangler, provide the environment variable in your command
+
+`WRANGLER_LOG=debug`
+
+e.g.
+
+```sh
+WRANGLER_LOG=debug npx wrangler deploy
+```
+
+Analytics source code can be viewed at https://github.com/cloudflare/workers-sdk/tree/main/packages/wrangler/src/metrics. It is run in the background and will not delay project execution. As a result, when necessary (e.g. no internet connection), it will fail quickly and quietly.
+
+## How can I configure Wrangler telemetry?
+
+If you would like to disable telemetry, you can run:
+
+```sh
+npx wrangler telemetry disable
+```
+
+You may also configure telemetry on a per project basis by adding the following filed to your project’s wrangler.toml:
+
+`send_metrics=false`
+
+Alternatively, you may set an environment variable to disable telemetry.
+
+`WRANGLER_SEND_METRICS=false`
+
+If you would like to re-enable telemetry globally, you can run:
+
+```sh
+npx wrangler telemetry enable
+```
+
+If you would like to check the status of Wrangler telemetry, you can run:
+
+```sh
+npx wrangler telemetry status
+```

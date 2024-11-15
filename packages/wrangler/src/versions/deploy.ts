@@ -97,7 +97,7 @@ export const versionsDeployCommand = createCommand({
 	},
 	positionalArgs: ["version-specs"],
 	handler: async function versionsDeployHandler(args, { config }) {
-		await metrics.sendMetricsEvent(
+		metrics.sendMetricsEvent(
 			"deploy worker versions",
 			{},
 			{

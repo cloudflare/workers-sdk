@@ -44,9 +44,9 @@ async function buildMain(flags: BuildFlags = {}) {
 			__RELATIVE_PACKAGE_PATH__,
 			"import.meta.url": "import_meta_url",
 			"process.env.NODE_ENV": `'${process.env.NODE_ENV || "production"}'`,
-			...(process.env.SPARROW_SOURCE_KEY
-				? { SPARROW_SOURCE_KEY: `"${process.env.SPARROW_SOURCE_KEY}"` }
-				: {}),
+			"process.env.SPARROW_SOURCE_KEY": JSON.stringify(
+				process.env.SPARROW_SOURCE_KEY ?? ""
+			),
 			...(process.env.ALGOLIA_APP_ID
 				? { ALGOLIA_APP_ID: `"${process.env.ALGOLIA_APP_ID}"` }
 				: {}),

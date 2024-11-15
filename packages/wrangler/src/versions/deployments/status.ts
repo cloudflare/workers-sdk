@@ -43,7 +43,7 @@ export async function versionsDeploymentsStatusHandler(
 	}
 
 	const config = getConfig(args);
-	await metrics.sendMetricsEvent(
+	metrics.sendMetricsEvent(
 		"view latest versioned deployment",
 		{},
 		{

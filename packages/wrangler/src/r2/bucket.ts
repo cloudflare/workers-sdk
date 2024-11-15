@@ -92,7 +92,7 @@ export const r2BucketCreateCommand = createCommand({
 
 			${formatConfigSnippet({ r2_buckets: [{ bucket_name: args.name, binding: getValidBindingName(args.name, "r2") }] }, config.configPath)}`);
 
-		await metrics.sendMetricsEvent("create r2 bucket", {
+		metrics.sendMetricsEvent("create r2 bucket", {
 			sendMetrics: config.send_metrics,
 		});
 	},
@@ -259,7 +259,7 @@ export const r2BucketDeleteCommand = createCommand({
 		logger.log(`Deleting bucket ${fullBucketName}.`);
 		await deleteR2Bucket(accountId, args.bucket, args.jurisdiction);
 		logger.log(`Deleted bucket ${fullBucketName}.`);
-		await metrics.sendMetricsEvent("delete r2 bucket", {
+		metrics.sendMetricsEvent("delete r2 bucket", {
 			sendMetrics: config.send_metrics,
 		});
 	},

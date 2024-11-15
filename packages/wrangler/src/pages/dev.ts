@@ -677,7 +677,7 @@ export const Handler = async (args: PagesDevArguments) => {
 			watcher.add(currentBundleDependencies);
 			watchedBundleDependencies = [...currentBundleDependencies];
 
-			await metrics.sendMetricsEvent("build pages functions");
+			metrics.sendMetricsEvent("build pages functions");
 		};
 
 		/*
@@ -925,7 +925,7 @@ export const Handler = async (args: PagesDevArguments) => {
 			enableIpc: true,
 		},
 	});
-	await metrics.sendMetricsEvent("run pages dev");
+	metrics.sendMetricsEvent("run pages dev");
 
 	CLEANUP_CALLBACKS.push(stop);
 

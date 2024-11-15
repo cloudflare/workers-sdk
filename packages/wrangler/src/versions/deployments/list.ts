@@ -43,7 +43,7 @@ export async function versionsDeploymentsListHandler(
 	}
 
 	const config = getConfig(args);
-	await metrics.sendMetricsEvent(
+	metrics.sendMetricsEvent(
 		"list versioned deployments",
 		{ json: args.json },
 		{

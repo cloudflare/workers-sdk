@@ -28,7 +28,7 @@ export const versionsListCommand = createCommand({
 		},
 	},
 	handler: async function versionsSecretListHandler(args, { config }) {
-		await metrics.sendMetricsEvent(
+		metrics.sendMetricsEvent(
 			"list worker versions",
 			{ json: args.json },
 			{

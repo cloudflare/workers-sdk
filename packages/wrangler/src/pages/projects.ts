@@ -43,7 +43,7 @@ export async function ListHandler() {
 	});
 
 	logger.table(data);
-	await metrics.sendMetricsEvent("list pages projects");
+	metrics.sendMetricsEvent("list pages projects");
 }
 
 export const listProjects = async ({
@@ -182,7 +182,7 @@ export async function CreateHandler({
 	logger.log(
 		`To deploy a folder of assets, run 'wrangler pages deploy [directory]'.`
 	);
-	await metrics.sendMetricsEvent("create pages project");
+	metrics.sendMetricsEvent("create pages project");
 }
 
 export function DeleteOptions(yargs: CommonYargsArgv) {

@@ -59,7 +59,7 @@ async function triggersDeployHandler(
 
 	const config = readConfig(undefined, args);
 	const assetsOptions = getAssetsOptions({ assets: undefined }, config);
-	await metrics.sendMetricsEvent(
+	metrics.sendMetricsEvent(
 		"deploy worker triggers",
 		{},
 		{

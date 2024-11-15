@@ -284,7 +284,7 @@ export function pipelines(pipelineYargs: CommonYargsArgv) {
 
 				logger.log(`🌀 Creating pipeline named "${name}"`);
 				const pipeline = await createPipeline(accountId, pipelineConfig);
-				await metrics.sendMetricsEvent("create pipeline", {
+				metrics.sendMetricsEvent("create pipeline", {
 					sendMetrics: config.send_metrics,
 				});
 
@@ -307,7 +307,7 @@ export function pipelines(pipelineYargs: CommonYargsArgv) {
 
 				// TODO: we should show bindings & transforms if they exist for given ids
 				const list = await listPipelines(accountId);
-				await metrics.sendMetricsEvent("list pipelines", {
+				metrics.sendMetricsEvent("list pipelines", {
 					sendMetrics: config.send_metrics,
 				});
 
@@ -340,7 +340,7 @@ export function pipelines(pipelineYargs: CommonYargsArgv) {
 
 				logger.log(`Retrieving config for pipeline "${name}".`);
 				const pipeline = await getPipeline(accountId, name);
-				await metrics.sendMetricsEvent("show pipeline", {
+				metrics.sendMetricsEvent("show pipeline", {
 					sendMetrics: config.send_metrics,
 				});
 
@@ -473,7 +473,7 @@ export function pipelines(pipelineYargs: CommonYargsArgv) {
 
 				logger.log(`🌀 Updating pipeline "${name}"`);
 				const pipeline = await updatePipeline(accountId, name, pipelineConfig);
-				await metrics.sendMetricsEvent("update pipeline", {
+				metrics.sendMetricsEvent("update pipeline", {
 					sendMetrics: config.send_metrics,
 				});
 
@@ -503,7 +503,7 @@ export function pipelines(pipelineYargs: CommonYargsArgv) {
 				logger.log(`Deleting pipeline ${name}.`);
 				await deletePipeline(accountId, name);
 				logger.log(`Deleted pipeline ${name}.`);
-				await metrics.sendMetricsEvent("delete pipeline", {
+				metrics.sendMetricsEvent("delete pipeline", {
 					sendMetrics: config.send_metrics,
 				});
 			}

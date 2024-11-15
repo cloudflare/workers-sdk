@@ -319,7 +319,7 @@ export const Handler = async (args: PagesBuildArgs) => {
 		}
 	}
 
-	await metrics.sendMetricsEvent("build pages functions");
+	metrics.sendMetricsEvent("build pages functions");
 };
 
 type WorkerBundleArgs = Omit<PagesBuildArgs, "nodeCompat"> & {

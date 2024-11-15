@@ -158,7 +158,7 @@ export const secret = (secretYargs: CommonYargsArgv, subHelp: SubHelp) => {
 					}
 				);
 
-				await metrics.sendMetricsEvent("create pages encrypted variable", {
+				metrics.sendMetricsEvent("create pages encrypted variable", {
 					sendMetrics: config?.send_metrics,
 				});
 
@@ -311,7 +311,7 @@ export const secret = (secretYargs: CommonYargsArgv, subHelp: SubHelp) => {
 							}),
 						}
 					);
-					await metrics.sendMetricsEvent("delete pages encrypted variable", {
+					metrics.sendMetricsEvent("delete pages encrypted variable", {
 						sendMetrics: config?.send_metrics,
 					});
 					logger.log(`✨ Success! Deleted secret ${args.key}`);
@@ -352,7 +352,7 @@ export const secret = (secretYargs: CommonYargsArgv, subHelp: SubHelp) => {
 
 				logger.log(message);
 
-				await metrics.sendMetricsEvent("list pages encrypted variables", {
+				metrics.sendMetricsEvent("list pages encrypted variables", {
 					sendMetrics: config?.send_metrics,
 				});
 			}
