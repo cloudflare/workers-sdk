@@ -14,42 +14,32 @@
 
 ## Quick Start
 
-```bash
-# Make a javascript file
-echo "export default { fetch() { return new Response('hello world') } }" > index.js
-# try it out
-npx wrangler dev index.js
-# and then deploy it
-npx wrangler deploy index.js --name my-worker
-# visit https://my-worker.<your workers subdomain>.workers.dev
-```
-
-## Create a Project
+To get started quickly with a new project, run the command below and follow the interactive instructions:
 
 ```bash
-# Generate a new project
-npx wrangler init my-worker --no-delegate-c3
-# try it out
-cd my-worker && npm run start
-# and then deploy it
-npm run deploy
+npx wrangler init my-worker
 ```
 
-## Installation:
+For more info, visit our [Getting Started](https://developers.cloudflare.com/workers/get-started/guide/) guide.
 
-```bash
-$ npm install wrangler --save-dev
-```
+## Documentation
+
+For the latest Wrangler documentation, [click here](https://developers.cloudflare.com/workers/wrangler/).
+
+To read more about Workers in general:
+- [Getting Started](https://developers.cloudflare.com/workers/get-started/guide/)
+- [How Workers works](https://developers.cloudflare.com/workers/reference/how-workers-works/)
+- [Observability](https://developers.cloudflare.com/workers/observability/)
+- [Platform](https://developers.cloudflare.com/workers/platform/)
+
 
 ## Configuration:
 
-Wrangler is configured via a `wrangler.toml` file in the project root. When utilizing the `wrangler init` command, a `wrangler.toml` file will be created for you.
-
-Example:
+Wrangler is configured via a `wrangler.toml` file in the project root. `npx wrangler init` will generate a simple configuration file for you:
 
 ```toml
 name = "my-worker"
-main = "./src/index.ts" # init w/ TypeScript
+main = "./src/index.ts"
 compatibility_date = "YYYY-MM-DD"
 ```
 
@@ -57,30 +47,22 @@ For more detailed information about configuration, refer to the [documentation](
 
 ## Commands
 
-### `wrangler init [name]`
-
-Creates a Worker project. For details on configuration keys and values, refer to the [documentation](https://developers.cloudflare.com/workers/wrangler/commands/#init).
-
 ### `wrangler dev`
 
 Start a local development server, with live reloading and devtools.
 
 ### `wrangler deploy`
 
-Publish the given script to the worldwide Cloudflare network.
+Publish the given script to Cloudflare's global network.
 
 For more commands and options, refer to the [documentation](https://developers.cloudflare.com/workers/wrangler/commands/).
 
 ## Pages
 
-### `wrangler pages dev [directory] [-- command]`
+### `wrangler pages dev [directory]`
 
-Either serves a static build asset directory, or proxies itself in front of a command.
+Serves a static build asset directory.
 
 Builds and runs functions from a `./functions` directory or uses a `_worker.js` file inside the static build asset directory.
 
 For more commands and options, refer to the [documentation](https://developers.cloudflare.com/pages/platform/functions#develop-and-preview-locally) or run `wrangler pages dev --help`.
-
-## Documentation
-
-For the latest Wrangler documentation, [click here](https://developers.cloudflare.com/workers/wrangler/).
