@@ -27,11 +27,11 @@ For more info, visit our [Getting Started](https://developers.cloudflare.com/wor
 For the latest Wrangler documentation, [click here](https://developers.cloudflare.com/workers/wrangler/).
 
 To read more about Workers in general:
+
 - [Getting Started](https://developers.cloudflare.com/workers/get-started/guide/)
 - [How Workers works](https://developers.cloudflare.com/workers/reference/how-workers-works/)
 - [Observability](https://developers.cloudflare.com/workers/observability/)
 - [Platform](https://developers.cloudflare.com/workers/platform/)
-
 
 ## Configuration:
 
