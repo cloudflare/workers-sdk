@@ -131,12 +131,31 @@ export async function select<Values extends string>(
 	return value;
 }
 
+interface MultiSelectOptions<Values> {
+	choices: SelectOption<Values>[];
+	defaultOptions?: number[];
+}
+
 export async function multiselect<Values extends string>(
 	text: string,
-	options: SelectOptions<Values>
+	options: MultiSelectOptions<Values>
 ): Promise<Values[]> {
 	if (isNonInteractiveOrCI()) {
-		throw new NoDefaultValueProvided();
+		if (options?.defaultOptions === undefined) {
+			throw new NoDefaultValueProvided();
+		}
+
+		const defaultTitles = options.defaultOptions.map(
+			(index) => options.choices[index].title
+		);
+		logger.log(`? ${text}`);
+
+		logger.log(
+			`🤖 ${chalk.dim(
+				"Using default value(s) in non-interactive context:"
+			)} ${chalk.white.bold(defaultTitles.join(", "))}`
+		);
+		return options.defaultOptions.map((index) => options.choices[index].value);
 	}
 	const { value } = await prompts({
 		type: "multiselect",

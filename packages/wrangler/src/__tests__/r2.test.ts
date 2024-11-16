@@ -101,7 +101,7 @@ describe("r2", () => {
 				  wrangler r2 bucket notification     Manage event notification rules for an R2 bucket
 				  wrangler r2 bucket domain           Manage custom domains for an R2 bucket
 				  wrangler r2 bucket dev-url          Manage public access via the r2.dev URL for an R2 bucket
-				  wrangler r2 bucket lifecycle      Manage lifecycle rules for an R2 bucket
+				  wrangler r2 bucket lifecycle        Manage lifecycle rules for an R2 bucket
 
 				GLOBAL FLAGS
 				  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
@@ -139,7 +139,7 @@ describe("r2", () => {
 				  wrangler r2 bucket notification     Manage event notification rules for an R2 bucket
 				  wrangler r2 bucket domain           Manage custom domains for an R2 bucket
 				  wrangler r2 bucket dev-url          Manage public access via the r2.dev URL for an R2 bucket
-				  wrangler r2 bucket lifecycle      Manage lifecycle rules for an R2 bucket
+				  wrangler r2 bucket lifecycle        Manage lifecycle rules for an R2 bucket
 
 				GLOBAL FLAGS
 				  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
@@ -1003,7 +1003,7 @@ binding = \\"testBucket\\""
 						"
 						wrangler r2 bucket notification list <bucket>
 
-						List event notification rules for a bucket
+						List event notification rules for an R2 bucket
 
 						POSITIONALS
 						  bucket  The name of the R2 bucket to get event notification rules for  [string] [required]

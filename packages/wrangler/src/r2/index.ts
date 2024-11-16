@@ -577,7 +577,7 @@ export function r2(r2Yargs: CommonYargsArgv, subHelp: SubHelp) {
 					return r2EvNotifyYargs
 						.command(
 							["list <bucket>", "get <bucket>"],
-							"List event notification rules for a bucket",
+							"List event notification rules for an R2 bucket",
 							Notification.ListOptions,
 							Notification.ListHandler
 						)
@@ -659,7 +659,7 @@ export function r2(r2Yargs: CommonYargsArgv, subHelp: SubHelp) {
 					return lifecycleYargs
 						.command(
 							"list <bucket>",
-							"List lifecycle rules for a bucket",
+							"List lifecycle rules for an R2 bucket",
 							Lifecycle.ListOptions,
 							Lifecycle.ListHandler
 						)

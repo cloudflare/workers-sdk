@@ -1,6 +1,7 @@
-import { readConfig } from "../config";
+import { readConfig, withConfig } from "../config";
 import { confirm, multiselect, prompt } from "../dialogs";
 import { UserError } from "../errors";
+import isInteractive from "../is-interactive";
 import { logger } from "../logger";
 import { readFileSync } from "../parse";
 import { printWranglerBanner } from "../update-check";
@@ -111,17 +112,19 @@ export function AddOptions(yargs: CommonYargsArgv) {
 			alias: "J",
 			requiresArg: true,
 			type: "string",
+		})
+		.option("force", {
+			describe: "Skip confirmation",
+			type: "boolean",
+			alias: "y",
+			default: false,
 		});
 }
 
-export async function AddHandler(
-	args: StrictYargsOptionsToInterface<typeof AddOptions>
-) {
-	await printWranglerBanner();
-	const config = readConfig(args.config, args);
-	const accountId = await requireAuth(config);
-
-	const {
+export const AddHandler = withConfig<
+	StrictYargsOptionsToInterface<typeof AddOptions>
+>(
+	async ({
 		bucket,
 		expireDays,
 		expireDate,
@@ -129,161 +132,178 @@ export async function AddHandler(
 		iaTransitionDate,
 		abortMultipartDays,
 		jurisdiction,
-	} = args;
+		force,
+		id,
+		prefix,
+		config,
+	}): Promise<void> => {
+		await printWranglerBanner();
+		const accountId = await requireAuth(config);
 
-	let { id, prefix } = args;
-
-	const isInteractive = process.stdin.isTTY;
-
-	const lifecycleRules = await getLifecycleRules(
-		accountId,
-		bucket,
-		jurisdiction
-	);
-
-	if (!id && isInteractive) {
-		id = await prompt("Enter a unique identifier for the lifecycle rule");
-	}
-
-	if (!id) {
-		throw new UserError("Must specify a rule ID.");
-	}
-
-	const newRule: LifecycleRule = {
-		id: id,
-		enabled: true,
-		conditions: {},
-	};
-
-	if (!prefix && isInteractive) {
-		prefix = await prompt(
-			"Enter a prefix for the lifecycle rule (leave empty for all prefixes)"
+		const lifecycleRules = await getLifecycleRules(
+			accountId,
+			bucket,
+			jurisdiction
 		);
-	}
-	if (prefix) {
-		newRule.conditions.prefix = prefix;
-	}
 
-	let selectedActions: string[] = [];
+		if (!id && isInteractive()) {
+			id = await prompt("Enter a unique identifier for the lifecycle rule");
+		}
 
-	if (expireDays !== undefined || expireDate !== undefined) {
-		selectedActions.push("expire");
-	}
-	if (iaTransitionDays !== undefined || iaTransitionDate !== undefined) {
-		selectedActions.push("transition");
-	}
-	if (abortMultipartDays !== undefined) {
-		selectedActions.push("abort-multipart");
-	}
+		if (!id) {
+			throw new UserError("Must specify a rule ID.");
+		}
 
-	if (selectedActions.length === 0 && isInteractive) {
-		const actionChoices = [
-			{ title: "Expire objects", value: "expire" },
-			{
-				title: "Transition to Infrequent Access storage class",
-				value: "transition",
-			},
-			{ title: "Abort incomplete multipart uploads", value: "abort-multipart" },
-		];
+		const newRule: LifecycleRule = {
+			id: id,
+			enabled: true,
+			conditions: {},
+		};
 
-		selectedActions = await multiselect("Select the actions to apply", {
-			choices: actionChoices,
-		});
-	}
+		let selectedActions: string[] = [];
 
-	if (selectedActions.length === 0) {
-		throw new UserError("Must specify at least one action.");
-	}
+		if (expireDays !== undefined || expireDate !== undefined) {
+			selectedActions.push("expire");
+		}
+		if (iaTransitionDays !== undefined || iaTransitionDate !== undefined) {
+			selectedActions.push("transition");
+		}
+		if (abortMultipartDays !== undefined) {
+			selectedActions.push("abort-multipart");
+		}
 
-	for (const action of selectedActions) {
-		let conditionType: "Age" | "Date";
-		let conditionValue: number | string;
-
-		if (action === "abort-multipart") {
-			if (abortMultipartDays !== undefined) {
-				conditionValue = abortMultipartDays;
-			} else {
-				conditionValue = await prompt(
-					`Enter the number of days after which to ${formatActionDescription(action)}`
+		if (selectedActions.length === 0 && isInteractive()) {
+			if (prefix === undefined) {
+				prefix = await prompt(
+					"Enter a prefix for the lifecycle rule (leave empty for all prefixes)"
 				);
 			}
-			if (!isNonNegativeNumber(String(conditionValue))) {
-				throw new UserError("Must be a positive number.");
-			}
-
-			conditionType = "Age";
-			conditionValue = Number(conditionValue) * 86400; // Convert days to seconds
-
-			newRule.abortMultipartUploadsTransition = {
-				condition: {
-					maxAge: conditionValue,
-					type: conditionType,
+			const actionChoices = [
+				{ title: "Expire objects", value: "expire" },
+				{
+					title: "Transition to Infrequent Access storage class",
+					value: "transition",
 				},
-			};
-		} else {
-			if (expireDays !== undefined) {
-				conditionType = "Age";
-				conditionValue = expireDays;
-			} else if (iaTransitionDays !== undefined) {
-				conditionType = "Age";
-				conditionValue = iaTransitionDays;
-			} else if (expireDate !== undefined) {
-				conditionType = "Date";
-				conditionValue = expireDate;
-			} else if (iaTransitionDate !== undefined) {
-				conditionType = "Date";
-				conditionValue = iaTransitionDate;
-			} else {
-				conditionValue = await prompt(
-					`Enter the number of days or a date (YYYY-MM-DD) after which to ${formatActionDescription(action)}`
-				);
-				if (
-					!isNonNegativeNumber(String(conditionValue)) &&
-					!isValidDate(String(conditionValue))
-				) {
-					throw new UserError(
-						"Must be a positive number or a valid date in the YYYY-MM-DD format."
+				{
+					title: "Abort incomplete multipart uploads",
+					value: "abort-multipart",
+				},
+			];
+
+			selectedActions = await multiselect("Select the actions to apply", {
+				choices: actionChoices,
+			});
+		}
+
+		if (selectedActions.length === 0) {
+			throw new UserError("Must specify at least one action.");
+		}
+
+		for (const action of selectedActions) {
+			let conditionType: "Age" | "Date";
+			let conditionValue: number | string;
+
+			if (action === "abort-multipart") {
+				if (abortMultipartDays !== undefined) {
+					conditionValue = abortMultipartDays;
+				} else {
+					conditionValue = await prompt(
+						`Enter the number of days after which to ${formatActionDescription(action)}`
 					);
 				}
-			}
+				if (!isNonNegativeNumber(String(conditionValue))) {
+					throw new UserError("Must be a positive number.");
+				}
 
-			if (isNonNegativeNumber(String(conditionValue))) {
 				conditionType = "Age";
 				conditionValue = Number(conditionValue) * 86400; // Convert days to seconds
-			} else if (isValidDate(String(conditionValue))) {
-				conditionType = "Date";
-				const date = new Date(`${conditionValue}T00:00:00.000Z`);
-				conditionValue = date.toISOString();
-			} else {
-				throw new UserError("Invalid condition input.");
-			}
 
-			if (action === "expire") {
-				newRule.deleteObjectsTransition = {
+				newRule.abortMultipartUploadsTransition = {
 					condition: {
-						[conditionType === "Age" ? "maxAge" : "date"]: conditionValue,
+						maxAge: conditionValue,
 						type: conditionType,
 					},
 				};
-			} else if (action === "transition") {
-				newRule.storageClassTransitions = [
-					{
+			} else {
+				if (expireDays !== undefined) {
+					conditionType = "Age";
+					conditionValue = expireDays;
+				} else if (iaTransitionDays !== undefined) {
+					conditionType = "Age";
+					conditionValue = iaTransitionDays;
+				} else if (expireDate !== undefined) {
+					conditionType = "Date";
+					conditionValue = expireDate;
+				} else if (iaTransitionDate !== undefined) {
+					conditionType = "Date";
+					conditionValue = iaTransitionDate;
+				} else {
+					conditionValue = await prompt(
+						`Enter the number of days or a date (YYYY-MM-DD) after which to ${formatActionDescription(action)}`
+					);
+					if (
+						!isNonNegativeNumber(String(conditionValue)) &&
+						!isValidDate(String(conditionValue))
+					) {
+						throw new UserError(
+							"Must be a positive number or a valid date in the YYYY-MM-DD format."
+						);
+					}
+				}
+
+				if (isNonNegativeNumber(String(conditionValue))) {
+					conditionType = "Age";
+					conditionValue = Number(conditionValue) * 86400; // Convert days to seconds
+				} else if (isValidDate(String(conditionValue))) {
+					conditionType = "Date";
+					const date = new Date(`${conditionValue}T00:00:00.000Z`);
+					conditionValue = date.toISOString();
+				} else {
+					throw new UserError("Invalid condition input.");
+				}
+
+				if (action === "expire") {
+					newRule.deleteObjectsTransition = {
 						condition: {
 							[conditionType === "Age" ? "maxAge" : "date"]: conditionValue,
 							type: conditionType,
 						},
-						storageClass: "InfrequentAccess",
-					},
-				];
+					};
+				} else if (action === "transition") {
+					newRule.storageClassTransitions = [
+						{
+							condition: {
+								[conditionType === "Age" ? "maxAge" : "date"]: conditionValue,
+								type: conditionType,
+							},
+							storageClass: "InfrequentAccess",
+						},
+					];
+				}
 			}
 		}
-	}
 
-	lifecycleRules.push(newRule);
-	logger.log(`Adding lifecycle rule '${id}' to bucket '${bucket}'...`);
-	await putLifecycleRules(accountId, bucket, lifecycleRules, jurisdiction);
-	logger.log(`✨ Added lifecycle rule '${id}' to bucket '${bucket}'.`);
-}
+		if (!prefix && !force) {
+			const confirmedAdd = await confirm(
+				`Are you sure you want to add lifecycle rule '${id}' to bucket '${bucket}' without a prefix? ` +
+					`The lifecycle rule will apply to all objects in your bucket.`
+			);
+			if (!confirmedAdd) {
+				logger.log("Add cancelled.");
+				return;
+			}
+		}
+
+		if (prefix) {
+			newRule.conditions.prefix = prefix;
+		}
+
+		lifecycleRules.push(newRule);
+		logger.log(`Adding lifecycle rule '${id}' to bucket '${bucket}'...`);
+		await putLifecycleRules(accountId, bucket, lifecycleRules, jurisdiction);
+		logger.log(`✨ Added lifecycle rule '${id}' to bucket '${bucket}'.`);
+	}
+);
 
 export function RemoveOptions(yargs: CommonYargsArgv) {
 	return yargs
