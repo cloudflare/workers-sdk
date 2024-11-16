@@ -105,6 +105,8 @@ describe("unstable_dev()", () => {
 						}
 					);
 
+					await setTimeout(2000)
+
 					const parentWorker = await unstable_dev(
 						"src/index.ts",
 						{
