@@ -35,11 +35,10 @@ describe("wrangler", () => {
 					  wrangler pubsub broker     Interact with your Pub/Sub Brokers
 
 					GLOBAL FLAGS
-					  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean] [default: true]
-					  -c, --config                    Path to .toml configuration file  [string]
-					  -e, --env                       Environment to use for operations and .env files  [string]
-					  -h, --help                      Show help  [boolean]
-					  -v, --version                   Show version number  [boolean]
+					  -c, --config   Path to .toml configuration file  [string]
+					  -e, --env      Environment to use for operations and .env files  [string]
+					  -h, --help     Show help  [boolean]
+					  -v, --version  Show version number  [boolean]
 
 					👷🏽 'wrangler pubsub ...' commands are currently in private beta. If your account isn't authorized, commands will fail. Visit the Pub/Sub docs for more info: https://developers.cloudflare.com/pub-sub/",
 					  "warn": "",
@@ -68,11 +67,10 @@ describe("wrangler", () => {
 						  wrangler pubsub namespace describe <name>  Describe a Pub/Sub Namespace
 
 						GLOBAL FLAGS
-						  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean] [default: true]
-						  -c, --config                    Path to .toml configuration file  [string]
-						  -e, --env                       Environment to use for operations and .env files  [string]
-						  -h, --help                      Show help  [boolean]
-						  -v, --version                   Show version number  [boolean]
+						  -c, --config   Path to .toml configuration file  [string]
+						  -e, --env      Environment to use for operations and .env files  [string]
+						  -h, --help     Show help  [boolean]
+						  -v, --version  Show version number  [boolean]
 
 						👷🏽 'wrangler pubsub ...' commands are currently in private beta. If your account isn't authorized, commands will fail. Visit the Pub/Sub docs for more info: https://developers.cloudflare.com/pub-sub/",
 						  "warn": "",
@@ -196,11 +194,10 @@ describe("wrangler", () => {
 						  wrangler pubsub broker public-keys <name>       Show the public keys used for verifying on-publish hooks and credentials for a Broker.
 
 						GLOBAL FLAGS
-						  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean] [default: true]
-						  -c, --config                    Path to .toml configuration file  [string]
-						  -e, --env                       Environment to use for operations and .env files  [string]
-						  -h, --help                      Show help  [boolean]
-						  -v, --version                   Show version number  [boolean]
+						  -c, --config   Path to .toml configuration file  [string]
+						  -e, --env      Environment to use for operations and .env files  [string]
+						  -h, --help     Show help  [boolean]
+						  -v, --version  Show version number  [boolean]
 
 						👷🏽 'wrangler pubsub ...' commands are currently in private beta. If your account isn't authorized, commands will fail. Visit the Pub/Sub docs for more info: https://developers.cloudflare.com/pub-sub/",
 						  "warn": "",
