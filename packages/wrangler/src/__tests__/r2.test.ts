@@ -11,6 +11,10 @@ import { useMockIsTTY } from "./helpers/mock-istty";
 import { createFetchResult, msw, mswR2handlers } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
+import {
+	writeWranglerJson,
+	writeWranglerToml,
+} from "./helpers/write-wrangler-toml";
 import type {
 	PutNotificationRequestBody,
 	R2EventableOperation,
@@ -302,72 +306,84 @@ describe("r2", () => {
 			          `);
 			});
 
-			it("should create a bucket & check request inputs", async () => {
-				msw.use(
-					http.post(
-						"*/accounts/:accountId/r2/buckets",
-						async ({ request, params }) => {
-							const { accountId } = params;
-							expect(accountId).toEqual("some-account-id");
-							expect(await request.json()).toEqual({ name: "testBucket" });
-							return HttpResponse.json(createFetchResult({}));
-						},
-						{ once: true }
-					)
-				);
-				await runWrangler("r2 bucket create testBucket");
-				expect(std.out).toMatchInlineSnapshot(`
-"Creating bucket 'testBucket'...
+			it.each(["toml", "jsonc"])(
+				"should create a bucket & check request inputs",
+				async (format) => {
+					format === "toml" ? writeWranglerToml() : writeWranglerJson();
+
+					msw.use(
+						http.post(
+							"*/accounts/:accountId/r2/buckets",
+							async ({ request, params }) => {
+								const { accountId } = params;
+								expect(accountId).toEqual("some-account-id");
+								expect(await request.json()).toEqual({ name: "testBucket" });
+								return HttpResponse.json(createFetchResult({}));
+							},
+							{ once: true }
+						)
+					);
+					await runWrangler("r2 bucket create testBucket");
+					expect(std.out).toContain(`Creating bucket 'testBucket'...
 ✅ Created bucket 'testBucket' with default storage class of Standard.
 
-Configure your Worker to write objects to this bucket:
+Configure your Worker to write objects to this bucket:`);
+					if (format === "toml") {
+						expect(std.out).toContain("[[r2_buckets]]");
+					} else {
+						expect(std.out).toContain(`"r2_buckets": [`);
+					}
+				}
+			);
 
-[[r2_buckets]]
-bucket_name = \\"testBucket\\"
-binding = \\"testBucket\\""
-			  `);
-			});
+			it.each(["toml", "jsonc"])(
+				"should create a bucket with the expected jurisdiction",
+				async (format) => {
+					format === "toml" ? writeWranglerToml() : writeWranglerJson();
 
-			it("should create a bucket with the expected jurisdiction", async () => {
-				msw.use(
-					http.post(
-						"*/accounts/:accountId/r2/buckets",
-						async ({ request, params }) => {
-							const { accountId } = params;
-							expect(accountId).toEqual("some-account-id");
-							expect(request.headers.get("cf-r2-jurisdiction")).toEqual("eu");
-							expect(await request.json()).toEqual({ name: "testBucket" });
-							return HttpResponse.json(createFetchResult({}));
-						},
-						{ once: true }
-					)
-				);
-				await runWrangler("r2 bucket create testBucket -J eu");
-				expect(std.out).toMatchInlineSnapshot(`
-"Creating bucket 'testBucket (eu)'...
+					msw.use(
+						http.post(
+							"*/accounts/:accountId/r2/buckets",
+							async ({ request, params }) => {
+								const { accountId } = params;
+								expect(accountId).toEqual("some-account-id");
+								expect(request.headers.get("cf-r2-jurisdiction")).toEqual("eu");
+								expect(await request.json()).toEqual({ name: "testBucket" });
+								return HttpResponse.json(createFetchResult({}));
+							},
+							{ once: true }
+						)
+					);
+					await runWrangler("r2 bucket create testBucket -J eu");
+					expect(std.out).toContain(`Creating bucket 'testBucket (eu)'...
 ✅ Created bucket 'testBucket (eu)' with default storage class of Standard.
 
-Configure your Worker to write objects to this bucket:
+Configure your Worker to write objects to this bucket:`);
+					if (format === "toml") {
+						expect(std.out).toContain("[[r2_buckets]]");
+					} else {
+						expect(std.out).toContain(`"r2_buckets": [`);
+					}
+				}
+			);
 
-[[r2_buckets]]
-bucket_name = \\"testBucket\\"
-binding = \\"testBucket\\""
-			  `);
-			});
+			it.each(["toml", "jsonc"])(
+				"should create a bucket with the expected default storage class",
+				async (format) => {
+					format === "toml" ? writeWranglerToml() : writeWranglerJson();
 
-			it("should create a bucket with the expected default storage class", async () => {
-				await runWrangler("r2 bucket create testBucket -s InfrequentAccess");
-				expect(std.out).toMatchInlineSnapshot(`
-"Creating bucket 'testBucket'...
+					await runWrangler("r2 bucket create testBucket -s InfrequentAccess");
+					expect(std.out).toContain(`Creating bucket 'testBucket'...
 ✅ Created bucket 'testBucket' with default storage class of InfrequentAccess.
 
-Configure your Worker to write objects to this bucket:
-
-[[r2_buckets]]
-bucket_name = \\"testBucket\\"
-binding = \\"testBucket\\""
-			  `);
-			});
+Configure your Worker to write objects to this bucket:`);
+					if (format === "toml") {
+						expect(std.out).toContain("[[r2_buckets]]");
+					} else {
+						expect(std.out).toContain(`"r2_buckets": [`);
+					}
+				}
+			);
 
 			it("should error if storage class is invalid", async () => {
 				await expect(
@@ -388,34 +404,37 @@ binding = \\"testBucket\\""
 				"
 		`);
 			});
-			it("should create a bucket with the expected location hint", async () => {
-				msw.use(
-					http.post(
-						"*/accounts/:accountId/r2/buckets",
-						async ({ request, params }) => {
-							const { accountId } = params;
-							expect(accountId).toEqual("some-account-id");
-							expect(await request.json()).toEqual({
-								name: "testBucket",
-								locationHint: "weur",
-							});
-							return HttpResponse.json(createFetchResult({}));
-						},
-						{ once: true }
-					)
-				);
-				await runWrangler("r2 bucket create testBucket --location weur");
-				expect(std.out).toMatchInlineSnapshot(`
-"Creating bucket 'testBucket'...
+			it.each(["toml", "jsonc"])(
+				"should create a bucket with the expected location hint",
+				async (format) => {
+					format === "toml" ? writeWranglerToml() : writeWranglerJson();
+					msw.use(
+						http.post(
+							"*/accounts/:accountId/r2/buckets",
+							async ({ request, params }) => {
+								const { accountId } = params;
+								expect(accountId).toEqual("some-account-id");
+								expect(await request.json()).toEqual({
+									name: "testBucket",
+									locationHint: "weur",
+								});
+								return HttpResponse.json(createFetchResult({}));
+							},
+							{ once: true }
+						)
+					);
+					await runWrangler("r2 bucket create testBucket --location weur");
+					expect(std.out).toContain(`Creating bucket 'testBucket'...
 ✅ Created bucket 'testBucket' with location hint weur and default storage class of Standard.
 
-Configure your Worker to write objects to this bucket:
-
-[[r2_buckets]]
-bucket_name = \\"testBucket\\"
-binding = \\"testBucket\\""
-				`);
-			});
+Configure your Worker to write objects to this bucket:`);
+					if (format === "toml") {
+						expect(std.out).toContain("[[r2_buckets]]");
+					} else {
+						expect(std.out).toContain(`"r2_buckets": [`);
+					}
+				}
+			);
 		});
 
 		describe("update", () => {

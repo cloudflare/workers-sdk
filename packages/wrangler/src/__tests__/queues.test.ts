@@ -4,6 +4,10 @@ import { mockConsoleMethods } from "./helpers/mock-console";
 import { msw } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
+import {
+	writeWranglerJson,
+	writeWranglerToml,
+} from "./helpers/write-wrangler-toml";
 import type { PostTypedConsumerBody, QueueResponse } from "../queues/client";
 
 describe("wrangler", () => {
@@ -254,24 +258,15 @@ describe("wrangler", () => {
 				`);
 			});
 
-			it("should create a queue", async () => {
+			it.each(["toml", "jsonc"])("should create a queue", async (format) => {
+				format === "toml" ? writeWranglerToml() : writeWranglerJson();
 				const requests = mockCreateRequest("testQueue");
 				await runWrangler("queues create testQueue");
-				expect(std.out).toMatchInlineSnapshot(`
-					"🌀 Creating queue 'testQueue'
-					✅ Created queue 'testQueue'
-
-					Configure your Worker to send messages to this queue:
-
-					[[queues.producers]]
-					queue = \\"testQueue\\"
-					binding = \\"testQueue\\"
-
-					Configure your Worker to consume messages from this queue:
-
-					[[queues.consumers]]
-					queue = \\"testQueue\\""
-			  `);
+				if (format === "toml") {
+					expect(std.out).toContain("[[queues.producers]]");
+				} else {
+					expect(std.out).toContain(`"queues": {`);
+				}
 				expect(requests.count).toEqual(1);
 			});
 
@@ -315,26 +310,25 @@ describe("wrangler", () => {
 		`);
 			});
 
-			it("should send queue settings with delivery delay", async () => {
-				const requests = mockCreateRequest("testQueue", { delivery_delay: 10 });
-				await runWrangler("queues create testQueue --delivery-delay-secs=10");
-				expect(std.out).toMatchInlineSnapshot(`
-					"🌀 Creating queue 'testQueue'
-					✅ Created queue 'testQueue'
+			it.each(["toml", "jsonc"])(
+				"should send queue settings with delivery delay",
+				async (format) => {
+					format === "toml" ? writeWranglerToml() : writeWranglerJson();
 
-					Configure your Worker to send messages to this queue:
+					const requests = mockCreateRequest("testQueue", {
+						delivery_delay: 10,
+					});
+					await runWrangler("queues create testQueue --delivery-delay-secs=10");
 
-					[[queues.producers]]
-					queue = \\"testQueue\\"
-					binding = \\"testQueue\\"
+					if (format === "toml") {
+						expect(std.out).toContain("[[queues.producers]]");
+					} else {
+						expect(std.out).toContain(`"queues": {`);
+					}
 
-					Configure your Worker to consume messages from this queue:
-
-					[[queues.consumers]]
-					queue = \\"testQueue\\""
-			  `);
-				expect(requests.count).toEqual(1);
-			});
+					expect(requests.count).toEqual(1);
+				}
+			);
 
 			it("should show an error when two delivery delays are set", async () => {
 				const requests = mockCreateRequest("testQueue", { delivery_delay: 0 });

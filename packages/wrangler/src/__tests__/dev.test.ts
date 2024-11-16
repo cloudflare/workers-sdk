@@ -1241,11 +1241,12 @@ describe.sequential("wrangler dev", () => {
 				  CLASS_3), but no [migrations] for them. This may not work as expected until you add a [migrations]
 				  section to your wrangler.toml. Add this configuration to your wrangler.toml:
 
-				        \`\`\`
-				        [[migrations]]
-				        tag = \\"v1\\" # Should be unique for each entry
-				        new_classes = [\\"CLASS_1\\", \\"CLASS_3\\"]
-				        \`\`\`
+				      \`\`\`
+				      [[migrations]]
+				      tag = \\"v1\\"
+				      new_classes = [ \\"CLASS_1\\", \\"CLASS_3\\" ]
+
+				      \`\`\`
 
 				      Refer to
 				  [4mhttps://developers.cloudflare.com/durable-objects/reference/durable-objects-migrations/[0m for more

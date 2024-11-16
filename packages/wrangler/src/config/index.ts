@@ -1,4 +1,5 @@
 import fs from "node:fs";
+import TOML from "@iarna/toml";
 import chalk from "chalk";
 import dotenv from "dotenv";
 import { findUpSync } from "find-up";
@@ -7,6 +8,7 @@ import { getFlag } from "../experimental-flags";
 import { logger } from "../logger";
 import { EXIT_CODE_INVALID_PAGES_CONFIG } from "../pages/errors";
 import { parseJSONC, parseTOML, readFileSync } from "../parse";
+import { RawEnvironment } from "./environment";
 import { isPagesConfig, normalizeAndValidateConfig } from "./validation";
 import { validatePagesConfig } from "./validation-pages";
 import type { CfWorkerInit } from "../deployment-bundle/worker";
@@ -27,6 +29,18 @@ export type {
 	Environment,
 	RawEnvironment,
 } from "./environment";
+
+export function formatConfigSnippet(
+	config: RawEnvironment,
+	parsedFormat: Config["parsedFormat"],
+	spacing = true
+) {
+	if (parsedFormat === "jsonc") {
+		return spacing ? JSON.stringify(config, null, 2) : JSON.stringify(config);
+	} else {
+		return TOML.stringify(config as TOML.JsonMap);
+	}
+}
 
 type ReadConfigCommandArgs = NormalizeAndValidateConfigArgs & {
 	experimentalJsonConfig?: boolean | undefined;
@@ -55,6 +69,7 @@ export function readConfig(
 	requirePagesConfig?: boolean,
 	hideWarnings: boolean = false
 ): Config {
+	let parsedFormat: Config["parsedFormat"] = "jsonc";
 	const isJsonConfigEnabled =
 		getFlag("JSON_CONFIG_FILE") ?? args.experimentalJsonConfig;
 	let rawConfig: RawConfig = {};
@@ -66,8 +81,10 @@ export function readConfig(
 	try {
 		// Load the configuration from disk if available
 		if (configPath?.endsWith("toml")) {
+			parsedFormat = "toml";
 			rawConfig = parseTOML(readFileSync(configPath), configPath);
 		} else if (configPath?.endsWith("json") || configPath?.endsWith("jsonc")) {
+			parsedFormat = "jsonc";
 			rawConfig = parseJSONC(readFileSync(configPath), configPath);
 		}
 	} catch (e) {
@@ -108,7 +125,8 @@ export function readConfig(
 	const { config, diagnostics } = normalizeAndValidateConfig(
 		rawConfig,
 		configPath,
-		args
+		args,
+		parsedFormat
 	);
 
 	if (diagnostics.hasWarnings() && !hideWarnings) {
@@ -138,6 +156,7 @@ export function readConfig(
 	}
 
 	applyPythonConfig(config, args);
+	config.parsedFormat = parsedFormat;
 
 	return config;
 }

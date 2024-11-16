@@ -1,5 +1,6 @@
 import { writeFileSync } from "node:fs";
 import { http, HttpResponse } from "msw";
+import dedent from "ts-dedent";
 import { endEventLoop } from "./helpers/end-event-loop";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
@@ -9,6 +10,10 @@ import { mockProcess } from "./helpers/mock-process";
 import { msw } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
+import {
+	writeWranglerJson,
+	writeWranglerToml,
+} from "./helpers/write-wrangler-toml";
 import type {
 	KeyValue,
 	KVNamespaceInfo,
@@ -190,60 +195,109 @@ describe("wrangler", () => {
 		        `);
 			});
 
-			it("should create a namespace", async () => {
-				mockCreateRequest("worker-UnitTestNamespace");
-				await runWrangler("kv namespace create UnitTestNamespace");
-				expect(std.out).toMatchInlineSnapshot(`
-					"🌀 Creating namespace with title \\"worker-UnitTestNamespace\\"
-					✨ Success!
-					Add the following to your configuration file in your kv_namespaces array:
-					[[kv_namespaces]]
-					binding = \\"UnitTestNamespace\\"
-					id = \\"some-namespace-id\\""
-				`);
-			});
+			it.each(["toml", "jsonc"])(
+				"should create a namespace",
+				async (format) => {
+					format === "toml"
+						? writeWranglerToml({ name: "worker" })
+						: writeWranglerJson({ name: "worker" });
 
-			it("should create a preview namespace if configured to do so", async () => {
-				mockCreateRequest("worker-UnitTestNamespace_preview");
-				await runWrangler("kv namespace create UnitTestNamespace --preview");
-				expect(std.out).toMatchInlineSnapshot(`
-					"🌀 Creating namespace with title \\"worker-UnitTestNamespace_preview\\"
-					✨ Success!
-					Add the following to your configuration file in your kv_namespaces array:
-					[[kv_namespaces]]
-					binding = \\"UnitTestNamespace\\"
-					preview_id = \\"some-namespace-id\\""
-				`);
-			});
+					mockCreateRequest("worker-UnitTestNamespace");
+					await runWrangler("kv namespace create UnitTestNamespace");
+					expect(std.out).toContain(dedent`
+						🌀 Creating namespace with title "worker-UnitTestNamespace"
+						✨ Success!
+						Add the following to your configuration file in your kv_namespaces array:
+					`);
+					if (format === "toml") {
+						expect(std.out).toContain("[[kv_namespaces]]");
+					} else {
+						expect(std.out).toContain(`"kv_namespaces": [`);
+					}
+				}
+			);
 
-			it("should create a namespace using configured worker name", async () => {
-				writeFileSync("./wrangler.toml", 'name = "other-worker"', "utf-8");
-				mockCreateRequest("other-worker-UnitTestNamespace");
-				await runWrangler("kv namespace create UnitTestNamespace");
-				expect(std.out).toMatchInlineSnapshot(`
-					"🌀 Creating namespace with title \\"other-worker-UnitTestNamespace\\"
-					✨ Success!
-					Add the following to your configuration file in your kv_namespaces array:
-					[[kv_namespaces]]
-					binding = \\"UnitTestNamespace\\"
-					id = \\"some-namespace-id\\""
-				`);
-			});
+			it.each(["toml", "jsonc"])(
+				"should create a preview namespace if configured to do so",
+				async (format) => {
+					format === "toml"
+						? writeWranglerToml({ name: "worker" })
+						: writeWranglerJson({ name: "worker" });
 
-			it("should create a namespace in an environment if configured to do so", async () => {
-				mockCreateRequest("worker-customEnv-UnitTestNamespace");
-				await runWrangler(
-					"kv namespace create UnitTestNamespace --env customEnv"
-				);
-				expect(std.out).toMatchInlineSnapshot(`
-					"🌀 Creating namespace with title \\"worker-customEnv-UnitTestNamespace\\"
-					✨ Success!
-					Add the following to your configuration file in your kv_namespaces array under [env.customEnv]:
-					[[kv_namespaces]]
-					binding = \\"UnitTestNamespace\\"
-					id = \\"some-namespace-id\\""
-				`);
-			});
+					mockCreateRequest("worker-UnitTestNamespace_preview");
+					await runWrangler("kv namespace create UnitTestNamespace --preview");
+					expect(std.out).toContain(dedent`
+						🌀 Creating namespace with title "worker-UnitTestNamespace_preview"
+						✨ Success!
+						Add the following to your configuration file in your kv_namespaces array:
+					`);
+					if (format === "toml") {
+						expect(std.out).toContain("[[kv_namespaces]]");
+					} else {
+						expect(std.out).toContain(`"kv_namespaces": [`);
+					}
+				}
+			);
+
+			it.each(["toml", "jsonc"])(
+				"should create a namespace using configured worker name",
+				async (format) => {
+					format === "toml"
+						? writeWranglerToml({ name: "other-worker" })
+						: writeWranglerJson({ name: "other-worker" });
+
+					mockCreateRequest("other-worker-UnitTestNamespace");
+					await runWrangler("kv namespace create UnitTestNamespace");
+					expect(std.out).toContain(dedent`
+						🌀 Creating namespace with title "other-worker-UnitTestNamespace"
+						✨ Success!
+						Add the following to your configuration file in your kv_namespaces array:
+					`);
+					if (format === "toml") {
+						expect(std.out).toContain("[[kv_namespaces]]");
+					} else {
+						expect(std.out).toContain(`"kv_namespaces": [`);
+					}
+				}
+			);
+
+			it.each(["jsonc", "toml"])(
+				"should create a namespace in an environment if configured to do so",
+				async (format) => {
+					format === "toml"
+						? writeWranglerToml({
+								name: "worker",
+								env: {
+									customEnv: {
+										name: "worker",
+									},
+								},
+							})
+						: writeWranglerJson({
+								name: "worker",
+								env: {
+									customEnv: {
+										name: "worker",
+									},
+								},
+							});
+
+					mockCreateRequest("worker-customEnv-UnitTestNamespace");
+					await runWrangler(
+						"kv namespace create UnitTestNamespace --env customEnv"
+					);
+					expect(std.out).toContain(dedent`
+						🌀 Creating namespace with title "worker-customEnv-UnitTestNamespace"
+						✨ Success!
+						Add the following to your configuration file in your kv_namespaces array under [env.customEnv]:
+					`);
+					if (format === "toml") {
+						expect(std.out).toContain("[[kv_namespaces]]");
+					} else {
+						expect(std.out).toContain(`"kv_namespaces": [`);
+					}
+				}
+			);
 		});
 
 		describe("list", () => {

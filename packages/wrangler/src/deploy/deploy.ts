@@ -5,7 +5,7 @@ import { URLSearchParams } from "node:url";
 import { cancel } from "@cloudflare/cli";
 import { syncAssets } from "../assets";
 import { fetchListResult, fetchResult } from "../cfetch";
-import { printBindings } from "../config";
+import { formatConfigSnippet, printBindings } from "../config";
 import { bundleWorker } from "../deployment-bundle/bundle";
 import {
 	printBundleSize,
@@ -425,7 +425,7 @@ export default async function deploy(props: Props): Promise<{
 
 		throw new UserError(`A compatibility_date is required when publishing. Add the following to your wrangler.toml file:.
     \`\`\`
-    compatibility_date = "${compatibilityDateStr}"
+    ${formatConfigSnippet({ compatibility_date: compatibilityDateStr }, config.parsedFormat, false)}
     \`\`\`
     Or you could pass it in your terminal as \`--compatibility-date ${compatibilityDateStr}\`
 See https://developers.cloudflare.com/workers/platform/compatibility-dates for more information.`);

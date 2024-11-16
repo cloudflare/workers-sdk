@@ -30,7 +30,7 @@ import {
 	validateRequiredProperty,
 	validateTypedArray,
 } from "./validation-helpers";
-import { friendlyBindingNames } from ".";
+import { formatConfigSnippet, friendlyBindingNames } from ".";
 import type { CfWorkerInit } from "../deployment-bundle/worker";
 import type { Config, DevConfig, RawConfig, RawDevConfig } from "./config";
 import type {
@@ -73,7 +73,8 @@ export function isPagesConfig(rawConfig: RawConfig): boolean {
 export function normalizeAndValidateConfig(
 	rawConfig: RawConfig,
 	configPath: string | undefined,
-	args: NormalizeAndValidateConfigArgs
+	args: NormalizeAndValidateConfigArgs,
+	parsedFormat: Config["parsedFormat"] = "toml"
 ): {
 	config: Config;
 	diagnostics: Diagnostics;
@@ -173,7 +174,12 @@ export function normalizeAndValidateConfig(
 		diagnostics,
 		configPath,
 		rawConfig,
-		isDispatchNamespace
+		isDispatchNamespace,
+		"top level",
+		undefined,
+		undefined,
+		undefined,
+		parsedFormat
 	);
 
 	//TODO: find a better way to define the type of Args that can be passed to the normalizeAndValidateConfig()
@@ -211,7 +217,8 @@ export function normalizeAndValidateConfig(
 				envName,
 				topLevelEnv,
 				isLegacyEnv,
-				rawConfig
+				rawConfig,
+				parsedFormat
 			);
 			diagnostics.addChild(envDiagnostics);
 		} else if (!isPagesConfig(rawConfig)) {
@@ -223,7 +230,8 @@ export function normalizeAndValidateConfig(
 				envName,
 				topLevelEnv,
 				isLegacyEnv,
-				rawConfig
+				rawConfig,
+				parsedFormat
 			);
 			const envNames = rawConfig.env
 				? `The available configured environment names are: ${JSON.stringify(
@@ -1027,40 +1035,8 @@ const validateTailConsumers: ValidatorFn = (diagnostics, field, value) => {
 };
 
 /**
- * Validate top-level environment configuration and return the normalized values.
- */
-function normalizeAndValidateEnvironment(
-	diagnostics: Diagnostics,
-	configPath: string | undefined,
-	topLevelEnv: RawEnvironment,
-	isDispatchNamespace: boolean
-): Environment;
-/**
  * Validate the named environment configuration and return the normalized values.
  */
-function normalizeAndValidateEnvironment(
-	diagnostics: Diagnostics,
-	configPath: string | undefined,
-	rawEnv: RawEnvironment,
-	isDispatchNamespace: boolean,
-	envName: string,
-	topLevelEnv: Environment,
-	isLegacyEnv: boolean,
-	rawConfig: RawConfig
-): Environment;
-/**
- * Validate the named environment configuration and return the normalized values.
- */
-function normalizeAndValidateEnvironment(
-	diagnostics: Diagnostics,
-	configPath: string | undefined,
-	rawEnv: RawEnvironment,
-	isDispatchNamespace: boolean,
-	envName?: string,
-	topLevelEnv?: Environment,
-	isLegacyEnv?: boolean,
-	rawConfig?: RawConfig
-): Environment;
 function normalizeAndValidateEnvironment(
 	diagnostics: Diagnostics,
 	configPath: string | undefined,
@@ -1069,7 +1045,8 @@ function normalizeAndValidateEnvironment(
 	envName = "top level",
 	topLevelEnv?: Environment | undefined,
 	isLegacyEnv?: boolean,
-	rawConfig?: RawConfig | undefined
+	rawConfig?: RawConfig | undefined,
+	parsedFormat?: Config["parsedFormat"]
 ): Environment {
 	deprecated(
 		diagnostics,
@@ -1556,11 +1533,7 @@ function normalizeAndValidateEnvironment(
 		),
 	};
 
-	warnIfDurableObjectsHaveNoMigrations(
-		diagnostics,
-		environment.durable_objects,
-		environment.migrations
-	);
+	warnIfDurableObjectsHaveNoMigrations(diagnostics, environment, parsedFormat);
 
 	return environment;
 }
@@ -3431,18 +3404,18 @@ const validateObservability: ValidatorFn = (diagnostics, field, value) => {
 
 function warnIfDurableObjectsHaveNoMigrations(
 	diagnostics: Diagnostics,
-	durableObjects: Config["durable_objects"],
-	migrations: Config["migrations"]
+	config: Environment,
+	parsedFormat: Config["parsedFormat"]
 ) {
 	if (
-		Array.isArray(durableObjects.bindings) &&
-		durableObjects.bindings.length > 0
+		Array.isArray(config.durable_objects.bindings) &&
+		config.durable_objects.bindings.length > 0
 	) {
 		// intrinsic [durable_objects] implies [migrations]
-		const exportedDurableObjects = (durableObjects.bindings || []).filter(
-			(binding) => !binding.script_name
-		);
-		if (exportedDurableObjects.length > 0 && migrations.length === 0) {
+		const exportedDurableObjects = (
+			config.durable_objects.bindings || []
+		).filter((binding) => !binding.script_name);
+		if (exportedDurableObjects.length > 0 && config.migrations.length === 0) {
 			if (
 				!exportedDurableObjects.some(
 					(exportedDurableObject) =>
@@ -3456,11 +3429,14 @@ function warnIfDurableObjectsHaveNoMigrations(
 				diagnostics.warnings.push(dedent`
 				In wrangler.toml, you have configured [durable_objects] exported by this Worker (${durableObjectClassnames.join(", ")}), but no [migrations] for them. This may not work as expected until you add a [migrations] section to your wrangler.toml. Add this configuration to your wrangler.toml:
 
-				  \`\`\`
-				  [[migrations]]
-				  tag = "v1" # Should be unique for each entry
-				  new_classes = [${durableObjectClassnames.map((name) => `"${name}"`).join(", ")}]
-				  \`\`\`
+				\`\`\`
+				${formatConfigSnippet(
+					{
+						migrations: [{ tag: "v1", new_classes: durableObjectClassnames }],
+					},
+					parsedFormat
+				)}
+				\`\`\`
 
 				Refer to https://developers.cloudflare.com/durable-objects/reference/durable-objects-migrations/ for more details.`);
 			}

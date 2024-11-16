@@ -5317,13 +5317,13 @@ addEventListener('fetch', event => {});`
 			}
 
 			expect(err?.message.replaceAll(/\d/g, "X")).toMatchInlineSnapshot(`
-			        "A compatibility_date is required when publishing. Add the following to your wrangler.toml file:.
-			            \`\`\`
-			            compatibility_date = \\"XXXX-XX-XX\\"
-			            \`\`\`
-			            Or you could pass it in your terminal as \`--compatibility-date XXXX-XX-XX\`
-			        See https://developers.cloudflare.com/workers/platform/compatibility-dates for more information."
-		      `);
+				"A compatibility_date is required when publishing. Add the following to your wrangler.toml file:.
+				    \`\`\`
+				    {\\"compatibility_date\\":\\"XXXX-XX-XX\\"}
+				    \`\`\`
+				    Or you could pass it in your terminal as \`--compatibility-date XXXX-XX-XX\`
+				See https://developers.cloudflare.com/workers/platform/compatibility-dates for more information."
+			`);
 		});
 
 		it("should error if a compatibility_date is missing and suggest the correct month", async () => {
@@ -5340,13 +5340,13 @@ addEventListener('fetch', event => {});`
 			}
 
 			expect(err?.message).toMatchInlineSnapshot(`
-			"A compatibility_date is required when publishing. Add the following to your wrangler.toml file:.
-			    \`\`\`
-			    compatibility_date = \\"2020-12-01\\"
-			    \`\`\`
-			    Or you could pass it in your terminal as \`--compatibility-date 2020-12-01\`
-			See https://developers.cloudflare.com/workers/platform/compatibility-dates for more information."
-		`);
+				"A compatibility_date is required when publishing. Add the following to your wrangler.toml file:.
+				    \`\`\`
+				    {\\"compatibility_date\\":\\"2020-12-01\\"}
+				    \`\`\`
+				    Or you could pass it in your terminal as \`--compatibility-date 2020-12-01\`
+				See https://developers.cloudflare.com/workers/platform/compatibility-dates for more information."
+			`);
 		});
 
 		it("should enable the workers.dev domain if workers_dev is undefined and subdomain is not already available", async () => {
@@ -6090,24 +6090,25 @@ addEventListener('fetch', event => {});`
 			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`
-			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
 
-			    - In wrangler.toml, you have configured [durable_objects] exported by this Worker (SomeClass),
-			  but no [migrations] for them. This may not work as expected until you add a [migrations] section
-			  to your wrangler.toml. Add this configuration to your wrangler.toml:
+				    - In wrangler.toml, you have configured [durable_objects] exported by this Worker (SomeClass),
+				  but no [migrations] for them. This may not work as expected until you add a [migrations] section
+				  to your wrangler.toml. Add this configuration to your wrangler.toml:
 
-			        \`\`\`
-			        [[migrations]]
-			        tag = \\"v1\\" # Should be unique for each entry
-			        new_classes = [\\"SomeClass\\"]
-			        \`\`\`
+				      \`\`\`
+				      [[migrations]]
+				      tag = \\"v1\\"
+				      new_classes = [ \\"SomeClass\\" ]
 
-			      Refer to
-			  [4mhttps://developers.cloudflare.com/durable-objects/reference/durable-objects-migrations/[0m for more
-			  details.
+				      \`\`\`
 
-			"
-		`);
+				      Refer to
+				  [4mhttps://developers.cloudflare.com/durable-objects/reference/durable-objects-migrations/[0m for more
+				  details.
+
+				"
+			`);
 		});
 
 		it("does not warn if all the durable object bindings are to external classes", async () => {
