@@ -46,7 +46,7 @@ describe("Workflows", () => {
 		}
 	}
 
-	it.only("creates two instances with same id in two different workflows", async ({
+	it("creates two instances with same id in two different workflows", async ({
 		expect,
 	}) => {
 		const createResult = {

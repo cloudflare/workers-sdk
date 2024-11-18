@@ -53,9 +53,10 @@ export type DatabaseInstance = {
 	ended_on: string | null;
 };
 
+const ENGINE_STATUS_KEY = "ENGINE_STATUS";
+
 export class Engine extends DurableObject<Env> {
 	logs: Array<unknown> = [];
-	status: InstanceStatus = InstanceStatus.Queued;
 
 	isRunning: boolean = false;
 	accountId: number | undefined;
@@ -66,21 +67,32 @@ export class Engine extends DurableObject<Env> {
 
 	constructor(state: DurableObjectState, env: Env) {
 		super(state, env);
-
 		void this.ctx.blockConcurrencyWhile(async () => {
 			this.ctx.storage.transactionSync(() => {
-				this.ctx.storage.sql.exec(`
-                    CREATE TABLE IF NOT EXISTS priority_queue (
-                        id INTEGER PRIMARY KEY NOT NULL,
-                        created_on TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                        target_timestamp INTEGER NOT NULL,
-                        action INTEGER NOT NULL, -- should only be 0 or 1 (1 for added, 0 for deleted),
-                        entryType INTEGER NOT NULL,
-                        hash TEXT NOT NULL,
-                        CHECK (action IN (0, 1)), -- guararentee that action can only be 0 or 1
-                        UNIQUE (action, entryType, hash)
-                    )
-                `);
+				try {
+					this.ctx.storage.sql.exec(`
+						CREATE TABLE IF NOT EXISTS priority_queue (
+							id INTEGER PRIMARY KEY NOT NULL,
+							created_on TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+							target_timestamp INTEGER NOT NULL,
+							action INTEGER NOT NULL, -- should only be 0 or 1 (1 for added, 0 for deleted),
+							entryType INTEGER NOT NULL,
+							hash TEXT NOT NULL,
+							CHECK (action IN (0, 1)), -- guararentee that action can only be 0 or 1
+							UNIQUE (action, entryType, hash)
+						);
+						CREATE TABLE IF NOT EXISTS states (
+							id INTEGER PRIMARY KEY NOT NULL,
+							groupKey TEXT,
+							target TEXT,
+							metadata TEXT,
+							event INTEGER NOT NULL
+						)
+					`);
+				} catch (e) {
+					console.error(e);
+					throw e;
+				}
 			});
 		});
 
@@ -96,12 +108,13 @@ export class Engine extends DurableObject<Env> {
 		target: string | null = null,
 		metadata: Record<string, unknown>
 	) {
-		this.logs.push({
+		this.ctx.storage.sql.exec(
+			"INSERT INTO states (event, groupKey, target, metadata) VALUES (?, ?, ?, ?)",
 			event,
 			group,
 			target,
-			metadata,
-		});
+			JSON.stringify(metadata)
+		);
 	}
 
 	readLogsFromStep(_cacheKey: string): RawInstanceLog[] {
@@ -109,9 +122,19 @@ export class Engine extends DurableObject<Env> {
 	}
 
 	readLogs(): InstanceLogsResponse {
+		const logs = [
+			...this.ctx.storage.sql.exec<Record<string, string | number>>(
+				"SELECT event, groupKey, target, metadata FROM states"
+			),
+		];
+
 		return {
 			// @ts-expect-error TODO: Fix this
-			logs: this.logs,
+			logs: logs.map((log) => ({
+				...log,
+				metadata: JSON.parse(log.metadata as string),
+				group: log.groupKey,
+			})),
 		};
 	}
 
@@ -119,7 +142,13 @@ export class Engine extends DurableObject<Env> {
 		_accountId: number,
 		_instanceId: string
 	): Promise<InstanceStatus> {
-		return this.status;
+		const res = await this.ctx.storage.get<InstanceStatus>(ENGINE_STATUS_KEY);
+
+		// NOTE(lduarte): if status don't exist, means that engine is running for the first time, so we assume queued
+		if (res === undefined) {
+			return InstanceStatus.Queued;
+		}
+		return res;
 	}
 
 	async setStatus(
@@ -127,7 +156,7 @@ export class Engine extends DurableObject<Env> {
 		instanceId: string,
 		status: InstanceStatus
 	): Promise<void> {
-		this.status = status;
+		await this.ctx.storage.put(ENGINE_STATUS_KEY, status);
 	}
 
 	async abort(_reason: string) {

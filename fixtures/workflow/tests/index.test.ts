@@ -1,3 +1,4 @@
+import { rm } from "fs/promises";
 import { resolve } from "path";
 import { fetch } from "undici";
 import { afterAll, beforeAll, describe, it, vi } from "vitest";
@@ -10,6 +11,11 @@ describe("Workflows", () => {
 		getOutput: () => string;
 
 	beforeAll(async () => {
+		// delete previous run contents because of persistence
+		await rm(resolve(__dirname, "..") + "/.wrangler", {
+			force: true,
+			recursive: true,
+		});
 		({ ip, port, stop, getOutput } = await runWranglerDev(
 			resolve(__dirname, ".."),
 			[
