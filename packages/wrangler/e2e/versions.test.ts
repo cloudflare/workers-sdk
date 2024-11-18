@@ -1,5 +1,7 @@
+import { readFile } from "fs/promises";
+import path from "path";
 import dedent from "ts-dedent";
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 import { CLOUDFLARE_ACCOUNT_ID } from "./helpers/account-id";
 import { WranglerE2ETestHelper } from "./helpers/e2e-wrangler-test";
 import { generateResourceName } from "./helpers/generate-resource-name";
@@ -23,9 +25,10 @@ describe("versions deploy", { timeout: TIMEOUT }, () => {
 	let versionId0: string;
 	let versionId1: string;
 	let versionId2: string;
-	const helper = new WranglerE2ETestHelper();
+	let helper: WranglerE2ETestHelper;
 
-	it("deploy worker", async () => {
+	beforeAll(async () => {
+		helper = new WranglerE2ETestHelper();
 		await helper.seed({
 			"wrangler.toml": dedent`
 							name = "${workerName}"
@@ -630,6 +633,27 @@ describe("versions deploy", { timeout: TIMEOUT }, () => {
 			Changes to non-versioned settings (config properties 'logpush' or 'tail_consumers') take effect after your next deployment using the command wrangler versions deploy
 			Changes to triggers (routes, custom domains, cron schedules, etc) must be applied with the command wrangler triggers deploy"
 		`);
+	});
+
+	it("should include version preview url in output file", async () => {
+		const outputFile = path.join(helper.tmpPath, "output.jsonnd");
+		const upload = await helper.run(
+			`wrangler versions upload --message "Upload via e2e test" --tag "e2e-upload" --x-versions`,
+			{
+				env: {
+					...process.env,
+					WRANGLER_OUTPUT_FILE_PATH: outputFile,
+				},
+			}
+		);
+
+		versionId1 = matchVersionId(upload.stdout);
+
+		const output = await readFile(outputFile, "utf8");
+
+		expect(JSON.parse(normalizeOutput(output.split("\n")[1]))).toMatchObject({
+			preview_url: "https://tmp-e2e-worker-PREVIEW-URL.SUBDOMAIN.workers.dev",
+		});
 	});
 
 	it("should delete Worker", async () => {
