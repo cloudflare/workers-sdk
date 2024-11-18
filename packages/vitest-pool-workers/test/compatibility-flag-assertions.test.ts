@@ -157,7 +157,7 @@ describe("FlagAssertions", () => {
 		});
 	});
 
-	describe("assertUnionOfEnableFlags", () => {
+	describe("assertAtLeastOneFlagExists", () => {
 		it("returns true when at least one of the flags is present", () => {
 			const options = {
 				...baseOptions,
@@ -165,7 +165,7 @@ describe("FlagAssertions", () => {
 				compatibilityFlags: ["flag1", "flag2"],
 			};
 			const flagAssertions = new CompatibilityFlagAssertions(options);
-			const result = flagAssertions.assertUnionOfEnableFlags(["flag1"]);
+			const result = flagAssertions.assertAtLeastOneFlagExists(["flag1"]);
 			expect(result.isValid).toBe(true);
 		});
 
@@ -176,7 +176,7 @@ describe("FlagAssertions", () => {
 				compatibilityFlags: ["flag1", "flag2", "flag3"],
 			};
 			const flagAssertions = new CompatibilityFlagAssertions(options);
-			const result = flagAssertions.assertUnionOfEnableFlags([
+			const result = flagAssertions.assertAtLeastOneFlagExists([
 				"flag2",
 				"flag3",
 			]);
@@ -190,7 +190,7 @@ describe("FlagAssertions", () => {
 				compatibilityFlags: ["flag1"],
 			};
 			const flagAssertions = new CompatibilityFlagAssertions(options);
-			const result = flagAssertions.assertUnionOfEnableFlags([
+			const result = flagAssertions.assertAtLeastOneFlagExists([
 				"flag2",
 				"flag3",
 			]);
@@ -208,7 +208,7 @@ describe("FlagAssertions", () => {
 				relativeWranglerConfigPath: "wrangler.toml",
 			};
 			const flagAssertions = new CompatibilityFlagAssertions(options);
-			const result = flagAssertions.assertUnionOfEnableFlags([
+			const result = flagAssertions.assertAtLeastOneFlagExists([
 				"flag2",
 				"flag3",
 			]);
@@ -225,7 +225,7 @@ describe("FlagAssertions", () => {
 				compatibilityFlags: ["flag1", "flag2", "flag3"],
 			};
 			const flagAssertions = new CompatibilityFlagAssertions(options);
-			const result = flagAssertions.assertUnionOfEnableFlags([
+			const result = flagAssertions.assertAtLeastOneFlagExists([
 				"flag1",
 				"flag2",
 				"flag3",
@@ -240,7 +240,7 @@ describe("FlagAssertions", () => {
 				compatibilityFlags: [],
 			};
 			const flagAssertions = new CompatibilityFlagAssertions(options);
-			const result = flagAssertions.assertUnionOfEnableFlags([
+			const result = flagAssertions.assertAtLeastOneFlagExists([
 				"flag1",
 				"flag2",
 			]);
@@ -257,7 +257,7 @@ describe("FlagAssertions", () => {
 				compatibilityFlags: ["flag1"],
 			};
 			const flagAssertions = new CompatibilityFlagAssertions(options);
-			const result = flagAssertions.assertUnionOfEnableFlags([]);
+			const result = flagAssertions.assertAtLeastOneFlagExists([]);
 			expect(result.isValid).toBe(true);
 		});
 	});

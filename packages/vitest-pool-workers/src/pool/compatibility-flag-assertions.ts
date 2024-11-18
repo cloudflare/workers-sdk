@@ -21,7 +21,7 @@ export class CompatibilityFlagAssertions {
 	/**
 	 * Checks if a specific flag is present in the compatibilityFlags array.
 	 */
-	private isFlagPresent(flag: string): boolean {
+	#flagExists(flag: string): boolean {
 		return this.#compatibilityFlags.includes(flag);
 	}
 
@@ -70,14 +70,14 @@ export class CompatibilityFlagAssertions {
 		defaultOnDate?: string;
 	}): AssertionResult {
 		// If it's disabled by this flag, we can return early.
-		if (this.isFlagPresent(disableFlag)) {
+		if (this.#flagExists(disableFlag)) {
 			const errorMessage = `${this.#buildErrorMessageBase()}, ${this.#buildConfigPath(
 				"compatibility_flags"
 			)} must not contain "${disableFlag}".\nThis flag is incompatible with \`@cloudflare/vitest-pool-workers\`.`;
 			return { isValid: false, errorMessage };
 		}
 
-		const enableFlagPresent = this.isFlagPresent(enableFlag);
+		const enableFlagPresent = this.#flagExists(enableFlag);
 		const dateSufficient = isDateSufficient(
 			this.#compatibilityDate,
 			defaultOnDate
@@ -103,10 +103,10 @@ export class CompatibilityFlagAssertions {
 	}
 
 	/**
-	 * Ensures that a any one of a given set of flags is present.
+	 * Ensures that a any one of a given set of flags is present in the compatibility_flags array.
 	 */
-	assertUnionOfEnableFlags(flags: string[]): AssertionResult {
-		if (flags.length === 0 || flags.some((flag) => this.isFlagPresent(flag))) {
+	assertAtLeastOneFlagExists(flags: string[]): AssertionResult {
+		if (flags.length === 0 || flags.some((flag) => this.#flagExists(flag))) {
 			return { isValid: true };
 		}
 

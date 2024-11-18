@@ -357,7 +357,7 @@ function buildProjectWorkerOptions(
 				defaultOnDate: "2022-10-31",
 			}),
 		() =>
-			flagAssertions.assertUnionOfEnableFlags([
+			flagAssertions.assertAtLeastOneFlagExists([
 				"nodejs_compat",
 				"nodejs_compat_v2",
 			]),
