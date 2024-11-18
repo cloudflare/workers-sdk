@@ -28,7 +28,6 @@ import { confirm } from "../dialogs";
 import { getMigrationsToUpload } from "../durable";
 import { UserError } from "../errors";
 import { logger } from "../logger";
-import { getMetricsUsageHeaders } from "../metrics";
 import { isNavigatorDefined } from "../navigator-user-agent";
 import { APIError, ParseError, parseNonHyphenedUuid } from "../parse";
 import { getWranglerTmpDir } from "../paths";
@@ -832,7 +831,6 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 							{
 								method: "POST",
 								body: createWorkerUploadForm(worker),
-								headers: await getMetricsUsageHeaders(config.send_metrics),
 							}
 						)
 					);
@@ -874,7 +872,6 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 							{
 								method: "PUT",
 								body: createWorkerUploadForm(worker),
-								headers: await getMetricsUsageHeaders(config.send_metrics),
 							},
 							new URLSearchParams({
 								// pass excludeScript so the whole body of the

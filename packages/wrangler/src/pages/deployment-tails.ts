@@ -2,12 +2,10 @@ import { setTimeout } from "node:timers/promises";
 import onExit from "signal-exit";
 import { printWranglerBanner } from "..";
 import { fetchResult } from "../cfetch";
-import { readConfig } from "../config";
 import { getConfigCache } from "../config-cache";
 import { FatalError } from "../errors";
 import isInteractive from "../is-interactive";
 import { logger } from "../logger";
-import * as metrics from "../metrics";
 import {
 	createPagesTail,
 	jsonPrintLogs,
@@ -119,7 +117,6 @@ export async function Handler({
 	status,
 	format = "pretty",
 	debug,
-	...args
 }: StrictYargsOptionsToInterface<typeof Options>) {
 	if (status && !isStatusChoiceList(status)) {
 		throw new FatalError(
@@ -131,7 +128,6 @@ export async function Handler({
 		await printWranglerBanner();
 	}
 
-	const config = readConfig(args.config, args);
 	const pagesConfig = getConfigCache<PagesConfigCache>(
 		PAGES_CONFIG_CACHE_FILENAME
 	);
@@ -218,10 +214,6 @@ export async function Handler({
 		status,
 	});
 
-	await metrics.sendMetricsEvent("begin pages log stream", {
-		sendMetrics: config.send_metrics,
-	});
-
 	const { tail, deleteTail } = await createPagesTail({
 		accountId,
 		projectName,
@@ -240,9 +232,6 @@ export async function Handler({
 
 			tail.terminate();
 			await deleteTail();
-			await metrics.sendMetricsEvent("end pages log stream", {
-				sendMetrics: config.send_metrics,
-			});
 
 			didTerminate = true;
 		};
@@ -269,9 +258,6 @@ export async function Handler({
 				await setTimeout(100);
 				break;
 			case tail.CLOSED:
-				await metrics.sendMetricsEvent("end log stream", {
-					sendMetrics: config.send_metrics,
-				});
 				throw new Error(
 					`Connection to deployment ${deploymentId} closed unexpectedly.`
 				);

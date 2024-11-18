@@ -1,7 +1,6 @@
 import { processAssetsArg } from "../assets";
 import { readConfig } from "../config";
 import { getScriptName, isLegacyEnv, printWranglerBanner } from "../index";
-import * as metrics from "../metrics";
 import { requireAuth } from "../user";
 import triggersDeploy from "./deploy";
 import type {
@@ -59,13 +58,6 @@ async function triggersDeployHandler(
 
 	const config = readConfig(undefined, args);
 	const assetsOptions = processAssetsArg({ assets: undefined }, config);
-	await metrics.sendMetricsEvent(
-		"deploy worker triggers",
-		{},
-		{
-			sendMetrics: config.send_metrics,
-		}
-	);
 
 	const accountId = args.dryRun ? undefined : await requireAuth(config);
 

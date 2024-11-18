@@ -8,7 +8,6 @@ import { readConfig } from "../config";
 import { CommandLineArgsError, FatalError, UserError } from "../errors";
 import { printWranglerBanner } from "../index";
 import { logger } from "../logger";
-import * as metrics from "../metrics";
 import { requireAuth } from "../user";
 import { MAX_UPLOAD_SIZE } from "./constants";
 import * as Create from "./create";
@@ -537,9 +536,6 @@ export function r2(r2Yargs: CommonYargsArgv, subHelp: SubHelp) {
 					logger.log(`Deleting bucket ${fullBucketName}.`);
 					await deleteR2Bucket(accountId, args.bucket, args.jurisdiction);
 					logger.log(`Deleted bucket ${fullBucketName}.`);
-					await metrics.sendMetricsEvent("delete r2 bucket", {
-						sendMetrics: config.send_metrics,
-					});
 				}
 			);
 

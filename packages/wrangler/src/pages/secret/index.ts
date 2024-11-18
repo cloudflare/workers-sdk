@@ -9,7 +9,6 @@ import { FatalError } from "../../errors";
 import { printWranglerBanner } from "../../index";
 import isInteractive from "../../is-interactive";
 import { logger } from "../../logger";
-import * as metrics from "../../metrics";
 import { parseJSON, readFileSync } from "../../parse";
 import { requireAuth } from "../../user";
 import { readFromStdin, trimTrailingWhitespace } from "../../utils/std";
@@ -126,7 +125,7 @@ export const secret = (secretYargs: CommonYargsArgv, subHelp: SubHelp) => {
 			},
 			async (args) => {
 				await printWranglerBanner();
-				const { env, project, accountId, config } = await pagesProject(
+				const { env, project, accountId } = await pagesProject(
 					args.env,
 					args.projectName
 				);
@@ -161,10 +160,6 @@ export const secret = (secretYargs: CommonYargsArgv, subHelp: SubHelp) => {
 						}),
 					}
 				);
-
-				await metrics.sendMetricsEvent("create pages encrypted variable", {
-					sendMetrics: config?.send_metrics,
-				});
 
 				logger.log(`✨ Success! Uploaded secret ${args.key}`);
 			}
@@ -284,7 +279,7 @@ export const secret = (secretYargs: CommonYargsArgv, subHelp: SubHelp) => {
 			},
 			async (args) => {
 				await printWranglerBanner();
-				const { env, project, accountId, config } = await pagesProject(
+				const { env, project, accountId } = await pagesProject(
 					args.env,
 					args.projectName
 				);
@@ -315,9 +310,6 @@ export const secret = (secretYargs: CommonYargsArgv, subHelp: SubHelp) => {
 							}),
 						}
 					);
-					await metrics.sendMetricsEvent("delete pages encrypted variable", {
-						sendMetrics: config?.send_metrics,
-					});
 					logger.log(`✨ Success! Deleted secret ${args.key}`);
 				}
 			}
@@ -334,10 +326,7 @@ export const secret = (secretYargs: CommonYargsArgv, subHelp: SubHelp) => {
 			},
 			async (args) => {
 				await printWranglerBanner();
-				const { env, project, config } = await pagesProject(
-					args.env,
-					args.projectName
-				);
+				const { env, project } = await pagesProject(args.env, args.projectName);
 
 				const secrets = Object.entries(
 					project.deployment_configs[env].env_vars ?? {}
@@ -355,10 +344,6 @@ export const secret = (secretYargs: CommonYargsArgv, subHelp: SubHelp) => {
 				].join("\n");
 
 				logger.log(message);
-
-				await metrics.sendMetricsEvent("list pages encrypted variables", {
-					sendMetrics: config?.send_metrics,
-				});
 			}
 		);
 };

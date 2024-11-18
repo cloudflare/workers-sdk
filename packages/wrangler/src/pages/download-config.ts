@@ -8,7 +8,6 @@ import { getConfigCache } from "../config-cache";
 import { confirm } from "../dialogs";
 import { FatalError } from "../errors";
 import { logger } from "../logger";
-import * as metrics from "../metrics";
 import { printWranglerBanner } from "../update-check";
 import { requireAuth } from "../user";
 import { PAGES_CONFIG_CACHE_FILENAME } from "./constants";
@@ -303,7 +302,6 @@ export function Options(yargs: CommonYargsArgv) {
 }
 
 export const Handler = async ({ projectName, force }: DownloadConfigArgs) => {
-	void metrics.sendMetricsEvent("download pages config");
 	await printWranglerBanner();
 
 	const projectConfig = getConfigCache<PagesConfigCache>(

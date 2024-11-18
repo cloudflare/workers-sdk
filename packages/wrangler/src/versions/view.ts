@@ -1,6 +1,5 @@
 import { logRaw } from "@cloudflare/cli";
 import { UserError } from "../errors";
-import * as metrics from "../metrics";
 import { printWranglerBanner } from "../update-check";
 import { requireAuth } from "../user";
 import formatLabelledValues from "../utils/render-labelled-values";
@@ -44,13 +43,6 @@ export async function versionsViewHandler(args: VersionsViewArgs) {
 	}
 
 	const config = getConfig(args);
-	await metrics.sendMetricsEvent(
-		"view worker version",
-		{},
-		{
-			sendMetrics: config.send_metrics,
-		}
-	);
 
 	const accountId = await requireAuth(config);
 	const workerName = args.name ?? config.name;

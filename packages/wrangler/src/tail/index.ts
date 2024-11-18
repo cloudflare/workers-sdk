@@ -8,7 +8,6 @@ import {
 	printWranglerBanner,
 } from "../index";
 import { logger } from "../logger";
-import * as metrics from "../metrics";
 import { requireAuth } from "../user";
 import { getWorkerForZone } from "../zones";
 import {
@@ -99,9 +98,6 @@ export async function tailHandler(args: TailArgs) {
 				"For Pages, please run `wrangler pages deployment tail` instead."
 		);
 	}
-	await metrics.sendMetricsEvent("begin log stream", {
-		sendMetrics: config.send_metrics,
-	});
 
 	let scriptName;
 
@@ -170,9 +166,6 @@ export async function tailHandler(args: TailArgs) {
 				await setTimeout(100);
 				break;
 			case tail.CLOSED:
-				await metrics.sendMetricsEvent("end log stream", {
-					sendMetrics: config.send_metrics,
-				});
 				throw new Error(
 					`Connection to ${scriptDisplayName} closed unexpectedly.`
 				);
@@ -191,9 +184,6 @@ export async function tailHandler(args: TailArgs) {
 		cancelPing();
 		tail.terminate();
 		await deleteTail();
-		await metrics.sendMetricsEvent("end log stream", {
-			sendMetrics: config.send_metrics,
-		});
 	}
 
 	/**

@@ -2,7 +2,6 @@ import path from "path";
 import { logRaw } from "@cloudflare/cli";
 import { findWranglerToml, readConfig } from "../config";
 import { UserError } from "../errors";
-import * as metrics from "../metrics";
 import { printWranglerBanner } from "../update-check";
 import { requireAuth } from "../user";
 import formatLabelledValues from "../utils/render-labelled-values";
@@ -39,13 +38,6 @@ export async function versionsListHandler(args: VersionsListArgs) {
 	}
 
 	const config = getConfig(args);
-	await metrics.sendMetricsEvent(
-		"list worker versions",
-		{ json: args.json },
-		{
-			sendMetrics: config.send_metrics,
-		}
-	);
 
 	const accountId = await requireAuth(config);
 	const workerName = args.name ?? config.name;

@@ -8,10 +8,8 @@ import { confirm, prompt } from "./dialogs";
 import { UserError } from "./errors";
 import { mapBindings } from "./init";
 import { logger } from "./logger";
-import * as metrics from "./metrics";
 import { requireAuth } from "./user";
 import { getScriptName, printWranglerBanner } from ".";
-import type { Config } from "./config";
 import type { WorkerMetadataBinding } from "./deployment-bundle/create-worker-upload-form";
 import type { ServiceMetadataRes } from "./init";
 import type { CommonYargsOptions } from "./yargs-types";
@@ -52,17 +50,8 @@ export type DeploymentListResult = {
 
 export async function deployments(
 	accountId: string,
-	scriptName: string | undefined,
-	{ send_metrics: sendMetrics }: { send_metrics?: Config["send_metrics"] } = {}
+	scriptName: string | undefined
 ) {
-	await metrics.sendMetricsEvent(
-		"view deployments",
-		{ view: scriptName ? "single" : "all" },
-		{
-			sendMetrics,
-		}
-	);
-
 	const scriptTag = (
 		await fetchResult<ServiceMetadataRes>(
 			`/accounts/${accountId}/workers/services/${scriptName}`
@@ -136,7 +125,6 @@ function formatTrigger(trigger: string): string {
 export async function rollbackDeployment(
 	accountId: string,
 	scriptName: string | undefined,
-	{ send_metrics: sendMetrics }: { send_metrics?: Config["send_metrics"] } = {},
 	deploymentId: string | undefined,
 	message: string | undefined
 ) {
@@ -197,14 +185,6 @@ export async function rollbackDeployment(
 		rollbackMessage
 	);
 
-	await metrics.sendMetricsEvent(
-		"rollback deployments",
-		{ view: scriptName ? "single" : "all" },
-		{
-			sendMetrics,
-		}
-	);
-
 	deploymentId = addHyphens(deploymentId) ?? deploymentId;
 	rollbackVersion = addHyphens(rollbackVersion) ?? rollbackVersion;
 
@@ -237,17 +217,8 @@ async function rollbackRequest(
 export async function viewDeployment(
 	accountId: string,
 	scriptName: string | undefined,
-	{ send_metrics: sendMetrics }: { send_metrics?: Config["send_metrics"] } = {},
 	deploymentId: string | undefined
 ) {
-	await metrics.sendMetricsEvent(
-		"view deployments",
-		{ view: scriptName ? "single" : "all" },
-		{
-			sendMetrics,
-		}
-	);
-
 	const scriptTag = (
 		await fetchResult<ServiceMetadataRes>(
 			`/accounts/${accountId}/workers/services/${scriptName}`

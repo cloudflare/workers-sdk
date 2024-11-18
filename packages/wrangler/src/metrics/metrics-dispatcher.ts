@@ -34,26 +34,6 @@ export function getMetricsDispatcher(options: MetricsConfigOptions) {
 	let amplitude_event_id = 0;
 
 	return {
-		/**
-		 * Dispatch a event to the analytics target.
-		 *
-		 * The event should follow these conventions
-		 *  - name is of the form `[action] [object]` (lower case)
-		 *  - additional properties are camelCased
-		 */
-		async sendEvent(name: string, properties: Properties = {}): Promise<void> {
-			await dispatch({ type: "event", name, properties });
-		},
-
-		/**
-		 * Dispatch a user profile information to the analytics target.
-		 *
-		 * This call can be used to inform the analytics target of relevant properties associated
-		 * with the current user.
-		 */
-		async identify(properties: Properties): Promise<void> {
-			await dispatch({ type: "identify", name: "identify", properties });
-		},
 		async sendNewEvent<EventName extends Events["name"]>(
 			name: EventName,
 			properties: Omit<
@@ -61,12 +41,11 @@ export function getMetricsDispatcher(options: MetricsConfigOptions) {
 				keyof CommonEventProperties
 			>
 		): Promise<void> {
-			await dispatch({ type: "event", name, properties });
+			await dispatch({ name, properties });
 		},
 	};
 
 	async function dispatch(event: {
-		type: "identify" | "event";
 		name: string;
 		properties: Properties;
 	}): Promise<void> {
@@ -111,7 +90,7 @@ export function getMetricsDispatcher(options: MetricsConfigOptions) {
 
 		// Do not await this fetch call.
 		// Just fire-and-forget, otherwise we might slow down the rest of Wrangler.
-		fetch(`${SPARROW_URL}/api/v1/${event.type}`, {
+		fetch(`${SPARROW_URL}/api/v1/event`, {
 			method: "POST",
 			headers: {
 				Accept: "*/*",

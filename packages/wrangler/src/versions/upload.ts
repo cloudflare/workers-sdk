@@ -26,7 +26,6 @@ import { confirm } from "../dialogs";
 import { getMigrationsToUpload } from "../durable";
 import { UserError } from "../errors";
 import { logger } from "../logger";
-import { getMetricsUsageHeaders } from "../metrics";
 import { isNavigatorDefined } from "../navigator-user-agent";
 import { ParseError } from "../parse";
 import { getWranglerTmpDir } from "../paths";
@@ -492,7 +491,6 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 					}>(`${workerUrl}/versions`, {
 						method: "POST",
 						body,
-						headers: await getMetricsUsageHeaders(config.send_metrics),
 					})
 				);
 

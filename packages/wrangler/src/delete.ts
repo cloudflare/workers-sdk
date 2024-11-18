@@ -6,7 +6,6 @@ import { confirm } from "./dialogs";
 import { UserError } from "./errors";
 import { deleteKVNamespace, listKVNamespaces } from "./kv/helpers";
 import { logger } from "./logger";
-import * as metrics from "./metrics";
 import { requireAuth } from "./user";
 import { getScriptName, printWranglerBanner } from "./index";
 import type {
@@ -103,11 +102,6 @@ export async function deleteHandler(args: DeleteArgs) {
 				"For Pages, please run `wrangler pages project delete` instead."
 		);
 	}
-	await metrics.sendMetricsEvent(
-		"delete worker script",
-		{},
-		{ sendMetrics: config.send_metrics }
-	);
 
 	const accountId = args.dryRun ? undefined : await requireAuth(config);
 

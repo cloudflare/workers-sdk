@@ -2,7 +2,6 @@ import { printWranglerBanner } from "..";
 import { readConfig } from "../config";
 import { UserError } from "../errors";
 import { logger } from "../logger";
-import * as metrics from "../metrics";
 import { requireAuth } from "../user";
 import { getValidBindingName } from "../utils/getValidBindingName";
 import { LOCATION_CHOICES } from "./constants";
@@ -75,8 +74,4 @@ export async function Handler(args: HandlerOptions) {
 			`bucket_name = "${args.name}"\n` +
 			`binding = "${getValidBindingName(args.name, "r2")}"`
 	);
-
-	await metrics.sendMetricsEvent("create r2 bucket", {
-		sendMetrics: config.send_metrics,
-	});
 }

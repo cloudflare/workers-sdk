@@ -61,7 +61,6 @@ export type DevProps = {
 	forceLocal: boolean | undefined;
 	enablePagesAssetsServiceBinding?: EnablePagesAssetsServiceBindingOptions;
 	firstPartyWorker: boolean | undefined;
-	sendMetrics: boolean | undefined;
 	testScheduled: boolean | undefined;
 	projectRoot: string | undefined;
 	rawConfig: Config;

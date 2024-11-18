@@ -363,9 +363,9 @@ export function createCLIParser(argv: string[]) {
 					"Displays the 10 most recent deployments for a Worker",
 					async (listYargs) => listYargs,
 					async (listYargs) => {
-						const { accountId, scriptName, config } =
+						const { accountId, scriptName } =
 							await commonDeploymentCMDSetup(listYargs);
-						await deployments(accountId, scriptName, config);
+						await deployments(accountId, scriptName);
 					}
 				)
 				.command(
@@ -378,15 +378,10 @@ export function createCLIParser(argv: string[]) {
 							demandOption: false,
 						}),
 					async (viewYargs) => {
-						const { accountId, scriptName, config } =
+						const { accountId, scriptName } =
 							await commonDeploymentCMDSetup(viewYargs);
 
-						await viewDeployment(
-							accountId,
-							scriptName,
-							config,
-							viewYargs.deploymentId
-						);
+						await viewDeployment(accountId, scriptName, viewYargs.deploymentId);
 					}
 				)
 				.command(subHelp)
@@ -421,13 +416,12 @@ export function createCLIParser(argv: string[]) {
 						type: "string",
 					}),
 			async (rollbackYargs) => {
-				const { accountId, scriptName, config } =
+				const { accountId, scriptName } =
 					await commonDeploymentCMDSetup(rollbackYargs);
 
 				await rollbackDeployment(
 					accountId,
 					scriptName,
-					config,
 					rollbackYargs.deploymentId,
 					rollbackYargs.message
 				);

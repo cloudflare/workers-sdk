@@ -12,7 +12,6 @@ import {
 } from "../index";
 import { logger } from "../logger";
 import { verifyWorkerMatchesCITag } from "../match-tag";
-import * as metrics from "../metrics";
 import { writeOutput } from "../output";
 import { getLegacyAssetPaths, getSiteAssetPaths } from "../sites";
 import { requireAuth } from "../user";
@@ -317,7 +316,6 @@ export async function deployHandler(args: DeployArgs) {
 		await standardPricingWarning(config);
 	}
 
-	const beforeUpload = Date.now();
 	const name = getScriptName(args, config);
 	assert(
 		name,
@@ -332,7 +330,7 @@ export async function deployHandler(args: DeployArgs) {
 			path.relative(entry.directory, config.configPath ?? "wrangler.toml")
 		);
 	}
-	const { sourceMapSize, versionId, workerTag, targets } = await deploy({
+	const { versionId, workerTag, targets } = await deploy({
 		config,
 		accountId,
 		name,
@@ -377,16 +375,4 @@ export async function deployHandler(args: DeployArgs) {
 		version_id: versionId,
 		targets,
 	});
-
-	await metrics.sendMetricsEvent(
-		"deploy worker script",
-		{
-			usesTypeScript: /\.tsx?$/.test(entry.file),
-			durationMs: Date.now() - beforeUpload,
-			sourceMapSize,
-		},
-		{
-			sendMetrics: config.send_metrics,
-		}
-	);
 }

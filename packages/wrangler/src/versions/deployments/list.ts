@@ -2,7 +2,6 @@ import assert from "assert";
 import { logRaw } from "@cloudflare/cli";
 import { brandColor, gray } from "@cloudflare/cli/colors";
 import { UserError } from "../../errors";
-import * as metrics from "../../metrics";
 import { printWranglerBanner } from "../../update-check";
 import { requireAuth } from "../../user";
 import formatLabelledValues from "../../utils/render-labelled-values";
@@ -42,14 +41,6 @@ export async function versionsDeploymentsListHandler(
 	}
 
 	const config = getConfig(args);
-	await metrics.sendMetricsEvent(
-		"list versioned deployments",
-		{ json: args.json },
-		{
-			sendMetrics: config.send_metrics,
-		}
-	);
-
 	const accountId = await requireAuth(config);
 	const workerName = args.name ?? config.name;
 

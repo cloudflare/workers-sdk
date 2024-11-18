@@ -107,7 +107,6 @@ export async function versionsSecretDeleteHandler(
 			secrets: newSecrets,
 			versionMessage: args.message ?? `Deleted secret "${args.key}"`,
 			versionTag: args.tag,
-			sendMetrics: config.send_metrics,
 			overrideAllSecrets: true,
 		});
 
