@@ -80,14 +80,6 @@ export interface StartDevWorkerInput {
 	/** The triggers which will cause the worker's exported default handlers to be called. */
 	triggers?: Trigger[];
 
-	/**
-	 * Whether Wrangler should send usage metrics to Cloudflare for this project.
-	 *
-	 * When defined this will override any user settings.
-	 * Otherwise, Wrangler will use the user's preference.
-	 */
-	sendMetrics?: boolean;
-
 	/** Options applying to the worker's build step. Applies to deploy and dev. */
 	build?: {
 		/** Whether the worker and its dependencies are bundled. Defaults to true. */

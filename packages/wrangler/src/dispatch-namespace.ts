@@ -1,7 +1,6 @@
 import { fetchResult } from "./cfetch";
 import { readConfig } from "./config";
 import { logger } from "./logger";
-import * as metrics from "./metrics";
 import { requireAuth } from "./user";
 import { printWranglerBanner } from ".";
 import type { CommonYargsArgv, CommonYargsOptions } from "./yargs-types";
@@ -116,9 +115,6 @@ export function workerNamespaceCommands(
 				const config = readConfig(args.config, args);
 				const accountId = await requireAuth(config);
 				await listWorkerNamespaces(accountId);
-				await metrics.sendMetricsEvent("list dispatch namespaces", {
-					sendMetrics: config.send_metrics,
-				});
 			}
 		)
 		.command(
@@ -135,9 +131,6 @@ export function workerNamespaceCommands(
 				const config = readConfig(args.config, args);
 				const accountId = await requireAuth(config);
 				await getWorkerNamespaceInfo(accountId, args.name);
-				await metrics.sendMetricsEvent("view dispatch namespace", {
-					sendMetrics: config.send_metrics,
-				});
 			}
 		)
 		.command(
@@ -155,9 +148,6 @@ export function workerNamespaceCommands(
 				const config = readConfig(args.config, args);
 				const accountId = await requireAuth(config);
 				await createWorkerNamespace(accountId, args.name);
-				await metrics.sendMetricsEvent("create dispatch namespace", {
-					sendMetrics: config.send_metrics,
-				});
 			}
 		)
 		.command(
@@ -175,9 +165,6 @@ export function workerNamespaceCommands(
 				const config = readConfig(args.config, args);
 				const accountId = await requireAuth(config);
 				await deleteWorkerNamespace(accountId, args.name);
-				await metrics.sendMetricsEvent("delete dispatch namespace", {
-					sendMetrics: config.send_metrics,
-				});
 			}
 		)
 		.command(
@@ -201,9 +188,6 @@ export function workerNamespaceCommands(
 				const config = readConfig(args.config, args);
 				const accountId = await requireAuth(config);
 				await renameWorkerNamespace(accountId, args.oldName, args.newName);
-				await metrics.sendMetricsEvent("rename dispatch namespace", {
-					sendMetrics: config.send_metrics,
-				});
 			}
 		);
 }

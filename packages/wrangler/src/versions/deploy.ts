@@ -13,7 +13,6 @@ import { findWranglerToml, readConfig } from "../config";
 import { UserError } from "../errors";
 import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
-import * as metrics from "../metrics";
 import { writeOutput } from "../output";
 import { APIError } from "../parse";
 import { printWranglerBanner } from "../update-check";
@@ -104,13 +103,6 @@ export async function versionsDeployHandler(args: VersionsDeployArgs) {
 	await printWranglerBanner();
 
 	const config = getConfig(args);
-	await metrics.sendMetricsEvent(
-		"deploy worker versions",
-		{},
-		{
-			sendMetrics: config.send_metrics,
-		}
-	);
 
 	const accountId = await requireAuth(config);
 	const workerName = args.name ?? config.name;

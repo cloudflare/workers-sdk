@@ -6,7 +6,6 @@ import { getConfigCache, saveToConfigCache } from "../config-cache";
 import { prompt, select } from "../dialogs";
 import { FatalError } from "../errors";
 import { logger } from "../logger";
-import * as metrics from "../metrics";
 import { writeOutput } from "../output";
 import { requireAuth } from "../user";
 import {
@@ -286,7 +285,6 @@ export const Handler = async (args: PagesDeployArgs) => {
 				});
 
 				logger.log(`✨ Successfully created the '${projectName}' project.`);
-				await metrics.sendMetricsEvent("create pages project");
 				break;
 			}
 		}
@@ -455,8 +453,6 @@ ${failureMessage}`,
 		alias,
 		environment: deploymentResponse.environment,
 	});
-
-	await metrics.sendMetricsEvent("create pages deployment");
 };
 
 type NewOrExistingItem = {

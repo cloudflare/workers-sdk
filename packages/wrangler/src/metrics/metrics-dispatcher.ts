@@ -34,17 +34,6 @@ export function getMetricsDispatcher(options: MetricsConfigOptions) {
 	let amplitude_event_id = 0;
 
 	return {
-		/**
-		 * Dispatch a event to the analytics target.
-		 *
-		 * The event should follow these conventions
-		 *  - name is of the form `[action] [object]` (lower case)
-		 *  - additional properties are camelCased
-		 */
-		async sendEvent(name: string, properties: Properties = {}): Promise<void> {
-			await dispatch({ type: "event", name, properties });
-		},
-
 		async sendNewEvent<EventName extends Events["name"]>(
 			name: EventName,
 			properties: Omit<

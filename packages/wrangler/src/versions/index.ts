@@ -12,7 +12,6 @@ import {
 } from "../index";
 import { logger } from "../logger";
 import { verifyWorkerMatchesCITag } from "../match-tag";
-import * as metrics from "../metrics";
 import { writeOutput } from "../output";
 import { requireAuth } from "../user";
 import { collectKeyValues } from "../utils/collectKeyValues";
@@ -204,15 +203,6 @@ async function versionsUploadHandler(
 	const projectRoot = configPath && path.dirname(configPath);
 	const config = readConfig(configPath, args);
 	const entry = await getEntry(args, config, "versions upload");
-	await metrics.sendMetricsEvent(
-		"upload worker version",
-		{
-			usesTypeScript: /\.tsx?$/.test(entry.file),
-		},
-		{
-			sendMetrics: config.send_metrics,
-		}
-	);
 
 	if (args.site || config.site) {
 		throw new UserError(

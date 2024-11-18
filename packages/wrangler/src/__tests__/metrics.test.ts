@@ -55,7 +55,7 @@ describe("metrics", () => {
 			it("should send a request to the default URL", async () => {
 				const requests = mockMetricRequest(
 					{
-						event: "some-event",
+						event: "wrangler command started",
 						properties: {
 							category: "Workers",
 							wranglerVersion,
@@ -70,7 +70,7 @@ describe("metrics", () => {
 					"event"
 				);
 				const dispatcher = await getMetricsDispatcher(MOCK_DISPATCHER_OPTIONS);
-				await dispatcher.sendEvent("some-event", { a: 1, b: 2 });
+				await dispatcher.sendEvent("wrangler command started", { a: 1, b: 2 });
 
 				expect(requests.count).toBe(1);
 				expect(std.debug).toMatchInlineSnapshot(

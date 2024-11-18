@@ -80,7 +80,6 @@ async function expectedHostAndZone(
 			}),
 		env: undefined,
 		legacyEnv: undefined,
-		sendMetrics: undefined,
 	});
 
 	expect(ctx).toEqual(
