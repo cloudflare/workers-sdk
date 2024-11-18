@@ -51,84 +51,6 @@ describe("metrics", () => {
 			expect(userRequests.count).toBe(0);
 		});
 
-		describe("identify()", () => {
-			it("should send a request to the default URL", async () => {
-				const request = mockMetricRequest(
-					{
-						event: "identify",
-						properties: {
-							category: "Workers",
-							wranglerVersion,
-							os: process.platform + ":" + process.arch,
-							a: 1,
-							b: 2,
-						},
-					},
-					{ "Sparrow-Source-Key": "MOCK_KEY" },
-					"identify"
-				);
-				const dispatcher = await getMetricsDispatcher(MOCK_DISPATCHER_OPTIONS);
-				await dispatcher.identify({ a: 1, b: 2 });
-
-				expect(request.count).toBe(1);
-				expect(std.debug).toMatchInlineSnapshot(
-					`"Metrics dispatcher: Posting data {\\"type\\":\\"identify\\",\\"name\\":\\"identify\\",\\"properties\\":{\\"a\\":1,\\"b\\":2}}"`
-				);
-				expect(std.out).toMatchInlineSnapshot(`""`);
-				expect(std.warn).toMatchInlineSnapshot(`""`);
-				expect(std.err).toMatchInlineSnapshot(`""`);
-			});
-
-			it("should write a debug log if the dispatcher is disabled", async () => {
-				const requests = mockMetricRequest({}, {}, "identify");
-				const dispatcher = await getMetricsDispatcher({
-					...MOCK_DISPATCHER_OPTIONS,
-					sendMetrics: false,
-				});
-				await dispatcher.identify({ a: 1, b: 2 });
-				await flushPromises();
-
-				expect(requests.count).toBe(0);
-				expect(std.debug).toMatchInlineSnapshot(
-					`"Metrics dispatcher: Dispatching disabled - would have sent {\\"type\\":\\"identify\\",\\"name\\":\\"identify\\",\\"properties\\":{\\"a\\":1,\\"b\\":2}}."`
-				);
-				expect(std.out).toMatchInlineSnapshot(`""`);
-				expect(std.warn).toMatchInlineSnapshot(`""`);
-				expect(std.err).toMatchInlineSnapshot(`""`);
-			});
-
-			it("should write a debug log if the request fails", async () => {
-				msw.use(
-					http.post("*/identify", async () => {
-						return HttpResponse.error();
-					})
-				);
-
-				const dispatcher = await getMetricsDispatcher(MOCK_DISPATCHER_OPTIONS);
-				await dispatcher.identify({ a: 1, b: 2 });
-				await flushPromises();
-				expect(std.debug).toMatchInlineSnapshot(`
-					"Metrics dispatcher: Posting data {\\"type\\":\\"identify\\",\\"name\\":\\"identify\\",\\"properties\\":{\\"a\\":1,\\"b\\":2}}
-					Metrics dispatcher: Failed to send request: Failed to fetch"
-				`);
-				expect(std.out).toMatchInlineSnapshot(`""`);
-				expect(std.warn).toMatchInlineSnapshot(`""`);
-				expect(std.err).toMatchInlineSnapshot(`""`);
-			});
-
-			it("should write a warning log if no source key has been provided", async () => {
-				global.SPARROW_SOURCE_KEY = undefined;
-				const dispatcher = await getMetricsDispatcher(MOCK_DISPATCHER_OPTIONS);
-				await dispatcher.identify({ a: 1, b: 2 });
-				expect(std.debug).toMatchInlineSnapshot(
-					`"Metrics dispatcher: Source Key not provided. Be sure to initialize before sending events. { type: 'identify', name: 'identify', properties: { a: 1, b: 2 } }"`
-				);
-				expect(std.out).toMatchInlineSnapshot(`""`);
-				expect(std.warn).toMatchInlineSnapshot(`""`);
-				expect(std.err).toMatchInlineSnapshot(`""`);
-			});
-		});
-
 		describe("sendEvent()", () => {
 			it("should send a request to the default URL", async () => {
 				const requests = mockMetricRequest(
@@ -554,15 +476,11 @@ function mockUserRequest() {
 	return requests;
 }
 
-function mockMetricRequest(
-	body: unknown,
-	header: unknown,
-	endpoint: "identify" | "event"
-) {
+function mockMetricRequest(body: unknown, header: unknown) {
 	const requests = { count: 0 };
 	msw.use(
 		http.post(
-			`*/${endpoint}`,
+			`*/event`,
 			async ({ request }) => {
 				requests.count++;
 				expect(await request.json()).toEqual(body);
