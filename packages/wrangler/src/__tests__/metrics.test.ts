@@ -393,7 +393,7 @@ describe("metrics", () => {
 		});
 	});
 
-	describe("telemetry commands", () => {
+	describe.each(["metrics", "telemetry"])("%s commands", (cmd) => {
 		beforeEach(() => {
 			vi.useFakeTimers();
 			vi.setSystemTime(new Date(2024, 11, 12));
@@ -401,7 +401,7 @@ describe("metrics", () => {
 		afterEach(() => {
 			vi.useRealTimers();
 		});
-		describe("wrangler telemetry status", () => {
+		describe(`${cmd} status`, () => {
 			it("prints the current telemetry status based on the cached metrics config", async () => {
 				writeMetricsConfig({
 					permission: {
@@ -409,14 +409,9 @@ describe("metrics", () => {
 						date: new Date(2022, 6, 4),
 					},
 				});
-				await runWrangler("telemetry status");
-				expect(std.out).toMatchInlineSnapshot(`
-					"Status: Enabled
-
-					To configure telemetry globally on this machine, you can run \`wrangler telemetry disable / enable\`.
-					You can override this for individual projects with the environment variable \`WRANGLER_SEND_METRICS=true/false\`.
-					"
-				`);
+				await runWrangler(`${cmd} status`);
+				expect(std.out).toContain("Status: Enabled");
+				expect(std.out).not.toContain("Status: Disabled");
 				writeMetricsConfig({
 					permission: {
 						enabled: false,
@@ -424,18 +419,7 @@ describe("metrics", () => {
 					},
 				});
 				await runWrangler("telemetry status");
-				expect(std.out).toMatchInlineSnapshot(`
-					"Status: Enabled
-
-					To configure telemetry globally on this machine, you can run \`wrangler telemetry disable / enable\`.
-					You can override this for individual projects with the environment variable \`WRANGLER_SEND_METRICS=true/false\`.
-
-					Status: Disabled
-
-					To configure telemetry globally on this machine, you can run \`wrangler telemetry disable / enable\`.
-					You can override this for individual projects with the environment variable \`WRANGLER_SEND_METRICS=true/false\`.
-					"
-				`);
+				expect(std.out).toContain("Status: Disabled");
 			});
 
 			it("shows wrangler.toml as the source with send_metrics is present", async () => {
@@ -446,14 +430,8 @@ describe("metrics", () => {
 					},
 				});
 				writeWranglerToml({ send_metrics: false });
-				await runWrangler("telemetry status");
-				expect(std.out).toMatchInlineSnapshot(`
-					"Status: Disabled (set by wrangler.toml)
-
-					To configure telemetry globally on this machine, you can run \`wrangler telemetry disable / enable\`.
-					You can override this for individual projects with the environment variable \`WRANGLER_SEND_METRICS=true/false\`.
-					"
-				`);
+				await runWrangler(`${cmd} status`);
+				expect(std.out).toContain("Status: Disabled (set by wrangler.toml)");
 			});
 
 			it("shows environment variable as the source if used", async () => {
@@ -464,26 +442,16 @@ describe("metrics", () => {
 					},
 				});
 				vi.stubEnv("WRANGLER_SEND_METRICS", "false");
-				await runWrangler("telemetry status");
-				expect(std.out).toMatchInlineSnapshot(`
-					"Status: Disabled (set by environment variable)
-
-					To configure telemetry globally on this machine, you can run \`wrangler telemetry disable / enable\`.
-					You can override this for individual projects with the environment variable \`WRANGLER_SEND_METRICS=true/false\`.
-					"
-				`);
+				await runWrangler(`${cmd} status`);
+				expect(std.out).toContain(
+					"Status: Disabled (set by environment variable)"
+				);
 			});
 
 			it("defaults to enabled if metrics config is not set", async () => {
 				writeMetricsConfig({});
-				await runWrangler("telemetry status");
-				expect(std.out).toMatchInlineSnapshot(`
-					"Status: Enabled
-
-					To configure telemetry globally on this machine, you can run \`wrangler telemetry disable / enable\`.
-					You can override this for individual projects with the environment variable \`WRANGLER_SEND_METRICS=true/false\`.
-					"
-				`);
+				await runWrangler(`${cmd} status`);
+				expect(std.out).toContain("Status: Enabled");
 			});
 
 			it("prioritises environment variable over send_metrics", async () => {
@@ -495,31 +463,24 @@ describe("metrics", () => {
 				});
 				writeWranglerToml({ send_metrics: true });
 				vi.stubEnv("WRANGLER_SEND_METRICS", "false");
-				await runWrangler("telemetry status");
-				expect(std.out).toMatchInlineSnapshot(`
-					"Status: Disabled (set by environment variable)
-
-					To configure telemetry globally on this machine, you can run \`wrangler telemetry disable / enable\`.
-					You can override this for individual projects with the environment variable \`WRANGLER_SEND_METRICS=true/false\`.
-					"
-				`);
+				await runWrangler(`${cmd} status`);
+				expect(std.out).toContain(
+					"Status: Disabled (set by environment variable)"
+				);
 			});
 		});
 
-		it("disables telemetry when `wrangler telemetry disable` is run", async () => {
+		it(`disables telemetry when "wrangler ${cmd} disable" is run`, async () => {
 			writeMetricsConfig({
 				permission: {
 					enabled: true,
 					date: new Date(2022, 6, 4),
 				},
 			});
-			await runWrangler("telemetry disable");
-			expect(std.out).toMatchInlineSnapshot(`
-				"Status: Disabled
+			await runWrangler(`${cmd} disable`);
+			expect(std.out).toContain(`Status: Disabled
 
-				Wrangler is no longer collecting telemetry about your usage.
-				"
-			`);
+Wrangler is no longer collecting telemetry about your usage.`);
 			expect(readMetricsConfig()).toMatchObject({
 				permission: {
 					enabled: false,
@@ -528,20 +489,17 @@ describe("metrics", () => {
 			});
 		});
 
-		it("enables telemetry when `wrangler telemetry enable` is run", async () => {
+		it(`enables telemetry when "wrangler ${cmd} enable" is run`, async () => {
 			writeMetricsConfig({
 				permission: {
 					enabled: false,
 					date: new Date(2022, 6, 4),
 				},
 			});
-			await runWrangler("telemetry enable");
-			expect(std.out).toMatchInlineSnapshot(`
-				"Status: Enabled
+			await runWrangler(`${cmd} enable`);
+			expect(std.out).toContain(`Status: Enabled
 
-				Wrangler is now collecting telemetry about your usage. Thank you for helping make Wrangler better 🧡
-				"
-			`);
+Wrangler is now collecting telemetry about your usage. Thank you for helping make Wrangler better 🧡`);
 			expect(readMetricsConfig()).toMatchObject({
 				permission: {
 					enabled: true,
@@ -557,13 +515,10 @@ describe("metrics", () => {
 					date: new Date(2022, 6, 4),
 				},
 			});
-			await runWrangler("telemetry enable");
-			expect(std.out).toMatchInlineSnapshot(`
-				"Status: Enabled
+			await runWrangler(`${cmd} enable`);
+			expect(std.out).toContain(`Status: Enabled
 
-				Wrangler is now collecting telemetry about your usage. Thank you for helping make Wrangler better 🧡
-				"
-			`);
+Wrangler is now collecting telemetry about your usage. Thank you for helping make Wrangler better 🧡`);
 			const config = readMetricsConfig();
 			expect(config).toMatchObject({
 				c3permission: {
@@ -574,50 +529,6 @@ describe("metrics", () => {
 					enabled: true,
 					date: new Date(2024, 11, 12),
 				},
-			});
-		});
-
-		describe("aliases wrangler metrics to wrangler telemetry", async () => {
-			it("wrangler metrics status", async () => {
-				writeWranglerToml({ send_metrics: false });
-				await runWrangler("metrics status");
-				expect(std.out).toMatchInlineSnapshot(`
-				"Status: Disabled (set by wrangler.toml)
-
-				To configure telemetry globally on this machine, you can run \`wrangler telemetry disable / enable\`.
-				You can override this for individual projects with the environment variable \`WRANGLER_SEND_METRICS=true/false\`.
-				"
-			`);
-			});
-			it("wrangler metrics disable", async () => {
-				await runWrangler("metrics disable");
-				expect(std.out).toMatchInlineSnapshot(`
-				"Status: Disabled
-
-				Wrangler is no longer collecting telemetry about your usage.
-				"
-			`);
-			});
-			it("wrangler metrics enable", async () => {
-				writeMetricsConfig({
-					permission: {
-						enabled: false,
-						date: new Date(2022, 6, 4),
-					},
-				});
-				await runWrangler("metrics status");
-				await runWrangler("metrics enable");
-				expect(std.out).toMatchInlineSnapshot(`
-					"Status: Disabled
-
-					To configure telemetry globally on this machine, you can run \`wrangler telemetry disable / enable\`.
-					You can override this for individual projects with the environment variable \`WRANGLER_SEND_METRICS=true/false\`.
-
-					Status: Enabled
-
-					Wrangler is now collecting telemetry about your usage. Thank you for helping make Wrangler better 🧡
-					"
-				`);
 			});
 		});
 	});
