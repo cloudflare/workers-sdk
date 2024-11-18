@@ -18,4 +18,12 @@ export default defineConfig([
 		noExternal: ['vite/module-runner'],
 		tsconfig: 'tsconfig.runner.json',
 	},
+	{
+		entry: ['src/assets/router-worker.ts', 'src/assets/asset-worker.ts'],
+		format: 'esm',
+		platform: 'neutral',
+		outDir: 'dist/assets',
+		external: ['cloudflare:workers'],
+		tsconfig: 'tsconfig.assets.json',
+	},
 ]);

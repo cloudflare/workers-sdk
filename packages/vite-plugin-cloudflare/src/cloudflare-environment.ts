@@ -2,6 +2,7 @@ import { builtinModules } from 'node:module';
 import * as vite from 'vite';
 import { getNodeCompatExternals } from './node-js-compat';
 import { INIT_PATH, invariant, UNKNOWN_HOST } from './shared';
+import { toMiniflareRequest } from './utils';
 import type { NormalizedPluginConfig, WorkerOptions } from './plugin-config';
 import type { Fetcher } from '@cloudflare/workers-types/experimental';
 import type {
@@ -110,12 +111,7 @@ export class CloudflareDevEnvironment extends vite.DevEnvironment {
 	async dispatchFetch(request: Request) {
 		invariant(this.#worker, 'Runner not initialized');
 
-		return this.#worker.fetch(request.url, {
-			method: request.method,
-			headers: [['accept-encoding', 'identity'], ...request.headers],
-			body: request.body,
-			duplex: 'half',
-		}) as any;
+		return this.#worker.fetch(toMiniflareRequest(request)) as any;
 	}
 }
 

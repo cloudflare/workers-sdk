@@ -23,6 +23,7 @@
 		"miniflare": "^3.20241004.0"
 	},
 	"devDependencies": {
+		"@cloudflare/workers-shared": "^0.7.0",
 		"@cloudflare/workers-types": "catalog:default",
 		"@types/node": "catalog:default",
 		"@vite-plugin-cloudflare/typescript-config": "workspace:*",

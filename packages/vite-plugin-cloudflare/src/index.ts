@@ -2,6 +2,7 @@ import path from 'node:path';
 import { createMiddleware } from '@hattip/adapter-node';
 import { Miniflare } from 'miniflare';
 import * as vite from 'vite';
+import { getRouterWorker } from './assets';
 import {
 	createCloudflareEnvironmentOptions,
 	initRunners,
@@ -14,7 +15,7 @@ import {
 } from './node-js-compat';
 import { normalizePluginConfig } from './plugin-config';
 import { invariant } from './shared';
-import type { CloudflareDevEnvironment } from './cloudflare-environment';
+import { toMiniflareRequest } from './utils';
 import type {
 	NormalizedPluginConfig,
 	PluginConfig,
@@ -25,7 +26,6 @@ export function cloudflare<T extends Record<string, WorkerOptions>>(
 	pluginConfig: PluginConfig<T>,
 ): vite.Plugin {
 	let viteConfig: vite.ResolvedConfig;
-
 	let normalizedPluginConfig: NormalizedPluginConfig;
 
 	return {
@@ -38,7 +38,7 @@ export function cloudflare<T extends Record<string, WorkerOptions>>(
 				appType: 'custom',
 				builder: {
 					async buildApp(builder) {
-						const environments = Object.keys(pluginConfig.workers).map(
+						const environments = Object.keys(pluginConfig.workers ?? {}).map(
 							(name) => {
 								const environment = builder.environments[name];
 								invariant(environment, `${name} environment not found`);
@@ -54,10 +54,12 @@ export function cloudflare<T extends Record<string, WorkerOptions>>(
 				},
 				// Ensure there is an environment for each worker
 				environments: Object.fromEntries(
-					Object.entries(pluginConfig.workers).map(([name, workerOptions]) => [
-						name,
-						createCloudflareEnvironmentOptions(workerOptions),
-					]),
+					Object.entries(pluginConfig.workers ?? {}).map(
+						([name, workerOptions]) => [
+							name,
+							createCloudflareEnvironmentOptions(workerOptions),
+						],
+					),
 				),
 			};
 		},
@@ -129,26 +131,19 @@ export function cloudflare<T extends Record<string, WorkerOptions>>(
 				}
 			});
 
-			const middleware =
-				pluginConfig.entryWorker &&
-				createMiddleware(
-					(context) => {
-						return (
-							viteDevServer.environments[
-								pluginConfig.entryWorker as string
-							] as CloudflareDevEnvironment
-						).dispatchFetch(context.request);
-					},
-					{ alwaysCallNext: false },
-				);
+			const middleware = createMiddleware(async ({ request }) => {
+				const routerWorker = await getRouterWorker(miniflare);
+
+				return routerWorker.fetch(toMiniflareRequest(request), {
+					redirect: 'manual',
+				}) as any;
+			});
 
 			return () => {
 				viteDevServer.middlewares.use((req, res, next) => {
 					if (error) {
 						throw error;
 					}
-
-					req.url = req.originalUrl;
 
 					if (!middleware) {
 						next();

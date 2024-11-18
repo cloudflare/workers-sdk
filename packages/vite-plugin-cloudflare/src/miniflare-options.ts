@@ -1,8 +1,14 @@
 import * as fs from 'node:fs';
+import * as fsp from 'node:fs/promises';
 import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Log, LogLevel, Response as MiniflareResponse } from 'miniflare';
 import * as vite from 'vite';
+import {
+	ASSET_WORKER_NAME,
+	ASSET_WORKERS_COMPATIBILITY_DATE,
+	ROUTER_WORKER_NAME,
+} from './assets';
 import { invariant } from './shared';
 import type { CloudflareDevEnvironment } from './cloudflare-environment';
 import type { NormalizedPluginConfig } from './plugin-config';
@@ -110,6 +116,8 @@ export function getWorkerToDurableObjectClassNamesMap(
 // to paths ensures correct names. This requires us to specify `contents` in
 // the miniflare module definitions though, as the new paths don't exist.
 const miniflareModulesRoot = process.platform === 'win32' ? 'Z:\\' : '/';
+const ROUTER_WORKER_PATH = './assets/router-worker.js';
+const ASSET_WORKER_PATH = './assets/asset-worker.js';
 const WRAPPER_PATH = '__VITE_WORKER_ENTRY__';
 const RUNNER_PATH = './runner/index.js';
 
@@ -118,7 +126,95 @@ export function getMiniflareOptions(
 	viteConfig: vite.ResolvedConfig,
 	viteDevServer: vite.ViteDevServer,
 ): MiniflareOptions {
-	const workers = Object.values(normalizedPluginConfig.workers).map(
+	const assetWorkers: Array<WorkerOptions> = [
+		{
+			name: ROUTER_WORKER_NAME,
+			compatibilityDate: ASSET_WORKERS_COMPATIBILITY_DATE,
+			modulesRoot: miniflareModulesRoot,
+			modules: [
+				{
+					type: 'ESModule',
+					path: path.join(miniflareModulesRoot, ROUTER_WORKER_PATH),
+					contents: fs.readFileSync(
+						fileURLToPath(new URL(ROUTER_WORKER_PATH, import.meta.url)),
+					),
+				},
+			],
+			bindings: {
+				CONFIG: {
+					has_user_worker: normalizedPluginConfig.entryWorkerName
+						? true
+						: false,
+				},
+			},
+			serviceBindings: {
+				ASSET_WORKER: ASSET_WORKER_NAME,
+				...(normalizedPluginConfig.entryWorkerName
+					? { USER_WORKER: normalizedPluginConfig.entryWorkerName }
+					: {}),
+			},
+		},
+		{
+			name: ASSET_WORKER_NAME,
+			compatibilityDate: ASSET_WORKERS_COMPATIBILITY_DATE,
+			modulesRoot: miniflareModulesRoot,
+			modules: [
+				{
+					type: 'ESModule',
+					path: path.join(miniflareModulesRoot, ASSET_WORKER_PATH),
+					contents: fs.readFileSync(
+						fileURLToPath(new URL(ASSET_WORKER_PATH, import.meta.url)),
+					),
+				},
+			],
+			bindings: {
+				CONFIG: {
+					...(normalizedPluginConfig.assets.htmlHandling
+						? { html_handling: normalizedPluginConfig.assets.htmlHandling }
+						: {}),
+					...(normalizedPluginConfig.assets.notFoundHandling
+						? {
+								not_found_handling:
+									normalizedPluginConfig.assets.notFoundHandling,
+							}
+						: {}),
+				},
+			},
+			serviceBindings: {
+				__VITE_ASSET_EXISTS__: async (request) => {
+					const { pathname } = new URL(request.url);
+					const filePath = path.join(viteConfig.root, pathname);
+
+					let exists: boolean;
+
+					try {
+						exists = fs.statSync(filePath).isFile();
+					} catch (error) {
+						exists = false;
+					}
+
+					return MiniflareResponse.json(exists);
+				},
+				__VITE_FETCH_ASSET__: async (request) => {
+					const { pathname } = new URL(request.url);
+					const filePath = path.join(viteConfig.root, pathname);
+
+					try {
+						let html = await fsp.readFile(filePath, 'utf-8');
+						html = await viteDevServer.transformIndexHtml(pathname, html);
+
+						return new MiniflareResponse(html, {
+							headers: { 'Content-Type': 'text/html' },
+						});
+					} catch (error) {
+						throw new Error(`Unexpected error. Failed to load ${pathname}`);
+					}
+				},
+			},
+		},
+	];
+
+	const userWorkers = Object.values(normalizedPluginConfig.workers).map(
 		(worker) => {
 			const { ratelimits, ...workerOptions } = worker.workerOptions;
 
@@ -132,16 +228,23 @@ export function getMiniflareOptions(
 					__VITE_ROOT__: viteConfig.root,
 					__VITE_ENTRY_PATH__: worker.entryPath,
 				},
+				serviceBindings: {
+					...workerOptions.serviceBindings,
+					...(worker.assetsBinding
+						? { [worker.assetsBinding]: ASSET_WORKER_NAME }
+						: {}),
+				},
 			} satisfies Partial<WorkerOptions>;
 		},
 	);
 
 	const workerToWorkerEntrypointNamesMap =
-		getWorkerToWorkerEntrypointNamesMap(workers);
+		getWorkerToWorkerEntrypointNamesMap(userWorkers);
 	const workerToDurableObjectClassNamesMap =
-		getWorkerToDurableObjectClassNamesMap(workers);
+		getWorkerToDurableObjectClassNamesMap(userWorkers);
 
 	const logger = new ViteMiniflareLogger(viteConfig);
+
 	return {
 		log: logger,
 		handleRuntimeStdio(stdout, stderr) {
@@ -152,109 +255,112 @@ export function getMiniflareOptions(
 			);
 		},
 		...getPersistence(normalizedPluginConfig.persistPath),
-		workers: workers.map((workerOptions) => {
-			const wrappers = [
-				`import { createWorkerEntrypointWrapper, createDurableObjectWrapper } from '${RUNNER_PATH}';`,
-				`export default createWorkerEntrypointWrapper('default');`,
-			];
+		workers: [
+			...assetWorkers,
+			...userWorkers.map((workerOptions) => {
+				const wrappers = [
+					`import { createWorkerEntrypointWrapper, createDurableObjectWrapper } from '${RUNNER_PATH}';`,
+					`export default createWorkerEntrypointWrapper('default');`,
+				];
 
-			const entrypointNames = workerToWorkerEntrypointNamesMap.get(
-				workerOptions.name,
-			);
-			invariant(
-				entrypointNames,
-				`WorkerEntrypoint names not found for worker ${workerOptions.name}`,
-			);
-
-			for (const entrypointName of [...entrypointNames].sort()) {
-				wrappers.push(
-					`export const ${entrypointName} = createWorkerEntrypointWrapper('${entrypointName}');`,
+				const entrypointNames = workerToWorkerEntrypointNamesMap.get(
+					workerOptions.name,
 				);
-			}
-
-			const classNames = workerToDurableObjectClassNamesMap.get(
-				workerOptions.name,
-			);
-			invariant(
-				classNames,
-				`DurableObject class names not found for worker ${workerOptions.name}`,
-			);
-
-			for (const className of [...classNames].sort()) {
-				wrappers.push(
-					`export const ${className} = createDurableObjectWrapper('${className}');`,
+				invariant(
+					entrypointNames,
+					`WorkerEntrypoint names not found for worker ${workerOptions.name}`,
 				);
-			}
 
-			return {
-				...workerOptions,
-				modules: [
-					{
-						type: 'ESModule',
-						path: path.join(miniflareModulesRoot, WRAPPER_PATH),
-						contents: wrappers.join('\n'),
+				for (const entrypointName of [...entrypointNames].sort()) {
+					wrappers.push(
+						`export const ${entrypointName} = createWorkerEntrypointWrapper('${entrypointName}');`,
+					);
+				}
+
+				const classNames = workerToDurableObjectClassNamesMap.get(
+					workerOptions.name,
+				);
+				invariant(
+					classNames,
+					`DurableObject class names not found for worker ${workerOptions.name}`,
+				);
+
+				for (const className of [...classNames].sort()) {
+					wrappers.push(
+						`export const ${className} = createDurableObjectWrapper('${className}');`,
+					);
+				}
+
+				return {
+					...workerOptions,
+					modules: [
+						{
+							type: 'ESModule',
+							path: path.join(miniflareModulesRoot, WRAPPER_PATH),
+							contents: wrappers.join('\n'),
+						},
+						{
+							type: 'ESModule',
+							path: path.join(miniflareModulesRoot, RUNNER_PATH),
+							contents: fs.readFileSync(
+								fileURLToPath(new URL(RUNNER_PATH, import.meta.url)),
+							),
+						},
+					],
+					serviceBindings: {
+						...workerOptions.serviceBindings,
+						__VITE_FETCH_MODULE__: async (request) => {
+							const [moduleId, imported, options] = (await request.json()) as [
+								string,
+								string,
+								FetchFunctionOptions,
+							];
+
+							// For some reason we need this here for cloudflare built-ins (e.g. `cloudflare:workers`) but not for node built-ins (e.g. `node:path`)
+							// See https://github.com/flarelabs-net/vite-plugin-cloudflare/issues/46
+							if (moduleId.startsWith('cloudflare:')) {
+								const result = {
+									externalize: moduleId,
+									type: 'builtin',
+								} satisfies vite.FetchResult;
+
+								return new MiniflareResponse(JSON.stringify(result));
+							}
+
+							// Sometimes Vite fails to resolve built-ins and converts them to "url-friendly" ids
+							// that start with `/@id/...`.
+							if (moduleId.startsWith('/@id/')) {
+								const result = {
+									externalize: moduleId.slice('/@id/'.length),
+									type: 'builtin',
+								} satisfies vite.FetchResult;
+
+								return new MiniflareResponse(JSON.stringify(result));
+							}
+
+							const devEnvironment = viteDevServer.environments[
+								workerOptions.name
+							] as CloudflareDevEnvironment;
+
+							try {
+								const result = await devEnvironment.fetchModule(
+									moduleId,
+									imported,
+									options,
+								);
+
+								return new MiniflareResponse(JSON.stringify(result));
+							} catch (error) {
+								return new MiniflareResponse(
+									`Unexpected Error, failed to get module: ${moduleId}\n${error}`,
+									{ status: 404 },
+								);
+							}
+						},
 					},
-					{
-						type: 'ESModule',
-						path: path.join(miniflareModulesRoot, RUNNER_PATH),
-						contents: fs.readFileSync(
-							fileURLToPath(new URL(RUNNER_PATH, import.meta.url)),
-						),
-					},
-				],
-				serviceBindings: {
-					...workerOptions.serviceBindings,
-					__VITE_FETCH_MODULE__: async (request) => {
-						const [moduleId, imported, options] = (await request.json()) as [
-							string,
-							string,
-							FetchFunctionOptions,
-						];
-
-						// For some reason we need this here for cloudflare built-ins (e.g. `cloudflare:workers`) but not for node built-ins (e.g. `node:path`)
-						// See https://github.com/flarelabs-net/vite-plugin-cloudflare/issues/46
-						if (moduleId.startsWith('cloudflare:')) {
-							const result = {
-								externalize: moduleId,
-								type: 'builtin',
-							} satisfies vite.FetchResult;
-
-							return new MiniflareResponse(JSON.stringify(result));
-						}
-
-						// Sometimes Vite fails to resolve built-ins and converts them to "url-friendly" ids
-						// that start with `/@id/...`.
-						if (moduleId.startsWith('/@id/')) {
-							const result = {
-								externalize: moduleId.slice('/@id/'.length),
-								type: 'builtin',
-							} satisfies vite.FetchResult;
-
-							return new MiniflareResponse(JSON.stringify(result));
-						}
-
-						const devEnvironment = viteDevServer.environments[
-							workerOptions.name
-						] as CloudflareDevEnvironment;
-
-						try {
-							const result = await devEnvironment.fetchModule(
-								moduleId,
-								imported,
-								options,
-							);
-
-							return new MiniflareResponse(JSON.stringify(result));
-						} catch (error) {
-							return new MiniflareResponse(
-								`Unexpected Error, failed to get module: ${moduleId}\n${error}`,
-								{ status: 404 },
-							);
-						}
-					},
-				},
-			};
-		}),
+				} satisfies WorkerOptions;
+			}),
+		],
 	};
 }
 

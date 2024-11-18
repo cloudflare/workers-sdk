@@ -1,0 +1,4 @@
+{
+	"extends": ["@vite-plugin-cloudflare/typescript-config/react.json"],
+	"include": ["**/*"]
+}
