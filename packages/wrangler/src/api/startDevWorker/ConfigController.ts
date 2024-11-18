@@ -259,7 +259,6 @@ async function resolveConfig(
 		directory: entry.directory,
 		bindings,
 		migrations: input.migrations ?? config.migrations,
-		sendMetrics: input.sendMetrics ?? config.send_metrics,
 		triggers: await resolveTriggers(config, input),
 		env: input.env,
 		build: {

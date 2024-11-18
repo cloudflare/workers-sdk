@@ -11,7 +11,6 @@ import {
 import { confirm } from "../dialogs";
 import { CommandLineArgsError, UserError } from "../errors";
 import { logger } from "../logger";
-import * as metrics from "../metrics";
 import { parseJSON, readFileSync, readFileSyncToBuffer } from "../parse";
 import { requireAuth } from "../user";
 import { getValidBindingName } from "../utils/getValidBindingName";
@@ -30,7 +29,6 @@ import {
 	unexpectedKVKeyValueProps,
 	usingLocalNamespace,
 } from "./helpers";
-import type { EventNames } from "../metrics";
 import type { KeyValue, NamespaceKeyInfo } from "./helpers";
 
 defineAlias({
@@ -141,9 +139,6 @@ defineCommand({
 
 		logger.log(`🌀 Creating namespace with title "${title}"`);
 		const namespaceId = await createKVNamespace(accountId, title);
-		await metrics.sendMetricsEvent("create kv namespace", {
-			sendMetrics: config.send_metrics,
-		});
 
 		logger.log("✨ Success!");
 		const envString = args.env ? ` under [env.${args.env}]` : "";
@@ -180,9 +175,6 @@ defineCommand({
 		// TODO: we should show bindings if they exist for given ids
 
 		logger.log(JSON.stringify(await listKVNamespaces(accountId), null, "  "));
-		await metrics.sendMetricsEvent("list kv namespaces", {
-			sendMetrics: config.send_metrics,
-		});
 	},
 });
 
@@ -233,9 +225,6 @@ defineCommand({
 		logger.log(`Deleting KV namespace ${id}.`);
 		await deleteKVNamespace(accountId, id);
 		logger.log(`Deleted KV namespace ${id}.`);
-		await metrics.sendMetricsEvent("delete kv namespace", {
-			sendMetrics: config.send_metrics,
-		});
 
 		// TODO: recommend they remove it from wrangler.toml
 
@@ -350,7 +339,6 @@ defineCommand({
 			);
 		}
 
-		let metricEvent: EventNames;
 		if (args.local) {
 			await usingLocalNamespace(
 				args.persistTo,
@@ -363,8 +351,6 @@ defineCommand({
 						metadata,
 					})
 			);
-
-			metricEvent = "write kv key-value (local)";
 		} else {
 			const accountId = await requireAuth(config);
 
@@ -375,13 +361,7 @@ defineCommand({
 				expiration_ttl: ttl,
 				metadata: metadata as KeyValue["metadata"],
 			});
-
-			metricEvent = "write kv key-value";
 		}
-
-		await metrics.sendMetricsEvent(metricEvent, {
-			sendMetrics: config.send_metrics,
-		});
 	},
 });
 
@@ -436,7 +416,6 @@ defineCommand({
 		const namespaceId = getKVNamespaceId(args, config);
 
 		let result: NamespaceKeyInfo[];
-		let metricEvent: EventNames;
 		if (args.local) {
 			const listResult = await usingLocalNamespace(
 				args.persistTo,
@@ -445,19 +424,13 @@ defineCommand({
 				(namespace) => namespace.list({ prefix })
 			);
 			result = listResult.keys as NamespaceKeyInfo[];
-
-			metricEvent = "list kv keys (local)";
 		} else {
 			const accountId = await requireAuth(config);
 
 			result = await listKVNamespaceKeys(accountId, namespaceId, prefix);
-			metricEvent = "list kv keys";
 		}
 
 		logger.log(JSON.stringify(result, undefined, 2));
-		await metrics.sendMetricsEvent(metricEvent, {
-			sendMetrics: config.send_metrics,
-		});
 	},
 });
 
@@ -517,7 +490,6 @@ defineCommand({
 		const namespaceId = getKVNamespaceId(args, config);
 
 		let bufferKVValue;
-		let metricEvent: EventNames;
 		if (args.local) {
 			const val = await usingLocalNamespace(
 				args.persistTo,
@@ -536,14 +508,11 @@ defineCommand({
 			}
 
 			bufferKVValue = Buffer.from(val);
-			metricEvent = "read kv value (local)";
 		} else {
 			const accountId = await requireAuth(config);
 			bufferKVValue = Buffer.from(
 				await getKVKeyValue(accountId, namespaceId, key)
 			);
-
-			metricEvent = "read kv value";
 		}
 
 		if (args.text) {
@@ -552,9 +521,6 @@ defineCommand({
 		} else {
 			process.stdout.write(bufferKVValue);
 		}
-		await metrics.sendMetricsEvent(metricEvent, {
-			sendMetrics: config.send_metrics,
-		});
 	},
 });
 
@@ -604,7 +570,6 @@ defineCommand({
 
 		logger.log(`Deleting the key "${key}" on namespace ${namespaceId}.`);
 
-		let metricEvent: EventNames;
 		if (args.local) {
 			await usingLocalNamespace(
 				args.persistTo,
@@ -612,17 +577,11 @@ defineCommand({
 				namespaceId,
 				(namespace) => namespace.delete(key)
 			);
-
-			metricEvent = "delete kv key-value (local)";
 		} else {
 			const accountId = await requireAuth(config);
 
 			await deleteKVKeyValue(accountId, namespaceId, key);
-			metricEvent = "delete kv key-value";
 		}
-		await metrics.sendMetricsEvent(metricEvent, {
-			sendMetrics: config.send_metrics,
-		});
 	},
 });
 
@@ -738,7 +697,6 @@ defineCommand({
 			);
 		}
 
-		let metricEvent: EventNames;
 		if (args.local) {
 			await usingLocalNamespace(
 				args.persistTo,
@@ -754,18 +712,12 @@ defineCommand({
 					}
 				}
 			);
-
-			metricEvent = "write kv key-values (bulk) (local)";
 		} else {
 			const accountId = await requireAuth(config);
 
 			await putKVBulkKeyValue(accountId, namespaceId, content);
-			metricEvent = "write kv key-values (bulk)";
 		}
 
-		await metrics.sendMetricsEvent(metricEvent, {
-			sendMetrics: config.send_metrics,
-		});
 		logger.log("Success!");
 	},
 });
@@ -858,7 +810,6 @@ defineCommand({
 			);
 		}
 
-		let metricEvent: EventNames;
 		if (args.local) {
 			await usingLocalNamespace(
 				args.persistTo,
@@ -870,18 +821,11 @@ defineCommand({
 					}
 				}
 			);
-
-			metricEvent = "delete kv key-values (bulk) (local)";
 		} else {
 			const accountId = await requireAuth(config);
 
 			await deleteKVBulkKeyValue(accountId, namespaceId, content);
-			metricEvent = "delete kv key-values (bulk)";
 		}
-
-		await metrics.sendMetricsEvent(metricEvent, {
-			sendMetrics: config.send_metrics,
-		});
 
 		logger.log("Success!");
 	},

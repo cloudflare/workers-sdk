@@ -5,7 +5,6 @@ import { getConfigCache, saveToConfigCache } from "../config-cache";
 import { confirm, prompt } from "../dialogs";
 import { FatalError } from "../errors";
 import { logger } from "../logger";
-import * as metrics from "../metrics";
 import { requireAuth } from "../user";
 import { getCloudflareAccountIdFromEnv } from "../user/auth-variables";
 import { PAGES_CONFIG_CACHE_FILENAME } from "./constants";
@@ -43,7 +42,6 @@ export async function ListHandler() {
 	});
 
 	logger.table(data);
-	await metrics.sendMetricsEvent("list pages projects");
 }
 
 export const listProjects = async ({
@@ -182,7 +180,6 @@ export async function CreateHandler({
 	logger.log(
 		`To deploy a folder of assets, run 'wrangler pages deploy [directory]'.`
 	);
-	await metrics.sendMetricsEvent("create pages project");
 }
 
 export function DeleteOptions(yargs: CommonYargsArgv) {

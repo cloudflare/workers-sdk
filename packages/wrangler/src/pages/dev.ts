@@ -10,7 +10,6 @@ import { esbuildAliasExternalPlugin } from "../deployment-bundle/esbuild-plugins
 import { validateNodeCompatMode } from "../deployment-bundle/node-compat";
 import { FatalError } from "../errors";
 import { logger } from "../logger";
-import * as metrics from "../metrics";
 import { isNavigatorDefined } from "../navigator-user-agent";
 import { getBasePath } from "../paths";
 import { printWranglerBanner } from "../update-check";
@@ -673,8 +672,6 @@ export const Handler = async (args: PagesDevArguments) => {
 			}
 			watcher.add(currentBundleDependencies);
 			watchedBundleDependencies = [...currentBundleDependencies];
-
-			await metrics.sendMetricsEvent("build pages functions");
 		};
 
 		/*
@@ -922,7 +919,6 @@ export const Handler = async (args: PagesDevArguments) => {
 			enableIpc: true,
 		},
 	});
-	await metrics.sendMetricsEvent("run pages dev");
 
 	CLEANUP_CALLBACKS.push(stop);
 
