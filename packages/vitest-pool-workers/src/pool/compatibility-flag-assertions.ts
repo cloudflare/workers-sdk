@@ -1,15 +1,17 @@
 /**
- * The `FlagAssertions` class provides methods to validate compatibility flags and dates
+ * The `CompatibilityFlagAssertions` class provides methods to validate compatibility flags and dates
  * within a project's configuration. It ensures that specific flags are either present
  * or absent and that compatibility dates meet the required criteria.
  */
-export class FlagAssertions {
+export class CompatibilityFlagAssertions {
+	#compatibilityDate?: string;
 	#compatibilityFlags: string[];
 	#optionsPath: string;
 	#relativeProjectPath: string;
 	#relativeWranglerConfigPath?: string;
 
 	constructor(options: CommonOptions) {
+		this.#compatibilityDate = options.compatibilityDate;
 		this.#compatibilityFlags = options.compatibilityFlags;
 		this.#optionsPath = options.optionsPath;
 		this.#relativeProjectPath = options.relativeProjectPath;
@@ -56,37 +58,44 @@ export class FlagAssertions {
 	}
 
 	/**
-	 * Ensures that a specific disable flag is not present.
+	 * Ensures that a specific enable flag is present or that the compatibility date meets the required date.
 	 */
-	assertDisableFlagNotPresent(flag: string): AssertionResult {
-		if (this.isFlagPresent(flag)) {
+	assertIsEnabled({
+		enableFlag,
+		disableFlag,
+		defaultOnDate,
+	}: {
+		enableFlag: string;
+		disableFlag: string;
+		defaultOnDate?: string;
+	}): AssertionResult {
+		// If it's disabled by this flag, we can return early.
+		if (this.isFlagPresent(disableFlag)) {
 			const errorMessage = `${this.#buildErrorMessageBase()}, ${this.#buildConfigPath(
 				"compatibility_flags"
-			)} must not contain "${flag}".\nThis flag is incompatible with \`@cloudflare/vitest-pool-workers\`.`;
+			)} must not contain "${disableFlag}".\nThis flag is incompatible with \`@cloudflare/vitest-pool-workers\`.`;
 			return { isValid: false, errorMessage };
 		}
 
-		return { isValid: true };
-	}
+		const enableFlagPresent = this.isFlagPresent(enableFlag);
+		const dateSufficient = isDateSufficient(
+			this.#compatibilityDate,
+			defaultOnDate
+		);
 
-	/**
-	 * Ensures that a specific enable flag is present or that the compatibility date meets the required date.
-	 */
-	assertEnableFlagOrCompatibilityDate(
-		flag: string,
-		options: DateOptions
-	): AssertionResult {
-		const { defaultOnDate, compatibilityDate } = options;
-
-		const flagPresent = this.isFlagPresent(flag);
-		const dateSufficient = isDateSufficient(compatibilityDate, defaultOnDate);
-
-		if (!flagPresent && !dateSufficient) {
-			const errorMessage = `${this.#buildErrorMessageBase()}, ${this.#buildConfigPath(
+		if (!enableFlagPresent && !dateSufficient) {
+			let errorMessage = `${this.#buildErrorMessageBase()}, ${this.#buildConfigPath(
 				"compatibility_flags"
-			)} must contain "${flag}", or ${this.#buildConfigPath(
-				"compatibility_date"
-			)} must be >= "${defaultOnDate}".\nThis flag is required to use \`@cloudflare/vitest-pool-workers\`.`;
+			)} must contain "${enableFlag}"`;
+
+			if (defaultOnDate) {
+				errorMessage += `, or ${this.#buildConfigPath(
+					"compatibility_date"
+				)} must be >= "${defaultOnDate}".`;
+			}
+
+			errorMessage += `\nThis flag is required to use \`@cloudflare/vitest-pool-workers\`.`;
+
 			return { isValid: false, errorMessage };
 		}
 
@@ -97,7 +106,7 @@ export class FlagAssertions {
 	 * Ensures that a any one of a given set of flags is present.
 	 */
 	assertUnionOfEnableFlags(flags: string[]): AssertionResult {
-		if (flags.some((flag) => this.isFlagPresent(flag))) {
+		if (flags.length === 0 || flags.some((flag) => this.isFlagPresent(flag))) {
 			return { isValid: true };
 		}
 
@@ -113,18 +122,11 @@ export class FlagAssertions {
  * Common options used across all assertion methods.
  */
 interface CommonOptions {
+	compatibilityDate?: string;
 	compatibilityFlags: string[];
 	optionsPath: string;
 	relativeProjectPath: string;
 	relativeWranglerConfigPath?: string;
-}
-
-/**
- * Options specific to date-related assertions.
- */
-interface DateOptions {
-	compatibilityDate?: string;
-	defaultOnDate: string;
 }
 
 /**

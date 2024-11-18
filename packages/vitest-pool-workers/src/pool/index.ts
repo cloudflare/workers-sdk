@@ -23,8 +23,8 @@ import {
 import semverSatisfies from "semver/functions/satisfies.js";
 import { createMethodsRPC } from "vitest/node";
 import { createChunkingSocket } from "../shared/chunking-socket";
+import { CompatibilityFlagAssertions } from "./compatibility-flag-assertions";
 import { OPTIONS_PATH, parseProjectOptions } from "./config";
-import { FlagAssertions } from "./flag-assertions";
 import {
 	getProjectPath,
 	getRelativeProjectPath,
@@ -341,7 +341,8 @@ function buildProjectWorkerOptions(
 	// Initialize compatibilityFlags if undefined
 	runnerWorker.compatibilityFlags ??= [];
 
-	const flagAssertions = new FlagAssertions({
+	const flagAssertions = new CompatibilityFlagAssertions({
+		compatibilityDate: runnerWorker.compatibilityDate,
 		compatibilityFlags: runnerWorker.compatibilityFlags,
 		optionsPath: `${OPTIONS_PATH}.miniflare`,
 		relativeProjectPath: project.relativePath.toString(),
@@ -350,15 +351,11 @@ function buildProjectWorkerOptions(
 
 	const assertions = [
 		() =>
-			flagAssertions.assertDisableFlagNotPresent("export_commonjs_namespace"),
-		() =>
-			flagAssertions.assertEnableFlagOrCompatibilityDate(
-				"export_commonjs_default",
-				{
-					compatibilityDate: runnerWorker.compatibilityDate,
-					defaultOnDate: "2022-10-31",
-				}
-			),
+			flagAssertions.assertIsEnabled({
+				enableFlag: "export_commonjs_default",
+				disableFlag: "export_commonjs_namespace",
+				defaultOnDate: "2022-10-31",
+			}),
 		() =>
 			flagAssertions.assertUnionOfEnableFlags([
 				"nodejs_compat",
