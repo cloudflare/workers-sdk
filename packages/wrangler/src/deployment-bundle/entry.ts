@@ -53,7 +53,9 @@ export async function getEntry(
 	const directory = process.cwd();
 	const entryPoint = config.site?.["entry-point"];
 
-	let paths: { absolutePath: string; relativePath: string } | undefined;
+	let paths:
+		| { absolutePath: string; relativePath: string; directory?: string }
+		| undefined;
 
 	if (args.script) {
 		paths = resolveEntryWithScript(args.script);
@@ -81,9 +83,10 @@ export async function getEntry(
 	}
 	await runCustomBuild(paths.absolutePath, paths.relativePath, config.build);
 
+	const projectRoot = paths.directory ?? directory;
 	const { format, exports } = await guessWorkerFormat(
 		paths.absolutePath,
-		directory,
+		projectRoot,
 		args.format ?? config.build?.upload?.format,
 		config.tsconfig
 	);
@@ -117,7 +120,7 @@ export async function getEntry(
 
 	return {
 		file: paths.absolutePath,
-		directory,
+		directory: projectRoot,
 		format,
 		moduleRoot:
 			args.moduleRoot ?? config.base_dir ?? path.dirname(paths.absolutePath),
