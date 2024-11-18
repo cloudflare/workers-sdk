@@ -49,7 +49,8 @@ export interface ScriptReference {
 }
 
 export type Producer = ScriptReference & {
-	type: string
+	type: string;
+	bucket_name?: string;
 }
 
 export type Consumer = ScriptReference & {

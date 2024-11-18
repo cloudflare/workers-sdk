@@ -1466,10 +1466,10 @@ describe("wrangler", () => {
 					Consumers: Consumer: worker:test-consumer"
 				`)
 			})
-			it('should return "http consumer" when the consumer type is not worker', async () => {
+			it('should return "http consumer" and a curl command when the consumer type is http_pull', async () => {
 				const mockHTTPPullQueue = { ...mockQueue, consumers: [{...mockQueue.consumers[0], type: "http_pull" }]}
 				mockGetQueueByNameRequest(expectedQueueName, mockHTTPPullQueue);
-				await runWrangler("queues info testQueue")
+				await runWrangler("queues info testQueue");
 				expect(std.out).toMatchInlineSnapshot(`
 					"Queue Name: testQueue
 					Queue ID: 1234567
@@ -1483,7 +1483,22 @@ describe("wrangler", () => {
 						--header \\"Authorization: Bearer <api key>\\"
 						--header \\"Content-Type: application/json\\"
 						--data '{ \\"visibility_timeout\\": 10000, \\"batch_size\\": 2 }'"
-				`)
+				`);
+			})
+			it('should return the list of r2 bucket producers when the queue is used in an r2 event notification', async () => {
+				const mockEventNotificationQueue = {...mockQueue, producers: [{type: "r2_bucket", bucket_name: "test-bucket1"}, {type: "r2_bucket", bucket_name: "test-bucket2"}]};
+				mockGetQueueByNameRequest(expectedQueueName, mockEventNotificationQueue);
+				await runWrangler("queues info testQueue");
+				expect(std.out).toMatchInlineSnapshot(`
+					"Queue Name: testQueue
+					Queue ID: 1234567
+					Created On: 2024-05-20T14:43:56.70498Z
+					Last Modified: 2024-07-19T14:43:56.70498Z
+					Number of Producers: 2
+					Producers: r2_bucket:test-bucket1, r2_bucket:test-bucket2
+					Number of Consumers: 1
+					Consumers: Consumer: worker:test-consumer"
+				`);
 			})
 		})
 	});

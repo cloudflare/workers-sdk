@@ -28,7 +28,7 @@ export async function handler(
     logger.log(`Created On: ${queue.created_on}`)
     logger.log(`Last Modified: ${queue.modified_on}`)
     logger.log(`Number of Producers: ${queue.producers_total_count}`)
-    logger.log(`Producers:${queue.producers.map((p: Producer) => ` ${p.type}:${p.script}` ).toString()}`)
+    logger.log(`Producers:${queue.producers.map((p: Producer) => p.type === "r2_bucket" ? ` ${p.type}:${p.bucket_name}` : ` ${p.type}:${p.script}` ).toString()}`)
     logger.log(`Number of Consumers: ${queue.consumers_total_count}`)
     logger.log(`Consumers: ${queue.consumers.map((c: Consumer) => {
                          return c.type === "worker" || c.type === "r2_bucket" ? `Consumer: ${c.type}:${c.script}` : `HTTP Pull Consumer \ncurl "https://api.cloudflare.com/client/v4/accounts/${config.account_id}/queues/${queue.queue_id}/messages/pull" \
