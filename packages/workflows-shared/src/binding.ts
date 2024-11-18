@@ -66,12 +66,11 @@ export class WorkflowBinding extends WorkerEntrypoint<Env> implements Workflow {
 }
 
 export class WorkflowHandle extends RpcTarget implements WorkflowInstance {
-	public id: string;
-	private stub: DurableObjectStub<Engine>;
-	constructor(id: string, stub: DurableObjectStub<Engine>) {
+	constructor(
+		public id: string,
+		private stub: DurableObjectStub<Engine>
+	) {
 		super();
-		this.id = id;
-		this.stub = stub;
 	}
 
 	public async pause(): Promise<void> {
