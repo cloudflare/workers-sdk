@@ -5,7 +5,6 @@ import {
 	fromMimeType,
 } from "../../deployment-bundle/create-worker-upload-form";
 import { FatalError, UserError } from "../../errors";
-import { getMetricsUsageHeaders } from "../../metrics";
 import {
 	versionsSecretPutBulkHandler,
 	versionsSecretsPutBulkOptions,
@@ -115,7 +114,6 @@ interface CopyLatestWorkerVersionArgs {
 	secrets: { name: string; value: string; inherit?: boolean }[];
 	versionMessage?: string;
 	versionTag?: string;
-	sendMetrics?: boolean;
 	overrideAllSecrets?: boolean; // Used for delete - this will make sure we do not inherit any
 }
 
@@ -127,7 +125,6 @@ export async function copyWorkerVersionWithNewSecrets({
 	secrets,
 	versionMessage,
 	versionTag,
-	sendMetrics,
 	overrideAllSecrets,
 }: CopyLatestWorkerVersionArgs) {
 	// Grab the specific version info
@@ -225,7 +222,6 @@ export async function copyWorkerVersionWithNewSecrets({
 		{
 			method: "POST",
 			body,
-			headers: await getMetricsUsageHeaders(sendMetrics),
 		},
 		new URLSearchParams({
 			include_subdomain_availability: "true",
