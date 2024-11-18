@@ -688,12 +688,20 @@ export async function main(argv: string[]): Promise<void> {
 		// `args._` doesn't include any positional arguments (e.g. script name,
 		// key to fetch) or flags
 
-		const { rawConfig } = parseConfig(args.config, args, false);
-		dispatcher = getMetricsDispatcher({ sendMetrics: rawConfig.send_metrics });
+		try {
+			const { rawConfig } = parseConfig(args.config, args, false);
+			dispatcher = getMetricsDispatcher({
+				sendMetrics: rawConfig.send_metrics,
+			});
+		} catch (e) {
+			// If we can't parse the config, we can't send metrics
+			logger.debug("Failed to parse config. Disabling metrics dispatcher.", e);
+		}
+
 		command = `wrangler ${args._.join(" ")}`;
 		metricsArgs = args;
 		addBreadcrumb(command);
-		void dispatcher.sendNewEvent("wrangler command started", {
+		void dispatcher?.sendNewEvent("wrangler command started", {
 			command,
 			args,
 		});

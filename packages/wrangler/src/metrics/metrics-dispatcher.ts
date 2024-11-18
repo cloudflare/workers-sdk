@@ -1,34 +1,24 @@
 import { fetch } from "undici";
-import whichPmRuns from "which-pm-runs";
-import { version as wranglerVersion } from "../../package.json";
 import { logger } from "../logger";
+import {
+	getOS,
+	getPackageManager,
+	getPlatform,
+	getWranglerVersion,
+} from "./helpers";
 import { getMetricsConfig, readMetricsConfig } from "./metrics-config";
 import type { MetricsConfigOptions } from "./metrics-config";
 import type { CommonEventProperties, Events } from "./send-event";
 
-// The SPARROW_SOURCE_KEY is provided at esbuild time as a `define` for production and beta
-// releases. Otherwise it is left undefined, which automatically disables metrics requests.
-declare const SPARROW_SOURCE_KEY: string;
 const SPARROW_URL = "https://sparrow.cloudflare.com";
 
-function getPlatform() {
-	const platform = process.platform;
-
-	switch (platform) {
-		case "win32":
-			return "Windows";
-		case "darwin":
-			return "Mac OS";
-		case "linux":
-			return "Linux";
-		default:
-			return `Others: ${platform}`;
-	}
-}
-
 export function getMetricsDispatcher(options: MetricsConfigOptions) {
+	// The SPARROW_SOURCE_KEY will be provided at build time through esbuild's `define` option
+	// No events will be sent if the env `SPARROW_SOURCE_KEY` is not provided and the value will be set to an empty string instead.
+	const SPARROW_SOURCE_KEY = process.env.SPARROW_SOURCE_KEY ?? "";
+	const wranglerVersion = getWranglerVersion();
 	const platform = getPlatform();
-	const packageManager = whichPmRuns()?.name;
+	const packageManager = getPackageManager();
 	const isFirstUsage = readMetricsConfig().permission === undefined;
 	const amplitude_session_id = Date.now();
 	let amplitude_event_id = 0;
@@ -42,7 +32,15 @@ export function getMetricsDispatcher(options: MetricsConfigOptions) {
 		 *  - additional properties are camelCased
 		 */
 		async sendEvent(name: string, properties: Properties = {}): Promise<void> {
-			await dispatch({ name, properties });
+			await dispatch({
+				name,
+				properties: {
+					category: "Workers",
+					wranglerVersion,
+					os: getOS(),
+					...properties,
+				},
+			});
 		},
 
 		async sendNewEvent<EventName extends Events["name"]>(
@@ -52,7 +50,22 @@ export function getMetricsDispatcher(options: MetricsConfigOptions) {
 				keyof CommonEventProperties
 			>
 		): Promise<void> {
-			await dispatch({ name, properties });
+			const commonEventProperties: CommonEventProperties = {
+				amplitude_session_id,
+				amplitude_event_id: amplitude_event_id++,
+				wranglerVersion,
+				platform,
+				packageManager,
+				isFirstUsage,
+			};
+
+			await dispatch({
+				name,
+				properties: {
+					...commonEventProperties,
+					properties,
+				},
+			});
 		},
 	};
 
@@ -61,23 +74,11 @@ export function getMetricsDispatcher(options: MetricsConfigOptions) {
 		properties: Properties;
 	}): Promise<void> {
 		const metricsConfig = getMetricsConfig(options);
-
-		const commonEventProperties: CommonEventProperties = {
-			amplitude_session_id,
-			amplitude_event_id: amplitude_event_id++,
-			wranglerVersion,
-			platform,
-			packageManager,
-			isFirstUsage,
-		};
 		const body = {
 			deviceId: metricsConfig.deviceId,
 			event: event.name,
 			timestamp: Date.now(),
-			properties: {
-				...commonEventProperties,
-				...event.properties,
-			},
+			properties: event.properties,
 		};
 
 		if (!metricsConfig.enabled) {
