@@ -3,7 +3,6 @@ import { sleep } from "../deploy/deploy";
 import { FatalError, UserError } from "../errors";
 import { printWranglerBanner } from "../index";
 import { logger } from "../logger";
-import * as metrics from "../metrics";
 import { APIError } from "../parse";
 import { requireAuth } from "../user";
 import {
@@ -284,9 +283,6 @@ export function pipelines(pipelineYargs: CommonYargsArgv) {
 
 				logger.log(`🌀 Creating pipeline named "${name}"`);
 				const pipeline = await createPipeline(accountId, pipelineConfig);
-				await metrics.sendMetricsEvent("create pipeline", {
-					sendMetrics: config.send_metrics,
-				});
 
 				logger.log(
 					`✅ Successfully created pipeline "${pipeline.name}" with id ${pipeline.id}`
@@ -307,9 +303,6 @@ export function pipelines(pipelineYargs: CommonYargsArgv) {
 
 				// TODO: we should show bindings & transforms if they exist for given ids
 				const list = await listPipelines(accountId);
-				await metrics.sendMetricsEvent("list pipelines", {
-					sendMetrics: config.send_metrics,
-				});
 
 				logger.table(
 					list.map((pipeline) => ({
@@ -340,9 +333,6 @@ export function pipelines(pipelineYargs: CommonYargsArgv) {
 
 				logger.log(`Retrieving config for pipeline "${name}".`);
 				const pipeline = await getPipeline(accountId, name);
-				await metrics.sendMetricsEvent("show pipeline", {
-					sendMetrics: config.send_metrics,
-				});
 
 				logger.log(JSON.stringify(pipeline, null, 2));
 			}
@@ -473,9 +463,6 @@ export function pipelines(pipelineYargs: CommonYargsArgv) {
 
 				logger.log(`🌀 Updating pipeline "${name}"`);
 				const pipeline = await updatePipeline(accountId, name, pipelineConfig);
-				await metrics.sendMetricsEvent("update pipeline", {
-					sendMetrics: config.send_metrics,
-				});
 
 				logger.log(
 					`✅ Successfully updated pipeline "${pipeline.name}" with ID ${pipeline.id}\n`
@@ -503,9 +490,6 @@ export function pipelines(pipelineYargs: CommonYargsArgv) {
 				logger.log(`Deleting pipeline ${name}.`);
 				await deletePipeline(accountId, name);
 				logger.log(`Deleted pipeline ${name}.`);
-				await metrics.sendMetricsEvent("delete pipeline", {
-					sendMetrics: config.send_metrics,
-				});
 			}
 		);
 }

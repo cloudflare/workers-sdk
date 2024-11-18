@@ -12,7 +12,6 @@ import {
 	printWranglerBanner,
 } from "../index";
 import { logger } from "../logger";
-import * as metrics from "../metrics";
 import { APIError, parseJSON, readFileSync } from "../parse";
 import { requireAuth } from "../user";
 import { readFromStdin, trimTrailingWhitespace } from "../utils/std";
@@ -220,9 +219,6 @@ export const secret = (secretYargs: CommonYargsArgv) => {
 
 				try {
 					await submitSecret();
-					await metrics.sendMetricsEvent("create encrypted variable", {
-						sendMetrics: config.send_metrics,
-					});
 				} catch (e) {
 					if (isMissingWorkerError(e)) {
 						// create a draft worker and try again
@@ -300,9 +296,6 @@ export const secret = (secretYargs: CommonYargsArgv) => {
 							: `/accounts/${accountId}/workers/services/${scriptName}/environments/${args.env}/secrets`;
 
 					await fetchResult(`${url}/${args.key}`, { method: "DELETE" });
-					await metrics.sendMetricsEvent("delete encrypted variable", {
-						sendMetrics: config.send_metrics,
-					});
 					logger.log(`✨ Success! Deleted secret ${args.key}`);
 				}
 			}
@@ -356,10 +349,6 @@ export const secret = (secretYargs: CommonYargsArgv) => {
 				} else {
 					logger.log(JSON.stringify(secrets, null, "  "));
 				}
-
-				await metrics.sendMetricsEvent("list encrypted variables", {
-					sendMetrics: config.send_metrics,
-				});
 			}
 		)
 		.command(

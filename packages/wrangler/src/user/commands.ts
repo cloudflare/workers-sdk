@@ -1,6 +1,5 @@
 import { defineCommand } from "../core/define-command";
 import { CommandLineArgsError } from "../errors";
-import * as metrics from "../metrics";
 import { listScopes, login, logout, validateScopeKeys } from "./user";
 import { whoami } from "./whoami";
 
@@ -30,7 +29,7 @@ defineCommand({
 			requiresArg: true,
 		},
 	},
-	async handler(args, { config }) {
+	async handler(args) {
 		if (args.scopesList) {
 			listScopes();
 			return;
@@ -50,9 +49,6 @@ defineCommand({
 			return;
 		}
 		await login({ browser: args.browser });
-		await metrics.sendMetricsEvent("login user", {
-			sendMetrics: config.send_metrics,
-		});
 
 		// TODO: would be nice if it optionally saved login
 		// credentials inside node_modules/.cache or something
@@ -70,11 +66,8 @@ defineCommand({
 	behaviour: {
 		printConfigWarnings: false,
 	},
-	async handler(_, { config }) {
+	async handler() {
 		await logout();
-		await metrics.sendMetricsEvent("logout user", {
-			sendMetrics: config.send_metrics,
-		});
 	},
 });
 
@@ -95,10 +88,7 @@ defineCommand({
 				"Show membership information for the given account (id or name).",
 		},
 	},
-	async handler(args, { config }) {
+	async handler(args) {
 		await whoami(args.account);
-		await metrics.sendMetricsEvent("view accounts", {
-			sendMetrics: config.send_metrics,
-		});
 	},
 });

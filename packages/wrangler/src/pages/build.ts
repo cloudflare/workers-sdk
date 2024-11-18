@@ -13,7 +13,6 @@ import { writeAdditionalModules } from "../deployment-bundle/find-additional-mod
 import { validateNodeCompatMode } from "../deployment-bundle/node-compat";
 import { FatalError } from "../errors";
 import { logger } from "../logger";
-import * as metrics from "../metrics";
 import { isNavigatorDefined } from "../navigator-user-agent";
 import { buildFunctions } from "./buildFunctions";
 import {
@@ -311,8 +310,6 @@ export const Handler = async (args: PagesBuildArgs) => {
 			writeFileSync(buildMetadataPath, JSON.stringify(buildMetadata));
 		}
 	}
-
-	await metrics.sendMetricsEvent("build pages functions");
 };
 
 type WorkerBundleArgs = Omit<PagesBuildArgs, "nodeCompat"> & {
