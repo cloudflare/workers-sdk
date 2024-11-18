@@ -77,9 +77,7 @@ describe("Workflows", () => {
 	});
 
 	it("creates a workflow without id", async ({ expect }) => {
-		await expect(
-			fetchJson(`http://${ip}:${port}/create`)
-		).resolves.toEqual({
+		await expect(fetchJson(`http://${ip}:${port}/create`)).resolves.toEqual({
 			status: "running",
 			output: [],
 		});
