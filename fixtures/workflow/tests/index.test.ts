@@ -40,7 +40,7 @@ describe("Workflows", () => {
 		}
 	}
 
-	it("creates a workflow", async ({ expect }) => {
+	it("creates a workflow with id", async ({ expect }) => {
 		await expect(
 			fetchJson(`http://${ip}:${port}/create?workflowName=test`)
 		).resolves.toEqual({
@@ -74,5 +74,14 @@ describe("Workflows", () => {
 			},
 			{ timeout: 5000 }
 		);
+	});
+
+	it("creates a workflow without id", async ({ expect }) => {
+		await expect(
+			fetchJson(`http://${ip}:${port}/create`)
+		).resolves.toEqual({
+			status: "running",
+			output: [],
+		});
 	});
 });
