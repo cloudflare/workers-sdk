@@ -5,7 +5,6 @@ import { msw } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import type { PostTypedConsumerBody, QueueResponse } from "../queues/client";
-import script from "./helpers/msw/handlers/script";
 
 describe("wrangler", () => {
 	mockAccountId();
@@ -1486,7 +1485,8 @@ describe("wrangler", () => {
 				`);
 			})
 			it('should return the list of r2 bucket producers when the queue is used in an r2 event notification', async () => {
-				const mockEventNotificationQueue = {...mockQueue, producers: [{type: "r2_bucket", bucket_name: "test-bucket1"}, {type: "r2_bucket", bucket_name: "test-bucket2"}]};
+				const mockEventNotificationQueue = {...mockQueue, producers: [{type: "r2_bucket", bucket_name: "test-bucket1"},
+					{type: "r2_bucket", bucket_name: "test-bucket2"}], consumers: [{...mockQueue.consumers[0], type: "r2_bucket", bucket_name: "bucket-consumer"}]};
 				mockGetQueueByNameRequest(expectedQueueName, mockEventNotificationQueue);
 				await runWrangler("queues info testQueue");
 				expect(std.out).toMatchInlineSnapshot(`
@@ -1497,7 +1497,7 @@ describe("wrangler", () => {
 					Number of Producers: 2
 					Producers: r2_bucket:test-bucket1, r2_bucket:test-bucket2
 					Number of Consumers: 1
-					Consumers: Consumer: worker:test-consumer"
+					Consumers: Consumer: r2_bucket:bucket-consumer"
 				`);
 			})
 		})
