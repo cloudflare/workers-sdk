@@ -576,6 +576,50 @@ describe("metrics", () => {
 				},
 			});
 		});
+
+		describe("aliases wrangler metrics to wrangler telemetry", async () => {
+			it("wrangler metrics status", async () => {
+				writeWranglerToml({ send_metrics: false });
+				await runWrangler("metrics status");
+				expect(std.out).toMatchInlineSnapshot(`
+				"Status: Disabled (set by wrangler.toml)
+
+				To configure telemetry globally on this machine, you can run \`wrangler telemetry disable / enable\`.
+				You can override this for individual projects with the environment variable \`WRANGLER_SEND_METRICS=true/false\`.
+				"
+			`);
+			});
+			it("wrangler metrics disable", async () => {
+				await runWrangler("metrics disable");
+				expect(std.out).toMatchInlineSnapshot(`
+				"Status: Disabled
+
+				Wrangler is no longer collecting telemetry about your usage.
+				"
+			`);
+			});
+			it("wrangler metrics enable", async () => {
+				writeMetricsConfig({
+					permission: {
+						enabled: false,
+						date: new Date(2022, 6, 4),
+					},
+				});
+				await runWrangler("metrics status");
+				await runWrangler("metrics enable");
+				expect(std.out).toMatchInlineSnapshot(`
+					"Status: Disabled
+
+					To configure telemetry globally on this machine, you can run \`wrangler telemetry disable / enable\`.
+					You can override this for individual projects with the environment variable \`WRANGLER_SEND_METRICS=true/false\`.
+
+					Status: Enabled
+
+					Wrangler is now collecting telemetry about your usage. Thank you for helping make Wrangler better 🧡
+					"
+				`);
+			});
+		});
 	});
 });
 
