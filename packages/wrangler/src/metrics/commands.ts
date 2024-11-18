@@ -1,5 +1,5 @@
 import chalk from "chalk";
-import { defineCommand, defineNamespace } from "../core";
+import { defineAlias, defineCommand, defineNamespace } from "../core";
 import { getWranglerSendMetricsFromEnv } from "../environment-variables/misc-variables";
 import { logger } from "../logger";
 import { readMetricsConfig, updateMetricsPermission } from "./metrics-config";
@@ -12,6 +12,11 @@ defineNamespace({
 		status: "stable",
 		hidden: true,
 	},
+});
+
+defineAlias({
+	command: "wrangler metrics",
+	aliasOf: "wrangler telemetry",
 });
 
 defineCommand({
