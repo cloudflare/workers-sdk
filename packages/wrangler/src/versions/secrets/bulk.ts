@@ -116,7 +116,6 @@ export async function versionsSecretPutBulkHandler(
 		secrets,
 		versionMessage: args.message ?? `Bulk updated ${secrets.length} secrets`,
 		versionTag: args.tag,
-		sendMetrics: config.send_metrics,
 	});
 
 	for (const secret of secrets) {

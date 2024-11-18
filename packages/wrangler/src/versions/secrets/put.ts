@@ -89,7 +89,6 @@ export async function versionsSecretPutHandler(
 		secrets: [{ name: args.key, value: secretValue }],
 		versionMessage: args.message ?? `Updated secret "${args.key}"`,
 		versionTag: args.tag,
-		sendMetrics: config.send_metrics,
 	});
 
 	logger.log(
