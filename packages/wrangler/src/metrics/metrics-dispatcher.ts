@@ -1,15 +1,28 @@
 import { fetch } from "undici";
-import { version as wranglerVersion } from "../../package.json";
 import { logger } from "../logger";
-import { getMetricsConfig } from "./metrics-config";
+import {
+	getOS,
+	getPackageManager,
+	getPlatform,
+	getWranglerVersion,
+} from "./helpers";
+import { getMetricsConfig, readMetricsConfig } from "./metrics-config";
 import type { MetricsConfigOptions } from "./metrics-config";
+import type { CommonEventProperties, Events } from "./send-event";
 
-// The SPARROW_SOURCE_KEY is provided at esbuild time as a `define` for production and beta
-// releases. Otherwise it is left undefined, which automatically disables metrics requests.
-declare const SPARROW_SOURCE_KEY: string;
 const SPARROW_URL = "https://sparrow.cloudflare.com";
 
-export async function getMetricsDispatcher(options: MetricsConfigOptions) {
+export function getMetricsDispatcher(options: MetricsConfigOptions) {
+	// The SPARROW_SOURCE_KEY will be provided at build time through esbuild's `define` option
+	// No events will be sent if the env `SPARROW_SOURCE_KEY` is not provided and the value will be set to an empty string instead.
+	const SPARROW_SOURCE_KEY = process.env.SPARROW_SOURCE_KEY ?? "";
+	const wranglerVersion = getWranglerVersion();
+	const platform = getPlatform();
+	const packageManager = getPackageManager();
+	const isFirstUsage = readMetricsConfig().permission === undefined;
+	const amplitude_session_id = Date.now();
+	let amplitude_event_id = 0;
+
 	return {
 		/**
 		 * Dispatch a event to the analytics target.
@@ -19,62 +32,77 @@ export async function getMetricsDispatcher(options: MetricsConfigOptions) {
 		 *  - additional properties are camelCased
 		 */
 		async sendEvent(name: string, properties: Properties = {}): Promise<void> {
-			await dispatch({ type: "event", name, properties });
+			await dispatch({
+				name,
+				properties: {
+					category: "Workers",
+					wranglerVersion,
+					os: getOS(),
+					...properties,
+				},
+			});
 		},
 
-		/**
-		 * Dispatch a user profile information to the analytics target.
-		 *
-		 * This call can be used to inform the analytics target of relevant properties associated
-		 * with the current user.
-		 */
-		async identify(properties: Properties): Promise<void> {
-			await dispatch({ type: "identify", name: "identify", properties });
+		async sendNewEvent<EventName extends Events["name"]>(
+			name: EventName,
+			properties: Omit<
+				Extract<Events, { name: EventName }>["properties"],
+				keyof CommonEventProperties
+			>
+		): Promise<void> {
+			const commonEventProperties: CommonEventProperties = {
+				amplitude_session_id,
+				amplitude_event_id: amplitude_event_id++,
+				wranglerVersion,
+				platform,
+				packageManager,
+				isFirstUsage,
+			};
+
+			await dispatch({
+				name,
+				properties: {
+					...commonEventProperties,
+					properties,
+				},
+			});
 		},
 	};
 
 	async function dispatch(event: {
-		type: "identify" | "event";
 		name: string;
 		properties: Properties;
 	}): Promise<void> {
-		if (!SPARROW_SOURCE_KEY) {
-			logger.debug(
-				"Metrics dispatcher: Source Key not provided. Be sure to initialize before sending events.",
-				event
-			);
-			return;
-		}
+		const metricsConfig = getMetricsConfig(options);
+		const body = {
+			deviceId: metricsConfig.deviceId,
+			event: event.name,
+			timestamp: Date.now(),
+			properties: event.properties,
+		};
 
-		// Lazily get the config for this dispatcher only when an event is being dispatched.
-		// We must await this since it might trigger user interaction that would break other UI
-		// in Wrangler if it was allowed to run in parallel.
-		const metricsConfig = await getMetricsConfig(options);
 		if (!metricsConfig.enabled) {
 			logger.debug(
 				`Metrics dispatcher: Dispatching disabled - would have sent ${JSON.stringify(
-					event
+					body
 				)}.`
 			);
 			return;
 		}
 
-		logger.debug(`Metrics dispatcher: Posting data ${JSON.stringify(event)}`);
-		const body = JSON.stringify({
-			deviceId: metricsConfig.deviceId,
-			userId: metricsConfig.userId,
-			event: event.name,
-			properties: {
-				category: "Workers",
-				wranglerVersion,
-				os: process.platform + ":" + process.arch,
-				...event.properties,
-			},
-		});
+		if (!SPARROW_SOURCE_KEY) {
+			logger.debug(
+				"Metrics dispatcher: Source Key not provided. Be sure to initialize before sending events",
+				JSON.stringify(body)
+			);
+			return;
+		}
+
+		logger.debug(`Metrics dispatcher: Posting data ${JSON.stringify(body)}`);
 
 		// Do not await this fetch call.
 		// Just fire-and-forget, otherwise we might slow down the rest of Wrangler.
-		fetch(`${SPARROW_URL}/api/v1/${event.type}`, {
+		fetch(`${SPARROW_URL}/api/v1/event`, {
 			method: "POST",
 			headers: {
 				Accept: "*/*",
@@ -83,7 +111,7 @@ export async function getMetricsDispatcher(options: MetricsConfigOptions) {
 			},
 			mode: "cors",
 			keepalive: true,
-			body,
+			body: JSON.stringify(body),
 		}).catch((e) => {
 			logger.debug(
 				"Metrics dispatcher: Failed to send request:",

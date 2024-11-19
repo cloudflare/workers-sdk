@@ -752,7 +752,6 @@ export async function startDev(args: StartDevOptions) {
 			},
 			{
 				sendMetrics: devEnv.config.latestConfig?.sendMetrics,
-				offline: !args.remote,
 			}
 		);
 

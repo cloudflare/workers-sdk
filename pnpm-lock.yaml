@@ -1714,6 +1714,9 @@ importers:
       unenv:
         specifier: npm:unenv-nightly@2.0.0-20241111-080453-894aa31
         version: unenv-nightly@2.0.0-20241111-080453-894aa31
+      which-pm-runs:
+        specifier: ^1.1.0
+        version: 1.1.0
       workerd:
         specifier: 1.20241106.1
         version: 1.20241106.1
@@ -1800,6 +1803,9 @@ importers:
       '@types/supports-color':
         specifier: ^8.1.1
         version: 8.1.1
+      '@types/which-pm-runs':
+        specifier: ^1.0.0
+        version: 1.0.0
       '@types/ws':
         specifier: ^8.5.7
         version: 8.5.10
