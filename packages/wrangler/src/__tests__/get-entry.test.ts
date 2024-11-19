@@ -1,19 +1,20 @@
-import { writeFile } from "fs/promises";
 import path from "path";
 import dedent from "ts-dedent";
-import { Config } from "../config";
 import { defaultWranglerConfig } from "../config/config";
-import { Entry, getEntry } from "../deployment-bundle/entry";
-import guessWorkerFormat from "../deployment-bundle/guess-worker-format";
+import { getEntry } from "../deployment-bundle/entry";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { seed } from "./helpers/seed";
+import type { Entry } from "../deployment-bundle/entry";
 
 function normalize(entry: Entry): Entry {
 	return JSON.parse(
-		JSON.stringify(entry).replaceAll(process.cwd(), "/tmp/dir")
+		JSON.stringify(entry)
+			.replaceAll(process.cwd(), "/tmp/dir")
+			.replaceAll(path.sep, "/")
 	);
 }
+
 describe("getEntry()", () => {
 	runInTempDir();
 	mockConsoleMethods();
