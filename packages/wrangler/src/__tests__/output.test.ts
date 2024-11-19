@@ -193,6 +193,12 @@ describe("writeOutput()", () => {
 			url: "test.com",
 			alias: "dev.com",
 			environment: "production",
+			production_branch: "production-branch",
+			deployment_trigger: {
+				metadata: {
+					commit_hash: "bc286bd30cf12b7fdbce046be6e53ce12ae1283d",
+				},
+			},
 		});
 
 		const outputFilePaths = readdirSync("output");
@@ -215,6 +221,12 @@ describe("writeOutput()", () => {
 				url: "test.com",
 				alias: "dev.com",
 				environment: "production",
+				production_branch: "production-branch",
+				deployment_trigger: {
+					metadata: {
+						commit_hash: "bc286bd30cf12b7fdbce046be6e53ce12ae1283d",
+					},
+				},
 			},
 		]);
 	});

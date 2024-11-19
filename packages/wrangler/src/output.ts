@@ -118,6 +118,14 @@ interface OutputEntryPagesDeploymentDetailed
 	alias: string | undefined;
 	/** The environment being deployed to */
 	environment: "production" | "preview";
+	/** The production branch of the pages project */
+	production_branch: string;
+	deployment_trigger: {
+		metadata: {
+			/** Commit hash of the deployment trigger metadata for the pages project */
+			commit_hash: string;
+		};
+	};
 }
 
 interface OutputEntryVersionUpload extends OutputEntryBase<"version-upload"> {
