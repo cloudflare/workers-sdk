@@ -7,7 +7,7 @@ import makeCLI from "yargs";
 import { version as wranglerVersion } from "../package.json";
 import { ai } from "./ai";
 import { cloudchamber } from "./cloudchamber";
-import { loadDotEnv } from "./config";
+import { loadDotEnv, parseConfig } from "./config";
 import { createCommandRegister } from "./core/register-commands";
 import { d1 } from "./d1";
 import { deleteHandler, deleteOptions } from "./delete";
@@ -52,6 +52,7 @@ import "./user/commands";
 import "./metrics/commands";
 import { demandSingleValue } from "./core";
 import { logBuildFailure, logger, LOGGER_LEVELS } from "./logger";
+import { getMetricsDispatcher } from "./metrics";
 import { mTlsCertificateCommands } from "./mtls-certificate/cli";
 import { writeOutput } from "./output";
 import { pages } from "./pages";
@@ -671,8 +672,11 @@ export function createCLIParser(argv: string[]) {
 export async function main(argv: string[]): Promise<void> {
 	setupSentry();
 
+	const startTime = Date.now();
 	const wrangler = createCLIParser(argv);
-
+	let command: string | undefined;
+	let metricsArgs: Record<string, unknown> | undefined;
+	let dispatcher: ReturnType<typeof getMetricsDispatcher> | undefined;
 	// Register Yargs middleware to record command as Sentry breadcrumb
 	let recordedCommand = false;
 	const wranglerWithMiddleware = wrangler.middleware((args) => {
@@ -683,15 +687,43 @@ export async function main(argv: string[]): Promise<void> {
 		recordedCommand = true;
 		// `args._` doesn't include any positional arguments (e.g. script name,
 		// key to fetch) or flags
-		addBreadcrumb(`wrangler ${args._.join(" ")}`);
+
+		try {
+			const { rawConfig } = parseConfig(args.config, args, false);
+			dispatcher = getMetricsDispatcher({
+				sendMetrics: rawConfig.send_metrics,
+			});
+		} catch (e) {
+			// If we can't parse the config, we can't send metrics
+			logger.debug("Failed to parse config. Disabling metrics dispatcher.", e);
+		}
+
+		command = `wrangler ${args._.join(" ")}`;
+		metricsArgs = args;
+		addBreadcrumb(command);
+		void dispatcher?.sendNewEvent("wrangler command started", {
+			command,
+			args,
+		});
 	}, /* applyBeforeValidation */ true);
 
 	let cliHandlerThrew = false;
 	try {
 		await wranglerWithMiddleware.parse();
+
+		const durationMs = Date.now() - startTime;
+
+		void dispatcher?.sendNewEvent("wrangler command completed", {
+			command,
+			args: metricsArgs,
+			durationMs,
+			durationSeconds: durationMs / 1000,
+			durationMinutes: durationMs / 1000 / 60,
+		});
 	} catch (e) {
 		cliHandlerThrew = true;
 		let mayReport = true;
+		let errorType: string | undefined;
 
 		logger.log(""); // Just adds a bit of space
 		if (e instanceof CommandLineArgsError) {
@@ -702,6 +734,7 @@ export async function main(argv: string[]): Promise<void> {
 			await createCLIParser([...argv, "--help"]).parse();
 		} else if (isAuthenticationError(e)) {
 			mayReport = false;
+			errorType = "AuthenticationError";
 			logger.log(formatMessage(e));
 			const envAuth = getAuthFromEnv();
 			if (envAuth !== undefined && "apiToken" in envAuth) {
@@ -748,9 +781,12 @@ export async function main(argv: string[]): Promise<void> {
 			);
 		} else if (isBuildFailure(e)) {
 			mayReport = false;
+			errorType = "BuildFailure";
+
 			logBuildFailure(e.errors, e.warnings);
 		} else if (isBuildFailureFromCause(e)) {
 			mayReport = false;
+			errorType = "BuildFailure";
 			logBuildFailure(e.cause.errors, e.cause.warnings);
 		} else {
 			let loggableException = e;
@@ -790,6 +826,18 @@ export async function main(argv: string[]): Promise<void> {
 		) {
 			await captureGlobalException(e);
 		}
+
+		const durationMs = Date.now() - startTime;
+
+		void dispatcher?.sendNewEvent("wrangler command errored", {
+			command,
+			args: metricsArgs,
+			durationMs,
+			durationSeconds: durationMs / 1000,
+			durationMinutes: durationMs / 1000 / 60,
+			errorType:
+				errorType ?? (e instanceof Error ? e.constructor.name : undefined),
+		});
 
 		throw e;
 	} finally {

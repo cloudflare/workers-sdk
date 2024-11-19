@@ -1,135 +1,56 @@
-import { mkdirSync } from "node:fs";
 import { http, HttpResponse } from "msw";
 import { vi } from "vitest";
-import { version as wranglerVersion } from "../../package.json";
-import { purgeConfigCaches, saveToConfigCache } from "../config-cache";
 import { CI } from "../is-ci";
 import { logger } from "../logger";
-import { getMetricsConfig, getMetricsDispatcher } from "../metrics";
+import { getOS, getWranglerVersion } from "../metrics/helpers";
 import {
+	getMetricsConfig,
 	readMetricsConfig,
-	USER_ID_CACHE_PATH,
 	writeMetricsConfig,
 } from "../metrics/metrics-config";
-import { writeAuthConfigFile } from "../user";
+import { getMetricsDispatcher } from "../metrics/metrics-dispatcher";
 import { mockConsoleMethods } from "./helpers/mock-console";
-import { clearDialogs } from "./helpers/mock-dialogs";
 import { useMockIsTTY } from "./helpers/mock-istty";
-import { msw, mswSuccessOauthHandlers } from "./helpers/msw";
+import { msw } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import { writeWranglerToml } from "./helpers/write-wrangler-toml";
 import type { MockInstance } from "vitest";
 
-declare const global: { SPARROW_SOURCE_KEY: string | undefined };
+vi.mock("../metrics/helpers");
 vi.unmock("../metrics/metrics-config");
 
 describe("metrics", () => {
-	const ORIGINAL_SPARROW_SOURCE_KEY = global.SPARROW_SOURCE_KEY;
 	const std = mockConsoleMethods();
 	runInTempDir();
 
 	beforeEach(async () => {
-		global.SPARROW_SOURCE_KEY = "MOCK_KEY";
+		vi.stubEnv("SPARROW_SOURCE_KEY", "MOCK_KEY");
 		logger.loggerLevel = "debug";
-		// Create a node_modules directory to store config-cache files
-		mkdirSync("node_modules");
 	});
+
 	afterEach(() => {
-		global.SPARROW_SOURCE_KEY = ORIGINAL_SPARROW_SOURCE_KEY;
-		purgeConfigCaches();
-		clearDialogs();
+		vi.unstubAllEnvs();
 	});
 
 	describe("getMetricsDispatcher()", () => {
-		const MOCK_DISPATCHER_OPTIONS = {
-			// By setting this to true we avoid the `getMetricsConfig()` logic in these tests.
-			sendMetrics: true,
-			offline: false,
-		};
-
-		// These tests should never hit the `/user` API endpoint.
-		const userRequests = mockUserRequest();
-		afterEach(() => {
-			expect(userRequests.count).toBe(0);
+		beforeEach(() => {
+			vi.mocked(getOS).mockReturnValue("foo:bar");
+			vi.mocked(getWranglerVersion).mockReturnValue("1.2.3");
+			vi.useFakeTimers({
+				now: new Date(2024, 11, 12),
+			});
+			writeMetricsConfig({
+				permission: {
+					enabled: true,
+					date: new Date(2024, 11, 11),
+				},
+				deviceId: "f82b1f46-eb7b-4154-aa9f-ce95f23b2288",
+			});
 		});
 
-		describe("identify()", () => {
-			it("should send a request to the default URL", async () => {
-				const request = mockMetricRequest(
-					{
-						event: "identify",
-						properties: {
-							category: "Workers",
-							wranglerVersion,
-							os: process.platform + ":" + process.arch,
-							a: 1,
-							b: 2,
-						},
-					},
-					{ "Sparrow-Source-Key": "MOCK_KEY" },
-					"identify"
-				);
-				const dispatcher = await getMetricsDispatcher(MOCK_DISPATCHER_OPTIONS);
-				await dispatcher.identify({ a: 1, b: 2 });
-
-				expect(request.count).toBe(1);
-				expect(std.debug).toMatchInlineSnapshot(
-					`"Metrics dispatcher: Posting data {\\"type\\":\\"identify\\",\\"name\\":\\"identify\\",\\"properties\\":{\\"a\\":1,\\"b\\":2}}"`
-				);
-				expect(std.out).toMatchInlineSnapshot(`""`);
-				expect(std.warn).toMatchInlineSnapshot(`""`);
-				expect(std.err).toMatchInlineSnapshot(`""`);
-			});
-
-			it("should write a debug log if the dispatcher is disabled", async () => {
-				const requests = mockMetricRequest({}, {}, "identify");
-				const dispatcher = await getMetricsDispatcher({
-					...MOCK_DISPATCHER_OPTIONS,
-					sendMetrics: false,
-				});
-				await dispatcher.identify({ a: 1, b: 2 });
-				await flushPromises();
-
-				expect(requests.count).toBe(0);
-				expect(std.debug).toMatchInlineSnapshot(
-					`"Metrics dispatcher: Dispatching disabled - would have sent {\\"type\\":\\"identify\\",\\"name\\":\\"identify\\",\\"properties\\":{\\"a\\":1,\\"b\\":2}}."`
-				);
-				expect(std.out).toMatchInlineSnapshot(`""`);
-				expect(std.warn).toMatchInlineSnapshot(`""`);
-				expect(std.err).toMatchInlineSnapshot(`""`);
-			});
-
-			it("should write a debug log if the request fails", async () => {
-				msw.use(
-					http.post("*/identify", async () => {
-						return HttpResponse.error();
-					})
-				);
-
-				const dispatcher = await getMetricsDispatcher(MOCK_DISPATCHER_OPTIONS);
-				await dispatcher.identify({ a: 1, b: 2 });
-				await flushPromises();
-				expect(std.debug).toMatchInlineSnapshot(`
-					"Metrics dispatcher: Posting data {\\"type\\":\\"identify\\",\\"name\\":\\"identify\\",\\"properties\\":{\\"a\\":1,\\"b\\":2}}
-					Metrics dispatcher: Failed to send request: Failed to fetch"
-				`);
-				expect(std.out).toMatchInlineSnapshot(`""`);
-				expect(std.warn).toMatchInlineSnapshot(`""`);
-				expect(std.err).toMatchInlineSnapshot(`""`);
-			});
-
-			it("should write a warning log if no source key has been provided", async () => {
-				global.SPARROW_SOURCE_KEY = undefined;
-				const dispatcher = await getMetricsDispatcher(MOCK_DISPATCHER_OPTIONS);
-				await dispatcher.identify({ a: 1, b: 2 });
-				expect(std.debug).toMatchInlineSnapshot(
-					`"Metrics dispatcher: Source Key not provided. Be sure to initialize before sending events. { type: 'identify', name: 'identify', properties: { a: 1, b: 2 } }"`
-				);
-				expect(std.out).toMatchInlineSnapshot(`""`);
-				expect(std.warn).toMatchInlineSnapshot(`""`);
-				expect(std.err).toMatchInlineSnapshot(`""`);
-			});
+		afterEach(() => {
+			vi.useRealTimers();
 		});
 
 		describe("sendEvent()", () => {
@@ -139,8 +60,8 @@ describe("metrics", () => {
 						event: "some-event",
 						properties: {
 							category: "Workers",
-							wranglerVersion,
-							os: process.platform + ":" + process.arch,
+							wranglerVersion: "1.2.3",
+							os: "foo:bar",
 							a: 1,
 							b: 2,
 						},
@@ -150,12 +71,14 @@ describe("metrics", () => {
 					},
 					"event"
 				);
-				const dispatcher = await getMetricsDispatcher(MOCK_DISPATCHER_OPTIONS);
+				const dispatcher = await getMetricsDispatcher({
+					sendMetrics: true,
+				});
 				await dispatcher.sendEvent("some-event", { a: 1, b: 2 });
 
 				expect(requests.count).toBe(1);
 				expect(std.debug).toMatchInlineSnapshot(
-					`"Metrics dispatcher: Posting data {\\"type\\":\\"event\\",\\"name\\":\\"some-event\\",\\"properties\\":{\\"a\\":1,\\"b\\":2}}"`
+					`"Metrics dispatcher: Posting data {\\"deviceId\\":\\"f82b1f46-eb7b-4154-aa9f-ce95f23b2288\\",\\"event\\":\\"some-event\\",\\"timestamp\\":1733961600000,\\"properties\\":{\\"category\\":\\"Workers\\",\\"wranglerVersion\\":\\"1.2.3\\",\\"os\\":\\"foo:bar\\",\\"a\\":1,\\"b\\":2}}"`
 				);
 				expect(std.out).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -164,17 +87,14 @@ describe("metrics", () => {
 
 			it("should write a debug log if the dispatcher is disabled", async () => {
 				const requests = mockMetricRequest({}, {}, "event");
-
 				const dispatcher = await getMetricsDispatcher({
-					...MOCK_DISPATCHER_OPTIONS,
 					sendMetrics: false,
 				});
 				await dispatcher.sendEvent("some-event", { a: 1, b: 2 });
-				await flushPromises();
 
 				expect(requests.count).toBe(0);
 				expect(std.debug).toMatchInlineSnapshot(
-					`"Metrics dispatcher: Dispatching disabled - would have sent {\\"type\\":\\"event\\",\\"name\\":\\"some-event\\",\\"properties\\":{\\"a\\":1,\\"b\\":2}}."`
+					`"Metrics dispatcher: Dispatching disabled - would have sent {\\"deviceId\\":\\"f82b1f46-eb7b-4154-aa9f-ce95f23b2288\\",\\"event\\":\\"some-event\\",\\"timestamp\\":1733961600000,\\"properties\\":{\\"category\\":\\"Workers\\",\\"wranglerVersion\\":\\"1.2.3\\",\\"os\\":\\"foo:bar\\",\\"a\\":1,\\"b\\":2}}."`
 				);
 				expect(std.out).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -187,27 +107,35 @@ describe("metrics", () => {
 						return HttpResponse.error();
 					})
 				);
-				const dispatcher = await getMetricsDispatcher(MOCK_DISPATCHER_OPTIONS);
+				const dispatcher = await getMetricsDispatcher({
+					sendMetrics: true,
+				});
 				await dispatcher.sendEvent("some-event", { a: 1, b: 2 });
 				await flushPromises();
-				expect(std.debug).toMatchInlineSnapshot(`
-					"Metrics dispatcher: Posting data {\\"type\\":\\"event\\",\\"name\\":\\"some-event\\",\\"properties\\":{\\"a\\":1,\\"b\\":2}}
+
+				expect(std.debug).toMatchInlineSnapshot(
+					`
+					"Metrics dispatcher: Posting data {\\"deviceId\\":\\"f82b1f46-eb7b-4154-aa9f-ce95f23b2288\\",\\"event\\":\\"some-event\\",\\"timestamp\\":1733961600000,\\"properties\\":{\\"category\\":\\"Workers\\",\\"wranglerVersion\\":\\"1.2.3\\",\\"os\\":\\"foo:bar\\",\\"a\\":1,\\"b\\":2}}
 					Metrics dispatcher: Failed to send request: Failed to fetch"
-				`);
+				`
+				);
 				expect(std.out).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 			});
 
 			it("should write a warning log if no source key has been provided", async () => {
-				global.SPARROW_SOURCE_KEY = undefined;
+				vi.stubEnv("SPARROW_SOURCE_KEY", undefined);
+
 				const requests = mockMetricRequest({}, {}, "event");
-				const dispatcher = await getMetricsDispatcher(MOCK_DISPATCHER_OPTIONS);
+				const dispatcher = await getMetricsDispatcher({
+					sendMetrics: true,
+				});
 				await dispatcher.sendEvent("some-event", { a: 1, b: 2 });
 
 				expect(requests.count).toBe(0);
 				expect(std.debug).toMatchInlineSnapshot(
-					`"Metrics dispatcher: Source Key not provided. Be sure to initialize before sending events. { type: 'event', name: 'some-event', properties: { a: 1, b: 2 } }"`
+					`"Metrics dispatcher: Source Key not provided. Be sure to initialize before sending events {\\"deviceId\\":\\"f82b1f46-eb7b-4154-aa9f-ce95f23b2288\\",\\"event\\":\\"some-event\\",\\"timestamp\\":1733961600000,\\"properties\\":{\\"category\\":\\"Workers\\",\\"wranglerVersion\\":\\"1.2.3\\",\\"os\\":\\"foo:bar\\",\\"a\\":1,\\"b\\":2}}"`
 				);
 				expect(std.out).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -246,14 +174,10 @@ describe("metrics", () => {
 			});
 
 			it("should return the sendMetrics argument for enabled if it is defined", async () => {
-				expect(
-					await getMetricsConfig({ sendMetrics: false, offline: false })
-				).toMatchObject({
+				expect(await getMetricsConfig({ sendMetrics: false })).toMatchObject({
 					enabled: false,
 				});
-				expect(
-					await getMetricsConfig({ sendMetrics: true, offline: false })
-				).toMatchObject({
+				expect(await getMetricsConfig({ sendMetrics: true })).toMatchObject({
 					enabled: true,
 				});
 			});
@@ -263,7 +187,6 @@ describe("metrics", () => {
 				expect(
 					await getMetricsConfig({
 						sendMetrics: undefined,
-						offline: false,
 					})
 				).toMatchObject({
 					enabled: false,
@@ -280,7 +203,6 @@ describe("metrics", () => {
 				expect(
 					await getMetricsConfig({
 						sendMetrics: undefined,
-						offline: false,
 					})
 				).toMatchObject({
 					enabled: true,
@@ -297,7 +219,6 @@ describe("metrics", () => {
 				expect(
 					await getMetricsConfig({
 						sendMetrics: undefined,
-						offline: false,
 					})
 				).toMatchObject({
 					enabled: false,
@@ -314,7 +235,6 @@ describe("metrics", () => {
 				expect(
 					await getMetricsConfig({
 						sendMetrics: undefined,
-						offline: false,
 					})
 				).toMatchObject({
 					enabled: true,
@@ -336,7 +256,6 @@ describe("metrics", () => {
 				writeMetricsConfig({ deviceId: "XXXX-YYYY-ZZZZ" });
 				const { deviceId } = await getMetricsConfig({
 					sendMetrics: true,
-					offline: false,
 				});
 				expect(deviceId).toEqual("XXXX-YYYY-ZZZZ");
 				expect(readMetricsConfig().deviceId).toEqual(deviceId);
@@ -346,49 +265,11 @@ describe("metrics", () => {
 				writeMetricsConfig({});
 				const { deviceId } = await getMetricsConfig({
 					sendMetrics: true,
-					offline: false,
 				});
 				expect(deviceId).toMatch(
 					/[0-9a-fA-F]{8}-([0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}/
 				);
 				expect(readMetricsConfig().deviceId).toEqual(deviceId);
-			});
-		});
-
-		describe("userId", () => {
-			const userRequests = mockUserRequest();
-			it("should return a userId found in a cache file", async () => {
-				saveToConfigCache(USER_ID_CACHE_PATH, {
-					userId: "CACHED_USER_ID",
-				});
-				const { userId } = await getMetricsConfig({
-					sendMetrics: true,
-					offline: false,
-				});
-				expect(userId).toEqual("CACHED_USER_ID");
-				expect(userRequests.count).toBe(0);
-			});
-
-			it("should fetch the userId from Cloudflare and store it in a cache file", async () => {
-				writeAuthConfigFile({ oauth_token: "DUMMY_TOKEN" });
-				const { userId } = await getMetricsConfig({
-					sendMetrics: true,
-					offline: false,
-				});
-				await flushPromises();
-
-				expect(userId).toEqual("MOCK_USER_ID");
-				expect(userRequests.count).toBe(1);
-			});
-
-			it("should not fetch the userId from Cloudflare if running in `offline` mode", async () => {
-				writeAuthConfigFile({ oauth_token: "DUMMY_TOKEN" });
-				const { userId } = await getMetricsConfig({
-					sendMetrics: true,
-					offline: true,
-				});
-				expect(userId).toBe(undefined);
-				expect(userRequests.count).toBe(0);
 			});
 		});
 	});
@@ -534,31 +415,6 @@ Wrangler is now collecting telemetry about your usage. Thank you for helping mak
 	});
 });
 
-function mockUserRequest() {
-	const requests = { count: 0 };
-	beforeEach(() => {
-		msw.use(
-			...mswSuccessOauthHandlers,
-			http.get("*/user", () => {
-				requests.count++;
-				return HttpResponse.json(
-					{
-						success: true,
-						errors: [],
-						messages: [],
-						result: { id: "MOCK_USER_ID" },
-					},
-					{ status: 200 }
-				);
-			})
-		);
-	});
-	afterEach(() => {
-		requests.count = 0;
-	});
-	return requests;
-}
-
 function mockMetricRequest(
 	body: unknown,
 	header: unknown,
@@ -582,6 +438,9 @@ function mockMetricRequest(
 }
 
 // Forces a tick to allow the non-awaited fetch promise to resolve.
-function flushPromises(): Promise<void> {
-	return new Promise((resolve) => setTimeout(resolve, 0));
+async function flushPromises(): Promise<void> {
+	await Promise.all([
+		new Promise((resolve) => setTimeout(resolve, 0)),
+		vi.advanceTimersToNextTimerAsync(),
+	]);
 }
