@@ -28,18 +28,18 @@ export async function handler(
     logger.log(`Created On: ${queue.created_on}`)
     logger.log(`Last Modified: ${queue.modified_on}`)
     logger.log(`Number of Producers: ${queue.producers_total_count}`)
-    logger.log(`Producers:${queue.producers.map((p: Producer) => p.type === "r2_bucket" ? ` ${p.type}:${p.bucket_name}` : ` ${p.type}:${p.script}` ).toString()}`)
+    queue.producers_total_count > 0 && logger.log(`Producers:${queue.producers.map((p: Producer) => p.type === "r2_bucket" ? ` ${p.type}:${p.bucket_name}` : ` ${p.type}:${p.script}` ).toString()}`)
     logger.log(`Number of Consumers: ${queue.consumers_total_count}`)
-    logger.log(`Consumers: ${queue.consumers.map((c: Consumer) => {
+    queue.consumers_total_count > 0 && logger.log(`Consumers: ${queue.consumers.map((c: Consumer) => {
         if (c.type === "r2_bucket") {
-            return `Consumer: ${c.type}:${c.bucket_name}`;
+            return `${c.type}:${c.bucket_name}`;
         }
         if (c.type === "http_pull") {
-            return `HTTP Pull Consumer \ncurl "https://api.cloudflare.com/client/v4/accounts/${config.account_id}/queues/${queue.queue_id}/messages/pull" \
-                \n\t--header "Authorization: Bearer <api key>" \
+            return `HTTP Pull Consumer \ncurl "https://api.cloudflare.com/client/v4/accounts/${config.account_id || "<add your account id here>"}/queues/${queue.queue_id || "<add your queue id here>"}/messages/pull" \
+                \n\t--header "Authorization: Bearer <add your api key here>" \
                 \n\t--header "Content-Type: application/json" \
                 \n\t--data '{ "visibility_timeout": 10000, "batch_size": 2 }'`;
         }
-        return `Consumer: ${c.type}:${c.script}`;
+        return `${c.type}:${c.script}`;
     }).toString()}`)
 }
