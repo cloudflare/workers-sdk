@@ -1,5 +1,40 @@
 # wrangler
 
+## 3.88.0
+
+### Minor Changes
+
+- [#7173](https://github.com/cloudflare/workers-sdk/pull/7173) [`b6cbfbd`](https://github.com/cloudflare/workers-sdk/commit/b6cbfbdd10dfbb732ec12a5c69bd4a74b07de8a0) Thanks [@Ankcorn](https://github.com/Ankcorn)! - Adds [observability.logs] settings to wrangler. This setting lets developers control the settings for logs as an independent dataset enabling more dataset types in the future. The most specific setting will win if any of the datasets are not enabled.
+
+  It also adds the following setting to the logs config
+
+  - `invocation_logs` - set to false to disable invocation logs. Defaults to true.
+
+  ```toml
+  [observability.logs]
+  enabled = true
+  invocation_logs = false
+  ```
+
+- [#7207](https://github.com/cloudflare/workers-sdk/pull/7207) [`edec415`](https://github.com/cloudflare/workers-sdk/commit/edec41591dcf37262d459568c0f454820b90dbaa) Thanks [@jonesphillip](https://github.com/jonesphillip)! - Added r2 bucket lifecycle command to Wrangler including list, add, remove, set
+
+### Patch Changes
+
+- [#7243](https://github.com/cloudflare/workers-sdk/pull/7243) [`941d411`](https://github.com/cloudflare/workers-sdk/commit/941d4110ca84510d235b72b3f98692e4188a7ad4) Thanks [@penalosa](https://github.com/penalosa)! - Include Version Preview URL in Wrangler's output file
+
+- [#7038](https://github.com/cloudflare/workers-sdk/pull/7038) [`e2e6912`](https://github.com/cloudflare/workers-sdk/commit/e2e6912bcb7a1f6b7f8081b889a4e08be8a740a1) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: only show fetch warning if on old compatibility_date
+
+  Now that we have the `allow_custom_ports` compatibility flag, we only need to show the fetch warnings when that flag is not enabled.
+
+  Fixes https://github.com/cloudflare/workerd/issues/2955
+
+- [#7216](https://github.com/cloudflare/workers-sdk/pull/7216) [`09e6e90`](https://github.com/cloudflare/workers-sdk/commit/09e6e905d9825d33b8e90acabb8ff7b962cc908b) Thanks [@vicb](https://github.com/vicb)! - chore(wrangler): update unenv dependency version
+
+- [#7081](https://github.com/cloudflare/workers-sdk/pull/7081) [`b4a0e74`](https://github.com/cloudflare/workers-sdk/commit/b4a0e74680440084342477fc9373f9f76ab91c0b) Thanks [@penalosa](https://github.com/penalosa)! - Default the file based registry (`--x-registry`) to on. This should improve stability of multi-worker development
+
+- Updated dependencies []:
+  - miniflare@3.20241106.0
+
 ## 3.87.0
 
 ### Minor Changes
