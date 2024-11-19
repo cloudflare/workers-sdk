@@ -338,7 +338,6 @@ function buildProjectWorkerOptions(
 	// compatibility flags enabled. Vitest makes heavy use of Node APIs, and many
 	// of the libraries it depends on expect `require()` to return
 	// `module.exports` directly, rather than `{ default: module.exports }`.
-	// Initialize compatibilityFlags if undefined
 	runnerWorker.compatibilityFlags ??= [];
 
 	const flagAssertions = new CompatibilityFlagAssertions({
