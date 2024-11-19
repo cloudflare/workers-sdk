@@ -1,5 +1,15 @@
 # @cloudflare/vitest-pool-workers
 
+## 0.5.29
+
+### Patch Changes
+
+- [#7278](https://github.com/cloudflare/workers-sdk/pull/7278) [`6508ea2`](https://github.com/cloudflare/workers-sdk/commit/6508ea21c396beff8a2de987eaf335bb46bdd89c) Thanks [@andyjessop](https://github.com/andyjessop)! - fix: ensures Vitest Pool Workers doesn't error when using nodejs_compat_v2 flag
+
+- Updated dependencies [[`b6cbfbd`](https://github.com/cloudflare/workers-sdk/commit/b6cbfbdd10dfbb732ec12a5c69bd4a74b07de8a0), [`edec415`](https://github.com/cloudflare/workers-sdk/commit/edec41591dcf37262d459568c0f454820b90dbaa), [`941d411`](https://github.com/cloudflare/workers-sdk/commit/941d4110ca84510d235b72b3f98692e4188a7ad4), [`e2e6912`](https://github.com/cloudflare/workers-sdk/commit/e2e6912bcb7a1f6b7f8081b889a4e08be8a740a1), [`09e6e90`](https://github.com/cloudflare/workers-sdk/commit/09e6e905d9825d33b8e90acabb8ff7b962cc908b), [`b4a0e74`](https://github.com/cloudflare/workers-sdk/commit/b4a0e74680440084342477fc9373f9f76ab91c0b)]:
+  - wrangler@3.88.0
+  - miniflare@3.20241106.0
+
 ## 0.5.28
 
 ### Patch Changes
