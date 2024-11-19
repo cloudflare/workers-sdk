@@ -52,6 +52,7 @@ export interface Worker {
 	fetch: DispatchFetch;
 	scheduled: MiniflareWorker["scheduled"];
 	queue: MiniflareWorker["queue"];
+	getLocalMiniflareInstance(): Promise<Miniflare>;
 	dispose(): Promise<void>;
 }
 

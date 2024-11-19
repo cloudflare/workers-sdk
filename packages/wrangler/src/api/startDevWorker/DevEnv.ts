@@ -178,6 +178,17 @@ function createWorkerObject(devEnv: DevEnv): Worker {
 			const w = await proxyWorker.getWorker(this.config.name);
 			return w.scheduled(...args);
 		},
+		async getLocalMiniflareInstance() {
+			const local = devEnv.runtimes.find(
+				(ctrl) => ctrl instanceof LocalRuntimeController
+			);
+
+			if (this.config.dev.remote || !local) {
+				throw new Error("local only");
+			}
+
+			return await local.getMiniflareInstance();
+		},
 		async dispose() {
 			await devEnv.teardown();
 		},
