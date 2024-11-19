@@ -741,6 +741,15 @@ importers:
         specifier: workspace:*
         version: link:../../packages/wrangler
 
+  packages/chrome-devtools-patches:
+    devDependencies:
+      patch-package:
+        specifier: ^6.5.1
+        version: 6.5.1
+      wrangler:
+        specifier: workspace:*
+        version: link:../wrangler
+
   packages/cli:
     devDependencies:
       '@clack/core':
@@ -1941,15 +1950,6 @@ importers:
       yargs:
         specifier: ^17.7.2
         version: 17.7.2
-
-  packages/wrangler-devtools:
-    devDependencies:
-      patch-package:
-        specifier: ^6.5.1
-        version: 6.5.1
-      wrangler:
-        specifier: workspace:*
-        version: link:../wrangler
 
   tools:
     devDependencies:
