@@ -142,6 +142,9 @@ export class LocalRuntimeController extends RuntimeController {
 	#mutex = new Mutex();
 	#mf?: Miniflare;
 
+	#bindings?: Record<string, unknown>;
+	#cf?: Record<string, unknown>;
+
 	async getMiniflareInstance() {
 		if (this.#mf) {
 			return this.#mf;
@@ -154,6 +157,42 @@ export class LocalRuntimeController extends RuntimeController {
 		}
 
 		return this.#mf;
+	}
+
+	async getBindings(): Promise<Record<string, unknown>> {
+		const mf = await this.getMiniflareInstance();
+
+		this.#bindings = await mf.getBindings();
+
+		// eslint-disable-next-line @typescript-eslint/no-this-alias
+		const self = this;
+
+		return new Proxy(
+			{},
+			{
+				get(_, prop, receiver) {
+					return Reflect.get(self.#bindings ?? {}, prop, receiver);
+				},
+			}
+		);
+	}
+
+	async getCf(): Promise<Record<string, unknown>> {
+		const mf = await this.getMiniflareInstance();
+
+		this.#cf = await mf.getCf();
+
+		// eslint-disable-next-line @typescript-eslint/no-this-alias
+		const self = this;
+
+		return new Proxy(
+			{},
+			{
+				get(_, prop, receiver) {
+					return Reflect.get(self.#cf ?? {}, prop, receiver);
+				},
+			}
+		);
 	}
 
 	onBundleStart(_: BundleStartEvent) {
@@ -187,6 +226,16 @@ export class LocalRuntimeController extends RuntimeController {
 			// dispatch a `reloadComplete` for this bundle, ignore this bundle.
 			if (id !== this.#currentBundleId) {
 				return;
+			}
+
+			if (this.#bindings) {
+				// Re-fetch bindings to ensure they're up-to-date
+				this.#bindings = await this.#mf.getBindings();
+			}
+
+			if (this.#cf) {
+				// Re-fetch `CfProperties` to ensure they're up-to-date
+				this.#cf = await this.#mf.getCf();
 			}
 
 			// Get entrypoint addresses

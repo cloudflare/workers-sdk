@@ -122,13 +122,11 @@ export async function getPlatformProxy<
 		},
 	});
 
-	const mf = await worker.getLocalMiniflareInstance();
-	const bindings: Env = await mf.getBindings();
-	const cf = await mf.getCf();
+	const { env, cf } = await worker.getPlatformProxy();
 	deepFreeze(cf);
 
 	return {
-		env: bindings,
+		env: env as Env,
 		cf: cf as CfProperties,
 		ctx: new ExecutionContext(),
 		caches: new CacheStorage(),

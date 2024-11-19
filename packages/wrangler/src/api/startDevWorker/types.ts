@@ -52,7 +52,10 @@ export interface Worker {
 	fetch: DispatchFetch;
 	scheduled: MiniflareWorker["scheduled"];
 	queue: MiniflareWorker["queue"];
-	getLocalMiniflareInstance(): Promise<Miniflare>;
+	getPlatformProxy(): Promise<{
+		env: Record<string, unknown>;
+		cf: Record<string, unknown>;
+	}>;
 	dispose(): Promise<void>;
 }
 

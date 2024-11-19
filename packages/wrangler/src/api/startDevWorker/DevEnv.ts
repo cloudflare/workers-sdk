@@ -178,7 +178,7 @@ function createWorkerObject(devEnv: DevEnv): Worker {
 			const w = await proxyWorker.getWorker(this.config.name);
 			return w.scheduled(...args);
 		},
-		async getLocalMiniflareInstance() {
+		async getPlatformProxy() {
 			const local = devEnv.runtimes.find(
 				(ctrl) => ctrl instanceof LocalRuntimeController
 			);
@@ -187,7 +187,12 @@ function createWorkerObject(devEnv: DevEnv): Worker {
 				throw new Error("local only");
 			}
 
-			return await local.getMiniflareInstance();
+			const [env, cf] = await Promise.all([local.getBindings(), local.getCf()]);
+
+			return {
+				env,
+				cf,
+			};
 		},
 		async dispose() {
 			await devEnv.teardown();
