@@ -92,8 +92,8 @@ export function getMetricsDispatcher(options: MetricsConfigOptions) {
 
 		if (!SPARROW_SOURCE_KEY) {
 			logger.debug(
-				"Metrics dispatcher: Source Key not provided. Be sure to initialize before sending events.",
-				event
+				"Metrics dispatcher: Source Key not provided. Be sure to initialize before sending events",
+				JSON.stringify(body)
 			);
 			return;
 		}

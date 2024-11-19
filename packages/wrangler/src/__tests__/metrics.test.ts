@@ -111,9 +111,13 @@ describe("metrics", () => {
 					sendMetrics: true,
 				});
 				await dispatcher.sendEvent("some-event", { a: 1, b: 2 });
+				await flushPromises();
 
 				expect(std.debug).toMatchInlineSnapshot(
-					`"Metrics dispatcher: Posting data {\\"deviceId\\":\\"f82b1f46-eb7b-4154-aa9f-ce95f23b2288\\",\\"event\\":\\"some-event\\",\\"timestamp\\":1733961600000,\\"properties\\":{\\"category\\":\\"Workers\\",\\"wranglerVersion\\":\\"1.2.3\\",\\"os\\":\\"foo:bar\\",\\"a\\":1,\\"b\\":2}}"`
+					`
+					"Metrics dispatcher: Posting data {\\"deviceId\\":\\"f82b1f46-eb7b-4154-aa9f-ce95f23b2288\\",\\"event\\":\\"some-event\\",\\"timestamp\\":1733961600000,\\"properties\\":{\\"category\\":\\"Workers\\",\\"wranglerVersion\\":\\"1.2.3\\",\\"os\\":\\"foo:bar\\",\\"a\\":1,\\"b\\":2}}
+					Metrics dispatcher: Failed to send request: Failed to fetch"
+				`
 				);
 				expect(std.out).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -130,18 +134,9 @@ describe("metrics", () => {
 				await dispatcher.sendEvent("some-event", { a: 1, b: 2 });
 
 				expect(requests.count).toBe(0);
-				expect(std.debug).toMatchInlineSnapshot(`
-					"Metrics dispatcher: Source Key not provided. Be sure to initialize before sending events. {
-					  name: 'some-event',
-					  properties: {
-					    category: 'Workers',
-					    wranglerVersion: '1.2.3',
-					    os: 'foo:bar',
-					    a: 1,
-					    b: 2
-					  }
-					}"
-				`);
+				expect(std.debug).toMatchInlineSnapshot(
+					`"Metrics dispatcher: Source Key not provided. Be sure to initialize before sending events {\\"deviceId\\":\\"f82b1f46-eb7b-4154-aa9f-ce95f23b2288\\",\\"event\\":\\"some-event\\",\\"timestamp\\":1733961600000,\\"properties\\":{\\"category\\":\\"Workers\\",\\"wranglerVersion\\":\\"1.2.3\\",\\"os\\":\\"foo:bar\\",\\"a\\":1,\\"b\\":2}}"`
+				);
 				expect(std.out).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
@@ -440,4 +435,12 @@ function mockMetricRequest(
 	);
 
 	return requests;
+}
+
+// Forces a tick to allow the non-awaited fetch promise to resolve.
+async function flushPromises(): Promise<void> {
+	await Promise.all([
+		new Promise((resolve) => setTimeout(resolve, 0)),
+		vi.advanceTimersToNextTimerAsync(),
+	]);
 }
