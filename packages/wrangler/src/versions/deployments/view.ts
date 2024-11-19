@@ -1,41 +1,36 @@
+import { defineCommand } from "../../core";
 import { UserError } from "../../errors";
-import { printWranglerBanner } from "../../update-check";
-import type {
-	CommonYargsArgv,
-	StrictYargsOptionsToInterface,
-} from "../../yargs-types";
 
-export type VersionsDeploymentsViewArgs = StrictYargsOptionsToInterface<
-	typeof versionsDeploymentsViewOptions
->;
-
-export function versionsDeploymentsViewOptions(yargs: CommonYargsArgv) {
-	return yargs
-		.option("name", {
+defineCommand({
+	command: "wrangler versions deploy view",
+	metadata: {
+		description:
+			"`wrangler deployments view` has been renamed to `wrangler deployments status`. Please use that command instead.",
+		owner: "Workers: Authoring and Testing",
+		status: "stable",
+	},
+	args: {
+		name: {
 			describe: "Name of the worker",
 			type: "string",
 			requiresArg: true,
-		})
-		.positional("deployment-id", {
+		},
+		"deployment-id": {
 			describe:
 				"Deprecated. Deployment ID is now referred to as Version ID. Please use `wrangler versions view [version-id]` instead.",
 			type: "string",
 			requiresArg: true,
-		});
-}
-
-export async function versionsDeploymentsViewHandler(
-	args: VersionsDeploymentsViewArgs
-) {
-	await printWranglerBanner();
-
-	if (args.deploymentId === undefined) {
-		throw new UserError(
-			"`wrangler deployments view` has been renamed `wrangler deployments status`. Please use that command instead."
-		);
-	} else {
-		throw new UserError(
-			"`wrangler deployments view <deployment-id>` has been renamed `wrangler versions view [version-id]`. Please use that command instead."
-		);
-	}
-}
+		},
+	},
+	handler: async function versionsDeploymentsViewHandler(args) {
+		if (args.deploymentId === undefined) {
+			throw new UserError(
+				"`wrangler deployments view` has been renamed `wrangler deployments status`. Please use that command instead."
+			);
+		} else {
+			throw new UserError(
+				"`wrangler deployments view <deployment-id>` has been renamed `wrangler versions view [version-id]`. Please use that command instead."
+			);
+		}
+	},
+});

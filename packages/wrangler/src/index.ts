@@ -47,9 +47,24 @@ import { initHandler, initOptions } from "./init";
 import "./docs";
 import "./dev";
 import "./kv";
+import "./versions";
+import "./versions/deploy";
+import "./versions/list";
+import "./versions/upload";
+import "./versions/view";
+import "./versions/deployments";
+import "./versions/deployments/list";
+import "./versions/deployments/status";
+import "./versions/deployments/view";
+import "./versions/rollback";
+import "./versions/secrets";
+import "./versions/secrets/bulk";
+import "./versions/secrets/delete";
+import "./versions/secrets/list";
+import "./versions/secrets/put";
 import "./workflows";
 import "./user/commands";
-import { demandSingleValue } from "./core";
+import { defineAlias, demandSingleValue } from "./core";
 import { logBuildFailure, logger, LOGGER_LEVELS } from "./logger";
 import { mTlsCertificateCommands } from "./mtls-certificate/cli";
 import { writeOutput } from "./output";
@@ -74,9 +89,6 @@ import { getAuthFromEnv } from "./user";
 import { whoami } from "./user/whoami";
 import { debugLogFilepath } from "./utils/log-file";
 import { vectorize } from "./vectorize/index";
-import registerVersionsSubcommands from "./versions";
-import registerVersionsDeploymentsSubcommands from "./versions/deployments";
-import registerVersionsRollbackCommand from "./versions/rollback";
 import { asJson } from "./yargs-types";
 import type { Config } from "./config";
 import type { LoggerLevel } from "./logger";
@@ -344,11 +356,7 @@ export function createCLIParser(argv: string[]) {
 		"🚢 List and view the current and past deployments for your Worker";
 
 	if (experimentalGradualRollouts) {
-		wrangler.command(
-			"deployments",
-			deploymentsDescription,
-			registerVersionsDeploymentsSubcommands
-		);
+		register.registerNamespace("deployments");
 	} else {
 		wrangler.command("deployments", deploymentsDescription, (yargs) =>
 			yargs
@@ -395,7 +403,7 @@ export function createCLIParser(argv: string[]) {
 	const rollbackDescription = "🔙 Rollback a deployment for a Worker";
 
 	if (experimentalGradualRollouts) {
-		registerVersionsRollbackCommand(wrangler, rollbackDescription);
+		register.registerNamespace("rollback");
 	} else {
 		wrangler.command(
 			"rollback [deployment-id]",
@@ -433,15 +441,9 @@ export function createCLIParser(argv: string[]) {
 		);
 	}
 
-	// versions
+	// versions/versions deployments/versions rollback/versions secrets
 	if (experimentalGradualRollouts) {
-		wrangler.command(
-			"versions",
-			"🫧  List, view, upload and deploy Versions of your Worker to Cloudflare",
-			(yargs) => {
-				return registerVersionsSubcommands(yargs.command(subHelp), subHelp);
-			}
-		);
+		register.registerNamespace("versions");
 	}
 
 	// triggers
