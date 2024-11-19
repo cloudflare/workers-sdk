@@ -17,112 +17,118 @@ function normalize(entry: Entry): Entry {
 describe("getEntry()", () => {
 	runInTempDir();
 	mockConsoleMethods();
-	it.each([
-		[
-			"--script index.ts",
-			{
-				"index.ts": dedent/* javascript */ `
-						export default {
-							fetch() {
 
+	it("--script index.ts", async () => {
+		await seed({
+			"index.ts": dedent/* javascript */ `
+							export default {
+								fetch() {
+
+								}
 							}
-						}
-					`,
-			},
+						`,
+		});
+		const entry = await getEntry(
 			{ script: "index.ts" },
-			{},
-			{
-				directory: "/tmp/dir",
-				file: "/tmp/dir/index.ts",
-				moduleRoot: "/tmp/dir",
-			},
-		],
-		[
-			"--script src/index.ts",
-			{
-				"src/index.ts": dedent/* javascript */ `
-						export default {
-							fetch() {
+			defaultWranglerConfig,
+			"deploy"
+		);
+		expect(normalize(entry)).toMatchObject({
+			directory: "/tmp/dir",
+			file: "/tmp/dir/index.ts",
+			moduleRoot: "/tmp/dir",
+		});
+	});
 
+	it("--script src/index.ts", async () => {
+		await seed({
+			"src/index.ts": dedent/* javascript */ `
+							export default {
+								fetch() {
+
+								}
 							}
-						}
-					`,
-			},
+						`,
+		});
+		const entry = await getEntry(
 			{ script: "src/index.ts" },
-			{},
-			{
-				directory: "/tmp/dir",
-				file: "/tmp/dir/src/index.ts",
-				moduleRoot: "/tmp/dir/src",
-			},
-		],
-		[
-			"main = index.ts",
-			{
-				"index.ts": dedent/* javascript */ `
-						export default {
-							fetch() {
+			defaultWranglerConfig,
+			"deploy"
+		);
+		expect(normalize(entry)).toMatchObject({
+			directory: "/tmp/dir",
+			file: "/tmp/dir/src/index.ts",
+			moduleRoot: "/tmp/dir/src",
+		});
+	});
 
-							}
-						}
-					`,
-			},
-			{},
-			{ main: "index.ts" },
-			{
-				directory: "/tmp/dir",
-				file: "/tmp/dir/index.ts",
-				moduleRoot: "/tmp/dir",
-			},
-		],
-		[
-			"main = src/index.ts",
-			{
-				"src/index.ts": dedent/* javascript */ `
-						export default {
-							fetch() {
+	it("main = index.ts", async () => {
+		await seed({
+			"index.ts": dedent/* javascript */ `
+							export default {
+								fetch() {
 
+								}
 							}
-						}
-					`,
-			},
+						`,
+		});
+		const entry = await getEntry(
 			{},
-			{ main: "src/index.ts" },
-			{
-				directory: "/tmp/dir",
-				file: "/tmp/dir/src/index.ts",
-				moduleRoot: "/tmp/dir/src",
-			},
-		],
-		[
-			"main = src/index.ts w/ configPath",
-			{
-				"other-worker/src/index.ts": dedent/* javascript */ `
-						export default {
-							fetch() {
+			{ ...defaultWranglerConfig, main: "index.ts" },
+			"deploy"
+		);
+		expect(normalize(entry)).toMatchObject({
+			directory: "/tmp/dir",
+			file: "/tmp/dir/index.ts",
+			moduleRoot: "/tmp/dir",
+		});
+	});
 
+	it("main = src/index.ts", async () => {
+		await seed({
+			"src/index.ts": dedent/* javascript */ `
+							export default {
+								fetch() {
+
+								}
 							}
-						}
-					`,
-			},
+						`,
+		});
+		const entry = await getEntry(
+			{},
+			{ ...defaultWranglerConfig, main: "src/index.ts" },
+			"deploy"
+		);
+		expect(normalize(entry)).toMatchObject({
+			directory: "/tmp/dir",
+			file: "/tmp/dir/src/index.ts",
+			moduleRoot: "/tmp/dir/src",
+		});
+	});
+
+	it("main = src/index.ts w/ configPath", async () => {
+		await seed({
+			"other-worker/src/index.ts": dedent/* javascript */ `
+							export default {
+								fetch() {
+
+								}
+							}
+						`,
+		});
+		const entry = await getEntry(
 			{},
 			{
+				...defaultWranglerConfig,
 				main: "src/index.ts",
 				configPath: "other-worker/wrangler.toml",
 			},
-			{
-				directory: "/tmp/dir/other-worker",
-				file: "/tmp/dir/other-worker/src/index.ts",
-				moduleRoot: "/tmp/dir/other-worker/src",
-			},
-		],
-	])("%s", async (_name, files, args, config, result) => {
-		await seed(files);
-		const entry = await getEntry(
-			args,
-			{ ...defaultWranglerConfig, ...config },
 			"deploy"
 		);
-		expect(normalize(entry)).toMatchObject(result);
+		expect(normalize(entry)).toMatchObject({
+			directory: "/tmp/dir/other-worker",
+			file: "/tmp/dir/other-worker/src/index.ts",
+			moduleRoot: "/tmp/dir/other-worker/src",
+		});
 	});
 });
