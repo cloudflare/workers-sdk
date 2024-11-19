@@ -34,7 +34,7 @@ describe("getEntry()", () => {
 			"deploy"
 		);
 		expect(normalize(entry)).toMatchObject({
-			directory: "/tmp/dir",
+			projectRoot: "/tmp/dir",
 			file: "/tmp/dir/index.ts",
 			moduleRoot: "/tmp/dir",
 		});
@@ -56,7 +56,7 @@ describe("getEntry()", () => {
 			"deploy"
 		);
 		expect(normalize(entry)).toMatchObject({
-			directory: "/tmp/dir",
+			projectRoot: "/tmp/dir",
 			file: "/tmp/dir/src/index.ts",
 			moduleRoot: "/tmp/dir/src",
 		});
@@ -78,7 +78,7 @@ describe("getEntry()", () => {
 			"deploy"
 		);
 		expect(normalize(entry)).toMatchObject({
-			directory: "/tmp/dir",
+			projectRoot: "/tmp/dir",
 			file: "/tmp/dir/index.ts",
 			moduleRoot: "/tmp/dir",
 		});
@@ -100,7 +100,7 @@ describe("getEntry()", () => {
 			"deploy"
 		);
 		expect(normalize(entry)).toMatchObject({
-			directory: "/tmp/dir",
+			projectRoot: "/tmp/dir",
 			file: "/tmp/dir/src/index.ts",
 			moduleRoot: "/tmp/dir/src",
 		});
@@ -126,7 +126,7 @@ describe("getEntry()", () => {
 			"deploy"
 		);
 		expect(normalize(entry)).toMatchObject({
-			directory: "/tmp/dir/other-worker",
+			projectRoot: "/tmp/dir/other-worker",
 			file: "/tmp/dir/other-worker/src/index.ts",
 			moduleRoot: "/tmp/dir/other-worker/src",
 		});

@@ -29,7 +29,7 @@ export function buildPluginFromFunctions({
 }: Options) {
 	const entry: Entry = {
 		file: resolve(getBasePath(), "templates/pages-template-plugin.ts"),
-		directory: functionsDirectory,
+		projectRoot: functionsDirectory,
 		format: "modules",
 		moduleRoot: functionsDirectory,
 		exports: [],

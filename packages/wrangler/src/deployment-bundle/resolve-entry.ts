@@ -16,12 +16,12 @@ export function resolveEntryWithMain(
 ): {
 	absolutePath: string;
 	relativePath: string;
-	directory: string;
+	projectRoot: string;
 } {
-	const directory = path.resolve(path.dirname(configPath ?? "."));
-	const file = path.resolve(directory, main);
-	const relativePath = path.relative(directory, file) || ".";
-	return { absolutePath: file, relativePath, directory };
+	const projectRoot = path.resolve(path.dirname(configPath ?? "."));
+	const file = path.resolve(projectRoot, main);
+	const relativePath = path.relative(projectRoot, file) || ".";
+	return { absolutePath: file, relativePath, projectRoot };
 }
 
 export function resolveEntryWithEntryPoint(
@@ -30,14 +30,14 @@ export function resolveEntryWithEntryPoint(
 ): {
 	absolutePath: string;
 	relativePath: string;
-	directory: string;
+	projectRoot: string;
 } {
-	const directory = path.resolve(path.dirname(configPath ?? "."));
+	const projectRoot = path.resolve(path.dirname(configPath ?? "."));
 	const file = path.extname(entryPoint)
 		? path.resolve(entryPoint)
 		: path.resolve(entryPoint, "index.js");
-	const relativePath = path.relative(directory, file) || ".";
-	return { absolutePath: file, relativePath, directory };
+	const relativePath = path.relative(projectRoot, file) || ".";
+	return { absolutePath: file, relativePath, projectRoot };
 }
 
 export function resolveEntryWithAssets(): {

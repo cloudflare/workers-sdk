@@ -267,7 +267,7 @@ async function versionsUploadHandler(
 		await verifyWorkerMatchesCITag(
 			accountId,
 			name,
-			path.relative(entry.directory, config.configPath ?? "wrangler.toml")
+			path.relative(entry.projectRoot, config.configPath ?? "wrangler.toml")
 		);
 	}
 

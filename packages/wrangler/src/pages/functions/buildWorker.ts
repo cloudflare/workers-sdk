@@ -55,7 +55,7 @@ export function buildWorkerFromFunctions({
 }: Options) {
 	const entry: Entry = {
 		file: resolve(getBasePath(), "templates/pages-template-worker.ts"),
-		directory: functionsDirectory,
+		projectRoot: functionsDirectory,
 		format: "modules",
 		moduleRoot: functionsDirectory,
 		exports: [],
@@ -151,7 +151,7 @@ export function buildRawWorker({
 }: RawOptions) {
 	const entry: Entry = {
 		file: workerScriptPath,
-		directory: resolve(directory),
+		projectRoot: resolve(directory),
 		format: "modules",
 		moduleRoot: resolve(directory),
 		exports: [],
@@ -240,7 +240,7 @@ export async function produceWorkerBundleForWorkerJSDirectory({
 	const additionalModules = await findAdditionalModules(
 		{
 			file: entrypoint,
-			directory: resolve(workerJSDirectory),
+			projectRoot: resolve(workerJSDirectory),
 			format: "modules",
 			moduleRoot: resolve(workerJSDirectory),
 			exports: [],
