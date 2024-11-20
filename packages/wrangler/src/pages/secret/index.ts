@@ -2,7 +2,7 @@ import path from "node:path";
 import readline from "node:readline";
 import chalk from "chalk";
 import { fetchResult } from "../../cfetch";
-import { findWranglerToml, readConfig } from "../../config";
+import { findWranglerConfig, readConfig } from "../../config";
 import { getConfigCache } from "../../config-cache";
 import { confirm, prompt } from "../../dialogs";
 import { FatalError } from "../../errors";
@@ -41,7 +41,7 @@ async function pagesProject(
 		);
 	}
 	let config: Config | undefined;
-	const configPath = findWranglerToml(process.cwd(), false);
+	const configPath = findWranglerConfig(process.cwd());
 
 	try {
 		/*
@@ -49,11 +49,7 @@ async function pagesProject(
 		 * return the top-level config. This contains all the information we
 		 * need.
 		 */
-		config = readConfig(
-			configPath,
-			{ env: undefined, experimentalJsonConfig: false },
-			true
-		);
+		config = readConfig(configPath, { env: undefined }, true);
 	} catch (err) {
 		if (
 			!(

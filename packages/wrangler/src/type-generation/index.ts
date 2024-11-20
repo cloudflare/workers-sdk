@@ -2,7 +2,7 @@ import * as fs from "node:fs";
 import { basename, dirname, extname, join, relative, resolve } from "node:path";
 import { findUpSync } from "find-up";
 import { getNodeCompat } from "miniflare";
-import { findWranglerToml, readConfig } from "../config";
+import { findWranglerConfig, readConfig } from "../config";
 import { getEntry } from "../deployment-bundle/entry";
 import { getVarsForDev } from "../dev/dev-vars";
 import { CommandLineArgsError, UserError } from "../errors";
@@ -61,8 +61,7 @@ export async function typesHandler(
 
 	await printWranglerBanner();
 
-	const configPath =
-		args.config ?? findWranglerToml(process.cwd(), args.experimentalJsonConfig);
+	const configPath = args.config ?? findWranglerConfig(process.cwd());
 	if (
 		!configPath ||
 		!fs.existsSync(configPath) ||

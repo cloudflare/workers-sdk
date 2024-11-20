@@ -160,11 +160,7 @@ export async function deploy({
 	let config: Config | undefined;
 
 	try {
-		config = readConfig(
-			undefined,
-			{ ...args, experimentalJsonConfig: false, env },
-			true
-		);
+		config = readConfig(undefined, { ...args, env }, true);
 	} catch (err) {
 		if (
 			!(

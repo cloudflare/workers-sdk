@@ -196,7 +196,7 @@ export function createCLIParser(argv: string[]) {
 		})
 		.option("config", {
 			alias: "c",
-			describe: "Path to .toml configuration file",
+			describe: "Path to Wrangler configuration file",
 			type: "string",
 			requiresArg: true,
 		})
@@ -210,10 +210,19 @@ export function createCLIParser(argv: string[]) {
 		.check(demandSingleValue("env"))
 		.option("experimental-json-config", {
 			alias: "j",
-			describe: `Experimental: support wrangler.json`,
+			describe: `Support wrangler.json.`,
 			type: "boolean",
 			default: true,
+			deprecated: true,
 			hidden: true,
+		})
+		.check((args) => {
+			if (args["experimental-json-config"] === false) {
+				throw new CommandLineArgsError(
+					`Wrangler now supports wrangler.json configuration files by default and ignores the value of the \`--experimental-json-config\` flag.`
+				);
+			}
+			return true;
 		})
 		.option("experimental-versions", {
 			describe: `Experimental: support Worker Versions`,
@@ -260,7 +269,7 @@ export function createCLIParser(argv: string[]) {
 		"Examples:": `${chalk.bold("EXAMPLES")}`,
 	});
 	wrangler.group(
-		["experimental-json-config", "config", "env", "help", "version"],
+		["config", "env", "help", "version"],
 		`${chalk.bold("GLOBAL FLAGS")}`
 	);
 	wrangler.help("help", "Show help").alias("h", "help");
@@ -531,7 +540,7 @@ export function createCLIParser(argv: string[]) {
 	wrangler.command("pages", "⚡️ Configure Cloudflare Pages", (pagesYargs) => {
 		// Pages does not support the `--config`,
 		// and `--env` flags, therefore hiding them from the global flags list.
-		pagesYargs.hide("config").hide("env").hide("experimental-json-config");
+		pagesYargs.hide("config").hide("env");
 
 		return pages(pagesYargs, subHelp);
 	});

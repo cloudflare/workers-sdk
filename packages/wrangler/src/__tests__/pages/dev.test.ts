@@ -34,18 +34,6 @@ describe("pages dev", () => {
 		);
 	});
 
-	it("should error if the [--experimental-json-config] command line arg was specified", async () => {
-		await expect(
-			runWrangler("pages dev public --experimental-json-config")
-		).rejects.toThrowErrorMatchingInlineSnapshot(
-			`
-			[Error: Cannot find module './miniflare-cli/assets'
-			Require stack:
-			- /Users/penalosa/dev/wrangler2/packages/wrangler/src/dev.ts]
-		`
-		);
-	});
-
 	it("should error if the [--env] command line arg was specified", async () => {
 		await expect(
 			runWrangler("pages dev public --env=production")

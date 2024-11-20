@@ -38,13 +38,6 @@ export type GetPlatformProxyOptions = {
 	 */
 	configPath?: string;
 	/**
-	 * Flag to indicate the utility to read a json config file (`wrangler.json`/`wrangler.jsonc`)
-	 * instead of the toml one (`wrangler.toml`)
-	 *
-	 * Note: this feature is experimental
-	 */
-	experimentalJsonConfig?: boolean;
-	/**
 	 * Indicates if and where to persist the bindings data, if not present or `true` it defaults to the same location
 	 * used by wrangler v3: `.wrangler/state/v3` (so that the same data can be easily used by the caller and wrangler).
 	 * If `false` is specified no data is persisted on the filesystem.
@@ -104,14 +97,12 @@ export async function getPlatformProxy<
 	const env = options.environment;
 
 	const rawConfig = readConfig(options.configPath, {
-		experimentalJsonConfig: options.experimentalJsonConfig,
 		env,
 	});
 
 	const miniflareOptions = await run(
 		{
 			FILE_BASED_REGISTRY: Boolean(options.experimentalRegistry ?? true),
-			JSON_CONFIG_FILE: Boolean(options.experimentalJsonConfig ?? true),
 		},
 		() => getMiniflareOptionsFromConfig(rawConfig, env, options)
 	);
@@ -252,15 +243,7 @@ export function unstable_getMiniflareWorkerOptions(
 	define: Record<string, string>;
 	main?: string;
 } {
-	// experimental json is usually enabled via a cli arg,
-	// so it cannot be passed to the vitest integration.
-	// instead we infer it from the config path (instead of setting a default)
-	// because wrangler.json is not compatible with pages.
-	const isJsonConfigFile =
-		configPath.endsWith(".json") || configPath.endsWith(".jsonc");
-
 	const config = readConfig(configPath, {
-		experimentalJsonConfig: isJsonConfigFile,
 		env,
 	});
 

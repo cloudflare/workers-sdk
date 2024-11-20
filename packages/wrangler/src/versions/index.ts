@@ -1,7 +1,7 @@
 import assert from "node:assert";
 import path from "node:path";
 import { processAssetsArg, validateAssetsArgsAndConfig } from "../assets";
-import { findWranglerToml, readConfig } from "../config";
+import { findWranglerConfig, readConfig } from "../config";
 import { getEntry } from "../deployment-bundle/entry";
 import { UserError } from "../errors";
 import {
@@ -200,7 +200,8 @@ async function versionsUploadHandler(
 	await printWranglerBanner();
 
 	const configPath =
-		args.config || (args.script && findWranglerToml(path.dirname(args.script)));
+		args.config ||
+		(args.script && findWranglerConfig(path.dirname(args.script)));
 	const projectRoot = configPath && path.dirname(configPath);
 	const config = readConfig(configPath, args);
 	const entry = await getEntry(args, config, "versions upload");

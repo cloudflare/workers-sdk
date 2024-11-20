@@ -1,7 +1,7 @@
 import { execSync } from "node:child_process";
 import { deploy } from "../api/pages/deploy";
 import { fetchResult } from "../cfetch";
-import { findWranglerToml, readConfig } from "../config";
+import { findWranglerConfig, readConfig } from "../config";
 import { getConfigCache, saveToConfigCache } from "../config-cache";
 import { prompt, select } from "../dialogs";
 import { FatalError } from "../errors";
@@ -113,7 +113,7 @@ export const Handler = async (args: PagesDeployArgs) => {
 	}
 
 	let config: Config | undefined;
-	const configPath = findWranglerToml(process.cwd(), false);
+	const configPath = findWranglerConfig(process.cwd());
 
 	try {
 		/*

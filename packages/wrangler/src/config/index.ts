@@ -4,7 +4,6 @@ import chalk from "chalk";
 import dotenv from "dotenv";
 import { findUpSync } from "find-up";
 import { FatalError, UserError } from "../errors";
-import { getFlag } from "../experimental-flags";
 import { logger } from "../logger";
 import { EXIT_CODE_INVALID_PAGES_CONFIG } from "../pages/errors";
 import { parseJSONC, parseTOML, readFileSync } from "../parse";
@@ -42,9 +41,7 @@ export function formatConfigSnippet(
 	}
 }
 
-type ReadConfigCommandArgs = NormalizeAndValidateConfigArgs & {
-	experimentalJsonConfig?: boolean | undefined;
-};
+type ReadConfigCommandArgs = NormalizeAndValidateConfigArgs;
 
 /**
  * Get the Wrangler configuration; read it from the give `configPath` if available.
@@ -70,12 +67,10 @@ export function readConfig(
 	hideWarnings: boolean = false
 ): Config {
 	let parsedFormat: Config["parsedFormat"] = "jsonc";
-	const isJsonConfigEnabled =
-		getFlag("JSON_CONFIG_FILE") ?? args.experimentalJsonConfig;
 	let rawConfig: RawConfig = {};
 
 	if (!configPath) {
-		configPath = findWranglerToml(process.cwd(), isJsonConfigEnabled);
+		configPath = findWranglerConfig(process.cwd());
 	}
 
 	try {
@@ -183,21 +178,17 @@ function applyPythonConfig(config: Config, args: ReadConfigCommandArgs) {
 }
 
 /**
- * Find the wrangler.toml file by searching up the file-system
+ * Find the wrangler config file by searching up the file-system
  * from the current working directory.
  */
-export function findWranglerToml(
-	referencePath: string = process.cwd(),
-	preferJson = false
+export function findWranglerConfig(
+	referencePath: string = process.cwd()
 ): string | undefined {
-	if (preferJson) {
-		return (
-			findUpSync(`wrangler.json`, { cwd: referencePath }) ??
-			findUpSync(`wrangler.jsonc`, { cwd: referencePath }) ??
-			findUpSync(`wrangler.toml`, { cwd: referencePath })
-		);
-	}
-	return findUpSync(`wrangler.toml`, { cwd: referencePath });
+	return (
+		findUpSync(`wrangler.json`, { cwd: referencePath }) ??
+		findUpSync(`wrangler.jsonc`, { cwd: referencePath }) ??
+		findUpSync(`wrangler.toml`, { cwd: referencePath })
+	);
 }
 
 function addLocalSuffix(id: string, local: boolean = false) {

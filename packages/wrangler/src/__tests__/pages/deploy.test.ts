@@ -99,14 +99,6 @@ describe("pages deploy", () => {
 		);
 	});
 
-	it("should error if the [--experimental-json-config] command line arg was specififed", async () => {
-		await expect(
-			runWrangler("pages deploy public --experimental-json-config")
-		).rejects.toThrowErrorMatchingInlineSnapshot(
-			`[Error: Must specify a project name.]`
-		);
-	});
-
 	it("should error if the [--env] command line arg was specififed", async () => {
 		await expect(
 			runWrangler("pages deploy public --env=production")

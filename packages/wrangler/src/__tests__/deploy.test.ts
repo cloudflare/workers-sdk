@@ -236,7 +236,7 @@ describe("deploy", () => {
 		});
 		mockSubDomainRequest();
 
-		await runWrangler("deploy ./my-worker/index.js --experimental-json-config");
+		await runWrangler("deploy ./my-worker/index.js");
 		expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Worker Startup Time: 100 ms
@@ -310,7 +310,7 @@ describe("deploy", () => {
 		});
 		mockSubDomainRequest();
 
-		await runWrangler("deploy ./my-worker/index.js --experimental-json-config");
+		await runWrangler("deploy ./my-worker/index.js");
 		expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Worker Startup Time: 100 ms

@@ -8,7 +8,7 @@ import {
 	convertCfWorkerInitBindingstoBindings,
 	extractBindingsOfType,
 } from "./api/startDevWorker/utils";
-import { findWranglerToml } from "./config";
+import { findWranglerConfig } from "./config";
 import { defineCommand } from "./core";
 import { validateRoutes } from "./deploy/deploy";
 import { validateNodeCompatMode } from "./deployment-bundle/node-compat";
@@ -364,7 +364,6 @@ const command = defineCommand({
 		const devInstance = await run(
 			{
 				FILE_BASED_REGISTRY: args.experimentalRegistry,
-				JSON_CONFIG_FILE: Boolean(args.experimentalJsonConfig ?? true),
 			},
 			() => startDev(args)
 		);
@@ -554,7 +553,7 @@ export async function startDev(args: StartDevOptions) {
 
 		const configPath =
 			args.config ||
-			(args.script && findWranglerToml(path.dirname(args.script)));
+			(args.script && findWranglerConfig(path.dirname(args.script)));
 
 		// The ProxyWorker will have a stable host and port, so only listen for the first update
 		void devEnv.proxy.ready.promise.then(({ url }) => {

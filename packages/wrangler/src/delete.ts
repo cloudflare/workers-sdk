@@ -1,7 +1,7 @@
 import assert from "assert";
 import path from "path";
 import { fetchResult } from "./cfetch";
-import { findWranglerToml, readConfig } from "./config";
+import { findWranglerConfig, readConfig } from "./config";
 import { confirm } from "./dialogs";
 import { UserError } from "./errors";
 import { deleteKVNamespace, listKVNamespaces } from "./kv/helpers";
@@ -95,7 +95,8 @@ export async function deleteHandler(args: DeleteArgs) {
 	await printWranglerBanner();
 
 	const configPath =
-		args.config || (args.script && findWranglerToml(path.dirname(args.script)));
+		args.config ||
+		(args.script && findWranglerConfig(path.dirname(args.script)));
 	const config = readConfig(configPath, args);
 	if (config.pages_build_output_dir) {
 		throw new UserError(

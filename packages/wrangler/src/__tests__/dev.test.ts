@@ -177,9 +177,7 @@ describe.sequential("wrangler dev", () => {
 			});
 			fs.writeFileSync("index.js", `export default {};`);
 
-			const options = await runWranglerUntilConfig(
-				"dev --experimental-json-config"
-			);
+			const options = await runWranglerUntilConfig("dev");
 			expect(options.name).toMatchInlineSnapshot(`"test-worker-json"`);
 		});
 
@@ -194,9 +192,7 @@ describe.sequential("wrangler dev", () => {
 			);
 			fs.writeFileSync("index.js", `export default {};`);
 
-			const options = await runWranglerUntilConfig(
-				"dev --experimental-json-config"
-			);
+			const options = await runWranglerUntilConfig("dev");
 			expect(options.name).toMatchInlineSnapshot(`"test-worker-jsonc"`);
 		});
 	});
