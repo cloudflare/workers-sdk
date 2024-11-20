@@ -116,6 +116,22 @@ describe("cloudchamber create", () => {
 		);
 	});
 
+	it("should fail with a nice message when image is invalid", async () => {
+		setIsTTY(false);
+		setWranglerConfig({});
+		await expect(
+			runWrangler("cloudchamber create --image hello:latest --location sfo06")
+		).rejects.toThrowErrorMatchingInlineSnapshot(
+			`[Error: "latest" tag is not allowed]`
+		);
+
+		await expect(
+			runWrangler("cloudchamber create --image hello --location sfo06")
+		).rejects.toThrowErrorMatchingInlineSnapshot(
+			`[Error: Invalid image format: expected NAME:TAG[@DIGEST] or NAME@DIGEST]`
+		);
+	});
+
 	it("should fail with a nice message when parameters are mistyped", async () => {
 		setIsTTY(false);
 		fs.writeFileSync(
