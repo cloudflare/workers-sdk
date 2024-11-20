@@ -21,7 +21,7 @@ devtools-frontend/out/Default/gen/front_end: devtools-frontend
 	cd devtools-frontend && PATH="$(PATH_WITH_DEPOT)" $(ROOT)/depot/autoninja -C out/Default
 
 publish: cleanup devtools-frontend/out/Default/gen/front_end
-	npx wrangler pages deploy --project-name cloudflare-devtools devtools-frontend/out/Default/gen/front_end
+	npx wrangler pages deploy --project-name chrome-devtools-patches devtools-frontend/out/Default/gen/front_end
 
 cleanup:
 	rm -rf devtools-frontend .gclient* .cipd node_modules depot
