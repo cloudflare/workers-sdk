@@ -18,12 +18,7 @@ describe("Workflows", () => {
 		});
 		({ ip, port, stop, getOutput } = await runWranglerDev(
 			resolve(__dirname, ".."),
-			[
-				"--port=0",
-				"--inspector-port=0",
-				"--upstream-protocol=https",
-				"--host=prod.example.org",
-			]
+			["--port=0", "--inspector-port=0"]
 		));
 	});
 

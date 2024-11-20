@@ -1,6 +1,6 @@
 ---
 "@cloudflare/workflows-shared": minor
-"miniflare": patch
+"miniflare": minor
 ---
 
 Add proper engine persistance in .wrangler and fix multiple workflows in miniflare
