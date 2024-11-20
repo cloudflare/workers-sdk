@@ -142,6 +142,27 @@ describe("metrics", () => {
 				expect(std.err).toMatchInlineSnapshot(`""`);
 			});
 		});
+
+		it("should keep track of all requests made", async () => {
+			const requests = mockMetricRequest({}, {}, "event");
+			const dispatcher = await getMetricsDispatcher({
+				sendMetrics: true,
+			});
+
+			void dispatcher.sendEvent("some-event", { a: 1, b: 2 });
+			expect(dispatcher.requests.length).toBe(1);
+
+			expect(requests.count).toBe(0);
+			await Promise.allSettled(dispatcher.requests);
+			expect(requests.count).toBe(1);
+
+			void dispatcher.sendEvent("another-event", { c: 3, d: 4 });
+			expect(dispatcher.requests.length).toBe(2);
+
+			expect(requests.count).toBe(1);
+			await Promise.allSettled(dispatcher.requests);
+			expect(requests.count).toBe(2);
+		});
 	});
 
 	describe("getMetricsConfig()", () => {
@@ -422,16 +443,12 @@ function mockMetricRequest(
 ) {
 	const requests = { count: 0 };
 	msw.use(
-		http.post(
-			`*/${endpoint}`,
-			async ({ request }) => {
-				requests.count++;
-				expect(await request.json()).toEqual(body);
-				expect(request.headers).toContain(header);
-				return HttpResponse.json({}, { status: 200 });
-			},
-			{ once: true }
-		)
+		http.post(`*/${endpoint}`, async ({ request }) => {
+			requests.count++;
+			expect(await request.json()).toEqual(body);
+			expect(request.headers).toContain(header);
+			return HttpResponse.json({}, { status: 200 });
+		})
 	);
 
 	return requests;
