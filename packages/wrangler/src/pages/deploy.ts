@@ -1,3 +1,4 @@
+import { env, isCI, provider } from "std-env";
 import { execSync } from "node:child_process";
 import { deploy } from "../api/pages/deploy";
 import { fetchResult } from "../cfetch";
@@ -294,6 +295,15 @@ export const Handler = async (args: PagesDeployArgs) => {
 
 	if (!projectName) {
 		throw new FatalError("Must specify a project name.", 1);
+	}
+
+	if (isCI) {
+		switch(provider) {
+			case 'gitlab':
+				branch = env.CI_COMMIT_BRANCH
+				commitHash = env.CI_COMMIT_SHA
+				commitMessage = env.CI_COMMIT_MESSAGE
+		}
 	}
 
 	// We infer git info by default is not passed in

@@ -87,7 +87,8 @@
 		"source-map": "^0.6.1",
 		"unenv": "npm:unenv-nightly@2.0.0-20241111-080453-894aa31",
 		"workerd": "1.20241106.1",
-		"xxhash-wasm": "^1.0.1"
+		"xxhash-wasm": "^1.0.1",
+		"std-env": "^3.8.0"
 	},
 	"devDependencies": {
 		"@cloudflare/cli": "workspace:*",
