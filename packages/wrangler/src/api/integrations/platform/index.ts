@@ -110,9 +110,8 @@ export async function getPlatformProxy<
 			server: {
 				port: 0,
 			},
-			logLevel: "none",
+			logLevel: "error",
 			liveReload: false,
-			watch: false,
 			persist:
 				typeof options.persist === "object"
 					? options.persist.path
