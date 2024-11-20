@@ -61,6 +61,12 @@ export function getMetricsDispatcher(options: MetricsConfigOptions) {
 				keyof CommonEventProperties
 			>
 		): Promise<void> {
+			if (
+				properties.command === "wrangler telemetry disable" ||
+				properties.command === "wrangler metrics disable"
+			) {
+				return;
+			}
 			if (name === "wrangler command started") {
 				printMetricsBanner();
 			}

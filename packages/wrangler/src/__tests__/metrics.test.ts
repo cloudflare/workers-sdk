@@ -68,8 +68,7 @@ describe("metrics", () => {
 					},
 					{
 						"Sparrow-Source-Key": "MOCK_KEY",
-					},
-					"event"
+					}
 				);
 				const dispatcher = await getMetricsDispatcher({
 					sendMetrics: true,
@@ -86,7 +85,7 @@ describe("metrics", () => {
 			});
 
 			it("should write a debug log if the dispatcher is disabled", async () => {
-				const requests = mockMetricRequest({}, {}, "event");
+				const requests = mockMetricRequest({}, {});
 				const dispatcher = await getMetricsDispatcher({
 					sendMetrics: false,
 				});
@@ -127,7 +126,7 @@ describe("metrics", () => {
 			it("should write a warning log if no source key has been provided", async () => {
 				vi.stubEnv("SPARROW_SOURCE_KEY", undefined);
 
-				const requests = mockMetricRequest({}, {}, "event");
+				const requests = mockMetricRequest({}, {});
 				const dispatcher = await getMetricsDispatcher({
 					sendMetrics: true,
 				});
@@ -370,6 +369,32 @@ Wrangler is no longer collecting telemetry about your usage.`);
 			});
 		});
 
+		it(`doesn't send telemetry when running "wrangler ${cmd} disable"`, async () => {
+			const requests = mockMetricRequest({}, {});
+			writeMetricsConfig({
+				permission: {
+					enabled: true,
+					date: new Date(2022, 6, 4),
+				},
+			});
+			await runWrangler(`${cmd} disable`);
+			expect(requests.count).toBe(0);
+			expect(std.debug).not.toContain("Metrics dispatcher: Posting data");
+		});
+
+		it(`does send telemetry when running "wrangler ${cmd} enable"`, async () => {
+			const requests = mockMetricRequest({}, {});
+			writeMetricsConfig({
+				permission: {
+					enabled: true,
+					date: new Date(2022, 6, 4),
+				},
+			});
+			await runWrangler(`${cmd} enable`);
+			expect(requests.count).toBe(2);
+			expect(std.debug).toContain("Metrics dispatcher: Posting data");
+		});
+
 		it(`enables telemetry when "wrangler ${cmd} enable" is run`, async () => {
 			writeMetricsConfig({
 				permission: {
@@ -415,23 +440,16 @@ Wrangler is now collecting telemetry about your usage. Thank you for helping mak
 	});
 });
 
-function mockMetricRequest(
-	body: unknown,
-	header: unknown,
-	endpoint: "identify" | "event"
-) {
+function mockMetricRequest(body: unknown, header: unknown) {
 	const requests = { count: 0 };
 	msw.use(
-		http.post(
-			`*/${endpoint}`,
-			async ({ request }) => {
-				requests.count++;
-				expect(await request.json()).toEqual(body);
-				expect(request.headers).toContain(header);
-				return HttpResponse.json({}, { status: 200 });
-			},
-			{ once: true }
-		)
+		http.post(`*/event`, async ({ request }) => {
+			requests.count++;
+
+			expect(await request.json()).toBe(body);
+			expect(request.headers).toContain(header);
+			return HttpResponse.json({}, { status: 200 });
+		})
 	);
 
 	return requests;
