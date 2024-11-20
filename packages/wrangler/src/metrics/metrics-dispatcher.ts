@@ -63,7 +63,7 @@ export function getMetricsDispatcher(options: MetricsConfigOptions) {
 				name,
 				properties: {
 					...commonEventProperties,
-					properties,
+					...properties,
 				},
 			});
 		},
