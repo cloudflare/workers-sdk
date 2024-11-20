@@ -11,7 +11,6 @@ import { loadDotEnv } from "./config";
 import { createCommandRegister } from "./core/register-commands";
 import { d1 } from "./d1";
 import { deleteHandler, deleteOptions } from "./delete";
-import { deployHandler, deployOptions } from "./deploy";
 import { isAuthenticationError } from "./deploy/deploy";
 import {
 	isBuildFailure,
@@ -46,6 +45,7 @@ import { hyperdrive } from "./hyperdrive/index";
 import { initHandler, initOptions } from "./init";
 import "./docs";
 import "./dev";
+import "./deploy";
 import "./kv";
 import "./workflows";
 import "./user/commands";
@@ -332,12 +332,7 @@ export function createCLIParser(argv: string[]) {
 	register.registerNamespace("dev");
 
 	// deploy
-	wrangler.command(
-		["deploy [script]", "publish [script]"],
-		"🆙 Deploy a Worker to Cloudflare",
-		deployOptions,
-		deployHandler
-	);
+	register.registerNamespace("deploy");
 
 	// deployments
 	const deploymentsDescription =
