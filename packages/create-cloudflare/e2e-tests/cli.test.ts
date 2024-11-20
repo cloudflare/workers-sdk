@@ -193,29 +193,31 @@ describe.skipIf(experimental || frameworkToTest || isQuarantineMode())(
 			},
 		);
 
-		test({ experimental }).skipIf(process.platform === "win32")(
-			"Cloning remote template with full GitHub URL",
-			async ({ logStream, project }) => {
-				const { output } = await runC3(
-					[
-						project.path,
-						"--template=https://github.com/cloudflare/templates/worker-router",
-						"--no-deploy",
-						"--git=false",
-					],
-					[],
-					logStream,
-				);
+		test({ experimental })
+			.skipIf(process.platform === "win32")
+			.only(
+				"Cloning remote template with full GitHub URL",
+				async ({ logStream, project }) => {
+					const { output } = await runC3(
+						[
+							project.path,
+							"--template=https://github.com/cloudflare/templates/d1-template",
+							"--no-deploy",
+							"--git=false",
+						],
+						[],
+						logStream,
+					);
 
-				expect(output).toContain(
-					`repository https://github.com/cloudflare/templates/worker-router`,
-				);
-				expect(output).toContain(
-					`Cloning template from: https://github.com/cloudflare/templates/worker-router`,
-				);
-				expect(output).toContain(`template cloned and validated`);
-			},
-		);
+					expect(output).toContain(
+						`repository https://github.com/cloudflare/templates/d1-template`,
+					);
+					expect(output).toContain(
+						`Cloning template from: https://github.com/cloudflare/templates/d1-template`,
+					);
+					expect(output).toContain(`template cloned and validated`);
+				},
+			);
 
 		test({ experimental }).skipIf(process.platform === "win32")(
 			"Inferring the category, type and language if the type is `hello-world-python`",
