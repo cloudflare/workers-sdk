@@ -174,6 +174,8 @@ function versionsUploadOptions(yargs: CommonYargsArgv) {
 			.option("node-compat", {
 				describe: "Enable Node.js compatibility",
 				type: "boolean",
+				hidden: true,
+				deprecated: true,
 			})
 			.option("dry-run", {
 				describe: "Don't actually deploy",
@@ -214,7 +216,11 @@ async function versionsUploadHandler(
 			sendMetrics: config.send_metrics,
 		}
 	);
-
+	if (args.nodeCompat) {
+		throw new UserError(
+			`The --node-compat flag is no longer supported as of Wrangler v4. Instead, use the \`nodejs_compat\` compatibility flag. This includes the functionality from legacy \`node_compat\` polyfills and natively implemented Node.js APIs. See https://developers.cloudflare.com/workers/runtime-apis/nodejs for more information.`
+		);
+	}
 	if (args.site || config.site) {
 		throw new UserError(
 			"Workers Sites does not support uploading versions through `wrangler versions upload`. You must use `wrangler deploy` instead."
@@ -296,7 +302,6 @@ async function versionsUploadHandler(
 		assetsOptions,
 		minify: args.minify,
 		uploadSourceMaps: args.uploadSourceMaps,
-		nodeCompat: args.nodeCompat,
 		isWorkersSite: Boolean(args.site || config.site),
 		outDir: args.outdir,
 		dryRun: args.dryRun,

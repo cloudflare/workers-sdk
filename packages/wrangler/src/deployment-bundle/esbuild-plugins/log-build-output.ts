@@ -30,9 +30,7 @@ export function logBuildOutput(
 					}
 				} else {
 					if (errors.length > 0) {
-						if (nodejsCompatMode !== "legacy") {
-							rewriteNodeCompatBuildFailure(errors, nodejsCompatMode);
-						}
+						rewriteNodeCompatBuildFailure(errors, nodejsCompatMode);
 						logBuildFailure(errors, warnings);
 						return;
 					}

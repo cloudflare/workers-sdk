@@ -22,14 +22,14 @@ import { retry } from "./helpers/retry";
  */
 const workerName = generateResourceName();
 
-it("can import URL from 'url' in node_compat mode", async () => {
+it("can import URL from 'url' in nodejs_compat mode", async () => {
 	const helper = new WranglerE2ETestHelper();
 	await helper.seed({
 		"wrangler.toml": dedent`
 				name = "${workerName}"
 				main = "src/index.ts"
 				compatibility_date = "2023-01-01"
-				node_compat = true
+				compatibility_flags = ["nodejs_compat"]
 		`,
 		"src/index.ts": dedent`
 				const { URL } = require('url');

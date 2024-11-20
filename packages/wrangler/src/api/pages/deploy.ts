@@ -175,7 +175,6 @@ export async function deploy({
 		config?.compatibility_date ?? deploymentConfig.compatibility_date,
 		config?.compatibility_flags ?? deploymentConfig.compatibility_flags ?? [],
 		{
-			nodeCompat: false,
 			noBundle: config?.no_bundle,
 		}
 	);
