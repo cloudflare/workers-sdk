@@ -22,7 +22,7 @@ export type Entry = {
 	/** A worker's entrypoint */
 	file: string;
 	/** A worker's directory. Usually where the wrangler.toml file is located */
-	directory: string;
+	projectRoot: string;
 	/** Is this a module worker or a service worker? */
 	format: CfScriptFormat;
 	/** The directory that contains all of a `--no-bundle` worker's modules. Usually `${directory}/src`. Defaults to path.dirname(file) */
@@ -50,10 +50,11 @@ export async function getEntry(
 	config: Config,
 	command: "dev" | "deploy" | "versions upload" | "types"
 ): Promise<Entry> {
-	const directory = process.cwd();
 	const entryPoint = config.site?.["entry-point"];
 
-	let paths: { absolutePath: string; relativePath: string } | undefined;
+	let paths:
+		| { absolutePath: string; relativePath: string; projectRoot?: string }
+		| undefined;
 
 	if (args.script) {
 		paths = resolveEntryWithScript(args.script);
@@ -81,9 +82,10 @@ export async function getEntry(
 	}
 	await runCustomBuild(paths.absolutePath, paths.relativePath, config.build);
 
+	const projectRoot = paths.projectRoot ?? process.cwd();
 	const { format, exports } = await guessWorkerFormat(
 		paths.absolutePath,
-		directory,
+		projectRoot,
 		args.format ?? config.build?.upload?.format,
 		config.tsconfig
 	);
@@ -117,7 +119,7 @@ export async function getEntry(
 
 	return {
 		file: paths.absolutePath,
-		directory,
+		projectRoot,
 		format,
 		moduleRoot:
 			args.moduleRoot ?? config.base_dir ?? path.dirname(paths.absolutePath),

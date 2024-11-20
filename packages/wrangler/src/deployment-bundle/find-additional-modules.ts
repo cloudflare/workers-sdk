@@ -72,7 +72,7 @@ export async function findAdditionalModules(
 		let pythonRequirements = "";
 		try {
 			pythonRequirements = await readFile(
-				path.resolve(entry.directory, "requirements.txt"),
+				path.resolve(entry.projectRoot, "requirements.txt"),
 				"utf-8"
 			);
 		} catch (e) {

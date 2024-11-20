@@ -256,7 +256,7 @@ async function resolveConfig(
 		compatibilityDate: getDevCompatibilityDate(config, input.compatibilityDate),
 		compatibilityFlags: input.compatibilityFlags ?? config.compatibility_flags,
 		entrypoint: entry.file,
-		directory: entry.directory,
+		projectRoot: entry.projectRoot,
 		bindings,
 		migrations: input.migrations ?? config.migrations,
 		sendMetrics: input.sendMetrics ?? config.send_metrics,
