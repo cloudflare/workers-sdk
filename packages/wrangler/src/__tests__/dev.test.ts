@@ -1379,7 +1379,7 @@ describe.sequential("wrangler dev", () => {
 				👂 Start a local server for developing your Worker
 
 				POSITIONALS
-				  script  The path to an entry point for your worker  [string]
+				  script  The path to an entry point for your Worker  [string]
 
 				GLOBAL FLAGS
 				  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
@@ -1389,10 +1389,10 @@ describe.sequential("wrangler dev", () => {
 				  -v, --version                   Show version number  [boolean]
 
 				OPTIONS
-				      --name                                       Name of the worker  [string]
+				      --name                                       Name of the Worker  [string]
 				      --compatibility-date                         Date to use for compatibility checks  [string]
 				      --compatibility-flags, --compatibility-flag  Flags to use for compatibility checks  [array]
-				      --latest                                     Use the latest version of the worker runtime  [boolean] [default: true]
+				      --latest                                     Use the latest version of the Workers runtime  [boolean] [default: true]
 				      --assets                                     Static assets to be served. Replaces Workers Sites.  [string]
 				      --no-bundle                                  Skip internal build steps and directly deploy script  [boolean] [default: false]
 				      --ip                                         IP address to listen on  [string]
@@ -1418,9 +1418,8 @@ describe.sequential("wrangler dev", () => {
 				      --live-reload                                Auto reload HTML pages when change is detected in local mode  [boolean]
 				      --test-scheduled                             Test scheduled events by visiting /__scheduled in browser  [boolean] [default: false]
 				      --log-level                                  Specify logging level  [choices: \\"debug\\", \\"info\\", \\"log\\", \\"warn\\", \\"error\\", \\"none\\"] [default: \\"log\\"]
-				      --show-interactive-dev-session               Show interactive dev session  (defaults to true if the terminal supports interactivity)  [boolean]
-				      --experimental-dev-env, --x-dev-env          Use the experimental DevEnv instantiation (unified across wrangler dev and unstable_dev)  [boolean] [default: true]
-				      --experimental-registry, --x-registry        Use the experimental file based dev registry for multi-worker development  [boolean] [default: false]
+				      --show-interactive-dev-session               Show interactive dev session (defaults to true if the terminal supports interactivity)  [boolean]
+				      --experimental-registry, --x-registry        Use the experimental file based dev registry for multi-worker development  [boolean] [default: true]
 				      --experimental-vectorize-bind-to-prod        Bind to production Vectorize indexes in local development mode  [boolean] [default: false]",
 				  "warn": "",
 				}

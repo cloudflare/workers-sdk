@@ -35,9 +35,7 @@ import {
 	subdomainHandler,
 	subdomainOptions,
 } from "./deprecated";
-import { devHandler, devOptions } from "./dev";
 import { workerNamespaceCommands } from "./dispatch-namespace";
-import { docsHandler, docsOptions } from "./docs";
 import {
 	CommandLineArgsError,
 	JsonFriendlyFatalError,
@@ -46,6 +44,8 @@ import {
 import { generateHandler, generateOptions } from "./generate";
 import { hyperdrive } from "./hyperdrive/index";
 import { initHandler, initOptions } from "./init";
+import "./docs";
+import "./dev";
 import "./kv";
 import "./workflows";
 import "./user/commands";
@@ -317,12 +317,7 @@ export function createCLIParser(argv: string[]) {
 	/*                 WRANGLER COMMANDS                  */
 	/******************************************************/
 	// docs
-	wrangler.command(
-		"docs [search..]",
-		"📚 Open Wrangler's command documentation in your browser\n",
-		docsOptions,
-		docsHandler
-	);
+	register.registerNamespace("docs");
 
 	/******************** CMD GROUP ***********************/
 	// init
@@ -334,12 +329,7 @@ export function createCLIParser(argv: string[]) {
 	);
 
 	// dev
-	wrangler.command(
-		"dev [script]",
-		"👂 Start a local server for developing your Worker",
-		devOptions,
-		devHandler
-	);
+	register.registerNamespace("dev");
 
 	// deploy
 	wrangler.command(

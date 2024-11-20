@@ -259,8 +259,19 @@ describe("wrangler", () => {
 				const requests = mockCreateRequest("testQueue");
 				await runWrangler("queues create testQueue");
 				expect(std.out).toMatchInlineSnapshot(`
-					"Creating queue testQueue.
-					Created queue testQueue."
+					"🌀 Creating queue 'testQueue'
+					✅ Created queue 'testQueue'
+
+					Configure your Worker to send messages to this queue:
+
+					[[queues.producers]]
+					queue = \\"testQueue\\"
+					binding = \\"testQueue\\"
+
+					Configure your Worker to consume messages from this queue:
+
+					[[queues.consumers]]
+					queue = \\"testQueue\\""
 			  `);
 				expect(requests.count).toEqual(1);
 			});
@@ -291,7 +302,7 @@ describe("wrangler", () => {
 					runWrangler(`queues create ${queueName}`)
 				).rejects.toThrowError();
 				expect(std.out).toMatchInlineSnapshot(`
-			"Creating queue testQueue.
+			"🌀 Creating queue 'testQueue'
 			Queues is not currently enabled on this account. Go to https://dash.cloudflare.com/some-account-id/workers/queues to enable it.
 
 			[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/accounts/some-account-id/queues) failed.[0m
@@ -309,8 +320,19 @@ describe("wrangler", () => {
 				const requests = mockCreateRequest("testQueue", { delivery_delay: 10 });
 				await runWrangler("queues create testQueue --delivery-delay-secs=10");
 				expect(std.out).toMatchInlineSnapshot(`
-					"Creating queue testQueue.
-					Created queue testQueue."
+					"🌀 Creating queue 'testQueue'
+					✅ Created queue 'testQueue'
+
+					Configure your Worker to send messages to this queue:
+
+					[[queues.producers]]
+					queue = \\"testQueue\\"
+					binding = \\"testQueue\\"
+
+					Configure your Worker to consume messages from this queue:
+
+					[[queues.consumers]]
+					queue = \\"testQueue\\""
 			  `);
 				expect(requests.count).toEqual(1);
 			});

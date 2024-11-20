@@ -10,7 +10,7 @@ export function getErrorMessage(error: Message): string {
 	}`;
 }
 
-export function truncate(str: string, maxLen: number) {
+function truncate(str: string, maxLen: number) {
 	return str.slice(0, maxLen) + (str.length > maxLen ? "..." : "");
 }
 
@@ -29,7 +29,7 @@ export function truncateDescription(
 	return truncate(description, process.stdout.columns - alreadyUsed);
 }
 
-export async function aiCatalogList<ResponseType>(
+async function aiCatalogList<ResponseType>(
 	accountId: string,
 	partialUrl: string
 ): Promise<Array<ResponseType>> {
@@ -54,7 +54,7 @@ export async function aiCatalogList<ResponseType>(
 	return results;
 }
 
-export async function aiFinetuneList<ResponseType>(
+async function aiFinetuneList<ResponseType>(
 	accountId: string
 ): Promise<Array<ResponseType>> {
 	const results: Array<ResponseType> = await fetchResult(

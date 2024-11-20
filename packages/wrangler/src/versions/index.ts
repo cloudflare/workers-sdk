@@ -36,7 +36,7 @@ async function standardPricingWarning(config: Config) {
 	}
 }
 
-export function versionsUploadOptions(yargs: CommonYargsArgv) {
+function versionsUploadOptions(yargs: CommonYargsArgv) {
 	return (
 		yargs
 			.positional("script", {
@@ -194,7 +194,7 @@ export function versionsUploadOptions(yargs: CommonYargsArgv) {
 	);
 }
 
-export async function versionsUploadHandler(
+async function versionsUploadHandler(
 	args: StrictYargsOptionsToInterface<typeof versionsUploadOptions>
 ) {
 	await printWranglerBanner();
@@ -267,14 +267,14 @@ export async function versionsUploadHandler(
 		await verifyWorkerMatchesCITag(
 			accountId,
 			name,
-			path.relative(entry.directory, config.configPath ?? "wrangler.toml")
+			path.relative(entry.projectRoot, config.configPath ?? "wrangler.toml")
 		);
 	}
 
 	if (!args.dryRun) {
 		await standardPricingWarning(config);
 	}
-	const { versionId, workerTag } = await versionsUpload({
+	const { versionId, workerTag, versionPreviewUrl } = await versionsUpload({
 		config,
 		accountId,
 		name,
@@ -313,6 +313,7 @@ export async function versionsUploadHandler(
 		worker_name: name ?? null,
 		worker_tag: workerTag,
 		version_id: versionId,
+		preview_url: versionPreviewUrl,
 	});
 }
 

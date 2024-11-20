@@ -1,5 +1,69 @@
 # create-cloudflare
 
+## 2.32.2
+
+### Patch Changes
+
+- [#6831](https://github.com/cloudflare/workers-sdk/pull/6831) [`0fe018c`](https://github.com/cloudflare/workers-sdk/commit/0fe018c7b85d767de60e9cc88f256f99f17046e3) Thanks [@Cherry](https://github.com/Cherry)! - Adds support for new upcoming bun.lock lockfile
+
+## 2.32.1
+
+### Patch Changes
+
+- [#7217](https://github.com/cloudflare/workers-sdk/pull/7217) [`f76da8d`](https://github.com/cloudflare/workers-sdk/commit/f76da8d61f0d4fa02c3de132363b95699c0a80c9) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency        | From  | To    |
+  | ----------------- | ----- | ----- |
+  | create-docusaurus | 3.6.0 | 3.6.1 |
+
+- [#7218](https://github.com/cloudflare/workers-sdk/pull/7218) [`39675b5`](https://github.com/cloudflare/workers-sdk/commit/39675b517c9f8ad35023137ca3f52fe486e25107) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency   | From   | To     |
+  | ------------ | ------ | ------ |
+  | create-remix | 2.13.1 | 2.14.0 |
+
+- [#7219](https://github.com/cloudflare/workers-sdk/pull/7219) [`287a5d0`](https://github.com/cloudflare/workers-sdk/commit/287a5d0e4d73fd1fc4e17aed5596436dbca1aae0) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | create-vue | 3.12.0 | 3.12.1 |
+
+- [#6569](https://github.com/cloudflare/workers-sdk/pull/6569) [`7be8f76`](https://github.com/cloudflare/workers-sdk/commit/7be8f763967d0f50a2cced0520db8f7a7b691fe4) Thanks [@penalosa](https://github.com/penalosa)! - Make sure `wrangler deploy` and `wrangler pages deploy` are run in an interactive context in C3, so that users are able to respond to interactive prompts
+
+## 2.32.0
+
+### Minor Changes
+
+- [#7170](https://github.com/cloudflare/workers-sdk/pull/7170) [`f292294`](https://github.com/cloudflare/workers-sdk/commit/f292294ba2e545742d8801f2f3060763547b7ccb) Thanks [@edmundhung](https://github.com/edmundhung)! - feat: update experimental remix template to be based on its worker template
+
+### Patch Changes
+
+- [#7179](https://github.com/cloudflare/workers-sdk/pull/7179) [`a4f5647`](https://github.com/cloudflare/workers-sdk/commit/a4f5647a368c3d6857fa425bee2827493eda2dd1) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency        | From  | To    |
+  | ----------------- | ----- | ----- |
+  | create-docusaurus | 3.5.2 | 3.6.0 |
+
+- [#7188](https://github.com/cloudflare/workers-sdk/pull/7188) [`28edf9b`](https://github.com/cloudflare/workers-sdk/commit/28edf9b2eb08a978e016bc1d320459f33d5590b8) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | gatsby     | 5.13.7 | 5.14.0 |
+
+- [#7109](https://github.com/cloudflare/workers-sdk/pull/7109) [`492533f`](https://github.com/cloudflare/workers-sdk/commit/492533f19e4840b8f93d9e29c0c267ce742f2fc5) Thanks [@jsparkdev](https://github.com/jsparkdev)! - Rename the framework name
+
+  The name currently displayed in the CLI is `Svelte`. However, all of the options actually create a `SvelteKit` app, and the name `SvelteKit` is also used in the [documentation](https://developers.cloudflare.com/pages/framework-guides/deploy-a-svelte-site/).
+
 ## 2.31.2
 
 ### Patch Changes

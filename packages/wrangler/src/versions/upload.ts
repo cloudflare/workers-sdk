@@ -112,9 +112,11 @@ function errIsStartupErr(err: unknown): err is ParseError & { code: 10021 } {
 	return false;
 }
 
-export default async function versionsUpload(
-	props: Props
-): Promise<{ versionId: string | null; workerTag: string | null }> {
+export default async function versionsUpload(props: Props): Promise<{
+	versionId: string | null;
+	workerTag: string | null;
+	versionPreviewUrl?: string | undefined;
+}> {
 	// TODO: warn if git/hg has uncommitted changes
 	const { config, accountId, name } = props;
 	let versionId: string | null = null;
@@ -565,6 +567,8 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 	logger.log("Uploaded", workerName, formatTime(uploadMs));
 	logger.log("Worker Version ID:", versionId);
 
+	let versionPreviewUrl: string | undefined = undefined;
+
 	if (versionId && hasPreview) {
 		const { enabled: available_on_subdomain } = await fetchResult<{
 			enabled: boolean;
@@ -573,9 +577,8 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		if (available_on_subdomain) {
 			const userSubdomain = await getWorkersDevSubdomain(accountId);
 			const shortVersion = versionId.slice(0, 8);
-			logger.log(
-				`Version Preview URL: https://${shortVersion}-${workerName}.${userSubdomain}.workers.dev`
-			);
+			versionPreviewUrl = `https://${shortVersion}-${workerName}.${userSubdomain}.workers.dev`;
+			logger.log(`Version Preview URL: ${versionPreviewUrl}`);
 		}
 	}
 
@@ -591,10 +594,10 @@ Changes to triggers (routes, custom domains, cron schedules, etc) must be applie
 `)
 	);
 
-	return { versionId, workerTag };
+	return { versionId, workerTag, versionPreviewUrl };
 }
 
-export function helpIfErrorIsSizeOrScriptStartup(
+function helpIfErrorIsSizeOrScriptStartup(
 	err: unknown,
 	dependencies: { [path: string]: { bytesInOutput: number } }
 ) {
@@ -617,10 +620,6 @@ export function helpIfErrorIsSizeOrScriptStartup(
 
 function formatTime(duration: number) {
 	return `(${(duration / 1000).toFixed(2)} sec)`;
-}
-
-export function isAuthenticationError(e: unknown): e is ParseError {
-	return e instanceof ParseError && (e as { code?: number }).code === 10000;
 }
 
 async function noBundleWorker(

@@ -33,18 +33,6 @@ export class FunctionsBuildError extends UserError {
 }
 
 /**
- * Warning message for when buildFunctions throws FunctionsBuildError
- */
-export function getFunctionsBuildWarning(
-	functionsDirectory: string,
-	suffix?: string
-) {
-	return `Unexpected error building Functions directory: ${functionsDirectory}${
-		suffix ? " - " + suffix : ""
-	}`;
-}
-
-/**
  * Pages error when no routes are found in the functions directory
  */
 export class FunctionsNoRoutesError extends UserError {

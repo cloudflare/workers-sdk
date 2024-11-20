@@ -4,7 +4,7 @@ import type { R2BucketInfo } from "../r2/helpers";
 
 // ensure this is in sync with:
 //   https://bitbucket.cfdata.org/projects/PIPE/repos/superpipe/browse/src/coordinator/types.ts#6
-export type RecursivePartial<T> = {
+type RecursivePartial<T> = {
 	[P in keyof T]?: RecursivePartial<T[P]>;
 };
 export type PartialExcept<T, K extends keyof T> = RecursivePartial<T> &
