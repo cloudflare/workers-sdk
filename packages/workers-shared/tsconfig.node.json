@@ -6,7 +6,8 @@
 		"moduleResolution": "NodeNext",
 		"allowSyntheticDefaultImports": true,
 		"target": "ES2021",
-		"lib": ["ES2021"]
+		"lib": ["ES2021"],
+		"noEmit": true
 	},
 	"include": ["./**/vitest.config.mts", "./scripts/**/*.ts"]
 }
