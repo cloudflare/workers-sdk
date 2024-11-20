@@ -17,6 +17,7 @@ const existsMock = (fileList: Set<string>) => {
 			if (fileList.has(pathname)) {
 				return pathname;
 			}
+			return null;
 		}
 	);
 };
@@ -33,7 +34,7 @@ const testSuites = [
 	},
 ];
 
-describe.each(testSuites)("$title", ({ title, suite }) => {
+describe.each(testSuites)("$title", ({ suite }) => {
 	beforeEach(() => {
 		vi.mocked(getAssetWithMetadataFromKV).mockImplementation(
 			() =>
@@ -64,7 +65,7 @@ describe.each(testSuites)("$title", ({ title, suite }) => {
 			async ({ files, requestPath, matchedFile, finalPath }) => {
 				existsMock(new Set(files));
 				const request = new IncomingRequest(BASE_URL + requestPath);
-				let response = await SELF.fetch(request);
+				const response = await SELF.fetch(request);
 				if (matchedFile && finalPath) {
 					expect(getAssetWithMetadataFromKV).toBeCalledTimes(1);
 					expect(getAssetWithMetadataFromKV).toBeCalledWith(

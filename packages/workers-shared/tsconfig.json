@@ -12,6 +12,6 @@
 		"strict": true,
 		"skipLibCheck": true
 	},
-	"include": ["utils/*.ts"],
+	"include": ["utils/*.ts", "index.ts"],
 	"exclude": ["scripts/**"]
 }
