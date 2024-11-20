@@ -199,7 +199,7 @@ describe.skipIf(experimental || frameworkToTest || isQuarantineMode())(
 				const { output } = await runC3(
 					[
 						project.path,
-						"--template=https://github.com/cloudflare/templates/d1-template",
+						"--template=https://github.com/cloudflare/workers-graphql-server",
 						"--no-deploy",
 						"--git=false",
 					],
@@ -208,10 +208,10 @@ describe.skipIf(experimental || frameworkToTest || isQuarantineMode())(
 				);
 
 				expect(output).toContain(
-					`repository https://github.com/cloudflare/templates/d1-template`,
+					`repository https://github.com/cloudflare/workers-graphql-server`,
 				);
 				expect(output).toContain(
-					`Cloning template from: https://github.com/cloudflare/templates/d1-template`,
+					`Cloning template from: https://github.com/cloudflare/workers-graphql-server`,
 				);
 				expect(output).toContain(`template cloned and validated`);
 			},
