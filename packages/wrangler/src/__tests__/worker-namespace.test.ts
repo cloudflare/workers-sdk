@@ -42,7 +42,7 @@ describe("dispatch-namespace", () => {
 			  wrangler dispatch-namespace rename <old-name> <new-name>  Rename a dispatch namespace
 
 			GLOBAL FLAGS
-			  -c, --config   Path to .toml configuration file  [string]
+			  -c, --config   Path to Wrangler configuration file  [string]
 			  -e, --env      Environment to use for operations and .env files  [string]
 			  -h, --help     Show help  [boolean]
 			  -v, --version  Show version number  [boolean]",
@@ -94,7 +94,7 @@ describe("dispatch-namespace", () => {
 				  name  Name of the dispatch namespace  [string] [required]
 
 				GLOBAL FLAGS
-				  -c, --config   Path to .toml configuration file  [string]
+				  -c, --config   Path to Wrangler configuration file  [string]
 				  -e, --env      Environment to use for operations and .env files  [string]
 				  -h, --help     Show help  [boolean]
 				  -v, --version  Show version number  [boolean]"
@@ -144,7 +144,7 @@ describe("dispatch-namespace", () => {
 				  name  Name of the dispatch namespace  [string] [required]
 
 				GLOBAL FLAGS
-				  -c, --config   Path to .toml configuration file  [string]
+				  -c, --config   Path to Wrangler configuration file  [string]
 				  -e, --env      Environment to use for operations and .env files  [string]
 				  -h, --help     Show help  [boolean]
 				  -v, --version  Show version number  [boolean]"
@@ -203,7 +203,7 @@ describe("dispatch-namespace", () => {
 				  name  Name of the dispatch namespace  [string] [required]
 
 				GLOBAL FLAGS
-				  -c, --config   Path to .toml configuration file  [string]
+				  -c, --config   Path to Wrangler configuration file  [string]
 				  -e, --env      Environment to use for operations and .env files  [string]
 				  -h, --help     Show help  [boolean]
 				  -v, --version  Show version number  [boolean]"
@@ -313,7 +313,7 @@ describe("dispatch-namespace", () => {
 				  new-name  New name of the dispatch namespace  [string] [required]
 
 				GLOBAL FLAGS
-				  -c, --config   Path to .toml configuration file  [string]
+				  -c, --config   Path to Wrangler configuration file  [string]
 				  -e, --env      Environment to use for operations and .env files  [string]
 				  -h, --help     Show help  [boolean]
 				  -v, --version  Show version number  [boolean]"

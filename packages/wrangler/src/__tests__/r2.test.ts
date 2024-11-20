@@ -40,7 +40,7 @@ describe("r2", () => {
 			  wrangler r2 bucket  Manage R2 buckets
 
 			GLOBAL FLAGS
-			  -c, --config   Path to .toml configuration file  [string]
+			  -c, --config   Path to Wrangler configuration file  [string]
 			  -e, --env      Environment to use for operations and .env files  [string]
 			  -h, --help     Show help  [boolean]
 			  -v, --version  Show version number  [boolean]"
@@ -68,7 +68,7 @@ describe("r2", () => {
 			  wrangler r2 bucket  Manage R2 buckets
 
 			GLOBAL FLAGS
-			  -c, --config   Path to .toml configuration file  [string]
+			  -c, --config   Path to Wrangler configuration file  [string]
 			  -e, --env      Environment to use for operations and .env files  [string]
 			  -h, --help     Show help  [boolean]
 			  -v, --version  Show version number  [boolean]"
@@ -106,7 +106,7 @@ describe("r2", () => {
 				  wrangler r2 bucket lifecycle        Manage lifecycle rules for an R2 bucket
 
 				GLOBAL FLAGS
-				  -c, --config   Path to .toml configuration file  [string]
+				  -c, --config   Path to Wrangler configuration file  [string]
 				  -e, --env      Environment to use for operations and .env files  [string]
 				  -h, --help     Show help  [boolean]
 				  -v, --version  Show version number  [boolean]"
@@ -143,7 +143,7 @@ describe("r2", () => {
 				  wrangler r2 bucket lifecycle        Manage lifecycle rules for an R2 bucket
 
 				GLOBAL FLAGS
-				  -c, --config   Path to .toml configuration file  [string]
+				  -c, --config   Path to Wrangler configuration file  [string]
 				  -e, --env      Environment to use for operations and .env files  [string]
 				  -h, --help     Show help  [boolean]
 				  -v, --version  Show version number  [boolean]"
@@ -250,7 +250,7 @@ describe("r2", () => {
 					  name  The name of the new bucket  [string] [required]
 
 					GLOBAL FLAGS
-					  -c, --config   Path to .toml configuration file  [string]
+					  -c, --config   Path to Wrangler configuration file  [string]
 					  -e, --env      Environment to use for operations and .env files  [string]
 					  -h, --help     Show help  [boolean]
 					  -v, --version  Show version number  [boolean]
@@ -283,7 +283,7 @@ describe("r2", () => {
 					  name  The name of the new bucket  [string] [required]
 
 					GLOBAL FLAGS
-					  -c, --config   Path to .toml configuration file  [string]
+					  -c, --config   Path to Wrangler configuration file  [string]
 					  -e, --env      Environment to use for operations and .env files  [string]
 					  -h, --help     Show help  [boolean]
 					  -v, --version  Show version number  [boolean]
@@ -448,7 +448,7 @@ Configure your Worker to write objects to this bucket:`);
 					  wrangler r2 bucket update storage-class <name>  Update the default storage class of an existing R2 bucket
 
 					GLOBAL FLAGS
-					  -c, --config   Path to .toml configuration file  [string]
+					  -c, --config   Path to Wrangler configuration file  [string]
 					  -e, --env      Environment to use for operations and .env files  [string]
 					  -h, --help     Show help  [boolean]
 					  -v, --version  Show version number  [boolean]"
@@ -477,7 +477,7 @@ Configure your Worker to write objects to this bucket:`);
 						  name  The name of the existing bucket  [string] [required]
 
 						GLOBAL FLAGS
-						  -c, --config   Path to .toml configuration file  [string]
+						  -c, --config   Path to Wrangler configuration file  [string]
 						  -e, --env      Environment to use for operations and .env files  [string]
 						  -h, --help     Show help  [boolean]
 						  -v, --version  Show version number  [boolean]
@@ -542,7 +542,7 @@ Configure your Worker to write objects to this bucket:`);
 					  bucket  The name of the bucket to delete  [string] [required]
 
 					GLOBAL FLAGS
-					  -c, --config   Path to .toml configuration file  [string]
+					  -c, --config   Path to Wrangler configuration file  [string]
 					  -e, --env      Environment to use for operations and .env files  [string]
 					  -h, --help     Show help  [boolean]
 					  -v, --version  Show version number  [boolean]
@@ -581,7 +581,7 @@ Configure your Worker to write objects to this bucket:`);
 					  bucket  The name of the bucket to delete  [string] [required]
 
 					GLOBAL FLAGS
-					  -c, --config   Path to .toml configuration file  [string]
+					  -c, --config   Path to Wrangler configuration file  [string]
 					  -e, --env      Environment to use for operations and .env files  [string]
 					  -h, --help     Show help  [boolean]
 					  -v, --version  Show version number  [boolean]
@@ -648,7 +648,7 @@ Configure your Worker to write objects to this bucket:`);
 					  wrangler r2 bucket sippy get <name>      Check the status of Sippy on an R2 bucket
 
 					GLOBAL FLAGS
-					  -c, --config   Path to .toml configuration file  [string]
+					  -c, --config   Path to Wrangler configuration file  [string]
 					  -e, --env      Environment to use for operations and .env files  [string]
 					  -h, --help     Show help  [boolean]
 					  -v, --version  Show version number  [boolean]"
@@ -739,7 +739,7 @@ Configure your Worker to write objects to this bucket:`);
 						  name  The name of the bucket  [string] [required]
 
 						GLOBAL FLAGS
-						  -c, --config   Path to .toml configuration file  [string]
+						  -c, --config   Path to Wrangler configuration file  [string]
 						  -e, --env      Environment to use for operations and .env files  [string]
 						  -h, --help     Show help  [boolean]
 						  -v, --version  Show version number  [boolean]
@@ -782,7 +782,7 @@ Configure your Worker to write objects to this bucket:`);
 						  name  The name of the bucket  [string] [required]
 
 						GLOBAL FLAGS
-						  -c, --config   Path to .toml configuration file  [string]
+						  -c, --config   Path to Wrangler configuration file  [string]
 						  -e, --env      Environment to use for operations and .env files  [string]
 						  -h, --help     Show help  [boolean]
 						  -v, --version  Show version number  [boolean]
@@ -833,7 +833,7 @@ Configure your Worker to write objects to this bucket:`);
 						  name  The name of the bucket  [string] [required]
 
 						GLOBAL FLAGS
-						  -c, --config   Path to .toml configuration file  [string]
+						  -c, --config   Path to Wrangler configuration file  [string]
 						  -e, --env      Environment to use for operations and .env files  [string]
 						  -h, --help     Show help  [boolean]
 						  -v, --version  Show version number  [boolean]
@@ -1014,7 +1014,7 @@ Configure your Worker to write objects to this bucket:`);
 						  bucket  The name of the R2 bucket to get event notification rules for  [string] [required]
 
 						GLOBAL FLAGS
-						  -c, --config   Path to .toml configuration file  [string]
+						  -c, --config   Path to Wrangler configuration file  [string]
 						  -e, --env      Environment to use for operations and .env files  [string]
 						  -h, --help     Show help  [boolean]
 						  -v, --version  Show version number  [boolean]
@@ -1374,7 +1374,7 @@ Configure your Worker to write objects to this bucket:`);
 						  bucket  The name of the R2 bucket to create an event notification rule for  [string] [required]
 
 						GLOBAL FLAGS
-						  -c, --config   Path to .toml configuration file  [string]
+						  -c, --config   Path to Wrangler configuration file  [string]
 						  -e, --env      Environment to use for operations and .env files  [string]
 						  -h, --help     Show help  [boolean]
 						  -v, --version  Show version number  [boolean]
@@ -1532,7 +1532,7 @@ Configure your Worker to write objects to this bucket:`);
 						  bucket  The name of the R2 bucket to delete an event notification rule for  [string] [required]
 
 						GLOBAL FLAGS
-						  -c, --config   Path to .toml configuration file  [string]
+						  -c, --config   Path to Wrangler configuration file  [string]
 						  -e, --env      Environment to use for operations and .env files  [string]
 						  -h, --help     Show help  [boolean]
 						  -v, --version  Show version number  [boolean]
@@ -2130,7 +2130,7 @@ Configure your Worker to write objects to this bucket:`);
 				  wrangler r2 object delete <objectPath>  Delete an object in an R2 bucket
 
 				GLOBAL FLAGS
-				  -c, --config   Path to .toml configuration file  [string]
+				  -c, --config   Path to Wrangler configuration file  [string]
 				  -e, --env      Environment to use for operations and .env files  [string]
 				  -h, --help     Show help  [boolean]
 				  -v, --version  Show version number  [boolean]"

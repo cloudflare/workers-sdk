@@ -35,7 +35,7 @@ describe("wrangler", () => {
 					  wrangler pubsub broker     Interact with your Pub/Sub Brokers
 
 					GLOBAL FLAGS
-					  -c, --config   Path to .toml configuration file  [string]
+					  -c, --config   Path to Wrangler configuration file  [string]
 					  -e, --env      Environment to use for operations and .env files  [string]
 					  -h, --help     Show help  [boolean]
 					  -v, --version  Show version number  [boolean]
@@ -67,7 +67,7 @@ describe("wrangler", () => {
 						  wrangler pubsub namespace describe <name>  Describe a Pub/Sub Namespace
 
 						GLOBAL FLAGS
-						  -c, --config   Path to .toml configuration file  [string]
+						  -c, --config   Path to Wrangler configuration file  [string]
 						  -e, --env      Environment to use for operations and .env files  [string]
 						  -h, --help     Show help  [boolean]
 						  -v, --version  Show version number  [boolean]
@@ -194,7 +194,7 @@ describe("wrangler", () => {
 						  wrangler pubsub broker public-keys <name>       Show the public keys used for verifying on-publish hooks and credentials for a Broker.
 
 						GLOBAL FLAGS
-						  -c, --config   Path to .toml configuration file  [string]
+						  -c, --config   Path to Wrangler configuration file  [string]
 						  -e, --env      Environment to use for operations and .env files  [string]
 						  -h, --help     Show help  [boolean]
 						  -v, --version  Show version number  [boolean]

@@ -73,7 +73,7 @@ describe("wrangler workflows", () => {
 				  wrangler workflows instances                Manage Workflow instances [open-beta]
 
 				GLOBAL FLAGS
-				  -c, --config   Path to .toml configuration file  [string]
+				  -c, --config   Path to Wrangler configuration file  [string]
 				  -e, --env      Environment to use for operations and .env files  [string]
 				  -h, --help     Show help  [boolean]
 				  -v, --version  Show version number  [boolean]"
@@ -103,7 +103,7 @@ describe("wrangler workflows", () => {
 				  wrangler workflows instances resume <name> <id>     Resume a workflow instance [open-beta]
 
 				GLOBAL FLAGS
-				  -c, --config   Path to .toml configuration file  [string]
+				  -c, --config   Path to Wrangler configuration file  [string]
 				  -e, --env      Environment to use for operations and .env files  [string]
 				  -h, --help     Show help  [boolean]
 				  -v, --version  Show version number  [boolean]"

@@ -203,7 +203,7 @@ describe("Command Registration", () => {
 			  wrangler two                             namespace 2
 
 			GLOBAL FLAGS
-			  -c, --config   Path to .toml configuration file  [string]
+			  -c, --config   Path to Wrangler configuration file  [string]
 			  -e, --env      Environment to use for operations and .env files  [string]
 			  -h, --help     Show help  [boolean]
 			  -v, --version  Show version number  [boolean]
@@ -225,7 +225,7 @@ describe("Command Registration", () => {
 			  wrangler one two  command 1 2
 
 			GLOBAL FLAGS
-			  -c, --config   Path to .toml configuration file  [string]
+			  -c, --config   Path to Wrangler configuration file  [string]
 			  -e, --env      Environment to use for operations and .env files  [string]
 			  -h, --help     Show help  [boolean]
 			  -v, --version  Show version number  [boolean]"
@@ -244,7 +244,7 @@ describe("Command Registration", () => {
 			  wrangler one two three  command 1 2 3
 
 			GLOBAL FLAGS
-			  -c, --config   Path to .toml configuration file  [string]
+			  -c, --config   Path to Wrangler configuration file  [string]
 			  -e, --env      Environment to use for operations and .env files  [string]
 			  -h, --help     Show help  [boolean]
 			  -v, --version  Show version number  [boolean]"
@@ -260,7 +260,7 @@ describe("Command Registration", () => {
 			command 1 2 3
 
 			GLOBAL FLAGS
-			  -c, --config   Path to .toml configuration file  [string]
+			  -c, --config   Path to Wrangler configuration file  [string]
 			  -e, --env      Environment to use for operations and .env files  [string]
 			  -h, --help     Show help  [boolean]
 			  -v, --version  Show version number  [boolean]"
@@ -343,7 +343,7 @@ describe("Command Registration", () => {
 			  posNum  [number]
 
 			GLOBAL FLAGS
-			  -c, --config   Path to .toml configuration file  [string]
+			  -c, --config   Path to Wrangler configuration file  [string]
 			  -e, --env      Environment to use for operations and .env files  [string]
 			  -h, --help     Show help  [boolean]
 			  -v, --version  Show version number  [boolean]

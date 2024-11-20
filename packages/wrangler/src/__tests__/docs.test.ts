@@ -57,7 +57,7 @@ describe("wrangler docs", () => {
 			  search  Enter search terms (e.g. the wrangler command) you want to know more about  [array] [default: []]
 
 			GLOBAL FLAGS
-			  -c, --config   Path to .toml configuration file  [string]
+			  -c, --config   Path to Wrangler configuration file  [string]
 			  -e, --env      Environment to use for operations and .env files  [string]
 			  -h, --help     Show help  [boolean]
 			  -v, --version  Show version number  [boolean]

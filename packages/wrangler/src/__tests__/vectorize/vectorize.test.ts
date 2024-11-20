@@ -39,7 +39,7 @@ describe("vectorize help", () => {
 			  wrangler vectorize delete-metadata-index <name>  Delete metadata indexes
 
 			GLOBAL FLAGS
-			  -c, --config   Path to .toml configuration file  [string]
+			  -c, --config   Path to Wrangler configuration file  [string]
 			  -e, --env      Environment to use for operations and .env files  [string]
 			  -h, --help     Show help  [boolean]
 			  -v, --version  Show version number  [boolean]
@@ -87,7 +87,7 @@ describe("vectorize help", () => {
 			  wrangler vectorize delete-metadata-index <name>  Delete metadata indexes
 
 			GLOBAL FLAGS
-			  -c, --config   Path to .toml configuration file  [string]
+			  -c, --config   Path to Wrangler configuration file  [string]
 			  -e, --env      Environment to use for operations and .env files  [string]
 			  -h, --help     Show help  [boolean]
 			  -v, --version  Show version number  [boolean]
@@ -123,7 +123,7 @@ describe("vectorize help", () => {
 			  name  The name of the Vectorize index.  [string] [required]
 
 			GLOBAL FLAGS
-			  -c, --config   Path to .toml configuration file  [string]
+			  -c, --config   Path to Wrangler configuration file  [string]
 			  -e, --env      Environment to use for operations and .env files  [string]
 			  -h, --help     Show help  [boolean]
 			  -v, --version  Show version number  [boolean]
@@ -163,7 +163,7 @@ describe("vectorize help", () => {
 			  name  The name of the Vectorize index  [string] [required]
 
 			GLOBAL FLAGS
-			  -c, --config   Path to .toml configuration file  [string]
+			  -c, --config   Path to Wrangler configuration file  [string]
 			  -e, --env      Environment to use for operations and .env files  [string]
 			  -h, --help     Show help  [boolean]
 			  -v, --version  Show version number  [boolean]

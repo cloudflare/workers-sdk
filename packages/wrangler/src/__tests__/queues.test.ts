@@ -36,7 +36,7 @@ describe("wrangler", () => {
 				  wrangler queues consumer       Configure Queue consumers
 
 				GLOBAL FLAGS
-				  -c, --config   Path to .toml configuration file  [string]
+				  -c, --config   Path to Wrangler configuration file  [string]
 				  -e, --env      Environment to use for operations and .env files  [string]
 				  -h, --help     Show help  [boolean]
 				  -v, --version  Show version number  [boolean]"
@@ -109,7 +109,7 @@ describe("wrangler", () => {
 					List Queues
 
 					GLOBAL FLAGS
-					  -c, --config   Path to .toml configuration file  [string]
+					  -c, --config   Path to Wrangler configuration file  [string]
 					  -e, --env      Environment to use for operations and .env files  [string]
 					  -h, --help     Show help  [boolean]
 					  -v, --version  Show version number  [boolean]
@@ -245,7 +245,7 @@ describe("wrangler", () => {
 					  name  The name of the queue  [string] [required]
 
 					GLOBAL FLAGS
-					  -c, --config   Path to .toml configuration file  [string]
+					  -c, --config   Path to Wrangler configuration file  [string]
 					  -e, --env      Environment to use for operations and .env files  [string]
 					  -h, --help     Show help  [boolean]
 					  -v, --version  Show version number  [boolean]
@@ -377,7 +377,7 @@ describe("wrangler", () => {
 					  name  The name of the queue  [string] [required]
 
 					GLOBAL FLAGS
-					  -c, --config   Path to .toml configuration file  [string]
+					  -c, --config   Path to Wrangler configuration file  [string]
 					  -e, --env      Environment to use for operations and .env files  [string]
 					  -h, --help     Show help  [boolean]
 					  -v, --version  Show version number  [boolean]"
@@ -445,7 +445,7 @@ describe("wrangler", () => {
 					  wrangler queues consumer worker                             Configure Queue Worker Consumers
 
 					GLOBAL FLAGS
-					  -c, --config   Path to .toml configuration file  [string]
+					  -c, --config   Path to Wrangler configuration file  [string]
 					  -e, --env      Environment to use for operations and .env files  [string]
 					  -h, --help     Show help  [boolean]
 					  -v, --version  Show version number  [boolean]"
@@ -492,7 +492,7 @@ describe("wrangler", () => {
 						  script-name  Name of the consumer script  [string] [required]
 
 						GLOBAL FLAGS
-						  -c, --config   Path to .toml configuration file  [string]
+						  -c, --config   Path to Wrangler configuration file  [string]
 						  -e, --env      Environment to use for operations and .env files  [string]
 						  -h, --help     Show help  [boolean]
 						  -v, --version  Show version number  [boolean]
@@ -813,7 +813,7 @@ describe("wrangler", () => {
 						  script-name  Name of the consumer script  [string] [required]
 
 						GLOBAL FLAGS
-						  -c, --config   Path to .toml configuration file  [string]
+						  -c, --config   Path to Wrangler configuration file  [string]
 						  -e, --env      Environment to use for operations and .env files  [string]
 						  -h, --help     Show help  [boolean]
 						  -v, --version  Show version number  [boolean]"
@@ -1200,7 +1200,7 @@ describe("wrangler", () => {
 					  wrangler queues consumer http remove <queue-name>  Remove a Queue HTTP Pull Consumer
 
 					GLOBAL FLAGS
-					  -c, --config   Path to .toml configuration file  [string]
+					  -c, --config   Path to Wrangler configuration file  [string]
 					  -e, --env      Environment to use for operations and .env files  [string]
 					  -h, --help     Show help  [boolean]
 					  -v, --version  Show version number  [boolean]"
@@ -1246,7 +1246,7 @@ describe("wrangler", () => {
 						  queue-name  Name of the queue for the consumer  [string] [required]
 
 						GLOBAL FLAGS
-						  -c, --config   Path to .toml configuration file  [string]
+						  -c, --config   Path to Wrangler configuration file  [string]
 						  -e, --env      Environment to use for operations and .env files  [string]
 						  -h, --help     Show help  [boolean]
 						  -v, --version  Show version number  [boolean]
@@ -1376,7 +1376,7 @@ describe("wrangler", () => {
 						  queue-name  Name of the queue for the consumer  [string] [required]
 
 						GLOBAL FLAGS
-						  -c, --config   Path to .toml configuration file  [string]
+						  -c, --config   Path to Wrangler configuration file  [string]
 						  -e, --env      Environment to use for operations and .env files  [string]
 						  -h, --help     Show help  [boolean]
 						  -v, --version  Show version number  [boolean]"
