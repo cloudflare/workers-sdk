@@ -1,3 +1,4 @@
+import chalk from "chalk";
 import { fetch } from "undici";
 import { logger } from "../logger";
 import {
@@ -6,7 +7,11 @@ import {
 	getPlatform,
 	getWranglerVersion,
 } from "./helpers";
-import { getMetricsConfig, readMetricsConfig } from "./metrics-config";
+import {
+	getMetricsConfig,
+	readMetricsConfig,
+	writeMetricsConfig,
+} from "./metrics-config";
 import type { MetricsConfigOptions } from "./metrics-config";
 import type { CommonEventProperties, Events } from "./send-event";
 
@@ -43,6 +48,12 @@ export function getMetricsDispatcher(options: MetricsConfigOptions) {
 			});
 		},
 
+		/**
+		 * Dispatches `wrangler command started / completed / errored` events
+		 *
+		 * This happens on every command execution, and will (hopefully) replace sendEvent soon.
+		 * However to prevent disruption, we're adding under `sendNewEvent` for now.
+		 */
 		async sendNewEvent<EventName extends Events["name"]>(
 			name: EventName,
 			properties: Omit<
@@ -50,6 +61,9 @@ export function getMetricsDispatcher(options: MetricsConfigOptions) {
 				keyof CommonEventProperties
 			>
 		): Promise<void> {
+			if (name === "wrangler command started") {
+				printMetricsBanner();
+			}
 			const commonEventProperties: CommonEventProperties = {
 				amplitude_session_id,
 				amplitude_event_id: amplitude_event_id++,
@@ -119,6 +133,38 @@ export function getMetricsDispatcher(options: MetricsConfigOptions) {
 			);
 		});
 	}
+
+	function printMetricsBanner() {
+		const metricsConfig = readMetricsConfig();
+		const lastShown = metricsConfig.permission?.bannerLastShown;
+		if (
+			metricsConfig.permission?.enabled &&
+			(!lastShown || isNewVersion(lastShown, wranglerVersion))
+		) {
+			logger.log(
+				chalk.gray(
+					`\nCloudflare collects anonymous telemetry about your usage of Wrangler. Learn more at https://github.com/cloudflare/workers-sdk/tree/main/telemetry.md`
+				)
+			);
+			metricsConfig.permission.bannerLastShown = wranglerVersion;
+			writeMetricsConfig(metricsConfig);
+		}
+	}
 }
 
 export type Properties = Record<string, unknown>;
+
+const isNewVersion = (stored: string, current: string) => {
+	const storedVersion = stored.split(".");
+	const currentVersion = current.split(".");
+	for (let i = 0; i < storedVersion.length; i++) {
+		const storedSegment = parseInt(storedVersion[i]);
+		const currentSegment = parseInt(currentVersion[i]);
+		if (currentSegment > storedSegment) {
+			return true;
+		} else if (currentSegment < storedSegment) {
+			return false;
+		}
+	}
+	return false;
+};
