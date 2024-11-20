@@ -12,6 +12,7 @@ account_id = "0f1b8aa119a907021f659042f95ea9ba"
 workers_dev = false
 main = "src/index.ts"
 compatibility_date = "2024-07-31"
+compatibility_flags = ["nodejs_compat"]
 
 [version_metadata]
 binding = "VERSION_METADATA"
