@@ -44,6 +44,35 @@ export type CloudchamberCommandConfiguration = CommonCloudchamberConfiguration &
 	CommonYargsOptions & { wranglerConfig: Config };
 
 /**
+ * These patterns are defined by the OCI specification.
+ *
+ * See: https://github.com/opencontainers/distribution-spec/blob/v1.1.0/spec.md#pulling-manifests
+ */
+const alphaNumeric = "[a-z0-9]+";
+const separator = "(?:\\.|_|__|-+)";
+const port = ":[0-9]+";
+const domain = `${alphaNumeric}(?:${separator}${alphaNumeric})*`;
+const tag = "[a-zA-Z0-9_][a-zA-Z0-9._-]{0,127}";
+const imageRe = new RegExp(`^((?:${domain}(?:${port})?/)?(?:${domain}/)*(?:${domain})):(${tag})$`);
+
+/**
+ * Parse a container image name.
+ */
+export function parseImageName(value: string): {name?: string, tag?: string, err?: string} {
+	const matches = value.match(imageRe);
+	if (matches === null || matches.length != 3) {
+		return {err: "Invalid image format: expected NAME:TAG"};
+	}
+
+	const [_match, name, tag] = matches;
+	if (tag == "latest") {
+		return {err: '"latest" tag is not allowed'};
+	}
+
+	return {name, tag};
+}
+
+/**
  * Wrapper that parses wrangler configuration and authentication.
  * It also wraps exceptions and checks if they are from the RestAPI.
  *

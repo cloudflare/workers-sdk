@@ -14,6 +14,7 @@ import {
 	promptForLabels,
 	renderDeploymentConfiguration,
 	renderDeploymentMutationError,
+	parseImageName,
 } from "./common";
 import { wrap } from "./helpers/wrap";
 import { loadAccount } from "./locations";
@@ -192,15 +193,14 @@ async function handleModifyCommand(
 		label: "",
 		validate: (value) => {
 			if (typeof value !== "string") {
-				return "unknown error";
+				return "Unknown error";
 			}
-			if (value.endsWith(":latest")) {
-				return "we don't allow :latest tags";
-			}
+			const {err} = parseImageName(value);
+			return err;
 		},
 		defaultValue: givenImage ?? deployment.image,
 		initialValue: givenImage ?? deployment.image,
-		helpText: "Press Return to leave unchanged",
+		helpText: "press Return to leave unchanged",
 		type: "text",
 	});
 
