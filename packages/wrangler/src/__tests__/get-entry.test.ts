@@ -8,11 +8,19 @@ import { seed } from "./helpers/seed";
 import type { Entry } from "../deployment-bundle/entry";
 
 function normalize(entry: Entry): Entry {
-	return JSON.parse(
-		JSON.stringify(entry)
-			.replaceAll(process.cwd(), "/tmp/dir")
-			.replaceAll(path.sep, "/")
-	);
+	const tmpDir = process.cwd();
+	const tmpDirName = path.basename(tmpDir);
+
+	return Object.fromEntries(
+		Object.entries(entry).map(([k, v]) => [
+			k,
+			typeof v === "string"
+				? v
+						.replaceAll("\\", "/")
+						.replace(new RegExp(`(.*${tmpDirName})`), `/tmp/dir`)
+				: v,
+		])
+	) as Entry;
 }
 
 describe("getEntry()", () => {
