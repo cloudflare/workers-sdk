@@ -592,6 +592,7 @@ describe("asset-server handler", () => {
 				"cache-control": "public, s-maxage=604800",
 				"x-robots-tag": "noindex",
 				"cf-cache-status": "HIT", // new header
+				"x-cf-pgs-apc": "HIT", // new header
 			});
 
 			// Serve with a fresh cache and ensure we don't get a response
