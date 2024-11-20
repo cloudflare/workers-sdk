@@ -44,7 +44,7 @@ const escapeRegex = (str: string) => {
 export const COMMON_ESBUILD_OPTIONS = {
 	// Our workerd runtime uses the same V8 version as recent Chrome, which is highly ES2022 compliant: https://kangax.github.io/compat-table/es2016plus/
 	target: "es2022",
-	loader: { ".js": "jsx", ".mjs": "jsx", ".cjs": "jsx", ".wasm": "binary" },
+	loader: { ".js": "jsx", ".mjs": "jsx", ".cjs": "jsx" },
 } as const;
 
 /**
