@@ -1,4 +1,4 @@
-import { TestCase } from "../html-handling.test";
+import { TestCase } from "./test-case";
 
 export const encodingTestCases: {
 	html_handling:

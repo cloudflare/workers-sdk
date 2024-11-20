@@ -1,16 +1,16 @@
 import { SELF } from "cloudflare:test";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { applyConfigurationDefaults } from "../../packages/workers-shared/asset-worker/src/configuration";
-import Worker from "../../packages/workers-shared/asset-worker/src/index";
-import { getAssetWithMetadataFromKV } from "../../packages/workers-shared/asset-worker/src/utils/kv";
+import { applyConfigurationDefaults } from "../src/configuration";
+import Worker from "../src/index";
+import { getAssetWithMetadataFromKV } from "../src/utils/kv";
 import { encodingTestCases } from "./test-cases/encoding-test-cases";
 import { htmlHandlingTestCases } from "./test-cases/html-handling-test-cases";
-import type { AssetMetadata } from "../../packages/workers-shared/asset-worker/src/utils/kv";
+import type { AssetMetadata } from "../src/utils/kv";
 
 const IncomingRequest = Request<unknown, IncomingRequestCfProperties>;
 
-vi.mock("../../packages/workers-shared/asset-worker/src/utils/kv.ts");
-vi.mock("../../packages/workers-shared/asset-worker/src/configuration");
+vi.mock("../src/utils/kv.ts");
+vi.mock("../src/configuration");
 const existsMock = (fileList: Set<string>) => {
 	vi.spyOn(Worker.prototype, "unstable_exists").mockImplementation(
 		async (pathname: string) => {
@@ -21,14 +21,6 @@ const existsMock = (fileList: Set<string>) => {
 	);
 };
 const BASE_URL = "http://example.com";
-
-export type TestCase = {
-	title: string;
-	files: string[];
-	requestPath: string;
-	matchedFile?: string;
-	finalPath?: string;
-};
 
 const testSuites = [
 	{
