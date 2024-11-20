@@ -339,7 +339,7 @@ export async function commonDeploymentCMDSetup(
 	return { accountId, scriptName, config };
 }
 
-export function addHyphens(uuid: string | null): string | null {
+function addHyphens(uuid: string | null): string | null {
 	if (uuid == null) {
 		return uuid;
 	}

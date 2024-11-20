@@ -65,6 +65,8 @@ async function devRegistry(
 async function startWorkerRegistry(
 	cb?: (registry: WorkerRegistry | undefined) => void
 ) {
+	await loadWorkerDefinitions();
+	cb?.({ ...globalWorkers });
 	globalWatcher ??= watch(DEV_REGISTRY_PATH, {
 		persistent: true,
 	}).on("all", async () => {
@@ -124,7 +126,7 @@ async function unregisterWorker(name: string) {
 	return;
 }
 
-export async function loadWorkerDefinitions(): Promise<WorkerRegistry> {
+async function loadWorkerDefinitions(): Promise<WorkerRegistry> {
 	await mkdir(DEV_REGISTRY_PATH, { recursive: true });
 	globalWorkers ??= {};
 	const newWorkers = new Set<string>();

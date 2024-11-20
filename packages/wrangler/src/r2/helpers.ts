@@ -1,5 +1,6 @@
 import { Miniflare } from "miniflare";
-import { fetchResult } from "../cfetch";
+import prettyBytes from "pretty-bytes";
+import { fetchGraphqlResult, fetchResult } from "../cfetch";
 import { fetchR2Objects } from "../cfetch/internal";
 import { getLocalPersistencePath } from "../dev/get-local-persistence-path";
 import { buildPersistOptions } from "../dev/miniflare";
@@ -20,6 +21,29 @@ import type { HeadersInit } from "undici";
 export interface R2BucketInfo {
 	name: string;
 	creation_date: string;
+	location?: string;
+	storage_class?: string;
+}
+
+export interface R2BucketMetrics {
+	max?: {
+		objectCount?: number;
+		payloadSize?: number;
+		metadataSize?: number;
+	};
+	dimensions: {
+		datetime?: string;
+	};
+}
+
+export interface R2BucketMetricsGraphQLResponse {
+	data: {
+		viewer: {
+			accounts: {
+				r2StorageAdaptiveGroups?: R2BucketMetrics[];
+			}[];
+		};
+	};
 }
 
 /**
@@ -37,6 +61,114 @@ export async function listR2Buckets(
 		buckets: R2BucketInfo[];
 	}>(`/accounts/${accountId}/r2/buckets`, { headers });
 	return results.buckets;
+}
+
+export function tablefromR2BucketsListResponse(buckets: R2BucketInfo[]): {
+	name: string;
+	creation_date: string;
+}[] {
+	const rows = [];
+	for (const bucket of buckets) {
+		rows.push({
+			name: bucket.name,
+			creation_date: bucket.creation_date,
+		});
+	}
+	return rows;
+}
+
+export async function getR2Bucket(
+	accountId: string,
+	bucketName: string,
+	jurisdiction?: string
+): Promise<R2BucketInfo> {
+	const headers: HeadersInit = {};
+	if (jurisdiction !== undefined) {
+		headers["cf-r2-jurisdiction"] = jurisdiction;
+	}
+	const result = await fetchResult<R2BucketInfo>(
+		`/accounts/${accountId}/r2/buckets/${bucketName}`,
+		{
+			method: "GET",
+			headers,
+		}
+	);
+	return result;
+}
+
+export async function getR2BucketMetrics(
+	accountId: string,
+	bucketName: string,
+	jurisdiction?: string
+): Promise<{ objectCount: number; totalSize: string }> {
+	const today = new Date();
+	const yesterday = new Date(new Date(today).setDate(today.getDate() - 1));
+
+	let fullBucketName = bucketName;
+	if (jurisdiction) {
+		fullBucketName = `${jurisdiction}_${bucketName}`;
+	}
+
+	const storageMetricsQuery = `
+    query getR2StorageMetrics($accountTag: String, $filter: R2StorageAdaptiveGroupsFilter_InputObject) {
+      viewer {
+        accounts(filter: { accountTag: $accountTag }) {
+          r2StorageAdaptiveGroups(
+            limit: 1
+            filter: $filter
+            orderBy: [datetime_DESC]
+          ) {
+            max {
+              objectCount
+              payloadSize
+              metadataSize
+            }
+            dimensions {
+              datetime
+            }
+          }
+        }
+      }
+    }
+    `;
+
+	const variables = {
+		accountTag: accountId,
+		filter: {
+			datetime_geq: yesterday.toISOString(),
+			datetime_leq: today.toISOString(),
+			bucketName: fullBucketName,
+		},
+	};
+	const storageMetricsResult =
+		await fetchGraphqlResult<R2BucketMetricsGraphQLResponse>({
+			method: "POST",
+			body: JSON.stringify({
+				query: storageMetricsQuery,
+				operationName: "getR2StorageMetrics",
+				variables,
+			}),
+			headers: {
+				"Content-Type": "application/json",
+			},
+		});
+
+	if (storageMetricsResult) {
+		const metricsData =
+			storageMetricsResult.data?.viewer?.accounts[0]
+				?.r2StorageAdaptiveGroups?.[0];
+		if (metricsData && metricsData.max) {
+			const objectCount = metricsData.max.objectCount || 0;
+			const totalSize =
+				(metricsData.max.payloadSize || 0) +
+				(metricsData.max.metadataSize || 0);
+			return {
+				objectCount,
+				totalSize: prettyBytes(totalSize),
+			};
+		}
+	}
+	return { objectCount: 0, totalSize: "0 B" };
 }
 
 /**
@@ -359,7 +491,7 @@ export async function putR2Sippy(
 	);
 }
 
-export const R2EventableOperations = [
+const R2EventableOperations = [
 	"PutObject",
 	"DeleteObject",
 	"CompleteMultipartUpload",
@@ -399,10 +531,10 @@ export type GetNotificationConfigResponse = {
 	bucketName: string;
 	queues: GetQueueDetail[];
 };
-export type DetailID = string;
+type DetailID = string;
 type QueueID = string;
 type BucketName = string;
-export type NotificationDetail = Record<
+type NotificationDetail = Record<
 	DetailID, // This is the detail ID that identifies this config
 	{ queue: QueueID; rules: NotificationRule[] }
 >;
@@ -740,6 +872,215 @@ export async function configureCustomDomainSettings(
 			body: JSON.stringify(config),
 		}
 	);
+}
+
+export interface R2DevDomainInfo {
+	bucketId: string;
+	domain: string;
+	enabled: boolean;
+}
+
+export async function getR2DevDomain(
+	accountId: string,
+	bucketName: string,
+	jurisdiction?: string
+): Promise<R2DevDomainInfo> {
+	const headers: HeadersInit = {};
+	if (jurisdiction) {
+		headers["cf-r2-jurisdiction"] = jurisdiction;
+	}
+
+	const result = await fetchResult<R2DevDomainInfo>(
+		`/accounts/${accountId}/r2/buckets/${bucketName}/domains/managed`,
+		{
+			method: "GET",
+			headers,
+		}
+	);
+	return result;
+}
+
+export async function updateR2DevDomain(
+	accountId: string,
+	bucketName: string,
+	enabled: boolean,
+	jurisdiction?: string
+): Promise<R2DevDomainInfo> {
+	const headers: HeadersInit = {
+		"Content-Type": "application/json",
+	};
+	if (jurisdiction) {
+		headers["cf-r2-jurisdiction"] = jurisdiction;
+	}
+
+	const result = await fetchResult<R2DevDomainInfo>(
+		`/accounts/${accountId}/r2/buckets/${bucketName}/domains/managed`,
+		{
+			method: "PUT",
+			headers,
+			body: JSON.stringify({ enabled }),
+		}
+	);
+	return result;
+}
+
+export interface LifecycleCondition {
+	type: "Age" | "Date";
+	maxAge?: number;
+	date?: string;
+}
+
+export interface LifecycleRule {
+	id: string;
+	enabled: boolean;
+	conditions: {
+		prefix?: string;
+	};
+	deleteObjectsTransition?: {
+		condition: LifecycleCondition;
+	};
+	storageClassTransitions?: Array<{
+		condition: LifecycleCondition;
+		storageClass: "InfrequentAccess";
+	}>;
+	abortMultipartUploadsTransition?: {
+		condition: LifecycleCondition;
+	};
+}
+
+function formatCondition(condition: LifecycleCondition): string {
+	if (condition.type === "Age" && typeof condition.maxAge === "number") {
+		const days = condition.maxAge / 86400; // Convert seconds to days
+		return `after ${days} days`;
+	} else if (condition.type === "Date" && condition.date) {
+		const date = new Date(condition.date);
+		const displayDate = date.toISOString().split("T")[0];
+		return `on ${displayDate}`;
+	}
+
+	return "";
+}
+
+export function tableFromLifecycleRulesResponse(rules: LifecycleRule[]): {
+	id: string;
+	enabled: string;
+	prefix: string;
+	action: string;
+}[] {
+	const rows = [];
+	for (const rule of rules) {
+		const actions = [];
+
+		if (rule.deleteObjectsTransition) {
+			const action = "Expire objects";
+			const condition = formatCondition(rule.deleteObjectsTransition.condition);
+			actions.push(`${action} ${condition}`);
+		}
+		if (
+			rule.storageClassTransitions &&
+			rule.storageClassTransitions.length > 0
+		) {
+			for (const transition of rule.storageClassTransitions) {
+				const action = "Transition to Infrequent Access";
+				const condition = formatCondition(transition.condition);
+				actions.push(`${action} ${condition}`);
+			}
+		}
+		if (rule.abortMultipartUploadsTransition) {
+			const action = "Abort incomplete multipart uploads";
+			const condition = formatCondition(
+				rule.abortMultipartUploadsTransition.condition
+			);
+			actions.push(`${action} ${condition}`);
+		}
+
+		rows.push({
+			id: rule.id,
+			enabled: rule.enabled ? "Yes" : "No",
+			prefix: rule.conditions.prefix || "(all prefixes)",
+			action: actions.join(", ") || "(none)",
+		});
+	}
+	return rows;
+}
+
+export async function getLifecycleRules(
+	accountId: string,
+	bucket: string,
+	jurisdiction?: string
+): Promise<LifecycleRule[]> {
+	const headers: HeadersInit = {};
+	if (jurisdiction) {
+		headers["cf-r2-jurisdiction"] = jurisdiction;
+	}
+
+	const result = await fetchResult<{ rules: LifecycleRule[] }>(
+		`/accounts/${accountId}/r2/buckets/${bucket}/lifecycle`,
+		{
+			method: "GET",
+			headers,
+		}
+	);
+	return result.rules;
+}
+
+export async function putLifecycleRules(
+	accountId: string,
+	bucket: string,
+	rules: LifecycleRule[],
+	jurisdiction?: string
+): Promise<void> {
+	const headers: HeadersInit = {
+		"Content-Type": "application/json",
+	};
+	if (jurisdiction) {
+		headers["cf-r2-jurisdiction"] = jurisdiction;
+	}
+
+	await fetchResult(`/accounts/${accountId}/r2/buckets/${bucket}/lifecycle`, {
+		method: "PUT",
+		headers,
+		body: JSON.stringify({ rules: rules }),
+	});
+}
+
+export function formatActionDescription(action: string): string {
+	switch (action) {
+		case "expire":
+			return "expire objects";
+		case "transition":
+			return "transition to Infrequent Access storage class";
+		case "abort-multipart":
+			return "abort incomplete multipart uploads";
+		default:
+			return action;
+	}
+}
+
+export function isValidDate(dateString: string): boolean {
+	const regex = /^\d{4}-\d{2}-\d{2}$/;
+	if (!regex.test(dateString)) {
+		return false;
+	}
+	const date = new Date(`${dateString}T00:00:00.000Z`);
+	const timestamp = date.getTime();
+	if (isNaN(timestamp)) {
+		return false;
+	}
+	const [year, month, day] = dateString.split("-").map(Number);
+	return (
+		date.getUTCFullYear() === year &&
+		date.getUTCMonth() + 1 === month &&
+		date.getUTCDate() === day
+	);
+}
+
+export function isNonNegativeNumber(str: string): boolean {
+	if (str === "") {
+		return false;
+	}
+	const num = Number(str);
+	return num >= 0;
 }
 
 /**

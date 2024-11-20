@@ -4,6 +4,7 @@ import { UserError } from "../errors";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { requireAuth } from "../user";
+import { getValidBindingName } from "../utils/getValidBindingName";
 import { LOCATION_CHOICES } from "./constants";
 import { createR2Bucket, isValidR2BucketName } from "./helpers";
 import type {
@@ -68,8 +69,13 @@ export async function Handler(args: HandlerOptions) {
 	logger.log(
 		`✅ Created bucket '${fullBucketName}' with${
 			location ? ` location hint ${location} and` : ``
-		} default storage class of ${storageClass ? storageClass : `Standard`}.`
+		} default storage class of ${storageClass ? storageClass : `Standard`}.\n\n` +
+			"Configure your Worker to write objects to this bucket:\n\n" +
+			"[[r2_buckets]]\n" +
+			`bucket_name = "${args.name}"\n` +
+			`binding = "${getValidBindingName(args.name, "r2")}"`
 	);
+
 	await metrics.sendMetricsEvent("create r2 bucket", {
 		sendMetrics: config.send_metrics,
 	});

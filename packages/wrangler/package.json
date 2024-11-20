@@ -1,6 +1,6 @@
 {
 	"name": "wrangler",
-	"version": "3.84.1",
+	"version": "3.88.0",
 	"description": "Command-line interface for all things Cloudflare Workers",
 	"keywords": [
 		"wrangler",
@@ -74,7 +74,7 @@
 		"@esbuild-plugins/node-globals-polyfill": "^0.2.3",
 		"@esbuild-plugins/node-modules-polyfill": "^0.2.2",
 		"blake3-wasm": "^2.1.5",
-		"chokidar": "^3.5.3",
+		"chokidar": "^4.0.1",
 		"date-fns": "^4.1.0",
 		"esbuild": "0.17.19",
 		"itty-time": "^1.0.6",
@@ -85,8 +85,8 @@
 		"resolve.exports": "^2.0.2",
 		"selfsigned": "^2.0.1",
 		"source-map": "^0.6.1",
-		"unenv": "npm:unenv-nightly@2.0.0-20241024-111401-d4156ac",
-		"workerd": "1.20241022.0",
+		"unenv": "npm:unenv-nightly@2.0.0-20241111-080453-894aa31",
+		"workerd": "1.20241106.1",
 		"xxhash-wasm": "^1.0.1"
 	},
 	"devDependencies": {
@@ -95,7 +95,7 @@
 		"@cloudflare/pages-shared": "workspace:^",
 		"@cloudflare/types": "6.18.4",
 		"@cloudflare/workers-tsconfig": "workspace:*",
-		"@cloudflare/workers-types": "^4.20241022.0",
+		"@cloudflare/workers-types": "^4.20241106.0",
 		"@cspotcode/source-map-support": "0.8.1",
 		"@iarna/toml": "^3.0.0",
 		"@microsoft/api-extractor": "^7.47.0",
@@ -111,9 +111,7 @@
 		"@types/mime": "^3.0.4",
 		"@types/minimatch": "^5.1.2",
 		"@types/prompts": "^2.0.14",
-		"@types/react": "^18.3.3",
 		"@types/resolve": "^1.20.6",
-		"@types/serve-static": "^1.13.10",
 		"@types/shell-quote": "^1.7.2",
 		"@types/signal-exit": "^3.0.1",
 		"@types/supports-color": "^8.1.1",
@@ -124,7 +122,6 @@
 		"body-parser": "^1.20.0",
 		"chalk": "^5.2.0",
 		"cli-table3": "^0.6.3",
-		"clipboardy": "^3.0.0",
 		"cmd-shim": "^4.1.0",
 		"command-exists": "^1.2.9",
 		"concurrently": "^8.2.2",
@@ -138,10 +135,6 @@
 		"http-terminator": "^3.2.0",
 		"https-proxy-agent": "7.0.2",
 		"ignore": "^5.2.0",
-		"ink": "^3.2.0",
-		"ink-select-input": "^4.2.1",
-		"ink-spinner": "^4.0.3",
-		"ink-table": "^3.0.0",
 		"is-ci": "^3.0.1",
 		"javascript-time-ago": "^2.5.4",
 		"md5-file": "5.0.0",
@@ -154,13 +147,8 @@
 		"patch-console": "^1.0.0",
 		"pretty-bytes": "^6.0.0",
 		"prompts": "^2.4.2",
-		"ps-list": "^8.1.1",
-		"react": "^18.3.1",
-		"react-error-boundary": "^3.1.4",
 		"semiver": "^1.1.0",
-		"serve-static": "^1.15.0",
 		"shell-quote": "^1.8.1",
-		"shellac": "^0.8.0",
 		"signal-exit": "^3.0.7",
 		"strip-ansi": "^7.1.0",
 		"supports-color": "^9.2.2",
@@ -173,11 +161,10 @@
 		"vitest-websocket-mock": "^0.4.0",
 		"ws": "^8.18.0",
 		"xdg-app-paths": "^8.3.0",
-		"yargs": "^17.7.2",
-		"yoga-layout": "file:../../vendor/yoga-layout-2.0.0-beta.1.tgz"
+		"yargs": "^17.7.2"
 	},
 	"peerDependencies": {
-		"@cloudflare/workers-types": "^4.20241022.0"
+		"@cloudflare/workers-types": "^4.20241106.0"
 	},
 	"peerDependenciesMeta": {
 		"@cloudflare/workers-types": {

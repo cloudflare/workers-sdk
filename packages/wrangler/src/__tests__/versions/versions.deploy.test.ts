@@ -12,7 +12,10 @@ import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { useMockIsTTY } from "../helpers/mock-istty";
 import { mockUploadWorkerRequest } from "../helpers/mock-upload-worker";
-import { mockSubDomainRequest } from "../helpers/mock-workers-subdomain";
+import {
+	mockGetWorkerSubdomain,
+	mockSubDomainRequest,
+} from "../helpers/mock-workers-subdomain";
 import {
 	msw,
 	mswGetVersion,
@@ -57,8 +60,9 @@ describe("versions deploy", () => {
 			);
 			writeWranglerToml();
 			writeWorkerSource();
-			mockSubDomainRequest();
 			mockUploadWorkerRequest();
+			mockGetWorkerSubdomain({ enabled: true });
+			mockSubDomainRequest();
 
 			await runWrangler("deploy ./index");
 

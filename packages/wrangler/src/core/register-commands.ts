@@ -106,7 +106,7 @@ function walkTreeAndRegister(
 		// inference from positionalArgs
 		const commandPositionalArgsSuffix = def.positionalArgs
 			?.map((key) => {
-				const { demandOption, array } = def.args[key];
+				const { demandOption, array } = def.args?.[key] ?? {};
 				return demandOption
 					? `<${key}${array ? ".." : ""}>` // <key> or <key..>
 					: `[${key}${array ? ".." : ""}]`; // [key] or [key..]
@@ -124,21 +124,23 @@ function walkTreeAndRegister(
 		(def.metadata.hidden ? false : def.metadata.description) as string, // cast to satisfy typescript overload selection
 		function builder(subYargs) {
 			if (def.type === "command") {
-				yargs.options(def.args);
+				const args = def.args ?? {};
+
+				yargs.options(args);
 
 				// Yargs offers an `array: true` option that will always coerces the value to an array
 				// e.g. `--name foo` becomes `{ name: ["foo"] }` instead of `{ name: "foo" }`
 				// However, non-array arguments can still receives multiple values
 				// e.g. `--name foo --name bar` becomes `{ name: ["foo", "bar"] }` regardless of the `array` setting
 				// @see https://github.com/yargs/yargs/issues/1318
-				for (const [key, opt] of Object.entries(def.args)) {
+				for (const [key, opt] of Object.entries(args)) {
 					if (!opt.array) {
 						yargs.check(demandSingleValue(key));
 					}
 				}
 
 				for (const key of def.positionalArgs ?? []) {
-					yargs.positional(key, def.args[key]);
+					yargs.positional(key, args[key]);
 				}
 			} else if (def.type === "namespace") {
 				// this is our hacky way of printing --help text for incomplete commands
@@ -180,7 +182,12 @@ function createHandler(def: CommandDefinition) {
 			await def.validateArgs?.(args);
 
 			await def.handler(args, {
-				config: readConfig(args.config, args),
+				config: readConfig(
+					args.config,
+					args,
+					undefined,
+					!(def.behaviour?.printConfigWarnings ?? true)
+				),
 				errors: { UserError, FatalError },
 				logger,
 				fetchResult,

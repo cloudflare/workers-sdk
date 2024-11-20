@@ -98,7 +98,7 @@ const config: TemplateConfig = {
 	configVersion: 1,
 	id: "svelte",
 	frameworkCli: "sv",
-	displayName: "Svelte",
+	displayName: "SvelteKit",
 	platform: "pages",
 	copyFiles: {
 		variants: {

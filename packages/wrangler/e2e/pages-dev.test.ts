@@ -7,10 +7,7 @@ import { WranglerE2ETestHelper } from "./helpers/e2e-wrangler-test";
 import { fetchText } from "./helpers/fetch-text";
 import { normalizeOutput } from "./helpers/normalize";
 
-describe.each([
-	{ cmd: "wrangler pages dev --no-x-dev-env" },
-	{ cmd: "wrangler pages dev --x-dev-env" },
-])("Pages $cmd", ({ cmd }) => {
+describe.each([{ cmd: "wrangler pages dev" }])("Pages $cmd", ({ cmd }) => {
 	it("should warn if no [--compatibility_date] command line arg was specified", async () => {
 		const helper = new WranglerE2ETestHelper();
 		await helper.seed({
@@ -120,7 +117,7 @@ describe.each([
 		expect(normalizeOutput(worker.currentOutput)).toContain(
 			dedent`Your worker has access to the following bindings:
 					- Durable Objects:
-					  - TEST_DO: TestDurableObject (defined in 🔴 a)
+					  - TEST_DO: TestDurableObject (defined in a [not connected])
 					- KV Namespaces:
 					  - TEST_KV: TEST_KV (local)
 					- D1 Databases:
@@ -128,7 +125,7 @@ describe.each([
 					- R2 Buckets:
 					  - TEST_R2: TEST_R2 (local)
 					- Services:
-					  - TEST_SERVICE: 🔴 test-worker
+					  - TEST_SERVICE: test-worker [not connected]
 		`
 		);
 	});

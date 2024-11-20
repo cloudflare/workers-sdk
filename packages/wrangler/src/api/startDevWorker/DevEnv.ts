@@ -111,30 +111,6 @@ export class DevEnv extends EventEmitter {
 	emitErrorEvent(ev: ErrorEvent) {
 		if (
 			ev.source === "ProxyController" &&
-			ev.reason === "Failed to start ProxyWorker or InspectorProxyWorker"
-		) {
-			assert(ev.data.config); // we must already have a `config` if we've already tried (and failed) to instantiate the ProxyWorker(s)
-
-			const { config } = ev.data;
-			const port = config.dev?.server?.port;
-			const inspectorPort = config.dev?.inspector?.port;
-			const randomPorts = [0, undefined];
-
-			if (!randomPorts.includes(port) || !randomPorts.includes(inspectorPort)) {
-				// emit the event here while the ConfigController is unimplemented
-				// this will cause the ProxyController to try reinstantiating the ProxyWorker(s)
-				// TODO: change this to `this.config.updateOptions({ dev: { server: { port: 0 }, inspector: { port: 0 } } });` when the ConfigController is implemented
-				this.config.emitConfigUpdateEvent({
-					...config,
-					dev: {
-						...config.dev,
-						server: { ...config.dev?.server, port: 0 }, // override port
-						inspector: { ...config.dev?.inspector, port: 0 }, // override port
-					},
-				});
-			}
-		} else if (
-			ev.source === "ProxyController" &&
 			(ev.reason.startsWith("Failed to send message to") ||
 				ev.reason.startsWith("Could not connect to InspectorProxyWorker"))
 		) {
@@ -157,7 +133,7 @@ export class DevEnv extends EventEmitter {
 	}
 }
 
-export function createWorkerObject(devEnv: DevEnv): Worker {
+function createWorkerObject(devEnv: DevEnv): Worker {
 	return {
 		get ready() {
 			return devEnv.proxy.ready.promise.then(() => undefined);

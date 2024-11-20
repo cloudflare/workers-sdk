@@ -11,8 +11,7 @@ import {
 import { fetchResult } from "../cfetch";
 import { findWranglerToml, readConfig } from "../config";
 import { UserError } from "../errors";
-import { CI } from "../is-ci";
-import isInteractive from "../is-interactive";
+import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { writeOutput } from "../output";
@@ -123,7 +122,7 @@ export async function versionsDeployHandler(args: VersionsDeployArgs) {
 	}
 
 	if (config.workflows?.length) {
-		logger.warnOnce("Workflows is currently in open beta.");
+		logger.once.warn("Workflows is currently in open beta.");
 	}
 
 	const versionCache: VersionCache = new Map();
@@ -272,8 +271,8 @@ export async function confirmLatestDeploymentOverwrite(
 				type: "confirm",
 				question: `"wrangler deploy" will upload a new version and deploy it globally immediately.\nAre you sure you want to continue?`,
 				label: "",
-				defaultValue: !isInteractive() || CI.isCI(), // defaults to true in CI for back-compat
-				acceptDefault: !isInteractive() || CI.isCI(),
+				defaultValue: isNonInteractiveOrCI(), // defaults to true in CI for back-compat
+				acceptDefault: isNonInteractiveOrCI(),
 			});
 		}
 	} catch (e) {
@@ -305,7 +304,7 @@ export async function printLatestDeployment(
 	);
 }
 
-export async function printDeployment(
+async function printDeployment(
 	accountId: string,
 	workerName: string,
 	deployment: ApiDeployment | undefined,
@@ -333,7 +332,7 @@ export function printVersions(
 	cli.newline();
 }
 
-export function formatVersions(
+function formatVersions(
 	versions: ApiVersion[],
 	traffic: Map<VersionId, Percentage>
 ) {

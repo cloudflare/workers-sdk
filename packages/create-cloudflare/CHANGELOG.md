@@ -1,5 +1,125 @@
 # create-cloudflare
 
+## 2.32.2
+
+### Patch Changes
+
+- [#6831](https://github.com/cloudflare/workers-sdk/pull/6831) [`0fe018c`](https://github.com/cloudflare/workers-sdk/commit/0fe018c7b85d767de60e9cc88f256f99f17046e3) Thanks [@Cherry](https://github.com/Cherry)! - Adds support for new upcoming bun.lock lockfile
+
+## 2.32.1
+
+### Patch Changes
+
+- [#7217](https://github.com/cloudflare/workers-sdk/pull/7217) [`f76da8d`](https://github.com/cloudflare/workers-sdk/commit/f76da8d61f0d4fa02c3de132363b95699c0a80c9) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency        | From  | To    |
+  | ----------------- | ----- | ----- |
+  | create-docusaurus | 3.6.0 | 3.6.1 |
+
+- [#7218](https://github.com/cloudflare/workers-sdk/pull/7218) [`39675b5`](https://github.com/cloudflare/workers-sdk/commit/39675b517c9f8ad35023137ca3f52fe486e25107) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency   | From   | To     |
+  | ------------ | ------ | ------ |
+  | create-remix | 2.13.1 | 2.14.0 |
+
+- [#7219](https://github.com/cloudflare/workers-sdk/pull/7219) [`287a5d0`](https://github.com/cloudflare/workers-sdk/commit/287a5d0e4d73fd1fc4e17aed5596436dbca1aae0) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | create-vue | 3.12.0 | 3.12.1 |
+
+- [#6569](https://github.com/cloudflare/workers-sdk/pull/6569) [`7be8f76`](https://github.com/cloudflare/workers-sdk/commit/7be8f763967d0f50a2cced0520db8f7a7b691fe4) Thanks [@penalosa](https://github.com/penalosa)! - Make sure `wrangler deploy` and `wrangler pages deploy` are run in an interactive context in C3, so that users are able to respond to interactive prompts
+
+## 2.32.0
+
+### Minor Changes
+
+- [#7170](https://github.com/cloudflare/workers-sdk/pull/7170) [`f292294`](https://github.com/cloudflare/workers-sdk/commit/f292294ba2e545742d8801f2f3060763547b7ccb) Thanks [@edmundhung](https://github.com/edmundhung)! - feat: update experimental remix template to be based on its worker template
+
+### Patch Changes
+
+- [#7179](https://github.com/cloudflare/workers-sdk/pull/7179) [`a4f5647`](https://github.com/cloudflare/workers-sdk/commit/a4f5647a368c3d6857fa425bee2827493eda2dd1) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency        | From  | To    |
+  | ----------------- | ----- | ----- |
+  | create-docusaurus | 3.5.2 | 3.6.0 |
+
+- [#7188](https://github.com/cloudflare/workers-sdk/pull/7188) [`28edf9b`](https://github.com/cloudflare/workers-sdk/commit/28edf9b2eb08a978e016bc1d320459f33d5590b8) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | gatsby     | 5.13.7 | 5.14.0 |
+
+- [#7109](https://github.com/cloudflare/workers-sdk/pull/7109) [`492533f`](https://github.com/cloudflare/workers-sdk/commit/492533f19e4840b8f93d9e29c0c267ce742f2fc5) Thanks [@jsparkdev](https://github.com/jsparkdev)! - Rename the framework name
+
+  The name currently displayed in the CLI is `Svelte`. However, all of the options actually create a `SvelteKit` app, and the name `SvelteKit` is also used in the [documentation](https://developers.cloudflare.com/pages/framework-guides/deploy-a-svelte-site/).
+
+## 2.31.2
+
+### Patch Changes
+
+- [#6973](https://github.com/cloudflare/workers-sdk/pull/6973) [`afe9850`](https://github.com/cloudflare/workers-sdk/commit/afe9850931b7730989e005a612ea74887f5d5e72) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency   | From  | To     |
+  | ------------ | ----- | ------ |
+  | create-astro | 4.8.0 | 4.10.0 |
+
+- [#7146](https://github.com/cloudflare/workers-sdk/pull/7146) [`d31a902`](https://github.com/cloudflare/workers-sdk/commit/d31a9021681b0d053bd441826849510dc97c5321) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | create-vue | 3.11.1 | 3.11.2 |
+
+- [#7148](https://github.com/cloudflare/workers-sdk/pull/7148) [`f46330a`](https://github.com/cloudflare/workers-sdk/commit/f46330a4dc8b6a21b0dc629682148e0ed399e8ae) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | nuxi       | 3.12.0 | 3.15.0 |
+
+- [#7161](https://github.com/cloudflare/workers-sdk/pull/7161) [`6948b70`](https://github.com/cloudflare/workers-sdk/commit/6948b7045d40dcd40ad0bc88d480056f2a9c9732) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To    |
+  | ---------- | ------ | ----- |
+  | sv         | 0.5.11 | 0.6.1 |
+
+- [#7167](https://github.com/cloudflare/workers-sdk/pull/7167) [`251e49a`](https://github.com/cloudflare/workers-sdk/commit/251e49a7a325e8d4fad8e01f693391e9cb101e37) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | create-vue | 3.11.2 | 3.12.0 |
+
+- [#7177](https://github.com/cloudflare/workers-sdk/pull/7177) [`f992c90`](https://github.com/cloudflare/workers-sdk/commit/f992c90311d400669f5c451b24fd732d77c1667d) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From   | To      |
+  | --------------- | ------ | ------- |
+  | @angular/create | 18.2.8 | 18.2.11 |
+
+- [#7171](https://github.com/cloudflare/workers-sdk/pull/7171) [`5a712e7`](https://github.com/cloudflare/workers-sdk/commit/5a712e70ffa7aac02ae0765d4b2c2b0b38621b11) Thanks [@edmundhung](https://github.com/edmundhung)! - fix: missing nodejs_compact flag on astro template
+
+- [#7155](https://github.com/cloudflare/workers-sdk/pull/7155) [`edef523`](https://github.com/cloudflare/workers-sdk/commit/edef523b71d1efd123d7b3e9743cd30f4e396855) Thanks [@flashblaze](https://github.com/flashblaze)! - fix invalid preset config on the experimental solid template
+
 ## 2.31.1
 
 ### Patch Changes

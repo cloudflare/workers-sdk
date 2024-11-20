@@ -36,7 +36,7 @@ async function standardPricingWarning(config: Config) {
 	}
 }
 
-export function versionsUploadOptions(yargs: CommonYargsArgv) {
+function versionsUploadOptions(yargs: CommonYargsArgv) {
 	return (
 		yargs
 			.positional("script", {
@@ -194,7 +194,7 @@ export function versionsUploadOptions(yargs: CommonYargsArgv) {
 	);
 }
 
-export async function versionsUploadHandler(
+async function versionsUploadHandler(
 	args: StrictYargsOptionsToInterface<typeof versionsUploadOptions>
 ) {
 	await printWranglerBanner();
@@ -226,7 +226,7 @@ export async function versionsUploadHandler(
 	}
 
 	if (config.workflows?.length) {
-		logger.warnOnce("Workflows is currently in open beta.");
+		logger.once.warn("Workflows is currently in open beta.");
 	}
 
 	validateAssetsArgsAndConfig(
@@ -274,7 +274,7 @@ export async function versionsUploadHandler(
 	if (!args.dryRun) {
 		await standardPricingWarning(config);
 	}
-	const { versionId, workerTag } = await versionsUpload({
+	const { versionId, workerTag, versionPreviewUrl } = await versionsUpload({
 		config,
 		accountId,
 		name,
@@ -313,6 +313,7 @@ export async function versionsUploadHandler(
 		worker_name: name ?? null,
 		worker_tag: workerTag,
 		version_id: versionId,
+		preview_url: versionPreviewUrl,
 	});
 }
 

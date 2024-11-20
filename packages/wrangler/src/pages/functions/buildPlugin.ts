@@ -24,6 +24,7 @@ export function buildPluginFromFunctions({
 	functionsDirectory,
 	local,
 	defineNavigatorUserAgent,
+	checkFetch,
 	external,
 }: Options) {
 	const entry: Entry = {
@@ -107,7 +108,7 @@ export function buildPluginFromFunctions({
 			},
 		],
 		serveLegacyAssetsFromWorker: false,
-		checkFetch: local,
+		checkFetch: local && checkFetch,
 		// TODO: mock AE datasets in Pages functions for dev
 		mockAnalyticsEngineDatasets: [],
 		targetConsumer: local ? "dev" : "deploy",

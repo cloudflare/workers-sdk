@@ -1,5 +1,11 @@
 # @cloudflare/workers-shared
 
+## 0.7.1
+
+### Patch Changes
+
+- [#7183](https://github.com/cloudflare/workers-sdk/pull/7183) [`08c6580`](https://github.com/cloudflare/workers-sdk/commit/08c6580494e702373d17ff7485988a8fae9af59e) Thanks [@WillTaylorDev](https://github.com/WillTaylorDev)! - Fixes bug where indexId was never set for router-worker and asset-worker
+
 ## 0.7.0
 
 ### Minor Changes

@@ -1,4 +1,4 @@
-import { appendFile, readFile } from "node:fs/promises";
+import { appendFile } from "node:fs/promises";
 import path from "node:path";
 import { Mutex } from "miniflare";
 import onExit from "signal-exit";
@@ -89,11 +89,4 @@ ${message}
 			}
 		}
 	});
-}
-
-/**
- * Reads the current log file after waiting for all pending writes
- */
-export function readDebugLogFile(): Promise<string> {
-	return mutex.runWith(() => readFile(debugLogFilepath, "utf-8"));
 }

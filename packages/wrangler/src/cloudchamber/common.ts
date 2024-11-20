@@ -7,8 +7,7 @@ import { version as wranglerVersion } from "../../package.json";
 import { readConfig } from "../config";
 import { getConfigCache, purgeConfigCaches } from "../config-cache";
 import { getCloudflareApiBaseUrl } from "../environment-variables/misc-variables";
-import { CI } from "../is-ci";
-import isInteractive from "../is-interactive";
+import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import {
 	DefaultScopeKeys,
@@ -40,8 +39,6 @@ import type {
 import type { Arg } from "@cloudflare/cli/interactive";
 
 export type CommonCloudchamberConfiguration = { json: boolean };
-export type CloudchamberCommandConfiguration = CommonCloudchamberConfiguration &
-	CommonYargsOptions & { wranglerConfig: Config };
 
 /**
  * Wrapper that parses wrangler configuration and authentication.
@@ -128,7 +125,7 @@ export async function promiseSpinner<T>(
 	return t;
 }
 
-export async function fillOpenAPIConfiguration(config: Config, json: boolean) {
+async function fillOpenAPIConfiguration(config: Config, json: boolean) {
 	const headers: Record<string, string> =
 		OpenAPI.HEADERS !== undefined ? { ...OpenAPI.HEADERS } : {};
 
@@ -227,7 +224,7 @@ export async function fillOpenAPIConfiguration(config: Config, json: boolean) {
 }
 
 export function interactWithUser(config: { json?: boolean }): boolean {
-	return !config.json && isInteractive() && !CI.isCI();
+	return !config.json && !isNonInteractiveOrCI();
 }
 
 type NonObject = undefined | null | boolean | string | number;
@@ -394,9 +391,7 @@ export function renderDeploymentMutationError(
 	crash(details["reason"] ?? errorEnumToErrorMessage[errorEnum]());
 }
 
-export function sortEnvironmentVariables(
-	environmentVariables: EnvironmentVariable[]
-) {
+function sortEnvironmentVariables(environmentVariables: EnvironmentVariable[]) {
 	environmentVariables.sort((a, b) => a.name.localeCompare(b.name));
 }
 
@@ -505,7 +500,7 @@ export async function promptForEnvironmentVariables(
 	return [];
 }
 
-export function sortLabels(labels: Label[]) {
+function sortLabels(labels: Label[]) {
 	labels.sort((a, b) => a.name.localeCompare(b.name));
 }
 

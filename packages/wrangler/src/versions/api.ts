@@ -149,15 +149,3 @@ export async function patchNonVersionedScriptSettings(
 
 	return res;
 }
-
-export async function fetchNonVersionedScriptSettings(
-	accountId: string,
-	workerName: string
-): Promise<NonVersionedScriptSettings> {
-	const res = await fetchResult<NonVersionedScriptSettings>(
-		`/accounts/${accountId}/workers/scripts/${workerName}/script-settings`,
-		{ method: "GET" }
-	);
-
-	return res;
-}

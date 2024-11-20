@@ -14,7 +14,7 @@ let sentryReportingAllowed = false;
 declare const SENTRY_DSN: string;
 
 /* Returns a Sentry transport for the Sentry proxy Worker. */
-export const makeSentry10Transport = (options: BaseTransportOptions) => {
+const makeSentry10Transport = (options: BaseTransportOptions) => {
 	let eventQueue: [string, RequestInit][] = [];
 
 	const transportSentry10 = async (request: TransportRequest) => {
