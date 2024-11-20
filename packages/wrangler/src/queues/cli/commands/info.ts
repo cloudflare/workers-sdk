@@ -7,6 +7,7 @@ import type {
 	StrictYargsOptionsToInterface,
 } from "../../../yargs-types";
 import type { Consumer, Producer, QueueResponse } from "../../client";
+import { requireAuth } from "../../../user";
 
 export function options(yargs: CommonYargsArgv) {
 	return yargs.positional("name", {
@@ -21,6 +22,7 @@ export async function handler(
 ) {
 	const config = readConfig(args.config, args);
 	const queue: QueueResponse = await getQueue(config, args.name);
+	const accountId = await requireAuth(config)
 
 	await printWranglerBanner();
 	logger.log(`Queue Name: ${queue.queue_name}`);
@@ -43,7 +45,7 @@ export async function handler(
 					if (c.type === "http_pull") {
 						return `HTTP Pull Consumer.
 Pull messages using:
-curl "https://api.cloudflare.com/client/v4/accounts/${config.account_id || "<add your account id here>"}/queues/${queue.queue_id || "<add your queue id here>"}/messages/pull" \\
+curl "https://api.cloudflare.com/client/v4/accounts/${accountId || "<add your account id here>"}/queues/${queue.queue_id || "<add your queue id here>"}/messages/pull" \\
 	--header "Authorization: Bearer <add your api key here>" \\
 	--header "Content-Type: application/json" \\
 	--data '{ "visibility_timeout": 10000, "batch_size": 2 }'`;

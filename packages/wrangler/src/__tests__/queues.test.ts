@@ -1517,11 +1517,11 @@ describe("wrangler", () => {
 					Producers: worker:test-producer1, worker:test-producer2
 					Number of Consumers: 1
 					Consumers: HTTP Pull Consumer.
-					    Pull messages using:
-					    curl \\"https://api.cloudflare.com/client/v4/accounts/<add your account id here>/queues/1234567/messages/pull\\" /
-					        --header \\"Authorization: Bearer <add your api key here>\\" /
-					        --header \\"Content-Type: application/json\\" /
-					        --data '{ \\"visibility_timeout\\": 10000, \\"batch_size\\": 2 }'"
+					Pull messages using:
+					curl \\"https://api.cloudflare.com/client/v4/accounts/some-account-id/queues/1234567/messages/pull\\" /
+						--header \\"Authorization: Bearer <add your api key here>\\" /
+						--header \\"Content-Type: application/json\\" /
+						--data '{ \\"visibility_timeout\\": 10000, \\"batch_size\\": 2 }'"
 				`);
 			});
 			it("should return the list of r2 bucket producers when the queue is used in an r2 event notification", async () => {
