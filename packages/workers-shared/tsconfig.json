@@ -1,12 +1,17 @@
 {
-	"extends": "@cloudflare/workers-tsconfig/tsconfig.json",
 	"compilerOptions": {
-		"module": "esnext",
-		"sourceMap": true,
+		"target": "es2021",
+		"lib": ["es2021"],
+		"module": "es2022",
+		"moduleResolution": "Bundler",
+		"types": ["@cloudflare/workers-types/experimental"],
+		"noEmit": true,
+		"isolatedModules": true,
+		"allowSyntheticDefaultImports": true,
 		"forceConsistentCasingInFileNames": true,
-		"useUnknownInCatchVariables": false,
-		"types": ["@cloudflare/workers-types/experimental"]
+		"strict": true,
+		"skipLibCheck": true
 	},
-	"include": ["**/*.ts", "vitest.config.mts"],
-	"exclude": ["node_modules", "dist", "**/tests", "**/*.test.ts"]
+	"include": ["**/*.ts"],
+	"exclude": ["scripts/**"]
 }
