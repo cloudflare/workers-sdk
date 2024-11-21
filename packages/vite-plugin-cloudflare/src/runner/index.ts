@@ -158,7 +158,6 @@ export function createWorkerEntrypointWrapper(
 
 				if (url.pathname === INIT_PATH) {
 					const { 0: client, 1: server } = new WebSocketPair();
-					server.accept();
 					createModuleRunner(this.env, server);
 
 					return new Response(null, { status: 101, webSocket: client });

@@ -309,12 +309,20 @@ export function getMiniflareOptions(
 					],
 					serviceBindings: {
 						...workerOptions.serviceBindings,
-						__VITE_FETCH_MODULE__: async (request) => {
-							const [moduleId, imported, options] = (await request.json()) as [
-								string,
-								string,
-								FetchFunctionOptions,
-							];
+						__VITE_INVOKE_MODULE__: async (request) => {
+							const payload = (await request.json()) as vite.CustomPayload;
+							const invokePayloadData = payload.data as {
+								id: string;
+								name: string;
+								data: [string, string, FetchFunctionOptions];
+							};
+
+							invariant(
+								invokePayloadData.name === 'fetchModule',
+								`Invalid invoke event: ${invokePayloadData.name}`,
+							);
+
+							const [moduleId] = invokePayloadData.data;
 
 							// For some reason we need this here for cloudflare built-ins (e.g. `cloudflare:workers`) but not for node built-ins (e.g. `node:path`)
 							// See https://github.com/flarelabs-net/vite-plugin-cloudflare/issues/46
@@ -324,7 +332,7 @@ export function getMiniflareOptions(
 									type: 'builtin',
 								} satisfies vite.FetchResult;
 
-								return new MiniflareResponse(JSON.stringify(result));
+								return new MiniflareResponse(JSON.stringify({ r: result }));
 							}
 
 							// Sometimes Vite fails to resolve built-ins and converts them to "url-friendly" ids
@@ -335,27 +343,16 @@ export function getMiniflareOptions(
 									type: 'builtin',
 								} satisfies vite.FetchResult;
 
-								return new MiniflareResponse(JSON.stringify(result));
+								return new MiniflareResponse(JSON.stringify({ r: result }));
 							}
 
 							const devEnvironment = viteDevServer.environments[
 								workerOptions.name
 							] as CloudflareDevEnvironment;
 
-							try {
-								const result = await devEnvironment.fetchModule(
-									moduleId,
-									imported,
-									options,
-								);
+							const result = await devEnvironment.hot.handleInvoke(payload);
 
-								return new MiniflareResponse(JSON.stringify(result));
-							} catch (error) {
-								return new MiniflareResponse(
-									`Unexpected Error, failed to get module: ${moduleId}\n${error}`,
-									{ status: 404 },
-								);
-							}
+							return new MiniflareResponse(JSON.stringify(result));
 						},
 					},
 				} satisfies WorkerOptions;

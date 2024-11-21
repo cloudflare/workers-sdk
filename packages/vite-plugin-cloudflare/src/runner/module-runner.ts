@@ -1,7 +1,9 @@
-import { ModuleRunner } from 'vite/module-runner';
+import {
+	createWebSocketModuleRunnerTransport,
+	ModuleRunner,
+} from 'vite/module-runner';
 import { UNKNOWN_HOST } from '../shared';
 import type { WrapperEnv } from './env';
-import type { FetchResult } from 'vite/module-runner';
 
 let moduleRunner: ModuleRunner;
 
@@ -13,16 +15,25 @@ export async function createModuleRunner(
 		throw new Error('Runner already initialized');
 	}
 
+	const transport = createWebSocketModuleRunnerTransport({
+		createConnection() {
+			webSocket.accept();
+
+			return webSocket;
+		},
+	});
+
 	moduleRunner = new ModuleRunner(
 		{
 			root: env.__VITE_ROOT__,
 			sourcemapInterceptor: 'prepareStackTrace',
 			transport: {
-				async fetchModule(...args) {
-					const response = await env.__VITE_FETCH_MODULE__.fetch(
+				...transport,
+				async invoke(data) {
+					const response = await env.__VITE_INVOKE_MODULE__.fetch(
 						new Request(UNKNOWN_HOST, {
 							method: 'POST',
-							body: JSON.stringify(args),
+							body: JSON.stringify(data),
 						}),
 					);
 
@@ -32,22 +43,10 @@ export async function createModuleRunner(
 
 					const result = await response.json();
 
-					return result as FetchResult;
+					return result as { r: any } | { e: any };
 				},
 			},
-			hmr: {
-				connection: {
-					isReady: () => true,
-					onUpdate(callback) {
-						webSocket.addEventListener('message', (event) => {
-							callback(JSON.parse(event.data.toString()));
-						});
-					},
-					send(payload) {
-						webSocket.send(JSON.stringify(payload));
-					},
-				},
-			},
+			hmr: true,
 		},
 		{
 			async runInlinedModule(context, transformed, module) {

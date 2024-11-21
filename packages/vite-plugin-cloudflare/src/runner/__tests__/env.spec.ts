@@ -7,7 +7,7 @@ describe('stripInternalEnv', () => {
 		const env = {
 			__VITE_ROOT__: '',
 			__VITE_ENTRY_PATH__: '',
-			__VITE_FETCH_MODULE__: {
+			__VITE_INVOKE_MODULE__: {
 				fetch: async () => new Response(),
 			},
 			__VITE_UNSAFE_EVAL__: {
@@ -22,7 +22,7 @@ describe('stripInternalEnv', () => {
 		const env = {
 			__VITE_ROOT__: '',
 			__VITE_ENTRY_PATH__: '',
-			__VITE_FETCH_MODULE__: {
+			__VITE_INVOKE_MODULE__: {
 				fetch: async () => new Response(),
 			},
 			__VITE_UNSAFE_EVAL__: {
@@ -44,7 +44,7 @@ describe('stripInternalEnv', () => {
 		const env = {
 			__VITE_ROOT__: '',
 			__VITE_ENTRY_PATH__: '',
-			__VITE_FETCH_MODULE__: {
+			__VITE_INVOKE_MODULE__: {
 				fetch: async () => new Response(),
 			},
 			__VITE_UNSAFE_EVAL__: {
