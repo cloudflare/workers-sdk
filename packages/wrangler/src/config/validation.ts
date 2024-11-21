@@ -3384,13 +3384,13 @@ const validateObservability: ValidatorFn = (diagnostics, field, value) => {
 	 */
 	if (typeof val.logs === "object") {
 		isValid =
-		validateOptionalProperty(
-			diagnostics,
-			field,
-			"logs.enabled",
-			val.logs.enabled,
-			"boolean"
-		) && isValid;
+			validateOptionalProperty(
+				diagnostics,
+				field,
+				"logs.enabled",
+				val.logs.enabled,
+				"boolean"
+			) && isValid;
 
 		isValid =
 			validateOptionalProperty(
