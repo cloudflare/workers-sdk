@@ -1,4 +1,5 @@
 import { readConfig, withConfig } from "../config";
+import { defineCommand, defineNamespace } from "../core";
 import { confirm, multiselect, prompt } from "../dialogs";
 import { UserError } from "../errors";
 import isInteractive from "../is-interactive";
@@ -21,45 +22,57 @@ import type {
 } from "../yargs-types";
 import type { LifecycleRule } from "./helpers";
 
-export function ListOptions(yargs: CommonYargsArgv) {
-	return yargs
-		.positional("bucket", {
+defineNamespace({
+	command: "wrangler r2 bucket lifecycle",
+	metadata: {
+		description: "Manage lifecycle rules for an R2 bucket",
+		status: "stable",
+		owner: "Product: R2",
+	},
+});
+
+defineCommand({
+	command: "wrangler r2 bucket lifecycle list",
+	metadata: {
+		description: "List lifecycle rules for an R2 bucket",
+		status: "stable",
+		owner: "Product: R2",
+	},
+	positionalArgs: ["bucket"],
+	args: {
+		bucket: {
 			describe: "The name of the R2 bucket to list lifecycle rules for",
 			type: "string",
 			demandOption: true,
-		})
-		.option("jurisdiction", {
+		},
+		jurisdiction: {
 			describe: "The jurisdiction where the bucket exists",
 			alias: "J",
 			requiresArg: true,
 			type: "string",
-		});
-}
+		},
+	},
+	async handler(args, { config }) {
+		const accountId = await requireAuth(config);
 
-export async function ListHandler(
-	args: StrictYargsOptionsToInterface<typeof ListOptions>
-) {
-	await printWranglerBanner();
-	const config = readConfig(args.config, args);
-	const accountId = await requireAuth(config);
+		const { bucket, jurisdiction } = args;
 
-	const { bucket, jurisdiction } = args;
+		logger.log(`Listing lifecycle rules for bucket '${bucket}'...`);
 
-	logger.log(`Listing lifecycle rules for bucket '${bucket}'...`);
+		const lifecycleRules = await getLifecycleRules(
+			accountId,
+			bucket,
+			jurisdiction
+		);
 
-	const lifecycleRules = await getLifecycleRules(
-		accountId,
-		bucket,
-		jurisdiction
-	);
-
-	if (lifecycleRules.length === 0) {
-		logger.log(`There are no lifecycle rules for bucket '${bucket}'.`);
-	} else {
-		const tableOutput = tableFromLifecycleRulesResponse(lifecycleRules);
-		logger.log(tableOutput.map((x) => formatLabelledValues(x)).join("\n\n"));
-	}
-}
+		if (lifecycleRules.length === 0) {
+			logger.log(`There are no lifecycle rules for bucket '${bucket}'.`);
+		} else {
+			const tableOutput = tableFromLifecycleRulesResponse(lifecycleRules);
+			logger.log(tableOutput.map((x) => formatLabelledValues(x)).join("\n\n"));
+		}
+	},
+});
 
 export function AddOptions(yargs: CommonYargsArgv) {
 	return yargs
