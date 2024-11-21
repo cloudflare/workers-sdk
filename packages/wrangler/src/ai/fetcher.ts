@@ -19,7 +19,7 @@ export async function AIFetcher(request: Request): Promise<Response> {
 	const reqHeaders = new Headers(request.headers);
 	reqHeaders.delete("Host");
 	reqHeaders.delete("Content-Length");
-	reqHeaders.set("x-url", request.url);
+	reqHeaders.set("X-Forwarded-Host", request.url);
 
 	const res = await performApiFetch(`/accounts/${accountId}/ai/run/proxy`, {
 		method: request.method,
