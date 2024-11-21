@@ -86,12 +86,6 @@ export function getMetricsConfig({
 		}
 	}
 
-	// We couldn't get the metrics permission from the project-level nor the user-level config.
-	// If we are not interactive or in a CI build then just bail out.
-	if (isNonInteractiveOrCI()) {
-		return { enabled: false, deviceId };
-	}
-
 	// Otherwise, default to true
 	writeMetricsConfig({
 		...config,

@@ -139,6 +139,9 @@ export type CommonEventProperties = {
 
 	amplitude_session_id: number;
 	amplitude_event_id: number;
+
+	isCI: boolean;
+	isNonInteractive: boolean;
 };
 
 export type Events =

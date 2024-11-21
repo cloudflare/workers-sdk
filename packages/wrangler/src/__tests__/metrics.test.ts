@@ -23,16 +23,21 @@ vi.mock("../metrics/helpers");
 vi.unmock("../metrics/metrics-config");
 
 describe("metrics", () => {
+	let isCISpy: MockInstance;
 	const std = mockConsoleMethods();
+	const { setIsTTY } = useMockIsTTY();
 	runInTempDir();
 
 	beforeEach(async () => {
+		isCISpy = vi.spyOn(CI, "isCI").mockReturnValue(false);
+		setIsTTY(true);
 		vi.stubEnv("SPARROW_SOURCE_KEY", "MOCK_KEY");
 		logger.loggerLevel = "debug";
 	});
 
 	afterEach(() => {
 		vi.unstubAllEnvs();
+		isCISpy.mockClear();
 	});
 
 	describe("getMetricsDispatcher()", () => {
@@ -211,11 +216,11 @@ describe("metrics", () => {
 
 				// command started
 				expect(std.debug).toContain(
-					`Metrics dispatcher: Posting data {"deviceId":"f82b1f46-eb7b-4154-aa9f-ce95f23b2288","event":"wrangler command started","timestamp":1733961600000,"properties":{"amplitude_session_id":1733961600000,"amplitude_event_id":0,"wranglerVersion":"1.2.3","isFirstUsage":false,"command":"wrangler command subcommand","args":{"_":["command","subcommand"],"experimental-versions":true,"x-versions":true,"experimental-gradual-rollouts":true,"xVersions":true,"experimentalGradualRollouts":true,"experimentalVersions":true,"$0":"wrangler","positional":"positional"}}}`
+					`Metrics dispatcher: Posting data {"deviceId":"f82b1f46-eb7b-4154-aa9f-ce95f23b2288","event":"wrangler command started","timestamp":1733961600000,"properties":{"amplitude_session_id":1733961600000,"amplitude_event_id":0,"wranglerVersion":"1.2.3","isFirstUsage":false,"isCI":false,"isNonInteractive":false,"command":"wrangler command subcommand","args":{"_":["command","subcommand"],"experimental-versions":true,"x-versions":true,"experimental-gradual-rollouts":true,"xVersions":true,"experimentalGradualRollouts":true,"experimentalVersions":true,"$0":"wrangler","positional":"positional"}}}`
 				);
 				// command completed
 				expect(std.debug).toContain(
-					`Metrics dispatcher: Posting data {"deviceId":"f82b1f46-eb7b-4154-aa9f-ce95f23b2288","event":"wrangler command completed","timestamp":1733961600000,"properties":{"amplitude_session_id":1733961600000,"amplitude_event_id":1,"wranglerVersion":"1.2.3","isFirstUsage":false,"command":"wrangler command subcommand","args":{"_":["command","subcommand"],"experimental-versions":true,"x-versions":true,"experimental-gradual-rollouts":true,"xVersions":true,"experimentalGradualRollouts":true,"experimentalVersions":true,"$0":"wrangler","positional":"positional"},"durationMs":0,"durationSeconds":0,"durationMinutes":0}}`
+					`Metrics dispatcher: Posting data {"deviceId":"f82b1f46-eb7b-4154-aa9f-ce95f23b2288","event":"wrangler command completed","timestamp":1733961600000,"properties":{"amplitude_session_id":1733961600000,"amplitude_event_id":1,"wranglerVersion":"1.2.3","isFirstUsage":false,"isCI":false,"isNonInteractive":false,"command":"wrangler command subcommand","args":{"_":["command","subcommand"],"experimental-versions":true,"x-versions":true,"experimental-gradual-rollouts":true,"xVersions":true,"experimentalGradualRollouts":true,"experimentalVersions":true,"$0":"wrangler","positional":"positional"},"durationMs":0,"durationSeconds":0,"durationMinutes":0}}`
 				);
 				expect(std.out).toMatchInlineSnapshot(`
 					"
@@ -237,12 +242,32 @@ describe("metrics", () => {
 
 				// command started
 				expect(std.debug).toContain(
-					`Metrics dispatcher: Posting data {"deviceId":"f82b1f46-eb7b-4154-aa9f-ce95f23b2288","event":"wrangler command started","timestamp":1733961600000,"properties":{"amplitude_session_id":1733961600000,"amplitude_event_id":0,"wranglerVersion":"1.2.3","isFirstUsage":false,"command":"wrangler command subcommand","args":{"_":["command","subcommand"],"experimental-versions":true,"x-versions":true,"experimental-gradual-rollouts":true,"xVersions":true,"experimentalGradualRollouts":true,"experimentalVersions":true,"$0":"wrangler","positional":"error"}}}`
+					`Metrics dispatcher: Posting data {"deviceId":"f82b1f46-eb7b-4154-aa9f-ce95f23b2288","event":"wrangler command started","timestamp":1733961600000,"properties":{"amplitude_session_id":1733961600000,"amplitude_event_id":0,"wranglerVersion":"1.2.3","isFirstUsage":false,"isCI":false,"isNonInteractive":false,"command":"wrangler command subcommand","args":{"_":["command","subcommand"],"experimental-versions":true,"x-versions":true,"experimental-gradual-rollouts":true,"xVersions":true,"experimentalGradualRollouts":true,"experimentalVersions":true,"$0":"wrangler","positional":"error"}}}`
 				);
 				// command completed
 				expect(std.debug).toContain(
-					`Metrics dispatcher: Posting data {"deviceId":"f82b1f46-eb7b-4154-aa9f-ce95f23b2288","event":"wrangler command errored","timestamp":1733961600000,"properties":{"amplitude_session_id":1733961600000,"amplitude_event_id":1,"wranglerVersion":"1.2.3","isFirstUsage":false,"command":"wrangler command subcommand","args":{"_":["command","subcommand"],"experimental-versions":true,"x-versions":true,"experimental-gradual-rollouts":true,"xVersions":true,"experimentalGradualRollouts":true,"experimentalVersions":true,"$0":"wrangler","positional":"error"},"durationMs":0,"durationSeconds":0,"durationMinutes":0,"errorType":"UserError"}}`
+					`Metrics dispatcher: Posting data {"deviceId":"f82b1f46-eb7b-4154-aa9f-ce95f23b2288","event":"wrangler command errored","timestamp":1733961600000,"properties":{"amplitude_session_id":1733961600000,"amplitude_event_id":1,"wranglerVersion":"1.2.3","isFirstUsage":false,"isCI":false,"isNonInteractive":false,"command":"wrangler command subcommand","args":{"_":["command","subcommand"],"experimental-versions":true,"x-versions":true,"experimental-gradual-rollouts":true,"xVersions":true,"experimentalGradualRollouts":true,"experimentalVersions":true,"$0":"wrangler","positional":"error"},"durationMs":0,"durationSeconds":0,"durationMinutes":0,"errorType":"UserError"}}`
 				);
+			});
+
+			it("should mark isCI as true if running in CI", async () => {
+				isCISpy.mockReturnValue(true);
+				const requests = mockMetricRequest({}, {});
+
+				await runWrangler("command subcommand positional");
+
+				expect(requests.count).toBe(2);
+				expect(std.debug).toContain('isCI":true');
+			});
+
+			it("should mark as non-interactive if running in non-interactive environment", async () => {
+				setIsTTY(false);
+				const requests = mockMetricRequest({}, {});
+
+				await runWrangler("command subcommand positional");
+
+				expect(requests.count).toBe(2);
+				expect(std.debug).toContain('isNonInteractive":true');
 			});
 
 			describe("banner", () => {
@@ -323,12 +348,7 @@ describe("metrics", () => {
 	});
 
 	describe("getMetricsConfig()", () => {
-		let isCISpy: MockInstance;
-
-		const { setIsTTY } = useMockIsTTY();
 		beforeEach(() => {
-			// Default the mock TTY to interactive for all these tests.
-			setIsTTY(true);
 			isCISpy = vi.spyOn(CI, "isCI").mockReturnValue(false);
 		});
 
@@ -341,13 +361,6 @@ describe("metrics", () => {
 				vi.stubEnv("WRANGLER_SEND_METRICS", "true");
 				expect(await getMetricsConfig({})).toMatchObject({
 					enabled: true,
-				});
-			});
-
-			it("should return false if running in a CI environment", async () => {
-				isCISpy.mockReturnValue(true);
-				expect(await getMetricsConfig({})).toMatchObject({
-					enabled: false,
 				});
 			});
 

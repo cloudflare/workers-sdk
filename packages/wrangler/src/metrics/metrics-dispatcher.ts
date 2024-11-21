@@ -1,6 +1,8 @@
 import chalk from "chalk";
 import { fetch } from "undici";
+import isInteractive from "../is-interactive";
 import { logger } from "../logger";
+import { CI } from "./../is-ci";
 import {
 	getOS,
 	getPackageManager,
@@ -26,6 +28,8 @@ export function getMetricsDispatcher(options: MetricsConfigOptions) {
 	const platform = getPlatform();
 	const packageManager = getPackageManager();
 	const isFirstUsage = readMetricsConfig().permission === undefined;
+	const isCI = CI.isCI();
+	const isNonInteractive = !isInteractive();
 	const amplitude_session_id = Date.now();
 	let amplitude_event_id = 0;
 
@@ -76,6 +80,8 @@ export function getMetricsDispatcher(options: MetricsConfigOptions) {
 				platform,
 				packageManager,
 				isFirstUsage,
+				isCI,
+				isNonInteractive,
 			};
 
 			await dispatch({
