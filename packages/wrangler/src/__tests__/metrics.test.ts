@@ -249,7 +249,7 @@ describe("metrics", () => {
 				beforeEach(() => {
 					vi.mocked(getWranglerVersion).mockReturnValue("1.2.3");
 				});
-				it("should print the banner if current version is newer than stored version", async () => {
+				it("should print the banner if current version is different to the stored version", async () => {
 					writeMetricsConfig({
 						permission: {
 							enabled: true,
@@ -275,21 +275,6 @@ describe("metrics", () => {
 							enabled: true,
 							date: new Date(2022, 6, 4),
 							bannerLastShown: "1.2.3",
-						},
-					});
-					const requests = mockMetricRequest({}, {});
-					await runWrangler("command subcommand positional");
-					expect(std.out).toMatchInlineSnapshot(`
-						"Ran wrangler command subcommand"
-					`);
-					expect(requests.count).toBe(2);
-				});
-				it("should not print the banner if current version is older than the stored version", async () => {
-					writeMetricsConfig({
-						permission: {
-							enabled: true,
-							date: new Date(2022, 6, 4),
-							bannerLastShown: "1.2.4",
 						},
 					});
 					const requests = mockMetricRequest({}, {});

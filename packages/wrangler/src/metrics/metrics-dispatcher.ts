@@ -149,10 +149,9 @@ export function getMetricsDispatcher(options: MetricsConfigOptions) {
 
 	function printMetricsBanner() {
 		const metricsConfig = readMetricsConfig();
-		const lastShown = metricsConfig.permission?.bannerLastShown;
 		if (
 			metricsConfig.permission?.enabled &&
-			(!lastShown || isNewVersion(lastShown, wranglerVersion))
+			metricsConfig.permission?.bannerLastShown !== wranglerVersion
 		) {
 			logger.log(
 				chalk.gray(
@@ -166,18 +165,3 @@ export function getMetricsDispatcher(options: MetricsConfigOptions) {
 }
 
 export type Properties = Record<string, unknown>;
-
-const isNewVersion = (stored: string, current: string) => {
-	const storedVersion = stored.split(".");
-	const currentVersion = current.split(".");
-	for (let i = 0; i < storedVersion.length; i++) {
-		const storedSegment = parseInt(storedVersion[i]);
-		const currentSegment = parseInt(currentVersion[i]);
-		if (currentSegment > storedSegment) {
-			return true;
-		} else if (currentSegment < storedSegment) {
-			return false;
-		}
-	}
-	return false;
-};
