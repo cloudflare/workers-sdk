@@ -1,6 +1,8 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`pages deploy > with wrangler.json configuration > should always deploy to the Pages project specified by the top-level \`name\` configuration field, regardless of the corresponding env-level configuration 1`] = `
+exports[`pages deploy > with wrangler.json configuration > should always deploy to the Pages project specified by the top-level \`name\` configuration field, regardless of the corresponding env-level configuration 1`] = `"2ea0b43fa4411e79883bfbfc1dcb4360d1789067eca64a492604d59b8eab932c"`;
+
+exports[`pages deploy > with wrangler.json configuration > should always deploy to the Pages project specified by the top-level \`name\` configuration field, regardless of the corresponding env-level configuration 2`] = `
 "✨ Success! Uploaded 1 files (TIMINGS)
 
 ✨ Compiled Worker successfully
@@ -24,7 +26,9 @@ exports[`pages deploy > with wrangler.json configuration > should support wrangl
 
 exports[`pages deploy > with wrangler.json configuration > should warn and ignore the config file, if it doesn't specify the \`pages_build_output_dir\` field 1`] = `[Error: Must specify a project name.]`;
 
-exports[`pages deploy > with wrangler.toml configuration > should always deploy to the Pages project specified by the top-level \`name\` configuration field, regardless of the corresponding env-level configuration 1`] = `
+exports[`pages deploy > with wrangler.toml configuration > should always deploy to the Pages project specified by the top-level \`name\` configuration field, regardless of the corresponding env-level configuration 1`] = `"b5f53af7922efd0f0b73c7bf288f7e3f14df5c31e8b654e98027ddf85ea7e574"`;
+
+exports[`pages deploy > with wrangler.toml configuration > should always deploy to the Pages project specified by the top-level \`name\` configuration field, regardless of the corresponding env-level configuration 2`] = `
 "✨ Success! Uploaded 1 files (TIMINGS)
 
 ✨ Compiled Worker successfully

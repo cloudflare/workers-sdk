@@ -4881,6 +4881,7 @@ Failed to publish your Function. Got error: Uncaught TypeError: a is not a funct
 							);
 							expect(branch).toEqual("main");
 							expect(buildOutputDir).toEqual("public");
+							expect(configHash).toMatchSnapshot();
 
 							return HttpResponse.json(
 								{
