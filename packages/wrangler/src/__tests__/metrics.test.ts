@@ -197,6 +197,10 @@ describe("metrics", () => {
 						optional: {
 							type: "string",
 						},
+						default: {
+							type: "boolean",
+							default: false,
+						},
 					},
 					positionalArgs: ["positional"],
 					handler(args, ctx) {
@@ -236,6 +240,7 @@ describe("metrics", () => {
 							xVersions: true,
 							experimentalGradualRollouts: true,
 							experimentalVersions: true,
+							default: false,
 							$0: "wrangler",
 							positional: "positional",
 						},
@@ -266,6 +271,7 @@ describe("metrics", () => {
 							xVersions: true,
 							experimentalGradualRollouts: true,
 							experimentalVersions: true,
+							default: false,
 							$0: "wrangler",
 							positional: "positional",
 						},
@@ -318,6 +324,7 @@ describe("metrics", () => {
 							xVersions: true,
 							experimentalGradualRollouts: true,
 							experimentalVersions: true,
+							default: false,
 							$0: "wrangler",
 							positional: "error",
 						},
@@ -349,6 +356,7 @@ describe("metrics", () => {
 							xVersions: true,
 							experimentalGradualRollouts: true,
 							experimentalVersions: true,
+							default: false,
 							$0: "wrangler",
 							positional: "error",
 						},

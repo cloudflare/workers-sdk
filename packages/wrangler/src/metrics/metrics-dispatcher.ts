@@ -73,7 +73,7 @@ export function getMetricsDispatcher(options: MetricsConfigOptions) {
 				return;
 			}
 			printMetricsBanner();
-			const argsUsed = normaliseArgs(Object.keys(properties.args ?? []));
+			const argsUsed = normaliseArgs(properties.args ?? {});
 			const argsCombination = argsUsed.sort().join(", ");
 			const commonEventProperties: CommonEventProperties = {
 				amplitude_session_id,
@@ -177,11 +177,18 @@ export function getMetricsDispatcher(options: MetricsConfigOptions) {
 export type Properties = Record<string, unknown>;
 
 /** just some pretty naive cleaning so we don't send "experimental-versions", "experimentalVersions", "x-versions" and "xVersions" etc. */
-const normaliseArgs = (args: string[]) => {
+const normaliseArgs = (argsWithValues: Record<string, unknown>) => {
 	const exclude = new Set(["$0", "_"]);
 	const result: string[] = [];
+	const args = Object.keys(argsWithValues);
 	for (const arg of args) {
 		if (exclude.has(arg)) {
+			continue;
+		}
+		if (
+			typeof argsWithValues[arg] === "boolean" &&
+			argsWithValues[arg] === false
+		) {
 			continue;
 		}
 		const normalisedArg = arg
