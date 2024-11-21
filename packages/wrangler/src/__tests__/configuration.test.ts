@@ -1021,6 +1021,7 @@ describe("normalizeAndValidateConfig()", () => {
 				{ env: undefined }
 			);
 
+			// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
 			expect({ ...config, tsconfig: normalizePath(config.tsconfig!) }).toEqual(
 				expect.objectContaining({ ...expectedConfig, main: resolvedMain })
 			);
