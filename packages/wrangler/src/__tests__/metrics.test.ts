@@ -223,6 +223,96 @@ describe("metrics", () => {
 					`Metrics dispatcher: Posting data {"deviceId":"f82b1f46-eb7b-4154-aa9f-ce95f23b2288","event":"wrangler command errored","timestamp":1733961600000,"properties":{"amplitude_session_id":1733961600000,"amplitude_event_id":1,"wranglerVersion":"1.2.3","isFirstUsage":false,"command":"wrangler command subcommand","args":{"_":["command","subcommand"],"experimental-versions":true,"x-versions":true,"experimental-gradual-rollouts":true,"xVersions":true,"experimentalGradualRollouts":true,"experimentalVersions":true,"$0":"wrangler","positional":"error"},"durationMs":0,"durationSeconds":0,"durationMinutes":0,"errorType":"UserError"}}`
 				);
 			});
+
+			describe("banner", () => {
+				beforeEach(() => {
+					vi.mocked(getWranglerVersion).mockReturnValue("1.2.3");
+				});
+				it("should print the banner if current version is newer than stored version", async () => {
+					writeMetricsConfig({
+						permission: {
+							enabled: true,
+							date: new Date(2022, 6, 4),
+							bannerLastShown: "1.2.1",
+						},
+					});
+
+					const requests = mockMetricRequest({}, {});
+
+					await runWrangler("command subcommand positional");
+					expect(std.out).toMatchInlineSnapshot(`
+						"
+						Cloudflare collects anonymous telemetry about your usage of Wrangler. Learn more at https://github.com/cloudflare/workers-sdk/tree/main/telemetry.md
+						Ran wrangler command subcommand"
+					`);
+
+					expect(requests.count).toBe(2);
+				});
+				it("should not print the banner if current version is the same as the stored version", async () => {
+					writeMetricsConfig({
+						permission: {
+							enabled: true,
+							date: new Date(2022, 6, 4),
+							bannerLastShown: "1.2.3",
+						},
+					});
+					const requests = mockMetricRequest({}, {});
+					await runWrangler("command subcommand positional");
+					expect(std.out).toMatchInlineSnapshot(`
+						"Ran wrangler command subcommand"
+					`);
+					expect(requests.count).toBe(2);
+				});
+				it("should not print the banner if current version is older than the stored version", async () => {
+					writeMetricsConfig({
+						permission: {
+							enabled: true,
+							date: new Date(2022, 6, 4),
+							bannerLastShown: "1.2.4",
+						},
+					});
+					const requests = mockMetricRequest({}, {});
+					await runWrangler("command subcommand positional");
+					expect(std.out).toMatchInlineSnapshot(`
+						"Ran wrangler command subcommand"
+					`);
+					expect(requests.count).toBe(2);
+				});
+				it("should print the banner if nothing is stored under bannerLastShown and then store the current version", async () => {
+					writeMetricsConfig({
+						permission: {
+							enabled: true,
+							date: new Date(2022, 6, 4),
+						},
+					});
+					const requests = mockMetricRequest({}, {});
+					await runWrangler("command subcommand positional");
+					expect(std.out).toMatchInlineSnapshot(`
+						"
+						Cloudflare collects anonymous telemetry about your usage of Wrangler. Learn more at https://github.com/cloudflare/workers-sdk/tree/main/telemetry.md
+						Ran wrangler command subcommand"
+					`);
+					expect(requests.count).toBe(2);
+					const { permission } = readMetricsConfig();
+					expect(permission?.bannerLastShown).toEqual("1.2.3");
+				});
+				it("should not print the banner if telemetry permission is disabled", async () => {
+					writeMetricsConfig({
+						permission: {
+							enabled: false,
+							date: new Date(2022, 6, 4),
+						},
+					});
+					const requests = mockMetricRequest({}, {});
+					await runWrangler("command subcommand positional");
+					expect(std.out).toMatchInlineSnapshot(`
+						"Ran wrangler command subcommand"
+					`);
+					expect(requests.count).toBe(0);
+					const { permission } = readMetricsConfig();
+					expect(permission?.bannerLastShown).toBeUndefined();
+				});
+			});
 		});
 	});
 
