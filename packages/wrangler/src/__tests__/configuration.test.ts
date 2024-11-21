@@ -1017,7 +1017,7 @@ describe("normalizeAndValidateConfig()", () => {
 
 			const { config, diagnostics } = normalizeAndValidateConfig(
 				expectedConfig,
-				undefined,
+				"wrangler.toml",
 				{ env: undefined }
 			);
 
@@ -1026,21 +1026,15 @@ describe("normalizeAndValidateConfig()", () => {
 			);
 			expect(diagnostics.hasErrors()).toBe(false);
 			expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-				"Processing wrangler configuration:
+				"Processing wrangler.toml configuration:
 				  - \\"unsafe\\" fields are experimental and may change or break at any time.
-				  - In your Wrangler configuration file, you have configured \`durable_objects\` exported by this Worker (CLASS1), but no \`migrations\` for them. This may not work as expected until you add a \`migrations\` section to your Wrangler configuration file. Add the following configuration:
+				  - In your wrangler.toml file, you have configured \`durable_objects\` exported by this Worker (CLASS1), but no \`migrations\` for them. This may not work as expected until you add a \`migrations\` section to your wrangler.toml file. Add the following configuration:
 
 				    \`\`\`
-				    {
-				      \\"migrations\\": [
-				        {
-				          \\"tag\\": \\"v1\\",
-				          \\"new_classes\\": [
-				            \\"CLASS1\\"
-				          ]
-				        }
-				      ]
-				    }
+				    [[migrations]]
+				    tag = \\"v1\\"
+				    new_classes = [ \\"CLASS1\\" ]
+
 				    \`\`\`
 
 				    Refer to https://developers.cloudflare.com/durable-objects/reference/durable-objects-migrations/ for more details."

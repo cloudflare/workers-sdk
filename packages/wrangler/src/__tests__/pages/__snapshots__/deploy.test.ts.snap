@@ -1,0 +1,49 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`pages deploy > with wrangler.json configuration > should always deploy to the Pages project specified by the top-level \`name\` configuration field, regardless of the corresponding env-level configuration 1`] = `
+"✨ Success! Uploaded 1 files (TIMINGS)
+
+✨ Compiled Worker successfully
+✨ Uploading Worker bundle
+🌎 Deploying...
+✨ Deployment complete! Take a peek over at https://abcxyz.pages-project.pages.dev/"
+`;
+
+exports[`pages deploy > with wrangler.json configuration > should error if user attempts to specify a custom config file path 1`] = `[Error: Pages does not support custom paths for the Wrangler configuration file]`;
+
+exports[`pages deploy > with wrangler.json configuration > should support wrangler.json 1`] = `"b6a9158832033622c937859452cd6fe4d9542ec8a863c17aa84f761140b750b9"`;
+
+exports[`pages deploy > with wrangler.json configuration > should support wrangler.json 2`] = `
+"✨ Success! Uploaded 1 files (TIMINGS)
+
+✨ Compiled Worker successfully
+✨ Uploading Worker bundle
+🌎 Deploying...
+✨ Deployment complete! Take a peek over at https://abcxyz.pages-is-awesome.pages.dev/"
+`;
+
+exports[`pages deploy > with wrangler.json configuration > should warn and ignore the config file, if it doesn't specify the \`pages_build_output_dir\` field 1`] = `[Error: Must specify a project name.]`;
+
+exports[`pages deploy > with wrangler.toml configuration > should always deploy to the Pages project specified by the top-level \`name\` configuration field, regardless of the corresponding env-level configuration 1`] = `
+"✨ Success! Uploaded 1 files (TIMINGS)
+
+✨ Compiled Worker successfully
+✨ Uploading Worker bundle
+🌎 Deploying...
+✨ Deployment complete! Take a peek over at https://abcxyz.pages-project.pages.dev/"
+`;
+
+exports[`pages deploy > with wrangler.toml configuration > should error if user attempts to specify a custom config file path 1`] = `[Error: Pages does not support custom paths for the Wrangler configuration file]`;
+
+exports[`pages deploy > with wrangler.toml configuration > should support wrangler.toml 1`] = `"62e8895a4896fc18db089b5590f7ecce38de8c1f38b515b1861da4bfd6ae7596"`;
+
+exports[`pages deploy > with wrangler.toml configuration > should support wrangler.toml 2`] = `
+"✨ Success! Uploaded 1 files (TIMINGS)
+
+✨ Compiled Worker successfully
+✨ Uploading Worker bundle
+🌎 Deploying...
+✨ Deployment complete! Take a peek over at https://abcxyz.pages-is-awesome.pages.dev/"
+`;
+
+exports[`pages deploy > with wrangler.toml configuration > should warn and ignore the config file, if it doesn't specify the \`pages_build_output_dir\` field 1`] = `[Error: Must specify a project name.]`;
