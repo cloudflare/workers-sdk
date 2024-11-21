@@ -9,6 +9,8 @@ import { LOCATION_CHOICES } from "./constants";
 import {
 	createR2Bucket,
 	deleteR2Bucket,
+	getR2Bucket,
+	getR2BucketMetrics,
 	isValidR2BucketName,
 	listR2Buckets,
 	tablefromR2BucketsListResponse,
@@ -179,6 +181,56 @@ defineCommand({
 		const buckets = await listR2Buckets(accountId, args.jurisdiction);
 		const tableOutput = tablefromR2BucketsListResponse(buckets);
 		logger.log(tableOutput.map((x) => formatLabelledValues(x)).join("\n\n"));
+	},
+});
+
+defineCommand({
+	command: "wrangler r2 bucket info",
+	metadata: {
+		description: "Get information about an R2 bucket",
+		status: "stable",
+		owner: "Product: R2",
+	},
+	positionalArgs: ["bucket"],
+	args: {
+		bucket: {
+			describe: "The name of the bucket to delete",
+			type: "string",
+			demandOption: true,
+		},
+		jurisdiction: {
+			describe: "The jurisdiction where the bucket exists",
+			alias: "J",
+			requiresArg: true,
+			type: "string",
+		},
+	},
+	async handler(args, { config }) {
+		const accountId = await requireAuth(config);
+
+		logger.log(`Getting info for '${args.bucket}'...`);
+
+		const bucketInfo = await getR2Bucket(
+			accountId,
+			args.bucket,
+			args.jurisdiction
+		);
+		const bucketMetrics = await getR2BucketMetrics(
+			accountId,
+			args.bucket,
+			args.jurisdiction
+		);
+
+		const output = {
+			name: bucketInfo.name,
+			created: bucketInfo.creation_date,
+			location: bucketInfo.location || "(unknown)",
+			default_storage_class: bucketInfo.storage_class || "(unknown)",
+			object_count: bucketMetrics.objectCount.toLocaleString(),
+			bucket_size: bucketMetrics.totalSize,
+		};
+
+		logger.log(formatLabelledValues(output));
 	},
 });
 

@@ -5,7 +5,6 @@ import "./sippy";
 import "./notification";
 import "./domain";
 import "./public-dev-url";
-import * as Info from "./info";
 import * as Lifecycle from "./lifecycle";
 import type { CommonYargsArgv, SubHelp } from "../yargs-types";
 
@@ -23,13 +22,6 @@ export function r2(r2Yargs: CommonYargsArgv, subHelp: SubHelp) {
 		.command(subHelp)
 		.command("bucket", "Manage R2 buckets", (r2BucketYargs) => {
 			r2BucketYargs.demandCommand();
-
-			r2BucketYargs.command(
-				"info <bucket>",
-				"Get information about an R2 bucket",
-				Info.InfoOptions,
-				Info.InfoHandler
-			);
 
 			r2BucketYargs.command(
 				"lifecycle",
