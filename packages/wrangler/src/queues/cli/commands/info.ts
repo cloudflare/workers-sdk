@@ -1,13 +1,13 @@
 import { readConfig } from "../../../config";
 import { logger } from "../../../logger";
 import { printWranglerBanner } from "../../../update-check";
+import { requireAuth } from "../../../user";
 import { getQueue } from "../../client";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
 } from "../../../yargs-types";
 import type { Consumer, Producer, QueueResponse } from "../../client";
-import { requireAuth } from "../../../user";
 
 export function options(yargs: CommonYargsArgv) {
 	return yargs.positional("name", {
@@ -22,7 +22,7 @@ export async function handler(
 ) {
 	const config = readConfig(args.config, args);
 	const queue: QueueResponse = await getQueue(config, args.name);
-	const accountId = await requireAuth(config)
+	const accountId = await requireAuth(config);
 
 	await printWranglerBanner();
 	logger.log(`Queue Name: ${queue.queue_name}`);
