@@ -3,7 +3,6 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { getWranglerSendMetricsFromEnv } from "../environment-variables/misc-variables";
 import { getGlobalWranglerConfigPath } from "../global-wrangler-config-path";
-import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 
 /**
