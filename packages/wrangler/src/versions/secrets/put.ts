@@ -1,18 +1,16 @@
 import { fetchResult } from "../../cfetch";
-import { readConfig } from "../../config";
 import { defineCommand } from "../../core";
 import { prompt } from "../../dialogs";
 import { UserError } from "../../errors";
 import { getLegacyScriptName } from "../../index";
 import { logger } from "../../logger";
-import { printWranglerBanner } from "../../update-check";
 import { requireAuth } from "../../user";
 import { readFromStdin, trimTrailingWhitespace } from "../../utils/std";
 import { copyWorkerVersionWithNewSecrets } from "./index";
 import type { WorkerVersion } from "./index";
 
 defineCommand({
-	command: "wrangler versions secrets put",
+	command: "wrangler versions secret put",
 	metadata: {
 		description: "Create or update a secret variable for a Worker",
 		owner: "Workers: Authoring and Testing",

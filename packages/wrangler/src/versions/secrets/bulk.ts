@@ -13,7 +13,7 @@ import { copyWorkerVersionWithNewSecrets } from "./index";
 import type { WorkerVersion } from "./index";
 
 defineCommand({
-	command: "wrangler versions secrets bulk",
+	command: "wrangler versions secret bulk",
 	metadata: {
 		description: "Create or update a secret variable for a Worker",
 		owner: "Workers: Authoring and Testing",

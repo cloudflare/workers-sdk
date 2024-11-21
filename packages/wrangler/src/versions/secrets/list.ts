@@ -4,15 +4,13 @@ import { defineCommand } from "../../core";
 import { UserError } from "../../errors";
 import { getLegacyScriptName } from "../../index";
 import { logger } from "../../logger";
-import { printWranglerBanner } from "../../update-check";
 import { requireAuth } from "../../user";
 import { fetchDeploymentVersions, fetchLatestDeployment } from "../api";
 import type { VersionDetails } from ".";
-import type { StrictYargsOptionsToInterface } from "../../yargs-types";
 import type { ApiVersion, VersionCache } from "../types";
 
 defineCommand({
-	command: "wrangler versions secrets list",
+	command: "wrangler versions secret list",
 	metadata: {
 		description: "List the secrets currently deployed",
 		owner: "Workers: Authoring and Testing",
