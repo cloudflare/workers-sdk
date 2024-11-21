@@ -8,6 +8,7 @@ import {
 	viteTestUrl,
 } from '../../__test-utils__';
 
+// TODO: test build
 describe.runIf(!isBuild)('module resolution', async () => {
 	afterAll(() => {
 		const unexpectedErrors = serverLogs.errors.filter(

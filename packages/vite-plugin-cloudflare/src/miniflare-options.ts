@@ -121,7 +121,7 @@ const ASSET_WORKER_PATH = './assets/asset-worker.js';
 const WRAPPER_PATH = '__VITE_WORKER_ENTRY__';
 const RUNNER_PATH = './runner/index.js';
 
-export function getMiniflareOptions(
+export function getDevMiniflareOptions(
 	normalizedPluginConfig: NormalizedPluginConfig,
 	viteConfig: vite.ResolvedConfig,
 	viteDevServer: vite.ViteDevServer,
@@ -216,21 +216,19 @@ export function getMiniflareOptions(
 
 	const userWorkers = Object.values(normalizedPluginConfig.workers).map(
 		(worker) => {
-			const { ratelimits, ...workerOptions } = worker.workerOptions;
-
 			return {
-				...workerOptions,
-				name: worker.name,
+				...worker.workerOptions,
 				modulesRoot: miniflareModulesRoot,
 				unsafeEvalBinding: '__VITE_UNSAFE_EVAL__',
 				bindings: {
-					...workerOptions.bindings,
+					...worker.workerOptions.bindings,
 					__VITE_ROOT__: viteConfig.root,
 					__VITE_ENTRY_PATH__: worker.entryPath,
 				},
 				serviceBindings: {
-					...workerOptions.serviceBindings,
-					...(worker.assetsBinding
+					...worker.workerOptions.serviceBindings,
+					...(worker.workerOptions.name ===
+						normalizedPluginConfig.entryWorkerName && worker.assetsBinding
 						? { [worker.assetsBinding]: ASSET_WORKER_NAME }
 						: {}),
 				},
@@ -358,6 +356,111 @@ export function getMiniflareOptions(
 				} satisfies WorkerOptions;
 			}),
 		],
+	};
+}
+
+export function getPreviewMiniflareOptions(
+	normalizedPluginConfig: NormalizedPluginConfig,
+	viteConfig: vite.ResolvedConfig,
+): MiniflareOptions {
+	const entryWorkerConfig = normalizedPluginConfig.entryWorkerName
+		? normalizedPluginConfig.workers[normalizedPluginConfig.entryWorkerName]
+		: undefined;
+
+	const assetsDirectory = path.resolve(
+		viteConfig.root,
+		viteConfig.build.outDir,
+		'client',
+	);
+	const hasAssets = fs.existsSync(assetsDirectory);
+	const assetsOptions = hasAssets
+		? {
+				assets: {
+					routingConfig: {
+						has_user_worker: entryWorkerConfig ? true : false,
+					},
+					assetConfig: {
+						...(normalizedPluginConfig.assets.htmlHandling
+							? { html_handling: normalizedPluginConfig.assets.htmlHandling }
+							: {}),
+						...(normalizedPluginConfig.assets.notFoundHandling
+							? {
+									not_found_handling:
+										normalizedPluginConfig.assets.notFoundHandling,
+								}
+							: {}),
+					},
+					directory: assetsDirectory,
+					...(entryWorkerConfig?.assetsBinding
+						? { binding: entryWorkerConfig.assetsBinding }
+						: {}),
+				},
+			}
+		: {};
+
+	const workers: Array<WorkerOptions> = [
+		...(entryWorkerConfig
+			? [
+					{
+						...entryWorkerConfig.workerOptions,
+						...assetsOptions,
+						modules: [
+							{
+								type: 'ESModule',
+								path: path.resolve(
+									viteConfig.root,
+									viteConfig.build.outDir,
+									entryWorkerConfig.workerOptions.name,
+									'index.js',
+								),
+							} as const,
+						],
+					},
+				]
+			: [
+					{
+						...assetsOptions,
+						name: 'assets-only',
+						script: '',
+						modules: true,
+					},
+				]),
+		...Object.values(normalizedPluginConfig.workers)
+			.filter(
+				(config) =>
+					config.workerOptions.name !== normalizedPluginConfig.entryWorkerName,
+			)
+			.map((config) => {
+				return {
+					...config.workerOptions,
+					modules: [
+						{
+							type: 'ESModule',
+							path: path.resolve(
+								viteConfig.root,
+								viteConfig.build.outDir,
+								config.workerOptions.name,
+								'index.js',
+							),
+						} as const,
+					],
+				};
+			}),
+	];
+
+	const logger = new ViteMiniflareLogger(viteConfig);
+
+	return {
+		log: logger,
+		handleRuntimeStdio(stdout, stderr) {
+			const decoder = new TextDecoder();
+			stdout.forEach((data) => logger.info(decoder.decode(data)));
+			stderr.forEach((error) =>
+				logger.logWithLevel(LogLevel.ERROR, decoder.decode(error)),
+			);
+		},
+		...getPersistence(normalizedPluginConfig.persistPath),
+		workers,
 	};
 }
 

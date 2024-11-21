@@ -6,6 +6,7 @@ import {
 	viteTestUrl,
 } from '../../../__test-utils__';
 
+// TODO: test build
 describe.runIf(!isBuild)('module resolution without prebundling', async () => {
 	test('importing a non-prebundled `@cloudflare-dev-module-resolution/requires/no-ext`', async () => {
 		await page.goto(`${viteTestUrl}/require-no-ext`);

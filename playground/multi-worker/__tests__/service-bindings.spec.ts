@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vitest';
-import { getJsonResponse, isBuild } from '../../__test-utils__';
+import { getJsonResponse } from '../../__test-utils__';
 
-describe.runIf(!isBuild)('multi-worker service bindings', async () => {
+describe('multi-worker service bindings', async () => {
 	test('returns a response from another worker', async () => {
 		const result = await getJsonResponse('/fetch');
 		expect(result).toEqual({ result: { name: 'Worker B' } });

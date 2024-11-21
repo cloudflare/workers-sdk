@@ -1,3 +1,4 @@
+import * as fs from 'node:fs';
 import path from 'node:path';
 import { createMiddleware } from '@hattip/adapter-node';
 import { Miniflare } from 'miniflare';
@@ -7,7 +8,10 @@ import {
 	createCloudflareEnvironmentOptions,
 	initRunners,
 } from './cloudflare-environment';
-import { getMiniflareOptions } from './miniflare-options';
+import {
+	getDevMiniflareOptions,
+	getPreviewMiniflareOptions,
+} from './miniflare-options';
 import {
 	getNodeCompatAliases,
 	injectGlobalCode,
@@ -30,7 +34,7 @@ export function cloudflare<T extends Record<string, WorkerOptions>>(
 
 	return {
 		name: 'vite-plugin-cloudflare',
-		config() {
+		config(userConfig) {
 			return {
 				resolve: {
 					alias: getNodeCompatAliases(),
@@ -38,17 +42,33 @@ export function cloudflare<T extends Record<string, WorkerOptions>>(
 				appType: 'custom',
 				builder: {
 					async buildApp(builder) {
-						const environments = Object.keys(pluginConfig.workers ?? {}).map(
-							(name) => {
-								const environment = builder.environments[name];
-								invariant(environment, `${name} environment not found`);
-
-								return environment;
-							},
+						const client = builder.environments.client;
+						const defaultHtmlPath = path.resolve(
+							builder.config.root,
+							'index.html',
 						);
 
+						if (
+							client &&
+							(client.config.build.rollupOptions.input ||
+								fs.existsSync(defaultHtmlPath))
+						) {
+							await builder.build(client);
+						}
+
+						const workerEnvironments = Object.keys(
+							pluginConfig.workers ?? {},
+						).map((name) => {
+							const environment = builder.environments[name];
+							invariant(environment, `${name} environment not found`);
+
+							return environment;
+						});
+
 						await Promise.all(
-							environments.map((environment) => builder.build(environment)),
+							workerEnvironments.map((environment) =>
+								builder.build(environment),
+							),
 						);
 					},
 				},
@@ -57,7 +77,7 @@ export function cloudflare<T extends Record<string, WorkerOptions>>(
 					Object.entries(pluginConfig.workers ?? {}).map(
 						([name, workerOptions]) => [
 							name,
-							createCloudflareEnvironmentOptions(workerOptions),
+							createCloudflareEnvironmentOptions(workerOptions, userConfig),
 						],
 					),
 				),
@@ -65,8 +85,9 @@ export function cloudflare<T extends Record<string, WorkerOptions>>(
 		},
 		configEnvironment(name, options) {
 			options.build = {
-				outDir: path.join('dist', name),
 				...options.build,
+				// Puts all environment builds in subdirectories of the same build directory
+				outDir: path.join(options.build?.outDir ?? 'dist', name),
 			};
 		},
 		configResolved(resolvedConfig) {
@@ -102,7 +123,11 @@ export function cloudflare<T extends Record<string, WorkerOptions>>(
 			let error: unknown;
 
 			const miniflare = new Miniflare(
-				getMiniflareOptions(normalizedPluginConfig, viteConfig, viteDevServer),
+				getDevMiniflareOptions(
+					normalizedPluginConfig,
+					viteConfig,
+					viteDevServer,
+				),
 			);
 
 			await initRunners(normalizedPluginConfig, miniflare, viteDevServer);
@@ -114,7 +139,7 @@ export function cloudflare<T extends Record<string, WorkerOptions>>(
 
 				try {
 					await miniflare.setOptions(
-						getMiniflareOptions(
+						getDevMiniflareOptions(
 							normalizedPluginConfig,
 							viteConfig,
 							viteDevServer,
@@ -145,6 +170,31 @@ export function cloudflare<T extends Record<string, WorkerOptions>>(
 						throw error;
 					}
 
+					if (!middleware) {
+						next();
+						return;
+					}
+
+					middleware(req, res, next);
+				});
+			};
+		},
+		configurePreviewServer(vitePreviewServer) {
+			const miniflare = new Miniflare(
+				getPreviewMiniflareOptions(normalizedPluginConfig, viteConfig),
+			);
+
+			const middleware = createMiddleware(
+				({ request }) => {
+					return miniflare.dispatchFetch(toMiniflareRequest(request), {
+						redirect: 'manual',
+					}) as any;
+				},
+				{ alwaysCallNext: false },
+			);
+
+			return () => {
+				vitePreviewServer.middlewares.use((req, res, next) => {
 					if (!middleware) {
 						next();
 						return;

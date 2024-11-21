@@ -29,11 +29,10 @@ export interface NormalizedPluginConfig {
 	workers: Record<
 		string,
 		{
-			name: string;
 			entryPath: string;
 			wranglerConfigPath: string;
 			assetsBinding?: string;
-			workerOptions: SourcelessWorkerOptions;
+			workerOptions: SourcelessWorkerOptions & { name: string };
 		}
 	>;
 	entryWorkerName?: string;
@@ -64,17 +63,19 @@ export function normalizePluginConfig(
 
 			wranglerConfigPaths.add(wranglerConfigPath);
 
-			const { workerOptions } =
+			const miniflareWorkerOptions =
 				unstable_getMiniflareWorkerOptions(wranglerConfigPath);
+
+			const { ratelimits, ...workerOptions } =
+				miniflareWorkerOptions.workerOptions;
 
 			return [
 				name,
 				{
-					name,
 					entryPath: options.main,
 					wranglerConfigPath,
 					assetsBinding: options.assetsBinding,
-					workerOptions,
+					workerOptions: { ...workerOptions, name },
 				},
 			];
 		}),

@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vitest';
-import { getTextResponse, isBuild } from '../../__test-utils__';
+import { getTextResponse } from '../../__test-utils__';
 
-describe.runIf(!isBuild)('in-worker defined durable objects', async () => {
+describe('in-worker defined durable objects', async () => {
 	test('can bind and use a Durable Object defined in the worker', async () => {
 		expect(await getTextResponse('/?name=my-do')).toEqual(
 			"Durable Object 'my-do' count: 0",

@@ -5,7 +5,8 @@
 	"scripts": {
 		"build": "vite build --app",
 		"check:types": "tsc --build",
-		"dev": "vite dev"
+		"dev": "vite dev",
+		"preview": "vite preview"
 	},
 	"dependencies": {
 		"react": "18.3.1",

@@ -5,7 +5,8 @@
 	"scripts": {
 		"build": "vite build --app",
 		"check:types": "tsc --build",
-		"dev": "vite dev"
+		"dev": "vite dev",
+		"preview": "vite preview"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-types": "catalog:default",

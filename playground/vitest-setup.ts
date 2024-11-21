@@ -2,7 +2,6 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { chromium } from 'playwright-chromium';
 import {
-	build,
 	createBuilder,
 	createServer,
 	loadConfigFromFile,
@@ -269,26 +268,16 @@ export async function startDefaultServe(): Promise<void> {
 			},
 		});
 		const buildConfig = mergeConfig(
-			await loadConfig({ command: 'build', mode: 'production' }),
+			await loadConfig({
+				command: 'build',
+				mode: 'production',
+			}),
 			{
 				plugins: [resolvedPlugin()],
 			},
 		);
-		if (buildConfig.builder) {
-			const builder = await createBuilder(buildConfig);
-			await builder.buildApp();
-		} else {
-			const rollupOutput = await build(buildConfig);
-			const isWatch = !!resolvedConfig!.build.watch;
-			// in build watch,call startStaticServer after the build is complete
-			if (isWatch) {
-				watcher = rollupOutput as Rollup.RollupWatcher;
-				await notifyRebuildComplete(watcher);
-			}
-			if (buildConfig.__test__) {
-				buildConfig.__test__();
-			}
-		}
+		const builder = await createBuilder(buildConfig);
+		await builder.buildApp();
 
 		// TODO: the step below spins up a vite preview server, instead of this we
 		//       want something that actually runs workers such as `startMultiWorker`
@@ -303,6 +292,9 @@ export async function startDefaultServe(): Promise<void> {
 		// prevent preview change NODE_ENV
 		process.env.NODE_ENV = _nodeEnv;
 		viteTestUrl = previewServer!.resolvedUrls!.local[0]!;
+		if (previewServer.config.base === '/') {
+			viteTestUrl = viteTestUrl.replace(/\/$/, '');
+		}
 		await page.goto(viteTestUrl);
 	}
 }

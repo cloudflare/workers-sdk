@@ -1,4 +1,5 @@
 import { builtinModules } from 'node:module';
+import * as path from 'node:path';
 import * as vite from 'vite';
 import { getNodeCompatExternals } from './node-js-compat';
 import { INIT_PATH, invariant, UNKNOWN_HOST } from './shared';
@@ -123,6 +124,7 @@ const cloudflareBuiltInModules = [
 
 export function createCloudflareEnvironmentOptions(
 	options: WorkerOptions,
+	userConfig: vite.UserConfig,
 ): vite.EnvironmentOptions {
 	return vite.mergeConfig(
 		{
@@ -142,13 +144,17 @@ export function createCloudflareEnvironmentOptions(
 				createEnvironment(name, config) {
 					return new vite.BuildEnvironment(name, config);
 				},
+				// This is a bit of a hack to make sure the user can't override the output directory at the environment level
+				outDir: userConfig.build?.outDir ?? 'dist',
 				ssr: true,
 				rollupOptions: {
 					// Note: vite starts dev pre-bundling crawling from either optimizeDeps.entries or rollupOptions.input
 					//       so the input value here serves both as the build input as well as the starting point for
 					//       dev pre-bundling crawling (were we not to set this input field we'd have to appropriately set
 					//       optimizeDeps.entries in the dev config)
-					input: options.main,
+					input: userConfig.root
+						? path.resolve(userConfig.root, options.main)
+						: path.resolve(options.main),
 					external: [...cloudflareBuiltInModules, ...getNodeCompatExternals()],
 				},
 			},

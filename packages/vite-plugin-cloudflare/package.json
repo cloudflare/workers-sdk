@@ -20,7 +20,7 @@
 	"dependencies": {
 		"@hattip/adapter-node": "^0.0.48",
 		"cjs-module-lexer": "^1.4.1",
-		"miniflare": "^3.20241004.0"
+		"miniflare": "^3.20241106.0"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-shared": "^0.7.0",
