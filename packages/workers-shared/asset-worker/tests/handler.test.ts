@@ -96,4 +96,37 @@ describe("[Asset Worker] `handleRequest`", () => {
 
 		expect(response.status).toBe(200);
 	});
+
+	it("normalizes double slashes", async () => {
+		const configuration: Required<AssetConfig> = {
+			html_handling: "none",
+			not_found_handling: "none",
+		};
+		const eTag = "some-etag";
+		const exists = vi.fn().mockReturnValue(eTag);
+		const getByETag = vi.fn().mockReturnValue({
+			readableStream: new ReadableStream(),
+			contentType: "text/html",
+		});
+
+		let response = await handleRequest(
+			new Request("https://example.com/abc/def//123/456"),
+			configuration,
+			exists,
+			getByETag
+		);
+
+		expect(response.status).toBe(307);
+		expect(response.headers.get('location')).toBe('/abc/def/123/456');
+
+		response = await handleRequest(
+			new Request("https://example.com/%2fexample.com/"),
+			configuration,
+			exists,
+			getByETag
+		);
+
+		expect(response.status).toBe(307);
+		expect(response.headers.get('location')).toBe('/example.com/');
+	});
 });

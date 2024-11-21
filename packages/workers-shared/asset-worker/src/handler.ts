@@ -18,7 +18,10 @@ export const handleRequest = async (
 ) => {
 	const { pathname, search } = new URL(request.url);
 
-	const decodedPathname = decodePath(pathname);
+	let decodedPathname = decodePath(pathname);
+	// normalize the path
+	decodedPathname = decodedPathname.replaceAll('//', '/');
+
 	const intent = await getIntent(decodedPathname, configuration, exists);
 
 	if (!intent) {
@@ -42,6 +45,8 @@ export const handleRequest = async (
 	 * We combine this with other redirects (e.g. for html_handling) to avoid multiple redirects.
 	 */
 	if (encodedDestination !== pathname || intent.redirect) {
+		console.log(encodedDestination, pathname);
+
 		return new TemporaryRedirectResponse(encodedDestination + search);
 	}
 
@@ -637,6 +642,8 @@ const safeRedirect = async (
 	if (skip) {
 		return null;
 	}
+
+	console.log(file, destination, configuration);
 
 	if (!(await exists(destination))) {
 		const intent = await getIntent(destination, configuration, exists, true);
