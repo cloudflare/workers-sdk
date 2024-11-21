@@ -228,15 +228,19 @@ describe("vectorize commands", () => {
 "
 		`);
 		expect(std.out).toMatchInlineSnapshot(`
-				"🚧 Creating index: 'some-index'
-				✅ Successfully created a new Vectorize index: 'test-index'
-				📋 To start querying from a Worker, add the following binding configuration into 'wrangler.toml':
+			"🚧 Creating index: 'some-index'
+			✅ Successfully created a new Vectorize index: 'test-index'
+			📋 To start querying from a Worker, add the following binding configuration to your Wrangler configuration file:
 
-				[[vectorize]]
-				binding = \\"VECTORIZE_INDEX\\"
-				index_name = \\"test-index\\"
-				"
-			`);
+			{
+			  \\"vectorize\\": [
+			    {
+			      \\"binding\\": \\"VECTORIZE_INDEX\\",
+			      \\"index_name\\": \\"test-index\\"
+			    }
+			  ]
+			}"
+		`);
 	});
 
 	it("should handle creating a vectorize index", async () => {
@@ -245,15 +249,19 @@ describe("vectorize commands", () => {
 			"vectorize create test-index --dimensions=1536 --metric=euclidean"
 		);
 		expect(std.out).toMatchInlineSnapshot(`
-				"🚧 Creating index: 'test-index'
-				✅ Successfully created a new Vectorize index: 'test-index'
-				📋 To start querying from a Worker, add the following binding configuration into 'wrangler.toml':
+			"🚧 Creating index: 'test-index'
+			✅ Successfully created a new Vectorize index: 'test-index'
+			📋 To start querying from a Worker, add the following binding configuration to your Wrangler configuration file:
 
-				[[vectorize]]
-				binding = \\"VECTORIZE\\"
-				index_name = \\"test-index\\"
-				"
-			`);
+			{
+			  \\"vectorize\\": [
+			    {
+			      \\"binding\\": \\"VECTORIZE\\",
+			      \\"index_name\\": \\"test-index\\"
+			    }
+			  ]
+			}"
+		`);
 	});
 
 	it("should handle creating a vectorize index with preset", async () => {
@@ -262,16 +270,20 @@ describe("vectorize commands", () => {
 			"vectorize create test-index --preset=openai/text-embedding-ada-002"
 		);
 		expect(std.out).toMatchInlineSnapshot(`
-				"Configuring index based for the embedding model openai/text-embedding-ada-002.
-				🚧 Creating index: 'test-index'
-				✅ Successfully created a new Vectorize index: 'test-index'
-				📋 To start querying from a Worker, add the following binding configuration into 'wrangler.toml':
+			"Configuring index based for the embedding model openai/text-embedding-ada-002.
+			🚧 Creating index: 'test-index'
+			✅ Successfully created a new Vectorize index: 'test-index'
+			📋 To start querying from a Worker, add the following binding configuration to your Wrangler configuration file:
 
-				[[vectorize]]
-				binding = \\"VECTORIZE\\"
-				index_name = \\"test-index\\"
-				"
-			`);
+			{
+			  \\"vectorize\\": [
+			    {
+			      \\"binding\\": \\"VECTORIZE\\",
+			      \\"index_name\\": \\"test-index\\"
+			    }
+			  ]
+			}"
+		`);
 	});
 
 	it("should fail index creation with invalid metric", async () => {

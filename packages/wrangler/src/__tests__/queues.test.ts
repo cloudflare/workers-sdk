@@ -4,10 +4,7 @@ import { mockConsoleMethods } from "./helpers/mock-console";
 import { msw } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
-import {
-	writeWranglerJson,
-	writeWranglerToml,
-} from "./helpers/write-wrangler-toml";
+import { writeWranglerConfig } from "./helpers/write-wrangler-config";
 import type { PostTypedConsumerBody, QueueResponse } from "../queues/client";
 
 describe("wrangler", () => {
@@ -254,17 +251,24 @@ describe("wrangler", () => {
 					      --delivery-delay-secs  How long a published message should be delayed for, in seconds. Must be a positive integer  [number]"
 				`);
 			});
+			describe.each(["wrangler.json", "wrangler.toml"])("%s", (configPath) => {
+				it("should create a queue", async () => {
+					writeWranglerConfig({}, configPath);
+					const requests = mockCreateRequest("testQueue");
+					await runWrangler("queues create testQueue");
+					expect(std.out).toMatchSnapshot();
+					expect(requests.count).toEqual(1);
+				});
 
-			it.each(["toml", "jsonc"])("should create a queue", async (format) => {
-				format === "toml" ? writeWranglerToml() : writeWranglerJson();
-				const requests = mockCreateRequest("testQueue");
-				await runWrangler("queues create testQueue");
-				if (format === "toml") {
-					expect(std.out).toContain("[[queues.producers]]");
-				} else {
-					expect(std.out).toContain(`"queues": {`);
-				}
-				expect(requests.count).toEqual(1);
+				it("should send queue settings with delivery delay", async () => {
+					const requests = mockCreateRequest("testQueue", {
+						delivery_delay: 10,
+					});
+					writeWranglerConfig({}, configPath);
+					await runWrangler("queues create testQueue --delivery-delay-secs=10");
+					expect(std.out).toMatchSnapshot();
+					expect(requests.count).toEqual(1);
+				});
 			});
 
 			it("should show link to dash when not enabled", async () => {
@@ -278,7 +282,10 @@ describe("wrangler", () => {
 								{
 									success: false,
 									errors: [
-										{ message: "workers.api.error.unauthorized", code: 10023 },
+										{
+											message: "workers.api.error.unauthorized",
+											code: 10023,
+										},
 									],
 									messages: [],
 								},
@@ -293,39 +300,19 @@ describe("wrangler", () => {
 					runWrangler(`queues create ${queueName}`)
 				).rejects.toThrowError();
 				expect(std.out).toMatchInlineSnapshot(`
-			"🌀 Creating queue 'testQueue'
-			Queues is not currently enabled on this account. Go to https://dash.cloudflare.com/some-account-id/workers/queues to enable it.
+		"🌀 Creating queue 'testQueue'
+		Queues is not currently enabled on this account. Go to https://dash.cloudflare.com/some-account-id/workers/queues to enable it.
 
-			[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/accounts/some-account-id/queues) failed.[0m
+		[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/accounts/some-account-id/queues) failed.[0m
 
-			  workers.api.error.unauthorized [code: 10023]
+		  workers.api.error.unauthorized [code: 10023]
 
-			  If you think this is a bug, please open an issue at:
-			  [4mhttps://github.com/cloudflare/workers-sdk/issues/new/choose[0m
+		  If you think this is a bug, please open an issue at:
+		  [4mhttps://github.com/cloudflare/workers-sdk/issues/new/choose[0m
 
-			"
-		`);
+		"
+	`);
 			});
-
-			it.each(["toml", "jsonc"])(
-				"should send queue settings with delivery delay",
-				async (format) => {
-					format === "toml" ? writeWranglerToml() : writeWranglerJson();
-
-					const requests = mockCreateRequest("testQueue", {
-						delivery_delay: 10,
-					});
-					await runWrangler("queues create testQueue --delivery-delay-secs=10");
-
-					if (format === "toml") {
-						expect(std.out).toContain("[[queues.producers]]");
-					} else {
-						expect(std.out).toContain(`"queues": {`);
-					}
-
-					expect(requests.count).toEqual(1);
-				}
-			);
 
 			it("should show an error when two delivery delays are set", async () => {
 				const requests = mockCreateRequest("testQueue", { delivery_delay: 0 });

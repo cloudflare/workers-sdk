@@ -181,7 +181,7 @@ describe("pages", () => {
 			Download settings from your project
 
 			COMMANDS
-			  wrangler pages download config [projectName]  Experimental: Download your Pages project config as a wrangler.toml file
+			  wrangler pages download config [projectName]  Experimental: Download your Pages project config as a Wrangler configuration file
 
 			GLOBAL FLAGS
 			  -h, --help     Show help  [boolean]
@@ -235,7 +235,7 @@ describe("pages", () => {
 			await expect(
 				runWrangler("pages dev")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: Must specify a directory of static assets to serve, or a command to run, or a proxy port, or configure \`pages_build_output_dir\` in \`wrangler.toml\`.]`
+				`[Error: Must specify a directory of static assets to serve, or a command to run, or a proxy port, or configure \`pages_build_output_dir\` in your Wrangler configuration file.]`
 			);
 
 			expect(std.out).toMatchInlineSnapshot(`""`);

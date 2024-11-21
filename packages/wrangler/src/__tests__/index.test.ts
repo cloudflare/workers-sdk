@@ -7,7 +7,7 @@ import { mockConsoleMethods } from "./helpers/mock-console";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import { writeWorkerSource } from "./helpers/write-worker-source";
-import { writeWranglerToml } from "./helpers/write-wrangler-toml";
+import { writeWranglerConfig } from "./helpers/write-wrangler-config";
 import type { PackageManager } from "../package-manager";
 import type { Mock } from "vitest";
 
@@ -281,7 +281,7 @@ describe("wrangler", () => {
 	});
 
 	it("should print a deprecation message for 'build' and then try to run `deploy --dry-run --outdir`", async () => {
-		writeWranglerToml({
+		writeWranglerConfig({
 			main: "index.js",
 		});
 		writeWorkerSource();

@@ -18,8 +18,8 @@ import {
 	getInferredHost,
 	maskVars,
 } from "../../dev";
+import { getClassNamesWhichUseSQLite } from "../../dev/class-names-sqlite";
 import { getLocalPersistencePath } from "../../dev/get-local-persistence-path";
-import { getClassNamesWhichUseSQLite } from "../../dev/validate-dev-props";
 import { UserError } from "../../errors";
 import { logger } from "../../logger";
 import { requireApiToken, requireAuth } from "../../user";

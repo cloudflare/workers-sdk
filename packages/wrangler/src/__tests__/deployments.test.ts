@@ -15,7 +15,7 @@ import {
 } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
-import { writeWranglerToml } from "./helpers/write-wrangler-toml";
+import { writeWranglerConfig } from "./helpers/write-wrangler-config";
 
 function isFileNotFound(e: unknown) {
 	return (
@@ -76,7 +76,7 @@ describe("deployments", () => {
 	describe("deployments subcommands", () => {
 		describe("deployments list", () => {
 			it("should log deployments", async () => {
-				writeWranglerToml();
+				writeWranglerConfig();
 
 				await runWrangler("deployments list --no-x-versions");
 				expect(std.out).toMatchInlineSnapshot(`
@@ -143,14 +143,14 @@ describe("deployments", () => {
 				await expect(
 					runWrangler("deployments list --no-x-versions")
 				).rejects.toMatchInlineSnapshot(
-					`[Error: Required Worker name missing. Please specify the Worker name in wrangler.toml, or pass it as an argument with \`--name\`]`
+					`[Error: Required Worker name missing. Please specify the Worker name in your Wrangler configuration file, or pass it as an argument with \`--name\`]`
 				);
 			});
 		});
 
 		describe("deployment view", () => {
 			it("should error with no --no-x-versions flag", async () => {
-				writeWranglerToml();
+				writeWranglerConfig();
 
 				await expect(
 					runWrangler("deployments view 1701-E")
@@ -160,7 +160,7 @@ describe("deployments", () => {
 			});
 
 			it("should log deployment details", async () => {
-				writeWranglerToml();
+				writeWranglerConfig();
 
 				await runWrangler("deployments view 1701-E --no-x-versions");
 
@@ -181,7 +181,7 @@ describe("deployments", () => {
 			});
 
 			it("should log deployment details with bindings", async () => {
-				writeWranglerToml();
+				writeWranglerConfig();
 
 				await runWrangler("deployments view bindings-tag --no-x-versions");
 
@@ -205,7 +205,7 @@ describe("deployments", () => {
 			});
 
 			it("should automatically log latest deployment details", async () => {
-				writeWranglerToml();
+				writeWranglerConfig();
 
 				await runWrangler("deployments view --no-x-versions");
 
@@ -283,7 +283,7 @@ describe("deployments", () => {
 					result: "",
 				});
 
-				writeWranglerToml();
+				writeWranglerConfig();
 				await runWrangler(
 					"rollback 3mEgaU1T-Intrepid-someThing-tag:test-name --no-x-versions"
 				);
@@ -302,7 +302,7 @@ describe("deployments", () => {
 					result: false,
 				});
 
-				writeWranglerToml();
+				writeWranglerConfig();
 				await runWrangler(
 					"rollback 3mEgaU1T-Intrpid-someThing-tag:test-name --no-x-versions"
 				);
@@ -314,7 +314,7 @@ describe("deployments", () => {
 			it("should skip prompt automatically in rollback if in a non-TTY environment", async () => {
 				setIsTTY(false);
 
-				writeWranglerToml();
+				writeWranglerConfig();
 				await runWrangler(
 					"rollback 3mEgaU1T-Intrepid-someThing-tag:test-name --no-x-versions"
 				);
@@ -332,7 +332,7 @@ describe("deployments", () => {
 			});
 
 			it("should skip prompt automatically in rollback if message flag is provided", async () => {
-				writeWranglerToml();
+				writeWranglerConfig();
 				await runWrangler(
 					`rollback 3mEgaU1T-Intrepid-someThing-tag:test-name --message "test" --no-x-versions`
 				);
@@ -346,7 +346,7 @@ describe("deployments", () => {
 			});
 
 			it("should skip prompt automatically in rollback with empty message", async () => {
-				writeWranglerToml();
+				writeWranglerConfig();
 				await runWrangler(
 					`rollback 3mEgaU1T-Intrepid-someThing-tag:test-name --message "test" --no-x-versions`
 				);
@@ -370,7 +370,7 @@ describe("deployments", () => {
 					result: "",
 				});
 
-				writeWranglerToml();
+				writeWranglerConfig();
 				await runWrangler("rollback --no-x-versions");
 				expect(std.out).toMatchInlineSnapshot(`
 					"

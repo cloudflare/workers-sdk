@@ -1,6 +1,5 @@
 import { writeFileSync } from "node:fs";
 import { http, HttpResponse } from "msw";
-import dedent from "ts-dedent";
 import { endEventLoop } from "./helpers/end-event-loop";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
@@ -10,10 +9,7 @@ import { mockProcess } from "./helpers/mock-process";
 import { msw } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
-import {
-	writeWranglerJson,
-	writeWranglerToml,
-} from "./helpers/write-wrangler-toml";
+import { writeWranglerConfig } from "./helpers/write-wrangler-config";
 import type {
 	KeyValue,
 	KVNamespaceInfo,
@@ -190,109 +186,50 @@ describe("wrangler", () => {
 		        `);
 			});
 
-			it.each(["toml", "jsonc"])(
-				"should create a namespace",
-				async (format) => {
-					format === "toml"
-						? writeWranglerToml({ name: "worker" })
-						: writeWranglerJson({ name: "worker" });
-
+			describe.each(["wrangler.json", "wrangler.toml"])("%s", (configPath) => {
+				it("should create a namespace", async () => {
+					writeWranglerConfig({ name: "worker" }, configPath);
 					mockCreateRequest("worker-UnitTestNamespace");
 					await runWrangler("kv namespace create UnitTestNamespace");
-					expect(std.out).toContain(dedent`
-						🌀 Creating namespace with title "worker-UnitTestNamespace"
-						✨ Success!
-						Add the following to your configuration file in your kv_namespaces array:
-					`);
-					if (format === "toml") {
-						expect(std.out).toContain("[[kv_namespaces]]");
-					} else {
-						expect(std.out).toContain(`"kv_namespaces": [`);
-					}
-				}
-			);
+					expect(std.out).toMatchSnapshot();
+				});
 
-			it.each(["toml", "jsonc"])(
-				"should create a preview namespace if configured to do so",
-				async (format) => {
-					format === "toml"
-						? writeWranglerToml({ name: "worker" })
-						: writeWranglerJson({ name: "worker" });
+				it("should create a preview namespace if configured to do so", async () => {
+					writeWranglerConfig({ name: "worker" }, configPath);
 
 					mockCreateRequest("worker-UnitTestNamespace_preview");
 					await runWrangler("kv namespace create UnitTestNamespace --preview");
-					expect(std.out).toContain(dedent`
-						🌀 Creating namespace with title "worker-UnitTestNamespace_preview"
-						✨ Success!
-						Add the following to your configuration file in your kv_namespaces array:
-					`);
-					if (format === "toml") {
-						expect(std.out).toContain("[[kv_namespaces]]");
-					} else {
-						expect(std.out).toContain(`"kv_namespaces": [`);
-					}
-				}
-			);
+					expect(std.out).toMatchSnapshot();
+				});
 
-			it.each(["toml", "jsonc"])(
-				"should create a namespace using configured worker name",
-				async (format) => {
-					format === "toml"
-						? writeWranglerToml({ name: "other-worker" })
-						: writeWranglerJson({ name: "other-worker" });
+				it("should create a namespace using configured worker name", async () => {
+					writeWranglerConfig({ name: "other-worker" }, configPath);
 
 					mockCreateRequest("other-worker-UnitTestNamespace");
 					await runWrangler("kv namespace create UnitTestNamespace");
-					expect(std.out).toContain(dedent`
-						🌀 Creating namespace with title "other-worker-UnitTestNamespace"
-						✨ Success!
-						Add the following to your configuration file in your kv_namespaces array:
-					`);
-					if (format === "toml") {
-						expect(std.out).toContain("[[kv_namespaces]]");
-					} else {
-						expect(std.out).toContain(`"kv_namespaces": [`);
-					}
-				}
-			);
+					expect(std.out).toMatchSnapshot();
+				});
 
-			it.each(["jsonc", "toml"])(
-				"should create a namespace in an environment if configured to do so",
-				async (format) => {
-					format === "toml"
-						? writeWranglerToml({
-								name: "worker",
-								env: {
-									customEnv: {
-										name: "worker",
-									},
+				it("should create a namespace in an environment if configured to do so", async () => {
+					writeWranglerConfig(
+						{
+							name: "worker",
+							env: {
+								customEnv: {
+									name: "worker",
 								},
-							})
-						: writeWranglerJson({
-								name: "worker",
-								env: {
-									customEnv: {
-										name: "worker",
-									},
-								},
-							});
+							},
+						},
+						configPath
+					);
 
 					mockCreateRequest("worker-customEnv-UnitTestNamespace");
 					await runWrangler(
 						"kv namespace create UnitTestNamespace --env customEnv"
 					);
-					expect(std.out).toContain(dedent`
-						🌀 Creating namespace with title "worker-customEnv-UnitTestNamespace"
-						✨ Success!
-						Add the following to your configuration file in your kv_namespaces array under [env.customEnv]:
-					`);
-					if (format === "toml") {
-						expect(std.out).toContain("[[kv_namespaces]]");
-					} else {
-						expect(std.out).toContain(`"kv_namespaces": [`);
-					}
-				}
-			);
+					expect(std.out).toMatchSnapshot();
+				});
+			});
 		});
 
 		describe("list", () => {
@@ -378,7 +315,7 @@ describe("wrangler", () => {
 			});
 
 			it("should delete a namespace specified by binding name", async () => {
-				writeWranglerConfig();
+				writeWranglerKVConfig();
 				const requests = mockDeleteRequest("bound-id");
 				await runWrangler(
 					`kv namespace delete --binding someBinding --preview false`
@@ -387,7 +324,7 @@ describe("wrangler", () => {
 			});
 
 			it("should delete a preview namespace specified by binding name", async () => {
-				writeWranglerConfig();
+				writeWranglerKVConfig();
 				const requests = mockDeleteRequest("preview-bound-id");
 				await runWrangler(
 					`kv namespace delete --binding someBinding --preview`
@@ -396,7 +333,7 @@ describe("wrangler", () => {
 			});
 
 			it("should error if a given binding name is not in the configured kv namespaces", async () => {
-				writeWranglerConfig();
+				writeWranglerKVConfig();
 				await expect(runWrangler("kv namespace delete --binding otherBinding"))
 					.rejects.toThrowErrorMatchingInlineSnapshot(`
 					[Error: Not able to delete namespace.
@@ -412,7 +349,7 @@ describe("wrangler", () => {
 			});
 
 			it("should delete a namespace specified by binding name in a given environment", async () => {
-				writeWranglerConfig();
+				writeWranglerKVConfig();
 				const requests = mockDeleteRequest("env-bound-id");
 				await runWrangler(
 					"kv namespace delete --binding someBinding --env some-environment --preview false"
@@ -427,7 +364,7 @@ describe("wrangler", () => {
 			});
 
 			it("should delete a preview namespace specified by binding name in a given environment", async () => {
-				writeWranglerConfig();
+				writeWranglerKVConfig();
 				const requests = mockDeleteRequest("preview-env-bound-id");
 				await runWrangler(
 					`kv namespace delete --binding someBinding --env some-environment --preview`
@@ -522,7 +459,7 @@ describe("wrangler", () => {
 			});
 
 			it("should put a key in a given namespace specified by binding", async () => {
-				writeWranglerConfig();
+				writeWranglerKVConfig();
 				const requests = mockKeyPutRequest("bound-id", {
 					key: "my-key",
 					value: "my-value",
@@ -539,7 +476,7 @@ describe("wrangler", () => {
 			});
 
 			it("should put a key in a given preview namespace specified by binding", async () => {
-				writeWranglerConfig();
+				writeWranglerKVConfig();
 				const requests = mockKeyPutRequest("preview-bound-id", {
 					key: "my-key",
 					value: "my-value",
@@ -574,7 +511,7 @@ describe("wrangler", () => {
 			});
 
 			it("should put a key to the specified environment in a given namespace", async () => {
-				writeWranglerConfig();
+				writeWranglerKVConfig();
 				const requests = mockKeyPutRequest("env-bound-id", {
 					key: "my-key",
 					value: "my-value",
@@ -873,7 +810,7 @@ describe("wrangler", () => {
 			});
 
 			it("should error if a given binding name is not in the configured kv namespaces", async () => {
-				writeWranglerConfig();
+				writeWranglerKVConfig();
 				await expect(
 					runWrangler("kv key put key value --binding otherBinding")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
@@ -889,7 +826,7 @@ describe("wrangler", () => {
 			});
 
 			it("should error if a given binding has both preview and non-preview and --preview is not specified", async () => {
-				writeWranglerConfig();
+				writeWranglerKVConfig();
 				const requests = mockKeyPutRequest("preview-bound-id", {
 					key: "my-key",
 					value: "my-value",
@@ -937,7 +874,7 @@ describe("wrangler", () => {
 			});
 
 			it("should list the keys of a namespace specified by binding", async () => {
-				writeWranglerConfig();
+				writeWranglerKVConfig();
 				const keys = [{ name: "key-1" }, { name: "key-2" }, { name: "key-3" }];
 				mockKeyListRequest("bound-id", keys);
 
@@ -959,7 +896,7 @@ describe("wrangler", () => {
 			});
 
 			it("should list the keys of a preview namespace specified by binding", async () => {
-				writeWranglerConfig();
+				writeWranglerKVConfig();
 				const keys = [{ name: "key-1" }, { name: "key-2" }, { name: "key-3" }];
 				mockKeyListRequest("preview-bound-id", keys);
 				await runWrangler("kv key list --binding someBinding --preview");
@@ -980,7 +917,7 @@ describe("wrangler", () => {
 			});
 
 			it("should list the keys of a namespace specified by binding, in a given environment", async () => {
-				writeWranglerConfig();
+				writeWranglerKVConfig();
 				const keys = [{ name: "key-1" }, { name: "key-2" }, { name: "key-3" }];
 				mockKeyListRequest("env-bound-id", keys);
 				await runWrangler(
@@ -1003,7 +940,7 @@ describe("wrangler", () => {
 			});
 
 			it("should list the keys of a preview namespace specified by binding, in a given environment", async () => {
-				writeWranglerConfig();
+				writeWranglerKVConfig();
 				const keys = [{ name: "key-1" }, { name: "key-2" }, { name: "key-3" }];
 				mockKeyListRequest("preview-env-bound-id", keys);
 				await runWrangler(
@@ -1056,7 +993,7 @@ describe("wrangler", () => {
 			}
 
 			it("should error if a given binding name is not in the configured kv namespaces", async () => {
-				writeWranglerConfig();
+				writeWranglerKVConfig();
 				await expect(
 					runWrangler("kv key list --binding otherBinding")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
@@ -1145,7 +1082,7 @@ describe("wrangler", () => {
 			});
 
 			it("should get a key in a given namespace specified by binding", async () => {
-				writeWranglerConfig();
+				writeWranglerKVConfig();
 				setMockFetchKVGetValue(
 					"some-account-id",
 					"bound-id",
@@ -1160,7 +1097,7 @@ describe("wrangler", () => {
 			});
 
 			it("should get a key in a given preview namespace specified by binding", async () => {
-				writeWranglerConfig();
+				writeWranglerKVConfig();
 				setMockFetchKVGetValue(
 					"some-account-id",
 					"preview-bound-id",
@@ -1173,7 +1110,7 @@ describe("wrangler", () => {
 			});
 
 			it("should get a key for the specified environment in a given namespace", async () => {
-				writeWranglerConfig();
+				writeWranglerKVConfig();
 				setMockFetchKVGetValue(
 					"some-account-id",
 					"env-bound-id",
@@ -1312,7 +1249,7 @@ describe("wrangler", () => {
 			});
 
 			it("should error if a given binding name is not in the configured kv namespaces", async () => {
-				writeWranglerConfig();
+				writeWranglerKVConfig();
 				await expect(
 					runWrangler("kv key get key --binding otherBinding")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
@@ -1338,7 +1275,7 @@ describe("wrangler", () => {
 					await expect(runWrangler("kv key get key --namespace-id=xxxx"))
 						.rejects.toThrowErrorMatchingInlineSnapshot(`
 						[Error: More than one account available but unable to select one in non-interactive mode.
-						Please set the appropriate \`account_id\` in your \`wrangler.toml\` file.
+						Please set the appropriate \`account_id\` in your Wrangler configuration file.
 						Available accounts are (\`<name>\`: \`<account_id>\`):
 						  \`one\`: \`1\`
 						  \`two\`: \`2\`]
@@ -1354,7 +1291,7 @@ describe("wrangler", () => {
 					await expect(runWrangler("kv key get key --namespace-id=xxxx"))
 						.rejects.toThrowErrorMatchingInlineSnapshot(`
 						[Error: More than one account available but unable to select one in non-interactive mode.
-						Please set the appropriate \`account_id\` in your \`wrangler.toml\` file.
+						Please set the appropriate \`account_id\` in your Wrangler configuration file.
 						Available accounts are (\`<name>\`: \`<account_id>\`):
 						  \`one\`: \`1\`
 						  \`two\`: \`2\`]
@@ -1382,7 +1319,7 @@ describe("wrangler", () => {
 					await expect(runWrangler("kv key get key --namespace-id=xxxx"))
 						.rejects.toThrowErrorMatchingInlineSnapshot(`
 						[Error: Failed to automatically retrieve account IDs for the logged in user.
-						You may have incorrect permissions on your API token. You can skip this account check by adding an \`account_id\` in your \`wrangler.toml\`, or by setting the value of CLOUDFLARE_ACCOUNT_ID"]
+						You may have incorrect permissions on your API token. You can skip this account check by adding an \`account_id\` in your Wrangler configuration file, or by setting the value of CLOUDFLARE_ACCOUNT_ID"]
 					`);
 				});
 
@@ -1395,7 +1332,7 @@ describe("wrangler", () => {
 					await expect(runWrangler("kv key get key --namespace-id=xxxx"))
 						.rejects.toThrowErrorMatchingInlineSnapshot(`
 						[Error: More than one account available but unable to select one in non-interactive mode.
-						Please set the appropriate \`account_id\` in your \`wrangler.toml\` file.
+						Please set the appropriate \`account_id\` in your Wrangler configuration file.
 						Available accounts are (\`<name>\`: \`<account_id>\`):
 						  \`one\`: \`1\`
 						  \`two\`: \`2\`]
@@ -1448,7 +1385,7 @@ describe("wrangler", () => {
 			});
 
 			it("should delete a key in a namespace specified by binding name", async () => {
-				writeWranglerConfig();
+				writeWranglerKVConfig();
 				const requests = mockDeleteRequest("bound-id", "someKey");
 				await runWrangler(
 					`kv key delete --binding someBinding --preview false someKey`
@@ -1457,7 +1394,7 @@ describe("wrangler", () => {
 			});
 
 			it("should delete a key in a preview namespace specified by binding name", async () => {
-				writeWranglerConfig();
+				writeWranglerKVConfig();
 				const requests = mockDeleteRequest("preview-bound-id", "someKey");
 				await runWrangler(
 					`kv key delete --binding someBinding --preview someKey`
@@ -1466,7 +1403,7 @@ describe("wrangler", () => {
 			});
 
 			it("should error if a given binding name is not in the configured kv namespaces", async () => {
-				writeWranglerConfig();
+				writeWranglerKVConfig();
 				await expect(
 					runWrangler(`kv key delete --binding otherBinding someKey`)
 				).rejects.toThrowErrorMatchingInlineSnapshot(
@@ -1481,7 +1418,7 @@ describe("wrangler", () => {
 			});
 
 			it("should delete a key in a namespace specified by binding name in a given environment", async () => {
-				writeWranglerConfig();
+				writeWranglerKVConfig();
 				const requests = mockDeleteRequest("env-bound-id", "someKey");
 				await runWrangler(
 					`kv key delete --binding someBinding --env some-environment --preview false someKey`
@@ -1494,7 +1431,7 @@ describe("wrangler", () => {
 			});
 
 			it("should delete a key in a preview namespace specified by binding name in a given environment", async () => {
-				writeWranglerConfig();
+				writeWranglerKVConfig();
 				const requests = mockDeleteRequest("preview-env-bound-id", "someKey");
 				await runWrangler(
 					`kv key delete --binding someBinding --env some-environment --preview someKey`
@@ -1889,22 +1826,28 @@ describe("wrangler", () => {
 	});
 });
 
-function writeWranglerConfig() {
-	writeFileSync(
-		"./wrangler.toml",
-		[
-			'name = "other-worker"',
-			"kv_namespaces = [",
-			'  { binding = "someBinding", id = "bound-id", preview_id = "preview-bound-id" }',
-			"]",
-			"",
-			"[env.some-environment]",
-			"kv_namespaces = [",
-			'  { binding = "someBinding", id = "env-bound-id", preview_id = "preview-env-bound-id" }',
-			"]",
-		].join("\n"),
-		"utf-8"
-	);
+function writeWranglerKVConfig() {
+	writeWranglerConfig({
+		name: "other-worker",
+		kv_namespaces: [
+			{
+				binding: "someBinding",
+				id: "bound-id",
+				preview_id: "preview-bound-id",
+			},
+		],
+		env: {
+			"some-environment": {
+				kv_namespaces: [
+					{
+						binding: "someBinding",
+						id: "env-bound-id",
+						preview_id: "preview-env-bound-id",
+					},
+				],
+			},
+		},
+	});
 }
 
 function setMockFetchKVGetValue(

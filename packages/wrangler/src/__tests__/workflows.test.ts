@@ -6,7 +6,7 @@ import { clearDialogs } from "./helpers/mock-dialogs";
 import { msw } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
-import { writeWranglerToml } from "./helpers/write-wrangler-toml";
+import { writeWranglerConfig } from "./helpers/write-wrangler-config";
 import type { Instance, Workflow } from "../workflows/types";
 
 describe("wrangler workflows", () => {
@@ -55,7 +55,7 @@ describe("wrangler workflows", () => {
 
 	describe("help", () => {
 		it("should show help when no argument is passed", async () => {
-			writeWranglerToml();
+			writeWranglerConfig();
 
 			await runWrangler(`workflows`);
 			await endEventLoop();
@@ -84,7 +84,7 @@ describe("wrangler workflows", () => {
 
 	describe("instances help", () => {
 		it("should show instance help when no argument is passed", async () => {
-			writeWranglerToml();
+			writeWranglerConfig();
 
 			await runWrangler(`workflows instances`);
 			await endEventLoop();
@@ -150,7 +150,7 @@ describe("wrangler workflows", () => {
 		};
 
 		it("should get the list of workflows", async () => {
-			writeWranglerToml();
+			writeWranglerConfig();
 			await mockGetWorkflows(mockWorkflows);
 
 			await runWrangler(`workflows list`);
@@ -190,7 +190,7 @@ describe("wrangler workflows", () => {
 		];
 
 		it("should get the list of instances given a name", async () => {
-			writeWranglerToml();
+			writeWranglerConfig();
 			await mockGetInstances(mockInstances);
 
 			await runWrangler(`workflows instances list some-workflow`);
@@ -273,7 +273,7 @@ describe("wrangler workflows", () => {
 		};
 
 		it("should describe the bar instance given a name", async () => {
-			writeWranglerToml();
+			writeWranglerConfig();
 			await mockDescribeInstances();
 
 			await runWrangler(`workflows instances describe some-workflow bar`);
@@ -308,7 +308,7 @@ describe("wrangler workflows", () => {
 		];
 
 		it("should get and pause the bar instance given a name", async () => {
-			writeWranglerToml();
+			writeWranglerConfig();
 			await mockGetInstances(mockInstances);
 			await mockPatchRequest("bar");
 
@@ -340,7 +340,7 @@ describe("wrangler workflows", () => {
 		];
 
 		it("should get and resume the bar instance given a name", async () => {
-			writeWranglerToml();
+			writeWranglerConfig();
 			await mockGetInstances(mockInstances);
 			await mockPatchRequest("bar");
 
@@ -372,7 +372,7 @@ describe("wrangler workflows", () => {
 		];
 
 		it("should get and terminate the bar instance given a name", async () => {
-			writeWranglerToml();
+			writeWranglerConfig();
 			await mockGetInstances(mockInstances);
 			await mockPatchRequest("bar");
 
@@ -407,7 +407,7 @@ describe("wrangler workflows", () => {
 		};
 
 		it("should trigger a workflow given a name", async () => {
-			writeWranglerToml();
+			writeWranglerConfig();
 			await mockTriggerWorkflow();
 
 			await runWrangler(`workflows trigger some-workflow`);
@@ -420,7 +420,7 @@ describe("wrangler workflows", () => {
 
 	describe("delete", () => {
 		it("should delete a workflow - check not implemented", async () => {
-			writeWranglerToml();
+			writeWranglerConfig();
 
 			await runWrangler(`workflows delete some-workflow`);
 			expect(std.out).toMatchInlineSnapshot(

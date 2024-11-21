@@ -3,7 +3,7 @@ import { readConfig } from "../config";
 import { normalizeAndValidateConfig } from "../config/validation";
 import { normalizeString } from "./helpers/normalize";
 import { runInTempDir } from "./helpers/run-in-tmp";
-import { writeWranglerToml } from "./helpers/write-wrangler-toml";
+import { writeWranglerConfig } from "./helpers/write-wrangler-config";
 import type {
 	ConfigFields,
 	RawConfig,
@@ -14,7 +14,7 @@ import type {
 describe("readConfig()", () => {
 	runInTempDir();
 	it("should not error if a python entrypoint is used with the right compatibility_flag", () => {
-		writeWranglerToml({
+		writeWranglerConfig({
 			main: "index.py",
 			compatibility_flags: ["python_workers"],
 		});
@@ -31,7 +31,7 @@ describe("readConfig()", () => {
 		`);
 	});
 	it("should error if a python entrypoint is used without the right compatibility_flag", () => {
-		writeWranglerToml({
+		writeWranglerConfig({
 			main: "index.py",
 		});
 		try {
@@ -1028,13 +1028,19 @@ describe("normalizeAndValidateConfig()", () => {
 			expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
 				"Processing wrangler configuration:
 				  - \\"unsafe\\" fields are experimental and may change or break at any time.
-				  - In wrangler.toml, you have configured [durable_objects] exported by this Worker (CLASS1), but no [migrations] for them. This may not work as expected until you add a [migrations] section to your wrangler.toml. Add this configuration to your wrangler.toml:
+				  - In your Wrangler configuration file, you have configured \`durable_objects\` exported by this Worker (CLASS1), but no \`migrations\` for them. This may not work as expected until you add a \`migrations\` section to your Wrangler configuration file. Add the following configuration:
 
 				    \`\`\`
-				    [[migrations]]
-				    tag = \\"v1\\"
-				    new_classes = [ \\"CLASS1\\" ]
-
+				    {
+				      \\"migrations\\": [
+				        {
+				          \\"tag\\": \\"v1\\",
+				          \\"new_classes\\": [
+				            \\"CLASS1\\"
+				          ]
+				        }
+				      ]
+				    }
 				    \`\`\`
 
 				    Refer to https://developers.cloudflare.com/durable-objects/reference/durable-objects-migrations/ for more details."
@@ -3724,16 +3730,16 @@ describe("normalizeAndValidateConfig()", () => {
 			        "
 		      `);
 			expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-			        "Processing wrangler configuration:
-			          - No environment found in configuration with name \\"DEV\\".
-			            Before using \`--env=DEV\` there should be an equivalent environment section in the configuration.
+				"Processing wrangler configuration:
+				  - No environment found in configuration with name \\"DEV\\".
+				    Before using \`--env=DEV\` there should be an equivalent environment section in the configuration.
 
-			            Consider adding an environment configuration section to the wrangler.toml file:
-			            \`\`\`
-			            [env.DEV]
-			            \`\`\`
-			        "
-		      `);
+				    Consider adding an environment configuration section to the Wrangler configuration file:
+				    \`\`\`
+				    [env.DEV]
+				    \`\`\`
+				"
+			`);
 		});
 
 		it("should error if we specify an environment that does not match the named environments", () => {
@@ -3742,17 +3748,17 @@ describe("normalizeAndValidateConfig()", () => {
 				env: "DEV",
 			});
 			expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			        "Processing wrangler configuration:
-			          - No environment found in configuration with name \\"DEV\\".
-			            Before using \`--env=DEV\` there should be an equivalent environment section in the configuration.
-			            The available configured environment names are: [\\"ENV1\\"]
+				"Processing wrangler configuration:
+				  - No environment found in configuration with name \\"DEV\\".
+				    Before using \`--env=DEV\` there should be an equivalent environment section in the configuration.
+				    The available configured environment names are: [\\"ENV1\\"]
 
-			            Consider adding an environment configuration section to the wrangler.toml file:
-			            \`\`\`
-			            [env.DEV]
-			            \`\`\`
-			        "
-		      `);
+				    Consider adding an environment configuration section to the Wrangler configuration file:
+				    \`\`\`
+				    [env.DEV]
+				    \`\`\`
+				"
+			`);
 			expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
 			        "Processing wrangler configuration:
 			        "

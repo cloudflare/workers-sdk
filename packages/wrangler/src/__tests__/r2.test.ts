@@ -11,10 +11,7 @@ import { useMockIsTTY } from "./helpers/mock-istty";
 import { createFetchResult, msw, mswR2handlers } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
-import {
-	writeWranglerJson,
-	writeWranglerToml,
-} from "./helpers/write-wrangler-toml";
+import { writeWranglerConfig } from "./helpers/write-wrangler-config";
 import type {
 	PutNotificationRequestBody,
 	R2EventableOperation,
@@ -300,11 +297,8 @@ describe("r2", () => {
 			          `);
 			});
 
-			it.each(["toml", "jsonc"])(
-				"should create a bucket & check request inputs",
-				async (format) => {
-					format === "toml" ? writeWranglerToml() : writeWranglerJson();
-
+			describe.each(["wrangler.json", "wrangler.toml"])("%s", (configPath) => {
+				it("should create a bucket & check request inputs", async () => {
 					msw.use(
 						http.post(
 							"*/accounts/:accountId/r2/buckets",
@@ -317,24 +311,12 @@ describe("r2", () => {
 							{ once: true }
 						)
 					);
+					writeWranglerConfig({}, configPath);
 					await runWrangler("r2 bucket create testBucket");
-					expect(std.out).toContain(`Creating bucket 'testBucket'...
-✅ Created bucket 'testBucket' with default storage class of Standard.
+					expect(std.out).toMatchSnapshot();
+				});
 
-Configure your Worker to write objects to this bucket:`);
-					if (format === "toml") {
-						expect(std.out).toContain("[[r2_buckets]]");
-					} else {
-						expect(std.out).toContain(`"r2_buckets": [`);
-					}
-				}
-			);
-
-			it.each(["toml", "jsonc"])(
-				"should create a bucket with the expected jurisdiction",
-				async (format) => {
-					format === "toml" ? writeWranglerToml() : writeWranglerJson();
-
+				it("should create a bucket with the expected jurisdiction", async () => {
 					msw.use(
 						http.post(
 							"*/accounts/:accountId/r2/buckets",
@@ -348,60 +330,18 @@ Configure your Worker to write objects to this bucket:`);
 							{ once: true }
 						)
 					);
+					writeWranglerConfig({}, configPath);
 					await runWrangler("r2 bucket create testBucket -J eu");
-					expect(std.out).toContain(`Creating bucket 'testBucket (eu)'...
-✅ Created bucket 'testBucket (eu)' with default storage class of Standard.
+					expect(std.out).toMatchSnapshot();
+				});
 
-Configure your Worker to write objects to this bucket:`);
-					if (format === "toml") {
-						expect(std.out).toContain("[[r2_buckets]]");
-					} else {
-						expect(std.out).toContain(`"r2_buckets": [`);
-					}
-				}
-			);
-
-			it.each(["toml", "jsonc"])(
-				"should create a bucket with the expected default storage class",
-				async (format) => {
-					format === "toml" ? writeWranglerToml() : writeWranglerJson();
-
+				it("should create a bucket with the expected default storage class", async () => {
+					writeWranglerConfig({}, configPath);
 					await runWrangler("r2 bucket create testBucket -s InfrequentAccess");
-					expect(std.out).toContain(`Creating bucket 'testBucket'...
-✅ Created bucket 'testBucket' with default storage class of InfrequentAccess.
+					expect(std.out).toMatchSnapshot();
+				});
 
-Configure your Worker to write objects to this bucket:`);
-					if (format === "toml") {
-						expect(std.out).toContain("[[r2_buckets]]");
-					} else {
-						expect(std.out).toContain(`"r2_buckets": [`);
-					}
-				}
-			);
-
-			it("should error if storage class is invalid", async () => {
-				await expect(
-					runWrangler("r2 bucket create testBucket -s Foo")
-				).rejects.toThrowErrorMatchingInlineSnapshot(
-					`[APIError: A request to the Cloudflare API (/accounts/some-account-id/r2/buckets) failed.]`
-				);
-				expect(std.out).toMatchInlineSnapshot(`
-				"Creating bucket 'testBucket'...
-
-				[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/accounts/some-account-id/r2/buckets) failed.[0m
-
-				  The JSON you provided was not well formed. [code: 10040]
-
-				  If you think this is a bug, please open an issue at:
-				  [4mhttps://github.com/cloudflare/workers-sdk/issues/new/choose[0m
-
-				"
-		`);
-			});
-			it.each(["toml", "jsonc"])(
-				"should create a bucket with the expected location hint",
-				async (format) => {
-					format === "toml" ? writeWranglerToml() : writeWranglerJson();
+				it("should create a bucket with the expected location hint", async () => {
 					msw.use(
 						http.post(
 							"*/accounts/:accountId/r2/buckets",
@@ -417,18 +357,32 @@ Configure your Worker to write objects to this bucket:`);
 							{ once: true }
 						)
 					);
-					await runWrangler("r2 bucket create testBucket --location weur");
-					expect(std.out).toContain(`Creating bucket 'testBucket'...
-✅ Created bucket 'testBucket' with location hint weur and default storage class of Standard.
+					writeWranglerConfig({}, configPath);
 
-Configure your Worker to write objects to this bucket:`);
-					if (format === "toml") {
-						expect(std.out).toContain("[[r2_buckets]]");
-					} else {
-						expect(std.out).toContain(`"r2_buckets": [`);
-					}
-				}
-			);
+					await runWrangler("r2 bucket create testBucket --location weur");
+					expect(std.out).toMatchSnapshot();
+				});
+			});
+
+			it("should error if storage class is invalid", async () => {
+				await expect(
+					runWrangler("r2 bucket create testBucket -s Foo")
+				).rejects.toThrowErrorMatchingInlineSnapshot(
+					`[APIError: A request to the Cloudflare API (/accounts/some-account-id/r2/buckets) failed.]`
+				);
+				expect(std.out).toMatchInlineSnapshot(`
+			"Creating bucket 'testBucket'...
+
+			[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/accounts/some-account-id/r2/buckets) failed.[0m
+
+			  The JSON you provided was not well formed. [code: 10040]
+
+			  If you think this is a bug, please open an issue at:
+			  [4mhttps://github.com/cloudflare/workers-sdk/issues/new/choose[0m
+
+			"
+	`);
+			});
 		});
 
 		describe("update", () => {

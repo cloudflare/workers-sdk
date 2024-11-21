@@ -79,7 +79,7 @@ describe("pages deploy", () => {
 		await expect(
 			runWrangler("pages deploy")
 		).rejects.toThrowErrorMatchingInlineSnapshot(
-			`[Error: Must specify a directory of assets to deploy. Please specify the [<directory>] argument in the \`pages deploy\` command, or configure \`pages_build_output_dir\` in your \`wrangler.toml\` configuration file.]`
+			`[Error: Must specify a directory of assets to deploy. Please specify the [<directory>] argument in the \`pages deploy\` command, or configure \`pages_build_output_dir\` in your Wrangler configuration file.]`
 		);
 	});
 
@@ -95,7 +95,7 @@ describe("pages deploy", () => {
 		await expect(
 			runWrangler("pages deploy public --config=/path/to/wrangler.toml")
 		).rejects.toThrowErrorMatchingInlineSnapshot(
-			`[Error: Pages does not support custom paths for the \`wrangler.toml\` configuration file]`
+			`[Error: Pages does not support custom paths for the Wrangler configuration file]`
 		);
 	});
 
@@ -4722,7 +4722,7 @@ Failed to publish your Function. Got error: Uncaught TypeError: a is not a funct
 			await expect(
 				runWrangler("pages deploy --config foo.toml")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: Pages does not support custom paths for the \`wrangler.toml\` configuration file]`
+				`[Error: Pages does not support custom paths for the Wrangler configuration file]`
 			);
 		});
 
