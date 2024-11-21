@@ -1,5 +1,7 @@
 import { http, HttpResponse } from "msw";
 import { vi } from "vitest";
+import { defineCommand, defineNamespace } from "../core";
+import { UserError } from "../errors";
 import { CI } from "../is-ci";
 import { logger } from "../logger";
 import { getOS, getWranglerVersion } from "../metrics/helpers";
@@ -139,6 +141,87 @@ describe("metrics", () => {
 				expect(std.out).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
+			});
+		});
+
+		describe("sendNewEvent()", () => {
+			beforeAll(() => {
+				// register a no-op test command
+				defineNamespace({
+					command: "wrangler command",
+					metadata: {
+						description: "test command namespace",
+						owner: "Workers: Authoring and Testing",
+						status: "stable",
+					},
+				});
+
+				defineCommand({
+					command: "wrangler command subcommand",
+					metadata: {
+						description: "test command",
+						owner: "Workers: Authoring and Testing",
+						status: "stable",
+					},
+					args: {
+						positional: {
+							type: "string",
+							demandOption: true,
+						},
+						optional: {
+							type: "string",
+						},
+					},
+					positionalArgs: ["positional"],
+					handler(args, ctx) {
+						ctx.logger.log("Ran wrangler command subcommand");
+						if (args.positional === "error") {
+							throw new UserError("oh no");
+						}
+					},
+				});
+			});
+			it("should send a started and completed event", async () => {
+				const requests = mockMetricRequest({}, {});
+
+				await runWrangler("command subcommand positional");
+
+				expect(requests.count).toBe(2);
+
+				// command started
+				expect(std.debug).toContain(
+					`Metrics dispatcher: Posting data {"deviceId":"f82b1f46-eb7b-4154-aa9f-ce95f23b2288","event":"wrangler command started","timestamp":1733961600000,"properties":{"amplitude_session_id":1733961600000,"amplitude_event_id":0,"wranglerVersion":"1.2.3","isFirstUsage":false,"command":"wrangler command subcommand","args":{"_":["command","subcommand"],"experimental-versions":true,"x-versions":true,"experimental-gradual-rollouts":true,"xVersions":true,"experimentalGradualRollouts":true,"experimentalVersions":true,"$0":"wrangler","positional":"positional"}}}`
+				);
+				// command completed
+				expect(std.debug).toContain(
+					`Metrics dispatcher: Posting data {"deviceId":"f82b1f46-eb7b-4154-aa9f-ce95f23b2288","event":"wrangler command completed","timestamp":1733961600000,"properties":{"amplitude_session_id":1733961600000,"amplitude_event_id":1,"wranglerVersion":"1.2.3","isFirstUsage":false,"command":"wrangler command subcommand","args":{"_":["command","subcommand"],"experimental-versions":true,"x-versions":true,"experimental-gradual-rollouts":true,"xVersions":true,"experimentalGradualRollouts":true,"experimentalVersions":true,"$0":"wrangler","positional":"positional"},"durationMs":0,"durationSeconds":0,"durationMinutes":0}}`
+				);
+				expect(std.out).toMatchInlineSnapshot(`
+					"
+					Cloudflare collects anonymous telemetry about your usage of Wrangler. Learn more at https://github.com/cloudflare/workers-sdk/tree/main/telemetry.md
+					Ran wrangler command subcommand"
+				`);
+				expect(std.warn).toMatchInlineSnapshot(`""`);
+				expect(std.err).toMatchInlineSnapshot(`""`);
+			});
+
+			it("should send a started and errored event", async () => {
+				const requests = mockMetricRequest({}, {});
+
+				await expect(runWrangler("command subcommand error")).rejects.toThrow(
+					"oh no"
+				);
+
+				expect(requests.count).toBe(2);
+
+				// command started
+				expect(std.debug).toContain(
+					`Metrics dispatcher: Posting data {"deviceId":"f82b1f46-eb7b-4154-aa9f-ce95f23b2288","event":"wrangler command started","timestamp":1733961600000,"properties":{"amplitude_session_id":1733961600000,"amplitude_event_id":0,"wranglerVersion":"1.2.3","isFirstUsage":false,"command":"wrangler command subcommand","args":{"_":["command","subcommand"],"experimental-versions":true,"x-versions":true,"experimental-gradual-rollouts":true,"xVersions":true,"experimentalGradualRollouts":true,"experimentalVersions":true,"$0":"wrangler","positional":"error"}}}`
+				);
+				// command completed
+				expect(std.debug).toContain(
+					`Metrics dispatcher: Posting data {"deviceId":"f82b1f46-eb7b-4154-aa9f-ce95f23b2288","event":"wrangler command errored","timestamp":1733961600000,"properties":{"amplitude_session_id":1733961600000,"amplitude_event_id":1,"wranglerVersion":"1.2.3","isFirstUsage":false,"command":"wrangler command subcommand","args":{"_":["command","subcommand"],"experimental-versions":true,"x-versions":true,"experimental-gradual-rollouts":true,"xVersions":true,"experimentalGradualRollouts":true,"experimentalVersions":true,"$0":"wrangler","positional":"error"},"durationMs":0,"durationSeconds":0,"durationMinutes":0,"errorType":"UserError"}}`
+				);
 			});
 		});
 	});
