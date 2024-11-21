@@ -1021,7 +1021,7 @@ describe("normalizeAndValidateConfig()", () => {
 				{ env: undefined }
 			);
 
-			expect(config).toEqual(
+			expect({ ...config, tsconfig: normalizePath(config.tsconfig!) }).toEqual(
 				expect.objectContaining({ ...expectedConfig, main: resolvedMain })
 			);
 			expect(diagnostics.hasErrors()).toBe(false);
@@ -5886,5 +5886,6 @@ describe("normalizeAndValidateConfig()", () => {
 function normalizePath(text: string): string {
 	return text
 		.replace("project\\wrangler.toml", "project/wrangler.toml")
-		.replace("src\\index.ts", "src/index.ts");
+		.replace("src\\index.ts", "src/index.ts")
+		.replace("path\\to\\tsconfig", "path/to/tsconfig");
 }
