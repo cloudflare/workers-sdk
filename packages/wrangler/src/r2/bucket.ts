@@ -4,12 +4,14 @@ import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { requireAuth } from "../user";
 import { getValidBindingName } from "../utils/getValidBindingName";
+import formatLabelledValues from "../utils/render-labelled-values";
 import { LOCATION_CHOICES } from "./constants";
 import {
 	createR2Bucket,
 	deleteR2Bucket,
 	isValidR2BucketName,
 	listR2Buckets,
+	tablefromR2BucketsListResponse,
 	updateR2BucketStorageClass,
 } from "./helpers";
 
@@ -172,12 +174,11 @@ defineCommand({
 	async handler(args, { config }) {
 		const accountId = await requireAuth(config);
 
-		logger.log(
-			JSON.stringify(await listR2Buckets(accountId, args.jurisdiction), null, 2)
-		);
-		await metrics.sendMetricsEvent("list r2 buckets", {
-			sendMetrics: config.send_metrics,
-		});
+		logger.log(`Listing buckets...`);
+
+		const buckets = await listR2Buckets(accountId, args.jurisdiction);
+		const tableOutput = tablefromR2BucketsListResponse(buckets);
+		logger.log(tableOutput.map((x) => formatLabelledValues(x)).join("\n\n"));
 	},
 });
 
