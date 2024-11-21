@@ -68,9 +68,7 @@ export function getMetricsDispatcher(options: MetricsConfigOptions) {
 			) {
 				return;
 			}
-			if (name === "wrangler command started") {
-				printMetricsBanner();
-			}
+			printMetricsBanner();
 			const commonEventProperties: CommonEventProperties = {
 				amplitude_session_id,
 				amplitude_event_id: amplitude_event_id++,
