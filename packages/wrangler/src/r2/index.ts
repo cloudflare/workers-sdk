@@ -29,12 +29,6 @@ export function r2(r2Yargs: CommonYargsArgv, subHelp: SubHelp) {
 				(lifecycleYargs) => {
 					return lifecycleYargs
 						.command(
-							"add <bucket>",
-							"Add a lifecycle rule to an R2 bucket",
-							Lifecycle.AddOptions,
-							Lifecycle.AddHandler
-						)
-						.command(
 							"remove <bucket>",
 							"Remove a lifecycle rule from an R2 bucket",
 							Lifecycle.RemoveOptions,

@@ -74,83 +74,87 @@ defineCommand({
 	},
 });
 
-export function AddOptions(yargs: CommonYargsArgv) {
-	return yargs
-		.positional("bucket", {
+defineCommand({
+	command: "wrangler r2 bucket lifecycle add",
+	metadata: {
+		description: "Add a lifecycle rule to an R2 bucket",
+		status: "stable",
+		owner: "Product: R2",
+	},
+	positionalArgs: ["bucket", "id", "prefix"],
+	args: {
+		bucket: {
 			describe: "The name of the R2 bucket to add a lifecycle rule to",
 			type: "string",
 			demandOption: true,
-		})
-		.positional("id", {
+		},
+		id: {
 			describe: "A unique identifier for the lifecycle rule",
 			type: "string",
 			requiresArg: true,
-		})
-		.positional("prefix", {
+		},
+		prefix: {
 			describe:
 				"Prefix condition for the lifecycle rule (leave empty for all prefixes)",
 			type: "string",
 			requiresArg: true,
-		})
-		.option("expire-days", {
+		},
+		"expire-days": {
 			describe: "Number of days after which objects expire",
 			type: "number",
 			requiresArg: true,
-		})
-		.option("expire-date", {
+		},
+		"expire-date": {
 			describe: "Date after which objects expire (YYYY-MM-DD)",
 			type: "number",
 			requiresArg: true,
-		})
-		.option("ia-transition-days", {
+		},
+		"ia-transition-days": {
 			describe:
 				"Number of days after which objects transition to Infrequent Access storage",
 			type: "number",
 			requiresArg: true,
-		})
-		.option("ia-transition-date", {
+		},
+		"ia-transition-date": {
 			describe:
 				"Date after which objects transition to Infrequent Access storage (YYYY-MM-DD)",
 			type: "string",
 			requiresArg: true,
-		})
-		.option("abort-multipart-days", {
+		},
+		"abort-multipart-days": {
 			describe:
 				"Number of days after which incomplete multipart uploads are aborted",
 			type: "number",
 			requiresArg: true,
-		})
-		.option("jurisdiction", {
+		},
+		jurisdiction: {
 			describe: "The jurisdiction where the bucket exists",
 			alias: "J",
 			requiresArg: true,
 			type: "string",
-		})
-		.option("force", {
+		},
+		force: {
 			describe: "Skip confirmation",
 			type: "boolean",
 			alias: "y",
 			default: false,
-		});
-}
-
-export const AddHandler = withConfig<
-	StrictYargsOptionsToInterface<typeof AddOptions>
->(
-	async ({
-		bucket,
-		expireDays,
-		expireDate,
-		iaTransitionDays,
-		iaTransitionDate,
-		abortMultipartDays,
-		jurisdiction,
-		force,
-		id,
-		prefix,
-		config,
-	}): Promise<void> => {
-		await printWranglerBanner();
+		},
+	},
+	async handler(
+		{
+			bucket,
+			expireDays,
+			expireDate,
+			iaTransitionDays,
+			iaTransitionDate,
+			abortMultipartDays,
+			jurisdiction,
+			force,
+			id,
+			prefix,
+		},
+		{ config }
+	) {
 		const accountId = await requireAuth(config);
 
 		const lifecycleRules = await getLifecycleRules(
@@ -315,8 +319,8 @@ export const AddHandler = withConfig<
 		logger.log(`Adding lifecycle rule '${id}' to bucket '${bucket}'...`);
 		await putLifecycleRules(accountId, bucket, lifecycleRules, jurisdiction);
 		logger.log(`✨ Added lifecycle rule '${id}' to bucket '${bucket}'.`);
-	}
-);
+	},
+});
 
 export function RemoveOptions(yargs: CommonYargsArgv) {
 	return yargs
