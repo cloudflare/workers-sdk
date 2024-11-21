@@ -48,6 +48,16 @@ import "./docs";
 import "./dev";
 import "./kv";
 import "./r2";
+import { defineVersions } from "./versions";
+import { defineVersionsDeploy } from "./versions/deploy";
+import { defineVersionsList } from "./versions/list";
+import { defineVersionsSecret } from "./versions/secrets";
+import { defineVersionsSecretBulk } from "./versions/secrets/bulk";
+import { defineVersionsSecretDelete } from "./versions/secrets/delete";
+import { defineVersionsSecretList } from "./versions/secrets/list";
+import { defineVersionsSecretPut } from "./versions/secrets/put";
+import { defineVersionsUpload } from "./versions/upload";
+import { defineVersionsView } from "./versions/view";
 import "./workflows";
 import "./user/commands";
 import { demandSingleValue } from "./core";
@@ -74,7 +84,6 @@ import { getAuthFromEnv } from "./user";
 import { whoami } from "./user/whoami";
 import { debugLogFilepath } from "./utils/log-file";
 import { vectorize } from "./vectorize/index";
-import registerVersionsSubcommands from "./versions";
 import registerVersionsDeploymentsSubcommands from "./versions/deployments";
 import registerVersionsRollbackCommand from "./versions/rollback";
 import { asJson } from "./yargs-types";
@@ -435,13 +444,17 @@ export function createCLIParser(argv: string[]) {
 
 	// versions
 	if (experimentalGradualRollouts) {
-		wrangler.command(
-			"versions",
-			"🫧  List, view, upload and deploy Versions of your Worker to Cloudflare",
-			(yargs) => {
-				return registerVersionsSubcommands(yargs.command(subHelp), subHelp);
-			}
-		);
+		defineVersions();
+		defineVersionsView();
+		defineVersionsList();
+		defineVersionsUpload();
+		defineVersionsDeploy();
+		defineVersionsSecret();
+		defineVersionsSecretList();
+		defineVersionsSecretPut();
+		defineVersionsSecretDelete();
+		defineVersionsSecretBulk();
+		register.registerNamespace("versions");
 	}
 
 	// triggers

@@ -5,7 +5,6 @@ import {
 	parseVersionSpecs,
 	summariseVersionTraffic,
 	validateTrafficSubtotal,
-	versionsDeployOptions,
 } from "../../versions/deploy";
 import { collectCLIOutput } from "../helpers/collect-cli-output";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
@@ -30,7 +29,7 @@ import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 import { writeWorkerSource } from "../helpers/write-worker-source";
 import { writeWranglerToml } from "../helpers/write-wrangler-toml";
-import type { VersionsDeployArgs } from "../../versions/deploy";
+import type { ParseVersionSpecsArgs } from "../../versions/deploy";
 
 describe("versions deploy", () => {
 	mockAccountId();
@@ -936,7 +935,7 @@ describe("units", () => {
 		test("no args", () => {
 			const input = "versions deploy";
 
-			const args = options.parse(input) as VersionsDeployArgs;
+			const args = options.parse(input) as ParseVersionSpecsArgs;
 			const result = parseVersionSpecs(args);
 
 			expect(result).toMatchObject(new Map());
@@ -945,7 +944,7 @@ describe("units", () => {
 		test("1 positional arg", () => {
 			const input = "versions deploy 10000000-0000-0000-0000-000000000000@10%";
 
-			const args = options.parse(input) as VersionsDeployArgs;
+			const args = options.parse(input) as ParseVersionSpecsArgs;
 			const result = parseVersionSpecs(args);
 
 			expect(Object.fromEntries(result)).toMatchObject({
@@ -956,7 +955,7 @@ describe("units", () => {
 			const input =
 				"versions deploy 10000000-0000-0000-0000-000000000000@10% 20000000-0000-0000-0000-000000000000@90%";
 
-			const args = options.parse(input) as VersionsDeployArgs;
+			const args = options.parse(input) as ParseVersionSpecsArgs;
 			const result = parseVersionSpecs(args);
 
 			expect(Object.fromEntries(result)).toMatchObject({
@@ -969,7 +968,7 @@ describe("units", () => {
 			const input =
 				"versions deploy --version-id 10000000-0000-0000-0000-000000000000 --percentage 10";
 
-			const args = options.parse(input) as VersionsDeployArgs;
+			const args = options.parse(input) as ParseVersionSpecsArgs;
 			const result = parseVersionSpecs(args);
 
 			expect(Object.fromEntries(result)).toMatchObject({
@@ -980,7 +979,7 @@ describe("units", () => {
 			const input =
 				"versions deploy --version-id 10000000-0000-0000-0000-000000000000 --percentage 10 --version-id 20000000-0000-0000-0000-000000000000 --percentage 90";
 
-			const args = options.parse(input) as VersionsDeployArgs;
+			const args = options.parse(input) as ParseVersionSpecsArgs;
 			const result = parseVersionSpecs(args);
 
 			expect(Object.fromEntries(result)).toMatchObject({
@@ -992,7 +991,7 @@ describe("units", () => {
 			const input =
 				"versions deploy --version-id 10000000-0000-0000-0000-000000000000 --version-id 20000000-0000-0000-0000-000000000000 --percentage 10 --percentage 90";
 
-			const args = options.parse(input) as VersionsDeployArgs;
+			const args = options.parse(input) as ParseVersionSpecsArgs;
 			const result = parseVersionSpecs(args);
 
 			expect(Object.fromEntries(result)).toMatchObject({
@@ -1004,7 +1003,7 @@ describe("units", () => {
 			const input =
 				"versions deploy --version-id 10000000-0000-0000-0000-000000000000 --percentage 10 --version-id 20000000-0000-0000-0000-000000000000";
 
-			const args = options.parse(input) as VersionsDeployArgs;
+			const args = options.parse(input) as ParseVersionSpecsArgs;
 			const result = parseVersionSpecs(args);
 
 			expect(Object.fromEntries(result)).toMatchObject({
@@ -1016,7 +1015,7 @@ describe("units", () => {
 			const input =
 				"versions deploy --version-id 10000000-0000-0000-0000-000000000000 --version-id 20000000-0000-0000-0000-000000000000 --percentage 10";
 
-			const args = options.parse(input) as VersionsDeployArgs;
+			const args = options.parse(input) as ParseVersionSpecsArgs;
 			const result = parseVersionSpecs(args);
 
 			expect(Object.fromEntries(result)).toMatchObject({

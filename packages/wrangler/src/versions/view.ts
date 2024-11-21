@@ -1,140 +1,144 @@
 import { logRaw } from "@cloudflare/cli";
+import { defineCommand } from "../core";
 import { UserError } from "../errors";
 import * as metrics from "../metrics";
 import { printWranglerBanner } from "../update-check";
 import { requireAuth } from "../user";
 import formatLabelledValues from "../utils/render-labelled-values";
 import { fetchVersion } from "./api";
-import { getConfig, getVersionSource } from "./list";
+import { getVersionSource } from "./list";
 import type { WorkerMetadataBinding } from "../deployment-bundle/create-worker-upload-form";
-import type {
-	CommonYargsArgv,
-	StrictYargsOptionsToInterface,
-} from "../yargs-types";
 
 const BLANK_INPUT = "-"; // To be used where optional user-input is displayed and the value is nullish
 
-export type VersionsViewArgs = StrictYargsOptionsToInterface<
-	typeof versionsViewOptions
->;
+export function defineVersionsView() {
+	defineCommand({
+		command: "wrangler versions view",
+		metadata: {
+			description: "View the details of a specific version of your Worker",
+			owner: "Workers: Authoring and Testing",
+			status: "open-beta",
+		},
+		args: {
+			"version-id": {
+				describe: "The Worker Version ID to view",
+				type: "string",
+				requiresArg: true,
+				demandOption: true,
+			},
+			name: {
+				describe: "Name of the worker",
+				type: "string",
+				requiresArg: true,
+			},
+			json: {
+				describe: "Display output as clean JSON",
+				type: "boolean",
+				default: false,
+			},
+		},
+		positionalArgs: ["version-id"],
+		handler: async function versionsViewHandler(args, { config }) {
+			if (!args.json) {
+				await printWranglerBanner();
+			}
 
-export function versionsViewOptions(yargs: CommonYargsArgv) {
-	return yargs
-		.positional("version-id", {
-			describe: "The Worker Version ID to view",
-			type: "string",
-			requiresArg: true,
-			demandOption: true,
-		})
-		.option("name", {
-			describe: "Name of the worker",
-			type: "string",
-			requiresArg: true,
-		})
-		.option("json", {
-			describe: "Display output as clean JSON",
-			type: "boolean",
-			default: false,
-		});
-}
+			await metrics.sendMetricsEvent(
+				"view worker version",
+				{},
+				{
+					sendMetrics: config.send_metrics,
+				}
+			);
 
-export async function versionsViewHandler(args: VersionsViewArgs) {
-	if (!args.json) {
-		await printWranglerBanner();
-	}
+			const accountId = await requireAuth(config);
+			const workerName = args.name ?? config.name;
 
-	const config = getConfig(args);
-	await metrics.sendMetricsEvent(
-		"view worker version",
-		{},
-		{
-			sendMetrics: config.send_metrics,
-		}
-	);
+			if (workerName === undefined) {
+				throw new UserError(
+					'You need to provide a name of your worker. Either pass it as a cli arg with `--name <name>` or in your config file as `name = "<name>"`'
+				);
+			}
 
-	const accountId = await requireAuth(config);
-	const workerName = args.name ?? config.name;
+			const version = await fetchVersion(accountId, workerName, args.versionId);
 
-	if (workerName === undefined) {
-		throw new UserError(
-			'You need to provide a name of your worker. Either pass it as a cli arg with `--name <name>` or in your config file as `name = "<name>"`'
-		);
-	}
+			if (args.json) {
+				logRaw(JSON.stringify(version, null, 2));
+				return;
+			}
 
-	const version = await fetchVersion(accountId, workerName, args.versionId);
-
-	if (args.json) {
-		logRaw(JSON.stringify(version, null, 2));
-		return;
-	}
-
-	logRaw(
-		formatLabelledValues({
-			"Version ID": version.id,
-			Created: new Date(version.metadata["created_on"]).toISOString(),
-			Author: version.metadata.author_email,
-			Source: getVersionSource(version),
-			Tag: version.annotations?.["workers/tag"] || BLANK_INPUT,
-			Message: version.annotations?.["workers/message"] || BLANK_INPUT,
-		})
-	);
-	logRaw("------------------------------------------------------------");
-	const scriptInfo: ScriptInfoLog = {
-		Handlers: version.resources.script.handlers.join(", "),
-	};
-	if (version.resources.script_runtime.compatibility_date) {
-		scriptInfo["Compatibility Date"] =
-			version.resources.script_runtime.compatibility_date;
-	}
-	if (version.resources.script_runtime.compatibility_flags) {
-		scriptInfo["Compatibility Flags"] =
-			version.resources.script_runtime.compatibility_flags.join(", ");
-	}
-	logRaw(formatLabelledValues(scriptInfo));
-
-	const secrets = version.resources.bindings.filter(
-		(binding) => binding.type === "secret_text"
-	);
-	if (secrets.length > 0) {
-		logRaw("------------------------- secrets  -------------------------");
-		for (const secret of secrets) {
 			logRaw(
 				formatLabelledValues({
-					"Secret Name": secret.name,
+					"Version ID": version.id,
+					Created: new Date(version.metadata["created_on"]).toISOString(),
+					Author: version.metadata.author_email,
+					Source: getVersionSource(version),
+					Tag: version.annotations?.["workers/tag"] || BLANK_INPUT,
+					Message: version.annotations?.["workers/message"] || BLANK_INPUT,
 				})
 			);
-		}
-	}
+			logRaw("------------------------------------------------------------");
 
-	const bindings = version.resources.bindings.filter(
-		(binding) => binding.type !== "secret_text"
-	);
-	if (bindings.length > 0) {
-		logRaw("------------------------- bindings -------------------------");
-		// env vars are done differently so target them first
-		const envVars = bindings.filter((binding) => binding.type === "plain_text");
-		if (envVars.length > 0) {
-			logRaw(
-				`[vars]\n` +
-					// ts is having issues typing from the filter
-					(envVars as { type: "plain_text"; name: string; text: string }[])
-						.map((envVar) => `${envVar.name} = "${envVar.text}"`)
-						.join("\n")
-			);
-		}
-
-		// Filter out env vars since they got handled above
-		const restOfBindings = bindings.filter(
-			(binding) => binding.type !== "plain_text"
-		);
-		for (const binding of restOfBindings) {
-			const output = printBindingAsToml(binding);
-			if (output !== null) {
-				logRaw(output);
-				logRaw("");
+			const scriptInfo: ScriptInfoLog = {
+				Handlers: version.resources.script.handlers.join(", "),
+			};
+			if (version.resources.script_runtime.compatibility_date) {
+				scriptInfo["Compatibility Date"] =
+					version.resources.script_runtime.compatibility_date;
 			}
-		}
-	}
+			if (version.resources.script_runtime.compatibility_flags) {
+				scriptInfo["Compatibility Flags"] =
+					version.resources.script_runtime.compatibility_flags.join(", ");
+			}
+			logRaw(formatLabelledValues(scriptInfo));
+
+			const secrets = version.resources.bindings.filter(
+				(binding) => binding.type === "secret_text"
+			);
+			if (secrets.length > 0) {
+				logRaw("------------------------- secrets  -------------------------");
+				for (const secret of secrets) {
+					logRaw(
+						formatLabelledValues({
+							"Secret Name": secret.name,
+						})
+					);
+				}
+			}
+
+			const bindings = version.resources.bindings.filter(
+				(binding) => binding.type !== "secret_text"
+			);
+			if (bindings.length > 0) {
+				logRaw("------------------------- bindings -------------------------");
+				// env vars are done differently so target them first
+				const envVars = bindings.filter(
+					(binding) => binding.type === "plain_text"
+				);
+				if (envVars.length > 0) {
+					logRaw(
+						`[vars]\n` +
+							// ts is having issues typing from the filter
+							(envVars as { type: "plain_text"; name: string; text: string }[])
+								.map((envVar) => `${envVar.name} = "${envVar.text}"`)
+								.join("\n")
+					);
+				}
+
+				// Filter out env vars since they got handled above
+				const restOfBindings = bindings.filter(
+					(binding) => binding.type !== "plain_text"
+				);
+				for (const binding of restOfBindings) {
+					const output = printBindingAsToml(binding);
+					if (output !== null) {
+						logRaw(output);
+						logRaw("");
+					}
+				}
+			}
+		},
+	});
 }
 
 type ScriptInfoLog = {
