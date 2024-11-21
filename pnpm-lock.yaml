@@ -741,6 +741,27 @@ importers:
         specifier: workspace:*
         version: link:../../packages/wrangler
 
+  fixtures/workflow-multiple:
+    devDependencies:
+      '@cloudflare/workers-types':
+        specifier: ^4.20241106.0
+        version: 4.20241106.0
+      undici:
+        specifier: catalog:default
+        version: 5.28.4
+      wrangler:
+        specifier: workspace:*
+        version: link:../../packages/wrangler
+
+  packages/chrome-devtools-patches:
+    devDependencies:
+      patch-package:
+        specifier: ^6.5.1
+        version: 6.5.1
+      wrangler:
+        specifier: workspace:*
+        version: link:../wrangler
+
   packages/cli:
     devDependencies:
       '@clack/core':
@@ -1941,15 +1962,6 @@ importers:
       yargs:
         specifier: ^17.7.2
         version: 17.7.2
-
-  packages/wrangler-devtools:
-    devDependencies:
-      patch-package:
-        specifier: ^6.5.1
-        version: 6.5.1
-      wrangler:
-        specifier: workspace:*
-        version: link:../wrangler
 
   tools:
     devDependencies:

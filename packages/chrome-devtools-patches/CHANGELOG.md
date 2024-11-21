@@ -1,4 +1,4 @@
-# @cloudflare/wrangler-devtools
+# @cloudflare/chrome-devtools-patches
 
 ## 0.1.0
 

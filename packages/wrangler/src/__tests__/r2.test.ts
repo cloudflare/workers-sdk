@@ -1,4 +1,5 @@
 import * as fs from "node:fs";
+import { writeFileSync } from "node:fs";
 import { http, HttpResponse } from "msw";
 import { MAX_UPLOAD_SIZE } from "../r2/constants";
 import { actionsForEventCategories } from "../r2/helpers";
@@ -100,6 +101,7 @@ describe("r2", () => {
 				  wrangler r2 bucket notification     Manage event notification rules for an R2 bucket
 				  wrangler r2 bucket domain           Manage custom domains for an R2 bucket
 				  wrangler r2 bucket dev-url          Manage public access via the r2.dev URL for an R2 bucket
+				  wrangler r2 bucket lifecycle        Manage lifecycle rules for an R2 bucket
 
 				GLOBAL FLAGS
 				  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
@@ -137,6 +139,7 @@ describe("r2", () => {
 				  wrangler r2 bucket notification     Manage event notification rules for an R2 bucket
 				  wrangler r2 bucket domain           Manage custom domains for an R2 bucket
 				  wrangler r2 bucket dev-url          Manage public access via the r2.dev URL for an R2 bucket
+				  wrangler r2 bucket lifecycle        Manage lifecycle rules for an R2 bucket
 
 				GLOBAL FLAGS
 				  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
@@ -1000,7 +1003,7 @@ binding = \\"testBucket\\""
 						"
 						wrangler r2 bucket notification list <bucket>
 
-						List event notification rules for a bucket
+						List event notification rules for an R2 bucket
 
 						POSITIONALS
 						  bucket  The name of the R2 bucket to get event notification rules for  [string] [required]
@@ -1865,6 +1868,240 @@ binding = \\"testBucket\\""
 					expect(std.out).toMatchInlineSnapshot(`
 						"Disabling public access for bucket 'my-bucket'...
 						Public access disabled at 'https://pub-bucket-id-123.r2.dev'."
+					  `);
+				});
+			});
+		});
+		describe("lifecycle", () => {
+			const { setIsTTY } = useMockIsTTY();
+			mockAccountId();
+			mockApiToken();
+			describe("list", () => {
+				it("should list lifecycle rules when they exist", async () => {
+					const bucketName = "my-bucket";
+					const lifecycleRules = [
+						{
+							id: "rule-1",
+							enabled: true,
+							conditions: { prefix: "images/" },
+							deleteObjectsTransition: {
+								condition: {
+									type: "Age",
+									maxAge: 2592000,
+								},
+							},
+						},
+					];
+					msw.use(
+						http.get(
+							"*/accounts/:accountId/r2/buckets/:bucketName/lifecycle",
+							async ({ params }) => {
+								const { accountId, bucketName: bucketParam } = params;
+								expect(accountId).toEqual("some-account-id");
+								expect(bucketParam).toEqual(bucketName);
+								return HttpResponse.json(
+									createFetchResult({
+										rules: lifecycleRules,
+									})
+								);
+							},
+							{ once: true }
+						)
+					);
+					await runWrangler(`r2 bucket lifecycle list ${bucketName}`);
+					expect(std.out).toMatchInlineSnapshot(`
+					"Listing lifecycle rules for bucket 'my-bucket'...
+					id:       rule-1
+					enabled:  Yes
+					prefix:   images/
+					action:   Expire objects after 30 days"
+				  `);
+				});
+			});
+			describe("add", () => {
+				it("it should add a lifecycle rule using command-line arguments", async () => {
+					const bucketName = "my-bucket";
+					const ruleId = "my-rule";
+					const prefix = "images/";
+					const conditionType = "Age";
+					const conditionValue = "30";
+
+					msw.use(
+						http.get(
+							"*/accounts/:accountId/r2/buckets/:bucketName/lifecycle",
+							async ({ params }) => {
+								const { accountId, bucketName: bucketParam } = params;
+								expect(accountId).toEqual("some-account-id");
+								expect(bucketParam).toEqual(bucketName);
+								return HttpResponse.json(
+									createFetchResult({
+										rules: [],
+									})
+								);
+							},
+							{ once: true }
+						),
+						http.put(
+							"*/accounts/:accountId/r2/buckets/:bucketName/lifecycle",
+							async ({ request, params }) => {
+								const { accountId, bucketName: bucketParam } = params;
+								expect(accountId).toEqual("some-account-id");
+								expect(bucketName).toEqual(bucketParam);
+								const requestBody = await request.json();
+								expect(requestBody).toEqual({
+									rules: [
+										{
+											id: ruleId,
+											enabled: true,
+											conditions: { prefix: prefix },
+											deleteObjectsTransition: {
+												condition: {
+													type: conditionType,
+													maxAge: 2592000,
+												},
+											},
+										},
+									],
+								});
+								return HttpResponse.json(createFetchResult({}));
+							},
+							{ once: true }
+						)
+					);
+					await runWrangler(
+						`r2 bucket lifecycle add ${bucketName} --id ${ruleId} --prefix ${prefix} --expire-days ${conditionValue}`
+					);
+					expect(std.out).toMatchInlineSnapshot(`
+						"Adding lifecycle rule 'my-rule' to bucket 'my-bucket'...
+						✨ Added lifecycle rule 'my-rule' to bucket 'my-bucket'."
+					  `);
+				});
+			});
+			describe("remove", () => {
+				it("should remove a lifecycle rule as expected", async () => {
+					const bucketName = "my-bucket";
+					const ruleId = "my-rule";
+					const lifecycleRules = {
+						rules: [
+							{
+								id: ruleId,
+								enabled: true,
+								conditions: {},
+							},
+						],
+					};
+					msw.use(
+						http.get(
+							"*/accounts/:accountId/r2/buckets/:bucketName/lifecycle",
+							async ({ params }) => {
+								const { accountId, bucketName: bucketParam } = params;
+								expect(accountId).toEqual("some-account-id");
+								expect(bucketParam).toEqual(bucketName);
+								return HttpResponse.json(createFetchResult(lifecycleRules));
+							},
+							{ once: true }
+						),
+						http.put(
+							"*/accounts/:accountId/r2/buckets/:bucketName/lifecycle",
+							async ({ request, params }) => {
+								const { accountId, bucketName: bucketParam } = params;
+								expect(accountId).toEqual("some-account-id");
+								expect(bucketName).toEqual(bucketParam);
+								const requestBody = await request.json();
+								expect(requestBody).toEqual({
+									rules: [],
+								});
+								return HttpResponse.json(createFetchResult({}));
+							},
+							{ once: true }
+						)
+					);
+					await runWrangler(
+						`r2 bucket lifecycle remove ${bucketName} --id ${ruleId}`
+					);
+					expect(std.out).toMatchInlineSnapshot(`
+						"Removing lifecycle rule 'my-rule' from bucket 'my-bucket'...
+						Lifecycle rule 'my-rule' removed from bucket 'my-bucket'."
+					  `);
+				});
+				it("should handle removing non-existant rule ID as expected", async () => {
+					const bucketName = "my-bucket";
+					const ruleId = "my-rule";
+					const lifecycleRules = {
+						rules: [],
+					};
+					msw.use(
+						http.get(
+							"*/accounts/:accountId/r2/buckets/:bucketName/lifecycle",
+							async ({ params }) => {
+								const { accountId, bucketName: bucketParam } = params;
+								expect(accountId).toEqual("some-account-id");
+								expect(bucketParam).toEqual(bucketName);
+								return HttpResponse.json(createFetchResult(lifecycleRules));
+							},
+							{ once: true }
+						)
+					);
+					await expect(() =>
+						runWrangler(
+							`r2 bucket lifecycle remove ${bucketName} --id ${ruleId}`
+						)
+					).rejects.toThrowErrorMatchingInlineSnapshot(
+						"[Error: Lifecycle rule with ID 'my-rule' not found in configuration for 'my-bucket'.]"
+					);
+				});
+			});
+			describe("set", () => {
+				it("should set lifecycle configuration from a JSON file", async () => {
+					const bucketName = "my-bucket";
+					const filePath = "lifecycle-configuration.json";
+					const lifecycleRules = {
+						rules: [
+							{
+								id: "rule-1",
+								enabled: true,
+								conditions: {},
+								deleteObjectsTransition: {
+									condition: {
+										type: "Age",
+										maxAge: 2592000,
+									},
+								},
+							},
+						],
+					};
+
+					writeFileSync(filePath, JSON.stringify(lifecycleRules));
+
+					setIsTTY(true);
+					mockConfirm({
+						text: `Are you sure you want to overwrite all existing lifecycle rules for bucket '${bucketName}'?`,
+						result: true,
+					});
+
+					msw.use(
+						http.put(
+							"*/accounts/:accountId/r2/buckets/:bucketName/lifecycle",
+							async ({ request, params }) => {
+								const { accountId, bucketName: bucketParam } = params;
+								expect(accountId).toEqual("some-account-id");
+								expect(bucketName).toEqual(bucketParam);
+								const requestBody = await request.json();
+								expect(requestBody).toEqual({
+									...lifecycleRules,
+								});
+								return HttpResponse.json(createFetchResult({}));
+							},
+							{ once: true }
+						)
+					);
+
+					await runWrangler(
+						`r2 bucket lifecycle set ${bucketName} --file ${filePath}`
+					);
+					expect(std.out).toMatchInlineSnapshot(`
+						"Setting lifecycle configuration (1 rules) for bucket 'my-bucket'...
+						✨ Set lifecycle configuration for bucket 'my-bucket'."
 					  `);
 				});
 			});
