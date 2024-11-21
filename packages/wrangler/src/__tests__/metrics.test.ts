@@ -10,7 +10,10 @@ import {
 	readMetricsConfig,
 	writeMetricsConfig,
 } from "../metrics/metrics-config";
-import { getMetricsDispatcher } from "../metrics/metrics-dispatcher";
+import {
+	getMetricsDispatcher,
+	redactArgValues,
+} from "../metrics/metrics-dispatcher";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { useMockIsTTY } from "./helpers/mock-istty";
 import { msw } from "./helpers/msw";
@@ -201,6 +204,15 @@ describe("metrics", () => {
 							type: "boolean",
 							default: false,
 						},
+						array: {
+							type: "string",
+							array: true,
+							default: ["beep", "boop"],
+						},
+						number: {
+							type: "number",
+							default: 42,
+						},
 					},
 					positionalArgs: ["positional"],
 					handler(args, ctx) {
@@ -229,11 +241,17 @@ describe("metrics", () => {
 						isFirstUsage: false,
 						isCI: false,
 						isNonInteractive: false,
-						argsUsed: ["positional", "xgradualrollouts", "xversions"],
-						argsCombination: "positional, xgradualrollouts, xversions",
+						argsUsed: [
+							"array",
+							"number",
+							"positional",
+							"xgradualrollouts",
+							"xversions",
+						],
+						argsCombination:
+							"array, number, positional, xgradualrollouts, xversions",
 						command: "wrangler command subcommand",
 						args: {
-							_: ["command", "subcommand"],
 							"experimental-versions": true,
 							"x-versions": true,
 							"experimental-gradual-rollouts": true,
@@ -241,8 +259,9 @@ describe("metrics", () => {
 							experimentalGradualRollouts: true,
 							experimentalVersions: true,
 							default: false,
-							$0: "wrangler",
-							positional: "positional",
+							array: ["<REDACTED>", "<REDACTED>"],
+							number: 42,
+							positional: "<REDACTED>",
 						},
 					},
 				};
@@ -260,11 +279,17 @@ describe("metrics", () => {
 						isFirstUsage: false,
 						isCI: false,
 						isNonInteractive: false,
-						argsUsed: ["positional", "xgradualrollouts", "xversions"],
-						argsCombination: "positional, xgradualrollouts, xversions",
+						argsUsed: [
+							"array",
+							"number",
+							"positional",
+							"xgradualrollouts",
+							"xversions",
+						],
+						argsCombination:
+							"array, number, positional, xgradualrollouts, xversions",
 						command: "wrangler command subcommand",
 						args: {
-							_: ["command", "subcommand"],
 							"experimental-versions": true,
 							"x-versions": true,
 							"experimental-gradual-rollouts": true,
@@ -272,8 +297,9 @@ describe("metrics", () => {
 							experimentalGradualRollouts: true,
 							experimentalVersions: true,
 							default: false,
-							$0: "wrangler",
-							positional: "positional",
+							array: ["<REDACTED>", "<REDACTED>"],
+							number: 42,
+							positional: "<REDACTED>",
 						},
 						durationMs: 0,
 						durationSeconds: 0,
@@ -313,11 +339,17 @@ describe("metrics", () => {
 						isFirstUsage: false,
 						isCI: false,
 						isNonInteractive: false,
-						argsUsed: ["positional", "xgradualrollouts", "xversions"],
-						argsCombination: "positional, xgradualrollouts, xversions",
+						argsUsed: [
+							"array",
+							"number",
+							"positional",
+							"xgradualrollouts",
+							"xversions",
+						],
+						argsCombination:
+							"array, number, positional, xgradualrollouts, xversions",
 						command: "wrangler command subcommand",
 						args: {
-							_: ["command", "subcommand"],
 							"experimental-versions": true,
 							"x-versions": true,
 							"experimental-gradual-rollouts": true,
@@ -325,8 +357,9 @@ describe("metrics", () => {
 							experimentalGradualRollouts: true,
 							experimentalVersions: true,
 							default: false,
-							$0: "wrangler",
-							positional: "error",
+							array: ["<REDACTED>", "<REDACTED>"],
+							number: 42,
+							positional: "<REDACTED>",
 						},
 					},
 				};
@@ -345,11 +378,17 @@ describe("metrics", () => {
 						isFirstUsage: false,
 						isCI: false,
 						isNonInteractive: false,
-						argsUsed: ["positional", "xgradualrollouts", "xversions"],
-						argsCombination: "positional, xgradualrollouts, xversions",
+						argsUsed: [
+							"array",
+							"number",
+							"positional",
+							"xgradualrollouts",
+							"xversions",
+						],
+						argsCombination:
+							"array, number, positional, xgradualrollouts, xversions",
 						command: "wrangler command subcommand",
 						args: {
-							_: ["command", "subcommand"],
 							"experimental-versions": true,
 							"x-versions": true,
 							"experimental-gradual-rollouts": true,
@@ -357,8 +396,9 @@ describe("metrics", () => {
 							experimentalGradualRollouts: true,
 							experimentalVersions: true,
 							default: false,
-							$0: "wrangler",
-							positional: "error",
+							array: ["<REDACTED>", "<REDACTED>"],
+							number: 42,
+							positional: "<REDACTED>",
 						},
 						durationMs: 0,
 						durationSeconds: 0,
@@ -464,6 +504,29 @@ describe("metrics", () => {
 					expect(requests.count).toBe(0);
 					const { permission } = readMetricsConfig();
 					expect(permission?.bannerLastShown).toBeUndefined();
+				});
+			});
+		});
+
+		describe("redactArgValues()", () => {
+			it("should redact sensitive values", () => {
+				const args = {
+					default: false,
+					array: ["beep", "boop"],
+					secretArray: ["beep", "boop"],
+					number: 42,
+					string: "secret",
+					secretString: "secret",
+				};
+
+				const redacted = redactArgValues(args, ["string", "array"]);
+				expect(redacted).toMatchObject({
+					default: false,
+					array: ["beep", "boop"],
+					secretArray: ["<REDACTED>", "<REDACTED>"],
+					number: 42,
+					string: "secret",
+					secretString: "<REDACTED>",
 				});
 			});
 		});
