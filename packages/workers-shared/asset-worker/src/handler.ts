@@ -19,8 +19,8 @@ export const handleRequest = async (
 	const { pathname, search } = new URL(request.url);
 
 	let decodedPathname = decodePath(pathname);
-	// normalize the path
-	decodedPathname = decodedPathname.replaceAll('//', '/');
+	// normalize the path; remove multiple slashes which could lead to same-schema redirects
+	decodedPathname = decodedPathname.replace(/\/+/g, "/");
 
 	const intent = await getIntent(decodedPathname, configuration, exists);
 
@@ -44,9 +44,7 @@ export const handleRequest = async (
 	 * Thus we need to redirect if that is different from the decoded version.
 	 * We combine this with other redirects (e.g. for html_handling) to avoid multiple redirects.
 	 */
-	if (encodedDestination !== pathname || intent.redirect) {
-		console.log(encodedDestination, pathname);
-
+	if ((encodedDestination !== pathname && intent.asset) || intent.redirect) {
 		return new TemporaryRedirectResponse(encodedDestination + search);
 	}
 
@@ -642,8 +640,6 @@ const safeRedirect = async (
 	if (skip) {
 		return null;
 	}
-
-	console.log(file, destination, configuration);
 
 	if (!(await exists(destination))) {
 		const intent = await getIntent(destination, configuration, exists, true);
