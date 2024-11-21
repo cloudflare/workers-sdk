@@ -64,7 +64,7 @@ import "./versions/secrets/list";
 import "./versions/secrets/put";
 import "./workflows";
 import "./user/commands";
-import { defineAlias, demandSingleValue } from "./core";
+import { demandSingleValue } from "./core";
 import { logBuildFailure, logger, LOGGER_LEVELS } from "./logger";
 import { mTlsCertificateCommands } from "./mtls-certificate/cli";
 import { writeOutput } from "./output";
