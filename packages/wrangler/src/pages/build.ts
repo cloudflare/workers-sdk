@@ -8,7 +8,7 @@ import path, {
 	resolve as resolvePath,
 } from "node:path";
 import { createUploadWorkerBundleContents } from "../api/pages/create-worker-bundle-contents";
-import { readConfig } from "../config";
+import { findWranglerConfig, readConfig } from "../config";
 import { shouldCheckFetch } from "../deployment-bundle/bundle";
 import { writeAdditionalModules } from "../deployment-bundle/find-additional-modules";
 import { validateNodeCompatMode } from "../deployment-bundle/node-compat";
@@ -353,9 +353,9 @@ async function maybeReadPagesConfig(
 	if (!args.projectDirectory || !args.buildMetadataPath) {
 		return;
 	}
-	const configPath = path.resolve(args.projectDirectory, "wrangler.toml");
+	const configPath = findWranglerConfig(args.projectDirectory);
 	// Fail early if the config file doesn't exist
-	if (!existsSync(configPath)) {
+	if (!configPath || !existsSync(configPath)) {
 		return undefined;
 	}
 	try {

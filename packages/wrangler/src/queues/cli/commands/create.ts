@@ -73,7 +73,7 @@ export async function handler(
 						],
 					},
 				},
-				config.parsedFormat
+				config.configPath
 			)}
 			Configure your Worker to consume messages from this queue:
 
@@ -87,7 +87,7 @@ export async function handler(
 						],
 					},
 				},
-				config.parsedFormat
+				config.configPath
 			)}`);
 	} catch (e) {
 		handleFetchError(e as { code?: number });

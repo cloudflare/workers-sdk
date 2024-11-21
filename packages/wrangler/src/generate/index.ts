@@ -148,11 +148,11 @@ export async function generateHandler(args: GenerateArgs) {
  * - workers
  * |
  * | - worker
- * | | - wrangler.toml
+ * | | - wrangler.toml/wrangler.json
  * | | ...
  * |
  * | - worker-1
- * | | - wrangler.toml
+ * | | - wrangler.toml/wrangler.json
  * | | ...
  * ```
  *

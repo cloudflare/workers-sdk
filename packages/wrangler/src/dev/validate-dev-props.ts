@@ -1,3 +1,4 @@
+import { configFileName } from "../config";
 import { UserError } from "../errors";
 import type { Config } from "../config";
 import type { DevProps } from "./dev";
@@ -21,13 +22,13 @@ export function validateDevProps(props: Omit<DevProps, "host">) {
 
 	if (props.bindings.text_blobs && props.entry.format === "modules") {
 		throw new UserError(
-			"You cannot configure [text_blobs] with an ES module worker. Instead, import the file directly in your code, and optionally configure `[rules]` in your wrangler.toml"
+			`You cannot configure [text_blobs] with an ES module worker. Instead, import the file directly in your code, and optionally configure \`[rules]\` in your ${configFileName(props.rawConfig.configPath)} file`
 		);
 	}
 
 	if (props.bindings.data_blobs && props.entry.format === "modules") {
 		throw new UserError(
-			"You cannot configure [data_blobs] with an ES module worker. Instead, import the file directly in your code, and optionally configure `[rules]` in your wrangler.toml"
+			`You cannot configure [data_blobs] with an ES module worker. Instead, import the file directly in your code, and optionally configure \`[rules]\` in your ${configFileName(props.rawConfig.configPath)} file`
 		);
 	}
 }

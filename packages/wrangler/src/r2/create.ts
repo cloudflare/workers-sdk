@@ -74,7 +74,7 @@ export async function Handler(args: HandlerOptions) {
 
 		Configure your Worker to write objects to this bucket:
 
-		${formatConfigSnippet({ r2_buckets: [{ bucket_name: args.name, binding: getValidBindingName(args.name, "r2") }] }, config.parsedFormat)}`);
+		${formatConfigSnippet({ r2_buckets: [{ bucket_name: args.name, binding: getValidBindingName(args.name, "r2") }] }, config.configPath)}`);
 
 	await metrics.sendMetricsEvent("create r2 bucket", {
 		sendMetrics: config.send_metrics,

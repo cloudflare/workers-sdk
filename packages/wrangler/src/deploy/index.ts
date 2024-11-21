@@ -1,7 +1,7 @@
 import assert from "node:assert";
 import path from "node:path";
 import { processAssetsArg, validateAssetsArgsAndConfig } from "../assets";
-import { findWranglerConfig, readConfig } from "../config";
+import { configFileName, findWranglerConfig, readConfig } from "../config";
 import { getEntry } from "../deployment-bundle/entry";
 import { UserError } from "../errors";
 import {
@@ -27,7 +27,7 @@ import type {
 async function standardPricingWarning(config: Config) {
 	if (config.usage_model !== undefined) {
 		logger.warn(
-			"The `usage_model` defined in wrangler.toml is deprecated and no longer used. Visit our developer docs for details: https://developers.cloudflare.com/workers/wrangler/configuration/#usage-model"
+			`The \`usage_model\` defined in your ${configFileName(config.configPath)} file is deprecated and no longer used. Visit our developer docs for details: https://developers.cloudflare.com/workers/wrangler/configuration/#usage-model`
 		);
 	}
 }
@@ -200,7 +200,7 @@ export function deployOptions(yargs: CommonYargsArgv) {
 			})
 			.option("keep-vars", {
 				describe:
-					"Stop wrangler from deleting vars that are not present in the wrangler.toml\nBy default Wrangler will remove all vars and replace them with those found in the wrangler.toml configuration.\nIf your development approach is to modify vars after deployment via the dashboard you may wish to set this flag.",
+					"Stop wrangler from deleting vars that are not present in the Wrangler configuration file\nBy default Wrangler will remove all vars and replace them with those found in the Wrangler configuration.\nIf your development approach is to modify vars after deployment via the dashboard you may wish to set this flag.",
 				default: false,
 				type: "boolean",
 			})
@@ -294,7 +294,7 @@ export async function deployHandler(args: DeployArgs) {
 
 	if (args.latest) {
 		logger.warn(
-			"Using the latest version of the Workers runtime. To silence this warning, please choose a specific version of the runtime with --compatibility-date, or add a compatibility_date to your wrangler.toml.\n"
+			`Using the latest version of the Workers runtime. To silence this warning, please choose a specific version of the runtime with --compatibility-date, or add a compatibility_date to your ${configFileName(config.configPath)} file.`
 		);
 	}
 

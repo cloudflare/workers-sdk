@@ -1,7 +1,7 @@
 import { execSync } from "node:child_process";
 import { deploy } from "../api/pages/deploy";
 import { fetchResult } from "../cfetch";
-import { findWranglerConfig, readConfig } from "../config";
+import { configFileName, findWranglerConfig, readConfig } from "../config";
 import { getConfigCache, saveToConfigCache } from "../config-cache";
 import { prompt, select } from "../dialogs";
 import { FatalError } from "../errors";
@@ -75,7 +75,8 @@ export function Options(yargs: CommonYargsArgv) {
 				description: "Whether to run bundling on `_worker.js` before deploying",
 			},
 			config: {
-				describe: "Pages does not support wrangler.toml",
+				describe:
+					"Pages does not support custom Wrangler configuration file locations",
 				type: "string",
 				hidden: true,
 			},
@@ -100,7 +101,7 @@ export const Handler = async (args: PagesDeployArgs) => {
 
 	if (args.config) {
 		throw new FatalError(
-			"Pages does not support custom paths for the `wrangler.toml` configuration file",
+			"Pages does not support custom paths for the Wrangler configuration file",
 			1
 		);
 	}
@@ -140,7 +141,7 @@ export const Handler = async (args: PagesDeployArgs) => {
 	 */
 	if (configPath && config === undefined) {
 		logger.warn(
-			`Pages now has wrangler.toml support.\n` +
+			`Pages now has ${configFileName(configPath)} support.\n` +
 				`We detected a configuration file at ${configPath} but it is missing the "pages_build_output_dir" field, required by Pages.\n` +
 				`If you would like to use this configuration file to deploy your project, please use "pages_build_output_dir" to specify the directory of static files to upload.\n` +
 				`Ignoring configuration file for now, and proceeding with project deploy.`
@@ -150,7 +151,7 @@ export const Handler = async (args: PagesDeployArgs) => {
 	const directory = args.directory ?? config?.pages_build_output_dir;
 	if (!directory) {
 		throw new FatalError(
-			"Must specify a directory of assets to deploy. Please specify the [<directory>] argument in the `pages deploy` command, or configure `pages_build_output_dir` in your `wrangler.toml` configuration file.",
+			`Must specify a directory of assets to deploy. Please specify the [<directory>] argument in the \`pages deploy\` command, or configure \`pages_build_output_dir\` in your ${configFileName(configPath)} file.`,
 			1
 		);
 	}

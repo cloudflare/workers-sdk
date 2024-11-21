@@ -1,7 +1,7 @@
 import path from "node:path";
 import readline from "node:readline";
 import { fetchResult } from "../../cfetch";
-import { readConfig } from "../../config";
+import { configFileName, readConfig } from "../../config";
 import { UserError } from "../../errors";
 import { getLegacyScriptName } from "../../index";
 import { logger } from "../../logger";
@@ -48,7 +48,7 @@ export async function versionsSecretPutBulkHandler(
 	const scriptName = getLegacyScriptName(args, config);
 	if (!scriptName) {
 		throw new UserError(
-			"Required Worker name missing. Please specify the Worker name in wrangler.toml, or pass it as an argument with `--name <worker-name>`"
+			`Required Worker name missing. Please specify the Worker name in your ${configFileName(config.configPath)} file, or pass it as an argument with \`--name <worker-name>\``
 		);
 	}
 

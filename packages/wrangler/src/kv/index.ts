@@ -163,7 +163,7 @@ defineCommand({
 						},
 					],
 				},
-				config.parsedFormat
+				config.configPath
 			)
 		);
 	},

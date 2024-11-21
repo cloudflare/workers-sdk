@@ -119,7 +119,7 @@ async function resolveDevConfig(
 		origin: {
 			secure:
 				input.dev?.origin?.secure ?? config.dev.upstream_protocol === "https",
-			hostname: host ?? getInferredHost(routes),
+			hostname: host ?? getInferredHost(routes, config.configPath),
 		},
 		liveReload: input.dev?.liveReload || false,
 		testScheduled: input.dev?.testScheduled,
@@ -253,6 +253,7 @@ async function resolveConfig(
 
 	const resolved = {
 		name: getScriptName({ name: input.name, env: input.env }, config),
+		config: config.configPath,
 		compatibilityDate: getDevCompatibilityDate(config, input.compatibilityDate),
 		compatibilityFlags: input.compatibilityFlags ?? config.compatibility_flags,
 		entrypoint: entry.file,

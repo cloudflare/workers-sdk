@@ -8,7 +8,11 @@ import {
 	convertCfWorkerInitBindingstoBindings,
 	extractBindingsOfType,
 } from "./api/startDevWorker/utils";
-import { findWranglerConfig } from "./config";
+import {
+	configFileName,
+	findWranglerConfig,
+	formatConfigSnippet,
+} from "./config";
 import { defineCommand } from "./core";
 import { validateRoutes } from "./deploy/deploy";
 import { validateNodeCompatMode } from "./deployment-bundle/node-compat";
@@ -828,7 +832,10 @@ export async function getHostAndRoutes(
 	return { host, routes };
 }
 
-export function getInferredHost(routes: Route[] | undefined) {
+export function getInferredHost(
+	routes: Route[] | undefined,
+	configPath: string | undefined
+) {
 	if (routes?.length) {
 		const firstRoute = routes[0];
 		const host = getHostFromRoute(firstRoute);
@@ -838,11 +845,17 @@ export function getInferredHost(routes: Route[] | undefined) {
 			throw new UserError(
 				`Cannot infer host from first route: ${JSON.stringify(
 					firstRoute
-				)}.\nYou can explicitly set the \`dev.host\` configuration in your wrangler.toml file, for example:
+				)}.\nYou can explicitly set the \`dev.host\` configuration in your ${configFileName(configPath)} file, for example:
 
 	\`\`\`
-	[dev]
-	host = "example.com"
+	${formatConfigSnippet(
+		{
+			dev: {
+				host: "example.com",
+			},
+		},
+		configPath
+	)}
 	\`\`\`
 `
 			);
@@ -892,7 +905,7 @@ export function getBindings(
 				// TODO: This error has to be a _lot_ better, ideally just asking
 				// to create a preview namespace for the user automatically
 				throw new UserError(
-					`In development, you should use a separate kv namespace than the one you'd use in production. Please create a new kv namespace with "wrangler kv:namespace create <name> --preview" and add its id as preview_id to the kv_namespace "${binding}" in your wrangler.toml`
+					`In development, you should use a separate kv namespace than the one you'd use in production. Please create a new kv namespace with "wrangler kv:namespace create <name> --preview" and add its id as preview_id to the kv_namespace "${binding}" in your ${configFileName(configParam.configPath)} file`
 				); // Ugh, I really don't like this message very much
 			}
 			return {
@@ -921,7 +934,7 @@ export function getBindings(
 		// if you have a preview_database_id, we'll use it, but we shouldn't force people to use it.
 		if (!d1Db.preview_database_id && !process.env.NO_D1_WARNING) {
 			logger.log(
-				`--------------------\n💡 Recommendation: for development, use a preview D1 database rather than the one you'd use in production.\n💡 Create a new D1 database with "wrangler d1 create <name>" and add its id as preview_database_id to the d1_database "${d1Db.binding}" in your wrangler.toml\n--------------------\n`
+				`--------------------\n💡 Recommendation: for development, use a preview D1 database rather than the one you'd use in production.\n💡 Create a new D1 database with "wrangler d1 create <name>" and add its id as preview_database_id to the d1_database "${d1Db.binding}" in your ${configFileName(configParam.configPath)} file\n--------------------\n`
 			);
 		}
 		return { ...d1Db, database_id };
@@ -937,7 +950,7 @@ export function getBindings(
 				// same copy-on-write TODO
 				if (!preview_bucket_name && !local) {
 					throw new UserError(
-						`In development, you should use a separate r2 bucket than the one you'd use in production. Please create a new r2 bucket with "wrangler r2 bucket create <name>" and add its name as preview_bucket_name to the r2_buckets "${binding}" in your wrangler.toml`
+						`In development, you should use a separate r2 bucket than the one you'd use in production. Please create a new r2 bucket with "wrangler r2 bucket create <name>" and add its name as preview_bucket_name to the r2_buckets "${binding}" in your ${configFileName(configParam.configPath)} file`
 					);
 				}
 				return {

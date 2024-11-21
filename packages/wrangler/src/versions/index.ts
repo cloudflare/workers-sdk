@@ -1,7 +1,7 @@
 import assert from "node:assert";
 import path from "node:path";
 import { processAssetsArg, validateAssetsArgsAndConfig } from "../assets";
-import { findWranglerConfig, readConfig } from "../config";
+import { configFileName, findWranglerConfig, readConfig } from "../config";
 import { getEntry } from "../deployment-bundle/entry";
 import { UserError } from "../errors";
 import {
@@ -31,7 +31,7 @@ import type {
 async function standardPricingWarning(config: Config) {
 	if (config.usage_model !== undefined) {
 		logger.warn(
-			"The `usage_model` defined in wrangler.toml is deprecated and no longer used. Visit our developer docs for details: https://developers.cloudflare.com/workers/wrangler/configuration/#usage-model"
+			`The \`usage_model\` defined in your ${configFileName(config.configPath)} file is deprecated and no longer used. Visit our developer docs for details: https://developers.cloudflare.com/workers/wrangler/configuration/#usage-model`
 		);
 	}
 }
@@ -247,7 +247,7 @@ async function versionsUploadHandler(
 
 	if (args.latest) {
 		logger.warn(
-			"Using the latest version of the Workers runtime. To silence this warning, please choose a specific version of the runtime with --compatibility-date, or add a compatibility_date to your wrangler.toml.\n"
+			`Using the latest version of the Workers runtime. To silence this warning, please choose a specific version of the runtime with --compatibility-date, or add a compatibility_date to your ${configFileName(config.configPath)} file.\n`
 		);
 	}
 

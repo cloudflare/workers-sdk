@@ -1,5 +1,5 @@
 ---
-"wrangler": patch
+"wrangler": minor
 ---
 
 Turn on `wrangler.json(c)` support by default

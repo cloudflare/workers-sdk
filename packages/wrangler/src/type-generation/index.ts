@@ -97,7 +97,12 @@ export async function typesHandler(
 			}
 		);
 
-		logRuntimeTypesMessage(outFile, tsconfigTypes, mode !== null);
+		logRuntimeTypesMessage(
+			outFile,
+			tsconfigTypes,
+			mode !== null,
+			config.configPath
+		);
 	}
 
 	const secrets = getVarsForDev(

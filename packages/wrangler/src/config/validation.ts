@@ -30,7 +30,7 @@ import {
 	validateRequiredProperty,
 	validateTypedArray,
 } from "./validation-helpers";
-import { formatConfigSnippet, friendlyBindingNames } from ".";
+import { configFileName, formatConfigSnippet, friendlyBindingNames } from ".";
 import type { CfWorkerInit } from "../deployment-bundle/worker";
 import type { Config, DevConfig, RawConfig, RawDevConfig } from "./config";
 import type {
@@ -73,8 +73,7 @@ export function isPagesConfig(rawConfig: RawConfig): boolean {
 export function normalizeAndValidateConfig(
 	rawConfig: RawConfig,
 	configPath: string | undefined,
-	args: NormalizeAndValidateConfigArgs,
-	parsedFormat: Config["parsedFormat"] = "toml"
+	args: NormalizeAndValidateConfigArgs
 ): {
 	config: Config;
 	diagnostics: Diagnostics;
@@ -174,12 +173,7 @@ export function normalizeAndValidateConfig(
 		diagnostics,
 		configPath,
 		rawConfig,
-		isDispatchNamespace,
-		"top level",
-		undefined,
-		undefined,
-		undefined,
-		parsedFormat
+		isDispatchNamespace
 	);
 
 	//TODO: find a better way to define the type of Args that can be passed to the normalizeAndValidateConfig()
@@ -217,8 +211,7 @@ export function normalizeAndValidateConfig(
 				envName,
 				topLevelEnv,
 				isLegacyEnv,
-				rawConfig,
-				parsedFormat
+				rawConfig
 			);
 			diagnostics.addChild(envDiagnostics);
 		} else if (!isPagesConfig(rawConfig)) {
@@ -230,8 +223,7 @@ export function normalizeAndValidateConfig(
 				envName,
 				topLevelEnv,
 				isLegacyEnv,
-				rawConfig,
-				parsedFormat
+				rawConfig
 			);
 			const envNames = rawConfig.env
 				? `The available configured environment names are: ${JSON.stringify(
@@ -242,7 +234,7 @@ export function normalizeAndValidateConfig(
 				`No environment found in configuration with name "${envName}".\n` +
 				`Before using \`--env=${envName}\` there should be an equivalent environment section in the configuration.\n` +
 				`${envNames}\n` +
-				`Consider adding an environment configuration section to the wrangler.toml file:\n` +
+				`Consider adding an environment configuration section to the ${configFileName(configPath)} file:\n` +
 				"```\n[env." +
 				envName +
 				"]\n```\n";
@@ -250,7 +242,7 @@ export function normalizeAndValidateConfig(
 			if (envNames.length > 0) {
 				diagnostics.errors.push(message);
 			} else {
-				// Only warn (rather than error) if there are not actually any environments configured in wrangler.toml.
+				// Only warn (rather than error) if there are not actually any environments configured in the Wrangler configuration file.
 				diagnostics.warnings.push(message);
 			}
 		}
@@ -392,7 +384,7 @@ function normalizeAndValidateBuild(
 			// - `watch_dir` only matters when `command` is defined, so we apply
 			// a default only when `command` is defined
 			// - `configPath` will always be defined since `build` can only
-			// be configured in `wrangler.toml`, but who knows, that may
+			// be configured in the Wrangler configuration file, but who knows, that may
 			// change in the future, so we do a check anyway
 			command && configPath
 				? Array.isArray(watch_dir)
@@ -1035,8 +1027,40 @@ const validateTailConsumers: ValidatorFn = (diagnostics, field, value) => {
 };
 
 /**
+ * Validate top-level environment configuration and return the normalized values.
+ */
+function normalizeAndValidateEnvironment(
+	diagnostics: Diagnostics,
+	configPath: string | undefined,
+	topLevelEnv: RawEnvironment,
+	isDispatchNamespace: boolean
+): Environment;
+/**
  * Validate the named environment configuration and return the normalized values.
  */
+function normalizeAndValidateEnvironment(
+	diagnostics: Diagnostics,
+	configPath: string | undefined,
+	rawEnv: RawEnvironment,
+	isDispatchNamespace: boolean,
+	envName: string,
+	topLevelEnv: Environment,
+	isLegacyEnv: boolean,
+	rawConfig: RawConfig
+): Environment;
+/**
+ * Validate the named environment configuration and return the normalized values.
+ */
+function normalizeAndValidateEnvironment(
+	diagnostics: Diagnostics,
+	configPath: string | undefined,
+	rawEnv: RawEnvironment,
+	isDispatchNamespace: boolean,
+	envName?: string,
+	topLevelEnv?: Environment,
+	isLegacyEnv?: boolean,
+	rawConfig?: RawConfig
+): Environment;
 function normalizeAndValidateEnvironment(
 	diagnostics: Diagnostics,
 	configPath: string | undefined,
@@ -1045,8 +1069,7 @@ function normalizeAndValidateEnvironment(
 	envName = "top level",
 	topLevelEnv?: Environment | undefined,
 	isLegacyEnv?: boolean,
-	rawConfig?: RawConfig | undefined,
-	parsedFormat?: Config["parsedFormat"]
+	rawConfig?: RawConfig | undefined
 ): Environment {
 	deprecated(
 		diagnostics,
@@ -1152,7 +1175,8 @@ function normalizeAndValidateEnvironment(
 			topLevelEnv,
 			rawEnv,
 			deprecatedUpload?.rules,
-			envName
+			envName,
+			configPath
 		),
 		name: inheritableInLegacyEnvironments(
 			diagnostics,
@@ -1533,7 +1557,12 @@ function normalizeAndValidateEnvironment(
 		),
 	};
 
-	warnIfDurableObjectsHaveNoMigrations(diagnostics, environment, parsedFormat);
+	warnIfDurableObjectsHaveNoMigrations(
+		diagnostics,
+		environment.durable_objects,
+		environment.migrations,
+		configPath
+	);
 
 	return environment;
 }
@@ -1566,13 +1595,14 @@ const validateAndNormalizeRules = (
 	topLevelEnv: Environment | undefined,
 	rawEnv: RawEnvironment,
 	deprecatedRules: Rule[] | undefined,
-	envName: string
+	envName: string,
+	configPath: string | undefined
 ): Rule[] => {
 	if (topLevelEnv === undefined) {
 		// Only create errors/warnings for the top-level environment
 		if (rawEnv.rules && deprecatedRules) {
 			diagnostics.errors.push(
-				`You cannot configure both [rules] and [build.upload.rules] in your wrangler.toml. Delete the \`build.upload\` section.`
+				`You cannot configure both [rules] and [build.upload.rules] in your ${configFileName(configPath)}. Delete the \`build.upload\` section.`
 			);
 		} else if (deprecatedRules) {
 			diagnostics.warnings.push(
@@ -3404,18 +3434,19 @@ const validateObservability: ValidatorFn = (diagnostics, field, value) => {
 
 function warnIfDurableObjectsHaveNoMigrations(
 	diagnostics: Diagnostics,
-	config: Environment,
-	parsedFormat: Config["parsedFormat"]
+	durableObjects: Config["durable_objects"],
+	migrations: Config["migrations"],
+	configPath: string | undefined
 ) {
 	if (
-		Array.isArray(config.durable_objects.bindings) &&
-		config.durable_objects.bindings.length > 0
+		Array.isArray(durableObjects.bindings) &&
+		durableObjects.bindings.length > 0
 	) {
 		// intrinsic [durable_objects] implies [migrations]
-		const exportedDurableObjects = (
-			config.durable_objects.bindings || []
-		).filter((binding) => !binding.script_name);
-		if (exportedDurableObjects.length > 0 && config.migrations.length === 0) {
+		const exportedDurableObjects = (durableObjects.bindings || []).filter(
+			(binding) => !binding.script_name
+		);
+		if (exportedDurableObjects.length > 0 && migrations.length === 0) {
 			if (
 				!exportedDurableObjects.some(
 					(exportedDurableObject) =>
@@ -3427,14 +3458,14 @@ function warnIfDurableObjectsHaveNoMigrations(
 				);
 
 				diagnostics.warnings.push(dedent`
-				In wrangler.toml, you have configured [durable_objects] exported by this Worker (${durableObjectClassnames.join(", ")}), but no [migrations] for them. This may not work as expected until you add a [migrations] section to your wrangler.toml. Add this configuration to your wrangler.toml:
+				In your ${configFileName(configPath)} file, you have configured \`durable_objects\` exported by this Worker (${durableObjectClassnames.join(", ")}), but no \`migrations\` for them. This may not work as expected until you add a \`migrations\` section to your ${configFileName(configPath)} file. Add the following configuration:
 
 				\`\`\`
 				${formatConfigSnippet(
 					{
 						migrations: [{ tag: "v1", new_classes: durableObjectClassnames }],
 					},
-					parsedFormat
+					configPath
 				)}
 				\`\`\`
 

@@ -13,7 +13,6 @@ import type { CfWorkerInit } from "../deployment-bundle/worker";
 import type { WorkerRegistry } from "../dev-registry";
 import type { CommonYargsOptions } from "../yargs-types";
 import type { Config, OnlyCamelCase, RawConfig } from "./config";
-import type { RawEnvironment } from "./environment";
 import type { NormalizeAndValidateConfigArgs } from "./validation";
 
 export type {
@@ -29,15 +28,40 @@ export type {
 	RawEnvironment,
 } from "./environment";
 
-export function formatConfigSnippet(
-	config: RawEnvironment,
-	parsedFormat: Config["parsedFormat"],
-	spacing = true
-) {
-	if (parsedFormat === "jsonc") {
-		return spacing ? JSON.stringify(config, null, 2) : JSON.stringify(config);
+function configFormat(
+	configPath: string | undefined
+): "jsonc" | "toml" | "none" {
+	if (configPath?.endsWith("toml")) {
+		return "toml";
+	} else if (configPath?.endsWith("json") || configPath?.endsWith("jsonc")) {
+		return "jsonc";
+	}
+	return "none";
+}
+
+export function configFileName(configPath: string | undefined) {
+	const format = configFormat(configPath);
+	if (format === "toml") {
+		return "wrangler.toml";
+	} else if (format === "jsonc") {
+		return "wrangler.json";
 	} else {
-		return TOML.stringify(config as TOML.JsonMap);
+		return "Wrangler configuration";
+	}
+}
+
+export function formatConfigSnippet(
+	snippet: RawConfig,
+	configPath: Config["configPath"],
+	formatted = true
+) {
+	const format = configFormat(configPath);
+	if (format === "toml") {
+		return TOML.stringify(snippet as TOML.JsonMap);
+	} else {
+		return formatted
+			? JSON.stringify(snippet, null, 2)
+			: JSON.stringify(snippet);
 	}
 }
 
@@ -66,7 +90,6 @@ export function readConfig(
 	requirePagesConfig?: boolean,
 	hideWarnings: boolean = false
 ): Config {
-	let parsedFormat: Config["parsedFormat"] = "jsonc";
 	let rawConfig: RawConfig = {};
 
 	if (!configPath) {
@@ -76,10 +99,8 @@ export function readConfig(
 	try {
 		// Load the configuration from disk if available
 		if (configPath?.endsWith("toml")) {
-			parsedFormat = "toml";
 			rawConfig = parseTOML(readFileSync(configPath), configPath);
 		} else if (configPath?.endsWith("json") || configPath?.endsWith("jsonc")) {
-			parsedFormat = "jsonc";
 			rawConfig = parseJSONC(readFileSync(configPath), configPath);
 		}
 	} catch (e) {
@@ -89,7 +110,7 @@ export function readConfig(
 		if (requirePagesConfig) {
 			logger.error(e);
 			throw new FatalError(
-				"Your wrangler.toml is not a valid Pages config file",
+				`Your ${configFileName(configPath)} file is not a valid Pages config file`,
 				EXIT_CODE_INVALID_PAGES_CONFIG
 			);
 		} else {
@@ -102,15 +123,12 @@ export function readConfig(
 	 *
 	 * The `pages_build_output_dir` config key is used to determine if the
 	 * configuration file belongs to a Workers or Pages project. This key
-	 * should always be set for Pages but never for Workers. Furthermore,
-	 * Pages projects currently have support for `wrangler.toml` only,
-	 * so we should error if `wrangler.json` || `wrangler.jsonc` is detected
-	 * in a Pages project
+	 * should always be set for Pages but never for Workers.
 	 */
 	const isPagesConfigFile = isPagesConfig(rawConfig);
 	if (!isPagesConfigFile && requirePagesConfig) {
 		throw new FatalError(
-			"Your wrangler.toml is not a valid Pages config file",
+			`Your ${configFileName(configPath)} file is not a valid Pages config file`,
 			EXIT_CODE_INVALID_PAGES_CONFIG
 		);
 	}
@@ -120,8 +138,7 @@ export function readConfig(
 	const { config, diagnostics } = normalizeAndValidateConfig(
 		rawConfig,
 		configPath,
-		args,
-		parsedFormat
+		args
 	);
 
 	if (diagnostics.hasWarnings() && !hideWarnings) {
@@ -151,7 +168,6 @@ export function readConfig(
 	}
 
 	applyPythonConfig(config, args);
-	config.parsedFormat = parsedFormat;
 
 	return config;
 }

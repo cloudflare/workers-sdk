@@ -31,7 +31,7 @@ export type GetPlatformProxyOptions = {
 	/**
 	 * The path to the config file to use.
 	 * If no path is specified the default behavior is to search from the
-	 * current directory up the filesystem for a `wrangler.toml` to use.
+	 * current directory up the filesystem for a Wrangler configuration file to use.
 	 *
 	 * Note: this field is optional but if a path is specified it must
 	 *       point to a valid file on the filesystem
@@ -81,7 +81,7 @@ export type PlatformProxy<
 };
 
 /**
- * By reading from a `wrangler.toml` file this function generates proxy objects that can be
+ * By reading from a Wrangler configuration file this function generates proxy objects that can be
  * used to simulate the interaction with the Cloudflare platform during local development
  * in a Node.js environment
  *

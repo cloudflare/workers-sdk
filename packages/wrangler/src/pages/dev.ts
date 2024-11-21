@@ -4,7 +4,7 @@ import { dirname, join, normalize, resolve } from "node:path";
 import { watch } from "chokidar";
 import * as esbuild from "esbuild";
 import { unstable_dev } from "../api";
-import { readConfig } from "../config";
+import { configFileName, readConfig } from "../config";
 import { isBuildFailure } from "../deployment-bundle/build-failures";
 import { shouldCheckFetch } from "../deployment-bundle/bundle";
 import { esbuildAliasExternalPlugin } from "../deployment-bundle/esbuild-plugins/alias-external";
@@ -225,7 +225,7 @@ export function Options(yargs: CommonYargsArgv) {
 			},
 			config: {
 				describe:
-					"Pages does not support custom paths for the wrangler.toml configuration file",
+					"Pages does not support custom paths for the Wrangler configuration file",
 				type: "string",
 				hidden: true,
 			},
@@ -283,7 +283,7 @@ export const Handler = async (args: PagesDevArguments) => {
 
 	if (args.config) {
 		throw new FatalError(
-			"Pages does not support custom paths for the `wrangler.toml` configuration file",
+			"Pages does not support custom paths for the Wrangler configuration file",
 			1
 		);
 	}
@@ -1026,7 +1026,7 @@ async function spawnProxyProcess({
 
 		CLEANUP();
 		throw new FatalError(
-			"Must specify a directory of static assets to serve, or a command to run, or a proxy port, or configure `pages_build_output_dir` in `wrangler.toml`.",
+			`Must specify a directory of static assets to serve, or a command to run, or a proxy port, or configure \`pages_build_output_dir\` in your Wrangler configuration file.`,
 			1
 		);
 	}
@@ -1104,7 +1104,7 @@ function resolvePagesDevServerSettings(
 		const currentDate = new Date().toISOString().substring(0, 10);
 		logger.warn(
 			`No compatibility_date was specified. Using today's date: ${currentDate}.\n` +
-				`❯❯ Add one to your wrangler.toml file: compatibility_date = "${currentDate}", or\n` +
+				`❯❯ Add one to your ${configFileName(config.configPath)} file: compatibility_date = "${currentDate}", or\n` +
 				`❯❯ Pass it in your terminal: wrangler pages dev [<DIRECTORY>] --compatibility-date=${currentDate}\n\n` +
 				"See https://developers.cloudflare.com/workers/platform/compatibility-dates/ for more information."
 		);
