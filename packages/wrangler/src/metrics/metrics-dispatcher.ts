@@ -21,6 +21,7 @@ export function getMetricsDispatcher(options: MetricsConfigOptions) {
 	// The SPARROW_SOURCE_KEY will be provided at build time through esbuild's `define` option
 	// No events will be sent if the env `SPARROW_SOURCE_KEY` is not provided and the value will be set to an empty string instead.
 	const SPARROW_SOURCE_KEY = process.env.SPARROW_SOURCE_KEY ?? "";
+	const requests: Array<Promise<void>> = [];
 	const wranglerVersion = getWranglerVersion();
 	const platform = getPlatform();
 	const packageManager = getPackageManager();
@@ -87,6 +88,10 @@ export function getMetricsDispatcher(options: MetricsConfigOptions) {
 				},
 			});
 		},
+
+		get requests() {
+			return requests;
+		},
 	};
 
 	async function dispatch(event: {
@@ -122,7 +127,7 @@ export function getMetricsDispatcher(options: MetricsConfigOptions) {
 
 		// Do not await this fetch call.
 		// Just fire-and-forget, otherwise we might slow down the rest of Wrangler.
-		fetch(`${SPARROW_URL}/api/v1/event`, {
+		const request = fetch(`${SPARROW_URL}/api/v1/event`, {
 			method: "POST",
 			headers: {
 				Accept: "*/*",
@@ -132,12 +137,16 @@ export function getMetricsDispatcher(options: MetricsConfigOptions) {
 			mode: "cors",
 			keepalive: true,
 			body: JSON.stringify(body),
-		}).catch((e) => {
-			logger.debug(
-				"Metrics dispatcher: Failed to send request:",
-				(e as Error).message
-			);
-		});
+		})
+			.then(() => {})
+			.catch((e) => {
+				logger.debug(
+					"Metrics dispatcher: Failed to send request:",
+					(e as Error).message
+				);
+			});
+
+		requests.push(request);
 	}
 
 	function printMetricsBanner() {

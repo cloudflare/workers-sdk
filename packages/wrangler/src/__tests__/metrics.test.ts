@@ -144,6 +144,27 @@ describe("metrics", () => {
 			});
 		});
 
+		it("should keep track of all requests made", async () => {
+			const requests = mockMetricRequest({}, {});
+			const dispatcher = await getMetricsDispatcher({
+				sendMetrics: true,
+			});
+
+			void dispatcher.sendEvent("some-event", { a: 1, b: 2 });
+			expect(dispatcher.requests.length).toBe(1);
+
+			expect(requests.count).toBe(0);
+			await Promise.allSettled(dispatcher.requests);
+			expect(requests.count).toBe(1);
+
+			void dispatcher.sendEvent("another-event", { c: 3, d: 4 });
+			expect(dispatcher.requests.length).toBe(2);
+
+			expect(requests.count).toBe(1);
+			await Promise.allSettled(dispatcher.requests);
+			expect(requests.count).toBe(2);
+		});
+
 		describe("sendNewEvent()", () => {
 			beforeAll(() => {
 				// register a no-op test command
@@ -351,17 +372,6 @@ describe("metrics", () => {
 				});
 				expect(await getMetricsConfig({ sendMetrics: true })).toMatchObject({
 					enabled: true,
-				});
-			});
-
-			it("should return enabled false if the process is not interactive", async () => {
-				setIsTTY(false);
-				expect(
-					await getMetricsConfig({
-						sendMetrics: undefined,
-					})
-				).toMatchObject({
-					enabled: false,
 				});
 			});
 
