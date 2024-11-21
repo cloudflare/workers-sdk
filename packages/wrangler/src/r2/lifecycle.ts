@@ -1,11 +1,9 @@
-import { readConfig } from "../config";
 import { defineCommand, defineNamespace } from "../core";
 import { confirm, multiselect, prompt } from "../dialogs";
 import { UserError } from "../errors";
 import isInteractive from "../is-interactive";
 import { logger } from "../logger";
 import { readFileSync } from "../parse";
-import { printWranglerBanner } from "../update-check";
 import { requireAuth } from "../user";
 import formatLabelledValues from "../utils/render-labelled-values";
 import {
@@ -16,10 +14,6 @@ import {
 	putLifecycleRules,
 	tableFromLifecycleRulesResponse,
 } from "./helpers";
-import type {
-	CommonYargsArgv,
-	StrictYargsOptionsToInterface,
-} from "../yargs-types";
 import type { LifecycleRule } from "./helpers";
 
 defineNamespace({
@@ -376,77 +370,81 @@ defineCommand({
 	},
 });
 
-export function SetOptions(yargs: CommonYargsArgv) {
-	return yargs
-		.positional("bucket", {
+defineCommand({
+	command: "wrangler r2 bucket lifecycle set",
+	metadata: {
+		description:
+			"Set the lifecycle configuration for an R2 bucket from a JSON file",
+		status: "stable",
+		owner: "Product: R2",
+	},
+	positionalArgs: ["bucket"],
+	args: {
+		bucket: {
 			describe: "The name of the R2 bucket to set lifecycle configuration for",
 			type: "string",
 			demandOption: true,
-		})
-		.option("file", {
+		},
+		file: {
 			describe: "Path to the JSON file containing lifecycle configuration",
 			type: "string",
 			demandOption: true,
 			requiresArg: true,
-		})
-		.option("jurisdiction", {
+		},
+		jurisdiction: {
 			describe: "The jurisdiction where the bucket exists",
 			alias: "J",
 			requiresArg: true,
 			type: "string",
-		})
-		.option("force", {
+		},
+		force: {
 			describe: "Skip confirmation",
 			type: "boolean",
 			alias: "y",
 			default: false,
-		});
-}
+		},
+	},
+	async handler(args, { config }) {
+		const accountId = await requireAuth(config);
 
-export async function SetHandler(
-	args: StrictYargsOptionsToInterface<typeof SetOptions>
-) {
-	await printWranglerBanner();
-	const config = readConfig(args.config, args);
-	const accountId = await requireAuth(config);
+		const { bucket, file, jurisdiction, force } = args;
+		let lifecyclePolicy: { rules: LifecycleRule[] };
+		try {
+			lifecyclePolicy = JSON.parse(readFileSync(file));
+		} catch (e) {
+			if (e instanceof Error) {
+				throw new UserError(
+					`Failed to read or parse the lifecycle configuration config file: '${e.message}'`
+				);
+			} else {
+				throw e;
+			}
+		}
 
-	const { bucket, file, jurisdiction, force } = args;
-	let lifecyclePolicy: { rules: LifecycleRule[] };
-	try {
-		lifecyclePolicy = JSON.parse(readFileSync(file));
-	} catch (e) {
-		if (e instanceof Error) {
+		if (!lifecyclePolicy.rules || !Array.isArray(lifecyclePolicy.rules)) {
 			throw new UserError(
-				`Failed to read or parse the lifecycle configuration config file: '${e.message}'`
+				"The lifecycle configuration file must contain a 'rules' array."
 			);
-		} else {
-			throw e;
 		}
-	}
 
-	if (!lifecyclePolicy.rules || !Array.isArray(lifecyclePolicy.rules)) {
-		throw new UserError(
-			"The lifecycle configuration file must contain a 'rules' array."
-		);
-	}
-
-	if (!force) {
-		const confirmedRemoval = await confirm(
-			`Are you sure you want to overwrite all existing lifecycle rules for bucket '${bucket}'?`
-		);
-		if (!confirmedRemoval) {
-			logger.log("Set cancelled.");
-			return;
+		if (!force) {
+			const confirmedRemoval = await confirm(
+				`Are you sure you want to overwrite all existing lifecycle rules for bucket '${bucket}'?`
+			);
+			if (!confirmedRemoval) {
+				logger.log("Set cancelled.");
+				return;
+			}
 		}
-	}
-	logger.log(
-		`Setting lifecycle configuration (${lifecyclePolicy.rules.length} rules) for bucket '${bucket}'...`
-	);
-	await putLifecycleRules(
-		accountId,
-		bucket,
-		lifecyclePolicy.rules,
-		jurisdiction
-	);
-	logger.log(`✨ Set lifecycle configuration for bucket '${bucket}'.`);
-}
+		logger.log(
+			`Setting lifecycle configuration (${lifecyclePolicy.rules.length} rules) for bucket '${bucket}'...`
+		);
+		await putLifecycleRules(
+			accountId,
+			bucket,
+			lifecyclePolicy.rules,
+			jurisdiction
+		);
+		logger.log(`✨ Set lifecycle configuration for bucket '${bucket}'.`);
+	},
+});
