@@ -174,7 +174,7 @@ export interface StartDevWorkerInput {
 
 export type StartDevWorkerOptions = Omit<StartDevWorkerInput, "assets"> & {
 	/** A worker's directory. Usually where the wrangler.toml file is located */
-	directory: string;
+	projectRoot: string;
 	build: StartDevWorkerInput["build"] & {
 		nodejsCompatMode: NodeJSCompatMode;
 		format: CfScriptFormat;

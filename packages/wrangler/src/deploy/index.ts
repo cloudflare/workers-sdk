@@ -329,7 +329,7 @@ export async function deployHandler(args: DeployArgs) {
 		await verifyWorkerMatchesCITag(
 			accountId,
 			name,
-			path.relative(entry.directory, config.configPath ?? "wrangler.toml")
+			path.relative(entry.projectRoot, config.configPath ?? "wrangler.toml")
 		);
 	}
 	const { sourceMapSize, versionId, workerTag, targets } = await deploy({

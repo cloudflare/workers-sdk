@@ -193,7 +193,7 @@ export function runBuild(
 			// Check whether we need to watch a Python requirements.txt file.
 			const watchPythonRequirements =
 				getBundleType(entry.format, entry.file) === "python"
-					? path.resolve(entry.directory, "requirements.txt")
+					? path.resolve(entry.projectRoot, "requirements.txt")
 					: undefined;
 
 			if (watchPythonRequirements) {
