@@ -1,5 +1,30 @@
 # @cloudflare/vitest-pool-workers
 
+## 0.5.30
+
+### Patch Changes
+
+- Updated dependencies [[`97acf07`](https://github.com/cloudflare/workers-sdk/commit/97acf07b3e09192b71e81a722029d026a7198b8b), [`1b80dec`](https://github.com/cloudflare/workers-sdk/commit/1b80decfaf56c8782e49dad685c344288629b668), [`563439b`](https://github.com/cloudflare/workers-sdk/commit/563439bd02c450921b28d721d36be5a70897690d), [`a30c805`](https://github.com/cloudflare/workers-sdk/commit/a30c8056621f44063082a81d06f10e723844059f), [`fa21312`](https://github.com/cloudflare/workers-sdk/commit/fa21312c6625680709e05547c13897bc1fa8c9d3)]:
+  - wrangler@3.89.0
+  - miniflare@3.20241106.1
+
+## 0.5.29
+
+### Patch Changes
+
+- [#7278](https://github.com/cloudflare/workers-sdk/pull/7278) [`6508ea2`](https://github.com/cloudflare/workers-sdk/commit/6508ea21c396beff8a2de987eaf335bb46bdd89c) Thanks [@andyjessop](https://github.com/andyjessop)! - fix: ensures Vitest Pool Workers doesn't error when using nodejs_compat_v2 flag
+
+- Updated dependencies [[`b6cbfbd`](https://github.com/cloudflare/workers-sdk/commit/b6cbfbdd10dfbb732ec12a5c69bd4a74b07de8a0), [`edec415`](https://github.com/cloudflare/workers-sdk/commit/edec41591dcf37262d459568c0f454820b90dbaa), [`941d411`](https://github.com/cloudflare/workers-sdk/commit/941d4110ca84510d235b72b3f98692e4188a7ad4), [`e2e6912`](https://github.com/cloudflare/workers-sdk/commit/e2e6912bcb7a1f6b7f8081b889a4e08be8a740a1), [`09e6e90`](https://github.com/cloudflare/workers-sdk/commit/09e6e905d9825d33b8e90acabb8ff7b962cc908b), [`b4a0e74`](https://github.com/cloudflare/workers-sdk/commit/b4a0e74680440084342477fc9373f9f76ab91c0b)]:
+  - wrangler@3.88.0
+  - miniflare@3.20241106.0
+
+## 0.5.28
+
+### Patch Changes
+
+- Updated dependencies [[`c12c0fe`](https://github.com/cloudflare/workers-sdk/commit/c12c0fed888421215c15af9755f895bcfd635d8c), [`4814455`](https://github.com/cloudflare/workers-sdk/commit/481445571735978b6af036254a82b3b9ca73f161), [`beed72e`](https://github.com/cloudflare/workers-sdk/commit/beed72e7f3611c06ba777cd3a253a03a6eca2a17), [`94f07ee`](https://github.com/cloudflare/workers-sdk/commit/94f07eec15bf48ab4792b9b39e960c5c92fbf517), [`837f2f5`](https://github.com/cloudflare/workers-sdk/commit/837f2f569bb300b93acc6fd22d96f11e468fa552), [`c46e02d`](https://github.com/cloudflare/workers-sdk/commit/c46e02dfd7e951ccd8d33db87c00c3772c085487)]:
+  - wrangler@3.87.0
+
 ## 0.5.27
 
 ### Patch Changes

@@ -267,14 +267,14 @@ async function versionsUploadHandler(
 		await verifyWorkerMatchesCITag(
 			accountId,
 			name,
-			path.relative(entry.directory, config.configPath ?? "wrangler.toml")
+			path.relative(entry.projectRoot, config.configPath ?? "wrangler.toml")
 		);
 	}
 
 	if (!args.dryRun) {
 		await standardPricingWarning(config);
 	}
-	const { versionId, workerTag } = await versionsUpload({
+	const { versionId, workerTag, versionPreviewUrl } = await versionsUpload({
 		config,
 		accountId,
 		name,
@@ -313,6 +313,7 @@ async function versionsUploadHandler(
 		worker_name: name ?? null,
 		worker_tag: workerTag,
 		version_id: versionId,
+		preview_url: versionPreviewUrl,
 	});
 }
 

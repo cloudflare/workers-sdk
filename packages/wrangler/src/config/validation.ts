@@ -24,6 +24,7 @@ import {
 	isValidName,
 	notInheritable,
 	validateAdditionalProperties,
+	validateAtLeastOnePropertyRequired,
 	validateOptionalProperty,
 	validateOptionalTypedArray,
 	validateRequiredProperty,
@@ -3341,14 +3342,22 @@ const validateObservability: ValidatorFn = (diagnostics, field, value) => {
 	const val = value as Observability;
 	let isValid = true;
 
+	/**
+	 * One of observability.enabled or observability.logs.enabled must be defined
+	 */
 	isValid =
-		validateRequiredProperty(
-			diagnostics,
-			field,
-			"enabled",
-			val.enabled,
-			"boolean"
-		) && isValid;
+		validateAtLeastOnePropertyRequired(diagnostics, field, [
+			{
+				key: "enabled",
+				value: val.enabled,
+				type: "boolean",
+			},
+			{
+				key: "logs.enabled",
+				value: val.logs?.enabled,
+				type: "boolean",
+			},
+		]) && isValid;
 
 	isValid =
 		validateOptionalProperty(
@@ -3360,10 +3369,54 @@ const validateObservability: ValidatorFn = (diagnostics, field, value) => {
 		) && isValid;
 
 	isValid =
+		validateOptionalProperty(diagnostics, field, "logs", val.logs, "object") &&
+		isValid;
+
+	isValid =
 		validateAdditionalProperties(diagnostics, field, Object.keys(val), [
 			"enabled",
 			"head_sampling_rate",
+			"logs",
 		]) && isValid;
+
+	/**
+	 * Validate the optional nested logs configuration
+	 */
+	if (typeof val.logs === "object") {
+		isValid =
+			validateOptionalProperty(
+				diagnostics,
+				field,
+				"logs.enabled",
+				val.logs.enabled,
+				"boolean"
+			) && isValid;
+
+		isValid =
+			validateOptionalProperty(
+				diagnostics,
+				field,
+				"logs.head_sampling_rate",
+				val.logs.head_sampling_rate,
+				"number"
+			) && isValid;
+
+		isValid =
+			validateOptionalProperty(
+				diagnostics,
+				field,
+				"logs.invocation_logs",
+				val.logs.invocation_logs,
+				"boolean"
+			) && isValid;
+
+		isValid =
+			validateAdditionalProperties(diagnostics, field, Object.keys(val.logs), [
+				"enabled",
+				"head_sampling_rate",
+				"invocation_logs",
+			]) && isValid;
+	}
 
 	const samplingRate = val?.head_sampling_rate;
 

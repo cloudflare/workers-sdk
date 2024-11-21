@@ -29,7 +29,11 @@ import {
 	mockOAuthFlow,
 } from "./helpers/mock-oauth-flow";
 import { mockUploadWorkerRequest } from "./helpers/mock-upload-worker";
-import { mockSubDomainRequest } from "./helpers/mock-workers-subdomain";
+import {
+	mockGetWorkerSubdomain,
+	mockSubDomainRequest,
+	mockUpdateWorkerSubdomain,
+} from "./helpers/mock-workers-subdomain";
 import {
 	createFetchResult,
 	msw,
@@ -94,9 +98,9 @@ describe("deploy", () => {
 			routes: ["example.com/some-route/*"],
 			workers_dev: true,
 		});
-		mockSubDomainRequest();
 		mockUploadWorkerRequest();
-		mockUpdateWorkerRequest({ enabled: false });
+		mockSubDomainRequest();
+		mockGetWorkerSubdomain({ enabled: true });
 		mockPublishRoutesRequest({ routes: ["example.com/some-route/*"] });
 
 		await runWrangler("deploy ./index.js");
@@ -150,9 +154,10 @@ describe("deploy", () => {
 			scriptName: "test-name",
 			script: { id: "test-name", tag: "abc123" },
 		});
-		mockSubDomainRequest();
 		mockUploadWorkerRequest();
-		mockUpdateWorkerRequest({ enabled: false });
+		mockSubDomainRequest();
+		mockGetWorkerSubdomain({ enabled: false });
+		mockUpdateWorkerSubdomain({ enabled: true });
 		mockPublishRoutesRequest({ routes: ["example.com/some-route/*"] });
 
 		await runWrangler("deploy ./index.js");
@@ -995,7 +1000,7 @@ describe("deploy", () => {
 				routes: ["example.com/some-route/*"],
 			});
 			writeWorkerSource();
-			mockUpdateWorkerRequest({ enabled: false });
+			mockUpdateWorkerSubdomain({ enabled: false });
 			mockUploadWorkerRequest({ expectedType: "esm" });
 			mockPublishRoutesRequest({ routes: ["example.com/some-route/*"] });
 			await runWrangler("deploy ./index");
@@ -1006,7 +1011,7 @@ describe("deploy", () => {
 				route: "",
 			});
 			writeWorkerSource();
-			mockUpdateWorkerRequest({ enabled: false });
+			mockUpdateWorkerSubdomain({ enabled: false });
 			mockUploadWorkerRequest({ expectedType: "esm" });
 			mockSubDomainRequest();
 			mockPublishRoutesRequest({ routes: [] });
@@ -1045,7 +1050,7 @@ describe("deploy", () => {
 				],
 			});
 			writeWorkerSource();
-			mockUpdateWorkerRequest({ enabled: false });
+			mockUpdateWorkerSubdomain({ enabled: false });
 			mockUploadWorkerRequest({ expectedType: "esm" });
 			mockPublishRoutesRequest({
 				routes: [
@@ -1091,8 +1096,8 @@ describe("deploy", () => {
 				],
 			});
 			writeWorkerSource();
-			mockUpdateWorkerRequest({ enabled: false });
-			mockUploadWorkerRequest({ available_on_subdomain: false });
+			mockUploadWorkerRequest();
+			mockGetWorkerSubdomain({ enabled: false });
 			mockGetZones("owned-zone.com", [{ id: "owned-zone-id-1" }]);
 			mockGetWorkerRoutes("owned-zone-id-1");
 			mockPublishRoutesRequest({
@@ -1131,8 +1136,8 @@ describe("deploy", () => {
 				],
 			});
 			writeWorkerSource();
-			mockUpdateWorkerRequest({ enabled: false });
-			mockUploadWorkerRequest({ available_on_subdomain: false });
+			mockUploadWorkerRequest();
+			mockGetWorkerSubdomain({ enabled: false });
 			mockGetZones("owned-zone.com", [{ id: "owned-zone-id-1" }]);
 			mockGetWorkerRoutes("owned-zone-id-1");
 			mockPublishRoutesRequest({
@@ -1179,7 +1184,7 @@ describe("deploy", () => {
 			});
 			mockSubDomainRequest();
 			writeWorkerSource();
-			mockUpdateWorkerRequest({
+			mockUpdateWorkerSubdomain({
 				enabled: false,
 				env: "staging",
 				legacyEnv: false,
@@ -1240,7 +1245,11 @@ describe("deploy", () => {
 				},
 			});
 			writeWorkerSource();
-			mockUpdateWorkerRequest({ enabled: false, legacyEnv: true, env: "dev" });
+			mockUpdateWorkerSubdomain({
+				enabled: false,
+				legacyEnv: true,
+				env: "dev",
+			});
 			mockUploadWorkerRequest({
 				expectedType: "esm",
 				legacyEnv: true,
@@ -1264,7 +1273,7 @@ describe("deploy", () => {
 				},
 			});
 			writeWorkerSource();
-			mockUpdateWorkerRequest({ enabled: false, env: "dev" });
+			mockUpdateWorkerSubdomain({ enabled: false, env: "dev" });
 			mockUploadWorkerRequest({
 				expectedType: "esm",
 				env: "dev",
@@ -1281,7 +1290,7 @@ describe("deploy", () => {
 				routes: ["example.com/some-route/*"],
 			});
 			writeWorkerSource();
-			mockUpdateWorkerRequest({ enabled: false });
+			mockUpdateWorkerSubdomain({ enabled: false });
 			mockUploadWorkerRequest({ expectedType: "esm" });
 			// Simulate the bulk-routes API failing with a not authorized error.
 			mockUnauthorizedPublishRoutesRequest();
@@ -1333,7 +1342,7 @@ describe("deploy", () => {
 				legacy_env: false,
 			});
 			writeWorkerSource();
-			mockUpdateWorkerRequest({ env: "staging", enabled: false });
+			mockUpdateWorkerSubdomain({ env: "staging", enabled: false });
 			mockUploadWorkerRequest({ env: "staging", expectedType: "esm" });
 			// Simulate the bulk-routes API failing with a not authorized error.
 			mockUnauthorizedPublishRoutesRequest({ env: "staging" });
@@ -1362,7 +1371,7 @@ describe("deploy", () => {
 					routes: [{ pattern: "api.example.com", custom_domain: true }],
 				});
 				writeWorkerSource();
-				mockUpdateWorkerRequest({ enabled: false });
+				mockUpdateWorkerSubdomain({ enabled: false });
 				mockUploadWorkerRequest({ expectedType: "esm" });
 				mockCustomDomainsChangesetRequest({});
 				mockPublishCustomDomainsRequest({
@@ -1382,7 +1391,7 @@ describe("deploy", () => {
 					routes: [{ pattern: "api.example.com", custom_domain: true }],
 				});
 				writeWorkerSource();
-				mockUpdateWorkerRequest({ enabled: false });
+				mockUpdateWorkerSubdomain({ enabled: false });
 				mockUploadWorkerRequest({ expectedType: "esm" });
 				mockCustomDomainsChangesetRequest({
 					originConflicts: [
@@ -1427,7 +1436,7 @@ Update them to point to this script instead?`,
 					routes: [{ pattern: "api.example.com", custom_domain: true }],
 				});
 				writeWorkerSource();
-				mockUpdateWorkerRequest({ enabled: false });
+				mockUpdateWorkerSubdomain({ enabled: false });
 				mockUploadWorkerRequest({ expectedType: "esm" });
 				mockCustomDomainsChangesetRequest({
 					dnsRecordConflicts: [
@@ -1464,7 +1473,7 @@ Update them to point to this script instead?`,
 					routes: [{ pattern: "api.example.com", custom_domain: true }],
 				});
 				writeWorkerSource();
-				mockUpdateWorkerRequest({ enabled: false });
+				mockUpdateWorkerSubdomain({ enabled: false });
 				mockUploadWorkerRequest({ expectedType: "esm" });
 				mockCustomDomainsChangesetRequest({
 					originConflicts: [
@@ -1556,7 +1565,7 @@ Update them to point to this script instead?`,
 					routes: [{ pattern: "api.example.com", custom_domain: true }],
 				});
 				writeWorkerSource();
-				mockUpdateWorkerRequest({ enabled: false });
+				mockUpdateWorkerSubdomain({ enabled: false });
 				mockUploadWorkerRequest({ expectedType: "esm" });
 				mockCustomDomainsChangesetRequest({
 					originConflicts: [
@@ -4976,7 +4985,9 @@ addEventListener('fetch', event => {});`
 			writeWranglerToml();
 			writeWorkerSource();
 			mockUploadWorkerRequest();
+			mockGetWorkerSubdomain({ enabled: false });
 			mockSubDomainRequest();
+			mockUpdateWorkerSubdomain({ enabled: true });
 
 			await runWrangler("deploy ./index");
 
@@ -4996,9 +5007,10 @@ addEventListener('fetch', event => {});`
 				workers_dev: true,
 			});
 			writeWorkerSource();
-			mockUploadWorkerRequest({ available_on_subdomain: false });
+			mockUploadWorkerRequest();
 			mockSubDomainRequest();
-			mockUpdateWorkerRequest({ enabled: true });
+			mockGetWorkerSubdomain({ enabled: false });
+			mockUpdateWorkerSubdomain({ enabled: true });
 
 			await runWrangler("deploy ./index");
 
@@ -5018,7 +5030,8 @@ addEventListener('fetch', event => {});`
 				workers_dev: true,
 			});
 			writeWorkerSource();
-			mockUploadWorkerRequest({ available_on_subdomain: true });
+			mockUploadWorkerRequest();
+			mockGetWorkerSubdomain({ enabled: true });
 			mockSubDomainRequest();
 
 			await runWrangler("deploy ./index");
@@ -5040,7 +5053,8 @@ addEventListener('fetch', event => {});`
 			});
 			writeWorkerSource();
 			mockUploadWorkerRequest();
-			mockUpdateWorkerRequest({ enabled: false });
+			mockGetWorkerSubdomain({ enabled: true });
+			mockUpdateWorkerSubdomain({ enabled: false });
 
 			await runWrangler("deploy ./index");
 
@@ -5059,8 +5073,8 @@ addEventListener('fetch', event => {});`
 				workers_dev: false,
 			});
 			writeWorkerSource();
-			mockSubDomainRequest("test-sub-domain", false);
-			mockUploadWorkerRequest({ available_on_subdomain: false });
+			mockUploadWorkerRequest();
+			mockGetWorkerSubdomain({ enabled: false });
 
 			// note the lack of a mock for the subdomain disable request
 
@@ -5089,7 +5103,8 @@ addEventListener('fetch', event => {});`
 				env: "dev",
 				useOldUploadApi: true,
 			});
-			mockUpdateWorkerRequest({ enabled: false, env: "dev" });
+			mockGetWorkerSubdomain({ enabled: true, env: "dev" });
+			mockUpdateWorkerSubdomain({ enabled: false, env: "dev" });
 
 			await runWrangler("deploy ./index --env dev --legacy-env false");
 
@@ -5116,7 +5131,8 @@ addEventListener('fetch', event => {});`
 			mockUploadWorkerRequest({
 				env: "dev",
 			});
-			mockUpdateWorkerRequest({ enabled: false, env: "dev" });
+			mockGetWorkerSubdomain({ enabled: true, env: "dev" });
+			mockUpdateWorkerSubdomain({ enabled: false, env: "dev" });
 
 			await runWrangler("deploy ./index --env dev --legacy-env false");
 
@@ -5143,8 +5159,9 @@ addEventListener('fetch', event => {});`
 				env: "dev",
 				useOldUploadApi: true,
 			});
+			mockGetWorkerSubdomain({ enabled: false, env: "dev" });
 			mockSubDomainRequest();
-			mockUpdateWorkerRequest({ enabled: true, env: "dev" });
+			mockUpdateWorkerSubdomain({ enabled: true, env: "dev" });
 
 			await runWrangler("deploy ./index --env dev --legacy-env false");
 
@@ -5173,8 +5190,9 @@ addEventListener('fetch', event => {});`
 				env: "dev",
 				useOldUploadApi: true,
 			});
+			mockGetWorkerSubdomain({ enabled: false, env: "dev" });
 			mockSubDomainRequest();
-			mockUpdateWorkerRequest({ enabled: true, env: "dev" });
+			mockUpdateWorkerSubdomain({ enabled: true, env: "dev" });
 
 			await runWrangler("deploy ./index --env dev --legacy-env false");
 
@@ -5205,7 +5223,7 @@ addEventListener('fetch', event => {});`
 				useOldUploadApi: true,
 			});
 			mockSubDomainRequest();
-			mockUpdateWorkerRequest({ enabled: true, env: "dev" });
+			mockGetWorkerSubdomain({ enabled: true, env: "dev" });
 
 			await runWrangler("deploy ./index --env dev --legacy-env false");
 
@@ -5238,8 +5256,8 @@ addEventListener('fetch', event => {});`
 				expectedCompatibilityFlags: ["global_navigator"],
 				useOldUploadApi: true,
 			});
+			mockGetWorkerSubdomain({ enabled: true, env: "dev" });
 			mockSubDomainRequest();
-			mockUpdateWorkerRequest({ enabled: true, env: "dev" });
 
 			await runWrangler("deploy ./index --env dev --legacy-env false");
 
@@ -5271,8 +5289,8 @@ addEventListener('fetch', event => {});`
 				expectedCompatibilityDate: "2022-01-14",
 				expectedCompatibilityFlags: ["url_standard"],
 			});
+			mockGetWorkerSubdomain({ enabled: true, env: "dev" });
 			mockSubDomainRequest();
-			mockUpdateWorkerRequest({ enabled: true, env: "dev" });
 
 			await runWrangler(
 				"deploy ./index --env dev --legacy-env false --compatibility-date 2022-01-14 --compatibility-flags url_standard"
@@ -5334,9 +5352,10 @@ addEventListener('fetch', event => {});`
 		it("should enable the workers.dev domain if workers_dev is undefined and subdomain is not already available", async () => {
 			writeWranglerToml();
 			writeWorkerSource();
-			mockUploadWorkerRequest({ available_on_subdomain: false });
+			mockUploadWorkerRequest();
+			mockGetWorkerSubdomain({ enabled: false });
 			mockSubDomainRequest();
-			mockUpdateWorkerRequest({ enabled: true });
+			mockUpdateWorkerSubdomain({ enabled: true });
 
 			await runWrangler("deploy ./index");
 
@@ -5354,9 +5373,10 @@ addEventListener('fetch', event => {});`
 		it("should enable the workers.dev domain if workers_dev is true and subdomain is not already available", async () => {
 			writeWranglerToml({ workers_dev: true });
 			writeWorkerSource();
-			mockUploadWorkerRequest({ available_on_subdomain: false });
+			mockUploadWorkerRequest();
+			mockGetWorkerSubdomain({ enabled: false });
 			mockSubDomainRequest();
-			mockUpdateWorkerRequest({ enabled: true });
+			mockUpdateWorkerSubdomain({ enabled: true });
 
 			await runWrangler("deploy ./index");
 
@@ -5374,7 +5394,8 @@ addEventListener('fetch', event => {});`
 		it("should fail to deploy to the workers.dev domain if email is unverified", async () => {
 			writeWranglerToml({ workers_dev: true });
 			writeWorkerSource();
-			mockUploadWorkerRequest({ available_on_subdomain: false });
+			mockUploadWorkerRequest();
+			mockGetWorkerSubdomain({ enabled: false });
 			mockSubDomainRequest();
 			msw.use(
 				http.post(
@@ -5410,6 +5431,7 @@ addEventListener('fetch', event => {});`
 			});
 			writeWorkerSource();
 			mockUploadWorkerRequest();
+			mockGetWorkerSubdomain({ enabled: false });
 			mockSubDomainRequest("does-not-exist", false);
 
 			mockConfirm({
@@ -5429,11 +5451,11 @@ addEventListener('fetch', event => {});`
 				routes: ["http://example.com/*"],
 			});
 			writeWorkerSource();
-			mockSubDomainRequest();
 			mockUploadWorkerRequest();
-			mockUpdateWorkerRequest({
-				enabled: false,
-			});
+			mockGetWorkerSubdomain({ enabled: false });
+			// no set-subdomain call
+			mockGetZones("example.com", [{ id: "example-id" }]);
+			mockGetWorkerRoutes("example-id");
 			mockPublishRoutesRequest({ routes: ["http://example.com/*"] });
 			await runWrangler("deploy index.js");
 
@@ -5459,13 +5481,14 @@ addEventListener('fetch', event => {});`
 				},
 			});
 			writeWorkerSource();
-			mockSubDomainRequest();
 			mockUploadWorkerRequest({ env: "production", legacyEnv: true });
-			mockUpdateWorkerRequest({
+			mockGetWorkerSubdomain({
 				enabled: false,
 				env: "production",
 				legacyEnv: true,
 			});
+			mockGetZones("production.example.com", [{ id: "example-id" }]);
+			mockGetWorkerRoutes("example-id");
 			mockPublishRoutesRequest({
 				routes: ["http://production.example.com/*"],
 				env: "production",
@@ -5496,11 +5519,13 @@ addEventListener('fetch', event => {});`
 			writeWorkerSource();
 			mockSubDomainRequest();
 			mockUploadWorkerRequest({ env: "production", legacyEnv: true });
-			mockUpdateWorkerRequest({
+			mockGetWorkerSubdomain({
 				enabled: false,
 				env: "production",
 				legacyEnv: true,
 			});
+			mockGetZones("production.example.com", [{ id: "example-id" }]);
+			mockGetWorkerRoutes("example-id");
 			mockPublishRoutesRequest({
 				routes: ["http://production.example.com/*"],
 				env: "production",
@@ -5528,8 +5553,11 @@ addEventListener('fetch', event => {});`
 			writeWorkerSource();
 			mockSubDomainRequest();
 			mockUploadWorkerRequest();
-			mockUpdateWorkerRequest({
+			mockGetWorkerSubdomain({
 				enabled: false,
+			});
+			mockUpdateWorkerSubdomain({
+				enabled: true,
 			});
 			mockPublishRoutesRequest({
 				routes: ["http://example.com/*"],
@@ -5561,8 +5589,13 @@ addEventListener('fetch', event => {});`
 			writeWorkerSource();
 			mockSubDomainRequest();
 			mockUploadWorkerRequest({ env: "production", legacyEnv: true });
-			mockUpdateWorkerRequest({
+			mockGetWorkerSubdomain({
 				enabled: false,
+				env: "production",
+				legacyEnv: true,
+			});
+			mockUpdateWorkerSubdomain({
+				enabled: true,
 				env: "production",
 				legacyEnv: true,
 			});
@@ -5598,8 +5631,13 @@ addEventListener('fetch', event => {});`
 			writeWorkerSource();
 			mockSubDomainRequest();
 			mockUploadWorkerRequest({ env: "production", legacyEnv: true });
-			mockUpdateWorkerRequest({
+			mockGetWorkerSubdomain({
 				enabled: false,
+				env: "production",
+				legacyEnv: true,
+			});
+			mockUpdateWorkerSubdomain({
+				enabled: true,
 				env: "production",
 				legacyEnv: true,
 			});
@@ -5635,11 +5673,13 @@ addEventListener('fetch', event => {});`
 			writeWorkerSource();
 			mockSubDomainRequest();
 			mockUploadWorkerRequest({ env: "production", legacyEnv: true });
-			mockUpdateWorkerRequest({
+			mockGetWorkerSubdomain({
 				enabled: false,
 				env: "production",
 				legacyEnv: true,
 			});
+			mockGetZones("production.example.com", [{ id: "example-id" }]);
+			mockGetWorkerRoutes("example-id");
 			mockPublishRoutesRequest({
 				routes: ["http://production.example.com/*"],
 				env: "production",
@@ -5671,11 +5711,13 @@ addEventListener('fetch', event => {});`
 			writeWorkerSource();
 			mockSubDomainRequest();
 			mockUploadWorkerRequest({ env: "production", legacyEnv: true });
-			mockUpdateWorkerRequest({
+			mockGetWorkerSubdomain({
 				enabled: false,
 				env: "production",
 				legacyEnv: true,
 			});
+			mockGetZones("production.example.com", [{ id: "example-id" }]);
+			mockGetWorkerRoutes("example-id");
 			mockPublishRoutesRequest({
 				routes: ["http://production.example.com/*"],
 				env: "production",
@@ -11378,6 +11420,43 @@ export default{
 			`);
 		});
 
+		it("should allow uploading workers with nested observability logs setting", async () => {
+			writeWranglerToml({
+				observability: {
+					enabled: true,
+					head_sampling_rate: 0.5,
+					logs: {
+						enabled: true,
+						head_sampling_rate: 0.3,
+						invocation_logs: false,
+					},
+				},
+			});
+			await fs.promises.writeFile("index.js", `export default {};`);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedObservability: {
+					enabled: true,
+					head_sampling_rate: 0.5,
+					logs: {
+						enabled: true,
+						head_sampling_rate: 0.3,
+						invocation_logs: false,
+					},
+				},
+			});
+
+			await runWrangler("publish index.js");
+			expect(std.out).toMatchInlineSnapshot(`
+				"Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
+		});
+
 		it("should disable observability if not explicitly defined", async () => {
 			writeWranglerToml({});
 			await fs.promises.writeFile("index.js", `export default {};`);
@@ -11493,40 +11572,6 @@ function mockDeploymentsListRequest() {
 
 function mockLastDeploymentRequest() {
 	msw.use(...mswSuccessDeploymentScriptMetadata);
-}
-
-/** Create a mock handler to toggle a <script>.<user>.workers.dev subdomain */
-function mockUpdateWorkerRequest({
-	env,
-	enabled,
-	legacyEnv = false,
-}: {
-	enabled: boolean;
-	env?: string | undefined;
-	legacyEnv?: boolean | undefined;
-}) {
-	const requests = { count: 0 };
-	const servicesOrScripts = env && !legacyEnv ? "services" : "scripts";
-	const environment = env && !legacyEnv ? "/environments/:envName" : "";
-	msw.use(
-		http.post(
-			`*/accounts/:accountId/workers/${servicesOrScripts}/:scriptName${environment}/subdomain`,
-			async ({ request, params }) => {
-				expect(params.accountId).toEqual("some-account-id");
-				expect(params.scriptName).toEqual(
-					legacyEnv && env ? `test-name-${env}` : "test-name"
-				);
-				if (!legacyEnv) {
-					expect(params.envName).toEqual(env);
-				}
-				const body = await request.json();
-				expect(body).toEqual({ enabled });
-				return HttpResponse.json(createFetchResult(null));
-			},
-			{ once: true }
-		)
-	);
-	return requests;
 }
 
 function mockPublishRoutesRequest({

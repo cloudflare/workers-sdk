@@ -1,5 +1,77 @@
 # wrangler
 
+## 3.89.0
+
+### Minor Changes
+
+- [#7252](https://github.com/cloudflare/workers-sdk/pull/7252) [`97acf07`](https://github.com/cloudflare/workers-sdk/commit/97acf07b3e09192b71e81a722029d026a7198b8b) Thanks [@Maximo-Guk](https://github.com/Maximo-Guk)! - feat: Add production_branch and deployment_trigger to pages deploy detailed artifact for wrangler-action pages parity
+
+- [#7263](https://github.com/cloudflare/workers-sdk/pull/7263) [`1b80dec`](https://github.com/cloudflare/workers-sdk/commit/1b80decfaf56c8782e49dad685c344288629b668) Thanks [@danielrs](https://github.com/danielrs)! - Fix wrangler pages deployment (list|tail) environment filtering.
+
+### Patch Changes
+
+- [#7314](https://github.com/cloudflare/workers-sdk/pull/7314) [`a30c805`](https://github.com/cloudflare/workers-sdk/commit/a30c8056621f44063082a81d06f10e723844059f) Thanks [@Ankcorn](https://github.com/Ankcorn)! - Fix observability.logs.enabled validation
+
+- [#7285](https://github.com/cloudflare/workers-sdk/pull/7285) [`fa21312`](https://github.com/cloudflare/workers-sdk/commit/fa21312c6625680709e05547c13897bc1fa8c9d3) Thanks [@penalosa](https://github.com/penalosa)! - Rename `directory` to `projectRoot` and ensure it's relative to the `wrangler.toml`. This fixes a regression which meant that `.wrangler` temporary folders were inadvertently generated relative to `process.cwd()` rather than the location of the `wrangler.toml` file. It also renames `directory` to `projectRoot`, which affects the `unstable_startWorker() interface.
+
+- Updated dependencies [[`563439b`](https://github.com/cloudflare/workers-sdk/commit/563439bd02c450921b28d721d36be5a70897690d)]:
+  - miniflare@3.20241106.1
+
+## 3.88.0
+
+### Minor Changes
+
+- [#7173](https://github.com/cloudflare/workers-sdk/pull/7173) [`b6cbfbd`](https://github.com/cloudflare/workers-sdk/commit/b6cbfbdd10dfbb732ec12a5c69bd4a74b07de8a0) Thanks [@Ankcorn](https://github.com/Ankcorn)! - Adds [observability.logs] settings to wrangler. This setting lets developers control the settings for logs as an independent dataset enabling more dataset types in the future. The most specific setting will win if any of the datasets are not enabled.
+
+  It also adds the following setting to the logs config
+
+  - `invocation_logs` - set to false to disable invocation logs. Defaults to true.
+
+  ```toml
+  [observability.logs]
+  enabled = true
+  invocation_logs = false
+  ```
+
+- [#7207](https://github.com/cloudflare/workers-sdk/pull/7207) [`edec415`](https://github.com/cloudflare/workers-sdk/commit/edec41591dcf37262d459568c0f454820b90dbaa) Thanks [@jonesphillip](https://github.com/jonesphillip)! - Added r2 bucket lifecycle command to Wrangler including list, add, remove, set
+
+### Patch Changes
+
+- [#7243](https://github.com/cloudflare/workers-sdk/pull/7243) [`941d411`](https://github.com/cloudflare/workers-sdk/commit/941d4110ca84510d235b72b3f98692e4188a7ad4) Thanks [@penalosa](https://github.com/penalosa)! - Include Version Preview URL in Wrangler's output file
+
+- [#7038](https://github.com/cloudflare/workers-sdk/pull/7038) [`e2e6912`](https://github.com/cloudflare/workers-sdk/commit/e2e6912bcb7a1f6b7f8081b889a4e08be8a740a1) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: only show fetch warning if on old compatibility_date
+
+  Now that we have the `allow_custom_ports` compatibility flag, we only need to show the fetch warnings when that flag is not enabled.
+
+  Fixes https://github.com/cloudflare/workerd/issues/2955
+
+- [#7216](https://github.com/cloudflare/workers-sdk/pull/7216) [`09e6e90`](https://github.com/cloudflare/workers-sdk/commit/09e6e905d9825d33b8e90acabb8ff7b962cc908b) Thanks [@vicb](https://github.com/vicb)! - chore(wrangler): update unenv dependency version
+
+- [#7081](https://github.com/cloudflare/workers-sdk/pull/7081) [`b4a0e74`](https://github.com/cloudflare/workers-sdk/commit/b4a0e74680440084342477fc9373f9f76ab91c0b) Thanks [@penalosa](https://github.com/penalosa)! - Default the file based registry (`--x-registry`) to on. This should improve stability of multi-worker development
+
+- Updated dependencies []:
+  - miniflare@3.20241106.0
+
+## 3.87.0
+
+### Minor Changes
+
+- [#7201](https://github.com/cloudflare/workers-sdk/pull/7201) [`beed72e`](https://github.com/cloudflare/workers-sdk/commit/beed72e7f3611c06ba777cd3a253a03a6eca2a17) Thanks [@GregBrimble](https://github.com/GregBrimble)! - feat: Tail Consumers are now supported for Workers with assets.
+
+  You can now configure `tail_consumers` in conjunction with `assets` in your `wrangler.toml` file. Read more about [Static Assets](https://developers.cloudflare.com/workers/static-assets/) and [Tail Consumers](https://developers.cloudflare.com/workers/observability/logs/tail-workers/) in the documentation.
+
+- [#7212](https://github.com/cloudflare/workers-sdk/pull/7212) [`837f2f5`](https://github.com/cloudflare/workers-sdk/commit/837f2f569bb300b93acc6fd22d96f11e468fa552) Thanks [@jonesphillip](https://github.com/jonesphillip)! - Added r2 bucket info command to Wrangler. Improved formatting of r2 bucket list output
+
+### Patch Changes
+
+- [#7210](https://github.com/cloudflare/workers-sdk/pull/7210) [`c12c0fe`](https://github.com/cloudflare/workers-sdk/commit/c12c0fed888421215c15af9755f895bcfd635d8c) Thanks [@taylorlee](https://github.com/taylorlee)! - Avoid an unnecessary GET request during `wrangler deploy`.
+
+- [#7197](https://github.com/cloudflare/workers-sdk/pull/7197) [`4814455`](https://github.com/cloudflare/workers-sdk/commit/481445571735978b6af036254a82b3b9ca73f161) Thanks [@michelheusschen](https://github.com/michelheusschen)! - fix console output for `wrangler d1 migrations create`
+
+- [#6795](https://github.com/cloudflare/workers-sdk/pull/6795) [`94f07ee`](https://github.com/cloudflare/workers-sdk/commit/94f07eec15bf48ab4792b9b39e960c5c92fbf517) Thanks [@benmccann](https://github.com/benmccann)! - chore: upgrade chokidar to v4
+
+- [#7133](https://github.com/cloudflare/workers-sdk/pull/7133) [`c46e02d`](https://github.com/cloudflare/workers-sdk/commit/c46e02dfd7e951ccd8d33db87c00c3772c085487) Thanks [@gpanders](https://github.com/gpanders)! - Do not emit escape sequences when stdout is not a TTY
+
 ## 3.86.1
 
 ### Patch Changes

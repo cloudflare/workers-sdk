@@ -163,7 +163,9 @@ export async function Handler({
 	}
 
 	const deployments: Array<Deployment> = await fetchResult(
-		`/accounts/${accountId}/pages/projects/${projectName}/deployments`
+		`/accounts/${accountId}/pages/projects/${projectName}/deployments`,
+		{},
+		new URLSearchParams({ env: environment })
 	);
 
 	const envDeployments = deployments.filter(

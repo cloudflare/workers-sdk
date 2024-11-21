@@ -1,5 +1,11 @@
 # create-cloudflare
 
+## 2.32.2
+
+### Patch Changes
+
+- [#6831](https://github.com/cloudflare/workers-sdk/pull/6831) [`0fe018c`](https://github.com/cloudflare/workers-sdk/commit/0fe018c7b85d767de60e9cc88f256f99f17046e3) Thanks [@Cherry](https://github.com/Cherry)! - Adds support for new upcoming bun.lock lockfile
+
 ## 2.32.1
 
 ### Patch Changes

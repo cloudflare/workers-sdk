@@ -454,6 +454,13 @@ ${failureMessage}`,
 		url: deploymentResponse.url,
 		alias,
 		environment: deploymentResponse.environment,
+		production_branch: deploymentResponse.production_branch,
+		deployment_trigger: {
+			metadata: {
+				commit_hash:
+					deploymentResponse.deployment_trigger?.metadata?.commit_hash ?? "",
+			},
+		},
 	});
 
 	await metrics.sendMetricsEvent("create pages deployment");

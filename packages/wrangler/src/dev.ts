@@ -11,6 +11,7 @@ import {
 	extractBindingsOfType,
 } from "./api/startDevWorker/utils";
 import { findWranglerToml } from "./config";
+import { defineCommand } from "./core";
 import { validateRoutes } from "./deploy/deploy";
 import { validateNodeCompatMode } from "./deployment-bundle/node-compat";
 import { devRegistry, getBoundRegisteredWorkers } from "./dev-registry";
@@ -30,7 +31,6 @@ import {
 } from "./utils/collectKeyValues";
 import { mergeWithOverride } from "./utils/mergeWithOverride";
 import { getHostFromRoute } from "./zones";
-import { printWranglerBanner } from "./index";
 import type {
 	AsyncHook,
 	ReloadCompleteEvent,
@@ -48,351 +48,344 @@ import type { WorkerRegistry } from "./dev-registry";
 import type { CfAccount } from "./dev/create-worker-preview";
 import type { LoggerLevel } from "./logger";
 import type { EnablePagesAssetsServiceBindingOptions } from "./miniflare-cli/types";
-import type {
-	CommonYargsArgv,
-	StrictYargsOptionsToInterface,
-} from "./yargs-types";
 import type { watch } from "chokidar";
 import type { Json } from "miniflare";
 
-export function devOptions(yargs: CommonYargsArgv) {
-	return (
-		yargs
-			.positional("script", {
-				describe: "The path to an entry point for your worker",
-				type: "string",
-			})
-			.option("name", {
-				describe: "Name of the worker",
-				type: "string",
-				requiresArg: true,
-			})
-			.option("compatibility-date", {
-				describe: "Date to use for compatibility checks",
-				type: "string",
-				requiresArg: true,
-			})
-			.option("compatibility-flags", {
-				describe: "Flags to use for compatibility checks",
-				alias: "compatibility-flag",
-				type: "string",
-				requiresArg: true,
-				array: true,
-			})
-			.option("latest", {
-				describe: "Use the latest version of the worker runtime",
-				type: "boolean",
-				default: true,
-			})
-			.option("assets", {
-				describe: "Static assets to be served. Replaces Workers Sites.",
-				type: "string",
-				requiresArg: true,
-			})
-			// We want to have a --no-bundle flag, but yargs requires that
-			// we also have a --bundle flag (that it adds the --no to by itself)
-			// So we make a --bundle flag, but hide it, and then add a --no-bundle flag
-			// that's visible to the user but doesn't "do" anything.
-			.option("bundle", {
-				describe: "Run wrangler's compilation step before publishing",
-				type: "boolean",
-				hidden: true,
-			})
-			.option("no-bundle", {
-				describe: "Skip internal build steps and directly deploy script",
-				type: "boolean",
-				default: false,
-			})
-			.option("format", {
-				choices: ["modules", "service-worker"] as const,
-				describe: "Choose an entry type",
-				hidden: true,
-				deprecated: true,
-			})
-			.option("ip", {
-				describe: "IP address to listen on",
-				type: "string",
-			})
-			.option("port", {
-				describe: "Port to listen on",
-				type: "number",
-			})
-			.option("inspector-port", {
-				describe: "Port for devtools to connect to",
-				type: "number",
-			})
-			.option("routes", {
-				describe: "Routes to upload",
-				alias: "route",
-				type: "string",
-				requiresArg: true,
-				array: true,
-			})
-			.option("host", {
-				type: "string",
-				requiresArg: true,
-				describe:
-					"Host to forward requests to, defaults to the zone of project",
-			})
-			.option("local-protocol", {
-				describe: "Protocol to listen to requests on, defaults to http.",
-				choices: ["http", "https"] as const,
-			})
-			.option("https-key-path", {
-				describe: "Path to a custom certificate key",
-				type: "string",
-				requiresArg: true,
-			})
-			.option("https-cert-path", {
-				describe: "Path to a custom certificate",
-				type: "string",
-				requiresArg: true,
-			})
-			.options("local-upstream", {
-				type: "string",
-				describe:
-					"Host to act as origin in local mode, defaults to dev.host or route",
-			})
-			.option("experimental-public", {
-				describe: "(Deprecated) Static assets to be served",
-				type: "string",
-				requiresArg: true,
-				deprecated: true,
-				hidden: true,
-			})
-			.option("legacy-assets", {
-				describe: "Static assets to be served",
-				type: "string",
-				requiresArg: true,
-				deprecated: true,
-				hidden: true,
-			})
-
-			.option("public", {
-				describe: "(Deprecated) Static assets to be served",
-				type: "string",
-				requiresArg: true,
-				deprecated: true,
-				hidden: true,
-			})
-			.option("site", {
-				describe: "Root folder of static assets for Workers Sites",
-				type: "string",
-				requiresArg: true,
-				hidden: true,
-				deprecated: true,
-			})
-			.option("site-include", {
-				describe:
-					"Array of .gitignore-style patterns that match file or directory names from the sites directory. Only matched items will be uploaded.",
-				type: "string",
-				requiresArg: true,
-				array: true,
-				hidden: true,
-				deprecated: true,
-			})
-			.option("site-exclude", {
-				describe:
-					"Array of .gitignore-style patterns that match file or directory names from the sites directory. Matched items will not be uploaded.",
-				type: "string",
-				requiresArg: true,
-				array: true,
-				hidden: true,
-				deprecated: true,
-			})
-			.option("upstream-protocol", {
-				describe: "Protocol to forward requests to host on, defaults to https.",
-				choices: ["http", "https"] as const,
-			})
-			.option("var", {
-				describe:
-					"A key-value pair to be injected into the script as a variable",
-				type: "string",
-				requiresArg: true,
-				array: true,
-			})
-			.option("define", {
-				describe: "A key-value pair to be substituted in the script",
-				type: "string",
-				requiresArg: true,
-				array: true,
-			})
-			.option("alias", {
-				describe: "A module pair to be substituted in the script",
-				type: "string",
-				requiresArg: true,
-				array: true,
-			})
-			.option("jsx-factory", {
-				describe: "The function that is called for each JSX element",
-				type: "string",
-				requiresArg: true,
-			})
-			.option("jsx-fragment", {
-				describe: "The function that is called for each JSX fragment",
-				type: "string",
-				requiresArg: true,
-			})
-			.option("tsconfig", {
-				describe: "Path to a custom tsconfig.json file",
-				type: "string",
-				requiresArg: true,
-			})
-			.option("remote", {
-				alias: "r",
-				describe:
-					"Run on the global Cloudflare network with access to production resources",
-				type: "boolean",
-				default: false,
-			})
-			.option("local", {
-				alias: "l",
-				describe: "Run on my machine",
-				type: "boolean",
-				deprecated: true,
-				hidden: true,
-			})
-			.option("experimental-local", {
-				describe: "Run on my machine using the Cloudflare Workers runtime",
-				type: "boolean",
-				deprecated: true,
-				hidden: true,
-			})
-			.option("minify", {
-				describe: "Minify the script",
-				type: "boolean",
-			})
-			.option("node-compat", {
-				describe: "Enable Node.js compatibility",
-				type: "boolean",
-			})
-			.option("experimental-enable-local-persistence", {
-				describe:
-					"Enable persistence for local mode (deprecated, use --persist)",
-				type: "boolean",
-				deprecated: true,
-				hidden: true,
-			})
-			.option("persist-to", {
-				describe:
-					"Specify directory to use for local persistence (defaults to .wrangler/state)",
-				type: "string",
-				requiresArg: true,
-			})
-			.option("live-reload", {
-				describe:
-					"Auto reload HTML pages when change is detected in local mode",
-				type: "boolean",
-			})
-			.check((argv) => {
-				if (argv["live-reload"] && argv.remote) {
-					throw new UserError(
-						"--live-reload is only supported in local mode. Please just use one of either --remote or --live-reload."
-					);
-				}
-				return true;
-			})
-			.option("inspect", {
-				describe: "Enable dev tools",
-				type: "boolean",
-				deprecated: true,
-				hidden: true,
-			})
-			.option("legacy-env", {
-				type: "boolean",
-				describe: "Use legacy environments",
-				hidden: true,
-			})
-			.option("test-scheduled", {
-				describe: "Test scheduled events by visiting /__scheduled in browser",
-				type: "boolean",
-				default: false,
-			})
-			.option("log-level", {
-				choices: ["debug", "info", "log", "warn", "error", "none"] as const,
-				describe: "Specify logging level",
-				// Yargs requires this to type log-level properly
-				default: "log" as LoggerLevel,
-			})
-			.option("show-interactive-dev-session", {
-				describe:
-					"Show interactive dev session  (defaults to true if the terminal supports interactivity)",
-				type: "boolean",
-			})
-			.option("experimental-dev-env", {
-				alias: ["x-dev-env"],
-				type: "boolean",
-				deprecated: true,
-				hidden: true,
-			})
-			.option("experimental-registry", {
-				alias: ["x-registry"],
-				type: "boolean",
-				describe:
-					"Use the experimental file based dev registry for multi-worker development",
-				default: false,
-			})
-			.option("experimental-vectorize-bind-to-prod", {
-				type: "boolean",
-				describe:
-					"Bind to production Vectorize indexes in local development mode",
-				default: false,
-			})
-	);
-}
-
-type DevArguments = StrictYargsOptionsToInterface<typeof devOptions>;
-
-export async function devHandler(args: DevArguments) {
-	await printWranglerBanner();
-
-	if (args.experimentalDevEnv) {
-		logger.warn(
-			"--x-dev-env is now on by default and will be removed in a future version."
-		);
-	}
-
-	if (isWebContainer()) {
-		logger.error(
-			`Oh no! 😟 You tried to run \`wrangler dev\` in a StackBlitz WebContainer. 🤯
-This is currently not supported 😭, but we think that we'll get it to work soon... hang in there! 🥺`
-		);
-		process.exitCode = 1;
-		return;
-	}
-
-	if (args.remote) {
-		const isLoggedIn = await loginOrRefreshIfRequired();
-		if (!isLoggedIn) {
+const command = defineCommand({
+	command: "wrangler dev",
+	behaviour: {
+		printConfigWarnings: false,
+	},
+	metadata: {
+		description: "👂 Start a local server for developing your Worker",
+		owner: "Workers: Authoring and Testing",
+		status: "stable",
+	},
+	positionalArgs: ["script"],
+	args: {
+		script: {
+			describe: "The path to an entry point for your Worker",
+			type: "string",
+		},
+		name: {
+			describe: "Name of the Worker",
+			type: "string",
+			requiresArg: true,
+		},
+		"compatibility-date": {
+			describe: "Date to use for compatibility checks",
+			type: "string",
+			requiresArg: true,
+		},
+		"compatibility-flags": {
+			describe: "Flags to use for compatibility checks",
+			alias: "compatibility-flag",
+			type: "string",
+			requiresArg: true,
+			array: true,
+		},
+		latest: {
+			describe: "Use the latest version of the Workers runtime",
+			type: "boolean",
+			default: true,
+		},
+		assets: {
+			describe: "Static assets to be served. Replaces Workers Sites.",
+			type: "string",
+			requiresArg: true,
+		},
+		// We want to have a --no-bundle flag, but yargs requires that
+		// we also have a --bundle flag (that it adds the --no to by itself)
+		// So we make a --bundle flag, but hide it, and then add a --no-bundle flag
+		// that's visible to the user but doesn't "do" anything.
+		bundle: {
+			describe: "Run wrangler's compilation step before publishing",
+			type: "boolean",
+			hidden: true,
+		},
+		"no-bundle": {
+			describe: "Skip internal build steps and directly deploy script",
+			type: "boolean",
+			default: false,
+		},
+		format: {
+			choices: ["modules", "service-worker"] as const,
+			describe: "Choose an entry type",
+			hidden: true,
+			deprecated: true,
+		},
+		ip: {
+			describe: "IP address to listen on",
+			type: "string",
+		},
+		port: {
+			describe: "Port to listen on",
+			type: "number",
+		},
+		"inspector-port": {
+			describe: "Port for devtools to connect to",
+			type: "number",
+		},
+		routes: {
+			describe: "Routes to upload",
+			alias: "route",
+			type: "string",
+			requiresArg: true,
+			array: true,
+		},
+		host: {
+			type: "string",
+			requiresArg: true,
+			describe: "Host to forward requests to, defaults to the zone of project",
+		},
+		"local-protocol": {
+			describe: "Protocol to listen to requests on, defaults to http.",
+			choices: ["http", "https"] as const,
+		},
+		"https-key-path": {
+			describe: "Path to a custom certificate key",
+			type: "string",
+			requiresArg: true,
+		},
+		"https-cert-path": {
+			describe: "Path to a custom certificate",
+			type: "string",
+			requiresArg: true,
+		},
+		"local-upstream": {
+			type: "string",
+			describe:
+				"Host to act as origin in local mode, defaults to dev.host or route",
+		},
+		"experimental-public": {
+			describe: "(Deprecated) Static assets to be served",
+			type: "string",
+			requiresArg: true,
+			deprecated: true,
+			hidden: true,
+		},
+		"legacy-assets": {
+			describe: "Static assets to be served",
+			type: "string",
+			requiresArg: true,
+			deprecated: true,
+			hidden: true,
+		},
+		public: {
+			describe: "(Deprecated) Static assets to be served",
+			type: "string",
+			requiresArg: true,
+			deprecated: true,
+			hidden: true,
+		},
+		site: {
+			describe: "Root folder of static assets for Workers Sites",
+			type: "string",
+			requiresArg: true,
+			hidden: true,
+			deprecated: true,
+		},
+		"site-include": {
+			describe:
+				"Array of .gitignore-style patterns that match file or directory names from the sites directory. Only matched items will be uploaded.",
+			type: "string",
+			requiresArg: true,
+			array: true,
+			hidden: true,
+			deprecated: true,
+		},
+		"site-exclude": {
+			describe:
+				"Array of .gitignore-style patterns that match file or directory names from the sites directory. Matched items will not be uploaded.",
+			type: "string",
+			requiresArg: true,
+			array: true,
+			hidden: true,
+			deprecated: true,
+		},
+		"upstream-protocol": {
+			describe: "Protocol to forward requests to host on, defaults to https.",
+			choices: ["http", "https"] as const,
+		},
+		var: {
+			describe: "A key-value pair to be injected into the script as a variable",
+			type: "string",
+			requiresArg: true,
+			array: true,
+		},
+		define: {
+			describe: "A key-value pair to be substituted in the script",
+			type: "string",
+			requiresArg: true,
+			array: true,
+		},
+		alias: {
+			describe: "A module pair to be substituted in the script",
+			type: "string",
+			requiresArg: true,
+			array: true,
+		},
+		"jsx-factory": {
+			describe: "The function that is called for each JSX element",
+			type: "string",
+			requiresArg: true,
+		},
+		"jsx-fragment": {
+			describe: "The function that is called for each JSX fragment",
+			type: "string",
+			requiresArg: true,
+		},
+		tsconfig: {
+			describe: "Path to a custom tsconfig.json file",
+			type: "string",
+			requiresArg: true,
+		},
+		remote: {
+			alias: "r",
+			describe:
+				"Run on the global Cloudflare network with access to production resources",
+			type: "boolean",
+			default: false,
+		},
+		local: {
+			alias: "l",
+			describe: "Run on my machine",
+			type: "boolean",
+			deprecated: true,
+			hidden: true,
+		},
+		"experimental-local": {
+			describe: "Run on my machine using the Cloudflare Workers runtime",
+			type: "boolean",
+			deprecated: true,
+			hidden: true,
+		},
+		minify: {
+			describe: "Minify the script",
+			type: "boolean",
+		},
+		"node-compat": {
+			describe: "Enable Node.js compatibility",
+			type: "boolean",
+		},
+		"experimental-enable-local-persistence": {
+			describe: "Enable persistence for local mode (deprecated, use --persist)",
+			type: "boolean",
+			deprecated: true,
+			hidden: true,
+		},
+		"persist-to": {
+			describe:
+				"Specify directory to use for local persistence (defaults to .wrangler/state)",
+			type: "string",
+			requiresArg: true,
+		},
+		"live-reload": {
+			describe: "Auto reload HTML pages when change is detected in local mode",
+			type: "boolean",
+		},
+		inspect: {
+			describe: "Enable dev tools",
+			type: "boolean",
+			deprecated: true,
+			hidden: true,
+		},
+		"legacy-env": {
+			type: "boolean",
+			describe: "Use legacy environments",
+			hidden: true,
+		},
+		"test-scheduled": {
+			describe: "Test scheduled events by visiting /__scheduled in browser",
+			type: "boolean",
+			default: false,
+		},
+		"log-level": {
+			choices: ["debug", "info", "log", "warn", "error", "none"] as const,
+			describe: "Specify logging level",
+			// Yargs requires this to type log-level properly
+			default: "log" as LoggerLevel,
+		},
+		"show-interactive-dev-session": {
+			describe:
+				"Show interactive dev session (defaults to true if the terminal supports interactivity)",
+			type: "boolean",
+		},
+		"experimental-dev-env": {
+			alias: ["x-dev-env"],
+			type: "boolean",
+			deprecated: true,
+			hidden: true,
+		},
+		"experimental-registry": {
+			alias: ["x-registry"],
+			type: "boolean",
+			describe:
+				"Use the experimental file based dev registry for multi-worker development",
+			default: true,
+		},
+		"experimental-vectorize-bind-to-prod": {
+			type: "boolean",
+			describe:
+				"Bind to production Vectorize indexes in local development mode",
+			default: false,
+		},
+	},
+	async validateArgs(args) {
+		if (args.liveReload && args.remote) {
 			throw new UserError(
-				"You must be logged in to use wrangler dev in remote mode. Try logging in, or run wrangler dev --local."
+				"--live-reload is only supported in local mode. Please just use one of either --remote or --live-reload."
 			);
 		}
-	}
+		if (args.experimentalDevEnv) {
+			logger.warn(
+				"--x-dev-env is now on by default and will be removed in a future version."
+			);
+		}
 
-	if (args.legacyAssets) {
-		logger.warn(
-			`The --legacy-assets argument has been deprecated. Please use --assets instead.\n` +
-				`To learn more about Workers with assets, visit our documentation at https://developers.cloudflare.com/workers/frameworks/.`
+		if (isWebContainer()) {
+			logger.error(
+				`Oh no! 😟 You tried to run \`wrangler dev\` in a StackBlitz WebContainer. 🤯
+	This is currently not supported 😭, but we think that we'll get it to work soon... hang in there! 🥺`
+			);
+			process.exitCode = 1;
+			return;
+		}
+
+		if (args.remote) {
+			const isLoggedIn = await loginOrRefreshIfRequired();
+			if (!isLoggedIn) {
+				throw new UserError(
+					"You must be logged in to use wrangler dev in remote mode. Try logging in, or run wrangler dev --local."
+				);
+			}
+		}
+
+		if (args.legacyAssets) {
+			logger.warn(
+				`The --legacy-assets argument has been deprecated. Please use --assets instead.\n` +
+					`To learn more about Workers with assets, visit our documentation at https://developers.cloudflare.com/workers/frameworks/.`
+			);
+		}
+	},
+	async handler(args) {
+		const devInstance = await run(
+			{
+				FILE_BASED_REGISTRY: args.experimentalRegistry,
+				JSON_CONFIG_FILE: Boolean(args.experimentalJsonConfig),
+				MULTIWORKER: Array.isArray(args.config),
+			},
+			() => startDev(args)
 		);
-	}
-
-	const devInstance = await run(
-		{
-			FILE_BASED_REGISTRY: args.experimentalRegistry,
-			JSON_CONFIG_FILE: Boolean(args.experimentalJsonConfig),
-			MULTIWORKER: Array.isArray(args.config),
-		},
-		() => startDev(args)
-	);
-	assert(devInstance.devEnv !== undefined);
-	await events.once(devInstance.devEnv, "teardown");
-	if (devInstance.teardownRegistryPromise) {
-		const teardownRegistry = await devInstance.teardownRegistryPromise;
-		await teardownRegistry(devInstance.devEnv.config.latestConfig?.name);
-	}
-	devInstance.unregisterHotKeys?.();
-}
+		assert(devInstance.devEnv !== undefined);
+		await events.once(devInstance.devEnv, "teardown");
+		if (devInstance.teardownRegistryPromise) {
+			const teardownRegistry = await devInstance.teardownRegistryPromise;
+			await teardownRegistry(devInstance.devEnv.config.latestConfig?.name);
+		}
+		devInstance.unregisterHotKeys?.();
+	},
+});
 
 export type AdditionalDevProps = {
 	vars?: Record<string, string | Json>;
@@ -432,6 +425,8 @@ export type AdditionalDevProps = {
 	rules?: Rule[];
 	showInteractiveDevSession?: boolean;
 };
+
+type DevArguments = (typeof command)["args"];
 
 export type StartDevOptions = DevArguments &
 	// These options can be passed in directly when called with the `wrangler.dev()` API.

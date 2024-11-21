@@ -125,7 +125,7 @@ export async function unstable_dev(
 		showInteractiveDevSession,
 		testMode,
 		testScheduled,
-		fileBasedRegistry = false,
+		fileBasedRegistry = true,
 		vectorizeBindToProd,
 		// 2. options for alpha/beta products/libs
 		d1Databases,

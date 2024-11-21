@@ -58,6 +58,7 @@ export function runBuild(
 		projectRoot,
 		onStart,
 		defineNavigatorUserAgent,
+		checkFetch,
 	}: {
 		entry: Entry;
 		destination: string | undefined;
@@ -84,6 +85,7 @@ export function runBuild(
 		projectRoot: string | undefined;
 		onStart: () => void;
 		defineNavigatorUserAgent: boolean;
+		checkFetch: boolean;
 	},
 	setBundle: (
 		cb: (previous: EsbuildBundle | undefined) => EsbuildBundle
@@ -158,7 +160,6 @@ export function runBuild(
 						workflowBindings: workflows,
 						alias,
 						define,
-						checkFetch: true,
 						mockAnalyticsEngineDatasets,
 						legacyAssets,
 						// disable the cache in dev
@@ -178,6 +179,7 @@ export function runBuild(
 
 						// sourcemap defaults to true in dev
 						sourcemap: undefined,
+						checkFetch,
 					})
 				: undefined;
 
@@ -191,7 +193,7 @@ export function runBuild(
 			// Check whether we need to watch a Python requirements.txt file.
 			const watchPythonRequirements =
 				getBundleType(entry.format, entry.file) === "python"
-					? path.resolve(entry.directory, "requirements.txt")
+					? path.resolve(entry.projectRoot, "requirements.txt")
 					: undefined;
 
 			if (watchPythonRequirements) {

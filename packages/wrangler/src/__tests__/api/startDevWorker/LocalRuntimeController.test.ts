@@ -88,7 +88,7 @@ function makeEsbuildBundle(testBundle: TestBundle): Bundle {
 		entrypointSource: "",
 		entry: {
 			file: "index.mjs",
-			directory: "/virtual/",
+			projectRoot: "/virtual/",
 			format: "modules",
 			moduleRoot: "/virtual",
 			name: undefined,
@@ -128,7 +128,7 @@ function configDefaults(
 	return {
 		name: "test-worker",
 		entrypoint: "NOT_REAL",
-		directory: "NOT_REAL",
+		projectRoot: "NOT_REAL",
 		build: unusable<StartDevWorkerOptions["build"]>(),
 		legacy: {},
 		dev: { persist: "./persist" },
@@ -233,7 +233,7 @@ describe("LocalRuntimeController", () => {
 			`,
 				entry: {
 					file: "esm/index.mjs",
-					directory: "/virtual/",
+					projectRoot: "/virtual/",
 					format: "modules",
 					moduleRoot: "/virtual",
 					name: undefined,
@@ -347,7 +347,7 @@ describe("LocalRuntimeController", () => {
 				path: "/virtual/index.js",
 				entry: {
 					file: "index.js",
-					directory: "/virtual/",
+					projectRoot: "/virtual/",
 					format: "service-worker",
 					moduleRoot: "/virtual",
 					name: undefined,

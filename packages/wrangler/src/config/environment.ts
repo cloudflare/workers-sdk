@@ -946,4 +946,11 @@ export interface Observability {
 	enabled: boolean;
 	/** The sampling rate */
 	head_sampling_rate?: number;
+	logs?: {
+		enabled: boolean;
+		/** The sampling rate */
+		head_sampling_rate?: number;
+		/** Set to false to disable invocation logs */
+		invocation_logs?: boolean;
+	};
 }
