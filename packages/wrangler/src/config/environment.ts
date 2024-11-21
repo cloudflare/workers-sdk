@@ -939,6 +939,7 @@ export type Assets = {
 		| "drop-trailing-slash"
 		| "none";
 	not_found_handling?: "single-page-application" | "404-page" | "none";
+	serve_directly?: boolean;
 };
 
 export interface Observability {
