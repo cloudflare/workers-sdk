@@ -1,4 +1,4 @@
-import { readConfig, withConfig } from "../config";
+import { readConfig } from "../config";
 import { defineCommand, defineNamespace } from "../core";
 import { confirm, multiselect, prompt } from "../dialogs";
 import { UserError } from "../errors";
@@ -322,56 +322,59 @@ defineCommand({
 	},
 });
 
-export function RemoveOptions(yargs: CommonYargsArgv) {
-	return yargs
-		.positional("bucket", {
+defineCommand({
+	command: "wrangler r2 bucket lifecycle remove",
+	metadata: {
+		description: "Remove a lifecycle rule from an R2 bucket",
+		status: "stable",
+		owner: "Product: R2",
+	},
+	positionalArgs: ["bucket"],
+	args: {
+		bucket: {
 			describe: "The name of the R2 bucket to remove a lifecycle rule from",
 			type: "string",
 			demandOption: true,
-		})
-		.option("id", {
+		},
+		id: {
 			describe: "The unique identifier of the lifecycle rule to remove",
 			type: "string",
 			demandOption: true,
 			requiresArg: true,
-		})
-		.option("jurisdiction", {
+		},
+		jurisdiction: {
 			describe: "The jurisdiction where the bucket exists",
 			alias: "J",
 			requiresArg: true,
 			type: "string",
-		});
-}
+		},
+	},
+	async handler(args, { config }) {
+		const accountId = await requireAuth(config);
 
-export async function RemoveHandler(
-	args: StrictYargsOptionsToInterface<typeof RemoveOptions>
-) {
-	await printWranglerBanner();
-	const config = readConfig(args.config, args);
-	const accountId = await requireAuth(config);
+		const { bucket, id, jurisdiction } = args;
 
-	const { bucket, id, jurisdiction } = args;
-
-	const lifecycleRules = await getLifecycleRules(
-		accountId,
-		bucket,
-		jurisdiction
-	);
-
-	const index = lifecycleRules.findIndex((rule) => rule.id === id);
-
-	if (index === -1) {
-		throw new UserError(
-			`Lifecycle rule with ID '${id}' not found in configuration for '${bucket}'.`
+		const lifecycleRules = await getLifecycleRules(
+			accountId,
+			bucket,
+			jurisdiction
 		);
-	}
 
-	lifecycleRules.splice(index, 1);
+		const index = lifecycleRules.findIndex((rule) => rule.id === id);
 
-	logger.log(`Removing lifecycle rule '${id}' from bucket '${bucket}'...`);
-	await putLifecycleRules(accountId, bucket, lifecycleRules, jurisdiction);
-	logger.log(`Lifecycle rule '${id}' removed from bucket '${bucket}'.`);
-}
+		if (index === -1) {
+			throw new UserError(
+				`Lifecycle rule with ID '${id}' not found in configuration for '${bucket}'.`
+			);
+		}
+
+		lifecycleRules.splice(index, 1);
+
+		logger.log(`Removing lifecycle rule '${id}' from bucket '${bucket}'...`);
+		await putLifecycleRules(accountId, bucket, lifecycleRules, jurisdiction);
+		logger.log(`Lifecycle rule '${id}' removed from bucket '${bucket}'.`);
+	},
+});
 
 export function SetOptions(yargs: CommonYargsArgv) {
 	return yargs

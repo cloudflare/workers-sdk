@@ -27,19 +27,12 @@ export function r2(r2Yargs: CommonYargsArgv, subHelp: SubHelp) {
 				"lifecycle",
 				"Manage lifecycle rules for an R2 bucket",
 				(lifecycleYargs) => {
-					return lifecycleYargs
-						.command(
-							"remove <bucket>",
-							"Remove a lifecycle rule from an R2 bucket",
-							Lifecycle.RemoveOptions,
-							Lifecycle.RemoveHandler
-						)
-						.command(
-							"set <bucket>",
-							"Set the lifecycle configuration for an R2 bucket from a JSON file",
-							Lifecycle.SetOptions,
-							Lifecycle.SetHandler
-						);
+					return lifecycleYargs.command(
+						"set <bucket>",
+						"Set the lifecycle configuration for an R2 bucket from a JSON file",
+						Lifecycle.SetOptions,
+						Lifecycle.SetHandler
+					);
 				}
 			);
 			return r2BucketYargs;
