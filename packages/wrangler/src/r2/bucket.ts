@@ -188,9 +188,9 @@ defineCommand({
 		status: "stable",
 		owner: "Product: R2",
 	},
-	positionalArgs: ["name"],
+	positionalArgs: ["bucket"],
 	args: {
-		name: {
+		bucket: {
 			describe: "The name of the bucket to delete",
 			type: "string",
 			demandOption: true,
@@ -205,12 +205,12 @@ defineCommand({
 	async handler(args, { config }) {
 		const accountId = await requireAuth(config);
 
-		let fullBucketName = `${args.name}`;
+		let fullBucketName = `${args.bucket}`;
 		if (args.jurisdiction !== undefined) {
 			fullBucketName += ` (${args.jurisdiction})`;
 		}
 		logger.log(`Deleting bucket ${fullBucketName}.`);
-		await deleteR2Bucket(accountId, args.name, args.jurisdiction);
+		await deleteR2Bucket(accountId, args.bucket, args.jurisdiction);
 		logger.log(`Deleted bucket ${fullBucketName}.`);
 		await metrics.sendMetricsEvent("delete r2 bucket", {
 			sendMetrics: config.send_metrics,
