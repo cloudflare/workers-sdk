@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import events from "node:events";
 import { readFile } from "node:fs/promises";
 import chalk from "chalk";
 import { Miniflare, Mutex } from "miniflare";
@@ -142,6 +143,63 @@ export class LocalRuntimeController extends RuntimeController {
 	#mutex = new Mutex();
 	#mf?: Miniflare;
 
+	#bindings?: Record<string, unknown>;
+	#cf?: Record<string, unknown>;
+
+	async getMiniflareInstance() {
+		if (!this.#mf) {
+			await events.once(this, "reloadComplete");
+
+			if (!this.#mf) {
+				throw new Error("Miniflare instance is not available after reload");
+			}
+		}
+
+		return this.#mf;
+	}
+
+	async getBindings() {
+		// Initialize the bindings from the Miniflare instance, which will be updated on each reload
+		if (!this.#bindings) {
+			const mf = await this.getMiniflareInstance();
+			this.#bindings = await mf.getBindings();
+		}
+
+		return new Proxy({} as Record<string, unknown>, {
+			get: (_, prop, receiver) => {
+				try {
+					return Reflect.get(this.#bindings ?? {}, prop, receiver);
+				} catch (e) {
+					if (
+						e instanceof Error &&
+						e.message.startsWith("Attempted to use poisoned stub")
+					) {
+						throw new Error(
+							`The binding "${prop.toString()}" is not available; Please check the logs for more information.`,
+							{ cause: e }
+						);
+					}
+
+					throw e;
+				}
+			},
+		});
+	}
+
+	async getCf() {
+		// Initialize the cf properties from the Miniflare instance, which will be updated on each reload
+		if (!this.#cf) {
+			const mf = await this.getMiniflareInstance();
+			this.#cf = await mf.getCf();
+		}
+
+		return new Proxy({} as Record<string, unknown>, {
+			get: (_, prop, receiver) => {
+				return Reflect.get(this.#cf ?? {}, prop, receiver);
+			},
+		});
+	}
+
 	onBundleStart(_: BundleStartEvent) {
 		// Ignored in local runtime
 	}
@@ -162,6 +220,16 @@ export class LocalRuntimeController extends RuntimeController {
 				logger.log(chalk.dim("⎔ Reloading local server..."));
 
 				await this.#mf.setOptions(options);
+
+				if (this.#bindings) {
+					// If the bindings were already fetched, re-fetch them to ensure they're up-to-date
+					this.#bindings = await this.#mf.getBindings();
+				}
+
+				if (this.#cf) {
+					// If the cf properties were already fetched, re-fetch them to ensure they're up-to-date
+					this.#cf = await this.#mf.getCf();
+				}
 			}
 			// All asynchronous `Miniflare` methods will wait for all `setOptions()`
 			// calls to complete before resolving. To ensure we get the `url` and
