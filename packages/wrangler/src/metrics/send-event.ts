@@ -142,6 +142,8 @@ export type CommonEventProperties = {
 
 	isCI: boolean;
 	isNonInteractive: boolean;
+	argsUsed: string[];
+	argsCombination: string;
 };
 
 export type Events =

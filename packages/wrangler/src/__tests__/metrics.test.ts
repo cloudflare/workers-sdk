@@ -214,13 +214,69 @@ describe("metrics", () => {
 
 				expect(requests.count).toBe(2);
 
-				// command started
+				const expectedStartReq = {
+					deviceId: "f82b1f46-eb7b-4154-aa9f-ce95f23b2288",
+					event: "wrangler command started",
+					timestamp: 1733961600000,
+					properties: {
+						amplitude_session_id: 1733961600000,
+						amplitude_event_id: 0,
+						wranglerVersion: "1.2.3",
+						isFirstUsage: false,
+						isCI: false,
+						isNonInteractive: false,
+						argsUsed: ["positional", "xgradualrollouts", "xversions"],
+						argsCombination: "positional, xgradualrollouts, xversions",
+						command: "wrangler command subcommand",
+						args: {
+							_: ["command", "subcommand"],
+							"experimental-versions": true,
+							"x-versions": true,
+							"experimental-gradual-rollouts": true,
+							xVersions: true,
+							experimentalGradualRollouts: true,
+							experimentalVersions: true,
+							$0: "wrangler",
+							positional: "positional",
+						},
+					},
+				};
 				expect(std.debug).toContain(
-					`Metrics dispatcher: Posting data {"deviceId":"f82b1f46-eb7b-4154-aa9f-ce95f23b2288","event":"wrangler command started","timestamp":1733961600000,"properties":{"amplitude_session_id":1733961600000,"amplitude_event_id":0,"wranglerVersion":"1.2.3","isFirstUsage":false,"isCI":false,"isNonInteractive":false,"command":"wrangler command subcommand","args":{"_":["command","subcommand"],"experimental-versions":true,"x-versions":true,"experimental-gradual-rollouts":true,"xVersions":true,"experimentalGradualRollouts":true,"experimentalVersions":true,"$0":"wrangler","positional":"positional"}}}`
+					`Posting data ${JSON.stringify(expectedStartReq)}`
 				);
+				const expectedCompleteReq = {
+					deviceId: "f82b1f46-eb7b-4154-aa9f-ce95f23b2288",
+					event: "wrangler command completed",
+					timestamp: 1733961600000,
+					properties: {
+						amplitude_session_id: 1733961600000,
+						amplitude_event_id: 1,
+						wranglerVersion: "1.2.3",
+						isFirstUsage: false,
+						isCI: false,
+						isNonInteractive: false,
+						argsUsed: ["positional", "xgradualrollouts", "xversions"],
+						argsCombination: "positional, xgradualrollouts, xversions",
+						command: "wrangler command subcommand",
+						args: {
+							_: ["command", "subcommand"],
+							"experimental-versions": true,
+							"x-versions": true,
+							"experimental-gradual-rollouts": true,
+							xVersions: true,
+							experimentalGradualRollouts: true,
+							experimentalVersions: true,
+							$0: "wrangler",
+							positional: "positional",
+						},
+						durationMs: 0,
+						durationSeconds: 0,
+						durationMinutes: 0,
+					},
+				};
 				// command completed
 				expect(std.debug).toContain(
-					`Metrics dispatcher: Posting data {"deviceId":"f82b1f46-eb7b-4154-aa9f-ce95f23b2288","event":"wrangler command completed","timestamp":1733961600000,"properties":{"amplitude_session_id":1733961600000,"amplitude_event_id":1,"wranglerVersion":"1.2.3","isFirstUsage":false,"isCI":false,"isNonInteractive":false,"command":"wrangler command subcommand","args":{"_":["command","subcommand"],"experimental-versions":true,"x-versions":true,"experimental-gradual-rollouts":true,"xVersions":true,"experimentalGradualRollouts":true,"experimentalVersions":true,"$0":"wrangler","positional":"positional"},"durationMs":0,"durationSeconds":0,"durationMinutes":0}}`
+					`Posting data ${JSON.stringify(expectedCompleteReq)}`
 				);
 				expect(std.out).toMatchInlineSnapshot(`
 					"
@@ -240,13 +296,71 @@ describe("metrics", () => {
 
 				expect(requests.count).toBe(2);
 
-				// command started
+				const expectedStartReq = {
+					deviceId: "f82b1f46-eb7b-4154-aa9f-ce95f23b2288",
+					event: "wrangler command started",
+					timestamp: 1733961600000,
+					properties: {
+						amplitude_session_id: 1733961600000,
+						amplitude_event_id: 0,
+						wranglerVersion: "1.2.3",
+						isFirstUsage: false,
+						isCI: false,
+						isNonInteractive: false,
+						argsUsed: ["positional", "xgradualrollouts", "xversions"],
+						argsCombination: "positional, xgradualrollouts, xversions",
+						command: "wrangler command subcommand",
+						args: {
+							_: ["command", "subcommand"],
+							"experimental-versions": true,
+							"x-versions": true,
+							"experimental-gradual-rollouts": true,
+							xVersions: true,
+							experimentalGradualRollouts: true,
+							experimentalVersions: true,
+							$0: "wrangler",
+							positional: "error",
+						},
+					},
+				};
 				expect(std.debug).toContain(
-					`Metrics dispatcher: Posting data {"deviceId":"f82b1f46-eb7b-4154-aa9f-ce95f23b2288","event":"wrangler command started","timestamp":1733961600000,"properties":{"amplitude_session_id":1733961600000,"amplitude_event_id":0,"wranglerVersion":"1.2.3","isFirstUsage":false,"isCI":false,"isNonInteractive":false,"command":"wrangler command subcommand","args":{"_":["command","subcommand"],"experimental-versions":true,"x-versions":true,"experimental-gradual-rollouts":true,"xVersions":true,"experimentalGradualRollouts":true,"experimentalVersions":true,"$0":"wrangler","positional":"error"}}}`
+					`Posting data ${JSON.stringify(expectedStartReq)}`
 				);
-				// command completed
+
+				const expectedErrorReq = {
+					deviceId: "f82b1f46-eb7b-4154-aa9f-ce95f23b2288",
+					event: "wrangler command errored",
+					timestamp: 1733961600000,
+					properties: {
+						amplitude_session_id: 1733961600000,
+						amplitude_event_id: 1,
+						wranglerVersion: "1.2.3",
+						isFirstUsage: false,
+						isCI: false,
+						isNonInteractive: false,
+						argsUsed: ["positional", "xgradualrollouts", "xversions"],
+						argsCombination: "positional, xgradualrollouts, xversions",
+						command: "wrangler command subcommand",
+						args: {
+							_: ["command", "subcommand"],
+							"experimental-versions": true,
+							"x-versions": true,
+							"experimental-gradual-rollouts": true,
+							xVersions: true,
+							experimentalGradualRollouts: true,
+							experimentalVersions: true,
+							$0: "wrangler",
+							positional: "error",
+						},
+						durationMs: 0,
+						durationSeconds: 0,
+						durationMinutes: 0,
+						errorType: "UserError",
+					},
+				};
+
 				expect(std.debug).toContain(
-					`Metrics dispatcher: Posting data {"deviceId":"f82b1f46-eb7b-4154-aa9f-ce95f23b2288","event":"wrangler command errored","timestamp":1733961600000,"properties":{"amplitude_session_id":1733961600000,"amplitude_event_id":1,"wranglerVersion":"1.2.3","isFirstUsage":false,"isCI":false,"isNonInteractive":false,"command":"wrangler command subcommand","args":{"_":["command","subcommand"],"experimental-versions":true,"x-versions":true,"experimental-gradual-rollouts":true,"xVersions":true,"experimentalGradualRollouts":true,"experimentalVersions":true,"$0":"wrangler","positional":"error"},"durationMs":0,"durationSeconds":0,"durationMinutes":0,"errorType":"UserError"}}`
+					`Posting data ${JSON.stringify(expectedErrorReq)}`
 				);
 			});
 

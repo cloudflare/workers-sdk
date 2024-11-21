@@ -73,6 +73,8 @@ export function getMetricsDispatcher(options: MetricsConfigOptions) {
 				return;
 			}
 			printMetricsBanner();
+			const argsUsed = normaliseArgs(Object.keys(properties.args ?? []));
+			const argsCombination = argsUsed.sort().join(", ");
 			const commonEventProperties: CommonEventProperties = {
 				amplitude_session_id,
 				amplitude_event_id: amplitude_event_id++,
@@ -82,6 +84,8 @@ export function getMetricsDispatcher(options: MetricsConfigOptions) {
 				isFirstUsage,
 				isCI,
 				isNonInteractive,
+				argsUsed,
+				argsCombination,
 			};
 
 			await dispatch({
@@ -171,3 +175,23 @@ export function getMetricsDispatcher(options: MetricsConfigOptions) {
 }
 
 export type Properties = Record<string, unknown>;
+
+/** just some pretty naive cleaning so we don't send "experimental-versions", "experimentalVersions", "x-versions" and "xVersions" etc. */
+const normaliseArgs = (args: string[]) => {
+	const exclude = new Set(["$0", "_"]);
+	const result: string[] = [];
+	for (const arg of args) {
+		if (exclude.has(arg)) {
+			continue;
+		}
+		const normalisedArg = arg
+			.replace("experimental", "x")
+			.replaceAll("-", "")
+			.toLowerCase();
+		if (result.includes(normalisedArg)) {
+			continue;
+		}
+		result.push(normalisedArg);
+	}
+	return result;
+};
