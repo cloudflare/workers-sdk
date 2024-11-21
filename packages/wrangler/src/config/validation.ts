@@ -3384,7 +3384,7 @@ const validateObservability: ValidatorFn = (diagnostics, field, value) => {
 	 */
 	if (typeof val.logs === "object") {
 		isValid =
-			validateRequiredProperty(
+			validateOptionalProperty(
 				diagnostics,
 				field,
 				"logs.enabled",
