@@ -16,12 +16,14 @@ export default function (env) {
 export async function AIFetcher(request: Request): Promise<Response> {
 	const accountId = await getAccountId();
 
-	request.headers.delete("Host");
-	request.headers.delete("Content-Length");
+	const reqHeaders = new Headers(request.headers);
+	reqHeaders.delete("Host");
+	reqHeaders.delete("Content-Length");
+	reqHeaders.set("x-url", request.url);
 
 	const res = await performApiFetch(`/accounts/${accountId}/ai/run/proxy`, {
-		method: "POST",
-		headers: Object.fromEntries(request.headers.entries()),
+		method: request.method,
+		headers: Object.fromEntries(reqHeaders.entries()),
 		body: request.body,
 		duplex: "half",
 	});
