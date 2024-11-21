@@ -4955,7 +4955,7 @@ addEventListener('fetch', event => {});`
 			];
 			writeAssets(assets);
 			writeWorkerSource({ format: "js" });
-			writeWranglerToml({
+			writeWranglerConfig({
 				main: "index.js",
 				compatibility_date: "2024-09-27",
 				compatibility_flags: ["nodejs_compat"],
@@ -4993,7 +4993,7 @@ addEventListener('fetch', event => {});`
 			];
 			writeAssets(assets);
 			writeWorkerSource({ format: "js" });
-			writeWranglerToml({
+			writeWranglerConfig({
 				main: "index.js",
 				compatibility_date: "2024-09-27",
 				compatibility_flags: ["nodejs_compat"],
@@ -5029,7 +5029,7 @@ addEventListener('fetch', event => {});`
 			];
 			writeAssets(assets);
 			writeWorkerSource({ format: "js" });
-			writeWranglerToml({
+			writeWranglerConfig({
 				main: "index.js",
 				compatibility_date: "2024-09-27",
 				compatibility_flags: ["nodejs_compat"],
