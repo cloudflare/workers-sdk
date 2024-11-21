@@ -16,7 +16,7 @@ const generate = async (ctx: C3Context) => {
 	await runFrameworkGenerator(ctx, [
 		ctx.project.name,
 		"--ssr",
-		"--server-routing", /** Dev Preview API */
+		"--server-routing" /** Dev Preview API */,
 	]);
 	logRaw("");
 };
