@@ -1,5 +1,7 @@
 import { http, HttpResponse } from "msw";
 import { vi } from "vitest";
+import { defineCommand, defineNamespace } from "../core";
+import { UserError } from "../errors";
 import { CI } from "../is-ci";
 import { logger } from "../logger";
 import { getOS, getWranglerVersion } from "../metrics/helpers";
@@ -68,8 +70,7 @@ describe("metrics", () => {
 					},
 					{
 						"Sparrow-Source-Key": "MOCK_KEY",
-					},
-					"event"
+					}
 				);
 				const dispatcher = await getMetricsDispatcher({
 					sendMetrics: true,
@@ -86,7 +87,7 @@ describe("metrics", () => {
 			});
 
 			it("should write a debug log if the dispatcher is disabled", async () => {
-				const requests = mockMetricRequest({}, {}, "event");
+				const requests = mockMetricRequest({}, {});
 				const dispatcher = await getMetricsDispatcher({
 					sendMetrics: false,
 				});
@@ -127,7 +128,7 @@ describe("metrics", () => {
 			it("should write a warning log if no source key has been provided", async () => {
 				vi.stubEnv("SPARROW_SOURCE_KEY", undefined);
 
-				const requests = mockMetricRequest({}, {}, "event");
+				const requests = mockMetricRequest({}, {});
 				const dispatcher = await getMetricsDispatcher({
 					sendMetrics: true,
 				});
@@ -140,6 +141,183 @@ describe("metrics", () => {
 				expect(std.out).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
+			});
+		});
+
+		it("should keep track of all requests made", async () => {
+			const requests = mockMetricRequest({}, {});
+			const dispatcher = await getMetricsDispatcher({
+				sendMetrics: true,
+			});
+
+			void dispatcher.sendEvent("some-event", { a: 1, b: 2 });
+			expect(dispatcher.requests.length).toBe(1);
+
+			expect(requests.count).toBe(0);
+			await Promise.allSettled(dispatcher.requests);
+			expect(requests.count).toBe(1);
+
+			void dispatcher.sendEvent("another-event", { c: 3, d: 4 });
+			expect(dispatcher.requests.length).toBe(2);
+
+			expect(requests.count).toBe(1);
+			await Promise.allSettled(dispatcher.requests);
+			expect(requests.count).toBe(2);
+		});
+
+		describe("sendNewEvent()", () => {
+			beforeAll(() => {
+				// register a no-op test command
+				defineNamespace({
+					command: "wrangler command",
+					metadata: {
+						description: "test command namespace",
+						owner: "Workers: Authoring and Testing",
+						status: "stable",
+					},
+				});
+
+				defineCommand({
+					command: "wrangler command subcommand",
+					metadata: {
+						description: "test command",
+						owner: "Workers: Authoring and Testing",
+						status: "stable",
+					},
+					args: {
+						positional: {
+							type: "string",
+							demandOption: true,
+						},
+						optional: {
+							type: "string",
+						},
+					},
+					positionalArgs: ["positional"],
+					handler(args, ctx) {
+						ctx.logger.log("Ran wrangler command subcommand");
+						if (args.positional === "error") {
+							throw new UserError("oh no");
+						}
+					},
+				});
+			});
+			it("should send a started and completed event", async () => {
+				const requests = mockMetricRequest({}, {});
+
+				await runWrangler("command subcommand positional");
+
+				expect(requests.count).toBe(2);
+
+				// command started
+				expect(std.debug).toContain(
+					`Metrics dispatcher: Posting data {"deviceId":"f82b1f46-eb7b-4154-aa9f-ce95f23b2288","event":"wrangler command started","timestamp":1733961600000,"properties":{"amplitude_session_id":1733961600000,"amplitude_event_id":0,"wranglerVersion":"1.2.3","isFirstUsage":false,"command":"wrangler command subcommand","args":{"_":["command","subcommand"],"experimental-versions":true,"x-versions":true,"experimental-gradual-rollouts":true,"xVersions":true,"experimentalGradualRollouts":true,"experimentalVersions":true,"$0":"wrangler","positional":"positional"}}}`
+				);
+				// command completed
+				expect(std.debug).toContain(
+					`Metrics dispatcher: Posting data {"deviceId":"f82b1f46-eb7b-4154-aa9f-ce95f23b2288","event":"wrangler command completed","timestamp":1733961600000,"properties":{"amplitude_session_id":1733961600000,"amplitude_event_id":1,"wranglerVersion":"1.2.3","isFirstUsage":false,"command":"wrangler command subcommand","args":{"_":["command","subcommand"],"experimental-versions":true,"x-versions":true,"experimental-gradual-rollouts":true,"xVersions":true,"experimentalGradualRollouts":true,"experimentalVersions":true,"$0":"wrangler","positional":"positional"},"durationMs":0,"durationSeconds":0,"durationMinutes":0}}`
+				);
+				expect(std.out).toMatchInlineSnapshot(`
+					"
+					Cloudflare collects anonymous telemetry about your usage of Wrangler. Learn more at https://github.com/cloudflare/workers-sdk/tree/main/telemetry.md
+					Ran wrangler command subcommand"
+				`);
+				expect(std.warn).toMatchInlineSnapshot(`""`);
+				expect(std.err).toMatchInlineSnapshot(`""`);
+			});
+
+			it("should send a started and errored event", async () => {
+				const requests = mockMetricRequest({}, {});
+
+				await expect(runWrangler("command subcommand error")).rejects.toThrow(
+					"oh no"
+				);
+
+				expect(requests.count).toBe(2);
+
+				// command started
+				expect(std.debug).toContain(
+					`Metrics dispatcher: Posting data {"deviceId":"f82b1f46-eb7b-4154-aa9f-ce95f23b2288","event":"wrangler command started","timestamp":1733961600000,"properties":{"amplitude_session_id":1733961600000,"amplitude_event_id":0,"wranglerVersion":"1.2.3","isFirstUsage":false,"command":"wrangler command subcommand","args":{"_":["command","subcommand"],"experimental-versions":true,"x-versions":true,"experimental-gradual-rollouts":true,"xVersions":true,"experimentalGradualRollouts":true,"experimentalVersions":true,"$0":"wrangler","positional":"error"}}}`
+				);
+				// command completed
+				expect(std.debug).toContain(
+					`Metrics dispatcher: Posting data {"deviceId":"f82b1f46-eb7b-4154-aa9f-ce95f23b2288","event":"wrangler command errored","timestamp":1733961600000,"properties":{"amplitude_session_id":1733961600000,"amplitude_event_id":1,"wranglerVersion":"1.2.3","isFirstUsage":false,"command":"wrangler command subcommand","args":{"_":["command","subcommand"],"experimental-versions":true,"x-versions":true,"experimental-gradual-rollouts":true,"xVersions":true,"experimentalGradualRollouts":true,"experimentalVersions":true,"$0":"wrangler","positional":"error"},"durationMs":0,"durationSeconds":0,"durationMinutes":0,"errorType":"UserError"}}`
+				);
+			});
+
+			describe("banner", () => {
+				beforeEach(() => {
+					vi.mocked(getWranglerVersion).mockReturnValue("1.2.3");
+				});
+				it("should print the banner if current version is different to the stored version", async () => {
+					writeMetricsConfig({
+						permission: {
+							enabled: true,
+							date: new Date(2022, 6, 4),
+							bannerLastShown: "1.2.1",
+						},
+					});
+
+					const requests = mockMetricRequest({}, {});
+
+					await runWrangler("command subcommand positional");
+					expect(std.out).toMatchInlineSnapshot(`
+						"
+						Cloudflare collects anonymous telemetry about your usage of Wrangler. Learn more at https://github.com/cloudflare/workers-sdk/tree/main/telemetry.md
+						Ran wrangler command subcommand"
+					`);
+
+					expect(requests.count).toBe(2);
+				});
+				it("should not print the banner if current version is the same as the stored version", async () => {
+					writeMetricsConfig({
+						permission: {
+							enabled: true,
+							date: new Date(2022, 6, 4),
+							bannerLastShown: "1.2.3",
+						},
+					});
+					const requests = mockMetricRequest({}, {});
+					await runWrangler("command subcommand positional");
+					expect(std.out).toMatchInlineSnapshot(`
+						"Ran wrangler command subcommand"
+					`);
+					expect(requests.count).toBe(2);
+				});
+				it("should print the banner if nothing is stored under bannerLastShown and then store the current version", async () => {
+					writeMetricsConfig({
+						permission: {
+							enabled: true,
+							date: new Date(2022, 6, 4),
+						},
+					});
+					const requests = mockMetricRequest({}, {});
+					await runWrangler("command subcommand positional");
+					expect(std.out).toMatchInlineSnapshot(`
+						"
+						Cloudflare collects anonymous telemetry about your usage of Wrangler. Learn more at https://github.com/cloudflare/workers-sdk/tree/main/telemetry.md
+						Ran wrangler command subcommand"
+					`);
+					expect(requests.count).toBe(2);
+					const { permission } = readMetricsConfig();
+					expect(permission?.bannerLastShown).toEqual("1.2.3");
+				});
+				it("should not print the banner if telemetry permission is disabled", async () => {
+					writeMetricsConfig({
+						permission: {
+							enabled: false,
+							date: new Date(2022, 6, 4),
+						},
+					});
+					const requests = mockMetricRequest({}, {});
+					await runWrangler("command subcommand positional");
+					expect(std.out).toMatchInlineSnapshot(`
+						"Ran wrangler command subcommand"
+					`);
+					expect(requests.count).toBe(0);
+					const { permission } = readMetricsConfig();
+					expect(permission?.bannerLastShown).toBeUndefined();
+				});
 			});
 		});
 	});
@@ -179,17 +357,6 @@ describe("metrics", () => {
 				});
 				expect(await getMetricsConfig({ sendMetrics: true })).toMatchObject({
 					enabled: true,
-				});
-			});
-
-			it("should return enabled false if the process is not interactive", async () => {
-				setIsTTY(false);
-				expect(
-					await getMetricsConfig({
-						sendMetrics: undefined,
-					})
-				).toMatchObject({
-					enabled: false,
 				});
 			});
 
@@ -370,6 +537,32 @@ Wrangler is no longer collecting telemetry about your usage.`);
 			});
 		});
 
+		it(`doesn't send telemetry when running "wrangler ${cmd} disable"`, async () => {
+			const requests = mockMetricRequest({}, {});
+			writeMetricsConfig({
+				permission: {
+					enabled: true,
+					date: new Date(2022, 6, 4),
+				},
+			});
+			await runWrangler(`${cmd} disable`);
+			expect(requests.count).toBe(0);
+			expect(std.debug).not.toContain("Metrics dispatcher: Posting data");
+		});
+
+		it(`does send telemetry when running "wrangler ${cmd} enable"`, async () => {
+			const requests = mockMetricRequest({}, {});
+			writeMetricsConfig({
+				permission: {
+					enabled: true,
+					date: new Date(2022, 6, 4),
+				},
+			});
+			await runWrangler(`${cmd} enable`);
+			expect(requests.count).toBe(2);
+			expect(std.debug).toContain("Metrics dispatcher: Posting data");
+		});
+
 		it(`enables telemetry when "wrangler ${cmd} enable" is run`, async () => {
 			writeMetricsConfig({
 				permission: {
@@ -415,23 +608,16 @@ Wrangler is now collecting telemetry about your usage. Thank you for helping mak
 	});
 });
 
-function mockMetricRequest(
-	body: unknown,
-	header: unknown,
-	endpoint: "identify" | "event"
-) {
+function mockMetricRequest(body: unknown, header: unknown) {
 	const requests = { count: 0 };
 	msw.use(
-		http.post(
-			`*/${endpoint}`,
-			async ({ request }) => {
-				requests.count++;
-				expect(await request.json()).toEqual(body);
-				expect(request.headers).toContain(header);
-				return HttpResponse.json({}, { status: 200 });
-			},
-			{ once: true }
-		)
+		http.post(`*/event`, async ({ request }) => {
+			requests.count++;
+
+			expect(await request.json()).toBe(body);
+			expect(request.headers).toContain(header);
+			return HttpResponse.json({}, { status: 200 });
+		})
 	);
 
 	return requests;

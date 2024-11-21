@@ -158,6 +158,8 @@ export interface MetricsConfigFile {
 		enabled: boolean;
 		/** The date that this permission was set. */
 		date: Date;
+		/** Version number the banner was last shown - only show on version update */
+		bannerLastShown?: string;
 	};
 	c3permission?: {
 		/** True if c3 should send metrics to Cloudflare. */

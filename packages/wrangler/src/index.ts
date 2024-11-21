@@ -1,5 +1,6 @@
 import module from "node:module";
 import os from "node:os";
+import { setTimeout } from "node:timers/promises";
 import TOML from "@iarna/toml";
 import chalk from "chalk";
 import { ProxyAgent, setGlobalDispatcher } from "undici";
@@ -855,6 +856,10 @@ export async function main(argv: string[]): Promise<void> {
 			}
 
 			await closeSentry();
+			await Promise.race([
+				await Promise.allSettled(dispatcher?.requests ?? []),
+				setTimeout(1000), // Ensure we don't hang indefinitely
+			]);
 		} catch (e) {
 			logger.error(e);
 			// Only re-throw if we haven't already re-thrown an exception from a

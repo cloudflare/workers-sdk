@@ -1,3 +1,4 @@
+import chalk from "chalk";
 import { fetch } from "undici";
 import { logger } from "../logger";
 import {
@@ -6,7 +7,11 @@ import {
 	getPlatform,
 	getWranglerVersion,
 } from "./helpers";
-import { getMetricsConfig, readMetricsConfig } from "./metrics-config";
+import {
+	getMetricsConfig,
+	readMetricsConfig,
+	writeMetricsConfig,
+} from "./metrics-config";
 import type { MetricsConfigOptions } from "./metrics-config";
 import type { CommonEventProperties, Events } from "./send-event";
 
@@ -16,6 +21,7 @@ export function getMetricsDispatcher(options: MetricsConfigOptions) {
 	// The SPARROW_SOURCE_KEY will be provided at build time through esbuild's `define` option
 	// No events will be sent if the env `SPARROW_SOURCE_KEY` is not provided and the value will be set to an empty string instead.
 	const SPARROW_SOURCE_KEY = process.env.SPARROW_SOURCE_KEY ?? "";
+	const requests: Array<Promise<void>> = [];
 	const wranglerVersion = getWranglerVersion();
 	const platform = getPlatform();
 	const packageManager = getPackageManager();
@@ -43,6 +49,12 @@ export function getMetricsDispatcher(options: MetricsConfigOptions) {
 			});
 		},
 
+		/**
+		 * Dispatches `wrangler command started / completed / errored` events
+		 *
+		 * This happens on every command execution, and will (hopefully) replace sendEvent soon.
+		 * However to prevent disruption, we're adding under `sendNewEvent` for now.
+		 */
 		async sendNewEvent<EventName extends Events["name"]>(
 			name: EventName,
 			properties: Omit<
@@ -50,6 +62,13 @@ export function getMetricsDispatcher(options: MetricsConfigOptions) {
 				keyof CommonEventProperties
 			>
 		): Promise<void> {
+			if (
+				properties.command === "wrangler telemetry disable" ||
+				properties.command === "wrangler metrics disable"
+			) {
+				return;
+			}
+			printMetricsBanner();
 			const commonEventProperties: CommonEventProperties = {
 				amplitude_session_id,
 				amplitude_event_id: amplitude_event_id++,
@@ -66,6 +85,10 @@ export function getMetricsDispatcher(options: MetricsConfigOptions) {
 					...properties,
 				},
 			});
+		},
+
+		get requests() {
+			return requests;
 		},
 	};
 
@@ -102,7 +125,7 @@ export function getMetricsDispatcher(options: MetricsConfigOptions) {
 
 		// Do not await this fetch call.
 		// Just fire-and-forget, otherwise we might slow down the rest of Wrangler.
-		fetch(`${SPARROW_URL}/api/v1/event`, {
+		const request = fetch(`${SPARROW_URL}/api/v1/event`, {
 			method: "POST",
 			headers: {
 				Accept: "*/*",
@@ -112,12 +135,32 @@ export function getMetricsDispatcher(options: MetricsConfigOptions) {
 			mode: "cors",
 			keepalive: true,
 			body: JSON.stringify(body),
-		}).catch((e) => {
-			logger.debug(
-				"Metrics dispatcher: Failed to send request:",
-				(e as Error).message
+		})
+			.then(() => {})
+			.catch((e) => {
+				logger.debug(
+					"Metrics dispatcher: Failed to send request:",
+					(e as Error).message
+				);
+			});
+
+		requests.push(request);
+	}
+
+	function printMetricsBanner() {
+		const metricsConfig = readMetricsConfig();
+		if (
+			metricsConfig.permission?.enabled &&
+			metricsConfig.permission?.bannerLastShown !== wranglerVersion
+		) {
+			logger.log(
+				chalk.gray(
+					`\nCloudflare collects anonymous telemetry about your usage of Wrangler. Learn more at https://github.com/cloudflare/workers-sdk/tree/main/telemetry.md`
+				)
 			);
-		});
+			metricsConfig.permission.bannerLastShown = wranglerVersion;
+			writeMetricsConfig(metricsConfig);
+		}
 	}
 }
 
