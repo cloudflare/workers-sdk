@@ -57,7 +57,7 @@ export class WranglerE2ETestHelper {
 			return name;
 		}
 		const result = await this.run(`wrangler kv namespace create ${name}`);
-		const match = /id = "([0-9a-f]{32})"/.exec(result.stdout);
+		const match = /"id": "([0-9a-f]{32})"/.exec(result.stdout);
 		assert(match !== null, `Cannot find ID in ${JSON.stringify(result)}`);
 		const id = match[1];
 		onTestFinished(async () => {
@@ -84,7 +84,7 @@ export class WranglerE2ETestHelper {
 			return { id: crypto.randomUUID(), name };
 		}
 		const result = await this.run(`wrangler d1 create ${name}`);
-		const match = /database_id = "([0-9a-f-]{36})"/.exec(result.stdout);
+		const match = /"database_id": "([0-9a-f-]{36})"/.exec(result.stdout);
 		assert(match !== null, `Cannot find ID in ${JSON.stringify(result)}`);
 		const id = match[1];
 		onTestFinished(async () => {
