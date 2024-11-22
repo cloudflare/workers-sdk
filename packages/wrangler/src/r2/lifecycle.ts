@@ -1,10 +1,9 @@
-import { readConfig, withConfig } from "../config";
+import { defineCommand, defineNamespace } from "../core";
 import { confirm, multiselect, prompt } from "../dialogs";
 import { UserError } from "../errors";
 import isInteractive from "../is-interactive";
 import { logger } from "../logger";
 import { readFileSync } from "../parse";
-import { printWranglerBanner } from "../update-check";
 import { requireAuth } from "../user";
 import formatLabelledValues from "../utils/render-labelled-values";
 import {
@@ -15,129 +14,141 @@ import {
 	putLifecycleRules,
 	tableFromLifecycleRulesResponse,
 } from "./helpers";
-import type {
-	CommonYargsArgv,
-	StrictYargsOptionsToInterface,
-} from "../yargs-types";
 import type { LifecycleRule } from "./helpers";
 
-export function ListOptions(yargs: CommonYargsArgv) {
-	return yargs
-		.positional("bucket", {
+defineNamespace({
+	command: "wrangler r2 bucket lifecycle",
+	metadata: {
+		description: "Manage lifecycle rules for an R2 bucket",
+		status: "stable",
+		owner: "Product: R2",
+	},
+});
+
+defineCommand({
+	command: "wrangler r2 bucket lifecycle list",
+	metadata: {
+		description: "List lifecycle rules for an R2 bucket",
+		status: "stable",
+		owner: "Product: R2",
+	},
+	positionalArgs: ["bucket"],
+	args: {
+		bucket: {
 			describe: "The name of the R2 bucket to list lifecycle rules for",
 			type: "string",
 			demandOption: true,
-		})
-		.option("jurisdiction", {
+		},
+		jurisdiction: {
 			describe: "The jurisdiction where the bucket exists",
 			alias: "J",
 			requiresArg: true,
 			type: "string",
-		});
-}
+		},
+	},
+	async handler(args, { config }) {
+		const accountId = await requireAuth(config);
 
-export async function ListHandler(
-	args: StrictYargsOptionsToInterface<typeof ListOptions>
-) {
-	await printWranglerBanner();
-	const config = readConfig(args.config, args);
-	const accountId = await requireAuth(config);
+		const { bucket, jurisdiction } = args;
 
-	const { bucket, jurisdiction } = args;
+		logger.log(`Listing lifecycle rules for bucket '${bucket}'...`);
 
-	logger.log(`Listing lifecycle rules for bucket '${bucket}'...`);
+		const lifecycleRules = await getLifecycleRules(
+			accountId,
+			bucket,
+			jurisdiction
+		);
 
-	const lifecycleRules = await getLifecycleRules(
-		accountId,
-		bucket,
-		jurisdiction
-	);
+		if (lifecycleRules.length === 0) {
+			logger.log(`There are no lifecycle rules for bucket '${bucket}'.`);
+		} else {
+			const tableOutput = tableFromLifecycleRulesResponse(lifecycleRules);
+			logger.log(tableOutput.map((x) => formatLabelledValues(x)).join("\n\n"));
+		}
+	},
+});
 
-	if (lifecycleRules.length === 0) {
-		logger.log(`There are no lifecycle rules for bucket '${bucket}'.`);
-	} else {
-		const tableOutput = tableFromLifecycleRulesResponse(lifecycleRules);
-		logger.log(tableOutput.map((x) => formatLabelledValues(x)).join("\n\n"));
-	}
-}
-
-export function AddOptions(yargs: CommonYargsArgv) {
-	return yargs
-		.positional("bucket", {
+defineCommand({
+	command: "wrangler r2 bucket lifecycle add",
+	metadata: {
+		description: "Add a lifecycle rule to an R2 bucket",
+		status: "stable",
+		owner: "Product: R2",
+	},
+	positionalArgs: ["bucket", "id", "prefix"],
+	args: {
+		bucket: {
 			describe: "The name of the R2 bucket to add a lifecycle rule to",
 			type: "string",
 			demandOption: true,
-		})
-		.positional("id", {
+		},
+		id: {
 			describe: "A unique identifier for the lifecycle rule",
 			type: "string",
 			requiresArg: true,
-		})
-		.positional("prefix", {
+		},
+		prefix: {
 			describe:
 				"Prefix condition for the lifecycle rule (leave empty for all prefixes)",
 			type: "string",
 			requiresArg: true,
-		})
-		.option("expire-days", {
+		},
+		"expire-days": {
 			describe: "Number of days after which objects expire",
 			type: "number",
 			requiresArg: true,
-		})
-		.option("expire-date", {
+		},
+		"expire-date": {
 			describe: "Date after which objects expire (YYYY-MM-DD)",
 			type: "number",
 			requiresArg: true,
-		})
-		.option("ia-transition-days", {
+		},
+		"ia-transition-days": {
 			describe:
 				"Number of days after which objects transition to Infrequent Access storage",
 			type: "number",
 			requiresArg: true,
-		})
-		.option("ia-transition-date", {
+		},
+		"ia-transition-date": {
 			describe:
 				"Date after which objects transition to Infrequent Access storage (YYYY-MM-DD)",
 			type: "string",
 			requiresArg: true,
-		})
-		.option("abort-multipart-days", {
+		},
+		"abort-multipart-days": {
 			describe:
 				"Number of days after which incomplete multipart uploads are aborted",
 			type: "number",
 			requiresArg: true,
-		})
-		.option("jurisdiction", {
+		},
+		jurisdiction: {
 			describe: "The jurisdiction where the bucket exists",
 			alias: "J",
 			requiresArg: true,
 			type: "string",
-		})
-		.option("force", {
+		},
+		force: {
 			describe: "Skip confirmation",
 			type: "boolean",
 			alias: "y",
 			default: false,
-		});
-}
-
-export const AddHandler = withConfig<
-	StrictYargsOptionsToInterface<typeof AddOptions>
->(
-	async ({
-		bucket,
-		expireDays,
-		expireDate,
-		iaTransitionDays,
-		iaTransitionDate,
-		abortMultipartDays,
-		jurisdiction,
-		force,
-		id,
-		prefix,
-		config,
-	}): Promise<void> => {
-		await printWranglerBanner();
+		},
+	},
+	async handler(
+		{
+			bucket,
+			expireDays,
+			expireDate,
+			iaTransitionDays,
+			iaTransitionDate,
+			abortMultipartDays,
+			jurisdiction,
+			force,
+			id,
+			prefix,
+		},
+		{ config }
+	) {
 		const accountId = await requireAuth(config);
 
 		const lifecycleRules = await getLifecycleRules(
@@ -302,131 +313,138 @@ export const AddHandler = withConfig<
 		logger.log(`Adding lifecycle rule '${id}' to bucket '${bucket}'...`);
 		await putLifecycleRules(accountId, bucket, lifecycleRules, jurisdiction);
 		logger.log(`✨ Added lifecycle rule '${id}' to bucket '${bucket}'.`);
-	}
-);
+	},
+});
 
-export function RemoveOptions(yargs: CommonYargsArgv) {
-	return yargs
-		.positional("bucket", {
+defineCommand({
+	command: "wrangler r2 bucket lifecycle remove",
+	metadata: {
+		description: "Remove a lifecycle rule from an R2 bucket",
+		status: "stable",
+		owner: "Product: R2",
+	},
+	positionalArgs: ["bucket"],
+	args: {
+		bucket: {
 			describe: "The name of the R2 bucket to remove a lifecycle rule from",
 			type: "string",
 			demandOption: true,
-		})
-		.option("id", {
+		},
+		id: {
 			describe: "The unique identifier of the lifecycle rule to remove",
 			type: "string",
 			demandOption: true,
 			requiresArg: true,
-		})
-		.option("jurisdiction", {
+		},
+		jurisdiction: {
 			describe: "The jurisdiction where the bucket exists",
 			alias: "J",
 			requiresArg: true,
 			type: "string",
-		});
-}
+		},
+	},
+	async handler(args, { config }) {
+		const accountId = await requireAuth(config);
 
-export async function RemoveHandler(
-	args: StrictYargsOptionsToInterface<typeof RemoveOptions>
-) {
-	await printWranglerBanner();
-	const config = readConfig(args.config, args);
-	const accountId = await requireAuth(config);
+		const { bucket, id, jurisdiction } = args;
 
-	const { bucket, id, jurisdiction } = args;
-
-	const lifecycleRules = await getLifecycleRules(
-		accountId,
-		bucket,
-		jurisdiction
-	);
-
-	const index = lifecycleRules.findIndex((rule) => rule.id === id);
-
-	if (index === -1) {
-		throw new UserError(
-			`Lifecycle rule with ID '${id}' not found in configuration for '${bucket}'.`
+		const lifecycleRules = await getLifecycleRules(
+			accountId,
+			bucket,
+			jurisdiction
 		);
-	}
 
-	lifecycleRules.splice(index, 1);
+		const index = lifecycleRules.findIndex((rule) => rule.id === id);
 
-	logger.log(`Removing lifecycle rule '${id}' from bucket '${bucket}'...`);
-	await putLifecycleRules(accountId, bucket, lifecycleRules, jurisdiction);
-	logger.log(`Lifecycle rule '${id}' removed from bucket '${bucket}'.`);
-}
+		if (index === -1) {
+			throw new UserError(
+				`Lifecycle rule with ID '${id}' not found in configuration for '${bucket}'.`
+			);
+		}
 
-export function SetOptions(yargs: CommonYargsArgv) {
-	return yargs
-		.positional("bucket", {
+		lifecycleRules.splice(index, 1);
+
+		logger.log(`Removing lifecycle rule '${id}' from bucket '${bucket}'...`);
+		await putLifecycleRules(accountId, bucket, lifecycleRules, jurisdiction);
+		logger.log(`Lifecycle rule '${id}' removed from bucket '${bucket}'.`);
+	},
+});
+
+defineCommand({
+	command: "wrangler r2 bucket lifecycle set",
+	metadata: {
+		description:
+			"Set the lifecycle configuration for an R2 bucket from a JSON file",
+		status: "stable",
+		owner: "Product: R2",
+	},
+	positionalArgs: ["bucket"],
+	args: {
+		bucket: {
 			describe: "The name of the R2 bucket to set lifecycle configuration for",
 			type: "string",
 			demandOption: true,
-		})
-		.option("file", {
+		},
+		file: {
 			describe: "Path to the JSON file containing lifecycle configuration",
 			type: "string",
 			demandOption: true,
 			requiresArg: true,
-		})
-		.option("jurisdiction", {
+		},
+		jurisdiction: {
 			describe: "The jurisdiction where the bucket exists",
 			alias: "J",
 			requiresArg: true,
 			type: "string",
-		})
-		.option("force", {
+		},
+		force: {
 			describe: "Skip confirmation",
 			type: "boolean",
 			alias: "y",
 			default: false,
-		});
-}
+		},
+	},
+	async handler(args, { config }) {
+		const accountId = await requireAuth(config);
 
-export async function SetHandler(
-	args: StrictYargsOptionsToInterface<typeof SetOptions>
-) {
-	await printWranglerBanner();
-	const config = readConfig(args.config, args);
-	const accountId = await requireAuth(config);
+		const { bucket, file, jurisdiction, force } = args;
+		let lifecyclePolicy: { rules: LifecycleRule[] };
+		try {
+			lifecyclePolicy = JSON.parse(readFileSync(file));
+		} catch (e) {
+			if (e instanceof Error) {
+				throw new UserError(
+					`Failed to read or parse the lifecycle configuration config file: '${e.message}'`
+				);
+			} else {
+				throw e;
+			}
+		}
 
-	const { bucket, file, jurisdiction, force } = args;
-	let lifecyclePolicy: { rules: LifecycleRule[] };
-	try {
-		lifecyclePolicy = JSON.parse(readFileSync(file));
-	} catch (e) {
-		if (e instanceof Error) {
+		if (!lifecyclePolicy.rules || !Array.isArray(lifecyclePolicy.rules)) {
 			throw new UserError(
-				`Failed to read or parse the lifecycle configuration config file: '${e.message}'`
+				"The lifecycle configuration file must contain a 'rules' array."
 			);
-		} else {
-			throw e;
 		}
-	}
 
-	if (!lifecyclePolicy.rules || !Array.isArray(lifecyclePolicy.rules)) {
-		throw new UserError(
-			"The lifecycle configuration file must contain a 'rules' array."
-		);
-	}
-
-	if (!force) {
-		const confirmedRemoval = await confirm(
-			`Are you sure you want to overwrite all existing lifecycle rules for bucket '${bucket}'?`
-		);
-		if (!confirmedRemoval) {
-			logger.log("Set cancelled.");
-			return;
+		if (!force) {
+			const confirmedRemoval = await confirm(
+				`Are you sure you want to overwrite all existing lifecycle rules for bucket '${bucket}'?`
+			);
+			if (!confirmedRemoval) {
+				logger.log("Set cancelled.");
+				return;
+			}
 		}
-	}
-	logger.log(
-		`Setting lifecycle configuration (${lifecyclePolicy.rules.length} rules) for bucket '${bucket}'...`
-	);
-	await putLifecycleRules(
-		accountId,
-		bucket,
-		lifecyclePolicy.rules,
-		jurisdiction
-	);
-	logger.log(`✨ Set lifecycle configuration for bucket '${bucket}'.`);
-}
+		logger.log(
+			`Setting lifecycle configuration (${lifecyclePolicy.rules.length} rules) for bucket '${bucket}'...`
+		);
+		await putLifecycleRules(
+			accountId,
+			bucket,
+			lifecyclePolicy.rules,
+			jurisdiction
+		);
+		logger.log(`✨ Set lifecycle configuration for bucket '${bucket}'.`);
+	},
+});
