@@ -1,11 +1,11 @@
 import { defineProject, mergeConfig } from "vitest/config";
-import configShared from "../../vitest.shared";
+import configShared from "../../../vitest.shared.js";
 
 export default mergeConfig(
 	configShared,
 	defineProject({
 		test: {
-			include: ["asset-worker/tests/**.{test,spec}.{ts,js}"],
+			include: ["tests/**.{test,spec}.{ts,js}"],
 			globals: true,
 		},
 	})
