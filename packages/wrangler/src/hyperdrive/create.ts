@@ -1,3 +1,4 @@
+import TOML from "@iarna/toml";
 import { readConfig } from "../config";
 import { logger } from "../logger";
 import { createConfig } from "./client";
@@ -35,6 +36,10 @@ export async function handler(
 	});
 	logger.log(
 		`✅ Created new Hyperdrive config\n`,
-		JSON.stringify(database, null, 2)
+		TOML.stringify({
+			hyperdrive: [
+				{binding: "HYPERDRIVE", id: database.id}
+			]
+		})
 	);
 }
