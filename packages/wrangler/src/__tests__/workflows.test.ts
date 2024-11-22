@@ -6,7 +6,7 @@ import { clearDialogs } from "./helpers/mock-dialogs";
 import { msw } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
-import { writeWranglerToml } from "./helpers/write-wrangler-toml";
+import { writeWranglerConfig } from "./helpers/write-wrangler-config";
 import type { Instance, Workflow } from "../workflows/types";
 
 describe("wrangler workflows", () => {
@@ -55,57 +55,59 @@ describe("wrangler workflows", () => {
 
 	describe("help", () => {
 		it("should show help when no argument is passed", async () => {
-			writeWranglerToml();
+			writeWranglerConfig();
 
 			await runWrangler(`workflows`);
 			await endEventLoop();
 
 			expect(std.out).toMatchInlineSnapshot(
-				`"wrangler workflows
+				`
+				"wrangler workflows
 
-🔁 Manage Workflows [open-beta]
+				🔁 Manage Workflows [open-beta]
 
-COMMANDS
-  wrangler workflows list                     List Workflows associated to account [open-beta]
-  wrangler workflows describe <name>          Describe Workflow resource [open-beta]
-  wrangler workflows trigger <name> [params]  Trigger a workflow, creating a new instance. Can optionally take a JSON string to pass a parameter into the workflow instance [open-beta]
-  wrangler workflows instances                Manage Workflow instances [open-beta]
+				COMMANDS
+				  wrangler workflows list                     List Workflows associated to account [open-beta]
+				  wrangler workflows describe <name>          Describe Workflow resource [open-beta]
+				  wrangler workflows trigger <name> [params]  Trigger a workflow, creating a new instance. Can optionally take a JSON string to pass a parameter into the workflow instance [open-beta]
+				  wrangler workflows instances                Manage Workflow instances [open-beta]
 
-GLOBAL FLAGS
-  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
-  -c, --config                    Path to .toml configuration file  [string]
-  -e, --env                       Environment to use for operations and .env files  [string]
-  -h, --help                      Show help  [boolean]
-  -v, --version                   Show version number  [boolean]"`
+				GLOBAL FLAGS
+				  -c, --config   Path to Wrangler configuration file  [string]
+				  -e, --env      Environment to use for operations and .env files  [string]
+				  -h, --help     Show help  [boolean]
+				  -v, --version  Show version number  [boolean]"
+			`
 			);
 		});
 	});
 
 	describe("instances help", () => {
 		it("should show instance help when no argument is passed", async () => {
-			writeWranglerToml();
+			writeWranglerConfig();
 
 			await runWrangler(`workflows instances`);
 			await endEventLoop();
 
 			expect(std.out).toMatchInlineSnapshot(
-				`"wrangler workflows instances
+				`
+				"wrangler workflows instances
 
-Manage Workflow instances [open-beta]
+				Manage Workflow instances [open-beta]
 
-COMMANDS
-  wrangler workflows instances list <name>            Instance related commands (list, describe, terminate, pause, resume) [open-beta]
-  wrangler workflows instances describe <name> <id>   Describe a workflow instance - see its logs, retries and errors [open-beta]
-  wrangler workflows instances terminate <name> <id>  Terminate a workflow instance [open-beta]
-  wrangler workflows instances pause <name> <id>      Pause a workflow instance [open-beta]
-  wrangler workflows instances resume <name> <id>     Resume a workflow instance [open-beta]
+				COMMANDS
+				  wrangler workflows instances list <name>            Instance related commands (list, describe, terminate, pause, resume) [open-beta]
+				  wrangler workflows instances describe <name> <id>   Describe a workflow instance - see its logs, retries and errors [open-beta]
+				  wrangler workflows instances terminate <name> <id>  Terminate a workflow instance [open-beta]
+				  wrangler workflows instances pause <name> <id>      Pause a workflow instance [open-beta]
+				  wrangler workflows instances resume <name> <id>     Resume a workflow instance [open-beta]
 
-GLOBAL FLAGS
-  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
-  -c, --config                    Path to .toml configuration file  [string]
-  -e, --env                       Environment to use for operations and .env files  [string]
-  -h, --help                      Show help  [boolean]
-  -v, --version                   Show version number  [boolean]"`
+				GLOBAL FLAGS
+				  -c, --config   Path to Wrangler configuration file  [string]
+				  -e, --env      Environment to use for operations and .env files  [string]
+				  -h, --help     Show help  [boolean]
+				  -v, --version  Show version number  [boolean]"
+			`
 			);
 		});
 	});
@@ -148,7 +150,7 @@ GLOBAL FLAGS
 		};
 
 		it("should get the list of workflows", async () => {
-			writeWranglerToml();
+			writeWranglerConfig();
 			await mockGetWorkflows(mockWorkflows);
 
 			await runWrangler(`workflows list`);
@@ -188,7 +190,7 @@ GLOBAL FLAGS
 		];
 
 		it("should get the list of instances given a name", async () => {
-			writeWranglerToml();
+			writeWranglerConfig();
 			await mockGetInstances(mockInstances);
 
 			await runWrangler(`workflows instances list some-workflow`);
@@ -271,7 +273,7 @@ GLOBAL FLAGS
 		};
 
 		it("should describe the bar instance given a name", async () => {
-			writeWranglerToml();
+			writeWranglerConfig();
 			await mockDescribeInstances();
 
 			await runWrangler(`workflows instances describe some-workflow bar`);
@@ -306,7 +308,7 @@ GLOBAL FLAGS
 		];
 
 		it("should get and pause the bar instance given a name", async () => {
-			writeWranglerToml();
+			writeWranglerConfig();
 			await mockGetInstances(mockInstances);
 			await mockPatchRequest("bar");
 
@@ -338,7 +340,7 @@ GLOBAL FLAGS
 		];
 
 		it("should get and resume the bar instance given a name", async () => {
-			writeWranglerToml();
+			writeWranglerConfig();
 			await mockGetInstances(mockInstances);
 			await mockPatchRequest("bar");
 
@@ -370,7 +372,7 @@ GLOBAL FLAGS
 		];
 
 		it("should get and terminate the bar instance given a name", async () => {
-			writeWranglerToml();
+			writeWranglerConfig();
 			await mockGetInstances(mockInstances);
 			await mockPatchRequest("bar");
 
@@ -405,7 +407,7 @@ GLOBAL FLAGS
 		};
 
 		it("should trigger a workflow given a name", async () => {
-			writeWranglerToml();
+			writeWranglerConfig();
 			await mockTriggerWorkflow();
 
 			await runWrangler(`workflows trigger some-workflow`);
@@ -418,7 +420,7 @@ GLOBAL FLAGS
 
 	describe("delete", () => {
 		it("should delete a workflow - check not implemented", async () => {
-			writeWranglerToml();
+			writeWranglerConfig();
 
 			await runWrangler(`workflows delete some-workflow`);
 			expect(std.out).toMatchInlineSnapshot(

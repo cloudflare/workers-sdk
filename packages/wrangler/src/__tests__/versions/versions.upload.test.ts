@@ -10,7 +10,7 @@ import { createFetchResult, msw } from "../helpers/msw";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 import { writeWorkerSource } from "../helpers/write-worker-source";
-import { writeWranglerToml } from "../helpers/write-wrangler-toml";
+import { writeWranglerConfig } from "../helpers/write-wrangler-config";
 
 describe("versions upload", () => {
 	runInTempDir();
@@ -71,7 +71,7 @@ describe("versions upload", () => {
 		mockUploadVersion(false);
 
 		// Setup
-		writeWranglerToml({
+		writeWranglerConfig({
 			name: "test-name",
 			main: "./index.js",
 			vars: {
@@ -114,7 +114,7 @@ describe("versions upload", () => {
 		mockSubDomainRequest();
 
 		// Setup
-		writeWranglerToml({
+		writeWranglerConfig({
 			name: "test-name",
 			main: "./index.js",
 			vars: {
@@ -146,7 +146,7 @@ describe("versions upload", () => {
 		mockGetWorkerSubdomain({ enabled: false });
 
 		// Setup
-		writeWranglerToml({
+		writeWranglerConfig({
 			name: "test-name",
 			main: "./index.js",
 			vars: {

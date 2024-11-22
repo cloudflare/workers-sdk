@@ -56,6 +56,19 @@ export default {
 			}
 
 			const maybeSecondRequest = request.clone();
+
+			// User's configuration indicates they want user-Worker to run ahead of any
+			// assets. Do not provide any fallback logic.
+			if (env.CONFIG.invoke_user_worker_ahead_of_assets) {
+				if (!env.CONFIG.has_user_worker) {
+					throw new Error(
+						"Fetch for user worker without having a user worker binding"
+					);
+				}
+				return env.USER_WORKER.fetch(maybeSecondRequest);
+			}
+
+			// Otherwise, we try to first fetch assets, falling back to user-Worker.
 			if (env.CONFIG.has_user_worker) {
 				if (await env.ASSET_WORKER.unstable_canFetch(request)) {
 					analytics.setData({ dispatchtype: DISPATCH_TYPE.ASSETS });

@@ -1,5 +1,11 @@
 # @cloudflare/workers-shared
 
+## 0.8.0
+
+### Minor Changes
+
+- [#7318](https://github.com/cloudflare/workers-sdk/pull/7318) [`6ba5903`](https://github.com/cloudflare/workers-sdk/commit/6ba5903201de34cb3a8a5610fa11825279171a7e) Thanks [@WillTaylorDev](https://github.com/WillTaylorDev)! - Prevent same-schema attacks
+
 ## 0.7.1
 
 ### Patch Changes

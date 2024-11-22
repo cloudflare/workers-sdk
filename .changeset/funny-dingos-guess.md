@@ -2,4 +2,4 @@
 "@cloudflare/workers-shared": minor
 ---
 
-Prevent same-schema attacks
+Option to invoke user worker ahead of assets

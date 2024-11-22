@@ -857,9 +857,9 @@ export interface DeprecatedUpload {
 
 	/**
 	 * The directory you wish to upload your Worker from,
-	 * relative to the wrangler.toml file.
+	 * relative to the Wrangler configuration file.
 	 *
-	 * Defaults to the directory containing the wrangler.toml file.
+	 * Defaults to the directory containing the Wrangler configuration file.
 	 *
 	 * @deprecated
 	 */

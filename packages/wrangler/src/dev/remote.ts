@@ -178,6 +178,7 @@ export async function getWorkerAccountAndContext(props: {
 	host: string | undefined;
 	routes: Route[] | undefined;
 	sendMetrics: boolean | undefined;
+	configPath: string | undefined;
 }): Promise<{ workerAccount: CfAccount; workerContext: CfWorkerContext }> {
 	const workerAccount: CfAccount = {
 		accountId: props.accountId,
@@ -195,7 +196,7 @@ export async function getWorkerAccountAndContext(props: {
 		env: props.env,
 		legacyEnv: props.legacyEnv,
 		zone: zoneId,
-		host: props.host ?? getInferredHost(props.routes),
+		host: props.host ?? getInferredHost(props.routes, props.configPath),
 		routes: props.routes,
 		sendMetrics: props.sendMetrics,
 	};

@@ -1,6 +1,6 @@
 {
 	"name": "@cloudflare/workers-shared",
-	"version": "0.7.1",
+	"version": "0.8.0",
 	"description": "Package that is used at Cloudflare to power some internal features of Cloudflare Workers.",
 	"keywords": [
 		"cloudflare",
@@ -30,14 +30,16 @@
 		"bundle:router-worker:prod": "pnpm run bundle:router-worker --minify",
 		"check:lint": "eslint . --max-warnings=0",
 		"check:type": "pnpm run check:type:tests && tsc",
-		"check:type:tests": "tsc -p ./asset-worker/tests/tsconfig.json",
+		"check:type:tests": "tsc -p ./asset-worker/tests/tsconfig.json && tsc -p ./router-worker/tests/tsconfig.json",
 		"clean": "rimraf dist",
 		"deploy": "pnpm run deploy:router-worker && pnpm run deploy:asset-worker",
 		"deploy:asset-worker": "CLOUDFLARE_API_TOKEN=$WORKERS_DEPLOY_AND_CONFIG_CLOUDFLARE_API_TOKEN pnpx wrangler versions upload --experimental-versions -c asset-worker/wrangler.toml",
 		"deploy:router-worker": "CLOUDFLARE_API_TOKEN=$WORKERS_DEPLOY_AND_CONFIG_CLOUDFLARE_API_TOKEN pnpx wrangler versions upload --experimental-versions -c router-worker/wrangler.toml",
 		"dev": "pnpm run clean && concurrently -n bundle:asset-worker,bundle:router-worker -c blue,magenta \"pnpm run bundle:asset-worker --watch\" \"pnpm run bundle:router-worker --watch\"",
-		"test": "vitest",
-		"test:ci": "vitest run",
+		"test": "concurrently --group -n router-worker,asset-worker \"pnpm run test:router-worker\" \"pnpm run test:asset-worker\"",
+		"test:asset-worker": "vitest -c asset-worker/vitest.config.mts --dir asset-worker",
+		"test:ci": "pnpm run test",
+		"test:router-worker": "vitest -c router-worker/vitest.config.mts --dir router-worker",
 		"types:emit": "tsc index.ts --declaration --emitDeclarationOnly --declarationDir ./dist"
 	},
 	"dependencies": {
@@ -46,6 +48,7 @@
 	},
 	"devDependencies": {
 		"@cloudflare/eslint-config-worker": "workspace:*",
+		"@cloudflare/vitest-pool-workers": "latest",
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-types": "^4.20241106.0",
 		"@types/mime": "^3.0.4",

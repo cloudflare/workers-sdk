@@ -1,5 +1,17 @@
 # wrangler
 
+## 3.90.0
+
+### Minor Changes
+
+- [#7315](https://github.com/cloudflare/workers-sdk/pull/7315) [`31729ee`](https://github.com/cloudflare/workers-sdk/commit/31729ee63df0fbaf34787ab9e5a53f7180d0ec8c) Thanks [@G4brym](https://github.com/G4brym)! - Update local AI fetcher to forward method and url to upstream
+
+### Patch Changes
+
+- Updated dependencies [[`6ba5903`](https://github.com/cloudflare/workers-sdk/commit/6ba5903201de34cb3a8a5610fa11825279171a7e)]:
+  - @cloudflare/workers-shared@0.8.0
+  - miniflare@3.20241106.1
+
 ## 3.89.0
 
 ### Minor Changes

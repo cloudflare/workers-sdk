@@ -8,7 +8,7 @@ import { mockGetMemberships } from "../helpers/mock-oauth-flow";
 import { msw } from "../helpers/msw";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
-import { writeWranglerToml } from "../helpers/write-wrangler-toml";
+import { writeWranglerConfig } from "../helpers/write-wrangler-config";
 
 describe("export", () => {
 	mockAccountId({ accountId: null });
@@ -25,7 +25,7 @@ describe("export", () => {
 
 	it("should handle local", async () => {
 		setIsTTY(false);
-		writeWranglerToml({
+		writeWranglerConfig({
 			d1_databases: [
 				{ binding: "DATABASE", database_name: "db", database_id: "xxxx" },
 			],
@@ -104,7 +104,7 @@ describe("export", () => {
 
 	it("should handle remote", async () => {
 		setIsTTY(false);
-		writeWranglerToml({
+		writeWranglerConfig({
 			d1_databases: [
 				{ binding: "DATABASE", database_name: "db", database_id: "xxxx" },
 			],

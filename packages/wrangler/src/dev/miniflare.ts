@@ -18,7 +18,7 @@ import {
 	EXTERNAL_VECTORIZE_WORKER_SCRIPT,
 	MakeVectorizeFetcher,
 } from "../vectorize/fetcher";
-import { getClassNamesWhichUseSQLite } from "./validate-dev-props";
+import { getClassNamesWhichUseSQLite } from "./class-names-sqlite";
 import type { ServiceFetch } from "../api";
 import type { AssetsOptions } from "../assets";
 import type { Config } from "../config";

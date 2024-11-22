@@ -7,7 +7,7 @@ import { mockConsoleMethods } from "./helpers/mock-console";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import { writeWorkerSource } from "./helpers/write-worker-source";
-import { writeWranglerToml } from "./helpers/write-wrangler-toml";
+import { writeWranglerConfig } from "./helpers/write-wrangler-config";
 import type { PackageManager } from "../package-manager";
 import type { Mock } from "vitest";
 
@@ -67,11 +67,10 @@ describe("wrangler", () => {
 				  wrangler whoami                 🕵️  Retrieve your user information
 
 				GLOBAL FLAGS
-				  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
-				  -c, --config                    Path to .toml configuration file  [string]
-				  -e, --env                       Environment to use for operations and .env files  [string]
-				  -h, --help                      Show help  [boolean]
-				  -v, --version                   Show version number  [boolean]
+				  -c, --config   Path to Wrangler configuration file  [string]
+				  -e, --env      Environment to use for operations and .env files  [string]
+				  -h, --help     Show help  [boolean]
+				  -v, --version  Show version number  [boolean]
 
 				Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose"
 			`);
@@ -124,11 +123,10 @@ describe("wrangler", () => {
 				  wrangler whoami                 🕵️  Retrieve your user information
 
 				GLOBAL FLAGS
-				  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
-				  -c, --config                    Path to .toml configuration file  [string]
-				  -e, --env                       Environment to use for operations and .env files  [string]
-				  -h, --help                      Show help  [boolean]
-				  -v, --version                   Show version number  [boolean]
+				  -c, --config   Path to Wrangler configuration file  [string]
+				  -e, --env      Environment to use for operations and .env files  [string]
+				  -h, --help     Show help  [boolean]
+				  -v, --version  Show version number  [boolean]
 
 				Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose"
 			`);
@@ -191,11 +189,10 @@ describe("wrangler", () => {
 				  wrangler secret bulk [json]   Bulk upload secrets for a Worker
 
 				GLOBAL FLAGS
-				  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
-				  -c, --config                    Path to .toml configuration file  [string]
-				  -e, --env                       Environment to use for operations and .env files  [string]
-				  -h, --help                      Show help  [boolean]
-				  -v, --version                   Show version number  [boolean]"
+				  -c, --config   Path to Wrangler configuration file  [string]
+				  -e, --env      Environment to use for operations and .env files  [string]
+				  -h, --help     Show help  [boolean]
+				  -v, --version  Show version number  [boolean]"
 			`);
 		});
 
@@ -213,11 +210,10 @@ describe("wrangler", () => {
 				  wrangler kv namespace delete              Delete a given namespace.
 
 				GLOBAL FLAGS
-				  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
-				  -c, --config                    Path to .toml configuration file  [string]
-				  -e, --env                       Environment to use for operations and .env files  [string]
-				  -h, --help                      Show help  [boolean]
-				  -v, --version                   Show version number  [boolean]"
+				  -c, --config   Path to Wrangler configuration file  [string]
+				  -e, --env      Environment to use for operations and .env files  [string]
+				  -h, --help     Show help  [boolean]
+				  -v, --version  Show version number  [boolean]"
 			`);
 		});
 
@@ -236,11 +232,10 @@ describe("wrangler", () => {
 				  wrangler kv key delete <key>       Remove a single key value pair from the given namespace
 
 				GLOBAL FLAGS
-				  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
-				  -c, --config                    Path to .toml configuration file  [string]
-				  -e, --env                       Environment to use for operations and .env files  [string]
-				  -h, --help                      Show help  [boolean]
-				  -v, --version                   Show version number  [boolean]"
+				  -c, --config   Path to Wrangler configuration file  [string]
+				  -e, --env      Environment to use for operations and .env files  [string]
+				  -h, --help     Show help  [boolean]
+				  -v, --version  Show version number  [boolean]"
 			`);
 		});
 
@@ -257,11 +252,10 @@ describe("wrangler", () => {
 				  wrangler kv bulk delete <filename>  Delete multiple key-value pairs from a namespace
 
 				GLOBAL FLAGS
-				  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
-				  -c, --config                    Path to .toml configuration file  [string]
-				  -e, --env                       Environment to use for operations and .env files  [string]
-				  -h, --help                      Show help  [boolean]
-				  -v, --version                   Show version number  [boolean]"
+				  -c, --config   Path to Wrangler configuration file  [string]
+				  -e, --env      Environment to use for operations and .env files  [string]
+				  -h, --help     Show help  [boolean]
+				  -v, --version  Show version number  [boolean]"
 			`);
 		});
 
@@ -278,17 +272,16 @@ describe("wrangler", () => {
 				  wrangler r2 bucket  Manage R2 buckets
 
 				GLOBAL FLAGS
-				  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
-				  -c, --config                    Path to .toml configuration file  [string]
-				  -e, --env                       Environment to use for operations and .env files  [string]
-				  -h, --help                      Show help  [boolean]
-				  -v, --version                   Show version number  [boolean]"
+				  -c, --config   Path to Wrangler configuration file  [string]
+				  -e, --env      Environment to use for operations and .env files  [string]
+				  -h, --help     Show help  [boolean]
+				  -v, --version  Show version number  [boolean]"
 			`);
 		});
 	});
 
 	it("should print a deprecation message for 'build' and then try to run `deploy --dry-run --outdir`", async () => {
-		writeWranglerToml({
+		writeWranglerConfig({
 			main: "index.js",
 		});
 		writeWorkerSource();
