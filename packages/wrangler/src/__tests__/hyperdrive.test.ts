@@ -118,17 +118,10 @@ describe("hyperdrive commands", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 			"🚧 Creating 'test123'
 			✅ Created new Hyperdrive config
-			 {
-			  \\"id\\": \\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\\",
-			  \\"name\\": \\"test123\\",
-			  \\"origin\\": {
-			    \\"host\\": \\"example.com\\",
-			    \\"port\\": 12345,
-			    \\"database\\": \\"neondb\\",
-			    \\"scheme\\": \\"postgresql\\",
-			    \\"user\\": \\"test\\"
-			  }
-			}"
+			 [[hyperdrive]]
+			binding = \\"HYPERDRIVE\\"
+			id = \\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\\"
+			"
 		`);
 	});
 
@@ -154,17 +147,10 @@ describe("hyperdrive commands", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 			"🚧 Creating 'test123'
 			✅ Created new Hyperdrive config
-			 {
-			  \\"id\\": \\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\\",
-			  \\"name\\": \\"test123\\",
-			  \\"origin\\": {
-			    \\"host\\": \\"example.com\\",
-			    \\"port\\": 5432,
-			    \\"database\\": \\"neondb\\",
-			    \\"scheme\\": \\"postgresql\\",
-			    \\"user\\": \\"test\\"
-			  }
-			}"
+			 [[hyperdrive]]
+			binding = \\"HYPERDRIVE\\"
+			id = \\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\\"
+			"
 		`);
 	});
 
@@ -194,21 +180,10 @@ describe("hyperdrive commands", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 			"🚧 Creating 'test123'
 			✅ Created new Hyperdrive config
-			 {
-			  \\"id\\": \\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\\",
-			  \\"name\\": \\"test123\\",
-			  \\"origin\\": {
-			    \\"host\\": \\"example.com\\",
-			    \\"port\\": 12345,
-			    \\"database\\": \\"neondb\\",
-			    \\"scheme\\": \\"postgresql\\",
-			    \\"user\\": \\"test\\"
-			  },
-			  \\"caching\\": {
-			    \\"max_age\\": 30,
-			    \\"stale_while_revalidate\\": 15
-			  }
-			}"
+			 [[hyperdrive]]
+			binding = \\"HYPERDRIVE\\"
+			id = \\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\\"
+			"
 		`);
 	});
 
@@ -234,17 +209,10 @@ describe("hyperdrive commands", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 			"🚧 Creating 'test123'
 			✅ Created new Hyperdrive config
-			 {
-			  \\"id\\": \\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\\",
-			  \\"name\\": \\"test123\\",
-			  \\"origin\\": {
-			    \\"host\\": \\"example.com\\",
-			    \\"port\\": 5432,
-			    \\"database\\": \\"neondb\\",
-			    \\"scheme\\": \\"postgresql\\",
-			    \\"user\\": \\"user:name\\"
-			  }
-			}"
+			 [[hyperdrive]]
+			binding = \\"HYPERDRIVE\\"
+			id = \\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\\"
+			"
 		`);
 	});
 
@@ -270,17 +238,10 @@ describe("hyperdrive commands", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 			"🚧 Creating 'test123'
 			✅ Created new Hyperdrive config
-			 {
-			  \\"id\\": \\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\\",
-			  \\"name\\": \\"test123\\",
-			  \\"origin\\": {
-			    \\"host\\": \\"example.com\\",
-			    \\"port\\": 5432,
-			    \\"database\\": \\"neondb\\",
-			    \\"scheme\\": \\"postgresql\\",
-			    \\"user\\": \\"test\\"
-			  }
-			}"
+			 [[hyperdrive]]
+			binding = \\"HYPERDRIVE\\"
+			id = \\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\\"
+			"
 		`);
 	});
 
@@ -306,17 +267,10 @@ describe("hyperdrive commands", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 			"🚧 Creating 'test123'
 			✅ Created new Hyperdrive config
-			 {
-			  \\"id\\": \\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\\",
-			  \\"name\\": \\"test123\\",
-			  \\"origin\\": {
-			    \\"host\\": \\"example.com\\",
-			    \\"port\\": 5432,
-			    \\"database\\": \\"/\\"weird/\\" dbname\\",
-			    \\"scheme\\": \\"postgresql\\",
-			    \\"user\\": \\"test\\"
-			  }
-			}"
+			 [[hyperdrive]]
+			binding = \\"HYPERDRIVE\\"
+			id = \\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\\"
+			"
 		`);
 	});
 
@@ -342,17 +296,10 @@ describe("hyperdrive commands", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 			"🚧 Creating 'test123'
 			✅ Created new Hyperdrive config
-			 {
-			  \\"id\\": \\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\\",
-			  \\"name\\": \\"test123\\",
-			  \\"origin\\": {
-			    \\"host\\": \\"example.com\\",
-			    \\"port\\": 5432,
-			    \\"database\\": \\"neondb\\",
-			    \\"scheme\\": \\"postgresql\\",
-			    \\"user\\": \\"test\\"
-			  }
-			}"
+			 [[hyperdrive]]
+			binding = \\"HYPERDRIVE\\"
+			id = \\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\\"
+			"
 		`);
 	});
 
@@ -378,17 +325,10 @@ describe("hyperdrive commands", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 			"🚧 Creating 'test123'
 			✅ Created new Hyperdrive config
-			 {
-			  \\"id\\": \\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\\",
-			  \\"name\\": \\"test123\\",
-			  \\"origin\\": {
-			    \\"host\\": \\"example.com\\",
-			    \\"port\\": 1234,
-			    \\"database\\": \\"neondb\\",
-			    \\"scheme\\": \\"postgresql\\",
-			    \\"user\\": \\"test\\"
-			  }
-			}"
+			 [[hyperdrive]]
+			binding = \\"HYPERDRIVE\\"
+			id = \\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\\"
+			"
 		`);
 	});
 
@@ -440,17 +380,10 @@ describe("hyperdrive commands", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 			"🚧 Creating 'test123'
 			✅ Created new Hyperdrive config
-			 {
-			  \\"id\\": \\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\\",
-			  \\"name\\": \\"test123\\",
-			  \\"origin\\": {
-			    \\"host\\": \\"example.com\\",
-			    \\"database\\": \\"neondb\\",
-			    \\"scheme\\": \\"postgresql\\",
-			    \\"user\\": \\"test\\",
-			    \\"access_client_id\\": \\"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.access\\"
-			  }
-			}"
+			 [[hyperdrive]]
+			binding = \\"HYPERDRIVE\\"
+			id = \\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\\"
+			"
 		`);
 	});
 
@@ -476,17 +409,10 @@ describe("hyperdrive commands", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 			"🚧 Creating 'test123'
 			✅ Created new Hyperdrive config
-			 {
-			  \\"id\\": \\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\\",
-			  \\"name\\": \\"test123\\",
-			  \\"origin\\": {
-			    \\"host\\": \\"example.com/database\\",
-			    \\"database\\": \\"neondb\\",
-			    \\"scheme\\": \\"postgresql\\",
-			    \\"user\\": \\"test\\",
-			    \\"access_client_id\\": \\"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.access\\"
-			  }
-			}"
+			 [[hyperdrive]]
+			binding = \\"HYPERDRIVE\\"
+			id = \\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\\"
+			"
 		`);
 	});
 
