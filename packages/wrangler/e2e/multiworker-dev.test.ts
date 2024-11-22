@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import dedent from "ts-dedent";
 import { fetch } from "undici";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -5,6 +6,7 @@ import { WranglerE2ETestHelper } from "./helpers/e2e-wrangler-test";
 import { fetchText } from "./helpers/fetch-text";
 import { generateResourceName } from "./helpers/generate-resource-name";
 import { seed as baseSeed, makeRoot } from "./helpers/setup";
+import { getStartedWorkerdProcesses } from "./helpers/workerd-processes";
 import type { RequestInit } from "undici";
 
 async function fetchJson<T>(url: string, info?: RequestInit): Promise<T> {
@@ -176,6 +178,54 @@ describe("multiworker", () => {
 				async () => await expect(fetchText(url)).resolves.toBe("hello world"),
 				{ interval: 1000, timeout: 10_000 }
 			);
+		});
+
+		it("shows error on startup with non-existent service", async () => {
+			await baseSeed(a, {
+				"wrangler.toml": dedent`
+						name = "${workerName}"
+						main = "src/index.ts"
+						compatibility_date = "2023-01-01"
+
+						[[services]]
+						binding = "BEE"
+						service = '${randomUUID()}'
+				`,
+			});
+
+			const workerA = helper.runLongLived(
+				`wrangler dev -c wrangler.toml -c ${b}/wrangler.toml`,
+				{ cwd: a }
+			);
+			await workerA.readUntil(/no such service is defined/);
+
+			expect(await workerA.exitCode).toBe(1);
+		});
+
+		it(`leaves no orphaned workerd processes after shutdown`, async () => {
+			const beginProcesses = getStartedWorkerdProcesses(helper.tmpPath);
+
+			const workerA = helper.runLongLived(
+				`wrangler dev -c wrangler.toml -c ${b}/wrangler.toml`,
+				{ cwd: a }
+			);
+			const { url } = await workerA.waitForReady(5_000);
+
+			await vi.waitFor(
+				async () => await expect(fetchText(url)).resolves.toBe("hello world"),
+				{ interval: 1000, timeout: 10_000 }
+			);
+
+			workerA.signal("SIGINT");
+
+			const exitCode = await workerA.exitCode;
+
+			expect(exitCode).toBe(0);
+
+			const endProcesses = getStartedWorkerdProcesses(helper.tmpPath);
+
+			expect(beginProcesses.length).toBe(0);
+			expect(endProcesses.length).toBe(0);
 		});
 	});
 

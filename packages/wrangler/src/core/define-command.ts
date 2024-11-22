@@ -107,6 +107,12 @@ export type CommandDefinition<
 		 * Set this value to `false` to skip printing these warnings.
 		 */
 		printConfigWarnings?: boolean;
+
+		/**
+		 * By default, wrangler will read & provide the wrangler.toml/wrangler.json configuration.
+		 * Set this value to `false` to skip this.
+		 */
+		provideConfig?: boolean;
 	};
 
 	/**

@@ -4,7 +4,7 @@ import path from "node:path";
 import util from "node:util";
 import { isWebContainer } from "@webcontainer/env";
 import { DevEnv } from "./api";
-import { MultiworkerRuntimeController } from "./api/startDevWorker/MultiworkerRuntimeController";
+import { LocalRuntimeController } from "./api/startDevWorker/LocalRuntimeController";
 import { NoOpProxyController } from "./api/startDevWorker/NoOpProxyController";
 import {
 	convertCfWorkerInitBindingstoBindings,
@@ -54,7 +54,7 @@ import type { Json } from "miniflare";
 const command = defineCommand({
 	command: "wrangler dev",
 	behaviour: {
-		printConfigWarnings: false,
+		provideConfig: false,
 	},
 	metadata: {
 		description: "👂 Start a local server for developing your Worker",
@@ -379,6 +379,7 @@ const command = defineCommand({
 		);
 		assert(devInstance.devEnv !== undefined);
 		await events.once(devInstance.devEnv, "teardown");
+		await Promise.all(devInstance.secondary.map((d) => d.teardown()));
 		if (devInstance.teardownRegistryPromise) {
 			const teardownRegistry = await devInstance.teardownRegistryPromise;
 			await teardownRegistry(devInstance.devEnv.config.latestConfig?.name);
@@ -718,7 +719,7 @@ export async function startDev(args: StartDevOptions) {
 		};
 
 		if (Array.isArray(configPath)) {
-			const runtime = new MultiworkerRuntimeController(configPath.length);
+			const runtime = new LocalRuntimeController(configPath.length);
 
 			const primaryDevEnv = new DevEnv({ runtimes: [runtime] });
 
@@ -731,7 +732,6 @@ export async function startDev(args: StartDevOptions) {
 				await setupDevEnv(primaryDevEnv, configPath[0], authHook, {
 					...args,
 					disableDevRegistry: true,
-					multiworkerPrimary: true,
 				}),
 			];
 
@@ -748,17 +748,12 @@ export async function startDev(args: StartDevOptions) {
 							authHook,
 							{
 								disableDevRegistry: true,
+								multiworkerPrimary: false,
 							}
 						);
 					})
 				))
 			);
-
-			// Hook up teardowns
-			primaryDevEnv.on("teardown", () => {
-				assert(Array.isArray(devEnv));
-				devEnv.slice(1).map((d) => d.teardown());
-			});
 		} else {
 			devEnv = new DevEnv();
 
@@ -832,6 +827,7 @@ export async function startDev(args: StartDevOptions) {
 
 		return {
 			devEnv: Array.isArray(devEnv) ? devEnv[0] : devEnv,
+			secondary: Array.isArray(devEnv) ? devEnv.slice(1) : [],
 			unregisterHotKeys,
 			teardownRegistryPromise,
 		};
