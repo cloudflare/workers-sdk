@@ -9,7 +9,7 @@ import {
 	spinnerWhile,
 } from "@cloudflare/cli/interactive";
 import { fetchResult } from "../cfetch";
-import { findWranglerToml, readConfig } from "../config";
+import { findWranglerConfig, readConfig } from "../config";
 import { UserError } from "../errors";
 import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
@@ -230,11 +230,9 @@ export async function versionsDeployHandler(args: VersionsDeployArgs) {
 	});
 }
 
-function getConfig(
-	args: Pick<VersionsDeployArgs, "config" | "name" | "experimentalJsonConfig">
-) {
+function getConfig(args: Pick<VersionsDeployArgs, "config" | "name">) {
 	const configPath =
-		args.config || (args.name && findWranglerToml(path.dirname(args.name)));
+		args.config || (args.name && findWranglerConfig(path.dirname(args.name)));
 	const config = readConfig(configPath, args);
 
 	return config;

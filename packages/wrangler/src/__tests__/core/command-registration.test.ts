@@ -133,6 +133,9 @@ describe("Command Registration", () => {
 			  num: 2,
 			  bool: true,
 			  arr: [ 'first', 'second', 'third' ],
+			  'experimental-json-config': true,
+			  j: true,
+			  experimentalJsonConfig: true,
 			  'experimental-versions': true,
 			  'x-versions': true,
 			  'experimental-gradual-rollouts': true,
@@ -200,11 +203,10 @@ describe("Command Registration", () => {
 			  wrangler two                             namespace 2
 
 			GLOBAL FLAGS
-			  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
-			  -c, --config                    Path to .toml configuration file  [string]
-			  -e, --env                       Environment to use for operations and .env files  [string]
-			  -h, --help                      Show help  [boolean]
-			  -v, --version                   Show version number  [boolean]
+			  -c, --config   Path to Wrangler configuration file  [string]
+			  -e, --env      Environment to use for operations and .env files  [string]
+			  -h, --help     Show help  [boolean]
+			  -v, --version  Show version number  [boolean]
 
 			Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose"
 		`);
@@ -223,11 +225,10 @@ describe("Command Registration", () => {
 			  wrangler one two  command 1 2
 
 			GLOBAL FLAGS
-			  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
-			  -c, --config                    Path to .toml configuration file  [string]
-			  -e, --env                       Environment to use for operations and .env files  [string]
-			  -h, --help                      Show help  [boolean]
-			  -v, --version                   Show version number  [boolean]"
+			  -c, --config   Path to Wrangler configuration file  [string]
+			  -e, --env      Environment to use for operations and .env files  [string]
+			  -h, --help     Show help  [boolean]
+			  -v, --version  Show version number  [boolean]"
 		`);
 	});
 
@@ -243,11 +244,10 @@ describe("Command Registration", () => {
 			  wrangler one two three  command 1 2 3
 
 			GLOBAL FLAGS
-			  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
-			  -c, --config                    Path to .toml configuration file  [string]
-			  -e, --env                       Environment to use for operations and .env files  [string]
-			  -h, --help                      Show help  [boolean]
-			  -v, --version                   Show version number  [boolean]"
+			  -c, --config   Path to Wrangler configuration file  [string]
+			  -e, --env      Environment to use for operations and .env files  [string]
+			  -h, --help     Show help  [boolean]
+			  -v, --version  Show version number  [boolean]"
 		`);
 	});
 
@@ -260,11 +260,10 @@ describe("Command Registration", () => {
 			command 1 2 3
 
 			GLOBAL FLAGS
-			  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
-			  -c, --config                    Path to .toml configuration file  [string]
-			  -e, --env                       Environment to use for operations and .env files  [string]
-			  -h, --help                      Show help  [boolean]
-			  -v, --version                   Show version number  [boolean]"
+			  -c, --config   Path to Wrangler configuration file  [string]
+			  -e, --env      Environment to use for operations and .env files  [string]
+			  -h, --help     Show help  [boolean]
+			  -v, --version  Show version number  [boolean]"
 		`);
 	});
 
@@ -285,6 +284,9 @@ describe("Command Registration", () => {
 			  num: 3,
 			  bool: true,
 			  arr: [ '1st', '2nd', '3rd' ],
+			  'experimental-json-config': true,
+			  j: true,
+			  experimentalJsonConfig: true,
 			  'experimental-versions': true,
 			  'x-versions': true,
 			  'experimental-gradual-rollouts': true,
@@ -341,11 +343,10 @@ describe("Command Registration", () => {
 			  posNum  [number]
 
 			GLOBAL FLAGS
-			  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
-			  -c, --config                    Path to .toml configuration file  [string]
-			  -e, --env                       Environment to use for operations and .env files  [string]
-			  -h, --help                      Show help  [boolean]
-			  -v, --version                   Show version number  [boolean]
+			  -c, --config   Path to Wrangler configuration file  [string]
+			  -e, --env      Environment to use for operations and .env files  [string]
+			  -h, --help     Show help  [boolean]
+			  -v, --version  Show version number  [boolean]
 
 			OPTIONS
 			      --str  [string] [required]

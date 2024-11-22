@@ -1,3 +1,5 @@
+import dedent from "ts-dedent";
+import { formatConfigSnippet } from "../config";
 import { defineCommand, defineNamespace } from "../core";
 import { UserError } from "../errors";
 import { logger } from "../logger";
@@ -83,15 +85,14 @@ defineCommand({
 
 		logger.log(`Creating bucket '${fullBucketName}'...`);
 		await createR2Bucket(accountId, name, location, jurisdiction, storageClass);
-		logger.log(
-			`✅ Created bucket '${fullBucketName}' with${
+		logger.log(dedent`
+			✅ Created bucket '${fullBucketName}' with${
 				location ? ` location hint ${location} and` : ``
-			} default storage class of ${storageClass ? storageClass : `Standard`}.\n\n` +
-				"Configure your Worker to write objects to this bucket:\n\n" +
-				"[[r2_buckets]]\n" +
-				`bucket_name = "${args.name}"\n` +
-				`binding = "${getValidBindingName(args.name, "r2")}"`
-		);
+			} default storage class of ${storageClass ? storageClass : `Standard`}.
+
+			Configure your Worker to write objects to this bucket:
+
+			${formatConfigSnippet({ r2_buckets: [{ bucket_name: args.name, binding: getValidBindingName(args.name, "r2") }] }, config.configPath)}`);
 
 		await metrics.sendMetricsEvent("create r2 bucket", {
 			sendMetrics: config.send_metrics,

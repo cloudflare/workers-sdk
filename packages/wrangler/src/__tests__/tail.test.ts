@@ -10,7 +10,7 @@ import { MockWebSocket } from "./helpers/mock-web-socket";
 import { createFetchResult, msw, mswSucessScriptHandlers } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
-import { writeWranglerToml } from "./helpers/write-wrangler-toml";
+import { writeWranglerConfig } from "./helpers/write-wrangler-config";
 import type {
 	AlarmEvent,
 	EmailEvent,
@@ -74,7 +74,7 @@ describe("tail", () => {
 			await expect(
 				runWrangler("tail")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: Required Worker name missing. Please specify the Worker name in wrangler.toml, or pass it as an argument with \`wrangler tail <worker-name>\`]`
+				`[Error: Required Worker name missing. Please specify the Worker name in your Wrangler configuration file, or pass it as an argument with \`wrangler tail <worker-name>\`]`
 			);
 		});
 
@@ -846,7 +846,7 @@ describe("tail", () => {
 	});
 
 	it("should error helpfully if pages_build_output_dir is set in wrangler.toml", async () => {
-		writeWranglerToml({
+		writeWranglerConfig({
 			pages_build_output_dir: "public",
 			name: "test-name",
 		});

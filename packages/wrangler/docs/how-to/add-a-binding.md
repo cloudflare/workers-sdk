@@ -1,6 +1,6 @@
 # How to register a binding
 
-1. Register `wrangler.toml` section in: `packages/wrangler/src/config/environment.ts` [ref](https://github.com/cloudflare/workers-sdk/blob/ce7db9d9cb4f5bcd5a326b86dde051cb54b999fb/packages/wrangler/src/config/environment.ts#L431-L451)
+1. Register Wrangler configuration section in: `packages/wrangler/src/config/environment.ts` [ref](https://github.com/cloudflare/workers-sdk/blob/ce7db9d9cb4f5bcd5a326b86dde051cb54b999fb/packages/wrangler/src/config/environment.ts#L431-L451)
 1. Register validation functions in: `packages/wrangler/src/config/validation.ts` [ref](https://github.com/cloudflare/workers-sdk/blob/ce7db9d9cb4f5bcd5a326b86dde051cb54b999fb/packages/wrangler/src/config/validation.ts#L1297-L1306)
 1. Add empty state for bindings, as necessary (tip: use typescript to guide you -- either via your editor or run: `pnpm check:type` from within `packages/wrangler`)
 1. Add type for deployment bundle to:
@@ -14,5 +14,5 @@
    - `convertBindingsToCfWorkerInitBindings` in: `packages/wrangler/src/api/startDevWorker/utils.ts` [ref](https://github.com/cloudflare/workers-sdk/blob/ce7db9d9cb4f5bcd5a326b86dde051cb54b999fb/packages/wrangler/src/api/startDevWorker/utils.ts#L303-L305)
 1. Test binding is deployed and printed in: `packages/wrangler/src/**tests**/deploy.test.ts` [ref](https://github.com/cloudflare/workers-sdk/blob/ce7db9d9cb4f5bcd5a326b86dde051cb54b999fb/packages/wrangler/src/__tests__/deploy.test.ts#L7604)
 1. Test your validation in: `packages/wrangler/src/**tests**/configuration.test.ts` [ref](https://github.com/cloudflare/workers-sdk/blob/ce7db9d9cb4f5bcd5a326b86dde051cb54b999fb/packages/wrangler/src/__tests__/configuration.test.ts#L2234)
-1. Enable `wrangler init --from-dash` to include your binding in the `wrangler.toml` it generates in: `packages/wrangler/src/init.ts` [ref](https://github.com/cloudflare/workers-sdk/blob/ce7db9d9cb4f5bcd5a326b86dde051cb54b999fb/packages/wrangler/src/init.ts#L1036-L1043)
+1. Enable `wrangler init --from-dash` to include your binding in the Wrangler configuration file it generates in: `packages/wrangler/src/init.ts` [ref](https://github.com/cloudflare/workers-sdk/blob/ce7db9d9cb4f5bcd5a326b86dde051cb54b999fb/packages/wrangler/src/init.ts#L1036-L1043)
 1. Enable `wrangler types` to emit your binding type in: `packages/src/type-generation/index.ts` [ref](https://github.com/cloudflare/workers-sdk/blob/ce7db9d9cb4f5bcd5a326b86dde051cb54b999fb/packages/wrangler/src/type-generation/index.ts#L115)

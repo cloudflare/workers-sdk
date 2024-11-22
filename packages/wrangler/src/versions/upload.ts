@@ -3,7 +3,7 @@ import path from "node:path";
 import { blue, gray } from "@cloudflare/cli/colors";
 import { syncAssets } from "../assets";
 import { fetchResult } from "../cfetch";
-import { printBindings } from "../config";
+import { configFileName, formatConfigSnippet, printBindings } from "../config";
 import { bundleWorker } from "../deployment-bundle/bundle";
 import {
 	printBundleSize,
@@ -176,9 +176,9 @@ export default async function versionsUpload(props: Props): Promise<{
 			""
 		).padStart(2, "0")}-${(new Date().getDate() + "").padStart(2, "0")}`;
 
-		throw new UserError(`A compatibility_date is required when uploading a Worker Version. Add the following to your wrangler.toml file:.
+		throw new UserError(`A compatibility_date is required when uploading a Worker Version. Add the following to your ${configFileName(config.configPath)} file:
     \`\`\`
-    compatibility_date = "${compatibilityDateStr}"
+	${(formatConfigSnippet({ compatibility_date: compatibilityDateStr }, config.configPath), false)}
     \`\`\`
     Or you could pass it in your terminal as \`--compatibility-date ${compatibilityDateStr}\`
 See https://developers.cloudflare.com/workers/platform/compatibility-dates for more information.`);
@@ -245,13 +245,13 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 	if (config.text_blobs && format === "modules") {
 		throw new UserError(
-			"You cannot configure [text_blobs] with an ES module worker. Instead, import the file directly in your code, and optionally configure `[rules]` in your wrangler.toml"
+			`You cannot configure [text_blobs] with an ES module worker. Instead, import the file directly in your code, and optionally configure \`[rules]\` in your ${configFileName(config.configPath)} file`
 		);
 	}
 
 	if (config.data_blobs && format === "modules") {
 		throw new UserError(
-			"You cannot configure [data_blobs] with an ES module worker. Instead, import the file directly in your code, and optionally configure `[rules]` in your wrangler.toml"
+			`You cannot configure [data_blobs] with an ES module worker. Instead, import the file directly in your code, and optionally configure \`[rules]\` in your ${configFileName(config.configPath)} file`
 		);
 	}
 
@@ -575,7 +575,10 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		}>(`${workerUrl}/subdomain`);
 
 		if (available_on_subdomain) {
-			const userSubdomain = await getWorkersDevSubdomain(accountId);
+			const userSubdomain = await getWorkersDevSubdomain(
+				accountId,
+				config.configPath
+			);
 			const shortVersion = versionId.slice(0, 8);
 			versionPreviewUrl = `https://${shortVersion}-${workerName}.${userSubdomain}.workers.dev`;
 			logger.log(`Version Preview URL: ${versionPreviewUrl}`);

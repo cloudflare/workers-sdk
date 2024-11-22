@@ -214,6 +214,7 @@ import url from "node:url";
 import { TextEncoder } from "node:util";
 import TOML from "@iarna/toml";
 import { fetch } from "undici";
+import { configFileName } from "../config";
 import {
 	getConfigCache,
 	purgeConfigCaches,
@@ -1172,7 +1173,7 @@ export async function getAccountId(): Promise<string> {
 		if (e instanceof NoDefaultValueProvided) {
 			throw new UserError(
 				`More than one account available but unable to select one in non-interactive mode.
-Please set the appropriate \`account_id\` in your \`wrangler.toml\` file.
+Please set the appropriate \`account_id\` in your ${configFileName(undefined)} file.
 Available accounts are (\`<name>\`: \`<account_id>\`):
 ${accounts
 	.map((account) => `  \`${account.name}\`: \`${account.id}\``)

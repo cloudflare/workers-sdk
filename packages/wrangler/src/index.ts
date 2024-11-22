@@ -7,7 +7,7 @@ import makeCLI from "yargs";
 import { version as wranglerVersion } from "../package.json";
 import { ai } from "./ai";
 import { cloudchamber } from "./cloudchamber";
-import { loadDotEnv } from "./config";
+import { configFileName, formatConfigSnippet, loadDotEnv } from "./config";
 import { createCommandRegister } from "./core/register-commands";
 import { d1 } from "./d1";
 import { deleteHandler, deleteOptions } from "./delete";
@@ -108,7 +108,7 @@ export function getRules(config: Config): Config["rules"] {
 
 	if (config.rules && config.build?.upload?.rules) {
 		throw new UserError(
-			`You cannot configure both [rules] and [build.upload.rules] in your wrangler.toml. Delete the \`build.upload\` section.`
+			`You cannot configure both [rules] and [build.upload.rules] in your ${configFileName(config.configPath)} file. Delete the \`build.upload\` section.`
 		);
 	}
 
@@ -134,11 +134,17 @@ export function getScriptName(
 ): string | undefined {
 	if (args.name && isLegacyEnv(config) && args.env) {
 		throw new CommandLineArgsError(
-			"In legacy environment mode you cannot use --name and --env together. If you want to specify a Worker name for a specific environment you can add the following to your wrangler.toml config:" +
-				`
-    [env.${args.env}]
-    name = "${args.name}"
-    `
+			`In legacy environment mode you cannot use --name and --env together. If you want to specify a Worker name for a specific environment you can add the following to your ${configFileName(config.configPath)} file:\n` +
+				formatConfigSnippet(
+					{
+						env: {
+							[args.env]: {
+								name: args.name,
+							},
+						},
+					},
+					config.configPath
+				)
 		);
 	}
 
@@ -196,7 +202,7 @@ export function createCLIParser(argv: string[]) {
 		})
 		.option("config", {
 			alias: "c",
-			describe: "Path to .toml configuration file",
+			describe: "Path to Wrangler configuration file",
 			type: "string",
 			requiresArg: true,
 		})
@@ -210,8 +216,19 @@ export function createCLIParser(argv: string[]) {
 		.check(demandSingleValue("env"))
 		.option("experimental-json-config", {
 			alias: "j",
-			describe: `Experimental: support wrangler.json`,
+			describe: `Support wrangler.json.`,
 			type: "boolean",
+			default: true,
+			deprecated: true,
+			hidden: true,
+		})
+		.check((args) => {
+			if (args["experimental-json-config"] === false) {
+				throw new CommandLineArgsError(
+					`Wrangler now supports wrangler.json configuration files by default and ignores the value of the \`--experimental-json-config\` flag.`
+				);
+			}
+			return true;
 		})
 		.option("experimental-versions", {
 			describe: `Experimental: support Worker Versions`,
@@ -258,7 +275,7 @@ export function createCLIParser(argv: string[]) {
 		"Examples:": `${chalk.bold("EXAMPLES")}`,
 	});
 	wrangler.group(
-		["experimental-json-config", "config", "env", "help", "version"],
+		["config", "env", "help", "version"],
 		`${chalk.bold("GLOBAL FLAGS")}`
 	);
 	wrangler.help("help", "Show help").alias("h", "help");
@@ -525,9 +542,9 @@ export function createCLIParser(argv: string[]) {
 
 	// pages
 	wrangler.command("pages", "⚡️ Configure Cloudflare Pages", (pagesYargs) => {
-		// Pages does not support the `--config`, `--experimental-json-config`,
+		// Pages does not support the `--config`,
 		// and `--env` flags, therefore hiding them from the global flags list.
-		pagesYargs.hide("config").hide("env").hide("experimental-json-config");
+		pagesYargs.hide("config").hide("env");
 
 		return pages(pagesYargs, subHelp);
 	});
@@ -830,7 +847,7 @@ export function getDevCompatibilityDate(
 	if (config.configPath !== undefined && compatibilityDate === undefined) {
 		logger.warn(
 			`No compatibility_date was specified. Using the installed Workers runtime's latest supported date: ${currentDate}.\n` +
-				`❯❯ Add one to your wrangler.toml file: compatibility_date = "${currentDate}", or\n` +
+				`❯❯ Add one to your ${configFileName(config.configPath)} file: compatibility_date = "${currentDate}", or\n` +
 				`❯❯ Pass it in your terminal: wrangler dev [<SCRIPT>] --compatibility-date=${currentDate}\n\n` +
 				"See https://developers.cloudflare.com/workers/platform/compatibility-dates/ for more information."
 		);

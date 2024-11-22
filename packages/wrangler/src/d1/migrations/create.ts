@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "path";
 import { printWranglerBanner } from "../..";
-import { withConfig } from "../../config";
+import { configFileName, withConfig } from "../../config";
 import { UserError } from "../../errors";
 import { logger } from "../../logger";
 import { DEFAULT_MIGRATION_PATH } from "../constants";
@@ -29,7 +29,7 @@ export const CreateHandler = withConfig<CreateHandlerOptions>(
 		const databaseInfo = getDatabaseInfoFromConfig(config, database);
 		if (!databaseInfo) {
 			throw new UserError(
-				`Couldn't find a D1 DB with the name or binding '${database}' in wrangler.toml.`
+				`Couldn't find a D1 DB with the name or binding '${database}' in your ${configFileName(config.configPath)} file.`
 			);
 		}
 
@@ -42,6 +42,7 @@ export const CreateHandler = withConfig<CreateHandlerOptions>(
 			migrationsFolderPath:
 				databaseInfo.migrationsFolderPath ?? DEFAULT_MIGRATION_PATH,
 			createIfMissing: true,
+			configPath: config.configPath,
 		});
 		const nextMigrationNumber = pad(getNextMigrationNumber(migrationsPath), 4);
 		const migrationName = message.replaceAll(" ", "_");

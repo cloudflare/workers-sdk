@@ -92,7 +92,10 @@ export default async function triggersDeploy(
 
 	if (deployToWorkersDev) {
 		// Deploy to a subdomain of `workers.dev`
-		const userSubdomain = await getWorkersDevSubdomain(accountId);
+		const userSubdomain = await getWorkersDevSubdomain(
+			accountId,
+			config.configPath
+		);
 		const scriptURL =
 			props.legacyEnv || !props.env
 				? `${scriptName}.${userSubdomain}.workers.dev`

@@ -8,7 +8,7 @@ import {
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
-import { writeWranglerToml } from "../helpers/write-wrangler-toml";
+import { writeWranglerConfig } from "../helpers/write-wrangler-config";
 
 describe("pages build env", () => {
 	const std = mockConsoleMethods();
@@ -23,18 +23,18 @@ describe("pages build env", () => {
 	});
 
 	it("should render empty object", async () => {
-		writeWranglerToml({
+		writeWranglerConfig({
 			pages_build_output_dir: "./dist",
 			vars: {},
 		});
 		await runWrangler("pages functions build-env . --outfile data.json");
 		expect(std.out).toMatchInlineSnapshot(`
-		"Checking for configuration in a wrangler.toml configuration file (BETA)
+			"Checking for configuration in a Wrangler configuration file (BETA)
 
-		Found wrangler.toml file. Reading build configuration...
-		pages_build_output_dir: dist
-		Build environment variables: (none found)"
-	`);
+			Found wrangler.toml file. Reading build configuration...
+			pages_build_output_dir: dist
+			Build environment variables: (none found)"
+		`);
 		expect(readFileSync("data.json", "utf8")).toMatchInlineSnapshot(
 			`"{\\"vars\\":{},\\"pages_build_output_dir\\":\\"dist\\"}"`
 		);
@@ -62,18 +62,18 @@ describe("pages build env", () => {
 
 		expect(process.exitCode).toEqual(EXIT_CODE_NO_CONFIG_FOUND);
 		expect(std.out).toMatchInlineSnapshot(`
-		"Checking for configuration in a wrangler.toml configuration file (BETA)
-		"
-	`);
+			"Checking for configuration in a Wrangler configuration file (BETA)
+			"
+		`);
 		expect(std.debug).toContain(
-			"No wrangler.toml configuration file found. Exiting."
+			"No Wrangler configuration file found. Exiting."
 		);
 		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
 
 	it("should exit with specific code if a non-pages config file is found", async () => {
 		logger.loggerLevel = "debug";
-		writeWranglerToml({
+		writeWranglerConfig({
 			vars: {
 				VAR1: "VALUE1",
 				VAR2: "VALUE2",
@@ -104,10 +104,10 @@ describe("pages build env", () => {
 
 		expect(process.exitCode).toEqual(EXIT_CODE_INVALID_PAGES_CONFIG);
 		expect(std.out).toMatchInlineSnapshot(`
-		"Checking for configuration in a wrangler.toml configuration file (BETA)
+			"Checking for configuration in a Wrangler configuration file (BETA)
 
-		Found wrangler.toml file. Reading build configuration..."
-	`);
+			Found wrangler.toml file. Reading build configuration..."
+		`);
 		expect(std.debug).toContain("wrangler.toml file is invalid. Exiting.");
 		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
@@ -122,16 +122,16 @@ describe("pages build env", () => {
 		expect(process.exitCode).toEqual(EXIT_CODE_INVALID_PAGES_CONFIG);
 		expect(std.err).toContain("ParseError");
 		expect(std.out).toMatchInlineSnapshot(`
-		"Checking for configuration in a wrangler.toml configuration file (BETA)
+			"Checking for configuration in a Wrangler configuration file (BETA)
 
-		Found wrangler.toml file. Reading build configuration..."
-	`);
+			Found wrangler.toml file. Reading build configuration..."
+		`);
 		expect(std.debug).toContain("wrangler.toml file is invalid. Exiting.");
 	});
 
 	it("should exit correctly with a non-pages config file w/ invalid environment", async () => {
 		logger.loggerLevel = "debug";
-		writeWranglerToml({
+		writeWranglerConfig({
 			vars: {
 				VAR1: "VALUE1",
 				VAR2: "VALUE2",
@@ -162,16 +162,16 @@ describe("pages build env", () => {
 
 		expect(process.exitCode).toEqual(EXIT_CODE_INVALID_PAGES_CONFIG);
 		expect(std.out).toMatchInlineSnapshot(`
-		"Checking for configuration in a wrangler.toml configuration file (BETA)
+			"Checking for configuration in a Wrangler configuration file (BETA)
 
-		Found wrangler.toml file. Reading build configuration..."
-	`);
+			Found wrangler.toml file. Reading build configuration..."
+		`);
 		expect(std.debug).toContain("wrangler.toml file is invalid. Exiting.");
 		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
 
 	it("should throw an error if an invalid pages confg file is found", async () => {
-		writeWranglerToml({
+		writeWranglerConfig({
 			pages_build_output_dir: "dist",
 			vars: {
 				VAR1: "VALUE1",
@@ -209,15 +209,15 @@ describe("pages build env", () => {
 		await runWrangler("pages functions build-env . --outfile data.json");
 		expect(process.exitCode).toEqual(EXIT_CODE_INVALID_PAGES_CONFIG);
 		expect(std.out).toMatchInlineSnapshot(`
-		"Checking for configuration in a wrangler.toml configuration file (BETA)
+			"Checking for configuration in a Wrangler configuration file (BETA)
 
-		Found wrangler.toml file. Reading build configuration..."
-	`);
+			Found wrangler.toml file. Reading build configuration..."
+		`);
 	});
 
 	it("should return top-level by default", async () => {
 		vi.stubEnv("PAGES_ENVIRONMENT", "");
-		writeWranglerToml({
+		writeWranglerConfig({
 			pages_build_output_dir: "./dist",
 			vars: {
 				VAR1: "VALUE1",
@@ -245,14 +245,60 @@ describe("pages build env", () => {
 		});
 		await runWrangler("pages functions build-env . --outfile data.json");
 		expect(std.out).toMatchInlineSnapshot(`
-		"Checking for configuration in a wrangler.toml configuration file (BETA)
+			"Checking for configuration in a Wrangler configuration file (BETA)
 
-		Found wrangler.toml file. Reading build configuration...
-		pages_build_output_dir: dist
-		Build environment variables:
-		  - VAR1: VALUE1
-		  - VAR2: VALUE2"
-	`);
+			Found wrangler.toml file. Reading build configuration...
+			pages_build_output_dir: dist
+			Build environment variables:
+			  - VAR1: VALUE1
+			  - VAR2: VALUE2"
+		`);
+		expect(readFileSync("data.json", "utf8")).toMatchInlineSnapshot(
+			`"{\\"vars\\":{\\"VAR1\\":\\"VALUE1\\",\\"VAR2\\":\\"VALUE2\\"},\\"pages_build_output_dir\\":\\"dist\\"}"`
+		);
+	});
+
+	it("should return top-level by default (json)", async () => {
+		vi.stubEnv("PAGES_ENVIRONMENT", "");
+		writeWranglerConfig(
+			{
+				pages_build_output_dir: "./dist",
+				vars: {
+					VAR1: "VALUE1",
+					VAR2: "VALUE2",
+					JSON: { json: true },
+				},
+				env: {
+					production: {
+						vars: {
+							VAR1: "PROD_VALUE1",
+							VAR2: "PROD_VALUE2",
+							PROD_VAR3: "PROD_VALUE3",
+							JSON: { json: true },
+						},
+					},
+					preview: {
+						vars: {
+							VAR1: "PREVIEW_VALUE1",
+							VAR2: "PREVIEW_VALUE2",
+							PREVIEW_VAR3: "PREVIEW_VALUE3",
+							JSON: { json: true },
+						},
+					},
+				},
+			},
+			"wrangler.json"
+		);
+		await runWrangler("pages functions build-env . --outfile data.json");
+		expect(std.out).toMatchInlineSnapshot(`
+			"Checking for configuration in a Wrangler configuration file (BETA)
+
+			Found wrangler.json file. Reading build configuration...
+			pages_build_output_dir: dist
+			Build environment variables:
+			  - VAR1: VALUE1
+			  - VAR2: VALUE2"
+		`);
 		expect(readFileSync("data.json", "utf8")).toMatchInlineSnapshot(
 			`"{\\"vars\\":{\\"VAR1\\":\\"VALUE1\\",\\"VAR2\\":\\"VALUE2\\"},\\"pages_build_output_dir\\":\\"dist\\"}"`
 		);
@@ -260,7 +306,7 @@ describe("pages build env", () => {
 
 	it("should return production", async () => {
 		vi.stubEnv("PAGES_ENVIRONMENT", "production");
-		writeWranglerToml({
+		writeWranglerConfig({
 			pages_build_output_dir: "./dist",
 			vars: {
 				VAR1: "VALUE1",
@@ -288,15 +334,15 @@ describe("pages build env", () => {
 		});
 		await runWrangler("pages functions build-env . --outfile data.json");
 		expect(std.out).toMatchInlineSnapshot(`
-		"Checking for configuration in a wrangler.toml configuration file (BETA)
+			"Checking for configuration in a Wrangler configuration file (BETA)
 
-		Found wrangler.toml file. Reading build configuration...
-		pages_build_output_dir: dist
-		Build environment variables:
-		  - VAR1: PROD_VALUE1
-		  - VAR2: PROD_VALUE2
-		  - PROD_VAR3: PROD_VALUE3"
-	`);
+			Found wrangler.toml file. Reading build configuration...
+			pages_build_output_dir: dist
+			Build environment variables:
+			  - VAR1: PROD_VALUE1
+			  - VAR2: PROD_VALUE2
+			  - PROD_VAR3: PROD_VALUE3"
+		`);
 		expect(readFileSync("data.json", "utf8")).toMatchInlineSnapshot(
 			`"{\\"vars\\":{\\"VAR1\\":\\"PROD_VALUE1\\",\\"VAR2\\":\\"PROD_VALUE2\\",\\"PROD_VAR3\\":\\"PROD_VALUE3\\"},\\"pages_build_output_dir\\":\\"dist\\"}"`
 		);
@@ -304,7 +350,7 @@ describe("pages build env", () => {
 
 	it("should return preview", async () => {
 		vi.stubEnv("PAGES_ENVIRONMENT", "preview");
-		writeWranglerToml({
+		writeWranglerConfig({
 			pages_build_output_dir: "./dist",
 			vars: {
 				VAR1: "VALUE1",
@@ -332,15 +378,15 @@ describe("pages build env", () => {
 		});
 		await runWrangler("pages functions build-env . --outfile data.json");
 		expect(std.out).toMatchInlineSnapshot(`
-		"Checking for configuration in a wrangler.toml configuration file (BETA)
+			"Checking for configuration in a Wrangler configuration file (BETA)
 
-		Found wrangler.toml file. Reading build configuration...
-		pages_build_output_dir: dist
-		Build environment variables:
-		  - VAR1: PREVIEW_VALUE1
-		  - VAR2: PREVIEW_VALUE2
-		  - PREVIEW_VAR3: PREVIEW_VALUE3"
-	`);
+			Found wrangler.toml file. Reading build configuration...
+			pages_build_output_dir: dist
+			Build environment variables:
+			  - VAR1: PREVIEW_VALUE1
+			  - VAR2: PREVIEW_VALUE2
+			  - PREVIEW_VAR3: PREVIEW_VALUE3"
+		`);
 		expect(readFileSync("data.json", "utf8")).toMatchInlineSnapshot(
 			`"{\\"vars\\":{\\"VAR1\\":\\"PREVIEW_VALUE1\\",\\"VAR2\\":\\"PREVIEW_VALUE2\\",\\"PREVIEW_VAR3\\":\\"PREVIEW_VALUE3\\"},\\"pages_build_output_dir\\":\\"dist\\"}"`
 		);
