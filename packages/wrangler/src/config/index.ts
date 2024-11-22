@@ -685,7 +685,9 @@ function tryLoadDotEnv(path: string): DotEnv | undefined {
 		return { path, parsed };
 	} catch (e) {
 		if ((e as { code: string }).code === "ENOENT") {
-			logger.debug(`.env file not found at "${path}"`);
+			logger.debug(
+				`.env file not found at "${path}". Continuing... For more details, refer to https://developers.cloudflare.com/workers/wrangler/system-environment-variables/`
+			);
 		} else {
 			logger.debug(`Failed to load .env file "${path}":`, e);
 		}
