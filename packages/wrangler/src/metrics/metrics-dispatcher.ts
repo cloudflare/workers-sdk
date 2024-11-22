@@ -1,6 +1,6 @@
 import chalk from "chalk";
 import { fetch } from "undici";
-import isInteractive from "../is-interactive";
+import _isInteractive from "../is-interactive";
 import { logger } from "../logger";
 import { CI } from "./../is-ci";
 import {
@@ -29,7 +29,7 @@ export function getMetricsDispatcher(options: MetricsConfigOptions) {
 	const packageManager = getPackageManager();
 	const isFirstUsage = readMetricsConfig().permission === undefined;
 	const isCI = CI.isCI();
-	const isNonInteractive = !isInteractive();
+	const isInteractive = _isInteractive();
 	const amplitude_session_id = Date.now();
 	let amplitude_event_id = 0;
 	/** We redact strings in arg values, unless they are named here */
@@ -90,7 +90,7 @@ export function getMetricsDispatcher(options: MetricsConfigOptions) {
 				packageManager,
 				isFirstUsage,
 				isCI,
-				isNonInteractive,
+				isInteractive,
 				argsUsed,
 				argsCombination,
 			};

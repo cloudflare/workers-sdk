@@ -141,7 +141,7 @@ export type CommonEventProperties = {
 	amplitude_event_id: number;
 
 	isCI: boolean;
-	isNonInteractive: boolean;
+	isInteractive: boolean;
 	argsUsed: string[];
 	argsCombination: string;
 };

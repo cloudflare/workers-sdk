@@ -240,7 +240,7 @@ describe("metrics", () => {
 						wranglerVersion: "1.2.3",
 						isFirstUsage: false,
 						isCI: false,
-						isNonInteractive: false,
+						isInteractive: true,
 						argsUsed: [
 							"array",
 							"number",
@@ -278,7 +278,7 @@ describe("metrics", () => {
 						wranglerVersion: "1.2.3",
 						isFirstUsage: false,
 						isCI: false,
-						isNonInteractive: false,
+						isInteractive: true,
 						argsUsed: [
 							"array",
 							"number",
@@ -338,7 +338,7 @@ describe("metrics", () => {
 						wranglerVersion: "1.2.3",
 						isFirstUsage: false,
 						isCI: false,
-						isNonInteractive: false,
+						isInteractive: true,
 						argsUsed: [
 							"array",
 							"number",
@@ -377,7 +377,7 @@ describe("metrics", () => {
 						wranglerVersion: "1.2.3",
 						isFirstUsage: false,
 						isCI: false,
-						isNonInteractive: false,
+						isInteractive: true,
 						argsUsed: [
 							"array",
 							"number",
@@ -429,7 +429,7 @@ describe("metrics", () => {
 				await runWrangler("command subcommand positional");
 
 				expect(requests.count).toBe(2);
-				expect(std.debug).toContain('isNonInteractive":true');
+				expect(std.debug).toContain('"isInteractive":false,');
 			});
 
 			describe("banner", () => {
