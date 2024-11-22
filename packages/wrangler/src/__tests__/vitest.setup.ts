@@ -22,9 +22,6 @@ chalk.level = 0;
 	global as unknown as { __RELATIVE_PACKAGE_PATH__: string }
 ).__RELATIVE_PACKAGE_PATH__ = "..";
 
-// Set `LC_ALL` to fix the language as English for the messages thrown by Yargs.
-process.env.LC_ALL = "en";
-
 vi.mock("ansi-escapes", () => {
 	return {
 		__esModule: true,
