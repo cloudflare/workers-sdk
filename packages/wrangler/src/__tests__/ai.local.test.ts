@@ -12,13 +12,13 @@ describe("ai", () => {
 		});
 
 		describe("local", () => {
-			it("should send x-forwarded-host header", async () => {
+			it("should send x-forwarded header", async () => {
 				vi.spyOn(user, "getAccountId").mockImplementation(async () => "123");
 				vi.spyOn(internal, "performApiFetch").mockImplementation(
 					async (resource: string, init: RequestInit = {}) => {
 						const headers = new Headers(init.headers);
 						return HttpResponse.json({
-							xForwardedFor: headers.get("X-Forwarded-Host"),
+							xForwarded: headers.get("X-Forwarded"),
 							method: init.method,
 						});
 					}
@@ -35,7 +35,7 @@ describe("ai", () => {
 				);
 
 				expect(await resp.json()).toEqual({
-					xForwardedFor: url,
+					xForwarded: url,
 					method: "PATCH",
 				});
 			});
