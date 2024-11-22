@@ -246,22 +246,22 @@ describe("generateTypes()", () => {
 	const std = mockConsoleMethods();
 	runInTempDir();
 
-	it("should show a warning when no config file is detected", async () => {
+	it("should error when no config file is detected", async () => {
 		await runWrangler("types");
-		expect(std.warn).toMatchInlineSnapshot(`
-		"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mNo config file detected, aborting[0m
+		expect(std.warn).toMatchInlineSnapshot(`""`);
+		expect(std.err).toMatchInlineSnapshot(`
+			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNo config file detected, aborting[0m
 
-		"
-	`);
+			"
+		`);
 	});
 
-	it("should show a warning when no custom config file is detected", async () => {
-		await runWrangler("types -c hello.toml");
-		expect(std.warn).toMatchInlineSnapshot(`
-		"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mNo config file detected (at hello.toml), aborting[0m
-
-		"
-	`);
+	it("should error when no custom config file is detected", async () => {
+		await expect(
+			runWrangler("types -c hello.toml")
+		).rejects.toThrowErrorMatchingInlineSnapshot(
+			`[ParseError: Could not read file: hello.toml]`
+		);
 	});
 
 	it("should respect the top level -c|--config flag", async () => {

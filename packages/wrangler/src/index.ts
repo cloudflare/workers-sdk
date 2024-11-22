@@ -46,6 +46,8 @@ import { hyperdrive } from "./hyperdrive/index";
 import { initHandler, initOptions } from "./init";
 import "./docs";
 import "./dev";
+import "./tail";
+import "./type-generation";
 import "./kv";
 import "./r2";
 import "./workflows";
@@ -66,9 +68,7 @@ import {
 	closeSentry,
 	setupSentry,
 } from "./sentry";
-import { tailHandler, tailOptions } from "./tail";
 import registerTriggersSubcommands from "./triggers";
-import { typesHandler, typesOptions } from "./type-generation";
 import { printWranglerBanner, updateCheck } from "./update-check";
 import { getAuthFromEnv } from "./user";
 import { whoami } from "./user/whoami";
@@ -464,12 +464,7 @@ export function createCLIParser(argv: string[]) {
 	);
 
 	// tail
-	wrangler.command(
-		"tail [worker]",
-		"🦚 Start a log tailing session for a Worker",
-		tailOptions,
-		tailHandler
-	);
+	register.registerNamespace("tail");
 
 	// secret
 	wrangler.command(
@@ -481,12 +476,7 @@ export function createCLIParser(argv: string[]) {
 	);
 
 	// types
-	wrangler.command(
-		"types [path]",
-		"📝 Generate types from bindings and module rules in configuration\n",
-		typesOptions,
-		typesHandler
-	);
+	register.registerNamespace("types");
 
 	/******************** CMD GROUP ***********************/
 	// kv
