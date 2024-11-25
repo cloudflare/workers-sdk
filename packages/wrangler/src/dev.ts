@@ -551,6 +551,7 @@ async function setupDevEnv(
 					text_blobs: undefined,
 					browser: undefined,
 					ai: args.ai,
+					images: undefined,
 					version_metadata: args.version_metadata,
 					data_blobs: undefined,
 					durable_objects: { bindings: args.durableObjects ?? [] },
@@ -1079,6 +1080,7 @@ export function getBindings(
 		analytics_engine_datasets: configParam.analytics_engine_datasets,
 		browser: configParam.browser,
 		ai: args.ai || configParam.ai,
+		images: configParam.images,
 		version_metadata: args.version_metadata || configParam.version_metadata,
 		unsafe: {
 			bindings: configParam.unsafe.bindings,
