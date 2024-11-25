@@ -140,7 +140,7 @@ describe("versions upload", () => {
 		`);
 	});
 
-	it("should not print preview url when workers_dev_previews is false", async () => {
+	it("should not print preview url when preview_urls is false", async () => {
 		mockGetScript();
 		mockUploadVersion(true);
 		mockGetWorkerSubdomain({ enabled: true, previews_enabled: false });

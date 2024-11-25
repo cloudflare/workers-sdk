@@ -5,7 +5,6 @@ import {
 	publishCustomDomains,
 	publishRoutes,
 	renderRoute,
-	sleep,
 	updateQueueConsumers,
 	updateQueueProducers,
 	validateRoutes,
@@ -96,11 +95,14 @@ export default async function triggersDeploy(
 
 	const deploymentInSync = deployToWorkersDev === available_on_subdomain;
 	const previewsInSync =
-		config.workers_dev_previews === previews_available_on_subdomain;
+		config.preview_urls === previews_available_on_subdomain;
 
 	if (deployToWorkersDev) {
 		// Deploy to a subdomain of `workers.dev`
-		const userSubdomain = await getWorkersDevSubdomain(accountId, config.configPath);
+		const userSubdomain = await getWorkersDevSubdomain(
+			accountId,
+			config.configPath
+		);
 
 		const deploymentURL =
 			props.legacyEnv || !props.env
@@ -116,21 +118,12 @@ export default async function triggersDeploy(
 					method: "POST",
 					body: JSON.stringify({
 						enabled: true,
-						previews_enabled: config.workers_dev_previews,
+						previews_enabled: config.preview_urls,
 					}),
 					headers: {
 						"Content-Type": "application/json",
 					},
-				})
-					.then(() => [deploymentURL])
-					// Add a delay when the subdomain is first created.
-					// This is to prevent an issue where a negative cache-hit
-					// causes the subdomain to be unavailable for 30 seconds.
-					// This is a temporary measure until we fix this on the edge.
-					.then(async (url) => {
-						await sleep(3000);
-						return url;
-					})
+				}).then(() => [deploymentURL])
 			);
 		}
 	}
@@ -140,7 +133,7 @@ export default async function triggersDeploy(
 			method: "POST",
 			body: JSON.stringify({
 				enabled: false,
-				previews_enabled: config.workers_dev_previews,
+				previews_enabled: config.preview_urls,
 			}),
 			headers: {
 				"Content-Type": "application/json",

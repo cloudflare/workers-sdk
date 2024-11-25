@@ -941,7 +941,7 @@ async function getWorkerConfig(
 		name: workerName,
 		main: entrypoint,
 		workers_dev: workersDev.enabled,
-		workers_dev_previews: workersDev.previews_enabled,
+		preview_urls: workersDev.previews_enabled,
 		compatibility_date:
 			serviceEnvMetadata.script.compatibility_date ??
 			new Date().toISOString().substring(0, 10),

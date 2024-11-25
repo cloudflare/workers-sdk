@@ -155,7 +155,7 @@ interface EnvironmentInheritable {
 	 * @default `true`
 	 * @inheritable
 	 */
-	workers_dev_previews: boolean | undefined;
+	preview_urls: boolean | undefined;
 
 	/**
 	 * A list of routes that your Worker should be published to.
