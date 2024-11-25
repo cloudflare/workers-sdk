@@ -241,6 +241,7 @@ export type Binding =
 	| { type: "text_blob"; source: File }
 	| { type: "browser" }
 	| { type: "ai" }
+	| { type: "images" }
 	| { type: "version_metadata" }
 	| { type: "data_blob"; source: BinaryFile }
 	| ({ type: "durable_object_namespace" } & NameOmit<CfDurableObject>)
