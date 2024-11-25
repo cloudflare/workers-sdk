@@ -48,16 +48,7 @@ import "./docs";
 import "./dev";
 import "./kv";
 import "./r2";
-import { defineVersions } from "./versions";
-import { defineVersionsDeploy } from "./versions/deploy";
-import { defineVersionsList } from "./versions/list";
-import { defineVersionsSecret } from "./versions/secrets";
-import { defineVersionsSecretBulk } from "./versions/secrets/bulk";
-import { defineVersionsSecretDelete } from "./versions/secrets/delete";
-import { defineVersionsSecretList } from "./versions/secrets/list";
-import { defineVersionsSecretPut } from "./versions/secrets/put";
-import { defineVersionsUpload } from "./versions/upload";
-import { defineVersionsView } from "./versions/view";
+import "./versions";
 import "./workflows";
 import "./user/commands";
 import { demandSingleValue } from "./core";
@@ -444,16 +435,6 @@ export function createCLIParser(argv: string[]) {
 
 	// versions
 	if (experimentalGradualRollouts) {
-		defineVersions();
-		defineVersionsView();
-		defineVersionsList();
-		defineVersionsUpload();
-		defineVersionsDeploy();
-		defineVersionsSecret();
-		defineVersionsSecretList();
-		defineVersionsSecretPut();
-		defineVersionsSecretDelete();
-		defineVersionsSecretBulk();
 		register.registerNamespace("versions");
 	}
 
