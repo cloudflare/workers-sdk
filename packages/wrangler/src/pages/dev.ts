@@ -240,6 +240,12 @@ export function Options(yargs: CommonYargsArgv) {
 					"Bind to production Vectorize indexes in local development mode",
 				default: false,
 			},
+			"experimental-images-local-mode": {
+				type: "boolean",
+				describe:
+					"Use a local lower-fidelity implementation of the Images binding",
+				default: false,
+			},
 		});
 }
 
@@ -944,6 +950,7 @@ export const Handler = async (args: PagesDevArguments) => {
 				logLevel: args.logLevel ?? "log",
 				experimentalProvision: undefined,
 				experimentalVectorizeBindToProd: false,
+				experimentalImagesLocalMode: false,
 				enableIpc: true,
 				config: Array.isArray(args.config) ? args.config : undefined,
 				legacyAssets: undefined,
