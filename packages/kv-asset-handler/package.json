@@ -50,7 +50,7 @@
 		"service-worker-mock": "^2.0.5"
 	},
 	"engines": {
-		"node": ">=16.13"
+		"node": ">=18.20.5"
 	},
 	"volta": {
 		"extends": "../../package.json"
