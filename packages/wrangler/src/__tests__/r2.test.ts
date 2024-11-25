@@ -247,7 +247,7 @@ describe("r2", () => {
 					  -v, --version  Show version number  [boolean]
 
 					OPTIONS
-					      --location       The optional location hint that determines geographic placement of the R2 bucket  [string] [choices: \\"weur\\", \\"eeur\\", \\"apac\\", \\"wnam\\", \\"enam\\"]
+					      --location       The optional location hint that determines geographic placement of the R2 bucket  [string] [choices: \\"weur\\", \\"eeur\\", \\"apac\\", \\"wnam\\", \\"enam\\", \\"oc\\"]
 					  -s, --storage-class  The default storage class for objects uploaded to this bucket  [string]
 					  -J, --jurisdiction   The jurisdiction where the new bucket will be created  [string]"
 				`);
@@ -280,7 +280,7 @@ describe("r2", () => {
 					  -v, --version  Show version number  [boolean]
 
 					OPTIONS
-					      --location       The optional location hint that determines geographic placement of the R2 bucket  [string] [choices: \\"weur\\", \\"eeur\\", \\"apac\\", \\"wnam\\", \\"enam\\"]
+					      --location       The optional location hint that determines geographic placement of the R2 bucket  [string] [choices: \\"weur\\", \\"eeur\\", \\"apac\\", \\"wnam\\", \\"enam\\", \\"oc\\"]
 					  -s, --storage-class  The default storage class for objects uploaded to this bucket  [string]
 					  -J, --jurisdiction   The jurisdiction where the new bucket will be created  [string]"
 				`);
