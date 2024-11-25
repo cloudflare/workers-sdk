@@ -1589,7 +1589,7 @@ importers:
         specifier: workspace:*
         version: link:../eslint-config-worker
       '@cloudflare/vitest-pool-workers':
-        specifier: workspace:*
+        specifier: workspace:^0.5.31
         version: link:../vitest-pool-workers
       '@cloudflare/workers-tsconfig':
         specifier: workspace:*
