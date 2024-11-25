@@ -30,6 +30,7 @@ describe("wrangler", () => {
 				  wrangler queues list           List Queues
 				  wrangler queues create <name>  Create a Queue
 				  wrangler queues delete <name>  Delete a Queue
+				  wrangler queues info <name>    Get Queue information
 				  wrangler queues consumer       Configure Queue consumers
 
 				GLOBAL FLAGS
@@ -1404,6 +1405,125 @@ describe("wrangler", () => {
 							Removed consumer from queue testQueue."
 						`);
 				});
+			});
+		});
+
+		describe("info", () => {
+			const mockQueue = {
+				queue_id: "1234567",
+				queue_name: expectedQueueName,
+				created_on: "2024-05-20T14:43:56.70498Z",
+				producers: [
+					{
+						namespace: "testnamespace",
+						script: "test-producer1",
+						type: "worker",
+					},
+					{
+						namespace: "testnamespace",
+						script: "test-producer2",
+						type: "worker",
+					},
+				],
+				consumers: [
+					{
+						dead_letter_queue: "testdlq",
+						settings: { batch_size: 10 },
+						consumer_id: "111",
+						type: "worker",
+						script: "test-consumer",
+					},
+				],
+				producers_total_count: 2,
+				consumers_total_count: 1,
+				modified_on: "2024-07-19T14:43:56.70498Z",
+			};
+
+			it("should return the documentation for the info command when using the --help param", async () => {
+				await runWrangler("queues info --help");
+				expect(std.err).toMatchInlineSnapshot(`""`);
+				expect(std.out).toMatchInlineSnapshot(`
+					"wrangler queues info <name>
+
+					Get Queue information
+
+					POSITIONALS
+					  name  The name of the queue  [string] [required]
+
+					GLOBAL FLAGS
+					  -c, --config   Path to Wrangler configuration file  [string]
+					  -e, --env      Environment to use for operations and .env files  [string]
+					  -h, --help     Show help  [boolean]
+					  -v, --version  Show version number  [boolean]"
+				`);
+			});
+			it("should return queue info with worker producers when the queue has workers configured as producers", async () => {
+				mockGetQueueByNameRequest(expectedQueueName, mockQueue);
+				await runWrangler("queues info testQueue");
+				expect(std.out).toMatchInlineSnapshot(`
+					"Queue Name: testQueue
+					Queue ID: 1234567
+					Created On: 2024-05-20T14:43:56.70498Z
+					Last Modified: 2024-07-19T14:43:56.70498Z
+					Number of Producers: 2
+					Producers: worker:test-producer1, worker:test-producer2
+					Number of Consumers: 1
+					Consumers: worker:test-consumer"
+				`);
+			});
+			it('should return "http consumer" and a curl command when the consumer type is http_pull', async () => {
+				const mockHTTPPullQueue = {
+					...mockQueue,
+					consumers: [{ ...mockQueue.consumers[0], type: "http_pull" }],
+				};
+				mockGetQueueByNameRequest(expectedQueueName, mockHTTPPullQueue);
+				await runWrangler("queues info testQueue");
+				expect(std.out).toMatchInlineSnapshot(`
+					"Queue Name: testQueue
+					Queue ID: 1234567
+					Created On: 2024-05-20T14:43:56.70498Z
+					Last Modified: 2024-07-19T14:43:56.70498Z
+					Number of Producers: 2
+					Producers: worker:test-producer1, worker:test-producer2
+					Number of Consumers: 1
+					Consumers: HTTP Pull Consumer.
+					Pull messages using:
+					curl \\"https://api.cloudflare.com/client/v4/accounts/some-account-id/queues/1234567/messages/pull\\" /
+						--header \\"Authorization: Bearer <add your api key here>\\" /
+						--header \\"Content-Type: application/json\\" /
+						--data '{ \\"visibility_timeout\\": 10000, \\"batch_size\\": 2 }'"
+				`);
+			});
+			it("should return the list of r2 bucket producers when the queue is used in an r2 event notification", async () => {
+				const mockEventNotificationQueue = {
+					...mockQueue,
+					producers: [
+						{ type: "r2_bucket", bucket_name: "test-bucket1" },
+						{ type: "r2_bucket", bucket_name: "test-bucket2" },
+					],
+					consumers: [
+						{
+							...mockQueue.consumers[0],
+							type: "r2_bucket",
+							bucket_name: "bucket-consumer",
+						},
+					],
+				};
+				mockGetQueueByNameRequest(
+					expectedQueueName,
+					mockEventNotificationQueue
+				);
+				await runWrangler("queues info testQueue");
+				expect(std.out).toMatchInlineSnapshot(`
+					"Queue Name: testQueue
+					Queue ID: 1234567
+					Created On: 2024-05-20T14:43:56.70498Z
+					Last Modified: 2024-07-19T14:43:56.70498Z
+					Number of Producers: 2
+					Producers: r2_bucket:test-bucket1, r2_bucket:test-bucket2
+					Number of Consumers: 1
+					Consumers: r2_bucket:bucket-consumer"
+				`);
 			});
 		});
 	});
