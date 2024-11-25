@@ -49,6 +49,7 @@ function createWorkerBundleFormData(
 		vars: config?.vars,
 		browser: config?.browser,
 		ai: config?.ai,
+		images: config?.images,
 		version_metadata: config?.version_metadata,
 		durable_objects: config?.durable_objects,
 		workflows: config?.workflows,
