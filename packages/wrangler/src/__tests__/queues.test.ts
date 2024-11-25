@@ -1443,20 +1443,19 @@ describe("wrangler", () => {
 				await runWrangler("queues info --help");
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.out).toMatchInlineSnapshot(`
-						"wrangler queues info <name>
+					"wrangler queues info <name>
 
-						Get Queue information
+					Get Queue information
 
-						POSITIONALS
-						  name  The name of the queue  [string] [required]
+					POSITIONALS
+					  name  The name of the queue  [string] [required]
 
-						GLOBAL FLAGS
-						  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
-						  -c, --config                    Path to .toml configuration file  [string]
-						  -e, --env                       Environment to use for operations and .env files  [string]
-						  -h, --help                      Show help  [boolean]
-						  -v, --version                   Show version number  [boolean]"
-					`);
+					GLOBAL FLAGS
+					  -c, --config   Path to Wrangler configuration file  [string]
+					  -e, --env      Environment to use for operations and .env files  [string]
+					  -h, --help     Show help  [boolean]
+					  -v, --version  Show version number  [boolean]"
+				`);
 			});
 			it("should return queue info with worker producers when the queue has workers configured as producers", async () => {
 				mockGetQueueByNameRequest(expectedQueueName, mockQueue);
