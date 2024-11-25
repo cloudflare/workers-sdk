@@ -41,6 +41,7 @@ import type { EsbuildBundle } from "./use-esbuild";
 import type { MiniflareOptions, SourceOptions, WorkerOptions } from "miniflare";
 import type { UUID } from "node:crypto";
 import type { Readable } from "node:stream";
+import { EXTERNAL_IMAGES_WORKER_NAME, EXTERNAL_IMAGES_WORKER_SCRIPT, imagesFetcher } from "../images/fetcher";
 
 // This worker proxies all external Durable Objects to the Wrangler session
 // where they're defined, and receives all requests from other Wrangler sessions
@@ -395,7 +396,6 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 	externalWorkers: WorkerOptions[];
 } {
 	const bindings = config.bindings;
-
 	// Setup blob and module bindings
 	// TODO: check all these blob bindings just work, they're relative to cwd
 	const textBlobBindings = { ...bindings.text_blobs };
@@ -604,6 +604,27 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 
 		wrappedBindings[bindings.ai.binding] = {
 			scriptName: EXTERNAL_AI_WORKER_NAME,
+		};
+	}
+
+
+	if (bindings.images?.binding) {
+		externalWorkers.push({
+			name: EXTERNAL_IMAGES_WORKER_NAME,
+			modules: [
+				{
+					type: "ESModule",
+					path: "index.mjs",
+					contents: EXTERNAL_IMAGES_WORKER_SCRIPT,
+				}
+			],
+			serviceBindings: {
+				FETCHER: imagesFetcher,
+			}
+		});
+
+		wrappedBindings[bindings.images?.binding] = {
+			scriptName: EXTERNAL_IMAGES_WORKER_NAME,
 		};
 	}
 
