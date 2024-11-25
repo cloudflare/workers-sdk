@@ -8,6 +8,7 @@ import { useMockIsTTY } from "./helpers/mock-istty";
 import { createFetchResult, msw } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
+import { writeWranglerConfig } from "./helpers/write-wrangler-config";
 import type {
 	CreateUpdateHyperdriveBody,
 	HyperdriveConfig,
@@ -117,8 +118,47 @@ describe("hyperdrive commands", () => {
 
 		expect(std.out).toMatchInlineSnapshot(`
 			"🚧 Creating 'test123'
-			✅ Created new Hyperdrive config
-			 [[hyperdrive]]
+			✅ Created new Hyperdrive config: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+			📋 To start using your config from a Worker, add the following binding configuration to your Wrangler configuration file:
+
+			{
+			  \\"hyperdrive\\": [
+			    {
+			      \\"binding\\": \\"HYPERDRIVE\\",
+			      \\"id\\": \\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\\"
+			    }
+			  ]
+			}"
+		`);
+	});
+
+	it("should handle creating a hyperdrive and printing a TOML snipped", async () => {
+		const reqProm = mockHyperdriveCreate();
+		writeWranglerConfig();
+		await runWrangler(
+			"hyperdrive create test123 --connection-string='postgresql://test:password@example.com:12345/neondb'"
+		);
+
+		await expect(reqProm).resolves.toMatchInlineSnapshot(`
+			Object {
+			  "name": "test123",
+			  "origin": Object {
+			    "database": "neondb",
+			    "host": "example.com",
+			    "password": "password",
+			    "port": 12345,
+			    "scheme": "postgresql",
+			    "user": "test",
+			  },
+			}
+		`);
+
+		expect(std.out).toMatchInlineSnapshot(`
+			"🚧 Creating 'test123'
+			✅ Created new Hyperdrive config: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+			📋 To start using your config from a Worker, add the following binding configuration to your wrangler.toml file:
+
+			[[hyperdrive]]
 			binding = \\"HYPERDRIVE\\"
 			id = \\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\\"
 			"
@@ -146,11 +186,17 @@ describe("hyperdrive commands", () => {
 		`);
 		expect(std.out).toMatchInlineSnapshot(`
 			"🚧 Creating 'test123'
-			✅ Created new Hyperdrive config
-			 [[hyperdrive]]
-			binding = \\"HYPERDRIVE\\"
-			id = \\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\\"
-			"
+			✅ Created new Hyperdrive config: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+			📋 To start using your config from a Worker, add the following binding configuration to your Wrangler configuration file:
+
+			{
+			  \\"hyperdrive\\": [
+			    {
+			      \\"binding\\": \\"HYPERDRIVE\\",
+			      \\"id\\": \\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\\"
+			    }
+			  ]
+			}"
 		`);
 	});
 
@@ -179,11 +225,17 @@ describe("hyperdrive commands", () => {
 		`);
 		expect(std.out).toMatchInlineSnapshot(`
 			"🚧 Creating 'test123'
-			✅ Created new Hyperdrive config
-			 [[hyperdrive]]
-			binding = \\"HYPERDRIVE\\"
-			id = \\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\\"
-			"
+			✅ Created new Hyperdrive config: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+			📋 To start using your config from a Worker, add the following binding configuration to your Wrangler configuration file:
+
+			{
+			  \\"hyperdrive\\": [
+			    {
+			      \\"binding\\": \\"HYPERDRIVE\\",
+			      \\"id\\": \\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\\"
+			    }
+			  ]
+			}"
 		`);
 	});
 
@@ -208,11 +260,17 @@ describe("hyperdrive commands", () => {
 		`);
 		expect(std.out).toMatchInlineSnapshot(`
 			"🚧 Creating 'test123'
-			✅ Created new Hyperdrive config
-			 [[hyperdrive]]
-			binding = \\"HYPERDRIVE\\"
-			id = \\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\\"
-			"
+			✅ Created new Hyperdrive config: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+			📋 To start using your config from a Worker, add the following binding configuration to your Wrangler configuration file:
+
+			{
+			  \\"hyperdrive\\": [
+			    {
+			      \\"binding\\": \\"HYPERDRIVE\\",
+			      \\"id\\": \\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\\"
+			    }
+			  ]
+			}"
 		`);
 	});
 
@@ -237,11 +295,17 @@ describe("hyperdrive commands", () => {
 		`);
 		expect(std.out).toMatchInlineSnapshot(`
 			"🚧 Creating 'test123'
-			✅ Created new Hyperdrive config
-			 [[hyperdrive]]
-			binding = \\"HYPERDRIVE\\"
-			id = \\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\\"
-			"
+			✅ Created new Hyperdrive config: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+			📋 To start using your config from a Worker, add the following binding configuration to your Wrangler configuration file:
+
+			{
+			  \\"hyperdrive\\": [
+			    {
+			      \\"binding\\": \\"HYPERDRIVE\\",
+			      \\"id\\": \\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\\"
+			    }
+			  ]
+			}"
 		`);
 	});
 
@@ -266,11 +330,17 @@ describe("hyperdrive commands", () => {
 		`);
 		expect(std.out).toMatchInlineSnapshot(`
 			"🚧 Creating 'test123'
-			✅ Created new Hyperdrive config
-			 [[hyperdrive]]
-			binding = \\"HYPERDRIVE\\"
-			id = \\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\\"
-			"
+			✅ Created new Hyperdrive config: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+			📋 To start using your config from a Worker, add the following binding configuration to your Wrangler configuration file:
+
+			{
+			  \\"hyperdrive\\": [
+			    {
+			      \\"binding\\": \\"HYPERDRIVE\\",
+			      \\"id\\": \\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\\"
+			    }
+			  ]
+			}"
 		`);
 	});
 
@@ -295,11 +365,17 @@ describe("hyperdrive commands", () => {
 		`);
 		expect(std.out).toMatchInlineSnapshot(`
 			"🚧 Creating 'test123'
-			✅ Created new Hyperdrive config
-			 [[hyperdrive]]
-			binding = \\"HYPERDRIVE\\"
-			id = \\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\\"
-			"
+			✅ Created new Hyperdrive config: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+			📋 To start using your config from a Worker, add the following binding configuration to your Wrangler configuration file:
+
+			{
+			  \\"hyperdrive\\": [
+			    {
+			      \\"binding\\": \\"HYPERDRIVE\\",
+			      \\"id\\": \\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\\"
+			    }
+			  ]
+			}"
 		`);
 	});
 
@@ -324,11 +400,17 @@ describe("hyperdrive commands", () => {
 		`);
 		expect(std.out).toMatchInlineSnapshot(`
 			"🚧 Creating 'test123'
-			✅ Created new Hyperdrive config
-			 [[hyperdrive]]
-			binding = \\"HYPERDRIVE\\"
-			id = \\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\\"
-			"
+			✅ Created new Hyperdrive config: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+			📋 To start using your config from a Worker, add the following binding configuration to your Wrangler configuration file:
+
+			{
+			  \\"hyperdrive\\": [
+			    {
+			      \\"binding\\": \\"HYPERDRIVE\\",
+			      \\"id\\": \\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\\"
+			    }
+			  ]
+			}"
 		`);
 	});
 
@@ -379,11 +461,17 @@ describe("hyperdrive commands", () => {
 		`);
 		expect(std.out).toMatchInlineSnapshot(`
 			"🚧 Creating 'test123'
-			✅ Created new Hyperdrive config
-			 [[hyperdrive]]
-			binding = \\"HYPERDRIVE\\"
-			id = \\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\\"
-			"
+			✅ Created new Hyperdrive config: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+			📋 To start using your config from a Worker, add the following binding configuration to your Wrangler configuration file:
+
+			{
+			  \\"hyperdrive\\": [
+			    {
+			      \\"binding\\": \\"HYPERDRIVE\\",
+			      \\"id\\": \\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\\"
+			    }
+			  ]
+			}"
 		`);
 	});
 
@@ -408,11 +496,17 @@ describe("hyperdrive commands", () => {
 		`);
 		expect(std.out).toMatchInlineSnapshot(`
 			"🚧 Creating 'test123'
-			✅ Created new Hyperdrive config
-			 [[hyperdrive]]
-			binding = \\"HYPERDRIVE\\"
-			id = \\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\\"
-			"
+			✅ Created new Hyperdrive config: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+			📋 To start using your config from a Worker, add the following binding configuration to your Wrangler configuration file:
+
+			{
+			  \\"hyperdrive\\": [
+			    {
+			      \\"binding\\": \\"HYPERDRIVE\\",
+			      \\"id\\": \\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\\"
+			    }
+			  ]
+			}"
 		`);
 	});
 
