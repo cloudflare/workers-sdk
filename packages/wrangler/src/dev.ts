@@ -336,6 +336,12 @@ export const dev = createCommand({
 				"Bind to production Vectorize indexes in local development mode",
 			default: false,
 		},
+		"experimental-images-local-mode": {
+			type: "boolean",
+			describe:
+				"Use a local lower-fidelity implementation of the Images binding",
+			default: false,
+		},
 	},
 	async validateArgs(args) {
 		if (args.liveReload && args.remote) {
@@ -622,6 +628,7 @@ async function setupDevEnv(
 					? null
 					: devEnv.config.latestConfig?.dev.registry,
 				bindVectorizeToProd: args.experimentalVectorizeBindToProd,
+				imagesLocalMode: args.experimentalImagesLocalMode,
 				multiworkerPrimary: args.multiworkerPrimary,
 			},
 			legacy: {
