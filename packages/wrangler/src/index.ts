@@ -656,24 +656,6 @@ export function createCLIParser(argv: string[]) {
 	// This set to false to allow overwrite of default behaviour
 	wrangler.version(false);
 
-	// [DEPRECATED] version
-	wrangler.command(
-		"version",
-		false,
-		() => {},
-		async () => {
-			if (process.stdout.isTTY) {
-				await printWranglerBanner();
-			} else {
-				logger.log(wranglerVersion);
-			}
-
-			logger.warn(
-				"`wrangler version` is deprecated and will be removed in a future major version. Please use `wrangler --version` instead."
-			);
-		}
-	);
-
 	register.registerAll();
 
 	wrangler.exitProcess(false);
