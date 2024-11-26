@@ -43,7 +43,6 @@ export type Entry = {
 export async function getEntry(
 	args: {
 		script?: string;
-		format?: CfScriptFormat | undefined;
 		legacyAssets?: string | undefined | boolean;
 		moduleRoot?: string;
 		assets?: string | undefined;
@@ -92,7 +91,6 @@ export async function getEntry(
 	const { format, exports } = await guessWorkerFormat(
 		paths.absolutePath,
 		projectRoot,
-		args.format ?? config.build?.upload?.format,
 		config.tsconfig
 	);
 

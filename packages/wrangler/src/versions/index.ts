@@ -21,20 +21,11 @@ import { versionsListHandler, versionsListOptions } from "./list";
 import { registerVersionsSecretsSubcommands } from "./secrets";
 import versionsUpload from "./upload";
 import { versionsViewHandler, versionsViewOptions } from "./view";
-import type { Config } from "../config";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
 	SubHelp,
 } from "../yargs-types";
-
-async function standardPricingWarning(config: Config) {
-	if (config.usage_model !== undefined) {
-		logger.warn(
-			`The \`usage_model\` defined in your ${configFileName(config.configPath)} file is deprecated and no longer used. Visit our developer docs for details: https://developers.cloudflare.com/workers/wrangler/configuration/#usage-model`
-		);
-	}
-}
 
 function versionsUploadOptions(yargs: CommonYargsArgv) {
 	return (
@@ -89,12 +80,6 @@ function versionsUploadOptions(yargs: CommonYargsArgv) {
 				describe: "Static assets to be served. Replaces Workers Sites.",
 				type: "string",
 				requiresArg: true,
-			})
-			.option("format", {
-				choices: ["modules", "service-worker"] as const,
-				describe: "Choose an entry type",
-				deprecated: true,
-				hidden: true,
 			})
 			.option("legacy-assets", {
 				describe: "Static assets to be served",
@@ -272,9 +257,6 @@ async function versionsUploadHandler(
 		);
 	}
 
-	if (!args.dryRun) {
-		await standardPricingWarning(config);
-	}
 	const { versionId, workerTag, versionPreviewUrl } = await versionsUpload({
 		config,
 		accountId,
