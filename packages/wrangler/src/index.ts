@@ -262,6 +262,12 @@ export function createCLIParser(argv: string[]) {
 
 			return true;
 		})
+		.option("experimental-provision", {
+			describe: `Automatic resources provision`,
+			type: "boolean",
+			hidden: true,
+			alias: ["x-provision"],
+		})
 		.epilogue(
 			`Please report any issues to ${chalk.hex("#3B818D")(
 				"https://github.com/cloudflare/workers-sdk/issues/new/choose"

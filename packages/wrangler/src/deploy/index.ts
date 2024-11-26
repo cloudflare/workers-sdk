@@ -4,6 +4,7 @@ import { processAssetsArg, validateAssetsArgsAndConfig } from "../assets";
 import { configFileName, findWranglerConfig, readConfig } from "../config";
 import { getEntry } from "../deployment-bundle/entry";
 import { UserError } from "../errors";
+import { run } from "../experimental-flags";
 import {
 	getRules,
 	getScriptName,
@@ -234,6 +235,15 @@ export function deployOptions(yargs: CommonYargsArgv) {
 export type DeployArgs = StrictYargsOptionsToInterface<typeof deployOptions>;
 
 export async function deployHandler(args: DeployArgs) {
+	await run(
+		{
+			RESOURCES_PROVISION: args.experimentalProvision,
+		},
+		() => deployWorker(args)
+	);
+}
+
+async function deployWorker(args: DeployArgs) {
 	await printWranglerBanner();
 
 	// Check for deprecated `wrangler publish` command
