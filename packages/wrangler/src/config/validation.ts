@@ -2169,21 +2169,11 @@ const validateAssetsConfig: ValidatorFn = (diagnostics, field, value) => {
 		) && isValid;
 
 	isValid =
-		validateOptionalProperty(
-			diagnostics,
-			field,
-			"serve_directly",
-			(value as Assets).serve_directly,
-			"boolean"
-		) && isValid;
-
-	isValid =
 		validateAdditionalProperties(diagnostics, field, Object.keys(value), [
 			"directory",
 			"binding",
 			"html_handling",
 			"not_found_handling",
-			"serve_directly",
 		]) && isValid;
 
 	return isValid;
