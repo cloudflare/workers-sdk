@@ -2,4 +2,4 @@
 "@cloudflare/workers-shared": minor
 ---
 
-Option to invoke user worker ahead of assets
+Preparatory work to allow invoking user worker ahead of assets
