@@ -310,21 +310,14 @@ export async function bundleWorker(
 
 	// When multiple workers are running we need some way to disambiguate logs between them. Inject a patched version of `globalThis.console` that prefixes logs with the worker name
 	if (getFlag("MULTIWORKER")) {
-		const patchedConsoleFileToInject = path.join(
-			tmpDir.path,
-			"patch-console.js"
-		);
-
-		if (!fs.existsSync(patchedConsoleFileToInject)) {
-			fs.writeFileSync(
-				patchedConsoleFileToInject,
-				fs.readFileSync(
-					path.resolve(getBasePath(), "templates/patch-console.js")
-				)
-			);
-		}
-
-		inject.push(patchedConsoleFileToInject);
+		middlewareToLoad.push({
+			name: "patch-console-prefix",
+			path: "templates/middleware/middleware-patch-console-prefix.ts",
+			supports: ["modules", "service-worker"],
+			config: {
+				prefix: JSON.stringify(chalk.blue(`[${entry.name}]`)),
+			},
+		});
 	}
 	// Check that the current worker format is supported by all the active middleware
 	for (const middleware of middlewareToLoad) {
@@ -441,13 +434,6 @@ export async function bundleWorker(
 				"process.env.NODE_ENV": `"${process.env["NODE_ENV" + ""]}"`,
 				...(nodejsCompatMode === "legacy" ? { global: "globalThis" } : {}),
 				...define,
-				...(getFlag("MULTIWORKER")
-					? {
-							WRANGLER_WORKER_NAME: JSON.stringify(
-								chalk.blue(`[${entry.name}]`)
-							),
-						}
-					: {}),
 			},
 		}),
 		loader: COMMON_ESBUILD_OPTIONS.loader,
