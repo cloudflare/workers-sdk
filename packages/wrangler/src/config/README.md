@@ -1,6 +1,6 @@
 # Configuration validation
 
-The files in this directory define and validate the configuration that is read from a `wrangler.toml` file.
+The files in this directory define and validate the configuration that is read from a Wrangler configuration file.
 
 The configuration for a Worker is complicated since we can define different "environments", and each environment can have its own configuration.
 There is a default ("top-level") environment and then named environments that provide environment specific configuration.
@@ -13,7 +13,7 @@ This is further complicated by the fact that there are three kinds of environmen
 - **non-inheritable**: these values must be explicitly defined in each environment if they are defined at the top-level.
   Named environments do not inherit such configuration and must provide their own values.
 
-All configuration values in `wrangler.toml` are optional and will receive a default value if not defined.
+All configuration values in Wrangler configuration are optional and will receive a default value if not defined.
 
 ## Types
 
@@ -36,8 +36,8 @@ These types should be used when you are working with fields that should be passe
 The `RawConfig` type is a version of `Config`, where all the fields are optional.
 The `RawConfig` type includes `DeprecatedConfigFields` and `EnvironmentMap`.
 It also extends the `RawEnvironment` type, which is a version of `Environment` where all the fields are optional.
-These optional fields map to the actual fields found in the `wrangler.toml`.
-These types should be used when you are working with raw configuration that is read or will be written to a `wrangler.toml`.
+These optional fields map to the actual fields found in the Wrangler configuration file.
+These types should be used when you are working with raw configuration that is read or will be written to a Wrangler configuration file.
 
 ## Validation
 
@@ -60,7 +60,7 @@ The [high level API](./index.ts) for configuration processing consists of the `f
 
 ### readConfig()
 
-The `readConfig()` function will find the nearest `wrangler.toml` file, load and parse it, then validate and normalize the values into a `Config` object.
+The `readConfig()` function will find the nearest Wrangler configuration file, load and parse it, then validate and normalize the values into a `Config` object.
 Note that you should pass the current active environment name in as a parameter. The resulting `Config` object will contain only the fields appropriate to that environment.
 If there are validation errors then it will throw a suitable error.
 
@@ -68,7 +68,7 @@ If there are validation errors then it will throw a suitable error.
 
 ### Add a new configuration field
 
-When a new field needs to be added to the `wrangler.toml` configuration you will need to add to the types and validation code in this directory.
+When a new field needs to be added to the Wrangler configuration you will need to add to the types and validation code in this directory.
 
 Here are some steps that you should consider when doing this:
 

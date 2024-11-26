@@ -57,7 +57,6 @@ export async function generateHandler(args: GenerateArgs) {
 			type: undefined,
 			_: args._,
 			$0: args.$0,
-			experimentalJsonConfig: false,
 			experimentalVersions: args.experimentalVersions,
 		});
 	}
@@ -149,11 +148,11 @@ export async function generateHandler(args: GenerateArgs) {
  * - workers
  * |
  * | - worker
- * | | - wrangler.toml
+ * | | - wrangler.toml/wrangler.json
  * | | ...
  * |
  * | - worker-1
- * | | - wrangler.toml
+ * | | - wrangler.toml/wrangler.json
  * | | ...
  * ```
  *

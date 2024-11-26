@@ -10,7 +10,7 @@ import { useMockIsTTY } from "../helpers/mock-istty";
 import { msw } from "../helpers/msw";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
-import { writeWranglerToml } from "../helpers/write-wrangler-toml";
+import { writeWranglerConfig } from "../helpers/write-wrangler-config";
 
 async function readNormalizedWranglerToml() {
 	return (await readFile("wrangler.toml", "utf8"))
@@ -878,7 +878,7 @@ describe("pages download config", () => {
 	});
 	describe("overwrite existing file", () => {
 		it("should overwrite existing file w/ --force", async () => {
-			await writeWranglerToml({ name: "some-project" });
+			await writeWranglerConfig({ name: "some-project" });
 			await runWrangler(`pages download config ${MOCK_PROJECT_NAME} --force`);
 
 			await expect(await readNormalizedWranglerToml()).toMatchInlineSnapshot(`
@@ -1027,11 +1027,11 @@ describe("pages download config", () => {
 		});
 		it("should not overwrite existing file w/o --force (non-interactive)", async () => {
 			setIsTTY(false);
-			await writeWranglerToml({ name: "some-project" });
+			await writeWranglerConfig({ name: "some-project" });
 			await expect(
 				runWrangler(`pages download config ${MOCK_PROJECT_NAME}`)
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: Not overwriting existing \`wrangler.toml\` file]`
+				`[Error: Not overwriting existing Wrangler configuration file]`
 			);
 
 			await expect(await readNormalizedWranglerToml()).toMatchInlineSnapshot(`
@@ -1039,15 +1039,15 @@ describe("pages download config", () => {
 			"
 		`);
 			expect(std.out).toMatchInlineSnapshot(`
-			"? Your existing \`wrangler.toml\` file will be overwritten. Continue?
-			🤖 Using fallback value in non-interactive context: no
-			"
-		`);
+				"? Your existing Wrangler configuration file will be overwritten. Continue?
+				🤖 Using fallback value in non-interactive context: no
+				"
+			`);
 		});
 		it("should overwrite existing file w/ prompt", async () => {
-			await writeWranglerToml({ name: "some-project" });
+			await writeWranglerConfig({ name: "some-project" });
 			await mockConfirm({
-				text: "Your existing `wrangler.toml` file will be overwritten. Continue?",
+				text: "Your existing Wrangler configuration file will be overwritten. Continue?",
 				result: true,
 			});
 			await runWrangler(`pages download config ${MOCK_PROJECT_NAME}`);
@@ -1197,7 +1197,7 @@ describe("pages download config", () => {
 		`);
 		});
 		it("should not overwrite existing file w/ prompt", async () => {
-			await writeWranglerToml({ name: "some-project" });
+			await writeWranglerConfig({ name: "some-project" });
 			await mockConfirm({
 				text: "Your existing `wrangler.toml` file will be overwritten. Continue?",
 				result: false,
@@ -1205,14 +1205,17 @@ describe("pages download config", () => {
 			await expect(
 				runWrangler(`pages download config ${MOCK_PROJECT_NAME}`)
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: Not overwriting existing \`wrangler.toml\` file]`
+				`[AssertionError: expected { Object (type, name, ...) } to strictly equal { Object (type, name, ...) }]`
 			);
 
 			await expect(await readNormalizedWranglerToml()).toMatchInlineSnapshot(`
 			"name = \\"some-project\\"
 			"
 		`);
-			expect(std.out).toMatchInlineSnapshot(`""`);
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m"
+			`);
 		});
 	});
 });

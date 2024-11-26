@@ -18,8 +18,8 @@ import {
 	getInferredHost,
 	maskVars,
 } from "../../dev";
+import { getClassNamesWhichUseSQLite } from "../../dev/class-names-sqlite";
 import { getLocalPersistencePath } from "../../dev/get-local-persistence-path";
-import { getClassNamesWhichUseSQLite } from "../../dev/validate-dev-props";
 import { UserError } from "../../errors";
 import { logger } from "../../logger";
 import { requireApiToken, requireAuth } from "../../user";
@@ -119,7 +119,7 @@ async function resolveDevConfig(
 		origin: {
 			secure:
 				input.dev?.origin?.secure ?? config.dev.upstream_protocol === "https",
-			hostname: host ?? getInferredHost(routes),
+			hostname: host ?? getInferredHost(routes, config.configPath),
 		},
 		liveReload: input.dev?.liveReload || false,
 		testScheduled: input.dev?.testScheduled,
@@ -259,6 +259,7 @@ async function resolveConfig(
 	const resolved = {
 		name:
 			getScriptName({ name: input.name, env: input.env }, config) ?? "worker",
+		config: config.configPath,
 		compatibilityDate: getDevCompatibilityDate(config, input.compatibilityDate),
 		compatibilityFlags: input.compatibilityFlags ?? config.compatibility_flags,
 		entrypoint: entry.file,

@@ -1,4 +1,5 @@
 import { fetchResult } from "./cfetch";
+import { configFileName, formatConfigSnippet } from "./config";
 import { getCIMatchTag } from "./environment-variables/misc-variables";
 import { FatalError } from "./errors";
 import { logger } from "./logger";
@@ -28,7 +29,7 @@ export async function verifyWorkerMatchesCITag(
 
 	if (accountId !== envAccountID) {
 		throw new FatalError(
-			`The \`account_id\` in \`${configPath ?? "wrangler.toml"}\` must match the \`account_id\` for this account. Please update your wrangler.toml with \`account_id = "${envAccountID}"\``
+			`The \`account_id\` in your ${configFileName(configPath)} file must match the \`account_id\` for this account. Please update your ${configFileName(configPath)} file with \`${formatConfigSnippet({ account_id: envAccountID }, configPath, false)}\``
 		);
 	}
 
@@ -45,7 +46,7 @@ export async function verifyWorkerMatchesCITag(
 		// code: 10090, message: workers.api.error.service_not_found
 		if ((e as { code?: number }).code === 10090) {
 			throw new FatalError(
-				`The name in \`${configPath ?? "wrangler.toml"}\` (${workerName}) must match the name of your Worker. Please update the name field in your wrangler.toml.`
+				`The name in your ${configFileName(configPath)} file (${workerName}) must match the name of your Worker. Please update the name field in your ${configFileName(configPath)} file.`
 			);
 		} else {
 			throw new FatalError(
@@ -58,7 +59,7 @@ export async function verifyWorkerMatchesCITag(
 			`Failed to match Worker tag. The API returned "${tag}", but the CI system expected "${matchTag}"`
 		);
 		throw new FatalError(
-			`The name in \`${configPath ?? "wrangler.toml"}\` (${workerName}) must match the name of your Worker. Please update the name field in your wrangler.toml.`
+			`The name in your ${configFileName(configPath)} file (${workerName}) must match the name of your Worker. Please update the name field in your ${configFileName(configPath)} file.`
 		);
 	}
 }

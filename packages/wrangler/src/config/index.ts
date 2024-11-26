@@ -1,9 +1,9 @@
 import fs from "node:fs";
+import TOML from "@iarna/toml";
 import chalk from "chalk";
 import dotenv from "dotenv";
 import { findUpSync } from "find-up";
 import { FatalError, UserError } from "../errors";
-import { getFlag } from "../experimental-flags";
 import { logger } from "../logger";
 import { EXIT_CODE_INVALID_PAGES_CONFIG } from "../pages/errors";
 import { parseJSONC, parseTOML, readFileSync } from "../parse";
@@ -28,9 +28,44 @@ export type {
 	RawEnvironment,
 } from "./environment";
 
-type ReadConfigCommandArgs = NormalizeAndValidateConfigArgs & {
-	experimentalJsonConfig?: boolean | undefined;
-};
+function configFormat(
+	configPath: string | undefined
+): "jsonc" | "toml" | "none" {
+	if (configPath?.endsWith("toml")) {
+		return "toml";
+	} else if (configPath?.endsWith("json") || configPath?.endsWith("jsonc")) {
+		return "jsonc";
+	}
+	return "none";
+}
+
+export function configFileName(configPath: string | undefined) {
+	const format = configFormat(configPath);
+	if (format === "toml") {
+		return "wrangler.toml";
+	} else if (format === "jsonc") {
+		return "wrangler.json";
+	} else {
+		return "Wrangler configuration";
+	}
+}
+
+export function formatConfigSnippet(
+	snippet: RawConfig,
+	configPath: Config["configPath"],
+	formatted = true
+) {
+	const format = configFormat(configPath);
+	if (format === "toml") {
+		return TOML.stringify(snippet as TOML.JsonMap);
+	} else {
+		return formatted
+			? JSON.stringify(snippet, null, 2)
+			: JSON.stringify(snippet);
+	}
+}
+
+type ReadConfigCommandArgs = NormalizeAndValidateConfigArgs;
 
 /**
  * Get the Wrangler configuration; read it from the give `configPath` if available.
@@ -55,12 +90,10 @@ export function readConfig(
 	requirePagesConfig?: boolean,
 	hideWarnings: boolean = false
 ): Config {
-	const isJsonConfigEnabled =
-		getFlag("JSON_CONFIG_FILE") ?? args.experimentalJsonConfig;
 	let rawConfig: RawConfig = {};
 
 	if (!configPath) {
-		configPath = findWranglerToml(process.cwd(), isJsonConfigEnabled);
+		configPath = findWranglerConfig(process.cwd());
 	}
 
 	try {
@@ -77,7 +110,7 @@ export function readConfig(
 		if (requirePagesConfig) {
 			logger.error(e);
 			throw new FatalError(
-				"Your wrangler.toml is not a valid Pages config file",
+				`Your ${configFileName(configPath)} file is not a valid Pages config file`,
 				EXIT_CODE_INVALID_PAGES_CONFIG
 			);
 		} else {
@@ -90,28 +123,13 @@ export function readConfig(
 	 *
 	 * The `pages_build_output_dir` config key is used to determine if the
 	 * configuration file belongs to a Workers or Pages project. This key
-	 * should always be set for Pages but never for Workers. Furthermore,
-	 * Pages projects currently have support for `wrangler.toml` only,
-	 * so we should error if `wrangler.json` || `wrangler.jsonc` is detected
-	 * in a Pages project
+	 * should always be set for Pages but never for Workers.
 	 */
 	const isPagesConfigFile = isPagesConfig(rawConfig);
 	if (!isPagesConfigFile && requirePagesConfig) {
 		throw new FatalError(
-			"Your wrangler.toml is not a valid Pages config file",
+			`Your ${configFileName(configPath)} file is not a valid Pages config file`,
 			EXIT_CODE_INVALID_PAGES_CONFIG
-		);
-	}
-	if (
-		isPagesConfigFile &&
-		(configPath?.endsWith("json") ||
-			configPath?.endsWith("jsonc") ||
-			isJsonConfigEnabled)
-	) {
-		throw new UserError(
-			`Pages doesn't currently support JSON formatted config \`${
-				configPath ?? "wrangler.json"
-			}\`. Please use wrangler.toml instead.`
 		);
 	}
 
@@ -176,21 +194,17 @@ function applyPythonConfig(config: Config, args: ReadConfigCommandArgs) {
 }
 
 /**
- * Find the wrangler.toml file by searching up the file-system
+ * Find the wrangler config file by searching up the file-system
  * from the current working directory.
  */
-export function findWranglerToml(
-	referencePath: string = process.cwd(),
-	preferJson = false
+export function findWranglerConfig(
+	referencePath: string = process.cwd()
 ): string | undefined {
-	if (preferJson) {
-		return (
-			findUpSync(`wrangler.json`, { cwd: referencePath }) ??
-			findUpSync(`wrangler.jsonc`, { cwd: referencePath }) ??
-			findUpSync(`wrangler.toml`, { cwd: referencePath })
-		);
-	}
-	return findUpSync(`wrangler.toml`, { cwd: referencePath });
+	return (
+		findUpSync(`wrangler.json`, { cwd: referencePath }) ??
+		findUpSync(`wrangler.jsonc`, { cwd: referencePath }) ??
+		findUpSync(`wrangler.toml`, { cwd: referencePath })
+	);
 }
 
 function addLocalSuffix(id: string, local: boolean = false) {

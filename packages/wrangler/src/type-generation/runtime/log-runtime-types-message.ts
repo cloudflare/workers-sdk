@@ -1,4 +1,5 @@
 import { dedent } from "ts-dedent";
+import { configFileName } from "../../config";
 import { logger } from "../../logger";
 
 /**
@@ -7,7 +8,8 @@ import { logger } from "../../logger";
 export function logRuntimeTypesMessage(
 	outFile: string,
 	tsconfigTypes: string[],
-	isNodeCompat = false
+	isNodeCompat = false,
+	configPath: string | undefined
 ) {
 	const isWorkersTypesInstalled = tsconfigTypes.find((type) =>
 		type.startsWith("@cloudflare/workers-types")
@@ -52,7 +54,7 @@ export function logRuntimeTypesMessage(
 		);
 	}
 	logger.info(
-		"📣 Remember to run 'wrangler types --x-include-runtime' again if you change 'compatibility_date' or 'compatibility_flags' in your wrangler.toml.\n"
+		`📣 Remember to run 'wrangler types --x-include-runtime' again if you change 'compatibility_date' or 'compatibility_flags' in your ${configFileName(configPath)} file.\n`
 	);
 }
 

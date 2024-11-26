@@ -60,7 +60,7 @@ export interface StartDevWorkerInput {
 	name?: string;
 	/**
 	 * The javascript or typescript entry-point of the worker.
-	 * This is the `main` property of a wrangler.toml.
+	 * This is the `main` property of a Wrangler configuration file.
 	 * You can specify a file path or provide the contents directly.
 	 */
 	entrypoint?: string;
@@ -176,7 +176,7 @@ export interface StartDevWorkerInput {
 }
 
 export type StartDevWorkerOptions = Omit<StartDevWorkerInput, "assets"> & {
-	/** A worker's directory. Usually where the wrangler.toml file is located */
+	/** A worker's directory. Usually where the Wrangler configuration file is located */
 	projectRoot: string;
 	build: StartDevWorkerInput["build"] & {
 		nodejsCompatMode: NodeJSCompatMode;
@@ -195,7 +195,7 @@ export type StartDevWorkerOptions = Omit<StartDevWorkerInput, "assets"> & {
 	};
 	dev: StartDevWorkerInput["dev"] & {
 		persist: string;
-		auth?: AsyncHook<CfAccount>; // redefine without config.account_id hook param (can only be provided by ConfigController with access to wrangler.toml, not by other controllers eg RemoteRuntimeContoller)
+		auth?: AsyncHook<CfAccount>; // redefine without config.account_id hook param (can only be provided by ConfigController with access to the Wrangler configuration file, not by other controllers eg RemoteRuntimeContoller)
 	};
 	entrypoint: string;
 	assets?: AssetsOptions;

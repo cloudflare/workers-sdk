@@ -31,7 +31,7 @@ describe.each([{ cmd: "wrangler pages dev" }])("Pages $cmd", ({ cmd }) => {
 			`No compatibility_date was specified. Using today's date: <current-date>.`
 		);
 		expect(output).toContain(
-			`❯❯ Add one to your wrangler.toml file: compatibility_date = "<current-date>", or`
+			`❯❯ Add one to your Wrangler configuration file: compatibility_date = "<current-date>", or`
 		);
 		expect(output).toContain(
 			`❯❯ Pass it in your terminal: wrangler pages dev [<DIRECTORY>] --compatibility-date=<current-date>`

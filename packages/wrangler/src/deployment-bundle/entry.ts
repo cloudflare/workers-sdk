@@ -1,4 +1,5 @@
 import path from "node:path";
+import { configFileName } from "../config";
 import { UserError } from "../errors";
 import { logger } from "../logger";
 import guessWorkerFormat from "./guess-worker-format";
@@ -21,7 +22,7 @@ import type { CfScriptFormat } from "./worker";
 export type Entry = {
 	/** A worker's entrypoint */
 	file: string;
-	/** A worker's directory. Usually where the wrangler.toml file is located */
+	/** A worker's directory. Usually where the Wrangler configuration file is located */
 	projectRoot: string;
 	/** Is this a module worker or a service worker? */
 	format: CfScriptFormat;
@@ -80,7 +81,12 @@ export async function getEntry(
 			`Missing entry-point: The entry-point should be specified via the command line (e.g. \`wrangler ${command} path/to/script\`) or the \`main\` config field.`
 		);
 	}
-	await runCustomBuild(paths.absolutePath, paths.relativePath, config.build);
+	await runCustomBuild(
+		paths.absolutePath,
+		paths.relativePath,
+		config.build,
+		config.configPath
+	);
 
 	const projectRoot = paths.projectRoot ?? process.cwd();
 	const { format, exports } = await guessWorkerFormat(
@@ -105,8 +111,7 @@ export async function getEntry(
 	if (format === "service-worker" && localBindings.length > 0) {
 		const errorMessage =
 			"You seem to be trying to use Durable Objects in a Worker written as a service-worker.";
-		const addScriptName =
-			"You can use Durable Objects defined in other Workers by specifying a `script_name` in your wrangler.toml, where `script_name` is the name of the Worker that implements that Durable Object. For example:";
+		const addScriptName = `You can use Durable Objects defined in other Workers by specifying a \`script_name\` in your ${configFileName(config.configPath)} file, where \`script_name\` is the name of the Worker that implements that Durable Object. For example:`;
 		const addScriptNameExamples = generateAddScriptNameExamples(localBindings);
 		const migrateText =
 			"Alternatively, migrate your worker to ES Module syntax to implement a Durable Object in this Worker:";

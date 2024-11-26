@@ -5,7 +5,7 @@ import { mockConsoleMethods } from "../../helpers/mock-console";
 import { msw, mswGetVersion, mswListNewDeployments } from "../../helpers/msw";
 import { runInTempDir } from "../../helpers/run-in-tmp";
 import { runWrangler } from "../../helpers/run-wrangler";
-import { writeWranglerToml } from "../../helpers/write-wrangler-toml";
+import { writeWranglerConfig } from "../../helpers/write-wrangler-config";
 
 describe("deployments list", () => {
 	mockAccountId();
@@ -196,7 +196,7 @@ describe("deployments list", () => {
 	});
 
 	describe("with wrangler.toml", () => {
-		beforeEach(() => writeWranglerToml());
+		beforeEach(() => writeWranglerConfig());
 
 		test("prints deployments to stdout", async () => {
 			const result = runWrangler("deployments list  --experimental-versions");
