@@ -216,7 +216,7 @@ describe("multiworker", () => {
 				{ interval: 1000, timeout: 10_000 }
 			);
 
-			workerA.signal("SIGINT");
+			await workerA.signal("SIGINT");
 
 			const exitCode = await workerA.exitCode;
 
