@@ -22,18 +22,7 @@ import {
 	rollbackDeployment,
 	viewDeployment,
 } from "./deployments";
-import {
-	buildHandler,
-	buildOptions,
-	configHandler,
-	noOpOptions,
-	previewHandler,
-	previewOptions,
-	route,
-	routeHandler,
-	subdomainHandler,
-	subdomainOptions,
-} from "./deprecated";
+import { buildHandler, buildOptions } from "./deprecated";
 import { workerNamespaceCommands } from "./dispatch-namespace";
 import {
 	CommandLineArgsError,
@@ -57,7 +46,7 @@ import { APIError, formatMessage, ParseError } from "./parse";
 import { pipelines } from "./pipelines";
 import { pubSubCommands } from "./pubsub/pubsub-commands";
 import { queues } from "./queues/cli/commands";
-import { secret, secretBulkHandler, secretBulkOptions } from "./secret";
+import { secret } from "./secret";
 import {
 	addBreadcrumb,
 	captureGlobalException,
@@ -333,7 +322,7 @@ export function createCLIParser(argv: string[]) {
 
 	// deploy
 	wrangler.command(
-		["deploy [script]", "publish [script]"],
+		"deploy [script]",
 		"🆙 Deploy a Worker to Cloudflare",
 		deployOptions,
 		deployHandler
@@ -583,50 +572,7 @@ export function createCLIParser(argv: string[]) {
 	register.registerNamespace("logout");
 	register.registerNamespace("whoami");
 
-	/******************************************************/
-	/*               DEPRECATED COMMANDS                  */
-	/******************************************************/
-	// [DEPRECATED] build
 	wrangler.command("build", false, buildOptions, buildHandler);
-
-	// [DEPRECATED] config
-	wrangler.command("config", false, noOpOptions, configHandler);
-
-	// [DEPRECATED] preview
-	wrangler.command(
-		"preview [method] [body]",
-		false,
-		previewOptions,
-		previewHandler
-	);
-
-	// [DEPRECATED] route
-	wrangler.command(
-		"route",
-		false, // I think we want to hide this command
-		// "➡️  List or delete worker routes",
-		(routeYargs) => {
-			return route(routeYargs);
-		},
-		routeHandler
-	);
-
-	// [DEPRECATED] subdomain
-	wrangler.command(
-		"subdomain [name]",
-		false,
-		// "👷 Create or change your workers.dev subdomain.",
-		subdomainOptions,
-		subdomainHandler
-	);
-
-	// [DEPRECATED] secret:bulk
-	wrangler.command(
-		"secret:bulk [json]",
-		false,
-		secretBulkOptions,
-		secretBulkHandler
-	);
 
 	// This set to false to allow overwrite of default behaviour
 	wrangler.version(false);
