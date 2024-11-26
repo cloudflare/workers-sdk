@@ -570,11 +570,12 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 	let versionPreviewUrl: string | undefined = undefined;
 
 	if (versionId && hasPreview) {
-		const { enabled: available_on_subdomain } = await fetchResult<{
-			enabled: boolean;
-		}>(`${workerUrl}/subdomain`);
+		const { previews_enabled: previews_available_on_subdomain } =
+			await fetchResult<{
+				previews_enabled: boolean;
+			}>(`${workerUrl}/subdomain`);
 
-		if (available_on_subdomain) {
+		if (previews_available_on_subdomain) {
 			const userSubdomain = await getWorkersDevSubdomain(
 				accountId,
 				config.configPath

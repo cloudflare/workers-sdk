@@ -110,7 +110,7 @@ describe("versions upload", () => {
 	test("should print preview url if version has preview", async () => {
 		mockGetScript();
 		mockUploadVersion(true);
-		mockGetWorkerSubdomain({ enabled: true });
+		mockGetWorkerSubdomain({ enabled: true, previews_enabled: true });
 		mockSubDomainRequest();
 
 		// Setup
@@ -140,10 +140,10 @@ describe("versions upload", () => {
 		`);
 	});
 
-	it("should not print preview url workers_dev is false", async () => {
+	it("should not print preview url when preview_urls is false", async () => {
 		mockGetScript();
 		mockUploadVersion(true);
-		mockGetWorkerSubdomain({ enabled: false });
+		mockGetWorkerSubdomain({ enabled: true, previews_enabled: false });
 
 		// Setup
 		writeWranglerConfig({
