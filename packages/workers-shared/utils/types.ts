@@ -2,7 +2,6 @@ import { z } from "zod";
 
 export const RoutingConfigSchema = z.object({
 	has_user_worker: z.boolean().optional(),
-	invoke_user_worker_ahead_of_assets: z.boolean().optional(),
 });
 
 export const AssetConfigSchema = z.object({
