@@ -4,6 +4,7 @@ import chalk from "chalk";
 import dotenv from "dotenv";
 import { findUpSync } from "find-up";
 import { FatalError, UserError } from "../errors";
+import { getFlag } from "../experimental-flags";
 import { logger } from "../logger";
 import { EXIT_CODE_INVALID_PAGES_CONFIG } from "../pages/errors";
 import { parseJSONC, parseTOML, readFileSync } from "../parse";
