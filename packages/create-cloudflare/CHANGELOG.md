@@ -1,5 +1,19 @@
 # create-cloudflare
 
+## 2.33.1
+
+### Patch Changes
+
+- [#7235](https://github.com/cloudflare/workers-sdk/pull/7235) [`8246c45`](https://github.com/cloudflare/workers-sdk/commit/8246c45883cfc8092bef68a05fadf7376d1f5b5f) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency  | From  | To     |
+  | ----------- | ----- | ------ |
+  | create-qwik | 1.9.1 | 1.10.0 |
+
+- [#6410](https://github.com/cloudflare/workers-sdk/pull/6410) [`c808590`](https://github.com/cloudflare/workers-sdk/commit/c8085903678099335e91fd3d7e5d555d9f911a5b) Thanks [@stof](https://github.com/stof)! - Fix the test tsconfig file in the hello-world typescript template
+
 ## 2.33.0
 
 ### Minor Changes
