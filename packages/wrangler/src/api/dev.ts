@@ -217,6 +217,7 @@ export async function unstable_dev(
 		...options,
 		logLevel: options?.logLevel ?? defaultLogLevel,
 		port: options?.port ?? 0,
+		experimentalProvision: undefined,
 		experimentalVersions: undefined,
 		experimentalDevEnv: undefined,
 		experimentalRegistry: fileBasedRegistry,
