@@ -347,7 +347,6 @@ export function processAssetsArg(
 	const assetConfig = {
 		html_handling: config.assets?.html_handling,
 		not_found_handling: config.assets?.not_found_handling,
-		serve_directly: config.assets?.serve_directly,
 	};
 
 	return {

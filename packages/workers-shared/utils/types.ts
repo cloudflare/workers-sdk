@@ -17,7 +17,6 @@ export const AssetConfigSchema = z.object({
 	not_found_handling: z
 		.enum(["single-page-application", "404-page", "none"])
 		.optional(),
-	serve_directly: z.boolean().optional(),
 });
 
 export type RoutingConfig = z.infer<typeof RoutingConfigSchema>;
