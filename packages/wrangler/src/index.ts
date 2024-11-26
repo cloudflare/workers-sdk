@@ -41,7 +41,6 @@ import {
 	JsonFriendlyFatalError,
 	UserError,
 } from "./errors";
-import { generateHandler, generateOptions } from "./generate";
 import { hyperdrive } from "./hyperdrive/index";
 import { initHandler, initOptions } from "./init";
 import "./docs";
@@ -643,14 +642,6 @@ export function createCLIParser(argv: string[]) {
 		false,
 		secretBulkOptions,
 		secretBulkHandler
-	);
-
-	// [DEPRECATED] generate
-	wrangler.command(
-		"generate [name] [template]",
-		false,
-		generateOptions,
-		generateHandler
 	);
 
 	// This set to false to allow overwrite of default behaviour

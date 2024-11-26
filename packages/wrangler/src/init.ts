@@ -1,23 +1,15 @@
-import * as fs from "node:fs";
 import { mkdir, writeFile } from "node:fs/promises";
 import path, { dirname } from "node:path";
 import TOML from "@iarna/toml";
 import { execa } from "execa";
-import { findUp } from "find-up";
-import { version as wranglerVersion } from "../package.json";
 import { assertNever } from "./api/startDevWorker/utils";
 import { fetchResult } from "./cfetch";
 import { fetchWorker } from "./cfetch/internal";
-import { readConfig } from "./config";
 import { getDatabaseInfoFromId } from "./d1/utils";
-import { confirm, select } from "./dialogs";
 import { getC3CommandFromEnv } from "./environment-variables/misc-variables";
-import { CommandLineArgsError, FatalError, UserError } from "./errors";
-import { getGitVersioon, initializeGit, isInsideGitRepo } from "./git-client";
+import { FatalError, UserError } from "./errors";
 import { logger } from "./logger";
 import { getPackageManager } from "./package-manager";
-import { parsePackageJSON, parseTOML, readFileSync } from "./parse";
-import { getBasePath } from "./paths";
 import { requireAuth } from "./user";
 import { createBatches } from "./utils/create-batches";
 import * as shellquote from "./utils/shell-quote";
@@ -36,7 +28,6 @@ import type {
 	WorkerMetadataBinding,
 } from "./deployment-bundle/create-worker-upload-form";
 import type { PackageManager } from "./package-manager";
-import type { PackageJSON } from "./parse";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
@@ -48,18 +39,6 @@ export function initOptions(yargs: CommonYargsArgv) {
 		.positional("name", {
 			describe: "The name of your worker",
 			type: "string",
-		})
-		.option("type", {
-			describe: "The type of worker to create",
-			type: "string",
-			choices: ["rust", "javascript", "webpack"],
-			hidden: true,
-			deprecated: true,
-		})
-		.option("site", {
-			hidden: true,
-			type: "boolean",
-			deprecated: true,
 		})
 		.option("yes", {
 			describe: 'Answer "yes" to any prompts for new projects',
@@ -159,718 +138,71 @@ export async function initHandler(args: InitArgs) {
 	await printWranglerBanner();
 
 	const yesFlag = args.yes ?? false;
-	const devDepsToInstall: string[] = [];
-	const instructions: string[] = [];
-	let shouldRunPackageManagerInstall = false;
-	const fromDashWorkerName = args.fromDash;
-	const creationDirectory = path.resolve(
-		process.cwd(),
-		(args.name ? args.name : fromDashWorkerName) ?? ""
-	);
 
-	assertNoTypeArg(args);
-	assertNoSiteArg(args, creationDirectory);
+	const packageManager = await getPackageManager();
 
-	// TODO: make sure args.name is a valid identifier for a worker name
-	const workerName = path
-		.basename(creationDirectory)
-		.toLowerCase()
-		.replaceAll(/[^a-z0-9\-_]/gm, "-");
+	const name = args.fromDash ?? args.name;
 
-	const packageManager = await getPackageManager(creationDirectory);
+	const c3Arguments = [
+		...shellquote.parse(getC3CommandFromEnv()),
+		...(name ? [name] : []),
+		...(yesFlag && isNpm(packageManager) ? ["-y"] : []), // --yes arg for npx
+		...(isNpm(packageManager) ? ["--"] : []),
+		...(args.fromDash ? ["--existing-script", args.fromDash] : []),
+		...(yesFlag ? ["--wrangler-defaults"] : []),
+	];
+	const replacementC3Command = `\`${packageManager.type} ${c3Arguments.join(
+		" "
+	)}\``;
 
-	// TODO: ask which directory to make the worker in (defaults to args.name)
-	// TODO: if args.name isn't provided, ask what to name the worker
-	// Note: `--from-dash` will be a fallback creationDir/Worker name if none is provided.
-
-	const wranglerTomlDestination = path.join(
-		creationDirectory,
-		"./wrangler.toml"
-	);
-	let justCreatedWranglerToml = false;
-
-	let accountId = "";
-
-	// If --from-dash, check that script actually exists
-	if (fromDashWorkerName) {
-		const c3Arguments = [
-			...shellquote.parse(getC3CommandFromEnv()),
-			fromDashWorkerName,
-			...(yesFlag && isNpm(packageManager) ? ["-y"] : []), // --yes arg for npx
-			...(isNpm(packageManager) ? ["--"] : []),
-			"--existing-script",
-			fromDashWorkerName,
-		];
-
-		if (yesFlag) {
-			c3Arguments.push("--wrangler-defaults");
-		}
-
-		const replacementC3Command = `\`${packageManager.type} ${c3Arguments.join(
-			" "
-		)}\``;
-		// C3 will run wrangler with the --do-not-delegate flag to communicate with the API
-		if (args.delegateC3) {
-			logger.log(`🌀 Running ${replacementC3Command}...`);
-
-			await execa(packageManager.type, c3Arguments, { stdio: "inherit" });
-
-			return;
-		} else {
-			const config = readConfig(args.config, args);
-			accountId = await requireAuth(config);
-			try {
-				await fetchResult<ServiceMetadataRes>(
-					`/accounts/${accountId}/workers/services/${fromDashWorkerName}`
-				);
-			} catch (err) {
-				if ((err as { code?: number }).code === 10090) {
-					throw new UserError(
-						"wrangler couldn't find a Worker script with that name in your account.\nRun `wrangler whoami` to confirm you're logged into the correct account."
-					);
-				}
-				throw err;
-			}
-		}
-	}
-
-	if (fs.existsSync(wranglerTomlDestination)) {
-		let shouldContinue = false;
-		logger.warn(
-			`${path.relative(process.cwd(), wranglerTomlDestination)} already exists!`
-		);
-		if (!fromDashWorkerName) {
-			shouldContinue = await confirm(
-				"Do you want to continue initializing this project?"
-			);
-		}
-		if (!shouldContinue) {
-			return;
-		}
-	} else {
-		if (!fromDashWorkerName) {
-			const c3Arguments: string[] = [];
-
-			if (args.name) {
-				c3Arguments.push(args.name);
-			}
-
-			if (yesFlag) {
-				c3Arguments.push("--wrangler-defaults");
-			}
-
-			if (c3Arguments.length > 0 && isNpm(packageManager)) {
-				c3Arguments.unshift("--");
-			}
-
-			if (yesFlag && isNpm(packageManager)) {
-				c3Arguments.unshift("-y"); // arg for npx
-			}
-
-			c3Arguments.unshift(...shellquote.parse(getC3CommandFromEnv()));
-
-			const replacementC3Command = `\`${packageManager.type} ${shellquote.quote(
-				c3Arguments
-			)}\``;
-
-			if (args.delegateC3) {
-				logger.log(
-					`The \`init\` command now delegates to \`create-cloudflare\` instead. You can use the \`--no-c3\` flag to access the old implementation.\n`
-				);
-				logger.log(`🌀 Running ${replacementC3Command}...`);
-
-				await execa(packageManager.type, c3Arguments, {
-					stdio: "inherit",
-				});
-
-				return;
-			}
-		}
-
-		await mkdir(creationDirectory, { recursive: true });
-		const compatibilityDate = new Date().toISOString().substring(0, 10);
-
+	if (args.fromDash && !args.delegateC3) {
+		const accountId = await requireAuth({});
 		try {
-			await writeFile(
-				wranglerTomlDestination,
-				TOML.stringify({
-					name: workerName,
-					compatibility_date: compatibilityDate,
-				}) + "\n"
+			await fetchResult<ServiceMetadataRes>(
+				`/accounts/${accountId}/workers/services/${args.fromDash}`
 			);
-
-			logger.log(
-				`✨ Created ${path.relative(process.cwd(), wranglerTomlDestination)}`
-			);
-			justCreatedWranglerToml = true;
 		} catch (err) {
-			throw new Error(
-				`Failed to create ${path.relative(
-					process.cwd(),
-					wranglerTomlDestination
-				)}.\n${(err as Error).message ?? err}`
-			);
-		}
-	}
-
-	if (!(await isInsideGitRepo(creationDirectory)) && (await getGitVersioon())) {
-		const shouldInitGit =
-			yesFlag ||
-			(await confirm("Would you like to use git to manage this Worker?"));
-		if (shouldInitGit) {
-			await initializeGit(creationDirectory);
-			await writeFile(
-				path.join(creationDirectory, ".gitignore"),
-				readFileSync(path.join(getBasePath(), "templates/gitignore"))
-			);
-			logger.log(
-				args.name && args.name !== "."
-					? `✨ Initialized git repository at ${path.relative(
-							process.cwd(),
-							creationDirectory
-						)}`
-					: `✨ Initialized git repository`
-			);
-		}
-	}
-
-	const isolatedInit = !!args.name;
-	let pathToPackageJson = await findPath(
-		isolatedInit,
-		creationDirectory,
-		"package.json"
-	);
-	let shouldCreatePackageJson = false;
-	let shouldCreateTests = false;
-	let newWorkerTestType: "jest" | "vitest" = "jest";
-
-	if (!pathToPackageJson) {
-		// If no package.json exists, ask to create one
-		shouldCreatePackageJson =
-			yesFlag ||
-			(await confirm("No package.json found. Would you like to create one?"));
-
-		if (shouldCreatePackageJson) {
-			await writeFile(
-				path.join(creationDirectory, "./package.json"),
-				JSON.stringify(
-					{
-						name: workerName,
-						version: "0.0.0",
-						devDependencies: {
-							wrangler: wranglerVersion,
-						},
-						private: true,
-					},
-					null,
-					"  "
-				) + "\n"
-			);
-
-			shouldRunPackageManagerInstall = true;
-			pathToPackageJson = path.join(creationDirectory, "package.json");
-			logger.log(
-				`✨ Created ${path.relative(process.cwd(), pathToPackageJson)}`
-			);
-		} else {
-			return;
-		}
-	} else {
-		// If package.json exists and wrangler isn't installed,
-		// then ask to add wrangler to devDependencies
-		const packageJson = parsePackageJSON(
-			readFileSync(pathToPackageJson),
-			pathToPackageJson
-		);
-		if (
-			!(
-				packageJson.devDependencies?.wrangler ||
-				packageJson.dependencies?.wrangler
-			)
-		) {
-			const shouldInstall =
-				yesFlag ||
-				(await confirm(
-					`Would you like to install wrangler into ${path.relative(
-						process.cwd(),
-						pathToPackageJson
-					)}?`
-				));
-			if (shouldInstall) {
-				devDepsToInstall.push(`wrangler@${wranglerVersion}`);
-			}
-		}
-	}
-
-	let isTypescriptProject = false;
-	let pathToTSConfig = await findPath(
-		isolatedInit,
-		creationDirectory,
-		"tsconfig.json"
-	);
-	// If we're coming from the dash, the worker is always Javascript
-	if (!fromDashWorkerName) {
-		if (!pathToTSConfig) {
-			// If there's no tsconfig, offer to create one
-			// and install @cloudflare/workers-types
-			if (yesFlag || (await confirm("Would you like to use TypeScript?"))) {
-				isTypescriptProject = true;
-				await writeFile(
-					path.join(creationDirectory, "./tsconfig.json"),
-					readFileSync(path.join(getBasePath(), "templates/tsconfig.init.json"))
-				);
-				devDepsToInstall.push("@cloudflare/workers-types");
-				devDepsToInstall.push("typescript");
-				pathToTSConfig = path.join(creationDirectory, "tsconfig.json");
-				logger.log(
-					`✨ Created ${path.relative(process.cwd(), pathToTSConfig)}`
+			if ((err as { code?: number }).code === 10090) {
+				throw new UserError(
+					"wrangler couldn't find a Worker with that name in your account.\nRun `wrangler whoami` to confirm you're logged into the correct account."
 				);
 			}
-		} else {
-			isTypescriptProject = true;
-			// If there's a tsconfig, check if @cloudflare/workers-types
-			// is already installed, and offer to install it if not
-			const packageJson = parsePackageJSON(
-				readFileSync(pathToPackageJson),
-				pathToPackageJson
-			);
-			if (
-				!(
-					packageJson.devDependencies?.["@cloudflare/workers-types"] ||
-					packageJson.dependencies?.["@cloudflare/workers-types"]
-				)
-			) {
-				const shouldInstall = await confirm(
-					"Would you like to install the type definitions for Workers into your package.json?"
-				);
-				if (shouldInstall) {
-					devDepsToInstall.push("@cloudflare/workers-types");
-					// We don't update the tsconfig.json because
-					// it could be complicated in existing projects
-					// and we don't want to break them. Instead, we simply
-					// tell the user that they need to update their tsconfig.json
-					instructions.push(
-						`🚨 Please add "@cloudflare/workers-types" to compilerOptions.types in ${path.relative(
-							process.cwd(),
-							pathToTSConfig
-						)}`
-					);
-				}
-			}
+			throw err;
 		}
-	}
 
-	const packageJsonContent = parsePackageJSON(
-		readFileSync(pathToPackageJson),
-		pathToPackageJson
-	);
-	const shouldWritePackageJsonScripts =
-		!packageJsonContent.scripts?.start &&
-		!packageJsonContent.scripts?.publish &&
-		shouldCreatePackageJson;
+		const creationDir = path.join(process.cwd(), args.fromDash);
 
-	async function writePackageJsonScriptsAndUpdateWranglerToml({
-		isWritingScripts,
-		isAddingTests,
-		testRunner,
-		isCreatingWranglerToml,
-		packagePath,
-		scriptPath,
-		extraToml,
-	}: {
-		isWritingScripts: boolean;
-		isAddingTests?: boolean;
-		testRunner?: "jest" | "vitest";
-		isCreatingWranglerToml: boolean;
-		packagePath: string;
-		scriptPath: string;
-		extraToml: TOML.JsonMap;
-	}) {
-		if (isAddingTests && !testRunner) {
-			logger.error("testRunner is required if isAddingTests");
-		}
-		if (isCreatingWranglerToml) {
-			// rewrite wrangler.toml with main = "path/to/script" and any additional config specified in `extraToml`
-			const parsedWranglerToml = parseTOML(
-				readFileSync(wranglerTomlDestination)
-			);
-			const newToml = {
-				name: parsedWranglerToml.name,
-				main: scriptPath,
-				compatibility_date: parsedWranglerToml.compatibility_date,
-				...extraToml,
-			};
-			fs.writeFileSync(wranglerTomlDestination, TOML.stringify(newToml));
-		}
-		const isNamedWorker =
-			isCreatingWranglerToml && path.dirname(packagePath) !== process.cwd();
-		const isAddingTestScripts =
-			isAddingTests && !packageJsonContent.scripts?.test;
-		if (isWritingScripts) {
-			await writeFile(
-				packagePath,
-				JSON.stringify(
-					{
-						...packageJsonContent,
-						scripts: {
-							...packageJsonContent.scripts,
-							start: isCreatingWranglerToml
-								? `wrangler dev`
-								: `wrangler dev ${scriptPath}`,
-							deploy: isCreatingWranglerToml
-								? `wrangler deploy`
-								: `wrangler deploy ${scriptPath}`,
-							...(isAddingTestScripts && { test: testRunner }),
-						},
-					} as PackageJSON,
-					null,
-					2
-				) + "\n"
-			);
-			instructions.push(
-				`\nTo start developing your Worker, run \`${
-					isNamedWorker ? `cd ${args.name || fromDashWorkerName} && ` : ""
-				}npm start\``
-			);
-			if (isAddingTestScripts) {
-				instructions.push(`To start testing your Worker, run \`npm test\``);
-			}
-			instructions.push(
-				`To publish your Worker to the Internet, run \`npm run deploy\``
-			);
-		} else {
-			instructions.push(
-				`\nTo start developing your Worker, run \`npx wrangler dev\`${
-					isCreatingWranglerToml ? "" : ` ${scriptPath}`
-				}`
-			);
-			instructions.push(
-				`To publish your Worker to the Internet, run \`npx wrangler deploy\`${
-					isCreatingWranglerToml ? "" : ` ${scriptPath}`
-				}`
-			);
-		}
-	}
-	if (isTypescriptProject) {
-		if (!fs.existsSync(path.join(creationDirectory, "./src/index.ts"))) {
-			const newWorkerFilename = path.relative(
-				process.cwd(),
-				path.join(creationDirectory, "./src/index.ts")
-			);
+		await mkdir(creationDir, { recursive: true });
+		const { modules, config } = await downloadWorker(accountId, args.fromDash);
 
-			const newWorkerType = yesFlag
-				? "fetch"
-				: await getNewWorkerType(newWorkerFilename);
-
-			if (newWorkerType !== "none") {
-				const template = getNewWorkerTemplate("ts", newWorkerType);
-
-				await mkdir(path.join(creationDirectory, "./src"), {
-					recursive: true,
-				});
-
-				await writeFile(
-					path.join(creationDirectory, "./src/index.ts"),
-					readFileSync(path.join(getBasePath(), `templates/${template}`))
-				);
-
-				logger.log(
-					`✨ Created ${path.relative(
-						process.cwd(),
-						path.join(creationDirectory, "./src/index.ts")
-					)}`
-				);
-
-				shouldCreateTests =
-					yesFlag ||
-					(await confirm(
-						"Would you like us to write your first test with Vitest?"
-					));
-
-				if (shouldCreateTests) {
-					if (yesFlag) {
-						logger.info("Your project will use Vitest to run your tests.");
-					}
-
-					newWorkerTestType = "vitest";
-					devDepsToInstall.push(newWorkerTestType);
-
-					await writeFile(
-						path.join(creationDirectory, "./src/index.test.ts"),
-						readFileSync(
-							path.join(
-								getBasePath(),
-								`templates/init-tests/test-${newWorkerTestType}-new-worker.ts`
-							)
-						)
-					);
-					logger.log(
-						`✨ Created ${path.relative(
-							process.cwd(),
-							path.join(creationDirectory, "./src/index.test.ts")
-						)}`
-					);
-				}
-
-				await writePackageJsonScriptsAndUpdateWranglerToml({
-					isWritingScripts: shouldWritePackageJsonScripts,
-					isAddingTests: shouldCreateTests,
-					isCreatingWranglerToml: justCreatedWranglerToml,
-					packagePath: pathToPackageJson,
-					testRunner: newWorkerTestType,
-					scriptPath: "src/index.ts",
-					extraToml: getNewWorkerToml(newWorkerType),
-				});
-			}
-		}
-	} else {
-		if (!fs.existsSync(path.join(creationDirectory, "./src/index.js"))) {
-			const newWorkerFilename = path.relative(
-				process.cwd(),
-				path.join(creationDirectory, "./src/index.js")
-			);
-
-			if (fromDashWorkerName) {
-				logger.warn(
-					"After running `wrangler init --from-dash`, modifying your worker via the Cloudflare dashboard is discouraged.\nEdits made via the Dashboard will not be synchronized locally and will be overridden by your local code and config when you deploy."
-				);
-
-				const { modules, config } = await downloadWorker(
-					accountId,
-					fromDashWorkerName
-				);
-
-				await mkdir(path.join(creationDirectory, "./src"), {
-					recursive: true,
-				});
-
-				config.main = `src/${config.main}`;
-				config.name = workerName;
-
-				// writeFile in small batches (of 10) to not exhaust system file descriptors
-				for (const files of createBatches(modules, 10)) {
-					await Promise.all(
-						files.map(async (file) => {
-							const filepath = path.join(
-								creationDirectory,
-								`./src/${file.name}`
-							);
-							const directory = dirname(filepath);
-
-							await mkdir(directory, { recursive: true });
-							await writeFile(filepath, file.stream() as ReadableStream);
-						})
-					);
-				}
-
-				await writePackageJsonScriptsAndUpdateWranglerToml({
-					isWritingScripts: shouldWritePackageJsonScripts,
-					isCreatingWranglerToml: justCreatedWranglerToml,
-					packagePath: pathToPackageJson,
-					scriptPath: "src/index.js",
-					//? Should we have Environment argument for `wrangler init --from-dash` - Jacob
-					extraToml: config as TOML.JsonMap,
-				});
-			} else {
-				const newWorkerType = yesFlag
-					? "fetch"
-					: await getNewWorkerType(newWorkerFilename);
-
-				if (newWorkerType !== "none") {
-					const template = getNewWorkerTemplate("js", newWorkerType);
-
-					await mkdir(path.join(creationDirectory, "./src"), {
-						recursive: true,
-					});
-					await writeFile(
-						path.join(creationDirectory, "./src/index.js"),
-						readFileSync(path.join(getBasePath(), `templates/${template}`))
-					);
-
-					logger.log(
-						`✨ Created ${path.relative(
-							process.cwd(),
-							path.join(creationDirectory, "./src/index.js")
-						)}`
-					);
-
-					shouldCreateTests =
-						yesFlag ||
-						(await confirm("Would you like us to write your first test?"));
-
-					if (shouldCreateTests) {
-						newWorkerTestType = await getNewWorkerTestType(yesFlag);
-						devDepsToInstall.push(newWorkerTestType);
-						await writeFile(
-							path.join(creationDirectory, "./src/index.test.js"),
-							readFileSync(
-								path.join(
-									getBasePath(),
-									`templates/init-tests/test-${newWorkerTestType}-new-worker.js`
-								)
-							)
-						);
-						logger.log(
-							`✨ Created ${path.relative(
-								process.cwd(),
-								path.join(creationDirectory, "./src/index.test.js")
-							)}`
-						);
-					}
-
-					await writePackageJsonScriptsAndUpdateWranglerToml({
-						isWritingScripts: shouldWritePackageJsonScripts,
-						isAddingTests: shouldCreateTests,
-						testRunner: newWorkerTestType,
-						isCreatingWranglerToml: justCreatedWranglerToml,
-						packagePath: pathToPackageJson,
-						scriptPath: "src/index.js",
-						extraToml: getNewWorkerToml(newWorkerType),
-					});
-				}
-			}
-		}
-	}
-	// install packages as the final step of init
-	try {
-		await installPackages(
-			shouldRunPackageManagerInstall,
-			devDepsToInstall,
-			packageManager
-		);
-	} catch (e) {
-		// fetching packages could fail due to loss of internet, etc
-		// we should let folks know we failed to fetch, but their
-		// workers project is still ready to go
-		logger.error(e instanceof Error ? e.message : e);
-		instructions.push(
-			"\n🚨 wrangler was unable to fetch your npm packages, but your project is ready to go"
-		);
-	}
-
-	// let users know what to do now
-	instructions.forEach((instruction) => logger.log(instruction));
-}
-
-/*
- * Passes the array of accumulated devDeps to install through to
- * the package manager. Also generates a human-readable list
- * of packages it installed.
- * If there are no devDeps to install, optionally runs
- * the package manager's install command.
- */
-async function installPackages(
-	shouldRunInstall: boolean,
-	depsToInstall: string[],
-	packageManager: PackageManager
-) {
-	//lets install the devDeps they asked for
-	//and run their package manager's install command if needed
-	if (depsToInstall.length > 0) {
-		const formatter = new Intl.ListFormat("en-US", {
-			style: "long",
-			type: "conjunction",
+		await mkdir(path.join(creationDir, "./src"), {
+			recursive: true,
 		});
-		await packageManager.addDevDeps(...depsToInstall);
-		const versionlessPackages = depsToInstall.map((dep) =>
-			dep === `wrangler@${wranglerVersion}` ? "wrangler" : dep
-		);
 
-		logger.log(
-			`✨ Installed ${formatter.format(
-				versionlessPackages
-			)} into devDependencies`
-		);
-	} else {
-		if (shouldRunInstall) {
-			await packageManager.install();
+		config.main = `src/${config.main}`;
+		config.name = args.fromDash;
+
+		// writeFile in small batches (of 10) to not exhaust system file descriptors
+		for (const files of createBatches(modules, 10)) {
+			await Promise.all(
+				files.map(async (file) => {
+					const filepath = path.join(creationDir, `./src/${file.name}`);
+					const directory = dirname(filepath);
+
+					await mkdir(directory, { recursive: true });
+					await writeFile(filepath, file.stream() as ReadableStream);
+				})
+			);
 		}
-	}
-}
 
-async function getNewWorkerType(newWorkerFilename: string) {
-	return select(`Would you like to create a Worker at ${newWorkerFilename}?`, {
-		choices: [
-			{
-				value: "none",
-				title: "None",
-			},
-			{
-				value: "fetch",
-				title: "Fetch handler",
-			},
-			{
-				value: "scheduled",
-				title: "Scheduled handler",
-			},
-		],
-		defaultOption: 1,
-	});
-}
-
-async function getNewWorkerTestType(yesFlag?: boolean) {
-	return yesFlag
-		? "jest"
-		: select(`Which test runner would you like to use?`, {
-				choices: [
-					{
-						value: "vitest",
-						title: "Vitest",
-					},
-					{
-						value: "jest",
-						title: "Jest",
-					},
-				],
-				defaultOption: 1,
-			});
-}
-
-function getNewWorkerTemplate(
-	lang: "js" | "ts",
-	workerType: "fetch" | "scheduled"
-) {
-	const templates = {
-		"js-fetch": "new-worker.js",
-		"js-scheduled": "new-worker-scheduled.js",
-		"ts-fetch": "new-worker.ts",
-		"ts-scheduled": "new-worker-scheduled.ts",
-	};
-
-	return templates[`${lang}-${workerType}`];
-}
-
-function getNewWorkerToml(workerType: "fetch" | "scheduled"): TOML.JsonMap {
-	if (workerType === "scheduled") {
-		return {
-			triggers: {
-				crons: ["1 * * * *"],
-			},
-		};
-	}
-
-	return {};
-}
-
-/**
- * Find the path to the given `basename` file from the `cwd`.
- *
- * If `isolatedInit` is true then we only look in the `cwd` directory for the file.
- * Otherwise we also search up the tree.
- */
-async function findPath(
-	isolatedInit: boolean,
-	cwd: string,
-	basename: string
-): Promise<string | undefined> {
-	if (isolatedInit) {
-		return fs.existsSync(path.resolve(cwd, basename))
-			? path.resolve(cwd, basename)
-			: undefined;
+		await writeFile(
+			path.join(creationDir, "wrangler.toml"),
+			TOML.stringify(config as TOML.JsonMap)
+		);
 	} else {
-		return await findUp(basename, {
-			cwd: cwd,
-		});
+		logger.log(`🌀 Running ${replacementC3Command}...`);
+
+		await execa(packageManager.type, c3Arguments, { stdio: "inherit" });
 	}
 }
 
@@ -1256,38 +588,6 @@ export async function mapBindings(
 				// eslint-disable-next-line @typescript-eslint/no-explicit-any
 			}, {} as RawConfig)
 	);
-}
-
-/** Assert that there is no type argument passed. */
-function assertNoTypeArg(args: InitArgs) {
-	if (args.type) {
-		let message = "The --type option is no longer supported.";
-		if (args.type === "webpack") {
-			message +=
-				"\nIf you wish to use webpack then you will need to create a custom build.";
-			// TODO: Add a link to docs
-		}
-		throw new CommandLineArgsError(message);
-	}
-}
-
-function assertNoSiteArg(args: InitArgs, creationDirectory: string) {
-	if (args.site) {
-		const gitDirectory =
-			creationDirectory !== process.cwd()
-				? path.basename(creationDirectory)
-				: "my-site";
-		const message =
-			"The --site option is no longer supported.\n" +
-			"If you wish to create a brand new Worker Sites project then clone the `worker-sites-template` starter repository:\n\n" +
-			"```\n" +
-			`git clone --depth=1 --branch=wrangler2 https://github.com/cloudflare/worker-sites-template ${gitDirectory}\n` +
-			`cd ${gitDirectory}\n` +
-			"```\n\n" +
-			"Find out more about how to create and maintain Sites projects at https://developers.cloudflare.com/workers/platform/sites.\n" +
-			"Have you considered using Cloudflare Pages instead? See https://pages.cloudflare.com/.";
-		throw new CommandLineArgsError(message);
-	}
 }
 
 export async function downloadWorker(accountId: string, workerName: string) {
