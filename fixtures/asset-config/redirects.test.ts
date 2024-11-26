@@ -20,7 +20,7 @@ const existsMock = (fileList: Set<string>) => {
 };
 const BASE_URL = "http://example.com";
 
-describe("[Asset Worker] `test url normalization`", () => {
+describe("[Asset Worker] `test location rewrite`", () => {
 	afterEach(() => {
 		vi.mocked(getAssetWithMetadataFromKV).mockRestore();
 	});
@@ -41,6 +41,7 @@ describe("[Asset Worker] `test url normalization`", () => {
 			return {
 				html_handling: "none",
 				not_found_handling: "none",
+				serve_directly: true,
 			};
 		});
 	});

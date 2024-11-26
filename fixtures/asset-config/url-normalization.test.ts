@@ -20,7 +20,7 @@ const existsMock = (fileList: Set<string>) => {
 };
 const BASE_URL = "http://example.com";
 
-describe("[Asset Worker] `test redirects`", () => {
+describe("[Asset Worker] `test slash normalization`", () => {
 	afterEach(() => {
 		vi.mocked(getAssetWithMetadataFromKV).mockRestore();
 	});
@@ -41,6 +41,7 @@ describe("[Asset Worker] `test redirects`", () => {
 			return {
 				html_handling: "none",
 				not_found_handling: "none",
+				serve_directly: true,
 			};
 		});
 	});
