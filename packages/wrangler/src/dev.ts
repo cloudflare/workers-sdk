@@ -4,7 +4,7 @@ import path from "node:path";
 import util from "node:util";
 import { isWebContainer } from "@webcontainer/env";
 import { DevEnv } from "./api";
-import { LocalRuntimeController } from "./api/startDevWorker/LocalRuntimeController";
+import { MultiworkerRuntimeController } from "./api/startDevWorker/MultiworkerRuntimeController";
 import { NoOpProxyController } from "./api/startDevWorker/NoOpProxyController";
 import {
 	convertCfWorkerInitBindingstoBindings,
@@ -719,7 +719,7 @@ export async function startDev(args: StartDevOptions) {
 		};
 
 		if (Array.isArray(configPath)) {
-			const runtime = new LocalRuntimeController(configPath.length);
+			const runtime = new MultiworkerRuntimeController(configPath.length);
 
 			const primaryDevEnv = new DevEnv({ runtimes: [runtime] });
 
@@ -732,6 +732,7 @@ export async function startDev(args: StartDevOptions) {
 				await setupDevEnv(primaryDevEnv, configPath[0], authHook, {
 					...args,
 					disableDevRegistry: true,
+					multiworkerPrimary: true,
 				}),
 			];
 

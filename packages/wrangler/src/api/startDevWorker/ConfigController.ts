@@ -127,7 +127,7 @@ async function resolveDevConfig(
 		persist: localPersistencePath,
 		registry: input.dev?.registry,
 		bindVectorizeToProd: input.dev?.bindVectorizeToProd ?? false,
-		multiworkerPrimary: input.dev?.multiworkerPrimary ?? true,
+		multiworkerPrimary: input.dev?.multiworkerPrimary,
 	} satisfies StartDevWorkerOptions["dev"];
 }
 

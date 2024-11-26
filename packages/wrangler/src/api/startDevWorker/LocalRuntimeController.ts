@@ -1,4 +1,3 @@
-import assert from "node:assert";
 import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import chalk from "chalk";
@@ -17,34 +16,6 @@ import type {
 	ReloadStartEvent,
 } from "./events";
 import type { File, StartDevWorkerOptions } from "./types";
-
-// Ensure DO references from other workers have the same SQL setting as the DO definition in it's original Worker
-function ensureMatchingSql(options: MF.Options) {
-	const sameWorkerDOSqlEnabled = new Map<string, boolean | undefined>();
-
-	for (const worker of options.workers) {
-		for (const designator of Object.values(worker.durableObjects ?? {})) {
-			const isObject = typeof designator === "object";
-			const className = isObject ? designator.className : designator;
-			const enableSql = isObject ? designator.useSQLite : undefined;
-
-			if (!isObject || designator.scriptName === undefined) {
-				sameWorkerDOSqlEnabled.set(className, enableSql);
-			}
-		}
-	}
-
-	for (const worker of options.workers) {
-		for (const designator of Object.values(worker.durableObjects ?? {})) {
-			const isObject = typeof designator === "object";
-
-			if (isObject && designator.scriptName !== undefined) {
-				designator.useSQLite = sameWorkerDOSqlEnabled.get(designator.className);
-			}
-		}
-	}
-	return options;
-}
 
 async function getBinaryFileContents(file: File<string | Uint8Array>) {
 	if ("contents" in file) {
@@ -152,9 +123,6 @@ export async function convertToConfigBundle(
 }
 
 export class LocalRuntimeController extends RuntimeController {
-	constructor(private numWorkers: number = 1) {
-		super();
-	}
 	// ******************
 	//   Event Handlers
 	// ******************
@@ -173,36 +141,6 @@ export class LocalRuntimeController extends RuntimeController {
 	#mutex = new Mutex();
 	#mf?: Miniflare;
 
-	#options = new Map<string, { options: MF.Options; primary: boolean }>();
-
-	#canStartMiniflare() {
-		return (
-			[...this.#options.values()].some((o) => o.primary) &&
-			[...this.#options.values()].length === this.numWorkers
-		);
-	}
-
-	#mergedMfOptions(): MF.Options {
-		const primary = [...this.#options.values()].find((o) => o.primary);
-		assert(primary !== undefined);
-
-		const secondary = [...this.#options.values()].filter((o) => !o.primary);
-
-		return {
-			...primary.options,
-			workers: [
-				...primary.options.workers,
-				...secondary.flatMap((o) =>
-					o.options.workers.map((w) => {
-						// TODO: investigate why ratelimits causes everything to crash
-						delete w.ratelimits;
-						return w;
-					})
-				),
-			],
-		};
-	}
-
 	onBundleStart(_: BundleStartEvent) {
 		// Ignored in local runtime
 	}
@@ -216,83 +154,65 @@ export class LocalRuntimeController extends RuntimeController {
 					this.#proxyToUserWorkerAuthenticationSecret
 				);
 			options.liveReload = false; // TODO: set in buildMiniflareOptions once old code path is removed
+			if (this.#mf === undefined) {
+				logger.log(chalk.dim("⎔ Starting local server..."));
+				this.#mf = new Miniflare(options);
+			} else {
+				logger.log(chalk.dim("⎔ Reloading local server..."));
 
-			this.#options.set(data.config.name, {
-				options,
-				primary: Boolean(data.config.dev.multiworkerPrimary),
-			});
-
-			if (this.#canStartMiniflare()) {
-				const mergedMfOptions = ensureMatchingSql(this.#mergedMfOptions());
-
-				if (this.#mf === undefined) {
-					logger.log(chalk.dim("⎔ Starting local server..."));
-					this.#mf = new Miniflare(mergedMfOptions);
-				} else {
-					logger.log(chalk.dim("⎔ Reloading local server..."));
-
-					await this.#mf.setOptions(mergedMfOptions);
-				}
-				// All asynchronous `Miniflare` methods will wait for all `setOptions()`
-				// calls to complete before resolving. To ensure we get the `url` and
-				// `inspectorUrl` for this set of `options`, we protect `#mf` with a mutex,
-				// so only one update can happen at a time.
-				const userWorkerUrl = await this.#mf.ready;
-				const userWorkerInspectorUrl = await this.#mf.getInspectorURL();
-				// If we received a new `bundleComplete` event before we were able to
-				// dispatch a `reloadComplete` for this bundle, ignore this bundle.
-				if (id !== this.#currentBundleId) {
-					return;
-				}
-
-				// Get entrypoint addresses
-				const entrypointAddresses: WorkerEntrypointsDefinition = {};
-
-				// It's not possible to bind to Workers in a multi-worker setup across the dev registry, so these are intentionally left empty
-				if (this.numWorkers === 1) {
-					for (const name of entrypointNames) {
-						const directUrl = await this.#mf.unsafeGetDirectURL(
-							undefined,
-							name
-						);
-						const port = parseInt(directUrl.port);
-						entrypointAddresses[name] = { host: directUrl.hostname, port };
-					}
-				}
-				this.emitReloadCompleteEvent({
-					type: "reloadComplete",
-					config: data.config,
-					bundle: data.bundle,
-					proxyData: {
-						userWorkerUrl: {
-							protocol: userWorkerUrl.protocol,
-							hostname: userWorkerUrl.hostname,
-							port: userWorkerUrl.port,
-						},
-						userWorkerInspectorUrl: {
-							protocol: userWorkerInspectorUrl.protocol,
-							hostname: userWorkerInspectorUrl.hostname,
-							port: userWorkerInspectorUrl.port,
-							pathname: `/core:user:${getName(data.config)}`,
-						},
-						userWorkerInnerUrlOverrides: {
-							protocol: data.config?.dev?.origin?.secure ? "https:" : "http:",
-							hostname: data.config?.dev?.origin?.hostname,
-							port: data.config?.dev?.origin?.hostname ? "" : undefined,
-						},
-						headers: {
-							// Passing this signature from Proxy Worker allows the User Worker to trust the request.
-							"MF-Proxy-Shared-Secret":
-								this.#proxyToUserWorkerAuthenticationSecret,
-						},
-						liveReload: data.config.dev?.liveReload,
-						proxyLogsToController:
-							data.bundle.entry.format === "service-worker",
-						internalDurableObjects: internalObjects,
-						entrypointAddresses,
-					},
-				});
+				await this.#mf.setOptions(options);
 			}
+			// All asynchronous `Miniflare` methods will wait for all `setOptions()`
+			// calls to complete before resolving. To ensure we get the `url` and
+			// `inspectorUrl` for this set of `options`, we protect `#mf` with a mutex,
+			// so only one update can happen at a time.
+			const userWorkerUrl = await this.#mf.ready;
+			const userWorkerInspectorUrl = await this.#mf.getInspectorURL();
+			// If we received a new `bundleComplete` event before we were able to
+			// dispatch a `reloadComplete` for this bundle, ignore this bundle.
+			if (id !== this.#currentBundleId) {
+				return;
+			}
+
+			// Get entrypoint addresses
+			const entrypointAddresses: WorkerEntrypointsDefinition = {};
+			for (const name of entrypointNames) {
+				const directUrl = await this.#mf.unsafeGetDirectURL(undefined, name);
+				const port = parseInt(directUrl.port);
+				entrypointAddresses[name] = { host: directUrl.hostname, port };
+			}
+			this.emitReloadCompleteEvent({
+				type: "reloadComplete",
+				config: data.config,
+				bundle: data.bundle,
+				proxyData: {
+					userWorkerUrl: {
+						protocol: userWorkerUrl.protocol,
+						hostname: userWorkerUrl.hostname,
+						port: userWorkerUrl.port,
+					},
+					userWorkerInspectorUrl: {
+						protocol: userWorkerInspectorUrl.protocol,
+						hostname: userWorkerInspectorUrl.hostname,
+						port: userWorkerInspectorUrl.port,
+						pathname: `/core:user:${getName(data.config)}`,
+					},
+					userWorkerInnerUrlOverrides: {
+						protocol: data.config?.dev?.origin?.secure ? "https:" : "http:",
+						hostname: data.config?.dev?.origin?.hostname,
+						port: data.config?.dev?.origin?.hostname ? "" : undefined,
+					},
+					headers: {
+						// Passing this signature from Proxy Worker allows the User Worker to trust the request.
+						"MF-Proxy-Shared-Secret":
+							this.#proxyToUserWorkerAuthenticationSecret,
+					},
+					liveReload: data.config.dev?.liveReload,
+					proxyLogsToController: data.bundle.entry.format === "service-worker",
+					internalDurableObjects: internalObjects,
+					entrypointAddresses,
+				},
+			});
 		} catch (error) {
 			this.emitErrorEvent({
 				type: "error",
