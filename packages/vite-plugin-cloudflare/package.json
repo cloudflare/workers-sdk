@@ -26,7 +26,6 @@
 		"@cloudflare/workers-shared": "^0.7.0",
 		"@cloudflare/workers-types": "catalog:default",
 		"@types/node": "catalog:default",
-		"@vite-plugin-cloudflare/typescript-config": "workspace:*",
 		"magic-string": "^0.30.12",
 		"tsup": "^8.3.0",
 		"typescript": "catalog:default",
