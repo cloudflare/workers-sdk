@@ -540,6 +540,31 @@ describe("generateTypes()", () => {
 	`);
 	});
 
+	it("should not error if expected entrypoint is not found and assume module worker", async () => {
+		fs.writeFileSync(
+			"./wrangler.toml",
+			TOML.stringify({
+				main: "index.ts",
+				vars: bindingsConfigMock.vars,
+			} as unknown as TOML.JsonMap),
+			"utf-8"
+		);
+		// note index.ts does not exist
+
+		await runWrangler("types");
+		expect(std.out).toMatchInlineSnapshot(`
+		"Generating project types...
+
+		interface Env {
+			SOMETHING: \\"asdasdfasdf\\";
+			ANOTHER: \\"thing\\";
+			\\"some-other-var\\": \\"some-other-value\\";
+			OBJECT_VAR: {\\"enterprise\\":\\"1701-D\\",\\"activeDuty\\":true,\\"captian\\":\\"Picard\\"};
+		}
+		"
+	`);
+	});
+
 	it("should include secret keys from .dev.vars", async () => {
 		fs.writeFileSync(
 			"./wrangler.toml",

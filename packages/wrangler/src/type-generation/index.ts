@@ -12,6 +12,7 @@ import { printWranglerBanner } from "../update-check";
 import { generateRuntimeTypes } from "./runtime";
 import { logRuntimeTypesMessage } from "./runtime/log-runtime-types-message";
 import type { Config } from "../config";
+import type { Entry } from "../deployment-bundle/entry";
 import type { CfScriptFormat } from "../deployment-bundle/worker";
 import type {
 	CommonYargsArgv,
@@ -232,10 +233,17 @@ async function generateTypes(
 	const configContainsEntrypoint =
 		config.main !== undefined || !!config.site?.["entry-point"];
 
-	const entrypoint = configContainsEntrypoint
-		? await getEntry({}, config, "types")
-		: undefined;
-
+	let entrypoint: Entry | undefined;
+	if (configContainsEntrypoint) {
+		// this will throw if an entrypoint is expected, but doesn't exist
+		// e.g. before building. however someone might still want to generate types
+		// so we default to module worker
+		try {
+			entrypoint = await getEntry({}, config, "types");
+		} catch {
+			entrypoint = undefined;
+		}
+	}
 	const entrypointFormat = entrypoint?.format ?? "modules";
 	const fullOutputPath = resolve(outputPath);
 
