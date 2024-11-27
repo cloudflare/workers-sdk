@@ -1,4 +1,10 @@
-# @cloudflare/wrangler-devtools
+# @cloudflare/chrome-devtools-patches
+
+## 0.1.1
+
+### Patch Changes
+
+- [#7258](https://github.com/cloudflare/workers-sdk/pull/7258) [`f1f508e`](https://github.com/cloudflare/workers-sdk/commit/f1f508ec1acefd7b409b77ae1070029953cca061) Thanks [@andyjessop](https://github.com/andyjessop)! - change package name from @cloudflare/wrangler-devtools to @cloudflare/chrome-devtools-patches
 
 ## 0.1.0
 

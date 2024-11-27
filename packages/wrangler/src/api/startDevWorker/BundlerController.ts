@@ -3,7 +3,7 @@ import { readFileSync, realpathSync, writeFileSync } from "fs";
 import path from "path";
 import { watch } from "chokidar";
 import { noBundleWorker } from "../../deploy/deploy";
-import { bundleWorker } from "../../deployment-bundle/bundle";
+import { bundleWorker, shouldCheckFetch } from "../../deployment-bundle/bundle";
 import { getBundleType } from "../../deployment-bundle/bundle-type";
 import {
 	createModuleCollector,
@@ -51,14 +51,19 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 		// Since `this.#customBuildAborter` will change as new builds are scheduled, store the specific AbortController that will be used for this build
 		const buildAborter = this.#customBuildAborter;
 		const relativeFile =
-			path.relative(config.directory, config.entrypoint) || ".";
+			path.relative(config.projectRoot, config.entrypoint) || ".";
 		logger.log(`The file ${filePath} changed, restarting build...`);
 		this.emitBundleStartEvent(config);
 		try {
-			await runCustomBuild(config.entrypoint, relativeFile, {
-				cwd: config.build?.custom?.workingDirectory,
-				command: config.build?.custom?.command,
-			});
+			await runCustomBuild(
+				config.entrypoint,
+				relativeFile,
+				{
+					cwd: config.build?.custom?.workingDirectory,
+					command: config.build?.custom?.command,
+				},
+				config.config
+			);
 			if (buildAborter.signal.aborted) {
 				return;
 			}
@@ -74,7 +79,7 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 
 			const entry: Entry = {
 				file: config.entrypoint,
-				directory: config.directory,
+				projectRoot: config.projectRoot,
 				format: config.build.format,
 				moduleRoot: config.build.moduleRoot,
 				exports: config.build.exports,
@@ -117,7 +122,10 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 						minify: config.build.minify,
 						nodejsCompatMode: config.build.nodejsCompatMode,
 						define: config.build.define,
-						checkFetch: true,
+						checkFetch: shouldCheckFetch(
+							config.compatibilityDate,
+							config.compatibilityFlags
+						),
 						mockAnalyticsEngineDatasets:
 							bindings.analytics_engine_datasets ?? [],
 						alias: config.build.alias,
@@ -128,7 +136,7 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 						// This could potentially cause issues as we no longer have identical behaviour between dev and deploy?
 						targetConsumer: "dev",
 						local: !config.dev?.remote,
-						projectRoot: config.directory,
+						projectRoot: config.projectRoot,
 						defineNavigatorUserAgent: isNavigatorDefined(
 							config.compatibilityDate,
 							config.compatibilityFlags
@@ -226,7 +234,7 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 		assert(this.#tmpDir);
 		const entry: Entry = {
 			file: config.entrypoint,
-			directory: config.directory,
+			projectRoot: config.projectRoot,
 			format: config.build.format,
 			moduleRoot: config.build.moduleRoot,
 			exports: config.build.exports,
@@ -261,10 +269,14 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 				// startDevWorker only applies to "dev"
 				targetConsumer: "dev",
 				testScheduled: Boolean(config.dev?.testScheduled),
-				projectRoot: config.directory,
+				projectRoot: config.projectRoot,
 				onStart: () => {
 					this.emitBundleStartEvent(config);
 				},
+				checkFetch: shouldCheckFetch(
+					config.compatibilityDate,
+					config.compatibilityFlags
+				),
 				defineNavigatorUserAgent: isNavigatorDefined(
 					config.compatibilityDate,
 					config.compatibilityFlags
@@ -318,7 +330,7 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 	onConfigUpdate(event: ConfigUpdateEvent) {
 		this.#tmpDir?.remove();
 		try {
-			this.#tmpDir = getWranglerTmpDir(event.config.directory, "dev");
+			this.#tmpDir = getWranglerTmpDir(event.config.projectRoot, "dev");
 		} catch (e) {
 			logger.error(
 				"Failed to create temporary directory to store built files."

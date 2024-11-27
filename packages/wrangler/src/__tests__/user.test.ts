@@ -23,7 +23,7 @@ import {
 import { normalizeString } from "./helpers/normalize";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
-import { writeWranglerToml } from "./helpers/write-wrangler-toml";
+import { writeWranglerConfig } from "./helpers/write-wrangler-config";
 import type { Config } from "../config";
 import type { UserAuthConfig } from "../user";
 import type { MockInstance } from "vitest";
@@ -203,7 +203,7 @@ describe("User", () => {
 		);
 
 		// @ts-expect-error - intentionally invalid
-		writeWranglerToml({ invalid: true });
+		writeWranglerConfig({ invalid: true });
 
 		await runWrangler("login");
 

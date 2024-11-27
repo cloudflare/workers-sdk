@@ -41,6 +41,50 @@ import type { Arg } from "@cloudflare/cli/interactive";
 export type CommonCloudchamberConfiguration = { json: boolean };
 
 /**
+ * Regular expression for matching an image name.
+ *
+ * See: https://github.com/opencontainers/distribution-spec/blob/v1.1.0/spec.md#pulling-manifests
+ */
+const imageRe = (() => {
+	const alphaNumeric = "[a-z0-9]+";
+	const separator = "(?:\\.|_|__|-+)";
+	const port = ":[0-9]+";
+	const domain = `${alphaNumeric}(?:${separator}${alphaNumeric})*`;
+	const name = `(?:${domain}(?:${port})?/)?(?:${domain}/)*(?:${domain})`;
+	const tag = ":([a-zA-Z0-9_][a-zA-Z0-9._-]{0,127})";
+	const digest = "@(sha256:[A-Fa-f0-9]+)";
+	const reference = `(?:${tag}(?:${digest})?|${digest})`;
+	return new RegExp(`^(${name})${reference}$`);
+})();
+
+/**
+ * Parse a container image name.
+ */
+export function parseImageName(value: string): {
+	name?: string;
+	tag?: string;
+	digest?: string;
+	err?: string;
+} {
+	const matches = value.match(imageRe);
+	if (matches === null) {
+		return {
+			err: "Invalid image format: expected NAME:TAG[@DIGEST] or NAME@DIGEST",
+		};
+	}
+
+	const name = matches[1];
+	const tag = matches[2];
+	const digest = matches[3] ?? matches[4];
+
+	if (tag === "latest") {
+		return { err: '"latest" tag is not allowed' };
+	}
+
+	return { name, tag, digest };
+}
+
+/**
  * Wrapper that parses wrangler configuration and authentication.
  * It also wraps exceptions and checks if they are from the RestAPI.
  *

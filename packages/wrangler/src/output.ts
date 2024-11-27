@@ -118,6 +118,14 @@ interface OutputEntryPagesDeploymentDetailed
 	alias: string | undefined;
 	/** The environment being deployed to */
 	environment: "production" | "preview";
+	/** The production branch of the pages project */
+	production_branch: string;
+	deployment_trigger: {
+		metadata: {
+			/** Commit hash of the deployment trigger metadata for the pages project */
+			commit_hash: string;
+		};
+	};
 }
 
 interface OutputEntryVersionUpload extends OutputEntryBase<"version-upload"> {
@@ -128,6 +136,8 @@ interface OutputEntryVersionUpload extends OutputEntryBase<"version-upload"> {
 	worker_tag: string | null;
 	/** A GUID that identifies this uploaded, but not yet deployed, version of the Worker. This version will need to be "deployed" to receive traffic. */
 	version_id: string | null;
+	/** The preview URL associated with this version upload */
+	preview_url: string | undefined;
 }
 
 interface OutputEntryVersionDeployment

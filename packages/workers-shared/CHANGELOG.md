@@ -1,5 +1,21 @@
 # @cloudflare/workers-shared
 
+## 0.9.0
+
+### Minor Changes
+
+- [#7303](https://github.com/cloudflare/workers-sdk/pull/7303) [`0d314ed`](https://github.com/cloudflare/workers-sdk/commit/0d314ed14145d50b8fd00fdae8b31fb043f4d31a) Thanks [@WillTaylorDev](https://github.com/WillTaylorDev)! - Preparatory work to allow invoking user worker ahead of assets
+
+### Patch Changes
+
+- [#7176](https://github.com/cloudflare/workers-sdk/pull/7176) [`476e5df`](https://github.com/cloudflare/workers-sdk/commit/476e5df5d9f0a2aa3d713160994da3e2a752418e) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Remove incorrect logic in Asset Worker.
+
+## 0.8.0
+
+### Minor Changes
+
+- [#7318](https://github.com/cloudflare/workers-sdk/pull/7318) [`6ba5903`](https://github.com/cloudflare/workers-sdk/commit/6ba5903201de34cb3a8a5610fa11825279171a7e) Thanks [@WillTaylorDev](https://github.com/WillTaylorDev)! - Prevent same-schema attacks
+
 ## 0.7.1
 
 ### Patch Changes

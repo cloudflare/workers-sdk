@@ -1,8 +1,8 @@
 {
-	"name": "@cloudflare/wrangler-devtools",
-	"version": "0.1.0",
+	"name": "@cloudflare/chrome-devtools-patches",
+	"version": "0.1.1",
 	"private": true,
-	"description": "Chrome Devtools hosted for easy use with Wrangler",
+	"description": "Chrome Devtools hosted for easy use with Workers tooling and applications (Wrangler, Playground, Quick Editor).",
 	"homepage": "https://github.com/cloudflare/workers-sdk#readme",
 	"bugs": {
 		"url": "https://github.com/cloudflare/workers-sdk/issues"

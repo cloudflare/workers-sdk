@@ -3,7 +3,7 @@ import path from "node:path";
 import { blue, gray } from "@cloudflare/cli/colors";
 import { syncAssets } from "../assets";
 import { fetchResult } from "../cfetch";
-import { printBindings } from "../config";
+import { configFileName, formatConfigSnippet, printBindings } from "../config";
 import { bundleWorker } from "../deployment-bundle/bundle";
 import {
 	printBundleSize,
@@ -112,9 +112,11 @@ function errIsStartupErr(err: unknown): err is ParseError & { code: 10021 } {
 	return false;
 }
 
-export default async function versionsUpload(
-	props: Props
-): Promise<{ versionId: string | null; workerTag: string | null }> {
+export default async function versionsUpload(props: Props): Promise<{
+	versionId: string | null;
+	workerTag: string | null;
+	versionPreviewUrl?: string | undefined;
+}> {
 	// TODO: warn if git/hg has uncommitted changes
 	const { config, accountId, name } = props;
 	let versionId: string | null = null;
@@ -174,9 +176,9 @@ export default async function versionsUpload(
 			""
 		).padStart(2, "0")}-${(new Date().getDate() + "").padStart(2, "0")}`;
 
-		throw new UserError(`A compatibility_date is required when uploading a Worker Version. Add the following to your wrangler.toml file:.
+		throw new UserError(`A compatibility_date is required when uploading a Worker Version. Add the following to your ${configFileName(config.configPath)} file:
     \`\`\`
-    compatibility_date = "${compatibilityDateStr}"
+	${(formatConfigSnippet({ compatibility_date: compatibilityDateStr }, config.configPath), false)}
     \`\`\`
     Or you could pass it in your terminal as \`--compatibility-date ${compatibilityDateStr}\`
 See https://developers.cloudflare.com/workers/platform/compatibility-dates for more information.`);
@@ -243,13 +245,13 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 	if (config.text_blobs && format === "modules") {
 		throw new UserError(
-			"You cannot configure [text_blobs] with an ES module worker. Instead, import the file directly in your code, and optionally configure `[rules]` in your wrangler.toml"
+			`You cannot configure [text_blobs] with an ES module worker. Instead, import the file directly in your code, and optionally configure \`[rules]\` in your ${configFileName(config.configPath)} file`
 		);
 	}
 
 	if (config.data_blobs && format === "modules") {
 		throw new UserError(
-			"You cannot configure [data_blobs] with an ES module worker. Instead, import the file directly in your code, and optionally configure `[rules]` in your wrangler.toml"
+			`You cannot configure [data_blobs] with an ES module worker. Instead, import the file directly in your code, and optionally configure \`[rules]\` in your ${configFileName(config.configPath)} file`
 		);
 	}
 
@@ -565,17 +567,22 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 	logger.log("Uploaded", workerName, formatTime(uploadMs));
 	logger.log("Worker Version ID:", versionId);
 
-	if (versionId && hasPreview) {
-		const { enabled: available_on_subdomain } = await fetchResult<{
-			enabled: boolean;
-		}>(`${workerUrl}/subdomain`);
+	let versionPreviewUrl: string | undefined = undefined;
 
-		if (available_on_subdomain) {
-			const userSubdomain = await getWorkersDevSubdomain(accountId);
-			const shortVersion = versionId.slice(0, 8);
-			logger.log(
-				`Version Preview URL: https://${shortVersion}-${workerName}.${userSubdomain}.workers.dev`
+	if (versionId && hasPreview) {
+		const { previews_enabled: previews_available_on_subdomain } =
+			await fetchResult<{
+				previews_enabled: boolean;
+			}>(`${workerUrl}/subdomain`);
+
+		if (previews_available_on_subdomain) {
+			const userSubdomain = await getWorkersDevSubdomain(
+				accountId,
+				config.configPath
 			);
+			const shortVersion = versionId.slice(0, 8);
+			versionPreviewUrl = `https://${shortVersion}-${workerName}.${userSubdomain}.workers.dev`;
+			logger.log(`Version Preview URL: ${versionPreviewUrl}`);
 		}
 	}
 
@@ -591,7 +598,7 @@ Changes to triggers (routes, custom domains, cron schedules, etc) must be applie
 `)
 	);
 
-	return { versionId, workerTag };
+	return { versionId, workerTag, versionPreviewUrl };
 }
 
 function helpIfErrorIsSizeOrScriptStartup(

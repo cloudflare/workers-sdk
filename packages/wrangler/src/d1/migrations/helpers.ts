@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "path";
+import { configFileName } from "../../config";
 import { confirm } from "../../dialogs";
 import { UserError } from "../../errors";
 import { isNonInteractiveOrCI } from "../../is-interactive";
@@ -14,10 +15,12 @@ export async function getMigrationsPath({
 	projectPath,
 	migrationsFolderPath,
 	createIfMissing,
+	configPath,
 }: {
 	projectPath: string;
 	migrationsFolderPath: string;
 	createIfMissing: boolean;
+	configPath: string | undefined;
 }): Promise<string> {
 	const dir = path.resolve(projectPath, migrationsFolderPath);
 	if (fs.existsSync(dir)) {
@@ -26,7 +29,7 @@ export async function getMigrationsPath({
 
 	const warning = `No migrations folder found.${
 		migrationsFolderPath === DEFAULT_MIGRATION_PATH
-			? " Set `migrations_dir` in wrangler.toml to choose a different path."
+			? ` Set \`migrations_dir\` in your ${configFileName(configPath)} file to choose a different path.`
 			: ""
 	}`;
 

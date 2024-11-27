@@ -125,7 +125,7 @@ export async function unstable_dev(
 		showInteractiveDevSession,
 		testMode,
 		testScheduled,
-		fileBasedRegistry = false,
+		fileBasedRegistry = true,
 		vectorizeBindToProd,
 		// 2. options for alpha/beta products/libs
 		d1Databases,
@@ -195,7 +195,6 @@ export async function unstable_dev(
 		nodeCompat: options?.nodeCompat, // Enable Node.js compatibility
 		persist: options?.persist, // Enable persistence for local mode, using default path: .wrangler/state
 		persistTo: options?.persistTo, // Specify directory to use for local persistence (implies --persist)
-		experimentalJsonConfig: undefined,
 		name: undefined,
 		noBundle: false,
 		format: undefined,
@@ -218,6 +217,7 @@ export async function unstable_dev(
 		...options,
 		logLevel: options?.logLevel ?? defaultLogLevel,
 		port: options?.port ?? 0,
+		experimentalProvision: undefined,
 		experimentalVersions: undefined,
 		experimentalDevEnv: undefined,
 		experimentalRegistry: fileBasedRegistry,
@@ -229,7 +229,7 @@ export async function unstable_dev(
 	const devServer = await run(
 		{
 			FILE_BASED_REGISTRY: fileBasedRegistry,
-			JSON_CONFIG_FILE: Boolean(devOptions.experimentalJsonConfig),
+			RESOURCES_PROVISION: false,
 		},
 		() => startDev(devOptions)
 	);

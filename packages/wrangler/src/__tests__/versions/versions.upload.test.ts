@@ -10,7 +10,7 @@ import { createFetchResult, msw } from "../helpers/msw";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 import { writeWorkerSource } from "../helpers/write-worker-source";
-import { writeWranglerToml } from "../helpers/write-wrangler-toml";
+import { writeWranglerConfig } from "../helpers/write-wrangler-config";
 
 describe("versions upload", () => {
 	runInTempDir();
@@ -71,7 +71,7 @@ describe("versions upload", () => {
 		mockUploadVersion(false);
 
 		// Setup
-		writeWranglerToml({
+		writeWranglerConfig({
 			name: "test-name",
 			main: "./index.js",
 			vars: {
@@ -110,11 +110,11 @@ describe("versions upload", () => {
 	test("should print preview url if version has preview", async () => {
 		mockGetScript();
 		mockUploadVersion(true);
-		mockGetWorkerSubdomain({ enabled: true });
+		mockGetWorkerSubdomain({ enabled: true, previews_enabled: true });
 		mockSubDomainRequest();
 
 		// Setup
-		writeWranglerToml({
+		writeWranglerConfig({
 			name: "test-name",
 			main: "./index.js",
 			vars: {
@@ -140,13 +140,13 @@ describe("versions upload", () => {
 		`);
 	});
 
-	it("should not print preview url workers_dev is false", async () => {
+	it("should not print preview url when preview_urls is false", async () => {
 		mockGetScript();
 		mockUploadVersion(true);
-		mockGetWorkerSubdomain({ enabled: false });
+		mockGetWorkerSubdomain({ enabled: true, previews_enabled: false });
 
 		// Setup
-		writeWranglerToml({
+		writeWranglerConfig({
 			name: "test-name",
 			main: "./index.js",
 			vars: {

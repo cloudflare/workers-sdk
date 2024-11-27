@@ -85,7 +85,7 @@ describe("sentry", () => {
 
 		it("should not hit sentry with user error", async () => {
 			await expect(runWrangler("delete")).rejects.toMatchInlineSnapshot(
-				`[Error: A worker name must be defined, either via --name, or in wrangler.toml]`
+				`[Error: A worker name must be defined, either via --name, or in your Wrangler configuration file]`
 			);
 			expect(std.out).toMatchInlineSnapshot(`""`);
 			expect(sentryRequests?.length).toEqual(0);
