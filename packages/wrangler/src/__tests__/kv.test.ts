@@ -9,6 +9,7 @@ import { mockProcess } from "./helpers/mock-process";
 import { msw } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
+import { writeWranglerConfig } from "./helpers/write-wrangler-config";
 import type {
 	KeyValue,
 	KVNamespaceInfo,
@@ -46,11 +47,10 @@ describe("wrangler", () => {
 			  wrangler kv bulk       Interact with multiple Workers KV key-value pairs at once
 
 			GLOBAL FLAGS
-			  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
-			  -c, --config                    Path to .toml configuration file  [string]
-			  -e, --env                       Environment to use for operations and .env files  [string]
-			  -h, --help                      Show help  [boolean]
-			  -v, --version                   Show version number  [boolean]"
+			  -c, --config   Path to Wrangler configuration file  [string]
+			  -e, --env      Environment to use for operations and .env files  [string]
+			  -h, --help     Show help  [boolean]
+			  -v, --version  Show version number  [boolean]"
 		`);
 	});
 
@@ -68,11 +68,10 @@ describe("wrangler", () => {
 			  wrangler kv bulk       Interact with multiple Workers KV key-value pairs at once
 
 			GLOBAL FLAGS
-			  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
-			  -c, --config                    Path to .toml configuration file  [string]
-			  -e, --env                       Environment to use for operations and .env files  [string]
-			  -h, --help                      Show help  [boolean]
-			  -v, --version                   Show version number  [boolean]"
+			  -c, --config   Path to Wrangler configuration file  [string]
+			  -e, --env      Environment to use for operations and .env files  [string]
+			  -h, --help     Show help  [boolean]
+			  -v, --version  Show version number  [boolean]"
 		`);
 	});
 
@@ -97,11 +96,10 @@ describe("wrangler", () => {
 			  wrangler kv bulk       Interact with multiple Workers KV key-value pairs at once
 
 			GLOBAL FLAGS
-			  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
-			  -c, --config                    Path to .toml configuration file  [string]
-			  -e, --env                       Environment to use for operations and .env files  [string]
-			  -h, --help                      Show help  [boolean]
-			  -v, --version                   Show version number  [boolean]"
+			  -c, --config   Path to Wrangler configuration file  [string]
+			  -e, --env      Environment to use for operations and .env files  [string]
+			  -h, --help     Show help  [boolean]
+			  -v, --version  Show version number  [boolean]"
 		`);
 	});
 
@@ -142,11 +140,10 @@ describe("wrangler", () => {
 					  namespace  The name of the new namespace  [string] [required]
 
 					GLOBAL FLAGS
-					  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
-					  -c, --config                    Path to .toml configuration file  [string]
-					  -e, --env                       Environment to use for operations and .env files  [string]
-					  -h, --help                      Show help  [boolean]
-					  -v, --version                   Show version number  [boolean]
+					  -c, --config   Path to Wrangler configuration file  [string]
+					  -e, --env      Environment to use for operations and .env files  [string]
+					  -h, --help     Show help  [boolean]
+					  -v, --version  Show version number  [boolean]
 
 					OPTIONS
 					      --preview  Interact with a preview namespace  [boolean]"
@@ -174,11 +171,10 @@ describe("wrangler", () => {
 					  namespace  The name of the new namespace  [string] [required]
 
 					GLOBAL FLAGS
-					  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
-					  -c, --config                    Path to .toml configuration file  [string]
-					  -e, --env                       Environment to use for operations and .env files  [string]
-					  -h, --help                      Show help  [boolean]
-					  -v, --version                   Show version number  [boolean]
+					  -c, --config   Path to Wrangler configuration file  [string]
+					  -e, --env      Environment to use for operations and .env files  [string]
+					  -h, --help     Show help  [boolean]
+					  -v, --version  Show version number  [boolean]
 
 					OPTIONS
 					      --preview  Interact with a preview namespace  [boolean]"
@@ -190,59 +186,49 @@ describe("wrangler", () => {
 		        `);
 			});
 
-			it("should create a namespace", async () => {
-				mockCreateRequest("worker-UnitTestNamespace");
-				await runWrangler("kv namespace create UnitTestNamespace");
-				expect(std.out).toMatchInlineSnapshot(`
-					"🌀 Creating namespace with title \\"worker-UnitTestNamespace\\"
-					✨ Success!
-					Add the following to your configuration file in your kv_namespaces array:
-					[[kv_namespaces]]
-					binding = \\"UnitTestNamespace\\"
-					id = \\"some-namespace-id\\""
-				`);
-			});
+			describe.each(["wrangler.json", "wrangler.toml"])("%s", (configPath) => {
+				it("should create a namespace", async () => {
+					writeWranglerConfig({ name: "worker" }, configPath);
+					mockCreateRequest("worker-UnitTestNamespace");
+					await runWrangler("kv namespace create UnitTestNamespace");
+					expect(std.out).toMatchSnapshot();
+				});
 
-			it("should create a preview namespace if configured to do so", async () => {
-				mockCreateRequest("worker-UnitTestNamespace_preview");
-				await runWrangler("kv namespace create UnitTestNamespace --preview");
-				expect(std.out).toMatchInlineSnapshot(`
-					"🌀 Creating namespace with title \\"worker-UnitTestNamespace_preview\\"
-					✨ Success!
-					Add the following to your configuration file in your kv_namespaces array:
-					[[kv_namespaces]]
-					binding = \\"UnitTestNamespace\\"
-					preview_id = \\"some-namespace-id\\""
-				`);
-			});
+				it("should create a preview namespace if configured to do so", async () => {
+					writeWranglerConfig({ name: "worker" }, configPath);
 
-			it("should create a namespace using configured worker name", async () => {
-				writeFileSync("./wrangler.toml", 'name = "other-worker"', "utf-8");
-				mockCreateRequest("other-worker-UnitTestNamespace");
-				await runWrangler("kv namespace create UnitTestNamespace");
-				expect(std.out).toMatchInlineSnapshot(`
-					"🌀 Creating namespace with title \\"other-worker-UnitTestNamespace\\"
-					✨ Success!
-					Add the following to your configuration file in your kv_namespaces array:
-					[[kv_namespaces]]
-					binding = \\"UnitTestNamespace\\"
-					id = \\"some-namespace-id\\""
-				`);
-			});
+					mockCreateRequest("worker-UnitTestNamespace_preview");
+					await runWrangler("kv namespace create UnitTestNamespace --preview");
+					expect(std.out).toMatchSnapshot();
+				});
 
-			it("should create a namespace in an environment if configured to do so", async () => {
-				mockCreateRequest("worker-customEnv-UnitTestNamespace");
-				await runWrangler(
-					"kv namespace create UnitTestNamespace --env customEnv"
-				);
-				expect(std.out).toMatchInlineSnapshot(`
-					"🌀 Creating namespace with title \\"worker-customEnv-UnitTestNamespace\\"
-					✨ Success!
-					Add the following to your configuration file in your kv_namespaces array under [env.customEnv]:
-					[[kv_namespaces]]
-					binding = \\"UnitTestNamespace\\"
-					id = \\"some-namespace-id\\""
-				`);
+				it("should create a namespace using configured worker name", async () => {
+					writeWranglerConfig({ name: "other-worker" }, configPath);
+
+					mockCreateRequest("other-worker-UnitTestNamespace");
+					await runWrangler("kv namespace create UnitTestNamespace");
+					expect(std.out).toMatchSnapshot();
+				});
+
+				it("should create a namespace in an environment if configured to do so", async () => {
+					writeWranglerConfig(
+						{
+							name: "worker",
+							env: {
+								customEnv: {
+									name: "worker",
+								},
+							},
+						},
+						configPath
+					);
+
+					mockCreateRequest("worker-customEnv-UnitTestNamespace");
+					await runWrangler(
+						"kv namespace create UnitTestNamespace --env customEnv"
+					);
+					expect(std.out).toMatchSnapshot();
+				});
 			});
 		});
 
@@ -329,7 +315,7 @@ describe("wrangler", () => {
 			});
 
 			it("should delete a namespace specified by binding name", async () => {
-				writeWranglerConfig();
+				writeWranglerKVConfig();
 				const requests = mockDeleteRequest("bound-id");
 				await runWrangler(
 					`kv namespace delete --binding someBinding --preview false`
@@ -338,7 +324,7 @@ describe("wrangler", () => {
 			});
 
 			it("should delete a preview namespace specified by binding name", async () => {
-				writeWranglerConfig();
+				writeWranglerKVConfig();
 				const requests = mockDeleteRequest("preview-bound-id");
 				await runWrangler(
 					`kv namespace delete --binding someBinding --preview`
@@ -347,7 +333,7 @@ describe("wrangler", () => {
 			});
 
 			it("should error if a given binding name is not in the configured kv namespaces", async () => {
-				writeWranglerConfig();
+				writeWranglerKVConfig();
 				await expect(runWrangler("kv namespace delete --binding otherBinding"))
 					.rejects.toThrowErrorMatchingInlineSnapshot(`
 					[Error: Not able to delete namespace.
@@ -363,7 +349,7 @@ describe("wrangler", () => {
 			});
 
 			it("should delete a namespace specified by binding name in a given environment", async () => {
-				writeWranglerConfig();
+				writeWranglerKVConfig();
 				const requests = mockDeleteRequest("env-bound-id");
 				await runWrangler(
 					"kv namespace delete --binding someBinding --env some-environment --preview false"
@@ -378,7 +364,7 @@ describe("wrangler", () => {
 			});
 
 			it("should delete a preview namespace specified by binding name in a given environment", async () => {
-				writeWranglerConfig();
+				writeWranglerKVConfig();
 				const requests = mockDeleteRequest("preview-env-bound-id");
 				await runWrangler(
 					`kv namespace delete --binding someBinding --env some-environment --preview`
@@ -473,7 +459,7 @@ describe("wrangler", () => {
 			});
 
 			it("should put a key in a given namespace specified by binding", async () => {
-				writeWranglerConfig();
+				writeWranglerKVConfig();
 				const requests = mockKeyPutRequest("bound-id", {
 					key: "my-key",
 					value: "my-value",
@@ -490,7 +476,7 @@ describe("wrangler", () => {
 			});
 
 			it("should put a key in a given preview namespace specified by binding", async () => {
-				writeWranglerConfig();
+				writeWranglerKVConfig();
 				const requests = mockKeyPutRequest("preview-bound-id", {
 					key: "my-key",
 					value: "my-value",
@@ -525,7 +511,7 @@ describe("wrangler", () => {
 			});
 
 			it("should put a key to the specified environment in a given namespace", async () => {
-				writeWranglerConfig();
+				writeWranglerKVConfig();
 				const requests = mockKeyPutRequest("env-bound-id", {
 					key: "my-key",
 					value: "my-value",
@@ -636,11 +622,10 @@ describe("wrangler", () => {
 					  value  The value to write  [string]
 
 					GLOBAL FLAGS
-					  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
-					  -c, --config                    Path to .toml configuration file  [string]
-					  -e, --env                       Environment to use for operations and .env files  [string]
-					  -h, --help                      Show help  [boolean]
-					  -v, --version                   Show version number  [boolean]
+					  -c, --config   Path to Wrangler configuration file  [string]
+					  -e, --env      Environment to use for operations and .env files  [string]
+					  -h, --help     Show help  [boolean]
+					  -v, --version  Show version number  [boolean]
 
 					OPTIONS
 					      --binding       The binding of the namespace to write to  [string]
@@ -678,11 +663,10 @@ describe("wrangler", () => {
 					  value  The value to write  [string]
 
 					GLOBAL FLAGS
-					  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
-					  -c, --config                    Path to .toml configuration file  [string]
-					  -e, --env                       Environment to use for operations and .env files  [string]
-					  -h, --help                      Show help  [boolean]
-					  -v, --version                   Show version number  [boolean]
+					  -c, --config   Path to Wrangler configuration file  [string]
+					  -e, --env      Environment to use for operations and .env files  [string]
+					  -h, --help     Show help  [boolean]
+					  -v, --version  Show version number  [boolean]
 
 					OPTIONS
 					      --binding       The binding of the namespace to write to  [string]
@@ -720,11 +704,10 @@ describe("wrangler", () => {
 					  value  The value to write  [string]
 
 					GLOBAL FLAGS
-					  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
-					  -c, --config                    Path to .toml configuration file  [string]
-					  -e, --env                       Environment to use for operations and .env files  [string]
-					  -h, --help                      Show help  [boolean]
-					  -v, --version                   Show version number  [boolean]
+					  -c, --config   Path to Wrangler configuration file  [string]
+					  -e, --env      Environment to use for operations and .env files  [string]
+					  -h, --help     Show help  [boolean]
+					  -v, --version  Show version number  [boolean]
 
 					OPTIONS
 					      --binding       The binding of the namespace to write to  [string]
@@ -762,11 +745,10 @@ describe("wrangler", () => {
 					  value  The value to write  [string]
 
 					GLOBAL FLAGS
-					  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
-					  -c, --config                    Path to .toml configuration file  [string]
-					  -e, --env                       Environment to use for operations and .env files  [string]
-					  -h, --help                      Show help  [boolean]
-					  -v, --version                   Show version number  [boolean]
+					  -c, --config   Path to Wrangler configuration file  [string]
+					  -e, --env      Environment to use for operations and .env files  [string]
+					  -h, --help     Show help  [boolean]
+					  -v, --version  Show version number  [boolean]
 
 					OPTIONS
 					      --binding       The binding of the namespace to write to  [string]
@@ -804,11 +786,10 @@ describe("wrangler", () => {
 					  value  The value to write  [string]
 
 					GLOBAL FLAGS
-					  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
-					  -c, --config                    Path to .toml configuration file  [string]
-					  -e, --env                       Environment to use for operations and .env files  [string]
-					  -h, --help                      Show help  [boolean]
-					  -v, --version                   Show version number  [boolean]
+					  -c, --config   Path to Wrangler configuration file  [string]
+					  -e, --env      Environment to use for operations and .env files  [string]
+					  -h, --help     Show help  [boolean]
+					  -v, --version  Show version number  [boolean]
 
 					OPTIONS
 					      --binding       The binding of the namespace to write to  [string]
@@ -829,7 +810,7 @@ describe("wrangler", () => {
 			});
 
 			it("should error if a given binding name is not in the configured kv namespaces", async () => {
-				writeWranglerConfig();
+				writeWranglerKVConfig();
 				await expect(
 					runWrangler("kv key put key value --binding otherBinding")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
@@ -845,7 +826,7 @@ describe("wrangler", () => {
 			});
 
 			it("should error if a given binding has both preview and non-preview and --preview is not specified", async () => {
-				writeWranglerConfig();
+				writeWranglerKVConfig();
 				const requests = mockKeyPutRequest("preview-bound-id", {
 					key: "my-key",
 					value: "my-value",
@@ -893,7 +874,7 @@ describe("wrangler", () => {
 			});
 
 			it("should list the keys of a namespace specified by binding", async () => {
-				writeWranglerConfig();
+				writeWranglerKVConfig();
 				const keys = [{ name: "key-1" }, { name: "key-2" }, { name: "key-3" }];
 				mockKeyListRequest("bound-id", keys);
 
@@ -915,7 +896,7 @@ describe("wrangler", () => {
 			});
 
 			it("should list the keys of a preview namespace specified by binding", async () => {
-				writeWranglerConfig();
+				writeWranglerKVConfig();
 				const keys = [{ name: "key-1" }, { name: "key-2" }, { name: "key-3" }];
 				mockKeyListRequest("preview-bound-id", keys);
 				await runWrangler("kv key list --binding someBinding --preview");
@@ -936,7 +917,7 @@ describe("wrangler", () => {
 			});
 
 			it("should list the keys of a namespace specified by binding, in a given environment", async () => {
-				writeWranglerConfig();
+				writeWranglerKVConfig();
 				const keys = [{ name: "key-1" }, { name: "key-2" }, { name: "key-3" }];
 				mockKeyListRequest("env-bound-id", keys);
 				await runWrangler(
@@ -959,7 +940,7 @@ describe("wrangler", () => {
 			});
 
 			it("should list the keys of a preview namespace specified by binding, in a given environment", async () => {
-				writeWranglerConfig();
+				writeWranglerKVConfig();
 				const keys = [{ name: "key-1" }, { name: "key-2" }, { name: "key-3" }];
 				mockKeyListRequest("preview-env-bound-id", keys);
 				await runWrangler(
@@ -1012,7 +993,7 @@ describe("wrangler", () => {
 			}
 
 			it("should error if a given binding name is not in the configured kv namespaces", async () => {
-				writeWranglerConfig();
+				writeWranglerKVConfig();
 				await expect(
 					runWrangler("kv key list --binding otherBinding")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
@@ -1101,7 +1082,7 @@ describe("wrangler", () => {
 			});
 
 			it("should get a key in a given namespace specified by binding", async () => {
-				writeWranglerConfig();
+				writeWranglerKVConfig();
 				setMockFetchKVGetValue(
 					"some-account-id",
 					"bound-id",
@@ -1116,7 +1097,7 @@ describe("wrangler", () => {
 			});
 
 			it("should get a key in a given preview namespace specified by binding", async () => {
-				writeWranglerConfig();
+				writeWranglerKVConfig();
 				setMockFetchKVGetValue(
 					"some-account-id",
 					"preview-bound-id",
@@ -1129,7 +1110,7 @@ describe("wrangler", () => {
 			});
 
 			it("should get a key for the specified environment in a given namespace", async () => {
-				writeWranglerConfig();
+				writeWranglerKVConfig();
 				setMockFetchKVGetValue(
 					"some-account-id",
 					"env-bound-id",
@@ -1174,11 +1155,10 @@ describe("wrangler", () => {
 					  key  The key value to get.  [string] [required]
 
 					GLOBAL FLAGS
-					  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
-					  -c, --config                    Path to .toml configuration file  [string]
-					  -e, --env                       Environment to use for operations and .env files  [string]
-					  -h, --help                      Show help  [boolean]
-					  -v, --version                   Show version number  [boolean]
+					  -c, --config   Path to Wrangler configuration file  [string]
+					  -e, --env      Environment to use for operations and .env files  [string]
+					  -h, --help     Show help  [boolean]
+					  -v, --version  Show version number  [boolean]
 
 					OPTIONS
 					      --binding       The name of the namespace to get from  [string]
@@ -1211,11 +1191,10 @@ describe("wrangler", () => {
 					  key  The key value to get.  [string] [required]
 
 					GLOBAL FLAGS
-					  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
-					  -c, --config                    Path to .toml configuration file  [string]
-					  -e, --env                       Environment to use for operations and .env files  [string]
-					  -h, --help                      Show help  [boolean]
-					  -v, --version                   Show version number  [boolean]
+					  -c, --config   Path to Wrangler configuration file  [string]
+					  -e, --env      Environment to use for operations and .env files  [string]
+					  -h, --help     Show help  [boolean]
+					  -v, --version  Show version number  [boolean]
 
 					OPTIONS
 					      --binding       The name of the namespace to get from  [string]
@@ -1249,11 +1228,10 @@ describe("wrangler", () => {
 					  key  The key value to get.  [string] [required]
 
 					GLOBAL FLAGS
-					  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
-					  -c, --config                    Path to .toml configuration file  [string]
-					  -e, --env                       Environment to use for operations and .env files  [string]
-					  -h, --help                      Show help  [boolean]
-					  -v, --version                   Show version number  [boolean]
+					  -c, --config   Path to Wrangler configuration file  [string]
+					  -e, --env      Environment to use for operations and .env files  [string]
+					  -h, --help     Show help  [boolean]
+					  -v, --version  Show version number  [boolean]
 
 					OPTIONS
 					      --binding       The name of the namespace to get from  [string]
@@ -1271,7 +1249,7 @@ describe("wrangler", () => {
 			});
 
 			it("should error if a given binding name is not in the configured kv namespaces", async () => {
-				writeWranglerConfig();
+				writeWranglerKVConfig();
 				await expect(
 					runWrangler("kv key get key --binding otherBinding")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
@@ -1297,7 +1275,7 @@ describe("wrangler", () => {
 					await expect(runWrangler("kv key get key --namespace-id=xxxx"))
 						.rejects.toThrowErrorMatchingInlineSnapshot(`
 						[Error: More than one account available but unable to select one in non-interactive mode.
-						Please set the appropriate \`account_id\` in your \`wrangler.toml\` file.
+						Please set the appropriate \`account_id\` in your Wrangler configuration file.
 						Available accounts are (\`<name>\`: \`<account_id>\`):
 						  \`one\`: \`1\`
 						  \`two\`: \`2\`]
@@ -1313,7 +1291,7 @@ describe("wrangler", () => {
 					await expect(runWrangler("kv key get key --namespace-id=xxxx"))
 						.rejects.toThrowErrorMatchingInlineSnapshot(`
 						[Error: More than one account available but unable to select one in non-interactive mode.
-						Please set the appropriate \`account_id\` in your \`wrangler.toml\` file.
+						Please set the appropriate \`account_id\` in your Wrangler configuration file.
 						Available accounts are (\`<name>\`: \`<account_id>\`):
 						  \`one\`: \`1\`
 						  \`two\`: \`2\`]
@@ -1341,7 +1319,7 @@ describe("wrangler", () => {
 					await expect(runWrangler("kv key get key --namespace-id=xxxx"))
 						.rejects.toThrowErrorMatchingInlineSnapshot(`
 						[Error: Failed to automatically retrieve account IDs for the logged in user.
-						You may have incorrect permissions on your API token. You can skip this account check by adding an \`account_id\` in your \`wrangler.toml\`, or by setting the value of CLOUDFLARE_ACCOUNT_ID"]
+						You may have incorrect permissions on your API token. You can skip this account check by adding an \`account_id\` in your Wrangler configuration file, or by setting the value of CLOUDFLARE_ACCOUNT_ID"]
 					`);
 				});
 
@@ -1354,7 +1332,7 @@ describe("wrangler", () => {
 					await expect(runWrangler("kv key get key --namespace-id=xxxx"))
 						.rejects.toThrowErrorMatchingInlineSnapshot(`
 						[Error: More than one account available but unable to select one in non-interactive mode.
-						Please set the appropriate \`account_id\` in your \`wrangler.toml\` file.
+						Please set the appropriate \`account_id\` in your Wrangler configuration file.
 						Available accounts are (\`<name>\`: \`<account_id>\`):
 						  \`one\`: \`1\`
 						  \`two\`: \`2\`]
@@ -1407,7 +1385,7 @@ describe("wrangler", () => {
 			});
 
 			it("should delete a key in a namespace specified by binding name", async () => {
-				writeWranglerConfig();
+				writeWranglerKVConfig();
 				const requests = mockDeleteRequest("bound-id", "someKey");
 				await runWrangler(
 					`kv key delete --binding someBinding --preview false someKey`
@@ -1416,7 +1394,7 @@ describe("wrangler", () => {
 			});
 
 			it("should delete a key in a preview namespace specified by binding name", async () => {
-				writeWranglerConfig();
+				writeWranglerKVConfig();
 				const requests = mockDeleteRequest("preview-bound-id", "someKey");
 				await runWrangler(
 					`kv key delete --binding someBinding --preview someKey`
@@ -1425,7 +1403,7 @@ describe("wrangler", () => {
 			});
 
 			it("should error if a given binding name is not in the configured kv namespaces", async () => {
-				writeWranglerConfig();
+				writeWranglerKVConfig();
 				await expect(
 					runWrangler(`kv key delete --binding otherBinding someKey`)
 				).rejects.toThrowErrorMatchingInlineSnapshot(
@@ -1440,7 +1418,7 @@ describe("wrangler", () => {
 			});
 
 			it("should delete a key in a namespace specified by binding name in a given environment", async () => {
-				writeWranglerConfig();
+				writeWranglerKVConfig();
 				const requests = mockDeleteRequest("env-bound-id", "someKey");
 				await runWrangler(
 					`kv key delete --binding someBinding --env some-environment --preview false someKey`
@@ -1453,7 +1431,7 @@ describe("wrangler", () => {
 			});
 
 			it("should delete a key in a preview namespace specified by binding name in a given environment", async () => {
-				writeWranglerConfig();
+				writeWranglerKVConfig();
 				const requests = mockDeleteRequest("preview-env-bound-id", "someKey");
 				await runWrangler(
 					`kv key delete --binding someBinding --env some-environment --preview someKey`
@@ -1801,11 +1779,10 @@ describe("wrangler", () => {
 				  wrangler kv:namespace delete              Delete a given namespace.
 
 				GLOBAL FLAGS
-				  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
-				  -c, --config                    Path to .toml configuration file  [string]
-				  -e, --env                       Environment to use for operations and .env files  [string]
-				  -h, --help                      Show help  [boolean]
-				  -v, --version                   Show version number  [boolean]"
+				  -c, --config   Path to Wrangler configuration file  [string]
+				  -e, --env      Environment to use for operations and .env files  [string]
+				  -h, --help     Show help  [boolean]
+				  -v, --version  Show version number  [boolean]"
 			`);
 		});
 		test("kv:key", async () => {
@@ -1822,11 +1799,10 @@ describe("wrangler", () => {
 				  wrangler kv:key delete <key>       Remove a single key value pair from the given namespace
 
 				GLOBAL FLAGS
-				  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
-				  -c, --config                    Path to .toml configuration file  [string]
-				  -e, --env                       Environment to use for operations and .env files  [string]
-				  -h, --help                      Show help  [boolean]
-				  -v, --version                   Show version number  [boolean]"
+				  -c, --config   Path to Wrangler configuration file  [string]
+				  -e, --env      Environment to use for operations and .env files  [string]
+				  -h, --help     Show help  [boolean]
+				  -v, --version  Show version number  [boolean]"
 			`);
 		});
 		test("kv:bulk", async () => {
@@ -1841,32 +1817,37 @@ describe("wrangler", () => {
 				  wrangler kv:bulk delete <filename>  Delete multiple key-value pairs from a namespace
 
 				GLOBAL FLAGS
-				  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
-				  -c, --config                    Path to .toml configuration file  [string]
-				  -e, --env                       Environment to use for operations and .env files  [string]
-				  -h, --help                      Show help  [boolean]
-				  -v, --version                   Show version number  [boolean]"
+				  -c, --config   Path to Wrangler configuration file  [string]
+				  -e, --env      Environment to use for operations and .env files  [string]
+				  -h, --help     Show help  [boolean]
+				  -v, --version  Show version number  [boolean]"
 			`);
 		});
 	});
 });
 
-function writeWranglerConfig() {
-	writeFileSync(
-		"./wrangler.toml",
-		[
-			'name = "other-worker"',
-			"kv_namespaces = [",
-			'  { binding = "someBinding", id = "bound-id", preview_id = "preview-bound-id" }',
-			"]",
-			"",
-			"[env.some-environment]",
-			"kv_namespaces = [",
-			'  { binding = "someBinding", id = "env-bound-id", preview_id = "preview-env-bound-id" }',
-			"]",
-		].join("\n"),
-		"utf-8"
-	);
+function writeWranglerKVConfig() {
+	writeWranglerConfig({
+		name: "other-worker",
+		kv_namespaces: [
+			{
+				binding: "someBinding",
+				id: "bound-id",
+				preview_id: "preview-bound-id",
+			},
+		],
+		env: {
+			"some-environment": {
+				kv_namespaces: [
+					{
+						binding: "someBinding",
+						id: "env-bound-id",
+						preview_id: "preview-env-bound-id",
+					},
+				],
+			},
+		},
+	});
 }
 
 function setMockFetchKVGetValue(

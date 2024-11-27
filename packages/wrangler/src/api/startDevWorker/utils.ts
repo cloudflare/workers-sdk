@@ -8,7 +8,6 @@ import type {
 	Hook,
 	HookValues,
 	ServiceFetch,
-	StartDevWorkerInput,
 	StartDevWorkerOptions,
 } from "./types";
 
@@ -66,7 +65,7 @@ export function unwrapHook<
 	return typeof hook === "function" ? hook(...args) : hook;
 }
 
-export async function getBinaryFileContents(file: File<string | Uint8Array>) {
+async function getBinaryFileContents(file: File<string | Uint8Array>) {
 	if ("contents" in file) {
 		if (file.contents instanceof Buffer) {
 			return file.contents;
@@ -74,19 +73,6 @@ export async function getBinaryFileContents(file: File<string | Uint8Array>) {
 		return Buffer.from(file.contents);
 	}
 	return readFile(file.path);
-}
-
-export async function getTextFileContents(file: File<string | Uint8Array>) {
-	if ("contents" in file) {
-		if (typeof file.contents === "string") {
-			return file.contents;
-		}
-		if (file.contents instanceof Buffer) {
-			return file.contents.toString();
-		}
-		return Buffer.from(file.contents).toString();
-	}
-	return readFile(file.path, "utf8");
 }
 
 export function convertCfWorkerInitBindingstoBindings(
@@ -422,13 +408,4 @@ export function extractBindingsOfType<
 		binding: string;
 		/* ugh why durable objects :( */ name: string;
 	})[];
-}
-
-// DO NOT USE!
-// StartDevWorkerInput and StartDevWorkerOptions are not generally assignable to each other, but they're assignable _enough_ to make the faking of events work when --x-dev-env is turned off
-// Typescript needs some help to figure this out though
-export function fakeResolvedInput(
-	input: StartDevWorkerInput
-): StartDevWorkerOptions {
-	return input as StartDevWorkerOptions;
 }

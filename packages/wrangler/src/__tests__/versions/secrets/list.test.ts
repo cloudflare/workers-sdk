@@ -4,7 +4,7 @@ import { mockAccountId, mockApiToken } from "../../helpers/mock-account-id";
 import { mockConsoleMethods } from "../../helpers/mock-console";
 import { createFetchResult, msw } from "../../helpers/msw";
 import { runWrangler } from "../../helpers/run-wrangler";
-import { writeWranglerToml } from "../../helpers/write-wrangler-toml";
+import { writeWranglerConfig } from "../../helpers/write-wrangler-config";
 import type { ApiDeployment, ApiVersion } from "../../../versions/types";
 
 describe("versions secret list", () => {
@@ -133,7 +133,7 @@ describe("versions secret list", () => {
 	});
 
 	test("Can list secrets in single version deployment reading from wrangler.toml", async () => {
-		writeWranglerToml({ name: "script-name" });
+		writeWranglerConfig({ name: "script-name" });
 
 		mockGetDeployments();
 		mockGetVersion("version-id-1");
@@ -151,7 +151,7 @@ describe("versions secret list", () => {
 	});
 
 	test("Can list secrets for latest version", async () => {
-		writeWranglerToml({ name: "script-name" });
+		writeWranglerConfig({ name: "script-name" });
 
 		msw.use(
 			http.get(

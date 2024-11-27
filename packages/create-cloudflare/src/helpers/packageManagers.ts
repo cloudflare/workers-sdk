@@ -119,7 +119,7 @@ export const rectifyPmMismatch = async (ctx: C3Context) => {
 	});
 };
 
-const detectPmMismatch = (ctx: C3Context) => {
+export const detectPmMismatch = (ctx: C3Context) => {
 	const { npm } = detectPackageManager();
 	const projectPath = ctx.project.path;
 
@@ -131,6 +131,9 @@ const detectPmMismatch = (ctx: C3Context) => {
 		case "pnpm":
 			return !existsSync(path.join(projectPath, "pnpm-lock.yaml"));
 		case "bun":
-			return !existsSync(path.join(projectPath, "bun.lockb"));
+			return (
+				!existsSync(path.join(projectPath, "bun.lockb")) &&
+				!existsSync(path.join(projectPath, "bun.lock"))
+			);
 	}
 };

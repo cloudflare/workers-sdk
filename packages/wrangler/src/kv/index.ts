@@ -1,7 +1,7 @@
 import { Blob } from "node:buffer";
 import { arrayBuffer } from "node:stream/consumers";
 import { StringDecoder } from "node:string_decoder";
-import { readConfig } from "../config";
+import { formatConfigSnippet, readConfig } from "../config";
 import {
 	defineAlias,
 	defineCommand,
@@ -151,11 +151,21 @@ defineCommand({
 		logger.log(
 			`Add the following to your configuration file in your kv_namespaces array${envString}:`
 		);
-		logger.log(`[[kv_namespaces]]`);
-		logger.log(`binding = "${getValidBindingName(args.namespace, "KV")}"`);
-		logger.log(`${previewString}id = "${namespaceId}"`);
 
-		// TODO: automatically write this block to the wrangler.toml config file??
+		logger.log(
+			formatConfigSnippet(
+				{
+					kv_namespaces: [
+						// @ts-expect-error intentional subset
+						{
+							binding: getValidBindingName(args.namespace, "KV"),
+							[`${previewString}id`]: namespaceId,
+						},
+					],
+				},
+				config.configPath
+			)
+		);
 	},
 });
 

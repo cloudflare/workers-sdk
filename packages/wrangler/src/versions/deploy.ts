@@ -9,10 +9,9 @@ import {
 	spinnerWhile,
 } from "@cloudflare/cli/interactive";
 import { fetchResult } from "../cfetch";
-import { findWranglerToml, readConfig } from "../config";
+import { findWranglerConfig, readConfig } from "../config";
 import { UserError } from "../errors";
-import { CI } from "../is-ci";
-import isInteractive from "../is-interactive";
+import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { writeOutput } from "../output";
@@ -231,11 +230,9 @@ export async function versionsDeployHandler(args: VersionsDeployArgs) {
 	});
 }
 
-function getConfig(
-	args: Pick<VersionsDeployArgs, "config" | "name" | "experimentalJsonConfig">
-) {
+function getConfig(args: Pick<VersionsDeployArgs, "config" | "name">) {
 	const configPath =
-		args.config || (args.name && findWranglerToml(path.dirname(args.name)));
+		args.config || (args.name && findWranglerConfig(path.dirname(args.name)));
 	const config = readConfig(configPath, args);
 
 	return config;
@@ -272,8 +269,8 @@ export async function confirmLatestDeploymentOverwrite(
 				type: "confirm",
 				question: `"wrangler deploy" will upload a new version and deploy it globally immediately.\nAre you sure you want to continue?`,
 				label: "",
-				defaultValue: !isInteractive() || CI.isCI(), // defaults to true in CI for back-compat
-				acceptDefault: !isInteractive() || CI.isCI(),
+				defaultValue: isNonInteractiveOrCI(), // defaults to true in CI for back-compat
+				acceptDefault: isNonInteractiveOrCI(),
 			});
 		}
 	} catch (e) {
@@ -305,7 +302,7 @@ export async function printLatestDeployment(
 	);
 }
 
-export async function printDeployment(
+async function printDeployment(
 	accountId: string,
 	workerName: string,
 	deployment: ApiDeployment | undefined,
@@ -333,7 +330,7 @@ export function printVersions(
 	cli.newline();
 }
 
-export function formatVersions(
+function formatVersions(
 	versions: ApiVersion[],
 	traffic: Map<VersionId, Percentage>
 ) {

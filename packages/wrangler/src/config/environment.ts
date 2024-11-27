@@ -10,7 +10,7 @@ export interface Environment
 	extends EnvironmentInheritable,
 		EnvironmentNonInheritable {}
 
-export type SimpleRoute = string;
+type SimpleRoute = string;
 export type ZoneIdRoute = {
 	pattern: string;
 	zone_id: string;
@@ -147,6 +147,15 @@ interface EnvironmentInheritable {
 	 * @inheritable
 	 */
 	workers_dev: boolean | undefined;
+
+	/**
+	 * Whether we use <version>-<name>.<subdomain>.workers.dev to
+	 * serve Preview URLs for your Worker.
+	 *
+	 * @default `true`
+	 * @inheritable
+	 */
+	preview_urls: boolean | undefined;
 
 	/**
 	 * A list of routes that your Worker should be published to.
@@ -857,9 +866,9 @@ export interface DeprecatedUpload {
 
 	/**
 	 * The directory you wish to upload your Worker from,
-	 * relative to the wrangler.toml file.
+	 * relative to the Wrangler configuration file.
 	 *
-	 * Defaults to the directory containing the wrangler.toml file.
+	 * Defaults to the directory containing the Wrangler configuration file.
 	 *
 	 * @deprecated
 	 */
@@ -939,6 +948,7 @@ export type Assets = {
 		| "drop-trailing-slash"
 		| "none";
 	not_found_handling?: "single-page-application" | "404-page" | "none";
+	serve_directly?: boolean;
 };
 
 export interface Observability {
@@ -946,4 +956,11 @@ export interface Observability {
 	enabled: boolean;
 	/** The sampling rate */
 	head_sampling_rate?: number;
+	logs?: {
+		enabled: boolean;
+		/** The sampling rate */
+		head_sampling_rate?: number;
+		/** Set to false to disable invocation logs */
+		invocation_logs?: boolean;
+	};
 }

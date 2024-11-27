@@ -86,11 +86,10 @@ describe("cloudchamber create", () => {
 			Create a new deployment
 
 			GLOBAL FLAGS
-			  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
-			  -c, --config                    Path to .toml configuration file  [string]
-			  -e, --env                       Environment to use for operations and .env files  [string]
-			  -h, --help                      Show help  [boolean]
-			  -v, --version                   Show version number  [boolean]
+			  -c, --config   Path to Wrangler configuration file  [string]
+			  -e, --env      Environment to use for operations and .env files  [string]
+			  -h, --help     Show help  [boolean]
+			  -v, --version  Show version number  [boolean]
 
 			OPTIONS
 			      --json          Return output as clean JSON  [boolean] [default: false]
@@ -113,6 +112,22 @@ describe("cloudchamber create", () => {
 			runWrangler("cloudchamber create --image hello:world")
 		).rejects.toThrowErrorMatchingInlineSnapshot(
 			`[Error: location is required but it's not passed as an argument]`
+		);
+	});
+
+	it("should fail with a nice message when image is invalid", async () => {
+		setIsTTY(false);
+		setWranglerConfig({});
+		await expect(
+			runWrangler("cloudchamber create --image hello:latest --location sfo06")
+		).rejects.toThrowErrorMatchingInlineSnapshot(
+			`[Error: "latest" tag is not allowed]`
+		);
+
+		await expect(
+			runWrangler("cloudchamber create --image hello --location sfo06")
+		).rejects.toThrowErrorMatchingInlineSnapshot(
+			`[Error: Invalid image format: expected NAME:TAG[@DIGEST] or NAME@DIGEST]`
 		);
 	});
 

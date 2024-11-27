@@ -1,5 +1,4 @@
-import { stringify } from "@iarna/toml";
-import { readConfig } from "../config";
+import { configFileName, formatConfigSnippet, readConfig } from "../config";
 import { logger } from "../logger";
 import { createIndex } from "./client";
 import { deprecatedV1DefaultFlag, vectorizeGABanner } from "./common";
@@ -121,16 +120,19 @@ export async function handler(
 		`✅ Successfully created a new Vectorize index: '${indexResult.name}'`
 	);
 	logger.log(
-		`📋 To start querying from a Worker, add the following binding configuration into 'wrangler.toml':\n`
+		`📋 To start querying from a Worker, add the following binding configuration to your ${configFileName(config.configPath)} file:\n`
 	);
 	logger.log(
-		stringify({
-			vectorize: [
-				{
-					binding: bindingName,
-					index_name: indexResult.name,
-				},
-			],
-		})
+		formatConfigSnippet(
+			{
+				vectorize: [
+					{
+						binding: bindingName,
+						index_name: indexResult.name,
+					},
+				],
+			},
+			config.configPath
+		)
 	);
 }

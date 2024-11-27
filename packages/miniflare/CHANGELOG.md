@@ -1,5 +1,11 @@
 # miniflare
 
+## 3.20241106.1
+
+### Minor Changes
+
+- [#7286](https://github.com/cloudflare/workers-sdk/pull/7286) [`563439b`](https://github.com/cloudflare/workers-sdk/commit/563439bd02c450921b28d721d36be5a70897690d) Thanks [@LuisDuarte1](https://github.com/LuisDuarte1)! - Add proper engine persistance in .wrangler and fix multiple workflows in miniflare
+
 ## 3.20241106.0
 
 ### Patch Changes

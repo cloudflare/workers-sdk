@@ -16,7 +16,7 @@ import type { VersionId } from "../types";
 
 export const CANNOT_ROLLBACK_WITH_MODIFIED_SECERT_CODE = 10220;
 
-export type VersionsRollbackArgs = StrictYargsOptionsToInterface<
+type VersionsRollbackArgs = StrictYargsOptionsToInterface<
 	typeof versionsRollbackOptions
 >;
 
@@ -32,7 +32,7 @@ export default function registerVersionsRollbackCommand(
 	);
 }
 
-export function versionsRollbackOptions(rollbackYargs: CommonYargsArgv) {
+function versionsRollbackOptions(rollbackYargs: CommonYargsArgv) {
 	return rollbackYargs
 		.positional("version-id", {
 			describe: "The ID of the Worker Version to rollback to",
@@ -57,7 +57,7 @@ export function versionsRollbackOptions(rollbackYargs: CommonYargsArgv) {
 		});
 }
 
-export async function versionsRollbackHandler(args: VersionsRollbackArgs) {
+async function versionsRollbackHandler(args: VersionsRollbackArgs) {
 	const config = getConfig(args);
 	const accountId = await requireAuth(config);
 	const workerName = args.name ?? config.name;

@@ -104,7 +104,7 @@ describe("defineNavigatorUserAgent is respected", () => {
 		await bundleWorker(
 			{
 				file: path.resolve("src/index.js"),
-				directory: process.cwd(),
+				projectRoot: process.cwd(),
 				format: "modules",
 				moduleRoot: path.dirname(path.resolve("src/index.js")),
 				exports: [],
@@ -167,7 +167,7 @@ describe("defineNavigatorUserAgent is respected", () => {
 		await bundleWorker(
 			{
 				file: path.resolve("src/index.js"),
-				directory: process.cwd(),
+				projectRoot: process.cwd(),
 				format: "modules",
 				moduleRoot: path.dirname(path.resolve("src/index.js")),
 				exports: [],

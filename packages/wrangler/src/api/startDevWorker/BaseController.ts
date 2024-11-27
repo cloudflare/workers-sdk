@@ -8,9 +8,8 @@ import type {
 	ReloadStartEvent,
 } from "./events";
 
-export interface TypedEventEmitter<
-	EventMap extends Record<string | symbol, unknown[]>,
-> extends EventEmitter {
+interface TypedEventEmitter<EventMap extends Record<string | symbol, unknown[]>>
+	extends EventEmitter {
 	addListener<Name extends keyof EventMap>(
 		eventName: Name,
 		listener: (...args: EventMap[Name]) => void
@@ -73,7 +72,7 @@ export abstract class Controller<
 	}
 }
 
-export type RuntimeControllerEventMap = ControllerEventMap & {
+type RuntimeControllerEventMap = ControllerEventMap & {
 	reloadStart: [ReloadStartEvent];
 	reloadComplete: [ReloadCompleteEvent];
 };

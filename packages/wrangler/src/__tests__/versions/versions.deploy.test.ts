@@ -12,7 +12,10 @@ import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { useMockIsTTY } from "../helpers/mock-istty";
 import { mockUploadWorkerRequest } from "../helpers/mock-upload-worker";
-import { mockSubDomainRequest } from "../helpers/mock-workers-subdomain";
+import {
+	mockGetWorkerSubdomain,
+	mockSubDomainRequest,
+} from "../helpers/mock-workers-subdomain";
 import {
 	msw,
 	mswGetVersion,
@@ -26,7 +29,7 @@ import { mswListNewDeploymentsLatestFiftyFifty } from "../helpers/msw/handlers/v
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 import { writeWorkerSource } from "../helpers/write-worker-source";
-import { writeWranglerToml } from "../helpers/write-wrangler-toml";
+import { writeWranglerConfig } from "../helpers/write-wrangler-config";
 import type { VersionsDeployArgs } from "../../versions/deploy";
 
 describe("versions deploy", () => {
@@ -55,10 +58,11 @@ describe("versions deploy", () => {
 				...mswSuccessDeploymentScriptMetadata,
 				...mswListNewDeploymentsLatestFiftyFifty
 			);
-			writeWranglerToml();
+			writeWranglerConfig();
 			writeWorkerSource();
-			mockSubDomainRequest();
 			mockUploadWorkerRequest();
+			mockGetWorkerSubdomain({ enabled: true });
+			mockSubDomainRequest();
 
 			await runWrangler("deploy ./index");
 
@@ -149,7 +153,7 @@ describe("versions deploy", () => {
 	});
 
 	describe("with wrangler.toml", () => {
-		beforeEach(() => writeWranglerToml());
+		beforeEach(() => writeWranglerConfig());
 
 		test("no args", async () => {
 			const result = runWrangler(
@@ -656,7 +660,7 @@ describe("versions deploy", () => {
 		});
 
 		test("with logpush in wrangler.toml", async () => {
-			writeWranglerToml({
+			writeWranglerConfig({
 				logpush: true,
 			});
 
@@ -712,7 +716,7 @@ describe("versions deploy", () => {
 		});
 
 		test("with observability disabled in wrangler.toml", async () => {
-			writeWranglerToml({
+			writeWranglerConfig({
 				observability: {
 					enabled: false,
 				},
@@ -770,7 +774,7 @@ describe("versions deploy", () => {
 		});
 
 		test("with logpush, tail_consumers, and observability in wrangler.toml", async () => {
-			writeWranglerToml({
+			writeWranglerConfig({
 				logpush: false,
 				observability: {
 					enabled: true,

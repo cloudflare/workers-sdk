@@ -6,5 +6,6 @@ export const applyConfigurationDefaults = (
 	return {
 		html_handling: configuration?.html_handling ?? "auto-trailing-slash",
 		not_found_handling: configuration?.not_found_handling ?? "none",
+		serve_directly: configuration?.serve_directly ?? true,
 	};
 };

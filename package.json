@@ -80,7 +80,6 @@
 			"@types/node": "$@types/node"
 		},
 		"patchedDependencies": {
-			"ink@3.2.0": "patches/ink@3.2.0.patch",
 			"@cloudflare/component-listbox@1.10.6": "patches/@cloudflare__component-listbox@1.10.6.patch",
 			"capnp-ts@0.7.0": "patches/capnp-ts@0.7.0.patch",
 			"pg@8.11.3": "patches/pg@8.11.3.patch",

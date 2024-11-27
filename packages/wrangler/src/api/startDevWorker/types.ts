@@ -60,7 +60,7 @@ export interface StartDevWorkerInput {
 	name?: string;
 	/**
 	 * The javascript or typescript entry-point of the worker.
-	 * This is the `main` property of a wrangler.toml.
+	 * This is the `main` property of a Wrangler configuration file.
 	 * You can specify a file path or provide the contents directly.
 	 */
 	entrypoint?: string;
@@ -173,8 +173,8 @@ export interface StartDevWorkerInput {
 }
 
 export type StartDevWorkerOptions = Omit<StartDevWorkerInput, "assets"> & {
-	/** A worker's directory. Usually where the wrangler.toml file is located */
-	directory: string;
+	/** A worker's directory. Usually where the Wrangler configuration file is located */
+	projectRoot: string;
 	build: StartDevWorkerInput["build"] & {
 		nodejsCompatMode: NodeJSCompatMode;
 		format: CfScriptFormat;
@@ -192,7 +192,7 @@ export type StartDevWorkerOptions = Omit<StartDevWorkerInput, "assets"> & {
 	};
 	dev: StartDevWorkerInput["dev"] & {
 		persist: string;
-		auth?: AsyncHook<CfAccount>; // redefine without config.account_id hook param (can only be provided by ConfigController with access to wrangler.toml, not by other controllers eg RemoteRuntimeContoller)
+		auth?: AsyncHook<CfAccount>; // redefine without config.account_id hook param (can only be provided by ConfigController with access to the Wrangler configuration file, not by other controllers eg RemoteRuntimeContoller)
 	};
 	entrypoint: string;
 	assets?: AssetsOptions;
@@ -214,26 +214,6 @@ export type File<Contents = string, Path = string> =
 	| { path: Path } // `path` resolved relative to cwd
 	| { contents: Contents; path?: Path }; // `contents` used instead, `path` can be specified if needed e.g. for module resolution
 export type BinaryFile = File<Uint8Array>; // Note: Node's `Buffer`s are instances of `Uint8Array`
-export type FilePath<Path = string> = Extract<
-	File<undefined, Path>,
-	{ path: Path }
->; // file that must be on disk -- reminder to allow uses of `contents` eventually
-
-export interface Location {
-	hostname?: string;
-	port?: number;
-	secure?: boolean; // Usually `https`, but could be `wss` for inspector
-}
-
-export type PatternRoute = {
-	pattern: string;
-} & (
-	| { pattern: string; customDomain: true }
-	| { pattern: string; zoneId: string; customDomain?: true; zoneName?: never }
-	| { pattern: string; zoneName: string; customDomain?: true; zoneId?: never }
-);
-export type WorkersDevRoute = { workersDev: true };
-export type Route = PatternRoute | WorkersDevRoute;
 
 type QueueConsumer = NonNullable<Config["queues"]["consumers"]>[number];
 
@@ -277,8 +257,3 @@ export type Binding =
 	| { type: "assets" };
 
 export type ServiceFetch = (request: Request) => Promise<Response> | Response;
-
-export interface ServiceDesignator {
-	name: string;
-	env?: string;
-}

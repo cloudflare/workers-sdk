@@ -5,7 +5,7 @@ import { clearDialogs, mockConfirm } from "../../helpers/mock-dialogs";
 import { useMockIsTTY } from "../../helpers/mock-istty";
 import { runInTempDir } from "../../helpers/run-in-tmp";
 import { runWrangler } from "../../helpers/run-wrangler";
-import { writeWranglerToml } from "../../helpers/write-wrangler-toml";
+import { writeWranglerConfig } from "../../helpers/write-wrangler-config";
 import { mockGetVersion, mockPostVersion, mockSetupApiCalls } from "./utils";
 
 describe("versions secret put", () => {
@@ -78,7 +78,7 @@ describe("versions secret put", () => {
 	});
 
 	test("can delete a secret reading Worker name from wrangler.toml", async () => {
-		writeWranglerToml({ name: "script-name" });
+		writeWranglerConfig({ name: "script-name" });
 		setIsTTY(false);
 
 		mockSetupApiCalls();

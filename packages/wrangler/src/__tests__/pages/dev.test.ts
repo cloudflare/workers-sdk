@@ -14,7 +14,7 @@ describe("pages dev", () => {
 		await expect(
 			runWrangler("pages dev")
 		).rejects.toThrowErrorMatchingInlineSnapshot(
-			`[Error: Must specify a directory of static assets to serve, or a command to run, or a proxy port, or configure \`pages_build_output_dir\` in \`wrangler.toml\`.]`
+			`[Error: Must specify a directory of static assets to serve, or a command to run, or a proxy port, or configure \`pages_build_output_dir\` in your Wrangler configuration file.]`
 		);
 	});
 
@@ -30,15 +30,7 @@ describe("pages dev", () => {
 		await expect(
 			runWrangler("pages dev public --config=/path/to/wrangler.toml")
 		).rejects.toThrowErrorMatchingInlineSnapshot(
-			`[Error: Pages does not support custom paths for the \`wrangler.toml\` configuration file]`
-		);
-	});
-
-	it("should error if the [--experimental-json-config] command line arg was specified", async () => {
-		await expect(
-			runWrangler("pages dev public --experimental-json-config")
-		).rejects.toThrowErrorMatchingInlineSnapshot(
-			`[Error: Pages does not support \`wrangler.json\`]`
+			`[Error: Pages does not support custom paths for the Wrangler configuration file]`
 		);
 	});
 

@@ -1,11 +1,13 @@
 import chalk from "chalk";
 import { fetchResult } from "./cfetch";
+import { configFileName } from "./config";
 import { confirm, prompt } from "./dialogs";
 import { UserError } from "./errors";
 import { logger } from "./logger";
 
 export async function getWorkersDevSubdomain(
-	accountId: string
+	accountId: string,
+	configPath: string | undefined
 ): Promise<string> {
 	try {
 		// note: API docs say that this field is "name", but they're lying.
@@ -28,21 +30,23 @@ export async function getWorkersDevSubdomain(
 				{ fallbackValue: false }
 			);
 			if (!wantsToRegister) {
-				const solutionMessage =
-					"You can either deploy your worker to one or more routes by specifying them in wrangler.toml, or register a workers.dev subdomain here:";
+				const solutionMessage = `You can either deploy your worker to one or more routes by specifying them in your ${configFileName(configPath)} file, or register a workers.dev subdomain here:`;
 				const onboardingLink = `https://dash.cloudflare.com/${accountId}/workers/onboarding`;
 
 				throw new UserError(`${solutionMessage}\n${onboardingLink}`);
 			}
 
-			return await registerSubdomain(accountId);
+			return await registerSubdomain(accountId, configPath);
 		} else {
 			throw e;
 		}
 	}
 }
 
-async function registerSubdomain(accountId: string): Promise<string> {
+async function registerSubdomain(
+	accountId: string,
+	configPath: string | undefined
+): Promise<string> {
 	let subdomain: string | undefined;
 
 	while (subdomain === undefined) {
@@ -91,8 +95,7 @@ async function registerSubdomain(accountId: string): Promise<string> {
 			)}. Ok to proceed?`
 		);
 		if (!ok) {
-			const solutionMessage =
-				"You can either deploy your worker to one or more routes by specifying them in wrangler.toml, or register a workers.dev subdomain here:";
+			const solutionMessage = `You can either deploy your worker to one or more routes by specifying them in your ${configFileName(configPath)} file, or register a workers.dev subdomain here:`;
 			const onboardingLink = `https://dash.cloudflare.com/${accountId}/workers/onboarding`;
 
 			throw new UserError(`${solutionMessage}\n${onboardingLink}`);

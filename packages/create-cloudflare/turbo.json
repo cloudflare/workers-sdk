@@ -26,7 +26,8 @@
 				"E2E_EXPERIMENTAL",
 				"TEST_PM"
 			],
-			"dependsOn": ["build"]
+			"dependsOn": ["build"],
+			"outputs": [".e2e-logs", ".e2e-logs-experimental"]
 		}
 	}
 }

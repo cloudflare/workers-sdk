@@ -2,7 +2,7 @@ import path from "node:path";
 import readline from "node:readline";
 import chalk from "chalk";
 import { fetchResult } from "../../cfetch";
-import { findWranglerToml, readConfig } from "../../config";
+import { configFileName, findWranglerConfig, readConfig } from "../../config";
 import { getConfigCache } from "../../config-cache";
 import { confirm, prompt } from "../../dialogs";
 import { FatalError } from "../../errors";
@@ -41,7 +41,7 @@ async function pagesProject(
 		);
 	}
 	let config: Config | undefined;
-	const configPath = findWranglerToml(process.cwd(), false);
+	const configPath = findWranglerConfig(process.cwd());
 
 	try {
 		/*
@@ -49,11 +49,7 @@ async function pagesProject(
 		 * return the top-level config. This contains all the information we
 		 * need.
 		 */
-		config = readConfig(
-			configPath,
-			{ env: undefined, experimentalJsonConfig: false },
-			true
-		);
+		config = readConfig(configPath, { env: undefined }, true);
 	} catch (err) {
 		if (
 			!(
@@ -65,13 +61,13 @@ async function pagesProject(
 	}
 
 	/*
-	 * If we found a `wrangler.toml` config file that doesn't specify
+	 * If we found a Wrangler config file that doesn't specify
 	 * `pages_build_output_dir`, we'll ignore the file, but inform users
 	 * that we did find one, just not valid for Pages.
 	 */
 	if (configPath && config === undefined) {
 		logger.warn(
-			`Pages now has wrangler.toml support.\n` +
+			`Pages now has ${configFileName(configPath)} support.\n` +
 				`We detected a configuration file at ${configPath} but it is missing the "pages_build_output_dir" field, required by Pages.\n` +
 				`If you would like to use this configuration file for your project, please use "pages_build_output_dir" to specify the directory of static files to upload.\n` +
 				`Ignoring configuration file for now.`

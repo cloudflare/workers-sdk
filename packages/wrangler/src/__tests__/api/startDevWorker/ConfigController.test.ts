@@ -51,7 +51,7 @@ describe("ConfigController", () => {
 					moduleRoot: path.join(process.cwd(), "src"),
 					moduleRules: [],
 				},
-				directory: process.cwd(),
+				projectRoot: process.cwd(),
 				entrypoint: path.join(process.cwd(), "src/index.ts"),
 			},
 		});
@@ -87,7 +87,7 @@ base_dir = \"./some/base_dir\"`,
 					moduleRoot: path.join(process.cwd(), "./some/base_dir"),
 					moduleRules: [],
 				},
-				directory: process.cwd(),
+				projectRoot: process.cwd(),
 				entrypoint: path.join(process.cwd(), "./some/base_dir/nested/index.js"),
 			},
 		});
@@ -114,7 +114,7 @@ base_dir = \"./some/base_dir\"`,
 			type: "configUpdate",
 			config: {
 				entrypoint: path.join(process.cwd(), "src/index.ts"),
-				directory: process.cwd(),
+				projectRoot: process.cwd(),
 				build: {
 					additionalModules: [],
 					define: {},
@@ -138,7 +138,7 @@ base_dir = \"./some/base_dir\"`,
 			type: "configUpdate",
 			config: {
 				entrypoint: path.join(process.cwd(), "src/index.ts"),
-				directory: process.cwd(),
+				projectRoot: process.cwd(),
 				build: {
 					additionalModules: [],
 					define: {},
@@ -168,7 +168,7 @@ base_dir = \"./some/base_dir\"`,
 			type: "configUpdate",
 			config: {
 				entrypoint: path.join(process.cwd(), "src/index.ts"),
-				directory: process.cwd(),
+				projectRoot: process.cwd(),
 				build: {
 					alias: {
 						foo: "bar",

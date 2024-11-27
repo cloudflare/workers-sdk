@@ -5,7 +5,7 @@ import { URLSearchParams } from "node:url";
 import { cancel } from "@cloudflare/cli";
 import { syncAssets } from "../assets";
 import { fetchListResult, fetchResult } from "../cfetch";
-import { printBindings } from "../config";
+import { configFileName, formatConfigSnippet, printBindings } from "../config";
 import { bundleWorker } from "../deployment-bundle/bundle";
 import {
 	printBundleSize,
@@ -423,9 +423,9 @@ export default async function deploy(props: Props): Promise<{
 			""
 		).padStart(2, "0")}-${(new Date().getDate() + "").padStart(2, "0")}`;
 
-		throw new UserError(`A compatibility_date is required when publishing. Add the following to your wrangler.toml file:.
+		throw new UserError(`A compatibility_date is required when publishing. Add the following to your ${configFileName(config.configPath)} file:
     \`\`\`
-    compatibility_date = "${compatibilityDateStr}"
+    ${formatConfigSnippet({ compatibility_date: compatibilityDateStr }, config.configPath, false)}
     \`\`\`
     Or you could pass it in your terminal as \`--compatibility-date ${compatibilityDateStr}\`
 See https://developers.cloudflare.com/workers/platform/compatibility-dates for more information.`);
@@ -522,13 +522,13 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 	if (config.text_blobs && format === "modules") {
 		throw new UserError(
-			"You cannot configure [text_blobs] with an ES module worker. Instead, import the file directly in your code, and optionally configure `[rules]` in your wrangler.toml"
+			`You cannot configure [text_blobs] with an ES module worker. Instead, import the file directly in your code, and optionally configure \`[rules]\` in your ${configFileName(config.configPath)} file`
 		);
 	}
 
 	if (config.data_blobs && format === "modules") {
 		throw new UserError(
-			"You cannot configure [data_blobs] with an ES module worker. Instead, import the file directly in your code, and optionally configure `[rules]` in your wrangler.toml"
+			`You cannot configure [data_blobs] with an ES module worker. Instead, import the file directly in your code, and optionally configure \`[rules]\` in your ${configFileName(config.configPath)} file`
 		);
 	}
 
@@ -813,10 +813,8 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			let bindingsPrinted = false;
 
 			// Upload the script so it has time to propagate.
-			// We can also now tell whether available_on_subdomain is set
 			try {
 				let result: {
-					available_on_subdomain: boolean;
 					id: string | null;
 					etag: string | null;
 					pipeline_hash: string | null;
@@ -850,16 +848,11 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 						logpush: worker.logpush,
 						// If the user hasn't specified observability assume that they want it disabled if they have it on.
 						// This is a no-op in the event that they don't have observability enabled, but will remove observability
-						// if it has been removed from their wrangler.toml
+						// if it has been removed from their Wrangler configuration file
 						observability: worker.observability ?? { enabled: false },
 					});
 
-					const { available_on_subdomain } = await fetchResult<{
-						available_on_subdomain: boolean;
-					}>(`/accounts/${accountId}/workers/scripts/${scriptName}/subdomain`);
-
 					result = {
-						available_on_subdomain,
 						id: null, // fpw - ignore
 						etag: versionResult.resources.script.etag,
 						pipeline_hash: null, // fpw - ignore
@@ -870,7 +863,6 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 				} else {
 					result = await retryOnError(async () =>
 						fetchResult<{
-							available_on_subdomain: boolean;
 							id: string | null;
 							etag: string | null;
 							pipeline_hash: string | null;
@@ -885,7 +877,6 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 								headers: await getMetricsUsageHeaders(config.send_metrics),
 							},
 							new URLSearchParams({
-								include_subdomain_availability: "true",
 								// pass excludeScript so the whole body of the
 								// script doesn't get included in the response
 								excludeScript: "true",
@@ -1021,7 +1012,7 @@ function deployWfpUserWorker(
 	logger.log("Current Version ID:", versionId);
 }
 
-export function helpIfErrorIsSizeOrScriptStartup(
+function helpIfErrorIsSizeOrScriptStartup(
 	err: unknown,
 	dependencies: { [path: string]: { bytesInOutput: number } }
 ) {

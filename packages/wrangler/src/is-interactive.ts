@@ -1,3 +1,4 @@
+import { isInteractive as __isInteractive } from "@cloudflare/cli/interactive";
 import { CI } from "./is-ci";
 
 /**
@@ -10,14 +11,12 @@ export default function isInteractive(): boolean {
 		return false;
 	}
 
-	try {
-		return Boolean(process.stdin.isTTY && process.stdout.isTTY);
-	} catch {
-		return false;
-	}
+	return __isInteractive();
 }
 
-// TODO: Use this function across the codebase.
+/**
+ * Test whether a process is non-interactive or running in CI.
+ */
 export function isNonInteractiveOrCI(): boolean {
 	return !isInteractive() || CI.isCI();
 }

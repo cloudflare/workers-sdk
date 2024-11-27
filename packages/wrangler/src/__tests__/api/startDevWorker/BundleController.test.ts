@@ -40,7 +40,7 @@ function configDefaults(
 	const persist = path.join(process.cwd(), ".wrangler/persist");
 	return {
 		entrypoint: "NOT_REAL",
-		directory: "NOT_REAL",
+		projectRoot: "NOT_REAL",
 		build: unusable<StartDevWorkerOptions["build"]>(),
 		legacy: {},
 		dev: { persist },
@@ -68,7 +68,7 @@ describe("BundleController", () => {
 				legacy: {},
 				name: "worker",
 				entrypoint: path.resolve("src/index.ts"),
-				directory: path.resolve("src"),
+				projectRoot: path.resolve("src"),
 				build: {
 					additionalModules: [],
 					processEntrypoint: false,
@@ -141,7 +141,7 @@ describe("BundleController", () => {
 				legacy: {},
 				name: "worker",
 				entrypoint: path.resolve("src/index.ts"),
-				directory: path.resolve("src"),
+				projectRoot: path.resolve("src"),
 				build: {
 					additionalModules: [],
 					processEntrypoint: false,
@@ -207,7 +207,7 @@ describe("BundleController", () => {
 				legacy: {},
 				name: "worker",
 				entrypoint: path.resolve("out.ts"),
-				directory: path.resolve("."),
+				projectRoot: path.resolve("."),
 				build: {
 					additionalModules: [],
 					processEntrypoint: false,
@@ -287,7 +287,7 @@ describe("BundleController", () => {
 			legacy: {},
 			name: "worker",
 			entrypoint: path.resolve("src/index.ts"),
-			directory: path.resolve("src"),
+			projectRoot: path.resolve("src"),
 			build: {
 				additionalModules: [],
 				processEntrypoint: false,
@@ -345,7 +345,7 @@ describe("BundleController", () => {
 				legacy: {},
 				name: "worker",
 				entrypoint: path.resolve("src/index.ts"),
-				directory: path.resolve("src"),
+				projectRoot: path.resolve("src"),
 
 				build: {
 					additionalModules: [],
@@ -391,7 +391,7 @@ describe("BundleController", () => {
 			const configCustom: Partial<StartDevWorkerOptions> = {
 				name: "worker",
 				entrypoint: path.resolve("out.ts"),
-				directory: process.cwd(),
+				projectRoot: process.cwd(),
 				build: {
 					additionalModules: [],
 					processEntrypoint: false,
@@ -464,7 +464,7 @@ describe("BundleController", () => {
 			const configCustom: Partial<StartDevWorkerOptions> = {
 				name: "worker",
 				entrypoint: path.resolve("out.ts"),
-				directory: process.cwd(),
+				projectRoot: process.cwd(),
 
 				build: {
 					additionalModules: [],
@@ -513,7 +513,7 @@ describe("BundleController", () => {
 				legacy: {},
 				name: "worker",
 				entrypoint: path.resolve("src/index.ts"),
-				directory: path.resolve("src"),
+				projectRoot: path.resolve("src"),
 
 				build: {
 					additionalModules: [],

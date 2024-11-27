@@ -202,7 +202,7 @@ Changes should be committed to a new local branch, which then gets pushed to you
   git push -u origin <new-branch-name>
   ```
 - Once you are happy with your changes, create a Pull Request on GitHub
-- The format for Pull Request titles is `[package name] description`, where the package name should indicate which package of the `workers-sdk` monorepo your PR pertains to (e.g. `wrangler`/`pages-shared`/`wrangler-devtools`), and the description should be a succinct summary of the change you're making.
+- The format for Pull Request titles is `[package name] description`, where the package name should indicate which package of the `workers-sdk` monorepo your PR pertains to (e.g. `wrangler`/`pages-shared`/`chrome-devtools-patches`), and the description should be a succinct summary of the change you're making.
 - GitHub will insert a template for the body of your Pull Request—it's important to carefully fill out all the fields, giving as much detail as possible to reviewers.
 
 ## PR Review
@@ -215,7 +215,7 @@ Every PR will have an associated pre-release build for all releaseable packages 
 
 It's also possible to generate preview builds for the applications in the repository. These aren't generated automatically because they're pretty slow CI jobs, but you can trigger preview builds by adding one of the following labels to your PR:
 
-- `preview:wrangler-devtools` for deploying [wrangler-devtools](packages/wrangler-devtools)
+- `preview:chrome-devtools-patches` for deploying [chrome-devtools-patches](packages/chrome-devtools-patches)
 - `preview:workers-playground` for deploying [workers-playground](packages/workers-playground)
 - `preview:quick-edit` for deploying [quick-edit](packages/quick-edit)
 

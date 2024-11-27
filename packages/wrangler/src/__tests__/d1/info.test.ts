@@ -6,7 +6,7 @@ import { mockGetMemberships } from "../helpers/mock-oauth-flow";
 import { msw } from "../helpers/msw";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
-import { writeWranglerToml } from "../helpers/write-wrangler-toml";
+import { writeWranglerConfig } from "../helpers/write-wrangler-config";
 
 describe("info", () => {
 	mockAccountId({ accountId: null });
@@ -21,7 +21,7 @@ describe("info", () => {
 		mockGetMemberships([
 			{ id: "IG-88", account: { id: "1701", name: "enterprise" } },
 		]);
-		writeWranglerToml({
+		writeWranglerConfig({
 			d1_databases: [
 				{
 					binding: "DB",
@@ -70,7 +70,7 @@ describe("info", () => {
 		mockGetMemberships([
 			{ id: "IG-88", account: { id: "1701", name: "enterprise" } },
 		]);
-		writeWranglerToml({
+		writeWranglerConfig({
 			d1_databases: [
 				{
 					binding: "DB",

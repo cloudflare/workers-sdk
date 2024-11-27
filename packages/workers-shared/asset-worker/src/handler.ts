@@ -18,7 +18,10 @@ export const handleRequest = async (
 ) => {
 	const { pathname, search } = new URL(request.url);
 
-	const decodedPathname = decodePath(pathname);
+	let decodedPathname = decodePath(pathname);
+	// normalize the path; remove multiple slashes which could lead to same-schema redirects
+	decodedPathname = decodedPathname.replace(/\/+/g, "/");
+
 	const intent = await getIntent(decodedPathname, configuration, exists);
 
 	if (!intent) {
@@ -41,7 +44,7 @@ export const handleRequest = async (
 	 * Thus we need to redirect if that is different from the decoded version.
 	 * We combine this with other redirects (e.g. for html_handling) to avoid multiple redirects.
 	 */
-	if (encodedDestination !== pathname || intent.redirect) {
+	if ((encodedDestination !== pathname && intent.asset) || intent.redirect) {
 		return new TemporaryRedirectResponse(encodedDestination + search);
 	}
 

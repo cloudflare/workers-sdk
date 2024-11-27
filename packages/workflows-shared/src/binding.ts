@@ -14,12 +14,9 @@ type Env = {
 // this.env.WORKFLOW is WorkflowBinding
 export class WorkflowBinding extends WorkerEntrypoint<Env> implements Workflow {
 	public async create({
-		id,
-		params,
-	}: WorkflowInstanceCreateOptions): Promise<WorkflowInstance> {
-		if (!id) {
-			id = crypto.randomUUID();
-		}
+		id = crypto.randomUUID(),
+		params = {},
+	}: WorkflowInstanceCreateOptions = {}): Promise<WorkflowInstance> {
 		const stubId = this.env.ENGINE.idFromName(id);
 		const stub = this.env.ENGINE.get(stubId);
 
@@ -34,13 +31,37 @@ export class WorkflowBinding extends WorkerEntrypoint<Env> implements Workflow {
 			}
 		);
 
-		return new WorkflowHandle(id, stub);
+		const handle = new WorkflowHandle(id, stub);
+		return {
+			id: id,
+			pause: handle.pause.bind(handle),
+			resume: handle.resume.bind(handle),
+			terminate: handle.terminate.bind(handle),
+			restart: handle.restart.bind(handle),
+			status: handle.status.bind(handle),
+		};
 	}
 
 	public async get(id: string): Promise<WorkflowInstance> {
-		const stubId = this.env.ENGINE.idFromName(id);
-		const stub = this.env.ENGINE.get(stubId);
-		return new WorkflowHandle(id, stub);
+		const engineStubId = this.env.ENGINE.idFromName(id);
+		const engineStub = this.env.ENGINE.get(engineStubId);
+
+		const handle = new WorkflowHandle(id, engineStub);
+
+		try {
+			await handle.status();
+		} catch (e) {
+			throw new Error("instance.not_found");
+		}
+
+		return {
+			id: id,
+			pause: handle.pause.bind(handle),
+			resume: handle.resume.bind(handle),
+			terminate: handle.terminate.bind(handle),
+			restart: handle.restart.bind(handle),
+			status: handle.status.bind(handle),
+		};
 	}
 }
 

@@ -9,7 +9,7 @@ import { useMockStdin } from "../../helpers/mock-stdin";
 import { msw } from "../../helpers/msw";
 import { runInTempDir } from "../../helpers/run-in-tmp";
 import { runWrangler } from "../../helpers/run-wrangler";
-import { writeWranglerToml } from "../../helpers/write-wrangler-toml";
+import { writeWranglerConfig } from "../../helpers/write-wrangler-config";
 import { mockPostVersion, mockSetupApiCalls } from "./utils";
 
 describe("versions secret put", () => {
@@ -90,7 +90,7 @@ describe("versions secret put", () => {
 	});
 
 	test("can add a new secret, read Worker name from wrangler.toml", async () => {
-		writeWranglerToml({ name: "script-name" });
+		writeWranglerConfig({ name: "script-name" });
 
 		setIsTTY(true);
 

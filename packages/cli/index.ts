@@ -61,7 +61,9 @@ export const logRaw = (msg: string) => {
 
 // A simple stylized log for use within a prompt
 export const log = (msg: string) => {
-	const lines = msg.split("\n").map((ln) => `${gray(shapes.bar)} ${white(ln)}`);
+	const lines = msg
+		.split("\n")
+		.map((ln) => `${gray(shapes.bar)}${ln.length > 0 ? " " + white(ln) : ""}`);
 
 	logRaw(lines.join("\n"));
 };

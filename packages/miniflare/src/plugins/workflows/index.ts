@@ -62,15 +62,20 @@ export const WORKFLOWS_PLUGIN: Plugin<
 			sharedOptions.workflowsPersist
 		);
 		await fs.mkdir(persistPath, { recursive: true });
-		const storageService: Service = {
-			name: WORKFLOWS_STORAGE_SERVICE_NAME,
+		// each workflow should get its own storage service
+		const storageServices: Service[] = Object.entries(
+			options.workflows ?? {}
+		).map<Service>(([_, workflow]) => ({
+			name: `${WORKFLOWS_STORAGE_SERVICE_NAME}-${workflow.name}`,
 			disk: { path: persistPath, writable: true },
-		};
+		}));
 
 		// this creates one miniflare service per workflow that the user's script has. we should dedupe engine definition later
 		const services = Object.entries(options.workflows ?? {}).map<Service>(
 			([_bindingName, workflow]) => {
-				const uniqueKey = `miniflare-workflows`;
+				// NOTE(lduarte): the engine unique namespace key must be unique per workflow definition
+				// otherwise workerd will crash because there's two equal DO namespaces
+				const uniqueKey = `miniflare-workflows-${workflow.name}`;
 
 				const workflowsBinding: Service = {
 					name: `${WORKFLOWS_PLUGIN_NAME}:${workflow.name}`,
@@ -90,8 +95,9 @@ export const WORKFLOWS_PLUGIN: Plugin<
 								preventEviction: true,
 							},
 						],
-						// this might conflict between workflows
-						durableObjectStorage: { localDisk: WORKFLOWS_STORAGE_SERVICE_NAME },
+						durableObjectStorage: {
+							localDisk: `${WORKFLOWS_STORAGE_SERVICE_NAME}-${workflow.name}`,
+						},
 						bindings: [
 							{
 								name: "ENGINE",
@@ -116,7 +122,7 @@ export const WORKFLOWS_PLUGIN: Plugin<
 			return [];
 		}
 
-		return [storageService, ...services];
+		return [...storageServices, ...services];
 	},
 
 	getPersistPath({ workflowsPersist }, tmpPath) {

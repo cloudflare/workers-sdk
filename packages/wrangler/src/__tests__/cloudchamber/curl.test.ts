@@ -39,11 +39,10 @@ describe("cloudchamber curl", () => {
 			  path  [string] [required] [default: \\"/\\"]
 
 			GLOBAL FLAGS
-			  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
-			  -c, --config                    Path to .toml configuration file  [string]
-			  -e, --env                       Environment to use for operations and .env files  [string]
-			  -h, --help                      Show help  [boolean]
-			  -v, --version                   Show version number  [boolean]
+			  -c, --config   Path to Wrangler configuration file  [string]
+			  -e, --env      Environment to use for operations and .env files  [string]
+			  -h, --help     Show help  [boolean]
+			  -v, --version  Show version number  [boolean]
 
 			OPTIONS
 			      --json                Output json. Use for consistent, machine readable output.  [boolean] [default: false]
@@ -153,8 +152,8 @@ describe("cloudchamber curl", () => {
 		);
 		expect(std.err).toMatchInlineSnapshot(`""`);
 		expect(std.out).toMatchInlineSnapshot(`
-			"├ Loading account 
-			│ 
+			"├ Loading account
+			│
 			>> Body
 			[
 			    {
@@ -310,7 +309,7 @@ describe("cloudchamber curl", () => {
 			"cloudchamber curl /deployments/v2 --header something:here"
 		);
 		expect(std.err).toMatchInlineSnapshot(`""`);
-		const text = std.out.split("\n").splice(1).join("\n");
+		const text = std.out.split("\n").splice(2).join("\n");
 		const response = JSON.parse(text);
 		expect(response.status).toEqual(500);
 		expect(response.statusText).toEqual("Unhandled Exception");

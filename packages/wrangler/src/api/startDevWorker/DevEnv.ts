@@ -117,7 +117,7 @@ export class DevEnv extends EventEmitter {
 			logger.debug(`Error in ${ev.source}: ${ev.reason}\n`, ev.cause);
 			logger.debug("=> Error contextual data:", ev.data);
 		}
-		// Parse errors are recoverable by changing your `wrangler.toml` and saving
+		// Parse errors are recoverable by changing your Wrangler configuration file and saving
 		// All other errors from the ConfigController are non-recoverable
 		else if (
 			ev.source === "ConfigController" &&
@@ -133,7 +133,7 @@ export class DevEnv extends EventEmitter {
 	}
 }
 
-export function createWorkerObject(devEnv: DevEnv): Worker {
+function createWorkerObject(devEnv: DevEnv): Worker {
 	return {
 		get ready() {
 			return devEnv.proxy.ready.promise.then(() => undefined);

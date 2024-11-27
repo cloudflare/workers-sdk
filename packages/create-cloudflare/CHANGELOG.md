@@ -1,5 +1,61 @@
 # create-cloudflare
 
+## 2.33.1
+
+### Patch Changes
+
+- [#7235](https://github.com/cloudflare/workers-sdk/pull/7235) [`8246c45`](https://github.com/cloudflare/workers-sdk/commit/8246c45883cfc8092bef68a05fadf7376d1f5b5f) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency  | From  | To     |
+  | ----------- | ----- | ------ |
+  | create-qwik | 1.9.1 | 1.10.0 |
+
+- [#6410](https://github.com/cloudflare/workers-sdk/pull/6410) [`c808590`](https://github.com/cloudflare/workers-sdk/commit/c8085903678099335e91fd3d7e5d555d9f911a5b) Thanks [@stof](https://github.com/stof)! - Fix the test tsconfig file in the hello-world typescript template
+
+## 2.33.0
+
+### Minor Changes
+
+- [#6960](https://github.com/cloudflare/workers-sdk/pull/6960) [`3e52c7c`](https://github.com/cloudflare/workers-sdk/commit/3e52c7c609a1aee13830bb42e4439bf80ea30bf3) Thanks [@alan-agius4](https://github.com/alan-agius4)! - Update Angular template to version 19
+
+## 2.32.2
+
+### Patch Changes
+
+- [#6831](https://github.com/cloudflare/workers-sdk/pull/6831) [`0fe018c`](https://github.com/cloudflare/workers-sdk/commit/0fe018c7b85d767de60e9cc88f256f99f17046e3) Thanks [@Cherry](https://github.com/Cherry)! - Adds support for new upcoming bun.lock lockfile
+
+## 2.32.1
+
+### Patch Changes
+
+- [#7217](https://github.com/cloudflare/workers-sdk/pull/7217) [`f76da8d`](https://github.com/cloudflare/workers-sdk/commit/f76da8d61f0d4fa02c3de132363b95699c0a80c9) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency        | From  | To    |
+  | ----------------- | ----- | ----- |
+  | create-docusaurus | 3.6.0 | 3.6.1 |
+
+- [#7218](https://github.com/cloudflare/workers-sdk/pull/7218) [`39675b5`](https://github.com/cloudflare/workers-sdk/commit/39675b517c9f8ad35023137ca3f52fe486e25107) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency   | From   | To     |
+  | ------------ | ------ | ------ |
+  | create-remix | 2.13.1 | 2.14.0 |
+
+- [#7219](https://github.com/cloudflare/workers-sdk/pull/7219) [`287a5d0`](https://github.com/cloudflare/workers-sdk/commit/287a5d0e4d73fd1fc4e17aed5596436dbca1aae0) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | create-vue | 3.12.0 | 3.12.1 |
+
+- [#6569](https://github.com/cloudflare/workers-sdk/pull/6569) [`7be8f76`](https://github.com/cloudflare/workers-sdk/commit/7be8f763967d0f50a2cced0520db8f7a7b691fe4) Thanks [@penalosa](https://github.com/penalosa)! - Make sure `wrangler deploy` and `wrangler pages deploy` are run in an interactive context in C3, so that users are able to respond to interactive prompts
+
 ## 2.32.0
 
 ### Minor Changes

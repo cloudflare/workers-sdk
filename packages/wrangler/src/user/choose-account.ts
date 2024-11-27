@@ -1,4 +1,5 @@
 import { fetchPagedListResult } from "../cfetch";
+import { configFileName } from "../config";
 import { UserError } from "../errors";
 import { getCloudflareAccountIdFromEnv } from "./auth-variables";
 
@@ -23,7 +24,7 @@ export async function getAccountChoices(): Promise<ChooseAccountItem[]> {
 			if (accounts.length === 0) {
 				throw new UserError(
 					"Failed to automatically retrieve account IDs for the logged in user.\n" +
-						"In a non-interactive environment, it is mandatory to specify an account ID, either by assigning its value to CLOUDFLARE_ACCOUNT_ID, or as `account_id` in your `wrangler.toml` file."
+						`In a non-interactive environment, it is mandatory to specify an account ID, either by assigning its value to CLOUDFLARE_ACCOUNT_ID, or as \`account_id\` in your ${configFileName(undefined)} file.`
 				);
 			} else {
 				return accounts;
@@ -32,7 +33,7 @@ export async function getAccountChoices(): Promise<ChooseAccountItem[]> {
 			if ((err as { code: number }).code === 9109) {
 				throw new UserError(
 					`Failed to automatically retrieve account IDs for the logged in user.
-You may have incorrect permissions on your API token. You can skip this account check by adding an \`account_id\` in your \`wrangler.toml\`, or by setting the value of CLOUDFLARE_ACCOUNT_ID"`
+You may have incorrect permissions on your API token. You can skip this account check by adding an \`account_id\` in your ${configFileName(undefined)} file, or by setting the value of CLOUDFLARE_ACCOUNT_ID"`
 				);
 			} else {
 				throw err;

@@ -19,7 +19,7 @@ export type BindingsProxy<
 };
 
 /**
- * By reading from a `wrangler.toml` file this function generates proxy binding objects that can be
+ * By reading from a Wrangler configuration file this function generates proxy binding objects that can be
  * used to simulate the interaction with bindings during local development in a Node.js environment
  *
  * @deprecated use `getPlatformProxy` instead

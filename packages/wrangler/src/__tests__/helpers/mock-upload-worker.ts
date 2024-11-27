@@ -1,4 +1,5 @@
 import { http, HttpResponse } from "msw";
+import { mockGetWorkerSubdomain } from "./mock-workers-subdomain";
 import { createFetchResult, msw } from "./msw";
 import { serialize, toString } from "./serialize-form-data-entry";
 import type { WorkerMetadata } from "../../deployment-bundle/create-worker-upload-form";
@@ -10,7 +11,6 @@ import type { HttpResponseResolver } from "msw";
 /** Create a mock handler for the request to upload a worker script. */
 export function mockUploadWorkerRequest(
 	options: {
-		available_on_subdomain?: boolean;
 		expectedEntry?: string | RegExp | ((entry: string | null) => void);
 		expectedMainModule?: string;
 		expectedType?: "esm" | "sw" | "none";
@@ -50,9 +50,6 @@ export function mockUploadWorkerRequest(
 			expect(params.envName).toEqual(env);
 		}
 		if (useOldUploadApi) {
-			expect(url.searchParams.get("include_subdomain_availability")).toEqual(
-				"true"
-			);
 			expect(url.searchParams.get("excludeScript")).toEqual("true");
 		}
 		if (expectedDispatchNamespace) {
@@ -130,7 +127,6 @@ export function mockUploadWorkerRequest(
 		if (useOldUploadApi) {
 			return HttpResponse.json(
 				createFetchResult({
-					available_on_subdomain,
 					id: "abc12345",
 					etag: "etag98765",
 					pipeline_hash: "hash9999",
@@ -156,7 +152,6 @@ export function mockUploadWorkerRequest(
 	};
 
 	const {
-		available_on_subdomain = true,
 		expectedEntry,
 		expectedAssets,
 		// Allow setting expectedMainModule to undefined to test static-asset only uploads
@@ -227,25 +222,11 @@ export function mockUploadWorkerRequest(
 			)
 		);
 	}
-
-	msw.use(
-		http.get(
-			env && !legacyEnv
-				? `*/accounts/:accountId/workers/services/:scriptName/environments/:envName/subdomain`
-				: `*/accounts/:accountId/workers/scripts/:scriptName/subdomain`,
-			({ params }) => {
-				expect(params.accountId).toEqual("some-account-id");
-				expect(params.scriptName).toEqual(
-					legacyEnv && env ? `${expectedScriptName}-${env}` : expectedScriptName
-				);
-				if (!legacyEnv) {
-					expect(params.envName).toEqual(env);
-				}
-
-				return HttpResponse.json(
-					createFetchResult({ enabled: available_on_subdomain })
-				);
-			}
-		)
-	);
+	// TODO make explicit by callers?
+	mockGetWorkerSubdomain({
+		enabled: true,
+		env,
+		legacyEnv,
+		expectedScriptName,
+	});
 }

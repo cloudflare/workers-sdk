@@ -218,7 +218,7 @@ export const syncAssets = async (
 	return completionJwt;
 };
 
-export const buildAssetManifest = async (dir: string) => {
+const buildAssetManifest = async (dir: string) => {
 	const files = await readdir(dir, { recursive: true });
 	const manifest: AssetManifest = {};
 	let counter = 0;
@@ -301,7 +301,7 @@ function logAssetUpload(line: string, diffCount: number) {
  * Returns the base path of the assets to upload.
  *
  */
-export function getAssetsBasePath(
+function getAssetsBasePath(
 	config: Config,
 	assetsCommandLineArg: string | undefined
 ): string {
@@ -347,6 +347,7 @@ export function processAssetsArg(
 	const assetConfig = {
 		html_handling: config.assets?.html_handling,
 		not_found_handling: config.assets?.not_found_handling,
+		serve_directly: config.assets?.serve_directly,
 	};
 
 	return {
@@ -403,13 +404,6 @@ export function validateAssetsArgsAndConfig(
 		throw new UserError(
 			"Cannot use assets and Workers Sites in the same Worker.\n" +
 				"Please remove either the `site` or `assets` field from your configuration file."
-		);
-	}
-
-	// tail_consumers don't exist in dev, so ignore SDW here
-	if ((args.assets || config?.assets) && config?.tail_consumers?.length) {
-		throw new UserError(
-			"Cannot use assets and tail consumers in the same Worker. Tail Workers are not yet supported for Workers with assets."
 		);
 	}
 

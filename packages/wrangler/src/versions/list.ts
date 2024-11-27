@@ -1,6 +1,6 @@
 import path from "path";
 import { logRaw } from "@cloudflare/cli";
-import { findWranglerToml, readConfig } from "../config";
+import { findWranglerConfig, readConfig } from "../config";
 import { UserError } from "../errors";
 import * as metrics from "../metrics";
 import { printWranglerBanner } from "../update-check";
@@ -81,11 +81,9 @@ export async function versionsListHandler(args: VersionsListArgs) {
 	}
 }
 
-export function getConfig(
-	args: Pick<VersionsListArgs, "config" | "name" | "experimentalJsonConfig">
-) {
+export function getConfig(args: Pick<VersionsListArgs, "config" | "name">) {
 	const configPath =
-		args.config || (args.name && findWranglerToml(path.dirname(args.name)));
+		args.config || (args.name && findWranglerConfig(path.dirname(args.name)));
 	const config = readConfig(configPath, args);
 
 	return config;
@@ -103,7 +101,7 @@ export function getVersionSource(version: {
 		: formatTrigger(version.annotations["workers/triggered_by"]);
 }
 
-export function formatSource(source: string): string {
+function formatSource(source: string): string {
 	switch (source) {
 		case "api":
 			return "API 📡";
@@ -117,7 +115,7 @@ export function formatSource(source: string): string {
 			return `Other (${source})`;
 	}
 }
-export function formatTrigger(trigger: string): string {
+function formatTrigger(trigger: string): string {
 	switch (trigger) {
 		case "upload":
 			return "Upload";

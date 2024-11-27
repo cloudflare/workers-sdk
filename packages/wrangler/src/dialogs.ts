@@ -130,3 +130,47 @@ export async function select<Values extends string>(
 	});
 	return value;
 }
+
+interface MultiSelectOptions<Values> {
+	choices: SelectOption<Values>[];
+	defaultOptions?: number[];
+}
+
+export async function multiselect<Values extends string>(
+	text: string,
+	options: MultiSelectOptions<Values>
+): Promise<Values[]> {
+	if (isNonInteractiveOrCI()) {
+		if (options?.defaultOptions === undefined) {
+			throw new NoDefaultValueProvided();
+		}
+
+		const defaultTitles = options.defaultOptions.map(
+			(index) => options.choices[index].title
+		);
+		logger.log(`? ${text}`);
+
+		logger.log(
+			`🤖 ${chalk.dim(
+				"Using default value(s) in non-interactive context:"
+			)} ${chalk.white.bold(defaultTitles.join(", "))}`
+		);
+		return options.defaultOptions.map((index) => options.choices[index].value);
+	}
+	const { value } = await prompts({
+		type: "multiselect",
+		name: "value",
+		message: text,
+		choices: options.choices,
+		instructions: false,
+		hint: "- Space to select. Return to submit",
+		onState: (state) => {
+			if (state.aborted) {
+				process.nextTick(() => {
+					process.exit(1);
+				});
+			}
+		},
+	});
+	return value;
+}

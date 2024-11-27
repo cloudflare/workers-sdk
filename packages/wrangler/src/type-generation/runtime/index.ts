@@ -82,7 +82,7 @@ export async function generateRuntimeTypes({
  * Generates runtime types for Cloudflare Workers by spawning a workerd process with the type-generation
  * worker, and then making a request to that worker to fetch types.
  */
-export async function generate({
+async function generate({
 	compatibilityDate,
 	compatibilityFlags = [],
 }: {

@@ -103,7 +103,7 @@ function normalizeErrorMarkers(str: string): string {
  *
  * Use this in snapshot tests to be resilient to file-system differences.
  */
-export function normalizeSlashes(str: string): string {
+function normalizeSlashes(str: string): string {
 	return str.replace(/\\/g, "/");
 }
 
@@ -112,7 +112,7 @@ export function normalizeSlashes(str: string): string {
  *
  * Use this in snapshot tests to be resilient to slight changes in timing of processing.
  */
-export function stripTimings(stdout: string): string {
+function stripTimings(stdout: string): string {
 	return stdout
 		.replace(/\(\d+\.\d+ sec\)/g, "(TIMINGS)")
 		.replace(/\d+ ms/g, "(TIMINGS)");
@@ -123,7 +123,7 @@ export function stripTimings(stdout: string): string {
  *
  * Use this in snapshot tests to be resilient to slight changes in timing of processing.
  */
-export function npmStripTimings(stdout: string): string {
+function npmStripTimings(stdout: string): string {
 	return stdout
 		.replace(
 			/added \d+ packages, and audited \d+ packages in [\dms]+/,
@@ -135,7 +135,7 @@ export function npmStripTimings(stdout: string): string {
 		);
 }
 
-export function stripTrailingWhitespace(str: string): string {
+function stripTrailingWhitespace(str: string): string {
 	return str.replace(/[^\S\n]+\n/g, "\n");
 }
 
@@ -150,14 +150,14 @@ function replaceByte(stdout: string): string {
 /**
  * Temp directories are created with random names, so we replace all comments temp dirs in them
  */
-export function normalizeTempDirs(stdout: string): string {
+function normalizeTempDirs(stdout: string): string {
 	return stdout.replaceAll(/\/\/.+\/wrangler-smoke-.+/g, "//tmpdir");
 }
 
 /**
  * Debug log files are created with a timestamp, so we replace the debug log filepath timestamp with <TIMESTAMP>
  */
-export function normalizeDebugLogFilepath(stdout: string): string {
+function normalizeDebugLogFilepath(stdout: string): string {
 	return stdout
 		.replace(/🪵 {2}Writing logs to ".+\.log"/, '🪵  Writing logs to "<LOG>"')
 		.replace(
@@ -169,7 +169,7 @@ export function normalizeDebugLogFilepath(stdout: string): string {
 /**
  * Squash the one or more local network bindings from `$ wrangler dev`
  */
-export function removeLocalPort(stdout: string): string {
+function removeLocalPort(stdout: string): string {
 	return stdout.replace(
 		/\[wrangler:inf\] Ready on (https?):\/\/(.+):\d{4,5}/,
 		"[wrangler:inf] Ready on $1://$2:<PORT>"

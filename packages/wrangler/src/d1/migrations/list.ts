@@ -1,6 +1,6 @@
 import path from "path";
 import { printWranglerBanner } from "../..";
-import { withConfig } from "../../config";
+import { configFileName, withConfig } from "../../config";
 import { UserError } from "../../errors";
 import { logger } from "../../logger";
 import { requireAuth } from "../../user";
@@ -40,7 +40,7 @@ export const ListHandler = withConfig<ListHandlerOptions>(
 		const databaseInfo = getDatabaseInfoFromConfig(config, database);
 		if (!databaseInfo && remote) {
 			throw new UserError(
-				`Couldn't find a D1 DB with the name or binding '${database}' in wrangler.toml.`
+				`Couldn't find a D1 DB with the name or binding '${database}' in your ${configFileName(config.configPath)} file.`
 			);
 		}
 
@@ -53,6 +53,7 @@ export const ListHandler = withConfig<ListHandlerOptions>(
 			migrationsFolderPath:
 				databaseInfo?.migrationsFolderPath ?? DEFAULT_MIGRATION_PATH,
 			createIfMissing: false,
+			configPath: config.configPath,
 		});
 
 		const migrationsTableName =
