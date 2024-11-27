@@ -17,7 +17,7 @@
 To get started quickly with a new project, run the command below and follow the interactive instructions:
 
 ```bash
-npx wrangler init my-worker
+npx wrangler init my-worker -y
 ```
 
 For more info, visit our [Getting Started](https://developers.cloudflare.com/workers/get-started/guide/) guide.
