@@ -3,7 +3,7 @@ import { logger } from "./logger";
 
 type ExperimentalFlags = {
 	FILE_BASED_REGISTRY: boolean;
-	RESOURCES_PROVISION: boolean | undefined;
+	RESOURCES_PROVISION: boolean;
 };
 
 const flags = new AsyncLocalStorage<ExperimentalFlags>();

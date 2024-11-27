@@ -238,7 +238,7 @@ export async function deployHandler(args: DeployArgs) {
 	await run(
 		{
 			FILE_BASED_REGISTRY: false,
-			RESOURCES_PROVISION: args.experimentalProvision,
+			RESOURCES_PROVISION: args.experimentalProvision ?? false,
 		},
 		() => deployWorker(args)
 	);
