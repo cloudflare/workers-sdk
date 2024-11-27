@@ -207,7 +207,11 @@ export function findWranglerConfig(
 	);
 }
 
-function addLocalSuffix(id: string, local: boolean = false) {
+function addLocalSuffix(id: string | undefined, local: boolean = false) {
+	if (!id) {
+		return local ? "(local)" : "(remote)";
+	}
+
 	return `${id}${local ? " (local)" : ""}`;
 }
 
@@ -401,13 +405,14 @@ export function printBindings(
 			name: friendlyBindingNames.d1_databases,
 			entries: d1_databases.map(
 				({ binding, database_name, database_id, preview_database_id }) => {
-					let databaseValue = `${database_id}`;
-					if (database_name) {
-						databaseValue = `${database_name} (${database_id})`;
-					}
+					let databaseValue =
+						database_id && database_name
+							? `${database_name} (${database_id})`
+							: database_id ?? database_name;
+
 					//database_id is local when running `wrangler dev --local`
 					if (preview_database_id && database_id !== "local") {
-						databaseValue += `, Preview: (${preview_database_id})`;
+						databaseValue = `${databaseValue ? `${databaseValue}, ` : ""}Preview: (${preview_database_id})`;
 					}
 					return {
 						key: binding,

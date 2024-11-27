@@ -34,7 +34,7 @@ export interface UnstableDevOptions {
 	vars?: Record<string, string | Json>;
 	kv?: {
 		binding: string;
-		id: string;
+		id?: string;
 		preview_id?: string;
 	}[];
 	durableObjects?: {
@@ -51,7 +51,7 @@ export interface UnstableDevOptions {
 	}[];
 	r2?: {
 		binding: string;
-		bucket_name: string;
+		bucket_name?: string;
 		preview_bucket_name?: string;
 	}[];
 	ai?: {
