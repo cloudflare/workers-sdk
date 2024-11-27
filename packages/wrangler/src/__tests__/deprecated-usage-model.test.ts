@@ -39,7 +39,9 @@ describe("deprecated-usage-model", () => {
 		await runWrangler("deploy ./index");
 
 		expect(std.warn).toMatchInlineSnapshot(`
-			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`usage_model\` defined in your wrangler.toml file is deprecated and no longer used. Visit our developer docs for details: https://developers.cloudflare.com/workers/wrangler/configuration/#usage-model[0m
+			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
+
+			    - Unexpected fields found in top-level field: \\"usage_model\\"
 
 			"
 		`);

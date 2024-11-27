@@ -861,7 +861,7 @@ describe("middleware", () => {
 			`,
 			});
 
-			await runWrangler("publish --dry-run --outdir dist");
+			await runWrangler("deploy --dry-run --outdir dist");
 
 			const fileContents = await readFile("dist/index.js", "utf8");
 			expect(

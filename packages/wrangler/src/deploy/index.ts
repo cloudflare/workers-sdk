@@ -221,13 +221,6 @@ export type DeployArgs = StrictYargsOptionsToInterface<typeof deployOptions>;
 export async function deployHandler(args: DeployArgs) {
 	await printWranglerBanner();
 
-	// Check for deprecated `wrangler publish` command
-	if (args._[0] === "publish") {
-		logger.warn(
-			"`wrangler publish` is deprecated and will be removed in the next major version.\nPlease use `wrangler deploy` instead, which accepts exactly the same arguments."
-		);
-	}
-
 	if (args.legacyAssets) {
 		logger.warn(
 			`The --legacy-assets argument has been deprecated. Please use --assets instead.\n` +

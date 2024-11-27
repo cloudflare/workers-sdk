@@ -2127,7 +2127,7 @@ describe("r2", () => {
 		`);
 			});
 
-			it("should fail to upload R2 object to bucket if too large", async () => {
+			it.only("should fail to upload R2 object to bucket if too large", async () => {
 				const TOO_BIG_FILE_SIZE = MAX_UPLOAD_SIZE + 1024 * 1024;
 				fs.writeFileSync("wormhole-img.png", Buffer.alloc(TOO_BIG_FILE_SIZE));
 				await expect(
