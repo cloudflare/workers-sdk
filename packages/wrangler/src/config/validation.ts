@@ -2,6 +2,7 @@ import assert from "node:assert";
 import path from "node:path";
 import TOML from "@iarna/toml";
 import { dedent } from "ts-dedent";
+import { getFlag } from "../experimental-flags";
 import { Diagnostics } from "./diagnostics";
 import {
 	all,
@@ -2433,8 +2434,10 @@ const validateKVBinding: ValidatorFn = (diagnostics, field, value) => {
 		isValid = false;
 	}
 	if (
-		!isRequiredProperty(value, "id", "string") ||
-		(value as { id: string }).id.length === 0
+		getFlag("RESOURCES_PROVISION")
+			? !isOptionalProperty(value, "id", "string") ||
+				(value.id !== undefined && value.id.length === 0)
+			: !isRequiredProperty(value, "id", "string") || value.id.length === 0
 	) {
 		diagnostics.errors.push(
 			`"${field}" bindings should have a string "id" field but got ${JSON.stringify(
@@ -2595,8 +2598,11 @@ const validateR2Binding: ValidatorFn = (diagnostics, field, value) => {
 		isValid = false;
 	}
 	if (
-		!isRequiredProperty(value, "bucket_name", "string") ||
-		(value as { bucket_name: string }).bucket_name.length === 0
+		getFlag("RESOURCES_PROVISION")
+			? !isOptionalProperty(value, "bucket_id", "string") ||
+				(value.bucket_id !== undefined && value.bucket_id.length === 0)
+			: !isRequiredProperty(value, "bucket_name", "string") ||
+				value.bucket_name.length === 0
 	) {
 		diagnostics.errors.push(
 			`"${field}" bindings should have a string "bucket_name" field but got ${JSON.stringify(
@@ -2653,9 +2659,11 @@ const validateD1Binding: ValidatorFn = (diagnostics, field, value) => {
 		isValid = false;
 	}
 	if (
-		// TODO: allow name only, where we look up the ID dynamically
-		// !isOptionalProperty(value, "database_name", "string") &&
-		!isRequiredProperty(value, "database_id", "string")
+		getFlag("RESOURCES_PROVISION")
+			? !isOptionalProperty(value, "database_id", "string")
+			: // TODO: allow name only, where we look up the ID dynamically
+				// !isOptionalProperty(value, "database_name", "string") &&
+				!isRequiredProperty(value, "database_id", "string")
 	) {
 		diagnostics.errors.push(
 			`"${field}" bindings must have a "database_id" field but got ${JSON.stringify(
