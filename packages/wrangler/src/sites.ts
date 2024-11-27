@@ -454,50 +454,6 @@ export interface LegacyAssetPaths {
 }
 
 /**
- * Get an object that describes what assets to upload, if any.
- *
- * Uses the args (passed from the command line) if available,
- * falling back to those defined in the config.
- *
- * (This function corresponds to --legacy-assets/config.assets)
- *
- */
-export function getLegacyAssetPaths(
-	config: Config,
-	assetDirectory: string | undefined
-): LegacyAssetPaths | undefined {
-	const baseDirectory = assetDirectory
-		? process.cwd()
-		: path.resolve(path.dirname(config.configPath ?? "wrangler.toml"));
-
-	assetDirectory ??=
-		typeof config.legacy_assets === "string"
-			? config.legacy_assets
-			: config.legacy_assets !== undefined
-				? config.legacy_assets.bucket
-				: undefined;
-
-	const includePatterns =
-		(typeof config.legacy_assets !== "string" &&
-			config.legacy_assets?.include) ||
-		[];
-
-	const excludePatterns =
-		(typeof config.legacy_assets !== "string" &&
-			config.legacy_assets?.exclude) ||
-		[];
-
-	return assetDirectory
-		? {
-				baseDirectory,
-				assetDirectory,
-				includePatterns,
-				excludePatterns,
-			}
-		: undefined;
-}
-
-/**
  * Get an object that describes what site assets to upload, if any.
  *
  * Uses the args (passed from the command line) if available,

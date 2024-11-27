@@ -114,24 +114,6 @@ export interface ConfigFields<Dev extends RawDevConfig> {
 		| undefined;
 
 	/**
-	 * Old behaviour of serving a folder of static assets with your Worker,
-	 * without any additional code.
-	 * This can either be a string, or an object with additional config
-	 * fields.
-	 * Will be deprecated in the near future in favor of `assets`.
-	 */
-	legacy_assets:
-		| {
-				bucket: string;
-				include: string[];
-				exclude: string[];
-				browser_TTL: number | undefined;
-				serve_single_page_app: boolean;
-		  }
-		| string
-		| undefined;
-
-	/**
 	 * A list of wasm modules that your worker should be bound to. This is
 	 * the "legacy" way of binding to a wasm module. ES module workers should
 	 * do proper module imports.
@@ -314,7 +296,6 @@ export const defaultWranglerConfig: Config = {
 	configPath: undefined,
 	legacy_env: true,
 	site: undefined,
-	legacy_assets: undefined,
 	wasm_modules: undefined,
 	text_blobs: undefined,
 	data_blobs: undefined,

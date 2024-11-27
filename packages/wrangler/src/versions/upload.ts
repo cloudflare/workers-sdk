@@ -299,7 +299,6 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 						bundle: true,
 						additionalModules: [],
 						moduleCollector,
-						serveLegacyAssetsFromWorker: false,
 						doBindings: config.durable_objects.bindings,
 						workflowBindings: config.workflows,
 						jsxFactory,
@@ -311,10 +310,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 						define: { ...config.define, ...props.defines },
 						alias: { ...config.alias, ...props.alias },
 						checkFetch: false,
-						legacyAssets: config.legacy_assets,
 						mockAnalyticsEngineDatasets: [],
-						// enable the cache when publishing
-						bypassAssetCache: false,
 						// We want to know if the build is for development or publishing
 						// This could potentially cause issues as we no longer have identical behaviour between dev and deploy?
 						targetConsumer: "deploy",

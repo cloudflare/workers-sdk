@@ -81,13 +81,6 @@ function versionsUploadOptions(yargs: CommonYargsArgv) {
 				type: "string",
 				requiresArg: true,
 			})
-			.option("legacy-assets", {
-				describe: "Static assets to be served",
-				type: "string",
-				requiresArg: true,
-				deprecated: true,
-				hidden: true,
-			})
 			.option("site", {
 				describe: "Root folder of static assets for Workers Sites",
 				type: "string",
@@ -205,11 +198,6 @@ async function versionsUploadHandler(
 			"Workers Sites does not support uploading versions through `wrangler versions upload`. You must use `wrangler deploy` instead."
 		);
 	}
-	if (args.legacyAssets || config.legacy_assets) {
-		throw new UserError(
-			"Legacy assets does not support uploading versions through `wrangler versions upload`. You must use `wrangler deploy` instead."
-		);
-	}
 
 	if (config.workflows?.length) {
 		logger.once.warn("Workflows is currently in open beta.");
@@ -220,7 +208,6 @@ async function versionsUploadHandler(
 			// given that legacyAssets and sites are not supported by
 			// `wrangler versions upload` pass them as undefined to
 			// skip the corresponding mutual exclusivity validation
-			legacyAssets: undefined,
 			site: undefined,
 			assets: args.assets,
 			script: args.script,

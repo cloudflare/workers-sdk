@@ -218,14 +218,6 @@ export function normalizeAndValidateConfig(
 		}
 	}
 
-	deprecated(
-		diagnostics,
-		rawConfig,
-		"legacy_assets",
-		`The \`legacy_assets\` feature has been deprecated. Please use \`assets\` instead.`,
-		false
-	);
-
 	// Process the top-level default environment configuration.
 	const config: Config = {
 		configPath,
@@ -243,11 +235,6 @@ export function normalizeAndValidateConfig(
 			configPath,
 			rawConfig,
 			activeEnv.main
-		),
-		legacy_assets: normalizeAndValidateLegacyAssets(
-			diagnostics,
-			configPath,
-			rawConfig
 		),
 		alias: normalizeAndValidateAliases(diagnostics, configPath, rawConfig),
 		wasm_modules: normalizeAndValidateModulePaths(
@@ -586,91 +573,6 @@ function normalizeAndValidateAliases(
 	}
 
 	return;
-}
-
-/**
- * Validate the `legacy_assets` configuration and return normalized values.
- */
-function normalizeAndValidateLegacyAssets(
-	diagnostics: Diagnostics,
-	configPath: string | undefined,
-	rawConfig: RawConfig
-): Config["legacy_assets"] {
-	const legacyAssetsConfig = rawConfig["legacy_assets"];
-
-	// Even though the type doesn't say it,
-	// we allow for a string input in the config,
-	// so let's normalise it
-	if (typeof legacyAssetsConfig === "string") {
-		return {
-			bucket: legacyAssetsConfig,
-			include: [],
-			exclude: [],
-			browser_TTL: undefined,
-			serve_single_page_app: false,
-		};
-	}
-
-	if (legacyAssetsConfig === undefined) {
-		return undefined;
-	}
-
-	if (typeof legacyAssetsConfig !== "object") {
-		diagnostics.errors.push(
-			`Expected the \`legacy_assets\` field to be a string or an object, but got ${typeof legacyAssetsConfig}.`
-		);
-		return undefined;
-	}
-
-	const {
-		bucket,
-		include = [],
-		exclude = [],
-		browser_TTL,
-		serve_single_page_app,
-		...rest
-	} = legacyAssetsConfig;
-
-	validateAdditionalProperties(
-		diagnostics,
-		"legacy_assets",
-		Object.keys(rest),
-		[]
-	);
-
-	validateRequiredProperty(
-		diagnostics,
-		"legacy_assets",
-		"bucket",
-		bucket,
-		"string"
-	);
-	validateTypedArray(diagnostics, `legacy_assets.include`, include, "string");
-	validateTypedArray(diagnostics, `legacy_assets.exclude`, exclude, "string");
-
-	validateOptionalProperty(
-		diagnostics,
-		"legacy_assets",
-		"browser_TTL",
-		browser_TTL,
-		"number"
-	);
-
-	validateOptionalProperty(
-		diagnostics,
-		"legacy_assets",
-		"serve_single_page_app",
-		serve_single_page_app,
-		"boolean"
-	);
-
-	return {
-		bucket,
-		include,
-		exclude,
-		browser_TTL,
-		serve_single_page_app,
-	};
 }
 
 /**

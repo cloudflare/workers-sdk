@@ -14,7 +14,7 @@ import { logger } from "../logger";
 import { verifyWorkerMatchesCITag } from "../match-tag";
 import * as metrics from "../metrics";
 import { writeOutput } from "../output";
-import { getLegacyAssetPaths, getSiteAssetPaths } from "../sites";
+import { getSiteAssetPaths } from "../sites";
 import { requireAuth } from "../user";
 import { collectKeyValues } from "../utils/collectKeyValues";
 import deploy from "./deploy";
@@ -76,27 +76,6 @@ export function deployOptions(yargs: CommonYargsArgv) {
 				describe: "Static assets to be served. Replaces Workers Sites.",
 				type: "string",
 				requiresArg: true,
-			})
-			.option("experimental-public", {
-				describe: "(Deprecated) Static assets to be served",
-				type: "string",
-				requiresArg: true,
-				deprecated: true,
-				hidden: true,
-			})
-			.option("public", {
-				describe: "(Deprecated) Static assets to be served",
-				type: "string",
-				requiresArg: true,
-				deprecated: true,
-				hidden: true,
-			})
-			.option("legacy-assets", {
-				describe: "Static assets to be served",
-				type: "string",
-				requiresArg: true,
-				deprecated: true,
-				hidden: true,
 			})
 			.option("site", {
 				describe: "Root folder of static assets for Workers Sites",
@@ -221,13 +200,6 @@ export type DeployArgs = StrictYargsOptionsToInterface<typeof deployOptions>;
 export async function deployHandler(args: DeployArgs) {
 	await printWranglerBanner();
 
-	if (args.legacyAssets) {
-		logger.warn(
-			`The --legacy-assets argument has been deprecated. Please use --assets instead.\n` +
-				`To learn more about Workers with assets, visit our documentation at https://developers.cloudflare.com/workers/frameworks/.`
-		);
-	}
-
 	const configPath =
 		args.config ||
 		(args.script && findWranglerConfig(path.dirname(args.script)));
@@ -241,26 +213,6 @@ export async function deployHandler(args: DeployArgs) {
 	}
 
 	const entry = await getEntry(args, config, "deploy");
-
-	if (args.public) {
-		throw new UserError(
-			"The --public field has been deprecated, try --legacy-assets instead."
-		);
-	}
-	if (args.experimentalPublic) {
-		throw new UserError(
-			"The --experimental-public field has been deprecated, try --legacy-assets instead."
-		);
-	}
-
-	if (
-		(args.legacyAssets || config.legacy_assets) &&
-		(args.site || config.site)
-	) {
-		throw new UserError(
-			"Cannot use legacy assets and Workers Sites in the same Worker."
-		);
-	}
 
 	if (config.workflows?.length) {
 		logger.once.warn("Workflows is currently in open beta.");
@@ -282,15 +234,12 @@ export async function deployHandler(args: DeployArgs) {
 
 	const accountId = args.dryRun ? undefined : await requireAuth(config);
 
-	const legacyAssetPaths =
-		args.legacyAssets || config.legacy_assets
-			? getLegacyAssetPaths(config, args.legacyAssets)
-			: getSiteAssetPaths(
-					config,
-					args.site,
-					args.siteInclude,
-					args.siteExclude
-				);
+	const siteAssetPaths = getSiteAssetPaths(
+		config,
+		args.site,
+		args.siteInclude,
+		args.siteExclude
+	);
 
 	const beforeUpload = Date.now();
 	const name = getScriptName(args, config);
@@ -327,7 +276,7 @@ export async function deployHandler(args: DeployArgs) {
 		tsconfig: args.tsconfig,
 		routes: args.routes,
 		assetsOptions,
-		legacyAssetPaths,
+		legacyAssetPaths: siteAssetPaths,
 		legacyEnv: isLegacyEnv(config),
 		minify: args.minify,
 		nodeCompat: args.nodeCompat,
