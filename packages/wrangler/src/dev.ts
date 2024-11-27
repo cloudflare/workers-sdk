@@ -26,7 +26,6 @@ import { UserError } from "./errors";
 import { run } from "./experimental-flags";
 import isInteractive from "./is-interactive";
 import { logger } from "./logger";
-import * as metrics from "./metrics";
 import { getLegacyAssetPaths, getSiteAssetPaths } from "./sites";
 import { loginOrRefreshIfRequired, requireApiToken, requireAuth } from "./user";
 import {
@@ -815,20 +814,6 @@ export async function startDev(args: StartDevOptions) {
 
 			await setupDevEnv(devEnv, configPath, authHook, args);
 		}
-
-		void metrics.sendMetricsEvent(
-			"run dev",
-			{
-				local: !args.remote,
-				// usesTypeScript: /\.tsx?$/.test(
-				// 	devEnv.config.latestConfig?.entrypoint as string
-				// ),
-			},
-			{
-				// sendMetrics: devEnv.config.latestConfig?.sendMetrics,
-				offline: !args.remote,
-			}
-		);
 
 		return {
 			devEnv: Array.isArray(devEnv) ? devEnv[0] : devEnv,
