@@ -1,6 +1,7 @@
 import path from "node:path";
 import { readConfig } from "../config";
 import { normalizeAndValidateConfig } from "../config/validation";
+import { run } from "../experimental-flags";
 import { normalizeString } from "./helpers/normalize";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { writeWranglerConfig } from "./helpers/write-wrangler-config";
@@ -2324,6 +2325,26 @@ describe("normalizeAndValidateConfig()", () => {
 			            - \\"kv_namespaces[4]\\" bindings should have a string \\"id\\" field but got {\\"binding\\":\\"VALID\\",\\"id\\":\\"\\"}."
 		        `);
 			});
+
+			it("should allow the id field to be omitted when the RESOURCES_PROVISION experimental flag is enabled", () => {
+				const { diagnostics } = run(
+					{
+						RESOURCES_PROVISION: true,
+						FILE_BASED_REGISTRY: false,
+					},
+					() =>
+						normalizeAndValidateConfig(
+							{
+								kv_namespaces: [{ binding: "VALID" }],
+							} as unknown as RawConfig,
+							undefined,
+							{ env: undefined }
+						)
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(false);
+			});
 		});
 
 		it("should error if send_email.bindings are not valid", () => {
@@ -2451,6 +2472,26 @@ describe("normalizeAndValidateConfig()", () => {
 			  - \\"d1_databases[3]\\" bindings must have a \\"database_id\\" field but got {\\"binding\\":\\"D1_BINDING_2\\",\\"id\\":\\"my-db\\",\\"preview_id\\":2222}.
 			  - \\"d1_databases[4]\\" bindings must have a \\"database_id\\" field but got {\\"binding\\":\\"VALID\\",\\"id\\":\\"\\"}."
 		`);
+			});
+
+			it("should allow the database_id field to be omitted when the RESOURCES_PROVISION experimental flag is enabled", () => {
+				const { diagnostics } = run(
+					{
+						RESOURCES_PROVISION: true,
+						FILE_BASED_REGISTRY: false,
+					},
+					() =>
+						normalizeAndValidateConfig(
+							{
+								d1_databases: [{ binding: "VALID" }],
+							} as unknown as RawConfig,
+							undefined,
+							{ env: undefined }
+						)
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(false);
 			});
 		});
 
@@ -2745,6 +2786,26 @@ describe("normalizeAndValidateConfig()", () => {
 			            - \\"r2_buckets[3]\\" bindings should, optionally, have a string \\"preview_bucket_name\\" field but got {\\"binding\\":\\"R2_BINDING_2\\",\\"bucket_name\\":\\"R2_BUCKET_2\\",\\"preview_bucket_name\\":2555}.
 			            - \\"r2_buckets[4]\\" bindings should have a string \\"bucket_name\\" field but got {\\"binding\\":\\"R2_BINDING_1\\",\\"bucket_name\\":\\"\\"}."
 		        `);
+			});
+
+			it("should allow the bucket_name field to be omitted when the RESOURCES_PROVISION experimental flag is enabled", () => {
+				const { diagnostics } = run(
+					{
+						RESOURCES_PROVISION: true,
+						FILE_BASED_REGISTRY: false,
+					},
+					() =>
+						normalizeAndValidateConfig(
+							{
+								d1_databases: [{ binding: "VALID" }],
+							} as unknown as RawConfig,
+							undefined,
+							{ env: undefined }
+						)
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(false);
 			});
 		});
 
