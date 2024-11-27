@@ -241,6 +241,10 @@ export function createModuleCollector(props: {
 						build.onResolve(
 							{ filter: globToRegExp(glob) },
 							async (args: esbuild.OnResolveArgs) => {
+								if (args.pluginData?.skip) {
+									return;
+								}
+
 								// take the file and massage it to a
 								// transportable/manageable format
 
@@ -264,9 +268,16 @@ export function createModuleCollector(props: {
 								// and if so, validate the import against the package.json exports
 								// and resolve the file path to the correct file.
 								try {
-									filePath = require.resolve(args.path, {
-										paths: [args.resolveDir],
+									const resolved = await build.resolve(args.path, {
+										kind: "import-statement",
+										resolveDir: args.resolveDir,
+										pluginData: {
+											skip: true,
+										},
 									});
+									if (resolved.path) {
+										filePath = resolved.path;
+									}
 								} catch (ex) {
 									// We tried, now it'll just fall-through to the previous behaviour
 									// and ENOENT if the absolute file path doesn't exist.
