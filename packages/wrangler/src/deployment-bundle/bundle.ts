@@ -315,7 +315,7 @@ export async function bundleWorker(
 			path: "templates/middleware/middleware-patch-console-prefix.ts",
 			supports: ["modules", "service-worker"],
 			config: {
-				prefix: JSON.stringify(chalk.blue(`[${entry.name}]`)),
+				prefix: chalk.blue(`[${entry.name}]`),
 			},
 		});
 	}

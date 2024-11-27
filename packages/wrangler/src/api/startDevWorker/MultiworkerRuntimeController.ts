@@ -197,4 +197,20 @@ export class MultiworkerRuntimeController extends LocalRuntimeController {
 
 		void this.#mutex.runWith(() => this.#onBundleComplete(data, id));
 	}
+
+	#teardown = async (): Promise<void> => {
+		logger.debug("MultiworkerRuntimeController teardown beginning...");
+
+		if (this.#mf) {
+			logger.log(chalk.dim("⎔ Shutting down local server..."));
+		}
+
+		await this.#mf?.dispose();
+		this.#mf = undefined;
+
+		logger.debug("MultiworkerRuntimeController teardown complete");
+	};
+	async teardown() {
+		return this.#mutex.runWith(this.#teardown);
+	}
 }
