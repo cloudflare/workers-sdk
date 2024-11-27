@@ -4,6 +4,7 @@ import { logger } from "./logger";
 type ExperimentalFlags = {
 	FILE_BASED_REGISTRY: boolean;
 	MULTIWORKER: boolean;
+	RESOURCES_PROVISION: boolean;
 };
 
 const flags = new AsyncLocalStorage<ExperimentalFlags>();

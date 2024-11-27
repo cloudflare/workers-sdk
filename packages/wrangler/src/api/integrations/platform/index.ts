@@ -104,6 +104,7 @@ export async function getPlatformProxy<
 		{
 			FILE_BASED_REGISTRY: Boolean(options.experimentalRegistry ?? true),
 			MULTIWORKER: false,
+			RESOURCES_PROVISION: false,
 		},
 		() => getMiniflareOptionsFromConfig(rawConfig, env, options)
 	);

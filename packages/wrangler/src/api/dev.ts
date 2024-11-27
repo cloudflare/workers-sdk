@@ -217,6 +217,7 @@ export async function unstable_dev(
 		...options,
 		logLevel: options?.logLevel ?? defaultLogLevel,
 		port: options?.port ?? 0,
+		experimentalProvision: undefined,
 		experimentalVersions: undefined,
 		experimentalDevEnv: undefined,
 		experimentalRegistry: fileBasedRegistry,
@@ -230,6 +231,7 @@ export async function unstable_dev(
 			FILE_BASED_REGISTRY: fileBasedRegistry,
 			// TODO: can we make this work?
 			MULTIWORKER: false,
+			RESOURCES_PROVISION: false,
 		},
 		() => startDev(devOptions)
 	);

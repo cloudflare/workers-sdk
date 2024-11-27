@@ -39,7 +39,7 @@ jobs:
       - name: "Download runtime versions"
         # Regular `actions/download-artifact` doesn't support downloading
         # artifacts from another workflow
-        uses: dawidd6/action-download-artifact@v2
+        uses: dawidd6/action-download-artifact@v6
         with:
           run_id: ${{ github.event.workflow_run.id }}
           name: runtime-versions.md
@@ -54,7 +54,7 @@ jobs:
           } >> "$GITHUB_ENV"
 
       - name: "Download pre-release report"
-        uses: dawidd6/action-download-artifact@v2
+        uses: dawidd6/action-download-artifact@v6
         with:
           run_id: ${{ github.event.workflow_run.id }}
           name: prerelease-report.md

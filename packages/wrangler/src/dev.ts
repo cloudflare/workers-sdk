@@ -377,6 +377,7 @@ const command = defineCommand({
 			{
 				FILE_BASED_REGISTRY: args.experimentalRegistry,
 				MULTIWORKER: Array.isArray(args.config),
+				RESOURCES_PROVISION: false,
 			},
 			() => startDev(args)
 		);
