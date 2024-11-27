@@ -239,6 +239,7 @@ export async function deployHandler(args: DeployArgs) {
 		{
 			FILE_BASED_REGISTRY: false,
 			RESOURCES_PROVISION: args.experimentalProvision ?? false,
+			MULTIWORKER: false,
 		},
 		() => deployWorker(args)
 	);
