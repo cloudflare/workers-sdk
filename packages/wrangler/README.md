@@ -14,7 +14,7 @@
 
 ## Quick Start
 
-To get started quickly with a new project, run the command below and follow the interactive instructions:
+To get started quickly with a Hello World worker, run the command below:
 
 ```bash
 npx wrangler init my-worker -y
