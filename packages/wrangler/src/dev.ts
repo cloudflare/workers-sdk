@@ -368,6 +368,7 @@ const command = defineCommand({
 		const devInstance = await run(
 			{
 				FILE_BASED_REGISTRY: args.experimentalRegistry,
+				RESOURCES_PROVISION: false,
 			},
 			() => startDev(args)
 		);
