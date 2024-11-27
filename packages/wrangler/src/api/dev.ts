@@ -229,6 +229,7 @@ export async function unstable_dev(
 	const devServer = await run(
 		{
 			FILE_BASED_REGISTRY: fileBasedRegistry,
+			RESOURCES_PROVISION: false,
 		},
 		() => startDev(devOptions)
 	);

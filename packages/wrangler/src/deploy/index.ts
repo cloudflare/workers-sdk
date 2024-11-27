@@ -237,7 +237,8 @@ export type DeployArgs = StrictYargsOptionsToInterface<typeof deployOptions>;
 export async function deployHandler(args: DeployArgs) {
 	await run(
 		{
-			RESOURCES_PROVISION: args.experimentalProvision,
+			FILE_BASED_REGISTRY: false,
+			RESOURCES_PROVISION: args.experimentalProvision ?? false,
 		},
 		() => deployWorker(args)
 	);

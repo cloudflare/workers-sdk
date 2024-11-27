@@ -2,8 +2,8 @@ import { AsyncLocalStorage } from "async_hooks";
 import { logger } from "./logger";
 
 type ExperimentalFlags = {
-	FILE_BASED_REGISTRY?: boolean;
-	RESOURCES_PROVISION?: boolean;
+	FILE_BASED_REGISTRY: boolean;
+	RESOURCES_PROVISION: boolean;
 };
 
 const flags = new AsyncLocalStorage<ExperimentalFlags>();
