@@ -40,7 +40,7 @@ jobs:
       - name: "Checkout PR"
         run: gh pr checkout ${{ inputs.pr-number }} -b run-ci-on-behalf-of-${{ inputs.pr-number }} -f
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
 
       - name: Push Branch
         run: git push origin HEAD --force
@@ -49,4 +49,4 @@ jobs:
         run: |
           gh pr create --head run-ci-on-behalf-of-${{ inputs.pr-number }} --draft --label "e2e" --title "Run CI on behalf of #${{ inputs.pr-number }}" --body "This PR is created to run CI on behalf of \#${{ inputs.pr-number }}. It can be closed after the CI run is complete."
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
