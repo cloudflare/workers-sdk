@@ -263,7 +263,7 @@ export function createCLIParser(argv: string[]) {
 			return true;
 		})
 		.option("experimental-provision", {
-			describe: `Automatic resources provision`,
+			describe: `Experimental: Enable automatic resource provisioning`,
 			type: "boolean",
 			hidden: true,
 			alias: ["x-provision"],
