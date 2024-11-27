@@ -194,6 +194,7 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 	const assetConfig = {
 		html_handling: assets?.assetConfig?.html_handling,
 		not_found_handling: assets?.assetConfig?.not_found_handling,
+		serve_directly: assets?.assetConfig?.serve_directly,
 	};
 
 	// short circuit if static assets upload only
