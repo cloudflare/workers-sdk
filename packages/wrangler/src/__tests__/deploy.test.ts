@@ -5135,7 +5135,7 @@ addEventListener('fetch', event => {});`
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should not try to enable the workers.dev domain if it has been enabled before", async () => {
+		it("should not try to enable the workers.dev domain if it has been enabled before and previews are in sync", async () => {
 			writeWranglerConfig({
 				workers_dev: true,
 			});
@@ -5143,6 +5143,53 @@ addEventListener('fetch', event => {});`
 			mockUploadWorkerRequest();
 			mockGetWorkerSubdomain({ enabled: true });
 			mockSubDomainRequest();
+
+			await runWrangler("deploy ./index");
+
+			expect(std.out).toMatchInlineSnapshot(`
+				"Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
+			expect(std.err).toMatchInlineSnapshot(`""`);
+		});
+
+		it("should sync the workers.dev domain if it has been enabled before but previews should be enabled", async () => {
+			writeWranglerConfig({
+				workers_dev: true,
+			});
+			writeWorkerSource();
+			mockUploadWorkerRequest();
+			mockGetWorkerSubdomain({ enabled: true, previews_enabled: false });
+			mockSubDomainRequest();
+			mockUpdateWorkerSubdomain({ enabled: true, previews_enabled: true });
+
+			await runWrangler("deploy ./index");
+
+			expect(std.out).toMatchInlineSnapshot(`
+				"Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
+			expect(std.err).toMatchInlineSnapshot(`""`);
+		});
+
+		it("should sync the workers.dev domain if it has been enabled before but previews should be enabled", async () => {
+			writeWranglerConfig({
+				workers_dev: true,
+				preview_urls: false,
+			});
+			writeWorkerSource();
+			mockUploadWorkerRequest();
+			mockGetWorkerSubdomain({ enabled: true, previews_enabled: true });
+			mockSubDomainRequest();
+			mockUpdateWorkerSubdomain({ enabled: true, previews_enabled: false });
 
 			await runWrangler("deploy ./index");
 
@@ -5178,7 +5225,7 @@ addEventListener('fetch', event => {});`
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should not try to disable the workers.dev domain if it is not already available", async () => {
+		it("should not try to disable the workers.dev domain if it is not already available and previews are in sync", async () => {
 			writeWranglerConfig({
 				workers_dev: false,
 			});
@@ -5187,6 +5234,49 @@ addEventListener('fetch', event => {});`
 			mockGetWorkerSubdomain({ enabled: false });
 
 			// note the lack of a mock for the subdomain disable request
+
+			await runWrangler("deploy ./index");
+
+			expect(std.out).toMatchInlineSnapshot(`
+				"Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Uploaded test-name (TIMINGS)
+				No deploy targets for test-name (TIMINGS)
+				Current Version ID: Galaxy-Class"
+			`);
+			expect(std.err).toMatchInlineSnapshot(`""`);
+		});
+
+		it("should sync the workers.dev domain if it is not available but previews should be enabled", async () => {
+			writeWranglerConfig({
+				workers_dev: false,
+			});
+			writeWorkerSource();
+			mockUploadWorkerRequest();
+			mockGetWorkerSubdomain({ enabled: false, previews_enabled: false });
+			mockUpdateWorkerSubdomain({ enabled: false, previews_enabled: true });
+
+			await runWrangler("deploy ./index");
+
+			expect(std.out).toMatchInlineSnapshot(`
+				"Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Uploaded test-name (TIMINGS)
+				No deploy targets for test-name (TIMINGS)
+				Current Version ID: Galaxy-Class"
+			`);
+			expect(std.err).toMatchInlineSnapshot(`""`);
+		});
+
+		it("should sync the workers.dev domain if it is not available but previews should be disabled", async () => {
+			writeWranglerConfig({
+				workers_dev: false,
+				preview_urls: false,
+			});
+			writeWorkerSource();
+			mockUploadWorkerRequest();
+			mockGetWorkerSubdomain({ enabled: false, previews_enabled: true });
+			mockUpdateWorkerSubdomain({ enabled: false, previews_enabled: false });
 
 			await runWrangler("deploy ./index");
 
