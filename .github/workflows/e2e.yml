@@ -14,7 +14,7 @@ jobs:
       group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}-${{ matrix.node }}
       cancel-in-progress: true
     timeout-minutes: 40
-    if: github.repository_owner == 'cloudflare' && (github.event_name != 'pull_request' || (github.event_name == 'pull_request' && contains(github.event.*.labels.*.name, 'e2e' )))
+    if: (github.event_name != 'pull_request' || (github.event_name == 'pull_request' && contains(github.event.*.labels.*.name, 'e2e' ) && github.event.pull_request.head.repo.owner.login == 'cloudflare'))
     name: "E2E Test"
     strategy:
       fail-fast: false
@@ -43,20 +43,13 @@ jobs:
           NODE_ENV: "production"
           CI_OS: ${{ runner.os }}
 
-      - name: Deploy a local version of Wrangler
-        run: |
-          pnpm --filter wrangler deploy ${{ github.workspace}}/temp/wrangler
-          rm ${{ github.workspace}}/temp/wrangler/templates/tsconfig.json
-        env:
-          NODE_ENV: "production"
-
       - name: Run tests
         run: pnpm run test:e2e:wrangler
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.TEST_CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.TEST_CLOUDFLARE_ACCOUNT_ID }}
-          WRANGLER: node --no-warnings ${{ github.workspace}}/temp/wrangler/bin/wrangler.js
-          WRANGLER_IMPORT: ${{ github.workspace}}/temp/wrangler/wrangler-dist/cli.js
+          WRANGLER: node --no-warnings ${{ github.workspace}}/packages/wrangler/bin/wrangler.js
+          WRANGLER_IMPORT: ${{ github.workspace}}/packages/wrangler/wrangler-dist/cli.js
           NODE_OPTIONS: "--max_old_space_size=8192"
           WRANGLER_LOG_PATH: ${{ runner.temp }}/wrangler-debug-logs/
           TEST_REPORT_PATH: ${{ runner.temp }}/test-report/index.html

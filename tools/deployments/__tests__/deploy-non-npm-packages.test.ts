@@ -97,6 +97,7 @@ describe("findDeployablePackageNames()", () => {
 	}) => {
 		expect(findDeployablePackageNames()).toMatchInlineSnapshot(`
 			Set {
+			  "@cloudflare/chrome-devtools-patches",
 			  "devprod-status-bot",
 			  "edge-preview-authenticated-proxy",
 			  "format-errors",
@@ -107,7 +108,7 @@ describe("findDeployablePackageNames()", () => {
 			  "workers-playground",
 			  "@cloudflare/workers-shared",
 			  "workers.new",
-			  "@cloudflare/wrangler-devtools",
+			  "@cloudflare/workflows-shared",
 			}
 		`);
 	});

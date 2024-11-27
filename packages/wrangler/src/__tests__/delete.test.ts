@@ -6,7 +6,7 @@ import { useMockIsTTY } from "./helpers/mock-istty";
 import { msw } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
-import { writeWranglerToml } from "./helpers/write-wrangler-toml";
+import { writeWranglerConfig } from "./helpers/write-wrangler-config";
 import type { ServiceReferenceResponse, Tail } from "../delete";
 import type { KVNamespaceInfo } from "../kv/helpers";
 
@@ -47,7 +47,7 @@ describe("delete", () => {
 			text: `Are you sure you want to delete test-name? This action cannot be undone.`,
 			result: true,
 		});
-		writeWranglerToml();
+		writeWranglerConfig();
 		mockListKVNamespacesRequest();
 		mockListReferencesRequest("test-name");
 		mockListTailsByConsumerRequest("test-name");
@@ -229,6 +229,17 @@ describe("delete", () => {
 	`);
 	});
 
+	it("should error helpfully if pages_build_output_dir is set", async () => {
+		writeWranglerConfig({ pages_build_output_dir: "dist", name: "test" });
+		await expect(
+			runWrangler("delete")
+		).rejects.toThrowErrorMatchingInlineSnapshot(
+			`
+			[Error: It looks like you've run a Workers-specific command in a Pages project.
+			For Pages, please run \`wrangler pages project delete\` instead.]
+		`
+		);
+	});
 	describe("force deletes", () => {
 		it("should prompt for extra confirmation when service is depended on and use force", async () => {
 			mockConfirm({
@@ -248,7 +259,7 @@ You can still delete this Worker, but doing so WILL BREAK the Workers that depen
 Are you sure you want to continue?`,
 				result: true,
 			});
-			writeWranglerToml();
+			writeWranglerConfig();
 			mockListKVNamespacesRequest();
 			mockListReferencesRequest("test-name", {
 				services: {
@@ -329,7 +340,7 @@ You can still delete this Worker, but doing so WILL BREAK the Workers that depen
 Are you sure you want to continue?`,
 				result: false,
 			});
-			writeWranglerToml();
+			writeWranglerConfig();
 			mockListKVNamespacesRequest();
 			mockListReferencesRequest("test-name", {
 				services: {
@@ -358,7 +369,7 @@ Are you sure you want to continue?`,
 		});
 
 		it("should not require confirmation when --force is used", async () => {
-			writeWranglerToml();
+			writeWranglerConfig();
 			mockListKVNamespacesRequest();
 			mockDeleteWorkerRequest({ force: true });
 			await runWrangler("delete --force");

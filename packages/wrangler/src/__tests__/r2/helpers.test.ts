@@ -13,7 +13,6 @@ describe("event notifications", () => {
 
 	test("tableFromNotificationsGetResponse", async () => {
 		const bucketName = "my-bucket";
-		const config = { account_id: "my-account" };
 		const response: GetNotificationConfigResponse = {
 			bucketName,
 			queues: [
@@ -48,10 +47,7 @@ describe("event notifications", () => {
 				},
 			],
 		};
-		const tableOutput = await tableFromNotificationGetResponse(
-			config,
-			response
-		);
+		const tableOutput = tableFromNotificationGetResponse(response);
 		logger.log(tableOutput.map((x) => formatLabelledValues(x)).join("\n\n"));
 
 		await expect(std.out).toMatchInlineSnapshot(`
@@ -82,7 +78,7 @@ describe("event notifications", () => {
 			authEmail: "test@example.com",
 			authKey: "some-big-secret",
 		};
-		const result = eventNotificationHeaders(creds);
+		const result = eventNotificationHeaders(creds, "");
 		expect(result).toMatchObject({
 			"X-Auth-Key": creds.authKey,
 			"X-Auth-Email": creds.authEmail,
@@ -91,9 +87,10 @@ describe("event notifications", () => {
 
 	test("API token eventNotificationHeaders", () => {
 		const creds: ApiCredentials = { apiToken: "some-api-token" };
-		const result = eventNotificationHeaders(creds);
+		const result = eventNotificationHeaders(creds, "eu");
 		expect(result).toMatchObject({
 			Authorization: `Bearer ${creds.apiToken}`,
+			"cf-r2-jurisdiction": "eu",
 		});
 	});
 });

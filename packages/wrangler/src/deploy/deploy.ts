@@ -3,8 +3,9 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { URLSearchParams } from "node:url";
 import { cancel } from "@cloudflare/cli";
+import { syncAssets } from "../assets";
 import { fetchListResult, fetchResult } from "../cfetch";
-import { printBindings } from "../config";
+import { configFileName, formatConfigSnippet, printBindings } from "../config";
 import { bundleWorker } from "../deployment-bundle/bundle";
 import {
 	printBundleSize,
@@ -21,12 +22,11 @@ import {
 	createModuleCollector,
 	getWrangler1xLegacyModuleReferences,
 } from "../deployment-bundle/module-collection";
-import { getNodeCompatMode } from "../deployment-bundle/node-compat";
+import { validateNodeCompatMode } from "../deployment-bundle/node-compat";
 import { loadSourceMaps } from "../deployment-bundle/source-maps";
 import { confirm } from "../dialogs";
 import { getMigrationsToUpload } from "../durable";
 import { UserError } from "../errors";
-import { syncExperimentalAssets } from "../experimental-assets";
 import { logger } from "../logger";
 import { getMetricsUsageHeaders } from "../metrics";
 import { isNavigatorDefined } from "../navigator-user-agent";
@@ -46,12 +46,14 @@ import {
 	maybeRetrieveFileSourceMap,
 } from "../sourcemap";
 import triggersDeploy from "../triggers/deploy";
+import { retryOnError } from "../utils/retry";
 import {
 	createDeployment,
 	patchNonVersionedScriptSettings,
 } from "../versions/api";
 import { confirmLatestDeploymentOverwrite } from "../versions/deploy";
 import { getZoneForRoute } from "../zones";
+import type { AssetsOptions } from "../assets";
 import type { Config } from "../config";
 import type {
 	CustomDomainRoute,
@@ -66,7 +68,6 @@ import type {
 	CfPlacement,
 	CfWorkerInit,
 } from "../deployment-bundle/worker";
-import type { ExperimentalAssetsOptions } from "../experimental-assets";
 import type { PostQueueBody, PostTypedConsumerBody } from "../queues/client";
 import type { LegacyAssetPaths } from "../sites";
 import type { RetrieveSourceMapFunction } from "../sourcemap";
@@ -82,7 +83,7 @@ type Props = {
 	compatibilityDate: string | undefined;
 	compatibilityFlags: string[] | undefined;
 	legacyAssetPaths: LegacyAssetPaths | undefined;
-	experimentalAssetsOptions: ExperimentalAssetsOptions | undefined;
+	assetsOptions: AssetsOptions | undefined;
 	vars: Record<string, string> | undefined;
 	defines: Record<string, string> | undefined;
 	alias: Record<string, string> | undefined;
@@ -171,10 +172,7 @@ function errIsStartupErr(err: unknown): err is ParseError & { code: 10021 } {
 	return false;
 }
 
-export const validateRoutes = (
-	routes: Route[],
-	hasExperimentalAssets: boolean
-) => {
+export const validateRoutes = (routes: Route[], hasAssets: boolean) => {
 	const invalidRoutes: Record<string, string[]> = {};
 	for (const route of routes) {
 		if (typeof route !== "string" && route.custom_domain) {
@@ -190,7 +188,7 @@ export const validateRoutes = (
 					`Paths are not allowed in Custom Domains`
 				);
 			}
-		} else if (hasExperimentalAssets) {
+		} else if (hasAssets) {
 			const pattern = typeof route === "string" ? route : route.pattern;
 			const components = pattern.split("/");
 
@@ -425,9 +423,9 @@ export default async function deploy(props: Props): Promise<{
 			""
 		).padStart(2, "0")}-${(new Date().getDate() + "").padStart(2, "0")}`;
 
-		throw new UserError(`A compatibility_date is required when publishing. Add the following to your wrangler.toml file:.
+		throw new UserError(`A compatibility_date is required when publishing. Add the following to your ${configFileName(config.configPath)} file:
     \`\`\`
-    compatibility_date = "${compatibilityDateStr}"
+    ${formatConfigSnippet({ compatibility_date: compatibilityDateStr }, config.configPath, false)}
     \`\`\`
     Or you could pass it in your terminal as \`--compatibility-date ${compatibilityDateStr}\`
 See https://developers.cloudflare.com/workers/platform/compatibility-dates for more information.`);
@@ -435,7 +433,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 	const routes =
 		props.routes ?? config.routes ?? (config.route ? [config.route] : []) ?? [];
-	validateRoutes(routes, Boolean(props.experimentalAssetsOptions));
+	validateRoutes(routes, Boolean(props.assetsOptions));
 
 	const jsxFactory = props.jsxFactory || config.jsx_factory;
 	const jsxFragment = props.jsxFragment || config.jsx_fragment;
@@ -443,12 +441,18 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 	const minify = props.minify ?? config.minify;
 
+	const compatibilityDate =
+		props.compatibilityDate ?? config.compatibility_date;
 	const compatibilityFlags =
 		props.compatibilityFlags ?? config.compatibility_flags;
-	const nodejsCompatMode = getNodeCompatMode(compatibilityFlags, {
-		nodeCompat: props.nodeCompat ?? config.node_compat,
-		noBundle: props.noBundle ?? config.no_bundle,
-	});
+	const nodejsCompatMode = validateNodeCompatMode(
+		compatibilityDate,
+		compatibilityFlags,
+		{
+			nodeCompat: props.nodeCompat ?? config.node_compat,
+			noBundle: props.noBundle ?? config.no_bundle,
+		}
+	);
 
 	// Warn if user tries minify with no-bundle
 	if (props.noBundle && minify) {
@@ -518,13 +522,13 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 	if (config.text_blobs && format === "modules") {
 		throw new UserError(
-			"You cannot configure [text_blobs] with an ES module worker. Instead, import the file directly in your code, and optionally configure `[rules]` in your wrangler.toml"
+			`You cannot configure [text_blobs] with an ES module worker. Instead, import the file directly in your code, and optionally configure \`[rules]\` in your ${configFileName(config.configPath)} file`
 		);
 	}
 
 	if (config.data_blobs && format === "modules") {
 		throw new UserError(
-			"You cannot configure [data_blobs] with an ES module worker. Instead, import the file directly in your code, and optionally configure `[rules]` in your wrangler.toml"
+			`You cannot configure [data_blobs] with an ES module worker. Instead, import the file directly in your code, and optionally configure \`[rules]\` in your ${configFileName(config.configPath)} file`
 		);
 	}
 
@@ -576,6 +580,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 						serveLegacyAssetsFromWorker:
 							!props.isWorkersSite && Boolean(props.legacyAssetPaths),
 						doBindings: config.durable_objects.bindings,
+						workflowBindings: config.workflows ?? [],
 						jsxFactory,
 						jsxFragment,
 						tsconfig: props.tsconfig ?? config.tsconfig,
@@ -600,6 +605,16 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 							props.compatibilityFlags ?? config.compatibility_flags
 						),
 						plugins: [logBuildOutput(nodejsCompatMode)],
+
+						// Pages specific options used by wrangler pages commands
+						entryName: undefined,
+						inject: undefined,
+						isOutfile: undefined,
+						external: undefined,
+
+						// These options are dev-only
+						testScheduled: undefined,
+						watch: undefined,
 					}
 				);
 
@@ -627,17 +642,14 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 					config,
 					legacyEnv: props.legacyEnv,
 					env: props.env,
+					dispatchNamespace: props.dispatchNamespace,
 				})
 			: undefined;
 
-		// Upload assets if experimental assets is being used
-		const experimentalAssetsJwt =
-			props.experimentalAssetsOptions && !props.dryRun
-				? await syncExperimentalAssets(
-						accountId,
-						scriptName,
-						props.experimentalAssetsOptions.directory
-					)
+		// Upload assets if assets is being used
+		const assetsJwt =
+			props.assetsOptions && !props.dryRun
+				? await syncAssets(accountId, scriptName, props.assetsOptions.directory)
 				: undefined;
 
 		const legacyAssets = await syncLegacyAssets(
@@ -674,6 +686,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			},
 			data_blobs: config.data_blobs,
 			durable_objects: config.durable_objects,
+			workflows: config.workflows,
 			queues: config.queues.producers?.map((producer) => {
 				return { binding: producer.binding, queue_name: producer.queue };
 			}),
@@ -687,8 +700,8 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			mtls_certificates: config.mtls_certificates,
 			pipelines: config.pipelines,
 			logfwdr: config.logfwdr,
-			experimental_assets: config.experimental_assets?.binding
-				? { binding: config.experimental_assets.binding }
+			assets: config.assets?.binding
+				? { binding: config.assets.binding }
 				: undefined,
 			unsafe: {
 				bindings: config.unsafe.bindings,
@@ -736,12 +749,12 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			placement,
 			tail_consumers: config.tail_consumers,
 			limits: config.limits,
-			experimental_assets:
-				props.experimentalAssetsOptions && experimentalAssetsJwt
+			assets:
+				props.assetsOptions && assetsJwt
 					? {
-							jwt: experimentalAssetsJwt,
-							routingConfig: props.experimentalAssetsOptions.routingConfig,
-							assetConfig: props.experimentalAssetsOptions.assetConfig,
+							jwt: assetsJwt,
+							routingConfig: props.assetsOptions.routingConfig,
+							assetConfig: props.assetsOptions.assetConfig,
 						}
 					: undefined,
 			observability: config.observability,
@@ -800,10 +813,8 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			let bindingsPrinted = false;
 
 			// Upload the script so it has time to propagate.
-			// We can also now tell whether available_on_subdomain is set
 			try {
 				let result: {
-					available_on_subdomain: boolean;
 					id: string | null;
 					etag: string | null;
 					pipeline_hash: string | null;
@@ -815,13 +826,15 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 				// If we're using the new APIs, first upload the version
 				if (canUseNewVersionsDeploymentsApi) {
 					// Upload new version
-					const versionResult = await fetchResult<ApiVersion>(
-						`/accounts/${accountId}/workers/scripts/${scriptName}/versions`,
-						{
-							method: "POST",
-							body: createWorkerUploadForm(worker),
-							headers: await getMetricsUsageHeaders(config.send_metrics),
-						}
+					const versionResult = await retryOnError(async () =>
+						fetchResult<ApiVersion>(
+							`/accounts/${accountId}/workers/scripts/${scriptName}/versions`,
+							{
+								method: "POST",
+								body: createWorkerUploadForm(worker),
+								headers: await getMetricsUsageHeaders(config.send_metrics),
+							}
+						)
 					);
 
 					// Deploy new version to 100%
@@ -829,19 +842,17 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 					versionMap.set(versionResult.id, 100);
 					await createDeployment(accountId, scriptName, versionMap, undefined);
 
-					// Update tail consumers and logpush settings
+					// Update tail consumers, logpush, and observability settings
 					await patchNonVersionedScriptSettings(accountId, scriptName, {
 						tail_consumers: worker.tail_consumers,
 						logpush: worker.logpush,
-						observability: worker.observability,
+						// If the user hasn't specified observability assume that they want it disabled if they have it on.
+						// This is a no-op in the event that they don't have observability enabled, but will remove observability
+						// if it has been removed from their Wrangler configuration file
+						observability: worker.observability ?? { enabled: false },
 					});
 
-					const { available_on_subdomain } = await fetchResult<{
-						available_on_subdomain: boolean;
-					}>(`/accounts/${accountId}/workers/scripts/${scriptName}/subdomain`);
-
 					result = {
-						available_on_subdomain,
 						id: null, // fpw - ignore
 						etag: versionResult.resources.script.etag,
 						pipeline_hash: null, // fpw - ignore
@@ -850,27 +861,27 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 						startup_time_ms: versionResult.startup_time_ms,
 					};
 				} else {
-					result = await fetchResult<{
-						available_on_subdomain: boolean;
-						id: string | null;
-						etag: string | null;
-						pipeline_hash: string | null;
-						mutable_pipeline_id: string | null;
-						deployment_id: string | null;
-						startup_time_ms: number;
-					}>(
-						workerUrl,
-						{
-							method: "PUT",
-							body: createWorkerUploadForm(worker),
-							headers: await getMetricsUsageHeaders(config.send_metrics),
-						},
-						new URLSearchParams({
-							include_subdomain_availability: "true",
-							// pass excludeScript so the whole body of the
-							// script doesn't get included in the response
-							excludeScript: "true",
-						})
+					result = await retryOnError(async () =>
+						fetchResult<{
+							id: string | null;
+							etag: string | null;
+							pipeline_hash: string | null;
+							mutable_pipeline_id: string | null;
+							deployment_id: string | null;
+							startup_time_ms: number;
+						}>(
+							workerUrl,
+							{
+								method: "PUT",
+								body: createWorkerUploadForm(worker),
+								headers: await getMetricsUsageHeaders(config.send_metrics),
+							},
+							new URLSearchParams({
+								// pass excludeScript so the whole body of the
+								// script doesn't get included in the response
+								excludeScript: "true",
+							})
+						)
 					);
 				}
 
@@ -1001,7 +1012,7 @@ function deployWfpUserWorker(
 	logger.log("Current Version ID:", versionId);
 }
 
-export function helpIfErrorIsSizeOrScriptStartup(
+function helpIfErrorIsSizeOrScriptStartup(
 	err: unknown,
 	dependencies: { [path: string]: { bytesInOutput: number } }
 ) {

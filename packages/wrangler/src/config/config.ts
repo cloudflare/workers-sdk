@@ -4,7 +4,7 @@ import type { CamelCaseKey } from "yargs";
 /**
  * This is the static type definition for the configuration object.
  *
- * It reflects a normalized and validated version of the configuration that you can write in wrangler.toml,
+ * It reflects a normalized and validated version of the configuration that you can write in a Wrangler configuration file,
  * and optionally augment with arguments passed directly to wrangler.
  *
  * For more information about the configuration object, see the
@@ -15,7 +15,7 @@ import type { CamelCaseKey } from "yargs";
  * - Fields that are only specified in `ConfigFields` and not `Environment` can only appear
  * in the top level config and should not appear in any environments.
  * - Fields that are specified in `PagesConfigFields` are only relevant for Pages projects
- * - All top level fields in config and environments are optional in the wrangler.toml file.
+ * - All top level fields in config and environments are optional in the Wrangler configuration file.
  *
  * Legend for the annotations:
  *
@@ -31,11 +31,11 @@ export type RawConfig = Partial<ConfigFields<RawDevConfig>> &
 	EnvironmentMap & { $schema?: string };
 
 // Pages-specific configuration fields
-export interface PagesConfigFields {
+interface PagesConfigFields {
 	/**
 	 * The directory of static assets to serve.
 	 *
-	 * The presence of this field in `wrangler.toml` indicates a Pages project,
+	 * The presence of this field in a Wrangler configuration file indicates a Pages project,
 	 * and will prompt the handling of the configuration file according to the
 	 * Pages-specific validation rules.
 	 */
@@ -77,7 +77,7 @@ export interface ConfigFields<Dev extends RawDevConfig> {
 				/**
 				 * The directory containing your static assets.
 				 *
-				 * It must be a path relative to your wrangler.toml file.
+				 * It must be a path relative to your Wrangler configuration file.
 				 * Example: bucket = "./public"
 				 *
 				 * If there is a `site` field then it must contain this `bucket` field.
@@ -115,9 +115,11 @@ export interface ConfigFields<Dev extends RawDevConfig> {
 		| undefined;
 
 	/**
-	 * Serve a folder of static assets with your Worker, without any additional code.
-	 * This can either be a string, or an object with additional config fields.
-	 * Only one of assets and legacy_assets can be used.
+	 * Old behaviour of serving a folder of static assets with your Worker,
+	 * without any additional code.
+	 * This can either be a string, or an object with additional config
+	 * fields.
+	 * Will be deprecated in the near future in favor of `assets`.
 	 */
 	legacy_assets:
 		| {
@@ -170,7 +172,7 @@ export interface ConfigFields<Dev extends RawDevConfig> {
 	alias: { [key: string]: string } | undefined;
 
 	/**
-	 * By default, wrangler.toml is the source of truth for your environment configuration, like a terraform file.
+	 * By default, the Wrangler configuration file is the source of truth for your environment configuration, like a terraform file.
 	 *
 	 * If you change your vars in the dashboard, wrangler *will* override/delete them on its next deploy.
 	 *
@@ -183,11 +185,11 @@ export interface ConfigFields<Dev extends RawDevConfig> {
 }
 
 // Pages-specific configuration fields
-export interface PagesConfigFields {
+interface PagesConfigFields {
 	/**
 	 * The directory of static assets to serve.
 	 *
-	 * The presence of this field in `wrangler.toml` indicates a Pages project,
+	 * The presence of this field in a Wrangler configuration file indicates a Pages project,
 	 * and will prompt the handling of the configuration file according to the
 	 * Pages-specific validation rules.
 	 */
@@ -241,7 +243,7 @@ export interface DevConfig {
 
 export type RawDevConfig = Partial<DevConfig>;
 
-export interface DeprecatedConfigFields {
+interface DeprecatedConfigFields {
 	/**
 	 * The project "type". A holdover from Wrangler v1.x.
 	 * Valid values were "webpack", "javascript", and "rust".
@@ -265,22 +267,6 @@ export interface DeprecatedConfigFields {
 	 * @deprecated
 	 */
 	miniflare?: unknown;
-
-	/**
-	 * Serve a folder of static assets with your Worker, without any additional code.
-	 * This can either be a string, or an object with additional config fields.
-	 * Only one of assets and legacy_assets can be used.
-	 */
-	assets?:
-		| {
-				bucket: string;
-				include: string[];
-				exclude: string[];
-				browser_TTL: number | undefined;
-				serve_single_page_app: boolean;
-		  }
-		| string
-		| undefined;
 }
 
 interface EnvironmentMap {
@@ -342,6 +328,7 @@ export const defaultWranglerConfig: Config = {
 	d1_databases: [],
 	vectorize: [],
 	hyperdrive: [],
+	workflows: [],
 	services: [],
 	analytics_engine_datasets: [],
 	ai: undefined,
@@ -368,6 +355,7 @@ export const defaultWranglerConfig: Config = {
 	preserve_file_names: undefined,
 	base_dir: undefined,
 	workers_dev: undefined,
+	preview_urls: true,
 	route: undefined,
 	routes: undefined,
 	tsconfig: undefined,
@@ -389,7 +377,7 @@ export const defaultWranglerConfig: Config = {
 	logfwdr: { bindings: [] },
 	logpush: undefined,
 	upload_source_maps: undefined,
-	experimental_assets: undefined,
+	assets: undefined,
 	observability: { enabled: true },
 
 	/** NON-INHERITABLE ENVIRONMENT FIELDS **/

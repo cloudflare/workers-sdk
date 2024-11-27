@@ -323,6 +323,9 @@ export async function syncLegacyAssets(
 				}
 				throw e;
 			}
+			if (controller.signal.aborted) {
+				break;
+			}
 			uploadedCount += nextBucket.length;
 			const percent = Math.floor((100 * uploadedCount) / uploadCount);
 			logger.info(
@@ -422,7 +425,7 @@ function validateAssetKey(assetKey: string) {
  *
  * Primarily this involves converting Windows backslashes to forward slashes.
  */
-export function urlSafe(filePath: string): string {
+function urlSafe(filePath: string): string {
 	return filePath.replace(/\\/g, "/");
 }
 

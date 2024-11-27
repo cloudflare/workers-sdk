@@ -1,5 +1,7 @@
+import { readFile } from "fs/promises";
+import path from "path";
 import dedent from "ts-dedent";
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 import { CLOUDFLARE_ACCOUNT_ID } from "./helpers/account-id";
 import { WranglerE2ETestHelper } from "./helpers/e2e-wrangler-test";
 import { generateResourceName } from "./helpers/generate-resource-name";
@@ -23,9 +25,10 @@ describe("versions deploy", { timeout: TIMEOUT }, () => {
 	let versionId0: string;
 	let versionId1: string;
 	let versionId2: string;
-	const helper = new WranglerE2ETestHelper();
+	let helper: WranglerE2ETestHelper;
 
-	it("deploy worker", async () => {
+	beforeAll(async () => {
+		helper = new WranglerE2ETestHelper();
 		await helper.seed({
 			"wrangler.toml": dedent`
 							name = "${workerName}"
@@ -63,6 +66,7 @@ describe("versions deploy", { timeout: TIMEOUT }, () => {
 			Worker Startup Time: (TIMINGS)
 			Uploaded tmp-e2e-worker-00000000-0000-0000-0000-000000000000 (TIMINGS)
 			Worker Version ID: 00000000-0000-0000-0000-000000000000
+			Version Preview URL: https://tmp-e2e-worker-PREVIEW-URL.SUBDOMAIN.workers.dev
 			To deploy this version to production traffic use the command wrangler versions deploy
 			Changes to non-versioned settings (config properties 'logpush' or 'tail_consumers') take effect after your next deployment using the command wrangler versions deploy
 			Changes to triggers (routes, custom domains, cron schedules, etc) must be applied with the command wrangler triggers deploy"
@@ -178,6 +182,7 @@ describe("versions deploy", { timeout: TIMEOUT }, () => {
 			Worker Startup Time: (TIMINGS)
 			Uploaded tmp-e2e-worker-00000000-0000-0000-0000-000000000000 (TIMINGS)
 			Worker Version ID: 00000000-0000-0000-0000-000000000000
+			Version Preview URL: https://tmp-e2e-worker-PREVIEW-URL.SUBDOMAIN.workers.dev
 			To deploy this version to production traffic use the command wrangler versions deploy
 			Changes to non-versioned settings (config properties 'logpush' or 'tail_consumers') take effect after your next deployment using the command wrangler versions deploy
 			Changes to triggers (routes, custom domains, cron schedules, etc) must be applied with the command wrangler triggers deploy"
@@ -546,11 +551,11 @@ describe("versions deploy", { timeout: TIMEOUT }, () => {
 		});
 
 		const upload = await helper.run(
-			`wrangler versions upload --assets='./public'  --x-versions`
+			`wrangler versions upload --legacy-assets='./public'  --x-versions`
 		);
 
 		expect(normalize(upload.output)).toMatchInlineSnapshot(`
-			"X [ERROR] Legacy Assets does not support uploading versions through \`wrangler versions upload\`. You must use \`wrangler deploy\` instead.
+			"X [ERROR] Legacy assets does not support uploading versions through \`wrangler versions upload\`. You must use \`wrangler deploy\` instead.
 			🪵  Logs were written to "<LOG>""
 		`);
 	});
@@ -589,14 +594,13 @@ describe("versions deploy", { timeout: TIMEOUT }, () => {
 		`);
 	});
 
-	// TODO: revisit once AUS stabilises/works
-	it.skip("currently fails to upload if using experimental assets", async () => {
+	it("should upload version of Worker with assets", async () => {
 		await helper.seed({
 			"wrangler.toml": dedent`
 	            name = "${workerName}"
 	            compatibility_date = "2023-01-01"
 
-	            [experimental_assets]
+	            [assets]
 	            directory = "./public"
 	        `,
 			"public/asset.txt": `beep boop`,
@@ -609,26 +613,47 @@ describe("versions deploy", { timeout: TIMEOUT }, () => {
 	        `,
 		});
 
-		const upload = await helper.run(`wrangler versions upload  --x-versions`);
+		const upload = await helper.run(
+			`wrangler versions upload --message "Upload via e2e test" --tag "e2e-upload-assets"  --x-versions`
+		);
 
-		expect(normalize(upload.output).split("X [ERROR]")[0])
-			.toMatchInlineSnapshot(`
+		expect(normalize(upload.stdout)).toMatchInlineSnapshot(`
 			"🌀 Building list of assets...
 			🌀 Starting asset upload...
-			🌀 Found 1 new or modified file to upload. Proceeding with upload...
+			🌀 Found 1 new or modified static asset to upload. Proceeding with upload...
 			+ /asset.txt
-			Asset upload failed. Retrying...
-			 APIError: A request to the Cloudflare API (/accounts/CLOUDFLARE_ACCOUNT_ID/workers/assets/upload) failed.
-			Asset upload failed. Retrying...
-			 APIError: A request to the Cloudflare API (/accounts/CLOUDFLARE_ACCOUNT_ID/workers/assets/upload) failed.
-			Asset upload failed. Retrying...
-			 APIError: A request to the Cloudflare API (/accounts/CLOUDFLARE_ACCOUNT_ID/workers/assets/upload) failed.
-			Asset upload failed. Retrying...
-			 APIError: A request to the Cloudflare API (/accounts/CLOUDFLARE_ACCOUNT_ID/workers/assets/upload) failed.
-			Asset upload failed. Retrying...
-			 APIError: A request to the Cloudflare API (/accounts/CLOUDFLARE_ACCOUNT_ID/workers/assets/upload) failed.
-			"
+			Uploaded 1 of 1 assets
+			✨ Success! Uploaded 1 file (TIMINGS)
+			Total Upload: xx KiB / gzip: xx KiB
+			Worker Startup Time: (TIMINGS)
+			Uploaded tmp-e2e-worker-00000000-0000-0000-0000-000000000000 (TIMINGS)
+			Worker Version ID: 00000000-0000-0000-0000-000000000000
+			Version Preview URL: https://tmp-e2e-worker-PREVIEW-URL.SUBDOMAIN.workers.dev
+			To deploy this version to production traffic use the command wrangler versions deploy
+			Changes to non-versioned settings (config properties 'logpush' or 'tail_consumers') take effect after your next deployment using the command wrangler versions deploy
+			Changes to triggers (routes, custom domains, cron schedules, etc) must be applied with the command wrangler triggers deploy"
 		`);
+	});
+
+	it("should include version preview url in output file", async () => {
+		const outputFile = path.join(helper.tmpPath, "output.jsonnd");
+		const upload = await helper.run(
+			`wrangler versions upload --message "Upload via e2e test" --tag "e2e-upload" --x-versions`,
+			{
+				env: {
+					...process.env,
+					WRANGLER_OUTPUT_FILE_PATH: outputFile,
+				},
+			}
+		);
+
+		versionId1 = matchVersionId(upload.stdout);
+
+		const output = await readFile(outputFile, "utf8");
+
+		expect(JSON.parse(normalizeOutput(output.split("\n")[1]))).toMatchObject({
+			preview_url: "https://tmp-e2e-worker-PREVIEW-URL.SUBDOMAIN.workers.dev",
+		});
 	});
 
 	it("should delete Worker", async () => {

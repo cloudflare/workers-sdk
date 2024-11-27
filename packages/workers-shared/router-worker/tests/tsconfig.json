@@ -1,0 +1,15 @@
+{
+	"compilerOptions": {
+		"target": "ES2020",
+		"module": "ES2020",
+		"lib": ["ES2020"],
+		"types": [
+			"@cloudflare/workers-types/experimental",
+			"@cloudflare/vitest-pool-workers"
+		],
+		"moduleResolution": "bundler",
+		"noEmit": true,
+		"skipLibCheck": true
+	},
+	"include": ["**/*.ts"]
+}

@@ -1,23 +1,33 @@
 {
 	"$schema": "http://turbo.build/schema.json",
 	"extends": ["//"],
-	"pipeline": {
+	"tasks": {
 		"build": {
-			"env": ["TEST_PM", "TEST_PM_VERSION", "npm_config_user_agent", "CI"],
+			"env": [
+				"TEST_PM",
+				"TEST_PM_VERSION",
+				"npm_config_user_agent",
+				"CI",
+				"CREATE_CLOUDFLARE_TELEMETRY_DISABLED",
+				"CREATE_CLOUDFLARE_TELEMETRY_DEBUG",
+				"SPARROW_SOURCE_KEY"
+			],
 			"outputs": ["dist/**"]
 		},
 		"test:e2e": {
 			"env": [
-				"SAVE_DIFFS",
 				"CLOUDFLARE_ACCOUNT_ID",
 				"CLOUDFLARE_API_TOKEN",
 				"FRAMEWORK_CLI_TO_TEST",
 				"E2E_QUARANTINE",
 				"E2E_PROJECT_PATH",
 				"E2E_RETRIES",
-				"E2E_NO_DEPLOY"
+				"E2E_NO_DEPLOY",
+				"E2E_EXPERIMENTAL",
+				"TEST_PM"
 			],
-			"dependsOn": ["build"]
+			"dependsOn": ["build"],
+			"outputs": [".e2e-logs", ".e2e-logs-experimental"]
 		}
 	}
 }

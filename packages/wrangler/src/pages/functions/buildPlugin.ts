@@ -24,13 +24,15 @@ export function buildPluginFromFunctions({
 	functionsDirectory,
 	local,
 	defineNavigatorUserAgent,
+	checkFetch,
 	external,
 }: Options) {
 	const entry: Entry = {
 		file: resolve(getBasePath(), "templates/pages-template-plugin.ts"),
-		directory: functionsDirectory,
+		projectRoot: functionsDirectory,
 		format: "modules",
 		moduleRoot: functionsDirectory,
+		exports: [],
 	};
 	const moduleCollector = createModuleCollector({
 		entry,
@@ -52,6 +54,7 @@ export function buildPluginFromFunctions({
 		define: {},
 		alias: {},
 		doBindings: [], // Pages functions don't support internal Durable Objects
+		workflowBindings: [], // Pages functions don't support internal Workflows
 		external,
 		plugins: [
 			buildNotifierPlugin(onEnd),
@@ -105,13 +108,20 @@ export function buildPluginFromFunctions({
 			},
 		],
 		serveLegacyAssetsFromWorker: false,
-		checkFetch: local,
+		checkFetch: local && checkFetch,
 		// TODO: mock AE datasets in Pages functions for dev
 		mockAnalyticsEngineDatasets: [],
 		targetConsumer: local ? "dev" : "deploy",
-		forPages: true,
 		local,
 		projectRoot: getPagesProjectRoot(),
 		defineNavigatorUserAgent,
+
+		legacyAssets: undefined,
+		bypassAssetCache: undefined,
+		jsxFactory: undefined,
+		jsxFragment: undefined,
+		tsconfig: undefined,
+		testScheduled: undefined,
+		isOutfile: undefined,
 	});
 }

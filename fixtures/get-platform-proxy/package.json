@@ -5,12 +5,12 @@
 	"scripts": {
 		"test:ci": "vitest run",
 		"test:watch": "vitest",
-		"type:tests": "tsc --noEmit"
+		"type:tests": "tsc --noEmit -p tests/tsconfig.json"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-tsconfig": "workspace:*",
-		"@cloudflare/workers-types": "^4.20240909.0",
-		"undici": "^5.28.4",
+		"@cloudflare/workers-types": "^4.20241106.0",
+		"undici": "catalog:default",
 		"wrangler": "workspace:*"
 	},
 	"volta": {

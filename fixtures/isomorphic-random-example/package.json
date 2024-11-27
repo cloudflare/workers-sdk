@@ -3,8 +3,10 @@
 	"private": true,
 	"description": "Isomorphic secure-random library, demonstrating `exports` use with Workers",
 	"exports": {
+		"other": "./src/other.js",
 		"node": "./src/node.js",
-		"workerd": "./src/workerd.mjs"
+		"workerd": "./src/workerd.mjs",
+		"default": "./src/default.js"
 	},
 	"volta": {
 		"extends": "../../package.json"

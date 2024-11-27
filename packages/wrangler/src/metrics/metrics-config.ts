@@ -6,8 +6,7 @@ import { getConfigCache, saveToConfigCache } from "../config-cache";
 import { confirm } from "../dialogs";
 import { getWranglerSendMetricsFromEnv } from "../environment-variables/misc-variables";
 import { getGlobalWranglerConfigPath } from "../global-wrangler-config-path";
-import { CI } from "../is-ci";
-import isInteractive from "../is-interactive";
+import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import { getAPIToken } from "../user";
 
@@ -103,7 +102,7 @@ export async function getMetricsConfig({
 
 	// We couldn't get the metrics permission from the project-level nor the user-level config.
 	// If we are not interactive or in a CI build then just bail out.
-	if (!isInteractive() || CI.isCI()) {
+	if (isNonInteractiveOrCI()) {
 		return { enabled: false, deviceId, userId };
 	}
 

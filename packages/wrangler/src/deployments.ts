@@ -3,7 +3,7 @@ import TOML from "@iarna/toml";
 import chalk from "chalk";
 import { FormData } from "undici";
 import { fetchResult } from "./cfetch";
-import { readConfig } from "./config";
+import { configFileName, readConfig } from "./config";
 import { confirm, prompt } from "./dialogs";
 import { UserError } from "./errors";
 import { mapBindings } from "./init";
@@ -332,14 +332,14 @@ export async function commonDeploymentCMDSetup(
 
 	if (!scriptName) {
 		throw new UserError(
-			"Required Worker name missing. Please specify the Worker name in wrangler.toml, or pass it as an argument with `--name`"
+			`Required Worker name missing. Please specify the Worker name in your ${configFileName(config.configPath)} file, or pass it as an argument with \`--name\``
 		);
 	}
 
 	return { accountId, scriptName, config };
 }
 
-export function addHyphens(uuid: string | null): string | null {
+function addHyphens(uuid: string | null): string | null {
 	if (uuid == null) {
 		return uuid;
 	}

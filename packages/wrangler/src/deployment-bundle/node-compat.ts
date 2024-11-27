@@ -1,71 +1,40 @@
+import { getNodeCompat } from "miniflare";
 import { UserError } from "../errors";
 import { logger } from "../logger";
+import type { NodeJSCompatMode } from "miniflare";
 
 /**
- * Wrangler can provide Node.js compatibility in a number of different modes:
- * - "legacy" - this mode adds compile-time polyfills that are not well maintained and cannot work with workerd runtime builtins.
- * - "als": this mode tells the workerd runtime to enable only the Async Local Storage builtin library (accessible via `node:async_hooks`).
- * - "v1" - this mode tells the workerd runtime to enable some Node.js builtin libraries (accessible only via `node:...` imports) but no globals.
- * - "v2" - this mode tells the workerd runtime to enable more Node.js builtin libraries (accessible both with and without the `node:` prefix)
- *   and also some Node.js globals such as `Buffer`; it also turns on additional compile-time polyfills for those that are not provided by the runtime.
- */
-export type NodeJSCompatMode = "legacy" | "als" | "v1" | "v2" | null;
-
-/**
- * Computes the Node.js compatibility mode we are running.
+ * Computes and validates the Node.js compatibility mode we are running.
  *
- * NOTE:
- * Currently v2 mode is configured via `nodejs_compat_v2` compat flag.
- * At a future compatibility date, the use of `nodejs_compat` flag will imply `nodejs_compat_v2`.
+ * NOTES:
+ * - The v2 mode is configured via `nodejs_compat_v2` compat flag or via `nodejs_compat` plus a compatibility date of Sept 23rd. 2024 or later.
+ * - See `EnvironmentInheritable` for `nodeCompat` and `noBundle`.
  *
- * see `EnvironmentInheritable` for `nodeCompat` and `noBundle`.
- *
+ * @param compatibilityDateStr The compatibility date
  * @param compatibilityFlags The compatibility flags
- * @param validateConfig Whether to validate the config (logs and throws)
  * @param nodeCompat Whether to add polyfills for node builtin modules and globals
  * @param noBundle Whether to skip internal build steps and directly deploy script
- * @returns one of:
- *  - "legacy": build-time polyfills, from `node_compat` flag
- *  - "als": nodejs_als compatibility flag
- *  - "v1": nodejs_compat compatibility flag
- *  - "v2": nodejs_compat_v2 compatibility flag
- *  - null: no Node.js compatibility
- */
-export function getNodeCompatMode(
+ *
+ */ export function validateNodeCompatMode(
+	compatibilityDateStr: string = "2000-01-01", // Default to some arbitrary old date
 	compatibilityFlags: string[],
 	{
-		validateConfig = true,
-		nodeCompat = undefined,
+		nodeCompat: legacy = false,
 		noBundle = undefined,
 	}: {
-		validateConfig?: boolean;
 		nodeCompat?: boolean;
 		noBundle?: boolean;
 	}
 ): NodeJSCompatMode {
 	const {
+		mode,
 		hasNodejsAlsFlag,
 		hasNodejsCompatFlag,
 		hasNodejsCompatV2Flag,
 		hasExperimentalNodejsCompatV2Flag,
-	} = parseNodeCompatibilityFlags(compatibilityFlags);
-
-	const legacy = nodeCompat === true;
-	let mode: NodeJSCompatMode = null;
-	if (hasNodejsCompatV2Flag) {
-		mode = "v2";
-	} else if (hasNodejsCompatFlag) {
-		mode = "v1";
-	} else if (hasNodejsAlsFlag) {
-		mode = "als";
-	} else if (legacy) {
-		mode = "legacy";
-	}
-
-	if (validateConfig !== true) {
-		// Skip the validation.
-		return mode;
-	}
+	} = getNodeCompat(compatibilityDateStr, compatibilityFlags, {
+		nodeCompat: legacy,
+	});
 
 	if (hasExperimentalNodejsCompatV2Flag) {
 		throw new UserError(
@@ -107,20 +76,9 @@ export function getNodeCompatMode(
 
 	if (mode === "legacy") {
 		logger.warn(
-			"Enabling Wrangler compile-time Node.js compatibility polyfill mode for builtins and globals. This is experimental and has serious tradeoffs."
+			"You are using `node_compat`, which is a legacy Node.js compatibility option. Instead, use the `nodejs_compat` compatibility flag. This includes the functionality from legacy `node_compat` polyfills and natively implemented Node.js APIs. See https://developers.cloudflare.com/workers/runtime-apis/nodejs for more information."
 		);
 	}
 
 	return mode;
-}
-
-function parseNodeCompatibilityFlags(compatibilityFlags: string[]) {
-	return {
-		hasNodejsAlsFlag: compatibilityFlags.includes("nodejs_als"),
-		hasNodejsCompatFlag: compatibilityFlags.includes("nodejs_compat"),
-		hasNodejsCompatV2Flag: compatibilityFlags.includes("nodejs_compat_v2"),
-		hasExperimentalNodejsCompatV2Flag: compatibilityFlags.includes(
-			"experimental:nodejs_compat_v2"
-		),
-	};
 }

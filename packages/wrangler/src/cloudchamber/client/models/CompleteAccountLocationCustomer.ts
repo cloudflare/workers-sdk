@@ -7,7 +7,7 @@ import type { AccountLocationLimitsAsProperty } from "./AccountLocationLimitsAsP
 import type { Location } from "./Location";
 
 /**
- * Represents an account location with a limit property for customers
+ * Represents an account location with a limit property for customers.
  */
 export type CompleteAccountLocationCustomer = AccountLocationLimitsAsProperty &
 	AccountLocation &

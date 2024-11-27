@@ -2,4 +2,10 @@
 name = "<TBD>"
 compatibility_date = "<TBD>"
 main = ".svelte-kit/cloudflare/_worker.js"
-experimental_assets = { directory = ".svelte-kit/cloudflare", binding = "ASSETS" }
+assets = { directory = ".svelte-kit/cloudflare", binding = "ASSETS" }
+
+# Workers Logs
+# Docs: https://developers.cloudflare.com/workers/observability/logs/workers-logs/
+# Configuration: https://developers.cloudflare.com/workers/observability/logs/workers-logs/#enable-workers-logs
+[observability]
+enabled = true

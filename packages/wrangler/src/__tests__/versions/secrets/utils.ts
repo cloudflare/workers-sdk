@@ -4,7 +4,7 @@ import { createFetchResult, msw } from "../../helpers/msw";
 import type { WorkerMetadata } from "../../../deployment-bundle/create-worker-upload-form";
 import type { VersionDetails, WorkerVersion } from "../../../versions/secrets";
 
-export function mockGetVersions() {
+function mockGetVersions() {
 	msw.use(
 		http.get(
 			`*/accounts/:accountId/workers/scripts/:scriptName/versions`,
@@ -79,7 +79,7 @@ export function mockGetVersion(versionInfo?: VersionDetails) {
 	);
 }
 
-export function mockGetVersionContent() {
+function mockGetVersionContent() {
 	msw.use(
 		http.get(
 			`*/accounts/:accountId/workers/scripts/:scriptName/content/v2?version=ce15c78b-cc43-4f60-b5a9-15ce4f298c2a`,
@@ -105,7 +105,7 @@ export function mockGetVersionContent() {
 	);
 }
 
-export function mockGetWorkerSettings() {
+function mockGetWorkerSettings() {
 	msw.use(
 		http.get(
 			`*/accounts/:accountId/workers/scripts/:scriptName/script-settings`,

@@ -1,14 +1,14 @@
 import fs, { existsSync, statSync } from "fs";
 import { join } from "path";
-import { crash } from "@cloudflare/cli";
 import TOML from "@iarna/toml";
+import type { JsonMap } from "@iarna/toml";
 import type { C3Context } from "types";
 
 export const copyFile = (path: string, dest: string) => {
 	try {
 		fs.copyFileSync(path, dest);
 	} catch (error) {
-		crash(error as string);
+		throw new Error(error as string);
 	}
 };
 
@@ -16,7 +16,7 @@ export const writeFile = (path: string, content: string) => {
 	try {
 		fs.writeFileSync(path, content);
 	} catch (error) {
-		crash(error as string);
+		throw new Error(error as string);
 	}
 };
 
@@ -24,7 +24,7 @@ export const appendFile = (path: string, content: string) => {
 	try {
 		fs.appendFileSync(path, content);
 	} catch (error) {
-		crash(error as string);
+		throw new Error(error as string);
 	}
 };
 
@@ -32,7 +32,7 @@ export const readFile = (path: string) => {
 	try {
 		return fs.readFileSync(path, "utf-8");
 	} catch (error) {
-		return crash(error as string);
+		throw new Error(error as string);
 	}
 };
 
@@ -40,7 +40,7 @@ export const removeFile = (path: string) => {
 	try {
 		fs.rmSync(path, { force: true });
 	} catch (error) {
-		crash(error as string);
+		throw new Error(`Remove file failed: ${path}`, { cause: error });
 	}
 };
 
@@ -52,7 +52,7 @@ export const directoryExists = (path: string): boolean => {
 		if ((error as { code: string }).code === "ENOENT") {
 			return false;
 		}
-		return crash(error as string);
+		throw new Error(error as string);
 	}
 };
 
@@ -63,11 +63,15 @@ export const readJSON = (path: string) => {
 
 export const readToml = (path: string) => {
 	const contents = readFile(path);
-	return contents ? TOML.parse(contents) : contents;
+	return contents ? TOML.parse(contents) : {};
 };
 
 export const writeJSON = (path: string, object: object, stringifySpace = 2) => {
 	writeFile(path, JSON.stringify(object, null, stringifySpace));
+};
+
+export const writeToml = (path: string, object: JsonMap) => {
+	writeFile(path, TOML.stringify(object));
 };
 
 // Probes a list of paths and returns the first one that exists or null if none does

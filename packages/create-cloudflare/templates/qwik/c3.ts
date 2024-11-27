@@ -1,4 +1,4 @@
-import { crash, endSection } from "@cloudflare/cli";
+import { endSection } from "@cloudflare/cli";
 import { brandColor } from "@cloudflare/cli/colors";
 import { spinner } from "@cloudflare/cli/interactive";
 import { runFrameworkGenerator } from "frameworks/index";
@@ -13,7 +13,7 @@ import type { C3Context } from "types";
 const { npm, npx } = detectPackageManager();
 
 const generate = async (ctx: C3Context) => {
-	await runFrameworkGenerator(ctx, ["basic", ctx.project.name]);
+	await runFrameworkGenerator(ctx, ["playground", ctx.project.name]);
 };
 
 const configure = async (ctx: C3Context) => {
@@ -75,7 +75,7 @@ const addBindingsProxy = (ctx: C3Context) => {
 			}
 
 			if (configArgument.type !== "ObjectExpression") {
-				crash("Failed to update `vite.config.ts`");
+				throw new Error("Failed to update `vite.config.ts`");
 			}
 
 			// Add the `platform` object to the object

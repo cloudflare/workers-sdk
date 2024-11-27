@@ -57,7 +57,9 @@ export class WranglerE2ETestHelper {
 			return name;
 		}
 		const result = await this.run(`wrangler kv namespace create ${name}`);
-		const match = /id = "([0-9a-f]{32})"/.exec(result.stdout);
+		const tomlMatch = /id = "([0-9a-f]{32})"/.exec(result.stdout);
+		const jsonMatch = /"id": "([0-9a-f]{32})"/.exec(result.stdout);
+		const match = jsonMatch ?? tomlMatch;
 		assert(match !== null, `Cannot find ID in ${JSON.stringify(result)}`);
 		const id = match[1];
 		onTestFinished(async () => {
@@ -84,7 +86,9 @@ export class WranglerE2ETestHelper {
 			return { id: crypto.randomUUID(), name };
 		}
 		const result = await this.run(`wrangler d1 create ${name}`);
-		const match = /database_id = "([0-9a-f-]{36})"/.exec(result.stdout);
+		const tomlMatch = /database_id = "([0-9a-f-]{36})"/.exec(result.stdout);
+		const jsonMatch = /"database_id": "([0-9a-f-]{36})"/.exec(result.stdout);
+		const match = jsonMatch ?? tomlMatch;
 		assert(match !== null, `Cannot find ID in ${JSON.stringify(result)}`);
 		const id = match[1];
 		onTestFinished(async () => {
@@ -92,5 +96,18 @@ export class WranglerE2ETestHelper {
 		});
 
 		return { id, name };
+	}
+
+	async vectorize(dimensions: number, metric: string) {
+		// vectorize does not have a local dev mode yet, so we don't yet support the isLocal flag here
+		const name = generateResourceName("vectorize");
+		await this.run(
+			`wrangler vectorize create ${name} --dimensions ${dimensions} --metric ${metric}`
+		);
+		onTestFinished(async () => {
+			await this.run(`wrangler vectorize delete ${name}`);
+		});
+
+		return name;
 	}
 }

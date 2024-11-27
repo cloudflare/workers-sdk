@@ -12,9 +12,9 @@
 	"devDependencies": {
 		"@cloudflare/vitest-pool-workers": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
-		"@cloudflare/workers-types": "^4.20240821.1",
+		"@cloudflare/workers-types": "^4.20241106.0",
 		"run-script-os": "^1.1.6",
-		"undici": "^5.28.4",
+		"undici": "catalog:default",
 		"vitest": "catalog:default",
 		"wrangler": "workspace:*"
 	},

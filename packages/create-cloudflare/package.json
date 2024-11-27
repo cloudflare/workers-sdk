@@ -1,6 +1,6 @@
 {
 	"name": "create-cloudflare",
-	"version": "2.27.2",
+	"version": "2.33.1",
 	"description": "A CLI for creating and deploying new applications to Cloudflare.",
 	"keywords": [
 		"cloudflare",
@@ -49,7 +49,7 @@
 		"@cloudflare/cli": "workspace:*",
 		"@cloudflare/eslint-config-worker": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
-		"@cloudflare/workers-types": "^4.20240909.0",
+		"@cloudflare/workers-types": "^4.20241106.0",
 		"@iarna/toml": "^3.0.0",
 		"@types/command-exists": "^1.2.0",
 		"@types/cross-spawn": "^6.0.2",
@@ -57,7 +57,7 @@
 		"@types/degit": "^2.8.6",
 		"@types/dns2": "^2.0.3",
 		"@types/esprima": "^4.0.3",
-		"@types/node": "20.8.3",
+		"@types/node": "catalog:default",
 		"@types/semver": "^7.5.1",
 		"@types/which-pm-runs": "^1.0.0",
 		"@types/yargs": "^17.0.22",
@@ -79,11 +79,12 @@
 		"open": "^8.4.0",
 		"recast": "^0.22.0",
 		"semver": "^7.5.1",
-		"undici": "^5.28.4",
+		"undici": "catalog:default",
 		"vite-tsconfig-paths": "^4.0.8",
 		"which-pm-runs": "^1.1.0",
 		"wrangler": "workspace:*",
 		"wrap-ansi": "^9.0.0",
+		"xdg-app-paths": "^8.3.0",
 		"yargs": "^17.7.2"
 	},
 	"engines": {

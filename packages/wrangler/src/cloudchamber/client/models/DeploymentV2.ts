@@ -5,11 +5,14 @@
 import type { AccountID } from "./AccountID";
 import type { ApplicationID } from "./ApplicationID";
 import type { Command } from "./Command";
+import type { DeploymentCheck } from "./DeploymentCheck";
 import type { DeploymentID } from "./DeploymentID";
 import type { DeploymentLocation } from "./DeploymentLocation";
+import type { DeploymentSecretMap } from "./DeploymentSecretMap";
 import type { DeploymentState } from "./DeploymentState";
 import type { DeploymentType } from "./DeploymentType";
 import type { DeploymentVersion } from "./DeploymentVersion";
+import type { Disk } from "./Disk";
 import type { DNSConfiguration } from "./DNSConfiguration";
 import type { Entrypoint } from "./Entrypoint";
 import type { EnvironmentVariable } from "./EnvironmentVariable";
@@ -40,6 +43,10 @@ export type DeploymentV2 = {
 	 */
 	ssh_public_key_ids?: Array<SSHPublicKeyID>;
 	/**
+	 * A list of objects with secret names and the their access types from the account
+	 */
+	secrets?: Array<DeploymentSecretMap>;
+	/**
 	 * Container environment variables
 	 */
 	environment_variables?: Array<EnvironmentVariable>;
@@ -61,6 +68,10 @@ export type DeploymentV2 = {
 	 * The node group of this deployment
 	 */
 	node_group: NodeGroup;
+	/**
+	 * The disk configuration for this deployment
+	 */
+	disk?: Disk;
 	network?: Network;
 	/**
 	 * The GPU memory of this deployment. If deployment is not node_group 'gpu', this will be null
@@ -69,5 +80,9 @@ export type DeploymentV2 = {
 	command?: Command;
 	entrypoint?: Entrypoint;
 	dns?: DNSConfiguration;
+	/**
+	 * Health and readiness checks for this deployment.
+	 */
+	checks?: Array<DeploymentCheck>;
 	state?: DeploymentState;
 };

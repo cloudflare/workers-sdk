@@ -1,6 +1,7 @@
 import assert from "node:assert";
 import { spawn, spawnSync } from "node:child_process";
 import events from "node:events";
+import path from "node:path";
 import rl from "node:readline";
 import { PassThrough } from "node:stream";
 import { ReadableStream } from "node:stream/web";
@@ -40,15 +41,13 @@ export function runCommand(
 			encoding: "utf8",
 			timeout,
 		});
-		// eslint-disable-next-line turbo/no-undeclared-env-vars
-		if (process.env.VITEST_MODE === "WATCH") {
-			if (stdout.length) {
-				console.log(stdout);
-			}
-			if (stderr.length) {
-				console.error(stderr);
-			}
+		if (stdout.length) {
+			console.log(`[${path.basename(cwd ?? "/unknown")}]`, stdout);
 		}
+		if (stderr.length) {
+			console.error(`[${path.basename(cwd ?? "/unknown")}]`, stderr);
+		}
+
 		return {
 			status,
 			stdout,
@@ -78,7 +77,7 @@ export function runCommand(
 export class LongLivedCommand {
 	private lines: string[] = [];
 	private stream: ReadableStream;
-	private exitPromise: Promise<unknown>;
+	private exitPromise: Promise<[number, unknown]>;
 	private commandProcess: ChildProcessWithoutNullStreams;
 
 	constructor(
@@ -94,7 +93,9 @@ export class LongLivedCommand {
 			signal,
 		});
 
-		this.exitPromise = events.once(this.commandProcess, "exit");
+		this.exitPromise = events.once(this.commandProcess, "exit") as Promise<
+			[number, unknown]
+		>;
 
 		// Merge the stdout and stderr into a single output stream
 		const output = new PassThrough();
@@ -105,10 +106,7 @@ export class LongLivedCommand {
 		this.stream = new ReadableStream<string>({
 			start: (controller) => {
 				lineInterface.on("line", (line) => {
-					// eslint-disable-next-line turbo/no-undeclared-env-vars
-					if (process.env.VITEST_MODE === "WATCH") {
-						console.log(line);
-					}
+					console.log(`[${path.basename(cwd ?? "/unknown")}]`, line);
 					this.lines.push(line);
 					try {
 						controller.enqueue(line);
@@ -147,7 +145,7 @@ export class LongLivedCommand {
 	}
 
 	get exitCode() {
-		return this.exitPromise;
+		return this.exitPromise.then((e) => e[0]);
 	}
 
 	async stop() {

@@ -1,5 +1,49 @@
 # @cloudflare/workers-shared
 
+## 0.9.0
+
+### Minor Changes
+
+- [#7303](https://github.com/cloudflare/workers-sdk/pull/7303) [`0d314ed`](https://github.com/cloudflare/workers-sdk/commit/0d314ed14145d50b8fd00fdae8b31fb043f4d31a) Thanks [@WillTaylorDev](https://github.com/WillTaylorDev)! - Preparatory work to allow invoking user worker ahead of assets
+
+### Patch Changes
+
+- [#7176](https://github.com/cloudflare/workers-sdk/pull/7176) [`476e5df`](https://github.com/cloudflare/workers-sdk/commit/476e5df5d9f0a2aa3d713160994da3e2a752418e) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Remove incorrect logic in Asset Worker.
+
+## 0.8.0
+
+### Minor Changes
+
+- [#7318](https://github.com/cloudflare/workers-sdk/pull/7318) [`6ba5903`](https://github.com/cloudflare/workers-sdk/commit/6ba5903201de34cb3a8a5610fa11825279171a7e) Thanks [@WillTaylorDev](https://github.com/WillTaylorDev)! - Prevent same-schema attacks
+
+## 0.7.1
+
+### Patch Changes
+
+- [#7183](https://github.com/cloudflare/workers-sdk/pull/7183) [`08c6580`](https://github.com/cloudflare/workers-sdk/commit/08c6580494e702373d17ff7485988a8fae9af59e) Thanks [@WillTaylorDev](https://github.com/WillTaylorDev)! - Fixes bug where indexId was never set for router-worker and asset-worker
+
+## 0.7.0
+
+### Minor Changes
+
+- [#7053](https://github.com/cloudflare/workers-sdk/pull/7053) [`8dc2b7d`](https://github.com/cloudflare/workers-sdk/commit/8dc2b7d739239411ac29e419c22d22c291777042) Thanks [@WillTaylorDev](https://github.com/WillTaylorDev)! - Adds analytics to asset-worker
+
+## 0.6.0
+
+### Minor Changes
+
+- [#6941](https://github.com/cloudflare/workers-sdk/pull/6941) [`fd43068`](https://github.com/cloudflare/workers-sdk/commit/fd430687ec1431be6c3af1b7420278b636c36e59) Thanks [@WillTaylorDev](https://github.com/WillTaylorDev)! - feat: Add observability to router-worker
+
+## 0.5.4
+
+### Patch Changes
+
+- [#6728](https://github.com/cloudflare/workers-sdk/pull/6728) [`1ca313f`](https://github.com/cloudflare/workers-sdk/commit/1ca313f2041688cd13e25f0817e3b72dfc930bac) Thanks [@emily-shen](https://github.com/emily-shen)! - fix: remove filepath encoding on asset upload and handle sometimes-encoded characters
+
+  Some characters like [ ] @ are encoded by encodeURIComponent() but are often requested at an unencoded URL path.
+  This change will make assets with filenames with these characters accessible at both the encoded and unencoded paths,
+  but to use the encoded path as the canonical one, and to redirect requests to the canonical path if necessary.
+
 ## 0.5.3
 
 ### Patch Changes

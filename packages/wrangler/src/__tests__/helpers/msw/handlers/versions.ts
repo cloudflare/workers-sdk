@@ -339,14 +339,3 @@ export const mswPatchNonVersionedScriptSettings = http.patch(
 		return HttpResponse.json(createFetchResult(await request.json()));
 	}
 );
-export const mswGetNonVersionedScriptSettings = http.patch(
-	"*/accounts/:accountId/workers/scripts/:workerName/script-settings",
-	() => {
-		return HttpResponse.json(
-			createFetchResult({
-				logpush: false,
-				tail_consumers: [],
-			})
-		);
-	}
-);

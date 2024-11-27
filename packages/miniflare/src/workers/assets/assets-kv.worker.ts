@@ -26,7 +26,14 @@ export default <ExportedHandler<Env>>{
 		const { filePath, contentType } = entry;
 		const blobsService = env[SharedBindings.MAYBE_SERVICE_BLOBS];
 		const response = await blobsService.fetch(
-			new URL(filePath, "http://placeholder")
+			new URL(
+				// somewhere in blobservice I think this is being decoded again
+				filePath
+					.split("/")
+					.map((x) => encodeURIComponent(x))
+					.join("/"),
+				"http://placeholder"
+			)
 		);
 		const newResponse = new Response(response.body, response);
 		// ensure the runtime will return the metadata we need

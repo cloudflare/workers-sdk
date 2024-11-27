@@ -8,7 +8,7 @@ jobs:
   release:
     if: ${{ github.repository_owner == 'cloudflare' }}
     name: Release
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     steps:
       - name: Checkout Repo

@@ -43,7 +43,7 @@ import type { StartDevWorkerOptions } from "./types";
 import type { DeferredPromise } from "./utils";
 import type { MiniflareOptions } from "miniflare";
 
-export type ProxyControllerEventMap = ControllerEventMap & {
+type ProxyControllerEventMap = ControllerEventMap & {
 	ready: [ReadyEvent];
 	previewTokenExpired: [PreviewTokenExpiredEvent];
 };
@@ -177,7 +177,9 @@ export class ProxyController extends Controller<ProxyControllerEventMap> {
 		if (proxyWorkerOptionsChanged) {
 			logger.debug("ProxyWorker miniflare options changed, reinstantiating...");
 
-			void this.proxyWorker.setOptions(proxyWorkerOptions);
+			void this.proxyWorker.setOptions(proxyWorkerOptions).catch((error) => {
+				this.emitErrorEvent("Failed to start ProxyWorker", error);
+			});
 
 			// this creates a new .ready promise that will be resolved when both ProxyWorkers are ready
 			// it also respects any await-ers of the existing .ready promise
@@ -316,8 +318,6 @@ export class ProxyController extends Controller<ProxyControllerEventMap> {
 				`Failed to send message to ProxyWorker: ${JSON.stringify(message)}`,
 				error
 			);
-
-			throw error;
 		}
 	}
 	async sendMessageToInspectorProxyWorker(
@@ -351,8 +351,6 @@ export class ProxyController extends Controller<ProxyControllerEventMap> {
 				)}`,
 				error
 			);
-
-			throw error;
 		}
 	}
 
@@ -548,7 +546,7 @@ export class ProxyController extends Controller<ProxyControllerEventMap> {
 	}
 }
 
-export class ProxyControllerLogger extends WranglerLog {
+class ProxyControllerLogger extends WranglerLog {
 	log(message: string) {
 		// filter out request logs being handled by the ProxyWorker
 		// the requests log remaining are handled by the UserWorker

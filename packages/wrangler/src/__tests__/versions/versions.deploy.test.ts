@@ -12,7 +12,10 @@ import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { useMockIsTTY } from "../helpers/mock-istty";
 import { mockUploadWorkerRequest } from "../helpers/mock-upload-worker";
-import { mockSubDomainRequest } from "../helpers/mock-workers-subdomain";
+import {
+	mockGetWorkerSubdomain,
+	mockSubDomainRequest,
+} from "../helpers/mock-workers-subdomain";
 import {
 	msw,
 	mswGetVersion,
@@ -26,7 +29,7 @@ import { mswListNewDeploymentsLatestFiftyFifty } from "../helpers/msw/handlers/v
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 import { writeWorkerSource } from "../helpers/write-worker-source";
-import { writeWranglerToml } from "../helpers/write-wrangler-toml";
+import { writeWranglerConfig } from "../helpers/write-wrangler-config";
 import type { VersionsDeployArgs } from "../../versions/deploy";
 
 describe("versions deploy", () => {
@@ -55,10 +58,11 @@ describe("versions deploy", () => {
 				...mswSuccessDeploymentScriptMetadata,
 				...mswListNewDeploymentsLatestFiftyFifty
 			);
-			writeWranglerToml();
+			writeWranglerConfig();
 			writeWorkerSource();
-			mockSubDomainRequest();
 			mockUploadWorkerRequest();
+			mockGetWorkerSubdomain({ enabled: true });
+			mockSubDomainRequest();
 
 			await runWrangler("deploy ./index");
 
@@ -149,7 +153,7 @@ describe("versions deploy", () => {
 	});
 
 	describe("with wrangler.toml", () => {
-		beforeEach(() => writeWranglerToml());
+		beforeEach(() => writeWranglerConfig());
 
 		test("no args", async () => {
 			const result = runWrangler(
@@ -656,7 +660,7 @@ describe("versions deploy", () => {
 		});
 
 		test("with logpush in wrangler.toml", async () => {
-			writeWranglerToml({
+			writeWranglerConfig({
 				logpush: true,
 			});
 
@@ -704,17 +708,78 @@ describe("versions deploy", () => {
 				│
 				│ Synced non-versioned settings:
 				│            logpush:  true
+				│      observability:  <skipped>
 				│     tail_consumers:  <skipped>
 				│
 				╰  SUCCESS  Deployed test-name version 00000000-0000-0000-0000-000000000000 at 100% (TIMINGS)"
 			`);
-
-			expect(normalizeOutput(std.out)).toContain("logpush:  true");
 		});
 
-		test("with logpush and tail_consumers in wrangler.toml", async () => {
-			writeWranglerToml({
+		test("with observability disabled in wrangler.toml", async () => {
+			writeWranglerConfig({
+				observability: {
+					enabled: false,
+				},
+			});
+
+			const result = runWrangler(
+				"versions deploy 10000000-0000-0000-0000-000000000000 --yes --experimental-gradual-rollouts"
+			);
+
+			await expect(result).resolves.toBeUndefined();
+
+			expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`
+				"╭ Deploy Worker Versions by splitting traffic between multiple versions
+				│
+				├ Fetching latest deployment
+				│
+				├ Your current deployment has 2 version(s):
+				│
+				│ (10%) 00000000-0000-0000-0000-000000000000
+				│       Created:  TIMESTAMP
+				│           Tag:  -
+				│       Message:  -
+				│
+				│ (90%) 00000000-0000-0000-0000-000000000000
+				│       Created:  TIMESTAMP
+				│           Tag:  -
+				│       Message:  -
+				│
+				├ Fetching deployable versions
+				│
+				├ Which version(s) do you want to deploy?
+				├ 1 Worker Version(s) selected
+				│
+				├     Worker Version 1:  00000000-0000-0000-0000-000000000000
+				│              Created:  TIMESTAMP
+				│                  Tag:  -
+				│              Message:  -
+				│
+				├ What percentage of traffic should Worker Version 1 receive?
+				├ 100% of traffic
+				├
+				├ Add a deployment message (skipped)
+				│
+				├ Deploying 1 version(s)
+				│
+				├ Syncing non-versioned settings
+				│
+				│ Synced non-versioned settings:
+				│            logpush:  <skipped>
+				│      observability:  enabled:  false
+				│     tail_consumers:  <skipped>
+				│
+				╰  SUCCESS  Deployed test-name version 00000000-0000-0000-0000-000000000000 at 100% (TIMINGS)"
+			`);
+		});
+
+		test("with logpush, tail_consumers, and observability in wrangler.toml", async () => {
+			writeWranglerConfig({
 				logpush: false,
+				observability: {
+					enabled: true,
+					head_sampling_rate: 0.5,
+				},
 				tail_consumers: [
 					{ service: "worker-1" },
 					{ service: "worker-2", environment: "preview" },
@@ -766,6 +831,8 @@ describe("versions deploy", () => {
 				│
 				│ Synced non-versioned settings:
 				│            logpush:  false
+				│      observability:  enabled:             true
+				│                      head_sampling_rate:  0.5
 				│     tail_consumers:  worker-1
 				│                      worker-2 (preview)
 				│                      worker-3 (staging)

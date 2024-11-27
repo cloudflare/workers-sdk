@@ -1,8 +1,14 @@
 import path from "node:path";
+import { configFileName } from "../config";
 import { UserError } from "../errors";
 import { logger } from "../logger";
-import { getBasePath } from "../paths";
 import guessWorkerFormat from "./guess-worker-format";
+import {
+	resolveEntryWithAssets,
+	resolveEntryWithEntryPoint,
+	resolveEntryWithMain,
+	resolveEntryWithScript,
+} from "./resolve-entry";
 import { runCustomBuild } from "./run-custom-build";
 import type { Config } from "../config";
 import type { DurableObjectBindings } from "../config/environment";
@@ -16,8 +22,8 @@ import type { CfScriptFormat } from "./worker";
 export type Entry = {
 	/** A worker's entrypoint */
 	file: string;
-	/** A worker's directory. Usually where the wrangler.toml file is located */
-	directory: string;
+	/** A worker's directory. Usually where the Wrangler configuration file is located */
+	projectRoot: string;
 	/** Is this a module worker or a service worker? */
 	format: CfScriptFormat;
 	/** The directory that contains all of a `--no-bundle` worker's modules. Usually `${directory}/src`. Defaults to path.dirname(file) */
@@ -26,6 +32,9 @@ export type Entry = {
 	 * A worker's name
 	 */
 	name?: string | undefined;
+
+	/** Export from a Worker's entrypoint */
+	exports: string[];
 };
 
 /**
@@ -37,47 +46,52 @@ export async function getEntry(
 		format?: CfScriptFormat | undefined;
 		legacyAssets?: string | undefined | boolean;
 		moduleRoot?: string;
-		experimentalAssets?: string | undefined;
+		assets?: string | undefined;
 	},
 	config: Config,
 	command: "dev" | "deploy" | "versions upload" | "types"
 ): Promise<Entry> {
-	let file: string;
-	let directory = process.cwd();
+	const entryPoint = config.site?.["entry-point"];
+
+	let paths:
+		| { absolutePath: string; relativePath: string; projectRoot?: string }
+		| undefined;
 
 	if (args.script) {
-		// If the script name comes from the command line it is relative to the current working directory.
-		file = path.resolve(args.script);
-	} else if (config.main === undefined) {
-		if (config.site?.["entry-point"]) {
-			directory = path.resolve(path.dirname(config.configPath ?? "."));
-			file = path.extname(config.site?.["entry-point"])
-				? path.resolve(config.site?.["entry-point"])
-				: // site.entry-point could be a directory
-					path.resolve(config.site?.["entry-point"], "index.js");
-		} else if (
-			args.legacyAssets ||
-			config.legacy_assets ||
-			args.experimentalAssets ||
-			config.experimental_assets
-		) {
-			file = path.resolve(getBasePath(), "templates/no-op-worker.js");
-		} else {
+		paths = resolveEntryWithScript(args.script);
+	} else if (config.main !== undefined) {
+		paths = resolveEntryWithMain(config.main, config.configPath);
+	} else if (entryPoint) {
+		paths = resolveEntryWithEntryPoint(entryPoint, config.configPath);
+	} else if (
+		args.legacyAssets ||
+		config.legacy_assets ||
+		args.assets ||
+		config.assets
+	) {
+		paths = resolveEntryWithAssets();
+	} else {
+		if (config.pages_build_output_dir && command === "dev") {
 			throw new UserError(
-				`Missing entry-point: The entry-point should be specified via the command line (e.g. \`wrangler ${command} path/to/script\`) or the \`main\` config field.`
+				"It looks like you've run a Workers-specific command in a Pages project.\n" +
+					"For Pages, please run `wrangler pages dev` instead."
 			);
 		}
-	} else {
-		directory = path.resolve(path.dirname(config.configPath ?? "."));
-		file = path.resolve(directory, config.main);
+		throw new UserError(
+			`Missing entry-point: The entry-point should be specified via the command line (e.g. \`wrangler ${command} path/to/script\`) or the \`main\` config field.`
+		);
 	}
+	await runCustomBuild(
+		paths.absolutePath,
+		paths.relativePath,
+		config.build,
+		config.configPath
+	);
 
-	const relativeFile = path.relative(directory, file) || ".";
-	await runCustomBuild(file, relativeFile, config.build);
-
-	const format = await guessWorkerFormat(
-		file,
-		directory,
+	const projectRoot = paths.projectRoot ?? process.cwd();
+	const { format, exports } = await guessWorkerFormat(
+		paths.absolutePath,
+		projectRoot,
 		args.format ?? config.build?.upload?.format,
 		config.tsconfig
 	);
@@ -97,8 +111,7 @@ export async function getEntry(
 	if (format === "service-worker" && localBindings.length > 0) {
 		const errorMessage =
 			"You seem to be trying to use Durable Objects in a Worker written as a service-worker.";
-		const addScriptName =
-			"You can use Durable Objects defined in other Workers by specifying a `script_name` in your wrangler.toml, where `script_name` is the name of the Worker that implements that Durable Object. For example:";
+		const addScriptName = `You can use Durable Objects defined in other Workers by specifying a \`script_name\` in your ${configFileName(config.configPath)} file, where \`script_name\` is the name of the Worker that implements that Durable Object. For example:`;
 		const addScriptNameExamples = generateAddScriptNameExamples(localBindings);
 		const migrateText =
 			"Alternatively, migrate your worker to ES Module syntax to implement a Durable Object in this Worker:";
@@ -110,11 +123,13 @@ export async function getEntry(
 	}
 
 	return {
-		file,
-		directory,
+		file: paths.absolutePath,
+		projectRoot,
 		format,
-		moduleRoot: args.moduleRoot ?? config.base_dir ?? path.dirname(file),
+		moduleRoot:
+			args.moduleRoot ?? config.base_dir ?? path.dirname(paths.absolutePath),
 		name: config.name ?? "worker",
+		exports,
 	};
 }
 

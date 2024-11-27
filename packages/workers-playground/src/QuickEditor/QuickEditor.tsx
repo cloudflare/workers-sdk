@@ -56,14 +56,19 @@ export default function QuickEditor() {
 		window.location.hash.slice(1)
 	);
 
-	function updateWorkerHash(hash: string) {
-		history.replaceState(null, "", hash);
-	}
+	const draftWorker = useDraftWorker(initialWorkerContentHash);
 
-	const draftWorker = useDraftWorker(
-		initialWorkerContentHash,
-		updateWorkerHash
-	);
+	useEffect(() => {
+		function updateWorkerHash(hash: string) {
+			history.replaceState(null, "", hash);
+		}
+
+		const hash = draftWorker.previewHash?.serialised;
+
+		if (hash) {
+			updateWorkerHash(`/playground#${hash}`);
+		}
+	}, [draftWorker.previewHash?.serialised]);
 
 	useEffect(() => {
 		if (initialWorkerContentHash === "") {

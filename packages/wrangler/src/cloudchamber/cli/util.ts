@@ -1,34 +1,31 @@
 import { bgGreen, bgRed, bgYellow } from "@cloudflare/cli/colors";
-import type { Status } from "../enums";
+import { type PlacementStatusHealth } from "../client";
 
-export function statusToColored(status?: Status): string {
+export function capitalize<S extends string>(str: S): Capitalize<S> {
+	return (
+		str.length > 0 ? str[0].toUpperCase() + str.substring(1) : str
+	) as Capitalize<S>;
+}
+
+export function statusToColored(status?: PlacementStatusHealth): string {
 	if (!status) {
 		return bgYellow("PLACING");
 	}
 
-	const mappings: Record<Status, (_: string) => string> = {
-		placing: bgYellow,
+	const mappings: Record<PlacementStatusHealth, (_: string) => string> = {
+		pending: bgYellow,
 		placed: bgYellow,
 		running: bgGreen,
 		stopped: bgYellow,
 		stopping: bgYellow,
 		failed: bgRed,
+		unhealthy: bgRed,
+		complete: bgGreen,
 	};
 
-	return mappings[status](status.toUpperCase());
-}
+	if (!(status in mappings)) {
+		return bgYellow(status);
+	}
 
-export function fakeWait<T = Record<string, unknown>>(
-	ms: number,
-	object: T,
-	reject = false
-) {
-	return new Promise<typeof object>((res, rej) => {
-		setTimeout(() => {
-			if (reject) {
-				return rej(object);
-			}
-			res(object);
-		}, ms);
-	});
+	return mappings[status](status.toUpperCase());
 }

@@ -1,0 +1,26 @@
+{
+	"name": "@cloudflare/chrome-devtools-patches",
+	"version": "0.1.1",
+	"private": true,
+	"description": "Chrome Devtools hosted for easy use with Workers tooling and applications (Wrangler, Playground, Quick Editor).",
+	"homepage": "https://github.com/cloudflare/workers-sdk#readme",
+	"bugs": {
+		"url": "https://github.com/cloudflare/workers-sdk/issues"
+	},
+	"license": "BSD-3-Clause",
+	"author": "workers-devprod@cloudflare.com",
+	"scripts": {
+		"deploy": "CLOUDFLARE_ACCOUNT_ID=e35fd947284363a46fd7061634477114 make publish",
+		"testenv": "make testenv"
+	},
+	"devDependencies": {
+		"patch-package": "^6.5.1",
+		"wrangler": "workspace:*"
+	},
+	"volta": {
+		"extends": "../../package.json"
+	},
+	"workers-sdk": {
+		"deploy": true
+	}
+}

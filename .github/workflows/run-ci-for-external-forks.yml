@@ -1,0 +1,52 @@
+name: Run CI on behalf of External Forks
+on:
+  workflow_dispatch:
+    inputs:
+      pr-number:
+        description: "The PR number to run CI on behalf of"
+        required: true
+      reviewed:
+        description: "Confirm that the PR has been reviewed for use/leakage of secrets"
+        type: boolean
+        required: true
+jobs:
+  create-draft-pr:
+    name: Create Draft PR
+    if: ${{ inputs.reviewed == true }}
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+      contents: write
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check user for team affiliation
+        uses: tspascoal/get-user-teams-membership@v2
+        id: teamAffiliation
+        with:
+          GITHUB_TOKEN: ${{ secrets.READ_ONLY_ORG_GITHUB_TOKEN }}
+          username: ${{ github.actor }}
+          team: wrangler
+
+      - name: Stop workflow if user is not a team member
+        if: ${{ steps.teamAffiliation.outputs.isTeamMember == false }}
+        run: |
+          echo "You have must be on the "wrangler" team to trigger this job."
+          exit 1
+
+      - name: "Checkout PR"
+        run: gh pr checkout ${{ inputs.pr-number }} -b run-ci-on-behalf-of-${{ inputs.pr-number }} -f
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Push Branch
+        run: git push origin HEAD --force
+
+      - name: "Create Draft PR"
+        run: |
+          gh pr create --head run-ci-on-behalf-of-${{ inputs.pr-number }} --draft --label "e2e" --title "Run CI on behalf of #${{ inputs.pr-number }}" --body "This PR is created to run CI on behalf of \#${{ inputs.pr-number }}. It can be closed after the CI run is complete."
+        env:
+          GH_TOKEN: ${{ github.token }}

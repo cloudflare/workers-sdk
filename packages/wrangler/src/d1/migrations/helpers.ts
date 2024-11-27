@@ -1,9 +1,9 @@
 import fs from "node:fs";
 import path from "path";
+import { configFileName } from "../../config";
 import { confirm } from "../../dialogs";
 import { UserError } from "../../errors";
-import { CI } from "../../is-ci";
-import isInteractive from "../../is-interactive";
+import { isNonInteractiveOrCI } from "../../is-interactive";
 import { logger } from "../../logger";
 import { DEFAULT_MIGRATION_PATH } from "../constants";
 import { executeSql } from "../execute";
@@ -15,10 +15,12 @@ export async function getMigrationsPath({
 	projectPath,
 	migrationsFolderPath,
 	createIfMissing,
+	configPath,
 }: {
 	projectPath: string;
 	migrationsFolderPath: string;
 	createIfMissing: boolean;
+	configPath: string | undefined;
 }): Promise<string> {
 	const dir = path.resolve(projectPath, migrationsFolderPath);
 	if (fs.existsSync(dir)) {
@@ -27,7 +29,7 @@ export async function getMigrationsPath({
 
 	const warning = `No migrations folder found.${
 		migrationsFolderPath === DEFAULT_MIGRATION_PATH
-			? " Set `migrations_dir` in wrangler.toml to choose a different path."
+			? ` Set \`migrations_dir\` in your ${configFileName(configPath)} file to choose a different path.`
 			: ""
 	}`;
 
@@ -110,7 +112,7 @@ const listAppliedMigrations = async ({
 		remote,
 		config,
 		name,
-		shouldPrompt: isInteractive() && !CI.isCI(),
+		shouldPrompt: !isNonInteractiveOrCI(),
 		persistTo,
 		command: `SELECT *
 		FROM ${migrationsTableName}
@@ -178,7 +180,7 @@ export const initMigrationsTable = async ({
 		remote,
 		config,
 		name,
-		shouldPrompt: isInteractive() && !CI.isCI(),
+		shouldPrompt: !isNonInteractiveOrCI(),
 		persistTo,
 		command: `CREATE TABLE IF NOT EXISTS ${migrationsTableName}(
 		id         INTEGER PRIMARY KEY AUTOINCREMENT,

@@ -14,9 +14,9 @@ import { getBasePath } from "../../paths";
 import { getPagesProjectRoot, getPagesTmpDir } from "../utils";
 import type { BundleResult } from "../../deployment-bundle/bundle";
 import type { Entry } from "../../deployment-bundle/entry";
-import type { NodeJSCompatMode } from "../../deployment-bundle/node-compat";
 import type { CfModule } from "../../deployment-bundle/worker";
 import type { Plugin } from "esbuild";
+import type { NodeJSCompatMode } from "miniflare";
 
 export type Options = {
 	routesModule: string;
@@ -32,6 +32,7 @@ export type Options = {
 	functionsDirectory: string;
 	local: boolean;
 	defineNavigatorUserAgent: boolean;
+	checkFetch: boolean;
 	external?: string[];
 };
 
@@ -49,13 +50,15 @@ export function buildWorkerFromFunctions({
 	functionsDirectory,
 	local,
 	defineNavigatorUserAgent,
+	checkFetch,
 	external,
 }: Options) {
 	const entry: Entry = {
 		file: resolve(getBasePath(), "templates/pages-template-worker.ts"),
-		directory: functionsDirectory,
+		projectRoot: functionsDirectory,
 		format: "modules",
 		moduleRoot: functionsDirectory,
+		exports: [],
 	};
 	const moduleCollector = createModuleCollector({
 		entry,
@@ -67,7 +70,7 @@ export function buildWorkerFromFunctions({
 		additionalModules: [],
 		moduleCollector,
 		inject: [routesModule],
-		...(outdir ? { entryName: "index" } : {}),
+		...(outdir ? { entryName: "index" } : { entryName: undefined }),
 		minify,
 		sourcemap,
 		watch,
@@ -79,16 +82,23 @@ export function buildWorkerFromFunctions({
 		},
 		alias: {},
 		doBindings: [], // Pages functions don't support internal Durable Objects
+		workflowBindings: [], // Pages functions don't support internal Workflows
 		external,
 		plugins: [buildNotifierPlugin(onEnd), assetsPlugin(buildOutputDirectory)],
 		isOutfile: !outdir,
 		serveLegacyAssetsFromWorker: false,
-		checkFetch: local,
+		checkFetch: local && checkFetch,
 		targetConsumer: local ? "dev" : "deploy",
-		forPages: true,
 		local,
 		projectRoot: getPagesProjectRoot(),
 		defineNavigatorUserAgent,
+
+		legacyAssets: undefined,
+		bypassAssetCache: undefined,
+		jsxFactory: undefined,
+		jsxFragment: undefined,
+		tsconfig: undefined,
+		testScheduled: undefined,
 	});
 }
 
@@ -109,6 +119,7 @@ export type RawOptions = {
 	local: boolean;
 	additionalModules?: CfModule[];
 	defineNavigatorUserAgent: boolean;
+	checkFetch: boolean;
 	external?: string[];
 };
 
@@ -135,13 +146,15 @@ export function buildRawWorker({
 	local,
 	additionalModules = [],
 	defineNavigatorUserAgent,
+	checkFetch,
 	external,
 }: RawOptions) {
 	const entry: Entry = {
 		file: workerScriptPath,
-		directory: resolve(directory),
+		projectRoot: resolve(directory),
 		format: "modules",
 		moduleRoot: resolve(directory),
+		exports: [],
 	};
 	const moduleCollector = externalModules
 		? noopModuleCollector
@@ -160,6 +173,7 @@ export function buildRawWorker({
 		define: {},
 		alias: {},
 		doBindings: [], // Pages functions don't support internal Durable Objects
+		workflowBindings: [], // Pages functions don't support internal Workflows
 		external,
 		plugins: [
 			...plugins,
@@ -187,12 +201,20 @@ export function buildRawWorker({
 		],
 		isOutfile: !outdir,
 		serveLegacyAssetsFromWorker: false,
-		checkFetch: local,
+		checkFetch: local && checkFetch,
 		targetConsumer: local ? "dev" : "deploy",
-		forPages: true,
 		local,
 		projectRoot: getPagesProjectRoot(),
 		defineNavigatorUserAgent,
+
+		legacyAssets: undefined,
+		bypassAssetCache: undefined,
+		jsxFactory: undefined,
+		jsxFragment: undefined,
+		tsconfig: undefined,
+		testScheduled: undefined,
+		entryName: undefined,
+		inject: undefined,
 	});
 }
 
@@ -202,6 +224,7 @@ export async function produceWorkerBundleForWorkerJSDirectory({
 	buildOutputDirectory,
 	nodejsCompatMode,
 	defineNavigatorUserAgent,
+	checkFetch,
 	sourceMaps,
 }: {
 	workerJSDirectory: string;
@@ -209,6 +232,7 @@ export async function produceWorkerBundleForWorkerJSDirectory({
 	buildOutputDirectory: string;
 	nodejsCompatMode: NodeJSCompatMode;
 	defineNavigatorUserAgent: boolean;
+	checkFetch: boolean;
 	sourceMaps: boolean;
 }): Promise<BundleResult> {
 	const entrypoint = resolve(join(workerJSDirectory, "index.js"));
@@ -216,9 +240,10 @@ export async function produceWorkerBundleForWorkerJSDirectory({
 	const additionalModules = await findAdditionalModules(
 		{
 			file: entrypoint,
-			directory: resolve(workerJSDirectory),
+			projectRoot: resolve(workerJSDirectory),
 			format: "modules",
 			moduleRoot: resolve(workerJSDirectory),
+			exports: [],
 		},
 		[
 			{
@@ -259,6 +284,7 @@ export async function produceWorkerBundleForWorkerJSDirectory({
 		nodejsCompatMode,
 		additionalModules,
 		defineNavigatorUserAgent,
+		checkFetch,
 	});
 	return {
 		modules: bundleResult.modules,

@@ -43,7 +43,7 @@ $ npm install wrangler --save-dev
 
 ## Configuration:
 
-Wrangler is configured via a `wrangler.toml` file in the project root. When utilizing the `wrangler init` command, a `wrangler.toml` file will be created for you.
+Wrangler is configured via a `wrangler.json` or `wrangler.toml` file in the project root. When utilizing the `wrangler init` command, a `wrangler.toml` file will be created for you.
 
 Example:
 
