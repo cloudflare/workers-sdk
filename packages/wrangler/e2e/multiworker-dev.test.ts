@@ -47,11 +47,13 @@ describe("multiworker", () => {
 			"wrangler.toml": dedent`
 					name = "${workerName}"
 					main = "src/index.ts"
-					compatibility_date = "2023-01-01"
+					compatibility_date = "2024-11-01"
 			`,
 			"src/index.ts": dedent/* javascript */ `
+				import { DurableObject } from "cloudflare:workers";
+
 				export default {
-					fetch(req, env) {
+					async fetch(req, env) {
                         const url = new URL(req.url)
                         if (url.pathname === "/do") {
                             const id = env.MY_DO.idFromName(url.pathname);
@@ -61,21 +63,30 @@ describe("multiworker", () => {
                         if (url.pathname === "/service") {
                             return env.CEE.fetch(req);
                         }
+						if (url.pathname === "/count") {
+                            const counter = await env.COUNTER.newCounter()
+							await counter.increment(1)
+							await counter.increment(2)
+							await counter.increment(3)
+							return new Response(String(await counter.value))
+                        }
 						return env.BEE.fetch(req);
 					},
 				};
 
-                export class MyDurableObject implements DurableObject {
-                    constructor(public state: DurableObjectState) {}
-
+                export class MyDurableObject extends DurableObject {
                     async fetch(request: Request) {
                         if (request.headers.has("X-Reset-Count")) {
-                            await this.state.storage.put("count", 0);
+                            await this.ctx.storage.put("count", 0);
                         }
-                        let count: number = (await this.state.storage.get("count")) || 0;
-                        await this.state.storage.put("count", ++count);
-                        return Response.json({ count, id: this.state.id.toString() });
+                        let count: number = (await this.ctx.storage.get("count")) || 0;
+                        await this.ctx.storage.put("count", ++count);
+                        return Response.json({ count });
                     }
+
+					sayHello(name: string) {
+						return "Hello " + name
+					}
                 }
 				`,
 			"package.json": dedent`
@@ -92,7 +103,7 @@ describe("multiworker", () => {
 			"wrangler.toml": dedent`
 					name = "${workerName2}"
 					main = "src/index.ts"
-					compatibility_date = "2023-01-01"
+					compatibility_date = "2024-11-01"
 
 
                     [durable_objects]
@@ -101,13 +112,38 @@ describe("multiworker", () => {
                     ]
 			`,
 			"src/index.ts": dedent/* javascript */ `
+				import { WorkerEntrypoint, RpcTarget } from "cloudflare:workers";
+
+				class Counter extends RpcTarget {
+					#value = 0;
+
+					increment(amount) {
+						this.#value += amount;
+						return this.#value;
+					}
+
+					get value() {
+						return this.#value;
+					}
+				}
+
+				export class CounterService extends WorkerEntrypoint {
+					async newCounter() {
+						return new Counter();
+					}
+				}
 				export default{
-					fetch(req, env) {
+					async fetch(req, env) {
                         const url = new URL(req.url)
                         if (url.pathname === "/do") {
                             const id = env.REFERENCED_DO.idFromName(url.pathname);
                             const stub = env.REFERENCED_DO.get(id);
                             return stub.fetch(req);
+                        }
+						if (url.pathname === "/do-rpc") {
+                            const id = env.REFERENCED_DO.idFromName(url.pathname);
+                            const stub = env.REFERENCED_DO.get(id);
+                            return new Response(await stub.sayHello("through DO RPC"));
                         }
 						return new Response("hello world");
 					},
@@ -149,11 +185,16 @@ describe("multiworker", () => {
 				"wrangler.toml": dedent`
 						name = "${workerName}"
 						main = "src/index.ts"
-						compatibility_date = "2023-01-01"
+						compatibility_date = "2024-11-01"
 
 						[[services]]
 						binding = "BEE"
 						service = '${workerName2}'
+
+						[[services]]
+						binding = "COUNTER"
+						service = '${workerName2}'
+						entrypoint = 'CounterService'
 				`,
 			});
 		});
@@ -180,12 +221,25 @@ describe("multiworker", () => {
 			);
 		});
 
+		it("can fetch named entrypoint on b through a and do RPC", async () => {
+			const workerA = helper.runLongLived(
+				`wrangler dev -c wrangler.toml -c ${b}/wrangler.toml`,
+				{ cwd: a }
+			);
+			const { url } = await workerA.waitForReady(5_000);
+
+			await vi.waitFor(
+				async () => await expect(fetchText(`${url}/count`)).resolves.toBe("6"),
+				{ interval: 1000, timeout: 10_000 }
+			);
+		});
+
 		it("shows error on startup with non-existent service", async () => {
 			await baseSeed(a, {
 				"wrangler.toml": dedent`
 						name = "${workerName}"
 						main = "src/index.ts"
-						compatibility_date = "2023-01-01"
+						compatibility_date = "2024-11-01"
 
 						[[services]]
 						binding = "BEE"
@@ -235,7 +289,7 @@ describe("multiworker", () => {
 				"wrangler.toml": dedent`
 					name = "${workerName}"
 					main = "src/index.ts"
-					compatibility_date = "2023-01-01"
+					compatibility_date = "2024-11-01"
 
                     [[services]]
 					binding = "CEE"
@@ -267,7 +321,7 @@ describe("multiworker", () => {
 				"wrangler.toml": dedent`
 						name = "${workerName}"
 						main = "src/index.ts"
-						compatibility_date = "2023-01-01"
+						compatibility_date = "2024-11-01"
 
 						[[services]]
 						binding = "BEE"
@@ -314,6 +368,22 @@ describe("multiworker", () => {
 							},
 						})
 					).resolves.toMatchObject({ count: 1 }),
+				{ interval: 1000, timeout: 10_000 }
+			);
+		});
+
+		it("can fetch remote DO attached to a through b with RPC", async () => {
+			const workerB = helper.runLongLived(
+				`wrangler dev -c wrangler.toml -c ${a}/wrangler.toml`,
+				{ cwd: b }
+			);
+			const { url } = await workerB.waitForReady(5_000);
+
+			await vi.waitFor(
+				async () =>
+					await expect(fetchText(`${url}/do-rpc`)).resolves.toBe(
+						"Hello through DO RPC"
+					),
 				{ interval: 1000, timeout: 10_000 }
 			);
 		});
