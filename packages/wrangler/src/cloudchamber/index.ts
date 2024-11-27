@@ -1,3 +1,4 @@
+import { buildCommand, buildYargs, pushCommand, pushYargs } from "./build";
 import { handleFailure } from "./common";
 import { createCommand, createCommandOptionalYargs } from "./create";
 import { curlCommand, yargsCurl } from "./curl";
@@ -61,5 +62,17 @@ export const cloudchamber = (
 			"send a request to an arbitrary cloudchamber endpoint",
 			(args) => yargsCurl(args),
 			(args) => handleFailure(curlCommand)(args)
+		)
+		.command(
+			"build",
+			"build a dockerfile",
+			(args) => buildYargs(args),
+			(args) => handleFailure(buildCommand)(args)
+		)
+		.command(
+			"push",
+			"push a tag to a registry (defaults to cloudchamber managed registry)",
+			(args) => pushYargs(args),
+			(args) => handleFailure(pushCommand)(args)
 		);
 };

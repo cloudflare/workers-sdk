@@ -37,6 +37,7 @@ export type CloudchamberConfig = {
 	vcpu?: number;
 	memory?: string;
 	ipv4?: boolean;
+	build_command?: string;
 };
 
 /**
