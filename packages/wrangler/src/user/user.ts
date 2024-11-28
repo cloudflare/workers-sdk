@@ -661,7 +661,7 @@ function isReturningFromAuthServer(query: ParsedUrlQuery): boolean {
 	return true;
 }
 
-async function getAuthURL(scopes = DefaultScopeKeys): Promise<string> {
+async function getAuthURL(scopes: string[], clientId: string): Promise<string> {
 	const { codeChallenge, codeVerifier } = await generatePKCECodes();
 	const stateQueryParam = generateRandomState(RECOMMENDED_STATE_LENGTH);
 
@@ -673,7 +673,7 @@ async function getAuthURL(scopes = DefaultScopeKeys): Promise<string> {
 
 	return generateAuthUrl({
 		authUrl: getAuthUrlFromEnv(),
-		clientId: getClientIdFromEnv(),
+		clientId,
 		callbackUrl: CALLBACK_URL,
 		scopes,
 		stateQueryParam,
@@ -939,43 +939,45 @@ export async function loginOrRefreshIfRequired(
 	}
 }
 
-export async function login(
-	props: LoginProps = { browser: true }
-): Promise<boolean> {
-	const authFromEnv = getAuthFromEnv();
-	if (authFromEnv) {
-		// Auth from env overrides any login details, so no point in allowing the user to login.
-		logger.error(
-			"You are logged in with an API Token. Unset the CLOUDFLARE_API_TOKEN in the " +
-				"environment to log in via OAuth."
-		);
-		return false;
-	}
-
-	logger.log("Attempting to login via OAuth...");
-	const urlToOpen = await getAuthURL(props?.scopes);
+export async function getOauthToken(options: {
+	browser: boolean;
+	scopes: string[];
+	clientId: string;
+	denied: {
+		url: string;
+		error: string;
+	};
+	granted: {
+		url: string;
+	};
+}): Promise<AccessContext> {
+	const urlToOpen = await getAuthURL(options.scopes, options.clientId);
 	let server: http.Server;
 	let loginTimeoutHandle: ReturnType<typeof setTimeout>;
-	const timerPromise = new Promise<boolean>((resolve) => {
+	const timerPromise = new Promise<AccessContext>((_, reject) => {
 		loginTimeoutHandle = setTimeout(() => {
-			logger.error(
-				"Timed out waiting for authorization code, please try again."
-			);
 			server.close();
 			clearTimeout(loginTimeoutHandle);
-			resolve(false);
+			reject(
+				new UserError(
+					"Timed out waiting for authorization code, please try again."
+				)
+			);
 		}, 120000); // wait for 120 seconds for the user to authorize
 	});
 
-	const loginPromise = new Promise<boolean>((resolve, reject) => {
+	const loginPromise = new Promise<AccessContext>((resolve, reject) => {
 		server = http.createServer(async (req, res) => {
-			function finish(status: boolean, error?: Error) {
+			function finish(token: null, error: Error): void;
+			function finish(token: AccessContext): void;
+			function finish(token: AccessContext | null, error?: Error) {
 				clearTimeout(loginTimeoutHandle);
 				server.close((closeErr?: Error) => {
 					if (error || closeErr) {
 						reject(error || closeErr);
 					} else {
-						resolve(status);
+						assert(token);
+						resolve(token);
 					}
 				});
 			}
@@ -993,45 +995,30 @@ export async function login(
 					} catch (err: unknown) {
 						if (err instanceof ErrorAccessDenied) {
 							res.writeHead(307, {
-								Location:
-									"https://welcome.developers.workers.dev/wrangler-oauth-consent-denied",
+								Location: options.denied.url,
 							});
 							res.end(() => {
-								finish(false);
+								finish(null, new UserError(options.denied.error));
 							});
-							logger.error(
-								"Error: Consent denied. You must grant consent to Wrangler in order to login.\n" +
-									"If you don't want to do this consider passing an API token via the `CLOUDFLARE_API_TOKEN` environment variable"
-							);
 
 							return;
 						} else {
-							finish(false, err as Error);
+							finish(null, err as Error);
 							return;
 						}
 					}
 					if (!hasAuthCode) {
 						// render an error page here
-						finish(false, new ErrorNoAuthCode());
+						finish(null, new ErrorNoAuthCode());
 						return;
 					} else {
 						const exchange = await exchangeAuthCodeForAccessToken();
-						writeAuthConfigFile({
-							oauth_token: exchange.token?.value ?? "",
-							expiration_time: exchange.token?.expiry,
-							refresh_token: exchange.refreshToken?.value,
-							scopes: exchange.scopes,
-						});
 						res.writeHead(307, {
-							Location:
-								"https://welcome.developers.workers.dev/wrangler-oauth-consent-granted",
+							Location: options.granted.url,
 						});
 						res.end(() => {
-							finish(true);
+							finish(exchange);
 						});
-						logger.log(`Successfully logged in.`);
-
-						purgeConfigCaches();
 
 						return;
 					}
@@ -1041,7 +1028,7 @@ export async function login(
 
 		server.listen(8976, "localhost");
 	});
-	if (props?.browser) {
+	if (options.browser) {
 		logger.log(`Opening a link in your default browser: ${urlToOpen}`);
 		await openInBrowser(urlToOpen);
 	} else {
@@ -1049,6 +1036,50 @@ export async function login(
 	}
 
 	return Promise.race([timerPromise, loginPromise]);
+}
+
+export async function login(
+	props: LoginProps = { browser: true }
+): Promise<boolean> {
+	const authFromEnv = getAuthFromEnv();
+	if (authFromEnv) {
+		// Auth from env overrides any login details, so no point in allowing the user to login.
+		logger.error(
+			"You are logged in with an API Token. Unset the CLOUDFLARE_API_TOKEN in the " +
+				"environment to log in via OAuth."
+		);
+		return false;
+	}
+
+	logger.log("Attempting to login via OAuth...");
+
+	const oauth = await getOauthToken({
+		browser: !!props.browser,
+		scopes: props.scopes ?? DefaultScopeKeys,
+		clientId: getClientIdFromEnv(),
+		denied: {
+			url: "https://welcome.developers.workers.dev/wrangler-oauth-consent-denied",
+			error:
+				"Error: Consent denied. You must grant consent to Wrangler in order to login.\n" +
+				"If you don't want to do this consider passing an API token via the `CLOUDFLARE_API_TOKEN` environment variable",
+		},
+		granted: {
+			url: "https://welcome.developers.workers.dev/wrangler-oauth-consent-granted",
+		},
+	});
+
+	writeAuthConfigFile({
+		oauth_token: oauth.token?.value ?? "",
+		expiration_time: oauth.token?.expiry,
+		refresh_token: oauth.refreshToken?.value,
+		scopes: oauth.scopes,
+	});
+
+	logger.log(`Successfully logged in.`);
+
+	purgeConfigCaches();
+
+	return true;
 }
 
 /**
