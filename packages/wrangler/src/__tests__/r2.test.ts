@@ -95,6 +95,7 @@ describe("r2", () => {
 				  wrangler r2 bucket domain           Manage custom domains for an R2 bucket
 				  wrangler r2 bucket dev-url          Manage public access via the r2.dev URL for an R2 bucket
 				  wrangler r2 bucket lifecycle        Manage lifecycle rules for an R2 bucket
+				  wrangler r2 bucket cors             Manage CORS configuration for an R2 bucket
 
 				GLOBAL FLAGS
 				  -c, --config   Path to Wrangler configuration file  [string]
@@ -132,6 +133,7 @@ describe("r2", () => {
 				  wrangler r2 bucket domain           Manage custom domains for an R2 bucket
 				  wrangler r2 bucket dev-url          Manage public access via the r2.dev URL for an R2 bucket
 				  wrangler r2 bucket lifecycle        Manage lifecycle rules for an R2 bucket
+				  wrangler r2 bucket cors             Manage CORS configuration for an R2 bucket
 
 				GLOBAL FLAGS
 				  -c, --config   Path to Wrangler configuration file  [string]
@@ -2051,6 +2053,155 @@ describe("r2", () => {
 					expect(std.out).toMatchInlineSnapshot(`
 						"Setting lifecycle configuration (1 rules) for bucket 'my-bucket'...
 						✨ Set lifecycle configuration for bucket 'my-bucket'."
+					  `);
+				});
+			});
+		});
+		describe("cors", () => {
+			const { setIsTTY } = useMockIsTTY();
+			mockAccountId();
+			mockApiToken();
+			describe("list", () => {
+				it("should list CORS rules when they exist", async () => {
+					const bucketName = "my-bucket";
+					const corsRules = [
+						{
+							allowed: {
+								origins: ["https://www.example.com"],
+								methods: ["GET", "PUT"],
+								headers: ["Content-Type", "Authorization"],
+							},
+							exposeHeaders: ["ETag", "Content-Length"],
+							maxAgeSeconds: 8640,
+						},
+					];
+
+					msw.use(
+						http.get(
+							"*/accounts/:accountId/r2/buckets/:bucketName/cors",
+							async ({ params }) => {
+								const { accountId, bucketName: bucketParam } = params;
+								expect(accountId).toEqual("some-account-id");
+								expect(bucketParam).toEqual(bucketName);
+								return HttpResponse.json(
+									createFetchResult({
+										rules: corsRules,
+									})
+								);
+							},
+							{ once: true }
+						)
+					);
+					await runWrangler(`r2 bucket cors list ${bucketName}`);
+					expect(std.out).toMatchInlineSnapshot(`
+					"Listing CORS rules for bucket 'my-bucket'...
+					allowed_origins:  https://www.example.com
+					allowed_methods:  GET, PUT
+					allowed_headers:  Content-Type, Authorization
+					exposed_headers:  ETag, Content-Length
+					max_age_seconds:  8640"
+				  `);
+				});
+			});
+			describe("set", () => {
+				it("should set CORS configuration from a JSON file", async () => {
+					const bucketName = "my-bucket";
+					const filePath = "cors-configuration.json";
+					const corsRules = {
+						rules: [
+							{
+								allowed: {
+									origins: ["https://www.example.com"],
+									methods: ["GET", "PUT"],
+									headers: ["Content-Type", "Authorization"],
+								},
+								exposeHeaders: ["ETag", "Content-Length"],
+								maxAgeSeconds: 8640,
+							},
+						],
+					};
+
+					writeFileSync(filePath, JSON.stringify(corsRules));
+
+					setIsTTY(true);
+					mockConfirm({
+						text: `Are you sure you want to overwrite the existing CORS configuration for bucket '${bucketName}'?`,
+						result: true,
+					});
+
+					msw.use(
+						http.put(
+							"*/accounts/:accountId/r2/buckets/:bucketName/cors",
+							async ({ request, params }) => {
+								const { accountId, bucketName: bucketParam } = params;
+								expect(accountId).toEqual("some-account-id");
+								expect(bucketName).toEqual(bucketParam);
+								const requestBody = await request.json();
+								expect(requestBody).toEqual({
+									...corsRules,
+								});
+								return HttpResponse.json(createFetchResult({}));
+							},
+							{ once: true }
+						)
+					);
+
+					await runWrangler(
+						`r2 bucket cors set ${bucketName} --file ${filePath}`
+					);
+					expect(std.out).toMatchInlineSnapshot(`
+						"Setting CORS configuration (1 rules) for bucket 'my-bucket'...
+						✨ Set CORS configuration for bucket 'my-bucket'."
+					  `);
+				});
+			});
+			describe("delete", () => {
+				it("should delete CORS configuration as expected", async () => {
+					const bucketName = "my-bucket";
+					const corsRules = {
+						rules: [
+							{
+								allowed: {
+									origins: ["https://www.example.com"],
+									methods: ["GET", "PUT"],
+									headers: ["Content-Type", "Authorization"],
+								},
+								exposeHeaders: ["ETag", "Content-Length"],
+								maxAgeSeconds: 8640,
+							},
+						],
+					};
+					setIsTTY(true);
+					mockConfirm({
+						text: `Are you sure you want to clear the existing CORS configuration for bucket '${bucketName}'?`,
+						result: true,
+					});
+					msw.use(
+						http.get(
+							"*/accounts/:accountId/r2/buckets/:bucketName/cors",
+							async ({ params }) => {
+								const { accountId, bucketName: bucketParam } = params;
+								expect(accountId).toEqual("some-account-id");
+								expect(bucketParam).toEqual(bucketName);
+								return HttpResponse.json(createFetchResult(corsRules));
+							},
+							{ once: true }
+						),
+						http.delete(
+							"*/accounts/:accountId/r2/buckets/:bucketName/cors",
+							async ({ params }) => {
+								const { accountId, bucketName: bucketParam } = params;
+								expect(accountId).toEqual("some-account-id");
+								expect(bucketName).toEqual(bucketParam);
+								return HttpResponse.json(createFetchResult({}));
+							},
+							{ once: true }
+						)
+					);
+					await runWrangler(`r2 bucket cors delete ${bucketName}`);
+					expect(std.out).toMatchInlineSnapshot(`
+						"Deleting the CORS configuration for bucket 'my-bucket'...
+						CORS configuration deleted for bucket 'my-bucket'."
 					  `);
 				});
 			});

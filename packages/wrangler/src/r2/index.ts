@@ -6,6 +6,7 @@ import "./notification";
 import "./domain";
 import "./public-dev-url";
 import "./lifecycle";
+import "./cors";
 
 defineNamespace({
 	command: "wrangler r2",
