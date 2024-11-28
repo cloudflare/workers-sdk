@@ -2599,8 +2599,8 @@ const validateR2Binding: ValidatorFn = (diagnostics, field, value) => {
 	}
 	if (
 		getFlag("RESOURCES_PROVISION")
-			? !isOptionalProperty(value, "bucket_id", "string") ||
-				(value.bucket_id !== undefined && value.bucket_id.length === 0)
+			? !isOptionalProperty(value, "bucket_name", "string") ||
+				(value.bucket_name !== undefined && value.bucket_name.length === 0)
 			: !isRequiredProperty(value, "bucket_name", "string") ||
 				value.bucket_name.length === 0
 	) {
