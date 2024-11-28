@@ -7,16 +7,16 @@ import type {
 	NamespaceDefinition,
 } from "./types";
 
-export type DefineCommandResult<NamedArgDefs extends NamedArgDefinitions> =
+export type CreateCommandResult<NamedArgDefs extends NamedArgDefinitions> =
 	DeepFlatten<{
 		args: HandlerArgs<NamedArgDefs>; // used for type inference only
 	}>;
 export function createCommand<NamedArgDefs extends NamedArgDefinitions>(
 	definition: CommandDefinition<NamedArgDefs>
-): DefineCommandResult<NamedArgDefs>;
+): CreateCommandResult<NamedArgDefs>;
 export function createCommand(
 	definition: CommandDefinition
-): DefineCommandResult<NamedArgDefinitions> {
+): CreateCommandResult<NamedArgDefinitions> {
 	// @ts-expect-error return type is used for type inference only
 	return definition;
 }

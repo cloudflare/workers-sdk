@@ -11,25 +11,27 @@
 
 ## Defining your new command in Wrangler
 
-1. Define the command structure with the utils `defineNamespace()` & `defineCommand()`
+1. Create the command structure and define it in the registry.
+
+First, create your namespaces and commands with the `createNamespace` and `createCommand` utilities. Namespaces are the prefix before the subcommand, eg. "wrangler kv" in "wrangler kv put".
 
 ```ts
-import { defineCommand, defineNamespace } from "./util";
+import { createCommand, createNamespace } from "../core/create-command";
+import { createKVNamespace } from "./helpers";
 
 // Namespaces are the prefix before the subcommand
 // eg "wrangler kv" in "wrangler kv put"
 // eg "wrangler kv key" in "wrangler kv key put"
-defineNamespace({
-	command: "wrangler kv",
+export const kvNamespace = createNamespace({
 	metadata: {
 		description: "Commands for interacting with Workers KV",
 		status: "stable",
 	},
 });
+
 // Every level of namespaces must be defined
 // eg "wrangler kv key" in "wrangler kv key put"
-defineNamespace({
-	command: "wrangler kv key",
+export const kvKeyNamespace = createKVNamespace({
 	metadata: {
 		description: "Commands for interacting with Workers KV data",
 		status: "stable",
@@ -37,8 +39,7 @@ defineNamespace({
 });
 
 // Define the command args, implementation and metadata
-const command = defineCommand({
-	command: "wrangler kv key put", // the full command including the namespace
+export const kvKeyPutCommand = createCommand({
 	metadata: {
 		description: "Put a key-value pair into a Workers KV namespace",
 		status: "stable",
@@ -65,6 +66,22 @@ const command = defineCommand({
 		// implementation here
 	},
 });
+```
+
+Define your commands in the registry
+
+```ts
+import { kvKeyNamespace, kvKeyPutCommand, kvNamespace } from "./kv";
+
+// ...
+
+registry.define([
+	{ command: "wrangler kv", definition: kvNamespace },
+	{ command: "wrangler kv key", definition: kvKeyNamespace },
+	{ command: "wrangler kv key put", definition: kvKeyPutCommand },
+	// ...other kv commands here
+]);
+registry.registerNamespace("kv");
 ```
 
 2. Command-specific (named + positional) args vs shared args vs global args

@@ -1,5 +1,5 @@
 import { CommandLineArgsError } from "../errors";
-import type { DefineCommandResult } from "./create-command";
+import type { CreateCommandResult } from "./create-command";
 import type {
 	AliasDefinition,
 	CommandDefinition,
@@ -63,7 +63,7 @@ export function demandSingleValue<Argv extends { [key: string]: unknown }>(
 export function isAliasDefinition(
 	def:
 		| AliasDefinition
-		| DefineCommandResult<NamedArgDefinitions>
+		| CreateCommandResult<NamedArgDefinitions>
 		| NamespaceDefinition
 ): def is AliasDefinition {
 	return (def as AliasDefinition).aliasOf !== undefined;
@@ -75,7 +75,7 @@ export function isAliasDefinition(
 export function isCommandDefinition(
 	def:
 		| AliasDefinition
-		| DefineCommandResult<NamedArgDefinitions>
+		| CreateCommandResult<NamedArgDefinitions>
 		| NamespaceDefinition
 ): def is CommandDefinition {
 	return (def as CommandDefinition).handler !== undefined;
@@ -87,7 +87,7 @@ export function isCommandDefinition(
 export function isNamespaceDefinition(
 	def:
 		| AliasDefinition
-		| DefineCommandResult<NamedArgDefinitions>
+		| CreateCommandResult<NamedArgDefinitions>
 		| NamespaceDefinition
 ): def is NamespaceDefinition {
 	return !isAliasDefinition(def) && !isCommandDefinition(def);

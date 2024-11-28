@@ -5,7 +5,7 @@ import {
 	isCommandDefinition,
 	isNamespaceDefinition,
 } from "./helpers";
-import type { DefineCommandResult } from "./create-command";
+import type { CreateCommandResult } from "./create-command";
 import type {
 	AliasDefinition,
 	Command,
@@ -60,7 +60,7 @@ export class CommandRegistry {
 			command: Command;
 			definition:
 				| AliasDefinition
-				| DefineCommandResult<NamedArgDefinitions>
+				| CreateCommandResult<NamedArgDefinitions>
 				| NamespaceDefinition;
 		}[]
 	) {
@@ -116,7 +116,7 @@ export class CommandRegistry {
 		command: Command;
 		definition:
 			| AliasDefinition
-			| DefineCommandResult<NamedArgDefinitions>
+			| CreateCommandResult<NamedArgDefinitions>
 			| NamespaceDefinition;
 	}) {
 		if (isAliasDefinition(definition)) {
