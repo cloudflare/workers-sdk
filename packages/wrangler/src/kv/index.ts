@@ -2,12 +2,12 @@ import { Blob } from "node:buffer";
 import { arrayBuffer } from "node:stream/consumers";
 import { StringDecoder } from "node:string_decoder";
 import { formatConfigSnippet, readConfig } from "../config";
+import { demandOneOfOption } from "../core";
 import {
-	defineAlias,
-	defineCommand,
-	defineNamespace,
-	demandOneOfOption,
-} from "../core";
+	createAlias,
+	createCommand,
+	createNamespace,
+} from "../core/create-command";
 import { confirm } from "../dialogs";
 import { CommandLineArgsError, UserError } from "../errors";
 import { logger } from "../logger";
@@ -33,8 +33,7 @@ import {
 import type { EventNames } from "../metrics";
 import type { KeyValue, NamespaceKeyInfo } from "./helpers";
 
-defineAlias({
-	command: "wrangler kv:key",
+export const kvKeyAlias = createAlias({
 	aliasOf: "wrangler kv key",
 	metadata: {
 		deprecated: true,
@@ -43,8 +42,8 @@ defineAlias({
 		hidden: true,
 	},
 });
-defineAlias({
-	command: "wrangler kv:namespace",
+
+export const kvNamespaceAlias = createAlias({
 	aliasOf: "wrangler kv namespace",
 	metadata: {
 		deprecated: true,
@@ -53,8 +52,8 @@ defineAlias({
 		hidden: true,
 	},
 });
-defineAlias({
-	command: "wrangler kv:bulk",
+
+export const kvBulkAlias = createAlias({
 	aliasOf: "wrangler kv bulk",
 	metadata: {
 		deprecated: true,
@@ -64,8 +63,7 @@ defineAlias({
 	},
 });
 
-defineNamespace({
-	command: "wrangler kv",
+export const kvNamespace = createNamespace({
 	metadata: {
 		description: "🗂️  Manage Workers KV Namespaces",
 		status: "stable",
@@ -73,8 +71,7 @@ defineNamespace({
 	},
 });
 
-defineNamespace({
-	command: "wrangler kv namespace",
+export const kvNamespaceNamespace = createNamespace({
 	metadata: {
 		description: `Interact with your Workers KV Namespaces`,
 		status: "stable",
@@ -82,8 +79,7 @@ defineNamespace({
 	},
 });
 
-defineNamespace({
-	command: "wrangler kv key",
+export const kvKeyNamespace = createNamespace({
 	metadata: {
 		description: `Individually manage Workers KV key-value pairs`,
 		status: "stable",
@@ -91,8 +87,7 @@ defineNamespace({
 	},
 });
 
-defineNamespace({
-	command: "wrangler kv bulk",
+export const kvBulkNamespace = createNamespace({
 	metadata: {
 		description: `Interact with multiple Workers KV key-value pairs at once`,
 		status: "stable",
@@ -100,9 +95,7 @@ defineNamespace({
 	},
 });
 
-defineCommand({
-	command: "wrangler kv namespace create",
-
+export const kvNamespaceCreateCommand = createCommand({
 	metadata: {
 		description: "Create a new namespace",
 		status: "stable",
@@ -169,9 +162,7 @@ defineCommand({
 	},
 });
 
-defineCommand({
-	command: "wrangler kv namespace list",
-
+export const kvNamespaceListCommand = createCommand({
 	metadata: {
 		description:
 			"Output a list of all KV namespaces associated with your account id",
@@ -196,9 +187,7 @@ defineCommand({
 	},
 });
 
-defineCommand({
-	command: "wrangler kv namespace delete",
-
+export const kvNamespaceDeleteCommand = createCommand({
 	metadata: {
 		description: "Delete a given namespace.",
 		status: "stable",
@@ -267,9 +256,7 @@ defineCommand({
 	},
 });
 
-defineCommand({
-	command: "wrangler kv key put",
-
+export const kvKeyPutCommand = createCommand({
 	metadata: {
 		description: "Write a single key/value pair to the given namespace",
 		status: "stable",
@@ -395,9 +382,7 @@ defineCommand({
 	},
 });
 
-defineCommand({
-	command: "wrangler kv key list",
-
+export const kvKeyListCommand = createCommand({
 	metadata: {
 		description: "Output a list of all keys in a given namespace",
 		status: "stable",
@@ -471,9 +456,7 @@ defineCommand({
 	},
 });
 
-defineCommand({
-	command: "wrangler kv key get",
-
+export const kvKeyGetCommand = createCommand({
 	metadata: {
 		description: "Read a single value by key from the given namespace",
 		status: "stable",
@@ -568,9 +551,7 @@ defineCommand({
 	},
 });
 
-defineCommand({
-	command: "wrangler kv key delete",
-
+export const kvKeyDeleteCommand = createCommand({
 	metadata: {
 		description: "Remove a single key value pair from the given namespace",
 		status: "stable",
@@ -636,9 +617,7 @@ defineCommand({
 	},
 });
 
-defineCommand({
-	command: "wrangler kv bulk put",
-
+export const kvBulkPutCommand = createCommand({
 	metadata: {
 		description: "Upload multiple key-value pairs to a namespace",
 		status: "stable",
@@ -780,9 +759,7 @@ defineCommand({
 	},
 });
 
-defineCommand({
-	command: "wrangler kv bulk delete",
-
+export const kvBulkDeleteCommand = createCommand({
 	metadata: {
 		description: "Delete multiple key-value pairs from a namespace",
 		status: "stable",

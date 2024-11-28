@@ -1,4 +1,4 @@
-import { defineCommand, defineNamespace } from "../core";
+import { createCommand, createNamespace } from "../core/create-command";
 import { confirm } from "../dialogs";
 import { logger } from "../logger";
 import { requireAuth } from "../user";
@@ -11,8 +11,7 @@ import {
 	tableFromCustomDomainListResponse,
 } from "./helpers";
 
-defineNamespace({
-	command: "wrangler r2 bucket domain",
+export const r2BucketDomainNamespace = createNamespace({
 	metadata: {
 		description: "Manage custom domains for an R2 bucket",
 		status: "stable",
@@ -20,8 +19,7 @@ defineNamespace({
 	},
 });
 
-defineCommand({
-	command: "wrangler r2 bucket domain list",
+export const r2BucketDomainListCommand = createCommand({
 	metadata: {
 		description: "List custom domains for an R2 bucket",
 		status: "stable",
@@ -64,8 +62,7 @@ defineCommand({
 	},
 });
 
-defineCommand({
-	command: "wrangler r2 bucket domain add",
+export const r2BucketDomainAddCommand = createCommand({
 	metadata: {
 		description: "Connect a custom domain to an R2 bucket",
 		status: "stable",
@@ -147,8 +144,7 @@ defineCommand({
 	},
 });
 
-defineCommand({
-	command: "wrangler r2 bucket domain remove",
+export const r2BucketDomainRemoveCommand = createCommand({
 	metadata: {
 		description: "Remove a custom domain from an R2 bucket",
 		status: "stable",
@@ -202,8 +198,7 @@ defineCommand({
 	},
 });
 
-defineCommand({
-	command: "wrangler r2 bucket domain update",
+export const r2BucketDomainUpdateCommand = createCommand({
 	metadata: {
 		description:
 			"Update settings for a custom domain connected to an R2 bucket",

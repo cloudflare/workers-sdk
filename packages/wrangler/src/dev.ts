@@ -15,7 +15,7 @@ import {
 	findWranglerConfig,
 	formatConfigSnippet,
 } from "./config";
-import { defineCommand } from "./core";
+import { createCommand } from "./core/create-command";
 import { validateRoutes } from "./deploy/deploy";
 import { validateNodeCompatMode } from "./deployment-bundle/node-compat";
 import { devRegistry, getBoundRegisteredWorkers } from "./dev-registry";
@@ -54,8 +54,7 @@ import type { EnablePagesAssetsServiceBindingOptions } from "./miniflare-cli/typ
 import type { watch } from "chokidar";
 import type { Json } from "miniflare";
 
-const command = defineCommand({
-	command: "wrangler dev",
+export const dev = createCommand({
 	behaviour: {
 		provideConfig: false,
 	},
@@ -430,7 +429,7 @@ export type AdditionalDevProps = {
 	showInteractiveDevSession?: boolean;
 };
 
-type DevArguments = (typeof command)["args"];
+type DevArguments = (typeof dev)["args"];
 
 export type StartDevOptions = DevArguments &
 	// These options can be passed in directly when called with the `wrangler.dev()` API.

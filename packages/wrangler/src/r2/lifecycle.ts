@@ -1,4 +1,4 @@
-import { defineCommand, defineNamespace } from "../core";
+import { createCommand, createNamespace } from "../core/create-command";
 import { confirm, multiselect, prompt } from "../dialogs";
 import { UserError } from "../errors";
 import isInteractive from "../is-interactive";
@@ -16,8 +16,7 @@ import {
 } from "./helpers";
 import type { LifecycleRule } from "./helpers";
 
-defineNamespace({
-	command: "wrangler r2 bucket lifecycle",
+export const r2BucketLifecycleNamespace = createNamespace({
 	metadata: {
 		description: "Manage lifecycle rules for an R2 bucket",
 		status: "stable",
@@ -25,8 +24,7 @@ defineNamespace({
 	},
 });
 
-defineCommand({
-	command: "wrangler r2 bucket lifecycle list",
+export const r2BucketLifecycleListCommand = createCommand({
 	metadata: {
 		description: "List lifecycle rules for an R2 bucket",
 		status: "stable",
@@ -68,8 +66,7 @@ defineCommand({
 	},
 });
 
-defineCommand({
-	command: "wrangler r2 bucket lifecycle add",
+export const r2BucketLifecycleAddCommand = createCommand({
 	metadata: {
 		description: "Add a lifecycle rule to an R2 bucket",
 		status: "stable",
@@ -316,8 +313,7 @@ defineCommand({
 	},
 });
 
-defineCommand({
-	command: "wrangler r2 bucket lifecycle remove",
+export const r2BucketLifecycleRemoveCommand = createCommand({
 	metadata: {
 		description: "Remove a lifecycle rule from an R2 bucket",
 		status: "stable",
@@ -370,8 +366,7 @@ defineCommand({
 	},
 });
 
-defineCommand({
-	command: "wrangler r2 bucket lifecycle set",
+export const r2BucketLifecycleSetCommand = createCommand({
 	metadata: {
 		description:
 			"Set the lifecycle configuration for an R2 bucket from a JSON file",

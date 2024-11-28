@@ -1,4 +1,4 @@
-import { defineCommand, defineNamespace } from "../core";
+import { createCommand, createNamespace } from "../core/create-command";
 import { prompt } from "../dialogs";
 import { UserError } from "../errors";
 import { logger } from "../logger";
@@ -10,8 +10,7 @@ import type { SippyPutParams } from "./helpers";
 const NO_SUCH_OBJECT_KEY = 10007;
 const SIPPY_PROVIDER_CHOICES = ["AWS", "GCS"];
 
-defineNamespace({
-	command: "wrangler r2 bucket sippy",
+export const r2BucketSippyNamespace = createNamespace({
 	metadata: {
 		description: "Manage Sippy incremental migration on an R2 bucket",
 		status: "stable",
@@ -19,8 +18,7 @@ defineNamespace({
 	},
 });
 
-defineCommand({
-	command: "wrangler r2 bucket sippy enable",
+export const r2BucketSippyEnableCommand = createCommand({
 	metadata: {
 		description: "Enable Sippy on an R2 bucket",
 		status: "stable",
@@ -251,8 +249,7 @@ defineCommand({
 	},
 });
 
-defineCommand({
-	command: "wrangler r2 bucket sippy disable",
+export const r2BucketSippyDisableCommand = createCommand({
 	metadata: {
 		description: "Disable Sippy on an R2 bucket",
 		status: "stable",
@@ -281,8 +278,7 @@ defineCommand({
 	},
 });
 
-defineCommand({
-	command: "wrangler r2 bucket sippy get",
+export const r2BucketSippyGetCommand = createCommand({
 	metadata: {
 		description: "Check the status of Sippy on an R2 bucket",
 		status: "stable",

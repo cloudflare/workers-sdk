@@ -1,8 +1,7 @@
-import { defineCommand } from "../../core";
+import { createCommand } from "../../core/create-command";
 import { logger } from "../../logger";
 
-defineCommand({
-	command: "wrangler workflows delete",
+export const workflowsDeleteCommand = createCommand({
 	metadata: {
 		description:
 			"Delete workflow - when deleting a workflow, it will also delete it's own instances",

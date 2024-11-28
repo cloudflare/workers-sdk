@@ -1,11 +1,10 @@
-import { defineCommand, defineNamespace } from "../core";
+import { createCommand, createNamespace } from "../core/create-command";
 import { confirm } from "../dialogs";
 import { logger } from "../logger";
 import { requireAuth } from "../user";
 import { getR2DevDomain, updateR2DevDomain } from "./helpers";
 
-defineNamespace({
-	command: "wrangler r2 bucket dev-url",
+export const r2BucketDevUrlNamespace = createNamespace({
 	metadata: {
 		description: "Manage public access via the r2.dev URL for an R2 bucket",
 		status: "stable",
@@ -13,8 +12,7 @@ defineNamespace({
 	},
 });
 
-defineCommand({
-	command: "wrangler r2 bucket dev-url get",
+export const r2BucketDevUrlGetCommand = createCommand({
 	metadata: {
 		description: "Get the r2.dev URL and status for an R2 bucket",
 		status: "stable",
@@ -49,8 +47,7 @@ defineCommand({
 	},
 });
 
-defineCommand({
-	command: "wrangler r2 bucket dev-url enable",
+export const r2BucketDevUrlEnableCommand = createCommand({
 	metadata: {
 		description: "Enable public access via the r2.dev URL for an R2 bucket",
 		status: "stable",
@@ -106,8 +103,7 @@ defineCommand({
 	},
 });
 
-defineCommand({
-	command: "wrangler r2 bucket dev-url disable",
+export const r2BucketDevUrlDisableCommand = createCommand({
 	metadata: {
 		description: "Disable public access via the r2.dev URL for an R2 bucket",
 		status: "stable",
