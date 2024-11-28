@@ -1,5 +1,6 @@
 import assert from "node:assert";
 import path from "node:path";
+import { syncAssets } from "../assets";
 import { printBundleSize } from "../deployment-bundle/bundle-reporter";
 import { getBundleType } from "../deployment-bundle/bundle-type";
 import { withSourceURLs } from "../deployment-bundle/source-url";
@@ -10,6 +11,7 @@ import { syncLegacyAssets } from "../sites";
 import { requireApiToken } from "../user";
 import { isAbortError } from "../utils/isAbortError";
 import { getZoneIdForPreview } from "../zones";
+import type { AssetsOptions } from "../assets";
 import type { Route } from "../config/environment";
 import type {
 	CfModule,
@@ -79,14 +81,18 @@ export function handlePreviewSessionCreationError(
 	}
 }
 
+export type CfWorkerInitWithName = Required<Pick<CfWorkerInit, "name">> &
+	CfWorkerInit;
+
 export async function createRemoteWorkerInit(props: {
 	bundle: EsbuildBundle;
 	modules: CfModule[];
 	accountId: string;
-	name: string | undefined;
+	name: string;
 	legacyEnv: boolean | undefined;
 	env: string | undefined;
 	isWorkersSite: boolean;
+	assets: AssetsOptions | undefined;
 	legacyAssetPaths: LegacyAssetPaths | undefined;
 	format: CfScriptFormat;
 	bindings: CfWorkerInit["bindings"];
@@ -130,7 +136,11 @@ export async function createRemoteWorkerInit(props: {
 		});
 	}
 
-	const init: CfWorkerInit = {
+	const assetsJwt = props.assets
+		? await syncAssets(props.accountId, props.name, props.assets.directory)
+		: undefined;
+
+	const init: CfWorkerInitWithName = {
 		name: props.name,
 		main: {
 			name: path.basename(props.bundle.path),
@@ -161,10 +171,17 @@ export async function createRemoteWorkerInit(props: {
 		keepSecrets: true,
 		logpush: false,
 		sourceMaps: undefined,
+		assets:
+			props.assets && assetsJwt
+				? {
+						jwt: assetsJwt,
+						routingConfig: props.assets.routingConfig,
+						assetConfig: props.assets.assetConfig,
+					}
+				: undefined,
 		placement: undefined, // no placement in dev
 		tail_consumers: undefined, // no tail consumers in dev - TODO revisit?
 		limits: undefined, // no limits in preview - not supported yet but can be added
-		assets: undefined, // no remote mode for assets
 		observability: undefined, // no observability in dev
 	};
 

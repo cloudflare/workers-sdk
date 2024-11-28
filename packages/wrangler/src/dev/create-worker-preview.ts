@@ -7,11 +7,9 @@ import { logger } from "../logger";
 import { ParseError, parseJSON } from "../parse";
 import { getAccessToken } from "../user/access";
 import { isAbortError } from "../utils/isAbortError";
-import type {
-	CfWorkerContext,
-	CfWorkerInit,
-} from "../deployment-bundle/worker";
+import type { CfWorkerContext } from "../deployment-bundle/worker";
 import type { ApiCredentials } from "../user";
+import type { CfWorkerInitWithName } from "./remote";
 import type { HeadersInit } from "undici";
 
 /**
@@ -227,18 +225,17 @@ export async function createPreviewSession(
  */
 async function createPreviewToken(
 	account: CfAccount,
-	worker: CfWorkerInit,
+	worker: CfWorkerInitWithName,
 	ctx: CfWorkerContext,
 	session: CfPreviewSession,
 	abortSignal: AbortSignal
 ): Promise<CfPreviewToken> {
 	const { value, host, inspectorUrl, prewarmUrl } = session;
 	const { accountId } = account;
-	const scriptId = worker.name || (ctx.zone ? session.id : host.split(".")[0]);
 	const url =
 		ctx.env && !ctx.legacyEnv
-			? `/accounts/${accountId}/workers/services/${scriptId}/environments/${ctx.env}/edge-preview`
-			: `/accounts/${accountId}/workers/scripts/${scriptId}/edge-preview`;
+			? `/accounts/${accountId}/workers/services/${worker.name}/environments/${ctx.env}/edge-preview`
+			: `/accounts/${accountId}/workers/scripts/${worker.name}/edge-preview`;
 
 	const mode: CfPreviewMode = ctx.zone
 		? {
@@ -303,7 +300,7 @@ async function createPreviewToken(
  * const {value, host} = await createWorker(init, acct);
  */
 export async function createWorkerPreview(
-	init: CfWorkerInit,
+	init: CfWorkerInitWithName,
 	account: CfAccount,
 	ctx: CfWorkerContext,
 	session: CfPreviewSession,

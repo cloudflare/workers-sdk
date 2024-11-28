@@ -1732,27 +1732,6 @@ describe.sequential("wrangler dev", () => {
 				)
 			);
 		});
-
-		it("should error if --assets and --remote are used together", async () => {
-			fs.mkdirSync("public");
-			await expect(
-				runWrangler("dev --assets public --remote")
-			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: Cannot use assets in remote mode. Workers with assets are only supported in local mode. Please use \`wrangler dev\`.]`
-			);
-		});
-
-		it("should error if config.assets and --remote are used together", async () => {
-			writeWranglerConfig({
-				assets: { directory: "./public" },
-			});
-			fs.mkdirSync("public");
-			await expect(
-				runWrangler("dev --remote")
-			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: Cannot use assets in remote mode. Workers with assets are only supported in local mode. Please use \`wrangler dev\`.]`
-			);
-		});
 	});
 
 	describe("--inspect", () => {

@@ -30,6 +30,8 @@ import type {
 } from "./events";
 import type { Trigger } from "./types";
 
+type CreateRemoteWorkerInitProps = Parameters<typeof createRemoteWorkerInit>[0];
+
 export class RemoteRuntimeController extends RuntimeController {
 	#abortController = new AbortController();
 
@@ -60,25 +62,15 @@ export class RemoteRuntimeController extends RuntimeController {
 	}
 
 	async #previewToken(
-		props: Parameters<typeof createRemoteWorkerInit>[0] &
+		props: Omit<CreateRemoteWorkerInitProps, "name"> &
+			Partial<Pick<CreateRemoteWorkerInitProps, "name">> &
 			Parameters<typeof getWorkerAccountAndContext>[0]
 	): Promise<CfPreviewToken | undefined> {
-		try {
-			const init = await createRemoteWorkerInit({
-				bundle: props.bundle,
-				modules: props.modules,
-				accountId: props.accountId,
-				name: props.name,
-				legacyEnv: props.legacyEnv,
-				env: props.env,
-				isWorkersSite: props.isWorkersSite,
-				legacyAssetPaths: props.legacyAssetPaths,
-				format: props.format,
-				bindings: props.bindings,
-				compatibilityDate: props.compatibilityDate,
-				compatibilityFlags: props.compatibilityFlags,
-			});
+		if (!this.#session) {
+			return;
+		}
 
+		try {
 			const { workerAccount, workerContext } = await getWorkerAccountAndContext(
 				{
 					accountId: props.accountId,
@@ -90,9 +82,28 @@ export class RemoteRuntimeController extends RuntimeController {
 					configPath: props.configPath,
 				}
 			);
-			if (!this.#session) {
-				return;
-			}
+
+			const scriptId =
+				props.name ||
+				(workerContext.zone
+					? this.#session.id
+					: this.#session.host.split(".")[0]);
+
+			const init = await createRemoteWorkerInit({
+				bundle: props.bundle,
+				modules: props.modules,
+				accountId: props.accountId,
+				name: scriptId,
+				legacyEnv: props.legacyEnv,
+				env: props.env,
+				isWorkersSite: props.isWorkersSite,
+				assets: props.assets,
+				legacyAssetPaths: props.legacyAssetPaths,
+				format: props.format,
+				bindings: props.bindings,
+				compatibilityDate: props.compatibilityDate,
+				compatibilityFlags: props.compatibilityFlags,
+			});
 
 			const workerPreviewToken = await createWorkerPreview(
 				init,
@@ -172,6 +183,7 @@ export class RemoteRuntimeController extends RuntimeController {
 				legacyEnv: !config.legacy?.enableServiceEnvironments,
 				env: config.env,
 				isWorkersSite: config.legacy?.site !== undefined,
+				assets: config.assets,
 				legacyAssetPaths: config.legacy?.site?.bucket
 					? {
 							baseDirectory: config.legacy?.site?.bucket,
