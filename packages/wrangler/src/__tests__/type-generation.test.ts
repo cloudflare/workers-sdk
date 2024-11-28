@@ -549,7 +549,7 @@ describe("generateTypes()", () => {
 			} as unknown as TOML.JsonMap),
 			"utf-8"
 		);
-		// note index.ts does not exist
+		expect(fs.existsSync("index.ts")).toEqual(false);
 
 		await runWrangler("types");
 		expect(std.out).toMatchInlineSnapshot(`
