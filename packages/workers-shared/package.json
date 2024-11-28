@@ -1,6 +1,6 @@
 {
 	"name": "@cloudflare/workers-shared",
-	"version": "0.7.1",
+	"version": "0.9.0",
 	"description": "Package that is used at Cloudflare to power some internal features of Cloudflare Workers.",
 	"keywords": [
 		"cloudflare",
@@ -48,7 +48,7 @@
 	},
 	"devDependencies": {
 		"@cloudflare/eslint-config-worker": "workspace:*",
-		"@cloudflare/vitest-pool-workers": "^0.5.29",
+		"@cloudflare/vitest-pool-workers": "^0.5.31",
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-types": "^4.20241106.0",
 		"@types/mime": "^3.0.4",

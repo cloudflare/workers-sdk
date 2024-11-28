@@ -2,12 +2,14 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import NodeGlobalsPolyfills from "@esbuild-plugins/node-globals-polyfill";
 import NodeModulesPolyfills from "@esbuild-plugins/node-modules-polyfill";
+import chalk from "chalk";
 import * as esbuild from "esbuild";
 import {
 	getBuildConditionsFromEnv,
 	getBuildPlatformFromEnv,
 } from "../environment-variables/misc-variables";
 import { UserError } from "../errors";
+import { getFlag } from "../experimental-flags";
 import { getBasePath, getWranglerTmpDir } from "../paths";
 import { applyMiddlewareLoaderFacade } from "./apply-middleware";
 import {
@@ -304,6 +306,18 @@ export async function bundleWorker(
 		}
 
 		inject.push(checkedFetchFileToInject);
+	}
+
+	// When multiple workers are running we need some way to disambiguate logs between them. Inject a patched version of `globalThis.console` that prefixes logs with the worker name
+	if (getFlag("MULTIWORKER")) {
+		middlewareToLoad.push({
+			name: "patch-console-prefix",
+			path: "templates/middleware/middleware-patch-console-prefix.ts",
+			supports: ["modules", "service-worker"],
+			config: {
+				prefix: chalk.blue(`[${entry.name}]`),
+			},
+		});
 	}
 	// Check that the current worker format is supported by all the active middleware
 	for (const middleware of middlewareToLoad) {

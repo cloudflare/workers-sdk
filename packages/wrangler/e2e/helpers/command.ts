@@ -169,6 +169,10 @@ export class LongLivedCommand {
 			});
 		});
 	}
+
+	async signal(signal: NodeJS.Signals) {
+		return this.commandProcess.kill(signal);
+	}
 }
 
 interface TimedOutError extends Error {

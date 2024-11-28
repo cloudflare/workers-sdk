@@ -55,10 +55,15 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 		logger.log(`The file ${filePath} changed, restarting build...`);
 		this.emitBundleStartEvent(config);
 		try {
-			await runCustomBuild(config.entrypoint, relativeFile, {
-				cwd: config.build?.custom?.workingDirectory,
-				command: config.build?.custom?.command,
-			});
+			await runCustomBuild(
+				config.entrypoint,
+				relativeFile,
+				{
+					cwd: config.build?.custom?.workingDirectory,
+					command: config.build?.custom?.command,
+				},
+				config.config
+			);
 			if (buildAborter.signal.aborted) {
 				return;
 			}
@@ -233,6 +238,7 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 			format: config.build.format,
 			moduleRoot: config.build.moduleRoot,
 			exports: config.build.exports,
+			name: config.name,
 		};
 		const { bindings } = await convertBindingsToCfWorkerInitBindings(
 			config.bindings

@@ -103,10 +103,16 @@ export type CommandDefinition<
 		printBanner?: boolean;
 
 		/**
-		 * By default, wrangler will print warnings about wrangler.toml configuration.
+		 * By default, wrangler will print warnings about the Wrangler configuration file.
 		 * Set this value to `false` to skip printing these warnings.
 		 */
 		printConfigWarnings?: boolean;
+
+		/**
+		 * By default, wrangler will read & provide the wrangler.toml/wrangler.json configuration.
+		 * Set this value to `false` to skip this.
+		 */
+		provideConfig?: boolean;
 	};
 
 	/**

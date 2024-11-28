@@ -18,7 +18,7 @@ import {
 	EXTERNAL_VECTORIZE_WORKER_SCRIPT,
 	MakeVectorizeFetcher,
 } from "../vectorize/fetcher";
-import { getClassNamesWhichUseSQLite } from "./validate-dev-props";
+import { getClassNamesWhichUseSQLite } from "./class-names-sqlite";
 import type { ServiceFetch } from "../api";
 import type { AssetsOptions } from "../assets";
 import type { Config } from "../config";
@@ -166,7 +166,7 @@ export interface ConfigBundle {
 	compatibilityFlags: string[] | undefined;
 	bindings: CfWorkerInit["bindings"];
 	migrations: Config["migrations"] | undefined;
-	workerDefinitions: WorkerRegistry | undefined;
+	workerDefinitions: WorkerRegistry | undefined | null;
 	legacyAssetPaths: LegacyAssetPaths | undefined;
 	assets: AssetsOptions | undefined;
 	initialPort: Port;
@@ -415,11 +415,11 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 
 	const notFoundServices = new Set<string>();
 	for (const service of config.services ?? []) {
-		if (service.service === config.name) {
-			// If this is a service binding to the current worker, don't bother using
-			// the dev registry to look up the address, just bind to it directly.
+		if (service.service === config.name || config.workerDefinitions === null) {
+			// If this is a service binding to the current worker or the registry is disabled,
+			// don't bother using the dev registry to look up the address, just bind to it directly.
 			serviceBindings[service.binding] = {
-				name: getName(config),
+				name: service.service,
 				entrypoint: service.entrypoint,
 			};
 			continue;
@@ -508,72 +508,75 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 			binding.script_name === undefined || binding.script_name === config.name;
 		(internal ? internalObjects : externalObjects).push(binding);
 	}
-	// Setup Durable Object bindings and proxy worker
-	externalWorkers.push({
-		name: EXTERNAL_SERVICE_WORKER_NAME,
-		// Bind all internal objects, so they're accessible by all other sessions
-		// that proxy requests for our objects to this worker
-		durableObjects: Object.fromEntries(
-			internalObjects.map(({ class_name }) => {
-				const useSQLite = classNameToUseSQLite.get(class_name);
-				return [
-					class_name,
-					{ className: class_name, scriptName: getName(config), useSQLite },
-				];
-			})
-		),
-		// Use this worker instead of the user worker if the pathname is
-		// `/${EXTERNAL_SERVICE_WORKER_NAME}`
-		routes: [`*/${EXTERNAL_SERVICE_WORKER_NAME}`],
-		// Use in-memory storage for the stub object classes *declared* by this
-		// script. They don't need to persist anything, and would end up using the
-		// incorrect unsafe unique key.
-		unsafeEphemeralDurableObjects: true,
-		compatibilityDate: "2024-01-01",
-		modules: true,
-		script:
-			EXTERNAL_SERVICE_WORKER_SCRIPT +
-			// Add stub object classes that proxy requests to the correct session
-			externalObjects
-				.map(({ class_name, script_name }) => {
-					assert(script_name !== undefined);
-					const target = config.workerDefinitions?.[script_name];
-					const targetHasClass = target?.durableObjects.some(
-						({ className }) => className === class_name
-					);
 
-					const identifier = getIdentifier(`do_${script_name}_${class_name}`);
-					const classNameJson = JSON.stringify(class_name);
-
-					if (
-						target?.host === undefined ||
-						target.port === undefined ||
-						!targetHasClass
-					) {
-						// If we couldn't find the target or the class, create a stub object
-						// that just returns `503 Service Unavailable` responses.
-						return `export const ${identifier} = createDurableObjectClass({ className: ${classNameJson} });`;
-					} else if (target.protocol === "https") {
-						throw new UserError(
-							`Cannot proxy to \`wrangler dev\` session for class ${classNameJson} because it uses HTTPS. Please remove the \`--local-protocol\`/\`dev.local_protocol\` option.`
+	if (config.workerDefinitions !== null) {
+		// Setup Durable Object bindings and proxy worker
+		externalWorkers.push({
+			name: EXTERNAL_SERVICE_WORKER_NAME,
+			// Bind all internal objects, so they're accessible by all other sessions
+			// that proxy requests for our objects to this worker
+			durableObjects: Object.fromEntries(
+				internalObjects.map(({ class_name }) => {
+					const useSQLite = classNameToUseSQLite.get(class_name);
+					return [
+						class_name,
+						{ className: class_name, scriptName: getName(config), useSQLite },
+					];
+				})
+			),
+			// Use this worker instead of the user worker if the pathname is
+			// `/${EXTERNAL_SERVICE_WORKER_NAME}`
+			routes: [`*/${EXTERNAL_SERVICE_WORKER_NAME}`],
+			// Use in-memory storage for the stub object classes *declared* by this
+			// script. They don't need to persist anything, and would end up using the
+			// incorrect unsafe unique key.
+			unsafeEphemeralDurableObjects: true,
+			compatibilityDate: "2024-01-01",
+			modules: true,
+			script:
+				EXTERNAL_SERVICE_WORKER_SCRIPT +
+				// Add stub object classes that proxy requests to the correct session
+				externalObjects
+					.map(({ class_name, script_name }) => {
+						assert(script_name !== undefined);
+						const target = config.workerDefinitions?.[script_name];
+						const targetHasClass = target?.durableObjects.some(
+							({ className }) => className === class_name
 						);
-					} else {
-						// Otherwise, create a stub object that proxies request to the
-						// target session at `${hostname}:${port}`.
-						const proxyUrl = `http://${target.host}:${target.port}/${EXTERNAL_SERVICE_WORKER_NAME}`;
-						const proxyUrlJson = JSON.stringify(proxyUrl);
-						return `export const ${identifier} = createDurableObjectClass({ className: ${classNameJson}, proxyUrl: ${proxyUrlJson} });`;
-					}
-				})
-				.join("\n") +
-			Array.from(notFoundServices)
-				.map((service) => {
-					const identifier = getIdentifier(`service_${service}`);
-					const serviceJson = JSON.stringify(service);
-					return `export const ${identifier} = createNotFoundWorkerEntrypointClass({ service: ${serviceJson} });`;
-				})
-				.join("\n"),
-	});
+
+						const identifier = getIdentifier(`do_${script_name}_${class_name}`);
+						const classNameJson = JSON.stringify(class_name);
+
+						if (
+							target?.host === undefined ||
+							target.port === undefined ||
+							!targetHasClass
+						) {
+							// If we couldn't find the target or the class, create a stub object
+							// that just returns `503 Service Unavailable` responses.
+							return `export const ${identifier} = createDurableObjectClass({ className: ${classNameJson} });`;
+						} else if (target.protocol === "https") {
+							throw new UserError(
+								`Cannot proxy to \`wrangler dev\` session for class ${classNameJson} because it uses HTTPS. Please remove the \`--local-protocol\`/\`dev.local_protocol\` option.`
+							);
+						} else {
+							// Otherwise, create a stub object that proxies request to the
+							// target session at `${hostname}:${port}`.
+							const proxyUrl = `http://${target.host}:${target.port}/${EXTERNAL_SERVICE_WORKER_NAME}`;
+							const proxyUrlJson = JSON.stringify(proxyUrl);
+							return `export const ${identifier} = createDurableObjectClass({ className: ${classNameJson}, proxyUrl: ${proxyUrlJson} });`;
+						}
+					})
+					.join("\n") +
+				Array.from(notFoundServices)
+					.map((service) => {
+						const identifier = getIdentifier(`service_${service}`);
+						const serviceJson = JSON.stringify(service);
+						return `export const ${identifier} = createNotFoundWorkerEntrypointClass({ service: ${serviceJson} });`;
+					})
+					.join("\n"),
+		});
+	}
 
 	const wrappedBindings: WorkerOptions["wrappedBindings"] = {};
 	if (bindings.ai?.binding) {
@@ -672,20 +675,28 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 			...externalObjects.map(({ name, class_name, script_name }) => {
 				const identifier = getIdentifier(`do_${script_name}_${class_name}`);
 				const useSQLite = classNameToUseSQLite.get(class_name);
-				return [
-					name,
-					{
-						className: identifier,
-						scriptName: EXTERNAL_SERVICE_WORKER_NAME,
-						useSQLite,
-						// Matches the unique key Miniflare will generate for this object in
-						// the target session. We need to do this so workerd generates the
-						// same IDs it would if this were part of the same process. workerd
-						// doesn't allow IDs from Durable Objects with different unique keys
-						// to be used with each other.
-						unsafeUniqueKey: `${script_name}-${class_name}`,
-					},
-				];
+				return config.workerDefinitions === null
+					? [
+							name,
+							{
+								className: class_name,
+								scriptName: script_name,
+							},
+						]
+					: [
+							name,
+							{
+								className: identifier,
+								scriptName: EXTERNAL_SERVICE_WORKER_NAME,
+								useSQLite,
+								// Matches the unique key Miniflare will generate for this object in
+								// the target session. We need to do this so workerd generates the
+								// same IDs it would if this were part of the same process. workerd
+								// doesn't allow IDs from Durable Objects with different unique keys
+								// to be used with each other.
+								unsafeUniqueKey: `${script_name}-${class_name}`,
+							},
+						];
 			}),
 		]),
 
@@ -888,12 +899,14 @@ let didWarnMiniflareCronSupport = false;
 let didWarnMiniflareVectorizeSupport = false;
 let didWarnAiAccountUsage = false;
 
+export type Options = Extract<MiniflareOptions, { workers: WorkerOptions[] }>;
+
 export async function buildMiniflareOptions(
 	log: Log,
 	config: Omit<ConfigBundle, "rules">,
 	proxyToUserWorkerAuthenticationSecret: UUID
 ): Promise<{
-	options: MiniflareOptions;
+	options: Options;
 	internalObjects: CfDurableObject[];
 	entrypointNames: string[];
 }> {

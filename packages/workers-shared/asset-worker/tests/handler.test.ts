@@ -7,6 +7,7 @@ describe("[Asset Worker] `handleRequest`", () => {
 		const configuration: Required<AssetConfig> = {
 			html_handling: "none",
 			not_found_handling: "none",
+			serve_directly: true,
 		};
 		const eTag = "some-etag";
 		const exists = vi.fn().mockReturnValue(eTag);
@@ -29,6 +30,7 @@ describe("[Asset Worker] `handleRequest`", () => {
 		const configuration: Required<AssetConfig> = {
 			html_handling: "none",
 			not_found_handling: "none",
+			serve_directly: true,
 		};
 		const eTag = "some-etag";
 		const exists = vi.fn().mockReturnValue(eTag);
@@ -53,6 +55,7 @@ describe("[Asset Worker] `handleRequest`", () => {
 		const configuration: Required<AssetConfig> = {
 			html_handling: "none",
 			not_found_handling: "none",
+			serve_directly: true,
 		};
 		const eTag = "some-etag";
 		const exists = vi.fn().mockReturnValue(eTag);
@@ -77,6 +80,7 @@ describe("[Asset Worker] `handleRequest`", () => {
 		const configuration: Required<AssetConfig> = {
 			html_handling: "none",
 			not_found_handling: "none",
+			serve_directly: true,
 		};
 		const eTag = "some-etag";
 		const exists = vi.fn().mockReturnValue(eTag);

@@ -31,10 +31,10 @@ describe("validatePagesConfig()", () => {
 			expect(diagnostics.hasWarnings()).toBeFalsy();
 			expect(diagnostics.hasErrors()).toBeTruthy();
 			expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			"Running configuration file validation for Pages:
-			  - Missing top-level field \\"name\\" in configuration file.
-			    Pages requires the name of your project to be configured at the top-level of your \`wrangler.toml\` file. This is because, in Pages, environments target the same project."
-		`);
+				"Running configuration file validation for Pages:
+				  - Missing top-level field \\"name\\" in configuration file.
+				    Pages requires the name of your project to be configured at the top-level of your Wrangler configuration file. This is because, in Pages, environments target the same project."
+			`);
 		});
 	});
 

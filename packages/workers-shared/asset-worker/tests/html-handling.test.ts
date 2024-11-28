@@ -57,6 +57,7 @@ describe.each(testSuites)("$title", ({ suite }) => {
 				return {
 					html_handling,
 					not_found_handling: "none",
+					serve_directly: true,
 				};
 			});
 		});

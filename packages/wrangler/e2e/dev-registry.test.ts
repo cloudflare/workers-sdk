@@ -1,4 +1,5 @@
 import { execSync } from "child_process";
+import getPort from "get-port";
 import dedent from "ts-dedent";
 import { fetch } from "undici";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -140,7 +141,7 @@ describe("unstable_dev()", () => {
 });
 
 describe.each([
-	{ cmd: "wrangler dev --x-registry" },
+	{ cmd: "wrangler dev" },
 	{ cmd: "wrangler dev --no-x-registry" },
 ])("dev registry $cmd", ({ cmd }) => {
 	let workerName: string;
@@ -446,6 +447,123 @@ describe.each([
 							},
 						}).then((r) => r.json())
 					).resolves.toMatchObject({ count: 1 }),
+				{ interval: 1000, timeout: 10_000 }
+			);
+		});
+	});
+
+	describe("pages dev", () => {
+		beforeEach(async () => {
+			await baseSeed(a, {
+				"wrangler.toml": dedent`
+						name = "${workerName}"
+						pages_build_output_dir = "dist"
+						compatibility_date = "2023-01-01"
+
+						[[services]]
+						binding = "BEE"
+						service = '${workerName2}'
+				`,
+				"dist/_worker.js": dedent/* javascript */ `export default {
+					fetch(req, env) {
+                        const url = new URL(req.url)
+                        if (url.pathname === "/service") {
+                            return env.BEE.fetch(req);
+                        }
+						return new Response("Hello from Pages")
+					},
+				};`,
+			});
+		});
+		it("can fetch b", async () => {
+			const worker = helper.runLongLived(cmd, { cwd: b });
+
+			const { url } = await worker.waitForReady(5_000);
+
+			await expect(fetch(url).then((r) => r.text())).resolves.toBe(
+				"hello world"
+			);
+		});
+
+		it("can fetch a (pages project)", async () => {
+			const port = await getPort();
+			const worker = helper.runLongLived(
+				`${cmd.replace("wrangler dev", "wrangler pages dev")} --port ${port}`,
+				{ cwd: a }
+			);
+
+			const { url } = await worker.waitForReady(5_000);
+
+			await expect(fetch(url).then((r) => r.text())).resolves.toBe(
+				"Hello from Pages"
+			);
+		});
+
+		it("can fetch b through a (start b, start a)", async () => {
+			const workerB = helper.runLongLived(cmd, { cwd: b });
+			// We don't need b's URL, but ensure that b starts up before a
+			await workerB.waitForReady(5_000);
+
+			const port = await getPort();
+			const workerA = helper.runLongLived(
+				`${cmd.replace("wrangler dev", "wrangler pages dev")} --port ${port}`,
+				{ cwd: a }
+			);
+			const { url } = await workerA.waitForReady(5_000);
+
+			await vi.waitFor(
+				async () =>
+					await expect(fetchText(`${url}/service`)).resolves.toBe(
+						"hello world"
+					),
+				{ interval: 1000, timeout: 10_000 }
+			);
+
+			expect(normalizeOutput(workerA.currentOutput)).toContain(
+				"bindings connect to other `wrangler dev` processes running locally"
+			);
+		});
+
+		it("can fetch b through a (start a, start b)", async () => {
+			const port = await getPort();
+			const workerA = helper.runLongLived(
+				`${cmd.replace("wrangler dev", "wrangler pages dev")} --port ${port}`,
+				{ cwd: a }
+			);
+			const { url } = await workerA.waitForReady(5_000);
+
+			const workerB = helper.runLongLived(cmd, { cwd: b });
+			await workerB.waitForReady(5_000);
+
+			await vi.waitFor(
+				async () =>
+					await expect(fetchText(`${url}/service`)).resolves.toBe(
+						"hello world"
+					),
+				{ interval: 1000, timeout: 10_000 }
+			);
+		});
+
+		it("can fetch b through a (start a, start b) w/o config file", async () => {
+			await baseSeed(a, {
+				"wrangler.toml": dedent`
+				`,
+			});
+			const port = await getPort();
+			const workerA = helper.runLongLived(
+				`${cmd.replace("wrangler dev", "wrangler pages dev")} dist --service BEE=${workerName2} --port ${port}`,
+				{ cwd: a }
+			);
+			const { url } = await workerA.waitForReady(5_000);
+
+			const workerB = helper.runLongLived(cmd, { cwd: b });
+			await workerB.waitForReady(5_000);
+
+			await vi.waitFor(
+				async () =>
+					await expect(fetchText(`${url}/service`)).resolves.toBe(
+						"hello world"
+					),
 				{ interval: 1000, timeout: 10_000 }
 			);
 		});

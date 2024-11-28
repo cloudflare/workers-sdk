@@ -17,6 +17,7 @@ import {
 	collectLabels,
 	interactWithUser,
 	loadAccountSpinner,
+	parseImageName,
 	promptForEnvironmentVariables,
 	promptForLabels,
 	renderDeploymentConfiguration,
@@ -33,6 +34,8 @@ import type {
 } from "../yargs-types";
 import type { EnvironmentVariable, Label, SSHPublicKeyID } from "./client";
 import type { Arg } from "@cloudflare/cli/interactive";
+
+const defaultContainerImage = "docker.io/cloudflare/hello-world:1.0";
 
 export function createCommandOptionalYargs(yargs: CommonYargsArgvJSON) {
 	return yargs
@@ -123,6 +126,12 @@ export async function createCommand(
 		}
 
 		const body = checkEverythingIsSet(args, ["image", "location"]);
+
+		const { err } = parseImageName(body.image);
+		if (err !== undefined) {
+			throw new Error(err);
+		}
+
 		const keysToAdd = args.allSshKeys
 			? (await pollSSHKeysUntilCondition(() => true)).map((key) => key.id)
 			: [];
@@ -239,18 +248,19 @@ async function handleCreateCommand(
 		label: "image",
 		validate: (value) => {
 			if (typeof value !== "string") {
-				return "unknown error";
+				return "Unknown error";
 			}
 			if (value.length === 0) {
-				return "you should fill this input";
+				// validate is called before defaultValue is
+				// applied, so we must set it ourselves
+				value = defaultContainerImage;
 			}
-			if (value.endsWith(":latest")) {
-				return "we don't allow :latest tags";
-			}
+
+			const { err } = parseImageName(value);
+			return err;
 		},
-		defaultValue: givenImage ?? "",
-		initialValue: givenImage ?? "",
-		helpText: 'i.e. "docker.io/org/app:1.2", :latest tags are not allowed!',
+		defaultValue: givenImage ?? defaultContainerImage,
+		helpText: 'NAME:TAG ("latest" tag is not allowed)',
 		type: "text",
 	});
 
@@ -323,4 +333,4 @@ async function handleCreateCommand(
 	await waitForPlacement(deployment);
 }
 
-const whichImageQuestion = "Which image url should we use for your container?";
+const whichImageQuestion = "Which image should we use for your container?";

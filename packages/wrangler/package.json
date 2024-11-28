@@ -1,6 +1,6 @@
 {
 	"name": "wrangler",
-	"version": "3.88.0",
+	"version": "3.91.0",
 	"description": "Command-line interface for all things Cloudflare Workers",
 	"keywords": [
 		"wrangler",
@@ -85,7 +85,7 @@
 		"resolve.exports": "^2.0.2",
 		"selfsigned": "^2.0.1",
 		"source-map": "^0.6.1",
-		"unenv": "npm:unenv-nightly@2.0.0-20241111-080453-894aa31",
+		"unenv": "npm:unenv-nightly@2.0.0-20241121-161142-806b5c0",
 		"workerd": "1.20241106.1",
 		"xxhash-wasm": "^1.0.1"
 	},

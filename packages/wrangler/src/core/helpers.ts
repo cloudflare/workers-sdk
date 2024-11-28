@@ -35,9 +35,12 @@ export function demandOneOfOption(...options: string[]) {
  *
  * @see https://github.com/yargs/yargs/issues/1318
  */
-export function demandSingleValue(key: string) {
-	return function (argv: { [key: string]: unknown }) {
-		if (Array.isArray(argv[key])) {
+export function demandSingleValue<Argv extends { [key: string]: unknown }>(
+	key: string,
+	allow?: (argv: Argv) => boolean
+) {
+	return function (argv: Argv) {
+		if (Array.isArray(argv[key]) && !allow?.(argv)) {
 			throw new CommandLineArgsError(
 				`The argument "--${key}" expects a single value, but received multiple: ${JSON.stringify(argv[key])}.`
 			);

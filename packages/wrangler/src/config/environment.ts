@@ -149,6 +149,15 @@ interface EnvironmentInheritable {
 	workers_dev: boolean | undefined;
 
 	/**
+	 * Whether we use <version>-<name>.<subdomain>.workers.dev to
+	 * serve Preview URLs for your Worker.
+	 *
+	 * @default `true`
+	 * @inheritable
+	 */
+	preview_urls: boolean | undefined;
+
+	/**
 	 * A list of routes that your Worker should be published to.
 	 * Only one of `routes` or `route` is required.
 	 *
@@ -857,9 +866,9 @@ export interface DeprecatedUpload {
 
 	/**
 	 * The directory you wish to upload your Worker from,
-	 * relative to the wrangler.toml file.
+	 * relative to the Wrangler configuration file.
 	 *
-	 * Defaults to the directory containing the wrangler.toml file.
+	 * Defaults to the directory containing the Wrangler configuration file.
 	 *
 	 * @deprecated
 	 */
@@ -939,6 +948,7 @@ export type Assets = {
 		| "drop-trailing-slash"
 		| "none";
 	not_found_handling?: "single-page-application" | "404-page" | "none";
+	serve_directly?: boolean;
 };
 
 export interface Observability {
