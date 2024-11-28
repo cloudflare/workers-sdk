@@ -956,7 +956,7 @@ describe.sequential("wrangler dev", () => {
 			});
 			it("should show reasonable debug output if `.env` does not exist", async () => {
 				fs.rmSync(".env");
-				writeWranglerToml({
+				writeWranglerConfig({
 					main: "index.js",
 				});
 				await runWranglerUntilConfig("dev --log-level debug");
