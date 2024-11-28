@@ -229,6 +229,34 @@ describe.each(devScripts)("wrangler $args", ({ args, expectedBody }) => {
 	});
 });
 
+it.each(exitKeys)("multiworker cleanly exits with $name", async ({ key }) => {
+	const beginProcesses = getStartedWorkerdProcesses();
+
+	const wrangler = await startWranglerDev([
+		"dev",
+		"-c",
+		"wrangler.a.toml",
+		"-c",
+		"wrangler.b.toml",
+	]);
+	const duringProcesses = getStartedWorkerdProcesses();
+
+	// Check dev server working correctly
+	const res = await fetch(wrangler.url);
+	expect((await res.text()).trim()).toBe("hello from a & hello from b");
+
+	// Check key cleanly exits dev server
+	wrangler.pty.write(key);
+	expect(await wrangler.exitPromise).toBe(0);
+	const endProcesses = getStartedWorkerdProcesses();
+
+	// Check no hanging workerd processes
+	if (process.platform !== "win32" || windowsProcessCwdSupported) {
+		expect(beginProcesses.length).toBe(endProcesses.length);
+		expect(duringProcesses.length).toBeGreaterThan(beginProcesses.length);
+	}
+});
+
 it.runIf(RUN_IF && nodePtySupported)(
 	"hotkeys should be unregistered when the initial build fails",
 	async () => {

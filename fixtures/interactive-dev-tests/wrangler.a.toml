@@ -1,0 +1,7 @@
+name = "a"
+main = "src/worker-a.mjs"
+compatibility_date = "2023-12-01"
+
+[[services]]
+binding = "WORKER"
+service = "b"

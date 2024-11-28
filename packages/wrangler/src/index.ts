@@ -88,7 +88,6 @@ export const betaCmdColor = "#BD5B08";
 
 export const DEFAULT_LOCAL_PORT = 8787;
 export const DEFAULT_INSPECTOR_PORT = 9229;
-
 export const proxy =
 	process.env.https_proxy ||
 	process.env.HTTPS_PROXY ||
@@ -206,7 +205,9 @@ export function createCLIParser(argv: string[]) {
 			type: "string",
 			requiresArg: true,
 		})
-		.check(demandSingleValue("config"))
+		.check(
+			demandSingleValue("config", (configArgv) => configArgv["_"][0] === "dev")
+		)
 		.option("env", {
 			alias: "e",
 			describe: "Environment to use for operations and .env files",

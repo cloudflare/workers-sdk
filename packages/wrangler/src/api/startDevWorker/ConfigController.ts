@@ -127,6 +127,7 @@ async function resolveDevConfig(
 		persist: localPersistencePath,
 		registry: input.dev?.registry,
 		bindVectorizeToProd: input.dev?.bindVectorizeToProd ?? false,
+		multiworkerPrimary: input.dev?.multiworkerPrimary,
 	} satisfies StartDevWorkerOptions["dev"];
 }
 
@@ -164,7 +165,11 @@ async function resolveBindings(
 			...bindings,
 			vars: maskedVars,
 		},
-		{ registry: input.dev?.registry, local: !input.dev?.remote }
+		{
+			registry: input.dev?.registry,
+			local: !input.dev?.remote,
+			name: config.name,
+		}
 	);
 
 	return {
@@ -252,7 +257,8 @@ async function resolveConfig(
 	);
 
 	const resolved = {
-		name: getScriptName({ name: input.name, env: input.env }, config),
+		name:
+			getScriptName({ name: input.name, env: input.env }, config) ?? "worker",
 		config: config.configPath,
 		compatibilityDate: getDevCompatibilityDate(config, input.compatibilityDate),
 		compatibilityFlags: input.compatibilityFlags ?? config.compatibility_flags,
