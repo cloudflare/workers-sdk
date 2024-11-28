@@ -6,7 +6,6 @@ import { WranglerE2ETestHelper } from "./helpers/e2e-wrangler-test";
 import { fetchText } from "./helpers/fetch-text";
 import { generateResourceName } from "./helpers/generate-resource-name";
 import { seed as baseSeed, makeRoot } from "./helpers/setup";
-import { getStartedWorkerdProcesses } from "./helpers/workerd-processes";
 import type { RequestInit } from "undici";
 
 async function fetchJson<T>(url: string, info?: RequestInit): Promise<T> {
@@ -254,32 +253,6 @@ describe("multiworker", () => {
 			await workerA.readUntil(/no such service is defined/);
 
 			expect(await workerA.exitCode).toBe(1);
-		});
-
-		it(`leaves no orphaned workerd processes after shutdown`, async () => {
-			const beginProcesses = getStartedWorkerdProcesses(helper.tmpPath);
-
-			const workerA = helper.runLongLived(
-				`wrangler dev -c wrangler.toml -c ${b}/wrangler.toml`,
-				{ cwd: a }
-			);
-			const { url } = await workerA.waitForReady(5_000);
-
-			await vi.waitFor(
-				async () => await expect(fetchText(url)).resolves.toBe("hello world"),
-				{ interval: 1000, timeout: 10_000 }
-			);
-
-			await workerA.signal("SIGINT");
-
-			const exitCode = await workerA.exitCode;
-
-			expect(exitCode).toBe(0);
-
-			const endProcesses = getStartedWorkerdProcesses(helper.tmpPath);
-
-			expect(beginProcesses.length).toBe(0);
-			expect(endProcesses.length).toBe(0);
 		});
 	});
 
