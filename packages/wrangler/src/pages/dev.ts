@@ -249,7 +249,7 @@ export function Options(yargs: CommonYargsArgv) {
 				type: "boolean",
 				describe:
 					"Use the experimental file based dev registry for multi-worker development",
-				default: false,
+				default: true,
 			},
 			"experimental-vectorize-bind-to-prod": {
 				type: "boolean",
