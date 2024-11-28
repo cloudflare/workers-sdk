@@ -101,6 +101,7 @@ import {
 } from "./r2/bucket";
 import {
 	r2BucketDomainAddCommand,
+	r2BucketDomainGetCommand,
 	r2BucketDomainListCommand,
 	r2BucketDomainNamespace,
 	r2BucketDomainRemoveCommand,
@@ -779,6 +780,10 @@ export function createCLIParser(argv: string[]) {
 		{
 			command: "wrangler r2 bucket domain list",
 			definition: r2BucketDomainListCommand,
+		},
+		{
+			command: "wrangler r2 bucket domain get",
+			definition: r2BucketDomainGetCommand,
 		},
 		{
 			command: "wrangler r2 bucket domain add",
