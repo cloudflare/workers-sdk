@@ -21,7 +21,7 @@ import type { IncomingRequestCfProperties } from "@cloudflare/workers-types/expe
 import type { MiniflareOptions, ModuleRule, WorkerOptions } from "miniflare";
 
 export { readConfig };
-export type { RawConfig, RawEnvironment };
+export type { Config, RawConfig, RawEnvironment };
 
 /**
  * Options for the `getPlatformProxy` utility
