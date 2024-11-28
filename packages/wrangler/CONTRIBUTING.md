@@ -13,7 +13,7 @@
 
 1. Create the command structure and define it in the registry.
 
-First, create your namespaces and commands with the `createNamespace` and `createCommand` utilities. Namespaces are the prefix before the subcommand, eg. "wrangler kv" in "wrangler kv put".
+First, create your namespaces and commands with the `createNamespace`, `createCommand`, and `createAlias` utilities. Namespaces are the prefix before the subcommand, eg. "wrangler kv" in "wrangler kv put".
 
 ```ts
 import { createCommand, createNamespace } from "../core/create-command";
@@ -66,12 +66,19 @@ export const kvKeyPutCommand = createCommand({
 		// implementation here
 	},
 });
+
+export const kvKeyAlias = createAlias({
+	metadata: {
+		description: "Could have its own description, different from the original command",
+		status: "stable",
+	},
+});
 ```
 
-Define your commands in the registry
+Define your commands in the registry. To create an alias, use the `aliasOf` field.
 
 ```ts
-import { kvKeyNamespace, kvKeyPutCommand, kvNamespace } from "./kv";
+import { kvKeyAlias, kvKeyNamespace, kvKeyPutCommand, kvNamespace } from "./kv";
 
 // ...
 
@@ -79,6 +86,7 @@ registry.define([
 	{ command: "wrangler kv", definition: kvNamespace },
 	{ command: "wrangler kv key", definition: kvKeyNamespace },
 	{ command: "wrangler kv key put", definition: kvKeyPutCommand },
+	{ aliasOf: "wrangler kv key", command: "wrangler kv:key", definition: kvKeyAlias }, // the definition for an alias is optional
 	// ...other kv commands here
 ]);
 registry.registerNamespace("kv");

@@ -23,10 +23,6 @@ export const r2BucketNotificationNamespace = createNamespace({
 	},
 });
 
-export const r2BucketNotificationGetAlias = createAlias({
-	aliasOf: "wrangler r2 bucket notification list",
-});
-
 export const r2BucketNotificationListCommand = createCommand({
 	metadata: {
 		description: "List event notification rules for an R2 bucket",

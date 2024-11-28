@@ -1,14 +1,9 @@
 import assert from "node:assert";
 import chalk from "chalk";
-import {
-	isAliasDefinition,
-	isCommandDefinition,
-	isNamespaceDefinition,
-} from "./helpers";
-import type { CreateCommandResult } from "./create-command";
 import type {
 	AliasDefinition,
 	Command,
+	CommandDefinition,
 	DefinitionTree,
 	DefinitionTreeNode,
 	InternalDefinition,
@@ -55,15 +50,7 @@ export class CommandRegistry {
 	/**
 	 * Defines multiple commands and their corresponding definitions.
 	 */
-	define(
-		defs: {
-			command: Command;
-			definition:
-				| AliasDefinition
-				| CreateCommandResult<NamedArgDefinitions>
-				| NamespaceDefinition;
-		}[]
-	) {
+	define(defs: DefineEntry[]) {
 		for (const def of defs) {
 			this.#defineOne(def);
 		}
@@ -109,24 +96,22 @@ export class CommandRegistry {
 	/**
 	 * Defines a single command and its corresponding definition.
 	 */
-	#defineOne({
-		command,
-		definition,
-	}: {
-		command: Command;
-		definition:
-			| AliasDefinition
-			| CreateCommandResult<NamedArgDefinitions>
-			| NamespaceDefinition;
-	}) {
-		if (isAliasDefinition(definition)) {
-			this.#upsertDefinition({ type: "alias", command, ...definition });
-		}
-
-		if (isCommandDefinition(definition)) {
-			this.#upsertDefinition({ type: "command", command, ...definition });
-		} else if (isNamespaceDefinition(definition)) {
-			this.#upsertDefinition({ type: "namespace", command, ...definition });
+	#defineOne(entry: DefineEntry) {
+		if ("aliasOf" in entry) {
+			const { command, aliasOf, definition } = entry;
+			this.#upsertDefinition({
+				type: "alias",
+				command,
+				aliasOf,
+				...definition,
+			});
+		} else {
+			const { command, definition } = entry;
+			if ("handler" in definition) {
+				this.#upsertDefinition({ type: "command", command, ...definition });
+			} else if ("metadata" in definition) {
+				this.#upsertDefinition({ type: "namespace", command, ...definition });
+			}
 		}
 	}
 
@@ -510,3 +495,16 @@ type RegisterCommand = (
 	def: InternalDefinition,
 	registerSubTreeCallback: () => void
 ) => void;
+
+export type AliasEntry = {
+	command: Command;
+	aliasOf: Command;
+	definition?: AliasDefinition;
+};
+
+export type CommandOrNamespaceEntry = {
+	command: Command;
+	definition: CommandDefinition<NamedArgDefinitions> | NamespaceDefinition;
+};
+
+export type DefineEntry = AliasEntry | CommandOrNamespaceEntry;

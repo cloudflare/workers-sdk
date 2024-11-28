@@ -1,16 +1,15 @@
 import type {
 	AliasDefinition,
 	CommandDefinition,
-	DeepFlatten,
 	HandlerArgs,
 	NamedArgDefinitions,
 	NamespaceDefinition,
 } from "./types";
 
 export type CreateCommandResult<NamedArgDefs extends NamedArgDefinitions> =
-	DeepFlatten<{
-		args: HandlerArgs<NamedArgDefs>; // used for type inference only
-	}>;
+	Omit<CommandDefinition<NamedArgDefs>, "args"> & {
+		args: HandlerArgs<NamedArgDefs>; // Used for type inference only
+	};
 export function createCommand<NamedArgDefs extends NamedArgDefinitions>(
 	definition: CommandDefinition<NamedArgDefs>
 ): CreateCommandResult<NamedArgDefs>;

@@ -144,16 +144,31 @@ export type NamespaceDefinition = {
 };
 
 export type AliasDefinition = {
-	aliasOf: Command;
 	metadata?: Partial<Metadata>;
 };
 
+export type AliasInternalDefinition = {
+	type: "alias";
+	command: Command;
+	aliasOf: Command;
+	metadata?: Partial<Metadata>;
+};
 export type InternalDefinition =
-	| ({ type: "command"; command: Command } & CommandDefinition)
+	| ({
+			type: "command";
+			command: Command;
+	  } & CommandDefinition<NamedArgDefinitions>)
 	| ({ type: "namespace"; command: Command } & NamespaceDefinition)
-	| ({ type: "alias"; command: Command } & AliasDefinition);
+	| AliasInternalDefinition;
+
 export type DefinitionTreeNode = {
 	definition?: InternalDefinition;
 	subtree: DefinitionTree;
 };
 export type DefinitionTree = Map<string, DefinitionTreeNode>;
+
+export function isAliasInternalDefinition(
+	def?: InternalDefinition
+): def is AliasInternalDefinition {
+	return Boolean(def && "aliasOf" in def);
+}

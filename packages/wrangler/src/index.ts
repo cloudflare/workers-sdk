@@ -101,7 +101,6 @@ import {
 import {
 	r2BucketNotificationCreateCommand,
 	r2BucketNotificationDeleteCommand,
-	r2BucketNotificationGetAlias,
 	r2BucketNotificationListCommand,
 	r2BucketNotificationNamespace,
 } from "./r2/notification";
@@ -601,9 +600,21 @@ export function createCLIParser(argv: string[]) {
 
 	/******************** CMD GROUP ***********************/
 	registry.define([
-		{ command: "wrangler kv:key", definition: kvKeyAlias },
-		{ command: "wrangler kv:namespace", definition: kvNamespaceAlias },
-		{ command: "wrangler kv:bulk", definition: kvBulkAlias },
+		{
+			command: "wrangler kv:key",
+			aliasOf: "wrangler kv key",
+			definition: kvKeyAlias,
+		},
+		{
+			command: "wrangler kv:namespace",
+			aliasOf: "wrangler kv namespace",
+			definition: kvNamespaceAlias,
+		},
+		{
+			command: "wrangler kv:bulk",
+			aliasOf: "wrangler kv bulk",
+			definition: kvBulkAlias,
+		},
 		{ command: "wrangler kv", definition: kvNamespace },
 		{ command: "wrangler kv namespace", definition: kvNamespaceNamespace },
 		{ command: "wrangler kv key", definition: kvKeyNamespace },
@@ -703,7 +714,7 @@ export function createCLIParser(argv: string[]) {
 		},
 		{
 			command: "wrangler r2 bucket notification get",
-			definition: r2BucketNotificationGetAlias,
+			aliasOf: "wrangler r2 bucket notification list",
 		},
 		{
 			command: "wrangler r2 bucket notification list",

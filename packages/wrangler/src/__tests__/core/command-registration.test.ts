@@ -5,10 +5,10 @@ import {
 	createCommand,
 	createNamespace,
 } from "../../core/create-command";
-import { isAliasDefinition } from "../../core/helpers";
-import type {
+import {
 	HandlerContext,
 	InternalDefinition,
+	isAliasInternalDefinition,
 	Metadata,
 } from "../../core/types";
 
@@ -59,7 +59,9 @@ describe("CommandRegistry", () => {
 
 	test("throws on duplicate command definition", () => {
 		// @ts-expect-error missing command definition
-		const definition = createCommand({});
+		const definition = createCommand({
+			handler: () => {},
+		});
 
 		registry.define([
 			{
@@ -116,8 +118,8 @@ describe("CommandRegistry", () => {
 			},
 			{
 				command: "wrangler my-test-alias",
+				aliasOf: "wrangler my-test-command",
 				definition: createAlias({
-					aliasOf: "wrangler my-test-command",
 					metadata: {
 						status: "stable",
 					},
@@ -130,9 +132,9 @@ describe("CommandRegistry", () => {
 		const aliasNode = registry
 			.getDefinitionTreeRoot()
 			.subtree.get("my-test-alias");
-		assert(aliasNode);
-		const def = aliasNode.definition;
-		assert(def && isAliasDefinition(def));
+
+		const def = aliasNode?.definition;
+		assert(isAliasInternalDefinition(def));
 
 		expect(def.aliasOf).toBe("wrangler my-test-command");
 	});
@@ -141,9 +143,7 @@ describe("CommandRegistry", () => {
 		registry.define([
 			{
 				command: "wrangler my-alias-command",
-				definition: createAlias({
-					aliasOf: "wrangler undefined-command",
-				}),
+				aliasOf: "wrangler undefined-command",
 			},
 		]);
 
@@ -156,13 +156,17 @@ describe("CommandRegistry", () => {
 		registry.define([
 			{
 				command: "wrangler known-namespace",
-				// @ts-expect-error missing definition
-				definition: {},
+				definition: createCommand(
+					// @ts-expect-error missing definition
+					{}
+				),
 			},
 			{
 				command: "wrangler missing-namespace subcommand",
-				// @ts-expect-error missing definition
-				definition: {},
+				definition: createCommand(
+					// @ts-expect-error missing definition
+					{}
+				),
 			},
 		]);
 
@@ -177,23 +181,24 @@ describe("CommandRegistry", () => {
 		registry.define([
 			{
 				command: "wrangler original-command",
-				// @ts-expect-error missing definition
-				definition: {},
+				definition: createCommand(
+					// @ts-expect-error missing definition
+					{}
+				),
 			},
 			{
 				command: "wrangler alias-command",
-				definition: createAlias({
-					aliasOf: "wrangler original-command",
-				}),
+				aliasOf: "wrangler original-command",
 			},
 		]);
 
 		const aliasNode = registry
 			.getDefinitionTreeRoot()
 			.subtree.get("alias-command");
-		assert(aliasNode);
-		const def = aliasNode.definition;
-		assert(def && isAliasDefinition(def));
+
+		const def = aliasNode?.definition;
+		assert(isAliasInternalDefinition(def));
+
 		expect(def.aliasOf).toBe("wrangler original-command");
 	});
 
@@ -217,32 +222,25 @@ describe("CommandRegistry", () => {
 		registry.registerAll();
 
 		const node = registry.getDefinitionTreeRoot().subtree.get("test-command");
-		assert(node);
-		expect(node.definition?.metadata).toEqual(commandMetadata);
+		expect(node?.definition?.metadata).toEqual(commandMetadata);
 	});
 
 	test("correctly resolves multiple alias chains", () => {
 		registry.define([
 			{
 				command: "wrangler original-command",
-				// @ts-expect-error missing definition
-				definition: {
-					metadata: {
-						status: "stable",
-					},
-				},
+				definition: createCommand(
+					// @ts-expect-error missing definition
+					{}
+				),
 			},
 			{
 				command: "wrangler alias-command-1",
-				definition: createAlias({
-					aliasOf: "wrangler original-command",
-				}),
+				aliasOf: "wrangler original-command",
 			},
 			{
 				command: "wrangler alias-command-2",
-				definition: createAlias({
-					aliasOf: "wrangler alias-command-1", // Alias to alias-command-1
-				}),
+				aliasOf: "wrangler alias-command-1",
 			},
 		]);
 
@@ -251,9 +249,10 @@ describe("CommandRegistry", () => {
 		const aliasNode = registry
 			.getDefinitionTreeRoot()
 			.subtree.get("alias-command-2");
-		assert(aliasNode);
-		const def = aliasNode.definition;
-		assert(def && isAliasDefinition(def));
+
+		const def = aliasNode?.definition;
+		assert(isAliasInternalDefinition(def));
+
 		expect(def.aliasOf).toBe("wrangler alias-command-1");
 	});
 
@@ -261,8 +260,10 @@ describe("CommandRegistry", () => {
 		registry.define([
 			{
 				command: "wrangler invalid-namespace subcommand",
-				// @ts-expect-error missing definition
-				definition: {},
+				definition: createCommand(
+					// @ts-expect-error missing definition
+					{}
+				),
 			},
 		]);
 

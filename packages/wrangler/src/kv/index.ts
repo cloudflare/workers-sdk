@@ -34,7 +34,6 @@ import type { EventNames } from "../metrics";
 import type { KeyValue, NamespaceKeyInfo } from "./helpers";
 
 export const kvKeyAlias = createAlias({
-	aliasOf: "wrangler kv key",
 	metadata: {
 		deprecated: true,
 		deprecatedMessage:
@@ -44,7 +43,6 @@ export const kvKeyAlias = createAlias({
 });
 
 export const kvNamespaceAlias = createAlias({
-	aliasOf: "wrangler kv namespace",
 	metadata: {
 		deprecated: true,
 		deprecatedMessage:
@@ -54,7 +52,6 @@ export const kvNamespaceAlias = createAlias({
 });
 
 export const kvBulkAlias = createAlias({
-	aliasOf: "wrangler kv bulk",
 	metadata: {
 		deprecated: true,
 		deprecatedMessage:

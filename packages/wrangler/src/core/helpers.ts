@@ -1,11 +1,5 @@
 import { CommandLineArgsError } from "../errors";
-import type { CreateCommandResult } from "./create-command";
-import type {
-	AliasDefinition,
-	CommandDefinition,
-	NamedArgDefinitions,
-	NamespaceDefinition,
-} from "./types";
+import type { AliasInternalDefinition, InternalDefinition } from "./types";
 
 /**
  * A helper to demand one of a set of options
@@ -55,40 +49,4 @@ export function demandSingleValue<Argv extends { [key: string]: unknown }>(
 
 		return true;
 	};
-}
-
-/**
- * Checks if a definition is an alias definition.
- */
-export function isAliasDefinition(
-	def:
-		| AliasDefinition
-		| CreateCommandResult<NamedArgDefinitions>
-		| NamespaceDefinition
-): def is AliasDefinition {
-	return (def as AliasDefinition).aliasOf !== undefined;
-}
-
-/**
- * Checks if a definition is a command definition.
- */
-export function isCommandDefinition(
-	def:
-		| AliasDefinition
-		| CreateCommandResult<NamedArgDefinitions>
-		| NamespaceDefinition
-): def is CommandDefinition {
-	return (def as CommandDefinition).handler !== undefined;
-}
-
-/**
- * Checks if a definition is a namespace definition.
- */
-export function isNamespaceDefinition(
-	def:
-		| AliasDefinition
-		| CreateCommandResult<NamedArgDefinitions>
-		| NamespaceDefinition
-): def is NamespaceDefinition {
-	return !isAliasDefinition(def) && !isCommandDefinition(def);
 }
