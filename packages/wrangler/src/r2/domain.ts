@@ -6,6 +6,7 @@ import formatLabelledValues from "../utils/render-labelled-values";
 import {
 	attachCustomDomainToBucket,
 	configureCustomDomainSettings,
+	getCustomDomain,
 	listCustomDomainsOfBucket,
 	removeCustomDomainFromBucket,
 	tableFromCustomDomainListResponse,
@@ -17,6 +18,51 @@ defineNamespace({
 		description: "Manage custom domains for an R2 bucket",
 		status: "stable",
 		owner: "Product: R2",
+	},
+});
+
+defineCommand({
+	command: "wrangler r2 bucket domain get",
+	metadata: {
+		description: "Get custom domain connected to an R2 bucket",
+		status: "stable",
+		owner: "Product: R2",
+	},
+	positionalArgs: ["bucket"],
+	args: {
+		bucket: {
+			describe: "The name of the R2 bucket whose custom domain to retrieve",
+			type: "string",
+			demandOption: true,
+		},
+		domain: {
+			describe: "The custom domain to get information for",
+			type: "string",
+			demandOption: true,
+		},
+		jurisdiction: {
+			describe: "The jurisdiction where the bucket exists",
+			alias: "J",
+			requiresArg: true,
+			type: "string",
+		},
+	},
+	async handler({ bucket, domain, jurisdiction }, { config }) {
+		const accountId = await requireAuth(config);
+
+		logger.log(
+			`Retrieving custom domain '${domain}' connected to bucket '${bucket}'...`
+		);
+
+		const domainResponse = await getCustomDomain(
+			accountId,
+			bucket,
+			domain,
+			jurisdiction
+		);
+
+		const tableOutput = tableFromCustomDomainListResponse([domainResponse]);
+		logger.log(tableOutput.map((x) => formatLabelledValues(x)).join("\n\n"));
 	},
 });
 

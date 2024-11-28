@@ -759,6 +759,28 @@ export interface CustomDomainInfo {
 	zoneName: string;
 }
 
+export async function getCustomDomain(
+	accountId: string,
+	bucketName: string,
+	domainName: string,
+	jurisdiction?: string
+): Promise<CustomDomainInfo> {
+	const headers: HeadersInit = {};
+	if (jurisdiction) {
+		headers["cf-r2-jurisdiction"] = jurisdiction;
+	}
+
+	const result = await fetchResult<CustomDomainInfo>(
+		`/accounts/${accountId}/r2/buckets/${bucketName}/domains/custom/${domainName}`,
+		{
+			method: "GET",
+			headers,
+		}
+	);
+
+	return result;
+}
+
 export async function attachCustomDomainToBucket(
 	accountId: string,
 	bucketName: string,
