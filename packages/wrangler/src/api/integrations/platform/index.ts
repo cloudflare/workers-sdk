@@ -240,17 +240,27 @@ export type SourcelessWorkerOptions = Omit<
 	"script" | "scriptPath" | "modules" | "modulesRoot"
 > & { modulesRules?: ModuleRule[] };
 
-export function unstable_getMiniflareWorkerOptions(
-	configPath: string,
-	env?: string
-): {
+interface MiniflareWorkerOptions {
 	workerOptions: SourcelessWorkerOptions;
 	define: Record<string, string>;
 	main?: string;
-} {
-	const config = readConfig(configPath, {
-		env,
-	});
+}
+
+export function unstable_getMiniflareWorkerOptions(
+	configPath: string,
+	env?: string
+): MiniflareWorkerOptions;
+export function unstable_getMiniflareWorkerOptions(
+	config: Config
+): MiniflareWorkerOptions;
+export function unstable_getMiniflareWorkerOptions(
+	configOrConfigPath: string | Config,
+	env?: string
+): MiniflareWorkerOptions {
+	const config =
+		typeof configOrConfigPath === "string"
+			? readConfig(configOrConfigPath, { env })
+			: configOrConfigPath;
 
 	const modulesRules: ModuleRule[] = config.rules
 		.concat(DEFAULT_MODULE_RULES)
