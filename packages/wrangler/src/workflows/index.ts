@@ -1,16 +1,6 @@
-import { defineNamespace } from "../core";
-import "./commands/list";
-import "./commands/describe";
-import "./commands/delete";
-import "./commands/trigger";
-import "./commands/instances/list";
-import "./commands/instances/describe";
-import "./commands/instances/terminate";
-import "./commands/instances/pause";
-import "./commands/instances/resume";
+import { createNamespace } from "../core/create-command";
 
-defineNamespace({
-	command: "wrangler workflows",
+export const workflowsNamespace = createNamespace({
 	metadata: {
 		description: "🔁 Manage Workflows",
 		owner: "Product: Workflows",
@@ -18,8 +8,7 @@ defineNamespace({
 	},
 });
 
-defineNamespace({
-	command: "wrangler workflows instances",
+export const workflowsInstanceNamespace = createNamespace({
 	metadata: {
 		description: "Manage Workflow instances",
 		owner: "Product: Workflows",

@@ -1,4 +1,8 @@
-import { defineAlias, defineCommand, defineNamespace } from "../core";
+import {
+	createAlias,
+	createCommand,
+	createNamespace,
+} from "../core/create-command";
 import { logger } from "../logger";
 import { requireApiToken, requireAuth } from "../user";
 import formatLabelledValues from "../utils/render-labelled-values";
@@ -11,8 +15,7 @@ import {
 } from "./helpers";
 import type { R2EventType } from "./helpers";
 
-defineNamespace({
-	command: "wrangler r2 bucket notification",
+export const r2BucketNotificationNamespace = createNamespace({
 	metadata: {
 		description: "Manage event notification rules for an R2 bucket",
 		status: "stable",
@@ -20,13 +23,11 @@ defineNamespace({
 	},
 });
 
-defineAlias({
-	command: "wrangler r2 bucket notification get",
+export const r2BucketNotificationGetAlias = createAlias({
 	aliasOf: "wrangler r2 bucket notification list",
 });
 
-defineCommand({
-	command: "wrangler r2 bucket notification list",
+export const r2BucketNotificationListCommand = createCommand({
 	metadata: {
 		description: "List event notification rules for an R2 bucket",
 		status: "stable",
@@ -67,8 +68,7 @@ defineCommand({
 	},
 });
 
-defineCommand({
-	command: "wrangler r2 bucket notification create",
+export const r2BucketNotificationCreateCommand = createCommand({
 	metadata: {
 		description: "Create an event notification rule for an R2 bucket",
 		status: "stable",
@@ -148,8 +148,7 @@ defineCommand({
 	},
 });
 
-defineCommand({
-	command: "wrangler r2 bucket notification delete",
+export const r2BucketNotificationDeleteCommand = createCommand({
 	metadata: {
 		description: "Delete an event notification rule from an R2 bucket",
 		status: "stable",

@@ -259,11 +259,11 @@ describe("sentry", () => {
 				              Object {
 				                "colno": 0,
 				                "context_line": "",
-				                "filename": "/wrangler/packages/wrangler/src/core/register-commands.ts",
+				                "filename": "/wrangler/packages/wrangler/src/core/register-yargs-command.ts",
 				                "function": "",
 				                "in_app": false,
 				                "lineno": 0,
-				                "module": "register-commands.ts",
+				                "module": "register-yargs-command.ts",
 				                "post_context": Array [],
 				                "pre_context": Array [],
 				              },

@@ -4,7 +4,7 @@ import * as path from "node:path";
 import * as stream from "node:stream";
 import prettyBytes from "pretty-bytes";
 import { readConfig } from "../config";
-import { defineCommand, defineNamespace } from "../core";
+import { createCommand, createNamespace } from "../core/create-command";
 import { CommandLineArgsError, FatalError, UserError } from "../errors";
 import { logger } from "../logger";
 import { requireAuth } from "../user";
@@ -19,8 +19,7 @@ import {
 } from "./helpers";
 import type { R2PutOptions } from "@cloudflare/workers-types/experimental";
 
-defineNamespace({
-	command: "wrangler r2 object",
+export const r2ObjectNamespace = createNamespace({
 	metadata: {
 		description: `Manage R2 objects`,
 		status: "stable",
@@ -28,8 +27,7 @@ defineNamespace({
 	},
 });
 
-defineCommand({
-	command: "wrangler r2 object get",
+export const r2ObjectGetCommand = createCommand({
 	metadata: {
 		description: "Fetch an object from an R2 bucket",
 		status: "stable",
@@ -122,8 +120,7 @@ defineCommand({
 	},
 });
 
-defineCommand({
-	command: "wrangler r2 object put",
+export const r2ObjectPutCommand = createCommand({
 	metadata: {
 		description: "Create an object in an R2 bucket",
 		status: "stable",
@@ -339,8 +336,7 @@ defineCommand({
 	},
 });
 
-defineCommand({
-	command: "wrangler r2 object delete",
+export const r2ObjectDeleteCommand = createCommand({
 	metadata: {
 		description: "Delete an object in an R2 bucket",
 		status: "stable",

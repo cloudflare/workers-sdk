@@ -1,11 +1,10 @@
 import { fetchResult } from "../../cfetch";
-import { defineCommand } from "../../core";
+import { createCommand } from "../../core/create-command";
 import { logger } from "../../logger";
 import { requireAuth } from "../../user";
 import type { Workflow } from "../types";
 
-defineCommand({
-	command: "wrangler workflows list",
+export const workflowsListCommand = createCommand({
 	metadata: {
 		description: "List Workflows associated to account",
 		owner: "Product: Workflows",

@@ -1,11 +1,9 @@
 import { fetchResult } from "../../cfetch";
-import { defineCommand } from "../../core";
+import { createCommand } from "../../core/create-command";
 import { requireAuth } from "../../user";
 import type { InstanceWithoutDates } from "../types";
 
-defineCommand({
-	command: "wrangler workflows trigger",
-
+export const workflowsTriggerCommand = createCommand({
 	metadata: {
 		description:
 			"Trigger a workflow, creating a new instance. Can optionally take a JSON string to pass a parameter into the workflow instance",

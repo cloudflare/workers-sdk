@@ -1,11 +1,10 @@
-import { defineCommand } from "../core/define-command";
+import { createCommand } from "../core/create-command";
 import { CommandLineArgsError } from "../errors";
 import * as metrics from "../metrics";
 import { listScopes, login, logout, validateScopeKeys } from "./user";
 import { whoami } from "./whoami";
 
-defineCommand({
-	command: "wrangler login",
+export const loginCommand = createCommand({
 	metadata: {
 		description: "🔓 Login to Cloudflare",
 		owner: "Workers: Authoring and Testing",
@@ -60,8 +59,7 @@ defineCommand({
 	},
 });
 
-defineCommand({
-	command: "wrangler logout",
+export const logoutCommand = createCommand({
 	metadata: {
 		description: "🚪 Logout from Cloudflare",
 		owner: "Workers: Authoring and Testing",
@@ -78,8 +76,7 @@ defineCommand({
 	},
 });
 
-defineCommand({
-	command: "wrangler whoami",
+export const whoamiCommand = createCommand({
 	metadata: {
 		description: "🕵️  Retrieve your user information",
 		owner: "Workers: Authoring and Testing",

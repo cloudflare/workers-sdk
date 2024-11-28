@@ -1,6 +1,6 @@
 import dedent from "ts-dedent";
 import { formatConfigSnippet } from "../config";
-import { defineCommand, defineNamespace } from "../core";
+import { createCommand, createNamespace } from "../core/create-command";
 import { UserError } from "../errors";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
@@ -19,8 +19,7 @@ import {
 	updateR2BucketStorageClass,
 } from "./helpers";
 
-defineNamespace({
-	command: "wrangler r2 bucket",
+export const r2BucketNamespace = createNamespace({
 	metadata: {
 		description: "Manage R2 buckets",
 		status: "stable",
@@ -28,8 +27,7 @@ defineNamespace({
 	},
 });
 
-defineCommand({
-	command: "wrangler r2 bucket create",
+export const r2BucketCreateCommand = createCommand({
 	metadata: {
 		description: "Create a new R2 bucket",
 		status: "stable",
@@ -100,8 +98,7 @@ defineCommand({
 	},
 });
 
-defineNamespace({
-	command: "wrangler r2 bucket update",
+export const r2BucketUpdateNamespace = createNamespace({
 	metadata: {
 		description: "Update bucket state",
 		status: "stable",
@@ -109,8 +106,7 @@ defineNamespace({
 	},
 });
 
-defineCommand({
-	command: "wrangler r2 bucket update storage-class",
+export const r2BucketUpdateStorageClassCommand = createCommand({
 	metadata: {
 		description: "Update the default storage class of an existing R2 bucket",
 		status: "stable",
@@ -159,8 +155,7 @@ defineCommand({
 	},
 });
 
-defineCommand({
-	command: "wrangler r2 bucket list",
+export const r2BucketListCommand = createCommand({
 	metadata: {
 		description: "List R2 buckets",
 		status: "stable",
@@ -185,8 +180,7 @@ defineCommand({
 	},
 });
 
-defineCommand({
-	command: "wrangler r2 bucket info",
+export const r2BucketInfoCommand = createCommand({
 	metadata: {
 		description: "Get information about an R2 bucket",
 		status: "stable",
@@ -235,8 +229,7 @@ defineCommand({
 	},
 });
 
-defineCommand({
-	command: "wrangler r2 bucket delete",
+export const r2BucketDeleteCommand = createCommand({
 	metadata: {
 		description: "Delete an R2 bucket",
 		status: "stable",

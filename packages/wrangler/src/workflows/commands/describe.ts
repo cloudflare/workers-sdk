@@ -1,13 +1,12 @@
 import { logRaw } from "@cloudflare/cli";
 import { white } from "@cloudflare/cli/colors";
 import { fetchResult } from "../../cfetch";
-import { defineCommand } from "../../core";
+import { createCommand } from "../../core/create-command";
 import { requireAuth } from "../../user";
 import formatLabelledValues from "../../utils/render-labelled-values";
 import type { Version, Workflow } from "../types";
 
-defineCommand({
-	command: "wrangler workflows describe",
+export const workflowsDescribeCommand = createCommand({
 	metadata: {
 		description: "Describe Workflow resource",
 		owner: "Product: Workflows",

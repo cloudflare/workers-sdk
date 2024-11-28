@@ -13,10 +13,8 @@ import type {
 	PositionalOptions,
 } from "yargs";
 
-export class CommandRegistrationError extends Error {}
-
 type StringKeyOf<T> = Extract<keyof T, string>;
-type DeepFlatten<T> = T extends object
+export type DeepFlatten<T> = T extends object
 	? { [K in keyof T]: DeepFlatten<T[K]> }
 	: T;
 
@@ -78,11 +76,6 @@ export type HandlerContext = {
 export type CommandDefinition<
 	NamedArgDefs extends NamedArgDefinitions = NamedArgDefinitions,
 > = {
-	/**
-	 * The full command as it would be written by the user.
-	 */
-	command: Command;
-
 	/**
 	 * Descriptive information about the command which does not affect behaviour.
 	 * This is used for the CLI --help and subcommand --help output.
@@ -146,75 +139,21 @@ export type CommandDefinition<
 	) => void | Promise<void>;
 };
 
-type DefineCommandResult<NamedArgDefs extends NamedArgDefinitions> =
-	DeepFlatten<{
-		args: HandlerArgs<NamedArgDefs>; // used for type inference only
-	}>;
-export function defineCommand<NamedArgDefs extends NamedArgDefinitions>(
-	definition: CommandDefinition<NamedArgDefs>
-): DefineCommandResult<NamedArgDefs>;
-export function defineCommand(
-	definition: CommandDefinition
-): DefineCommandResult<NamedArgDefinitions> {
-	upsertDefinition({ type: "command", ...definition });
-
-	// @ts-expect-error return type is used for type inference only
-	return {};
-}
-
 export type NamespaceDefinition = {
-	command: Command;
 	metadata: Metadata;
 };
-export function defineNamespace(definition: NamespaceDefinition) {
-	upsertDefinition({ type: "namespace", ...definition });
-}
 
 export type AliasDefinition = {
-	command: Command;
 	aliasOf: Command;
 	metadata?: Partial<Metadata>;
 };
-export function defineAlias(definition: AliasDefinition) {
-	upsertDefinition({ type: "alias", ...definition });
-}
 
 export type InternalDefinition =
-	| ({ type: "command" } & CommandDefinition)
-	| ({ type: "namespace" } & NamespaceDefinition)
-	| ({ type: "alias" } & AliasDefinition);
+	| ({ type: "command"; command: Command } & CommandDefinition)
+	| ({ type: "namespace"; command: Command } & NamespaceDefinition)
+	| ({ type: "alias"; command: Command } & AliasDefinition);
 export type DefinitionTreeNode = {
 	definition?: InternalDefinition;
 	subtree: DefinitionTree;
 };
 export type DefinitionTree = Map<string, DefinitionTreeNode>;
-
-export const DefinitionTreeRoot: DefinitionTreeNode = { subtree: new Map() };
-function upsertDefinition(def: InternalDefinition, root = DefinitionTreeRoot) {
-	const segments = def.command.split(" ").slice(1); // eg. ["versions", "secret", "put"]
-
-	let node = root;
-	for (const segment of segments) {
-		const subtree = node.subtree;
-		let child = subtree.get(segment);
-		if (!child) {
-			child = {
-				definition: undefined,
-				subtree: new Map(),
-			};
-			subtree.set(segment, child);
-		}
-
-		node = child;
-	}
-
-	if (node.definition) {
-		throw new CommandRegistrationError(
-			`Duplicate definition for "${def.command}"`
-		);
-	}
-
-	node.definition = def;
-
-	return node;
-}

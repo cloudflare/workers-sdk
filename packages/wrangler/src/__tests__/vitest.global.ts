@@ -4,4 +4,5 @@ export function setup(): void {
 	// This needs to be in a globalSetup script - it won't work in a setupFile script.
 	// https://github.com/vitest-dev/vitest/issues/1575#issuecomment-1439286286
 	process.env.LC_ALL = "C";
+	process.env.TZ = "UTC";
 }
