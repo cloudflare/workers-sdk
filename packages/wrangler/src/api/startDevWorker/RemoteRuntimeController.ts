@@ -161,10 +161,9 @@ export class RemoteRuntimeController extends RuntimeController {
 				configPath: config.config,
 			});
 
-			const bindings = (
-				await convertBindingsToCfWorkerInitBindings(config.bindings)
-			).bindings;
-
+			const { bindings } = await convertBindingsToCfWorkerInitBindings(
+				config.bindings
+			);
 			const token = await this.#previewToken({
 				bundle,
 				modules: bundle.modules,

@@ -208,8 +208,11 @@ export function findWranglerConfig(
 	);
 }
 
-function addLocalSuffix(id: string | undefined, local: boolean = false) {
-	if (!id) {
+function addLocalSuffix(
+	id: string | symbol | undefined,
+	local: boolean = false
+) {
+	if (!id || typeof id === "symbol") {
 		return local ? "(local)" : "(remote)";
 	}
 
@@ -407,10 +410,12 @@ export function printBindings(
 			name: friendlyBindingNames.d1_databases,
 			entries: d1_databases.map(
 				({ binding, database_name, database_id, preview_database_id }) => {
+					const remoteDatabaseId =
+						typeof database_id === "string" ? database_id : null;
 					let databaseValue =
-						database_id && database_name
-							? `${database_name} (${database_id})`
-							: database_id ?? database_name;
+						remoteDatabaseId && database_name
+							? `${database_name} (${remoteDatabaseId})`
+							: remoteDatabaseId ?? database_name;
 
 					//database_id is local when running `wrangler dev --local`
 					if (preview_database_id && database_id !== "local") {
@@ -453,12 +458,15 @@ export function printBindings(
 		output.push({
 			name: friendlyBindingNames.r2_buckets,
 			entries: r2_buckets.map(({ binding, bucket_name, jurisdiction }) => {
+				let name = typeof bucket_name === "string" ? bucket_name : "";
+
 				if (jurisdiction !== undefined) {
-					bucket_name += ` (${jurisdiction})`;
+					name += ` (${jurisdiction})`;
 				}
+
 				return {
 					key: binding,
-					value: addLocalSuffix(bucket_name, context.local),
+					value: addLocalSuffix(name, context.local),
 				};
 			}),
 		});

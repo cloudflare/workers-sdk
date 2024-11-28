@@ -3,6 +3,7 @@ import type {
 	WorkerMetadata,
 	WorkerMetadataBinding,
 } from "./create-worker-upload-form";
+import type { INHERIT_SYMBOL } from "./provision";
 import type { AssetConfig, RoutingConfig } from "@cloudflare/workers-shared";
 import type { Json } from "miniflare";
 
@@ -81,7 +82,7 @@ export interface CfVars {
  */
 export interface CfKvNamespace {
 	binding: string;
-	id?: string;
+	id?: string | typeof INHERIT_SYMBOL;
 }
 
 /**
@@ -167,14 +168,14 @@ export interface CfQueue {
 
 export interface CfR2Bucket {
 	binding: string;
-	bucket_name?: string;
+	bucket_name?: string | typeof INHERIT_SYMBOL;
 	jurisdiction?: string;
 }
 
 // TODO: figure out if this is duplicated in packages/wrangler/src/config/environment.ts
 export interface CfD1Database {
 	binding: string;
-	database_id?: string;
+	database_id?: string | typeof INHERIT_SYMBOL;
 	database_name?: string;
 	preview_database_id?: string;
 	database_internal_env?: string;

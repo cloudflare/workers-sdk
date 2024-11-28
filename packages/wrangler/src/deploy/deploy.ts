@@ -23,6 +23,7 @@ import {
 	getWrangler1xLegacyModuleReferences,
 } from "../deployment-bundle/module-collection";
 import { validateNodeCompatMode } from "../deployment-bundle/node-compat";
+import { getBindings } from "../deployment-bundle/provision";
 import { loadSourceMaps } from "../deployment-bundle/source-maps";
 import { confirm } from "../dialogs";
 import { getMigrationsToUpload } from "../durable";
@@ -671,18 +672,14 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			props.oldAssetTtl
 		);
 
-		const bindings: CfWorkerInit["bindings"] = {
-			kv_namespaces: (config.kv_namespaces || []).concat(
+		const bindings = getBindings({
+			...config,
+			kv_namespaces: config.kv_namespaces.concat(
 				legacyAssets.namespace
 					? { binding: "__STATIC_CONTENT", id: legacyAssets.namespace }
 					: []
 			),
-			send_email: config.send_email,
 			vars: { ...config.vars, ...props.vars },
-			wasm_modules: config.wasm_modules,
-			browser: config.browser,
-			ai: config.ai,
-			version_metadata: config.version_metadata,
 			text_blobs: {
 				...config.text_blobs,
 				...(legacyAssets.manifest &&
@@ -690,31 +687,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 						__STATIC_CONTENT_MANIFEST: "__STATIC_CONTENT_MANIFEST",
 					}),
 			},
-			data_blobs: config.data_blobs,
-			durable_objects: config.durable_objects,
-			workflows: config.workflows,
-			queues: config.queues.producers?.map((producer) => {
-				return { binding: producer.binding, queue_name: producer.queue };
-			}),
-			r2_buckets: config.r2_buckets,
-			d1_databases: config.d1_databases,
-			vectorize: config.vectorize,
-			hyperdrive: config.hyperdrive,
-			services: config.services,
-			analytics_engine_datasets: config.analytics_engine_datasets,
-			dispatch_namespaces: config.dispatch_namespaces,
-			mtls_certificates: config.mtls_certificates,
-			pipelines: config.pipelines,
-			logfwdr: config.logfwdr,
-			assets: config.assets?.binding
-				? { binding: config.assets.binding }
-				: undefined,
-			unsafe: {
-				bindings: config.unsafe.bindings,
-				metadata: config.unsafe.metadata,
-				capnp: config.unsafe.capnp,
-			},
-		};
+		});
 
 		if (legacyAssets.manifest) {
 			modules.push({

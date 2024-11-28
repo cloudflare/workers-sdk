@@ -46,6 +46,7 @@ import type {
 	Route,
 	Rule,
 } from "./config/environment";
+import type { INHERIT_SYMBOL } from "./deployment-bundle/provision";
 import type {
 	CfKvNamespace,
 	CfModule,
@@ -398,7 +399,7 @@ export type AdditionalDevProps = {
 	vars?: Record<string, string | Json>;
 	kv?: {
 		binding: string;
-		id?: string;
+		id?: string | typeof INHERIT_SYMBOL;
 		preview_id?: string;
 	}[];
 	durableObjects?: {
@@ -415,7 +416,7 @@ export type AdditionalDevProps = {
 	}[];
 	r2?: {
 		binding: string;
-		bucket_name?: string;
+		bucket_name?: string | typeof INHERIT_SYMBOL;
 		preview_bucket_name?: string;
 		jurisdiction?: string;
 	}[];
@@ -425,7 +426,11 @@ export type AdditionalDevProps = {
 	version_metadata?: {
 		binding: string;
 	};
-	d1Databases?: Environment["d1_databases"];
+	d1Databases?: Array<
+		Omit<Environment["d1_databases"][number], "database_id"> & {
+			database_id?: string | typeof INHERIT_SYMBOL;
+		}
+	>;
 	processEntrypoint?: boolean;
 	additionalModules?: CfModule[];
 	moduleRoot?: string;

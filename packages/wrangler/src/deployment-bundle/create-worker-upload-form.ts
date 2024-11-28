@@ -4,6 +4,7 @@ import path from "node:path";
 import { File, FormData } from "undici";
 import { UserError } from "../errors";
 import { handleUnsafeCapnp } from "./capnp";
+import { INHERIT_SYMBOL } from "./provision";
 import type { Observability } from "../config/environment";
 import type {
 	CfDurableObjectMigrations,
@@ -229,11 +230,19 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 		if (id === undefined) {
 			throw new UserError(`${binding} bindings must have an "id" field`);
 		}
-		metadataBindings.push({
-			name: binding,
-			type: "kv_namespace",
-			namespace_id: id,
-		});
+
+		if (id === INHERIT_SYMBOL) {
+			metadataBindings.push({
+				name: binding,
+				type: "inherit",
+			});
+		} else {
+			metadataBindings.push({
+				name: binding,
+				type: "kv_namespace",
+				namespace_id: id,
+			});
+		}
 	});
 
 	bindings.send_email?.forEach(
@@ -284,12 +293,20 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 				`${binding} bindings must have a "bucket_name" field`
 			);
 		}
-		metadataBindings.push({
-			name: binding,
-			type: "r2_bucket",
-			bucket_name,
-			jurisdiction,
-		});
+
+		if (bucket_name === INHERIT_SYMBOL) {
+			metadataBindings.push({
+				name: binding,
+				type: "inherit",
+			});
+		} else {
+			metadataBindings.push({
+				name: binding,
+				type: "r2_bucket",
+				bucket_name,
+				jurisdiction,
+			});
+		}
 	});
 
 	bindings.d1_databases?.forEach(
@@ -299,12 +316,20 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 					`${binding} bindings must have a "database_id" field`
 				);
 			}
-			metadataBindings.push({
-				name: binding,
-				type: "d1",
-				id: database_id,
-				internalEnv: database_internal_env,
-			});
+
+			if (database_id === INHERIT_SYMBOL) {
+				metadataBindings.push({
+					name: binding,
+					type: "inherit",
+				});
+			} else {
+				metadataBindings.push({
+					name: binding,
+					type: "d1",
+					id: database_id,
+					internalEnv: database_internal_env,
+				});
+			}
 		}
 	);
 

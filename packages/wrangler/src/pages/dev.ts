@@ -1168,7 +1168,7 @@ function getBindingsFromArgs(args: PagesDevArguments): Partial<
 					id: ref || kv.toString(),
 				};
 			})
-			.filter(Boolean) as AdditionalDevProps["kv"];
+			.filter(Boolean) as EnvironmentNonInheritable["kv_namespaces"];
 	}
 
 	// get DO bindings from the [--do] arg
@@ -1216,7 +1216,7 @@ function getBindingsFromArgs(args: PagesDevArguments): Partial<
 					database_name: `local-${d1}`,
 				};
 			})
-			.filter(Boolean) as AdditionalDevProps["d1Databases"];
+			.filter(Boolean) as EnvironmentNonInheritable["d1_databases"];
 	}
 
 	// get R2 bindings from the [--r2] arg
@@ -1234,7 +1234,7 @@ function getBindingsFromArgs(args: PagesDevArguments): Partial<
 
 				return { binding, bucket_name: ref || binding.toString() };
 			})
-			.filter(Boolean) as AdditionalDevProps["r2"];
+			.filter(Boolean) as EnvironmentNonInheritable["r2_buckets"];
 	}
 
 	// get service bindings from the [--services] arg
