@@ -5,6 +5,7 @@ import { dedent } from "../../utils/dedent";
 import type { Plugin } from "esbuild";
 import type { NodeJSCompatMode } from "miniflare";
 
+
 /**
  * An esbuild plugin that will:
  * - mark any `node:...` imports as external
@@ -19,11 +20,11 @@ export const nodejsCompatPlugin = (mode: NodeJSCompatMode): Plugin => ({
 		const seen = new Set<string>();
 
 		// Prevent multiple warnings per package
-		const warnedPackaged = new Map<string, string[]>();
+		const warnedPackages = new Map<string, string[]>();
 
 		pluginBuild.onStart(() => {
 			seen.clear();
-			warnedPackaged.clear();
+			warnedPackages.clear();
 		});
 		pluginBuild.onResolve(
 			{ filter: /node:.*/ },
@@ -44,9 +45,9 @@ export const nodejsCompatPlugin = (mode: NodeJSCompatMode): Plugin => ({
 				if (result.errors.length > 0) {
 					// esbuild couldn't resolve the package
 					// We should warn the user, but not fail the build
-					const pathWarnedPackaged = warnedPackaged.get(path) ?? [];
-					pathWarnedPackaged.push(importer);
-					warnedPackaged.set(path, pathWarnedPackaged);
+					const pathWarnedPackages = warnedPackages.get(path) ?? [];
+					pathWarnedPackages.push(importer);
+					warnedPackages.set(path, pathWarnedPackages);
 
 					return { external: true };
 				}
@@ -64,10 +65,10 @@ export const nodejsCompatPlugin = (mode: NodeJSCompatMode): Plugin => ({
 		pluginBuild.onEnd(() => {
 			if (
 				pluginBuild.initialOptions.format === "iife" &&
-				warnedPackaged.size > 0
+				warnedPackages.size > 0
 			) {
 				const paths = new Intl.ListFormat("en-US").format(
-					Array.from(warnedPackaged.keys())
+					Array.from(warnedPackages.keys())
 						.map((p) => `"${p}"`)
 						.sort()
 				);
@@ -91,7 +92,7 @@ export const nodejsCompatPlugin = (mode: NodeJSCompatMode): Plugin => ({
 		// can be collated
 		pluginBuild.onEnd(() => {
 			if (mode !== "v1") {
-				warnedPackaged.forEach((importers: string[], path: string) => {
+				warnedPackages.forEach((importers: string[], path: string) => {
 					logger.warn(
 						dedent`
 						The package "${path}" wasn't found on the file system but is built into node.
