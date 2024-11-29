@@ -9,6 +9,7 @@ import { createBirpc } from "birpc";
 import * as devalue from "devalue";
 import {
 	compileModuleRules,
+	getNodeCompat,
 	kCurrentWorker,
 	kUnsafeEphemeralUniqueKey,
 	Log,
@@ -355,11 +356,6 @@ function buildProjectWorkerOptions(
 				disableFlag: "export_commonjs_namespace",
 				defaultOnDate: "2022-10-31",
 			}),
-		() =>
-			flagAssertions.assertAtLeastOneFlagExists([
-				"nodejs_compat",
-				"nodejs_compat_v2",
-			]),
 	];
 
 	for (const assertion of assertions) {
@@ -367,6 +363,17 @@ function buildProjectWorkerOptions(
 		if (!result.isValid) {
 			throw new Error(result.errorMessage);
 		}
+	}
+
+	// Vitest requires node compat. Here we check for any existing node compatibility, and if not
+	// found
+	const { mode } = getNodeCompat(
+		runnerWorker.compatibilityDate,
+		runnerWorker.compatibilityFlags
+	);
+
+	if (!mode || !["v1"].includes(mode)) {
+		runnerWorker.compatibilityFlags.push("nodejs_compat");
 	}
 
 	// Required for `workerd:unsafe` module. We don't require this flag to be set
