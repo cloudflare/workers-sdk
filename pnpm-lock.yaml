@@ -9534,9 +9534,19 @@ snapshots:
       '@esbuild-kit/core-utils': 3.3.2
       get-tsconfig: 4.7.0
 
+  '@esbuild-plugins/node-globals-polyfill@0.2.3(esbuild@0.17.19)':
+    dependencies:
+      esbuild: 0.17.19
+
   '@esbuild-plugins/node-globals-polyfill@0.2.3(esbuild@0.24.0)':
     dependencies:
       esbuild: 0.24.0
+
+  '@esbuild-plugins/node-modules-polyfill@0.2.2(esbuild@0.17.19)':
+    dependencies:
+      esbuild: 0.17.19
+      escape-string-regexp: 4.0.0
+      rollup-plugin-node-polyfills: 0.2.1
 
   '@esbuild-plugins/node-modules-polyfill@0.2.2(esbuild@0.24.0)':
     dependencies:
