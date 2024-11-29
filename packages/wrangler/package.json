@@ -175,7 +175,7 @@
 		"sharp": "^0.33.5"
 	},
 	"engines": {
-		"node": ">=16.17.0"
+		"node": ">=18.0.0"
 	},
 	"volta": {
 		"extends": "../../package.json"
