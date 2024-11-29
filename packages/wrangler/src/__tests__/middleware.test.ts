@@ -872,9 +872,6 @@ describe("middleware", () => {
 			).toMatchInlineSnapshot(`
 				"var __defProp = Object.defineProperty;
 				var __name = (target, value) => __defProp(target, \\"name\\", { value, configurable: true });
-
-
-				var __defProp = Object.defineProperty;
 				var __export = (target, all) => {
 				  for (var name in all)
 				    __defProp(target, name, { get: all[name], enumerable: true });
@@ -892,13 +889,15 @@ describe("middleware", () => {
 				  }
 				};
 				var DurableObjectExample = class {
+				  static {
+				    __name(this, \\"DurableObjectExample\\");
+				  }
 				  constructor(state, env) {
 				  }
 				  async fetch(request) {
 				    return new Response(\\"Hello World\\");
 				  }
 				};
-				__name(DurableObjectExample, \\"DurableObjectExample\\");
 
 
 				var MIDDLEWARE_TEST_INJECT = \\"__INJECT_FOR_TESTING_WRANGLER_MIDDLEWARE__\\";
@@ -939,6 +938,9 @@ describe("middleware", () => {
 				    this.cron = cron;
 				    this.#noRetry = noRetry;
 				  }
+				  static {
+				    __name(this, \\"__Facade_ScheduledController__\\");
+				  }
 				  #noRetry;
 				  noRetry() {
 				    if (!(this instanceof ___Facade_ScheduledController__)) {
@@ -947,7 +949,6 @@ describe("middleware", () => {
 				    this.#noRetry();
 				  }
 				};
-				__name(__Facade_ScheduledController__, \\"__Facade_ScheduledController__\\");
 				function wrapExportedHandler(worker) {
 				  if (__INTERNAL_WRANGLER_MIDDLEWARE__ === void 0 || __INTERNAL_WRANGLER_MIDDLEWARE__.length === 0) {
 				    return worker;
@@ -988,15 +989,15 @@ describe("middleware", () => {
 				    __facade_register__(middleware);
 				  }
 				  return class extends klass {
-				    #fetchDispatcher = (request, env, ctx) => {
+				    #fetchDispatcher = /* @__PURE__ */ __name((request, env, ctx) => {
 				      this.env = env;
 				      this.ctx = ctx;
 				      if (super.fetch === void 0) {
 				        throw new Error(\\"Entrypoint class does not define a fetch() function.\\");
 				      }
 				      return super.fetch(request);
-				    };
-				    #dispatcher = (type, init) => {
+				    }, \\"#fetchDispatcher\\");
+				    #dispatcher = /* @__PURE__ */ __name((type, init) => {
 				      if (type === \\"scheduled\\" && super.scheduled !== void 0) {
 				        const controller = new __Facade_ScheduledController__(
 				          Date.now(),
@@ -1006,7 +1007,7 @@ describe("middleware", () => {
 				        );
 				        return super.scheduled(controller);
 				      }
-				    };
+				    }, \\"#dispatcher\\");
 				    fetch(request) {
 				      return __facade_invoke__(
 				        request,
