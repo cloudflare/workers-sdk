@@ -123,7 +123,6 @@ describe("normalizeAndValidateConfig()", () => {
 			zone_id: undefined,
 			no_bundle: undefined,
 			minify: undefined,
-			node_compat: undefined,
 			first_party_worker: undefined,
 			keep_vars: undefined,
 			logpush: undefined,
@@ -1002,7 +1001,6 @@ describe("normalizeAndValidateConfig()", () => {
 				},
 				no_bundle: true,
 				minify: true,
-				node_compat: true,
 				first_party_worker: true,
 				logpush: true,
 				upload_source_maps: true,
@@ -1086,7 +1084,6 @@ describe("normalizeAndValidateConfig()", () => {
 				},
 				no_bundle: "INVALID",
 				minify: "INVALID",
-				node_compat: "INVALID",
 				first_party_worker: "INVALID",
 				logpush: "INVALID",
 				upload_source_maps: "INVALID",
@@ -1164,7 +1161,6 @@ describe("normalizeAndValidateConfig()", () => {
 				  - The field \\"define.DEF1\\" should be a string but got 1777.
 				  - Expected \\"no_bundle\\" to be of type boolean but got \\"INVALID\\".
 				  - Expected \\"minify\\" to be of type boolean but got \\"INVALID\\".
-				  - Expected \\"node_compat\\" to be of type boolean but got \\"INVALID\\".
 				  - Expected \\"first_party_worker\\" to be of type boolean but got \\"INVALID\\".
 				  - Expected \\"logpush\\" to be of type boolean but got \\"INVALID\\".
 				  - Expected \\"upload_source_maps\\" to be of type boolean but got \\"INVALID\\".
@@ -3783,7 +3779,6 @@ describe("normalizeAndValidateConfig()", () => {
 				},
 				no_bundle: true,
 				minify: true,
-				node_compat: true,
 				first_party_worker: true,
 				logpush: true,
 				upload_source_maps: true,
@@ -3833,7 +3828,6 @@ describe("normalizeAndValidateConfig()", () => {
 				},
 				no_bundle: false,
 				minify: false,
-				node_compat: false,
 				first_party_worker: false,
 				logpush: false,
 				upload_source_maps: false,
@@ -3861,7 +3855,6 @@ describe("normalizeAndValidateConfig()", () => {
 				},
 				no_bundle: true,
 				minify: true,
-				node_compat: true,
 				first_party_worker: true,
 				logpush: true,
 				upload_source_maps: true,
@@ -4116,6 +4109,23 @@ describe("normalizeAndValidateConfig()", () => {
 			`);
 		});
 
+		it("should error on node_compat", () => {
+			const { diagnostics } = normalizeAndValidateConfig(
+				// @ts-expect-error node_compat has been removed
+				{ env: { ENV1: { node_compat: true } } },
+				undefined,
+				{ env: "ENV1" }
+			);
+			expect(diagnostics.hasErrors()).toBe(true);
+			expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+				"Processing wrangler configuration:
+
+				  - \\"env.ENV1\\" environment configuration
+				    - [1mRemoved[0m: \\"node_compat\\":
+				      The \\"node_compat\\" field is no longer supported as of Wrangler v4. Instead, use the \`nodejs_compat\` compatibility flag. This includes the functionality from legacy \`node_compat\` polyfills and natively implemented Node.js APIs. See https://developers.cloudflare.com/workers/runtime-apis/nodejs for more information."
+			`);
+		});
+
 		it("should error on invalid environment values", () => {
 			const expectedConfig: RawEnvironment = {
 				name: 111,
@@ -4138,7 +4148,6 @@ describe("normalizeAndValidateConfig()", () => {
 				},
 				no_bundle: "INVALID",
 				minify: "INVALID",
-				node_compat: "INVALID",
 				first_party_worker: "INVALID",
 				logpush: "INVALID",
 				upload_source_maps: "INVALID",
@@ -4177,7 +4186,6 @@ describe("normalizeAndValidateConfig()", () => {
 			    - Expected \\"usage_model\\" field to be one of [\\"bundled\\",\\"unbound\\"] but got \\"INVALID\\".
 			    - Expected \\"no_bundle\\" to be of type boolean but got \\"INVALID\\".
 			    - Expected \\"minify\\" to be of type boolean but got \\"INVALID\\".
-			    - Expected \\"node_compat\\" to be of type boolean but got \\"INVALID\\".
 			    - Expected \\"first_party_worker\\" to be of type boolean but got \\"INVALID\\".
 			    - Expected \\"logpush\\" to be of type boolean but got \\"INVALID\\".
 			    - Expected \\"upload_source_maps\\" to be of type boolean but got \\"INVALID\\"."

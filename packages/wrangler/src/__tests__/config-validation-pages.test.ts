@@ -232,7 +232,6 @@ describe("validatePagesConfig()", () => {
 					build: {
 						command: "npm run build",
 					},
-					node_compat: true,
 				},
 			};
 			diagnostics = validatePagesConfig(
@@ -243,12 +242,11 @@ describe("validatePagesConfig()", () => {
 			expect(diagnostics.hasWarnings()).toBeFalsy();
 			expect(diagnostics.hasErrors()).toBeTruthy();
 			expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			"Running configuration file validation for Pages:
-			  - Configuration file for Pages projects does not support \\"triggers\\"
-			  - Configuration file for Pages projects does not support \\"usage_model\\"
-			  - Configuration file for Pages projects does not support \\"build\\"
-			  - Configuration file for Pages projects does not support \\"node_compat\\""
-		`);
+				"Running configuration file validation for Pages:
+				  - Configuration file for Pages projects does not support \\"triggers\\"
+				  - Configuration file for Pages projects does not support \\"usage_model\\"
+				  - Configuration file for Pages projects does not support \\"build\\""
+			`);
 
 			// test with non-inheritable environment config fields
 			// (incl. `queues.consumers`)

@@ -1412,7 +1412,6 @@ describe.sequential("wrangler dev", () => {
 				      --tsconfig                                   Path to a custom tsconfig.json file  [string]
 				  -r, --remote                                     Run on the global Cloudflare network with access to production resources  [boolean] [default: false]
 				      --minify                                     Minify the script  [boolean]
-				      --node-compat                                Enable Node.js compatibility  [boolean]
 				      --persist-to                                 Specify directory to use for local persistence (defaults to .wrangler/state)  [string]
 				      --live-reload                                Auto reload HTML pages when change is detected in local mode  [boolean]
 				      --test-scheduled                             Test scheduled events by visiting /__scheduled in browser  [boolean] [default: false]
@@ -1860,21 +1859,6 @@ describe.sequential("wrangler dev", () => {
 				  - SECRET: \\"(hidden)\\"
 				"
 			`);
-		});
-	});
-
-	describe("`nodejs_compat` compatibility flag", () => {
-		it("should conflict with the --node-compat option", async () => {
-			writeWranglerConfig();
-			fs.writeFileSync("index.js", `export default {};`);
-
-			await expect(
-				runWrangler(
-					"dev index.js --compatibility-flag=nodejs_compat --node-compat"
-				)
-			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: The \`nodejs_compat\` compatibility flag cannot be used in conjunction with the legacy \`--node-compat\` flag. If you want to use the Workers \`nodejs_compat\` compatibility flag, please remove the \`--node-compat\` argument from your CLI command or \`node_compat = true\` from your config file.]`
-			);
 		});
 	});
 

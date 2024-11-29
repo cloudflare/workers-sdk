@@ -1693,12 +1693,6 @@ importers:
       '@cloudflare/workers-shared':
         specifier: workspace:*
         version: link:../workers-shared
-      '@esbuild-plugins/node-globals-polyfill':
-        specifier: ^0.2.3
-        version: 0.2.3(esbuild@0.17.19)
-      '@esbuild-plugins/node-modules-polyfill':
-        specifier: ^0.2.2
-        version: 0.2.2(esbuild@0.17.19)
       blake3-wasm:
         specifier: ^2.1.5
         version: 2.1.5

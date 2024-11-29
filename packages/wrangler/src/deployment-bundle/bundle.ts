@@ -1,7 +1,5 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
-import NodeGlobalsPolyfills from "@esbuild-plugins/node-globals-polyfill";
-import NodeModulesPolyfills from "@esbuild-plugins/node-modules-polyfill";
 import * as esbuild from "esbuild";
 import {
 	getBuildConditionsFromEnv,
@@ -21,7 +19,6 @@ import { cloudflareInternalPlugin } from "./esbuild-plugins/cloudflare-internal"
 import { configProviderPlugin } from "./esbuild-plugins/config-provider";
 import { nodejsHybridPlugin } from "./esbuild-plugins/hybrid-nodejs-compat";
 import { nodejsCompatPlugin } from "./esbuild-plugins/nodejs-compat";
-import { standardURLPlugin } from "./esbuild-plugins/standard-url";
 import { writeAdditionalModules } from "./find-additional-modules";
 import { noopModuleCollector } from "./module-collection";
 import type { Config } from "../config";
@@ -418,7 +415,6 @@ export async function bundleWorker(
 				// use process.env["NODE_ENV" + ""] so that esbuild doesn't replace it
 				// when we do a build of wrangler. (re: https://github.com/cloudflare/workers-sdk/issues/1477)
 				"process.env.NODE_ENV": `"${process.env["NODE_ENV" + ""]}"`,
-				...(nodejsCompatMode === "legacy" ? { global: "globalThis" } : {}),
 				...define,
 			},
 		}),
@@ -427,13 +423,6 @@ export async function bundleWorker(
 			aliasPlugin,
 			moduleCollector.plugin,
 			...(nodejsCompatMode === "als" ? [asyncLocalStoragePlugin] : []),
-			...(nodejsCompatMode === "legacy"
-				? [
-						NodeGlobalsPolyfills({ buffer: true }),
-						standardURLPlugin(),
-						NodeModulesPolyfills(),
-					]
-				: []),
 			// Runtime Node.js compatibility (will warn if not using nodejs compat flag and are trying to import from a Node.js builtin).
 			...(nodejsCompatMode === "v1" || nodejsCompatMode !== "v2"
 				? [nodejsCompatPlugin(nodejsCompatMode === "v1")]

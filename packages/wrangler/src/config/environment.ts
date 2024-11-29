@@ -282,12 +282,6 @@ interface EnvironmentInheritable {
 	minify: boolean | undefined;
 
 	/**
-	 * Add polyfills for node builtin modules and globals
-	 * @inheritable
-	 */
-	node_compat: boolean | undefined;
-
-	/**
 	 * Designates this Worker as an internal-only "first-party" Worker.
 	 *
 	 * @inheritable

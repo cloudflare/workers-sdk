@@ -193,6 +193,8 @@ export function deployOptions(yargs: CommonYargsArgv) {
 			.option("node-compat", {
 				describe: "Enable Node.js compatibility",
 				type: "boolean",
+				hidden: true,
+				deprecated: true,
 			})
 			.option("dry-run", {
 				describe: "Don't actually deploy",
@@ -240,6 +242,12 @@ export async function deployHandler(args: DeployArgs) {
 	if (args._[0] === "publish") {
 		logger.warn(
 			"`wrangler publish` is deprecated and will be removed in the next major version.\nPlease use `wrangler deploy` instead, which accepts exactly the same arguments."
+		);
+	}
+
+	if (args.nodeCompat) {
+		throw new UserError(
+			`The --node-compat flag is no longer supported as of Wrangler v4. Instead, use the \`nodejs_compat\` compatibility flag. This includes the functionality from legacy \`node_compat\` polyfills and natively implemented Node.js APIs. See https://developers.cloudflare.com/workers/runtime-apis/nodejs for more information.`
 		);
 	}
 
@@ -356,7 +364,6 @@ export async function deployHandler(args: DeployArgs) {
 		legacyAssetPaths,
 		legacyEnv: isLegacyEnv(config),
 		minify: args.minify,
-		nodeCompat: args.nodeCompat,
 		isWorkersSite: Boolean(args.site || config.site),
 		outDir: args.outdir,
 		dryRun: args.dryRun,
