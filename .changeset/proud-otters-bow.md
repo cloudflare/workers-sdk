@@ -159,17 +159,20 @@ This patch updates esbuild from 0.17.19 to 0.24.0. That's a big bump! Lots has g
 
     In general, we DO NOT recommend using the wildcard import pattern. If done wrong, it can leak files into your bundle that you don't want, or make your worker slightly slower to start. If you must use it (either with a wildcard import pattern or with `find_additional_modules`) you must be diligent to check that your worker is working as expected and that you are not leaking files into your bundle that you don't want. You can configure eslint to disallow dynamic imports like this:
 
-    ```jsonc
-    // .eslintrc.js
-    {
-    	"rules": {
-    		"no-restricted-syntax": [
-    			"error",
-    			{
-    				"selector": "ImportExpression[argument.type!='Literal']",
-    				"message": "Dynamic imports with non-literal arguments are not allowed.",
-    			},
-    		],
+    ```js
+    // eslint.config.js
+    export default [
+    	{
+    		rules: {
+    			"no-restricted-syntax": [
+    				"error",
+    				{
+    					selector: "ImportExpression[argument.type!='Literal']",
+    					message:
+    						"Dynamic imports with non-literal arguments are not allowed.",
+    				},
+    			],
+    		},
     	},
-    }
+    ];
     ```
