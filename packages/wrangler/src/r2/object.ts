@@ -59,6 +59,11 @@ defineCommand({
 			type: "boolean",
 			describe: "Interact with local storage",
 		},
+		remote: {
+			type: "boolean",
+			describe: "Interact with remote storage",
+			conflicts: "local",
+		},
 		"persist-to": {
 			type: "string",
 			describe: "Directory for local persistence",
@@ -94,7 +99,7 @@ defineCommand({
 		} else {
 			output = process.stdout;
 		}
-		if (objectGetYargs.local) {
+		if (!objectGetYargs.remote) {
 			await usingLocalBucket(
 				objectGetYargs.persistTo,
 				config.configPath,
@@ -191,6 +196,11 @@ defineCommand({
 			type: "boolean",
 			describe: "Interact with local storage",
 		},
+		remote: {
+			type: "boolean",
+			describe: "Interact with remote storage",
+			conflicts: "local",
+		},
 		"persist-to": {
 			type: "string",
 			describe: "Directory for local persistence",
@@ -213,12 +223,12 @@ defineCommand({
 			objectPath,
 			file,
 			pipe,
-			local,
 			persistTo,
 			jurisdiction,
 			storageClass,
 			...options
 		} = objectPutYargs;
+		const local = !objectPutYargs.remote;
 		const { bucket, key } = bucketAndKeyFromObjectPath(objectPath);
 		if (!file && !pipe) {
 			throw new CommandLineArgsError(
@@ -357,6 +367,11 @@ defineCommand({
 			type: "boolean",
 			describe: "Interact with local storage",
 		},
+		remote: {
+			type: "boolean",
+			describe: "Interact with remote storage",
+			conflicts: "local",
+		},
 		"persist-to": {
 			type: "string",
 			describe: "Directory for local persistence",
@@ -379,7 +394,7 @@ defineCommand({
 
 		logger.log(`Deleting object "${key}" from bucket "${fullBucketName}".`);
 
-		if (args.local) {
+		if (!args.remote) {
 			await usingLocalBucket(
 				args.persistTo,
 				config.configPath,
