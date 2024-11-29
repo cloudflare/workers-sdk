@@ -370,8 +370,8 @@ function buildProjectWorkerOptions(
 		runnerWorker.compatibilityFlags
 	);
 
-	if (mode === null) {
-		runnerWorker.compatibilityFlags.push("nodejs_compat_v2");
+	if (mode !== "v1") {
+		runnerWorker.compatibilityFlags.push("nodejs_compat");
 	}
 
 	// Required for `workerd:unsafe` module. We don't require this flag to be set
