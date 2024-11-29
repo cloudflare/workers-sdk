@@ -28,7 +28,7 @@ it("can import URL from 'url' in nodejs_compat mode", async () => {
 		"wrangler.toml": dedent`
 				name = "${workerName}"
 				main = "src/index.ts"
-				compatibility_date = "2023-01-01"
+				compatibility_date = "2024-11-11"
 				compatibility_flags = ["nodejs_compat"]
 		`,
 		"src/index.ts": dedent`
