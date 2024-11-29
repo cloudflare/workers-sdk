@@ -110,11 +110,11 @@ jobs:
             node_version: 18
           # Do a limited test on other Node versions (limited because of CI capacity)
           - os: ubuntu-latest
-            filter: "./fixtures"
+            filter: "./packages"
             node_version: 20
 
           - os: ubuntu-latest
-            filter: "./fixtures"
+            filter: "./packages"
             node_version: 22
 
     runs-on: ${{ matrix.os }}
