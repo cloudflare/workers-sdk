@@ -433,7 +433,7 @@ describe("wrangler", () => {
 				});
 
 				await runWrangler(
-					"kv key put my-key my-value --namespace-id some-namespace-id"
+					"kv key put --remote my-key my-value --namespace-id some-namespace-id"
 				);
 
 				expect(requests.count).toEqual(1);
@@ -449,7 +449,9 @@ describe("wrangler", () => {
 					value: "my-value",
 				});
 
-				await runWrangler("kv key put /my-key my-value --namespace-id DS9");
+				await runWrangler(
+					"kv key put --remote /my-key my-value --namespace-id DS9"
+				);
 
 				expect(requests.count).toEqual(1);
 				expect(std.out).toMatchInlineSnapshot(
@@ -465,7 +467,7 @@ describe("wrangler", () => {
 					value: "my-value",
 				});
 				await runWrangler(
-					"kv key put my-key my-value --binding someBinding --preview false"
+					"kv key put --remote my-key my-value --binding someBinding --preview false"
 				);
 
 				expect(std.out).toMatchInlineSnapshot(
@@ -483,7 +485,7 @@ describe("wrangler", () => {
 				});
 
 				await runWrangler(
-					"kv key put my-key my-value --binding someBinding --preview"
+					"kv key put --remote my-key my-value --binding someBinding --preview"
 				);
 
 				expect(std.out).toMatchInlineSnapshot(
@@ -501,7 +503,7 @@ describe("wrangler", () => {
 					expiration_ttl: 20,
 				});
 				await runWrangler(
-					"kv key put my-key my-value --namespace-id some-namespace-id --expiration 10 --ttl 20"
+					"kv key put --remote my-key my-value --namespace-id some-namespace-id --expiration 10 --ttl 20"
 				);
 				expect(requests.count).toEqual(1);
 				expect(std.out).toMatchInlineSnapshot(
@@ -517,7 +519,7 @@ describe("wrangler", () => {
 					value: "my-value",
 				});
 				await runWrangler(
-					"kv key put my-key my-value --binding someBinding --env some-environment --preview false"
+					"kv key put --remote my-key my-value --binding someBinding --env some-environment --preview false"
 				);
 				expect(std.out).toMatchInlineSnapshot(
 					`"Writing the value \\"my-value\\" to key \\"my-key\\" on namespace env-bound-id."`
@@ -534,7 +536,7 @@ describe("wrangler", () => {
 					value: buf,
 				});
 				await runWrangler(
-					"kv key put my-key --namespace-id some-namespace-id --path foo.txt"
+					"kv key put --remote my-key --namespace-id some-namespace-id --path foo.txt"
 				);
 				expect(std.out).toMatchInlineSnapshot(
 					`"Writing the contents of foo.txt to the key \\"my-key\\" on namespace some-namespace-id."`
@@ -554,7 +556,7 @@ describe("wrangler", () => {
 					value: buf,
 				});
 				await runWrangler(
-					"kv key put my-key --namespace-id another-namespace-id --path test.png"
+					"kv key put --remote my-key --namespace-id another-namespace-id --path test.png"
 				);
 				expect(std.out).toMatchInlineSnapshot(
 					`"Writing the contents of test.png to the key \\"my-key\\" on namespace another-namespace-id."`
@@ -572,7 +574,7 @@ describe("wrangler", () => {
 					},
 				});
 				await runWrangler(
-					`kv key put dKey dVal --namespace-id some-namespace-id --metadata '{"mKey":"mValue"}'`
+					`kv key put --remote dKey dVal --namespace-id some-namespace-id --metadata '{"mKey":"mValue"}'`
 				);
 				expect(requests.count).toEqual(1);
 				expect(std.out).toMatchInlineSnapshot(
@@ -595,7 +597,7 @@ describe("wrangler", () => {
 					},
 				});
 				await runWrangler(
-					`kv key put another-my-key --namespace-id some-namespace-id --path test.png --metadata '{"mKey":"mValue"}'`
+					`kv key put --remote another-my-key --namespace-id some-namespace-id --path test.png --metadata '{"mKey":"mValue"}'`
 				);
 				expect(requests.count).toEqual(1);
 				expect(std.out).toMatchInlineSnapshot(
@@ -636,6 +638,7 @@ describe("wrangler", () => {
 					      --metadata      Arbitrary JSON that is associated with a key  [string]
 					      --path          Read value from the file at a given path  [string]
 					      --local         Interact with local storage  [boolean]
+					      --remote        Interact with remote storage  [boolean]
 					      --persist-to    Directory for local persistence  [string]"
 				`);
 				expect(std.err).toMatchInlineSnapshot(`
@@ -647,7 +650,7 @@ describe("wrangler", () => {
 
 			it("should error if no binding nor namespace is provided", async () => {
 				await expect(
-					runWrangler("kv key put foo bar")
+					runWrangler("kv key put --remote foo bar")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
 					`[Error: Exactly one of the arguments binding and namespace-id is required]`
 				);
@@ -677,6 +680,7 @@ describe("wrangler", () => {
 					      --metadata      Arbitrary JSON that is associated with a key  [string]
 					      --path          Read value from the file at a given path  [string]
 					      --local         Interact with local storage  [boolean]
+					      --remote        Interact with remote storage  [boolean]
 					      --persist-to    Directory for local persistence  [string]"
 				`);
 				expect(std.err).toMatchInlineSnapshot(`
@@ -688,7 +692,9 @@ describe("wrangler", () => {
 
 			it("should error if both binding and namespace is provided", async () => {
 				await expect(
-					runWrangler("kv key put foo bar --binding x --namespace-id y")
+					runWrangler(
+						"kv key put --remote foo bar --binding x --namespace-id y"
+					)
 				).rejects.toThrowErrorMatchingInlineSnapshot(
 					`[Error: Arguments binding and namespace-id are mutually exclusive]`
 				);
@@ -718,6 +724,7 @@ describe("wrangler", () => {
 					      --metadata      Arbitrary JSON that is associated with a key  [string]
 					      --path          Read value from the file at a given path  [string]
 					      --local         Interact with local storage  [boolean]
+					      --remote        Interact with remote storage  [boolean]
 					      --persist-to    Directory for local persistence  [string]"
 				`);
 				expect(std.err).toMatchInlineSnapshot(`
@@ -729,7 +736,7 @@ describe("wrangler", () => {
 
 			it("should error if no value nor path is provided", async () => {
 				await expect(
-					runWrangler("kv key put key --namespace-id 12345")
+					runWrangler("kv key put --remote key --namespace-id 12345")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
 					`[Error: Exactly one of the arguments value and path is required]`
 				);
@@ -759,6 +766,7 @@ describe("wrangler", () => {
 					      --metadata      Arbitrary JSON that is associated with a key  [string]
 					      --path          Read value from the file at a given path  [string]
 					      --local         Interact with local storage  [boolean]
+					      --remote        Interact with remote storage  [boolean]
 					      --persist-to    Directory for local persistence  [string]"
 				`);
 				expect(std.err).toMatchInlineSnapshot(`
@@ -768,9 +776,53 @@ describe("wrangler", () => {
 		        `);
 			});
 
+			it("should error if both --local and --remote are provided", async () => {
+				await expect(
+					runWrangler("kv key put --remote --local key value")
+				).rejects.toThrowErrorMatchingInlineSnapshot(
+					`[Error: Arguments remote and local are mutually exclusive]`
+				);
+
+				expect(std.out).toMatchInlineSnapshot(`
+					"
+					wrangler kv key put <key> [value]
+
+					Write a single key/value pair to the given namespace
+
+					POSITIONALS
+					  key    The key to write to  [string] [required]
+					  value  The value to write  [string]
+
+					GLOBAL FLAGS
+					  -c, --config   Path to Wrangler configuration file  [string]
+					  -e, --env      Environment to use for operations and .env files  [string]
+					  -h, --help     Show help  [boolean]
+					  -v, --version  Show version number  [boolean]
+
+					OPTIONS
+					      --binding       The binding of the namespace to write to  [string]
+					      --namespace-id  The id of the namespace to write to  [string]
+					      --preview       Interact with a preview namespace  [boolean]
+					      --ttl           Time for which the entries should be visible  [number]
+					      --expiration    Time since the UNIX epoch after which the entry expires  [number]
+					      --metadata      Arbitrary JSON that is associated with a key  [string]
+					      --path          Read value from the file at a given path  [string]
+					      --local         Interact with local storage  [boolean]
+					      --remote        Interact with remote storage  [boolean]
+					      --persist-to    Directory for local persistence  [string]"
+				`);
+				expect(std.err).toMatchInlineSnapshot(`
+					"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mArguments remote and local are mutually exclusive[0m
+
+					"
+				`);
+			});
+
 			it("should error if both value and path is provided", async () => {
 				await expect(
-					runWrangler("kv key put key value --path xyz --namespace-id 12345")
+					runWrangler(
+						"kv key put --remote key value --path xyz --namespace-id 12345"
+					)
 				).rejects.toThrowErrorMatchingInlineSnapshot(
 					`[Error: Arguments value and path are mutually exclusive]`
 				);
@@ -800,6 +852,7 @@ describe("wrangler", () => {
 					      --metadata      Arbitrary JSON that is associated with a key  [string]
 					      --path          Read value from the file at a given path  [string]
 					      --local         Interact with local storage  [boolean]
+					      --remote        Interact with remote storage  [boolean]
 					      --persist-to    Directory for local persistence  [string]"
 				`);
 				expect(std.err).toMatchInlineSnapshot(`
@@ -812,7 +865,7 @@ describe("wrangler", () => {
 			it("should error if a given binding name is not in the configured kv namespaces", async () => {
 				writeWranglerKVConfig();
 				await expect(
-					runWrangler("kv key put key value --binding otherBinding")
+					runWrangler("kv key put --remote key value --binding otherBinding")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
 					`[Error: A namespace with binding name "otherBinding" was not found in the configured "kv_namespaces".]`
 				);
@@ -832,7 +885,9 @@ describe("wrangler", () => {
 					value: "my-value",
 				});
 				await expect(
-					runWrangler("kv key put my-key my-value --binding someBinding")
+					runWrangler(
+						"kv key put --remote my-key my-value --binding someBinding"
+					)
 				).rejects.toThrowErrorMatchingInlineSnapshot(
 					`[Error: someBinding has both a namespace ID and a preview ID. Specify "--preview" or "--preview false" to avoid writing data to the wrong namespace.]`
 				);
@@ -854,23 +909,25 @@ describe("wrangler", () => {
 					{ name: "key-3", expiration_ttl: 666 },
 				];
 				mockKeyListRequest("some-namespace-id", keys);
-				await runWrangler("kv key list --namespace-id some-namespace-id");
+				await runWrangler(
+					"kv key list --remote --namespace-id some-namespace-id"
+				);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.out).toMatchInlineSnapshot(`
-			          "[
-			            {
-			              \\"name\\": \\"key-1\\"
-			            },
-			            {
-			              \\"name\\": \\"key-2\\",
-			              \\"expiration\\": 123456789
-			            },
-			            {
-			              \\"name\\": \\"key-3\\",
-			              \\"expiration_ttl\\": 666
-			            }
-			          ]"
-		        `);
+					"[
+					  {
+					    \\"name\\": \\"key-1\\"
+					  },
+					  {
+					    \\"name\\": \\"key-2\\",
+					    \\"expiration\\": 123456789
+					  },
+					  {
+					    \\"name\\": \\"key-3\\",
+					    \\"expiration_ttl\\": 666
+					  }
+					]"
+				`);
 			});
 
 			it("should list the keys of a namespace specified by binding", async () => {
@@ -878,42 +935,44 @@ describe("wrangler", () => {
 				const keys = [{ name: "key-1" }, { name: "key-2" }, { name: "key-3" }];
 				mockKeyListRequest("bound-id", keys);
 
-				await runWrangler("kv key list --binding someBinding");
+				await runWrangler("kv key list --remote --binding someBinding");
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.out).toMatchInlineSnapshot(`
-			          "[
-			            {
-			              \\"name\\": \\"key-1\\"
-			            },
-			            {
-			              \\"name\\": \\"key-2\\"
-			            },
-			            {
-			              \\"name\\": \\"key-3\\"
-			            }
-			          ]"
-		        `);
+					"[
+					  {
+					    \\"name\\": \\"key-1\\"
+					  },
+					  {
+					    \\"name\\": \\"key-2\\"
+					  },
+					  {
+					    \\"name\\": \\"key-3\\"
+					  }
+					]"
+				`);
 			});
 
 			it("should list the keys of a preview namespace specified by binding", async () => {
 				writeWranglerKVConfig();
 				const keys = [{ name: "key-1" }, { name: "key-2" }, { name: "key-3" }];
 				mockKeyListRequest("preview-bound-id", keys);
-				await runWrangler("kv key list --binding someBinding --preview");
+				await runWrangler(
+					"kv key list --remote --binding someBinding --preview"
+				);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.out).toMatchInlineSnapshot(`
-			          "[
-			            {
-			              \\"name\\": \\"key-1\\"
-			            },
-			            {
-			              \\"name\\": \\"key-2\\"
-			            },
-			            {
-			              \\"name\\": \\"key-3\\"
-			            }
-			          ]"
-		        `);
+					"[
+					  {
+					    \\"name\\": \\"key-1\\"
+					  },
+					  {
+					    \\"name\\": \\"key-2\\"
+					  },
+					  {
+					    \\"name\\": \\"key-3\\"
+					  }
+					]"
+				`);
 			});
 
 			it("should list the keys of a namespace specified by binding, in a given environment", async () => {
@@ -921,22 +980,22 @@ describe("wrangler", () => {
 				const keys = [{ name: "key-1" }, { name: "key-2" }, { name: "key-3" }];
 				mockKeyListRequest("env-bound-id", keys);
 				await runWrangler(
-					"kv key list --binding someBinding --env some-environment"
+					"kv key list --remote --binding someBinding --env some-environment"
 				);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.out).toMatchInlineSnapshot(`
-			          "[
-			            {
-			              \\"name\\": \\"key-1\\"
-			            },
-			            {
-			              \\"name\\": \\"key-2\\"
-			            },
-			            {
-			              \\"name\\": \\"key-3\\"
-			            }
-			          ]"
-		        `);
+					"[
+					  {
+					    \\"name\\": \\"key-1\\"
+					  },
+					  {
+					    \\"name\\": \\"key-2\\"
+					  },
+					  {
+					    \\"name\\": \\"key-3\\"
+					  }
+					]"
+				`);
 			});
 
 			it("should list the keys of a preview namespace specified by binding, in a given environment", async () => {
@@ -944,22 +1003,22 @@ describe("wrangler", () => {
 				const keys = [{ name: "key-1" }, { name: "key-2" }, { name: "key-3" }];
 				mockKeyListRequest("preview-env-bound-id", keys);
 				await runWrangler(
-					"kv key list --binding someBinding --preview --env some-environment"
+					"kv key list --remote --binding someBinding --preview --env some-environment"
 				);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.out).toMatchInlineSnapshot(`
-			          "[
-			            {
-			              \\"name\\": \\"key-1\\"
-			            },
-			            {
-			              \\"name\\": \\"key-2\\"
-			            },
-			            {
-			              \\"name\\": \\"key-3\\"
-			            }
-			          ]"
-		        `);
+					"[
+					  {
+					    \\"name\\": \\"key-1\\"
+					  },
+					  {
+					    \\"name\\": \\"key-2\\"
+					  },
+					  {
+					    \\"name\\": \\"key-3\\"
+					  }
+					]"
+				`);
 			});
 
 			// We'll run the next test with variations on the cursor
@@ -984,7 +1043,9 @@ describe("wrangler", () => {
 							100,
 							blankCursorValue
 						);
-						await runWrangler("kv key list --namespace-id some-namespace-id");
+						await runWrangler(
+							"kv key list --remote --namespace-id some-namespace-id"
+						);
 						expect(std.err).toEqual("");
 						expect(JSON.parse(std.out)).toEqual(keys);
 						expect(requests.count).toEqual(6);
@@ -995,7 +1056,7 @@ describe("wrangler", () => {
 			it("should error if a given binding name is not in the configured kv namespaces", async () => {
 				writeWranglerKVConfig();
 				await expect(
-					runWrangler("kv key list --binding otherBinding")
+					runWrangler("kv key list --remote --binding otherBinding")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
 					`[Error: A namespace with binding name "otherBinding" was not found in the configured "kv_namespaces".]`
 				);
@@ -1017,7 +1078,9 @@ describe("wrangler", () => {
 					"my-value"
 				);
 
-				await runWrangler("kv key get my-key --namespace-id some-namespace-id");
+				await runWrangler(
+					"kv key get --remote my-key --namespace-id some-namespace-id"
+				);
 
 				expect(proc.write).toEqual(Buffer.from("my-value"));
 				expect(std.err).toMatchInlineSnapshot(`""`);
@@ -1031,18 +1094,18 @@ describe("wrangler", () => {
 					"my-value"
 				);
 				await runWrangler(
-					"kv key get my-key --text --namespace-id some-namespace-id"
+					"kv key get --remote my-key --text --namespace-id some-namespace-id"
 				);
 				expect(proc.write).not.toEqual(Buffer.from("my-value"));
 				expect(std).toMatchInlineSnapshot(`
-			Object {
-			  "debug": "",
-			  "err": "",
-			  "info": "",
-			  "out": "my-value",
-			  "warn": "",
-			}
-		`);
+					Object {
+					  "debug": "",
+					  "err": "",
+					  "info": "",
+					  "out": "my-value",
+					  "warn": "",
+					}
+				`);
 			});
 
 			it("should get a binary and decode as utf8 text, resulting in improper decoding", async () => {
@@ -1057,7 +1120,7 @@ describe("wrangler", () => {
 					buf
 				);
 				await runWrangler(
-					"kv key get my-key --text --namespace-id some-namespace-id"
+					"kv key get --remote my-key --text --namespace-id some-namespace-id"
 				);
 				expect(proc.write).not.toEqual(buf);
 				expect(JSON.stringify(std)).toMatchInlineSnapshot(
@@ -1076,7 +1139,9 @@ describe("wrangler", () => {
 					"my-key",
 					buf
 				);
-				await runWrangler("kv key get my-key --namespace-id some-namespace-id");
+				await runWrangler(
+					"kv key get --remote my-key --namespace-id some-namespace-id"
+				);
 				expect(proc.write).toEqual(buf);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 			});
@@ -1090,7 +1155,7 @@ describe("wrangler", () => {
 					"my-value"
 				);
 				await runWrangler(
-					"kv key get my-key --binding someBinding --preview false"
+					"kv key get --remote my-key --binding someBinding --preview false"
 				);
 				expect(proc.write).toEqual(Buffer.from("my-value"));
 				expect(std.err).toMatchInlineSnapshot(`""`);
@@ -1104,7 +1169,9 @@ describe("wrangler", () => {
 					"my-key",
 					"my-value"
 				);
-				await runWrangler("kv key get my-key --binding someBinding --preview");
+				await runWrangler(
+					"kv key get --remote my-key --binding someBinding --preview"
+				);
 				expect(proc.write).toEqual(Buffer.from("my-value"));
 				expect(std.err).toMatchInlineSnapshot(`""`);
 			});
@@ -1118,7 +1185,7 @@ describe("wrangler", () => {
 					"my-value"
 				);
 				await runWrangler(
-					"kv key get my-key --binding someBinding --env some-environment --preview false"
+					"kv key get --remote my-key --binding someBinding --env some-environment --preview false"
 				);
 				expect(proc.write).toEqual(Buffer.from("my-value"));
 				expect(std.err).toMatchInlineSnapshot(`""`);
@@ -1133,7 +1200,7 @@ describe("wrangler", () => {
 				);
 
 				await runWrangler(
-					"kv key get /my,key --namespace-id some-namespace-id"
+					"kv key get --remote /my,key --namespace-id some-namespace-id"
 				);
 				expect(proc.write).toEqual(Buffer.from("my-value"));
 				expect(std.err).toMatchInlineSnapshot(`""`);
@@ -1166,6 +1233,7 @@ describe("wrangler", () => {
 					      --preview       Interact with a preview namespace  [boolean] [default: false]
 					      --text          Decode the returned value as a utf8 string  [boolean] [default: false]
 					      --local         Interact with local storage  [boolean]
+					      --remote        Interact with remote storage  [boolean]
 					      --persist-to    Directory for local persistence  [string]"
 				`);
 				expect(std.err).toMatchInlineSnapshot(`
@@ -1177,7 +1245,7 @@ describe("wrangler", () => {
 
 			it("should error if no binding nor namespace is provided", async () => {
 				await expect(
-					runWrangler("kv key get foo")
+					runWrangler("kv key get --remote foo")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
 					`[Error: Exactly one of the arguments binding and namespace-id is required]`
 				);
@@ -1202,6 +1270,7 @@ describe("wrangler", () => {
 					      --preview       Interact with a preview namespace  [boolean] [default: false]
 					      --text          Decode the returned value as a utf8 string  [boolean] [default: false]
 					      --local         Interact with local storage  [boolean]
+					      --remote        Interact with remote storage  [boolean]
 					      --persist-to    Directory for local persistence  [string]"
 				`);
 				expect(std.err).toMatchInlineSnapshot(`
@@ -1213,7 +1282,7 @@ describe("wrangler", () => {
 
 			it("should error if both binding and namespace is provided", async () => {
 				await expect(
-					runWrangler("kv key get foo --binding x --namespace-id y")
+					runWrangler("kv key get --remote foo --binding x --namespace-id y")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
 					`[Error: Arguments binding and namespace-id are mutually exclusive]`
 				);
@@ -1239,6 +1308,7 @@ describe("wrangler", () => {
 					      --preview       Interact with a preview namespace  [boolean] [default: false]
 					      --text          Decode the returned value as a utf8 string  [boolean] [default: false]
 					      --local         Interact with local storage  [boolean]
+					      --remote        Interact with remote storage  [boolean]
 					      --persist-to    Directory for local persistence  [string]"
 				`);
 				expect(std.err).toMatchInlineSnapshot(`
@@ -1251,7 +1321,7 @@ describe("wrangler", () => {
 			it("should error if a given binding name is not in the configured kv namespaces", async () => {
 				writeWranglerKVConfig();
 				await expect(
-					runWrangler("kv key get key --binding otherBinding")
+					runWrangler("kv key get --remote key --binding otherBinding")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
 					`[Error: A namespace with binding name "otherBinding" was not found in the configured "kv_namespaces".]`
 				);
@@ -1272,8 +1342,9 @@ describe("wrangler", () => {
 						{ id: "yyy", account: { id: "2", name: "two" } },
 					]);
 					setIsTTY({ stdin: false, stdout: true });
-					await expect(runWrangler("kv key get key --namespace-id=xxxx"))
-						.rejects.toThrowErrorMatchingInlineSnapshot(`
+					await expect(
+						runWrangler("kv key get --remote key --namespace-id=xxxx")
+					).rejects.toThrowErrorMatchingInlineSnapshot(`
 						[Error: More than one account available but unable to select one in non-interactive mode.
 						Please set the appropriate \`account_id\` in your Wrangler configuration file.
 						Available accounts are (\`<name>\`: \`<account_id>\`):
@@ -1288,8 +1359,9 @@ describe("wrangler", () => {
 						{ id: "yyy", account: { id: "2", name: "two" } },
 					]);
 					setIsTTY({ stdin: true, stdout: false });
-					await expect(runWrangler("kv key get key --namespace-id=xxxx"))
-						.rejects.toThrowErrorMatchingInlineSnapshot(`
+					await expect(
+						runWrangler("kv key get --remote key --namespace-id=xxxx")
+					).rejects.toThrowErrorMatchingInlineSnapshot(`
 						[Error: More than one account available but unable to select one in non-interactive mode.
 						Please set the appropriate \`account_id\` in your Wrangler configuration file.
 						Available accounts are (\`<name>\`: \`<account_id>\`):
@@ -1316,8 +1388,9 @@ describe("wrangler", () => {
 							{ once: true }
 						)
 					);
-					await expect(runWrangler("kv key get key --namespace-id=xxxx"))
-						.rejects.toThrowErrorMatchingInlineSnapshot(`
+					await expect(
+						runWrangler("kv key get --remote key --namespace-id=xxxx")
+					).rejects.toThrowErrorMatchingInlineSnapshot(`
 						[Error: Failed to automatically retrieve account IDs for the logged in user.
 						You may have incorrect permissions on your API token. You can skip this account check by adding an \`account_id\` in your Wrangler configuration file, or by setting the value of CLOUDFLARE_ACCOUNT_ID"]
 					`);
@@ -1329,8 +1402,9 @@ describe("wrangler", () => {
 						{ id: "yyy", account: { id: "2", name: "two" } },
 					]);
 					setIsTTY(false);
-					await expect(runWrangler("kv key get key --namespace-id=xxxx"))
-						.rejects.toThrowErrorMatchingInlineSnapshot(`
+					await expect(
+						runWrangler("kv key get --remote key --namespace-id=xxxx")
+					).rejects.toThrowErrorMatchingInlineSnapshot(`
 						[Error: More than one account available but unable to select one in non-interactive mode.
 						Please set the appropriate \`account_id\` in your Wrangler configuration file.
 						Available accounts are (\`<name>\`: \`<account_id>\`):
@@ -1368,14 +1442,16 @@ describe("wrangler", () => {
 			it("should delete a key in a namespace specified by id", async () => {
 				const requests = mockDeleteRequest("some-namespace-id", "someKey");
 				await runWrangler(
-					`kv key delete --namespace-id some-namespace-id someKey`
+					`kv key delete --remote --namespace-id some-namespace-id someKey`
 				);
 				expect(requests.count).toEqual(1);
 			});
 
 			it("should encode the key in the api request to delete a value", async () => {
 				const requests = mockDeleteRequest("voyager", "/NCC-74656");
-				await runWrangler(`kv key delete --namespace-id voyager /NCC-74656`);
+				await runWrangler(
+					`kv key delete --remote --namespace-id voyager /NCC-74656`
+				);
 
 				expect(requests.count).toEqual(1);
 				expect(std.out).toMatchInlineSnapshot(
@@ -1388,7 +1464,7 @@ describe("wrangler", () => {
 				writeWranglerKVConfig();
 				const requests = mockDeleteRequest("bound-id", "someKey");
 				await runWrangler(
-					`kv key delete --binding someBinding --preview false someKey`
+					`kv key delete --remote --binding someBinding --preview false someKey`
 				);
 				expect(requests.count).toEqual(1);
 			});
@@ -1397,7 +1473,7 @@ describe("wrangler", () => {
 				writeWranglerKVConfig();
 				const requests = mockDeleteRequest("preview-bound-id", "someKey");
 				await runWrangler(
-					`kv key delete --binding someBinding --preview someKey`
+					`kv key delete --remote --binding someBinding --preview someKey`
 				);
 				expect(requests.count).toEqual(1);
 			});
@@ -1405,7 +1481,7 @@ describe("wrangler", () => {
 			it("should error if a given binding name is not in the configured kv namespaces", async () => {
 				writeWranglerKVConfig();
 				await expect(
-					runWrangler(`kv key delete --binding otherBinding someKey`)
+					runWrangler(`kv key delete --remote --binding otherBinding someKey`)
 				).rejects.toThrowErrorMatchingInlineSnapshot(
 					`[Error: A namespace with binding name "otherBinding" was not found in the configured "kv_namespaces".]`
 				);
@@ -1421,7 +1497,7 @@ describe("wrangler", () => {
 				writeWranglerKVConfig();
 				const requests = mockDeleteRequest("env-bound-id", "someKey");
 				await runWrangler(
-					`kv key delete --binding someBinding --env some-environment --preview false someKey`
+					`kv key delete --remote --binding someBinding --env some-environment --preview false someKey`
 				);
 				expect(std.out).toMatchInlineSnapshot(
 					`"Deleting the key \\"someKey\\" on namespace env-bound-id."`
@@ -1434,7 +1510,7 @@ describe("wrangler", () => {
 				writeWranglerKVConfig();
 				const requests = mockDeleteRequest("preview-env-bound-id", "someKey");
 				await runWrangler(
-					`kv key delete --binding someBinding --env some-environment --preview someKey`
+					`kv key delete --remote --binding someBinding --env some-environment --preview someKey`
 				);
 				expect(requests.count).toEqual(1);
 			});
@@ -1480,7 +1556,7 @@ describe("wrangler", () => {
 				writeFileSync("./keys.json", JSON.stringify(keyValues));
 				const requests = mockPutRequest("some-namespace-id", keyValues);
 				await runWrangler(
-					`kv bulk put --namespace-id some-namespace-id keys.json`
+					`kv bulk put --remote --namespace-id some-namespace-id keys.json`
 				);
 				expect(requests.count).toEqual(1);
 				expect(std.out).toMatchInlineSnapshot(`"Success!"`);
@@ -1496,7 +1572,7 @@ describe("wrangler", () => {
 				writeFileSync("./keys.json", JSON.stringify(keyValues));
 				const requests = mockPutRequest("some-namespace-id", keyValues);
 				await runWrangler(
-					`kv bulk put --namespace-id some-namespace-id keys.json`
+					`kv bulk put --remote --namespace-id some-namespace-id keys.json`
 				);
 				expect(requests.count).toEqual(12);
 				expect(std.out).toMatchInlineSnapshot(`
@@ -1523,7 +1599,9 @@ describe("wrangler", () => {
 				const keyValues = { key: "someKey1", value: "someValue1" };
 				writeFileSync("./keys.json", JSON.stringify(keyValues));
 				await expect(
-					runWrangler(`kv bulk put --namespace-id some-namespace-id keys.json`)
+					runWrangler(
+						`kv bulk put --remote --namespace-id some-namespace-id keys.json`
+					)
 				).rejects.toThrowErrorMatchingInlineSnapshot(`
 					[Error: Unexpected JSON input from "keys.json".
 					Expected an array of key-value objects but got type "object".]
@@ -1560,7 +1638,9 @@ describe("wrangler", () => {
 				];
 				writeFileSync("./keys.json", JSON.stringify(keyValues));
 				await expect(
-					runWrangler(`kv bulk put --namespace-id some-namespace-id keys.json`)
+					runWrangler(
+						`kv bulk put --remote --namespace-id some-namespace-id keys.json`
+					)
 				).rejects.toThrowErrorMatchingInlineSnapshot(`
 					[Error: Unexpected JSON input from "keys.json".
 					Each item in the array should be an object that matches:
@@ -1638,7 +1718,7 @@ describe("wrangler", () => {
 				});
 				const requests = mockDeleteRequest("some-namespace-id", keys);
 				await runWrangler(
-					`kv bulk delete --namespace-id some-namespace-id keys.json`
+					`kv bulk delete --remote --namespace-id some-namespace-id keys.json`
 				);
 				expect(requests.count).toEqual(1);
 				expect(std.out).toMatchInlineSnapshot(`"Success!"`);
@@ -1655,7 +1735,7 @@ describe("wrangler", () => {
 				});
 				const requests = mockDeleteRequest("some-namespace-id", keys);
 				await runWrangler(
-					`kv bulk delete --namespace-id some-namespace-id keys.json`
+					`kv bulk delete --remote --namespace-id some-namespace-id keys.json`
 				);
 				expect(requests.count).toEqual(12);
 				expect(std.out).toMatchInlineSnapshot(`
@@ -1686,7 +1766,7 @@ describe("wrangler", () => {
 					result: false,
 				});
 				await runWrangler(
-					`kv bulk delete --namespace-id some-namespace-id keys.json`
+					`kv bulk delete --remote --namespace-id some-namespace-id keys.json`
 				);
 				expect(std.out).toMatchInlineSnapshot(
 					`"Not deleting keys read from \\"keys.json\\"."`
@@ -1700,7 +1780,7 @@ describe("wrangler", () => {
 				writeFileSync("./keys.json", JSON.stringify(keys));
 				const requests = mockDeleteRequest("some-namespace-id", keys);
 				await runWrangler(
-					`kv bulk delete --namespace-id some-namespace-id keys.json --force`
+					`kv bulk delete --remote --namespace-id some-namespace-id keys.json --force`
 				);
 				expect(requests.count).toEqual(1);
 				expect(std.out).toMatchInlineSnapshot(`"Success!"`);
@@ -1713,7 +1793,7 @@ describe("wrangler", () => {
 				writeFileSync("./keys.json", JSON.stringify(keys));
 				const requests = mockDeleteRequest("some-namespace-id", keys);
 				await runWrangler(
-					`kv bulk delete --namespace-id some-namespace-id keys.json -f`
+					`kv bulk delete --remote --namespace-id some-namespace-id keys.json -f`
 				);
 				expect(requests.count).toEqual(1);
 				expect(std.out).toMatchInlineSnapshot(`"Success!"`);
@@ -1730,7 +1810,7 @@ describe("wrangler", () => {
 				});
 				await expect(
 					runWrangler(
-						`kv bulk delete --namespace-id some-namespace-id keys.json`
+						`kv bulk delete --remote --namespace-id some-namespace-id keys.json`
 					)
 				).rejects.toThrowErrorMatchingInlineSnapshot(`
 					[Error: Unexpected JSON input from "keys.json".
@@ -1750,7 +1830,7 @@ describe("wrangler", () => {
 				});
 				await expect(
 					runWrangler(
-						`kv bulk delete --namespace-id some-namespace-id keys.json`
+						`kv bulk delete --remote --namespace-id some-namespace-id keys.json`
 					)
 				).rejects.toThrowErrorMatchingInlineSnapshot(`
 					[Error: Unexpected JSON input from "keys.json".
