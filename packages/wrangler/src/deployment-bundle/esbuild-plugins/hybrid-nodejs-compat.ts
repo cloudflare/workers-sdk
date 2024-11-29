@@ -219,7 +219,7 @@ function getGlobalInject(globalInject: string | string[]) {
  * Encodes a case sensitive string to lowercase string.
  *
  * - Escape $ with another $ ("$" -> "$$")
- * - Esacpe uppercase letters with $ and turn them into lowercase letters ("L" -> "$L")
+ * - Escape uppercase letters with $ and turn them into lowercase letters ("L" -> "$L")
  *
  * This function exists because ESBuild requires that all resolved paths are case insensitive.
  * Without this transformation, ESBuild will clobber /foo/bar.js with /foo/Bar.js
