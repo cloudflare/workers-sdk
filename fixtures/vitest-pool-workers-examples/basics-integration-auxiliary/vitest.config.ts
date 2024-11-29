@@ -10,7 +10,6 @@ export default defineWorkersProject({
 					// Configuration for the test runner Worker
 					compatibilityDate: "2024-01-01",
 					compatibilityFlags: [
-						"nodejs_compat",
 						// Required to use `WORKER.scheduled()`. This is an experimental
 						// compatibility flag, and cannot be enabled in production.
 						"service_binding_extra_handlers",
@@ -29,7 +28,6 @@ export default defineWorkersProject({
 							modules: true,
 							scriptPath: "./dist/index.js", // Built by `global-setup.ts`
 							compatibilityDate: "2024-01-01",
-							compatibilityFlags: ["nodejs_compat"],
 						},
 					],
 				},
