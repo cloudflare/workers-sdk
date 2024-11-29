@@ -5,7 +5,6 @@ import { dedent } from "../../utils/dedent";
 import type { Plugin } from "esbuild";
 import type { NodeJSCompatMode } from "miniflare";
 
-
 /**
  * An esbuild plugin that will:
  * - mark any `node:...` imports as external
