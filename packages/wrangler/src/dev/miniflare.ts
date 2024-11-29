@@ -303,13 +303,13 @@ async function buildSourceOptions(
 }
 
 function kvNamespaceEntry({ binding, id }: CfKvNamespace): [string, string] {
-	return [binding, id];
+	return [binding, id ?? binding];
 }
 function r2BucketEntry({ binding, bucket_name }: CfR2Bucket): [string, string] {
-	return [binding, bucket_name];
+	return [binding, bucket_name ?? binding];
 }
 function d1DatabaseEntry(db: CfD1Database): [string, string] {
-	return [db.binding, db.preview_database_id ?? db.database_id];
+	return [db.binding, db.preview_database_id ?? db.database_id ?? db.binding];
 }
 function queueProducerEntry(
 	queue: CfQueue

@@ -149,7 +149,6 @@ export const kvNamespaceCreateCommand = createCommand({
 			formatConfigSnippet(
 				{
 					kv_namespaces: [
-						// @ts-expect-error intentional subset
 						{
 							binding: getValidBindingName(args.namespace, "KV"),
 							[`${previewString}id`]: namespaceId,

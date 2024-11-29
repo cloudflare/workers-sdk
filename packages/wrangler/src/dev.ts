@@ -46,7 +46,11 @@ import type {
 	Route,
 	Rule,
 } from "./config/environment";
-import type { CfModule, CfWorkerInit } from "./deployment-bundle/worker";
+import type {
+	CfKvNamespace,
+	CfModule,
+	CfWorkerInit,
+} from "./deployment-bundle/worker";
 import type { WorkerRegistry } from "./dev-registry";
 import type { CfAccount } from "./dev/create-worker-preview";
 import type { LoggerLevel } from "./logger";
@@ -394,7 +398,7 @@ export type AdditionalDevProps = {
 	vars?: Record<string, string | Json>;
 	kv?: {
 		binding: string;
-		id: string;
+		id?: string;
 		preview_id?: string;
 	}[];
 	durableObjects?: {
@@ -411,7 +415,7 @@ export type AdditionalDevProps = {
 	}[];
 	r2?: {
 		binding: string;
-		bucket_name: string;
+		bucket_name?: string;
 		preview_bucket_name?: string;
 		jurisdiction?: string;
 	}[];
@@ -956,7 +960,7 @@ export function getBindings(
 	 * config in `wrangler.toml`.
 	 */
 	// merge KV bindings
-	const kvConfig = (configParam.kv_namespaces || []).map(
+	const kvConfig = (configParam.kv_namespaces || []).map<CfKvNamespace>(
 		({ binding, preview_id, id }) => {
 			// In remote `dev`, we make folks use a separate kv namespace called
 			// `preview_id` instead of `id` so that they don't
