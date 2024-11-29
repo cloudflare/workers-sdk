@@ -24,8 +24,8 @@ export const nodejsCompatPlugin: (silenceWarnings: boolean) => Plugin = (
 		});
 		pluginBuild.onResolve(
 			{ filter: /node:.*/ },
-			async ({ path, kind, resolveDir, ...opts }) => {
-				const specifier = `${path}:${kind}:${resolveDir}:${opts.importer}`;
+			async ({ path, kind, resolveDir, importer }) => {
+				const specifier = `${path}:${kind}:${resolveDir}:${importer}`;
 				if (seen.has(specifier)) {
 					return;
 				}
@@ -35,18 +35,15 @@ export const nodejsCompatPlugin: (silenceWarnings: boolean) => Plugin = (
 				const result = await pluginBuild.resolve(path, {
 					kind,
 					resolveDir,
-					importer: opts.importer,
+					importer,
 				});
 
 				if (result.errors.length > 0) {
 					// esbuild couldn't resolve the package
 					// We should warn the user, but not fail the build
-
-					let pathWarnedPackaged = warnedPackaged.get(path);
-					if (pathWarnedPackaged === undefined) {
-						warnedPackaged.set(path, (pathWarnedPackaged = []));
-					}
-					pathWarnedPackaged.push(opts.importer);
+					const pathWarnedPackaged = warnedPackaged.get(path) ?? [];
+					pathWarnedPackaged.push(importer);
+					warnedPackaged.set(path, pathWarnedPackaged);
 
 					return { external: true };
 				}

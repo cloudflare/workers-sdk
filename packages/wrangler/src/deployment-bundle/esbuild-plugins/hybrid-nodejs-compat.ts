@@ -79,8 +79,8 @@ function handleRequireCallsToNodeJSBuiltins(build: PluginBuild) {
 		({ path }) => {
 			return {
 				contents: dedent`
-        import libDefault from '${path}';
-        module.exports = libDefault;`,
+					import libDefault from '${path}';
+					module.exports = libDefault;`,
 				loader: "js",
 			};
 		}
@@ -150,8 +150,8 @@ function handleUnenvAliasedPackages(
 		({ path }) => {
 			return {
 				contents: dedent`
-        import * as esm from '${path}';
-				module.exports = __cf_cjs(esm);
+					import * as esm from '${path}';
+					module.exports = __cf_cjs(esm);
 				`,
 				loader: "js",
 			};
@@ -188,7 +188,10 @@ function handleNodeJSGlobals(
 		const { importStatement, exportName } = getGlobalInject(inject[globalName]);
 
 		return {
-			contents: `${importStatement}\nglobalThis.${globalName} = ${exportName};`,
+			contents: dedent`
+				${importStatement}
+				globalThis.${globalName} = ${exportName};
+			`,
 		};
 	});
 }
@@ -213,38 +216,21 @@ function getGlobalInject(globalInject: string | string[]) {
 }
 
 /**
- * Encodes a case sensitive string to lowercase string by prefixing all uppercase letters
- * with $ and turning them into lowercase letters.
+ * Encodes a case sensitive string to lowercase string.
+ *
+ * - Escape $ with another $ ("$" -> "$$")
+ * - Esacpe uppercase letters with $ and turn them into lowercase letters ("L" -> "$L")
  *
  * This function exists because ESBuild requires that all resolved paths are case insensitive.
  * Without this transformation, ESBuild will clobber /foo/bar.js with /foo/Bar.js
- *
- * This is important to support `inject` config for `performance` and `Performance` introduced
- * in https://github.com/unjs/unenv/pull/257
  */
 export function encodeToLowerCase(str: string): string {
-	return str
-		.replaceAll(/\$/g, () => "$$")
-		.replaceAll(/[A-Z]/g, (letter) => `$${letter.toLowerCase()}`);
+	return str.replace(/[A-Z$]/g, (escape) => `$${escape.toLowerCase()}`);
 }
 
 /**
  * Decodes a string lowercased using `encodeToLowerCase` to the original strings
  */
 export function decodeFromLowerCase(str: string): string {
-	let out = "";
-	let i = 0;
-	while (i < str.length - 1) {
-		if (str[i] === "$") {
-			i++;
-			out += str[i].toUpperCase();
-		} else {
-			out += str[i];
-		}
-		i++;
-	}
-	if (i < str.length) {
-		out += str[i];
-	}
-	return out;
+	return str.replace(/\$[a-z$]/g, (escaped) => escaped[1].toUpperCase());
 }
