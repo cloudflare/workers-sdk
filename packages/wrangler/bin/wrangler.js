@@ -4,7 +4,7 @@ const path = require("path");
 const fs = require("fs");
 const os = require("os");
 
-const MIN_NODE_VERSION = "18.20.5";
+const MIN_NODE_VERSION = "18.0.0";
 const debug =
 	process.env["WRANGLER_LOG"] === "debug"
 		? (...args) => console.log(...args)
