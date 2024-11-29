@@ -205,8 +205,8 @@ async function versionsUploadHandler(
 
 	validateAssetsArgsAndConfig(
 		{
-			// given that legacyAssets and sites are not supported by
-			// `wrangler versions upload` pass them as undefined to
+			// given that sites is not supported by
+			// `wrangler versions upload` pass as undefined to
 			// skip the corresponding mutual exclusivity validation
 			site: undefined,
 			assets: args.assets,

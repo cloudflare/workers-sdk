@@ -118,7 +118,7 @@ function pluralise(count: number) {
  * @returns a promise for an object mapping the relative paths of the assets to the key of that
  * asset in the KV namespace.
  */
-export async function syncLegacyAssets(
+export async function syncWorkersSite(
 	accountId: string | undefined,
 	scriptName: string,
 	siteAssets: LegacyAssetPaths | undefined,

@@ -40,7 +40,7 @@ import {
 	putConsumerById,
 	putQueue,
 } from "../queues/client";
-import { syncLegacyAssets } from "../sites";
+import { syncWorkersSite } from "../sites";
 import {
 	getSourceMappedString,
 	maybeRetrieveFileSourceMap,
@@ -647,7 +647,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 				? await syncAssets(accountId, scriptName, props.assetsOptions.directory)
 				: undefined;
 
-		const legacyAssets = await syncLegacyAssets(
+		const legacyAssets = await syncWorkersSite(
 			accountId,
 			// When we're using the newer service environments, we wouldn't
 			// have added the env name on to the script name. However, we must

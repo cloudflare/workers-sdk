@@ -43,7 +43,6 @@ export type Entry = {
 export async function getEntry(
 	args: {
 		script?: string;
-		legacyAssets?: string | undefined | boolean;
 		moduleRoot?: string;
 		assets?: string | undefined;
 	},

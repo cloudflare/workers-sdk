@@ -53,7 +53,6 @@ describe("normalizeAndValidateConfig()", () => {
 
 		expect(config).toEqual({
 			account_id: undefined,
-			legacy_assets: undefined,
 			build: {
 				command: undefined,
 				cwd: undefined,
