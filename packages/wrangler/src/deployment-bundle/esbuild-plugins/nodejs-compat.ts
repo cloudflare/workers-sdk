@@ -3,13 +3,16 @@ import chalk from "chalk";
 import { logger } from "../../logger";
 import { dedent } from "../../utils/dedent";
 import type { Plugin } from "esbuild";
+import type { NodeJSCompatMode } from "miniflare";
 
 /**
- * An esbuild plugin that will mark any `node:...` imports as external.
+ * An esbuild plugin that will:
+ * - mark any `node:...` imports as external
+ * - warn if there are node imports (if not in v1 mode)
+ *
+ * Applies to: null, als, legacy and v1 modes.
  */
-export const nodejsCompatPlugin: (silenceWarnings: boolean) => Plugin = (
-	silenceWarnings
-) => ({
+export const nodejsCompatPlugin = (mode: NodeJSCompatMode): Plugin => ({
 	name: "nodejs_compat-imports",
 	setup(pluginBuild) {
 		// Infinite loop detection
@@ -87,7 +90,7 @@ export const nodejsCompatPlugin: (silenceWarnings: boolean) => Plugin = (
 		// Wait until the build finishes to log warnings, so that all files which import a package
 		// can be collated
 		pluginBuild.onEnd(() => {
-			if (!silenceWarnings) {
+			if (mode !== "v1") {
 				warnedPackaged.forEach((importers: string[], path: string) => {
 					logger.warn(
 						dedent`
