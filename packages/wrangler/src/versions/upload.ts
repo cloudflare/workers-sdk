@@ -64,7 +64,6 @@ type Props = {
 	isWorkersSite: boolean;
 	minify: boolean | undefined;
 	uploadSourceMaps: boolean | undefined;
-	nodeCompat: boolean | undefined;
 	outDir: string | undefined;
 	dryRun: boolean | undefined;
 	noBundle: boolean | undefined;
@@ -193,7 +192,6 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		props.compatibilityDate ?? config.compatibility_date,
 		props.compatibilityFlags ?? config.compatibility_flags,
 		{
-			nodeCompat: props.nodeCompat ?? config.node_compat,
 			noBundle: props.noBundle ?? config.no_bundle,
 		}
 	);

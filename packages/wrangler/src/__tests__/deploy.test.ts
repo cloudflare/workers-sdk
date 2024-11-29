@@ -9083,22 +9083,14 @@ export default{
 	});
 
 	describe("--node-compat", () => {
-		it("should warn when using node compatibility mode", async () => {
+		it("should error when using node compatibility mode", async () => {
 			writeWranglerConfig();
 			writeWorkerSource();
-			await runWrangler("deploy index.js --node-compat --dry-run");
-			expect(std).toMatchInlineSnapshot(`
-				Object {
-				  "debug": "",
-				  "err": "",
-				  "info": "",
-				  "out": "Total Upload: xx KiB / gzip: xx KiB
-				--dry-run: exiting now.",
-				  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mYou are using \`node_compat\`, which is a legacy Node.js compatibility option. Instead, use the \`nodejs_compat\` compatibility flag. This includes the functionality from legacy \`node_compat\` polyfills and natively implemented Node.js APIs. See https://developers.cloudflare.com/workers/runtime-apis/nodejs for more information.[0m
-
-				",
-				}
-			`);
+			await expect(
+				runWrangler("deploy index.js --node-compat --dry-run")
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: The --node-compat flag is no longer supported as of Wrangler v4. Instead, use the \`nodejs_compat\` compatibility flag. This includes the functionality from legacy \`node_compat\` polyfills and natively implemented Node.js APIs. See https://developers.cloudflare.com/workers/runtime-apis/nodejs for more information.]`
+			);
 		});
 
 		it("should recommend node compatibility flag when using node builtins and no node compat is enabled", async () => {
@@ -9150,33 +9142,6 @@ export default{
 
 				  The package \\"path\\" wasn't found on the file system but is built into node.
 				  - Add the \\"nodejs_compat\\" compatibility flag to your project."
-			`);
-		});
-
-		it("should recommend node compatibility flag when using node builtins and `node_compat` is true", async () => {
-			writeWranglerConfig({
-				node_compat: true,
-			});
-			fs.writeFileSync("index.js", "import fs from 'diagnostics_channel';");
-
-			await expect(
-				runWrangler("deploy index.js --dry-run").catch((e) =>
-					normalizeString(
-						esbuild
-							.formatMessagesSync(e?.errors ?? [], { kind: "error" })
-							.join()
-							.trim()
-					)
-				)
-			).resolves.toMatchInlineSnapshot(`
-				"X [ERROR] Could not resolve \\"diagnostics_channel\\"
-
-				    index.js:1:15:
-				      1 │ import fs from 'diagnostics_channel';
-				        ╵                ~~~~~~~~~~~~~~~~~~~~~
-
-				  The package \\"diagnostics_channel\\" wasn't found on the file system but is built into node.
-				  - Try removing the legacy \\"node_compat\\" setting and add the \\"nodejs_compat\\" compatibility flag in your project"
 			`);
 		});
 
@@ -9233,31 +9198,6 @@ export default{
 
 				  The package \\"path\\" wasn't found on the file system but is built into node.
 				  - Make sure to prefix the module name with \\"node:\\" or update your compatibility_date to 2024-09-23 or later."
-			`);
-		});
-
-		it("should polyfill node builtins when enabled", async () => {
-			writeWranglerConfig();
-			fs.writeFileSync(
-				"index.js",
-				`
-      import path from 'path';
-      console.log(path.join("some/path/to", "a/file.txt"));
-      export default {}
-      `
-			);
-			await runWrangler("deploy index.js --node-compat --dry-run"); // this would throw if node compatibility didn't exist
-			expect(std).toMatchInlineSnapshot(`
-				Object {
-				  "debug": "",
-				  "err": "",
-				  "info": "",
-				  "out": "Total Upload: xx KiB / gzip: xx KiB
-				--dry-run: exiting now.",
-				  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mYou are using \`node_compat\`, which is a legacy Node.js compatibility option. Instead, use the \`nodejs_compat\` compatibility flag. This includes the functionality from legacy \`node_compat\` polyfills and natively implemented Node.js APIs. See https://developers.cloudflare.com/workers/runtime-apis/nodejs for more information.[0m
-
-				",
-				}
 			`);
 		});
 	});
@@ -9346,26 +9286,6 @@ export default{
 		`);
 			expect(fs.readFileSync("dist/index.js", { encoding: "utf-8" })).toContain(
 				`import path from "path";`
-			);
-		});
-
-		it("should conflict with the --node-compat option", async () => {
-			writeWranglerConfig();
-			fs.writeFileSync(
-				"index.js",
-				`
-      import AsyncHooks from 'node:async_hooks';
-      console.log(AsyncHooks);
-      export default {}
-      `
-			);
-
-			await expect(
-				runWrangler(
-					"deploy index.js --dry-run --outdir=dist --compatibility-flag=nodejs_compat --node-compat"
-				)
-			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: The \`nodejs_compat\` compatibility flag cannot be used in conjunction with the legacy \`--node-compat\` flag. If you want to use the Workers \`nodejs_compat\` compatibility flag, please remove the \`--node-compat\` argument from your CLI command or \`node_compat = true\` from your config file.]`
 			);
 		});
 	});
@@ -9762,47 +9682,6 @@ export default{
 
 			"
 		`);
-		});
-	});
-
-	describe("--no-bundle --node-compat", () => {
-		it("should warn that no-bundle and node-compat can't be used together", async () => {
-			writeWranglerConfig();
-			const scriptContent = `
-			const xyz = 123; // a statement that would otherwise be compiled out
-		`;
-			fs.writeFileSync("index.js", scriptContent);
-			await runWrangler(
-				"deploy index.js --no-bundle --node-compat --dry-run --outdir dist"
-			);
-			expect(std.warn).toMatchInlineSnapshot(`
-				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m\`--node-compat\` and \`--no-bundle\` can't be used together. If you want to polyfill Node.js built-ins and disable Wrangler's bundling, please polyfill as part of your own bundling process.[0m
-
-
-				[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mYou are using \`node_compat\`, which is a legacy Node.js compatibility option. Instead, use the \`nodejs_compat\` compatibility flag. This includes the functionality from legacy \`node_compat\` polyfills and natively implemented Node.js APIs. See https://developers.cloudflare.com/workers/runtime-apis/nodejs for more information.[0m
-
-				"
-			`);
-		});
-
-		it("should warn that no-bundle and node-compat can't be used together", async () => {
-			writeWranglerConfig({
-				no_bundle: true,
-				node_compat: true,
-			});
-			const scriptContent = `
-			const xyz = 123; // a statement that would otherwise be compiled out
-		`;
-			fs.writeFileSync("index.js", scriptContent);
-			await runWrangler("deploy index.js --dry-run --outdir dist");
-			expect(std.warn).toMatchInlineSnapshot(`
-				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m\`--node-compat\` and \`--no-bundle\` can't be used together. If you want to polyfill Node.js built-ins and disable Wrangler's bundling, please polyfill as part of your own bundling process.[0m
-
-
-				[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mYou are using \`node_compat\`, which is a legacy Node.js compatibility option. Instead, use the \`nodejs_compat\` compatibility flag. This includes the functionality from legacy \`node_compat\` polyfills and natively implemented Node.js APIs. See https://developers.cloudflare.com/workers/runtime-apis/nodejs for more information.[0m
-
-				"
-			`);
 		});
 	});
 

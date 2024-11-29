@@ -232,7 +232,6 @@ describe("validatePagesConfig()", () => {
 					build: {
 						command: "npm run build",
 					},
-					node_compat: true,
 				},
 			};
 			diagnostics = validatePagesConfig(
@@ -246,7 +245,6 @@ describe("validatePagesConfig()", () => {
 				"Running configuration file validation for Pages:
 				  - Configuration file for Pages projects does not support \\"triggers\\"
 				  - Configuration file for Pages projects does not support \\"build\\"
-				  - Configuration file for Pages projects does not support \\"node_compat\\"
 				  - Configuration file for Pages projects does not support \\"usage_model\\""
 			`);
 

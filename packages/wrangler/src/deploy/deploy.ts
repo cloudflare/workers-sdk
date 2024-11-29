@@ -95,7 +95,6 @@ type Props = {
 	tsconfig: string | undefined;
 	isWorkersSite: boolean;
 	minify: boolean | undefined;
-	nodeCompat: boolean | undefined;
 	outDir: string | undefined;
 	dryRun: boolean | undefined;
 	noBundle: boolean | undefined;
@@ -449,7 +448,6 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		compatibilityDate,
 		compatibilityFlags,
 		{
-			nodeCompat: props.nodeCompat ?? config.node_compat,
 			noBundle: props.noBundle ?? config.no_bundle,
 		}
 	);
