@@ -2331,6 +2331,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{
 						RESOURCES_PROVISION: true,
 						FILE_BASED_REGISTRY: false,
+						MULTIWORKER: false,
 					},
 					() =>
 						normalizeAndValidateConfig(
@@ -2479,6 +2480,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{
 						RESOURCES_PROVISION: true,
 						FILE_BASED_REGISTRY: false,
+						MULTIWORKER: false,
 					},
 					() =>
 						normalizeAndValidateConfig(
@@ -2793,6 +2795,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{
 						RESOURCES_PROVISION: true,
 						FILE_BASED_REGISTRY: false,
+						MULTIWORKER: false,
 					},
 					() =>
 						normalizeAndValidateConfig(
