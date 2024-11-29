@@ -220,6 +220,8 @@ importers:
         specifier: workspace:*
         version: link:../../packages/wrangler
 
+  fixtures/import-npm: {}
+
   fixtures/import-wasm-example:
     dependencies:
       import-wasm-static:
@@ -1726,9 +1728,6 @@ importers:
       resolve:
         specifier: ^1.22.8
         version: 1.22.8
-      resolve.exports:
-        specifier: ^2.0.2
-        version: 2.0.2
       selfsigned:
         specifier: ^2.0.1
         version: 2.1.1
@@ -7271,10 +7270,6 @@ packages:
 
   resolve-pkg-maps@1.0.0:
     resolution: {integrity: sha512-seS2Tj26TBVOC2NIc2rOe2y2ZO7efxITtLZcGSOnHHNOQ7CkiUBfw0Iw2ck6xkIhPwLhKNLS8BO+hEpngQlqzw==}
-
-  resolve.exports@2.0.2:
-    resolution: {integrity: sha512-X2UW6Nw3n/aMgDVy+0rSqgHlv39WZAlZrXCdnbyEiKm17DSqHX4MmQMaST3FbeWR5FTuRcUwYAziZajji0Y7mg==}
-    engines: {node: '>=10'}
 
   resolve@1.22.8:
     resolution: {integrity: sha512-oKWePCxqpd6FlLvGV1VU0x7bkPmmCNolxzjMf4NczoDnQcIWrAF+cPtZn5i6n+RfD2d9i0tzpKnG6Yk168yIyw==}
@@ -14469,8 +14464,6 @@ snapshots:
 
   resolve-pkg-maps@1.0.0: {}
 
-  resolve.exports@2.0.2: {}
-
   resolve@1.22.8:
     dependencies:
       is-core-module: 2.13.0
@@ -15638,7 +15631,6 @@ snapshots:
       nanoid: 3.3.7
       path-to-regexp: 6.3.0
       resolve: 1.22.8
-      resolve.exports: 2.0.2
       selfsigned: 2.1.1
       source-map: 0.6.1
       unenv: unenv-nightly@2.0.0-20241111-080453-894aa31
