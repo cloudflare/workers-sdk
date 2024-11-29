@@ -365,15 +365,13 @@ function buildProjectWorkerOptions(
 		}
 	}
 
-	// Vitest requires node compat. Here we check for any existing node compatibility, and if not
-	// found
 	const { mode } = getNodeCompat(
 		runnerWorker.compatibilityDate,
 		runnerWorker.compatibilityFlags
 	);
 
-	if (!mode || !["v1"].includes(mode)) {
-		runnerWorker.compatibilityFlags.push("nodejs_compat");
+	if (mode === null) {
+		runnerWorker.compatibilityFlags.push("nodejs_compat_v2");
 	}
 
 	// Required for `workerd:unsafe` module. We don't require this flag to be set
