@@ -478,37 +478,17 @@ export function validateAssetsArgsAndConfig(
 ): void;
 export function validateAssetsArgsAndConfig(
 	args:
-		| Pick<StartDevOptions, "legacyAssets" | "site" | "assets" | "script">
-		| Pick<DeployArgs, "legacyAssets" | "site" | "assets" | "script">,
+		| Pick<StartDevOptions, "site" | "assets" | "script">
+		| Pick<DeployArgs, "site" | "assets" | "script">,
 	config: Config
 ): void;
 export function validateAssetsArgsAndConfig(
 	args:
-		| Pick<StartDevOptions, "legacyAssets" | "site" | "assets" | "script">
-		| Pick<DeployArgs, "legacyAssets" | "site" | "assets" | "script">
+		| Pick<StartDevOptions, "site" | "assets" | "script">
+		| Pick<DeployArgs, "site" | "assets" | "script">
 		| Pick<StartDevWorkerOptions, "legacy" | "assets" | "entrypoint">,
 	config?: Config
 ): void {
-	/*
-	 * - `config.legacy_assets` conflates `legacy_assets` and `assets`
-	 * - `args.legacyAssets` conflates `legacy-assets` and `assets`
-	 */
-	if (
-		"legacy" in args
-			? args.assets && args.legacy.legacyAssets
-			: (args.assets || config?.assets) &&
-				(args?.legacyAssets || config?.legacy_assets)
-	) {
-		throw new UserError(
-			"Cannot use assets and legacy assets in the same Worker.\n" +
-				"Please remove either the `legacy_assets` or `assets` field from your configuration file.",
-			{
-				telemetryMessage:
-					"Cannot use assets and legacy assets in the same Worker",
-			}
-		);
-	}
-
 	if (
 		"legacy" in args
 			? args.assets && args.legacy.site

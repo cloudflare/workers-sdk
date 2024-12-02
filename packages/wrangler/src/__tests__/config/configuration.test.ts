@@ -60,7 +60,6 @@ describe("normalizeAndValidateConfig()", () => {
 
 		expect(config).toEqual({
 			account_id: undefined,
-			legacy_assets: undefined,
 			build: {
 				command: undefined,
 				cwd: undefined,
@@ -248,10 +247,9 @@ describe("normalizeAndValidateConfig()", () => {
 			expect("miniflare" in config).toBe(false);
 			expect(diagnostics.hasErrors()).toBe(false);
 			expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-			        "Processing wrangler configuration:
-			          - [1m😶 Ignored[0m: \\"miniflare\\":
-			            Wrangler does not use configuration in the \`miniflare\` section. Unless you are using Miniflare directly you can remove this section."
-		      `);
+				"Processing wrangler configuration:
+				  - Unexpected fields found in top-level field: \\"miniflare\\""
+			`);
 		});
 
 		it("should normalise a blank route value to be undefined", () => {
@@ -635,134 +633,6 @@ describe("normalizeAndValidateConfig()", () => {
 			});
 		});
 
-		describe("[legacy_assets]", () => {
-			it("normalizes a string input to an object", () => {
-				const { config, diagnostics } = normalizeAndValidateConfig(
-					{
-						legacy_assets: "path/to/assets",
-					} as unknown as RawConfig,
-					undefined,
-					undefined,
-
-					{ env: undefined }
-				);
-
-				expect(config.legacy_assets).toMatchInlineSnapshot(`
-					Object {
-					  "browser_TTL": undefined,
-					  "bucket": "path/to/assets",
-					  "exclude": Array [],
-					  "include": Array [],
-					  "serve_single_page_app": false,
-					}
-				`);
-				expect(diagnostics.hasWarnings()).toBe(true);
-				expect(diagnostics.hasErrors()).toBe(false);
-
-				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-					"Processing wrangler configuration:
-					  - [1mDeprecation[0m: \\"legacy_assets\\":
-					    The \`legacy_assets\` feature has been deprecated. Please use \`assets\` instead."
-				`);
-			});
-
-			it("errors when input is not a string or object", () => {
-				const { config, diagnostics } = normalizeAndValidateConfig(
-					{
-						legacy_assets: 123,
-					} as unknown as RawConfig,
-					undefined,
-					undefined,
-
-					{ env: undefined }
-				);
-				expect(config.legacy_assets).toBeUndefined();
-				expect(diagnostics.hasWarnings()).toBe(true);
-				expect(diagnostics.hasErrors()).toBe(true);
-
-				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-					"Processing wrangler configuration:
-					  - [1mDeprecation[0m: \\"legacy_assets\\":
-					    The \`legacy_assets\` feature has been deprecated. Please use \`assets\` instead."
-				`);
-				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-					"Processing wrangler configuration:
-					  - Expected the \`legacy_assets\` field to be a string or an object, but got number."
-				`);
-			});
-
-			it("should error if `legacy_assets` config is missing `bucket`", () => {
-				const expectedConfig: RawConfig = {
-					// @ts-expect-error we're intentionally passing an invalid configuration here
-					legacy_assets: {
-						include: ["INCLUDE_1", "INCLUDE_2"],
-						exclude: ["EXCLUDE_1", "EXCLUDE_2"],
-					},
-				};
-
-				const { config, diagnostics } = normalizeAndValidateConfig(
-					expectedConfig,
-					undefined,
-					undefined,
-
-					{ env: undefined }
-				);
-
-				expect(config.legacy_assets).toEqual(
-					expect.objectContaining(expectedConfig.legacy_assets)
-				);
-				expect(diagnostics.hasWarnings()).toBe(true);
-				expect(diagnostics.hasErrors()).toBe(true);
-
-				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-					"Processing wrangler configuration:
-					  - [1mDeprecation[0m: \\"legacy_assets\\":
-					    The \`legacy_assets\` feature has been deprecated. Please use \`assets\` instead."
-				`);
-				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-					"Processing wrangler configuration:
-					  - \\"legacy_assets.bucket\\" is a required field."
-				`);
-			});
-
-			it("should error on invalid `legacy_assets` values", () => {
-				const expectedConfig = {
-					legacy_assets: {
-						bucket: "BUCKET",
-						include: [222, 333],
-						exclude: [444, 555],
-						browser_TTL: "not valid",
-						serve_single_page_app: "INVALID",
-					},
-				};
-
-				const { config, diagnostics } = normalizeAndValidateConfig(
-					expectedConfig as unknown as RawConfig,
-					undefined,
-					undefined,
-
-					{ env: undefined }
-				);
-
-				expect(config).toEqual(expect.objectContaining(expectedConfig));
-				expect(diagnostics.hasWarnings()).toBe(true);
-				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-					"Processing wrangler configuration:
-					  - [1mDeprecation[0m: \\"legacy_assets\\":
-					    The \`legacy_assets\` feature has been deprecated. Please use \`assets\` instead."
-				`);
-				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-					"Processing wrangler configuration:
-					  - Expected \\"legacy_assets.include.[0]\\" to be of type string but got 222.
-					  - Expected \\"legacy_assets.include.[1]\\" to be of type string but got 333.
-					  - Expected \\"legacy_assets.exclude.[0]\\" to be of type string but got 444.
-					  - Expected \\"legacy_assets.exclude.[1]\\" to be of type string but got 555.
-					  - Expected \\"legacy_assets.browser_TTL\\" to be of type number but got \\"not valid\\".
-					  - Expected \\"legacy_assets.serve_single_page_app\\" to be of type boolean but got \\"INVALID\\"."
-				`);
-			});
-		});
-
 		it("should map `wasm_module` paths from relative to the config path to relative to the cwd", () => {
 			const expectedConfig: RawConfig = {
 				wasm_modules: {
@@ -986,39 +856,6 @@ describe("normalizeAndValidateConfig()", () => {
 			expect(diagnostics.hasWarnings()).toBe(false);
 		});
 
-		describe("(deprecated)", () => {
-			it("should remove and warn about deprecated properties", () => {
-				const rawConfig: RawConfig = {
-					type: "webpack",
-					webpack_config: "CONFIG",
-				};
-
-				const { config, diagnostics } = normalizeAndValidateConfig(
-					rawConfig,
-					undefined,
-					undefined,
-					{ env: undefined }
-				);
-
-				// Note the `.not.` here...
-				expect(config).toEqual(
-					expect.not.objectContaining({
-						type: expect.anything(),
-						webpack_config: expect.anything(),
-					})
-				);
-				expect(diagnostics.hasErrors()).toBe(false);
-				expect(diagnostics.hasWarnings()).toBe(true);
-				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-			          "Processing wrangler configuration:
-			            - [1m😶 Ignored[0m: \\"type\\":
-			              Most common features now work out of the box with wrangler, including modules, jsx, typescript, etc. If you need anything more, use a custom build.
-			            - [1m😶 Ignored[0m: \\"webpack_config\\":
-			              Most common features now work out of the box with wrangler, including modules, jsx, typescript, etc. If you need anything more, use a custom build."
-		        `);
-			});
-		});
-
 		it("should warn on unsafe binding metadata usage", () => {
 			const expectedConfig: RawConfig = {
 				unsafe: {
@@ -1084,7 +921,6 @@ describe("normalizeAndValidateConfig()", () => {
 				jsx_fragment: "JSX_FRAGMENT",
 				tsconfig: "path/to/tsconfig",
 				triggers: { crons: ["CRON_1", "CRON_2"] },
-				usage_model: "bundled",
 				main,
 				build: {
 					command: "COMMAND",
@@ -1249,7 +1085,6 @@ describe("normalizeAndValidateConfig()", () => {
 				jsx_fragment: 1000,
 				tsconfig: true,
 				triggers: { crons: [1111, 1222] },
-				usage_model: "INVALID",
 				main: 1333,
 				build: {
 					command: 1444,
@@ -1334,7 +1169,6 @@ describe("normalizeAndValidateConfig()", () => {
 				  - Expected \\"tsconfig\\" to be of type string but got true.
 				  - Expected \\"name\\" to be of type string, alphanumeric and lowercase with dashes only but got 111.
 				  - Expected \\"main\\" to be of type string but got 1333.
-				  - Expected \\"usage_model\\" field to be one of [\\"bundled\\",\\"unbound\\"] but got \\"INVALID\\".
 				  - Expected \\"placement.mode\\" field to be one of [\\"off\\",\\"smart\\"] but got \\"INVALID\\".
 				  - The field \\"define.DEF1\\" should be a string but got 1777.
 				  - Expected \\"no_bundle\\" to be of type boolean but got \\"INVALID\\".
@@ -1443,52 +1277,6 @@ describe("normalizeAndValidateConfig()", () => {
 		});
 
 		describe("[build]", () => {
-			it("should override build.upload config defaults with provided values and warn about deprecations", () => {
-				const expectedConfig: RawEnvironment = {
-					build: {
-						upload: {
-							dir: "src",
-							format: "modules",
-							main: "index.ts",
-							rules: [{ type: "Text", globs: ["GLOB"], fallthrough: true }],
-						},
-					},
-				};
-
-				const { config, diagnostics } = normalizeAndValidateConfig(
-					expectedConfig,
-					path.resolve("project/wrangler.toml"),
-					path.resolve("project/wrangler.toml"),
-					{ env: undefined }
-				);
-
-				expect(config.main).toEqual(path.resolve("project/src/index.ts"));
-				expect(config.build.upload).toBeUndefined();
-				expect(diagnostics.hasErrors()).toBe(false);
-				expect(diagnostics.hasWarnings()).toBe(true);
-				expect(normalizePath(diagnostics.renderWarnings()))
-					.toMatchInlineSnapshot(`
-			          "Processing project/wrangler.toml configuration:
-			            - [1mDeprecation[0m: \\"build.upload.format\\":
-			              The format is inferred automatically from the code.
-			            - [1mDeprecation[0m: \\"build.upload.main\\":
-			              Delete the \`build.upload.main\` and \`build.upload.dir\` fields.
-			              Then add the top level \`main\` field to your configuration file:
-			              \`\`\`
-			              main = \\"src/index.ts\\"
-			              \`\`\`
-			            - [1mDeprecation[0m: \\"build.upload.dir\\":
-			              Use the top level \\"main\\" field or a command-line argument to specify the entry-point for the Worker.
-			            - Deprecation: The \`build.upload.rules\` config field is no longer used, the rules should be specified via the \`rules\` config field. Delete the \`build.upload\` field from the configuration file, and add this:
-			              \`\`\`
-			              [[rules]]
-			              type = \\"Text\\"
-			              globs = [ \\"GLOB\\" ]
-			              fallthrough = true
-			              \`\`\`"
-		        `);
-			});
-
 			it("should default custom build watch directories to src", () => {
 				const expectedConfig: RawEnvironment = {
 					build: {
@@ -4061,41 +3849,6 @@ describe("normalizeAndValidateConfig()", () => {
 			});
 		});
 
-		describe("(deprecated)", () => {
-			it("should remove and warn about deprecated properties", () => {
-				const rawConfig: RawConfig = {
-					zone_id: "ZONE_ID",
-					experimental_services: [
-						{
-							name: "mock-name",
-							service: "SERVICE",
-							environment: "ENV",
-						},
-					],
-				};
-
-				const { config, diagnostics } = normalizeAndValidateConfig(
-					rawConfig,
-					undefined,
-					undefined,
-					{ env: undefined }
-				);
-
-				expect("experimental_services" in config).toBe(false);
-				// Zone is not removed yet, since `route` commands might use it
-				expect(config.zone_id).toEqual("ZONE_ID");
-				expect(diagnostics.hasErrors()).toBe(false);
-				expect(diagnostics.hasWarnings()).toBe(true);
-				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-			          "Processing wrangler configuration:
-			            - [1mDeprecation[0m: \\"zone_id\\":
-			              This is unnecessary since we can deduce this from routes directly.
-			            - [1mDeprecation[0m: \\"experimental_services\\":
-			              The \\"experimental_services\\" field is no longer supported. Simply rename the [experimental_services] field to [services]."
-		        `);
-			});
-		});
-
 		describe("route & routes fields", () => {
 			it("should error if both route and routes are specified", () => {
 				const rawConfig: RawConfig = {
@@ -4197,7 +3950,6 @@ describe("normalizeAndValidateConfig()", () => {
 				jsx_fragment: "JSX_FRAGMENT",
 				tsconfig: "path/to/tsconfig.json",
 				triggers: { crons: ["CRON_1", "CRON_2"] },
-				usage_model: "bundled",
 				main,
 				build: {
 					command: "COMMAND",
@@ -4248,7 +4000,6 @@ describe("normalizeAndValidateConfig()", () => {
 				jsx_fragment: "ENV_JSX_FRAGMENT",
 				tsconfig: "ENV_path/to/tsconfig.json",
 				triggers: { crons: ["ENV_CRON_1", "ENV_CRON_2"] },
-				usage_model: "unbound",
 				main,
 				build: {
 					command: "ENV_COMMAND",
@@ -4275,7 +4026,6 @@ describe("normalizeAndValidateConfig()", () => {
 				jsx_fragment: "JSX_FRAGMENT",
 				tsconfig: "path/to/tsconfig.json",
 				triggers: { crons: ["CRON_1", "CRON_2"] },
-				usage_model: "bundled",
 				main: "top-level.js",
 				build: {
 					command: "COMMAND",
@@ -4579,7 +4329,6 @@ describe("normalizeAndValidateConfig()", () => {
 				jsx_fragment: 1000,
 				tsconfig: 123,
 				triggers: { crons: [1111, 1222] },
-				usage_model: "INVALID",
 				main: 1333,
 				build: {
 					command: 1444,
@@ -4603,34 +4352,33 @@ describe("normalizeAndValidateConfig()", () => {
 			expect(config).toEqual(expect.objectContaining(expectedConfig));
 			expect(diagnostics.hasWarnings()).toBe(false);
 			expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			"Processing wrangler configuration:
+				"Processing wrangler configuration:
 
-			  - \\"env.ENV1\\" environment configuration
-			    - Expected \\"route\\" to be either a string, or an object with shape { pattern, custom_domain, zone_id | zone_name }, but got 888.
-			    - Expected \\"account_id\\" to be of type string but got 222.
-			    - Expected \\"routes\\" to be an array of either strings or objects with the shape { pattern, custom_domain, zone_id | zone_name }, but these weren't valid: [
-			        666,
-			        777
-			      ].
-			    - Expected exactly one of the following fields [\\"routes\\",\\"route\\"].
-			    - Expected \\"workers_dev\\" to be of type boolean but got \\"BAD\\".
-			    - Expected \\"build.command\\" to be of type string but got 1444.
-			    - Expected \\"build.cwd\\" to be of type string but got 1555.
-			    - Expected \\"build.watch_dir\\" to be of type string but got 1666.
-			    - Expected \\"compatibility_date\\" to be of type string but got 333.
-			    - Expected \\"compatibility_flags\\" to be of type string array but got [444,555].
-			    - Expected \\"jsx_factory\\" to be of type string but got 999.
-			    - Expected \\"jsx_fragment\\" to be of type string but got 1000.
-			    - Expected \\"tsconfig\\" to be of type string but got 123.
-			    - Expected \\"name\\" to be of type string, alphanumeric and lowercase with dashes only but got 111.
-			    - Expected \\"main\\" to be of type string but got 1333.
-			    - Expected \\"usage_model\\" field to be one of [\\"bundled\\",\\"unbound\\"] but got \\"INVALID\\".
-			    - Expected \\"no_bundle\\" to be of type boolean but got \\"INVALID\\".
-			    - Expected \\"minify\\" to be of type boolean but got \\"INVALID\\".
-			    - Expected \\"first_party_worker\\" to be of type boolean but got \\"INVALID\\".
-			    - Expected \\"logpush\\" to be of type boolean but got \\"INVALID\\".
-			    - Expected \\"upload_source_maps\\" to be of type boolean but got \\"INVALID\\"."
-		`);
+				  - \\"env.ENV1\\" environment configuration
+				    - Expected \\"route\\" to be either a string, or an object with shape { pattern, custom_domain, zone_id | zone_name }, but got 888.
+				    - Expected \\"account_id\\" to be of type string but got 222.
+				    - Expected \\"routes\\" to be an array of either strings or objects with the shape { pattern, custom_domain, zone_id | zone_name }, but these weren't valid: [
+				        666,
+				        777
+				      ].
+				    - Expected exactly one of the following fields [\\"routes\\",\\"route\\"].
+				    - Expected \\"workers_dev\\" to be of type boolean but got \\"BAD\\".
+				    - Expected \\"build.command\\" to be of type string but got 1444.
+				    - Expected \\"build.cwd\\" to be of type string but got 1555.
+				    - Expected \\"build.watch_dir\\" to be of type string but got 1666.
+				    - Expected \\"compatibility_date\\" to be of type string but got 333.
+				    - Expected \\"compatibility_flags\\" to be of type string array but got [444,555].
+				    - Expected \\"jsx_factory\\" to be of type string but got 999.
+				    - Expected \\"jsx_fragment\\" to be of type string but got 1000.
+				    - Expected \\"tsconfig\\" to be of type string but got 123.
+				    - Expected \\"name\\" to be of type string, alphanumeric and lowercase with dashes only but got 111.
+				    - Expected \\"main\\" to be of type string but got 1333.
+				    - Expected \\"no_bundle\\" to be of type boolean but got \\"INVALID\\".
+				    - Expected \\"minify\\" to be of type boolean but got \\"INVALID\\".
+				    - Expected \\"first_party_worker\\" to be of type boolean but got \\"INVALID\\".
+				    - Expected \\"logpush\\" to be of type boolean but got \\"INVALID\\".
+				    - Expected \\"upload_source_maps\\" to be of type boolean but got \\"INVALID\\"."
+			`);
 		});
 
 		describe("[define]", () => {
@@ -6114,50 +5862,6 @@ describe("normalizeAndValidateConfig()", () => {
 			});
 		});
 
-		describe("(deprecated)", () => {
-			it("should remove and warn about deprecated properties", () => {
-				const environment: RawEnvironment = {
-					zone_id: "ZONE_ID",
-					"kv-namespaces": "BAD_KV_NAMESPACE",
-					experimental_services: [
-						{
-							name: "mock-name",
-							service: "SERVICE",
-							environment: "ENV",
-						},
-					],
-				};
-
-				const { config, diagnostics } = normalizeAndValidateConfig(
-					{
-						env: {
-							ENV1: environment,
-						},
-					},
-					undefined,
-					undefined,
-					{ env: "ENV1" }
-				);
-
-				expect("experimental_services" in config).toBe(false);
-				// Zone is not removed yet, since `route` commands might use it
-				expect(config.zone_id).toEqual("ZONE_ID");
-				expect(diagnostics.hasErrors()).toBe(false);
-				expect(diagnostics.hasWarnings()).toBe(true);
-				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-			"Processing wrangler configuration:
-
-			  - \\"env.ENV1\\" environment configuration
-			    - [1mDeprecation[0m: \\"kv-namespaces\\":
-			      The \\"kv-namespaces\\" field is no longer supported, please rename to \\"kv_namespaces\\"
-			    - [1mDeprecation[0m: \\"zone_id\\":
-			      This is unnecessary since we can deduce this from routes directly.
-			    - [1mDeprecation[0m: \\"experimental_services\\":
-			      The \\"experimental_services\\" field is no longer supported. Simply rename the [experimental_services] field to [services]."
-		`);
-			});
-		});
-
 		describe("route & routes fields", () => {
 			it("should error if both route and routes are specified in the same environment", () => {
 				const environment: RawEnvironment = {
@@ -6171,7 +5875,6 @@ describe("normalizeAndValidateConfig()", () => {
 					jsx_factory: "ENV_JSX_FACTORY",
 					jsx_fragment: "ENV_JSX_FRAGMENT",
 					triggers: { crons: ["ENV_CRON_1", "ENV_CRON_2"] },
-					usage_model: "unbound",
 				};
 				const expectedConfig: RawConfig = {
 					name: "mock-name",
@@ -6183,7 +5886,6 @@ describe("normalizeAndValidateConfig()", () => {
 					jsx_factory: "JSX_FACTORY",
 					jsx_fragment: "JSX_FRAGMENT",
 					triggers: { crons: ["CRON_1", "CRON_2"] },
-					usage_model: "bundled",
 					env: {
 						ENV1: environment,
 					},
@@ -6219,7 +5921,6 @@ describe("normalizeAndValidateConfig()", () => {
 					jsx_factory: "ENV_JSX_FACTORY",
 					jsx_fragment: "ENV_JSX_FRAGMENT",
 					triggers: { crons: ["ENV_CRON_1", "ENV_CRON_2"] },
-					usage_model: "unbound",
 				};
 				const expectedConfig: RawConfig = {
 					name: "mock-name",
@@ -6232,7 +5933,6 @@ describe("normalizeAndValidateConfig()", () => {
 					jsx_factory: "JSX_FACTORY",
 					jsx_fragment: "JSX_FRAGMENT",
 					triggers: { crons: ["CRON_1", "CRON_2"] },
-					usage_model: "bundled",
 					env: {
 						ENV1: environment,
 					},
@@ -6266,7 +5966,6 @@ describe("normalizeAndValidateConfig()", () => {
 					jsx_factory: "ENV_JSX_FACTORY",
 					jsx_fragment: "ENV_JSX_FRAGMENT",
 					triggers: { crons: ["ENV_CRON_1", "ENV_CRON_2"] },
-					usage_model: "unbound",
 				};
 				const expectedConfig: RawConfig = {
 					name: "mock-name",
@@ -6278,7 +5977,6 @@ describe("normalizeAndValidateConfig()", () => {
 					jsx_factory: "JSX_FACTORY",
 					jsx_fragment: "JSX_FRAGMENT",
 					triggers: { crons: ["CRON_1", "CRON_2"] },
-					usage_model: "bundled",
 					env: {
 						ENV1: environment,
 					},
@@ -6307,7 +6005,6 @@ describe("normalizeAndValidateConfig()", () => {
 					jsx_factory: "ENV_JSX_FACTORY",
 					jsx_fragment: "ENV_JSX_FRAGMENT",
 					triggers: { crons: ["ENV_CRON_1", "ENV_CRON_2"] },
-					usage_model: "unbound",
 				};
 				const expectedConfig: RawConfig = {
 					name: "mock-name",
@@ -6319,7 +6016,6 @@ describe("normalizeAndValidateConfig()", () => {
 					jsx_factory: "JSX_FACTORY",
 					jsx_fragment: "JSX_FRAGMENT",
 					triggers: { crons: ["CRON_1", "CRON_2"] },
-					usage_model: "bundled",
 					env: {
 						ENV1: environment,
 					},
@@ -6348,7 +6044,6 @@ describe("normalizeAndValidateConfig()", () => {
 					jsx_factory: "ENV_JSX_FACTORY",
 					jsx_fragment: "ENV_JSX_FRAGMENT",
 					triggers: { crons: ["ENV_CRON_1", "ENV_CRON_2"] },
-					usage_model: "unbound",
 				};
 				const environment2: RawEnvironment = {
 					name: "mock-env-name",
@@ -6360,7 +6055,6 @@ describe("normalizeAndValidateConfig()", () => {
 					jsx_factory: "ENV_JSX_FACTORY",
 					jsx_fragment: "ENV_JSX_FRAGMENT",
 					triggers: { crons: ["ENV_CRON_1", "ENV_CRON_2"] },
-					usage_model: "unbound",
 				};
 				const expectedConfig: RawConfig = {
 					name: "mock-name",
@@ -6372,7 +6066,6 @@ describe("normalizeAndValidateConfig()", () => {
 					jsx_factory: "JSX_FACTORY",
 					jsx_fragment: "JSX_FRAGMENT",
 					triggers: { crons: ["CRON_1", "CRON_2"] },
-					usage_model: "bundled",
 					env: {
 						ENV1: environment1,
 						ENV2: environment2,
@@ -6473,85 +6166,6 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 				expect(diagnostics.hasErrors()).toBe(false);
 				expect(diagnostics.hasWarnings()).toBe(false);
-			});
-
-			it("should warn about experimental_serve_directly deprecation from inherited top-level env", () => {
-				const rawConfig: RawConfig = {
-					assets: {
-						directory: "dist",
-						binding: "ASSETS",
-						experimental_serve_directly: false,
-					},
-					env: {
-						ENV1: {},
-					},
-				};
-
-				const { config, diagnostics } = normalizeAndValidateConfig(
-					rawConfig,
-					undefined,
-					undefined,
-					{ env: "ENV1" }
-				);
-
-				expect(config).toEqual(
-					expect.objectContaining({
-						assets: {
-							directory: "dist",
-							binding: "ASSETS",
-							experimental_serve_directly: false,
-						},
-					})
-				);
-				expect(diagnostics.hasErrors()).toBe(false);
-				expect(diagnostics.hasWarnings()).toBe(true);
-				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-					"Processing wrangler configuration:
-					  - [1mDeprecation[0m: \\"assets.experimental_serve_directly\\":
-					    The \\"experimental_serve_directly\\" field is not longer supported. Please use run_worker_first.
-					    Read more: https://developers.cloudflare.com/workers/static-assets/binding/#run_worker_first"
-				`);
-			});
-
-			it("should warn about experimental_serve_directly deprecation from named env", () => {
-				const rawConfig: RawConfig = {
-					env: {
-						ENV1: {
-							assets: {
-								directory: "dist",
-								binding: "ASSETS",
-								experimental_serve_directly: false,
-							},
-						},
-					},
-				};
-
-				const { config, diagnostics } = normalizeAndValidateConfig(
-					rawConfig,
-					undefined,
-					undefined,
-					{ env: "ENV1" }
-				);
-
-				expect(config).toEqual(
-					expect.objectContaining({
-						assets: {
-							directory: "dist",
-							binding: "ASSETS",
-							experimental_serve_directly: false,
-						},
-					})
-				);
-				expect(diagnostics.hasErrors()).toBe(false);
-				expect(diagnostics.hasWarnings()).toBe(true);
-				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-					"Processing wrangler configuration:
-
-					  - \\"env.ENV1\\" environment configuration
-					    - [1mDeprecation[0m: \\"assets.experimental_serve_directly\\":
-					      The \\"experimental_serve_directly\\" field is not longer supported. Please use run_worker_first.
-					      Read more: https://developers.cloudflare.com/workers/static-assets/binding/#run_worker_first"
-				`);
 			});
 		});
 	});
