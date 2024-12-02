@@ -21,24 +21,13 @@ import { CommandRegistry } from "./core/CommandRegistry";
 import { createRegisterYargsCommand } from "./core/register-yargs-command";
 import { d1 } from "./d1";
 import { deleteHandler, deleteOptions } from "./delete";
-import { deployCommand, publishAlias } from "./deploy";
+import { deployCommand } from "./deploy";
 import { isAuthenticationError } from "./deploy/deploy";
 import {
 	isBuildFailure,
 	isBuildFailureFromCause,
 } from "./deployment-bundle/build-failures";
-import {
-	buildHandler,
-	buildOptions,
-	configHandler,
-	noOpOptions,
-	previewHandler,
-	previewOptions,
-	route,
-	routeHandler,
-	subdomainHandler,
-	subdomainOptions,
-} from "./deprecated";
+import { buildHandler, buildOptions } from "./deprecated";
 import { dev } from "./dev";
 import { workerNamespaceCommands } from "./dispatch-namespace";
 import { docs } from "./docs";
@@ -47,22 +36,18 @@ import {
 	JsonFriendlyFatalError,
 	UserError,
 } from "./errors";
-import { generateHandler, generateOptions } from "./generate";
 import { hyperdrive } from "./hyperdrive/index";
 import { initHandler, initOptions } from "./init";
 import {
-	kvBulkAlias,
 	kvBulkDeleteCommand,
 	kvBulkNamespace,
 	kvBulkPutCommand,
-	kvKeyAlias,
 	kvKeyDeleteCommand,
 	kvKeyGetCommand,
 	kvKeyListCommand,
 	kvKeyNamespace,
 	kvKeyPutCommand,
 	kvNamespace,
-	kvNamespaceAlias,
 	kvNamespaceCreateCommand,
 	kvNamespaceDeleteCommand,
 	kvNamespaceListCommand,
@@ -141,7 +126,6 @@ import {
 	r2BucketSippyNamespace,
 } from "./r2/sippy";
 import {
-	secretBulkAlias,
 	secretBulkCommand,
 	secretDeleteCommand,
 	secretListCommand,
@@ -411,10 +395,6 @@ export function createCLIParser(argv: string[]) {
 			command: "wrangler deploy",
 			definition: deployCommand,
 		},
-		{
-			command: "wrangler publish",
-			definition: publishAlias,
-		},
 	]);
 	registry.registerNamespace("deploy");
 
@@ -511,7 +491,6 @@ export function createCLIParser(argv: string[]) {
 		{ command: "wrangler secret delete", definition: secretDeleteCommand },
 		{ command: "wrangler secret list", definition: secretListCommand },
 		{ command: "wrangler secret bulk", definition: secretBulkCommand },
-		{ command: "wrangler secret:bulk", definition: secretBulkAlias },
 	]);
 	registry.registerNamespace("secret");
 
@@ -521,9 +500,6 @@ export function createCLIParser(argv: string[]) {
 
 	/******************** CMD GROUP ***********************/
 	registry.define([
-		{ command: "wrangler kv:key", definition: kvKeyAlias },
-		{ command: "wrangler kv:namespace", definition: kvNamespaceAlias },
-		{ command: "wrangler kv:bulk", definition: kvBulkAlias },
 		{ command: "wrangler kv", definition: kvNamespace },
 		{ command: "wrangler kv namespace", definition: kvNamespaceNamespace },
 		{ command: "wrangler kv key", definition: kvKeyNamespace },
@@ -918,71 +894,10 @@ export function createCLIParser(argv: string[]) {
 	]);
 	registry.registerNamespace("check");
 
-	/******************************************************/
-	/*               DEPRECATED COMMANDS                  */
-	/******************************************************/
-	// [DEPRECATED] build
 	wrangler.command("build", false, buildOptions, buildHandler);
-
-	// [DEPRECATED] config
-	wrangler.command("config", false, noOpOptions, configHandler);
-
-	// [DEPRECATED] preview
-	wrangler.command(
-		"preview [method] [body]",
-		false,
-		previewOptions,
-		previewHandler
-	);
-
-	// [DEPRECATED] route
-	wrangler.command(
-		"route",
-		false, // I think we want to hide this command
-		// "➡️  List or delete worker routes",
-		(routeYargs) => {
-			return route(routeYargs);
-		},
-		routeHandler
-	);
-
-	// [DEPRECATED] subdomain
-	wrangler.command(
-		"subdomain [name]",
-		false,
-		// "👷 Create or change your workers.dev subdomain.",
-		subdomainOptions,
-		subdomainHandler
-	);
-
-	// [DEPRECATED] generate
-	wrangler.command(
-		"generate [name] [template]",
-		false,
-		generateOptions,
-		generateHandler
-	);
 
 	// This set to false to allow overwrite of default behaviour
 	wrangler.version(false);
-
-	// [DEPRECATED] version
-	wrangler.command(
-		"version",
-		false,
-		() => {},
-		async () => {
-			if (process.stdout.isTTY) {
-				await printWranglerBanner();
-			} else {
-				logger.log(wranglerVersion);
-			}
-
-			logger.warn(
-				"`wrangler version` is deprecated and will be removed in a future major version. Please use `wrangler --version` instead."
-			);
-		}
-	);
 
 	registry.registerAll();
 
