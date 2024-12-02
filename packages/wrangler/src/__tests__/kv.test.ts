@@ -1864,66 +1864,6 @@ describe("wrangler", () => {
 			});
 		});
 	});
-
-	describe("kv:* (deprecated)", () => {
-		test("kv:namespace", async () => {
-			const result = runWrangler("kv:namespace --help");
-
-			await expect(result).resolves.toBeUndefined();
-			expect(std.out).toMatchInlineSnapshot(`
-				"wrangler kv:namespace
-
-				COMMANDS
-				  wrangler kv:namespace create <namespace>  Create a new namespace
-				  wrangler kv:namespace list                Output a list of all KV namespaces associated with your account id
-				  wrangler kv:namespace delete              Delete a given namespace.
-
-				GLOBAL FLAGS
-				  -c, --config   Path to Wrangler configuration file  [string]
-				  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-				  -h, --help     Show help  [boolean]
-				  -v, --version  Show version number  [boolean]"
-			`);
-		});
-		test("kv:key", async () => {
-			const result = runWrangler("kv:key --help");
-
-			await expect(result).resolves.toBeUndefined();
-			expect(std.out).toMatchInlineSnapshot(`
-				"wrangler kv:key
-
-				COMMANDS
-				  wrangler kv:key put <key> [value]  Write a single key/value pair to the given namespace
-				  wrangler kv:key list               Output a list of all keys in a given namespace
-				  wrangler kv:key get <key>          Read a single value by key from the given namespace
-				  wrangler kv:key delete <key>       Remove a single key value pair from the given namespace
-
-				GLOBAL FLAGS
-				  -c, --config   Path to Wrangler configuration file  [string]
-				  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-				  -h, --help     Show help  [boolean]
-				  -v, --version  Show version number  [boolean]"
-			`);
-		});
-		test("kv:bulk", async () => {
-			const result = runWrangler("kv:bulk --help");
-
-			await expect(result).resolves.toBeUndefined();
-			expect(std.out).toMatchInlineSnapshot(`
-				"wrangler kv:bulk
-
-				COMMANDS
-				  wrangler kv:bulk put <filename>     Upload multiple key-value pairs to a namespace
-				  wrangler kv:bulk delete <filename>  Delete multiple key-value pairs from a namespace
-
-				GLOBAL FLAGS
-				  -c, --config   Path to Wrangler configuration file  [string]
-				  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-				  -h, --help     Show help  [boolean]
-				  -v, --version  Show version number  [boolean]"
-			`);
-		});
-	});
 });
 
 function writeWranglerKVConfig() {

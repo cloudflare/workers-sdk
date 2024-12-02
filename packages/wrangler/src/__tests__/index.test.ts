@@ -158,20 +158,16 @@ describe("wrangler", () => {
 
 	describe("preview", () => {
 		it("should throw an error if the deprecated command is used with positional arguments", async () => {
-			await expect(runWrangler("preview GET")).rejects
-				.toThrowErrorMatchingInlineSnapshot(`
-				[Error: Deprecation:
-				The \`wrangler preview\` command has been deprecated.
-				Try using \`wrangler dev\` to to try out a worker during development.
-				]
-			`);
-			await expect(runWrangler(`preview GET "SomeBody"`)).rejects
-				.toThrowErrorMatchingInlineSnapshot(`
-				[Error: Deprecation:
-				The \`wrangler preview\` command has been deprecated.
-				Try using \`wrangler dev\` to to try out a worker during development.
-				]
-			`);
+			await expect(
+				runWrangler("preview GET")
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: Unknown arguments: preview, GET]`
+			);
+			await expect(
+				runWrangler(`preview GET "SomeBody"`)
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: Unknown arguments: preview, GET, SomeBody]`
+			);
 		});
 	});
 
@@ -290,15 +286,7 @@ describe("wrangler", () => {
 		await runWrangler("build");
 		await endEventLoop();
 		expect(std.out).toMatchInlineSnapshot(`
-			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mDeprecation: \`wrangler build\` has been deprecated.[0m
-
-			  Please refer to [4mhttps://developers.cloudflare.com/workers/wrangler/migration/deprecations/#build[0m
-			  for more information.
-			  Attempting to run \`wrangler deploy --dry-run --outdir=dist\` for you instead:
-
-
-			Total Upload: xx KiB / gzip: xx KiB
-			No bindings found.
+			"Total Upload: xx KiB / gzip: xx KiB
 			--dry-run: exiting now."
 		`);
 	});

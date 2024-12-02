@@ -41,7 +41,6 @@ export type DevProps = {
 	queueConsumers: Config["queues"]["consumers"];
 	isWorkersSite: boolean;
 	legacyAssetPaths: LegacyAssetPaths | undefined;
-	legacyAssetsConfig: Config["legacy_assets"];
 	assets: AssetsOptions | undefined;
 	compatibilityDate: string;
 	compatibilityFlags: string[] | undefined;

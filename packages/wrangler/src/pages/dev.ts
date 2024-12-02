@@ -894,7 +894,6 @@ export const Handler = async (args: PagesDevArguments) => {
 				$0: "",
 				remote: false,
 				local: true,
-				experimentalLocal: undefined,
 				d1Databases: d1_databases,
 				testScheduled: false,
 				enablePagesAssetsServiceBinding: {
@@ -910,12 +909,10 @@ export const Handler = async (args: PagesDevArguments) => {
 				assets: undefined,
 				name: undefined,
 				noBundle: false,
-				format: undefined,
 				latest: false,
 				routes: undefined,
 				host: undefined,
 				localUpstream: undefined,
-				experimentalPublic: undefined,
 				upstreamProtocol: undefined,
 				var: undefined,
 				define: undefined,
@@ -924,9 +921,7 @@ export const Handler = async (args: PagesDevArguments) => {
 				jsxFragment: undefined,
 				tsconfig: undefined,
 				minify: undefined,
-				experimentalEnableLocalPersistence: undefined,
 				legacyEnv: undefined,
-				public: undefined,
 				env: undefined,
 				ip,
 				port,
@@ -959,11 +954,9 @@ export const Handler = async (args: PagesDevArguments) => {
 				experimentalImagesLocalMode: false,
 				enableIpc: true,
 				config: Array.isArray(args.config) ? args.config : undefined,
-				legacyAssets: undefined,
 				site: undefined,
 				siteInclude: undefined,
 				siteExclude: undefined,
-				inspect: undefined,
 			})
 	);
 
