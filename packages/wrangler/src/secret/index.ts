@@ -4,11 +4,7 @@ import { parse as dotenvParse } from "dotenv";
 import { FormData } from "undici";
 import { fetchResult } from "../cfetch";
 import { configFileName } from "../config";
-import {
-	createAlias,
-	createCommand,
-	createNamespace,
-} from "../core/create-command";
+import { createCommand, createNamespace } from "../core/create-command";
 import { createWorkerUploadForm } from "../deployment-bundle/create-worker-upload-form";
 import { confirm, prompt } from "../dialogs";
 import { FatalError, UserError } from "../errors";
@@ -523,16 +519,6 @@ export const secretBulkCommand = createCommand({
 			logger.log(`✨ 0 secrets successfully uploaded`);
 			throw new Error(`🚨 ${upsertBindings.length} secrets failed to upload`);
 		}
-	},
-});
-
-export const secretBulkAlias = createAlias({
-	aliasOf: "wrangler secret bulk",
-	metadata: {
-		deprecated: true,
-		deprecatedMessage:
-			"`wrangler secret:bulk` is deprecated and will be removed in a future major version.\nPlease use `wrangler secret bulk` instead, which accepts exactly the same arguments.",
-		hidden: true,
 	},
 });
 

@@ -3,11 +3,7 @@ import { arrayBuffer } from "node:stream/consumers";
 import { StringDecoder } from "node:string_decoder";
 import { formatConfigSnippet, readConfig } from "../config";
 import { demandOneOfOption } from "../core";
-import {
-	createAlias,
-	createCommand,
-	createNamespace,
-} from "../core/create-command";
+import { createCommand, createNamespace } from "../core/create-command";
 import { confirm } from "../dialogs";
 import { CommandLineArgsError, UserError } from "../errors";
 import { logger } from "../logger";
@@ -32,36 +28,6 @@ import {
 } from "./helpers";
 import type { EventNames } from "../metrics";
 import type { KeyValue, NamespaceKeyInfo } from "./helpers";
-
-export const kvKeyAlias = createAlias({
-	aliasOf: "wrangler kv key",
-	metadata: {
-		deprecated: true,
-		deprecatedMessage:
-			"The `wrangler kv:key` command is deprecated and will be removed in a future major version. Please use `wrangler kv key` instead which behaves the same.",
-		hidden: true,
-	},
-});
-
-export const kvNamespaceAlias = createAlias({
-	aliasOf: "wrangler kv namespace",
-	metadata: {
-		deprecated: true,
-		deprecatedMessage:
-			"The `wrangler kv:namespace` command is deprecated and will be removed in a future major version. Please use `wrangler kv namespace` instead which behaves the same.",
-		hidden: true,
-	},
-});
-
-export const kvBulkAlias = createAlias({
-	aliasOf: "wrangler kv bulk",
-	metadata: {
-		deprecated: true,
-		deprecatedMessage:
-			"The `wrangler kv:bulk` command is deprecated and will be removed in a future major version. Please use `wrangler kv bulk` instead which behaves the same.",
-		hidden: true,
-	},
-});
 
 export const kvNamespace = createNamespace({
 	metadata: {
