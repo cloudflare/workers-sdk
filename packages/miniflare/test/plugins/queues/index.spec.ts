@@ -41,7 +41,7 @@ async function getControlStub(
 	return stub;
 }
 
-test.only("maxBatchTimeout validation", async (t) => {
+test("maxBatchTimeout validation", async (t) => {
 	const mf = new Miniflare({
 		verbose: true,
 		queueConsumers: {
