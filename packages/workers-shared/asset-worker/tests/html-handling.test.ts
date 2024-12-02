@@ -1,34 +1,27 @@
 import { SELF } from "cloudflare:test";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { applyConfigurationDefaults } from "../../packages/workers-shared/asset-worker/src/configuration";
-import Worker from "../../packages/workers-shared/asset-worker/src/index";
-import { getAssetWithMetadataFromKV } from "../../packages/workers-shared/asset-worker/src/utils/kv";
+import { applyConfigurationDefaults } from "../src/configuration";
+import Worker from "../src/index";
+import { getAssetWithMetadataFromKV } from "../src/utils/kv";
 import { encodingTestCases } from "./test-cases/encoding-test-cases";
 import { htmlHandlingTestCases } from "./test-cases/html-handling-test-cases";
-import type { AssetMetadata } from "../../packages/workers-shared/asset-worker/src/utils/kv";
+import type { AssetMetadata } from "../src/utils/kv";
 
 const IncomingRequest = Request<unknown, IncomingRequestCfProperties>;
 
-vi.mock("../../packages/workers-shared/asset-worker/src/utils/kv.ts");
-vi.mock("../../packages/workers-shared/asset-worker/src/configuration");
+vi.mock("../src/utils/kv.ts");
+vi.mock("../src/configuration");
 const existsMock = (fileList: Set<string>) => {
 	vi.spyOn(Worker.prototype, "unstable_exists").mockImplementation(
 		async (pathname: string) => {
 			if (fileList.has(pathname)) {
 				return pathname;
 			}
+			return null;
 		}
 	);
 };
 const BASE_URL = "http://example.com";
-
-export type TestCase = {
-	title: string;
-	files: string[];
-	requestPath: string;
-	matchedFile?: string;
-	finalPath?: string;
-};
 
 const testSuites = [
 	{
@@ -41,7 +34,7 @@ const testSuites = [
 	},
 ];
 
-describe.each(testSuites)("$title", ({ title, suite }) => {
+describe.each(testSuites)("$title", ({ suite }) => {
 	beforeEach(() => {
 		vi.mocked(getAssetWithMetadataFromKV).mockImplementation(
 			() =>
@@ -73,7 +66,7 @@ describe.each(testSuites)("$title", ({ title, suite }) => {
 			async ({ files, requestPath, matchedFile, finalPath }) => {
 				existsMock(new Set(files));
 				const request = new IncomingRequest(BASE_URL + requestPath);
-				let response = await SELF.fetch(request);
+				const response = await SELF.fetch(request);
 				if (matchedFile && finalPath) {
 					expect(getAssetWithMetadataFromKV).toBeCalledTimes(1);
 					expect(getAssetWithMetadataFromKV).toBeCalledWith(

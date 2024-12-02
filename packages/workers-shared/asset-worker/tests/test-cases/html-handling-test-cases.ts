@@ -1,4 +1,4 @@
-import { TestCase } from "../html-handling.test";
+import type { TestCase } from "./test-case";
 
 export const htmlHandlingTestCases: {
 	html_handling:
