@@ -10,10 +10,14 @@ if (require.main === module) {
 
 		execSync(`git push origin HEAD --force`);
 
-		// Open PR
-		execSync(
-			`gh pr create --head v3-maintenance-${process.env.PR_NUMBER} --label "skip-pr-description-validation" --title "Backport #${process.env.PR_NUMBER} to Wrangler v3" --body "This is an automatically opened PR to backport patch changes from #${process.env.PR_NUMBER} to Wrangler v3"`
-		);
+		try {
+			// Open PR
+			execSync(
+				`gh pr create --head v3-maintenance-${process.env.PR_NUMBER} --label "skip-pr-description-validation" --title "Backport #${process.env.PR_NUMBER} to Wrangler v3" --body "This is an automatically opened PR to backport patch changes from #${process.env.PR_NUMBER} to Wrangler v3"`
+			);
+		} catch {
+			// Ignore "PR already created failures"
+		}
 	}
 }
 
