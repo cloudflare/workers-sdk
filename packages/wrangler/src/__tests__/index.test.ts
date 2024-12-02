@@ -156,10 +156,16 @@ describe("wrangler", () => {
 
 	describe("preview", () => {
 		it("should throw an error if the deprecated command is used with positional arguments", async () => {
-			await expect(runWrangler("preview GET")).rejects
-				.toThrowErrorMatchingInlineSnapshot(`[Error: Unknown arguments: preview, GET]`);
-			await expect(runWrangler(`preview GET "SomeBody"`)).rejects
-				.toThrowErrorMatchingInlineSnapshot(`[Error: Unknown arguments: preview, GET, SomeBody]`);
+			await expect(
+				runWrangler("preview GET")
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: Unknown arguments: preview, GET]`
+			);
+			await expect(
+				runWrangler(`preview GET "SomeBody"`)
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: Unknown arguments: preview, GET, SomeBody]`
+			);
 		});
 	});
 
