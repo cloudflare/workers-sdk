@@ -27,7 +27,6 @@ export type Config = ConfigFields<DevConfig> & PagesConfigFields & Environment;
 export type RawConfig = Partial<ConfigFields<RawDevConfig>> &
 	PagesConfigFields &
 	RawEnvironment &
-	DeprecatedConfigFields &
 	EnvironmentMap & { $schema?: string };
 
 // Pages-specific configuration fields
@@ -112,24 +111,6 @@ export interface ConfigFields<Dev extends RawDevConfig> {
 				 */
 				exclude?: string[];
 		  }
-		| undefined;
-
-	/**
-	 * Old behaviour of serving a folder of static assets with your Worker,
-	 * without any additional code.
-	 * This can either be a string, or an object with additional config
-	 * fields.
-	 * Will be deprecated in the near future in favor of `assets`.
-	 */
-	legacy_assets:
-		| {
-				bucket: string;
-				include: string[];
-				exclude: string[];
-				browser_TTL: number | undefined;
-				serve_single_page_app: boolean;
-		  }
-		| string
 		| undefined;
 
 	/**
@@ -243,32 +224,6 @@ export interface DevConfig {
 
 export type RawDevConfig = Partial<DevConfig>;
 
-interface DeprecatedConfigFields {
-	/**
-	 * The project "type". A holdover from Wrangler v1.x.
-	 * Valid values were "webpack", "javascript", and "rust".
-	 *
-	 * @deprecated DO NOT USE THIS. Most common features now work out of the box with wrangler, including modules, jsx, typescript, etc. If you need anything more, use a custom build.
-	 * @breaking
-	 */
-	type?: "webpack" | "javascript" | "rust";
-
-	/**
-	 * Path to the webpack config to use when building your worker.
-	 * A holdover from Wrangler v1.x, used with `type: "webpack"`.
-	 *
-	 * @deprecated DO NOT USE THIS. Most common features now work out of the box with wrangler, including modules, jsx, typescript, etc. If you need anything more, use a custom build.
-	 * @breaking
-	 */
-	webpack_config?: string;
-
-	/**
-	 * Configuration only used by a standalone use of the miniflare binary.
-	 * @deprecated
-	 */
-	miniflare?: unknown;
-}
-
 interface EnvironmentMap {
 	/**
 	 * The `env` section defines overrides for the configuration for different environments.
@@ -341,7 +296,6 @@ export const defaultWranglerConfig: Config = {
 	configPath: undefined,
 	legacy_env: true,
 	site: undefined,
-	legacy_assets: undefined,
 	wasm_modules: undefined,
 	text_blobs: undefined,
 	data_blobs: undefined,
@@ -364,14 +318,12 @@ export const defaultWranglerConfig: Config = {
 	triggers: {
 		crons: [],
 	},
-	usage_model: undefined,
 	rules: [],
 	build: { command: undefined, watch_dir: "./src", cwd: undefined },
 	no_bundle: undefined,
 	minify: undefined,
 	dispatch_namespaces: [],
 	first_party_worker: undefined,
-	zone_id: undefined,
 	logfwdr: { bindings: [] },
 	logpush: undefined,
 	upload_source_maps: undefined,

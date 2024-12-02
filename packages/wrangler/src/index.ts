@@ -1,6 +1,5 @@
 import module from "node:module";
 import os from "node:os";
-import TOML from "@iarna/toml";
 import chalk from "chalk";
 import { ProxyAgent, setGlobalDispatcher } from "undici";
 import makeCLI from "yargs";
@@ -23,25 +22,13 @@ import {
 	rollbackDeployment,
 	viewDeployment,
 } from "./deployments";
-import {
-	buildHandler,
-	buildOptions,
-	configHandler,
-	noOpOptions,
-	previewHandler,
-	previewOptions,
-	route,
-	routeHandler,
-	subdomainHandler,
-	subdomainOptions,
-} from "./deprecated";
+import { buildHandler, buildOptions } from "./deprecated";
 import { workerNamespaceCommands } from "./dispatch-namespace";
 import {
 	CommandLineArgsError,
 	JsonFriendlyFatalError,
 	UserError,
 } from "./errors";
-import { generateHandler, generateOptions } from "./generate";
 import { hyperdrive } from "./hyperdrive/index";
 import { initHandler, initOptions } from "./init";
 import "./docs";
@@ -59,7 +46,7 @@ import { APIError, formatMessage, ParseError } from "./parse";
 import { pipelines } from "./pipelines";
 import { pubSubCommands } from "./pubsub/pubsub-commands";
 import { queues } from "./queues/cli/commands";
-import { secret, secretBulkHandler, secretBulkOptions } from "./secret";
+import { secret } from "./secret";
 import {
 	addBreadcrumb,
 	captureGlobalException,
@@ -104,22 +91,7 @@ if (proxy) {
 }
 
 export function getRules(config: Config): Config["rules"] {
-	const rules = config.rules ?? config.build?.upload?.rules ?? [];
-
-	if (config.rules && config.build?.upload?.rules) {
-		throw new UserError(
-			`You cannot configure both [rules] and [build.upload.rules] in your ${configFileName(config.configPath)} file. Delete the \`build.upload\` section.`
-		);
-	}
-
-	if (config.build?.upload?.rules) {
-		logger.warn(
-			`Deprecation: The \`build.upload.rules\` config field is no longer used, the rules should be specified via the \`rules\` config field. Delete the \`build.upload\` field from the configuration file, and add this:
-
-${TOML.stringify({ rules: config.build.upload.rules })}`
-		);
-	}
-	return rules;
+	return config.rules ?? [];
 }
 
 export function isLegacyEnv(config: Config): boolean {
@@ -350,7 +322,7 @@ export function createCLIParser(argv: string[]) {
 
 	// deploy
 	wrangler.command(
-		["deploy [script]", "publish [script]"],
+		"deploy [script]",
 		"🆙 Deploy a Worker to Cloudflare",
 		deployOptions,
 		deployHandler
@@ -600,79 +572,10 @@ export function createCLIParser(argv: string[]) {
 	register.registerNamespace("logout");
 	register.registerNamespace("whoami");
 
-	/******************************************************/
-	/*               DEPRECATED COMMANDS                  */
-	/******************************************************/
-	// [DEPRECATED] build
 	wrangler.command("build", false, buildOptions, buildHandler);
-
-	// [DEPRECATED] config
-	wrangler.command("config", false, noOpOptions, configHandler);
-
-	// [DEPRECATED] preview
-	wrangler.command(
-		"preview [method] [body]",
-		false,
-		previewOptions,
-		previewHandler
-	);
-
-	// [DEPRECATED] route
-	wrangler.command(
-		"route",
-		false, // I think we want to hide this command
-		// "➡️  List or delete worker routes",
-		(routeYargs) => {
-			return route(routeYargs);
-		},
-		routeHandler
-	);
-
-	// [DEPRECATED] subdomain
-	wrangler.command(
-		"subdomain [name]",
-		false,
-		// "👷 Create or change your workers.dev subdomain.",
-		subdomainOptions,
-		subdomainHandler
-	);
-
-	// [DEPRECATED] secret:bulk
-	wrangler.command(
-		"secret:bulk [json]",
-		false,
-		secretBulkOptions,
-		secretBulkHandler
-	);
-
-	// [DEPRECATED] generate
-	wrangler.command(
-		"generate [name] [template]",
-		false,
-		generateOptions,
-		generateHandler
-	);
 
 	// This set to false to allow overwrite of default behaviour
 	wrangler.version(false);
-
-	// [DEPRECATED] version
-	wrangler.command(
-		"version",
-		false,
-		() => {},
-		async () => {
-			if (process.stdout.isTTY) {
-				await printWranglerBanner();
-			} else {
-				logger.log(wranglerVersion);
-			}
-
-			logger.warn(
-				"`wrangler version` is deprecated and will be removed in a future major version. Please use `wrangler --version` instead."
-			);
-		}
-	);
 
 	register.registerAll();
 

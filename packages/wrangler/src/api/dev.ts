@@ -22,7 +22,6 @@ export interface UnstableDevOptions {
 	httpsKeyPath?: string;
 	httpsCertPath?: string;
 	assets?: string; // Static assets to be served
-	legacyAssets?: string; // Static assets to be served
 	site?: string; // Root folder of static assets for Workers Sites
 	siteInclude?: string[]; // Array of .gitignore-style patterns that match file or directory names from the sites directory. Only matched items will be uploaded.
 	siteExclude?: string[]; // Array of .gitignore-style patterns that match file or directory names from the sites directory. Matched items will not be uploaded.
@@ -188,7 +187,6 @@ export async function unstable_dev(
 		httpsKeyPath: options?.httpsKeyPath,
 		httpsCertPath: options?.httpsCertPath,
 		assets: undefined,
-		legacyAssets: options?.legacyAssets,
 		site: options?.site, // Root folder of static assets for Workers Sites
 		siteInclude: options?.siteInclude, // Array of .gitignore-style patterns that match file or directory names from the sites directory. Only matched items will be uploaded.
 		siteExclude: options?.siteExclude, // Array of .gitignore-style patterns that match file or directory names from the sites directory. Matched items will not be uploaded.
@@ -201,7 +199,6 @@ export async function unstable_dev(
 		routes: undefined,
 		host: undefined,
 		localUpstream: undefined,
-		experimentalPublic: undefined,
 		upstreamProtocol: undefined,
 		var: undefined,
 		define: undefined,
@@ -212,7 +209,6 @@ export async function unstable_dev(
 		minify: undefined,
 		experimentalEnableLocalPersistence: undefined,
 		legacyEnv: undefined,
-		public: undefined,
 		...options,
 		logLevel: options?.logLevel ?? defaultLogLevel,
 		port: options?.port ?? 0,

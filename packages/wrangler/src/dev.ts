@@ -25,7 +25,7 @@ import { run } from "./experimental-flags";
 import isInteractive from "./is-interactive";
 import { logger } from "./logger";
 import * as metrics from "./metrics";
-import { getLegacyAssetPaths, getSiteAssetPaths } from "./sites";
+import { getSiteAssetPaths } from "./sites";
 import { loginOrRefreshIfRequired, requireApiToken, requireAuth } from "./user";
 import {
 	collectKeyValues,
@@ -152,27 +152,6 @@ const command = defineCommand({
 			type: "string",
 			describe:
 				"Host to act as origin in local mode, defaults to dev.host or route",
-		},
-		"experimental-public": {
-			describe: "(Deprecated) Static assets to be served",
-			type: "string",
-			requiresArg: true,
-			deprecated: true,
-			hidden: true,
-		},
-		"legacy-assets": {
-			describe: "Static assets to be served",
-			type: "string",
-			requiresArg: true,
-			deprecated: true,
-			hidden: true,
-		},
-		public: {
-			describe: "(Deprecated) Static assets to be served",
-			type: "string",
-			requiresArg: true,
-			deprecated: true,
-			hidden: true,
 		},
 		site: {
 			describe: "Root folder of static assets for Workers Sites",
@@ -363,13 +342,6 @@ const command = defineCommand({
 				);
 			}
 		}
-
-		if (args.legacyAssets) {
-			logger.warn(
-				`The --legacy-assets argument has been deprecated. Please use --assets instead.\n` +
-					`To learn more about Workers with assets, visit our documentation at https://developers.cloudflare.com/workers/frameworks/.`
-			);
-		}
 	},
 	async handler(args) {
 		const devInstance = await run(
@@ -539,18 +511,6 @@ export async function startDev(args: StartDevOptions) {
 			//devtools are enabled by default, but we still need to disable them if the caller doesn't want them
 			logger.warn(
 				"Passing --inspect is unnecessary, now you can always connect to devtools."
-			);
-		}
-
-		if (args.experimentalPublic) {
-			throw new UserError(
-				"The --experimental-public field has been deprecated, try --legacy-assets instead."
-			);
-		}
-
-		if (args.public) {
-			throw new UserError(
-				"The --public field has been deprecated, try --legacy-assets instead."
 			);
 		}
 
@@ -727,7 +687,7 @@ export async function startDev(args: StartDevOptions) {
 				},
 				legacy: {
 					site: (configParam) => {
-						const legacyAssetPaths = getResolvedLegacyAssetPaths(
+						const legacyAssetPaths = getResolvedSiteAssetPaths(
 							args,
 							configParam
 						);
@@ -742,8 +702,6 @@ export async function startDev(args: StartDevOptions) {
 								}
 							: undefined;
 					},
-					legacyAssets: (configParam) =>
-						args.legacyAssets ?? configParam.legacy_assets,
 					enableServiceEnvironments: !(args.legacyEnv ?? true),
 				},
 				assets: args.assets,
@@ -870,20 +828,13 @@ export function getInferredHost(
 	}
 }
 
-function getResolvedLegacyAssetPaths(
-	args: StartDevOptions,
-	configParam: Config
-) {
-	const legacyAssetPaths =
-		args.legacyAssets || configParam.legacy_assets
-			? getLegacyAssetPaths(configParam, args.legacyAssets)
-			: getSiteAssetPaths(
-					configParam,
-					args.site,
-					args.siteInclude,
-					args.siteExclude
-				);
-	return legacyAssetPaths;
+function getResolvedSiteAssetPaths(args: StartDevOptions, configParam: Config) {
+	return getSiteAssetPaths(
+		configParam,
+		args.site,
+		args.siteInclude,
+		args.siteExclude
+	);
 }
 
 export function getBindings(

@@ -1774,97 +1774,6 @@ Update them to point to this script instead?`,
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it('should use `build.upload.main` as an entry point, where `build.upload.dir` defaults to "./dist", and log a deprecation warning', async () => {
-			writeWranglerConfig({ build: { upload: { main: "./index.js" } } });
-			writeWorkerSource({ basePath: "./dist" });
-			mockUploadWorkerRequest();
-			mockSubDomainRequest();
-
-			await runWrangler("deploy");
-
-			expect(std.out).toMatchInlineSnapshot(`
-				"Total Upload: xx KiB / gzip: xx KiB
-				Worker Startup Time: 100 ms
-				Uploaded test-name (TIMINGS)
-				Deployed test-name triggers (TIMINGS)
-				  https://test-name.test-sub-domain.workers.dev
-				Current Version ID: Galaxy-Class"
-			`);
-			expect(std.err).toMatchInlineSnapshot(`""`);
-			expect(std.warn).toMatchInlineSnapshot(`
-				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
-
-				    - [1mDeprecation[0m: \\"build.upload.main\\":
-				      Delete the \`build.upload.main\` and \`build.upload.dir\` fields.
-				      Then add the top level \`main\` field to your configuration file:
-				      \`\`\`
-				      main = \\"dist/index.js\\"
-				      \`\`\`
-
-				"
-			`);
-		});
-
-		it("should use `build.upload.main` relative to `build.upload.dir`", async () => {
-			writeWranglerConfig({
-				build: {
-					upload: {
-						main: "./index.js",
-						dir: "./foo",
-					},
-				},
-			});
-			writeWorkerSource({ basePath: "./foo" });
-			mockUploadWorkerRequest({ expectedEntry: "var foo = 100;" });
-			mockSubDomainRequest();
-			process.chdir("foo");
-			await runWrangler("deploy");
-
-			expect(std.out).toMatchInlineSnapshot(`
-				"Total Upload: xx KiB / gzip: xx KiB
-				Worker Startup Time: 100 ms
-				Uploaded test-name (TIMINGS)
-				Deployed test-name triggers (TIMINGS)
-				  https://test-name.test-sub-domain.workers.dev
-				Current Version ID: Galaxy-Class"
-			`);
-			expect(std.err).toMatchInlineSnapshot(`""`);
-			expect(std.warn).toMatchInlineSnapshot(`
-				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing ../wrangler.toml configuration:[0m
-
-				    - [1mDeprecation[0m: \\"build.upload.main\\":
-				      Delete the \`build.upload.main\` and \`build.upload.dir\` fields.
-				      Then add the top level \`main\` field to your configuration file:
-				      \`\`\`
-				      main = \\"foo/index.js\\"
-				      \`\`\`
-				    - [1mDeprecation[0m: \\"build.upload.dir\\":
-				      Use the top level \\"main\\" field or a command-line argument to specify the entry-point for the
-				  Worker.
-
-				"
-			`);
-		});
-
-		it("should error when both `main` and `build.upload.main` are used", async () => {
-			writeWranglerConfig({
-				main: "./index.js",
-				build: {
-					upload: {
-						main: "./index.js",
-						dir: "./foo",
-					},
-				},
-			});
-			await expect(runWrangler("deploy")).rejects
-				.toThrowErrorMatchingInlineSnapshot(`
-				[Error: Processing wrangler.toml configuration:
-				  - Don't define both the \`main\` and \`build.upload.main\` fields in your configuration.
-				    They serve the same purpose: to point to the entry-point of your worker.
-				    Delete the \`build.upload.main\` and \`build.upload.dir\` field from your config.]
-			`);
-		});
-
 		it("should be able to transpile TypeScript (esm)", async () => {
 			writeWranglerConfig();
 			writeWorkerSource({ format: "ts" });
@@ -2273,58 +2182,6 @@ addEventListener('fetch', event => {});`
 		      `);
 		});
 
-		it("should not require an explicit entry point when using --legacy-assets", async () => {
-			const assets = [
-				{ filePath: "file-1.txt", content: "Content of file-1" },
-				{ filePath: "file-2.txt", content: "Content of file-2" },
-			];
-			const kvNamespace = {
-				title: "__test-name-workers_sites_assets",
-				id: "__test-name-workers_sites_assets-id",
-			};
-			writeAssets(assets);
-			mockUploadWorkerRequest({
-				expectedMainModule: "no-op-worker.js",
-			});
-			mockSubDomainRequest();
-			mockListKVNamespacesRequest(kvNamespace);
-			mockKeyListRequest(kvNamespace.id, []);
-			mockUploadAssetsToKVRequest(kvNamespace.id, assets);
-
-			await runWrangler(
-				"deploy --legacy-assets assets --latest --name test-name"
-			);
-
-			expect(std.warn).toMatchInlineSnapshot(`
-				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --legacy-assets argument has been deprecated. Please use --assets instead.[0m
-
-				  To learn more about Workers with assets, visit our documentation at
-				  [4mhttps://developers.cloudflare.com/workers/frameworks/[0m.
-
-
-				[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mUsing the latest version of the Workers runtime. To silence this warning, please choose a specific version of the runtime with --compatibility-date, or add a compatibility_date to your Wrangler configuration file.[0m
-
-				"
-			`);
-			expect(std.info).toMatchInlineSnapshot(`
-				"Fetching list of already uploaded assets...
-				Building list of assets to upload...
-				 + file-1.2ca234f380.txt (uploading new version of file-1.txt)
-				 + file-2.5938485188.txt (uploading new version of file-2.txt)
-				Uploading 2 new assets...
-				Uploaded 100% [2 out of 2]"
-			`);
-			expect(std.out).toMatchInlineSnapshot(`
-				"↗️  Done syncing assets
-				Total Upload: xx KiB / gzip: xx KiB
-				Worker Startup Time: 100 ms
-				Uploaded test-name (TIMINGS)
-				Deployed test-name triggers (TIMINGS)
-				  https://test-name.test-sub-domain.workers.dev
-				Current Version ID: Galaxy-Class"
-			`);
-		});
-
 		describe("should source map validation errors", () => {
 			function mockDeployWithValidationError(message: string) {
 				const handler = http.post(
@@ -2482,281 +2339,6 @@ addEventListener('fetch', event => {});`
 				Current Version ID: Galaxy-Class"
 			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
-		});
-
-		it("should upload all the files in the directory specified by `--legacy-assets`", async () => {
-			const assets = [
-				{ filePath: "file-1.txt", content: "Content of file-1" },
-				{ filePath: "file-2.txt", content: "Content of file-2" },
-			];
-			const kvNamespace = {
-				title: "__test-name-workers_sites_assets",
-				id: "__test-name-workers_sites_assets-id",
-			};
-			writeWranglerConfig({
-				main: "./index.js",
-			});
-			writeWorkerSource();
-			writeAssets(assets);
-			mockUploadWorkerRequest({
-				expectedMainModule: "index.js",
-			});
-			mockSubDomainRequest();
-			mockListKVNamespacesRequest(kvNamespace);
-			mockKeyListRequest(kvNamespace.id, []);
-			mockUploadAssetsToKVRequest(kvNamespace.id, assets);
-			await runWrangler("deploy --legacy-assets assets");
-
-			expect(std.warn).toMatchInlineSnapshot(`
-				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --legacy-assets argument has been deprecated. Please use --assets instead.[0m
-
-				  To learn more about Workers with assets, visit our documentation at
-				  [4mhttps://developers.cloudflare.com/workers/frameworks/[0m.
-
-				"
-			`);
-			expect(std.out).toMatchInlineSnapshot(`
-				"↗️  Done syncing assets
-				Total Upload: xx KiB / gzip: xx KiB
-				Worker Startup Time: 100 ms
-				Uploaded test-name (TIMINGS)
-				Deployed test-name triggers (TIMINGS)
-				  https://test-name.test-sub-domain.workers.dev
-				Current Version ID: Galaxy-Class"
-			`);
-
-			expect(std.info).toMatchInlineSnapshot(`
-				"Fetching list of already uploaded assets...
-				Building list of assets to upload...
-				 + file-1.2ca234f380.txt (uploading new version of file-1.txt)
-				 + file-2.5938485188.txt (uploading new version of file-2.txt)
-				Uploading 2 new assets...
-				Uploaded 100% [2 out of 2]"
-			`);
-		});
-
-		it("should error when trying to use --legacy-assets with a service-worker Worker", async () => {
-			writeWranglerConfig({
-				main: "./index.js",
-			});
-			writeWorkerSource({ type: "sw" });
-			await expect(
-				runWrangler("deploy --legacy-assets abc")
-			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: You cannot use the service-worker format with an \`assets\` directory yet. For information on how to migrate to the module-worker format, see: https://developers.cloudflare.com/workers/learning/migrating-to-module-workers/]`
-			);
-
-			expect(std.warn).toMatchInlineSnapshot(`
-				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --legacy-assets argument has been deprecated. Please use --assets instead.[0m
-
-				  To learn more about Workers with assets, visit our documentation at
-				  [4mhttps://developers.cloudflare.com/workers/frameworks/[0m.
-
-				"
-			`);
-		});
-
-		it("should error if --legacy-assets and --site are used together", async () => {
-			writeWranglerConfig({
-				main: "./index.js",
-			});
-			writeWorkerSource();
-			await expect(
-				runWrangler("deploy --legacy-assets abc --site xyz")
-			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: Cannot use legacy assets and Workers Sites in the same Worker.]`
-			);
-
-			expect(std.warn).toMatchInlineSnapshot(`
-				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --legacy-assets argument has been deprecated. Please use --assets instead.[0m
-
-				  To learn more about Workers with assets, visit our documentation at
-				  [4mhttps://developers.cloudflare.com/workers/frameworks/[0m.
-
-				"
-			`);
-			expect(std.err).toMatchInlineSnapshot(`
-				"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mCannot use legacy assets and Workers Sites in the same Worker.[0m
-
-				"
-			`);
-		});
-
-		it("should error if --legacy-assets and config.site are used together", async () => {
-			writeWranglerConfig({
-				main: "./index.js",
-				site: {
-					bucket: "xyz",
-				},
-			});
-			writeWorkerSource();
-			await expect(
-				runWrangler("deploy --legacy-assets abc")
-			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: Cannot use legacy assets and Workers Sites in the same Worker.]`
-			);
-
-			expect(std.warn).toMatchInlineSnapshot(`
-				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --legacy-assets argument has been deprecated. Please use --assets instead.[0m
-
-				  To learn more about Workers with assets, visit our documentation at
-				  [4mhttps://developers.cloudflare.com/workers/frameworks/[0m.
-
-				"
-			`);
-		});
-
-		it("should error if config.legacy_assets and --site are used together", async () => {
-			writeWranglerConfig({
-				main: "./index.js",
-				legacy_assets: "abc",
-			});
-			writeWorkerSource();
-			await expect(
-				runWrangler("deploy --site xyz")
-			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: Cannot use legacy assets and Workers Sites in the same Worker.]`
-			);
-
-			expect(std.warn).toMatchInlineSnapshot(`
-				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
-
-				    - [1mDeprecation[0m: \\"legacy_assets\\":
-				      The \`legacy_assets\` feature has been deprecated. Please use \`assets\` instead.
-
-				"
-			`);
-		});
-
-		it("should error if config.legacy_assets and config.site are used together", async () => {
-			writeWranglerConfig({
-				main: "./index.js",
-				legacy_assets: "abc",
-				site: {
-					bucket: "xyz",
-				},
-			});
-			writeWorkerSource();
-			await expect(
-				runWrangler("deploy")
-			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: Cannot use legacy assets and Workers Sites in the same Worker.]`
-			);
-
-			expect(std.warn).toMatchInlineSnapshot(`
-				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
-
-				    - [1mDeprecation[0m: \\"legacy_assets\\":
-				      The \`legacy_assets\` feature has been deprecated. Please use \`assets\` instead.
-
-				"
-			`);
-		});
-
-		it("should warn if --legacy-assets is used", async () => {
-			writeWranglerConfig({
-				main: "./index.js",
-			});
-			const assets = [
-				{ filePath: "subdir/file-1.txt", content: "Content of file-1" },
-				{ filePath: "subdir/file-2.txt", content: "Content of file-2" },
-			];
-			const kvNamespace = {
-				title: "__test-name-workers_sites_assets",
-				id: "__test-name-workers_sites_assets-id",
-			};
-			fs.writeFileSync("index.js", `export default {};`);
-			writeWorkerSource();
-			writeAssets(assets);
-			mockUploadWorkerRequest({
-				expectedMainModule: "index.js",
-			});
-			mockSubDomainRequest();
-			mockListKVNamespacesRequest(kvNamespace);
-			mockKeyListRequest(kvNamespace.id, []);
-			mockUploadAssetsToKVRequest(kvNamespace.id, assets);
-
-			await runWrangler("deploy --legacy-assets ./assets");
-
-			expect(std.warn).toMatchInlineSnapshot(`
-				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --legacy-assets argument has been deprecated. Please use --assets instead.[0m
-
-				  To learn more about Workers with assets, visit our documentation at
-				  [4mhttps://developers.cloudflare.com/workers/frameworks/[0m.
-
-				"
-			`);
-			expect(std.err).toMatchInlineSnapshot(`""`);
-			expect(std.info).toMatchInlineSnapshot(`
-				"Fetching list of already uploaded assets...
-				Building list of assets to upload...
-				 + subdir/file-1.2ca234f380.txt (uploading new version of subdir/file-1.txt)
-				 + subdir/file-2.5938485188.txt (uploading new version of subdir/file-2.txt)
-				Uploading 2 new assets...
-				Uploaded 100% [2 out of 2]"
-			`);
-			expect(std.out).toMatchInlineSnapshot(`
-				"↗️  Done syncing assets
-				Total Upload: xx KiB / gzip: xx KiB
-				Worker Startup Time: 100 ms
-				Uploaded test-name (TIMINGS)
-				Deployed test-name triggers (TIMINGS)
-				  https://test-name.test-sub-domain.workers.dev
-				Current Version ID: Galaxy-Class"
-			`);
-		});
-
-		it("should warn if config.legacy_assets is used", async () => {
-			writeWranglerConfig({
-				main: "./index.js",
-				legacy_assets: "./assets",
-			});
-			const assets = [
-				{ filePath: "subdir/file-1.txt", content: "Content of file-1" },
-				{ filePath: "subdir/file-2.txt", content: "Content of file-2" },
-			];
-			const kvNamespace = {
-				title: "__test-name-workers_sites_assets",
-				id: "__test-name-workers_sites_assets-id",
-			};
-			fs.writeFileSync("index.js", `export default {};`);
-			writeWorkerSource();
-			writeAssets(assets);
-			mockUploadWorkerRequest({
-				expectedMainModule: "index.js",
-			});
-			mockSubDomainRequest();
-			mockListKVNamespacesRequest(kvNamespace);
-			mockKeyListRequest(kvNamespace.id, []);
-			mockUploadAssetsToKVRequest(kvNamespace.id, assets);
-
-			await runWrangler("deploy");
-
-			expect(std.warn).toMatchInlineSnapshot(`
-				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
-
-				    - [1mDeprecation[0m: \\"legacy_assets\\":
-				      The \`legacy_assets\` feature has been deprecated. Please use \`assets\` instead.
-
-				"
-			`);
-			expect(std.info).toMatchInlineSnapshot(`
-				"Fetching list of already uploaded assets...
-				Building list of assets to upload...
-				 + subdir/file-1.2ca234f380.txt (uploading new version of subdir/file-1.txt)
-				 + subdir/file-2.5938485188.txt (uploading new version of subdir/file-2.txt)
-				Uploading 2 new assets...
-				Uploaded 100% [2 out of 2]"
-			`);
-			expect(std.out).toMatchInlineSnapshot(`
-				"↗️  Done syncing assets
-				Total Upload: xx KiB / gzip: xx KiB
-				Worker Startup Time: 100 ms
-				Uploaded test-name (TIMINGS)
-				Deployed test-name triggers (TIMINGS)
-				  https://test-name.test-sub-domain.workers.dev
-				Current Version ID: Galaxy-Class"
-			`);
 		});
 
 		it("should not contain backslash for assets with nested directories", async () => {
@@ -3889,57 +3471,6 @@ addEventListener('fetch', event => {});`
 				Current Version ID: Galaxy-Class",
 				  "warn": "",
 				}
-			`);
-		});
-
-		it("should use the relative path from current working directory to Worker directory when using `--legacy-assets`", async () => {
-			const assets = [
-				{ filePath: "file-1.txt", content: "Content of file-1" },
-				{ filePath: "file-2.txt", content: "Content of file-2" },
-			];
-			const kvNamespace = {
-				title: "__test-name-workers_sites_assets",
-				id: "__test-name-workers_sites_assets-id",
-			};
-			writeWranglerConfig({
-				main: "./index.js",
-			});
-			writeWorkerSource();
-			writeAssets(assets, "my-assets");
-			mockUploadWorkerRequest({
-				expectedMainModule: "index.js",
-			});
-			mockSubDomainRequest();
-			mockListKVNamespacesRequest(kvNamespace);
-			mockKeyListRequest(kvNamespace.id, []);
-			mockUploadAssetsToKVRequest(kvNamespace.id, assets);
-			process.chdir("./my-assets");
-			await runWrangler("deploy --legacy-assets .");
-
-			expect(std.warn).toMatchInlineSnapshot(`
-				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --legacy-assets argument has been deprecated. Please use --assets instead.[0m
-
-				  To learn more about Workers with assets, visit our documentation at
-				  [4mhttps://developers.cloudflare.com/workers/frameworks/[0m.
-
-				"
-			`);
-			expect(std.info).toMatchInlineSnapshot(`
-				"Fetching list of already uploaded assets...
-				Building list of assets to upload...
-				 + file-1.2ca234f380.txt (uploading new version of file-1.txt)
-				 + file-2.5938485188.txt (uploading new version of file-2.txt)
-				Uploading 2 new assets...
-				Uploaded 100% [2 out of 2]"
-			`);
-			expect(std.out).toMatchInlineSnapshot(`
-				"↗️  Done syncing assets
-				Total Upload: xx KiB / gzip: xx KiB
-				Worker Startup Time: 100 ms
-				Uploaded test-name (TIMINGS)
-				Deployed test-name triggers (TIMINGS)
-				  https://test-name.test-sub-domain.workers.dev
-				Current Version ID: Galaxy-Class"
 			`);
 		});
 
@@ -6792,7 +6323,7 @@ addEventListener('fetch', event => {});`
 				],
 			});
 
-			await runWrangler("publish index.js");
+			await runWrangler("deploy index.js");
 			expect(std.out).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
@@ -6816,7 +6347,7 @@ addEventListener('fetch', event => {});`
 				expectedLimits: { cpu_ms: 15_000 },
 			});
 
-			await runWrangler("publish index.js");
+			await runWrangler("deploy index.js");
 			expect(std.out).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
@@ -8482,7 +8013,7 @@ addEventListener('fetch', event => {});`
 						},
 					],
 				});
-				await runWrangler("publish index.js");
+				await runWrangler("deploy index.js");
 				expect(std.out).toMatchInlineSnapshot(`
 					"Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
@@ -8496,13 +8027,7 @@ addEventListener('fetch', event => {});`
 					Current Version ID: Galaxy-Class"
 				`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
-				expect(std.warn).toMatchInlineSnapshot(`
-			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m\`wrangler publish\` is deprecated and will be removed in the next major version.[0m
-
-			  Please use \`wrangler deploy\` instead, which accepts exactly the same arguments.
-
-			"
-		`);
+				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
 
 			it("should support dispatch namespace bindings with parameterized outbounds", async () => {
@@ -8539,7 +8064,7 @@ addEventListener('fetch', event => {});`
 						},
 					],
 				});
-				await runWrangler("publish index.js");
+				await runWrangler("deploy index.js");
 				expect(std.out).toMatchInlineSnapshot(`
 					"Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
@@ -8552,13 +8077,7 @@ addEventListener('fetch', event => {});`
 					Current Version ID: Galaxy-Class"
 				`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
-				expect(std.warn).toMatchInlineSnapshot(`
-			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m\`wrangler publish\` is deprecated and will be removed in the next major version.[0m
-
-			  Please use \`wrangler deploy\` instead, which accepts exactly the same arguments.
-
-			"
-		`);
+				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
 		});
 
@@ -8911,55 +8430,6 @@ addEventListener('fetch', event => {});`
 			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
-		});
-
-		it("should log a deprecation warning when using `build.upload.rules`", async () => {
-			writeWranglerConfig({
-				build: {
-					upload: {
-						rules: [{ type: "Text", globs: ["**/*.file"], fallthrough: true }],
-					},
-				},
-			});
-			fs.writeFileSync(
-				"./index.js",
-				`import TEXT from './text.file'; export default {};`
-			);
-			fs.writeFileSync("./text.file", "SOME TEXT CONTENT");
-			mockSubDomainRequest();
-			mockUploadWorkerRequest({
-				expectedType: "esm",
-				expectedBindings: [],
-				expectedModules: {
-					"./2d91d1c4dd6e57d4f5432187ab7c25f45a8973f0-text.file":
-						"SOME TEXT CONTENT",
-				},
-			});
-			await runWrangler("deploy index.js");
-			expect(std.out).toMatchInlineSnapshot(`
-				"Total Upload: xx KiB / gzip: xx KiB
-				Worker Startup Time: 100 ms
-				Uploaded test-name (TIMINGS)
-				Deployed test-name triggers (TIMINGS)
-				  https://test-name.test-sub-domain.workers.dev
-				Current Version ID: Galaxy-Class"
-			`);
-			expect(std.err).toMatchInlineSnapshot(`""`);
-			expect(std.warn).toMatchInlineSnapshot(`
-				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
-
-				    - Deprecation: The \`build.upload.rules\` config field is no longer used, the rules should be
-				  specified via the \`rules\` config field. Delete the \`build.upload\` field from the configuration
-				  file, and add this:
-				      \`\`\`
-				      [[rules]]
-				      type = \\"Text\\"
-				      globs = [ \\"**/*.file\\" ]
-				      fallthrough = true
-				      \`\`\`
-
-				"
-			`);
 		});
 
 		it("should be able to use fallthrough:true for multiple rules", async () => {
@@ -9520,47 +8990,6 @@ addEventListener('fetch', event => {});`
 				Current Version ID: Galaxy-Class",
 				  "warn": "",
 				}
-			`);
-		});
-
-		it("should preserve the entry point file name, even when using a facade", async () => {
-			writeWranglerConfig();
-			writeWorkerSource();
-			mockSubDomainRequest();
-			mockUploadWorkerRequest();
-			const assets = [
-				{ filePath: "file-1.txt", content: "Content of file-1" },
-				{ filePath: "file-2.txt", content: "Content of file-2" },
-			];
-			const kvNamespace = {
-				title: "__test-name-workers_sites_assets",
-				id: "__test-name-workers_sites_assets-id",
-			};
-			writeAssets(assets);
-			mockListKVNamespacesRequest(kvNamespace);
-			mockKeyListRequest(kvNamespace.id, []);
-			mockUploadAssetsToKVRequest(kvNamespace.id, assets);
-			await runWrangler(
-				"deploy index.js --outdir some-dir --legacy-assets assets"
-			);
-			expect(fs.existsSync("some-dir/index.js")).toBe(true);
-			expect(fs.existsSync("some-dir/index.js.map")).toBe(true);
-			expect(std.info).toMatchInlineSnapshot(`
-				"Fetching list of already uploaded assets...
-				Building list of assets to upload...
-				 + file-1.2ca234f380.txt (uploading new version of file-1.txt)
-				 + file-2.5938485188.txt (uploading new version of file-2.txt)
-				Uploading 2 new assets...
-				Uploaded 100% [2 out of 2]"
-			`);
-			expect(std.out).toMatchInlineSnapshot(`
-				"↗️  Done syncing assets
-				Total Upload: xx KiB / gzip: xx KiB
-				Worker Startup Time: 100 ms
-				Uploaded test-name (TIMINGS)
-				Deployed test-name triggers (TIMINGS)
-				  https://test-name.test-sub-domain.workers.dev
-				Current Version ID: Galaxy-Class"
 			`);
 		});
 
@@ -11407,7 +10836,7 @@ export default{
 				},
 			});
 
-			await runWrangler("publish index.js");
+			await runWrangler("deploy index.js");
 			expect(std.out).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
@@ -11444,7 +10873,7 @@ export default{
 				},
 			});
 
-			await runWrangler("publish index.js");
+			await runWrangler("deploy index.js");
 			expect(std.out).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
@@ -11467,7 +10896,7 @@ export default{
 				},
 			});
 
-			await runWrangler("publish index.js");
+			await runWrangler("deploy index.js");
 			expect(std.out).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms

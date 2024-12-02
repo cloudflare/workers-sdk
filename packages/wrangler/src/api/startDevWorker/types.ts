@@ -165,7 +165,6 @@ export interface StartDevWorkerInput {
 	};
 	legacy?: {
 		site?: Hook<Config["site"], [Config]>;
-		legacyAssets?: Hook<Config["legacy_assets"], [Config]>;
 		enableServiceEnvironments?: boolean;
 	};
 	unsafe?: Omit<CfUnsafe, "bindings">;
@@ -187,7 +186,6 @@ export type StartDevWorkerOptions = Omit<StartDevWorkerInput, "assets"> & {
 		processEntrypoint: boolean;
 	};
 	legacy: StartDevWorkerInput["legacy"] & {
-		legacyAssets?: Config["legacy_assets"];
 		site?: Config["site"];
 	};
 	dev: StartDevWorkerInput["dev"] & {

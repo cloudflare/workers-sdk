@@ -21,20 +21,11 @@ import { versionsListHandler, versionsListOptions } from "./list";
 import { registerVersionsSecretsSubcommands } from "./secrets";
 import versionsUpload from "./upload";
 import { versionsViewHandler, versionsViewOptions } from "./view";
-import type { Config } from "../config";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
 	SubHelp,
 } from "../yargs-types";
-
-async function standardPricingWarning(config: Config) {
-	if (config.usage_model !== undefined) {
-		logger.warn(
-			`The \`usage_model\` defined in your ${configFileName(config.configPath)} file is deprecated and no longer used. Visit our developer docs for details: https://developers.cloudflare.com/workers/wrangler/configuration/#usage-model`
-		);
-	}
-}
 
 function versionsUploadOptions(yargs: CommonYargsArgv) {
 	return (
@@ -89,19 +80,6 @@ function versionsUploadOptions(yargs: CommonYargsArgv) {
 				describe: "Static assets to be served. Replaces Workers Sites.",
 				type: "string",
 				requiresArg: true,
-			})
-			.option("format", {
-				choices: ["modules", "service-worker"] as const,
-				describe: "Choose an entry type",
-				deprecated: true,
-				hidden: true,
-			})
-			.option("legacy-assets", {
-				describe: "Static assets to be served",
-				type: "string",
-				requiresArg: true,
-				deprecated: true,
-				hidden: true,
 			})
 			.option("site", {
 				describe: "Root folder of static assets for Workers Sites",
@@ -226,11 +204,6 @@ async function versionsUploadHandler(
 			"Workers Sites does not support uploading versions through `wrangler versions upload`. You must use `wrangler deploy` instead."
 		);
 	}
-	if (args.legacyAssets || config.legacy_assets) {
-		throw new UserError(
-			"Legacy assets does not support uploading versions through `wrangler versions upload`. You must use `wrangler deploy` instead."
-		);
-	}
 
 	if (config.workflows?.length) {
 		logger.once.warn("Workflows is currently in open beta.");
@@ -238,10 +211,9 @@ async function versionsUploadHandler(
 
 	validateAssetsArgsAndConfig(
 		{
-			// given that legacyAssets and sites are not supported by
-			// `wrangler versions upload` pass them as undefined to
+			// given that sites is not supported by
+			// `wrangler versions upload` pass as undefined to
 			// skip the corresponding mutual exclusivity validation
-			legacyAssets: undefined,
 			site: undefined,
 			assets: args.assets,
 			script: args.script,
@@ -278,9 +250,6 @@ async function versionsUploadHandler(
 		);
 	}
 
-	if (!args.dryRun) {
-		await standardPricingWarning(config);
-	}
 	const { versionId, workerTag, versionPreviewUrl } = await versionsUpload({
 		config,
 		accountId,

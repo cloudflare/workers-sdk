@@ -1424,62 +1424,6 @@ describe.sequential("wrangler dev", () => {
 			`);
 		});
 
-		it("should error if --legacy-assets and --site are used together", async () => {
-			writeWranglerConfig({
-				main: "./index.js",
-			});
-			fs.writeFileSync("index.js", `export default {};`);
-			await expect(
-				runWrangler("dev --legacy-assets abc --site xyz")
-			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: Cannot use legacy assets and Workers Sites in the same Worker.]`
-			);
-		});
-
-		it("should error if --legacy-assets and config.site are used together", async () => {
-			writeWranglerConfig({
-				main: "./index.js",
-				site: {
-					bucket: "xyz",
-				},
-			});
-			fs.writeFileSync("index.js", `export default {};`);
-			await expect(
-				runWrangler("dev --legacy-assets abc")
-			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: Cannot use legacy assets and Workers Sites in the same Worker.]`
-			);
-		});
-
-		it("should error if config.legacy_assets and --site are used together", async () => {
-			writeWranglerConfig({
-				main: "./index.js",
-				legacy_assets: "abc",
-			});
-			fs.writeFileSync("index.js", `export default {};`);
-			await expect(
-				runWrangler("dev --site xyz")
-			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: Cannot use legacy assets and Workers Sites in the same Worker.]`
-			);
-		});
-
-		it("should error if config.legacy_assets and config.site are used together", async () => {
-			writeWranglerConfig({
-				main: "./index.js",
-				legacy_assets: "abc",
-				site: {
-					bucket: "xyz",
-				},
-			});
-			fs.writeFileSync("index.js", `export default {};`);
-			await expect(
-				runWrangler("dev --legacy-assets abc")
-			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: Cannot use legacy assets and Workers Sites in the same Worker.]`
-			);
-		});
-
 		describe("should indicate whether Sites is being used", () => {
 			it("no use", async () => {
 				writeWranglerConfig({
@@ -1499,51 +1443,6 @@ describe.sequential("wrangler dev", () => {
 				const config = await runWranglerUntilConfig("dev --site abc");
 				expect(config.legacy.site).toBeTruthy();
 			});
-			it("--legacy-assets arg", async () => {
-				writeWranglerConfig({
-					main: "index.js",
-				});
-				fs.writeFileSync("index.js", `export default {};`);
-
-				const config = await runWranglerUntilConfig("dev --legacy-assets abc");
-				expect(config.legacy.site).toBeFalsy();
-			});
-		});
-
-		it("should warn if --legacy-assets is used", async () => {
-			writeWranglerConfig({
-				main: "./index.js",
-			});
-			fs.writeFileSync("index.js", `export default {};`);
-
-			await runWranglerUntilConfig('dev --legacy-assets "./assets"');
-			expect(std.warn).toMatchInlineSnapshot(`
-				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --legacy-assets argument has been deprecated. Please use --assets instead.[0m
-
-				  To learn more about Workers with assets, visit our documentation at
-				  [4mhttps://developers.cloudflare.com/workers/frameworks/[0m.
-
-				"
-			`);
-		});
-
-		it("should warn if config.legacy_assets is used", async () => {
-			writeWranglerConfig({
-				main: "./index.js",
-				legacy_assets: "./assets",
-			});
-
-			fs.writeFileSync("index.js", `export default {};`);
-
-			await runWranglerUntilConfig("dev");
-			expect(std.warn).toMatchInlineSnapshot(`
-				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
-
-				    - [1mDeprecation[0m: \\"legacy_assets\\":
-				      The \`legacy_assets\` feature has been deprecated. Please use \`assets\` instead.
-
-				"
-			`);
 		});
 	});
 
@@ -1596,88 +1495,6 @@ describe.sequential("wrangler dev", () => {
 				`
 				[Error: Cannot use assets and Workers Sites in the same Worker.
 				Please remove either the \`site\` or \`assets\` field from your configuration file.]
-			`
-			);
-		});
-
-		it("should error if config.assets and config.legacy_assets are used together", async () => {
-			writeWranglerConfig({
-				main: "./index.js",
-				assets: { directory: "assets" },
-				legacy_assets: {
-					bucket: "xyz",
-					include: [],
-					exclude: [],
-					browser_TTL: undefined,
-					serve_single_page_app: true,
-				},
-			});
-			fs.writeFileSync("index.js", `export default {};`);
-			fs.mkdirSync("assets");
-			fs.mkdirSync("xyz");
-
-			await expect(
-				runWrangler("dev")
-			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`
-				[Error: Cannot use assets and legacy assets in the same Worker.
-				Please remove either the \`legacy_assets\` or \`assets\` field from your configuration file.]
-			`
-			);
-		});
-
-		it("should error if --assets and --legacy-assets are used together", async () => {
-			fs.writeFileSync("index.js", `export default {};`);
-			fs.mkdirSync("assets");
-			await expect(
-				runWrangler("dev --assets assets --legacy-assets assets")
-			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`
-				[Error: Cannot use assets and legacy assets in the same Worker.
-				Please remove either the \`legacy_assets\` or \`assets\` field from your configuration file.]
-			`
-			);
-		});
-
-		it("should error if --assets and config.legacy_assets are used together", async () => {
-			writeWranglerConfig({
-				main: "./index.js",
-				legacy_assets: {
-					bucket: "xyz",
-					include: [],
-					exclude: [],
-					browser_TTL: undefined,
-					serve_single_page_app: true,
-				},
-			});
-			fs.writeFileSync("index.js", `export default {};`);
-			fs.mkdirSync("assets");
-			fs.mkdirSync("xyz");
-			await expect(
-				runWrangler("dev --assets assets")
-			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`
-				[Error: Cannot use assets and legacy assets in the same Worker.
-				Please remove either the \`legacy_assets\` or \`assets\` field from your configuration file.]
-			`
-			);
-		});
-
-		it("should error if config.assets and --legacy-assets are used together", async () => {
-			writeWranglerConfig({
-				main: "./index.js",
-				assets: {
-					directory: "xyz",
-				},
-			});
-			fs.writeFileSync("index.js", `export default {};`);
-			fs.mkdirSync("xyz");
-			await expect(
-				runWrangler("dev --legacy-assets xyz")
-			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`
-				[Error: Cannot use assets and legacy assets in the same Worker.
-				Please remove either the \`legacy_assets\` or \`assets\` field from your configuration file.]
 			`
 			);
 		});

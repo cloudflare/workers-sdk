@@ -1,6 +1,5 @@
 import assert from "node:assert";
 import path from "node:path";
-import TOML from "@iarna/toml";
 import { dedent } from "ts-dedent";
 import { Diagnostics } from "./diagnostics";
 import {
@@ -16,7 +15,6 @@ import {
 	isMutuallyExclusiveWith,
 	isNonEmptyString,
 	isObjectWith,
-	isOneOf,
 	isOptionalProperty,
 	isRequiredProperty,
 	isString,
@@ -35,7 +33,6 @@ import type { CfWorkerInit } from "../deployment-bundle/worker";
 import type { Config, DevConfig, RawConfig, RawDevConfig } from "./config";
 import type {
 	Assets,
-	DeprecatedUpload,
 	DispatchNamespaceOutbound,
 	Environment,
 	Observability,
@@ -82,33 +79,6 @@ export function normalizeAndValidateConfig(
 		`Processing ${
 			configPath ? path.relative(process.cwd(), configPath) : "wrangler"
 		} configuration:`
-	);
-
-	deprecated(
-		diagnostics,
-		rawConfig,
-		"miniflare",
-		"Wrangler does not use configuration in the `miniflare` section. Unless you are using Miniflare directly you can remove this section.",
-		true,
-		"😶 Ignored"
-	);
-
-	deprecated(
-		diagnostics,
-		rawConfig,
-		"type",
-		"Most common features now work out of the box with wrangler, including modules, jsx, typescript, etc. If you need anything more, use a custom build.",
-		true,
-		"😶 Ignored"
-	);
-
-	deprecated(
-		diagnostics,
-		rawConfig,
-		"webpack_config",
-		"Most common features now work out of the box with wrangler, including modules, jsx, typescript, etc. If you need anything more, use a custom build.",
-		true,
-		"😶 Ignored"
 	);
 
 	validateOptionalProperty(
@@ -248,14 +218,6 @@ export function normalizeAndValidateConfig(
 		}
 	}
 
-	deprecated(
-		diagnostics,
-		rawConfig,
-		"legacy_assets",
-		`The \`legacy_assets\` feature has been deprecated. Please use \`assets\` instead.`,
-		false
-	);
-
 	// Process the top-level default environment configuration.
 	const config: Config = {
 		configPath,
@@ -273,11 +235,6 @@ export function normalizeAndValidateConfig(
 			configPath,
 			rawConfig,
 			activeEnv.main
-		),
-		legacy_assets: normalizeAndValidateLegacyAssets(
-			diagnostics,
-			configPath,
-			rawConfig
 		),
 		alias: normalizeAndValidateAliases(diagnostics, configPath, rawConfig),
 		wasm_modules: normalizeAndValidateModulePaths(
@@ -320,9 +277,8 @@ function normalizeAndValidateBuild(
 	rawEnv: RawEnvironment,
 	rawBuild: Config["build"],
 	configPath: string | undefined
-): Config["build"] & { deprecatedUpload: DeprecatedUpload } {
-	const { command, cwd, watch_dir = "./src", upload, ...rest } = rawBuild;
-	const deprecatedUpload: DeprecatedUpload = { ...upload };
+): Config["build"] {
+	const { command, cwd, watch_dir = "./src", ...rest } = rawBuild;
 	validateAdditionalProperties(diagnostics, "build", Object.keys(rest), []);
 
 	validateOptionalProperty(diagnostics, "build", "command", command, "string");
@@ -336,45 +292,6 @@ function normalizeAndValidateBuild(
 			"watch_dir",
 			watch_dir,
 			"string"
-		);
-	}
-
-	deprecated(
-		diagnostics,
-		rawEnv,
-		"build.upload.format",
-		"The format is inferred automatically from the code.",
-		true
-	);
-
-	if (rawEnv.main !== undefined && rawBuild.upload?.main) {
-		diagnostics.errors.push(
-			`Don't define both the \`main\` and \`build.upload.main\` fields in your configuration.\n` +
-				`They serve the same purpose: to point to the entry-point of your worker.\n` +
-				`Delete the \`build.upload.main\` and \`build.upload.dir\` field from your config.`
-		);
-	} else {
-		deprecated(
-			diagnostics,
-			rawEnv,
-			"build.upload.main",
-			`Delete the \`build.upload.main\` and \`build.upload.dir\` fields.\n` +
-				`Then add the top level \`main\` field to your configuration file:\n` +
-				`\`\`\`\n` +
-				`main = "${path.join(
-					rawBuild.upload?.dir ?? "./dist",
-					rawBuild.upload?.main ?? "."
-				)}"\n` +
-				`\`\`\``,
-			true
-		);
-
-		deprecated(
-			diagnostics,
-			rawEnv,
-			"build.upload.dir",
-			`Use the top level "main" field or a command-line argument to specify the entry-point for the Worker.`,
-			true
 		);
 	}
 
@@ -400,7 +317,6 @@ function normalizeAndValidateBuild(
 						)
 				: watch_dir,
 		cwd,
-		deprecatedUpload,
 	};
 }
 
@@ -409,8 +325,7 @@ function normalizeAndValidateBuild(
  */
 function normalizeAndValidateMainField(
 	configPath: string | undefined,
-	rawMain: string | undefined,
-	deprecatedUpload: DeprecatedUpload | undefined
+	rawMain: string | undefined
 ): string | undefined {
 	const configDir = path.dirname(configPath ?? "wrangler.toml");
 	if (rawMain !== undefined) {
@@ -420,12 +335,6 @@ function normalizeAndValidateMainField(
 		} else {
 			return rawMain;
 		}
-	} else if (deprecatedUpload?.main !== undefined) {
-		const directory = path.resolve(
-			configDir,
-			deprecatedUpload?.dir || "./dist"
-		);
-		return path.resolve(directory, deprecatedUpload.main);
 	} else {
 		return;
 	}
@@ -664,91 +573,6 @@ function normalizeAndValidateAliases(
 	}
 
 	return;
-}
-
-/**
- * Validate the `legacy_assets` configuration and return normalized values.
- */
-function normalizeAndValidateLegacyAssets(
-	diagnostics: Diagnostics,
-	configPath: string | undefined,
-	rawConfig: RawConfig
-): Config["legacy_assets"] {
-	const legacyAssetsConfig = rawConfig["legacy_assets"];
-
-	// Even though the type doesn't say it,
-	// we allow for a string input in the config,
-	// so let's normalise it
-	if (typeof legacyAssetsConfig === "string") {
-		return {
-			bucket: legacyAssetsConfig,
-			include: [],
-			exclude: [],
-			browser_TTL: undefined,
-			serve_single_page_app: false,
-		};
-	}
-
-	if (legacyAssetsConfig === undefined) {
-		return undefined;
-	}
-
-	if (typeof legacyAssetsConfig !== "object") {
-		diagnostics.errors.push(
-			`Expected the \`legacy_assets\` field to be a string or an object, but got ${typeof legacyAssetsConfig}.`
-		);
-		return undefined;
-	}
-
-	const {
-		bucket,
-		include = [],
-		exclude = [],
-		browser_TTL,
-		serve_single_page_app,
-		...rest
-	} = legacyAssetsConfig;
-
-	validateAdditionalProperties(
-		diagnostics,
-		"legacy_assets",
-		Object.keys(rest),
-		[]
-	);
-
-	validateRequiredProperty(
-		diagnostics,
-		"legacy_assets",
-		"bucket",
-		bucket,
-		"string"
-	);
-	validateTypedArray(diagnostics, `legacy_assets.include`, include, "string");
-	validateTypedArray(diagnostics, `legacy_assets.exclude`, exclude, "string");
-
-	validateOptionalProperty(
-		diagnostics,
-		"legacy_assets",
-		"browser_TTL",
-		browser_TTL,
-		"number"
-	);
-
-	validateOptionalProperty(
-		diagnostics,
-		"legacy_assets",
-		"serve_single_page_app",
-		serve_single_page_app,
-		"boolean"
-	);
-
-	return {
-		bucket,
-		include,
-		exclude,
-		browser_TTL,
-		serve_single_page_app,
-	};
 }
 
 /**
@@ -1074,37 +898,12 @@ function normalizeAndValidateEnvironment(
 	deprecated(
 		diagnostics,
 		rawEnv,
-		"kv-namespaces",
-		`The "kv-namespaces" field is no longer supported, please rename to "kv_namespaces"`,
-		true
-	);
-	deprecated(
-		diagnostics,
-		rawEnv,
-		"zone_id",
-		"This is unnecessary since we can deduce this from routes directly.",
-		false // We need to leave this in-place for the moment since `route` commands might use it.
-	);
-
-	deprecated(
-		diagnostics,
-		rawEnv,
 		// @ts-expect-error Removed from the config type
 		"node_compat",
 		`The "node_compat" field is no longer supported as of Wrangler v4. Instead, use the \`nodejs_compat\` compatibility flag. This includes the functionality from legacy \`node_compat\` polyfills and natively implemented Node.js APIs. See https://developers.cloudflare.com/workers/runtime-apis/nodejs for more information.`,
 		true,
 		"Removed",
 		"error"
-	);
-
-	// The field "experimental_services" doesn't exist anymore in the config, but we still want to error about any older usage.
-
-	deprecated(
-		diagnostics,
-		rawEnv,
-		"experimental_services",
-		`The "experimental_services" field is no longer supported. Simply rename the [experimental_services] field to [services].`,
-		true
 	);
 
 	experimental(diagnostics, rawEnv, "unsafe");
@@ -1133,7 +932,7 @@ function normalizeAndValidateEnvironment(
 		undefined
 	);
 
-	const { deprecatedUpload, ...build } = normalizeAndValidateBuild(
+	const build = normalizeAndValidateBuild(
 		diagnostics,
 		rawEnv,
 		rawEnv.build ?? topLevelEnv?.build ?? {},
@@ -1181,14 +980,7 @@ function normalizeAndValidateEnvironment(
 			rawEnv,
 			configPath
 		),
-		rules: validateAndNormalizeRules(
-			diagnostics,
-			topLevelEnv,
-			rawEnv,
-			deprecatedUpload?.rules,
-			envName,
-			configPath
-		),
+		rules: validateAndNormalizeRules(diagnostics, topLevelEnv, rawEnv, envName),
 		name: inheritableInLegacyEnvironments(
 			diagnostics,
 			isLegacyEnv,
@@ -1201,15 +993,7 @@ function normalizeAndValidateEnvironment(
 		),
 		main: normalizeAndValidateMainField(
 			configPath,
-			inheritable(
-				diagnostics,
-				topLevelEnv,
-				rawEnv,
-				"main",
-				isString,
-				undefined
-			),
-			deprecatedUpload
+			inheritable(diagnostics, topLevelEnv, rawEnv, "main", isString, undefined)
 		),
 		find_additional_modules: inheritable(
 			diagnostics,
@@ -1254,14 +1038,6 @@ function normalizeAndValidateEnvironment(
 			rawEnv,
 			"assets",
 			validateAssetsConfig,
-			undefined
-		),
-		usage_model: inheritable(
-			diagnostics,
-			topLevelEnv,
-			rawEnv,
-			"usage_model",
-			isOneOf("bundled", "unbound"),
 			undefined
 		),
 		limits: normalizeAndValidateLimits(diagnostics, topLevelEnv, rawEnv),
@@ -1499,7 +1275,6 @@ function normalizeAndValidateEnvironment(
 			validateVersionMetadataBinding(envName),
 			undefined
 		),
-		zone_id: rawEnv.zone_id,
 		logfwdr: inheritable(
 			diagnostics,
 			topLevelEnv,
@@ -1597,33 +1372,15 @@ const validateAndNormalizeRules = (
 	diagnostics: Diagnostics,
 	topLevelEnv: Environment | undefined,
 	rawEnv: RawEnvironment,
-	deprecatedRules: Rule[] | undefined,
-	envName: string,
-	configPath: string | undefined
+	envName: string
 ): Rule[] => {
-	if (topLevelEnv === undefined) {
-		// Only create errors/warnings for the top-level environment
-		if (rawEnv.rules && deprecatedRules) {
-			diagnostics.errors.push(
-				`You cannot configure both [rules] and [build.upload.rules] in your ${configFileName(configPath)}. Delete the \`build.upload\` section.`
-			);
-		} else if (deprecatedRules) {
-			diagnostics.warnings.push(
-				`Deprecation: The \`build.upload.rules\` config field is no longer used, the rules should be specified via the \`rules\` config field. Delete the \`build.upload\` field from the configuration file, and add this:\n` +
-					"```\n" +
-					TOML.stringify({ rules: deprecatedRules }) +
-					"```"
-			);
-		}
-	}
-
 	return inheritable(
 		diagnostics,
 		topLevelEnv,
 		rawEnv,
 		"rules",
 		validateRules(envName),
-		deprecatedRules ?? []
+		[]
 	);
 };
 

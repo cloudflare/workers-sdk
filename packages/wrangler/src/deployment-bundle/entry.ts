@@ -43,8 +43,6 @@ export type Entry = {
 export async function getEntry(
 	args: {
 		script?: string;
-		format?: CfScriptFormat | undefined;
-		legacyAssets?: string | undefined | boolean;
 		moduleRoot?: string;
 		assets?: string | undefined;
 	},
@@ -63,12 +61,7 @@ export async function getEntry(
 		paths = resolveEntryWithMain(config.main, config.configPath);
 	} else if (entryPoint) {
 		paths = resolveEntryWithEntryPoint(entryPoint, config.configPath);
-	} else if (
-		args.legacyAssets ||
-		config.legacy_assets ||
-		args.assets ||
-		config.assets
-	) {
+	} else if (args.assets || config.assets) {
 		paths = resolveEntryWithAssets();
 	} else {
 		if (config.pages_build_output_dir && command === "dev") {
@@ -92,7 +85,6 @@ export async function getEntry(
 	const { format, exports } = await guessWorkerFormat(
 		paths.absolutePath,
 		projectRoot,
-		args.format ?? config.build?.upload?.format,
 		config.tsconfig
 	);
 
