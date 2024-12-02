@@ -30,3 +30,4 @@ jobs:
           FILES: ${{ steps.files.outputs.all }}
           PR_NUMBER: ${{ github.event.number }}
           GH_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
+          LABELS: ${{ toJson(github.event.pull_request.labels.*.name) }}

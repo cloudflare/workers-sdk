@@ -4,7 +4,11 @@ import parseChangeset from "@changesets/parse";
 
 /* eslint-disable turbo/no-undeclared-env-vars */
 if (require.main === module) {
-	if (isWranglerPatch(process.env.FILES as string)) {
+	const parsedLabels = JSON.parse(process.env.LABELS as string) as string[];
+	if (
+		isWranglerPatch(process.env.FILES as string) &&
+		!parsedLabels.includes("skip-backport")
+	) {
 		// Create a new branch for the v3 maintenance PR
 		execSync(`git checkout -b v3-maintenance-${process.env.PR_NUMBER} -f`);
 
@@ -13,7 +17,7 @@ if (require.main === module) {
 		try {
 			// Open PR
 			execSync(
-				`gh pr create --base next --head v3-maintenance-${process.env.PR_NUMBER} --label "skip-pr-description-validation" --title "Backport #${process.env.PR_NUMBER} to Wrangler v3" --body "This is an automatically opened PR to backport patch changes from #${process.env.PR_NUMBER} to Wrangler v3"`
+				`gh pr create --base next --head v3-maintenance-${process.env.PR_NUMBER} --label "skip-pr-description-validation" --label "skip-backport" --title "Backport #${process.env.PR_NUMBER} to Wrangler v3" --body "This is an automatically opened PR to backport patch changes from #${process.env.PR_NUMBER} to Wrangler v3"`
 			);
 		} catch {
 			// Ignore "PR already created failures"
