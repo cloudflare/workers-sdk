@@ -79,7 +79,6 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 
 			const entry: Entry = {
 				file: config.entrypoint,
-				projectRoot: config.projectRoot,
 				format: config.build.format,
 				moduleRoot: config.build.moduleRoot,
 				exports: config.build.exports,
@@ -87,6 +86,7 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 
 			const entryDirectory = path.dirname(config.entrypoint);
 			const moduleCollector = createModuleCollector({
+				projectRoot: config.projectRoot,
 				wrangler1xLegacyModuleReferences: getWrangler1xLegacyModuleReferences(
 					entryDirectory,
 					config.entrypoint
@@ -103,6 +103,7 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 			).bindings;
 			const bundleResult: Omit<BundleResult, "stop"> = !config.build?.bundle
 				? await noBundleWorker(
+						config.projectRoot,
 						entry,
 						config.build.moduleRules,
 						this.#tmpDir.path
@@ -234,7 +235,6 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 		assert(this.#tmpDir);
 		const entry: Entry = {
 			file: config.entrypoint,
-			projectRoot: config.projectRoot,
 			format: config.build.format,
 			moduleRoot: config.build.moduleRoot,
 			exports: config.build.exports,

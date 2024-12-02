@@ -45,6 +45,7 @@ function isValidPythonPackageName(name: string): boolean {
  * that match the given `rules`.
  */
 export async function findAdditionalModules(
+	projectRoot: string,
 	entry: Entry,
 	rules: Rule[] | ParsedRules,
 	attachSourcemaps = false
@@ -72,7 +73,7 @@ export async function findAdditionalModules(
 		let pythonRequirements = "";
 		try {
 			pythonRequirements = await readFile(
-				path.resolve(entry.projectRoot, "requirements.txt"),
+				path.resolve(projectRoot, "requirements.txt"),
 				"utf-8"
 			);
 		} catch (e) {

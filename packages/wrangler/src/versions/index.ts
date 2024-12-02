@@ -202,7 +202,6 @@ async function versionsUploadHandler(
 	const configPath =
 		args.config ||
 		(args.script && findWranglerConfig(path.dirname(args.script)));
-	const projectRoot = configPath && path.dirname(configPath);
 	const config = readConfig(configPath, args);
 	const entry = await getEntry(args, config, "versions upload");
 	await metrics.sendMetricsEvent(
@@ -268,7 +267,7 @@ async function versionsUploadHandler(
 		await verifyWorkerMatchesCITag(
 			accountId,
 			name,
-			path.relative(entry.projectRoot, config.configPath ?? "wrangler.toml")
+			path.relative(config.projectRoot, config.configPath ?? "wrangler.toml")
 		);
 	}
 
@@ -302,8 +301,6 @@ async function versionsUploadHandler(
 		dryRun: args.dryRun,
 		noBundle: !(args.bundle ?? !config.no_bundle),
 		keepVars: false,
-		projectRoot,
-
 		tag: args.tag,
 		message: args.message,
 	});

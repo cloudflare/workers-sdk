@@ -260,6 +260,9 @@ export function normalizeAndValidateConfig(
 	// Process the top-level default environment configuration.
 	const config: Config = {
 		configPath,
+		projectRoot: path.resolve(
+			configPath !== undefined ? path.dirname(configPath) : process.cwd()
+		),
 		pages_build_output_dir: normalizeAndValidatePagesBuildOutputDir(
 			configPath,
 			rawConfig.pages_build_output_dir

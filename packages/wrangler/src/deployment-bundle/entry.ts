@@ -22,8 +22,6 @@ import type { CfScriptFormat } from "./worker";
 export type Entry = {
 	/** A worker's entrypoint */
 	file: string;
-	/** A worker's directory. Usually where the Wrangler configuration file is located */
-	projectRoot: string;
 	/** Is this a module worker or a service worker? */
 	format: CfScriptFormat;
 	/** The directory that contains all of a `--no-bundle` worker's modules. Usually `${directory}/src`. Defaults to path.dirname(file) */
@@ -60,9 +58,9 @@ export async function getEntry(
 	if (args.script) {
 		paths = resolveEntryWithScript(args.script);
 	} else if (config.main !== undefined) {
-		paths = resolveEntryWithMain(config.main, config.configPath);
+		paths = resolveEntryWithMain(config.main, config.projectRoot);
 	} else if (entryPoint) {
-		paths = resolveEntryWithEntryPoint(entryPoint, config.configPath);
+		paths = resolveEntryWithEntryPoint(entryPoint, config.projectRoot);
 	} else if (
 		args.legacyAssets ||
 		config.legacy_assets ||
@@ -124,7 +122,6 @@ export async function getEntry(
 
 	return {
 		file: paths.absolutePath,
-		projectRoot,
 		format,
 		moduleRoot:
 			args.moduleRoot ?? config.base_dir ?? path.dirname(paths.absolutePath),
