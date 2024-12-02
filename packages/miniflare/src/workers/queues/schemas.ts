@@ -26,7 +26,7 @@ export const QueueConsumerOptionsSchema = /* @__PURE__ */ z
 		// https://developers.cloudflare.com/queues/platform/configuration/#consumer
 		// https://developers.cloudflare.com/queues/platform/limits/
 		maxBatchSize: z.number().min(0).max(100).optional(),
-		maxBatchTimeout: z.number().min(0).max(30).optional(), // seconds
+		maxBatchTimeout: z.number().min(0).max(60).optional(), // seconds
 		maxRetires: z.number().min(0).max(100).optional(), // deprecated
 		maxRetries: z.number().min(0).max(100).optional(),
 		deadLetterQueue: z.ostring(),
