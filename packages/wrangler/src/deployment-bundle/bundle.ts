@@ -112,9 +112,6 @@ export type BundleOptions = {
 	additionalModules: CfModule[];
 	// A module collector enables you to observe what modules are in the Worker.
 	moduleCollector: ModuleCollector;
-	serveLegacyAssetsFromWorker: boolean;
-	legacyAssets: Config["legacy_assets"] | undefined;
-	bypassAssetCache: boolean | undefined;
 	doBindings: DurableObjectBindings;
 	workflowBindings: WorkflowBinding[];
 	jsxFactory: string | undefined;
@@ -150,7 +147,6 @@ export async function bundleWorker(
 		bundle,
 		moduleCollector = noopModuleCollector,
 		additionalModules = [],
-		serveLegacyAssetsFromWorker,
 		doBindings,
 		workflowBindings,
 		jsxFactory,
@@ -164,8 +160,6 @@ export async function bundleWorker(
 		define,
 		checkFetch,
 		mockAnalyticsEngineDatasets,
-		legacyAssets,
-		bypassAssetCache,
 		targetConsumer,
 		testScheduled,
 		inject: injectOption,
@@ -241,29 +235,6 @@ export async function bundleWorker(
 		middlewareToLoad.push({
 			name: "miniflare3-json-error",
 			path: "templates/middleware/middleware-miniflare3-json-error.ts",
-			supports: ["modules", "service-worker"],
-		});
-	}
-
-	if (serveLegacyAssetsFromWorker) {
-		middlewareToLoad.push({
-			name: "serve-static-assets",
-			path: "templates/middleware/middleware-serve-static-assets.ts",
-			config: {
-				spaMode:
-					typeof legacyAssets === "object"
-						? legacyAssets.serve_single_page_app
-						: false,
-				cacheControl:
-					typeof legacyAssets === "object"
-						? {
-								browserTTL:
-									legacyAssets.browser_TTL ||
-									172800 /* 2 days: 2* 60 * 60 * 24 */,
-								bypassCache: bypassAssetCache,
-							}
-						: {},
-			},
 			supports: ["modules", "service-worker"],
 		});
 	}
