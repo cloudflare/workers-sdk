@@ -1,5 +1,11 @@
 # @cloudflare/workers-shared
 
+## 0.9.1
+
+### Patch Changes
+
+- [#7410](https://github.com/cloudflare/workers-sdk/pull/7410) [`6b21919`](https://github.com/cloudflare/workers-sdk/commit/6b21919a3d8042afa0270c825bc119e9b58c0455) Thanks [@WalshyDev](https://github.com/WalshyDev)! - chore: remove awaits from Asset Worker fetches. This has no user-facing impact.
+
 ## 0.9.0
 
 ### Minor Changes
