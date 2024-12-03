@@ -51,9 +51,7 @@ export async function getEntry(
 ): Promise<Entry> {
 	const entryPoint = config.site?.["entry-point"];
 
-	let paths:
-		| { absolutePath: string; relativePath: string; projectRoot?: string }
-		| undefined;
+	let paths: { absolutePath: string; relativePath: string } | undefined;
 
 	if (args.script) {
 		paths = resolveEntryWithScript(args.script);
@@ -86,10 +84,9 @@ export async function getEntry(
 		config.configPath
 	);
 
-	const projectRoot = paths.projectRoot ?? process.cwd();
 	const { format, exports } = await guessWorkerFormat(
 		paths.absolutePath,
-		projectRoot,
+		config.projectRoot,
 		args.format ?? config.build?.upload?.format,
 		config.tsconfig
 	);
