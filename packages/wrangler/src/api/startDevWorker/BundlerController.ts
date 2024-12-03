@@ -206,9 +206,6 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 			// TODO: add comments re this ans ready
 			ignoreInitial: true,
 		});
-		this.#customBuildWatcher.on("ready", () => {
-			void this.#runCustomBuild(config, String(pathsToWatch));
-		});
 
 		this.#customBuildWatcher.on(
 			"all",
