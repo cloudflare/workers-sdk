@@ -10,6 +10,12 @@ import {
 import { ModuleTypeToRuleType } from "../deployment-bundle/module-collection";
 import { withSourceURLs } from "../deployment-bundle/source-url";
 import { UserError } from "../errors";
+import {
+	EXTERNAL_IMAGES_WORKER_NAME,
+	EXTERNAL_IMAGES_WORKER_SCRIPT,
+	imagesLocalFetcher,
+	imagesRemoteFetcher,
+} from "../images/fetcher";
 import { logger } from "../logger";
 import { getSourceMappedString } from "../sourcemap";
 import { updateCheck } from "../update-check";
@@ -41,7 +47,6 @@ import type { EsbuildBundle } from "./use-esbuild";
 import type { MiniflareOptions, SourceOptions, WorkerOptions } from "miniflare";
 import type { UUID } from "node:crypto";
 import type { Readable } from "node:stream";
-import { EXTERNAL_IMAGES_WORKER_NAME, EXTERNAL_IMAGES_WORKER_SCRIPT, imagesFetcher } from "../images/fetcher";
 
 // This worker proxies all external Durable Objects to the Wrangler session
 // where they're defined, and receives all requests from other Wrangler sessions
@@ -621,8 +626,10 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 				},
 			],
 			serviceBindings: {
-				FETCHER: config.imagesLocalMode ? imagesFetcher : imagesFetcher,
-			}
+				FETCHER: config.imagesLocalMode
+					? imagesLocalFetcher
+					: imagesRemoteFetcher,
+			},
 		});
 
 		wrappedBindings[bindings.images?.binding] = {

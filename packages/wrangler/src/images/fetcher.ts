@@ -15,7 +15,7 @@ export default function (env) {
 }
 `;
 
-export async function imagesFetcher(request: Request): Promise<Response> {
+export async function imagesRemoteFetcher(request: Request): Promise<Response> {
 	const accountId = await getAccountId();
 
 	const url = `/accounts/${accountId}/images_edge/v2/binding/preview${new URL(request.url).pathname}`;
@@ -31,3 +31,5 @@ export async function imagesFetcher(request: Request): Promise<Response> {
 
 	return new Response(res.body, { headers: res.headers });
 }
+
+export { imagesLocalFetcher } from "./local";
