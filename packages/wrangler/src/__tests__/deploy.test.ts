@@ -52,6 +52,7 @@ import { writeWranglerConfig } from "./helpers/write-wrangler-config";
 import type { AssetManifest } from "../assets";
 import type { Config } from "../config";
 import type { CustomDomain, CustomDomainChangeset } from "../deploy/deploy";
+import type { Settings } from "../deployment-bundle/bindings";
 import type { KVNamespaceInfo } from "../kv/helpers";
 import type {
 	PostQueueBody,
@@ -10550,7 +10551,7 @@ export default{
 	});
 
 	describe("--x-provision", () => {
-		it("should accept KV, R2 and D1 bindings without IDs in the configuration file", async () => {
+		it("should inherit KV, R2 and D1 bindings if they could be found from the settings", async () => {
 			writeWorkerSource();
 			writeWranglerConfig({
 				main: "index.js",
@@ -10558,9 +10559,28 @@ export default{
 				r2_buckets: [{ binding: "R2_BUCKET" }],
 				d1_databases: [{ binding: "D1_DATABASE" }],
 			});
+			mockGetSettings({
+				result: {
+					bindings: [
+						{
+							type: "kv_namespace",
+							name: "KV_NAMESPACE",
+							namespace_id: "kv-id",
+						},
+						{
+							type: "r2_bucket",
+							name: "R2_BUCKET",
+							bucket_name: "test-bucket",
+						},
+						{
+							type: "d1",
+							name: "D1_DATABASE",
+							id: "d1-id",
+						},
+					],
+				},
+			});
 			mockUploadWorkerRequest({
-				// We are treating them as inherited bindings temporarily to test the current implementation only
-				// This will be updated as we implement the actual provision logic
 				expectedBindings: [
 					{
 						name: "KV_NAMESPACE",
@@ -10591,6 +10611,65 @@ export default{
 				  - D1_DATABASE: (remote)
 				- R2 Buckets:
 				  - R2_BUCKET: (remote)
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
+			expect(std.err).toMatchInlineSnapshot(`""`);
+			expect(std.warn).toMatchInlineSnapshot(`""`);
+		});
+
+		it("should provision KV, R2 and D1 bindings if they couldn't be found from the settings", async () => {
+			writeWorkerSource();
+			writeWranglerConfig({
+				main: "index.js",
+				kv_namespaces: [{ binding: "KV_NAMESPACE" }],
+				// r2_buckets: [{ binding: "R2_BUCKET" }],
+				// d1_databases: [{ binding: "D1_DATABASE" }],
+			});
+			mockGetSettings();
+			mockCreateKvNamespace({
+				resultId: "kv-id",
+			});
+			mockConfirm({
+				text: "Would you like Wrangler to provision these resources on your behalf and bind them to your project?",
+				result: true,
+			});
+			mockUploadWorkerRequest({
+				expectedBindings: [
+					{
+						name: "KV_NAMESPACE",
+						type: "kv_namespace",
+						namespace_id: "kv-id",
+					},
+					// {
+					// 	name: "R2_BUCKET",
+					// 	type: "inherit",
+					// },
+					// {
+					// 	name: "D1_DATABASE",
+					// 	type: "inherit",
+					// },
+				],
+			});
+			mockSubDomainRequest();
+
+			await expect(
+				runWrangler("deploy --x-provision")
+			).resolves.toBeUndefined();
+			expect(std.out).toMatchInlineSnapshot(`
+				"Total Upload: xx KiB / gzip: xx KiB
+				Your worker has access to the following bindings:
+				- KV Namespaces:
+				  - KV_NAMESPACE: (remote)
+
+				Provisioning resources...
+				All resources provisioned, continuing deployment...
+				Worker Startup Time: 100 ms
+				Your worker has access to the following bindings:
+				- KV Namespaces:
+				  - KV_NAMESPACE: kv-id
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
@@ -12405,6 +12484,72 @@ function mockServiceScriptData(options: {
 			);
 		}
 	}
+}
+
+function mockGetSettings(
+	options: {
+		result?: Settings;
+		assertAccountId?: string;
+		assertScriptName?: string;
+	} = {}
+) {
+	msw.use(
+		http.get(
+			"*/accounts/:accountId/workers/scripts/:scriptName/settings",
+			async ({ params }) => {
+				if (options.assertAccountId) {
+					expect(params.accountId).toEqual(options.assertAccountId);
+				}
+
+				if (options.assertScriptName) {
+					expect(params.scriptName).toEqual(options.assertScriptName);
+				}
+
+				if (!options.result) {
+					return new Response(null, { status: 404 });
+				}
+
+				return HttpResponse.json({
+					success: true,
+					errors: [],
+					messages: [],
+					result: options.result,
+				});
+			}
+		)
+	);
+}
+
+function mockCreateKvNamespace(
+	options: {
+		resultId?: string;
+		assertAccountId?: string;
+		assertTitle?: string;
+	} = {}
+) {
+	msw.use(
+		http.post(
+			"*/accounts/:accountId/storage/kv/namespaces",
+			async ({ request, params }) => {
+				if (options.assertAccountId) {
+					expect(params.accountId).toEqual(options.assertAccountId);
+				}
+
+				if (options.assertTitle) {
+					const requestBody = await request.json();
+					const title =
+						typeof requestBody === "object" ? requestBody?.title : null;
+					expect(title).toEqual(options.assertTitle);
+				}
+
+				return HttpResponse.json(
+					createFetchResult({ id: options.resultId ?? "some-namespace-id" }),
+					{ status: 200 }
+				);
+			},
+			{ once: true }
+		)
+	);
 }
 
 function mockGetQueueByName(queueName: string, queue: QueueResponse | null) {
