@@ -85,7 +85,7 @@
 		"selfsigned": "^2.0.1",
 		"source-map": "^0.6.1",
 		"unenv": "npm:unenv-nightly@2.0.0-20241121-161142-806b5c0",
-		"workerd": "1.20241106.1",
+		"workerd": "1.20241106.2",
 		"xxhash-wasm": "^1.0.1"
 	},
 	"devDependencies": {
