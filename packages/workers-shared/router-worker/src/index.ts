@@ -72,7 +72,7 @@ export default {
 			if (env.CONFIG.has_user_worker) {
 				if (await env.ASSET_WORKER.unstable_canFetch(request)) {
 					analytics.setData({ dispatchtype: DISPATCH_TYPE.ASSETS });
-					return await env.ASSET_WORKER.fetch(maybeSecondRequest);
+					return env.ASSET_WORKER.fetch(maybeSecondRequest);
 				} else {
 					analytics.setData({ dispatchtype: DISPATCH_TYPE.WORKER });
 					return env.USER_WORKER.fetch(maybeSecondRequest);
@@ -80,7 +80,7 @@ export default {
 			}
 
 			analytics.setData({ dispatchtype: DISPATCH_TYPE.ASSETS });
-			return await env.ASSET_WORKER.fetch(request);
+			return env.ASSET_WORKER.fetch(request);
 		} catch (err) {
 			if (err instanceof Error) {
 				analytics.setData({ error: err.message });

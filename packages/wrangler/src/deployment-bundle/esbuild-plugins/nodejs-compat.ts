@@ -3,29 +3,32 @@ import chalk from "chalk";
 import { logger } from "../../logger";
 import { dedent } from "../../utils/dedent";
 import type { Plugin } from "esbuild";
+import type { NodeJSCompatMode } from "miniflare";
 
 /**
- * An esbuild plugin that will mark any `node:...` imports as external.
+ * An esbuild plugin that will:
+ * - mark any `node:...` imports as external
+ * - warn if there are node imports (if not in v1 mode)
+ *
+ * Applies to: null, als, legacy and v1 modes.
  */
-export const nodejsCompatPlugin: (silenceWarnings: boolean) => Plugin = (
-	silenceWarnings
-) => ({
+export const nodejsCompatPlugin = (mode: NodeJSCompatMode): Plugin => ({
 	name: "nodejs_compat-imports",
 	setup(pluginBuild) {
 		// Infinite loop detection
 		const seen = new Set<string>();
 
 		// Prevent multiple warnings per package
-		const warnedPackaged = new Map<string, string[]>();
+		const warnedPackages = new Map<string, string[]>();
 
 		pluginBuild.onStart(() => {
 			seen.clear();
-			warnedPackaged.clear();
+			warnedPackages.clear();
 		});
 		pluginBuild.onResolve(
 			{ filter: /node:.*/ },
-			async ({ path, kind, resolveDir, ...opts }) => {
-				const specifier = `${path}:${kind}:${resolveDir}:${opts.importer}`;
+			async ({ path, kind, resolveDir, importer }) => {
+				const specifier = `${path}:${kind}:${resolveDir}:${importer}`;
 				if (seen.has(specifier)) {
 					return;
 				}
@@ -35,18 +38,15 @@ export const nodejsCompatPlugin: (silenceWarnings: boolean) => Plugin = (
 				const result = await pluginBuild.resolve(path, {
 					kind,
 					resolveDir,
-					importer: opts.importer,
+					importer,
 				});
 
 				if (result.errors.length > 0) {
 					// esbuild couldn't resolve the package
 					// We should warn the user, but not fail the build
-
-					let pathWarnedPackaged = warnedPackaged.get(path);
-					if (pathWarnedPackaged === undefined) {
-						warnedPackaged.set(path, (pathWarnedPackaged = []));
-					}
-					pathWarnedPackaged.push(opts.importer);
+					const pathWarnedPackages = warnedPackages.get(path) ?? [];
+					pathWarnedPackages.push(importer);
+					warnedPackages.set(path, pathWarnedPackages);
 
 					return { external: true };
 				}
@@ -64,10 +64,10 @@ export const nodejsCompatPlugin: (silenceWarnings: boolean) => Plugin = (
 		pluginBuild.onEnd(() => {
 			if (
 				pluginBuild.initialOptions.format === "iife" &&
-				warnedPackaged.size > 0
+				warnedPackages.size > 0
 			) {
 				const paths = new Intl.ListFormat("en-US").format(
-					Array.from(warnedPackaged.keys())
+					Array.from(warnedPackages.keys())
 						.map((p) => `"${p}"`)
 						.sort()
 				);
@@ -90,8 +90,8 @@ export const nodejsCompatPlugin: (silenceWarnings: boolean) => Plugin = (
 		// Wait until the build finishes to log warnings, so that all files which import a package
 		// can be collated
 		pluginBuild.onEnd(() => {
-			if (!silenceWarnings) {
-				warnedPackaged.forEach((importers: string[], path: string) => {
+			if (mode !== "v1") {
+				warnedPackages.forEach((importers: string[], path: string) => {
 					logger.warn(
 						dedent`
 						The package "${path}" wasn't found on the file system but is built into node.
