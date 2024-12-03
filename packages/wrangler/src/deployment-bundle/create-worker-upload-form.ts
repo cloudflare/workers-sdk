@@ -3,8 +3,8 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { File, FormData } from "undici";
 import { UserError } from "../errors";
+import { INHERIT_SYMBOL } from "./bindings";
 import { handleUnsafeCapnp } from "./capnp";
-import { INHERIT_SYMBOL } from "./provision";
 import type { Observability } from "../config/environment";
 import type {
 	CfDurableObjectMigrations,

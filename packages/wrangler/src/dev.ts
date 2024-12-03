@@ -46,7 +46,7 @@ import type {
 	Route,
 	Rule,
 } from "./config/environment";
-import type { INHERIT_SYMBOL } from "./deployment-bundle/provision";
+import type { INHERIT_SYMBOL } from "./deployment-bundle/bindings";
 import type {
 	CfKvNamespace,
 	CfModule,

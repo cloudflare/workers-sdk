@@ -6,6 +6,7 @@ import { cancel } from "@cloudflare/cli";
 import { syncAssets } from "../assets";
 import { fetchListResult, fetchResult } from "../cfetch";
 import { configFileName, formatConfigSnippet, printBindings } from "../config";
+import { getBindings } from "../deployment-bundle/bindings";
 import { bundleWorker } from "../deployment-bundle/bundle";
 import {
 	printBundleSize,
@@ -23,7 +24,6 @@ import {
 	getWrangler1xLegacyModuleReferences,
 } from "../deployment-bundle/module-collection";
 import { validateNodeCompatMode } from "../deployment-bundle/node-compat";
-import { getBindings } from "../deployment-bundle/provision";
 import { loadSourceMaps } from "../deployment-bundle/source-maps";
 import { confirm } from "../dialogs";
 import { getMigrationsToUpload } from "../durable";

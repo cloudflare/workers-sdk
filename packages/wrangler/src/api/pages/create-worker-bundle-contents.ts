@@ -1,8 +1,8 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { Response } from "undici";
+import { getBindings } from "../../deployment-bundle/bindings";
 import { createWorkerUploadForm } from "../../deployment-bundle/create-worker-upload-form";
-import { getBindings } from "../../deployment-bundle/provision";
 import { loadSourceMaps } from "../../deployment-bundle/source-maps";
 import type { Config } from "../../config";
 import type { BundleResult } from "../../deployment-bundle/bundle";

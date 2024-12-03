@@ -1,9 +1,9 @@
 import type { Observability, Route } from "../config/environment";
+import type { INHERIT_SYMBOL } from "./bindings";
 import type {
 	WorkerMetadata,
 	WorkerMetadataBinding,
 } from "./create-worker-upload-form";
-import type { INHERIT_SYMBOL } from "./provision";
 import type { AssetConfig, RoutingConfig } from "@cloudflare/workers-shared";
 import type { Json } from "miniflare";
 
