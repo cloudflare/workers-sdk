@@ -134,7 +134,7 @@ export type BundleOptions = {
 	plugins: esbuild.Plugin[] | undefined;
 	isOutfile: boolean | undefined;
 	local: boolean;
-	projectRoot: string | undefined;
+	projectRoot: string;
 	defineNavigatorUserAgent: boolean;
 	external: string[] | undefined;
 };
@@ -382,7 +382,7 @@ export async function bundleWorker(
 						path: require.resolve(aliasPath, {
 							// From the esbuild alias docs: "Note that when an import path is substituted using an alias, the resulting import path is resolved in the working directory instead of in the directory containing the source file with the import path."
 							// https://esbuild.github.io/api/#alias:~:text=Note%20that%20when%20an%20import%20path%20is%20substituted%20using%20an%20alias%2C%20the%20resulting%20import%20path%20is%20resolved%20in%20the%20working%20directory%20instead%20of%20in%20the%20directory%20containing%20the%20source%20file%20with%20the%20import%20path.
-							paths: [entry.projectRoot],
+							paths: [projectRoot],
 						}),
 					};
 				}
@@ -394,7 +394,7 @@ export async function bundleWorker(
 		// Don't use entryFile here as the file may have been changed when applying the middleware
 		entryPoints: [entry.file],
 		bundle,
-		absWorkingDir: entry.projectRoot,
+		absWorkingDir: projectRoot,
 		outdir: destination,
 		keepNames: true,
 		entryNames: entryName || path.parse(entryFile).name,
@@ -522,7 +522,7 @@ export async function bundleWorker(
 	)[0];
 
 	const resolvedEntryPointPath = path.resolve(
-		entry.projectRoot,
+		projectRoot,
 		entryPoint.relativePath
 	);
 
@@ -544,7 +544,7 @@ export async function bundleWorker(
 		sourceMapPath,
 		sourceMapMetadata: {
 			tmpDir: tmpDir.path,
-			entryDirectory: entry.projectRoot,
+			entryDirectory: projectRoot,
 		},
 	};
 }

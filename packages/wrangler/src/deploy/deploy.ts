@@ -103,7 +103,7 @@ type Props = {
 	logpush: boolean | undefined;
 	uploadSourceMaps: boolean | undefined;
 	oldAssetTtl: number | undefined;
-	projectRoot: string | undefined;
+	projectRoot: string;
 	dispatchNamespace: string | undefined;
 	experimentalVersions: boolean | undefined;
 };
@@ -548,6 +548,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 		const entryDirectory = path.dirname(props.entry.file);
 		const moduleCollector = createModuleCollector({
+			projectRoot: config.projectRoot,
 			wrangler1xLegacyModuleReferences: getWrangler1xLegacyModuleReferences(
 				entryDirectory,
 				props.entry.file
@@ -569,7 +570,12 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			bundleType,
 			...bundle
 		} = props.noBundle
-			? await noBundleWorker(props.entry, props.rules, props.outDir)
+			? await noBundleWorker(
+					props.projectRoot,
+					props.entry,
+					props.rules,
+					props.outDir
+				)
 			: await bundleWorker(
 					props.entry,
 					typeof destination === "string" ? destination : destination.path,
@@ -1308,11 +1314,12 @@ export async function updateQueueConsumers(
 }
 
 export async function noBundleWorker(
+	projectRoot: string,
 	entry: Entry,
 	rules: Rule[],
 	outDir: string | undefined
 ) {
-	const modules = await findAdditionalModules(entry, rules);
+	const modules = await findAdditionalModules(projectRoot, entry, rules);
 	if (outDir) {
 		await writeAdditionalModules(modules, outDir);
 	}

@@ -37,9 +37,9 @@ describe("traverse module graph", () => {
 		);
 
 		const modules = await findAdditionalModules(
+			process.cwd(),
 			{
 				file: path.join(process.cwd(), "./index.js"),
-				projectRoot: process.cwd(),
 				format: "modules",
 				moduleRoot: process.cwd(),
 				exports: [],
@@ -73,9 +73,9 @@ describe("traverse module graph", () => {
 		);
 
 		const modules = await findAdditionalModules(
+			process.cwd(),
 			{
 				file: path.join(process.cwd(), "./index.js"),
-				projectRoot: process.cwd(),
 				format: "modules",
 				moduleRoot: process.cwd(),
 				exports: [],
@@ -107,9 +107,9 @@ describe("traverse module graph", () => {
 		);
 
 		const modules = await findAdditionalModules(
+			path.join(process.cwd(), "./src/nested"),
 			{
 				file: path.join(process.cwd(), "./src/nested/index.js"),
-				projectRoot: path.join(process.cwd(), "./src/nested"),
 				format: "modules",
 				// The default module root is dirname(file)
 				moduleRoot: path.join(process.cwd(), "./src/nested"),
@@ -142,9 +142,9 @@ describe("traverse module graph", () => {
 		);
 
 		const modules = await findAdditionalModules(
+			path.join(process.cwd(), "./src/nested"),
 			{
 				file: path.join(process.cwd(), "./src/nested/index.js"),
-				projectRoot: path.join(process.cwd(), "./src/nested"),
 				format: "modules",
 				// The default module root is dirname(file)
 				moduleRoot: path.join(process.cwd(), "./src"),
@@ -177,9 +177,9 @@ describe("traverse module graph", () => {
 		);
 
 		const modules = await findAdditionalModules(
+			path.join(process.cwd(), "./src/nested"),
 			{
 				file: path.join(process.cwd(), "./src/nested/index.js"),
-				projectRoot: path.join(process.cwd(), "./src/nested"),
 				format: "modules",
 				// The default module root is dirname(file)
 				moduleRoot: path.join(process.cwd(), "./src"),
@@ -212,9 +212,9 @@ describe("traverse module graph", () => {
 		);
 
 		const modules = await findAdditionalModules(
+			path.join(process.cwd(), "./src"),
 			{
 				file: path.join(process.cwd(), "./src/index.js"),
-				projectRoot: path.join(process.cwd(), "./src"),
 				format: "modules",
 				// The default module root is dirname(file)
 				moduleRoot: path.join(process.cwd(), "./src"),
@@ -247,9 +247,9 @@ describe("traverse module graph", () => {
 
 		await expect(
 			findAdditionalModules(
+				path.join(process.cwd(), "./src"),
 				{
 					file: path.join(process.cwd(), "./src/index.js"),
-					projectRoot: path.join(process.cwd(), "./src"),
 					format: "modules",
 					// The default module root is dirname(file)
 					moduleRoot: path.join(process.cwd(), "./src"),

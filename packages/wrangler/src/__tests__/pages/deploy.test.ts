@@ -2855,7 +2855,7 @@ Failed to publish your Function. Got error: Uncaught TypeError: a is not a funct
 		});
 	});
 
-	describe("in Advanced Mode [_worker,js]", () => {
+	describe("in Advanced Mode [_worker.js]", () => {
 		it("should upload an Advanced Mode project", async () => {
 			// set up the directory of static files to upload.
 			mkdirSync("public");
