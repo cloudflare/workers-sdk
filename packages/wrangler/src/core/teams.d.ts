@@ -15,4 +15,5 @@ export type Teams =
 	| "Product: Hyperdrive"
 	| "Product: Vectorize"
 	| "Product: Workflows"
-	| "Product: Cloudchamber";
+	| "Product: Cloudchamber"
+	| "Product: SSL";
