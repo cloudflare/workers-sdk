@@ -36,6 +36,15 @@ export interface MTlsCertificateBody {
 }
 
 /**
+ * details for uploading an CA certificate or CA chain via the ssl api
+ */
+export interface CaCertificateBody {
+	certificates: string;
+	ca: boolean;
+	name?: string;
+}
+
+/**
  * supported filters for listing mTLS certificates via the ssl api
  */
 export interface MTlsCertificateListFilter {
@@ -63,6 +72,23 @@ export async function uploadMTlsCertificateFromFs(
 		certificateChain: readFileSync(details.certificateChainFilename),
 		privateKey: readFileSync(details.privateKeyFilename),
 		name: details.name,
+	});
+}
+
+/**
+ * reads an CA certificate from disk and uploads it to the account mTLS certificate store
+ */
+export async function uploadCaCertificateFromFs(
+	accountId: string,
+	details: CaCertificateBody
+): Promise<MTlsCertificateResponse> {
+	return await fetchResult(`/accounts/${accountId}/mtls_certificates`, {
+		method: "POST",
+		body: JSON.stringify({
+			name: details.name,
+			certificates: readFileSync(details.certificates),
+			ca: details.ca,
+		}),
 	});
 }
 
@@ -102,10 +128,13 @@ export async function getMTlsCertificate(
  */
 export async function listMTlsCertificates(
 	accountId: string,
-	filter: MTlsCertificateListFilter
+	filter: MTlsCertificateListFilter,
+	ca: boolean = false
 ): Promise<MTlsCertificateResponse[]> {
 	const params = new URLSearchParams();
-	params.append("ca", "false");
+	if (!ca) {
+		params.append("ca", String(false));
+	}
 	if (filter.name) {
 		params.append("name", filter.name);
 	}
@@ -121,9 +150,10 @@ export async function listMTlsCertificates(
  */
 export async function getMTlsCertificateByName(
 	accountId: string,
-	name: string
+	name: string,
+	ca: boolean = false
 ): Promise<MTlsCertificateResponse> {
-	const certificates = await listMTlsCertificates(accountId, { name });
+	const certificates = await listMTlsCertificates(accountId, { name }, ca);
 	if (certificates.length === 0) {
 		throw new ErrorMTlsCertificateNameNotFound(
 			`certificate not found with name "${name}"`
