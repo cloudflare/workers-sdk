@@ -4964,7 +4964,7 @@ addEventListener('fetch', event => {});`
 					binding: "ASSETS",
 					html_handling: "none",
 					not_found_handling: "404-page",
-					serve_directly: false,
+					experimental_serve_directly: false,
 				},
 			});
 			await mockAUSRequest();
@@ -5038,7 +5038,7 @@ addEventListener('fetch', event => {});`
 					binding: "ASSETS",
 					html_handling: "none",
 					not_found_handling: "404-page",
-					serve_directly: true,
+					experimental_serve_directly: true,
 				},
 			});
 			await mockAUSRequest();

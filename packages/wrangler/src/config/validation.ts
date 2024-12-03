@@ -2176,8 +2176,8 @@ const validateAssetsConfig: ValidatorFn = (diagnostics, field, value) => {
 		validateOptionalProperty(
 			diagnostics,
 			field,
-			"serve_directly",
-			(value as Assets).serve_directly,
+			"experimental_serve_directly",
+			(value as Assets).experimental_serve_directly,
 			"boolean"
 		) && isValid;
 
@@ -2187,7 +2187,7 @@ const validateAssetsConfig: ValidatorFn = (diagnostics, field, value) => {
 			"binding",
 			"html_handling",
 			"not_found_handling",
-			"serve_directly",
+			"experimental_serve_directly",
 		]) && isValid;
 
 	return isValid;
