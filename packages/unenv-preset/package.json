@@ -1,0 +1,62 @@
+{
+	"name": "@cloudflare/unenv-preset",
+	"version": "0.0.0",
+	"description": "cloudflare preset for unenv",
+	"keywords": [
+		"cloudflare",
+		"workers",
+		"cloudflare workers",
+		"Node.js",
+		"unenv",
+		"polyfills"
+	],
+	"homepage": "https://github.com/cloudflare/workers-sdk#readme",
+	"bugs": {
+		"url": "https://github.com/cloudflare/workers-sdk/issues"
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/cloudflare/workers-sdk.git",
+		"directory": "packages/unenv-preset"
+	},
+	"license": "MIT OR Apache-2.0",
+	"sideEffects": false,
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"import": "./dist/index.mjs"
+		},
+		"./runtime/*": {
+			"types": "./runtime/*.d.ts",
+			"import": "./runtime/*.mjs"
+		}
+	},
+	"types": "./dist/index.d.ts",
+	"files": [
+		"dist",
+		"runtime"
+	],
+	"scripts": {
+		"build": "unbuild",
+		"check:lint": "eslint",
+		"check:type": "tsc --noEmit"
+	},
+	"dependencies": {
+		"unenv": "npm:unenv-nightly@2.0.0-20241127-105629-7a9f230"
+	},
+	"devDependencies": {
+		"@types/node": "^22.9.3",
+		"eslint-config-unjs": "^0.4.1",
+		"typescript": "catalog:default",
+		"unbuild": "^2.0.0",
+		"wrangler": "workspace:*"
+	},
+	"peerDependencies": {
+		"workerd": "^1.20241112.0"
+	},
+	"peerDependenciesMeta": {
+		"workerd": {
+			"optional": true
+		}
+	}
+}

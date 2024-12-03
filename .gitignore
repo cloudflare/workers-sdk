@@ -198,6 +198,8 @@ packages/chrome-devtools-patches/depot
 packages/chrome-devtools-patches/devtools-frontend
 packages/miniflare/dist-types/
 
+packages/unenv-preset/runtime
+
 fixtures/remix-pages-app/public/build
 fixtures/remix-pages-app/functions/\[\[path\]\].js
 
