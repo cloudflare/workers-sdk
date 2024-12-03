@@ -1,5 +1,23 @@
 # create-cloudflare
 
+## 2.33.2
+
+### Patch Changes
+
+- [#7359](https://github.com/cloudflare/workers-sdk/pull/7359) [`515174e`](https://github.com/cloudflare/workers-sdk/commit/515174e7e9059d3bc19bedb9a2444dad4db57f0c) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency  | From   | To     |
+  | ----------- | ------ | ------ |
+  | create-qwik | 1.10.0 | 1.11.0 |
+
+- [#7409](https://github.com/cloudflare/workers-sdk/pull/7409) [`5739015`](https://github.com/cloudflare/workers-sdk/commit/57390152300517f339eb910cf561430316a33622) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: update Angular experimental Workers + Assets template
+
+- [#7342](https://github.com/cloudflare/workers-sdk/pull/7342) [`499e12d`](https://github.com/cloudflare/workers-sdk/commit/499e12d17ca349d3fdeea977c5cceeed062c8b06) Thanks [@neomax7](https://github.com/neomax7)! - fix: Angular template should call `handle()` method on `AngularAppEngine` not 'render()'
+
+  Fixes #7341
+
 ## 2.33.1
 
 ### Patch Changes
