@@ -211,8 +211,6 @@ export class FilesystemWorkerRegistry implements Registry {
 	async startRegistryWatcher(
 		cb?: (registry: WorkerRegistry | undefined) => void
 	) {
-		await this.#loadWorkerDefinitions();
-		cb?.({ ...this.#globalWorkers });
 		this.#globalWatcher ??= watch(this.#registryPath, {
 			persistent: true,
 		}).on("all", async () => {
