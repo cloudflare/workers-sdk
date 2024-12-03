@@ -85,7 +85,7 @@
 		"selfsigned": "^2.0.1",
 		"source-map": "^0.6.1",
 		"unenv": "npm:unenv-nightly@2.0.0-20241121-161142-806b5c0",
-		"workerd": "1.20241106.1",
+		"workerd": "1.20241202.0",
 		"xxhash-wasm": "^1.0.1"
 	},
 	"devDependencies": {
@@ -94,7 +94,7 @@
 		"@cloudflare/pages-shared": "workspace:^",
 		"@cloudflare/types": "6.18.4",
 		"@cloudflare/workers-tsconfig": "workspace:*",
-		"@cloudflare/workers-types": "^4.20241106.0",
+		"@cloudflare/workers-types": "^4.20241202.0",
 		"@cspotcode/source-map-support": "0.8.1",
 		"@iarna/toml": "^3.0.0",
 		"@microsoft/api-extractor": "^7.47.0",
@@ -163,7 +163,7 @@
 		"yargs": "^17.7.2"
 	},
 	"peerDependencies": {
-		"@cloudflare/workers-types": "^4.20241106.0"
+		"@cloudflare/workers-types": "^4.20241202.0"
 	},
 	"peerDependenciesMeta": {
 		"@cloudflare/workers-types": {
