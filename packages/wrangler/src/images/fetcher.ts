@@ -1,4 +1,4 @@
-import { Headers, Response } from "miniflare";
+import { Response } from "miniflare";
 import { performApiFetch } from "../cfetch/internal";
 import { getAccountId } from "../user";
 import type { Request } from "miniflare";
@@ -15,7 +15,7 @@ export default function (env) {
 }
 `;
 
-export async function imagesFetcher(request: Request): Promise<Response> {
+export async function imagesRemoteFetcher(request: Request): Promise<Response> {
     const accountId = await getAccountId();
 
     const url = `/accounts/${accountId}/images_edge/v2/binding/preview${new URL(request.url).pathname}`;
@@ -30,3 +30,5 @@ export async function imagesFetcher(request: Request): Promise<Response> {
         { headers: res.headers }
     );
 }
+
+export { imagesLocalFetcher } from './local';
