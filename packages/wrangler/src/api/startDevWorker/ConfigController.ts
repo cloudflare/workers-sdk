@@ -9,7 +9,7 @@ import {
 	getScriptName,
 	isLegacyEnv,
 } from "../..";
-import { processAssetsArg, validateAssetsArgsAndConfig } from "../../assets";
+import { getAssetsOptions, validateAssetsArgsAndConfig } from "../../assets";
 import { printBindings, readConfig } from "../../config";
 import { getEntry } from "../../deployment-bundle/entry";
 import {
@@ -248,7 +248,7 @@ async function resolveConfig(
 
 	const { bindings, unsafe } = await resolveBindings(config, input);
 
-	const assetsOptions = processAssetsArg(
+	const assetsOptions = getAssetsOptions(
 		{
 			assets: input?.assets,
 			script: input.entrypoint,

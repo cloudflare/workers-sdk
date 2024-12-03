@@ -1,4 +1,4 @@
-import { processAssetsArg } from "../assets";
+import { getAssetsOptions } from "../assets";
 import { readConfig } from "../config";
 import { getScriptName, isLegacyEnv, printWranglerBanner } from "../index";
 import * as metrics from "../metrics";
@@ -58,7 +58,7 @@ async function triggersDeployHandler(
 	await printWranglerBanner();
 
 	const config = readConfig(undefined, args);
-	const assetsOptions = processAssetsArg({ assets: undefined }, config);
+	const assetsOptions = getAssetsOptions({ assets: undefined }, config);
 	await metrics.sendMetricsEvent(
 		"deploy worker triggers",
 		{},

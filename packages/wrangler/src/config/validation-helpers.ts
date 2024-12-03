@@ -232,27 +232,6 @@ export const isString: ValidatorFn = (diagnostics, field, value) => {
 };
 
 /**
- * Validate that the field is a non-empty string.
- */
-export const isNonEmptyString: ValidatorFn = (
-	diagnostics,
-	field,
-	value,
-	topLevelEnv
-) => {
-	if (!isString(diagnostics, field, value, topLevelEnv)) {
-		return false;
-	}
-
-	if ((value as string)?.trim() === "") {
-		diagnostics.errors.push(`Expected "${field}" to be a non-empty string.`);
-		return false;
-	}
-
-	return true;
-};
-
-/**
  * Validate that the `name` field is compliant with EWC constraints.
  */
 export const isValidName: ValidatorFn = (diagnostics, field, value) => {

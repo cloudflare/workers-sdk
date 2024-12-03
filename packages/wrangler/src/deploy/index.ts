@@ -1,6 +1,6 @@
 import assert from "node:assert";
 import path from "node:path";
-import { processAssetsArg, validateAssetsArgsAndConfig } from "../assets";
+import { getAssetsOptions, validateAssetsArgsAndConfig } from "../assets";
 import { configFileName, findWranglerConfig, readConfig } from "../config";
 import { getEntry } from "../deployment-bundle/entry";
 import { UserError } from "../errors";
@@ -301,7 +301,7 @@ async function deployWorker(args: DeployArgs) {
 
 	validateAssetsArgsAndConfig(args, config);
 
-	const assetsOptions = processAssetsArg(args, config);
+	const assetsOptions = getAssetsOptions(args, config);
 
 	if (args.latest) {
 		logger.warn(
