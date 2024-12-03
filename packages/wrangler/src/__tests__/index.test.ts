@@ -56,6 +56,7 @@ describe("wrangler", () => {
 				  wrangler d1                     🗄  Manage Workers D1 databases
 				  wrangler vectorize              🧮 Manage Vectorize indexes [open beta]
 				  wrangler hyperdrive             🚀 Manage Hyperdrive databases
+				  wrangler cert                   🪪 Manage client mTLS certificates and CA certificate chains used for secured connections [open-beta]
 				  wrangler pages                  ⚡️ Configure Cloudflare Pages
 				  wrangler mtls-certificate       🪪  Manage certificates used for mTLS connections
 				  wrangler pubsub                 📮 Manage Pub/Sub brokers [private beta]
@@ -112,6 +113,7 @@ describe("wrangler", () => {
 				  wrangler d1                     🗄  Manage Workers D1 databases
 				  wrangler vectorize              🧮 Manage Vectorize indexes [open beta]
 				  wrangler hyperdrive             🚀 Manage Hyperdrive databases
+				  wrangler cert                   🪪 Manage client mTLS certificates and CA certificate chains used for secured connections [open-beta]
 				  wrangler pages                  ⚡️ Configure Cloudflare Pages
 				  wrangler mtls-certificate       🪪  Manage certificates used for mTLS connections
 				  wrangler pubsub                 📮 Manage Pub/Sub brokers [private beta]
