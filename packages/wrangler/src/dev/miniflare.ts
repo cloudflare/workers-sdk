@@ -41,6 +41,12 @@ import type { EsbuildBundle } from "./use-esbuild";
 import type { MiniflareOptions, SourceOptions, WorkerOptions } from "miniflare";
 import type { UUID } from "node:crypto";
 import type { Readable } from "node:stream";
+import {
+	EXTERNAL_IMAGES_WORKER_NAME,
+	EXTERNAL_IMAGES_WORKER_SCRIPT,
+	imagesLocalFetcher,
+	imagesRemoteFetcher,
+} from "../images/fetcher";
 
 // This worker proxies all external Durable Objects to the Wrangler session
 // where they're defined, and receives all requests from other Wrangler sessions
@@ -186,6 +192,7 @@ export interface ConfigBundle {
 	services: Config["services"] | undefined;
 	serviceBindings: Record<string, ServiceFetch>;
 	bindVectorizeToProd: boolean;
+	imagesLocalMode: boolean;
 	testScheduled: boolean;
 }
 
@@ -376,6 +383,7 @@ type MiniflareBindingsConfig = Pick<
 	| "name"
 	| "services"
 	| "serviceBindings"
+	| "imagesLocalMode"
 > &
 	Partial<Pick<ConfigBundle, "format" | "bundle" | "assets">>;
 
@@ -387,7 +395,6 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 	externalWorkers: WorkerOptions[];
 } {
 	const bindings = config.bindings;
-
 	// Setup blob and module bindings
 	// TODO: check all these blob bindings just work, they're relative to cwd
 	const textBlobBindings = { ...bindings.text_blobs };
@@ -596,6 +603,27 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 
 		wrappedBindings[bindings.ai.binding] = {
 			scriptName: EXTERNAL_AI_WORKER_NAME,
+		};
+	}
+
+
+	if (bindings.images?.binding) {
+		externalWorkers.push({
+			name: EXTERNAL_IMAGES_WORKER_NAME,
+			modules: [
+				{
+					type: "ESModule",
+					path: "index.mjs",
+					contents: EXTERNAL_IMAGES_WORKER_SCRIPT,
+				}
+			],
+			serviceBindings: {
+				FETCHER: config.imagesLocalMode ? imagesLocalFetcher : imagesRemoteFetcher,
+			}
+		});
+
+		wrappedBindings[bindings.images?.binding] = {
+			scriptName: EXTERNAL_IMAGES_WORKER_NAME,
 		};
 	}
 
@@ -898,6 +926,7 @@ export function handleRuntimeStdio(stdout: Readable, stderr: Readable) {
 let didWarnMiniflareCronSupport = false;
 let didWarnMiniflareVectorizeSupport = false;
 let didWarnAiAccountUsage = false;
+let didWarnImagesLocalModeUsage = false;
 
 export type Options = Extract<MiniflareOptions, { workers: WorkerOptions[] }>;
 
@@ -941,6 +970,13 @@ export async function buildMiniflareOptions(
 			logger.warn(
 				"You are using a mixed-mode binding for Vectorize (through `--experimental-vectorize-bind-to-prod`). It may incur usage charges and modify your databases even in local development. "
 			);
+		}
+	}
+
+	if (config.bindings.images && config.imagesLocalMode) {
+		if (!didWarnImagesLocalModeUsage) {
+			didWarnImagesLocalModeUsage = true;
+			logger.info("You are using Images local mode. This only supports resizing, rotating and transcoding.");
 		}
 	}
 

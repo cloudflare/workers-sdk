@@ -1066,6 +1066,13 @@ export async function mapBindings(
 							};
 						}
 						break;
+					case "images":
+						{
+							configObj.images = {
+								binding: binding.name
+							};
+						}
+						break;
 					case "r2_bucket":
 						{
 							configObj.r2_buckets = [

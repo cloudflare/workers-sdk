@@ -127,6 +127,13 @@ export interface CfAIBinding {
 }
 
 /**
+ * A binding to Cloudflare Images
+ */
+export interface CfImagesBinding {
+	binding: string;
+}
+
+/**
  * A binding to the Worker Version's metadata
  */
 
@@ -327,6 +334,7 @@ export interface CfWorkerInit {
 		text_blobs: CfTextBlobBindings | undefined;
 		browser: CfBrowserBinding | undefined;
 		ai: CfAIBinding | undefined;
+		images: CfImagesBinding | undefined;
 		version_metadata: CfVersionMetadataBinding | undefined;
 		data_blobs: CfDataBlobBindings | undefined;
 		durable_objects: { bindings: CfDurableObject[] } | undefined;

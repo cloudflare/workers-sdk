@@ -384,6 +384,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			wasm_modules: config.wasm_modules,
 			browser: config.browser,
 			ai: config.ai,
+			images: config.images,
 			version_metadata: config.version_metadata,
 			text_blobs: config.text_blobs,
 			data_blobs: config.data_blobs,
