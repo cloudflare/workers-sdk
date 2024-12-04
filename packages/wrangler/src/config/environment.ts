@@ -953,11 +953,11 @@ export type Assets = {
 
 export interface Observability {
 	/** If observability is enabled for this Worker */
-	enabled: boolean;
+	enabled?: boolean;
 	/** The sampling rate */
 	head_sampling_rate?: number;
 	logs?: {
-		enabled: boolean;
+		enabled?: boolean;
 		/** The sampling rate */
 		head_sampling_rate?: number;
 		/** Set to false to disable invocation logs */
