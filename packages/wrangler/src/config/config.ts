@@ -22,10 +22,7 @@ import type { CamelCaseKey } from "yargs";
  * - `@breaking`: the deprecation/optionality is a breaking change from Wrangler v1.
  * - `@todo`: there's more work to be done (with details attached).
  */
-export type Config = ComputedConfigFields &
-	ConfigFields<DevConfig> &
-	PagesConfigFields &
-	Environment;
+export type Config = ConfigFields<DevConfig> & PagesConfigFields & Environment;
 
 export type RawConfig = Partial<ConfigFields<RawDevConfig>> &
 	PagesConfigFields &
@@ -33,14 +30,9 @@ export type RawConfig = Partial<ConfigFields<RawDevConfig>> &
 	DeprecatedConfigFields &
 	EnvironmentMap & { $schema?: string };
 
-export interface ComputedConfigFields {
-	/** Path to the configuration file (e.g. wrangler.toml/json), if one was provided. */
+export interface ConfigFields<Dev extends RawDevConfig> {
 	configPath: string | undefined;
 
-	/** A worker's directory. Usually where the Wrangler configuration file is located */
-	projectRoot: string;
-}
-export interface ConfigFields<Dev extends RawDevConfig> {
 	/**
 	 * A boolean to enable "legacy" style wrangler environments (from Wrangler v1).
 	 * These have been superseded by Services, but there may be projects that won't
@@ -333,11 +325,8 @@ export const defaultWranglerConfig: Config = {
 	/*====================================================*/
 	/*           Fields supported by Workers only         */
 	/*====================================================*/
-	/* COMPUTED CONFIG FIELDS */
-	configPath: undefined,
-	projectRoot: process.cwd(),
-
 	/* TOP-LEVEL ONLY FIELDS */
+	configPath: undefined,
 	legacy_env: true,
 	site: undefined,
 	legacy_assets: undefined,

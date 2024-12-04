@@ -63,7 +63,6 @@ describe("normalizeAndValidateConfig()", () => {
 			compatibility_date: undefined,
 			compatibility_flags: [],
 			configPath: undefined,
-			projectRoot: process.cwd(),
 			d1_databases: [],
 			vectorize: [],
 			hyperdrive: [],

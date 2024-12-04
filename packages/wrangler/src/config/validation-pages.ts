@@ -36,10 +36,9 @@ const supportedPagesConfigFields = [
 	"dev",
 	"mtls_certificates",
 	"browser",
-	"upload_source_maps",
-	// normalizeAndValidateConfig() sets the following values
+	// normalizeAndValidateConfig() sets this value
 	"configPath",
-	"projectRoot",
+	"upload_source_maps",
 ] as const;
 
 export function validatePagesConfig(

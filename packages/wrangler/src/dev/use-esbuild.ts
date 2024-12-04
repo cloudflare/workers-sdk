@@ -82,7 +82,7 @@ export function runBuild(
 		local: boolean;
 		targetConsumer: "dev" | "deploy";
 		testScheduled: boolean;
-		projectRoot: string;
+		projectRoot: string | undefined;
 		onStart: () => void;
 		defineNavigatorUserAgent: boolean;
 		checkFetch: boolean;
@@ -98,7 +98,6 @@ export function runBuild(
 	const moduleCollector = noBundle
 		? noopModuleCollector
 		: createModuleCollector({
-				projectRoot: projectRoot,
 				wrangler1xLegacyModuleReferences: getWrangler1xLegacyModuleReferences(
 					entryDirectory,
 					entry.file
@@ -111,7 +110,7 @@ export function runBuild(
 	async function getAdditionalModules() {
 		return noBundle
 			? dedupeModulesByName([
-					...((await doFindAdditionalModules(projectRoot, entry, rules)) ?? []),
+					...((await doFindAdditionalModules(entry, rules)) ?? []),
 					...additionalModules,
 				])
 			: additionalModules;
@@ -194,7 +193,7 @@ export function runBuild(
 			// Check whether we need to watch a Python requirements.txt file.
 			const watchPythonRequirements =
 				getBundleType(entry.format, entry.file) === "python"
-					? path.resolve(projectRoot, "requirements.txt")
+					? path.resolve(entry.projectRoot, "requirements.txt")
 					: undefined;
 
 			if (watchPythonRequirements) {

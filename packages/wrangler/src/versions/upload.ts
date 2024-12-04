@@ -89,6 +89,7 @@ type Props = {
 	dryRun: boolean | undefined;
 	noBundle: boolean | undefined;
 	keepVars: boolean | undefined;
+	projectRoot: string | undefined;
 
 	tag: string | undefined;
 	message: string | undefined;
@@ -357,7 +358,7 @@ export const versionsUploadCommand = createCommand({
 			await verifyWorkerMatchesCITag(
 				accountId,
 				name,
-				path.relative(config.projectRoot, config.configPath ?? "wrangler.toml")
+				path.relative(entry.projectRoot, config.configPath ?? "wrangler.toml")
 			);
 		}
 
@@ -391,6 +392,7 @@ export const versionsUploadCommand = createCommand({
 			dryRun: args.dryRun,
 			noBundle: !(args.bundle ?? !config.no_bundle),
 			keepVars: false,
+			projectRoot: entry.projectRoot,
 			tag: args.tag,
 			message: args.message,
 		});
@@ -531,7 +533,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 	}
 
 	const destination =
-		props.outDir ?? getWranglerTmpDir(props.config.projectRoot, "deploy");
+		props.outDir ?? getWranglerTmpDir(props.projectRoot, "deploy");
 
 	const start = Date.now();
 	const workerName = scriptName;
@@ -573,7 +575,6 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 		const entryDirectory = path.dirname(props.entry.file);
 		const moduleCollector = createModuleCollector({
-			projectRoot: props.config.projectRoot,
 			wrangler1xLegacyModuleReferences: getWrangler1xLegacyModuleReferences(
 				entryDirectory,
 				props.entry.file
@@ -594,12 +595,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			bundleType,
 			...bundle
 		} = props.noBundle
-			? await noBundleWorker(
-					props.config.projectRoot,
-					props.entry,
-					props.rules,
-					props.outDir
-				)
+			? await noBundleWorker(props.entry, props.rules, props.outDir)
 			: await bundleWorker(
 					props.entry,
 					typeof destination === "string" ? destination : destination.path,
@@ -627,7 +623,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 						// This could potentially cause issues as we no longer have identical behaviour between dev and deploy?
 						targetConsumer: "deploy",
 						local: false,
-						projectRoot: props.config.projectRoot,
+						projectRoot: props.projectRoot,
 						defineNavigatorUserAgent: isNavigatorDefined(
 							props.compatibilityDate ?? config.compatibility_date,
 							props.compatibilityFlags ?? config.compatibility_flags
@@ -899,12 +895,11 @@ function formatTime(duration: number) {
 }
 
 async function noBundleWorker(
-	projectRoot: string,
 	entry: Entry,
 	rules: Rule[],
 	outDir: string | undefined
 ) {
-	const modules = await findAdditionalModules(projectRoot, entry, rules);
+	const modules = await findAdditionalModules(entry, rules);
 	if (outDir) {
 		await writeAdditionalModules(modules, outDir);
 	}
