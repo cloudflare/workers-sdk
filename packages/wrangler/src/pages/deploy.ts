@@ -283,7 +283,7 @@ export const Handler = async (args: PagesDeployArgs) => {
 				});
 
 				logger.log(`✨ Successfully created the '${projectName}' project.`);
-				await metrics.sendMetricsEvent("create pages project");
+				metrics.sendMetricsEvent("create pages project");
 				break;
 			}
 		}
@@ -460,7 +460,7 @@ ${failureMessage}`,
 		},
 	});
 
-	await metrics.sendMetricsEvent("create pages deployment");
+	metrics.sendMetricsEvent("create pages deployment");
 };
 
 type NewOrExistingItem = {

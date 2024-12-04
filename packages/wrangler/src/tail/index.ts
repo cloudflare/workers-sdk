@@ -99,7 +99,7 @@ export async function tailHandler(args: TailArgs) {
 				"For Pages, please run `wrangler pages deployment tail` instead."
 		);
 	}
-	await metrics.sendMetricsEvent("begin log stream", {
+	metrics.sendMetricsEvent("begin log stream", {
 		sendMetrics: config.send_metrics,
 	});
 
@@ -173,7 +173,7 @@ export async function tailHandler(args: TailArgs) {
 				await setTimeout(100);
 				break;
 			case tail.CLOSED:
-				await metrics.sendMetricsEvent("end log stream", {
+				metrics.sendMetricsEvent("end log stream", {
 					sendMetrics: config.send_metrics,
 				});
 				throw new Error(
@@ -194,7 +194,7 @@ export async function tailHandler(args: TailArgs) {
 		cancelPing();
 		tail.terminate();
 		await deleteTail();
-		await metrics.sendMetricsEvent("end log stream", {
+		metrics.sendMetricsEvent("end log stream", {
 			sendMetrics: config.send_metrics,
 		});
 	}

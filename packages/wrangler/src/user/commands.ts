@@ -49,7 +49,7 @@ export const loginCommand = createCommand({
 			return;
 		}
 		await login({ browser: args.browser });
-		await metrics.sendMetricsEvent("login user", {
+		metrics.sendMetricsEvent("login user", {
 			sendMetrics: config.send_metrics,
 		});
 
@@ -70,7 +70,7 @@ export const logoutCommand = createCommand({
 	},
 	async handler(_, { config }) {
 		await logout();
-		await metrics.sendMetricsEvent("logout user", {
+		metrics.sendMetricsEvent("logout user", {
 			sendMetrics: config.send_metrics,
 		});
 	},
@@ -94,7 +94,7 @@ export const whoamiCommand = createCommand({
 	},
 	async handler(args, { config }) {
 		await whoami(args.account);
-		await metrics.sendMetricsEvent("view accounts", {
+		metrics.sendMetricsEvent("view accounts", {
 			sendMetrics: config.send_metrics,
 		});
 	},

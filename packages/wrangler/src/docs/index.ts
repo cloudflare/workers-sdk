@@ -45,7 +45,7 @@ export const docs = createCommand({
 
 		logger.log(`Opening a link in your default browser: ${urlToOpen}`);
 		await openInBrowser(urlToOpen);
-		await metrics.sendMetricsEvent("view docs", {
+		metrics.sendMetricsEvent("view docs", {
 			sendMetrics: config.send_metrics,
 		});
 	},

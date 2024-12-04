@@ -9,6 +9,7 @@ import { File, FormData } from "undici";
 import { vi } from "vitest";
 import { version as wranglerVersion } from "../../package.json";
 import { downloadWorker } from "../init";
+import { writeMetricsConfig } from "../metrics/metrics-config";
 import { getPackageManager } from "../package-manager";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
@@ -148,6 +149,27 @@ describe("init", () => {
 					{ stdio: "inherit" }
 				);
 			});
+		});
+
+		test("if telemetry is disabled in wrangler, then disable for c3 too", async () => {
+			writeMetricsConfig({
+				permission: {
+					enabled: false,
+					date: new Date(2024, 11, 11),
+				},
+			});
+			await runWrangler("init");
+
+			expect(execa).toHaveBeenCalledWith(
+				"mockpm",
+				["create", "cloudflare@^2.5.0"],
+				{
+					env: {
+						CREATE_CLOUDFLARE_TELEMETRY_DISABLED: "1",
+					},
+					stdio: "inherit",
+				}
+			);
 		});
 	});
 

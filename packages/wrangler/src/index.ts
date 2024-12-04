@@ -1,5 +1,6 @@
 import module from "node:module";
 import os from "node:os";
+import { setTimeout } from "node:timers/promises";
 import TOML from "@iarna/toml";
 import chalk from "chalk";
 import { ProxyAgent, setGlobalDispatcher } from "undici";
@@ -7,7 +8,13 @@ import makeCLI from "yargs";
 import { version as wranglerVersion } from "../package.json";
 import { ai } from "./ai";
 import { cloudchamber } from "./cloudchamber";
-import { configFileName, formatConfigSnippet, loadDotEnv } from "./config";
+import {
+	configFileName,
+	findWranglerConfig,
+	formatConfigSnippet,
+	loadDotEnv,
+	readRawConfig,
+} from "./config";
 import { demandSingleValue } from "./core";
 import { CommandRegistry } from "./core/CommandRegistry";
 import { createRegisterYargsCommand } from "./core/register-yargs-command";
@@ -67,6 +74,14 @@ import {
 	kvNamespaceNamespace,
 } from "./kv";
 import { logBuildFailure, logger, LOGGER_LEVELS } from "./logger";
+import { getMetricsDispatcher } from "./metrics";
+import {
+	metricsAlias,
+	telemetryDisableCommand,
+	telemetryEnableCommand,
+	telemetryNamespace,
+	telemetryStatusCommand,
+} from "./metrics/commands";
 import { mTlsCertificateCommands } from "./mtls-certificate/cli";
 import { writeOutput } from "./output";
 import { pages } from "./pages";
@@ -323,11 +338,6 @@ export function createCLIParser(argv: string[]) {
 			alias: ["x-versions", "experimental-gradual-rollouts"],
 		})
 		.check((args) => {
-			// Update logger level, before we do any logging
-			if (Object.keys(LOGGER_LEVELS).includes(args.logLevel as string)) {
-				logger.loggerLevel = args.logLevel as LoggerLevel;
-			}
-
 			// Grab locally specified env params from `.env` file
 			const loaded = loadDotEnv(".env", args.env);
 			for (const [key, value] of Object.entries(loaded?.parsed ?? {})) {
@@ -970,6 +980,30 @@ export function createCLIParser(argv: string[]) {
 	]);
 	registry.registerNamespace("whoami");
 
+	registry.define([
+		{
+			command: "wrangler telemetry",
+			definition: telemetryNamespace,
+		},
+		{
+			command: "wrangler metrics",
+			definition: metricsAlias,
+		},
+		{
+			command: "wrangler telemetry disable",
+			definition: telemetryDisableCommand,
+		},
+		{
+			command: "wrangler telemetry enable",
+			definition: telemetryEnableCommand,
+		},
+		{
+			command: "wrangler telemetry status",
+			definition: telemetryStatusCommand,
+		},
+	]);
+	registry.registerNamespace("telemetry");
+
 	/******************************************************/
 	/*               DEPRECATED COMMANDS                  */
 	/******************************************************/
@@ -1054,11 +1088,18 @@ export function createCLIParser(argv: string[]) {
 export async function main(argv: string[]): Promise<void> {
 	setupSentry();
 
+	const startTime = Date.now();
 	const wrangler = createCLIParser(argv);
-
+	let command: string | undefined;
+	let metricsArgs: Record<string, unknown> | undefined;
+	let dispatcher: ReturnType<typeof getMetricsDispatcher> | undefined;
 	// Register Yargs middleware to record command as Sentry breadcrumb
 	let recordedCommand = false;
 	const wranglerWithMiddleware = wrangler.middleware((args) => {
+		// Update logger level, before we do any logging
+		if (Object.keys(LOGGER_LEVELS).includes(args.logLevel as string)) {
+			logger.loggerLevel = args.logLevel as LoggerLevel;
+		}
 		// Middleware called for each sub-command, but only want to record once
 		if (recordedCommand) {
 			return;
@@ -1066,15 +1107,47 @@ export async function main(argv: string[]): Promise<void> {
 		recordedCommand = true;
 		// `args._` doesn't include any positional arguments (e.g. script name,
 		// key to fetch) or flags
-		addBreadcrumb(`wrangler ${args._.join(" ")}`);
+
+		try {
+			const configPath = args.config ?? findWranglerConfig(process.cwd());
+			const rawConfig = readRawConfig(args.config);
+			dispatcher = getMetricsDispatcher({
+				sendMetrics: rawConfig.send_metrics,
+				configPath,
+			});
+		} catch (e) {
+			// If we can't parse the config, we can't send metrics
+			logger.debug("Failed to parse config. Disabling metrics dispatcher.", e);
+		}
+
+		command = `wrangler ${args._.join(" ")}`;
+		metricsArgs = args;
+		addBreadcrumb(command);
+		// NB despite 'applyBeforeValidation = true', this runs *after* yargs 'validates' options,
+		// e.g. if a required arg is missing, yargs will error out before we send any events :/
+		dispatcher?.sendCommandEvent("wrangler command started", {
+			command,
+			args,
+		});
 	}, /* applyBeforeValidation */ true);
 
 	let cliHandlerThrew = false;
 	try {
 		await wranglerWithMiddleware.parse();
+
+		const durationMs = Date.now() - startTime;
+
+		dispatcher?.sendCommandEvent("wrangler command completed", {
+			command,
+			args: metricsArgs,
+			durationMs,
+			durationSeconds: durationMs / 1000,
+			durationMinutes: durationMs / 1000 / 60,
+		});
 	} catch (e) {
 		cliHandlerThrew = true;
 		let mayReport = true;
+		let errorType: string | undefined;
 
 		logger.log(""); // Just adds a bit of space
 		if (e instanceof CommandLineArgsError) {
@@ -1085,6 +1158,7 @@ export async function main(argv: string[]): Promise<void> {
 			await createCLIParser([...argv, "--help"]).parse();
 		} else if (isAuthenticationError(e)) {
 			mayReport = false;
+			errorType = "AuthenticationError";
 			logger.log(formatMessage(e));
 			const envAuth = getAuthFromEnv();
 			if (envAuth !== undefined && "apiToken" in envAuth) {
@@ -1131,9 +1205,12 @@ export async function main(argv: string[]): Promise<void> {
 			);
 		} else if (isBuildFailure(e)) {
 			mayReport = false;
+			errorType = "BuildFailure";
+
 			logBuildFailure(e.errors, e.warnings);
 		} else if (isBuildFailureFromCause(e)) {
 			mayReport = false;
+			errorType = "BuildFailure";
 			logBuildFailure(e.cause.errors, e.cause.warnings);
 		} else {
 			let loggableException = e;
@@ -1174,6 +1251,18 @@ export async function main(argv: string[]): Promise<void> {
 			await captureGlobalException(e);
 		}
 
+		const durationMs = Date.now() - startTime;
+
+		dispatcher?.sendCommandEvent("wrangler command errored", {
+			command,
+			args: metricsArgs,
+			durationMs,
+			durationSeconds: durationMs / 1000,
+			durationMinutes: durationMs / 1000 / 60,
+			errorType:
+				errorType ?? (e instanceof Error ? e.constructor.name : undefined),
+		});
+
 		throw e;
 	} finally {
 		try {
@@ -1190,6 +1279,10 @@ export async function main(argv: string[]): Promise<void> {
 			}
 
 			await closeSentry();
+			await Promise.race([
+				await Promise.allSettled(dispatcher?.requests ?? []),
+				setTimeout(1000), // Ensure we don't hang indefinitely
+			]);
 		} catch (e) {
 			logger.error(e);
 			// Only re-throw if we haven't already re-thrown an exception from a

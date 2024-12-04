@@ -41,7 +41,7 @@ export const versionsViewCommand = createCommand({
 			await printWranglerBanner();
 		}
 
-		await metrics.sendMetricsEvent(
+		metrics.sendMetricsEvent(
 			"view worker version",
 			{},
 			{

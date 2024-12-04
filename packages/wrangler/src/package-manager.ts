@@ -200,7 +200,7 @@ function supportsPnpm(): Promise<boolean> {
  * - [pnpm](https://github.com/pnpm/pnpm/blob/cd4f9341e966eb8b411462b48ff0c0612e0a51a7/packages/plugin-commands-script-runners/src/makeEnv.ts#L14)
  * - [yarn](https://yarnpkg.com/advanced/lifecycle-scripts#environment-variables)
  */
-function sniffUserAgent(): "npm" | "pnpm" | "yarn" | undefined {
+export function sniffUserAgent(): "npm" | "pnpm" | "yarn" | undefined {
 	const userAgent = env.npm_config_user_agent;
 	if (userAgent === undefined) {
 		return undefined;

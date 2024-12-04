@@ -134,7 +134,7 @@ export const kvNamespaceCreateCommand = createCommand({
 
 		logger.log(`🌀 Creating namespace with title "${title}"`);
 		const namespaceId = await createKVNamespace(accountId, title);
-		await metrics.sendMetricsEvent("create kv namespace", {
+		metrics.sendMetricsEvent("create kv namespace", {
 			sendMetrics: config.send_metrics,
 		});
 
@@ -180,7 +180,7 @@ export const kvNamespaceListCommand = createCommand({
 		// TODO: we should show bindings if they exist for given ids
 
 		logger.log(JSON.stringify(await listKVNamespaces(accountId), null, "  "));
-		await metrics.sendMetricsEvent("list kv namespaces", {
+		metrics.sendMetricsEvent("list kv namespaces", {
 			sendMetrics: config.send_metrics,
 		});
 	},
@@ -231,7 +231,7 @@ export const kvNamespaceDeleteCommand = createCommand({
 		logger.log(`Deleting KV namespace ${id}.`);
 		await deleteKVNamespace(accountId, id);
 		logger.log(`Deleted KV namespace ${id}.`);
-		await metrics.sendMetricsEvent("delete kv namespace", {
+		metrics.sendMetricsEvent("delete kv namespace", {
 			sendMetrics: config.send_metrics,
 		});
 
@@ -375,7 +375,7 @@ export const kvKeyPutCommand = createCommand({
 			metricEvent = "write kv key-value";
 		}
 
-		await metrics.sendMetricsEvent(metricEvent, {
+		metrics.sendMetricsEvent(metricEvent, {
 			sendMetrics: config.send_metrics,
 		});
 	},
@@ -449,7 +449,7 @@ export const kvKeyListCommand = createCommand({
 		}
 
 		logger.log(JSON.stringify(result, undefined, 2));
-		await metrics.sendMetricsEvent(metricEvent, {
+		metrics.sendMetricsEvent(metricEvent, {
 			sendMetrics: config.send_metrics,
 		});
 	},
@@ -544,7 +544,7 @@ export const kvKeyGetCommand = createCommand({
 		} else {
 			process.stdout.write(bufferKVValue);
 		}
-		await metrics.sendMetricsEvent(metricEvent, {
+		metrics.sendMetricsEvent(metricEvent, {
 			sendMetrics: config.send_metrics,
 		});
 	},
@@ -610,7 +610,7 @@ export const kvKeyDeleteCommand = createCommand({
 			await deleteKVKeyValue(accountId, namespaceId, key);
 			metricEvent = "delete kv key-value";
 		}
-		await metrics.sendMetricsEvent(metricEvent, {
+		metrics.sendMetricsEvent(metricEvent, {
 			sendMetrics: config.send_metrics,
 		});
 	},
@@ -751,7 +751,7 @@ export const kvBulkPutCommand = createCommand({
 			metricEvent = "write kv key-values (bulk)";
 		}
 
-		await metrics.sendMetricsEvent(metricEvent, {
+		metrics.sendMetricsEvent(metricEvent, {
 			sendMetrics: config.send_metrics,
 		});
 		logger.log("Success!");
@@ -865,7 +865,7 @@ export const kvBulkDeleteCommand = createCommand({
 			metricEvent = "delete kv key-values (bulk)";
 		}
 
-		await metrics.sendMetricsEvent(metricEvent, {
+		metrics.sendMetricsEvent(metricEvent, {
 			sendMetrics: config.send_metrics,
 		});
 

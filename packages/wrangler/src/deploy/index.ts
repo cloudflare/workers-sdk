@@ -390,7 +390,7 @@ async function deployWorker(args: DeployArgs) {
 		targets,
 	});
 
-	await metrics.sendMetricsEvent(
+	metrics.sendMetricsEvent(
 		"deploy worker script",
 		{
 			usesTypeScript: /\.tsx?$/.test(entry.file),

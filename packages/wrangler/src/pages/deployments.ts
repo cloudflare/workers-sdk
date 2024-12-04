@@ -87,5 +87,5 @@ export async function ListHandler({ projectName, environment }: ListArgs) {
 	});
 
 	logger.table(data);
-	await metrics.sendMetricsEvent("list pages deployments");
+	metrics.sendMetricsEvent("list pages deployments");
 }

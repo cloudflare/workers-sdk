@@ -104,7 +104,7 @@ export async function deleteHandler(args: DeleteArgs) {
 				"For Pages, please run `wrangler pages project delete` instead."
 		);
 	}
-	await metrics.sendMetricsEvent(
+	metrics.sendMetricsEvent(
 		"delete worker script",
 		{},
 		{ sendMetrics: config.send_metrics }

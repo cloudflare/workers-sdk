@@ -220,7 +220,7 @@ export const secret = (secretYargs: CommonYargsArgv) => {
 
 				try {
 					await submitSecret();
-					await metrics.sendMetricsEvent("create encrypted variable", {
+					metrics.sendMetricsEvent("create encrypted variable", {
 						sendMetrics: config.send_metrics,
 					});
 				} catch (e) {
@@ -300,7 +300,7 @@ export const secret = (secretYargs: CommonYargsArgv) => {
 							: `/accounts/${accountId}/workers/services/${scriptName}/environments/${args.env}/secrets`;
 
 					await fetchResult(`${url}/${args.key}`, { method: "DELETE" });
-					await metrics.sendMetricsEvent("delete encrypted variable", {
+					metrics.sendMetricsEvent("delete encrypted variable", {
 						sendMetrics: config.send_metrics,
 					});
 					logger.log(`✨ Success! Deleted secret ${args.key}`);
@@ -357,7 +357,7 @@ export const secret = (secretYargs: CommonYargsArgv) => {
 					logger.log(JSON.stringify(secrets, null, "  "));
 				}
 
-				await metrics.sendMetricsEvent("list encrypted variables", {
+				metrics.sendMetricsEvent("list encrypted variables", {
 					sendMetrics: config.send_metrics,
 				});
 			}
