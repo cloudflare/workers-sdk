@@ -4,6 +4,7 @@ import { blue, gray } from "@cloudflare/cli/colors";
 import { syncAssets } from "../assets";
 import { fetchResult } from "../cfetch";
 import { configFileName, formatConfigSnippet, printBindings } from "../config";
+import { getBindings } from "../deployment-bundle/bindings";
 import { bundleWorker } from "../deployment-bundle/bundle";
 import {
 	printBundleSize,
@@ -377,40 +378,10 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 				? await syncAssets(accountId, scriptName, props.assetsOptions.directory)
 				: undefined;
 
-		const bindings: CfWorkerInit["bindings"] = {
-			kv_namespaces: config.kv_namespaces || [],
-			send_email: config.send_email,
+		const bindings = getBindings({
+			...config,
 			vars: { ...config.vars, ...props.vars },
-			wasm_modules: config.wasm_modules,
-			browser: config.browser,
-			ai: config.ai,
-			version_metadata: config.version_metadata,
-			text_blobs: config.text_blobs,
-			data_blobs: config.data_blobs,
-			durable_objects: config.durable_objects,
-			workflows: config.workflows,
-			queues: config.queues.producers?.map((producer) => {
-				return { binding: producer.binding, queue_name: producer.queue };
-			}),
-			r2_buckets: config.r2_buckets,
-			d1_databases: config.d1_databases,
-			vectorize: config.vectorize,
-			hyperdrive: config.hyperdrive,
-			services: config.services,
-			analytics_engine_datasets: config.analytics_engine_datasets,
-			dispatch_namespaces: config.dispatch_namespaces,
-			mtls_certificates: config.mtls_certificates,
-			pipelines: config.pipelines,
-			logfwdr: config.logfwdr,
-			assets: config.assets?.binding
-				? { binding: config.assets?.binding }
-				: undefined,
-			unsafe: {
-				bindings: config.unsafe.bindings,
-				metadata: config.unsafe.metadata,
-				capnp: config.unsafe.capnp,
-			},
-		};
+		});
 
 		// The upload API only accepts an empty string or no specified placement for the "off" mode.
 		const placement: CfPlacement | undefined =
@@ -462,15 +433,9 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			modules
 		);
 
-		const withoutStaticAssets = {
-			...bindings,
-			kv_namespaces: config.kv_namespaces,
-			text_blobs: config.text_blobs,
-		};
-
 		// mask anything that was overridden in cli args
 		// so that we don't log potential secrets into the terminal
-		const maskedVars = { ...withoutStaticAssets.vars };
+		const maskedVars = { ...bindings.vars };
 		for (const key of Object.keys(maskedVars)) {
 			if (maskedVars[key] !== config.vars[key]) {
 				// This means it was overridden in cli args
@@ -480,7 +445,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		}
 
 		if (props.dryRun) {
-			printBindings({ ...withoutStaticAssets, vars: maskedVars });
+			printBindings({ ...bindings, vars: maskedVars });
 		} else {
 			await ensureQueuesExistByConfig(config);
 			let bindingsPrinted = false;
@@ -505,12 +470,12 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 				logger.log("Worker Startup Time:", result.startup_time_ms, "ms");
 				bindingsPrinted = true;
-				printBindings({ ...withoutStaticAssets, vars: maskedVars });
+				printBindings({ ...bindings, vars: maskedVars });
 				versionId = result.id;
 				hasPreview = result.metadata.has_preview;
 			} catch (err) {
 				if (!bindingsPrinted) {
-					printBindings({ ...withoutStaticAssets, vars: maskedVars });
+					printBindings({ ...bindings, vars: maskedVars });
 				}
 
 				helpIfErrorIsSizeOrScriptStartup(err, dependencies);

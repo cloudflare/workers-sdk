@@ -302,14 +302,21 @@ async function buildSourceOptions(
 	}
 }
 
+function getRemoteId(id: string | symbol | undefined): string | null {
+	return typeof id === "string" ? id : null;
+}
+
 function kvNamespaceEntry({ binding, id }: CfKvNamespace): [string, string] {
-	return [binding, id ?? binding];
+	return [binding, getRemoteId(id) ?? binding];
 }
 function r2BucketEntry({ binding, bucket_name }: CfR2Bucket): [string, string] {
-	return [binding, bucket_name ?? binding];
+	return [binding, getRemoteId(bucket_name) ?? binding];
 }
 function d1DatabaseEntry(db: CfD1Database): [string, string] {
-	return [db.binding, db.preview_database_id ?? db.database_id ?? db.binding];
+	return [
+		db.binding,
+		getRemoteId(db.preview_database_id ?? db.database_id) ?? db.binding,
+	];
 }
 function queueProducerEntry(
 	queue: CfQueue
