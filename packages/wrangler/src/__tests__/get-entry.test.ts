@@ -1,18 +1,15 @@
 import path from "path";
 import dedent from "ts-dedent";
-import { defaultWranglerConfig } from "../config/config";
+import { normalizeAndValidateConfig } from "../config/validation";
 import { getEntry } from "../deployment-bundle/entry";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { seed } from "./helpers/seed";
-import type { Config } from "../config/config";
+import type { Config, RawConfig } from "../config";
 import type { Entry } from "../deployment-bundle/entry";
 
-function getConfig(): Config {
-	return {
-		...defaultWranglerConfig,
-		projectRoot: process.cwd(),
-	};
+function getConfig(raw: RawConfig = {}, configPath?: string): Config {
+	return normalizeAndValidateConfig(raw, configPath, {}).config;
 }
 
 function normalize(entry: Entry): Entry {
@@ -83,11 +80,7 @@ describe("getEntry()", () => {
 							}
 						`,
 		});
-		const entry = await getEntry(
-			{},
-			{ ...getConfig(), main: "index.ts" },
-			"deploy"
-		);
+		const entry = await getEntry({}, getConfig({ main: "index.ts" }), "deploy");
 		expect(normalize(entry)).toMatchObject({
 			file: "/tmp/dir/index.ts",
 			moduleRoot: "/tmp/dir",
@@ -106,7 +99,7 @@ describe("getEntry()", () => {
 		});
 		const entry = await getEntry(
 			{},
-			{ ...getConfig(), main: "src/index.ts" },
+			getConfig({ main: "src/index.ts" }),
 			"deploy"
 		);
 		expect(normalize(entry)).toMatchObject({
@@ -127,12 +120,12 @@ describe("getEntry()", () => {
 		});
 		const entry = await getEntry(
 			{},
-			{
-				...getConfig(),
-				main: "src/index.ts",
-				configPath: "other-worker/wrangler.toml",
-				projectRoot: "other-worker",
-			},
+			getConfig(
+				{
+					main: "src/index.ts",
+				},
+				"other-worker/wrangler.toml"
+			),
 			"deploy"
 		);
 		expect(normalize(entry)).toMatchObject({

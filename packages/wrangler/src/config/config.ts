@@ -34,10 +34,17 @@ export type RawConfig = Partial<ConfigFields<RawDevConfig>> &
 	EnvironmentMap & { $schema?: string };
 
 export interface ComputedConfigFields {
-	/** Path to the configuration file (e.g. wrangler.toml/json), if one was provided. */
+	/**
+	 * Path (relative to current working directory) of the configuration file (e.g. wrangler.toml/json), if one was provided.
+	 */
 	configPath: string | undefined;
 
-	/** A worker's directory. Usually where the Wrangler configuration file is located */
+	/**
+	 * Absolute path to the Worker's directory.
+	 *
+	 * Will be the directory containing the Wrangler configuration file,
+	 * or the current working directory otherwise.
+	 */
 	projectRoot: string;
 }
 export interface ConfigFields<Dev extends RawDevConfig> {
