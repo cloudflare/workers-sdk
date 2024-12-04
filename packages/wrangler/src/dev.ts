@@ -705,7 +705,8 @@ export async function startDev(args: StartDevOptions) {
 
 		const configPath =
 			args.config ||
-			(args.script && findWranglerConfig(path.dirname(args.script)));
+			(args.script &&
+				findWranglerConfig(path.dirname(args.script), { useRedirect: true }));
 
 		const authHook: AsyncHook<CfAccount, [Pick<Config, "account_id">]> = async (
 			config

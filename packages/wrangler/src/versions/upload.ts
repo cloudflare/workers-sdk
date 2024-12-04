@@ -285,7 +285,7 @@ export const versionsUploadCommand = createCommand({
 		provideConfig: false,
 	},
 	handler: async function versionsUploadHandler(args) {
-		const config = getConfig(args, {}, args.script);
+		const config = getConfig(args, { useRedirect: true }, args.script);
 		const entry = await getEntry(args, config, "versions upload");
 		await metrics.sendMetricsEvent(
 			"upload worker version",

@@ -6,6 +6,10 @@ type Options = Parameters<typeof readConfig>[2];
 
 export function getConfig(args: Args, options?: Options, entryPath?: string) {
 	const configPath =
-		args.config || (entryPath && findWranglerConfig(path.dirname(entryPath)));
+		args.config ||
+		(entryPath &&
+			findWranglerConfig(path.dirname(entryPath), {
+				useRedirect: options?.useRedirect,
+			}));
 	return readConfig(configPath, args, options);
 }

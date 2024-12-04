@@ -25,6 +25,7 @@ import {
 	fetchVersions,
 	patchNonVersionedScriptSettings,
 } from "./api";
+import { getConfig } from "./utils/config";
 import type { Config } from "../config";
 import type {
 	ApiDeployment,
@@ -47,6 +48,10 @@ export const versionsDeployCommand = createCommand({
 		owner: "Workers: Authoring and Testing",
 		status: "open-beta",
 	},
+	behaviour: {
+		provideConfig: false,
+	},
+
 	args: {
 		name: {
 			describe: "Name of the worker",
@@ -96,7 +101,8 @@ export const versionsDeployCommand = createCommand({
 		},
 	},
 	positionalArgs: ["version-specs"],
-	handler: async function versionsDeployHandler(args, { config }) {
+	handler: async function versionsDeployHandler(args) {
+		const config = getConfig(args, { useRedirect: true });
 		metrics.sendMetricsEvent(
 			"deploy worker versions",
 			{},

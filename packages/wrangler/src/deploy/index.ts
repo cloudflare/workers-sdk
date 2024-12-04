@@ -264,9 +264,10 @@ async function deployWorker(args: DeployArgs) {
 
 	const configPath =
 		args.config ||
-		(args.script && findWranglerConfig(path.dirname(args.script)));
+		(args.script &&
+			findWranglerConfig(path.dirname(args.script), { useRedirect: true }));
 	const projectRoot = configPath && path.dirname(configPath);
-	const config = readConfig(configPath, args);
+	const config = readConfig(configPath, args, { useRedirect: true });
 	if (config.pages_build_output_dir) {
 		throw new UserError(
 			"It looks like you've run a Workers-specific command in a Pages project.\n" +
