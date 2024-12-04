@@ -22,10 +22,7 @@ import {
 } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
-import {
-	writeWranglerJson,
-	writeWranglerToml,
-} from "./helpers/write-wrangler-toml";
+import { writeWranglerConfig } from "./helpers/write-wrangler-config";
 import type {
 	Binding,
 	StartDevWorkerInput,
@@ -81,6 +78,7 @@ async function expectedHostAndZone(
 		env: undefined,
 		legacyEnv: undefined,
 		sendMetrics: undefined,
+		configPath: config.config,
 	});
 
 	expect(ctx).toEqual(
@@ -158,7 +156,7 @@ describe.sequential("wrangler dev", () => {
 
 	describe("config file support", () => {
 		it("should support wrangler.toml", async () => {
-			writeWranglerToml({
+			writeWranglerConfig({
 				name: "test-worker-toml",
 				main: "index.js",
 				compatibility_date: "2024-01-01",
@@ -170,21 +168,22 @@ describe.sequential("wrangler dev", () => {
 		});
 
 		it("should support wrangler.json", async () => {
-			writeWranglerJson({
-				name: "test-worker-json",
-				main: "index.js",
-				compatibility_date: "2024-01-01",
-			});
+			writeWranglerConfig(
+				{
+					name: "test-worker-json",
+					main: "index.js",
+					compatibility_date: "2024-01-01",
+				},
+				"wrangler.json"
+			);
 			fs.writeFileSync("index.js", `export default {};`);
 
-			const options = await runWranglerUntilConfig(
-				"dev --experimental-json-config"
-			);
+			const options = await runWranglerUntilConfig("dev");
 			expect(options.name).toMatchInlineSnapshot(`"test-worker-json"`);
 		});
 
 		it("should support wrangler.jsonc", async () => {
-			writeWranglerJson(
+			writeWranglerConfig(
 				{
 					name: "test-worker-jsonc",
 					main: "index.js",
@@ -194,9 +193,7 @@ describe.sequential("wrangler dev", () => {
 			);
 			fs.writeFileSync("index.js", `export default {};`);
 
-			const options = await runWranglerUntilConfig(
-				"dev --experimental-json-config"
-			);
+			const options = await runWranglerUntilConfig("dev");
 			expect(options.name).toMatchInlineSnapshot(`"test-worker-jsonc"`);
 		});
 	});
@@ -219,7 +216,7 @@ describe.sequential("wrangler dev", () => {
 	});
 	describe("authorization with env var", () => {
 		it("should use config.account_id over env var", async () => {
-			writeWranglerToml({
+			writeWranglerConfig({
 				name: "test-worker-toml",
 				main: "index.js",
 				compatibility_date: "2024-01-01",
@@ -235,7 +232,7 @@ describe.sequential("wrangler dev", () => {
 		});
 
 		it("should use env var when config.account_id is not set", async () => {
-			writeWranglerToml({
+			writeWranglerConfig({
 				name: "test-worker-toml",
 				main: "index.js",
 				compatibility_date: "2024-01-01",
@@ -258,7 +255,7 @@ describe.sequential("wrangler dev", () => {
 		});
 
 		it("should warn if there is a wrangler.toml but no compatibility-date", async () => {
-			writeWranglerToml({
+			writeWranglerConfig({
 				main: "index.js",
 				compatibility_date: undefined,
 			});
@@ -274,19 +271,19 @@ describe.sequential("wrangler dev", () => {
 
 			expect(std.warn.replaceAll(currentDate, "<current-date>"))
 				.toMatchInlineSnapshot(`
-"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mNo compatibility_date was specified. Using the installed Workers runtime's latest supported date: <current-date>.[0m
+					"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mNo compatibility_date was specified. Using the installed Workers runtime's latest supported date: <current-date>.[0m
 
-  ❯❯ Add one to your wrangler.toml file: compatibility_date = \\"<current-date>\\", or
-  ❯❯ Pass it in your terminal: wrangler dev [<SCRIPT>] --compatibility-date=<current-date>
+					  ❯❯ Add one to your wrangler.toml file: compatibility_date = \\"<current-date>\\", or
+					  ❯❯ Pass it in your terminal: wrangler dev [<SCRIPT>] --compatibility-date=<current-date>
 
-  See [4mhttps://developers.cloudflare.com/workers/platform/compatibility-dates/[0m for more information.
+					  See [4mhttps://developers.cloudflare.com/workers/platform/compatibility-dates/[0m for more information.
 
-"
-`);
+					"
+				`);
 		});
 
 		it("should not warn if there is a wrangler.toml but compatibility-date is specified at the command line", async () => {
-			writeWranglerToml({
+			writeWranglerConfig({
 				main: "index.js",
 				compatibility_date: undefined,
 			});
@@ -298,7 +295,7 @@ describe.sequential("wrangler dev", () => {
 
 	describe("entry-points", () => {
 		it("should error if there is no entry-point specified", async () => {
-			writeWranglerToml();
+			writeWranglerConfig();
 
 			await expect(
 				runWrangler("dev")
@@ -315,7 +312,7 @@ describe.sequential("wrangler dev", () => {
 		});
 
 		it("should use `main` from the top-level environment", async () => {
-			writeWranglerToml({
+			writeWranglerConfig({
 				main: "index.js",
 			});
 			fs.writeFileSync("index.js", `export default {};`);
@@ -324,7 +321,7 @@ describe.sequential("wrangler dev", () => {
 		});
 
 		it("should use `main` from a named environment", async () => {
-			writeWranglerToml({
+			writeWranglerConfig({
 				env: {
 					ENV1: {
 						main: "index.js",
@@ -337,7 +334,7 @@ describe.sequential("wrangler dev", () => {
 		});
 
 		it("should use `main` from a named environment, rather than the top-level", async () => {
-			writeWranglerToml({
+			writeWranglerConfig({
 				main: "other.js",
 				env: {
 					ENV1: {
@@ -357,7 +354,7 @@ describe.sequential("wrangler dev", () => {
 
 			// config.routes
 			mockGetZones("5.some-host.com", [{ id: "some-zone-id-5" }]);
-			writeWranglerToml({
+			writeWranglerConfig({
 				main: "index.js",
 				routes: ["http://5.some-host.com/some/path/*"],
 			});
@@ -379,7 +376,7 @@ describe.sequential("wrangler dev", () => {
 		});
 		it("should error if custom domains with paths are passed in but allow paths on normal routes", async () => {
 			fs.writeFileSync("index.js", `export default {};`);
-			writeWranglerToml({
+			writeWranglerConfig({
 				main: "index.js",
 				routes: [
 					"simple.co.uk/path",
@@ -405,7 +402,7 @@ describe.sequential("wrangler dev", () => {
 			`);
 		});
 		it("should error on routes with paths if assets are present", async () => {
-			writeWranglerToml({
+			writeWranglerConfig({
 				routes: [
 					"simple.co.uk/path",
 					"simple.co.uk/path/*",
@@ -465,7 +462,7 @@ describe.sequential("wrangler dev", () => {
 
 	describe("host", () => {
 		it("should resolve a host to its zone", async () => {
-			writeWranglerToml({
+			writeWranglerConfig({
 				main: "index.js",
 			});
 			fs.writeFileSync("index.js", `export default {};`);
@@ -478,7 +475,7 @@ describe.sequential("wrangler dev", () => {
 		});
 
 		it("should read wrangler.toml's dev.host", async () => {
-			writeWranglerToml({
+			writeWranglerConfig({
 				main: "index.js",
 				dev: {
 					host: "some-host.com",
@@ -491,7 +488,7 @@ describe.sequential("wrangler dev", () => {
 		});
 
 		it("should read --route", async () => {
-			writeWranglerToml({
+			writeWranglerConfig({
 				main: "index.js",
 			});
 			fs.writeFileSync("index.js", `export default {};`);
@@ -503,7 +500,7 @@ describe.sequential("wrangler dev", () => {
 		});
 
 		it("should read wrangler.toml's routes", async () => {
-			writeWranglerToml({
+			writeWranglerConfig({
 				main: "index.js",
 				routes: [
 					"http://some-host.com/some/path/*",
@@ -517,7 +514,7 @@ describe.sequential("wrangler dev", () => {
 		});
 
 		it("should read wrangler.toml's environment specific routes", async () => {
-			writeWranglerToml({
+			writeWranglerConfig({
 				main: "index.js",
 				routes: [
 					"http://a-host.com/some/path/*",
@@ -539,7 +536,7 @@ describe.sequential("wrangler dev", () => {
 		});
 
 		it("should strip leading `*` from given host when deducing a zone id", async () => {
-			writeWranglerToml({
+			writeWranglerConfig({
 				main: "index.js",
 				route: "*some-host.com/some/path/*",
 			});
@@ -550,7 +547,7 @@ describe.sequential("wrangler dev", () => {
 		});
 
 		it("should strip leading `*.` from given host when deducing a zone id", async () => {
-			writeWranglerToml({
+			writeWranglerConfig({
 				main: "index.js",
 				route: "*.some-host.com/some/path/*",
 			});
@@ -561,7 +558,7 @@ describe.sequential("wrangler dev", () => {
 		});
 
 		it("should, when provided, use a configured zone_id", async () => {
-			writeWranglerToml({
+			writeWranglerConfig({
 				main: "index.js",
 				routes: [
 					{ pattern: "https://some-domain.com/*", zone_id: "some-zone-id" },
@@ -574,7 +571,7 @@ describe.sequential("wrangler dev", () => {
 		});
 
 		it("should, when provided, use a zone_name to get a zone_id", async () => {
-			writeWranglerToml({
+			writeWranglerConfig({
 				main: "index.js",
 				routes: [
 					{
@@ -591,7 +588,7 @@ describe.sequential("wrangler dev", () => {
 		});
 
 		it("should find the host from the given pattern, not zone_name", async () => {
-			writeWranglerToml({
+			writeWranglerConfig({
 				main: "index.js",
 				routes: [
 					{
@@ -607,7 +604,7 @@ describe.sequential("wrangler dev", () => {
 		});
 
 		it("should fail for non-existing zones, when falling back from */*", async () => {
-			writeWranglerToml({
+			writeWranglerConfig({
 				main: "index.js",
 				routes: [
 					{
@@ -625,7 +622,7 @@ describe.sequential("wrangler dev", () => {
 		});
 
 		it("should fallback to zone_name when given the pattern */*", async () => {
-			writeWranglerToml({
+			writeWranglerConfig({
 				main: "index.js",
 				routes: [
 					{
@@ -644,7 +641,7 @@ describe.sequential("wrangler dev", () => {
 			]);
 		});
 		it("fails when given the pattern */* and no zone_name", async () => {
-			writeWranglerToml({
+			writeWranglerConfig({
 				main: "index.js",
 				routes: [
 					{
@@ -656,19 +653,20 @@ describe.sequential("wrangler dev", () => {
 			await fs.promises.writeFile("index.js", `export default {};`);
 
 			await expect(runWrangler("dev")).rejects.toMatchInlineSnapshot(`
-			[Error: Cannot infer host from first route: {"pattern":"*/*","zone_id":"exists-com"}.
-			You can explicitly set the \`dev.host\` configuration in your wrangler.toml file, for example:
+				[Error: Cannot infer host from first route: {"pattern":"*/*","zone_id":"exists-com"}.
+				You can explicitly set the \`dev.host\` configuration in your wrangler.toml file, for example:
 
-				\`\`\`
-				[dev]
+					\`\`\`
+					[dev]
 				host = "example.com"
-				\`\`\`
-			]
-		`);
+
+					\`\`\`
+				]
+			`);
 		});
 
 		it("given a long host, it should use the longest subdomain that resolves to a zone", async () => {
-			writeWranglerToml({
+			writeWranglerConfig({
 				main: "index.js",
 			});
 			fs.writeFileSync("index.js", `export default {};`);
@@ -713,7 +711,7 @@ describe.sequential("wrangler dev", () => {
 				fs.writeFileSync("index.js", `export default {};`);
 
 				mockGetZones("5.some-host.com", [{ id: "some-zone-id-5" }]);
-				writeWranglerToml({
+				writeWranglerConfig({
 					main: "index.js",
 					routes: ["http://5.some-host.com/some/path/*"],
 				});
@@ -725,7 +723,7 @@ describe.sequential("wrangler dev", () => {
 				fs.writeFileSync("index.js", `export default {};`);
 
 				mockGetZones("4.some-host.com", [{ id: "some-zone-id-4" }]);
-				writeWranglerToml({
+				writeWranglerConfig({
 					main: "index.js",
 					route: "https://4.some-host.com/some/path/*",
 				});
@@ -737,7 +735,7 @@ describe.sequential("wrangler dev", () => {
 				fs.writeFileSync("index.js", `export default {};`);
 
 				mockGetZones("3.some-host.com", [{ id: "some-zone-id-3" }]);
-				writeWranglerToml({
+				writeWranglerConfig({
 					main: "index.js",
 					route: "https://4.some-host.com/some/path/*",
 				});
@@ -751,7 +749,7 @@ describe.sequential("wrangler dev", () => {
 				fs.writeFileSync("index.js", `export default {};`);
 
 				mockGetZones("2.some-host.com", [{ id: "some-zone-id-2" }]);
-				writeWranglerToml({
+				writeWranglerConfig({
 					main: "index.js",
 					dev: {
 						host: `2.some-host.com`,
@@ -767,7 +765,7 @@ describe.sequential("wrangler dev", () => {
 				fs.writeFileSync("index.js", `export default {};`);
 
 				mockGetZones("1.some-host.com", [{ id: "some-zone-id-1" }]);
-				writeWranglerToml({
+				writeWranglerConfig({
 					main: "index.js",
 					dev: {
 						host: `2.some-host.com`,
@@ -781,7 +779,7 @@ describe.sequential("wrangler dev", () => {
 			});
 		});
 		it("should error if a host can't resolve to a zone", async () => {
-			writeWranglerToml({
+			writeWranglerConfig({
 				main: "index.js",
 			});
 			fs.writeFileSync("index.js", `export default {};`);
@@ -794,7 +792,7 @@ describe.sequential("wrangler dev", () => {
 		});
 
 		it("should not try to resolve a zone when starting in local mode", async () => {
-			writeWranglerToml({
+			writeWranglerConfig({
 				main: "index.js",
 			});
 			fs.writeFileSync("index.js", `export default {};`);
@@ -806,7 +804,7 @@ describe.sequential("wrangler dev", () => {
 
 	describe("local upstream", () => {
 		it("should use dev.host from toml by default", async () => {
-			writeWranglerToml({
+			writeWranglerConfig({
 				main: "index.js",
 				dev: {
 					host: `2.some-host.com`,
@@ -818,7 +816,7 @@ describe.sequential("wrangler dev", () => {
 		});
 
 		it("should use route from toml by default", async () => {
-			writeWranglerToml({
+			writeWranglerConfig({
 				main: "index.js",
 				route: "https://4.some-host.com/some/path/*",
 			});
@@ -828,7 +826,7 @@ describe.sequential("wrangler dev", () => {
 		});
 
 		it("should respect the option when provided", async () => {
-			writeWranglerToml({
+			writeWranglerConfig({
 				main: "index.js",
 				route: `2.some-host.com`,
 			});
@@ -843,7 +841,7 @@ describe.sequential("wrangler dev", () => {
 
 	describe("custom builds", () => {
 		it("should run a custom build before starting `dev`", async () => {
-			writeWranglerToml({
+			writeWranglerConfig({
 				build: {
 					command: `node -e "4+4; require('fs').writeFileSync('index.js', 'export default { fetch(){ return new Response(123) } }')"`,
 				},
@@ -873,7 +871,7 @@ describe.sequential("wrangler dev", () => {
 		it.skipIf(process.platform === "win32")(
 			"should run a custom build of multiple steps combined by && before starting `dev`",
 			async () => {
-				writeWranglerToml({
+				writeWranglerConfig({
 					build: {
 						command: `echo "export default { fetch(){ return new Response(123) } }" > index.js`,
 					},
@@ -896,7 +894,7 @@ describe.sequential("wrangler dev", () => {
 		);
 
 		it("should throw an error if the entry doesn't exist after the build finishes", async () => {
-			writeWranglerToml({
+			writeWranglerConfig({
 				main: "index.js",
 				build: {
 					command: `node -e "4+4;"`,
@@ -906,19 +904,20 @@ describe.sequential("wrangler dev", () => {
 			await expect(runWrangler("dev")).rejects
 				.toThrowErrorMatchingInlineSnapshot(`
 				[Error: The expected output file at "index.js" was not found after running custom build: node -e "4+4;".
-				The \`main\` property in wrangler.toml should point to the file generated by the custom build.]
+				The \`main\` property in your wrangler.toml file should point to the file generated by the custom build.]
 			`);
 			expect(std.out).toMatchInlineSnapshot(`
 			"Running custom build: node -e \\"4+4;\\"
 			"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`
-			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe expected output file at \\"index.js\\" was not found after running custom build: node -e \\"4+4;\\".[0m
+				"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe expected output file at \\"index.js\\" was not found after running custom build: node -e \\"4+4;\\".[0m
 
-			  The \`main\` property in wrangler.toml should point to the file generated by the custom build.
+				  The \`main\` property in your wrangler.toml file should point to the file generated by the custom
+				  build.
 
-			"
-		`);
+				"
+			`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
 
@@ -927,7 +926,7 @@ describe.sequential("wrangler dev", () => {
 				fs.writeFileSync(".env", "CUSTOM_BUILD_VAR=default");
 				fs.writeFileSync(".env.custom", "CUSTOM_BUILD_VAR=custom");
 				fs.writeFileSync("index.js", `export default {};`);
-				writeWranglerToml({
+				writeWranglerConfig({
 					main: "index.js",
 					env: { custom: {} },
 					build: {
@@ -955,12 +954,20 @@ describe.sequential("wrangler dev", () => {
 				const output = fs.readFileSync("var.txt", "utf8");
 				expect(output).toMatch("custom");
 			});
+			it("should show reasonable debug output if `.env` does not exist", async () => {
+				fs.rmSync(".env");
+				writeWranglerConfig({
+					main: "index.js",
+				});
+				await runWranglerUntilConfig("dev --log-level debug");
+				expect(std.debug).toContain(".env file not found at");
+			});
 		});
 	});
 
 	describe("upstream-protocol", () => {
 		it("should default upstream-protocol to `https` if remote mode", async () => {
-			writeWranglerToml({
+			writeWranglerConfig({
 				main: "index.js",
 			});
 			fs.writeFileSync("index.js", `export default {};`);
@@ -969,7 +976,7 @@ describe.sequential("wrangler dev", () => {
 		});
 
 		it("should warn if `--upstream-protocol=http` is used in remote mode", async () => {
-			writeWranglerToml({
+			writeWranglerConfig({
 				main: "index.js",
 			});
 			fs.writeFileSync("index.js", `export default {};`);
@@ -988,7 +995,7 @@ describe.sequential("wrangler dev", () => {
 		});
 
 		it("should default upstream-protocol to local-protocol if local mode", async () => {
-			writeWranglerToml({
+			writeWranglerConfig({
 				main: "index.js",
 			});
 			fs.writeFileSync("index.js", `export default {};`);
@@ -997,7 +1004,7 @@ describe.sequential("wrangler dev", () => {
 		});
 
 		it("should default upstream-protocol to http if no local-protocol in local mode", async () => {
-			writeWranglerToml({
+			writeWranglerConfig({
 				main: "index.js",
 			});
 			fs.writeFileSync("index.js", `export default {};`);
@@ -1008,7 +1015,7 @@ describe.sequential("wrangler dev", () => {
 
 	describe("local-protocol", () => {
 		it("should default local-protocol to `http`", async () => {
-			writeWranglerToml({
+			writeWranglerConfig({
 				main: "index.js",
 			});
 			fs.writeFileSync("index.js", `export default {};`);
@@ -1017,7 +1024,7 @@ describe.sequential("wrangler dev", () => {
 		});
 
 		it("should use `local_protocol` from `wrangler.toml`, if available", async () => {
-			writeWranglerToml({
+			writeWranglerConfig({
 				main: "index.js",
 				dev: {
 					local_protocol: "https",
@@ -1031,7 +1038,7 @@ describe.sequential("wrangler dev", () => {
 		it("should use --local-protocol command line arg, if provided", async () => {
 			// Here we show that the command line overrides the wrangler.toml by
 			// setting the config to https, and then setting it back to http on the command line.
-			writeWranglerToml({
+			writeWranglerConfig({
 				main: "index.js",
 				dev: {
 					local_protocol: "https",
@@ -1045,7 +1052,7 @@ describe.sequential("wrangler dev", () => {
 
 	describe("ip", () => {
 		it("should default ip to localhost", async () => {
-			writeWranglerToml({
+			writeWranglerConfig({
 				main: "index.js",
 			});
 			fs.writeFileSync("index.js", `export default {};`);
@@ -1056,7 +1063,7 @@ describe.sequential("wrangler dev", () => {
 		});
 
 		it("should use to `ip` from `wrangler.toml`, if available", async () => {
-			writeWranglerToml({
+			writeWranglerConfig({
 				main: "index.js",
 				dev: {
 					ip: "::1",
@@ -1068,7 +1075,7 @@ describe.sequential("wrangler dev", () => {
 		});
 
 		it("should use --ip command line arg, if provided", async () => {
-			writeWranglerToml({
+			writeWranglerConfig({
 				main: "index.js",
 				dev: {
 					ip: "::1",
@@ -1083,7 +1090,7 @@ describe.sequential("wrangler dev", () => {
 	describe("inspector port", () => {
 		it("should use 9229 as the default port", async () => {
 			(getPort as Mock).mockImplementation((options) => options.port);
-			writeWranglerToml({
+			writeWranglerConfig({
 				main: "index.js",
 			});
 			fs.writeFileSync("index.js", `export default {};`);
@@ -1093,7 +1100,7 @@ describe.sequential("wrangler dev", () => {
 
 		it("should read --inspector-port", async () => {
 			(getPort as Mock).mockImplementation((options) => options.port);
-			writeWranglerToml({
+			writeWranglerConfig({
 				main: "index.js",
 			});
 			fs.writeFileSync("index.js", `export default {};`);
@@ -1102,7 +1109,7 @@ describe.sequential("wrangler dev", () => {
 		});
 
 		it("should read dev.inspector_port from wrangler.toml", async () => {
-			writeWranglerToml({
+			writeWranglerConfig({
 				main: "index.js",
 				dev: {
 					inspector_port: 9999,
@@ -1114,7 +1121,7 @@ describe.sequential("wrangler dev", () => {
 		});
 
 		it("should error if a bad dev.inspector_port config is provided", async () => {
-			writeWranglerToml({
+			writeWranglerConfig({
 				main: "index.js",
 				dev: {
 					// @ts-expect-error intentionally bad port
@@ -1132,7 +1139,7 @@ describe.sequential("wrangler dev", () => {
 
 	describe("port", () => {
 		it("should default port to 8787 if it is not in use", async () => {
-			writeWranglerToml({
+			writeWranglerConfig({
 				main: "index.js",
 			});
 			fs.writeFileSync("index.js", `export default {};`);
@@ -1141,7 +1148,7 @@ describe.sequential("wrangler dev", () => {
 		});
 
 		it("should use `port` from `wrangler.toml`, if available", async () => {
-			writeWranglerToml({
+			writeWranglerConfig({
 				main: "index.js",
 				dev: {
 					port: 8888,
@@ -1156,7 +1163,7 @@ describe.sequential("wrangler dev", () => {
 		});
 
 		it("should error if a bad dev.port config is provided", async () => {
-			writeWranglerToml({
+			writeWranglerConfig({
 				main: "index.js",
 				dev: {
 					// @ts-expect-error intentionally bad port
@@ -1172,7 +1179,7 @@ describe.sequential("wrangler dev", () => {
 		});
 
 		it("should use --port command line arg, if provided", async () => {
-			writeWranglerToml({
+			writeWranglerConfig({
 				main: "index.js",
 				dev: {
 					port: 8888,
@@ -1187,7 +1194,7 @@ describe.sequential("wrangler dev", () => {
 		});
 
 		it("should use a different port to the default if it is in use", async () => {
-			writeWranglerToml({
+			writeWranglerConfig({
 				main: "index.js",
 			});
 			fs.writeFileSync("index.js", `export default {};`);
@@ -1201,7 +1208,7 @@ describe.sequential("wrangler dev", () => {
 
 	describe("durable_objects", () => {
 		it("should warn if there are remote Durable Objects, or missing migrations for local Durable Objects", async () => {
-			writeWranglerToml({
+			writeWranglerConfig({
 				main: "index.js",
 				durable_objects: {
 					bindings: [
@@ -1237,15 +1244,16 @@ describe.sequential("wrangler dev", () => {
 			expect(std.warn).toMatchInlineSnapshot(`
 				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
 
-				    - In wrangler.toml, you have configured [durable_objects] exported by this Worker (CLASS_1,
-				  CLASS_3), but no [migrations] for them. This may not work as expected until you add a [migrations]
-				  section to your wrangler.toml. Add this configuration to your wrangler.toml:
+				    - In your wrangler.toml file, you have configured \`durable_objects\` exported by this Worker
+				  (CLASS_1, CLASS_3), but no \`migrations\` for them. This may not work as expected until you add a
+				  \`migrations\` section to your wrangler.toml file. Add the following configuration:
 
-				        \`\`\`
-				        [[migrations]]
-				        tag = \\"v1\\" # Should be unique for each entry
-				        new_classes = [\\"CLASS_1\\", \\"CLASS_3\\"]
-				        \`\`\`
+				      \`\`\`
+				      [[migrations]]
+				      tag = \\"v1\\"
+				      new_classes = [ \\"CLASS_1\\", \\"CLASS_3\\" ]
+
+				      \`\`\`
 
 				      Refer to
 				  [4mhttps://developers.cloudflare.com/durable-objects/reference/durable-objects-migrations/[0m for more
@@ -1281,7 +1289,7 @@ describe.sequential("wrangler dev", () => {
       `;
 			fs.writeFileSync(".dev.vars", localVarsEnvContent, "utf8");
 
-			writeWranglerToml({
+			writeWranglerConfig({
 				main: "index.js",
 				vars: {
 					VAR_1: "original value 1",
@@ -1334,7 +1342,7 @@ describe.sequential("wrangler dev", () => {
 			fs.writeFileSync(".dev.vars", "DEFAULT_VAR=default");
 			fs.writeFileSync(".dev.vars.custom", "CUSTOM_VAR=custom");
 
-			writeWranglerToml({ main: "index.js", env: { custom: {} } });
+			writeWranglerConfig({ main: "index.js", env: { custom: {} } });
 			const config = await runWranglerUntilConfig("dev --env custom");
 			const varBindings: Record<string, unknown> = Object.fromEntries(
 				Object.entries(config.bindings ?? {})
@@ -1382,11 +1390,10 @@ describe.sequential("wrangler dev", () => {
 				  script  The path to an entry point for your Worker  [string]
 
 				GLOBAL FLAGS
-				  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
-				  -c, --config                    Path to .toml configuration file  [string]
-				  -e, --env                       Environment to use for operations and .env files  [string]
-				  -h, --help                      Show help  [boolean]
-				  -v, --version                   Show version number  [boolean]
+				  -c, --config   Path to Wrangler configuration file  [string]
+				  -e, --env      Environment to use for operations and .env files  [string]
+				  -h, --help     Show help  [boolean]
+				  -v, --version  Show version number  [boolean]
 
 				OPTIONS
 				      --name                                       Name of the Worker  [string]
@@ -1427,7 +1434,7 @@ describe.sequential("wrangler dev", () => {
 		});
 
 		it("should error if --legacy-assets and --site are used together", async () => {
-			writeWranglerToml({
+			writeWranglerConfig({
 				main: "./index.js",
 			});
 			fs.writeFileSync("index.js", `export default {};`);
@@ -1439,7 +1446,7 @@ describe.sequential("wrangler dev", () => {
 		});
 
 		it("should error if --legacy-assets and config.site are used together", async () => {
-			writeWranglerToml({
+			writeWranglerConfig({
 				main: "./index.js",
 				site: {
 					bucket: "xyz",
@@ -1454,7 +1461,7 @@ describe.sequential("wrangler dev", () => {
 		});
 
 		it("should error if config.legacy_assets and --site are used together", async () => {
-			writeWranglerToml({
+			writeWranglerConfig({
 				main: "./index.js",
 				legacy_assets: "abc",
 			});
@@ -1467,7 +1474,7 @@ describe.sequential("wrangler dev", () => {
 		});
 
 		it("should error if config.legacy_assets and config.site are used together", async () => {
-			writeWranglerToml({
+			writeWranglerConfig({
 				main: "./index.js",
 				legacy_assets: "abc",
 				site: {
@@ -1484,7 +1491,7 @@ describe.sequential("wrangler dev", () => {
 
 		describe("should indicate whether Sites is being used", () => {
 			it("no use", async () => {
-				writeWranglerToml({
+				writeWranglerConfig({
 					main: "index.js",
 				});
 				fs.writeFileSync("index.js", `export default {};`);
@@ -1493,7 +1500,7 @@ describe.sequential("wrangler dev", () => {
 				expect(config.legacy.site).toBeFalsy();
 			});
 			it("--site arg", async () => {
-				writeWranglerToml({
+				writeWranglerConfig({
 					main: "index.js",
 				});
 				fs.writeFileSync("index.js", `export default {};`);
@@ -1502,7 +1509,7 @@ describe.sequential("wrangler dev", () => {
 				expect(config.legacy.site).toBeTruthy();
 			});
 			it("--legacy-assets arg", async () => {
-				writeWranglerToml({
+				writeWranglerConfig({
 					main: "index.js",
 				});
 				fs.writeFileSync("index.js", `export default {};`);
@@ -1513,7 +1520,7 @@ describe.sequential("wrangler dev", () => {
 		});
 
 		it("should warn if --legacy-assets is used", async () => {
-			writeWranglerToml({
+			writeWranglerConfig({
 				main: "./index.js",
 			});
 			fs.writeFileSync("index.js", `export default {};`);
@@ -1530,7 +1537,7 @@ describe.sequential("wrangler dev", () => {
 		});
 
 		it("should warn if config.legacy_assets is used", async () => {
-			writeWranglerToml({
+			writeWranglerConfig({
 				main: "./index.js",
 				legacy_assets: "./assets",
 			});
@@ -1552,7 +1559,7 @@ describe.sequential("wrangler dev", () => {
 	describe("--assets", () => {
 		it("should not require entry point if using --assets", async () => {
 			fs.mkdirSync("assets");
-			writeWranglerToml({
+			writeWranglerConfig({
 				assets: { directory: "assets" },
 			});
 
@@ -1560,7 +1567,7 @@ describe.sequential("wrangler dev", () => {
 		});
 
 		it("should error if config.site and config.assets are used together", async () => {
-			writeWranglerToml({
+			writeWranglerConfig({
 				main: "./index.js",
 				assets: { directory: "assets" },
 				site: {
@@ -1582,7 +1589,7 @@ describe.sequential("wrangler dev", () => {
 		});
 
 		it("should error if config.site and --assets are used together", async () => {
-			writeWranglerToml({
+			writeWranglerConfig({
 				main: "./index.js",
 				site: {
 					bucket: "xyz",
@@ -1603,7 +1610,7 @@ describe.sequential("wrangler dev", () => {
 		});
 
 		it("should error if config.assets and config.legacy_assets are used together", async () => {
-			writeWranglerToml({
+			writeWranglerConfig({
 				main: "./index.js",
 				assets: { directory: "assets" },
 				legacy_assets: {
@@ -1642,7 +1649,7 @@ describe.sequential("wrangler dev", () => {
 		});
 
 		it("should error if --assets and config.legacy_assets are used together", async () => {
-			writeWranglerToml({
+			writeWranglerConfig({
 				main: "./index.js",
 				legacy_assets: {
 					bucket: "xyz",
@@ -1666,7 +1673,7 @@ describe.sequential("wrangler dev", () => {
 		});
 
 		it("should error if config.assets and --legacy-assets are used together", async () => {
-			writeWranglerToml({
+			writeWranglerConfig({
 				main: "./index.js",
 				assets: {
 					directory: "xyz",
@@ -1685,7 +1692,7 @@ describe.sequential("wrangler dev", () => {
 		});
 
 		it("should error if an ASSET binding is provided without a user Worker", async () => {
-			writeWranglerToml({
+			writeWranglerConfig({
 				assets: { directory: "assets", binding: "ASSETS" },
 			});
 			fs.mkdirSync("assets");
@@ -1700,7 +1707,7 @@ describe.sequential("wrangler dev", () => {
 		});
 
 		it("should error if directory specified by '--assets' command line argument does not exist", async () => {
-			writeWranglerToml({
+			writeWranglerConfig({
 				main: "./index.js",
 			});
 			fs.writeFileSync("index.js", `export default {};`);
@@ -1712,7 +1719,7 @@ describe.sequential("wrangler dev", () => {
 		});
 
 		it("should error if directory specified by '[assets]' configuration key does not exist", async () => {
-			writeWranglerToml({
+			writeWranglerConfig({
 				main: "./index.js",
 				assets: {
 					directory: "abc",
@@ -1736,7 +1743,7 @@ describe.sequential("wrangler dev", () => {
 		});
 
 		it("should error if config.assets and --remote are used together", async () => {
-			writeWranglerToml({
+			writeWranglerConfig({
 				assets: { directory: "./public" },
 			});
 			fs.mkdirSync("public");
@@ -1797,7 +1804,7 @@ describe.sequential("wrangler dev", () => {
 
 	describe("service bindings", () => {
 		it("should warn when using service bindings", async () => {
-			writeWranglerToml({
+			writeWranglerConfig({
 				services: [
 					{ binding: "WorkerA", service: "A" },
 					{ binding: "WorkerB", service: "B", environment: "staging" },
@@ -1818,7 +1825,7 @@ describe.sequential("wrangler dev", () => {
 
 	describe("print bindings", () => {
 		it("should print bindings", async () => {
-			writeWranglerToml({
+			writeWranglerConfig({
 				services: [
 					{ binding: "WorkerA", service: "A" },
 					{ binding: "WorkerB", service: "B", environment: "staging" },
@@ -1837,7 +1844,7 @@ describe.sequential("wrangler dev", () => {
 		});
 
 		it("should mask vars that were overriden in .dev.vars", async () => {
-			writeWranglerToml({
+			writeWranglerConfig({
 				vars: {
 					variable: 123,
 					overriden: "original values",
@@ -1866,7 +1873,7 @@ describe.sequential("wrangler dev", () => {
 
 	describe("`nodejs_compat` compatibility flag", () => {
 		it("should conflict with the --node-compat option", async () => {
-			writeWranglerToml();
+			writeWranglerConfig();
 			fs.writeFileSync("index.js", `export default {};`);
 
 			await expect(
@@ -1880,7 +1887,7 @@ describe.sequential("wrangler dev", () => {
 	});
 
 	it("should error helpfully if pages_build_output_dir is set", async () => {
-		writeWranglerToml({ pages_build_output_dir: "dist", name: "test" });
+		writeWranglerConfig({ pages_build_output_dir: "dist", name: "test" });
 		await expect(runWrangler("dev")).rejects.toThrowErrorMatchingInlineSnapshot(
 			`
 			[Error: It looks like you've run a Workers-specific command in a Pages project.

@@ -45,6 +45,7 @@ function isValidPythonPackageName(name: string): boolean {
  * that match the given `rules`.
  */
 export async function findAdditionalModules(
+	projectRoot: string,
 	entry: Entry,
 	rules: Rule[] | ParsedRules,
 	attachSourcemaps = false
@@ -72,7 +73,7 @@ export async function findAdditionalModules(
 		let pythonRequirements = "";
 		try {
 			pythonRequirements = await readFile(
-				path.resolve(entry.directory, "requirements.txt"),
+				path.resolve(projectRoot, "requirements.txt"),
 				"utf-8"
 			);
 		} catch (e) {
@@ -144,7 +145,7 @@ async function matchFiles(
 	const modules: CfModule[] = [];
 
 	// Use the `moduleNames` set to deduplicate modules.
-	// This is usually a poorly specified `wrangler.toml` configuration, but duplicate modules will cause a crash at runtime
+	// This is usually a poorly specified Wrangler configuration file, but duplicate modules will cause a crash at runtime
 	const moduleNames = new Set<string>();
 
 	for await (const filePath of files) {

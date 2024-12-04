@@ -11,6 +11,7 @@ import { useMockIsTTY } from "./helpers/mock-istty";
 import { createFetchResult, msw, mswR2handlers } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
+import { writeWranglerConfig } from "./helpers/write-wrangler-config";
 import type {
 	PutNotificationRequestBody,
 	R2EventableOperation,
@@ -27,21 +28,20 @@ describe("r2", () => {
 		await runWrangler("r2");
 		await endEventLoop();
 		expect(std.out).toMatchInlineSnapshot(`
-		"wrangler r2
+			"wrangler r2
 
-		📦 Manage R2 buckets & objects
+			📦 Manage R2 buckets & objects
 
-		COMMANDS
-		  wrangler r2 object  Manage R2 objects
-		  wrangler r2 bucket  Manage R2 buckets
+			COMMANDS
+			  wrangler r2 object  Manage R2 objects
+			  wrangler r2 bucket  Manage R2 buckets
 
-		GLOBAL FLAGS
-		  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
-		  -c, --config                    Path to .toml configuration file  [string]
-		  -e, --env                       Environment to use for operations and .env files  [string]
-		  -h, --help                      Show help  [boolean]
-		  -v, --version                   Show version number  [boolean]"
-	`);
+			GLOBAL FLAGS
+			  -c, --config   Path to Wrangler configuration file  [string]
+			  -e, --env      Environment to use for operations and .env files  [string]
+			  -h, --help     Show help  [boolean]
+			  -v, --version  Show version number  [boolean]"
+		`);
 	});
 
 	it("should show help when an invalid argument is passed", async () => {
@@ -55,22 +55,21 @@ describe("r2", () => {
 			"
 		`);
 		expect(std.out).toMatchInlineSnapshot(`
-		"
-		wrangler r2
+			"
+			wrangler r2
 
-		📦 Manage R2 buckets & objects
+			📦 Manage R2 buckets & objects
 
-		COMMANDS
-		  wrangler r2 object  Manage R2 objects
-		  wrangler r2 bucket  Manage R2 buckets
+			COMMANDS
+			  wrangler r2 object  Manage R2 objects
+			  wrangler r2 bucket  Manage R2 buckets
 
-		GLOBAL FLAGS
-		  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
-		  -c, --config                    Path to .toml configuration file  [string]
-		  -e, --env                       Environment to use for operations and .env files  [string]
-		  -h, --help                      Show help  [boolean]
-		  -v, --version                   Show version number  [boolean]"
-	`);
+			GLOBAL FLAGS
+			  -c, --config   Path to Wrangler configuration file  [string]
+			  -e, --env      Environment to use for operations and .env files  [string]
+			  -h, --help     Show help  [boolean]
+			  -v, --version  Show version number  [boolean]"
+		`);
 	});
 
 	describe("bucket", () => {
@@ -78,16 +77,10 @@ describe("r2", () => {
 		mockApiToken();
 
 		it("should show help when the bucket command is passed", async () => {
-			await expect(() => runWrangler("r2 bucket")).rejects.toThrow(
-				"Not enough non-option arguments: got 0, need at least 1"
-			);
-			expect(std.err).toMatchInlineSnapshot(`
-				"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNot enough non-option arguments: got 0, need at least 1[0m
-
-"`);
+			await runWrangler("r2 bucket");
+			await endEventLoop();
 			expect(std.out).toMatchInlineSnapshot(`
-				"
-				wrangler r2 bucket
+				"wrangler r2 bucket
 
 				Manage R2 buckets
 
@@ -104,11 +97,10 @@ describe("r2", () => {
 				  wrangler r2 bucket lifecycle        Manage lifecycle rules for an R2 bucket
 
 				GLOBAL FLAGS
-				  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
-				  -c, --config                    Path to .toml configuration file  [string]
-				  -e, --env                       Environment to use for operations and .env files  [string]
-				  -h, --help                      Show help  [boolean]
-				  -v, --version                   Show version number  [boolean]"
+				  -c, --config   Path to Wrangler configuration file  [string]
+				  -e, --env      Environment to use for operations and .env files  [string]
+				  -h, --help     Show help  [boolean]
+				  -v, --version  Show version number  [boolean]"
 			`);
 		});
 
@@ -142,11 +134,10 @@ describe("r2", () => {
 				  wrangler r2 bucket lifecycle        Manage lifecycle rules for an R2 bucket
 
 				GLOBAL FLAGS
-				  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
-				  -c, --config                    Path to .toml configuration file  [string]
-				  -e, --env                       Environment to use for operations and .env files  [string]
-				  -h, --help                      Show help  [boolean]
-				  -v, --version                   Show version number  [boolean]"
+				  -c, --config   Path to Wrangler configuration file  [string]
+				  -e, --env      Environment to use for operations and .env files  [string]
+				  -h, --help     Show help  [boolean]
+				  -v, --version  Show version number  [boolean]"
 			`);
 		});
 
@@ -250,14 +241,13 @@ describe("r2", () => {
 					  name  The name of the new bucket  [string] [required]
 
 					GLOBAL FLAGS
-					  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
-					  -c, --config                    Path to .toml configuration file  [string]
-					  -e, --env                       Environment to use for operations and .env files  [string]
-					  -h, --help                      Show help  [boolean]
-					  -v, --version                   Show version number  [boolean]
+					  -c, --config   Path to Wrangler configuration file  [string]
+					  -e, --env      Environment to use for operations and .env files  [string]
+					  -h, --help     Show help  [boolean]
+					  -v, --version  Show version number  [boolean]
 
 					OPTIONS
-					      --location       The optional location hint that determines geographic placement of the R2 bucket  [string] [choices: \\"weur\\", \\"eeur\\", \\"apac\\", \\"wnam\\", \\"enam\\"]
+					      --location       The optional location hint that determines geographic placement of the R2 bucket  [string] [choices: \\"weur\\", \\"eeur\\", \\"apac\\", \\"wnam\\", \\"enam\\", \\"oc\\"]
 					  -s, --storage-class  The default storage class for objects uploaded to this bucket  [string]
 					  -J, --jurisdiction   The jurisdiction where the new bucket will be created  [string]"
 				`);
@@ -275,25 +265,24 @@ describe("r2", () => {
 					`[Error: Unknown arguments: def, ghi]`
 				);
 				expect(std.out).toMatchInlineSnapshot(`
-  				"
-  				wrangler r2 bucket create <name>
+					"
+					wrangler r2 bucket create <name>
 
-  				Create a new R2 bucket
+					Create a new R2 bucket
 
-  				POSITIONALS
-  				  name  The name of the new bucket  [string] [required]
+					POSITIONALS
+					  name  The name of the new bucket  [string] [required]
 
-  				GLOBAL FLAGS
-  				  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
-  				  -c, --config                    Path to .toml configuration file  [string]
-  				  -e, --env                       Environment to use for operations and .env files  [string]
-  				  -h, --help                      Show help  [boolean]
-  				  -v, --version                   Show version number  [boolean]
+					GLOBAL FLAGS
+					  -c, --config   Path to Wrangler configuration file  [string]
+					  -e, --env      Environment to use for operations and .env files  [string]
+					  -h, --help     Show help  [boolean]
+					  -v, --version  Show version number  [boolean]
 
-  				OPTIONS
-  				      --location       The optional location hint that determines geographic placement of the R2 bucket  [string] [choices: \\"weur\\", \\"eeur\\", \\"apac\\", \\"wnam\\", \\"enam\\"]
-  				  -s, --storage-class  The default storage class for objects uploaded to this bucket  [string]
-  				  -J, --jurisdiction   The jurisdiction where the new bucket will be created  [string]"
+					OPTIONS
+					      --location       The optional location hint that determines geographic placement of the R2 bucket  [string] [choices: \\"weur\\", \\"eeur\\", \\"apac\\", \\"wnam\\", \\"enam\\", \\"oc\\"]
+					  -s, --storage-class  The default storage class for objects uploaded to this bucket  [string]
+					  -J, --jurisdiction   The jurisdiction where the new bucket will be created  [string]"
 				`);
 				expect(std.err).toMatchInlineSnapshot(`
 				            "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mUnknown arguments: def, ghi[0m
@@ -302,71 +291,71 @@ describe("r2", () => {
 			          `);
 			});
 
-			it("should create a bucket & check request inputs", async () => {
-				msw.use(
-					http.post(
-						"*/accounts/:accountId/r2/buckets",
-						async ({ request, params }) => {
-							const { accountId } = params;
-							expect(accountId).toEqual("some-account-id");
-							expect(await request.json()).toEqual({ name: "testBucket" });
-							return HttpResponse.json(createFetchResult({}));
-						},
-						{ once: true }
-					)
-				);
-				await runWrangler("r2 bucket create testBucket");
-				expect(std.out).toMatchInlineSnapshot(`
-"Creating bucket 'testBucket'...
-✅ Created bucket 'testBucket' with default storage class of Standard.
+			describe.each(["wrangler.json", "wrangler.toml"])("%s", (configPath) => {
+				it("should create a bucket & check request inputs", async () => {
+					msw.use(
+						http.post(
+							"*/accounts/:accountId/r2/buckets",
+							async ({ request, params }) => {
+								const { accountId } = params;
+								expect(accountId).toEqual("some-account-id");
+								expect(await request.json()).toEqual({ name: "testBucket" });
+								return HttpResponse.json(createFetchResult({}));
+							},
+							{ once: true }
+						)
+					);
+					writeWranglerConfig({}, configPath);
+					await runWrangler("r2 bucket create testBucket");
+					expect(std.out).toMatchSnapshot();
+				});
 
-Configure your Worker to write objects to this bucket:
+				it("should create a bucket with the expected jurisdiction", async () => {
+					msw.use(
+						http.post(
+							"*/accounts/:accountId/r2/buckets",
+							async ({ request, params }) => {
+								const { accountId } = params;
+								expect(accountId).toEqual("some-account-id");
+								expect(request.headers.get("cf-r2-jurisdiction")).toEqual("eu");
+								expect(await request.json()).toEqual({ name: "testBucket" });
+								return HttpResponse.json(createFetchResult({}));
+							},
+							{ once: true }
+						)
+					);
+					writeWranglerConfig({}, configPath);
+					await runWrangler("r2 bucket create testBucket -J eu");
+					expect(std.out).toMatchSnapshot();
+				});
 
-[[r2_buckets]]
-bucket_name = \\"testBucket\\"
-binding = \\"testBucket\\""
-			  `);
-			});
+				it("should create a bucket with the expected default storage class", async () => {
+					writeWranglerConfig({}, configPath);
+					await runWrangler("r2 bucket create testBucket -s InfrequentAccess");
+					expect(std.out).toMatchSnapshot();
+				});
 
-			it("should create a bucket with the expected jurisdiction", async () => {
-				msw.use(
-					http.post(
-						"*/accounts/:accountId/r2/buckets",
-						async ({ request, params }) => {
-							const { accountId } = params;
-							expect(accountId).toEqual("some-account-id");
-							expect(request.headers.get("cf-r2-jurisdiction")).toEqual("eu");
-							expect(await request.json()).toEqual({ name: "testBucket" });
-							return HttpResponse.json(createFetchResult({}));
-						},
-						{ once: true }
-					)
-				);
-				await runWrangler("r2 bucket create testBucket -J eu");
-				expect(std.out).toMatchInlineSnapshot(`
-"Creating bucket 'testBucket (eu)'...
-✅ Created bucket 'testBucket (eu)' with default storage class of Standard.
+				it("should create a bucket with the expected location hint", async () => {
+					msw.use(
+						http.post(
+							"*/accounts/:accountId/r2/buckets",
+							async ({ request, params }) => {
+								const { accountId } = params;
+								expect(accountId).toEqual("some-account-id");
+								expect(await request.json()).toEqual({
+									name: "testBucket",
+									locationHint: "weur",
+								});
+								return HttpResponse.json(createFetchResult({}));
+							},
+							{ once: true }
+						)
+					);
+					writeWranglerConfig({}, configPath);
 
-Configure your Worker to write objects to this bucket:
-
-[[r2_buckets]]
-bucket_name = \\"testBucket\\"
-binding = \\"testBucket\\""
-			  `);
-			});
-
-			it("should create a bucket with the expected default storage class", async () => {
-				await runWrangler("r2 bucket create testBucket -s InfrequentAccess");
-				expect(std.out).toMatchInlineSnapshot(`
-"Creating bucket 'testBucket'...
-✅ Created bucket 'testBucket' with default storage class of InfrequentAccess.
-
-Configure your Worker to write objects to this bucket:
-
-[[r2_buckets]]
-bucket_name = \\"testBucket\\"
-binding = \\"testBucket\\""
-			  `);
+					await runWrangler("r2 bucket create testBucket --location weur");
+					expect(std.out).toMatchSnapshot();
+				});
 			});
 
 			it("should error if storage class is invalid", async () => {
@@ -376,45 +365,17 @@ binding = \\"testBucket\\""
 					`[APIError: A request to the Cloudflare API (/accounts/some-account-id/r2/buckets) failed.]`
 				);
 				expect(std.out).toMatchInlineSnapshot(`
-				"Creating bucket 'testBucket'...
+			"Creating bucket 'testBucket'...
 
-				[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/accounts/some-account-id/r2/buckets) failed.[0m
+			[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/accounts/some-account-id/r2/buckets) failed.[0m
 
-				  The JSON you provided was not well formed. [code: 10040]
+			  The JSON you provided was not well formed. [code: 10040]
 
-				  If you think this is a bug, please open an issue at:
-				  [4mhttps://github.com/cloudflare/workers-sdk/issues/new/choose[0m
+			  If you think this is a bug, please open an issue at:
+			  [4mhttps://github.com/cloudflare/workers-sdk/issues/new/choose[0m
 
-				"
-		`);
-			});
-			it("should create a bucket with the expected location hint", async () => {
-				msw.use(
-					http.post(
-						"*/accounts/:accountId/r2/buckets",
-						async ({ request, params }) => {
-							const { accountId } = params;
-							expect(accountId).toEqual("some-account-id");
-							expect(await request.json()).toEqual({
-								name: "testBucket",
-								locationHint: "weur",
-							});
-							return HttpResponse.json(createFetchResult({}));
-						},
-						{ once: true }
-					)
-				);
-				await runWrangler("r2 bucket create testBucket --location weur");
-				expect(std.out).toMatchInlineSnapshot(`
-"Creating bucket 'testBucket'...
-✅ Created bucket 'testBucket' with location hint weur and default storage class of Standard.
-
-Configure your Worker to write objects to this bucket:
-
-[[r2_buckets]]
-bucket_name = \\"testBucket\\"
-binding = \\"testBucket\\""
-				`);
+			"
+	`);
 			});
 		});
 
@@ -435,11 +396,10 @@ binding = \\"testBucket\\""
 					  wrangler r2 bucket update storage-class <name>  Update the default storage class of an existing R2 bucket
 
 					GLOBAL FLAGS
-					  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
-					  -c, --config                    Path to .toml configuration file  [string]
-					  -e, --env                       Environment to use for operations and .env files  [string]
-					  -h, --help                      Show help  [boolean]
-					  -v, --version                   Show version number  [boolean]"
+					  -c, --config   Path to Wrangler configuration file  [string]
+					  -e, --env      Environment to use for operations and .env files  [string]
+					  -h, --help     Show help  [boolean]
+					  -v, --version  Show version number  [boolean]"
 				`);
 				expect(std.err).toMatchInlineSnapshot(`
 				            "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mUnknown argument: foo[0m
@@ -465,11 +425,10 @@ binding = \\"testBucket\\""
 						  name  The name of the existing bucket  [string] [required]
 
 						GLOBAL FLAGS
-						  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
-						  -c, --config                    Path to .toml configuration file  [string]
-						  -e, --env                       Environment to use for operations and .env files  [string]
-						  -h, --help                      Show help  [boolean]
-						  -v, --version                   Show version number  [boolean]
+						  -c, --config   Path to Wrangler configuration file  [string]
+						  -e, --env      Environment to use for operations and .env files  [string]
+						  -h, --help     Show help  [boolean]
+						  -v, --version  Show version number  [boolean]
 
 						OPTIONS
 						  -J, --jurisdiction   The jurisdiction of the bucket to be updated  [string]
@@ -531,11 +490,10 @@ binding = \\"testBucket\\""
 					  bucket  The name of the bucket to delete  [string] [required]
 
 					GLOBAL FLAGS
-					  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
-					  -c, --config                    Path to .toml configuration file  [string]
-					  -e, --env                       Environment to use for operations and .env files  [string]
-					  -h, --help                      Show help  [boolean]
-					  -v, --version                   Show version number  [boolean]
+					  -c, --config   Path to Wrangler configuration file  [string]
+					  -e, --env      Environment to use for operations and .env files  [string]
+					  -h, --help     Show help  [boolean]
+					  -v, --version  Show version number  [boolean]
 
 					OPTIONS
 					  -J, --jurisdiction  The jurisdiction where the bucket exists  [string]"
@@ -571,11 +529,10 @@ binding = \\"testBucket\\""
 					  bucket  The name of the bucket to delete  [string] [required]
 
 					GLOBAL FLAGS
-					  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
-					  -c, --config                    Path to .toml configuration file  [string]
-					  -e, --env                       Environment to use for operations and .env files  [string]
-					  -h, --help                      Show help  [boolean]
-					  -v, --version                   Show version number  [boolean]
+					  -c, --config   Path to Wrangler configuration file  [string]
+					  -e, --env      Environment to use for operations and .env files  [string]
+					  -h, --help     Show help  [boolean]
+					  -v, --version  Show version number  [boolean]
 
 					OPTIONS
 					  -J, --jurisdiction  The jurisdiction where the bucket exists  [string]"
@@ -639,11 +596,10 @@ binding = \\"testBucket\\""
 					  wrangler r2 bucket sippy get <name>      Check the status of Sippy on an R2 bucket
 
 					GLOBAL FLAGS
-					  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
-					  -c, --config                    Path to .toml configuration file  [string]
-					  -e, --env                       Environment to use for operations and .env files  [string]
-					  -h, --help                      Show help  [boolean]
-					  -v, --version                   Show version number  [boolean]"
+					  -c, --config   Path to Wrangler configuration file  [string]
+					  -e, --env      Environment to use for operations and .env files  [string]
+					  -h, --help     Show help  [boolean]
+					  -v, --version  Show version number  [boolean]"
 				`);
 			});
 
@@ -731,11 +687,10 @@ binding = \\"testBucket\\""
 						  name  The name of the bucket  [string] [required]
 
 						GLOBAL FLAGS
-						  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
-						  -c, --config                    Path to .toml configuration file  [string]
-						  -e, --env                       Environment to use for operations and .env files  [string]
-						  -h, --help                      Show help  [boolean]
-						  -v, --version                   Show version number  [boolean]
+						  -c, --config   Path to Wrangler configuration file  [string]
+						  -e, --env      Environment to use for operations and .env files  [string]
+						  -h, --help     Show help  [boolean]
+						  -v, --version  Show version number  [boolean]
 
 						OPTIONS
 						  -J, --jurisdiction              The jurisdiction where the bucket exists  [string]
@@ -775,11 +730,10 @@ binding = \\"testBucket\\""
 						  name  The name of the bucket  [string] [required]
 
 						GLOBAL FLAGS
-						  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
-						  -c, --config                    Path to .toml configuration file  [string]
-						  -e, --env                       Environment to use for operations and .env files  [string]
-						  -h, --help                      Show help  [boolean]
-						  -v, --version                   Show version number  [boolean]
+						  -c, --config   Path to Wrangler configuration file  [string]
+						  -e, --env      Environment to use for operations and .env files  [string]
+						  -h, --help     Show help  [boolean]
+						  -v, --version  Show version number  [boolean]
 
 						OPTIONS
 						  -J, --jurisdiction  The jurisdiction where the bucket exists  [string]"
@@ -827,11 +781,10 @@ binding = \\"testBucket\\""
 						  name  The name of the bucket  [string] [required]
 
 						GLOBAL FLAGS
-						  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
-						  -c, --config                    Path to .toml configuration file  [string]
-						  -e, --env                       Environment to use for operations and .env files  [string]
-						  -h, --help                      Show help  [boolean]
-						  -v, --version                   Show version number  [boolean]
+						  -c, --config   Path to Wrangler configuration file  [string]
+						  -e, --env      Environment to use for operations and .env files  [string]
+						  -h, --help     Show help  [boolean]
+						  -v, --version  Show version number  [boolean]
 
 						OPTIONS
 						  -J, --jurisdiction  The jurisdiction where the bucket exists  [string]"
@@ -1009,11 +962,10 @@ binding = \\"testBucket\\""
 						  bucket  The name of the R2 bucket to get event notification rules for  [string] [required]
 
 						GLOBAL FLAGS
-						  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
-						  -c, --config                    Path to .toml configuration file  [string]
-						  -e, --env                       Environment to use for operations and .env files  [string]
-						  -h, --help                      Show help  [boolean]
-						  -v, --version                   Show version number  [boolean]
+						  -c, --config   Path to Wrangler configuration file  [string]
+						  -e, --env      Environment to use for operations and .env files  [string]
+						  -h, --help     Show help  [boolean]
+						  -v, --version  Show version number  [boolean]
 
 						OPTIONS
 						  -J, --jurisdiction  The jurisdiction where the bucket exists  [string]"
@@ -1370,11 +1322,10 @@ binding = \\"testBucket\\""
 						  bucket  The name of the R2 bucket to create an event notification rule for  [string] [required]
 
 						GLOBAL FLAGS
-						  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
-						  -c, --config                    Path to .toml configuration file  [string]
-						  -e, --env                       Environment to use for operations and .env files  [string]
-						  -h, --help                      Show help  [boolean]
-						  -v, --version                   Show version number  [boolean]
+						  -c, --config   Path to Wrangler configuration file  [string]
+						  -e, --env      Environment to use for operations and .env files  [string]
+						  -h, --help     Show help  [boolean]
+						  -v, --version  Show version number  [boolean]
 
 						OPTIONS
 						      --event-types, --event-type  The type of event(s) that will emit event notifications  [array] [required] [choices: \\"object-create\\", \\"object-delete\\"]
@@ -1529,17 +1480,15 @@ binding = \\"testBucket\\""
 						  bucket  The name of the R2 bucket to delete an event notification rule for  [string] [required]
 
 						GLOBAL FLAGS
-						  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
-						  -c, --config                    Path to .toml configuration file  [string]
-						  -e, --env                       Environment to use for operations and .env files  [string]
-						  -h, --help                      Show help  [boolean]
-						  -v, --version                   Show version number  [boolean]
+						  -c, --config   Path to Wrangler configuration file  [string]
+						  -e, --env      Environment to use for operations and .env files  [string]
+						  -h, --help     Show help  [boolean]
+						  -v, --version  Show version number  [boolean]
 
 						OPTIONS
 						      --queue         The name of the queue that corresponds to the event notification rule. If no rule is provided, all event notification rules associated with the bucket and queue will be deleted  [string] [required]
 						      --rule          The ID of the event notification rule to delete  [string]
 						  -J, --jurisdiction  The jurisdiction where the bucket exists  [string]"
-
 					`);
 				});
 			});
@@ -2110,16 +2059,10 @@ binding = \\"testBucket\\""
 
 	describe("r2 object", () => {
 		it("should show help when the object command is passed", async () => {
-			await expect(() => runWrangler("r2 object")).rejects.toThrow(
-				"Not enough non-option arguments: got 0, need at least 1"
-			);
-			expect(std.err).toMatchInlineSnapshot(`
-				"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNot enough non-option arguments: got 0, need at least 1[0m
-
-"`);
+			await runWrangler("r2 object");
+			await endEventLoop();
 			expect(std.out).toMatchInlineSnapshot(`
-				"
-				wrangler r2 object
+				"wrangler r2 object
 
 				Manage R2 objects
 
@@ -2129,11 +2072,10 @@ binding = \\"testBucket\\""
 				  wrangler r2 object delete <objectPath>  Delete an object in an R2 bucket
 
 				GLOBAL FLAGS
-				  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
-				  -c, --config                    Path to .toml configuration file  [string]
-				  -e, --env                       Environment to use for operations and .env files  [string]
-				  -h, --help                      Show help  [boolean]
-				  -v, --version                   Show version number  [boolean]"
+				  -c, --config   Path to Wrangler configuration file  [string]
+				  -e, --env      Environment to use for operations and .env files  [string]
+				  -h, --help     Show help  [boolean]
+				  -v, --version  Show version number  [boolean]"
 			`);
 		});
 		describe("remote", () => {

@@ -7,8 +7,10 @@ import makeCLI from "yargs";
 import { version as wranglerVersion } from "../package.json";
 import { ai } from "./ai";
 import { cloudchamber } from "./cloudchamber";
-import { loadDotEnv } from "./config";
-import { createCommandRegister } from "./core/register-commands";
+import { configFileName, formatConfigSnippet, loadDotEnv } from "./config";
+import { demandSingleValue } from "./core";
+import { CommandRegistry } from "./core/CommandRegistry";
+import { createRegisterYargsCommand } from "./core/register-yargs-command";
 import { d1 } from "./d1";
 import { deleteHandler, deleteOptions } from "./delete";
 import { deployHandler, deployOptions } from "./deploy";
@@ -35,7 +37,9 @@ import {
 	subdomainHandler,
 	subdomainOptions,
 } from "./deprecated";
+import { dev } from "./dev";
 import { workerNamespaceCommands } from "./dispatch-namespace";
+import { docs } from "./docs";
 import {
 	CommandLineArgsError,
 	JsonFriendlyFatalError,
@@ -44,12 +48,24 @@ import {
 import { generateHandler, generateOptions } from "./generate";
 import { hyperdrive } from "./hyperdrive/index";
 import { initHandler, initOptions } from "./init";
-import "./docs";
-import "./dev";
-import "./kv";
-import "./workflows";
-import "./user/commands";
-import { demandSingleValue } from "./core";
+import {
+	kvBulkAlias,
+	kvBulkDeleteCommand,
+	kvBulkNamespace,
+	kvBulkPutCommand,
+	kvKeyAlias,
+	kvKeyDeleteCommand,
+	kvKeyGetCommand,
+	kvKeyListCommand,
+	kvKeyNamespace,
+	kvKeyPutCommand,
+	kvNamespace,
+	kvNamespaceAlias,
+	kvNamespaceCreateCommand,
+	kvNamespaceDeleteCommand,
+	kvNamespaceListCommand,
+	kvNamespaceNamespace,
+} from "./kv";
 import { logBuildFailure, logger, LOGGER_LEVELS } from "./logger";
 import { mTlsCertificateCommands } from "./mtls-certificate/cli";
 import { writeOutput } from "./output";
@@ -58,7 +74,55 @@ import { APIError, formatMessage, ParseError } from "./parse";
 import { pipelines } from "./pipelines";
 import { pubSubCommands } from "./pubsub/pubsub-commands";
 import { queues } from "./queues/cli/commands";
-import { r2 } from "./r2";
+import { r2Namespace } from "./r2";
+import {
+	r2BucketCreateCommand,
+	r2BucketDeleteCommand,
+	r2BucketInfoCommand,
+	r2BucketListCommand,
+	r2BucketNamespace,
+	r2BucketUpdateNamespace,
+	r2BucketUpdateStorageClassCommand,
+} from "./r2/bucket";
+import {
+	r2BucketDomainAddCommand,
+	r2BucketDomainListCommand,
+	r2BucketDomainNamespace,
+	r2BucketDomainRemoveCommand,
+	r2BucketDomainUpdateCommand,
+} from "./r2/domain";
+import {
+	r2BucketLifecycleAddCommand,
+	r2BucketLifecycleListCommand,
+	r2BucketLifecycleNamespace,
+	r2BucketLifecycleRemoveCommand,
+	r2BucketLifecycleSetCommand,
+} from "./r2/lifecycle";
+import {
+	r2BucketNotificationCreateCommand,
+	r2BucketNotificationDeleteCommand,
+	r2BucketNotificationGetAlias,
+	r2BucketNotificationListCommand,
+	r2BucketNotificationNamespace,
+} from "./r2/notification";
+import {
+	r2ObjectDeleteCommand,
+	r2ObjectGetCommand,
+	r2ObjectNamespace,
+	r2ObjectPutCommand,
+} from "./r2/object";
+import {
+	r2BucketDevUrlDisableCommand,
+	r2BucketDevUrlEnableCommand,
+	r2BucketDevUrlGetCommand,
+	r2BucketDevUrlNamespace,
+} from "./r2/public-dev-url";
+import {
+	r2BucketSippyDisableCommand,
+	r2BucketSippyEnableCommand,
+	r2BucketSippyGetCommand,
+	r2BucketSippyNamespace,
+} from "./r2/sippy";
 import { secret, secretBulkHandler, secretBulkOptions } from "./secret";
 import {
 	addBreadcrumb,
@@ -71,12 +135,23 @@ import registerTriggersSubcommands from "./triggers";
 import { typesHandler, typesOptions } from "./type-generation";
 import { printWranglerBanner, updateCheck } from "./update-check";
 import { getAuthFromEnv } from "./user";
+import { loginCommand, logoutCommand, whoamiCommand } from "./user/commands";
 import { whoami } from "./user/whoami";
 import { debugLogFilepath } from "./utils/log-file";
 import { vectorize } from "./vectorize/index";
 import registerVersionsSubcommands from "./versions";
 import registerVersionsDeploymentsSubcommands from "./versions/deployments";
 import registerVersionsRollbackCommand from "./versions/rollback";
+import { workflowsInstanceNamespace, workflowsNamespace } from "./workflows";
+import { workflowsDeleteCommand } from "./workflows/commands/delete";
+import { workflowsDescribeCommand } from "./workflows/commands/describe";
+import { workflowsInstancesDescribeCommand } from "./workflows/commands/instances/describe";
+import { workflowsInstancesListCommand } from "./workflows/commands/instances/list";
+import { workflowsInstancesPauseCommand } from "./workflows/commands/instances/pause";
+import { workflowsInstancesResumeCommand } from "./workflows/commands/instances/resume";
+import { workflowsInstancesTerminateCommand } from "./workflows/commands/instances/terminate";
+import { workflowsListCommand } from "./workflows/commands/list";
+import { workflowsTriggerCommand } from "./workflows/commands/trigger";
 import { asJson } from "./yargs-types";
 import type { Config } from "./config";
 import type { LoggerLevel } from "./logger";
@@ -88,7 +163,6 @@ export const betaCmdColor = "#BD5B08";
 
 export const DEFAULT_LOCAL_PORT = 8787;
 export const DEFAULT_INSPECTOR_PORT = 9229;
-
 export const proxy =
 	process.env.https_proxy ||
 	process.env.HTTPS_PROXY ||
@@ -108,7 +182,7 @@ export function getRules(config: Config): Config["rules"] {
 
 	if (config.rules && config.build?.upload?.rules) {
 		throw new UserError(
-			`You cannot configure both [rules] and [build.upload.rules] in your wrangler.toml. Delete the \`build.upload\` section.`
+			`You cannot configure both [rules] and [build.upload.rules] in your ${configFileName(config.configPath)} file. Delete the \`build.upload\` section.`
 		);
 	}
 
@@ -134,11 +208,17 @@ export function getScriptName(
 ): string | undefined {
 	if (args.name && isLegacyEnv(config) && args.env) {
 		throw new CommandLineArgsError(
-			"In legacy environment mode you cannot use --name and --env together. If you want to specify a Worker name for a specific environment you can add the following to your wrangler.toml config:" +
-				`
-    [env.${args.env}]
-    name = "${args.name}"
-    `
+			`In legacy environment mode you cannot use --name and --env together. If you want to specify a Worker name for a specific environment you can add the following to your ${configFileName(config.configPath)} file:\n` +
+				formatConfigSnippet(
+					{
+						env: {
+							[args.env]: {
+								name: args.name,
+							},
+						},
+					},
+					config.configPath
+				)
 		);
 	}
 
@@ -196,11 +276,13 @@ export function createCLIParser(argv: string[]) {
 		})
 		.option("config", {
 			alias: "c",
-			describe: "Path to .toml configuration file",
+			describe: "Path to Wrangler configuration file",
 			type: "string",
 			requiresArg: true,
 		})
-		.check(demandSingleValue("config"))
+		.check(
+			demandSingleValue("config", (configArgv) => configArgv["_"][0] === "dev")
+		)
 		.option("env", {
 			alias: "e",
 			describe: "Environment to use for operations and .env files",
@@ -210,8 +292,19 @@ export function createCLIParser(argv: string[]) {
 		.check(demandSingleValue("env"))
 		.option("experimental-json-config", {
 			alias: "j",
-			describe: `Experimental: support wrangler.json`,
+			describe: `Support wrangler.json.`,
 			type: "boolean",
+			default: true,
+			deprecated: true,
+			hidden: true,
+		})
+		.check((args) => {
+			if (args["experimental-json-config"] === false) {
+				throw new CommandLineArgsError(
+					`Wrangler now supports wrangler.json configuration files by default and ignores the value of the \`--experimental-json-config\` flag.`
+				);
+			}
+			return true;
 		})
 		.option("experimental-versions", {
 			describe: `Experimental: support Worker Versions`,
@@ -245,6 +338,12 @@ export function createCLIParser(argv: string[]) {
 
 			return true;
 		})
+		.option("experimental-provision", {
+			describe: `Experimental: Enable automatic resource provisioning`,
+			type: "boolean",
+			hidden: true,
+			alias: ["x-provision"],
+		})
 		.epilogue(
 			`Please report any issues to ${chalk.hex("#3B818D")(
 				"https://github.com/cloudflare/workers-sdk/issues/new/choose"
@@ -258,7 +357,7 @@ export function createCLIParser(argv: string[]) {
 		"Examples:": `${chalk.bold("EXAMPLES")}`,
 	});
 	wrangler.group(
-		["experimental-json-config", "config", "env", "help", "version"],
+		["config", "env", "help", "version"],
 		`${chalk.bold("GLOBAL FLAGS")}`
 	);
 	wrangler.help("help", "Show help").alias("h", "help");
@@ -296,7 +395,8 @@ export function createCLIParser(argv: string[]) {
 		}
 	);
 
-	const register = createCommandRegister(wrangler, subHelp);
+	const registerCommand = createRegisterYargsCommand(wrangler, subHelp);
+	const registry = new CommandRegistry(registerCommand);
 
 	/*
 	 * You will note that we use the form for all commands where we use the builder function
@@ -317,7 +417,13 @@ export function createCLIParser(argv: string[]) {
 	/*                 WRANGLER COMMANDS                  */
 	/******************************************************/
 	// docs
-	register.registerNamespace("docs");
+	registry.define([
+		{
+			command: "wrangler docs",
+			definition: docs,
+		},
+	]);
+	registry.registerNamespace("docs");
 
 	/******************** CMD GROUP ***********************/
 	// init
@@ -328,8 +434,13 @@ export function createCLIParser(argv: string[]) {
 		initHandler
 	);
 
-	// dev
-	register.registerNamespace("dev");
+	registry.define([
+		{
+			command: "wrangler dev",
+			definition: dev,
+		},
+	]);
+	registry.registerNamespace("dev");
 
 	// deploy
 	wrangler.command(
@@ -489,8 +600,34 @@ export function createCLIParser(argv: string[]) {
 	);
 
 	/******************** CMD GROUP ***********************/
-	// kv
-	register.registerNamespace("kv");
+	registry.define([
+		{ command: "wrangler kv:key", definition: kvKeyAlias },
+		{ command: "wrangler kv:namespace", definition: kvNamespaceAlias },
+		{ command: "wrangler kv:bulk", definition: kvBulkAlias },
+		{ command: "wrangler kv", definition: kvNamespace },
+		{ command: "wrangler kv namespace", definition: kvNamespaceNamespace },
+		{ command: "wrangler kv key", definition: kvKeyNamespace },
+		{ command: "wrangler kv bulk", definition: kvBulkNamespace },
+		{
+			command: "wrangler kv namespace create",
+			definition: kvNamespaceCreateCommand,
+		},
+		{
+			command: "wrangler kv namespace list",
+			definition: kvNamespaceListCommand,
+		},
+		{
+			command: "wrangler kv namespace delete",
+			definition: kvNamespaceDeleteCommand,
+		},
+		{ command: "wrangler kv key put", definition: kvKeyPutCommand },
+		{ command: "wrangler kv key list", definition: kvKeyListCommand },
+		{ command: "wrangler kv key get", definition: kvKeyGetCommand },
+		{ command: "wrangler kv key delete", definition: kvKeyDeleteCommand },
+		{ command: "wrangler kv bulk put", definition: kvBulkPutCommand },
+		{ command: "wrangler kv bulk delete", definition: kvBulkDeleteCommand },
+	]);
+	registry.registerNamespace("kv");
 
 	// queues
 	wrangler.command("queues", "🇶  Manage Workers Queues", (queuesYargs) => {
@@ -498,9 +635,146 @@ export function createCLIParser(argv: string[]) {
 	});
 
 	// r2
-	wrangler.command("r2", "📦 Manage R2 buckets & objects", (r2Yargs) => {
-		return r2(r2Yargs, subHelp);
-	});
+	registry.define([
+		{ command: "wrangler r2", definition: r2Namespace },
+		{
+			command: "wrangler r2 object",
+			definition: r2ObjectNamespace,
+		},
+		{
+			command: "wrangler r2 object get",
+			definition: r2ObjectGetCommand,
+		},
+		{
+			command: "wrangler r2 object put",
+			definition: r2ObjectPutCommand,
+		},
+		{
+			command: "wrangler r2 object delete",
+			definition: r2ObjectDeleteCommand,
+		},
+		{
+			command: "wrangler r2 bucket",
+			definition: r2BucketNamespace,
+		},
+		{
+			command: "wrangler r2 bucket create",
+			definition: r2BucketCreateCommand,
+		},
+		{
+			command: "wrangler r2 bucket update",
+			definition: r2BucketUpdateNamespace,
+		},
+		{
+			command: "wrangler r2 bucket update storage-class",
+			definition: r2BucketUpdateStorageClassCommand,
+		},
+		{
+			command: "wrangler r2 bucket list",
+			definition: r2BucketListCommand,
+		},
+		{
+			command: "wrangler r2 bucket info",
+			definition: r2BucketInfoCommand,
+		},
+		{
+			command: "wrangler r2 bucket delete",
+			definition: r2BucketDeleteCommand,
+		},
+		{
+			command: "wrangler r2 bucket sippy",
+			definition: r2BucketSippyNamespace,
+		},
+		{
+			command: "wrangler r2 bucket sippy enable",
+			definition: r2BucketSippyEnableCommand,
+		},
+		{
+			command: "wrangler r2 bucket sippy disable",
+			definition: r2BucketSippyDisableCommand,
+		},
+		{
+			command: "wrangler r2 bucket sippy get",
+			definition: r2BucketSippyGetCommand,
+		},
+		{
+			command: "wrangler r2 bucket notification",
+			definition: r2BucketNotificationNamespace,
+		},
+		{
+			command: "wrangler r2 bucket notification get",
+			definition: r2BucketNotificationGetAlias,
+		},
+		{
+			command: "wrangler r2 bucket notification list",
+			definition: r2BucketNotificationListCommand,
+		},
+		{
+			command: "wrangler r2 bucket notification create",
+			definition: r2BucketNotificationCreateCommand,
+		},
+		{
+			command: "wrangler r2 bucket notification delete",
+			definition: r2BucketNotificationDeleteCommand,
+		},
+		{
+			command: "wrangler r2 bucket domain",
+			definition: r2BucketDomainNamespace,
+		},
+		{
+			command: "wrangler r2 bucket domain list",
+			definition: r2BucketDomainListCommand,
+		},
+		{
+			command: "wrangler r2 bucket domain add",
+			definition: r2BucketDomainAddCommand,
+		},
+		{
+			command: "wrangler r2 bucket domain remove",
+			definition: r2BucketDomainRemoveCommand,
+		},
+		{
+			command: "wrangler r2 bucket domain update",
+			definition: r2BucketDomainUpdateCommand,
+		},
+		{
+			command: "wrangler r2 bucket dev-url",
+			definition: r2BucketDevUrlNamespace,
+		},
+		{
+			command: "wrangler r2 bucket dev-url get",
+			definition: r2BucketDevUrlGetCommand,
+		},
+		{
+			command: "wrangler r2 bucket dev-url enable",
+			definition: r2BucketDevUrlEnableCommand,
+		},
+		{
+			command: "wrangler r2 bucket dev-url disable",
+			definition: r2BucketDevUrlDisableCommand,
+		},
+		{
+			command: "wrangler r2 bucket lifecycle",
+			definition: r2BucketLifecycleNamespace,
+		},
+		{
+			command: "wrangler r2 bucket lifecycle list",
+			definition: r2BucketLifecycleListCommand,
+		},
+		{
+			command: "wrangler r2 bucket lifecycle add",
+			definition: r2BucketLifecycleAddCommand,
+		},
+		{
+			command: "wrangler r2 bucket lifecycle remove",
+			definition: r2BucketLifecycleRemoveCommand,
+		},
+		{
+			command: "wrangler r2 bucket lifecycle set",
+			definition: r2BucketLifecycleSetCommand,
+		},
+	]);
+	registry.registerNamespace("r2");
 
 	// d1
 	wrangler.command("d1", `🗄  Manage Workers D1 databases`, (d1Yargs) => {
@@ -527,9 +801,9 @@ export function createCLIParser(argv: string[]) {
 
 	// pages
 	wrangler.command("pages", "⚡️ Configure Cloudflare Pages", (pagesYargs) => {
-		// Pages does not support the `--config`, `--experimental-json-config`,
+		// Pages does not support the `--config`,
 		// and `--env` flags, therefore hiding them from the global flags list.
-		pagesYargs.hide("config").hide("env").hide("experimental-json-config");
+		pagesYargs.hide("config").hide("env");
 
 		return pages(pagesYargs, subHelp);
 	});
@@ -572,7 +846,53 @@ export function createCLIParser(argv: string[]) {
 	});
 
 	// workflows
-	register.registerNamespace("workflows");
+	registry.define([
+		{
+			command: "wrangler workflows",
+			definition: workflowsNamespace,
+		},
+		{
+			command: "wrangler workflows list",
+			definition: workflowsListCommand,
+		},
+		{
+			command: "wrangler workflows describe",
+			definition: workflowsDescribeCommand,
+		},
+		{
+			command: "wrangler workflows delete",
+			definition: workflowsDeleteCommand,
+		},
+		{
+			command: "wrangler workflows trigger",
+			definition: workflowsTriggerCommand,
+		},
+		{
+			command: "wrangler workflows instances",
+			definition: workflowsInstanceNamespace,
+		},
+		{
+			command: "wrangler workflows instances list",
+			definition: workflowsInstancesListCommand,
+		},
+		{
+			command: "wrangler workflows instances describe",
+			definition: workflowsInstancesDescribeCommand,
+		},
+		{
+			command: "wrangler workflows instances terminate",
+			definition: workflowsInstancesTerminateCommand,
+		},
+		{
+			command: "wrangler workflows instances pause",
+			definition: workflowsInstancesPauseCommand,
+		},
+		{
+			command: "wrangler workflows instances resume",
+			definition: workflowsInstancesResumeCommand,
+		},
+	]);
+	registry.registerNamespace("workflows");
 
 	// pipelines
 	wrangler.command("pipelines", false, (pipelinesYargs) => {
@@ -581,9 +901,29 @@ export function createCLIParser(argv: string[]) {
 
 	/******************** CMD GROUP ***********************/
 
-	register.registerNamespace("login");
-	register.registerNamespace("logout");
-	register.registerNamespace("whoami");
+	registry.define([
+		{
+			command: "wrangler login",
+			definition: loginCommand,
+		},
+	]);
+	registry.registerNamespace("login");
+
+	registry.define([
+		{
+			command: "wrangler logout",
+			definition: logoutCommand,
+		},
+	]);
+	registry.registerNamespace("logout");
+
+	registry.define([
+		{
+			command: "wrangler whoami",
+			definition: whoamiCommand,
+		},
+	]);
+	registry.registerNamespace("whoami");
 
 	/******************************************************/
 	/*               DEPRECATED COMMANDS                  */
@@ -659,7 +999,7 @@ export function createCLIParser(argv: string[]) {
 		}
 	);
 
-	register.registerAll();
+	registry.registerAll();
 
 	wrangler.exitProcess(false);
 
@@ -832,7 +1172,7 @@ export function getDevCompatibilityDate(
 	if (config.configPath !== undefined && compatibilityDate === undefined) {
 		logger.warn(
 			`No compatibility_date was specified. Using the installed Workers runtime's latest supported date: ${currentDate}.\n` +
-				`❯❯ Add one to your wrangler.toml file: compatibility_date = "${currentDate}", or\n` +
+				`❯❯ Add one to your ${configFileName(config.configPath)} file: compatibility_date = "${currentDate}", or\n` +
 				`❯❯ Pass it in your terminal: wrangler dev [<SCRIPT>] --compatibility-date=${currentDate}\n\n` +
 				"See https://developers.cloudflare.com/workers/platform/compatibility-dates/ for more information."
 		);

@@ -1,13 +1,11 @@
 import { fetchResult } from "../../../cfetch";
-import { defineCommand } from "../../../core";
+import { createCommand } from "../../../core/create-command";
 import { logger } from "../../../logger";
 import { requireAuth } from "../../../user";
 import { emojifyInstanceStatus, validateStatus } from "../../utils";
 import type { Instance } from "../../types";
 
-defineCommand({
-	command: "wrangler workflows instances list",
-
+export const workflowsInstancesListCommand = createCommand({
 	metadata: {
 		description:
 			"Instance related commands (list, describe, terminate, pause, resume)",

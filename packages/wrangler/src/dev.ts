@@ -4,12 +4,18 @@ import path from "node:path";
 import util from "node:util";
 import { isWebContainer } from "@webcontainer/env";
 import { DevEnv } from "./api";
+import { MultiworkerRuntimeController } from "./api/startDevWorker/MultiworkerRuntimeController";
+import { NoOpProxyController } from "./api/startDevWorker/NoOpProxyController";
 import {
 	convertCfWorkerInitBindingstoBindings,
 	extractBindingsOfType,
 } from "./api/startDevWorker/utils";
-import { findWranglerToml } from "./config";
-import { defineCommand } from "./core";
+import {
+	configFileName,
+	findWranglerConfig,
+	formatConfigSnippet,
+} from "./config";
+import { createCommand } from "./core/create-command";
 import { validateRoutes } from "./deploy/deploy";
 import { validateNodeCompatMode } from "./deployment-bundle/node-compat";
 import { devRegistry, getBoundRegisteredWorkers } from "./dev-registry";
@@ -20,7 +26,6 @@ import { UserError } from "./errors";
 import { run } from "./experimental-flags";
 import isInteractive from "./is-interactive";
 import { logger } from "./logger";
-import * as metrics from "./metrics";
 import { getLegacyAssetPaths, getSiteAssetPaths } from "./sites";
 import { loginOrRefreshIfRequired, requireApiToken, requireAuth } from "./user";
 import {
@@ -29,24 +34,33 @@ import {
 } from "./utils/collectKeyValues";
 import { mergeWithOverride } from "./utils/mergeWithOverride";
 import { getHostFromRoute } from "./zones";
-import type { ReloadCompleteEvent, StartDevWorkerInput, Trigger } from "./api";
+import type {
+	AsyncHook,
+	ReloadCompleteEvent,
+	StartDevWorkerInput,
+	Trigger,
+} from "./api";
 import type { Config, Environment } from "./config";
 import type {
 	EnvironmentNonInheritable,
 	Route,
 	Rule,
 } from "./config/environment";
-import type { CfModule, CfWorkerInit } from "./deployment-bundle/worker";
+import type {
+	CfKvNamespace,
+	CfModule,
+	CfWorkerInit,
+} from "./deployment-bundle/worker";
 import type { WorkerRegistry } from "./dev-registry";
+import type { CfAccount } from "./dev/create-worker-preview";
 import type { LoggerLevel } from "./logger";
 import type { EnablePagesAssetsServiceBindingOptions } from "./miniflare-cli/types";
 import type { watch } from "chokidar";
 import type { Json } from "miniflare";
 
-const command = defineCommand({
-	command: "wrangler dev",
+export const dev = createCommand({
 	behaviour: {
-		printConfigWarnings: false,
+		provideConfig: false,
 	},
 	metadata: {
 		description: "👂 Start a local server for developing your Worker",
@@ -364,12 +378,14 @@ const command = defineCommand({
 		const devInstance = await run(
 			{
 				FILE_BASED_REGISTRY: args.experimentalRegistry,
-				JSON_CONFIG_FILE: Boolean(args.experimentalJsonConfig),
+				MULTIWORKER: Array.isArray(args.config),
+				RESOURCES_PROVISION: false,
 			},
 			() => startDev(args)
 		);
 		assert(devInstance.devEnv !== undefined);
 		await events.once(devInstance.devEnv, "teardown");
+		await Promise.all(devInstance.secondary.map((d) => d.teardown()));
 		if (devInstance.teardownRegistryPromise) {
 			const teardownRegistry = await devInstance.teardownRegistryPromise;
 			await teardownRegistry(devInstance.devEnv.config.latestConfig?.name);
@@ -382,7 +398,7 @@ export type AdditionalDevProps = {
 	vars?: Record<string, string | Json>;
 	kv?: {
 		binding: string;
-		id: string;
+		id?: string;
 		preview_id?: string;
 	}[];
 	durableObjects?: {
@@ -399,7 +415,7 @@ export type AdditionalDevProps = {
 	}[];
 	r2?: {
 		binding: string;
-		bucket_name: string;
+		bucket_name?: string;
 		preview_bucket_name?: string;
 		jurisdiction?: string;
 	}[];
@@ -417,7 +433,7 @@ export type AdditionalDevProps = {
 	showInteractiveDevSession?: boolean;
 };
 
-type DevArguments = (typeof command)["args"];
+type DevArguments = (typeof dev)["args"];
 
 export type StartDevOptions = DevArguments &
 	// These options can be passed in directly when called with the `wrangler.dev()` API.
@@ -505,10 +521,140 @@ async function getPagesAssetsFetcher(
 	}
 }
 
+async function setupDevEnv(
+	devEnv: DevEnv,
+	configPath: string | undefined,
+	auth: AsyncHook<CfAccount, [Pick<Config, "account_id">]>,
+	args: Partial<StartDevOptions> & { multiworkerPrimary?: boolean }
+) {
+	await devEnv.config.set(
+		{
+			name: args.name,
+			config: configPath,
+			entrypoint: args.script,
+			compatibilityDate: args.compatibilityDate,
+			compatibilityFlags: args.compatibilityFlags,
+			triggers: args.routes?.map<Extract<Trigger, { type: "route" }>>((r) => ({
+				type: "route",
+				pattern: r,
+			})),
+			env: args.env,
+			build: {
+				bundle: args.bundle !== undefined ? args.bundle : undefined,
+				define: collectKeyValues(args.define),
+				jsxFactory: args.jsxFactory,
+				jsxFragment: args.jsxFragment,
+				tsconfig: args.tsconfig,
+				minify: args.minify,
+				processEntrypoint: args.processEntrypoint,
+				additionalModules: args.additionalModules,
+				moduleRoot: args.moduleRoot,
+				moduleRules: args.rules,
+				nodejsCompatMode: (parsedConfig: Config) =>
+					validateNodeCompatMode(
+						args.compatibilityDate ?? parsedConfig.compatibility_date,
+						args.compatibilityFlags ?? parsedConfig.compatibility_flags ?? [],
+						{
+							nodeCompat: args.nodeCompat ?? parsedConfig.node_compat,
+							noBundle: args.noBundle ?? parsedConfig.no_bundle,
+						}
+					),
+			},
+			bindings: {
+				...(await getPagesAssetsFetcher(args.enablePagesAssetsServiceBinding)),
+				...collectPlainTextVars(args.var),
+				...convertCfWorkerInitBindingstoBindings({
+					kv_namespaces: args.kv,
+					vars: args.vars,
+					send_email: undefined,
+					wasm_modules: undefined,
+					text_blobs: undefined,
+					browser: undefined,
+					ai: args.ai,
+					version_metadata: args.version_metadata,
+					data_blobs: undefined,
+					durable_objects: { bindings: args.durableObjects ?? [] },
+					workflows: undefined,
+					queues: undefined,
+					r2_buckets: args.r2,
+					d1_databases: args.d1Databases,
+					vectorize: undefined,
+					hyperdrive: undefined,
+					services: args.services,
+					analytics_engine_datasets: undefined,
+					dispatch_namespaces: undefined,
+					mtls_certificates: undefined,
+					pipelines: undefined,
+					logfwdr: undefined,
+					unsafe: undefined,
+					assets: undefined,
+				}),
+			},
+			dev: {
+				auth,
+				remote: !args.forceLocal && args.remote,
+				server: {
+					hostname: args.ip,
+					port: args.port,
+					secure:
+						args.localProtocol === undefined
+							? undefined
+							: args.localProtocol === "https",
+					httpsCertPath: args.httpsCertPath,
+					httpsKeyPath: args.httpsKeyPath,
+				},
+				inspector: {
+					port: args.inspectorPort,
+				},
+				origin: {
+					hostname: args.host ?? args.localUpstream,
+					secure:
+						args.upstreamProtocol === undefined
+							? undefined
+							: args.upstreamProtocol === "https",
+				},
+				persist: args.persistTo,
+				liveReload: args.liveReload,
+				testScheduled: args.testScheduled,
+				logLevel: args.logLevel,
+				registry: args.disableDevRegistry
+					? null
+					: devEnv.config.latestConfig?.dev.registry,
+				bindVectorizeToProd: args.experimentalVectorizeBindToProd,
+				multiworkerPrimary: args.multiworkerPrimary,
+			},
+			legacy: {
+				site: (configParam) => {
+					const legacyAssetPaths = getResolvedLegacyAssetPaths(
+						args,
+						configParam
+					);
+					return Boolean(args.site || configParam.site) && legacyAssetPaths
+						? {
+								bucket: path.join(
+									legacyAssetPaths.baseDirectory,
+									legacyAssetPaths?.assetDirectory
+								),
+								include: legacyAssetPaths.includePatterns,
+								exclude: legacyAssetPaths.excludePatterns,
+							}
+						: undefined;
+				},
+				legacyAssets: (configParam) =>
+					args.legacyAssets ?? configParam.legacy_assets,
+				enableServiceEnvironments: !(args.legacyEnv ?? true),
+			},
+			assets: args.assets,
+		} satisfies StartDevWorkerInput,
+		true
+	);
+	return devEnv;
+}
+
 export async function startDev(args: StartDevOptions) {
 	let configFileWatcher: ReturnType<typeof watch> | undefined;
 	let assetsWatcher: ReturnType<typeof watch> | undefined;
-	const devEnv = new DevEnv();
+	let devEnv: DevEnv | DevEnv[] | undefined;
 	let teardownRegistryPromise:
 		| Promise<(name?: string) => Promise<void>>
 		| undefined;
@@ -554,218 +700,142 @@ export async function startDev(args: StartDevOptions) {
 
 		const configPath =
 			args.config ||
-			(args.script && findWranglerToml(path.dirname(args.script)));
+			(args.script && findWranglerConfig(path.dirname(args.script)));
 
-		// The ProxyWorker will have a stable host and port, so only listen for the first update
-		void devEnv.proxy.ready.promise.then(({ url }) => {
-			if (args.onReady) {
-				args.onReady(url.hostname, parseInt(url.port));
+		const authHook: AsyncHook<CfAccount, [Pick<Config, "account_id">]> = async (
+			config
+		) => {
+			const hotkeysDisplayed = !!unregisterHotKeys;
+			let accountId = args.accountId;
+			if (!accountId) {
+				unregisterHotKeys?.();
+				accountId = await requireAuth(config);
+				if (hotkeysDisplayed) {
+					assert(devEnv !== undefined);
+					unregisterHotKeys = registerDevHotKeys(
+						Array.isArray(devEnv) ? devEnv[0] : devEnv,
+						args
+					);
+				}
+			}
+			return {
+				accountId,
+				apiToken: requireApiToken(),
+			};
+		};
+
+		if (Array.isArray(configPath)) {
+			const runtime = new MultiworkerRuntimeController(configPath.length);
+
+			const primaryDevEnv = new DevEnv({ runtimes: [runtime] });
+
+			if (isInteractive() && args.showInteractiveDevSession !== false) {
+				unregisterHotKeys = registerDevHotKeys(primaryDevEnv, args);
 			}
 
-			if (
-				(args.enableIpc || !args.onReady) &&
-				process.send &&
-				typeof vitest === "undefined"
-			) {
-				process.send(
-					JSON.stringify({
-						event: "DEV_SERVER_READY",
-						ip: url.hostname,
-						port: parseInt(url.port),
-					})
-				);
-			}
-		});
+			// Set up the primary DevEnv (the one that the ProxyController will connect to)
+			devEnv = [
+				await setupDevEnv(primaryDevEnv, configPath[0], authHook, {
+					...args,
+					disableDevRegistry: true,
+					multiworkerPrimary: true,
+				}),
+			];
 
-		if (!args.disableDevRegistry) {
-			teardownRegistryPromise = devRegistry((registry) =>
-				updateDevEnvRegistry(devEnv, registry)
-			);
-
-			devEnv.runtimes.forEach((runtime) => {
-				runtime.on(
-					"reloadComplete",
-					async (reloadEvent: ReloadCompleteEvent) => {
-						if (!reloadEvent.config.dev?.remote) {
-							const { url } = await devEnv.proxy.ready.promise;
-
-							await maybeRegisterLocalWorker(
-								url,
-								reloadEvent.config.name,
-								reloadEvent.proxyData.internalDurableObjects,
-								reloadEvent.proxyData.entrypointAddresses
-							);
-						}
-					}
-				);
-			});
-		}
-
-		if (isInteractive() && args.showInteractiveDevSession !== false) {
-			unregisterHotKeys = registerDevHotKeys(devEnv, args);
-		}
-
-		await devEnv.config.set(
-			{
-				name: args.name,
-				config: configPath,
-				entrypoint: args.script,
-				compatibilityDate: args.compatibilityDate,
-				compatibilityFlags: args.compatibilityFlags,
-				triggers: args.routes?.map<Extract<Trigger, { type: "route" }>>(
-					(r) => ({
-						type: "route",
-						pattern: r,
-					})
-				),
-				env: args.env,
-				build: {
-					bundle: args.bundle !== undefined ? args.bundle : undefined,
-					define: collectKeyValues(args.define),
-					jsxFactory: args.jsxFactory,
-					jsxFragment: args.jsxFragment,
-					tsconfig: args.tsconfig,
-					minify: args.minify,
-					processEntrypoint: args.processEntrypoint,
-					additionalModules: args.additionalModules,
-					moduleRoot: args.moduleRoot,
-					moduleRules: args.rules,
-					nodejsCompatMode: (parsedConfig: Config) =>
-						validateNodeCompatMode(
-							args.compatibilityDate ?? parsedConfig.compatibility_date,
-							args.compatibilityFlags ?? parsedConfig.compatibility_flags ?? [],
+			// Set up all auxiliary DevEnvs
+			devEnv.push(
+				...(await Promise.all(
+					(configPath as string[]).slice(1).map((c) => {
+						return setupDevEnv(
+							new DevEnv({
+								runtimes: [runtime],
+								proxy: new NoOpProxyController(),
+							}),
+							c,
+							authHook,
 							{
-								nodeCompat: args.nodeCompat ?? parsedConfig.node_compat,
-								noBundle: args.noBundle ?? parsedConfig.no_bundle,
+								disableDevRegistry: true,
+								multiworkerPrimary: false,
 							}
-						),
-				},
-				bindings: {
-					...(await getPagesAssetsFetcher(
-						args.enablePagesAssetsServiceBinding
-					)),
-					...collectPlainTextVars(args.var),
-					...convertCfWorkerInitBindingstoBindings({
-						kv_namespaces: args.kv,
-						vars: args.vars,
-						send_email: undefined,
-						wasm_modules: undefined,
-						text_blobs: undefined,
-						browser: undefined,
-						ai: args.ai,
-						version_metadata: args.version_metadata,
-						data_blobs: undefined,
-						durable_objects: { bindings: args.durableObjects ?? [] },
-						workflows: undefined,
-						queues: undefined,
-						r2_buckets: args.r2,
-						d1_databases: args.d1Databases,
-						vectorize: undefined,
-						hyperdrive: undefined,
-						services: args.services,
-						analytics_engine_datasets: undefined,
-						dispatch_namespaces: undefined,
-						mtls_certificates: undefined,
-						pipelines: undefined,
-						logfwdr: undefined,
-						unsafe: undefined,
-						assets: undefined,
-					}),
-				},
-				dev: {
-					auth: async (config) => {
-						const hotkeysDisplayed = !!unregisterHotKeys;
-						let accountId = args.accountId;
-						if (!accountId) {
-							unregisterHotKeys?.();
-							accountId = await requireAuth(config);
-							if (hotkeysDisplayed) {
-								unregisterHotKeys = registerDevHotKeys(devEnv, args);
+						);
+					})
+				))
+			);
+		} else {
+			devEnv = new DevEnv();
+
+			// The ProxyWorker will have a stable host and port, so only listen for the first update
+			void devEnv.proxy.ready.promise.then(({ url }) => {
+				if (args.onReady) {
+					args.onReady(url.hostname, parseInt(url.port));
+				}
+
+				if (
+					(args.enableIpc || !args.onReady) &&
+					process.send &&
+					typeof vitest === "undefined"
+				) {
+					process.send(
+						JSON.stringify({
+							event: "DEV_SERVER_READY",
+							ip: url.hostname,
+							port: parseInt(url.port),
+						})
+					);
+				}
+			});
+
+			if (!args.disableDevRegistry) {
+				teardownRegistryPromise = devRegistry((registry) => {
+					assert(devEnv !== undefined && !Array.isArray(devEnv));
+					void updateDevEnvRegistry(devEnv, registry);
+				});
+
+				devEnv.runtimes.forEach((runtime) => {
+					runtime.on(
+						"reloadComplete",
+						async (reloadEvent: ReloadCompleteEvent) => {
+							if (!reloadEvent.config.dev?.remote) {
+								assert(devEnv !== undefined && !Array.isArray(devEnv));
+								const { url } = await devEnv.proxy.ready.promise;
+
+								await maybeRegisterLocalWorker(
+									url,
+									reloadEvent.config.name,
+									reloadEvent.proxyData.internalDurableObjects,
+									reloadEvent.proxyData.entrypointAddresses
+								);
 							}
 						}
-						return {
-							accountId,
-							apiToken: requireApiToken(),
-						};
-					},
-					remote: !args.forceLocal && args.remote,
-					server: {
-						hostname: args.ip,
-						port: args.port,
-						secure:
-							args.localProtocol === undefined
-								? undefined
-								: args.localProtocol === "https",
-						httpsCertPath: args.httpsCertPath,
-						httpsKeyPath: args.httpsKeyPath,
-					},
-					inspector: {
-						port: args.inspectorPort,
-					},
-					origin: {
-						hostname: args.host ?? args.localUpstream,
-						secure:
-							args.upstreamProtocol === undefined
-								? undefined
-								: args.upstreamProtocol === "https",
-					},
-					persist: args.persistTo,
-					liveReload: args.liveReload,
-					testScheduled: args.testScheduled,
-					logLevel: args.logLevel,
-					registry: devEnv.config.latestConfig?.dev.registry,
-					bindVectorizeToProd: args.experimentalVectorizeBindToProd,
-				},
-				legacy: {
-					site: (configParam) => {
-						const legacyAssetPaths = getResolvedLegacyAssetPaths(
-							args,
-							configParam
-						);
-						return Boolean(args.site || configParam.site) && legacyAssetPaths
-							? {
-									bucket: path.join(
-										legacyAssetPaths.baseDirectory,
-										legacyAssetPaths?.assetDirectory
-									),
-									include: legacyAssetPaths.includePatterns,
-									exclude: legacyAssetPaths.excludePatterns,
-								}
-							: undefined;
-					},
-					legacyAssets: (configParam) =>
-						args.legacyAssets ?? configParam.legacy_assets,
-					enableServiceEnvironments: !(args.legacyEnv ?? true),
-				},
-				assets: args.assets,
-			} satisfies StartDevWorkerInput,
-			true
-		);
-
-		void metrics.sendMetricsEvent(
-			"run dev",
-			{
-				local: !args.remote,
-				usesTypeScript: /\.tsx?$/.test(
-					devEnv.config.latestConfig?.entrypoint as string
-				),
-			},
-			{
-				sendMetrics: devEnv.config.latestConfig?.sendMetrics,
-				offline: !args.remote,
+					);
+				});
 			}
-		);
 
-		return { devEnv, unregisterHotKeys, teardownRegistryPromise };
+			if (isInteractive() && args.showInteractiveDevSession !== false) {
+				unregisterHotKeys = registerDevHotKeys(devEnv, args);
+			}
+
+			await setupDevEnv(devEnv, configPath, authHook, args);
+		}
+
+		return {
+			devEnv: Array.isArray(devEnv) ? devEnv[0] : devEnv,
+			secondary: Array.isArray(devEnv) ? devEnv.slice(1) : [],
+			unregisterHotKeys,
+			teardownRegistryPromise,
+		};
 	} catch (e) {
 		await Promise.allSettled([
 			configFileWatcher?.close(),
 			assetsWatcher?.close(),
-			devEnv.teardown(),
+			...(Array.isArray(devEnv)
+				? devEnv.map((d) => d.teardown())
+				: [devEnv?.teardown()]),
 			(async () => {
 				if (teardownRegistryPromise) {
+					assert(devEnv === undefined || !Array.isArray(devEnv));
 					const teardownRegistry = await teardownRegistryPromise;
-					await teardownRegistry(devEnv.config.latestConfig?.name);
+					await teardownRegistry(devEnv?.config.latestConfig?.name);
 				}
 				unregisterHotKeys?.();
 			})(),
@@ -829,7 +899,10 @@ export async function getHostAndRoutes(
 	return { host, routes };
 }
 
-export function getInferredHost(routes: Route[] | undefined) {
+export function getInferredHost(
+	routes: Route[] | undefined,
+	configPath: string | undefined
+) {
 	if (routes?.length) {
 		const firstRoute = routes[0];
 		const host = getHostFromRoute(firstRoute);
@@ -839,11 +912,17 @@ export function getInferredHost(routes: Route[] | undefined) {
 			throw new UserError(
 				`Cannot infer host from first route: ${JSON.stringify(
 					firstRoute
-				)}.\nYou can explicitly set the \`dev.host\` configuration in your wrangler.toml file, for example:
+				)}.\nYou can explicitly set the \`dev.host\` configuration in your ${configFileName(configPath)} file, for example:
 
 	\`\`\`
-	[dev]
-	host = "example.com"
+	${formatConfigSnippet(
+		{
+			dev: {
+				host: "example.com",
+			},
+		},
+		configPath
+	)}
 	\`\`\`
 `
 			);
@@ -853,7 +932,7 @@ export function getInferredHost(routes: Route[] | undefined) {
 }
 
 function getResolvedLegacyAssetPaths(
-	args: StartDevOptions,
+	args: Partial<StartDevOptions>,
 	configParam: Config
 ) {
 	const legacyAssetPaths =
@@ -881,7 +960,7 @@ export function getBindings(
 	 * config in `wrangler.toml`.
 	 */
 	// merge KV bindings
-	const kvConfig = (configParam.kv_namespaces || []).map(
+	const kvConfig = (configParam.kv_namespaces || []).map<CfKvNamespace>(
 		({ binding, preview_id, id }) => {
 			// In remote `dev`, we make folks use a separate kv namespace called
 			// `preview_id` instead of `id` so that they don't
@@ -893,7 +972,7 @@ export function getBindings(
 				// TODO: This error has to be a _lot_ better, ideally just asking
 				// to create a preview namespace for the user automatically
 				throw new UserError(
-					`In development, you should use a separate kv namespace than the one you'd use in production. Please create a new kv namespace with "wrangler kv:namespace create <name> --preview" and add its id as preview_id to the kv_namespace "${binding}" in your wrangler.toml`
+					`In development, you should use a separate kv namespace than the one you'd use in production. Please create a new kv namespace with "wrangler kv:namespace create <name> --preview" and add its id as preview_id to the kv_namespace "${binding}" in your ${configFileName(configParam.configPath)} file`
 				); // Ugh, I really don't like this message very much
 			}
 			return {
@@ -922,7 +1001,7 @@ export function getBindings(
 		// if you have a preview_database_id, we'll use it, but we shouldn't force people to use it.
 		if (!d1Db.preview_database_id && !process.env.NO_D1_WARNING) {
 			logger.log(
-				`--------------------\n💡 Recommendation: for development, use a preview D1 database rather than the one you'd use in production.\n💡 Create a new D1 database with "wrangler d1 create <name>" and add its id as preview_database_id to the d1_database "${d1Db.binding}" in your wrangler.toml\n--------------------\n`
+				`--------------------\n💡 Recommendation: for development, use a preview D1 database rather than the one you'd use in production.\n💡 Create a new D1 database with "wrangler d1 create <name>" and add its id as preview_database_id to the d1_database "${d1Db.binding}" in your ${configFileName(configParam.configPath)} file\n--------------------\n`
 			);
 		}
 		return { ...d1Db, database_id };
@@ -938,7 +1017,7 @@ export function getBindings(
 				// same copy-on-write TODO
 				if (!preview_bucket_name && !local) {
 					throw new UserError(
-						`In development, you should use a separate r2 bucket than the one you'd use in production. Please create a new r2 bucket with "wrangler r2 bucket create <name>" and add its name as preview_bucket_name to the r2_buckets "${binding}" in your wrangler.toml`
+						`In development, you should use a separate r2 bucket than the one you'd use in production. Please create a new r2 bucket with "wrangler r2 bucket create <name>" and add its name as preview_bucket_name to the r2_buckets "${binding}" in your ${configFileName(configParam.configPath)} file`
 					);
 				}
 				return {

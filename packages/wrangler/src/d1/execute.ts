@@ -8,7 +8,7 @@ import { Miniflare } from "miniflare";
 import { fetch } from "undici";
 import { printWranglerBanner } from "..";
 import { fetchResult } from "../cfetch";
-import { readConfig } from "../config";
+import { configFileName, readConfig } from "../config";
 import { getLocalPersistencePath } from "../dev/get-local-persistence-path";
 import { confirm } from "../dialogs";
 import { createFatalError, JsonFriendlyFatalError, UserError } from "../errors";
@@ -19,7 +19,7 @@ import { requireAuth } from "../user";
 import * as options from "./options";
 import splitSqlQuery from "./splitter";
 import { getDatabaseByNameOrBinding, getDatabaseInfoFromConfig } from "./utils";
-import type { Config, ConfigFields, DevConfig, Environment } from "../config";
+import type { Config } from "../config";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
@@ -197,7 +197,7 @@ export async function executeSql({
 }: {
 	local: boolean | undefined;
 	remote: boolean | undefined;
-	config: ConfigFields<DevConfig> & Environment;
+	config: Config;
 	name: string;
 	shouldPrompt: boolean | undefined;
 	persistTo: string | undefined;
@@ -271,7 +271,7 @@ async function executeLocally({
 	const localDB = getDatabaseInfoFromConfig(config, name);
 	if (!localDB) {
 		throw new UserError(
-			`Couldn't find a D1 DB with the name or binding '${name}' in wrangler.toml.`
+			`Couldn't find a D1 DB with the name or binding '${name}' in your ${configFileName(config.configPath)} file.`
 		);
 	}
 
@@ -368,7 +368,7 @@ async function executeRemotely({
 	if (preview) {
 		if (!db.previewDatabaseUuid) {
 			throw new UserError(
-				"Please define a `preview_database_id` in your wrangler.toml to execute your queries against a preview database"
+				`Please define a \`preview_database_id\` in your ${configFileName(config.configPath)} file to execute your queries against a preview database`
 			);
 		}
 		db.uuid = db.previewDatabaseUuid;

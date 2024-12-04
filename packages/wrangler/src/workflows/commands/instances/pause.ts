@@ -1,12 +1,10 @@
 import { fetchResult } from "../../../cfetch";
-import { defineCommand } from "../../../core";
+import { createCommand } from "../../../core/create-command";
 import { logger } from "../../../logger";
 import { requireAuth } from "../../../user";
 import type { Instance } from "../../types";
 
-defineCommand({
-	command: "wrangler workflows instances pause",
-
+export const workflowsInstancesPauseCommand = createCommand({
 	metadata: {
 		description: "Pause a workflow instance",
 		owner: "Product: Workflows",

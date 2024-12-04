@@ -36,11 +36,13 @@ export function mockSubDomainRequest(
 /** Create a mock handler to fetch the  <script>.<user>.workers.dev subdomain status*/
 export function mockGetWorkerSubdomain({
 	enabled,
+	previews_enabled = true,
 	env,
 	legacyEnv = false,
 	expectedScriptName = "test-name",
 }: {
 	enabled: boolean;
+	previews_enabled?: boolean;
 	env?: string | undefined;
 	legacyEnv?: boolean | undefined;
 	expectedScriptName?: string;
@@ -61,7 +63,9 @@ export function mockGetWorkerSubdomain({
 					expect(params.envName).toEqual(env);
 				}
 
-				return HttpResponse.json(createFetchResult({ enabled }));
+				return HttpResponse.json(
+					createFetchResult({ enabled, previews_enabled })
+				);
 			},
 			{ once: true }
 		)
@@ -71,11 +75,13 @@ export function mockGetWorkerSubdomain({
 /** Create a mock handler to toggle a <script>.<user>.workers.dev subdomain status */
 export function mockUpdateWorkerSubdomain({
 	enabled,
+	previews_enabled = true,
 	env,
 	legacyEnv = false,
 	expectedScriptName = "test-name",
 }: {
 	enabled: boolean;
+	previews_enabled?: boolean;
 	env?: string | undefined;
 	legacyEnv?: boolean | undefined;
 	expectedScriptName?: string;
@@ -96,8 +102,10 @@ export function mockUpdateWorkerSubdomain({
 					expect(params.envName).toEqual(env);
 				}
 				const body = await request.json();
-				expect(body).toEqual({ enabled });
-				return HttpResponse.json(createFetchResult({ enabled }));
+				expect(body).toEqual({ enabled, previews_enabled });
+				return HttpResponse.json(
+					createFetchResult({ enabled, previews_enabled })
+				);
 			},
 			{ once: true }
 		)

@@ -5,7 +5,7 @@ import { mockConsoleMethods } from "./helpers/mock-console";
 import { msw } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
-import { writeWranglerToml } from "./helpers/write-wrangler-toml";
+import { writeWranglerConfig } from "./helpers/write-wrangler-config";
 
 describe("logout", () => {
 	runInTempDir();
@@ -72,7 +72,7 @@ describe("logout", () => {
 		expect(fs.existsSync(config)).toBeTruthy();
 
 		// @ts-expect-error - intentionally invalid
-		writeWranglerToml({ invalid: true });
+		writeWranglerConfig({ invalid: true });
 
 		await runWrangler("logout");
 

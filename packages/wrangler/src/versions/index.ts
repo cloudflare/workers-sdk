@@ -1,7 +1,7 @@
 import assert from "node:assert";
 import path from "node:path";
 import { processAssetsArg, validateAssetsArgsAndConfig } from "../assets";
-import { findWranglerToml, readConfig } from "../config";
+import { configFileName, findWranglerConfig, readConfig } from "../config";
 import { getEntry } from "../deployment-bundle/entry";
 import { UserError } from "../errors";
 import {
@@ -31,7 +31,7 @@ import type {
 async function standardPricingWarning(config: Config) {
 	if (config.usage_model !== undefined) {
 		logger.warn(
-			"The `usage_model` defined in wrangler.toml is deprecated and no longer used. Visit our developer docs for details: https://developers.cloudflare.com/workers/wrangler/configuration/#usage-model"
+			`The \`usage_model\` defined in your ${configFileName(config.configPath)} file is deprecated and no longer used. Visit our developer docs for details: https://developers.cloudflare.com/workers/wrangler/configuration/#usage-model`
 		);
 	}
 }
@@ -200,8 +200,8 @@ async function versionsUploadHandler(
 	await printWranglerBanner();
 
 	const configPath =
-		args.config || (args.script && findWranglerToml(path.dirname(args.script)));
-	const projectRoot = configPath && path.dirname(configPath);
+		args.config ||
+		(args.script && findWranglerConfig(path.dirname(args.script)));
 	const config = readConfig(configPath, args);
 	const entry = await getEntry(args, config, "versions upload");
 	await metrics.sendMetricsEvent(
@@ -246,7 +246,7 @@ async function versionsUploadHandler(
 
 	if (args.latest) {
 		logger.warn(
-			"Using the latest version of the Workers runtime. To silence this warning, please choose a specific version of the runtime with --compatibility-date, or add a compatibility_date to your wrangler.toml.\n"
+			`Using the latest version of the Workers runtime. To silence this warning, please choose a specific version of the runtime with --compatibility-date, or add a compatibility_date to your ${configFileName(config.configPath)} file.\n`
 		);
 	}
 
@@ -267,7 +267,7 @@ async function versionsUploadHandler(
 		await verifyWorkerMatchesCITag(
 			accountId,
 			name,
-			path.relative(entry.directory, config.configPath ?? "wrangler.toml")
+			path.relative(config.projectRoot, config.configPath ?? "wrangler.toml")
 		);
 	}
 
@@ -301,8 +301,6 @@ async function versionsUploadHandler(
 		dryRun: args.dryRun,
 		noBundle: !(args.bundle ?? !config.no_bundle),
 		keepVars: false,
-		projectRoot,
-
 		tag: args.tag,
 		message: args.message,
 	});

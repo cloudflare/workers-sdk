@@ -1,9 +1,9 @@
 /**
- * Pages now supports configuration via `wrangler.toml`. As opposed to
+ * Pages now supports configuration via a Wrangler configuration file. As opposed to
  * Workers however, Pages only supports a limited subset of all available
  * configuration keys.
  *
- * This file contains all `wrangler.toml` validation things, specific to
+ * This file contains all Wrangler configuration file validation things, specific to
  * Pages.
  */
 
@@ -36,9 +36,10 @@ const supportedPagesConfigFields = [
 	"dev",
 	"mtls_certificates",
 	"browser",
-	// normalizeAndValidateConfig() sets this value
-	"configPath",
 	"upload_source_maps",
+	// normalizeAndValidateConfig() sets the following values
+	"configPath",
+	"projectRoot",
 ] as const;
 
 export function validatePagesConfig(
@@ -88,7 +89,7 @@ function validateProjectName(
 	if (name === undefined || name.trim() === "") {
 		diagnostics.errors.push(
 			`Missing top-level field "name" in configuration file.\n` +
-				`Pages requires the name of your project to be configured at the top-level of your \`wrangler.toml\` file. This is because, in Pages, environments target the same project.`
+				`Pages requires the name of your project to be configured at the top-level of your Wrangler configuration file. This is because, in Pages, environments target the same project.`
 		);
 	}
 }

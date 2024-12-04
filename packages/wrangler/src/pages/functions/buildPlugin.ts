@@ -29,12 +29,12 @@ export function buildPluginFromFunctions({
 }: Options) {
 	const entry: Entry = {
 		file: resolve(getBasePath(), "templates/pages-template-plugin.ts"),
-		directory: functionsDirectory,
 		format: "modules",
 		moduleRoot: functionsDirectory,
 		exports: [],
 	};
 	const moduleCollector = createModuleCollector({
+		projectRoot: functionsDirectory,
 		entry,
 		findAdditionalModules: false,
 	});

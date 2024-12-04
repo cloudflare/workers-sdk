@@ -1,9 +1,10 @@
 import path from "node:path";
 import { readConfig } from "../config";
 import { normalizeAndValidateConfig } from "../config/validation";
+import { run } from "../experimental-flags";
 import { normalizeString } from "./helpers/normalize";
 import { runInTempDir } from "./helpers/run-in-tmp";
-import { writeWranglerToml } from "./helpers/write-wrangler-toml";
+import { writeWranglerConfig } from "./helpers/write-wrangler-config";
 import type {
 	ConfigFields,
 	RawConfig,
@@ -14,7 +15,7 @@ import type {
 describe("readConfig()", () => {
 	runInTempDir();
 	it("should not error if a python entrypoint is used with the right compatibility_flag", () => {
-		writeWranglerToml({
+		writeWranglerConfig({
 			main: "index.py",
 			compatibility_flags: ["python_workers"],
 		});
@@ -31,7 +32,7 @@ describe("readConfig()", () => {
 		`);
 	});
 	it("should error if a python entrypoint is used without the right compatibility_flag", () => {
-		writeWranglerToml({
+		writeWranglerConfig({
 			main: "index.py",
 		});
 		try {
@@ -62,6 +63,7 @@ describe("normalizeAndValidateConfig()", () => {
 			compatibility_date: undefined,
 			compatibility_flags: [],
 			configPath: undefined,
+			projectRoot: process.cwd(),
 			d1_databases: [],
 			vectorize: [],
 			hyperdrive: [],
@@ -120,6 +122,7 @@ describe("normalizeAndValidateConfig()", () => {
 			wasm_modules: undefined,
 			data_blobs: undefined,
 			workers_dev: undefined,
+			preview_urls: true,
 			zone_id: undefined,
 			no_bundle: undefined,
 			minify: undefined,
@@ -1017,24 +1020,26 @@ describe("normalizeAndValidateConfig()", () => {
 
 			const { config, diagnostics } = normalizeAndValidateConfig(
 				expectedConfig,
-				undefined,
+				"wrangler.toml",
 				{ env: undefined }
 			);
 
-			expect(config).toEqual(
+			// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+			expect({ ...config, tsconfig: normalizePath(config.tsconfig!) }).toEqual(
 				expect.objectContaining({ ...expectedConfig, main: resolvedMain })
 			);
 			expect(diagnostics.hasErrors()).toBe(false);
 			expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-				"Processing wrangler configuration:
+				"Processing wrangler.toml configuration:
 				  - \\"unsafe\\" fields are experimental and may change or break at any time.
-				  - In wrangler.toml, you have configured [durable_objects] exported by this Worker (CLASS1), but no [migrations] for them. This may not work as expected until you add a [migrations] section to your wrangler.toml. Add this configuration to your wrangler.toml:
+				  - In your wrangler.toml file, you have configured \`durable_objects\` exported by this Worker (CLASS1), but no \`migrations\` for them. This may not work as expected until you add a \`migrations\` section to your wrangler.toml file. Add the following configuration:
 
-				      \`\`\`
-				      [[migrations]]
-				      tag = \\"v1\\" # Should be unique for each entry
-				      new_classes = [\\"CLASS1\\"]
-				      \`\`\`
+				    \`\`\`
+				    [[migrations]]
+				    tag = \\"v1\\"
+				    new_classes = [ \\"CLASS1\\" ]
+
+				    \`\`\`
 
 				    Refer to https://developers.cloudflare.com/durable-objects/reference/durable-objects-migrations/ for more details."
 			`);
@@ -2321,6 +2326,27 @@ describe("normalizeAndValidateConfig()", () => {
 			            - \\"kv_namespaces[4]\\" bindings should have a string \\"id\\" field but got {\\"binding\\":\\"VALID\\",\\"id\\":\\"\\"}."
 		        `);
 			});
+
+			it("should allow the id field to be omitted when the RESOURCES_PROVISION experimental flag is enabled", () => {
+				const { diagnostics } = run(
+					{
+						RESOURCES_PROVISION: true,
+						FILE_BASED_REGISTRY: false,
+						MULTIWORKER: false,
+					},
+					() =>
+						normalizeAndValidateConfig(
+							{
+								kv_namespaces: [{ binding: "VALID" }],
+							} as unknown as RawConfig,
+							undefined,
+							{ env: undefined }
+						)
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(false);
+			});
 		});
 
 		it("should error if send_email.bindings are not valid", () => {
@@ -2448,6 +2474,27 @@ describe("normalizeAndValidateConfig()", () => {
 			  - \\"d1_databases[3]\\" bindings must have a \\"database_id\\" field but got {\\"binding\\":\\"D1_BINDING_2\\",\\"id\\":\\"my-db\\",\\"preview_id\\":2222}.
 			  - \\"d1_databases[4]\\" bindings must have a \\"database_id\\" field but got {\\"binding\\":\\"VALID\\",\\"id\\":\\"\\"}."
 		`);
+			});
+
+			it("should allow the database_id field to be omitted when the RESOURCES_PROVISION experimental flag is enabled", () => {
+				const { diagnostics } = run(
+					{
+						RESOURCES_PROVISION: true,
+						FILE_BASED_REGISTRY: false,
+						MULTIWORKER: false,
+					},
+					() =>
+						normalizeAndValidateConfig(
+							{
+								d1_databases: [{ binding: "VALID" }],
+							} as unknown as RawConfig,
+							undefined,
+							{ env: undefined }
+						)
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(false);
 			});
 		});
 
@@ -2742,6 +2789,27 @@ describe("normalizeAndValidateConfig()", () => {
 			            - \\"r2_buckets[3]\\" bindings should, optionally, have a string \\"preview_bucket_name\\" field but got {\\"binding\\":\\"R2_BINDING_2\\",\\"bucket_name\\":\\"R2_BUCKET_2\\",\\"preview_bucket_name\\":2555}.
 			            - \\"r2_buckets[4]\\" bindings should have a string \\"bucket_name\\" field but got {\\"binding\\":\\"R2_BINDING_1\\",\\"bucket_name\\":\\"\\"}."
 		        `);
+			});
+
+			it("should allow the bucket_name field to be omitted when the RESOURCES_PROVISION experimental flag is enabled", () => {
+				const { diagnostics } = run(
+					{
+						RESOURCES_PROVISION: true,
+						FILE_BASED_REGISTRY: false,
+						MULTIWORKER: false,
+					},
+					() =>
+						normalizeAndValidateConfig(
+							{
+								d1_databases: [{ binding: "VALID" }],
+							} as unknown as RawConfig,
+							undefined,
+							{ env: undefined }
+						)
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(false);
 			});
 		});
 
@@ -3723,16 +3791,16 @@ describe("normalizeAndValidateConfig()", () => {
 			        "
 		      `);
 			expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-			        "Processing wrangler configuration:
-			          - No environment found in configuration with name \\"DEV\\".
-			            Before using \`--env=DEV\` there should be an equivalent environment section in the configuration.
+				"Processing wrangler configuration:
+				  - No environment found in configuration with name \\"DEV\\".
+				    Before using \`--env=DEV\` there should be an equivalent environment section in the configuration.
 
-			            Consider adding an environment configuration section to the wrangler.toml file:
-			            \`\`\`
-			            [env.DEV]
-			            \`\`\`
-			        "
-		      `);
+				    Consider adding an environment configuration section to the Wrangler configuration file:
+				    \`\`\`
+				    [env.DEV]
+				    \`\`\`
+				"
+			`);
 		});
 
 		it("should error if we specify an environment that does not match the named environments", () => {
@@ -3741,17 +3809,17 @@ describe("normalizeAndValidateConfig()", () => {
 				env: "DEV",
 			});
 			expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			        "Processing wrangler configuration:
-			          - No environment found in configuration with name \\"DEV\\".
-			            Before using \`--env=DEV\` there should be an equivalent environment section in the configuration.
-			            The available configured environment names are: [\\"ENV1\\"]
+				"Processing wrangler configuration:
+				  - No environment found in configuration with name \\"DEV\\".
+				    Before using \`--env=DEV\` there should be an equivalent environment section in the configuration.
+				    The available configured environment names are: [\\"ENV1\\"]
 
-			            Consider adding an environment configuration section to the wrangler.toml file:
-			            \`\`\`
-			            [env.DEV]
-			            \`\`\`
-			        "
-		      `);
+				    Consider adding an environment configuration section to the Wrangler configuration file:
+				    \`\`\`
+				    [env.DEV]
+				    \`\`\`
+				"
+			`);
 			expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
 			        "Processing wrangler configuration:
 			        "
@@ -5537,6 +5605,29 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.hasErrors()).toBe(false);
 			});
+
+			it("should not error on mixed observability config", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						observability: {
+							enabled: true,
+							logs: {
+								invocation_logs: false,
+							},
+						},
+					} as unknown as RawConfig,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					"
+				`);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+			});
 			it("should error on a sampling rate out of range", () => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
@@ -5862,5 +5953,6 @@ describe("normalizeAndValidateConfig()", () => {
 function normalizePath(text: string): string {
 	return text
 		.replace("project\\wrangler.toml", "project/wrangler.toml")
-		.replace("src\\index.ts", "src/index.ts");
+		.replace("src\\index.ts", "src/index.ts")
+		.replace("path\\to\\tsconfig", "path/to/tsconfig");
 }

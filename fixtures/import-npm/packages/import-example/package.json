@@ -1,0 +1,21 @@
+{
+	"name": "import-example",
+	"private": true,
+	"description": "",
+	"author": "",
+	"main": "src/index.js",
+	"scripts": {
+		"check:type": "tsc",
+		"test:ci": "vitest run",
+		"test:watch": "vitest",
+		"type:tests": "tsc -p ./tests/tsconfig.json"
+	},
+	"dependencies": {
+		"import-wasm-static": "../../../../fixtures/import-wasm-static"
+	},
+	"devDependencies": {
+		"@cloudflare/workers-tsconfig": "../../../../packages/workers-tsconfig",
+		"undici": "^5.28.4",
+		"wrangler": "../../../../packages/wrangler"
+	}
+}

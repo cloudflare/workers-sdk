@@ -1,12 +1,13 @@
 import fs from "node:fs";
 import path from "path";
+import { configFileName } from "../../config";
 import { confirm } from "../../dialogs";
 import { UserError } from "../../errors";
 import { isNonInteractiveOrCI } from "../../is-interactive";
 import { logger } from "../../logger";
 import { DEFAULT_MIGRATION_PATH } from "../constants";
 import { executeSql } from "../execute";
-import type { ConfigFields, DevConfig, Environment } from "../../config";
+import type { Config } from "../../config";
 import type { QueryResult } from "../execute";
 import type { Migration } from "../types";
 
@@ -14,10 +15,12 @@ export async function getMigrationsPath({
 	projectPath,
 	migrationsFolderPath,
 	createIfMissing,
+	configPath,
 }: {
 	projectPath: string;
 	migrationsFolderPath: string;
 	createIfMissing: boolean;
+	configPath: string | undefined;
 }): Promise<string> {
 	const dir = path.resolve(projectPath, migrationsFolderPath);
 	if (fs.existsSync(dir)) {
@@ -26,7 +29,7 @@ export async function getMigrationsPath({
 
 	const warning = `No migrations folder found.${
 		migrationsFolderPath === DEFAULT_MIGRATION_PATH
-			? " Set `migrations_dir` in wrangler.toml to choose a different path."
+			? ` Set \`migrations_dir\` in your ${configFileName(configPath)} file to choose a different path.`
 			: ""
 	}`;
 
@@ -54,7 +57,7 @@ export async function getUnappliedMigrations({
 	migrationsPath: string;
 	local: boolean | undefined;
 	remote: boolean | undefined;
-	config: ConfigFields<DevConfig> & Environment;
+	config: Config;
 	name: string;
 	persistTo: string | undefined;
 	preview: boolean | undefined;
@@ -89,7 +92,7 @@ type ListAppliedMigrationsProps = {
 	migrationsTableName: string;
 	local: boolean | undefined;
 	remote: boolean | undefined;
-	config: ConfigFields<DevConfig> & Environment;
+	config: Config;
 	name: string;
 	persistTo: string | undefined;
 	preview: boolean | undefined;
@@ -167,7 +170,7 @@ export const initMigrationsTable = async ({
 	migrationsTableName: string;
 	local: boolean | undefined;
 	remote: boolean | undefined;
-	config: ConfigFields<DevConfig> & Environment;
+	config: Config;
 	name: string;
 	persistTo: string | undefined;
 	preview: boolean | undefined;

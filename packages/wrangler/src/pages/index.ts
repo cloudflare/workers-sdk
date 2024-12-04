@@ -129,7 +129,7 @@ export function pages(yargs: CommonYargsArgv, subHelp: SubHelp) {
 			.command("download", "Download settings from your project", (args) =>
 				args.command(
 					"config [projectName]",
-					"Experimental: Download your Pages project config as a wrangler.toml file",
+					"Experimental: Download your Pages project config as a Wrangler configuration file",
 					DownloadConfig.Options,
 					DownloadConfig.Handler
 				)

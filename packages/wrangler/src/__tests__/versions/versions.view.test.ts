@@ -5,7 +5,7 @@ import { mockConsoleMethods } from "../helpers/mock-console";
 import { msw, mswGetVersion } from "../helpers/msw";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
-import { writeWranglerToml } from "../helpers/write-wrangler-toml";
+import { writeWranglerConfig } from "../helpers/write-wrangler-config";
 
 describe("versions view", () => {
 	mockAccountId();
@@ -155,7 +155,7 @@ describe("versions view", () => {
 	describe("with wrangler.toml", () => {
 		beforeEach(() => {
 			msw.use(mswGetVersion());
-			writeWranglerToml();
+			writeWranglerConfig();
 		});
 
 		test("fails with no args", async () => {

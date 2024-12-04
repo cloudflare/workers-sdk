@@ -2,7 +2,7 @@ import path from "node:path";
 import readline from "node:readline";
 import { FormData } from "undici";
 import { fetchResult } from "../cfetch";
-import { readConfig } from "../config";
+import { configFileName, readConfig } from "../config";
 import { createWorkerUploadForm } from "../deployment-bundle/create-worker-upload-form";
 import { confirm, prompt } from "../dialogs";
 import { FatalError, UserError } from "../errors";
@@ -165,7 +165,7 @@ export const secret = (secretYargs: CommonYargsArgv) => {
 				const scriptName = getLegacyScriptName(args, config);
 				if (!scriptName) {
 					throw new UserError(
-						"Required Worker name missing. Please specify the Worker name in wrangler.toml, or pass it as an argument with `--name <worker-name>`"
+						`Required Worker name missing. Please specify the Worker name in your ${configFileName(config.configPath)} file, or pass it as an argument with \`--name <worker-name>\``
 					);
 				}
 
@@ -273,7 +273,7 @@ export const secret = (secretYargs: CommonYargsArgv) => {
 				const scriptName = getLegacyScriptName(args, config);
 				if (!scriptName) {
 					throw new UserError(
-						"Required Worker name missing. Please specify the Worker name in wrangler.toml, or pass it as an argument with `--name <worker-name>`"
+						`Required Worker name missing. Please specify the Worker name in your ${configFileName(config.configPath)} file, or pass it as an argument with \`--name <worker-name>\``
 					);
 				}
 
@@ -335,7 +335,7 @@ export const secret = (secretYargs: CommonYargsArgv) => {
 				const scriptName = getLegacyScriptName(args, config);
 				if (!scriptName) {
 					throw new UserError(
-						"Required Worker name missing. Please specify the Worker name in wrangler.toml, or pass it as an argument with `--name <worker-name>`"
+						`Required Worker name missing. Please specify the Worker name in your ${configFileName(config.configPath)} file, or pass it as an argument with \`--name <worker-name>\``
 					);
 				}
 
@@ -408,7 +408,7 @@ export const secretBulkHandler = async (secretBulkArgs: SecretBulkArgs) => {
 	const scriptName = getLegacyScriptName(secretBulkArgs, config);
 	if (!scriptName) {
 		const error = new UserError(
-			"Required Worker name missing. Please specify the Worker name in wrangler.toml, or pass it as an argument with `--name <worker-name>`"
+			`Required Worker name missing. Please specify the Worker name in your ${configFileName(config.configPath)} file, or pass it as an argument with \`--name <worker-name>\``
 		);
 		logger.error(error.message);
 		throw error;

@@ -58,6 +58,121 @@ function getFrameworkTests(opts: {
 }): Record<string, FrameworkTestConfig> {
 	if (opts.experimental) {
 		return {
+			docusaurus: {
+				unsupportedPms: ["bun"],
+				testCommitMessage: true,
+				unsupportedOSs: ["win32"],
+				timeout: LONG_TIMEOUT,
+				verifyDeploy: {
+					route: "/",
+					expectedText: "Dinosaurs are cool",
+				},
+				verifyPreview: {
+					route: "/",
+					expectedText: "Dinosaurs are cool",
+				},
+				flags: [`--package-manager`, pm],
+				promptHandlers: [
+					{
+						matcher: /Which language do you want to use\?/,
+						input: [keys.enter],
+					},
+				],
+			},
+			angular: {
+				testCommitMessage: true,
+				timeout: LONG_TIMEOUT,
+				unsupportedOSs: ["win32"],
+				unsupportedPms: ["bun"],
+				verifyDeploy: {
+					route: "/",
+					expectedText: "Congratulations! Your app is running.",
+				},
+				verifyPreview: {
+					route: "/",
+					expectedText: "Congratulations! Your app is running.",
+				},
+				flags: ["--style", "sass"],
+			},
+			gatsby: {
+				unsupportedPms: ["bun", "pnpm"],
+				promptHandlers: [
+					{
+						matcher: /Would you like to use a template\?/,
+						input: ["n"],
+					},
+				],
+				testCommitMessage: true,
+				timeout: LONG_TIMEOUT,
+				verifyDeploy: {
+					route: "/",
+					expectedText: "Gatsby!",
+				},
+				verifyPreview: {
+					route: "/",
+					expectedText: "Gatsby!",
+				},
+			},
+			hono: {
+				testCommitMessage: false,
+				unsupportedOSs: ["win32"],
+				verifyDeploy: {
+					route: "/",
+					expectedText: "Hello Hono!",
+				},
+				verifyPreview: {
+					route: "/",
+					expectedText: "Hello Hono!",
+				},
+				promptHandlers: [
+					{
+						matcher: /Do you want to install project dependencies\?/,
+						input: [keys.enter],
+					},
+				],
+			},
+			qwik: {
+				promptHandlers: [
+					{
+						matcher: /Yes looks good, finish update/,
+						input: [keys.enter],
+					},
+				],
+				testCommitMessage: true,
+				unsupportedOSs: ["win32"],
+				unsupportedPms: ["yarn"],
+				verifyDeploy: {
+					route: "/",
+					expectedText: "Welcome to Qwik",
+				},
+				verifyPreview: {
+					route: "/",
+					expectedText: "Welcome to Qwik",
+				},
+				verifyBuildCfTypes: {
+					outputFile: "worker-configuration.d.ts",
+					envInterfaceName: "Env",
+				},
+			},
+			remix: {
+				testCommitMessage: true,
+				timeout: LONG_TIMEOUT,
+				unsupportedPms: ["yarn"],
+				unsupportedOSs: ["win32"],
+				verifyDeploy: {
+					route: "/",
+					expectedText: "Welcome to Remix",
+				},
+				verifyPreview: {
+					route: "/test",
+					expectedText: "C3_TEST",
+				},
+				verifyBuildCfTypes: {
+					outputFile: "worker-configuration.d.ts",
+					envInterfaceName: "Env",
+				},
+				flags: ["--typescript", "--no-install", "--no-git-init"],
+			},
 			next: {
 				testCommitMessage: false,
 				verifyBuildCfTypes: {
@@ -73,6 +188,80 @@ function getFrameworkTests(opts: {
 					expectedText: "Create Next App",
 				},
 				unsupportedOSs: ["win32"],
+			},
+			nuxt: {
+				quarantine: true,
+				testCommitMessage: true,
+				timeout: LONG_TIMEOUT,
+				unsupportedOSs: ["win32"],
+				verifyDeploy: {
+					route: "/",
+					expectedText: "Welcome to Nuxt!",
+				},
+				verifyPreview: {
+					route: "/test",
+					expectedText: "C3_TEST",
+				},
+				verifyBuildCfTypes: {
+					outputFile: "worker-configuration.d.ts",
+					envInterfaceName: "Env",
+				},
+			},
+			solid: {
+				promptHandlers: [
+					{
+						matcher: /Which template would you like to use/,
+						input: [keys.enter],
+					},
+					{
+						matcher: /Use Typescript/,
+						input: [keys.enter],
+					},
+				],
+				testCommitMessage: true,
+				timeout: LONG_TIMEOUT,
+				unsupportedPms: ["npm", "yarn"],
+				unsupportedOSs: ["win32"],
+				verifyDeploy: {
+					route: "/",
+					expectedText: "Hello world",
+				},
+				verifyPreview: {
+					route: "/",
+					expectedText: "Hello world",
+				},
+			},
+			svelte: {
+				promptHandlers: [
+					{
+						matcher: /Which template would you like/,
+						input: [keys.enter],
+					},
+					{
+						matcher: /Add type checking with Typescript/,
+						input: [keys.down, keys.enter],
+					},
+					{
+						matcher: /What would you like to add to your project/,
+						input: [keys.enter],
+					},
+					{
+						matcher:
+							/Which package manager do you want to install dependencies with/,
+						input: [keys.enter],
+					},
+				],
+				testCommitMessage: true,
+				unsupportedOSs: ["win32"],
+				unsupportedPms: ["npm"],
+				verifyDeploy: {
+					route: "/",
+					expectedText: "SvelteKit app",
+				},
+				verifyPreview: {
+					route: "/test",
+					expectedText: "C3_TEST",
+				},
 			},
 		};
 	} else {
