@@ -20,8 +20,12 @@ import type { Config, RawConfig, RawEnvironment } from "../../../config";
 import type { IncomingRequestCfProperties } from "@cloudflare/workers-types/experimental";
 import type { MiniflareOptions, ModuleRule, WorkerOptions } from "miniflare";
 
-export { readConfig };
-export type { Config, RawConfig, RawEnvironment };
+export { readConfig as unstable_readConfig };
+export type {
+	Config as UnstableConfig,
+	RawConfig as UnstableRawConfig,
+	RawEnvironment as UnstableRawEnvironment,
+};
 
 /**
  * Options for the `getPlatformProxy` utility
@@ -240,7 +244,7 @@ export type SourcelessWorkerOptions = Omit<
 	"script" | "scriptPath" | "modules" | "modulesRoot"
 > & { modulesRules?: ModuleRule[] };
 
-interface MiniflareWorkerOptions {
+export interface UnstableMiniflareWorkerOptions {
 	workerOptions: SourcelessWorkerOptions;
 	define: Record<string, string>;
 	main?: string;
@@ -249,14 +253,14 @@ interface MiniflareWorkerOptions {
 export function unstable_getMiniflareWorkerOptions(
 	configPath: string,
 	env?: string
-): MiniflareWorkerOptions;
+): UnstableMiniflareWorkerOptions;
 export function unstable_getMiniflareWorkerOptions(
 	config: Config
-): MiniflareWorkerOptions;
+): UnstableMiniflareWorkerOptions;
 export function unstable_getMiniflareWorkerOptions(
 	configOrConfigPath: string | Config,
 	env?: string
-): MiniflareWorkerOptions {
+): UnstableMiniflareWorkerOptions {
 	const config =
 		typeof configOrConfigPath === "string"
 			? readConfig(configOrConfigPath, { env })
