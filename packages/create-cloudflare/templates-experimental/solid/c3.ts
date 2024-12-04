@@ -2,6 +2,7 @@ import { logRaw, updateStatus } from "@cloudflare/cli";
 import { blue, brandColor, dim } from "@cloudflare/cli/colors";
 import { runFrameworkGenerator } from "frameworks/index";
 import { mergeObjectProperties, transformFile } from "helpers/codemod";
+import { getWorkerdCompatibilityDate } from "helpers/compatDate";
 import { usesTypescript } from "helpers/files";
 import { detectPackageManager } from "helpers/packageManagers";
 import { installPackages } from "helpers/packages";
@@ -30,6 +31,8 @@ const configure = async (ctx: C3Context) => {
 	usesTypescript(ctx);
 	const filePath = `app.config.${usesTypescript(ctx) ? "ts" : "js"}`;
 
+	const compatDate = await getWorkerdCompatibilityDate();
+
 	updateStatus(`Updating configuration in ${blue(filePath)}`);
 
 	transformFile(filePath, {
@@ -46,60 +49,14 @@ const configure = async (ctx: C3Context) => {
 					b.objectProperty(
 						b.identifier("server"),
 						b.objectExpression([
-							// preset: "cloudflare-pages"
+							// preset: "cloudflare_module"
 							b.objectProperty(
 								b.identifier("preset"),
-								b.stringLiteral("cloudflare-pages"),
+								b.stringLiteral("cloudflare_module"),
 							),
-							// output: {
-							// 	dir: "{{ rootDir }}/dist",
-							// 	publicDir: "{{ output.dir }}/public",
-							// 	serverDir: "{{ output.dir }}/worker",
-							// },
 							b.objectProperty(
-								b.identifier("output"),
-								b.objectExpression([
-									b.objectProperty(
-										b.identifier("dir"),
-										b.stringLiteral("{{ rootDir }}/dist"),
-									),
-									b.objectProperty(
-										b.identifier("publicDir"),
-										b.stringLiteral("{{ output.dir }}/public"),
-									),
-									b.objectProperty(
-										b.identifier("serverDir"),
-										b.stringLiteral("{{ output.dir }}/worker"),
-									),
-								]),
-							),
-							// rollupConfig: {
-							// 	external: ["node:async_hooks"],
-							// },
-							b.objectProperty(
-								b.identifier("rollupConfig"),
-								b.objectExpression([
-									b.objectProperty(
-										b.identifier("external"),
-										b.arrayExpression([b.stringLiteral("node:async_hooks")]),
-									),
-								]),
-							),
-							// hooks: {
-							// 	// Prevent the Pages preset from writing the _routes.json etc.
-							// 	compiled() {},
-							// },
-							b.objectProperty(
-								b.identifier("hooks"),
-								b.objectExpression([
-									b.objectMethod(
-										"method",
-										b.identifier("compiled"),
-										[],
-										b.blockStatement([]),
-										false,
-									),
-								]),
+								b.identifier("compatibilityDate"),
+								b.stringLiteral(compatDate),
 							),
 						]),
 					),
