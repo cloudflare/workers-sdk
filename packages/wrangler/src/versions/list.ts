@@ -1,5 +1,4 @@
 import { logRaw } from "@cloudflare/cli";
-import { readConfig } from "../config";
 import { createCommand } from "../core/create-command";
 import { UserError } from "../errors";
 import * as metrics from "../metrics";

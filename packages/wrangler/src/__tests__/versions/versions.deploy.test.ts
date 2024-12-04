@@ -1,4 +1,3 @@
-import yargs from "yargs";
 import { normalizeOutput } from "../../../e2e/helpers/normalize";
 import {
 	assignAndDistributePercentages,
@@ -29,7 +28,6 @@ import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 import { writeWorkerSource } from "../helpers/write-worker-source";
 import { writeWranglerConfig } from "../helpers/write-wrangler-config";
-import type { ParseVersionSpecsArgs } from "../../versions/deploy";
 
 describe("versions deploy", () => {
 	mockAccountId();
