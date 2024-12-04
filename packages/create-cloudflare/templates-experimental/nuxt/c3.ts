@@ -82,7 +82,7 @@ const updateNuxtConfig = () => {
 		b.objectExpression([
 			b.objectProperty(
 				b.identifier("preset"),
-				b.stringLiteral("./cloudflare-preset"),
+				b.stringLiteral("cloudflare_module"),
 			),
 		]),
 	);

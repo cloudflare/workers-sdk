@@ -190,7 +190,6 @@ function getFrameworkTests(opts: {
 				unsupportedOSs: ["win32"],
 			},
 			nuxt: {
-				quarantine: true,
 				testCommitMessage: true,
 				timeout: LONG_TIMEOUT,
 				unsupportedOSs: ["win32"],
