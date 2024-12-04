@@ -8,7 +8,13 @@ import {
 	validateAssetsArgsAndConfig,
 } from "../assets";
 import { fetchResult } from "../cfetch";
-import { configFileName, formatConfigSnippet, printBindings } from "../config";
+import {
+	configFileName,
+	findWranglerConfig,
+	formatConfigSnippet,
+	printBindings,
+	readConfig,
+} from "../config";
 import { createCommand } from "../core/create-command";
 import { getBindings } from "../deployment-bundle/bindings";
 import { bundleWorker } from "../deployment-bundle/bundle";
@@ -279,7 +285,14 @@ export const versionsUploadCommand = createCommand({
 			requiresArg: true,
 		},
 	},
-	handler: async function versionsUploadHandler(args, { config }) {
+	behaviour: {
+		provideConfig: false,
+	},
+	handler: async function versionsUploadHandler(args) {
+		const configPath =
+			args.config ||
+			(args.script && findWranglerConfig(path.dirname(args.script)));
+		const config = readConfig(configPath, args);
 		const entry = await getEntry(args, config, "versions upload");
 		await metrics.sendMetricsEvent(
 			"upload worker version",
