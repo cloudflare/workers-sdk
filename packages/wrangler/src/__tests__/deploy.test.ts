@@ -4291,7 +4291,7 @@ addEventListener('fetch', event => {});`
 		});
 	});
 
-	describe("--assets", () => {
+	describe("assets", () => {
 		it("should use the directory specified in the CLI over wrangler.toml", async () => {
 			const cliAssets = [
 				{ filePath: "cliAsset.txt", content: "Content of file-1" },
@@ -4303,6 +4303,36 @@ addEventListener('fetch', event => {});`
 			writeAssets(configAssets, "config-assets");
 			writeWranglerConfig({
 				assets: { directory: "config-assets" },
+			});
+			const bodies: AssetManifest[] = [];
+			await mockAUSRequest(bodies);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedAssets: {
+					jwt: "<<aus-completion-token>>",
+					config: {},
+				},
+				expectedType: "none",
+			});
+			await runWrangler("deploy --assets cli-assets");
+			expect(bodies.length).toBe(1);
+			expect(bodies[0]).toEqual({
+				manifest: {
+					"/cliAsset.txt": {
+						hash: "0de3dd5df907418e9730fd2bd747bd5e",
+						size: 17,
+					},
+				},
+			});
+		});
+
+		it("should use the directory specified in the CLI and allow the directory to be missing in the configuration", async () => {
+			const cliAssets = [
+				{ filePath: "cliAsset.txt", content: "Content of file-1" },
+			];
+			writeAssets(cliAssets, "cli-assets");
+			writeWranglerConfig({
+				assets: {},
 			});
 			const bodies: AssetManifest[] = [];
 			await mockAUSRequest(bodies);
@@ -4364,6 +4394,28 @@ addEventListener('fetch', event => {});`
 				new RegExp(
 					'^The directory specified by the "--assets" command line argument does not exist:[Ss]*'
 				)
+			);
+		});
+
+		it("should error if the directory path specified by the assets config is undefined", async () => {
+			writeWranglerConfig({
+				assets: {},
+			});
+			await expect(
+				runWrangler("deploy")
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: The \`assets\` property in your configuration is missing the required \`directory\` property.]`
+			);
+		});
+
+		it("should error if the directory path specified by the assets config is an empty string", async () => {
+			writeWranglerConfig({
+				assets: { directory: "" },
+			});
+			await expect(
+				runWrangler("deploy")
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: \`The assets directory cannot be an empty string.]`
 			);
 		});
 

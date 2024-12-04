@@ -15,7 +15,6 @@ import {
 	inheritableInLegacyEnvironments,
 	isBoolean,
 	isMutuallyExclusiveWith,
-	isNonEmptyString,
 	isObjectWith,
 	isOneOf,
 	isOptionalProperty,
@@ -2122,20 +2121,12 @@ const validateAssetsConfig: ValidatorFn = (diagnostics, field, value) => {
 	// ensure we validate all props before we show the validation errors
 	// this way users have all the necessary info to fix all errors in one go
 	isValid =
-		validateRequiredProperty(
+		validateOptionalProperty(
 			diagnostics,
 			field,
 			"directory",
 			(value as Assets).directory,
 			"string"
-		) && isValid;
-
-	isValid =
-		isNonEmptyString(
-			diagnostics,
-			`${field}.directory`,
-			(value as Assets).directory,
-			undefined
 		) && isValid;
 
 	isValid =

@@ -24,7 +24,6 @@ import { dedent } from "./utils/dedent";
 import { createPatternMatcher } from "./utils/filesystem";
 import type { StartDevWorkerOptions } from "./api";
 import type { Config } from "./config";
-import type { Assets } from "./config/environment";
 import type { DeployArgs } from "./deploy";
 import type { StartDevOptions } from "./dev";
 import type { AssetConfig, RoutingConfig } from "@cloudflare/workers-shared";
@@ -310,12 +309,14 @@ function getAssetsBasePath(
 		: path.resolve(path.dirname(config.configPath ?? "wrangler.toml"));
 }
 
-export type AssetsOptions = Pick<Assets, "directory" | "binding"> & {
+export type AssetsOptions = {
+	directory: string;
+	binding?: string;
 	routingConfig: RoutingConfig;
 	assetConfig: AssetConfig;
 };
 
-export function processAssetsArg(
+export function getAssetsOptions(
 	args: { assets: string | undefined; script?: string },
 	config: Config
 ): AssetsOptions | undefined {
@@ -325,8 +326,20 @@ export function processAssetsArg(
 		return;
 	}
 
+	const { directory, binding } = assets;
+
+	if (directory === undefined) {
+		throw new UserError(
+			"The `assets` property in your configuration is missing the required `directory` property."
+		);
+	}
+
+	if (directory === "") {
+		throw new UserError("`The assets directory cannot be an empty string.");
+	}
+
 	const assetsBasePath = getAssetsBasePath(config, args.assets);
-	const resolvedAssetsPath = path.resolve(assetsBasePath, assets.directory);
+	const resolvedAssetsPath = path.resolve(assetsBasePath, directory);
 
 	if (!existsSync(resolvedAssetsPath)) {
 		const sourceOfTruthMessage = args.assets
@@ -339,7 +352,6 @@ export function processAssetsArg(
 		);
 	}
 
-	assets.directory = resolvedAssetsPath;
 	const routingConfig = {
 		has_user_worker: Boolean(args.script || config.main),
 	};
@@ -351,7 +363,8 @@ export function processAssetsArg(
 	};
 
 	return {
-		...assets,
+		directory: resolvedAssetsPath,
+		binding,
 		routingConfig,
 		assetConfig,
 	};

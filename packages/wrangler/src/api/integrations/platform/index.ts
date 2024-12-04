@@ -1,5 +1,5 @@
 import { kCurrentWorker, Miniflare } from "miniflare";
-import { processAssetsArg } from "../../../assets";
+import { getAssetsOptions } from "../../../assets";
 import { readConfig } from "../../../config";
 import { DEFAULT_MODULE_RULES } from "../../../deployment-bundle/rules";
 import { getBindings } from "../../../dev";
@@ -309,7 +309,7 @@ export function unstable_getMiniflareWorkerOptions(
 		? getLegacyAssetPaths(config, undefined)
 		: getSiteAssetPaths(config);
 	const sitesOptions = buildSitesOptions({ legacyAssetPaths });
-	const processedAssetOptions = processAssetsArg({ assets: undefined }, config);
+	const processedAssetOptions = getAssetsOptions({ assets: undefined }, config);
 	const assetOptions = processedAssetOptions
 		? buildAssetOptions({ assets: processedAssetOptions })
 		: {};

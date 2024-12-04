@@ -940,14 +940,21 @@ export interface UserLimits {
 
 export type Assets = {
 	/** Absolute path to assets directory */
-	directory: string;
+	directory?: string;
+	/** Name of `env` binding property in the User Worker. */
 	binding?: string;
+	/** How to handle HTML requests. */
 	html_handling?:
 		| "auto-trailing-slash"
 		| "force-trailing-slash"
 		| "drop-trailing-slash"
 		| "none";
+	/** How to handle requests that do not match an asset. */
 	not_found_handling?: "single-page-application" | "404-page" | "none";
+	/**
+	 * If true, then respond to requests that match an asset with that asset directly.
+	 * If false, route every request to the User Worker, whether or not it matches an asset.
+	 * */
 	experimental_serve_directly?: boolean;
 };
 

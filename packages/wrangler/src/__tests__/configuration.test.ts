@@ -1792,7 +1792,6 @@ describe("normalizeAndValidateConfig()", () => {
 				`);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - \\"assets.directory\\" is a required field.
 					  - Expected \\"assets.binding\\" to be of type string but got 2."
 				`);
 			});
@@ -1843,27 +1842,6 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(config).toEqual(expect.objectContaining(expectedConfig));
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.hasErrors()).toBe(false);
-			});
-
-			it("should error if `directory` is an empty string", () => {
-				const expectedConfig = {
-					assets: {
-						directory: "",
-					},
-				};
-
-				const { config, diagnostics } = normalizeAndValidateConfig(
-					expectedConfig as unknown as RawConfig,
-					undefined,
-					{ env: undefined }
-				);
-
-				expect(config).toEqual(expect.objectContaining(expectedConfig));
-				expect(diagnostics.hasWarnings()).toBeFalsy();
-				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-					"Processing wrangler configuration:
-					  - Expected \\"assets.directory\\" to be a non-empty string."
-				`);
 			});
 
 			it("should error on invalid additional fields", () => {
