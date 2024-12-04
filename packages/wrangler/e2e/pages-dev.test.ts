@@ -1,3 +1,5 @@
+import { existsSync } from "node:fs";
+import path from "node:path";
 import { setTimeout } from "node:timers/promises";
 import getPort from "get-port";
 import dedent from "ts-dedent";
@@ -454,7 +456,7 @@ describe.each([{ cmd: "wrangler pages dev" }])("Pages $cmd", ({ cmd }) => {
 	});
 
 	describe("watch mode", () => {
-		it("should modify worker during dev session (Functions)", async () => {
+		it.only("should modify worker during dev session (Functions)", async () => {
 			const helper = new WranglerE2ETestHelper();
 
 			await helper.seed({
@@ -482,6 +484,11 @@ describe.each([{ cmd: "wrangler pages dev" }])("Pages $cmd", ({ cmd }) => {
 
 			text = await fetchText(url);
 			expect(text).toBe("Updated Worker!");
+
+			// Ensure Wrangler doesn't write tmp files in the functions directory—regression test for https://github.com/cloudflare/workers-sdk/issues/7440
+			expect(
+				existsSync(path.join(helper.tmpPath, "functions/.wrangler"))
+			).toBeFalsy();
 		});
 
 		it("should support modifying dependencies during dev session (Functions)", async () => {

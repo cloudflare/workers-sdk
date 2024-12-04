@@ -11,7 +11,7 @@ import {
 import { FatalError } from "../../errors";
 import { logBuildFailure, logger } from "../../logger";
 import { getBasePath } from "../../paths";
-import { getPagesTmpDir } from "../utils";
+import { getPagesProjectRoot, getPagesTmpDir } from "../utils";
 import type { BundleResult } from "../../deployment-bundle/bundle";
 import type { Entry } from "../../deployment-bundle/entry";
 import type { CfModule } from "../../deployment-bundle/worker";
@@ -90,7 +90,7 @@ export function buildWorkerFromFunctions({
 		checkFetch: local && checkFetch,
 		targetConsumer: local ? "dev" : "deploy",
 		local,
-		projectRoot: functionsDirectory,
+		projectRoot: getPagesProjectRoot(),
 		defineNavigatorUserAgent,
 
 		legacyAssets: undefined,
