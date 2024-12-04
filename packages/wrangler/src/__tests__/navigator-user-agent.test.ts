@@ -104,11 +104,12 @@ describe("defineNavigatorUserAgent is respected", () => {
 		await bundleWorker(
 			{
 				file: path.resolve("src/index.js"),
-				directory: process.cwd(),
 				format: "modules",
 				moduleRoot: path.dirname(path.resolve("src/index.js")),
+				exports: [],
 			},
 			path.resolve("dist"),
+			// @ts-expect-error Ignore the requirement for passing undefined values
 			{
 				bundle: true,
 				additionalModules: [],
@@ -116,6 +117,7 @@ describe("defineNavigatorUserAgent is respected", () => {
 				serveLegacyAssetsFromWorker: false,
 				mockAnalyticsEngineDatasets: [],
 				doBindings: [],
+				workflowBindings: [],
 				define: {},
 				alias: {},
 				checkFetch: false,
@@ -164,17 +166,19 @@ describe("defineNavigatorUserAgent is respected", () => {
 		await bundleWorker(
 			{
 				file: path.resolve("src/index.js"),
-				directory: process.cwd(),
 				format: "modules",
 				moduleRoot: path.dirname(path.resolve("src/index.js")),
+				exports: [],
 			},
 			path.resolve("dist"),
+			// @ts-expect-error Ignore the requirement for passing undefined values
 			{
 				bundle: true,
 				additionalModules: [],
 				moduleCollector: noopModuleCollector,
 				serveLegacyAssetsFromWorker: false,
 				doBindings: [],
+				workflowBindings: [],
 				define: {},
 				alias: {},
 				mockAnalyticsEngineDatasets: [],

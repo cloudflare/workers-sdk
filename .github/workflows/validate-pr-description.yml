@@ -6,20 +6,33 @@ on:
 
 jobs:
   check:
-    if: github.ref != 'refs/heads/changeset-release/main'
+    if: github.head_ref != 'changeset-release/main'
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}-add-pr
       cancel-in-progress: true
     timeout-minutes: 30
     name: Check
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
+      - uses: dorny/paths-filter@v3
+        id: changes
+        with:
+          filters: |
+            everything_but_markdown:
+              - '!**/*.md'
+
+      - uses: Ana06/get-changed-files@v1.2
+        id: files
+        with:
+          format: "json"
+
       - name: Install Dependencies
+        if: steps.changes.outputs.everything_but_markdown == 'true'
         uses: ./.github/actions/install-dependencies
         with:
           turbo-api: ${{ secrets.TURBO_API }}
@@ -28,7 +41,9 @@ jobs:
           turbo-signature: ${{ secrets.TURBO_REMOTE_CACHE_SIGNATURE_KEY }}
 
       - run: node -r esbuild-register tools/deployments/validate-pr-description.ts
+        if: steps.changes.outputs.everything_but_markdown == 'true'
         env:
           TITLE: ${{ github.event.pull_request.title }}
           BODY: ${{ github.event.pull_request.body }}
           LABELS: ${{ toJson(github.event.pull_request.labels.*.name) }}
+          FILES: ${{ steps.files.outputs.all }}

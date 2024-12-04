@@ -2,12 +2,12 @@ import { existsSync } from "fs";
 import { cp, mkdtemp, rename } from "fs/promises";
 import { tmpdir } from "os";
 import { basename, dirname, join, resolve } from "path";
-import { crash, shapes, updateStatus, warn } from "@cloudflare/cli";
-import { processArgument } from "@cloudflare/cli/args";
+import { shapes, updateStatus, warn } from "@cloudflare/cli";
 import { blue, brandColor, dim } from "@cloudflare/cli/colors";
 import { spinner } from "@cloudflare/cli/interactive";
 import deepmerge from "deepmerge";
 import degit from "degit";
+import { processArgument } from "helpers/args";
 import { C3_DEFAULTS } from "helpers/cli";
 import {
 	appendFile,
@@ -22,7 +22,11 @@ import angularTemplateExperimental from "templates-experimental/angular/c3";
 import astroTemplateExperimental from "templates-experimental/astro/c3";
 import docusaurusTemplateExperimental from "templates-experimental/docusaurus/c3";
 import gatsbyTemplateExperimental from "templates-experimental/gatsby/c3";
+import assetsOnlyTemplateExperimental from "templates-experimental/hello-world-assets-only/c3";
+import helloWorldWithDurableObjectAssetsTemplateExperimental from "templates-experimental/hello-world-durable-object-with-assets/c3";
 import helloWorldWithAssetsTemplateExperimental from "templates-experimental/hello-world-with-assets/c3";
+import honoTemplateExperimental from "templates-experimental/hono/c3";
+import nextTemplateExperimental from "templates-experimental/next/c3";
 import nuxtTemplateExperimental from "templates-experimental/nuxt/c3";
 import qwikTemplateExperimental from "templates-experimental/qwik/c3";
 import remixTemplateExperimental from "templates-experimental/remix/c3";
@@ -163,6 +167,8 @@ export function getFrameworkMap({ experimental = false }): TemplateMap {
 			astro: astroTemplateExperimental,
 			docusaurus: docusaurusTemplateExperimental,
 			gatsby: gatsbyTemplateExperimental,
+			hono: honoTemplateExperimental,
+			next: nextTemplateExperimental,
 			nuxt: nuxtTemplateExperimental,
 			qwik: qwikTemplateExperimental,
 			remix: remixTemplateExperimental,
@@ -192,7 +198,10 @@ export function getFrameworkMap({ experimental = false }): TemplateMap {
 export function getTemplateMap({ experimental = false }) {
 	if (experimental) {
 		return {
+			"hello-world-assets-only": assetsOnlyTemplateExperimental,
 			"hello-world-with-assets": helloWorldWithAssetsTemplateExperimental,
+			"hello-world-durable-object-with-assets":
+				helloWorldWithDurableObjectAssetsTemplateExperimental,
 		} as Record<string, TemplateConfig>;
 	} else {
 		return {
@@ -264,7 +273,7 @@ export const deriveCorrelatedArgs = (args: Partial<C3Args>) => {
 		const language = args.ts ? "ts" : "js";
 
 		if (args.lang !== undefined) {
-			crash(
+			throw new Error(
 				"The `--ts` argument cannot be specified in conjunction with the `--lang` argument",
 			);
 		}
@@ -282,28 +291,36 @@ export const createContext = async (
 	args: Partial<C3Args>,
 	prevArgs?: Partial<C3Args>,
 ): Promise<C3Context> => {
+	// Derive all correlated arguments first so we can skip some prompts
+	deriveCorrelatedArgs(args);
+
 	// Allows the users to go back to the previous step
 	// By moving the cursor up to a certain line and clearing the screen
-	const goBack = async (from: "type" | "framework" | "lang") => {
-		const newArgs = { ...args };
+	const goBack = async (from: "category" | "type" | "framework" | "lang") => {
+		const currentArgs = { ...args };
 		let linesPrinted = 0;
 
 		switch (from) {
+			case "category":
+				linesPrinted = 6;
+				args.projectName = undefined;
+				break;
 			case "type":
 				linesPrinted = 9;
-				newArgs.category = undefined;
+				args.category = undefined;
 				break;
 			case "framework":
 				linesPrinted = 9;
-				newArgs.category = undefined;
+				args.category = undefined;
 				break;
 			case "lang":
 				linesPrinted = 12;
-				newArgs.type = undefined;
+				args.type = undefined;
 				break;
 		}
 
-		newArgs[from] = undefined;
+		// To remove the BACK_VALUE from the result args
+		currentArgs[from] = undefined;
 		args[from] = undefined;
 
 		if (process.stdout.isTTY) {
@@ -311,7 +328,7 @@ export const createContext = async (
 			process.stdout.clearScreenDown();
 		}
 
-		return await createContext(newArgs, args);
+		return await createContext(args, currentArgs);
 	};
 
 	// The option to go back to the previous step
@@ -324,11 +341,11 @@ export const createContext = async (
 	};
 
 	const defaultName = args.existingScript || C3_DEFAULTS.projectName;
-	const projectName = await processArgument<string>(args, "projectName", {
+	const projectName = await processArgument(args, "projectName", {
 		type: "text",
 		question: `In which directory do you want to create your application?`,
 		helpText: "also used as application name",
-		defaultValue: defaultName,
+		defaultValue: prevArgs?.projectName ?? defaultName,
 		label: "dir",
 		validate: (value) =>
 			validateProjectDirectory(String(value) || C3_DEFAULTS.projectName, args),
@@ -353,21 +370,26 @@ export const createContext = async (
 				"Select from a range of starter applications using various Cloudflare products",
 		},
 		{
-			label: "Template from a Github repo",
+			label: "Template from a GitHub repo",
 			value: "remote-template",
 			description: "Start from an existing GitHub repo link",
 		},
 		// This is used only if the type is `pre-existing`
 		{ label: "Others", value: "others", hidden: true },
+		backOption,
 	];
 
-	const category = await processArgument<string>(args, "category", {
+	const category = await processArgument(args, "category", {
 		type: "select",
 		question: "What would you like to start with?",
 		label: "category",
 		options: categoryOptions,
 		defaultValue: prevArgs?.category ?? C3_DEFAULTS.category,
 	});
+
+	if (category === BACK_VALUE) {
+		return goBack("category");
+	}
 
 	let template: TemplateConfig;
 
@@ -382,7 +404,7 @@ export const createContext = async (
 			}),
 		);
 
-		const framework = await processArgument<string>(args, "framework", {
+		const framework = await processArgument(args, "framework", {
 			type: "select",
 			label: "framework",
 			question: "Which development framework do you want to use?",
@@ -397,7 +419,7 @@ export const createContext = async (
 		const frameworkConfig = frameworkMap[framework];
 
 		if (!frameworkConfig) {
-			crash(`Unsupported framework: ${framework}`);
+			throw new Error(`Unsupported framework: ${framework}`);
 		}
 
 		template = {
@@ -428,7 +450,7 @@ export const createContext = async (
 			},
 		);
 
-		const type = await processArgument<string>(args, "type", {
+		const type = await processArgument(args, "type", {
 			type: "select",
 			question: "Which template would you like to use?",
 			label: "type",
@@ -443,7 +465,7 @@ export const createContext = async (
 		template = templateMap[type];
 
 		if (!template) {
-			return crash(`Unknown application type provided: ${type}.`);
+			throw new Error(`Unknown application type provided: ${type}.`);
 		}
 	}
 
@@ -473,7 +495,7 @@ export const createContext = async (
 				{ label: "Python (beta)", value: "python" },
 			];
 
-			const lang = await processArgument<string>(args, "lang", {
+			const lang = await processArgument(args, "lang", {
 				type: "select",
 				question: "Which language do you want to use?",
 				label: "lang",
@@ -496,10 +518,9 @@ export const createContext = async (
 
 	return {
 		project: { name, path },
-		args: {
-			...args,
-			projectName,
-		},
+		// We need to maintain a reference to the original args
+		// To ensure that we send the latest args to Sparrow
+		args: Object.assign(args, { projectName }),
 		template,
 		originalCWD,
 		gitRepoAlreadyExisted: await isInsideGitRepo(directory),
@@ -527,7 +548,9 @@ export async function copyTemplateFiles(ctx: C3Context) {
 		const variantInfo = variant ? copyFiles.variants[variant] : null;
 
 		if (!variantInfo) {
-			crash(`Unknown variant provided: ${JSON.stringify(variant ?? "")}`);
+			throw new Error(
+				`Unknown variant provided: ${JSON.stringify(variant ?? "")}`,
+			);
 		}
 
 		srcdir = join(getTemplatePath(ctx), variantInfo.path);
@@ -552,7 +575,7 @@ export async function copyTemplateFiles(ctx: C3Context) {
 }
 
 export const processRemoteTemplate = async (args: Partial<C3Args>) => {
-	const templateUrl = await processArgument<string>(args, "template", {
+	const templateUrl = await processArgument(args, "template", {
 		type: "text",
 		question:
 			"What's the url of git repo containing the template you'd like to use?",
@@ -603,13 +626,17 @@ const validateTemplateSrcDirectory = (path: string, config: TemplateConfig) => {
 	if (config.platform === "workers") {
 		const wranglerTomlPath = resolve(path, "wrangler.toml");
 		if (!existsSync(wranglerTomlPath)) {
-			crash(`create-cloudflare templates must contain a "wrangler.toml" file.`);
+			throw new Error(
+				`create-cloudflare templates must contain a "wrangler.toml" file.`,
+			);
 		}
 	}
 
 	const pkgJsonPath = resolve(path, "package.json");
 	if (!existsSync(pkgJsonPath)) {
-		crash(`create-cloudflare templates must contain a "package.json" file.`);
+		throw new Error(
+			`create-cloudflare templates must contain a "package.json" file.`,
+		);
 	}
 };
 
@@ -669,7 +696,7 @@ export const downloadRemoteTemplate = async (src: string) => {
 		return tmpDir;
 	} catch (error) {
 		updateStatus(`${brandColor("template")} ${dim("failed")}`);
-		return crash(`Failed to clone remote template: ${src}`);
+		throw new Error(`Failed to clone remote template: ${src}`);
 	}
 };
 

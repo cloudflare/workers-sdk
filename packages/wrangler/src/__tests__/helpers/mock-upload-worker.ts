@@ -1,15 +1,16 @@
 import { http, HttpResponse } from "msw";
+import { mockGetWorkerSubdomain } from "./mock-workers-subdomain";
 import { createFetchResult, msw } from "./msw";
 import { serialize, toString } from "./serialize-form-data-entry";
 import type { WorkerMetadata } from "../../deployment-bundle/create-worker-upload-form";
 import type { CfWorkerInit } from "../../deployment-bundle/worker";
+import type { NonVersionedScriptSettings } from "../../versions/api";
 import type { AssetConfig } from "@cloudflare/workers-shared";
 import type { HttpResponseResolver } from "msw";
 
 /** Create a mock handler for the request to upload a worker script. */
 export function mockUploadWorkerRequest(
 	options: {
-		available_on_subdomain?: boolean;
 		expectedEntry?: string | RegExp | ((entry: string | null) => void);
 		expectedMainModule?: string;
 		expectedType?: "esm" | "sw" | "none";
@@ -29,12 +30,13 @@ export function mockUploadWorkerRequest(
 		tag?: string;
 		expectedDispatchNamespace?: string;
 		expectedScriptName?: string;
-		expectedExperimentalAssets?: {
+		expectedAssets?: {
 			jwt: string;
 			config: AssetConfig;
 		};
 		useOldUploadApi?: boolean;
 		expectedObservability?: CfWorkerInit["observability"];
+		expectedSettingsPatch?: Partial<NonVersionedScriptSettings>;
 	} = {}
 ) {
 	const expectedScriptName = (options.expectedScriptName ??= "test-name");
@@ -48,9 +50,6 @@ export function mockUploadWorkerRequest(
 			expect(params.envName).toEqual(env);
 		}
 		if (useOldUploadApi) {
-			expect(url.searchParams.get("include_subdomain_availability")).toEqual(
-				"true"
-			);
 			expect(url.searchParams.get("excludeScript")).toEqual("true");
 		}
 		if (expectedDispatchNamespace) {
@@ -110,8 +109,8 @@ export function mockUploadWorkerRequest(
 		if ("expectedLimits" in options) {
 			expect(metadata.limits).toEqual(expectedLimits);
 		}
-		if ("expectedExperimentalAssets" in options) {
-			expect(metadata.assets).toEqual(expectedExperimentalAssets);
+		if ("expectedAssets" in options) {
+			expect(metadata.assets).toEqual(expectedAssets);
 		}
 		if ("expectedObservability" in options) {
 			expect(metadata.observability).toEqual(expectedObservability);
@@ -128,7 +127,6 @@ export function mockUploadWorkerRequest(
 		if (useOldUploadApi) {
 			return HttpResponse.json(
 				createFetchResult({
-					available_on_subdomain,
 					id: "abc12345",
 					etag: "etag98765",
 					pipeline_hash: "hash9999",
@@ -154,11 +152,10 @@ export function mockUploadWorkerRequest(
 	};
 
 	const {
-		available_on_subdomain = true,
 		expectedEntry,
-		expectedExperimentalAssets,
+		expectedAssets,
 		// Allow setting expectedMainModule to undefined to test static-asset only uploads
-		expectedMainModule = expectedExperimentalAssets
+		expectedMainModule = expectedAssets
 			? options.expectedMainModule
 			: "index.js",
 		expectedType = "esm",
@@ -178,6 +175,7 @@ export function mockUploadWorkerRequest(
 		expectedDispatchNamespace,
 		useOldUploadApi,
 		expectedObservability,
+		expectedSettingsPatch,
 	} = options;
 	if (env && !legacyEnv) {
 		msw.use(
@@ -212,29 +210,23 @@ export function mockUploadWorkerRequest(
 			),
 			http.patch(
 				"*/accounts/:accountId/workers/scripts/:scriptName/script-settings",
-				() => HttpResponse.json(createFetchResult({}))
+				async ({ request }) => {
+					const body = await request.json();
+
+					if ("expectedSettingsPatch" in options) {
+						expect(body).toEqual(expectedSettingsPatch);
+					}
+
+					return HttpResponse.json(createFetchResult({}));
+				}
 			)
 		);
 	}
-
-	msw.use(
-		http.get(
-			env && !legacyEnv
-				? `*/accounts/:accountId/workers/services/:scriptName/environments/:envName/subdomain`
-				: `*/accounts/:accountId/workers/scripts/:scriptName/subdomain`,
-			({ params }) => {
-				expect(params.accountId).toEqual("some-account-id");
-				expect(params.scriptName).toEqual(
-					legacyEnv && env ? `${expectedScriptName}-${env}` : expectedScriptName
-				);
-				if (!legacyEnv) {
-					expect(params.envName).toEqual(env);
-				}
-
-				return HttpResponse.json(
-					createFetchResult({ enabled: available_on_subdomain })
-				);
-			}
-		)
-	);
+	// TODO make explicit by callers?
+	mockGetWorkerSubdomain({
+		enabled: true,
+		env,
+		legacyEnv,
+		expectedScriptName,
+	});
 }

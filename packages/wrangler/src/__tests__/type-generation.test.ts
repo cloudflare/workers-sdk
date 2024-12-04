@@ -1,6 +1,7 @@
 import * as fs from "fs";
 import * as TOML from "@iarna/toml";
 import {
+	constructTSModuleGlob,
 	constructType,
 	constructTypeKey,
 	generateImportSpecifier,
@@ -45,6 +46,22 @@ describe("constructTypeKey", () => {
 		expect(constructTypeKey("123invalid")).toBe('"123invalid"');
 		expect(constructTypeKey("invalid-123")).toBe('"invalid-123"');
 		expect(constructTypeKey("invalid 123")).toBe('"invalid 123"');
+	});
+});
+
+describe("constructTSModuleGlob() should return a valid TS glob ", () => {
+	it.each([
+		["**/*.wasm", "*.wasm"],
+		["**/*.txt", "*.txt"],
+		["**/foo", "*/foo"],
+		["**/*foo", "*foo"],
+		["file.foo", "file.foo"],
+		["folder/file.foo", "folder/file.foo"],
+		["folder/*", "folder/*"],
+		["folder/**", "folder/*"],
+		["folder/**/*", "folder/*"],
+	])("$1 -> $2", (from, to) => {
+		expect(constructTSModuleGlob(from)).toBe(to);
 	});
 });
 
@@ -147,6 +164,7 @@ const bindingsConfigMock: Omit<
 			},
 		],
 	},
+	workflows: [],
 	r2_buckets: [
 		{
 			binding: "R2_BUCKET_BINDING",
@@ -218,6 +236,10 @@ const bindingsConfigMock: Omit<
 		{ type: "CompiledWasm", globs: ["**/*.wasm"], fallthrough: true },
 	],
 	pipelines: [],
+	assets: {
+		binding: "ASSETS_BINDING",
+		directory: "/assets",
+	},
 };
 
 describe("generateTypes()", () => {
@@ -355,6 +377,7 @@ describe("generateTypes()", () => {
 			BROWSER_BINDING: Fetcher;
 			AI_BINDING: Ai;
 			VERSION_METADATA_BINDING: { id: string; tag: string };
+			ASSETS_BINDING: Fetcher;
 		}
 		declare module \\"*.txt\\" {
 			const value: string;
@@ -422,8 +445,9 @@ describe("generateTypes()", () => {
 			);
 
 			await runWrangler("types");
-			expect(fs.readFileSync("./worker-configuration.d.ts", "utf-8")).toMatch(
-				/interface Env \{\s*\}/
+
+			expect(fs.readFileSync("./worker-configuration.d.ts", "utf-8")).toContain(
+				`// eslint-disable-next-line @typescript-eslint/no-empty-interface,@typescript-eslint/no-empty-object-type\ninterface Env {\n}`
 			);
 			expect(std.out).toMatchInlineSnapshot(`
 			"Generating project types...
@@ -501,6 +525,31 @@ describe("generateTypes()", () => {
 			} as unknown as TOML.JsonMap),
 			"utf-8"
 		);
+
+		await runWrangler("types");
+		expect(std.out).toMatchInlineSnapshot(`
+		"Generating project types...
+
+		interface Env {
+			SOMETHING: \\"asdasdfasdf\\";
+			ANOTHER: \\"thing\\";
+			\\"some-other-var\\": \\"some-other-value\\";
+			OBJECT_VAR: {\\"enterprise\\":\\"1701-D\\",\\"activeDuty\\":true,\\"captian\\":\\"Picard\\"};
+		}
+		"
+	`);
+	});
+
+	it("should not error if expected entrypoint is not found and assume module worker", async () => {
+		fs.writeFileSync(
+			"./wrangler.toml",
+			TOML.stringify({
+				main: "index.ts",
+				vars: bindingsConfigMock.vars,
+			} as unknown as TOML.JsonMap),
+			"utf-8"
+		);
+		expect(fs.existsSync("index.ts")).toEqual(false);
 
 		await runWrangler("types");
 		expect(std.out).toMatchInlineSnapshot(`

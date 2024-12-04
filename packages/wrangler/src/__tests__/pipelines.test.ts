@@ -7,7 +7,7 @@ import { mockConsoleMethods } from "./helpers/mock-console";
 import { msw } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
-import type { Pipeline, PipelineEntry } from "../pipelines/client";
+import type { HttpSource, Pipeline, PipelineEntry } from "../pipelines/client";
 
 describe("pipelines", () => {
 	const std = mockConsoleMethods();
@@ -39,7 +39,7 @@ describe("pipelines", () => {
 			},
 		},
 		endpoint: "https://0001.pipelines.cloudflarestorage.com",
-	};
+	} satisfies Pipeline;
 
 	function mockCreateR2Token(bucket: string) {
 		const requests = { count: 0 };
@@ -145,7 +145,10 @@ describe("pipelines", () => {
 		status: number = 200,
 		error?: object
 	) {
-		const requests = { count: 0 };
+		const requests: { count: number; body: Pipeline | null } = {
+			count: 0,
+			body: null,
+		};
 		msw.use(
 			http.post(
 				"*/accounts/:accountId/pipelines",
@@ -153,6 +156,7 @@ describe("pipelines", () => {
 					expect(params.accountId).toEqual("some-account-id");
 					const config = (await request.json()) as Pipeline;
 					expect(config.name).toEqual(name);
+					requests.body = config;
 					requests.count++;
 					const pipeline: Pipeline = {
 						...config,
@@ -167,7 +171,7 @@ describe("pipelines", () => {
 							messages: [],
 							result: pipeline,
 						},
-						{ status: status }
+						{ status }
 					);
 				},
 				{ once: true }
@@ -321,44 +325,114 @@ describe("pipelines", () => {
 			  wrangler pipelines delete <pipeline>  Delete a pipeline
 
 			GLOBAL FLAGS
-			  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
-			  -c, --config                    Path to .toml configuration file  [string]
-			  -e, --env                       Environment to use for operations and .env files  [string]
-			  -h, --help                      Show help  [boolean]
-			  -v, --version                   Show version number  [boolean]"
+			  -c, --config   Path to Wrangler configuration file  [string]
+			  -e, --env      Environment to use for operations and .env files  [string]
+			  -h, --help     Show help  [boolean]
+			  -v, --version  Show version number  [boolean]"
 		`);
 	});
 
-	it("create - should create a pipeline", async () => {
-		const tokenReq = mockCreateR2Token("test-bucket");
-		const requests = mockCreateRequest("my-pipeline");
-		await runWrangler("pipelines create my-pipeline --r2 test-bucket");
+	describe("create", () => {
+		it("should show usage details", async () => {
+			await runWrangler("pipelines create -h");
+			await endEventLoop();
 
-		expect(tokenReq.count).toEqual(3);
-		expect(requests.count).toEqual(1);
-	});
+			expect(std.err).toMatchInlineSnapshot(`""`);
+			expect(std.out).toMatchInlineSnapshot(`
+				"wrangler pipelines create <pipeline>
 
-	it("create - should create a pipeline with explicit credentials", async () => {
-		const requests = mockCreateRequest("my-pipeline");
-		await runWrangler(
-			"pipelines create my-pipeline --r2 test-bucket --access-key-id my-key --secret-access-key my-secret"
-		);
-		expect(requests.count).toEqual(1);
-	});
+				Create a new pipeline
 
-	it("create - should fail a missing bucket", async () => {
-		const requests = mockCreeatR2TokenFailure("bad-bucket");
-		await expect(
-			runWrangler("pipelines create bad-pipeline --r2 bad-bucket")
-		).rejects.toThrowError();
+				POSITIONALS
+				  pipeline  The name of the new pipeline  [string] [required]
 
-		await endEventLoop();
+				GLOBAL FLAGS
+				  -c, --config   Path to Wrangler configuration file  [string]
+				  -e, --env      Environment to use for operations and .env files  [string]
+				  -h, --help     Show help  [boolean]
+				  -v, --version  Show version number  [boolean]
 
-		expect(normalizeOutput(std.err)).toMatchInlineSnapshot(`
-			"X [ERROR] The R2 bucket [bad-bucket] doesn't exist"
-		`);
-		expect(std.out).toMatchInlineSnapshot(`""`);
-		expect(requests.count).toEqual(1);
+				OPTIONS
+				      --secret-access-key  The R2 service token Access Key to write data  [string]
+				      --access-key-id      The R2 service token Secret Key to write data  [string]
+				      --batch-max-mb       The approximate maximum size of a batch before flush in megabytes
+				                           Default: 10  [number]
+				      --batch-max-rows     The approximate maximum size of a batch before flush in rows
+				                           Default: 10000  [number]
+				      --batch-max-seconds  The approximate maximum duration of a batch before flush in seconds
+				                           Default: 15  [number]
+				      --transform          The worker and entrypoint of the PipelineTransform implementation in the format \\"worker.entrypoint\\"
+				                           Default: No transformation worker  [string]
+				      --compression        Sets the compression format of output files
+				                           Default: gzip  [string] [choices: \\"none\\", \\"gzip\\", \\"deflate\\"]
+				      --filepath           The path to store files in the destination bucket
+				                           Default: event_date=\${date}/hr=\${hr}  [string]
+				      --filename           The name of the file in the bucket. Must contain \\"\${slug}\\". File extension is optional
+				                           Default: \${slug}-\${hr}.json  [string]
+				      --binding            Enable Worker binding to this pipeline  [boolean] [default: true]
+				      --http               Enable HTTPS endpoint to send data to this pipeline  [boolean] [default: true]
+				      --authentication     Require authentication (Cloudflare API Token) to send data to the HTTPS endpoint  [boolean] [default: false]
+				      --r2                 Destination R2 bucket name  [string] [required]"
+			`);
+		});
+
+		it("should create a pipeline", async () => {
+			const tokenReq = mockCreateR2Token("test-bucket");
+			const requests = mockCreateRequest("my-pipeline");
+			await runWrangler("pipelines create my-pipeline --r2 test-bucket");
+
+			expect(tokenReq.count).toEqual(3);
+			expect(requests.count).toEqual(1);
+		});
+
+		it("should create a pipeline with explicit credentials", async () => {
+			const requests = mockCreateRequest("my-pipeline");
+			await runWrangler(
+				"pipelines create my-pipeline --r2 test-bucket --access-key-id my-key --secret-access-key my-secret"
+			);
+			expect(requests.count).toEqual(1);
+		});
+
+		it("should fail a missing bucket", async () => {
+			const requests = mockCreeatR2TokenFailure("bad-bucket");
+			await expect(
+				runWrangler("pipelines create bad-pipeline --r2 bad-bucket")
+			).rejects.toThrowError();
+
+			await endEventLoop();
+
+			expect(normalizeOutput(std.err)).toMatchInlineSnapshot(`
+				"X [ERROR] The R2 bucket [bad-bucket] doesn't exist"
+			`);
+			expect(std.out).toMatchInlineSnapshot(`""`);
+			expect(requests.count).toEqual(1);
+		});
+
+		it("should create a pipeline with auth", async () => {
+			const requests = mockCreateRequest("my-pipeline");
+			await runWrangler(
+				"pipelines create my-pipeline --authentication --r2 test-bucket --access-key-id my-key --secret-access-key my-secret"
+			);
+			expect(requests.count).toEqual(1);
+
+			// contain http source and include auth
+			expect(requests.body?.source[1].type).toEqual("http");
+			expect((requests.body?.source[1] as HttpSource).authentication).toEqual(
+				true
+			);
+		});
+
+		it("should create a pipeline without http", async () => {
+			const requests = mockCreateRequest("my-pipeline");
+			await runWrangler(
+				"pipelines create my-pipeline --http=false --r2 test-bucket --access-key-id my-key --secret-access-key my-secret"
+			);
+			expect(requests.count).toEqual(1);
+
+			// only contains binding source
+			expect(requests.body?.source.length).toEqual(1);
+			expect(requests.body?.source[0].type).toEqual("binding");
+		});
 	});
 
 	it("list - should list pipelines", async () => {
@@ -382,171 +456,203 @@ describe("pipelines", () => {
 		expect(requests.count).toEqual(1);
 	});
 
-	it("show - should show pipeline", async () => {
-		const requests = mockShowRequest("foo", samplePipeline);
-		await runWrangler("pipelines show foo");
+	describe("show", () => {
+		it("should show pipeline", async () => {
+			const requests = mockShowRequest("foo", samplePipeline);
+			await runWrangler("pipelines show foo");
 
-		expect(std.err).toMatchInlineSnapshot(`""`);
-		expect(std.out).toMatchInlineSnapshot(`
-			"Retrieving config for pipeline \\"foo\\".
-			{
-			  \\"currentVersion\\": 1,
-			  \\"id\\": \\"0001\\",
-			  \\"name\\": \\"my-pipeline\\",
-			  \\"metadata\\": {},
-			  \\"source\\": [
-			    {
-			      \\"type\\": \\"binding\\",
-			      \\"format\\": \\"json\\"
-			    }
-			  ],
-			  \\"transforms\\": [],
-			  \\"destination\\": {
-			    \\"type\\": \\"json\\",
-			    \\"batch\\": {},
-			    \\"compression\\": {
-			      \\"type\\": \\"none\\"
-			    },
-			    \\"format\\": \\"json\\",
-			    \\"path\\": {
-			      \\"bucket\\": \\"bucket\\"
-			    }
-			  },
-			  \\"endpoint\\": \\"https://0001.pipelines.cloudflarestorage.com\\"
-			}"
-		`);
-		expect(requests.count).toEqual(1);
-	});
-
-	it("show - should fail on missing pipeline", async () => {
-		const requests = mockShowRequest("bad-pipeline", null, 404, {
-			code: 1000,
-			message: "Pipeline does not exist",
+			expect(std.err).toMatchInlineSnapshot(`""`);
+			expect(std.out).toMatchInlineSnapshot(`
+				"Retrieving config for pipeline \\"foo\\".
+				{
+				  \\"currentVersion\\": 1,
+				  \\"id\\": \\"0001\\",
+				  \\"name\\": \\"my-pipeline\\",
+				  \\"metadata\\": {},
+				  \\"source\\": [
+				    {
+				      \\"type\\": \\"binding\\",
+				      \\"format\\": \\"json\\"
+				    }
+				  ],
+				  \\"transforms\\": [],
+				  \\"destination\\": {
+				    \\"type\\": \\"json\\",
+				    \\"batch\\": {},
+				    \\"compression\\": {
+				      \\"type\\": \\"none\\"
+				    },
+				    \\"format\\": \\"json\\",
+				    \\"path\\": {
+				      \\"bucket\\": \\"bucket\\"
+				    }
+				  },
+				  \\"endpoint\\": \\"https://0001.pipelines.cloudflarestorage.com\\"
+				}"
+			`);
+			expect(requests.count).toEqual(1);
 		});
-		await expect(
-			runWrangler("pipelines show bad-pipeline")
-		).rejects.toThrowError();
 
-		await endEventLoop();
+		it("should fail on missing pipeline", async () => {
+			const requests = mockShowRequest("bad-pipeline", null, 404, {
+				code: 1000,
+				message: "Pipeline does not exist",
+			});
+			await expect(
+				runWrangler("pipelines show bad-pipeline")
+			).rejects.toThrowError();
 
-		expect(std.err).toMatchInlineSnapshot(`""`);
-		expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`
-			"Retrieving config for pipeline \\"bad-pipeline\\".
-			X [ERROR] A request to the Cloudflare API (/accounts/some-account-id/pipelines/bad-pipeline) failed.
-			  Pipeline does not exist [code: 1000]
-			  If you think this is a bug, please open an issue at:
-			  https://github.com/cloudflare/workers-sdk/issues/new/choose"
-		`);
-		expect(requests.count).toEqual(1);
-	});
+			await endEventLoop();
 
-	it("update - should update a pipeline", async () => {
-		const pipeline: Pipeline = samplePipeline;
-		mockShowRequest(pipeline.name, pipeline);
-
-		const update = JSON.parse(JSON.stringify(pipeline));
-		update.destination.compression.type = "gzip";
-		const updateReq = mockUpdateRequest(update.name, update);
-
-		await runWrangler("pipelines update my-pipeline --compression gzip");
-		expect(updateReq.count).toEqual(1);
-	});
-
-	it("update - should update a pipeline with new bucket", async () => {
-		const pipeline: Pipeline = samplePipeline;
-		const tokenReq = mockCreateR2Token("new-bucket");
-		mockShowRequest(pipeline.name, pipeline);
-
-		const update = JSON.parse(JSON.stringify(pipeline));
-		update.destination.path.bucket = "new_bucket";
-		update.destination.credentials = {
-			endpoint: "https://some-account-id.r2.cloudflarestorage.com",
-			access_key_id: "service-token-id",
-			secret_access_key:
-				"be22cbae9c1585c7b61a92fdb75afd10babd535fb9b317f90ac9a9ca896d02d7",
-		};
-		const updateReq = mockUpdateRequest(update.name, update);
-
-		await runWrangler("pipelines update my-pipeline --r2 new-bucket");
-
-		expect(tokenReq.count).toEqual(3);
-		expect(updateReq.count).toEqual(1);
-	});
-
-	it("update - should update a pipeline with new credential", async () => {
-		const pipeline: Pipeline = samplePipeline;
-		mockShowRequest(pipeline.name, pipeline);
-
-		const update = JSON.parse(JSON.stringify(pipeline));
-		update.destination.path.bucket = "new-bucket";
-		update.destination.credentials = {
-			endpoint: "https://some-account-id.r2.cloudflarestorage.com",
-			access_key_id: "new-key",
-			secret_access_key: "new-secret",
-		};
-		const updateReq = mockUpdateRequest(update.name, update);
-
-		await runWrangler(
-			"pipelines update my-pipeline --r2 new-bucket --access-key-id new-key --secret-access-key new-secret"
-		);
-
-		expect(updateReq.count).toEqual(1);
-	});
-
-	it("update - should fail a missing pipeline", async () => {
-		const requests = mockShowRequest("bad-pipeline", null, 404, {
-			code: 1000,
-			message: "Pipeline does not exist",
+			expect(std.err).toMatchInlineSnapshot(`""`);
+			expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`
+				"Retrieving config for pipeline \\"bad-pipeline\\".
+				X [ERROR] A request to the Cloudflare API (/accounts/some-account-id/pipelines/bad-pipeline) failed.
+				  Pipeline does not exist [code: 1000]
+				  If you think this is a bug, please open an issue at:
+				  https://github.com/cloudflare/workers-sdk/issues/new/choose"
+			`);
+			expect(requests.count).toEqual(1);
 		});
-		await expect(
-			runWrangler(
-				"pipelines update bad-pipeline --r2 new-bucket --access-key-id new-key --secret-access-key new-secret"
-			)
-		).rejects.toThrowError();
-
-		await endEventLoop();
-
-		expect(std.err).toMatchInlineSnapshot(`""`);
-		expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`
-			"X [ERROR] A request to the Cloudflare API (/accounts/some-account-id/pipelines/bad-pipeline) failed.
-			  Pipeline does not exist [code: 1000]
-			  If you think this is a bug, please open an issue at:
-			  https://github.com/cloudflare/workers-sdk/issues/new/choose"
-		`);
-		expect(requests.count).toEqual(1);
 	});
 
-	it("delete - should delete pipeline", async () => {
-		const requests = mockDeleteRequest("foo");
-		await runWrangler("pipelines delete foo");
+	describe("update", () => {
+		it("should update a pipeline", async () => {
+			const pipeline: Pipeline = samplePipeline;
+			mockShowRequest(pipeline.name, pipeline);
 
-		expect(std.err).toMatchInlineSnapshot(`""`);
-		expect(std.out).toMatchInlineSnapshot(`
-			"Deleting pipeline foo.
-			Deleted pipeline foo."
-		`);
-		expect(requests.count).toEqual(1);
-	});
+			const update = JSON.parse(JSON.stringify(pipeline));
+			update.destination.compression.type = "gzip";
+			const updateReq = mockUpdateRequest(update.name, update);
 
-	it("delete - should fail a missing pipeline", async () => {
-		const requests = mockDeleteRequest("bad-pipeline", 404, {
-			code: 1000,
-			message: "Pipeline does not exist",
+			await runWrangler("pipelines update my-pipeline --compression gzip");
+			expect(updateReq.count).toEqual(1);
 		});
-		await expect(
-			runWrangler("pipelines delete bad-pipeline")
-		).rejects.toThrowError();
 
-		await endEventLoop();
+		it("should update a pipeline with new bucket", async () => {
+			const pipeline: Pipeline = samplePipeline;
+			const tokenReq = mockCreateR2Token("new-bucket");
+			mockShowRequest(pipeline.name, pipeline);
 
-		expect(std.err).toMatchInlineSnapshot(`""`);
-		expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`
-			"Deleting pipeline bad-pipeline.
-			X [ERROR] A request to the Cloudflare API (/accounts/some-account-id/pipelines/bad-pipeline) failed.
-			  Pipeline does not exist [code: 1000]
-			  If you think this is a bug, please open an issue at:
-			  https://github.com/cloudflare/workers-sdk/issues/new/choose"
-		`);
-		expect(requests.count).toEqual(1);
+			const update = JSON.parse(JSON.stringify(pipeline));
+			update.destination.path.bucket = "new_bucket";
+			update.destination.credentials = {
+				endpoint: "https://some-account-id.r2.cloudflarestorage.com",
+				access_key_id: "service-token-id",
+				secret_access_key:
+					"be22cbae9c1585c7b61a92fdb75afd10babd535fb9b317f90ac9a9ca896d02d7",
+			};
+			const updateReq = mockUpdateRequest(update.name, update);
+
+			await runWrangler("pipelines update my-pipeline --r2 new-bucket");
+
+			expect(tokenReq.count).toEqual(3);
+			expect(updateReq.count).toEqual(1);
+		});
+
+		it("should update a pipeline with new credential", async () => {
+			const pipeline: Pipeline = samplePipeline;
+			mockShowRequest(pipeline.name, pipeline);
+
+			const update = JSON.parse(JSON.stringify(pipeline));
+			update.destination.path.bucket = "new-bucket";
+			update.destination.credentials = {
+				endpoint: "https://some-account-id.r2.cloudflarestorage.com",
+				access_key_id: "new-key",
+				secret_access_key: "new-secret",
+			};
+			const updateReq = mockUpdateRequest(update.name, update);
+
+			await runWrangler(
+				"pipelines update my-pipeline --r2 new-bucket --access-key-id new-key --secret-access-key new-secret"
+			);
+
+			expect(updateReq.count).toEqual(1);
+		});
+
+		it("should update a pipeline with source changes http auth", async () => {
+			const pipeline: Pipeline = samplePipeline;
+			mockShowRequest(pipeline.name, pipeline);
+
+			const update = JSON.parse(JSON.stringify(pipeline));
+			update.source = [
+				{
+					type: "http",
+					format: "json",
+					authenticated: true,
+				},
+			];
+			const updateReq = mockUpdateRequest(update.name, update);
+
+			await runWrangler(
+				"pipelines update my-pipeline --binding=false --http --authentication"
+			);
+
+			expect(updateReq.count).toEqual(1);
+			expect(updateReq.body?.source.length).toEqual(1);
+			expect(updateReq.body?.source[0].type).toEqual("http");
+			expect((updateReq.body?.source[0] as HttpSource).authentication).toEqual(
+				true
+			);
+		});
+
+		it("should fail a missing pipeline", async () => {
+			const requests = mockShowRequest("bad-pipeline", null, 404, {
+				code: 1000,
+				message: "Pipeline does not exist",
+			});
+			await expect(
+				runWrangler(
+					"pipelines update bad-pipeline --r2 new-bucket --access-key-id new-key --secret-access-key new-secret"
+				)
+			).rejects.toThrowError();
+
+			await endEventLoop();
+
+			expect(std.err).toMatchInlineSnapshot(`""`);
+			expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`
+				"X [ERROR] A request to the Cloudflare API (/accounts/some-account-id/pipelines/bad-pipeline) failed.
+				  Pipeline does not exist [code: 1000]
+				  If you think this is a bug, please open an issue at:
+				  https://github.com/cloudflare/workers-sdk/issues/new/choose"
+			`);
+			expect(requests.count).toEqual(1);
+		});
+	});
+
+	describe("delete", () => {
+		it("should delete pipeline", async () => {
+			const requests = mockDeleteRequest("foo");
+			await runWrangler("pipelines delete foo");
+
+			expect(std.err).toMatchInlineSnapshot(`""`);
+			expect(std.out).toMatchInlineSnapshot(`
+				"Deleting pipeline foo.
+				Deleted pipeline foo."
+			`);
+			expect(requests.count).toEqual(1);
+		});
+
+		it("should fail a missing pipeline", async () => {
+			const requests = mockDeleteRequest("bad-pipeline", 404, {
+				code: 1000,
+				message: "Pipeline does not exist",
+			});
+			await expect(
+				runWrangler("pipelines delete bad-pipeline")
+			).rejects.toThrowError();
+
+			await endEventLoop();
+
+			expect(std.err).toMatchInlineSnapshot(`""`);
+			expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`
+				"Deleting pipeline bad-pipeline.
+				X [ERROR] A request to the Cloudflare API (/accounts/some-account-id/pipelines/bad-pipeline) failed.
+				  Pipeline does not exist [code: 1000]
+				  If you think this is a bug, please open an issue at:
+				  https://github.com/cloudflare/workers-sdk/issues/new/choose"
+			`);
+			expect(requests.count).toEqual(1);
+		});
 	});
 });

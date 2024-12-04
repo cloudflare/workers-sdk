@@ -6,28 +6,66 @@ import { getBasePath } from "../../paths";
 import type { Plugin, PluginBuild } from "esbuild";
 
 const REQUIRED_NODE_BUILT_IN_NAMESPACE = "node-built-in-modules";
+const REQUIRED_UNENV_ALIAS_NAMESPACE = "required-unenv-alias";
 
 export const nodejsHybridPlugin: () => Plugin = () => {
 	const { alias, inject, external } = env(nodeless, cloudflare);
 	return {
-		name: "unenv-cloudflare",
+		name: "hybrid-nodejs_compat",
 		setup(build) {
+			errorOnServiceWorkerFormat(build);
 			handleRequireCallsToNodeJSBuiltins(build);
-			handleAliasedNodeJSPackages(build, alias, external);
+			handleUnenvAliasedPackages(build, alias, external);
 			handleNodeJSGlobals(build, inject);
 		},
 	};
 };
 
+const NODEJS_MODULES_RE = new RegExp(`^(node:)?(${builtinModules.join("|")})$`);
+
 /**
- * We must convert `require()` calls for Node.js to a virtual ES Module that can be imported avoiding the require calls.
+ * If we are bundling a "Service Worker" formatted Worker, imports of external modules,
+ * which won't be inlined/bundled by esbuild, are invalid.
+ *
+ * This `onResolve()` handler will error if it identifies node.js external imports.
+ */
+function errorOnServiceWorkerFormat(build: PluginBuild) {
+	const paths = new Set();
+	build.onStart(() => paths.clear());
+	build.onResolve({ filter: NODEJS_MODULES_RE }, (args) => {
+		paths.add(args.path);
+		return null;
+	});
+	build.onEnd(() => {
+		if (build.initialOptions.format === "iife" && paths.size > 0) {
+			const pathList = new Intl.ListFormat("en-US").format(
+				Array.from(paths.keys())
+					.map((p) => `"${p}"`)
+					.sort()
+			);
+			return {
+				errors: [
+					{
+						text: dedent`
+							Unexpected external import of ${pathList}.
+							Your worker has no default export, which means it is assumed to be a Service Worker format Worker.
+							Did you mean to create a ES Module format Worker?
+							If so, try adding \`export default { ... }\` in your entry-point.
+							See https://developers.cloudflare.com/workers/reference/migrate-to-module-workers/.
+						`,
+					},
+				],
+			};
+		}
+	});
+}
+
+/**
+ * We must convert `require()` calls for Node.js modules to a virtual ES Module that can be imported avoiding the require calls.
  * We do this by creating a special virtual ES module that re-exports the library in an onLoad handler.
  * The onLoad handler is triggered by matching the "namespace" added to the resolve.
  */
 function handleRequireCallsToNodeJSBuiltins(build: PluginBuild) {
-	const NODEJS_MODULES_RE = new RegExp(
-		`^(node:)?(${builtinModules.join("|")})$`
-	);
 	build.onResolve({ filter: NODEJS_MODULES_RE }, (args) => {
 		if (args.kind === "require-call") {
 			return {
@@ -41,46 +79,84 @@ function handleRequireCallsToNodeJSBuiltins(build: PluginBuild) {
 		({ path }) => {
 			return {
 				contents: dedent`
-        import libDefault from '${path}';
-        module.exports = libDefault;`,
+					import libDefault from '${path}';
+					module.exports = libDefault;`,
 				loader: "js",
 			};
 		}
 	);
 }
 
-function handleAliasedNodeJSPackages(
+function handleUnenvAliasedPackages(
 	build: PluginBuild,
 	alias: Record<string, string>,
 	external: string[]
 ) {
 	// esbuild expects alias paths to be absolute
-	const aliasAbsolute = Object.fromEntries(
-		Object.entries(alias)
-			.map(([key, value]) => {
-				let resolvedAliasPath;
-				try {
-					resolvedAliasPath = require.resolve(value);
-				} catch (e) {
-					// this is an alias for package that is not installed in the current app => ignore
-					resolvedAliasPath = "";
-				}
+	const aliasAbsolute: Record<string, string> = {};
+	for (const [module, unresolvedAlias] of Object.entries(alias)) {
+		try {
+			aliasAbsolute[module] = require
+				.resolve(unresolvedAlias)
+				.replace(/\.cjs$/, ".mjs");
+		} catch (e) {
+			// this is an alias for package that is not installed in the current app => ignore
+		}
+	}
 
-				return [key, resolvedAliasPath.replace(/\.cjs$/, ".mjs")];
-			})
-			.filter((entry) => entry[1] !== "")
-	);
 	const UNENV_ALIAS_RE = new RegExp(
 		`^(${Object.keys(aliasAbsolute).join("|")})$`
 	);
 
 	build.onResolve({ filter: UNENV_ALIAS_RE }, (args) => {
+		const unresolvedAlias = alias[args.path];
+		// Convert `require()` calls for NPM packages to a virtual ES Module that can be imported avoiding the require calls.
+		// Note: Does not apply to Node.js packages that are handled in `handleRequireCallsToNodeJSBuiltins`
+		if (
+			args.kind === "require-call" &&
+			(unresolvedAlias.startsWith("unenv/runtime/npm/") ||
+				unresolvedAlias.startsWith("unenv/runtime/mock/"))
+		) {
+			return {
+				path: args.path,
+				namespace: REQUIRED_UNENV_ALIAS_NAMESPACE,
+			};
+		}
 		// Resolve the alias to its absolute path and potentially mark it as external
 		return {
 			path: aliasAbsolute[args.path],
-			external: external.includes(alias[args.path]),
+			external: external.includes(unresolvedAlias),
 		};
 	});
+
+	build.initialOptions.banner = { js: "", ...build.initialOptions.banner };
+	build.initialOptions.banner.js += dedent`
+		function __cf_cjs(esm) {
+		  const cjs = 'default' in esm ? esm.default : {};
+			for (const [k, v] of Object.entries(esm)) {
+				if (k !== 'default') {
+					Object.defineProperty(cjs, k, {
+						enumerable: true,
+						value: v,
+					});
+				}
+			}
+			return cjs;
+		}
+		`;
+
+	build.onLoad(
+		{ filter: /.*/, namespace: REQUIRED_UNENV_ALIAS_NAMESPACE },
+		({ path }) => {
+			return {
+				contents: dedent`
+					import * as esm from '${path}';
+					module.exports = __cf_cjs(esm);
+				`,
+				loader: "js",
+			};
+		}
+	);
 }
 
 /**
@@ -112,7 +188,10 @@ function handleNodeJSGlobals(
 		const { importStatement, exportName } = getGlobalInject(inject[globalName]);
 
 		return {
-			contents: `${importStatement}\nglobalThis.${globalName} = ${exportName};`,
+			contents: dedent`
+				${importStatement}
+				globalThis.${globalName} = ${exportName};
+			`,
 		};
 	});
 }
@@ -137,38 +216,21 @@ function getGlobalInject(globalInject: string | string[]) {
 }
 
 /**
- * Encodes a case sensitive string to lowercase string by prefixing all uppercase letters
- * with $ and turning them into lowercase letters.
+ * Encodes a case sensitive string to lowercase string.
+ *
+ * - Escape $ with another $ ("$" -> "$$")
+ * - Escape uppercase letters with $ and turn them into lowercase letters ("L" -> "$L")
  *
  * This function exists because ESBuild requires that all resolved paths are case insensitive.
  * Without this transformation, ESBuild will clobber /foo/bar.js with /foo/Bar.js
- *
- * This is important to support `inject` config for `performance` and `Performance` introduced
- * in https://github.com/unjs/unenv/pull/257
  */
 export function encodeToLowerCase(str: string): string {
-	return str
-		.replaceAll(/\$/g, () => "$$")
-		.replaceAll(/[A-Z]/g, (letter) => `$${letter.toLowerCase()}`);
+	return str.replace(/[A-Z$]/g, (escape) => `$${escape.toLowerCase()}`);
 }
 
 /**
  * Decodes a string lowercased using `encodeToLowerCase` to the original strings
  */
 export function decodeFromLowerCase(str: string): string {
-	let out = "";
-	let i = 0;
-	while (i < str.length - 1) {
-		if (str[i] === "$") {
-			i++;
-			out += str[i].toUpperCase();
-		} else {
-			out += str[i];
-		}
-		i++;
-	}
-	if (i < str.length) {
-		out += str[i];
-	}
-	return out;
+	return str.replace(/\$[a-z$]/g, (escaped) => escaped[1].toUpperCase());
 }

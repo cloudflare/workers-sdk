@@ -81,7 +81,7 @@ export interface CfVars {
  */
 export interface CfKvNamespace {
 	binding: string;
-	id: string;
+	id?: string;
 }
 
 /**
@@ -152,6 +152,13 @@ export interface CfDurableObject {
 	environment?: string;
 }
 
+export interface CfWorkflow {
+	name: string;
+	class_name: string;
+	binding: string;
+	script_name?: string;
+}
+
 export interface CfQueue {
 	binding: string;
 	queue_name: string;
@@ -160,15 +167,15 @@ export interface CfQueue {
 
 export interface CfR2Bucket {
 	binding: string;
-	bucket_name: string;
+	bucket_name?: string;
 	jurisdiction?: string;
 }
 
 // TODO: figure out if this is duplicated in packages/wrangler/src/config/environment.ts
 export interface CfD1Database {
 	binding: string;
-	database_id: string;
-	database_name: string;
+	database_id?: string;
+	database_name?: string;
 	preview_database_id?: string;
 	database_internal_env?: string;
 	migrations_table?: string;
@@ -222,7 +229,7 @@ export interface CfLogfwdrBinding {
 	destination: string;
 }
 
-export interface CfExperimentalAssetBinding {
+export interface CfAssetsBinding {
 	binding: string;
 }
 
@@ -284,7 +291,7 @@ export interface CfUserLimits {
 	cpu_ms?: number;
 }
 
-export interface CfExperimentalAssets {
+export interface CfAssets {
 	jwt: string;
 	routingConfig: RoutingConfig;
 	assetConfig?: AssetConfig;
@@ -323,6 +330,7 @@ export interface CfWorkerInit {
 		version_metadata: CfVersionMetadataBinding | undefined;
 		data_blobs: CfDataBlobBindings | undefined;
 		durable_objects: { bindings: CfDurableObject[] } | undefined;
+		workflows: CfWorkflow[] | undefined;
 		queues: CfQueue[] | undefined;
 		r2_buckets: CfR2Bucket[] | undefined;
 		d1_databases: CfD1Database[] | undefined;
@@ -335,7 +343,7 @@ export interface CfWorkerInit {
 		logfwdr: CfLogfwdr | undefined;
 		pipelines: CfPipeline[] | undefined;
 		unsafe: CfUnsafe | undefined;
-		experimental_assets: CfExperimentalAssetBinding | undefined;
+		assets: CfAssetsBinding | undefined;
 	};
 	/**
 	 * The raw bindings - this is basically never provided and it'll be the bindings above
@@ -356,7 +364,7 @@ export interface CfWorkerInit {
 	limits: CfUserLimits | undefined;
 	annotations?: Record<string, string | undefined>;
 	keep_assets?: boolean | undefined;
-	experimental_assets: CfExperimentalAssets | undefined;
+	assets: CfAssets | undefined;
 	observability: Observability | undefined;
 }
 

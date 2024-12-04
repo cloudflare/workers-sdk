@@ -1,0 +1,10 @@
+# add 'e2e' label to any changes within the 'packages/wrangler/e2e' directory
+e2e:
+  - all:
+      - changed-files:
+          - any-glob-to-any-file: "packages/wrangler/e2e/**/*"
+
+# add 'skip-pr-description-validation' label to Version Packages PRs
+skip-pr-description-validation:
+  - all:
+      - head-branch: "changeset-release/main"

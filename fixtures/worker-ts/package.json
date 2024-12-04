@@ -3,10 +3,10 @@
 	"private": true,
 	"scripts": {
 		"deploy": "wrangler deploy",
-		"start": "wrangler dev --x-dev-env"
+		"start": "wrangler dev"
 	},
 	"devDependencies": {
-		"@cloudflare/workers-types": "^4.20240909.0",
+		"@cloudflare/workers-types": "^4.20241106.0",
 		"wrangler": "workspace:*"
 	},
 	"volta": {

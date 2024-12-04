@@ -175,6 +175,61 @@ describe("writeOutput()", () => {
 			},
 		]);
 	});
+	it("should write an alias and environment for pages-deploy-detailed outputs", () => {
+		vi.stubEnv("WRANGLER_OUTPUT_FILE_DIRECTORY", "output");
+		vi.stubEnv("WRANGLER_OUTPUT_FILE_PATH", "");
+		writeOutput({
+			type: "wrangler-session",
+			version: 1,
+			wrangler_version: "0.0.0.0",
+			command_line_args: ["--help"],
+			log_file_path: "some/log/path.log",
+		});
+		writeOutput({
+			type: "pages-deploy-detailed",
+			version: 1,
+			pages_project: "pages",
+			deployment_id: "ABCDE12345",
+			url: "test.com",
+			alias: "dev.com",
+			environment: "production",
+			production_branch: "production-branch",
+			deployment_trigger: {
+				metadata: {
+					commit_hash: "bc286bd30cf12b7fdbce046be6e53ce12ae1283d",
+				},
+			},
+		});
+
+		const outputFilePaths = readdirSync("output");
+		expect(outputFilePaths.length).toEqual(1);
+		expect(outputFilePaths[0]).toMatch(/wrangler-output-.+\.json/);
+		const outputFile = readFileSync(join("output", outputFilePaths[0]), "utf8");
+		expect(outputFile).toContainEntries([
+			{
+				type: "wrangler-session",
+				version: 1,
+				wrangler_version: "0.0.0.0",
+				command_line_args: ["--help"],
+				log_file_path: "some/log/path.log",
+			},
+			{
+				type: "pages-deploy-detailed",
+				version: 1,
+				pages_project: "pages",
+				deployment_id: "ABCDE12345",
+				url: "test.com",
+				alias: "dev.com",
+				environment: "production",
+				production_branch: "production-branch",
+				deployment_trigger: {
+					metadata: {
+						commit_hash: "bc286bd30cf12b7fdbce046be6e53ce12ae1283d",
+					},
+				},
+			},
+		]);
+	});
 });
 
 expect.extend({

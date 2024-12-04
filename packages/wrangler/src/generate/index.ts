@@ -2,9 +2,9 @@ import fs from "node:fs";
 import path from "node:path";
 import { execa } from "execa";
 import { getC3CommandFromEnv } from "../environment-variables/misc-variables";
-import { UserError } from "../errors";
+import { CommandLineArgsError, UserError } from "../errors";
 import { cloneIntoDirectory, initializeGit } from "../git-client";
-import { CommandLineArgsError, printWranglerBanner } from "../index";
+import { printWranglerBanner } from "../index";
 import { initHandler } from "../init";
 import { logger } from "../logger";
 import { getPackageManager } from "../package-manager";
@@ -57,8 +57,8 @@ export async function generateHandler(args: GenerateArgs) {
 			type: undefined,
 			_: args._,
 			$0: args.$0,
-			experimentalJsonConfig: false,
 			experimentalVersions: args.experimentalVersions,
+			experimentalProvision: args.experimentalProvision,
 		});
 	}
 
@@ -149,11 +149,11 @@ export async function generateHandler(args: GenerateArgs) {
  * - workers
  * |
  * | - worker
- * | | - wrangler.toml
+ * | | - wrangler.toml/wrangler.json
  * | | ...
  * |
  * | - worker-1
- * | | - wrangler.toml
+ * | | - wrangler.toml/wrangler.json
  * | | ...
  * ```
  *

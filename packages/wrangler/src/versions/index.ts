@@ -1,12 +1,9 @@
 import assert from "node:assert";
 import path from "node:path";
-import { findWranglerToml, readConfig } from "../config";
+import { processAssetsArg, validateAssetsArgsAndConfig } from "../assets";
+import { configFileName, findWranglerConfig, readConfig } from "../config";
 import { getEntry } from "../deployment-bundle/entry";
 import { UserError } from "../errors";
-import {
-	processExperimentalAssetsArg,
-	verifyMutuallyExclusiveAssetsArgsOrConfig,
-} from "../experimental-assets";
 import {
 	getRules,
 	getScriptName,
@@ -34,12 +31,12 @@ import type {
 async function standardPricingWarning(config: Config) {
 	if (config.usage_model !== undefined) {
 		logger.warn(
-			"The `usage_model` defined in wrangler.toml is deprecated and no longer used. Visit our developer docs for details: https://developers.cloudflare.com/workers/wrangler/configuration/#usage-model"
+			`The \`usage_model\` defined in your ${configFileName(config.configPath)} file is deprecated and no longer used. Visit our developer docs for details: https://developers.cloudflare.com/workers/wrangler/configuration/#usage-model`
 		);
 	}
 }
 
-export function versionsUploadOptions(yargs: CommonYargsArgv) {
+function versionsUploadOptions(yargs: CommonYargsArgv) {
 	return (
 		yargs
 			.positional("script", {
@@ -71,12 +68,6 @@ export function versionsUploadOptions(yargs: CommonYargsArgv) {
 				type: "string",
 				requiresArg: true,
 			})
-			.option("format", {
-				choices: ["modules", "service-worker"] as const,
-				describe: "Choose an entry type",
-				deprecated: true,
-				hidden: true,
-			})
 			.option("compatibility-date", {
 				describe: "Date to use for compatibility checks",
 				type: "string",
@@ -94,23 +85,22 @@ export function versionsUploadOptions(yargs: CommonYargsArgv) {
 				type: "boolean",
 				default: false,
 			})
-			.option("legacy-assets", {
-				describe: "(Experimental) Static assets to be served",
-				type: "string",
-				requiresArg: true,
-				hidden: true,
-			})
 			.option("assets", {
-				describe: "(Experimental) Static assets to be served",
+				describe: "Static assets to be served. Replaces Workers Sites.",
 				type: "string",
 				requiresArg: true,
+			})
+			.option("format", {
+				choices: ["modules", "service-worker"] as const,
+				describe: "Choose an entry type",
+				deprecated: true,
 				hidden: true,
 			})
-			.option("experimental-assets", {
+			.option("legacy-assets", {
 				describe: "Static assets to be served",
 				type: "string",
-				alias: "x-assets",
 				requiresArg: true,
+				deprecated: true,
 				hidden: true,
 			})
 			.option("site", {
@@ -118,6 +108,7 @@ export function versionsUploadOptions(yargs: CommonYargsArgv) {
 				type: "string",
 				requiresArg: true,
 				hidden: true,
+				deprecated: true,
 			})
 			.option("site-include", {
 				describe:
@@ -126,6 +117,7 @@ export function versionsUploadOptions(yargs: CommonYargsArgv) {
 				requiresArg: true,
 				array: true,
 				hidden: true,
+				deprecated: true,
 			})
 			.option("site-exclude", {
 				describe:
@@ -134,6 +126,7 @@ export function versionsUploadOptions(yargs: CommonYargsArgv) {
 				requiresArg: true,
 				array: true,
 				hidden: true,
+				deprecated: true,
 			})
 			.option("var", {
 				describe:
@@ -201,14 +194,14 @@ export function versionsUploadOptions(yargs: CommonYargsArgv) {
 	);
 }
 
-export async function versionsUploadHandler(
+async function versionsUploadHandler(
 	args: StrictYargsOptionsToInterface<typeof versionsUploadOptions>
 ) {
 	await printWranglerBanner();
 
 	const configPath =
-		args.config || (args.script && findWranglerToml(path.dirname(args.script)));
-	const projectRoot = configPath && path.dirname(configPath);
+		args.config ||
+		(args.script && findWranglerConfig(path.dirname(args.script)));
 	const config = readConfig(configPath, args);
 	const entry = await getEntry(args, config, "versions upload");
 	await metrics.sendMetricsEvent(
@@ -221,8 +214,6 @@ export async function versionsUploadHandler(
 		}
 	);
 
-	args.legacyAssets = args.legacyAssets ?? args.assets;
-
 	if (args.site || config.site) {
 		throw new UserError(
 			"Workers Sites does not support uploading versions through `wrangler versions upload`. You must use `wrangler deploy` instead."
@@ -230,27 +221,32 @@ export async function versionsUploadHandler(
 	}
 	if (args.legacyAssets || config.legacy_assets) {
 		throw new UserError(
-			"Legacy Assets does not support uploading versions through `wrangler versions upload`. You must use `wrangler deploy` instead."
+			"Legacy assets does not support uploading versions through `wrangler versions upload`. You must use `wrangler deploy` instead."
 		);
 	}
 
-	verifyMutuallyExclusiveAssetsArgsOrConfig(
+	if (config.workflows?.length) {
+		logger.once.warn("Workflows is currently in open beta.");
+	}
+
+	validateAssetsArgsAndConfig(
 		{
 			// given that legacyAssets and sites are not supported by
 			// `wrangler versions upload` pass them as undefined to
 			// skip the corresponding mutual exclusivity validation
 			legacyAssets: undefined,
 			site: undefined,
-			experimentalAssets: args.experimentalAssets,
+			assets: args.assets,
+			script: args.script,
 		},
 		config
 	);
 
-	const experimentalAssetsOptions = processExperimentalAssetsArg(args, config);
+	const assetsOptions = processAssetsArg(args, config);
 
 	if (args.latest) {
 		logger.warn(
-			"Using the latest version of the Workers runtime. To silence this warning, please choose a specific version of the runtime with --compatibility-date, or add a compatibility_date to your wrangler.toml.\n"
+			`Using the latest version of the Workers runtime. To silence this warning, please choose a specific version of the runtime with --compatibility-date, or add a compatibility_date to your ${configFileName(config.configPath)} file.\n`
 		);
 	}
 
@@ -268,13 +264,17 @@ export async function versionsUploadHandler(
 
 	if (!args.dryRun) {
 		assert(accountId, "Missing account ID");
-		await verifyWorkerMatchesCITag(accountId, name);
+		await verifyWorkerMatchesCITag(
+			accountId,
+			name,
+			path.relative(config.projectRoot, config.configPath ?? "wrangler.toml")
+		);
 	}
 
 	if (!args.dryRun) {
 		await standardPricingWarning(config);
 	}
-	const { versionId, workerTag } = await versionsUpload({
+	const { versionId, workerTag, versionPreviewUrl } = await versionsUpload({
 		config,
 		accountId,
 		name,
@@ -292,7 +292,7 @@ export async function versionsUploadHandler(
 		jsxFactory: args.jsxFactory,
 		jsxFragment: args.jsxFragment,
 		tsconfig: args.tsconfig,
-		experimentalAssetsOptions,
+		assetsOptions,
 		minify: args.minify,
 		uploadSourceMaps: args.uploadSourceMaps,
 		nodeCompat: args.nodeCompat,
@@ -301,8 +301,6 @@ export async function versionsUploadHandler(
 		dryRun: args.dryRun,
 		noBundle: !(args.bundle ?? !config.no_bundle),
 		keepVars: false,
-		projectRoot,
-
 		tag: args.tag,
 		message: args.message,
 	});
@@ -313,6 +311,7 @@ export async function versionsUploadHandler(
 		worker_name: name ?? null,
 		worker_tag: workerTag,
 		version_id: versionId,
+		preview_url: versionPreviewUrl,
 	});
 }
 

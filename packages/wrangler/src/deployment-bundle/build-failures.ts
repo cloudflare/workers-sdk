@@ -1,5 +1,6 @@
 import { builtinModules } from "node:module";
 import type * as esbuild from "esbuild";
+import type { NodeJSCompatMode } from "miniflare";
 
 /**
  * RegExp matching against esbuild's error text when it is unable to resolve
@@ -19,23 +20,25 @@ const nodeBuiltinResolveErrorText = new RegExp(
  */
 export function rewriteNodeCompatBuildFailure(
 	errors: esbuild.Message[],
-	forPages = false
+	compatMode: NodeJSCompatMode = null
 ) {
 	for (const error of errors) {
 		const match = nodeBuiltinResolveErrorText.exec(error.text);
 		if (match !== null) {
-			const issue = `The package "${match[1]}" wasn't found on the file system but is built into node.`;
+			let text = `The package "${match[1]}" wasn't found on the file system but is built into node.\n`;
 
-			const instructionForUser = `${
-				forPages
-					? 'Add the "nodejs_compat" compatibility flag to your Pages project'
-					: 'Add "node_compat = true" to your wrangler.toml file'
-			} and make sure to prefix the module name with "node:" to enable Node.js compatibility.`;
+			if (compatMode === null || compatMode === "als") {
+				text += `- Add the "nodejs_compat" compatibility flag to your project.\n`;
+			} else if (compatMode === "legacy") {
+				text += `- Try removing the legacy "node_compat" setting and add the "nodejs_compat" compatibility flag in your project\n`;
+			} else if (compatMode === "v1" && !match[1].startsWith("node:")) {
+				text += `- Make sure to prefix the module name with "node:" or update your compatibility_date to 2024-09-23 or later.\n`;
+			}
 
 			error.notes = [
 				{
 					location: null,
-					text: `${issue}\n${instructionForUser}`,
+					text,
 				},
 			];
 		}
@@ -50,5 +53,19 @@ export function isBuildFailure(err: unknown): err is esbuild.BuildFailure {
 		err !== null &&
 		"errors" in err &&
 		"warnings" in err
+	);
+}
+
+/**
+ * Returns true if the error has a cause that is like an esbuild BuildFailure object.
+ */
+export function isBuildFailureFromCause(
+	err: unknown
+): err is { cause: esbuild.BuildFailure } {
+	return (
+		typeof err === "object" &&
+		err !== null &&
+		"cause" in err &&
+		isBuildFailure(err.cause)
 	);
 }

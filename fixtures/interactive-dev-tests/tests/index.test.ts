@@ -86,7 +86,7 @@ const processes: PtyProcess[] = [];
 afterEach(() => {
 	for (const p of processes.splice(0)) {
 		// If the process didn't exit cleanly, log its output for debugging
-		if (p.exitCode !== 0) console.log(stripAnsi(p.stdout));
+		if (p.exitCode !== 0) console.log(p.stdout);
 		// If the process hasn't exited yet, kill it
 		if (p.exitCode === null) {
 			// `node-pty` throws if signal passed on Windows
@@ -97,7 +97,7 @@ afterEach(() => {
 });
 
 const readyRegexp = /Ready on (http:\/\/[a-z0-9.]+:[0-9]+)/;
-async function startWranglerDev(args: string[]) {
+async function startWranglerDev(args: string[], skipWaitingForReady = false) {
 	const stdoutStream = new stream.PassThrough();
 	const stdoutInterface = rl.createInterface(stdoutStream);
 
@@ -134,13 +134,14 @@ async function startWranglerDev(args: string[]) {
 		stdoutStream.end();
 	});
 
-	let readyMatch: RegExpMatchArray | null = null;
-	for await (const line of stdoutInterface) {
-		if ((readyMatch = readyRegexp.exec(line)) !== null) break;
+	if (!skipWaitingForReady) {
+		let readyMatch: RegExpMatchArray | null = null;
+		for await (const line of stdoutInterface) {
+			if ((readyMatch = readyRegexp.exec(line)) !== null) break;
+		}
+		assert(readyMatch !== null, "Expected ready message");
+		result.url = readyMatch[1];
 	}
-	assert(readyMatch !== null, "Expected ready message");
-	result.url = readyMatch[1];
-
 	return result;
 }
 
@@ -197,7 +198,6 @@ function getStartedWorkerdProcesses(): Process[] {
 
 const devScripts = [
 	{ args: ["dev"], expectedBody: "body" },
-	{ args: ["dev", "--x-dev-env"], expectedBody: "body" },
 	{ args: ["pages", "dev", "public"], expectedBody: "<p>body</p>" },
 ];
 const exitKeys = [
@@ -228,3 +228,55 @@ describe.each(devScripts)("wrangler $args", ({ args, expectedBody }) => {
 		}
 	});
 });
+
+it.each(exitKeys)("multiworker cleanly exits with $name", async ({ key }) => {
+	const beginProcesses = getStartedWorkerdProcesses();
+
+	const wrangler = await startWranglerDev([
+		"dev",
+		"-c",
+		"wrangler.a.toml",
+		"-c",
+		"wrangler.b.toml",
+	]);
+	const duringProcesses = getStartedWorkerdProcesses();
+
+	// Check dev server working correctly
+	const res = await fetch(wrangler.url);
+	expect((await res.text()).trim()).toBe("hello from a & hello from b");
+
+	// Check key cleanly exits dev server
+	wrangler.pty.write(key);
+	expect(await wrangler.exitPromise).toBe(0);
+	const endProcesses = getStartedWorkerdProcesses();
+
+	// Check no hanging workerd processes
+	if (process.platform !== "win32" || windowsProcessCwdSupported) {
+		expect(beginProcesses.length).toBe(endProcesses.length);
+		expect(duringProcesses.length).toBeGreaterThan(beginProcesses.length);
+	}
+});
+
+it.runIf(RUN_IF && nodePtySupported)(
+	"hotkeys should be unregistered when the initial build fails",
+	async () => {
+		const wrangler = await startWranglerDev(
+			["dev", "src/startup-error.ts"],
+			true
+		);
+
+		expect(await wrangler.exitPromise).toBe(1);
+
+		const hotkeysRenderCount = [
+			...wrangler.stdout.matchAll(/\[b\] open a browser/g),
+		];
+
+		const clearHotkeysCount = [
+			// This is the control sequence for moving the cursor up and then clearing from the cursor to the end
+			...wrangler.stdout.matchAll(/\[\dA\[0J/g),
+		];
+
+		// The hotkeys should be rendered the same number of times as the control sequence for clearing them from the screen
+		expect(hotkeysRenderCount.length).toBe(clearHotkeysCount.length);
+	}
+);

@@ -23,6 +23,7 @@ import {
 import semverSatisfies from "semver/functions/satisfies.js";
 import { createMethodsRPC } from "vitest/node";
 import { createChunkingSocket } from "../shared/chunking-socket";
+import { CompatibilityFlagAssertions } from "./compatibility-flag-assertions";
 import { OPTIONS_PATH, parseProjectOptions } from "./config";
 import {
 	getProjectPath,
@@ -319,68 +320,6 @@ const SELF_SERVICE_BINDING = "__VITEST_POOL_WORKERS_SELF_SERVICE";
 const LOOPBACK_SERVICE_BINDING = "__VITEST_POOL_WORKERS_LOOPBACK_SERVICE";
 const RUNNER_OBJECT_BINDING = "__VITEST_POOL_WORKERS_RUNNER_OBJECT";
 
-const numericCompare = new Intl.Collator("en", { numeric: true }).compare;
-
-interface CompatibilityFlagCheckOptions {
-	// Context to check against
-	compatibilityFlags: string[];
-	compatibilityDate?: string;
-	relativeProjectPath: string | number;
-	relativeWranglerConfigPath?: string;
-
-	// Details on flag to check
-	enableFlag: string;
-	disableFlag?: string;
-	defaultOnDate?: string;
-}
-function assertCompatibilityFlagEnabled(opts: CompatibilityFlagCheckOptions) {
-	const hasWranglerConfig = opts.relativeWranglerConfigPath !== undefined;
-
-	// Check disable flag (if any) not enabled
-	if (
-		opts.disableFlag !== undefined &&
-		opts.compatibilityFlags.includes(opts.disableFlag)
-	) {
-		let message = `In project ${opts.relativeProjectPath}`;
-		if (hasWranglerConfig) {
-			message += `'s configuration file ${opts.relativeWranglerConfigPath}, \`compatibility_flags\` must not contain "${opts.disableFlag}".\nSimilarly`;
-			// Since the config is merged by this point, we don't know where the
-			// disable flag came from. So we include both possible locations in the
-			// error message. Note the enable-flag case doesn't have this problem, as
-			// we're asking the user to add something to *either* of their configs.
-		}
-		message +=
-			`, \`${OPTIONS_PATH}.miniflare.compatibilityFlags\` must not contain "${opts.disableFlag}".\n` +
-			"This flag is incompatible with `@cloudflare/vitest-pool-workers`.";
-		throw new Error(message);
-	}
-
-	// Check flag enabled or compatibility date enables flag by default
-	const enabledByFlag = opts.compatibilityFlags.includes(opts.enableFlag);
-	const enabledByDate =
-		opts.compatibilityDate !== undefined &&
-		opts.defaultOnDate !== undefined &&
-		numericCompare(opts.compatibilityDate, opts.defaultOnDate) >= 0;
-	if (!(enabledByFlag || enabledByDate)) {
-		let message = `In project ${opts.relativeProjectPath}`;
-		if (hasWranglerConfig) {
-			message += `'s configuration file ${opts.relativeWranglerConfigPath}, \`compatibility_flags\` must contain "${opts.enableFlag}"`;
-		} else {
-			message += `, \`${OPTIONS_PATH}.miniflare.compatibilityFlags\` must contain "${opts.enableFlag}"`;
-		}
-		if (opts.defaultOnDate !== undefined) {
-			if (hasWranglerConfig) {
-				message += `, or \`compatibility_date\` must be >= "${opts.defaultOnDate}"`;
-			} else {
-				message += `, or \`${OPTIONS_PATH}.miniflare.compatibilityDate\` must be >= "${opts.defaultOnDate}"`;
-			}
-		}
-		message +=
-			".\nThis flag is required to use `@cloudflare/vitest-pool-workers`.";
-		throw new Error(message);
-	}
-}
-
 function buildProjectWorkerOptions(
 	project: Omit<Project, "testFiles">
 ): ProjectWorkers {
@@ -400,23 +339,35 @@ function buildProjectWorkerOptions(
 	// of the libraries it depends on expect `require()` to return
 	// `module.exports` directly, rather than `{ default: module.exports }`.
 	runnerWorker.compatibilityFlags ??= [];
-	assertCompatibilityFlagEnabled({
-		compatibilityFlags: runnerWorker.compatibilityFlags,
+
+	const flagAssertions = new CompatibilityFlagAssertions({
 		compatibilityDate: runnerWorker.compatibilityDate,
-		relativeProjectPath: project.relativePath,
-		relativeWranglerConfigPath,
-		// https://developers.cloudflare.com/workers/configuration/compatibility-dates/#commonjs-modules-do-not-export-a-module-namespace
-		enableFlag: "export_commonjs_default",
-		disableFlag: "export_commonjs_namespace",
-		defaultOnDate: "2022-10-31",
-	});
-	assertCompatibilityFlagEnabled({
 		compatibilityFlags: runnerWorker.compatibilityFlags,
-		compatibilityDate: runnerWorker.compatibilityDate,
-		relativeProjectPath: project.relativePath,
+		optionsPath: `${OPTIONS_PATH}.miniflare`,
+		relativeProjectPath: project.relativePath.toString(),
 		relativeWranglerConfigPath,
-		enableFlag: "nodejs_compat",
 	});
+
+	const assertions = [
+		() =>
+			flagAssertions.assertIsEnabled({
+				enableFlag: "export_commonjs_default",
+				disableFlag: "export_commonjs_namespace",
+				defaultOnDate: "2022-10-31",
+			}),
+		() =>
+			flagAssertions.assertAtLeastOneFlagExists([
+				"nodejs_compat",
+				"nodejs_compat_v2",
+			]),
+	];
+
+	for (const assertion of assertions) {
+		const result = assertion();
+		if (!result.isValid) {
+			throw new Error(result.errorMessage);
+		}
+	}
 
 	// Required for `workerd:unsafe` module. We don't require this flag to be set
 	// as it's experimental, so couldn't be deployed by users.

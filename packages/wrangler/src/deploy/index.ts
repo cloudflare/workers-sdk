@@ -1,12 +1,10 @@
 import assert from "node:assert";
 import path from "node:path";
-import { findWranglerToml, readConfig } from "../config";
+import { processAssetsArg, validateAssetsArgsAndConfig } from "../assets";
+import { configFileName, findWranglerConfig, readConfig } from "../config";
 import { getEntry } from "../deployment-bundle/entry";
 import { UserError } from "../errors";
-import {
-	processExperimentalAssetsArg,
-	verifyMutuallyExclusiveAssetsArgsOrConfig,
-} from "../experimental-assets";
+import { run } from "../experimental-flags";
 import {
 	getRules,
 	getScriptName,
@@ -30,7 +28,7 @@ import type {
 async function standardPricingWarning(config: Config) {
 	if (config.usage_model !== undefined) {
 		logger.warn(
-			"The `usage_model` defined in wrangler.toml is deprecated and no longer used. Visit our developer docs for details: https://developers.cloudflare.com/workers/wrangler/configuration/#usage-model"
+			`The \`usage_model\` defined in your ${configFileName(config.configPath)} file is deprecated and no longer used. Visit our developer docs for details: https://developers.cloudflare.com/workers/wrangler/configuration/#usage-model`
 		);
 	}
 }
@@ -67,12 +65,6 @@ export function deployOptions(yargs: CommonYargsArgv) {
 				type: "string",
 				requiresArg: true,
 			})
-			.option("format", {
-				choices: ["modules", "service-worker"] as const,
-				describe: "Choose an entry type",
-				deprecated: true,
-				hidden: true,
-			})
 			.option("compatibility-date", {
 				describe: "Date to use for compatibility checks",
 				type: "string",
@@ -90,6 +82,17 @@ export function deployOptions(yargs: CommonYargsArgv) {
 				type: "boolean",
 				default: false,
 			})
+			.option("assets", {
+				describe: "Static assets to be served. Replaces Workers Sites.",
+				type: "string",
+				requiresArg: true,
+			})
+			.option("format", {
+				choices: ["modules", "service-worker"] as const,
+				describe: "Choose an entry type",
+				deprecated: true,
+				hidden: true,
+			})
 			.option("experimental-public", {
 				describe: "(Deprecated) Static assets to be served",
 				type: "string",
@@ -105,27 +108,18 @@ export function deployOptions(yargs: CommonYargsArgv) {
 				hidden: true,
 			})
 			.option("legacy-assets", {
-				describe: "(Experimental) Static assets to be served",
-				type: "string",
-				requiresArg: true,
-			})
-			.option("assets", {
-				describe: "(Experimental) Static assets to be served",
-				type: "string",
-				requiresArg: true,
-				hidden: true,
-			})
-			.option("experimental-assets", {
 				describe: "Static assets to be served",
 				type: "string",
-				alias: "x-assets",
 				requiresArg: true,
+				deprecated: true,
 				hidden: true,
 			})
 			.option("site", {
 				describe: "Root folder of static assets for Workers Sites",
 				type: "string",
 				requiresArg: true,
+				hidden: true,
+				deprecated: true,
 			})
 			.option("site-include", {
 				describe:
@@ -133,6 +127,8 @@ export function deployOptions(yargs: CommonYargsArgv) {
 				type: "string",
 				requiresArg: true,
 				array: true,
+				hidden: true,
+				deprecated: true,
 			})
 			.option("site-exclude", {
 				describe:
@@ -140,6 +136,8 @@ export function deployOptions(yargs: CommonYargsArgv) {
 				type: "string",
 				requiresArg: true,
 				array: true,
+				hidden: true,
+				deprecated: true,
 			})
 			.option("var", {
 				describe:
@@ -203,7 +201,7 @@ export function deployOptions(yargs: CommonYargsArgv) {
 			})
 			.option("keep-vars", {
 				describe:
-					"Stop wrangler from deleting vars that are not present in the wrangler.toml\nBy default Wrangler will remove all vars and replace them with those found in the wrangler.toml configuration.\nIf your development approach is to modify vars after deployment via the dashboard you may wish to set this flag.",
+					"Stop wrangler from deleting vars that are not present in the Wrangler configuration file\nBy default Wrangler will remove all vars and replace them with those found in the Wrangler configuration.\nIf your development approach is to modify vars after deployment via the dashboard you may wish to set this flag.",
 				default: false,
 				type: "boolean",
 			})
@@ -237,6 +235,17 @@ export function deployOptions(yargs: CommonYargsArgv) {
 export type DeployArgs = StrictYargsOptionsToInterface<typeof deployOptions>;
 
 export async function deployHandler(args: DeployArgs) {
+	await run(
+		{
+			FILE_BASED_REGISTRY: false,
+			RESOURCES_PROVISION: args.experimentalProvision ?? false,
+			MULTIWORKER: false,
+		},
+		() => deployWorker(args)
+	);
+}
+
+async function deployWorker(args: DeployArgs) {
 	await printWranglerBanner();
 
 	// Check for deprecated `wrangler publish` command
@@ -246,30 +255,24 @@ export async function deployHandler(args: DeployArgs) {
 		);
 	}
 
-	if (args.assets) {
-		logger.warn(
-			`The --assets argument is experimental. We are going to be changing the behavior of this experimental command after August 15th.\n` +
-				`Releases of wrangler after this date will no longer support current functionality.\n` +
-				`Please shift to the --legacy-assets command to preserve the current functionality.`
-		);
-	}
-
 	if (args.legacyAssets) {
 		logger.warn(
-			`The --legacy-assets argument is experimental and may change or break at any time.`
+			`The --legacy-assets argument has been deprecated. Please use --assets instead.\n` +
+				`To learn more about Workers with assets, visit our documentation at https://developers.cloudflare.com/workers/frameworks/.`
 		);
 	}
 
-	if (args.legacyAssets && args.assets) {
-		throw new UserError("Cannot use both --assets and --legacy-assets.");
+	const configPath =
+		args.config ||
+		(args.script && findWranglerConfig(path.dirname(args.script)));
+	const config = readConfig(configPath, args);
+	if (config.pages_build_output_dir) {
+		throw new UserError(
+			"It looks like you've run a Workers-specific command in a Pages project.\n" +
+				"For Pages, please run `wrangler pages deploy` instead."
+		);
 	}
 
-	args.legacyAssets = args.legacyAssets ?? args.assets;
-
-	const configPath =
-		args.config || (args.script && findWranglerToml(path.dirname(args.script)));
-	const projectRoot = configPath && path.dirname(configPath);
-	const config = readConfig(configPath, args);
 	const entry = await getEntry(args, config, "deploy");
 
 	if (args.public) {
@@ -288,17 +291,21 @@ export async function deployHandler(args: DeployArgs) {
 		(args.site || config.site)
 	) {
 		throw new UserError(
-			"Cannot use Legacy Assets and Workers Sites in the same Worker."
+			"Cannot use legacy assets and Workers Sites in the same Worker."
 		);
 	}
 
-	verifyMutuallyExclusiveAssetsArgsOrConfig(args, config);
+	if (config.workflows?.length) {
+		logger.once.warn("Workflows is currently in open beta.");
+	}
 
-	const experimentalAssetsOptions = processExperimentalAssetsArg(args, config);
+	validateAssetsArgsAndConfig(args, config);
+
+	const assetsOptions = processAssetsArg(args, config);
 
 	if (args.latest) {
 		logger.warn(
-			"Using the latest version of the Workers runtime. To silence this warning, please choose a specific version of the runtime with --compatibility-date, or add a compatibility_date to your wrangler.toml.\n"
+			`Using the latest version of the Workers runtime. To silence this warning, please choose a specific version of the runtime with --compatibility-date, or add a compatibility_date to your ${configFileName(config.configPath)} file.`
 		);
 	}
 
@@ -331,7 +338,11 @@ export async function deployHandler(args: DeployArgs) {
 
 	if (!args.dryRun) {
 		assert(accountId, "Missing account ID");
-		await verifyWorkerMatchesCITag(accountId, name);
+		await verifyWorkerMatchesCITag(
+			accountId,
+			name,
+			path.relative(config.projectRoot, config.configPath ?? "wrangler.toml")
+		);
 	}
 	const { sourceMapSize, versionId, workerTag, targets } = await deploy({
 		config,
@@ -352,7 +363,7 @@ export async function deployHandler(args: DeployArgs) {
 		jsxFragment: args.jsxFragment,
 		tsconfig: args.tsconfig,
 		routes: args.routes,
-		experimentalAssetsOptions,
+		assetsOptions,
 		legacyAssetPaths,
 		legacyEnv: isLegacyEnv(config),
 		minify: args.minify,
@@ -365,7 +376,7 @@ export async function deployHandler(args: DeployArgs) {
 		logpush: args.logpush,
 		uploadSourceMaps: args.uploadSourceMaps,
 		oldAssetTtl: args.oldAssetTtl,
-		projectRoot,
+		projectRoot: config.projectRoot,
 		dispatchNamespace: args.dispatchNamespace,
 		experimentalVersions: args.experimentalVersions,
 	});

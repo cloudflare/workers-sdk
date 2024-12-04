@@ -1,11 +1,11 @@
 {
 	"$schema": "http://turbo.build/schema.json",
 	"extends": ["//"],
-	"pipeline": {
+	"tasks": {
 		"build": {
 			"inputs": [
-				"!**/__tests__/**",
-				"!**/.wrangler/**",
+				"!*/**/__tests__/**",
+				"!*/**/.wrangler/**",
 				"bin/**",
 				"src/**",
 				"scripts/**",
@@ -54,6 +54,7 @@
 				"CI_OS",
 				"SENTRY_DSN",
 				"SYSTEMROOT",
+				"TZ",
 				"WRANGLER_DISABLE_EXPERIMENTAL_WARNING",
 				"WRANGLER_DISABLE_REQUEST_BODY_DRAINING",
 				"WRANGLER_WORKER_REGISTRY_PORT",
@@ -61,7 +62,7 @@
 			]
 		},
 		"test:ci": {
-			"inputs": ["!**/.wrangler/**", "**/__tests__/**"],
+			"inputs": ["!*/**/.wrangler/**", "**/__tests__/**"],
 			"dependsOn": ["build"]
 		},
 		"test:e2e": {

@@ -75,13 +75,29 @@ describe("pages project list", () => {
 		await runWrangler("pages project list");
 		expect(requests.count).toEqual(2);
 	});
+
+	it("should override cached accountId with CLOUDFLARE_ACCOUNT_ID environmental variable if provided", async () => {
+		vi.mock("getConfigCache", () => {
+			return {
+				account_id: "original-account-id",
+				project_name: "an-existing-project",
+			};
+		});
+		vi.stubEnv("CLOUDFLARE_ACCOUNT_ID", "new-account-id");
+		const requests = mockProjectListRequest([], "new-account-id");
+		await runWrangler("pages project list");
+		expect(requests.count).toBe(1);
+	});
 });
 
 /* -------------------------------------------------- */
 /*                    Helper Functions                */
 /* -------------------------------------------------- */
 
-function mockProjectListRequest(projects: unknown[]) {
+function mockProjectListRequest(
+	projects: unknown[],
+	accountId = "some-account-id"
+) {
 	const requests = { count: 0 };
 	msw.use(
 		http.get(
@@ -94,7 +110,7 @@ function mockProjectListRequest(projects: unknown[]) {
 				const page = Number(url.searchParams.get("page"));
 				const expectedPageSize = 10;
 				const expectedPage = requests.count;
-				expect(params.accountId).toEqual("some-account-id");
+				expect(params.accountId).toEqual(accountId);
 				expect(pageSize).toEqual(expectedPageSize);
 				expect(page).toEqual(expectedPage);
 				expect(await request.text()).toEqual("");

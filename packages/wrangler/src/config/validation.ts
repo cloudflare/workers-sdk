@@ -2,6 +2,7 @@ import assert from "node:assert";
 import path from "node:path";
 import TOML from "@iarna/toml";
 import { dedent } from "ts-dedent";
+import { getFlag } from "../experimental-flags";
 import { Diagnostics } from "./diagnostics";
 import {
 	all,
@@ -24,17 +25,20 @@ import {
 	isValidName,
 	notInheritable,
 	validateAdditionalProperties,
+	validateAtLeastOnePropertyRequired,
 	validateOptionalProperty,
 	validateOptionalTypedArray,
 	validateRequiredProperty,
 	validateTypedArray,
 } from "./validation-helpers";
+import { configFileName, formatConfigSnippet, friendlyBindingNames } from ".";
+import type { CfWorkerInit } from "../deployment-bundle/worker";
 import type { Config, DevConfig, RawConfig, RawDevConfig } from "./config";
 import type {
+	Assets,
 	DeprecatedUpload,
 	DispatchNamespaceOutbound,
 	Environment,
-	ExperimentalAssets,
 	Observability,
 	RawEnvironment,
 	Rule,
@@ -231,7 +235,7 @@ export function normalizeAndValidateConfig(
 				`No environment found in configuration with name "${envName}".\n` +
 				`Before using \`--env=${envName}\` there should be an equivalent environment section in the configuration.\n` +
 				`${envNames}\n` +
-				`Consider adding an environment configuration section to the wrangler.toml file:\n` +
+				`Consider adding an environment configuration section to the ${configFileName(configPath)} file:\n` +
 				"```\n[env." +
 				envName +
 				"]\n```\n";
@@ -239,7 +243,7 @@ export function normalizeAndValidateConfig(
 			if (envNames.length > 0) {
 				diagnostics.errors.push(message);
 			} else {
-				// Only warn (rather than error) if there are not actually any environments configured in wrangler.toml.
+				// Only warn (rather than error) if there are not actually any environments configured in the Wrangler configuration file.
 				diagnostics.warnings.push(message);
 			}
 		}
@@ -248,25 +252,17 @@ export function normalizeAndValidateConfig(
 	deprecated(
 		diagnostics,
 		rawConfig,
-		"assets",
-		`The \`assets\` feature is experimental. We are going to be changing its behavior after August 15th.\n` +
-			`Releases of wrangler after this date will no longer support current functionality.\n` +
-			`Please shift to \`legacy_assets\` to preserve the current functionality. `,
-		false,
-		"Behavior change"
+		"legacy_assets",
+		`The \`legacy_assets\` feature has been deprecated. Please use \`assets\` instead.`,
+		false
 	);
-
-	experimental(diagnostics, rawConfig, "legacy_assets");
-
-	if (rawConfig.assets && rawConfig.legacy_assets) {
-		diagnostics.errors.push(
-			"Expected only one of `assets` or `legacy_assets`."
-		);
-	}
 
 	// Process the top-level default environment configuration.
 	const config: Config = {
 		configPath,
+		projectRoot: path.resolve(
+			configPath !== undefined ? path.dirname(configPath) : process.cwd()
+		),
 		pages_build_output_dir: normalizeAndValidatePagesBuildOutputDir(
 			configPath,
 			rawConfig.pages_build_output_dir
@@ -314,7 +310,7 @@ export function normalizeAndValidateConfig(
 		diagnostics,
 		"top-level",
 		Object.keys(rawConfig),
-		[...Object.keys(config), "env", "$schema", "assets"]
+		[...Object.keys(config), "env", "$schema"]
 	);
 
 	return { config, diagnostics };
@@ -392,7 +388,7 @@ function normalizeAndValidateBuild(
 			// - `watch_dir` only matters when `command` is defined, so we apply
 			// a default only when `command` is defined
 			// - `configPath` will always be defined since `build` can only
-			// be configured in `wrangler.toml`, but who knows, that may
+			// be configured in the Wrangler configuration file, but who knows, that may
 			// change in the future, so we do a check anyway
 			command && configPath
 				? Array.isArray(watch_dir)
@@ -682,15 +678,14 @@ function normalizeAndValidateLegacyAssets(
 	configPath: string | undefined,
 	rawConfig: RawConfig
 ): Config["legacy_assets"] {
-	// So that the final config object only has the one legacy_assets property
-	const mergedAssetsConfig = rawConfig["legacy_assets"] ?? rawConfig["assets"];
+	const legacyAssetsConfig = rawConfig["legacy_assets"];
 
 	// Even though the type doesn't say it,
 	// we allow for a string input in the config,
 	// so let's normalise it
-	if (typeof mergedAssetsConfig === "string") {
+	if (typeof legacyAssetsConfig === "string") {
 		return {
-			bucket: mergedAssetsConfig,
+			bucket: legacyAssetsConfig,
 			include: [],
 			exclude: [],
 			browser_TTL: undefined,
@@ -698,15 +693,13 @@ function normalizeAndValidateLegacyAssets(
 		};
 	}
 
-	if (mergedAssetsConfig === undefined) {
+	if (legacyAssetsConfig === undefined) {
 		return undefined;
 	}
 
-	const fieldName = rawConfig["assets"] ? "assets" : "legacy_assets";
-
-	if (typeof mergedAssetsConfig !== "object") {
+	if (typeof legacyAssetsConfig !== "object") {
 		diagnostics.errors.push(
-			`Expected the \`${fieldName}\` field to be a string or an object, but got ${typeof mergedAssetsConfig}.`
+			`Expected the \`legacy_assets\` field to be a string or an object, but got ${typeof legacyAssetsConfig}.`
 		);
 		return undefined;
 	}
@@ -718,17 +711,28 @@ function normalizeAndValidateLegacyAssets(
 		browser_TTL,
 		serve_single_page_app,
 		...rest
-	} = mergedAssetsConfig;
+	} = legacyAssetsConfig;
 
-	validateAdditionalProperties(diagnostics, fieldName, Object.keys(rest), []);
+	validateAdditionalProperties(
+		diagnostics,
+		"legacy_assets",
+		Object.keys(rest),
+		[]
+	);
 
-	validateRequiredProperty(diagnostics, fieldName, "bucket", bucket, "string");
-	validateTypedArray(diagnostics, `${fieldName}.include`, include, "string");
-	validateTypedArray(diagnostics, `${fieldName}.exclude`, exclude, "string");
+	validateRequiredProperty(
+		diagnostics,
+		"legacy_assets",
+		"bucket",
+		bucket,
+		"string"
+	);
+	validateTypedArray(diagnostics, `legacy_assets.include`, include, "string");
+	validateTypedArray(diagnostics, `legacy_assets.exclude`, exclude, "string");
 
 	validateOptionalProperty(
 		diagnostics,
-		fieldName,
+		"legacy_assets",
 		"browser_TTL",
 		browser_TTL,
 		"number"
@@ -736,7 +740,7 @@ function normalizeAndValidateLegacyAssets(
 
 	validateOptionalProperty(
 		diagnostics,
-		fieldName,
+		"legacy_assets",
 		"serve_single_page_app",
 		serve_single_page_app,
 		"boolean"
@@ -1122,6 +1126,15 @@ function normalizeAndValidateEnvironment(
 		undefined
 	);
 
+	const preview_urls = inheritable(
+		diagnostics,
+		topLevelEnv,
+		rawEnv,
+		"preview_urls",
+		isBoolean,
+		true
+	);
+
 	const { deprecatedUpload, ...build } = normalizeAndValidateBuild(
 		diagnostics,
 		rawEnv,
@@ -1175,7 +1188,8 @@ function normalizeAndValidateEnvironment(
 			topLevelEnv,
 			rawEnv,
 			deprecatedUpload?.rules,
-			envName
+			envName,
+			configPath
 		),
 		name: inheritableInLegacyEnvironments(
 			diagnostics,
@@ -1236,11 +1250,11 @@ function normalizeAndValidateEnvironment(
 			isObjectWith("crons"),
 			{ crons: [] }
 		),
-		experimental_assets: inheritable(
+		assets: inheritable(
 			diagnostics,
 			topLevelEnv,
 			rawEnv,
-			"experimental_assets",
+			"assets",
 			validateAssetsConfig,
 			undefined
 		),
@@ -1256,6 +1270,7 @@ function normalizeAndValidateEnvironment(
 		placement: normalizeAndValidatePlacement(diagnostics, topLevelEnv, rawEnv),
 		build,
 		workers_dev,
+		preview_urls,
 		// Not inherited fields
 		vars: notInheritable(
 			diagnostics,
@@ -1288,6 +1303,16 @@ function normalizeAndValidateEnvironment(
 			{
 				bindings: [],
 			}
+		),
+		workflows: notInheritable(
+			diagnostics,
+			topLevelEnv,
+			rawConfig,
+			rawEnv,
+			envName,
+			"workflows",
+			validateBindingArray(envName, validateWorkflowBinding),
+			[]
 		),
 		migrations: inheritable(
 			diagnostics,
@@ -1549,7 +1574,8 @@ function normalizeAndValidateEnvironment(
 	warnIfDurableObjectsHaveNoMigrations(
 		diagnostics,
 		environment.durable_objects,
-		environment.migrations
+		environment.migrations,
+		configPath
 	);
 
 	return environment;
@@ -1583,13 +1609,14 @@ const validateAndNormalizeRules = (
 	topLevelEnv: Environment | undefined,
 	rawEnv: RawEnvironment,
 	deprecatedRules: Rule[] | undefined,
-	envName: string
+	envName: string,
+	configPath: string | undefined
 ): Rule[] => {
 	if (topLevelEnv === undefined) {
 		// Only create errors/warnings for the top-level environment
 		if (rawEnv.rules && deprecatedRules) {
 			diagnostics.errors.push(
-				`You cannot configure both [rules] and [build.upload.rules] in your wrangler.toml. Delete the \`build.upload\` section.`
+				`You cannot configure both [rules] and [build.upload.rules] in your ${configFileName(configPath)}. Delete the \`build.upload\` section.`
 			);
 		} else if (deprecatedRules) {
 			diagnostics.warnings.push(
@@ -2011,6 +2038,15 @@ const validateDurableObjectBinding: ValidatorFn = (
 	return isValid;
 };
 
+/**
+ * Check that the given field is a valid "workflow" binding object.
+ */
+const validateWorkflowBinding: ValidatorFn = (_diagnostics, _field, _value) => {
+	// TODO
+
+	return true;
+};
+
 const validateCflogfwdrObject: (env: string) => ValidatorFn =
 	(envName) => (diagnostics, field, value, topLevelEnv) => {
 		//validate the bindings property first, as this also validates that it's an object, etc.
@@ -2090,7 +2126,7 @@ const validateAssetsConfig: ValidatorFn = (diagnostics, field, value) => {
 			diagnostics,
 			field,
 			"directory",
-			(value as ExperimentalAssets).directory,
+			(value as Assets).directory,
 			"string"
 		) && isValid;
 
@@ -2098,7 +2134,7 @@ const validateAssetsConfig: ValidatorFn = (diagnostics, field, value) => {
 		isNonEmptyString(
 			diagnostics,
 			`${field}.directory`,
-			(value as ExperimentalAssets).directory,
+			(value as Assets).directory,
 			undefined
 		) && isValid;
 
@@ -2107,7 +2143,7 @@ const validateAssetsConfig: ValidatorFn = (diagnostics, field, value) => {
 			diagnostics,
 			field,
 			"binding",
-			(value as ExperimentalAssets).binding,
+			(value as Assets).binding,
 			"string"
 		) && isValid;
 
@@ -2116,7 +2152,7 @@ const validateAssetsConfig: ValidatorFn = (diagnostics, field, value) => {
 			diagnostics,
 			field,
 			"html_handling",
-			(value as ExperimentalAssets).html_handling,
+			(value as Assets).html_handling,
 			"string",
 			[
 				"auto-trailing-slash",
@@ -2131,9 +2167,18 @@ const validateAssetsConfig: ValidatorFn = (diagnostics, field, value) => {
 			diagnostics,
 			field,
 			"not_found_handling",
-			(value as ExperimentalAssets).not_found_handling,
+			(value as Assets).not_found_handling,
 			"string",
 			["single-page-application", "404-page", "none"]
+		) && isValid;
+
+	isValid =
+		validateOptionalProperty(
+			diagnostics,
+			field,
+			"experimental_serve_directly",
+			(value as Assets).experimental_serve_directly,
+			"boolean"
 		) && isValid;
 
 	isValid =
@@ -2142,6 +2187,7 @@ const validateAssetsConfig: ValidatorFn = (diagnostics, field, value) => {
 			"binding",
 			"html_handling",
 			"not_found_handling",
+			"experimental_serve_directly",
 		]) && isValid;
 
 	return isValid;
@@ -2391,8 +2437,10 @@ const validateKVBinding: ValidatorFn = (diagnostics, field, value) => {
 		isValid = false;
 	}
 	if (
-		!isRequiredProperty(value, "id", "string") ||
-		(value as { id: string }).id.length === 0
+		getFlag("RESOURCES_PROVISION")
+			? !isOptionalProperty(value, "id", "string") ||
+				(value.id !== undefined && value.id.length === 0)
+			: !isRequiredProperty(value, "id", "string") || value.id.length === 0
 	) {
 		diagnostics.errors.push(
 			`"${field}" bindings should have a string "id" field but got ${JSON.stringify(
@@ -2553,8 +2601,11 @@ const validateR2Binding: ValidatorFn = (diagnostics, field, value) => {
 		isValid = false;
 	}
 	if (
-		!isRequiredProperty(value, "bucket_name", "string") ||
-		(value as { bucket_name: string }).bucket_name.length === 0
+		getFlag("RESOURCES_PROVISION")
+			? !isOptionalProperty(value, "bucket_name", "string") ||
+				(value.bucket_name !== undefined && value.bucket_name.length === 0)
+			: !isRequiredProperty(value, "bucket_name", "string") ||
+				value.bucket_name.length === 0
 	) {
 		diagnostics.errors.push(
 			`"${field}" bindings should have a string "bucket_name" field but got ${JSON.stringify(
@@ -2611,9 +2662,11 @@ const validateD1Binding: ValidatorFn = (diagnostics, field, value) => {
 		isValid = false;
 	}
 	if (
-		// TODO: allow name only, where we look up the ID dynamically
-		// !isOptionalProperty(value, "database_name", "string") &&
-		!isRequiredProperty(value, "database_id", "string")
+		getFlag("RESOURCES_PROVISION")
+			? !isOptionalProperty(value, "database_id", "string")
+			: // TODO: allow name only, where we look up the ID dynamically
+				// !isOptionalProperty(value, "database_name", "string") &&
+				!isRequiredProperty(value, "database_id", "string")
 	) {
 		diagnostics.errors.push(
 			`"${field}" bindings must have a "database_id" field but got ${JSON.stringify(
@@ -2725,37 +2778,25 @@ const validateHyperdriveBinding: ValidatorFn = (diagnostics, field, value) => {
  */
 const validateBindingsHaveUniqueNames = (
 	diagnostics: Diagnostics,
-	{
-		durable_objects,
-		kv_namespaces,
-		r2_buckets,
-		analytics_engine_datasets,
-		text_blobs,
-		browser,
-		ai,
-		unsafe,
-		vars,
-		define,
-		wasm_modules,
-		data_blobs,
-	}: Partial<Config>
+	config: Partial<Config>
 ): boolean => {
 	let hasDuplicates = false;
 
-	const bindingsGroupedByType = {
-		"Durable Object": getBindingNames(durable_objects),
-		"KV Namespace": getBindingNames(kv_namespaces),
-		"R2 Bucket": getBindingNames(r2_buckets),
-		"Analytics Engine Dataset": getBindingNames(analytics_engine_datasets),
-		"Text Blob": getBindingNames(text_blobs),
-		Browser: getBindingNames(browser),
-		AI: getBindingNames(ai),
-		Unsafe: getBindingNames(unsafe),
-		"Environment Variable": getBindingNames(vars),
-		Definition: getBindingNames(define),
-		"WASM Module": getBindingNames(wasm_modules),
-		"Data Blob": getBindingNames(data_blobs),
-	} as Record<string, string[]>;
+	const bindingNamesArray = Object.entries(friendlyBindingNames) as [
+		keyof CfWorkerInit["bindings"],
+		string,
+	][];
+
+	const bindingsGroupedByType = Object.fromEntries(
+		bindingNamesArray.map(([bindingType, binding]) => [
+			binding,
+			getBindingNames(
+				bindingType === "queues"
+					? config[bindingType]?.producers
+					: config[bindingType]
+			),
+		])
+	);
 
 	const bindingsGroupedByName: Record<string, string[]> = {};
 
@@ -2765,6 +2806,12 @@ const validateBindingsHaveUniqueNames = (
 		for (const bindingName of bindingNames) {
 			if (!(bindingName in bindingsGroupedByName)) {
 				bindingsGroupedByName[bindingName] = [];
+			}
+
+			if (bindingName === "ASSETS" && isPagesConfig(config)) {
+				diagnostics.errors.push(
+					`The name 'ASSETS' is reserved in Pages projects. Please use a different name for your ${bindingType} binding.`
+				);
 			}
 
 			bindingsGroupedByName[bindingName].push(bindingType);
@@ -3329,14 +3376,22 @@ const validateObservability: ValidatorFn = (diagnostics, field, value) => {
 	const val = value as Observability;
 	let isValid = true;
 
+	/**
+	 * One of observability.enabled or observability.logs.enabled must be defined
+	 */
 	isValid =
-		validateRequiredProperty(
-			diagnostics,
-			field,
-			"enabled",
-			val.enabled,
-			"boolean"
-		) && isValid;
+		validateAtLeastOnePropertyRequired(diagnostics, field, [
+			{
+				key: "enabled",
+				value: val.enabled,
+				type: "boolean",
+			},
+			{
+				key: "logs.enabled",
+				value: val.logs?.enabled,
+				type: "boolean",
+			},
+		]) && isValid;
 
 	isValid =
 		validateOptionalProperty(
@@ -3347,11 +3402,61 @@ const validateObservability: ValidatorFn = (diagnostics, field, value) => {
 			"number"
 		) && isValid;
 
+	isValid =
+		validateOptionalProperty(diagnostics, field, "logs", val.logs, "object") &&
+		isValid;
+
+	isValid =
+		validateAdditionalProperties(diagnostics, field, Object.keys(val), [
+			"enabled",
+			"head_sampling_rate",
+			"logs",
+		]) && isValid;
+
+	/**
+	 * Validate the optional nested logs configuration
+	 */
+	if (typeof val.logs === "object") {
+		isValid =
+			validateOptionalProperty(
+				diagnostics,
+				field,
+				"logs.enabled",
+				val.logs.enabled,
+				"boolean"
+			) && isValid;
+
+		isValid =
+			validateOptionalProperty(
+				diagnostics,
+				field,
+				"logs.head_sampling_rate",
+				val.logs.head_sampling_rate,
+				"number"
+			) && isValid;
+
+		isValid =
+			validateOptionalProperty(
+				diagnostics,
+				field,
+				"logs.invocation_logs",
+				val.logs.invocation_logs,
+				"boolean"
+			) && isValid;
+
+		isValid =
+			validateAdditionalProperties(diagnostics, field, Object.keys(val.logs), [
+				"enabled",
+				"head_sampling_rate",
+				"invocation_logs",
+			]) && isValid;
+	}
+
 	const samplingRate = val?.head_sampling_rate;
 
 	if (samplingRate && (samplingRate < 0 || samplingRate > 1)) {
 		diagnostics.errors.push(
-			`\`${field}.head_sampling_rate\` must be a value between 0 and 1.`
+			`"${field}.head_sampling_rate" must be a value between 0 and 1.`
 		);
 	}
 
@@ -3361,7 +3466,8 @@ const validateObservability: ValidatorFn = (diagnostics, field, value) => {
 function warnIfDurableObjectsHaveNoMigrations(
 	diagnostics: Diagnostics,
 	durableObjects: Config["durable_objects"],
-	migrations: Config["migrations"]
+	migrations: Config["migrations"],
+	configPath: string | undefined
 ) {
 	if (
 		Array.isArray(durableObjects.bindings) &&
@@ -3383,13 +3489,16 @@ function warnIfDurableObjectsHaveNoMigrations(
 				);
 
 				diagnostics.warnings.push(dedent`
-				In wrangler.toml, you have configured [durable_objects] exported by this Worker (${durableObjectClassnames.join(", ")}), but no [migrations] for them. This may not work as expected until you add a [migrations] section to your wrangler.toml. Add this configuration to your wrangler.toml:
+				In your ${configFileName(configPath)} file, you have configured \`durable_objects\` exported by this Worker (${durableObjectClassnames.join(", ")}), but no \`migrations\` for them. This may not work as expected until you add a \`migrations\` section to your ${configFileName(configPath)} file. Add the following configuration:
 
-				  \`\`\`
-				  [[migrations]]
-				  tag = "v1" # Should be unique for each entry
-				  new_classes = [${durableObjectClassnames.map((name) => `"${name}"`).join(", ")}]
-				  \`\`\`
+				\`\`\`
+				${formatConfigSnippet(
+					{
+						migrations: [{ tag: "v1", new_classes: durableObjectClassnames }],
+					},
+					configPath
+				)}
+				\`\`\`
 
 				Refer to https://developers.cloudflare.com/durable-objects/reference/durable-objects-migrations/ for more details.`);
 			}

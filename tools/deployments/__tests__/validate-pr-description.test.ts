@@ -2,11 +2,12 @@ import { describe, expect, it } from "vitest";
 import { validateDescription } from "../validate-pr-description";
 
 describe("validateDescription()", () => {
-	it("should skip validation with the `skip-pr-validation` label", () => {
+	it("should skip validation with the `skip-pr-description-validation` label", () => {
 		expect(
-			validateDescription("", "", '["skip-pr-validation"]')
-		).toMatchInlineSnapshot(`[]`);
+			validateDescription("", "", '["skip-pr-description-validation"]', "[]")
+		).toHaveLength(0);
 	});
+
 	it("should show errors with default template + TODOs checked", () => {
 		expect(
 			validateDescription(
@@ -25,122 +26,52 @@ Fixes #[insert GH or internal issue number(s)].
   - [ ] I don't know
   - [ ] Required
   - [ ] Not required because:
-- Changeset ([Changeset guidelines](https://github.com/cloudflare/workers-sdk/blob/main/CONTRIBUTING.md#changesets))
-  - [ ] TODO (before merge)
-  - [ ] Changeset included
-  - [ ] Changeset not necessary because:
 - Public documentation
   - [x] TODO (before merge)
   - [ ] Cloudflare docs PR(s): <!--e.g. <https://github.com/cloudflare/cloudflare-docs/pull/>...-->
   - [ ] Documentation not necessary because:
 `,
+				"[]",
 				"[]"
 			)
 		).toMatchInlineSnapshot(`
 			[
-			  "Your PR description must include an issue reference in the format \`Fixes #000\` (for GitHub issues), \`Fixes [AA-000](https://jira.cfdata.org/browse/AA-000)\` (for internal Jira ticket references), or \`Fixes N/A\` if there's no associated issue (and it doesn't make sense to create one)",
 			  "All TODO checkboxes in your PR description must be unchecked before merging",
 			  "Your PR must include tests, or provide justification for why no tests are required",
 			  "Your PR must run E2E tests, or provide justification for why running them is not required",
-			  "Your PR must include a changeset, or provide justification for why no changesets are required",
+			  "Your PR doesn't include a changeset. Either include one (following the instructions in CONTRIBUTING.md) or add the 'no-changeset-required' label to bypass this check. Most PRs should have a changeset, so only bypass this check if you're sure that your change doesn't need one: see https://github.com/cloudflare/workers-sdk/blob/main/CONTRIBUTING.md#changesets for more details.",
 			  "Your PR must include documentation (in the form of a link to a Cloudflare Docs issue or PR), or provide justification for why no documentation is required",
 			]
 		`);
 	});
-	it("should accept GitHub issue reference", () => {
+
+	it("should bypass changesets check with label", () => {
 		expect(
 			validateDescription(
 				"",
 				`## What this PR solves / how to test
 
-Fixes #1234.
+Fixes #[insert GH or internal issue number(s)].
 
 ## Author has addressed the following
 
 - Tests
   - [ ] TODO (before merge)
-  - [ ] Tests included
-  - [x] Tests not necessary because: test
+  - [x] Tests included
+  - [ ] Tests not necessary because:
 - E2E Tests CI Job required? (Use "e2e" label or ask maintainer to run separately)
   - [ ] I don't know
   - [ ] Required
   - [x] Not required because: test
-- Changeset ([Changeset guidelines](https://github.com/cloudflare/workers-sdk/blob/main/CONTRIBUTING.md#changesets))
-  - [ ] TODO (before merge)
-  - [ ] Changeset included
-  - [x] Changeset not necessary because: test
 - Public documentation
   - [ ] TODO (before merge)
   - [ ] Cloudflare docs PR(s): <!--e.g. <https://github.com/cloudflare/cloudflare-docs/pull/>...-->
   - [x] Documentation not necessary because: test
 `,
+				'["no-changeset-required"]',
 				"[]"
 			)
-		).toMatchInlineSnapshot(`[]`);
-	});
-
-	it("should accept JIRA issue reference", () => {
-		expect(
-			validateDescription(
-				"",
-				`## What this PR solves / how to test
-
-Fixes [AA-000](https://jira.cfdata.org/browse/AA-000).
-
-## Author has addressed the following
-
-- Tests
-  - [ ] TODO (before merge)
-  - [ ] Tests included
-  - [x] Tests not necessary because: test
-- E2E Tests CI Job required? (Use "e2e" label or ask maintainer to run separately)
-  - [ ] I don't know
-  - [ ] Required
-  - [x] Not required because: test
-- Changeset ([Changeset guidelines](https://github.com/cloudflare/workers-sdk/blob/main/CONTRIBUTING.md#changesets))
-  - [ ] TODO (before merge)
-  - [ ] Changeset included
-  - [x] Changeset not necessary because: test
-- Public documentation
-  - [ ] TODO (before merge)
-  - [ ] Cloudflare docs PR(s): <!--e.g. <https://github.com/cloudflare/cloudflare-docs/pull/>...-->
-  - [x] Documentation not necessary because: test
-`,
-				"[]"
-			)
-		).toMatchInlineSnapshot(`[]`);
-	});
-
-	it("should accept N/A issue reference", () => {
-		expect(
-			validateDescription(
-				"",
-				`## What this PR solves / how to test
-
-Fixes N/A.
-
-## Author has addressed the following
-
-- Tests
-  - [ ] TODO (before merge)
-  - [ ] Tests included
-  - [x] Tests not necessary because: test
-- E2E Tests CI Job required? (Use "e2e" label or ask maintainer to run separately)
-  - [ ] I don't know
-  - [ ] Required
-  - [x] Not required because: test
-- Changeset ([Changeset guidelines](https://github.com/cloudflare/workers-sdk/blob/main/CONTRIBUTING.md#changesets))
-  - [ ] TODO (before merge)
-  - [ ] Changeset included
-  - [x] Changeset not necessary because: test
-- Public documentation
-  - [ ] TODO (before merge)
-  - [ ] Cloudflare docs PR(s): <!--e.g. <https://github.com/cloudflare/cloudflare-docs/pull/>...-->
-  - [x] Documentation not necessary because: test
-`,
-				"[]"
-			)
-		).toMatchInlineSnapshot(`[]`);
+		).toHaveLength(0);
 	});
 
 	it("should accept everything included", () => {
@@ -170,9 +101,10 @@ Fixes [AA-000](https://jira.cfdata.org/browse/AA-000).
   - [x] Cloudflare docs PR(s): https://github.com/cloudflare/cloudflare-docs/pull/123
   - [ ] Documentation not necessary because:
 `,
-				"[]"
+				"[]",
+				'[".changeset/hello-world.md"]'
 			)
-		).toMatchInlineSnapshot(`[]`);
+		).toHaveLength(0);
 	});
 
 	it("should not accept e2e unknown", () => {
@@ -202,7 +134,8 @@ Fixes [AA-000](https://jira.cfdata.org/browse/AA-000).
   - [x] Cloudflare docs PR(s): https://github.com/cloudflare/cloudflare-docs/pull/123
   - [ ] Documentation not necessary because:
 `,
-				"[]"
+				"[]",
+				'[".changeset/hello-world.md"]'
 			)
 		).toMatchInlineSnapshot(`
 			[
@@ -239,7 +172,8 @@ Fixes [AA-000](https://jira.cfdata.org/browse/AA-000).
   - [x] Cloudflare docs PR(s): https://github.com/cloudflare/cloudflare-docs/pull/123
   - [ ] Documentation not necessary because:
 `,
-				"[]"
+				"[]",
+				'[".changeset/hello-world.md"]'
 			)
 		).toMatchInlineSnapshot(`
 			[
@@ -247,6 +181,7 @@ Fixes [AA-000](https://jira.cfdata.org/browse/AA-000).
 			]
 		`);
 	});
+
 	it("should accept e2e with e2e label", () => {
 		expect(
 			validateDescription(
@@ -274,8 +209,42 @@ Fixes [AA-000](https://jira.cfdata.org/browse/AA-000).
   - [x] Cloudflare docs PR(s): https://github.com/cloudflare/cloudflare-docs/pull/123
   - [ ] Documentation not necessary because:
 `,
-				'["e2e"]'
+				'["e2e"]',
+				'[".changeset/hello-world.md"]'
 			)
-		).toMatchInlineSnapshot(`[]`);
+		).toHaveLength(0);
+	});
+
+	it("should accept e2e with e2e label - uppercase X", () => {
+		expect(
+			validateDescription(
+				"",
+				`## What this PR solves / how to test
+
+Fixes [AA-000](https://jira.cfdata.org/browse/AA-000).
+
+## Author has addressed the following
+
+- Tests
+  - [ ] TODO (before merge)
+  - [X] Tests included
+  - [ ] Tests not necessary because:
+- E2E Tests CI Job required? (Use "e2e" label or ask maintainer to run separately)
+  - [ ] I don't know
+  - [X] Required
+  - [ ] Not required because: test
+- Changeset ([Changeset guidelines](https://github.com/cloudflare/workers-sdk/blob/main/CONTRIBUTING.md#changesets))
+  - [ ] TODO (before merge)
+  - [X] Changeset included
+  - [ ] Changeset not necessary because:
+- Public documentation
+  - [ ] TODO (before merge)
+  - [X] Cloudflare docs PR(s): https://github.com/cloudflare/cloudflare-docs/pull/123
+  - [ ] Documentation not necessary because:
+`,
+				'["e2e"]',
+				'[".changeset/hello-world.md"]'
+			)
+		).toHaveLength(0);
 	});
 });

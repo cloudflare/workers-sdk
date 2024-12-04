@@ -1,19 +1,18 @@
 import * as fs from "node:fs";
 import { basename, dirname, extname, join, relative, resolve } from "node:path";
-import * as esmLexer from "es-module-lexer";
 import { findUpSync } from "find-up";
-import { findWranglerToml, readConfig } from "../config";
+import { getNodeCompat } from "miniflare";
+import { findWranglerConfig, readConfig } from "../config";
 import { getEntry } from "../deployment-bundle/entry";
-import { getNodeCompatMode } from "../deployment-bundle/node-compat";
 import { getVarsForDev } from "../dev/dev-vars";
-import { UserError } from "../errors";
-import { CommandLineArgsError } from "../index";
+import { CommandLineArgsError, UserError } from "../errors";
 import { logger } from "../logger";
 import { parseJSONC } from "../parse";
 import { printWranglerBanner } from "../update-check";
 import { generateRuntimeTypes } from "./runtime";
 import { logRuntimeTypesMessage } from "./runtime/log-runtime-types-message";
 import type { Config } from "../config";
+import type { Entry } from "../deployment-bundle/entry";
 import type { CfScriptFormat } from "../deployment-bundle/worker";
 import type {
 	CommonYargsArgv,
@@ -63,8 +62,7 @@ export async function typesHandler(
 
 	await printWranglerBanner();
 
-	const configPath =
-		args.config ?? findWranglerToml(process.cwd(), args.experimentalJsonConfig);
+	const configPath = args.config ?? findWranglerConfig(process.cwd());
 	if (
 		!configPath ||
 		!fs.existsSync(configPath) ||
@@ -92,12 +90,20 @@ export async function typesHandler(
 		const tsconfigPath =
 			config.tsconfig ?? join(dirname(configPath), "tsconfig.json");
 		const tsconfigTypes = readTsconfigTypes(tsconfigPath);
-		const mode = getNodeCompatMode(config.compatibility_flags, {
-			validateConfig: false,
-			nodeCompat: config.node_compat,
-		});
+		const { mode } = getNodeCompat(
+			config.compatibility_date,
+			config.compatibility_flags,
+			{
+				nodeCompat: config.node_compat,
+			}
+		);
 
-		logRuntimeTypesMessage(outFile, tsconfigTypes, mode !== null);
+		logRuntimeTypesMessage(
+			outFile,
+			tsconfigTypes,
+			mode !== null,
+			config.configPath
+		);
 	}
 
 	const secrets = getVarsForDev(
@@ -134,6 +140,8 @@ export async function typesHandler(
 		ai: config.ai,
 		version_metadata: config.version_metadata,
 		secrets,
+		assets: config.assets,
+		workflows: config.workflows,
 	};
 
 	await generateTypes(
@@ -159,6 +167,19 @@ export function constructTypeKey(key: string) {
 		return `${key}`;
 	}
 	return `"${key}"`;
+}
+
+export function constructTSModuleGlob(glob: string) {
+	// Exact module reference, don't transform
+	if (!glob.includes("*")) {
+		return glob;
+		// Usually something like **/*.wasm. Turn into *.wasm
+	} else if (glob.includes(".")) {
+		return `*.${glob.split(".").at(-1)}`;
+	} else {
+		// Replace common patterns
+		return glob.replace("**/*", "*").replace("**/", "*/").replace("/**", "/*");
+	}
 }
 
 /**
@@ -212,10 +233,17 @@ async function generateTypes(
 	const configContainsEntrypoint =
 		config.main !== undefined || !!config.site?.["entry-point"];
 
-	const entrypoint = configContainsEntrypoint
-		? await getEntry({}, config, "types")
-		: undefined;
-
+	let entrypoint: Entry | undefined;
+	if (configContainsEntrypoint) {
+		// this will throw if an entrypoint is expected, but doesn't exist
+		// e.g. before building. however someone might still want to generate types
+		// so we default to module worker
+		try {
+			entrypoint = await getEntry({}, config, "types");
+		} catch {
+			entrypoint = undefined;
+		}
+	}
 	const entrypointFormat = entrypoint?.format ?? "modules";
 	const fullOutputPath = resolve(outputPath);
 
@@ -271,14 +299,9 @@ async function generateTypes(
 			? generateImportSpecifier(fullOutputPath, entrypoint.file)
 			: undefined;
 
-		await esmLexer.init;
-		const entrypointExports = entrypoint
-			? esmLexer.parse(fs.readFileSync(entrypoint.file, "utf-8"))[1]
-			: undefined;
-
 		for (const durableObject of configToDTS.durable_objects.bindings) {
-			const exportExists = entrypointExports?.some(
-				(e) => e.n === durableObject.class_name
+			const exportExists = entrypoint?.exports?.some(
+				(e) => e === durableObject.class_name
 			);
 
 			let typeName: string;
@@ -406,6 +429,16 @@ async function generateTypes(
 		);
 	}
 
+	if (configToDTS.assets?.binding) {
+		envTypeStructure.push(constructType(configToDTS.assets.binding, "Fetcher"));
+	}
+
+	if (configToDTS.workflows) {
+		for (const workflow of configToDTS.workflows) {
+			envTypeStructure.push(constructType(workflow.binding, "Workflow"));
+		}
+	}
+
 	const modulesTypeStructure: string[] = [];
 	if (configToDTS.rules) {
 		const moduleTypeMap = {
@@ -418,9 +451,7 @@ async function generateTypes(
 				moduleTypeMap[ruleObject.type as keyof typeof moduleTypeMap];
 			if (typeScriptType !== undefined) {
 				ruleObject.globs.forEach((glob) => {
-					modulesTypeStructure.push(`declare module "*.${glob
-						.split(".")
-						.at(-1)}" {
+					modulesTypeStructure.push(`declare module "${constructTSModuleGlob(glob)}" {
 	const value: ${typeScriptType};
 	export default value;
 }`);
@@ -469,34 +500,58 @@ function writeDTSFile({
 		}
 	}
 
-	let combinedTypeStrings = "";
-	if (formatType === "modules") {
-		combinedTypeStrings += `interface ${envInterface} {${envTypeStructure
-			.map((value) => `\n\t${value}`)
-			.join("")}\n}\n${modulesTypeStructure.join("\n")}`;
-	} else {
-		combinedTypeStrings += `export {};\ndeclare global {\n${envTypeStructure
-			.map((value) => `\tconst ${value}`)
-			.join("\n")}\n}\n${modulesTypeStructure.join("\n")}`;
-	}
-
 	const wranglerCommandUsed = ["wrangler", ...process.argv.slice(2)].join(" ");
 
 	const typesHaveBeenFound =
 		envTypeStructure.length || modulesTypeStructure.length;
 
 	if (formatType === "modules" || typesHaveBeenFound) {
+		const { fileContent, consoleOutput } = generateTypeStrings(
+			formatType,
+			envInterface,
+			envTypeStructure,
+			modulesTypeStructure
+		);
+
 		fs.writeFileSync(
 			path,
 			[
 				`// Generated by Wrangler by running \`${wranglerCommandUsed}\``,
 				"",
-				combinedTypeStrings,
+				fileContent,
 			].join("\n")
 		);
+
 		logger.log(`Generating project types...\n`);
-		logger.log(combinedTypeStrings);
+		logger.log(consoleOutput);
 	}
+}
+
+function generateTypeStrings(
+	formatType: string,
+	envInterface: string,
+	envTypeStructure: string[],
+	modulesTypeStructure: string[]
+): { fileContent: string; consoleOutput: string } {
+	let baseContent = "";
+	let eslintDisable = "";
+
+	if (formatType === "modules") {
+		if (envTypeStructure.length === 0) {
+			eslintDisable =
+				"// eslint-disable-next-line @typescript-eslint/no-empty-interface,@typescript-eslint/no-empty-object-type\n";
+		}
+		baseContent = `interface ${envInterface} {${envTypeStructure.map((value) => `\n\t${value}`).join("")}\n}`;
+	} else {
+		baseContent = `export {};\ndeclare global {\n${envTypeStructure.map((value) => `\tconst ${value}`).join("\n")}\n}`;
+	}
+
+	const modulesContent = modulesTypeStructure.join("\n");
+
+	return {
+		fileContent: `${eslintDisable}${baseContent}\n${modulesContent}`,
+		consoleOutput: `${baseContent}\n${modulesContent}`,
+	};
 }
 
 /**

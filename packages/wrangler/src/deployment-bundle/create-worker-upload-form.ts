@@ -2,6 +2,7 @@ import assert from "node:assert";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { File, FormData } from "undici";
+import { UserError } from "../errors";
 import { handleUnsafeCapnp } from "./capnp";
 import type { Observability } from "../config/environment";
 import type {
@@ -26,7 +27,7 @@ const moduleTypeMimeType: { [type in CfModuleType]: string | undefined } = {
 	"nodejs-compat-module": undefined,
 };
 
-export function toMimeType(type: CfModuleType): string {
+function toMimeType(type: CfModuleType): string {
 	const mimeType = moduleTypeMimeType[type];
 	if (mimeType === undefined) {
 		throw new TypeError("Unsupported module: " + type);
@@ -76,6 +77,13 @@ export type WorkerMetadataBinding =
 			script_name?: string;
 			environment?: string;
 	  }
+	| {
+			type: "workflow";
+			name: string;
+			workflow_name: string;
+			class_name: string;
+			script_name?: string;
+	  }
 	| { type: "queue"; name: string; queue_name: string; delivery_delay?: number }
 	| {
 			type: "r2_bucket";
@@ -112,7 +120,7 @@ export type WorkerMetadataBinding =
 			};
 	  }
 	| { type: "mtls_certificate"; name: string; certificate_id: string }
-	| { type: "pipelines"; name: string; id: string }
+	| { type: "pipelines"; name: string; pipeline: string }
 	| {
 			type: "logfwdr";
 			name: string;
@@ -121,7 +129,7 @@ export type WorkerMetadataBinding =
 	| { type: "assets"; name: string };
 
 // for PUT /accounts/:accountId/workers/scripts/:scriptName
-export type WorkerMetadataPut = {
+type WorkerMetadataPut = {
 	/** The name of the entry point module. Only exists when the worker is in the ES module format */
 	main_module?: string;
 	/** The name of the entry point module. Only exists when the worker is in the service-worker format */
@@ -141,7 +149,7 @@ export type WorkerMetadataPut = {
 	placement?: CfPlacement;
 	tail_consumers?: CfTailConsumer[];
 	limits?: CfUserLimits;
-	// experimental assets (EWC will expect 'assets')
+
 	assets?: {
 		jwt: string;
 		config?: AssetConfig;
@@ -152,7 +160,7 @@ export type WorkerMetadataPut = {
 };
 
 // for POST /accounts/:accountId/workers/:workerName/versions
-export type WorkerMetadataVersionsPost = WorkerMetadataPut & {
+type WorkerMetadataVersionsPost = WorkerMetadataPut & {
 	annotations?: Record<string, string>;
 };
 
@@ -180,25 +188,23 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 		limits,
 		annotations,
 		keep_assets,
-		experimental_assets,
+		assets,
 		observability,
 	} = worker;
 
 	const assetConfig = {
-		html_handling: experimental_assets?.assetConfig?.html_handling,
-		not_found_handling: experimental_assets?.assetConfig?.not_found_handling,
+		html_handling: assets?.assetConfig?.html_handling,
+		not_found_handling: assets?.assetConfig?.not_found_handling,
+		serve_directly: assets?.assetConfig?.serve_directly,
 	};
 
 	// short circuit if static assets upload only
-	if (
-		experimental_assets &&
-		!experimental_assets.routingConfig.has_user_worker
-	) {
+	if (assets && !assets.routingConfig.has_user_worker) {
 		formData.set(
 			"metadata",
 			JSON.stringify({
 				assets: {
-					jwt: experimental_assets.jwt,
+					jwt: assets.jwt,
 					config: assetConfig,
 				},
 				...(compatibility_date && { compatibility_date }),
@@ -220,6 +226,9 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 	});
 
 	bindings.kv_namespaces?.forEach(({ id, binding }) => {
+		if (id === undefined) {
+			throw new UserError(`${binding} bindings must have an "id" field`);
+		}
 		metadataBindings.push({
 			name: binding,
 			type: "kv_namespace",
@@ -250,6 +259,16 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 		}
 	);
 
+	bindings.workflows?.forEach(({ binding, name, class_name, script_name }) => {
+		metadataBindings.push({
+			type: "workflow",
+			name: binding,
+			workflow_name: name,
+			class_name,
+			...(script_name && { script_name }),
+		});
+	});
+
 	bindings.queues?.forEach(({ binding, queue_name, delivery_delay }) => {
 		metadataBindings.push({
 			type: "queue",
@@ -260,6 +279,11 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 	});
 
 	bindings.r2_buckets?.forEach(({ binding, bucket_name, jurisdiction }) => {
+		if (bucket_name === undefined) {
+			throw new UserError(
+				`${binding} bindings must have a "bucket_name" field`
+			);
+		}
 		metadataBindings.push({
 			name: binding,
 			type: "r2_bucket",
@@ -270,6 +294,11 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 
 	bindings.d1_databases?.forEach(
 		({ binding, database_id, database_internal_env }) => {
+			if (database_id === undefined) {
+				throw new UserError(
+					`${binding} bindings must have a "database_id" field`
+				);
+			}
 			metadataBindings.push({
 				name: binding,
 				type: "d1",
@@ -344,7 +373,7 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 		metadataBindings.push({
 			name: binding,
 			type: "pipelines",
-			id: pipeline,
+			pipeline: pipeline,
 		});
 	});
 
@@ -397,9 +426,9 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 		});
 	}
 
-	if (bindings.experimental_assets !== undefined) {
+	if (bindings.assets !== undefined) {
 		metadataBindings.push({
-			name: bindings.experimental_assets.binding,
+			name: bindings.assets.binding,
 			type: "assets",
 		});
 	}
@@ -589,9 +618,9 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 		...(limits && { limits }),
 		...(annotations && { annotations }),
 		...(keep_assets !== undefined && { keep_assets }),
-		...(experimental_assets && {
+		...(assets && {
 			assets: {
-				jwt: experimental_assets.jwt,
+				jwt: assets.jwt,
 				config: assetConfig,
 			},
 		}),

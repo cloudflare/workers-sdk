@@ -65,9 +65,10 @@ describe("create", () => {
 		Created your new D1 database.
 
 		[[d1_databases]]
-		binding = \\"DB\\" # i.e. available in your Worker on env.DB
+		binding = \\"DB\\"
 		database_name = \\"test\\"
-		database_id = \\"51e7c314-456e-4167-b6c3-869ad188fc23\\""
+		database_id = \\"51e7c314-456e-4167-b6c3-869ad188fc23\\"
+		"
 	`);
 	});
 });

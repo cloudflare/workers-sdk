@@ -1,0 +1,3 @@
+name = "b"
+main = "src/worker-b.mjs"
+compatibility_date = "2023-12-01"

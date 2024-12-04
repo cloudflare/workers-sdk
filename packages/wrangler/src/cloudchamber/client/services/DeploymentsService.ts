@@ -7,6 +7,7 @@ import type { CancelablePromise } from "../core/CancelablePromise";
 import type { ApplicationID } from "../models/ApplicationID";
 import type { CreateDeploymentV2RequestBody } from "../models/CreateDeploymentV2RequestBody";
 import type { DeploymentID } from "../models/DeploymentID";
+import type { DeploymentPlacementState } from "../models/DeploymentPlacementState";
 import type { DeploymentV2 } from "../models/DeploymentV2";
 import type { EmptyResponse } from "../models/EmptyResponse";
 import type { Image } from "../models/Image";
@@ -16,7 +17,6 @@ import type { LocationID } from "../models/LocationID";
 import type { ModifyDeploymentV2RequestBody } from "../models/ModifyDeploymentV2RequestBody";
 import type { PlacementID } from "../models/PlacementID";
 import type { ReplaceDeploymentRequestBody } from "../models/ReplaceDeploymentRequestBody";
-import type { State } from "../models/State";
 
 export class DeploymentsService {
 	/**
@@ -49,7 +49,7 @@ export class DeploymentsService {
 	 * @param appId Filter deployments by application id
 	 * @param location Filter deployments by location
 	 * @param image Filter deployments by image
-	 * @param state Filter deployments by deployment state
+	 * @param state Filter deployments by placement state
 	 * @param ipv4 Filter deployments by ipv4 address
 	 * @param label Filter deployments by label
 	 * @returns ListDeploymentsV2 List of deployments with their corresponding placements
@@ -59,7 +59,7 @@ export class DeploymentsService {
 		appId?: ApplicationID,
 		location?: LocationID,
 		image?: Image,
-		state?: State,
+		state?: DeploymentPlacementState,
 		ipv4?: IPV4,
 		label?: Array<string>
 	): CancelablePromise<ListDeploymentsV2> {
@@ -67,7 +67,7 @@ export class DeploymentsService {
 			method: "GET",
 			url: "/deployments/v2",
 			query: {
-				appId: appId,
+				app_id: appId,
 				location: location,
 				image: image,
 				state: state,
@@ -94,9 +94,9 @@ export class DeploymentsService {
 	): CancelablePromise<DeploymentV2> {
 		return __request(OpenAPI, {
 			method: "GET",
-			url: "/deployments/{deploymentID}/v2",
+			url: "/deployments/{deployment_id}/v2",
 			path: {
-				deploymentID: deploymentId,
+				deployment_id: deploymentId,
 			},
 			errors: {
 				400: `Unknown account`,
@@ -121,9 +121,9 @@ export class DeploymentsService {
 	): CancelablePromise<DeploymentV2> {
 		return __request(OpenAPI, {
 			method: "PATCH",
-			url: "/deployments/{deploymentID}/v2",
+			url: "/deployments/{deployment_id}/v2",
 			path: {
-				deploymentID: deploymentId,
+				deployment_id: deploymentId,
 			},
 			body: requestBody,
 			mediaType: "application/json",
@@ -148,9 +148,9 @@ export class DeploymentsService {
 	): CancelablePromise<EmptyResponse> {
 		return __request(OpenAPI, {
 			method: "DELETE",
-			url: "/deployments/{deploymentID}/v2",
+			url: "/deployments/{deployment_id}/v2",
 			path: {
-				deploymentID: deploymentId,
+				deployment_id: deploymentId,
 			},
 			errors: {
 				400: `Unknown account`,
@@ -175,9 +175,9 @@ export class DeploymentsService {
 	): CancelablePromise<DeploymentV2> {
 		return __request(OpenAPI, {
 			method: "POST",
-			url: "/placements/{placementID}",
+			url: "/placements/{placement_id}",
 			path: {
-				placementID: placementId,
+				placement_id: placementId,
 			},
 			body: requestBody,
 			mediaType: "application/json",

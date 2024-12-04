@@ -21,6 +21,7 @@ describe("findPackageNames()", () => {
 	}) => {
 		expect(findPackageNames()).toMatchInlineSnapshot(`
 			Set {
+			  "@cloudflare/chrome-devtools-patches",
 			  "create-cloudflare",
 			  "devprod-status-bot",
 			  "edge-preview-authenticated-proxy",
@@ -38,8 +39,8 @@ describe("findPackageNames()", () => {
 			  "workers-playground",
 			  "@cloudflare/workers-shared",
 			  "workers.new",
+			  "@cloudflare/workflows-shared",
 			  "wrangler",
-			  "@cloudflare/wrangler-devtools",
 			}
 		`);
 	});
@@ -118,24 +119,6 @@ describe("validateChangesets()", () => {
 		  chore: test`,
 				},
 				{
-					file: "invalid-changetype-one.md",
-					contents: dedent`
-          ---
-          "package-a": patch
-          ---
-
-		  random: test`,
-				},
-				{
-					file: "invalid-changetype-two.md",
-					contents: dedent`
-          ---
-          "package-b": minor
-          ---
-
-		  change: test`,
-				},
-				{
 					file: "valid-three.md",
 					contents: dedent`
           ---
@@ -167,8 +150,6 @@ describe("validateChangesets()", () => {
 		);
 		expect(errors).toMatchInlineSnapshot(`
 			[
-			  "Invalid summary in changeset "invalid-changetype-one.md". It must start with one of "feat:", "fix:", "refactor:", "docs:", or "chore:"",
-			  "Invalid summary in changeset "invalid-changetype-two.md". It must start with one of "feat:", "fix:", "refactor:", "docs:", or "chore:"",
 			  "Error: could not parse changeset - invalid frontmatter: at file "invalid-frontmatter.md"",
 			  "Invalid package name "package-invalid" in changeset at "invalid-package.md".",
 			  "Invalid type "foo" for package "package-a" in changeset at "invalid-type.md".",

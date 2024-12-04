@@ -7,10 +7,7 @@ import { WranglerE2ETestHelper } from "./helpers/e2e-wrangler-test";
 import { fetchText } from "./helpers/fetch-text";
 import { normalizeOutput } from "./helpers/normalize";
 
-describe.each([
-	{ cmd: "wrangler pages dev" },
-	{ cmd: "wrangler pages dev --x-dev-env" },
-])("Pages $cmd", ({ cmd }) => {
+describe.each([{ cmd: "wrangler pages dev" }])("Pages $cmd", ({ cmd }) => {
 	it("should warn if no [--compatibility_date] command line arg was specified", async () => {
 		const helper = new WranglerE2ETestHelper();
 		await helper.seed({
@@ -34,7 +31,7 @@ describe.each([
 			`No compatibility_date was specified. Using today's date: <current-date>.`
 		);
 		expect(output).toContain(
-			`❯❯ Add one to your wrangler.toml file: compatibility_date = "<current-date>", or`
+			`❯❯ Add one to your Wrangler configuration file: compatibility_date = "<current-date>", or`
 		);
 		expect(output).toContain(
 			`❯❯ Pass it in your terminal: wrangler pages dev [<DIRECTORY>] --compatibility-date=<current-date>`
@@ -117,20 +114,19 @@ describe.each([
 			`${cmd} . --port ${port} --service TEST_SERVICE=test-worker --kv TEST_KV --do TEST_DO=TestDurableObject@a --d1 TEST_D1 --r2 TEST_R2`
 		);
 		await worker.waitForReady();
-		expect(normalizeOutput(worker.currentOutput).replace(/\s/g, "")).toContain(
-			`
-			Your worker has access to the following bindings:
-			- Durable Objects:
-			  - TEST_DO: TestDurableObject (defined in a)
-			- KV Namespaces:
-			  - TEST_KV: TEST_KV
-			- D1 Databases:
-			  - TEST_D1: local-TEST_D1 (TEST_D1)
-			- R2 Buckets:
-			  - TEST_R2: TEST_R2
-			- Services:
-			  - TEST_SERVICE: test-worker
-		`.replace(/\s/g, "")
+		expect(normalizeOutput(worker.currentOutput)).toContain(
+			dedent`Your worker has access to the following bindings:
+					- Durable Objects:
+					  - TEST_DO: TestDurableObject (defined in a [not connected])
+					- KV Namespaces:
+					  - TEST_KV: TEST_KV (local)
+					- D1 Databases:
+					  - TEST_D1: local-TEST_D1 (TEST_D1) (local)
+					- R2 Buckets:
+					  - TEST_R2: TEST_R2 (local)
+					- Services:
+					  - TEST_SERVICE: test-worker [not connected]
+		`
 		);
 	});
 
@@ -320,14 +316,13 @@ describe.each([
 		const text = await fetchText(url);
 
 		expect(text).toBe("⚡️ Pages ⚡️ supports wrangler.toml");
-		expect(normalizeOutput(worker.currentOutput).replace(/\s/g, "")).toContain(
-			`
-					Your worker has access to the following bindings:
+		expect(normalizeOutput(worker.currentOutput)).toContain(
+			dedent`Your worker has access to the following bindings:
 					- KV Namespaces:
-						- KV_BINDING_TOML: KV_ID_TOML
+					  - KV_BINDING_TOML: KV_ID_TOML (local)
 					- Vars:
-						- PAGES: "⚡️ Pages ⚡️"
-				`.replace(/\s/g, "")
+					  - PAGES: "⚡️ Pages ⚡️"
+				`
 		);
 	});
 

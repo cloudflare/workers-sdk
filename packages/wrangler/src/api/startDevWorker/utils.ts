@@ -8,7 +8,6 @@ import type {
 	Hook,
 	HookValues,
 	ServiceFetch,
-	StartDevWorkerInput,
 	StartDevWorkerOptions,
 } from "./types";
 
@@ -66,7 +65,7 @@ export function unwrapHook<
 	return typeof hook === "function" ? hook(...args) : hook;
 }
 
-export async function getBinaryFileContents(file: File<string | Uint8Array>) {
+async function getBinaryFileContents(file: File<string | Uint8Array>) {
 	if ("contents" in file) {
 		if (file.contents instanceof Buffer) {
 			return file.contents;
@@ -74,19 +73,6 @@ export async function getBinaryFileContents(file: File<string | Uint8Array>) {
 		return Buffer.from(file.contents);
 	}
 	return readFile(file.path);
-}
-
-export async function getTextFileContents(file: File<string | Uint8Array>) {
-	if ("contents" in file) {
-		if (typeof file.contents === "string") {
-			return file.contents;
-		}
-		if (file.contents instanceof Buffer) {
-			return file.contents.toString();
-		}
-		return Buffer.from(file.contents).toString();
-	}
-	return readFile(file.path, "utf8");
 }
 
 export function convertCfWorkerInitBindingstoBindings(
@@ -161,6 +147,12 @@ export function convertCfWorkerInitBindingstoBindings(
 			case "durable_objects": {
 				for (const { name, ...x } of info.bindings) {
 					output[name] = { type: "durable_object_namespace", ...x };
+				}
+				break;
+			}
+			case "workflows": {
+				for (const { binding, ...x } of info) {
+					output[binding] = { type: "workflow", ...x };
 				}
 				break;
 			}
@@ -240,7 +232,7 @@ export function convertCfWorkerInitBindingstoBindings(
 				}
 				break;
 			}
-			case "experimental_assets": {
+			case "assets": {
 				output[info["binding"]] = { type: "assets" };
 				break;
 			}
@@ -278,6 +270,7 @@ export async function convertBindingsToCfWorkerInitBindings(
 		durable_objects: undefined,
 		queues: undefined,
 		r2_buckets: undefined,
+		workflows: undefined,
 		d1_databases: undefined,
 		vectorize: undefined,
 		hyperdrive: undefined,
@@ -287,7 +280,7 @@ export async function convertBindingsToCfWorkerInitBindings(
 		mtls_certificates: undefined,
 		logfwdr: undefined,
 		unsafe: undefined,
-		experimental_assets: undefined,
+		assets: undefined,
 		pipelines: undefined,
 	};
 
@@ -367,6 +360,9 @@ export async function convertBindingsToCfWorkerInitBindings(
 		} else if (binding.type === "logfwdr") {
 			bindings.logfwdr ??= { bindings: [] };
 			bindings.logfwdr.bindings.push({ ...binding, name: name });
+		} else if (binding.type === "workflow") {
+			bindings.workflows ??= [];
+			bindings.workflows.push({ ...binding, binding: name });
 		} else if (isUnsafeBindingType(binding.type)) {
 			bindings.unsafe ??= {
 				bindings: [],
@@ -412,13 +408,4 @@ export function extractBindingsOfType<
 		binding: string;
 		/* ugh why durable objects :( */ name: string;
 	})[];
-}
-
-// DO NOT USE!
-// StartDevWorkerInput and StartDevWorkerOptions are not generally assignable to each other, but they're assignable _enough_ to make the faking of events work when --x-dev-env is turned off
-// Typescript needs some help to figure this out though
-export function fakeResolvedInput(
-	input: StartDevWorkerInput
-): StartDevWorkerOptions {
-	return input as StartDevWorkerOptions;
 }

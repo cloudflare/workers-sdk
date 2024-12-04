@@ -10,6 +10,7 @@ import { MockWebSocket } from "./helpers/mock-web-socket";
 import { createFetchResult, msw, mswSucessScriptHandlers } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
+import { writeWranglerConfig } from "./helpers/write-wrangler-config";
 import type {
 	AlarmEvent,
 	EmailEvent,
@@ -73,7 +74,7 @@ describe("tail", () => {
 			await expect(
 				runWrangler("tail")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: Required Worker name missing. Please specify the Worker name in wrangler.toml, or pass it as an argument with \`wrangler tail <worker-name>\`]`
+				`[Error: Required Worker name missing. Please specify the Worker name in your Wrangler configuration file, or pass it as an argument with \`wrangler tail <worker-name>\`]`
 			);
 		});
 
@@ -842,6 +843,21 @@ describe("tail", () => {
 			);
 			await api.closeHelper();
 		});
+	});
+
+	it("should error helpfully if pages_build_output_dir is set in wrangler.toml", async () => {
+		writeWranglerConfig({
+			pages_build_output_dir: "public",
+			name: "test-name",
+		});
+		await expect(
+			runWrangler("tail")
+		).rejects.toThrowErrorMatchingInlineSnapshot(
+			`
+			[Error: It looks like you've run a Workers-specific command in a Pages project.
+			For Pages, please run \`wrangler pages deployment tail\` instead.]
+		`
+		);
 	});
 });
 

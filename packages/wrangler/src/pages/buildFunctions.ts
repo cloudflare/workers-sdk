@@ -10,9 +10,9 @@ import { writeRoutesModule } from "./functions/routes";
 import { convertRoutesToRoutesJSONSpec } from "./functions/routes-transformation";
 import { getPagesTmpDir, RUNNING_BUILDERS } from "./utils";
 import type { BundleResult } from "../deployment-bundle/bundle";
-import type { NodeJSCompatMode } from "../deployment-bundle/node-compat";
 import type { PagesBuildArgs } from "./build";
 import type { Config } from "./functions/routes";
+import type { NodeJSCompatMode } from "miniflare";
 
 /**
  * Builds a Functions worker based on the functions directory, with filepath and handler based routing.
@@ -39,6 +39,7 @@ export async function buildFunctions({
 		`./functionsRoutes-${Math.random()}.mjs`
 	),
 	defineNavigatorUserAgent,
+	checkFetch,
 	external,
 }: Partial<
 	Pick<
@@ -64,6 +65,7 @@ export async function buildFunctions({
 	// temporary directory each time
 	routesModule?: string;
 	defineNavigatorUserAgent: boolean;
+	checkFetch: boolean;
 }) {
 	RUNNING_BUILDERS.forEach(
 		(runningBuilder) => runningBuilder.stop && runningBuilder.stop()
@@ -121,6 +123,7 @@ export async function buildFunctions({
 			functionsDirectory: absoluteFunctionsDirectory,
 			local,
 			defineNavigatorUserAgent,
+			checkFetch,
 			external,
 		});
 	} else {
@@ -138,6 +141,7 @@ export async function buildFunctions({
 			buildOutputDirectory,
 			nodejsCompatMode,
 			defineNavigatorUserAgent,
+			checkFetch,
 			external,
 		});
 	}

@@ -435,6 +435,43 @@ export const validateRequiredProperty = (
 };
 
 /**
+ * Validate that at least one of the properties in the list is required.
+ */
+export const validateAtLeastOnePropertyRequired = (
+	diagnostics: Diagnostics,
+	container: string,
+	properties: {
+		key: string;
+		value: unknown;
+		type: TypeofType;
+	}[]
+): boolean => {
+	const containerPath = container ? `${container}.` : "";
+
+	if (properties.every((property) => property.value === undefined)) {
+		diagnostics.errors.push(
+			`${properties.map(({ key }) => `"${containerPath}${key}"`).join(" or ")} is required.`
+		);
+		return false;
+	}
+
+	const errors = [];
+	for (const prop of properties) {
+		if (typeof prop.value === prop.type) {
+			return true;
+		}
+		errors.push(
+			`Expected "${containerPath}${prop.key}" to be of type ${prop.type} but got ${JSON.stringify(
+				prop.value
+			)}.`
+		);
+	}
+
+	diagnostics.errors.push(...errors);
+	return false;
+};
+
+/**
  * Validate that, if the optional field exists, then it has the expected type.
  */
 export const validateOptionalProperty = (
@@ -569,7 +606,6 @@ export const getBindingNames = (value: unknown): string[] => {
 	if (typeof value !== "object" || value === null) {
 		return [];
 	}
-
 	if (isBindingList(value)) {
 		return value.bindings.map(({ name }) => name);
 	} else if (isNamespaceList(value)) {
@@ -580,7 +616,6 @@ export const getBindingNames = (value: unknown): string[] => {
 		if (value["binding"] !== undefined) {
 			return [value["binding"] as string];
 		}
-
 		return Object.keys(value).filter((k) => value[k] !== undefined);
 	} else {
 		return [];

@@ -1,0 +1,4 @@
+name = "import-example"
+compatibility_date = "2024-10-31"
+
+main = "src/index.js"

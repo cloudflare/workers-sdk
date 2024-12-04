@@ -1,6 +1,6 @@
 import { setTimeout } from "node:timers/promises";
 import onExit from "signal-exit";
-import { readConfig } from "../config";
+import { configFileName, readConfig } from "../config";
 import { createFatalError, UserError } from "../errors";
 import {
 	getLegacyScriptName,
@@ -93,6 +93,12 @@ export async function tailHandler(args: TailArgs) {
 		await printWranglerBanner();
 	}
 	const config = readConfig(args.config, args);
+	if (config.pages_build_output_dir) {
+		throw new UserError(
+			"It looks like you've run a Workers-specific command in a Pages project.\n" +
+				"For Pages, please run `wrangler pages deployment tail` instead."
+		);
+	}
 	await metrics.sendMetricsEvent("begin log stream", {
 		sendMetrics: config.send_metrics,
 	});
@@ -103,10 +109,13 @@ export async function tailHandler(args: TailArgs) {
 
 	// Worker names can't contain "." (and most routes should), so use that as a discriminator
 	if (args.worker?.includes(".")) {
-		scriptName = await getWorkerForZone({
-			worker: args.worker,
-			accountId,
-		});
+		scriptName = await getWorkerForZone(
+			{
+				worker: args.worker,
+				accountId,
+			},
+			config.configPath
+		);
 		if (args.format === "pretty") {
 			logger.log(`Connecting to worker ${scriptName} at route ${args.worker}`);
 		}
@@ -116,7 +125,7 @@ export async function tailHandler(args: TailArgs) {
 
 	if (!scriptName) {
 		throw new UserError(
-			"Required Worker name missing. Please specify the Worker name in wrangler.toml, or pass it as an argument with `wrangler tail <worker-name>`"
+			`Required Worker name missing. Please specify the Worker name in your ${configFileName(config.configPath)} file, or pass it as an argument with \`wrangler tail <worker-name>\``
 		);
 	}
 

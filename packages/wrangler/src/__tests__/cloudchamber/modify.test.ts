@@ -15,7 +15,7 @@ function mockDeployment() {
 			"*/deployments/1234/v2",
 			async ({ request }) => {
 				expect(await request.text()).toBe(
-					`{"image":"hello:modify","location":"sfo06","environment_variables":[{"name":"HELLO","value":"WORLD"},{"name":"YOU","value":"CONQUERED"}],"vcpu":3,"memory":"40MB"}`
+					`{"image":"hello:modify","location":"sfo06","environment_variables":[{"name":"HELLO","value":"WORLD"},{"name":"YOU","value":"CONQUERED"}],"labels":[{"name":"appname","value":"helloworld"},{"name":"region","value":"wnam"}],"vcpu":3,"memory":"40MB"}`
 				);
 				return HttpResponse.json(MOCK_DEPLOYMENTS_COMPLEX[0]);
 			},
@@ -71,11 +71,10 @@ describe("cloudchamber modify", () => {
 			  deploymentId  The deployment you want to modify  [string]
 
 			GLOBAL FLAGS
-			  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
-			  -c, --config                    Path to .toml configuration file  [string]
-			  -e, --env                       Environment to use for operations and .env files  [string]
-			  -h, --help                      Show help  [boolean]
-			  -v, --version                   Show version number  [boolean]
+			  -c, --config   Path to Wrangler configuration file  [string]
+			  -e, --env      Environment to use for operations and .env files  [string]
+			  -h, --help     Show help  [boolean]
+			  -v, --version  Show version number  [boolean]
 
 			OPTIONS
 			      --json               Return output as clean JSON  [boolean] [default: false]
@@ -94,7 +93,7 @@ describe("cloudchamber modify", () => {
 		setWranglerConfig({});
 		mockDeployment();
 		await runWrangler(
-			"cloudchamber modify 1234 --image hello:modify --location sfo06 --var HELLO:WORLD --var YOU:CONQUERED --vcpu 3 --memory 40MB"
+			"cloudchamber modify 1234 --image hello:modify --location sfo06 --var HELLO:WORLD --var YOU:CONQUERED --label appname:helloworld --label region:wnam --vcpu 3 --memory 40MB"
 		);
 		expect(std.err).toMatchInlineSnapshot(`""`);
 		// so testing the actual UI will be harder than expected
@@ -112,7 +111,7 @@ describe("cloudchamber modify", () => {
 		});
 		mockDeployment();
 		await runWrangler(
-			"cloudchamber modify 1234 --var HELLO:WORLD --var YOU:CONQUERED"
+			"cloudchamber modify 1234 --var HELLO:WORLD --var YOU:CONQUERED --label appname:helloworld --label region:wnam"
 		);
 		expect(std.err).toMatchInlineSnapshot(`""`);
 		expect(std.out).toMatchInlineSnapshot(EXPECTED_RESULT);

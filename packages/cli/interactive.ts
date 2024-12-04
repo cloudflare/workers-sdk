@@ -7,6 +7,7 @@ import {
 } from "@clack/core";
 import { createLogUpdate } from "log-update";
 import { blue, bold, brandColor, dim, gray, white } from "./colors";
+import { CancelError } from "./error";
 import SelectRefreshablePrompt from "./select-list";
 import { stdout } from "./streams";
 import {
@@ -22,6 +23,9 @@ import {
 import type { OptionWithDetails } from "./select-list";
 import type { Prompt } from "@clack/core";
 
+// logUpdate writes text to a TTY (it uses escape sequences to move the cursor
+// and clear lines). This function should not be used when running
+// non-interactively.
 const logUpdate = createLogUpdate(stdout);
 
 export type Arg = string | boolean | string[] | undefined | number;
@@ -46,6 +50,8 @@ export type BasePromptConfig = {
 	helpText?: string;
 	// The value to use by default
 	defaultValue?: Arg;
+	// The error message to display if the initial value is invalid
+	initialErrorMessage?: string | null;
 	// Accept the initialValue/defaultValue as if the user pressed ENTER when prompted
 	acceptDefault?: boolean;
 	// The status label to be shown after submitting
@@ -56,6 +62,8 @@ export type BasePromptConfig = {
 	validate?: (value: Arg) => string | void;
 	// Override some/all renderers (can be used for custom renderers before hoisting back into shared code)
 	renderers?: Partial<ReturnType<typeof getRenderers>>;
+	// Whether to throw an error if the prompt is crashed or cancelled
+	throwOnError?: boolean;
 };
 
 export type TextPromptConfig = BasePromptConfig & {
@@ -108,7 +116,11 @@ function acceptDefault<T>(
 ): T {
 	const error = promptConfig.validate?.(initialValue as Arg);
 	if (error) {
-		crash(error);
+		if (promptConfig.throwOnError) {
+			throw new Error(error);
+		} else {
+			crash(error);
+		}
 	}
 
 	const lines = renderers.submit({ value: initialValue as Arg });
@@ -134,7 +146,14 @@ export const inputPrompt = async <T = string>(
 
 	// Looks up the needed renderer by the current state ('initial', 'submitted', etc.)
 	const dispatchRender = (props: RenderProps, p: Prompt): string | void => {
-		const renderedLines = renderers[props.state](props, p);
+		let state = props.state;
+
+		if (state === "initial" && promptConfig.initialErrorMessage) {
+			state = "error";
+			props.error = promptConfig.initialErrorMessage;
+		}
+
+		const renderedLines = renderers[state](props, p);
 		return renderedLines.join("\n");
 	};
 
@@ -226,8 +245,12 @@ export const inputPrompt = async <T = string>(
 	const input = (await prompt.prompt()) as T;
 
 	if (isCancel(input)) {
-		cancel("Operation cancelled.");
-		process.exit(0);
+		if (promptConfig.throwOnError) {
+			throw new CancelError("Operation cancelled");
+		} else {
+			cancel("Operation cancelled");
+			process.exit(0);
+		}
 	}
 
 	return input;
@@ -258,11 +281,6 @@ const renderSubmit = (config: PromptConfig, value: string) => {
 	return [`${leftT} ${question}`, content, `${grayBar}`];
 };
 
-const handleCancel = () => {
-	cancel("Operation cancelled.");
-	process.exit(0);
-};
-
 export const getRenderers = (config: PromptConfig) => {
 	switch (config.type) {
 		case "select":
@@ -283,6 +301,11 @@ const getTextRenderers = (config: TextPromptConfig) => {
 	const helpText = config.helpText ?? "";
 	const format = config.format ?? ((val: Arg) => String(val));
 	const defaultValue = config.defaultValue?.toString() ?? "";
+	const activeRenderer = ({ value }: { value: Arg }) => [
+		`${blCorner} ${bold(question)} ${dim(helpText)}`,
+		`${space(2)}${format(value || dim(defaultValue))}`,
+		``, // extra line for readability
+	];
 
 	return {
 		initial: () => [
@@ -290,11 +313,7 @@ const getTextRenderers = (config: TextPromptConfig) => {
 			`${space(2)}${gray(format(defaultValue))}`,
 			``, // extra line for readability
 		],
-		active: ({ value }: { value: Arg }) => [
-			`${blCorner} ${bold(question)} ${dim(helpText)}`,
-			`${space(2)}${format(value || dim(defaultValue))}`,
-			``, // extra line for readability
-		],
+		active: activeRenderer,
 		error: ({ value, error }: { value: Arg; error: string }) => [
 			`${leftT} ${status.error} ${dim(error)}`,
 			`${grayBar}`,
@@ -304,7 +323,7 @@ const getTextRenderers = (config: TextPromptConfig) => {
 		],
 		submit: ({ value }: { value: Arg }) =>
 			renderSubmit(config, format(value ?? "")),
-		cancel: handleCancel,
+		cancel: activeRenderer,
 	};
 };
 
@@ -435,7 +454,7 @@ const getSelectRenderers = (
 				options.find((o) => o.value === value)?.label as string
 			);
 		},
-		cancel: handleCancel,
+		cancel: defaultRenderer,
 	};
 };
 
@@ -559,7 +578,7 @@ const getSelectListRenderers = (config: ListPromptConfig) => {
 				options.find((o) => o.value === value)?.value as string
 			);
 		},
-		cancel: handleCancel,
+		cancel: defaultRenderer,
 	};
 };
 
@@ -586,7 +605,7 @@ const getConfirmRenderers = (config: ConfirmPromptConfig) => {
 		error: defaultRenderer,
 		submit: ({ value }: { value: Arg }) =>
 			renderSubmit(config, value ? "yes" : "no"),
-		cancel: handleCancel,
+		cancel: defaultRenderer,
 	};
 };
 
@@ -628,7 +647,10 @@ export const spinner = (
 		start(msg: string, helpText?: string) {
 			helpText ||= ``;
 			currentMsg = msg;
-			startMsg = `${currentMsg} ${dim(helpText)}`;
+			startMsg = currentMsg;
+			if (helpText !== undefined && helpText.length > 0) {
+				startMsg += ` ${dim(helpText)}`;
+			}
 
 			if (isInteractive()) {
 				let index = 0;
@@ -644,7 +666,7 @@ export const spinner = (
 					}
 				}, frameRate);
 			} else {
-				logUpdate(`${leftT} ${startMsg}`);
+				logRaw(`${leftT} ${startMsg}`);
 			}
 		},
 		update(msg: string) {
@@ -662,7 +684,7 @@ export const spinner = (
 				clearLoop();
 			} else {
 				if (msg !== undefined) {
-					logUpdate(`\n${grayBar} ${msg}`);
+					logRaw(`${grayBar} ${msg}`);
 				}
 				newline();
 			}
@@ -694,6 +716,13 @@ export const spinnerWhile = async <T>(opts: {
 	}
 };
 
-export const isInteractive = () => {
-	return process.stdin.isTTY;
-};
+/**
+ * Test whether the process is "interactive".
+ */
+export function isInteractive(): boolean {
+	try {
+		return Boolean(process.stdin.isTTY && process.stdout.isTTY);
+	} catch {
+		return false;
+	}
+}

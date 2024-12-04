@@ -1,5 +1,146 @@
 # miniflare
 
+## 3.20241106.2
+
+### Patch Changes
+
+- [#7418](https://github.com/cloudflare/workers-sdk/pull/7418) [`ac87395`](https://github.com/cloudflare/workers-sdk/commit/ac873952cfca41c67ce7855a73c6d3a8b131be06) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | workerd                   | 1.20241106.1  | 1.20241106.2  |
+  | @cloudflare/workers-types | ^4.20241106.0 | ^4.20241106.0 |
+
+- [#7399](https://github.com/cloudflare/workers-sdk/pull/7399) [`b3d2e7d`](https://github.com/cloudflare/workers-sdk/commit/b3d2e7dcee4358322f751b54a7b77d47f7b5ca78) Thanks [@emily-shen](https://github.com/emily-shen)! - fix: update queues max_batch_timeout limit from 30s to 60s
+
+## 3.20241106.1
+
+### Minor Changes
+
+- [#7286](https://github.com/cloudflare/workers-sdk/pull/7286) [`563439b`](https://github.com/cloudflare/workers-sdk/commit/563439bd02c450921b28d721d36be5a70897690d) Thanks [@LuisDuarte1](https://github.com/LuisDuarte1)! - Add proper engine persistance in .wrangler and fix multiple workflows in miniflare
+
+## 3.20241106.0
+
+### Patch Changes
+
+- [#7187](https://github.com/cloudflare/workers-sdk/pull/7187) [`1db7846`](https://github.com/cloudflare/workers-sdk/commit/1db7846ec5c356f6b59cddf5f48b16b3e7c73d66) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | workerd                   | 1.20241022.0  | 1.20241106.1  |
+  | @cloudflare/workers-types | ^4.20241022.0 | ^4.20241106.0 |
+
+## 3.20241022.0
+
+### Patch Changes
+
+- [#7066](https://github.com/cloudflare/workers-sdk/pull/7066) [`760e43f`](https://github.com/cloudflare/workers-sdk/commit/760e43ffa197597de5625b96bc91376161f5027a) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | workerd                   | 1.20241018.1  | 1.20241022.0  |
+  | @cloudflare/workers-types | ^4.20241018.0 | ^4.20241022.0 |
+
+- [#7045](https://github.com/cloudflare/workers-sdk/pull/7045) [`5ef6231`](https://github.com/cloudflare/workers-sdk/commit/5ef6231a5cefbaaef123e6e8ee899fb81fc69e3e) Thanks [@RamIdeas](https://github.com/RamIdeas)! - Add preliminary support for Workflows in wrangler dev
+
+## 3.20241018.0
+
+### Patch Changes
+
+- [#7035](https://github.com/cloudflare/workers-sdk/pull/7035) [`809193e`](https://github.com/cloudflare/workers-sdk/commit/809193e05ad80c32086acf18646d0bd436cf2bfd) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | workerd                   | 1.20241011.1  | 1.20241018.1  |
+  | @cloudflare/workers-types | ^4.20241011.0 | ^4.20241018.0 |
+
+## 3.20241011.0
+
+### Patch Changes
+
+- [#6961](https://github.com/cloudflare/workers-sdk/pull/6961) [`5761020`](https://github.com/cloudflare/workers-sdk/commit/5761020cb41270ce872ad6c555b263597949c06d) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | workerd                   | 1.20241004.0  | 1.20241011.1  |
+  | @cloudflare/workers-types | ^4.20241004.0 | ^4.20241011.0 |
+
+- [#6943](https://github.com/cloudflare/workers-sdk/pull/6943) [`7859a04`](https://github.com/cloudflare/workers-sdk/commit/7859a04bcd4b2f1cafe67c371bd236acaf7a2d91) Thanks [@sdnts](https://github.com/sdnts)! - fix: local queues now respect consumer max delays and retry delays properly
+
+## 3.20241004.0
+
+### Patch Changes
+
+- [#6949](https://github.com/cloudflare/workers-sdk/pull/6949) [`c863183`](https://github.com/cloudflare/workers-sdk/commit/c86318354f1a6c0f5c096d6b2a884de740552a19) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | workerd                   | 1.20240925.0  | 1.20241004.0  |
+  | @cloudflare/workers-types | ^4.20240925.0 | ^4.20241004.0 |
+
+## 3.20240925.1
+
+### Patch Changes
+
+- [#6835](https://github.com/cloudflare/workers-sdk/pull/6835) [`5c50949`](https://github.com/cloudflare/workers-sdk/commit/5c509494807a1c0418be83c47a459ec80126848e) Thanks [@emily-shen](https://github.com/emily-shen)! - fix: rename asset plugin options slightly to match wrangler.toml better
+
+  Renamed `path` -> `directory`, `bindingName` -> `binding`.
+
+## 3.20240925.0
+
+### Patch Changes
+
+- [#6826](https://github.com/cloudflare/workers-sdk/pull/6826) [`5e2e62c`](https://github.com/cloudflare/workers-sdk/commit/5e2e62c165166819c63998ad0c7caaaf57d7b988) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | workerd                   | 1.20240909.0  | 1.20240925.0  |
+  | @cloudflare/workers-types | ^4.20240909.0 | ^4.20240925.0 |
+
+- [#6824](https://github.com/cloudflare/workers-sdk/pull/6824) [`1c58a74`](https://github.com/cloudflare/workers-sdk/commit/1c58a7470757508e64003d05c76d9deb7f223763) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: teach Miniflare about node_compat version date switch
+
+  A compatibility of Sept 23, 2024 or later means that `nodejs_compat` is equivalent to `nodejs_compat_v2`.
+
+## 3.20240909.5
+
+### Patch Changes
+
+- [#6728](https://github.com/cloudflare/workers-sdk/pull/6728) [`1ca313f`](https://github.com/cloudflare/workers-sdk/commit/1ca313f2041688cd13e25f0817e3b72dfc930bac) Thanks [@emily-shen](https://github.com/emily-shen)! - fix: remove filepath encoding on asset upload and handle sometimes-encoded characters
+
+  Some characters like [ ] @ are encoded by encodeURIComponent() but are often requested at an unencoded URL path.
+  This change will make assets with filenames with these characters accessible at both the encoded and unencoded paths,
+  but to use the encoded path as the canonical one, and to redirect requests to the canonical path if necessary.
+
+## 3.20240909.4
+
+### Patch Changes
+
+- [#6736](https://github.com/cloudflare/workers-sdk/pull/6736) [`2ddbb65`](https://github.com/cloudflare/workers-sdk/commit/2ddbb65033e88dfc2127a093fc894ac91bd96369) Thanks [@emily-shen](https://github.com/emily-shen)! - fix: reflect file changes when using dev with workers + assets
+
+## 3.20240909.3
+
+### Patch Changes
+
+- [#6514](https://github.com/cloudflare/workers-sdk/pull/6514) [`2407c41`](https://github.com/cloudflare/workers-sdk/commit/2407c41484f29845a64ccffd9368bc5d234eb831) Thanks [@CarmenPopoviciu](https://github.com/CarmenPopoviciu)! - fix: Fix Miniflare regression introduced in #5570
+
+  PR #5570 introduced a regression in Miniflare, namely that declaring Queue Producers like `queueProducers: { "MY_QUEUE": "my-queue" }` no longer works. This commit fixes the issue.
+
+  Fixes #5908
+
 ## 3.20240909.2
 
 ### Patch Changes

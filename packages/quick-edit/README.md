@@ -15,7 +15,7 @@ Follow steps (1), (2) and (3) from above, and then run `pnpm run custom:build`
 
 ## Deployment
 
-Deployments are managed by Github Actions:
+Deployments are managed by GitHub Actions:
 
 - deploy-pages-previews.yml:
   - Runs on any PR that has the `preview:quick-edit` label.

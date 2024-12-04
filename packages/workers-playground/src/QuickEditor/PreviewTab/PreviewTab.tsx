@@ -41,14 +41,17 @@ function PreviewTabImplementation() {
 	return (
 		<Div display="flex" flexDirection="column" width="100%">
 			<UrlBar
+				initialURL={draftWorker.previewUrl}
 				onSubmit={(url) => {
+					draftWorker.preview();
+
 					if (url === draftWorker?.previewUrl) {
 						refresh();
 					} else {
 						draftWorker.setPreviewUrl(url);
 					}
 				}}
-				loading={isLoading}
+				loading={isLoading || draftWorker.isPreviewUpdating}
 			/>
 			{!firstLoad && !draftWorker?.previewError && (
 				<Div

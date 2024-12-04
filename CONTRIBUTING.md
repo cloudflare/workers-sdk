@@ -202,18 +202,31 @@ Changes should be committed to a new local branch, which then gets pushed to you
   git push -u origin <new-branch-name>
   ```
 - Once you are happy with your changes, create a Pull Request on GitHub
-- The format for Pull Request titles is `[package name] description`, where the package name should indicate which package of the `workers-sdk` monorepo your PR pertains to (e.g. `wrangler`/`pages-shared`/`wrangler-devtools`), and the description should be a succinct summary of the change you're making.
+- The format for Pull Request titles is `[package name] description`, where the package name should indicate which package of the `workers-sdk` monorepo your PR pertains to (e.g. `wrangler`/`pages-shared`/`chrome-devtools-patches`), and the description should be a succinct summary of the change you're making.
 - GitHub will insert a template for the body of your Pull Request—it's important to carefully fill out all the fields, giving as much detail as possible to reviewers.
 
 ## PR Review
 
-PR review is a critical and required step in the process for landing changes. This is an opportunity to catch potential issues, improve the quality of the work, celebrate good design, and learn from each other.
+PR review is a critical and required step in the process for landing changes. This is an opportunity to catch potential issues, improve the quality of the work, celebrate good design, and learn from each other. As a reviewer, it's important to be thoughtful about the proposed changes and communicate any feedback.
 
-As a reviewer, it's important to be thoughtful about the proposed changes and communicate any feedback. Examples of PR reviews that the community has identified as particularly high-caliber are labeled with the `highlight pr review` label. Please feel empowered to use these as a learning resource.
+## PR Previews
+
+Every PR will have an associated pre-release build for all releaseable packages within the repository, powered by our [prerelease registry](packages/prerelease-registry). You can find links to prereleases for each package in a comment automatically posted by GitHub Actions on each opened PR ([for example](https://github.com/cloudflare/workers-sdk/pull/7172#issuecomment-2457244715)).
+
+It's also possible to generate preview builds for the applications in the repository. These aren't generated automatically because they're pretty slow CI jobs, but you can trigger preview builds by adding one of the following labels to your PR:
+
+- `preview:chrome-devtools-patches` for deploying [chrome-devtools-patches](packages/chrome-devtools-patches)
+- `preview:workers-playground` for deploying [workers-playground](packages/workers-playground)
+- `preview:quick-edit` for deploying [quick-edit](packages/quick-edit)
+
+Once built, you can find the preview link for these applications in the [Deploy Pages Previews](.github/workflows/deploy-pages-previews.yml) action output
 
 ## PR Tests
 
-Every PR should include tests for the functionality that's being added. Most changes will be to [Wrangler](packages/wrangler/src/__tests__) (using Vitest), [Miniflare](packages/miniflare/test) (using Ava), or [C3](packages/create-cloudflare/src/__tests__) (using Vitest), and should include unit tests within the testing harness of those packages.
+Every PR should include tests for the functionality that's being added. Most changes will be to [Wrangler](packages/wrangler/src/__tests__) (using Vitest), [Miniflare](packages/miniflare/test) (using Ava), or [C3](packages/create-cloudflare/src/__tests__) (using Vitest), and should include unit tests within the testing harness of those packages. For documentation on how these testing frameworks work, see:
+
+- Vitest: https://vitest.dev/guide
+- Ava: https://github.com/avajs/ava?tab=readme-ov-file#documentation
 
 If your PR includes functionality that's difficult to unit test, you can add a fixture test by creating a new package in the `fixtures/` folder. This allows for adding a test that requires a specific filesystem or worker setup (for instance, `fixtures/no-bundle-import` tests the interaction of Wrangler with a specific set of JS, WASM, text, and binary modules on the filesystem). When adding a fixture test, include a `vitest.config.mts` file within the new package, which will ensure it's run as part of the `workers-sdk` CI. You should merge your own configuration with the default config from the root of the repo.
 
@@ -294,30 +307,26 @@ Each changeset is a file that describes the change being merged. This file is us
 To help maintain consistency in the changelog, changesets should have the following format:
 
 ```
-<TYPE>: <TITLE>
+<TITLE>
 
 <BODY>
-
-[BREAKING CHANGES <BREAKING_CHANGE_NOTES>]
 ```
 
-- `TYPE` should be a single word describing the "type" of the change. For example, one of `feature`, `fix`, `refactor`, `docs` or `chore`.
 - `TITLE` should be a single sentence containing an imperative description of the change.
 - `BODY` should be one or more paragraphs that go into more detail about the reason for the change and anything notable about the approach taken.
-- `BREAKING_CHANGE_NOTES` (optional) should be one or more paragraphs describing how this change breaks current usage and how to migrate to the new usage.
 
 ### Changeset file example
 
 The generated changeset file will contain the package name and type of change (eg. `patch`, `minor`, or `major`), followed by our changeset format described above.
 
-Here's an example of a `patch` to the `wrangler` package, which provides a `fix`:
+Here's an example of a `patch` to the `wrangler` package:
 
 ```
 ---
 "wrangler": patch
 ---
 
-fix: replace the word "publish" with "deploy" everywhere.
+Replace the word "publish" with "deploy" everywhere.
 
 We should be consistent with the word that describes how we get a worker to the edge. The command is `deploy`, so let's use that everywhere.
 ```
@@ -336,4 +345,4 @@ When contributing to Wrangler, please refer to the [`STYLEGUIDE.md file`](https:
 
 ## Releases
 
-We generally cut Wrangler releases at the start of each week. If you need a release cut outside of the regular cadence, please reach out to the [@cloudflare/wrangler-admins](https://github.com/orgs/cloudflare/teams/wrangler-admins) team.
+We generally cut Wrangler releases on Tuesday & Thursday each week. If you need a release cut outside of the regular cadence, please reach out to the [@cloudflare/wrangler-admins](https://github.com/orgs/cloudflare/teams/wrangler-admins) team.

@@ -1,5 +1,5 @@
 import assert from "node:assert";
-import { fetch, File, Headers, Response } from "undici";
+import { fetch, File, FormData, Headers, Response } from "undici";
 import { version as wranglerVersion } from "../../package.json";
 import { getCloudflareApiBaseUrl } from "../environment-variables/misc-variables";
 import { UserError } from "../errors";
@@ -41,6 +41,14 @@ export async function performApiFetch(
 	logger.debugWithSanitization("HEADERS:", JSON.stringify(logHeaders, null, 2));
 
 	logger.debugWithSanitization("INIT:", JSON.stringify({ ...init }, null, 2));
+	if (init.body instanceof FormData) {
+		logger.debugWithSanitization(
+			"BODY:",
+			await new Response(init.body).text(),
+			null,
+			2
+		);
+	}
 	logger.debug("-- END CF API REQUEST");
 	return await fetch(`${getCloudflareApiBaseUrl()}${resource}${queryString}`, {
 		method,
@@ -239,7 +247,7 @@ export async function fetchWorker(
 	});
 
 	if (!response.ok || !response.body) {
-		console.error(response.ok, response.body);
+		logger.error(response.ok, response.body);
 		throw new Error(
 			`Failed to fetch ${resource} - ${response.status}: ${response.statusText});`
 		);

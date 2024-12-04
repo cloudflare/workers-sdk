@@ -51,6 +51,7 @@ function createWorkerBundleFormData(
 		ai: config?.ai,
 		version_metadata: config?.version_metadata,
 		durable_objects: config?.durable_objects,
+		workflows: config?.workflows,
 		queues: config?.queues.producers?.map((producer) => {
 			return { binding: producer.binding, queue_name: producer.queue };
 		}),
@@ -69,7 +70,7 @@ function createWorkerBundleFormData(
 		pipelines: undefined,
 		logfwdr: undefined,
 		unsafe: undefined,
-		experimental_assets: undefined,
+		assets: undefined,
 	};
 
 	// The upload API only accepts an empty string or no specified placement for the "off" mode.
@@ -96,7 +97,7 @@ function createWorkerBundleFormData(
 		placement: placement,
 		tail_consumers: undefined,
 		limits: config?.limits,
-		experimental_assets: undefined,
+		assets: undefined,
 		observability: undefined,
 	};
 

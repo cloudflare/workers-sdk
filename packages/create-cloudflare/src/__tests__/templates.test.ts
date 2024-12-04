@@ -1,5 +1,4 @@
 import { existsSync, statSync } from "fs";
-import { crash } from "@cloudflare/cli";
 import { spinner } from "@cloudflare/cli/interactive";
 import degit from "degit";
 import { mockSpinner } from "helpers/__tests__/mocks";
@@ -21,7 +20,6 @@ import type { C3Args, C3Context } from "types";
 vi.mock("degit");
 vi.mock("fs");
 vi.mock("helpers/files");
-vi.mock("@cloudflare/cli");
 vi.mock("@cloudflare/cli/interactive");
 
 beforeEach(() => {
@@ -305,22 +303,17 @@ describe("deriveCorrelatedArgs", () => {
 	});
 
 	test("should crash if both the lang and ts arguments are specified", () => {
-		let args: Partial<C3Args> = {
-			lang: "ts",
-		};
-
-		deriveCorrelatedArgs(args);
-
-		expect(args.lang).toBe("ts");
-		expect(crash).not.toBeCalled();
-
-		args = {
-			ts: true,
-			lang: "ts",
-		};
-		deriveCorrelatedArgs(args);
-
-		expect(crash).toBeCalledWith(
+		expect(() =>
+			deriveCorrelatedArgs({
+				lang: "ts",
+			}),
+		).not.toThrow();
+		expect(() =>
+			deriveCorrelatedArgs({
+				ts: true,
+				lang: "ts",
+			}),
+		).toThrow(
 			"The `--ts` argument cannot be specified in conjunction with the `--lang` argument",
 		);
 	});

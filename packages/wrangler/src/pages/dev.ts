@@ -4,10 +4,11 @@ import { dirname, join, normalize, resolve } from "node:path";
 import { watch } from "chokidar";
 import * as esbuild from "esbuild";
 import { unstable_dev } from "../api";
-import { readConfig } from "../config";
+import { configFileName, readConfig } from "../config";
 import { isBuildFailure } from "../deployment-bundle/build-failures";
+import { shouldCheckFetch } from "../deployment-bundle/bundle";
 import { esbuildAliasExternalPlugin } from "../deployment-bundle/esbuild-plugins/alias-external";
-import { getNodeCompatMode } from "../deployment-bundle/node-compat";
+import { validateNodeCompatMode } from "../deployment-bundle/node-compat";
 import { FatalError } from "../errors";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
@@ -224,7 +225,7 @@ export function Options(yargs: CommonYargsArgv) {
 			},
 			config: {
 				describe:
-					"Pages does not support custom paths for the wrangler.toml configuration file",
+					"Pages does not support custom paths for the Wrangler configuration file",
 				type: "string",
 				hidden: true,
 			},
@@ -240,15 +241,20 @@ export function Options(yargs: CommonYargsArgv) {
 			"experimental-dev-env": {
 				alias: ["x-dev-env"],
 				type: "boolean",
-				describe:
-					"Use the experimental DevEnv instantiation (unified across wrangler dev and unstable_dev)",
 				default: false,
+				hidden: true,
 			},
 			"experimental-registry": {
 				alias: ["x-registry"],
 				type: "boolean",
 				describe:
 					"Use the experimental file based dev registry for multi-worker development",
+				default: true,
+			},
+			"experimental-vectorize-bind-to-prod": {
+				type: "boolean",
+				describe:
+					"Bind to production Vectorize indexes in local development mode",
 				default: false,
 			},
 		});
@@ -263,6 +269,12 @@ export const Handler = async (args: PagesDevArguments) => {
 
 	await printWranglerBanner();
 
+	if (args.experimentalDevEnv) {
+		logger.warn(
+			"--x-dev-env is now on by default and will be removed in a future version."
+		);
+	}
+
 	if (args.experimentalLocal) {
 		logger.warn(
 			"--experimental-local is no longer required and will be removed in a future version.\n`wrangler pages dev` now uses the local Cloudflare Workers runtime by default."
@@ -271,13 +283,9 @@ export const Handler = async (args: PagesDevArguments) => {
 
 	if (args.config) {
 		throw new FatalError(
-			"Pages does not support custom paths for the `wrangler.toml` configuration file",
+			"Pages does not support custom paths for the Wrangler configuration file",
 			1
 		);
-	}
-
-	if (args.experimentalJsonConfig) {
-		throw new FatalError("Pages does not support `wrangler.json`", 1);
 	}
 
 	if (args.env) {
@@ -360,7 +368,8 @@ export const Handler = async (args: PagesDevArguments) => {
 
 	let scriptPath = "";
 
-	const nodejsCompatMode = getNodeCompatMode(
+	const nodejsCompatMode = validateNodeCompatMode(
+		args.compatibilityDate ?? config.compatibility_date,
 		args.compatibilityFlags ?? config.compatibility_flags ?? [],
 		{
 			nodeCompat: args.nodeCompat,
@@ -372,6 +381,9 @@ export const Handler = async (args: PagesDevArguments) => {
 		compatibilityDate,
 		compatibilityFlags
 	);
+
+	const checkFetch = shouldCheckFetch(compatibilityDate, compatibilityFlags);
+
 	let modules: CfModule[] = [];
 
 	if (usingWorkerDirectory) {
@@ -382,6 +394,7 @@ export const Handler = async (args: PagesDevArguments) => {
 				buildOutputDirectory: directory ?? ".",
 				nodejsCompatMode,
 				defineNavigatorUserAgent,
+				checkFetch,
 				sourceMaps: config?.upload_source_maps ?? false,
 			});
 			modules = bundleResult.modules;
@@ -450,6 +463,7 @@ export const Handler = async (args: PagesDevArguments) => {
 					watch: false,
 					onEnd: () => scriptReadyResolve(),
 					defineNavigatorUserAgent,
+					checkFetch,
 				});
 
 				/*
@@ -620,6 +634,7 @@ export const Handler = async (args: PagesDevArguments) => {
 				local: true,
 				routesModule,
 				defineNavigatorUserAgent,
+				checkFetch,
 			});
 
 			/*
@@ -907,7 +922,7 @@ export const Handler = async (args: PagesDevArguments) => {
 			testMode: false,
 			watch: true,
 			fileBasedRegistry: args.experimentalRegistry,
-			devEnv: args.experimentalDevEnv,
+			enableIpc: true,
 		},
 	});
 	await metrics.sendMetricsEvent("run pages dev");
@@ -999,6 +1014,11 @@ async function spawnProxyProcess({
 			`Specifying a \`-- <command>\` or \`--proxy\` is deprecated and will be removed in a future version of Wrangler.\nBuild your application to a directory and run the \`wrangler pages dev <directory>\` instead.\nThis results in a more faithful emulation of production behavior.`
 		);
 	}
+	if (port !== undefined) {
+		logger.warn(
+			"On Node.js 17+, wrangler will default to fetching only the IPv6 address. Please ensure that the process listening on the port specified via `--proxy` is configured for IPv6."
+		);
+	}
 	if (command.length === 0) {
 		if (port !== undefined) {
 			return port;
@@ -1006,7 +1026,7 @@ async function spawnProxyProcess({
 
 		CLEANUP();
 		throw new FatalError(
-			"Must specify a directory of static assets to serve, or a command to run, or a proxy port, or configure `pages_build_output_dir` in `wrangler.toml`.",
+			`Must specify a directory of static assets to serve, or a command to run, or a proxy port, or configure \`pages_build_output_dir\` in your Wrangler configuration file.`,
 			1
 		);
 	}
@@ -1084,7 +1104,7 @@ function resolvePagesDevServerSettings(
 		const currentDate = new Date().toISOString().substring(0, 10);
 		logger.warn(
 			`No compatibility_date was specified. Using today's date: ${currentDate}.\n` +
-				`❯❯ Add one to your wrangler.toml file: compatibility_date = "${currentDate}", or\n` +
+				`❯❯ Add one to your ${configFileName(config.configPath)} file: compatibility_date = "${currentDate}", or\n` +
 				`❯❯ Pass it in your terminal: wrangler pages dev [<DIRECTORY>] --compatibility-date=${currentDate}\n\n` +
 				"See https://developers.cloudflare.com/workers/platform/compatibility-dates/ for more information."
 		);

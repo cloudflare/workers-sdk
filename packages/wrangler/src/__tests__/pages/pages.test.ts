@@ -77,8 +77,8 @@ describe("pages", () => {
 			      --persist-to                                 Specify directory to use for local persistence (defaults to .wrangler/state)  [string]
 			      --log-level                                  Specify logging level  [choices: \\"debug\\", \\"info\\", \\"log\\", \\"warn\\", \\"error\\", \\"none\\"]
 			      --show-interactive-dev-session               Show interactive dev session (defaults to true if the terminal supports interactivity)  [boolean]
-			      --experimental-dev-env, --x-dev-env          Use the experimental DevEnv instantiation (unified across wrangler dev and unstable_dev)  [boolean] [default: false]
-			      --experimental-registry, --x-registry        Use the experimental file based dev registry for multi-worker development  [boolean] [default: false]"
+			      --experimental-registry, --x-registry        Use the experimental file based dev registry for multi-worker development  [boolean] [default: true]
+			      --experimental-vectorize-bind-to-prod        Bind to production Vectorize indexes in local development mode  [boolean] [default: false]"
 		`);
 	});
 
@@ -181,7 +181,7 @@ describe("pages", () => {
 			Download settings from your project
 
 			COMMANDS
-			  wrangler pages download config [projectName]  Experimental: Download your Pages project config as a wrangler.toml file
+			  wrangler pages download config [projectName]  Experimental: Download your Pages project config as a Wrangler configuration file
 
 			GLOBAL FLAGS
 			  -h, --help     Show help  [boolean]
@@ -198,13 +198,13 @@ describe("pages", () => {
 			);
 
 			expect(std.warn).toMatchInlineSnapshot(`
-			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mSpecifying a \`-- <command>\` or \`--proxy\` is deprecated and will be removed in a future version of Wrangler.[0m
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mSpecifying a \`-- <command>\` or \`--proxy\` is deprecated and will be removed in a future version of Wrangler.[0m
 
-			  Build your application to a directory and run the \`wrangler pages dev <directory>\` instead.
-			  This results in a more faithful emulation of production behavior.
+				  Build your application to a directory and run the \`wrangler pages dev <directory>\` instead.
+				  This results in a more faithful emulation of production behavior.
 
-			"
-		`);
+				"
+			`);
 		});
 		it("should display for 'pages dev --script-path'", async () => {
 			await expect(
@@ -214,19 +214,19 @@ describe("pages", () => {
 			);
 
 			expect(std.warn).toMatchInlineSnapshot(`
-			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m\`--script-path\` is deprecated and will be removed in a future version of Wrangler.[0m
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m\`--script-path\` is deprecated and will be removed in a future version of Wrangler.[0m
 
-			  The Worker script should be named \`_worker.js\` and located in the build output directory of your
-			  project (specified with \`wrangler pages dev <directory>\`).
+				  The Worker script should be named \`_worker.js\` and located in the build output directory of your
+				  project (specified with \`wrangler pages dev <directory>\`).
 
 
-			[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mSpecifying a \`-- <command>\` or \`--proxy\` is deprecated and will be removed in a future version of Wrangler.[0m
+				[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mSpecifying a \`-- <command>\` or \`--proxy\` is deprecated and will be removed in a future version of Wrangler.[0m
 
-			  Build your application to a directory and run the \`wrangler pages dev <directory>\` instead.
-			  This results in a more faithful emulation of production behavior.
+				  Build your application to a directory and run the \`wrangler pages dev <directory>\` instead.
+				  This results in a more faithful emulation of production behavior.
 
-			"
-		`);
+				"
+			`);
 		});
 	});
 
@@ -235,7 +235,7 @@ describe("pages", () => {
 			await expect(
 				runWrangler("pages dev")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: Must specify a directory of static assets to serve, or a command to run, or a proxy port, or configure \`pages_build_output_dir\` in \`wrangler.toml\`.]`
+				`[Error: Must specify a directory of static assets to serve, or a command to run, or a proxy port, or configure \`pages_build_output_dir\` in your Wrangler configuration file.]`
 			);
 
 			expect(std.out).toMatchInlineSnapshot(`""`);

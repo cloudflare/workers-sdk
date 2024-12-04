@@ -13,7 +13,7 @@ import type { C3Context } from "types";
 const { npm, npx } = detectPackageManager();
 
 const generate = async (ctx: C3Context) => {
-	await runFrameworkGenerator(ctx, ["basic", ctx.project.name]);
+	await runFrameworkGenerator(ctx, ["playground", ctx.project.name]);
 };
 
 const configure = async (ctx: C3Context) => {

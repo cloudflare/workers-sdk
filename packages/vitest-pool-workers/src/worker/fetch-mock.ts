@@ -5,6 +5,15 @@ import type { Dispatcher } from "undici";
 
 const DECODER = new TextDecoder();
 
+/**
+ * Mutate an Error instance so it passes either of the checks in isAbortError
+ */
+export function castAsAbortError(err: Error): Error {
+	(err as Error & { code: string }).code = "ABORT_ERR";
+	err.name = "AbortError";
+	return err;
+}
+
 // See public facing `cloudflare:test` types for docs
 export const fetchMock = new MockAgent({ connections: 1 });
 
@@ -46,6 +55,13 @@ globalThis.fetch = async (input, init) => {
 
 	const request = new Request(input, init);
 	const url = new URL(request.url);
+
+	// Use a signal and the aborted value if provided
+	const abortSignal = init?.signal;
+	let abortSignalAborted = abortSignal?.aborted ?? false;
+	abortSignal?.addEventListener("abort", () => {
+		abortSignalAborted = true;
+	});
 
 	// Don't allow mocked `Upgrade` requests
 	if (request.headers.get("Upgrade") !== null) {
@@ -101,7 +117,11 @@ globalThis.fetch = async (input, init) => {
 
 	// Dispatch the request through the mock agent
 	const dispatchHandlers: Dispatcher.DispatchHandlers = {
-		onConnect(_abort) {}, // (ignored)
+		onConnect(abort) {
+			if (abortSignalAborted) {
+				abort();
+			}
+		},
 		onError(error) {
 			responseReject(error);
 		},
@@ -110,6 +130,10 @@ globalThis.fetch = async (input, init) => {
 		},
 		// `onHeaders` and `onData` will only be called if the response was mocked
 		onHeaders(statusCode, headers, _resume, statusText) {
+			if (abortSignalAborted) {
+				return false;
+			}
+
 			responseStatusCode = statusCode;
 			responseStatusText = statusText;
 
@@ -123,10 +147,21 @@ globalThis.fetch = async (input, init) => {
 			return true;
 		},
 		onData(chunk) {
+			if (abortSignalAborted) {
+				return false;
+			}
+
 			responseChunks.push(chunk);
 			return true;
 		},
 		onComplete(_trailers) {
+			if (abortSignalAborted) {
+				responseReject(
+					castAsAbortError(new Error("The operation was aborted"))
+				);
+				return;
+			}
+
 			// `maybeResponse` will be `undefined` if we mocked the request
 			const maybeResponse = responses.get(dispatchOptions);
 			if (maybeResponse === undefined) {

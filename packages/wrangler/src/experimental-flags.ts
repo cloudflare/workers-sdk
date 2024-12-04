@@ -2,10 +2,9 @@ import { AsyncLocalStorage } from "async_hooks";
 import { logger } from "./logger";
 
 type ExperimentalFlags = {
-	// TODO: use this
-	DEV_ENV: boolean;
 	FILE_BASED_REGISTRY: boolean;
-	JSON_CONFIG_FILE: boolean;
+	MULTIWORKER: boolean;
+	RESOURCES_PROVISION: boolean;
 };
 
 const flags = new AsyncLocalStorage<ExperimentalFlags>();

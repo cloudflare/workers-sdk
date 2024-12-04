@@ -1,6 +1,5 @@
 import { existsSync, lstatSync, readdirSync } from "fs";
 import path, { extname, join } from "path";
-import { crash } from "@cloudflare/cli";
 import * as recast from "recast";
 import * as esprimaParser from "recast/parsers/esprima";
 import * as typescriptParser from "recast/parsers/typescript";
@@ -34,7 +33,7 @@ export const parseJs = (src: string) => {
 	try {
 		return recast.parse(src, { parser: esprimaParser });
 	} catch (error) {
-		crash("Error parsing js template.");
+		throw new Error("Error parsing js template.");
 	}
 };
 
@@ -44,7 +43,7 @@ export const parseTs = (src: string) => {
 	try {
 		return recast.parse(src, { parser: typescriptParser });
 	} catch (error) {
-		crash("Error parsing ts template.");
+		throw new Error("Error parsing ts template.");
 	}
 };
 
@@ -61,7 +60,7 @@ export const parseFile = (filePath: string) => {
 			return recast.parse(fileContents, { parser }).program as Program;
 		}
 	} catch (error) {
-		crash(`Error parsing file: ${filePath}`);
+		throw new Error(`Error parsing file: ${filePath}`);
 	}
 
 	return null;

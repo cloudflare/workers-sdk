@@ -3,16 +3,18 @@ import { readFileSync, realpathSync, writeFileSync } from "fs";
 import path from "path";
 import { watch } from "chokidar";
 import { noBundleWorker } from "../../deploy/deploy";
-import { bundleWorker } from "../../deployment-bundle/bundle";
+import { bundleWorker, shouldCheckFetch } from "../../deployment-bundle/bundle";
 import { getBundleType } from "../../deployment-bundle/bundle-type";
 import {
 	createModuleCollector,
 	getWrangler1xLegacyModuleReferences,
 } from "../../deployment-bundle/module-collection";
 import { runCustomBuild } from "../../deployment-bundle/run-custom-build";
+import { getAssetChangeMessage } from "../../dev";
 import { runBuild } from "../../dev/use-esbuild";
 import { logger } from "../../logger";
 import { isNavigatorDefined } from "../../navigator-user-agent";
+import { debounce } from "../../pages/utils";
 import { getWranglerTmpDir } from "../../paths";
 import { Controller } from "./BaseController";
 import { castErrorCause } from "./events";
@@ -29,7 +31,7 @@ import type {
 } from "./events";
 import type { StartDevWorkerOptions } from "./types";
 
-export type BundlerControllerEventMap = ControllerEventMap & {
+type BundlerControllerEventMap = ControllerEventMap & {
 	bundleStart: [BundleStartEvent];
 	bundleComplete: [BundleCompleteEvent];
 };
@@ -39,7 +41,6 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 	#customBuildWatcher?: ReturnType<typeof watch>;
 
 	// Handle aborting in-flight custom builds as new ones come in from the filesystem watcher
-	// Note: we don't need this for non-custom builds since esbuild handles this internally with it's watch mode
 	#customBuildAborter = new AbortController();
 
 	async #runCustomBuild(config: StartDevWorkerOptions, filePath: string) {
@@ -50,14 +51,19 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 		// Since `this.#customBuildAborter` will change as new builds are scheduled, store the specific AbortController that will be used for this build
 		const buildAborter = this.#customBuildAborter;
 		const relativeFile =
-			path.relative(config.directory, config.entrypoint) || ".";
+			path.relative(config.projectRoot, config.entrypoint) || ".";
 		logger.log(`The file ${filePath} changed, restarting build...`);
 		this.emitBundleStartEvent(config);
 		try {
-			await runCustomBuild(config.entrypoint, relativeFile, {
-				cwd: config.build?.custom?.workingDirectory,
-				command: config.build?.custom?.command,
-			});
+			await runCustomBuild(
+				config.entrypoint,
+				relativeFile,
+				{
+					cwd: config.build?.custom?.workingDirectory,
+					command: config.build?.custom?.command,
+				},
+				config.config
+			);
 			if (buildAborter.signal.aborted) {
 				return;
 			}
@@ -73,13 +79,14 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 
 			const entry: Entry = {
 				file: config.entrypoint,
-				directory: config.directory,
 				format: config.build.format,
 				moduleRoot: config.build.moduleRoot,
+				exports: config.build.exports,
 			};
 
 			const entryDirectory = path.dirname(config.entrypoint);
 			const moduleCollector = createModuleCollector({
+				projectRoot: config.projectRoot,
 				wrangler1xLegacyModuleReferences: getWrangler1xLegacyModuleReferences(
 					entryDirectory,
 					config.entrypoint
@@ -96,6 +103,7 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 			).bindings;
 			const bundleResult: Omit<BundleResult, "stop"> = !config.build?.bundle
 				? await noBundleWorker(
+						config.projectRoot,
 						entry,
 						config.build.moduleRules,
 						this.#tmpDir.path
@@ -107,6 +115,7 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 						serveLegacyAssetsFromWorker: Boolean(
 							config.legacy?.legacyAssets && !config.dev?.remote
 						),
+						workflowBindings: bindings?.workflows ?? [],
 						doBindings: bindings?.durable_objects?.bindings ?? [],
 						jsxFactory: config.build.jsxFactory,
 						jsxFragment: config.build.jsxFactory,
@@ -114,7 +123,10 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 						minify: config.build.minify,
 						nodejsCompatMode: config.build.nodejsCompatMode,
 						define: config.build.define,
-						checkFetch: true,
+						checkFetch: shouldCheckFetch(
+							config.compatibilityDate,
+							config.compatibilityFlags
+						),
 						mockAnalyticsEngineDatasets:
 							bindings.analytics_engine_datasets ?? [],
 						alias: config.build.alias,
@@ -125,11 +137,25 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 						// This could potentially cause issues as we no longer have identical behaviour between dev and deploy?
 						targetConsumer: "dev",
 						local: !config.dev?.remote,
-						projectRoot: config.directory,
+						projectRoot: config.projectRoot,
 						defineNavigatorUserAgent: isNavigatorDefined(
 							config.compatibilityDate,
 							config.compatibilityFlags
 						),
+						testScheduled: config.dev.testScheduled,
+						plugins: undefined,
+
+						// Pages specific options used by wrangler pages commands
+						entryName: undefined,
+						inject: undefined,
+						isOutfile: undefined,
+						external: undefined,
+
+						// We don't use esbuild watching for custom builds
+						watch: undefined,
+
+						// sourcemap defaults to true in dev
+						sourcemap: undefined,
 					});
 			if (buildAborter.signal.aborted) {
 				return;
@@ -192,18 +218,27 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 	}
 
 	#bundlerCleanup?: ReturnType<typeof runBuild>;
+	#bundleBuildAborter = new AbortController();
 
 	async #startBundle(config: StartDevWorkerOptions) {
 		await this.#bundlerCleanup?.();
+		// If a new bundle build comes in, we need to cancel in-flight builds
+		this.#bundleBuildAborter.abort();
+		this.#bundleBuildAborter = new AbortController();
+
+		// Since `this.#customBuildAborter` will change as new builds are scheduled, store the specific AbortController that will be used for this build
+		const buildAborter = this.#bundleBuildAborter;
+
 		if (config.build?.custom?.command) {
 			return;
 		}
 		assert(this.#tmpDir);
 		const entry: Entry = {
 			file: config.entrypoint,
-			directory: config.directory,
 			format: config.build.format,
 			moduleRoot: config.build.moduleRoot,
+			exports: config.build.exports,
+			name: config.name,
 		};
 		const { bindings } = await convertBindingsToCfWorkerInitBindings(
 			config.bindings
@@ -229,15 +264,20 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 				noBundle: !config.build?.bundle,
 				findAdditionalModules: config.build?.findAdditionalModules,
 				durableObjects: bindings?.durable_objects ?? { bindings: [] },
+				workflows: bindings?.workflows ?? [],
 				mockAnalyticsEngineDatasets: bindings.analytics_engine_datasets ?? [],
 				local: !config.dev?.remote,
 				// startDevWorker only applies to "dev"
 				targetConsumer: "dev",
 				testScheduled: Boolean(config.dev?.testScheduled),
-				projectRoot: config.directory,
+				projectRoot: config.projectRoot,
 				onStart: () => {
 					this.emitBundleStartEvent(config);
 				},
+				checkFetch: shouldCheckFetch(
+					config.compatibilityDate,
+					config.compatibilityFlags
+				),
 				defineNavigatorUserAgent: isNavigatorDefined(
 					config.compatibilityDate,
 					config.compatibilityFlags
@@ -245,18 +285,45 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 			},
 			(cb) => {
 				const newBundle = cb(this.#currentBundle);
-				this.emitBundleCompleteEvent(config, newBundle);
-				this.#currentBundle = newBundle;
+				if (!buildAborter.signal.aborted) {
+					this.emitBundleCompleteEvent(config, newBundle);
+					this.#currentBundle = newBundle;
+				}
 			},
-			(err) =>
-				this.emitErrorEvent({
-					type: "error",
-					reason: "Failed to construct initial bundle",
-					cause: castErrorCause(err),
-					source: "BundlerController",
-					data: undefined,
-				})
+			(err) => {
+				if (!buildAborter.signal.aborted) {
+					this.emitErrorEvent({
+						type: "error",
+						reason: "Failed to construct initial bundle",
+						cause: castErrorCause(err),
+						source: "BundlerController",
+						data: undefined,
+					});
+				}
+			}
 		);
+	}
+
+	#assetsWatcher?: ReturnType<typeof watch>;
+	async #ensureWatchingAssets(config: StartDevWorkerOptions) {
+		await this.#assetsWatcher?.close();
+
+		const debouncedRefreshBundle = debounce(() => {
+			if (this.#currentBundle) {
+				this.emitBundleCompleteEvent(config, this.#currentBundle);
+			}
+		});
+
+		if (config.assets?.directory) {
+			this.#assetsWatcher = watch(config.assets.directory, {
+				persistent: true,
+				ignoreInitial: true,
+			}).on("all", async (eventName, filePath) => {
+				const message = getAssetChangeMessage(eventName, filePath);
+				logger.debug(`🌀 ${message}...`);
+				debouncedRefreshBundle();
+			});
+		}
 	}
 
 	#tmpDir?: EphemeralDirectory;
@@ -264,7 +331,7 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 	onConfigUpdate(event: ConfigUpdateEvent) {
 		this.#tmpDir?.remove();
 		try {
-			this.#tmpDir = getWranglerTmpDir(event.config.directory, "dev");
+			this.#tmpDir = getWranglerTmpDir(event.config.projectRoot, "dev");
 		} catch (e) {
 			logger.error(
 				"Failed to create temporary directory to store built files."
@@ -280,6 +347,7 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 
 		void this.#startCustomBuild(event.config);
 		void this.#startBundle(event.config);
+		void this.#ensureWatchingAssets(event.config);
 	}
 
 	async teardown() {
@@ -289,6 +357,7 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 		await Promise.all([
 			this.#bundlerCleanup?.(),
 			this.#customBuildWatcher?.close(),
+			this.#assetsWatcher?.close(),
 		]);
 		logger.debug("BundlerController teardown complete");
 	}

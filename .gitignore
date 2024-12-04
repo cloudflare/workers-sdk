@@ -188,10 +188,14 @@ packages/quick-edit/vscode
 packages/quick-edit/web
 
 packages/wrangler/config-schema.json
-packages/wrangler-devtools/built-devtools
-packages/wrangler-devtools/.cipd
-packages/wrangler-devtools/depot
-packages/wrangler-devtools/devtools-frontend
+packages/chrome-devtools-patches/built-devtools
+packages/chrome-devtools-patches/.cipd
+packages/chrome-devtools-patches/.gclient
+packages/chrome-devtools-patches/.gclient_entries
+packages/chrome-devtools-patches/.gclient_previous_sync_commits
+packages/chrome-devtools-patches/.gcs_entries
+packages/chrome-devtools-patches/depot
+packages/chrome-devtools-patches/devtools-frontend
 packages/miniflare/dist-types/
 
 fixtures/remix-pages-app/public/build
