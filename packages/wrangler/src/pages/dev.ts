@@ -391,7 +391,6 @@ export const Handler = async (args: PagesDevArguments) => {
 			const bundleResult = await produceWorkerBundleForWorkerJSDirectory({
 				workerJSDirectory: workerScriptPath,
 				bundle: enableBundling,
-				buildOutputDirectory: directory ?? ".",
 				nodejsCompatMode,
 				defineNavigatorUserAgent,
 				checkFetch,
@@ -456,7 +455,6 @@ export const Handler = async (args: PagesDevArguments) => {
 						? join(workerScriptPath, "index.js")
 						: workerScriptPath,
 					outfile: scriptPath,
-					directory: directory ?? ".",
 					nodejsCompatMode,
 					local: true,
 					sourcemap: true,

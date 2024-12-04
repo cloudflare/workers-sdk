@@ -3201,7 +3201,7 @@ Failed to publish your Function. Got error: Uncaught TypeError: a is not a funct
 							Content-Disposition: form-data; name=\\"bundledWorker-0.test.mjs\\"; filename=\\"bundledWorker-0.test.mjs\\"
 							Content-Type: application/javascript+module
 
-							// _worker.js
+							// public/_worker.js
 							import wasm from \\"./test-hello.wasm\\";
 							import html from \\"./test-hello.html\\";
 							var worker_default = {
@@ -3474,28 +3474,28 @@ Failed to publish your Function. Got error: Uncaught TypeError: a is not a funct
 						// `bundledWorker`, the wasm import, etc., and since `workerBundle` is
 						// small enough, let's go ahead and snapshot test the whole thing
 						expect(workerBundleWithConstantData).toMatchInlineSnapshot(`
-				"------formdata-undici-0.test
-				Content-Disposition: form-data; name=\\"metadata\\"
+							"------formdata-undici-0.test
+							Content-Disposition: form-data; name=\\"metadata\\"
 
-				{\\"main_module\\":\\"bundledWorker-0.test.mjs\\"}
-				------formdata-undici-0.test
-				Content-Disposition: form-data; name=\\"bundledWorker-0.test.mjs\\"; filename=\\"bundledWorker-0.test.mjs\\"
-				Content-Type: application/javascript+module
+							{\\"main_module\\":\\"bundledWorker-0.test.mjs\\"}
+							------formdata-undici-0.test
+							Content-Disposition: form-data; name=\\"bundledWorker-0.test.mjs\\"; filename=\\"bundledWorker-0.test.mjs\\"
+							Content-Type: application/javascript+module
 
-				// _worker.js
-				var worker_default = {
-				  async fetch(request, env) {
-				    const url = new URL(request.url);
-				    return url.pathname.startsWith(\\"/api/\\") ? new Response(\\"Ok\\") : env.ASSETS.fetch(request);
-				  }
-				};
-				export {
-				  worker_default as default
-				};
-				//# sourceMappingURL=bundledWorker-0.test.mjs.map
+							// public/_worker.js
+							var worker_default = {
+							  async fetch(request, env) {
+							    const url = new URL(request.url);
+							    return url.pathname.startsWith(\\"/api/\\") ? new Response(\\"Ok\\") : env.ASSETS.fetch(request);
+							  }
+							};
+							export {
+							  worker_default as default
+							};
+							//# sourceMappingURL=bundledWorker-0.test.mjs.map
 
-				------formdata-undici-0.test--"
-			`);
+							------formdata-undici-0.test--"
+						`);
 
 						expect(JSON.parse(customRoutesJSON)).toMatchObject({
 							version: ROUTES_SPEC_VERSION,
@@ -3843,28 +3843,28 @@ and that at least one include rule is provided.
 						// `bundledWorker`, the wasm import, etc., and since `workerBundle` is
 						// small enough, let's go ahead and snapshot test the whole thing
 						expect(workerBundleWithConstantData).toMatchInlineSnapshot(`
-				"------formdata-undici-0.test
-				Content-Disposition: form-data; name=\\"metadata\\"
+							"------formdata-undici-0.test
+							Content-Disposition: form-data; name=\\"metadata\\"
 
-				{\\"main_module\\":\\"bundledWorker-0.test.mjs\\"}
-				------formdata-undici-0.test
-				Content-Disposition: form-data; name=\\"bundledWorker-0.test.mjs\\"; filename=\\"bundledWorker-0.test.mjs\\"
-				Content-Type: application/javascript+module
+							{\\"main_module\\":\\"bundledWorker-0.test.mjs\\"}
+							------formdata-undici-0.test
+							Content-Disposition: form-data; name=\\"bundledWorker-0.test.mjs\\"; filename=\\"bundledWorker-0.test.mjs\\"
+							Content-Type: application/javascript+module
 
-				// _worker.js
-				var worker_default = {
-				  async fetch(request, env) {
-				    const url = new URL(request.url);
-				    return url.pathname.startsWith(\\"/api/\\") ? new Response(\\"Ok\\") : env.ASSETS.fetch(request);
-				  }
-				};
-				export {
-				  worker_default as default
-				};
-				//# sourceMappingURL=bundledWorker-0.test.mjs.map
+							// public/_worker.js
+							var worker_default = {
+							  async fetch(request, env) {
+							    const url = new URL(request.url);
+							    return url.pathname.startsWith(\\"/api/\\") ? new Response(\\"Ok\\") : env.ASSETS.fetch(request);
+							  }
+							};
+							export {
+							  worker_default as default
+							};
+							//# sourceMappingURL=bundledWorker-0.test.mjs.map
 
-				------formdata-undici-0.test--"
-			`);
+							------formdata-undici-0.test--"
+						`);
 
 						return HttpResponse.json(
 							{
@@ -5260,7 +5260,7 @@ Failed to publish your Function. Got error: Uncaught TypeError: a is not a funct
 				expect(contents).toContain(
 					'Content-Disposition: form-data; name="functionsWorker-0.test.js.map"'
 				);
-				expect(contents).toContain('"sources":["[[path]].ts"');
+				expect(contents).toContain('"sources":["functions/[[path]].ts",');
 			});
 
 			await runWrangler("pages deploy");
@@ -5284,7 +5284,7 @@ Failed to publish your Function. Got error: Uncaught TypeError: a is not a funct
 				expect(contents).toContain(
 					'Content-Disposition: form-data; name="bundledWorker-0.test.mjs.map"'
 				);
-				expect(contents).toContain('"sources":["_worker.js"');
+				expect(contents).toContain('"sources":["dist/_worker.js"]');
 			});
 
 			await runWrangler("pages deploy");

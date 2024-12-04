@@ -1,5 +1,5 @@
 import { access, cp, lstat, rm } from "node:fs/promises";
-import { join, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { build as esBuild } from "esbuild";
 import { nanoid } from "nanoid";
 import { bundleWorker } from "../../deployment-bundle/bundle";
@@ -106,7 +106,6 @@ export type RawOptions = {
 	workerScriptPath: string;
 	outfile?: string;
 	outdir?: string;
-	directory: string;
 	bundle?: boolean;
 	externalModules?: string[];
 	minify?: boolean;
@@ -134,7 +133,6 @@ export function buildRawWorker({
 	workerScriptPath,
 	outfile = join(getPagesTmpDir(), `./functionsWorker-${Math.random()}.js`),
 	outdir,
-	directory,
 	bundle = true,
 	externalModules,
 	minify = false,
@@ -152,13 +150,13 @@ export function buildRawWorker({
 	const entry: Entry = {
 		file: workerScriptPath,
 		format: "modules",
-		moduleRoot: resolve(directory),
+		moduleRoot: dirname(workerScriptPath),
 		exports: [],
 	};
 	const moduleCollector = externalModules
 		? noopModuleCollector
 		: createModuleCollector({
-				projectRoot: resolve(directory),
+				projectRoot: entry.moduleRoot,
 				entry,
 				findAdditionalModules: false,
 			});
@@ -224,7 +222,6 @@ export function buildRawWorker({
 export async function produceWorkerBundleForWorkerJSDirectory({
 	workerJSDirectory,
 	bundle,
-	buildOutputDirectory,
 	nodejsCompatMode,
 	defineNavigatorUserAgent,
 	checkFetch,
@@ -232,7 +229,6 @@ export async function produceWorkerBundleForWorkerJSDirectory({
 }: {
 	workerJSDirectory: string;
 	bundle: boolean;
-	buildOutputDirectory: string;
 	nodejsCompatMode: NodeJSCompatMode;
 	defineNavigatorUserAgent: boolean;
 	checkFetch: boolean;
@@ -279,7 +275,6 @@ export async function produceWorkerBundleForWorkerJSDirectory({
 			join(workerJSDirectory, m.name)
 		),
 		outfile,
-		directory: buildOutputDirectory,
 		local: false,
 		sourcemap: true,
 		watch: false,

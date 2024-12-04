@@ -318,7 +318,6 @@ export async function deploy({
 		workerBundle = await produceWorkerBundleForWorkerJSDirectory({
 			workerJSDirectory: _workerPath,
 			bundle,
-			buildOutputDirectory: directory,
 			nodejsCompatMode,
 			defineNavigatorUserAgent,
 			checkFetch,
@@ -333,7 +332,6 @@ export async function deploy({
 			workerBundle = await buildRawWorker({
 				workerScriptPath: _workerPath,
 				outfile,
-				directory,
 				local: false,
 				sourcemap: true,
 				watch: false,

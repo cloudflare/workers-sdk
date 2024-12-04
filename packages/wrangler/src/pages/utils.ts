@@ -70,7 +70,7 @@ export function getPagesTmpDir(): string {
 	if (tmpDirCache !== undefined && tmpDirCacheProjectRoot === projectRoot) {
 		return tmpDirCache;
 	}
-	const tmpDir = getWranglerTmpDir(getPagesProjectRoot(), "pages");
+	const tmpDir = getWranglerTmpDir(projectRoot, "pages");
 	tmpDirCache = tmpDir.path;
 	tmpDirCacheProjectRoot = projectRoot;
 	return tmpDirCache;

@@ -235,7 +235,6 @@ export const Handler = async (args: PagesBuildArgs) => {
 				bundle = await produceWorkerBundleForWorkerJSDirectory({
 					workerJSDirectory: workerScriptPath,
 					bundle: true,
-					buildOutputDirectory,
 					nodejsCompatMode,
 					defineNavigatorUserAgent,
 					checkFetch,
@@ -251,7 +250,6 @@ export const Handler = async (args: PagesBuildArgs) => {
 				bundle = await buildRawWorker({
 					workerScriptPath,
 					outdir,
-					directory: buildOutputDirectory,
 					local: false,
 					sourcemap: config?.upload_source_maps ?? sourcemap,
 					watch,
