@@ -1,17 +1,17 @@
 import * as fs from "fs";
 import path from "node:path";
-import { experimental_readRawConfig, readConfig } from "../config";
-import { normalizeAndValidateConfig } from "../config/validation";
-import { run } from "../experimental-flags";
-import { normalizeString } from "./helpers/normalize";
-import { runInTempDir } from "./helpers/run-in-tmp";
-import { writeWranglerConfig } from "./helpers/write-wrangler-config";
+import { experimental_readRawConfig, readConfig } from "../../config";
+import { normalizeAndValidateConfig } from "../../config/validation";
+import { run } from "../../experimental-flags";
+import { normalizeString } from "../helpers/normalize";
+import { runInTempDir } from "../helpers/run-in-tmp";
+import { writeWranglerConfig } from "../helpers/write-wrangler-config";
 import type {
 	ConfigFields,
 	RawConfig,
 	RawDevConfig,
 	RawEnvironment,
-} from "../config";
+} from "../../config";
 
 describe("readConfig()", () => {
 	runInTempDir();
