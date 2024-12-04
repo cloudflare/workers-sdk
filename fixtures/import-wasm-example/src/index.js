@@ -8,9 +8,7 @@ export default {
 		// we're really just testing the imports at the top of this file
 		const multiplyModule = await WebAssembly.instantiate(multiply);
 
-		const results = [
-			multiplyModule.exports.multiply(7, 3),
-		];
+		const results = [multiplyModule.exports.multiply(7, 3)];
 		return new Response(results.join(", "));
 	},
 };
