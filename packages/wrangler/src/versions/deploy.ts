@@ -8,6 +8,7 @@ import {
 	spinnerWhile,
 } from "@cloudflare/cli/interactive";
 import { fetchResult } from "../cfetch";
+import { readConfig } from "../config";
 import { createCommand } from "../core/create-command";
 import { UserError } from "../errors";
 import { isNonInteractiveOrCI } from "../is-interactive";
@@ -47,6 +48,10 @@ export const versionsDeployCommand = createCommand({
 		owner: "Workers: Authoring and Testing",
 		status: "stable",
 	},
+	behaviour: {
+		provideConfig: false,
+	},
+
 	args: {
 		name: {
 			describe: "Name of the worker",
@@ -96,7 +101,8 @@ export const versionsDeployCommand = createCommand({
 		},
 	},
 	positionalArgs: ["version-specs"],
-	handler: async function versionsDeployHandler(args, { config }) {
+	handler: async function versionsDeployHandler(args) {
+		const config = readConfig(args, { useRedirect: true });
 		metrics.sendMetricsEvent(
 			"deploy worker versions",
 			{},
