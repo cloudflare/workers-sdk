@@ -16,9 +16,16 @@ import { getLegacyAssetPaths, getSiteAssetPaths } from "../../../sites";
 import { CacheStorage } from "./caches";
 import { ExecutionContext } from "./executionContext";
 import { getServiceBindings } from "./services";
-import type { Config } from "../../../config";
+import type { Config, RawConfig, RawEnvironment } from "../../../config";
 import type { IncomingRequestCfProperties } from "@cloudflare/workers-types/experimental";
 import type { MiniflareOptions, ModuleRule, WorkerOptions } from "miniflare";
+
+export { readConfig as unstable_readConfig };
+export type {
+	Config as UnstableConfig,
+	RawConfig as UnstableRawConfig,
+	RawEnvironment as UnstableRawEnvironment,
+};
 
 /**
  * Options for the `getPlatformProxy` utility
@@ -237,17 +244,27 @@ export type SourcelessWorkerOptions = Omit<
 	"script" | "scriptPath" | "modules" | "modulesRoot"
 > & { modulesRules?: ModuleRule[] };
 
-export function unstable_getMiniflareWorkerOptions(
-	configPath: string,
-	env?: string
-): {
+export interface UnstableMiniflareWorkerOptions {
 	workerOptions: SourcelessWorkerOptions;
 	define: Record<string, string>;
 	main?: string;
-} {
-	const config = readConfig(configPath, {
-		env,
-	});
+}
+
+export function unstable_getMiniflareWorkerOptions(
+	configPath: string,
+	env?: string
+): UnstableMiniflareWorkerOptions;
+export function unstable_getMiniflareWorkerOptions(
+	config: Config
+): UnstableMiniflareWorkerOptions;
+export function unstable_getMiniflareWorkerOptions(
+	configOrConfigPath: string | Config,
+	env?: string
+): UnstableMiniflareWorkerOptions {
+	const config =
+		typeof configOrConfigPath === "string"
+			? readConfig(configOrConfigPath, { env })
+			: configOrConfigPath;
 
 	const modulesRules: ModuleRule[] = config.rules
 		.concat(DEFAULT_MODULE_RULES)
