@@ -49,7 +49,7 @@
 		"@cloudflare/cli": "workspace:*",
 		"@cloudflare/eslint-config-worker": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
-		"@cloudflare/workers-types": "^4.20241106.0",
+		"@cloudflare/workers-types": "^4.20241202.0",
 		"@iarna/toml": "^3.0.0",
 		"@types/command-exists": "^1.2.0",
 		"@types/cross-spawn": "^6.0.2",
