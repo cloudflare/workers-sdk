@@ -1,11 +1,9 @@
-import yargs from "yargs";
 import { normalizeOutput } from "../../../e2e/helpers/normalize";
 import {
 	assignAndDistributePercentages,
 	parseVersionSpecs,
 	summariseVersionTraffic,
 	validateTrafficSubtotal,
-	versionsDeployOptions,
 } from "../../versions/deploy";
 import { collectCLIOutput } from "../helpers/collect-cli-output";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
@@ -30,7 +28,6 @@ import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 import { writeWorkerSource } from "../helpers/write-worker-source";
 import { writeWranglerConfig } from "../helpers/write-wrangler-config";
-import type { VersionsDeployArgs } from "../../versions/deploy";
 
 describe("versions deploy", () => {
 	mockAccountId();
@@ -925,39 +922,28 @@ describe("versions deploy", () => {
 
 describe("units", () => {
 	describe("parseVersionSpecs", () => {
-		const options = yargs().command(
-			"versions deploy [version-specs..]",
-			"",
-			// @ts-expect-error creating the command using a fresh yargs() but it expects one preconfigured with global options
-			versionsDeployOptions,
-			() => {}
-		);
-
 		test("no args", () => {
-			const input = "versions deploy";
-
-			const args = options.parse(input) as VersionsDeployArgs;
-			const result = parseVersionSpecs(args);
+			const result = parseVersionSpecs({});
 
 			expect(result).toMatchObject(new Map());
 		});
 
 		test("1 positional arg", () => {
-			const input = "versions deploy 10000000-0000-0000-0000-000000000000@10%";
-
-			const args = options.parse(input) as VersionsDeployArgs;
-			const result = parseVersionSpecs(args);
+			const result = parseVersionSpecs({
+				versionSpecs: ["10000000-0000-0000-0000-000000000000@10%"],
+			});
 
 			expect(Object.fromEntries(result)).toMatchObject({
 				"10000000-0000-0000-0000-000000000000": 10,
 			});
 		});
 		test("2 positional args", () => {
-			const input =
-				"versions deploy 10000000-0000-0000-0000-000000000000@10% 20000000-0000-0000-0000-000000000000@90%";
-
-			const args = options.parse(input) as VersionsDeployArgs;
-			const result = parseVersionSpecs(args);
+			const result = parseVersionSpecs({
+				versionSpecs: [
+					"10000000-0000-0000-0000-000000000000@10%",
+					"20000000-0000-0000-0000-000000000000@90%",
+				],
+			});
 
 			expect(Object.fromEntries(result)).toMatchObject({
 				"10000000-0000-0000-0000-000000000000": 10,
@@ -966,34 +952,23 @@ describe("units", () => {
 		});
 
 		test("1 pair of named args", () => {
-			const input =
-				"versions deploy --version-id 10000000-0000-0000-0000-000000000000 --percentage 10";
-
-			const args = options.parse(input) as VersionsDeployArgs;
-			const result = parseVersionSpecs(args);
+			const result = parseVersionSpecs({
+				percentage: [10],
+				versionId: ["10000000-0000-0000-0000-000000000000"],
+			});
 
 			expect(Object.fromEntries(result)).toMatchObject({
 				"10000000-0000-0000-0000-000000000000": 10,
 			});
 		});
 		test("2 pairs of named args", () => {
-			const input =
-				"versions deploy --version-id 10000000-0000-0000-0000-000000000000 --percentage 10 --version-id 20000000-0000-0000-0000-000000000000 --percentage 90";
-
-			const args = options.parse(input) as VersionsDeployArgs;
-			const result = parseVersionSpecs(args);
-
-			expect(Object.fromEntries(result)).toMatchObject({
-				"10000000-0000-0000-0000-000000000000": 10,
-				"20000000-0000-0000-0000-000000000000": 90,
+			const result = parseVersionSpecs({
+				percentage: [10, 90],
+				versionId: [
+					"10000000-0000-0000-0000-000000000000",
+					"20000000-0000-0000-0000-000000000000",
+				],
 			});
-		});
-		test("unordered named args", () => {
-			const input =
-				"versions deploy --version-id 10000000-0000-0000-0000-000000000000 --version-id 20000000-0000-0000-0000-000000000000 --percentage 10 --percentage 90";
-
-			const args = options.parse(input) as VersionsDeployArgs;
-			const result = parseVersionSpecs(args);
 
 			expect(Object.fromEntries(result)).toMatchObject({
 				"10000000-0000-0000-0000-000000000000": 10,
@@ -1001,23 +976,13 @@ describe("units", () => {
 			});
 		});
 		test("unpaired named args", () => {
-			const input =
-				"versions deploy --version-id 10000000-0000-0000-0000-000000000000 --percentage 10 --version-id 20000000-0000-0000-0000-000000000000";
-
-			const args = options.parse(input) as VersionsDeployArgs;
-			const result = parseVersionSpecs(args);
-
-			expect(Object.fromEntries(result)).toMatchObject({
-				"10000000-0000-0000-0000-000000000000": 10,
-				"20000000-0000-0000-0000-000000000000": null,
+			const result = parseVersionSpecs({
+				percentage: [10],
+				versionId: [
+					"10000000-0000-0000-0000-000000000000",
+					"20000000-0000-0000-0000-000000000000",
+				],
 			});
-		});
-		test("unpaired, unordered named args", () => {
-			const input =
-				"versions deploy --version-id 10000000-0000-0000-0000-000000000000 --version-id 20000000-0000-0000-0000-000000000000 --percentage 10";
-
-			const args = options.parse(input) as VersionsDeployArgs;
-			const result = parseVersionSpecs(args);
 
 			expect(Object.fromEntries(result)).toMatchObject({
 				"10000000-0000-0000-0000-000000000000": 10,

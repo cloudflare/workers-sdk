@@ -555,7 +555,8 @@ describe("versions deploy", { timeout: TIMEOUT }, () => {
 		);
 
 		expect(normalize(upload.output)).toMatchInlineSnapshot(`
-			"X [ERROR] Legacy assets does not support uploading versions through \`wrangler versions upload\`. You must use \`wrangler deploy\` instead.
+			"▲ [WARNING] 🚧 \`wrangler versions upload\` is an open-beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose
+			X [ERROR] Legacy assets does not support uploading versions through \`wrangler versions upload\`. You must use \`wrangler deploy\` instead.
 			🪵  Logs were written to "<LOG>""
 		`);
 	});
@@ -589,7 +590,8 @@ describe("versions deploy", { timeout: TIMEOUT }, () => {
 		const upload = await helper.run(`wrangler versions upload  --x-versions`);
 
 		expect(normalize(upload.output)).toMatchInlineSnapshot(`
-			"X [ERROR] Workers Sites does not support uploading versions through \`wrangler versions upload\`. You must use \`wrangler deploy\` instead.
+			"▲ [WARNING] 🚧 \`wrangler versions upload\` is an open-beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose
+			X [ERROR] Workers Sites does not support uploading versions through \`wrangler versions upload\`. You must use \`wrangler deploy\` instead.
 			🪵  Logs were written to "<LOG>""
 		`);
 	});

@@ -1,9 +1,21 @@
+import assert from "node:assert";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { blue, gray } from "@cloudflare/cli/colors";
-import { syncAssets } from "../assets";
+import {
+	getAssetsOptions,
+	syncAssets,
+	validateAssetsArgsAndConfig,
+} from "../assets";
 import { fetchResult } from "../cfetch";
-import { configFileName, formatConfigSnippet, printBindings } from "../config";
+import {
+	configFileName,
+	findWranglerConfig,
+	formatConfigSnippet,
+	printBindings,
+	readConfig,
+} from "../config";
+import { createCommand } from "../core/create-command";
 import { getBindings } from "../deployment-bundle/bindings";
 import { bundleWorker } from "../deployment-bundle/bundle";
 import {
@@ -12,6 +24,7 @@ import {
 } from "../deployment-bundle/bundle-reporter";
 import { getBundleType } from "../deployment-bundle/bundle-type";
 import { createWorkerUploadForm } from "../deployment-bundle/create-worker-upload-form";
+import { getEntry } from "../deployment-bundle/entry";
 import { logBuildOutput } from "../deployment-bundle/esbuild-plugins/log-build-output";
 import {
 	findAdditionalModules,
@@ -26,9 +39,13 @@ import { loadSourceMaps } from "../deployment-bundle/source-maps";
 import { confirm } from "../dialogs";
 import { getMigrationsToUpload } from "../durable";
 import { UserError } from "../errors";
+import { getRules, getScriptName, isLegacyEnv } from "../index";
 import { logger } from "../logger";
+import { verifyWorkerMatchesCITag } from "../match-tag";
 import { getMetricsUsageHeaders } from "../metrics";
+import * as metrics from "../metrics";
 import { isNavigatorDefined } from "../navigator-user-agent";
+import { writeOutput } from "../output";
 import { ParseError } from "../parse";
 import { getWranglerTmpDir } from "../paths";
 import { ensureQueuesExistByConfig } from "../queues/client";
@@ -37,6 +54,8 @@ import {
 	getSourceMappedString,
 	maybeRetrieveFileSourceMap,
 } from "../sourcemap";
+import { requireAuth } from "../user";
+import { collectKeyValues } from "../utils/collectKeyValues";
 import { retryOnError } from "../utils/retry";
 import type { AssetsOptions } from "../assets";
 import type { Config } from "../config";
@@ -110,6 +129,289 @@ function errIsStartupErr(err: unknown): err is ParseError & { code: 10021 } {
 	}
 
 	return false;
+}
+
+export const versionsUploadCommand = createCommand({
+	metadata: {
+		description: "Uploads your Worker code and config as a new Version",
+		owner: "Workers: Authoring and Testing",
+		status: "open-beta",
+	},
+	args: {
+		script: {
+			describe: "The path to an entry point for your Worker",
+			type: "string",
+			requiresArg: true,
+		},
+		name: {
+			describe: "Name of the worker",
+			type: "string",
+			requiresArg: true,
+		},
+		bundle: {
+			describe: "Run wrangler's compilation step before publishing",
+			type: "boolean",
+			hidden: true,
+		},
+		"no-bundle": {
+			describe: "Skip internal build steps and directly deploy Worker",
+			type: "boolean",
+			default: false,
+		},
+		outdir: {
+			describe: "Output directory for the bundled Worker",
+			type: "string",
+			requiresArg: true,
+		},
+		"compatibility-date": {
+			describe: "Date to use for compatibility checks",
+			type: "string",
+			requiresArg: true,
+		},
+		"compatibility-flags": {
+			describe: "Flags to use for compatibility checks",
+			alias: "compatibility-flag",
+			type: "string",
+			requiresArg: true,
+			array: true,
+		},
+		latest: {
+			describe: "Use the latest version of the Worker runtime",
+			type: "boolean",
+			default: false,
+		},
+		assets: {
+			describe: "Static assets to be served. Replaces Workers Sites.",
+			type: "string",
+			requiresArg: true,
+		},
+		format: {
+			choices: ["modules", "service-worker"] as const,
+			describe: "Choose an entry type",
+			deprecated: true,
+			hidden: true,
+		},
+		"legacy-assets": {
+			describe: "Static assets to be served",
+			type: "string",
+			requiresArg: true,
+			deprecated: true,
+			hidden: true,
+		},
+		site: {
+			describe: "Root folder of static assets for Workers Sites",
+			type: "string",
+			requiresArg: true,
+			hidden: true,
+			deprecated: true,
+		},
+		"site-include": {
+			describe:
+				"Array of .gitignore-style patterns that match file or directory names from the sites directory. Only matched items will be uploaded.",
+			type: "string",
+			requiresArg: true,
+			array: true,
+			hidden: true,
+			deprecated: true,
+		},
+		"site-exclude": {
+			describe:
+				"Array of .gitignore-style patterns that match file or directory names from the sites directory. Matched items will not be uploaded.",
+			type: "string",
+			requiresArg: true,
+			array: true,
+			hidden: true,
+			deprecated: true,
+		},
+		var: {
+			describe: "A key-value pair to be injected into the script as a variable",
+			type: "string",
+			requiresArg: true,
+			array: true,
+		},
+		define: {
+			describe: "A key-value pair to be substituted in the script",
+			type: "string",
+			requiresArg: true,
+			array: true,
+		},
+		alias: {
+			describe: "A module pair to be substituted in the script",
+			type: "string",
+			requiresArg: true,
+			array: true,
+		},
+		"jsx-factory": {
+			describe: "The function that is called for each JSX element",
+			type: "string",
+			requiresArg: true,
+		},
+		"jsx-fragment": {
+			describe: "The function that is called for each JSX fragment",
+			type: "string",
+			requiresArg: true,
+		},
+		tsconfig: {
+			describe: "Path to a custom tsconfig.json file",
+			type: "string",
+			requiresArg: true,
+		},
+		minify: {
+			describe: "Minify the Worker",
+			type: "boolean",
+		},
+		"upload-source-maps": {
+			describe:
+				"Include source maps when uploading this Worker Gradual Rollouts Version.",
+			type: "boolean",
+		},
+		"node-compat": {
+			describe: "Enable Node.js compatibility",
+			type: "boolean",
+		},
+		"dry-run": {
+			describe: "Don't actually deploy",
+			type: "boolean",
+		},
+		tag: {
+			describe: "A tag for this Worker Gradual Rollouts Version",
+			type: "string",
+			requiresArg: true,
+		},
+		message: {
+			describe:
+				"A descriptive message for this Worker Gradual Rollouts Version",
+			type: "string",
+			requiresArg: true,
+		},
+	},
+	behaviour: {
+		provideConfig: false,
+	},
+	handler: async function versionsUploadHandler(args) {
+		const configPath =
+			args.config ||
+			(args.script && findWranglerConfig(path.dirname(args.script)));
+		const config = readConfig(configPath, args);
+		const entry = await getEntry(args, config, "versions upload");
+		await metrics.sendMetricsEvent(
+			"upload worker version",
+			{
+				usesTypeScript: /\.tsx?$/.test(entry.file),
+			},
+			{
+				sendMetrics: config.send_metrics,
+			}
+		);
+
+		if (args.site || config.site) {
+			throw new UserError(
+				"Workers Sites does not support uploading versions through `wrangler versions upload`. You must use `wrangler deploy` instead."
+			);
+		}
+		if (args.legacyAssets || config.legacy_assets) {
+			throw new UserError(
+				"Legacy assets does not support uploading versions through `wrangler versions upload`. You must use `wrangler deploy` instead."
+			);
+		}
+
+		if (config.workflows?.length) {
+			logger.once.warn("Workflows is currently in open beta.");
+		}
+
+		validateAssetsArgsAndConfig(
+			{
+				// given that legacyAssets and sites are not supported by
+				// `wrangler versions upload` pass them as undefined to
+				// skip the corresponding mutual exclusivity validation
+				legacyAssets: undefined,
+				site: undefined,
+				assets: args.assets,
+				script: args.script,
+			},
+			config
+		);
+
+		const assetsOptions = getAssetsOptions(args, config);
+
+		if (args.latest) {
+			logger.warn(
+				`Using the latest version of the Workers runtime. To silence this warning, please choose a specific version of the runtime with --compatibility-date, or add a compatibility_date to your ${configFileName(config.configPath)} file.\n`
+			);
+		}
+
+		const cliVars = collectKeyValues(args.var);
+		const cliDefines = collectKeyValues(args.define);
+		const cliAlias = collectKeyValues(args.alias);
+
+		const accountId = args.dryRun ? undefined : await requireAuth(config);
+		const name = getScriptName(args, config);
+
+		assert(
+			name,
+			'You need to provide a name when publishing a worker. Either pass it as a cli arg with `--name <name>` or in your config file as `name = "<name>"`'
+		);
+
+		if (!args.dryRun) {
+			assert(accountId, "Missing account ID");
+			await verifyWorkerMatchesCITag(
+				accountId,
+				name,
+				path.relative(config.projectRoot, config.configPath ?? "wrangler.toml")
+			);
+		}
+
+		if (!args.dryRun) {
+			await standardPricingWarning(config);
+		}
+		const { versionId, workerTag, versionPreviewUrl } = await versionsUpload({
+			config,
+			accountId,
+			name,
+			rules: getRules(config),
+			entry,
+			legacyEnv: isLegacyEnv(config),
+			env: args.env,
+			compatibilityDate: args.latest
+				? new Date().toISOString().substring(0, 10)
+				: args.compatibilityDate,
+			compatibilityFlags: args.compatibilityFlags,
+			vars: cliVars,
+			defines: cliDefines,
+			alias: cliAlias,
+			jsxFactory: args.jsxFactory,
+			jsxFragment: args.jsxFragment,
+			tsconfig: args.tsconfig,
+			assetsOptions,
+			minify: args.minify,
+			uploadSourceMaps: args.uploadSourceMaps,
+			nodeCompat: args.nodeCompat,
+			isWorkersSite: Boolean(args.site || config.site),
+			outDir: args.outdir,
+			dryRun: args.dryRun,
+			noBundle: !(args.bundle ?? !config.no_bundle),
+			keepVars: false,
+			tag: args.tag,
+			message: args.message,
+		});
+
+		writeOutput({
+			type: "version-upload",
+			version: 1,
+			worker_name: name ?? null,
+			worker_tag: workerTag,
+			version_id: versionId,
+			preview_url: versionPreviewUrl,
+		});
+	},
+});
+
+async function standardPricingWarning(config: Config) {
+	if (config.usage_model !== undefined) {
+		logger.warn(
+			`The \`usage_model\` defined in your ${configFileName(config.configPath)} file is deprecated and no longer used. Visit our developer docs for details: https://developers.cloudflare.com/workers/wrangler/configuration/#usage-model`
+		);
+	}
 }
 
 export default async function versionsUpload(props: Props): Promise<{

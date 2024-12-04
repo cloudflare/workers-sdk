@@ -63,10 +63,10 @@ describe("versions --help", () => {
 			🫧  List, view, upload and deploy Versions of your Worker to Cloudflare
 
 			COMMANDS
-			  wrangler versions view <version-id>         View the details of a specific version of your Worker [beta]
-			  wrangler versions list                      List the 10 most recent Versions of your Worker [beta]
-			  wrangler versions upload                    Uploads your Worker code and config as a new Version [beta]
-			  wrangler versions deploy [version-specs..]  Safely roll out new Versions of your Worker by splitting traffic between multiple Versions [beta]
+			  wrangler versions view <version-id>         View the details of a specific version of your Worker [open-beta]
+			  wrangler versions list                      List the 10 most recent Versions of your Worker [open-beta]
+			  wrangler versions upload                    Uploads your Worker code and config as a new Version [open-beta]
+			  wrangler versions deploy [version-specs..]  Safely roll out new Versions of your Worker by splitting traffic between multiple Versions [open-beta]
 			  wrangler versions secret                    Generate a secret that can be referenced in a Worker
 
 			GLOBAL FLAGS
@@ -88,10 +88,10 @@ describe("versions --help", () => {
 			🫧  List, view, upload and deploy Versions of your Worker to Cloudflare
 
 			COMMANDS
-			  wrangler versions view <version-id>         View the details of a specific version of your Worker [beta]
-			  wrangler versions list                      List the 10 most recent Versions of your Worker [beta]
-			  wrangler versions upload                    Uploads your Worker code and config as a new Version [beta]
-			  wrangler versions deploy [version-specs..]  Safely roll out new Versions of your Worker by splitting traffic between multiple Versions [beta]
+			  wrangler versions view <version-id>         View the details of a specific version of your Worker [open-beta]
+			  wrangler versions list                      List the 10 most recent Versions of your Worker [open-beta]
+			  wrangler versions upload                    Uploads your Worker code and config as a new Version [open-beta]
+			  wrangler versions deploy [version-specs..]  Safely roll out new Versions of your Worker by splitting traffic between multiple Versions [open-beta]
 			  wrangler versions secret                    Generate a secret that can be referenced in a Worker
 
 			GLOBAL FLAGS
@@ -126,10 +126,10 @@ describe("versions subhelp", () => {
 			🫧  List, view, upload and deploy Versions of your Worker to Cloudflare
 
 			COMMANDS
-			  wrangler versions view <version-id>         View the details of a specific version of your Worker [beta]
-			  wrangler versions list                      List the 10 most recent Versions of your Worker [beta]
-			  wrangler versions upload                    Uploads your Worker code and config as a new Version [beta]
-			  wrangler versions deploy [version-specs..]  Safely roll out new Versions of your Worker by splitting traffic between multiple Versions [beta]
+			  wrangler versions view <version-id>         View the details of a specific version of your Worker [open-beta]
+			  wrangler versions list                      List the 10 most recent Versions of your Worker [open-beta]
+			  wrangler versions upload                    Uploads your Worker code and config as a new Version [open-beta]
+			  wrangler versions deploy [version-specs..]  Safely roll out new Versions of your Worker by splitting traffic between multiple Versions [open-beta]
 			  wrangler versions secret                    Generate a secret that can be referenced in a Worker
 
 			GLOBAL FLAGS
@@ -152,10 +152,10 @@ describe("versions subhelp", () => {
 			🫧  List, view, upload and deploy Versions of your Worker to Cloudflare
 
 			COMMANDS
-			  wrangler versions view <version-id>         View the details of a specific version of your Worker [beta]
-			  wrangler versions list                      List the 10 most recent Versions of your Worker [beta]
-			  wrangler versions upload                    Uploads your Worker code and config as a new Version [beta]
-			  wrangler versions deploy [version-specs..]  Safely roll out new Versions of your Worker by splitting traffic between multiple Versions [beta]
+			  wrangler versions view <version-id>         View the details of a specific version of your Worker [open-beta]
+			  wrangler versions list                      List the 10 most recent Versions of your Worker [open-beta]
+			  wrangler versions upload                    Uploads your Worker code and config as a new Version [open-beta]
+			  wrangler versions deploy [version-specs..]  Safely roll out new Versions of your Worker by splitting traffic between multiple Versions [open-beta]
 			  wrangler versions secret                    Generate a secret that can be referenced in a Worker
 
 			GLOBAL FLAGS
@@ -178,10 +178,10 @@ describe("versions subhelp", () => {
 			🫧  List, view, upload and deploy Versions of your Worker to Cloudflare
 
 			COMMANDS
-			  wrangler versions view <version-id>         View the details of a specific version of your Worker [beta]
-			  wrangler versions list                      List the 10 most recent Versions of your Worker [beta]
-			  wrangler versions upload                    Uploads your Worker code and config as a new Version [beta]
-			  wrangler versions deploy [version-specs..]  Safely roll out new Versions of your Worker by splitting traffic between multiple Versions [beta]
+			  wrangler versions view <version-id>         View the details of a specific version of your Worker [open-beta]
+			  wrangler versions list                      List the 10 most recent Versions of your Worker [open-beta]
+			  wrangler versions upload                    Uploads your Worker code and config as a new Version [open-beta]
+			  wrangler versions deploy [version-specs..]  Safely roll out new Versions of your Worker by splitting traffic between multiple Versions [open-beta]
 			  wrangler versions secret                    Generate a secret that can be referenced in a Worker
 
 			GLOBAL FLAGS
@@ -204,10 +204,10 @@ describe("versions subhelp", () => {
 			🫧  List, view, upload and deploy Versions of your Worker to Cloudflare
 
 			COMMANDS
-			  wrangler versions view <version-id>         View the details of a specific version of your Worker [beta]
-			  wrangler versions list                      List the 10 most recent Versions of your Worker [beta]
-			  wrangler versions upload                    Uploads your Worker code and config as a new Version [beta]
-			  wrangler versions deploy [version-specs..]  Safely roll out new Versions of your Worker by splitting traffic between multiple Versions [beta]
+			  wrangler versions view <version-id>         View the details of a specific version of your Worker [open-beta]
+			  wrangler versions list                      List the 10 most recent Versions of your Worker [open-beta]
+			  wrangler versions upload                    Uploads your Worker code and config as a new Version [open-beta]
+			  wrangler versions deploy [version-specs..]  Safely roll out new Versions of your Worker by splitting traffic between multiple Versions [open-beta]
 			  wrangler versions secret                    Generate a secret that can be referenced in a Worker
 
 			GLOBAL FLAGS
