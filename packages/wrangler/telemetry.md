@@ -6,7 +6,7 @@ You can [opt out of sharing telemetry data](#how-can-i-configure-wrangler-teleme
 
 ## Why are we collecting telemetry data?
 
-Telemetry in Wrangler allows us to better identify bugs and gain visibility on usage of features across all users. It also helps us to make data-informed decisions like adding, improving or removing features. We monitor and analyze this data to ensure Wrangler’s consistent growth, stability, usability and developer experience. For instance, if certain errors are hit more frequently, those bug fixes will be prioritized in future releases
+Telemetry in Wrangler allows us to better identify bugs and gain visibility on usage of features across all users. It also helps us to make data-informed decisions like adding, improving or removing features. We monitor and analyze this data to ensure Wrangler’s consistent growth, stability, usability and developer experience. For instance, if certain errors are hit more frequently, those bug fixes will be prioritized in future releases.
 
 ## What telemetry data is Cloudflare collecting?
 
@@ -28,11 +28,11 @@ Cloudflare will receive the IP address associated with your machine and such inf
 
 ## What happens with sensitive data?
 
-Cloudflare takes your privacy seriously and does not collect any sensitive information including: any usernames, raw error logs and stack traces, file names/paths and content of files, and environment variables. Data is never shared with third parties.
+Cloudflare takes your privacy seriously and does not collect any sensitive information including: usernames, raw error logs, stack traces, file names/paths, content of files, and environment variables. Data is never shared with third parties.
 
 ## How can I view analytics data?
 
-To view what is being collected while using Wrangler, provide the environment variable in your command
+To view what is being collected while using Wrangler, provide the following environment variable in your command:
 
 `WRANGLER_LOG=debug`
 
@@ -42,7 +42,7 @@ e.g.
 WRANGLER_LOG=debug npx wrangler deploy
 ```
 
-Analytics source code can be viewed at https://github.com/cloudflare/workers-sdk/tree/main/packages/wrangler/src/metrics. It is run in the background and will not delay project execution. As a result, when necessary (e.g. no internet connection), it will fail quickly and quietly.
+Telemetry source code can be viewed at https://github.com/cloudflare/workers-sdk/tree/main/packages/wrangler/src/metrics. It is run in the background and will not delay project execution. As a result, when necessary (e.g. no internet connection), it will fail quickly and quietly.
 
 ## How can I configure Wrangler telemetry?
 
@@ -52,7 +52,7 @@ If you would like to disable telemetry, you can run:
 npx wrangler telemetry disable
 ```
 
-You may also configure telemetry on a per project basis by adding the following filed to your project’s wrangler.toml:
+You may also configure telemetry on a per project basis by adding the following field to your project’s wrangler.toml:
 
 `send_metrics=false`
 
