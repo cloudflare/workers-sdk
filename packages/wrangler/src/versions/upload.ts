@@ -286,7 +286,6 @@ export const versionsUploadCommand = createCommand({
 		},
 	},
 	behaviour: {
-		printConfigWarnings: false,
 		provideConfig: false,
 	},
 	handler: async function versionsUploadHandler(args) {
