@@ -207,7 +207,7 @@ export function buildRawWorker({
 		checkFetch: local && checkFetch,
 		targetConsumer: local ? "dev" : "deploy",
 		local,
-		projectRoot: resolve(directory),
+		projectRoot: getPagesProjectRoot(),
 		defineNavigatorUserAgent,
 
 		legacyAssets: undefined,
