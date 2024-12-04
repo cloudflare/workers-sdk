@@ -1,5 +1,5 @@
 {
-	"extends": "../typescript-config/base.json",
+	"extends": "@vite-plugin-cloudflare/typescript-config/base.json",
 	"include": ["src"],
 	"exclude": ["src/runner", "src/assets"]
 }
