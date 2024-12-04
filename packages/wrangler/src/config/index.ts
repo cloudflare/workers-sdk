@@ -1,4 +1,5 @@
 import fs from "node:fs";
+import path from "node:path";
 import TOML from "@iarna/toml";
 import dotenv from "dotenv";
 import { FatalError, UserError } from "../errors";
@@ -10,6 +11,7 @@ import { isPagesConfig, normalizeAndValidateConfig } from "./validation";
 import { validatePagesConfig } from "./validation-pages";
 import type { CommonYargsOptions } from "../yargs-types";
 import type { Config, OnlyCamelCase, RawConfig } from "./config";
+import type { ResolveConfigPathOptions } from "./config-helpers";
 import type { NormalizeAndValidateConfigArgs } from "./validation";
 
 export type {
@@ -62,9 +64,13 @@ export function formatConfigSnippet(
 	}
 }
 
-type ReadConfigCommandArgs = NormalizeAndValidateConfigArgs & {
+export type ReadConfigCommandArgs = NormalizeAndValidateConfigArgs & {
 	config?: string;
 	script?: string;
+};
+
+export type ReadConfigOptions = ResolveConfigPathOptions & {
+	hideWarnings?: boolean;
 };
 
 /**
@@ -72,13 +78,9 @@ type ReadConfigCommandArgs = NormalizeAndValidateConfigArgs & {
  */
 export function readConfig(
 	args: ReadConfigCommandArgs,
-	options?: { hideWarnings?: boolean }
-): Config;
-export function readConfig(
-	args: ReadConfigCommandArgs,
-	{ hideWarnings = false }: { hideWarnings?: boolean } = {}
+	options: ReadConfigOptions = {}
 ): Config {
-	const { rawConfig, configPath } = experimental_readRawConfig(args);
+	const { rawConfig, configPath } = experimental_readRawConfig(args, options);
 
 	const { config, diagnostics } = normalizeAndValidateConfig(
 		rawConfig,
@@ -86,7 +88,7 @@ export function readConfig(
 		args
 	);
 
-	if (diagnostics.hasWarnings() && !hideWarnings) {
+	if (diagnostics.hasWarnings() && !options?.hideWarnings) {
 		logger.warn(diagnostics.renderWarnings());
 	}
 	if (diagnostics.hasErrors()) {
@@ -98,12 +100,12 @@ export function readConfig(
 
 export function readPagesConfig(
 	args: ReadConfigCommandArgs,
-	{ hideWarnings = false }: { hideWarnings?: boolean } = {}
+	options: ReadConfigOptions = {}
 ): Omit<Config, "pages_build_output_dir"> & { pages_build_output_dir: string } {
 	let rawConfig: RawConfig;
 	let configPath: string | undefined;
 	try {
-		({ rawConfig, configPath } = experimental_readRawConfig(args));
+		({ rawConfig, configPath } = experimental_readRawConfig(args, options));
 	} catch (e) {
 		logger.error(e);
 		throw new FatalError(
@@ -125,7 +127,7 @@ export function readPagesConfig(
 		args
 	);
 
-	if (diagnostics.hasWarnings() && !hideWarnings) {
+	if (diagnostics.hasWarnings() && !options.hideWarnings) {
 		logger.warn(diagnostics.renderWarnings());
 	}
 	if (diagnostics.hasErrors()) {
@@ -153,10 +155,11 @@ export function readPagesConfig(
 }
 
 export const experimental_readRawConfig = (
-	args: ReadConfigCommandArgs
+	args: ReadConfigCommandArgs,
+	options: ReadConfigOptions = {}
 ): { rawConfig: RawConfig; configPath: string | undefined } => {
 	// Load the configuration from disk if available
-	const configPath = resolveWranglerConfigPath(args);
+	const configPath = resolveWranglerConfigPath(args, options);
 	let rawConfig: RawConfig = {};
 	if (configPath?.endsWith("toml")) {
 		rawConfig = parseTOML(readFileSync(configPath), configPath);
@@ -182,29 +185,32 @@ export interface DotEnv {
 	parsed: dotenv.DotenvParseOutput;
 }
 
-function tryLoadDotEnv(path: string): DotEnv | undefined {
+function tryLoadDotEnv(basePath: string): DotEnv | undefined {
 	try {
-		const parsed = dotenv.parse(fs.readFileSync(path));
-		return { path, parsed };
+		const parsed = dotenv.parse(fs.readFileSync(basePath));
+		return { path: basePath, parsed };
 	} catch (e) {
 		if ((e as { code: string }).code === "ENOENT") {
 			logger.debug(
-				`.env file not found at "${path}". Continuing... For more details, refer to https://developers.cloudflare.com/workers/wrangler/system-environment-variables/`
+				`.env file not found at "${path.relative(".", basePath)}". Continuing... For more details, refer to https://developers.cloudflare.com/workers/wrangler/system-environment-variables/`
 			);
 		} else {
-			logger.debug(`Failed to load .env file "${path}":`, e);
+			logger.debug(
+				`Failed to load .env file "${path.relative(".", basePath)}":`,
+				e
+			);
 		}
 	}
 }
 
 /**
- * Loads a dotenv file from <path>, preferring to read <path>.<environment> if
- * <environment> is defined and that file exists.
+ * Loads a dotenv file from `envPath`, preferring to read `${envPath}.${env}` if
+ * `env` is defined and that file exists.
  */
-export function loadDotEnv(path: string, env?: string): DotEnv | undefined {
+export function loadDotEnv(envPath: string, env?: string): DotEnv | undefined {
 	if (env === undefined) {
-		return tryLoadDotEnv(path);
+		return tryLoadDotEnv(envPath);
 	} else {
-		return tryLoadDotEnv(`${path}.${env}`) ?? tryLoadDotEnv(path);
+		return tryLoadDotEnv(`${envPath}.${env}`) ?? tryLoadDotEnv(envPath);
 	}
 }
