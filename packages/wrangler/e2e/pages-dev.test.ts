@@ -456,7 +456,7 @@ describe.each([{ cmd: "wrangler pages dev" }])("Pages $cmd", ({ cmd }) => {
 	});
 
 	describe("watch mode", () => {
-		it.only("should modify worker during dev session (Functions)", async () => {
+		it("should modify worker during dev session (Functions)", async () => {
 			const helper = new WranglerE2ETestHelper();
 
 			await helper.seed({
