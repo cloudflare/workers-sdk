@@ -139,9 +139,18 @@ import { loginCommand, logoutCommand, whoamiCommand } from "./user/commands";
 import { whoami } from "./user/whoami";
 import { debugLogFilepath } from "./utils/log-file";
 import { vectorize } from "./vectorize/index";
-import registerVersionsSubcommands from "./versions";
+import { versionsNamespace } from "./versions";
+import { versionsDeployCommand } from "./versions/deploy";
 import registerVersionsDeploymentsSubcommands from "./versions/deployments";
+import { versionsListCommand } from "./versions/list";
 import registerVersionsRollbackCommand from "./versions/rollback";
+import { versionsSecretNamespace } from "./versions/secrets";
+import { versionsSecretBulkCommand } from "./versions/secrets/bulk";
+import { versionsSecretDeleteCommand } from "./versions/secrets/delete";
+import { versionsSecretsListCommand } from "./versions/secrets/list";
+import { versionsSecretPutCommand } from "./versions/secrets/put";
+import { versionsUploadCommand } from "./versions/upload";
+import { versionsViewCommand } from "./versions/view";
 import { workflowsInstanceNamespace, workflowsNamespace } from "./workflows";
 import { workflowsDeleteCommand } from "./workflows/commands/delete";
 import { workflowsDescribeCommand } from "./workflows/commands/describe";
@@ -546,13 +555,49 @@ export function createCLIParser(argv: string[]) {
 
 	// versions
 	if (experimentalGradualRollouts) {
-		wrangler.command(
-			"versions",
-			"🫧  List, view, upload and deploy Versions of your Worker to Cloudflare",
-			(yargs) => {
-				return registerVersionsSubcommands(yargs.command(subHelp), subHelp);
-			}
-		);
+		registry.define([
+			{
+				command: "wrangler versions",
+				definition: versionsNamespace,
+			},
+			{
+				command: "wrangler versions view",
+				definition: versionsViewCommand,
+			},
+			{
+				command: "wrangler versions list",
+				definition: versionsListCommand,
+			},
+			{
+				command: "wrangler versions upload",
+				definition: versionsUploadCommand,
+			},
+			{
+				command: "wrangler versions deploy",
+				definition: versionsDeployCommand,
+			},
+			{
+				command: "wrangler versions secret",
+				definition: versionsSecretNamespace,
+			},
+			{
+				command: "wrangler versions secret put",
+				definition: versionsSecretPutCommand,
+			},
+			{
+				command: "wrangler versions secret bulk",
+				definition: versionsSecretBulkCommand,
+			},
+			{
+				command: "wrangler versions secret delete",
+				definition: versionsSecretDeleteCommand,
+			},
+			{
+				command: "wrangler versions secret list",
+				definition: versionsSecretsListCommand,
+			},
+		]);
+		registry.registerNamespace("versions");
 	}
 
 	// triggers
