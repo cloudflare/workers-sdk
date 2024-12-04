@@ -3,7 +3,6 @@ import { readdirSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import globToRegExp from "glob-to-regexp";
-import { exports as resolveExports } from "resolve.exports";
 import { UserError } from "../errors";
 import { logger } from "../logger";
 import {
