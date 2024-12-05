@@ -31,7 +31,7 @@ export const updateWranglerToml = async (ctx: C3Context) => {
 		}
 	} else {
 		newToml.prepend(
-			`compatibility_date = "${await getWorkerdCompatibilityDate()}"\n`
+			`compatibility_date = "${await getWorkerdCompatibilityDate()}"\n`,
 		);
 	}
 
