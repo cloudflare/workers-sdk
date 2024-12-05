@@ -63,10 +63,10 @@ export const Handler = async (args: PagesBuildEnvArgs) => {
 				// eslint-disable-next-line turbo/no-undeclared-env-vars
 				env: process.env.PAGES_ENVIRONMENT,
 			},
-			true
+			{ requirePagesConfig: true }
 		);
 	} catch (err) {
-		// found `wrangler.toml` but `pages_build_output_dir` is not specififed
+		// found `wrangler.toml` but `pages_build_output_dir` is not specified
 		if (
 			err instanceof FatalError &&
 			err.code === EXIT_CODE_INVALID_PAGES_CONFIG

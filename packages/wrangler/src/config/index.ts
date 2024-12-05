@@ -1,8 +1,10 @@
 import fs from "node:fs";
+import path from "node:path";
 import TOML from "@iarna/toml";
 import chalk from "chalk";
 import dotenv from "dotenv";
 import { findUpSync } from "find-up";
+import dedent from "ts-dedent";
 import { FatalError, UserError } from "../errors";
 import { getFlag } from "../experimental-flags";
 import { logger } from "../logger";
@@ -75,26 +77,36 @@ export function readConfig(
 	configPath: string | undefined,
 	// Include command specific args as well as the wrangler global flags
 	args: ReadConfigCommandArgs,
-	requirePagesConfig: true
+	options: { requirePagesConfig: true }
 ): Omit<Config, "pages_build_output_dir"> & { pages_build_output_dir: string };
 export function readConfig(
 	configPath: string | undefined,
 	// Include command specific args as well as the wrangler global flags
 	args: ReadConfigCommandArgs,
-	requirePagesConfig?: boolean,
-	hideWarnings?: boolean
+	options?: {
+		requirePagesConfig?: boolean;
+		hideWarnings?: boolean;
+		useRedirect?: boolean;
+	}
 ): Config;
 export function readConfig(
 	configPath: string | undefined,
 	// Include command specific args as well as the wrangler global flags
 	args: ReadConfigCommandArgs,
-	requirePagesConfig?: boolean,
-	hideWarnings: boolean = false
+	{
+		requirePagesConfig = false,
+		hideWarnings = false,
+		useRedirect = false,
+	}: {
+		requirePagesConfig?: boolean;
+		hideWarnings?: boolean;
+		useRedirect?: boolean;
+	} = {}
 ): Config {
 	let rawConfig: RawConfig = {};
 
 	if (!configPath) {
-		configPath = findWranglerConfig(process.cwd());
+		configPath = findWranglerConfig(process.cwd(), { useRedirect });
 	}
 
 	try {
@@ -200,16 +212,98 @@ function applyPythonConfig(config: Config, args: ReadConfigCommandArgs) {
 
 /**
  * Find the wrangler config file by searching up the file-system
- * from the current working directory.
+ * from the given current working directory (`cwd`).
+ *
+ * If `useRedirect` is true then we will try to find a deploy config
+ * and then redirect to a different config file if found.
  */
 export function findWranglerConfig(
-	referencePath: string = process.cwd()
+	cwd: string,
+	{ useRedirect = false } = {}
 ): string | undefined {
-	return (
-		findUpSync(`wrangler.json`, { cwd: referencePath }) ??
-		findUpSync(`wrangler.jsonc`, { cwd: referencePath }) ??
-		findUpSync(`wrangler.toml`, { cwd: referencePath })
-	);
+	const userConfigPath =
+		findUpSync(`wrangler.json`, { cwd }) ??
+		findUpSync(`wrangler.jsonc`, { cwd }) ??
+		findUpSync(`wrangler.toml`, { cwd });
+
+	return useRedirect
+		? findRedirectedWranglerConfig(cwd, userConfigPath)
+		: userConfigPath;
+}
+
+/**
+ * Check whether there is a config file that indicates
+ * @param cwd
+ * @param userConfigPath
+ * @returns
+ */
+function findRedirectedWranglerConfig(
+	cwd: string,
+	userConfigPath: string | undefined
+) {
+	const PATH_TO_DEPLOY_CONFIG = ".wrangler/deploy/config.json";
+	const deployConfigPath = findUpSync(PATH_TO_DEPLOY_CONFIG, { cwd });
+	if (deployConfigPath === undefined) {
+		return userConfigPath;
+	}
+
+	let redirectedConfigPath: string | undefined;
+	const deployConfigFile = readFileSync(deployConfigPath);
+	try {
+		const deployConfig: { configPath?: string } = parseJSONC(
+			deployConfigFile,
+			deployConfigPath
+		);
+		redirectedConfigPath =
+			deployConfig.configPath &&
+			path.resolve(path.dirname(deployConfigPath), deployConfig.configPath);
+	} catch (e) {
+		throw new UserError(
+			dedent`
+				Failed to load the deploy config at ${path.relative(".", deployConfigPath)}
+			`,
+			{ cause: e }
+		);
+	}
+	if (!redirectedConfigPath) {
+		throw new UserError(dedent`
+			A redirect config was found at "${path.relative(".", deployConfigPath)}".
+			But this is not valid - the required "configPath" property was not found.
+			Instead this file contains:
+			\`\`\`
+			${deployConfigFile}
+			\`\`\`
+		`);
+	}
+
+	if (redirectedConfigPath) {
+		if (!fs.existsSync(redirectedConfigPath)) {
+			throw new UserError(dedent`
+				There is a redirect configuration at "${path.relative(".", deployConfigPath)}".
+				But the config path it points to, "${path.relative(".", redirectedConfigPath)}", does not exist.
+			`);
+		}
+		if (userConfigPath) {
+			if (
+				path.join(path.dirname(userConfigPath), PATH_TO_DEPLOY_CONFIG) !==
+				deployConfigPath
+			) {
+				throw new UserError(dedent`
+					Found both a user config file at "${path.relative(".", userConfigPath)}"
+					and a redirect config file at "${path.relative(".", deployConfigPath)}".
+					But these do not share the same base path so it is not clear which should be used.
+				`);
+			}
+		}
+
+		logger.warn(dedent`
+			Using redirected Wrangler configuration.
+			Redirected config path: "${path.relative(".", redirectedConfigPath)}"
+			Deploy config path: "${path.relative(".", deployConfigPath)}"
+			Original config path: "${userConfigPath ? path.relative(".", userConfigPath) : "<no user config found>"}"
+		`);
+		return redirectedConfigPath;
+	}
 }
 
 function addLocalSuffix(
@@ -686,10 +780,11 @@ export function printBindings(
 export function withConfig<T>(
 	handler: (
 		t: OnlyCamelCase<T & CommonYargsOptions> & { config: Config }
-	) => Promise<void>
+	) => Promise<void>,
+	options?: Parameters<typeof readConfig>[2]
 ) {
 	return (t: OnlyCamelCase<T & CommonYargsOptions>) => {
-		return handler({ ...t, config: readConfig(t.config, t) });
+		return handler({ ...t, config: readConfig(t.config, t, options) });
 	};
 }
 
@@ -698,29 +793,32 @@ export interface DotEnv {
 	parsed: dotenv.DotenvParseOutput;
 }
 
-function tryLoadDotEnv(path: string): DotEnv | undefined {
+function tryLoadDotEnv(basePath: string): DotEnv | undefined {
 	try {
-		const parsed = dotenv.parse(fs.readFileSync(path));
-		return { path, parsed };
+		const parsed = dotenv.parse(fs.readFileSync(basePath));
+		return { path: basePath, parsed };
 	} catch (e) {
 		if ((e as { code: string }).code === "ENOENT") {
 			logger.debug(
-				`.env file not found at "${path}". Continuing... For more details, refer to https://developers.cloudflare.com/workers/wrangler/system-environment-variables/`
+				`.env file not found at "${path.relative(".", basePath)}". Continuing... For more details, refer to https://developers.cloudflare.com/workers/wrangler/system-environment-variables/`
 			);
 		} else {
-			logger.debug(`Failed to load .env file "${path}":`, e);
+			logger.debug(
+				`Failed to load .env file "${path.relative(".", basePath)}":`,
+				e
+			);
 		}
 	}
 }
 
 /**
- * Loads a dotenv file from <path>, preferring to read <path>.<environment> if
- * <environment> is defined and that file exists.
+ * Loads a dotenv file from `envPath`, preferring to read `${envPath}.${env}` if
+ * `env` is defined and that file exists.
  */
-export function loadDotEnv(path: string, env?: string): DotEnv | undefined {
+export function loadDotEnv(envPath: string, env?: string): DotEnv | undefined {
 	if (env === undefined) {
-		return tryLoadDotEnv(path);
+		return tryLoadDotEnv(envPath);
 	} else {
-		return tryLoadDotEnv(`${path}.${env}`) ?? tryLoadDotEnv(path);
+		return tryLoadDotEnv(`${envPath}.${env}`) ?? tryLoadDotEnv(envPath);
 	}
 }

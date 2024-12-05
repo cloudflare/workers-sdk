@@ -160,7 +160,11 @@ export async function deploy({
 	let config: Config | undefined;
 
 	try {
-		config = readConfig(undefined, { ...args, env }, true);
+		config = readConfig(
+			undefined,
+			{ ...args, env },
+			{ requirePagesConfig: true }
+		);
 	} catch (err) {
 		if (
 			!(

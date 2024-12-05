@@ -49,7 +49,11 @@ async function pagesProject(
 		 * return the top-level config. This contains all the information we
 		 * need.
 		 */
-		config = readConfig(configPath, { env: undefined }, true);
+		config = readConfig(
+			configPath,
+			{ env: undefined },
+			{ requirePagesConfig: true }
+		);
 	} catch (err) {
 		if (
 			!(

@@ -9,6 +9,7 @@ import { logger } from "../../logger";
 import { parseJSON, readFileSync } from "../../parse";
 import { validateJSONFileSecrets } from "../../secret";
 import { requireAuth } from "../../user";
+import { getConfig } from "../utils/config";
 import { copyWorkerVersionWithNewSecrets } from "./index";
 import type { WorkerVersion } from "./index";
 
@@ -17,6 +18,9 @@ export const versionsSecretBulkCommand = createCommand({
 		description: "Create or update a secret variable for a Worker",
 		owner: "Workers: Authoring and Testing",
 		status: "stable",
+	},
+	behaviour: {
+		provideConfig: false,
 	},
 	args: {
 		json: {
@@ -40,7 +44,8 @@ export const versionsSecretBulkCommand = createCommand({
 		},
 	},
 	positionalArgs: ["json"],
-	handler: async function versionsSecretPutBulkHandler(args, { config }) {
+	handler: async function versionsSecretPutBulkHandler(args) {
+		const config = getConfig(args, { hideWarnings: true });
 		const scriptName = getLegacyScriptName(args, config);
 		if (!scriptName) {
 			throw new UserError(

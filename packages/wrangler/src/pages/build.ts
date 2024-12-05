@@ -366,7 +366,7 @@ async function maybeReadPagesConfig(
 				// eslint-disable-next-line turbo/no-undeclared-env-vars
 				env: process.env.PAGES_ENVIRONMENT,
 			},
-			true
+			{ requirePagesConfig: true }
 		);
 
 		return {
