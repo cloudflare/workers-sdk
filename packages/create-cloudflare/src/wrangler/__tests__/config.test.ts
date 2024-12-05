@@ -1,11 +1,11 @@
 import { existsSync } from "fs";
+import TOML from "@iarna/toml";
 import { mockWorkersTypesDirectory } from "helpers/__tests__/mocks";
 import { getWorkerdCompatibilityDate } from "helpers/compatDate";
 import { readFile, writeFile } from "helpers/files";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { createTestContext } from "../../__tests__/helpers";
 import { updateWranglerToml } from "../config";
-import TOML from "@iarna/toml";
 
 vi.mock("helpers/files");
 vi.mock("helpers/compatDate");
