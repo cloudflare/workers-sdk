@@ -80,9 +80,9 @@ describe("updateWranglerToml", () => {
 		await updateWranglerToml(ctx);
 
 		const newToml = vi.mocked(writeFile).mock.calls[0][1];
-		expect(newToml).toMatch(`name = "${ctx.project.name}"`);
-		expect(newToml).toMatch(`main = "src/index.ts"`);
-		expect(newToml).toMatch(`compatibility_date = "${mockCompatDate}"`);
+		expect(newToml).toBe(`name = "${ctx.project.name}"
+compatibility_date = "${mockCompatDate}"
+main = "src/index.ts"`);
 	});
 
 	test("dont replace valid existing compatibility date", async () => {
