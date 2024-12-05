@@ -4,7 +4,7 @@ import os from "os";
 import path from "path";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { unstable_dev } from "wrangler";
-import type { UnstableDevWorker } from "wrangler";
+import type { Unstable_DevWorker } from "wrangler";
 
 function removeUUID(str: string) {
 	return str.replace(
@@ -14,8 +14,8 @@ function removeUUID(str: string) {
 }
 
 describe("Preview Worker", () => {
-	let worker: UnstableDevWorker;
-	let remote: UnstableDevWorker;
+	let worker: Unstable_DevWorker;
+	let remote: Unstable_DevWorker;
 	let tmpDir: string;
 
 	beforeAll(async () => {
@@ -301,8 +301,8 @@ compatibility_date = "2023-01-01"
 });
 
 describe("Raw HTTP preview", () => {
-	let worker: UnstableDevWorker;
-	let remote: UnstableDevWorker;
+	let worker: Unstable_DevWorker;
+	let remote: Unstable_DevWorker;
 	let tmpDir: string;
 
 	beforeAll(async () => {

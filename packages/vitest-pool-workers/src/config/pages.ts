@@ -1,5 +1,5 @@
 import type { Request, Response } from "miniflare";
-import type { UnstableASSETSBindingsOptions } from "wrangler";
+import type { Unstable_ASSETSBindingsOptions } from "wrangler";
 
 export async function buildPagesASSETSBinding(
 	assetsPath: string
@@ -17,6 +17,6 @@ export async function buildPagesASSETSBinding(
 		debugWithSanitization: console.debug,
 		loggerLevel: "info",
 		columns: process.stdout.columns,
-	} as unknown as UnstableASSETSBindingsOptions["log"];
+	} as unknown as Unstable_ASSETSBindingsOptions["log"];
 	return unstable_generateASSETSBinding({ log, directory: assetsPath });
 }
