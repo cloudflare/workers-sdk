@@ -19,6 +19,8 @@ type Data = {
 	metalId?: number;
 	// double4 - Colo tier (e.g. tier 1, tier 2, tier 3)
 	coloTier?: number;
+	// double5 - Run user worker ahead of assets
+	userWorkerAhead?: boolean;
 
 	// -- Blobs --
 	// blob1 - Hostname of the request
@@ -63,6 +65,9 @@ export class Analytics {
 				this.data.coloId ?? -1, // double2
 				this.data.metalId ?? -1, // double3
 				this.data.coloTier ?? -1, // double4
+				this.data.userWorkerAhead === undefined // double5
+					? -1
+					: Number(this.data.userWorkerAhead),
 			],
 			blobs: [
 				this.data.hostname?.substring(0, 256), // blob1 - trim to 256 bytes
