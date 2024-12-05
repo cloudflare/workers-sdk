@@ -2,6 +2,7 @@ import type { fetchResult } from "../cfetch";
 import type { Config } from "../config";
 import type { OnlyCamelCase } from "../config/config";
 import type { FatalError, UserError } from "../errors";
+import type { ExperimentalFlags } from "../experimental-flags";
 import type { Logger } from "../logger";
 import type { CommonYargsOptions, RemoveIndex } from "../yargs-types";
 import type { Teams } from "./teams";
@@ -106,6 +107,15 @@ export type CommandDefinition<
 		 * Set this value to `false` to skip this.
 		 */
 		provideConfig?: boolean;
+
+		/**
+		 * By default, wrangler will provide experimental flags in the handler context,
+		 * according to the default values in register-yargs.command.ts
+		 * Use this to override those defaults per command.
+		 */
+		overrideExperimentalFlags?: (
+			args: HandlerArgs<NamedArgDefs>
+		) => ExperimentalFlags;
 	};
 
 	/**
