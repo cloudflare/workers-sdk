@@ -10,7 +10,7 @@
 		"test:ci": "vitest run"
 	},
 	"devDependencies": {
-		"@cloudflare/eslint-config-worker": "*",
+		"@cloudflare/eslint-config-worker": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-types": "^3.0.0",
 		"wrangler": "workspace:*"

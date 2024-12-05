@@ -46,7 +46,7 @@
 		"@babel/types": "^7.21.4",
 		"@clack/prompts": "^0.6.3",
 		"@cloudflare/cli": "workspace:*",
-		"@cloudflare/eslint-config-worker": "*",
+		"@cloudflare/eslint-config-worker": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-types": "^4.20230419.0",
 		"@types/command-exists": "^1.2.0",
