@@ -1,11 +1,12 @@
 import { fetchResult } from "../../cfetch";
-import { configFileName, readConfig } from "../../config";
+import { configFileName } from "../../config";
 import { createCommand } from "../../core/create-command";
 import { UserError } from "../../errors";
 import { getLegacyScriptName } from "../../index";
 import { logger } from "../../logger";
 import { requireAuth } from "../../user";
 import { fetchDeploymentVersions, fetchLatestDeployment } from "../api";
+import { getConfig } from "../utils/config";
 import type { VersionDetails } from ".";
 import type { ApiVersion, VersionCache } from "../types";
 
@@ -14,6 +15,9 @@ export const versionsSecretsListCommand = createCommand({
 		description: "List the secrets currently deployed",
 		owner: "Workers: Authoring and Testing",
 		status: "stable",
+	},
+	behaviour: {
+		provideConfig: false,
 	},
 	args: {
 		name: {
@@ -28,7 +32,7 @@ export const versionsSecretsListCommand = createCommand({
 		},
 	},
 	handler: async function versionsSecretListHandler(args) {
-		const config = readConfig(args.config, args, false, true);
+		const config = getConfig(args, { hideWarnings: true });
 
 		const scriptName = getLegacyScriptName(args, config);
 		if (!scriptName) {

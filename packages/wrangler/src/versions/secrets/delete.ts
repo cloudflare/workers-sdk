@@ -6,6 +6,7 @@ import { UserError } from "../../errors";
 import { getLegacyScriptName, isLegacyEnv } from "../../index";
 import { logger } from "../../logger";
 import { requireAuth } from "../../user";
+import { getConfig } from "../utils/config";
 import { copyWorkerVersionWithNewSecrets } from "./index";
 import type { VersionDetails, WorkerVersion } from "./index";
 
@@ -14,6 +15,9 @@ export const versionsSecretDeleteCommand = createCommand({
 		description: "Delete a secret variable from a Worker",
 		owner: "Workers: Authoring and Testing",
 		status: "stable",
+	},
+	behaviour: {
+		provideConfig: false,
 	},
 	args: {
 		key: {
@@ -38,7 +42,8 @@ export const versionsSecretDeleteCommand = createCommand({
 		},
 	},
 	positionalArgs: ["key"],
-	handler: async function versionsSecretDeleteHandler(args, { config }) {
+	handler: async function versionsSecretDeleteHandler(args) {
+		const config = getConfig(args, { hideWarnings: true });
 		const scriptName = getLegacyScriptName(args, config);
 		if (!scriptName) {
 			throw new UserError(

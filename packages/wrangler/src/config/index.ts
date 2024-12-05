@@ -75,21 +75,22 @@ export function readConfig(
 	configPath: string | undefined,
 	// Include command specific args as well as the wrangler global flags
 	args: ReadConfigCommandArgs,
-	requirePagesConfig: true
+	options: { requirePagesConfig: true }
 ): Omit<Config, "pages_build_output_dir"> & { pages_build_output_dir: string };
 export function readConfig(
 	configPath: string | undefined,
 	// Include command specific args as well as the wrangler global flags
 	args: ReadConfigCommandArgs,
-	requirePagesConfig?: boolean,
-	hideWarnings?: boolean
+	options?: { requirePagesConfig?: boolean; hideWarnings?: boolean }
 ): Config;
 export function readConfig(
 	configPath: string | undefined,
 	// Include command specific args as well as the wrangler global flags
 	args: ReadConfigCommandArgs,
-	requirePagesConfig?: boolean,
-	hideWarnings: boolean = false
+	{
+		requirePagesConfig,
+		hideWarnings = false,
+	}: { requirePagesConfig?: boolean; hideWarnings?: boolean } = {}
 ): Config {
 	let rawConfig: RawConfig = {};
 
@@ -686,10 +687,11 @@ export function printBindings(
 export function withConfig<T>(
 	handler: (
 		t: OnlyCamelCase<T & CommonYargsOptions> & { config: Config }
-	) => Promise<void>
+	) => Promise<void>,
+	options?: Parameters<typeof readConfig>[2]
 ) {
 	return (t: OnlyCamelCase<T & CommonYargsOptions>) => {
-		return handler({ ...t, config: readConfig(t.config, t) });
+		return handler({ ...t, config: readConfig(t.config, t, options) });
 	};
 }
 
