@@ -287,7 +287,7 @@ export const versionsUploadCommand = createCommand({
 	handler: async function versionsUploadHandler(args) {
 		const config = getConfig(args, {}, args.script);
 		const entry = await getEntry(args, config, "versions upload");
-		await metrics.sendMetricsEvent(
+		metrics.sendMetricsEvent(
 			"upload worker version",
 			{
 				usesTypeScript: /\.tsx?$/.test(entry.file),
