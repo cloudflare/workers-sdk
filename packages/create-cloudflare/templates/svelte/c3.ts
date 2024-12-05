@@ -1,3 +1,4 @@
+import { existsSync } from "node:fs";
 import { platform } from "node:os";
 import { logRaw, updateStatus } from "@cloudflare/cli";
 import { blue, brandColor, dim } from "@cloudflare/cli/colors";
@@ -9,7 +10,6 @@ import { installPackages } from "helpers/packages";
 import * as recast from "recast";
 import type { TemplateConfig } from "../../src/templates";
 import type { C3Context, PackageJson } from "types";
-import { existsSync } from "node:fs";
 
 const { npm } = detectPackageManager();
 
@@ -60,8 +60,8 @@ const updatePlaywrightConfig = (shouldUseTypescript: boolean) => {
 	updateStatus(`Changing webServer port in ${blue(filePath)}`);
 
 	transformFile(filePath, {
-		visitObjectExpression: function(n) {
-			const portProp = n.node.properties.find(prop => {
+		visitObjectExpression: function (n) {
+			const portProp = n.node.properties.find((prop) => {
 				if (!("key" in prop) || !("name" in prop.key)) {
 					return false;
 				}
@@ -75,7 +75,7 @@ const updatePlaywrightConfig = (shouldUseTypescript: boolean) => {
 
 			portProp.value.value = 8788;
 			return false;
-		}
+		},
 	});
 };
 
