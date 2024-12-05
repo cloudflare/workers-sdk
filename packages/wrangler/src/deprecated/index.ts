@@ -36,7 +36,6 @@ export async function buildHandler(buildArgs: BuildArgs) {
 		"--outdir=dist",
 		...(buildArgs.env ? ["--env", buildArgs.env] : []),
 		...(buildArgs.config ? ["--config", buildArgs.config] : []),
-		...(buildArgs.experimentalVersions ? ["--experimental-versions"] : []),
 	]).parse();
 }
 

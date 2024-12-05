@@ -131,7 +131,7 @@ describe("rollback", () => {
 		});
 
 		await runWrangler(
-			"rollback --name script-name --version-id rollback-version --x-versions"
+			"rollback --name script-name --version-id rollback-version"
 		);
 
 		// Unable to test stdout as the output has weird whitespace. Causing lint to fail with "no-irregular-whitespace"
@@ -188,7 +188,7 @@ describe("rollback", () => {
 		});
 
 		await runWrangler(
-			"rollback --name script-name --version-id rollback-version --x-versions"
+			"rollback --name script-name --version-id rollback-version"
 		);
 
 		// Unable to test stdout as the output has weird whitespace. Causing lint to fail with "no-irregular-whitespace"
@@ -228,7 +228,7 @@ describe("rollback", () => {
 		mockPostDeployment(true);
 
 		await runWrangler(
-			"rollback --name script-name --version-id rollback-version --x-versions"
+			"rollback --name script-name --version-id rollback-version"
 		);
 
 		// Unable to test stdout as the output has weird whitespace. Causing lint to fail with "no-irregular-whitespace"

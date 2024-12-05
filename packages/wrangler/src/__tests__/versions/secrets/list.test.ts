@@ -101,7 +101,7 @@ describe("versions secret list", () => {
 		mockGetDeployments();
 		mockGetVersion("version-id-1");
 
-		await runWrangler("versions secret list --name script-name --x-versions");
+		await runWrangler("versions secret list --name script-name");
 
 		expect(std.out).toMatchInlineSnapshot(`
 			"-- Version version-id-1 (100%) secrets --
@@ -118,7 +118,7 @@ describe("versions secret list", () => {
 		mockGetVersion("version-id-1");
 		mockGetVersion("version-id-2");
 
-		await runWrangler("versions secret list --name script-name --x-versions");
+		await runWrangler("versions secret list --name script-name");
 
 		expect(std.out).toMatchInlineSnapshot(`
 			"-- Version version-id-1 (50%) secrets --
@@ -141,7 +141,7 @@ describe("versions secret list", () => {
 		mockGetDeployments();
 		mockGetVersion("version-id-1");
 
-		await runWrangler("versions secret list --x-versions");
+		await runWrangler("versions secret list");
 
 		expect(std.out).toMatchInlineSnapshot(`
 			"-- Version version-id-1 (100%) secrets --
@@ -245,7 +245,7 @@ describe("versions secret list", () => {
 		mockGetDeployments();
 		mockGetVersion("version-id-1");
 
-		await runWrangler("versions secret list --latest-version --x-versions");
+		await runWrangler("versions secret list --latest-version");
 
 		expect(std.out).toMatchInlineSnapshot(`
 			"-- Version version-id-3 (0%) secrets --
@@ -262,7 +262,7 @@ describe("versions secret list", () => {
 		mockGetDeployments();
 		mockGetVersion("version-id-1");
 
-		await runWrangler("versions secret list --name script-name --x-versions");
+		await runWrangler("versions secret list --name script-name");
 
 		expect(std.warn).toMatchInlineSnapshot(`""`);
 		expect(std.err).toMatchInlineSnapshot(`""`);
