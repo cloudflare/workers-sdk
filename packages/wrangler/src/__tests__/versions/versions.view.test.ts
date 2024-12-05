@@ -18,9 +18,7 @@ describe("versions view", () => {
 		beforeEach(() => msw.use(mswGetVersion()));
 
 		test("fails with no args", async () => {
-			const result = runWrangler(
-				"versions view  --experimental-gradual-rollouts"
-			);
+			const result = runWrangler("versions view");
 
 			await expect(result).rejects.toMatchInlineSnapshot(
 				`[Error: Not enough non-option arguments: got 0, need at least 1]`
@@ -32,9 +30,7 @@ describe("versions view", () => {
 		});
 
 		test("fails with --name arg only", async () => {
-			const result = runWrangler(
-				"versions view --name test-name  --experimental-gradual-rollouts"
-			);
+			const result = runWrangler("versions view --name test-name");
 
 			await expect(result).rejects.toMatchInlineSnapshot(
 				`[Error: Not enough non-option arguments: got 0, need at least 1]`
@@ -47,7 +43,7 @@ describe("versions view", () => {
 
 		test("fails with positional version-id arg only", async () => {
 			const result = runWrangler(
-				"versions view 10000000-0000-0000-0000-000000000000  --experimental-gradual-rollouts"
+				"versions view 10000000-0000-0000-0000-000000000000"
 			);
 
 			await expect(result).rejects.toMatchInlineSnapshot(
@@ -61,7 +57,7 @@ describe("versions view", () => {
 
 		test("succeeds with positional version-id arg and --name arg", async () => {
 			const result = runWrangler(
-				"versions view 10000000-0000-0000-0000-000000000000 --name test-name  --experimental-gradual-rollouts"
+				"versions view 10000000-0000-0000-0000-000000000000 --name test-name"
 			);
 
 			await expect(result).resolves.toBeUndefined();
@@ -94,7 +90,7 @@ describe("versions view", () => {
 
 		test("prints version to stdout as --json", async () => {
 			const result = runWrangler(
-				"versions view 10000000-0000-0000-0000-000000000000 --name test-name --json  --experimental-versions"
+				"versions view 10000000-0000-0000-0000-000000000000 --name test-name --json"
 			);
 
 			await expect(result).resolves.toBeUndefined();
@@ -159,9 +155,7 @@ describe("versions view", () => {
 		});
 
 		test("fails with no args", async () => {
-			const result = runWrangler(
-				"versions view  --experimental-gradual-rollouts"
-			);
+			const result = runWrangler("versions view");
 
 			await expect(result).rejects.toMatchInlineSnapshot(
 				`[Error: Not enough non-option arguments: got 0, need at least 1]`
@@ -174,7 +168,7 @@ describe("versions view", () => {
 
 		test("succeeds with positional version-id arg only", async () => {
 			const result = runWrangler(
-				"versions view 10000000-0000-0000-0000-000000000000  --experimental-gradual-rollouts"
+				"versions view 10000000-0000-0000-0000-000000000000"
 			);
 
 			await expect(result).resolves.toBeUndefined();
@@ -207,7 +201,7 @@ describe("versions view", () => {
 
 		test("fails with non-existent version-id", async () => {
 			const result = runWrangler(
-				"versions view ffffffff-ffff-ffff-ffff-ffffffffffff  --experimental-gradual-rollouts"
+				"versions view ffffffff-ffff-ffff-ffff-ffffffffffff"
 			);
 
 			await expect(result).rejects.toMatchInlineSnapshot(
@@ -221,7 +215,7 @@ describe("versions view", () => {
 
 		test("prints version to stdout as --json", async () => {
 			const result = runWrangler(
-				"versions view 10000000-0000-0000-0000-000000000000 --json  --experimental-versions"
+				"versions view 10000000-0000-0000-0000-000000000000 --json"
 			);
 
 			await expect(result).resolves.toBeUndefined();
@@ -308,7 +302,7 @@ describe("versions view", () => {
 			);
 
 			const result = runWrangler(
-				"versions view 10000000-0000-0000-0000-000000000000 --name test --experimental-versions"
+				"versions view 10000000-0000-0000-0000-000000000000 --name test"
 			);
 
 			await expect(result).resolves.toBeUndefined();
@@ -355,7 +349,7 @@ describe("versions view", () => {
 			);
 
 			const result = runWrangler(
-				"versions view 10000000-0000-0000-0000-000000000000 --name test --experimental-versions"
+				"versions view 10000000-0000-0000-0000-000000000000 --name test"
 			);
 
 			await expect(result).resolves.toBeUndefined();
@@ -404,7 +398,7 @@ describe("versions view", () => {
 			);
 
 			const result = runWrangler(
-				"versions view 10000000-0000-0000-0000-000000000000 --name test --experimental-versions"
+				"versions view 10000000-0000-0000-0000-000000000000 --name test"
 			);
 
 			await expect(result).resolves.toBeUndefined();
@@ -457,7 +451,7 @@ describe("versions view", () => {
 			);
 
 			const result = runWrangler(
-				"versions view 10000000-0000-0000-0000-000000000000 --name test --experimental-versions"
+				"versions view 10000000-0000-0000-0000-000000000000 --name test"
 			);
 
 			await expect(result).resolves.toBeUndefined();
@@ -513,7 +507,7 @@ describe("versions view", () => {
 			);
 
 			const result = runWrangler(
-				"versions view 10000000-0000-0000-0000-000000000000 --name test --experimental-versions"
+				"versions view 10000000-0000-0000-0000-000000000000 --name test"
 			);
 
 			await expect(result).resolves.toBeUndefined();
@@ -645,7 +639,7 @@ describe("versions view", () => {
 			);
 
 			const result = runWrangler(
-				"versions view 10000000-0000-0000-0000-000000000000 --name test --experimental-versions"
+				"versions view 10000000-0000-0000-0000-000000000000 --name test"
 			);
 
 			await expect(result).resolves.toBeUndefined();

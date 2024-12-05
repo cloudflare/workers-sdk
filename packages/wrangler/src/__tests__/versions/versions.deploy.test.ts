@@ -89,7 +89,7 @@ describe("versions deploy", () => {
 	describe("without wrangler.toml", () => {
 		test("succeeds with --name arg", async () => {
 			const result = runWrangler(
-				"versions deploy 10000000-0000-0000-0000-000000000000 --name named-worker --yes --experimental-gradual-rollouts"
+				"versions deploy 10000000-0000-0000-0000-000000000000 --name named-worker --yes"
 			);
 
 			await expect(result).resolves.toMatchInlineSnapshot(`undefined`);
@@ -140,7 +140,7 @@ describe("versions deploy", () => {
 
 		test("fails without --name arg", async () => {
 			const result = runWrangler(
-				"versions deploy 10000000-0000-0000-0000-000000000000 --yes --experimental-gradual-rollouts"
+				"versions deploy 10000000-0000-0000-0000-000000000000 --yes"
 			);
 
 			await expect(result).rejects.toMatchInlineSnapshot(
@@ -153,9 +153,7 @@ describe("versions deploy", () => {
 		beforeEach(() => writeWranglerConfig());
 
 		test("no args", async () => {
-			const result = runWrangler(
-				"versions deploy --yes --experimental-gradual-rollouts"
-			);
+			const result = runWrangler("versions deploy --yes");
 
 			await expect(result).rejects.toMatchInlineSnapshot(
 				`[Error: You must select at least 1 version to deploy.]`
@@ -188,7 +186,7 @@ describe("versions deploy", () => {
 
 		test("1 version @ (implicit) 100%", async () => {
 			const result = runWrangler(
-				"versions deploy 10000000-0000-0000-0000-000000000000 --yes --experimental-gradual-rollouts"
+				"versions deploy 10000000-0000-0000-0000-000000000000 --yes"
 			);
 
 			await expect(result).resolves.toBeUndefined();
@@ -235,7 +233,7 @@ describe("versions deploy", () => {
 
 		test("1 version @ (explicit) 100%", async () => {
 			const result = runWrangler(
-				"versions deploy 10000000-0000-0000-0000-000000000000@100% --yes --experimental-gradual-rollouts"
+				"versions deploy 10000000-0000-0000-0000-000000000000@100% --yes"
 			);
 
 			await expect(result).resolves.toBeUndefined();
@@ -282,7 +280,7 @@ describe("versions deploy", () => {
 
 		test("2 versions @ (implicit) 50% each", async () => {
 			const result = runWrangler(
-				"versions deploy 10000000-0000-0000-0000-000000000000 20000000-0000-0000-0000-000000000000 --yes --experimental-gradual-rollouts"
+				"versions deploy 10000000-0000-0000-0000-000000000000 20000000-0000-0000-0000-000000000000 --yes"
 			);
 
 			await expect(result).resolves.toBeUndefined();
@@ -337,7 +335,7 @@ describe("versions deploy", () => {
 
 		test("1 version @ (explicit) 100%", async () => {
 			const result = runWrangler(
-				"versions deploy 10000000-0000-0000-0000-000000000000@100% --yes --experimental-gradual-rollouts"
+				"versions deploy 10000000-0000-0000-0000-000000000000@100% --yes"
 			);
 
 			await expect(result).resolves.toBeUndefined();
@@ -384,7 +382,7 @@ describe("versions deploy", () => {
 
 		test("2 versions @ (explicit) 30% + (implicit) 70%", async () => {
 			const result = runWrangler(
-				"versions deploy 10000000-0000-0000-0000-000000000000@30% 20000000-0000-0000-0000-000000000000 --yes --experimental-gradual-rollouts"
+				"versions deploy 10000000-0000-0000-0000-000000000000@30% 20000000-0000-0000-0000-000000000000 --yes"
 			);
 
 			await expect(result).resolves.toBeUndefined();
@@ -439,7 +437,7 @@ describe("versions deploy", () => {
 
 		test("2 versions @ (explicit) 40% + (explicit) 60%", async () => {
 			const result = runWrangler(
-				"versions deploy 10000000-0000-0000-0000-000000000000@40% 20000000-0000-0000-0000-000000000000@60% --yes --experimental-gradual-rollouts"
+				"versions deploy 10000000-0000-0000-0000-000000000000@40% 20000000-0000-0000-0000-000000000000@60% --yes"
 			);
 
 			await expect(result).resolves.toBeUndefined();
@@ -495,7 +493,7 @@ describe("versions deploy", () => {
 		describe("max versions restrictions (temp)", () => {
 			test("2+ versions fails", async () => {
 				const result = runWrangler(
-					"versions deploy 10000000-0000-0000-0000-000000000000 20000000-0000-0000-0000-000000000000 30000000-0000-0000-0000-000000000000 --yes --experimental-gradual-rollouts"
+					"versions deploy 10000000-0000-0000-0000-000000000000 20000000-0000-0000-0000-000000000000 30000000-0000-0000-0000-000000000000 --yes"
 				);
 
 				await expect(result).rejects.toMatchInlineSnapshot(
@@ -544,7 +542,7 @@ describe("versions deploy", () => {
 
 			test("--max-versions allows > 2 versions", async () => {
 				const result = runWrangler(
-					"versions deploy 10000000-0000-0000-0000-000000000000 20000000-0000-0000-0000-000000000000 30000000-0000-0000-0000-000000000000 --max-versions=3 --yes --experimental-gradual-rollouts"
+					"versions deploy 10000000-0000-0000-0000-000000000000 20000000-0000-0000-0000-000000000000 30000000-0000-0000-0000-000000000000 --max-versions=3 --yes"
 				);
 
 				await expect(result).resolves.toBeUndefined();
@@ -610,7 +608,7 @@ describe("versions deploy", () => {
 
 		test("with a message", async () => {
 			const result = runWrangler(
-				"versions deploy 10000000-0000-0000-0000-000000000000 --message 'My versioned deployment message' --yes --experimental-gradual-rollouts"
+				"versions deploy 10000000-0000-0000-0000-000000000000 --message 'My versioned deployment message' --yes"
 			);
 
 			await expect(result).resolves.toBeUndefined();
@@ -662,7 +660,7 @@ describe("versions deploy", () => {
 			});
 
 			const result = runWrangler(
-				"versions deploy 10000000-0000-0000-0000-000000000000 --yes --experimental-gradual-rollouts"
+				"versions deploy 10000000-0000-0000-0000-000000000000 --yes"
 			);
 
 			await expect(result).resolves.toBeUndefined();
@@ -720,7 +718,7 @@ describe("versions deploy", () => {
 			});
 
 			const result = runWrangler(
-				"versions deploy 10000000-0000-0000-0000-000000000000 --yes --experimental-gradual-rollouts"
+				"versions deploy 10000000-0000-0000-0000-000000000000 --yes"
 			);
 
 			await expect(result).resolves.toBeUndefined();
@@ -785,7 +783,7 @@ describe("versions deploy", () => {
 			});
 
 			const result = runWrangler(
-				"versions deploy 10000000-0000-0000-0000-000000000000 --yes --experimental-gradual-rollouts"
+				"versions deploy 10000000-0000-0000-0000-000000000000 --yes"
 			);
 
 			await expect(result).resolves.toBeUndefined();
@@ -840,7 +838,7 @@ describe("versions deploy", () => {
 
 		test("fails for non-existent versionId", async () => {
 			const result = runWrangler(
-				"versions deploy ffffffff-ffff-ffff-ffff-ffffffffffff --yes --experimental-gradual-rollouts"
+				"versions deploy ffffffff-ffff-ffff-ffff-ffffffffffff --yes"
 			);
 
 			// TODO: could do with a better error message but this will suffice for now (this error isn't possible in the interactive flow)
@@ -872,7 +870,7 @@ describe("versions deploy", () => {
 
 		test("fails if --percentage > 100", async () => {
 			const result = runWrangler(
-				"versions deploy 10000000-0000-0000-0000-000000000000 --percentage 101 --yes --experimental-gradual-rollouts"
+				"versions deploy 10000000-0000-0000-0000-000000000000 --percentage 101 --yes"
 			);
 
 			await expect(result).rejects.toMatchInlineSnapshot(
@@ -884,7 +882,7 @@ describe("versions deploy", () => {
 
 		test("fails if --percentage < 0", async () => {
 			const result = runWrangler(
-				"versions deploy 10000000-0000-0000-0000-000000000000 --percentage -1 --yes --experimental-gradual-rollouts"
+				"versions deploy 10000000-0000-0000-0000-000000000000 --percentage -1 --yes"
 			);
 
 			await expect(result).rejects.toMatchInlineSnapshot(
@@ -896,7 +894,7 @@ describe("versions deploy", () => {
 
 		test("fails if version-spec percentage > 100", async () => {
 			const result = runWrangler(
-				"versions deploy 10000000-0000-0000-0000-000000000000 --percentage 101 --yes --experimental-gradual-rollouts"
+				"versions deploy 10000000-0000-0000-0000-000000000000 --percentage 101 --yes"
 			);
 
 			await expect(result).rejects.toMatchInlineSnapshot(
@@ -908,7 +906,7 @@ describe("versions deploy", () => {
 
 		test("fails if version-spec percentage < 0", async () => {
 			const result = runWrangler(
-				"versions deploy 10000000-0000-0000-0000-000000000000 --percentage -1 --yes --experimental-gradual-rollouts"
+				"versions deploy 10000000-0000-0000-0000-000000000000 --percentage -1 --yes"
 			);
 
 			await expect(result).rejects.toMatchInlineSnapshot(

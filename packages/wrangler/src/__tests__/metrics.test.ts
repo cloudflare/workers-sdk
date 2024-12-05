@@ -187,14 +187,8 @@ describe("metrics", () => {
 				configFileType: "toml",
 				isCI: false,
 				isInteractive: true,
-				argsUsed: [
-					"j",
-					"search",
-					"xGradualRollouts",
-					"xJsonConfig",
-					"xVersions",
-				],
-				argsCombination: "j, search, xGradualRollouts, xJsonConfig, xVersions",
+				argsUsed: ["j", "search", "xJsonConfig"],
+				argsCombination: "j, search, xJsonConfig",
 				command: "wrangler docs",
 				args: {
 					xJsonConfig: true,

@@ -78,7 +78,7 @@ describe("deployments", () => {
 			it("should log deployments", async () => {
 				writeWranglerConfig();
 
-				await runWrangler("deployments list --no-x-versions");
+				await runWrangler("deployments list");
 				expect(std.out).toMatchInlineSnapshot(`
 					"
 					Version ID:    Constitution-Class-tag:test-name
@@ -108,9 +108,7 @@ describe("deployments", () => {
 			});
 
 			it("should log deployments for script with passed in name option", async () => {
-				await runWrangler(
-					"deployments list --name something-else --no-x-versions"
-				);
+				await runWrangler("deployments list --name something-else");
 				expect(std.out).toMatchInlineSnapshot(`
 					"
 					Version ID:    Constitution-Class-tag:something-else
@@ -141,7 +139,7 @@ describe("deployments", () => {
 
 			it("should error on missing script name", async () => {
 				await expect(
-					runWrangler("deployments list --no-x-versions")
+					runWrangler("deployments list")
 				).rejects.toMatchInlineSnapshot(
 					`[Error: Required Worker name missing. Please specify the Worker name in your Wrangler configuration file, or pass it as an argument with \`--name\`]`
 				);
@@ -149,7 +147,7 @@ describe("deployments", () => {
 		});
 
 		describe("deployment view", () => {
-			it("should error with no --no-x-versions flag", async () => {
+			it("should error with no flag", async () => {
 				writeWranglerConfig();
 
 				await expect(
@@ -162,7 +160,7 @@ describe("deployments", () => {
 			it("should log deployment details", async () => {
 				writeWranglerConfig();
 
-				await runWrangler("deployments view 1701-E --no-x-versions");
+				await runWrangler("deployments view 1701-E");
 
 				expect(std.out).toMatchInlineSnapshot(`
 					"
@@ -183,7 +181,7 @@ describe("deployments", () => {
 			it("should log deployment details with bindings", async () => {
 				writeWranglerConfig();
 
-				await runWrangler("deployments view bindings-tag --no-x-versions");
+				await runWrangler("deployments view bindings-tag");
 
 				expect(std.out).toMatchInlineSnapshot(`
 					"
@@ -207,7 +205,7 @@ describe("deployments", () => {
 			it("should automatically log latest deployment details", async () => {
 				writeWranglerConfig();
 
-				await runWrangler("deployments view --no-x-versions");
+				await runWrangler("deployments view");
 
 				expect(std.out).toMatchInlineSnapshot(`
 					"
@@ -284,9 +282,7 @@ describe("deployments", () => {
 				});
 
 				writeWranglerConfig();
-				await runWrangler(
-					"rollback 3mEgaU1T-Intrepid-someThing-tag:test-name --no-x-versions"
-				);
+				await runWrangler("rollback 3mEgaU1T-Intrepid-someThing-tag:test-name");
 				expect(std.out).toMatchInlineSnapshot(`
 					"
 					Successfully rolled back to Deployment ID: 3mEgaU1T-Intrepid-someThing-tag:test-name
@@ -303,9 +299,7 @@ describe("deployments", () => {
 				});
 
 				writeWranglerConfig();
-				await runWrangler(
-					"rollback 3mEgaU1T-Intrpid-someThing-tag:test-name --no-x-versions"
-				);
+				await runWrangler("rollback 3mEgaU1T-Intrpid-someThing-tag:test-name");
 				expect(std.out).toMatchInlineSnapshot(`""`);
 
 				expect(requests.count).toEqual(0);
@@ -315,9 +309,7 @@ describe("deployments", () => {
 				setIsTTY(false);
 
 				writeWranglerConfig();
-				await runWrangler(
-					"rollback 3mEgaU1T-Intrepid-someThing-tag:test-name --no-x-versions"
-				);
+				await runWrangler("rollback 3mEgaU1T-Intrepid-someThing-tag:test-name");
 				expect(std.out).toMatchInlineSnapshot(`
 					"? This deployment 3mEgaU1T will immediately replace the current deployment and become the active deployment across all your deployed routes and domains. However, your local development environment will not be affected by this rollback. Note: Rolling back to a previous deployment will not rollback any of the bound resources (Durable Object, D1, R2, KV, etc).
 					🤖 Using fallback value in non-interactive context: yes
@@ -334,7 +326,7 @@ describe("deployments", () => {
 			it("should skip prompt automatically in rollback if message flag is provided", async () => {
 				writeWranglerConfig();
 				await runWrangler(
-					`rollback 3mEgaU1T-Intrepid-someThing-tag:test-name --message "test" --no-x-versions`
+					`rollback 3mEgaU1T-Intrepid-someThing-tag:test-name --message "test"`
 				);
 				expect(std.out).toMatchInlineSnapshot(`
 					"
@@ -348,7 +340,7 @@ describe("deployments", () => {
 			it("should skip prompt automatically in rollback with empty message", async () => {
 				writeWranglerConfig();
 				await runWrangler(
-					`rollback 3mEgaU1T-Intrepid-someThing-tag:test-name --message "test" --no-x-versions`
+					`rollback 3mEgaU1T-Intrepid-someThing-tag:test-name --message "test"`
 				);
 				expect(std.out).toMatchInlineSnapshot(`
 					"
@@ -371,7 +363,7 @@ describe("deployments", () => {
 				});
 
 				writeWranglerConfig();
-				await runWrangler("rollback --no-x-versions");
+				await runWrangler("rollback");
 				expect(std.out).toMatchInlineSnapshot(`
 					"
 					Successfully rolled back to Deployment ID: 3mEgaU1T-Intrepid-someThing-tag:test-name
@@ -400,7 +392,7 @@ describe("deployments", () => {
 					result: "",
 				});
 
-				await runWrangler("rollback --name something-else --no-x-versions");
+				await runWrangler("rollback --name something-else");
 				expect(std.out).toMatchInlineSnapshot(`
 					"
 					Successfully rolled back to Deployment ID: 3mEgaU1T-Intrepid-someThing-tag:something-else

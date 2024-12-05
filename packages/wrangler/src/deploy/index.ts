@@ -379,7 +379,6 @@ async function deployWorker(args: DeployArgs) {
 		oldAssetTtl: args.oldAssetTtl,
 		projectRoot,
 		dispatchNamespace: args.dispatchNamespace,
-		experimentalVersions: args.experimentalVersions,
 	});
 
 	writeOutput({

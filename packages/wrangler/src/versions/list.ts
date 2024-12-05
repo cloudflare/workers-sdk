@@ -13,7 +13,7 @@ export const versionsListCommand = createCommand({
 	metadata: {
 		description: "List the 10 most recent Versions of your Worker",
 		owner: "Workers: Authoring and Testing",
-		status: "open-beta",
+		status: "stable",
 	},
 	args: {
 		name: {

@@ -106,7 +106,6 @@ type Props = {
 	oldAssetTtl: number | undefined;
 	projectRoot: string | undefined;
 	dispatchNamespace: string | undefined;
-	experimentalVersions: boolean | undefined;
 };
 
 export type RouteObject = ZoneIdRoute | ZoneNameRoute | CustomDomainRoute;
@@ -761,7 +760,6 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		}
 
 		// We can use the new versions/deployments APIs if we:
-		// * have --x-versions enabled (default, but can be disabled with --no-x-versions)
 		// * are uploading a worker that already exists
 		// * aren't a dispatch namespace deploy
 		// * aren't a service env deploy
@@ -769,7 +767,6 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		// * we don't have DO migrations
 		// * we aren't an fpw
 		const canUseNewVersionsDeploymentsApi =
-			props.experimentalVersions &&
 			workerExists &&
 			props.dispatchNamespace === undefined &&
 			prod &&

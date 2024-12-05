@@ -218,7 +218,6 @@ export async function unstable_dev(
 		logLevel: options?.logLevel ?? defaultLogLevel,
 		port: options?.port ?? 0,
 		experimentalProvision: undefined,
-		experimentalVersions: undefined,
 		experimentalDevEnv: undefined,
 		experimentalRegistry: fileBasedRegistry,
 		experimentalVectorizeBindToProd: vectorizeBindToProd ?? false,

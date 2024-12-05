@@ -86,7 +86,7 @@ describe("versions upload", () => {
 		writeWorkerSource();
 		setIsTTY(false);
 
-		const result = runWrangler("versions upload --x-versions");
+		const result = runWrangler("versions upload");
 
 		await expect(result).resolves.toBeUndefined();
 
@@ -124,7 +124,7 @@ describe("versions upload", () => {
 		writeWorkerSource();
 		setIsTTY(false);
 
-		const result = runWrangler("versions upload --x-versions");
+		const result = runWrangler("versions upload");
 
 		await expect(result).resolves.toBeUndefined();
 
@@ -156,7 +156,7 @@ describe("versions upload", () => {
 		writeWorkerSource();
 		setIsTTY(false);
 
-		const result = runWrangler("versions upload --x-versions");
+		const result = runWrangler("versions upload");
 
 		await expect(result).resolves.toBeUndefined();
 

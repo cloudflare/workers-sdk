@@ -57,7 +57,6 @@ export async function generateHandler(args: GenerateArgs) {
 			type: undefined,
 			_: args._,
 			$0: args.$0,
-			experimentalVersions: args.experimentalVersions,
 			experimentalProvision: args.experimentalProvision,
 		});
 	}
