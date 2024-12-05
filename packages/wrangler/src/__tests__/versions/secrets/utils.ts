@@ -82,8 +82,12 @@ export function mockGetVersion(versionInfo?: VersionDetails) {
 function mockGetVersionContent() {
 	msw.use(
 		http.get(
-			`*/accounts/:accountId/workers/scripts/:scriptName/content/v2?version=ce15c78b-cc43-4f60-b5a9-15ce4f298c2a`,
-			async ({ params }) => {
+			`*/accounts/:accountId/workers/scripts/:scriptName/content/v2`,
+			async ({ params, request }) => {
+				const url = new URL(request.url);
+				expect(url.searchParams.get("version")).toEqual(
+					"ce15c78b-cc43-4f60-b5a9-15ce4f298c2a"
+				);
 				expect(params.accountId).toEqual("some-account-id");
 				expect(params.scriptName).toEqual("script-name");
 

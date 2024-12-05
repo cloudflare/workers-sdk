@@ -1,13 +1,11 @@
-import path from "path";
+import path from "node:path";
 import { findWranglerConfig, readConfig } from "../../config";
 
-export function getConfig<
-	T extends {
-		name?: string;
-		config?: string;
-	},
->(args: Pick<T, "config" | "name">) {
+type Args = Parameters<typeof readConfig>[1] & { config?: string };
+type Options = Parameters<typeof readConfig>[2];
+
+export function getConfig(args: Args, options?: Options, entryPath?: string) {
 	const configPath =
-		args.config || (args.name && findWranglerConfig(path.dirname(args.name)));
-	return readConfig(configPath, args);
+		args.config || (entryPath && findWranglerConfig(path.dirname(entryPath)));
+	return readConfig(configPath, args, options);
 }

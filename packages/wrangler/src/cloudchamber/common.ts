@@ -105,10 +105,7 @@ export function handleFailure<
 ) => Promise<void> {
 	return async (t) => {
 		try {
-			const config = readConfig(
-				t.config,
-				t as unknown as Parameters<typeof readConfig>[1]
-			);
+			const config = readConfig(t.config, t);
 			await fillOpenAPIConfiguration(config, t.json);
 			await cb(t, config);
 		} catch (err) {

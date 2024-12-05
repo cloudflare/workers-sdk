@@ -8,13 +8,7 @@ import {
 	validateAssetsArgsAndConfig,
 } from "../assets";
 import { fetchResult } from "../cfetch";
-import {
-	configFileName,
-	findWranglerConfig,
-	formatConfigSnippet,
-	printBindings,
-	readConfig,
-} from "../config";
+import { configFileName, formatConfigSnippet, printBindings } from "../config";
 import { createCommand } from "../core/create-command";
 import { getBindings } from "../deployment-bundle/bindings";
 import { bundleWorker } from "../deployment-bundle/bundle";
@@ -57,6 +51,7 @@ import {
 import { requireAuth } from "../user";
 import { collectKeyValues } from "../utils/collectKeyValues";
 import { retryOnError } from "../utils/retry";
+import { getConfig } from "./utils/config";
 import type { AssetsOptions } from "../assets";
 import type { Config } from "../config";
 import type { Rule } from "../config/environment";
@@ -290,10 +285,7 @@ export const versionsUploadCommand = createCommand({
 		provideConfig: false,
 	},
 	handler: async function versionsUploadHandler(args) {
-		const configPath =
-			args.config ||
-			(args.script && findWranglerConfig(path.dirname(args.script)));
-		const config = readConfig(configPath, args);
+		const config = getConfig(args, {}, args.script);
 		const entry = await getEntry(args, config, "versions upload");
 		await metrics.sendMetricsEvent(
 			"upload worker version",
