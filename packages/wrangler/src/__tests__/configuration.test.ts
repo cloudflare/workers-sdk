@@ -317,7 +317,8 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(normalizeString(result.diagnostics.renderErrors()))
 					.toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - Hyphens (-) should be used rather than en-dashes (—) or em-dashes (–) in the \\"compatibility_date\\" field."
+					  - \\"compatibility_date\\" field should use hyphens (-) rather than en-dashes (—) or em-dashes (–).
+					  - \\"compatibility_date\\" field should be a valid ISO-8601 date (YYYY-MM-DD), but got \\"2024–10-01\\"."
 				`);
 
 				expectedConfig = {
@@ -335,7 +336,8 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(normalizeString(result.diagnostics.renderErrors()))
 					.toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - Hyphens (-) should be used rather than en-dashes (—) or em-dashes (–) in the \\"compatibility_date\\" field."
+					  - \\"compatibility_date\\" field should use hyphens (-) rather than en-dashes (—) or em-dashes (–).
+					  - \\"compatibility_date\\" field should be a valid ISO-8601 date (YYYY-MM-DD), but got \\"2024—10-01\\"."
 				`);
 			});
 
@@ -356,7 +358,7 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(normalizeString(diagnostics.renderErrors()))
 					.toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - \\"compatibility_date\\" should be a valid ISO-8601 date (YYYY-MM-DD), but got \\"abc\\"."
+					  - \\"compatibility_date\\" field should be a valid ISO-8601 date (YYYY-MM-DD), but got \\"abc\\"."
 				`);
 			});
 		});

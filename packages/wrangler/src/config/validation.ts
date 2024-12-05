@@ -3217,24 +3217,28 @@ const validateCompatibilityDate: ValidatorFn = (diagnostics, field, value) => {
 		return false;
 	}
 
+	let isValid = true;
+
 	if (
 		value.includes("–") || // en-dash
 		value.includes("—") // em-dash
 	) {
+		isValid = false;
+
 		diagnostics.errors.push(
-			`Hyphens (-) should be used rather than en-dashes (—) or em-dashes (–) in the "${field}" field.`
+			`"${field}" field should use hyphens (-) rather than en-dashes (—) or em-dashes (–).`
 		);
-		return false;
 	}
 
 	if (!isValidDate(value)) {
+		isValid = false;
+
 		diagnostics.errors.push(
-			`"${field}" should be a valid ISO-8601 date (YYYY-MM-DD), but got ${JSON.stringify(value)}.`
+			`"${field}" field should be a valid ISO-8601 date (YYYY-MM-DD), but got ${JSON.stringify(value)}.`
 		);
-		return false;
 	}
 
-	return true;
+	return isValid;
 };
 
 const validatePipelineBinding: ValidatorFn = (diagnostics, field, value) => {
