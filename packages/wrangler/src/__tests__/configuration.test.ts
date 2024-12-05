@@ -300,12 +300,12 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasErrors()).toBe(false);
 			});
 
-			it("should error for en-dashes and em-dashes", () => {
-				let expectedConfig: RawConfig = {
-					compatibility_date: "2024–10-01", // en-dash
+			it("should error for en-dashes", () => {
+				const expectedConfig: RawConfig = {
+					compatibility_date: "2024–10–01", // en-dash
 				};
 
-				let result = normalizeAndValidateConfig(expectedConfig, undefined, {
+				const result = normalizeAndValidateConfig(expectedConfig, undefined, {
 					env: undefined,
 				});
 
@@ -315,15 +315,17 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(normalizeString(result.diagnostics.renderErrors()))
 					.toMatchInlineSnapshot(`
-					"Processing wrangler configuration:
-					  - Hyphens (-) should be used rather than en-dashes (—) or em-dashes (–) in the \\"compatibility_date\\" field."
-				`);
+						"Processing wrangler configuration:
+						  - \\"compatibility_date\\" field should use ISO-8601 accepted hyphens (-) rather than en-dashes (–) or em-dashes (—)."
+					`);
+			});
 
-				expectedConfig = {
-					compatibility_date: "2024—10-01", // em-dash
+			it("should error for em-dashes", () => {
+				const expectedConfig = {
+					compatibility_date: "2024—10—01", // em-dash
 				};
 
-				result = normalizeAndValidateConfig(expectedConfig, undefined, {
+				const result = normalizeAndValidateConfig(expectedConfig, undefined, {
 					env: undefined,
 				});
 
@@ -333,9 +335,9 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(normalizeString(result.diagnostics.renderErrors()))
 					.toMatchInlineSnapshot(`
-					"Processing wrangler configuration:
-					  - Hyphens (-) should be used rather than en-dashes (—) or em-dashes (–) in the \\"compatibility_date\\" field."
-				`);
+						"Processing wrangler configuration:
+						  - \\"compatibility_date\\" field should use ISO-8601 accepted hyphens (-) rather than en-dashes (–) or em-dashes (—)."
+					`);
 			});
 
 			it("should error for invalid date values", () => {
@@ -355,8 +357,29 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(normalizeString(diagnostics.renderErrors()))
 					.toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - \\"compatibility_date\\" should be a valid ISO-8601 date (YYYY-MM-DD), but got \\"abc\\"."
+					  - \\"compatibility_date\\" field should be a valid ISO-8601 date (YYYY-MM-DD), but got \\"abc\\"."
 				`);
+			});
+
+			it("should error for dates that are both invalid and include en/em dashes", () => {
+				const expectedConfig = {
+					compatibility_date: "2024—100—01", // invalid date + em-dash
+				};
+
+				const result = normalizeAndValidateConfig(expectedConfig, undefined, {
+					env: undefined,
+				});
+
+				expect(result.config).toEqual(expect.objectContaining(expectedConfig));
+				expect(result.diagnostics.hasWarnings()).toBe(false);
+				expect(result.diagnostics.hasErrors()).toBe(true);
+
+				expect(normalizeString(result.diagnostics.renderErrors()))
+					.toMatchInlineSnapshot(`
+						"Processing wrangler configuration:
+						  - \\"compatibility_date\\" field should use ISO-8601 accepted hyphens (-) rather than en-dashes (–) or em-dashes (—).
+						  - \\"compatibility_date\\" field should be a valid ISO-8601 date (YYYY-MM-DD), but got \\"2024—100—01\\"."
+					`);
 			});
 		});
 

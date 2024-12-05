@@ -22,6 +22,7 @@ import {
 	isRequiredProperty,
 	isString,
 	isStringArray,
+	isValidDateTimeStringFormat,
 	isValidName,
 	notInheritable,
 	validateAdditionalProperties,
@@ -3216,11 +3217,6 @@ const validateConsumer: ValidatorFn = (diagnostics, field, value, _config) => {
 	return isValid;
 };
 
-const isValidDate = (value: string): boolean => {
-	const data = new Date(value);
-	return !isNaN(data.getTime());
-};
-
 const validateCompatibilityDate: ValidatorFn = (diagnostics, field, value) => {
 	if (value === undefined) {
 		return true;
@@ -3233,24 +3229,7 @@ const validateCompatibilityDate: ValidatorFn = (diagnostics, field, value) => {
 		return false;
 	}
 
-	if (
-		value.includes("–") || // en-dash
-		value.includes("—") // em-dash
-	) {
-		diagnostics.errors.push(
-			`Hyphens (-) should be used rather than en-dashes (—) or em-dashes (–) in the "${field}" field.`
-		);
-		return false;
-	}
-
-	if (!isValidDate(value)) {
-		diagnostics.errors.push(
-			`"${field}" should be a valid ISO-8601 date (YYYY-MM-DD), but got ${JSON.stringify(value)}.`
-		);
-		return false;
-	}
-
-	return true;
+	return isValidDateTimeStringFormat(diagnostics, field, value);
 };
 
 const validatePipelineBinding: ValidatorFn = (diagnostics, field, value) => {
