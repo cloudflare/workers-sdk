@@ -1875,20 +1875,6 @@ const validateUnsafeSettings =
 			return false;
 		}
 
-		// At least one of bindings and metadata must exist
-		if (
-			!hasProperty(value, "bindings") &&
-			!hasProperty(value, "metadata") &&
-			!hasProperty(value, "capnp")
-		) {
-			diagnostics.errors.push(
-				`The field "${fieldPath}" should contain at least one of "bindings", "metadata" or "capnp" properties but got ${JSON.stringify(
-					value
-				)}.`
-			);
-			return false;
-		}
-
 		// unsafe.bindings
 		if (hasProperty(value, "bindings") && value.bindings !== undefined) {
 			const validateBindingsFn = validateBindingsProperty(
@@ -1974,6 +1960,12 @@ const validateUnsafeSettings =
 				}
 			}
 		}
+
+		validateAdditionalProperties(diagnostics, field, Object.keys(value), [
+			"bindings",
+			"metadata",
+			"capnp",
+		]);
 
 		return true;
 	};

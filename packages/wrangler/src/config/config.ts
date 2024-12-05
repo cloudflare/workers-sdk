@@ -373,10 +373,7 @@ export const defaultWranglerConfig: Config = {
 	cloudchamber: {},
 	send_email: [],
 	browser: undefined,
-	unsafe: {
-		bindings: undefined,
-		metadata: undefined,
-	},
+	unsafe: {},
 	mtls_certificates: [],
 	tail_consumers: undefined,
 	pipelines: [],
