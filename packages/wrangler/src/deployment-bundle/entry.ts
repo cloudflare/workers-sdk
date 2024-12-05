@@ -22,6 +22,8 @@ import type { CfScriptFormat } from "./worker";
 export type Entry = {
 	/** A worker's entrypoint */
 	file: string;
+	/** A worker's directory. Usually where the Wrangler configuration file is located */
+	projectRoot: string;
 	/** Is this a module worker or a service worker? */
 	format: CfScriptFormat;
 	/** The directory that contains all of a `--no-bundle` worker's modules. Usually `${directory}/src`. Defaults to path.dirname(file) */
@@ -51,14 +53,16 @@ export async function getEntry(
 ): Promise<Entry> {
 	const entryPoint = config.site?.["entry-point"];
 
-	let paths: { absolutePath: string; relativePath: string } | undefined;
+	let paths:
+		| { absolutePath: string; relativePath: string; projectRoot?: string }
+		| undefined;
 
 	if (args.script) {
 		paths = resolveEntryWithScript(args.script);
 	} else if (config.main !== undefined) {
-		paths = resolveEntryWithMain(config.main, config.projectRoot);
+		paths = resolveEntryWithMain(config.main, config.configPath);
 	} else if (entryPoint) {
-		paths = resolveEntryWithEntryPoint(entryPoint, config.projectRoot);
+		paths = resolveEntryWithEntryPoint(entryPoint, config.configPath);
 	} else if (
 		args.legacyAssets ||
 		config.legacy_assets ||
@@ -84,9 +88,10 @@ export async function getEntry(
 		config.configPath
 	);
 
+	const projectRoot = paths.projectRoot ?? process.cwd();
 	const { format, exports } = await guessWorkerFormat(
 		paths.absolutePath,
-		config.projectRoot,
+		projectRoot,
 		args.format ?? config.build?.upload?.format,
 		config.tsconfig
 	);
@@ -119,6 +124,7 @@ export async function getEntry(
 
 	return {
 		file: paths.absolutePath,
+		projectRoot,
 		format,
 		moduleRoot:
 			args.moduleRoot ?? config.base_dir ?? path.dirname(paths.absolutePath),

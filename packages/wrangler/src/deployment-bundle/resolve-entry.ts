@@ -12,28 +12,32 @@ export function resolveEntryWithScript(script: string): {
 
 export function resolveEntryWithMain(
 	main: string,
-	projectRoot: string
+	configPath?: string
 ): {
 	absolutePath: string;
 	relativePath: string;
+	projectRoot: string;
 } {
+	const projectRoot = path.resolve(path.dirname(configPath ?? "."));
 	const file = path.resolve(projectRoot, main);
 	const relativePath = path.relative(projectRoot, file) || ".";
-	return { absolutePath: file, relativePath };
+	return { absolutePath: file, relativePath, projectRoot };
 }
 
 export function resolveEntryWithEntryPoint(
 	entryPoint: string,
-	projectRoot: string
+	configPath?: string
 ): {
 	absolutePath: string;
 	relativePath: string;
+	projectRoot: string;
 } {
+	const projectRoot = path.resolve(path.dirname(configPath ?? "."));
 	const file = path.extname(entryPoint)
 		? path.resolve(entryPoint)
 		: path.resolve(entryPoint, "index.js");
 	const relativePath = path.relative(projectRoot, file) || ".";
-	return { absolutePath: file, relativePath };
+	return { absolutePath: file, relativePath, projectRoot };
 }
 
 export function resolveEntryWithAssets(): {

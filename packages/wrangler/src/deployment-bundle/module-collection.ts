@@ -70,7 +70,6 @@ export const noopModuleCollector: ModuleCollector = {
 };
 
 export function createModuleCollector(props: {
-	projectRoot: string;
 	entry: Entry;
 	findAdditionalModules: boolean;
 	rules?: Config["rules"];
@@ -107,11 +106,7 @@ export function createModuleCollector(props: {
 							return { errors: [{ text: error }] };
 						}
 
-						const found = await findAdditionalModules(
-							props.projectRoot,
-							props.entry,
-							parsedRules
-						);
+						const found = await findAdditionalModules(props.entry, parsedRules);
 						foundModulePaths = found.map(({ name }) =>
 							path.resolve(props.entry.moduleRoot, name)
 						);

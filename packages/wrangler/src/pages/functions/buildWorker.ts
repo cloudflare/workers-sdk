@@ -11,7 +11,7 @@ import {
 import { FatalError } from "../../errors";
 import { logBuildFailure, logger } from "../../logger";
 import { getBasePath } from "../../paths";
-import { getPagesTmpDir } from "../utils";
+import { getPagesProjectRoot, getPagesTmpDir } from "../utils";
 import type { BundleResult } from "../../deployment-bundle/bundle";
 import type { Entry } from "../../deployment-bundle/entry";
 import type { CfModule } from "../../deployment-bundle/worker";
@@ -55,12 +55,12 @@ export function buildWorkerFromFunctions({
 }: Options) {
 	const entry: Entry = {
 		file: resolve(getBasePath(), "templates/pages-template-worker.ts"),
+		projectRoot: functionsDirectory,
 		format: "modules",
 		moduleRoot: functionsDirectory,
 		exports: [],
 	};
 	const moduleCollector = createModuleCollector({
-		projectRoot: functionsDirectory,
 		entry,
 		findAdditionalModules: false,
 	});
@@ -90,7 +90,7 @@ export function buildWorkerFromFunctions({
 		checkFetch: local && checkFetch,
 		targetConsumer: local ? "dev" : "deploy",
 		local,
-		projectRoot: functionsDirectory,
+		projectRoot: getPagesProjectRoot(),
 		defineNavigatorUserAgent,
 
 		legacyAssets: undefined,
@@ -151,17 +151,14 @@ export function buildRawWorker({
 }: RawOptions) {
 	const entry: Entry = {
 		file: workerScriptPath,
+		projectRoot: resolve(directory),
 		format: "modules",
 		moduleRoot: resolve(directory),
 		exports: [],
 	};
 	const moduleCollector = externalModules
 		? noopModuleCollector
-		: createModuleCollector({
-				projectRoot: resolve(directory),
-				entry,
-				findAdditionalModules: false,
-			});
+		: createModuleCollector({ entry, findAdditionalModules: false });
 
 	return bundleWorker(entry, outdir ? resolve(outdir) : resolve(outfile), {
 		bundle,
@@ -207,7 +204,7 @@ export function buildRawWorker({
 		checkFetch: local && checkFetch,
 		targetConsumer: local ? "dev" : "deploy",
 		local,
-		projectRoot: resolve(directory),
+		projectRoot: getPagesProjectRoot(),
 		defineNavigatorUserAgent,
 
 		legacyAssets: undefined,
@@ -241,9 +238,9 @@ export async function produceWorkerBundleForWorkerJSDirectory({
 	const entrypoint = resolve(join(workerJSDirectory, "index.js"));
 
 	const additionalModules = await findAdditionalModules(
-		resolve(workerJSDirectory),
 		{
 			file: entrypoint,
+			projectRoot: resolve(workerJSDirectory),
 			format: "modules",
 			moduleRoot: resolve(workerJSDirectory),
 			exports: [],

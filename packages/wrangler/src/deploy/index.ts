@@ -265,6 +265,7 @@ async function deployWorker(args: DeployArgs) {
 	const configPath =
 		args.config ||
 		(args.script && findWranglerConfig(path.dirname(args.script)));
+	const projectRoot = configPath && path.dirname(configPath);
 	const config = readConfig(configPath, args);
 	if (config.pages_build_output_dir) {
 		throw new UserError(
@@ -341,7 +342,7 @@ async function deployWorker(args: DeployArgs) {
 		await verifyWorkerMatchesCITag(
 			accountId,
 			name,
-			path.relative(config.projectRoot, config.configPath ?? "wrangler.toml")
+			path.relative(entry.projectRoot, config.configPath ?? "wrangler.toml")
 		);
 	}
 	const { sourceMapSize, versionId, workerTag, targets } = await deploy({
@@ -376,7 +377,7 @@ async function deployWorker(args: DeployArgs) {
 		logpush: args.logpush,
 		uploadSourceMaps: args.uploadSourceMaps,
 		oldAssetTtl: args.oldAssetTtl,
-		projectRoot: config.projectRoot,
+		projectRoot,
 		dispatchNamespace: args.dispatchNamespace,
 		experimentalVersions: args.experimentalVersions,
 	});
