@@ -45,7 +45,7 @@ export const versionsDeployCommand = createCommand({
 		description:
 			"Safely roll out new Versions of your Worker by splitting traffic between multiple Versions",
 		owner: "Workers: Authoring and Testing",
-		status: "open-beta",
+		status: "stable",
 	},
 	args: {
 		name: {
