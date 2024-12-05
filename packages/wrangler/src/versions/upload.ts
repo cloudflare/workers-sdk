@@ -295,7 +295,7 @@ export const versionsUploadCommand = createCommand({
 			(args.script && findWranglerConfig(path.dirname(args.script)));
 		const config = readConfig(configPath, args);
 		const entry = await getEntry(args, config, "versions upload");
-		await metrics.sendMetricsEvent(
+		metrics.sendMetricsEvent(
 			"upload worker version",
 			{
 				usesTypeScript: /\.tsx?$/.test(entry.file),
