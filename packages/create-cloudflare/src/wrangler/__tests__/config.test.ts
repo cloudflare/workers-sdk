@@ -73,10 +73,9 @@ describe("updateWranglerToml", () => {
 		await updateWranglerToml(ctx);
 
 		const newToml = vi.mocked(writeFile).mock.calls[0][1];
-		expect(newToml).toMatch(`name = "${ctx.project.name}"`);
-		expect(newToml).toMatch(`main = "src/index.ts"`);
 		expect(newToml).toBe(
-			`compatibility_date = "2024-01-17"name = "test"\n` +
+			`compatibility_date = "${mockCompatDate}"\n` +
+				`name = "${ctx.project.name}"\n` +
 				`main = "src/index.ts"`,
 		);
 	});
@@ -88,11 +87,10 @@ describe("updateWranglerToml", () => {
 		await updateWranglerToml(ctx);
 
 		const newToml = vi.mocked(writeFile).mock.calls[0][1];
-		expect(newToml).toMatch(`name = "${ctx.project.name}"`);
-		expect(newToml).toMatch(`main = "src/index.ts"`);
-		expect(newToml).toMatch(`compatibility_date = "${mockCompatDate}"`);
 		expect(newToml).toBe(
-			`name = "test"compatibility_date = "2024-01-17"main = "src/index.ts"`,
+			`name = "${ctx.project.name}"\n` +
+				`compatibility_date = "${mockCompatDate}"\n` +
+				`main = "src/index.ts"`,
 		);
 	});
 
