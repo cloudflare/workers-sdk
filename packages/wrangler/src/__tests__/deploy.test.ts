@@ -5140,6 +5140,36 @@ addEventListener('fetch', event => {});`
 			});
 			await runWrangler("deploy");
 		});
+
+		it("should be able to upload to a WfP script", async () => {
+			const assets = [
+				{ filePath: "file-1.txt", content: "Content of file-1" },
+				{ filePath: "boop/file-2.txt", content: "Content of file-2" },
+			];
+			writeAssets(assets);
+			writeWorkerSource({ format: "js" });
+			writeWranglerConfig({
+				compatibility_date: "2024-09-27",
+				compatibility_flags: ["nodejs_compat"],
+				assets: {
+					directory: "assets",
+					html_handling: "none",
+				},
+			});
+			await mockAUSRequest(undefined, undefined, undefined, "my-namespace");
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedAssets: {
+					jwt: "<<aus-completion-token>>",
+					config: { html_handling: "none" },
+				},
+				expectedCompatibilityDate: "2024-09-27",
+				expectedCompatibilityFlags: ["nodejs_compat"],
+				expectedMainModule: undefined,
+				expectedDispatchNamespace: "my-namespace",
+			});
+			await runWrangler("deploy --dispatch-namespace my-namespace");
+		});
 	});
 
 	describe("workers_dev setting", () => {
@@ -12542,25 +12572,46 @@ function mockPostQueueHTTPConsumer(
 const mockAUSRequest = async (
 	bodies?: AssetManifest[],
 	buckets: string[][] = [[]],
-	jwt: string = "<<aus-completion-token>>"
+	jwt: string = "<<aus-completion-token>>",
+	dispatchNamespace?: string
 ) => {
-	msw.use(
-		http.post<never, AssetManifest>(
-			`*/accounts/some-account-id/workers/scripts/test-name/assets-upload-session`,
-			async ({ request }) => {
-				bodies?.push(await request.json());
-				return HttpResponse.json(
-					{
-						success: true,
-						errors: [],
-						messages: [],
-						result: { jwt, buckets },
-					},
-					{ status: 201 }
-				);
-			}
-		)
-	);
+	if (dispatchNamespace) {
+		msw.use(
+			http.post<never, AssetManifest>(
+				`*/accounts/some-account-id/workers/dispatch/namespaces/my-namespace/scripts/test-name/assets-upload-session`,
+				async ({ request }) => {
+					bodies?.push(await request.json());
+					return HttpResponse.json(
+						{
+							success: true,
+							errors: [],
+							messages: [],
+							result: { jwt, buckets },
+						},
+						{ status: 201 }
+					);
+				}
+			)
+		);
+	} else {
+		msw.use(
+			http.post<never, AssetManifest>(
+				`*/accounts/some-account-id/workers/scripts/test-name/assets-upload-session`,
+				async ({ request }) => {
+					bodies?.push(await request.json());
+					return HttpResponse.json(
+						{
+							success: true,
+							errors: [],
+							messages: [],
+							result: { jwt, buckets },
+						},
+						{ status: 201 }
+					);
+				}
+			)
+		);
+	}
 };
 
 const mockAssetUploadRequest = async (

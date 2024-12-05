@@ -665,7 +665,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		// Upload assets if assets is being used
 		const assetsJwt =
 			props.assetsOptions && !props.dryRun
-				? await syncAssets(accountId, scriptName, props.assetsOptions.directory)
+				? await syncAssets(accountId, props.assetsOptions.directory, scriptName)
 				: undefined;
 
 		const bindings = getBindings({
