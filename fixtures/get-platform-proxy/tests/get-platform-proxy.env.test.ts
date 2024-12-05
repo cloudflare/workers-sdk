@@ -3,7 +3,7 @@ import { D1Database, R2Bucket } from "@cloudflare/workers-types";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { getPlatformProxy } from "./shared";
 import type { Hyperdrive, KVNamespace } from "@cloudflare/workers-types";
-import type { UnstableDevWorker } from "wrangler";
+import type { Unstable_DevWorker } from "wrangler";
 
 type Env = {
 	MY_VAR: string;
@@ -20,7 +20,7 @@ type Env = {
 const wranglerTomlFilePath = path.join(__dirname, "..", "wrangler.toml");
 
 describe("getPlatformProxy - env", () => {
-	let devWorkers: UnstableDevWorker[];
+	let devWorkers: Unstable_DevWorker[];
 
 	beforeEach(() => {
 		// Hide stdout messages from the test logs

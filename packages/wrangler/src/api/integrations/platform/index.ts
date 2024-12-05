@@ -22,9 +22,9 @@ import type { MiniflareOptions, ModuleRule, WorkerOptions } from "miniflare";
 
 export { readConfig as unstable_readConfig };
 export type {
-	Config as UnstableConfig,
-	RawConfig as UnstableRawConfig,
-	RawEnvironment as UnstableRawEnvironment,
+	Config as Unstable_Config,
+	RawConfig as Unstable_RawConfig,
+	RawEnvironment as Unstable_RawEnvironment,
 };
 
 /**
@@ -244,7 +244,7 @@ export type SourcelessWorkerOptions = Omit<
 	"script" | "scriptPath" | "modules" | "modulesRoot"
 > & { modulesRules?: ModuleRule[] };
 
-export interface UnstableMiniflareWorkerOptions {
+export interface Unstable_MiniflareWorkerOptions {
 	workerOptions: SourcelessWorkerOptions;
 	define: Record<string, string>;
 	main?: string;
@@ -253,14 +253,14 @@ export interface UnstableMiniflareWorkerOptions {
 export function unstable_getMiniflareWorkerOptions(
 	configPath: string,
 	env?: string
-): UnstableMiniflareWorkerOptions;
+): Unstable_MiniflareWorkerOptions;
 export function unstable_getMiniflareWorkerOptions(
 	config: Config
-): UnstableMiniflareWorkerOptions;
+): Unstable_MiniflareWorkerOptions;
 export function unstable_getMiniflareWorkerOptions(
 	configOrConfigPath: string | Config,
 	env?: string
-): UnstableMiniflareWorkerOptions {
+): Unstable_MiniflareWorkerOptions {
 	const config =
 		typeof configOrConfigPath === "string"
 			? readConfig(configOrConfigPath, { env })
