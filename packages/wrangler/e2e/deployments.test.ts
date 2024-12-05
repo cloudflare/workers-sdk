@@ -400,4 +400,62 @@ describe("Workers + Assets deployment", { timeout: TIMEOUT }, () => {
 		);
 		expect(text).toContain("<h1>404.html</h1>");
 	});
+
+	it("runs user worker ahead of matching assets when serve_directly = false", async () => {
+		await helper.seed({
+			"wrangler.toml": dedent`
+						name = "${workerName}"
+						main = "src/index.ts"
+						compatibility_date = "2023-01-01"
+						[assets]
+						directory = "public"
+						binding = "ASSETS"
+						html_handling = "none"
+						not_found_handling = "404-page"
+						experimental_serve_directly = false
+				`,
+			"src/index.ts": dedent`
+						export default {
+							async fetch(request, env) {
+								return new Response("Hello World from User Worker!")
+							}
+						}`,
+			...initialAssets,
+		});
+
+		const output = await helper.run(`wrangler deploy`);
+		// expect only no asset files to be uploaded as no new asset files have been added
+		expect(normalize(output.stdout)).toMatchInlineSnapshot(`
+			"🌀 Building list of assets...
+			🌀 Starting asset upload...
+			No files to upload. Proceeding with deployment...
+			Total Upload: xx KiB / gzip: xx KiB
+			Uploaded tmp-e2e-worker-00000000-0000-0000-0000-000000000000 (TIMINGS)
+			Deployed tmp-e2e-worker-00000000-0000-0000-0000-000000000000 triggers (TIMINGS)
+			  https://tmp-e2e-worker-00000000-0000-0000-0000-000000000000.SUBDOMAIN.workers.dev
+			Current Version ID: 00000000-0000-0000-0000-000000000000"
+		`);
+
+		const match = output.stdout.match(
+			/(?<url>https:\/\/tmp-e2e-.+?\..+?\.workers\.dev)/
+		);
+		assert(match?.groups);
+		deployedUrl = match.groups.url;
+
+		const testCases: AssetTestCase[] = [
+			{
+				path: "/index.html",
+				content: "Hello World from User Worker!",
+			},
+			{
+				path: "/",
+				content: "Hello World from User Worker!",
+			},
+			{
+				path: "/worker",
+				content: "Hello World from User Worker!",
+			},
+		];
+		await checkAssets(testCases, deployedUrl);
+	});
 });

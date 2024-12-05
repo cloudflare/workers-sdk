@@ -354,6 +354,9 @@ export function getAssetsOptions(
 
 	const routingConfig = {
 		has_user_worker: Boolean(args.script || config.main),
+		invoke_user_worker_ahead_of_assets: !(
+			config.assets?.experimental_serve_directly ?? true
+		),
 	};
 	// defaults are set in asset worker
 	const assetConfig = {
