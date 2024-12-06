@@ -5,5 +5,5 @@ export default defineConfig({
 	build: {
 		outDir: 'dist/worker-process',
 	},
-	plugins: [cloudflare({ wranglerConfig: './worker-process/wrangler.toml' })],
+	plugins: [cloudflare({ configPath: './worker-process/wrangler.toml' })],
 });

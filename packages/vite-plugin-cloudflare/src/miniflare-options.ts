@@ -15,7 +15,11 @@ import {
 	ROUTER_WORKER_NAME,
 } from './assets';
 import type { CloudflareDevEnvironment } from './cloudflare-environment';
-import type { ResolvedPluginConfig, WorkerConfig } from './plugin-config';
+import type {
+	PersistState,
+	ResolvedPluginConfig,
+	WorkerConfig,
+} from './plugin-config';
 import type { MiniflareOptions, SharedOptions, WorkerOptions } from 'miniflare';
 import type { FetchFunctionOptions } from 'vite/module-runner';
 
@@ -28,12 +32,20 @@ type PersistOptions = Pick<
 	| 'r2Persist'
 >;
 
-function getPersistence(root: string, persistState = true): PersistOptions {
+function getPersistence(
+	root: string,
+	persistState: PersistState,
+): PersistOptions {
 	if (persistState === false) {
 		return {};
 	}
 
-	const persistPath = path.join(root, '.wrangler', 'state', 'v3');
+	const defaultPersistPath = '.wrangler/state';
+	const persistPath = path.resolve(
+		root,
+		typeof persistState === 'object' ? persistState.path : defaultPersistPath,
+		'v3',
+	);
 
 	return {
 		cachePersist: path.join(persistPath, 'cache'),
@@ -330,7 +342,7 @@ export function getDevMiniflareOptions(
 				logger.logWithLevel(LogLevel.ERROR, decoder.decode(error)),
 			);
 		},
-		...getPersistence(viteConfig.root),
+		...getPersistence(viteConfig.root, resolvedPluginConfig.persistState),
 		workers: [
 			...assetWorkers,
 			...userWorkers.map((workerOptions) => {
@@ -465,7 +477,7 @@ export function getPreviewMiniflareOptions(
 				logger.logWithLevel(LogLevel.ERROR, decoder.decode(error)),
 			);
 		},
-		...getPersistence(viteConfig.root),
+		...getPersistence(viteConfig.root, resolvedPluginConfig.persistState),
 		workers,
 	};
 }

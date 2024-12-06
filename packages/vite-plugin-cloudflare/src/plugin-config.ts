@@ -5,13 +5,16 @@ import * as vite from 'vite';
 import { unstable_readConfig } from 'wrangler';
 import type { Unstable_Config } from 'wrangler';
 
-export interface PluginConfig {
-	wranglerConfig?: string;
-	viteEnvironmentName?: string;
-	auxiliaryWorkers?: Array<{
-		wranglerConfig: string;
-		viteEnvironmentName?: string;
-	}>;
+export type PersistState = boolean | { path: string };
+
+interface PluginWorkerConfig {
+	configPath: string;
+	persistState?: PersistState;
+	viteEnvironment?: { name?: string };
+}
+
+export interface PluginConfig extends Partial<PluginWorkerConfig> {
+	auxiliaryWorkers?: PluginWorkerConfig[];
 }
 
 type Defined<T> = Exclude<T, undefined>;
@@ -36,7 +39,8 @@ interface WorkerResult {
 }
 
 interface BasePluginConfig {
-	wranglerConfigPaths: Set<string>;
+	configPaths: Set<string>;
+	persistState: PersistState;
 }
 
 interface AssetsOnlyPluginConfig extends BasePluginConfig {
@@ -54,16 +58,16 @@ export type ResolvedPluginConfig = AssetsOnlyPluginConfig | WorkersPluginConfig;
 
 function getConfigResult(
 	configPath: string,
-	wranglerConfigPaths: Set<string>,
+	configPaths: Set<string>,
 	isEntryWorker?: boolean,
 ): AssetsOnlyResult | WorkerResult {
-	if (wranglerConfigPaths.has(configPath)) {
+	if (configPaths.has(configPath)) {
 		throw new Error(`Duplicate Wrangler config path found: ${configPath}`);
 	}
 
 	const wranglerConfig = unstable_readConfig(configPath, {});
 
-	wranglerConfigPaths.add(configPath);
+	configPaths.add(configPath);
 
 	if (isEntryWorker && !wranglerConfig.main) {
 		assert(
@@ -117,11 +121,12 @@ export function resolvePluginConfig(
 	pluginConfig: PluginConfig,
 	userConfig: vite.UserConfig,
 ): ResolvedPluginConfig {
-	const wranglerConfigPaths = new Set<string>();
+	const configPaths = new Set<string>();
+	const persistState = pluginConfig.persistState ?? true;
 	const root = userConfig.root ? path.resolve(userConfig.root) : process.cwd();
 
-	const configPath = pluginConfig.wranglerConfig
-		? path.join(root, pluginConfig.wranglerConfig)
+	const configPath = pluginConfig.configPath
+		? path.join(root, pluginConfig.configPath)
 		: findWranglerConfig(root);
 
 	assert(
@@ -129,20 +134,16 @@ export function resolvePluginConfig(
 		`Config not found. Have you created a wrangler.json(c) or wrangler.toml file?`,
 	);
 
-	const entryConfigResult = getConfigResult(
-		configPath,
-		wranglerConfigPaths,
-		true,
-	);
+	const entryConfigResult = getConfigResult(configPath, configPaths, true);
 
 	if (entryConfigResult.type === 'assets-only') {
-		return { ...entryConfigResult, wranglerConfigPaths };
+		return { ...entryConfigResult, configPaths, persistState };
 	}
 
 	const entryWorkerConfig = entryConfigResult.config;
 
 	const entryWorkerEnvironmentName =
-		pluginConfig.viteEnvironmentName ??
+		pluginConfig.viteEnvironment?.name ??
 		workerNameToEnvironmentName(entryWorkerConfig.name);
 
 	const workers = {
@@ -151,8 +152,8 @@ export function resolvePluginConfig(
 
 	for (const auxiliaryWorker of pluginConfig.auxiliaryWorkers ?? []) {
 		const configResult = getConfigResult(
-			path.join(root, auxiliaryWorker.wranglerConfig),
-			wranglerConfigPaths,
+			path.join(root, auxiliaryWorker.configPath),
+			configPaths,
 		);
 
 		assert(
@@ -163,7 +164,7 @@ export function resolvePluginConfig(
 		const workerConfig = configResult.config;
 
 		const workerEnvironmentName =
-			auxiliaryWorker.viteEnvironmentName ??
+			auxiliaryWorker.viteEnvironment?.name ??
 			workerNameToEnvironmentName(workerConfig.name);
 
 		if (workers[workerEnvironmentName]) {
@@ -177,7 +178,8 @@ export function resolvePluginConfig(
 
 	return {
 		type: 'workers',
-		wranglerConfigPaths,
+		configPaths,
+		persistState,
 		workers,
 		entryWorkerEnvironmentName,
 	};

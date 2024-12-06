@@ -208,7 +208,7 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin {
 			await initRunners(resolvedPluginConfig, viteDevServer, miniflare);
 
 			viteDevServer.watcher.on('all', async (_, path) => {
-				if (!resolvedPluginConfig.wranglerConfigPaths.has(path)) {
+				if (!resolvedPluginConfig.configPaths.has(path)) {
 					return;
 				}
 

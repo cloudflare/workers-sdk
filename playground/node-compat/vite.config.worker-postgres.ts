@@ -5,5 +5,5 @@ export default defineConfig({
 	build: {
 		outDir: 'dist/worker-postgres',
 	},
-	plugins: [cloudflare({ wranglerConfig: './worker-postgres/wrangler.toml' })],
+	plugins: [cloudflare({ configPath: './worker-postgres/wrangler.toml' })],
 });

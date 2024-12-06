@@ -5,5 +5,5 @@ export default defineConfig({
 	build: {
 		outDir: 'dist/worker-crypto',
 	},
-	plugins: [cloudflare({ wranglerConfig: './worker-crypto/wrangler.toml' })],
+	plugins: [cloudflare({ configPath: './worker-crypto/wrangler.toml' })],
 });
