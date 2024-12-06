@@ -1,7 +1,7 @@
 import { execSync } from "node:child_process";
 import { deploy } from "../api/pages/deploy";
 import { fetchResult } from "../cfetch";
-import { configFileName, findWranglerConfig, readConfig } from "../config";
+import { configFileName, findWranglerConfig, readPagesConfig } from "../config";
 import { getConfigCache, saveToConfigCache } from "../config-cache";
 import { prompt, select } from "../dialogs";
 import { FatalError } from "../errors";
@@ -123,11 +123,7 @@ export const Handler = async (args: PagesDeployArgs) => {
 		 * need for now. We will perform a second config file read later
 		 * in `/api/pages/deploy`, that will get the environment specific config
 		 */
-		config = readConfig(
-			configPath,
-			{ ...args, env: undefined },
-			{ requirePagesConfig: true }
-		);
+		config = readPagesConfig(configPath, { ...args, env: undefined });
 	} catch (err) {
 		if (
 			!(
