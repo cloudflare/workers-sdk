@@ -1,8 +1,8 @@
+import assert from 'node:assert';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as vite from 'vite';
 import { unstable_readConfig } from 'wrangler';
-import { invariant } from './shared';
 import type { Unstable_Config } from 'wrangler';
 
 export interface PluginConfig {
@@ -66,7 +66,7 @@ function getConfigResult(
 	wranglerConfigPaths.add(configPath);
 
 	if (isEntryWorker && !wranglerConfig.main) {
-		invariant(
+		assert(
 			wranglerConfig.assets,
 			`No main or assets field provided in ${wranglerConfig.configPath}`,
 		);
@@ -77,12 +77,12 @@ function getConfigResult(
 		};
 	}
 
-	invariant(
+	assert(
 		wranglerConfig.main,
 		`No main field provided in ${wranglerConfig.configPath}`,
 	);
 
-	invariant(
+	assert(
 		wranglerConfig.name,
 		`No name field provided in ${wranglerConfig.configPath}`,
 	);
@@ -124,7 +124,7 @@ export function resolvePluginConfig(
 		? path.join(root, pluginConfig.wranglerConfig)
 		: findWranglerConfig(root);
 
-	invariant(
+	assert(
 		configPath,
 		`Config not found. Have you created a wrangler.json(c) or wrangler.toml file?`,
 	);
@@ -155,7 +155,7 @@ export function resolvePluginConfig(
 			wranglerConfigPaths,
 		);
 
-		invariant(
+		assert(
 			configResult.type === 'worker',
 			'Unexpected error: received AssetsOnlyResult with auxiliary workers.',
 		);

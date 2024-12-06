@@ -1,3 +1,4 @@
+import assert from 'node:assert';
 import * as fs from 'node:fs';
 import path from 'node:path';
 import { createMiddleware } from '@hattip/adapter-node';
@@ -18,7 +19,6 @@ import {
 	resolveNodeAliases,
 } from './node-js-compat';
 import { resolvePluginConfig } from './plugin-config';
-import { invariant } from './shared';
 import { toMiniflareRequest } from './utils';
 import type { PluginConfig, ResolvedPluginConfig } from './plugin-config';
 import type { Unstable_RawConfig } from 'wrangler';
@@ -79,10 +79,7 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin {
 						).map((environmentName) => {
 							const environment = builder.environments[environmentName];
 
-							invariant(
-								environment,
-								`${environmentName} environment not found`,
-							);
+							assert(environment, `${environmentName} environment not found`);
 
 							return environment;
 						});

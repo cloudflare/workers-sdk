@@ -1,7 +1,8 @@
+import assert from 'node:assert';
 import { builtinModules } from 'node:module';
 import * as vite from 'vite';
 import { getNodeCompatExternals } from './node-js-compat';
-import { INIT_PATH, invariant, UNKNOWN_HOST } from './shared';
+import { INIT_PATH, UNKNOWN_HOST } from './shared';
 import { toMiniflareRequest } from './utils';
 import type { ResolvedPluginConfig, WorkerConfig } from './plugin-config';
 import type { Fetcher } from '@cloudflare/workers-types/experimental';
@@ -26,7 +27,7 @@ function createHotChannel(
 	const client: vite.HotChannelClient = {
 		send(payload) {
 			const webSocket = webSocketContainer.webSocket;
-			invariant(webSocket, webSocketUndefinedError);
+			assert(webSocket, webSocketUndefinedError);
 
 			webSocket.send(JSON.stringify(payload));
 		},
@@ -44,7 +45,7 @@ function createHotChannel(
 	return {
 		send(payload) {
 			const webSocket = webSocketContainer.webSocket;
-			invariant(webSocket, webSocketUndefinedError);
+			assert(webSocket, webSocketUndefinedError);
 
 			webSocket.send(JSON.stringify(payload));
 		},
@@ -59,13 +60,13 @@ function createHotChannel(
 		},
 		listen() {
 			const webSocket = webSocketContainer.webSocket;
-			invariant(webSocket, webSocketUndefinedError);
+			assert(webSocket, webSocketUndefinedError);
 
 			webSocket.addEventListener('message', onMessage);
 		},
 		close() {
 			const webSocket = webSocketContainer.webSocket;
-			invariant(webSocket, webSocketUndefinedError);
+			assert(webSocket, webSocketUndefinedError);
 
 			webSocket.removeEventListener('message', onMessage);
 		},
@@ -98,10 +99,10 @@ export class CloudflareDevEnvironment extends vite.DevEnvironment {
 			},
 		);
 
-		invariant(response.ok, 'Failed to initialize module runner');
+		assert(response.ok, 'Failed to initialize module runner');
 
 		const webSocket = response.webSocket;
-		invariant(webSocket, 'Failed to establish WebSocket');
+		assert(webSocket, 'Failed to establish WebSocket');
 
 		webSocket.accept();
 
@@ -109,7 +110,7 @@ export class CloudflareDevEnvironment extends vite.DevEnvironment {
 	}
 
 	async dispatchFetch(request: Request) {
-		invariant(this.#worker, 'Runner not initialized');
+		assert(this.#worker, 'Runner not initialized');
 
 		return this.#worker.fetch(toMiniflareRequest(request)) as any;
 	}

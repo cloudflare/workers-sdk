@@ -1,3 +1,4 @@
+import assert from 'node:assert';
 import * as fs from 'node:fs';
 import * as fsp from 'node:fs/promises';
 import * as path from 'node:path';
@@ -13,7 +14,6 @@ import {
 	ASSET_WORKERS_COMPATIBILITY_DATE,
 	ROUTER_WORKER_NAME,
 } from './assets';
-import { invariant } from './shared';
 import type { CloudflareDevEnvironment } from './cloudflare-environment';
 import type { ResolvedPluginConfig, WorkerConfig } from './plugin-config';
 import type { MiniflareOptions, SharedOptions, WorkerOptions } from 'miniflare';
@@ -67,7 +67,7 @@ function getWorkerToWorkerEntrypointNamesMap(
 				const entrypointNames = workerToWorkerEntrypointNamesMap.get(
 					value.name,
 				);
-				invariant(entrypointNames, missingWorkerErrorMessage(value.name));
+				assert(entrypointNames, missingWorkerErrorMessage(value.name));
 
 				entrypointNames.add(value.entrypoint);
 			}
@@ -88,7 +88,7 @@ function getWorkerToDurableObjectClassNamesMap(
 		for (const value of Object.values(worker.durableObjects ?? {})) {
 			if (typeof value === 'string') {
 				const classNames = workerToDurableObjectClassNamesMap.get(worker.name);
-				invariant(classNames, missingWorkerErrorMessage(worker.name));
+				assert(classNames, missingWorkerErrorMessage(worker.name));
 
 				classNames.add(value);
 			} else if (typeof value === 'object') {
@@ -96,14 +96,14 @@ function getWorkerToDurableObjectClassNamesMap(
 					const classNames = workerToDurableObjectClassNamesMap.get(
 						value.scriptName,
 					);
-					invariant(classNames, missingWorkerErrorMessage(value.scriptName));
+					assert(classNames, missingWorkerErrorMessage(value.scriptName));
 
 					classNames.add(value.className);
 				} else {
 					const classNames = workerToDurableObjectClassNamesMap.get(
 						worker.name,
 					);
-					invariant(classNames, missingWorkerErrorMessage(worker.name));
+					assert(classNames, missingWorkerErrorMessage(worker.name));
 
 					classNames.add(value.className);
 				}
@@ -271,7 +271,7 @@ export function getDevMiniflareOptions(
 										data: [string, string, FetchFunctionOptions];
 									};
 
-									invariant(
+									assert(
 										invokePayloadData.name === 'fetchModule',
 										`Invalid invoke event: ${invokePayloadData.name}`,
 									);
@@ -342,7 +342,7 @@ export function getDevMiniflareOptions(
 				const entrypointNames = workerToWorkerEntrypointNamesMap.get(
 					workerOptions.name,
 				);
-				invariant(
+				assert(
 					entrypointNames,
 					`WorkerEntrypoint names not found for worker ${workerOptions.name}`,
 				);
@@ -356,7 +356,7 @@ export function getDevMiniflareOptions(
 				const classNames = workerToDurableObjectClassNamesMap.get(
 					workerOptions.name,
 				);
-				invariant(
+				assert(
 					classNames,
 					`DurableObject class names not found for worker ${workerOptions.name}`,
 				);
@@ -390,7 +390,7 @@ export function getDevMiniflareOptions(
 }
 
 function getEntryModule(main: string | undefined) {
-	invariant(
+	assert(
 		main,
 		'Unexpected error: missing main field in miniflareWorkerOptions',
 	);
