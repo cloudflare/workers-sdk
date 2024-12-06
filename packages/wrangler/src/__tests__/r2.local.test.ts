@@ -23,6 +23,12 @@ describe("r2", () => {
 					`[Error: The specified key does not exist.]`
 				);
 
+				expect(std.warn).toMatchInlineSnapshot(`
+					"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mBy default, \`wrangler r2\` commands access a local simulator of your R2 bucket, the same as that used by \`wrangler dev\`. To access your remote R2 bucket, re-run the command with the --remote flag[0m
+
+					"
+				`);
+
 				fs.writeFileSync("wormhole-img.png", "passageway");
 				await runWrangler(
 					`r2 object put bucketName-object-test/wormhole-img.png --file ./wormhole-img.png `
@@ -52,6 +58,11 @@ describe("r2", () => {
 				await runWrangler(
 					`r2 object put bucketName-object-test/wormhole-img.png --file ./wormhole-img.png `
 				);
+				expect(std.warn).toMatchInlineSnapshot(`
+					"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mBy default, \`wrangler r2\` commands access a local simulator of your R2 bucket, the same as that used by \`wrangler dev\`. To access your remote R2 bucket, re-run the command with the --remote flag[0m
+
+					"
+				`);
 
 				await runWrangler(
 					`r2 object get bucketName-object-test/wormhole-img.png --file ./wormhole-img.png `

@@ -19,6 +19,9 @@ import {
 } from "./helpers";
 import type { R2PutOptions } from "@cloudflare/workers-types/experimental";
 
+const remoteFlagWarning =
+	"By default, `wrangler r2` commands access a local simulator of your R2 bucket, the same as that used by `wrangler dev`. To access your remote R2 bucket, re-run the command with the --remote flag";
+
 defineNamespace({
 	command: "wrangler r2 object",
 	metadata: {
@@ -100,6 +103,9 @@ defineCommand({
 			output = process.stdout;
 		}
 		if (!objectGetYargs.remote) {
+			if (!pipe) {
+				logger.warn(remoteFlagWarning);
+			}
 			await usingLocalBucket(
 				objectGetYargs.persistTo,
 				config.configPath,
@@ -285,6 +291,7 @@ defineCommand({
 		);
 
 		if (local) {
+			logger.warn(remoteFlagWarning);
 			await usingLocalBucket(
 				persistTo,
 				config.configPath,
@@ -395,6 +402,7 @@ defineCommand({
 		logger.log(`Deleting object "${key}" from bucket "${fullBucketName}".`);
 
 		if (!args.remote) {
+			logger.warn(remoteFlagWarning);
 			await usingLocalBucket(
 				args.persistTo,
 				config.configPath,
