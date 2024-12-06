@@ -625,9 +625,15 @@ const validateTemplate = (path: string, config: TemplateConfig) => {
 const validateTemplateSrcDirectory = (path: string, config: TemplateConfig) => {
 	if (config.platform === "workers") {
 		const wranglerTomlPath = resolve(path, "wrangler.toml");
-		if (!existsSync(wranglerTomlPath)) {
+		const wranglerJsonPath = resolve(path, "wrangler.json");
+		const wranglerJsoncPath = resolve(path, "wrangler.jsonc");
+		if (
+			!existsSync(wranglerTomlPath) &&
+			!existsSync(wranglerJsonPath) &&
+			!existsSync(wranglerJsoncPath)
+		) {
 			throw new Error(
-				`create-cloudflare templates must contain a "wrangler.toml" file.`,
+				`create-cloudflare templates must contain a "wrangler.toml" or "wrangler.json(c)" file.`,
 			);
 		}
 	}
