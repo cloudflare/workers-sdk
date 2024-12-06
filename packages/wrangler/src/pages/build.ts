@@ -8,7 +8,8 @@ import path, {
 	resolve as resolvePath,
 } from "node:path";
 import { createUploadWorkerBundleContents } from "../api/pages/create-worker-bundle-contents";
-import { findWranglerConfig, readPagesConfig } from "../config";
+import { readPagesConfig } from "../config";
+import { findWranglerConfig } from "../config/config-helpers";
 import { shouldCheckFetch } from "../deployment-bundle/bundle";
 import { writeAdditionalModules } from "../deployment-bundle/find-additional-modules";
 import { validateNodeCompatMode } from "../deployment-bundle/node-compat";
@@ -359,8 +360,9 @@ async function maybeReadPagesConfig(
 		return undefined;
 	}
 	try {
-		const config = readPagesConfig(configPath, {
+		const config = readPagesConfig({
 			...args,
+			config: configPath,
 			// eslint-disable-next-line turbo/no-undeclared-env-vars
 			env: process.env.PAGES_ENVIRONMENT,
 		});

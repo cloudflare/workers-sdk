@@ -366,7 +366,7 @@ export const r2ObjectDeleteCommand = createCommand({
 	},
 	async handler(args) {
 		const { objectPath, jurisdiction } = args;
-		const config = readConfig(args.config, args);
+		const config = readConfig(args);
 		const { bucket, key } = bucketAndKeyFromObjectPath(objectPath);
 		let fullBucketName = bucket;
 		if (jurisdiction !== undefined) {

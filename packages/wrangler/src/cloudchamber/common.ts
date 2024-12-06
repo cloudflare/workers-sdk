@@ -97,19 +97,19 @@ export function handleFailure<
 		? K
 		: never,
 >(
-	cb: (t: CommandArgumentsObject, config: Config) => Promise<void>
+	cb: (args: CommandArgumentsObject, config: Config) => Promise<void>
 ): (
-	t: CommonYargsOptions &
+	args: CommonYargsOptions &
 		CommandArgumentsObject &
 		CommonCloudchamberConfiguration
 ) => Promise<void> {
-	return async (t) => {
+	return async (args) => {
 		try {
-			const config = readConfig(t.config, t);
-			await fillOpenAPIConfiguration(config, t.json);
-			await cb(t, config);
+			const config = readConfig(args);
+			await fillOpenAPIConfiguration(config, args.json);
+			await cb(args, config);
 		} catch (err) {
-			if (!t.json) {
+			if (!args.json) {
 				throw err;
 			}
 
