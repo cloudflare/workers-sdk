@@ -131,7 +131,7 @@ export const versionsUploadCommand = createCommand({
 	metadata: {
 		description: "Uploads your Worker code and config as a new Version",
 		owner: "Workers: Authoring and Testing",
-		status: "open-beta",
+		status: "stable",
 	},
 	args: {
 		script: {

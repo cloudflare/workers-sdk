@@ -15,7 +15,7 @@ export const versionsViewCommand = createCommand({
 	metadata: {
 		description: "View the details of a specific version of your Worker",
 		owner: "Workers: Authoring and Testing",
-		status: "open-beta",
+		status: "stable",
 	},
 	args: {
 		"version-id": {
