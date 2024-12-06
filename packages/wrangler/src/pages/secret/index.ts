@@ -2,7 +2,11 @@ import path from "node:path";
 import readline from "node:readline";
 import chalk from "chalk";
 import { fetchResult } from "../../cfetch";
-import { configFileName, findWranglerConfig, readConfig } from "../../config";
+import {
+	configFileName,
+	findWranglerConfig,
+	readPagesConfig,
+} from "../../config";
 import { getConfigCache } from "../../config-cache";
 import { confirm, prompt } from "../../dialogs";
 import { FatalError } from "../../errors";
@@ -49,11 +53,7 @@ async function pagesProject(
 		 * return the top-level config. This contains all the information we
 		 * need.
 		 */
-		config = readConfig(
-			configPath,
-			{ env: undefined },
-			{ requirePagesConfig: true }
-		);
+		config = readPagesConfig(configPath, { env: undefined });
 	} catch (err) {
 		if (
 			!(
