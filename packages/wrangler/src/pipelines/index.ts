@@ -183,7 +183,7 @@ export function pipelines(pipelineYargs: CommonYargsArgv) {
 			async (args) => {
 				await printWranglerBanner();
 
-				const config = readConfig(args.config, args);
+				const config = readConfig(args);
 				const bucket = args.r2;
 				const name = args.pipeline;
 				const compression =
@@ -302,7 +302,7 @@ export function pipelines(pipelineYargs: CommonYargsArgv) {
 			"List current pipelines",
 			(yargs) => yargs,
 			async (args) => {
-				const config = readConfig(args.config, args);
+				const config = readConfig(args);
 				const accountId = await requireAuth(config);
 
 				// TODO: we should show bindings & transforms if they exist for given ids
@@ -332,7 +332,7 @@ export function pipelines(pipelineYargs: CommonYargsArgv) {
 			},
 			async (args) => {
 				await printWranglerBanner();
-				const config = readConfig(args.config, args);
+				const config = readConfig(args);
 				const accountId = await requireAuth(config);
 				const name = args.pipeline;
 
@@ -368,7 +368,7 @@ export function pipelines(pipelineYargs: CommonYargsArgv) {
 
 				const name = args.pipeline;
 				// only the fields set will be updated - other fields will use the existing config
-				const config = readConfig(args.config, args);
+				const config = readConfig(args);
 				const accountId = await requireAuth(config);
 
 				const pipelineConfig = await getPipeline(accountId, name);
@@ -494,7 +494,7 @@ export function pipelines(pipelineYargs: CommonYargsArgv) {
 			},
 			async (args) => {
 				await printWranglerBanner();
-				const config = readConfig(args.config, args);
+				const config = readConfig(args);
 				const accountId = await requireAuth(config);
 				const name = args.pipeline;
 

@@ -9,7 +9,6 @@ import { logger } from "../../logger";
 import { parseJSON, readFileSync } from "../../parse";
 import { validateJSONFileSecrets } from "../../secret";
 import { requireAuth } from "../../user";
-import { getConfig } from "../utils/config";
 import { copyWorkerVersionWithNewSecrets } from "./index";
 import type { WorkerVersion } from "./index";
 
@@ -20,7 +19,7 @@ export const versionsSecretBulkCommand = createCommand({
 		status: "stable",
 	},
 	behaviour: {
-		provideConfig: false,
+		printConfigWarnings: false,
 	},
 	args: {
 		json: {
@@ -44,8 +43,7 @@ export const versionsSecretBulkCommand = createCommand({
 		},
 	},
 	positionalArgs: ["json"],
-	handler: async function versionsSecretPutBulkHandler(args) {
-		const config = getConfig(args, { hideWarnings: true });
+	handler: async function versionsSecretPutBulkHandler(args, { config }) {
 		const scriptName = getLegacyScriptName(args, config);
 		if (!scriptName) {
 			throw new UserError(

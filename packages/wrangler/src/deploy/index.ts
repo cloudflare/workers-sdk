@@ -1,7 +1,8 @@
 import assert from "node:assert";
 import path from "node:path";
 import { getAssetsOptions, validateAssetsArgsAndConfig } from "../assets";
-import { configFileName, findWranglerConfig, readConfig } from "../config";
+import { configFileName, readConfig } from "../config";
+import { resolveWranglerConfigPath } from "../config/config-helpers";
 import { getEntry } from "../deployment-bundle/entry";
 import { UserError } from "../errors";
 import { run } from "../experimental-flags";
@@ -262,11 +263,9 @@ async function deployWorker(args: DeployArgs) {
 		);
 	}
 
-	const configPath =
-		args.config ||
-		(args.script && findWranglerConfig(path.dirname(args.script)));
+	const configPath = resolveWranglerConfigPath(args);
 	const projectRoot = configPath && path.dirname(configPath);
-	const config = readConfig(configPath, args);
+	const config = readConfig(args);
 	if (config.pages_build_output_dir) {
 		throw new UserError(
 			"It looks like you've run a Workers-specific command in a Pages project.\n" +

@@ -1,6 +1,7 @@
 import { existsSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { configFileName, findWranglerConfig, readPagesConfig } from "../config";
+import { configFileName, readPagesConfig } from "../config";
+import { findWranglerConfig } from "../config/config-helpers";
 import { FatalError } from "../errors";
 import { logger } from "../logger";
 import {
@@ -56,8 +57,9 @@ export const Handler = async (args: PagesBuildEnvArgs) => {
 		pages_build_output_dir: string;
 	};
 	try {
-		config = readPagesConfig(configPath, {
+		config = readPagesConfig({
 			...args,
+			config: configPath,
 			// eslint-disable-next-line turbo/no-undeclared-env-vars
 			env: process.env.PAGES_ENVIRONMENT,
 		});

@@ -7,7 +7,6 @@ import { getLegacyScriptName } from "../../index";
 import { logger } from "../../logger";
 import { requireAuth } from "../../user";
 import { readFromStdin, trimTrailingWhitespace } from "../../utils/std";
-import { getConfig } from "../utils/config";
 import { copyWorkerVersionWithNewSecrets } from "./index";
 import type { WorkerVersion } from "./index";
 
@@ -18,7 +17,7 @@ export const versionsSecretPutCommand = createCommand({
 		status: "stable",
 	},
 	behaviour: {
-		provideConfig: false,
+		printConfigWarnings: false,
 	},
 	args: {
 		key: {
@@ -43,8 +42,7 @@ export const versionsSecretPutCommand = createCommand({
 		},
 	},
 	positionalArgs: ["key"],
-	handler: async function versionsSecretPutHandler(args) {
-		const config = getConfig(args, { hideWarnings: true });
+	handler: async function versionsSecretPutHandler(args, { config }) {
 		const scriptName = getLegacyScriptName(args, config);
 		if (!scriptName) {
 			throw new UserError(
