@@ -1,4 +1,3 @@
-import { platform } from "node:os";
 import { logRaw, updateStatus } from "@cloudflare/cli";
 import { blue, brandColor, dim } from "@cloudflare/cli/colors";
 import { runFrameworkGenerator } from "frameworks/index";
@@ -18,13 +17,14 @@ const generate = async (ctx: C3Context) => {
 	logRaw("");
 };
 
+const SVELTE_CLOUDFLARE_ADAPTER_NAME = `@sveltejs/adapter-cloudflare-workers`;
+
 const configure = async (ctx: C3Context) => {
 	// Install the adapter
-	const pkg = `@sveltejs/adapter-cloudflare`;
-	await installPackages([pkg], {
+	await installPackages([SVELTE_CLOUDFLARE_ADAPTER_NAME], {
 		dev: true,
-		startText: "Adding the Cloudflare Pages adapter",
-		doneText: `${brandColor(`installed`)} ${dim(pkg)}`,
+		startText: "Adding the Cloudflare adapter",
+		doneText: `${brandColor(`installed`)} ${dim(SVELTE_CLOUDFLARE_ADAPTER_NAME)}`,
 	});
 
 	updateSvelteConfig();
@@ -40,7 +40,7 @@ const updateSvelteConfig = () => {
 			// importSource is the `x` in `import y from "x"`
 			const importSource = n.value.source;
 			if (importSource.value === "@sveltejs/adapter-auto") {
-				importSource.value = "@sveltejs/adapter-cloudflare";
+				importSource.value = SVELTE_CLOUDFLARE_ADAPTER_NAME;
 			}
 
 			// stop traversing this node
@@ -101,29 +101,21 @@ const config: TemplateConfig = {
 	displayName: "SvelteKit",
 	platform: "workers",
 	copyFiles: {
-		variants: {
-			js: { path: "./js" },
-			ts: { path: "./ts" },
-		},
+		path: "./templates",
 	},
 	path: "templates-experimental/svelte",
 	generate,
 	configure,
-	transformPackageJson: async (original: PackageJson, ctx: C3Context) => {
-		let scripts: Record<string, string> = {
-			preview: `${npm} run build && wrangler dev`,
-			deploy: `${npm} run build && wrangler deploy`,
+	transformPackageJson: async (_: PackageJson, ctx: C3Context) => {
+		return {
+			scripts: {
+				preview: `${npm} run build && wrangler dev`,
+				deploy: `${npm} run build && wrangler deploy`,
+				...(usesTypescript(ctx)
+					? { "cf-typegen": `wrangler types src/worker-configuration.d.ts` }
+					: {}),
+			},
 		};
-
-		if (usesTypescript(ctx)) {
-			const mv = platform() === "win32" ? "move" : "mv";
-			scripts = {
-				...scripts,
-				"cf-typegen": `wrangler types && ${mv} worker-configuration.d.ts src/`,
-			};
-		}
-
-		return { scripts };
 	},
 	devScript: "dev",
 	deployScript: "deploy",

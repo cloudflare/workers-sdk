@@ -1,8 +1,8 @@
 #:schema node_modules/wrangler/config-schema.json
 name = "<TBD>"
 compatibility_date = "<TBD>"
-main = ".svelte-kit/cloudflare/_worker.js"
-assets = { directory = ".svelte-kit/cloudflare", binding = "ASSETS" }
+main = ".svelte-kit/cloudflare/server/index.js"
+assets = { directory = ".svelte-kit/cloudflare/client" }
 
 # Workers Logs
 # Docs: https://developers.cloudflare.com/workers/observability/logs/workers-logs/
