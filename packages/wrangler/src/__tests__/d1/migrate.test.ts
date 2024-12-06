@@ -16,6 +16,7 @@ describe("migrate", () => {
 	runInTempDir();
 	mockConsoleMethods();
 	mockSetTimeout();
+	vi.stubEnv("CLOUDFLARE_API_TOKEN", "123456789");
 
 	const { setIsTTY } = useMockIsTTY();
 
@@ -191,7 +192,7 @@ Your database may not be available to serve requests during the migration, conti
 				result: true,
 			});
 
-			await expect(runWrangler("d1 migrations apply db --remote")).resolves;
+			expect(runWrangler("d1 migrations apply db --remote")).resolves;
 		});
 	});
 
