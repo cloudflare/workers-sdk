@@ -44,7 +44,7 @@ export default {
 				sentry.setTag("metal", env.COLO_METADATA.metalId);
 			}
 
-			if (env.COLO_METADATA && env.VERSION_METADATA) {
+			if (env.COLO_METADATA && env.VERSION_METADATA && env.CONFIG) {
 				analytics.setData({
 					coloId: env.COLO_METADATA.coloId,
 					metalId: env.COLO_METADATA.metalId,
@@ -52,6 +52,7 @@ export default {
 					coloRegion: env.COLO_METADATA.coloRegion,
 					hostname: url.hostname,
 					version: env.VERSION_METADATA.id,
+					userWorkerAhead: env.CONFIG.invoke_user_worker_ahead_of_assets,
 				});
 			}
 
