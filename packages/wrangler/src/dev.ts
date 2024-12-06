@@ -1046,7 +1046,11 @@ export function getBindings(
 				`WRANGLER_HYPERDRIVE_LOCAL_CONNECTION_STRING_${hyperdrive.binding}`
 			];
 		// only require a local connection string in the wrangler file or the env if not using dev --remote
-		if (local && !connectionStringFromEnv && !hyperdrive.localConnectionString) {
+		if (
+			local &&
+			!connectionStringFromEnv &&
+			!hyperdrive.localConnectionString
+		) {
 			throw new UserError(
 				`When developing locally, you should use a local Postgres connection string to emulate Hyperdrive functionality. Please setup Postgres locally and set the value of the 'WRANGLER_HYPERDRIVE_LOCAL_CONNECTION_STRING_${hyperdrive.binding}' variable or "${hyperdrive.binding}"'s "localConnectionString" to the Postgres connection string.`
 			);
