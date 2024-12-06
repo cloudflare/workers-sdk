@@ -36,7 +36,7 @@
 	},
 	"dependencies": {
 		"@hattip/adapter-node": "^0.0.48",
-		"miniflare": "^3.20241106.0"
+		"miniflare": "beta"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-shared": "^0.7.0",

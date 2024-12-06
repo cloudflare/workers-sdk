@@ -15,16 +15,5 @@ export default defineConfig({
 			external: ['@non-existing/pkg'],
 		},
 	},
-	plugins: [
-		cloudflare({
-			workers: {
-				worker: {
-					main: './src/index.ts',
-					wranglerConfig: './src/wrangler.toml',
-				},
-			},
-			entryWorker: 'worker',
-			persistTo: false,
-		}),
-	],
+	plugins: [cloudflare()],
 });

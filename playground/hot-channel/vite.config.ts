@@ -4,16 +4,7 @@ import { defineConfig } from 'vite';
 
 export default defineConfig({
 	plugins: [
-		cloudflare({
-			workers: {
-				worker: {
-					main: './src/index.ts',
-					wranglerConfig: './src/wrangler.toml',
-				},
-			},
-			entryWorker: 'worker',
-			persistTo: false,
-		}),
+		cloudflare(),
 		{
 			name: 'test-plugin',
 			configureServer(viteDevServer) {

@@ -5,16 +5,5 @@ export default defineConfig({
 	build: {
 		outDir: 'dist/worker-crypto',
 	},
-	plugins: [
-		cloudflare({
-			workers: {
-				worker: {
-					main: './worker-crypto/index.ts',
-					wranglerConfig: './worker-crypto/wrangler.toml',
-				},
-			},
-			entryWorker: 'worker',
-			persistTo: false,
-		}),
-	],
+	plugins: [cloudflare({ wranglerConfig: './worker-crypto/wrangler.toml' })],
 });

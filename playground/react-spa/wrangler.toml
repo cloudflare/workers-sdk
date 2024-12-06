@@ -1,0 +1,1 @@
+assets = { directory = "dummy-directory", not_found_handling = "single-page-application" }

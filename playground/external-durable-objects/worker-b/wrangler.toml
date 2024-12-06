@@ -1,9 +1,9 @@
+name = "worker-b"
+main = "./index.ts"
 compatibility_date = "2024-09-09"
 
 [durable_objects]
-bindings = [
-	{ name = "COUNTERS", class_name = "Counter", script_name = "worker_a" },
-]
+bindings = [{ name = "COUNTERS", class_name = "Counter" }]
 
 [[migrations]]
 tag = "v1"

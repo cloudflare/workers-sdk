@@ -12,19 +12,11 @@ export default defineConfig({
 						contact: path.resolve(__dirname, 'contact.html'),
 						'404': path.resolve(__dirname, '404.html'),
 						about: path.resolve(__dirname, 'about/index.html'),
-						about404: path.resolve(__dirname, 'about/404.html'),
+						'about-404': path.resolve(__dirname, 'about/404.html'),
 					},
 				},
 			},
 		},
 	},
-	plugins: [
-		cloudflare({
-			assets: {
-				htmlHandling: 'auto-trailing-slash',
-				notFoundHandling: '404-page',
-			},
-			persistTo: false,
-		}),
-	],
+	plugins: [cloudflare()],
 });

@@ -1,23 +1,7 @@
-import { DurableObject } from 'cloudflare:workers';
+import type { Counter } from '../worker-b';
 
 interface Env {
 	COUNTERS: DurableObjectNamespace<Counter>;
-}
-
-export class Counter extends DurableObject {
-	async getCounterValue() {
-		let value = ((await this.ctx.storage.get('value')) as number) || 0;
-
-		return value;
-	}
-
-	async increment(amount = 1) {
-		let value = ((await this.ctx.storage.get('value')) as number) || 0;
-		value += amount;
-		await this.ctx.storage.put('value', value);
-
-		return value;
-	}
 }
 
 export default {
@@ -46,6 +30,6 @@ export default {
 				throw new Error('Unhandled route');
 		}
 
-		return Response.json({ name, count });
+		return new Response(`From worker-a: ${JSON.stringify({ name, count })}`);
 	},
 } satisfies ExportedHandler<Env>;

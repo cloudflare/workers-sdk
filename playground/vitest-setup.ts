@@ -279,9 +279,6 @@ export async function startDefaultServe(): Promise<void> {
 		const builder = await createBuilder(buildConfig);
 		await builder.buildApp();
 
-		// TODO: the step below spins up a vite preview server, instead of this we
-		//       want something that actually runs workers such as `startMultiWorker`
-		//       from https://github.com/cloudflare/workers-sdk/pull/6814
 		const previewConfig = await loadConfig({
 			command: 'serve',
 			mode: 'development',

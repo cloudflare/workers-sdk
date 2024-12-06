@@ -7,6 +7,6 @@ catalog:
   '@cloudflare/workers-types': ^4.20241112.0
   'typescript': ^5.6.2
   'vite': '6.0.0-beta.10'
-  'wrangler': '^3.87.0'
+  'wrangler': 'beta'
   '@types/node': '^22.8.7'
   'unenv': 'npm:unenv-nightly@2.0.0-20241024-111401-d4156ac'

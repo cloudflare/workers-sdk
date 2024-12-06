@@ -5,16 +5,5 @@ export default defineConfig({
 	build: {
 		outDir: 'dist/worker-cross-env',
 	},
-	plugins: [
-		cloudflare({
-			workers: {
-				worker: {
-					main: './worker-cross-env/index.ts',
-					wranglerConfig: './worker-cross-env/wrangler.toml',
-				},
-			},
-			entryWorker: 'worker',
-			persistTo: false,
-		}),
-	],
+	plugins: [cloudflare({ wranglerConfig: './worker-cross-env/wrangler.toml' })],
 });

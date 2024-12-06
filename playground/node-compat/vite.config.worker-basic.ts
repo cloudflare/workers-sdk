@@ -5,16 +5,5 @@ export default defineConfig({
 	build: {
 		outDir: 'dist/worker-basic',
 	},
-	plugins: [
-		cloudflare({
-			workers: {
-				worker: {
-					main: './worker-basic/index.ts',
-					wranglerConfig: './worker-basic/wrangler.toml',
-				},
-			},
-			entryWorker: 'worker',
-			persistTo: false,
-		}),
-	],
+	plugins: [cloudflare({ wranglerConfig: './worker-basic/wrangler.toml' })],
 });

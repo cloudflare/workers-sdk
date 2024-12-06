@@ -15,27 +15,17 @@ export default defineConfig({
 			external: ['@non-existing/pkg'],
 		},
 	},
-	plugins: [
-		cloudflare({
-			workers: {
-				worker: {
-					main: './src/index.ts',
-					wranglerConfig: './src/wrangler.toml',
-					// the following overrides partially opts out of prebundling
-					overrides: {
-						optimizeDeps: {
-							// we specifically opt-out of prebundling for the following dependencies
-							exclude: ['@cloudflare-dev-module-resolution/requires', 'react'],
-						},
-						resolve: {
-							// external modules don't get prebundled
-							external: ['@cloudflare-dev-module-resolution/requires/ext'],
-						},
-					},
-				},
+	environments: {
+		worker: {
+			optimizeDeps: {
+				// we specifically opt-out of prebundling for the following dependencies
+				exclude: ['@cloudflare-dev-module-resolution/requires', 'react'],
 			},
-			entryWorker: 'worker',
-			persistTo: false,
-		}),
-	],
+			resolve: {
+				// external modules don't get prebundled
+				external: ['@cloudflare-dev-module-resolution/requires/ext'],
+			},
+		},
+	},
+	plugins: [cloudflare({ viteEnvironmentName: 'worker' })],
 });
