@@ -262,6 +262,19 @@ function getFrameworkTests(opts: {
 					expectedText: "C3_TEST",
 				},
 			},
+			vue: {
+				testCommitMessage: true,
+				unsupportedOSs: ["win32"],
+				verifyDeploy: {
+					route: "/",
+					expectedText: "Vite App",
+				},
+				verifyPreview: {
+					route: "/",
+					expectedText: "Vite App",
+				},
+				flags: ["--ts"],
+			},
 		};
 	} else {
 		// These are ordered based on speed and reliability for ease of debugging
@@ -592,7 +605,6 @@ function getFrameworkTests(opts: {
 					expectedText: "Vite App",
 				},
 				flags: ["--ts"],
-				quarantine: true,
 			},
 		};
 	}
