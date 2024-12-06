@@ -74,7 +74,7 @@ type HandlerOptions = StrictYargsOptionsToInterface<typeof Options>;
 export const Handler = async (args: HandlerOptions): Promise<void> => {
 	const { local, remote, name, output, schema, data, table } = args;
 	await printWranglerBanner();
-	const config = readConfig(args.config, args);
+	const config = readConfig({ configPath: args.config, args });
 
 	if (!local && !remote) {
 		throw new UserError(`You must specify either --local or --remote`);

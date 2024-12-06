@@ -92,7 +92,7 @@ export async function tailHandler(args: TailArgs) {
 	if (args.format === "pretty") {
 		await printWranglerBanner();
 	}
-	const config = readConfig(args.config, args);
+	const config = readConfig({ configPath: args.config, args });
 	if (config.pages_build_output_dir) {
 		throw new UserError(
 			"It looks like you've run a Workers-specific command in a Pages project.\n" +

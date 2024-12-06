@@ -82,9 +82,12 @@ function createHandler(def: CommandDefinition) {
 			await def.handler(args, {
 				config:
 					def.behaviour?.provideConfig ?? true
-						? readConfig(args.config, args, {
-								hideWarnings: !(def.behaviour?.printConfigWarnings ?? true),
-							})
+						? readConfig(
+								{ configPath: args.config, args },
+								{
+									hideWarnings: !(def.behaviour?.printConfigWarnings ?? true),
+								}
+							)
 						: defaultWranglerConfig,
 				errors: { UserError, FatalError },
 				logger,

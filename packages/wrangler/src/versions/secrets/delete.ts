@@ -43,7 +43,7 @@ export const versionsSecretDeleteCommand = createCommand({
 	},
 	positionalArgs: ["key"],
 	handler: async function versionsSecretDeleteHandler(args) {
-		const config = getConfig(args, { hideWarnings: true });
+		const config = getConfig({ args }, { hideWarnings: true });
 		const scriptName = getLegacyScriptName(args, config);
 		if (!scriptName) {
 			throw new UserError(

@@ -57,7 +57,7 @@ async function triggersDeployHandler(
 ) {
 	await printWranglerBanner();
 
-	const config = readConfig(undefined, args);
+	const config = readConfig({ configPath: undefined, args });
 	const assetsOptions = getAssetsOptions({ assets: undefined }, config);
 	metrics.sendMetricsEvent(
 		"deploy worker triggers",

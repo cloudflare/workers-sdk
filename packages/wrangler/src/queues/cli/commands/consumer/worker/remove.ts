@@ -23,7 +23,7 @@ export function options(yargs: CommonYargsArgv) {
 export async function handler(
 	args: StrictYargsOptionsToInterface<typeof options>
 ) {
-	const config = readConfig(args.config, args);
+	const config = readConfig({ configPath: args.config, args });
 
 	logger.log(`Removing consumer from queue ${args.queueName}.`);
 	await deleteWorkerConsumer(config, args.queueName, args.scriptName, args.env);

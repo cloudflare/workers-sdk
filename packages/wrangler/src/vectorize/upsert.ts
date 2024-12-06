@@ -47,7 +47,7 @@ export function options(yargs: CommonYargsArgv) {
 export async function handler(
 	args: StrictYargsOptionsToInterface<typeof options>
 ) {
-	const config = readConfig(args.config, args);
+	const config = readConfig({ configPath: args.config, args });
 	const rl = createInterface({ input: createReadStream(args.file) });
 
 	if (Number(args.batchSize) > VECTORIZE_MAX_BATCH_SIZE) {

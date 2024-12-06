@@ -76,7 +76,7 @@ export async function typesHandler(
 		return;
 	}
 
-	const config = readConfig(configPath, args);
+	const config = readConfig({ configPath, args });
 
 	// args.xRuntime will be a string if the user passes "--x-include-runtime" or "--x-include-runtime=..."
 	if (typeof args.experimentalIncludeRuntime === "string") {

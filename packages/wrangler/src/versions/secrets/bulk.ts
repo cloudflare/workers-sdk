@@ -45,7 +45,7 @@ export const versionsSecretBulkCommand = createCommand({
 	},
 	positionalArgs: ["json"],
 	handler: async function versionsSecretPutBulkHandler(args) {
-		const config = getConfig(args, { hideWarnings: true });
+		const config = getConfig({ args }, { hideWarnings: true });
 		const scriptName = getLegacyScriptName(args, config);
 		if (!scriptName) {
 			throw new UserError(

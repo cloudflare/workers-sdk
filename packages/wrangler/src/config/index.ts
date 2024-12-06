@@ -72,15 +72,13 @@ type ReadConfigCommandArgs = NormalizeAndValidateConfigArgs;
  * Get the Wrangler configuration; read it from the give `configPath` if available.
  */
 export function readConfig(
-	configPath: string | undefined,
-	args: ReadConfigCommandArgs,
-	options?: { hideWarnings?: boolean }
-): Config;
-export function readConfig(
-	configPath: string | undefined,
-	args: ReadConfigCommandArgs,
-	{ hideWarnings = false }: { hideWarnings?: boolean } = {}
+	params: { configPath: string | undefined; args: ReadConfigCommandArgs },
+	options: { hideWarnings?: boolean } = {}
 ): Config {
+	let { configPath } = params;
+	const { args } = params;
+	const { hideWarnings } = options;
+
 	if (!configPath) {
 		configPath = findWranglerConfig(process.cwd());
 	}
@@ -104,10 +102,13 @@ export function readConfig(
 }
 
 export function readPagesConfig(
-	configPath: string | undefined,
-	args: ReadConfigCommandArgs,
-	{ hideWarnings = false }: { hideWarnings?: boolean } = {}
+	params: { configPath: string | undefined; args: ReadConfigCommandArgs },
+	options: { hideWarnings?: boolean } = {}
 ): Omit<Config, "pages_build_output_dir"> & { pages_build_output_dir: string } {
+	let { configPath } = params;
+	const { args } = params;
+	const { hideWarnings } = options;
+
 	if (!configPath) {
 		configPath = findWranglerConfig(process.cwd());
 	}
@@ -662,10 +663,13 @@ export function withConfig<T>(
 	handler: (
 		t: OnlyCamelCase<T & CommonYargsOptions> & { config: Config }
 	) => Promise<void>,
-	options?: Parameters<typeof readConfig>[2]
+	options?: Parameters<typeof readConfig>[1]
 ) {
 	return (t: OnlyCamelCase<T & CommonYargsOptions>) => {
-		return handler({ ...t, config: readConfig(t.config, t, options) });
+		return handler({
+			...t,
+			config: readConfig({ configPath: t.config, args: t }, options),
+		});
 	};
 }
 

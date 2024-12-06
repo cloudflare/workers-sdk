@@ -113,7 +113,7 @@ export function workerNamespaceCommands(
 			"List all dispatch namespaces",
 			(args) => args,
 			async (args) => {
-				const config = readConfig(args.config, args);
+				const config = readConfig({ configPath: args.config, args });
 				const accountId = await requireAuth(config);
 				await listWorkerNamespaces(accountId);
 				metrics.sendMetricsEvent("list dispatch namespaces", {
@@ -132,7 +132,7 @@ export function workerNamespaceCommands(
 				});
 			},
 			async (args) => {
-				const config = readConfig(args.config, args);
+				const config = readConfig({ configPath: args.config, args });
 				const accountId = await requireAuth(config);
 				await getWorkerNamespaceInfo(accountId, args.name);
 				metrics.sendMetricsEvent("view dispatch namespace", {
@@ -152,7 +152,7 @@ export function workerNamespaceCommands(
 			},
 			async (args) => {
 				await printWranglerBanner();
-				const config = readConfig(args.config, args);
+				const config = readConfig({ configPath: args.config, args });
 				const accountId = await requireAuth(config);
 				await createWorkerNamespace(accountId, args.name);
 				metrics.sendMetricsEvent("create dispatch namespace", {
@@ -172,7 +172,7 @@ export function workerNamespaceCommands(
 			},
 			async (args) => {
 				await printWranglerBanner();
-				const config = readConfig(args.config, args);
+				const config = readConfig({ configPath: args.config, args });
 				const accountId = await requireAuth(config);
 				await deleteWorkerNamespace(accountId, args.name);
 				metrics.sendMetricsEvent("delete dispatch namespace", {
@@ -198,7 +198,7 @@ export function workerNamespaceCommands(
 			},
 			async (args) => {
 				await printWranglerBanner();
-				const config = readConfig(args.config, args);
+				const config = readConfig({ configPath: args.config, args });
 				const accountId = await requireAuth(config);
 				await renameWorkerNamespace(accountId, args.oldName, args.newName);
 				metrics.sendMetricsEvent("rename dispatch namespace", {

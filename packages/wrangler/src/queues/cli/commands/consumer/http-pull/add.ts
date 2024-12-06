@@ -60,7 +60,7 @@ function createBody(
 export async function handler(
 	args: StrictYargsOptionsToInterface<typeof options>
 ) {
-	const config = readConfig(args.config, args);
+	const config = readConfig({ configPath: args.config, args });
 
 	if (Array.isArray(args.retryDelaySecs)) {
 		throw new CommandLineArgsError(

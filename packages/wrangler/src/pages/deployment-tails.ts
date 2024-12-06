@@ -131,7 +131,7 @@ export async function Handler({
 		await printWranglerBanner();
 	}
 
-	const config = readConfig(args.config, args);
+	const config = readConfig({ configPath: args.config, args });
 	const pagesConfig = getConfigCache<PagesConfigCache>(
 		PAGES_CONFIG_CACHE_FILENAME
 	);

@@ -42,7 +42,7 @@ export async function versionsDeploymentsListHandler(
 		await printWranglerBanner();
 	}
 
-	const config = getConfig(args);
+	const config = getConfig({ args });
 	metrics.sendMetricsEvent(
 		"list versioned deployments",
 		{ json: args.json },

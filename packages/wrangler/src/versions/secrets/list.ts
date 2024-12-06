@@ -32,7 +32,7 @@ export const versionsSecretsListCommand = createCommand({
 		},
 	},
 	handler: async function versionsSecretListHandler(args) {
-		const config = getConfig(args, { hideWarnings: true });
+		const config = getConfig({ args }, { hideWarnings: true });
 
 		const scriptName = getLegacyScriptName(args, config);
 		if (!scriptName) {

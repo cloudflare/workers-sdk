@@ -53,7 +53,7 @@ async function pagesProject(
 		 * return the top-level config. This contains all the information we
 		 * need.
 		 */
-		config = readPagesConfig(configPath, { env: undefined });
+		config = readPagesConfig({ configPath, args: { env: undefined } });
 	} catch (err) {
 		if (
 			!(

@@ -359,10 +359,13 @@ async function maybeReadPagesConfig(
 		return undefined;
 	}
 	try {
-		const config = readPagesConfig(configPath, {
-			...args,
-			// eslint-disable-next-line turbo/no-undeclared-env-vars
-			env: process.env.PAGES_ENVIRONMENT,
+		const config = readPagesConfig({
+			configPath,
+			args: {
+				...args,
+				// eslint-disable-next-line turbo/no-undeclared-env-vars
+				env: process.env.PAGES_ENVIRONMENT,
+			},
 		});
 
 		return {

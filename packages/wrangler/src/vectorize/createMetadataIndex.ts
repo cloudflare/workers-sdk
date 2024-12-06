@@ -36,7 +36,7 @@ export function options(yargs: CommonYargsArgv) {
 export async function handler(
 	args: StrictYargsOptionsToInterface<typeof options>
 ) {
-	const config = readConfig(args.config, args);
+	const config = readConfig({ configPath: args.config, args });
 
 	const reqOptions: VectorizeMetadataIndexProperty = {
 		propertyName: args.propertyName,

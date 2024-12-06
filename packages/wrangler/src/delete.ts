@@ -97,7 +97,7 @@ export async function deleteHandler(args: DeleteArgs) {
 	const configPath =
 		args.config ||
 		(args.script && findWranglerConfig(path.dirname(args.script)));
-	const config = readConfig(configPath, args);
+	const config = readConfig({ configPath, args });
 	if (config.pages_build_output_dir) {
 		throw new UserError(
 			"It looks like you've run a Workers-specific command in a Pages project.\n" +

@@ -111,7 +111,7 @@ export const Handler = async (args: HandlerOptions): Promise<void> => {
 	}
 	await printWranglerBanner();
 
-	const config = readConfig(args.config, args);
+	const config = readConfig({ configPath: args.config, args });
 
 	if (file && command) {
 		throw createFatalError(

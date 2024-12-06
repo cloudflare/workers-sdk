@@ -123,7 +123,7 @@ export const Handler = async (args: PagesDeployArgs) => {
 		 * need for now. We will perform a second config file read later
 		 * in `/api/pages/deploy`, that will get the environment specific config
 		 */
-		config = readPagesConfig(configPath, { ...args, env: undefined });
+		config = readPagesConfig({ configPath, args: { ...args, env: undefined } });
 	} catch (err) {
 		if (
 			!(

@@ -44,7 +44,7 @@ export const versionsSecretPutCommand = createCommand({
 	},
 	positionalArgs: ["key"],
 	handler: async function versionsSecretPutHandler(args) {
-		const config = getConfig(args, { hideWarnings: true });
+		const config = getConfig({ args }, { hideWarnings: true });
 		const scriptName = getLegacyScriptName(args, config);
 		if (!scriptName) {
 			throw new UserError(

@@ -58,7 +58,7 @@ function versionsRollbackOptions(rollbackYargs: CommonYargsArgv) {
 }
 
 async function versionsRollbackHandler(args: VersionsRollbackArgs) {
-	const config = getConfig(args);
+	const config = getConfig({ args });
 	const accountId = await requireAuth(config);
 	const workerName = args.name ?? config.name;
 

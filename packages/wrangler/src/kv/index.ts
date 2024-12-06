@@ -116,7 +116,7 @@ export const kvNamespaceCreateCommand = createCommand({
 	positionalArgs: ["namespace"],
 
 	async handler(args) {
-		const config = readConfig(args.config, args);
+		const config = readConfig({ configPath: args.config, args });
 		if (!config.name) {
 			logger.warn(
 				"No configured name present, using `worker` as a prefix for the title"
@@ -173,7 +173,7 @@ export const kvNamespaceListCommand = createCommand({
 
 	behaviour: { printBanner: false },
 	async handler(args) {
-		const config = readConfig(args.config, args);
+		const config = readConfig({ configPath: args.config, args });
 
 		const accountId = await requireAuth(config);
 
@@ -215,7 +215,7 @@ export const kvNamespaceDeleteCommand = createCommand({
 	},
 
 	async handler(args) {
-		const config = readConfig(args.config, args);
+		const config = readConfig({ configPath: args.config, args });
 
 		let id;
 		try {
@@ -324,7 +324,7 @@ export const kvKeyPutCommand = createCommand({
 	},
 
 	async handler({ key, ttl, expiration, metadata, ...args }) {
-		const config = readConfig(args.config, args);
+		const config = readConfig({ configPath: args.config, args });
 		const namespaceId = getKVNamespaceId(args, config);
 		// One of `args.path` and `args.value` must be defined
 		const value = args.path
@@ -426,7 +426,7 @@ export const kvKeyListCommand = createCommand({
 	behaviour: { printBanner: false },
 	async handler({ prefix, ...args }) {
 		// TODO: support for limit+cursor (pagination)
-		const config = readConfig(args.config, args);
+		const config = readConfig({ configPath: args.config, args });
 		const namespaceId = getKVNamespaceId(args, config);
 
 		let result: NamespaceKeyInfo[];
@@ -505,7 +505,7 @@ export const kvKeyGetCommand = createCommand({
 
 	behaviour: { printBanner: false },
 	async handler({ key, ...args }) {
-		const config = readConfig(args.config, args);
+		const config = readConfig({ configPath: args.config, args });
 		const namespaceId = getKVNamespaceId(args, config);
 
 		let bufferKVValue;
@@ -589,7 +589,7 @@ export const kvKeyDeleteCommand = createCommand({
 	},
 
 	async handler({ key, ...args }) {
-		const config = readConfig(args.config, args);
+		const config = readConfig({ configPath: args.config, args });
 		const namespaceId = getKVNamespaceId(args, config);
 
 		logger.log(`Deleting the key "${key}" on namespace ${namespaceId}.`);
@@ -676,7 +676,7 @@ export const kvBulkPutCommand = createCommand({
 		// This could be made more efficient with a streaming parser/uploader
 		// but we'll do that in the future if needed.
 
-		const config = readConfig(args.config, args);
+		const config = readConfig({ configPath: args.config, args });
 		const namespaceId = getKVNamespaceId(args, config);
 		const content = parseJSON(readFileSync(filename), filename);
 
@@ -802,7 +802,7 @@ export const kvBulkDeleteCommand = createCommand({
 	},
 
 	async handler({ filename, ...args }) {
-		const config = readConfig(args.config, args);
+		const config = readConfig({ configPath: args.config, args });
 		const namespaceId = getKVNamespaceId(args, config);
 
 		if (!args.force) {

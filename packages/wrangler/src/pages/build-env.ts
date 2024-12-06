@@ -56,10 +56,13 @@ export const Handler = async (args: PagesBuildEnvArgs) => {
 		pages_build_output_dir: string;
 	};
 	try {
-		config = readPagesConfig(configPath, {
-			...args,
-			// eslint-disable-next-line turbo/no-undeclared-env-vars
-			env: process.env.PAGES_ENVIRONMENT,
+		config = readPagesConfig({
+			configPath,
+			args: {
+				...args,
+				// eslint-disable-next-line turbo/no-undeclared-env-vars
+				env: process.env.PAGES_ENVIRONMENT,
+			},
 		});
 	} catch (err) {
 		// found `wrangler.toml` but `pages_build_output_dir` is not specified
