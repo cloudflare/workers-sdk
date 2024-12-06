@@ -592,7 +592,7 @@ describe("hyperdrive dev tests", () => {
 
 		const worker = helper.runLongLived("wrangler dev --remote");
 
-		const { url } = await worker.waitForReady()
+		const { url } = await worker.waitForReady();
 		const text = await fetchText(url);
 
 		const hyperdrive = new URL(text);
