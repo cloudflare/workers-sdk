@@ -68,6 +68,20 @@ export class WranglerE2ETestHelper {
 		return id;
 	}
 
+	async dispatchNamespace(isLocal: boolean) {
+		const name = generateResourceName("dispatch");
+		if (isLocal) {
+			throw new Error(
+				"Dispatch namespaces are not supported in local mode (yet)"
+			);
+		}
+		await this.run(`wrangler dispatch-namespace create ${name}`);
+		onTestFinished(async () => {
+			await this.run(`wrangler dispatch-namespace delete ${name}`);
+		});
+		return name;
+	}
+
 	async r2(isLocal: boolean) {
 		const name = generateResourceName("r2");
 		if (isLocal) {
