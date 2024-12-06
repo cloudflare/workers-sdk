@@ -414,7 +414,8 @@ export class ConfigController extends Controller<ConfigControllerEventMap> {
 		const signal = this.#abortController.signal;
 		this.latestInput = input;
 		try {
-			const fileConfig = readConfig(input.config, {
+			const fileConfig = readConfig({
+				config: input.config,
 				env: input.env,
 				"dispatch-namespace": undefined,
 				"legacy-env": !input.legacy?.enableServiceEnvironments,

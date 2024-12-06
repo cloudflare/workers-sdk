@@ -154,7 +154,7 @@ export const secret = (secretYargs: CommonYargsArgv) => {
 			},
 			async (args) => {
 				await printWranglerBanner();
-				const config = readConfig(args.config, args);
+				const config = readConfig(args);
 				if (config.pages_build_output_dir) {
 					throw new UserError(
 						"It looks like you've run a Workers-specific command in a Pages project.\n" +
@@ -262,7 +262,7 @@ export const secret = (secretYargs: CommonYargsArgv) => {
 			},
 			async (args) => {
 				await printWranglerBanner();
-				const config = readConfig(args.config, args);
+				const config = readConfig(args);
 				if (config.pages_build_output_dir) {
 					throw new UserError(
 						"It looks like you've run a Workers-specific command in a Pages project.\n" +
@@ -324,7 +324,7 @@ export const secret = (secretYargs: CommonYargsArgv) => {
 					});
 			},
 			async (args) => {
-				const config = readConfig(args.config, args);
+				const config = readConfig(args);
 				if (config.pages_build_output_dir) {
 					throw new UserError(
 						"It looks like you've run a Workers-specific command in a Pages project.\n" +
@@ -391,7 +391,7 @@ type SecretBulkArgs = StrictYargsOptionsToInterface<typeof secretBulkOptions>;
 
 export const secretBulkHandler = async (secretBulkArgs: SecretBulkArgs) => {
 	await printWranglerBanner();
-	const config = readConfig(secretBulkArgs.config, secretBulkArgs);
+	const config = readConfig(secretBulkArgs);
 	if (config.pages_build_output_dir) {
 		throw new UserError(
 			"It looks like you've run a Workers-specific command in a Pages project.\n" +

@@ -24,7 +24,7 @@ export function options(commonYargs: CommonYargsArgv) {
 export async function handler(
 	args: StrictYargsOptionsToInterface<typeof options>
 ) {
-	const config = readConfig(args.config, args);
+	const config = readConfig(args);
 	const origin = getOriginFromArgs(true, args);
 
 	logger.log(`🚧 Updating '${args.id}'`);

@@ -19,7 +19,7 @@ describe("readConfig()", () => {
 			main: "index.py",
 			compatibility_flags: ["python_workers"],
 		});
-		const config = readConfig("wrangler.toml", {});
+		const config = readConfig({ config: "wrangler.toml" });
 		expect(config.rules).toMatchInlineSnapshot(`
 			Array [
 			  Object {
@@ -36,7 +36,7 @@ describe("readConfig()", () => {
 			main: "index.py",
 		});
 		try {
-			readConfig("wrangler.toml", {});
+			readConfig({ config: "wrangler.toml" });
 			expect.fail();
 		} catch (e) {
 			expect(e).toMatchInlineSnapshot(

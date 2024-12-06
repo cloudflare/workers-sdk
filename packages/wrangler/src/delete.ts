@@ -1,7 +1,6 @@
 import assert from "assert";
-import path from "path";
 import { fetchResult } from "./cfetch";
-import { configFileName, findWranglerConfig, readConfig } from "./config";
+import { configFileName, readConfig } from "./config";
 import { confirm } from "./dialogs";
 import { UserError } from "./errors";
 import { deleteKVNamespace, listKVNamespaces } from "./kv/helpers";
@@ -94,10 +93,7 @@ type DeleteArgs = StrictYargsOptionsToInterface<typeof deleteOptions>;
 export async function deleteHandler(args: DeleteArgs) {
 	await printWranglerBanner();
 
-	const configPath =
-		args.config ||
-		(args.script && findWranglerConfig(path.dirname(args.script)));
-	const config = readConfig(configPath, args);
+	const config = readConfig(args);
 	if (config.pages_build_output_dir) {
 		throw new UserError(
 			"It looks like you've run a Workers-specific command in a Pages project.\n" +

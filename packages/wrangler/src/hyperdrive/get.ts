@@ -17,7 +17,7 @@ export function options(yargs: CommonYargsArgv) {
 export async function handler(
 	args: StrictYargsOptionsToInterface<typeof options>
 ) {
-	const config = readConfig(args.config, args);
+	const config = readConfig(args);
 
 	const database = await getConfig(config, args.id);
 	logger.log(JSON.stringify(database, null, 2));
