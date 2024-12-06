@@ -39,7 +39,7 @@ describe("r2", () => {
 			"test-r2.txt": fileContents,
 		});
 		const output = await helper.run(
-			`wrangler r2 object put ${bucketName}/testr2 --file test-r2.txt --content-type text/html`
+			`wrangler r2 object put ${bucketName}/testr2 --file test-r2.txt --content-type text/html --remote`
 		);
 		expect(normalize(output.stdout)).toMatchInlineSnapshot(`
 			"Creating object "testr2" in bucket "tmp-e2e-r2-00000000-0000-0000-0000-000000000000".
@@ -49,7 +49,7 @@ describe("r2", () => {
 
 	it("download object", async () => {
 		const output = await helper.run(
-			`wrangler r2 object get ${bucketName}/testr2 --file test-r2o.txt`
+			`wrangler r2 object get ${bucketName}/testr2 --file test-r2o.txt --remote`
 		);
 		expect(normalize(output.stdout)).toMatchInlineSnapshot(`
 			"Downloading "testr2" from "tmp-e2e-r2-00000000-0000-0000-0000-000000000000".
@@ -64,7 +64,7 @@ describe("r2", () => {
 
 	it("delete object", async () => {
 		const output = await helper.run(
-			`wrangler r2 object delete ${bucketName}/testr2`
+			`wrangler r2 object delete ${bucketName}/testr2 --remote`
 		);
 		expect(normalize(output.stdout)).toMatchInlineSnapshot(`
 			"Deleting object "testr2" from bucket "tmp-e2e-r2-00000000-0000-0000-0000-000000000000".
@@ -74,7 +74,7 @@ describe("r2", () => {
 
 	it("check object deleted", async () => {
 		const output = await helper.run(
-			`wrangler r2 object get ${bucketName}/testr2 --file test-r2o.txt`
+			`wrangler r2 object get ${bucketName}/testr2 --file test-r2o.txt --remote`
 		);
 		expect(output.stderr).toContain("The specified key does not exist");
 	});
@@ -92,7 +92,7 @@ describe("r2", () => {
 			"test-r2.txt": fileContents,
 		});
 		const output = await helper.run(
-			`wrangler r2 object put ${bucketName}/testr2 --file test-r2.txt --content-type text/html`
+			`wrangler r2 object put ${bucketName}/testr2 --file test-r2.txt --content-type text/html --remote`
 		);
 		expect(output.stderr).toContain("The specified bucket does not exist");
 	});

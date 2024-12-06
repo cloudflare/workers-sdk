@@ -13,12 +13,12 @@ describe("wrangler", () => {
 	describe("local", () => {
 		it("should put local kv storage", async () => {
 			await runWrangler(
-				`kv:key get val --namespace-id some-namespace-id --local --text`
+				`kv key get val --namespace-id some-namespace-id  --text`
 			);
 			expect(std.out).toMatchInlineSnapshot(`"Value not found"`);
 
 			await runWrangler(
-				`kv:key put val value --namespace-id some-namespace-id --local`
+				`kv key put val value --namespace-id some-namespace-id `
 			);
 			expect(std.out).toMatchInlineSnapshot(`
 			"Value not found
@@ -26,7 +26,7 @@ describe("wrangler", () => {
 		`);
 
 			await runWrangler(
-				`kv:key get val --namespace-id some-namespace-id --local --text`
+				`kv key get val --namespace-id some-namespace-id --text`
 			);
 			expect(std.out).toMatchInlineSnapshot(`
 			"Value not found
@@ -36,7 +36,7 @@ describe("wrangler", () => {
 		});
 
 		it("should list local kv storage", async () => {
-			await runWrangler(`kv:key list --namespace-id some-namespace-id --local`);
+			await runWrangler(`kv key list --namespace-id some-namespace-id`);
 			expect(std.out).toMatchInlineSnapshot(`"[]"`);
 			const keyValues = [
 				{
@@ -58,10 +58,10 @@ describe("wrangler", () => {
 			];
 			writeFileSync("./keys.json", JSON.stringify(keyValues));
 			await runWrangler(
-				`kv:bulk put keys.json --namespace-id some-namespace-id --local`
+				`kv bulk put keys.json --namespace-id some-namespace-id`
 			);
 
-			await runWrangler(`kv:key list --namespace-id some-namespace-id --local`);
+			await runWrangler(`kv key list --namespace-id some-namespace-id`);
 			expect(std.out).toMatchInlineSnapshot(`
 			"[]
 			Success!
@@ -82,13 +82,13 @@ describe("wrangler", () => {
 		`);
 
 			await runWrangler(
-				`kv:key list --namespace-id some-namespace-id --local --prefix a`
+				`kv key list --namespace-id some-namespace-id --prefix a`
 			);
 			await runWrangler(
-				`kv:key list --namespace-id some-namespace-id --local --prefix a/b`
+				`kv key list --namespace-id some-namespace-id --prefix a/b`
 			);
 			await runWrangler(
-				`kv:key list --namespace-id some-namespace-id --local --prefix abc`
+				`kv key list --namespace-id some-namespace-id --prefix abc`
 			);
 
 			expect(std.out).toMatchInlineSnapshot(`
@@ -130,18 +130,16 @@ describe("wrangler", () => {
 
 		it("should delete local kv storage", async () => {
 			await runWrangler(
-				`kv:key put val value --namespace-id some-namespace-id --local`
+				`kv key put val value --namespace-id some-namespace-id`
 			);
 			await runWrangler(
-				`kv:key get val --namespace-id some-namespace-id --local --text`
+				`kv key get val --namespace-id some-namespace-id --text`
 			);
 			expect(std.out).toMatchInlineSnapshot(`
 			"Writing the value \\"value\\" to key \\"val\\" on namespace some-namespace-id.
 			value"
 		`);
-			await runWrangler(
-				`kv:key delete val --namespace-id some-namespace-id --local`
-			);
+			await runWrangler(`kv key delete val --namespace-id some-namespace-id`);
 			expect(std.out).toMatchInlineSnapshot(`
 			"Writing the value \\"value\\" to key \\"val\\" on namespace some-namespace-id.
 			value
@@ -149,7 +147,7 @@ describe("wrangler", () => {
 		`);
 
 			await runWrangler(
-				`kv:key get val --namespace-id some-namespace-id --local --text`
+				`kv key get val --namespace-id some-namespace-id --text`
 			);
 			expect(std.out).toMatchInlineSnapshot(`
 			"Writing the value \\"value\\" to key \\"val\\" on namespace some-namespace-id.
@@ -160,7 +158,7 @@ describe("wrangler", () => {
 		});
 
 		it("should put local bulk kv storage", async () => {
-			await runWrangler(`kv:key list --namespace-id bulk-namespace-id --local`);
+			await runWrangler(`kv key list --namespace-id bulk-namespace-id`);
 			expect(std.out).toMatchInlineSnapshot(`"[]"`);
 
 			const keyValues = [
@@ -175,7 +173,7 @@ describe("wrangler", () => {
 			];
 			writeFileSync("./keys.json", JSON.stringify(keyValues));
 			await runWrangler(
-				`kv:bulk put keys.json --namespace-id bulk-namespace-id --local`
+				`kv bulk put keys.json --namespace-id bulk-namespace-id`
 			);
 			expect(std.out).toMatchInlineSnapshot(`
 			"[]
@@ -183,7 +181,7 @@ describe("wrangler", () => {
 		`);
 
 			await runWrangler(
-				`kv:key get test --namespace-id bulk-namespace-id --local --text`
+				`kv key get test --namespace-id bulk-namespace-id --text`
 			);
 			expect(std.out).toMatchInlineSnapshot(`
 			"[]
@@ -191,7 +189,7 @@ describe("wrangler", () => {
 			value"
 		`);
 
-			await runWrangler(`kv:key list --namespace-id bulk-namespace-id --local`);
+			await runWrangler(`kv key list --namespace-id bulk-namespace-id`);
 			expect(std.out).toMatchInlineSnapshot(`
 			"[]
 			Success!
@@ -207,7 +205,7 @@ describe("wrangler", () => {
 		`);
 		});
 
-		it("should delete local bulk kv storage (string)", async () => {
+		it("should delete local bulk kv storage", async () => {
 			const keyValues = [
 				{
 					key: "hello",
@@ -220,9 +218,9 @@ describe("wrangler", () => {
 			];
 			writeFileSync("./keys.json", JSON.stringify(keyValues));
 			await runWrangler(
-				`kv:bulk put keys.json --namespace-id bulk-namespace-id --local`
+				`kv bulk put keys.json --namespace-id bulk-namespace-id`
 			);
-			await runWrangler(`kv:key list --namespace-id bulk-namespace-id --local`);
+			await runWrangler(`kv key list --namespace-id bulk-namespace-id`);
 			expect(std.out).toMatchInlineSnapshot(`
 			"Success!
 			[
@@ -237,7 +235,7 @@ describe("wrangler", () => {
 			const keys = ["hello", "test"];
 			writeFileSync("./keys.json", JSON.stringify(keys));
 			await runWrangler(
-				`kv:bulk delete keys.json --namespace-id bulk-namespace-id --local --force`
+				`kv bulk delete keys.json --namespace-id bulk-namespace-id --force`
 			);
 			expect(std.out).toMatchInlineSnapshot(`
 			"Success!
@@ -252,7 +250,7 @@ describe("wrangler", () => {
 			Success!"
 		`);
 
-			await runWrangler(`kv:key list --namespace-id bulk-namespace-id --local`);
+			await runWrangler(`kv key list --namespace-id bulk-namespace-id`);
 			expect(std.out).toMatchInlineSnapshot(`
 			"Success!
 			[
@@ -281,9 +279,9 @@ describe("wrangler", () => {
 			];
 			writeFileSync("./keys.json", JSON.stringify(keyValues));
 			await runWrangler(
-				`kv bulk put keys.json --namespace-id bulk-namespace-id --local`
+				`kv bulk put keys.json --namespace-id bulk-namespace-id`
 			);
-			await runWrangler(`kv key list --namespace-id bulk-namespace-id --local`);
+			await runWrangler(`kv key list --namespace-id bulk-namespace-id`);
 			expect(std.out).toMatchInlineSnapshot(`
 			"Success!
 			[
@@ -305,7 +303,7 @@ describe("wrangler", () => {
 			];
 			writeFileSync("./keys.json", JSON.stringify(keys));
 			await runWrangler(
-				`kv bulk delete keys.json --namespace-id bulk-namespace-id --local --force`
+				`kv bulk delete keys.json --namespace-id bulk-namespace-id --force`
 			);
 			expect(std.out).toMatchInlineSnapshot(`
 			"Success!
@@ -320,7 +318,7 @@ describe("wrangler", () => {
 			Success!"
 		`);
 
-			await runWrangler(`kv key list --namespace-id bulk-namespace-id --local`);
+			await runWrangler(`kv key list --namespace-id bulk-namespace-id`);
 			expect(std.out).toMatchInlineSnapshot(`
 			"Success!
 			[
@@ -338,11 +336,11 @@ describe("wrangler", () => {
 
 		it("should follow persist-to for local kv storage", async () => {
 			await runWrangler(
-				`kv:key put val value --namespace-id some-namespace-id --local`
+				`kv key put val value --namespace-id some-namespace-id`
 			);
 
 			await runWrangler(
-				`kv:key put val persistValue --namespace-id some-namespace-id --local --persist-to ./persistdir`
+				`kv key put val persistValue --namespace-id some-namespace-id --persist-to ./persistdir`
 			);
 			expect(std.out).toMatchInlineSnapshot(`
 			"Writing the value \\"value\\" to key \\"val\\" on namespace some-namespace-id.
@@ -350,7 +348,7 @@ describe("wrangler", () => {
 		`);
 
 			await runWrangler(
-				`kv:key get val --namespace-id some-namespace-id --local --text`
+				`kv key get val --namespace-id some-namespace-id --text`
 			);
 			expect(std.out).toMatchInlineSnapshot(`
 			"Writing the value \\"value\\" to key \\"val\\" on namespace some-namespace-id.
@@ -359,7 +357,7 @@ describe("wrangler", () => {
 		`);
 
 			await runWrangler(
-				`kv:key get val --namespace-id some-namespace-id --local --text --persist-to ./persistdir`
+				`kv key get val --namespace-id some-namespace-id --text --persist-to ./persistdir`
 			);
 			expect(std.out).toMatchInlineSnapshot(`
 			"Writing the value \\"value\\" to key \\"val\\" on namespace some-namespace-id.
