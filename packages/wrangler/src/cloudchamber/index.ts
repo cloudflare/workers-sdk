@@ -1,3 +1,4 @@
+import { applyCommand, applyCommandOptionalYargs } from "./apply";
 import { handleFailure } from "./common";
 import { createCommand, createCommandOptionalYargs } from "./create";
 import { curlCommand, yargsCurl } from "./curl";
@@ -61,5 +62,11 @@ export const cloudchamber = (
 			"send a request to an arbitrary cloudchamber endpoint",
 			(args) => yargsCurl(args),
 			(args) => handleFailure(curlCommand)(args)
+		)
+		.command(
+			"apply",
+			"apply the changes in the container applications to deploy",
+			(args) => applyCommandOptionalYargs(args),
+			(args) => handleFailure(applyCommand)(args)
 		);
 };

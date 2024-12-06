@@ -1,4 +1,5 @@
 import * as util from "node:util";
+import * as streams from "@cloudflare/cli/streams";
 import { afterEach, beforeEach, vi } from "vitest";
 import { logger } from "../../logger";
 import { normalizeString } from "./normalize";
@@ -33,14 +34,14 @@ const std = {
 	},
 };
 
-function normalizeOutput(spy: MockInstance): string {
-	return normalizeString(captureCalls(spy));
+function normalizeOutput(spy: MockInstance, join = "\n"): string {
+	return normalizeString(captureCalls(spy, join));
 }
 
-function captureCalls(spy: MockInstance): string {
+function captureCalls(spy: MockInstance, join = "\n"): string {
 	return spy.mock.calls
 		.map((args: unknown[]) => util.format("%s", ...args))
-		.join("\n");
+		.join(join);
 }
 
 export function mockConsoleMethods() {
@@ -60,4 +61,32 @@ export function mockConsoleMethods() {
 		warnSpy.mockRestore();
 	});
 	return std;
+}
+
+let outSpy: MockInstance, errSpy: MockInstance;
+
+const process = {
+	get stdout() {
+		return normalizeOutput(outSpy, "");
+	},
+
+	get stderr() {
+		return normalizeOutput(errSpy, "");
+	},
+};
+
+export function mockCLIOutput() {
+	beforeEach(() => {
+		outSpy = vi.spyOn(streams.stdout, "write").mockImplementation(() => true);
+		errSpy = vi
+			.spyOn(streams.stderr, "write")
+			.mockImplementationOnce(() => true);
+	});
+
+	afterEach(() => {
+		outSpy.mockRestore();
+		errSpy.mockRestore();
+	});
+
+	return process;
 }

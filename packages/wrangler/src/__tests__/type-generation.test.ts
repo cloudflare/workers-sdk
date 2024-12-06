@@ -165,6 +165,7 @@ const bindingsConfigMock: Omit<
 		],
 	},
 	workflows: [],
+	container_app: [],
 	r2_buckets: [
 		{
 			binding: "R2_BUCKET_BINDING",
