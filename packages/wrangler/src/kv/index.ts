@@ -313,6 +313,11 @@ export const kvKeyPutCommand = createCommand({
 			type: "boolean",
 			describe: "Interact with local storage",
 		},
+		remote: {
+			type: "boolean",
+			describe: "Interact with remote storage",
+			conflicts: "local",
+		},
 		"persist-to": {
 			type: "string",
 			describe: "Directory for local persistence",
@@ -347,7 +352,7 @@ export const kvKeyPutCommand = createCommand({
 		}
 
 		let metricEvent: EventNames;
-		if (args.local) {
+		if (!args.remote) {
 			await usingLocalNamespace(
 				args.persistTo,
 				config,
@@ -414,6 +419,11 @@ export const kvKeyListCommand = createCommand({
 			type: "boolean",
 			describe: "Interact with local storage",
 		},
+		remote: {
+			type: "boolean",
+			describe: "Interact with remote storage",
+			conflicts: "local",
+		},
 		"persist-to": {
 			type: "string",
 			describe: "Directory for local persistence",
@@ -431,7 +441,7 @@ export const kvKeyListCommand = createCommand({
 
 		let result: NamespaceKeyInfo[];
 		let metricEvent: EventNames;
-		if (args.local) {
+		if (!args.remote) {
 			const listResult = await usingLocalNamespace(
 				args.persistTo,
 				config,
@@ -494,6 +504,11 @@ export const kvKeyGetCommand = createCommand({
 			type: "boolean",
 			describe: "Interact with local storage",
 		},
+		remote: {
+			type: "boolean",
+			describe: "Interact with remote storage",
+			conflicts: "local",
+		},
 		"persist-to": {
 			type: "string",
 			describe: "Directory for local persistence",
@@ -510,7 +525,7 @@ export const kvKeyGetCommand = createCommand({
 
 		let bufferKVValue;
 		let metricEvent: EventNames;
-		if (args.local) {
+		if (!args.remote) {
 			const val = await usingLocalNamespace(
 				args.persistTo,
 				config,
@@ -582,6 +597,11 @@ export const kvKeyDeleteCommand = createCommand({
 			type: "boolean",
 			describe: "Interact with local storage",
 		},
+		remote: {
+			type: "boolean",
+			describe: "Interact with remote storage",
+			conflicts: "local",
+		},
 		"persist-to": {
 			type: "string",
 			describe: "Directory for local persistence",
@@ -595,7 +615,7 @@ export const kvKeyDeleteCommand = createCommand({
 		logger.log(`Deleting the key "${key}" on namespace ${namespaceId}.`);
 
 		let metricEvent: EventNames;
-		if (args.local) {
+		if (!args.remote) {
 			await usingLocalNamespace(
 				args.persistTo,
 				config,
@@ -665,6 +685,11 @@ export const kvBulkPutCommand = createCommand({
 			type: "boolean",
 			describe: "Interact with local storage",
 		},
+		remote: {
+			type: "boolean",
+			describe: "Interact with remote storage",
+			conflicts: "local",
+		},
 		"persist-to": {
 			type: "string",
 			describe: "Directory for local persistence",
@@ -727,7 +752,7 @@ export const kvBulkPutCommand = createCommand({
 		}
 
 		let metricEvent: EventNames;
-		if (args.local) {
+		if (!args.remote) {
 			await usingLocalNamespace(
 				args.persistTo,
 				config,
@@ -799,6 +824,11 @@ export const kvBulkDeleteCommand = createCommand({
 			type: "boolean",
 			describe: "Interact with local storage",
 		},
+		remote: {
+			type: "boolean",
+			describe: "Interact with remote storage",
+			conflicts: "local",
+		},
 		"persist-to": {
 			type: "string",
 			describe: "Directory for local persistence",
@@ -856,7 +886,7 @@ export const kvBulkDeleteCommand = createCommand({
 		}
 
 		let metricEvent: EventNames;
-		if (args.local) {
+		if (!args.remote) {
 			await usingLocalNamespace(
 				args.persistTo,
 				config,
