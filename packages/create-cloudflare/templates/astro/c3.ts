@@ -1,3 +1,4 @@
+import { existsSync, writeFileSync } from "fs";
 import { logRaw, updateStatus } from "@cloudflare/cli";
 import { blue, brandColor, dim } from "@cloudflare/cli/colors";
 import { runFrameworkGenerator } from "frameworks/index";
@@ -65,6 +66,9 @@ const updateEnvDeclaration = (ctx: C3Context) => {
 	}
 
 	const filePath = "src/env.d.ts";
+	if (!existsSync(filePath)) {
+		writeFileSync(filePath, '/// <reference path="../.astro/types.d.ts" />', { encoding: "utf-8" });
+	}
 
 	updateStatus(`Adding type declarations in ${blue(filePath)}`);
 

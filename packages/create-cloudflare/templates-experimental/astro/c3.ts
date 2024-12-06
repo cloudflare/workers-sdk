@@ -1,3 +1,4 @@
+import { existsSync, writeFileSync } from "fs";
 import { logRaw, updateStatus } from "@cloudflare/cli";
 import { blue, brandColor, dim } from "@cloudflare/cli/colors";
 import { runFrameworkGenerator } from "frameworks/index";
@@ -32,6 +33,9 @@ const configure = async (ctx: C3Context) => {
 
 const updateAstroConfig = () => {
 	const filePath = "astro.config.mjs";
+	if (!existsSync(filePath)) {
+		writeFileSync(filePath, '/// <reference path="../.astro/types.d.ts" />', { encoding: "utf-8" });
+	}
 
 	updateStatus(`Updating configuration in ${blue(filePath)}`);
 
