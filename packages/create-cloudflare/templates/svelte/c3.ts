@@ -1,3 +1,4 @@
+import { existsSync } from "node:fs";
 import { platform } from "node:os";
 import { logRaw, updateStatus } from "@cloudflare/cli";
 import { blue, brandColor, dim } from "@cloudflare/cli/colors";
@@ -28,6 +29,7 @@ const configure = async (ctx: C3Context) => {
 	});
 
 	updateSvelteConfig();
+	updatePlaywrightConfig(usesTypescript(ctx));
 	updateTypeDefinitions(ctx);
 };
 
@@ -44,6 +46,34 @@ const updateSvelteConfig = () => {
 			}
 
 			// stop traversing this node
+			return false;
+		},
+	});
+};
+
+const updatePlaywrightConfig = (shouldUseTypescript: boolean) => {
+	const filePath = `playwright.config.${shouldUseTypescript ? "ts" : "js"}`;
+	if (!existsSync(filePath)) {
+		return;
+	}
+
+	updateStatus(`Changing webServer port in ${blue(filePath)}`);
+
+	transformFile(filePath, {
+		visitObjectExpression: function (n) {
+			const portProp = n.node.properties.find((prop) => {
+				if (!("key" in prop) || !("name" in prop.key)) {
+					return false;
+				}
+
+				return prop.key.name === "port";
+			});
+
+			if (!portProp || !("value" in portProp) || !("value" in portProp.value)) {
+				return this.traverse(n);
+			}
+
+			portProp.value.value = 8788;
 			return false;
 		},
 	});
