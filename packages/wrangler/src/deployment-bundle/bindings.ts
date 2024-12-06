@@ -199,13 +199,18 @@ export async function provisionBindings(
 			for (const kv of pendingResources.kv_namespaces) {
 				logger.log("Provisioning", kv.binding, `(${prettyBindingName})...`);
 				let name: string;
-				const selected = await inputPrompt({
-					type: "select",
-					question: `Would you like to connect an existing ${prettyBindingName} or create a new one?`,
-					options: options.concat([{ label: "Create new", value: "new" }]),
-					label: kv.binding,
-					defaultValue: "new",
-				});
+				const selected =
+					options.length === 0
+						? "new"
+						: await inputPrompt({
+								type: "select",
+								question: `Would you like to connect an existing ${prettyBindingName} or create a new one?`,
+								options: options.concat([
+									{ label: "Create new", value: "new" },
+								]),
+								label: kv.binding,
+								defaultValue: "new",
+							});
 				if (selected === "new") {
 					name = await prompt(`Enter a name for the new ${prettyBindingName}`);
 					logger.log(`🌀 Creating new ${prettyBindingName} "${name}"...`);
@@ -265,13 +270,18 @@ export async function provisionBindings(
 			for (const d1 of pendingResources.d1_databases) {
 				logger.log("Provisioning", d1.binding, `(${prettyBindingName})...`);
 				let name: string;
-				const selected = await inputPrompt({
-					type: "select",
-					question: `Would you like to connect an existing ${prettyBindingName} or create a new one?`,
-					options: options.concat([{ label: "Create new", value: "new" }]),
-					label: d1.binding,
-					defaultValue: "new",
-				});
+				const selected =
+					options.length === 0
+						? "new"
+						: await inputPrompt({
+								type: "select",
+								question: `Would you like to connect an existing ${prettyBindingName} or create a new one?`,
+								options: options.concat([
+									{ label: "Create new", value: "new" },
+								]),
+								label: d1.binding,
+								defaultValue: "new",
+							});
 				if (selected === "new") {
 					name = await prompt(`Enter a name for the new ${prettyBindingName}`);
 					logger.log(`🌀 Creating new ${prettyBindingName} "${name}"...`);
@@ -330,13 +340,18 @@ export async function provisionBindings(
 			for (const r2 of pendingResources.r2_buckets) {
 				logger.log("Provisioning", r2.binding, `(${prettyBindingName})...`);
 				let name: string;
-				const selected = await inputPrompt({
-					type: "select",
-					question: `Would you like to connect an existing ${prettyBindingName} or create a new one?`,
-					options: options.concat([{ label: "Create new", value: "new" }]),
-					label: r2.binding,
-					defaultValue: "new",
-				});
+				const selected =
+					options.length === 0
+						? "new"
+						: await inputPrompt({
+								type: "select",
+								question: `Would you like to connect an existing ${prettyBindingName} or create a new one?`,
+								options: options.concat([
+									{ label: "Create new", value: "new" },
+								]),
+								label: r2.binding,
+								defaultValue: "new",
+							});
 				if (selected === "new") {
 					name = await prompt(`Enter a name for the new ${prettyBindingName}`);
 					logger.log(`🌀 Creating new ${prettyBindingName} "${name}"...`);
