@@ -10,6 +10,7 @@ import {
 	convertCfWorkerInitBindingstoBindings,
 	extractBindingsOfType,
 } from "./api/startDevWorker/utils";
+import { getAssetsOptions } from "./assets";
 import {
 	configFileName,
 	findWranglerConfig,
@@ -876,9 +877,7 @@ export async function getHostAndRoutes(
 				routes?: Extract<Trigger, { type: "route" }>[];
 				assets?: string;
 		  },
-	config: Pick<Config, "route" | "routes" | "assets"> & {
-		dev: Pick<Config["dev"], "host">;
-	}
+	config: Config
 ) {
 	// TODO: if worker_dev = false and no routes, then error (only for dev)
 	// Compute zone info from the `host` and `route` args and config;
@@ -899,7 +898,8 @@ export async function getHostAndRoutes(
 		}
 	});
 	if (routes) {
-		validateRoutes(routes, Boolean(args.assets || config.assets));
+		const assetOptions = getAssetsOptions({ assets: args.assets }, config);
+		validateRoutes(routes, assetOptions);
 	}
 	return { host, routes };
 }
