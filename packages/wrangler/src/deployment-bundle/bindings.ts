@@ -161,7 +161,6 @@ export async function provisionBindings(
 					async create(name) {
 						const db = await createD1Database(accountId, name);
 						d1.database_id = db.uuid;
-						console.log("db", db);
 						return db.uuid;
 					},
 					updateId(id) {
