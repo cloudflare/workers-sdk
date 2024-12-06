@@ -1,16 +1,25 @@
-import { randomUUID } from "node:crypto";
-import { spinner } from "@cloudflare/cli/interactive";
+import { inputPrompt } from "@cloudflare/cli/interactive";
+import chalk from "chalk";
 import { fetchResult } from "../cfetch";
 import { printBindings } from "../config";
 import { createD1Database } from "../d1/create";
-import { confirm } from "../dialogs";
+import { listDatabases } from "../d1/list";
+import { prompt } from "../dialogs";
 import { FatalError } from "../errors";
-import { createKVNamespace } from "../kv/helpers";
+import { createKVNamespace, listKVNamespaces } from "../kv/helpers";
 import { logger } from "../logger";
-import { createR2Bucket } from "../r2/helpers";
+import { createR2Bucket, listR2Buckets } from "../r2/helpers";
 import type { Config } from "../config";
+import type { Database } from "../d1/types";
+import type { KVNamespaceInfo } from "../kv/helpers";
+import type { R2BucketInfo } from "../r2/helpers";
 import type { WorkerMetadataBinding } from "./create-worker-upload-form";
-import type { CfWorkerInit } from "./worker";
+import type {
+	CfD1Database,
+	CfKvNamespace,
+	CfR2Bucket,
+	CfWorkerInit,
+} from "./worker";
 
 /**
  * A symbol to inherit a binding from the deployed worker.
@@ -69,34 +78,25 @@ export type Settings = {
 	bindings: Array<WorkerMetadataBinding>;
 };
 
-export type PendingResource =
-	| {
-			name: string;
-			type: "kv";
-			create: (title: string) => Promise<string>;
-	  }
-	| {
-			name: string;
-			type: "r2";
-			create: (
-				bucketName: string,
-				location?: string,
-				jurisdiction?: string,
-				storageClass?: string
-			) => Promise<string>;
-	  }
-	| {
-			name: string;
-			type: "d1";
-			create: (name: string, location?: string) => Promise<string>;
-	  };
-
+type PendingResourceOperations = {
+	create: (name: string) => Promise<string>;
+	updateId: (id: string) => void;
+};
+type PendingResources = {
+	kv_namespaces: (CfKvNamespace & PendingResourceOperations)[];
+	r2_buckets?: (CfR2Bucket & PendingResourceOperations)[];
+	d1_databases?: (CfD1Database & PendingResourceOperations)[];
+};
 export async function provisionBindings(
 	bindings: CfWorkerInit["bindings"],
 	accountId: string,
 	scriptName: string
 ): Promise<void> {
-	const pendingResources: Array<PendingResource> = [];
+	const pendingResources: PendingResources = {
+		d1_databases: [],
+		r2_buckets: [],
+		kv_namespaces: [],
+	};
 	let settings: Settings | undefined;
 
 	try {
@@ -107,16 +107,18 @@ export async function provisionBindings(
 
 	for (const kv of bindings.kv_namespaces ?? []) {
 		if (!kv.id) {
-			if (hasBindingSettings(settings, "kv_namespace", kv.binding)) {
+			if (inBindingSettings(settings, "kv_namespace", kv.binding)) {
 				kv.id = INHERIT_SYMBOL;
 			} else {
-				pendingResources.push({
-					type: "kv",
-					name: kv.binding,
+				pendingResources.kv_namespaces?.push({
+					binding: kv.binding,
 					async create(title) {
 						const id = await createKVNamespace(accountId, title);
 						kv.id = id;
 						return id;
+					},
+					updateId(id) {
+						kv.id = id;
 					},
 				});
 			}
@@ -125,22 +127,24 @@ export async function provisionBindings(
 
 	for (const r2 of bindings.r2_buckets ?? []) {
 		if (!r2.bucket_name) {
-			if (hasBindingSettings(settings, "r2_bucket", r2.binding)) {
+			if (inBindingSettings(settings, "r2_bucket", r2.binding)) {
 				r2.bucket_name = INHERIT_SYMBOL;
 			} else {
-				pendingResources.push({
-					type: "r2",
-					name: r2.binding,
-					async create(bucketName, location, jurisdiction, storageClass) {
+				pendingResources.r2_buckets?.push({
+					binding: r2.binding,
+					async create(bucketName) {
 						await createR2Bucket(
 							accountId,
-							bucketName,
-							location,
-							jurisdiction,
-							storageClass
+							bucketName
+							// location,
+							// jurisdiction,
+							// storageClass
 						);
 						r2.bucket_name = bucketName;
 						return bucketName;
+					},
+					updateId(bucketName) {
+						r2.bucket_name = bucketName;
 					},
 				});
 			}
@@ -149,59 +153,234 @@ export async function provisionBindings(
 
 	for (const d1 of bindings.d1_databases ?? []) {
 		if (!d1.database_id) {
-			if (hasBindingSettings(settings, "d1", d1.binding)) {
+			if (inBindingSettings(settings, "d1", d1.binding)) {
 				d1.database_id = INHERIT_SYMBOL;
 			} else {
-				pendingResources.push({
-					type: "d1",
-					name: d1.binding,
-					async create(name, location) {
-						const db = await createD1Database(accountId, name, location);
+				pendingResources.d1_databases?.push({
+					binding: d1.binding,
+					async create(name) {
+						const db = await createD1Database(accountId, name);
 						d1.database_id = db.uuid;
+						console.log("db", db);
 						return db.uuid;
+					},
+					updateId(id) {
+						// tODO check d1 isn't doing something funny here
+						d1.database_id = id;
 					},
 				});
 			}
 		}
 	}
 
-	if (pendingResources.length > 0) {
-		printBindings(bindings);
+	const MAX_OPTIONS = 4;
 
-		// Stylistic newline
+	if (Object.values(pendingResources).some((v) => v && v.length > 0)) {
 		logger.log();
-
-		const ok = await confirm(
-			"Would you like Wrangler to provision these resources on your behalf and bind them to your project?"
-		);
-
-		if (ok) {
-			logger.log("Provisioning resources...");
-
-			// After asking the user, create the ones we need to create, mutating `bindings` in the process
-			for (const binding of pendingResources) {
-				const s = spinner();
-
-				s.start(`- Provisioning ${binding.name}...`);
-				const id = await binding.create(`${binding.name}-${randomUUID()}`);
-				s.stop(`- ${binding.name} provisioned with ID "${id}"`);
+		printBindings(pendingResources, { provisioning: true });
+		printDivider();
+		if (pendingResources.kv_namespaces?.length) {
+			const prettyBindingName = "KV Namespace";
+			const preExisting = await listKVNamespaces(accountId);
+			const options = preExisting
+				.map((resource) => {
+					return {
+						label: resource.title,
+						value: resource.id,
+					};
+				})
+				.slice(0, MAX_OPTIONS - 1);
+			if (options.length < preExisting.length) {
+				options.push({
+					label: "Other (too many to list)",
+					value: "manual",
+				});
 			}
-		} else {
-			throw new FatalError("Deployment aborted");
+
+			for (const kv of pendingResources.kv_namespaces) {
+				logger.log("Provisioning", kv.binding, `(${prettyBindingName})...`);
+				let name: string;
+				const selected = await inputPrompt({
+					type: "select",
+					question: `Would you like to connect an existing ${prettyBindingName} or create a new one?`,
+					options: options.concat([{ label: "Create new", value: "new" }]),
+					label: kv.binding,
+					defaultValue: "new",
+				});
+				if (selected === "new") {
+					name = await prompt(`Enter a name for the new ${prettyBindingName}`);
+					logger.log(`🌀 Creating new ${prettyBindingName} "${name}"...`);
+					// creates KV and mutates "bindings" to update id
+					await kv.create(name);
+				} else if (selected === "manual") {
+					let searchedResource: KVNamespaceInfo | undefined;
+					while (searchedResource === undefined) {
+						const input = await prompt(
+							`Enter the title or id of an existing ${prettyBindingName}`
+						);
+						searchedResource = preExisting.find(
+							(r) => r.title === input || r.id === input
+						);
+						if (!searchedResource) {
+							logger.log(
+								`No ${prettyBindingName} with the title/id "${input}" found. Please try again.`
+							);
+						}
+					}
+					name = searchedResource?.title;
+					//  mutates "bindings" to update id
+					kv.updateId(searchedResource.id);
+				} else {
+					const selectedResource = preExisting.find((r) => r.id === selected);
+					if (!selectedResource) {
+						throw new FatalError(
+							`${prettyBindingName} with id ${selected} not found`
+						);
+					}
+					name = selectedResource.title;
+					kv.updateId(selected);
+				}
+				logger.log(`✨ ${kv.binding} provisioned with ${name}`);
+				printDivider();
+			}
 		}
 
-		logger.log(`All resources provisioned, continuing deployment...`);
+		if (pendingResources.d1_databases?.length) {
+			const prettyBindingName = "D1 Database";
+			const preExisting = await listDatabases(accountId);
+			const options = preExisting
+				.map((resource) => {
+					return {
+						label: resource.name,
+						value: resource.uuid,
+					};
+				})
+				.slice(0, MAX_OPTIONS - 1);
+			if (options.length < preExisting.length) {
+				options.push({
+					label: "Other (too many to list)",
+					value: "manual",
+				});
+			}
+
+			for (const d1 of pendingResources.d1_databases) {
+				logger.log("Provisioning", d1.binding, `(${prettyBindingName})...`);
+				let name: string;
+				const selected = await inputPrompt({
+					type: "select",
+					question: `Would you like to connect an existing ${prettyBindingName} or create a new one?`,
+					options: options.concat([{ label: "Create new", value: "new" }]),
+					label: d1.binding,
+					defaultValue: "new",
+				});
+				if (selected === "new") {
+					name = await prompt(`Enter a name for the new ${prettyBindingName}`);
+					logger.log(`🌀 Creating new ${prettyBindingName} "${name}"...`);
+					// creates KV and mutates "bindings" to update id
+					await d1.create(name);
+				} else if (selected === "manual") {
+					let searchedResource: Database | undefined;
+					while (searchedResource === undefined) {
+						const input = await prompt(
+							`Enter the name or id of an existing ${prettyBindingName}`
+						);
+						searchedResource = preExisting.find(
+							(r) => r.name === input || r.uuid === input
+						);
+						if (!searchedResource) {
+							logger.log(
+								`No ${prettyBindingName} with the name/id "${input}" found. Please try again.`
+							);
+						}
+					}
+					name = searchedResource?.name;
+					//  mutates "bindings" to update id
+					d1.updateId(searchedResource.uuid);
+				} else {
+					const selectedResource = preExisting.find((r) => r.uuid === selected);
+					if (!selectedResource) {
+						throw new FatalError(
+							`${prettyBindingName} with id ${selected} not found`
+						);
+					}
+					name = selectedResource.name;
+					d1.updateId(selected);
+				}
+				logger.log(`✨ ${d1.binding} provisioned with ${name}`);
+				printDivider();
+			}
+		}
+		if (pendingResources.r2_buckets?.length) {
+			const prettyBindingName = "R2 Bucket";
+			const preExisting = await listR2Buckets(accountId);
+			const options = preExisting
+				.map((resource) => {
+					return {
+						label: resource.name,
+						value: resource.name,
+					};
+				})
+				.slice(0, MAX_OPTIONS - 1);
+			if (options.length < preExisting.length) {
+				options.push({
+					label: "Other (too many to list)",
+					value: "manual",
+				});
+			}
+
+			for (const r2 of pendingResources.r2_buckets) {
+				logger.log("Provisioning", r2.binding, `(${prettyBindingName})...`);
+				let name: string;
+				const selected = await inputPrompt({
+					type: "select",
+					question: `Would you like to connect an existing ${prettyBindingName} or create a new one?`,
+					options: options.concat([{ label: "Create new", value: "new" }]),
+					label: r2.binding,
+					defaultValue: "new",
+				});
+				if (selected === "new") {
+					name = await prompt(`Enter a name for the new ${prettyBindingName}`);
+					logger.log(`🌀 Creating new ${prettyBindingName} "${name}"...`);
+					// creates R2 bucket and mutates "bindings" to update id
+					await r2.create(name);
+				} else if (selected === "manual") {
+					let searchedResource: R2BucketInfo | undefined;
+					while (searchedResource === undefined) {
+						const input = await prompt(
+							`Enter the name of an existing ${prettyBindingName}`
+						);
+						searchedResource = preExisting.find((r) => r.name === input);
+						if (!searchedResource) {
+							logger.log(
+								`No ${prettyBindingName} with the name "${input}" found. Please try again.`
+							);
+						}
+					}
+					name = searchedResource.name;
+					//  mutates "bindings" to update id
+					r2.updateId(searchedResource.name);
+				} else {
+					name = selected;
+					r2.updateId(selected);
+				}
+				logger.log(`✨ ${r2.binding} provisioned with ${name}`);
+				printDivider();
+			}
+		}
+
+		logger.log(`🎉 All resources provisioned, continuing with deployment...\n`);
 	}
 }
 
-function hasBindingSettings<Type extends WorkerMetadataBinding["type"]>(
+/** checks whether the binding id can be inherited from a prev deployment */
+function inBindingSettings<Type extends WorkerMetadataBinding["type"]>(
 	settings: Settings | undefined,
 	type: Type,
-	name: string
+	bindingName: string
 ): Extract<WorkerMetadataBinding, { type: Type }> | undefined {
 	return settings?.bindings.find(
 		(binding): binding is Extract<WorkerMetadataBinding, { type: Type }> =>
-			binding.type === type && binding.name === name
+			binding.type === type && binding.name === bindingName
 	);
 }
 
@@ -209,4 +388,10 @@ function getSettings(accountId: string, scriptName: string) {
 	return fetchResult<Settings>(
 		`/accounts/${accountId}/workers/scripts/${scriptName}/settings`
 	);
+}
+
+function printDivider() {
+	logger.log();
+	logger.log(chalk.dim("--------------------------------------"));
+	logger.log();
 }
