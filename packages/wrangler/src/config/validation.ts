@@ -2,6 +2,7 @@ import assert from "node:assert";
 import path from "node:path";
 import TOML from "@iarna/toml";
 import { dedent } from "ts-dedent";
+import { UserError } from "../errors";
 import { getFlag } from "../experimental-flags";
 import { Diagnostics } from "./diagnostics";
 import {
@@ -309,7 +310,33 @@ export function normalizeAndValidateConfig(
 		[...Object.keys(config), "env", "$schema"]
 	);
 
+	applyPythonConfig(config, args);
+
 	return { config, diagnostics };
+}
+
+/**
+ * Modifies the provided config to support python workers, if the entrypoint is a .py file
+ */
+function applyPythonConfig(
+	config: Config,
+	args: NormalizeAndValidateConfigArgs
+) {
+	const mainModule = "script" in args ? args.script : config.main;
+	if (typeof mainModule === "string" && mainModule.endsWith(".py")) {
+		// Workers with a python entrypoint should have bundling turned off, since all of Wrangler's bundling is JS/TS specific
+		config.no_bundle = true;
+
+		// Workers with a python entrypoint need module rules for "*.py". Add one automatically as a DX nicety
+		if (!config.rules.some((rule) => rule.type === "PythonModule")) {
+			config.rules.push({ type: "PythonModule", globs: ["**/*.py"] });
+		}
+		if (!config.compatibility_flags.includes("python_workers")) {
+			throw new UserError(
+				"The `python_workers` compatibility flag is required to use Python."
+			);
+		}
+	}
 }
 
 /**

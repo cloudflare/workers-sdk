@@ -73,65 +73,20 @@ type ReadConfigCommandArgs = NormalizeAndValidateConfigArgs;
  */
 export function readConfig(
 	configPath: string | undefined,
-	// Include command specific args as well as the wrangler global flags
 	args: ReadConfigCommandArgs,
-	options: { requirePagesConfig: true }
-): Omit<Config, "pages_build_output_dir"> & { pages_build_output_dir: string };
-export function readConfig(
-	configPath: string | undefined,
-	// Include command specific args as well as the wrangler global flags
-	args: ReadConfigCommandArgs,
-	options?: { requirePagesConfig?: boolean; hideWarnings?: boolean }
+	options?: { hideWarnings?: boolean }
 ): Config;
 export function readConfig(
 	configPath: string | undefined,
-	// Include command specific args as well as the wrangler global flags
 	args: ReadConfigCommandArgs,
-	{
-		requirePagesConfig,
-		hideWarnings = false,
-	}: { requirePagesConfig?: boolean; hideWarnings?: boolean } = {}
+	{ hideWarnings = false }: { hideWarnings?: boolean } = {}
 ): Config {
-	let rawConfig: RawConfig = {};
-
 	if (!configPath) {
 		configPath = findWranglerConfig(process.cwd());
 	}
 
-	try {
-		rawConfig = readRawConfig(configPath);
-	} catch (e) {
-		// Swallow parsing errors if we require a pages config file.
-		// At this point, we can't tell if the user intended to provide a Pages config file (and so should see the parsing error) or not (and so shouldn't).
-		// We err on the side of swallowing the error so as to not break existing projects
-		if (requirePagesConfig) {
-			logger.error(e);
-			throw new FatalError(
-				`Your ${configFileName(configPath)} file is not a valid Pages config file`,
-				EXIT_CODE_INVALID_PAGES_CONFIG
-			);
-		} else {
-			throw e;
-		}
-	}
+	const rawConfig = readRawConfig(configPath);
 
-	/**
-	 * Check if configuration file belongs to a Pages project.
-	 *
-	 * The `pages_build_output_dir` config key is used to determine if the
-	 * configuration file belongs to a Workers or Pages project. This key
-	 * should always be set for Pages but never for Workers.
-	 */
-	const isPagesConfigFile = isPagesConfig(rawConfig);
-	if (!isPagesConfigFile && requirePagesConfig) {
-		throw new FatalError(
-			`Your ${configFileName(configPath)} file is not a valid Pages config file`,
-			EXIT_CODE_INVALID_PAGES_CONFIG
-		);
-	}
-
-	// Process the top-level configuration. This is common for both
-	// Workers and Pages
 	const { config, diagnostics } = normalizeAndValidateConfig(
 		rawConfig,
 		configPath,
@@ -145,28 +100,67 @@ export function readConfig(
 		throw new UserError(diagnostics.renderErrors());
 	}
 
-	// If we detected a Pages project, run config file validation against
-	// Pages specific validation rules
-	if (isPagesConfigFile) {
-		logger.debug(
-			`Configuration file belonging to ⚡️ Pages ⚡️ project detected.`
-		);
+	return config;
+}
 
-		const envNames = rawConfig.env ? Object.keys(rawConfig.env) : [];
-		const projectName = rawConfig?.name;
-		const pagesDiagnostics = validatePagesConfig(config, envNames, projectName);
-
-		if (pagesDiagnostics.hasWarnings()) {
-			logger.warn(pagesDiagnostics.renderWarnings());
-		}
-		if (pagesDiagnostics.hasErrors()) {
-			throw new UserError(pagesDiagnostics.renderErrors());
-		}
+export function readPagesConfig(
+	configPath: string | undefined,
+	args: ReadConfigCommandArgs,
+	{ hideWarnings = false }: { hideWarnings?: boolean } = {}
+): Omit<Config, "pages_build_output_dir"> & { pages_build_output_dir: string } {
+	if (!configPath) {
+		configPath = findWranglerConfig(process.cwd());
 	}
 
-	applyPythonConfig(config, args);
+	let rawConfig: RawConfig;
+	try {
+		rawConfig = readRawConfig(configPath);
+	} catch (e) {
+		logger.error(e);
+		throw new FatalError(
+			`Your ${configFileName(configPath)} file is not a valid Pages config file`,
+			EXIT_CODE_INVALID_PAGES_CONFIG
+		);
+	}
 
-	return config;
+	if (!isPagesConfig(rawConfig)) {
+		throw new FatalError(
+			`Your ${configFileName(configPath)} file is not a valid Pages config file`,
+			EXIT_CODE_INVALID_PAGES_CONFIG
+		);
+	}
+
+	const { config, diagnostics } = normalizeAndValidateConfig(
+		rawConfig,
+		configPath,
+		args
+	);
+
+	if (diagnostics.hasWarnings() && !hideWarnings) {
+		logger.warn(diagnostics.renderWarnings());
+	}
+	if (diagnostics.hasErrors()) {
+		throw new UserError(diagnostics.renderErrors());
+	}
+
+	logger.debug(
+		`Configuration file belonging to ⚡️ Pages ⚡️ project detected.`
+	);
+
+	const envNames = rawConfig.env ? Object.keys(rawConfig.env) : [];
+	const projectName = rawConfig?.name;
+	const pagesDiagnostics = validatePagesConfig(config, envNames, projectName);
+
+	if (pagesDiagnostics.hasWarnings()) {
+		logger.warn(pagesDiagnostics.renderWarnings());
+	}
+	if (pagesDiagnostics.hasErrors()) {
+		throw new UserError(pagesDiagnostics.renderErrors());
+	}
+
+	return config as Omit<Config, "pages_build_output_dir"> & {
+		pages_build_output_dir: string;
+	};
 }
 
 export const readRawConfig = (configPath: string | undefined): RawConfig => {
@@ -178,26 +172,6 @@ export const readRawConfig = (configPath: string | undefined): RawConfig => {
 	}
 	return {};
 };
-/**
- * Modifies the provided config to support python workers, if the entrypoint is a .py file
- */
-function applyPythonConfig(config: Config, args: ReadConfigCommandArgs) {
-	const mainModule = "script" in args ? args.script : config.main;
-	if (typeof mainModule === "string" && mainModule.endsWith(".py")) {
-		// Workers with a python entrypoint should have bundling turned off, since all of Wrangler's bundling is JS/TS specific
-		config.no_bundle = true;
-
-		// Workers with a python entrypoint need module rules for "*.py". Add one automatically as a DX nicety
-		if (!config.rules.some((rule) => rule.type === "PythonModule")) {
-			config.rules.push({ type: "PythonModule", globs: ["**/*.py"] });
-		}
-		if (!config.compatibility_flags.includes("python_workers")) {
-			throw new UserError(
-				"The `python_workers` compatibility flag is required to use Python."
-			);
-		}
-	}
-}
 
 /**
  * Find the wrangler config file by searching up the file-system
