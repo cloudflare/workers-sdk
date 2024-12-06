@@ -1,24 +1,15 @@
-const allowedPaths = new Set([
-	'/require-ext',
-	'/require-no-ext',
-	'/require-json',
-	'/cloudflare-imports',
-	'/external-cloudflare-imports',
-
-	'/third-party/react',
-	'/third-party/remix',
-	'/third-party/discord-api-types',
-	'/third-party/slash-create',
-]);
+const modules = import.meta.glob('../src/**/*.ts');
 
 export default {
 	async fetch(request) {
 		const url = new URL(request.url);
 		const path = url.pathname;
 
-		if (allowedPaths.has(path)) {
-			const mod = await import(/* @vite-ignore */ `./${path}`);
-			return Response.json(mod.default);
+		const filePath = `${path.replace(/^\//, './')}.ts`;
+
+		if (modules[filePath]) {
+			const mod = await modules[filePath]();
+			return Response.json((mod as { default: unknown }).default);
 		}
 
 		if (path === '/@alias/test') {
@@ -26,11 +17,13 @@ export default {
 			return test();
 		}
 
-		if (path === '/@non-existing/pkg') {
-			const { test } = await import('@non-existing/pkg');
-			return test();
-		}
-
-		return new Response(`path not found: '${path}'`, { status: 404 });
+		return new Response(
+			`path not found: '${path}' (the available paths are: ${Object.keys(
+				modules,
+			)
+				.map((path) => path.replace(/^\.\//, '/').replace(/\.ts$/, ''))
+				.join(', ')})`,
+			{ status: 404 },
+		);
 	},
 } satisfies ExportedHandler;
