@@ -380,7 +380,7 @@ export const dev = createCommand({
 			{
 				FILE_BASED_REGISTRY: args.experimentalRegistry,
 				MULTIWORKER: Array.isArray(args.config),
-				RESOURCES_PROVISION: false,
+				RESOURCES_PROVISION: args.experimentalProvision ?? false,
 			},
 			() => startDev(args)
 		);

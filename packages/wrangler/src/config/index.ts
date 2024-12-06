@@ -187,12 +187,9 @@ export function findWranglerConfig(
 	);
 }
 
-function addLocalSuffix(
-	id: string | symbol | undefined,
-	local: boolean = false
-) {
+function formatValue(id: string | symbol | undefined, local: boolean = false) {
 	if (!id || typeof id === "symbol") {
-		return local ? "(local)" : "(remote)";
+		return local ? "(local)" : "";
 	}
 
 	return `${id}${local ? " (local)" : ""}`;
@@ -232,11 +229,12 @@ export const friendlyBindingNames: Record<
  * Print all the bindings a worker using a given config would have access to
  */
 export function printBindings(
-	bindings: CfWorkerInit["bindings"],
+	bindings: Partial<CfWorkerInit["bindings"]>,
 	context: {
 		registry?: WorkerRegistry | null;
 		local?: boolean;
 		name?: string;
+		provisioning?: boolean;
 	} = {}
 ) {
 	let hasConnectionStatus = false;
@@ -349,7 +347,7 @@ export function printBindings(
 			entries: kv_namespaces.map(({ binding, id }) => {
 				return {
 					key: binding,
-					value: addLocalSuffix(id, context.local),
+					value: formatValue(id, context.local),
 				};
 			}),
 		});
@@ -378,7 +376,7 @@ export function printBindings(
 			entries: queues.map(({ binding, queue_name }) => {
 				return {
 					key: binding,
-					value: addLocalSuffix(queue_name, context.local),
+					value: formatValue(queue_name, context.local),
 				};
 			}),
 		});
@@ -402,7 +400,7 @@ export function printBindings(
 					}
 					return {
 						key: binding,
-						value: addLocalSuffix(databaseValue, context.local),
+						value: formatValue(databaseValue, context.local),
 					};
 				}
 			),
@@ -415,7 +413,7 @@ export function printBindings(
 			entries: vectorize.map(({ binding, index_name }) => {
 				return {
 					key: binding,
-					value: addLocalSuffix(index_name, context.local),
+					value: formatValue(index_name, context.local),
 				};
 			}),
 		});
@@ -427,7 +425,7 @@ export function printBindings(
 			entries: hyperdrive.map(({ binding, id }) => {
 				return {
 					key: binding,
-					value: addLocalSuffix(id, context.local),
+					value: formatValue(id, context.local),
 				};
 			}),
 		});
@@ -445,7 +443,7 @@ export function printBindings(
 
 				return {
 					key: binding,
-					value: addLocalSuffix(name, context.local),
+					value: formatValue(name, context.local),
 				};
 			}),
 		});
@@ -637,13 +635,24 @@ export function printBindings(
 		return;
 	}
 
+	let title: string;
+	if (context.provisioning) {
+		title = "The following bindings need to be provisioned:";
+	} else if (context.name && getFlag("MULTIWORKER")) {
+		title = `${chalk.blue(context.name)} has access to the following bindings:`;
+	} else {
+		title = "Your worker has access to the following bindings:";
+	}
+
 	const message = [
-		`${context.name && getFlag("MULTIWORKER") ? chalk.blue(context.name) : "Your worker"} has access to the following bindings:`,
+		title,
 		...output
 			.map((bindingGroup) => {
 				return [
 					`- ${bindingGroup.name}:`,
-					bindingGroup.entries.map(({ key, value }) => `  - ${key}: ${value}`),
+					bindingGroup.entries.map(
+						({ key, value }) => `  - ${key}${value ? ":" : ""} ${value}`
+					),
 				];
 			})
 			.flat(2),
