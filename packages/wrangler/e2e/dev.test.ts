@@ -55,7 +55,7 @@ it("can import URL from 'url' in node_compat mode", async () => {
 describe.each([{ cmd: "wrangler dev" }, { cmd: "wrangler dev --remote" }])(
 	"basic js dev: $cmd",
 	({ cmd }) => {
-		it(`can modify worker during ${cmd}`, async () => {
+		it(`can modify Worker during ${cmd}`, async () => {
 			const helper = new WranglerE2ETestHelper();
 			await helper.seed({
 				"wrangler.toml": dedent`
@@ -205,6 +205,104 @@ describe.each([{ cmd: "wrangler dev" }, { cmd: "wrangler dev --remote" }])(
 				).resolves.toMatchSnapshot();
 
 				await worker.readUntil(/Event triggered/);
+			});
+		});
+
+		describe("Workers + Assets", () => {
+			it(`can modify User Worker during ${cmd}`, async () => {
+				const helper = new WranglerE2ETestHelper();
+				await helper.seed({
+					"wrangler.toml": dedent`
+								name = "${workerName}"
+								main = "src/index.ts"
+								compatibility_date = "2023-01-01"
+								compatibility_flags = ["nodejs_compat"]
+
+								[assets]
+								directory = "public"
+						`,
+					"src/index.ts": dedent`
+								export default {
+									fetch(request) {
+										return new Response("Hello World!")
+									}
+								}`,
+					"public/readme.md": dedent`
+								Welcome to Workers + Assets readme!`,
+					"package.json": dedent`
+								{
+									"name": "worker",
+									"version": "0.0.0",
+									"private": true
+								}
+								`,
+				});
+				const worker = helper.runLongLived(cmd);
+
+				const { url } = await worker.waitForReady();
+
+				await expect(
+					fetch(url).then((r) => r.text())
+				).resolves.toMatchSnapshot();
+
+				await helper.seed({
+					"src/index.ts": dedent`
+							export default {
+								fetch(request, env) {
+									return new Response("Updated Worker!")
+								}
+							}`,
+				});
+
+				await worker.waitForReload();
+
+				await expect(fetchText(url)).resolves.toMatchSnapshot();
+			});
+
+			it(`can modify assets during ${cmd}`, async () => {
+				const helper = new WranglerE2ETestHelper();
+				await helper.seed({
+					"wrangler.toml": dedent`
+								name = "${workerName}"
+								main = "src/index.ts"
+								compatibility_date = "2023-01-01"
+								compatibility_flags = ["nodejs_compat"]
+
+								[assets]
+								directory = "public"
+						`,
+					"src/index.ts": dedent`
+								export default {
+									fetch(request) {
+										return new Response("Hello World!")
+									}
+								}`,
+					"public/readme.md": dedent`
+								Welcome to Workers + Assets readme!`,
+					"package.json": dedent`
+								{
+									"name": "worker",
+									"version": "0.0.0",
+									"private": true
+								}
+								`,
+				});
+				const worker = helper.runLongLived(cmd);
+
+				const { url } = await worker.waitForReady();
+
+				await expect(
+					fetch(url).then((r) => r.text())
+				).resolves.toMatchSnapshot();
+
+				await helper.seed({
+					"public/readme.md": dedent`
+								Welcome to updated Workers + Assets readme!`,
+				});
+
+				await worker.waitForReload();
+
+				await expect(fetchText(url)).resolves.toMatchSnapshot();
 			});
 		});
 	}
