@@ -19,6 +19,9 @@ import {
 } from "./helpers";
 import type { R2PutOptions } from "@cloudflare/workers-types/experimental";
 
+const remoteFlagWarning =
+	"By default, `wrangler r2` commands access a local simulator of your R2 bucket, the same as that used by `wrangler dev`. To access your remote R2 bucket, re-run the command with the --remote flag";
+
 defineNamespace({
 	command: "wrangler r2 object",
 	metadata: {
@@ -59,6 +62,11 @@ defineCommand({
 			type: "boolean",
 			describe: "Interact with local storage",
 		},
+		remote: {
+			type: "boolean",
+			describe: "Interact with remote storage",
+			conflicts: "local",
+		},
 		"persist-to": {
 			type: "string",
 			describe: "Directory for local persistence",
@@ -94,7 +102,10 @@ defineCommand({
 		} else {
 			output = process.stdout;
 		}
-		if (objectGetYargs.local) {
+		if (!objectGetYargs.remote) {
+			if (!pipe) {
+				logger.warn(remoteFlagWarning);
+			}
 			await usingLocalBucket(
 				objectGetYargs.persistTo,
 				config.configPath,
@@ -191,6 +202,11 @@ defineCommand({
 			type: "boolean",
 			describe: "Interact with local storage",
 		},
+		remote: {
+			type: "boolean",
+			describe: "Interact with remote storage",
+			conflicts: "local",
+		},
 		"persist-to": {
 			type: "string",
 			describe: "Directory for local persistence",
@@ -213,12 +229,12 @@ defineCommand({
 			objectPath,
 			file,
 			pipe,
-			local,
 			persistTo,
 			jurisdiction,
 			storageClass,
 			...options
 		} = objectPutYargs;
+		const local = !objectPutYargs.remote;
 		const { bucket, key } = bucketAndKeyFromObjectPath(objectPath);
 		if (!file && !pipe) {
 			throw new CommandLineArgsError(
@@ -275,6 +291,7 @@ defineCommand({
 		);
 
 		if (local) {
+			logger.warn(remoteFlagWarning);
 			await usingLocalBucket(
 				persistTo,
 				config.configPath,
@@ -357,6 +374,11 @@ defineCommand({
 			type: "boolean",
 			describe: "Interact with local storage",
 		},
+		remote: {
+			type: "boolean",
+			describe: "Interact with remote storage",
+			conflicts: "local",
+		},
 		"persist-to": {
 			type: "string",
 			describe: "Directory for local persistence",
@@ -379,7 +401,8 @@ defineCommand({
 
 		logger.log(`Deleting object "${key}" from bucket "${fullBucketName}".`);
 
-		if (args.local) {
+		if (!args.remote) {
+			logger.warn(remoteFlagWarning);
 			await usingLocalBucket(
 				args.persistTo,
 				config.configPath,

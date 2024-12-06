@@ -234,8 +234,7 @@ describe.sequential.each(RUNTIMES)("Core: $flags", ({ runtime, flags }) => {
 
 describe.sequential.each(RUNTIMES)("Bindings: $flags", ({ runtime, flags }) => {
 	const isLocal = runtime === "local";
-	const resourceFlags = isLocal ? "--local" : "";
-	const d1ResourceFlags = isLocal ? "" : "--remote";
+	const resourceFlags = isLocal ? "" : "--remote";
 
 	let helper: WranglerE2ETestHelper;
 	beforeEach(() => {
@@ -478,7 +477,7 @@ describe.sequential.each(RUNTIMES)("Bindings: $flags", ({ runtime, flags }) => {
 		});
 
 		const result = await helper.run(
-			`wrangler d1 execute ${d1ResourceFlags} DB --file schema.sql`
+			`wrangler d1 execute ${resourceFlags} DB --file schema.sql`
 		);
 		// D1 defaults to `--local`, so we deliberately use `flags`, not `resourceFlags`
 		const worker = helper.runLongLived(`wrangler dev ${flags}`);
@@ -490,7 +489,7 @@ describe.sequential.each(RUNTIMES)("Bindings: $flags", ({ runtime, flags }) => {
 		}
 
 		const result2 = await helper.run(
-			`wrangler d1 execute ${d1ResourceFlags} DB --command "SELECT * FROM entries WHERE key = 'key2'"`
+			`wrangler d1 execute ${resourceFlags} DB --command "SELECT * FROM entries WHERE key = 'key2'"`
 		);
 		expect(result2.stdout).toContain("value2");
 		if (isLocal) {
