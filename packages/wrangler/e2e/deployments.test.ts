@@ -1,7 +1,7 @@
 import assert from "node:assert";
 import dedent from "ts-dedent";
 import { fetch } from "undici";
-import { afterAll, describe, expect, it, vi } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { CLOUDFLARE_ACCOUNT_ID } from "./helpers/account-id";
 import { WranglerE2ETestHelper } from "./helpers/e2e-wrangler-test";
 import { generateResourceName } from "./helpers/generate-resource-name";
@@ -14,6 +14,8 @@ const normalize = (str: string) =>
 		[CLOUDFLARE_ACCOUNT_ID]: "CLOUDFLARE_ACCOUNT_ID",
 	}).replaceAll(/^Author:(\s+).+@.+$/gm, "Author:$1person@example.com");
 const workerName = generateResourceName();
+const dispatchNamespaceName = generateResourceName("dispatch");
+const dispatchWorkerName = generateResourceName();
 
 describe("deployments", { timeout: TIMEOUT }, () => {
 	let deployedUrl: string;
@@ -250,11 +252,118 @@ const checkAssets = async (testCases: AssetTestCase[], deployedUrl: string) => {
 	}
 };
 
-describe("Workers + Assets deployment", { timeout: TIMEOUT }, () => {
-	let deployedUrl: string;
+describe.each([
+	{
+		name: "regular Worker",
+		flags: "",
+		async beforeAll() {},
+		async afterAll(helper: WranglerE2ETestHelper) {
+			await helper.run(`wrangler delete`);
+		},
+		expectInitialStdout: (output: string) => {
+			expect(output).toEqual(`🌀 Building list of assets...
+🌀 Starting asset upload...
+🌀 Found 3 new or modified static assets to upload. Proceeding with upload...
++ /404.html
++ /index.html
++ /[boop].html
+Uploaded 1 of 3 assets
+Uploaded 2 of 3 assets
+Uploaded 3 of 3 assets
+✨ Success! Uploaded 3 files (TIMINGS)
+Total Upload: xx KiB / gzip: xx KiB
+Uploaded tmp-e2e-worker-00000000-0000-0000-0000-000000000000 (TIMINGS)
+Deployed tmp-e2e-worker-00000000-0000-0000-0000-000000000000 triggers (TIMINGS)
+  https://tmp-e2e-worker-00000000-0000-0000-0000-000000000000.SUBDOMAIN.workers.dev
+Current Version ID: 00000000-0000-0000-0000-000000000000`);
+		},
+		expectSubsequentStdout: (output: string) => {
+			expect(output).toEqual(`🌀 Building list of assets...
+🌀 Starting asset upload...
+No files to upload. Proceeding with deployment...
+Total Upload: xx KiB / gzip: xx KiB
+Uploaded tmp-e2e-worker-00000000-0000-0000-0000-000000000000 (TIMINGS)
+Deployed tmp-e2e-worker-00000000-0000-0000-0000-000000000000 triggers (TIMINGS)
+  https://tmp-e2e-worker-00000000-0000-0000-0000-000000000000.SUBDOMAIN.workers.dev
+Current Version ID: 00000000-0000-0000-0000-000000000000`);
+		},
+	},
+	{
+		name: "Workers for Platforms",
+		flags: `--dispatch-namespace ${dispatchNamespaceName}`,
+		url: "",
+		async beforeAll(helper: WranglerE2ETestHelper) {
+			await helper.seed({
+				"dispatch-worker/wrangler.toml": dedent`
+							name = "${dispatchWorkerName}"
+							main = "./src/index.js"
+							compatibility_date = "2023-01-01"
+
+							[[dispatch_namespaces]]
+							binding = "DISPATCH"
+							namespace = "${dispatchNamespaceName}"
+					`,
+				"dispatch-worker/src/index.js": dedent`
+					export default {
+						async fetch(request, env, ctx) {
+							const stub = env.DISPATCH.get("${workerName}");
+							return stub.fetch(request);
+						}
+					}
+				`,
+			});
+			await helper.run(
+				`wrangler dispatch-namespace create ${dispatchNamespaceName}`
+			);
+			const { stdout } = await helper.run(
+				`wrangler deploy -c dispatch-worker/wrangler.toml`
+			);
+			const match = stdout.match(
+				/(?<url>https:\/\/tmp-e2e-.+?\..+?\.workers\.dev)/
+			);
+			assert(match?.groups);
+			this.url = match.groups.url;
+		},
+		async afterAll(helper: WranglerE2ETestHelper) {
+			await helper.run(`wrangler delete -c dispatch-worker/wrangler.toml`);
+			await helper.run(
+				`wrangler dispatch-namespace delete ${dispatchNamespaceName}`
+			);
+		},
+		expectInitialStdout: (output: string) => {
+			expect(output).toEqual(`🌀 Building list of assets...
+🌀 Starting asset upload...
+🌀 Found 3 new or modified static assets to upload. Proceeding with upload...
++ /404.html
++ /index.html
++ /[boop].html
+Uploaded 1 of 3 assets
+Uploaded 2 of 3 assets
+Uploaded 3 of 3 assets
+✨ Success! Uploaded 3 files (TIMINGS)
+Total Upload: xx KiB / gzip: xx KiB
+Uploaded tmp-e2e-worker-00000000-0000-0000-0000-000000000000 (TIMINGS)
+  Dispatch Namespace: tmp-e2e-dispatch-00000000-0000-0000-0000-000000000000
+Current Version ID: 00000000-0000-0000-0000-000000000000`);
+		},
+		expectSubsequentStdout: (output: string) => {
+			expect(output).toEqual(`🌀 Building list of assets...
+🌀 Starting asset upload...
+No files to upload. Proceeding with deployment...
+Total Upload: xx KiB / gzip: xx KiB
+Uploaded tmp-e2e-worker-00000000-0000-0000-0000-000000000000 (TIMINGS)
+  Dispatch Namespace: tmp-e2e-dispatch-00000000-0000-0000-0000-000000000000
+Current Version ID: 00000000-0000-0000-0000-000000000000`);
+		},
+	},
+])("Workers + Assets deployment: $name", { timeout: TIMEOUT }, (testcase) => {
+	let deployedUrl: string | undefined;
 	const helper = new WranglerE2ETestHelper();
+	beforeAll(async () => {
+		await testcase.beforeAll(helper);
+	});
 	afterAll(async () => {
-		await helper.run(`wrangler delete`);
+		await testcase.afterAll(helper);
 	});
 	it("deploys a Workers + Assets project with assets only", async () => {
 		await helper.seed({
@@ -267,29 +376,17 @@ describe("Workers + Assets deployment", { timeout: TIMEOUT }, () => {
 			...initialAssets,
 		});
 
-		const output = await helper.run(`wrangler deploy`);
-		expect(normalize(output.stdout)).toMatchInlineSnapshot(`
-			"🌀 Building list of assets...
-			🌀 Starting asset upload...
-			🌀 Found 3 new or modified static assets to upload. Proceeding with upload...
-			+ /404.html
-			+ /index.html
-			+ /[boop].html
-			Uploaded 1 of 3 assets
-			Uploaded 2 of 3 assets
-			Uploaded 3 of 3 assets
-			✨ Success! Uploaded 3 files (TIMINGS)
-			Total Upload: xx KiB / gzip: xx KiB
-			Uploaded tmp-e2e-worker-00000000-0000-0000-0000-000000000000 (TIMINGS)
-			Deployed tmp-e2e-worker-00000000-0000-0000-0000-000000000000 triggers (TIMINGS)
-			  https://tmp-e2e-worker-00000000-0000-0000-0000-000000000000.SUBDOMAIN.workers.dev
-			Current Version ID: 00000000-0000-0000-0000-000000000000"
-		`);
-		const match = output.stdout.match(
-			/(?<url>https:\/\/tmp-e2e-.+?\..+?\.workers\.dev)/
-		);
-		assert(match?.groups);
-		deployedUrl = match.groups.url;
+		const output = await helper.run(`wrangler deploy ${testcase.flags}`);
+		testcase.expectInitialStdout(normalize(output.stdout));
+		if (testcase.url) {
+			deployedUrl = testcase.url;
+		} else {
+			const match = output.stdout.match(
+				/(?<url>https:\/\/tmp-e2e-.+?\..+?\.workers\.dev)/
+			);
+			assert(match?.groups);
+			deployedUrl = match.groups.url;
+		}
 
 		const testCases: AssetTestCase[] = [
 			// Tests html_handling = "auto_trailing_slash" (default):
@@ -349,23 +446,16 @@ describe("Workers + Assets deployment", { timeout: TIMEOUT }, () => {
 						}`,
 			...initialAssets,
 		});
-		const output = await helper.run(`wrangler deploy`);
+		const output = await helper.run(`wrangler deploy ${testcase.flags}`);
 		// expect only no asset files to be uploaded as no new asset files have been added
-		expect(normalize(output.stdout)).toMatchInlineSnapshot(`
-			"🌀 Building list of assets...
-			🌀 Starting asset upload...
-			No files to upload. Proceeding with deployment...
-			Total Upload: xx KiB / gzip: xx KiB
-			Uploaded tmp-e2e-worker-00000000-0000-0000-0000-000000000000 (TIMINGS)
-			Deployed tmp-e2e-worker-00000000-0000-0000-0000-000000000000 triggers (TIMINGS)
-			  https://tmp-e2e-worker-00000000-0000-0000-0000-000000000000.SUBDOMAIN.workers.dev
-			Current Version ID: 00000000-0000-0000-0000-000000000000"
-		`);
-		const match = output.stdout.match(
-			/(?<url>https:\/\/tmp-e2e-.+?\..+?\.workers\.dev)/
-		);
-		assert(match?.groups);
-		deployedUrl = match.groups.url;
+		testcase.expectSubsequentStdout(normalize(output.stdout));
+		if (!deployedUrl) {
+			const match = output.stdout.match(
+				/(?<url>https:\/\/tmp-e2e-.+?\..+?\.workers\.dev)/
+			);
+			assert(match?.groups);
+			deployedUrl = match.groups.url;
+		}
 
 		const testCases: AssetTestCase[] = [
 			// because html handling has now been set to "none", only exact matches will be served
@@ -400,7 +490,6 @@ describe("Workers + Assets deployment", { timeout: TIMEOUT }, () => {
 		);
 		expect(text).toContain("<h1>404.html</h1>");
 	});
-
 	it("runs user worker ahead of matching assets when serve_directly = false", async () => {
 		await helper.seed({
 			"wrangler.toml": dedent`
@@ -423,24 +512,16 @@ describe("Workers + Assets deployment", { timeout: TIMEOUT }, () => {
 			...initialAssets,
 		});
 
-		const output = await helper.run(`wrangler deploy`);
+		const output = await helper.run(`wrangler deploy ${testcase.flags}`);
 		// expect only no asset files to be uploaded as no new asset files have been added
-		expect(normalize(output.stdout)).toMatchInlineSnapshot(`
-			"🌀 Building list of assets...
-			🌀 Starting asset upload...
-			No files to upload. Proceeding with deployment...
-			Total Upload: xx KiB / gzip: xx KiB
-			Uploaded tmp-e2e-worker-00000000-0000-0000-0000-000000000000 (TIMINGS)
-			Deployed tmp-e2e-worker-00000000-0000-0000-0000-000000000000 triggers (TIMINGS)
-			  https://tmp-e2e-worker-00000000-0000-0000-0000-000000000000.SUBDOMAIN.workers.dev
-			Current Version ID: 00000000-0000-0000-0000-000000000000"
-		`);
-
-		const match = output.stdout.match(
-			/(?<url>https:\/\/tmp-e2e-.+?\..+?\.workers\.dev)/
-		);
-		assert(match?.groups);
-		deployedUrl = match.groups.url;
+		testcase.expectSubsequentStdout(normalize(output.stdout));
+		if (!deployedUrl) {
+			const match = output.stdout.match(
+				/(?<url>https:\/\/tmp-e2e-.+?\..+?\.workers\.dev)/
+			);
+			assert(match?.groups);
+			deployedUrl = match.groups.url;
+		}
 
 		const testCases: AssetTestCase[] = [
 			{
