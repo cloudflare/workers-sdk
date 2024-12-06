@@ -13,8 +13,6 @@
 		"noImplicitOverride": true,
 		"module": "Preserve",
 		"lib": ["ES2022"],
-		"declaration": true,
-		"declarationMap": true,
 		"noEmit": true
 	}
 }

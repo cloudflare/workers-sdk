@@ -6,7 +6,7 @@
 	"scripts": {
 		"check": "pnpm run check:types && pnpm run check:prettier",
 		"check:prettier": "prettier --check .",
-		"check:types": "pnpm -r check:types",
+		"check:types": "tsc --build && pnpm -r check:types",
 		"fix": "pnpm run fix:prettier",
 		"fix:prettier": "prettier --write .",
 		"postinstall": "pnpm -F @flarelabs-net/vite-plugin-cloudflare build",
@@ -22,10 +22,12 @@
 	},
 	"devDependencies": {
 		"@ianvs/prettier-plugin-sort-imports": "^4.3.1",
+		"@vite-plugin-cloudflare/typescript-config": "workspace:*",
 		"pkg-pr-new": "^0.0.33",
 		"playwright-chromium": "^1.48.1",
 		"prettier": "^3.3.3",
 		"prettier-plugin-packagejson": "^2.5.3",
+		"typescript": "catalog:default",
 		"vite": "catalog:default",
 		"vitest": "^2.1.3"
 	},

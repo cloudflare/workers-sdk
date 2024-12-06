@@ -1,4 +1,7 @@
 {
-	"extends": ["@vite-plugin-cloudflare/typescript-config/worker.json"],
-	"include": ["**/*"]
+	"files": [],
+	"references": [
+		{ "path": "./tsconfig.node.json" },
+		{ "path": "./tsconfig.worker.json" }
+	]
 }

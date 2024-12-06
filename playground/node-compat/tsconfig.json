@@ -1,11 +1,7 @@
 {
 	"files": [],
 	"references": [
-		{ "path": "./worker-basic/tsconfig.json" },
-		{ "path": "./worker-cross-env/tsconfig.json" },
-		{ "path": "./worker-crypto/tsconfig.json" },
-		{ "path": "./worker-postgres/tsconfig.json" },
-		{ "path": "./worker-process/tsconfig.json" },
-		{ "path": "./worker-random/tsconfig.json" }
+		{ "path": "./tsconfig.node.json" },
+		{ "path": "./tsconfig.worker.json" }
 	]
 }

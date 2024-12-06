@@ -1,14 +1,10 @@
 import crossFetch, { Headers } from 'cross-fetch';
 
 export default {
-	async fetch(
-		request: Request,
-		env: Env,
-		ctx: ExecutionContext,
-	): Promise<Response> {
+	async fetch() {
 		return testImportUenvAliasedPackages();
 	},
-};
+} satisfies ExportedHandler;
 
 async function testImportUenvAliasedPackages() {
 	const errors = [];

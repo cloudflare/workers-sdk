@@ -2,14 +2,10 @@ import nodeCrypto, { getRandomValues, webcrypto } from 'crypto';
 import assert from 'node:assert';
 
 export default {
-	async fetch(
-		request: Request,
-		env: Env,
-		ctx: ExecutionContext,
-	): Promise<Response> {
+	async fetch() {
 		return testGetRandomValues();
 	},
-};
+} satisfies ExportedHandler;
 
 function testGetRandomValues() {
 	assert(

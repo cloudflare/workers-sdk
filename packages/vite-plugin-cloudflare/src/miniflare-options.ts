@@ -116,10 +116,10 @@ export function getWorkerToDurableObjectClassNamesMap(
 // to paths ensures correct names. This requires us to specify `contents` in
 // the miniflare module definitions though, as the new paths don't exist.
 const miniflareModulesRoot = process.platform === 'win32' ? 'Z:\\' : '/';
-const ROUTER_WORKER_PATH = './assets/router-worker.js';
-const ASSET_WORKER_PATH = './assets/asset-worker.js';
+const ROUTER_WORKER_PATH = './asset-workers/router-worker.js';
+const ASSET_WORKER_PATH = './asset-workers/asset-worker.js';
 const WRAPPER_PATH = '__VITE_WORKER_ENTRY__';
-const RUNNER_PATH = './runner/index.js';
+const RUNNER_PATH = './runner-worker/index.js';
 
 export function getDevMiniflareOptions(
 	normalizedPluginConfig: NormalizedPluginConfig,

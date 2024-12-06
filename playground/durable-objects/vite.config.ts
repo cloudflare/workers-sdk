@@ -6,8 +6,8 @@ export default defineConfig({
 		cloudflare({
 			workers: {
 				worker: {
-					main: './worker/index.ts',
-					wranglerConfig: './worker/wrangler.toml',
+					main: './src/index.ts',
+					wranglerConfig: './src/wrangler.toml',
 				},
 			},
 			entryWorker: 'worker',

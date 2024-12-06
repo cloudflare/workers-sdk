@@ -1,11 +1,15 @@
 import { Client } from 'pg';
 
+interface Env {
+	DB_HOSTNAME: string;
+	DB_PORT: string;
+	DB_NAME: string;
+	DB_USERNAME: string;
+	DB_PASSWORD: string;
+}
+
 export default {
-	async fetch(
-		request: Request,
-		env: Env,
-		ctx: ExecutionContext,
-	): Promise<Response> {
+	async fetch(request, env, ctx) {
 		const client = new Client({
 			user: env.DB_USERNAME,
 			password: env.DB_PASSWORD,
@@ -21,7 +25,7 @@ export default {
 			return new Response(client.host);
 		}
 	},
-};
+} satisfies ExportedHandler<Env>;
 
 async function testPostgresLibrary(client: Client, ctx: ExecutionContext) {
 	await client.connect();

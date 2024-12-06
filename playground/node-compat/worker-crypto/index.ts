@@ -1,14 +1,10 @@
 import nodeCrypto from 'crypto';
 
 export default {
-	async fetch(
-		request: Request,
-		env: Env,
-		ctx: ExecutionContext,
-	): Promise<Response> {
+	async fetch() {
 		return testX509Certificate();
 	},
-};
+} satisfies ExportedHandler;
 
 function testX509Certificate() {
 	try {

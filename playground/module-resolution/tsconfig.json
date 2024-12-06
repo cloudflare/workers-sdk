@@ -1,10 +1,7 @@
 {
-	"extends": ["@vite-plugin-cloudflare/typescript-config/worker.json"],
-	"include": ["**/*"],
-	"compilerOptions": {
-		"paths": {
-			"@alias/test": ["./src/aliasing.ts"],
-			"@non-existing/pkg": ["./src/aliasing.ts"]
-		}
-	}
+	"files": [],
+	"references": [
+		{ "path": "./tsconfig.node.json" },
+		{ "path": "./tsconfig.worker.json" }
+	]
 }

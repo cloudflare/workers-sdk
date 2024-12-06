@@ -1,14 +1,10 @@
 import assert from 'node:assert';
 
 export default {
-	async fetch(
-		request: Request,
-		env: Env,
-		ctx: ExecutionContext,
-	): Promise<Response> {
+	async fetch() {
 		return testProcessBehaviour();
 	},
-};
+} satisfies ExportedHandler;
 
 function testProcessBehaviour() {
 	const originalProcess = process;

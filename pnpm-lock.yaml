@@ -36,6 +36,9 @@ importers:
       '@ianvs/prettier-plugin-sort-imports':
         specifier: ^4.3.1
         version: 4.3.1(prettier@3.3.3)
+      '@vite-plugin-cloudflare/typescript-config':
+        specifier: workspace:*
+        version: link:packages/typescript-config
       pkg-pr-new:
         specifier: ^0.0.33
         version: 0.0.33
@@ -48,6 +51,9 @@ importers:
       prettier-plugin-packagejson:
         specifier: ^2.5.3
         version: 2.5.3(prettier@3.3.3)
+      typescript:
+        specifier: catalog:default
+        version: 5.6.2
       vite:
         specifier: catalog:default
         version: 6.0.0-beta.10(@types/node@22.9.0)

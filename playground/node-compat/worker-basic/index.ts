@@ -4,14 +4,10 @@ import { join } from 'path';
 import 'perf_hooks';
 
 export default {
-	async fetch(
-		request: Request,
-		env: Env,
-		ctx: ExecutionContext,
-	): Promise<Response> {
+	async fetch() {
 		return testBasicNodejsProperties();
 	},
-};
+} satisfies ExportedHandler;
 
 function testBasicNodejsProperties() {
 	assert(true, 'the world is broken');
