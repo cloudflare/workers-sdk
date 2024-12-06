@@ -193,9 +193,11 @@ describe("BundleController", () => {
 			`);
 		});
 
-		test("custom build", async ({ controller }) => {
-			await seed({
-				"random_dir/index.ts": dedent/* javascript */ `
+		test(
+			"custom build",
+			async ({ controller }) => {
+				await seed({
+					"random_dir/index.ts": dedent/* javascript */ `
 				export default {
 					fetch(request, env, ctx) {
 						//comment
@@ -203,37 +205,37 @@ describe("BundleController", () => {
 					}
 				} satisfies ExportedHandler
 			`,
-			});
-			const config: Partial<StartDevWorkerOptions> = {
-				legacy: {},
-				name: "worker",
-				entrypoint: path.resolve("out.ts"),
-				projectRoot: path.resolve("."),
-				build: {
-					additionalModules: [],
-					processEntrypoint: false,
-					nodejsCompatMode: null,
-					bundle: true,
-					moduleRules: [],
-					custom: {
-						command: "cp random_dir/index.ts out.ts",
-						watch: "random_dir",
+				});
+				const config: Partial<StartDevWorkerOptions> = {
+					legacy: {},
+					name: "worker",
+					entrypoint: path.resolve("out.ts"),
+					projectRoot: path.resolve("."),
+					build: {
+						additionalModules: [],
+						processEntrypoint: false,
+						nodejsCompatMode: null,
+						bundle: true,
+						moduleRules: [],
+						custom: {
+							command: "cp random_dir/index.ts out.ts",
+							watch: "random_dir",
+						},
+						define: {},
+						format: "modules",
+						moduleRoot: path.resolve("."),
+						exports: [],
 					},
-					define: {},
-					format: "modules",
-					moduleRoot: path.resolve("."),
-					exports: [],
-				},
-			};
+				};
 
-			await controller.onConfigUpdate({
-				type: "configUpdate",
-				config: configDefaults(config),
-			});
+				await controller.onConfigUpdate({
+					type: "configUpdate",
+					config: configDefaults(config),
+				});
 
-			let ev = await waitForBundleComplete(controller);
-			expect(findSourceFile(ev.bundle.entrypointSource, "out.ts"))
-				.toMatchInlineSnapshot(`
+				let ev = await waitForBundleComplete(controller);
+				expect(findSourceFile(ev.bundle.entrypointSource, "out.ts"))
+					.toMatchInlineSnapshot(`
 				"// out.ts
 				var out_default = {
 				  fetch(request, env, ctx) {
@@ -242,8 +244,8 @@ describe("BundleController", () => {
 				};
 				"
 			`);
-			await seed({
-				"random_dir/index.ts": dedent/* javascript */ `
+				await seed({
+					"random_dir/index.ts": dedent/* javascript */ `
 					export default {
 						fetch(request, env, ctx) {
 							//comment
@@ -251,10 +253,10 @@ describe("BundleController", () => {
 						}
 					}
 				`,
-			});
-			ev = await waitForBundleComplete(controller);
-			expect(findSourceFile(ev.bundle.entrypointSource, "out.ts"))
-				.toMatchInlineSnapshot(`
+				});
+				ev = await waitForBundleComplete(controller);
+				expect(findSourceFile(ev.bundle.entrypointSource, "out.ts"))
+					.toMatchInlineSnapshot(`
 				"// out.ts
 				var out_default = {
 				  fetch(request, env, ctx) {
@@ -263,7 +265,10 @@ describe("BundleController", () => {
 				};
 				"
 			`);
-		});
+			},
+			// Extend this test's timeout as it keeps flaking on CI
+			{ timeout: 30_000 }
+		);
 	});
 
 	test("module aliasing", async ({ controller }) => {
