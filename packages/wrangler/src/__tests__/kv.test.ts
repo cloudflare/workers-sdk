@@ -1629,7 +1629,7 @@ describe("wrangler", () => {
 				return requests;
 			}
 
-			it("should delete the keys parsed from a file", async () => {
+			it("should delete the keys parsed from a file (string)", async () => {
 				const keys = ["someKey1", "ns:someKey2"];
 				writeFileSync("./keys.json", JSON.stringify(keys));
 				mockConfirm({
@@ -1637,6 +1637,26 @@ describe("wrangler", () => {
 					result: true,
 				});
 				const requests = mockDeleteRequest("some-namespace-id", keys);
+				await runWrangler(
+					`kv bulk delete --namespace-id some-namespace-id keys.json`
+				);
+				expect(requests.count).toEqual(1);
+				expect(std.out).toMatchInlineSnapshot(`"Success!"`);
+				expect(std.warn).toMatchInlineSnapshot(`""`);
+				expect(std.err).toMatchInlineSnapshot(`""`);
+			});
+
+			it("should delete the keys parsed from a file ({ name })", async () => {
+				const keys = [{ name: "someKey1" }, { name: "ns:someKey2" }];
+				writeFileSync("./keys.json", JSON.stringify(keys));
+				mockConfirm({
+					text: `Are you sure you want to delete all the keys read from "keys.json" from kv-namespace with id "some-namespace-id"?`,
+					result: true,
+				});
+				const requests = mockDeleteRequest(
+					"some-namespace-id",
+					keys.map((k) => k.name)
+				);
 				await runWrangler(
 					`kv bulk delete --namespace-id some-namespace-id keys.json`
 				);
@@ -1754,7 +1774,7 @@ describe("wrangler", () => {
 					)
 				).rejects.toThrowErrorMatchingInlineSnapshot(`
 					[Error: Unexpected JSON input from "keys.json".
-					Expected an array of strings.
+					Expected an array of strings or objects with a "name" key.
 					The item at index 1 is type: "number" - 12354
 					The item at index 2 is type: "object" - {"key":"someKey"}
 					The item at index 3 is type: "object" - null]
