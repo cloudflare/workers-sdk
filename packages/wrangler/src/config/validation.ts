@@ -1173,7 +1173,7 @@ function normalizeAndValidateEnvironment(
 			topLevelEnv,
 			rawEnv,
 			"compatibility_date",
-			isString,
+			validateCompatibilityDate,
 			undefined
 		),
 		compatibility_flags: inheritable(
@@ -3211,6 +3211,47 @@ const validateConsumer: ValidatorFn = (diagnostics, field, value, _config) => {
 			);
 			isValid = false;
 		}
+	}
+
+	return isValid;
+};
+
+const isValidDate = (value: string): boolean => {
+	const data = new Date(value);
+	return !isNaN(data.getTime());
+};
+
+const validateCompatibilityDate: ValidatorFn = (diagnostics, field, value) => {
+	if (value === undefined) {
+		return true;
+	}
+
+	if (typeof value !== "string") {
+		diagnostics.errors.push(
+			`Expected "${field}" to be of type string but got ${JSON.stringify(value)}.`
+		);
+		return false;
+	}
+
+	let isValid = true;
+
+	if (
+		value.includes("–") || // en-dash
+		value.includes("—") // em-dash
+	) {
+		isValid = false;
+
+		diagnostics.errors.push(
+			`"${field}" field should use hyphens (-) rather than en-dashes (—) or em-dashes (–).`
+		);
+	}
+
+	if (!isValidDate(value)) {
+		isValid = false;
+
+		diagnostics.errors.push(
+			`"${field}" field should be a valid ISO-8601 date (YYYY-MM-DD), but got ${JSON.stringify(value)}.`
+		);
 	}
 
 	return isValid;
