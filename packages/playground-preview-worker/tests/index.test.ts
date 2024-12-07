@@ -244,6 +244,18 @@ describe("Preview Worker", () => {
 		);
 		expect(await resp.text()).toMatchInlineSnapshot('"custom"');
 	});
+	it("should forward OPTIONS raw HTTP request", async () => {
+		const resp = await fetch(`${PREVIEW_REMOTE}/method`, {
+			method: "OPTIONS",
+			headers: {
+				"X-CF-Token": defaultUserToken,
+				"CF-Raw-HTTP": "true",
+			},
+			redirect: "manual",
+		});
+
+		expect(await resp.text()).toEqual("OPTIONS");
+	});
 	it("should reject no token for raw HTTP response", async () => {
 		const resp = await fetch(`${PREVIEW_REMOTE}/header`, {
 			headers: {
