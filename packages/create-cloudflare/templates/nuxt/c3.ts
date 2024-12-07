@@ -24,7 +24,7 @@ const generate = async (ctx: C3Context) => {
 		gitFlag,
 	]);
 
-	writeFile("./.node-version", "17");
+	writeFile("./.node-version", "18");
 
 	logRaw(""); // newline
 };
