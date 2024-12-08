@@ -471,6 +471,7 @@ function getFrameworkTests(opts: {
 					"--tailwind",
 					"--src-dir",
 					"--app",
+					"--turbopack",
 					"--import-alias",
 					"@/*",
 				],
