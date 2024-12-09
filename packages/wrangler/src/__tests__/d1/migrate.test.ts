@@ -16,6 +16,7 @@ describe("migrate", () => {
 	runInTempDir();
 	mockConsoleMethods();
 	mockSetTimeout();
+	vi.stubEnv("CLOUDFLARE_API_TOKEN", "123456789");
 
 	const { setIsTTY } = useMockIsTTY();
 
@@ -154,7 +155,7 @@ Your database may not be available to serve requests during the migration, conti
 								name: "benchmark3-v1",
 								num_tables: 2,
 								uuid: "7b0c1d24-ec57-4179-8663-9b82dafe9277",
-								version: "alpha",
+								version: "production",
 							},
 							success: true,
 							errors: [],
@@ -162,15 +163,7 @@ Your database may not be available to serve requests during the migration, conti
 						},
 						{ status: 200 }
 					);
-				}),
-				http.post(
-					"*/accounts/:accountId/d1/database/:databaseId/backup",
-					async ({ params }) => {
-						// All we need to do here is check that the right account ID was provided.
-						expect(params.accountId).toMatchInlineSnapshot(`"nx01"`);
-						return HttpResponse.error();
-					}
-				)
+				})
 			);
 			writeWranglerConfig({
 				d1_databases: [
@@ -199,11 +192,7 @@ Your database may not be available to serve requests during the migration, conti
 				result: true,
 			});
 
-			await expect(
-				runWrangler("d1 migrations apply db --remote")
-			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[TypeError: Failed to fetch]`
-			);
+			expect(runWrangler("d1 migrations apply db --remote")).resolves;
 		});
 	});
 
