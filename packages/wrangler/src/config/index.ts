@@ -2,12 +2,12 @@ import fs from "node:fs";
 import TOML from "@iarna/toml";
 import chalk from "chalk";
 import dotenv from "dotenv";
-import { findUpSync } from "find-up";
 import { FatalError, UserError } from "../errors";
 import { getFlag } from "../experimental-flags";
 import { logger } from "../logger";
 import { EXIT_CODE_INVALID_PAGES_CONFIG } from "../pages/errors";
 import { parseJSONC, parseTOML, readFileSync } from "../parse";
+import { resolveWranglerConfigPath } from "./config-helpers";
 import { isPagesConfig, normalizeAndValidateConfig } from "./validation";
 import { validatePagesConfig } from "./validation-pages";
 import type { CfWorkerInit } from "../deployment-bundle/worker";
@@ -66,25 +66,23 @@ export function formatConfigSnippet(
 	}
 }
 
-type ReadConfigCommandArgs = NormalizeAndValidateConfigArgs;
+type ReadConfigCommandArgs = NormalizeAndValidateConfigArgs & {
+	config?: string;
+	script?: string;
+};
 
 /**
  * Get the Wrangler configuration; read it from the give `configPath` if available.
  */
 export function readConfig(
-	configPath: string | undefined,
 	args: ReadConfigCommandArgs,
 	options?: { hideWarnings?: boolean }
 ): Config;
 export function readConfig(
-	configPath: string | undefined,
 	args: ReadConfigCommandArgs,
 	{ hideWarnings = false }: { hideWarnings?: boolean } = {}
 ): Config {
-	if (!configPath) {
-		configPath = findWranglerConfig(process.cwd());
-	}
-
+	const configPath = resolveWranglerConfigPath(args);
 	const rawConfig = readRawConfig(configPath);
 
 	const { config, diagnostics } = normalizeAndValidateConfig(
@@ -104,13 +102,10 @@ export function readConfig(
 }
 
 export function readPagesConfig(
-	configPath: string | undefined,
 	args: ReadConfigCommandArgs,
 	{ hideWarnings = false }: { hideWarnings?: boolean } = {}
 ): Omit<Config, "pages_build_output_dir"> & { pages_build_output_dir: string } {
-	if (!configPath) {
-		configPath = findWranglerConfig(process.cwd());
-	}
+	const configPath = resolveWranglerConfigPath(args);
 
 	let rawConfig: RawConfig;
 	try {
@@ -172,20 +167,6 @@ export const readRawConfig = (configPath: string | undefined): RawConfig => {
 	}
 	return {};
 };
-
-/**
- * Find the wrangler config file by searching up the file-system
- * from the current working directory.
- */
-export function findWranglerConfig(
-	referencePath: string = process.cwd()
-): string | undefined {
-	return (
-		findUpSync(`wrangler.json`, { cwd: referencePath }) ??
-		findUpSync(`wrangler.jsonc`, { cwd: referencePath }) ??
-		findUpSync(`wrangler.toml`, { cwd: referencePath })
-	);
-}
 
 function addLocalSuffix(
 	id: string | symbol | undefined,
@@ -660,12 +641,12 @@ export function printBindings(
 
 export function withConfig<T>(
 	handler: (
-		t: OnlyCamelCase<T & CommonYargsOptions> & { config: Config }
+		args: OnlyCamelCase<T & CommonYargsOptions> & { config: Config }
 	) => Promise<void>,
-	options?: Parameters<typeof readConfig>[2]
+	options?: Parameters<typeof readConfig>[1]
 ) {
-	return (t: OnlyCamelCase<T & CommonYargsOptions>) => {
-		return handler({ ...t, config: readConfig(t.config, t, options) });
+	return (args: OnlyCamelCase<T & CommonYargsOptions>) => {
+		return handler({ ...args, config: readConfig(args, options) });
 	};
 }
 

@@ -20,7 +20,7 @@ export function options(yargs: CommonYargsArgv) {
 export async function handler(
 	args: StrictYargsOptionsToInterface<typeof options>
 ) {
-	const config = readConfig(args.config, args);
+	const config = readConfig(args);
 	const queue: QueueResponse = await getQueue(config, args.name);
 	const accountId = await requireAuth(config);
 

@@ -25,7 +25,7 @@ export function options(yargs: CommonYargsArgv) {
 export async function handler(
 	args: StrictYargsOptionsToInterface<typeof options>
 ) {
-	const config = readConfig(args.config, args);
+	const config = readConfig(args);
 
 	logger.log(`📋 Listing Vectorize indexes...`);
 	const indexes = await listIndexes(config, args.deprecatedV1);
