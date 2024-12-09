@@ -218,6 +218,30 @@ describe.skipIf(experimental || frameworkToTest || isQuarantineMode())(
 		);
 
 		test({ experimental }).skipIf(process.platform === "win32")(
+			"Cloning remote template that uses wrangler.json",
+			async ({ logStream, project }) => {
+				const { output } = await runC3(
+					[
+						project.path,
+						"--template=cloudflare/templates/multiplayer-globe-template",
+						"--no-deploy",
+						"--git=false",
+					],
+					[],
+					logStream,
+				);
+
+				expect(output).toContain(
+					`repository cloudflare/templates/multiplayer-globe-template`,
+				);
+				expect(output).toContain(
+					`Cloning template from: cloudflare/templates/multiplayer-globe-template`,
+				);
+				expect(output).toContain(`template cloned and validated`);
+			},
+		);
+
+		test({ experimental }).skipIf(process.platform === "win32")(
 			"Inferring the category, type and language if the type is `hello-world-python`",
 			async ({ logStream, project }) => {
 				// The `hello-world-python` template is now the python variant of the `hello-world` template
