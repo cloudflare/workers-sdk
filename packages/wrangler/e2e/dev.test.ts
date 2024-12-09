@@ -557,10 +557,6 @@ describe("hyperdrive dev tests", () => {
 
 	it("does not require local connection string when running `wrangler dev --remote`", async () => {
 		const helper = new WranglerE2ETestHelper();
-		let port = 5432;
-		if (server.address() && typeof server.address() !== "string") {
-			port = (server.address() as nodeNet.AddressInfo).port;
-		}
 		await helper.seed({
 			"wrangler.toml": dedent`
 					name = "${workerName}"
