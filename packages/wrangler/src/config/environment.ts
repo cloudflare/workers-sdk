@@ -40,6 +40,32 @@ export type CloudchamberConfig = {
 };
 
 /**
+ * Configuration for a container application
+ */
+export type ContainerApp = {
+	// TODO: fill out the entire type
+
+	/* Name of the application*/
+	name: string;
+	/* Number of application instances */
+	instances: number;
+	/* The scheduling policy of the application, default is regional */
+	scheduling_policy?: "regional" | "moon";
+	/* Configuration of the container */
+	configuration: {
+		image: string;
+		labels?: { name: string; value: string }[];
+		secrets?: { name: string; type: "env"; secret: string }[];
+	};
+	/* Scheduling constraints */
+	constraints?: {
+		regions?: string[];
+		cities?: string[];
+		tier?: number;
+	};
+};
+
+/**
  * Configuration in wrangler for Durable Object Migrations
  */
 export type DurableObjectMigration = {
@@ -458,6 +484,22 @@ export interface EnvironmentNonInheritable {
 	 * @nonInheritable
 	 */
 	cloudchamber: CloudchamberConfig;
+
+	/**
+	 * Container related configuration
+	 */
+	containers: {
+		/**
+		 * Container app configuration
+		 *
+		 * NOTE: This field is not automatically inherited from the top level environment,
+		 * and so must be specified in every named environment.
+		 *
+		 * @default `{}`
+		 * @nonInheritable
+		 */
+		app: ContainerApp[];
+	};
 
 	/**
 	 * These specify any Workers KV Namespaces you want to
