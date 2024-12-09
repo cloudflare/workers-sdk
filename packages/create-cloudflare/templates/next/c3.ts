@@ -49,10 +49,10 @@ const generate = async (ctx: C3Context) => {
 	updateStatus("Created wrangler.toml file");
 };
 
-const updateNextConfig = () => {
+const updateNextConfig = (usesTs: boolean) => {
 	const s = spinner();
 
-	const configFile = "next.config.mjs";
+	const configFile = `next.config.${usesTs ? "ts" : "mjs"}`;
 	s.start(`Updating \`${configFile}\``);
 
 	const configContent = readFile(configFile);
@@ -107,7 +107,7 @@ const configure = async (ctx: C3Context) => {
 		await writeEslintrc(ctx);
 	}
 
-	updateNextConfig();
+	updateNextConfig(usesTs);
 
 	copyFile(
 		join(getTemplatePath(ctx), "README.md"),
