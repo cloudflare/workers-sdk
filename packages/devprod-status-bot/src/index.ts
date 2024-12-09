@@ -529,17 +529,11 @@ export default {
 			await sendReviewMessage(env.PROD_WEBHOOK, body);
 		}
 
-		const parsedRepo = repo.replaceAll(/[^a-z-]/g, "-")
-
-		if(!["workers-sdk", "wrangler-action"].includes(parsedRepo)) {
-			return new Response("Repo not allowed");
-		}
-
 		if (url.pathname.startsWith("/pr-project") && request.method === "POST") {
-			const [_, _prefix, repo, prNumber] = url.pathname.split("/");
+			const [_, _prefix, _repo, prNumber] = url.pathname.split("/");
 			return await addPRToProject(
 				env.GITHUB_PAT,
-				parsedRepo,
+				"workers-sdk,
 				prNumber.replaceAll(/[^0-9]/g, "-")
 			);
 		}
