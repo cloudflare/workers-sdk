@@ -373,13 +373,16 @@ describe("--x-provision", () => {
 				expect(labels).not.toContain("Other (too many to list)");
 				return "new";
 			});
-			vi.mocked(prompt).mockImplementation(async (text) => {
+			vi.mocked(prompt).mockImplementation(async (text, options) => {
 				switch (text) {
 					case "Enter a name for your new KV Namespace":
+						expect(options?.defaultValue).toBe("test-name-kv");
 						return "new-kv";
 					case "Enter a name for your new D1 Database":
+						expect(options?.defaultValue).toBe("test-name-d1");
 						return "new-d1";
 					case "Enter a name for your new R2 Bucket":
+						expect(options?.defaultValue).toBe("test-name-r2");
 						return "new-r2";
 					default:
 						throw new Error(`Unexpected prompt: ${text}`);

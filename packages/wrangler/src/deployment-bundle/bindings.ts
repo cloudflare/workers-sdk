@@ -172,7 +172,8 @@ export async function provisionBindings(
 				pendingResources.kv_namespaces,
 				"KV Namespace",
 				preExistingKV.map((ns) => ({ name: ns.title, id: ns.id })),
-				"title or id"
+				"title or id",
+				scriptName
 			);
 		}
 
@@ -182,7 +183,8 @@ export async function provisionBindings(
 				pendingResources.d1_databases,
 				"D1 Database",
 				preExisting.map((db) => ({ name: db.name, id: db.uuid })),
-				"name or id"
+				"name or id",
+				scriptName
 			);
 		}
 		if (pendingResources.r2_buckets?.length) {
@@ -191,7 +193,8 @@ export async function provisionBindings(
 				pendingResources.r2_buckets,
 				"R2 Bucket",
 				preExisting.map((bucket) => ({ name: bucket.name, id: bucket.name })),
-				"name"
+				"name",
+				scriptName
 			);
 		}
 		logger.log(`🎉 All resources provisioned, continuing with deployment...\n`);
@@ -231,7 +234,8 @@ async function runProvisioningFlow(
 	pending: PendingResources[ResourceType],
 	friendlyBindingName: string,
 	preExisting: NormalisedResourceInfo[],
-	resourceKeyDescriptor: string
+	resourceKeyDescriptor: string,
+	scriptName: string
 ) {
 	const MAX_OPTIONS = 4;
 	if (pending.length) {
@@ -262,7 +266,12 @@ async function runProvisioningFlow(
 							defaultValue: "new",
 						});
 			if (selected === "new") {
-				name = await prompt(`Enter a name for your new ${friendlyBindingName}`);
+				name = await prompt(
+					`Enter a name for your new ${friendlyBindingName}`,
+					{
+						defaultValue: `${scriptName}-${item.binding.toLowerCase().replace("_", "-")}`,
+					}
+				);
 				logger.log(`🌀 Creating new ${friendlyBindingName} "${name}"...`);
 				// creates new resource and mutates `bindings` to update id
 				await item.create(name);
