@@ -1,5 +1,23 @@
 # wrangler
 
+## 3.94.0
+
+### Minor Changes
+
+- [#7229](https://github.com/cloudflare/workers-sdk/pull/7229) [`669d7ad`](https://github.com/cloudflare/workers-sdk/commit/669d7ad1e44c07cf74202c4d0fc244a9c50dec81) Thanks [@gabivlj](https://github.com/gabivlj)! - Introduce a new cloudchamber command `wrangler cloudchamber apply`, which will be used by customers to deploy container-apps
+
+### Patch Changes
+
+- [#7002](https://github.com/cloudflare/workers-sdk/pull/7002) [`d2447c6`](https://github.com/cloudflare/workers-sdk/commit/d2447c6c1ebcdebf0829519c3bc52bc2d30a4294) Thanks [@GregBrimble](https://github.com/GregBrimble)! - fix: More helpful error messages when validating compatibility date
+
+- [#7493](https://github.com/cloudflare/workers-sdk/pull/7493) [`4c140bc`](https://github.com/cloudflare/workers-sdk/commit/4c140bcb2b75a3dcf12240d66c22619af10503df) Thanks [@emily-shen](https://github.com/emily-shen)! - fix: remove non-json output in json mode commands
+
+  Fixes regressions in 3.93.0 where unwanted text (wrangler banner, telemetry notice) was printing in commands that should only output valid json.
+
+- Updated dependencies [[`5449fe5`](https://github.com/cloudflare/workers-sdk/commit/5449fe54b15cf7c6dd12c385b0c8d2883c641b80)]:
+  - @cloudflare/workers-shared@0.11.0
+  - miniflare@3.20241205.0
+
 ## 3.93.0
 
 ### Minor Changes
