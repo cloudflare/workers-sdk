@@ -1,8 +1,7 @@
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from "fs";
 import * as path from "path";
 import { findUpSync } from "find-up";
-import { CI } from "./is-ci";
-import isInteractive from "./is-interactive";
+import { isNonInteractiveOrCI } from "./is-interactive";
 import { logger } from "./logger";
 
 let cacheMessageShown = false;
@@ -32,7 +31,7 @@ const arrayFormatter = new Intl.ListFormat("en-US", {
 });
 
 function showCacheMessage(fields: string[], folder: string) {
-	if (!cacheMessageShown && isInteractive() && !CI.isCI()) {
+	if (!cacheMessageShown && !isNonInteractiveOrCI()) {
 		if (fields.length > 0) {
 			logger.debug(
 				`Retrieving cached values for ${arrayFormatter.format(

@@ -4,8 +4,9 @@ import { dirname, join, normalize, resolve } from "node:path";
 import { watch } from "chokidar";
 import * as esbuild from "esbuild";
 import { unstable_dev } from "../api";
-import { readConfig } from "../config";
+import { configFileName, readConfig } from "../config";
 import { isBuildFailure } from "../deployment-bundle/build-failures";
+import { shouldCheckFetch } from "../deployment-bundle/bundle";
 import { esbuildAliasExternalPlugin } from "../deployment-bundle/esbuild-plugins/alias-external";
 import { validateNodeCompatMode } from "../deployment-bundle/node-compat";
 import { FatalError } from "../errors";
@@ -224,7 +225,7 @@ export function Options(yargs: CommonYargsArgv) {
 			},
 			config: {
 				describe:
-					"Pages does not support custom paths for the wrangler.toml configuration file",
+					"Pages does not support custom paths for the Wrangler configuration file",
 				type: "string",
 				hidden: true,
 			},
@@ -248,7 +249,7 @@ export function Options(yargs: CommonYargsArgv) {
 				type: "boolean",
 				describe:
 					"Use the experimental file based dev registry for multi-worker development",
-				default: false,
+				default: true,
 			},
 			"experimental-vectorize-bind-to-prod": {
 				type: "boolean",
@@ -282,13 +283,9 @@ export const Handler = async (args: PagesDevArguments) => {
 
 	if (args.config) {
 		throw new FatalError(
-			"Pages does not support custom paths for the `wrangler.toml` configuration file",
+			"Pages does not support custom paths for the Wrangler configuration file",
 			1
 		);
-	}
-
-	if (args.experimentalJsonConfig) {
-		throw new FatalError("Pages does not support `wrangler.json`", 1);
 	}
 
 	if (args.env) {
@@ -306,7 +303,7 @@ export const Handler = async (args: PagesDevArguments) => {
 
 	// for `dev` we always use the top-level config, which means we need
 	// to read the config file with `env` set to `undefined`
-	const config = readConfig(undefined, { ...args, env: undefined });
+	const config = readConfig({ ...args, env: undefined });
 	const resolvedDirectory = args.directory ?? config.pages_build_output_dir;
 	const [_pages, _dev, ...remaining] = args._;
 	const command = remaining;
@@ -384,6 +381,9 @@ export const Handler = async (args: PagesDevArguments) => {
 		compatibilityDate,
 		compatibilityFlags
 	);
+
+	const checkFetch = shouldCheckFetch(compatibilityDate, compatibilityFlags);
+
 	let modules: CfModule[] = [];
 
 	if (usingWorkerDirectory) {
@@ -394,6 +394,7 @@ export const Handler = async (args: PagesDevArguments) => {
 				buildOutputDirectory: directory ?? ".",
 				nodejsCompatMode,
 				defineNavigatorUserAgent,
+				checkFetch,
 				sourceMaps: config?.upload_source_maps ?? false,
 			});
 			modules = bundleResult.modules;
@@ -462,6 +463,7 @@ export const Handler = async (args: PagesDevArguments) => {
 					watch: false,
 					onEnd: () => scriptReadyResolve(),
 					defineNavigatorUserAgent,
+					checkFetch,
 				});
 
 				/*
@@ -632,6 +634,7 @@ export const Handler = async (args: PagesDevArguments) => {
 				local: true,
 				routesModule,
 				defineNavigatorUserAgent,
+				checkFetch,
 			});
 
 			/*
@@ -674,7 +677,7 @@ export const Handler = async (args: PagesDevArguments) => {
 			watcher.add(currentBundleDependencies);
 			watchedBundleDependencies = [...currentBundleDependencies];
 
-			await metrics.sendMetricsEvent("build pages functions");
+			metrics.sendMetricsEvent("build pages functions");
 		};
 
 		/*
@@ -922,7 +925,7 @@ export const Handler = async (args: PagesDevArguments) => {
 			enableIpc: true,
 		},
 	});
-	await metrics.sendMetricsEvent("run pages dev");
+	metrics.sendMetricsEvent("run pages dev");
 
 	CLEANUP_CALLBACKS.push(stop);
 
@@ -1023,7 +1026,7 @@ async function spawnProxyProcess({
 
 		CLEANUP();
 		throw new FatalError(
-			"Must specify a directory of static assets to serve, or a command to run, or a proxy port, or configure `pages_build_output_dir` in `wrangler.toml`.",
+			`Must specify a directory of static assets to serve, or a command to run, or a proxy port, or configure \`pages_build_output_dir\` in your Wrangler configuration file.`,
 			1
 		);
 	}
@@ -1101,7 +1104,7 @@ function resolvePagesDevServerSettings(
 		const currentDate = new Date().toISOString().substring(0, 10);
 		logger.warn(
 			`No compatibility_date was specified. Using today's date: ${currentDate}.\n` +
-				`❯❯ Add one to your wrangler.toml file: compatibility_date = "${currentDate}", or\n` +
+				`❯❯ Add one to your ${configFileName(config.configPath)} file: compatibility_date = "${currentDate}", or\n` +
 				`❯❯ Pass it in your terminal: wrangler pages dev [<DIRECTORY>] --compatibility-date=${currentDate}\n\n` +
 				"See https://developers.cloudflare.com/workers/platform/compatibility-dates/ for more information."
 		);
@@ -1165,7 +1168,7 @@ function getBindingsFromArgs(args: PagesDevArguments): Partial<
 					id: ref || kv.toString(),
 				};
 			})
-			.filter(Boolean) as AdditionalDevProps["kv"];
+			.filter(Boolean) as EnvironmentNonInheritable["kv_namespaces"];
 	}
 
 	// get DO bindings from the [--do] arg
@@ -1213,7 +1216,7 @@ function getBindingsFromArgs(args: PagesDevArguments): Partial<
 					database_name: `local-${d1}`,
 				};
 			})
-			.filter(Boolean) as AdditionalDevProps["d1Databases"];
+			.filter(Boolean) as EnvironmentNonInheritable["d1_databases"];
 	}
 
 	// get R2 bindings from the [--r2] arg
@@ -1231,7 +1234,7 @@ function getBindingsFromArgs(args: PagesDevArguments): Partial<
 
 				return { binding, bucket_name: ref || binding.toString() };
 			})
-			.filter(Boolean) as AdditionalDevProps["r2"];
+			.filter(Boolean) as EnvironmentNonInheritable["r2_buckets"];
 	}
 
 	// get service bindings from the [--services] arg

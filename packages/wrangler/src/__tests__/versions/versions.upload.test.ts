@@ -2,12 +2,15 @@ import { http, HttpResponse } from "msw";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { useMockIsTTY } from "../helpers/mock-istty";
-import { mockSubDomainRequest } from "../helpers/mock-workers-subdomain";
+import {
+	mockGetWorkerSubdomain,
+	mockSubDomainRequest,
+} from "../helpers/mock-workers-subdomain";
 import { createFetchResult, msw } from "../helpers/msw";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 import { writeWorkerSource } from "../helpers/write-worker-source";
-import { writeWranglerToml } from "../helpers/write-wrangler-toml";
+import { writeWranglerConfig } from "../helpers/write-wrangler-config";
 
 describe("versions upload", () => {
 	runInTempDir();
@@ -21,7 +24,7 @@ describe("versions upload", () => {
 			http.get(
 				`*/accounts/:accountId/workers/services/:scriptName`,
 				({ params }) => {
-					expect(params.scriptName).toEqual("test-worker");
+					expect(params.scriptName).toEqual("test-name");
 
 					return HttpResponse.json(
 						createFetchResult({
@@ -47,7 +50,7 @@ describe("versions upload", () => {
 						return HttpResponse.error();
 					}
 
-					expect(params.scriptName).toEqual("test-worker");
+					expect(params.scriptName).toEqual("test-name");
 
 					return HttpResponse.json(
 						createFetchResult({
@@ -63,27 +66,13 @@ describe("versions upload", () => {
 		);
 	}
 
-	function mockGetWorkerSubdomain(available_on_subdomain: boolean) {
-		msw.use(
-			http.get(
-				`*/accounts/:accountId/workers/scripts/:scriptName/subdomain`,
-				({ params }) => {
-					expect(params.scriptName).toEqual("test-worker");
-					return HttpResponse.json(
-						createFetchResult({ enabled: available_on_subdomain })
-					);
-				}
-			)
-		);
-	}
-
 	test("should print bindings & startup time on versions upload", async () => {
 		mockGetScript();
 		mockUploadVersion(false);
 
 		// Setup
-		writeWranglerToml({
-			name: "test-worker",
+		writeWranglerConfig({
+			name: "test-name",
 			main: "./index.js",
 			vars: {
 				TEST: "test-string",
@@ -113,7 +102,7 @@ describe("versions upload", () => {
 			 \\"abc\\": \\"def\\",
 			 \\"bool\\": true
 			}
-			Uploaded test-worker (TIMINGS)
+			Uploaded test-name (TIMINGS)
 			Worker Version ID: 51e4886e-2db7-4900-8d38-fbfecfeab993"
 		`);
 	});
@@ -121,12 +110,12 @@ describe("versions upload", () => {
 	test("should print preview url if version has preview", async () => {
 		mockGetScript();
 		mockUploadVersion(true);
-		mockGetWorkerSubdomain(true);
+		mockGetWorkerSubdomain({ enabled: true, previews_enabled: true });
 		mockSubDomainRequest();
 
 		// Setup
-		writeWranglerToml({
-			name: "test-worker",
+		writeWranglerConfig({
+			name: "test-name",
 			main: "./index.js",
 			vars: {
 				TEST: "test-string",
@@ -145,20 +134,20 @@ describe("versions upload", () => {
 			Your worker has access to the following bindings:
 			- Vars:
 			  - TEST: \\"test-string\\"
-			Uploaded test-worker (TIMINGS)
+			Uploaded test-name (TIMINGS)
 			Worker Version ID: 51e4886e-2db7-4900-8d38-fbfecfeab993
-			Version Preview URL: https://51e4886e-test-worker.test-sub-domain.workers.dev"
+			Version Preview URL: https://51e4886e-test-name.test-sub-domain.workers.dev"
 		`);
 	});
 
-	it("should not print preview url workers_dev is false", async () => {
+	it("should not print preview url when preview_urls is false", async () => {
 		mockGetScript();
 		mockUploadVersion(true);
-		mockGetWorkerSubdomain(false);
+		mockGetWorkerSubdomain({ enabled: true, previews_enabled: false });
 
 		// Setup
-		writeWranglerToml({
-			name: "test-worker",
+		writeWranglerConfig({
+			name: "test-name",
 			main: "./index.js",
 			vars: {
 				TEST: "test-string",
@@ -177,7 +166,7 @@ describe("versions upload", () => {
 			Your worker has access to the following bindings:
 			- Vars:
 			  - TEST: \\"test-string\\"
-			Uploaded test-worker (TIMINGS)
+			Uploaded test-name (TIMINGS)
 			Worker Version ID: 51e4886e-2db7-4900-8d38-fbfecfeab993"
 		`);
 	});

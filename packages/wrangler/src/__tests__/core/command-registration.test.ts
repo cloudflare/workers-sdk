@@ -1,511 +1,275 @@
-import { normalizeOutput } from "../../../e2e/helpers/normalize";
+import assert from "assert";
+import { CommandRegistry } from "../../core/CommandRegistry";
 import {
-	defineAlias,
-	defineCommand,
-	defineNamespace,
-	DefinitionTreeRoot,
-} from "../../core/define-command";
-import { mockConsoleMethods } from "../helpers/mock-console";
-import { runInTempDir } from "../helpers/run-in-tmp";
-import { runWrangler } from "../helpers/run-wrangler";
-import type { DefinitionTreeNode } from "../../core/define-command";
+	createAlias,
+	createCommand,
+	createNamespace,
+} from "../../core/create-command";
+import { isAliasDefinition } from "../../core/helpers";
+import type {
+	HandlerContext,
+	InternalDefinition,
+	Metadata,
+} from "../../core/types";
 
-describe("Command Registration", () => {
-	runInTempDir();
-	const std = mockConsoleMethods();
-
-	let originalDefinitions: [string, DefinitionTreeNode][];
-	beforeAll(() => {
-		originalDefinitions = [...DefinitionTreeRoot.subtree.entries()];
-	});
+describe("CommandRegistry", () => {
+	let registry: CommandRegistry;
 
 	beforeEach(() => {
-		// resets the commands definitions so the tests do not conflict with eachother
-		DefinitionTreeRoot.subtree = new Map(originalDefinitions);
-
-		// To make these tests less verbose, we will define
-		// a bunch of commands that *use* all features
-		// but test each feature independently (mockConsoleMethods requires a separate test to reset the log)
-		// rather than verbosely define commands per test
-
-		defineCommand({
-			command: "wrangler my-test-command",
-			metadata: {
-				description: "My test command",
-				owner: "Workers: Authoring and Testing",
-				status: "stable",
-			},
-			args: {
-				str: { type: "string", demandOption: true },
-				num: { type: "number", demandOption: true },
-				bool: { type: "boolean", demandOption: true },
-				arr: { type: "string", array: true, demandOption: true },
-				optional: { type: "string" },
-				pos: { type: "string" },
-				posNum: { type: "number" },
-			},
-			positionalArgs: ["pos", "posNum"],
-			handler(args, ctx) {
-				ctx.logger.log(args);
-			},
-		});
-
-		defineNamespace({
-			command: "wrangler one",
-			metadata: {
-				description: "namespace 1",
-				owner: "Workers: Authoring and Testing",
-				status: "stable",
-			},
-		});
-
-		defineCommand({
-			command: "wrangler one one",
-			metadata: {
-				description: "command 1 1",
-				owner: "Workers: Authoring and Testing",
-				status: "stable",
-			},
-			args: {},
-			handler(args, ctx) {
-				ctx.logger.log("Ran command 1 1");
-			},
-		});
-
-		defineCommand({
-			command: "wrangler one two",
-			metadata: {
-				description: "command 1 2",
-				owner: "Workers: Authoring and Testing",
-				status: "stable",
-			},
-			args: {},
-			handler(args, ctx) {
-				ctx.logger.log("Ran command 1 2");
-			},
-		});
-
-		defineCommand({
-			command: "wrangler one two three",
-			metadata: {
-				description: "command 1 2 3",
-				owner: "Workers: Authoring and Testing",
-				status: "stable",
-			},
-			args: {},
-			handler(args, ctx) {
-				ctx.logger.log("Ran command 1 2 3");
-			},
-		});
-
-		defineNamespace({
-			command: "wrangler two",
-			metadata: {
-				description: "namespace 2",
-				owner: "Workers: Authoring and Testing",
-				status: "stable",
-			},
-		});
-
-		defineCommand({
-			command: "wrangler two one",
-			metadata: {
-				description: "command 2 1",
-				owner: "Workers: Authoring and Testing",
-				status: "stable",
-			},
-			args: {},
-			handler(args, ctx) {
-				ctx.logger.log("Ran command 2 1");
-			},
-		});
-	});
-
-	test("can define a command and run it", async () => {
-		await runWrangler(
-			"my-test-command positionalFoo 5 --str foo --num 2 --bool --arr first second --arr third"
-		);
-
-		expect(std.out).toMatchInlineSnapshot(`
-			"{
-			  _: [ 'my-test-command' ],
-			  str: 'foo',
-			  num: 2,
-			  bool: true,
-			  arr: [ 'first', 'second', 'third' ],
-			  'experimental-versions': true,
-			  'x-versions': true,
-			  'experimental-gradual-rollouts': true,
-			  xVersions: true,
-			  experimentalGradualRollouts: true,
-			  experimentalVersions: true,
-			  '$0': 'wrangler',
-			  pos: 'positionalFoo',
-			  posNum: 5,
-			  'pos-num': 5
-			}"
-		`);
-	});
-
-	test("can define multiple commands and run them", async () => {
-		await runWrangler("one one");
-		await runWrangler("one two");
-		await runWrangler("two one");
-
-		expect(std.out).toMatchInlineSnapshot(`
-			"Ran command 1 1
-			Ran command 1 2
-			Ran command 2 1"
-		`);
-	});
-
-	test("displays commands in top-level --help", async () => {
-		await runWrangler("--help");
-
-		expect(std.out).toMatchInlineSnapshot(`
-			"wrangler
-
-			COMMANDS
-			  wrangler docs [search..]                 📚 Open Wrangler's command documentation in your browser
-
-			  wrangler init [name]                     📥 Initialize a basic Worker
-			  wrangler dev [script]                    👂 Start a local server for developing your Worker
-			  wrangler deploy [script]                 🆙 Deploy a Worker to Cloudflare  [aliases: publish]
-			  wrangler deployments                     🚢 List and view the current and past deployments for your Worker
-			  wrangler rollback [version-id]           🔙 Rollback a deployment for a Worker
-			  wrangler versions                        🫧  List, view, upload and deploy Versions of your Worker to Cloudflare
-			  wrangler triggers                        🎯 Updates the triggers of your current deployment
-			  wrangler delete [script]                 🗑  Delete a Worker from Cloudflare
-			  wrangler tail [worker]                   🦚 Start a log tailing session for a Worker
-			  wrangler secret                          🤫 Generate a secret that can be referenced in a Worker
-			  wrangler types [path]                    📝 Generate types from bindings and module rules in configuration
-
-			  wrangler kv                              🗂️  Manage Workers KV Namespaces
-			  wrangler queues                          🇶  Manage Workers Queues
-			  wrangler r2                              📦 Manage R2 buckets & objects
-			  wrangler d1                              🗄  Manage Workers D1 databases
-			  wrangler vectorize                       🧮 Manage Vectorize indexes [open beta]
-			  wrangler hyperdrive                      🚀 Manage Hyperdrive databases
-			  wrangler pages                           ⚡️ Configure Cloudflare Pages
-			  wrangler mtls-certificate                🪪  Manage certificates used for mTLS connections
-			  wrangler pubsub                          📮 Manage Pub/Sub brokers [private beta]
-			  wrangler dispatch-namespace              🏗️  Manage dispatch namespaces
-			  wrangler ai                              🤖 Manage AI models
-			  wrangler workflows                       🔁 Manage Workflows [open-beta]
-			  wrangler login                           🔓 Login to Cloudflare
-			  wrangler logout                          🚪 Logout from Cloudflare
-			  wrangler whoami                          🕵️  Retrieve your user information
-			  wrangler my-test-command [pos] [posNum]  My test command
-			  wrangler one                             namespace 1
-			  wrangler two                             namespace 2
-
-			GLOBAL FLAGS
-			  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
-			  -c, --config                    Path to .toml configuration file  [string]
-			  -e, --env                       Environment to use for operations and .env files  [string]
-			  -h, --help                      Show help  [boolean]
-			  -v, --version                   Show version number  [boolean]
-
-			Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose"
-		`);
-	});
-
-	test("displays namespace level 1 --help", async () => {
-		await runWrangler("one --help");
-
-		expect(std.out).toMatchInlineSnapshot(`
-			"wrangler one
-
-			namespace 1
-
-			COMMANDS
-			  wrangler one one  command 1 1
-			  wrangler one two  command 1 2
-
-			GLOBAL FLAGS
-			  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
-			  -c, --config                    Path to .toml configuration file  [string]
-			  -e, --env                       Environment to use for operations and .env files  [string]
-			  -h, --help                      Show help  [boolean]
-			  -v, --version                   Show version number  [boolean]"
-		`);
-	});
-
-	test("displays namespace level 2 --help", async () => {
-		await runWrangler("one two --help");
-
-		expect(std.out).toMatchInlineSnapshot(`
-			"wrangler one two
-
-			command 1 2
-
-			COMMANDS
-			  wrangler one two three  command 1 2 3
-
-			GLOBAL FLAGS
-			  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
-			  -c, --config                    Path to .toml configuration file  [string]
-			  -e, --env                       Environment to use for operations and .env files  [string]
-			  -h, --help                      Show help  [boolean]
-			  -v, --version                   Show version number  [boolean]"
-		`);
-	});
-
-	test("displays namespace level 3 --help", async () => {
-		await runWrangler("one two three --help");
-
-		expect(std.out).toMatchInlineSnapshot(`
-			"wrangler one two three
-
-			command 1 2 3
-
-			GLOBAL FLAGS
-			  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
-			  -c, --config                    Path to .toml configuration file  [string]
-			  -e, --env                       Environment to use for operations and .env files  [string]
-			  -h, --help                      Show help  [boolean]
-			  -v, --version                   Show version number  [boolean]"
-		`);
-	});
-
-	test("can alias a command to any other command", async () => {
-		defineAlias({
-			command: "wrangler my-test-alias",
-			aliasOf: "wrangler my-test-command",
-		});
-
-		await runWrangler(
-			"my-test-alias --str bar --num 3 --bool --arr 1st 2nd --arr 3rd"
-		);
-
-		expect(std.out).toMatchInlineSnapshot(`
-			"{
-			  _: [ 'my-test-alias' ],
-			  str: 'bar',
-			  num: 3,
-			  bool: true,
-			  arr: [ '1st', '2nd', '3rd' ],
-			  'experimental-versions': true,
-			  'x-versions': true,
-			  'experimental-gradual-rollouts': true,
-			  xVersions: true,
-			  experimentalGradualRollouts: true,
-			  experimentalVersions: true,
-			  '$0': 'wrangler'
-			}"
-		`);
-	});
-	test("can alias a command to another alias", async () => {
-		defineAlias({
-			command: "wrangler my-test-alias-alias",
-			aliasOf: "wrangler my-test-alias",
-		});
-
-		defineAlias({
-			command: "wrangler my-test-alias",
-			aliasOf: "wrangler one two three",
-		});
-
-		await runWrangler("my-test-alias-alias");
-
-		expect(std.out).toMatchInlineSnapshot(`"Ran command 1 2 3"`);
-	});
-	test("can alias a namespace to another namespace", async () => {
-		defineAlias({
-			command: "wrangler 1",
-			aliasOf: "wrangler one",
-		});
-
-		await runWrangler("1 two");
-
-		expect(std.out).toMatchInlineSnapshot(`"Ran command 1 2"`);
-	});
-	test("aliases are explained in --help", async () => {
-		defineAlias({
-			command: "wrangler my-test-alias",
-			aliasOf: "wrangler my-test-command",
-		});
-
-		await runWrangler("my-test-alias --help");
-
-		expect(std.out).toContain(`Alias for "wrangler my-test-command".`);
-		expect(std.out).toMatchInlineSnapshot(`
-			"wrangler my-test-alias [pos] [posNum]
-
-			My test command
-
-			Alias for \\"wrangler my-test-command\\".
-
-			POSITIONALS
-			  pos  [string]
-			  posNum  [number]
-
-			GLOBAL FLAGS
-			  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
-			  -c, --config                    Path to .toml configuration file  [string]
-			  -e, --env                       Environment to use for operations and .env files  [string]
-			  -h, --help                      Show help  [boolean]
-			  -v, --version                   Show version number  [boolean]
-
-			OPTIONS
-			      --str  [string] [required]
-			      --num  [number] [required]
-			      --bool  [boolean] [required]
-			      --arr  [array] [required]
-			      --optional  [string]"
-		`);
-	});
-
-	test("auto log status message", async () => {
-		defineCommand({
-			command: "wrangler alpha-command",
-			metadata: {
-				description:
-					"Description without status expecting it added autotmatically",
-				owner: "Workers: Authoring and Testing",
-				status: "alpha",
-			},
-			args: {},
-			handler(args, ctx) {
-				ctx.logger.log("Ran command");
-			},
-		});
-
-		await runWrangler("alpha-command");
-
-		expect(std.out).toMatchInlineSnapshot(`"Ran command"`);
-		expect(normalizeOutput(std.warn)).toMatchInlineSnapshot(
-			`"▲ [WARNING] 🚧 \`wrangler alpha-command\` is an alpha command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose"`
+		// Create a new CommandRegistry instance before each test
+		registry = new CommandRegistry(
+			(
+				segment: string,
+				def: InternalDefinition,
+				registerSubTreeCallback: () => void
+			) => {
+				// Mock the register command function (in a real scenario, this would call something like `yargs.command`)
+				registerSubTreeCallback();
+			}
 		);
 	});
-	test("auto log deprecation message", async () => {
-		defineCommand({
-			command: "wrangler deprecated-stable-command",
-			metadata: {
-				description:
-					"Description without status expecting it added autotmatically",
-				owner: "Workers: Authoring and Testing",
-				status: "stable",
-				deprecated: true,
-			},
-			args: {},
-			handler(args, ctx) {
-				ctx.logger.log("Ran command");
-			},
-		});
 
-		await runWrangler("deprecated-stable-command");
-
-		expect(std.out).toMatchInlineSnapshot(`"Ran command"`);
-		expect(normalizeOutput(std.warn)).toMatchInlineSnapshot(
-			`"▲ [WARNING] Deprecated: \\"wrangler deprecated-stable-command\\" is deprecated"`
-		);
-	});
-	test("auto log status+deprecation message", async () => {
-		defineCommand({
-			command: "wrangler deprecated-beta-command",
-			metadata: {
-				description:
-					"Description without status expecting it added autotmatically",
-				owner: "Workers: Authoring and Testing",
-				status: "private-beta",
-				deprecated: true,
+	test("can define a command", () => {
+		registry.define([
+			{
+				command: "wrangler my-test-command",
+				definition: createCommand({
+					metadata: {
+						description: "My test command",
+						owner: "Workers: Authoring and Testing",
+						status: "stable",
+					},
+					args: {
+						str: { type: "string", demandOption: true },
+						num: { type: "number", demandOption: true },
+					},
+					handler: (args, ctx: HandlerContext) => {
+						ctx.logger.log("Ran my-test-command");
+					},
+				}),
 			},
-			args: {},
-			handler(args, ctx) {
-				ctx.logger.log("Ran command");
-			},
-		});
+		]);
 
-		await runWrangler("deprecated-beta-command");
-
-		expect(std.out).toMatchInlineSnapshot(`"Ran command"`);
-		expect(normalizeOutput(std.warn)).toMatchInlineSnapshot(`
-			"▲ [WARNING] Deprecated: \\"wrangler deprecated-beta-command\\" is deprecated
-			▲ [WARNING] 🚧 \`wrangler deprecated-beta-command\` is a private-beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose"
-		`);
+		// Check internal state of the registry for the command
+		const node = registry
+			.getDefinitionTreeRoot()
+			.subtree.get("my-test-command");
+		expect(node?.definition?.command).toBe("wrangler my-test-command");
 	});
 
-	describe("registration errors", () => {
-		test("throws upon duplicate command definition", async () => {
-			await expect(() => {
-				defineCommand({
+	test("throws on duplicate command definition", () => {
+		// @ts-expect-error missing command definition
+		const definition = createCommand({});
+
+		registry.define([
+			{
+				command: "wrangler my-test-command",
+				definition,
+			},
+		]);
+
+		expect(() => {
+			registry.define([
+				{
 					command: "wrangler my-test-command",
+					definition,
+				},
+			]);
+		}).toThrowErrorMatchingInlineSnapshot(
+			`[Error: Duplicate definition for "wrangler my-test-command"]`
+		);
+	});
+
+	test("can define a namespace", () => {
+		const definition = createNamespace({
+			// @ts-expect-error missing metadata
+			metadata: {
+				status: "stable",
+			},
+		});
+
+		registry.define([
+			{
+				command: "wrangler one",
+				definition,
+			},
+		]);
+
+		registry.registerAll();
+
+		const node = registry.getDefinitionTreeRoot().subtree.get("one");
+		expect(node?.definition?.command).toBe("wrangler one");
+	});
+
+	test("can alias a command", () => {
+		const definition = createCommand({
+			// @ts-expect-error missing metadata
+			metadata: {
+				status: "stable",
+			},
+		});
+
+		registry.define([
+			{
+				command: "wrangler my-test-command",
+				definition,
+			},
+			{
+				command: "wrangler my-test-alias",
+				definition: createAlias({
+					aliasOf: "wrangler my-test-command",
 					metadata: {
-						description: "",
-						owner: "Workers: Authoring and Testing",
 						status: "stable",
 					},
-					args: {},
-					handler() {},
-				});
-			}).toThrowErrorMatchingInlineSnapshot(
-				`[Error: Duplicate definition for "wrangler my-test-command"]`
-			);
-		});
-		test("throws upon duplicate namespace definition", async () => {
-			await expect(() => {
-				defineNamespace({
-					command: "wrangler one two",
-					metadata: {
-						description: "",
-						owner: "Workers: Authoring and Testing",
-						status: "stable",
-					},
-				});
-			}).toThrowErrorMatchingInlineSnapshot(
-				`[Error: Duplicate definition for "wrangler one two"]`
-			);
-		});
-		test("throws upon missing namespace definition", async () => {
-			defineNamespace({
-				command: "wrangler known-namespace",
-				metadata: {
-					description: "",
-					owner: "Workers: Authoring and Testing",
-					status: "stable",
-				},
-			});
+				}),
+			},
+		]);
 
-			defineCommand({
-				command: "wrangler missing-namespace subcommand",
-				metadata: {
-					description: "",
-					owner: "Workers: Authoring and Testing",
-					status: "stable",
-				},
-				args: {},
-				handler() {},
-			});
+		registry.registerAll();
 
-			await expect(
-				runWrangler("known-namespace missing-namespace subcommand")
-			).rejects.toMatchInlineSnapshot(
-				`[Error: Missing namespace definition for 'wrangler missing-namespace']`
-			);
-		});
+		const aliasNode = registry
+			.getDefinitionTreeRoot()
+			.subtree.get("my-test-alias");
+		assert(aliasNode);
+		const def = aliasNode.definition;
+		assert(def && isAliasDefinition(def));
 
-		test("throws upon duplicated arguments on non-array options", async () => {
-			await expect(
-				runWrangler(
-					"my-test-command --str foo --str bar --num 123 --bool --arr first second --str baz"
-				)
-			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: The argument "--str" expects a single value, but received multiple: ["foo","bar","baz"].]`
-			);
-		});
+		expect(def.aliasOf).toBe("wrangler my-test-command");
+	});
 
-		test("throws upon alias to undefined command", async () => {
-			defineAlias({
+	test("throws on alias to undefined command", () => {
+		registry.define([
+			{
 				command: "wrangler my-alias-command",
-				aliasOf: "wrangler undefined-command",
-			});
+				definition: createAlias({
+					aliasOf: "wrangler undefined-command",
+				}),
+			},
+		]);
 
-			await expect(
-				runWrangler("my-test-command")
-			).rejects.toMatchInlineSnapshot(
-				`[Error: Missing definition for "wrangler undefined-command" (resolving from "wrangler my-alias-command")]`
-			);
-		});
+		expect(() => registry.registerAll()).toThrowErrorMatchingInlineSnapshot(
+			`[Error: Missing definition for "wrangler undefined-command" (resolving from "wrangler my-alias-command")]`
+		);
+	});
+
+	test("throws on missing namespace definition", () => {
+		registry.define([
+			{
+				command: "wrangler known-namespace",
+				// @ts-expect-error missing definition
+				definition: {},
+			},
+			{
+				command: "wrangler missing-namespace subcommand",
+				// @ts-expect-error missing definition
+				definition: {},
+			},
+		]);
+
+		expect(() =>
+			registry.registerNamespace("missing-namespace")
+		).toThrowErrorMatchingInlineSnapshot(
+			`[Error: Missing namespace definition for 'wrangler missing-namespace']`
+		);
+	});
+
+	test("correctly resolves definition chain for alias", () => {
+		registry.define([
+			{
+				command: "wrangler original-command",
+				// @ts-expect-error missing definition
+				definition: {},
+			},
+			{
+				command: "wrangler alias-command",
+				definition: createAlias({
+					aliasOf: "wrangler original-command",
+				}),
+			},
+		]);
+
+		const aliasNode = registry
+			.getDefinitionTreeRoot()
+			.subtree.get("alias-command");
+		assert(aliasNode);
+		const def = aliasNode.definition;
+		assert(def && isAliasDefinition(def));
+		expect(def.aliasOf).toBe("wrangler original-command");
+	});
+
+	test("can resolve a command definition with its metadata", () => {
+		const commandMetadata: Metadata = {
+			description: "Test command",
+			status: "stable",
+			owner: "Workers: Authoring and Testing",
+		};
+
+		registry.define([
+			{
+				command: "wrangler test-command",
+				// @ts-expect-error missing handler
+				definition: createCommand({
+					metadata: commandMetadata,
+				}),
+			},
+		]);
+
+		registry.registerAll();
+
+		const node = registry.getDefinitionTreeRoot().subtree.get("test-command");
+		assert(node);
+		expect(node.definition?.metadata).toEqual(commandMetadata);
+	});
+
+	test("correctly resolves multiple alias chains", () => {
+		registry.define([
+			{
+				command: "wrangler original-command",
+				// @ts-expect-error missing definition
+				definition: {
+					metadata: {
+						status: "stable",
+					},
+				},
+			},
+			{
+				command: "wrangler alias-command-1",
+				definition: createAlias({
+					aliasOf: "wrangler original-command",
+				}),
+			},
+			{
+				command: "wrangler alias-command-2",
+				definition: createAlias({
+					aliasOf: "wrangler alias-command-1", // Alias to alias-command-1
+				}),
+			},
+		]);
+
+		registry.registerAll();
+
+		const aliasNode = registry
+			.getDefinitionTreeRoot()
+			.subtree.get("alias-command-2");
+		assert(aliasNode);
+		const def = aliasNode.definition;
+		assert(def && isAliasDefinition(def));
+		expect(def.aliasOf).toBe("wrangler alias-command-1");
+	});
+
+	test("throws on invalid namespace resolution (namespace not defined)", () => {
+		registry.define([
+			{
+				command: "wrangler invalid-namespace subcommand",
+				// @ts-expect-error missing definition
+				definition: {},
+			},
+		]);
+
+		expect(() =>
+			registry.registerNamespace("invalid-namespace")
+		).toThrowErrorMatchingInlineSnapshot(
+			`[Error: Missing namespace definition for 'wrangler invalid-namespace']`
+		);
 	});
 });

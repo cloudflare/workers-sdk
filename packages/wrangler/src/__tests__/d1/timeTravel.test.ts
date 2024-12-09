@@ -7,7 +7,7 @@ import { mockGetMemberships } from "../helpers/mock-oauth-flow";
 import { msw } from "../helpers/msw";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
-import { writeWranglerToml } from "../helpers/write-wrangler-toml";
+import { writeWranglerConfig } from "../helpers/write-wrangler-config";
 
 describe("time-travel", () => {
 	mockConsoleMethods();
@@ -19,7 +19,7 @@ describe("time-travel", () => {
 	describe("restore", () => {
 		it("should reject the use of --timestamp with --bookmark", async () => {
 			setIsTTY(false);
-			writeWranglerToml({
+			writeWranglerConfig({
 				d1_databases: [
 					{ binding: "DATABASE", database_name: "db", database_id: "xxxx" },
 				],
@@ -37,7 +37,7 @@ describe("time-travel", () => {
 
 	describe("throwIfDatabaseIsAlpha", () => {
 		it("should throw for alpha dbs", async () => {
-			writeWranglerToml({
+			writeWranglerConfig({
 				d1_databases: [
 					{ binding: "DATABASE", database_name: "db", database_id: "xxxx" },
 				],
@@ -73,7 +73,7 @@ describe("time-travel", () => {
 			);
 		});
 		it("should not throw for non-alpha dbs", async () => {
-			writeWranglerToml({
+			writeWranglerConfig({
 				d1_databases: [
 					{ binding: "DATABASE", database_name: "db", database_id: "xxxx" },
 				],

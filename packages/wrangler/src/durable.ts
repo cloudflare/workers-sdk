@@ -1,5 +1,6 @@
 import assert from "node:assert";
 import { fetchResult } from "./cfetch";
+import { configFileName } from "./config";
 import { logger } from "./logger";
 import type { Config } from "./config";
 import type { CfWorkerInit } from "./deployment-bundle/worker";
@@ -73,7 +74,7 @@ export async function getMigrationsToUpload(
 			);
 			if (foundIndex === -1) {
 				logger.warn(
-					`The published script ${scriptName} has a migration tag "${script.migration_tag}, which was not found in wrangler.toml. You may have already deleted it. Applying all available migrations to the script...`
+					`The published script ${scriptName} has a migration tag "${script.migration_tag}, which was not found in your ${configFileName(config.configPath)} file. You may have already deleted it. Applying all available migrations to the script...`
 				);
 				migrations = {
 					old_tag: script.migration_tag,

@@ -1,5 +1,61 @@
 # create-cloudflare
 
+## 2.33.3
+
+### Patch Changes
+
+- [#7384](https://github.com/cloudflare/workers-sdk/pull/7384) [`55ec38a`](https://github.com/cloudflare/workers-sdk/commit/55ec38ae32ea28c080ca053274742240a06c44e8) Thanks [@Cherry](https://github.com/Cherry)! - chore: bump vitest in templates
+
+- [#7428](https://github.com/cloudflare/workers-sdk/pull/7428) [`f463dd2`](https://github.com/cloudflare/workers-sdk/commit/f463dd299dc6f28d348b8c782304c65f2c569d4b) Thanks [@Oreoezi](https://github.com/Oreoezi)! - Use correct port in playwright config file for generated SvelteKit apps
+
+- [#7343](https://github.com/cloudflare/workers-sdk/pull/7343) [`a3d5aad`](https://github.com/cloudflare/workers-sdk/commit/a3d5aad66aaa8f72bc371aeba7ea9cb5c6688042) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: C3 experimental template for Solid now uses correct preset
+
+- [#7332](https://github.com/cloudflare/workers-sdk/pull/7332) [`a068672`](https://github.com/cloudflare/workers-sdk/commit/a068672bc9264794d5b22b717db5fe53345ee174) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: C3 experimental template for Nuxt now uses correct preset
+
+## 2.33.2
+
+### Patch Changes
+
+- [#7359](https://github.com/cloudflare/workers-sdk/pull/7359) [`515174e`](https://github.com/cloudflare/workers-sdk/commit/515174e7e9059d3bc19bedb9a2444dad4db57f0c) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency  | From   | To     |
+  | ----------- | ------ | ------ |
+  | create-qwik | 1.10.0 | 1.11.0 |
+
+- [#7409](https://github.com/cloudflare/workers-sdk/pull/7409) [`5739015`](https://github.com/cloudflare/workers-sdk/commit/57390152300517f339eb910cf561430316a33622) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: update Angular experimental Workers + Assets template
+
+- [#7342](https://github.com/cloudflare/workers-sdk/pull/7342) [`499e12d`](https://github.com/cloudflare/workers-sdk/commit/499e12d17ca349d3fdeea977c5cceeed062c8b06) Thanks [@neomax7](https://github.com/neomax7)! - fix: Angular template should call `handle()` method on `AngularAppEngine` not 'render()'
+
+  Fixes #7341
+
+## 2.33.1
+
+### Patch Changes
+
+- [#7235](https://github.com/cloudflare/workers-sdk/pull/7235) [`8246c45`](https://github.com/cloudflare/workers-sdk/commit/8246c45883cfc8092bef68a05fadf7376d1f5b5f) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency  | From  | To     |
+  | ----------- | ----- | ------ |
+  | create-qwik | 1.9.1 | 1.10.0 |
+
+- [#6410](https://github.com/cloudflare/workers-sdk/pull/6410) [`c808590`](https://github.com/cloudflare/workers-sdk/commit/c8085903678099335e91fd3d7e5d555d9f911a5b) Thanks [@stof](https://github.com/stof)! - Fix the test tsconfig file in the hello-world typescript template
+
+## 2.33.0
+
+### Minor Changes
+
+- [#6960](https://github.com/cloudflare/workers-sdk/pull/6960) [`3e52c7c`](https://github.com/cloudflare/workers-sdk/commit/3e52c7c609a1aee13830bb42e4439bf80ea30bf3) Thanks [@alan-agius4](https://github.com/alan-agius4)! - Update Angular template to version 19
+
+## 2.32.2
+
+### Patch Changes
+
+- [#6831](https://github.com/cloudflare/workers-sdk/pull/6831) [`0fe018c`](https://github.com/cloudflare/workers-sdk/commit/0fe018c7b85d767de60e9cc88f256f99f17046e3) Thanks [@Cherry](https://github.com/Cherry)! - Adds support for new upcoming bun.lock lockfile
+
 ## 2.32.1
 
 ### Patch Changes

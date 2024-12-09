@@ -1,5 +1,4 @@
 import assert from "node:assert";
-import childProcess from "node:child_process";
 import { existsSync } from "node:fs";
 import * as nodeNet from "node:net";
 import { setTimeout } from "node:timers/promises";
@@ -11,6 +10,7 @@ import { fetchText } from "./helpers/fetch-text";
 import { fetchWithETag } from "./helpers/fetch-with-etag";
 import { generateResourceName } from "./helpers/generate-resource-name";
 import { retry } from "./helpers/retry";
+import { getStartedWorkerdProcesses } from "./helpers/workerd-processes";
 
 /**
  * We use the same workerName for all of the tests in this suite in hopes of reducing flakes.
@@ -209,35 +209,6 @@ describe.each([{ cmd: "wrangler dev" }, { cmd: "wrangler dev --remote" }])(
 		});
 	}
 );
-
-interface Process {
-	pid: string;
-	cmd: string;
-}
-
-function getProcesses(): Process[] {
-	return childProcess
-		.execSync("ps -e | awk '{print $1,$4}'", { encoding: "utf8" })
-		.trim()
-		.split("\n")
-		.map((line) => {
-			const [pid, cmd] = line.split(" ");
-			return { pid, cmd };
-		});
-}
-
-function getProcessCwd(pid: string | number) {
-	return childProcess
-		.execSync(`lsof -p ${pid} | awk '$4=="cwd" {print $9}'`, {
-			encoding: "utf8",
-		})
-		.trim();
-}
-function getStartedWorkerdProcesses(cwd: string): Process[] {
-	return getProcesses()
-		.filter(({ cmd }) => cmd.includes("workerd"))
-		.filter((c) => getProcessCwd(c.pid).includes(cwd));
-}
 
 // This fails on Windows because of https://github.com/cloudflare/workerd/issues/1664
 it.runIf(process.platform !== "win32")(

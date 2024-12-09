@@ -3,7 +3,7 @@ import TOML from "@iarna/toml";
 import chalk from "chalk";
 import { FormData } from "undici";
 import { fetchResult } from "./cfetch";
-import { readConfig } from "./config";
+import { configFileName, readConfig } from "./config";
 import { confirm, prompt } from "./dialogs";
 import { UserError } from "./errors";
 import { mapBindings } from "./init";
@@ -55,7 +55,7 @@ export async function deployments(
 	scriptName: string | undefined,
 	{ send_metrics: sendMetrics }: { send_metrics?: Config["send_metrics"] } = {}
 ) {
-	await metrics.sendMetricsEvent(
+	metrics.sendMetricsEvent(
 		"view deployments",
 		{ view: scriptName ? "single" : "all" },
 		{
@@ -197,7 +197,7 @@ export async function rollbackDeployment(
 		rollbackMessage
 	);
 
-	await metrics.sendMetricsEvent(
+	metrics.sendMetricsEvent(
 		"rollback deployments",
 		{ view: scriptName ? "single" : "all" },
 		{
@@ -240,7 +240,7 @@ export async function viewDeployment(
 	{ send_metrics: sendMetrics }: { send_metrics?: Config["send_metrics"] } = {},
 	deploymentId: string | undefined
 ) {
-	await metrics.sendMetricsEvent(
+	metrics.sendMetricsEvent(
 		"view deployments",
 		{ view: scriptName ? "single" : "all" },
 		{
@@ -323,7 +323,7 @@ export async function commonDeploymentCMDSetup(
 	yargs: ArgumentsCamelCase<CommonYargsOptions>
 ) {
 	await printWranglerBanner();
-	const config = readConfig(yargs.config, yargs);
+	const config = readConfig(yargs);
 	const accountId = await requireAuth(config);
 	const scriptName = getScriptName(
 		{ name: yargs.name as string, env: undefined },
@@ -332,7 +332,7 @@ export async function commonDeploymentCMDSetup(
 
 	if (!scriptName) {
 		throw new UserError(
-			"Required Worker name missing. Please specify the Worker name in wrangler.toml, or pass it as an argument with `--name`"
+			`Required Worker name missing. Please specify the Worker name in your ${configFileName(config.configPath)} file, or pass it as an argument with \`--name\``
 		);
 	}
 

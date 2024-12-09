@@ -5,7 +5,8 @@ import path, { join, resolve as resolvePath } from "node:path";
 import { cwd } from "node:process";
 import { File, FormData } from "undici";
 import { fetchResult } from "../../cfetch";
-import { readConfig } from "../../config";
+import { readPagesConfig } from "../../config";
+import { shouldCheckFetch } from "../../deployment-bundle/bundle";
 import { validateNodeCompatMode } from "../../deployment-bundle/node-compat";
 import { FatalError } from "../../errors";
 import { logger } from "../../logger";
@@ -159,11 +160,7 @@ export async function deploy({
 	let config: Config | undefined;
 
 	try {
-		config = readConfig(
-			undefined,
-			{ ...args, experimentalJsonConfig: false, env },
-			true
-		);
+		config = readPagesConfig({ ...args, env });
 	} catch (err) {
 		if (
 			!(
@@ -183,6 +180,10 @@ export async function deploy({
 		}
 	);
 	const defineNavigatorUserAgent = isNavigatorDefined(
+		config?.compatibility_date ?? deploymentConfig.compatibility_date,
+		config?.compatibility_flags ?? deploymentConfig.compatibility_flags
+	);
+	const checkFetch = shouldCheckFetch(
 		config?.compatibility_date ?? deploymentConfig.compatibility_date,
 		config?.compatibility_flags ?? deploymentConfig.compatibility_flags
 	);
@@ -221,6 +222,7 @@ export async function deploy({
 				local: false,
 				nodejsCompatMode,
 				defineNavigatorUserAgent,
+				checkFetch,
 			});
 
 			builtFunctions = readFileSync(
@@ -319,6 +321,7 @@ export async function deploy({
 			buildOutputDirectory: directory,
 			nodejsCompatMode,
 			defineNavigatorUserAgent,
+			checkFetch,
 			sourceMaps: sourceMaps,
 		});
 	} else if (_workerJS) {
@@ -337,6 +340,7 @@ export async function deploy({
 				onEnd: () => {},
 				nodejsCompatMode,
 				defineNavigatorUserAgent,
+				checkFetch,
 			});
 		} else {
 			await checkRawWorker(_workerPath, nodejsCompatMode, () => {});

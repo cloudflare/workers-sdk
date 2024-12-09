@@ -1,3 +1,4 @@
+import { writeFile } from "node:fs/promises";
 import { describe, expect, test } from "vitest";
 import { mockAccountId, mockApiToken } from "../../helpers/mock-account-id";
 import { mockConsoleMethods } from "../../helpers/mock-console";
@@ -5,10 +6,10 @@ import { clearDialogs, mockConfirm } from "../../helpers/mock-dialogs";
 import { useMockIsTTY } from "../../helpers/mock-istty";
 import { runInTempDir } from "../../helpers/run-in-tmp";
 import { runWrangler } from "../../helpers/run-wrangler";
-import { writeWranglerToml } from "../../helpers/write-wrangler-toml";
+import { writeWranglerConfig } from "../../helpers/write-wrangler-config";
 import { mockGetVersion, mockPostVersion, mockSetupApiCalls } from "./utils";
 
-describe("versions secret put", () => {
+describe("versions secret delete", () => {
 	const std = mockConsoleMethods();
 	const { setIsTTY } = useMockIsTTY();
 	runInTempDir();
@@ -78,7 +79,7 @@ describe("versions secret put", () => {
 	});
 
 	test("can delete a secret reading Worker name from wrangler.toml", async () => {
-		writeWranglerToml({ name: "script-name" });
+		writeWranglerConfig({ name: "script-name" });
 		setIsTTY(false);
 
 		mockSetupApiCalls();
@@ -101,6 +102,22 @@ describe("versions secret put", () => {
 			✨ Success! Created version id with deleted secret SECRET.
 			➡️  To deploy this version without the secret SECRET to production traffic use the command \\"wrangler versions deploy\\"."
 		`);
+		expect(std.err).toMatchInlineSnapshot(`""`);
+	});
+
+	test("no wrangler configuration warnings shown", async () => {
+		await writeFile("wrangler.json", JSON.stringify({ invalid_field: true }));
+		setIsTTY(false);
+
+		mockSetupApiCalls();
+		mockGetVersion();
+		mockPostVersion();
+
+		await runWrangler(
+			"versions secret delete SECRET --name script-name --x-versions"
+		);
+
+		expect(std.warn).toMatchInlineSnapshot(`""`);
 		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
 });

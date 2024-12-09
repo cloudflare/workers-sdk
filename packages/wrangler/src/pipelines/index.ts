@@ -183,7 +183,7 @@ export function pipelines(pipelineYargs: CommonYargsArgv) {
 			async (args) => {
 				await printWranglerBanner();
 
-				const config = readConfig(args.config, args);
+				const config = readConfig(args);
 				const bucket = args.r2;
 				const name = args.pipeline;
 				const compression =
@@ -284,7 +284,7 @@ export function pipelines(pipelineYargs: CommonYargsArgv) {
 
 				logger.log(`🌀 Creating pipeline named "${name}"`);
 				const pipeline = await createPipeline(accountId, pipelineConfig);
-				await metrics.sendMetricsEvent("create pipeline", {
+				metrics.sendMetricsEvent("create pipeline", {
 					sendMetrics: config.send_metrics,
 				});
 
@@ -302,12 +302,12 @@ export function pipelines(pipelineYargs: CommonYargsArgv) {
 			"List current pipelines",
 			(yargs) => yargs,
 			async (args) => {
-				const config = readConfig(args.config, args);
+				const config = readConfig(args);
 				const accountId = await requireAuth(config);
 
 				// TODO: we should show bindings & transforms if they exist for given ids
 				const list = await listPipelines(accountId);
-				await metrics.sendMetricsEvent("list pipelines", {
+				metrics.sendMetricsEvent("list pipelines", {
 					sendMetrics: config.send_metrics,
 				});
 
@@ -332,7 +332,7 @@ export function pipelines(pipelineYargs: CommonYargsArgv) {
 			},
 			async (args) => {
 				await printWranglerBanner();
-				const config = readConfig(args.config, args);
+				const config = readConfig(args);
 				const accountId = await requireAuth(config);
 				const name = args.pipeline;
 
@@ -340,7 +340,7 @@ export function pipelines(pipelineYargs: CommonYargsArgv) {
 
 				logger.log(`Retrieving config for pipeline "${name}".`);
 				const pipeline = await getPipeline(accountId, name);
-				await metrics.sendMetricsEvent("show pipeline", {
+				metrics.sendMetricsEvent("show pipeline", {
 					sendMetrics: config.send_metrics,
 				});
 
@@ -368,7 +368,7 @@ export function pipelines(pipelineYargs: CommonYargsArgv) {
 
 				const name = args.pipeline;
 				// only the fields set will be updated - other fields will use the existing config
-				const config = readConfig(args.config, args);
+				const config = readConfig(args);
 				const accountId = await requireAuth(config);
 
 				const pipelineConfig = await getPipeline(accountId, name);
@@ -473,7 +473,7 @@ export function pipelines(pipelineYargs: CommonYargsArgv) {
 
 				logger.log(`🌀 Updating pipeline "${name}"`);
 				const pipeline = await updatePipeline(accountId, name, pipelineConfig);
-				await metrics.sendMetricsEvent("update pipeline", {
+				metrics.sendMetricsEvent("update pipeline", {
 					sendMetrics: config.send_metrics,
 				});
 
@@ -494,7 +494,7 @@ export function pipelines(pipelineYargs: CommonYargsArgv) {
 			},
 			async (args) => {
 				await printWranglerBanner();
-				const config = readConfig(args.config, args);
+				const config = readConfig(args);
 				const accountId = await requireAuth(config);
 				const name = args.pipeline;
 
@@ -503,7 +503,7 @@ export function pipelines(pipelineYargs: CommonYargsArgv) {
 				logger.log(`Deleting pipeline ${name}.`);
 				await deletePipeline(accountId, name);
 				logger.log(`Deleted pipeline ${name}.`);
-				await metrics.sendMetricsEvent("delete pipeline", {
+				metrics.sendMetricsEvent("delete pipeline", {
 					sendMetrics: config.send_metrics,
 				});
 			}

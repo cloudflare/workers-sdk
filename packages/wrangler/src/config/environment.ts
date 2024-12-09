@@ -149,6 +149,15 @@ interface EnvironmentInheritable {
 	workers_dev: boolean | undefined;
 
 	/**
+	 * Whether we use <version>-<name>.<subdomain>.workers.dev to
+	 * serve Preview URLs for your Worker.
+	 *
+	 * @default `true`
+	 * @inheritable
+	 */
+	preview_urls: boolean | undefined;
+
+	/**
 	 * A list of routes that your Worker should be published to.
 	 * Only one of `routes` or `route` is required.
 	 *
@@ -467,7 +476,7 @@ export interface EnvironmentNonInheritable {
 		/** The binding name used to refer to the KV Namespace */
 		binding: string;
 		/** The ID of the KV namespace */
-		id: string;
+		id?: string;
 		/** The ID of the KV namespace used during `wrangler dev` */
 		preview_id?: string;
 	}[];
@@ -556,7 +565,7 @@ export interface EnvironmentNonInheritable {
 		/** The binding name used to refer to the R2 bucket in the Worker. */
 		binding: string;
 		/** The name of this R2 bucket at the edge. */
-		bucket_name: string;
+		bucket_name?: string;
 		/** The preview name of this R2 bucket at the edge. */
 		preview_bucket_name?: string;
 		/** The jurisdiction that the bucket exists in. Default if not present. */
@@ -576,9 +585,9 @@ export interface EnvironmentNonInheritable {
 		/** The binding name used to refer to the D1 database in the Worker. */
 		binding: string;
 		/** The name of this D1 database. */
-		database_name: string;
+		database_name?: string;
 		/** The UUID of this D1 database (not required). */
-		database_id: string;
+		database_id?: string;
 		/** The UUID of this D1 database for Wrangler Dev (if specified). */
 		preview_database_id?: string;
 		/** The name of the migrations table for this D1 database (defaults to 'd1_migrations'). */
@@ -857,9 +866,9 @@ export interface DeprecatedUpload {
 
 	/**
 	 * The directory you wish to upload your Worker from,
-	 * relative to the wrangler.toml file.
+	 * relative to the Wrangler configuration file.
 	 *
-	 * Defaults to the directory containing the wrangler.toml file.
+	 * Defaults to the directory containing the Wrangler configuration file.
 	 *
 	 * @deprecated
 	 */
@@ -931,19 +940,34 @@ export interface UserLimits {
 
 export type Assets = {
 	/** Absolute path to assets directory */
-	directory: string;
+	directory?: string;
+	/** Name of `env` binding property in the User Worker. */
 	binding?: string;
+	/** How to handle HTML requests. */
 	html_handling?:
 		| "auto-trailing-slash"
 		| "force-trailing-slash"
 		| "drop-trailing-slash"
 		| "none";
+	/** How to handle requests that do not match an asset. */
 	not_found_handling?: "single-page-application" | "404-page" | "none";
+	/**
+	 * If true, then respond to requests that match an asset with that asset directly.
+	 * If false, route every request to the User Worker, whether or not it matches an asset.
+	 * */
+	experimental_serve_directly?: boolean;
 };
 
 export interface Observability {
 	/** If observability is enabled for this Worker */
-	enabled: boolean;
+	enabled?: boolean;
 	/** The sampling rate */
 	head_sampling_rate?: number;
+	logs?: {
+		enabled?: boolean;
+		/** The sampling rate */
+		head_sampling_rate?: number;
+		/** Set to false to disable invocation logs */
+		invocation_logs?: boolean;
+	};
 }

@@ -3,7 +3,8 @@ import { logger } from "./logger";
 
 type ExperimentalFlags = {
 	FILE_BASED_REGISTRY: boolean;
-	JSON_CONFIG_FILE: boolean;
+	MULTIWORKER: boolean;
+	RESOURCES_PROVISION: boolean;
 };
 
 const flags = new AsyncLocalStorage<ExperimentalFlags>();

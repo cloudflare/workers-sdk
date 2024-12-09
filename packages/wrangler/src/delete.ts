@@ -1,7 +1,6 @@
 import assert from "assert";
-import path from "path";
 import { fetchResult } from "./cfetch";
-import { findWranglerToml, readConfig } from "./config";
+import { configFileName, readConfig } from "./config";
 import { confirm } from "./dialogs";
 import { UserError } from "./errors";
 import { deleteKVNamespace, listKVNamespaces } from "./kv/helpers";
@@ -94,16 +93,14 @@ type DeleteArgs = StrictYargsOptionsToInterface<typeof deleteOptions>;
 export async function deleteHandler(args: DeleteArgs) {
 	await printWranglerBanner();
 
-	const configPath =
-		args.config || (args.script && findWranglerToml(path.dirname(args.script)));
-	const config = readConfig(configPath, args);
+	const config = readConfig(args);
 	if (config.pages_build_output_dir) {
 		throw new UserError(
 			"It looks like you've run a Workers-specific command in a Pages project.\n" +
 				"For Pages, please run `wrangler pages project delete` instead."
 		);
 	}
-	await metrics.sendMetricsEvent(
+	metrics.sendMetricsEvent(
 		"delete worker script",
 		{},
 		{ sendMetrics: config.send_metrics }
@@ -114,7 +111,7 @@ export async function deleteHandler(args: DeleteArgs) {
 	const scriptName = getScriptName(args, config);
 	if (!scriptName) {
 		throw new UserError(
-			"A worker name must be defined, either via --name, or in wrangler.toml"
+			`A worker name must be defined, either via --name, or in your ${configFileName(config.configPath)} file`
 		);
 	}
 

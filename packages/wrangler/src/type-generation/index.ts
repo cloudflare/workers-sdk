@@ -2,7 +2,8 @@ import * as fs from "node:fs";
 import { basename, dirname, extname, join, relative, resolve } from "node:path";
 import { findUpSync } from "find-up";
 import { getNodeCompat } from "miniflare";
-import { findWranglerToml, readConfig } from "../config";
+import { readConfig } from "../config";
+import { resolveWranglerConfigPath } from "../config/config-helpers";
 import { getEntry } from "../deployment-bundle/entry";
 import { getVarsForDev } from "../dev/dev-vars";
 import { CommandLineArgsError, UserError } from "../errors";
@@ -12,6 +13,7 @@ import { printWranglerBanner } from "../update-check";
 import { generateRuntimeTypes } from "./runtime";
 import { logRuntimeTypesMessage } from "./runtime/log-runtime-types-message";
 import type { Config } from "../config";
+import type { Entry } from "../deployment-bundle/entry";
 import type { CfScriptFormat } from "../deployment-bundle/worker";
 import type {
 	CommonYargsArgv,
@@ -61,8 +63,7 @@ export async function typesHandler(
 
 	await printWranglerBanner();
 
-	const configPath =
-		args.config ?? findWranglerToml(process.cwd(), args.experimentalJsonConfig);
+	const configPath = resolveWranglerConfigPath(args);
 	if (
 		!configPath ||
 		!fs.existsSync(configPath) ||
@@ -76,7 +77,7 @@ export async function typesHandler(
 		return;
 	}
 
-	const config = readConfig(configPath, args);
+	const config = readConfig(args);
 
 	// args.xRuntime will be a string if the user passes "--x-include-runtime" or "--x-include-runtime=..."
 	if (typeof args.experimentalIncludeRuntime === "string") {
@@ -98,7 +99,12 @@ export async function typesHandler(
 			}
 		);
 
-		logRuntimeTypesMessage(outFile, tsconfigTypes, mode !== null);
+		logRuntimeTypesMessage(
+			outFile,
+			tsconfigTypes,
+			mode !== null,
+			config.configPath
+		);
 	}
 
 	const secrets = getVarsForDev(
@@ -228,10 +234,17 @@ async function generateTypes(
 	const configContainsEntrypoint =
 		config.main !== undefined || !!config.site?.["entry-point"];
 
-	const entrypoint = configContainsEntrypoint
-		? await getEntry({}, config, "types")
-		: undefined;
-
+	let entrypoint: Entry | undefined;
+	if (configContainsEntrypoint) {
+		// this will throw if an entrypoint is expected, but doesn't exist
+		// e.g. before building. however someone might still want to generate types
+		// so we default to module worker
+		try {
+			entrypoint = await getEntry({}, config, "types");
+		} catch {
+			entrypoint = undefined;
+		}
+	}
 	const entrypointFormat = entrypoint?.format ?? "modules";
 	const fullOutputPath = resolve(outputPath);
 

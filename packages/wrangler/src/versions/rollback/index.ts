@@ -1,5 +1,6 @@
 import * as cli from "@cloudflare/cli";
 import { spinnerWhile } from "@cloudflare/cli/interactive";
+import { readConfig } from "../../config";
 import { confirm, prompt } from "../../dialogs";
 import { UserError } from "../../errors";
 import { logger } from "../../logger";
@@ -7,7 +8,6 @@ import { APIError } from "../../parse";
 import { requireAuth } from "../../user";
 import { createDeployment, fetchLatestDeployments, fetchVersion } from "../api";
 import { printLatestDeployment, printVersions } from "../deploy";
-import { getConfig } from "../list";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
@@ -58,7 +58,7 @@ function versionsRollbackOptions(rollbackYargs: CommonYargsArgv) {
 }
 
 async function versionsRollbackHandler(args: VersionsRollbackArgs) {
-	const config = getConfig(args);
+	const config = readConfig(args);
 	const accountId = await requireAuth(config);
 	const workerName = args.name ?? config.name;
 

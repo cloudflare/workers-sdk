@@ -232,27 +232,6 @@ export const isString: ValidatorFn = (diagnostics, field, value) => {
 };
 
 /**
- * Validate that the field is a non-empty string.
- */
-export const isNonEmptyString: ValidatorFn = (
-	diagnostics,
-	field,
-	value,
-	topLevelEnv
-) => {
-	if (!isString(diagnostics, field, value, topLevelEnv)) {
-		return false;
-	}
-
-	if ((value as string)?.trim() === "") {
-		diagnostics.errors.push(`Expected "${field}" to be a non-empty string.`);
-		return false;
-	}
-
-	return true;
-};
-
-/**
  * Validate that the `name` field is compliant with EWC constraints.
  */
 export const isValidName: ValidatorFn = (diagnostics, field, value) => {
@@ -432,6 +411,43 @@ export const validateRequiredProperty = (
 		}
 	}
 	return true;
+};
+
+/**
+ * Validate that at least one of the properties in the list is required.
+ */
+export const validateAtLeastOnePropertyRequired = (
+	diagnostics: Diagnostics,
+	container: string,
+	properties: {
+		key: string;
+		value: unknown;
+		type: TypeofType;
+	}[]
+): boolean => {
+	const containerPath = container ? `${container}.` : "";
+
+	if (properties.every((property) => property.value === undefined)) {
+		diagnostics.errors.push(
+			`${properties.map(({ key }) => `"${containerPath}${key}"`).join(" or ")} is required.`
+		);
+		return false;
+	}
+
+	const errors = [];
+	for (const prop of properties) {
+		if (typeof prop.value === prop.type) {
+			return true;
+		}
+		errors.push(
+			`Expected "${containerPath}${prop.key}" to be of type ${prop.type} but got ${JSON.stringify(
+				prop.value
+			)}.`
+		);
+	}
+
+	diagnostics.errors.push(...errors);
+	return false;
 };
 
 /**

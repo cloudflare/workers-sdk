@@ -131,7 +131,7 @@ export async function Handler({
 		await printWranglerBanner();
 	}
 
-	const config = readConfig(args.config, args);
+	const config = readConfig(args);
 	const pagesConfig = getConfigCache<PagesConfigCache>(
 		PAGES_CONFIG_CACHE_FILENAME
 	);
@@ -163,7 +163,9 @@ export async function Handler({
 	}
 
 	const deployments: Array<Deployment> = await fetchResult(
-		`/accounts/${accountId}/pages/projects/${projectName}/deployments`
+		`/accounts/${accountId}/pages/projects/${projectName}/deployments`,
+		{},
+		new URLSearchParams({ env: environment })
 	);
 
 	const envDeployments = deployments.filter(
@@ -218,7 +220,7 @@ export async function Handler({
 		status,
 	});
 
-	await metrics.sendMetricsEvent("begin pages log stream", {
+	metrics.sendMetricsEvent("begin pages log stream", {
 		sendMetrics: config.send_metrics,
 	});
 
@@ -240,7 +242,7 @@ export async function Handler({
 
 			tail.terminate();
 			await deleteTail();
-			await metrics.sendMetricsEvent("end pages log stream", {
+			metrics.sendMetricsEvent("end pages log stream", {
 				sendMetrics: config.send_metrics,
 			});
 
@@ -269,7 +271,7 @@ export async function Handler({
 				await setTimeout(100);
 				break;
 			case tail.CLOSED:
-				await metrics.sendMetricsEvent("end log stream", {
+				metrics.sendMetricsEvent("end log stream", {
 					sendMetrics: config.send_metrics,
 				});
 				throw new Error(

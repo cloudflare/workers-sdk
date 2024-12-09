@@ -1,3 +1,5 @@
+import { existsSync } from "node:fs";
+import path from "node:path";
 import { setTimeout } from "node:timers/promises";
 import getPort from "get-port";
 import dedent from "ts-dedent";
@@ -31,7 +33,7 @@ describe.each([{ cmd: "wrangler pages dev" }])("Pages $cmd", ({ cmd }) => {
 			`No compatibility_date was specified. Using today's date: <current-date>.`
 		);
 		expect(output).toContain(
-			`❯❯ Add one to your wrangler.toml file: compatibility_date = "<current-date>", or`
+			`❯❯ Add one to your Wrangler configuration file: compatibility_date = "<current-date>", or`
 		);
 		expect(output).toContain(
 			`❯❯ Pass it in your terminal: wrangler pages dev [<DIRECTORY>] --compatibility-date=<current-date>`
@@ -482,6 +484,11 @@ describe.each([{ cmd: "wrangler pages dev" }])("Pages $cmd", ({ cmd }) => {
 
 			text = await fetchText(url);
 			expect(text).toBe("Updated Worker!");
+
+			// Ensure Wrangler doesn't write tmp files in the functions directory—regression test for https://github.com/cloudflare/workers-sdk/issues/7440
+			expect(
+				existsSync(path.join(helper.tmpPath, "functions/.wrangler"))
+			).toBeFalsy();
 		});
 
 		it("should support modifying dependencies during dev session (Functions)", async () => {

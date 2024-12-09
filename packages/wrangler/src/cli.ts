@@ -8,7 +8,7 @@ import {
 } from "./api";
 import { FatalError } from "./errors";
 import { main } from ".";
-import type { UnstableDevOptions, UnstableDevWorker } from "./api";
+import type { Unstable_DevOptions, Unstable_DevWorker } from "./api";
 import type { Logger } from "./logger";
 import type { Request, Response } from "miniflare";
 
@@ -32,7 +32,7 @@ if (typeof vitest === "undefined" && require.main === module) {
  * and call wrangler.unstable_dev().
  */
 export { unstable_dev, unstable_pages, unstable_DevEnv, unstable_startWorker };
-export type { UnstableDevWorker, UnstableDevOptions };
+export type { Unstable_DevWorker, Unstable_DevOptions };
 
 export * from "./api/integrations";
 
@@ -47,13 +47,13 @@ export { startWorkerRegistryServer as unstable_startWorkerRegistryServer } from 
 // We `require` instead of `import`ing here to avoid polluting the main
 // `wrangler` TypeScript project with the `global` augmentations. This
 // relies on the fact that `require` is untyped.
-export interface UnstableASSETSBindingsOptions {
+export interface Unstable_ASSETSBindingsOptions {
 	log: Logger;
 	proxyPort?: number;
 	directory?: string;
 }
 const generateASSETSBinding: (
-	opts: UnstableASSETSBindingsOptions
+	opts: Unstable_ASSETSBindingsOptions
 ) => (request: Request) => Promise<Response> =
 	// eslint-disable-next-line @typescript-eslint/no-var-requires
 	require("./miniflare-cli/assets").default;

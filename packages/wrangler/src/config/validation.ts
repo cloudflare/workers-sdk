@@ -2,6 +2,8 @@ import assert from "node:assert";
 import path from "node:path";
 import TOML from "@iarna/toml";
 import { dedent } from "ts-dedent";
+import { UserError } from "../errors";
+import { getFlag } from "../experimental-flags";
 import { Diagnostics } from "./diagnostics";
 import {
 	all,
@@ -14,7 +16,6 @@ import {
 	inheritableInLegacyEnvironments,
 	isBoolean,
 	isMutuallyExclusiveWith,
-	isNonEmptyString,
 	isObjectWith,
 	isOneOf,
 	isOptionalProperty,
@@ -24,12 +25,13 @@ import {
 	isValidName,
 	notInheritable,
 	validateAdditionalProperties,
+	validateAtLeastOnePropertyRequired,
 	validateOptionalProperty,
 	validateOptionalTypedArray,
 	validateRequiredProperty,
 	validateTypedArray,
 } from "./validation-helpers";
-import { friendlyBindingNames } from ".";
+import { configFileName, formatConfigSnippet, friendlyBindingNames } from ".";
 import type { CfWorkerInit } from "../deployment-bundle/worker";
 import type { Config, DevConfig, RawConfig, RawDevConfig } from "./config";
 import type {
@@ -233,7 +235,7 @@ export function normalizeAndValidateConfig(
 				`No environment found in configuration with name "${envName}".\n` +
 				`Before using \`--env=${envName}\` there should be an equivalent environment section in the configuration.\n` +
 				`${envNames}\n` +
-				`Consider adding an environment configuration section to the wrangler.toml file:\n` +
+				`Consider adding an environment configuration section to the ${configFileName(configPath)} file:\n` +
 				"```\n[env." +
 				envName +
 				"]\n```\n";
@@ -241,7 +243,7 @@ export function normalizeAndValidateConfig(
 			if (envNames.length > 0) {
 				diagnostics.errors.push(message);
 			} else {
-				// Only warn (rather than error) if there are not actually any environments configured in wrangler.toml.
+				// Only warn (rather than error) if there are not actually any environments configured in the Wrangler configuration file.
 				diagnostics.warnings.push(message);
 			}
 		}
@@ -308,7 +310,33 @@ export function normalizeAndValidateConfig(
 		[...Object.keys(config), "env", "$schema"]
 	);
 
+	applyPythonConfig(config, args);
+
 	return { config, diagnostics };
+}
+
+/**
+ * Modifies the provided config to support python workers, if the entrypoint is a .py file
+ */
+function applyPythonConfig(
+	config: Config,
+	args: NormalizeAndValidateConfigArgs
+) {
+	const mainModule = "script" in args ? args.script : config.main;
+	if (typeof mainModule === "string" && mainModule.endsWith(".py")) {
+		// Workers with a python entrypoint should have bundling turned off, since all of Wrangler's bundling is JS/TS specific
+		config.no_bundle = true;
+
+		// Workers with a python entrypoint need module rules for "*.py". Add one automatically as a DX nicety
+		if (!config.rules.some((rule) => rule.type === "PythonModule")) {
+			config.rules.push({ type: "PythonModule", globs: ["**/*.py"] });
+		}
+		if (!config.compatibility_flags.includes("python_workers")) {
+			throw new UserError(
+				"The `python_workers` compatibility flag is required to use Python."
+			);
+		}
+	}
 }
 
 /**
@@ -383,7 +411,7 @@ function normalizeAndValidateBuild(
 			// - `watch_dir` only matters when `command` is defined, so we apply
 			// a default only when `command` is defined
 			// - `configPath` will always be defined since `build` can only
-			// be configured in `wrangler.toml`, but who knows, that may
+			// be configured in the Wrangler configuration file, but who knows, that may
 			// change in the future, so we do a check anyway
 			command && configPath
 				? Array.isArray(watch_dir)
@@ -1121,6 +1149,15 @@ function normalizeAndValidateEnvironment(
 		undefined
 	);
 
+	const preview_urls = inheritable(
+		diagnostics,
+		topLevelEnv,
+		rawEnv,
+		"preview_urls",
+		isBoolean,
+		true
+	);
+
 	const { deprecatedUpload, ...build } = normalizeAndValidateBuild(
 		diagnostics,
 		rawEnv,
@@ -1174,7 +1211,8 @@ function normalizeAndValidateEnvironment(
 			topLevelEnv,
 			rawEnv,
 			deprecatedUpload?.rules,
-			envName
+			envName,
+			configPath
 		),
 		name: inheritableInLegacyEnvironments(
 			diagnostics,
@@ -1255,6 +1293,7 @@ function normalizeAndValidateEnvironment(
 		placement: normalizeAndValidatePlacement(diagnostics, topLevelEnv, rawEnv),
 		build,
 		workers_dev,
+		preview_urls,
 		// Not inherited fields
 		vars: notInheritable(
 			diagnostics,
@@ -1558,7 +1597,8 @@ function normalizeAndValidateEnvironment(
 	warnIfDurableObjectsHaveNoMigrations(
 		diagnostics,
 		environment.durable_objects,
-		environment.migrations
+		environment.migrations,
+		configPath
 	);
 
 	return environment;
@@ -1592,13 +1632,14 @@ const validateAndNormalizeRules = (
 	topLevelEnv: Environment | undefined,
 	rawEnv: RawEnvironment,
 	deprecatedRules: Rule[] | undefined,
-	envName: string
+	envName: string,
+	configPath: string | undefined
 ): Rule[] => {
 	if (topLevelEnv === undefined) {
 		// Only create errors/warnings for the top-level environment
 		if (rawEnv.rules && deprecatedRules) {
 			diagnostics.errors.push(
-				`You cannot configure both [rules] and [build.upload.rules] in your wrangler.toml. Delete the \`build.upload\` section.`
+				`You cannot configure both [rules] and [build.upload.rules] in your ${configFileName(configPath)}. Delete the \`build.upload\` section.`
 			);
 		} else if (deprecatedRules) {
 			diagnostics.warnings.push(
@@ -1861,20 +1902,6 @@ const validateUnsafeSettings =
 			return false;
 		}
 
-		// At least one of bindings and metadata must exist
-		if (
-			!hasProperty(value, "bindings") &&
-			!hasProperty(value, "metadata") &&
-			!hasProperty(value, "capnp")
-		) {
-			diagnostics.errors.push(
-				`The field "${fieldPath}" should contain at least one of "bindings", "metadata" or "capnp" properties but got ${JSON.stringify(
-					value
-				)}.`
-			);
-			return false;
-		}
-
 		// unsafe.bindings
 		if (hasProperty(value, "bindings") && value.bindings !== undefined) {
 			const validateBindingsFn = validateBindingsProperty(
@@ -1960,6 +1987,12 @@ const validateUnsafeSettings =
 				}
 			}
 		}
+
+		validateAdditionalProperties(diagnostics, field, Object.keys(value), [
+			"bindings",
+			"metadata",
+			"capnp",
+		]);
 
 		return true;
 	};
@@ -2104,20 +2137,12 @@ const validateAssetsConfig: ValidatorFn = (diagnostics, field, value) => {
 	// ensure we validate all props before we show the validation errors
 	// this way users have all the necessary info to fix all errors in one go
 	isValid =
-		validateRequiredProperty(
+		validateOptionalProperty(
 			diagnostics,
 			field,
 			"directory",
 			(value as Assets).directory,
 			"string"
-		) && isValid;
-
-	isValid =
-		isNonEmptyString(
-			diagnostics,
-			`${field}.directory`,
-			(value as Assets).directory,
-			undefined
 		) && isValid;
 
 	isValid =
@@ -2155,11 +2180,21 @@ const validateAssetsConfig: ValidatorFn = (diagnostics, field, value) => {
 		) && isValid;
 
 	isValid =
+		validateOptionalProperty(
+			diagnostics,
+			field,
+			"experimental_serve_directly",
+			(value as Assets).experimental_serve_directly,
+			"boolean"
+		) && isValid;
+
+	isValid =
 		validateAdditionalProperties(diagnostics, field, Object.keys(value), [
 			"directory",
 			"binding",
 			"html_handling",
 			"not_found_handling",
+			"experimental_serve_directly",
 		]) && isValid;
 
 	return isValid;
@@ -2409,8 +2444,10 @@ const validateKVBinding: ValidatorFn = (diagnostics, field, value) => {
 		isValid = false;
 	}
 	if (
-		!isRequiredProperty(value, "id", "string") ||
-		(value as { id: string }).id.length === 0
+		getFlag("RESOURCES_PROVISION")
+			? !isOptionalProperty(value, "id", "string") ||
+				(value.id !== undefined && value.id.length === 0)
+			: !isRequiredProperty(value, "id", "string") || value.id.length === 0
 	) {
 		diagnostics.errors.push(
 			`"${field}" bindings should have a string "id" field but got ${JSON.stringify(
@@ -2571,8 +2608,11 @@ const validateR2Binding: ValidatorFn = (diagnostics, field, value) => {
 		isValid = false;
 	}
 	if (
-		!isRequiredProperty(value, "bucket_name", "string") ||
-		(value as { bucket_name: string }).bucket_name.length === 0
+		getFlag("RESOURCES_PROVISION")
+			? !isOptionalProperty(value, "bucket_name", "string") ||
+				(value.bucket_name !== undefined && value.bucket_name.length === 0)
+			: !isRequiredProperty(value, "bucket_name", "string") ||
+				value.bucket_name.length === 0
 	) {
 		diagnostics.errors.push(
 			`"${field}" bindings should have a string "bucket_name" field but got ${JSON.stringify(
@@ -2629,9 +2669,11 @@ const validateD1Binding: ValidatorFn = (diagnostics, field, value) => {
 		isValid = false;
 	}
 	if (
-		// TODO: allow name only, where we look up the ID dynamically
-		// !isOptionalProperty(value, "database_name", "string") &&
-		!isRequiredProperty(value, "database_id", "string")
+		getFlag("RESOURCES_PROVISION")
+			? !isOptionalProperty(value, "database_id", "string")
+			: // TODO: allow name only, where we look up the ID dynamically
+				// !isOptionalProperty(value, "database_name", "string") &&
+				!isRequiredProperty(value, "database_id", "string")
 	) {
 		diagnostics.errors.push(
 			`"${field}" bindings must have a "database_id" field but got ${JSON.stringify(
@@ -3341,14 +3383,22 @@ const validateObservability: ValidatorFn = (diagnostics, field, value) => {
 	const val = value as Observability;
 	let isValid = true;
 
+	/**
+	 * One of observability.enabled or observability.logs.enabled must be defined
+	 */
 	isValid =
-		validateRequiredProperty(
-			diagnostics,
-			field,
-			"enabled",
-			val.enabled,
-			"boolean"
-		) && isValid;
+		validateAtLeastOnePropertyRequired(diagnostics, field, [
+			{
+				key: "enabled",
+				value: val.enabled,
+				type: "boolean",
+			},
+			{
+				key: "logs.enabled",
+				value: val.logs?.enabled,
+				type: "boolean",
+			},
+		]) && isValid;
 
 	isValid =
 		validateOptionalProperty(
@@ -3360,10 +3410,54 @@ const validateObservability: ValidatorFn = (diagnostics, field, value) => {
 		) && isValid;
 
 	isValid =
+		validateOptionalProperty(diagnostics, field, "logs", val.logs, "object") &&
+		isValid;
+
+	isValid =
 		validateAdditionalProperties(diagnostics, field, Object.keys(val), [
 			"enabled",
 			"head_sampling_rate",
+			"logs",
 		]) && isValid;
+
+	/**
+	 * Validate the optional nested logs configuration
+	 */
+	if (typeof val.logs === "object") {
+		isValid =
+			validateOptionalProperty(
+				diagnostics,
+				field,
+				"logs.enabled",
+				val.logs.enabled,
+				"boolean"
+			) && isValid;
+
+		isValid =
+			validateOptionalProperty(
+				diagnostics,
+				field,
+				"logs.head_sampling_rate",
+				val.logs.head_sampling_rate,
+				"number"
+			) && isValid;
+
+		isValid =
+			validateOptionalProperty(
+				diagnostics,
+				field,
+				"logs.invocation_logs",
+				val.logs.invocation_logs,
+				"boolean"
+			) && isValid;
+
+		isValid =
+			validateAdditionalProperties(diagnostics, field, Object.keys(val.logs), [
+				"enabled",
+				"head_sampling_rate",
+				"invocation_logs",
+			]) && isValid;
+	}
 
 	const samplingRate = val?.head_sampling_rate;
 
@@ -3379,7 +3473,8 @@ const validateObservability: ValidatorFn = (diagnostics, field, value) => {
 function warnIfDurableObjectsHaveNoMigrations(
 	diagnostics: Diagnostics,
 	durableObjects: Config["durable_objects"],
-	migrations: Config["migrations"]
+	migrations: Config["migrations"],
+	configPath: string | undefined
 ) {
 	if (
 		Array.isArray(durableObjects.bindings) &&
@@ -3401,13 +3496,16 @@ function warnIfDurableObjectsHaveNoMigrations(
 				);
 
 				diagnostics.warnings.push(dedent`
-				In wrangler.toml, you have configured [durable_objects] exported by this Worker (${durableObjectClassnames.join(", ")}), but no [migrations] for them. This may not work as expected until you add a [migrations] section to your wrangler.toml. Add this configuration to your wrangler.toml:
+				In your ${configFileName(configPath)} file, you have configured \`durable_objects\` exported by this Worker (${durableObjectClassnames.join(", ")}), but no \`migrations\` for them. This may not work as expected until you add a \`migrations\` section to your ${configFileName(configPath)} file. Add the following configuration:
 
-				  \`\`\`
-				  [[migrations]]
-				  tag = "v1" # Should be unique for each entry
-				  new_classes = [${durableObjectClassnames.map((name) => `"${name}"`).join(", ")}]
-				  \`\`\`
+				\`\`\`
+				${formatConfigSnippet(
+					{
+						migrations: [{ tag: "v1", new_classes: durableObjectClassnames }],
+					},
+					configPath
+				)}
+				\`\`\`
 
 				Refer to https://developers.cloudflare.com/durable-objects/reference/durable-objects-migrations/ for more details.`);
 			}

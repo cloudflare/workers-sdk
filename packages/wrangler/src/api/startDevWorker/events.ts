@@ -12,6 +12,7 @@ export type ErrorEvent =
 			| "RemoteRuntimeController"
 			| "ProxyWorker"
 			| "InspectorProxyWorker"
+			| "MultiworkerRuntimeController"
 	  >
 	| BaseErrorEvent<
 			"ProxyController",

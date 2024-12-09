@@ -1,4 +1,5 @@
-import { readConfig } from "../../../config";
+import dedent from "ts-dedent";
+import { formatConfigSnippet, readConfig } from "../../../config";
 import { CommandLineArgsError } from "../../../errors";
 import { logger } from "../../../logger";
 import { getValidBindingName } from "../../../utils/getValidBindingName";
@@ -51,21 +52,43 @@ function createBody(
 export async function handler(
 	args: StrictYargsOptionsToInterface<typeof options>
 ) {
-	const config = readConfig(args.config, args);
+	const config = readConfig(args);
 	const body = createBody(args);
 	try {
 		logger.log(`🌀 Creating queue '${args.name}'`);
 		await createQueue(config, body);
-		logger.log(
-			`✅ Created queue '${args.name}'\n\n` +
-				"Configure your Worker to send messages to this queue:\n\n" +
-				"[[queues.producers]]\n" +
-				`queue = "${args.name}"\n` +
-				`binding = "${getValidBindingName(args.name, "queue")}"\n\n` +
-				"Configure your Worker to consume messages from this queue:\n\n" +
-				"[[queues.consumers]]\n" +
-				`queue = "${args.name}"`
-		);
+		logger.log(dedent`
+			✅ Created queue '${args.name}'
+
+			Configure your Worker to send messages to this queue:
+
+			${formatConfigSnippet(
+				{
+					queues: {
+						producers: [
+							{
+								queue: args.name,
+								binding: getValidBindingName(args.name, "queue"),
+							},
+						],
+					},
+				},
+				config.configPath
+			)}
+			Configure your Worker to consume messages from this queue:
+
+			${formatConfigSnippet(
+				{
+					queues: {
+						consumers: [
+							{
+								queue: args.name,
+							},
+						],
+					},
+				},
+				config.configPath
+			)}`);
 	} catch (e) {
 		handleFetchError(e as { code?: number });
 	}

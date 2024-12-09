@@ -1,21 +1,12 @@
 import { fetchResult } from "../../cfetch";
 import { performApiFetch } from "../../cfetch/internal";
+import { createNamespace } from "../../core/create-command";
 import {
 	createWorkerUploadForm,
 	fromMimeType,
 } from "../../deployment-bundle/create-worker-upload-form";
 import { FatalError, UserError } from "../../errors";
 import { getMetricsUsageHeaders } from "../../metrics";
-import {
-	versionsSecretPutBulkHandler,
-	versionsSecretsPutBulkOptions,
-} from "./bulk";
-import {
-	versionsSecretDeleteHandler,
-	versionsSecretsDeleteOptions,
-} from "./delete";
-import { versionsSecretListHandler, versionsSecretsListOptions } from "./list";
-import { versionsSecretPutHandler, versionsSecretsPutOptions } from "./put";
 import type { Observability } from "../../config/environment";
 import type {
 	WorkerMetadata as CfWorkerMetadata,
@@ -28,36 +19,15 @@ import type {
 	CfWorkerInit,
 	CfWorkerSourceMap,
 } from "../../deployment-bundle/worker";
-import type { CommonYargsArgv } from "../../yargs-types";
 import type { File, SpecIterableIterator } from "undici";
 
-export function registerVersionsSecretsSubcommands(yargs: CommonYargsArgv) {
-	return yargs
-		.command(
-			"put <key>",
-			"Create or update a secret variable for a Worker",
-			versionsSecretsPutOptions,
-			versionsSecretPutHandler
-		)
-		.command(
-			"bulk [json]",
-			"Create or update a secret variable for a Worker",
-			versionsSecretsPutBulkOptions,
-			versionsSecretPutBulkHandler
-		)
-		.command(
-			"delete <key>",
-			"Delete a secret variable from a Worker",
-			versionsSecretsDeleteOptions,
-			versionsSecretDeleteHandler
-		)
-		.command(
-			"list",
-			"List the secrets currently deployed",
-			versionsSecretsListOptions,
-			versionsSecretListHandler
-		);
-}
+export const versionsSecretNamespace = createNamespace({
+	metadata: {
+		description: "Generate a secret that can be referenced in a Worker",
+		status: "stable",
+		owner: "Workers: Authoring and Testing",
+	},
+});
 
 // Shared code
 export interface WorkerVersion {

@@ -1,13 +1,13 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
-import NodeGlobalsPolyfills from "@esbuild-plugins/node-globals-polyfill";
-import NodeModulesPolyfills from "@esbuild-plugins/node-modules-polyfill";
+import chalk from "chalk";
 import * as esbuild from "esbuild";
 import {
 	getBuildConditionsFromEnv,
 	getBuildPlatformFromEnv,
 } from "../environment-variables/misc-variables";
 import { UserError } from "../errors";
+import { getFlag } from "../experimental-flags";
 import { getBasePath, getWranglerTmpDir } from "../paths";
 import { applyMiddlewareLoaderFacade } from "./apply-middleware";
 import {
@@ -16,12 +16,9 @@ import {
 } from "./build-failures";
 import { dedupeModulesByName } from "./dedupe-modules";
 import { getEntryPointFromMetafile } from "./entry-point-from-metafile";
-import { asyncLocalStoragePlugin } from "./esbuild-plugins/als-external";
 import { cloudflareInternalPlugin } from "./esbuild-plugins/cloudflare-internal";
 import { configProviderPlugin } from "./esbuild-plugins/config-provider";
-import { nodejsHybridPlugin } from "./esbuild-plugins/hybrid-nodejs-compat";
-import { nodejsCompatPlugin } from "./esbuild-plugins/nodejs-compat";
-import { standardURLPlugin } from "./esbuild-plugins/standard-url";
+import { getNodeJSCompatPlugins } from "./esbuild-plugins/nodejs-plugins";
 import { writeAdditionalModules } from "./find-additional-modules";
 import { noopModuleCollector } from "./module-collection";
 import type { Config } from "../config";
@@ -305,6 +302,18 @@ export async function bundleWorker(
 
 		inject.push(checkedFetchFileToInject);
 	}
+
+	// When multiple workers are running we need some way to disambiguate logs between them. Inject a patched version of `globalThis.console` that prefixes logs with the worker name
+	if (getFlag("MULTIWORKER")) {
+		middlewareToLoad.push({
+			name: "patch-console-prefix",
+			path: "templates/middleware/middleware-patch-console-prefix.ts",
+			supports: ["modules", "service-worker"],
+			config: {
+				prefix: chalk.blue(`[${entry.name}]`),
+			},
+		});
+	}
 	// Check that the current worker format is supported by all the active middleware
 	for (const middleware of middlewareToLoad) {
 		if (!middleware.supports.includes(entry.format)) {
@@ -373,7 +382,7 @@ export async function bundleWorker(
 						path: require.resolve(aliasPath, {
 							// From the esbuild alias docs: "Note that when an import path is substituted using an alias, the resulting import path is resolved in the working directory instead of in the directory containing the source file with the import path."
 							// https://esbuild.github.io/api/#alias:~:text=Note%20that%20when%20an%20import%20path%20is%20substituted%20using%20an%20alias%2C%20the%20resulting%20import%20path%20is%20resolved%20in%20the%20working%20directory%20instead%20of%20in%20the%20directory%20containing%20the%20source%20file%20with%20the%20import%20path.
-							paths: [entry.directory],
+							paths: [entry.projectRoot],
 						}),
 					};
 				}
@@ -385,7 +394,7 @@ export async function bundleWorker(
 		// Don't use entryFile here as the file may have been changed when applying the middleware
 		entryPoints: [entry.file],
 		bundle,
-		absWorkingDir: entry.directory,
+		absWorkingDir: entry.projectRoot,
 		outdir: destination,
 		keepNames: true,
 		entryNames: entryName || path.parse(entryFile).name,
@@ -426,20 +435,7 @@ export async function bundleWorker(
 		plugins: [
 			aliasPlugin,
 			moduleCollector.plugin,
-			...(nodejsCompatMode === "als" ? [asyncLocalStoragePlugin] : []),
-			...(nodejsCompatMode === "legacy"
-				? [
-						NodeGlobalsPolyfills({ buffer: true }),
-						standardURLPlugin(),
-						NodeModulesPolyfills(),
-					]
-				: []),
-			// Runtime Node.js compatibility (will warn if not using nodejs compat flag and are trying to import from a Node.js builtin).
-			...(nodejsCompatMode === "v1" || nodejsCompatMode !== "v2"
-				? [nodejsCompatPlugin(nodejsCompatMode === "v1")]
-				: []),
-			// Hybrid Node.js compatibility
-			...(nodejsCompatMode === "v2" ? [nodejsHybridPlugin()] : []),
+			...getNodeJSCompatPlugins(nodejsCompatMode ?? null),
 			cloudflareInternalPlugin,
 			buildResultPlugin,
 			...(plugins || []),
@@ -526,7 +522,7 @@ export async function bundleWorker(
 	)[0];
 
 	const resolvedEntryPointPath = path.resolve(
-		entry.directory,
+		entry.projectRoot,
 		entryPoint.relativePath
 	);
 
@@ -548,7 +544,7 @@ export async function bundleWorker(
 		sourceMapPath,
 		sourceMapMetadata: {
 			tmpDir: tmpDir.path,
-			entryDirectory: entry.directory,
+			entryDirectory: entry.projectRoot,
 		},
 	};
 }
@@ -561,4 +557,27 @@ class BuildFailure extends Error {
 	) {
 		super(message);
 	}
+}
+
+/**
+ * Whether to add middleware to check whether fetch requests use custom ports.
+ *
+ * This is controlled in the runtime by compatibility_flags:
+ *  - `ignore_custom_ports` - check fetch
+ *  - `allow_custom_ports` - do not check fetch
+ *
+ * `allow_custom_ports` became the default on 2024-09-02.
+ */
+export function shouldCheckFetch(
+	compatibilityDate: string = "2000-01-01", // Default to some arbitrary old date
+	compatibilityFlags: string[] = []
+): boolean {
+	// Yes, the logic can be less verbose than this but doing it this way makes it very clear.
+	if (compatibilityFlags.includes("ignore_custom_ports")) {
+		return true;
+	}
+	if (compatibilityFlags.includes("allow_custom_ports")) {
+		return false;
+	}
+	return compatibilityDate < "2024-09-02";
 }

@@ -1,6 +1,7 @@
 import { existsSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { readConfig } from "../config";
+import { configFileName, readPagesConfig } from "../config";
+import { findWranglerConfig } from "../config/config-helpers";
 import { FatalError } from "../errors";
 import { logger } from "../logger";
 import {
@@ -38,38 +39,39 @@ export const Handler = async (args: PagesBuildEnvArgs) => {
 	}
 
 	logger.log(
-		"Checking for configuration in a wrangler.toml configuration file (BETA)\n"
+		"Checking for configuration in a Wrangler configuration file (BETA)\n"
 	);
 
-	const configPath = path.resolve(args.projectDir, "wrangler.toml");
-	if (!existsSync(configPath)) {
-		logger.debug("No wrangler.toml configuration file found. Exiting.");
+	const configPath = findWranglerConfig(args.projectDir);
+	if (!configPath || !existsSync(configPath)) {
+		logger.debug("No Wrangler configuration file found. Exiting.");
 		process.exitCode = EXIT_CODE_NO_CONFIG_FOUND;
 		return;
 	}
 
-	logger.log("Found wrangler.toml file. Reading build configuration...");
+	logger.log(
+		`Found ${configFileName(configPath)} file. Reading build configuration...`
+	);
 
 	let config: Omit<Config, "pages_build_output_dir"> & {
 		pages_build_output_dir: string;
 	};
 	try {
-		config = readConfig(
-			configPath,
-			{
-				...args,
-				// eslint-disable-next-line turbo/no-undeclared-env-vars
-				env: process.env.PAGES_ENVIRONMENT,
-			},
-			true
-		);
+		config = readPagesConfig({
+			...args,
+			config: configPath,
+			// eslint-disable-next-line turbo/no-undeclared-env-vars
+			env: process.env.PAGES_ENVIRONMENT,
+		});
 	} catch (err) {
-		// found `wrangler.toml` but `pages_build_output_dir` is not specififed
+		// found `wrangler.toml` but `pages_build_output_dir` is not specified
 		if (
 			err instanceof FatalError &&
 			err.code === EXIT_CODE_INVALID_PAGES_CONFIG
 		) {
-			logger.debug("wrangler.toml file is invalid. Exiting.");
+			logger.debug(
+				`Your ${configFileName(configPath)} file is invalid. Exiting.`
+			);
 			process.exitCode = EXIT_CODE_INVALID_PAGES_CONFIG;
 			return;
 		}

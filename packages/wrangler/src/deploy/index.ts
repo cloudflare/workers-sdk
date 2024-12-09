@@ -1,9 +1,11 @@
 import assert from "node:assert";
 import path from "node:path";
-import { processAssetsArg, validateAssetsArgsAndConfig } from "../assets";
-import { findWranglerToml, readConfig } from "../config";
+import { getAssetsOptions, validateAssetsArgsAndConfig } from "../assets";
+import { configFileName, readConfig } from "../config";
+import { resolveWranglerConfigPath } from "../config/config-helpers";
 import { getEntry } from "../deployment-bundle/entry";
 import { UserError } from "../errors";
+import { run } from "../experimental-flags";
 import {
 	getRules,
 	getScriptName,
@@ -27,7 +29,7 @@ import type {
 async function standardPricingWarning(config: Config) {
 	if (config.usage_model !== undefined) {
 		logger.warn(
-			"The `usage_model` defined in wrangler.toml is deprecated and no longer used. Visit our developer docs for details: https://developers.cloudflare.com/workers/wrangler/configuration/#usage-model"
+			`The \`usage_model\` defined in your ${configFileName(config.configPath)} file is deprecated and no longer used. Visit our developer docs for details: https://developers.cloudflare.com/workers/wrangler/configuration/#usage-model`
 		);
 	}
 }
@@ -200,7 +202,7 @@ export function deployOptions(yargs: CommonYargsArgv) {
 			})
 			.option("keep-vars", {
 				describe:
-					"Stop wrangler from deleting vars that are not present in the wrangler.toml\nBy default Wrangler will remove all vars and replace them with those found in the wrangler.toml configuration.\nIf your development approach is to modify vars after deployment via the dashboard you may wish to set this flag.",
+					"Stop wrangler from deleting vars that are not present in the Wrangler configuration file\nBy default Wrangler will remove all vars and replace them with those found in the Wrangler configuration.\nIf your development approach is to modify vars after deployment via the dashboard you may wish to set this flag.",
 				default: false,
 				type: "boolean",
 			})
@@ -234,6 +236,17 @@ export function deployOptions(yargs: CommonYargsArgv) {
 export type DeployArgs = StrictYargsOptionsToInterface<typeof deployOptions>;
 
 export async function deployHandler(args: DeployArgs) {
+	await run(
+		{
+			FILE_BASED_REGISTRY: false,
+			RESOURCES_PROVISION: args.experimentalProvision ?? false,
+			MULTIWORKER: false,
+		},
+		() => deployWorker(args)
+	);
+}
+
+async function deployWorker(args: DeployArgs) {
 	await printWranglerBanner();
 
 	// Check for deprecated `wrangler publish` command
@@ -250,10 +263,9 @@ export async function deployHandler(args: DeployArgs) {
 		);
 	}
 
-	const configPath =
-		args.config || (args.script && findWranglerToml(path.dirname(args.script)));
+	const configPath = resolveWranglerConfigPath(args);
 	const projectRoot = configPath && path.dirname(configPath);
-	const config = readConfig(configPath, args);
+	const config = readConfig(args);
 	if (config.pages_build_output_dir) {
 		throw new UserError(
 			"It looks like you've run a Workers-specific command in a Pages project.\n" +
@@ -289,11 +301,11 @@ export async function deployHandler(args: DeployArgs) {
 
 	validateAssetsArgsAndConfig(args, config);
 
-	const assetsOptions = processAssetsArg(args, config);
+	const assetsOptions = getAssetsOptions(args, config);
 
 	if (args.latest) {
 		logger.warn(
-			"Using the latest version of the Workers runtime. To silence this warning, please choose a specific version of the runtime with --compatibility-date, or add a compatibility_date to your wrangler.toml.\n"
+			`Using the latest version of the Workers runtime. To silence this warning, please choose a specific version of the runtime with --compatibility-date, or add a compatibility_date to your ${configFileName(config.configPath)} file.`
 		);
 	}
 
@@ -329,7 +341,7 @@ export async function deployHandler(args: DeployArgs) {
 		await verifyWorkerMatchesCITag(
 			accountId,
 			name,
-			path.relative(entry.directory, config.configPath ?? "wrangler.toml")
+			path.relative(entry.projectRoot, config.configPath ?? "wrangler.toml")
 		);
 	}
 	const { sourceMapSize, versionId, workerTag, targets } = await deploy({
@@ -378,7 +390,7 @@ export async function deployHandler(args: DeployArgs) {
 		targets,
 	});
 
-	await metrics.sendMetricsEvent(
+	metrics.sendMetricsEvent(
 		"deploy worker script",
 		{
 			usesTypeScript: /\.tsx?$/.test(entry.file),

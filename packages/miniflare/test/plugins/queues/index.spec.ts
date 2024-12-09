@@ -3,6 +3,7 @@ import {
 	DeferredPromise,
 	LogLevel,
 	Miniflare,
+	MiniflareCoreError,
 	QUEUES_PLUGIN_NAME,
 	QueuesError,
 	Response,
@@ -39,6 +40,34 @@ async function getControlStub(
 	await stub.enableFakeTimers(1_000_000);
 	return stub;
 }
+
+test("maxBatchTimeout validation", async (t) => {
+	const mf = new Miniflare({
+		verbose: true,
+		queueConsumers: {
+			QUEUE: { maxBatchTimeout: 60 },
+		},
+		modules: true,
+		script: "",
+	});
+	t.throws(
+		() =>
+			new Miniflare({
+				verbose: true,
+				queueConsumers: {
+					QUEUE: { maxBatchTimeout: 61 },
+				},
+				modules: true,
+				script: "",
+			}),
+		{
+			instanceOf: MiniflareCoreError,
+			code: "ERR_VALIDATION",
+			message: /Number must be less than or equal to 60/,
+		}
+	);
+	t.teardown(() => mf.dispose());
+});
 
 test("flushes partial and full batches", async (t) => {
 	let batches: string[][] = [];

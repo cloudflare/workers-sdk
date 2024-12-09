@@ -24,7 +24,6 @@ import { dedent } from "./utils/dedent";
 import { createPatternMatcher } from "./utils/filesystem";
 import type { StartDevWorkerOptions } from "./api";
 import type { Config } from "./config";
-import type { Assets } from "./config/environment";
 import type { DeployArgs } from "./deploy";
 import type { StartDevOptions } from "./dev";
 import type { AssetConfig, RoutingConfig } from "@cloudflare/workers-shared";
@@ -48,8 +47,9 @@ const MAX_UPLOAD_GATEWAY_ERRORS = 5;
 
 export const syncAssets = async (
 	accountId: string | undefined,
+	assetDirectory: string,
 	scriptName: string,
-	assetDirectory: string
+	dispatchNamespace?: string
 ): Promise<string> => {
 	assert(accountId, "Missing accountId");
 
@@ -57,10 +57,14 @@ export const syncAssets = async (
 	logger.info("🌀 Building list of assets...");
 	const manifest = await buildAssetManifest(assetDirectory);
 
+	const url = dispatchNamespace
+		? `/accounts/${accountId}/workers/dispatch/namespaces/${dispatchNamespace}/scripts/${scriptName}/assets-upload-session`
+		: `/accounts/${accountId}/workers/scripts/${scriptName}/assets-upload-session`;
+
 	// 2. fetch buckets w/ hashes
 	logger.info("🌀 Starting asset upload...");
 	const initializeAssetsResponse = await fetchResult<InitializeAssetsResponse>(
-		`/accounts/${accountId}/workers/scripts/${scriptName}/assets-upload-session`,
+		url,
 		{
 			headers: { "Content-Type": "application/json" },
 			method: "POST",
@@ -310,12 +314,14 @@ function getAssetsBasePath(
 		: path.resolve(path.dirname(config.configPath ?? "wrangler.toml"));
 }
 
-export type AssetsOptions = Pick<Assets, "directory" | "binding"> & {
+export type AssetsOptions = {
+	directory: string;
+	binding?: string;
 	routingConfig: RoutingConfig;
 	assetConfig: AssetConfig;
 };
 
-export function processAssetsArg(
+export function getAssetsOptions(
 	args: { assets: string | undefined; script?: string },
 	config: Config
 ): AssetsOptions | undefined {
@@ -325,8 +331,20 @@ export function processAssetsArg(
 		return;
 	}
 
+	const { directory, binding } = assets;
+
+	if (directory === undefined) {
+		throw new UserError(
+			"The `assets` property in your configuration is missing the required `directory` property."
+		);
+	}
+
+	if (directory === "") {
+		throw new UserError("`The assets directory cannot be an empty string.");
+	}
+
 	const assetsBasePath = getAssetsBasePath(config, args.assets);
-	const resolvedAssetsPath = path.resolve(assetsBasePath, assets.directory);
+	const resolvedAssetsPath = path.resolve(assetsBasePath, directory);
 
 	if (!existsSync(resolvedAssetsPath)) {
 		const sourceOfTruthMessage = args.assets
@@ -339,18 +357,22 @@ export function processAssetsArg(
 		);
 	}
 
-	assets.directory = resolvedAssetsPath;
 	const routingConfig = {
 		has_user_worker: Boolean(args.script || config.main),
+		invoke_user_worker_ahead_of_assets: !(
+			config.assets?.experimental_serve_directly ?? true
+		),
 	};
 	// defaults are set in asset worker
 	const assetConfig = {
 		html_handling: config.assets?.html_handling,
 		not_found_handling: config.assets?.not_found_handling,
+		serve_directly: config.assets?.experimental_serve_directly,
 	};
 
 	return {
-		...assets,
+		directory: resolvedAssetsPath,
+		binding,
 		routingConfig,
 		assetConfig,
 	};

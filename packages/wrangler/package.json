@@ -1,6 +1,6 @@
 {
 	"name": "wrangler",
-	"version": "3.86.1",
+	"version": "3.93.0",
 	"description": "Command-line interface for all things Cloudflare Workers",
 	"keywords": [
 		"wrangler",
@@ -82,11 +82,10 @@
 		"nanoid": "^3.3.3",
 		"path-to-regexp": "^6.3.0",
 		"resolve": "^1.22.8",
-		"resolve.exports": "^2.0.2",
 		"selfsigned": "^2.0.1",
 		"source-map": "^0.6.1",
-		"unenv": "npm:unenv-nightly@2.0.0-20241024-111401-d4156ac",
-		"workerd": "1.20241106.1",
+		"unenv": "npm:unenv-nightly@2.0.0-20241204-140205-a5d5190",
+		"workerd": "1.20241205.0",
 		"xxhash-wasm": "^1.0.1"
 	},
 	"devDependencies": {
@@ -95,7 +94,7 @@
 		"@cloudflare/pages-shared": "workspace:^",
 		"@cloudflare/types": "6.18.4",
 		"@cloudflare/workers-tsconfig": "workspace:*",
-		"@cloudflare/workers-types": "^4.20241106.0",
+		"@cloudflare/workers-types": "^4.20241205.0",
 		"@cspotcode/source-map-support": "0.8.1",
 		"@iarna/toml": "^3.0.0",
 		"@microsoft/api-extractor": "^7.47.0",
@@ -164,7 +163,7 @@
 		"yargs": "^17.7.2"
 	},
 	"peerDependencies": {
-		"@cloudflare/workers-types": "^4.20241106.0"
+		"@cloudflare/workers-types": "^4.20241205.0"
 	},
 	"peerDependenciesMeta": {
 		"@cloudflare/workers-types": {

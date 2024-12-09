@@ -6,7 +6,7 @@ import { Miniflare } from "miniflare";
 import { fetch } from "undici";
 import { printWranglerBanner } from "..";
 import { fetchResult } from "../cfetch";
-import { readConfig } from "../config";
+import { configFileName, readConfig } from "../config";
 import { getLocalPersistencePath } from "../dev/get-local-persistence-path";
 import { UserError } from "../errors";
 import { logger } from "../logger";
@@ -74,7 +74,7 @@ type HandlerOptions = StrictYargsOptionsToInterface<typeof Options>;
 export const Handler = async (args: HandlerOptions): Promise<void> => {
 	const { local, remote, name, output, schema, data, table } = args;
 	await printWranglerBanner();
-	const config = readConfig(args.config, args);
+	const config = readConfig(args);
 
 	if (!local && !remote) {
 		throw new UserError(`You must specify either --local or --remote`);
@@ -109,7 +109,7 @@ async function exportLocal(
 	const localDB = getDatabaseInfoFromConfig(config, name);
 	if (!localDB) {
 		throw new UserError(
-			`Couldn't find a D1 DB with the name or binding '${name}' in wrangler.toml.`
+			`Couldn't find a D1 DB with the name or binding '${name}' in your ${configFileName(config.configPath)} file.`
 		);
 	}
 
