@@ -83,6 +83,7 @@ import {
 	telemetryStatusCommand,
 } from "./metrics/commands";
 import { mTlsCertificateCommands } from "./mtls-certificate/cli";
+import { certCommands } from "./cert/cli";
 import { writeOutput } from "./output";
 import { pages } from "./pages";
 import { APIError, formatMessage, ParseError } from "./parse";
@@ -872,6 +873,15 @@ export function createCLIParser(argv: string[]) {
 			return mTlsCertificateCommands(mtlsYargs.command(subHelp));
 		}
 	);
+
+	// cert - includes mtls-certificates and CA cert management
+	wrangler.command(
+		"cert",
+		"🪪  Manage client certificates and CA certificate chains used for mTLS connections",
+		(certArgs) => {
+			return certCommands(certArgs.command(subHelp));
+		}
+	)
 
 	// cloudchamber
 	wrangler.command("cloudchamber", false, (cloudchamberArgs) => {
