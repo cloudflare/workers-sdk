@@ -7,11 +7,13 @@ import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 import { writeWranglerConfig } from "../helpers/write-wrangler-config";
 
+vi.unmock("../../wrangler-banner");
+
 describe("versions view", () => {
 	mockAccountId();
 	mockApiToken();
 	runInTempDir();
-	mockConsoleMethods();
+	const cnsl = mockConsoleMethods();
 	const std = collectCLIOutput();
 
 	describe("without wrangler.toml", () => {
@@ -19,7 +21,7 @@ describe("versions view", () => {
 
 		test("fails with no args", async () => {
 			const result = runWrangler(
-				"versions view  --experimental-gradual-rollouts"
+				"versions view --experimental-gradual-rollouts"
 			);
 
 			await expect(result).rejects.toMatchInlineSnapshot(
@@ -89,6 +91,13 @@ describe("versions view", () => {
 				"
 			`);
 
+			expect(cnsl.out).toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler 3.93.0
+				-------------------
+				"
+			`);
+
 			expect(normalizeOutput(std.err)).toMatchInlineSnapshot(`""`);
 		});
 
@@ -98,6 +107,8 @@ describe("versions view", () => {
 			);
 
 			await expect(result).resolves.toBeUndefined();
+
+			expect(cnsl.out).toMatchInlineSnapshot(`""`);
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"{

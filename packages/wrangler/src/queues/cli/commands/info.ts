@@ -1,7 +1,7 @@
 import { readConfig } from "../../../config";
 import { logger } from "../../../logger";
-import { printWranglerBanner } from "../../../update-check";
 import { requireAuth } from "../../../user";
+import { printWranglerBanner } from "../../../wrangler-banner";
 import { getQueue } from "../../client";
 import type {
 	CommonYargsArgv,

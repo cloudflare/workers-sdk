@@ -3,7 +3,7 @@ import { readConfig } from "../config";
 import { defaultWranglerConfig } from "../config/config";
 import { FatalError, UserError } from "../errors";
 import { logger } from "../logger";
-import { printWranglerBanner } from "../update-check";
+import { printWranglerBanner } from "../wrangler-banner";
 import { demandSingleValue } from "./helpers";
 import type { CommonYargsArgv, SubHelp } from "../yargs-types";
 import type {

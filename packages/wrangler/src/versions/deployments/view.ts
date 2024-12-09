@@ -1,5 +1,5 @@
 import { UserError } from "../../errors";
-import { printWranglerBanner } from "../../update-check";
+import { printWranglerBanner } from "../../wrangler-banner";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
