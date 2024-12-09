@@ -291,7 +291,7 @@ We use the [`changesets`](https://github.com/changesets/changesets/blob/main/REA
 
 - Create a changeset for the current change.
   ```sh
-  > npx changeset
+  > pnpm changeset
   ```
 - Select which workspaces are affected by the change and whether the version requires a major, minor or patch release.
 - Update the generated changeset with a description of the change.
