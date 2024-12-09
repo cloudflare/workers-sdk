@@ -17,6 +17,9 @@ export const versionsViewCommand = createCommand({
 		owner: "Workers: Authoring and Testing",
 		status: "stable",
 	},
+	behaviour: {
+		printBanner: (args) => !args.json,
+	},
 	args: {
 		"version-id": {
 			describe: "The Worker Version ID to view",
@@ -37,10 +40,6 @@ export const versionsViewCommand = createCommand({
 	},
 	positionalArgs: ["version-id"],
 	handler: async function versionsViewHandler(args, { config }) {
-		if (!args.json) {
-			await printWranglerBanner();
-		}
-
 		metrics.sendMetricsEvent(
 			"view worker version",
 			{},
