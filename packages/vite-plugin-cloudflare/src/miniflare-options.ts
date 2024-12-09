@@ -298,7 +298,7 @@ export function getDevMiniflareOptions(
 											type: 'builtin',
 										} satisfies vite.FetchResult;
 
-										return new MiniflareResponse(JSON.stringify({ r: result }));
+										return new MiniflareResponse(JSON.stringify({ result }));
 									}
 
 									// Sometimes Vite fails to resolve built-ins and converts them to "url-friendly" ids
@@ -309,7 +309,7 @@ export function getDevMiniflareOptions(
 											type: 'builtin',
 										} satisfies vite.FetchResult;
 
-										return new MiniflareResponse(JSON.stringify({ r: result }));
+										return new MiniflareResponse(JSON.stringify({ result }));
 									}
 
 									const devEnvironment = viteDevServer.environments[

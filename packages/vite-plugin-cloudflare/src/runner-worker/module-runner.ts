@@ -43,7 +43,7 @@ export async function createModuleRunner(
 
 					const result = await response.json();
 
-					return result as { r: any } | { e: any };
+					return result as { result: any } | { error: any };
 				},
 			},
 			hmr: true,
