@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, test } from "vitest";
 import openInBrowser from "../open-in-browser";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { msw } from "./helpers/msw";
+import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 
 // NOTE: in production builds we "esbuild define" Algolia constants as globals
@@ -15,6 +16,7 @@ declare module globalThis {
 }
 
 describe("wrangler docs", () => {
+	runInTempDir();
 	const std = mockConsoleMethods();
 
 	beforeEach(() => {

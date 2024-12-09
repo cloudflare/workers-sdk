@@ -7,6 +7,7 @@ import { mockConsoleMethods } from "./helpers/mock-console";
 import { mockConfirm, mockPrompt } from "./helpers/mock-dialogs";
 import { useMockIsTTY } from "./helpers/mock-istty";
 import { createFetchResult, msw } from "./helpers/msw";
+import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import type { ApiDeployment } from "../versions/types";
 
@@ -16,6 +17,7 @@ describe("rollback", () => {
 	const { setIsTTY } = useMockIsTTY();
 	mockAccountId();
 	mockApiToken();
+	runInTempDir();
 
 	function mockGetDeployments(multiVersion = false) {
 		const versions = multiVersion
