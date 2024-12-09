@@ -224,7 +224,7 @@ export function normalizeAndValidateConfig(
 			activeEnv = normalizeAndValidateEnvironment(
 				envDiagnostics,
 				configPath,
-				{},
+				topLevelEnv, // in this case reuse the topLevelEnv to ensure that nonInherited fields are not removed
 				isDispatchNamespace,
 				envName,
 				topLevelEnv,

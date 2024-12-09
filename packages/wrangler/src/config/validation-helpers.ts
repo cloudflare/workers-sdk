@@ -69,7 +69,11 @@ export function inheritable<K extends keyof Environment>(
 ): Environment[K] {
 	validate(diagnostics, field, rawEnv[field], topLevelEnv);
 	return (
-		(rawEnv[field] as Environment[K]) ??
+		// `rawEnv === topLevelEnv` is a special case where the user has provided an environment name
+		// but that named environment is not actually defined in the configuration.
+		// In that case we have reused the topLevelEnv as the rawEnv,
+		// and so we need to process the `transformFn()` anyway rather than just using the field in the `rawEnv`.
+		(rawEnv !== topLevelEnv ? (rawEnv[field] as Environment[K]) : undefined) ??
 		transformFn(topLevelEnv?.[field]) ??
 		defaultValue
 	);
