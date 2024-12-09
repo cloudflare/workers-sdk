@@ -1,5 +1,37 @@
 # create-cloudflare
 
+## 2.33.4
+
+### Patch Changes
+
+- [#7257](https://github.com/cloudflare/workers-sdk/pull/7257) [`0920d13`](https://github.com/cloudflare/workers-sdk/commit/0920d132b3a9b900ed27999542c5d603198a7a97) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From    | To     |
+  | --------------- | ------- | ------ |
+  | @angular/create | 18.2.11 | 19.0.0 |
+  | create-qwik     | 1.9.1   | 1.11.0 |
+  | create-remix    | 2.14.0  | 2.15.0 |
+
+- [#7419](https://github.com/cloudflare/workers-sdk/pull/7419) [`51fb982`](https://github.com/cloudflare/workers-sdk/commit/51fb9824c760420aaa193ff9bf72269efe968586) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | nuxi       | 3.15.0 | 3.16.0 |
+
+- [#7489](https://github.com/cloudflare/workers-sdk/pull/7489) [`90fa58b`](https://github.com/cloudflare/workers-sdk/commit/90fa58b5b838b3a7e7befd529dc2b6368d887bb7) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency   | From   | To     |
+  | ------------ | ------ | ------ |
+  | create-remix | 2.14.0 | 2.15.0 |
+
+- [#7480](https://github.com/cloudflare/workers-sdk/pull/7480) [`9ea45b4`](https://github.com/cloudflare/workers-sdk/commit/9ea45b491e0ba94ddbb7966023d34dc385285be0) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - update Vue C3 experimental template to work with Worker Assets
+
 ## 2.33.3
 
 ### Patch Changes

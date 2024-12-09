@@ -1,5 +1,11 @@
 # @cloudflare/workers-shared
 
+## 0.11.0
+
+### Minor Changes
+
+- [#7465](https://github.com/cloudflare/workers-sdk/pull/7465) [`5449fe5`](https://github.com/cloudflare/workers-sdk/commit/5449fe54b15cf7c6dd12c385b0c8d2883c641b80) Thanks [@WillTaylorDev](https://github.com/WillTaylorDev)! - Instrument analytics around assets.serve_directly
+
 ## 0.10.0
 
 ### Minor Changes
