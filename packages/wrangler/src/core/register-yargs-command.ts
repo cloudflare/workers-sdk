@@ -1,4 +1,3 @@
-import { unwrapHook } from "../api/startDevWorker/utils";
 import { fetchResult } from "../cfetch";
 import { readConfig } from "../config";
 import { defaultWranglerConfig } from "../config/config";

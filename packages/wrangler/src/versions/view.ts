@@ -2,7 +2,6 @@ import { logRaw } from "@cloudflare/cli";
 import { createCommand } from "../core/create-command";
 import { UserError } from "../errors";
 import * as metrics from "../metrics";
-import { printWranglerBanner } from "../update-check";
 import { requireAuth } from "../user";
 import formatLabelledValues from "../utils/render-labelled-values";
 import { fetchVersion } from "./api";
