@@ -168,11 +168,13 @@ export const readRawConfig = (configPath: string | undefined): RawConfig => {
 	return {};
 };
 
-function formatValue(id: string | symbol | undefined, local: boolean = false) {
-	if (!id || typeof id === "symbol") {
-		return local ? "(local)" : "";
+function addLocalSuffix(
+	id: string | symbol | undefined,
+	local: boolean = false
+) {
+	if (id === undefined || typeof id === "symbol") {
+		id = "";
 	}
-
 	return `${id}${local ? " (local)" : ""}`;
 }
 
@@ -328,7 +330,7 @@ export function printBindings(
 			entries: kv_namespaces.map(({ binding, id }) => {
 				return {
 					key: binding,
-					value: formatValue(id, context.local),
+					value: addLocalSuffix(id, context.local),
 				};
 			}),
 		});
@@ -357,7 +359,7 @@ export function printBindings(
 			entries: queues.map(({ binding, queue_name }) => {
 				return {
 					key: binding,
-					value: formatValue(queue_name, context.local),
+					value: addLocalSuffix(queue_name, context.local),
 				};
 			}),
 		});
@@ -381,7 +383,7 @@ export function printBindings(
 					}
 					return {
 						key: binding,
-						value: formatValue(databaseValue, context.local),
+						value: addLocalSuffix(databaseValue, context.local),
 					};
 				}
 			),
@@ -394,7 +396,7 @@ export function printBindings(
 			entries: vectorize.map(({ binding, index_name }) => {
 				return {
 					key: binding,
-					value: formatValue(index_name, context.local),
+					value: addLocalSuffix(index_name, context.local),
 				};
 			}),
 		});
@@ -406,7 +408,7 @@ export function printBindings(
 			entries: hyperdrive.map(({ binding, id }) => {
 				return {
 					key: binding,
-					value: formatValue(id, context.local),
+					value: addLocalSuffix(id, context.local),
 				};
 			}),
 		});
@@ -424,7 +426,7 @@ export function printBindings(
 
 				return {
 					key: binding,
-					value: formatValue(name, context.local),
+					value: addLocalSuffix(name, context.local),
 				};
 			}),
 		});
