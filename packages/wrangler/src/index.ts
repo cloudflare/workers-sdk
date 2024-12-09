@@ -148,7 +148,7 @@ import {
 import { tailHandler, tailOptions } from "./tail";
 import registerTriggersSubcommands from "./triggers";
 import { typesHandler, typesOptions } from "./type-generation";
-import { printWranglerBanner, updateCheck } from "./update-check";
+import { updateCheck } from "./update-check";
 import { getAuthFromEnv } from "./user";
 import { loginCommand, logoutCommand, whoamiCommand } from "./user/commands";
 import { whoami } from "./user/whoami";
@@ -176,6 +176,7 @@ import { workflowsInstancesResumeCommand } from "./workflows/commands/instances/
 import { workflowsInstancesTerminateCommand } from "./workflows/commands/instances/terminate";
 import { workflowsListCommand } from "./workflows/commands/list";
 import { workflowsTriggerCommand } from "./workflows/commands/trigger";
+import { printWranglerBanner } from "./wrangler-banner";
 import { asJson } from "./yargs-types";
 import type { Config } from "./config";
 import type { LoggerLevel } from "./logger";
@@ -1110,7 +1111,7 @@ export async function main(argv: string[]): Promise<void> {
 
 		try {
 			const configPath = resolveWranglerConfigPath(args);
-			const rawConfig = readRawConfig(args.config);
+			const rawConfig = readRawConfig(configPath);
 			dispatcher = getMetricsDispatcher({
 				sendMetrics: rawConfig.send_metrics,
 				configPath,

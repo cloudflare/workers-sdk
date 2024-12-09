@@ -82,7 +82,15 @@ export function getMetricsDispatcher(options: MetricsConfigOptions) {
 				) {
 					return;
 				}
-				printMetricsBanner();
+				if (
+					properties.command === "wrangler deploy" ||
+					properties.command === "wrangler dev" ||
+					// for testing purposes
+					properties.command === "wrangler docs"
+				) {
+					printMetricsBanner();
+				}
+
 				const argsUsed = sanitiseUserInput(properties.args ?? {});
 				const argsCombination = argsUsed.sort().join(", ");
 				const commonEventProperties: CommonEventProperties = {

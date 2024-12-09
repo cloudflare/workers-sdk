@@ -9,8 +9,8 @@ import { confirm } from "../dialogs";
 import { FatalError } from "../errors";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
-import { printWranglerBanner } from "../update-check";
 import { requireAuth } from "../user";
+import { printWranglerBanner } from "../wrangler-banner";
 import { PAGES_CONFIG_CACHE_FILENAME } from "./constants";
 import type { RawEnvironment } from "../config";
 import type {

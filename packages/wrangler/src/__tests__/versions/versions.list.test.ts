@@ -7,11 +7,15 @@ import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 import { writeWranglerConfig } from "../helpers/write-wrangler-config";
 
+vi.unmock("../../wrangler-banner");
+
 describe("versions list", () => {
 	mockAccountId();
 	mockApiToken();
 	runInTempDir();
 	mockConsoleMethods();
+	const cnsl = mockConsoleMethods();
+
 	const std = collectCLIOutput();
 
 	beforeEach(() => {
@@ -69,6 +73,13 @@ describe("versions list", () => {
 				Tag:         -
 				Message:     -
 
+				"
+			`);
+
+			expect(cnsl.out).toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler 3.93.0
+				-------------------
 				"
 			`);
 
@@ -147,6 +158,8 @@ describe("versions list", () => {
 				]
 				"
 			`);
+
+			expect(cnsl.out).toMatchInlineSnapshot(`""`);
 
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});

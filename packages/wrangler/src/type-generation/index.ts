@@ -9,7 +9,7 @@ import { getVarsForDev } from "../dev/dev-vars";
 import { CommandLineArgsError, UserError } from "../errors";
 import { logger } from "../logger";
 import { parseJSONC } from "../parse";
-import { printWranglerBanner } from "../update-check";
+import { printWranglerBanner } from "../wrangler-banner";
 import { generateRuntimeTypes } from "./runtime";
 import { logRuntimeTypesMessage } from "./runtime/log-runtime-types-message";
 import type { Config } from "../config";

@@ -3,7 +3,7 @@ import { readConfig } from "../config";
 import { defaultWranglerConfig } from "../config/config";
 import { FatalError, UserError } from "../errors";
 import { logger } from "../logger";
-import { printWranglerBanner } from "../update-check";
+import { printWranglerBanner } from "../wrangler-banner";
 import { demandSingleValue } from "./helpers";
 import type { CommonYargsArgv, SubHelp } from "../yargs-types";
 import type {
@@ -64,7 +64,18 @@ function createHandler(def: CommandDefinition) {
 	return async function handler(args: HandlerArgs<NamedArgDefinitions>) {
 		// eslint-disable-next-line no-useless-catch
 		try {
-			if (def.behaviour?.printBanner !== false) {
+			const shouldPrintBanner = def.behaviour?.printBanner;
+
+			if (
+				/* No defautl behaviour override: show the banner */
+				shouldPrintBanner === undefined ||
+				/* Explicit opt in: show the banner */
+				(typeof shouldPrintBanner === "boolean" &&
+					shouldPrintBanner !== false) ||
+				/* Hook resolves to true */
+				(typeof shouldPrintBanner === "function" &&
+					shouldPrintBanner(args) === true)
+			) {
 				await printWranglerBanner();
 			}
 

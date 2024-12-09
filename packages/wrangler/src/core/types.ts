@@ -93,7 +93,7 @@ export type CommandDefinition<
 		 *
 		 * @default true
 		 */
-		printBanner?: boolean;
+		printBanner?: boolean | ((args: HandlerArgs<NamedArgDefs>) => boolean);
 
 		/**
 		 * By default, wrangler will print warnings about the Wrangler configuration file.

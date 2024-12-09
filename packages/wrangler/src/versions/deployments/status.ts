@@ -4,9 +4,9 @@ import { brandColor, gray } from "@cloudflare/cli/colors";
 import { readConfig } from "../../config";
 import { UserError } from "../../errors";
 import * as metrics from "../../metrics";
-import { printWranglerBanner } from "../../update-check";
 import { requireAuth } from "../../user";
 import formatLabelledValues from "../../utils/render-labelled-values";
+import { printWranglerBanner } from "../../wrangler-banner";
 import { fetchLatestDeployment, fetchVersions } from "../api";
 import { getDeploymentSource } from "./list";
 import type {

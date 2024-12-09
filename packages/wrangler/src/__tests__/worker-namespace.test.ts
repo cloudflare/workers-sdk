@@ -1,5 +1,5 @@
 import { http, HttpResponse } from "msw";
-import { printWranglerBanner } from "../update-check";
+import { printWranglerBanner } from "../wrangler-banner";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import {
