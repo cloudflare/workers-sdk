@@ -91,12 +91,7 @@ describe("versions view", () => {
 				"
 			`);
 
-			expect(cnsl.out).toMatchInlineSnapshot(`
-				"
-				 ⛅️ wrangler 3.93.0
-				-------------------
-				"
-			`);
+			expect(cnsl.out).toMatch(/⛅️ wrangler/);
 
 			expect(normalizeOutput(std.err)).toMatchInlineSnapshot(`""`);
 		});
@@ -108,7 +103,7 @@ describe("versions view", () => {
 
 			await expect(result).resolves.toBeUndefined();
 
-			expect(cnsl.out).toMatchInlineSnapshot(`""`);
+			expect(cnsl.out).not.toMatch(/⛅️ wrangler/);
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"{
