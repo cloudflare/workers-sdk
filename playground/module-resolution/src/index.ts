@@ -17,13 +17,29 @@ export default {
 			return test();
 		}
 
-		return new Response(
-			`path not found: '${path}' (the available paths are: ${Object.keys(
-				modules,
-			)
-				.map((path) => path.replace(/^\.\//, '/').replace(/\.ts$/, ''))
-				.join(', ')})`,
-			{ status: 404 },
-		);
+		const html = `<!DOCTYPE html>
+            <body>
+              <h1>Module Resolution App</h1>
+              <p>
+                This app is an example/test for dependencies module resolution being performed in the Cloudflare environment (inside the workerd runtime)
+              </p>
+              <hr />
+              <h2>Available Routes</h2>
+              <ul>
+              ${[...Object.keys(modules), '/@alias/test']
+								.map((path) => path.replace(/^\.\//, '/').replace(/\.ts$/, ''))
+								.map(
+									(route) =>
+										`                <li><a href="${route}">${route}</a></li>`,
+								)
+								.join('\n')}
+              </ul>
+            </body>`;
+
+		return new Response(html, {
+			headers: {
+				'content-type': 'text/html;charset=UTF-8',
+			},
+		});
 	},
 } satisfies ExportedHandler;
