@@ -101,10 +101,7 @@ const config: TemplateConfig = {
 	displayName: "SvelteKit",
 	platform: "workers",
 	copyFiles: {
-		variants: {
-			js: { path: "./js" },
-			ts: { path: "./ts" },
-		},
+		path: "./templates",
 	},
 	path: "templates-experimental/svelte",
 	generate,
