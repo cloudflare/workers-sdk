@@ -1109,7 +1109,7 @@ export async function main(argv: string[]): Promise<void> {
 		// key to fetch) or flags
 
 		try {
-			const configPath = resolveWranglerConfigPath(args);
+			const configPath = resolveWranglerConfigPath(args, {});
 			const rawConfig = readRawConfig(args.config);
 			dispatcher = getMetricsDispatcher({
 				sendMetrics: rawConfig.send_metrics,

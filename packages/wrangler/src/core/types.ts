@@ -106,6 +106,11 @@ export type CommandDefinition<
 		 * Set this value to `false` to skip this.
 		 */
 		provideConfig?: boolean;
+
+		/**
+		 * If true, then look for a redirect file at `.wrangler/deploy/config.json` and use that to find the Wrangler configuration file.
+		 */
+		useConfigRedirect?: boolean;
 	};
 
 	/**
