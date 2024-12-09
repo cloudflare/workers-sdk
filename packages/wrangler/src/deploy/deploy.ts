@@ -6,7 +6,7 @@ import { cancel } from "@cloudflare/cli";
 import { syncAssets } from "../assets";
 import { fetchListResult, fetchResult } from "../cfetch";
 import { configFileName, formatConfigSnippet, printBindings } from "../config";
-import { getBindings } from "../deployment-bundle/bindings";
+import { getBindings, provisionBindings } from "../deployment-bundle/bindings";
 import { bundleWorker } from "../deployment-bundle/bundle";
 import {
 	printBundleSize,
@@ -787,6 +787,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		} else {
 			assert(accountId, "Missing accountId");
 
+			await provisionBindings(bindings, accountId, scriptName);
 			await ensureQueuesExistByConfig(config);
 			let bindingsPrinted = false;
 

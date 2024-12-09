@@ -9,18 +9,17 @@ vi.unmock("child_process");
 vi.unmock("undici");
 
 describe("unstable_dev", () => {
+	runInTempDir();
 	mockConsoleMethods();
 	it("should return Hello World", async () => {
-		const worker = await unstable_dev(
-			"src/__tests__/helpers/worker-scripts/hello-world-worker.js",
-			{
-				ip: "127.0.0.1",
-				experimental: {
-					disableExperimentalWarning: true,
-					disableDevRegistry: true,
-				},
-			}
-		);
+		writeHelloWorldWorker();
+		const worker = await unstable_dev("index.js", {
+			ip: "127.0.0.1",
+			experimental: {
+				disableExperimentalWarning: true,
+				disableDevRegistry: true,
+			},
+		});
 		const resp = await worker.fetch();
 		if (resp) {
 			const text = await resp.text();
@@ -30,49 +29,45 @@ describe("unstable_dev", () => {
 	});
 
 	it("should return the port that the server started on (1)", async () => {
-		const worker = await unstable_dev(
-			"src/__tests__/helpers/worker-scripts/hello-world-worker.js",
-			{
-				ip: "127.0.0.1",
-				experimental: {
-					disableExperimentalWarning: true,
-					disableDevRegistry: true,
-				},
-			}
-		);
+		writeHelloWorldWorker();
+		const worker = await unstable_dev("index.js", {
+			ip: "127.0.0.1",
+			experimental: {
+				disableExperimentalWarning: true,
+				disableDevRegistry: true,
+			},
+		});
 		expect(worker.port).toBeGreaterThan(0);
 		await worker.stop();
 	});
 
 	it("should return the port that the server started on (2)", async () => {
-		const worker = await unstable_dev(
-			"src/__tests__/helpers/worker-scripts/hello-world-worker.js",
-			{
-				ip: "127.0.0.1",
-				experimental: {
-					disableExperimentalWarning: true,
-					disableDevRegistry: true,
-				},
-			}
-		);
+		writeHelloWorldWorker();
+		const worker = await unstable_dev("index.js", {
+			ip: "127.0.0.1",
+			experimental: {
+				disableExperimentalWarning: true,
+				disableDevRegistry: true,
+			},
+		});
 		expect(worker.port).not.toBe(0);
 		await worker.stop();
 	});
 });
 
 describe("unstable dev fetch input protocol", () => {
+	runInTempDir();
+
 	it("should use http localProtocol", async () => {
-		const worker = await unstable_dev(
-			"src/__tests__/helpers/worker-scripts/hello-world-worker.js",
-			{
-				localProtocol: "http",
-				ip: "127.0.0.1",
-				experimental: {
-					disableExperimentalWarning: true,
-					disableDevRegistry: true,
-				},
-			}
-		);
+		writeHelloWorldWorker();
+		const worker = await unstable_dev("index.js", {
+			localProtocol: "http",
+			ip: "127.0.0.1",
+			experimental: {
+				disableExperimentalWarning: true,
+				disableDevRegistry: true,
+			},
+		});
 		const res = await worker.fetch();
 		if (res) {
 			const text = await res.text();
@@ -82,17 +77,15 @@ describe("unstable dev fetch input protocol", () => {
 	});
 
 	it("should use undefined localProtocol", async () => {
-		const worker = await unstable_dev(
-			"src/__tests__/helpers/worker-scripts/hello-world-worker.js",
-			{
-				localProtocol: undefined,
-				ip: "127.0.0.1",
-				experimental: {
-					disableExperimentalWarning: true,
-					disableDevRegistry: true,
-				},
-			}
-		);
+		writeHelloWorldWorker();
+		const worker = await unstable_dev("index.js", {
+			localProtocol: undefined,
+			ip: "127.0.0.1",
+			experimental: {
+				disableExperimentalWarning: true,
+				disableDevRegistry: true,
+			},
+		});
 		const res = await worker.fetch();
 		if (res) {
 			const text = await res.text();
@@ -257,3 +250,14 @@ describe("unstable dev fetch input parsing", () => {
 		await worker.stop();
 	});
 });
+
+const writeHelloWorldWorker = () => {
+	const scriptContent = `
+	export default {
+		fetch(request, env, ctx) {
+			return new Response("Hello World!");
+		},
+	};
+	`;
+	fs.writeFileSync("index.js", scriptContent);
+};
