@@ -22,6 +22,7 @@ import {
 	isRequiredProperty,
 	isString,
 	isStringArray,
+	isValidDateTimeStringFormat,
 	isValidName,
 	notInheritable,
 	validateAdditionalProperties,
@@ -1173,7 +1174,7 @@ function normalizeAndValidateEnvironment(
 			topLevelEnv,
 			rawEnv,
 			"compatibility_date",
-			isString,
+			validateCompatibilityDate,
 			undefined
 		),
 		compatibility_flags: inheritable(
@@ -3214,6 +3215,21 @@ const validateConsumer: ValidatorFn = (diagnostics, field, value, _config) => {
 	}
 
 	return isValid;
+};
+
+const validateCompatibilityDate: ValidatorFn = (diagnostics, field, value) => {
+	if (value === undefined) {
+		return true;
+	}
+
+	if (typeof value !== "string") {
+		diagnostics.errors.push(
+			`Expected "${field}" to be of type string but got ${JSON.stringify(value)}.`
+		);
+		return false;
+	}
+
+	return isValidDateTimeStringFormat(diagnostics, field, value);
 };
 
 const validatePipelineBinding: ValidatorFn = (diagnostics, field, value) => {
