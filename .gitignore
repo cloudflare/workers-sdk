@@ -233,3 +233,5 @@ runtime-versions.md
 .e2e-test-report/
 
 .dev.vars
+
+fixtures/import-npm/package-lock.json

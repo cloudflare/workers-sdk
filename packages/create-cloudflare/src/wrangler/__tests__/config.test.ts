@@ -1,4 +1,5 @@
 import { existsSync } from "fs";
+import TOML from "@iarna/toml";
 import { mockWorkersTypesDirectory } from "helpers/__tests__/mocks";
 import { getWorkerdCompatibilityDate } from "helpers/compatDate";
 import { readFile, writeFile } from "helpers/files";
@@ -83,6 +84,8 @@ describe("updateWranglerToml", () => {
 		expect(newToml).toMatch(`name = "${ctx.project.name}"`);
 		expect(newToml).toMatch(`main = "src/index.ts"`);
 		expect(newToml).toMatch(`compatibility_date = "${mockCompatDate}"`);
+		// Validate the resulting toml by parsing it.
+		TOML.parse(newToml);
 	});
 
 	test("dont replace valid existing compatibility date", async () => {
