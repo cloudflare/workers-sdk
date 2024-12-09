@@ -126,7 +126,7 @@ export function resolvePluginConfig(
 	const root = userConfig.root ? path.resolve(userConfig.root) : process.cwd();
 
 	const configPath = pluginConfig.configPath
-		? path.join(root, pluginConfig.configPath)
+		? path.resolve(root, pluginConfig.configPath)
 		: findWranglerConfig(root);
 
 	assert(
@@ -152,7 +152,7 @@ export function resolvePluginConfig(
 
 	for (const auxiliaryWorker of pluginConfig.auxiliaryWorkers ?? []) {
 		const configResult = getConfigResult(
-			path.join(root, auxiliaryWorker.configPath),
+			path.resolve(root, auxiliaryWorker.configPath),
 			configPaths,
 		);
 

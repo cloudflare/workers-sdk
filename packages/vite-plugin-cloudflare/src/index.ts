@@ -24,13 +24,12 @@ import type { PluginConfig, ResolvedPluginConfig } from './plugin-config';
 import type { Unstable_RawConfig } from 'wrangler';
 
 export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin {
-	let viteUserConfig: vite.UserConfig;
 	let resolvedPluginConfig: ResolvedPluginConfig;
+	let miniflare: Miniflare | undefined;
 
 	return {
 		name: 'vite-plugin-cloudflare',
 		config(userConfig) {
-			viteUserConfig = userConfig;
 			resolvedPluginConfig = resolvePluginConfig(pluginConfig, userConfig);
 
 			return {
@@ -198,43 +197,26 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin {
 				source: JSON.stringify(config),
 			});
 		},
+		handleHotUpdate(options) {
+			if (resolvedPluginConfig.configPaths.has(options.file)) {
+				options.server.restart();
+			}
+		},
+		async buildEnd() {
+			if (miniflare) {
+				await miniflare.dispose();
+				miniflare = undefined;
+			}
+		},
 		async configureServer(viteDevServer) {
-			let error: unknown;
-
-			const miniflare = new Miniflare(
+			miniflare = new Miniflare(
 				getDevMiniflareOptions(resolvedPluginConfig, viteDevServer),
 			);
 
 			await initRunners(resolvedPluginConfig, viteDevServer, miniflare);
-
-			viteDevServer.watcher.on('all', async (_, path) => {
-				if (!resolvedPluginConfig.configPaths.has(path)) {
-					return;
-				}
-
-				try {
-					resolvedPluginConfig = resolvePluginConfig(
-						pluginConfig,
-						viteUserConfig,
-					);
-
-					await miniflare.setOptions(
-						getDevMiniflareOptions(resolvedPluginConfig, viteDevServer),
-					);
-
-					await initRunners(resolvedPluginConfig, viteDevServer, miniflare);
-
-					error = undefined;
-					viteDevServer.environments.client.hot.send({ type: 'full-reload' });
-				} catch (err) {
-					error = err;
-					viteDevServer.environments.client.hot.send({ type: 'full-reload' });
-				}
-			});
+			const routerWorker = await getRouterWorker(miniflare);
 
 			const middleware = createMiddleware(async ({ request }) => {
-				const routerWorker = await getRouterWorker(miniflare);
-
 				return routerWorker.fetch(toMiniflareRequest(request), {
 					redirect: 'manual',
 				}) as any;
@@ -242,10 +224,6 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin {
 
 			return () => {
 				viteDevServer.middlewares.use((req, res, next) => {
-					if (error) {
-						throw error;
-					}
-
 					if (!middleware) {
 						next();
 						return;
