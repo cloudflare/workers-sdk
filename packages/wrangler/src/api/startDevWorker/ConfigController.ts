@@ -9,7 +9,7 @@ import {
 	getScriptName,
 	isLegacyEnv,
 } from "../..";
-import { processAssetsArg, validateAssetsArgsAndConfig } from "../../assets";
+import { getAssetsOptions, validateAssetsArgsAndConfig } from "../../assets";
 import { printBindings, readConfig } from "../../config";
 import { getEntry } from "../../deployment-bundle/entry";
 import {
@@ -18,8 +18,8 @@ import {
 	getInferredHost,
 	maskVars,
 } from "../../dev";
+import { getClassNamesWhichUseSQLite } from "../../dev/class-names-sqlite";
 import { getLocalPersistencePath } from "../../dev/get-local-persistence-path";
-import { getClassNamesWhichUseSQLite } from "../../dev/validate-dev-props";
 import { UserError } from "../../errors";
 import { logger } from "../../logger";
 import { requireApiToken, requireAuth } from "../../user";
@@ -119,7 +119,7 @@ async function resolveDevConfig(
 		origin: {
 			secure:
 				input.dev?.origin?.secure ?? config.dev.upstream_protocol === "https",
-			hostname: host ?? getInferredHost(routes),
+			hostname: host ?? getInferredHost(routes, config.configPath),
 		},
 		liveReload: input.dev?.liveReload || false,
 		testScheduled: input.dev?.testScheduled,
@@ -127,6 +127,7 @@ async function resolveDevConfig(
 		persist: localPersistencePath,
 		registry: input.dev?.registry,
 		bindVectorizeToProd: input.dev?.bindVectorizeToProd ?? false,
+		multiworkerPrimary: input.dev?.multiworkerPrimary,
 	} satisfies StartDevWorkerOptions["dev"];
 }
 
@@ -164,7 +165,11 @@ async function resolveBindings(
 			...bindings,
 			vars: maskedVars,
 		},
-		{ registry: input.dev?.registry, local: !input.dev?.remote }
+		{
+			registry: input.dev?.registry,
+			local: !input.dev?.remote,
+			name: config.name,
+		}
 	);
 
 	return {
@@ -243,7 +248,7 @@ async function resolveConfig(
 
 	const { bindings, unsafe } = await resolveBindings(config, input);
 
-	const assetsOptions = processAssetsArg(
+	const assetsOptions = getAssetsOptions(
 		{
 			assets: input?.assets,
 			script: input.entrypoint,
@@ -252,11 +257,13 @@ async function resolveConfig(
 	);
 
 	const resolved = {
-		name: getScriptName({ name: input.name, env: input.env }, config),
+		name:
+			getScriptName({ name: input.name, env: input.env }, config) ?? "worker",
+		config: config.configPath,
 		compatibilityDate: getDevCompatibilityDate(config, input.compatibilityDate),
 		compatibilityFlags: input.compatibilityFlags ?? config.compatibility_flags,
 		entrypoint: entry.file,
-		directory: entry.directory,
+		projectRoot: entry.projectRoot,
 		bindings,
 		migrations: input.migrations ?? config.migrations,
 		sendMetrics: input.sendMetrics ?? config.send_metrics,

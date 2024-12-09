@@ -1,4 +1,4 @@
-import { readConfig } from "../config";
+import { configFileName, formatConfigSnippet, readConfig } from "../config";
 import { logger } from "../logger";
 import { createConfig } from "./client";
 import { getCacheOptionsFromArgs, getOriginFromArgs, upsertOptions } from ".";
@@ -33,8 +33,16 @@ export async function handler(
 		origin,
 		caching: getCacheOptionsFromArgs(args),
 	});
+	logger.log(`✅ Created new Hyperdrive config: ${database.id}`);
 	logger.log(
-		`✅ Created new Hyperdrive config\n`,
-		JSON.stringify(database, null, 2)
+		`📋 To start using your config from a Worker, add the following binding configuration to your ${configFileName(config.configPath)} file:\n`
+	);
+	logger.log(
+		formatConfigSnippet(
+			{
+				hyperdrive: [{ binding: "HYPERDRIVE", id: database.id }],
+			},
+			config.configPath
+		)
 	);
 }

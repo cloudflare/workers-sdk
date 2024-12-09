@@ -87,6 +87,7 @@ export class RemoteRuntimeController extends RuntimeController {
 					host: props.host,
 					routes: props.routes,
 					sendMetrics: props.sendMetrics,
+					configPath: props.configPath,
 				}
 			);
 			if (!this.#session) {
@@ -157,12 +158,12 @@ export class RemoteRuntimeController extends RuntimeController {
 				host: config.dev.origin?.hostname,
 				routes,
 				sendMetrics: config.sendMetrics,
+				configPath: config.config,
 			});
 
-			const bindings = (
-				await convertBindingsToCfWorkerInitBindings(config.bindings)
-			).bindings;
-
+			const { bindings } = await convertBindingsToCfWorkerInitBindings(
+				config.bindings
+			);
 			const token = await this.#previewToken({
 				bundle,
 				modules: bundle.modules,
@@ -187,6 +188,7 @@ export class RemoteRuntimeController extends RuntimeController {
 				routes,
 				host: config.dev.origin?.hostname,
 				sendMetrics: config.sendMetrics,
+				configPath: config.config,
 			});
 
 			// If we received a new `bundleComplete` event before we were able to

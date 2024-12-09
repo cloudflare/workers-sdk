@@ -7,7 +7,7 @@ import { APIError } from "../../parse";
 import { requireAuth } from "../../user";
 import { createDeployment, fetchLatestDeployments, fetchVersion } from "../api";
 import { printLatestDeployment, printVersions } from "../deploy";
-import { getConfig } from "../list";
+import { getConfig } from "../utils/config";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,

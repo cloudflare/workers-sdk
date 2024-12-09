@@ -2,11 +2,10 @@ import assert from "node:assert";
 import fs from "node:fs";
 import path from "path";
 import { printWranglerBanner } from "../..";
-import { withConfig } from "../../config";
+import { configFileName, withConfig } from "../../config";
 import { confirm } from "../../dialogs";
 import { UserError } from "../../errors";
-import { CI } from "../../is-ci";
-import isInteractive from "../../is-interactive";
+import { isNonInteractiveOrCI } from "../../is-interactive";
 import { logger } from "../../logger";
 import { requireAuth } from "../../user";
 import { createBackup } from "../backups";
@@ -49,7 +48,7 @@ export const ApplyHandler = withConfig<ApplyHandlerOptions>(
 
 		if (!databaseInfo && remote) {
 			throw new UserError(
-				`Couldn't find a D1 DB with the name or binding '${database}' in wrangler.toml.`
+				`Couldn't find a D1 DB with the name or binding '${database}' in your ${configFileName(config.configPath)} file.`
 			);
 		}
 
@@ -62,6 +61,7 @@ export const ApplyHandler = withConfig<ApplyHandlerOptions>(
 			migrationsFolderPath:
 				databaseInfo?.migrationsFolderPath ?? DEFAULT_MIGRATION_PATH,
 			createIfMissing: false,
+			configPath: config.configPath,
 		});
 
 		const migrationsTableName =
@@ -155,7 +155,7 @@ Your database may not be available to serve requests during the migration, conti
 					remote,
 					config,
 					name: database,
-					shouldPrompt: isInteractive() && !CI.isCI(),
+					shouldPrompt: !isNonInteractiveOrCI(),
 					persistTo,
 					command: query,
 					file: undefined,

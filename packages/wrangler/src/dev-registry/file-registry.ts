@@ -65,6 +65,8 @@ async function devRegistry(
 async function startWorkerRegistry(
 	cb?: (registry: WorkerRegistry | undefined) => void
 ) {
+	await loadWorkerDefinitions();
+	cb?.({ ...globalWorkers });
 	globalWatcher ??= watch(DEV_REGISTRY_PATH, {
 		persistent: true,
 	}).on("all", async () => {

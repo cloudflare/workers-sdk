@@ -1,3 +1,5 @@
+import * as fs from "node:fs";
+import { ReadableStream } from "node:stream/web";
 import { Miniflare } from "miniflare";
 import prettyBytes from "pretty-bytes";
 import { fetchGraphqlResult, fetchResult } from "../cfetch";
@@ -12,7 +14,6 @@ import type { ApiCredentials } from "../user";
 import type { R2Bucket } from "@cloudflare/workers-types/experimental";
 import type { ReplaceWorkersTypes } from "miniflare";
 import type { Readable } from "node:stream";
-import type { ReadableStream } from "node:stream/web";
 import type { HeadersInit } from "undici";
 
 /**
@@ -924,9 +925,191 @@ export async function updateR2DevDomain(
 	return result;
 }
 
+export interface LifecycleCondition {
+	type: "Age" | "Date";
+	maxAge?: number;
+	date?: string;
+}
+
+export interface LifecycleRule {
+	id: string;
+	enabled: boolean;
+	conditions: {
+		prefix?: string;
+	};
+	deleteObjectsTransition?: {
+		condition: LifecycleCondition;
+	};
+	storageClassTransitions?: Array<{
+		condition: LifecycleCondition;
+		storageClass: "InfrequentAccess";
+	}>;
+	abortMultipartUploadsTransition?: {
+		condition: LifecycleCondition;
+	};
+}
+
+function formatCondition(condition: LifecycleCondition): string {
+	if (condition.type === "Age" && typeof condition.maxAge === "number") {
+		const days = condition.maxAge / 86400; // Convert seconds to days
+		return `after ${days} days`;
+	} else if (condition.type === "Date" && condition.date) {
+		const date = new Date(condition.date);
+		const displayDate = date.toISOString().split("T")[0];
+		return `on ${displayDate}`;
+	}
+
+	return "";
+}
+
+export function tableFromLifecycleRulesResponse(rules: LifecycleRule[]): {
+	id: string;
+	enabled: string;
+	prefix: string;
+	action: string;
+}[] {
+	const rows = [];
+	for (const rule of rules) {
+		const actions = [];
+
+		if (rule.deleteObjectsTransition) {
+			const action = "Expire objects";
+			const condition = formatCondition(rule.deleteObjectsTransition.condition);
+			actions.push(`${action} ${condition}`);
+		}
+		if (
+			rule.storageClassTransitions &&
+			rule.storageClassTransitions.length > 0
+		) {
+			for (const transition of rule.storageClassTransitions) {
+				const action = "Transition to Infrequent Access";
+				const condition = formatCondition(transition.condition);
+				actions.push(`${action} ${condition}`);
+			}
+		}
+		if (rule.abortMultipartUploadsTransition) {
+			const action = "Abort incomplete multipart uploads";
+			const condition = formatCondition(
+				rule.abortMultipartUploadsTransition.condition
+			);
+			actions.push(`${action} ${condition}`);
+		}
+
+		rows.push({
+			id: rule.id,
+			enabled: rule.enabled ? "Yes" : "No",
+			prefix: rule.conditions.prefix || "(all prefixes)",
+			action: actions.join(", ") || "(none)",
+		});
+	}
+	return rows;
+}
+
+export async function getLifecycleRules(
+	accountId: string,
+	bucket: string,
+	jurisdiction?: string
+): Promise<LifecycleRule[]> {
+	const headers: HeadersInit = {};
+	if (jurisdiction) {
+		headers["cf-r2-jurisdiction"] = jurisdiction;
+	}
+
+	const result = await fetchResult<{ rules: LifecycleRule[] }>(
+		`/accounts/${accountId}/r2/buckets/${bucket}/lifecycle`,
+		{
+			method: "GET",
+			headers,
+		}
+	);
+	return result.rules;
+}
+
+export async function putLifecycleRules(
+	accountId: string,
+	bucket: string,
+	rules: LifecycleRule[],
+	jurisdiction?: string
+): Promise<void> {
+	const headers: HeadersInit = {
+		"Content-Type": "application/json",
+	};
+	if (jurisdiction) {
+		headers["cf-r2-jurisdiction"] = jurisdiction;
+	}
+
+	await fetchResult(`/accounts/${accountId}/r2/buckets/${bucket}/lifecycle`, {
+		method: "PUT",
+		headers,
+		body: JSON.stringify({ rules: rules }),
+	});
+}
+
+export function formatActionDescription(action: string): string {
+	switch (action) {
+		case "expire":
+			return "expire objects";
+		case "transition":
+			return "transition to Infrequent Access storage class";
+		case "abort-multipart":
+			return "abort incomplete multipart uploads";
+		default:
+			return action;
+	}
+}
+
+export function isValidDate(dateString: string): boolean {
+	const regex = /^\d{4}-\d{2}-\d{2}$/;
+	if (!regex.test(dateString)) {
+		return false;
+	}
+	const date = new Date(`${dateString}T00:00:00.000Z`);
+	const timestamp = date.getTime();
+	if (isNaN(timestamp)) {
+		return false;
+	}
+	const [year, month, day] = dateString.split("-").map(Number);
+	return (
+		date.getUTCFullYear() === year &&
+		date.getUTCMonth() + 1 === month &&
+		date.getUTCDate() === day
+	);
+}
+
+export function isNonNegativeNumber(str: string): boolean {
+	if (str === "") {
+		return false;
+	}
+	const num = Number(str);
+	return num >= 0;
+}
+
 /**
  * R2 bucket names must only contain alphanumeric and - characters.
  */
 export function isValidR2BucketName(name: string | undefined): name is string {
 	return typeof name === "string" && /^[a-zA-Z][a-zA-Z0-9-]*$/.test(name);
+}
+
+const CHUNK_SIZE = 1024;
+export async function createFileReadableStream(filePath: string) {
+	// Based off https://streams.spec.whatwg.org/#example-rs-pull
+	const handle = await fs.promises.open(filePath, "r");
+	let position = 0;
+	return new ReadableStream({
+		async pull(controller) {
+			const buffer = new Uint8Array(CHUNK_SIZE);
+			const { bytesRead } = await handle.read(buffer, 0, CHUNK_SIZE, position);
+			if (bytesRead === 0) {
+				await handle.close();
+				controller.close();
+			} else {
+				position += bytesRead;
+				controller.enqueue(buffer.subarray(0, bytesRead));
+			}
+		},
+		cancel() {
+			return handle.close();
+		},
+	});
 }

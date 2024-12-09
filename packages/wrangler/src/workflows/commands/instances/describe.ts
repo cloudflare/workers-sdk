@@ -7,7 +7,7 @@ import {
 } from "date-fns";
 import { ms } from "itty-time";
 import { fetchResult } from "../../../cfetch";
-import { defineCommand } from "../../../core";
+import { createCommand } from "../../../core/create-command";
 import { logger } from "../../../logger";
 import { requireAuth } from "../../../user";
 import formatLabelledValues from "../../../utils/render-labelled-values";
@@ -24,9 +24,7 @@ import type {
 	InstanceTerminateLog,
 } from "../../types";
 
-const command = defineCommand({
-	command: "wrangler workflows instances describe",
-
+export const workflowsInstancesDescribeCommand = createCommand({
 	metadata: {
 		description:
 			"Describe a workflow instance - see its logs, retries and errors",
@@ -141,7 +139,7 @@ const command = defineCommand({
 });
 
 function logStep(
-	args: typeof command.args,
+	args: typeof workflowsInstancesDescribeCommand.args,
 	step: InstanceStepLog | InstanceSleepLog | InstanceTerminateLog
 ) {
 	logRaw("");

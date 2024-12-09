@@ -1,4 +1,5 @@
 import fs from "node:fs";
+import TOML from "@iarna/toml";
 import chalk from "chalk";
 import dotenv from "dotenv";
 import { findUpSync } from "find-up";
@@ -28,95 +29,64 @@ export type {
 	RawEnvironment,
 } from "./environment";
 
-type ReadConfigCommandArgs = NormalizeAndValidateConfigArgs & {
-	experimentalJsonConfig?: boolean | undefined;
-};
+export function configFormat(
+	configPath: string | undefined
+): "jsonc" | "toml" | "none" {
+	if (configPath?.endsWith("toml")) {
+		return "toml";
+	} else if (configPath?.endsWith("json") || configPath?.endsWith("jsonc")) {
+		return "jsonc";
+	}
+	return "none";
+}
+
+export function configFileName(configPath: string | undefined) {
+	const format = configFormat(configPath);
+	if (format === "toml") {
+		return "wrangler.toml";
+	} else if (format === "jsonc") {
+		return "wrangler.json";
+	} else {
+		return "Wrangler configuration";
+	}
+}
+
+export function formatConfigSnippet(
+	snippet: RawConfig,
+	configPath: Config["configPath"],
+	formatted = true
+) {
+	const format = configFormat(configPath);
+	if (format === "toml") {
+		return TOML.stringify(snippet as TOML.JsonMap);
+	} else {
+		return formatted
+			? JSON.stringify(snippet, null, 2)
+			: JSON.stringify(snippet);
+	}
+}
+
+type ReadConfigCommandArgs = NormalizeAndValidateConfigArgs;
 
 /**
  * Get the Wrangler configuration; read it from the give `configPath` if available.
  */
 export function readConfig(
 	configPath: string | undefined,
-	// Include command specific args as well as the wrangler global flags
 	args: ReadConfigCommandArgs,
-	requirePagesConfig: true
-): Omit<Config, "pages_build_output_dir"> & { pages_build_output_dir: string };
-export function readConfig(
-	configPath: string | undefined,
-	// Include command specific args as well as the wrangler global flags
-	args: ReadConfigCommandArgs,
-	requirePagesConfig?: boolean,
-	hideWarnings?: boolean
+	options?: { hideWarnings?: boolean }
 ): Config;
 export function readConfig(
 	configPath: string | undefined,
-	// Include command specific args as well as the wrangler global flags
 	args: ReadConfigCommandArgs,
-	requirePagesConfig?: boolean,
-	hideWarnings: boolean = false
+	{ hideWarnings = false }: { hideWarnings?: boolean } = {}
 ): Config {
-	const isJsonConfigEnabled =
-		getFlag("JSON_CONFIG_FILE") ?? args.experimentalJsonConfig;
-	let rawConfig: RawConfig = {};
-
 	if (!configPath) {
-		configPath = findWranglerToml(process.cwd(), isJsonConfigEnabled);
+		configPath = findWranglerConfig(process.cwd());
 	}
 
-	try {
-		// Load the configuration from disk if available
-		if (configPath?.endsWith("toml")) {
-			rawConfig = parseTOML(readFileSync(configPath), configPath);
-		} else if (configPath?.endsWith("json") || configPath?.endsWith("jsonc")) {
-			rawConfig = parseJSONC(readFileSync(configPath), configPath);
-		}
-	} catch (e) {
-		// Swallow parsing errors if we require a pages config file.
-		// At this point, we can't tell if the user intended to provide a Pages config file (and so should see the parsing error) or not (and so shouldn't).
-		// We err on the side of swallowing the error so as to not break existing projects
-		if (requirePagesConfig) {
-			logger.error(e);
-			throw new FatalError(
-				"Your wrangler.toml is not a valid Pages config file",
-				EXIT_CODE_INVALID_PAGES_CONFIG
-			);
-		} else {
-			throw e;
-		}
-	}
+	const rawConfig = readRawConfig(configPath);
 
-	/**
-	 * Check if configuration file belongs to a Pages project.
-	 *
-	 * The `pages_build_output_dir` config key is used to determine if the
-	 * configuration file belongs to a Workers or Pages project. This key
-	 * should always be set for Pages but never for Workers. Furthermore,
-	 * Pages projects currently have support for `wrangler.toml` only,
-	 * so we should error if `wrangler.json` || `wrangler.jsonc` is detected
-	 * in a Pages project
-	 */
-	const isPagesConfigFile = isPagesConfig(rawConfig);
-	if (!isPagesConfigFile && requirePagesConfig) {
-		throw new FatalError(
-			"Your wrangler.toml is not a valid Pages config file",
-			EXIT_CODE_INVALID_PAGES_CONFIG
-		);
-	}
-	if (
-		isPagesConfigFile &&
-		(configPath?.endsWith("json") ||
-			configPath?.endsWith("jsonc") ||
-			isJsonConfigEnabled)
-	) {
-		throw new UserError(
-			`Pages doesn't currently support JSON formatted config \`${
-				configPath ?? "wrangler.json"
-			}\`. Please use wrangler.toml instead.`
-		);
-	}
-
-	// Process the top-level configuration. This is common for both
-	// Workers and Pages
 	const { config, diagnostics } = normalizeAndValidateConfig(
 		rawConfig,
 		configPath,
@@ -130,70 +100,101 @@ export function readConfig(
 		throw new UserError(diagnostics.renderErrors());
 	}
 
-	// If we detected a Pages project, run config file validation against
-	// Pages specific validation rules
-	if (isPagesConfigFile) {
-		logger.debug(
-			`Configuration file belonging to ⚡️ Pages ⚡️ project detected.`
-		);
-
-		const envNames = rawConfig.env ? Object.keys(rawConfig.env) : [];
-		const projectName = rawConfig?.name;
-		const pagesDiagnostics = validatePagesConfig(config, envNames, projectName);
-
-		if (pagesDiagnostics.hasWarnings()) {
-			logger.warn(pagesDiagnostics.renderWarnings());
-		}
-		if (pagesDiagnostics.hasErrors()) {
-			throw new UserError(pagesDiagnostics.renderErrors());
-		}
-	}
-
-	applyPythonConfig(config, args);
-
 	return config;
 }
 
-/**
- * Modifies the provided config to support python workers, if the entrypoint is a .py file
- */
-function applyPythonConfig(config: Config, args: ReadConfigCommandArgs) {
-	const mainModule = "script" in args ? args.script : config.main;
-	if (typeof mainModule === "string" && mainModule.endsWith(".py")) {
-		// Workers with a python entrypoint should have bundling turned off, since all of Wrangler's bundling is JS/TS specific
-		config.no_bundle = true;
-
-		// Workers with a python entrypoint need module rules for "*.py". Add one automatically as a DX nicety
-		if (!config.rules.some((rule) => rule.type === "PythonModule")) {
-			config.rules.push({ type: "PythonModule", globs: ["**/*.py"] });
-		}
-		if (!config.compatibility_flags.includes("python_workers")) {
-			throw new UserError(
-				"The `python_workers` compatibility flag is required to use Python."
-			);
-		}
+export function readPagesConfig(
+	configPath: string | undefined,
+	args: ReadConfigCommandArgs,
+	{ hideWarnings = false }: { hideWarnings?: boolean } = {}
+): Omit<Config, "pages_build_output_dir"> & { pages_build_output_dir: string } {
+	if (!configPath) {
+		configPath = findWranglerConfig(process.cwd());
 	}
-}
 
-/**
- * Find the wrangler.toml file by searching up the file-system
- * from the current working directory.
- */
-export function findWranglerToml(
-	referencePath: string = process.cwd(),
-	preferJson = false
-): string | undefined {
-	if (preferJson) {
-		return (
-			findUpSync(`wrangler.json`, { cwd: referencePath }) ??
-			findUpSync(`wrangler.jsonc`, { cwd: referencePath }) ??
-			findUpSync(`wrangler.toml`, { cwd: referencePath })
+	let rawConfig: RawConfig;
+	try {
+		rawConfig = readRawConfig(configPath);
+	} catch (e) {
+		logger.error(e);
+		throw new FatalError(
+			`Your ${configFileName(configPath)} file is not a valid Pages config file`,
+			EXIT_CODE_INVALID_PAGES_CONFIG
 		);
 	}
-	return findUpSync(`wrangler.toml`, { cwd: referencePath });
+
+	if (!isPagesConfig(rawConfig)) {
+		throw new FatalError(
+			`Your ${configFileName(configPath)} file is not a valid Pages config file`,
+			EXIT_CODE_INVALID_PAGES_CONFIG
+		);
+	}
+
+	const { config, diagnostics } = normalizeAndValidateConfig(
+		rawConfig,
+		configPath,
+		args
+	);
+
+	if (diagnostics.hasWarnings() && !hideWarnings) {
+		logger.warn(diagnostics.renderWarnings());
+	}
+	if (diagnostics.hasErrors()) {
+		throw new UserError(diagnostics.renderErrors());
+	}
+
+	logger.debug(
+		`Configuration file belonging to ⚡️ Pages ⚡️ project detected.`
+	);
+
+	const envNames = rawConfig.env ? Object.keys(rawConfig.env) : [];
+	const projectName = rawConfig?.name;
+	const pagesDiagnostics = validatePagesConfig(config, envNames, projectName);
+
+	if (pagesDiagnostics.hasWarnings()) {
+		logger.warn(pagesDiagnostics.renderWarnings());
+	}
+	if (pagesDiagnostics.hasErrors()) {
+		throw new UserError(pagesDiagnostics.renderErrors());
+	}
+
+	return config as Omit<Config, "pages_build_output_dir"> & {
+		pages_build_output_dir: string;
+	};
 }
 
-function addLocalSuffix(id: string, local: boolean = false) {
+export const readRawConfig = (configPath: string | undefined): RawConfig => {
+	// Load the configuration from disk if available
+	if (configPath?.endsWith("toml")) {
+		return parseTOML(readFileSync(configPath), configPath);
+	} else if (configPath?.endsWith("json") || configPath?.endsWith("jsonc")) {
+		return parseJSONC(readFileSync(configPath), configPath);
+	}
+	return {};
+};
+
+/**
+ * Find the wrangler config file by searching up the file-system
+ * from the current working directory.
+ */
+export function findWranglerConfig(
+	referencePath: string = process.cwd()
+): string | undefined {
+	return (
+		findUpSync(`wrangler.json`, { cwd: referencePath }) ??
+		findUpSync(`wrangler.jsonc`, { cwd: referencePath }) ??
+		findUpSync(`wrangler.toml`, { cwd: referencePath })
+	);
+}
+
+function addLocalSuffix(
+	id: string | symbol | undefined,
+	local: boolean = false
+) {
+	if (!id || typeof id === "symbol") {
+		return local ? "(local)" : "(remote)";
+	}
+
 	return `${id}${local ? " (local)" : ""}`;
 }
 
@@ -233,8 +234,9 @@ export const friendlyBindingNames: Record<
 export function printBindings(
 	bindings: CfWorkerInit["bindings"],
 	context: {
-		registry?: WorkerRegistry;
+		registry?: WorkerRegistry | null;
 		local?: boolean;
+		name?: string;
 	} = {}
 ) {
 	let hasConnectionStatus = false;
@@ -296,7 +298,7 @@ export function printBindings(
 				({ name, class_name, script_name }) => {
 					let value = class_name;
 					if (script_name) {
-						if (context.local) {
+						if (context.local && context.registry !== null) {
 							const registryDefinition = context.registry?.[script_name];
 
 							hasConnectionStatus = true;
@@ -387,13 +389,16 @@ export function printBindings(
 			name: friendlyBindingNames.d1_databases,
 			entries: d1_databases.map(
 				({ binding, database_name, database_id, preview_database_id }) => {
-					let databaseValue = `${database_id}`;
-					if (database_name) {
-						databaseValue = `${database_name} (${database_id})`;
-					}
+					const remoteDatabaseId =
+						typeof database_id === "string" ? database_id : null;
+					let databaseValue =
+						remoteDatabaseId && database_name
+							? `${database_name} (${remoteDatabaseId})`
+							: remoteDatabaseId ?? database_name;
+
 					//database_id is local when running `wrangler dev --local`
 					if (preview_database_id && database_id !== "local") {
-						databaseValue += `, Preview: (${preview_database_id})`;
+						databaseValue = `${databaseValue ? `${databaseValue}, ` : ""}Preview: (${preview_database_id})`;
 					}
 					return {
 						key: binding,
@@ -432,12 +437,15 @@ export function printBindings(
 		output.push({
 			name: friendlyBindingNames.r2_buckets,
 			entries: r2_buckets.map(({ binding, bucket_name, jurisdiction }) => {
+				let name = typeof bucket_name === "string" ? bucket_name : "";
+
 				if (jurisdiction !== undefined) {
-					bucket_name += ` (${jurisdiction})`;
+					name += ` (${jurisdiction})`;
 				}
+
 				return {
 					key: binding,
-					value: addLocalSuffix(bucket_name, context.local),
+					value: addLocalSuffix(name, context.local),
 				};
 			}),
 		});
@@ -464,7 +472,7 @@ export function printBindings(
 					value += `#${entrypoint}`;
 				}
 
-				if (context.local) {
+				if (context.local && context.registry !== null) {
 					const registryDefinition = context.registry?.[service];
 					hasConnectionStatus = true;
 
@@ -630,7 +638,7 @@ export function printBindings(
 	}
 
 	const message = [
-		`Your worker has access to the following bindings:`,
+		`${context.name && getFlag("MULTIWORKER") ? chalk.blue(context.name) : "Your worker"} has access to the following bindings:`,
 		...output
 			.map((bindingGroup) => {
 				return [
@@ -653,10 +661,11 @@ export function printBindings(
 export function withConfig<T>(
 	handler: (
 		t: OnlyCamelCase<T & CommonYargsOptions> & { config: Config }
-	) => Promise<void>
+	) => Promise<void>,
+	options?: Parameters<typeof readConfig>[2]
 ) {
 	return (t: OnlyCamelCase<T & CommonYargsOptions>) => {
-		return handler({ ...t, config: readConfig(t.config, t) });
+		return handler({ ...t, config: readConfig(t.config, t, options) });
 	};
 }
 
@@ -670,7 +679,13 @@ function tryLoadDotEnv(path: string): DotEnv | undefined {
 		const parsed = dotenv.parse(fs.readFileSync(path));
 		return { path, parsed };
 	} catch (e) {
-		logger.debug(`Failed to load .env file "${path}":`, e);
+		if ((e as { code: string }).code === "ENOENT") {
+			logger.debug(
+				`.env file not found at "${path}". Continuing... For more details, refer to https://developers.cloudflare.com/workers/wrangler/system-environment-variables/`
+			);
+		} else {
+			logger.debug(`Failed to load .env file "${path}":`, e);
+		}
 	}
 }
 

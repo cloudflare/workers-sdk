@@ -1,13 +1,13 @@
 import { Blob } from "node:buffer";
 import { arrayBuffer } from "node:stream/consumers";
 import { StringDecoder } from "node:string_decoder";
-import { readConfig } from "../config";
+import { formatConfigSnippet, readConfig } from "../config";
+import { demandOneOfOption } from "../core";
 import {
-	defineAlias,
-	defineCommand,
-	defineNamespace,
-	demandOneOfOption,
-} from "../core";
+	createAlias,
+	createCommand,
+	createNamespace,
+} from "../core/create-command";
 import { confirm } from "../dialogs";
 import { CommandLineArgsError, UserError } from "../errors";
 import { logger } from "../logger";
@@ -33,8 +33,7 @@ import {
 import type { EventNames } from "../metrics";
 import type { KeyValue, NamespaceKeyInfo } from "./helpers";
 
-defineAlias({
-	command: "wrangler kv:key",
+export const kvKeyAlias = createAlias({
 	aliasOf: "wrangler kv key",
 	metadata: {
 		deprecated: true,
@@ -43,8 +42,8 @@ defineAlias({
 		hidden: true,
 	},
 });
-defineAlias({
-	command: "wrangler kv:namespace",
+
+export const kvNamespaceAlias = createAlias({
 	aliasOf: "wrangler kv namespace",
 	metadata: {
 		deprecated: true,
@@ -53,8 +52,8 @@ defineAlias({
 		hidden: true,
 	},
 });
-defineAlias({
-	command: "wrangler kv:bulk",
+
+export const kvBulkAlias = createAlias({
 	aliasOf: "wrangler kv bulk",
 	metadata: {
 		deprecated: true,
@@ -64,8 +63,7 @@ defineAlias({
 	},
 });
 
-defineNamespace({
-	command: "wrangler kv",
+export const kvNamespace = createNamespace({
 	metadata: {
 		description: "🗂️  Manage Workers KV Namespaces",
 		status: "stable",
@@ -73,8 +71,7 @@ defineNamespace({
 	},
 });
 
-defineNamespace({
-	command: "wrangler kv namespace",
+export const kvNamespaceNamespace = createNamespace({
 	metadata: {
 		description: `Interact with your Workers KV Namespaces`,
 		status: "stable",
@@ -82,8 +79,7 @@ defineNamespace({
 	},
 });
 
-defineNamespace({
-	command: "wrangler kv key",
+export const kvKeyNamespace = createNamespace({
 	metadata: {
 		description: `Individually manage Workers KV key-value pairs`,
 		status: "stable",
@@ -91,8 +87,7 @@ defineNamespace({
 	},
 });
 
-defineNamespace({
-	command: "wrangler kv bulk",
+export const kvBulkNamespace = createNamespace({
 	metadata: {
 		description: `Interact with multiple Workers KV key-value pairs at once`,
 		status: "stable",
@@ -100,9 +95,7 @@ defineNamespace({
 	},
 });
 
-defineCommand({
-	command: "wrangler kv namespace create",
-
+export const kvNamespaceCreateCommand = createCommand({
 	metadata: {
 		description: "Create a new namespace",
 		status: "stable",
@@ -141,7 +134,7 @@ defineCommand({
 
 		logger.log(`🌀 Creating namespace with title "${title}"`);
 		const namespaceId = await createKVNamespace(accountId, title);
-		await metrics.sendMetricsEvent("create kv namespace", {
+		metrics.sendMetricsEvent("create kv namespace", {
 			sendMetrics: config.send_metrics,
 		});
 
@@ -151,17 +144,24 @@ defineCommand({
 		logger.log(
 			`Add the following to your configuration file in your kv_namespaces array${envString}:`
 		);
-		logger.log(`[[kv_namespaces]]`);
-		logger.log(`binding = "${getValidBindingName(args.namespace, "KV")}"`);
-		logger.log(`${previewString}id = "${namespaceId}"`);
 
-		// TODO: automatically write this block to the wrangler.toml config file??
+		logger.log(
+			formatConfigSnippet(
+				{
+					kv_namespaces: [
+						{
+							binding: getValidBindingName(args.namespace, "KV"),
+							[`${previewString}id`]: namespaceId,
+						},
+					],
+				},
+				config.configPath
+			)
+		);
 	},
 });
 
-defineCommand({
-	command: "wrangler kv namespace list",
-
+export const kvNamespaceListCommand = createCommand({
 	metadata: {
 		description:
 			"Output a list of all KV namespaces associated with your account id",
@@ -180,15 +180,13 @@ defineCommand({
 		// TODO: we should show bindings if they exist for given ids
 
 		logger.log(JSON.stringify(await listKVNamespaces(accountId), null, "  "));
-		await metrics.sendMetricsEvent("list kv namespaces", {
+		metrics.sendMetricsEvent("list kv namespaces", {
 			sendMetrics: config.send_metrics,
 		});
 	},
 });
 
-defineCommand({
-	command: "wrangler kv namespace delete",
-
+export const kvNamespaceDeleteCommand = createCommand({
 	metadata: {
 		description: "Delete a given namespace.",
 		status: "stable",
@@ -233,7 +231,7 @@ defineCommand({
 		logger.log(`Deleting KV namespace ${id}.`);
 		await deleteKVNamespace(accountId, id);
 		logger.log(`Deleted KV namespace ${id}.`);
-		await metrics.sendMetricsEvent("delete kv namespace", {
+		metrics.sendMetricsEvent("delete kv namespace", {
 			sendMetrics: config.send_metrics,
 		});
 
@@ -257,9 +255,7 @@ defineCommand({
 	},
 });
 
-defineCommand({
-	command: "wrangler kv key put",
-
+export const kvKeyPutCommand = createCommand({
 	metadata: {
 		description: "Write a single key/value pair to the given namespace",
 		status: "stable",
@@ -379,15 +375,13 @@ defineCommand({
 			metricEvent = "write kv key-value";
 		}
 
-		await metrics.sendMetricsEvent(metricEvent, {
+		metrics.sendMetricsEvent(metricEvent, {
 			sendMetrics: config.send_metrics,
 		});
 	},
 });
 
-defineCommand({
-	command: "wrangler kv key list",
-
+export const kvKeyListCommand = createCommand({
 	metadata: {
 		description: "Output a list of all keys in a given namespace",
 		status: "stable",
@@ -455,15 +449,13 @@ defineCommand({
 		}
 
 		logger.log(JSON.stringify(result, undefined, 2));
-		await metrics.sendMetricsEvent(metricEvent, {
+		metrics.sendMetricsEvent(metricEvent, {
 			sendMetrics: config.send_metrics,
 		});
 	},
 });
 
-defineCommand({
-	command: "wrangler kv key get",
-
+export const kvKeyGetCommand = createCommand({
 	metadata: {
 		description: "Read a single value by key from the given namespace",
 		status: "stable",
@@ -552,15 +544,13 @@ defineCommand({
 		} else {
 			process.stdout.write(bufferKVValue);
 		}
-		await metrics.sendMetricsEvent(metricEvent, {
+		metrics.sendMetricsEvent(metricEvent, {
 			sendMetrics: config.send_metrics,
 		});
 	},
 });
 
-defineCommand({
-	command: "wrangler kv key delete",
-
+export const kvKeyDeleteCommand = createCommand({
 	metadata: {
 		description: "Remove a single key value pair from the given namespace",
 		status: "stable",
@@ -620,15 +610,13 @@ defineCommand({
 			await deleteKVKeyValue(accountId, namespaceId, key);
 			metricEvent = "delete kv key-value";
 		}
-		await metrics.sendMetricsEvent(metricEvent, {
+		metrics.sendMetricsEvent(metricEvent, {
 			sendMetrics: config.send_metrics,
 		});
 	},
 });
 
-defineCommand({
-	command: "wrangler kv bulk put",
-
+export const kvBulkPutCommand = createCommand({
 	metadata: {
 		description: "Upload multiple key-value pairs to a namespace",
 		status: "stable",
@@ -763,16 +751,14 @@ defineCommand({
 			metricEvent = "write kv key-values (bulk)";
 		}
 
-		await metrics.sendMetricsEvent(metricEvent, {
+		metrics.sendMetricsEvent(metricEvent, {
 			sendMetrics: config.send_metrics,
 		});
 		logger.log("Success!");
 	},
 });
 
-defineCommand({
-	command: "wrangler kv bulk delete",
-
+export const kvBulkDeleteCommand = createCommand({
 	metadata: {
 		description: "Delete multiple key-value pairs from a namespace",
 		status: "stable",
@@ -879,7 +865,7 @@ defineCommand({
 			metricEvent = "delete kv key-values (bulk)";
 		}
 
-		await metrics.sendMetricsEvent(metricEvent, {
+		metrics.sendMetricsEvent(metricEvent, {
 			sendMetrics: config.send_metrics,
 		});
 

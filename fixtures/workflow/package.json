@@ -4,10 +4,10 @@
 	"scripts": {
 		"deploy": "wrangler deploy",
 		"start": "wrangler dev",
-		"test:ci": "vitest"
+		"test:ci": "vitest run"
 	},
 	"devDependencies": {
-		"@cloudflare/workers-types": "^4.20241106.0",
+		"@cloudflare/workers-types": "^4.20241205.0",
 		"undici": "catalog:default",
 		"wrangler": "workspace:*"
 	},

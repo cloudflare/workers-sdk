@@ -1,6 +1,6 @@
 import { setTimeout } from "node:timers/promises";
 import onExit from "signal-exit";
-import { readConfig } from "../config";
+import { configFileName, readConfig } from "../config";
 import { createFatalError, UserError } from "../errors";
 import {
 	getLegacyScriptName,
@@ -99,7 +99,7 @@ export async function tailHandler(args: TailArgs) {
 				"For Pages, please run `wrangler pages deployment tail` instead."
 		);
 	}
-	await metrics.sendMetricsEvent("begin log stream", {
+	metrics.sendMetricsEvent("begin log stream", {
 		sendMetrics: config.send_metrics,
 	});
 
@@ -109,10 +109,13 @@ export async function tailHandler(args: TailArgs) {
 
 	// Worker names can't contain "." (and most routes should), so use that as a discriminator
 	if (args.worker?.includes(".")) {
-		scriptName = await getWorkerForZone({
-			worker: args.worker,
-			accountId,
-		});
+		scriptName = await getWorkerForZone(
+			{
+				worker: args.worker,
+				accountId,
+			},
+			config.configPath
+		);
 		if (args.format === "pretty") {
 			logger.log(`Connecting to worker ${scriptName} at route ${args.worker}`);
 		}
@@ -122,7 +125,7 @@ export async function tailHandler(args: TailArgs) {
 
 	if (!scriptName) {
 		throw new UserError(
-			"Required Worker name missing. Please specify the Worker name in wrangler.toml, or pass it as an argument with `wrangler tail <worker-name>`"
+			`Required Worker name missing. Please specify the Worker name in your ${configFileName(config.configPath)} file, or pass it as an argument with \`wrangler tail <worker-name>\``
 		);
 	}
 
@@ -170,7 +173,7 @@ export async function tailHandler(args: TailArgs) {
 				await setTimeout(100);
 				break;
 			case tail.CLOSED:
-				await metrics.sendMetricsEvent("end log stream", {
+				metrics.sendMetricsEvent("end log stream", {
 					sendMetrics: config.send_metrics,
 				});
 				throw new Error(
@@ -191,7 +194,7 @@ export async function tailHandler(args: TailArgs) {
 		cancelPing();
 		tail.terminate();
 		await deleteTail();
-		await metrics.sendMetricsEvent("end log stream", {
+		metrics.sendMetricsEvent("end log stream", {
 			sendMetrics: config.send_metrics,
 		});
 	}

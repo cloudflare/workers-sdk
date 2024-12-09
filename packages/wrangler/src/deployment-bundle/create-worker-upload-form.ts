@@ -2,6 +2,8 @@ import assert from "node:assert";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { File, FormData } from "undici";
+import { UserError } from "../errors";
+import { INHERIT_SYMBOL } from "./bindings";
 import { handleUnsafeCapnp } from "./capnp";
 import type { Observability } from "../config/environment";
 import type {
@@ -194,6 +196,7 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 	const assetConfig = {
 		html_handling: assets?.assetConfig?.html_handling,
 		not_found_handling: assets?.assetConfig?.not_found_handling,
+		serve_directly: assets?.assetConfig?.serve_directly,
 	};
 
 	// short circuit if static assets upload only
@@ -224,11 +227,22 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 	});
 
 	bindings.kv_namespaces?.forEach(({ id, binding }) => {
-		metadataBindings.push({
-			name: binding,
-			type: "kv_namespace",
-			namespace_id: id,
-		});
+		if (id === undefined) {
+			throw new UserError(`${binding} bindings must have an "id" field`);
+		}
+
+		if (id === INHERIT_SYMBOL) {
+			metadataBindings.push({
+				name: binding,
+				type: "inherit",
+			});
+		} else {
+			metadataBindings.push({
+				name: binding,
+				type: "kv_namespace",
+				namespace_id: id,
+			});
+		}
 	});
 
 	bindings.send_email?.forEach(
@@ -274,22 +288,48 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 	});
 
 	bindings.r2_buckets?.forEach(({ binding, bucket_name, jurisdiction }) => {
-		metadataBindings.push({
-			name: binding,
-			type: "r2_bucket",
-			bucket_name,
-			jurisdiction,
-		});
+		if (bucket_name === undefined) {
+			throw new UserError(
+				`${binding} bindings must have a "bucket_name" field`
+			);
+		}
+
+		if (bucket_name === INHERIT_SYMBOL) {
+			metadataBindings.push({
+				name: binding,
+				type: "inherit",
+			});
+		} else {
+			metadataBindings.push({
+				name: binding,
+				type: "r2_bucket",
+				bucket_name,
+				jurisdiction,
+			});
+		}
 	});
 
 	bindings.d1_databases?.forEach(
 		({ binding, database_id, database_internal_env }) => {
-			metadataBindings.push({
-				name: binding,
-				type: "d1",
-				id: database_id,
-				internalEnv: database_internal_env,
-			});
+			if (database_id === undefined) {
+				throw new UserError(
+					`${binding} bindings must have a "database_id" field`
+				);
+			}
+
+			if (database_id === INHERIT_SYMBOL) {
+				metadataBindings.push({
+					name: binding,
+					type: "inherit",
+				});
+			} else {
+				metadataBindings.push({
+					name: binding,
+					type: "d1",
+					id: database_id,
+					internalEnv: database_internal_env,
+				});
+			}
 		}
 	);
 

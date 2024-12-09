@@ -1,9 +1,10 @@
 import path from "node:path";
 import { readConfig } from "../config";
 import { normalizeAndValidateConfig } from "../config/validation";
+import { run } from "../experimental-flags";
 import { normalizeString } from "./helpers/normalize";
 import { runInTempDir } from "./helpers/run-in-tmp";
-import { writeWranglerToml } from "./helpers/write-wrangler-toml";
+import { writeWranglerConfig } from "./helpers/write-wrangler-config";
 import type {
 	ConfigFields,
 	RawConfig,
@@ -14,7 +15,7 @@ import type {
 describe("readConfig()", () => {
 	runInTempDir();
 	it("should not error if a python entrypoint is used with the right compatibility_flag", () => {
-		writeWranglerToml({
+		writeWranglerConfig({
 			main: "index.py",
 			compatibility_flags: ["python_workers"],
 		});
@@ -31,7 +32,7 @@ describe("readConfig()", () => {
 		`);
 	});
 	it("should error if a python entrypoint is used without the right compatibility_flag", () => {
-		writeWranglerToml({
+		writeWranglerConfig({
 			main: "index.py",
 		});
 		try {
@@ -120,6 +121,7 @@ describe("normalizeAndValidateConfig()", () => {
 			wasm_modules: undefined,
 			data_blobs: undefined,
 			workers_dev: undefined,
+			preview_urls: true,
 			zone_id: undefined,
 			no_bundle: undefined,
 			minify: undefined,
@@ -1017,24 +1019,26 @@ describe("normalizeAndValidateConfig()", () => {
 
 			const { config, diagnostics } = normalizeAndValidateConfig(
 				expectedConfig,
-				undefined,
+				"wrangler.toml",
 				{ env: undefined }
 			);
 
-			expect(config).toEqual(
+			// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+			expect({ ...config, tsconfig: normalizePath(config.tsconfig!) }).toEqual(
 				expect.objectContaining({ ...expectedConfig, main: resolvedMain })
 			);
 			expect(diagnostics.hasErrors()).toBe(false);
 			expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-				"Processing wrangler configuration:
+				"Processing wrangler.toml configuration:
 				  - \\"unsafe\\" fields are experimental and may change or break at any time.
-				  - In wrangler.toml, you have configured [durable_objects] exported by this Worker (CLASS1), but no [migrations] for them. This may not work as expected until you add a [migrations] section to your wrangler.toml. Add this configuration to your wrangler.toml:
+				  - In your wrangler.toml file, you have configured \`durable_objects\` exported by this Worker (CLASS1), but no \`migrations\` for them. This may not work as expected until you add a \`migrations\` section to your wrangler.toml file. Add the following configuration:
 
-				      \`\`\`
-				      [[migrations]]
-				      tag = \\"v1\\" # Should be unique for each entry
-				      new_classes = [\\"CLASS1\\"]
-				      \`\`\`
+				    \`\`\`
+				    [[migrations]]
+				    tag = \\"v1\\"
+				    new_classes = [ \\"CLASS1\\" ]
+
+				    \`\`\`
 
 				    Refer to https://developers.cloudflare.com/durable-objects/reference/durable-objects-migrations/ for more details."
 			`);
@@ -1167,6 +1171,7 @@ describe("normalizeAndValidateConfig()", () => {
 				  - Expected \\"logpush\\" to be of type boolean but got \\"INVALID\\".
 				  - Expected \\"upload_source_maps\\" to be of type boolean but got \\"INVALID\\".
 				  - Expected \\"observability.enabled\\" to be of type boolean but got \\"INVALID\\".
+				  - Expected \\"observability.logs.enabled\\" to be of type boolean but got undefined.
 				  - Expected \\"observability.head_sampling_rate\\" to be of type number but got \\"INVALID\\"."
 			`);
 		});
@@ -1786,7 +1791,6 @@ describe("normalizeAndValidateConfig()", () => {
 				`);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - \\"assets.directory\\" is a required field.
 					  - Expected \\"assets.binding\\" to be of type string but got 2."
 				`);
 			});
@@ -1837,27 +1841,6 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(config).toEqual(expect.objectContaining(expectedConfig));
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.hasErrors()).toBe(false);
-			});
-
-			it("should error if `directory` is an empty string", () => {
-				const expectedConfig = {
-					assets: {
-						directory: "",
-					},
-				};
-
-				const { config, diagnostics } = normalizeAndValidateConfig(
-					expectedConfig as unknown as RawConfig,
-					undefined,
-					{ env: undefined }
-				);
-
-				expect(config).toEqual(expect.objectContaining(expectedConfig));
-				expect(diagnostics.hasWarnings()).toBeFalsy();
-				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-					"Processing wrangler configuration:
-					  - Expected \\"assets.directory\\" to be a non-empty string."
-				`);
 			});
 
 			it("should error on invalid additional fields", () => {
@@ -2320,6 +2303,27 @@ describe("normalizeAndValidateConfig()", () => {
 			            - \\"kv_namespaces[4]\\" bindings should have a string \\"id\\" field but got {\\"binding\\":\\"VALID\\",\\"id\\":\\"\\"}."
 		        `);
 			});
+
+			it("should allow the id field to be omitted when the RESOURCES_PROVISION experimental flag is enabled", () => {
+				const { diagnostics } = run(
+					{
+						RESOURCES_PROVISION: true,
+						FILE_BASED_REGISTRY: false,
+						MULTIWORKER: false,
+					},
+					() =>
+						normalizeAndValidateConfig(
+							{
+								kv_namespaces: [{ binding: "VALID" }],
+							} as unknown as RawConfig,
+							undefined,
+							{ env: undefined }
+						)
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(false);
+			});
 		});
 
 		it("should error if send_email.bindings are not valid", () => {
@@ -2447,6 +2451,27 @@ describe("normalizeAndValidateConfig()", () => {
 			  - \\"d1_databases[3]\\" bindings must have a \\"database_id\\" field but got {\\"binding\\":\\"D1_BINDING_2\\",\\"id\\":\\"my-db\\",\\"preview_id\\":2222}.
 			  - \\"d1_databases[4]\\" bindings must have a \\"database_id\\" field but got {\\"binding\\":\\"VALID\\",\\"id\\":\\"\\"}."
 		`);
+			});
+
+			it("should allow the database_id field to be omitted when the RESOURCES_PROVISION experimental flag is enabled", () => {
+				const { diagnostics } = run(
+					{
+						RESOURCES_PROVISION: true,
+						FILE_BASED_REGISTRY: false,
+						MULTIWORKER: false,
+					},
+					() =>
+						normalizeAndValidateConfig(
+							{
+								d1_databases: [{ binding: "VALID" }],
+							} as unknown as RawConfig,
+							undefined,
+							{ env: undefined }
+						)
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(false);
 			});
 		});
 
@@ -2741,6 +2766,27 @@ describe("normalizeAndValidateConfig()", () => {
 			            - \\"r2_buckets[3]\\" bindings should, optionally, have a string \\"preview_bucket_name\\" field but got {\\"binding\\":\\"R2_BINDING_2\\",\\"bucket_name\\":\\"R2_BUCKET_2\\",\\"preview_bucket_name\\":2555}.
 			            - \\"r2_buckets[4]\\" bindings should have a string \\"bucket_name\\" field but got {\\"binding\\":\\"R2_BINDING_1\\",\\"bucket_name\\":\\"\\"}."
 		        `);
+			});
+
+			it("should allow the bucket_name field to be omitted when the RESOURCES_PROVISION experimental flag is enabled", () => {
+				const { diagnostics } = run(
+					{
+						RESOURCES_PROVISION: true,
+						FILE_BASED_REGISTRY: false,
+						MULTIWORKER: false,
+					},
+					() =>
+						normalizeAndValidateConfig(
+							{
+								d1_databases: [{ binding: "VALID" }],
+							} as unknown as RawConfig,
+							undefined,
+							{ env: undefined }
+						)
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(false);
 			});
 		});
 
@@ -3396,9 +3442,9 @@ describe("normalizeAndValidateConfig()", () => {
 		              `);
 			});
 
-			it("should error if unsafe.bindings, unsafe.metadata and unsafe.capnp are undefined", () => {
+			it("should not error if unsafe is an empty object", () => {
 				const { diagnostics } = normalizeAndValidateConfig(
-					{ unsafe: {} } as unknown as RawConfig,
+					{ unsafe: {} } satisfies RawConfig,
 					undefined,
 					{ env: undefined }
 				);
@@ -3408,42 +3454,36 @@ describe("normalizeAndValidateConfig()", () => {
 			                    - \\"unsafe\\" fields are experimental and may change or break at any time."
 		              `);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			"Processing wrangler configuration:
-			  - The field \\"unsafe\\" should contain at least one of \\"bindings\\", \\"metadata\\" or \\"capnp\\" properties but got {}."
-		`);
+					"Processing wrangler configuration:
+					"
+				`);
 			});
 
-			it("should not error if at least unsafe.bindings is defined", () => {
+			it("should error if unsafe contains unexpected properties", () => {
 				const { diagnostics } = normalizeAndValidateConfig(
-					{ unsafe: { bindings: [] } } as unknown as RawConfig,
+					{
+						unsafe: {
+							invalid: true,
+						},
+					} as RawConfig,
 					undefined,
 					{ env: undefined }
 				);
 
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-			                  "Processing wrangler configuration:
-			                    - \\"unsafe\\" fields are experimental and may change or break at any time."
-		              `);
-				expect(diagnostics.hasErrors()).toBe(false);
-			});
-
-			it("should not error if at least unsafe.metadata is defined", () => {
-				const { diagnostics } = normalizeAndValidateConfig(
-					{ unsafe: { metadata: {} } } as unknown as RawConfig,
-					undefined,
-					{ env: undefined }
-				);
-
-				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-			                  "Processing wrangler configuration:
-			                    - \\"unsafe\\" fields are experimental and may change or break at any time."
-		              `);
-				expect(diagnostics.hasErrors()).toBe(false);
+					"Processing wrangler configuration:
+					  - \\"unsafe\\" fields are experimental and may change or break at any time.
+					  - Unexpected fields found in unsafe field: \\"invalid\\""
+				`);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					"
+				`);
 			});
 
 			it("should error if unsafe.bindings is an object", () => {
 				const { diagnostics } = normalizeAndValidateConfig(
-					{ unsafe: { bindings: {} } } as unknown as RawConfig,
+					{ unsafe: { bindings: {} } } as RawConfig,
 					undefined,
 					{ env: undefined }
 				);
@@ -3722,16 +3762,16 @@ describe("normalizeAndValidateConfig()", () => {
 			        "
 		      `);
 			expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-			        "Processing wrangler configuration:
-			          - No environment found in configuration with name \\"DEV\\".
-			            Before using \`--env=DEV\` there should be an equivalent environment section in the configuration.
+				"Processing wrangler configuration:
+				  - No environment found in configuration with name \\"DEV\\".
+				    Before using \`--env=DEV\` there should be an equivalent environment section in the configuration.
 
-			            Consider adding an environment configuration section to the wrangler.toml file:
-			            \`\`\`
-			            [env.DEV]
-			            \`\`\`
-			        "
-		      `);
+				    Consider adding an environment configuration section to the Wrangler configuration file:
+				    \`\`\`
+				    [env.DEV]
+				    \`\`\`
+				"
+			`);
 		});
 
 		it("should error if we specify an environment that does not match the named environments", () => {
@@ -3740,17 +3780,17 @@ describe("normalizeAndValidateConfig()", () => {
 				env: "DEV",
 			});
 			expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			        "Processing wrangler configuration:
-			          - No environment found in configuration with name \\"DEV\\".
-			            Before using \`--env=DEV\` there should be an equivalent environment section in the configuration.
-			            The available configured environment names are: [\\"ENV1\\"]
+				"Processing wrangler configuration:
+				  - No environment found in configuration with name \\"DEV\\".
+				    Before using \`--env=DEV\` there should be an equivalent environment section in the configuration.
+				    The available configured environment names are: [\\"ENV1\\"]
 
-			            Consider adding an environment configuration section to the wrangler.toml file:
-			            \`\`\`
-			            [env.DEV]
-			            \`\`\`
-			        "
-		      `);
+				    Consider adding an environment configuration section to the Wrangler configuration file:
+				    \`\`\`
+				    [env.DEV]
+				    \`\`\`
+				"
+			`);
 			expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
 			        "Processing wrangler configuration:
 			        "
@@ -5118,32 +5158,30 @@ describe("normalizeAndValidateConfig()", () => {
 		        `);
 			});
 
-			it("should error if unsafe.bindings, unsafe.metadata and unsafe.capnp are undefined", () => {
+			it("should not error if unsafe is an empty object", () => {
 				const { diagnostics } = normalizeAndValidateConfig(
-					{ env: { ENV1: { unsafe: {} } } } as unknown as RawConfig,
+					{ env: { ENV1: { unsafe: {} } } } as RawConfig,
 					undefined,
 					{ env: "ENV1" }
 				);
 
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-			          "Processing wrangler configuration:
+					"Processing wrangler configuration:
 
-			            - \\"env.ENV1\\" environment configuration
-			              - \\"unsafe\\" fields are experimental and may change or break at any time."
-		        `);
+					  - \\"env.ENV1\\" environment configuration
+					    - \\"unsafe\\" fields are experimental and may change or break at any time."
+				`);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			"Processing wrangler configuration:
-
-			  - \\"env.ENV1\\" environment configuration
-			    - The field \\"env.ENV1.unsafe\\" should contain at least one of \\"bindings\\", \\"metadata\\" or \\"capnp\\" properties but got {}."
-		`);
+					"Processing wrangler configuration:
+					"
+				`);
 			});
 
 			it("should not error if at least unsafe.bindings is undefined", () => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						env: { ENV1: { unsafe: { bindings: [] } } },
-					} as unknown as RawConfig,
+					} as RawConfig,
 					undefined,
 					{ env: "ENV1" }
 				);
@@ -5157,22 +5195,26 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasErrors()).toBe(false);
 			});
 
-			it("should not error if at least unsafe.metadata is undefined", () => {
+			it("should error if unsafe contains unexpected properties", () => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
-						env: { ENV1: { unsafe: { metadata: {} } } },
-					} as unknown as RawConfig,
+						env: { ENV1: { unsafe: { invalid: true } } },
+					} as RawConfig,
 					undefined,
 					{ env: "ENV1" }
 				);
 
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-			          "Processing wrangler configuration:
+					"Processing wrangler configuration:
 
-			            - \\"env.ENV1\\" environment configuration
-			              - \\"unsafe\\" fields are experimental and may change or break at any time."
-		        `);
-				expect(diagnostics.hasErrors()).toBe(false);
+					  - \\"env.ENV1\\" environment configuration
+					    - \\"unsafe\\" fields are experimental and may change or break at any time.
+					    - Unexpected fields found in unsafe field: \\"invalid\\""
+				`);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					"
+				`);
 			});
 
 			it("should error if unsafe.bindings is an object", () => {
@@ -5485,11 +5527,80 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasErrors()).toBe(true);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - \\"observability.enabled\\" is a required field.
+					  - \\"observability.enabled\\" or \\"observability.logs.enabled\\" is required.
 					  - Expected \\"observability.head_sampling_rate\\" to be of type number but got true."
 				`);
 			});
 
+			it("should error on invalid observability.logs", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						observability: {
+							enabled: true,
+							logs: "enabled",
+						},
+					} as unknown as RawConfig,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					"
+				`);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - Expected \\"observability.logs\\" to be of type object but got \\"enabled\\"."
+				`);
+			});
+
+			it("should not error on nested [observability.logs] config only", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						observability: {
+							logs: {
+								enabled: true,
+							},
+						},
+					} as unknown as RawConfig,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					"
+				`);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+			});
+
+			it("should not error on mixed observability config", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						observability: {
+							enabled: true,
+							logs: {
+								invocation_logs: false,
+							},
+						},
+					} as unknown as RawConfig,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					"
+				`);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+			});
 			it("should error on a sampling rate out of range", () => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
@@ -5815,5 +5926,6 @@ describe("normalizeAndValidateConfig()", () => {
 function normalizePath(text: string): string {
 	return text
 		.replace("project\\wrangler.toml", "project/wrangler.toml")
-		.replace("src\\index.ts", "src/index.ts");
+		.replace("src\\index.ts", "src/index.ts")
+		.replace("path\\to\\tsconfig", "path/to/tsconfig");
 }

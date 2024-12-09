@@ -2,6 +2,7 @@ import { stripAnsi } from "@cloudflare/cli";
 import { CancelError } from "@cloudflare/cli/error";
 import { isInteractive, spinner } from "@cloudflare/cli/interactive";
 import { spawn } from "cross-spawn";
+import { readMetricsConfig } from "./metrics-config";
 
 /**
  * Command is a string array, like ['git', 'commit', '-m', '"Initial commit"']
@@ -52,6 +53,15 @@ export const runCommand = async (
 		doneText: opts.doneText,
 		promise() {
 			const [executable, ...args] = command;
+			// Don't send metrics data on any wrangler commands if telemetry is disabled in C3
+			// If telemetry is disabled separately for wrangler, wrangler will handle that
+			if (args[0] === "wrangler") {
+				const metrics = readMetricsConfig();
+				if (metrics.c3permission?.enabled === false) {
+					opts.env ??= {};
+					opts.env["WRANGLER_SEND_METRICS"] = "false";
+				}
+			}
 			const abortController = new AbortController();
 			const cmd = spawn(executable, [...args], {
 				// TODO: ideally inherit stderr, but npm install uses this for warnings

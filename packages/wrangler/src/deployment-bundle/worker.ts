@@ -1,4 +1,5 @@
 import type { Observability, Route } from "../config/environment";
+import type { INHERIT_SYMBOL } from "./bindings";
 import type {
 	WorkerMetadata,
 	WorkerMetadataBinding,
@@ -81,7 +82,7 @@ export interface CfVars {
  */
 export interface CfKvNamespace {
 	binding: string;
-	id: string;
+	id?: string | typeof INHERIT_SYMBOL;
 }
 
 /**
@@ -167,15 +168,15 @@ export interface CfQueue {
 
 export interface CfR2Bucket {
 	binding: string;
-	bucket_name: string;
+	bucket_name?: string | typeof INHERIT_SYMBOL;
 	jurisdiction?: string;
 }
 
 // TODO: figure out if this is duplicated in packages/wrangler/src/config/environment.ts
 export interface CfD1Database {
 	binding: string;
-	database_id: string;
-	database_name: string;
+	database_id?: string | typeof INHERIT_SYMBOL;
+	database_name?: string;
 	preview_database_id?: string;
 	database_internal_env?: string;
 	migrations_table?: string;

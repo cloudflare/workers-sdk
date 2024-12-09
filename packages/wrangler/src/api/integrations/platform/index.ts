@@ -1,24 +1,31 @@
 import { kCurrentWorker, Miniflare } from "miniflare";
-import { processAssetsArg } from "../../../assets";
+import { getAssetsOptions } from "../../../assets";
 import { readConfig } from "../../../config";
 import { DEFAULT_MODULE_RULES } from "../../../deployment-bundle/rules";
 import { getBindings } from "../../../dev";
 import { getBoundRegisteredWorkers } from "../../../dev-registry";
+import { getClassNamesWhichUseSQLite } from "../../../dev/class-names-sqlite";
 import { getVarsForDev } from "../../../dev/dev-vars";
 import {
 	buildAssetOptions,
 	buildMiniflareBindingOptions,
 	buildSitesOptions,
 } from "../../../dev/miniflare";
-import { getClassNamesWhichUseSQLite } from "../../../dev/validate-dev-props";
 import { run } from "../../../experimental-flags";
 import { getLegacyAssetPaths, getSiteAssetPaths } from "../../../sites";
 import { CacheStorage } from "./caches";
 import { ExecutionContext } from "./executionContext";
 import { getServiceBindings } from "./services";
-import type { Config } from "../../../config";
+import type { Config, RawConfig, RawEnvironment } from "../../../config";
 import type { IncomingRequestCfProperties } from "@cloudflare/workers-types/experimental";
 import type { MiniflareOptions, ModuleRule, WorkerOptions } from "miniflare";
+
+export { readConfig as unstable_readConfig };
+export type {
+	Config as Unstable_Config,
+	RawConfig as Unstable_RawConfig,
+	RawEnvironment as Unstable_RawEnvironment,
+};
 
 /**
  * Options for the `getPlatformProxy` utility
@@ -31,19 +38,12 @@ export type GetPlatformProxyOptions = {
 	/**
 	 * The path to the config file to use.
 	 * If no path is specified the default behavior is to search from the
-	 * current directory up the filesystem for a `wrangler.toml` to use.
+	 * current directory up the filesystem for a Wrangler configuration file to use.
 	 *
 	 * Note: this field is optional but if a path is specified it must
 	 *       point to a valid file on the filesystem
 	 */
 	configPath?: string;
-	/**
-	 * Flag to indicate the utility to read a json config file (`wrangler.json`/`wrangler.jsonc`)
-	 * instead of the toml one (`wrangler.toml`)
-	 *
-	 * Note: this feature is experimental
-	 */
-	experimentalJsonConfig?: boolean;
 	/**
 	 * Indicates if and where to persist the bindings data, if not present or `true` it defaults to the same location
 	 * used by wrangler v3: `.wrangler/state/v3` (so that the same data can be easily used by the caller and wrangler).
@@ -88,7 +88,7 @@ export type PlatformProxy<
 };
 
 /**
- * By reading from a `wrangler.toml` file this function generates proxy objects that can be
+ * By reading from a Wrangler configuration file this function generates proxy objects that can be
  * used to simulate the interaction with the Cloudflare platform during local development
  * in a Node.js environment
  *
@@ -104,14 +104,14 @@ export async function getPlatformProxy<
 	const env = options.environment;
 
 	const rawConfig = readConfig(options.configPath, {
-		experimentalJsonConfig: options.experimentalJsonConfig,
 		env,
 	});
 
 	const miniflareOptions = await run(
 		{
-			FILE_BASED_REGISTRY: Boolean(options.experimentalRegistry),
-			JSON_CONFIG_FILE: Boolean(options.experimentalJsonConfig),
+			FILE_BASED_REGISTRY: Boolean(options.experimentalRegistry ?? true),
+			MULTIWORKER: false,
+			RESOURCES_PROVISION: false,
 		},
 		() => getMiniflareOptionsFromConfig(rawConfig, env, options)
 	);
@@ -244,25 +244,27 @@ export type SourcelessWorkerOptions = Omit<
 	"script" | "scriptPath" | "modules" | "modulesRoot"
 > & { modulesRules?: ModuleRule[] };
 
-export function unstable_getMiniflareWorkerOptions(
-	configPath: string,
-	env?: string
-): {
+export interface Unstable_MiniflareWorkerOptions {
 	workerOptions: SourcelessWorkerOptions;
 	define: Record<string, string>;
 	main?: string;
-} {
-	// experimental json is usually enabled via a cli arg,
-	// so it cannot be passed to the vitest integration.
-	// instead we infer it from the config path (instead of setting a default)
-	// because wrangler.json is not compatible with pages.
-	const isJsonConfigFile =
-		configPath.endsWith(".json") || configPath.endsWith(".jsonc");
+}
 
-	const config = readConfig(configPath, {
-		experimentalJsonConfig: isJsonConfigFile,
-		env,
-	});
+export function unstable_getMiniflareWorkerOptions(
+	configPath: string,
+	env?: string
+): Unstable_MiniflareWorkerOptions;
+export function unstable_getMiniflareWorkerOptions(
+	config: Config
+): Unstable_MiniflareWorkerOptions;
+export function unstable_getMiniflareWorkerOptions(
+	configOrConfigPath: string | Config,
+	env?: string
+): Unstable_MiniflareWorkerOptions {
+	const config =
+		typeof configOrConfigPath === "string"
+			? readConfig(configOrConfigPath, { env })
+			: configOrConfigPath;
 
 	const modulesRules: ModuleRule[] = config.rules
 		.concat(DEFAULT_MODULE_RULES)
@@ -324,7 +326,7 @@ export function unstable_getMiniflareWorkerOptions(
 		? getLegacyAssetPaths(config, undefined)
 		: getSiteAssetPaths(config);
 	const sitesOptions = buildSitesOptions({ legacyAssetPaths });
-	const processedAssetOptions = processAssetsArg({ assets: undefined }, config);
+	const processedAssetOptions = getAssetsOptions({ assets: undefined }, config);
 	const assetOptions = processedAssetOptions
 		? buildAssetOptions({ assets: processedAssetOptions })
 		: {};

@@ -57,13 +57,29 @@ export class WranglerE2ETestHelper {
 			return name;
 		}
 		const result = await this.run(`wrangler kv namespace create ${name}`);
-		const match = /id = "([0-9a-f]{32})"/.exec(result.stdout);
+		const tomlMatch = /id = "([0-9a-f]{32})"/.exec(result.stdout);
+		const jsonMatch = /"id": "([0-9a-f]{32})"/.exec(result.stdout);
+		const match = jsonMatch ?? tomlMatch;
 		assert(match !== null, `Cannot find ID in ${JSON.stringify(result)}`);
 		const id = match[1];
 		onTestFinished(async () => {
 			await this.run(`wrangler kv namespace delete --namespace-id ${id}`);
 		});
 		return id;
+	}
+
+	async dispatchNamespace(isLocal: boolean) {
+		const name = generateResourceName("dispatch");
+		if (isLocal) {
+			throw new Error(
+				"Dispatch namespaces are not supported in local mode (yet)"
+			);
+		}
+		await this.run(`wrangler dispatch-namespace create ${name}`);
+		onTestFinished(async () => {
+			await this.run(`wrangler dispatch-namespace delete ${name}`);
+		});
+		return name;
 	}
 
 	async r2(isLocal: boolean) {
@@ -84,7 +100,9 @@ export class WranglerE2ETestHelper {
 			return { id: crypto.randomUUID(), name };
 		}
 		const result = await this.run(`wrangler d1 create ${name}`);
-		const match = /database_id = "([0-9a-f-]{36})"/.exec(result.stdout);
+		const tomlMatch = /database_id = "([0-9a-f-]{36})"/.exec(result.stdout);
+		const jsonMatch = /"database_id": "([0-9a-f-]{36})"/.exec(result.stdout);
+		const match = jsonMatch ?? tomlMatch;
 		assert(match !== null, `Cannot find ID in ${JSON.stringify(result)}`);
 		const id = match[1];
 		onTestFinished(async () => {

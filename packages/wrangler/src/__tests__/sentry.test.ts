@@ -85,7 +85,7 @@ describe("sentry", () => {
 
 		it("should not hit sentry with user error", async () => {
 			await expect(runWrangler("delete")).rejects.toMatchInlineSnapshot(
-				`[Error: A worker name must be defined, either via --name, or in wrangler.toml]`
+				`[Error: A worker name must be defined, either via --name, or in your Wrangler configuration file]`
 			);
 			expect(std.out).toMatchInlineSnapshot(`""`);
 			expect(sentryRequests?.length).toEqual(0);
@@ -259,11 +259,11 @@ describe("sentry", () => {
 				              Object {
 				                "colno": 0,
 				                "context_line": "",
-				                "filename": "/wrangler/packages/wrangler/src/core/register-commands.ts",
+				                "filename": "/wrangler/packages/wrangler/src/core/register-yargs-command.ts",
 				                "function": "",
 				                "in_app": false,
 				                "lineno": 0,
-				                "module": "register-commands.ts",
+				                "module": "register-yargs-command.ts",
 				                "post_context": Array [],
 				                "pre_context": Array [],
 				              },

@@ -15,6 +15,7 @@ import { getC3CommandFromEnv } from "./environment-variables/misc-variables";
 import { CommandLineArgsError, FatalError, UserError } from "./errors";
 import { getGitVersioon, initializeGit, isInsideGitRepo } from "./git-client";
 import { logger } from "./logger";
+import { readMetricsConfig } from "./metrics/metrics-config";
 import { getPackageManager } from "./package-manager";
 import { parsePackageJSON, parseTOML, readFileSync } from "./parse";
 import { getBasePath } from "./paths";
@@ -140,6 +141,7 @@ type CustomDomainsRes = {
 
 type WorkersDevRes = {
 	enabled: boolean;
+	previews_enabled: boolean;
 };
 type CronTriggersRes = {
 	schedules: [
@@ -279,8 +281,14 @@ export async function initHandler(args: InitArgs) {
 				);
 				logger.log(`🌀 Running ${replacementC3Command}...`);
 
+				// if telemetry is disabled in wrangler, prevent c3 from sending metrics too
+				const metricsConfig = readMetricsConfig();
+
 				await execa(packageManager.type, c3Arguments, {
 					stdio: "inherit",
+					...(metricsConfig.permission?.enabled === false && {
+						env: { CREATE_CLOUDFLARE_TELEMETRY_DISABLED: "1" },
+					}),
 				});
 
 				return;
@@ -940,6 +948,7 @@ async function getWorkerConfig(
 		name: workerName,
 		main: entrypoint,
 		workers_dev: workersDev.enabled,
+		preview_urls: workersDev.previews_enabled,
 		compatibility_date:
 			serviceEnvMetadata.script.compatibility_date ??
 			new Date().toISOString().substring(0, 10),

@@ -9,7 +9,7 @@ import { runWrangler } from "../../helpers/run-wrangler";
 import { mockPostVersion, mockSetupApiCalls } from "./utils";
 import type { Interface } from "node:readline";
 
-describe("versions secret put", () => {
+describe("versions secret bulk", () => {
 	const std = mockConsoleMethods();
 	runInTempDir();
 	mockAccountId();
@@ -72,6 +72,18 @@ describe("versions secret put", () => {
 			➡️  To deploy this version to production traffic use the command \\"wrangler versions deploy\\"."
 		`
 		);
+		expect(std.err).toMatchInlineSnapshot(`""`);
+	});
+
+	test("no wrangler configuration warnings shown", async () => {
+		await writeFile("secrets.json", JSON.stringify({ SECRET_1: "secret-1" }));
+		await writeFile("wrangler.json", JSON.stringify({ invalid_field: true }));
+		mockSetupApiCalls();
+		mockPostVersion();
+		await runWrangler(
+			`versions secret bulk secrets.json --name script-name --x-versions`
+		);
+		expect(std.warn).toMatchInlineSnapshot(`""`);
 		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
 

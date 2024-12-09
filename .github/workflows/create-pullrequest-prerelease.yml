@@ -57,6 +57,8 @@ jobs:
         run: node .github/prereleases/2-build-pack-upload.mjs
         env:
           NODE_ENV: "production"
+          # this is the "test/staging" key for sparrow analytics
+          SPARROW_SOURCE_KEY: "5adf183f94b3436ba78d67f506965998"
           ALGOLIA_APP_ID: ${{ secrets.ALGOLIA_APP_ID }}
           ALGOLIA_PUBLIC_KEY: ${{ secrets.ALGOLIA_PUBLIC_KEY }}
           SENTRY_DSN: "https://9edbb8417b284aa2bbead9b4c318918b@sentry10.cfdata.org/583"

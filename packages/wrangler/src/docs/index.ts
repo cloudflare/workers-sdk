@@ -1,11 +1,10 @@
-import { defineCommand } from "../core";
+import { createCommand } from "../core/create-command";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
 import openInBrowser from "../open-in-browser";
 import { runSearch } from "./helpers";
 
-defineCommand({
-	command: "wrangler docs",
+export const docs = createCommand({
 	metadata: {
 		description: "📚 Open Wrangler's command documentation in your browser\n",
 		owner: "Workers: Authoring and Testing",
@@ -46,7 +45,7 @@ defineCommand({
 
 		logger.log(`Opening a link in your default browser: ${urlToOpen}`);
 		await openInBrowser(urlToOpen);
-		await metrics.sendMetricsEvent("view docs", {
+		metrics.sendMetricsEvent("view docs", {
 			sendMetrics: config.send_metrics,
 		});
 	},

@@ -1,5 +1,39 @@
 # miniflare
 
+## 3.20241205.0
+
+### Patch Changes
+
+- [#7464](https://github.com/cloudflare/workers-sdk/pull/7464) [`21a9e24`](https://github.com/cloudflare/workers-sdk/commit/21a9e24bc7cea1e7bf54a77568de98df9b7c8d03) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | workerd                   | 1.20241106.2  | 1.20241205.0  |
+  | @cloudflare/workers-types | ^4.20241106.0 | ^4.20241205.0 |
+
+## 3.20241106.2
+
+### Patch Changes
+
+- [#7418](https://github.com/cloudflare/workers-sdk/pull/7418) [`ac87395`](https://github.com/cloudflare/workers-sdk/commit/ac873952cfca41c67ce7855a73c6d3a8b131be06) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | workerd                   | 1.20241106.1  | 1.20241106.2  |
+  | @cloudflare/workers-types | ^4.20241106.0 | ^4.20241106.0 |
+
+- [#7399](https://github.com/cloudflare/workers-sdk/pull/7399) [`b3d2e7d`](https://github.com/cloudflare/workers-sdk/commit/b3d2e7dcee4358322f751b54a7b77d47f7b5ca78) Thanks [@emily-shen](https://github.com/emily-shen)! - fix: update queues max_batch_timeout limit from 30s to 60s
+
+## 3.20241106.1
+
+### Minor Changes
+
+- [#7286](https://github.com/cloudflare/workers-sdk/pull/7286) [`563439b`](https://github.com/cloudflare/workers-sdk/commit/563439bd02c450921b28d721d36be5a70897690d) Thanks [@LuisDuarte1](https://github.com/LuisDuarte1)! - Add proper engine persistance in .wrangler and fix multiple workflows in miniflare
+
 ## 3.20241106.0
 
 ### Patch Changes

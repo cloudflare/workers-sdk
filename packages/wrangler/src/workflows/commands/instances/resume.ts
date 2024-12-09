@@ -1,12 +1,10 @@
 import { fetchResult } from "../../../cfetch";
-import { defineCommand } from "../../../core";
+import { createCommand } from "../../../core/create-command";
 import { logger } from "../../../logger";
 import { requireAuth } from "../../../user";
 import type { Instance } from "../../types";
 
-defineCommand({
-	command: "wrangler workflows instances resume",
-
+export const workflowsInstancesResumeCommand = createCommand({
 	metadata: {
 		description: "Resume a workflow instance",
 		owner: "Product: Workflows",

@@ -11,7 +11,7 @@ import type { EnablePagesAssetsServiceBindingOptions } from "../miniflare-cli/ty
 import type { Json } from "miniflare";
 import type { RequestInfo, RequestInit, Response } from "undici";
 
-export interface UnstableDevOptions {
+export interface Unstable_DevOptions {
 	config?: string; // Path to .toml configuration file, relative to cwd
 	env?: string; // Environment to use for operations and .env files
 	ip?: string; // IP address to listen on
@@ -34,7 +34,7 @@ export interface UnstableDevOptions {
 	vars?: Record<string, string | Json>;
 	kv?: {
 		binding: string;
-		id: string;
+		id?: string;
 		preview_id?: string;
 	}[];
 	durableObjects?: {
@@ -51,7 +51,7 @@ export interface UnstableDevOptions {
 	}[];
 	r2?: {
 		binding: string;
-		bucket_name: string;
+		bucket_name?: string;
 		preview_bucket_name?: string;
 	}[];
 	ai?: {
@@ -86,7 +86,7 @@ export interface UnstableDevOptions {
 	};
 }
 
-export interface UnstableDevWorker {
+export interface Unstable_DevWorker {
 	port: number;
 	address: string;
 	stop: () => Promise<void>;
@@ -98,9 +98,9 @@ export interface UnstableDevWorker {
  */
 export async function unstable_dev(
 	script: string,
-	options?: UnstableDevOptions,
+	options?: Unstable_DevOptions,
 	apiOptions?: unknown
-): Promise<UnstableDevWorker> {
+): Promise<Unstable_DevWorker> {
 	// Note that not every experimental option is passed directly through to the underlying dev API - experimental options can be used here in unstable_dev. Otherwise we could just pass experimental down to dev blindly.
 
 	const experimentalOptions = {
@@ -125,7 +125,7 @@ export async function unstable_dev(
 		showInteractiveDevSession,
 		testMode,
 		testScheduled,
-		fileBasedRegistry = false,
+		fileBasedRegistry = true,
 		vectorizeBindToProd,
 		// 2. options for alpha/beta products/libs
 		d1Databases,
@@ -195,7 +195,6 @@ export async function unstable_dev(
 		nodeCompat: options?.nodeCompat, // Enable Node.js compatibility
 		persist: options?.persist, // Enable persistence for local mode, using default path: .wrangler/state
 		persistTo: options?.persistTo, // Specify directory to use for local persistence (implies --persist)
-		experimentalJsonConfig: undefined,
 		name: undefined,
 		noBundle: false,
 		format: undefined,
@@ -218,6 +217,7 @@ export async function unstable_dev(
 		...options,
 		logLevel: options?.logLevel ?? defaultLogLevel,
 		port: options?.port ?? 0,
+		experimentalProvision: undefined,
 		experimentalVersions: undefined,
 		experimentalDevEnv: undefined,
 		experimentalRegistry: fileBasedRegistry,
@@ -229,7 +229,9 @@ export async function unstable_dev(
 	const devServer = await run(
 		{
 			FILE_BASED_REGISTRY: fileBasedRegistry,
-			JSON_CONFIG_FILE: Boolean(devOptions.experimentalJsonConfig),
+			// TODO: can we make this work?
+			MULTIWORKER: false,
+			RESOURCES_PROVISION: false,
 		},
 		() => startDev(devOptions)
 	);

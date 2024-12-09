@@ -39,12 +39,11 @@ async function getTextFileContents(file: File<string | Uint8Array>) {
 	return readFile(file.path, "utf8");
 }
 
-const DEFAULT_WORKER_NAME = "worker";
 function getName(config: StartDevWorkerOptions) {
-	return config.name ?? DEFAULT_WORKER_NAME;
+	return config.name;
 }
 
-async function convertToConfigBundle(
+export async function convertToConfigBundle(
 	event: BundleCompleteEvent
 ): Promise<MF.ConfigBundle> {
 	const { bindings, fetchers } = await convertBindingsToCfWorkerInitBindings(

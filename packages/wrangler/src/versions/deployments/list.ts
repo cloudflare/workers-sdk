@@ -7,7 +7,8 @@ import { printWranglerBanner } from "../../update-check";
 import { requireAuth } from "../../user";
 import formatLabelledValues from "../../utils/render-labelled-values";
 import { fetchLatestDeployments, fetchVersions } from "../api";
-import { getConfig, getVersionSource } from "../list";
+import { getVersionSource } from "../list";
+import { getConfig } from "../utils/config";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
@@ -42,7 +43,7 @@ export async function versionsDeploymentsListHandler(
 	}
 
 	const config = getConfig(args);
-	await metrics.sendMetricsEvent(
+	metrics.sendMetricsEvent(
 		"list versioned deployments",
 		{ json: args.json },
 		{

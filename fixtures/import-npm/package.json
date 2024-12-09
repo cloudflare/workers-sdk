@@ -1,0 +1,15 @@
+{
+	"name": "import-npm",
+	"private": true,
+	"description": "",
+	"author": "",
+	"workspaces": [
+		"packages/*"
+	],
+	"scripts": {
+		"check:type": "rm -rf node_modules && npm install && npm run check:type --workspaces",
+		"test:ci": "npm install && npm run test:ci --workspaces",
+		"test:watch": "npm install && npm run test:watch --workspaces",
+		"type:tests": "rm -rf node_modules && npm install && npm run type:tests --workspaces"
+	}
+}
