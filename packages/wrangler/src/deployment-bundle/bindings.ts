@@ -130,13 +130,7 @@ export async function provisionBindings(
 				pendingResources.r2_buckets?.push({
 					binding: r2.binding,
 					async create(bucketName) {
-						await createR2Bucket(
-							accountId,
-							bucketName
-							// location,
-							// jurisdiction,
-							// storageClass
-						);
+						await createR2Bucket(accountId, bucketName);
 						r2.bucket_name = bucketName;
 						return bucketName;
 					},
@@ -161,7 +155,6 @@ export async function provisionBindings(
 						return db.uuid;
 					},
 					updateId(id) {
-						// tODO check d1 isn't doing something funny here
 						d1.database_id = id;
 					},
 				});
@@ -172,13 +165,14 @@ export async function provisionBindings(
 	if (Object.values(pendingResources).some((v) => v && v.length > 0)) {
 		logger.log();
 		printBindings(pendingResources, { provisioning: true });
-		printDivider();
+		logger.log();
 		if (pendingResources.kv_namespaces?.length) {
-			const preExisting = await listKVNamespaces(accountId);
+			const preExistingKV = await listKVNamespaces(accountId);
 			await runProvisioningFlow(
 				pendingResources.kv_namespaces,
-				"kv_namespaces",
-				preExisting.map((ns) => ({ name: ns.title, id: ns.id }))
+				"KV Namespace",
+				preExistingKV.map((ns) => ({ name: ns.title, id: ns.id })),
+				"title or id"
 			);
 		}
 
@@ -186,16 +180,18 @@ export async function provisionBindings(
 			const preExisting = await listDatabases(accountId);
 			await runProvisioningFlow(
 				pendingResources.d1_databases,
-				"d1_databases",
-				preExisting.map((db) => ({ name: db.name, id: db.uuid }))
+				"D1 Database",
+				preExisting.map((db) => ({ name: db.name, id: db.uuid })),
+				"name or id"
 			);
 		}
 		if (pendingResources.r2_buckets?.length) {
 			const preExisting = await listR2Buckets(accountId);
 			await runProvisioningFlow(
 				pendingResources.r2_buckets,
-				"r2_buckets",
-				preExisting.map((bucket) => ({ name: bucket.name, id: bucket.name }))
+				"R2 Bucket",
+				preExisting.map((bucket) => ({ name: bucket.name, id: bucket.name })),
+				"name"
 			);
 		}
 		logger.log(`🎉 All resources provisioned, continuing with deployment...\n`);
@@ -233,12 +229,12 @@ type NormalisedResourceInfo = {
 type ResourceType = "d1_databases" | "r2_buckets" | "kv_namespaces";
 async function runProvisioningFlow(
 	pending: PendingResources[ResourceType],
-	key: ResourceType,
-	preExisting: NormalisedResourceInfo[]
+	friendlyBindingName: string,
+	preExisting: NormalisedResourceInfo[],
+	resourceKeyDescriptor: string
 ) {
 	const MAX_OPTIONS = 4;
 	if (pending.length) {
-		const prettyBindingName = friendlyBindingNames[key];
 		const options = preExisting
 			.map((resource) => ({
 				label: resource.name,
@@ -253,40 +249,28 @@ async function runProvisioningFlow(
 		}
 
 		for (const item of pending) {
-			logger.log("Provisioning", item.binding, `(${prettyBindingName})...`);
+			logger.log("Provisioning", item.binding, `(${friendlyBindingName})...`);
 			let name: string = "";
 			const selected =
 				options.length === 0
 					? "new"
 					: await inputPrompt({
 							type: "select",
-							question: `Would you like to connect an existing ${prettyBindingName} or create a new one?`,
+							question: `Would you like to connect an existing ${friendlyBindingName} or create a new one?`,
 							options: options.concat([{ label: "Create new", value: "new" }]),
 							label: item.binding,
 							defaultValue: "new",
 						});
 			if (selected === "new") {
-				name = await prompt(`Enter a name for a new ${prettyBindingName}`);
-				logger.log(`🌀 Creating new ${prettyBindingName} "${name}"...`);
-				// creates new resource and mutates "bindings" to update id
+				name = await prompt(`Enter a name for your new ${friendlyBindingName}`);
+				logger.log(`🌀 Creating new ${friendlyBindingName} "${name}"...`);
+				// creates new resource and mutates `bindings` to update id
 				await item.create(name);
 			} else if (selected === "manual") {
 				let searchedResource: NormalisedResourceInfo | undefined;
 				while (searchedResource === undefined) {
-					let resourceKey: string;
-					switch (key) {
-						case "kv_namespaces":
-							resourceKey = "title or id";
-							break;
-						case "r2_buckets":
-							resourceKey = "name";
-							break;
-						case "d1_databases":
-							resourceKey = "name or id";
-							break;
-					}
 					const input = await prompt(
-						`Enter the ${resourceKey} of an existing ${prettyBindingName}`
+						`Enter the ${resourceKeyDescriptor} for an existing ${friendlyBindingName}`
 					);
 					searchedResource = preExisting.find((r) => {
 						if (r.name === input || r.id === input) {
@@ -299,7 +283,7 @@ async function runProvisioningFlow(
 					});
 					if (!searchedResource) {
 						logger.log(
-							`No ${prettyBindingName} with that ${resourceKey} "${input}" found. Please try again.`
+							`No ${friendlyBindingName} with that ${resourceKeyDescriptor} "${input}" found. Please try again.`
 						);
 					}
 				}
@@ -316,7 +300,7 @@ async function runProvisioningFlow(
 				// we shouldn't get here
 				if (!selectedResource) {
 					throw new FatalError(
-						`${prettyBindingName} with id ${selected} not found`
+						`${friendlyBindingName} with id ${selected} not found`
 					);
 				}
 			}
