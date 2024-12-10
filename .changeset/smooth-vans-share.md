@@ -1,5 +1,5 @@
 ---
-"create-cloudflare": patch
+"create-cloudflare": minor
 ---
 
-feat: notify users when they are running C3 in experimental mode
+Notify users when they are running C3 in experimental mode
