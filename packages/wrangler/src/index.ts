@@ -100,6 +100,12 @@ import {
 	r2BucketUpdateStorageClassCommand,
 } from "./r2/bucket";
 import {
+	r2BucketCORSDeleteCommand,
+	r2BucketCORSListCommand,
+	r2BucketCORSNamespace,
+	r2BucketCORSSetCommand,
+} from "./r2/cors";
+import {
 	r2BucketDomainAddCommand,
 	r2BucketDomainListCommand,
 	r2BucketDomainNamespace,
@@ -828,6 +834,22 @@ export function createCLIParser(argv: string[]) {
 		{
 			command: "wrangler r2 bucket lifecycle set",
 			definition: r2BucketLifecycleSetCommand,
+		},
+		{
+			command: "wrangler r2 bucket cors",
+			definition: r2BucketCORSNamespace,
+		},
+		{
+			command: "wrangler r2 bucket cors delete",
+			definition: r2BucketCORSDeleteCommand,
+		},
+		{
+			command: "wrangler r2 bucket cors list",
+			definition: r2BucketCORSListCommand,
+		},
+		{
+			command: "wrangler r2 bucket cors set",
+			definition: r2BucketCORSSetCommand,
 		},
 	]);
 	registry.registerNamespace("r2");

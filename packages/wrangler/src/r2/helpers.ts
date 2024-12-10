@@ -1084,6 +1084,92 @@ export function isNonNegativeNumber(str: string): boolean {
 	return num >= 0;
 }
 
+export interface CORSRule {
+	allowed?: {
+		origins?: string[];
+		methods?: string[];
+		headers?: string[];
+	};
+	exposeHeaders?: string[];
+	maxAgeSeconds?: number;
+}
+
+export async function getCORSPolicy(
+	accountId: string,
+	bucketName: string,
+	jurisdiction?: string
+): Promise<CORSRule[]> {
+	const headers: HeadersInit = {};
+	if (jurisdiction) {
+		headers["cf-r2-jurisdiction"] = jurisdiction;
+	}
+
+	const result = await fetchResult<{ rules: CORSRule[] }>(
+		`/accounts/${accountId}/r2/buckets/${bucketName}/cors`,
+		{
+			method: "GET",
+			headers,
+		}
+	);
+	return result.rules;
+}
+
+export function tableFromCORSPolicyResponse(rules: CORSRule[]): {
+	allowed_origins: string;
+	allowed_methods: string;
+	allowed_headers: string;
+	exposed_headers: string;
+	max_age_seconds: string;
+}[] {
+	const rows = [];
+	for (const rule of rules) {
+		rows.push({
+			allowed_origins: rule.allowed?.origins?.join(", ") || "(no origins)",
+			allowed_methods: rule.allowed?.methods?.join(", ") || "(no methods)",
+			allowed_headers: rule.allowed?.headers?.join(", ") || "(no headers)",
+			exposed_headers: rule.exposeHeaders?.join(", ") || "(no exposed headers)",
+			max_age_seconds: rule.maxAgeSeconds?.toString() || "(0 seconds)",
+		});
+	}
+	return rows;
+}
+
+export async function putCORSPolicy(
+	accountId: string,
+	bucketName: string,
+	rules: CORSRule[],
+	jurisdiction?: string
+): Promise<void> {
+	const headers: HeadersInit = {
+		"Content-Type": "application/json",
+	};
+	if (jurisdiction) {
+		headers["cf-r2-jurisdiction"] = jurisdiction;
+	}
+
+	await fetchResult(`/accounts/${accountId}/r2/buckets/${bucketName}/cors`, {
+		method: "PUT",
+		headers,
+		body: JSON.stringify({ rules: rules }),
+	});
+}
+
+export async function deleteCORSPolicy(
+	accountId: string,
+	bucketName: string,
+	jurisdiction?: string
+): Promise<void> {
+	const headers: HeadersInit = {};
+	if (jurisdiction) {
+		headers["cf-r2-jurisdiction"] = jurisdiction;
+	}
+
+	await fetchResult(`/accounts/${accountId}/r2/buckets/${bucketName}/cors`, {
+		method: "DELETE",
+		headers,
+	});
+}
+
 /**
  * R2 bucket names must only contain alphanumeric and - characters.
  */
