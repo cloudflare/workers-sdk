@@ -168,7 +168,7 @@ import { deploymentsListCommand } from "./versions/deployments/list";
 import { deploymentsStatusCommand } from "./versions/deployments/status";
 import { deploymentsViewCommand } from "./versions/deployments/view";
 import { versionsListCommand } from "./versions/list";
-import registerVersionsRollbackCommand from "./versions/rollback";
+import { versionsRollbackCommand } from "./versions/rollback";
 import { versionsSecretNamespace } from "./versions/secrets";
 import { versionsSecretBulkCommand } from "./versions/secrets/bulk";
 import { versionsSecretDeleteCommand } from "./versions/secrets/delete";
@@ -546,7 +546,10 @@ export function createCLIParser(argv: string[]) {
 	const rollbackDescription = "🔙 Rollback a deployment for a Worker";
 
 	if (experimentalGradualRollouts) {
-		registerVersionsRollbackCommand(wrangler, rollbackDescription);
+		registry.define([
+			{ command: "wrangler rollback", definition: versionsRollbackCommand },
+		]);
+		registry.registerNamespace("rollback");
 	} else {
 		wrangler.command(
 			"rollback [deployment-id]",
