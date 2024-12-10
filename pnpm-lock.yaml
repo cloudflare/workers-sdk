@@ -69,7 +69,7 @@ importers:
         specifier: ^0.0.49
         version: 0.0.49
       miniflare:
-        specifier: ^3.20241205.0
+        specifier: 3.20241205.0
         version: 3.20241205.0
     devDependencies:
       '@cloudflare/workers-shared':
@@ -391,7 +391,7 @@ importers:
         version: 6.0.3(@types/node@22.10.1)
       wrangler:
         specifier: catalog:default
-        version: 3.93.0(@cloudflare/workers-types@4.20241205.0)
+        version: 3.94.0(@cloudflare/workers-types@4.20241205.0)
 
   playground/worker:
     devDependencies:
