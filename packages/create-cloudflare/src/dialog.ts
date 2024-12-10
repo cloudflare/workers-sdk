@@ -3,7 +3,7 @@ import { hyperlink, logRaw, shapes, stripAnsi } from "@cloudflare/cli";
 import { bgGreen, blue, gray } from "@cloudflare/cli/colors";
 import { quoteShellArgs } from "helpers/command";
 import { detectPackageManager } from "helpers/packageManagers";
-import type { C3Context } from "types";
+import type { C3Args, C3Context } from "types";
 
 /**
  * Wrap the lines with a border and inner padding
@@ -27,18 +27,27 @@ export function createDialog(lines: string[]) {
 export function printWelcomeMessage(
 	version: string,
 	telemetryEnabled: boolean,
+	args: Partial<C3Args>,
 ) {
 	const lines = [
 		`👋 Welcome to create-cloudflare v${version}!`,
 		`🧡 Let's get started.`,
 	];
 
+	if (args.experimental) {
+		lines.push("", blue`🧪 Running in experimental mode`);
+	}
+
 	if (telemetryEnabled) {
+		if (args.experimental) {
+			lines.push("");
+		}
+
 		const telemetryDocsUrl = `https://github.com/cloudflare/workers-sdk/blob/main/packages/create-cloudflare/telemetry.md`;
 
 		lines.push(
 			`📊 Cloudflare collects telemetry about your usage of Create-Cloudflare.`,
-			``,
+			"",
 			`Learn more at: ${blue.underline(hyperlink(telemetryDocsUrl))}`,
 		);
 	}

@@ -102,7 +102,7 @@ export const runLatest = async () => {
 
 // Entrypoint to c3
 export const runCli = async (args: Partial<C3Args>) => {
-	printBanner();
+	printBanner(args);
 
 	const ctx = await createContext(args);
 
@@ -186,8 +186,8 @@ const deploy = async (ctx: C3Context) => {
 	endSection("Done");
 };
 
-const printBanner = () => {
-	printWelcomeMessage(version, reporter.isEnabled);
+const printBanner = (args: Partial<C3Args>) => {
+	printWelcomeMessage(version, reporter.isEnabled, args);
 	startSection(`Create an application with Cloudflare`, "Step 1 of 3");
 };
 
