@@ -107,6 +107,7 @@ type Props = {
 	projectRoot: string | undefined;
 	dispatchNamespace: string | undefined;
 	experimentalVersions: boolean | undefined;
+	experimentalAutoCreate: boolean;
 };
 
 export type RouteObject = ZoneIdRoute | ZoneNameRoute | CustomDomainRoute;
@@ -787,7 +788,12 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		} else {
 			assert(accountId, "Missing accountId");
 
-			await provisionBindings(bindings, accountId, scriptName);
+			await provisionBindings(
+				bindings,
+				accountId,
+				scriptName,
+				props.experimentalAutoCreate
+			);
 			await ensureQueuesExistByConfig(config);
 			let bindingsPrinted = false;
 

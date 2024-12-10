@@ -61,7 +61,8 @@ export interface KVNamespaceInfo {
  * Fetch a list of all the namespaces under the given `accountId`.
  */
 export async function listKVNamespaces(
-	accountId: string
+	accountId: string,
+	limitCalls: boolean = false
 ): Promise<KVNamespaceInfo[]> {
 	const pageSize = 100;
 	let page = 1;
@@ -79,6 +80,9 @@ export async function listKVNamespaces(
 		);
 		page++;
 		results.push(...json);
+		if (limitCalls) {
+			break;
+		}
 		if (json.length < pageSize) {
 			break;
 		}

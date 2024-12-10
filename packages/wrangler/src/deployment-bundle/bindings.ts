@@ -86,7 +86,8 @@ type PendingResources = {
 export async function provisionBindings(
 	bindings: CfWorkerInit["bindings"],
 	accountId: string,
-	scriptName: string
+	scriptName: string,
+	autoCreate: boolean
 ): Promise<void> {
 	const pendingResources: PendingResources = {
 		d1_databases: [],
@@ -166,34 +167,37 @@ export async function provisionBindings(
 		printBindings(pendingResources, { provisioning: true });
 		logger.log();
 		if (pendingResources.kv_namespaces?.length) {
-			const preExistingKV = await listKVNamespaces(accountId);
+			const preExistingKV = await listKVNamespaces(accountId, true);
 			await runProvisioningFlow(
 				pendingResources.kv_namespaces,
-				"KV Namespace",
 				preExistingKV.map((ns) => ({ name: ns.title, id: ns.id })),
+				"KV Namespace",
 				"title or id",
-				scriptName
+				scriptName,
+				autoCreate
 			);
 		}
 
 		if (pendingResources.d1_databases?.length) {
-			const preExisting = await listDatabases(accountId);
+			const preExisting = await listDatabases(accountId, true);
 			await runProvisioningFlow(
 				pendingResources.d1_databases,
-				"D1 Database",
 				preExisting.map((db) => ({ name: db.name, id: db.uuid })),
+				"D1 Database",
 				"name or id",
-				scriptName
+				scriptName,
+				autoCreate
 			);
 		}
 		if (pendingResources.r2_buckets?.length) {
 			const preExisting = await listR2Buckets(accountId);
 			await runProvisioningFlow(
 				pendingResources.r2_buckets,
-				"R2 Bucket",
 				preExisting.map((bucket) => ({ name: bucket.name, id: bucket.name })),
+				"R2 Bucket",
 				"name",
-				scriptName
+				scriptName,
+				autoCreate
 			);
 		}
 		logger.log(`🎉 All resources provisioned, continuing with deployment...\n`);
@@ -231,10 +235,11 @@ type NormalisedResourceInfo = {
 type ResourceType = "d1_databases" | "r2_buckets" | "kv_namespaces";
 async function runProvisioningFlow(
 	pending: PendingResources[ResourceType],
-	friendlyBindingName: string,
 	preExisting: NormalisedResourceInfo[],
+	friendlyBindingName: string,
 	resourceKeyDescriptor: string,
-	scriptName: string
+	scriptName: string,
+	autoCreate: boolean
 ) {
 	const MAX_OPTIONS = 4;
 	if (pending.length) {
@@ -254,25 +259,25 @@ async function runProvisioningFlow(
 		for (const item of pending) {
 			logger.log("Provisioning", item.binding, `(${friendlyBindingName})...`);
 			let name: string = "";
-			const selected =
-				options.length === 0
-					? "new"
-					: await select(
-							`Would you like to connect an existing ${friendlyBindingName} or create a new one?`,
-							{
-								choices: options.concat([
-									{ title: "Create new", value: "new" },
-								]),
-								defaultOption: options.length,
-							}
-						);
-			if (selected === "new") {
-				name = await prompt(
-					`Enter a name for your new ${friendlyBindingName}`,
+			let selected: string;
+			if (options.length === 0 || autoCreate) {
+				selected = "new";
+			} else {
+				selected = await select(
+					`Would you like to connect an existing ${friendlyBindingName} or create a new one?`,
 					{
-						defaultValue: `${scriptName}-${item.binding.toLowerCase().replace("_", "-")}`,
+						choices: options.concat([{ title: "Create new", value: "new" }]),
+						defaultOption: options.length,
 					}
 				);
+			}
+			if (selected === "new") {
+				const defaultValue = `${scriptName}-${item.binding.toLowerCase().replace("_", "-")}`;
+				name = autoCreate
+					? defaultValue
+					: await prompt(`Enter a name for your new ${friendlyBindingName}`, {
+							defaultValue,
+						});
 				logger.log(`🌀 Creating new ${friendlyBindingName} "${name}"...`);
 				// creates new resource and mutates `bindings` to update id
 				await item.create(name);

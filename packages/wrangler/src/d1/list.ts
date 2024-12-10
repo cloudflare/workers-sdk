@@ -39,7 +39,8 @@ export const Handler = withConfig<HandlerOptions>(
 );
 
 export const listDatabases = async (
-	accountId: string
+	accountId: string,
+	limitCalls: boolean = false
 ): Promise<Array<Database>> => {
 	const pageSize = 10;
 	let page = 1;
@@ -55,6 +56,9 @@ export const listDatabases = async (
 		);
 		page++;
 		results.push(...json);
+		if (limitCalls) {
+			break;
+		}
 		if (json.length < pageSize) {
 			break;
 		}
