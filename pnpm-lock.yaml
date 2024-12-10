@@ -372,6 +372,27 @@ importers:
         specifier: catalog:default
         version: 3.93.0(@cloudflare/workers-types@4.20241205.0)
 
+  playground/virtual-modules:
+    devDependencies:
+      '@cloudflare/workers-types':
+        specifier: catalog:default
+        version: 4.20241205.0
+      '@flarelabs-net/vite-plugin-cloudflare':
+        specifier: workspace:*
+        version: link:../../packages/vite-plugin-cloudflare
+      '@vite-plugin-cloudflare/typescript-config':
+        specifier: workspace:*
+        version: link:../../packages/typescript-config
+      typescript:
+        specifier: catalog:default
+        version: 5.7.2
+      vite:
+        specifier: catalog:default
+        version: 6.0.3(@types/node@22.10.1)
+      wrangler:
+        specifier: catalog:default
+        version: 3.93.0(@cloudflare/workers-types@4.20241205.0)
+
   playground/worker:
     devDependencies:
       '@cloudflare/workers-types':
