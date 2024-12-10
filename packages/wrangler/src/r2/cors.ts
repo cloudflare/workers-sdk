@@ -1,8 +1,9 @@
-import { defineCommand, defineNamespace } from "../core";
+import path from "node:path";
+import { createCommand, createNamespace } from "../core/create-command";
 import { confirm } from "../dialogs";
 import { UserError } from "../errors";
 import { logger } from "../logger";
-import { readFileSync } from "../parse";
+import { parseJSON, readFileSync } from "../parse";
 import { requireAuth } from "../user";
 import formatLabelledValues from "../utils/render-labelled-values";
 import {
@@ -13,8 +14,7 @@ import {
 } from "./helpers";
 import type { CORSRule } from "./helpers";
 
-defineNamespace({
-	command: "wrangler r2 bucket cors",
+export const r2BucketCORSNamespace = createNamespace({
 	metadata: {
 		description: "Manage CORS configuration for an R2 bucket",
 		status: "stable",
@@ -22,8 +22,7 @@ defineNamespace({
 	},
 });
 
-defineCommand({
-	command: "wrangler r2 bucket cors list",
+export const r2BucketCORSListCommand = createCommand({
 	metadata: {
 		description: "List the CORS rules for an R2 bucket",
 		status: "stable",
@@ -60,8 +59,7 @@ defineCommand({
 	},
 });
 
-defineCommand({
-	command: "wrangler r2 bucket cors set",
+export const r2BucketCORSSetCommand = createCommand({
 	metadata: {
 		description: "Set the CORS configuration for an R2 bucket from a JSON file",
 		status: "stable",
@@ -96,22 +94,17 @@ defineCommand({
 	async handler({ bucket, file, jurisdiction, force }, { config }) {
 		const accountId = await requireAuth(config);
 
-		let corsConfig: { rules: CORSRule[] };
-		try {
-			corsConfig = JSON.parse(readFileSync(file));
-		} catch (e) {
-			if (e instanceof Error) {
-				throw new UserError(
-					`Failed to read or parse the CORS configuration file: '${e.message}'`
-				);
-			} else {
-				throw e;
-			}
-		}
+		const jsonFilePath = path.resolve(file);
+
+		const corsConfig = parseJSON<{ rules: CORSRule[] }>(
+			readFileSync(jsonFilePath),
+			jsonFilePath
+		);
 
 		if (!corsConfig.rules || !Array.isArray(corsConfig.rules)) {
 			throw new UserError(
-				"The CORS configuration file must contain a 'rules' array."
+				`The CORS configuration file must contain a 'rules' array as expected by the request body of the CORS API: ` +
+					`https://developers.cloudflare.com/api/operations/r2-put-bucket-cors-policy`
 			);
 		}
 
@@ -133,8 +126,7 @@ defineCommand({
 	},
 });
 
-defineCommand({
-	command: "wrangler r2 bucket cors delete",
+export const r2BucketCORSDeleteCommand = createCommand({
 	metadata: {
 		description: "Clear the CORS configuration for an R2 bucket",
 		status: "stable",
