@@ -1,5 +1,44 @@
 # create-cloudflare
 
+## 2.34.0
+
+### Minor Changes
+
+- [#7506](https://github.com/cloudflare/workers-sdk/pull/7506) [`8ca9533`](https://github.com/cloudflare/workers-sdk/commit/8ca9533f85b5cd1ca72eeab211c3cf6a62a84660) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Notify users when they are running C3 in experimental mode
+
+### Patch Changes
+
+- [#7248](https://github.com/cloudflare/workers-sdk/pull/7248) [`6d29319`](https://github.com/cloudflare/workers-sdk/commit/6d293192204996dc03005501e3ca06054221453a) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From    | To     |
+  | --------------- | ------- | ------ |
+  | @angular/create | 18.2.11 | 19.0.0 |
+  | create-qwik     | 1.9.1   | 1.11.0 |
+  | create-remix    | 2.14.0  | 2.15.0 |
+  | create-solid    | 0.5.13  | 0.5.14 |
+  | nuxi            | 3.15.0  | 3.16.0 |
+  | sv              | 0.6.2   | 0.6.2  |
+
+- [#7503](https://github.com/cloudflare/workers-sdk/pull/7503) [`5f6e9c1`](https://github.com/cloudflare/workers-sdk/commit/5f6e9c1d1c16cf25ac54c3f98789d95e12123da6) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency        | From  | To    |
+  | ----------------- | ----- | ----- |
+  | create-docusaurus | 3.6.1 | 3.6.3 |
+
+- [#7505](https://github.com/cloudflare/workers-sdk/pull/7505) [`5f80241`](https://github.com/cloudflare/workers-sdk/commit/5f80241320c1705d1f67c097f2ecf2b8ccf495f2) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency  | From  | To    |
+  | ----------- | ----- | ----- |
+  | create-vite | 5.5.5 | 6.0.1 |
+
+- [#7457](https://github.com/cloudflare/workers-sdk/pull/7457) [`75be0d5`](https://github.com/cloudflare/workers-sdk/commit/75be0d54abdd3593b98ac4064f1ca50bde61f7a6) Thanks [@syumai](https://github.com/syumai)! - fix(create-cloudflare): add a newline character to the line prepended to wrangler.toml
+
 ## 2.33.4
 
 ### Patch Changes
