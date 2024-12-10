@@ -3,7 +3,7 @@ import { blue, brandColor, dim } from "@cloudflare/cli/colors";
 import { runFrameworkGenerator } from "frameworks/index";
 import { loadTemplateSnippets, transformFile } from "helpers/codemod";
 import { runCommand } from "helpers/command";
-import { usesTypescript } from "helpers/files";
+import { hasTsConfig, usesTypescript } from "helpers/files";
 import { detectPackageManager } from "helpers/packageManagers";
 import * as recast from "recast";
 import type { TemplateConfig } from "../../src/templates";
@@ -95,7 +95,21 @@ const config: TemplateConfig = {
 	platform: "workers",
 	displayName: "Astro",
 	copyFiles: {
-		path: "./templates",
+		async selectVariant(ctx) {
+			// Note: this `selectVariant` function should not be needed
+			//       this is just a quick workaround until
+			//       https://github.com/cloudflare/workers-sdk/issues/7495
+			//       is resolved
+			return hasTsConfig(ctx.project.path) ? "ts" : "js";
+		},
+		variants: {
+			js: {
+				path: "./templates/js",
+			},
+			ts: {
+				path: "./templates/ts",
+			},
+		},
 	},
 	devScript: "dev",
 	deployScript: "deploy",

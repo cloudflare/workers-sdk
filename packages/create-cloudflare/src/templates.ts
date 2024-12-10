@@ -479,6 +479,7 @@ export const createContext = async (
 			? Object.keys(template.copyFiles.variants)
 			: [];
 
+	debugger;
 	// Prompt for language preference only if selectVariant is not defined
 	// If it is defined, copyTemplateFiles will handle the selection
 	if (languageVariants.length > 0) {
