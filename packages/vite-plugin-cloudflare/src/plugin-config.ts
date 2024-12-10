@@ -65,7 +65,7 @@ function getConfigResult(
 		throw new Error(`Duplicate Wrangler config path found: ${configPath}`);
 	}
 
-	const wranglerConfig = unstable_readConfig(configPath, {});
+	const wranglerConfig = unstable_readConfig({ config: configPath }, {});
 
 	configPaths.add(configPath);
 
