@@ -251,6 +251,47 @@ export const isValidName: ValidatorFn = (diagnostics, field, value) => {
 };
 
 /**
+ * Validate that the field is a valid ISO-8601 date time string
+ * see https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date#date_time_string_format
+ * or https://tc39.es/ecma262/multipage/numbers-and-dates.html#sec-date-time-string-format
+ */
+export const isValidDateTimeStringFormat = (
+	diagnostics: Diagnostics,
+	field: string,
+	value: string
+): boolean => {
+	let isValid = true;
+
+	// en/em dashes are not valid characters in the JS date time string format.
+	// While they would be caught by the `isNaN(data.getTime())` check below,
+	// we want to single these use cases out, and throw a more specific error
+	if (
+		value.includes("–") || // en-dash
+		value.includes("—") // em-dash
+	) {
+		diagnostics.errors.push(
+			`"${field}" field should use ISO-8601 accepted hyphens (-) rather than en-dashes (–) or em-dashes (—).`
+		);
+		isValid = false;
+	}
+
+	// en/em dashes were already handled above. Let's replace them with hyphens,
+	// which is a valid date time string format character, and evaluate the
+	// resulting date time string further. This ensures we validate for hyphens
+	// only once!
+	const data = new Date(value.replaceAll(/–|—/g, "-"));
+
+	if (isNaN(data.getTime())) {
+		diagnostics.errors.push(
+			`"${field}" field should be a valid ISO-8601 date (YYYY-MM-DD), but got ${JSON.stringify(value)}.`
+		);
+		isValid = false;
+	}
+
+	return isValid;
+};
+
+/**
  * Validate that the field is an array of strings.
  */
 export const isStringArray: ValidatorFn = (diagnostics, field, value) => {

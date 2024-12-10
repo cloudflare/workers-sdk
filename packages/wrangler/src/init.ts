@@ -219,7 +219,7 @@ export async function initHandler(args: InitArgs) {
 
 			return;
 		} else {
-			const config = readConfig(args.config, args);
+			const config = readConfig(args);
 			accountId = await requireAuth(config);
 			try {
 				await fetchResult<ServiceMetadataRes>(

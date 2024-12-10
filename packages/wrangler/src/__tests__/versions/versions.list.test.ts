@@ -7,11 +7,15 @@ import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 import { writeWranglerConfig } from "../helpers/write-wrangler-config";
 
+vi.unmock("../../wrangler-banner");
+
 describe("versions list", () => {
 	mockAccountId();
 	mockApiToken();
 	runInTempDir();
 	mockConsoleMethods();
+	const cnsl = mockConsoleMethods();
+
 	const std = collectCLIOutput();
 
 	beforeEach(() => {
@@ -71,6 +75,8 @@ describe("versions list", () => {
 
 				"
 			`);
+
+			expect(cnsl.out).toMatch(/⛅️ wrangler/);
 
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -147,6 +153,8 @@ describe("versions list", () => {
 				]
 				"
 			`);
+
+			expect(cnsl.out).not.toMatch(/⛅️ wrangler/);
 
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});

@@ -6,7 +6,6 @@ import { getLegacyScriptName } from "../../index";
 import { logger } from "../../logger";
 import { requireAuth } from "../../user";
 import { fetchDeploymentVersions, fetchLatestDeployment } from "../api";
-import { getConfig } from "../utils/config";
 import type { VersionDetails } from ".";
 import type { ApiVersion, VersionCache } from "../types";
 
@@ -17,7 +16,7 @@ export const versionsSecretsListCommand = createCommand({
 		status: "stable",
 	},
 	behaviour: {
-		provideConfig: false,
+		printConfigWarnings: false,
 	},
 	args: {
 		name: {
@@ -31,9 +30,7 @@ export const versionsSecretsListCommand = createCommand({
 			default: false,
 		},
 	},
-	handler: async function versionsSecretListHandler(args) {
-		const config = getConfig(args, { hideWarnings: true });
-
+	handler: async function versionsSecretListHandler(args, { config }) {
 		const scriptName = getLegacyScriptName(args, config);
 		if (!scriptName) {
 			throw new UserError(

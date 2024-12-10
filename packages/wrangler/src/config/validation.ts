@@ -2,6 +2,7 @@ import assert from "node:assert";
 import path from "node:path";
 import TOML from "@iarna/toml";
 import { dedent } from "ts-dedent";
+import { UserError } from "../errors";
 import { getFlag } from "../experimental-flags";
 import { Diagnostics } from "./diagnostics";
 import {
@@ -21,6 +22,7 @@ import {
 	isRequiredProperty,
 	isString,
 	isStringArray,
+	isValidDateTimeStringFormat,
 	isValidName,
 	notInheritable,
 	validateAdditionalProperties,
@@ -31,6 +33,10 @@ import {
 	validateTypedArray,
 } from "./validation-helpers";
 import { configFileName, formatConfigSnippet, friendlyBindingNames } from ".";
+import type {
+	CreateApplicationRequest,
+	UserDeploymentConfiguration,
+} from "../cloudchamber/client";
 import type { CfWorkerInit } from "../deployment-bundle/worker";
 import type { Config, DevConfig, RawConfig, RawDevConfig } from "./config";
 import type {
@@ -309,7 +315,33 @@ export function normalizeAndValidateConfig(
 		[...Object.keys(config), "env", "$schema"]
 	);
 
+	applyPythonConfig(config, args);
+
 	return { config, diagnostics };
+}
+
+/**
+ * Modifies the provided config to support python workers, if the entrypoint is a .py file
+ */
+function applyPythonConfig(
+	config: Config,
+	args: NormalizeAndValidateConfigArgs
+) {
+	const mainModule = "script" in args ? args.script : config.main;
+	if (typeof mainModule === "string" && mainModule.endsWith(".py")) {
+		// Workers with a python entrypoint should have bundling turned off, since all of Wrangler's bundling is JS/TS specific
+		config.no_bundle = true;
+
+		// Workers with a python entrypoint need module rules for "*.py". Add one automatically as a DX nicety
+		if (!config.rules.some((rule) => rule.type === "PythonModule")) {
+			config.rules.push({ type: "PythonModule", globs: ["**/*.py"] });
+		}
+		if (!config.compatibility_flags.includes("python_workers")) {
+			throw new UserError(
+				"The `python_workers` compatibility flag is required to use Python."
+			);
+		}
+	}
 }
 
 /**
@@ -1146,7 +1178,7 @@ function normalizeAndValidateEnvironment(
 			topLevelEnv,
 			rawEnv,
 			"compatibility_date",
-			isString,
+			validateCompatibilityDate,
 			undefined
 		),
 		compatibility_flags: inheritable(
@@ -1337,6 +1369,16 @@ function normalizeAndValidateEnvironment(
 			"cloudchamber",
 			validateCloudchamberConfig,
 			{}
+		),
+		containers: notInheritable(
+			diagnostics,
+			topLevelEnv,
+			rawConfig,
+			rawEnv,
+			envName,
+			"containers",
+			validateContainerAppConfig,
+			{ app: [] }
 		),
 		send_email: notInheritable(
 			diagnostics,
@@ -2366,6 +2408,87 @@ const validateBindingArray =
 		return isValid;
 	};
 
+const validateContainerAppConfig: ValidatorFn = (
+	diagnostics,
+	_field,
+	value
+) => {
+	if (!value) {
+		diagnostics.errors.push(
+			`"containers" should be an object, but got a falsy value`
+		);
+		return false;
+	}
+
+	if (typeof value !== "object") {
+		diagnostics.errors.push(
+			`"containers" should be an object, but got ${typeof value}`
+		);
+		return false;
+	}
+
+	if (Array.isArray(value)) {
+		diagnostics.errors.push(
+			`"containers" should be an object, but got an array`
+		);
+		return false;
+	}
+
+	if (!("app" in value)) {
+		return true;
+	}
+
+	value = value.app;
+	if (!Array.isArray(value)) {
+		diagnostics.errors.push(
+			`"containers.app" should be an array, but got ${JSON.stringify(value)}`
+		);
+		return false;
+	}
+
+	for (const containerApp of value) {
+		const containerAppOptional =
+			containerApp as Partial<CreateApplicationRequest>;
+		if (!isRequiredProperty(containerAppOptional, "instances", "number")) {
+			diagnostics.errors.push(
+				`"containers.app.instances" should be defined and an integer`
+			);
+		}
+
+		if (!isRequiredProperty(containerAppOptional, "name", "string")) {
+			diagnostics.errors.push(
+				`"containers.app.name" should be defined and a string`
+			);
+		}
+
+		if (!("configuration" in containerAppOptional)) {
+			diagnostics.errors.push(
+				`"containers.app.configuration" should be defined`
+			);
+		} else if (Array.isArray(containerAppOptional.configuration)) {
+			diagnostics.errors.push(
+				`"containers.app.configuration" is defined as an array, it should be an object`
+			);
+		} else if (
+			!isRequiredProperty(
+				containerAppOptional.configuration as UserDeploymentConfiguration,
+				"image",
+				"string"
+			)
+		) {
+			diagnostics.errors.push(
+				`"containers.app.configuration.image" should be defined and a string`
+			);
+		}
+	}
+
+	if (diagnostics.errors.length > 0) {
+		return false;
+	}
+
+	return true;
+};
+
 const validateCloudchamberConfig: ValidatorFn = (diagnostics, field, value) => {
 	if (typeof value !== "object" || value === null || Array.isArray(value)) {
 		diagnostics.errors.push(
@@ -3187,6 +3310,21 @@ const validateConsumer: ValidatorFn = (diagnostics, field, value, _config) => {
 	}
 
 	return isValid;
+};
+
+const validateCompatibilityDate: ValidatorFn = (diagnostics, field, value) => {
+	if (value === undefined) {
+		return true;
+	}
+
+	if (typeof value !== "string") {
+		diagnostics.errors.push(
+			`Expected "${field}" to be of type string but got ${JSON.stringify(value)}.`
+		);
+		return false;
+	}
+
+	return isValidDateTimeStringFormat(diagnostics, field, value);
 };
 
 const validatePipelineBinding: ValidatorFn = (diagnostics, field, value) => {

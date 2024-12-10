@@ -1,13 +1,13 @@
 import assert from "assert";
 import { logRaw } from "@cloudflare/cli";
 import { brandColor, gray } from "@cloudflare/cli/colors";
+import { readConfig } from "../../config";
 import { UserError } from "../../errors";
 import * as metrics from "../../metrics";
-import { printWranglerBanner } from "../../update-check";
 import { requireAuth } from "../../user";
 import formatLabelledValues from "../../utils/render-labelled-values";
+import { printWranglerBanner } from "../../wrangler-banner";
 import { fetchLatestDeployment, fetchVersions } from "../api";
-import { getConfig } from "../utils/config";
 import { getDeploymentSource } from "./list";
 import type {
 	CommonYargsArgv,
@@ -42,7 +42,7 @@ export async function versionsDeploymentsStatusHandler(
 		await printWranglerBanner();
 	}
 
-	const config = getConfig(args);
+	const config = readConfig(args);
 	metrics.sendMetricsEvent(
 		"view latest versioned deployment",
 		{},

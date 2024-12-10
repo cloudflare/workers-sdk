@@ -14,8 +14,8 @@ import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { isNavigatorDefined } from "../navigator-user-agent";
 import { getBasePath } from "../paths";
-import { printWranglerBanner } from "../update-check";
 import * as shellquote from "../utils/shell-quote";
+import { printWranglerBanner } from "../wrangler-banner";
 import { buildFunctions } from "./buildFunctions";
 import { ROUTES_SPEC_VERSION, SECONDS_TO_WAIT_FOR_PROXY } from "./constants";
 import { FunctionsNoRoutesError, getFunctionsNoRoutesWarning } from "./errors";
@@ -303,7 +303,7 @@ export const Handler = async (args: PagesDevArguments) => {
 
 	// for `dev` we always use the top-level config, which means we need
 	// to read the config file with `env` set to `undefined`
-	const config = readConfig(undefined, { ...args, env: undefined });
+	const config = readConfig({ ...args, env: undefined });
 	const resolvedDirectory = args.directory ?? config.pages_build_output_dir;
 	const [_pages, _dev, ...remaining] = args._;
 	const command = remaining;

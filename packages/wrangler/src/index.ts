@@ -10,11 +10,11 @@ import { ai } from "./ai";
 import { cloudchamber } from "./cloudchamber";
 import {
 	configFileName,
-	findWranglerConfig,
 	formatConfigSnippet,
 	loadDotEnv,
 	readRawConfig,
 } from "./config";
+import { resolveWranglerConfigPath } from "./config/config-helpers";
 import { demandSingleValue } from "./core";
 import { CommandRegistry } from "./core/CommandRegistry";
 import { createRegisterYargsCommand } from "./core/register-yargs-command";
@@ -100,6 +100,12 @@ import {
 	r2BucketUpdateStorageClassCommand,
 } from "./r2/bucket";
 import {
+	r2BucketCORSDeleteCommand,
+	r2BucketCORSListCommand,
+	r2BucketCORSNamespace,
+	r2BucketCORSSetCommand,
+} from "./r2/cors";
+import {
 	r2BucketDomainAddCommand,
 	r2BucketDomainListCommand,
 	r2BucketDomainNamespace,
@@ -148,7 +154,7 @@ import {
 import { tailHandler, tailOptions } from "./tail";
 import registerTriggersSubcommands from "./triggers";
 import { typesHandler, typesOptions } from "./type-generation";
-import { printWranglerBanner, updateCheck } from "./update-check";
+import { updateCheck } from "./update-check";
 import { getAuthFromEnv } from "./user";
 import { loginCommand, logoutCommand, whoamiCommand } from "./user/commands";
 import { whoami } from "./user/whoami";
@@ -176,6 +182,7 @@ import { workflowsInstancesResumeCommand } from "./workflows/commands/instances/
 import { workflowsInstancesTerminateCommand } from "./workflows/commands/instances/terminate";
 import { workflowsListCommand } from "./workflows/commands/list";
 import { workflowsTriggerCommand } from "./workflows/commands/trigger";
+import { printWranglerBanner } from "./wrangler-banner";
 import { asJson } from "./yargs-types";
 import type { Config } from "./config";
 import type { LoggerLevel } from "./logger";
@@ -828,6 +835,22 @@ export function createCLIParser(argv: string[]) {
 			command: "wrangler r2 bucket lifecycle set",
 			definition: r2BucketLifecycleSetCommand,
 		},
+		{
+			command: "wrangler r2 bucket cors",
+			definition: r2BucketCORSNamespace,
+		},
+		{
+			command: "wrangler r2 bucket cors delete",
+			definition: r2BucketCORSDeleteCommand,
+		},
+		{
+			command: "wrangler r2 bucket cors list",
+			definition: r2BucketCORSListCommand,
+		},
+		{
+			command: "wrangler r2 bucket cors set",
+			definition: r2BucketCORSSetCommand,
+		},
 	]);
 	registry.registerNamespace("r2");
 
@@ -1109,8 +1132,8 @@ export async function main(argv: string[]): Promise<void> {
 		// key to fetch) or flags
 
 		try {
-			const configPath = args.config ?? findWranglerConfig(process.cwd());
-			const rawConfig = readRawConfig(args.config);
+			const configPath = resolveWranglerConfigPath(args);
+			const rawConfig = readRawConfig(configPath);
 			dispatcher = getMetricsDispatcher({
 				sendMetrics: rawConfig.send_metrics,
 				configPath,

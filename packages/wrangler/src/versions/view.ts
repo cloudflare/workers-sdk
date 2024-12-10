@@ -2,7 +2,6 @@ import { logRaw } from "@cloudflare/cli";
 import { createCommand } from "../core/create-command";
 import { UserError } from "../errors";
 import * as metrics from "../metrics";
-import { printWranglerBanner } from "../update-check";
 import { requireAuth } from "../user";
 import formatLabelledValues from "../utils/render-labelled-values";
 import { fetchVersion } from "./api";
@@ -16,6 +15,9 @@ export const versionsViewCommand = createCommand({
 		description: "View the details of a specific version of your Worker",
 		owner: "Workers: Authoring and Testing",
 		status: "stable",
+	},
+	behaviour: {
+		printBanner: (args) => !args.json,
 	},
 	args: {
 		"version-id": {
@@ -37,10 +39,6 @@ export const versionsViewCommand = createCommand({
 	},
 	positionalArgs: ["version-id"],
 	handler: async function versionsViewHandler(args, { config }) {
-		if (!args.json) {
-			await printWranglerBanner();
-		}
-
 		metrics.sendMetricsEvent(
 			"view worker version",
 			{},

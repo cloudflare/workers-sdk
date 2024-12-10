@@ -6,7 +6,6 @@ import { UserError } from "../../errors";
 import { getLegacyScriptName, isLegacyEnv } from "../../index";
 import { logger } from "../../logger";
 import { requireAuth } from "../../user";
-import { getConfig } from "../utils/config";
 import { copyWorkerVersionWithNewSecrets } from "./index";
 import type { VersionDetails, WorkerVersion } from "./index";
 
@@ -17,7 +16,7 @@ export const versionsSecretDeleteCommand = createCommand({
 		status: "stable",
 	},
 	behaviour: {
-		provideConfig: false,
+		printConfigWarnings: false,
 	},
 	args: {
 		key: {
@@ -42,8 +41,7 @@ export const versionsSecretDeleteCommand = createCommand({
 		},
 	},
 	positionalArgs: ["key"],
-	handler: async function versionsSecretDeleteHandler(args) {
-		const config = getConfig(args, { hideWarnings: true });
+	handler: async function versionsSecretDeleteHandler(args, { config }) {
 		const scriptName = getLegacyScriptName(args, config);
 		if (!scriptName) {
 			throw new UserError(

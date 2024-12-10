@@ -1,5 +1,78 @@
 # wrangler
 
+## 3.94.0
+
+### Minor Changes
+
+- [#7229](https://github.com/cloudflare/workers-sdk/pull/7229) [`669d7ad`](https://github.com/cloudflare/workers-sdk/commit/669d7ad1e44c07cf74202c4d0fc244a9c50dec81) Thanks [@gabivlj](https://github.com/gabivlj)! - Introduce a new cloudchamber command `wrangler cloudchamber apply`, which will be used by customers to deploy container-apps
+
+### Patch Changes
+
+- [#7002](https://github.com/cloudflare/workers-sdk/pull/7002) [`d2447c6`](https://github.com/cloudflare/workers-sdk/commit/d2447c6c1ebcdebf0829519c3bc52bc2d30a4294) Thanks [@GregBrimble](https://github.com/GregBrimble)! - fix: More helpful error messages when validating compatibility date
+
+- [#7493](https://github.com/cloudflare/workers-sdk/pull/7493) [`4c140bc`](https://github.com/cloudflare/workers-sdk/commit/4c140bcb2b75a3dcf12240d66c22619af10503df) Thanks [@emily-shen](https://github.com/emily-shen)! - fix: remove non-json output in json mode commands
+
+  Fixes regressions in 3.93.0 where unwanted text (wrangler banner, telemetry notice) was printing in commands that should only output valid json.
+
+- Updated dependencies [[`5449fe5`](https://github.com/cloudflare/workers-sdk/commit/5449fe54b15cf7c6dd12c385b0c8d2883c641b80)]:
+  - @cloudflare/workers-shared@0.11.0
+  - miniflare@3.20241205.0
+
+## 3.93.0
+
+### Minor Changes
+
+- [#7291](https://github.com/cloudflare/workers-sdk/pull/7291) [`f5b9cd5`](https://github.com/cloudflare/workers-sdk/commit/f5b9cd52bc2ec42e17435c5ea0cd79b766ff76dd) Thanks [@edmundhung](https://github.com/edmundhung)! - Add anonymous telemetry to Wrangler commands
+
+  For new users, Cloudflare will collect anonymous usage telemetry to guide and improve Wrangler's development. If you have already opted out of Wrangler's existing telemetry, this setting will still be respected.
+
+  See our [data policy](https://github.com/cloudflare/workers-sdk/tree/main/packages/wrangler/telemetry.md) for more details on what we collect and how to opt out if you wish.
+
+- [#7448](https://github.com/cloudflare/workers-sdk/pull/7448) [`20a0f17`](https://github.com/cloudflare/workers-sdk/commit/20a0f17609f8f71997c14de9284dae217109e02a) Thanks [@GregBrimble](https://github.com/GregBrimble)! - feat: Allow Workers for Platforms scripts (scripts deployed with `--dispatch-namespace`) to bring along `assets`
+
+- [#7445](https://github.com/cloudflare/workers-sdk/pull/7445) [`f4ae6ee`](https://github.com/cloudflare/workers-sdk/commit/f4ae6ee17a0bd487aa0680a0a7c0757256dee36d) Thanks [@WillTaylorDev](https://github.com/WillTaylorDev)! - Support for `assets.experimental_serve_directly` with `wrangler dev`
+
+### Patch Changes
+
+- [#7256](https://github.com/cloudflare/workers-sdk/pull/7256) [`415e5b5`](https://github.com/cloudflare/workers-sdk/commit/415e5b58c752c75f9cfcea4a5acf189cb1861404) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Export unstable_readConfig function and Unstable_Config, Unstable_RawConfig, Unstable_RawEnvironment and Unstable_MiniflareWorkerOptions types from Wrangler.
+  Overload unstable_getMiniflareWorkerOptions function to accept a config that has already been loaded.
+
+- [#7431](https://github.com/cloudflare/workers-sdk/pull/7431) [`8f25ebe`](https://github.com/cloudflare/workers-sdk/commit/8f25ebe74d19237e85b6dada1eb34236add11d48) Thanks [@vicb](https://github.com/vicb)! - chore(wrangler): update unenv dependency version
+
+  Pull in:
+
+  - refactor(cloudflare): reimplement module:createRequire for latest workerd (unjs/unenv#351)
+  - refactor: use node:events instead of relative path (unjs/unenv#354)
+  - refactor(http, cloudflare): use unenv/ imports inside node:http (unjs/unenv#363)
+  - refactor(node:process): set process.domain to undefined (unjs/unenv#367)
+
+- [#7426](https://github.com/cloudflare/workers-sdk/pull/7426) [`b40d0ab`](https://github.com/cloudflare/workers-sdk/commit/b40d0ab4fdd3a03c06ebb7682e4eea0e561afe81) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: allow the asset directory to be omitted in Wrangler config for commands that don't need it
+
+- [#7454](https://github.com/cloudflare/workers-sdk/pull/7454) [`f2045be`](https://github.com/cloudflare/workers-sdk/commit/f2045be9e689c2a919086904f3bd24f9e32baac9) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - refactor: Ensure that unstable type exports are all prefixed with `Unstable_` rather than just `Unstable`
+
+- [#7461](https://github.com/cloudflare/workers-sdk/pull/7461) [`9ede45b`](https://github.com/cloudflare/workers-sdk/commit/9ede45b02b43284180c7b9bce2839543fcc3229a) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: relax validation of unsafe configuration to allow an empty object
+
+  The types, the default and the code in general support an empty object for this config setting.
+
+  So it makes sense to avoid erroring when validating the config.
+
+- [#7446](https://github.com/cloudflare/workers-sdk/pull/7446) [`9435af0`](https://github.com/cloudflare/workers-sdk/commit/9435af0b927a84adecf8d4f48093bf8df07561e9) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: make sure Wrangler doesn't create a `.wrangler` tmp dir in the `functions/` folder of a Pages project
+
+  This regression was introduced in https://github.com/cloudflare/workers-sdk/pull/7415
+  and this change fixes it by reverting that change.
+
+- [#7385](https://github.com/cloudflare/workers-sdk/pull/7385) [`14a7bc6`](https://github.com/cloudflare/workers-sdk/commit/14a7bc659d70fbe11ed895ebe031ad3f46f8e995) Thanks [@edmundhung](https://github.com/edmundhung)! - The `x-provision` experimental flag now support inherit bindings in deploys
+
+- [#7463](https://github.com/cloudflare/workers-sdk/pull/7463) [`073293f`](https://github.com/cloudflare/workers-sdk/commit/073293faad82f7dd0d95ece9727f13d1195f7b74) Thanks [@penalosa](https://github.com/penalosa)! - Clarify messaging around `wrangler versions` commands to reflect that they're stable (and have been since GA during birthday week)
+
+- [#7436](https://github.com/cloudflare/workers-sdk/pull/7436) [`5e69799`](https://github.com/cloudflare/workers-sdk/commit/5e6979914a255d06830798c5167332b5165b048e) Thanks [@Ankcorn](https://github.com/Ankcorn)! - Relax type on observability.enabled to remove linting error for nested configurations
+
+- [#7450](https://github.com/cloudflare/workers-sdk/pull/7450) [`8c873ed`](https://github.com/cloudflare/workers-sdk/commit/8c873edd9434e998f94ce54d56c2bc7494da5615) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: ensure that version secrets commands do not write wrangler config warnings
+
+- Updated dependencies [[`21a9e24`](https://github.com/cloudflare/workers-sdk/commit/21a9e24bc7cea1e7bf54a77568de98df9b7c8d03), [`f4ae6ee`](https://github.com/cloudflare/workers-sdk/commit/f4ae6ee17a0bd487aa0680a0a7c0757256dee36d)]:
+  - miniflare@3.20241205.0
+  - @cloudflare/workers-shared@0.10.0
+
 ## 3.92.0
 
 ### Minor Changes

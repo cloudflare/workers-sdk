@@ -1,6 +1,7 @@
 import { existsSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { configFileName, findWranglerConfig, readConfig } from "../config";
+import { configFileName, readPagesConfig } from "../config";
+import { findWranglerConfig } from "../config/config-helpers";
 import { FatalError } from "../errors";
 import { logger } from "../logger";
 import {
@@ -56,15 +57,12 @@ export const Handler = async (args: PagesBuildEnvArgs) => {
 		pages_build_output_dir: string;
 	};
 	try {
-		config = readConfig(
-			configPath,
-			{
-				...args,
-				// eslint-disable-next-line turbo/no-undeclared-env-vars
-				env: process.env.PAGES_ENVIRONMENT,
-			},
-			{ requirePagesConfig: true }
-		);
+		config = readPagesConfig({
+			...args,
+			config: configPath,
+			// eslint-disable-next-line turbo/no-undeclared-env-vars
+			env: process.env.PAGES_ENVIRONMENT,
+		});
 	} catch (err) {
 		// found `wrangler.toml` but `pages_build_output_dir` is not specified
 		if (

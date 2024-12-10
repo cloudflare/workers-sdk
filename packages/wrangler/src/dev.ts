@@ -10,11 +10,8 @@ import {
 	convertCfWorkerInitBindingstoBindings,
 	extractBindingsOfType,
 } from "./api/startDevWorker/utils";
-import {
-	configFileName,
-	findWranglerConfig,
-	formatConfigSnippet,
-} from "./config";
+import { configFileName, formatConfigSnippet } from "./config";
+import { resolveWranglerConfigPath } from "./config/config-helpers";
 import { createCommand } from "./core/create-command";
 import { validateRoutes } from "./deploy/deploy";
 import { validateNodeCompatMode } from "./deployment-bundle/node-compat";
@@ -701,9 +698,7 @@ export async function startDev(args: StartDevOptions) {
 			);
 		}
 
-		const configPath =
-			args.config ||
-			(args.script && findWranglerConfig(path.dirname(args.script)));
+		const configPath = resolveWranglerConfigPath(args);
 
 		const authHook: AsyncHook<CfAccount, [Pick<Config, "account_id">]> = async (
 			config

@@ -15,6 +15,9 @@ export const versionsListCommand = createCommand({
 		owner: "Workers: Authoring and Testing",
 		status: "stable",
 	},
+	behaviour: {
+		printBanner: (args) => !args.json,
+	},
 	args: {
 		name: {
 			describe: "Name of the Worker",
@@ -27,7 +30,7 @@ export const versionsListCommand = createCommand({
 			default: false,
 		},
 	},
-	handler: async function versionsSecretListHandler(args, { config }) {
+	handler: async function versionsListHandler(args, { config }) {
 		metrics.sendMetricsEvent(
 			"list worker versions",
 			{ json: args.json },

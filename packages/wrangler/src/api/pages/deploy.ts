@@ -5,7 +5,7 @@ import path, { join, resolve as resolvePath } from "node:path";
 import { cwd } from "node:process";
 import { File, FormData } from "undici";
 import { fetchResult } from "../../cfetch";
-import { readConfig } from "../../config";
+import { readPagesConfig } from "../../config";
 import { shouldCheckFetch } from "../../deployment-bundle/bundle";
 import { validateNodeCompatMode } from "../../deployment-bundle/node-compat";
 import { FatalError } from "../../errors";
@@ -160,11 +160,7 @@ export async function deploy({
 	let config: Config | undefined;
 
 	try {
-		config = readConfig(
-			undefined,
-			{ ...args, env },
-			{ requirePagesConfig: true }
-		);
+		config = readPagesConfig({ ...args, env });
 	} catch (err) {
 		if (
 			!(

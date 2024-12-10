@@ -47,8 +47,9 @@ const MAX_UPLOAD_GATEWAY_ERRORS = 5;
 
 export const syncAssets = async (
 	accountId: string | undefined,
+	assetDirectory: string,
 	scriptName: string,
-	assetDirectory: string
+	dispatchNamespace?: string
 ): Promise<string> => {
 	assert(accountId, "Missing accountId");
 
@@ -56,10 +57,14 @@ export const syncAssets = async (
 	logger.info("🌀 Building list of assets...");
 	const manifest = await buildAssetManifest(assetDirectory);
 
+	const url = dispatchNamespace
+		? `/accounts/${accountId}/workers/dispatch/namespaces/${dispatchNamespace}/scripts/${scriptName}/assets-upload-session`
+		: `/accounts/${accountId}/workers/scripts/${scriptName}/assets-upload-session`;
+
 	// 2. fetch buckets w/ hashes
 	logger.info("🌀 Starting asset upload...");
 	const initializeAssetsResponse = await fetchResult<InitializeAssetsResponse>(
-		`/accounts/${accountId}/workers/scripts/${scriptName}/assets-upload-session`,
+		url,
 		{
 			headers: { "Content-Type": "application/json" },
 			method: "POST",

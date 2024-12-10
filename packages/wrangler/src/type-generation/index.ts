@@ -2,13 +2,14 @@ import * as fs from "node:fs";
 import { basename, dirname, extname, join, relative, resolve } from "node:path";
 import { findUpSync } from "find-up";
 import { getNodeCompat } from "miniflare";
-import { findWranglerConfig, readConfig } from "../config";
+import { readConfig } from "../config";
+import { resolveWranglerConfigPath } from "../config/config-helpers";
 import { getEntry } from "../deployment-bundle/entry";
 import { getVarsForDev } from "../dev/dev-vars";
 import { CommandLineArgsError, UserError } from "../errors";
 import { logger } from "../logger";
 import { parseJSONC } from "../parse";
-import { printWranglerBanner } from "../update-check";
+import { printWranglerBanner } from "../wrangler-banner";
 import { generateRuntimeTypes } from "./runtime";
 import { logRuntimeTypesMessage } from "./runtime/log-runtime-types-message";
 import type { Config } from "../config";
@@ -62,7 +63,7 @@ export async function typesHandler(
 
 	await printWranglerBanner();
 
-	const configPath = args.config ?? findWranglerConfig(process.cwd());
+	const configPath = resolveWranglerConfigPath(args);
 	if (
 		!configPath ||
 		!fs.existsSync(configPath) ||
@@ -76,7 +77,7 @@ export async function typesHandler(
 		return;
 	}
 
-	const config = readConfig(configPath, args);
+	const config = readConfig(args);
 
 	// args.xRuntime will be a string if the user passes "--x-include-runtime" or "--x-include-runtime=..."
 	if (typeof args.experimentalIncludeRuntime === "string") {

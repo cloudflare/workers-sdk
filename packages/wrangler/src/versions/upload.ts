@@ -51,7 +51,6 @@ import {
 import { requireAuth } from "../user";
 import { collectKeyValues } from "../utils/collectKeyValues";
 import { retryOnError } from "../utils/retry";
-import { getConfig } from "./utils/config";
 import type { AssetsOptions } from "../assets";
 import type { Config } from "../config";
 import type { Rule } from "../config/environment";
@@ -282,10 +281,9 @@ export const versionsUploadCommand = createCommand({
 		},
 	},
 	behaviour: {
-		provideConfig: false,
+		provideConfig: true,
 	},
-	handler: async function versionsUploadHandler(args) {
-		const config = getConfig(args, {}, args.script);
+	handler: async function versionsUploadHandler(args, { config }) {
 		const entry = await getEntry(args, config, "versions upload");
 		metrics.sendMetricsEvent(
 			"upload worker version",
@@ -665,7 +663,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		// Upload assets if assets is being used
 		const assetsJwt =
 			props.assetsOptions && !props.dryRun
-				? await syncAssets(accountId, scriptName, props.assetsOptions.directory)
+				? await syncAssets(accountId, props.assetsOptions.directory, scriptName)
 				: undefined;
 
 		const bindings = getBindings({

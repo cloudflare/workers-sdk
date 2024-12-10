@@ -1,5 +1,17 @@
 # @cloudflare/workers-shared
 
+## 0.11.0
+
+### Minor Changes
+
+- [#7465](https://github.com/cloudflare/workers-sdk/pull/7465) [`5449fe5`](https://github.com/cloudflare/workers-sdk/commit/5449fe54b15cf7c6dd12c385b0c8d2883c641b80) Thanks [@WillTaylorDev](https://github.com/WillTaylorDev)! - Instrument analytics around assets.serve_directly
+
+## 0.10.0
+
+### Minor Changes
+
+- [#7445](https://github.com/cloudflare/workers-sdk/pull/7445) [`f4ae6ee`](https://github.com/cloudflare/workers-sdk/commit/f4ae6ee17a0bd487aa0680a0a7c0757256dee36d) Thanks [@WillTaylorDev](https://github.com/WillTaylorDev)! - Support for `assets.experimental_serve_directly` with `wrangler dev`
+
 ## 0.9.1
 
 ### Patch Changes

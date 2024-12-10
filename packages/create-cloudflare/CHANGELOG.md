@@ -1,5 +1,49 @@
 # create-cloudflare
 
+## 2.33.4
+
+### Patch Changes
+
+- [#7257](https://github.com/cloudflare/workers-sdk/pull/7257) [`0920d13`](https://github.com/cloudflare/workers-sdk/commit/0920d132b3a9b900ed27999542c5d603198a7a97) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From    | To     |
+  | --------------- | ------- | ------ |
+  | @angular/create | 18.2.11 | 19.0.0 |
+  | create-qwik     | 1.9.1   | 1.11.0 |
+  | create-remix    | 2.14.0  | 2.15.0 |
+
+- [#7419](https://github.com/cloudflare/workers-sdk/pull/7419) [`51fb982`](https://github.com/cloudflare/workers-sdk/commit/51fb9824c760420aaa193ff9bf72269efe968586) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | nuxi       | 3.15.0 | 3.16.0 |
+
+- [#7489](https://github.com/cloudflare/workers-sdk/pull/7489) [`90fa58b`](https://github.com/cloudflare/workers-sdk/commit/90fa58b5b838b3a7e7befd529dc2b6368d887bb7) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency   | From   | To     |
+  | ------------ | ------ | ------ |
+  | create-remix | 2.14.0 | 2.15.0 |
+
+- [#7480](https://github.com/cloudflare/workers-sdk/pull/7480) [`9ea45b4`](https://github.com/cloudflare/workers-sdk/commit/9ea45b491e0ba94ddbb7966023d34dc385285be0) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - update Vue C3 experimental template to work with Worker Assets
+
+## 2.33.3
+
+### Patch Changes
+
+- [#7384](https://github.com/cloudflare/workers-sdk/pull/7384) [`55ec38a`](https://github.com/cloudflare/workers-sdk/commit/55ec38ae32ea28c080ca053274742240a06c44e8) Thanks [@Cherry](https://github.com/Cherry)! - chore: bump vitest in templates
+
+- [#7428](https://github.com/cloudflare/workers-sdk/pull/7428) [`f463dd2`](https://github.com/cloudflare/workers-sdk/commit/f463dd299dc6f28d348b8c782304c65f2c569d4b) Thanks [@Oreoezi](https://github.com/Oreoezi)! - Use correct port in playwright config file for generated SvelteKit apps
+
+- [#7343](https://github.com/cloudflare/workers-sdk/pull/7343) [`a3d5aad`](https://github.com/cloudflare/workers-sdk/commit/a3d5aad66aaa8f72bc371aeba7ea9cb5c6688042) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: C3 experimental template for Solid now uses correct preset
+
+- [#7332](https://github.com/cloudflare/workers-sdk/pull/7332) [`a068672`](https://github.com/cloudflare/workers-sdk/commit/a068672bc9264794d5b22b717db5fe53345ee174) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: C3 experimental template for Nuxt now uses correct preset
+
 ## 2.33.2
 
 ### Patch Changes
