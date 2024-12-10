@@ -16,7 +16,6 @@ describe("migrate", () => {
 	runInTempDir();
 	mockConsoleMethods();
 	mockSetTimeout();
-	vi.stubEnv("CLOUDFLARE_API_TOKEN", "123456789");
 
 	const { setIsTTY } = useMockIsTTY();
 
@@ -124,6 +123,7 @@ Your database may not be available to serve requests during the migration, conti
 		});
 		it("multiple accounts: should let the user apply migrations with an account_id in config", async () => {
 			setIsTTY(false);
+			const std = mockConsoleMethods();
 			msw.use(
 				http.post(
 					"*/accounts/:accountId/d1/database/:databaseId/query",
@@ -191,8 +191,8 @@ Ok to create /tmp/my-migrations-go-here?`,
 Your database may not be available to serve requests during the migration, continue?`,
 				result: true,
 			});
-
-			expect(runWrangler("d1 migrations apply db --remote")).resolves;
+			await runWrangler("d1 migrations apply db --remote");
+			expect(std.out).toBe("");
 		});
 	});
 
