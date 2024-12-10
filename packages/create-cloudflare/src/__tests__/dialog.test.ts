@@ -15,33 +15,69 @@ describe("dialog helpers", () => {
 		process.stdout.columns = originalColumns;
 	});
 
-	test("printWelcomeMessage with telemetry disabled", () => {
-		printWelcomeMessage("0.0.0", false);
+	describe("printWelcomeMessage", () => {
+		test("with telemetry disabled", () => {
+			printWelcomeMessage("0.0.0", false, {});
 
-		expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`
-			"────────────────────────────────────────────────────────────
-			👋 Welcome to create-cloudflare v0.0.0!
-			🧡 Let's get started.
-			────────────────────────────────────────────────────────────
+			expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`
+				"────────────────────────────────────────────────────────────
+				👋 Welcome to create-cloudflare v0.0.0!
+				🧡 Let's get started.
+				────────────────────────────────────────────────────────────
 
-			"
-		`);
-	});
+				"
+			`);
+		});
 
-	test("printWelcomeMessage with telemetry enabled", () => {
-		printWelcomeMessage("0.0.0", true);
+		test("with telemetry enabled", () => {
+			printWelcomeMessage("0.0.0", true, {});
 
-		expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`
-			"────────────────────────────────────────────────────────────
-			👋 Welcome to create-cloudflare v0.0.0!
-			🧡 Let's get started.
-			📊 Cloudflare collects telemetry about your usage of Create-Cloudflare.
+			expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`
+				"────────────────────────────────────────────────────────────
+				👋 Welcome to create-cloudflare v0.0.0!
+				🧡 Let's get started.
+				📊 Cloudflare collects telemetry about your usage of Create-Cloudflare.
 
-			Learn more at: https://github.com/cloudflare/workers-sdk/blob/main/packages/create-cloudflare/telemetry.md
-			────────────────────────────────────────────────────────────
+				Learn more at: https://github.com/cloudflare/workers-sdk/blob/main/packages/create-cloudflare/telemetry.md
+				────────────────────────────────────────────────────────────
 
-			"
-		`);
+				"
+			`);
+		});
+
+		test("with telemetry disabled in experimental mode", () => {
+			printWelcomeMessage("0.0.0", false, { experimental: true });
+
+			expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`
+				"────────────────────────────────────────────────────────────
+				👋 Welcome to create-cloudflare v0.0.0!
+				🧡 Let's get started.
+
+				🧪 Running in experimental mode
+				────────────────────────────────────────────────────────────
+
+				"
+			`);
+		});
+
+		test("with telemetry enabled in experimental mode", () => {
+			printWelcomeMessage("0.0.0", true, { experimental: true });
+
+			expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`
+				"────────────────────────────────────────────────────────────
+				👋 Welcome to create-cloudflare v0.0.0!
+				🧡 Let's get started.
+
+				🧪 Running in experimental mode
+
+				📊 Cloudflare collects telemetry about your usage of Create-Cloudflare.
+
+				Learn more at: https://github.com/cloudflare/workers-sdk/blob/main/packages/create-cloudflare/telemetry.md
+				────────────────────────────────────────────────────────────
+
+				"
+			`);
+		});
 	});
 
 	describe("printSummary", () => {
