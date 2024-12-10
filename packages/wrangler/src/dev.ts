@@ -20,7 +20,6 @@ import { getVarsForDev } from "./dev/dev-vars";
 import registerDevHotKeys from "./dev/hotkeys";
 import { maybeRegisterLocalWorker } from "./dev/local";
 import { UserError } from "./errors";
-import { run } from "./experimental-flags";
 import isInteractive from "./is-interactive";
 import { logger } from "./logger";
 import { getLegacyAssetPaths, getSiteAssetPaths } from "./sites";
