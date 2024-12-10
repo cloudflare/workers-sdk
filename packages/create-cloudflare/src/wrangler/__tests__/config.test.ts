@@ -39,9 +39,11 @@ describe("updateWranglerToml", () => {
 		await updateWranglerToml(ctx);
 
 		const newToml = vi.mocked(writeFile).mock.calls[0][1];
-		expect(newToml).toMatch(`name = "${ctx.project.name}"`);
-		expect(newToml).toMatch(`main = "src/index.ts"`);
-		expect(newToml).toMatch(`compatibility_date = "${mockCompatDate}"`);
+		expect(newToml).toBe(
+			`name = "${ctx.project.name}"\n` +
+				`main = "src/index.ts"\n` +
+				`compatibility_date = "${mockCompatDate}"`,
+		);
 	});
 
 	test("empty replacement", async () => {
@@ -55,9 +57,11 @@ describe("updateWranglerToml", () => {
 		await updateWranglerToml(ctx);
 
 		const newToml = vi.mocked(writeFile).mock.calls[0][1];
-		expect(newToml).toMatch(`name = "${ctx.project.name}"`);
-		expect(newToml).toMatch(`main = "src/index.ts"`);
-		expect(newToml).toMatch(`compatibility_date = "${mockCompatDate}"`);
+		expect(newToml).toBe(
+			`name = "${ctx.project.name}"\n` +
+				`main = "src/index.ts"\n` +
+				`compatibility_date = "${mockCompatDate}"`,
+		);
 	});
 
 	test("string literal replacement", async () => {
@@ -71,6 +75,10 @@ describe("updateWranglerToml", () => {
 		const newToml = vi.mocked(writeFile).mock.calls[0][1];
 		expect(newToml).toMatch(`name = "${ctx.project.name}"`);
 		expect(newToml).toMatch(`main = "src/index.ts"`);
+		expect(newToml).toBe(
+			`compatibility_date = "2024-01-17"name = "test"\n` +
+				`main = "src/index.ts"`,
+		);
 	});
 
 	test("missing name and compat date", async () => {
@@ -83,6 +91,9 @@ describe("updateWranglerToml", () => {
 		expect(newToml).toMatch(`name = "${ctx.project.name}"`);
 		expect(newToml).toMatch(`main = "src/index.ts"`);
 		expect(newToml).toMatch(`compatibility_date = "${mockCompatDate}"`);
+		expect(newToml).toBe(
+			`name = "test"compatibility_date = "2024-01-17"main = "src/index.ts"`,
+		);
 	});
 
 	test("dont replace valid existing compatibility date", async () => {
@@ -95,6 +106,8 @@ describe("updateWranglerToml", () => {
 		await updateWranglerToml(ctx);
 
 		const newToml = vi.mocked(writeFile).mock.calls[0][1];
-		expect(newToml).toMatch(`compatibility_date = "2001-10-12"`);
+		expect(newToml).toBe(
+			`name = "test"\n` + `compatibility_date = "2001-10-12"`,
+		);
 	});
 });
