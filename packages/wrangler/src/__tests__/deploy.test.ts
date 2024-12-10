@@ -22,7 +22,10 @@ import { clearDialogs, mockConfirm } from "./helpers/mock-dialogs";
 import { mockGetZoneFromHostRequest } from "./helpers/mock-get-zone-from-host";
 import { useMockIsTTY } from "./helpers/mock-istty";
 import { mockCollectKnownRoutesRequest } from "./helpers/mock-known-routes";
-import { mockKeyListRequest } from "./helpers/mock-kv";
+import {
+	mockKeyListRequest,
+	mockListKVNamespacesRequest,
+} from "./helpers/mock-kv";
 import {
 	mockExchangeRefreshTokenForAccessToken,
 	mockGetMemberships,
@@ -52,7 +55,6 @@ import { writeWranglerConfig } from "./helpers/write-wrangler-config";
 import type { AssetManifest } from "../assets";
 import type { Config } from "../config";
 import type { CustomDomain, CustomDomainChangeset } from "../deploy/deploy";
-import type { KVNamespaceInfo } from "../kv/helpers";
 import type {
 	PostQueueBody,
 	PostTypedConsumerBody,
@@ -12093,20 +12095,6 @@ function mockPublishCustomDomainsRequest({
 				});
 
 				return HttpResponse.json(createFetchResult(null));
-			},
-			{ once: true }
-		)
-	);
-}
-
-/** Create a mock handler for the request to get a list of all KV namespaces. */
-export function mockListKVNamespacesRequest(...namespaces: KVNamespaceInfo[]) {
-	msw.use(
-		http.get(
-			"*/accounts/:accountId/storage/kv/namespaces",
-			({ params }) => {
-				expect(params.accountId).toEqual("some-account-id");
-				return HttpResponse.json(createFetchResult(namespaces));
 			},
 			{ once: true }
 		)

@@ -1,7 +1,7 @@
 import { inputPrompt } from "@cloudflare/cli/interactive";
 import chalk from "chalk";
 import { fetchResult } from "../cfetch";
-import { friendlyBindingNames, printBindings } from "../config";
+import { printBindings } from "../config";
 import { createD1Database } from "../d1/create";
 import { listDatabases } from "../d1/list";
 import { prompt } from "../dialogs";

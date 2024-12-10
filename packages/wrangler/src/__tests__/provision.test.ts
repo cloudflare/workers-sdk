@@ -1,10 +1,13 @@
 import { inputPrompt } from "@cloudflare/cli/interactive";
 import { http, HttpResponse } from "msw";
 import { prompt } from "../dialogs";
-import { mockListKVNamespacesRequest } from "./deploy.test";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { useMockIsTTY } from "./helpers/mock-istty";
+import {
+	mockCreateKVNamespace,
+	mockListKVNamespacesRequest,
+} from "./helpers/mock-kv";
 import { mockUploadWorkerRequest } from "./helpers/mock-upload-worker";
 import { mockSubDomainRequest } from "./helpers/mock-workers-subdomain";
 import {
@@ -502,30 +505,6 @@ function mockGetSettings(
 					result: options.result,
 				});
 			}
-		)
-	);
-}
-
-function mockCreateKVNamespace(
-	options: {
-		resultId?: string;
-		assertTitle?: string;
-	} = {}
-) {
-	msw.use(
-		http.post(
-			"*/accounts/:accountId/storage/kv/namespaces",
-			async ({ request }) => {
-				if (options.assertTitle) {
-					const requestBody = await request.json();
-					expect(requestBody).toEqual({ title: options.assertTitle });
-				}
-
-				return HttpResponse.json(
-					createFetchResult({ id: options.resultId ?? "some-namespace-id" })
-				);
-			},
-			{ once: true }
 		)
 	);
 }
