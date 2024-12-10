@@ -1,6 +1,5 @@
 import { createCommand } from "../../core/create-command";
 import { UserError } from "../../errors";
-import { printWranglerBanner } from "../../wrangler-banner";
 
 export const deploymentsViewCommand = createCommand({
 	metadata: {

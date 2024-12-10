@@ -6,7 +6,6 @@ import { UserError } from "../../errors";
 import * as metrics from "../../metrics";
 import { requireAuth } from "../../user";
 import formatLabelledValues from "../../utils/render-labelled-values";
-import { printWranglerBanner } from "../../wrangler-banner";
 import { fetchLatestDeployments, fetchVersions } from "../api";
 import { getVersionSource } from "../list";
 import type { ApiDeployment, VersionCache } from "../types";
