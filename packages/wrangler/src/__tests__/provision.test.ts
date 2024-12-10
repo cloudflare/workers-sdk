@@ -1,8 +1,7 @@
-import { inputPrompt } from "@cloudflare/cli/interactive";
 import { http, HttpResponse } from "msw";
-import { prompt } from "../dialogs";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
+import { clearDialogs, mockPrompt, mockSelect } from "./helpers/mock-dialogs";
 import { useMockIsTTY } from "./helpers/mock-istty";
 import {
 	mockCreateKVNamespace,
@@ -21,9 +20,6 @@ import { runWrangler } from "./helpers/run-wrangler";
 import { writeWorkerSource } from "./helpers/write-worker-source";
 import { writeWranglerConfig } from "./helpers/write-wrangler-config";
 import type { Settings } from "../deployment-bundle/bindings";
-
-vi.mock("@cloudflare/cli/interactive");
-vi.mock("../dialogs");
 
 describe("--x-provision", () => {
 	const std = mockConsoleMethods();
@@ -48,8 +44,9 @@ describe("--x-provision", () => {
 		});
 	});
 	afterEach(() => {
-		vi.clearAllMocks();
+		clearDialogs();
 	});
+
 	it("should inherit KV, R2 and D1 bindings if they could be found from the settings", async () => {
 		mockGetSettings({
 			result: {
@@ -140,14 +137,17 @@ describe("--x-provision", () => {
 				})
 			);
 
-			vi.mocked(inputPrompt).mockImplementation(async (options) => {
-				if (options.label === "KV") {
-					return "existing-kv-id";
-				} else if (options.label === "R2") {
-					return "existing-bucket-name";
-				} else if (options.label === "D1") {
-					return "existing-d1-id";
-				}
+			mockSelect({
+				text: "Would you like to connect an existing KV Namespace or create a new one?",
+				result: "existing-kv-id",
+			});
+			mockSelect({
+				text: "Would you like to connect an existing D1 Database or create a new one?",
+				result: "existing-d1-id",
+			});
+			mockSelect({
+				text: "Would you like to connect an existing R2 Bucket or create a new one?",
+				result: "existing-bucket-name",
 			});
 
 			mockUploadWorkerRequest({
@@ -250,25 +250,29 @@ describe("--x-provision", () => {
 				})
 			);
 
-			vi.mocked(inputPrompt).mockImplementation(async (options) => {
-				expect(options.type).toBe("select");
-				expect(options.type === "select" && options.options[3]).toStrictEqual({
-					label: "Other (too many to list)",
-					value: "manual",
-				});
-				return "manual";
+			mockSelect({
+				text: "Would you like to connect an existing KV Namespace or create a new one?",
+				result: "manual",
 			});
-			vi.mocked(prompt).mockImplementation(async (text) => {
-				switch (text) {
-					case "Enter the title or id for an existing KV Namespace":
-						return "existing-kv-id-1";
-					case "Enter the name or id for an existing D1 Database":
-						return "existing-d1-id-1";
-					case "Enter the name for an existing R2 Bucket":
-						return "existing-bucket-1";
-					default:
-						throw new Error(`Unexpected prompt: ${text}`);
-				}
+			mockPrompt({
+				text: "Enter the title or id for an existing KV Namespace",
+				result: "existing-kv-id-1",
+			});
+			mockSelect({
+				text: "Would you like to connect an existing D1 Database or create a new one?",
+				result: "manual",
+			});
+			mockPrompt({
+				text: "Enter the name or id for an existing D1 Database",
+				result: "existing-d1-id-1",
+			});
+			mockSelect({
+				text: "Would you like to connect an existing R2 Bucket or create a new one?",
+				result: "manual",
+			});
+			mockPrompt({
+				text: "Enter the name for an existing R2 Bucket",
+				result: "existing-bucket-1",
 			});
 
 			mockUploadWorkerRequest({
@@ -368,36 +372,39 @@ describe("--x-provision", () => {
 				})
 			);
 
-			vi.mocked(inputPrompt).mockImplementation(async (options) => {
-				expect(options.type).toBe("select");
-				const labels =
-					options.type === "select" && options.options.map((o) => o.label);
-				expect(labels).toContain("Create new");
-				expect(labels).not.toContain("Other (too many to list)");
-				return "new";
+			mockSelect({
+				text: "Would you like to connect an existing KV Namespace or create a new one?",
+				result: "new",
 			});
-			vi.mocked(prompt).mockImplementation(async (text, options) => {
-				switch (text) {
-					case "Enter a name for your new KV Namespace":
-						expect(options?.defaultValue).toBe("test-name-kv");
-						return "new-kv";
-					case "Enter a name for your new D1 Database":
-						expect(options?.defaultValue).toBe("test-name-d1");
-						return "new-d1";
-					case "Enter a name for your new R2 Bucket":
-						expect(options?.defaultValue).toBe("test-name-r2");
-						return "new-r2";
-					default:
-						throw new Error(`Unexpected prompt: ${text}`);
-				}
+			mockPrompt({
+				text: "Enter a name for your new KV Namespace",
+				result: "new-kv",
 			});
 			mockCreateKVNamespace({
 				assertTitle: "new-kv",
 				resultId: "new-kv-id",
 			});
+
+			mockSelect({
+				text: "Would you like to connect an existing D1 Database or create a new one?",
+				result: "new",
+			});
+			mockPrompt({
+				text: "Enter a name for your new D1 Database",
+				result: "new-d1",
+			});
 			mockCreateD1Database({
 				assertName: "new-d1",
 				resultId: "new-d1-id",
+			});
+
+			mockSelect({
+				text: "Would you like to connect an existing R2 Bucket or create a new one?",
+				result: "new",
+			});
+			mockPrompt({
+				text: "Enter a name for your new R2 Bucket",
+				result: "new-r2",
 			});
 			mockCreateR2Bucket({
 				assertBucketName: "new-r2",

@@ -1,10 +1,9 @@
-import { inputPrompt } from "@cloudflare/cli/interactive";
 import chalk from "chalk";
 import { fetchResult } from "../cfetch";
 import { printBindings } from "../config";
 import { createD1Database } from "../d1/create";
 import { listDatabases } from "../d1/list";
-import { prompt } from "../dialogs";
+import { prompt, select } from "../dialogs";
 import { FatalError } from "../errors";
 import { createKVNamespace, listKVNamespaces } from "../kv/helpers";
 import { logger } from "../logger";
@@ -241,13 +240,13 @@ async function runProvisioningFlow(
 	if (pending.length) {
 		const options = preExisting
 			.map((resource) => ({
-				label: resource.name,
+				title: resource.name,
 				value: resource.id,
 			}))
 			.slice(0, MAX_OPTIONS - 1);
 		if (options.length < preExisting.length) {
 			options.push({
-				label: "Other (too many to list)",
+				title: "Other (too many to list)",
 				value: "manual",
 			});
 		}
@@ -258,13 +257,15 @@ async function runProvisioningFlow(
 			const selected =
 				options.length === 0
 					? "new"
-					: await inputPrompt({
-							type: "select",
-							question: `Would you like to connect an existing ${friendlyBindingName} or create a new one?`,
-							options: options.concat([{ label: "Create new", value: "new" }]),
-							label: item.binding,
-							defaultValue: "new",
-						});
+					: await select(
+							`Would you like to connect an existing ${friendlyBindingName} or create a new one?`,
+							{
+								choices: options.concat([
+									{ title: "Create new", value: "new" },
+								]),
+								defaultOption: options.length,
+							}
+						);
 			if (selected === "new") {
 				name = await prompt(
 					`Enter a name for your new ${friendlyBindingName}`,
