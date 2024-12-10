@@ -20,5 +20,7 @@ export default defineConfig({
 			},
 		},
 	},
-	plugins: [cloudflare({ viteEnvironment: { name: 'worker' } })],
+	plugins: [
+		cloudflare({ viteEnvironment: { name: 'worker' }, persistState: false }),
+	],
 });

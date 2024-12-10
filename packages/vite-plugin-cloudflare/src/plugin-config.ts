@@ -9,12 +9,12 @@ export type PersistState = boolean | { path: string };
 
 interface PluginWorkerConfig {
 	configPath: string;
-	persistState?: PersistState;
 	viteEnvironment?: { name?: string };
 }
 
 export interface PluginConfig extends Partial<PluginWorkerConfig> {
 	auxiliaryWorkers?: PluginWorkerConfig[];
+	persistState?: PersistState;
 }
 
 type Defined<T> = Exclude<T, undefined>;

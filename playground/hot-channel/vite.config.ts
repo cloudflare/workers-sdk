@@ -4,7 +4,7 @@ import { defineConfig } from 'vite';
 
 export default defineConfig({
 	plugins: [
-		cloudflare(),
+		cloudflare({ persistState: false }),
 		{
 			name: 'test-plugin',
 			configureServer(viteDevServer) {

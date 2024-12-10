@@ -18,5 +18,5 @@ export default defineConfig({
 			},
 		},
 	},
-	plugins: [cloudflare()],
+	plugins: [cloudflare({ persistState: false })],
 });
