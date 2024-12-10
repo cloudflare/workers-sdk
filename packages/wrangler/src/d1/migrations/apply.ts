@@ -22,11 +22,7 @@ import type {
 } from "../../yargs-types";
 
 export function ApplyOptions(yargs: CommonYargsArgv) {
-	return MigrationOptions(yargs).option("batch-size", {
-		describe: "Number of queries to send in a single batch",
-		type: "number",
-		deprecated: true,
-	});
+	return MigrationOptions(yargs);
 }
 
 type ApplyHandlerOptions = StrictYargsOptionsToInterface<typeof ApplyOptions>;
