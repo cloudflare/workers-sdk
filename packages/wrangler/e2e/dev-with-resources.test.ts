@@ -341,7 +341,30 @@ describe.sequential.each(RUNTIMES)("Bindings: $flags", ({ runtime, flags }) => {
 		expect(result.stdout).toBe("new-value");
 	});
 
-	it("supports Workers Sites bindings", async () => {
+	it("supports Workers Sites bindings", async ({ onTestFinished }) => {
+		if (!isLocal) {
+			onTestFinished(async () => {
+				// Try to clean up created remote Workers Sites namespace
+				const listResult = await helper.run(`wrangler kv namespace list`);
+				const list = JSON.parse(
+					// Ignore extra debug output
+					listResult.stdout.substring(
+						listResult.stdout.indexOf("["),
+						listResult.stdout.lastIndexOf("]") + 1
+					)
+				);
+				assert(Array.isArray(list));
+				const ns = list.find(({ title }) => title.includes(workerName));
+				if (ns === undefined) {
+					console.warn("Couldn't find Workers Sites namespace to delete");
+				} else {
+					await helper.run(
+						`wrangler kv namespace delete --namespace-id ${ns.id}`
+					);
+				}
+			});
+		}
+
 		const kvAssetHandler = require.resolve("@cloudflare/kv-asset-handler");
 		await helper.seed({
 			"public/index.html": "<h1>👋</h1>",
@@ -380,27 +403,6 @@ describe.sequential.each(RUNTIMES)("Bindings: $flags", ({ runtime, flags }) => {
 		const { url } = await worker.waitForReady();
 		const res = await fetch(url);
 		expect(await res.text()).toBe("<h1>👋</h1>");
-
-		// Try to clean up created remote Workers Sites namespace
-		if (!isLocal) {
-			const listResult = await helper.run(`wrangler kv namespace list`);
-			const list = JSON.parse(
-				// Ignore extra debug output
-				listResult.stdout.substring(
-					listResult.stdout.indexOf("["),
-					listResult.stdout.lastIndexOf("]") + 1
-				)
-			);
-			assert(Array.isArray(list));
-			const ns = list.find(({ title }) => title.includes(workerName));
-			if (ns === undefined) {
-				console.warn("Couldn't find Workers Sites namespace to delete");
-			} else {
-				await helper.run(
-					`wrangler kv namespace delete --namespace-id ${ns.id}`
-				);
-			}
-		}
 	});
 
 	it("exposes R2 bucket bindings", async () => {
