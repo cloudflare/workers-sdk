@@ -3,10 +3,10 @@ import {
 	endSection,
 	log,
 	startSection,
-	status,
 	updateStatus,
 } from "@cloudflare/cli";
 import { processArgument } from "@cloudflare/cli/args";
+import { brandColor, dim } from "@cloudflare/cli/colors";
 import { inputPrompt, spinner } from "@cloudflare/cli/interactive";
 import { pollSSHKeysUntilCondition, waitForPlacement } from "./cli";
 import { getLocation } from "./cli/locations";
@@ -171,9 +171,9 @@ async function askWhichSSHKeysDoTheyWantToAdd(
 
 	if (keys.length === 1) {
 		const yes = await inputPrompt({
-			question: `Do you want to add the ssh key ${keyItems[0].name}?`,
+			question: `Do you want to add the SSH key ${keyItems[0].name}?`,
 			type: "confirm",
-			helpText: "You need this to ssh into the VM",
+			helpText: "You need this to SSH into the VM",
 			defaultValue: false,
 			label: "",
 		});
@@ -190,15 +190,15 @@ async function askWhichSSHKeysDoTheyWantToAdd(
 
 	const res = await inputPrompt({
 		question:
-			"You have multiple ssh keys in your account, what do you want to do for this new deployment?",
-		label: "",
+			"You have multiple SSH keys in your account, what do you want to do for this new deployment?",
+		label: "ssh",
 		defaultValue: false,
 		helpText: "",
 		type: "select",
 		options: [
 			{ label: "Add all of them", value: "all" },
 			{ label: "Select the keys", value: "select" },
-			{ label: "Don't add any ssh keys", value: "none" },
+			{ label: "Don't add any SSH keys", value: "none" },
 		],
 	});
 	if (res === "all") {
@@ -294,7 +294,7 @@ async function handleCreateCommand(
 
 	const yes = await inputPrompt({
 		type: "confirm",
-		question: "Do you want to go ahead and create your container?",
+		question: "Proceed?",
 		label: "",
 	});
 	if (!yes) {
@@ -323,10 +323,8 @@ async function handleCreateCommand(
 	}
 
 	stop();
-	updateStatus(`${status.success} Created deployment!`);
-	if (deployment.network?.ipv4) {
-		log(`${deployment.id}\nIP: ${deployment.network.ipv4}`);
-	}
+	updateStatus("Created deployment", false);
+	log(`${brandColor("id")} ${dim(deployment.id)}\n`);
 
 	endSection("Creating a placement for your container");
 	startSection("Create a Cloudflare container", "Step 2 of 2");

@@ -3,6 +3,7 @@ import {
 	endSection,
 	log,
 	logRaw,
+	newline,
 	status,
 	updateStatus,
 } from "@cloudflare/cli";
@@ -277,13 +278,20 @@ async function waitForVMToStart(deployment: DeploymentV2) {
 		checkPlacementStatus(eventPlacement.placement);
 	}
 
-	updateStatus(status.success + " Created your container");
-	log(
-		`${brandColor("assigned ipv6 address")} ${dim(
-			eventPlacement.placement.status["ipv6Address"]
-		)}\n`
-	);
-	endSection("Your container is up and running");
+	const ipv4 = eventPlacement.placement.status["ipv4Address"];
+	if (ipv4) {
+		log(`${brandColor("assigned IPv4 address")} ${dim(ipv4)}\n`);
+	}
+
+	const ipv6 = eventPlacement.placement.status["ipv6Address"];
+	if (ipv6) {
+		log(`${brandColor("assigned IPv6 address")} ${dim(ipv6)}\n`);
+	}
+
+	endSection("Done");
+
+	logRaw(status.success + " Created your container\n");
+
 	logRaw(
 		`Run ${brandColor(
 			`wrangler cloudchamber list ${deployment.id.slice(0, 6)}`
@@ -334,15 +342,18 @@ async function waitForPlacementInstance(deployment: DeploymentV2) {
 	}
 
 	updateStatus(
-		"Assigned placement in " + idToLocationName(deployment.location.name)
+		"Assigned placement in " + idToLocationName(deployment.location.name),
+		false
 	);
-	if (d.current_placement?.deployment_version) {
+
+	if (d.current_placement !== undefined) {
 		log(
-			`${brandColor("assigned placement")} ${dim(
-				`version ${d.current_placement.deployment_version}`
-			)}\n`
+			`${brandColor("version")} ${dim(d.current_placement.deployment_version)}`
 		);
+		log(`${brandColor("id")} ${dim(d.current_placement?.id)}`);
+		newline();
 	}
+
 	deployment.current_placement = d.current_placement;
 }
 
@@ -370,7 +381,6 @@ export async function waitForPlacement(deployment: DeploymentV2) {
 					crash(
 						"Couldn't retrieve a new deployment: " + getDeploymentError.message
 					);
-					return;
 				}
 
 				currentDeployment = newDeployment;
