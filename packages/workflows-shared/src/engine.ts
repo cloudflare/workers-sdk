@@ -142,6 +142,10 @@ export class Engine extends DurableObject<Env> {
 		_accountId: number,
 		_instanceId: string
 	): Promise<InstanceStatus> {
+		if (this.accountId === undefined) {
+			throw new Error("stub not initialized");
+		}
+
 		const res = await this.ctx.storage.get<InstanceStatus>(ENGINE_STATUS_KEY);
 
 		// NOTE(lduarte): if status don't exist, means that engine is running for the first time, so we assume queued

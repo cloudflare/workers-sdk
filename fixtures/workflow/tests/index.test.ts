@@ -83,4 +83,15 @@ describe("Workflows", () => {
 			output: [],
 		});
 	});
+
+	it("fails getting a workflow without creating it first", async ({
+		expect,
+	}) => {
+		await expect(
+			fetchJson(`http://${ip}:${port}/status?workflowName=anotherTest`)
+		).resolves.toMatchObject({
+			message: "instance.not_found",
+			name: "Error",
+		});
+	});
 });
