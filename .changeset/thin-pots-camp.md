@@ -2,10 +2,10 @@
 "wrangler": minor
 ---
 
-feat: add support for redirecting Wrangler to a generated config when running deploy commands
+feat: add support for redirecting Wrangler to a generated config when running deploy-related commands
 
 This new feature is designed for build tools and frameworks to provide a deploy-specific configuration,
-which Wrangler can use instead of user configuration when running deploy commands.
+which Wrangler can use instead of user configuration when running deploy-related commands.
 It is not expected that developers of Workers will need to use this feature directly.
 
 ### Affected commands
@@ -16,6 +16,9 @@ The commands that use this feature are:
 - `wrangler dev`
 - `wrangler versions upload`
 - `wrangler versions deploy`
+- `wrangler pages deploy`
+- `wrangler pages build`
+- `wrangler pages build-env`
 
 ### Config redirect file
 
@@ -25,7 +28,7 @@ When running these commands, Wrangler will look up the directory tree from the c
 { "configPath": "../../path/to/wrangler.json" }
 ```
 
-When this file exists Wrangler will use the `configPath` (relative to the `deploy.json` file) to find an alternative Wrangler configuration file to load and use as part of this command.
+When this file exists Wrangler will follow the `configPath` (relative to the `.wrangler/deploy/config.json` file) to find an alternative Wrangler configuration file to load and use as part of this command.
 
 When this happens Wrangler will display a warning to the user to indicate that the configuration has been redirected to a different file than the user's configuration file.
 
