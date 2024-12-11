@@ -235,6 +235,7 @@ export function deployOptions(yargs: CommonYargsArgv) {
 
 export type DeployArgs = StrictYargsOptionsToInterface<typeof deployOptions>;
 
+// TODO: move this into defineCommand behaviour
 export async function deployHandler(args: DeployArgs) {
 	await run(
 		{
