@@ -262,7 +262,7 @@ function getCustomServiceDesignator(
 	} else if (service === kCurrentWorker) {
 		// Sets SELF binding to point to router worker instead if assets are present.
 		serviceName = hasAssetsAndIsVitest
-			? ROUTER_SERVICE_NAME
+			? `${ROUTER_SERVICE_NAME}-${refererName}`
 			: getUserServiceName(refererName);
 	} else {
 		// Regular user worker
