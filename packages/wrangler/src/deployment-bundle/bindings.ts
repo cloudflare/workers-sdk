@@ -1,7 +1,6 @@
 import chalk from "chalk";
 import { isLegacyEnv } from "..";
 import { fetchResult } from "../cfetch";
-import { printBindings } from "../config";
 import { createD1Database } from "../d1/create";
 import { listDatabases } from "../d1/list";
 import { prompt, select } from "../dialogs";
@@ -9,6 +8,7 @@ import { FatalError, UserError } from "../errors";
 import { createKVNamespace, listKVNamespaces } from "../kv/helpers";
 import { logger } from "../logger";
 import { createR2Bucket, listR2Buckets } from "../r2/helpers";
+import { printBindings } from "../utils/print-bindings";
 import type { Config } from "../config";
 import type { WorkerMetadataBinding } from "./create-worker-upload-form";
 import type {

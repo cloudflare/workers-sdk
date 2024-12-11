@@ -5,7 +5,7 @@ import { URLSearchParams } from "node:url";
 import { cancel } from "@cloudflare/cli";
 import { syncAssets } from "../assets";
 import { fetchListResult, fetchResult } from "../cfetch";
-import { configFileName, formatConfigSnippet, printBindings } from "../config";
+import { configFileName, formatConfigSnippet } from "../config";
 import { getBindings, provisionBindings } from "../deployment-bundle/bindings";
 import { bundleWorker } from "../deployment-bundle/bundle";
 import {
@@ -47,6 +47,7 @@ import {
 	maybeRetrieveFileSourceMap,
 } from "../sourcemap";
 import triggersDeploy from "../triggers/deploy";
+import { printBindings } from "../utils/print-bindings";
 import { retryOnError } from "../utils/retry";
 import {
 	createDeployment,
