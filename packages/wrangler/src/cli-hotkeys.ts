@@ -62,17 +62,22 @@ export default function (
 	}
 
 	const unregisterKeyPress = onKeyPress(async (key) => {
-		let char = key.name.toLowerCase();
+		const entries: string[] = [];
 
-		if (key?.meta) {
-			char = "meta+" + char;
+		if (key.name) {
+			entries.push(key.name.toLowerCase());
 		}
-		if (key?.ctrl) {
-			char = "ctrl+" + char;
+		if (key.meta) {
+			entries.unshift("meta");
 		}
-		if (key?.shift) {
-			char = "shift+" + char;
+		if (key.ctrl) {
+			entries.unshift("ctrl");
 		}
+		if (key.shift) {
+			entries.unshift("shift");
+		}
+
+		const char = entries.join("+");
 
 		for (const { keys, handler, disabled } of options) {
 			if (unwrapHook(disabled)) {
