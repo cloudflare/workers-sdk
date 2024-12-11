@@ -1,5 +1,11 @@
 # wrangler
 
+## 3.95.0
+
+### Minor Changes
+
+- [#7382](https://github.com/cloudflare/workers-sdk/pull/7382) [`e0b98fd`](https://github.com/cloudflare/workers-sdk/commit/e0b98fdb6eefffff16fc0624517cd9e5fce93c98) Thanks [@jonesphillip](https://github.com/jonesphillip)! - Added r2 bucket cors command to Wrangler including list, set, delete
+
 ## 3.94.0
 
 ### Minor Changes
