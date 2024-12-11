@@ -27,6 +27,7 @@ export function resolveWranglerConfigPath({
 export function findWranglerConfig(
 	referencePath: string = process.cwd()
 ): string | undefined {
+	console.dir(referencePath);
 	return (
 		findUpSync(`wrangler.json`, { cwd: referencePath }) ??
 		findUpSync(`wrangler.jsonc`, { cwd: referencePath }) ??

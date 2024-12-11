@@ -5,6 +5,7 @@ import { normalizeAndValidateConfig } from "../config/validation";
 import { run } from "../experimental-flags";
 import { normalizeString } from "./helpers/normalize";
 import { runInTempDir } from "./helpers/run-in-tmp";
+import { writeWorkerSource } from "./helpers/write-worker-source";
 import { writeWranglerConfig } from "./helpers/write-wrangler-config";
 import type {
 	ConfigFields,
