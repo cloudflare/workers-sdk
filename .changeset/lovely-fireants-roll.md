@@ -2,4 +2,4 @@
 "@cloudflare/workflows-shared": patch
 ---
 
-Fix getting a workflow when such workflow was not yet created
+Fixed a bug in local development where fetching a Workflow instance by ID would return a Workflow status, even if that instance did not exist. This only impacted the `get()` method on the Worker bindings. 
