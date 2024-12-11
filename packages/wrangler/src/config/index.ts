@@ -82,8 +82,7 @@ export function readConfig(
 	args: ReadConfigCommandArgs,
 	{ hideWarnings = false }: { hideWarnings?: boolean } = {}
 ): Config {
-	const configPath = resolveWranglerConfigPath(args);
-	const rawConfig = readRawConfig(configPath);
+	const { rawConfig, configPath } = experimental_readRawConfig(args);
 
 	const { config, diagnostics } = normalizeAndValidateConfig(
 		rawConfig,
@@ -105,11 +104,10 @@ export function readPagesConfig(
 	args: ReadConfigCommandArgs,
 	{ hideWarnings = false }: { hideWarnings?: boolean } = {}
 ): Omit<Config, "pages_build_output_dir"> & { pages_build_output_dir: string } {
-	const configPath = resolveWranglerConfigPath(args);
-
 	let rawConfig: RawConfig;
+	let configPath: string | undefined;
 	try {
-		rawConfig = readRawConfig(configPath);
+		({ rawConfig, configPath } = experimental_readRawConfig(args));
 	} catch (e) {
 		logger.error(e);
 		throw new FatalError(
@@ -158,14 +156,19 @@ export function readPagesConfig(
 	};
 }
 
-export const readRawConfig = (configPath: string | undefined): RawConfig => {
+export const experimental_readRawConfig = (
+	args: ReadConfigCommandArgs
+): { rawConfig: RawConfig; configPath: string | undefined } => {
 	// Load the configuration from disk if available
+	const configPath = resolveWranglerConfigPath(args);
+	console.dir(configPath);
+	let rawConfig: RawConfig = {};
 	if (configPath?.endsWith("toml")) {
-		return parseTOML(readFileSync(configPath), configPath);
+		rawConfig = parseTOML(readFileSync(configPath), configPath);
 	} else if (configPath?.endsWith("json") || configPath?.endsWith("jsonc")) {
-		return parseJSONC(readFileSync(configPath), configPath);
+		rawConfig = parseJSONC(readFileSync(configPath), configPath);
 	}
-	return {};
+	return { rawConfig, configPath };
 };
 
 function addLocalSuffix(
