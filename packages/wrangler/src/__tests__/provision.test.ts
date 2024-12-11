@@ -252,7 +252,7 @@ describe("--x-provision", () => {
 
 			mockSelect({
 				text: "Would you like to connect an existing KV Namespace or create a new one?",
-				result: "manual",
+				result: "__WRANGLER_INTERNAL_SEARCH",
 			});
 			mockPrompt({
 				text: "Enter the title or id for an existing KV Namespace",
@@ -260,7 +260,7 @@ describe("--x-provision", () => {
 			});
 			mockSelect({
 				text: "Would you like to connect an existing D1 Database or create a new one?",
-				result: "manual",
+				result: "__WRANGLER_INTERNAL_SEARCH",
 			});
 			mockPrompt({
 				text: "Enter the name or id for an existing D1 Database",
@@ -268,7 +268,7 @@ describe("--x-provision", () => {
 			});
 			mockSelect({
 				text: "Would you like to connect an existing R2 Bucket or create a new one?",
-				result: "manual",
+				result: "__WRANGLER_INTERNAL_SEARCH",
 			});
 			mockPrompt({
 				text: "Enter the name for an existing R2 Bucket",
@@ -374,7 +374,7 @@ describe("--x-provision", () => {
 
 			mockSelect({
 				text: "Would you like to connect an existing KV Namespace or create a new one?",
-				result: "new",
+				result: "__WRANGLER_INTERNAL_NEW",
 			});
 			mockPrompt({
 				text: "Enter a name for your new KV Namespace",
@@ -387,7 +387,7 @@ describe("--x-provision", () => {
 
 			mockSelect({
 				text: "Would you like to connect an existing D1 Database or create a new one?",
-				result: "new",
+				result: "__WRANGLER_INTERNAL_NEW",
 			});
 			mockPrompt({
 				text: "Enter a name for your new D1 Database",
@@ -400,7 +400,7 @@ describe("--x-provision", () => {
 
 			mockSelect({
 				text: "Would you like to connect an existing R2 Bucket or create a new one?",
-				result: "new",
+				result: "__WRANGLER_INTERNAL_NEW",
 			});
 			mockPrompt({
 				text: "Enter a name for your new R2 Bucket",
