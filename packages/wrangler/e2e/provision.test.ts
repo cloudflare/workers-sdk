@@ -13,10 +13,7 @@ const TIMEOUT = 500_000;
 const normalize = (str: string) => {
 	return normalizeOutput(str, {
 		[CLOUDFLARE_ACCOUNT_ID]: "CLOUDFLARE_ACCOUNT_ID",
-	}).replaceAll(
-		/- KV: ([0-9a-f]{32})/gm,
-		"- KV: 00000000000000000000000000000000"
-	);
+	});
 };
 const workerName = generateResourceName();
 
@@ -26,10 +23,8 @@ describe("provisioning", { timeout: TIMEOUT }, () => {
 	let d1Id: string;
 	const helper = new WranglerE2ETestHelper();
 
-	it.skip("can run dev without resource ids", async () => {
-		const worker = helper.runLongLived("wrangler dev --x-provision", {
-			debug: true,
-		});
+	it("can run dev without resource ids", async () => {
+		const worker = helper.runLongLived("wrangler dev --x-provision");
 
 		const { url } = await worker.waitForReady();
 		await fetch(url);
@@ -135,6 +130,35 @@ describe("provisioning", { timeout: TIMEOUT }, () => {
 		expect(text).toMatchInlineSnapshot('"Hello World!"');
 	});
 
+	it("can inherit bindings on re-deploy and won't re-provision", async () => {
+		const worker = helper.runLongLived(`wrangler deploy --x-provision`);
+		await worker.exitCode;
+		const output = await worker.output;
+		expect(normalize(output)).toMatchInlineSnapshot(`
+			"Total Upload: xx KiB / gzip: xx KiB
+			Your worker has access to the following bindings:
+			- KV Namespaces:
+			  - KV
+			- D1 Databases:
+			  - D1
+			- R2 Buckets:
+			  - R2
+			Uploaded tmp-e2e-worker-00000000-0000-0000-0000-000000000000 (TIMINGS)
+			Deployed tmp-e2e-worker-00000000-0000-0000-0000-000000000000 triggers (TIMINGS)
+			  https://tmp-e2e-worker-00000000-0000-0000-0000-000000000000.SUBDOMAIN.workers.dev
+			Current Version ID: 00000000-0000-0000-0000-000000000000"
+		`);
+
+		const { text } = await retry(
+			(s) => s.status !== 200,
+			async () => {
+				const r = await fetch(deployedUrl);
+				return { text: await r.text(), status: r.status };
+			}
+		);
+		expect(text).toMatchInlineSnapshot('"Hello World!"');
+	});
+
 	afterAll(async () => {
 		// we need to add d1 back into the config because otherwise wrangler will
 		// call the api for all 5000 or so db's the e2e test account has
@@ -153,9 +177,7 @@ describe("provisioning", { timeout: TIMEOUT }, () => {
 		});
 		let output = await helper.run(`wrangler r2 bucket delete ${workerName}-r2`);
 		expect(output.stdout).toContain(`Deleted bucket`);
-		output = await helper.run(`wrangler d1 delete ${workerName}-d1 -y`, {
-			debug: true,
-		});
+		output = await helper.run(`wrangler d1 delete ${workerName}-d1 -y`);
 		expect(output.stdout).toContain(`Deleted '${workerName}-d1' successfully.`);
 		output = await helper.run(`wrangler delete`);
 		expect(output.stdout).toContain("Successfully deleted");
@@ -169,5 +191,5 @@ describe("provisioning", { timeout: TIMEOUT }, () => {
 			`wrangler kv namespace delete --namespace-id ${kvId}`
 		);
 		expect(output.stdout).toContain(`Deleted KV namespace`);
-	});
+	}, TIMEOUT);
 });

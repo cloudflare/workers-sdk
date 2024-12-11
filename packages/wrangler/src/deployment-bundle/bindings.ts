@@ -170,7 +170,7 @@ export async function provisionBindings(
 			const preExistingKV = await listKVNamespaces(accountId, true);
 			await runProvisioningFlow(
 				pendingResources.kv_namespaces,
-				preExistingKV.map((ns) => ({ name: ns.title, id: ns.id })),
+				preExistingKV.map((ns) => ({ title: ns.title, value: ns.id })),
 				"KV Namespace",
 				"title or id",
 				scriptName,
@@ -182,7 +182,7 @@ export async function provisionBindings(
 			const preExisting = await listDatabases(accountId, true);
 			await runProvisioningFlow(
 				pendingResources.d1_databases,
-				preExisting.map((db) => ({ name: db.name, id: db.uuid })),
+				preExisting.map((db) => ({ title: db.name, value: db.uuid })),
 				"D1 Database",
 				"name or id",
 				scriptName,
@@ -193,7 +193,10 @@ export async function provisionBindings(
 			const preExisting = await listR2Buckets(accountId);
 			await runProvisioningFlow(
 				pendingResources.r2_buckets,
-				preExisting.map((bucket) => ({ name: bucket.name, id: bucket.name })),
+				preExisting.map((bucket) => ({
+					title: bucket.name,
+					value: bucket.name,
+				})),
 				"R2 Bucket",
 				"name",
 				scriptName,
@@ -229,30 +232,29 @@ function printDivider() {
 }
 
 type NormalisedResourceInfo = {
-	name: string;
-	id: string;
+	/** The name of the resource */
+	title: string;
+	/** The id of the resource */
+	value: string;
 };
-type ResourceType = "d1_databases" | "r2_buckets" | "kv_namespaces";
+
 async function runProvisioningFlow(
-	pending: PendingResources[ResourceType],
+	pending: PendingResources[keyof PendingResources],
 	preExisting: NormalisedResourceInfo[],
 	friendlyBindingName: string,
 	resourceKeyDescriptor: string,
 	scriptName: string,
 	autoCreate: boolean
 ) {
+	const NEW_OPTION_VALUE = "__WRANGLER_INTERNAL_NEW";
+	const SEARCH_OPTION_VALUE = "__WRANGLER_INTERNAL_SEARCH";
 	const MAX_OPTIONS = 4;
 	if (pending.length) {
-		const options = preExisting
-			.map((resource) => ({
-				title: resource.name,
-				value: resource.id,
-			}))
-			.slice(0, MAX_OPTIONS - 1);
+		const options = preExisting.slice(0, MAX_OPTIONS - 1);
 		if (options.length < preExisting.length) {
 			options.push({
 				title: "Other (too many to list)",
-				value: "manual",
+				value: SEARCH_OPTION_VALUE,
 			});
 		}
 
@@ -260,8 +262,9 @@ async function runProvisioningFlow(
 			logger.log("Provisioning", item.binding, `(${friendlyBindingName})...`);
 			let name: string = "";
 			let selected: string;
+
 			if (options.length === 0 || autoCreate) {
-				selected = "new";
+				selected = NEW_OPTION_VALUE;
 			} else {
 				selected = await select(
 					`Would you like to connect an existing ${friendlyBindingName} or create a new one?`,
@@ -271,7 +274,8 @@ async function runProvisioningFlow(
 					}
 				);
 			}
-			if (selected === "new") {
+
+			if (selected === NEW_OPTION_VALUE) {
 				const defaultValue = `${scriptName}-${item.binding.toLowerCase().replace("_", "-")}`;
 				name = autoCreate
 					? defaultValue
@@ -281,16 +285,16 @@ async function runProvisioningFlow(
 				logger.log(`🌀 Creating new ${friendlyBindingName} "${name}"...`);
 				// creates new resource and mutates `bindings` to update id
 				await item.create(name);
-			} else if (selected === "manual") {
+			} else if (selected === SEARCH_OPTION_VALUE) {
 				let searchedResource: NormalisedResourceInfo | undefined;
 				while (searchedResource === undefined) {
 					const input = await prompt(
 						`Enter the ${resourceKeyDescriptor} for an existing ${friendlyBindingName}`
 					);
 					searchedResource = preExisting.find((r) => {
-						if (r.name === input || r.id === input) {
-							name = r.name;
-							item.updateId(r.id);
+						if (r.title === input || r.value === input) {
+							name = r.title;
+							item.updateId(r.value);
 							return true;
 						} else {
 							return false;
@@ -304,8 +308,8 @@ async function runProvisioningFlow(
 				}
 			} else {
 				const selectedResource = preExisting.find((r) => {
-					if (r.id === selected) {
-						name = r.name;
+					if (r.value === selected) {
+						name = r.title;
 						item.updateId(selected);
 						return true;
 					} else {
@@ -319,6 +323,7 @@ async function runProvisioningFlow(
 					);
 				}
 			}
+
 			logger.log(`✨ ${item.binding} provisioned with ${name}`);
 			printDivider();
 		}
