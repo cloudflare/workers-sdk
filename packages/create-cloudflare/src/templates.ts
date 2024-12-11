@@ -79,7 +79,7 @@ export type TemplateConfig = {
 	 * A specific version of the framework cli tool to use instead of the standard one taken from the src/frameworks/package.json
 	 * (which gets managed and bumped by dependabot)
 	 */
-	pinFrameworkCli?: string;
+	frameworkCliPinnedVersion?: string;
 	/** When set to true, hides this template from the selection menu */
 	hidden?: boolean;
 	/** Specifies a set of files that will be copied to the project directory during creation.
