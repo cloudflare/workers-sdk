@@ -18,14 +18,7 @@ const generate = async (ctx: C3Context) => {
 };
 
 const configure = async () => {
-	const packages = [
-		// Note: this is using the experimental pkg.pr.new prerelease
-		//       we do this because the stable @opennextjs/cloudflare package
-		//       does not yet support Next 15, we should move away from this
-		//       as soon as possible
-		"https://pkg.pr.new/@opennextjs/cloudflare@experimental",
-		"@cloudflare/workers-types",
-	];
+	const packages = ["@opennextjs/cloudflare", "@cloudflare/workers-types"];
 	await installPackages(packages, {
 		dev: true,
 		startText: "Adding the Cloudflare adapter",
