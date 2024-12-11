@@ -815,7 +815,10 @@ export const kvBulkDeleteCommand = createCommand({
 			}
 		}
 
-		const content = parseJSON(readFileSync(filename), filename) as string[];
+		const content = parseJSON(readFileSync(filename), filename) as (
+			| string
+			| { name: string }
+		)[];
 
 		if (!Array.isArray(content)) {
 			throw new UserError(
@@ -825,21 +828,25 @@ export const kvBulkDeleteCommand = createCommand({
 		}
 
 		const errors: string[] = [];
-		for (let i = 0; i < content.length; i++) {
-			const key = content[i];
+
+		const keysToDelete: string[] = [];
+		for (const [index, item] of content.entries()) {
+			const key = typeof item !== "string" ? item?.name : item;
+
 			if (typeof key !== "string") {
 				errors.push(
-					`The item at index ${i} is type: "${typeof key}" - ${JSON.stringify(
-						key
+					`The item at index ${index} is type: "${typeof item}" - ${JSON.stringify(
+						item
 					)}`
 				);
 			}
+			keysToDelete.push(key);
 		}
 
 		if (errors.length > 0) {
 			throw new UserError(
 				`Unexpected JSON input from "${filename}".\n` +
-					`Expected an array of strings.\n` +
+					`Expected an array of strings or objects with a "name" key.\n` +
 					errors.join("\n")
 			);
 		}
@@ -851,7 +858,7 @@ export const kvBulkDeleteCommand = createCommand({
 				config.configPath,
 				namespaceId,
 				async (namespace) => {
-					for (const key of content) {
+					for (const key of keysToDelete) {
 						await namespace.delete(key);
 					}
 				}
@@ -861,7 +868,7 @@ export const kvBulkDeleteCommand = createCommand({
 		} else {
 			const accountId = await requireAuth(config);
 
-			await deleteKVBulkKeyValue(accountId, namespaceId, content);
+			await deleteKVBulkKeyValue(accountId, namespaceId, keysToDelete);
 			metricEvent = "delete kv key-values (bulk)";
 		}
 
