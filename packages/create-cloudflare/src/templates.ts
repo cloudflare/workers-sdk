@@ -65,16 +65,21 @@ export type TemplateConfig = {
 	 * to handle config version skew between different versions of c3
 	 */
 	configVersion: number;
-	/** The id by which template is referred to internally and keyed in lookup maps*/
+	/** The id by which template is referred to internally and keyed in lookup maps */
 	id: string;
-	/** A string that controls how the template is presented to the user in the selection menu*/
+	/** A string that controls how the template is presented to the user in the selection menu */
 	displayName: string;
-	/** A string that explains what is inside the template, including any resources and how those will be used*/
+	/** A string that explains what is inside the template, including any resources and how those will be used */
 	description?: string;
 	/** The deployment platform for this template */
 	platform: "workers" | "pages";
-	/** The name of the framework cli tool that is used to generate this project or undefined if none. */
+	/** The name of the framework cli tool that is used to generate this project or undefined if none */
 	frameworkCli?: string;
+	/**
+	 * The version of the framework cli tool to use.
+	 * If omitted the cli version is taken from src/frameworks/package.json, which is the default/standard behavior.
+	 */
+	frameworkCliVersion?: string;
 	/** When set to true, hides this template from the selection menu */
 	hidden?: boolean;
 	/** Specifies a set of files that will be copied to the project directory during creation.

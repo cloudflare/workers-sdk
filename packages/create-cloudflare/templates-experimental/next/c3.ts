@@ -30,6 +30,10 @@ export default {
 	configVersion: 1,
 	id: "next",
 	frameworkCli: "create-next-app",
+	// TODO: here we need to specify a version of create-next-app which is different from the
+	//       standard one used in the stable Next.js template, that's because our open-next adapter
+	//       is not yet fully ready for Next.js 15, once it is we should remove the following
+	frameworkCliVersion: "14.2.5",
 	platform: "workers",
 	displayName: "Next (using Node.js compat + Workers Assets)",
 	path: "templates-experimental/next",
