@@ -87,16 +87,11 @@ describe('module resolution', async () => {
 			});
 		});
 
-		// Note: this test is skipped during build because the remix import does not work in preview
-		//       because there seem to be an I/O operation being performed at the top level of the
-		//       generated remix bundled module, this is a legitimate issue and a workerd known quirk/bug
-		//       (https://github.com/flarelabs-net/vite-plugin-cloudflare/issues/83)
-		test.skipIf(isBuild)('@remix-run/cloudflare', async () => {
+		test('@remix-run/cloudflare', async () => {
 			const result = await getJsonResponse('/third-party/remix');
 			expect(result).toEqual({
 				'(remix) remixRunCloudflareCookieName':
 					'my-remix-run-cloudflare-cookie',
-				'(remix) typeof cloudflare json({})': 'object',
 			});
 		});
 
