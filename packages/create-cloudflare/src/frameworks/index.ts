@@ -13,7 +13,7 @@ export const getFrameworkCli = (ctx: C3Context, withVersion = true) => {
 	const frameworkCli = ctx.template
 		.frameworkCli as keyof typeof frameworksPackageJson.dependencies;
 	const version =
-		ctx.template.frameworkCliVersion ??
+		ctx.template.pinFrameworkCli ??
 		frameworksPackageJson.dependencies[frameworkCli];
 	return withVersion ? `${frameworkCli}@${version}` : frameworkCli;
 };
