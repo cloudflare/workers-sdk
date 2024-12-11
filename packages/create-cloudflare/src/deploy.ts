@@ -10,9 +10,14 @@ import { quoteShellArgs, runCommand } from "helpers/command";
 import { readFile } from "helpers/files";
 import { detectPackageManager } from "helpers/packageManagers";
 import { poll } from "helpers/poll";
+import { parse as jsoncParse } from "jsonc-parser";
 import { isInsideGitRepo } from "./git";
 import { chooseAccount, wranglerLogin } from "./wrangler/accounts";
-import { readWranglerToml } from "./wrangler/config";
+import {
+	readWranglerJson,
+	readWranglerToml,
+	wranglerJsonExists,
+} from "./wrangler/config";
 import type { C3Context } from "types";
 
 export const offerToDeploy = async (ctx: C3Context) => {
@@ -72,12 +77,17 @@ const isDeployable = async (ctx: C3Context) => {
 	if (ctx.template.platform === "pages") {
 		return true;
 	}
+	const wranglerConfig = readWranglerConfig(ctx);
+	return !hasBinding(wranglerConfig);
+};
 
+const readWranglerConfig = (ctx: C3Context) => {
+	if (wranglerJsonExists(ctx)) {
+		const wranglerJsonStr = readWranglerJson(ctx);
+		return jsoncParse(wranglerJsonStr);
+	}
 	const wranglerTomlStr = readWranglerToml(ctx);
-
-	const wranglerToml = TOML.parse(wranglerTomlStr.replace(/\r\n/g, "\n"));
-
-	return !hasBinding(wranglerToml);
+	return TOML.parse(wranglerTomlStr.replace(/\r\n/g, "\n"));
 };
 
 export const runDeploy = async (ctx: C3Context) => {
