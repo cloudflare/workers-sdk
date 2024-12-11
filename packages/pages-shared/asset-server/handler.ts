@@ -29,6 +29,11 @@ export const ASSET_PRESERVATION_CACHE_V1 = "assetPreservationCache";
 // V2 stores the content hash instead of the asset.
 // TODO: Remove V1 once we've fully migrated to V2
 export const ASSET_PRESERVATION_CACHE_V2 = "assetPreservationCacheV2";
+/**
+ * Response header will be present w/ "HIT"
+ * value if served from `ASSET_PRESERVATION_CACHE_V2`
+ */
+const HEADER_ASSET_PRESERVATION_CACHE_V2 = "x-cf-pgs-apc";
 const CACHE_CONTROL_PRESERVATION = "public, s-maxage=604800"; // 1 week
 
 /** The preservation cache should be periodically
@@ -676,7 +681,9 @@ export async function generateHandler<
 						const asset = await fetchAsset(assetKey);
 						if (asset) {
 							// We know the asset hasn't changed, so use the cached headers.
-							return new Response(asset.body, preservedResponse);
+							const response = new Response(asset.body, preservedResponse);
+							response.headers.set(HEADER_ASSET_PRESERVATION_CACHE_V2, "HIT");
+							return response;
 						} else {
 							logError(
 								new Error(
