@@ -8,7 +8,7 @@ import {
 	validateAssetsArgsAndConfig,
 } from "../assets";
 import { fetchResult } from "../cfetch";
-import { configFileName, formatConfigSnippet, printBindings } from "../config";
+import { configFileName, formatConfigSnippet } from "../config";
 import { createCommand } from "../core/create-command";
 import { getBindings } from "../deployment-bundle/bindings";
 import { bundleWorker } from "../deployment-bundle/bundle";
@@ -50,6 +50,7 @@ import {
 } from "../sourcemap";
 import { requireAuth } from "../user";
 import { collectKeyValues } from "../utils/collectKeyValues";
+import { printBindings } from "../utils/print-bindings";
 import { retryOnError } from "../utils/retry";
 import type { AssetsOptions } from "../assets";
 import type { Config } from "../config";
