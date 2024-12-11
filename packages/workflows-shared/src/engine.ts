@@ -142,7 +142,6 @@ export class Engine extends DurableObject<Env> {
 		_accountId: number,
 		_instanceId: string
 	): Promise<InstanceStatus> {
-		// NOTE(dferreira): we need to verify if the engine was initialized or not
 		if (this.accountId === undefined) {
 			throw new Error("stub not initialized");
 		}
