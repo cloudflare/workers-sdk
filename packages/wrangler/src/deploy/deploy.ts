@@ -792,7 +792,8 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 				bindings,
 				accountId,
 				scriptName,
-				props.experimentalAutoCreate
+				props.experimentalAutoCreate,
+				props.config
 			);
 			await ensureQueuesExistByConfig(config);
 			let bindingsPrinted = false;

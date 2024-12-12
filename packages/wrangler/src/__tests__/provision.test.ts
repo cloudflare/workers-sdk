@@ -480,6 +480,18 @@ describe("--x-provision", () => {
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
 	});
+
+	it("should error if used with a service environment", async () => {
+		writeWorkerSource();
+		writeWranglerConfig({
+			main: "index.js",
+			legacy_env: false,
+			kv_namespaces: [{ binding: "KV" }],
+		});
+		await expect(runWrangler("deploy --x-provision")).rejects.toThrow(
+			"Provisioning resources is not supported with a service environment"
+		);
+	});
 });
 
 function mockGetSettings(

@@ -1,10 +1,11 @@
 import chalk from "chalk";
+import { isLegacyEnv } from "..";
 import { fetchResult } from "../cfetch";
 import { printBindings } from "../config";
 import { createD1Database } from "../d1/create";
 import { listDatabases } from "../d1/list";
 import { prompt, select } from "../dialogs";
-import { FatalError } from "../errors";
+import { FatalError, UserError } from "../errors";
 import { createKVNamespace, listKVNamespaces } from "../kv/helpers";
 import { logger } from "../logger";
 import { createR2Bucket, listR2Buckets } from "../r2/helpers";
@@ -87,7 +88,8 @@ export async function provisionBindings(
 	bindings: CfWorkerInit["bindings"],
 	accountId: string,
 	scriptName: string,
-	autoCreate: boolean
+	autoCreate: boolean,
+	config: Config
 ): Promise<void> {
 	const pendingResources: PendingResources = {
 		d1_databases: [],
@@ -163,9 +165,15 @@ export async function provisionBindings(
 	}
 
 	if (Object.values(pendingResources).some((v) => v && v.length > 0)) {
+		if (!isLegacyEnv(config)) {
+			throw new UserError(
+				"Provisioning resources is not supported with a service environment"
+			);
+		}
 		logger.log();
 		printBindings(pendingResources, { provisioning: true });
 		logger.log();
+
 		if (pendingResources.kv_namespaces?.length) {
 			const preExistingKV = await listKVNamespaces(accountId, true);
 			await runProvisioningFlow(
