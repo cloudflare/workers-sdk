@@ -19,6 +19,16 @@ describe("versions upload", () => {
 	const { setIsTTY } = useMockIsTTY();
 	const std = mockConsoleMethods();
 
+	beforeEach(() => {
+		vi.stubGlobal("setTimeout", (fn: () => void) => {
+			setImmediate(fn);
+		});
+	});
+
+	afterEach(() => {
+		vi.unstubAllGlobals();
+	});
+
 	function mockGetScript() {
 		msw.use(
 			http.get(
