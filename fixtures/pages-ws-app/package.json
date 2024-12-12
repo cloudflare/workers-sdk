@@ -1,6 +1,6 @@
 {
 	"name": "pages-ws-app",
-	"version": "0.1.2",
+	"version": "0.2.0",
 	"private": true,
 	"sideEffects": false,
 	"main": "server/index.js",
