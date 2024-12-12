@@ -1,6 +1,5 @@
 import { http, HttpResponse } from "msw";
 import { normalizeOutput } from "../../e2e/helpers/normalize";
-import { __testSkipDelays } from "../pipelines";
 import { endEventLoop } from "./helpers/end-event-loop";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
@@ -115,7 +114,7 @@ describe("pipelines", () => {
 		return requests;
 	}
 
-	function mockCreeatR2TokenFailure(bucket: string) {
+	function mockCreateR2TokenFailure(bucket: string) {
 		const requests = { count: 0 };
 		msw.use(
 			http.get(
@@ -310,9 +309,6 @@ describe("pipelines", () => {
 		);
 		return requests;
 	}
-	beforeAll(() => {
-		__testSkipDelays();
-	});
 
 	it("shows usage details", async () => {
 		await runWrangler("pipelines");
@@ -383,15 +379,6 @@ describe("pipelines", () => {
 			`);
 		});
 
-		it("should create a pipeline", async () => {
-			const tokenReq = mockCreateR2Token("test-bucket");
-			const requests = mockCreateRequest("my-pipeline");
-			await runWrangler("pipelines create my-pipeline --r2 test-bucket");
-
-			expect(tokenReq.count).toEqual(3);
-			expect(requests.count).toEqual(1);
-		});
-
 		it("should create a pipeline with explicit credentials", async () => {
 			const requests = mockCreateRequest("my-pipeline");
 			await runWrangler(
@@ -401,7 +388,7 @@ describe("pipelines", () => {
 		});
 
 		it("should fail a missing bucket", async () => {
-			const requests = mockCreeatR2TokenFailure("bad-bucket");
+			const requests = mockCreateR2TokenFailure("bad-bucket");
 			await expect(
 				runWrangler("pipelines create bad-pipeline --r2 bad-bucket")
 			).rejects.toThrowError();
@@ -543,7 +530,6 @@ describe("pipelines", () => {
 
 		it("should update a pipeline with new bucket", async () => {
 			const pipeline: Pipeline = samplePipeline;
-			const tokenReq = mockCreateR2Token("new-bucket");
 			mockShowRequest(pipeline.name, pipeline);
 
 			const update = JSON.parse(JSON.stringify(pipeline));
@@ -552,13 +538,12 @@ describe("pipelines", () => {
 				endpoint: "https://some-account-id.r2.cloudflarestorage.com",
 				access_key_id: "service-token-id",
 				secret_access_key:
-					"be22cbae9c1585c7b61a92fdb75afd10babd535fb9b317f90ac9a9ca896d02d7",
+					"my-secret-access-key",
 			};
 			const updateReq = mockUpdateRequest(update.name, update);
 
-			await runWrangler("pipelines update my-pipeline --r2 new-bucket");
+			await runWrangler("pipelines update my-pipeline --r2 new-bucket --access-key-id service-token-id --secret-access-key my-secret-access-key");
 
-			expect(tokenReq.count).toEqual(3);
 			expect(updateReq.count).toEqual(1);
 		});
 
