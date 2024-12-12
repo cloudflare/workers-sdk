@@ -1,5 +1,11 @@
+import assert from "node:assert";
 import { createHash } from "node:crypto";
+import http from "node:http";
 import { fetchResult } from "../cfetch";
+import { getCloudflareApiEnvironmentFromEnv } from "../environment-variables/misc-variables";
+import { UserError } from "../errors";
+import { logger } from "../logger";
+import openInBrowser from "../open-in-browser";
 import type { R2BucketInfo } from "../r2/helpers";
 
 // ensure this is in sync with:
@@ -96,44 +102,84 @@ export type PermissionGroup = {
 	scopes: string[];
 };
 
+interface S3AccessKey {
+	accessKeyId: string;
+	secretAccessKey: string;
+}
+
 // Generate a Service Token to write to R2 for a pipeline
 export async function generateR2ServiceToken(
-	label: string,
 	accountId: string,
-	bucket: string
-): Promise<ServiceToken> {
-	const res = await fetchResult<PermissionGroup[]>(
-		`/user/tokens/permission_groups`,
-		{
-			method: "GET",
-		}
-	);
-	const perm = res.find(
-		(g) => g.name == "Workers R2 Storage Bucket Item Write"
-	);
-	if (!perm) {
-		throw new Error("Missing R2 Permissions");
-	}
-
-	// generate specific bucket write token for pipeline
-	const body = JSON.stringify({
-		policies: [
-			{
-				effect: "allow",
-				permission_groups: [{ id: perm.id }],
-				resources: {
-					[`com.cloudflare.edge.r2.bucket.${accountId}_default_${bucket}`]: "*",
-				},
-			},
-		],
-		name: label,
+	bucketName: string,
+	pipelineName: string
+): Promise<S3AccessKey> {
+	let server: http.Server;
+	let loginTimeoutHandle: ReturnType<typeof setTimeout>;
+	const timerPromise = new Promise<S3AccessKey>((_, reject) => {
+		loginTimeoutHandle = setTimeout(() => {
+			server.close();
+			clearTimeout(loginTimeoutHandle);
+			reject(
+				new UserError(
+					"Timed out waiting for authorization code, please try again."
+				)
+			);
+		}, 120000); // wait for 120 seconds for the user to authorize
 	});
 
-	return await fetchResult<ServiceToken>(`/user/tokens`, {
-		method: "POST",
-		headers: API_HEADERS,
-		body,
+	const loginPromise = new Promise<S3AccessKey>((resolve, reject) => {
+		server = http.createServer(async (request, response) => {
+			assert(request.url, "This request doesn't have a URL"); // This should never happen
+
+			if (request.method !== "GET") {
+				response.writeHead(405);
+				response.end("Method not allowed.");
+				return;
+			}
+
+			const { pathname, searchParams } = new URL(
+				request.url,
+				`http://${request.headers.host}`
+			);
+
+			if (pathname !== "/") {
+				response.writeHead(404);
+				response.end("Not found.");
+				return;
+			}
+
+			// Retrieve values from the URL parameters
+			const accessKeyId = searchParams.get("access-key-id");
+			const secretAccessKey = searchParams.get("secret-access-key");
+
+			if (!accessKeyId || !secretAccessKey) {
+				reject(new UserError("Missing required URL parameters"));
+				return;
+			}
+
+			resolve({ accessKeyId, secretAccessKey } as S3AccessKey);
+			// Do a final redirect to "clear" the URL of the sensitive URL parameters that were returned.
+			response.writeHead(307, {
+				Location:
+					"https://welcome.developers.workers.dev/wrangler-oauth-consent-granted",
+			});
+			response.end();
+		});
+
+		server.listen(8976, "localhost");
 	});
+
+	const env = getCloudflareApiEnvironmentFromEnv();
+	const oauthDomain =
+		env === "staging"
+			? "oauth.pipelines-staging.cloudflare.com"
+			: "oauth.pipelines.cloudflare.com";
+
+	const urlToOpen = `https://${oauthDomain}/oauth/login?accountId=${accountId}&bucketName=${bucketName}&pipelineName=${pipelineName}`;
+	logger.log(`Opening a link in your default browser: ${urlToOpen}`);
+	await openInBrowser(urlToOpen);
+
+	return Promise.race([timerPromise, loginPromise]);
 }
 
 // Get R2 bucket information from v4 API
