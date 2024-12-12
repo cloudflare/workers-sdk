@@ -22,7 +22,10 @@ import { clearDialogs, mockConfirm } from "./helpers/mock-dialogs";
 import { mockGetZoneFromHostRequest } from "./helpers/mock-get-zone-from-host";
 import { useMockIsTTY } from "./helpers/mock-istty";
 import { mockCollectKnownRoutesRequest } from "./helpers/mock-known-routes";
-import { mockKeyListRequest } from "./helpers/mock-kv";
+import {
+	mockKeyListRequest,
+	mockListKVNamespacesRequest,
+} from "./helpers/mock-kv";
 import {
 	mockExchangeRefreshTokenForAccessToken,
 	mockGetMemberships,
@@ -52,7 +55,6 @@ import { writeWranglerConfig } from "./helpers/write-wrangler-config";
 import type { AssetManifest } from "../assets";
 import type { Config } from "../config";
 import type { CustomDomain, CustomDomainChangeset } from "../deploy/deploy";
-import type { KVNamespaceInfo } from "../kv/helpers";
 import type {
 	PostQueueBody,
 	PostTypedConsumerBody,
@@ -10549,58 +10551,6 @@ export default{
 		});
 	});
 
-	describe("--x-provision", () => {
-		it("should accept KV, R2 and D1 bindings without IDs in the configuration file", async () => {
-			writeWorkerSource();
-			writeWranglerConfig({
-				main: "index.js",
-				kv_namespaces: [{ binding: "KV_NAMESPACE" }],
-				r2_buckets: [{ binding: "R2_BUCKET" }],
-				d1_databases: [{ binding: "D1_DATABASE" }],
-			});
-			mockUploadWorkerRequest({
-				// We are treating them as inherited bindings temporarily to test the current implementation only
-				// This will be updated as we implement the actual provision logic
-				expectedBindings: [
-					{
-						name: "KV_NAMESPACE",
-						type: "inherit",
-					},
-					{
-						name: "R2_BUCKET",
-						type: "inherit",
-					},
-					{
-						name: "D1_DATABASE",
-						type: "inherit",
-					},
-				],
-			});
-			mockSubDomainRequest();
-
-			await expect(
-				runWrangler("deploy --x-provision")
-			).resolves.toBeUndefined();
-			expect(std.out).toMatchInlineSnapshot(`
-				"Total Upload: xx KiB / gzip: xx KiB
-				Worker Startup Time: 100 ms
-				Your worker has access to the following bindings:
-				- KV Namespaces:
-				  - KV_NAMESPACE: (remote)
-				- D1 Databases:
-				  - D1_DATABASE: (remote)
-				- R2 Buckets:
-				  - R2_BUCKET: (remote)
-				Uploaded test-name (TIMINGS)
-				Deployed test-name triggers (TIMINGS)
-				  https://test-name.test-sub-domain.workers.dev
-				Current Version ID: Galaxy-Class"
-			`);
-			expect(std.err).toMatchInlineSnapshot(`""`);
-			expect(std.warn).toMatchInlineSnapshot(`""`);
-		});
-	});
-
 	describe("queues", () => {
 		const queueId = "queue-id";
 		const queueName = "queue1";
@@ -12145,20 +12095,6 @@ function mockPublishCustomDomainsRequest({
 				});
 
 				return HttpResponse.json(createFetchResult(null));
-			},
-			{ once: true }
-		)
-	);
-}
-
-/** Create a mock handler for the request to get a list of all KV namespaces. */
-function mockListKVNamespacesRequest(...namespaces: KVNamespaceInfo[]) {
-	msw.use(
-		http.get(
-			"*/accounts/:accountId/storage/kv/namespaces",
-			({ params }) => {
-				expect(params.accountId).toEqual("some-account-id");
-				return HttpResponse.json(createFetchResult(namespaces));
 			},
 			{ once: true }
 		)

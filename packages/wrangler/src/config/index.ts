@@ -172,10 +172,9 @@ function addLocalSuffix(
 	id: string | symbol | undefined,
 	local: boolean = false
 ) {
-	if (!id || typeof id === "symbol") {
-		return local ? "(local)" : "(remote)";
+	if (id === undefined || typeof id === "symbol") {
+		id = "";
 	}
-
 	return `${id}${local ? " (local)" : ""}`;
 }
 
@@ -213,11 +212,12 @@ export const friendlyBindingNames: Record<
  * Print all the bindings a worker using a given config would have access to
  */
 export function printBindings(
-	bindings: CfWorkerInit["bindings"],
+	bindings: Partial<CfWorkerInit["bindings"]>,
 	context: {
 		registry?: WorkerRegistry | null;
 		local?: boolean;
 		name?: string;
+		provisioning?: boolean;
 	} = {}
 ) {
 	let hasConnectionStatus = false;
@@ -618,13 +618,24 @@ export function printBindings(
 		return;
 	}
 
+	let title: string;
+	if (context.provisioning) {
+		title = "The following bindings need to be provisioned:";
+	} else if (context.name && getFlag("MULTIWORKER")) {
+		title = `${chalk.blue(context.name)} has access to the following bindings:`;
+	} else {
+		title = "Your worker has access to the following bindings:";
+	}
+
 	const message = [
-		`${context.name && getFlag("MULTIWORKER") ? chalk.blue(context.name) : "Your worker"} has access to the following bindings:`,
+		title,
 		...output
 			.map((bindingGroup) => {
 				return [
 					`- ${bindingGroup.name}:`,
-					bindingGroup.entries.map(({ key, value }) => `  - ${key}: ${value}`),
+					bindingGroup.entries.map(
+						({ key, value }) => `  - ${key}${value ? ":" : ""} ${value}`
+					),
 				];
 			})
 			.flat(2),
