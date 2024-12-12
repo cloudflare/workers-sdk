@@ -127,6 +127,17 @@ export const getBuildPlatformFromEnv = getEnvironmentVariableFactory({
 });
 
 /**
+ * `WRANGLER_UNENV_PRESET_PATH` specifies the path to the unenv preset.
+ *
+ * By default wrangler uses the unenv preset version installed from the package.json.
+ *
+ * Setting a different root path allow to use a different version of the preset.
+ */
+export const getUnenvPresetPathFromEnv = getEnvironmentVariableFactory({
+	variableName: "WRANGLER_UNENV_PRESET_PATH",
+});
+
+/**
  * `WRANGLER_REGISTRY_PATH` specifies the file based dev registry folder
  */
 export const getRegistryPath = getEnvironmentVariableFactory({

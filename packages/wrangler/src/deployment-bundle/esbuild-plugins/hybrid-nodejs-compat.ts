@@ -8,18 +8,26 @@ import type { Plugin, PluginBuild } from "esbuild";
 const REQUIRED_NODE_BUILT_IN_NAMESPACE = "node-built-in-modules";
 const REQUIRED_UNENV_ALIAS_NAMESPACE = "required-unenv-alias";
 
-export const nodejsHybridPlugin: () => Plugin = () => {
+/**
+ * ESBuild plugin to apply the unenv preset.
+ *
+ * @param unenvPresetPath Root path to the unenv preset.
+ * @returns ESBuild plugin
+ */
+export function nodejsHybridPlugin(
+	unenvPresetPath: string | undefined
+): Plugin {
 	const { alias, inject, external } = env(nodeless, cloudflare);
 	return {
 		name: "hybrid-nodejs_compat",
 		setup(build) {
 			errorOnServiceWorkerFormat(build);
 			handleRequireCallsToNodeJSBuiltins(build);
-			handleUnenvAliasedPackages(build, alias, external);
+			handleUnenvAliasedPackages(build, alias, external, unenvPresetPath);
 			handleNodeJSGlobals(build, inject);
 		},
 	};
-};
+}
 
 const NODEJS_MODULES_RE = new RegExp(`^(node:)?(${builtinModules.join("|")})$`);
 
@@ -90,14 +98,16 @@ function handleRequireCallsToNodeJSBuiltins(build: PluginBuild) {
 function handleUnenvAliasedPackages(
 	build: PluginBuild,
 	alias: Record<string, string>,
-	external: string[]
+	external: string[],
+	unenvPresetPath: string | undefined
 ) {
 	// esbuild expects alias paths to be absolute
 	const aliasAbsolute: Record<string, string> = {};
 	for (const [module, unresolvedAlias] of Object.entries(alias)) {
 		try {
+			const paths = unenvPresetPath ? [unenvPresetPath] : undefined;
 			aliasAbsolute[module] = require
-				.resolve(unresolvedAlias)
+				.resolve(unresolvedAlias, { paths })
 				.replace(/\.cjs$/, ".mjs");
 		} catch (e) {
 			// this is an alias for package that is not installed in the current app => ignore
