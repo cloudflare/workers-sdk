@@ -1,5 +1,27 @@
 # create-cloudflare
 
+## 2.34.1
+
+### Patch Changes
+
+- [#7504](https://github.com/cloudflare/workers-sdk/pull/7504) [`8371748`](https://github.com/cloudflare/workers-sdk/commit/83717482eca2ac8167f9e58da1ccdad1156edb9c) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From   | To     |
+  | --------------- | ------ | ------ |
+  | @angular/create | 19.0.0 | 19.0.4 |
+
+- [#7512](https://github.com/cloudflare/workers-sdk/pull/7512) [`21ceca4`](https://github.com/cloudflare/workers-sdk/commit/21ceca425417b782e7bce45f9efd0b7d2cc0a678) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency  | From   | To     |
+  | ----------- | ------ | ------ |
+  | create-hono | 0.14.2 | 0.14.3 |
+
+- [#7526](https://github.com/cloudflare/workers-sdk/pull/7526) [`0117820`](https://github.com/cloudflare/workers-sdk/commit/01178200cac928292488b77942b43c7b19966414) Thanks [@WalshyDev](https://github.com/WalshyDev)! - fix: update create-remix to fix creating a Remix project failing with "Cannot find module 'fs-extra'"
+
 ## 2.34.0
 
 ### Minor Changes

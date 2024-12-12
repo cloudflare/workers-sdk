@@ -1,5 +1,18 @@
 # wrangler
 
+## 3.96.0
+
+### Minor Changes
+
+- [#7383](https://github.com/cloudflare/workers-sdk/pull/7383) [`8af3365`](https://github.com/cloudflare/workers-sdk/commit/8af336504b48bbc1f9ce5f65e2f1e3d6384e267b) Thanks [@jonesphillip](https://github.com/jonesphillip)! - Added wrangler r2 domain get command
+
+### Patch Changes
+
+- [#6754](https://github.com/cloudflare/workers-sdk/pull/6754) [`0356d0a`](https://github.com/cloudflare/workers-sdk/commit/0356d0ac6a742a8e88e5efa87ebe085eeca07de2) Thanks [@bluwy](https://github.com/bluwy)! - refactor: move `@cloudflare/workers-shared` as dev dependency
+
+- Updated dependencies []:
+  - miniflare@3.20241205.0
+
 ## 3.95.0
 
 ### Minor Changes
