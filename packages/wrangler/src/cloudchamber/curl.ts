@@ -157,6 +157,7 @@ async function requestFromCmd(
 					request: error.request,
 					status: error.status,
 					statusText: error.statusText,
+					body: error.body,
 				})
 			);
 		} else {
