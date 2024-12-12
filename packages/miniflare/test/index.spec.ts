@@ -1335,20 +1335,24 @@ test("Miniflare: python modules", async (t) => {
 	t.is(await res.text(), "4");
 });
 
-test("Miniflare: HTTPS fetches using browser CA certificates", async (t) => {
-	const mf = new Miniflare({
-		modules: true,
-		script: `export default {
+if (process.env.CI) {
+	// This test seems to fail on developer machines locally.
+	// Possibly because our WARP setup requires self-signed root CA certificates?
+	test("Miniflare: HTTPS fetches using browser CA certificates", async (t) => {
+		const mf = new Miniflare({
+			modules: true,
+			script: `export default {
 			fetch() {
 				return fetch("https://workers.cloudflare.com/cf.json");
 			}
 		}`,
+		});
+		t.teardown(() => mf.dispose());
+		const res = await mf.dispatchFetch("http://localhost");
+		t.true(res.ok);
+		await res.arrayBuffer(); // (drain)
 	});
-	t.teardown(() => mf.dispose());
-	const res = await mf.dispatchFetch("http://localhost");
-	t.true(res.ok);
-	await res.arrayBuffer(); // (drain)
-});
+}
 
 test("Miniflare: accepts https requests", async (t) => {
 	const log = new TestLog(t);
