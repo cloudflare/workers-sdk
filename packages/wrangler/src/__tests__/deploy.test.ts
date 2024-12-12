@@ -4687,6 +4687,143 @@ addEventListener('fetch', event => {});`
 			`);
 		});
 
+		it("should warn when using smart placement with assets-first", async () => {
+			const assets = [
+				{ filePath: ".assetsignore", content: "*.bak\nsub-dir" },
+				{ filePath: "file-1.txt", content: "Content of file-1" },
+				{ filePath: "file-2.bak", content: "Content of file-2" },
+				{ filePath: "file-3.txt", content: "Content of file-3" },
+				{ filePath: "sub-dir/file-4.bak", content: "Content of file-4" },
+				{ filePath: "sub-dir/file-5.txt", content: "Content of file-5" },
+			];
+			writeAssets(assets, "assets");
+			writeWranglerConfig({
+				assets: {
+					directory: "assets",
+					experimental_serve_directly: true,
+				},
+				placement: {
+					mode: "smart",
+				},
+			});
+			const bodies: AssetManifest[] = [];
+			await mockAUSRequest(bodies);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedAssets: {
+					jwt: "<<aus-completion-token>>",
+					config: {
+						serve_directly: true,
+					},
+				},
+				expectedType: "none",
+			});
+
+			await runWrangler("deploy");
+
+			expect(std.warn).toMatchInlineSnapshot(`
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mUsing assets with smart placement turned on may result in poor performance.[0m
+
+				"
+			`);
+		});
+
+		it("should warn when using smart placement with assets-first", async () => {
+			const assets = [
+				{ filePath: ".assetsignore", content: "*.bak\nsub-dir" },
+				{ filePath: "file-1.txt", content: "Content of file-1" },
+				{ filePath: "file-2.bak", content: "Content of file-2" },
+				{ filePath: "file-3.txt", content: "Content of file-3" },
+				{ filePath: "sub-dir/file-4.bak", content: "Content of file-4" },
+				{ filePath: "sub-dir/file-5.txt", content: "Content of file-5" },
+			];
+			writeAssets(assets, "assets");
+			writeWranglerConfig({
+				assets: {
+					directory: "assets",
+					experimental_serve_directly: true,
+				},
+				placement: {
+					mode: "smart",
+				},
+			});
+			const bodies: AssetManifest[] = [];
+			await mockAUSRequest(bodies);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedAssets: {
+					jwt: "<<aus-completion-token>>",
+					config: {
+						serve_directly: true,
+					},
+				},
+				expectedType: "none",
+			});
+
+			await runWrangler("deploy");
+
+			expect(std.warn).toMatchInlineSnapshot(`
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mUsing assets with smart placement turned on may result in poor performance.[0m
+
+				"
+			`);
+		});
+
+		it("should warn if experimental_serve_directly=false but no binding is provided", async () => {
+			const assets = [
+				{ filePath: ".assetsignore", content: "*.bak\nsub-dir" },
+				{ filePath: "file-1.txt", content: "Content of file-1" },
+				{ filePath: "file-2.bak", content: "Content of file-2" },
+				{ filePath: "file-3.txt", content: "Content of file-3" },
+				{ filePath: "sub-dir/file-4.bak", content: "Content of file-4" },
+				{ filePath: "sub-dir/file-5.txt", content: "Content of file-5" },
+			];
+			writeAssets(assets, "assets");
+			writeWorkerSource({ format: "js" });
+			writeWranglerConfig({
+				main: "index.js",
+				assets: {
+					directory: "assets",
+					experimental_serve_directly: false,
+				},
+			});
+			const bodies: AssetManifest[] = [];
+			await mockAUSRequest(bodies);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedAssets: {
+					jwt: "<<aus-completion-token>>",
+					config: {
+						serve_directly: false,
+					},
+				},
+				expectedMainModule: "index.js",
+			});
+
+			await runWrangler("deploy");
+
+			expect(std.warn).toMatchInlineSnapshot(`
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mexperimental_serve_directly=false but no assets.binding provided.[0m
+
+				"
+			`);
+		});
+
+		it("should error if an experimental_serve_directly is false without providing a user Worker", async () => {
+			writeWranglerConfig({
+				assets: {
+					directory: "xyz",
+					experimental_serve_directly: false,
+				},
+			});
+
+			await expect(runWrangler("deploy")).rejects
+				.toThrowErrorMatchingInlineSnapshot(`
+				[Error: Cannot set experimental_serve_directly=false without a Worker script.
+				Please remove experimental_serve_directly from your configuration file, or provide a Worker script in your configuration file (\`main\`).]
+			`);
+		});
+
 		it("should be able to upload files with special characters in filepaths", async () => {
 			// NB windows will disallow these characters in file paths anyway < > : " / \ | ? *
 			const assets = [

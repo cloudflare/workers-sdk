@@ -443,6 +443,42 @@ export function validateAssetsArgsAndConfig(
 				"Please remove the asset binding from your configuration file, or provide a Worker script in your configuration file (`main`)."
 		);
 	}
+
+	// Smart placement turned on when using assets
+	if (
+		config?.placement?.mode === "smart" &&
+		config?.assets?.experimental_serve_directly
+	) {
+		logger.warn(
+			"Using assets with smart placement turned on may result in poor performance."
+		);
+	}
+
+	// User worker ahead of assets, but no assets binding provided
+	if (
+		"legacy" in args
+			? args.assets?.assetConfig?.serve_directly === false &&
+				!args.assets?.binding
+			: config?.assets?.experimental_serve_directly === false &&
+				!config?.assets?.binding
+	) {
+		logger.warn(
+			"experimental_serve_directly=false but no assets.binding provided."
+		);
+	}
+
+	// Using serve_directly=false, but didn't provide a Worker script
+	if (
+		"legacy" in args
+			? args.entrypoint === noOpEntrypoint &&
+				args.assets?.assetConfig?.serve_directly === false
+			: !config?.main && config?.assets?.experimental_serve_directly === false
+	) {
+		throw new UserError(
+			"Cannot set experimental_serve_directly=false without a Worker script.\n" +
+				"Please remove experimental_serve_directly from your configuration file, or provide a Worker script in your configuration file (`main`)."
+		);
+	}
 }
 
 const CF_ASSETS_IGNORE_FILENAME = ".assetsignore";

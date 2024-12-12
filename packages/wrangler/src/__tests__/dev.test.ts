@@ -1679,6 +1679,41 @@ describe.sequential("wrangler dev", () => {
 			);
 		});
 
+		it("should warn if experimental_serve_directly=false but no binding is provided", async () => {
+			writeWranglerConfig({
+				main: "index.js",
+				assets: {
+					directory: "assets",
+					experimental_serve_directly: false,
+				},
+			});
+			fs.mkdirSync("assets");
+			fs.writeFileSync("index.js", `export default {};`);
+
+			await runWranglerUntilConfig("dev");
+
+			expect(std.warn).toMatchInlineSnapshot(`
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mexperimental_serve_directly=false but no assets.binding provided.[0m
+
+				"
+			`);
+		});
+
+		it("should error if an experimental_serve_directly is false without providing a user Worker", async () => {
+			writeWranglerConfig({
+				assets: { directory: "assets", experimental_serve_directly: false },
+			});
+			fs.mkdirSync("assets");
+			await expect(
+				runWrangler("dev")
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`
+				[Error: Cannot set experimental_serve_directly=false without a Worker script.
+				Please remove experimental_serve_directly from your configuration file, or provide a Worker script in your configuration file (\`main\`).]
+			`
+			);
+		});
+
 		it("should error if directory specified by '--assets' command line argument does not exist", async () => {
 			writeWranglerConfig({
 				main: "./index.js",
