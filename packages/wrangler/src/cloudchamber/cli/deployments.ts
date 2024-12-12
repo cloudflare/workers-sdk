@@ -1,5 +1,5 @@
 import { exit } from "process";
-import { cancel, crash, endSection, log } from "@cloudflare/cli";
+import { cancel, crash, endSection, log, newline } from "@cloudflare/cli";
 import { processArgument } from "@cloudflare/cli/args";
 import { brandColor, dim, yellow } from "@cloudflare/cli/colors";
 import { spinner } from "@cloudflare/cli/interactive";
@@ -172,11 +172,10 @@ export async function pickDeployment(deploymentIdPrefix?: string) {
 }
 
 export function logDeployment(deployment: DeploymentV2) {
+	log(`${brandColor("image")} ${dim(deployment.image)}`);
 	log(
-		`${brandColor("Image")} ${dim(deployment.image)}\n${brandColor(
-			"Location"
-		)} ${dim(idToLocationName(deployment.location.name))}\n${brandColor(
-			"Version"
-		)} ${dim(`${deployment.version}`)}\n`
+		`${brandColor("location")} ${dim(idToLocationName(deployment.location.name))}`
 	);
+	log(`${brandColor("version")} ${dim(`${deployment.version}`)}`);
+	newline();
 }

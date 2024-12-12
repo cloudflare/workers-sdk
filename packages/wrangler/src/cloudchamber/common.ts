@@ -344,17 +344,15 @@ export function renderDeploymentConfiguration(
 	}
 
 	const containerInformation = [
-		["Image", image],
-		["Location", idToLocationName(location)],
-		["VCPU", `${vcpu}`],
-		["Memory", memory],
-		["Environment variables", environmentVariablesText],
-		["Labels", labelsText],
+		["image", image],
+		["location", idToLocationName(location)],
+		["vCPU", `${vcpu}`],
+		["memory", memory],
+		["environment variables", environmentVariablesText],
+		["labels", labelsText],
 		...(network === undefined
 			? []
-			: [
-					["Include IPv4", network.assign_ipv4 === "predefined" ? "yes" : "no"],
-				]),
+			: [["IPv4", network.assign_ipv4 === "predefined" ? "yes" : "no"]]),
 	] as const;
 
 	updateStatus(
