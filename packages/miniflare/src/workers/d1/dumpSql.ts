@@ -19,10 +19,10 @@ export function* dumpSql(
 	// Taken from SQLite shell.c.in https://github.com/sqlite/sqlite/blob/105c20648e1b05839fd0638686b95f2e3998abcb/src/shell.c.in#L8463-L8469
 	// @ts-ignore (SqlStorageStatement needs to be callable)
 	const tables_cursor = db.prepare(`
-    SELECT name, type, sql 
-      FROM sqlite_schema AS o 
-    WHERE (true) AND type=='table' 
-      AND sql NOT NULL 
+    SELECT name, type, sql
+      FROM sqlite_schema AS o
+    WHERE (true) AND type=='table'
+      AND sql NOT NULL
     ORDER BY tbl_name='sqlite_sequence', rowid;
   `)();
 	const tables: any[] = Array.from(tables_cursor);
@@ -56,8 +56,8 @@ export function* dumpSql(
 		if (noData) continue;
 		const columns_cursor = db.exec(`PRAGMA table_info="${table}"`);
 		const columns = Array.from(columns_cursor);
-		const select = `SELECT ${columns.map((c) => c.name).join(", ")}
-                            FROM "${table}";`;
+		const column_names = columns.map((c) => c.name).join(", ")
+		const select = `SELECT ${column_names} FROM "${table}";`;
 		const rows_cursor = db.exec(select);
 		for (const dataRow of rows_cursor.raw()) {
 			const formattedCells = dataRow.map((cell: unknown, i: number) => {
@@ -79,7 +79,7 @@ export function* dumpSql(
 				}
 			});
 
-			yield `INSERT INTO ${sqliteQuote(table)} VALUES(${formattedCells.join(",")});`;
+			yield `INSERT INTO ${sqliteQuote(table)}(${column_names}) VALUES(${formattedCells.join(",")});`;
 		}
 	}
 
