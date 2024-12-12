@@ -1499,6 +1499,53 @@ describe("r2", () => {
 			const { setIsTTY } = useMockIsTTY();
 			mockAccountId();
 			mockApiToken();
+			describe("get", () => {
+				it("should get custom domain for the bucket as expected", async () => {
+					const bucketName = "my-bucket";
+					const domainName = "test.com";
+					const mockDomain = {
+						domain: domainName,
+						enabled: false,
+						status: {
+							ownership: "pending",
+							ssl: "pending",
+						},
+						minTLS: "1.0",
+						zoneId: "zone-id-456",
+						zoneName: "test-zone",
+					};
+					msw.use(
+						http.get(
+							"*/accounts/:accountId/r2/buckets/:bucketName/domains/custom/:domainName",
+							async ({ params }) => {
+								const {
+									accountId,
+									bucketName: bucketParam,
+									domainName: domainParam,
+								} = params;
+								expect(accountId).toEqual("some-account-id");
+								expect(bucketParam).toEqual(bucketName);
+								expect(domainParam).toEqual(domainName);
+								return HttpResponse.json(createFetchResult(mockDomain));
+							},
+							{ once: true }
+						)
+					);
+					await runWrangler(
+						`r2 bucket domain get ${bucketName} --domain ${domainName}`
+					);
+					expect(std.out).toMatchInlineSnapshot(`
+						"Retrieving custom domain 'test.com' connected to bucket 'my-bucket'...
+						domain:            test.com
+						enabled:           No
+						ownership_status:  pending
+						ssl_status:        pending
+						min_tls_version:   1.0
+						zone_id:           zone-id-456
+						zone_name:         test-zone"
+					  `);
+				});
+			});
 			describe("add", () => {
 				it("should add custom domain to the bucket as expected", async () => {
 					const bucketName = "my-bucket";
