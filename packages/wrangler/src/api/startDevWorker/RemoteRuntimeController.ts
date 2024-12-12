@@ -83,6 +83,8 @@ export class RemoteRuntimeController extends RuntimeController {
 				}
 			);
 
+			// console.log(props.name);
+
 			const scriptId =
 				props.name ||
 				(workerContext.zone
@@ -259,7 +261,7 @@ export class RemoteRuntimeController extends RuntimeController {
 	//   Event Handlers
 	// ******************
 
-	onBundleStart(_: BundleStartEvent) {
+	onBundleStart(ev: BundleStartEvent) {
 		// Abort any previous operations when a new bundle is started
 		this.#abortController.abort();
 		this.#abortController = new AbortController();

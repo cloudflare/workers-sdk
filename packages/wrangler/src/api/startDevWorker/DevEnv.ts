@@ -21,6 +21,7 @@ export class DevEnv extends EventEmitter {
 		const worker = createWorkerObject(this);
 
 		await this.config.set(options);
+		// console.log(this.config);
 
 		return worker;
 	}
@@ -170,6 +171,7 @@ function createWorkerObject(devEnv: DevEnv): Worker {
 			return w.queue(...args);
 		},
 		async scheduled(...args) {
+			//
 			assert(
 				this.config.name,
 				"Worker name must be defined to use `Worker.scheduled()`"

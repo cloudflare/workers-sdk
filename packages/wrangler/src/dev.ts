@@ -19,6 +19,7 @@ import { devRegistry, getBoundRegisteredWorkers } from "./dev-registry";
 import { getVarsForDev } from "./dev/dev-vars";
 import registerDevHotKeys from "./dev/hotkeys";
 import { maybeRegisterLocalWorker } from "./dev/local";
+import { confirm, prompt } from "./dialogs";
 import { UserError } from "./errors";
 import isInteractive from "./is-interactive";
 import { logger } from "./logger";
@@ -668,6 +669,24 @@ export async function startDev(args: StartDevOptions) {
 			logger.warn(
 				"--experimental-local is no longer required and will be removed in a future version.\n`wrangler dev` now uses the local Cloudflare Workers runtime by default. 🎉"
 			);
+		}
+
+		// let response = await prompt("foo bar baz");
+		// if (response !== "y" && response !== "Y") {
+		// 	throw new Error("bad response");
+		// }
+
+		console.log(args.remote);
+		// console.log(config)
+		console.log(args.name);
+
+		const ok = await confirm(
+			`dev --remote with assets requires an uploaded worker. Continue?`
+		);
+		console.log("hello");
+		if (!ok) {
+			console.log("DEBUG THREE");
+			throw new Error("do not continue");
 		}
 
 		if (args.inspect) {

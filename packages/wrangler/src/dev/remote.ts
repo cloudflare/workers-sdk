@@ -5,6 +5,7 @@ import { printBundleSize } from "../deployment-bundle/bundle-reporter";
 import { getBundleType } from "../deployment-bundle/bundle-type";
 import { withSourceURLs } from "../deployment-bundle/source-url";
 import { getInferredHost } from "../dev";
+import { confirm, prompt } from "../dialogs";
 import { UserError } from "../errors";
 import { logger } from "../logger";
 import { syncLegacyAssets } from "../sites";
@@ -113,6 +114,29 @@ export async function createRemoteWorkerInit(props: {
 		},
 		props.modules
 	);
+
+	// console.log(props);
+
+	console.log("DEBUG ONE");
+	console.log("FOO");
+
+	if (props.assets?.directory) {
+		// let response = await prompt("foo bar baz");
+		// if (response !== "y" && response !== "Y") {
+		// 	throw new Error("bad response");
+		// }
+		// console.log("DEBUG TWO");
+		// const ok = await confirm(
+		// 	`dev --remote with assets requires an uploaded worker. Continue?`
+		// );
+		// console.log("hello");
+		// if (!ok) {
+		// 	console.log("DEBUG THREE");
+		// 	throw new Error("do not continue");
+		// }
+	} else {
+		console.log("DEBUG FOUR");
+	}
 
 	const legacyAssets = await syncLegacyAssets(
 		props.accountId,
