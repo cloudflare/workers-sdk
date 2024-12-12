@@ -2,13 +2,10 @@ version: 2
 updates:
   # Automatically check for updates in framework CLIs for C3
   - package-ecosystem: "npm"
+    open-pull-requests-limit: 10
     directory: "/packages/create-cloudflare/src/frameworks"
     schedule:
-      # Note: this interval is likely going to be too short and create
-      #       too much noise, we are just setting it as daily for the time
-      #       being to test the efficacy of the solution, we shall set it
-      #       to "weekly" after a testing period of 1/2 weeks
-      interval: "daily"
+      interval: "weekly"
     versioning-strategy: increase
     # the following is used to add the [C3] prefix to the PR title,
     # we override the commit message but setting a prefix like this

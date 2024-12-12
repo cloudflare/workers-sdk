@@ -3854,22 +3854,35 @@ describe("normalizeAndValidateConfig()", () => {
 
 	describe("named environments", () => {
 		it("should warn if we specify an environment but there are no named environments", () => {
-			const rawConfig: RawConfig = {};
-			const { diagnostics } = normalizeAndValidateConfig(rawConfig, undefined, {
-				env: "DEV",
-			});
+			const rawConfig: RawConfig = {
+				name: "my-worker",
+				kv_namespaces: [{ binding: "KV", id: "xxxx-xxxx-xxxx-xxxx" }],
+			};
+			const { diagnostics, config } = normalizeAndValidateConfig(
+				rawConfig,
+				undefined,
+				{
+					env: "dev",
+				}
+			);
+			expect(config).toEqual(
+				expect.objectContaining({
+					name: "my-worker-dev",
+					kv_namespaces: [{ binding: "KV", id: "xxxx-xxxx-xxxx-xxxx" }],
+				})
+			);
 			expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 			        "Processing wrangler configuration:
 			        "
 		      `);
 			expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
 				"Processing wrangler configuration:
-				  - No environment found in configuration with name \\"DEV\\".
-				    Before using \`--env=DEV\` there should be an equivalent environment section in the configuration.
+				  - No environment found in configuration with name \\"dev\\".
+				    Before using \`--env=dev\` there should be an equivalent environment section in the configuration.
 
 				    Consider adding an environment configuration section to the Wrangler configuration file:
 				    \`\`\`
-				    [env.DEV]
+				    [env.dev]
 				    \`\`\`
 				"
 			`);
@@ -4111,70 +4124,70 @@ describe("normalizeAndValidateConfig()", () => {
 			                Please remove the field from this environment."
 		        `);
 			});
-		});
 
-		it("should error if named environment contains a `account_id` field, even if there is no top-level name", () => {
-			const rawConfig: RawConfig = {
-				legacy_env: false,
-				env: {
-					DEV: {
-						account_id: "some_account_id",
+			it("should error if named environment contains a `account_id` field, even if there is no top-level name", () => {
+				const rawConfig: RawConfig = {
+					legacy_env: false,
+					env: {
+						DEV: {
+							account_id: "some_account_id",
+						},
 					},
-				},
-			};
+				};
 
-			const { config, diagnostics } = normalizeAndValidateConfig(
-				rawConfig,
-				undefined,
-				{ env: "DEV" }
-			);
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					rawConfig,
+					undefined,
+					{ env: "DEV" }
+				);
 
-			expect(diagnostics.hasWarnings()).toBe(true);
-			expect(config.account_id).toBeUndefined();
-			expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-			        "Processing wrangler configuration:
-			          - Experimental: Service environments are in beta, and their behaviour is guaranteed to change in the future. DO NOT USE IN PRODUCTION."
-		      `);
-			expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			        "Processing wrangler configuration:
+				expect(diagnostics.hasWarnings()).toBe(true);
+				expect(config.account_id).toBeUndefined();
+				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - Experimental: Service environments are in beta, and their behaviour is guaranteed to change in the future. DO NOT USE IN PRODUCTION."
+				`);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
 
-			          - \\"env.DEV\\" environment configuration
-			            - The \\"account_id\\" field is not allowed in named service environments.
-			              Please remove the field from this environment."
-		      `);
-		});
+					  - \\"env.DEV\\" environment configuration
+					    - The \\"account_id\\" field is not allowed in named service environments.
+					      Please remove the field from this environment."
+				`);
+			});
 
-		it("should error if top-level config and a named environment both contain a `account_id` field", () => {
-			const rawConfig: RawConfig = {
-				account_id: "ACCOUNT_ID",
-				legacy_env: false,
-				env: {
-					DEV: {
-						account_id: "ENV_ACCOUNT_ID",
+			it("should error if top-level config and a named environment both contain a `account_id` field", () => {
+				const rawConfig: RawConfig = {
+					account_id: "ACCOUNT_ID",
+					legacy_env: false,
+					env: {
+						DEV: {
+							account_id: "ENV_ACCOUNT_ID",
+						},
 					},
-				},
-			};
+				};
 
-			const { config, diagnostics } = normalizeAndValidateConfig(
-				rawConfig,
-				undefined,
-				{ env: "DEV" }
-			);
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					rawConfig,
+					undefined,
+					{ env: "DEV" }
+				);
 
-			expect(config.account_id).toEqual("ACCOUNT_ID");
-			expect(diagnostics.hasErrors()).toBe(true);
-			expect(diagnostics.hasWarnings()).toBe(true);
-			expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-			        "Processing wrangler configuration:
-			          - Experimental: Service environments are in beta, and their behaviour is guaranteed to change in the future. DO NOT USE IN PRODUCTION."
-		      `);
-			expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			        "Processing wrangler configuration:
+				expect(config.account_id).toEqual("ACCOUNT_ID");
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.hasWarnings()).toBe(true);
+				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - Experimental: Service environments are in beta, and their behaviour is guaranteed to change in the future. DO NOT USE IN PRODUCTION."
+				`);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
 
-			          - \\"env.DEV\\" environment configuration
-			            - The \\"account_id\\" field is not allowed in named service environments.
-			              Please remove the field from this environment."
-		      `);
+					  - \\"env.DEV\\" environment configuration
+					    - The \\"account_id\\" field is not allowed in named service environments.
+					      Please remove the field from this environment."
+				`);
+			});
 		});
 
 		it("should warn for non-inherited fields that are missing in environments", () => {

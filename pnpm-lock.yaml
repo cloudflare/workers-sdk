@@ -1707,9 +1707,6 @@ importers:
       '@cloudflare/kv-asset-handler':
         specifier: workspace:*
         version: link:../kv-asset-handler
-      '@cloudflare/workers-shared':
-        specifier: workspace:*
-        version: link:../workers-shared
       '@esbuild-plugins/node-globals-polyfill':
         specifier: ^0.2.3
         version: 0.2.3(esbuild@0.17.19)
@@ -1775,6 +1772,9 @@ importers:
       '@cloudflare/types':
         specifier: 6.18.4
         version: 6.18.4(react@18.3.1)
+      '@cloudflare/workers-shared':
+        specifier: workspace:*
+        version: link:../workers-shared
       '@cloudflare/workers-tsconfig':
         specifier: workspace:*
         version: link:../workers-tsconfig

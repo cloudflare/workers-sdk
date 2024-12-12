@@ -46,7 +46,7 @@ In order to enable the example:
   ```ts
   // KV Example:
   ```
-  and uncomment the commented lines below it.
+  and uncomment the commented lines below it (also uncomment the relevant imports).
 - Do the same in the `wrangler.toml` file, where
   the comment is:
   ```

@@ -20,7 +20,6 @@ import { getVarsForDev } from "./dev/dev-vars";
 import registerDevHotKeys from "./dev/hotkeys";
 import { maybeRegisterLocalWorker } from "./dev/local";
 import { UserError } from "./errors";
-import { run } from "./experimental-flags";
 import isInteractive from "./is-interactive";
 import { logger } from "./logger";
 import { getLegacyAssetPaths, getSiteAssetPaths } from "./sites";
@@ -59,6 +58,11 @@ import type { Json } from "miniflare";
 export const dev = createCommand({
 	behaviour: {
 		provideConfig: false,
+		overrideExperimentalFlags: (args) => ({
+			FILE_BASED_REGISTRY: args.experimentalRegistry,
+			MULTIWORKER: Array.isArray(args.config),
+			RESOURCES_PROVISION: args.experimentalProvision ?? false,
+		}),
 	},
 	metadata: {
 		description: "👂 Start a local server for developing your Worker",
@@ -373,14 +377,7 @@ export const dev = createCommand({
 		}
 	},
 	async handler(args) {
-		const devInstance = await run(
-			{
-				FILE_BASED_REGISTRY: args.experimentalRegistry,
-				MULTIWORKER: Array.isArray(args.config),
-				RESOURCES_PROVISION: false,
-			},
-			() => startDev(args)
-		);
+		const devInstance = await startDev(args);
 		assert(devInstance.devEnv !== undefined);
 		await events.once(devInstance.devEnv, "teardown");
 		await Promise.all(devInstance.secondary.map((d) => d.teardown()));

@@ -2,6 +2,7 @@ import { fetchResult } from "../cfetch";
 import { readConfig } from "../config";
 import { defaultWranglerConfig } from "../config/config";
 import { FatalError, UserError } from "../errors";
+import { run } from "../experimental-flags";
 import { logger } from "../logger";
 import { printWranglerBanner } from "../wrangler-banner";
 import { demandSingleValue } from "./helpers";
@@ -89,18 +90,27 @@ function createHandler(def: CommandDefinition) {
 			// TODO(telemetry): send command started event
 
 			await def.validateArgs?.(args);
+			const experimentalFlags = def.behaviour?.overrideExperimentalFlags
+				? def.behaviour?.overrideExperimentalFlags(args)
+				: {
+						FILE_BASED_REGISTRY: false,
+						MULTIWORKER: false,
+						RESOURCES_PROVISION: args.experimentalProvision ?? false,
+					};
 
-			await def.handler(args, {
-				config:
-					def.behaviour?.provideConfig ?? true
-						? readConfig(args, {
-								hideWarnings: !(def.behaviour?.printConfigWarnings ?? true),
-							})
-						: defaultWranglerConfig,
-				errors: { UserError, FatalError },
-				logger,
-				fetchResult,
-			});
+			await run(experimentalFlags, () =>
+				def.handler(args, {
+					config:
+						def.behaviour?.provideConfig ?? true
+							? readConfig(args, {
+									hideWarnings: !(def.behaviour?.printConfigWarnings ?? true),
+								})
+							: defaultWranglerConfig,
+					errors: { UserError, FatalError },
+					logger,
+					fetchResult,
+				})
+			);
 
 			// TODO(telemetry): send command completed event
 		} catch (err) {
