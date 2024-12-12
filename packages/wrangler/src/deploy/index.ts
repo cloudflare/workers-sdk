@@ -230,6 +230,13 @@ export function deployOptions(yargs: CommonYargsArgv) {
 					"Name of a dispatch namespace to deploy the Worker to (Workers for Platforms)",
 				type: "string",
 			})
+			.option("experimental-auto-create", {
+				describe: "Automatically provision draft bindings with new resources",
+				type: "boolean",
+				default: false,
+				hidden: true,
+				alias: "x-auto-create",
+			})
 	);
 }
 
@@ -380,6 +387,7 @@ async function deployWorker(args: DeployArgs) {
 		projectRoot,
 		dispatchNamespace: args.dispatchNamespace,
 		experimentalVersions: args.experimentalVersions,
+		experimentalAutoCreate: args.experimentalAutoCreate,
 	});
 
 	writeOutput({

@@ -12,6 +12,7 @@ export function normalizeOutput(
 		removeWorkerPreviewUrl,
 		removeUUID,
 		removeBinding,
+		removeKVId,
 		normalizeErrorMarkers,
 		replaceByte,
 		stripTrailingWhitespace,
@@ -75,6 +76,10 @@ function removeBinding(str: string) {
 		/\w{8}_\w{4}_\w{4}_\w{4}_\w{12}/g,
 		"00000000_0000_0000_0000_000000000000"
 	);
+}
+
+function removeKVId(str: string) {
+	return str.replace(/([0-9a-f]{32})/g, "00000000000000000000000000000000");
 }
 
 /**
