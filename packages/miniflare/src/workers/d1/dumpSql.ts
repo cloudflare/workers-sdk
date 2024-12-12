@@ -56,7 +56,7 @@ export function* dumpSql(
 		if (noData) continue;
 		const columns_cursor = db.exec(`PRAGMA table_info="${table}"`);
 		const columns = Array.from(columns_cursor);
-		const column_names = columns.map((c) => c.name).join(", ")
+		const column_names = columns.map((c) => c.name).join(", ");
 		const select = `SELECT ${column_names} FROM "${table}";`;
 		const rows_cursor = db.exec(select);
 		for (const dataRow of rows_cursor.raw()) {
