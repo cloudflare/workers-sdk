@@ -129,15 +129,21 @@ function addCreateAndUpdateOptions(yargs: Argv<CommonYargsOptions>) {
 			choices: ["none", "gzip", "deflate"],
 			demandOption: false,
 		})
+		.option("prefix", {
+			describe:
+				"Optional base path to store files in the destination bucket \nDefault: (none)",
+			type: "string",
+			demandOption: false,
+		})
 		.option("filepath", {
 			describe:
-				"The path to store files in the destination bucket \nDefault: event_date=${date}/hr=${hr}",
+				"The path to store partitioned files in the destination bucket \nDefault: event_date=${date}/hr=${hr}",
 			type: "string",
 			demandOption: false,
 		})
 		.option("filename", {
 			describe:
-				'The name of the file in the bucket. Must contain "${slug}". File extension is optional \nDefault: ${slug}-${hr}.json',
+				'The name of each unique file in the bucket. Must contain "${slug}". File extension is optional \nDefault: ${slug}${extension}',
 			type: "string",
 			demandOption: false,
 		})
@@ -275,6 +281,9 @@ export function pipelines(pipelineYargs: CommonYargsArgv) {
 					pipelineConfig.transforms.push(parseTransform(args.transform));
 				}
 
+				if (args.prefix) {
+					pipelineConfig.destination.path.prefix = args.prefix;
+				}
 				if (args.filepath) {
 					pipelineConfig.destination.path.filepath = args.filepath;
 				}
@@ -464,6 +473,9 @@ export function pipelines(pipelineYargs: CommonYargsArgv) {
 					pipelineConfig.transforms.push(parseTransform(args.transform));
 				}
 
+				if (args.prefix) {
+					pipelineConfig.destination.path.prefix = args.prefix;
+				}
 				if (args.filepath) {
 					pipelineConfig.destination.path.filepath = args.filepath;
 				}

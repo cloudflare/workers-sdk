@@ -16,8 +16,8 @@ describe("pipelines", () => {
 	runInTempDir();
 
 	const samplePipeline = {
-		currentVersion: 1,
 		id: "0001",
+		version: 1,
 		name: "my-pipeline",
 		metadata: {},
 		source: [
@@ -25,15 +25,20 @@ describe("pipelines", () => {
 				type: "binding",
 				format: "json",
 			},
+			{
+				type: "http",
+				format: "json",
+				authentication: false,
+			},
 		],
 		transforms: [],
 		destination: {
-			type: "json",
+			type: "r2",
+			format: "json",
 			batch: {},
 			compression: {
 				type: "none",
 			},
-			format: "json",
 			path: {
 				bucket: "bucket",
 			},
@@ -365,10 +370,12 @@ describe("pipelines", () => {
 				                           Default: No transformation worker  [string]
 				      --compression        Sets the compression format of output files
 				                           Default: gzip  [string] [choices: \\"none\\", \\"gzip\\", \\"deflate\\"]
-				      --filepath           The path to store files in the destination bucket
+				      --prefix             Optional base path to store files in the destination bucket
+				                           Default: (none)  [string]
+				      --filepath           The path to store partitioned files in the destination bucket
 				                           Default: event_date=\${date}/hr=\${hr}  [string]
-				      --filename           The name of the file in the bucket. Must contain \\"\${slug}\\". File extension is optional
-				                           Default: \${slug}-\${hr}.json  [string]
+				      --filename           The name of each unique file in the bucket. Must contain \\"\${slug}\\". File extension is optional
+				                           Default: \${slug}\${extension}  [string]
 				      --binding            Enable Worker binding to this pipeline  [boolean] [default: true]
 				      --http               Enable HTTPS endpoint to send data to this pipeline  [boolean] [default: true]
 				      --authentication     Require authentication (Cloudflare API Token) to send data to the HTTPS endpoint  [boolean] [default: false]
@@ -465,24 +472,29 @@ describe("pipelines", () => {
 			expect(std.out).toMatchInlineSnapshot(`
 				"Retrieving config for pipeline \\"foo\\".
 				{
-				  \\"currentVersion\\": 1,
 				  \\"id\\": \\"0001\\",
+				  \\"version\\": 1,
 				  \\"name\\": \\"my-pipeline\\",
 				  \\"metadata\\": {},
 				  \\"source\\": [
 				    {
 				      \\"type\\": \\"binding\\",
 				      \\"format\\": \\"json\\"
+				    },
+				    {
+				      \\"type\\": \\"http\\",
+				      \\"format\\": \\"json\\",
+				      \\"authentication\\": false
 				    }
 				  ],
 				  \\"transforms\\": [],
 				  \\"destination\\": {
-				    \\"type\\": \\"json\\",
+				    \\"type\\": \\"r2\\",
+				    \\"format\\": \\"json\\",
 				    \\"batch\\": {},
 				    \\"compression\\": {
 				      \\"type\\": \\"none\\"
 				    },
-				    \\"format\\": \\"json\\",
 				    \\"path\\": {
 				      \\"bucket\\": \\"bucket\\"
 				    }
