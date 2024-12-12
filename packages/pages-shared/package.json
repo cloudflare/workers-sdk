@@ -18,7 +18,7 @@
 		"test:ci": "vitest run"
 	},
 	"dependencies": {
-		"miniflare": "workspace:*"
+		"miniflare": "3.20241106.2"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-tsconfig": "workspace:*",
