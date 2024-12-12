@@ -444,7 +444,17 @@ export function validateAssetsArgsAndConfig(
 		);
 	}
 
-	// User Worker ahead of assets, but no assets binding provided
+	// Smart placement turned on when using assets
+	if (
+		config?.placement?.mode === "smart" &&
+		config?.assets?.experimental_serve_directly
+	) {
+		logger.warn(
+			"Using assets with smart placement turned on may result in poor performance."
+		);
+	}
+
+	// User worker ahead of assets, but no assets binding provided
 	if (
 		"legacy" in args
 			? args.assets?.assetConfig?.serve_directly === false &&
