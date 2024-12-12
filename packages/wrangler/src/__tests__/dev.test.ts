@@ -1886,6 +1886,23 @@ describe.sequential("wrangler dev", () => {
 		});
 	});
 
+	describe("`browser rendering binding", () => {
+		it("should show error when running locally", async () => {
+			writeWranglerConfig({
+				browser: {
+					binding: "MYBROWSER",
+				},
+			});
+			fs.writeFileSync("index.js", `export default {};`);
+
+			await expect(
+				runWrangler("dev index.js")
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				"[Error: Browser render is not supported locally. Please use `wrangler dev --remote` instead.]"
+			);
+		});
+	});
+
 	it("should error helpfully if pages_build_output_dir is set", async () => {
 		writeWranglerConfig({ pages_build_output_dir: "dist", name: "test" });
 		await expect(runWrangler("dev")).rejects.toThrowErrorMatchingInlineSnapshot(

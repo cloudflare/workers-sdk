@@ -320,6 +320,12 @@ async function resolveConfig(
 		);
 	}
 
+	if (resolved.bindings?.browser && resolved.dev.remote !== true) {
+		throw new UserError(
+			"Browser render is not supported locally. Please use `wrangler dev --remote` instead."
+		);
+	}
+
 	validateAssetsArgsAndConfig(resolved);
 
 	const services = extractBindingsOfType("service", resolved.bindings);
