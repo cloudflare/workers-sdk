@@ -1,9 +1,0 @@
-{
-  "extends": "./tsconfig.json",
-  "compilerOptions": {
-    "paths": {
-      "miniflare:shared": ["./dist-types/src/workers/shared/index.d.ts"],
-      "miniflare:zod": ["./dist-types/src/workers/shared/zod.worker.d.ts"]
-    }
-  },
-}
