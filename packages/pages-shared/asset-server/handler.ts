@@ -68,9 +68,24 @@ export function normaliseHeaders(
 	}
 }
 
-type FindAssetEntryForPath<AssetEntry> = (
-	path: string
-) => Promise<null | AssetEntry>;
+function generateETagHeader(assetKey: string) {
+	// https://support.cloudflare.com/hc/en-us/articles/218505467-Using-ETag-Headers-with-Cloudflare
+	// We sometimes remove etags unless they are wrapped in quotes
+	const strongETag = `"${assetKey}"`;
+	const weakETag = `W/"${assetKey}"`;
+	return { strongETag, weakETag };
+}
+
+function checkIfNoneMatch(
+	request: Request,
+	strongETag: string,
+	weakETag: string
+) {
+	const ifNoneMatch = request.headers.get("if-none-match");
+
+	// We sometimes downgrade strong etags to a weak ones, so we need to check for both
+	return ifNoneMatch === weakETag || ifNoneMatch === strongETag;
+}
 
 function generateETagHeader(assetKey: string) {
 	// https://support.cloudflare.com/hc/en-us/articles/218505467-Using-ETag-Headers-with-Cloudflare
