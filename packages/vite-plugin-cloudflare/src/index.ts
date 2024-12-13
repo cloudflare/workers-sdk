@@ -44,10 +44,7 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin {
 									([environmentName, workerConfig]) => {
 										return [
 											environmentName,
-											createCloudflareEnvironmentOptions(
-												workerConfig,
-												userConfig,
-											),
+											createCloudflareEnvironmentOptions(workerConfig),
 										];
 									},
 								),
@@ -93,12 +90,10 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin {
 			};
 		},
 		configEnvironment(name, options) {
-			if (resolvedPluginConfig.type === 'workers') {
+			if (resolvedPluginConfig.type === 'workers' && !options.build?.outDir) {
 				options.build = {
 					...options.build,
-					// Puts all environment builds in subdirectories of the same build directory
-					// TODO: allow the user to override this
-					outDir: path.join(options.build?.outDir ?? 'dist', name),
+					outDir: path.join('dist', name),
 				};
 			}
 		},

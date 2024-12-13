@@ -403,6 +403,19 @@ export function getDevMiniflareOptions(
 	};
 }
 
+function getConfigPath(
+	viteConfig: vite.ResolvedConfig,
+	environmentName: string,
+) {
+	const outDir = viteConfig.environments[environmentName]?.build.outDir;
+
+	assert(outDir, `No output directory for environment ${environmentName}`);
+
+	const configPath = path.resolve(viteConfig.root, outDir, 'wrangler.json');
+
+	return configPath;
+}
+
 function getEntryModule(main: string | undefined) {
 	assert(
 		main,
@@ -419,19 +432,19 @@ export function getPreviewMiniflareOptions(
 	vitePreviewServer: vite.PreviewServer,
 ): MiniflareOptions {
 	const viteConfig = vitePreviewServer.config;
-	// For now, we are enforcing that packages are always inside the same build directory
-	const buildDirectory = path.resolve(viteConfig.root, viteConfig.build.outDir);
 
-	const configPath =
-		resolvedPluginConfig.type === 'workers'
-			? path.join(
-					buildDirectory,
-					resolvedPluginConfig.entryWorkerEnvironmentName,
-					'wrangler.json',
-				)
-			: path.join(buildDirectory, 'wrangler.json');
 	const configs = [
-		unstable_readConfig({ config: configPath }, {}),
+		unstable_readConfig(
+			{
+				config: getConfigPath(
+					viteConfig,
+					resolvedPluginConfig.type === 'workers'
+						? resolvedPluginConfig.entryWorkerEnvironmentName
+						: 'client',
+				),
+			},
+			{},
+		),
 		...(resolvedPluginConfig.type === 'workers'
 			? Object.keys(resolvedPluginConfig.workers)
 					.filter(
@@ -442,11 +455,7 @@ export function getPreviewMiniflareOptions(
 					.map((environmentName) =>
 						unstable_readConfig(
 							{
-								config: path.join(
-									buildDirectory,
-									environmentName,
-									'wrangler.json',
-								),
+								config: getConfigPath(viteConfig, environmentName),
 							},
 							{},
 						),
