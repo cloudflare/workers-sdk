@@ -157,7 +157,6 @@ export const experimental_readRawConfig = (
 ): { rawConfig: RawConfig; configPath: string | undefined } => {
 	// Load the configuration from disk if available
 	const configPath = resolveWranglerConfigPath(args);
-	console.dir(configPath);
 	let rawConfig: RawConfig = {};
 	if (configPath?.endsWith("toml")) {
 		rawConfig = parseTOML(readFileSync(configPath), configPath);

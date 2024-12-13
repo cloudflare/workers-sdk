@@ -17,7 +17,6 @@ export function resolveWranglerConfigPath({
 	}
 
 	const leafPath = script !== undefined ? path.dirname(script) : process.cwd();
-	console.dir(leafPath);
 	return findWranglerConfig(leafPath);
 }
 
@@ -28,7 +27,6 @@ export function resolveWranglerConfigPath({
 export function findWranglerConfig(
 	referencePath: string = process.cwd()
 ): string | undefined {
-	console.dir(referencePath);
 	return (
 		findUpSync(`wrangler.json`, { cwd: referencePath }) ??
 		findUpSync(`wrangler.jsonc`, { cwd: referencePath }) ??
