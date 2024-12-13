@@ -1153,10 +1153,14 @@ export async function main(argv: string[]): Promise<void> {
 		addBreadcrumb(command);
 		// NB despite 'applyBeforeValidation = true', this runs *after* yargs 'validates' options,
 		// e.g. if a required arg is missing, yargs will error out before we send any events :/
-		dispatcher?.sendCommandEvent("wrangler command started", {
-			command,
-			args,
-		});
+		dispatcher?.sendCommandEvent(
+			"wrangler command started",
+			{
+				command,
+				args,
+			},
+			argv
+		);
 	}, /* applyBeforeValidation */ true);
 
 	let cliHandlerThrew = false;
@@ -1165,13 +1169,17 @@ export async function main(argv: string[]): Promise<void> {
 
 		const durationMs = Date.now() - startTime;
 
-		dispatcher?.sendCommandEvent("wrangler command completed", {
-			command,
-			args: metricsArgs,
-			durationMs,
-			durationSeconds: durationMs / 1000,
-			durationMinutes: durationMs / 1000 / 60,
-		});
+		dispatcher?.sendCommandEvent(
+			"wrangler command completed",
+			{
+				command,
+				args: metricsArgs,
+				durationMs,
+				durationSeconds: durationMs / 1000,
+				durationMinutes: durationMs / 1000 / 60,
+			},
+			argv
+		);
 	} catch (e) {
 		cliHandlerThrew = true;
 		let mayReport = true;
@@ -1281,15 +1289,19 @@ export async function main(argv: string[]): Promise<void> {
 
 		const durationMs = Date.now() - startTime;
 
-		dispatcher?.sendCommandEvent("wrangler command errored", {
-			command,
-			args: metricsArgs,
-			durationMs,
-			durationSeconds: durationMs / 1000,
-			durationMinutes: durationMs / 1000 / 60,
-			errorType:
-				errorType ?? (e instanceof Error ? e.constructor.name : undefined),
-		});
+		dispatcher?.sendCommandEvent(
+			"wrangler command errored",
+			{
+				command,
+				args: metricsArgs,
+				durationMs,
+				durationSeconds: durationMs / 1000,
+				durationMinutes: durationMs / 1000 / 60,
+				errorType:
+					errorType ?? (e instanceof Error ? e.constructor.name : undefined),
+			},
+			argv
+		);
 
 		throw e;
 	} finally {

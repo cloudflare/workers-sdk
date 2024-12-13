@@ -186,15 +186,11 @@ describe("metrics", () => {
 				isFirstUsage: false,
 				configFileType: "toml",
 				isCI: false,
+				isPagesCI: false,
+				isWorkersCI: false,
 				isInteractive: true,
-				argsUsed: [
-					"j",
-					"search",
-					"xGradualRollouts",
-					"xJsonConfig",
-					"xVersions",
-				],
-				argsCombination: "j, search, xGradualRollouts, xJsonConfig, xVersions",
+				argsUsed: [],
+				argsCombination: "",
 				command: "wrangler docs",
 				args: {
 					xJsonConfig: true,
@@ -341,6 +337,36 @@ describe("metrics", () => {
 
 				expect(requests.count).toBe(2);
 				expect(std.debug).toContain('isCI":true');
+			});
+
+			it("should mark isPagesCI as true if running in Pages CI", async () => {
+				vi.stubEnv("CF_PAGES", "1");
+				const requests = mockMetricRequest();
+
+				await runWrangler("docs arg");
+
+				expect(requests.count).toBe(2);
+				expect(std.debug).toContain('isPagesCI":true');
+			});
+
+			it("should mark isWorkersCI as true if running in Workers CI", async () => {
+				vi.stubEnv("WORKERS_CI", "1");
+				const requests = mockMetricRequest();
+
+				await runWrangler("docs arg");
+
+				expect(requests.count).toBe(2);
+				expect(std.debug).toContain('isWorkersCI":true');
+			});
+
+			it("should include args provided by the user", async () => {
+				const requests = mockMetricRequest();
+
+				await runWrangler("docs arg --search 'some search term'");
+
+				expect(requests.count).toBe(2);
+				// Notably, this _doesn't_ include default args (e.g. --x-versions)
+				expect(std.debug).toContain('argsCombination":"search"');
 			});
 
 			it("should mark as non-interactive if running in non-interactive environment", async () => {

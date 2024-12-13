@@ -9,6 +9,8 @@ import isCI from "is-ci";
 export const CI = {
 	/** Is Wrangler currently running in a CI? */
 	isCI() {
-		return isCI;
+		return (
+			isCI || process.env.CF_PAGES === "1" || process.env.WORKERS_CI === "1"
+		);
 	},
 };
