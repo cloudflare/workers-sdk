@@ -346,11 +346,7 @@ export const versionsUploadCommand = createCommand({
 
 		if (!args.dryRun) {
 			assert(accountId, "Missing account ID");
-			await verifyWorkerMatchesCITag(
-				accountId,
-				name,
-				path.relative(entry.projectRoot, config.configPath ?? "wrangler.toml")
-			);
+			await verifyWorkerMatchesCITag(accountId, name, config.configPath);
 		}
 
 		if (!args.dryRun) {
