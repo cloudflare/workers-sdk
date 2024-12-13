@@ -5,38 +5,42 @@ import type { RawConfig } from "./config";
 import type { JSONPath } from "jsonc-parser";
 
 export const experimental_patchConfig = (
-	configPath: string,
+	configPath: string | undefined,
 	patch: RawConfig
 ) => {
-	// will be json shaped
-	let raw = readFileSync(configPath);
+	if (!configPath) {
+		return;
+	}
+
+	let configString = readFileSync(configPath);
 
 	if (configPath.endsWith("toml")) {
-		// what if they have a # in a string...?
-		if (raw.includes("#")) {
+		// the TOML parser we use does not preserve comments
+		if (configString.includes("#")) {
 			return;
 		} else {
+			// for simplicity, use the JSONC editor to make all edits
 			// toml -> js object -> json string -> edits -> js object -> toml
-			raw = JSON.stringify(parseTOML(raw));
+			configString = JSON.stringify(parseTOML(configString));
 		}
-	} else if (!(configPath.endsWith("jsonc") || configPath.endsWith("json"))) {
-		throw new Error("shouldn't get here?");
 	}
 
 	const patchPaths: JSONPath[] = [];
 	getPath(patch, patchPaths);
 	for (const patchPath of patchPaths) {
 		const value = patchPath.pop();
-		const edit = modify(raw, patchPath, value, { isArrayInsertion: true });
-		raw = applyEdits(raw, edit);
-		const formatEdit = format(raw, undefined, {});
-		raw = applyEdits(raw, formatEdit);
+		const edit = modify(configString, patchPath, value, {
+			isArrayInsertion: true,
+		});
+		configString = applyEdits(configString, edit);
+		const formatEdit = format(configString, undefined, {});
+		configString = applyEdits(configString, formatEdit);
 	}
 
 	if (configPath.endsWith(".toml")) {
-		return TOML.stringify(JSONCParse(raw));
+		return TOML.stringify(JSONCParse(configString));
 	}
-	return raw;
+	return configString;
 };
 
 const getPath = (
