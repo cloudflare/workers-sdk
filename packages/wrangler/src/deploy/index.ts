@@ -271,8 +271,10 @@ async function deployWorker(args: DeployArgs) {
 		);
 	}
 
-	const configPath = resolveWranglerConfigPath(args, { useRedirect: true });
-	const projectRoot = configPath && path.dirname(configPath);
+	const { userConfigPath } = resolveWranglerConfigPath(args, {
+		useRedirect: true,
+	});
+	const projectRoot = userConfigPath && path.dirname(userConfigPath);
 	const config = readConfig(args, { useRedirect: true });
 	if (config.pages_build_output_dir) {
 		throw new UserError(

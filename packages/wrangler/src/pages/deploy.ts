@@ -115,7 +115,9 @@ export const Handler = async (args: PagesDeployArgs) => {
 	}
 
 	let config: Config | undefined;
-	const configPath = findWranglerConfig(process.cwd(), { useRedirect: true });
+	const { configPath } = findWranglerConfig(process.cwd(), {
+		useRedirect: true,
+	});
 
 	try {
 		/*
