@@ -436,11 +436,11 @@ export function getKVNamespaceId(
 //  https://devblogs.microsoft.com/typescript/announcing-typescript-5-2/#using-declarations-and-explicit-resource-management
 export async function usingLocalNamespace<T>(
 	persistTo: string | undefined,
-	configPath: string | undefined,
+	config: Config,
 	namespaceId: string,
 	closure: (namespace: ReplaceWorkersTypes<KVNamespace>) => Promise<T>
 ): Promise<T> {
-	const persist = getLocalPersistencePath(persistTo, configPath);
+	const persist = getLocalPersistencePath(persistTo, config);
 	const persistOptions = buildPersistOptions(persist);
 	const mf = new Miniflare({
 		script:

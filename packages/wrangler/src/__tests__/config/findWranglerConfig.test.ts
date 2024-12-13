@@ -20,18 +20,22 @@ describe("config findWranglerConfig()", () => {
 					[`foo/bar/wrangler.${ext}`]: "DUMMY",
 					[`foo/bar/qux/holder.txt`]: "DUMMY",
 				});
-				expect(findWranglerConfig(".")).toEqual(
-					path.resolve(`wrangler.${ext}`)
-				);
-				expect(findWranglerConfig("./foo")).toEqual(
-					path.resolve(`foo/wrangler.${ext}`)
-				);
-				expect(findWranglerConfig("./foo/bar")).toEqual(
-					path.resolve(`foo/bar/wrangler.${ext}`)
-				);
-				expect(findWranglerConfig("./foo/bar/qux")).toEqual(
-					path.resolve(`foo/bar/wrangler.${ext}`)
-				);
+				expect(findWranglerConfig(".")).toEqual({
+					configPath: path.resolve(`wrangler.${ext}`),
+					userConfigPath: path.resolve(`wrangler.${ext}`),
+				});
+				expect(findWranglerConfig("./foo")).toEqual({
+					configPath: path.resolve(`foo/wrangler.${ext}`),
+					userConfigPath: path.resolve(`foo/wrangler.${ext}`),
+				});
+				expect(findWranglerConfig("./foo/bar")).toEqual({
+					configPath: path.resolve(`foo/bar/wrangler.${ext}`),
+					userConfigPath: path.resolve(`foo/bar/wrangler.${ext}`),
+				});
+				expect(findWranglerConfig("./foo/bar/qux")).toEqual({
+					configPath: path.resolve(`foo/bar/wrangler.${ext}`),
+					userConfigPath: path.resolve(`foo/bar/wrangler.${ext}`),
+				});
 				expect(std).toEqual(NO_LOGS);
 			}
 		);
@@ -46,9 +50,10 @@ describe("config findWranglerConfig()", () => {
 					[`wrangler.${ext1}`]: "DUMMY",
 					[`wrangler.${ext2}`]: "DUMMY",
 				});
-				expect(findWranglerConfig(".")).toEqual(
-					path.resolve(`wrangler.${ext1}`)
-				);
+				expect(findWranglerConfig(".")).toEqual({
+					configPath: path.resolve(`wrangler.${ext1}`),
+					userConfigPath: path.resolve(`wrangler.${ext1}`),
+				});
 				expect(std).toEqual(NO_LOGS);
 			});
 
@@ -57,9 +62,10 @@ describe("config findWranglerConfig()", () => {
 					[`wrangler.${ext1}`]: "DUMMY",
 					[`foo/wrangler.${ext2}`]: "DUMMY",
 				});
-				expect(findWranglerConfig("./foo")).toEqual(
-					path.resolve(`wrangler.${ext1}`)
-				);
+				expect(findWranglerConfig("./foo")).toEqual({
+					configPath: path.resolve(`wrangler.${ext1}`),
+					userConfigPath: path.resolve(`wrangler.${ext1}`),
+				});
 				expect(std).toEqual(NO_LOGS);
 			});
 		});
@@ -70,9 +76,10 @@ describe("config findWranglerConfig()", () => {
 				[".wrangler/deploy/config.json"]: `{"configPath": "../../dist/wrangler.json" }`,
 				[`dist/wrangler.json`]: "DUMMY",
 			});
-			expect(findWranglerConfig(".", { useRedirect: false })).toEqual(
-				path.resolve(`wrangler.toml`)
-			);
+			expect(findWranglerConfig(".", { useRedirect: false })).toEqual({
+				configPath: path.resolve(`wrangler.toml`),
+				userConfigPath: path.resolve(`wrangler.toml`),
+			});
 			expect(std).toEqual(NO_LOGS);
 		});
 	});
@@ -84,12 +91,12 @@ describe("config findWranglerConfig()", () => {
 				[`dist/wrangler.json`]: "DUMMY",
 				["foo/holder.txt"]: "DUMMY",
 			});
-			expect(findWranglerConfig(".", { useRedirect: true })).toEqual(
-				path.resolve(`dist/wrangler.json`)
-			);
-			expect(findWranglerConfig("./foo", { useRedirect: true })).toEqual(
-				path.resolve(`dist/wrangler.json`)
-			);
+			expect(findWranglerConfig(".", { useRedirect: true })).toEqual({
+				configPath: path.resolve(`dist/wrangler.json`),
+			});
+			expect(findWranglerConfig("./foo", { useRedirect: true })).toEqual({
+				configPath: path.resolve(`dist/wrangler.json`),
+			});
 			expect(std).toMatchInlineSnapshot(`
 				Object {
 				  "debug": "",
@@ -121,12 +128,14 @@ describe("config findWranglerConfig()", () => {
 				[`dist/wrangler.json`]: "DUMMY",
 				["foo/holder.txt"]: "DUMMY",
 			});
-			expect(findWranglerConfig(".", { useRedirect: true })).toEqual(
-				path.resolve(`dist/wrangler.json`)
-			);
-			expect(findWranglerConfig("./foo", { useRedirect: true })).toEqual(
-				path.resolve(`dist/wrangler.json`)
-			);
+			expect(findWranglerConfig(".", { useRedirect: true })).toEqual({
+				configPath: path.resolve(`dist/wrangler.json`),
+				userConfigPath: path.resolve(`wrangler.toml`),
+			});
+			expect(findWranglerConfig("./foo", { useRedirect: true })).toEqual({
+				configPath: path.resolve(`dist/wrangler.json`),
+				userConfigPath: path.resolve(`wrangler.toml`),
+			});
 			expect(std).toMatchInlineSnapshot(`
 				Object {
 				  "debug": "",
