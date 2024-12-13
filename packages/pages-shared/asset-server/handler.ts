@@ -68,6 +68,10 @@ export function normaliseHeaders(
 	}
 }
 
+type FindAssetEntryForPath<AssetEntry> = (
+	path: string
+) => Promise<null | AssetEntry>;
+
 function generateETagHeader(assetKey: string) {
 	// https://support.cloudflare.com/hc/en-us/articles/218505467-Using-ETag-Headers-with-Cloudflare
 	// We sometimes remove etags unless they are wrapped in quotes
