@@ -157,16 +157,23 @@ export function readPagesConfig(
 export const experimental_readRawConfig = (
 	args: ReadConfigCommandArgs,
 	options: ReadConfigOptions = {}
-): { rawConfig: RawConfig; configPath: string | undefined } => {
+): {
+	rawConfig: RawConfig;
+	configPath: string | undefined;
+	userConfigPath: string | undefined;
+} => {
 	// Load the configuration from disk if available
-	const configPath = resolveWranglerConfigPath(args, options);
+	const { configPath, userConfigPath } = resolveWranglerConfigPath(
+		args,
+		options
+	);
 	let rawConfig: RawConfig = {};
 	if (configPath?.endsWith("toml")) {
 		rawConfig = parseTOML(readFileSync(configPath), configPath);
 	} else if (configPath?.endsWith("json") || configPath?.endsWith("jsonc")) {
 		rawConfig = parseJSONC(readFileSync(configPath), configPath);
 	}
-	return { rawConfig, configPath };
+	return { rawConfig, configPath, userConfigPath };
 };
 
 export function withConfig<T>(
