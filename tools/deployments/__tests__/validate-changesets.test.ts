@@ -22,6 +22,7 @@ describe("findPackageNames()", () => {
 		expect(findPackageNames()).toMatchInlineSnapshot(`
 			Set {
 			  "@cloudflare/chrome-devtools-patches",
+			  "cloudflare-workers-bindings-extension",
 			  "create-cloudflare",
 			  "devprod-status-bot",
 			  "edge-preview-authenticated-proxy",

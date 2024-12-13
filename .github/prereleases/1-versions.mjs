@@ -3,7 +3,8 @@ import { getPackagesForPrerelease, setPackage } from "./0-packages.mjs";
 
 function getPrereleaseVersion() {
 	const sha = execSync("git rev-parse --short HEAD", { encoding: "utf8" });
-	return `0.0.0-${sha.trim()}`;
+	// Prefix with a `v` to ensure the version is always alphanumeric rather than just numeric (which can cause issues with some tools e.g vsce)
+	return `0.0.0-v${sha.trim()}`;
 }
 
 /**

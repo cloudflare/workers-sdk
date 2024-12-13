@@ -1,0 +1,53 @@
+{
+	"name": "cloudflare-workers-bindings-extension",
+	"displayName": "Cloudflare Workers",
+	"version": "0.0.5",
+	"description": "Manage your Cloudflare Worker's bindings",
+	"categories": [
+		"Other"
+	],
+	"repository": "https://github.com/cloudflare/workers-sdk",
+	"license": "MIT OR Apache-2.0",
+	"publisher": "cloudflare",
+	"main": "./dist/extension.js",
+	"scripts": {
+		"vscode:prepublish": "pnpm run package",
+		"compile": "pnpm run check:type && pnpm run check:lint && node esbuild.js",
+		"watch": "npm-run-all -p watch:*",
+		"watch:esbuild": "node esbuild.js --watch",
+		"watch:tsc": "tsc --noEmit --watch --project tsconfig.json",
+		"package": "pnpm run check:type && pnpm run check:lint && node esbuild.js --production",
+		"compile-tests": "tsc -p . --outDir out",
+		"watch-tests": "tsc -p . -w --outDir out",
+		"check:type": "tsc --noEmit",
+		"check:lint": "eslint src --ext ts",
+		"build": "vsce package",
+		"deploy": "vsce publish --pre-release"
+	},
+	"activationEvents": [],
+	"devDependencies": {
+		"@types/mocha": "^10.0.7",
+		"@types/node": "20.x",
+		"@types/vscode": "^1.92.0",
+		"@typescript-eslint/eslint-plugin": "^7.14.1",
+		"@typescript-eslint/parser": "^7.11.0",
+		"@vscode/test-cli": "^0.0.9",
+		"@vscode/test-electron": "^2.4.0",
+		"esbuild": "^0.21.5",
+		"eslint": "^8.57.0",
+		"npm-run-all": "^4.1.5",
+		"typescript": "^5.4.5",
+		"vsce": "^2.15.0"
+	},
+	"engines": {
+		"vscode": "^1.92.0"
+	},
+	"icon": "media/cf-workers-logo.png",
+	"vsce": {
+		"dependencies": false
+	},
+	"workers-sdk": {
+		"prerelease": true,
+		"type": "extension"
+	}
+}
