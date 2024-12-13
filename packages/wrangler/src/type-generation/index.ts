@@ -63,7 +63,7 @@ export async function typesHandler(
 
 	await printWranglerBanner();
 
-	const configPath = resolveWranglerConfigPath(args, {});
+	const { configPath } = resolveWranglerConfigPath(args, {});
 	if (
 		!configPath ||
 		!fs.existsSync(configPath) ||

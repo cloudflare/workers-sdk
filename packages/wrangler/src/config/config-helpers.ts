@@ -10,6 +10,13 @@ export type ResolveConfigPathOptions = {
 	useRedirect?: boolean;
 };
 
+export type ConfigPaths = {
+	/** The path to the actual configuration being used (possibly redirected from the user's config). */
+	configPath: string | undefined;
+	/** The user's configuration, which may not be the same as `configPath` if it was redirected. */
+	userConfigPath: string | undefined;
+};
+
 /**
  * Resolve the path to the configuration file, given the `config` and `script` optional command line arguments.
  * `config` takes precedence, then `script`, then we just use the cwd.
@@ -23,9 +30,9 @@ export function resolveWranglerConfigPath(
 		script?: string;
 	},
 	options: { useRedirect?: boolean }
-): string | undefined {
+): ConfigPaths {
 	if (config !== undefined) {
-		return config;
+		return { userConfigPath: config, configPath: config };
 	}
 
 	const leafPath = script !== undefined ? path.dirname(script) : process.cwd();
@@ -40,15 +47,18 @@ export function resolveWranglerConfigPath(
 export function findWranglerConfig(
 	referencePath: string = process.cwd(),
 	{ useRedirect = false } = {}
-): string | undefined {
+): ConfigPaths {
 	const userConfigPath =
 		findUpSync(`wrangler.json`, { cwd: referencePath }) ??
 		findUpSync(`wrangler.jsonc`, { cwd: referencePath }) ??
 		findUpSync(`wrangler.toml`, { cwd: referencePath });
 
-	return useRedirect
-		? findRedirectedWranglerConfig(referencePath, userConfigPath)
-		: userConfigPath;
+	return {
+		userConfigPath,
+		configPath: useRedirect
+			? findRedirectedWranglerConfig(referencePath, userConfigPath)
+			: userConfigPath,
+	};
 }
 
 /**
