@@ -31,7 +31,10 @@ export type RawConfig = Partial<ConfigFields<RawDevConfig>> &
 	EnvironmentMap & { $schema?: string };
 
 export interface ConfigFields<Dev extends RawDevConfig> {
+	/** The path to the Wrangler config file (if any, and possibly redirected from the user Wrangler configuration) used to create this configuration. */
 	configPath: string | undefined;
+	/** The path to the user's Wrangler config file (if any), which may have been redirected to the actual config used to create this configuration. */
+	userConfigPath: string | undefined;
 
 	/**
 	 * A boolean to enable "legacy" style wrangler environments (from Wrangler v1).
@@ -327,6 +330,7 @@ export const defaultWranglerConfig: Config = {
 	/*====================================================*/
 	/* TOP-LEVEL ONLY FIELDS */
 	configPath: undefined,
+	userConfigPath: undefined,
 	legacy_env: true,
 	site: undefined,
 	legacy_assets: undefined,

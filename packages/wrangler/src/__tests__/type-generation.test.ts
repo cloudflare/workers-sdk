@@ -256,13 +256,12 @@ describe("generateTypes()", () => {
 	`);
 	});
 
-	it("should show a warning when no custom config file is detected", async () => {
-		await runWrangler("types -c hello.toml");
-		expect(std.warn).toMatchInlineSnapshot(`
-		"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mNo config file detected (at hello.toml), aborting[0m
-
-		"
-	`);
+	it("should error when a specified custom config file is missing", async () => {
+		await expect(() =>
+			runWrangler("types -c hello.toml")
+		).rejects.toMatchInlineSnapshot(
+			`[ParseError: Could not read file: hello.toml]`
+		);
 	});
 
 	it("should respect the top level -c|--config flag", async () => {

@@ -394,7 +394,7 @@ export async function bundleWorker(
 		// Don't use entryFile here as the file may have been changed when applying the middleware
 		entryPoints: [entry.file],
 		bundle,
-		absWorkingDir: projectRoot,
+		absWorkingDir: entry.projectRoot,
 		outdir: destination,
 		keepNames: true,
 		entryNames: entryName || path.parse(entryFile).name,
