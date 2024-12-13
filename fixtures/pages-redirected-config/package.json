@@ -1,0 +1,23 @@
+{
+	"name": "pages-redirected-config",
+	"private": true,
+	"description": "",
+	"license": "ISC",
+	"author": "",
+	"main": "src/index.js",
+	"scripts": {
+		"build": "node -r esbuild-register tools/build.ts",
+		"check:type": "tsc",
+		"dev": "pnpm run build && wrangler pages dev",
+		"test:ci": "pnpm run build && vitest run"
+	},
+	"devDependencies": {
+		"@cloudflare/workers-tsconfig": "workspace:^",
+		"undici": "catalog:default",
+		"vitest": "catalog:default",
+		"wrangler": "workspace:*"
+	},
+	"volta": {
+		"extends": "../../package.json"
+	}
+}
