@@ -68,6 +68,10 @@ export function normaliseHeaders(
 	}
 }
 
+type FindAssetEntryForPath<AssetEntry> = (
+	path: string
+) => Promise<null | AssetEntry>;
+
 function generateETagHeader(assetKey: string) {
 	// https://support.cloudflare.com/hc/en-us/articles/218505467-Using-ETag-Headers-with-Cloudflare
 	// We sometimes remove etags unless they are wrapped in quotes
@@ -95,7 +99,10 @@ type ServeAsset<AssetEntry> = (
 type CacheStatus = "hit" | "miss";
 type CacheResult<A extends string> = `${A}-${CacheStatus}`;
 export type HandlerMetrics = {
-	preservationCacheResult?: CacheResult<"checked"> | "disabled";
+	preservationCacheResult?:
+		| CacheResult<"checked">
+		| "not-modified"
+		| "disabled";
 	earlyHintsResult?: CacheResult<"used" | "notused"> | "disabled";
 };
 
@@ -663,6 +670,19 @@ export async function generateHandler<
 						return new Response(null, preservedResponse);
 					}
 					if (assetKey) {
+						const { strongETag, weakETag } = generateETagHeader(assetKey);
+						const isIfNoneMatch = checkIfNoneMatch(
+							request,
+							strongETag,
+							weakETag
+						);
+						if (isIfNoneMatch) {
+							if (setMetrics) {
+								setMetrics({ preservationCacheResult: "not-modified" });
+							}
+							return new NotModifiedResponse();
+						}
+
 						const asset = await fetchAsset(assetKey);
 
 						if (asset) {
