@@ -12,7 +12,6 @@ import {
 } from "./api/startDevWorker/utils";
 import { getAssetsOptions } from "./assets";
 import { configFileName, formatConfigSnippet } from "./config";
-import { resolveWranglerConfigPath } from "./config/config-helpers";
 import { createCommand } from "./core/create-command";
 import { validateRoutes } from "./deploy/deploy";
 import { validateNodeCompatMode } from "./deployment-bundle/node-compat";
@@ -698,10 +697,6 @@ export async function startDev(args: StartDevOptions) {
 			);
 		}
 
-		const { configPath } = resolveWranglerConfigPath(args, {
-			useRedirect: true,
-		});
-
 		const authHook: AsyncHook<CfAccount, [Pick<Config, "account_id">]> = async (
 			config
 		) => {
@@ -724,8 +719,8 @@ export async function startDev(args: StartDevOptions) {
 			};
 		};
 
-		if (Array.isArray(configPath)) {
-			const runtime = new MultiworkerRuntimeController(configPath.length);
+		if (Array.isArray(args.config)) {
+			const runtime = new MultiworkerRuntimeController(args.config.length);
 
 			const primaryDevEnv = new DevEnv({ runtimes: [runtime] });
 
@@ -735,7 +730,7 @@ export async function startDev(args: StartDevOptions) {
 
 			// Set up the primary DevEnv (the one that the ProxyController will connect to)
 			devEnv = [
-				await setupDevEnv(primaryDevEnv, configPath[0], authHook, {
+				await setupDevEnv(primaryDevEnv, args.config[0], authHook, {
 					...args,
 					disableDevRegistry: true,
 					multiworkerPrimary: true,
@@ -745,7 +740,7 @@ export async function startDev(args: StartDevOptions) {
 			// Set up all auxiliary DevEnvs
 			devEnv.push(
 				...(await Promise.all(
-					(configPath as string[]).slice(1).map((c) => {
+					(args.config as string[]).slice(1).map((c) => {
 						return setupDevEnv(
 							new DevEnv({
 								runtimes: [runtime],
@@ -815,7 +810,7 @@ export async function startDev(args: StartDevOptions) {
 				unregisterHotKeys = registerDevHotKeys(devEnv, args);
 			}
 
-			await setupDevEnv(devEnv, configPath, authHook, args);
+			await setupDevEnv(devEnv, args.config, authHook, args);
 		}
 
 		return {

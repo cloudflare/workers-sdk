@@ -67,7 +67,7 @@ async function resolveDevConfig(
 
 	const localPersistencePath = getLocalPersistencePath(
 		input.dev?.persist,
-		config.configPath
+		config
 	);
 
 	const { host, routes } = await getHostAndRoutes(

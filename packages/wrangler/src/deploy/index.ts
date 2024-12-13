@@ -2,7 +2,6 @@ import assert from "node:assert";
 import path from "node:path";
 import { getAssetsOptions, validateAssetsArgsAndConfig } from "../assets";
 import { configFileName, readConfig } from "../config";
-import { resolveWranglerConfigPath } from "../config/config-helpers";
 import { getEntry } from "../deployment-bundle/entry";
 import { UserError } from "../errors";
 import { run } from "../experimental-flags";
@@ -271,10 +270,6 @@ async function deployWorker(args: DeployArgs) {
 		);
 	}
 
-	const { userConfigPath } = resolveWranglerConfigPath(args, {
-		useRedirect: true,
-	});
-	const projectRoot = userConfigPath && path.dirname(userConfigPath);
 	const config = readConfig(args, { useRedirect: true });
 	if (config.pages_build_output_dir) {
 		throw new UserError(
@@ -282,6 +277,10 @@ async function deployWorker(args: DeployArgs) {
 				"For Pages, please run `wrangler pages deploy` instead."
 		);
 	}
+	// We use the `userConfigPath` to compute the root of a project,
+	// rather than a redirected (potentially generated) `configPath`.
+	const projectRoot =
+		config.userConfigPath && path.dirname(config.userConfigPath);
 
 	const entry = await getEntry(args, config, "deploy");
 

@@ -3,7 +3,6 @@ import { basename, dirname, extname, join, relative, resolve } from "node:path";
 import { findUpSync } from "find-up";
 import { getNodeCompat } from "miniflare";
 import { readConfig } from "../config";
-import { resolveWranglerConfigPath } from "../config/config-helpers";
 import { getEntry } from "../deployment-bundle/entry";
 import { getVarsForDev } from "../dev/dev-vars";
 import { CommandLineArgsError, UserError } from "../errors";
@@ -63,11 +62,11 @@ export async function typesHandler(
 
 	await printWranglerBanner();
 
-	const { configPath } = resolveWranglerConfigPath(args, {});
+	const config = readConfig(args);
 	if (
-		!configPath ||
-		!fs.existsSync(configPath) ||
-		fs.statSync(configPath).isDirectory()
+		!config.configPath ||
+		!fs.existsSync(config.configPath) ||
+		fs.statSync(config.configPath).isDirectory()
 	) {
 		logger.warn(
 			`No config file detected${
@@ -76,8 +75,6 @@ export async function typesHandler(
 		);
 		return;
 	}
-
-	const config = readConfig(args);
 
 	// args.xRuntime will be a string if the user passes "--x-include-runtime" or "--x-include-runtime=..."
 	if (typeof args.experimentalIncludeRuntime === "string") {
@@ -89,7 +86,7 @@ export async function typesHandler(
 		});
 
 		const tsconfigPath =
-			config.tsconfig ?? join(dirname(configPath), "tsconfig.json");
+			config.tsconfig ?? join(dirname(config.configPath), "tsconfig.json");
 		const tsconfigTypes = readTsconfigTypes(tsconfigPath);
 		const { mode } = getNodeCompat(
 			config.compatibility_date,
@@ -108,7 +105,10 @@ export async function typesHandler(
 	}
 
 	const secrets = getVarsForDev(
-		{ configPath, vars: {} },
+		// We do not want `getVarsForDev()` to merge in the standard vars into the dev vars
+		// because we want to be able to work with secrets differently to vars.
+		// So we pass in a fake vars object here.
+		{ ...config, vars: {} },
 		args.env,
 		true
 	) as Record<string, string>;

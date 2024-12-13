@@ -276,7 +276,7 @@ async function executeLocally({
 	}
 
 	const id = localDB.previewDatabaseUuid ?? localDB.uuid;
-	const persistencePath = getLocalPersistencePath(persistTo, config.configPath);
+	const persistencePath = getLocalPersistencePath(persistTo, config);
 	const d1Persist = path.join(persistencePath, "v3", "d1");
 
 	logger.log(

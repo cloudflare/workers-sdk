@@ -80,11 +80,15 @@ export function readConfig(
 	args: ReadConfigCommandArgs,
 	options: ReadConfigOptions = {}
 ): Config {
-	const { rawConfig, configPath } = experimental_readRawConfig(args, options);
+	const { rawConfig, configPath, userConfigPath } = experimental_readRawConfig(
+		args,
+		options
+	);
 
 	const { config, diagnostics } = normalizeAndValidateConfig(
 		rawConfig,
 		configPath,
+		userConfigPath,
 		args
 	);
 
@@ -104,8 +108,12 @@ export function readPagesConfig(
 ): Omit<Config, "pages_build_output_dir"> & { pages_build_output_dir: string } {
 	let rawConfig: RawConfig;
 	let configPath: string | undefined;
+	let userConfigPath: string | undefined;
 	try {
-		({ rawConfig, configPath } = experimental_readRawConfig(args, options));
+		({ rawConfig, configPath, userConfigPath } = experimental_readRawConfig(
+			args,
+			options
+		));
 	} catch (e) {
 		logger.error(e);
 		throw new FatalError(
@@ -124,6 +132,7 @@ export function readPagesConfig(
 	const { config, diagnostics } = normalizeAndValidateConfig(
 		rawConfig,
 		configPath,
+		userConfigPath,
 		args
 	);
 
