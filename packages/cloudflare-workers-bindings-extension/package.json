@@ -24,7 +24,39 @@
 		"build": "vsce package",
 		"deploy": "vsce publish --pre-release"
 	},
-	"activationEvents": [],
+	"contributes": {
+		"commands": [
+			{
+				"command": "cloudflare-workers-bindings-extension.testCommand",
+				"title": "Test command",
+				"icon": {
+					"light": "resources/light/edit.svg",
+					"dark": "resources/dark/edit.svg"
+				}
+			}
+		],
+		"views": {
+			"cloudflare-workers-bindings": [
+				{
+					"id": "cloudflare-workers-bindings-extension",
+					"name": "Bindings",
+					"icon": "resources/icons/cf-workers-logo.svg"
+				}
+			]
+		},
+		"viewsContainers": {
+			"activitybar": [
+				{
+					"id": "cloudflare-workers-bindings",
+					"title": "Cloudflare Workers",
+					"icon": "media/cf-workers-logo.svg"
+				}
+			]
+		}
+	},
+	"activationEvents": [
+		"workspaceContains:{**/wrangler.json,**/wrangler.jsonc,**/wrangler.toml}"
+	],
 	"devDependencies": {
 		"@types/mocha": "^10.0.7",
 		"@types/node": "20.x",
