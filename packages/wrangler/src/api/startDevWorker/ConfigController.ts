@@ -411,6 +411,7 @@ export class ConfigController extends Controller<ConfigControllerEventMap> {
 		try {
 			const fileConfig = readConfig(
 				{
+					script: input.entrypoint,
 					config: input.config,
 					env: input.env,
 					"dispatch-namespace": undefined,
