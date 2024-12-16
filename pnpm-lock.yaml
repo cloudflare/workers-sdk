@@ -2022,8 +2022,8 @@ importers:
         specifier: ^0.6.1
         version: 0.6.1
       unenv:
-        specifier: npm:unenv-nightly@2.0.0-20241204-140205-a5d5190
-        version: unenv-nightly@2.0.0-20241204-140205-a5d5190
+        specifier: npm:unenv-nightly@2.0.0-20241216-144314-7e05819
+        version: unenv-nightly@2.0.0-20241216-144314-7e05819
       workerd:
         specifier: 1.20241218.0
         version: 1.20241218.0
@@ -16299,7 +16299,7 @@ snapshots:
   miniflare@3.20241205.0:
     dependencies:
       '@cspotcode/source-map-support': 0.8.1
-      acorn: 8.11.3
+      acorn: 8.14.0
       acorn-walk: 8.3.2
       capnp-ts: 0.7.0(patch_hash=l4yimnxyvkiyj6alnps2ec3sii)
       exit-hook: 2.2.1
@@ -18610,7 +18610,7 @@ snapshots:
       mkdist: 1.6.0(typescript@5.6.3)(vue-tsc@2.0.29(typescript@5.6.3))
       mlly: 1.7.3
       pathe: 1.1.2
-      pkg-types: 1.0.3
+      pkg-types: 1.2.1
       pretty-bytes: 6.1.1
       rollup: 3.29.5
       rollup-plugin-dts: 6.1.1(rollup@3.29.5)(typescript@5.6.3)
