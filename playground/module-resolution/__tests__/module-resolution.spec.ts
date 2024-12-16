@@ -76,9 +76,7 @@ describe('module resolution', async () => {
 	 *  special meaning to us.
 	 */
 	describe('third party packages resolutions', () => {
-		// TODO: we skip this test on build because a `ReferenceError: process is not defined` is thrown
-		//       (https://github.com/flarelabs-net/vite-plugin-cloudflare/issues/82)
-		test.skipIf(isBuild)('react', async () => {
+		test('react', async () => {
 			const result = await getJsonResponse('/third-party/react');
 			expect(result).toEqual({
 				'(react) reactVersionsMatch': true,
