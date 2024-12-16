@@ -99,26 +99,24 @@ describe("unstable_dev()", () => {
 					const childWorker = await unstable_dev(
 						"${child.replaceAll("\\", "/")}/src/index.ts",
 						{
-							configPath: "${child.replaceAll("\\", "/")}/wrangler.toml",
 							experimental: {
 								disableExperimentalWarning: true,
 							},
 						}
 					);
 
+					// Wait long enough for the child to register itself on the Worker Registry
+					// before we boot up the parent that needs to know about it.
 					await setTimeout(2000)
 
 					const parentWorker = await unstable_dev(
 						"src/index.ts",
 						{
-							configPath: "wrangler.toml",
 							experimental: {
 								disableExperimentalWarning: true,
 							},
 						}
 					);
-
-					await setTimeout(2000)
 
 					console.log(await parentWorker.fetch("/").then(r => r.text()))
 
