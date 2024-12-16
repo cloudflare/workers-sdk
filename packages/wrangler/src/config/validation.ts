@@ -61,6 +61,7 @@ export type NormalizeAndValidateConfigArgs = {
 	remote?: boolean;
 	localProtocol?: string;
 	upstreamProtocol?: string;
+	script?: string;
 };
 
 const ENGLISH = new Intl.ListFormat("en-US");
@@ -330,7 +331,7 @@ function applyPythonConfig(
 	config: Config,
 	args: NormalizeAndValidateConfigArgs
 ) {
-	const mainModule = "script" in args ? args.script : config.main;
+	const mainModule = args.script ?? config.main;
 	if (typeof mainModule === "string" && mainModule.endsWith(".py")) {
 		// Workers with a python entrypoint should have bundling turned off, since all of Wrangler's bundling is JS/TS specific
 		config.no_bundle = true;
