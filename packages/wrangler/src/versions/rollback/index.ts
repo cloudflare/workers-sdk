@@ -20,7 +20,7 @@ export const versionsRollbackCommand = createCommand({
 			demandOption: false,
 		},
 		name: {
-			describe: "The name of your worker",
+			describe: "The name of your Worker",
 			type: "string",
 		},
 		message: {
