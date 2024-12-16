@@ -86,6 +86,86 @@ const testCases: TestCase[] = [
 			`,
 	},
 	{
+		name: "add a new D1 binding when only KV bindings exist",
+		original: {
+			kv_namespaces: [
+				{
+					binding: "KV",
+				},
+			],
+		},
+		patch: {
+			d1_databases: [
+				{
+					binding: "DB",
+				},
+			],
+		},
+		expectedToml: dedent`
+				compatibility_date = "2022-01-12"
+				name = "test-name"
+
+				[[kv_namespaces]]
+				binding = "KV"
+
+				[[d1_databases]]
+				binding = "DB"
+
+			`,
+		expectedJson: dedent`
+				{
+					"compatibility_date": "2022-01-12",
+					"name": "test-name",
+					"kv_namespaces": [
+						{
+							"binding": "KV"
+						}
+					],
+					"d1_databases": [
+						{
+							"binding": "DB"
+						}
+					]
+				}
+			`,
+	},
+	{
+		name: "add a new field",
+		original: {
+			kv_namespaces: [
+				{
+					binding: "KV",
+				},
+			],
+		},
+		patch: {
+			compatibility_flags: ["nodejs_compat"],
+		},
+		expectedToml: dedent`
+				compatibility_date = "2022-01-12"
+				name = "test-name"
+				compatibility_flags = [ "nodejs_compat" ]
+
+				[[kv_namespaces]]
+				binding = "KV"
+
+			`,
+		expectedJson: dedent`
+				{
+					"compatibility_date": "2022-01-12",
+					"name": "test-name",
+					"kv_namespaces": [
+						{
+							"binding": "KV"
+						}
+					],
+					"compatibility_flags": [
+						"nodejs_compat"
+					]
+				}
+			`,
+	},
+	{
 		name: "make multiple edits at the same time",
 		original: {
 			kv_namespaces: [
@@ -208,10 +288,22 @@ describe("experimental_patchConfig()", () => {
 	}
 	`;
 			writeFileSync("./wrangler.jsonc", jsonc);
-			const result = experimental_patchConfig(
-				"./wrangler.jsonc",
-				testCases[2].patch
-			);
+			const patch = {
+				kv_namespaces: [
+					{
+						binding: "KV2",
+					},
+					{
+						binding: "KV3",
+					},
+				],
+				d1_databases: [
+					{
+						binding: "DB2",
+					},
+				],
+			};
+			const result = experimental_patchConfig("./wrangler.jsonc", patch);
 			expect(result).not.toBeFalsy();
 			expect(result).toMatchInlineSnapshot(`
 				"{
