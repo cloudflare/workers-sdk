@@ -20,7 +20,7 @@ export const deploymentsListCommand = createCommand({
 	},
 	args: {
 		name: {
-			describe: "Name of the worker",
+			describe: "Name of the Worker",
 			type: "string",
 			requiresArg: true,
 		},
