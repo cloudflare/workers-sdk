@@ -1,7 +1,7 @@
 import { logRaw, updateStatus } from "@cloudflare/cli";
 import { blue, brandColor, dim } from "@cloudflare/cli/colors";
 import { runFrameworkGenerator } from "frameworks/index";
-import { loadTemplateSnippets, transformFile } from "helpers/codemod";
+import { transformFile } from "helpers/codemod";
 import { runCommand } from "helpers/command";
 import { usesTypescript } from "helpers/files";
 import { detectPackageManager } from "helpers/packageManagers";
@@ -17,7 +17,7 @@ const generate = async (ctx: C3Context) => {
 	logRaw(""); // newline
 };
 
-const configure = async (ctx: C3Context) => {
+const configure = async () => {
 	await runCommand([npx, "astro", "add", "cloudflare", "-y"], {
 		silent: true,
 		startText: "Installing adapter",
@@ -27,7 +27,6 @@ const configure = async (ctx: C3Context) => {
 	});
 
 	updateAstroConfig();
-	updateEnvDeclaration(ctx);
 };
 
 const updateAstroConfig = () => {
@@ -59,35 +58,6 @@ const updateAstroConfig = () => {
 	});
 };
 
-const updateEnvDeclaration = (ctx: C3Context) => {
-	if (!usesTypescript(ctx)) {
-		return;
-	}
-
-	const filePath = "src/env.d.ts";
-
-	updateStatus(`Adding type declarations in ${blue(filePath)}`);
-
-	transformFile(filePath, {
-		visitProgram: function (n) {
-			const snippets = loadTemplateSnippets(ctx);
-			const patch = snippets.runtimeDeclarationTs;
-			const b = recast.types.builders;
-
-			// Preserve comments with the new body
-			const comments = n.get("comments").value;
-			n.node.comments = comments.map((c: recast.types.namedTypes.CommentLine) =>
-				b.commentLine(c.value),
-			);
-
-			// Add the patch
-			n.get("body").push(...patch);
-
-			return false;
-		},
-	});
-};
-
 const config: TemplateConfig = {
 	configVersion: 1,
 	id: "astro",
@@ -95,7 +65,21 @@ const config: TemplateConfig = {
 	platform: "pages",
 	displayName: "Astro",
 	copyFiles: {
-		path: "./templates",
+		async selectVariant(ctx) {
+			// Note: this `selectVariant` function should not be needed
+			//       this is just a quick workaround until
+			//       https://github.com/cloudflare/workers-sdk/issues/7495
+			//       is resolved
+			return usesTypescript(ctx) ? "ts" : "js";
+		},
+		variants: {
+			js: {
+				path: "./templates/js",
+			},
+			ts: {
+				path: "./templates/ts",
+			},
+		},
 	},
 	devScript: "dev",
 	deployScript: "deploy",
