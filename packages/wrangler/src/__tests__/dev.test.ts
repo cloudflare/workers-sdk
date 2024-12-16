@@ -1693,13 +1693,18 @@ describe.sequential("wrangler dev", () => {
 			await runWranglerUntilConfig("dev");
 
 			expect(std.warn).toMatchInlineSnapshot(`
-				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mexperimental_serve_directly=false but no assets.binding provided.[0m
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mexperimental_serve_directly=false set without an assets binding[0m
+
+				  Setting experimental_serve_directly to false will always invoke your Worker script.
+				  To fetch your assets from your Worker, please set [assets.binding] in your configuration file.
+
+				  Read more: [4mhttps://developers.cloudflare.com/workers/static-assets/binding/#binding[0m
 
 				"
 			`);
 		});
 
-		it("should error if an experimental_serve_directly is false without providing a user Worker", async () => {
+		it("should error if experimental_serve_directly is false and no user Worker is provided", async () => {
 			writeWranglerConfig({
 				assets: { directory: "assets", experimental_serve_directly: false },
 			});

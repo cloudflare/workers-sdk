@@ -444,17 +444,7 @@ export function validateAssetsArgsAndConfig(
 		);
 	}
 
-	// Smart placement turned on when using assets
-	if (
-		config?.placement?.mode === "smart" &&
-		config?.assets?.experimental_serve_directly
-	) {
-		logger.warn(
-			"Using assets with smart placement turned on may result in poor performance."
-		);
-	}
-
-	// User worker ahead of assets, but no assets binding provided
+	// User Worker ahead of assets, but no assets binding provided
 	if (
 		"legacy" in args
 			? args.assets?.assetConfig?.serve_directly === false &&
@@ -463,7 +453,10 @@ export function validateAssetsArgsAndConfig(
 				!config?.assets?.binding
 	) {
 		logger.warn(
-			"experimental_serve_directly=false but no assets.binding provided."
+			"experimental_serve_directly=false set without an assets binding\n" +
+				"Setting experimental_serve_directly to false will always invoke your Worker script.\n" +
+				"To fetch your assets from your Worker, please set [assets.binding] in your configuration file.\n\n" +
+				"Read more: https://developers.cloudflare.com/workers/static-assets/binding/#binding"
 		);
 	}
 
