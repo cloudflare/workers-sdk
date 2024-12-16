@@ -533,7 +533,7 @@ export default {
 			const [_, _prefix, _repo, prNumber] = url.pathname.split("/");
 			return await addPRToProject(
 				env.GITHUB_PAT,
-				"workers-sdk,
+				"workers-sdk",
 				prNumber.replaceAll(/[^0-9]/g, "-")
 			);
 		}
