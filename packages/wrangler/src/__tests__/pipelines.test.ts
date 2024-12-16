@@ -1,5 +1,6 @@
 import { http, HttpResponse } from "msw";
 import { normalizeOutput } from "../../e2e/helpers/normalize";
+import { __testSkipDelays } from "../pipelines";
 import { endEventLoop } from "./helpers/end-event-loop";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
@@ -44,75 +45,6 @@ describe("pipelines", () => {
 		},
 		endpoint: "https://0001.pipelines.cloudflarestorage.com",
 	} satisfies Pipeline;
-
-	function mockCreateR2Token(bucket: string) {
-		const requests = { count: 0 };
-		msw.use(
-			http.get(
-				"*/accounts/:accountId/r2/buckets/:bucket",
-				async ({ params }) => {
-					expect(params.accountId).toEqual("some-account-id");
-					expect(params.bucket).toEqual(bucket);
-					requests.count++;
-					return HttpResponse.json(
-						{
-							success: true,
-							errors: [],
-							messages: [],
-							result: null,
-						},
-						{ status: 200 }
-					);
-				},
-				{ once: true }
-			),
-			http.get(
-				"*/user/tokens/permission_groups",
-				async () => {
-					requests.count++;
-					return HttpResponse.json(
-						{
-							success: true,
-							errors: [],
-							messages: [],
-							result: [
-								{
-									id: "2efd5506f9c8494dacb1fa10a3e7d5b6",
-									name: "Workers R2 Storage Bucket Item Write",
-									description:
-										"Grants write access to Cloudflare R2 Bucket Scoped Storage",
-									scopes: ["com.cloudflare.edge.r2.bucket"],
-								},
-							],
-						},
-						{ status: 200 }
-					);
-				},
-				{ once: true }
-			),
-			http.post(
-				"*/user/tokens",
-				async () => {
-					requests.count++;
-					return HttpResponse.json(
-						{
-							success: true,
-							errors: [],
-							messages: [],
-							result: {
-								id: "service-token-id",
-								name: "my-service-token",
-								value: "my-secret-value",
-							},
-						},
-						{ status: 200 }
-					);
-				},
-				{ once: true }
-			)
-		);
-		return requests;
-	}
 
 	function mockCreateR2TokenFailure(bucket: string) {
 		const requests = { count: 0 };
@@ -309,6 +241,10 @@ describe("pipelines", () => {
 		);
 		return requests;
 	}
+
+	beforeAll(() => {
+		__testSkipDelays();
+	});
 
 	it("shows usage details", async () => {
 		await runWrangler("pipelines");
@@ -537,12 +473,13 @@ describe("pipelines", () => {
 			update.destination.credentials = {
 				endpoint: "https://some-account-id.r2.cloudflarestorage.com",
 				access_key_id: "service-token-id",
-				secret_access_key:
-					"my-secret-access-key",
+				secret_access_key: "my-secret-access-key",
 			};
 			const updateReq = mockUpdateRequest(update.name, update);
 
-			await runWrangler("pipelines update my-pipeline --r2 new-bucket --access-key-id service-token-id --secret-access-key my-secret-access-key");
+			await runWrangler(
+				"pipelines update my-pipeline --r2 new-bucket --access-key-id service-token-id --secret-access-key my-secret-access-key"
+			);
 
 			expect(updateReq.count).toEqual(1);
 		});

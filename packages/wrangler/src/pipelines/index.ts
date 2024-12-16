@@ -1,4 +1,5 @@
 import { readConfig } from "../config";
+import { sleep } from "../deploy/deploy";
 import { FatalError, UserError } from "../errors";
 import { printWranglerBanner } from "../index";
 import { logger } from "../logger";
@@ -23,6 +24,9 @@ import type {
 } from "./client";
 import type { Argv } from "yargs";
 
+// flag to skip delays for tests
+let __testSkipDelaysFlag = false;
+
 async function authorizeR2Bucket(
 	pipelineName: string,
 	accountId: string,
@@ -46,6 +50,9 @@ async function authorizeR2Bucket(
 		bucketName,
 		pipelineName
 	);
+
+	// wait for token to settle/propagate
+	!__testSkipDelaysFlag && (await sleep(3000));
 
 	return serviceToken;
 }
@@ -507,4 +514,9 @@ export function pipelines(pipelineYargs: CommonYargsArgv) {
 				});
 			}
 		);
+}
+
+// Test exception to remove delays
+export function __testSkipDelays() {
+	__testSkipDelaysFlag = true;
 }
