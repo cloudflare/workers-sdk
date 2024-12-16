@@ -8,7 +8,8 @@ import type { RawConfig } from "../config";
 type TestCase = {
 	name: string;
 	original: RawConfig;
-	patch: RawConfig;
+	additivePatch: RawConfig;
+	replacingPatch: RawConfig;
 	expectedToml: string;
 	expectedJson: string;
 };
@@ -16,7 +17,14 @@ const testCases: TestCase[] = [
 	{
 		name: "add a binding",
 		original: {},
-		patch: {
+		additivePatch: {
+			kv_namespaces: [
+				{
+					binding: "KV",
+				},
+			],
+		},
+		replacingPatch: {
 			kv_namespaces: [
 				{
 					binding: "KV",
@@ -52,8 +60,18 @@ const testCases: TestCase[] = [
 				},
 			],
 		},
-		patch: {
+		additivePatch: {
 			kv_namespaces: [
+				{
+					binding: "KV2",
+				},
+			],
+		},
+		replacingPatch: {
+			kv_namespaces: [
+				{
+					binding: "KV",
+				},
 				{
 					binding: "KV2",
 				},
@@ -94,7 +112,14 @@ const testCases: TestCase[] = [
 				},
 			],
 		},
-		patch: {
+		additivePatch: {
+			d1_databases: [
+				{
+					binding: "DB",
+				},
+			],
+		},
+		replacingPatch: {
 			d1_databases: [
 				{
 					binding: "DB",
@@ -138,7 +163,10 @@ const testCases: TestCase[] = [
 				},
 			],
 		},
-		patch: {
+		additivePatch: {
+			compatibility_flags: ["nodejs_compat"],
+		},
+		replacingPatch: {
 			compatibility_flags: ["nodejs_compat"],
 		},
 		expectedToml: dedent`
@@ -179,7 +207,7 @@ const testCases: TestCase[] = [
 				},
 			],
 		},
-		patch: {
+		additivePatch: {
 			kv_namespaces: [
 				{
 					binding: "KV2",
@@ -189,6 +217,27 @@ const testCases: TestCase[] = [
 				},
 			],
 			d1_databases: [
+				{
+					binding: "DB2",
+				},
+			],
+		},
+		replacingPatch: {
+			kv_namespaces: [
+				{
+					binding: "KV",
+				},
+				{
+					binding: "KV2",
+				},
+				{
+					binding: "KV3",
+				},
+			],
+			d1_databases: [
+				{
+					binding: "DB",
+				},
 				{
 					binding: "DB2",
 				},
@@ -242,99 +291,412 @@ const testCases: TestCase[] = [
 	},
 ];
 
+const replacingOnlyTestCases: Omit<TestCase, "additivePatch">[] = [
+	{
+		name: "edit a binding",
+		original: {},
+		replacingPatch: {
+			kv_namespaces: [
+				{
+					binding: "KV2",
+				},
+			],
+		},
+		expectedToml: dedent`
+				compatibility_date = "2022-01-12"
+				name = "test-name"
+
+				[[kv_namespaces]]
+				binding = "KV2"
+
+				`,
+		expectedJson: dedent`
+				{
+					"compatibility_date": "2022-01-12",
+					"name": "test-name",
+					"kv_namespaces": [
+						{
+							"binding": "KV2"
+						}
+					]
+				}
+			`,
+	},
+	{
+		name: "add a field to an existing binding",
+		original: {
+			kv_namespaces: [
+				{
+					binding: "KV",
+				},
+			],
+		},
+		replacingPatch: {
+			kv_namespaces: [
+				{
+					binding: "KV",
+					id: "1234",
+				},
+			],
+		},
+		expectedToml: dedent`
+				compatibility_date = "2022-01-12"
+				name = "test-name"
+
+				[[kv_namespaces]]
+				binding = "KV"
+				id = "1234"
+
+				`,
+		expectedJson: dedent`
+				{
+					"compatibility_date": "2022-01-12",
+					"name": "test-name",
+					"kv_namespaces": [
+						{
+							"binding": "KV",
+							"id": "1234"
+						}
+					]
+				}
+			`,
+	},
+	{
+		name: "edit a compat flag",
+		original: {},
+		replacingPatch: {
+			compatibility_flags: ["no_nodejs_compat"],
+		},
+		expectedToml: dedent`
+				compatibility_date = "2022-01-12"
+				name = "test-name"
+				compatibility_flags = [ "no_nodejs_compat" ]
+
+			`,
+		expectedJson: dedent`
+				{
+					"compatibility_date": "2022-01-12",
+					"name": "test-name",
+					"compatibility_flags": [
+						"no_nodejs_compat"
+					]
+				}
+			`,
+	},
+	{
+		name: "add a compat flag",
+		original: { compatibility_flags: ["nodejs_compat"] },
+		replacingPatch: {
+			compatibility_flags: ["nodejs_compat", "flag"],
+		},
+		expectedToml: dedent`
+				compatibility_date = "2022-01-12"
+				name = "test-name"
+				compatibility_flags = [ "nodejs_compat", "flag" ]
+
+			`,
+		expectedJson: dedent`
+				{
+					"compatibility_date": "2022-01-12",
+					"name": "test-name",
+					"compatibility_flags": [
+						"nodejs_compat",
+						"flag"
+					]
+				}
+			`,
+	},
+	{
+		name: "delete a compat flag",
+		original: {},
+		replacingPatch: {
+			compatibility_flags: [],
+		},
+		expectedToml: dedent`
+				compatibility_date = "2022-01-12"
+				name = "test-name"
+
+			`,
+		expectedJson: dedent`
+				{
+					"compatibility_date": "2022-01-12",
+					"name": "test-name"
+				}
+			`,
+	},
+];
+
 describe("experimental_patchConfig()", () => {
 	runInTempDir();
-	describe.each(["json", "toml"])("%s", (configType) => {
-		it.each(testCases)(
+	describe.each([true, false])("isArrayInsertion = %o", (isArrayInsertion) => {
+		describe.each(testCases)(
 			`$name`,
-			({ original, patch, expectedJson, expectedToml }) => {
-				writeWranglerConfig(
-					original,
-					configType === "json" ? "./wrangler.json" : "./wrangler.toml"
-				);
-				const result = experimental_patchConfig(
-					configType === "json" ? "./wrangler.json" : "./wrangler.toml",
-					patch
-				);
-				expect(result).not.toBeFalsy();
-				expect(result).toEqual(
-					`${configType === "json" ? expectedJson : expectedToml}`
-				);
+			({
+				original,
+				replacingPatch,
+				additivePatch,
+				expectedJson,
+				expectedToml,
+			}) => {
+				it.each(["json", "toml"])("%s", (configType) => {
+					writeWranglerConfig(
+						original,
+						configType === "json" ? "./wrangler.json" : "./wrangler.toml"
+					);
+					const result = experimental_patchConfig(
+						configType === "json" ? "./wrangler.json" : "./wrangler.toml",
+						isArrayInsertion ? additivePatch : replacingPatch,
+						isArrayInsertion
+					);
+					expect(result).not.toBeFalsy();
+					expect(result).toEqual(
+						`${configType === "json" ? expectedJson : expectedToml}`
+					);
+				});
+			}
+		);
+	});
+	describe("isArrayInsertion = false", () => {
+		describe.each(replacingOnlyTestCases)(
+			`$name`,
+			({ original, replacingPatch, expectedJson, expectedToml }) => {
+				it.each(["json", "toml"])("%s", (configType) => {
+					writeWranglerConfig(
+						original,
+						configType === "json" ? "./wrangler.json" : "./wrangler.toml"
+					);
+					const result = experimental_patchConfig(
+						configType === "json" ? "./wrangler.json" : "./wrangler.toml",
+						replacingPatch,
+						false
+					);
+					expect(result).not.toBeFalsy();
+					expect(result).toEqual(
+						`${configType === "json" ? expectedJson : expectedToml}`
+					);
+				});
 			}
 		);
 	});
 
 	describe("jsonc", () => {
-		it("preserves comments", () => {
-			const jsonc = `
-	{
-		// a comment
-		"compatibility_date": "2022-01-12",
-		"name": "test-name",
-		"kv_namespaces": [
-			{
-				// more comments!
-				"binding": "KV"
-			}
-		],
-		"d1_databases": [
-			/**
-			 * multiline comment
-			 */
-			{
-				"binding": "DB"
-			}
-		]
-	}
-	`;
-			writeFileSync("./wrangler.jsonc", jsonc);
-			const patch = {
-				kv_namespaces: [
-					{
-						binding: "KV2",
-					},
-					{
-						binding: "KV3",
-					},
-				],
-				d1_databases: [
-					{
-						binding: "DB2",
-					},
-				],
-			};
-			const result = experimental_patchConfig("./wrangler.jsonc", patch);
-			expect(result).not.toBeFalsy();
-			expect(result).toMatchInlineSnapshot(`
-				"{
+		describe("add multiple bindings", () => {
+			it("isArrayInsertion = true", () => {
+				const jsonc = `
+				{
 					// a comment
-					\\"compatibility_date\\": \\"2022-01-12\\",
-					\\"name\\": \\"test-name\\",
-					\\"kv_namespaces\\": [
+					"compatibility_date": "2022-01-12",
+					"name": "test-name",
+					"kv_namespaces": [
 						{
 							// more comments!
-							\\"binding\\": \\"KV\\"
-						},
-						{
-							\\"binding\\": \\"KV2\\"
-						},
-						{
-							\\"binding\\": \\"KV3\\"
+							"binding": "KV"
 						}
 					],
-					\\"d1_databases\\": [
+					"d1_databases": [
 						/**
-							 * multiline comment
-							 */
+						 * multiline comment
+						 */
 						{
-							\\"binding\\": \\"DB\\"
-						},
-						{
-							\\"binding\\": \\"DB2\\"
+							"binding": "DB"
 						}
 					]
-				}"
-			`);
+				}
+				`;
+				writeFileSync("./wrangler.jsonc", jsonc);
+				const patch = {
+					kv_namespaces: [
+						{
+							binding: "KV2",
+						},
+						{
+							binding: "KV3",
+						},
+					],
+					d1_databases: [
+						{
+							binding: "DB2",
+						},
+					],
+				};
+				const result = experimental_patchConfig("./wrangler.jsonc", patch);
+				expect(result).not.toBeFalsy();
+				expect(result).toMatchInlineSnapshot(`
+					"{
+						// a comment
+						\\"compatibility_date\\": \\"2022-01-12\\",
+						\\"name\\": \\"test-name\\",
+						\\"kv_namespaces\\": [
+							{
+								// more comments!
+								\\"binding\\": \\"KV\\"
+							},
+							{
+								\\"binding\\": \\"KV2\\"
+							},
+							{
+								\\"binding\\": \\"KV3\\"
+							}
+						],
+						\\"d1_databases\\": [
+							/**
+											 * multiline comment
+											 */
+							{
+								\\"binding\\": \\"DB\\"
+							},
+							{
+								\\"binding\\": \\"DB2\\"
+							}
+						]
+					}"
+				`);
+			});
+			it("isArrayInsertion = false ", () => {
+				const jsonc = dedent`
+		{
+			// a comment
+			"compatibility_date": "2022-01-12",
+			"name": "test-name",
+			"kv_namespaces": [
+				{
+					// more comments!
+					"binding": "KV"
+				}
+			],
+			"d1_databases": [
+				/**
+				 * multiline comment
+				 */
+				{
+					"binding": "DB"
+				}
+			]
+		}
+		`;
+				writeFileSync("./wrangler.jsonc", jsonc);
+				const patch = {
+					kv_namespaces: [
+						{
+							binding: "KV",
+						},
+						{
+							binding: "KV2",
+						},
+						{
+							binding: "KV3",
+						},
+					],
+					d1_databases: [
+						{
+							binding: "DB",
+						},
+						{
+							binding: "DB2",
+						},
+					],
+				};
+				const result = experimental_patchConfig(
+					"./wrangler.jsonc",
+					patch,
+					false
+				);
+				expect(result).not.toBeFalsy();
+				expect(result).toMatchInlineSnapshot(`
+					"{
+						// a comment
+						\\"compatibility_date\\": \\"2022-01-12\\",
+						\\"name\\": \\"test-name\\",
+						\\"kv_namespaces\\": [
+							{
+								// more comments!
+								\\"binding\\": \\"KV\\"
+							},
+							{
+								\\"binding\\": \\"KV2\\"
+							},
+							{
+								\\"binding\\": \\"KV3\\"
+							}
+						],
+						\\"d1_databases\\": [
+							/**
+							 * multiline comment
+							 */
+							{
+								\\"binding\\": \\"DB\\"
+							},
+							{
+								\\"binding\\": \\"DB2\\"
+							}
+						]
+					}"
+				`);
+			});
+		});
+		describe("edit existing bindings", () => {
+			it("isArrayInsertion = false", () => {
+				const jsonc = `
+				{
+					// comment one
+					"compatibility_date": "2022-01-12",
+					// comment two
+					"name": "test-name",
+					"kv_namespaces": [
+						{
+							// comment three
+							"binding": "KV"
+							// comment four
+						},
+						{
+							// comment five
+							"binding": "KV2"
+							// comment six
+						}
+					]
+				}
+				`;
+				writeFileSync("./wrangler.jsonc", jsonc);
+				const patch = {
+					compatibility_date: "2024-27-09",
+					kv_namespaces: [
+						{
+							binding: "KV",
+							id: "hello-id",
+						},
+						{
+							binding: "KV2",
+						},
+					],
+				};
+				const result = experimental_patchConfig(
+					"./wrangler.jsonc",
+					patch,
+					false
+				);
+				expect(result).not.toBeFalsy();
+				expect(result).toMatchInlineSnapshot(`
+					"{
+						// comment one
+						\\"compatibility_date\\": \\"2024-27-09\\",
+						// comment two
+						\\"name\\": \\"test-name\\",
+						\\"kv_namespaces\\": [
+							{
+								// comment three
+								\\"binding\\": \\"KV\\",
+								\\"id\\": \\"hello-id\\"
+								// comment four
+							},
+							{
+								// comment five
+								\\"binding\\": \\"KV2\\"
+								// comment six
+							}
+						]
+					}"
+				`);
+			});
 		});
 	});
 });
