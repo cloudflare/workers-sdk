@@ -1,5 +1,37 @@
 # wrangler
 
+## 3.96.0
+
+### Minor Changes
+
+- [#7510](https://github.com/cloudflare/workers-sdk/pull/7510) [`004af53`](https://github.com/cloudflare/workers-sdk/commit/004af53928ba96060c0d644fc8a98e7a3a5e6957) Thanks [@oliy](https://github.com/oliy)! - Add file prefix option to wrangler pipelines commands
+
+- [#7383](https://github.com/cloudflare/workers-sdk/pull/7383) [`8af3365`](https://github.com/cloudflare/workers-sdk/commit/8af336504b48bbc1f9ce5f65e2f1e3d6384e267b) Thanks [@jonesphillip](https://github.com/jonesphillip)! - Added wrangler r2 domain get command
+
+### Patch Changes
+
+- [#7542](https://github.com/cloudflare/workers-sdk/pull/7542) [`f13c897`](https://github.com/cloudflare/workers-sdk/commit/f13c897769627f791e8485660566f3f59bcc57a3) Thanks [@CarmenPopoviciu](https://github.com/CarmenPopoviciu)! - Always print deployment and placement ID in Cloudchamber commands
+
+  Currently, Cloudchamber commands only print the full deployment ID when the deployment has an IPv4 address. This commit ensures the deployment ID and the placement ID are always printed to stdout. It also moves the printing of the IPv4 address (if one exists) to the same place as the IPv6 address so that they are printed together.
+
+- [#6754](https://github.com/cloudflare/workers-sdk/pull/6754) [`0356d0a`](https://github.com/cloudflare/workers-sdk/commit/0356d0ac6a742a8e88e5efa87ebe085eeca07de2) Thanks [@bluwy](https://github.com/bluwy)! - refactor: move `@cloudflare/workers-shared` as dev dependency
+
+- [#7478](https://github.com/cloudflare/workers-sdk/pull/7478) [`2e90efc`](https://github.com/cloudflare/workers-sdk/commit/2e90efcd52fe5da8f7916cd9f3e5dff5bc77bd1e) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: ensure that non-inherited fields are not removed when using an inferred named environment
+
+  It is an error for the the user to provide an environment name that doesn't match any of the named environments in the Wrangler configuration.
+  But if there are no named environments defined at all in the Wrangler configuration, we special case the top-level environment as though it was a named environment.
+  Previously, when this happens, we would remove all the nonInheritable fields from the configuration (essentially all the bindings) leaving an incorrect configuration.
+  Now we correctly generate a flattened named environment that has the nonInheritable fields, plus correctly applies any transformFn on inheritable fields.
+
+- [#7524](https://github.com/cloudflare/workers-sdk/pull/7524) [`11f95f7`](https://github.com/cloudflare/workers-sdk/commit/11f95f790a4222ad2efcea943c88e5f6128765a0) Thanks [@gpanders](https://github.com/gpanders)! - Include response body in Cloudchamber API errors
+
+- [#7427](https://github.com/cloudflare/workers-sdk/pull/7427) [`3bc0f28`](https://github.com/cloudflare/workers-sdk/commit/3bc0f2804bb64b5038dd7a1ca839e096f545196d) Thanks [@edmundhung](https://github.com/edmundhung)! - The `x-provision` experimental flag now identifies draft and inherit bindings by looking up the current binding settings.
+
+  Draft bindings can then be provisioned (connected to new or existing KV, D1, or R2 resources) during `wrangler deploy`.
+
+- Updated dependencies []:
+  - miniflare@3.20241205.0
+
 ## 3.95.0
 
 ### Minor Changes
