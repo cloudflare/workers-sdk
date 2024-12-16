@@ -175,7 +175,7 @@ interface Project {
 const allProjects = new Map<string /* projectName */, Project>();
 
 function getRunnerName(project: WorkspaceProject, testFile?: string) {
-	const name = `${WORKER_NAME_PREFIX}runner-${project.getName()}`;
+	const name = `${WORKER_NAME_PREFIX}runner-${encodeURIComponent(project.getName().replace("@", "-at-").replace("/", "-"))}`;
 	if (testFile === undefined) {
 		return name;
 	}
