@@ -12,7 +12,7 @@ describe("config findWranglerConfig()", () => {
 
 	describe("(useRedirect: false)", () => {
 		it.each(["toml", "json", "jsonc"])(
-			"should find the nearest wrangler.%s to the current working directory",
+			"should find the nearest wrangler.%s to the reference directory",
 			async (ext) => {
 				await seed({
 					[`wrangler.${ext}`]: "DUMMY",
