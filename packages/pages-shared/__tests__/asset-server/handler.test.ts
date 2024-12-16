@@ -435,11 +435,27 @@ describe("asset-server handler", () => {
 
 		const findAssetEntryForPath = async (path: string) => {
 			if (path === "/index.html") {
-				return "index.html";
+				return "asset-key-index.html";
 			}
 
 			return null;
 		};
+		const fetchAsset = () =>
+			Promise.resolve(
+				Object.assign(
+					new Response(`
+					<!DOCTYPE html>
+					<html>
+						<body>
+							<link rel="preload" as="image" href="/a.png" />
+							<link rel="preload" as="image" href="/b.png" />
+							<link rel="modulepreload" href="lib.js" />
+							<link rel="preconnect" href="cloudflare.com" />
+						</body>
+					</html>`),
+					{ contentType: "text/html" }
+				)
+			);
 
 		// Create cache storage to reuse between requests
 		const { caches } = createCacheStorage();
@@ -450,22 +466,7 @@ describe("asset-server handler", () => {
 				metadata,
 				findAssetEntryForPath,
 				caches,
-				fetchAsset: () =>
-					Promise.resolve(
-						Object.assign(
-							new Response(`
-							<!DOCTYPE html>
-							<html>
-								<body>
-									<link rel="preload" as="image" href="/a.png" />
-									<link rel="preload" as="image" href="/b.png" />
-									<link rel="modulepreload" href="lib.js" />
-									<link rel="preconnect" href="cloudflare.com" />
-								</body>
-							</html>`),
-							{ contentType: "text/html" }
-						)
-					),
+				fetchAsset,
 			});
 
 		const { response, spies } = await getResponse();
@@ -476,17 +477,20 @@ describe("asset-server handler", () => {
 		await Promise.all(spies.waitUntil);
 
 		const earlyHintsCache = await caches.open(`eh:${deploymentId}`);
-		const earlyHintsRes = await earlyHintsCache.match("https://example.com/");
+		const earlyHintsRes = await earlyHintsCache.match(
+			"https://example.com/asset-key-index.html"
+		);
 
 		if (!earlyHintsRes) {
 			throw new Error(
-				"Did not match early hints cache on https://example.com/"
+				"Did not match early hints cache on https://example.com/asset-key-index.html"
 			);
 		}
 
 		expect(earlyHintsRes.headers.get("link")).toMatchInlineSnapshot(
 			`"</a.png>; rel="preload"; as=image, </b.png>; rel="preload"; as=image, <lib.js>; rel="modulepreload", <cloudflare.com>; rel="preconnect""`
 		);
+		expect(response.headers.get("link")).toBeNull();
 
 		// Do it again, but this time ensure that we didn't write to cache again
 		const { response: response2, spies: spies2 } = await getResponse();
@@ -497,15 +501,52 @@ describe("asset-server handler", () => {
 
 		await Promise.all(spies2.waitUntil);
 
-		const earlyHintsRes2 = await earlyHintsCache.match("https://example.com/");
+		const earlyHintsRes2 = await earlyHintsCache.match(
+			"https://example.com/asset-key-index.html"
+		);
 
 		if (!earlyHintsRes2) {
 			throw new Error(
-				"Did not match early hints cache on https://example.com/"
+				"Did not match early hints cache on https://example.com/asset-key-index.html"
 			);
 		}
 
 		expect(earlyHintsRes2.headers.get("link")).toMatchInlineSnapshot(
+			`"</a.png>; rel="preload"; as=image, </b.png>; rel="preload"; as=image, <lib.js>; rel="modulepreload", <cloudflare.com>; rel="preconnect""`
+		);
+		expect(response2.headers.get("link")).toMatchInlineSnapshot(
+			`"</a.png>; rel="preload"; as=image, </b.png>; rel="preload"; as=image, <lib.js>; rel="modulepreload", <cloudflare.com>; rel="preconnect""`
+		);
+
+		// Now make sure that requests for other paths which resolve to the same asset share the EH cache result
+		const { response: response3, spies: spies3 } = await getTestResponse({
+			request: new Request("https://example.com/foo"),
+			metadata,
+			findAssetEntryForPath,
+			caches,
+			fetchAsset,
+		});
+
+		expect(response3.status).toBe(200);
+		// waitUntil should not be called at all (SPA)
+		expect(spies3.waitUntil.length).toBe(0);
+
+		await Promise.all(spies3.waitUntil);
+
+		const earlyHintsRes3 = await earlyHintsCache.match(
+			"https://example.com/asset-key-index.html"
+		);
+
+		if (!earlyHintsRes3) {
+			throw new Error(
+				"Did not match early hints cache on https://example.com/asset-key-index.html"
+			);
+		}
+
+		expect(earlyHintsRes3.headers.get("link")).toMatchInlineSnapshot(
+			`"</a.png>; rel="preload"; as=image, </b.png>; rel="preload"; as=image, <lib.js>; rel="modulepreload", <cloudflare.com>; rel="preconnect""`
+		);
+		expect(response3.headers.get("link")).toMatchInlineSnapshot(
 			`"</a.png>; rel="preload"; as=image, </b.png>; rel="preload"; as=image, <lib.js>; rel="modulepreload", <cloudflare.com>; rel="preconnect""`
 		);
 	});
@@ -516,7 +557,7 @@ describe("asset-server handler", () => {
 
 		const findAssetEntryForPath = async (path: string) => {
 			if (path === "/index.html") {
-				return "index.html";
+				return "asset-key-index.html";
 			}
 
 			return null;
@@ -554,15 +595,18 @@ describe("asset-server handler", () => {
 		await Promise.all(spies.waitUntil);
 
 		const earlyHintsCache = await caches.open(`eh:${deploymentId}`);
-		const earlyHintsRes = await earlyHintsCache.match("https://example.com/");
+		const earlyHintsRes = await earlyHintsCache.match(
+			"https://example.com/asset-key-index.html"
+		);
 
 		if (!earlyHintsRes) {
 			throw new Error(
-				"Did not match early hints cache on https://example.com/"
+				"Did not match early hints cache on https://example.com/asset-key-index.html"
 			);
 		}
 
 		expect(earlyHintsRes.headers.get("link")).toBeNull();
+		expect(response.headers.get("link")).toBeNull();
 
 		// Do it again, but this time ensure that we didn't write to cache again
 		const { response: response2, spies: spies2 } = await getResponse();
@@ -573,15 +617,18 @@ describe("asset-server handler", () => {
 
 		await Promise.all(spies2.waitUntil);
 
-		const earlyHintsRes2 = await earlyHintsCache.match("https://example.com/");
+		const earlyHintsRes2 = await earlyHintsCache.match(
+			"https://example.com/asset-key-index.html"
+		);
 
 		if (!earlyHintsRes2) {
 			throw new Error(
-				"Did not match early hints cache on https://example.com/"
+				"Did not match early hints cache on https://example.com/asset-key-index.html"
 			);
 		}
 
 		expect(earlyHintsRes2.headers.get("link")).toBeNull();
+		expect(response2.headers.get("link")).toBeNull();
 	});
 
 	test.todo(
