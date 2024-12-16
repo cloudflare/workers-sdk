@@ -436,22 +436,30 @@ export async function generateHandler<
 								});
 
 								const linkHeader = preEarlyHintsHeaders.get("Link");
+								const earlyHintsHeaders = new Headers({
+									"Cache-Control": "max-age=2592000", // 30 days
+								});
 								if (linkHeader) {
-									await earlyHintsCache.put(
-										earlyHintsCacheKey,
-										new Response(null, {
-											headers: {
-												Link: linkHeader,
-												"Cache-Control": "max-age=2592000", // 30 days
-											},
-										})
-									);
+									earlyHintsHeaders.append("Link", linkHeader);
 								}
+								await earlyHintsCache.put(
+									earlyHintsCacheKey,
+									new Response(null, { headers: earlyHintsHeaders })
+								);
 							} catch (err) {
 								// Nbd if we fail here in the deferred 'waitUntil' work. We're probably trying to parse a malformed page or something.
 								// Totally fine to skip over any errors.
 								// If we need to debug something, you can uncomment the following:
 								// logError(err)
+								// In any case, let's not bother checking again for another day.
+								await earlyHintsCache.put(
+									earlyHintsCacheKey,
+									new Response(null, {
+										headers: {
+											"Cache-Control": "max-age=86400", // 1 day
+										},
+									})
+								);
 							}
 						})()
 					);
