@@ -4687,7 +4687,7 @@ addEventListener('fetch', event => {});`
 			`);
 		});
 
-		it("should warn when using smart placement with assets-first", async () => {
+		it("should warn when using smart placement with Worker first", async () => {
 			const assets = [
 				{ filePath: ".assetsignore", content: "*.bak\nsub-dir" },
 				{ filePath: "file-1.txt", content: "Content of file-1" },
@@ -4697,10 +4697,13 @@ addEventListener('fetch', event => {});`
 				{ filePath: "sub-dir/file-5.txt", content: "Content of file-5" },
 			];
 			writeAssets(assets, "assets");
+			writeWorkerSource({ format: "js" });
 			writeWranglerConfig({
+				main: "index.js",
 				assets: {
 					directory: "assets",
-					experimental_serve_directly: true,
+					experimental_serve_directly: false,
+					binding: "ASSETS",
 				},
 				placement: {
 					mode: "smart",
@@ -4713,57 +4716,21 @@ addEventListener('fetch', event => {});`
 				expectedAssets: {
 					jwt: "<<aus-completion-token>>",
 					config: {
-						serve_directly: true,
+						serve_directly: false,
 					},
 				},
-				expectedType: "none",
+				expectedMainModule: "index.js",
+				expectedBindings: [{ name: "ASSETS", type: "assets" }],
 			});
 
 			await runWrangler("deploy");
 
 			expect(std.warn).toMatchInlineSnapshot(`
-				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mUsing assets with smart placement turned on may result in poor performance.[0m
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mTurning on Smart Placement in a Worker that is using assets and serve_directly set to false means that your entire Worker could be moved to run closer to your data source, and all requests will go to that Worker before serving assets.[0m
 
-				"
-			`);
-		});
+				  This could result in poor performance as round trip times could increase when serving assets.
 
-		it("should warn when using smart placement with assets-first", async () => {
-			const assets = [
-				{ filePath: ".assetsignore", content: "*.bak\nsub-dir" },
-				{ filePath: "file-1.txt", content: "Content of file-1" },
-				{ filePath: "file-2.bak", content: "Content of file-2" },
-				{ filePath: "file-3.txt", content: "Content of file-3" },
-				{ filePath: "sub-dir/file-4.bak", content: "Content of file-4" },
-				{ filePath: "sub-dir/file-5.txt", content: "Content of file-5" },
-			];
-			writeAssets(assets, "assets");
-			writeWranglerConfig({
-				assets: {
-					directory: "assets",
-					experimental_serve_directly: true,
-				},
-				placement: {
-					mode: "smart",
-				},
-			});
-			const bodies: AssetManifest[] = [];
-			await mockAUSRequest(bodies);
-			mockSubDomainRequest();
-			mockUploadWorkerRequest({
-				expectedAssets: {
-					jwt: "<<aus-completion-token>>",
-					config: {
-						serve_directly: true,
-					},
-				},
-				expectedType: "none",
-			});
-
-			await runWrangler("deploy");
-
-			expect(std.warn).toMatchInlineSnapshot(`
-				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mUsing assets with smart placement turned on may result in poor performance.[0m
+				  Read more: [4mhttps://developers.cloudflare.com/workers/static-assets/binding/#smart-placement[0m
 
 				"
 			`);
