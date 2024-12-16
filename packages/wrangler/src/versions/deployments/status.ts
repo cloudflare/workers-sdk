@@ -59,7 +59,7 @@ export const deploymentsStatusCommand = createCommand({
 		const latestDeployment = await fetchLatestDeployment(accountId, workerName);
 
 		if (!latestDeployment) {
-			throw new UserError(`The worker ${workerName} has no deployments.`);
+			throw new UserError(`The Worker ${workerName} has no deployments.`);
 		}
 
 		if (args.json) {
