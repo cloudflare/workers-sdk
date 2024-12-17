@@ -92,16 +92,30 @@ export class WorkflowHandle extends RpcTarget implements WorkflowInstance {
 		throw new Error("Not implemented yet");
 	}
 
-	public async status(): Promise<InstanceStatus> {
+	public async status(): Promise<
+		InstanceStatus & { __LOCAL_DEV_STEP_OUTPUTS: unknown[] }
+	> {
 		const status = await this.stub.getStatus(0, this.id);
-		const { logs } = await this.stub.readLogs();
-		// @ts-expect-error TODO: Fix this
+		const { logs } = (await this.stub.readLogs()) as { logs: unknown[] };
+
+		const workflowOutput = logs
+			.filter(
+				// @ts-expect-error TODO: Fix this
+				(log) => log.event === InstanceEvent.WORKFLOW_SUCCESS
+			)
+			.at(0);
 		const filteredLogs = logs.filter(
 			// @ts-expect-error TODO: Fix this
 			(log) => log.event === InstanceEvent.STEP_SUCCESS
 		);
 		// @ts-expect-error TODO: Fix this
-		const output = filteredLogs.map((log) => log.metadata.result);
-		return { status: instanceStatusName(status), output }; // output, error
+		const stepOutputs = filteredLogs.map((log) => log.metadata.result);
+		return {
+			status: instanceStatusName(status),
+			__LOCAL_DEV_STEP_OUTPUTS: stepOutputs,
+			// @ts-expect-error TODO: Fix this
+			output:
+				workflowOutput !== undefined ? workflowOutput.metadata.result : null,
+		}; // output, error
 	}
 }

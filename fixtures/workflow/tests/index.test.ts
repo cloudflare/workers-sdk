@@ -46,7 +46,8 @@ describe("Workflows", () => {
 			fetchJson(`http://${ip}:${port}/create?workflowName=test`)
 		).resolves.toEqual({
 			status: "running",
-			output: [],
+			__LOCAL_DEV_STEP_OUTPUTS: [],
+			output: null,
 		});
 
 		await vi.waitFor(
@@ -55,7 +56,8 @@ describe("Workflows", () => {
 					fetchJson(`http://${ip}:${port}/status?workflowName=test`)
 				).resolves.toEqual({
 					status: "running",
-					output: [{ output: "First step result" }],
+					__LOCAL_DEV_STEP_OUTPUTS: [{ output: "First step result" }],
+					output: null,
 				});
 			},
 			{ timeout: 5000 }
@@ -67,10 +69,11 @@ describe("Workflows", () => {
 					fetchJson(`http://${ip}:${port}/status?workflowName=test`)
 				).resolves.toEqual({
 					status: "complete",
-					output: [
+					__LOCAL_DEV_STEP_OUTPUTS: [
 						{ output: "First step result" },
 						{ output: "Second step result" },
 					],
+					output: "i'm a workflow output",
 				});
 			},
 			{ timeout: 5000 }
@@ -80,7 +83,8 @@ describe("Workflows", () => {
 	it("creates a workflow without id", async ({ expect }) => {
 		await expect(fetchJson(`http://${ip}:${port}/create`)).resolves.toEqual({
 			status: "running",
-			output: [],
+			__LOCAL_DEV_STEP_OUTPUTS: [],
+			output: null,
 		});
 	});
 
