@@ -40,6 +40,9 @@ export * from "./api/integrations";
 export { default as unstable_splitSqlQuery } from "./d1/splitter";
 export { startWorkerRegistryServer as unstable_startWorkerRegistryServer } from "./dev-registry";
 
+export { experimental_readRawConfig } from "./config";
+export { experimental_patchConfig } from "./config/patch-config";
+
 // `miniflare-cli/assets` dynamically imports`@cloudflare/pages-shared/environment-polyfills`.
 // `@cloudflare/pages-shared/environment-polyfills/types.ts` defines `global`
 // augmentations that pollute the `import`-site's typing environment.
