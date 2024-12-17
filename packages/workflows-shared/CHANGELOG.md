@@ -1,5 +1,11 @@
 # @cloudflare/workflows-shared
 
+## 0.2.1
+
+### Patch Changes
+
+- [#7520](https://github.com/cloudflare/workers-sdk/pull/7520) [`805ad2b`](https://github.com/cloudflare/workers-sdk/commit/805ad2b3959210b0d838daf789f580f329e1d7dd) Thanks [@bruxodasilva](https://github.com/bruxodasilva)! - Fixed a bug in local development where fetching a Workflow instance by ID would return a Workflow status, even if that instance did not exist. This only impacted the `get()` method on the Worker bindings.
+
 ## 0.2.0
 
 ### Minor Changes

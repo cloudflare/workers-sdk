@@ -6,6 +6,6 @@ chore: update dependencies of "create-cloudflare" package
 
 The following dependency versions have been updated:
 
-| Dependency   | From   | To     |
-| ------------ | ------ | ------ |
-| create-astro | 4.10.0 | 4.11.0 |
+| Dependency      | From   | To     |
+| --------------- | ------ | ------ |
+| @angular/create | 19.0.4 | 19.0.5 |

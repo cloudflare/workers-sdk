@@ -19,31 +19,32 @@ describe("findPackageNames()", () => {
 	it("should return all the private packages which contain deploy scripts", ({
 		expect,
 	}) => {
-		expect(findPackageNames()).toMatchInlineSnapshot(`
-			Set {
-			  "@cloudflare/chrome-devtools-patches",
-			  "cloudflare-workers-bindings-extension",
-			  "create-cloudflare",
-			  "devprod-status-bot",
-			  "edge-preview-authenticated-proxy",
-			  "format-errors",
-			  "@cloudflare/kv-asset-handler",
-			  "miniflare",
-			  "@cloudflare/pages-shared",
-			  "playground-preview-worker",
-			  "@cloudflare/prerelease-registry",
-			  "@cloudflare/quick-edit",
-			  "solarflare-theme",
-			  "turbo-r2-archive",
-			  "@cloudflare/vitest-pool-workers",
-			  "@cloudflare/workers-editor-shared",
-			  "workers-playground",
-			  "@cloudflare/workers-shared",
-			  "workers.new",
-			  "@cloudflare/workflows-shared",
-			  "wrangler",
-			}
-		`);
+		expect(findPackageNames()).toEqual(
+			new Set([
+				"@cloudflare/chrome-devtools-patches",
+				"@cloudflare/kv-asset-handler",
+				"@cloudflare/pages-shared",
+				"@cloudflare/prerelease-registry",
+				"@cloudflare/quick-edit",
+				"@cloudflare/unenv-preset",
+				"@cloudflare/vitest-pool-workers",
+				"@cloudflare/workers-editor-shared",
+				"@cloudflare/workers-shared",
+				"@cloudflare/workflows-shared",
+				"cloudflare-workers-bindings-extension",
+				"create-cloudflare",
+				"devprod-status-bot",
+				"edge-preview-authenticated-proxy",
+				"format-errors",
+				"miniflare",
+				"playground-preview-worker",
+				"solarflare-theme",
+				"turbo-r2-archive",
+				"workers-playground",
+				"workers.new",
+				"wrangler",
+			])
+		);
 	});
 });
 

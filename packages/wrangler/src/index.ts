@@ -163,9 +163,12 @@ import { debugLogFilepath } from "./utils/log-file";
 import { vectorize } from "./vectorize/index";
 import { versionsNamespace } from "./versions";
 import { versionsDeployCommand } from "./versions/deploy";
-import registerVersionsDeploymentsSubcommands from "./versions/deployments";
+import { deploymentsNamespace } from "./versions/deployments";
+import { deploymentsListCommand } from "./versions/deployments/list";
+import { deploymentsStatusCommand } from "./versions/deployments/status";
+import { deploymentsViewCommand } from "./versions/deployments/view";
 import { versionsListCommand } from "./versions/list";
-import registerVersionsRollbackCommand from "./versions/rollback";
+import { versionsRollbackCommand } from "./versions/rollback";
 import { versionsSecretNamespace } from "./versions/secrets";
 import { versionsSecretBulkCommand } from "./versions/secrets/bulk";
 import { versionsSecretDeleteCommand } from "./versions/secrets/delete";
@@ -477,55 +480,65 @@ export function createCLIParser(argv: string[]) {
 		deployHandler
 	);
 
-	// deployments
-	const deploymentsDescription =
-		"🚢 List and view the current and past deployments for your Worker";
-
 	if (experimentalGradualRollouts) {
+		registry.define([
+			{ command: "wrangler deployments", definition: deploymentsNamespace },
+			{
+				command: "wrangler deployments list",
+				definition: deploymentsListCommand,
+			},
+			{
+				command: "wrangler deployments status",
+				definition: deploymentsStatusCommand,
+			},
+			{
+				command: "wrangler deployments view",
+				definition: deploymentsViewCommand,
+			},
+		]);
+		registry.registerNamespace("deployments");
+	} else {
 		wrangler.command(
 			"deployments",
-			deploymentsDescription,
-			registerVersionsDeploymentsSubcommands
-		);
-	} else {
-		wrangler.command("deployments", deploymentsDescription, (yargs) =>
-			yargs
-				.option("name", {
-					describe: "The name of your Worker",
-					type: "string",
-				})
-				.command(
-					"list",
-					"Displays the 10 most recent deployments for a Worker",
-					async (listYargs) => listYargs,
-					async (listYargs) => {
-						const { accountId, scriptName, config } =
-							await commonDeploymentCMDSetup(listYargs);
-						await deployments(accountId, scriptName, config);
-					}
-				)
-				.command(
-					"view [deployment-id]",
-					"View a deployment",
-					async (viewYargs) =>
-						viewYargs.positional("deployment-id", {
-							describe: "The ID of the deployment you want to inspect",
-							type: "string",
-							demandOption: false,
-						}),
-					async (viewYargs) => {
-						const { accountId, scriptName, config } =
-							await commonDeploymentCMDSetup(viewYargs);
+			"🚢 List and view the current and past deployments for your Worker",
+			(yargs) =>
+				yargs
+					.option("name", {
+						describe: "The name of your Worker",
+						type: "string",
+					})
+					.command(
+						"list",
+						"Displays the 10 most recent deployments for a Worker",
+						async (listYargs) => listYargs,
+						async (listYargs) => {
+							const { accountId, scriptName, config } =
+								await commonDeploymentCMDSetup(listYargs);
+							await deployments(accountId, scriptName, config);
+						}
+					)
+					.command(
+						"view [deployment-id]",
+						"View a deployment",
+						async (viewYargs) =>
+							viewYargs.positional("deployment-id", {
+								describe: "The ID of the deployment you want to inspect",
+								type: "string",
+								demandOption: false,
+							}),
+						async (viewYargs) => {
+							const { accountId, scriptName, config } =
+								await commonDeploymentCMDSetup(viewYargs);
 
-						await viewDeployment(
-							accountId,
-							scriptName,
-							config,
-							viewYargs.deploymentId
-						);
-					}
-				)
-				.command(subHelp)
+							await viewDeployment(
+								accountId,
+								scriptName,
+								config,
+								viewYargs.deploymentId
+							);
+						}
+					)
+					.command(subHelp)
 		);
 	}
 
@@ -533,7 +546,10 @@ export function createCLIParser(argv: string[]) {
 	const rollbackDescription = "🔙 Rollback a deployment for a Worker";
 
 	if (experimentalGradualRollouts) {
-		registerVersionsRollbackCommand(wrangler, rollbackDescription);
+		registry.define([
+			{ command: "wrangler rollback", definition: versionsRollbackCommand },
+		]);
+		registry.registerNamespace("rollback");
 	} else {
 		wrangler.command(
 			"rollback [deployment-id]",
