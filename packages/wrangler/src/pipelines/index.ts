@@ -101,19 +101,19 @@ function addCreateAndUpdateOptions(yargs: Argv<CommonYargsOptions>) {
 		})
 		.option("batch-max-mb", {
 			describe:
-				"The approximate maximum size of a batch before flush in megabytes \nDefault: 10",
+				"The approximate maximum size (in megabytes) for each batch before flushing (range: 1 - 100)",
 			type: "number",
 			demandOption: false,
 		})
 		.option("batch-max-rows", {
 			describe:
-				"The approximate maximum size of a batch before flush in rows \nDefault: 10000",
+				"The approximate maximum number of rows in a batch before flushing (range: 100 - 1000000)",
 			type: "number",
 			demandOption: false,
 		})
 		.option("batch-max-seconds", {
 			describe:
-				"The approximate maximum duration of a batch before flush in seconds \nDefault: 15",
+				"The approximate maximum age (in seconds) of a batch before flushing (range: 1 - 300)",
 			type: "number",
 			demandOption: false,
 		})

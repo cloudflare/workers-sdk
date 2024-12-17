@@ -360,12 +360,9 @@ describe("pipelines", () => {
 				OPTIONS
 				      --secret-access-key  The R2 service token Access Key to write data  [string]
 				      --access-key-id      The R2 service token Secret Key to write data  [string]
-				      --batch-max-mb       The approximate maximum size of a batch before flush in megabytes
-				                           Default: 10  [number]
-				      --batch-max-rows     The approximate maximum size of a batch before flush in rows
-				                           Default: 10000  [number]
-				      --batch-max-seconds  The approximate maximum duration of a batch before flush in seconds
-				                           Default: 15  [number]
+				      --batch-max-mb       The approximate maximum size (in megabytes) for each batch before flushing (range: 1 - 100)  [number]
+				      --batch-max-rows     The approximate maximum number of rows in a batch before flushing (range: 100 - 1000000)  [number]
+				      --batch-max-seconds  The approximate maximum age (in seconds) of a batch before flushing (range: 1 - 300)  [number]
 				      --transform          The worker and entrypoint of the PipelineTransform implementation in the format \\"worker.entrypoint\\"
 				                           Default: No transformation worker  [string]
 				      --compression        Sets the compression format of output files
