@@ -127,7 +127,7 @@ export const getBuildPlatformFromEnv = getEnvironmentVariableFactory({
 });
 
 /**
- * `WRANGLER_UNENV_PRESET_PATHS` specifies the paths to the unenv preset.
+ * `WRANGLER_UNENV_RESOLVE_PATHS` lists the paths used to resolve unenv.
  *
  * Note: multiple coma separated paths can be specified.
  *
@@ -135,8 +135,8 @@ export const getBuildPlatformFromEnv = getEnvironmentVariableFactory({
  *
  * Setting root paths allow to use a different version of the preset.
  */
-export const getUnenvPresetsPathFromEnv = getEnvironmentVariableFactory({
-	variableName: "WRANGLER_UNENV_PRESET_PATHS",
+export const getUnenvResolvePathFromEnv = getEnvironmentVariableFactory({
+	variableName: "WRANGLER_UNENV_RESOLVE_PATHS",
 });
 
 /**

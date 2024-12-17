@@ -5,7 +5,7 @@ import * as esbuild from "esbuild";
 import {
 	getBuildConditionsFromEnv,
 	getBuildPlatformFromEnv,
-	getUnenvPresetsPathFromEnv,
+	getUnenvResolvePathFromEnv,
 } from "../environment-variables/misc-variables";
 import { UserError } from "../errors";
 import { getFlag } from "../experimental-flags";
@@ -391,7 +391,7 @@ export async function bundleWorker(
 		},
 	};
 
-	const unenvPresetPaths = getUnenvPresetsPathFromEnv()?.split(",");
+	const unenvResolvePaths = getUnenvResolvePathFromEnv()?.split(",");
 
 	const buildOptions: esbuild.BuildOptions & { metafile: true } = {
 		// Don't use entryFile here as the file may have been changed when applying the middleware
@@ -440,7 +440,7 @@ export async function bundleWorker(
 			moduleCollector.plugin,
 			...getNodeJSCompatPlugins({
 				mode: nodejsCompatMode ?? null,
-				unenvPresetPaths,
+				unenvResolvePaths,
 			}),
 			cloudflareInternalPlugin,
 			buildResultPlugin,

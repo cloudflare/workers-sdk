@@ -11,16 +11,16 @@ const REQUIRED_UNENV_ALIAS_NAMESPACE = "required-unenv-alias";
 /**
  * ESBuild plugin to apply the unenv preset.
  *
- * @param unenvPresetPaths Root paths used to resolve absolute paths.
+ * @param unenvResolvePaths Root paths used to resolve absolute paths.
  * @returns ESBuild plugin
  */
-export function nodejsHybridPlugin(unenvPresetPaths?: string[]): Plugin {
+export function nodejsHybridPlugin(unenvResolvePaths?: string[]): Plugin {
 	// Get the resolved environment.
 	const { env } = defineEnv({
 		nodeCompat: true,
 		presets: [cloudflare],
 		resolve: {
-			paths: unenvPresetPaths,
+			paths: unenvResolvePaths,
 		},
 	});
 	const { alias, inject, external } = env;

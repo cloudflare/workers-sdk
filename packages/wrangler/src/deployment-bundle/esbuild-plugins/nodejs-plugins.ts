@@ -12,10 +12,10 @@ import type { NodeJSCompatMode } from "miniflare";
  */
 export function getNodeJSCompatPlugins({
 	mode,
-	unenvPresetPaths,
+	unenvResolvePaths,
 }: {
 	mode: NodeJSCompatMode;
-	unenvPresetPaths?: string[];
+	unenvResolvePaths?: string[];
 }): Plugin[] {
 	switch (mode) {
 		case "als":
@@ -30,7 +30,7 @@ export function getNodeJSCompatPlugins({
 		case "v1":
 			return [nodejsCompatPlugin(mode)];
 		case "v2":
-			return [nodejsHybridPlugin(unenvPresetPaths)];
+			return [nodejsHybridPlugin(unenvResolvePaths)];
 		case null:
 			return [nodejsCompatPlugin(mode)];
 	}
