@@ -64,7 +64,7 @@ describe("nodejs compat", () => {
 		}
 	});
 
-	test("import unenv aliased packages", async ({ expect }) => {
+	test("require unenv aliased packages", async ({ expect }) => {
 		const { ip, port, stop } = await runWranglerDev(
 			resolve(__dirname, "../src"),
 			["--port=0", "--inspector-port=0"]
