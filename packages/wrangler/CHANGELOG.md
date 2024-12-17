@@ -1,5 +1,25 @@
 # wrangler
 
+## 3.97.0
+
+### Minor Changes
+
+- [#7522](https://github.com/cloudflare/workers-sdk/pull/7522) [`6403e41`](https://github.com/cloudflare/workers-sdk/commit/6403e41b809a20db59ecfd55362368926750c62d) Thanks [@vicb](https://github.com/vicb)! - feat(wrangler): allow overriding the unenv preset.
+
+  By default wrangler uses the bundled unenv preset.
+
+  Setting `WRANGLER_UNENV_RESOLVE_PATHS` allow to use another version of the preset.
+  Those paths are used when resolving the unenv module identifiers to absolute paths.
+  This can be used to test a development version.
+
+- [#7479](https://github.com/cloudflare/workers-sdk/pull/7479) [`2780849`](https://github.com/cloudflare/workers-sdk/commit/2780849eb56b5e86210eb801ed91892d22ab9310) Thanks [@penalosa](https://github.com/penalosa)! - Accept a JSON file of the format `{ name: string }[]` in `wrangler kv bulk delete`, as well as the current `string[]` format.
+
+### Patch Changes
+
+- [#7541](https://github.com/cloudflare/workers-sdk/pull/7541) [`ca9410a`](https://github.com/cloudflare/workers-sdk/commit/ca9410a4f92a61abc0d759a3abe29da05cedeaed) Thanks [@vicb](https://github.com/vicb)! - chore(wrangler): update unenv dependency version
+
+- [#7345](https://github.com/cloudflare/workers-sdk/pull/7345) [`15aa936`](https://github.com/cloudflare/workers-sdk/commit/15aa936ba46d31e501f427afa32078c16c9f4c4e) Thanks [@edmundhung](https://github.com/edmundhung)! - fix(wrangler): keypress event name is optional
+
 ## 3.96.0
 
 ### Minor Changes

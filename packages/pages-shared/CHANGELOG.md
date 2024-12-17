@@ -1,5 +1,11 @@
 # @cloudflare/pages-shared
 
+## 0.11.72
+
+### Patch Changes
+
+- [#7544](https://github.com/cloudflare/workers-sdk/pull/7544) [`77bd9a1`](https://github.com/cloudflare/workers-sdk/commit/77bd9a1f8e3975ca8e6d9cb99d2ea3c035ec15a7) Thanks [@GregBrimble](https://github.com/GregBrimble)! - chore: Remove now-unused asset preservation cache (v1)
+
 ## 0.11.71
 
 ### Patch Changes
