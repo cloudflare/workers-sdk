@@ -77,6 +77,9 @@ export function getMetricsDispatcher(options: MetricsConfigOptions) {
 			argv?: string[]
 		) {
 			try {
+				if (properties.command?.startsWith("wrangler login")) {
+					properties.command = "wrangler login";
+				}
 				if (
 					properties.command === "wrangler telemetry disable" ||
 					properties.command === "wrangler metrics disable"

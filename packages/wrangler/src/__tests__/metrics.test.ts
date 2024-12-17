@@ -359,6 +359,20 @@ describe("metrics", () => {
 				expect(std.debug).toContain('isWorkersCI":true');
 			});
 
+			it("should not send arguments with wrangler login", async () => {
+				const requests = mockMetricRequest();
+
+				await expect(
+					runWrangler("login username password")
+				).rejects.toThrowErrorMatchingInlineSnapshot(
+					`[Error: Unknown arguments: username, password]`
+				);
+
+				expect(requests.count).toBe(2);
+				expect(std.debug).toContain('"argsCombination":""');
+				expect(std.debug).toContain('"command":"wrangler login"');
+			});
+
 			it("should include args provided by the user", async () => {
 				const requests = mockMetricRequest();
 
