@@ -108,12 +108,6 @@ export class CloudflareDevEnvironment extends vite.DevEnvironment {
 
 		this.#webSocketContainer.webSocket = webSocket;
 	}
-
-	async dispatchFetch(request: Request) {
-		assert(this.#worker, 'Runner not initialized');
-
-		return this.#worker.fetch(toMiniflareRequest(request)) as any;
-	}
 }
 
 const cloudflareBuiltInModules = [
