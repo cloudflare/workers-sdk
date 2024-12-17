@@ -135,8 +135,9 @@ vi.mock("../user/generate-auth-url", () => {
 	};
 });
 
-vi.mock("../is-ci", () => {
-	return { CI: { isCI: vi.fn().mockImplementation(() => false) } };
+vi.mock("../is-ci", async (importOriginal) => {
+	const original = await importOriginal<typeof import("../is-ci")>();
+	return { ...original, CI: { isCI: vi.fn().mockImplementation(() => false) } };
 });
 
 vi.mock("../user/generate-random-state", () => {

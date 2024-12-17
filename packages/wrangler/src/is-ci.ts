@@ -1,5 +1,12 @@
 import isCI from "is-ci";
 
+export function isPagesCI() {
+	return process.env.CF_PAGES === "1";
+}
+
+export function isWorkersCI() {
+	return process.env.WORKERS_CI === "1";
+}
 /**
  * Use this object to find out if we are currently running in a continuous integration environment.
  *
@@ -9,6 +16,6 @@ import isCI from "is-ci";
 export const CI = {
 	/** Is Wrangler currently running in a CI? */
 	isCI() {
-		return isCI;
+		return isCI || isPagesCI() || isWorkersCI();
 	},
 };

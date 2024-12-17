@@ -41,6 +41,14 @@ export type CommonEventProperties = {
 	 */
 	isCI: boolean;
 	/**
+	 * Whether the Wrangler client is running in Pages CI
+	 */
+	isPagesCI: boolean;
+	/**
+	 * Whether the Wrangler client is running in Workers CI
+	 */
+	isWorkersCI: boolean;
+	/**
 	 * Whether the Wrangler client is running in an interactive instance
 	 */
 	isInteractive: boolean;
