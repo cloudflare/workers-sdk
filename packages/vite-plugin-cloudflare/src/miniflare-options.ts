@@ -13,7 +13,7 @@ import {
 	ASSET_WORKER_NAME,
 	ASSET_WORKERS_COMPATIBILITY_DATE,
 	ROUTER_WORKER_NAME,
-} from './assets';
+} from './constants';
 import type { CloudflareDevEnvironment } from './cloudflare-environment';
 import type {
 	PersistState,

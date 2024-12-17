@@ -1,14 +1,14 @@
 import assert from 'node:assert';
 import * as fs from 'node:fs';
-import path from 'node:path';
+import * as path from 'node:path';
 import { createMiddleware } from '@hattip/adapter-node';
 import { Miniflare } from 'miniflare';
 import * as vite from 'vite';
-import { getRouterWorker } from './assets';
 import {
 	createCloudflareEnvironmentOptions,
 	initRunners,
 } from './cloudflare-environment';
+import { getDevEntryWorker } from './dev';
 import {
 	getDevMiniflareOptions,
 	getPreviewMiniflareOptions,
@@ -209,21 +209,19 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin {
 			);
 
 			await initRunners(resolvedPluginConfig, viteDevServer, miniflare);
-			const routerWorker = await getRouterWorker(miniflare);
+			const entryWorker = await getDevEntryWorker(
+				resolvedPluginConfig,
+				miniflare,
+			);
 
-			const middleware = createMiddleware(async ({ request }) => {
-				return routerWorker.fetch(toMiniflareRequest(request), {
+			const middleware = createMiddleware(({ request }) => {
+				return entryWorker.fetch(toMiniflareRequest(request), {
 					redirect: 'manual',
 				}) as any;
 			});
 
 			return () => {
 				viteDevServer.middlewares.use((req, res, next) => {
-					if (!middleware) {
-						next();
-						return;
-					}
-
 					middleware(req, res, next);
 				});
 			};
@@ -241,11 +239,6 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin {
 
 			return () => {
 				vitePreviewServer.middlewares.use((req, res, next) => {
-					if (!middleware) {
-						next();
-						return;
-					}
-
 					middleware(req, res, next);
 				});
 			};
