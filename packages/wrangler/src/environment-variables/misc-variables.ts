@@ -129,7 +129,7 @@ export const getBuildPlatformFromEnv = getEnvironmentVariableFactory({
 /**
  * `WRANGLER_UNENV_RESOLVE_PATHS` lists the paths used to resolve unenv.
  *
- * Note: multiple coma separated paths can be specified.
+ * Note: multiple comma separated paths can be specified.
  *
  * By default wrangler uses the unenv preset version installed from the package.json.
  *
