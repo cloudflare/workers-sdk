@@ -1,5 +1,31 @@
 # create-cloudflare
 
+## 2.35.1
+
+### Patch Changes
+
+- [#7511](https://github.com/cloudflare/workers-sdk/pull/7511) [`5addedf`](https://github.com/cloudflare/workers-sdk/commit/5addedf5d85aba56c16978700b7bf16929568d60) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From   | To     |
+  | --------------- | ------ | ------ |
+  | create-next-app | 15.0.3 | 15.1.0 |
+
+- [#7557](https://github.com/cloudflare/workers-sdk/pull/7557) [`01b5451`](https://github.com/cloudflare/workers-sdk/commit/01b54518471ae4602dbdc3c3da6eedd991cc10a8) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From   | To     |
+  | --------------- | ------ | ------ |
+  | @angular/create | 19.0.4 | 19.0.5 |
+
+- [#7497](https://github.com/cloudflare/workers-sdk/pull/7497) [`fb30983`](https://github.com/cloudflare/workers-sdk/commit/fb30983134ed767bb0ba43de84ce493d0353aa20) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - fix: make sure C3 works with the latest Astro versions
+
+- [#7390](https://github.com/cloudflare/workers-sdk/pull/7390) [`0e9499e`](https://github.com/cloudflare/workers-sdk/commit/0e9499e7388fda6d212c341fe21a1fcb1797d8aa) Thanks [@penalosa](https://github.com/penalosa)! - Bump Nuxt C3 template to Node 18
+
+- [#7565](https://github.com/cloudflare/workers-sdk/pull/7565) [`8ad5be9`](https://github.com/cloudflare/workers-sdk/commit/8ad5be9452b018ce2ab7ca33f6aded4df4e15786) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - update the astro experimental template not to unnecessarily specify `v2` for `nodejs_compat`
+
 ## 2.35.0
 
 ### Minor Changes
