@@ -10274,11 +10274,6 @@ snapshots:
       '@babel/traverse': 7.25.9
       '@babel/types': 7.25.9
       convert-source-map: 2.0.0
-<<<<<<< HEAD
-      debug: 4.3.7(supports-color@9.2.2)
-||||||| c86101cb9
-      debug: 4.3.7(supports-color@8.1.1)
-=======
       debug: 4.3.7(supports-color@9.2.2)
       gensync: 1.0.0-beta.2
       json5: 2.2.3
@@ -10300,7 +10295,6 @@ snapshots:
       '@babel/types': 7.26.3
       convert-source-map: 2.0.0
       debug: 4.3.7(supports-color@9.2.2)
->>>>>>> origin/main
       gensync: 1.0.0-beta.2
       json5: 2.2.3
       semver: 6.3.1
