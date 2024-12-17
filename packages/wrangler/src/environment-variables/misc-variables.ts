@@ -135,7 +135,7 @@ export const getBuildPlatformFromEnv = getEnvironmentVariableFactory({
  *
  * Setting root paths allow to use a different version of the preset.
  */
-export const getUnenvResolvePathFromEnv = getEnvironmentVariableFactory({
+export const getUnenvResolvePathsFromEnv = getEnvironmentVariableFactory({
 	variableName: "WRANGLER_UNENV_RESOLVE_PATHS",
 });
 
