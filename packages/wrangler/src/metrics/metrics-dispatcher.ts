@@ -4,7 +4,7 @@ import { configFormat } from "../config";
 import isInteractive from "../is-interactive";
 import { logger } from "../logger";
 import { sniffUserAgent } from "../package-manager";
-import { CI } from "./../is-ci";
+import { CI, isPagesCI, isWorkersCI } from "./../is-ci";
 import {
 	getNodeVersion,
 	getOS,
@@ -105,8 +105,8 @@ export function getMetricsDispatcher(options: MetricsConfigOptions) {
 					isFirstUsage: readMetricsConfig().permission === undefined,
 					configFileType: configFormat(options.configPath),
 					isCI: CI.isCI(),
-					isPagesCI: process.env.CF_PAGES === "1",
-					isWorkersCI: process.env.WORKERS_CI === "1",
+					isPagesCI: isPagesCI(),
+					isWorkersCI: isWorkersCI(),
 					isInteractive: isInteractive(),
 					argsUsed,
 					argsCombination,
