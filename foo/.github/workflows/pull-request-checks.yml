@@ -1,0 +1,42 @@
+name: Pull Request Checks
+
+on: pull_request
+
+jobs:
+  checks:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-13, windows-2022, ubuntu-22.04]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Install Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'pnpm'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install Dependencies
+        shell: bash
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright extras
+        shell: bash
+        run: pnpm playwright install
+
+      - name: Running checks
+        shell: bash
+        run: pnpm check
+
+      - name: Run tests
+        shell: bash
+        run: pnpm test

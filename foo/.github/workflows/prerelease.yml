@@ -1,0 +1,37 @@
+name: Publish prereleases
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  publish-prerelease:
+    if: ${{ github.repository_owner == 'flarelabs-net' }}
+    name: Publish prerelease
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Install Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'pnpm'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install Dependencies
+        shell: bash
+        run: pnpm install --frozen-lockfile
+
+      - name: Publish to pkg-pr-new
+        run: pnpm exec pkg-pr-new publish --pnpm './packages/vite-plugin-cloudflare'

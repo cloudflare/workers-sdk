@@ -1,0 +1,8 @@
+node_modules
+pnpm-debug.log*
+dist
+.vscode
+.DS_Store
+**/*.tsbuildinfo
+.wrangler
+playground-temp

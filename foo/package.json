@@ -1,0 +1,37 @@
+{
+	"name": "@vite-plugin-cloudflare/root",
+	"private": true,
+	"description": "Monorepo for vite-plugin-cloudflare",
+	"type": "module",
+	"scripts": {
+		"check": "pnpm run check:types && pnpm run check:prettier",
+		"check:prettier": "prettier --check .",
+		"check:types": "tsc --build && pnpm -r check:types",
+		"fix": "pnpm run fix:prettier",
+		"fix:prettier": "prettier --write .",
+		"postinstall": "pnpm -F @flarelabs-net/vite-plugin-cloudflare build",
+		"test": "pnpm test-unit && pnpm test-serve && pnpm test-build",
+		"test-build": "cross-env VITE_TEST_BUILD=1 vitest run -c vitest.config.e2e.ts",
+		"test-serve": "vitest run -c vitest.config.e2e.ts",
+		"test-serve:watch": "vitest -c vitest.config.e2e.ts",
+		"test-unit": "vitest run",
+		"test-unit:watch": "vitest"
+	},
+	"dependencies": {
+		"cross-env": "^7.0.3"
+	},
+	"devDependencies": {
+		"@ianvs/prettier-plugin-sort-imports": "^4.3.1",
+		"@vite-plugin-cloudflare/typescript-config": "workspace:*",
+		"pkg-pr-new": "^0.0.33",
+		"playwright-chromium": "^1.48.1",
+		"prettier": "^3.3.3",
+		"prettier-plugin-packagejson": "^2.5.3",
+		"typescript": "catalog:default",
+		"vite": "catalog:default",
+		"vitest": "^2.1.3"
+	},
+	"engines": {
+		"pnpm": "^9.12.0"
+	}
+}

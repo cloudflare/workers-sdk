@@ -1,0 +1,21 @@
+{
+	"name": "@playground/multi-worker",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"build": "vite build --app",
+		"build:custom-output-directories": "vite build --app -c ./vite.config.custom-output-directories.ts",
+		"check:types": "tsc --build",
+		"dev": "vite dev",
+		"preview": "vite preview",
+		"preview:custom-output-directories": "vite preview -c ./vite.config.custom-output-directories.ts"
+	},
+	"devDependencies": {
+		"@cloudflare/workers-types": "catalog:default",
+		"@flarelabs-net/vite-plugin-cloudflare": "workspace:*",
+		"@vite-plugin-cloudflare/typescript-config": "workspace:*",
+		"typescript": "catalog:default",
+		"vite": "catalog:default",
+		"wrangler": "catalog:default"
+	}
+}
