@@ -362,6 +362,73 @@ const replacingOnlyTestCases: Omit<TestCase, "additivePatch">[] = [
 			`,
 	},
 	{
+		name: "delete an existing binding so that none are left",
+		original: {
+			kv_namespaces: [
+				{
+					binding: "KV",
+				},
+			],
+		},
+		replacingPatch: {
+			kv_namespaces: undefined,
+		},
+		expectedToml: dedent`
+				compatibility_date = "2022-01-12"
+				name = "test-name"
+
+				`,
+		expectedJson: dedent`
+				{
+					"compatibility_date": "2022-01-12",
+					"name": "test-name"
+				}
+			`,
+	},
+	// This one doesn't work because the jsonc-parser leaves behind a stray bracket when deleting
+	// there are possibly solutions that I am not inclined to solve right now
+	// e.g. passing in {binding: undefined} in the patch instead and cleaning up empty objects
+	// {
+	// 	name: "delete an existing binding (but some bindings of that type are still left)",
+	// 	original: {
+	// 		kv_namespaces: [
+	// 			{
+	// 				binding: "KV",
+	// 			},
+	// 			{
+	// 				binding: "KV2",
+	// 			},
+	// 		],
+	// 	},
+	// 	replacingPatch: {
+	// 		kv_namespaces: [
+	// 			{
+	// 				binding: "KV",
+	// 			},
+	// 			undefined,
+	// 		],
+	// 	},
+	// 	expectedToml: dedent`
+	// 			compatibility_date = "2022-01-12"
+	// 			name = "test-name"
+
+	// 			[[kv_namespaces]]
+	// 			binding = "KV"
+
+	// 			`,
+	// 	expectedJson: dedent`
+	// 			{
+	// 				"compatibility_date": "2022-01-12",
+	// 				"name": "test-name",
+	// 				"kv_namespaces": [
+	// 					{
+	// 						"binding": "KV"
+	// 					}
+	// 				]
+	// 			}
+	// 		`,
+	// },
+	{
 		name: "edit a compat flag",
 		original: {},
 		replacingPatch: {
@@ -410,7 +477,7 @@ const replacingOnlyTestCases: Omit<TestCase, "additivePatch">[] = [
 		name: "delete a compat flag",
 		original: {},
 		replacingPatch: {
-			compatibility_flags: [],
+			compatibility_flags: undefined,
 		},
 		expectedToml: dedent`
 				compatibility_date = "2022-01-12"
@@ -694,6 +761,117 @@ describe("experimental_patchConfig()", () => {
 								// comment six
 							}
 						]
+					}"
+				`);
+			});
+		});
+
+		describe("edit existing bindings with patch array in a different order (will mess up comments)", () => {
+			it("isArrayInsertion = false", () => {
+				const jsonc = `
+				{
+					// comment one
+					"compatibility_date": "2022-01-12",
+					// comment two
+					"name": "test-name",
+					"kv_namespaces": [
+						{
+							// comment three
+							"binding": "KV"
+							// comment four
+						},
+						{
+							// comment five
+							"binding": "KV2"
+							// comment six
+						}
+					]
+				}
+				`;
+				writeFileSync("./wrangler.jsonc", jsonc);
+				const patch = {
+					compatibility_date: "2024-27-09",
+					kv_namespaces: [
+						{
+							binding: "KV2",
+						},
+						{
+							binding: "KV",
+							id: "hello-id",
+						},
+					],
+				};
+				const result = experimental_patchConfig(
+					"./wrangler.jsonc",
+					patch,
+					false
+				);
+				expect(result).not.toBeFalsy();
+				// Note that the comments have stayed in place!
+				// However, I don't think we can reasonably expect to bring comments along when an array has been reordered
+				expect(result).toMatchInlineSnapshot(`
+					"{
+						// comment one
+						\\"compatibility_date\\": \\"2024-27-09\\",
+						// comment two
+						\\"name\\": \\"test-name\\",
+						\\"kv_namespaces\\": [
+							{
+								// comment three
+								\\"binding\\": \\"KV2\\"
+								// comment four
+							},
+							{
+								// comment five
+								\\"binding\\": \\"KV\\",
+								\\"id\\": \\"hello-id\\"
+								// comment six
+							}
+						]
+					}"
+				`);
+			});
+		});
+
+		describe("delete existing bindings (cannot preserve comments)", () => {
+			it("isArrayInsertion = false", () => {
+				const jsonc = `
+				{
+					// comment one
+					"compatibility_date": "2022-01-12",
+					// comment two
+					"name": "test-name",
+					"kv_namespaces": [
+						{
+							// comment three
+							"binding": "KV"
+							// comment four
+						},
+						{
+							// comment five
+							"binding": "KV2"
+							// comment six
+						}
+					]
+				}
+				`;
+				writeFileSync("./wrangler.jsonc", jsonc);
+				const patch = {
+					compatibility_date: "2024-27-09",
+					kv_namespaces: undefined,
+				};
+				const result = experimental_patchConfig(
+					"./wrangler.jsonc",
+					patch,
+					false
+				);
+				expect(result).not.toBeFalsy();
+				expect(result).toMatchInlineSnapshot(`
+					"{
+						// comment one
+						\\"compatibility_date\\": \\"2024-27-09\\",
+						// comment two
+						\\"name\\": \\"test-name\\"
 					}"
 				`);
 			});
