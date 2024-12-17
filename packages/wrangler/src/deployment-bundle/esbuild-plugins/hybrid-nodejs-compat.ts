@@ -8,12 +8,20 @@ import type { Plugin, PluginBuild } from "esbuild";
 const REQUIRED_NODE_BUILT_IN_NAMESPACE = "node-built-in-modules";
 const REQUIRED_UNENV_ALIAS_NAMESPACE = "required-unenv-alias";
 
-export const nodejsHybridPlugin: () => Plugin = () => {
+/**
+ * ESBuild plugin to apply the unenv preset.
+ *
+ * @param unenvResolvePaths Root paths used to resolve absolute paths.
+ * @returns ESBuild plugin
+ */
+export function nodejsHybridPlugin(unenvResolvePaths?: string[]): Plugin {
 	// Get the resolved environment.
 	const { env } = defineEnv({
 		nodeCompat: true,
 		presets: [cloudflare],
-		resolve: true,
+		resolve: {
+			paths: unenvResolvePaths,
+		},
 	});
 	const { alias, inject, external } = env;
 	// Get the unresolved alias.
@@ -31,7 +39,7 @@ export const nodejsHybridPlugin: () => Plugin = () => {
 			handleNodeJSGlobals(build, inject);
 		},
 	};
-};
+}
 
 const NODEJS_MODULES_RE = new RegExp(`^(node:)?(${builtinModules.join("|")})$`);
 
