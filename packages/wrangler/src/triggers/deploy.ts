@@ -42,7 +42,7 @@ export default async function triggersDeploy(
 		props.routes ?? config.routes ?? (config.route ? [config.route] : []) ?? [];
 	const routesOnly: Array<Route> = [];
 	const customDomainsOnly: Array<RouteObject> = [];
-	validateRoutes(routes, Boolean(props.assetsOptions));
+	validateRoutes(routes, props.assetsOptions);
 	for (const route of routes) {
 		if (typeof route !== "string" && route.custom_domain) {
 			customDomainsOnly.push(route);

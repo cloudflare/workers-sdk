@@ -374,6 +374,7 @@ describe.sequential("wrangler dev", () => {
 				],
 			});
 		});
+
 		it("should error if custom domains with paths are passed in but allow paths on normal routes", async () => {
 			fs.writeFileSync("index.js", `export default {};`);
 			writeWranglerConfig({
@@ -401,61 +402,33 @@ describe.sequential("wrangler dev", () => {
 				Paths are not allowed in Custom Domains]
 			`);
 		});
-		it("should error on routes with paths if assets are present", async () => {
+
+		it("should warn on mounted paths in dev", async () => {
 			writeWranglerConfig({
 				routes: [
-					"simple.co.uk/path",
 					"simple.co.uk/path/*",
-					"simple.co.uk/",
 					"simple.co.uk/*",
-					"simple.co.uk",
-					{ pattern: "route.co.uk/path", zone_id: "asdfadsf" },
-					{ pattern: "route.co.uk/path/*", zone_id: "asdfadsf" },
-					{ pattern: "route.co.uk/*", zone_id: "asdfadsf" },
-					{ pattern: "route.co.uk/", zone_id: "asdfadsf" },
-					{ pattern: "route.co.uk", zone_id: "asdfadsf" },
-					{ pattern: "custom.co.uk/path", custom_domain: true },
-					{ pattern: "custom.co.uk/*", custom_domain: true },
-					{ pattern: "custom.co.uk", custom_domain: true },
+					"*/*",
+					"*/blog/*",
+					{ pattern: "example.com/blog/*", zone_id: "asdfadsf" },
+					{ pattern: "example.com/*", zone_id: "asdfadsf" },
+					{ pattern: "example.com/abc/def/*", zone_id: "asdfadsf" },
 				],
-				assets: {
-					directory: "assets",
-				},
 			});
+
 			fs.mkdirSync("assets");
-			await expect(runWrangler(`dev`)).rejects
-				.toThrowErrorMatchingInlineSnapshot(`
-				[Error: Invalid Routes:
-				simple.co.uk/path:
-				Workers which have static assets cannot be routed on a URL which has a path component. Update the route to replace /path with /*
 
-				simple.co.uk/path/*:
-				Workers which have static assets cannot be routed on a URL which has a path component. Update the route to replace /path/* with /*
+			await runWranglerUntilConfig("dev --assets assets");
 
-				simple.co.uk/:
-				Workers which have static assets must end with a wildcard path. Update the route to end with /*
+			expect(std.warn).toMatchInlineSnapshot(`
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mWarning: The following routes will attempt to serve Assets on a configured path:[0m
 
-				simple.co.uk:
-				Workers which have static assets must end with a wildcard path. Update the route to end with /*
+				    • simple.co.uk/path/* (Will match assets: assets/path/*)
+				    • */blog/* (Will match assets: assets/blog/*)
+				    • example.com/blog/* (Will match assets: assets/blog/*)
+				    • example.com/abc/def/* (Will match assets: assets/abc/def/*)
 
-				route.co.uk/path:
-				Workers which have static assets cannot be routed on a URL which has a path component. Update the route to replace /path with /*
-
-				route.co.uk/path/*:
-				Workers which have static assets cannot be routed on a URL which has a path component. Update the route to replace /path/* with /*
-
-				route.co.uk/:
-				Workers which have static assets must end with a wildcard path. Update the route to end with /*
-
-				route.co.uk:
-				Workers which have static assets must end with a wildcard path. Update the route to end with /*
-
-				custom.co.uk/path:
-				Paths are not allowed in Custom Domains
-
-				custom.co.uk/*:
-				Wildcard operators (*) are not allowed in Custom Domains
-				Paths are not allowed in Custom Domains]
+				"
 			`);
 		});
 	});
