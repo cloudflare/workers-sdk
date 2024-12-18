@@ -76,4 +76,17 @@ describe("nodejs compat", () => {
 			await stop();
 		}
 	});
+
+	test("unenv preset", async ({ expect }) => {
+		const { ip, port, stop } = await runWranglerDev(
+			resolve(__dirname, "../src"),
+			["--port=0", "--inspector-port=0"]
+		);
+		try {
+			const response = await fetch(`http://${ip}:${port}/test-unenv-preset`);
+			await expect(response.text()).resolves.toBe("OK!");
+		} finally {
+			await stop();
+		}
+	});
 });
