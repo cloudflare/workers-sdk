@@ -6,6 +6,7 @@ import { Stream } from "node:stream";
 import { Context } from "vm";
 import { Client } from "pg";
 import { s } from "./dep.cjs";
+import { testUnenvPreset } from "./unenv-preset";
 
 testBasicNodejsProperties();
 
@@ -28,14 +29,18 @@ export default {
 				return testX509Certificate();
 			case "/test-require-alias":
 				return testRequireUenvAliasedPackages();
+			case "/test-unenv-preset":
+				return await testUnenvPreset();
 		}
 
 		return new Response(
-			'<a href="query">Postgres query</a> | ' +
-				'<a href="test-process">Test process global</a> | ' +
-				'<a href="test-random">Test getRandomValues()</a> | ' +
-				'<a href="test-x509-certificate">Test X509Certificate</a>' +
-				'<a href="test-require-alias">Test require unenv aliased packages</a>',
+			`<a href="query">Postgres query</a>
+<a href="test-process">Test process global</a>
+<a href="test-random">Test getRandomValues()</a>
+<a href="test-x509-certificate">Test X509Certificate</a>
+<a href="test-require-alias">Test require unenv aliased packages</a>
+<a href="test-unenv-preset">Test unenv preset</a>
+`,
 			{ headers: { "Content-Type": "text/html; charset=utf-8" } }
 		);
 	},
