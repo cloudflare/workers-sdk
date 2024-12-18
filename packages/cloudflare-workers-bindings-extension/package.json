@@ -30,10 +30,7 @@
 			{
 				"command": "cloudflare-workers-bindings.refresh",
 				"title": "Cloudflare Workers: Refresh bindings",
-				"icon": {
-					"light": "resources/light/refresh.svg",
-					"dark": "resources/dark/refresh.svg"
-				}
+				"icon": "$(refresh)"
 			}
 		],
 		"menus": {
