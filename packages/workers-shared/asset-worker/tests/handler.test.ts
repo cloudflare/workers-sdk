@@ -1,4 +1,5 @@
 import { vi } from "vitest";
+import { applyConfigurationDefaults } from "../src/configuration";
 import { handleRequest } from "../src/handler";
 import type { AssetConfig } from "../../utils/types";
 
@@ -99,5 +100,54 @@ describe("[Asset Worker] `handleRequest`", () => {
 		);
 
 		expect(response.status).toBe(200);
+	});
+
+	it("cannot fetch assets outside of configured path", async () => {
+		const assets: Record<string, string> = {
+			"/blog/test.html": "aaaaaaaaaa",
+			"/blog/index.html": "bbbbbbbbbb",
+			"/index.html": "cccccccccc",
+			"/test.html": "dddddddddd",
+		};
+
+		// Attempt to path traverse down to the root /test within asset-server
+		let response = await handleRequest(
+			new Request("https://example.com/blog/../test"),
+			applyConfigurationDefaults({}),
+			async (pathname: string) => {
+				if (pathname.startsWith("/blog/")) {
+					// our route
+					return assets[pathname] ?? null;
+				} else {
+					return null;
+				}
+			},
+			async (_: string) => ({
+				readableStream: new ReadableStream(),
+				contentType: "text/html",
+			})
+		);
+
+		expect(response.status).toBe(404);
+
+		// Attempt to path traverse down to the root /test within asset-server
+		response = await handleRequest(
+			new Request("https://example.com/blog/%2E%2E/test"),
+			applyConfigurationDefaults({}),
+			async (pathname: string) => {
+				if (pathname.startsWith("/blog/")) {
+					// our route
+					return assets[pathname] ?? null;
+				} else {
+					return null;
+				}
+			},
+			async (_: string) => ({
+				readableStream: new ReadableStream(),
+				contentType: "text/html",
+			})
+		);
+
+		expect(response.status).toBe(404);
 	});
 });

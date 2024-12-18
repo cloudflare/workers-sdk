@@ -174,8 +174,10 @@ function errIsStartupErr(err: unknown): err is ParseError & { code: 10021 } {
 	return false;
 }
 
-export const validateRoutes = (routes: Route[], hasAssets: boolean) => {
+export const validateRoutes = (routes: Route[], assets?: AssetsOptions) => {
 	const invalidRoutes: Record<string, string[]> = {};
+	const mountedAssetRoutes: string[] = [];
+
 	for (const route of routes) {
 		if (typeof route !== "string" && route.custom_domain) {
 			if (route.pattern.includes("*")) {
@@ -190,26 +192,17 @@ export const validateRoutes = (routes: Route[], hasAssets: boolean) => {
 					`Paths are not allowed in Custom Domains`
 				);
 			}
-		} else if (hasAssets) {
+			// If we have Assets but we're not always hitting the Worker then validate
+		} else if (
+			assets?.directory !== undefined &&
+			assets.assetConfig.serve_directly !== true
+		) {
 			const pattern = typeof route === "string" ? route : route.pattern;
 			const components = pattern.split("/");
 
-			if (
-				// = ["route.com"]  bare domains are invalid as it would only match exactly that
-				components.length === 1 ||
-				// = ["route.com",""] as above
-				(components.length === 2 && components[1] === "")
-			) {
-				invalidRoutes[pattern] ??= [];
-				invalidRoutes[pattern].push(
-					`Workers which have static assets must end with a wildcard path. Update the route to end with /*`
-				);
-				// ie it doesn't match exactly "route.com/*" = [route.com, *]
-			} else if (!(components.length === 2 && components[1] === "*")) {
-				invalidRoutes[pattern] ??= [];
-				invalidRoutes[pattern].push(
-					`Workers which have static assets cannot be routed on a URL which has a path component. Update the route to replace /${components.slice(1).join("/")} with /*`
-				);
+			// If this isn't `domain.com/*` then we're mounting to a path
+			if (!(components.length === 2 && components[1] === "*")) {
+				mountedAssetRoutes.push(pattern);
 			}
 		}
 	}
@@ -219,6 +212,26 @@ export const validateRoutes = (routes: Route[], hasAssets: boolean) => {
 				Object.entries(invalidRoutes)
 					.map(([route, errors]) => `${route}:\n` + errors.join("\n"))
 					.join(`\n\n`)
+		);
+	}
+
+	if (mountedAssetRoutes.length > 0 && assets?.directory !== undefined) {
+		const relativeAssetsDir = path.relative(process.cwd(), assets.directory);
+
+		logger.once.warn(
+			`Warning: The following routes will attempt to serve Assets on a configured path:\n${mountedAssetRoutes
+				.map((route) => {
+					const routeNoScheme = route.replace(/https?:\/\//g, "");
+					const assetPath = path.join(
+						relativeAssetsDir,
+						routeNoScheme.substring(routeNoScheme.indexOf("/"))
+					);
+					return `  • ${route} (Will match assets: ${assetPath})`;
+				})
+				.join("\n")}` +
+				(assets?.routingConfig.has_user_worker
+					? "\n\nRequests not matching an asset will be forwarded to the Worker's code."
+					: "")
 		);
 	}
 };
@@ -435,7 +448,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 	const routes =
 		props.routes ?? config.routes ?? (config.route ? [config.route] : []) ?? [];
-	validateRoutes(routes, Boolean(props.assetsOptions));
+	validateRoutes(routes, props.assetsOptions);
 
 	const jsxFactory = props.jsxFactory || config.jsx_factory;
 	const jsxFragment = props.jsxFragment || config.jsx_fragment;
