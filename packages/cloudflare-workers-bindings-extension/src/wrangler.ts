@@ -1,4 +1,5 @@
 import * as path from "path";
+import * as vscode from "vscode";
 
 export function importWrangler(
 	workspaceRoot: string
@@ -12,4 +13,14 @@ export function importWrangler(
 	);
 
 	return require(wrangler);
+}
+
+// Finds the first wrangler config file in the workspace and parse it
+export async function getConfigUri(): Promise<vscode.Uri | null> {
+	const [configUri] = await vscode.workspace.findFiles(
+		"wrangler.{toml,jsonc,json}",
+		null,
+		1
+	);
+	return configUri;
 }
