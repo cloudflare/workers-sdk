@@ -364,14 +364,10 @@ const replacingOnlyTestCases: Omit<TestCase, "additivePatch">[] = [
 	{
 		name: "delete an existing binding so that none are left",
 		original: {
-			kv_namespaces: [
-				{
-					binding: "KV",
-				},
-			],
+			compatibility_flags: ["test-flag"],
 		},
 		replacingPatch: {
-			kv_namespaces: undefined,
+			compatibility_flags: undefined,
 		},
 		expectedToml: dedent`
 				compatibility_date = "2022-01-12"
