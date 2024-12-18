@@ -6,7 +6,8 @@
 		"sourceMap": true,
 		"rootDir": "src",
 		"strict": true,
-		"noEmit": true /* enable all strict type-checking options */,
+		// We need to emit the file for tests to work
+		// "noEmit": true /* enable all strict type-checking options */,
 		"skipLibCheck": true
 		/* Additional Checks */
 		// "noImplicitReturns": true, /* Report error when not all code paths in function return a value. */
