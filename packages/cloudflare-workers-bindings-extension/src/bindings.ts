@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { getConfigUri, importWrangler } from "./wrangler";
+import { importWrangler } from "./wrangler";
 
 type Config = ReturnType<
 	ReturnType<typeof importWrangler>["experimental_readRawConfig"]
