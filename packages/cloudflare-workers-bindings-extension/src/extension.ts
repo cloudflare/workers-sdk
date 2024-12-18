@@ -1,4 +1,5 @@
 import * as vscode from "vscode";
+import { multiStepInput } from "./add-binding";
 import { BindingsProvider } from "./bindings";
 
 export type Result = {
@@ -31,7 +32,12 @@ export async function activate(
 		"cloudflare-workers-bindings.refresh",
 		() => bindingsProvider.refresh()
 	);
-
+	vscode.commands.registerCommand(
+		"cloudflare-workers-bindings.addEntry",
+		async () => {
+			await multiStepInput(context);
+		}
+	);
 	// Cleanup when the extension is deactivated
 	context.subscriptions.push(bindingsView, watcher, refreshCommand);
 

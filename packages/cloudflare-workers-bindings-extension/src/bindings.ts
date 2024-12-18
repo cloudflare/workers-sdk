@@ -200,26 +200,29 @@ export class BindingsProvider implements vscode.TreeDataProvider<Node> {
 
 // Finds the first wrangler config file in the workspace and parse it
 export async function getWranglerConfig(): Promise<Config | null> {
-	const [configUri] = await vscode.workspace.findFiles(
-		"wrangler.{toml,jsonc,json}",
-		null,
-		1
-	);
-
+	const configUri = await getConfigUri();
 	if (!configUri) {
 		return null;
 	}
-
 	const workspaceFolder = vscode.workspace.getWorkspaceFolder(configUri);
 
 	if (!workspaceFolder) {
 		return null;
 	}
 
-	const wrangler = await importWrangler(workspaceFolder.uri.fsPath);
+	const wrangler = importWrangler(workspaceFolder.uri.fsPath);
 	const { rawConfig } = wrangler.experimental_readRawConfig({
 		config: configUri.fsPath,
 	});
 
 	return rawConfig;
+}
+
+export async function getConfigUri(): Promise<vscode.Uri | null> {
+	const [configUri] = await vscode.workspace.findFiles(
+		"wrangler.{toml,jsonc,json}",
+		null,
+		1
+	);
+	return configUri;
 }

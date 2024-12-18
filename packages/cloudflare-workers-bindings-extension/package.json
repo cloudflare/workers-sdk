@@ -31,12 +31,22 @@
 				"command": "cloudflare-workers-bindings.refresh",
 				"title": "Cloudflare Workers: Refresh bindings",
 				"icon": "$(refresh)"
+			},
+			{
+				"command": "cloudflare-workers-bindings.addEntry",
+				"title": "Cloudflare Workers: Add binding",
+				"icon": "$(add)"
 			}
 		],
 		"menus": {
 			"view/title": [
 				{
 					"command": "cloudflare-workers-bindings.refresh",
+					"when": "view == cloudflare-workers-bindings",
+					"group": "navigation"
+				},
+				{
+					"command": "cloudflare-workers-bindings.addEntry",
 					"when": "view == cloudflare-workers-bindings",
 					"group": "navigation"
 				}
@@ -64,7 +74,7 @@
 		"viewsWelcome": [
 			{
 				"view": "cloudflare-workers-bindings",
-				"contents": "Welcome to Cloudflare Workers! [Learn more](https://workers.cloudflare.com).\n[Refresh Bindings](command:cloudflare-workers-bindings.refresh)"
+				"contents": "Welcome to Cloudflare Workers! [Learn more](https://workers.cloudflare.com).\n[Add a binding](command:cloudflare-workers-bindings.addEntry)"
 			}
 		]
 	},
