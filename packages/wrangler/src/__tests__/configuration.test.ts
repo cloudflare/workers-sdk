@@ -1,5 +1,6 @@
+import * as fs from "fs";
 import path from "node:path";
-import { readConfig } from "../config";
+import { experimental_readRawConfig, readConfig } from "../config";
 import { normalizeAndValidateConfig } from "../config/validation";
 import { run } from "../experimental-flags";
 import { normalizeString } from "./helpers/normalize";
@@ -6035,6 +6036,57 @@ describe("normalizeAndValidateConfig()", () => {
 			});
 		});
 	});
+});
+
+describe("experimental_readRawConfig()", () => {
+	describe.each(["json", "jsonc", "toml"])(
+		`with %s config files`,
+		(configType) => {
+			runInTempDir();
+			it(`should find a ${configType} config file given a specific path`, () => {
+				fs.mkdirSync("../folder", { recursive: true });
+				writeWranglerConfig({}, `../folder/config.${configType}`);
+
+				const result = experimental_readRawConfig({
+					config: `../folder/config.${configType}`,
+				});
+				expect(result.rawConfig).toEqual({
+					compatibility_date: "2022-01-12",
+					name: "test-name",
+				});
+			});
+
+			it("should find a config file given a specific script", () => {
+				fs.mkdirSync("./path/to", { recursive: true });
+				writeWranglerConfig(
+					{ name: "config-one" },
+					`./path/wrangler.${configType}`
+				);
+
+				fs.mkdirSync("../folder", { recursive: true });
+				writeWranglerConfig(
+					{ name: "config-two" },
+					`../folder/wrangler.${configType}`
+				);
+
+				let result = experimental_readRawConfig({
+					script: "./path/to/index.js",
+				});
+				expect(result.rawConfig).toEqual({
+					compatibility_date: "2022-01-12",
+					name: "config-one",
+				});
+
+				result = experimental_readRawConfig({
+					script: "../folder/index.js",
+				});
+				expect(result.rawConfig).toEqual({
+					compatibility_date: "2022-01-12",
+					name: "config-two",
+				});
+			});
+		}
+	);
 });
 
 function normalizePath(text: string): string {

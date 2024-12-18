@@ -10,11 +10,10 @@ import { ai } from "./ai";
 import { cloudchamber } from "./cloudchamber";
 import {
 	configFileName,
+	experimental_readRawConfig,
 	formatConfigSnippet,
 	loadDotEnv,
-	readRawConfig,
 } from "./config";
-import { resolveWranglerConfigPath } from "./config/config-helpers";
 import { demandSingleValue } from "./core";
 import { CommandRegistry } from "./core/CommandRegistry";
 import { createRegisterYargsCommand } from "./core/register-yargs-command";
@@ -1153,8 +1152,7 @@ export async function main(argv: string[]): Promise<void> {
 		// key to fetch) or flags
 
 		try {
-			const configPath = resolveWranglerConfigPath(args);
-			const rawConfig = readRawConfig(configPath);
+			const { rawConfig, configPath } = experimental_readRawConfig(args);
 			dispatcher = getMetricsDispatcher({
 				sendMetrics: rawConfig.send_metrics,
 				configPath,
