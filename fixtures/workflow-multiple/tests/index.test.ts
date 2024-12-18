@@ -48,7 +48,8 @@ describe("Workflows", () => {
 			id: "test",
 			status: {
 				status: "running",
-				output: [],
+				__LOCAL_DEV_STEP_OUTPUTS: [],
+				output: null,
 			},
 		};
 
@@ -65,7 +66,8 @@ describe("Workflows", () => {
 			id: "test",
 			status: {
 				status: "running",
-				output: [{ output: "First step result" }],
+				__LOCAL_DEV_STEP_OUTPUTS: [{ output: "First step result" }],
+				output: null,
 			},
 		};
 		await Promise.all([
@@ -96,10 +98,11 @@ describe("Workflows", () => {
 						id: "test",
 						status: {
 							status: "complete",
-							output: [
+							__LOCAL_DEV_STEP_OUTPUTS: [
 								{ output: "First step result" },
 								{ output: "workflow1" },
 							],
+							output: "i'm workflow1",
 						},
 					});
 				},
@@ -113,10 +116,11 @@ describe("Workflows", () => {
 						id: "test",
 						status: {
 							status: "complete",
-							output: [
+							__LOCAL_DEV_STEP_OUTPUTS: [
 								{ output: "First step result" },
 								{ output: "workflow2" },
 							],
+							output: "i'm workflow2",
 						},
 					});
 				},
