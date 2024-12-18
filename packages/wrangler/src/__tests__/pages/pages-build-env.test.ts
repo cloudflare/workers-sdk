@@ -1,11 +1,12 @@
 /* eslint-disable turbo/no-undeclared-env-vars */
-import { readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { logger } from "../../logger";
 import {
 	EXIT_CODE_INVALID_PAGES_CONFIG,
 	EXIT_CODE_NO_CONFIG_FOUND,
 } from "../../pages/errors";
 import { mockConsoleMethods } from "../helpers/mock-console";
+import { normalizeString } from "../helpers/normalize";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 import { writeWranglerConfig } from "../helpers/write-wrangler-config";
@@ -390,5 +391,35 @@ describe("pages build env", () => {
 		expect(readFileSync("data.json", "utf8")).toMatchInlineSnapshot(
 			`"{\\"vars\\":{\\"VAR1\\":\\"PREVIEW_VALUE1\\",\\"VAR2\\":\\"PREVIEW_VALUE2\\",\\"PREVIEW_VAR3\\":\\"PREVIEW_VALUE3\\"},\\"pages_build_output_dir\\":\\"dist\\"}"`
 		);
+	});
+
+	it("should render output directory path relative to project directory, even if wrangler config is redirected", async () => {
+		vi.stubEnv("PAGES_ENVIRONMENT", "");
+		writeWranglerConfig(
+			{
+				// Note this path is relative to the "generated" wrangler.json
+				pages_build_output_dir: "./dist",
+			},
+			"build/wrangler.json"
+		);
+		mkdirSync(".wrangler/deploy", { recursive: true });
+		writeFileSync(
+			".wrangler/deploy/config.json",
+			JSON.stringify({ configPath: "../../build/wrangler.json" })
+		);
+
+		await runWrangler("pages functions build-env . --outfile data.json");
+		expect(std.out).toMatchInlineSnapshot(`
+			"Checking for configuration in a Wrangler configuration file (BETA)
+
+			Found wrangler.json file. Reading build configuration...
+			pages_build_output_dir: build/dist
+			Build environment variables: (none found)"
+		`);
+		expect(
+			normalizeString(
+				JSON.parse(readFileSync("data.json", "utf8")).pages_build_output_dir
+			)
+		).toEqual("build/dist");
 	});
 });
