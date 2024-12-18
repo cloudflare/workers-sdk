@@ -107,12 +107,25 @@ interface S3AccessKey {
 	secretAccessKey: string;
 }
 
-// Generate a Service Token to write to R2 for a pipeline
+/**
+ * Generate an R2 service token for the given account ID, bucket name, and pipeline name.
+ *
+ * This function kicks off its own OAuth process using the Workers Pipelines OAuth client requesting the scope
+ * `pipelines:setup`. Once the user confirms, our OAuth callback endpoint will validate the request, exchange the
+ * authorization code and return a bucket-scoped R2 token.
+ *
+ * This OAuth flow is distinct from the one used in `wrangler login` to ensure these tokens are generated server-side
+ * and that only the tokens of concern are returned to the user.
+ * @param accountId
+ * @param bucketName
+ * @param pipelineName
+ */
 export async function generateR2ServiceToken(
 	accountId: string,
 	bucketName: string,
 	pipelineName: string
 ): Promise<S3AccessKey> {
+	// TODO: Refactor into startHttpServerWithTimeout function and update `getOauthToken`
 	let server: http.Server;
 	let loginTimeoutHandle: ReturnType<typeof setTimeout>;
 	const timerPromise = new Promise<S3AccessKey>((_, reject) => {
