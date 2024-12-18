@@ -130,9 +130,15 @@ importers:
       '@cloudflare/workers-types':
         specifier: ^4.20241205.0
         version: 4.20241205.0
+      typescript:
+        specifier: catalog:default
+        version: 5.6.3
       undici:
         specifier: catalog:default
         version: 5.28.4
+      vitest:
+        specifier: catalog:default
+        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -142,9 +148,15 @@ importers:
       '@cloudflare/workers-tsconfig':
         specifier: workspace:^
         version: link:../../packages/workers-tsconfig
+      typescript:
+        specifier: catalog:default
+        version: 5.6.3
       undici:
         specifier: catalog:default
         version: 5.28.4
+      vitest:
+        specifier: catalog:default
+        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -163,6 +175,9 @@ importers:
       run-script-os:
         specifier: ^1.1.6
         version: 1.1.6
+      typescript:
+        specifier: catalog:default
+        version: 5.6.3
       undici:
         specifier: catalog:default
         version: 5.28.4
@@ -187,6 +202,9 @@ importers:
       undici:
         specifier: catalog:default
         version: 5.28.4
+      vitest:
+        specifier: catalog:default
+        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -202,6 +220,9 @@ importers:
       undici:
         specifier: catalog:default
         version: 5.28.4
+      vitest:
+        specifier: catalog:default
+        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -214,9 +235,15 @@ importers:
       '@cloudflare/workers-types':
         specifier: ^4.20241205.0
         version: 4.20241205.0
+      typescript:
+        specifier: catalog:default
+        version: 5.6.3
       undici:
         specifier: catalog:default
         version: 5.28.4
+      vitest:
+        specifier: catalog:default
+        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -232,9 +259,15 @@ importers:
       '@cloudflare/workers-tsconfig':
         specifier: workspace:^
         version: link:../../packages/workers-tsconfig
+      typescript:
+        specifier: catalog:default
+        version: 5.6.3
       undici:
         specifier: catalog:default
         version: 5.28.4
+      vitest:
+        specifier: catalog:default
+        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -256,6 +289,9 @@ importers:
       undici:
         specifier: catalog:default
         version: 5.28.4
+      vitest:
+        specifier: catalog:default
+        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
 
   fixtures/isomorphic-random-example: {}
 
@@ -275,6 +311,12 @@ importers:
       buffer:
         specifier: ^6.0.3
         version: 6.0.3
+      typescript:
+        specifier: catalog:default
+        version: 5.6.3
+      vitest:
+        specifier: catalog:default
+        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -284,6 +326,9 @@ importers:
       get-port:
         specifier: ^7.0.0
         version: 7.0.0
+      vitest:
+        specifier: catalog:default
+        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -300,9 +345,15 @@ importers:
       '@cloudflare/workers-types':
         specifier: ^4.20241205.0
         version: 4.20241205.0
+      typescript:
+        specifier: catalog:default
+        version: 5.6.3
       undici:
         specifier: catalog:default
         version: 5.28.4
+      vitest:
+        specifier: catalog:default
+        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -318,6 +369,9 @@ importers:
       undici:
         specifier: catalog:default
         version: 5.28.4
+      vitest:
+        specifier: catalog:default
+        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -342,6 +396,9 @@ importers:
       undici:
         specifier: catalog:default
         version: 5.28.4
+      vitest:
+        specifier: catalog:default
+        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -351,9 +408,15 @@ importers:
       '@cloudflare/workers-tsconfig':
         specifier: workspace:*
         version: link:../../packages/workers-tsconfig
+      typescript:
+        specifier: catalog:default
+        version: 5.6.3
       undici:
         specifier: catalog:default
         version: 5.28.4
+      vitest:
+        specifier: catalog:default
+        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -366,9 +429,15 @@ importers:
       '@cloudflare/workers-types':
         specifier: ^4.20241205.0
         version: 4.20241205.0
+      typescript:
+        specifier: catalog:default
+        version: 5.6.3
       undici:
         specifier: catalog:default
         version: 5.28.4
+      vitest:
+        specifier: catalog:default
+        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -388,9 +457,15 @@ importers:
       pages-plugin-example:
         specifier: workspace:*
         version: link:../pages-plugin-example
+      typescript:
+        specifier: catalog:default
+        version: 5.6.3
       undici:
         specifier: catalog:default
         version: 5.28.4
+      vitest:
+        specifier: catalog:default
+        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -400,9 +475,15 @@ importers:
       '@cloudflare/workers-tsconfig':
         specifier: workspace:*
         version: link:../../packages/workers-tsconfig
+      typescript:
+        specifier: catalog:default
+        version: 5.6.3
       undici:
         specifier: catalog:default
         version: 5.28.4
+      vitest:
+        specifier: catalog:default
+        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -412,9 +493,15 @@ importers:
       '@cloudflare/workers-tsconfig':
         specifier: workspace:*
         version: link:../../packages/workers-tsconfig
+      typescript:
+        specifier: catalog:default
+        version: 5.6.3
       undici:
         specifier: catalog:default
         version: 5.28.4
+      vitest:
+        specifier: catalog:default
+        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -427,9 +514,15 @@ importers:
       '@cloudflare/workers-types':
         specifier: ^4.20241205.0
         version: 4.20241205.0
+      typescript:
+        specifier: catalog:default
+        version: 5.6.3
       undici:
         specifier: catalog:default
         version: 5.28.4
+      vitest:
+        specifier: catalog:default
+        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -439,9 +532,15 @@ importers:
       '@cloudflare/workers-tsconfig':
         specifier: workspace:^
         version: link:../../packages/workers-tsconfig
+      typescript:
+        specifier: catalog:default
+        version: 5.6.3
       undici:
         specifier: catalog:default
         version: 5.28.4
+      vitest:
+        specifier: catalog:default
+        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -470,9 +569,15 @@ importers:
       pages-plugin-example:
         specifier: workspace:*
         version: link:../pages-plugin-example
+      typescript:
+        specifier: catalog:default
+        version: 5.6.3
       undici:
         specifier: catalog:default
         version: 5.28.4
+      vitest:
+        specifier: catalog:default
+        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -485,9 +590,15 @@ importers:
       miniflare:
         specifier: workspace:*
         version: link:../../packages/miniflare
+      typescript:
+        specifier: catalog:default
+        version: 5.6.3
       undici:
         specifier: catalog:default
         version: 5.28.4
+      vitest:
+        specifier: catalog:default
+        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -500,9 +611,15 @@ importers:
       '@cloudflare/workers-types':
         specifier: ^4.20241205.0
         version: 4.20241205.0
+      typescript:
+        specifier: catalog:default
+        version: 5.6.3
       undici:
         specifier: catalog:default
         version: 5.28.4
+      vitest:
+        specifier: catalog:default
+        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -512,9 +629,15 @@ importers:
       '@cloudflare/workers-tsconfig':
         specifier: workspace:*
         version: link:../../packages/workers-tsconfig
+      typescript:
+        specifier: catalog:default
+        version: 5.6.3
       undici:
         specifier: catalog:default
         version: 5.28.4
+      vitest:
+        specifier: catalog:default
+        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -524,9 +647,15 @@ importers:
       '@cloudflare/workers-tsconfig':
         specifier: workspace:^
         version: link:../../packages/workers-tsconfig
+      typescript:
+        specifier: catalog:default
+        version: 5.6.3
       undici:
         specifier: catalog:default
         version: 5.28.4
+      vitest:
+        specifier: catalog:default
+        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -536,9 +665,15 @@ importers:
       '@cloudflare/workers-tsconfig':
         specifier: workspace:*
         version: link:../../packages/workers-tsconfig
+      typescript:
+        specifier: catalog:default
+        version: 5.6.3
       undici:
         specifier: catalog:default
         version: 5.28.4
+      vitest:
+        specifier: catalog:default
+        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -548,9 +683,15 @@ importers:
       '@cloudflare/workers-tsconfig':
         specifier: workspace:*
         version: link:../../packages/workers-tsconfig
+      typescript:
+        specifier: catalog:default
+        version: 5.6.3
       undici:
         specifier: catalog:default
         version: 5.28.4
+      vitest:
+        specifier: catalog:default
+        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -560,9 +701,15 @@ importers:
       '@cloudflare/workers-tsconfig':
         specifier: workspace:*
         version: link:../../packages/workers-tsconfig
+      typescript:
+        specifier: catalog:default
+        version: 5.6.3
       undici:
         specifier: catalog:default
         version: 5.28.4
+      vitest:
+        specifier: catalog:default
+        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -572,9 +719,15 @@ importers:
       '@cloudflare/workers-tsconfig':
         specifier: workspace:*
         version: link:../../packages/workers-tsconfig
+      typescript:
+        specifier: catalog:default
+        version: 5.6.3
       undici:
         specifier: catalog:default
         version: 5.28.4
+      vitest:
+        specifier: catalog:default
+        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -587,6 +740,12 @@ importers:
       miniflare:
         specifier: workspace:*
         version: link:../../packages/miniflare
+      typescript:
+        specifier: catalog:default
+        version: 5.6.3
+      vitest:
+        specifier: catalog:default
+        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -599,9 +758,15 @@ importers:
       '@cloudflare/workers-tsconfig':
         specifier: workspace:^
         version: link:../../packages/workers-tsconfig
+      typescript:
+        specifier: catalog:default
+        version: 5.6.3
       undici:
         specifier: catalog:default
         version: 5.28.4
+      vitest:
+        specifier: catalog:default
+        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -624,6 +789,9 @@ importers:
 
   fixtures/type-generation:
     devDependencies:
+      vitest:
+        specifier: catalog:default
+        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -684,9 +852,15 @@ importers:
       '@cloudflare/workers-tsconfig':
         specifier: workspace:^
         version: link:../../packages/workers-tsconfig
+      typescript:
+        specifier: catalog:default
+        version: 5.6.3
       undici:
         specifier: catalog:default
         version: 5.28.4
+      vitest:
+        specifier: catalog:default
+        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -710,9 +884,15 @@ importers:
       '@cloudflare/workers-types':
         specifier: ^4.20241205.0
         version: 4.20241205.0
+      typescript:
+        specifier: catalog:default
+        version: 5.6.3
       undici:
         specifier: catalog:default
         version: 5.28.4
+      vitest:
+        specifier: catalog:default
+        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -725,9 +905,15 @@ importers:
       '@cloudflare/workers-types':
         specifier: ^4.20241205.0
         version: 4.20241205.0
+      typescript:
+        specifier: catalog:default
+        version: 5.6.3
       undici:
         specifier: catalog:default
         version: 5.28.4
+      vitest:
+        specifier: catalog:default
+        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -740,9 +926,15 @@ importers:
       '@cloudflare/workers-types':
         specifier: ^4.20241205.0
         version: 4.20241205.0
+      typescript:
+        specifier: catalog:default
+        version: 5.6.3
       undici:
         specifier: catalog:default
         version: 5.28.4
+      vitest:
+        specifier: catalog:default
+        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -752,9 +944,15 @@ importers:
       '@cloudflare/workers-types':
         specifier: ^4.20241205.0
         version: 4.20241205.0
+      typescript:
+        specifier: catalog:default
+        version: 5.6.3
       undici:
         specifier: catalog:default
         version: 5.28.4
+      vitest:
+        specifier: catalog:default
+        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -764,9 +962,15 @@ importers:
       '@cloudflare/workers-types':
         specifier: ^4.20241205.0
         version: 4.20241205.0
+      typescript:
+        specifier: catalog:default
+        version: 5.6.3
       undici:
         specifier: catalog:default
         version: 5.28.4
+      vitest:
+        specifier: catalog:default
+        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -13441,7 +13645,7 @@ snapshots:
       assertion-error: 2.0.1
       check-error: 2.1.1
       deep-eql: 5.0.2
-      loupe: 3.1.1
+      loupe: 3.1.2
       pathval: 2.0.0
 
   chainsaw@0.1.0:

@@ -7,13 +7,14 @@
 	"main": "src/index.js",
 	"scripts": {
 		"dev": "wrangler deploy --dry-run",
-		"test": "npx vitest run",
-		"test:ci": "npx vitest run",
-		"test:watch": "npx vitest"
+		"test": "vitest run",
+		"test:ci": "vitest run",
+		"test:watch": "vitest"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-tsconfig": "workspace:^",
 		"undici": "catalog:default",
+		"vitest": "catalog:default",
 		"wrangler": "workspace:*"
 	},
 	"volta": {

@@ -6,7 +6,7 @@
 	"scripts": {
 		"build": "esbuild --bundle --platform=node server/index.ts --outfile=dist/index.js",
 		"check:type": "tsc",
-		"dev": "npx wrangler pages dev --port 8790 --proxy 8791 -- pnpm run server",
+		"dev": "wrangler pages dev --port 8790 --proxy 8791 -- pnpm run server",
 		"server": "node dist/index.js",
 		"test:ci": "vitest run",
 		"test:watch": "vitest",
@@ -15,6 +15,8 @@
 	"devDependencies": {
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"miniflare": "workspace:*",
+		"typescript": "catalog:default",
+		"vitest": "catalog:default",
 		"wrangler": "workspace:*",
 		"ws": "^8.18.0"
 	},
