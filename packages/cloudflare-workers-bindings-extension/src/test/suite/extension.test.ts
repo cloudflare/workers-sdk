@@ -57,59 +57,61 @@ describe("Extension Test Suite", () => {
 
 				const children = await bindingsProvider.getChildren();
 
-				assert.deepEqual(children, [
-					{
-						type: "binding",
-						config,
-						env: null,
-						binding: "KV Namespaces",
-					},
-					{
-						type: "binding",
-						config,
-						env: null,
-						binding: "R2 Buckets",
-					},
-					{
-						type: "binding",
-						config,
-						env: null,
-						binding: "D1 Databases",
-					},
-				]);
+				assert.deepEqual(
+					children.map((child) => bindingsProvider.getTreeItem(child)),
+					[
+						{
+							label: "KV Namespaces",
+							collapsibleState: vscode.TreeItemCollapsibleState.Expanded,
+						},
+						{
+							label: "R2 Buckets",
+							collapsibleState: vscode.TreeItemCollapsibleState.Expanded,
+						},
+						{
+							label: "D1 Databases",
+							collapsibleState: vscode.TreeItemCollapsibleState.Expanded,
+						},
+					]
+				);
 
 				const [kv, r2, d1] = children;
 
-				assert.deepEqual(await bindingsProvider.getChildren(kv), [
-					{
-						type: "resource",
-						config,
-						env: null,
-						binding: "KV Namespaces",
-						name: "cache",
-						description: "xx-yyyy-zzz",
-					},
-				]);
-				assert.deepEqual(await bindingsProvider.getChildren(r2), [
-					{
-						type: "resource",
-						config,
-						env: null,
-						binding: "R2 Buckets",
-						name: "images",
-						description: "something",
-					},
-				]);
-				assert.deepEqual(await bindingsProvider.getChildren(d1), [
-					{
-						type: "resource",
-						config,
-						env: null,
-						binding: "D1 Databases",
-						name: "db",
-						description: "xxxxyyyyzzzzz",
-					},
-				]);
+				const kvChildren = await bindingsProvider.getChildren(kv);
+				assert.deepEqual(
+					kvChildren.map((child) => bindingsProvider.getTreeItem(child)),
+					[
+						{
+							label: "cache",
+							description: "xx-yyyy-zzz",
+							collapsibleState: vscode.TreeItemCollapsibleState.None,
+						},
+					]
+				);
+
+				const r2Children = await bindingsProvider.getChildren(r2);
+				assert.deepEqual(
+					r2Children.map((child) => bindingsProvider.getTreeItem(child)),
+					[
+						{
+							label: "images",
+							description: "something",
+							collapsibleState: vscode.TreeItemCollapsibleState.None,
+						},
+					]
+				);
+
+				const d1Children = await bindingsProvider.getChildren(d1);
+				assert.deepEqual(
+					d1Children.map((child) => bindingsProvider.getTreeItem(child)),
+					[
+						{
+							label: "db",
+							description: "xxxxyyyyzzzzz",
+							collapsibleState: vscode.TreeItemCollapsibleState.None,
+						},
+					]
+				);
 			} finally {
 				await cleanup();
 			}
@@ -154,52 +156,64 @@ describe("Extension Test Suite", () => {
 
 				const children = await bindingsProvider.getChildren();
 
-				assert.deepEqual(children, [
-					{
-						type: "env",
-						config,
-						env: null,
-					},
-					{
-						type: "env",
-						config,
-						env: "staging",
-					},
-					{
-						type: "env",
-						config,
-						env: "production",
-					},
-				]);
+				assert.deepEqual(
+					children.map((child) => bindingsProvider.getTreeItem(child)),
+					[
+						{
+							label: "Top-level env",
+							collapsibleState: vscode.TreeItemCollapsibleState.Expanded,
+						},
+						{
+							label: "staging",
+							collapsibleState: vscode.TreeItemCollapsibleState.Expanded,
+						},
+						{
+							label: "production",
+							collapsibleState: vscode.TreeItemCollapsibleState.Expanded,
+						},
+					]
+				);
 
 				const [topLevelEnv, staging, production] = children;
 
-				assert.deepEqual(await bindingsProvider.getChildren(topLevelEnv), [
-					{
-						type: "binding",
-						config,
-						env: null,
-						binding: "D1 Databases",
-					},
-				]);
+				const topLevelEnvChildren =
+					await bindingsProvider.getChildren(topLevelEnv);
+				assert.deepEqual(
+					topLevelEnvChildren.map((child) =>
+						bindingsProvider.getTreeItem(child)
+					),
+					[
+						{
+							label: "D1 Databases",
+							collapsibleState: vscode.TreeItemCollapsibleState.Expanded,
+						},
+					]
+				);
 
-				assert.deepEqual(await bindingsProvider.getChildren(staging), [
-					{
-						type: "binding",
-						config,
-						env: "staging",
-						binding: "KV Namespaces",
-					},
-				]);
+				const stagingChildren = await bindingsProvider.getChildren(staging);
+				assert.deepEqual(
+					stagingChildren.map((child) => bindingsProvider.getTreeItem(child)),
+					[
+						{
+							label: "KV Namespaces",
+							collapsibleState: vscode.TreeItemCollapsibleState.Expanded,
+						},
+					]
+				);
 
-				assert.deepEqual(await bindingsProvider.getChildren(production), [
-					{
-						type: "binding",
-						config,
-						env: "production",
-						binding: "R2 Buckets",
-					},
-				]);
+				const productionChildren =
+					await bindingsProvider.getChildren(production);
+				assert.deepEqual(
+					productionChildren.map((child) =>
+						bindingsProvider.getTreeItem(child)
+					),
+					[
+						{
+							label: "R2 Buckets",
+							collapsibleState: vscode.TreeItemCollapsibleState.Expanded,
+						},
+					]
+				);
 			} finally {
 				await cleanup();
 			}
@@ -229,13 +243,15 @@ describe("Extension Test Suite", () => {
 
 				const children = await bindingsProvider.getChildren();
 
-				assert.deepEqual(children, [
-					{
-						type: "env",
-						config,
-						env: "production",
-					},
-				]);
+				assert.deepEqual(
+					children.map((child) => bindingsProvider.getTreeItem(child)),
+					[
+						{
+							label: "production",
+							collapsibleState: vscode.TreeItemCollapsibleState.Expanded,
+						},
+					]
+				);
 			} finally {
 				await cleanup();
 			}
