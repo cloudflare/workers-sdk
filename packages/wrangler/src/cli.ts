@@ -60,3 +60,4 @@ const generateASSETSBinding: (
 export { generateASSETSBinding as unstable_generateASSETSBinding };
 
 export { experimental_readRawConfig } from "./config";
+export { experimental_patchConfig } from "./config/patch-config";
