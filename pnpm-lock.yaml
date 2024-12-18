@@ -1812,8 +1812,8 @@ importers:
         specifier: ^0.6.1
         version: 0.6.1
       unenv:
-        specifier: npm:unenv-nightly@2.0.0-20241212-153011-af71c96
-        version: unenv-nightly@2.0.0-20241212-153011-af71c96
+        specifier: npm:unenv-nightly@2.0.0-20241204-140205-a5d5190
+        version: unenv-nightly@2.0.0-20241204-140205-a5d5190
       workerd:
         specifier: 1.20241205.0
         version: 1.20241205.0
@@ -9602,9 +9602,6 @@ packages:
   unenv-nightly@2.0.0-20241204-140205-a5d5190:
     resolution: {integrity: sha512-jpmAytLeiiW01pl5bhVn9wYJ4vtiLdhGe10oXlJBuQEX8mxjxO8BlEXGHU4vr4yEikjFP1wsomTHt/CLU8kUwg==}
 
-  unenv-nightly@2.0.0-20241212-153011-af71c96:
-    resolution: {integrity: sha512-Yugb9yPs/EZsPOY+IHloqVVEcZeJ0uwwViTedsZjOtVeYO8I29B1rzU/p84FMT0R1Ht3bHsKkNV/rzrjSd07QA==}
-
   unenv-nightly@2.0.0-20241216-144314-7e05819:
     resolution: {integrity: sha512-HpRspwDDxEwb6f9jOJYdL8iuZ054GIJ61LWHui7FPcgSVUPIXjZ3Nf0bh0qVIEqSGb3bNU/C1Zcw6fKHVl4lDg==}
 
@@ -16181,7 +16178,7 @@ snapshots:
   miniflare@3.20241205.0:
     dependencies:
       '@cspotcode/source-map-support': 0.8.1
-      acorn: 8.14.0
+      acorn: 8.11.3
       acorn-walk: 8.3.2
       capnp-ts: 0.7.0(patch_hash=l4yimnxyvkiyj6alnps2ec3sii)
       exit-hook: 2.2.1
@@ -18502,7 +18499,7 @@ snapshots:
       mkdist: 1.6.0(typescript@5.6.3)(vue-tsc@2.0.29(typescript@5.6.3))
       mlly: 1.7.3
       pathe: 1.1.2
-      pkg-types: 1.2.1
+      pkg-types: 1.0.3
       pretty-bytes: 6.1.1
       rollup: 3.29.5
       rollup-plugin-dts: 6.1.1(rollup@3.29.5)(typescript@5.6.3)
@@ -18541,14 +18538,6 @@ snapshots:
   unenv-nightly@2.0.0-20241204-140205-a5d5190:
     dependencies:
       defu: 6.1.4
-      ohash: 1.1.4
-      pathe: 1.1.2
-      ufo: 1.5.4
-
-  unenv-nightly@2.0.0-20241212-153011-af71c96:
-    dependencies:
-      defu: 6.1.4
-      mlly: 1.7.3
       ohash: 1.1.4
       pathe: 1.1.2
       ufo: 1.5.4
