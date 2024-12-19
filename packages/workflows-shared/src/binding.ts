@@ -1,4 +1,4 @@
-import { RpcTarget, WorkerEntrypoint, WorkflowEvent } from "cloudflare:workers";
+import { RpcTarget, WorkerEntrypoint } from "cloudflare:workers";
 import { InstanceEvent, instanceStatusName } from "./instance";
 import type {
 	DatabaseInstance,
