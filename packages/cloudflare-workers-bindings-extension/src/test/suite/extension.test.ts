@@ -2,7 +2,9 @@ import assert from "node:assert";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import * as vscode from "vscode";
+import { getBindingName } from "../../show-bindings";
 import type { Result } from "../../extension";
+import type { BindingType, Config } from "../../show-bindings";
 
 // Environment variable set by the test runner (See packages/cloudflare-workers-bindings-extension/src/test/runTest.ts)
 assert(
@@ -26,29 +28,120 @@ describe("Extension Test Suite", () => {
 		});
 
 		it("lists bindings based on the wrangler config", async () => {
-			const config = {
-				name: "test",
-				kv_namespaces: [
-					{
-						binding: "cache",
-						id: "xx-yyyy-zzz",
-					},
-				],
-				r2_buckets: [
-					{
-						binding: "images",
-						bucket_name: "something",
-					},
-				],
-				d1_databases: [
-					{
-						binding: "db",
-						database_id: "xxxxyyyyzzzzz",
-					},
-				],
-			};
 			const cleanup = await seed({
-				"wrangler.json": JSON.stringify(config),
+				"wrangler.json": generateWranglerConfig({
+					ai: {
+						binding: "AI",
+					},
+					analytics_engine_datasets: [
+						{
+							binding: "ANALYTICS",
+							dataset: "<dataset>",
+						},
+					],
+					assets: {
+						binding: "ASSETS",
+						directory: "./public/",
+					},
+					browser: {
+						binding: "MYBROWSER",
+					},
+					d1_databases: [
+						{
+							binding: "DB",
+							database_id: "<YOUR_D1_DATABASE_ID>",
+						},
+					],
+					dispatch_namespaces: [
+						{
+							binding: "DISPATCHER",
+							namespace: "testing",
+						},
+					],
+					durable_objects: {
+						bindings: [
+							{
+								name: "MY_DURABLE_OBJECT",
+								class_name: "MyDurableObject",
+							},
+						],
+					},
+					vars: {
+						API_HOST: "example.com",
+						API_ACCOUNT_ID: "example_user",
+						SERVICE_X_DATA: {
+							URL: "service-x-api.dev.example",
+							MY_ID: 123,
+						},
+					},
+					hyperdrive: [
+						{
+							binding: "HYPERDRIVE",
+							id: "<YOUR_DATABASE_ID>",
+						},
+					],
+					kv_namespaces: [
+						{
+							binding: "CACHE",
+							id: "<YOUR_KV_NAMESPACE_ID>",
+						},
+					],
+					mtls_certificates: [
+						{
+							binding: "MY_CERT",
+							certificate_id: "<CERTIFICATE_ID>",
+						},
+					],
+					queues: {
+						producers: [
+							{
+								queue: "MY-QUEUE-NAME",
+								binding: "MY_QUEUE",
+							},
+						],
+					},
+					r2_buckets: [
+						{
+							binding: "IMAGES",
+							bucket_name: "<YOUR_BUCKET_NAME>",
+						},
+					],
+					services: [
+						{
+							binding: "<BINDING_NAME>",
+							service: "<WORKER_NAME>",
+						},
+					],
+					vectorize: [
+						{
+							binding: "VECTORIZE",
+							index_name: "embeddings-index",
+						},
+					],
+					version_metadata: {
+						binding: "CF_VERSION_METADATA",
+					},
+					workflows: [
+						{
+							name: "workflows-starter",
+							binding: "MY_WORKFLOW",
+							class_name: "MyWorkflow",
+						},
+					],
+					unsafe: {
+						bindings: [
+							{
+								name: "MY_RATE_LIMITER",
+								type: "ratelimit",
+								namespace_id: "1001",
+								simple: {
+									limit: 100,
+									period: 60,
+								},
+							},
+						],
+					},
+				}),
 			});
 
 			try {
@@ -61,93 +154,286 @@ describe("Extension Test Suite", () => {
 					children.map((child) => bindingsProvider.getTreeItem(child)),
 					[
 						{
-							label: "KV Namespaces",
+							label: getBindingName("kv_namespaces"),
 							collapsibleState: vscode.TreeItemCollapsibleState.Expanded,
 						},
 						{
-							label: "R2 Buckets",
+							label: getBindingName("r2_buckets"),
 							collapsibleState: vscode.TreeItemCollapsibleState.Expanded,
 						},
 						{
-							label: "D1 Databases",
+							label: getBindingName("d1_databases"),
+							collapsibleState: vscode.TreeItemCollapsibleState.Expanded,
+						},
+						{
+							label: getBindingName("durable_objects"),
+							collapsibleState: vscode.TreeItemCollapsibleState.Expanded,
+						},
+						{
+							label: getBindingName("ai"),
+							collapsibleState: vscode.TreeItemCollapsibleState.Expanded,
+						},
+						{
+							label: getBindingName("analytics_engine_datasets"),
+							collapsibleState: vscode.TreeItemCollapsibleState.Expanded,
+						},
+						{
+							label: getBindingName("browser"),
+							collapsibleState: vscode.TreeItemCollapsibleState.Expanded,
+						},
+						{
+							label: getBindingName("hyperdrive"),
+							collapsibleState: vscode.TreeItemCollapsibleState.Expanded,
+						},
+						{
+							label: getBindingName("mtls_certificates"),
+							collapsibleState: vscode.TreeItemCollapsibleState.Expanded,
+						},
+						{
+							label: getBindingName("services"),
+							collapsibleState: vscode.TreeItemCollapsibleState.Expanded,
+						},
+						{
+							label: getBindingName("assets"),
+							collapsibleState: vscode.TreeItemCollapsibleState.Expanded,
+						},
+						{
+							label: getBindingName("vectorize"),
+							collapsibleState: vscode.TreeItemCollapsibleState.Expanded,
+						},
+						{
+							label: getBindingName("version_metadata"),
+							collapsibleState: vscode.TreeItemCollapsibleState.Expanded,
+						},
+						{
+							label: getBindingName("dispatch_namespaces"),
+							collapsibleState: vscode.TreeItemCollapsibleState.Expanded,
+						},
+						{
+							label: getBindingName("queues"),
+							collapsibleState: vscode.TreeItemCollapsibleState.Expanded,
+						},
+						{
+							label: getBindingName("workflows"),
+							collapsibleState: vscode.TreeItemCollapsibleState.Expanded,
+						},
+						{
+							label: getBindingName("vars"),
+							collapsibleState: vscode.TreeItemCollapsibleState.Expanded,
+						},
+						{
+							label: getBindingName("unsafe"),
 							collapsibleState: vscode.TreeItemCollapsibleState.Expanded,
 						},
 					]
 				);
 
-				const [kv, r2, d1] = children;
+				async function getBindingChildren(binding: BindingType) {
+					const bindingNode = children.find(
+						(child) => child.type === "binding" && child.name === binding
+					);
 
-				const kvChildren = await bindingsProvider.getChildren(kv);
+					if (!bindingNode) {
+						return [];
+					}
+
+					const grandChildren = await bindingsProvider.getChildren(bindingNode);
+
+					return grandChildren.map((child) =>
+						bindingsProvider.getTreeItem(child)
+					);
+				}
+
+				assert.deepEqual(await getBindingChildren("kv_namespaces"), [
+					{
+						label: "CACHE",
+						description: "<YOUR_KV_NAMESPACE_ID>",
+						collapsibleState: vscode.TreeItemCollapsibleState.None,
+					},
+				]);
+
+				assert.deepEqual(await getBindingChildren("r2_buckets"), [
+					{
+						label: "IMAGES",
+						description: "<YOUR_BUCKET_NAME>",
+						collapsibleState: vscode.TreeItemCollapsibleState.None,
+					},
+				]);
+
+				assert.deepEqual(await getBindingChildren("d1_databases"), [
+					{
+						label: "DB",
+						description: "<YOUR_D1_DATABASE_ID>",
+						collapsibleState: vscode.TreeItemCollapsibleState.None,
+					},
+				]);
+
+				assert.deepEqual(await getBindingChildren("durable_objects"), [
+					{
+						label: "MY_DURABLE_OBJECT",
+						description: "MyDurableObject",
+						collapsibleState: vscode.TreeItemCollapsibleState.None,
+					},
+				]);
+
+				assert.deepEqual(await getBindingChildren("ai"), [
+					{
+						label: "AI",
+						collapsibleState: vscode.TreeItemCollapsibleState.None,
+					},
+				]);
+
 				assert.deepEqual(
-					kvChildren.map((child) => bindingsProvider.getTreeItem(child)),
+					await getBindingChildren("analytics_engine_datasets"),
 					[
 						{
-							label: "cache",
-							description: "xx-yyyy-zzz",
+							label: "ANALYTICS",
+							description: "<dataset>",
 							collapsibleState: vscode.TreeItemCollapsibleState.None,
 						},
 					]
 				);
 
-				const r2Children = await bindingsProvider.getChildren(r2);
-				assert.deepEqual(
-					r2Children.map((child) => bindingsProvider.getTreeItem(child)),
-					[
-						{
-							label: "images",
-							description: "something",
-							collapsibleState: vscode.TreeItemCollapsibleState.None,
-						},
-					]
-				);
+				assert.deepEqual(await getBindingChildren("browser"), [
+					{
+						label: "MYBROWSER",
+						collapsibleState: vscode.TreeItemCollapsibleState.None,
+					},
+				]);
 
-				const d1Children = await bindingsProvider.getChildren(d1);
-				assert.deepEqual(
-					d1Children.map((child) => bindingsProvider.getTreeItem(child)),
-					[
-						{
-							label: "db",
-							description: "xxxxyyyyzzzzz",
-							collapsibleState: vscode.TreeItemCollapsibleState.None,
-						},
-					]
-				);
+				assert.deepEqual(await getBindingChildren("hyperdrive"), [
+					{
+						label: "HYPERDRIVE",
+						description: "<YOUR_DATABASE_ID>",
+						collapsibleState: vscode.TreeItemCollapsibleState.None,
+					},
+				]);
+
+				assert.deepEqual(await getBindingChildren("mtls_certificates"), [
+					{
+						label: "MY_CERT",
+						description: "<CERTIFICATE_ID>",
+						collapsibleState: vscode.TreeItemCollapsibleState.None,
+					},
+				]);
+
+				assert.deepEqual(await getBindingChildren("services"), [
+					{
+						label: "<BINDING_NAME>",
+						description: "<WORKER_NAME>",
+						collapsibleState: vscode.TreeItemCollapsibleState.None,
+					},
+				]);
+
+				assert.deepEqual(await getBindingChildren("assets"), [
+					{
+						label: "ASSETS",
+						description: "./public/",
+						collapsibleState: vscode.TreeItemCollapsibleState.None,
+					},
+				]);
+
+				assert.deepEqual(await getBindingChildren("vectorize"), [
+					{
+						label: "VECTORIZE",
+						description: "embeddings-index",
+						collapsibleState: vscode.TreeItemCollapsibleState.None,
+					},
+				]);
+
+				assert.deepEqual(await getBindingChildren("version_metadata"), [
+					{
+						label: "CF_VERSION_METADATA",
+						collapsibleState: vscode.TreeItemCollapsibleState.None,
+					},
+				]);
+
+				assert.deepEqual(await getBindingChildren("dispatch_namespaces"), [
+					{
+						label: "DISPATCHER",
+						description: "testing",
+						collapsibleState: vscode.TreeItemCollapsibleState.None,
+					},
+				]);
+
+				assert.deepEqual(await getBindingChildren("queues"), [
+					{
+						label: "MY_QUEUE",
+						description: "MY-QUEUE-NAME",
+						collapsibleState: vscode.TreeItemCollapsibleState.None,
+					},
+				]);
+
+				assert.deepEqual(await getBindingChildren("workflows"), [
+					{
+						label: "MY_WORKFLOW",
+						description: "MyWorkflow",
+						collapsibleState: vscode.TreeItemCollapsibleState.None,
+					},
+				]);
+
+				assert.deepEqual(await getBindingChildren("vars"), [
+					{
+						label: "API_HOST",
+						description: JSON.stringify("example.com"),
+						collapsibleState: vscode.TreeItemCollapsibleState.None,
+					},
+					{
+						label: "API_ACCOUNT_ID",
+						description: JSON.stringify("example_user"),
+						collapsibleState: vscode.TreeItemCollapsibleState.None,
+					},
+					{
+						label: "SERVICE_X_DATA",
+						description: JSON.stringify({
+							URL: "service-x-api.dev.example",
+							MY_ID: 123,
+						}),
+						collapsibleState: vscode.TreeItemCollapsibleState.None,
+					},
+				]);
+
+				assert.deepEqual(await getBindingChildren("unsafe"), [
+					{
+						label: "MY_RATE_LIMITER",
+						description: "ratelimit",
+						collapsibleState: vscode.TreeItemCollapsibleState.None,
+					},
+				]);
 			} finally {
 				await cleanup();
 			}
 		});
 
 		it("groups bindings by environment if available", async () => {
-			const config = {
-				name: "test",
-				d1_databases: [
-					{
-						binding: "db",
-						database_id: "xxxxyyyyzzzzz",
-					},
-				],
-				env: {
-					development: {},
-					staging: {
-						kv_namespaces: [
-							{
-								binding: "kv",
-								id: "aa-bb-cc",
-							},
-						],
-					},
-					production: {
-						r2_buckets: [
-							{
-								binding: "r2",
-								bucket_name: "something else",
-							},
-						],
-					},
-				},
-			};
 			const cleanup = await seed({
-				"wrangler.json": JSON.stringify(config),
+				"wrangler.json": generateWranglerConfig({
+					d1_databases: [
+						{
+							binding: "db",
+							database_id: "xxxxyyyyzzzzz",
+						},
+					],
+					env: {
+						development: {},
+						staging: {
+							kv_namespaces: [
+								{
+									binding: "kv",
+									id: "aa-bb-cc",
+								},
+							],
+						},
+						production: {
+							r2_buckets: [
+								{
+									binding: "r2",
+									bucket_name: "something else",
+								},
+							],
+						},
+					},
+				}),
 			});
 
 			try {
@@ -184,7 +470,7 @@ describe("Extension Test Suite", () => {
 					),
 					[
 						{
-							label: "D1 Databases",
+							label: getBindingName("d1_databases"),
 							collapsibleState: vscode.TreeItemCollapsibleState.Expanded,
 						},
 					]
@@ -195,7 +481,7 @@ describe("Extension Test Suite", () => {
 					stagingChildren.map((child) => bindingsProvider.getTreeItem(child)),
 					[
 						{
-							label: "KV Namespaces",
+							label: getBindingName("kv_namespaces"),
 							collapsibleState: vscode.TreeItemCollapsibleState.Expanded,
 						},
 					]
@@ -209,7 +495,7 @@ describe("Extension Test Suite", () => {
 					),
 					[
 						{
-							label: "R2 Buckets",
+							label: getBindingName("r2_buckets"),
 							collapsibleState: vscode.TreeItemCollapsibleState.Expanded,
 						},
 					]
@@ -220,21 +506,19 @@ describe("Extension Test Suite", () => {
 		});
 
 		it("hides top level env if there is no bindings", async () => {
-			const config = {
-				name: "test",
-				env: {
-					production: {
-						r2_buckets: [
-							{
-								binding: "r2",
-								bucket_name: "something else",
-							},
-						],
-					},
-				},
-			};
 			const cleanup = await seed({
-				"wrangler.json": JSON.stringify(config),
+				"wrangler.json": generateWranglerConfig({
+					env: {
+						production: {
+							r2_buckets: [
+								{
+									binding: "r2",
+									bucket_name: "something else",
+								},
+							],
+						},
+					},
+				}),
 			});
 
 			try {
@@ -272,7 +556,7 @@ describe("Extension Test Suite", () => {
 						}),
 						// Test creating config file
 						seed({
-							"wrangler.json": JSON.stringify({
+							"wrangler.json": generateWranglerConfig({
 								name: "test",
 								kv_namespaces: [
 									{
@@ -295,7 +579,7 @@ describe("Extension Test Suite", () => {
 						}),
 						// Test changing the config file
 						seed({
-							"wrangler.json": JSON.stringify({
+							"wrangler.json": generateWranglerConfig({
 								name: "test",
 								kv_namespaces: [
 									{
@@ -343,6 +627,10 @@ function getExtension() {
 	}
 
 	return extension;
+}
+
+function generateWranglerConfig(config: Config) {
+	return JSON.stringify(config);
 }
 
 async function symlinkWranglerNodeModule() {
