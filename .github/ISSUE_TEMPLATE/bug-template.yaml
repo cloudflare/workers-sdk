@@ -34,50 +34,29 @@ body:
       required: true
   - type: input
     attributes:
-      label: What version(s) of the tool(s) are you using?
-      placeholder: 0.0.0 [Wrangler], 0.0.0 [C3], etc.
+      label: What versions are you using?
+      placeholder: 0.0.0 [Wrangler], 0.0.0 [C3], 0.0.0 [Node.js], etc.
     validations:
       required: true
-  - type: input
-    attributes:
-      label: What version of Node are you using?
-      placeholder: 0.0.0
-    validations:
-      required: false
   - type: input
     attributes:
       label: What operating system and version are you using?
       placeholder: Mac Sonoma 14.2.1, Windows 11, Linux (or WSL) Debian Bookworm, etc.
     validations:
       required: true
-  - type: textarea
-    attributes:
-      label: Describe the Bug
-      description: Please describe the bug and include steps to reproduce.
-      value: |
-        ### Observed behavior
-        Please describe.
-
-        ### Expected behavior
-        Please describe.
-
-        ### Steps to reproduce
-        Please provide the following:
-        - A minimal working subset of your worker code
-        - A minimal working subset of your `wrangler.toml`
-        - Commands used to start your local dev server, including custom env and cli args
-        - Steps to be performed in the browser, curl commands, or a test we can run that reliably fails (at least a percent of the time)
-
-        A git repo we can clone and run a test suite on, or which has a README with step-by-step instructions, is even better. In this case, please use the field below to provide a link to the minimal repro.
-    validations:
-      required: true
   - type: input
     attributes:
       label: Please provide a link to a minimal reproduction
-      description: Although not required, we often request a minimal reproduction to help troubleshoot the issue, so providing this up-front streamlines the process towards resolution.
       placeholder: https://github.com/foobar-user/minimal-repro
     validations:
       required: false
+  - type: textarea
+    attributes:
+      label: Describe the Bug
+      description: Please describe the bug in as much detail as possible, including steps to reproduce, the behaviour you're seeing, and the behaviour you expect.
+      validations:
+      required: true
+
   - type: textarea
     attributes:
       label: Please provide any relevant error logs
