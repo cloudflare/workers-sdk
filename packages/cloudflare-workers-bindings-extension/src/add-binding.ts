@@ -10,7 +10,12 @@ import {
 	window,
 	workspace,
 } from "vscode";
-import { getConfigUri } from "./show-bindings";
+import {
+	bindingKeys,
+	Config,
+	getConfigUri,
+	getWranglerConfig,
+} from "./show-bindings";
 import { importWrangler } from "./wrangler";
 
 class BindingType implements QuickPickItem {
@@ -80,6 +85,12 @@ export async function addBindingFlow(context: ExtensionContext) {
 		input: MultiStepInput,
 		state: Partial<State>
 	) {
+		const config = await getWranglerConfig();
+		if (!config) {
+			throw new Error("No config found");
+		}
+		const allBindingNames = getAllBindingNames(config);
+
 		let name = await input.showInputBox({
 			title,
 			step: 2,
@@ -87,7 +98,10 @@ export async function addBindingFlow(context: ExtensionContext) {
 			value: state.name || "",
 			prompt: "Choose a binding name",
 			validate: validateNameIsUnique,
+			// so that we only have to get all binding names once, rather than on each validation
+			preExistingBindingNames: allBindingNames,
 			placeholder: `e.g. MY_BINDING`,
+			required: true,
 		});
 		state.name = name;
 		return () => addToConfig(state);
@@ -132,9 +146,8 @@ binding = "${state.name}"
 		});
 	}
 
-	async function validateNameIsUnique(name: string) {
-		// TODO: actually validate uniqueness
-		return name === "SOME_KV_BINDING" ? "Name not unique" : undefined;
+	async function validateNameIsUnique(name: string, allBindingNames: string[]) {
+		return allBindingNames.includes(name) ? "Name not unique" : undefined;
 	}
 
 	await collectInputs();
@@ -169,10 +182,15 @@ interface InputBoxParameters {
 	totalSteps: number;
 	value: string;
 	prompt: string;
-	validate: (value: string) => Promise<string | undefined>;
+	validate: (
+		value: string,
+		existingNames: string[]
+	) => Promise<string | undefined>;
 	buttons?: QuickInputButton[];
 	ignoreFocusOut?: boolean;
 	placeholder?: string;
+	required?: boolean;
+	preExistingBindingNames: string[];
 }
 
 export class MultiStepInput {
@@ -275,6 +293,8 @@ export class MultiStepInput {
 		buttons,
 		ignoreFocusOut,
 		placeholder,
+		required,
+		preExistingBindingNames,
 	}: P) {
 		const disposables: Disposable[] = [];
 		try {
@@ -293,7 +313,7 @@ export class MultiStepInput {
 					...(this.steps.length > 1 ? [QuickInputButtons.Back] : []),
 					...(buttons || []),
 				];
-				let validating = validate("");
+				let validating = validate("", preExistingBindingNames);
 				disposables.push(
 					input.onDidTriggerButton((item) => {
 						if (item === QuickInputButtons.Back) {
@@ -306,14 +326,16 @@ export class MultiStepInput {
 						const value = input.value;
 						input.enabled = false;
 						input.busy = true;
-						if (!(await validate(value))) {
+						if (required && !value) {
+							input.validationMessage = "You must provide a binding name";
+						} else if (!(await validate(value, preExistingBindingNames))) {
 							resolve(value);
 						}
 						input.enabled = true;
 						input.busy = false;
 					}),
 					input.onDidChangeValue(async (text) => {
-						const current = validate(text);
+						const current = validate(text, preExistingBindingNames);
 						validating = current;
 						const validationMessage = await current;
 						if (current === validating) {
@@ -332,3 +354,57 @@ export class MultiStepInput {
 		}
 	}
 }
+
+const getAllBindingNames = (config: Config) => {
+	return bindingKeys
+		.map((key) => {
+			const bindingsByType = config[key];
+			return getBindingNames(bindingsByType);
+		})
+		.flat();
+};
+const getBindingNames = (value: unknown): string[] => {
+	if (typeof value !== "object" || value === null) {
+		return [];
+	}
+	if (isBindingList(value)) {
+		return value.bindings.map(({ name }) => name);
+	} else if (isNamespaceList(value)) {
+		return value.map(({ binding }) => binding);
+	} else if (isRecord(value)) {
+		// browser and AI bindings are single values with a similar shape
+		// { binding = "name" }
+		if (value["binding"] !== undefined) {
+			return [value["binding"] as string];
+		}
+		return Object.keys(value).filter((k) => value[k] !== undefined);
+	} else {
+		return [];
+	}
+};
+const isBindingList = (
+	value: unknown
+): value is {
+	bindings: {
+		name: string;
+	}[];
+} =>
+	isRecord(value) &&
+	"bindings" in value &&
+	Array.isArray(value.bindings) &&
+	value.bindings.every(
+		(binding) =>
+			isRecord(binding) && "name" in binding && typeof binding.name === "string"
+	);
+
+const isNamespaceList = (value: unknown): value is { binding: string }[] =>
+	Array.isArray(value) &&
+	value.every(
+		(entry) =>
+			isRecord(entry) && "binding" in entry && typeof entry.binding === "string"
+	);
+
+const isRecord = (
+	value: unknown
+): value is Record<string | number | symbol, unknown> =>
+	typeof value === "object" && value !== null && !Array.isArray(value);
