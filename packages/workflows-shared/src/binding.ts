@@ -1,4 +1,4 @@
-import { RpcTarget, WorkerEntrypoint } from "cloudflare:workers";
+import { RpcTarget, WorkerEntrypoint, WorkflowEvent } from "cloudflare:workers";
 import { InstanceEvent, instanceStatusName } from "./instance";
 import type {
 	DatabaseInstance,
@@ -28,6 +28,7 @@ export class WorkflowBinding extends WorkerEntrypoint<Env> implements Workflow {
 			{
 				timestamp: new Date(),
 				payload: params as Readonly<typeof params>,
+				instanceId: id,
 			}
 		);
 
