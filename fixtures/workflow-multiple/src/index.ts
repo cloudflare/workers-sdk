@@ -29,7 +29,7 @@ export class Demo extends WorkflowEntrypoint<{}, Params> {
 			};
 		});
 
-		return [result, result2, timestamp, payload, "workflow1"];
+		return "i'm workflow1";
 	}
 }
 
@@ -53,7 +53,7 @@ export class Demo2 extends WorkflowEntrypoint<{}, Params> {
 			};
 		});
 
-		return [result, result2, timestamp, payload, "workflow2"];
+		return "i'm workflow2";
 	}
 }
 
