@@ -1,7 +1,7 @@
 name = "rpc"
 main = "src/index.ts"
 compatibility_date = "2024-01-01"
-compatibility_flags = ["nodejs_compat", "rpc"]
+compatibility_flags = ["rpc"]
 
 kv_namespaces = [
 	{ binding = "KV_NAMESPACE", id = "00000000000000000000000000000000" }
