@@ -12,11 +12,7 @@ import {
 	startGracePeriod,
 } from "./lib/gracePeriodSemaphore";
 import { TimePriorityQueue } from "./lib/timePriorityQueue";
-import type {
-	InstanceLogsResponse,
-	InstanceMetadata,
-	RawInstanceLog,
-} from "./instance";
+import type { InstanceMetadata, RawInstanceLog } from "./instance";
 import type { WorkflowEntrypoint, WorkflowEvent } from "cloudflare:workers";
 
 export interface Env {
@@ -51,6 +47,19 @@ export type DatabaseInstance = {
 	status: InstanceStatus;
 	started_on: string | null;
 	ended_on: string | null;
+};
+
+export type Log = {
+	event: InstanceEvent;
+	group: string | null;
+	target: string | null;
+	metadata: {
+		result: unknown;
+	};
+};
+
+export type EngineLogs = {
+	logs: Log[];
 };
 
 const ENGINE_STATUS_KEY = "ENGINE_STATUS";
@@ -121,18 +130,20 @@ export class Engine extends DurableObject<Env> {
 		return [];
 	}
 
-	readLogs(): InstanceLogsResponse {
+	readLogs(): EngineLogs {
 		const logs = [
-			...this.ctx.storage.sql.exec<Record<string, string | number>>(
-				"SELECT event, groupKey, target, metadata FROM states"
-			),
+			...this.ctx.storage.sql.exec<{
+				event: InstanceEvent;
+				groupKey: string | null;
+				target: string | null;
+				metadata: string;
+			}>("SELECT event, groupKey, target, metadata FROM states"),
 		];
 
 		return {
-			// @ts-expect-error TODO: Fix this
 			logs: logs.map((log) => ({
 				...log,
-				metadata: JSON.parse(log.metadata as string),
+				metadata: JSON.parse(log.metadata),
 				group: log.groupKey,
 			})),
 		};

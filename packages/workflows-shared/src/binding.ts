@@ -5,6 +5,7 @@ import type {
 	DatabaseVersion,
 	DatabaseWorkflow,
 	Engine,
+	EngineLogs,
 } from "./engine";
 
 type Env = {
@@ -96,26 +97,30 @@ export class WorkflowHandle extends RpcTarget implements WorkflowInstance {
 		InstanceStatus & { __LOCAL_DEV_STEP_OUTPUTS: unknown[] }
 	> {
 		const status = await this.stub.getStatus(0, this.id);
-		const { logs } = (await this.stub.readLogs()) as { logs: unknown[] };
 
-		const workflowOutput = logs
-			.filter(
-				// @ts-expect-error TODO: Fix this
-				(log) => log.event === InstanceEvent.WORKFLOW_SUCCESS
-			)
+		// NOTE(lduarte): for some reason, sync functions over RPC are typed as never instead of Promise<EngineLogs>
+		const { logs } =
+			await (this.stub.readLogs() as unknown as Promise<EngineLogs>);
+
+		const workflowSuccessEvent = logs
+			.filter((log) => log.event === InstanceEvent.WORKFLOW_SUCCESS)
 			.at(0);
+
 		const filteredLogs = logs.filter(
-			// @ts-expect-error TODO: Fix this
 			(log) => log.event === InstanceEvent.STEP_SUCCESS
 		);
-		// @ts-expect-error TODO: Fix this
 		const stepOutputs = filteredLogs.map((log) => log.metadata.result);
+
+		const workflowOutput =
+			workflowSuccessEvent !== undefined
+				? workflowSuccessEvent.metadata.result
+				: null;
+
 		return {
 			status: instanceStatusName(status),
 			__LOCAL_DEV_STEP_OUTPUTS: stepOutputs,
-			output:
-				// @ts-expect-error TODO: Fix this
-				workflowOutput !== undefined ? workflowOutput.metadata.result : null,
+			// @ts-expect-error types are wrong, will remove this expect-error once I fix them
+			output: workflowOutput,
 		}; // output, error
 	}
 }
