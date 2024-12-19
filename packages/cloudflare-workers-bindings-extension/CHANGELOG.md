@@ -1,5 +1,15 @@
 # cloudflare-workers-bindings-extension
 
+## 0.0.9
+
+### Patch Changes
+
+- [#7597](https://github.com/cloudflare/workers-sdk/pull/7597) [`dbf7aac`](https://github.com/cloudflare/workers-sdk/commit/dbf7aac6f58c7dbd7de6d6fd1fb9dc562e36c11b) Thanks [@edmundhung](https://github.com/edmundhung)! - Updates the bindings view to list all binding types
+
+- [#7600](https://github.com/cloudflare/workers-sdk/pull/7600) [`e3791f7`](https://github.com/cloudflare/workers-sdk/commit/e3791f7d83dd5ad8cdbff5f0afae3625d39391ed) Thanks [@emily-shen](https://github.com/emily-shen)! - feat: add validation to binding name input in vscode extension
+
+- [#7602](https://github.com/cloudflare/workers-sdk/pull/7602) [`697f166`](https://github.com/cloudflare/workers-sdk/commit/697f166afb279d494279259460e93cd0aa37e7a9) Thanks [@penalosa](https://github.com/penalosa)! - Add JSON schema for Wrangler config files
+
 ## 0.0.8
 
 ### Patch Changes
