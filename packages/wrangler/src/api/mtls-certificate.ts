@@ -36,6 +36,15 @@ export interface MTlsCertificateBody {
 }
 
 /**
+ * details for uploading an CA certificate or CA chain via the ssl api
+ */
+export interface CaCertificateBody {
+	certificates: string;
+	ca: boolean;
+	name?: string;
+}
+
+/**
  * supported filters for listing mTLS certificates via the ssl api
  */
 export interface MTlsCertificateListFilter {
@@ -67,6 +76,20 @@ export async function uploadMTlsCertificateFromFs(
 }
 
 /**
+ * reads an CA certificate from disk and uploads it to the account mTLS certificate store
+ */
+export async function uploadCaCertificateFromFs(
+	accountId: string,
+	details: CaCertificateBody
+): Promise<MTlsCertificateResponse> {
+	return await uploadCaCertificates(accountId, {
+		certificates: readFileSync(details.certificates),
+		ca: details.ca,
+		name: details.name,
+	});
+}
+
+/**
  *  uploads an mTLS certificate and private key pair to the account mTLS certificate store
  */
 export async function uploadMTlsCertificate(
@@ -80,6 +103,23 @@ export async function uploadMTlsCertificate(
 			certificates: body.certificateChain,
 			private_key: body.privateKey,
 			ca: false,
+		}),
+	});
+}
+
+/**
+ *  uploads either a single CA cert or CA chain to the account mTLS certificate store
+ */
+export async function uploadCaCertificates(
+	accountId: string,
+	body: CaCertificateBody
+): Promise<MTlsCertificateResponse> {
+	return await fetchResult(`/accounts/${accountId}/mtls_certificates`, {
+		method: "POST",
+		body: JSON.stringify({
+			name: body.name,
+			certificates: body.certificates,
+			ca: body.ca,
 		}),
 	});
 }
