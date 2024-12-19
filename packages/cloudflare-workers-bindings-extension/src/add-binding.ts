@@ -16,7 +16,7 @@ import { importWrangler } from "./wrangler";
 class BindingType implements QuickPickItem {
 	constructor(
 		public label: string,
-		public description?: string,
+		public configKey?: string,
 		public detail?: string,
 		public iconPath?: Uri
 	) {}
@@ -115,7 +115,7 @@ export async function addBindingFlow(context: ExtensionContext) {
 			window.showTextDocument(doc);
 			try {
 				wrangler.experimental_patchConfig(configUri.path, {
-					[state.bindingType?.description!]: [{ binding: state.name! }],
+					[state.bindingType?.configKey!]: [{ binding: state.name! }],
 				});
 				window.showInformationMessage(`Created binding '${state.name}'`);
 			} catch {
@@ -123,7 +123,7 @@ export async function addBindingFlow(context: ExtensionContext) {
 					`Unable to directly add binding to config file. A snippet has been copied to clipboard - please paste this into your config file.`
 				);
 
-				const patch = `[[${state.bindingType?.description!}]]
+				const patch = `[[${state.bindingType?.configKey!}]]
 binding = "${state.name}"
 `;
 
