@@ -1,5 +1,6 @@
 import * as vscode from "vscode";
-import { BindingsProvider } from "./bindings";
+import { addBindingFlow } from "./add-binding";
+import { BindingsProvider } from "./show-bindings";
 
 export type Result = {
 	bindingsProvider: BindingsProvider;
@@ -32,8 +33,20 @@ export async function activate(
 		() => bindingsProvider.refresh()
 	);
 
+	// Register the add bindings command
+	const addBindingCommand = vscode.commands.registerCommand(
+		"cloudflare-workers-bindings.addBinding",
+		async () => {
+			await addBindingFlow(context);
+		}
+	);
 	// Cleanup when the extension is deactivated
-	context.subscriptions.push(bindingsView, watcher, refreshCommand);
+	context.subscriptions.push(
+		bindingsView,
+		watcher,
+		refreshCommand,
+		addBindingCommand
+	);
 
 	return {
 		bindingsProvider,
