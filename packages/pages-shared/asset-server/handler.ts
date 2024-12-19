@@ -72,6 +72,25 @@ type FindAssetEntryForPath<AssetEntry> = (
 	path: string
 ) => Promise<null | AssetEntry>;
 
+function generateETagHeader(assetKey: string) {
+	// https://support.cloudflare.com/hc/en-us/articles/218505467-Using-ETag-Headers-with-Cloudflare
+	// We sometimes remove etags unless they are wrapped in quotes
+	const strongETag = `"${assetKey}"`;
+	const weakETag = `W/"${assetKey}"`;
+	return { strongETag, weakETag };
+}
+
+function checkIfNoneMatch(
+	request: Request,
+	strongETag: string,
+	weakETag: string
+) {
+	const ifNoneMatch = request.headers.get("if-none-match");
+
+	// We sometimes downgrade strong etags to a weak ones, so we need to check for both
+	return ifNoneMatch === weakETag || ifNoneMatch === strongETag;
+}
+
 type ServeAsset<AssetEntry> = (
 	assetEntry: AssetEntry,
 	options?: { preserve: boolean }
@@ -80,7 +99,10 @@ type ServeAsset<AssetEntry> = (
 type CacheStatus = "hit" | "miss";
 type CacheResult<A extends string> = `${A}-${CacheStatus}`;
 export type HandlerMetrics = {
-	preservationCacheResult?: CacheResult<"checked"> | "disabled";
+	preservationCacheResult?:
+		| CacheResult<"checked">
+		| "not-modified"
+		| "disabled";
 	earlyHintsResult?: CacheResult<"used" | "notused"> | "disabled";
 };
 
@@ -518,22 +540,16 @@ export async function generateHandler<
 
 		const assetKey = getAssetKey(servingAssetEntry, content);
 
-		// https://support.cloudflare.com/hc/en-us/articles/218505467-Using-ETag-Headers-with-Cloudflare
-		// We sometimes remove etags unless they are wrapped in quotes
-		const etag = `"${assetKey}"`;
-		const weakEtag = `W/${etag}`;
-
-		const ifNoneMatch = request.headers.get("if-none-match");
-
-		// We sometimes downgrade strong etags to a weak ones, so we need to check for both
-		if (ifNoneMatch === weakEtag || ifNoneMatch === etag) {
+		const { strongETag, weakETag } = generateETagHeader(assetKey);
+		const isIfNoneMatch = checkIfNoneMatch(request, strongETag, weakETag);
+		if (isIfNoneMatch) {
 			return new NotModifiedResponse();
 		}
 
 		try {
 			const asset = await fetchAsset(assetKey);
 			const headers: Record<string, string> = {
-				etag,
+				etag: strongETag,
 				"content-type": asset.contentType,
 			};
 			let encodeBody: BodyEncoding = "automatic";
@@ -654,6 +670,19 @@ export async function generateHandler<
 						return new Response(null, preservedResponse);
 					}
 					if (assetKey) {
+						const { strongETag, weakETag } = generateETagHeader(assetKey);
+						const isIfNoneMatch = checkIfNoneMatch(
+							request,
+							strongETag,
+							weakETag
+						);
+						if (isIfNoneMatch) {
+							if (setMetrics) {
+								setMetrics({ preservationCacheResult: "not-modified" });
+							}
+							return new NotModifiedResponse();
+						}
+
 						const asset = await fetchAsset(assetKey);
 
 						if (asset) {

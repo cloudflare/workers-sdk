@@ -572,11 +572,25 @@ describe("asset-server handler", () => {
 				'"asset-key-foo.html"'
 			);
 
-			// Delete the asset from the manifest and ensure it's served from preservation cache
+			// Delete the asset from the manifest and ensure it's served from preservation cache with a 304 when if-none-match is present
 			findAssetEntryForPath = async (_path: string) => {
 				return null;
 			};
 			const { response: response2 } = await getTestResponse({
+				request: new Request("https://example.com/foo", {
+					headers: { "if-none-match": expectedHeaders.etag },
+				}),
+				metadata,
+				findAssetEntryForPath,
+				caches,
+				fetchAsset: () =>
+					Promise.resolve(Object.assign(new Response("hello world!"))),
+			});
+			expect(response2.status).toBe(304);
+			expect(await response2.text()).toMatchInlineSnapshot('""');
+
+			// Ensure the asset is served from preservation cache with a 200 if if-none-match is not present
+			const { response: response3 } = await getTestResponse({
 				request: new Request("https://example.com/foo"),
 				metadata,
 				findAssetEntryForPath,
@@ -584,10 +598,10 @@ describe("asset-server handler", () => {
 				fetchAsset: () =>
 					Promise.resolve(Object.assign(new Response("hello world!"))),
 			});
-			expect(response2.status).toBe(200);
-			expect(await response2.text()).toMatchInlineSnapshot('"hello world!"');
+			expect(response3.status).toBe(200);
+			expect(await response3.text()).toMatchInlineSnapshot('"hello world!"');
 			// Cached responses have the same headers with a few changes/additions:
-			expect(Object.fromEntries(response2.headers)).toStrictEqual({
+			expect(Object.fromEntries(response3.headers)).toStrictEqual({
 				...expectedHeaders,
 				"cache-control": "public, s-maxage=604800",
 				"x-robots-tag": "noindex",
@@ -595,15 +609,15 @@ describe("asset-server handler", () => {
 			});
 
 			// Serve with a fresh cache and ensure we don't get a response
-			const { response: response3 } = await getTestResponse({
+			const { response: response4 } = await getTestResponse({
 				request: new Request("https://example.com/foo"),
 				metadata,
 				findAssetEntryForPath,
 				fetchAsset: () =>
 					Promise.resolve(Object.assign(new Response("hello world!"))),
 			});
-			expect(response3.status).toBe(404);
-			expect(Object.fromEntries(response3.headers)).toMatchInlineSnapshot(`
+			expect(response4.status).toBe(404);
+			expect(Object.fromEntries(response4.headers)).toMatchInlineSnapshot(`
 				{
 				  "access-control-allow-origin": "*",
 				  "cache-control": "no-store",
