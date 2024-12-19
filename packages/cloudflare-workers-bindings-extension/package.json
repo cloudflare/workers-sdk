@@ -38,6 +38,12 @@
 				"icon": "$(add)"
 			}
 		],
+		"jsonValidation": [
+			{
+				"fileMatch": "**/wrangler.{json,jsonc,toml}",
+				"url": "https://www.unpkg.com/wrangler/config-schema.json"
+			}
+		],
 		"menus": {
 			"view/title": [
 				{
