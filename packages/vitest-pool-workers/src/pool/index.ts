@@ -9,6 +9,7 @@ import { createBirpc } from "birpc";
 import * as devalue from "devalue";
 import {
 	compileModuleRules,
+	getNodeCompat,
 	kCurrentWorker,
 	kUnsafeEphemeralUniqueKey,
 	Log,
@@ -355,11 +356,6 @@ function buildProjectWorkerOptions(
 				disableFlag: "export_commonjs_namespace",
 				defaultOnDate: "2022-10-31",
 			}),
-		() =>
-			flagAssertions.assertAtLeastOneFlagExists([
-				"nodejs_compat",
-				"nodejs_compat_v2",
-			]),
 	];
 
 	for (const assertion of assertions) {
@@ -367,6 +363,18 @@ function buildProjectWorkerOptions(
 		if (!result.isValid) {
 			throw new Error(result.errorMessage);
 		}
+	}
+
+	const { mode } = getNodeCompat(
+		runnerWorker.compatibilityDate,
+		runnerWorker.compatibilityFlags
+	);
+
+	if (mode !== "v1" && mode !== "v2") {
+		runnerWorker.compatibilityFlags.push(
+			"nodejs_compat",
+			"no_nodejs_compat_v2"
+		);
 	}
 
 	// Required for `workerd:unsafe` module. We don't require this flag to be set
