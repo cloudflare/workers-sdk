@@ -64,13 +64,29 @@ export class RemoteRuntimeController extends RuntimeController {
 	async #previewToken(
 		props: Omit<CreateRemoteWorkerInitProps, "name"> &
 			Partial<Pick<CreateRemoteWorkerInitProps, "name">> &
-			Parameters<typeof getWorkerAccountAndContext>[0]
+			Parameters<typeof getWorkerAccountAndContext>[0] & { bundleId: number }
 	): Promise<CfPreviewToken | undefined> {
 		if (!this.#session) {
 			return;
 		}
 
 		try {
+			/*
+			 * Since `getWorkerAccountAndContext`, `createRemoteWorkerInit` and
+			 * `createWorkerPreview` are all async functions, it is technically
+			 * possible that new `bundleComplete` events are trigerred while those
+			 * functions are still executing. In such cases we want to drop the
+			 * current bundle and exit early, to avoid unnecessarily executing any
+			 * further expensive API calls.
+			 *
+			 * For this purpose, we want perform a check before each of these
+			 * functions, to ensure no new `bundleComplete` was triggered.
+			 */
+			// If we received a new `bundleComplete` event before we were able to
+			// dispatch a `reloadComplete` for this bundle, ignore this bundle.
+			if (props.bundleId !== this.#currentBundleId) {
+				return;
+			}
 			const { workerAccount, workerContext } = await getWorkerAccountAndContext(
 				{
 					accountId: props.accountId,
@@ -89,6 +105,11 @@ export class RemoteRuntimeController extends RuntimeController {
 					? this.#session.id
 					: this.#session.host.split(".")[0]);
 
+			// If we received a new `bundleComplete` event before we were able to
+			// dispatch a `reloadComplete` for this bundle, ignore this bundle.
+			if (props.bundleId !== this.#currentBundleId) {
+				return;
+			}
 			const init = await createRemoteWorkerInit({
 				bundle: props.bundle,
 				modules: props.modules,
@@ -105,6 +126,11 @@ export class RemoteRuntimeController extends RuntimeController {
 				compatibilityFlags: props.compatibilityFlags,
 			});
 
+			// If we received a new `bundleComplete` event before we were able to
+			// dispatch a `reloadComplete` for this bundle, ignore this bundle.
+			if (props.bundleId !== this.#currentBundleId) {
+				return;
+			}
 			const workerPreviewToken = await createWorkerPreview(
 				init,
 				workerAccount,
@@ -175,6 +201,13 @@ export class RemoteRuntimeController extends RuntimeController {
 			const { bindings } = await convertBindingsToCfWorkerInitBindings(
 				config.bindings
 			);
+
+			// If we received a new `bundleComplete` event before we were able to
+			// dispatch a `reloadComplete` for this bundle, ignore this bundle.
+			if (id !== this.#currentBundleId) {
+				return;
+			}
+
 			const token = await this.#previewToken({
 				bundle,
 				modules: bundle.modules,
@@ -201,6 +234,7 @@ export class RemoteRuntimeController extends RuntimeController {
 				host: config.dev.origin?.hostname,
 				sendMetrics: config.sendMetrics,
 				configPath: config.config,
+				bundleId: id,
 			});
 
 			// If we received a new `bundleComplete` event before we were able to

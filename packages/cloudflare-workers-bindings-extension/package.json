@@ -1,7 +1,7 @@
 {
 	"name": "cloudflare-workers-bindings-extension",
 	"displayName": "Cloudflare Workers",
-	"version": "0.0.6",
+	"version": "0.0.7",
 	"description": "Manage your Cloudflare Worker's bindings",
 	"categories": [
 		"Other"
@@ -19,6 +19,7 @@
 		"package": "pnpm run check:type && pnpm run check:lint && node esbuild.js --production",
 		"compile-tests": "tsc -p . --outDir out",
 		"watch-tests": "tsc -p . -w --outDir out",
+		"test": "node ./out/test/runTest.js",
 		"check:type": "tsc --noEmit",
 		"check:lint": "eslint src --ext ts",
 		"build": "vsce package",
@@ -27,46 +28,61 @@
 	"contributes": {
 		"commands": [
 			{
-				"command": "cloudflare-workers-bindings-extension.testCommand",
-				"title": "Test command",
-				"icon": {
-					"light": "resources/light/edit.svg",
-					"dark": "resources/dark/edit.svg"
-				}
+				"command": "cloudflare-workers-bindings.refresh",
+				"title": "Cloudflare Workers: Refresh bindings",
+				"icon": "$(refresh)"
 			}
 		],
-		"views": {
-			"cloudflare-workers-bindings": [
+		"menus": {
+			"view/title": [
 				{
-					"id": "cloudflare-workers-bindings-extension",
+					"command": "cloudflare-workers-bindings.refresh",
+					"when": "view == cloudflare-workers-bindings",
+					"group": "navigation"
+				}
+			]
+		},
+		"views": {
+			"cloudflare-workers": [
+				{
+					"id": "cloudflare-workers-bindings",
 					"name": "Bindings",
-					"icon": "resources/icons/cf-workers-logo.svg"
+					"icon": "media/cf-workers-logo.svg",
+					"contextualTitle": "Cloudflare Workers Bindings"
 				}
 			]
 		},
 		"viewsContainers": {
 			"activitybar": [
 				{
-					"id": "cloudflare-workers-bindings",
+					"id": "cloudflare-workers",
 					"title": "Cloudflare Workers",
 					"icon": "media/cf-workers-logo.svg"
 				}
 			]
-		}
+		},
+		"viewsWelcome": [
+			{
+				"view": "cloudflare-workers-bindings",
+				"contents": "Welcome to Cloudflare Workers! [Learn more](https://workers.cloudflare.com).\n[Refresh Bindings](command:cloudflare-workers-bindings.refresh)"
+			}
+		]
 	},
 	"activationEvents": [
-		"workspaceContains:{**/wrangler.json,**/wrangler.jsonc,**/wrangler.toml}"
+		"workspaceContains:**/wrangler.{json,jsonc,toml}"
 	],
 	"devDependencies": {
+		"@types/glob": "^7.1.1",
 		"@types/mocha": "^10.0.7",
 		"@types/node": "20.x",
 		"@types/vscode": "^1.92.0",
 		"@typescript-eslint/eslint-plugin": "^7.14.1",
 		"@typescript-eslint/parser": "^7.11.0",
-		"@vscode/test-cli": "^0.0.9",
-		"@vscode/test-electron": "^2.4.0",
+		"@vscode/test-electron": "^2.4.1",
 		"esbuild": "^0.21.5",
 		"eslint": "^8.57.0",
+		"glob": "^7.1.4",
+		"mocha": "^10.2.0",
 		"npm-run-all": "^4.1.5",
 		"typescript": "^5.4.5",
 		"vsce": "^2.15.0",

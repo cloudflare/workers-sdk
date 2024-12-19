@@ -1,5 +1,28 @@
 # wrangler
 
+## 3.98.0
+
+### Minor Changes
+
+- [#7476](https://github.com/cloudflare/workers-sdk/pull/7476) [`5124b5d`](https://github.com/cloudflare/workers-sdk/commit/5124b5da4f8c12bbb6192f2d89241a9c54ab73c7) Thanks [@WalshyDev](https://github.com/WalshyDev)! - feat: allow routing to Workers with Assets on any HTTP route, not just the root. For example, `example.com/blog/*` can now be used to serve assets.
+  These assets will be served as though the assets directly were mounted to the root.
+  For example, if you have `assets = { directory = "./public/" }`, a route like `"example.com/blog/*"` and a file `./public/blog/logo.png`, this will be available at `example.com/blog/logo.png`. Assets outside of directories which match the configured HTTP routes can still be accessed with the [Assets binding](https://developers.cloudflare.com/workers/static-assets/binding/#binding) or with a [Service binding](https://developers.cloudflare.com/workers/runtime-apis/bindings/service-bindings/) to this Worker.
+
+- [#7380](https://github.com/cloudflare/workers-sdk/pull/7380) [`72935f9`](https://github.com/cloudflare/workers-sdk/commit/72935f9b25416ff6d1d350e058f0d2a11864fb36) Thanks [@CarmenPopoviciu](https://github.com/CarmenPopoviciu)! - Add Workers + Assets support in `wrangler dev --remote`
+
+### Patch Changes
+
+- [#7573](https://github.com/cloudflare/workers-sdk/pull/7573) [`fb819f9`](https://github.com/cloudflare/workers-sdk/commit/fb819f9970285d3fc4ca8e98d652238c554d568b) Thanks [@emily-shen](https://github.com/emily-shen)! - feat: add experimental_readRawConfig()
+
+  Adds a Wrangler API to find and read a config file
+
+- [#7549](https://github.com/cloudflare/workers-sdk/pull/7549) [`42b9429`](https://github.com/cloudflare/workers-sdk/commit/42b942916efbd4eb8060e4d61c2e805ec78a1a89) Thanks [@penalosa](https://github.com/penalosa)! - Expand metrics collection to:
+
+  - Detect Pages & Workers CI
+  - Filter out default args (e.g. `--x-versions`, `--x-dev-env`, and `--latest`) by only including args that were in `argv`
+
+- [#7583](https://github.com/cloudflare/workers-sdk/pull/7583) [`8def8c9`](https://github.com/cloudflare/workers-sdk/commit/8def8c99e1f74f313a3771c827133c59e1b1032b) Thanks [@penalosa](https://github.com/penalosa)! - Revert support for custom unenv resolve path to address an issue with Wrangler failing to deploy Pages projects with `nodejs_compat_v2` in some cases
+
 ## 3.97.0
 
 ### Minor Changes

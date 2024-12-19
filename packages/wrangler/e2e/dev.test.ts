@@ -1158,7 +1158,7 @@ describe("watch mode", () => {
 	describe.each([{ cmd: "wrangler dev" }])(
 		"Workers + Assets watch mode: $cmd",
 		({ cmd }) => {
-			it(`supports modifying existing assets during dev session and errors when invalid routes are added`, async () => {
+			it(`supports modifying existing assets during dev session`, async () => {
 				const helper = new WranglerE2ETestHelper();
 				await helper.seed({
 					"wrangler.toml": dedent`
@@ -1199,19 +1199,6 @@ describe("watch mode", () => {
 				);
 				// expect a new eTag back because the content for this path has changed
 				expect(response.headers.get("etag")).not.toBe(originalETag);
-
-				// changes to routes should error while in watch mode
-				await helper.seed({
-					"wrangler.toml": dedent`
-								name = "${workerName}"
-								compatibility_date = "2023-01-01"
-								route = "example.com/path/*"
-
-								[assets]
-								directory = "./public"
-						`,
-				});
-				await worker.readUntil(/Invalid Routes:/);
 			});
 
 			it(`supports adding new assets during dev session`, async () => {
@@ -1662,13 +1649,48 @@ describe("watch mode", () => {
 				// now check assets are still fetchable
 				await expect(fetchText(url)).resolves.toBe("Hello from Assets");
 			});
+
+			it(`warns on mounted paths when routes are configured in the configuration file`, async () => {
+				const helper = new WranglerE2ETestHelper();
+				await helper.seed({
+					"wrangler.toml": dedent`
+								name = "${workerName}"
+								compatibility_date = "2023-01-01"
+
+								[assets]
+								directory = "./public"
+						`,
+					"public/index.html": dedent`
+								<h1>Hello Workers + Assets</h1>`,
+				});
+
+				const worker = helper.runLongLived(cmd);
+				const { url } = await worker.waitForReady();
+
+				const { response } = await fetchWithETag(`${url}/index.html`, {});
+				expect(await response.text()).toBe("<h1>Hello Workers + Assets</h1>");
+
+				await helper.seed({
+					"wrangler.toml": dedent`
+								name = "${workerName}"
+								compatibility_date = "2023-01-01"
+								route = "example.com/path/*"
+
+								[assets]
+								directory = "./public"
+						`,
+				});
+				await worker.readUntil(
+					/Warning: The following routes will attempt to serve Assets on a configured path:/
+				);
+			});
 		}
 	);
 
 	describe.each([{ cmd: "wrangler dev --assets=dist" }])(
 		"Workers + Assets watch mode: $cmd",
 		({ cmd }) => {
-			it(`supports modifying assets during dev session and errors when invalid routes are added`, async () => {
+			it(`supports modifying assets during dev session`, async () => {
 				const helper = new WranglerE2ETestHelper();
 				await helper.seed({
 					"wrangler.toml": dedent`
@@ -1749,16 +1771,6 @@ describe("watch mode", () => {
 					}
 				));
 				expect(response.status).toBe(404);
-
-				// changes to routes should error while in watch mode
-				await helper.seed({
-					"wrangler.toml": dedent`
-								name = "${workerName}"
-								compatibility_date = "2023-01-01"
-								route = "example.com/path/*"
-						`,
-				});
-				await worker.readUntil(/Invalid Routes:/);
 			});
 
 			it(`supports switching from assets-only Workers to Workers with assets during the current dev session`, async () => {
@@ -1858,6 +1870,35 @@ describe("watch mode", () => {
 				// verify no response from User Worker
 				response = await fetch(`${url}/hey`);
 				expect(response.status).toBe(404);
+			});
+
+			it(`warns on mounted paths when routes are configured in the configuration file`, async () => {
+				const helper = new WranglerE2ETestHelper();
+				await helper.seed({
+					"wrangler.toml": dedent`
+								name = "${workerName}"
+								compatibility_date = "2023-01-01"
+						`,
+					"dist/index.html": dedent`
+								<h1>Hello Workers + Assets</h1>`,
+				});
+
+				const worker = helper.runLongLived(cmd);
+				const { url } = await worker.waitForReady();
+
+				const { response } = await fetchWithETag(`${url}/index.html`, {});
+				expect(await response.text()).toBe("<h1>Hello Workers + Assets</h1>");
+
+				await helper.seed({
+					"wrangler.toml": dedent`
+								name = "${workerName}"
+								compatibility_date = "2023-01-01"
+								route = "example.com/path/*"
+						`,
+				});
+				await worker.readUntil(
+					/Warning: The following routes will attempt to serve Assets on a configured path:/
+				);
 			});
 		}
 	);
