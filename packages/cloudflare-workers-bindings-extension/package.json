@@ -63,7 +63,7 @@
 				{
 					"id": "cloudflare-workers-bindings",
 					"name": "Bindings",
-					"icon": "media/cf-workers-logo.svg",
+					"icon": "media/cloudflare-workers-outline.svg",
 					"contextualTitle": "Cloudflare Workers Bindings"
 				}
 			]
@@ -73,7 +73,7 @@
 				{
 					"id": "cloudflare-workers",
 					"title": "Cloudflare Workers",
-					"icon": "media/cf-workers-logo.svg"
+					"icon": "media/cloudflare-workers-outline.svg"
 				}
 			]
 		},
