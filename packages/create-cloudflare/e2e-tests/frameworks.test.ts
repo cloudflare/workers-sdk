@@ -324,6 +324,23 @@ function getFrameworkTests(opts: {
 				},
 				flags: ["--ts"],
 			},
+			waku: {
+				testCommitMessage: true,
+				timeout: LONG_TIMEOUT,
+				unsupportedOSs: ["win32"],
+				verifyDeploy: {
+					route: "/",
+					expectedText: "Waku",
+				},
+				verifyPreview: {
+					route: "/",
+					expectedText: "Waku",
+				},
+				verifyBuildCfTypes: {
+					outputFile: "worker-configuration.d.ts",
+					envInterfaceName: "Env",
+				},
+			},
 		};
 	} else {
 		// These are ordered based on speed and reliability for ease of debugging
