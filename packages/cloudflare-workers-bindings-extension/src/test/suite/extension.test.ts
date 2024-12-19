@@ -106,6 +106,26 @@ describe("Extension Test Suite", () => {
 							bucket_name: "<YOUR_BUCKET_NAME>",
 						},
 					],
+					logfwdr: {
+						bindings: [
+							{
+								name: "LOG",
+								destination: "<YOUR_LOG_DESTINATION>",
+							},
+						],
+					},
+					pipelines: [
+						{
+							binding: "PIPELINE",
+							pipeline: "<YOUR_PIPELINE>",
+						},
+					],
+					send_email: [
+						{
+							name: "EMAIL",
+							destination_address: "<YOUR_EMAIL_ADDRESS>",
+						},
+					],
 					services: [
 						{
 							binding: "<BINDING_NAME>",
@@ -215,6 +235,18 @@ describe("Extension Test Suite", () => {
 						},
 						{
 							label: getBindingName("workflows"),
+							collapsibleState: vscode.TreeItemCollapsibleState.Expanded,
+						},
+						{
+							label: getBindingName("send_email"),
+							collapsibleState: vscode.TreeItemCollapsibleState.Expanded,
+						},
+						{
+							label: getBindingName("logfwdr"),
+							collapsibleState: vscode.TreeItemCollapsibleState.Expanded,
+						},
+						{
+							label: getBindingName("pipelines"),
 							collapsibleState: vscode.TreeItemCollapsibleState.Expanded,
 						},
 						{
@@ -368,6 +400,30 @@ describe("Extension Test Suite", () => {
 					{
 						label: "MY_WORKFLOW",
 						description: "MyWorkflow",
+						collapsibleState: vscode.TreeItemCollapsibleState.None,
+					},
+				]);
+
+				assert.deepEqual(await getBindingChildren("send_email"), [
+					{
+						label: "EMAIL",
+						description: "<YOUR_EMAIL_ADDRESS>",
+						collapsibleState: vscode.TreeItemCollapsibleState.None,
+					},
+				]);
+
+				assert.deepEqual(await getBindingChildren("logfwdr"), [
+					{
+						label: "LOG",
+						description: "<YOUR_LOG_DESTINATION>",
+						collapsibleState: vscode.TreeItemCollapsibleState.None,
+					},
+				]);
+
+				assert.deepEqual(await getBindingChildren("pipelines"), [
+					{
+						label: "PIPELINE",
+						description: "<YOUR_PIPELINE>",
 						collapsibleState: vscode.TreeItemCollapsibleState.None,
 					},
 				]);

@@ -25,6 +25,9 @@ export type BindingType =
 	| "vectorize"
 	| "version_metadata"
 	| "workflows"
+	| "pipelines"
+	| "send_email"
+	| "logfwdr"
 	| "vars"
 	| "unsafe";
 
@@ -283,6 +286,30 @@ export class BindingsProvider implements vscode.TreeDataProvider<Node> {
 					});
 				}
 
+				if (hasBinding(node.config.send_email)) {
+					children.push({
+						type: "binding",
+						name: "send_email",
+						config: node.config.send_email,
+					});
+				}
+
+				if (hasBinding(node.config.logfwdr)) {
+					children.push({
+						type: "binding",
+						name: "logfwdr",
+						config: node.config.logfwdr,
+					});
+				}
+
+				if (hasBinding(node.config.pipelines)) {
+					children.push({
+						type: "binding",
+						name: "pipelines",
+						config: node.config.pipelines,
+					});
+				}
+
 				if (hasBinding(node.config.vars)) {
 					children.push({
 						type: "binding",
@@ -454,6 +481,36 @@ export class BindingsProvider implements vscode.TreeDataProvider<Node> {
 						}
 						break;
 					}
+					case "logfwdr": {
+						for (const item of node.config.bindings ?? []) {
+							children.push({
+								type: "resource",
+								name: item.name,
+								description: item.destination,
+							});
+						}
+						break;
+					}
+					case "pipelines": {
+						for (const item of node.config) {
+							children.push({
+								type: "resource",
+								name: item.binding,
+								description: item.pipeline,
+							});
+						}
+						break;
+					}
+					case "send_email": {
+						for (const item of node.config) {
+							children.push({
+								type: "resource",
+								name: item.name,
+								description: item.destination_address,
+							});
+						}
+						break;
+					}
 					case "dispatch_namespaces": {
 						for (const item of node.config) {
 							children.push({
@@ -497,47 +554,35 @@ export class BindingsProvider implements vscode.TreeDataProvider<Node> {
 	}
 }
 
+// Copied from https://github.com/cloudflare/workers-sdk/blob/178fd0123d8d4baf9f395bd8aade2cf1dccb6aa8/packages/wrangler/src/utils/print-bindings.ts#L18-L46
+// With `tail_consumers` added and legacy bindings removed (`data_blobs`, `text_blobs`, `wasm_modules`)
+export const friendlyBindingNames: Record<BindingType, string> = {
+	durable_objects: "Durable Objects",
+	kv_namespaces: "KV Namespaces",
+	send_email: "Send Email",
+	queues: "Queues",
+	d1_databases: "D1 Databases",
+	vectorize: "Vectorize Indexes",
+	hyperdrive: "Hyperdrive Configs",
+	r2_buckets: "R2 Buckets",
+	logfwdr: "logfwdr",
+	services: "Services",
+	analytics_engine_datasets: "Analytics Engine Datasets",
+	browser: "Browser",
+	ai: "AI",
+	version_metadata: "Worker Version Metadata",
+	unsafe: "Unsafe Metadata",
+	vars: "Vars",
+	dispatch_namespaces: "Dispatch Namespaces",
+	mtls_certificates: "mTLS Certificates",
+	workflows: "Workflows",
+	pipelines: "Pipelines",
+	assets: "Assets",
+	tail_consumers: "Tail Consumers",
+} as const;
+
 export function getBindingName(type: BindingType): string {
-	switch (type) {
-		case "ai":
-			return "Workers AI";
-		case "analytics_engine_datasets":
-			return "Workers Analytics Engine";
-		case "assets":
-			return "Static Assets";
-		case "browser":
-			return "Browser Rendering";
-		case "d1_databases":
-			return "D1 Databases";
-		case "dispatch_namespaces":
-			return "Workers for Platforms";
-		case "durable_objects":
-			return "Durable Objects";
-		case "vars":
-			return "Environment Variables";
-		case "hyperdrive":
-			return "Hyperdrive";
-		case "kv_namespaces":
-			return "KV Namespaces";
-		case "mtls_certificates":
-			return "mTLS Certificates";
-		case "queues":
-			return "Queues";
-		case "r2_buckets":
-			return "R2 Buckets";
-		case "services":
-			return "Services";
-		case "tail_consumers":
-			return "Tail Workers";
-		case "vectorize":
-			return "Vectorize";
-		case "version_metadata":
-			return "Version Metadata";
-		case "workflows":
-			return "Workflows";
-		case "unsafe":
-			return "Unsafe Bindings";
-	}
+	return friendlyBindingNames[type];
 }
 
 // Check if the binding has any items
