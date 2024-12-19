@@ -455,7 +455,7 @@ export function validateAssetsArgsAndConfig(
 		logger.warn(
 			"experimental_serve_directly=false set without an assets binding\n" +
 				"Setting experimental_serve_directly to false will always invoke your Worker script.\n" +
-				"To fetch your assets from your Worker, please set [assets.binding] in your configuration file.\n\n" +
+				"To fetch your assets from your Worker, please set the [assets.binding] key in your configuration file.\n\n" +
 				"Read more: https://developers.cloudflare.com/workers/static-assets/binding/#binding"
 		);
 	}
