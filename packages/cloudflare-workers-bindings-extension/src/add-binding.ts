@@ -10,7 +10,7 @@ import {
 	window,
 	workspace,
 } from "vscode";
-import { getConfigUri } from "./bindings";
+import { getConfigUri } from "./show-bindings";
 import { importWrangler } from "./wrangler";
 
 class BindingType implements QuickPickItem {
@@ -22,7 +22,7 @@ class BindingType implements QuickPickItem {
 	) {}
 }
 
-export async function multiStepInput(context: ExtensionContext) {
+export async function addBindingFlow(context: ExtensionContext) {
 	const bindingTypes: BindingType[] = [
 		new BindingType(
 			"KV",
@@ -56,16 +56,13 @@ export async function multiStepInput(context: ExtensionContext) {
 
 	async function collectInputs() {
 		const state = {} as Partial<State>;
-		await MultiStepInput.run((input) => pickResourceGroup(input, state));
+		await MultiStepInput.run((input) => pickBindingType(input, state));
 		return state as State;
 	}
 
 	const title = "Add binding";
 
-	async function pickResourceGroup(
-		input: MultiStepInput,
-		state: Partial<State>
-	) {
+	async function pickBindingType(input: MultiStepInput, state: Partial<State>) {
 		const pick = await input.showQuickPick({
 			title,
 			step: 1,
@@ -76,10 +73,13 @@ export async function multiStepInput(context: ExtensionContext) {
 				typeof state.bindingType !== "string" ? state.bindingType : undefined,
 		});
 		state.bindingType = pick as BindingType;
-		return (input: MultiStepInput) => inputName(input, state);
+		return (input: MultiStepInput) => inputBindingName(input, state);
 	}
 
-	async function inputName(input: MultiStepInput, state: Partial<State>) {
+	async function inputBindingName(
+		input: MultiStepInput,
+		state: Partial<State>
+	) {
 		let name = await input.showInputBox({
 			title,
 			step: 2,
@@ -90,12 +90,17 @@ export async function multiStepInput(context: ExtensionContext) {
 			placeholder: `e.g. MY_BINDING`,
 		});
 		state.name = name;
-		return () => addToToml(state);
+		return () => addToConfig(state);
 	}
 
-	async function addToToml(state: Partial<State>) {
+	async function addToConfig(state: Partial<State>) {
 		const configUri = await getConfigUri();
 		if (!configUri) {
+			// for some reason, if we just throw an error it doesn't surface properly when triggered by the button in the welcome view
+			window.showErrorMessage(
+				"Unable to locate Wrangler configuration file — have you opened a project with a wrangler.json(c) or wrangler.toml file?",
+				{}
+			);
 			return null;
 		}
 		const workspaceFolder = workspace.getWorkspaceFolder(configUri);
@@ -106,7 +111,7 @@ export async function multiStepInput(context: ExtensionContext) {
 
 		const wrangler = importWrangler(workspaceFolder.uri.fsPath);
 
-		await workspace.openTextDocument(configUri).then((doc) => {
+		workspace.openTextDocument(configUri).then((doc) => {
 			window.showTextDocument(doc);
 			try {
 				wrangler.experimental_patchConfig(configUri.path, {
@@ -132,7 +137,7 @@ binding = "${state.name}"
 		return name === "SOME_KV_BINDING" ? "Name not unique" : undefined;
 	}
 
-	const state = await collectInputs();
+	await collectInputs();
 }
 
 // -------------------------------------------------------

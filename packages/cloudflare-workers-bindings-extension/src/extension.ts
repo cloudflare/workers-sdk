@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
-import { multiStepInput } from "./add-binding";
-import { BindingsProvider } from "./bindings";
+import { addBindingFlow } from "./add-binding";
+import { BindingsProvider } from "./show-bindings";
 
 export type Result = {
 	bindingsProvider: BindingsProvider;
@@ -34,14 +34,19 @@ export async function activate(
 	);
 
 	// Register the add bindings command
-	vscode.commands.registerCommand(
+	const addBindingCommand = vscode.commands.registerCommand(
 		"cloudflare-workers-bindings.addBinding",
 		async () => {
-			await multiStepInput(context);
+			await addBindingFlow(context);
 		}
 	);
 	// Cleanup when the extension is deactivated
-	context.subscriptions.push(bindingsView, watcher, refreshCommand);
+	context.subscriptions.push(
+		bindingsView,
+		watcher,
+		refreshCommand,
+		addBindingCommand
+	);
 
 	return {
 		bindingsProvider,
