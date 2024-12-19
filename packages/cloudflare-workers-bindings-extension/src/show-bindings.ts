@@ -83,7 +83,7 @@ export class BindingsProvider implements vscode.TreeDataProvider<Node> {
 			}
 			case "binding": {
 				return new vscode.TreeItem(
-					getBindingName(node.name),
+					friendlyBindingNames[node.name],
 					vscode.TreeItemCollapsibleState.Expanded
 				);
 			}
@@ -580,10 +580,6 @@ export const friendlyBindingNames: Record<BindingType, string> = {
 	assets: "Assets",
 	tail_consumers: "Tail Consumers",
 } as const;
-
-export function getBindingName(type: BindingType): string {
-	return friendlyBindingNames[type];
-}
 
 // Check if the binding has any items
 // This is used to filter out empty bindings

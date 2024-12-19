@@ -2,7 +2,7 @@ import assert from "node:assert";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import * as vscode from "vscode";
-import { getBindingName } from "../../show-bindings";
+import { friendlyBindingNames } from "../../show-bindings";
 import type { Result } from "../../extension";
 import type { BindingType, Config } from "../../show-bindings";
 
@@ -174,87 +174,87 @@ describe("Extension Test Suite", () => {
 					children.map((child) => bindingsProvider.getTreeItem(child)),
 					[
 						{
-							label: getBindingName("kv_namespaces"),
+							label: friendlyBindingNames.kv_namespaces,
 							collapsibleState: vscode.TreeItemCollapsibleState.Expanded,
 						},
 						{
-							label: getBindingName("r2_buckets"),
+							label: friendlyBindingNames.r2_buckets,
 							collapsibleState: vscode.TreeItemCollapsibleState.Expanded,
 						},
 						{
-							label: getBindingName("d1_databases"),
+							label: friendlyBindingNames.d1_databases,
 							collapsibleState: vscode.TreeItemCollapsibleState.Expanded,
 						},
 						{
-							label: getBindingName("durable_objects"),
+							label: friendlyBindingNames.durable_objects,
 							collapsibleState: vscode.TreeItemCollapsibleState.Expanded,
 						},
 						{
-							label: getBindingName("ai"),
+							label: friendlyBindingNames.ai,
 							collapsibleState: vscode.TreeItemCollapsibleState.Expanded,
 						},
 						{
-							label: getBindingName("analytics_engine_datasets"),
+							label: friendlyBindingNames.analytics_engine_datasets,
 							collapsibleState: vscode.TreeItemCollapsibleState.Expanded,
 						},
 						{
-							label: getBindingName("browser"),
+							label: friendlyBindingNames.browser,
 							collapsibleState: vscode.TreeItemCollapsibleState.Expanded,
 						},
 						{
-							label: getBindingName("hyperdrive"),
+							label: friendlyBindingNames.hyperdrive,
 							collapsibleState: vscode.TreeItemCollapsibleState.Expanded,
 						},
 						{
-							label: getBindingName("mtls_certificates"),
+							label: friendlyBindingNames.mtls_certificates,
 							collapsibleState: vscode.TreeItemCollapsibleState.Expanded,
 						},
 						{
-							label: getBindingName("services"),
+							label: friendlyBindingNames.services,
 							collapsibleState: vscode.TreeItemCollapsibleState.Expanded,
 						},
 						{
-							label: getBindingName("assets"),
+							label: friendlyBindingNames.assets,
 							collapsibleState: vscode.TreeItemCollapsibleState.Expanded,
 						},
 						{
-							label: getBindingName("vectorize"),
+							label: friendlyBindingNames.vectorize,
 							collapsibleState: vscode.TreeItemCollapsibleState.Expanded,
 						},
 						{
-							label: getBindingName("version_metadata"),
+							label: friendlyBindingNames.version_metadata,
 							collapsibleState: vscode.TreeItemCollapsibleState.Expanded,
 						},
 						{
-							label: getBindingName("dispatch_namespaces"),
+							label: friendlyBindingNames.dispatch_namespaces,
 							collapsibleState: vscode.TreeItemCollapsibleState.Expanded,
 						},
 						{
-							label: getBindingName("queues"),
+							label: friendlyBindingNames.queues,
 							collapsibleState: vscode.TreeItemCollapsibleState.Expanded,
 						},
 						{
-							label: getBindingName("workflows"),
+							label: friendlyBindingNames.workflows,
 							collapsibleState: vscode.TreeItemCollapsibleState.Expanded,
 						},
 						{
-							label: getBindingName("send_email"),
+							label: friendlyBindingNames.send_email,
 							collapsibleState: vscode.TreeItemCollapsibleState.Expanded,
 						},
 						{
-							label: getBindingName("logfwdr"),
+							label: friendlyBindingNames.logfwdr,
 							collapsibleState: vscode.TreeItemCollapsibleState.Expanded,
 						},
 						{
-							label: getBindingName("pipelines"),
+							label: friendlyBindingNames.pipelines,
 							collapsibleState: vscode.TreeItemCollapsibleState.Expanded,
 						},
 						{
-							label: getBindingName("vars"),
+							label: friendlyBindingNames.vars,
 							collapsibleState: vscode.TreeItemCollapsibleState.Expanded,
 						},
 						{
-							label: getBindingName("unsafe"),
+							label: friendlyBindingNames.unsafe,
 							collapsibleState: vscode.TreeItemCollapsibleState.Expanded,
 						},
 					]
@@ -526,7 +526,7 @@ describe("Extension Test Suite", () => {
 					),
 					[
 						{
-							label: getBindingName("d1_databases"),
+							label: friendlyBindingNames.d1_databases,
 							collapsibleState: vscode.TreeItemCollapsibleState.Expanded,
 						},
 					]
@@ -537,7 +537,7 @@ describe("Extension Test Suite", () => {
 					stagingChildren.map((child) => bindingsProvider.getTreeItem(child)),
 					[
 						{
-							label: getBindingName("kv_namespaces"),
+							label: friendlyBindingNames.kv_namespaces,
 							collapsibleState: vscode.TreeItemCollapsibleState.Expanded,
 						},
 					]
@@ -551,7 +551,7 @@ describe("Extension Test Suite", () => {
 					),
 					[
 						{
-							label: getBindingName("r2_buckets"),
+							label: friendlyBindingNames.r2_buckets,
 							collapsibleState: vscode.TreeItemCollapsibleState.Expanded,
 						},
 					]
