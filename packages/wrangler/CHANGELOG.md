@@ -1,5 +1,31 @@
 # wrangler
 
+## 3.99.0
+
+### Minor Changes
+
+- [#7425](https://github.com/cloudflare/workers-sdk/pull/7425) [`8757579`](https://github.com/cloudflare/workers-sdk/commit/8757579a47d675909230a51f8e09d1611d5cadb1) Thanks [@CarmenPopoviciu](https://github.com/CarmenPopoviciu)! - feat: Make DX improvements in `wrangler dev --remote`
+
+  Workers + Assets projects have, in certain situations, a relatively degraded `wrangler dev --remote` developer experience, as opposed to Workers proper projects. This is due to the fact that, for Workers + Assets, we need to make extra API calls to:
+
+  1. check for asset files changes
+  2. upload the changed assets, if any
+
+  This commit improves the `wrangler dev --remote` DX for Workers + Assets, for use cases when the User Worker/assets change while the API calls for previous changes are still in flight. For such use cases, we have put an exit early strategy in place, that drops the event handler execution of the previous changes, in favour of the handler triggered by the new changes.
+
+- [#7537](https://github.com/cloudflare/workers-sdk/pull/7537) [`086a6b8`](https://github.com/cloudflare/workers-sdk/commit/086a6b8c613b9c8f0f7c4933ffd68f38f7771c3f) Thanks [@WillTaylorDev](https://github.com/WillTaylorDev)! - Provide validation around assets.experimental_serve_directly
+
+- [#7568](https://github.com/cloudflare/workers-sdk/pull/7568) [`2bbcb93`](https://github.com/cloudflare/workers-sdk/commit/2bbcb938b1e14cf21da5dc20ce0c8b9bea0f6aad) Thanks [@WillTaylorDev](https://github.com/WillTaylorDev)! - Warn users when using smart placement with Workers + Assets and `serve_directly` is set to `false`
+
+### Patch Changes
+
+- [#7521](https://github.com/cloudflare/workers-sdk/pull/7521) [`48e7e10`](https://github.com/cloudflare/workers-sdk/commit/48e7e1035f489639564948edd3789b1740a7873d) Thanks [@emily-shen](https://github.com/emily-shen)! - feat: add experimental_patchConfig()
+
+  `experimental_patchConfig()` can add to a user's config file. It preserves comments if its a `wrangler.jsonc`. However, it is not suitable for `wrangler.toml` with comments as we cannot preserve comments on write.
+
+- Updated dependencies [[`1488e11`](https://github.com/cloudflare/workers-sdk/commit/1488e118b4a43d032e4f2e69afa1c16c2e54aff6), [`7216835`](https://github.com/cloudflare/workers-sdk/commit/7216835bf7489804905751c6b52e75a8945e7974)]:
+  - miniflare@3.20241218.0
+
 ## 3.98.0
 
 ### Minor Changes

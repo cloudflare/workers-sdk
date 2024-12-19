@@ -1,5 +1,16 @@
 # @cloudflare/pages-shared
 
+## 0.12.0
+
+### Minor Changes
+
+- [#7546](https://github.com/cloudflare/workers-sdk/pull/7546) [`004fd33`](https://github.com/cloudflare/workers-sdk/commit/004fd33d62ab3a77888ffb5538f92135a15d2d3f) Thanks [@GregBrimble](https://github.com/GregBrimble)! - feat: Return a 304 Not Modified response when matching an asset preservation cache request if appropriate
+
+### Patch Changes
+
+- Updated dependencies [[`1488e11`](https://github.com/cloudflare/workers-sdk/commit/1488e118b4a43d032e4f2e69afa1c16c2e54aff6), [`7216835`](https://github.com/cloudflare/workers-sdk/commit/7216835bf7489804905751c6b52e75a8945e7974)]:
+  - miniflare@3.20241218.0
+
 ## 0.11.72
 
 ### Patch Changes
