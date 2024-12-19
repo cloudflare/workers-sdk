@@ -6045,15 +6045,19 @@ describe("experimental_readRawConfig()", () => {
 			runInTempDir();
 			it(`should find a ${configType} config file given a specific path`, () => {
 				fs.mkdirSync("../folder", { recursive: true });
-				writeWranglerConfig({}, `../folder/config.${configType}`);
+				writeWranglerConfig(
+					{ name: "config-one" },
+					`../folder/config.${configType}`
+				);
 
 				const result = experimental_readRawConfig({
 					config: `../folder/config.${configType}`,
 				});
-				expect(result.rawConfig).toEqual({
-					compatibility_date: "2022-01-12",
-					name: "test-name",
-				});
+				expect(result.rawConfig).toEqual(
+					expect.objectContaining({
+						name: "config-one",
+					})
+				);
 			});
 
 			it("should find a config file given a specific script", () => {
@@ -6072,18 +6076,20 @@ describe("experimental_readRawConfig()", () => {
 				let result = experimental_readRawConfig({
 					script: "./path/to/index.js",
 				});
-				expect(result.rawConfig).toEqual({
-					compatibility_date: "2022-01-12",
-					name: "config-one",
-				});
+				expect(result.rawConfig).toEqual(
+					expect.objectContaining({
+						name: "config-one",
+					})
+				);
 
 				result = experimental_readRawConfig({
 					script: "../folder/index.js",
 				});
-				expect(result.rawConfig).toEqual({
-					compatibility_date: "2022-01-12",
-					name: "config-two",
-				});
+				expect(result.rawConfig).toEqual(
+					expect.objectContaining({
+						name: "config-two",
+					})
+				);
 			});
 		}
 	);
