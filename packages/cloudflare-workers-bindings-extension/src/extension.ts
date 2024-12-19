@@ -32,8 +32,10 @@ export async function activate(
 		"cloudflare-workers-bindings.refresh",
 		() => bindingsProvider.refresh()
 	);
+
+	// Register the add bindings command
 	vscode.commands.registerCommand(
-		"cloudflare-workers-bindings.addEntry",
+		"cloudflare-workers-bindings.addBinding",
 		async () => {
 			await multiStepInput(context);
 		}

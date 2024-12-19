@@ -21,15 +21,8 @@ class BindingType implements QuickPickItem {
 		public iconPath?: Uri
 	) {}
 }
-/**
- * A multi-step input using window.createQuickPick() and window.createInputBox().
- *
- * This first part uses the helper class `MultiStepInput` that wraps the API for the multi-step case.
- */
-export async function multiStepInput(
-	context: ExtensionContext
-	// rootPath: string
-) {
+
+export async function multiStepInput(context: ExtensionContext) {
 	const bindingTypes: BindingType[] = [
 		new BindingType(
 			"KV",
@@ -81,15 +74,12 @@ export async function multiStepInput(
 			items: bindingTypes,
 			activeItem:
 				typeof state.bindingType !== "string" ? state.bindingType : undefined,
-			// shouldResume,
 		});
 		state.bindingType = pick as BindingType;
 		return (input: MultiStepInput) => inputName(input, state);
 	}
 
 	async function inputName(input: MultiStepInput, state: Partial<State>) {
-		// TODO: Remember current value when navigating back.
-
 		let name = await input.showInputBox({
 			title,
 			step: 2,
@@ -98,7 +88,6 @@ export async function multiStepInput(
 			prompt: "Choose a binding name",
 			validate: validateNameIsUnique,
 			placeholder: `e.g. MY_BINDING`,
-			// shouldResume,
 		});
 		state.name = name;
 		return () => addToToml(state);
@@ -179,7 +168,6 @@ interface InputBoxParameters {
 	buttons?: QuickInputButton[];
 	ignoreFocusOut?: boolean;
 	placeholder?: string;
-	// shouldResume: () => Thenable<boolean>;
 }
 
 export class MultiStepInput {
@@ -231,7 +219,6 @@ export class MultiStepInput {
 		ignoreFocusOut,
 		placeholder,
 		buttons,
-		// shouldResume,
 	}: P) {
 		const disposables: Disposable[] = [];
 		try {
@@ -261,15 +248,6 @@ export class MultiStepInput {
 						}
 					}),
 					input.onDidChangeSelection((items) => resolve(items[0]))
-					// input.onDidHide(() => {
-					// 	(async () => {
-					// 		reject(
-					// 			shouldResume && (await shouldResume())
-					// 				? InputFlowAction.resume
-					// 				: InputFlowAction.cancel
-					// 		);
-					// 	})().catch(reject);
-					// })
 				);
 				if (this.current) {
 					this.current.dispose();
@@ -292,7 +270,6 @@ export class MultiStepInput {
 		buttons,
 		ignoreFocusOut,
 		placeholder,
-		// shouldResume,
 	}: P) {
 		const disposables: Disposable[] = [];
 		try {
@@ -338,15 +315,6 @@ export class MultiStepInput {
 							input.validationMessage = validationMessage;
 						}
 					})
-					// input.onDidHide(() => {
-					// 	(async () => {
-					// 		reject(
-					// 			shouldResume && (await shouldResume())
-					// 				? InputFlowAction.resume
-					// 				: InputFlowAction.cancel
-					// 		);
-					// 	})().catch(reject);
-					// })
 				);
 				if (this.current) {
 					this.current.dispose();

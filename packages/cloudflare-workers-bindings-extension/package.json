@@ -33,7 +33,7 @@
 				"icon": "$(refresh)"
 			},
 			{
-				"command": "cloudflare-workers-bindings.addEntry",
+				"command": "cloudflare-workers-bindings.addBinding",
 				"title": "Cloudflare Workers: Add binding",
 				"icon": "$(add)"
 			}
@@ -46,7 +46,7 @@
 					"group": "navigation"
 				},
 				{
-					"command": "cloudflare-workers-bindings.addEntry",
+					"command": "cloudflare-workers-bindings.addBinding",
 					"when": "view == cloudflare-workers-bindings",
 					"group": "navigation"
 				}
@@ -74,7 +74,7 @@
 		"viewsWelcome": [
 			{
 				"view": "cloudflare-workers-bindings",
-				"contents": "Welcome to Cloudflare Workers! [Learn more](https://workers.cloudflare.com).\n[Add a binding](command:cloudflare-workers-bindings.addEntry)"
+				"contents": "Welcome to Cloudflare Workers! [Learn more](https://workers.cloudflare.com).\n[Add a binding](command:cloudflare-workers-bindings.addBinding)"
 			}
 		]
 	},
