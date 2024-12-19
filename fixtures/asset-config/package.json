@@ -2,7 +2,7 @@
 	"name": "workers-assets-config-test",
 	"private": true,
 	"scripts": {
-		"dev": "npx wrangler dev",
+		"dev": "wrangler dev",
 		"test:ci": "run-script-os",
 		"test:ci:default": "true",
 		"test:ci:nix": "vitest run",
@@ -14,6 +14,7 @@
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-types": "^4.20241205.0",
 		"run-script-os": "^1.1.6",
+		"typescript": "catalog:default",
 		"undici": "catalog:default",
 		"vitest": "catalog:default",
 		"wrangler": "workspace:*"

@@ -9,6 +9,7 @@
 	},
 	"devDependencies": {
 		"get-port": "^7.0.0",
+		"vitest": "catalog:default",
 		"wrangler": "workspace:*"
 	},
 	"volta": {

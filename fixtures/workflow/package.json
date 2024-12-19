@@ -8,7 +8,9 @@
 	},
 	"devDependencies": {
 		"@cloudflare/workers-types": "^4.20241205.0",
+		"typescript": "catalog:default",
 		"undici": "catalog:default",
+		"vitest": "catalog:default",
 		"wrangler": "workspace:*"
 	},
 	"volta": {

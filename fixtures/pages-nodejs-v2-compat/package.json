@@ -4,16 +4,18 @@
 	"sideEffects": false,
 	"scripts": {
 		"check:type": "tsc",
-		"dev:functions-app": "npx wrangler pages dev ./apps/functions --port 8792",
-		"dev:workerjs-directory": "npx wrangler pages dev ./apps/workerjs-directory --port 8792",
-		"dev:workerjs-file": "npx wrangler pages dev ./apps/workerjs-file --port 8792",
+		"dev:functions-app": "wrangler pages dev ./apps/functions --port 8792",
+		"dev:workerjs-directory": "wrangler pages dev ./apps/workerjs-directory --port 8792",
+		"dev:workerjs-file": "wrangler pages dev ./apps/workerjs-file --port 8792",
 		"test:ci": "vitest run",
 		"test:watch": "vitest",
 		"type:tests": "tsc -p ./tests/tsconfig.json"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-tsconfig": "workspace:^",
+		"typescript": "catalog:default",
 		"undici": "catalog:default",
+		"vitest": "catalog:default",
 		"wrangler": "workspace:*"
 	},
 	"engines": {

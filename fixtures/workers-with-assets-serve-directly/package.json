@@ -3,7 +3,7 @@
 	"private": true,
 	"scripts": {
 		"check:type": "tsc",
-		"dev": "npx wrangler dev",
+		"dev": "wrangler dev",
 		"test:ci": "vitest run",
 		"test:watch": "vitest",
 		"type:tests": "tsc -p ./tests/tsconfig.json"
@@ -11,7 +11,9 @@
 	"devDependencies": {
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-types": "^4.20241205.0",
+		"typescript": "catalog:default",
 		"undici": "catalog:default",
+		"vitest": "catalog:default",
 		"wrangler": "workspace:*"
 	},
 	"volta": {
