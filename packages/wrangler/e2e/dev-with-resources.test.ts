@@ -8,6 +8,9 @@ import WebSocket from "ws";
 import { WranglerE2ETestHelper } from "./helpers/e2e-wrangler-test";
 import { generateResourceName } from "./helpers/generate-resource-name";
 
+const port = await getPort();
+const inspectorPort = await getPort();
+
 const RUNTIMES = [
 	{ flags: "", runtime: "local" },
 	{ flags: "--remote", runtime: "remote" },
@@ -60,7 +63,9 @@ describe.sequential.each(RUNTIMES)("Core: $flags", ({ runtime, flags }) => {
 				}
 			`,
 		});
-		const worker = helper.runLongLived(`wrangler dev ${flags}`);
+		const worker = helper.runLongLived(
+			`wrangler dev ${flags} --port ${port} --inspector-port ${inspectorPort}`
+		);
 		const { url } = await worker.waitForReady();
 		let res = await fetch(url);
 
@@ -98,7 +103,9 @@ describe.sequential.each(RUNTIMES)("Core: $flags", ({ runtime, flags }) => {
 				});
 			`,
 		});
-		const worker = helper.runLongLived(`wrangler dev ${flags}`);
+		const worker = helper.runLongLived(
+			`wrangler dev ${flags} --port ${port} --inspector-port ${inspectorPort}`
+		);
 		const { url } = await worker.waitForReady();
 		let res = await fetch(url);
 		expect(await res.text()).toBe("service worker");
@@ -147,7 +154,9 @@ describe.sequential.each(RUNTIMES)("Core: $flags", ({ runtime, flags }) => {
 				}
 			`,
 		});
-		const worker = helper.runLongLived(`wrangler dev ${flags}`);
+		const worker = helper.runLongLived(
+			`wrangler dev ${flags} --port ${port} --inspector-port ${inspectorPort}`
+		);
 		const { url } = await worker.waitForReady();
 		const res = await fetch(url);
 		expect(await res.json()).toEqual({
@@ -158,8 +167,6 @@ describe.sequential.each(RUNTIMES)("Core: $flags", ({ runtime, flags }) => {
 	});
 
 	it("starts inspector and allows debugging", async () => {
-		const inspectorPort = await getPort();
-
 		await helper.seed({
 			"wrangler.toml": dedent`
 				name = "${workerName}"
@@ -173,7 +180,7 @@ describe.sequential.each(RUNTIMES)("Core: $flags", ({ runtime, flags }) => {
 			`,
 		});
 		const worker = helper.runLongLived(
-			`wrangler dev ${flags} --inspector-port=${inspectorPort}`
+			`wrangler dev ${flags} --port ${port} --inspector-port ${inspectorPort}`
 		);
 		await worker.waitForReady();
 		const inspectorUrl = new URL(`ws://127.0.0.1:${inspectorPort}`);
@@ -198,7 +205,7 @@ describe.sequential.each(RUNTIMES)("Core: $flags", ({ runtime, flags }) => {
 			`,
 		});
 		const worker = helper.runLongLived(
-			`wrangler dev ${flags} --local-protocol=https`
+			`wrangler dev ${flags} --port ${port} --inspector-port ${inspectorPort} --local-protocol=https`
 		);
 		const { url } = await worker.waitForReady();
 		const parsedURL = new URL(url);
@@ -224,7 +231,7 @@ describe.sequential.each(RUNTIMES)("Core: $flags", ({ runtime, flags }) => {
 		});
 		// TODO(soon): explore using `--host` for remote mode in this test
 		const worker = helper.runLongLived(
-			`wrangler dev ${flags} --local-upstream=example.com`
+			`wrangler dev ${flags} --port ${port} --inspector-port ${inspectorPort} --local-upstream=example.com`
 		);
 		const { url } = await worker.waitForReady();
 		const res = await fetch(url);
@@ -270,7 +277,9 @@ describe.sequential.each(RUNTIMES)("Bindings: $flags", ({ runtime, flags }) => {
 				});
 			`,
 		});
-		const worker = helper.runLongLived(`wrangler dev ${flags}`);
+		const worker = helper.runLongLived(
+			`wrangler dev ${flags} --port ${port} --inspector-port ${inspectorPort}`
+		);
 		const { url } = await worker.waitForReady();
 		const res = await fetch(url);
 		expect(await res.json()).toEqual({
@@ -298,7 +307,9 @@ describe.sequential.each(RUNTIMES)("Bindings: $flags", ({ runtime, flags }) => {
 				});
 			`,
 		});
-		const worker = helper.runLongLived(`wrangler dev ${flags}`);
+		const worker = helper.runLongLived(
+			`wrangler dev ${flags} --port ${port} --inspector-port ${inspectorPort}`
+		);
 		const { url } = await worker.waitForReady();
 		const res = await fetch(url);
 		expect(await res.text()).toBe("3");
@@ -330,7 +341,9 @@ describe.sequential.each(RUNTIMES)("Bindings: $flags", ({ runtime, flags }) => {
 				}
 			`,
 		});
-		const worker = helper.runLongLived(`wrangler dev ${flags}`);
+		const worker = helper.runLongLived(
+			`wrangler dev ${flags} --port ${port} --inspector-port ${inspectorPort}`
+		);
 		const { url } = await worker.waitForReady();
 		const res = await fetch(url);
 		expect(await res.text()).toBe("existing-value");
@@ -399,7 +412,9 @@ describe.sequential.each(RUNTIMES)("Bindings: $flags", ({ runtime, flags }) => {
 			`,
 		});
 
-		const worker = helper.runLongLived(`wrangler dev ${flags}`);
+		const worker = helper.runLongLived(
+			`wrangler dev ${flags} --port ${port} --inspector-port ${inspectorPort}`
+		);
 		const { url } = await worker.waitForReady();
 		const res = await fetch(url);
 		expect(await res.text()).toBe("<h1>👋</h1>");
@@ -432,7 +447,9 @@ describe.sequential.each(RUNTIMES)("Bindings: $flags", ({ runtime, flags }) => {
 				}
 			`,
 		});
-		const worker = helper.runLongLived(`wrangler dev ${flags}`);
+		const worker = helper.runLongLived(
+			`wrangler dev ${flags} --port ${port} --inspector-port ${inspectorPort}`
+		);
 		const { url } = await worker.waitForReady();
 		const res = await fetch(url);
 		expect(await res.text()).toBe("existing-value");
@@ -483,7 +500,9 @@ describe.sequential.each(RUNTIMES)("Bindings: $flags", ({ runtime, flags }) => {
 			`wrangler d1 execute ${d1ResourceFlags} DB --file schema.sql`
 		);
 		// D1 defaults to `--local`, so we deliberately use `flags`, not `resourceFlags`
-		const worker = helper.runLongLived(`wrangler dev ${flags}`);
+		const worker = helper.runLongLived(
+			`wrangler dev ${flags} --port ${port} --inspector-port ${inspectorPort}`
+		);
 		const { url } = await worker.waitForReady();
 		const res = await fetch(url);
 		expect(await res.json()).toEqual([{ key: "key1", value: "value1" }]);
@@ -551,7 +570,7 @@ describe.sequential.each(RUNTIMES)("Bindings: $flags", ({ runtime, flags }) => {
 		});
 
 		const worker = helper.runLongLived(
-			`wrangler dev ${flags} --experimental-vectorize-bind-to-prod`
+			`wrangler dev ${flags} --port ${port} --inspector-port ${inspectorPort} --experimental-vectorize-bind-to-prod`
 		);
 		const { url } = await worker.waitForReady();
 		const res = await fetch(url);
@@ -585,7 +604,9 @@ describe.sequential.each(RUNTIMES)("Bindings: $flags", ({ runtime, flags }) => {
 			`,
 		});
 
-		const worker = helper.runLongLived(`wrangler dev ${flags}`);
+		const worker = helper.runLongLived(
+			`wrangler dev ${flags} --port ${port} --inspector-port ${inspectorPort}`
+		);
 		const { url } = await worker.waitForReady();
 		const res = await fetch(url);
 
@@ -619,7 +640,9 @@ describe.sequential.each(RUNTIMES)("Bindings: $flags", ({ runtime, flags }) => {
 				}
 			`,
 		});
-		const worker = helper.runLongLived(`wrangler dev ${flags}`);
+		const worker = helper.runLongLived(
+			`wrangler dev ${flags} --port ${port} --inspector-port ${inspectorPort}`
+		);
 		const { url } = await worker.waitForReady();
 		await fetch(url);
 		await worker.readUntil(/✉️/);
@@ -659,7 +682,9 @@ describe.sequential.each(RUNTIMES)("Bindings: $flags", ({ runtime, flags }) => {
                 }
             `,
 		});
-		const worker = helper.runLongLived(`wrangler dev ${flags}`);
+		const worker = helper.runLongLived(
+			`wrangler dev ${flags} --port ${port} --inspector-port ${inspectorPort}`
+		);
 		const { url } = await worker.waitForReady();
 		const res = await fetch(url);
 
