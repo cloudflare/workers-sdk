@@ -6,30 +6,32 @@ export type Config = ReturnType<
 >["rawConfig"];
 
 export type Environment = Required<Config>["env"][string];
+export const bindingKeys = [
+	"kv_namespaces",
+	"durable_objects",
+	"r2_buckets",
+	"d1_databases",
+	"ai",
+	"analytics_engine_datasets",
+	"assets",
+	"dispatch_namespaces",
+	"queues",
+	"browser",
+	"hyperdrive",
+	"mtls_certificates",
+	"services",
+	"tail_consumers",
+	"vectorize",
+	"version_metadata",
+	"workflows",
+	"pipelines",
+	"send_email",
+	"logfwdr",
+	"vars",
+	"unsafe",
+] as const;
 
-export type BindingType =
-	| "kv_namespaces"
-	| "durable_objects"
-	| "r2_buckets"
-	| "d1_databases"
-	| "ai"
-	| "analytics_engine_datasets"
-	| "assets"
-	| "dispatch_namespaces"
-	| "queues"
-	| "browser"
-	| "hyperdrive"
-	| "mtls_certificates"
-	| "services"
-	| "tail_consumers"
-	| "vectorize"
-	| "version_metadata"
-	| "workflows"
-	| "pipelines"
-	| "send_email"
-	| "logfwdr"
-	| "vars"
-	| "unsafe";
+export type BindingType = (typeof bindingKeys)[number];
 
 type EnvNode = {
 	type: "env";
