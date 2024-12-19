@@ -361,4 +361,47 @@ describe("multiworker", () => {
 			);
 		});
 	});
+
+	describe("workers with assets", () => {
+		beforeEach(async () => {
+			await baseSeed(a, {
+				"wrangler.toml": dedent`
+						name = "${workerName}"
+						main = "src/index.ts"
+						compatibility_date = "2024-11-01"
+
+						[[services]]
+						binding = "BEE"
+						service = '${workerName2}'
+
+						[[services]]
+						binding = "COUNTER"
+						service = '${workerName2}'
+						entrypoint = 'CounterService'
+				`,
+			});
+			await baseSeed(b, {
+				"wrangler.toml": dedent`
+				name = "${workerName2}"
+				main = "src/index.ts"
+				compatibility_date = "2024-11-01"
+
+				assets = { directory = "./public/", binding = "ASSETS" }
+		`,
+				"public/index.html": "<p>have an asset</p>",
+			});
+		});
+		it("can fetch assets and worker on b", async () => {
+			const worker = helper.runLongLived(`wrangler dev`, { cwd: b });
+
+			const { url } = await worker.waitForReady(5_000);
+
+			await expect(fetch(url).then((r) => r.text())).resolves.toBe(
+				"<p>have an asset</p>"
+			);
+			await expect(fetch(`${url}/worker`).then((r) => r.text())).resolves.toBe(
+				"hello world"
+			);
+		});
+	});
 });
