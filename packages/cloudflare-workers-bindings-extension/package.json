@@ -2,6 +2,7 @@
 	"name": "cloudflare-workers-bindings-extension",
 	"displayName": "Cloudflare Workers",
 	"version": "0.0.9",
+	"private": true,
 	"description": "Manage your Cloudflare Worker's bindings",
 	"categories": [
 		"Other"
@@ -113,6 +114,7 @@
 	},
 	"workers-sdk": {
 		"prerelease": true,
-		"type": "extension"
+		"type": "extension",
+		"deploy": true
 	}
 }
