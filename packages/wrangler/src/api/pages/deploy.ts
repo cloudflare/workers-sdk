@@ -160,7 +160,7 @@ export async function deploy({
 	let config: Config | undefined;
 
 	try {
-		config = readPagesConfig({ ...args, env });
+		config = readPagesConfig({ ...args, env }, { useRedirect: true });
 	} catch (err) {
 		if (
 			!(
