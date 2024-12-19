@@ -1,30 +1,60 @@
 import * as vscode from "vscode";
 import { importWrangler } from "./wrangler";
 
-type Config = ReturnType<
+export type Config = ReturnType<
 	ReturnType<typeof importWrangler>["experimental_readRawConfig"]
 >["rawConfig"];
 
-type Node =
-	| {
-			type: "env";
-			config: Config;
-			env: string | null;
-	  }
-	| {
+export type Environment = Required<Config>["env"][string];
+
+export type BindingType =
+	| "kv_namespaces"
+	| "durable_objects"
+	| "r2_buckets"
+	| "d1_databases"
+	| "ai"
+	| "analytics_engine_datasets"
+	| "assets"
+	| "dispatch_namespaces"
+	| "queues"
+	| "browser"
+	| "hyperdrive"
+	| "mtls_certificates"
+	| "services"
+	| "tail_consumers"
+	| "vectorize"
+	| "version_metadata"
+	| "workflows"
+	| "pipelines"
+	| "send_email"
+	| "logfwdr"
+	| "vars"
+	| "unsafe";
+
+type EnvNode = {
+	type: "env";
+	config: Environment;
+	name: string | null;
+};
+
+type BindingNode = Exclude<
+	{
+		[Name in BindingType]: {
 			type: "binding";
-			config: Config;
-			env: string | null;
-			binding: string;
-	  }
-	| {
-			type: "resource";
-			config: Config;
-			env: string | null;
-			binding: string;
-			name: string;
-			description?: string;
-	  };
+			name: Name;
+			config: Required<Environment>[Name];
+		};
+	}[BindingType],
+	undefined
+>;
+
+type ResourceNode = {
+	type: "resource";
+	name: string;
+	description?: string;
+};
+
+type Node = EnvNode | BindingNode | ResourceNode;
 
 export class BindingsProvider implements vscode.TreeDataProvider<Node> {
 	// Event emitter for refreshing the tree
@@ -45,7 +75,7 @@ export class BindingsProvider implements vscode.TreeDataProvider<Node> {
 		switch (node.type) {
 			case "env": {
 				const item = new vscode.TreeItem(
-					node.env ?? "Top-level env",
+					node.name ?? "Top-level env",
 					vscode.TreeItemCollapsibleState.Expanded
 				);
 
@@ -53,7 +83,7 @@ export class BindingsProvider implements vscode.TreeDataProvider<Node> {
 			}
 			case "binding": {
 				return new vscode.TreeItem(
-					node.binding,
+					friendlyBindingNames[node.name],
 					vscode.TreeItemCollapsibleState.Expanded
 				);
 			}
@@ -74,32 +104,30 @@ export class BindingsProvider implements vscode.TreeDataProvider<Node> {
 
 	async getChildren(node?: Node): Promise<Node[]> {
 		if (!node) {
-			const config = await getWranglerConfig();
+			const wranglerConfig = await getWranglerConfig();
 
-			if (!config) {
+			if (!wranglerConfig) {
 				return [];
 			}
 
 			const topLevelEnvNode: Node = {
 				type: "env",
-				config,
-				env: null,
+				name: null,
+				config: wranglerConfig,
 			};
 			const children: Node[] = [];
 
-			for (const env of Object.keys(config.env ?? {})) {
+			for (const [name, config] of Object.entries(wranglerConfig.env ?? {})) {
 				const node: Node = {
-					...topLevelEnvNode,
-					env,
+					type: "env",
+					name,
+					config,
 				};
 				const grandChildren = await this.getChildren(node);
 
 				// Include the environment only if it has any bindings
 				if (grandChildren.length > 0) {
-					children.push({
-						...topLevelEnvNode,
-						env,
-					});
+					children.push(node);
 				}
 			}
 
@@ -120,73 +148,401 @@ export class BindingsProvider implements vscode.TreeDataProvider<Node> {
 
 		switch (node.type) {
 			case "env": {
-				const children: Node[] = [];
-				const env = node.env ? node.config.env?.[node.env] : node.config;
+				const children: BindingNode[] = [];
 
-				if (env?.kv_namespaces && env.kv_namespaces.length > 0) {
+				if (hasBinding(node.config.kv_namespaces)) {
 					children.push({
-						...node,
 						type: "binding",
-						binding: "KV Namespaces",
+						name: "kv_namespaces",
+						config: node.config.kv_namespaces,
 					});
 				}
 
-				if (env?.r2_buckets && env.r2_buckets.length > 0) {
+				if (hasBinding(node.config.r2_buckets)) {
 					children.push({
-						...node,
 						type: "binding",
-						binding: "R2 Buckets",
+						name: "r2_buckets",
+						config: node.config.r2_buckets,
 					});
 				}
 
-				if (env?.d1_databases && env.d1_databases.length > 0) {
+				if (hasBinding(node.config.d1_databases)) {
 					children.push({
-						...node,
 						type: "binding",
-						binding: "D1 Databases",
+						name: "d1_databases",
+						config: node.config.d1_databases,
+					});
+				}
+
+				if (hasBinding(node.config.durable_objects?.bindings)) {
+					children.push({
+						type: "binding",
+						name: "durable_objects",
+						config: node.config.durable_objects,
+					});
+				}
+
+				if (hasBinding(node.config.ai)) {
+					children.push({
+						type: "binding",
+						name: "ai",
+						config: node.config.ai,
+					});
+				}
+
+				if (hasBinding(node.config.analytics_engine_datasets)) {
+					children.push({
+						type: "binding",
+						name: "analytics_engine_datasets",
+						config: node.config.analytics_engine_datasets,
+					});
+				}
+
+				if (hasBinding(node.config.browser)) {
+					children.push({
+						type: "binding",
+						name: "browser",
+						config: node.config.browser,
+					});
+				}
+
+				if (hasBinding(node.config.hyperdrive)) {
+					children.push({
+						type: "binding",
+						name: "hyperdrive",
+						config: node.config.hyperdrive,
+					});
+				}
+
+				if (hasBinding(node.config.mtls_certificates)) {
+					children.push({
+						type: "binding",
+						name: "mtls_certificates",
+						config: node.config.mtls_certificates,
+					});
+				}
+
+				if (hasBinding(node.config.services)) {
+					children.push({
+						type: "binding",
+						name: "services",
+						config: node.config.services,
+					});
+				}
+
+				if (hasBinding(node.config.assets)) {
+					children.push({
+						type: "binding",
+						name: "assets",
+						config: node.config.assets,
+					});
+				}
+
+				if (hasBinding(node.config.tail_consumers)) {
+					children.push({
+						type: "binding",
+						name: "tail_consumers",
+						config: node.config.tail_consumers,
+					});
+				}
+
+				if (hasBinding(node.config.vectorize)) {
+					children.push({
+						type: "binding",
+						name: "vectorize",
+						config: node.config.vectorize,
+					});
+				}
+
+				if (hasBinding(node.config.version_metadata)) {
+					children.push({
+						type: "binding",
+						name: "version_metadata",
+						config: node.config.version_metadata,
+					});
+				}
+
+				if (hasBinding(node.config.dispatch_namespaces)) {
+					children.push({
+						type: "binding",
+						name: "dispatch_namespaces",
+						config: node.config.dispatch_namespaces,
+					});
+				}
+
+				if (hasBinding(node.config.queues?.producers)) {
+					children.push({
+						type: "binding",
+						name: "queues",
+						config: node.config.queues,
+					});
+				}
+
+				if (hasBinding(node.config.workflows)) {
+					children.push({
+						type: "binding",
+						name: "workflows",
+						config: node.config.workflows,
+					});
+				}
+
+				if (hasBinding(node.config.send_email)) {
+					children.push({
+						type: "binding",
+						name: "send_email",
+						config: node.config.send_email,
+					});
+				}
+
+				if (hasBinding(node.config.logfwdr)) {
+					children.push({
+						type: "binding",
+						name: "logfwdr",
+						config: node.config.logfwdr,
+					});
+				}
+
+				if (hasBinding(node.config.pipelines)) {
+					children.push({
+						type: "binding",
+						name: "pipelines",
+						config: node.config.pipelines,
+					});
+				}
+
+				if (hasBinding(node.config.vars)) {
+					children.push({
+						type: "binding",
+						name: "vars",
+						config: node.config.vars,
+					});
+				}
+
+				if (hasBinding(node.config.unsafe?.bindings)) {
+					children.push({
+						type: "binding",
+						name: "unsafe",
+						config: node.config.unsafe,
 					});
 				}
 
 				return children;
 			}
 			case "binding": {
-				const children: Node[] = [];
-				const env = node.env ? node.config.env?.[node.env] : node.config;
+				const children: ResourceNode[] = [];
 
-				switch (node.binding) {
-					case "KV Namespaces": {
-						for (const kv of env?.kv_namespaces ?? []) {
+				switch (node.name) {
+					case "kv_namespaces": {
+						for (const item of node.config) {
 							children.push({
-								...node,
 								type: "resource",
-								name: kv.binding,
-								description: kv.id,
+								name: item.binding,
+								description: item.id,
 							});
 						}
 						break;
 					}
-					case "R2 Buckets": {
-						for (const r2 of env?.r2_buckets ?? []) {
+					case "r2_buckets": {
+						for (const item of node.config) {
 							children.push({
-								...node,
 								type: "resource",
-								name: r2.binding,
-								description: r2.bucket_name,
+								name: item.binding,
+								description: item.bucket_name,
 							});
 						}
-
 						break;
 					}
-					case "D1 Databases": {
-						for (const d1 of env?.d1_databases ?? []) {
+					case "d1_databases": {
+						for (const item of node.config) {
 							children.push({
-								...node,
 								type: "resource",
-								name: d1.binding,
-								description: d1.database_id,
+								name: item.binding,
+								description: item.database_id,
 							});
 						}
 						break;
+					}
+					case "assets": {
+						children.push({
+							type: "resource",
+							name: node.config.binding ?? "n/a",
+							description: node.config.directory,
+						});
+						break;
+					}
+					case "ai": {
+						children.push({
+							type: "resource",
+							name: node.config.binding,
+						});
+						break;
+					}
+					case "analytics_engine_datasets": {
+						for (const item of node.config) {
+							children.push({
+								type: "resource",
+								name: item.binding,
+								description: item.dataset,
+							});
+						}
+						break;
+					}
+					case "durable_objects": {
+						for (const item of node.config.bindings) {
+							children.push({
+								type: "resource",
+								name: item.name,
+								description: item.class_name,
+							});
+						}
+						break;
+					}
+					case "browser": {
+						children.push({
+							type: "resource",
+							name: node.config.binding,
+						});
+						break;
+					}
+					case "hyperdrive": {
+						for (const item of node.config) {
+							children.push({
+								type: "resource",
+								name: item.binding,
+								description: item.id,
+							});
+						}
+						break;
+					}
+					case "mtls_certificates": {
+						for (const item of node.config) {
+							children.push({
+								type: "resource",
+								name: item.binding,
+								description: item.certificate_id,
+							});
+						}
+						break;
+					}
+					case "services": {
+						for (const item of node.config) {
+							children.push({
+								type: "resource",
+								name: item.binding,
+								description: item.service,
+							});
+						}
+						break;
+					}
+					case "tail_consumers": {
+						for (const item of node.config) {
+							children.push({
+								type: "resource",
+								name: item.service,
+								description: item.environment,
+							});
+						}
+						break;
+					}
+					case "vars": {
+						for (const [name, value] of Object.entries(node.config)) {
+							children.push({
+								type: "resource",
+								name,
+								description: JSON.stringify(value),
+							});
+						}
+						break;
+					}
+					case "vectorize": {
+						for (const item of node.config) {
+							children.push({
+								type: "resource",
+								name: item.binding,
+								description: item.index_name,
+							});
+						}
+						break;
+					}
+					case "version_metadata": {
+						children.push({
+							type: "resource",
+							name: node.config.binding,
+						});
+						break;
+					}
+					case "workflows": {
+						for (const item of node.config) {
+							children.push({
+								type: "resource",
+								name: item.binding,
+								description: item.class_name,
+							});
+						}
+						break;
+					}
+					case "logfwdr": {
+						for (const item of node.config.bindings ?? []) {
+							children.push({
+								type: "resource",
+								name: item.name,
+								description: item.destination,
+							});
+						}
+						break;
+					}
+					case "pipelines": {
+						for (const item of node.config) {
+							children.push({
+								type: "resource",
+								name: item.binding,
+								description: item.pipeline,
+							});
+						}
+						break;
+					}
+					case "send_email": {
+						for (const item of node.config) {
+							children.push({
+								type: "resource",
+								name: item.name,
+								description: item.destination_address,
+							});
+						}
+						break;
+					}
+					case "dispatch_namespaces": {
+						for (const item of node.config) {
+							children.push({
+								type: "resource",
+								name: item.binding,
+								description: item.namespace,
+							});
+						}
+						break;
+					}
+					case "queues": {
+						for (const item of node.config.producers ?? []) {
+							children.push({
+								type: "resource",
+								name: item.binding,
+								description: item.queue,
+							});
+						}
+						break;
+					}
+					case "unsafe": {
+						for (const item of node.config.bindings ?? []) {
+							children.push({
+								type: "resource",
+								name: item.name,
+								description: item.type,
+							});
+						}
+						break;
+					}
+					default: {
+						throw new Error(`Unknown binding type: ${node}`);
 					}
 				}
 
@@ -196,6 +552,49 @@ export class BindingsProvider implements vscode.TreeDataProvider<Node> {
 				return [];
 		}
 	}
+}
+
+// Copied from https://github.com/cloudflare/workers-sdk/blob/178fd0123d8d4baf9f395bd8aade2cf1dccb6aa8/packages/wrangler/src/utils/print-bindings.ts#L18-L46
+// With `tail_consumers` added and legacy bindings removed (`data_blobs`, `text_blobs`, `wasm_modules`)
+export const friendlyBindingNames: Record<BindingType, string> = {
+	durable_objects: "Durable Objects",
+	kv_namespaces: "KV Namespaces",
+	send_email: "Send Email",
+	queues: "Queues",
+	d1_databases: "D1 Databases",
+	vectorize: "Vectorize Indexes",
+	hyperdrive: "Hyperdrive Configs",
+	r2_buckets: "R2 Buckets",
+	logfwdr: "logfwdr",
+	services: "Services",
+	analytics_engine_datasets: "Analytics Engine Datasets",
+	browser: "Browser",
+	ai: "AI",
+	version_metadata: "Worker Version Metadata",
+	unsafe: "Unsafe Metadata",
+	vars: "Vars",
+	dispatch_namespaces: "Dispatch Namespaces",
+	mtls_certificates: "mTLS Certificates",
+	workflows: "Workflows",
+	pipelines: "Pipelines",
+	assets: "Assets",
+	tail_consumers: "Tail Consumers",
+} as const;
+
+// Check if the binding has any items
+// This is used to filter out empty bindings
+function hasBinding<Config extends Record<string, unknown> | Array<unknown>>(
+	config: Config | undefined
+): config is Config {
+	if (!config) {
+		return false;
+	}
+
+	if (Array.isArray(config)) {
+		return config.length > 0;
+	}
+
+	return Object.keys(config).length > 0;
 }
 
 // Finds the first wrangler config file in the workspace and parse it
