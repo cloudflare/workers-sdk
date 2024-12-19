@@ -444,6 +444,18 @@ export function validateAssetsArgsAndConfig(
 		);
 	}
 
+	// Smart placement turned on when using assets
+	if (
+		config?.placement?.mode === "smart" &&
+		config?.assets?.experimental_serve_directly === false
+	) {
+		logger.warn(
+			"Turning on Smart Placement in a Worker that is using assets and serve_directly set to false means that your entire Worker could be moved to run closer to your data source, and all requests will go to that Worker before serving assets.\n" +
+				"This could result in poor performance as round trip times could increase when serving assets.\n\n" +
+				"Read more: https://developers.cloudflare.com/workers/static-assets/binding/#smart-placement"
+		);
+	}
+
 	// User Worker ahead of assets, but no assets binding provided
 	if (
 		"legacy" in args
