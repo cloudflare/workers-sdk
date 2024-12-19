@@ -1,5 +1,15 @@
 # @cloudflare/workers-shared
 
+## 0.11.1
+
+### Patch Changes
+
+- [#7598](https://github.com/cloudflare/workers-sdk/pull/7598) [`178fd01`](https://github.com/cloudflare/workers-sdk/commit/178fd0123d8d4baf9f395bd8aade2cf1dccb6aa8) Thanks [@CarmenPopoviciu](https://github.com/CarmenPopoviciu)! - Dummy workers-shared version bump
+
+  The Router Worker and Asset Worker of `workers-shared` are currently in a weird state that prevents us to redeploy them. The current versions of these workers are developer modified due to adding secrets. We want a CI controlled version to safely use these secrets.
+
+  This commit performs a dummy `workers-shared` version bump to unlock us from this blocked state.
+
 ## 0.11.0
 
 ### Minor Changes

@@ -1,5 +1,20 @@
 # miniflare
 
+## 3.20241218.0
+
+### Patch Changes
+
+- [#7589](https://github.com/cloudflare/workers-sdk/pull/7589) [`1488e11`](https://github.com/cloudflare/workers-sdk/commit/1488e118b4a43d032e4f2e69afa1c16c2e54aff6) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | workerd                   | 1.20241205.0  | 1.20241218.0  |
+  | @cloudflare/workers-types | ^4.20241205.0 | ^4.20241218.0 |
+
+- [#7575](https://github.com/cloudflare/workers-sdk/pull/7575) [`7216835`](https://github.com/cloudflare/workers-sdk/commit/7216835bf7489804905751c6b52e75a8945e7974) Thanks [@LuisDuarte1](https://github.com/LuisDuarte1)! - Make `Instance.status()` return type the same as production
+
 ## 3.20241205.0
 
 ### Patch Changes

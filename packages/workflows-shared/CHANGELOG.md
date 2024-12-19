@@ -1,5 +1,11 @@
 # @cloudflare/workflows-shared
 
+## 0.2.2
+
+### Patch Changes
+
+- [#7575](https://github.com/cloudflare/workers-sdk/pull/7575) [`7216835`](https://github.com/cloudflare/workers-sdk/commit/7216835bf7489804905751c6b52e75a8945e7974) Thanks [@LuisDuarte1](https://github.com/LuisDuarte1)! - Make `Instance.status()` return type the same as production
+
 ## 0.2.1
 
 ### Patch Changes
