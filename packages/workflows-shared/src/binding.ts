@@ -28,6 +28,7 @@ export class WorkflowBinding extends WorkerEntrypoint<Env> implements Workflow {
 			{
 				timestamp: new Date(),
 				payload: params as Readonly<typeof params>,
+				instanceId: id,
 			}
 		);
 
