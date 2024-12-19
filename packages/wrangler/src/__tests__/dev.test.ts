@@ -1696,7 +1696,8 @@ describe.sequential("wrangler dev", () => {
 				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mexperimental_serve_directly=false set without an assets binding[0m
 
 				  Setting experimental_serve_directly to false will always invoke your Worker script.
-				  To fetch your assets from your Worker, please set the [assets.binding] key in your configuration file.
+				  To fetch your assets from your Worker, please set the [assets.binding] key in your configuration
+				  file.
 
 				  Read more: [4mhttps://developers.cloudflare.com/workers/static-assets/binding/#binding[0m
 
