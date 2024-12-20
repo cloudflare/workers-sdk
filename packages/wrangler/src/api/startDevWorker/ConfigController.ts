@@ -67,7 +67,7 @@ async function resolveDevConfig(
 
 	const localPersistencePath = getLocalPersistencePath(
 		input.dev?.persist,
-		config.configPath
+		config
 	);
 
 	const { host, routes } = await getHostAndRoutes(
@@ -409,25 +409,29 @@ export class ConfigController extends Controller<ConfigControllerEventMap> {
 		const signal = this.#abortController.signal;
 		this.latestInput = input;
 		try {
-			const fileConfig = readConfig({
-				config: input.config,
-				env: input.env,
-				"dispatch-namespace": undefined,
-				"legacy-env": !input.legacy?.enableServiceEnvironments,
-				remote: input.dev?.remote,
-				upstreamProtocol:
-					input.dev?.origin?.secure === undefined
-						? undefined
-						: input.dev?.origin?.secure
-							? "https"
-							: "http",
-				localProtocol:
-					input.dev?.server?.secure === undefined
-						? undefined
-						: input.dev?.server?.secure
-							? "https"
-							: "http",
-			});
+			const fileConfig = readConfig(
+				{
+					script: input.entrypoint,
+					config: input.config,
+					env: input.env,
+					"dispatch-namespace": undefined,
+					"legacy-env": !input.legacy?.enableServiceEnvironments,
+					remote: input.dev?.remote,
+					upstreamProtocol:
+						input.dev?.origin?.secure === undefined
+							? undefined
+							: input.dev?.origin?.secure
+								? "https"
+								: "http",
+					localProtocol:
+						input.dev?.server?.secure === undefined
+							? undefined
+							: input.dev?.server?.secure
+								? "https"
+								: "http",
+				},
+				{ useRedirect: true }
+			);
 
 			if (typeof vitest === "undefined") {
 				void this.#ensureWatchingConfig(fileConfig.configPath);

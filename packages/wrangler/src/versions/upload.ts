@@ -283,6 +283,7 @@ export const versionsUploadCommand = createCommand({
 	},
 	behaviour: {
 		provideConfig: true,
+		useConfigRedirect: true,
 	},
 	handler: async function versionsUploadHandler(args, { config }) {
 		const entry = await getEntry(args, config, "versions upload");
@@ -346,11 +347,7 @@ export const versionsUploadCommand = createCommand({
 
 		if (!args.dryRun) {
 			assert(accountId, "Missing account ID");
-			await verifyWorkerMatchesCITag(
-				accountId,
-				name,
-				path.relative(entry.projectRoot, config.configPath ?? "wrangler.toml")
-			);
+			await verifyWorkerMatchesCITag(accountId, name, config.configPath);
 		}
 
 		if (!args.dryRun) {
