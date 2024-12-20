@@ -62,7 +62,7 @@ export function findWranglerConfig(
 }
 
 /**
- * Check whether there is a config file that indicates
+ * Check whether there is a config file that indicates that we should redirect the user configuration.
  * @param cwd
  * @param userConfigPath
  * @returns
