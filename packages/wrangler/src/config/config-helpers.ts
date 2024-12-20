@@ -11,15 +11,17 @@ export type ResolveConfigPathOptions = {
 };
 
 export type ConfigPaths = {
-	/** The path to the actual configuration being used (possibly redirected from the user's config). */
+	/** Absolute path to the actual configuration being used (possibly redirected from the user's config). */
 	configPath: string | undefined;
-	/** The user's configuration, which may not be the same as `configPath` if it was redirected. */
+	/** Absolute path to the user's configuration, which may not be the same as `configPath` if it was redirected. */
 	userConfigPath: string | undefined;
 };
 
 /**
  * Resolve the path to the configuration file, given the `config` and `script` optional command line arguments.
  * `config` takes precedence, then `script`, then we just use the cwd.
+ *
+ * Returns an object with two paths: `configPath` and `userConfigPath`. If defined these are absolute file paths.
  */
 export function resolveWranglerConfigPath(
 	{
