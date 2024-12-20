@@ -196,6 +196,8 @@ export function normalizeAndValidateConfig(
 			`"env.${envName}" environment configuration`
 		);
 		const rawEnv = rawConfig.env?.[envName];
+		const isOptionalEnvironment =
+			options.optionalEnvironments?.includes(envName) ?? false;
 
 		/**
 		 * If an environment name was specified, and we found corresponding configuration
@@ -232,7 +234,8 @@ export function normalizeAndValidateConfig(
 				envName,
 				topLevelEnv,
 				isLegacyEnv,
-				rawConfig
+				rawConfig,
+				{ isOptionalEnvironment }
 			);
 
 			const envNames = rawConfig.env
@@ -249,11 +252,13 @@ export function normalizeAndValidateConfig(
 				envName +
 				"]\n```\n";
 
-			if (envNames.length > 0) {
-				diagnostics.errors.push(message);
-			} else if (!options.hideWarningForEnvironmentWhenOnlyTopLevel) {
-				// Only warn (rather than error) if there are not actually any environments configured in the Wrangler configuration file.
-				diagnostics.warnings.push(message);
+			if (!isOptionalEnvironment) {
+				if (envNames.length > 0) {
+					diagnostics.errors.push(message);
+				} else if (!options.hideWarningForEnvironmentWhenOnlyTopLevel) {
+					// Only warn (rather than error) if there are not actually any environments configured in the Wrangler configuration file.
+					diagnostics.warnings.push(message);
+				}
 			}
 		}
 	}
@@ -1095,7 +1100,8 @@ function normalizeAndValidateEnvironment(
 	envName?: string,
 	topLevelEnv?: Environment,
 	isLegacyEnv?: boolean,
-	rawConfig?: RawConfig
+	rawConfig?: RawConfig,
+	options?: { isOptionalEnvironment: boolean }
 ): Environment;
 function normalizeAndValidateEnvironment(
 	diagnostics: Diagnostics,
@@ -1105,7 +1111,8 @@ function normalizeAndValidateEnvironment(
 	envName = "top level",
 	topLevelEnv?: Environment | undefined,
 	isLegacyEnv?: boolean,
-	rawConfig?: RawConfig | undefined
+	rawConfig?: RawConfig | undefined,
+	options?: { isOptionalEnvironment: boolean }
 ): Environment {
 	deprecated(
 		diagnostics,
@@ -1230,7 +1237,7 @@ function normalizeAndValidateEnvironment(
 			rawEnv,
 			"name",
 			isDispatchNamespace ? isString : isValidName,
-			appendEnvName(envName),
+			options?.isOptionalEnvironment ? undefined : appendEnvName(envName),
 			undefined
 		),
 		main: normalizeAndValidateMainField(
