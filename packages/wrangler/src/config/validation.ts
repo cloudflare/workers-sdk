@@ -235,7 +235,11 @@ export function normalizeAndValidateConfig(
 				topLevelEnv,
 				isLegacyEnv,
 				rawConfig,
-				{ isOptionalEnvironment }
+				{
+					renameWorkerForEnvironment:
+						!isOptionalEnvironment &&
+						!options.allowEnvironmentsWhenNoneAreDefined,
+				}
 			);
 
 			const envNames = rawConfig.env
@@ -255,7 +259,7 @@ export function normalizeAndValidateConfig(
 			if (!isOptionalEnvironment) {
 				if (envNames.length > 0) {
 					diagnostics.errors.push(message);
-				} else if (!options.hideWarningForEnvironmentWhenOnlyTopLevel) {
+				} else if (!options.allowEnvironmentsWhenNoneAreDefined) {
 					// Only warn (rather than error) if there are not actually any environments configured in the Wrangler configuration file.
 					diagnostics.warnings.push(message);
 				}
@@ -1101,7 +1105,7 @@ function normalizeAndValidateEnvironment(
 	topLevelEnv?: Environment,
 	isLegacyEnv?: boolean,
 	rawConfig?: RawConfig,
-	options?: { isOptionalEnvironment: boolean }
+	options?: { renameWorkerForEnvironment: boolean }
 ): Environment;
 function normalizeAndValidateEnvironment(
 	diagnostics: Diagnostics,
@@ -1112,7 +1116,9 @@ function normalizeAndValidateEnvironment(
 	topLevelEnv?: Environment | undefined,
 	isLegacyEnv?: boolean,
 	rawConfig?: RawConfig | undefined,
-	options?: { isOptionalEnvironment: boolean }
+	options: { renameWorkerForEnvironment: boolean } = {
+		renameWorkerForEnvironment: true,
+	}
 ): Environment {
 	deprecated(
 		diagnostics,
@@ -1237,7 +1243,7 @@ function normalizeAndValidateEnvironment(
 			rawEnv,
 			"name",
 			isDispatchNamespace ? isString : isValidName,
-			options?.isOptionalEnvironment ? undefined : appendEnvName(envName),
+			options.renameWorkerForEnvironment ? appendEnvName(envName) : undefined,
 			undefined
 		),
 		main: normalizeAndValidateMainField(

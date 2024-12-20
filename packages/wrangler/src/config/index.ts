@@ -76,10 +76,12 @@ export type ReadConfigOptions = {
 	 * If this option is true then no warning is displayed when the user asks for an environment
 	 * and there are no named environments defined in the Wrangler configuration.
 	 *
+	 * Also, Wrangler will not suffix the Worker name with the environment name in this case.
+	 *
 	 * If there are named environments defined then that would still be an error condition -
 	 * unless the requested environment is listed in the `optionalEnvironments` below.
 	 */
-	hideWarningForEnvironmentWhenOnlyTopLevel?: boolean;
+	allowEnvironmentsWhenNoneAreDefined?: boolean;
 	/**
 	 * Any environments in this list do not need to have a named environment defined, even if there are other named environments.
 	 *
