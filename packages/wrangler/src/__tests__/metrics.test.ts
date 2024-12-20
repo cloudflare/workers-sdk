@@ -1,3 +1,4 @@
+import * as fs from "node:fs";
 import { http, HttpResponse } from "msw";
 import { vi } from "vitest";
 import { CI } from "../is-ci";
@@ -189,6 +190,7 @@ describe("metrics", () => {
 				isPagesCI: false,
 				isWorkersCI: false,
 				isInteractive: true,
+				hasAssets: false,
 				argsUsed: [],
 				argsCombination: "",
 				command: "wrangler docs",
@@ -357,6 +359,58 @@ describe("metrics", () => {
 
 				expect(requests.count).toBe(2);
 				expect(std.debug).toContain('isWorkersCI":true');
+			});
+
+			it("should capture Workers + Assets projects", async () => {
+				writeWranglerConfig({ assets: { directory: "./public" } });
+
+				// set up empty static assets directory
+				fs.mkdirSync("./public");
+
+				const requests = mockMetricRequest();
+
+				await runWrangler("docs arg");
+				expect(requests.count).toBe(2);
+
+				// command started
+				const expectedStartReq = {
+					deviceId: "f82b1f46-eb7b-4154-aa9f-ce95f23b2288",
+					event: "wrangler command started",
+					timestamp: 1733961600000,
+					properties: {
+						amplitude_session_id: 1733961600000,
+						amplitude_event_id: 0,
+						...{ ...reused, hasAssets: true },
+					},
+				};
+				expect(std.debug).toContain(
+					`Posting data ${JSON.stringify(expectedStartReq)}`
+				);
+
+				// command completed
+				const expectedCompleteReq = {
+					deviceId: "f82b1f46-eb7b-4154-aa9f-ce95f23b2288",
+					event: "wrangler command completed",
+					timestamp: 1733961606000,
+					properties: {
+						amplitude_session_id: 1733961600000,
+						amplitude_event_id: 1,
+						...{ ...reused, hasAssets: true },
+						durationMs: 6000,
+						durationSeconds: 6,
+						durationMinutes: 0.1,
+					},
+				};
+				expect(std.debug).toContain(
+					`Posting data ${JSON.stringify(expectedCompleteReq)}`
+				);
+				expect(std.out).toMatchInlineSnapshot(`
+					"
+					Cloudflare collects anonymous telemetry about your usage of Wrangler. Learn more at https://github.com/cloudflare/workers-sdk/tree/main/packages/wrangler/telemetry.md
+					Opening a link in your default browser: FAKE_DOCS_URL:{\\"params\\":\\"query=arg&hitsPerPage=1&getRankingInfo=0\\"}"
+				`);
+				expect(std.warn).toMatchInlineSnapshot(`""`);
+				expect(std.err).toMatchInlineSnapshot(`""`);
 			});
 
 			it("should not send arguments with wrangler login", async () => {

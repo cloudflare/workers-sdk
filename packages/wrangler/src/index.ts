@@ -1155,6 +1155,7 @@ export async function main(argv: string[]): Promise<void> {
 			const { rawConfig, configPath } = experimental_readRawConfig(args);
 			dispatcher = getMetricsDispatcher({
 				sendMetrics: rawConfig.send_metrics,
+				hasAssets: !!rawConfig.assets?.directory,
 				configPath,
 			});
 		} catch (e) {
