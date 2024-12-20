@@ -1,4 +1,4 @@
-import { writeFileSync } from "fs";
+// import { writeFileSync } from "fs";
 import TOML from "@iarna/toml";
 import { applyEdits, format, modify } from "jsonc-parser";
 import { parseJSONC, parseTOML, readFileSync } from "../parse";
@@ -16,9 +16,10 @@ export const experimental_patchConfig = (
 	 * and set isArrayInsertion = false
 	 */
 	patch: RawConfig,
-	isArrayInsertion: boolean = true
+	isArrayInsertion: boolean = true,
+	rawConfigString?: string
 ) => {
-	let configString = readFileSync(configPath);
+	let configString = rawConfigString ?? readFileSync(configPath);
 
 	if (configPath.endsWith("toml")) {
 		// the TOML parser we use does not preserve comments
@@ -48,7 +49,7 @@ export const experimental_patchConfig = (
 	if (configPath.endsWith(".toml")) {
 		configString = TOML.stringify(parseJSONC(configString));
 	}
-	writeFileSync(configPath, configString);
+	// writeFileSync(configPath, configString);
 	return configString;
 };
 

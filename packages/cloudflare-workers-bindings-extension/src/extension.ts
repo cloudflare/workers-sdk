@@ -1,6 +1,7 @@
 import * as vscode from "vscode";
 import { addBindingFlow } from "./add-binding";
 import { BindingsProvider } from "./show-bindings";
+import { WranglerConfigEditorProvider } from "./WranglerConfigEditorProvider";
 
 export type Result = {
 	bindingsProvider: BindingsProvider;
@@ -40,6 +41,10 @@ export async function activate(
 			await addBindingFlow(context);
 		}
 	);
+
+	// Register WranglerConfigEditor
+	WranglerConfigEditorProvider.register(context);
+
 	// Cleanup when the extension is deactivated
 	context.subscriptions.push(
 		bindingsView,

@@ -13,11 +13,11 @@
 	"main": "./dist/extension.js",
 	"scripts": {
 		"vscode:prepublish": "pnpm run package",
-		"compile": "pnpm run check:type && pnpm run check:lint && node esbuild.js",
+		"compile": "pnpm run check:type && pnpm run check:lint && node esbuild.js && tailwindcss -i src/WranglerConfigEditor/styles.css -o dist/WranglerConfigEditor.css",
 		"watch": "npm-run-all -p watch:*",
 		"watch:esbuild": "node esbuild.js --watch",
 		"watch:tsc": "tsc --noEmit --watch --project tsconfig.json",
-		"package": "pnpm run check:type && pnpm run check:lint && node esbuild.js --production",
+		"package": "pnpm run check:type && pnpm run check:lint && node esbuild.js --production && tailwindcss -i src/WranglerConfigEditor/styles.css -o dist/WranglerConfigEditor.css",
 		"compile-tests": "tsc -p . --outDir out",
 		"watch-tests": "tsc -p . -w --outDir out",
 		"test": "node ./out/test/runTest.js",
@@ -37,6 +37,27 @@
 				"command": "cloudflare-workers-bindings.addBinding",
 				"title": "Cloudflare Workers: Add binding",
 				"icon": "$(add)"
+			},
+			{
+				"command": "cloudflare-workers-bindings.openEditor",
+				"title": "Cloudflare Workers: Open file with Wrangler Config Editor",
+				"icon": "$(go-to-file)"
+			},
+			{
+				"command": "cloudflare-workers-bindings.viewSource",
+				"title": "Cloudflare Workers: View config source",
+				"icon": "$(go-to-file)"
+			}
+		],
+		"customEditors": [
+			{
+				"viewType": "cloudflare-workers-bindings.wranglerConfig",
+				"displayName": "Wrangler Configuration",
+				"selector": [
+					{
+						"filenamePattern": "wrangler.{toml,json,jsonc}"
+					}
+				]
 			}
 		],
 		"jsonValidation": [
@@ -56,6 +77,18 @@
 					"command": "cloudflare-workers-bindings.addBinding",
 					"when": "view == cloudflare-workers-bindings",
 					"group": "navigation"
+				}
+			],
+			"editor/title": [
+				{
+					"command": "cloudflare-workers-bindings.openEditor",
+					"when": "(resourceFilename == wrangler.toml || resourceFilename == wrangler.json || resourceFilename == wrangler.jsonc) && activeCustomEditorId != cloudflare-workers-bindings.wranglerConfig",
+					"group": "navigation@200"
+				},
+				{
+					"command": "cloudflare-workers-bindings.viewSource",
+					"when": "(resourceFilename == wrangler.toml || resourceFilename == wrangler.json || resourceFilename == wrangler.jsonc) && activeCustomEditorId == cloudflare-workers-bindings.wranglerConfig",
+					"group": "navigation@200"
 				}
 			]
 		},
@@ -88,10 +121,16 @@
 	"activationEvents": [
 		"workspaceContains:**/wrangler.{json,jsonc,toml}"
 	],
+	"dependencies": {
+		"react": "^18.3.1",
+		"react-dom": "^18.3.1"
+	},
 	"devDependencies": {
 		"@types/glob": "^7.1.1",
 		"@types/mocha": "^10.0.7",
 		"@types/node": "20.x",
+		"@types/react": "^18.3.3",
+		"@types/react-dom": "^18.2.0",
 		"@types/vscode": "^1.92.0",
 		"@typescript-eslint/eslint-plugin": "^7.14.1",
 		"@typescript-eslint/parser": "^7.11.0",
@@ -101,6 +140,7 @@
 		"glob": "^7.1.4",
 		"mocha": "^10.2.0",
 		"npm-run-all": "^4.1.5",
+		"tailwindcss": "^3.4.17",
 		"typescript": "^5.4.5",
 		"vsce": "^2.15.0",
 		"wrangler": "workspace:*"

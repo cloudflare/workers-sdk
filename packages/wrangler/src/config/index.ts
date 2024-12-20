@@ -65,6 +65,7 @@ export function formatConfigSnippet(
 type ReadConfigCommandArgs = NormalizeAndValidateConfigArgs & {
 	config?: string;
 	script?: string;
+	configString?: string;
 };
 
 /**
@@ -159,9 +160,15 @@ export const experimental_readRawConfig = (
 	const configPath = resolveWranglerConfigPath(args);
 	let rawConfig: RawConfig = {};
 	if (configPath?.endsWith("toml")) {
-		rawConfig = parseTOML(readFileSync(configPath), configPath);
+		rawConfig = parseTOML(
+			args.configString ?? readFileSync(configPath),
+			configPath
+		);
 	} else if (configPath?.endsWith("json") || configPath?.endsWith("jsonc")) {
-		rawConfig = parseJSONC(readFileSync(configPath), configPath);
+		rawConfig = parseJSONC(
+			args.configString ?? readFileSync(configPath),
+			configPath
+		);
 	}
 	return { rawConfig, configPath };
 };
