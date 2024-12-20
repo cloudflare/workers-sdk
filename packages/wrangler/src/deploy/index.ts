@@ -277,7 +277,7 @@ async function deployWorker(args: DeployArgs) {
 				"For Pages, please run `wrangler pages deploy` instead."
 		);
 	}
-	// We use the `userConfigPath` to compute the root of a Pages project,
+	// We use the `userConfigPath` to compute the root of a project,
 	// rather than a redirected (potentially generated) `configPath`.
 	const projectRoot =
 		config.userConfigPath && path.dirname(config.userConfigPath);
