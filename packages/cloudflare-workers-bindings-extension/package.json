@@ -81,7 +81,7 @@
 		"viewsWelcome": [
 			{
 				"view": "cloudflare-workers-bindings",
-				"contents": "Welcome to Cloudflare Workers! [Learn more](https://workers.cloudflare.com).\n[Add a binding](command:cloudflare-workers-bindings.addBinding)"
+				"contents": "**Welcome to [Cloudflare Workers](https://workers.cloudflare.com)**\nBuild serverless applications and deploy instantly across the globe for exceptional performance, reliability, and scale.\n[Read Workers Documentation](command:cloudflare-workers-bindings.addBinding)\n\n\n\n## Get Started\nChoose a template to start building your first application by running:\n```npm create cloudflare@latest```\n\n\n\n## Bind to resources\nConnect your Worker to compute, storage and AI resources on the developer platform by configuring a “binding”.\n[Add new binding](command:cloudflare-workers-bindings.addBinding)"
 			}
 		]
 	},
