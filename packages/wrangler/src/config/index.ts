@@ -67,26 +67,41 @@ type ReadConfigCommandArgs = NormalizeAndValidateConfigArgs & {
 	script?: string;
 };
 
+export type ReadConfigOptions = {
+	/**
+	 * If this option is true then no warnings are displayed to the user.
+	 */
+	hideWarnings?: boolean;
+	/**
+	 * If this option is true then no warning is displayed when the user asks for an environment
+	 * and there are no named environments defined in the Wrangler configuration.
+	 *
+	 * If there are named environments defined then that would still be an error condition -
+	 * unless the requested environment is listed in the `optionalEnvironments` below.
+	 */
+	hideWarningForEnvironmentWhenOnlyTopLevel?: boolean;
+};
 /**
  * Get the Wrangler configuration; read it from the give `configPath` if available.
  */
 export function readConfig(
 	args: ReadConfigCommandArgs,
-	options?: { hideWarnings?: boolean }
+	options?: ReadConfigOptions
 ): Config;
 export function readConfig(
 	args: ReadConfigCommandArgs,
-	{ hideWarnings = false }: { hideWarnings?: boolean } = {}
+	options: ReadConfigOptions = {}
 ): Config {
 	const { rawConfig, configPath } = experimental_readRawConfig(args);
 
 	const { config, diagnostics } = normalizeAndValidateConfig(
 		rawConfig,
 		configPath,
-		args
+		args,
+		options
 	);
 
-	if (diagnostics.hasWarnings() && !hideWarnings) {
+	if (diagnostics.hasWarnings() && !options.hideWarnings) {
 		logger.warn(diagnostics.renderWarnings());
 	}
 	if (diagnostics.hasErrors()) {
@@ -98,7 +113,7 @@ export function readConfig(
 
 export function readPagesConfig(
 	args: ReadConfigCommandArgs,
-	{ hideWarnings = false }: { hideWarnings?: boolean } = {}
+	options: ReadConfigOptions = {}
 ): Omit<Config, "pages_build_output_dir"> & { pages_build_output_dir: string } {
 	let rawConfig: RawConfig;
 	let configPath: string | undefined;
@@ -122,10 +137,11 @@ export function readPagesConfig(
 	const { config, diagnostics } = normalizeAndValidateConfig(
 		rawConfig,
 		configPath,
-		args
+		args,
+		options
 	);
 
-	if (diagnostics.hasWarnings() && !hideWarnings) {
+	if (diagnostics.hasWarnings() && !options.hideWarnings) {
 		logger.warn(diagnostics.renderWarnings());
 	}
 	if (diagnostics.hasErrors()) {

@@ -34,6 +34,7 @@ import {
 	validateTypedArray,
 } from "./validation-helpers";
 import { configFileName, formatConfigSnippet } from ".";
+import type { ReadConfigOptions } from ".";
 import type {
 	CreateApplicationRequest,
 	UserDeploymentConfiguration,
@@ -80,7 +81,8 @@ export function isPagesConfig(rawConfig: RawConfig): boolean {
 export function normalizeAndValidateConfig(
 	rawConfig: RawConfig,
 	configPath: string | undefined,
-	args: NormalizeAndValidateConfigArgs
+	args: NormalizeAndValidateConfigArgs,
+	options: ReadConfigOptions = {}
 ): {
 	config: Config;
 	diagnostics: Diagnostics;
@@ -232,6 +234,7 @@ export function normalizeAndValidateConfig(
 				isLegacyEnv,
 				rawConfig
 			);
+
 			const envNames = rawConfig.env
 				? `The available configured environment names are: ${JSON.stringify(
 						Object.keys(rawConfig.env)
@@ -248,7 +251,7 @@ export function normalizeAndValidateConfig(
 
 			if (envNames.length > 0) {
 				diagnostics.errors.push(message);
-			} else {
+			} else if (!options.hideWarningForEnvironmentWhenOnlyTopLevel) {
 				// Only warn (rather than error) if there are not actually any environments configured in the Wrangler configuration file.
 				diagnostics.warnings.push(message);
 			}
