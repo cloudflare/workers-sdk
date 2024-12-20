@@ -80,6 +80,13 @@ export type ReadConfigOptions = {
 	 * unless the requested environment is listed in the `optionalEnvironments` below.
 	 */
 	hideWarningForEnvironmentWhenOnlyTopLevel?: boolean;
+	/**
+	 * Any environments in this list do not need to have a named environment defined, even if there are other named environments.
+	 *
+	 * Normally in that case Wrangler would exit with an error.
+	 * Now such environments will just use the top-level environment and there will also be no warning.
+	 */
+	optionalEnvironments?: string[];
 };
 /**
  * Get the Wrangler configuration; read it from the give `configPath` if available.
