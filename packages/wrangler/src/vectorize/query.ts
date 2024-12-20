@@ -8,13 +8,11 @@ import type {
 } from "../yargs-types";
 import type {
 	VectorizeMatches,
-	VectorizeMetadataFilterInnerValue,
 	VectorizeMetadataFilterValue,
 	VectorizeMetadataRetrievalLevel,
 	VectorizeQueryOptions,
 	VectorizeVectorMetadataFilter,
 	VectorizeVectorMetadataFilterOp,
-	VectorizeVectorMetadataValue,
 } from "./types";
 
 export function options(yargs: CommonYargsArgv) {
@@ -155,7 +153,9 @@ export async function handler(
 	logger.log(JSON.stringify(res, null, 2));
 }
 
-function validateQueryFilterInnerValue(innerValue: any) {
+function validateQueryFilterInnerValue(
+	innerValue: VectorizeMetadataFilterValue
+) {
 	return ["string", "number", "boolean"].includes(typeof innerValue);
 }
 
@@ -180,7 +180,7 @@ export function validateQueryFilter(
 		for (const field in parsedObj) {
 			if (Object.prototype.hasOwnProperty.call(parsedObj, field)) {
 				const value = (
-					parsedObj as Record<string, VectorizeMetadataFilterValue>
+					parsedObj as Record<string, VectorizeVectorMetadataFilter>
 				)[field];
 
 				if (Array.isArray(value)) {
@@ -190,12 +190,12 @@ export function validateQueryFilter(
 
 				if (typeof value === "object" && value !== null) {
 					// Handle nested objects
-					const innerObj: any = {};
+					const innerObj: VectorizeVectorMetadataFilter = {};
 					let validInnerObj = true;
 
 					for (const op in value) {
 						if (Object.prototype.hasOwnProperty.call(value, op)) {
-							const innerValue = (value as any)[op];
+							const innerValue = value[op];
 							if (["$eq", "$ne", "$lt", "$lte", "$gt", "gte"].includes(op)) {
 								if (!validateQueryFilterInnerValue(innerValue)) {
 									validInnerObj = false;
@@ -204,9 +204,7 @@ export function validateQueryFilter(
 								if (!Array.isArray(innerValue)) {
 									validInnerObj = false;
 								} else {
-									if (
-										!(innerValue as any[]).every(validateQueryFilterInnerValue)
-									) {
+									if (!innerValue.every(validateQueryFilterInnerValue)) {
 										validInnerObj = false;
 									}
 								}
