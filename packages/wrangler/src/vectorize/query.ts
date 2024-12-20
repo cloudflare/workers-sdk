@@ -8,13 +8,11 @@ import type {
 } from "../yargs-types";
 import type {
 	VectorizeMatches,
-	VectorizeMetadataFilterInnerValue,
 	VectorizeMetadataFilterValue,
 	VectorizeMetadataRetrievalLevel,
 	VectorizeQueryOptions,
 	VectorizeVectorMetadataFilter,
 	VectorizeVectorMetadataFilterOp,
-	VectorizeVectorMetadataValue,
 } from "./types";
 
 export function options(yargs: CommonYargsArgv) {
@@ -155,6 +153,12 @@ export async function handler(
 	logger.log(JSON.stringify(res, null, 2));
 }
 
+function validateQueryFilterInnerValue(
+	innerValue: VectorizeMetadataFilterValue
+) {
+	return ["string", "number", "boolean"].includes(typeof innerValue);
+}
+
 export function validateQueryFilter(
 	input: object
 ): VectorizeVectorMetadataFilter | null {
@@ -176,7 +180,7 @@ export function validateQueryFilter(
 		for (const field in parsedObj) {
 			if (Object.prototype.hasOwnProperty.call(parsedObj, field)) {
 				const value = (
-					parsedObj as Record<string, VectorizeMetadataFilterValue>
+					parsedObj as Record<string, VectorizeVectorMetadataFilter>
 				)[field];
 
 				if (Array.isArray(value)) {
@@ -186,38 +190,28 @@ export function validateQueryFilter(
 
 				if (typeof value === "object" && value !== null) {
 					// Handle nested objects
-					const innerObj: Partial<{
-						[Op in VectorizeVectorMetadataFilterOp]?: Exclude<
-							VectorizeVectorMetadataValue,
-							string[]
-						> | null;
-					}> = {};
+					const innerObj: VectorizeVectorMetadataFilter = {};
 					let validInnerObj = true;
 
 					for (const op in value) {
 						if (Object.prototype.hasOwnProperty.call(value, op)) {
-							if (!["$eq", "$ne"].includes(op)) {
-								// Skip objects with invalid operators
+							const innerValue = value[op];
+							if (["$eq", "$ne", "$lt", "$lte", "$gt", "gte"].includes(op)) {
+								if (!validateQueryFilterInnerValue(innerValue)) {
+									validInnerObj = false;
+								}
+							} else if (["$in", "$nin"].includes(op)) {
+								if (!Array.isArray(innerValue)) {
+									validInnerObj = false;
+								} else {
+									if (!innerValue.every(validateQueryFilterInnerValue)) {
+										validInnerObj = false;
+									}
+								}
+							} else {
 								validInnerObj = false;
-								break;
 							}
-							const innerValue = (value as VectorizeMetadataFilterInnerValue)[
-								op as VectorizeVectorMetadataFilterOp
-							];
-							if (Array.isArray(innerValue)) {
-								// Skip arrays in nested objects
-								validInnerObj = false;
-								break;
-							}
-							if (
-								typeof innerValue === "object" &&
-								innerValue !== null &&
-								Object.keys(innerValue).length === 0
-							) {
-								// Skip empty objects in nested objects
-								validInnerObj = false;
-								break;
-							}
+
 							innerObj[op as VectorizeVectorMetadataFilterOp] = innerValue;
 						}
 					}
