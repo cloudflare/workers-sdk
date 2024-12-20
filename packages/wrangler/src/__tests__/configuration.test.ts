@@ -70,13 +70,28 @@ describe("readConfig()", () => {
 			`);
 		});
 
-		it("should not warn if an environment is requested but none are defined, and `hideWarningForEnvironmentWhenOnlyTopLevel` is true", () => {
+		it("should update the worker name if an environment is requested but not are defined", () => {
+			writeWranglerConfig();
+			const config = readConfig({ config: "wrangler.toml", env: "foo" });
+			expect(config.name).toEqual("test-name-foo");
+		});
+
+		it("should not warn if an environment is requested but none are defined, and `allowEnvironmentsWhenNoneAreDefined` is true", () => {
 			writeWranglerConfig();
 			readConfig(
 				{ config: "wrangler.toml", env: "foo" },
-				{ hideWarningForEnvironmentWhenOnlyTopLevel: true }
+				{ allowEnvironmentsWhenNoneAreDefined: true }
 			);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
+		});
+
+		it("should not update the worker name if an environment is requested but not are defined, and `allowEnvironmentsWhenNoneAreDefined` is true", () => {
+			writeWranglerConfig();
+			const config = readConfig(
+				{ config: "wrangler.toml", env: "foo" },
+				{ allowEnvironmentsWhenNoneAreDefined: true }
+			);
+			expect(config.name).toEqual("test-name");
 		});
 
 		it("should error if an environment is requested but at least one other is defined", () => {
@@ -100,7 +115,21 @@ describe("readConfig()", () => {
 			`);
 		});
 
-		it("should not error if an environment in `optionalEnvironments` is requested but at least one other is defined, and not update the worker name", () => {
+		it("should not error if an environment in `optionalEnvironments` is requested but at least one other is defined", () => {
+			writeWranglerConfig({
+				env: {
+					bar: {},
+				},
+			});
+			expect(() =>
+				readConfig(
+					{ config: "wrangler.toml", env: "foo" },
+					{ optionalEnvironments: ["foo"] }
+				)
+			).not.toThrow();
+		});
+
+		it("should not update the worker name if an environment in `optionalEnvironments` is requested but at least one other is defined", () => {
 			writeWranglerConfig({
 				env: {
 					bar: {},
