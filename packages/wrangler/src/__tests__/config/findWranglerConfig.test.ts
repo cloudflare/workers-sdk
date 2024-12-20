@@ -172,9 +172,17 @@ describe("config findWranglerConfig()", () => {
 				error = e;
 			}
 
-			expect(normalizeString(`${error}`)).toMatchInlineSnapshot(
-				`"Error: Failed to load the deploy config at .wrangler/deploy/config.json"`
-			);
+			expect(normalizeString(`${error}`).replace(process.cwd(), "<cwd>"))
+				.toMatchInlineSnapshot(`
+				"Error: Failed to load the deploy config at .wrangler/deploy/config.json
+				[31mX [41;31m[[41;97mERROR[41;31m][0m [1mInvalidSymbol[0m
+
+				    <cwd>/.wrangler/deploy/config.json:1:0:
+				[37m      1 │ [32mINVALID[37m JSON
+				        ╵ [32m~~~~~~~[0m
+
+				"
+			`);
 			expect(std).toEqual(NO_LOGS);
 		});
 

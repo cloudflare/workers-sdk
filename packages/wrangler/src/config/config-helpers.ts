@@ -4,7 +4,7 @@ import { findUpSync } from "find-up";
 import dedent from "ts-dedent";
 import { UserError } from "../errors";
 import { logger } from "../logger";
-import { parseJSONC, readFileSync } from "../parse";
+import { formatMessage, ParseError, parseJSONC, readFileSync } from "../parse";
 
 export type ResolveConfigPathOptions = {
 	useRedirect?: boolean;
@@ -91,8 +91,8 @@ function findRedirectedWranglerConfig(
 		throw new UserError(
 			dedent`
 				Failed to load the deploy config at ${path.relative(".", deployConfigPath)}
-			`,
-			{ cause: e }
+				${e instanceof ParseError ? formatMessage(e) : e}
+			`
 		);
 	}
 	if (!redirectedConfigPath) {
