@@ -111,6 +111,7 @@ export function getMetricsDispatcher(options: MetricsConfigOptions) {
 					isPagesCI: isPagesCI(),
 					isWorkersCI: isWorkersCI(),
 					isInteractive: isInteractive(),
+					hasAssets: options.hasAssets ?? false,
 					argsUsed,
 					argsCombination,
 				};
