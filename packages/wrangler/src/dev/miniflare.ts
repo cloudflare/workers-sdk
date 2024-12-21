@@ -952,6 +952,10 @@ export async function buildMiniflareOptions(
 		}
 	}
 
+	if (config.bindings.browser) {
+		logger.warn("Browser render is not supported locally use `--remote`");
+	}
+
 	const upstream =
 		typeof config.localUpstream === "string"
 			? `${config.upstreamProtocol}://${config.localUpstream}`
