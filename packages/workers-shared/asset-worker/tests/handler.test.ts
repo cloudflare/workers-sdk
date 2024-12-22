@@ -162,7 +162,7 @@ describe("[Asset Worker] `handleRequest`", () => {
 		};
 
 		const response = await handleRequest(
-			new Request("https://example.com/%AO"),
+			new Request("https://example.com/%A0"),
 			configuration,
 			async (pathname: string) => {
 				return assets[pathname] ?? null;
