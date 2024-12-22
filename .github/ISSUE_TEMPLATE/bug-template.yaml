@@ -54,7 +54,7 @@ body:
     attributes:
       label: Describe the Bug
       description: Please describe the bug in as much detail as possible, including steps to reproduce, the behaviour you're seeing, and the behaviour you expect.
-      validations:
+    validations:
       required: true
 
   - type: textarea
