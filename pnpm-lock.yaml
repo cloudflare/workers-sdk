@@ -2019,8 +2019,8 @@ importers:
         specifier: ^0.6.1
         version: 0.6.1
       unenv:
-        specifier: npm:unenv-nightly@2.0.0-20241216-144314-7e05819
-        version: unenv-nightly@2.0.0-20241216-144314-7e05819
+        specifier: npm:unenv-nightly@2.0.0-20241218-183400-5d6aec3
+        version: unenv-nightly@2.0.0-20241218-183400-5d6aec3
       workerd:
         specifier: 1.20241218.0
         version: 1.20241218.0
@@ -9735,6 +9735,9 @@ packages:
 
   unenv-nightly@2.0.0-20241216-144314-7e05819:
     resolution: {integrity: sha512-HpRspwDDxEwb6f9jOJYdL8iuZ054GIJ61LWHui7FPcgSVUPIXjZ3Nf0bh0qVIEqSGb3bNU/C1Zcw6fKHVl4lDg==}
+
+  unenv-nightly@2.0.0-20241218-183400-5d6aec3:
+    resolution: {integrity: sha512-7Xpi29CJRbOV1/IrC03DawMJ0hloklDLq/cigSe+J2jkcC+iDres2Cy0r4ltj5f0x7DqsaGaB4/dLuCPPFZnZA==}
 
   unicorn-magic@0.1.0:
     resolution: {integrity: sha512-lRfVq8fE8gz6QMBuDM6a+LO3IAzTi05H6gCVaUpir2E1Rwpo4ZUog45KpNXKC/Mn3Yb9UDuHumeFTo9iV/D9FQ==}
@@ -18548,6 +18551,14 @@ snapshots:
       ufo: 1.5.4
 
   unenv-nightly@2.0.0-20241216-144314-7e05819:
+    dependencies:
+      defu: 6.1.4
+      mlly: 1.7.3
+      ohash: 1.1.4
+      pathe: 1.1.2
+      ufo: 1.5.4
+
+  unenv-nightly@2.0.0-20241218-183400-5d6aec3:
     dependencies:
       defu: 6.1.4
       mlly: 1.7.3
