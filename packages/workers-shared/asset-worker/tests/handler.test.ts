@@ -150,4 +150,29 @@ describe("[Asset Worker] `handleRequest`", () => {
 
 		expect(response.status).toBe(404);
 	});
+
+	it("returns 404 Not Found responses for malformed path", async () => {
+		const assets: Record<string, string> = {
+			"/index.html": "aaaaaaaaaa",
+		};
+		const configuration: Required<AssetConfig> = {
+			html_handling: "none",
+			not_found_handling: "none",
+			serve_directly: true,
+		};
+
+		const response = await handleRequest(
+			new Request("https://example.com/%AO"),
+			configuration,
+			async (pathname: string) => {
+				return assets[pathname] ?? null;
+			},
+			async (_: string) => ({
+				readableStream: new ReadableStream(),
+				contentType: "text/html",
+			})
+		);
+
+		expect(response.status).toBe(404);
+	});
 });

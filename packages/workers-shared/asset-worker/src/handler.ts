@@ -18,7 +18,12 @@ export const handleRequest = async (
 ) => {
 	const { pathname, search } = new URL(request.url);
 
-	let decodedPathname = decodePath(pathname);
+	let decodedPathname;
+	try {
+		decodedPathname = decodePath(pathname);
+	} catch (err) {
+		return new NotFoundResponse();
+	}
 	// normalize the path; remove multiple slashes which could lead to same-schema redirects
 	decodedPathname = decodedPathname.replace(/\/+/g, "/");
 
