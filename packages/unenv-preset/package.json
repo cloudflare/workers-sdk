@@ -47,8 +47,7 @@
 	"devDependencies": {
 		"@types/node": "*",
 		"typescript": "catalog:default",
-		"unbuild": "^2.0.0",
-		"wrangler": "3.95.0"
+		"unbuild": "^2.0.0"
 	},
 	"peerDependencies": {
 		"unenv": "npm:unenv-nightly@*",
