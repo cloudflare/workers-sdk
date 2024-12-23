@@ -510,6 +510,87 @@ describe("asset-server handler", () => {
 		);
 	});
 
+	test("early hints should cache empty link headers", async () => {
+		const deploymentId = "deployment-" + Math.random();
+		const metadata = createMetadataObject({ deploymentId }) as Metadata;
+
+		const findAssetEntryForPath = async (path: string) => {
+			if (path === "/index.html") {
+				return "index.html";
+			}
+
+			return null;
+		};
+
+		// Create cache storage to reuse between requests
+		const { caches } = createCacheStorage();
+
+		const getResponse = async () =>
+			getTestResponse({
+				request: new Request("https://example.com/"),
+				metadata,
+				findAssetEntryForPath,
+				caches,
+				fetchAsset: () =>
+					Promise.resolve(
+						Object.assign(
+							new Response(`
+							<!DOCTYPE html>
+							<html>
+								<body>
+									<h1>I'm a teapot</h1>
+								</body>
+							</html>`),
+							{ contentType: "text/html" }
+						)
+					),
+			});
+
+		const { response, spies } = await getResponse();
+		expect(response.status).toBe(200);
+		// waitUntil should be called twice: once for asset-preservation, once for early hints
+		expect(spies.waitUntil.length).toBe(2);
+
+		await Promise.all(spies.waitUntil);
+
+		const earlyHintsCache = await caches.open(`eh:${deploymentId}`);
+		const earlyHintsRes = await earlyHintsCache.match("https://example.com/");
+
+		if (!earlyHintsRes) {
+			throw new Error(
+				"Did not match early hints cache on https://example.com/"
+			);
+		}
+
+		expect(earlyHintsRes.headers.get("link")).toBeNull();
+
+		// Do it again, but this time ensure that we didn't write to cache again
+		const { response: response2, spies: spies2 } = await getResponse();
+
+		expect(response2.status).toBe(200);
+		// waitUntil should only be called for asset-preservation
+		expect(spies2.waitUntil.length).toBe(1);
+
+		await Promise.all(spies2.waitUntil);
+
+		const earlyHintsRes2 = await earlyHintsCache.match("https://example.com/");
+
+		if (!earlyHintsRes2) {
+			throw new Error(
+				"Did not match early hints cache on https://example.com/"
+			);
+		}
+
+		expect(earlyHintsRes2.headers.get("link")).toBeNull();
+	});
+
+	test.todo(
+		"early hints should temporarily cache failures to parse links",
+		async () => {
+			// I couldn't figure out a way to make HTMLRewriter error out
+		}
+	);
+
 	describe("should serve deleted assets from preservation cache", async () => {
 		beforeEach(() => {
 			vi.useFakeTimers();
