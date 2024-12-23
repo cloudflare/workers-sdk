@@ -19,6 +19,9 @@ export function resolveEntryWithMain(
 	relativePath: string;
 	projectRoot: string;
 } {
+	// The project root is where the user defined the Worker via the Wrangler configuration (or the current working directory).
+	// The entry root is the base path used in bundling the source code for the Worker,
+	// which may be different from the project root if the Wrangler was redirected to use a different Wrangler configuration file.
 	const projectRoot = path.resolve(path.dirname(config.userConfigPath ?? "."));
 	const entryRoot = path.resolve(path.dirname(config.configPath ?? "."));
 	const absolutePath = path.resolve(entryRoot, main);
