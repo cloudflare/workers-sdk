@@ -141,6 +141,32 @@ describe("readConfig()", () => {
 			);
 			expect(config.name).toEqual("test-name");
 		});
+
+		it("should update the worker name if an environment is requested that is defined and allowEnvironmentsWhenNoneAreDefined is true", () => {
+			writeWranglerConfig({
+				env: {
+					foo: {},
+				},
+			});
+			const config = readConfig(
+				{ config: "wrangler.toml", env: "foo" },
+				{ allowEnvironmentsWhenNoneAreDefined: true }
+			);
+			expect(config.name).toEqual("test-name-foo");
+		});
+
+		it("should update the worker name if an environment is requested that is defined and named in optionalEnvironments", () => {
+			writeWranglerConfig({
+				env: {
+					foo: {},
+				},
+			});
+			const config = readConfig(
+				{ config: "wrangler.toml", env: "foo" },
+				{ optionalEnvironments: ["foo"] }
+			);
+			expect(config.name).toEqual("test-name-foo");
+		});
 	});
 });
 
