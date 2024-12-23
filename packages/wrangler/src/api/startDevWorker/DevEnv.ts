@@ -148,6 +148,10 @@ function createWorkerObject(devEnv: DevEnv): Worker {
 			assert(devEnv.config.latestConfig);
 			return devEnv.config.latestConfig;
 		},
+		get input() {
+			assert(devEnv.config.latestInput);
+			return devEnv.config.latestInput;
+		},
 		setConfig(config) {
 			return devEnv.config.set(config);
 		},
@@ -183,7 +187,7 @@ function createWorkerObject(devEnv: DevEnv): Worker {
 				(ctrl) => ctrl instanceof LocalRuntimeController
 			);
 
-			if (this.config.dev.remote || !local) {
+			if (!local) {
 				throw new Error("The platform proxy is only available in local mode");
 			}
 

@@ -14,6 +14,7 @@ import { startWorker } from "../../startDevWorker";
 import { CacheStorage } from "./caches";
 import { ExecutionContext } from "./executionContext";
 import type { Config, RawConfig, RawEnvironment } from "../../../config";
+import type { StartDevWorkerInput, Worker } from "../../startDevWorker";
 import type { IncomingRequestCfProperties } from "@cloudflare/workers-types/experimental";
 import type { ModuleRule, WorkerOptions } from "miniflare";
 
@@ -85,6 +86,11 @@ export type PlatformProxy<
 };
 
 /**
+ * The running worker instances with their reference count
+ */
+const workers = new Map<Worker, number>();
+
+/**
  * By reading from a Wrangler configuration file this function generates proxy objects that can be
  * used to simulate the interaction with the Cloudflare platform during local development
  * in a Node.js environment
@@ -100,7 +106,7 @@ export async function getPlatformProxy<
 ): Promise<PlatformProxy<Env, CfProperties>> {
 	// TODO: Allow skipping custom build
 
-	const worker = await startWorker({
+	const input: StartDevWorkerInput = {
 		config: options.configPath,
 		env: options.environment,
 		dev: {
@@ -119,7 +125,20 @@ export async function getPlatformProxy<
 						? ".wrangler/state/v3"
 						: undefined,
 		},
+	};
+
+	// Find an existing worker with the same input
+	let worker = Array.from(workers.keys()).find((w) => {
+		return JSON.stringify(w.input) === JSON.stringify(input);
 	});
+
+	// Start a new worker if none was found
+	if (!worker) {
+		worker = await startWorker(input);
+	}
+
+	// Update the reference count
+	workers.set(worker, (workers.get(worker) ?? 0) + 1);
 
 	const { env, cf } = await worker.getPlatformProxy();
 	deepFreeze(cf);
@@ -129,7 +148,22 @@ export async function getPlatformProxy<
 		cf: cf as CfProperties,
 		ctx: new ExecutionContext(),
 		caches: new CacheStorage(),
-		dispose: () => worker.dispose(),
+		dispose: async () => {
+			const count = workers.get(worker);
+
+			if (count !== undefined) {
+				// Don't dispose the worker if it's still in use
+				if (count > 1) {
+					workers.set(worker, count - 1);
+					return;
+				}
+
+				// Remove the worker from the map before disposing it
+				workers.delete(worker);
+			}
+
+			await worker.dispose();
+		},
 	};
 }
 

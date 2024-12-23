@@ -47,6 +47,7 @@ export interface Worker {
 	url: Promise<URL>;
 	inspectorUrl: Promise<URL>;
 	config: StartDevWorkerOptions;
+	input: StartDevWorkerInput;
 	setConfig: ConfigController["set"];
 	patchConfig: ConfigController["patch"];
 	fetch: DispatchFetch;
