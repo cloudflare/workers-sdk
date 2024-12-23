@@ -355,7 +355,7 @@ async function maybeReadPagesConfig(
 		return;
 	}
 	const { configPath } = findWranglerConfig(args.projectDirectory, {
-		useRedirect: true,
+		useRedirectIfAvailable: true,
 	});
 	// Fail early if the config file doesn't exist
 	if (!configPath || !existsSync(configPath)) {

@@ -43,7 +43,7 @@ export const Handler = async (args: PagesBuildEnvArgs) => {
 	);
 
 	const { configPath } = findWranglerConfig(args.projectDir, {
-		useRedirect: true,
+		useRedirectIfAvailable: true,
 	});
 	if (!configPath || !existsSync(configPath)) {
 		logger.debug("No Wrangler configuration file found. Exiting.");

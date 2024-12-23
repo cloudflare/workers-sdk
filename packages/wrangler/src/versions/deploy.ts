@@ -102,7 +102,7 @@ export const versionsDeployCommand = createCommand({
 	},
 	positionalArgs: ["version-specs"],
 	handler: async function versionsDeployHandler(args) {
-		const config = readConfig(args, { useRedirect: true });
+		const config = readConfig(args, { useRedirectIfAvailable: true });
 		metrics.sendMetricsEvent(
 			"deploy worker versions",
 			{},

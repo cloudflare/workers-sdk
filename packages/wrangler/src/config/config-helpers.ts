@@ -7,7 +7,7 @@ import { logger } from "../logger";
 import { formatMessage, ParseError, parseJSONC, readFileSync } from "../parse";
 
 export type ResolveConfigPathOptions = {
-	useRedirect?: boolean;
+	useRedirectIfAvailable?: boolean;
 };
 
 export type ConfigPaths = {
@@ -31,7 +31,7 @@ export function resolveWranglerConfigPath(
 		config?: string;
 		script?: string;
 	},
-	options: { useRedirect?: boolean }
+	options: { useRedirectIfAvailable?: boolean }
 ): ConfigPaths {
 	if (config !== undefined) {
 		return { userConfigPath: config, configPath: config };
@@ -48,7 +48,7 @@ export function resolveWranglerConfigPath(
  */
 export function findWranglerConfig(
 	referencePath: string = process.cwd(),
-	{ useRedirect = false } = {}
+	{ useRedirectIfAvailable = false } = {}
 ): ConfigPaths {
 	const userConfigPath =
 		findUpSync(`wrangler.json`, { cwd: referencePath }) ??
@@ -57,7 +57,7 @@ export function findWranglerConfig(
 
 	return {
 		userConfigPath,
-		configPath: useRedirect
+		configPath: useRedirectIfAvailable
 			? findRedirectedWranglerConfig(referencePath, userConfigPath)
 			: userConfigPath,
 	};

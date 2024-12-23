@@ -10,7 +10,7 @@ describe("config findWranglerConfig()", () => {
 	const std = mockConsoleMethods();
 	const NO_LOGS = { debug: "", err: "", info: "", out: "", warn: "" };
 
-	describe("(useRedirect: false)", () => {
+	describe("(useRedirectIfAvailable: false)", () => {
 		it.each(["toml", "json", "jsonc"])(
 			"should find the nearest wrangler.%s to the reference directory",
 			async (ext) => {
@@ -76,7 +76,9 @@ describe("config findWranglerConfig()", () => {
 				[".wrangler/deploy/config.json"]: `{"configPath": "../../dist/wrangler.json" }`,
 				[`dist/wrangler.json`]: "DUMMY",
 			});
-			expect(findWranglerConfig(".", { useRedirect: false })).toEqual({
+			expect(
+				findWranglerConfig(".", { useRedirectIfAvailable: false })
+			).toEqual({
 				configPath: path.resolve(`wrangler.toml`),
 				userConfigPath: path.resolve(`wrangler.toml`),
 			});
@@ -84,17 +86,21 @@ describe("config findWranglerConfig()", () => {
 		});
 	});
 
-	describe("(useRedirect: true)", () => {
+	describe("(useRedirectIfAvailable: true)", () => {
 		it("should return redirected config path if no user config and a deploy config is found", async () => {
 			await seed({
 				[".wrangler/deploy/config.json"]: `{"configPath": "../../dist/wrangler.json" }`,
 				[`dist/wrangler.json`]: "DUMMY",
 				["foo/holder.txt"]: "DUMMY",
 			});
-			expect(findWranglerConfig(".", { useRedirect: true })).toEqual({
-				configPath: path.resolve(`dist/wrangler.json`),
-			});
-			expect(findWranglerConfig("./foo", { useRedirect: true })).toEqual({
+			expect(findWranglerConfig(".", { useRedirectIfAvailable: true })).toEqual(
+				{
+					configPath: path.resolve(`dist/wrangler.json`),
+				}
+			);
+			expect(
+				findWranglerConfig("./foo", { useRedirectIfAvailable: true })
+			).toEqual({
 				configPath: path.resolve(`dist/wrangler.json`),
 			});
 			expect(std).toMatchInlineSnapshot(`
@@ -128,11 +134,15 @@ describe("config findWranglerConfig()", () => {
 				[`dist/wrangler.json`]: "DUMMY",
 				["foo/holder.txt"]: "DUMMY",
 			});
-			expect(findWranglerConfig(".", { useRedirect: true })).toEqual({
-				configPath: path.resolve(`dist/wrangler.json`),
-				userConfigPath: path.resolve(`wrangler.toml`),
-			});
-			expect(findWranglerConfig("./foo", { useRedirect: true })).toEqual({
+			expect(findWranglerConfig(".", { useRedirectIfAvailable: true })).toEqual(
+				{
+					configPath: path.resolve(`dist/wrangler.json`),
+					userConfigPath: path.resolve(`wrangler.toml`),
+				}
+			);
+			expect(
+				findWranglerConfig("./foo", { useRedirectIfAvailable: true })
+			).toEqual({
 				configPath: path.resolve(`dist/wrangler.json`),
 				userConfigPath: path.resolve(`wrangler.toml`),
 			});
@@ -167,7 +177,7 @@ describe("config findWranglerConfig()", () => {
 
 			let error;
 			try {
-				findWranglerConfig(".", { useRedirect: true });
+				findWranglerConfig(".", { useRedirectIfAvailable: true });
 			} catch (e) {
 				error = e;
 			}
@@ -192,7 +202,7 @@ describe("config findWranglerConfig()", () => {
 
 			let error;
 			try {
-				findWranglerConfig(".", { useRedirect: true });
+				findWranglerConfig(".", { useRedirectIfAvailable: true });
 			} catch (e) {
 				error = e;
 			}
@@ -215,7 +225,7 @@ describe("config findWranglerConfig()", () => {
 
 			let error;
 			try {
-				findWranglerConfig(".", { useRedirect: true });
+				findWranglerConfig(".", { useRedirectIfAvailable: true });
 			} catch (e) {
 				error = e;
 			}
@@ -240,7 +250,7 @@ describe("config findWranglerConfig()", () => {
 
 			let error;
 			try {
-				findWranglerConfig("foo/bar", { useRedirect: true });
+				findWranglerConfig("foo/bar", { useRedirectIfAvailable: true });
 			} catch (e) {
 				error = e;
 			}
@@ -254,7 +264,7 @@ describe("config findWranglerConfig()", () => {
 
 			try {
 				error = undefined;
-				findWranglerConfig("bar/foo", { useRedirect: true });
+				findWranglerConfig("bar/foo", { useRedirectIfAvailable: true });
 			} catch (e) {
 				error = e;
 			}

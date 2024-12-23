@@ -270,7 +270,7 @@ async function deployWorker(args: DeployArgs) {
 		);
 	}
 
-	const config = readConfig(args, { useRedirect: true });
+	const config = readConfig(args, { useRedirectIfAvailable: true });
 	if (config.pages_build_output_dir) {
 		throw new UserError(
 			"It looks like you've run a Workers-specific command in a Pages project.\n" +
