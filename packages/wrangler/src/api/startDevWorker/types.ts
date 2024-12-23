@@ -47,11 +47,16 @@ export interface Worker {
 	url: Promise<URL>;
 	inspectorUrl: Promise<URL>;
 	config: StartDevWorkerOptions;
+	input: StartDevWorkerInput;
 	setConfig: ConfigController["set"];
 	patchConfig: ConfigController["patch"];
 	fetch: DispatchFetch;
 	scheduled: MiniflareWorker["scheduled"];
 	queue: MiniflareWorker["queue"];
+	getPlatformProxy(): Promise<{
+		env: Record<string, unknown>;
+		cf: Record<string, unknown>;
+	}>;
 	dispose(): Promise<void>;
 }
 
