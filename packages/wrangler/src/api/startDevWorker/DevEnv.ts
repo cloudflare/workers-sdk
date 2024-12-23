@@ -20,6 +20,10 @@ export class DevEnv extends EventEmitter {
 	async startWorker(options: StartDevWorkerInput): Promise<Worker> {
 		const worker = createWorkerObject(this);
 
+		if (options.dev?.logLevel) {
+			logger.loggerLevel = options.dev.logLevel;
+		}
+
 		await this.config.set(options);
 
 		return worker;
