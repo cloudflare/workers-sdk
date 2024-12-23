@@ -117,14 +117,14 @@ export function readPagesConfig(
 	} catch (e) {
 		logger.error(e);
 		throw new FatalError(
-			`Your ${configFileName(configPath)} file is not a valid Pages config file`,
+			`Your ${configFileName(configPath)} file is not a valid Pages configuration file`,
 			EXIT_CODE_INVALID_PAGES_CONFIG
 		);
 	}
 
 	if (!isPagesConfig(rawConfig)) {
 		throw new FatalError(
-			`Your ${configFileName(configPath)} file is not a valid Pages config file`,
+			`Your ${configFileName(configPath)} file is not a valid Pages configuration file`,
 			EXIT_CODE_INVALID_PAGES_CONFIG
 		);
 	}

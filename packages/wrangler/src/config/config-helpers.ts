@@ -43,7 +43,7 @@ export function resolveWranglerConfigPath(
 }
 
 /**
- * Find the wrangler config file by searching up the file-system
+ * Find the wrangler configuration file by searching up the file-system
  * from the current working directory.
  */
 export function findWranglerConfig(
@@ -64,7 +64,7 @@ export function findWranglerConfig(
 }
 
 /**
- * Check whether there is a config file that indicates that we should redirect the user configuration.
+ * Check whether there is a configuration file that indicates that we should redirect the user configuration.
  * @param cwd
  * @param userConfigPath
  * @returns
@@ -92,14 +92,14 @@ function findRedirectedWranglerConfig(
 	} catch (e) {
 		throw new UserError(
 			dedent`
-				Failed to load the deploy config at ${path.relative(".", deployConfigPath)}
+				Failed to parse the deploy configuration file at ${path.relative(".", deployConfigPath)}
 				${e instanceof ParseError ? formatMessage(e) : e}
 			`
 		);
 	}
 	if (!redirectedConfigPath) {
 		throw new UserError(dedent`
-			A redirect config was found at "${path.relative(".", deployConfigPath)}".
+			A deploy configuration file was found at "${path.relative(".", deployConfigPath)}".
 			But this is not valid - the required "configPath" property was not found.
 			Instead this file contains:
 			\`\`\`
@@ -111,8 +111,8 @@ function findRedirectedWranglerConfig(
 	if (redirectedConfigPath) {
 		if (!fs.existsSync(redirectedConfigPath)) {
 			throw new UserError(dedent`
-				There is a redirect configuration at "${path.relative(".", deployConfigPath)}".
-				But the config path it points to, "${path.relative(".", redirectedConfigPath)}", does not exist.
+				There is a deploy configuration at "${path.relative(".", deployConfigPath)}".
+				But the redirected configuration path it points to, "${path.relative(".", redirectedConfigPath)}", does not exist.
 			`);
 		}
 		if (userConfigPath) {
@@ -121,8 +121,8 @@ function findRedirectedWranglerConfig(
 				deployConfigPath
 			) {
 				throw new UserError(dedent`
-					Found both a user config file at "${path.relative(".", userConfigPath)}"
-					and a redirect config file at "${path.relative(".", deployConfigPath)}".
+					Found both a user configuration file at "${path.relative(".", userConfigPath)}"
+					and a deploy configuration file at "${path.relative(".", deployConfigPath)}".
 					But these do not share the same base path so it is not clear which should be used.
 				`);
 			}
@@ -130,9 +130,9 @@ function findRedirectedWranglerConfig(
 
 		logger.warn(dedent`
 			Using redirected Wrangler configuration.
-			Redirected config path: "${path.relative(".", redirectedConfigPath)}"
-			Deploy config path: "${path.relative(".", deployConfigPath)}"
-			Original config path: "${userConfigPath ? path.relative(".", userConfigPath) : "<no user config found>"}"
+			Configuration being used: "${path.relative(".", redirectedConfigPath)}"
+			Original user's configuration: "${userConfigPath ? path.relative(".", userConfigPath) : "<no user config found>"}"
+			Deploy configuration file: "${path.relative(".", deployConfigPath)}"
 		`);
 		return redirectedConfigPath;
 	}

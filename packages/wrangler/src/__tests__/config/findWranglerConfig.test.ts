@@ -105,16 +105,16 @@ describe("config findWranglerConfig()", () => {
 				  "out": "",
 				  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mUsing redirected Wrangler configuration.[0m
 
-				  Redirected config path: \\"dist/wrangler.json\\"
-				  Deploy config path: \\".wrangler/deploy/config.json\\"
-				  Original config path: \\"<no user config found>\\"
+				  Configuration being used: \\"dist/wrangler.json\\"
+				  Original user's configuration: \\"<no user config found>\\"
+				  Deploy configuration file: \\".wrangler/deploy/config.json\\"
 
 
 				[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mUsing redirected Wrangler configuration.[0m
 
-				  Redirected config path: \\"dist/wrangler.json\\"
-				  Deploy config path: \\".wrangler/deploy/config.json\\"
-				  Original config path: \\"<no user config found>\\"
+				  Configuration being used: \\"dist/wrangler.json\\"
+				  Original user's configuration: \\"<no user config found>\\"
+				  Deploy configuration file: \\".wrangler/deploy/config.json\\"
 
 				",
 				}
@@ -144,16 +144,16 @@ describe("config findWranglerConfig()", () => {
 				  "out": "",
 				  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mUsing redirected Wrangler configuration.[0m
 
-				  Redirected config path: \\"dist/wrangler.json\\"
-				  Deploy config path: \\".wrangler/deploy/config.json\\"
-				  Original config path: \\"wrangler.toml\\"
+				  Configuration being used: \\"dist/wrangler.json\\"
+				  Original user's configuration: \\"wrangler.toml\\"
+				  Deploy configuration file: \\".wrangler/deploy/config.json\\"
 
 
 				[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mUsing redirected Wrangler configuration.[0m
 
-				  Redirected config path: \\"dist/wrangler.json\\"
-				  Deploy config path: \\".wrangler/deploy/config.json\\"
-				  Original config path: \\"wrangler.toml\\"
+				  Configuration being used: \\"dist/wrangler.json\\"
+				  Original user's configuration: \\"wrangler.toml\\"
+				  Deploy configuration file: \\".wrangler/deploy/config.json\\"
 
 				",
 				}
@@ -172,17 +172,16 @@ describe("config findWranglerConfig()", () => {
 				error = e;
 			}
 
-			expect(normalizeString(`${error}`).replace(process.cwd(), "<cwd>"))
-				.toMatchInlineSnapshot(`
-				"Error: Failed to load the deploy config at .wrangler/deploy/config.json
-				[31mX [41;31m[[41;97mERROR[41;31m][0m [1mInvalidSymbol[0m
+			expect(normalizeString(`${error}`)).toMatchInlineSnapshot(`
+					"Error: Failed to parse the deploy configuration file at .wrangler/deploy/config.json
+					[31mX [41;31m[[41;97mERROR[41;31m][0m [1mInvalidSymbol[0m
 
-				    <cwd>/.wrangler/deploy/config.json:1:0:
-				[37m      1 │ [32mINVALID[37m JSON
-				        ╵ [32m~~~~~~~[0m
+					    <cwd>/.wrangler/deploy/config.json:1:0:
+					[37m      1 │ [32mINVALID[37m JSON
+					        ╵ [32m~~~~~~~[0m
 
-				"
-			`);
+					"
+				`);
 			expect(std).toEqual(NO_LOGS);
 		});
 
@@ -199,7 +198,7 @@ describe("config findWranglerConfig()", () => {
 			}
 
 			expect(normalizeString(`${error}`)).toMatchInlineSnapshot(`
-				"Error: A redirect config was found at \\".wrangler/deploy/config.json\\".
+				"Error: A deploy configuration file was found at \\".wrangler/deploy/config.json\\".
 				But this is not valid - the required \\"configPath\\" property was not found.
 				Instead this file contains:
 				\`\`\`
@@ -222,8 +221,8 @@ describe("config findWranglerConfig()", () => {
 			}
 
 			expect(normalizeString(`${error}`)).toMatchInlineSnapshot(`
-				"Error: There is a redirect configuration at \\".wrangler/deploy/config.json\\".
-				But the config path it points to, \\".wrangler/deploy/missing/wrangler.json\\", does not exist."
+				"Error: There is a deploy configuration at \\".wrangler/deploy/config.json\\".
+				But the redirected configuration path it points to, \\".wrangler/deploy/missing/wrangler.json\\", does not exist."
 			`);
 			expect(std).toEqual(NO_LOGS);
 		});
@@ -247,8 +246,8 @@ describe("config findWranglerConfig()", () => {
 			}
 
 			expect(normalizeString(`${error}`)).toMatchInlineSnapshot(`
-				"Error: Found both a user config file at \\"foo/wrangler.toml\\"
-				and a redirect config file at \\"foo/bar/.wrangler/deploy/config.json\\".
+				"Error: Found both a user configuration file at \\"foo/wrangler.toml\\"
+				and a deploy configuration file at \\"foo/bar/.wrangler/deploy/config.json\\".
 				But these do not share the same base path so it is not clear which should be used."
 			`);
 			expect(std).toEqual(NO_LOGS);
@@ -261,8 +260,8 @@ describe("config findWranglerConfig()", () => {
 			}
 
 			expect(normalizeString(`${error}`)).toMatchInlineSnapshot(`
-				"Error: Found both a user config file at \\"bar/foo/wrangler.toml\\"
-				and a redirect config file at \\"bar/.wrangler/deploy/config.json\\".
+				"Error: Found both a user configuration file at \\"bar/foo/wrangler.toml\\"
+				and a deploy configuration file at \\"bar/.wrangler/deploy/config.json\\".
 				But these do not share the same base path so it is not clear which should be used."
 			`);
 			expect(std).toEqual(NO_LOGS);

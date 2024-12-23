@@ -31,9 +31,9 @@ export type RawConfig = Partial<ConfigFields<RawDevConfig>> &
 	EnvironmentMap & { $schema?: string };
 
 export interface ConfigFields<Dev extends RawDevConfig> {
-	/** The path to the Wrangler config file (if any, and possibly redirected from the user Wrangler configuration) used to create this configuration. */
+	/** The path to the Wrangler configuration file (if any, and possibly redirected from the user Wrangler configuration) used to create this configuration. */
 	configPath: string | undefined;
-	/** The path to the user's Wrangler config file (if any), which may have been redirected to the actual config used to create this configuration. */
+	/** The path to the user's Wrangler configuration file (if any), which may have been redirected to another file that used to create this configuration. */
 	userConfigPath: string | undefined;
 
 	/**
