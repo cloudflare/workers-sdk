@@ -282,8 +282,7 @@ export const versionsUploadCommand = createCommand({
 		},
 	},
 	behaviour: {
-		provideConfig: true,
-		useConfigRedirect: true,
+		useConfigRedirectIfAvailable: true,
 	},
 	handler: async function versionsUploadHandler(args, { config }) {
 		const entry = await getEntry(args, config, "versions upload");
