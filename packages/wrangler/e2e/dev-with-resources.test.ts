@@ -6,6 +6,7 @@ import { Agent, fetch } from "undici";
 import { beforeEach, describe, expect, it } from "vitest";
 import WebSocket from "ws";
 import { WranglerE2ETestHelper } from "./helpers/e2e-wrangler-test";
+import { fetchText } from "./helpers/fetch-text";
 import { generateResourceName } from "./helpers/generate-resource-name";
 
 const RUNTIMES = [
@@ -561,6 +562,42 @@ describe.sequential.each(RUNTIMES)("Bindings: $flags", ({ runtime, flags }) => {
 		);
 	});
 
+	it("exposes Hyperdrive bindings", async () => {
+		const { id } = await helper.hyperdrive(false);
+
+		await helper.seed({
+			"wrangler.toml": dedent`
+					name = "${workerName}"
+					main = "src/index.ts"
+					compatibility_date = "2023-10-25"
+
+					[[hyperdrive]]
+					binding = "HYPERDRIVE"
+					id = "${id}"
+			`,
+			"src/index.ts": dedent`
+					export default {
+						async fetch(request, env) {
+							if (request.url.includes("connect")) {
+								const conn = env.HYPERDRIVE.connect();
+								await conn.writable.getWriter().write(new TextEncoder().encode("test string"));
+							}
+							return new Response(env.HYPERDRIVE?.connectionString ?? "no")
+						}
+					}`,
+		});
+
+		const worker = helper.runLongLived(`wrangler dev ${flags}`);
+		const { url } = await worker.waitForReady();
+		const text = await fetchText(url);
+
+		const hyperdrive = new URL(text);
+		expect(hyperdrive.pathname).toBe("/some_db");
+		expect(hyperdrive.username).toBe("user");
+		expect(hyperdrive.password).toBe("!pass");
+		expect(hyperdrive.host).not.toBe("localhost");
+	});
+
 	it.skipIf(!isLocal).fails("exposes Pipelines bindings", async () => {
 		await helper.seed({
 			"wrangler.toml": dedent`
@@ -667,7 +704,6 @@ describe.sequential.each(RUNTIMES)("Bindings: $flags", ({ runtime, flags }) => {
 	});
 
 	// TODO(soon): implement E2E tests for other bindings
-	it.todo("exposes hyperdrive bindings");
 	it.skipIf(isLocal).todo("exposes send email bindings");
 	it.skipIf(isLocal).todo("exposes browser bindings");
 	it.skipIf(isLocal).todo("exposes Workers AI bindings");
