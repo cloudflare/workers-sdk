@@ -25,7 +25,7 @@ const esbuildProblemMatcherPlugin = {
 	},
 };
 
-async function main() {
+async function buildExtension(watch) {
 	const ctx = await esbuild.context({
 		entryPoints: ["src/extension.ts"],
 		bundle: true,
@@ -48,6 +48,45 @@ async function main() {
 		await ctx.rebuild();
 		await ctx.dispose();
 	}
+}
+
+async function buildWranglerConfigEditor(watch) {
+	const ctx = await esbuild.context({
+		entryPoints: ["src/WranglerConfigEditor/index.tsx"],
+		bundle: true,
+		format: "cjs",
+		minify: production,
+		sourcemap: !production,
+		sourcesContent: false,
+		outfile: "dist/WranglerConfigEditor.js",
+		external: ["vscode"],
+		logLevel: "silent",
+		plugins: [
+			/* add to the end of plugins array */
+			esbuildProblemMatcherPlugin,
+		],
+	});
+	if (watch) {
+		await ctx.watch();
+	} else {
+		await ctx.rebuild();
+		await ctx.dispose();
+	}
+}
+
+async function main() {
+	// Build all dependencies first
+	await buildWranglerConfigEditor();
+
+	if (!watch) {
+		return buildExtension();
+	}
+
+	// Rebuild on changes
+	return await Promise.all([
+		buildWranglerConfigEditor(true),
+		buildExtension(true),
+	]);
 }
 
 main().catch((e) => {
