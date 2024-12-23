@@ -9,6 +9,7 @@ import {
 	buildMiniflareBindingOptions,
 	buildSitesOptions,
 } from "../../../dev/miniflare";
+import { run } from "../../../experimental-flags";
 import { getLegacyAssetPaths, getSiteAssetPaths } from "../../../sites";
 import { startWorker } from "../../startDevWorker";
 import { CacheStorage } from "./caches";
@@ -106,65 +107,74 @@ export async function getPlatformProxy<
 ): Promise<PlatformProxy<Env, CfProperties>> {
 	// TODO: Allow skipping custom build
 
-	const input: StartDevWorkerInput = {
-		config: options.configPath,
-		env: options.environment,
-		dev: {
-			inspector: {
-				port: 0,
-			},
-			server: {
-				port: 0,
-			},
-			logLevel: "error",
-			liveReload: false,
-			persist:
-				typeof options.persist === "object"
-					? options.persist.path
-					: options.persist
-						? ".wrangler/state/v3"
-						: undefined,
+	return await run(
+		{
+			FILE_BASED_REGISTRY: Boolean(options.experimentalRegistry ?? true),
+			MULTIWORKER: false,
+			RESOURCES_PROVISION: false,
 		},
-	};
+		async () => {
+			const input: StartDevWorkerInput = {
+				config: options.configPath,
+				env: options.environment,
+				dev: {
+					inspector: {
+						port: 0,
+					},
+					server: {
+						port: 0,
+					},
+					logLevel: "error",
+					liveReload: false,
+					persist:
+						typeof options.persist === "object"
+							? options.persist.path
+							: options.persist
+								? ".wrangler/state/v3"
+								: undefined,
+				},
+			};
 
-	// Find an existing worker with the same input
-	let worker = Array.from(workers.keys()).find((w) => {
-		return JSON.stringify(w.input) === JSON.stringify(input);
-	});
+			// Find an existing worker with the same input
+			let worker = Array.from(workers.keys()).find((w) => {
+				return JSON.stringify(w.input) === JSON.stringify(input);
+			});
 
-	// Start a new worker if none was found
-	if (!worker) {
-		worker = await startWorker(input);
-	}
-
-	// Update the reference count
-	workers.set(worker, (workers.get(worker) ?? 0) + 1);
-
-	const { env, cf } = await worker.getPlatformProxy();
-	deepFreeze(cf);
-
-	return {
-		env: env as Env,
-		cf: cf as CfProperties,
-		ctx: new ExecutionContext(),
-		caches: new CacheStorage(),
-		dispose: async () => {
-			const count = workers.get(worker);
-
-			if (count !== undefined) {
-				// Don't dispose the worker if it's still in use
-				if (count > 1) {
-					workers.set(worker, count - 1);
-					return;
-				}
-
-				// Remove the worker from the map before disposing it
-				workers.delete(worker);
+			// Start a new worker if none was found
+			if (!worker) {
+				worker = await startWorker(input);
 			}
 
-			await worker.dispose();
-		},
-	};
+			// Update the reference count
+			workers.set(worker, (workers.get(worker) ?? 0) + 1);
+
+			const { env, cf } = await worker.getPlatformProxy();
+			deepFreeze(cf);
+
+			return {
+				env: env as Env,
+				cf: cf as CfProperties,
+				ctx: new ExecutionContext(),
+				caches: new CacheStorage(),
+				dispose: async () => {
+					const count = workers.get(worker);
+
+					if (count !== undefined) {
+						// Don't dispose the worker if it's still in use
+						if (count > 1) {
+							workers.set(worker, count - 1);
+							return;
+						}
+
+						// Remove the worker from the map before disposing it
+						workers.delete(worker);
+					}
+
+					await worker.dispose();
+				},
+			};
+		}
+	);
 }
 
 function deepFreeze<T extends Record<string | number | symbol, unknown>>(
