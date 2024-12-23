@@ -682,7 +682,15 @@ const safeRedirect = async (
 export const decodePath = (pathname: string) => {
 	return pathname
 		.split("/")
-		.map((x) => decodeURIComponent(x))
+		.map((x) => {
+			let decoded;
+			try {
+				decoded = decodeURIComponent(x);
+				return decoded;
+			} catch {
+				return x;
+			}
+		})
 		.join("/");
 };
 /**
@@ -692,6 +700,14 @@ export const decodePath = (pathname: string) => {
 const encodePath = (pathname: string) => {
 	return pathname
 		.split("/")
-		.map((x) => encodeURIComponent(x))
+		.map((x) => {
+			let encoded;
+			try {
+				encoded = encodeURIComponent(x);
+				return encoded;
+			} catch {
+				return x;
+			}
+		})
 		.join("/");
 };
