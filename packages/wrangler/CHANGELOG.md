@@ -1,5 +1,31 @@
 # wrangler
 
+## 3.100.0
+
+### Minor Changes
+
+- [#7604](https://github.com/cloudflare/workers-sdk/pull/7604) [`6c2f173`](https://github.com/cloudflare/workers-sdk/commit/6c2f17341037962bdf675e7008a4d91059465e16) Thanks [@CarmenPopoviciu](https://github.com/CarmenPopoviciu)! - feat: Capture Workers with static assets in the telemetry data
+
+  We want to measure accurately what this number of Workers + Assets projects running in remote mode is, as this number will be a very helpful data point down the road, when more decisions around remote mode will have to be taken.
+
+  These changes add this kind of insight to our telemetry data, by capturing whether the command running is in the context of a Workers + Assets project.
+
+  N.B. With these changes in place we will be capturing the Workers + Assets context for all commands, not just wrangler dev --remote.
+
+### Patch Changes
+
+- [#7581](https://github.com/cloudflare/workers-sdk/pull/7581) [`cac7fa6`](https://github.com/cloudflare/workers-sdk/commit/cac7fa6160ecc70d8f188de1f494a07c0e1e9626) Thanks [@vicb](https://github.com/vicb)! - chore(wrangler): update unenv dependency version
+
+  unenv now uses the workerd implementation on node:dns
+  See the [unjs/unenv#376](https://github.com/unjs/unenv/pull/376)
+
+- [#7614](https://github.com/cloudflare/workers-sdk/pull/7614) [`8abb43f`](https://github.com/cloudflare/workers-sdk/commit/8abb43fcdf0c506fa6268a7f07aa31b398b7daf2) Thanks [@vicb](https://github.com/vicb)! - chore(wrangler): update unenv dependency version
+
+  The updated unenv contains a fix for the module resolution,
+  see <https://github.com/unjs/unenv/pull/378>.
+  That bug prevented us from using unenv module resolution,
+  see <https://github.com/cloudflare/workers-sdk/pull/7583>.
+
 ## 3.99.0
 
 ### Minor Changes
