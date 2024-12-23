@@ -1,5 +1,73 @@
 # create-cloudflare
 
+## 2.35.2
+
+### Patch Changes
+
+- [#7617](https://github.com/cloudflare/workers-sdk/pull/7617) [`75393d6`](https://github.com/cloudflare/workers-sdk/commit/75393d67d04fae1d674b7b2fc0b751384b02103b) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency  | From  | To    |
+  | ----------- | ----- | ----- |
+  | create-vite | 6.0.1 | 6.1.0 |
+
+- [#7618](https://github.com/cloudflare/workers-sdk/pull/7618) [`e5b9a9a`](https://github.com/cloudflare/workers-sdk/commit/e5b9a9a9d7363acf8ac7fa45f88294d879a3e996) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From  | To    |
+  | ---------- | ----- | ----- |
+  | sv         | 0.6.7 | 0.6.9 |
+
+- [#7619](https://github.com/cloudflare/workers-sdk/pull/7619) [`9989022`](https://github.com/cloudflare/workers-sdk/commit/998902238552c860cf9dd9f629e8f351352ae3c4) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | gatsby     | 5.14.0 | 5.14.1 |
+
+- [#7620](https://github.com/cloudflare/workers-sdk/pull/7620) [`4a38b9b`](https://github.com/cloudflare/workers-sdk/commit/4a38b9b1f9d4249f0d6756c22593a168ab4149bc) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | nuxi       | 3.16.0 | 3.17.1 |
+
+- [#7621](https://github.com/cloudflare/workers-sdk/pull/7621) [`05cc188`](https://github.com/cloudflare/workers-sdk/commit/05cc18889d604145d68ff0a306926ebb9380ea3b) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From   | To     |
+  | --------------- | ------ | ------ |
+  | @angular/create | 19.0.5 | 19.0.6 |
+
+- [#7622](https://github.com/cloudflare/workers-sdk/pull/7622) [`a29b1c2`](https://github.com/cloudflare/workers-sdk/commit/a29b1c2c58f59a0e9891f1d30eb1c2c0fd68e42d) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency   | From   | To     |
+  | ------------ | ------ | ------ |
+  | create-remix | 2.15.1 | 2.15.2 |
+
+- [#7623](https://github.com/cloudflare/workers-sdk/pull/7623) [`c448a57`](https://github.com/cloudflare/workers-sdk/commit/c448a57a23052d0fb75f06a282b735f452ddb8c5) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency  | From   | To     |
+  | ----------- | ------ | ------ |
+  | create-qwik | 1.11.0 | 1.12.0 |
+
+- [#7624](https://github.com/cloudflare/workers-sdk/pull/7624) [`d4d8df1`](https://github.com/cloudflare/workers-sdk/commit/d4d8df1356df66b09f18abff09b201537373b839) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From   | To     |
+  | --------------- | ------ | ------ |
+  | create-next-app | 15.1.0 | 15.1.2 |
+
 ## 2.35.1
 
 ### Patch Changes
