@@ -151,28 +151,41 @@ describe("[Asset Worker] `handleRequest`", () => {
 		expect(response.status).toBe(404);
 	});
 
-	it("returns 404 Not Found responses for malformed path", async () => {
+	it("returns expected responses for malformed path", async () => {
 		const assets: Record<string, string> = {
 			"/index.html": "aaaaaaaaaa",
+			"/%A0%A0.html": "bbbbbbbbbb",
 		};
 		const configuration: Required<AssetConfig> = {
-			html_handling: "none",
+			html_handling: "drop-trailing-slash",
 			not_found_handling: "none",
 			serve_directly: true,
 		};
 
+		const exists = async (pathname: string) => {
+			return assets[pathname] ?? null;
+		};
+		const getByEtag = async (_: string) => ({
+			readableStream: new ReadableStream(),
+			contentType: "text/html",
+		});
+
+		// first malformed URL should return 404 as no match above
 		const response = await handleRequest(
 			new Request("https://example.com/%A0"),
 			configuration,
-			async (pathname: string) => {
-				return assets[pathname] ?? null;
-			},
-			async (_: string) => ({
-				readableStream: new ReadableStream(),
-				contentType: "text/html",
-			})
+			exists,
+			getByEtag
 		);
-
 		expect(response.status).toBe(404);
+
+		// but second malformed URL should return 307 as it matches and then redirects
+		const response2 = await handleRequest(
+			new Request("https://example.com/%A0%A0"),
+			configuration,
+			exists,
+			getByEtag
+		);
+		expect(response2.status).toBe(307);
 	});
 });
