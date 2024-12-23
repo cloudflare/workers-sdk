@@ -184,10 +184,13 @@ function createWorkerObject(devEnv: DevEnv): Worker {
 			);
 
 			if (this.config.dev.remote || !local) {
-				throw new Error("local only");
+				throw new Error("The platform proxy is only available in local mode");
 			}
 
-			const [env, cf] = await Promise.all([local.getBindings(), local.getCf()]);
+			const [env, cf] = await Promise.all([
+				local.getBindingsProxy(),
+				local.getCfProxy(),
+			]);
 
 			return {
 				env,

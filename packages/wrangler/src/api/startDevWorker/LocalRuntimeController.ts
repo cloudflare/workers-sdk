@@ -157,7 +157,7 @@ export class LocalRuntimeController extends RuntimeController {
 		return this.#mf;
 	}
 
-	async getBindings() {
+	async getBindingsProxy() {
 		// Initialize the bindings from the Miniflare instance, which will be updated on each reload
 		if (!this.#bindings) {
 			const mf = await this.getMiniflareInstance();
@@ -166,26 +166,12 @@ export class LocalRuntimeController extends RuntimeController {
 
 		return new Proxy({} as Record<string, unknown>, {
 			get: (_, prop, receiver) => {
-				try {
-					return Reflect.get(this.#bindings ?? {}, prop, receiver);
-				} catch (e) {
-					if (
-						e instanceof Error &&
-						e.message.startsWith("Attempted to use poisoned stub")
-					) {
-						throw new Error(
-							`The binding "${prop.toString()}" is not available; Please check the logs for more information.`,
-							{ cause: e }
-						);
-					}
-
-					throw e;
-				}
+				return Reflect.get(this.#bindings ?? {}, prop, receiver);
 			},
 		});
 	}
 
-	async getCf() {
+	async getCfProxy() {
 		// Initialize the cf properties from the Miniflare instance, which will be updated on each reload
 		if (!this.#cf) {
 			const mf = await this.getMiniflareInstance();
@@ -220,13 +206,13 @@ export class LocalRuntimeController extends RuntimeController {
 
 				await this.#mf.setOptions(options);
 
+				// If the bindings were fetched, ensure they're up-to-date
 				if (this.#bindings) {
-					// If the bindings were already fetched, re-fetch them to ensure they're up-to-date
 					this.#bindings = await this.#mf.getBindings();
 				}
 
+				// If the cf properties were fetched, ensure they're up-to-date
 				if (this.#cf) {
-					// If the cf properties were already fetched, re-fetch them to ensure they're up-to-date
 					this.#cf = await this.#mf.getCf();
 				}
 			}
