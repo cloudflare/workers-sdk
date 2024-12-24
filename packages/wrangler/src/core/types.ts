@@ -116,6 +116,11 @@ export type CommandDefinition<
 		overrideExperimentalFlags?: (
 			args: HandlerArgs<NamedArgDefs>
 		) => ExperimentalFlags;
+
+		/**
+		 * If true, then look for a redirect file at `.wrangler/deploy/config.json` and use that to find the Wrangler configuration file.
+		 */
+		useConfigRedirectIfAvailable?: boolean;
 	};
 
 	/**

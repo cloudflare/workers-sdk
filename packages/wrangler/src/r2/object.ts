@@ -95,7 +95,7 @@ export const r2ObjectGetCommand = createCommand({
 		if (objectGetYargs.local) {
 			await usingLocalBucket(
 				objectGetYargs.persistTo,
-				config.configPath,
+				config,
 				bucket,
 				async (r2Bucket) => {
 					const object = await r2Bucket.get(key);
@@ -274,7 +274,7 @@ export const r2ObjectPutCommand = createCommand({
 		if (local) {
 			await usingLocalBucket(
 				persistTo,
-				config.configPath,
+				config,
 				bucket,
 				async (r2Bucket, mf) => {
 					const putOptions: R2PutOptions = {
@@ -376,11 +376,8 @@ export const r2ObjectDeleteCommand = createCommand({
 		logger.log(`Deleting object "${key}" from bucket "${fullBucketName}".`);
 
 		if (args.local) {
-			await usingLocalBucket(
-				args.persistTo,
-				config.configPath,
-				bucket,
-				(r2Bucket) => r2Bucket.delete(key)
+			await usingLocalBucket(args.persistTo, config, bucket, (r2Bucket) =>
+				r2Bucket.delete(key)
 			);
 		} else {
 			const accountId = await requireAuth(config);
