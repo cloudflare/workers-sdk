@@ -76,9 +76,7 @@ describe("config findWranglerConfig()", () => {
 				[".wrangler/deploy/config.json"]: `{"configPath": "../../dist/wrangler.json" }`,
 				[`dist/wrangler.json`]: "DUMMY",
 			});
-			expect(
-				findWranglerConfig(".", { useRedirectIfAvailable: false })
-			).toEqual({
+			expect(findWranglerConfig(".")).toEqual({
 				configPath: path.resolve(`wrangler.toml`),
 				userConfigPath: path.resolve(`wrangler.toml`),
 			});
