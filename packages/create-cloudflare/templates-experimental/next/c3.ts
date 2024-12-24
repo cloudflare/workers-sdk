@@ -47,8 +47,8 @@ export default {
 	configure,
 	transformPackageJson: async () => ({
 		scripts: {
-			deploy: `cloudflare && wrangler deploy`,
-			preview: `cloudflare && wrangler dev`,
+			deploy: `opennextjs-cloudflare && wrangler deploy`,
+			preview: `opennextjs-cloudflare && wrangler dev`,
 			"cf-typegen": `wrangler types --env-interface CloudflareEnv env.d.ts`,
 		},
 	}),
