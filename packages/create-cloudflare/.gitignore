@@ -13,7 +13,7 @@ templates*/**/pnpm-lock.yaml
 # the build step renames .gitignore files to __dot__gitignore
 templates*/**/__dot__gitignore
 
-# include .dev.vars files in templates
+# include .dev.vars template files
 !templates*/**/.dev.vars
 
 scripts/snippets
