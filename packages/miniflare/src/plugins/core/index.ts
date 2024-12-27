@@ -317,9 +317,24 @@ function validateCompatibilityDate(log: Log, compatibilityDate: string) {
 			"ERR_FUTURE_COMPATIBILITY_DATE",
 			`Compatibility date "${compatibilityDate}" is in the future and unsupported`
 		);
-	} else if (
-		numericCompare(compatibilityDate, supportedCompatibilityDate) > 0
-	) {
+	}
+
+	if (numericCompare(compatibilityDate, supportedCompatibilityDate) < 0) {
+		// Encourage people to update their compatibility date if their Worker
+		log.warn(
+			[
+			  `A more recent compatibility date is available. `,
+			  bold(`"${supportedCompatibilityDate}"`),
+			  ` is the latest compatibility date supported by the installed Cloudflare Workers Runtime.`,
+			  `Your Worker is configured to use `,
+			  bold(`${compatibilityDate}"`),
+			  `. Update the compatibility date in your wrangler.toml or wrangler.json configuration file to get the latest functionality.`,
+			  `Learn more about compatibility dates: https://developers.cloudflare.com/workers/configuration/compatibility-dates/`
+		    ].join("")
+		);
+	}
+
+	if (numericCompare(compatibilityDate, supportedCompatibilityDate) > 0) {
 		// If this compatibility date is greater than the maximum supported
 		// compatibility date of the runtime, but not in the future, warn,
 		// and use the maximum supported date instead
@@ -336,6 +351,7 @@ function validateCompatibilityDate(log: Log, compatibilityDate: string) {
 		);
 		return supportedCompatibilityDate;
 	}
+
 	return compatibilityDate;
 }
 
