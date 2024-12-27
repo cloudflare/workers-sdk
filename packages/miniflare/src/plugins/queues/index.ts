@@ -1,3 +1,5 @@
+import fs from "fs/promises";
+import path from "path";
 import SCRIPT_QUEUE_BROKER_OBJECT from "worker:queues/broker";
 import { z } from "zod";
 import {
@@ -15,11 +17,19 @@ import {
 import { getUserServiceName } from "../core";
 import {
 	getMiniflareObjectBindings,
+	getPersistPath,
 	objectEntryWorker,
+	PersistenceSchema,
 	Plugin,
 	ProxyNodeBinding,
 	SERVICE_LOOPBACK,
 } from "../shared";
+import {
+	QUEUE_BROKER_OBJECT_CLASS_NAME,
+	QUEUES_PLUGIN_NAME,
+	QUEUES_STORAGE_SERVICE_NAME,
+	SERVICE_QUEUE_PREFIX,
+} from "./constants";
 
 export const QueuesOptionsSchema = z.object({
 	queueProducers: z
@@ -34,16 +44,21 @@ export const QueuesOptionsSchema = z.object({
 		.optional(),
 });
 
-export const QUEUES_PLUGIN_NAME = "queues";
-const SERVICE_QUEUE_PREFIX = `${QUEUES_PLUGIN_NAME}:queue`;
-const QUEUE_BROKER_OBJECT_CLASS_NAME = "QueueBrokerObject";
+export const QueuesSharedOptionsSchema = z.object({
+	queuesPersist: PersistenceSchema,
+});
+
 const QUEUE_BROKER_OBJECT: Worker_Binding_DurableObjectNamespaceDesignator = {
 	serviceName: SERVICE_QUEUE_PREFIX,
 	className: QUEUE_BROKER_OBJECT_CLASS_NAME,
 };
 
-export const QUEUES_PLUGIN: Plugin<typeof QueuesOptionsSchema> = {
+export const QUEUES_PLUGIN: Plugin<
+	typeof QueuesOptionsSchema,
+	typeof QueuesSharedOptionsSchema
+> = {
 	options: QueuesOptionsSchema,
+	sharedOptions: QueuesSharedOptionsSchema,
 	getBindings(options) {
 		const queues = bindingEntries(options.queueProducers);
 		return queues.map<Worker_Binding>(([name, id]) => ({
@@ -59,10 +74,12 @@ export const QUEUES_PLUGIN: Plugin<typeof QueuesOptionsSchema> = {
 	},
 	async getServices({
 		options,
+		sharedOptions,
 		workerNames,
 		queueProducers: allQueueProducers,
 		queueConsumers: allQueueConsumers,
 		unsafeStickyBlobs,
+		tmpPath,
 	}) {
 		const queues = bindingEntries(options.queueProducers);
 		if (queues.length === 0) return [];
@@ -73,6 +90,10 @@ export const QUEUES_PLUGIN: Plugin<typeof QueuesOptionsSchema> = {
 		}));
 
 		const uniqueKey = `miniflare-${QUEUE_BROKER_OBJECT_CLASS_NAME}`;
+		const storagePath =
+			sharedOptions?.queuesPersist === false
+				? undefined
+				: this.getPersistPath?.(sharedOptions, tmpPath);
 		const objectService: Service = {
 			name: SERVICE_QUEUE_PREFIX,
 			worker: {
@@ -92,8 +113,9 @@ export const QUEUES_PLUGIN: Plugin<typeof QueuesOptionsSchema> = {
 						preventEviction: true,
 					},
 				],
-				// Miniflare's Queue broker is in-memory only at the moment
-				durableObjectStorage: { inMemory: kVoid },
+				durableObjectStorage: storagePath
+					? { localDisk: QUEUES_STORAGE_SERVICE_NAME }
+					: { inMemory: kVoid },
 				bindings: [
 					{
 						name: SharedBindings.MAYBE_SERVICE_LOOPBACK,
@@ -123,7 +145,23 @@ export const QUEUES_PLUGIN: Plugin<typeof QueuesOptionsSchema> = {
 		};
 		services.push(objectService);
 
+		// Add storage service if using local disk
+		if (storagePath) {
+			// Create the storage directory if it doesn't exist
+			await fs.mkdir(path.dirname(storagePath), { recursive: true });
+			await fs.mkdir(storagePath, { recursive: true });
+			const storageService: Service = {
+				name: QUEUES_STORAGE_SERVICE_NAME,
+				disk: { path: storagePath, writable: true },
+			};
+			services.push(storageService);
+		}
+
 		return services;
+	},
+
+	getPersistPath({ queuesPersist }, tmpPath) {
+		return getPersistPath(QUEUES_PLUGIN_NAME, tmpPath, queuesPersist);
 	},
 };
 
@@ -161,3 +199,4 @@ function bindingKeys(
 }
 
 export * from "./errors";
+export { QUEUES_PLUGIN_NAME } from "./constants";

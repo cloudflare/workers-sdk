@@ -746,7 +746,11 @@ Options shared between all Workers/"nanoservices".
 
 - `workflowsPersist?: Persistence`
 
-Where to persist data stored in Workflows. See docs for `Persistence`.
+  Where to persist data stored in Workflows. See docs for `Persistence`.
+
+- `queuesPersist?: Persistence`
+
+  Where to persist data stored in Queues. See docs for `Persistence`.
 
 #### Analytics Engine, Browser Rendering, Sending Email, Vectorize, Workers AI and Workers for Platforms
 

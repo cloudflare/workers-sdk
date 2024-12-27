@@ -80,7 +80,8 @@ export type SharedOptions = z.input<typeof CORE_PLUGIN.sharedOptions> &
 	z.input<typeof DURABLE_OBJECTS_PLUGIN.sharedOptions> &
 	z.input<typeof KV_PLUGIN.sharedOptions> &
 	z.input<typeof R2_PLUGIN.sharedOptions> &
-	z.input<typeof WORKFLOWS_PLUGIN.sharedOptions>;
+	z.input<typeof WORKFLOWS_PLUGIN.sharedOptions> &
+	z.input<typeof QUEUES_PLUGIN.sharedOptions>;
 
 export const PLUGIN_ENTRIES = Object.entries(PLUGINS) as [
 	keyof Plugins,
