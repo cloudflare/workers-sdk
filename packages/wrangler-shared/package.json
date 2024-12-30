@@ -1,0 +1,19 @@
+{
+	"name": "@cloudflare/wrangler-shared",
+	"version": "0.0.1",
+	"description": "Package that is used at Cloudflare to share code between Wrangler modules",
+	"keywords": [
+		"cloudflare",
+		"workers",
+		"cloudflare workers",
+		"wrangler"
+	],
+	"devDependencies": {
+		"@cloudflare/eslint-config-worker": "workspace:*",
+		"@cloudflare/workers-tsconfig": "workspace:*",
+		"vitest": "catalog:default"
+	},
+	"volta": {
+		"extends": "../../package.json"
+	}
+}
