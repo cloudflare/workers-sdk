@@ -1,4 +1,4 @@
-import { readConfig } from "../../../../../config";
+import { readConfig } from "../../../../../../../wrangler-shared/src/config";
 import { CommandLineArgsError } from "../../../../../errors";
 import { logger } from "../../../../../logger";
 import { postConsumer } from "../../../../client";

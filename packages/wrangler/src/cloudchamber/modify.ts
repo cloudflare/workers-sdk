@@ -19,7 +19,7 @@ import {
 import { wrap } from "./helpers/wrap";
 import { loadAccount } from "./locations";
 import { sshPrompts } from "./ssh/ssh";
-import type { Config } from "../config";
+import type { Config } from "../../../wrangler-shared/src/config";
 import type {
 	CommonYargsArgvJSON,
 	StrictYargsOptionsToInterfaceJSON,

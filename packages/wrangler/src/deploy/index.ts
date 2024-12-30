@@ -1,8 +1,8 @@
 import assert from "node:assert";
 import path from "node:path";
 import { getAssetsOptions, validateAssetsArgsAndConfig } from "../assets";
-import { configFileName, readConfig } from "../config";
-import { resolveWranglerConfigPath } from "../config/config-helpers";
+import { configFileName, readConfig } from "../../../wrangler-shared/src/config";
+import { resolveWranglerConfigPath } from "../../../wrangler-shared/src/config/config-helpers";
 import { getEntry } from "../deployment-bundle/entry";
 import { UserError } from "../errors";
 import { run } from "../experimental-flags";
@@ -20,7 +20,7 @@ import { getLegacyAssetPaths, getSiteAssetPaths } from "../sites";
 import { requireAuth } from "../user";
 import { collectKeyValues } from "../utils/collectKeyValues";
 import deploy from "./deploy";
-import type { Config } from "../config";
+import type { Config } from "../../../wrangler-shared/src/config";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,

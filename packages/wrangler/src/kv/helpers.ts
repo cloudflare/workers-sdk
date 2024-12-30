@@ -7,7 +7,7 @@ import { getLocalPersistencePath } from "../dev/get-local-persistence-path";
 import { buildPersistOptions } from "../dev/miniflare";
 import { UserError } from "../errors";
 import { logger } from "../logger";
-import type { Config } from "../config";
+import type { Config } from "../../../wrangler-shared/src/config";
 import type { KVNamespace } from "@cloudflare/workers-types/experimental";
 import type { ReplaceWorkersTypes } from "miniflare";
 

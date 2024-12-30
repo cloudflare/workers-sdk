@@ -1,13 +1,13 @@
 import { fetchResult } from "../../cfetch";
 import { performApiFetch } from "../../cfetch/internal";
-import { createNamespace } from "../../core/create-command";
+import { createNamespace } from "../../../../wrangler-shared/src/core/create-command";
 import {
 	createWorkerUploadForm,
 	fromMimeType,
 } from "../../deployment-bundle/create-worker-upload-form";
 import { FatalError, UserError } from "../../errors";
 import { getMetricsUsageHeaders } from "../../metrics";
-import type { Observability } from "../../config/environment";
+import type { Observability } from "../../../../wrangler-shared/src/config/environment";
 import type {
 	WorkerMetadata as CfWorkerMetadata,
 	WorkerMetadataBinding,

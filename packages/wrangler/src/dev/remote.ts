@@ -12,7 +12,7 @@ import { requireApiToken } from "../user";
 import { isAbortError } from "../utils/isAbortError";
 import { getZoneIdForPreview } from "../zones";
 import type { AssetsOptions } from "../assets";
-import type { Route } from "../config/environment";
+import type { Route } from "../../../wrangler-shared/src/config/environment";
 import type {
 	CfModule,
 	CfScriptFormat,

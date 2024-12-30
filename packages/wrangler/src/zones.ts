@@ -1,7 +1,7 @@
 import { fetchListResult } from "./cfetch";
-import { configFileName } from "./config";
+import { configFileName } from "../../wrangler-shared/src/config";
 import { UserError } from "./errors";
-import type { Route } from "./config/environment";
+import type { Route } from "../../wrangler-shared/src/config/environment";
 
 /**
  * An object holding information about a zone for publishing.

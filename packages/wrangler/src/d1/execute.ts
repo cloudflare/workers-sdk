@@ -8,7 +8,7 @@ import { Miniflare } from "miniflare";
 import { fetch } from "undici";
 import { printWranglerBanner } from "..";
 import { fetchResult } from "../cfetch";
-import { configFileName, readConfig } from "../config";
+import { configFileName, readConfig } from "../../../wrangler-shared/src/config";
 import { getLocalPersistencePath } from "../dev/get-local-persistence-path";
 import { confirm } from "../dialogs";
 import { createFatalError, JsonFriendlyFatalError, UserError } from "../errors";
@@ -19,7 +19,7 @@ import { requireAuth } from "../user";
 import * as options from "./options";
 import splitSqlQuery from "./splitter";
 import { getDatabaseByNameOrBinding, getDatabaseInfoFromConfig } from "./utils";
-import type { Config, ConfigFields, DevConfig, Environment } from "../config";
+import type { Config, ConfigFields, DevConfig, Environment } from "../../../wrangler-shared/src/config";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,

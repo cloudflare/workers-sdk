@@ -2,7 +2,7 @@ import { fetchResult } from "../cfetch";
 import { UserError } from "../errors";
 import { DEFAULT_MIGRATION_PATH, DEFAULT_MIGRATION_TABLE } from "./constants";
 import { listDatabases } from "./list";
-import type { Config } from "../config";
+import type { Config } from "../../../wrangler-shared/src/config";
 import type { Database, DatabaseInfo } from "./types";
 
 export function getDatabaseInfoFromConfig(

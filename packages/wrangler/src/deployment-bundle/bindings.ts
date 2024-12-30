@@ -9,7 +9,7 @@ import { createKVNamespace, listKVNamespaces } from "../kv/helpers";
 import { logger } from "../logger";
 import { createR2Bucket, listR2Buckets } from "../r2/helpers";
 import { printBindings } from "../utils/print-bindings";
-import type { Config } from "../config";
+import type { Config } from "../../../wrangler-shared/src/config";
 import type { WorkerMetadataBinding } from "./create-worker-upload-form";
 import type {
 	CfD1Database,

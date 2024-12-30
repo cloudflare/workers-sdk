@@ -1,5 +1,5 @@
 import { fetchPagedListResult } from "../cfetch";
-import { configFileName } from "../config";
+import { configFileName } from "../../../wrangler-shared/src/config";
 import { UserError } from "../errors";
 import { getCloudflareAccountIdFromEnv } from "./auth-variables";
 

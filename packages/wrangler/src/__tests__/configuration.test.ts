@@ -1,7 +1,7 @@
 import * as fs from "fs";
 import path from "node:path";
-import { experimental_readRawConfig, readConfig } from "../config";
-import { normalizeAndValidateConfig } from "../config/validation";
+import { experimental_readRawConfig, readConfig } from "../../../wrangler-shared/src/config";
+import { normalizeAndValidateConfig } from "../../../wrangler-shared/src/config/validation";
 import { run } from "../experimental-flags";
 import { normalizeString } from "./helpers/normalize";
 import { runInTempDir } from "./helpers/run-in-tmp";
@@ -11,7 +11,7 @@ import type {
 	RawConfig,
 	RawDevConfig,
 	RawEnvironment,
-} from "../config";
+} from "../../../wrangler-shared/src/config";
 
 describe("readConfig()", () => {
 	runInTempDir();

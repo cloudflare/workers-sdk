@@ -11,7 +11,7 @@ import {
 	findAdditionalModuleWatchDirs,
 } from "./find-additional-modules";
 import { isJavaScriptModuleRule, parseRules } from "./rules";
-import type { Config, ConfigModuleRuleType } from "../config";
+import type { Config, ConfigModuleRuleType } from "../../../wrangler-shared/src/config";
 import type { Entry } from "./entry";
 import type { CfModule, CfModuleType } from "./worker";
 import type esbuild from "esbuild";

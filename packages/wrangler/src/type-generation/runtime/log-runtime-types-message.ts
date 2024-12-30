@@ -1,5 +1,5 @@
 import { dedent } from "ts-dedent";
-import { configFileName } from "../../config";
+import { configFileName } from "../../../../wrangler-shared/src/config";
 import { logger } from "../../logger";
 
 /**

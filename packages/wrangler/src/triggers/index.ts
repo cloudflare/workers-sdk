@@ -1,5 +1,5 @@
 import { getAssetsOptions } from "../assets";
-import { readConfig } from "../config";
+import { readConfig } from "../../../wrangler-shared/src/config";
 import { getScriptName, isLegacyEnv, printWranglerBanner } from "../index";
 import * as metrics from "../metrics";
 import { requireAuth } from "../user";

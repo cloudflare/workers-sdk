@@ -27,7 +27,7 @@ import { wrap } from "./helpers/wrap";
 import { loadAccount } from "./locations";
 import { getNetworkInput } from "./network/network";
 import { sshPrompts as promptForSSHKeyAndGetAddedSSHKey } from "./ssh/ssh";
-import type { Config } from "../config";
+import type { Config } from "../../../wrangler-shared/src/config";
 import type {
 	CommonYargsArgvJSON,
 	StrictYargsOptionsToInterfaceJSON,

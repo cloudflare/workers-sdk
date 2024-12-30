@@ -8,8 +8,8 @@ import path, {
 	resolve as resolvePath,
 } from "node:path";
 import { createUploadWorkerBundleContents } from "../api/pages/create-worker-bundle-contents";
-import { readPagesConfig } from "../config";
-import { findWranglerConfig } from "../config/config-helpers";
+import { readPagesConfig } from "../../../wrangler-shared/src/config";
+import { findWranglerConfig } from "../../../wrangler-shared/src/config/config-helpers";
 import { shouldCheckFetch } from "../deployment-bundle/bundle";
 import { writeAdditionalModules } from "../deployment-bundle/find-additional-modules";
 import { validateNodeCompatMode } from "../deployment-bundle/node-compat";
@@ -29,7 +29,7 @@ import {
 	buildRawWorker,
 	produceWorkerBundleForWorkerJSDirectory,
 } from "./functions/buildWorker";
-import type { Config } from "../config";
+import type { Config } from "../../../wrangler-shared/src/config";
 import type { BundleResult } from "../deployment-bundle/bundle";
 import type {
 	CommonYargsArgv,

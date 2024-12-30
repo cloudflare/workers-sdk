@@ -2,7 +2,7 @@ import { getFlag } from "../experimental-flags";
 import { FileRegistry } from "./file-registry";
 import { ServerRegistry } from "./server-registry";
 import type { Binding } from "../api";
-import type { Config } from "../config";
+import type { Config } from "../../../wrangler-shared/src/config";
 import type {
 	WorkerDefinition,
 	WorkerEntrypointsDefinition,

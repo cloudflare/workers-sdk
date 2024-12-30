@@ -1,4 +1,4 @@
-import type { OnlyCamelCase } from "./config/config";
+import type { OnlyCamelCase } from "../../wrangler-shared/src/config/config";
 import type { ArgumentsCamelCase, Argv, CommandModule } from "yargs";
 
 /**

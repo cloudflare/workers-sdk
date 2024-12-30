@@ -1,5 +1,5 @@
 import { fetchResult } from "./cfetch";
-import { configFileName, formatConfigSnippet } from "./config";
+import { configFileName, formatConfigSnippet } from "../../wrangler-shared/src/config";
 import { getCIMatchTag } from "./environment-variables/misc-variables";
 import { FatalError } from "./errors";
 import { logger } from "./logger";

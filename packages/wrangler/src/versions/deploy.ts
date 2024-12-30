@@ -8,7 +8,7 @@ import {
 	spinnerWhile,
 } from "@cloudflare/cli/interactive";
 import { fetchResult } from "../cfetch";
-import { createCommand } from "../core/create-command";
+import { createCommand } from "../../../wrangler-shared/src/core/create-command";
 import { UserError } from "../errors";
 import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
@@ -25,7 +25,7 @@ import {
 	fetchVersions,
 	patchNonVersionedScriptSettings,
 } from "./api";
-import type { Config } from "../config";
+import type { Config } from "../../../wrangler-shared/src/config";
 import type {
 	ApiDeployment,
 	ApiVersion,

@@ -1,5 +1,5 @@
 import dedent from "ts-dedent";
-import { formatConfigSnippet, readConfig } from "../../../config";
+import { formatConfigSnippet, readConfig } from "../../../../../wrangler-shared/src/config";
 import { CommandLineArgsError } from "../../../errors";
 import { logger } from "../../../logger";
 import { getValidBindingName } from "../../../utils/getValidBindingName";

@@ -1,4 +1,4 @@
-import { configFileName, formatConfigSnippet, readConfig } from "../config";
+import { configFileName, formatConfigSnippet, readConfig } from "../../../wrangler-shared/src/config";
 import { logger } from "../logger";
 import { createConfig } from "./client";
 import { getCacheOptionsFromArgs, getOriginFromArgs, upsertOptions } from ".";

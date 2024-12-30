@@ -1,14 +1,14 @@
 import { existsSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { configFileName, readPagesConfig } from "../config";
-import { findWranglerConfig } from "../config/config-helpers";
+import { configFileName, readPagesConfig } from "../../../wrangler-shared/src/config";
+import { findWranglerConfig } from "../../../wrangler-shared/src/config/config-helpers";
 import { FatalError } from "../errors";
 import { logger } from "../logger";
 import {
 	EXIT_CODE_INVALID_PAGES_CONFIG,
 	EXIT_CODE_NO_CONFIG_FOUND,
 } from "./errors";
-import type { Config } from "../config";
+import type { Config } from "../../../wrangler-shared/src/config";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,

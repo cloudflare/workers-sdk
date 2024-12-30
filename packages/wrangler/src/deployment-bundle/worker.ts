@@ -1,4 +1,4 @@
-import type { Observability, Route } from "../config/environment";
+import type { Observability, Route } from "../../../wrangler-shared/src/config/environment";
 import type { INHERIT_SYMBOL } from "./bindings";
 import type {
 	WorkerMetadata,

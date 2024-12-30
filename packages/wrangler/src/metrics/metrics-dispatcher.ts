@@ -1,6 +1,6 @@
 import chalk from "chalk";
 import { fetch } from "undici";
-import { configFormat } from "../config";
+import { configFormat } from "../../../wrangler-shared/src/config";
 import isInteractive from "../is-interactive";
 import { logger } from "../logger";
 import { sniffUserAgent } from "../package-manager";

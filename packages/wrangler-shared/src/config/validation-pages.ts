@@ -7,7 +7,7 @@
  * Pages.
  */
 
-import { FatalError } from "../errors";
+import { FatalError } from "../../../wrangler/src/errors";
 import { defaultWranglerConfig } from "./config";
 import { Diagnostics } from "./diagnostics";
 import { isRequiredProperty } from "./validation-helpers";

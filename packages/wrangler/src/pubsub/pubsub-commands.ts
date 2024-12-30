@@ -1,4 +1,4 @@
-import { readConfig } from "../config";
+import { readConfig } from "../../../wrangler-shared/src/config";
 import { confirm } from "../dialogs";
 import { CommandLineArgsError } from "../errors";
 import { logger } from "../logger";

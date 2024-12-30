@@ -23,7 +23,7 @@ import { getBasePath } from "./paths";
 import { dedent } from "./utils/dedent";
 import { createPatternMatcher } from "./utils/filesystem";
 import type { StartDevWorkerOptions } from "./api";
-import type { Config } from "./config";
+import type { Config } from "../../wrangler-shared/src/config";
 import type { DeployArgs } from "./deploy";
 import type { StartDevOptions } from "./dev";
 import type { AssetConfig, RoutingConfig } from "@cloudflare/workers-shared";

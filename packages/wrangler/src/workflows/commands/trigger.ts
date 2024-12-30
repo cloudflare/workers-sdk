@@ -1,5 +1,5 @@
 import { fetchResult } from "../../cfetch";
-import { createCommand } from "../../core/create-command";
+import { createCommand } from "../../../../wrangler-shared/src/core/create-command";
 import { requireAuth } from "../../user";
 import type { InstanceWithoutDates } from "../types";
 

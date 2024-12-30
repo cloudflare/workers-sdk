@@ -13,10 +13,10 @@ import {
 	experimental_readRawConfig,
 	formatConfigSnippet,
 	loadDotEnv,
-} from "./config";
-import { demandSingleValue } from "./core";
-import { CommandRegistry } from "./core/CommandRegistry";
-import { createRegisterYargsCommand } from "./core/register-yargs-command";
+} from "../../wrangler-shared/src/config";
+import { demandSingleValue } from "../../wrangler-shared/src/core";
+import { CommandRegistry } from "../../wrangler-shared/src/core/CommandRegistry";
+import { createRegisterYargsCommand } from "../../wrangler-shared/src/core/register-yargs-command";
 import { d1 } from "./d1";
 import { deleteHandler, deleteOptions } from "./delete";
 import { deployHandler, deployOptions } from "./deploy";
@@ -187,7 +187,7 @@ import { workflowsListCommand } from "./workflows/commands/list";
 import { workflowsTriggerCommand } from "./workflows/commands/trigger";
 import { printWranglerBanner } from "./wrangler-banner";
 import { asJson } from "./yargs-types";
-import type { Config } from "./config";
+import type { Config } from "../../wrangler-shared/src/config";
 import type { LoggerLevel } from "./logger";
 import type { CommonYargsArgv, SubHelp } from "./yargs-types";
 

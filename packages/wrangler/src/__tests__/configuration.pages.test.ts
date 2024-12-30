@@ -1,10 +1,10 @@
 import path from "node:path";
-import { normalizeAndValidateConfig } from "../config/validation";
+import { normalizeAndValidateConfig } from "../../../wrangler-shared/src/config/validation";
 import {
 	generateRawConfigForPages,
 	generateRawEnvConfigForPages,
 } from "./helpers/generate-wrangler-config";
-import type { RawConfig, RawEnvironment } from "../config";
+import type { RawConfig, RawEnvironment } from "../../../wrangler-shared/src/config";
 
 describe("normalizeAndValidateConfig()", () => {
 	describe("Pages configuration", () => {

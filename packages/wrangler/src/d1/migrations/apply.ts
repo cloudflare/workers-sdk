@@ -2,7 +2,7 @@ import assert from "node:assert";
 import fs from "node:fs";
 import path from "path";
 import { printWranglerBanner } from "../..";
-import { configFileName, withConfig } from "../../config";
+import { configFileName, withConfig } from "../../../../wrangler-shared/src/config";
 import { confirm } from "../../dialogs";
 import { UserError } from "../../errors";
 import { isNonInteractiveOrCI } from "../../is-interactive";

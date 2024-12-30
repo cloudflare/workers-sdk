@@ -1,6 +1,6 @@
 import chalk from "chalk";
 import { fetchResult } from "./cfetch";
-import { configFileName } from "./config";
+import { configFileName } from "../../wrangler-shared/src/config";
 import { confirm, prompt } from "./dialogs";
 import { UserError } from "./errors";
 import { logger } from "./logger";

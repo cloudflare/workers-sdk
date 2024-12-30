@@ -15,8 +15,8 @@ import { ensureQueuesExistByConfig } from "../queues/client";
 import { getWorkersDevSubdomain } from "../routes";
 import { getZoneForRoute } from "../zones";
 import type { AssetsOptions } from "../assets";
-import type { Config } from "../config";
-import type { Route } from "../config/environment";
+import type { Config } from "../../../wrangler-shared/src/config";
+import type { Route } from "../../../wrangler-shared/src/config/environment";
 import type { RouteObject } from "../deploy/deploy";
 
 type Props = {

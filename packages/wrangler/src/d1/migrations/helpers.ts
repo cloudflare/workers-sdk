@@ -1,13 +1,13 @@
 import fs from "node:fs";
 import path from "path";
-import { configFileName } from "../../config";
+import { configFileName } from "../../../../wrangler-shared/src/config";
 import { confirm } from "../../dialogs";
 import { UserError } from "../../errors";
 import { isNonInteractiveOrCI } from "../../is-interactive";
 import { logger } from "../../logger";
 import { DEFAULT_MIGRATION_PATH } from "../constants";
 import { executeSql } from "../execute";
-import type { ConfigFields, DevConfig, Environment } from "../../config";
+import type { ConfigFields, DevConfig, Environment } from "../../../../wrangler-shared/src/config";
 import type { QueryResult } from "../execute";
 import type { Migration } from "../types";
 

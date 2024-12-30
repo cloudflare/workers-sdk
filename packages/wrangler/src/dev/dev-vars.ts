@@ -1,7 +1,7 @@
 import * as path from "node:path";
-import { loadDotEnv } from "../config";
+import { loadDotEnv } from "../../../wrangler-shared/src/config";
 import { logger } from "../logger";
-import type { Config } from "../config";
+import type { Config } from "../../../wrangler-shared/src/config";
 
 /**
  * Get the Worker `vars` bindings for a `wrangler dev` instance of a Worker.

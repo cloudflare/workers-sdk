@@ -9,7 +9,7 @@ import { buildPersistOptions } from "../dev/miniflare";
 import { UserError } from "../errors";
 import { logger } from "../logger";
 import { getQueue, getQueueById } from "../queues/client";
-import type { Config } from "../config";
+import type { Config } from "../../../wrangler-shared/src/config";
 import type { ApiCredentials } from "../user";
 import type { R2Bucket } from "@cloudflare/workers-types/experimental";
 import type { ReplaceWorkersTypes } from "miniflare";

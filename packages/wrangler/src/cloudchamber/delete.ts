@@ -4,7 +4,7 @@ import { logDeployment, pickDeployment } from "./cli/deployments";
 import { DeploymentsService } from "./client";
 import { interactWithUser, loadAccountSpinner } from "./common";
 import { wrap } from "./helpers/wrap";
-import type { Config } from "../config";
+import type { Config } from "../../../wrangler-shared/src/config";
 import type {
 	CommonYargsArgvJSON,
 	StrictYargsOptionsToInterfaceJSON,

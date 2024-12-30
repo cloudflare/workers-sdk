@@ -1,6 +1,6 @@
 import { URLSearchParams } from "node:url";
 import { fetchPagedListResult, fetchResult } from "../cfetch";
-import { type Config } from "../config";
+import { type Config } from "../../../wrangler-shared/src/config";
 import { UserError } from "../errors";
 import { logger } from "../logger";
 import { requireAuth } from "../user";

@@ -1,10 +1,10 @@
-import type { fetchResult } from "../cfetch";
+import type { fetchResult } from "../../../wrangler/src/cfetch";
 import type { Config } from "../config";
 import type { OnlyCamelCase } from "../config/config";
-import type { FatalError, UserError } from "../errors";
-import type { ExperimentalFlags } from "../experimental-flags";
-import type { Logger } from "../logger";
-import type { CommonYargsOptions, RemoveIndex } from "../yargs-types";
+import type { FatalError, UserError } from "../../../wrangler/src/errors";
+import type { ExperimentalFlags } from "../../../wrangler/src/experimental-flags";
+import type { Logger } from "../../../wrangler/src/logger";
+import type { CommonYargsOptions, RemoveIndex } from "../../../wrangler/src/yargs-types";
 import type { Teams } from "./teams";
 import type {
 	Alias,

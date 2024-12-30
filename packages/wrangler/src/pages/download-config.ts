@@ -12,7 +12,7 @@ import * as metrics from "../metrics";
 import { requireAuth } from "../user";
 import { printWranglerBanner } from "../wrangler-banner";
 import { PAGES_CONFIG_CACHE_FILENAME } from "./constants";
-import type { RawEnvironment } from "../config";
+import type { RawEnvironment } from "../../../wrangler-shared/src/config";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,

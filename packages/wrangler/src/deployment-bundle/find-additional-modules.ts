@@ -8,7 +8,7 @@ import { getBundleType } from "./bundle-type";
 import { RuleTypeToModuleType } from "./module-collection";
 import { parseRules } from "./rules";
 import { tryAttachSourcemapToModule } from "./source-maps";
-import type { Rule } from "../config/environment";
+import type { Rule } from "../../../wrangler-shared/src/config/environment";
 import type { Entry } from "./entry";
 import type { ParsedRules } from "./rules";
 import type { CfModule } from "./worker";

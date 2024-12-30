@@ -5,7 +5,7 @@ import { File, FormData } from "undici";
 import { UserError } from "../errors";
 import { INHERIT_SYMBOL } from "./bindings";
 import { handleUnsafeCapnp } from "./capnp";
-import type { Observability } from "../config/environment";
+import type { Observability } from "../../../wrangler-shared/src/config/environment";
 import type {
 	CfDurableObjectMigrations,
 	CfModuleType,

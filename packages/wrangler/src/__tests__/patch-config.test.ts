@@ -1,9 +1,9 @@
 import { writeFileSync } from "node:fs";
 import dedent from "ts-dedent";
-import { experimental_patchConfig } from "../config/patch-config";
+import { experimental_patchConfig } from "../../../wrangler-shared/src/config/patch-config";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { writeWranglerConfig } from "./helpers/write-wrangler-config";
-import type { RawConfig } from "../config";
+import type { RawConfig } from "../../../wrangler-shared/src/config";
 
 type TestCase = {
 	name: string;

@@ -214,7 +214,7 @@ import url from "node:url";
 import { TextEncoder } from "node:util";
 import TOML from "@iarna/toml";
 import { fetch } from "undici";
-import { configFileName } from "../config";
+import { configFileName } from "../../../wrangler-shared/src/config";
 import {
 	getConfigCache,
 	purgeConfigCaches,

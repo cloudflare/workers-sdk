@@ -1,5 +1,5 @@
 import { UserError } from "../errors";
-import type { Config } from "../config";
+import type { Config } from "../../../wrangler-shared/src/config";
 
 export function getClassNamesWhichUseSQLite(
 	migrations: Config["migrations"] | undefined

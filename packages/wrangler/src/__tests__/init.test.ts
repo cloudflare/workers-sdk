@@ -18,8 +18,8 @@ import { useMockIsTTY } from "./helpers/mock-istty";
 import { msw } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
-import type { RawConfig } from "../config";
-import type { UserLimits } from "../config/environment";
+import type { RawConfig } from "../../../wrangler-shared/src/config";
+import type { UserLimits } from "../../../wrangler-shared/src/config/environment";
 import type { PackageManager } from "../package-manager";
 import type { Mock } from "vitest";
 

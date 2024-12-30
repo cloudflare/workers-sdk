@@ -1,4 +1,4 @@
-import { readConfig } from "../config";
+import { readConfig } from "../../../wrangler-shared/src/config";
 import { logger } from "../logger";
 import { indexInfo } from "./client";
 import { vectorizeGABanner } from "./common";

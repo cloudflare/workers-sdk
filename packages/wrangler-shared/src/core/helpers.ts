@@ -1,4 +1,4 @@
-import { CommandLineArgsError } from "../errors";
+import { CommandLineArgsError } from "../../../wrangler/src/errors";
 import type { CreateCommandResult } from "./create-command";
 import type {
 	AliasDefinition,

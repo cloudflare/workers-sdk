@@ -1,16 +1,16 @@
 import assert from "assert";
-import { CommandRegistry } from "../../core/CommandRegistry";
+import { CommandRegistry } from "../../../../wrangler-shared/src/core/CommandRegistry";
 import {
 	createAlias,
 	createCommand,
 	createNamespace,
-} from "../../core/create-command";
-import { isAliasDefinition } from "../../core/helpers";
+} from "../../../../wrangler-shared/src/core/create-command";
+import { isAliasDefinition } from "../../../../wrangler-shared/src/core/helpers";
 import type {
 	HandlerContext,
 	InternalDefinition,
 	Metadata,
-} from "../../core/types";
+} from "../../../../wrangler-shared/src/core/types";
 
 describe("CommandRegistry", () => {
 	let registry: CommandRegistry;

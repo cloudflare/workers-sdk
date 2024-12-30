@@ -2,7 +2,7 @@ import { setTimeout } from "node:timers/promises";
 import onExit from "signal-exit";
 import { printWranglerBanner } from "..";
 import { fetchResult } from "../cfetch";
-import { readConfig } from "../config";
+import { readConfig } from "../../../wrangler-shared/src/config";
 import { getConfigCache } from "../config-cache";
 import { FatalError } from "../errors";
 import isInteractive from "../is-interactive";

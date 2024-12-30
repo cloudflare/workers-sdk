@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "path";
 import { printWranglerBanner } from "../..";
-import { configFileName, withConfig } from "../../config";
+import { configFileName, withConfig } from "../../../../wrangler-shared/src/config";
 import { UserError } from "../../errors";
 import { logger } from "../../logger";
 import { DEFAULT_MIGRATION_PATH } from "../constants";

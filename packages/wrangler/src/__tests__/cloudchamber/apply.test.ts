@@ -15,7 +15,7 @@ import type {
 	CreateApplicationRequest,
 	ModifyApplicationRequestBody,
 } from "../../cloudchamber/client";
-import type { ContainerApp } from "../../config/environment";
+import type { ContainerApp } from "../../../../wrangler-shared/src/config/environment";
 
 function writeAppConfiguration(...app: ContainerApp[]) {
 	fs.writeFileSync(

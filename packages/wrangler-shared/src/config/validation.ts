@@ -2,9 +2,9 @@ import assert from "node:assert";
 import path from "node:path";
 import TOML from "@iarna/toml";
 import { dedent } from "ts-dedent";
-import { UserError } from "../errors";
-import { getFlag } from "../experimental-flags";
-import { friendlyBindingNames } from "../utils/print-bindings";
+import { UserError } from "../../../wrangler/src/errors";
+import { getFlag } from "../../../wrangler/src/experimental-flags";
+import { friendlyBindingNames } from "../../../wrangler/src/utils/print-bindings";
 import { Diagnostics } from "./diagnostics";
 import {
 	all,
@@ -33,12 +33,12 @@ import {
 	validateRequiredProperty,
 	validateTypedArray,
 } from "./validation-helpers";
-import { configFileName, formatConfigSnippet } from ".";
+import { configFileName, formatConfigSnippet } from "./index";
 import type {
 	CreateApplicationRequest,
 	UserDeploymentConfiguration,
-} from "../cloudchamber/client";
-import type { CfWorkerInit } from "../deployment-bundle/worker";
+} from "../../../wrangler/src/cloudchamber/client";
+import type { CfWorkerInit } from "../../../wrangler/src/deployment-bundle/worker";
 import type { Config, DevConfig, RawConfig, RawDevConfig } from "./config";
 import type {
 	Assets,

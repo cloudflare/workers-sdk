@@ -15,7 +15,7 @@ import { listDeploymentsAndChoose, loadDeployments } from "./cli/deployments";
 import { capitalize, statusToColored } from "./cli/util";
 import { DeploymentsService, PlacementsService } from "./client";
 import { loadAccountSpinner, promiseSpinner } from "./common";
-import type { Config } from "../config";
+import type { Config } from "../../../wrangler-shared/src/config";
 import type {
 	CommonYargsArgvJSON,
 	StrictYargsOptionsToInterfaceJSON,

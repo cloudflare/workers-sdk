@@ -1,4 +1,4 @@
-import { readConfig } from "../config";
+import { readConfig } from "../../../wrangler-shared/src/config";
 import { sleep } from "../deploy/deploy";
 import { FatalError, UserError } from "../errors";
 import { printWranglerBanner } from "../index";

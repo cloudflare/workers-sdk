@@ -11,7 +11,7 @@ import { dedent } from "../utils/dedent";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
-import type { EnvironmentNonInheritable } from "../config/environment";
+import type { EnvironmentNonInheritable } from "../../../wrangler-shared/src/config/environment";
 
 describe("isValidIdentifier", () => {
 	it("should return true for valid identifiers", () => {

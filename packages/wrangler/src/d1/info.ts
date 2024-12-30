@@ -1,7 +1,7 @@
 import prettyBytes from "pretty-bytes";
 import { printWranglerBanner } from "..";
 import { fetchGraphqlResult } from "../cfetch";
-import { withConfig } from "../config";
+import { withConfig } from "../../../wrangler-shared/src/config";
 import { logger } from "../logger";
 import { requireAuth } from "../user";
 import { getDatabaseByNameOrBinding, getDatabaseInfoFromId } from "./utils";

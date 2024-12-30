@@ -1,7 +1,7 @@
 import { createReadStream } from "node:fs";
 import { createInterface } from "node:readline";
 import { File, FormData } from "undici";
-import { readConfig } from "../config";
+import { readConfig } from "../../../wrangler-shared/src/config";
 import { logger } from "../logger";
 import { upsertIntoIndex } from "./client";
 import {

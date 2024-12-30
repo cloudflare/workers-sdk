@@ -1,8 +1,8 @@
 import assert from "node:assert";
 import { fetchResult } from "./cfetch";
-import { configFileName } from "./config";
+import { configFileName } from "../../wrangler-shared/src/config";
 import { logger } from "./logger";
-import type { Config } from "./config";
+import type { Config } from "../../wrangler-shared/src/config";
 import type { CfWorkerInit } from "./deployment-bundle/worker";
 
 /**

@@ -11,7 +11,7 @@ import {
 } from "@cloudflare/cli";
 import { processArgument } from "@cloudflare/cli/args";
 import { bold, brandColor, dim, green, red } from "@cloudflare/cli/colors";
-import { formatConfigSnippet } from "../config";
+import { formatConfigSnippet } from "../../../wrangler-shared/src/config";
 import {
 	ApiError,
 	ApplicationsService,
@@ -21,8 +21,8 @@ import {
 import { promiseSpinner } from "./common";
 import { diffLines } from "./helpers/diff";
 import { wrap } from "./helpers/wrap";
-import type { Config } from "../config";
-import type { ContainerApp } from "../config/environment";
+import type { Config } from "../../../wrangler-shared/src/config";
+import type { ContainerApp } from "../../../wrangler-shared/src/config/environment";
 import type {
 	CommonYargsArgvJSON,
 	StrictYargsOptionsToInterfaceJSON,

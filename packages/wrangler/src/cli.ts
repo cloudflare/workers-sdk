@@ -59,5 +59,5 @@ const generateASSETSBinding: (
 	require("./miniflare-cli/assets").default;
 export { generateASSETSBinding as unstable_generateASSETSBinding };
 
-export { experimental_readRawConfig } from "./config";
-export { experimental_patchConfig } from "./config/patch-config";
+export { experimental_readRawConfig } from "../../wrangler-shared/src/config";
+export { experimental_patchConfig } from "../../wrangler-shared/src/config/patch-config";

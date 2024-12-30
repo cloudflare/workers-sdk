@@ -4,7 +4,7 @@ import { crash, logRaw, space, status, updateStatus } from "@cloudflare/cli";
 import { brandColor, dim } from "@cloudflare/cli/colors";
 import { inputPrompt, spinner } from "@cloudflare/cli/interactive";
 import { version as wranglerVersion } from "../../package.json";
-import { readConfig } from "../config";
+import { readConfig } from "../../../wrangler-shared/src/config";
 import { getConfigCache, purgeConfigCaches } from "../config-cache";
 import { getCloudflareApiBaseUrl } from "../environment-variables/misc-variables";
 import { isNonInteractiveOrCI } from "../is-interactive";
@@ -24,7 +24,7 @@ import {
 import { ApiError, DeploymentMutationError, OpenAPI } from "./client";
 import { wrap } from "./helpers/wrap";
 import { idToLocationName, loadAccount } from "./locations";
-import type { Config } from "../config";
+import type { Config } from "../../../wrangler-shared/src/config";
 import type { Scope } from "../user";
 import type {
 	CommonYargsOptions,

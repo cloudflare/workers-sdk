@@ -1,14 +1,14 @@
 import fs from "node:fs";
 import TOML from "@iarna/toml";
 import dotenv from "dotenv";
-import { FatalError, UserError } from "../errors";
-import { logger } from "../logger";
-import { EXIT_CODE_INVALID_PAGES_CONFIG } from "../pages/errors";
-import { parseJSONC, parseTOML, readFileSync } from "../parse";
+import { FatalError, UserError } from "../../../wrangler/src/errors";
+import { logger } from "../../../wrangler/src/logger";
+import { EXIT_CODE_INVALID_PAGES_CONFIG } from "../../../wrangler/src/pages/errors";
+import { parseJSONC, parseTOML, readFileSync } from "../../../wrangler/src/parse";
 import { resolveWranglerConfigPath } from "./config-helpers";
 import { isPagesConfig, normalizeAndValidateConfig } from "./validation";
 import { validatePagesConfig } from "./validation-pages";
-import type { CommonYargsOptions } from "../yargs-types";
+import type { CommonYargsOptions } from "../../../wrangler/src/yargs-types";
 import type { Config, OnlyCamelCase, RawConfig } from "./config";
 import type { NormalizeAndValidateConfigArgs } from "./validation";
 

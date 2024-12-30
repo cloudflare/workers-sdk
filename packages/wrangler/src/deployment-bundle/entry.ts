@@ -1,5 +1,5 @@
 import path from "node:path";
-import { configFileName } from "../config";
+import { configFileName } from "../../../wrangler-shared/src/config";
 import { UserError } from "../errors";
 import { logger } from "../logger";
 import guessWorkerFormat from "./guess-worker-format";
@@ -10,8 +10,8 @@ import {
 	resolveEntryWithScript,
 } from "./resolve-entry";
 import { runCustomBuild } from "./run-custom-build";
-import type { Config } from "../config";
-import type { DurableObjectBindings } from "../config/environment";
+import type { Config } from "../../../wrangler-shared/src/config";
+import type { DurableObjectBindings } from "../../../wrangler-shared/src/config/environment";
 import type { CfScriptFormat } from "./worker";
 
 /**

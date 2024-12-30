@@ -1,6 +1,6 @@
 import { setTimeout } from "node:timers/promises";
 import onExit from "signal-exit";
-import { configFileName, readConfig } from "../config";
+import { configFileName, readConfig } from "../../../wrangler-shared/src/config";
 import { createFatalError, UserError } from "../errors";
 import {
 	getLegacyScriptName,

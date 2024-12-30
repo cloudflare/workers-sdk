@@ -1,4 +1,4 @@
-import { createCommand } from "../../core/create-command";
+import { createCommand } from "../../../../wrangler-shared/src/core/create-command";
 import { logger } from "../../logger";
 
 export const workflowsDeleteCommand = createCommand({

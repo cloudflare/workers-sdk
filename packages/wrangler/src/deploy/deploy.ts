@@ -5,7 +5,7 @@ import { URLSearchParams } from "node:url";
 import { cancel } from "@cloudflare/cli";
 import { syncAssets } from "../assets";
 import { fetchListResult, fetchResult } from "../cfetch";
-import { configFileName, formatConfigSnippet } from "../config";
+import { configFileName, formatConfigSnippet } from "../../../wrangler-shared/src/config";
 import { getBindings, provisionBindings } from "../deployment-bundle/bindings";
 import { bundleWorker } from "../deployment-bundle/bundle";
 import {
@@ -56,14 +56,14 @@ import {
 import { confirmLatestDeploymentOverwrite } from "../versions/deploy";
 import { getZoneForRoute } from "../zones";
 import type { AssetsOptions } from "../assets";
-import type { Config } from "../config";
+import type { Config } from "../../../wrangler-shared/src/config";
 import type {
 	CustomDomainRoute,
 	Route,
 	Rule,
 	ZoneIdRoute,
 	ZoneNameRoute,
-} from "../config/environment";
+} from "../../../wrangler-shared/src/config/environment";
 import type { Entry } from "../deployment-bundle/entry";
 import type {
 	CfModule,

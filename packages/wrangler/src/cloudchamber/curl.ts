@@ -5,7 +5,7 @@ import formatLabelledValues from "../utils/render-labelled-values";
 import { OpenAPI } from "./client";
 import { ApiError } from "./client/core/ApiError";
 import { request } from "./client/core/request";
-import type { Config } from "../config";
+import type { Config } from "../../../wrangler-shared/src/config";
 import type {
 	CommonYargsOptions,
 	StrictYargsOptionsToInterface,

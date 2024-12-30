@@ -1,6 +1,6 @@
 import path from "path";
 import { printWranglerBanner } from "../..";
-import { configFileName, withConfig } from "../../config";
+import { configFileName, withConfig } from "../../../../wrangler-shared/src/config";
 import { UserError } from "../../errors";
 import { logger } from "../../logger";
 import { requireAuth } from "../../user";

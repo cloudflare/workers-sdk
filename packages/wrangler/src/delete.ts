@@ -1,6 +1,6 @@
 import assert from "assert";
 import { fetchResult } from "./cfetch";
-import { configFileName, readConfig } from "./config";
+import { configFileName, readConfig } from "../../wrangler-shared/src/config";
 import { confirm } from "./dialogs";
 import { UserError } from "./errors";
 import { deleteKVNamespace, listKVNamespaces } from "./kv/helpers";

@@ -2,7 +2,7 @@ import {
 	createAlias,
 	createCommand,
 	createNamespace,
-} from "../core/create-command";
+} from "../../../wrangler-shared/src/core/create-command";
 import { logger } from "../logger";
 import { requireApiToken, requireAuth } from "../user";
 import formatLabelledValues from "../utils/render-labelled-values";

@@ -1,4 +1,4 @@
-import { createNamespace } from "../core/create-command";
+import { createNamespace } from "../../../wrangler-shared/src/core/create-command";
 
 export const workflowsNamespace = createNamespace({
 	metadata: {

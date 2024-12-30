@@ -1,6 +1,6 @@
 import { kCurrentWorker, Miniflare } from "miniflare";
 import { getAssetsOptions } from "../../../assets";
-import { readConfig } from "../../../config";
+import { readConfig } from "../../../../../wrangler-shared/src/config";
 import { DEFAULT_MODULE_RULES } from "../../../deployment-bundle/rules";
 import { getBindings } from "../../../dev";
 import { getBoundRegisteredWorkers } from "../../../dev-registry";
@@ -16,7 +16,7 @@ import { getLegacyAssetPaths, getSiteAssetPaths } from "../../../sites";
 import { CacheStorage } from "./caches";
 import { ExecutionContext } from "./executionContext";
 import { getServiceBindings } from "./services";
-import type { Config, RawConfig, RawEnvironment } from "../../../config";
+import type { Config, RawConfig, RawEnvironment } from "../../../../../wrangler-shared/src/config";
 import type { IncomingRequestCfProperties } from "@cloudflare/workers-types/experimental";
 import type { MiniflareOptions, ModuleRule, WorkerOptions } from "miniflare";
 

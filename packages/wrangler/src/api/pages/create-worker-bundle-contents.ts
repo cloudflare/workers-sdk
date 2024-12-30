@@ -4,7 +4,7 @@ import { Response } from "undici";
 import { getBindings } from "../../deployment-bundle/bindings";
 import { createWorkerUploadForm } from "../../deployment-bundle/create-worker-upload-form";
 import { loadSourceMaps } from "../../deployment-bundle/source-maps";
-import type { Config } from "../../config";
+import type { Config } from "../../../../wrangler-shared/src/config";
 import type { BundleResult } from "../../deployment-bundle/bundle";
 import type { CfPlacement } from "../../deployment-bundle/worker";
 import type { Blob } from "node:buffer";

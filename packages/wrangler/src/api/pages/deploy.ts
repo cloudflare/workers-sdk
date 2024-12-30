@@ -5,7 +5,7 @@ import path, { join, resolve as resolvePath } from "node:path";
 import { cwd } from "node:process";
 import { File, FormData } from "undici";
 import { fetchResult } from "../../cfetch";
-import { readPagesConfig } from "../../config";
+import { readPagesConfig } from "../../../../wrangler-shared/src/config";
 import { shouldCheckFetch } from "../../deployment-bundle/bundle";
 import { validateNodeCompatMode } from "../../deployment-bundle/node-compat";
 import { FatalError } from "../../errors";
@@ -29,7 +29,7 @@ import { upload } from "../../pages/upload";
 import { getPagesTmpDir } from "../../pages/utils";
 import { validate } from "../../pages/validate";
 import { createUploadWorkerBundleContents } from "./create-worker-bundle-contents";
-import type { Config } from "../../config";
+import type { Config } from "../../../../wrangler-shared/src/config";
 import type { BundleResult } from "../../deployment-bundle/bundle";
 import type { Deployment, Project } from "@cloudflare/types";
 

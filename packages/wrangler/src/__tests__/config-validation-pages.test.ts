@@ -1,6 +1,6 @@
-import { defaultWranglerConfig } from "../config/config";
-import { validatePagesConfig } from "../config/validation-pages";
-import type { Config } from "../config";
+import { defaultWranglerConfig } from "../../../wrangler-shared/src/config/config";
+import { validatePagesConfig } from "../../../wrangler-shared/src/config/validation-pages";
+import type { Config } from "../../../wrangler-shared/src/config";
 
 describe("validatePagesConfig()", () => {
 	describe("`main` field validation", () => {

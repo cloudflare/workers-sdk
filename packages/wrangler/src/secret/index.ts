@@ -2,7 +2,7 @@ import path from "node:path";
 import readline from "node:readline";
 import { FormData } from "undici";
 import { fetchResult } from "../cfetch";
-import { configFileName, readConfig } from "../config";
+import { configFileName, readConfig } from "../../../wrangler-shared/src/config";
 import { createWorkerUploadForm } from "../deployment-bundle/create-worker-upload-form";
 import { confirm, prompt } from "../dialogs";
 import { FatalError, UserError } from "../errors";
@@ -16,7 +16,7 @@ import * as metrics from "../metrics";
 import { APIError, parseJSON, readFileSync } from "../parse";
 import { requireAuth } from "../user";
 import { readFromStdin, trimTrailingWhitespace } from "../utils/std";
-import type { Config } from "../config";
+import type { Config } from "../../../wrangler-shared/src/config";
 import type { WorkerMetadataBinding } from "../deployment-bundle/create-worker-upload-form";
 import type {
 	CommonYargsArgv,

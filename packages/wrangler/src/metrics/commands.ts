@@ -3,7 +3,7 @@ import {
 	createAlias,
 	createCommand,
 	createNamespace,
-} from "../core/create-command";
+} from "../../../wrangler-shared/src/core/create-command";
 import { getWranglerSendMetricsFromEnv } from "../environment-variables/misc-variables";
 import { logger } from "../logger";
 import { readMetricsConfig, updateMetricsPermission } from "./metrics-config";

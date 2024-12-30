@@ -1,7 +1,7 @@
 import type { DevEnv, ProxyData } from "../api";
 import type { AssetsOptions } from "../assets";
-import type { Config } from "../config";
-import type { Route } from "../config/environment";
+import type { Config } from "../../../wrangler-shared/src/config";
+import type { Route } from "../../../wrangler-shared/src/config/environment";
 import type { Entry } from "../deployment-bundle/entry";
 import type { CfModule, CfWorkerInit } from "../deployment-bundle/worker";
 import type { StartDevOptions } from "../dev";

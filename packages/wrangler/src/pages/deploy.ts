@@ -1,9 +1,9 @@
 import { execSync } from "node:child_process";
 import { deploy } from "../api/pages/deploy";
 import { fetchResult } from "../cfetch";
-import { configFileName, readPagesConfig } from "../config";
+import { configFileName, readPagesConfig } from "../../../wrangler-shared/src/config";
 import { getConfigCache, saveToConfigCache } from "../config-cache";
-import { findWranglerConfig } from "../config/config-helpers";
+import { findWranglerConfig } from "../../../wrangler-shared/src/config/config-helpers";
 import { prompt, select } from "../dialogs";
 import { FatalError } from "../errors";
 import { logger } from "../logger";
@@ -17,7 +17,7 @@ import {
 import { EXIT_CODE_INVALID_PAGES_CONFIG } from "./errors";
 import { listProjects } from "./projects";
 import { promptSelectProject } from "./prompt-select-project";
-import type { Config } from "../config";
+import type { Config } from "../../../wrangler-shared/src/config";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,

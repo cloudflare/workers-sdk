@@ -1,6 +1,6 @@
 import path from "path";
 import dedent from "ts-dedent";
-import { defaultWranglerConfig } from "../config/config";
+import { defaultWranglerConfig } from "../../../wrangler-shared/src/config/config";
 import { getEntry } from "../deployment-bundle/entry";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { runInTempDir } from "./helpers/run-in-tmp";

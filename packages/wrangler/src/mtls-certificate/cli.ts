@@ -5,7 +5,7 @@ import {
 	listMTlsCertificates,
 	uploadMTlsCertificateFromFs,
 } from "../api/mtls-certificate";
-import { withConfig } from "../config";
+import { withConfig } from "../../../wrangler-shared/src/config";
 import { confirm } from "../dialogs";
 import { logger } from "../logger";
 import { requireAuth } from "../user";

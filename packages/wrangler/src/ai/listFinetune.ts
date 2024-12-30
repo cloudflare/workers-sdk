@@ -1,4 +1,4 @@
-import { withConfig } from "../config";
+import { withConfig } from "../../../wrangler-shared/src/config";
 import { logger } from "../logger";
 import { requireAuth } from "../user";
 import { asJson } from "../yargs-types";

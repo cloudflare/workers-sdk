@@ -1,5 +1,5 @@
 import { http, HttpResponse } from "msw";
-import { type Config } from "../../config";
+import { type Config } from "../../../../wrangler-shared/src/config";
 import {
 	getDatabaseByNameOrBinding,
 	getDatabaseInfoFromConfig,

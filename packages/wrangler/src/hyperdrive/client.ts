@@ -1,6 +1,6 @@
 import { fetchResult } from "../cfetch";
 import { requireAuth } from "../user";
-import type { Config } from "../config";
+import type { Config } from "../../../wrangler-shared/src/config";
 
 export type HyperdriveConfig = {
 	id: string;

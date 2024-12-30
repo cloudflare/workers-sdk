@@ -1,6 +1,6 @@
 import dedent from "ts-dedent";
-import { formatConfigSnippet } from "../config";
-import { createCommand, createNamespace } from "../core/create-command";
+import { formatConfigSnippet } from "../../../wrangler-shared/src/config";
+import { createCommand, createNamespace } from "../../../wrangler-shared/src/core/create-command";
 import { UserError } from "../errors";
 import { logger } from "../logger";
 import * as metrics from "../metrics";

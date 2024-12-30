@@ -4,7 +4,7 @@ import { Miniflare } from "miniflare";
 import { version } from "workerd";
 import { logger } from "../../logger";
 import { ensureDirectoryExists } from "../../utils/filesystem";
-import type { Config } from "../../config/config";
+import type { Config } from "../../../../wrangler-shared/src/config/config";
 
 const DEFAULT_OUTFILE_RELATIVE_PATH = "./.wrangler/types/runtime.d.ts";
 

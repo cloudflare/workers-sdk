@@ -12,7 +12,7 @@ import {
 	getWrangler1xLegacyModuleReferences,
 	noopModuleCollector,
 } from "../deployment-bundle/module-collection";
-import type { Config } from "../config";
+import type { Config } from "../../../wrangler-shared/src/config";
 import type { SourceMapMetadata } from "../deployment-bundle/bundle";
 import type { Entry } from "../deployment-bundle/entry";
 import type { CfModule, CfModuleType } from "../deployment-bundle/worker";

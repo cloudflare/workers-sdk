@@ -1,10 +1,10 @@
 import { existsSync, statSync } from "node:fs";
 import path from "node:path";
 import { execaCommand } from "execa";
-import { configFileName } from "../config";
+import { configFileName } from "../../../wrangler-shared/src/config";
 import { UserError } from "../errors";
 import { logger } from "../logger";
-import type { Config } from "../config";
+import type { Config } from "../../../wrangler-shared/src/config";
 
 /**
  * Run the custom build step, if one was provided.

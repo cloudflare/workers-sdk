@@ -53,7 +53,7 @@ import { runWrangler } from "./helpers/run-wrangler";
 import { writeWorkerSource } from "./helpers/write-worker-source";
 import { writeWranglerConfig } from "./helpers/write-wrangler-config";
 import type { AssetManifest } from "../assets";
-import type { Config } from "../config";
+import type { Config } from "../../../wrangler-shared/src/config";
 import type { CustomDomain, CustomDomainChangeset } from "../deploy/deploy";
 import type {
 	PostQueueBody,

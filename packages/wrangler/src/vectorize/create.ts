@@ -1,4 +1,4 @@
-import { configFileName, formatConfigSnippet, readConfig } from "../config";
+import { configFileName, formatConfigSnippet, readConfig } from "../../../wrangler-shared/src/config";
 import { logger } from "../logger";
 import { createIndex } from "./client";
 import { deprecatedV1DefaultFlag, vectorizeGABanner } from "./common";

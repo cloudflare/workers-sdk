@@ -1,6 +1,6 @@
 import { fetchResult } from "../../cfetch";
-import { configFileName } from "../../config";
-import { createCommand } from "../../core/create-command";
+import { configFileName } from "../../../../wrangler-shared/src/config";
+import { createCommand } from "../../../../wrangler-shared/src/core/create-command";
 import { UserError } from "../../errors";
 import { getLegacyScriptName } from "../../index";
 import { logger } from "../../logger";

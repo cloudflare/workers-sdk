@@ -24,7 +24,7 @@ import {
 } from "../common";
 import { wrap } from "../helpers/wrap";
 import { validatePublicSSHKeyCLI, validateSSHKey } from "./validate";
-import type { Config } from "../../config";
+import type { Config } from "../../../../wrangler-shared/src/config";
 import type {
 	CommonYargsArgvJSON,
 	CommonYargsArgvSanitizedJSON,

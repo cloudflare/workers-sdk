@@ -2253,6 +2253,22 @@ importers:
         version: 17.7.2
 
   packages/wrangler-shared:
+    dependencies:
+      '@iarna/toml':
+        specifier: ^3.0.0
+        version: 3.0.0
+      chalk:
+        specifier: ^5.2.0
+        version: 5.3.0
+      dotenv:
+        specifier: ^16.0.0
+        version: 16.3.1
+      find-up:
+        specifier: ^6.3.0
+        version: 6.3.0
+      ts-dedent:
+        specifier: ^2.2.0
+        version: 2.2.0
     devDependencies:
       '@cloudflare/eslint-config-worker':
         specifier: workspace:*

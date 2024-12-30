@@ -21,7 +21,7 @@ import {
 	promiseSpinner,
 } from "../common";
 import { wrap } from "../helpers/wrap";
-import type { Config } from "../../config";
+import type { Config } from "../../../../wrangler-shared/src/config";
 import type {
 	CommonYargsArgvJSON,
 	CommonYargsArgvSanitizedJSON,

@@ -1,6 +1,6 @@
 import * as fs from "fs";
-import { formatConfigSnippet } from "../../config";
-import type { RawConfig } from "../../config";
+import { formatConfigSnippet } from "../../../../wrangler-shared/src/config";
+import type { RawConfig } from "../../../../wrangler-shared/src/config";
 
 /** Write a mock wrangler config file to disk. */
 export function writeWranglerConfig(

@@ -1,13 +1,13 @@
 import { Blob } from "node:buffer";
 import { arrayBuffer } from "node:stream/consumers";
 import { StringDecoder } from "node:string_decoder";
-import { formatConfigSnippet, readConfig } from "../config";
-import { demandOneOfOption } from "../core";
+import { formatConfigSnippet, readConfig } from "../../../wrangler-shared/src/config";
+import { demandOneOfOption } from "../../../wrangler-shared/src/core";
 import {
 	createAlias,
 	createCommand,
 	createNamespace,
-} from "../core/create-command";
+} from "../../../wrangler-shared/src/core/create-command";
 import { confirm } from "../dialogs";
 import { CommandLineArgsError, UserError } from "../errors";
 import { logger } from "../logger";

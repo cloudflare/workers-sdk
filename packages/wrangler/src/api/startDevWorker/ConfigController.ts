@@ -10,7 +10,7 @@ import {
 	isLegacyEnv,
 } from "../..";
 import { getAssetsOptions, validateAssetsArgsAndConfig } from "../../assets";
-import { readConfig } from "../../config";
+import { readConfig } from "../../../../wrangler-shared/src/config";
 import { getEntry } from "../../deployment-bundle/entry";
 import {
 	getBindings,
@@ -33,7 +33,7 @@ import {
 	extractBindingsOfType,
 	unwrapHook,
 } from "./utils";
-import type { Config } from "../../config";
+import type { Config } from "../../../../wrangler-shared/src/config";
 import type { CfUnsafe } from "../../deployment-bundle/worker";
 import type { ControllerEventMap } from "./BaseController";
 import type { ConfigUpdateEvent } from "./events";

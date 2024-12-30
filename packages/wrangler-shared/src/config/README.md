@@ -19,12 +19,12 @@ All configuration values in Wrangler configuration are optional and will receive
 
 ### Environment
 
-The fields that can be defined within the `env` containers are defined in the [`Environment`](./environment.ts) type.
+The fields that can be defined within the `env` containers are defined in the [`Environment`](environment.ts) type.
 This includes the `EnvironmentInheritable` and `EnvironmentNonInheritable` fields.
 
 ### Config
 
-The "non-overridable" types are defined in the [`ConfigFields`](./config.ts) type.
+The "non-overridable" types are defined in the [`ConfigFields`](config.ts) type.
 The `Config` type is the overall configuration, which consists of the `ConfigFields` and also an `Environment`.
 In this case the `Environment`, here, corresponds to the "currently active" environment. This is specified by the `--env` command line argument.
 If there is no argument passed then the currently active environment is the "top-level" environment.
@@ -56,7 +56,7 @@ When checking for or rendering warnings and errors, the `Diagnostics` class will
 
 ## Usage
 
-The [high level API](./index.ts) for configuration processing consists of the `findWranglerToml()` and `readConfig()` functions.
+The [high level API](index.ts) for configuration processing consists of the `findWranglerToml()` and `readConfig()` functions.
 
 ### readConfig()
 

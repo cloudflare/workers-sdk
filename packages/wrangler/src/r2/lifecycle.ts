@@ -1,4 +1,4 @@
-import { createCommand, createNamespace } from "../core/create-command";
+import { createCommand, createNamespace } from "../../../wrangler-shared/src/core/create-command";
 import { confirm, multiselect, prompt } from "../dialogs";
 import { UserError } from "../errors";
 import isInteractive from "../is-interactive";

@@ -1,6 +1,6 @@
 import * as cli from "@cloudflare/cli";
 import { spinnerWhile } from "@cloudflare/cli/interactive";
-import { createCommand } from "../../core/create-command";
+import { createCommand } from "../../../../wrangler-shared/src/core/create-command";
 import { confirm, prompt } from "../../dialogs";
 import { UserError } from "../../errors";
 import { logger } from "../../logger";

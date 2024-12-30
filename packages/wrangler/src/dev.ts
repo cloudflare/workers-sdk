@@ -11,9 +11,9 @@ import {
 	extractBindingsOfType,
 } from "./api/startDevWorker/utils";
 import { getAssetsOptions } from "./assets";
-import { configFileName, formatConfigSnippet } from "./config";
-import { resolveWranglerConfigPath } from "./config/config-helpers";
-import { createCommand } from "./core/create-command";
+import { configFileName, formatConfigSnippet } from "../../wrangler-shared/src/config";
+import { resolveWranglerConfigPath } from "../../wrangler-shared/src/config/config-helpers";
+import { createCommand } from "../../wrangler-shared/src/core/create-command";
 import { validateRoutes } from "./deploy/deploy";
 import { validateNodeCompatMode } from "./deployment-bundle/node-compat";
 import { devRegistry, getBoundRegisteredWorkers } from "./dev-registry";
@@ -37,12 +37,12 @@ import type {
 	StartDevWorkerInput,
 	Trigger,
 } from "./api";
-import type { Config, Environment } from "./config";
+import type { Config, Environment } from "../../wrangler-shared/src/config";
 import type {
 	EnvironmentNonInheritable,
 	Route,
 	Rule,
-} from "./config/environment";
+} from "../../wrangler-shared/src/config/environment";
 import type { INHERIT_SYMBOL } from "./deployment-bundle/bindings";
 import type {
 	CfKvNamespace,

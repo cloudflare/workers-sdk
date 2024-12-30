@@ -1,4 +1,4 @@
-import { createCommand, createNamespace } from "../core/create-command";
+import { createCommand, createNamespace } from "../../../wrangler-shared/src/core/create-command";
 import { confirm } from "../dialogs";
 import { logger } from "../logger";
 import { requireAuth } from "../user";

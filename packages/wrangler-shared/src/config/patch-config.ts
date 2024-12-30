@@ -1,7 +1,7 @@
 import { writeFileSync } from "fs";
 import TOML from "@iarna/toml";
 import { applyEdits, format, modify } from "jsonc-parser";
-import { parseJSONC, parseTOML, readFileSync } from "../parse";
+import { parseJSONC, parseTOML, readFileSync } from "../../../wrangler/src/parse";
 import type { RawConfig } from "./config";
 import type { JSONPath } from "jsonc-parser";
 

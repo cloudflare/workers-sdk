@@ -2,7 +2,7 @@ import fs from "fs";
 import path from "path";
 import { FormData } from "undici";
 import { fetchResult } from "../cfetch";
-import { withConfig } from "../config";
+import { withConfig } from "../../../wrangler-shared/src/config";
 import { logger } from "../logger";
 import { requireAuth } from "../user";
 import { getErrorMessage } from "./utils";

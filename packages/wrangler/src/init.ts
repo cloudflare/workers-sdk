@@ -8,7 +8,7 @@ import { version as wranglerVersion } from "../package.json";
 import { assertNever } from "./api/startDevWorker/utils";
 import { fetchResult } from "./cfetch";
 import { fetchWorker } from "./cfetch/internal";
-import { readConfig } from "./config";
+import { readConfig } from "../../wrangler-shared/src/config";
 import { getDatabaseInfoFromId } from "./d1/utils";
 import { confirm, select } from "./dialogs";
 import { getC3CommandFromEnv } from "./environment-variables/misc-variables";
@@ -23,14 +23,14 @@ import { requireAuth } from "./user";
 import { createBatches } from "./utils/create-batches";
 import * as shellquote from "./utils/shell-quote";
 import { printWranglerBanner } from "./index";
-import type { RawConfig } from "./config";
+import type { RawConfig } from "../../wrangler-shared/src/config";
 import type {
 	CustomDomainRoute,
 	Observability,
 	Route,
 	TailConsumer,
 	ZoneNameRoute,
-} from "./config/environment";
+} from "../../wrangler-shared/src/config/environment";
 import type { DatabaseInfo } from "./d1/types";
 import type {
 	WorkerMetadata,

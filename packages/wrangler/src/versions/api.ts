@@ -1,5 +1,5 @@
 import { fetchResult } from "../cfetch";
-import type { Observability, TailConsumer } from "../config/environment";
+import type { Observability, TailConsumer } from "../../../wrangler-shared/src/config/environment";
 import type {
 	ApiDeployment,
 	ApiVersion,

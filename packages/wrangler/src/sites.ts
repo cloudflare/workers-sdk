@@ -17,7 +17,7 @@ import {
 } from "./kv/helpers";
 import { logger, LOGGER_LEVELS } from "./logger";
 import { createPatternMatcher } from "./utils/filesystem";
-import type { Config } from "./config";
+import type { Config } from "../../wrangler-shared/src/config";
 import type { KeyValue } from "./kv/helpers";
 import type { XXHashAPI } from "xxhash-wasm";
 

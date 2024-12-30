@@ -1,4 +1,4 @@
-import type { configFormat } from "../config";
+import type { configFormat } from "../../../wrangler-shared/src/config";
 import type { sniffUserAgent } from "../package-manager";
 
 export type CommonEventProperties = {

@@ -2,7 +2,7 @@ import fs from "node:fs/promises";
 import * as path from "path";
 import { fetchResult } from "../cfetch";
 import { performApiFetch } from "../cfetch/internal";
-import { withConfig } from "../config";
+import { withConfig } from "../../../wrangler-shared/src/config";
 import { logger } from "../logger";
 import { requireAuth } from "../user";
 import { formatBytes, formatTimeAgo } from "./formatTimeAgo";

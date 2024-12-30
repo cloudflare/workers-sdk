@@ -1,7 +1,7 @@
 import assert from "assert";
 import { logRaw } from "@cloudflare/cli";
 import { brandColor, gray } from "@cloudflare/cli/colors";
-import { createCommand } from "../../core/create-command";
+import { createCommand } from "../../../../wrangler-shared/src/core/create-command";
 import { UserError } from "../../errors";
 import * as metrics from "../../metrics";
 import { requireAuth } from "../../user";

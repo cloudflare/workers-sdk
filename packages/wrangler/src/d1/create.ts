@@ -1,7 +1,7 @@
 import TOML from "@iarna/toml";
 import { printWranglerBanner } from "..";
 import { fetchResult } from "../cfetch";
-import { withConfig } from "../config";
+import { withConfig } from "../../../wrangler-shared/src/config";
 import { UserError } from "../errors";
 import { logger } from "../logger";
 import { requireAuth } from "../user";

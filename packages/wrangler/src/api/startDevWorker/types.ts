@@ -1,12 +1,12 @@
 import type { AssetsOptions } from "../../assets";
-import type { Config } from "../../config";
+import type { Config } from "../../../../wrangler-shared/src/config";
 import type {
 	CustomDomainRoute,
 	DurableObjectMigration,
 	Rule,
 	ZoneIdRoute,
 	ZoneNameRoute,
-} from "../../config/environment";
+} from "../../../../wrangler-shared/src/config/environment";
 import type {
 	CfAnalyticsEngineDataset,
 	CfD1Database,

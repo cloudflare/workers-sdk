@@ -1,5 +1,5 @@
 import { logRaw } from "@cloudflare/cli";
-import { createCommand } from "../core/create-command";
+import { createCommand } from "../../../wrangler-shared/src/core/create-command";
 import { UserError } from "../errors";
 import * as metrics from "../metrics";
 import { requireAuth } from "../user";

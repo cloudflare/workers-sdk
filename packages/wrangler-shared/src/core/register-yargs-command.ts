@@ -1,12 +1,12 @@
-import { fetchResult } from "../cfetch";
+import { fetchResult } from "../../../wrangler/src/cfetch";
 import { readConfig } from "../config";
 import { defaultWranglerConfig } from "../config/config";
-import { FatalError, UserError } from "../errors";
-import { run } from "../experimental-flags";
-import { logger } from "../logger";
-import { printWranglerBanner } from "../wrangler-banner";
+import { FatalError, UserError } from "../../../wrangler/src/errors";
+import { run } from "../../../wrangler/src/experimental-flags";
+import { logger } from "../../../wrangler/src/logger";
+import { printWranglerBanner } from "../../../wrangler/src/wrangler-banner";
 import { demandSingleValue } from "./helpers";
-import type { CommonYargsArgv, SubHelp } from "../yargs-types";
+import type { CommonYargsArgv, SubHelp } from "../../../wrangler/src/yargs-types";
 import type {
 	CommandDefinition,
 	HandlerArgs,
