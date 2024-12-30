@@ -3,7 +3,7 @@ description: "Install dependencies, fetching from cache when possible"
 inputs:
   node-version:
     description: the version of Node.js to install
-    default: 18.20.2
+    default: 18.20.5
   turbo-api:
     description: the api URL for connecting to the turbo remote cache
   turbo-team:
