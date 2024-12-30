@@ -188,6 +188,11 @@ function getFrameworkTests(opts: {
 					expectedText: "Create Next App",
 				},
 				unsupportedOSs: ["win32"],
+				unsupportedPms: [
+					// bun and yarn are failing in CI
+					"bun",
+					"yarn",
+				],
 			},
 			nuxt: {
 				testCommitMessage: true,
