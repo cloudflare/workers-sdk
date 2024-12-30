@@ -50,6 +50,7 @@ jobs:
           turbo-team: ${{ secrets.TURBO_TEAM }}
           turbo-token: ${{ secrets.TURBO_TOKEN }}
           turbo-signature: ${{ secrets.TURBO_REMOTE_CACHE_SIGNATURE_KEY }}
+          node-version: 20
 
       - name: E2E Tests
         if: steps.changes.outputs.everything_but_markdown == 'true'

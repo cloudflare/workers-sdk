@@ -18,6 +18,9 @@ jobs:
           token: ${{ secrets.GH_ACCESS_TOKEN }}
       - name: Install Dependencies
         uses: ./.github/actions/install-dependencies
+        with:
+          node-version: 20
+
       - name: Configure Git
         run: |
           git config --global user.email wrangler@cloudflare.com
