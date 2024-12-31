@@ -203,6 +203,7 @@ function getMiniflarePersistOptions(
 	| "r2Persist"
 	| "d1Persist"
 	| "workflowsPersist"
+	| "queuesPersist"
 > {
 	if (persist === false) {
 		// the user explicitly asked for no persistance
@@ -212,6 +213,7 @@ function getMiniflarePersistOptions(
 			r2Persist: false,
 			d1Persist: false,
 			workflowsPersist: false,
+			queuesPersist: false,
 		};
 	}
 
@@ -226,6 +228,7 @@ function getMiniflarePersistOptions(
 		r2Persist: `${persistPath}/r2`,
 		d1Persist: `${persistPath}/d1`,
 		workflowsPersist: `${persistPath}/workflows`,
+		queuesPersist: `${persistPath}/queues`,
 	};
 }
 

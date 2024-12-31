@@ -148,8 +148,8 @@ export const QUEUES_PLUGIN: Plugin<
 		// Add storage service if using local disk
 		if (storagePath) {
 			// Create the storage directory if it doesn't exist
-			await fs.mkdir(path.dirname(storagePath), { recursive: true });
 			await fs.mkdir(storagePath, { recursive: true });
+
 			const storageService: Service = {
 				name: QUEUES_STORAGE_SERVICE_NAME,
 				disk: { path: storagePath, writable: true },
