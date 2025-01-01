@@ -634,6 +634,50 @@ describe("generateTypes()", () => {
 	`);
 	});
 
+	it("should produce unions where appropriate for vars present in multiple environments", async () => {
+		fs.writeFileSync(
+			"./wrangler.toml",
+			TOML.stringify({
+				vars: {
+					MY_VAR: "a var",
+					MY_VAR_A: "A (dev)",
+					MY_VAR_B: { value: "B (dev)" },
+					MY_VAR_C: ["a", "b", "c"],
+				},
+				env: {
+					production: {
+						vars: {
+							MY_VAR: "a var",
+							MY_VAR_A: "A (prod)",
+							MY_VAR_B: { value: "B (prod)" },
+							MY_VAR_C: [1, 2, 3],
+						},
+					},
+					staging: {
+						vars: {
+							MY_VAR_A: "A (stag)",
+						},
+					},
+				},
+			} as TOML.JsonMap),
+			"utf-8"
+		);
+
+		await runWrangler("types");
+
+		expect(std.out).toMatchInlineSnapshot(`
+		"Generating project types...
+
+		interface Env {
+			MY_VAR: \\"a var\\";
+			MY_VAR_A: \\"A (dev)\\" | \\"A (prod)\\" | \\"A (stag)\\";
+			MY_VAR_C: [\\"a\\",\\"b\\",\\"c\\"] | [1,2,3];
+			MY_VAR_B: {\\"value\\":\\"B (dev)\\"} | {\\"value\\":\\"B (prod)\\"};
+		}
+		"
+	`);
+	});
+
 	describe("customization", () => {
 		describe("env", () => {
 			it("should allow the user to customize the interface name", async () => {
