@@ -602,6 +602,35 @@ describe("generateTypes()", () => {
 	`);
 	});
 
+	it("should respect the loose-vars option", async () => {
+		fs.writeFileSync(
+			"./wrangler.toml",
+			TOML.stringify({
+				vars: {
+					varStr: "A from wrangler toml",
+					varArrNum: [1, 2, 3],
+					varArrMix: [1, "two", 3, true],
+					varObj: { test: true },
+				},
+			} as TOML.JsonMap),
+			"utf-8"
+		);
+
+		await runWrangler("types --loose-vars");
+
+		expect(std.out).toMatchInlineSnapshot(`
+		"Generating project types...
+
+		interface Env {
+			varStr: string;
+			varArrNum: number[];
+			varArrMix: (boolean|number|string)[];
+			varObj: object;
+		}
+		"
+	`);
+	});
+
 	it("should override vars with secrets", async () => {
 		fs.writeFileSync(
 			"./wrangler.toml",
@@ -634,48 +663,68 @@ describe("generateTypes()", () => {
 	`);
 	});
 
-	it("should produce unions where appropriate for vars present in multiple environments", async () => {
-		fs.writeFileSync(
-			"./wrangler.toml",
-			TOML.stringify({
-				vars: {
-					MY_VAR: "a var",
-					MY_VAR_A: "A (dev)",
-					MY_VAR_B: { value: "B (dev)" },
-					MY_VAR_C: ["a", "b", "c"],
-				},
-				env: {
-					production: {
-						vars: {
-							MY_VAR: "a var",
-							MY_VAR_A: "A (prod)",
-							MY_VAR_B: { value: "B (prod)" },
-							MY_VAR_C: [1, 2, 3],
+	describe("vars present in multiple environments", () => {
+		beforeEach(() => {
+			fs.writeFileSync(
+				"./wrangler.toml",
+				TOML.stringify({
+					vars: {
+						MY_VAR: "a var",
+						MY_VAR_A: "A (dev)",
+						MY_VAR_B: { value: "B (dev)" },
+						MY_VAR_C: ["a", "b", "c"],
+					},
+					env: {
+						production: {
+							vars: {
+								MY_VAR: "a var",
+								MY_VAR_A: "A (prod)",
+								MY_VAR_B: { value: "B (prod)" },
+								MY_VAR_C: [1, 2, 3],
+							},
+						},
+						staging: {
+							vars: {
+								MY_VAR_A: "A (stag)",
+							},
 						},
 					},
-					staging: {
-						vars: {
-							MY_VAR_A: "A (stag)",
-						},
-					},
-				},
-			} as TOML.JsonMap),
-			"utf-8"
-		);
+				} as TOML.JsonMap),
+				"utf-8"
+			);
+		});
 
-		await runWrangler("types");
+		it("should produce string and union types for variables (default)", async () => {
+			await runWrangler("types");
 
-		expect(std.out).toMatchInlineSnapshot(`
-		"Generating project types...
+			expect(std.out).toMatchInlineSnapshot(`
+			"Generating project types...
 
-		interface Env {
-			MY_VAR: \\"a var\\";
-			MY_VAR_A: \\"A (dev)\\" | \\"A (prod)\\" | \\"A (stag)\\";
-			MY_VAR_C: [\\"a\\",\\"b\\",\\"c\\"] | [1,2,3];
-			MY_VAR_B: {\\"value\\":\\"B (dev)\\"} | {\\"value\\":\\"B (prod)\\"};
-		}
-		"
-	`);
+			interface Env {
+				MY_VAR: \\"a var\\";
+				MY_VAR_A: \\"A (dev)\\" | \\"A (prod)\\" | \\"A (stag)\\";
+				MY_VAR_C: [\\"a\\",\\"b\\",\\"c\\"] | [1,2,3];
+				MY_VAR_B: {\\"value\\":\\"B (dev)\\"} | {\\"value\\":\\"B (prod)\\"};
+			}
+			"
+		`);
+		});
+
+		it("should produce loose types for variables (with --loose-vars)", async () => {
+			await runWrangler("types --loose-vars=true");
+
+			expect(std.out).toMatchInlineSnapshot(`
+			"Generating project types...
+
+			interface Env {
+				MY_VAR: string;
+				MY_VAR_A: string;
+				MY_VAR_C: string[] | number[];
+				MY_VAR_B: object;
+			}
+			"
+		`);
+		});
 	});
 
 	describe("customization", () => {

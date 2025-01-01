@@ -38,6 +38,12 @@ export function typesOptions(yargs: CommonYargsArgv) {
 			type: "string",
 			describe: "The path of the generated runtime types file",
 			demandOption: false,
+		})
+		.option("loose-vars", {
+			type: "boolean",
+			default: false,
+			describe:
+				'Generate "loose"/generic types instead of literal and union types for variables',
 		});
 }
 
@@ -147,7 +153,8 @@ export async function typesHandler(
 		configBindingsWithSecrets,
 		config,
 		envInterface,
-		outputPath
+		outputPath,
+		args.looseVars
 	);
 }
 
@@ -245,7 +252,8 @@ async function generateTypes(
 	configToDTS: ConfigToDTS,
 	config: Config,
 	envInterface: string,
-	outputPath: string
+	outputPath: string,
+	looseVars: boolean
 ) {
 	const configContainsEntrypoint =
 		config.main !== undefined || !!config.site?.["entry-point"];
@@ -296,6 +304,18 @@ async function generateTypes(
 				varInfo
 					.map(({ value }) => value)
 					.map((varValue) => {
+						if (looseVars) {
+							if (Array.isArray(varValue)) {
+								const typesInArray = [
+									...new Set(varValue.map((item) => typeof item)),
+								].sort();
+								if (typesInArray.length === 1) {
+									return `${typesInArray[0]}[]`;
+								}
+								return `(${typesInArray.join("|")})[]`;
+							}
+							return typeof varValue;
+						}
 						if (
 							typeof varValue === "string" ||
 							typeof varValue === "number" ||
