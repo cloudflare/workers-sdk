@@ -204,6 +204,9 @@ async function handleRawHttp(request: Request, url: URL) {
 	const token = requestHeaders.get("X-CF-Token");
 	const remote = requestHeaders.get("X-CF-Remote");
 
+	// Fallback to the request method for backward compatiblility
+	const method = requestHeaders.get("X-CF-Http-Method") ?? request.method;
+
 	if (!token || !remote) {
 		throw new RawHttpFailed();
 	}
@@ -216,6 +219,7 @@ async function handleRawHttp(request: Request, url: URL) {
 	// request due to exceeding size limits if the value is included twice.
 	requestHeaders.delete("X-CF-Token");
 	requestHeaders.delete("X-CF-Remote");
+	requestHeaders.delete("X-CF-Http-Method");
 
 	const headerEntries = [...requestHeaders.entries()];
 
@@ -229,6 +233,7 @@ async function handleRawHttp(request: Request, url: URL) {
 	const workerResponse = await fetch(
 		switchRemote(url, remote),
 		new Request(request, {
+			method,
 			headers: requestHeaders,
 			redirect: "manual",
 		})

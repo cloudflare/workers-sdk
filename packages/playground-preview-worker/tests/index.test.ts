@@ -244,6 +244,31 @@ describe("Preview Worker", () => {
 		);
 		expect(await resp.text()).toMatchInlineSnapshot('"custom"');
 	});
+	it("should return method specified on the X-CF-Http-Method header", async () => {
+		const resp = await fetch(`${PREVIEW_REMOTE}/method`, {
+			method: "POST",
+			headers: {
+				"X-CF-Token": defaultUserToken,
+				"X-CF-Http-Method": "PUT",
+				"CF-Raw-HTTP": "true",
+			},
+			redirect: "manual",
+		});
+
+		expect(await resp.text()).toEqual("PUT");
+	});
+	it("should fallback to the request method if the X-CF-Http-Method header is missing", async () => {
+		const resp = await fetch(`${PREVIEW_REMOTE}/method`, {
+			method: "PUT",
+			headers: {
+				"X-CF-Token": defaultUserToken,
+				"CF-Raw-HTTP": "true",
+			},
+			redirect: "manual",
+		});
+
+		expect(await resp.text()).toEqual("PUT");
+	});
 	it("should reject no token for raw HTTP response", async () => {
 		const resp = await fetch(`${PREVIEW_REMOTE}/header`, {
 			headers: {
