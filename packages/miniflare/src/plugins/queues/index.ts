@@ -1,5 +1,4 @@
 import fs from "fs/promises";
-import path from "path";
 import SCRIPT_QUEUE_BROKER_OBJECT from "worker:queues/broker";
 import { z } from "zod";
 import {
@@ -81,6 +80,7 @@ export const QUEUES_PLUGIN: Plugin<
 		unsafeStickyBlobs,
 		tmpPath,
 	}) {
+		const persist = sharedOptions.queuesPersist;
 		const queues = bindingEntries(options.queueProducers);
 		if (queues.length === 0) return [];
 
@@ -90,10 +90,15 @@ export const QUEUES_PLUGIN: Plugin<
 		}));
 
 		const uniqueKey = `miniflare-${QUEUE_BROKER_OBJECT_CLASS_NAME}`;
-		const storagePath =
-			sharedOptions?.queuesPersist === false
-				? undefined
-				: this.getPersistPath?.(sharedOptions, tmpPath);
+		const persistPath =
+			process.env.MINIFLARE_QUEUES_PERSIST_DIR ??
+			getPersistPath(QUEUES_PLUGIN_NAME, tmpPath, persist);
+		await fs.mkdir(persistPath, { recursive: true });
+		const storageService: Service = {
+			name: QUEUES_STORAGE_SERVICE_NAME,
+			disk: { path: persistPath, writable: true },
+		};
+
 		const objectService: Service = {
 			name: SERVICE_QUEUE_PREFIX,
 			worker: {
@@ -104,7 +109,10 @@ export const QUEUES_PLUGIN: Plugin<
 					"service_binding_extra_handlers",
 				],
 				modules: [
-					{ name: "broker.worker.js", esModule: SCRIPT_QUEUE_BROKER_OBJECT() },
+					{
+						name: "broker.worker.js",
+						esModule: SCRIPT_QUEUE_BROKER_OBJECT(),
+					},
 				],
 				durableObjectNamespaces: [
 					{
@@ -113,7 +121,7 @@ export const QUEUES_PLUGIN: Plugin<
 						preventEviction: true,
 					},
 				],
-				durableObjectStorage: storagePath
+				durableObjectStorage: persistPath
 					? { localDisk: QUEUES_STORAGE_SERVICE_NAME }
 					: { inMemory: kVoid },
 				bindings: [
@@ -143,25 +151,9 @@ export const QUEUES_PLUGIN: Plugin<
 				],
 			},
 		};
-		services.push(objectService);
-
-		// Add storage service if using local disk
-		if (storagePath) {
-			// Create the storage directory if it doesn't exist
-			await fs.mkdir(storagePath, { recursive: true });
-
-			const storageService: Service = {
-				name: QUEUES_STORAGE_SERVICE_NAME,
-				disk: { path: storagePath, writable: true },
-			};
-			services.push(storageService);
-		}
+		services.push(objectService, storageService);
 
 		return services;
-	},
-
-	getPersistPath({ queuesPersist }, tmpPath) {
-		return getPersistPath(QUEUES_PLUGIN_NAME, tmpPath, queuesPersist);
 	},
 };
 
