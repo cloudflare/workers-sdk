@@ -25,11 +25,19 @@ export type VectorFloatArray = Float32Array | Float64Array;
  *
  * This list is expected to grow as support for more operations are released.
  */
-export type VectorizeVectorMetadataFilterOp = "$eq" | "$ne";
+export type VectorizeMetadataFilterEqualityOp = "$eq" | "$ne";
+export type VectorizeMetadataFilterSetOp = "$in" | "$nin";
+export type VectorizeMetadataFilterRangeOp = "$lt" | "$lte" | "$gt" | "$gte";
+
+export type VectorizeVectorMetadataFilterOp =
+	| VectorizeMetadataFilterEqualityOp
+	| VectorizeMetadataFilterSetOp
+	| VectorizeMetadataFilterRangeOp;
 
 export type VectorizeMetadataFilterInnerValue = Record<
 	VectorizeVectorMetadataFilterOp,
-	Exclude<VectorizeVectorMetadataValue, string[]>
+	| Exclude<VectorizeVectorMetadataValue, string[]>
+	| Exclude<VectorizeVectorMetadataValue, string[]>[]
 >;
 
 export type VectorizeMetadataFilterValue =
