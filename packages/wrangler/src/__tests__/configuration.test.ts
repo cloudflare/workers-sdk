@@ -3,6 +3,7 @@ import path from "node:path";
 import { experimental_readRawConfig, readConfig } from "../config";
 import { normalizeAndValidateConfig } from "../config/validation";
 import { run } from "../experimental-flags";
+import { mockConsoleMethods } from "./helpers/mock-console";
 import { normalizeString } from "./helpers/normalize";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { writeWranglerConfig } from "./helpers/write-wrangler-config";
@@ -44,6 +45,128 @@ describe("readConfig()", () => {
 				`[Error: The \`python_workers\` compatibility flag is required to use Python.]`
 			);
 		}
+	});
+
+	describe("environment warnings and errors", () => {
+		const std = mockConsoleMethods();
+
+		it("should warn if an environment is requested but none are defined", () => {
+			writeWranglerConfig();
+			readConfig({ config: "wrangler.toml", env: "foo" });
+			expect(std.warn).toMatchInlineSnapshot(`
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
+
+				    - No environment found in configuration with name \\"foo\\".
+				      Before using \`--env=foo\` there should be an equivalent environment section in the
+				  configuration.
+
+				      Consider adding an environment configuration section to the wrangler.toml file:
+				      \`\`\`
+				      [env.foo]
+				      \`\`\`
+
+
+				"
+			`);
+		});
+
+		it("should update the worker name if an environment is requested but none are defined", () => {
+			writeWranglerConfig();
+			const config = readConfig({ config: "wrangler.toml", env: "foo" });
+			expect(config.name).toEqual("test-name-foo");
+		});
+
+		it("should not warn if an environment is requested but none are defined, and `allowEnvironmentsWhenNoneAreDefined` is true", () => {
+			writeWranglerConfig();
+			readConfig(
+				{ config: "wrangler.toml", env: "foo" },
+				{ allowEnvironmentsWhenNoneAreDefined: true }
+			);
+			expect(std.warn).toMatchInlineSnapshot(`""`);
+		});
+
+		it("should not update the worker name if an environment is requested but none are defined, and `allowEnvironmentsWhenNoneAreDefined` is true", () => {
+			writeWranglerConfig();
+			const config = readConfig(
+				{ config: "wrangler.toml", env: "foo" },
+				{ allowEnvironmentsWhenNoneAreDefined: true }
+			);
+			expect(config.name).toEqual("test-name");
+		});
+
+		it("should error if an environment is requested that is not defined and at least one other is defined", () => {
+			writeWranglerConfig({
+				env: {
+					bar: {},
+				},
+			});
+			expect(() => readConfig({ config: "wrangler.toml", env: "foo" }))
+				.toThrowErrorMatchingInlineSnapshot(`
+				[Error: Processing wrangler.toml configuration:
+				  - No environment found in configuration with name "foo".
+				    Before using \`--env=foo\` there should be an equivalent environment section in the configuration.
+				    The available configured environment names are: ["bar"]
+
+				    Consider adding an environment configuration section to the wrangler.toml file:
+				    \`\`\`
+				    [env.foo]
+				    \`\`\`
+				]
+			`);
+		});
+
+		it("should not error if an environment in `optionalEnvironments` is requested that is not defined and at least one other is defined", () => {
+			writeWranglerConfig({
+				env: {
+					bar: {},
+				},
+			});
+			expect(() =>
+				readConfig(
+					{ config: "wrangler.toml", env: "foo" },
+					{ optionalEnvironments: ["foo"] }
+				)
+			).not.toThrow();
+		});
+
+		it("should not update the worker name if an environment in `optionalEnvironments` is requested that is not defined and at least one other is defined", () => {
+			writeWranglerConfig({
+				env: {
+					bar: {},
+				},
+			});
+			const config = readConfig(
+				{ config: "wrangler.toml", env: "foo" },
+				{ optionalEnvironments: ["foo"] }
+			);
+			expect(config.name).toEqual("test-name");
+		});
+
+		it("should update the worker name if an environment is requested that is defined and allowEnvironmentsWhenNoneAreDefined is true", () => {
+			writeWranglerConfig({
+				env: {
+					foo: {},
+				},
+			});
+			const config = readConfig(
+				{ config: "wrangler.toml", env: "foo" },
+				{ allowEnvironmentsWhenNoneAreDefined: true }
+			);
+			expect(config.name).toEqual("test-name-foo");
+		});
+
+		it("should update the worker name if an environment is requested that is defined and named in optionalEnvironments", () => {
+			writeWranglerConfig({
+				env: {
+					foo: {},
+				},
+			});
+			const config = readConfig(
+				{ config: "wrangler.toml", env: "foo" },
+				{ optionalEnvironments: ["foo"] }
+			);
+			expect(config.name).toEqual("test-name-foo");
+		});
 	});
 });
 
