@@ -602,7 +602,7 @@ describe("generateTypes()", () => {
 	`);
 	});
 
-	it("should respect the loose-vars option", async () => {
+	it("should allow opting out of strict-vars", async () => {
 		fs.writeFileSync(
 			"./wrangler.toml",
 			TOML.stringify({
@@ -616,7 +616,7 @@ describe("generateTypes()", () => {
 			"utf-8"
 		);
 
-		await runWrangler("types --loose-vars");
+		await runWrangler("types --strict-vars=false");
 
 		expect(std.out).toMatchInlineSnapshot(`
 		"Generating project types...
@@ -710,8 +710,8 @@ describe("generateTypes()", () => {
 		`);
 		});
 
-		it("should produce loose types for variables (with --loose-vars)", async () => {
-			await runWrangler("types --loose-vars=true");
+		it("should produce non-strict types for variables (with --strict-vars=false)", async () => {
+			await runWrangler("types --strict-vars=false");
 
 			expect(std.out).toMatchInlineSnapshot(`
 			"Generating project types...

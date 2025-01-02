@@ -2,12 +2,12 @@
 "wrangler": minor
 ---
 
-add `loose-vars` option to `wrangler types`
+add `strict-vars` option to `wrangler types`
 
-add a new `--loose-vars` option to `wrangler types` that developers can use to get more
-loose types for their variables instead of literal and union types
+add a new `--strict-vars` option to `wrangler types` that developers can use to enable/disable
+more strict/literal types for their variables
 
-these more loose types can be useful when developers change often their `vars` values,
+opting out of strict variables can be useful when developers change often their `vars` values,
 even more so when multiple environments are involved
 
 ## Example
@@ -33,7 +33,7 @@ interface Env {
 }
 ```
 
-while `wrangler types --loose-vars` would instead generate:
+while `wrangler types --strict-vars=false` would instead generate:
 
 ```
 interface Env {
