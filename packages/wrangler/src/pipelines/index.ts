@@ -1,11 +1,12 @@
+import { HeadBucketCommand, S3Client } from "@aws-sdk/client-s3";
 import { readConfig } from "../config";
-import { sleep } from "../deploy/deploy";
 import { FatalError, UserError } from "../errors";
 import { printWranglerBanner } from "../index";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { APIError } from "../parse";
 import { requireAuth } from "../user";
+import { retryOnError } from "../utils/retry";
 import {
 	createPipeline,
 	deletePipeline,
@@ -51,8 +52,28 @@ async function authorizeR2Bucket(
 		pipelineName
 	);
 
-	// wait for token to settle/propagate
-	!__testSkipDelaysFlag && (await sleep(3000));
+	const r2 = new S3Client({
+		region: "auto",
+		credentials: {
+			accessKeyId: serviceToken.accessKeyId,
+			secretAccessKey: serviceToken.secretAccessKey,
+		},
+		endpoint: getAccountR2Endpoint(accountId),
+	});
+
+	// Wait for token to settle/propagate, retry up to 10 times, with 1s waits in-between errors
+	!__testSkipDelaysFlag &&
+		(await retryOnError(
+			async () => {
+				await r2.send(
+					new HeadBucketCommand({
+						Bucket: bucketName,
+					})
+				);
+			},
+			1000,
+			10
+		));
 
 	return serviceToken;
 }
