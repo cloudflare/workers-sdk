@@ -82,6 +82,14 @@ import {
 	telemetryStatusCommand,
 } from "./metrics/commands";
 import { mTlsCertificateCommands } from "./mtls-certificate/cli";
+import {
+		certNamespace,
+		certUploadNamespace,
+		certUploadCaCertCommand,
+		certUploadMtlsCommand,
+		certListCommand,
+		certDeleteCommand
+	} from "./cert/cert";
 import { writeOutput } from "./output";
 import { pages } from "./pages";
 import { APIError, formatMessage, ParseError } from "./parse";
@@ -896,6 +904,17 @@ export function createCLIParser(argv: string[]) {
 			return hyperdrive(hyperdriveYargs.command(subHelp));
 		}
 	);
+
+	// cert - includes mtls-certificates and CA cert management
+	registry.define([
+		{ command: "wrangler cert", definition: certNamespace },
+		{ command: "wrangler cert upload", definition: certUploadNamespace },
+		{ command: "wrangler cert upload mtls-certificate", definition: certUploadMtlsCommand },
+		{ command: "wrangler cert upload certificate-authority", definition: certUploadCaCertCommand },
+		{ command: "wrangler cert list", definition: certListCommand },
+		{ command: "wrangler cert delete", definition: certDeleteCommand},
+	]);
+	registry.registerNamespace("cert");
 
 	// pages
 	wrangler.command("pages", "⚡️ Configure Cloudflare Pages", (pagesYargs) => {
