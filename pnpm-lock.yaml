@@ -120,7 +120,7 @@ importers:
         version: 5.0.12(@types/node@18.19.59)
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)
+        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
 
   fixtures/additional-modules:
     devDependencies:
@@ -138,7 +138,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)
+        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -156,7 +156,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)
+        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -183,7 +183,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)
+        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -204,7 +204,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)
+        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -222,7 +222,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)
+        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -243,7 +243,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)
+        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -267,7 +267,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)
+        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -291,7 +291,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)
+        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
 
   fixtures/isomorphic-random-example: {}
 
@@ -316,7 +316,7 @@ importers:
         version: 5.6.3
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)
+        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -328,7 +328,7 @@ importers:
         version: 7.0.0
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)
+        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -353,7 +353,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)
+        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -371,7 +371,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)
+        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -398,7 +398,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)
+        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -416,7 +416,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)
+        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -437,7 +437,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)
+        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -465,7 +465,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)
+        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -483,7 +483,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)
+        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -501,7 +501,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)
+        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -522,7 +522,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)
+        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -540,7 +540,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)
+        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -577,7 +577,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)
+        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -598,7 +598,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)
+        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -619,7 +619,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)
+        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -637,7 +637,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)
+        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -655,7 +655,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)
+        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -673,7 +673,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)
+        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -691,7 +691,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)
+        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -709,7 +709,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)
+        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -727,7 +727,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)
+        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -745,7 +745,7 @@ importers:
         version: 5.6.3
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)
+        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -766,7 +766,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)
+        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -791,7 +791,7 @@ importers:
     devDependencies:
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)
+        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -833,7 +833,7 @@ importers:
         version: 5.6.3
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)
+        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -860,7 +860,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)
+        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -892,7 +892,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)
+        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -913,7 +913,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)
+        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -934,7 +934,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)
+        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -952,7 +952,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)
+        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -970,7 +970,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)
+        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -1699,7 +1699,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)
+        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
 
   packages/workers-editor-shared:
     dependencies:
@@ -1906,7 +1906,7 @@ importers:
         version: 5.6.3
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)
+        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
 
   packages/workers-tsconfig: {}
 
@@ -1929,7 +1929,7 @@ importers:
         version: 5.6.3
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)
+        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../wrangler
@@ -1972,7 +1972,7 @@ importers:
         version: 5.6.3
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)
+        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
 
   packages/wrangler:
     dependencies:
@@ -2797,14 +2797,14 @@ packages:
       - is-unicode-supported
 
   '@cloudflare/component-box@4.0.2':
-    resolution: {integrity: sha512-CInPo9qsB/XCFe5w3hllRhnuMIr9VpHfT4qHSMvSnXaKgeAcldGCw19EgcrkBST+Ye44cY9eO8sMycLLxG7luw==, tarball: https://registry-gateway.cloudflare-ui.workers.dev/archives/@cloudflare/component-box/-/component-box-4.0.2.tgz}
+    resolution: {integrity: sha512-CInPo9qsB/XCFe5w3hllRhnuMIr9VpHfT4qHSMvSnXaKgeAcldGCw19EgcrkBST+Ye44cY9eO8sMycLLxG7luw==}
     peerDependencies:
       '@cloudflare/style-const': ^5.3.9
       '@cloudflare/style-container': ^7.10.0
       react: ^15.0.0-0 || ^16.0.0-0 || ^17.0.0-0
 
   '@cloudflare/component-button@7.0.17':
-    resolution: {integrity: sha512-V30x19fuxVSjKvSy7Fw8e6GTrYOA9b5NU9QEh5SmVC5NB9qzJ/D41y3O6yJUYL5Ry3+988pzl8FJRuKAqwdyjw==, tarball: https://registry-gateway.cloudflare-ui.workers.dev/archives/@cloudflare/component-button/-/component-button-7.0.17.tgz}
+    resolution: {integrity: sha512-V30x19fuxVSjKvSy7Fw8e6GTrYOA9b5NU9QEh5SmVC5NB9qzJ/D41y3O6yJUYL5Ry3+988pzl8FJRuKAqwdyjw==}
     peerDependencies:
       '@cloudflare/component-icon': ^11.0.0
       '@cloudflare/style-const': ^5.6.0
@@ -2812,7 +2812,7 @@ packages:
       react: ^15.0.0-0 || ^16.0.0-0 || ^17.0.0-0
 
   '@cloudflare/component-code-block@4.2.8':
-    resolution: {integrity: sha512-1Xm917tLOyGDTQDbxPODkWsTO8pZ/93AFoBZOOQc/f2VtbKRmSEL5Vw8qB2CMAKfdzZo9yikT8OOyWqyHSymfg==, tarball: https://registry-gateway.cloudflare-ui.workers.dev/archives/@cloudflare/component-code-block/-/component-code-block-4.2.8.tgz}
+    resolution: {integrity: sha512-1Xm917tLOyGDTQDbxPODkWsTO8pZ/93AFoBZOOQc/f2VtbKRmSEL5Vw8qB2CMAKfdzZo9yikT8OOyWqyHSymfg==}
     peerDependencies:
       '@cloudflare/component-icon': ^11.0.0
       '@cloudflare/style-const': ^5.7.2
@@ -2821,28 +2821,28 @@ packages:
       react-dom: ^15.0.0-0 || ^16.0.0-0 || ^17.0.0-0
 
   '@cloudflare/component-heading@4.0.6':
-    resolution: {integrity: sha512-Rj4yClX7MsUZopiBrLEILCaLx5xl75Mn0Ad3As1Mlb7NcRpVHKR5giAt06M9a+bKg7fqKx8EV+jlf7RSwDeypQ==, tarball: https://registry.npmjs.org/@cloudflare/component-heading/-/component-heading-4.0.6.tgz}
+    resolution: {integrity: sha512-Rj4yClX7MsUZopiBrLEILCaLx5xl75Mn0Ad3As1Mlb7NcRpVHKR5giAt06M9a+bKg7fqKx8EV+jlf7RSwDeypQ==}
     peerDependencies:
       '@cloudflare/style-const': ^5.3.9
       '@cloudflare/style-container': ^7.10.0
       react: ^15.0.0-0 || ^16.0.0-0 || ^17.0.0-0
 
   '@cloudflare/component-icon@11.8.0':
-    resolution: {integrity: sha512-H97P7IRQv1PwKbIgn0ZVukQNggGF4sZeBUze3B7li5qZIKWd1f04te6Ef5tOrdq7E+l0/6zpmg1uCtShxTuPkA==, tarball: https://registry.npmjs.org/@cloudflare/component-icon/-/component-icon-11.8.0.tgz}
+    resolution: {integrity: sha512-H97P7IRQv1PwKbIgn0ZVukQNggGF4sZeBUze3B7li5qZIKWd1f04te6Ef5tOrdq7E+l0/6zpmg1uCtShxTuPkA==}
     peerDependencies:
       '@cloudflare/style-const': ^5.7.2
       '@cloudflare/style-container': ^7.10.0
       react: ^15.0.0-0 || ^16.0.0-0 || ^17.0.0-0
 
   '@cloudflare/component-input@8.1.2':
-    resolution: {integrity: sha512-HudzbU8jvci+oO22O97qKQvCOW/kmilqZu+U7kTzyuA7+3d/63FuAuPloM5j3S5yVbfGMBJ8WqF1R3nblbG5Gg==, tarball: https://registry.npmjs.org/@cloudflare/component-input/-/component-input-8.1.2.tgz}
+    resolution: {integrity: sha512-HudzbU8jvci+oO22O97qKQvCOW/kmilqZu+U7kTzyuA7+3d/63FuAuPloM5j3S5yVbfGMBJ8WqF1R3nblbG5Gg==}
     peerDependencies:
       '@cloudflare/style-const': ^5.7.2
       '@cloudflare/style-container': ^7.10.0
       react: ^15.0.0-0 || ^16.0.0-0 || ^17.0.0-0
 
   '@cloudflare/component-listbox@1.10.6':
-    resolution: {integrity: sha512-FK4pu+TcBhODs+lcBsaz1gIvw0l+pxMO6emB+2WMYedgINmMzFa2TT7QPOy4nlErrH9EUMFehsvA8KgtbtDIbg==, tarball: https://registry-gateway.cloudflare-ui.workers.dev/archives/@cloudflare/component-listbox/-/component-listbox-1.10.6.tgz}
+    resolution: {integrity: sha512-FK4pu+TcBhODs+lcBsaz1gIvw0l+pxMO6emB+2WMYedgINmMzFa2TT7QPOy4nlErrH9EUMFehsvA8KgtbtDIbg==}
     peerDependencies:
       '@cloudflare/component-icon': ^11.0.0
       '@cloudflare/style-const': ^5.7.2
@@ -2852,27 +2852,27 @@ packages:
       react-dom: ^15.0.0-0 || ^16.0.0-0 || ^17.0.0-0
 
   '@cloudflare/component-loading@6.1.1':
-    resolution: {integrity: sha512-CfYU9K80O2j99Y22d8fDzIhMGS94/0CnLNYjNBQmqDPjmwXRvju31ATJ2JEeYPaAHCHXRILdP1FED9AsnzdS0g==, tarball: https://registry.npmjs.org/@cloudflare/component-loading/-/component-loading-6.1.1.tgz}
+    resolution: {integrity: sha512-CfYU9K80O2j99Y22d8fDzIhMGS94/0CnLNYjNBQmqDPjmwXRvju31ATJ2JEeYPaAHCHXRILdP1FED9AsnzdS0g==}
     peerDependencies:
       '@cloudflare/style-const': ^5.3.9
       '@cloudflare/style-container': ^7.10.0
       react: ^16.0.0-0 || ^17.0.0-0 || ^18.0.0-0
 
   '@cloudflare/component-textarea@4.1.2':
-    resolution: {integrity: sha512-Pk6GlrKNv61HC5mu7mydg7eOJch5iWXt5gFMKG6RigXXJU5AOG93IzteZ794vCwH9aL/C+zAAHd7d7co9LWkSA==, tarball: https://registry.npmjs.org/@cloudflare/component-textarea/-/component-textarea-4.1.2.tgz}
+    resolution: {integrity: sha512-Pk6GlrKNv61HC5mu7mydg7eOJch5iWXt5gFMKG6RigXXJU5AOG93IzteZ794vCwH9aL/C+zAAHd7d7co9LWkSA==}
     peerDependencies:
       '@cloudflare/style-container': ^7.10.0
       react: ^15.0.0-0 || ^16.0.0-0 || ^17.0.0-0
 
   '@cloudflare/component-toast@5.1.2':
-    resolution: {integrity: sha512-O64mr8QNbVhQIoW/Wu9L32PcrVOMu53e8mz9cc6p+kJK1+RjtAt8zoNJo8Zxv4EA3YAFmAZWdFeC3dtV2xs5cg==, tarball: https://registry.npmjs.org/@cloudflare/component-toast/-/component-toast-5.1.2.tgz}
+    resolution: {integrity: sha512-O64mr8QNbVhQIoW/Wu9L32PcrVOMu53e8mz9cc6p+kJK1+RjtAt8zoNJo8Zxv4EA3YAFmAZWdFeC3dtV2xs5cg==}
     peerDependencies:
       '@cloudflare/style-const': ^5.7.2
       '@cloudflare/style-container': ^7.10.0
       react: ^15.0.0-0 || ^16.0.0-0 || ^17.0.0-0
 
   '@cloudflare/component-toggle@9.0.16':
-    resolution: {integrity: sha512-Mppxvs8KncXtAG6ntVFOySuPi08YaTv22yWceZSBvXhcAZVdW2bZqbK+/islZALxS922cfq3JH3qtHyYk8dsKg==, tarball: https://registry.npmjs.org/@cloudflare/component-toggle/-/component-toggle-9.0.16.tgz}
+    resolution: {integrity: sha512-Mppxvs8KncXtAG6ntVFOySuPi08YaTv22yWceZSBvXhcAZVdW2bZqbK+/islZALxS922cfq3JH3qtHyYk8dsKg==}
     peerDependencies:
       '@cloudflare/component-icon': ^11.0.0
       '@cloudflare/style-const': ^5.3.9
@@ -2880,7 +2880,7 @@ packages:
       react: ^15.0.0-0 || ^16.0.0-0 || ^17.0.0-0
 
   '@cloudflare/component-tooltip@4.3.2':
-    resolution: {integrity: sha512-sc1TPFqJkdntMMYWjAd57VOCkFHAu3K80kTjmxGphOv4C6fL8u3Z2RnFGRSs6ZNZFlPSjikJaFHBA6P/tdw3Yg==, tarball: https://registry.npmjs.org/@cloudflare/component-tooltip/-/component-tooltip-4.3.2.tgz}
+    resolution: {integrity: sha512-sc1TPFqJkdntMMYWjAd57VOCkFHAu3K80kTjmxGphOv4C6fL8u3Z2RnFGRSs6ZNZFlPSjikJaFHBA6P/tdw3Yg==}
     peerDependencies:
       '@cloudflare/style-const': ^5.7.2
       '@cloudflare/style-container': ^7.10.0
@@ -2888,180 +2888,180 @@ packages:
       react-dom: ^15.0.0-0 || ^16.0.0-0 || ^17.0.0-0
 
   '@cloudflare/component-visually-hidden@1.0.86':
-    resolution: {integrity: sha512-F7g5P8sowjgbfdfCH+6rL6SqMPtGsO+YuBEetwRJ4M7zzb5/96Sv4Uea5f2V9S+Y0QAYf7iUaQHDy3JtexBwHw==, tarball: https://registry-gateway.cloudflare-ui.workers.dev/archives/@cloudflare/component-visually-hidden/-/component-visually-hidden-1.0.86.tgz}
+    resolution: {integrity: sha512-F7g5P8sowjgbfdfCH+6rL6SqMPtGsO+YuBEetwRJ4M7zzb5/96Sv4Uea5f2V9S+Y0QAYf7iUaQHDy3JtexBwHw==}
     peerDependencies:
       '@cloudflare/style-const': ^5.7.2
       '@cloudflare/style-container': ^7.10.0
       react: ^15.0.0-0 || ^16.0.0-0 || ^17.0.0-0
 
   '@cloudflare/elements@3.0.3':
-    resolution: {integrity: sha512-s6Sjh+IWJD0xn+4iy6hk/FYwY1gAFLWvpiWUmfDZWrQ09ZOTto8aRwpoEN7jUV6dZCPlCkUqMj4xKwRzDQ72FQ==, tarball: https://registry.npmjs.org/@cloudflare/elements/-/elements-3.0.3.tgz}
+    resolution: {integrity: sha512-s6Sjh+IWJD0xn+4iy6hk/FYwY1gAFLWvpiWUmfDZWrQ09ZOTto8aRwpoEN7jUV6dZCPlCkUqMj4xKwRzDQ72FQ==}
     peerDependencies:
       '@cloudflare/style-const': ^5.7.2
       '@cloudflare/style-container': ^7.10.0
       react: ^15.0.0-0 || ^16.0.0-0 || ^17.0.0-0
 
   '@cloudflare/intl-core@1.15.0':
-    resolution: {integrity: sha512-pxD0ctm9x6StbDxAdFs7zi6imXuQxQe93KscTRqIJj/eP1eLhnZs6djqPsnT6rTXQnmlRBpXVE6BaP+594cSMQ==, tarball: https://registry.npmjs.org/@cloudflare/intl-core/-/intl-core-1.15.0.tgz}
+    resolution: {integrity: sha512-pxD0ctm9x6StbDxAdFs7zi6imXuQxQe93KscTRqIJj/eP1eLhnZs6djqPsnT6rTXQnmlRBpXVE6BaP+594cSMQ==}
     peerDependencies:
       regenerator-runtime: 0.x
 
   '@cloudflare/intl-react@1.12.5':
-    resolution: {integrity: sha512-pKFvUHCR/MGYVyuIHsEnk2IfFK8fJNThC+7XJx7q2acE8BT6cGFmbnxDEr3Ccs2hTzq3RiJ7HQ9dUBWcWgoULg==, tarball: https://registry.npmjs.org/@cloudflare/intl-react/-/intl-react-1.12.5.tgz}
+    resolution: {integrity: sha512-pKFvUHCR/MGYVyuIHsEnk2IfFK8fJNThC+7XJx7q2acE8BT6cGFmbnxDEr3Ccs2hTzq3RiJ7HQ9dUBWcWgoULg==}
     peerDependencies:
       react: ^15.0.0-0 || ^16.0.0-0 || ^17.0.0-0
 
   '@cloudflare/intl-types@1.5.1':
-    resolution: {integrity: sha512-zCHVZ9xtvRxDjiqxgG7GPeaS2kpshQsq8dDrZl+c8ppuerrzBreW7hHVw3orllAOe0HLjLCKYWVj47W4O6U8lg==, tarball: https://registry.npmjs.org/@cloudflare/intl-types/-/intl-types-1.5.1.tgz}
+    resolution: {integrity: sha512-zCHVZ9xtvRxDjiqxgG7GPeaS2kpshQsq8dDrZl+c8ppuerrzBreW7hHVw3orllAOe0HLjLCKYWVj47W4O6U8lg==}
     peerDependencies:
       react: ^15.0.0-0 || ^16.0.0-0 || ^17.0.0-0
 
   '@cloudflare/kv-asset-handler@0.3.4':
-    resolution: {integrity: sha512-YLPHc8yASwjNkmcDMQMY35yiWjoKAKnhUbPRszBRS0YgH+IXtsMp61j+yTcnCE3oO2DgP0U3iejLC8FTtKDC8Q==, tarball: https://registry.npmjs.org/@cloudflare/kv-asset-handler/-/kv-asset-handler-0.3.4.tgz}
+    resolution: {integrity: sha512-YLPHc8yASwjNkmcDMQMY35yiWjoKAKnhUbPRszBRS0YgH+IXtsMp61j+yTcnCE3oO2DgP0U3iejLC8FTtKDC8Q==}
     engines: {node: '>=16.13'}
 
   '@cloudflare/style-const@5.7.3':
-    resolution: {integrity: sha512-N9Y8bcFXoO7htm+sSVsBmQOVbjLeEY2hy1CBmvt0AoH1zWvs3izwJrnlL0ee4kJ6DkyjaY6SIAkUGUtTOApF3Q==, tarball: https://registry.npmjs.org/@cloudflare/style-const/-/style-const-5.7.3.tgz}
+    resolution: {integrity: sha512-N9Y8bcFXoO7htm+sSVsBmQOVbjLeEY2hy1CBmvt0AoH1zWvs3izwJrnlL0ee4kJ6DkyjaY6SIAkUGUtTOApF3Q==}
     peerDependencies:
       react: ^15.0.0-0 || ^16.0.0-0 || ^17.0.0-0
 
   '@cloudflare/style-container@7.12.2':
-    resolution: {integrity: sha512-oPgUBSvBlJ4uQ/YHG4uJzx1Z8VCTo47pmy+5rNsaQlUxVh8LC7Tg9hdIPFYiIfi1+5u2MoB8flP3Ra07xzE4HA==, tarball: https://registry.npmjs.org/@cloudflare/style-container/-/style-container-7.12.2.tgz}
+    resolution: {integrity: sha512-oPgUBSvBlJ4uQ/YHG4uJzx1Z8VCTo47pmy+5rNsaQlUxVh8LC7Tg9hdIPFYiIfi1+5u2MoB8flP3Ra07xzE4HA==}
     peerDependencies:
       '@cloudflare/style-const': ^5.3.14
       react: ^15.0.0-0 || ^16.0.0-0 || ^17.0.0-0
 
   '@cloudflare/style-provider@3.1.1':
-    resolution: {integrity: sha512-4emApxFzThzIi1HkhiI+lWirgV1AC6bL5VZfT28MndpZ+LzlmzAm3XVoE6qdC6Ys2XG3CILe9SxauK/48KLl4g==, tarball: https://registry.npmjs.org/@cloudflare/style-provider/-/style-provider-3.1.1.tgz}
+    resolution: {integrity: sha512-4emApxFzThzIi1HkhiI+lWirgV1AC6bL5VZfT28MndpZ+LzlmzAm3XVoE6qdC6Ys2XG3CILe9SxauK/48KLl4g==}
     peerDependencies:
       '@cloudflare/style-const': ^5.3.14
       '@cloudflare/style-container': ^7.10.0
       react: ^15.0.0-0 || ^16.0.0-0 || ^17.0.0-0
 
   '@cloudflare/types@6.18.4':
-    resolution: {integrity: sha512-Cgf6xjaHhQmf/MnSJ8zGat661oWmUI45qD/ClHf9uc++B5gh5128s0kuqaFed243PDhGgjdhQfk/ZGBjz+gf+w==, tarball: https://registry.npmjs.org/@cloudflare/types/-/types-6.18.4.tgz}
+    resolution: {integrity: sha512-Cgf6xjaHhQmf/MnSJ8zGat661oWmUI45qD/ClHf9uc++B5gh5128s0kuqaFed243PDhGgjdhQfk/ZGBjz+gf+w==}
     peerDependencies:
       react: ^15.0.0-0 || ^16.0.0-0 || ^17.0.0-0
 
   '@cloudflare/types@6.23.6':
-    resolution: {integrity: sha512-4JbJv5cbtGeo7Vpg2Sx3LXAhkvDJeJV/9FLFm2u3MkyxXb9SXdjxoanO5bOripQThTrzB1a8Ctw/ghweSA91Cw==, tarball: https://registry.npmjs.org/@cloudflare/types/-/types-6.23.6.tgz}
+    resolution: {integrity: sha512-4JbJv5cbtGeo7Vpg2Sx3LXAhkvDJeJV/9FLFm2u3MkyxXb9SXdjxoanO5bOripQThTrzB1a8Ctw/ghweSA91Cw==}
     peerDependencies:
       react: ^15.0.0-0 || ^16.0.0-0 || ^17.0.0-0
 
   '@cloudflare/util-en-garde@8.0.10':
-    resolution: {integrity: sha512-qdCFf90hoZzT4o4xEmxOKUf9+bEJNGh4ANnRYApo6BMyVnHoHEHAQ3nWmGSHBmo+W9hOk2Ik7r1oHLbI0O/RRg==, tarball: https://registry.npmjs.org/@cloudflare/util-en-garde/-/util-en-garde-8.0.10.tgz}
+    resolution: {integrity: sha512-qdCFf90hoZzT4o4xEmxOKUf9+bEJNGh4ANnRYApo6BMyVnHoHEHAQ3nWmGSHBmo+W9hOk2Ik7r1oHLbI0O/RRg==}
 
   '@cloudflare/util-hooks@1.3.1':
-    resolution: {integrity: sha512-gIsPlzgUbMswIE1h8vGK6LZr/Io5yocUl01WCLy5fxEajhCQ0mNLixkD2Uqne+WPTfqzu4jgC5NxYXgl+Hf6yQ==, tarball: https://registry-gateway.cloudflare-ui.workers.dev/archives/@cloudflare/util-hooks/-/util-hooks-1.3.1.tgz}
+    resolution: {integrity: sha512-gIsPlzgUbMswIE1h8vGK6LZr/Io5yocUl01WCLy5fxEajhCQ0mNLixkD2Uqne+WPTfqzu4jgC5NxYXgl+Hf6yQ==}
     peerDependencies:
       react: ^15.0.0-0 || ^16.0.0-0 || ^17.0.0-0
 
   '@cloudflare/util-markdown@1.2.15':
-    resolution: {integrity: sha512-H8q/Msk+9Fga6iqqmff7i4mi+kraBCQWFbMEaKIRq3+HBNN5gkpizk05DSG6iIHVxCG1M3WR1FkN9CQ0ZtK4Cw==, tarball: https://registry.npmjs.org/@cloudflare/util-markdown/-/util-markdown-1.2.15.tgz}
+    resolution: {integrity: sha512-H8q/Msk+9Fga6iqqmff7i4mi+kraBCQWFbMEaKIRq3+HBNN5gkpizk05DSG6iIHVxCG1M3WR1FkN9CQ0ZtK4Cw==}
 
   '@cloudflare/vitest-pool-workers@0.5.31':
-    resolution: {integrity: sha512-WGChnELpii95VLumWM4F+NiuuIHXdNcUyMPCBL8WKhn1GD04GjE5MtI5R6IyDsGYh8GAbULHzRy6j6t9ajZb9g==, tarball: https://registry.npmjs.org/@cloudflare/vitest-pool-workers/-/vitest-pool-workers-0.5.31.tgz}
+    resolution: {integrity: sha512-WGChnELpii95VLumWM4F+NiuuIHXdNcUyMPCBL8WKhn1GD04GjE5MtI5R6IyDsGYh8GAbULHzRy6j6t9ajZb9g==}
     peerDependencies:
       '@vitest/runner': 2.0.x - 2.1.x
       '@vitest/snapshot': 2.0.x - 2.1.x
       vitest: 2.0.x - 2.1.x
 
   '@cloudflare/workerd-darwin-64@1.20241106.1':
-    resolution: {integrity: sha512-zxvaToi1m0qzAScrxFt7UvFVqU8DxrCO2CinM1yQkv5no7pA1HolpIrwZ0xOhR3ny64Is2s/J6BrRjpO5dM9Zw==, tarball: https://registry.npmjs.org/@cloudflare/workerd-darwin-64/-/workerd-darwin-64-1.20241106.1.tgz}
+    resolution: {integrity: sha512-zxvaToi1m0qzAScrxFt7UvFVqU8DxrCO2CinM1yQkv5no7pA1HolpIrwZ0xOhR3ny64Is2s/J6BrRjpO5dM9Zw==}
     engines: {node: '>=16'}
     cpu: [x64]
     os: [darwin]
 
   '@cloudflare/workerd-darwin-64@1.20241216.0':
-    resolution: {integrity: sha512-GreuUuvd1tp34i/I8rv9I6tJTGkLIdUZfPd4Gq7glRntWhZSfeJOlhFHOa/tIil1SrWi1UzXmWeW22DCcUIprA==, tarball: https://registry.npmjs.org/@cloudflare/workerd-darwin-64/-/workerd-darwin-64-1.20241216.0.tgz}
+    resolution: {integrity: sha512-GreuUuvd1tp34i/I8rv9I6tJTGkLIdUZfPd4Gq7glRntWhZSfeJOlhFHOa/tIil1SrWi1UzXmWeW22DCcUIprA==}
     engines: {node: '>=16'}
     cpu: [x64]
     os: [darwin]
 
   '@cloudflare/workerd-darwin-64@1.20241218.0':
-    resolution: {integrity: sha512-8rveQoxtUvlmORKqTWgjv2ycM8uqWox0u9evn3zd2iWKdou5sncFwH517ZRLI3rq9P31ZLmCQBZ0gloFsTeY6w==, tarball: https://registry.npmjs.org/@cloudflare/workerd-darwin-64/-/workerd-darwin-64-1.20241218.0.tgz}
+    resolution: {integrity: sha512-8rveQoxtUvlmORKqTWgjv2ycM8uqWox0u9evn3zd2iWKdou5sncFwH517ZRLI3rq9P31ZLmCQBZ0gloFsTeY6w==}
     engines: {node: '>=16'}
     cpu: [x64]
     os: [darwin]
 
   '@cloudflare/workerd-darwin-arm64@1.20241106.1':
-    resolution: {integrity: sha512-j3dg/42D/bPgfNP3cRUBxF+4waCKO/5YKwXNj+lnVOwHxDu+ne5pFw9TIkKYcWTcwn0ZUkbNZNM5rhJqRn4xbg==, tarball: https://registry.npmjs.org/@cloudflare/workerd-darwin-arm64/-/workerd-darwin-arm64-1.20241106.1.tgz}
+    resolution: {integrity: sha512-j3dg/42D/bPgfNP3cRUBxF+4waCKO/5YKwXNj+lnVOwHxDu+ne5pFw9TIkKYcWTcwn0ZUkbNZNM5rhJqRn4xbg==}
     engines: {node: '>=16'}
     cpu: [arm64]
     os: [darwin]
 
   '@cloudflare/workerd-darwin-arm64@1.20241216.0':
-    resolution: {integrity: sha512-wGtzIWx4a8uu4y601Zq/x+5fPoSfJoXEEPkqxhcTs2g22Py60wnG91vAeVa8pZe9SipBozYczXh2OwoeCO1QVg==, tarball: https://registry.npmjs.org/@cloudflare/workerd-darwin-arm64/-/workerd-darwin-arm64-1.20241216.0.tgz}
+    resolution: {integrity: sha512-wGtzIWx4a8uu4y601Zq/x+5fPoSfJoXEEPkqxhcTs2g22Py60wnG91vAeVa8pZe9SipBozYczXh2OwoeCO1QVg==}
     engines: {node: '>=16'}
     cpu: [arm64]
     os: [darwin]
 
   '@cloudflare/workerd-darwin-arm64@1.20241218.0':
-    resolution: {integrity: sha512-be59Ad9nmM9lCkhHqmTs/uZ3JVZt8NJ9Z0PY+B0xnc5z6WwmV2lj0RVLtq7xJhQsQJA189zt5rXqDP6J+2mu7Q==, tarball: https://registry.npmjs.org/@cloudflare/workerd-darwin-arm64/-/workerd-darwin-arm64-1.20241218.0.tgz}
+    resolution: {integrity: sha512-be59Ad9nmM9lCkhHqmTs/uZ3JVZt8NJ9Z0PY+B0xnc5z6WwmV2lj0RVLtq7xJhQsQJA189zt5rXqDP6J+2mu7Q==}
     engines: {node: '>=16'}
     cpu: [arm64]
     os: [darwin]
 
   '@cloudflare/workerd-linux-64@1.20241106.1':
-    resolution: {integrity: sha512-Ih+Ye8E1DMBXcKrJktGfGztFqHKaX1CeByqshmTbODnWKHt6O65ax3oTecUwyC0+abuyraOpAtdhHNpFMhUkmw==, tarball: https://registry.npmjs.org/@cloudflare/workerd-linux-64/-/workerd-linux-64-1.20241106.1.tgz}
+    resolution: {integrity: sha512-Ih+Ye8E1DMBXcKrJktGfGztFqHKaX1CeByqshmTbODnWKHt6O65ax3oTecUwyC0+abuyraOpAtdhHNpFMhUkmw==}
     engines: {node: '>=16'}
     cpu: [x64]
     os: [linux]
 
   '@cloudflare/workerd-linux-64@1.20241216.0':
-    resolution: {integrity: sha512-HRkePwhnb/4r2Bd6SS3n8VWLPnczh2ApKo3j5N0YSVOz/bEJlqEbEnKAUivCb79C3zptTsbsb0tJ4b5uZsaHtw==, tarball: https://registry.npmjs.org/@cloudflare/workerd-linux-64/-/workerd-linux-64-1.20241216.0.tgz}
+    resolution: {integrity: sha512-HRkePwhnb/4r2Bd6SS3n8VWLPnczh2ApKo3j5N0YSVOz/bEJlqEbEnKAUivCb79C3zptTsbsb0tJ4b5uZsaHtw==}
     engines: {node: '>=16'}
     cpu: [x64]
     os: [linux]
 
   '@cloudflare/workerd-linux-64@1.20241218.0':
-    resolution: {integrity: sha512-MzpSBcfZXRxrYWxQ4pVDYDrUbkQuM62ssl4ZtHH8J35OAeGsWFAYji6MkS2SpVwVcvacPwJXIF4JSzp4xKImKw==, tarball: https://registry.npmjs.org/@cloudflare/workerd-linux-64/-/workerd-linux-64-1.20241218.0.tgz}
+    resolution: {integrity: sha512-MzpSBcfZXRxrYWxQ4pVDYDrUbkQuM62ssl4ZtHH8J35OAeGsWFAYji6MkS2SpVwVcvacPwJXIF4JSzp4xKImKw==}
     engines: {node: '>=16'}
     cpu: [x64]
     os: [linux]
 
   '@cloudflare/workerd-linux-arm64@1.20241106.1':
-    resolution: {integrity: sha512-mdQFPk4+14Yywn7n1xIzI+6olWM8Ybz10R7H3h+rk0XulMumCWUCy1CzIDauOx6GyIcSgKIibYMssVHZR30ObA==, tarball: https://registry.npmjs.org/@cloudflare/workerd-linux-arm64/-/workerd-linux-arm64-1.20241106.1.tgz}
+    resolution: {integrity: sha512-mdQFPk4+14Yywn7n1xIzI+6olWM8Ybz10R7H3h+rk0XulMumCWUCy1CzIDauOx6GyIcSgKIibYMssVHZR30ObA==}
     engines: {node: '>=16'}
     cpu: [arm64]
     os: [linux]
 
   '@cloudflare/workerd-linux-arm64@1.20241216.0':
-    resolution: {integrity: sha512-5U99Iaj18BEJAEpKr+n2kdOyzCITbmzV0Ld4zMpIw5ZW0R2MHCo1swra84Q+bvElVOK6+7KGhjKQSqyZUF1WWA==, tarball: https://registry.npmjs.org/@cloudflare/workerd-linux-arm64/-/workerd-linux-arm64-1.20241216.0.tgz}
+    resolution: {integrity: sha512-5U99Iaj18BEJAEpKr+n2kdOyzCITbmzV0Ld4zMpIw5ZW0R2MHCo1swra84Q+bvElVOK6+7KGhjKQSqyZUF1WWA==}
     engines: {node: '>=16'}
     cpu: [arm64]
     os: [linux]
 
   '@cloudflare/workerd-linux-arm64@1.20241218.0':
-    resolution: {integrity: sha512-RIuJjPxpNqvwIs52vQsXeRMttvhIjgg9NLjjFa3jK8Ijnj8c3ZDru9Wqi48lJP07yDFIRr4uDMMqh/y29YQi2A==, tarball: https://registry.npmjs.org/@cloudflare/workerd-linux-arm64/-/workerd-linux-arm64-1.20241218.0.tgz}
+    resolution: {integrity: sha512-RIuJjPxpNqvwIs52vQsXeRMttvhIjgg9NLjjFa3jK8Ijnj8c3ZDru9Wqi48lJP07yDFIRr4uDMMqh/y29YQi2A==}
     engines: {node: '>=16'}
     cpu: [arm64]
     os: [linux]
 
   '@cloudflare/workerd-windows-64@1.20241106.1':
-    resolution: {integrity: sha512-4rtcss31E/Rb/PeFocZfr+B9i1MdrkhsTBWizh8siNR4KMmkslU2xs2wPaH1z8+ErxkOsHrKRa5EPLh5rIiFeg==, tarball: https://registry.npmjs.org/@cloudflare/workerd-windows-64/-/workerd-windows-64-1.20241106.1.tgz}
+    resolution: {integrity: sha512-4rtcss31E/Rb/PeFocZfr+B9i1MdrkhsTBWizh8siNR4KMmkslU2xs2wPaH1z8+ErxkOsHrKRa5EPLh5rIiFeg==}
     engines: {node: '>=16'}
     cpu: [x64]
     os: [win32]
 
   '@cloudflare/workerd-windows-64@1.20241216.0':
-    resolution: {integrity: sha512-6UtbWgZNFuVyq6d3nKsp3Eb53Ghm2EYObCKTs9TSzV2ZHbovgOIU8BKIlbfJvmkEbG4Q8bbfZkb3QJpG/IwchQ==, tarball: https://registry.npmjs.org/@cloudflare/workerd-windows-64/-/workerd-windows-64-1.20241216.0.tgz}
+    resolution: {integrity: sha512-6UtbWgZNFuVyq6d3nKsp3Eb53Ghm2EYObCKTs9TSzV2ZHbovgOIU8BKIlbfJvmkEbG4Q8bbfZkb3QJpG/IwchQ==}
     engines: {node: '>=16'}
     cpu: [x64]
     os: [win32]
 
   '@cloudflare/workerd-windows-64@1.20241218.0':
-    resolution: {integrity: sha512-tO1VjlvK3F6Yb2d1jgEy/QBYl//9Pyv3K0j+lq8Eu7qdfm0IgKwSRgDWLept84/qmNsQfausZ4JdNGxTf9xsxQ==, tarball: https://registry.npmjs.org/@cloudflare/workerd-windows-64/-/workerd-windows-64-1.20241218.0.tgz}
+    resolution: {integrity: sha512-tO1VjlvK3F6Yb2d1jgEy/QBYl//9Pyv3K0j+lq8Eu7qdfm0IgKwSRgDWLept84/qmNsQfausZ4JdNGxTf9xsxQ==}
     engines: {node: '>=16'}
     cpu: [x64]
     os: [win32]
 
   '@cloudflare/workers-shared@0.8.0':
-    resolution: {integrity: sha512-1OvFkNtslaMZAJsaocTmbACApgmWv55uLpNj50Pn2MGcxdAjpqykXJFQw5tKc+lGV9TDZh9oO3Rsk17IEQDzIg==, tarball: https://registry.npmjs.org/@cloudflare/workers-shared/-/workers-shared-0.8.0.tgz}
+    resolution: {integrity: sha512-1OvFkNtslaMZAJsaocTmbACApgmWv55uLpNj50Pn2MGcxdAjpqykXJFQw5tKc+lGV9TDZh9oO3Rsk17IEQDzIg==}
     engines: {node: '>=16.7.0'}
 
   '@cloudflare/workers-types@4.20241218.0':
-    resolution: {integrity: sha512-Y0brjmJHcAZBXOPI7lU5hbiXglQWniA1kQjot2ata+HFimyjPPcz+4QWBRrmWcMPo0OadR2Vmac7WStDLpvz0w==, tarball: https://registry.npmjs.org/@cloudflare/workers-types/-/workers-types-4.20241218.0.tgz}
+    resolution: {integrity: sha512-Y0brjmJHcAZBXOPI7lU5hbiXglQWniA1kQjot2ata+HFimyjPPcz+4QWBRrmWcMPo0OadR2Vmac7WStDLpvz0w==}
 
   '@colors/colors@1.5.0':
     resolution: {integrity: sha512-ooWCrlZP11i8GImSjTHYHLkvFDP48nS4+204nGb1RiX/WXYHmJA2III9/e2DWVabCESdW7hBAEzHRqUn9OUVvQ==}
@@ -4382,8 +4382,8 @@ packages:
     resolution: {integrity: sha512-Gr/qwzyPaTL1tZcq8WQyHhTZREER5R1Wytmz4WnVGL4onA3dNk6Btll55c8Vr58pLdvWZmtG8oZxJTw3t3q7Jg==}
     engines: {node: '>=16.0.0'}
 
-  '@smithy/core@2.5.6':
-    resolution: {integrity: sha512-w494xO+CPwG/5B/N2l0obHv2Fi9U4DAY+sTi1GWT3BVvGpZetJjJXAynIO9IHp4zS1PinGhXtRSZydUXbJO4ag==}
+  '@smithy/core@2.5.7':
+    resolution: {integrity: sha512-8olpW6mKCa0v+ibCjoCzgZHQx1SQmZuW/WkrdZo73wiTprTH6qhmskT60QLFdT9DRa5mXxjz89kQPZ7ZSsoqqg==}
     engines: {node: '>=16.0.0'}
 
   '@smithy/credential-provider-imds@3.2.8':
@@ -4409,8 +4409,8 @@ packages:
     resolution: {integrity: sha512-L1Ib66+gg9uTnqp/18Gz4MDpJPKRE44geOjOQ2SVc0eiaO5l255ADziATZgjQjqumC7yPtp1XnjHlF1srcwjKw==}
     engines: {node: '>=16.0.0'}
 
-  '@smithy/fetch-http-handler@4.1.2':
-    resolution: {integrity: sha512-R7rU7Ae3ItU4rC0c5mB2sP5mJNbCfoDc8I5XlYjIZnquyUwec7fEo78F6DA3SmgJgkU1qTMcZJuGblxZsl10ZA==}
+  '@smithy/fetch-http-handler@4.1.3':
+    resolution: {integrity: sha512-6SxNltSncI8s689nvnzZQc/dPXcpHQ34KUj6gR/HBroytKOd/isMG3gJF/zBE1TBmTT18TXyzhg3O3SOOqGEhA==}
 
   '@smithy/hash-blob-browser@3.1.10':
     resolution: {integrity: sha512-elwslXOoNunmfS0fh55jHggyhccobFkexLYC1ZeZ1xP2BTSrcIBaHV2b4xUQOdctrSNOpMqOZH1r2XzWTEhyfA==}
@@ -4441,12 +4441,12 @@ packages:
     resolution: {integrity: sha512-zfMhzojhFpIX3P5ug7jxTjfUcIPcGjcQYzB9t+rv0g1TX7B0QdwONW+ATouaLoD7h7LOw/ZlXfkq4xJ/g2TrIw==}
     engines: {node: '>=16.0.0'}
 
-  '@smithy/middleware-endpoint@3.2.7':
-    resolution: {integrity: sha512-GTxSKf280aJBANGN97MomUQhW1VNxZ6w7HAj/pvZM5MUHbMPOGnWOp1PRYKi4czMaHNj9bdiA+ZarmT3Wkdqiw==}
+  '@smithy/middleware-endpoint@3.2.8':
+    resolution: {integrity: sha512-OEJZKVUEhMOqMs3ktrTWp7UvvluMJEvD5XgQwRePSbDg1VvBaL8pX8mwPltFn6wk1GySbcVwwyldL8S+iqnrEQ==}
     engines: {node: '>=16.0.0'}
 
-  '@smithy/middleware-retry@3.0.33':
-    resolution: {integrity: sha512-7ge5k7K+8lcT/jhcI4blaFCu+luaJfwq3sdPC5dO6SE02gDODfcmweR/Tr39qTTOX2DLWh9TQlkMuNVMvYY9mg==}
+  '@smithy/middleware-retry@3.0.34':
+    resolution: {integrity: sha512-yVRr/AAtPZlUvwEkrq7S3x7Z8/xCd97m2hLDaqdz6ucP2RKHsBjEqaUA2ebNv2SsZoPEi+ZD0dZbOB1u37tGCA==}
     engines: {node: '>=16.0.0'}
 
   '@smithy/middleware-serde@3.0.11':
@@ -4493,8 +4493,8 @@ packages:
     resolution: {integrity: sha512-5JWeMQYg81TgU4cG+OexAWdvDTs5JDdbEZx+Qr1iPbvo91QFGzjy0IkXAKaXUHqmKUJgSHK0ZxnCkgZpzkeNTA==}
     engines: {node: '>=16.0.0'}
 
-  '@smithy/smithy-client@3.6.0':
-    resolution: {integrity: sha512-ZMrzY6GuiTVK4ehkMInc4quw1SHyFtiNahC+w0xiG7qRUD1ynlXo+TfIjooMgh7xPMIxvkRFxq4H7feeYdQ6Rw==}
+  '@smithy/smithy-client@3.7.0':
+    resolution: {integrity: sha512-9wYrjAZFlqWhgVo3C4y/9kpc68jgiSsKUnsFPzr/MSiRL93+QRDafGTfhhKAb2wsr69Ru87WTiqSfQusSmWipA==}
     engines: {node: '>=16.0.0'}
 
   '@smithy/types@3.7.2':
@@ -4527,12 +4527,12 @@ packages:
     resolution: {integrity: sha512-pbjk4s0fwq3Di/ANL+rCvJMKM5bzAQdE5S/6RL5NXgMExFAi6UgQMPOm5yPaIWPpr+EOXKXRonJ3FoxKf4mCJQ==}
     engines: {node: '>=16.0.0'}
 
-  '@smithy/util-defaults-mode-browser@3.0.33':
-    resolution: {integrity: sha512-/xmnhZSxQAH/fkZUiAPXer/B8NbMGmfPJJMdmhIl0XBTXxZ1iO+Qkmd2zc/mFiL1A6NWYeKX7YvagXgf0XSZfw==}
+  '@smithy/util-defaults-mode-browser@3.0.34':
+    resolution: {integrity: sha512-FumjjF631lR521cX+svMLBj3SwSDh9VdtyynTYDAiBDEf8YPP5xORNXKQ9j0105o5+ARAGnOOP/RqSl40uXddA==}
     engines: {node: '>= 10.0.0'}
 
-  '@smithy/util-defaults-mode-node@3.0.33':
-    resolution: {integrity: sha512-J6x5IU29r5oi96xcpGfKT0dSO+qw69ZtbdoRlRYYvhHeMiAoewP91JzdYbjEehDdw9WMg35DlsDSSk3ov3sq8g==}
+  '@smithy/util-defaults-mode-node@3.0.34':
+    resolution: {integrity: sha512-vN6aHfzW9dVVzkI0wcZoUXvfjkl4CSbM9nE//08lmUMyf00S75uuCpTrqF9uD4bD9eldIXlt53colrlwKAT8Gw==}
     engines: {node: '>= 10.0.0'}
 
   '@smithy/util-endpoints@2.1.7':
@@ -4551,8 +4551,8 @@ packages:
     resolution: {integrity: sha512-hJUC6W7A3DQgaee3Hp9ZFcOxVDZzmBIRBPlUAk8/fSOEl7pE/aX7Dci0JycNOnm9Mfr0KV2XjIlUOcGWXQUdVQ==}
     engines: {node: '>=16.0.0'}
 
-  '@smithy/util-stream@3.3.3':
-    resolution: {integrity: sha512-bOm0YMMxRjbI3X6QkWwADPFkh2AH2xBMQIB1IQgCsCRqXXpSJatgjUR3oxHthpYwFkw3WPkOt8VgMpJxC0rFqg==}
+  '@smithy/util-stream@3.3.4':
+    resolution: {integrity: sha512-SGhGBG/KupieJvJSZp/rfHHka8BFgj56eek9px4pp7lZbOF+fRiVr4U7A3y3zJD8uGhxq32C5D96HxsTC9BckQ==}
     engines: {node: '>=16.0.0'}
 
   '@smithy/util-uri-escape@3.0.0':
@@ -10727,36 +10727,36 @@ snapshots:
       '@aws-sdk/util-user-agent-node': 3.721.0
       '@aws-sdk/xml-builder': 3.709.0
       '@smithy/config-resolver': 3.0.13
-      '@smithy/core': 2.5.6
+      '@smithy/core': 2.5.7
       '@smithy/eventstream-serde-browser': 3.0.14
       '@smithy/eventstream-serde-config-resolver': 3.0.11
       '@smithy/eventstream-serde-node': 3.0.13
-      '@smithy/fetch-http-handler': 4.1.2
+      '@smithy/fetch-http-handler': 4.1.3
       '@smithy/hash-blob-browser': 3.1.10
       '@smithy/hash-node': 3.0.11
       '@smithy/hash-stream-node': 3.1.10
       '@smithy/invalid-dependency': 3.0.11
       '@smithy/md5-js': 3.0.11
       '@smithy/middleware-content-length': 3.0.13
-      '@smithy/middleware-endpoint': 3.2.7
-      '@smithy/middleware-retry': 3.0.33
+      '@smithy/middleware-endpoint': 3.2.8
+      '@smithy/middleware-retry': 3.0.34
       '@smithy/middleware-serde': 3.0.11
       '@smithy/middleware-stack': 3.0.11
       '@smithy/node-config-provider': 3.1.12
       '@smithy/node-http-handler': 3.3.3
       '@smithy/protocol-http': 4.1.8
-      '@smithy/smithy-client': 3.6.0
+      '@smithy/smithy-client': 3.7.0
       '@smithy/types': 3.7.2
       '@smithy/url-parser': 3.0.11
       '@smithy/util-base64': 3.0.0
       '@smithy/util-body-length-browser': 3.0.0
       '@smithy/util-body-length-node': 3.0.0
-      '@smithy/util-defaults-mode-browser': 3.0.33
-      '@smithy/util-defaults-mode-node': 3.0.33
+      '@smithy/util-defaults-mode-browser': 3.0.34
+      '@smithy/util-defaults-mode-node': 3.0.34
       '@smithy/util-endpoints': 2.1.7
       '@smithy/util-middleware': 3.0.11
       '@smithy/util-retry': 3.0.11
-      '@smithy/util-stream': 3.3.3
+      '@smithy/util-stream': 3.3.4
       '@smithy/util-utf8': 3.0.0
       '@smithy/util-waiter': 3.2.0
       tslib: 2.8.1
@@ -10780,26 +10780,26 @@ snapshots:
       '@aws-sdk/util-user-agent-browser': 3.714.0
       '@aws-sdk/util-user-agent-node': 3.721.0
       '@smithy/config-resolver': 3.0.13
-      '@smithy/core': 2.5.6
-      '@smithy/fetch-http-handler': 4.1.2
+      '@smithy/core': 2.5.7
+      '@smithy/fetch-http-handler': 4.1.3
       '@smithy/hash-node': 3.0.11
       '@smithy/invalid-dependency': 3.0.11
       '@smithy/middleware-content-length': 3.0.13
-      '@smithy/middleware-endpoint': 3.2.7
-      '@smithy/middleware-retry': 3.0.33
+      '@smithy/middleware-endpoint': 3.2.8
+      '@smithy/middleware-retry': 3.0.34
       '@smithy/middleware-serde': 3.0.11
       '@smithy/middleware-stack': 3.0.11
       '@smithy/node-config-provider': 3.1.12
       '@smithy/node-http-handler': 3.3.3
       '@smithy/protocol-http': 4.1.8
-      '@smithy/smithy-client': 3.6.0
+      '@smithy/smithy-client': 3.7.0
       '@smithy/types': 3.7.2
       '@smithy/url-parser': 3.0.11
       '@smithy/util-base64': 3.0.0
       '@smithy/util-body-length-browser': 3.0.0
       '@smithy/util-body-length-node': 3.0.0
-      '@smithy/util-defaults-mode-browser': 3.0.33
-      '@smithy/util-defaults-mode-node': 3.0.33
+      '@smithy/util-defaults-mode-browser': 3.0.34
+      '@smithy/util-defaults-mode-node': 3.0.34
       '@smithy/util-endpoints': 2.1.7
       '@smithy/util-middleware': 3.0.11
       '@smithy/util-retry': 3.0.11
@@ -10823,26 +10823,26 @@ snapshots:
       '@aws-sdk/util-user-agent-browser': 3.714.0
       '@aws-sdk/util-user-agent-node': 3.721.0
       '@smithy/config-resolver': 3.0.13
-      '@smithy/core': 2.5.6
-      '@smithy/fetch-http-handler': 4.1.2
+      '@smithy/core': 2.5.7
+      '@smithy/fetch-http-handler': 4.1.3
       '@smithy/hash-node': 3.0.11
       '@smithy/invalid-dependency': 3.0.11
       '@smithy/middleware-content-length': 3.0.13
-      '@smithy/middleware-endpoint': 3.2.7
-      '@smithy/middleware-retry': 3.0.33
+      '@smithy/middleware-endpoint': 3.2.8
+      '@smithy/middleware-retry': 3.0.34
       '@smithy/middleware-serde': 3.0.11
       '@smithy/middleware-stack': 3.0.11
       '@smithy/node-config-provider': 3.1.12
       '@smithy/node-http-handler': 3.3.3
       '@smithy/protocol-http': 4.1.8
-      '@smithy/smithy-client': 3.6.0
+      '@smithy/smithy-client': 3.7.0
       '@smithy/types': 3.7.2
       '@smithy/url-parser': 3.0.11
       '@smithy/util-base64': 3.0.0
       '@smithy/util-body-length-browser': 3.0.0
       '@smithy/util-body-length-node': 3.0.0
-      '@smithy/util-defaults-mode-browser': 3.0.33
-      '@smithy/util-defaults-mode-node': 3.0.33
+      '@smithy/util-defaults-mode-browser': 3.0.34
+      '@smithy/util-defaults-mode-node': 3.0.34
       '@smithy/util-endpoints': 2.1.7
       '@smithy/util-middleware': 3.0.11
       '@smithy/util-retry': 3.0.11
@@ -10868,26 +10868,26 @@ snapshots:
       '@aws-sdk/util-user-agent-browser': 3.714.0
       '@aws-sdk/util-user-agent-node': 3.721.0
       '@smithy/config-resolver': 3.0.13
-      '@smithy/core': 2.5.6
-      '@smithy/fetch-http-handler': 4.1.2
+      '@smithy/core': 2.5.7
+      '@smithy/fetch-http-handler': 4.1.3
       '@smithy/hash-node': 3.0.11
       '@smithy/invalid-dependency': 3.0.11
       '@smithy/middleware-content-length': 3.0.13
-      '@smithy/middleware-endpoint': 3.2.7
-      '@smithy/middleware-retry': 3.0.33
+      '@smithy/middleware-endpoint': 3.2.8
+      '@smithy/middleware-retry': 3.0.34
       '@smithy/middleware-serde': 3.0.11
       '@smithy/middleware-stack': 3.0.11
       '@smithy/node-config-provider': 3.1.12
       '@smithy/node-http-handler': 3.3.3
       '@smithy/protocol-http': 4.1.8
-      '@smithy/smithy-client': 3.6.0
+      '@smithy/smithy-client': 3.7.0
       '@smithy/types': 3.7.2
       '@smithy/url-parser': 3.0.11
       '@smithy/util-base64': 3.0.0
       '@smithy/util-body-length-browser': 3.0.0
       '@smithy/util-body-length-node': 3.0.0
-      '@smithy/util-defaults-mode-browser': 3.0.33
-      '@smithy/util-defaults-mode-node': 3.0.33
+      '@smithy/util-defaults-mode-browser': 3.0.34
+      '@smithy/util-defaults-mode-node': 3.0.34
       '@smithy/util-endpoints': 2.1.7
       '@smithy/util-middleware': 3.0.11
       '@smithy/util-retry': 3.0.11
@@ -10899,12 +10899,12 @@ snapshots:
   '@aws-sdk/core@3.716.0':
     dependencies:
       '@aws-sdk/types': 3.714.0
-      '@smithy/core': 2.5.6
+      '@smithy/core': 2.5.7
       '@smithy/node-config-provider': 3.1.12
       '@smithy/property-provider': 3.1.11
       '@smithy/protocol-http': 4.1.8
       '@smithy/signature-v4': 4.2.4
-      '@smithy/smithy-client': 3.6.0
+      '@smithy/smithy-client': 3.7.0
       '@smithy/types': 3.7.2
       '@smithy/util-middleware': 3.0.11
       fast-xml-parser: 4.4.1
@@ -10922,13 +10922,13 @@ snapshots:
     dependencies:
       '@aws-sdk/core': 3.716.0
       '@aws-sdk/types': 3.714.0
-      '@smithy/fetch-http-handler': 4.1.2
+      '@smithy/fetch-http-handler': 4.1.3
       '@smithy/node-http-handler': 3.3.3
       '@smithy/property-provider': 3.1.11
       '@smithy/protocol-http': 4.1.8
-      '@smithy/smithy-client': 3.6.0
+      '@smithy/smithy-client': 3.7.0
       '@smithy/types': 3.7.2
-      '@smithy/util-stream': 3.3.3
+      '@smithy/util-stream': 3.3.4
       tslib: 2.8.1
 
   '@aws-sdk/credential-provider-ini@3.721.0(@aws-sdk/client-sso-oidc@3.721.0(@aws-sdk/client-sts@3.721.0))(@aws-sdk/client-sts@3.721.0)':
@@ -11030,7 +11030,7 @@ snapshots:
       '@smithy/protocol-http': 4.1.8
       '@smithy/types': 3.7.2
       '@smithy/util-middleware': 3.0.11
-      '@smithy/util-stream': 3.3.3
+      '@smithy/util-stream': 3.3.4
       '@smithy/util-utf8': 3.0.0
       tslib: 2.8.1
 
@@ -11065,15 +11065,15 @@ snapshots:
       '@aws-sdk/core': 3.716.0
       '@aws-sdk/types': 3.714.0
       '@aws-sdk/util-arn-parser': 3.693.0
-      '@smithy/core': 2.5.6
+      '@smithy/core': 2.5.7
       '@smithy/node-config-provider': 3.1.12
       '@smithy/protocol-http': 4.1.8
       '@smithy/signature-v4': 4.2.4
-      '@smithy/smithy-client': 3.6.0
+      '@smithy/smithy-client': 3.7.0
       '@smithy/types': 3.7.2
       '@smithy/util-config-provider': 3.0.0
       '@smithy/util-middleware': 3.0.11
-      '@smithy/util-stream': 3.3.3
+      '@smithy/util-stream': 3.3.4
       '@smithy/util-utf8': 3.0.0
       tslib: 2.8.1
 
@@ -11088,7 +11088,7 @@ snapshots:
       '@aws-sdk/core': 3.716.0
       '@aws-sdk/types': 3.714.0
       '@aws-sdk/util-endpoints': 3.714.0
-      '@smithy/core': 2.5.6
+      '@smithy/core': 2.5.7
       '@smithy/protocol-http': 4.1.8
       '@smithy/types': 3.7.2
       tslib: 2.8.1
@@ -11260,7 +11260,7 @@ snapshots:
       '@babel/traverse': 7.24.5
       '@babel/types': 7.25.2
       convert-source-map: 2.0.0
-      debug: 4.3.7(supports-color@8.1.1)
+      debug: 4.3.7(supports-color@9.2.2)
       gensync: 1.0.0-beta.2
       json5: 2.2.3
       semver: 6.3.1
@@ -11280,7 +11280,7 @@ snapshots:
       '@babel/traverse': 7.25.9
       '@babel/types': 7.25.9
       convert-source-map: 2.0.0
-      debug: 4.3.7(supports-color@8.1.1)
+      debug: 4.3.7(supports-color@9.2.2)
       gensync: 1.0.0-beta.2
       json5: 2.2.3
       semver: 6.3.1
@@ -11300,7 +11300,7 @@ snapshots:
       '@babel/traverse': 7.25.9
       '@babel/types': 7.26.3
       convert-source-map: 2.0.0
-      debug: 4.3.7(supports-color@8.1.1)
+      debug: 4.3.7(supports-color@9.2.2)
       gensync: 1.0.0-beta.2
       json5: 2.2.3
       semver: 6.3.1
@@ -11511,7 +11511,7 @@ snapshots:
       '@babel/helper-split-export-declaration': 7.24.5
       '@babel/parser': 7.25.3
       '@babel/types': 7.25.2
-      debug: 4.3.7(supports-color@8.1.1)
+      debug: 4.3.7(supports-color@9.2.2)
       globals: 11.12.0
     transitivePeerDependencies:
       - supports-color
@@ -11523,7 +11523,7 @@ snapshots:
       '@babel/parser': 7.25.9
       '@babel/template': 7.25.9
       '@babel/types': 7.25.9
-      debug: 4.3.7(supports-color@8.1.1)
+      debug: 4.3.7(supports-color@9.2.2)
       globals: 11.12.0
     transitivePeerDependencies:
       - supports-color
@@ -11988,7 +11988,7 @@ snapshots:
       esbuild: 0.17.19
       miniflare: 3.20241106.1
       semver: 7.5.4
-      vitest: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)
+      vitest: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
       wrangler: 3.90.0(@cloudflare/workers-types@4.20241218.0)
       zod: 3.22.3
     transitivePeerDependencies:
@@ -12602,7 +12602,7 @@ snapshots:
   '@mapbox/node-pre-gyp@1.0.11(encoding@0.1.13)':
     dependencies:
       detect-libc: 2.0.2
-      https-proxy-agent: 5.0.1
+      https-proxy-agent: 5.0.1(supports-color@9.2.2)
       make-dir: 3.1.0
       node-fetch: 2.6.11(encoding@0.1.13)
       nopt: 5.0.0
@@ -13160,14 +13160,14 @@ snapshots:
       '@smithy/util-middleware': 3.0.11
       tslib: 2.8.1
 
-  '@smithy/core@2.5.6':
+  '@smithy/core@2.5.7':
     dependencies:
       '@smithy/middleware-serde': 3.0.11
       '@smithy/protocol-http': 4.1.8
       '@smithy/types': 3.7.2
       '@smithy/util-body-length-browser': 3.0.0
       '@smithy/util-middleware': 3.0.11
-      '@smithy/util-stream': 3.3.3
+      '@smithy/util-stream': 3.3.4
       '@smithy/util-utf8': 3.0.0
       tslib: 2.8.1
 
@@ -13209,7 +13209,7 @@ snapshots:
       '@smithy/types': 3.7.2
       tslib: 2.8.1
 
-  '@smithy/fetch-http-handler@4.1.2':
+  '@smithy/fetch-http-handler@4.1.3':
     dependencies:
       '@smithy/protocol-http': 4.1.8
       '@smithy/querystring-builder': 3.0.11
@@ -13262,9 +13262,9 @@ snapshots:
       '@smithy/types': 3.7.2
       tslib: 2.8.1
 
-  '@smithy/middleware-endpoint@3.2.7':
+  '@smithy/middleware-endpoint@3.2.8':
     dependencies:
-      '@smithy/core': 2.5.6
+      '@smithy/core': 2.5.7
       '@smithy/middleware-serde': 3.0.11
       '@smithy/node-config-provider': 3.1.12
       '@smithy/shared-ini-file-loader': 3.1.12
@@ -13273,12 +13273,12 @@ snapshots:
       '@smithy/util-middleware': 3.0.11
       tslib: 2.8.1
 
-  '@smithy/middleware-retry@3.0.33':
+  '@smithy/middleware-retry@3.0.34':
     dependencies:
       '@smithy/node-config-provider': 3.1.12
       '@smithy/protocol-http': 4.1.8
       '@smithy/service-error-classification': 3.0.11
-      '@smithy/smithy-client': 3.6.0
+      '@smithy/smithy-client': 3.7.0
       '@smithy/types': 3.7.2
       '@smithy/util-middleware': 3.0.11
       '@smithy/util-retry': 3.0.11
@@ -13351,14 +13351,14 @@ snapshots:
       '@smithy/util-utf8': 3.0.0
       tslib: 2.8.1
 
-  '@smithy/smithy-client@3.6.0':
+  '@smithy/smithy-client@3.7.0':
     dependencies:
-      '@smithy/core': 2.5.6
-      '@smithy/middleware-endpoint': 3.2.7
+      '@smithy/core': 2.5.7
+      '@smithy/middleware-endpoint': 3.2.8
       '@smithy/middleware-stack': 3.0.11
       '@smithy/protocol-http': 4.1.8
       '@smithy/types': 3.7.2
-      '@smithy/util-stream': 3.3.3
+      '@smithy/util-stream': 3.3.4
       tslib: 2.8.1
 
   '@smithy/types@3.7.2':
@@ -13399,21 +13399,21 @@ snapshots:
     dependencies:
       tslib: 2.8.1
 
-  '@smithy/util-defaults-mode-browser@3.0.33':
+  '@smithy/util-defaults-mode-browser@3.0.34':
     dependencies:
       '@smithy/property-provider': 3.1.11
-      '@smithy/smithy-client': 3.6.0
+      '@smithy/smithy-client': 3.7.0
       '@smithy/types': 3.7.2
       bowser: 2.11.0
       tslib: 2.8.1
 
-  '@smithy/util-defaults-mode-node@3.0.33':
+  '@smithy/util-defaults-mode-node@3.0.34':
     dependencies:
       '@smithy/config-resolver': 3.0.13
       '@smithy/credential-provider-imds': 3.2.8
       '@smithy/node-config-provider': 3.1.12
       '@smithy/property-provider': 3.1.11
-      '@smithy/smithy-client': 3.6.0
+      '@smithy/smithy-client': 3.7.0
       '@smithy/types': 3.7.2
       tslib: 2.8.1
 
@@ -13438,9 +13438,9 @@ snapshots:
       '@smithy/types': 3.7.2
       tslib: 2.8.1
 
-  '@smithy/util-stream@3.3.3':
+  '@smithy/util-stream@3.3.4':
     dependencies:
-      '@smithy/fetch-http-handler': 4.1.2
+      '@smithy/fetch-http-handler': 4.1.3
       '@smithy/node-http-handler': 3.3.3
       '@smithy/types': 3.7.2
       '@smithy/util-base64': 3.0.0
@@ -13858,7 +13858,7 @@ snapshots:
       '@typescript-eslint/types': 7.18.0
       '@typescript-eslint/typescript-estree': 7.18.0(typescript@5.6.3)
       '@typescript-eslint/visitor-keys': 7.18.0
-      debug: 4.3.7(supports-color@8.1.1)
+      debug: 4.3.7(supports-color@9.2.2)
       eslint: 8.57.0
     optionalDependencies:
       typescript: 5.6.3
@@ -13891,7 +13891,7 @@ snapshots:
     dependencies:
       '@typescript-eslint/typescript-estree': 7.18.0(typescript@5.6.3)
       '@typescript-eslint/utils': 7.18.0(eslint@8.57.0)(typescript@5.6.3)
-      debug: 4.3.7(supports-color@8.1.1)
+      debug: 4.3.7(supports-color@9.2.2)
       eslint: 8.57.0
       ts-api-utils: 1.4.3(typescript@5.6.3)
     optionalDependencies:
@@ -13921,7 +13921,7 @@ snapshots:
     dependencies:
       '@typescript-eslint/types': 7.18.0
       '@typescript-eslint/visitor-keys': 7.18.0
-      debug: 4.3.7(supports-color@8.1.1)
+      debug: 4.3.7(supports-color@9.2.2)
       globby: 11.1.0
       is-glob: 4.0.3
       minimatch: 9.0.5
@@ -14192,21 +14192,9 @@ snapshots:
 
   acorn@8.14.0: {}
 
-  agent-base@6.0.2:
-    dependencies:
-      debug: 4.3.7(supports-color@8.1.1)
-    transitivePeerDependencies:
-      - supports-color
-
   agent-base@6.0.2(supports-color@9.2.2):
     dependencies:
       debug: 4.3.7(supports-color@9.2.2)
-    transitivePeerDependencies:
-      - supports-color
-
-  agent-base@7.1.0:
-    dependencies:
-      debug: 4.3.7(supports-color@8.1.1)
     transitivePeerDependencies:
       - supports-color
 
@@ -14724,7 +14712,7 @@ snapshots:
 
   capnp-ts@0.5.1:
     dependencies:
-      debug: 4.3.7(supports-color@8.1.1)
+      debug: 4.3.7(supports-color@9.2.2)
       format: 0.2.2
       tslib: 2.5.3
       utf8-encoding: 0.1.2
@@ -16401,7 +16389,7 @@ snapshots:
     dependencies:
       basic-ftp: 5.0.3
       data-uri-to-buffer: 5.0.1
-      debug: 4.3.7(supports-color@8.1.1)
+      debug: 4.3.7(supports-color@9.2.2)
       fs-extra: 8.1.0
     transitivePeerDependencies:
       - supports-color
@@ -16656,7 +16644,7 @@ snapshots:
   http-proxy-agent@7.0.2:
     dependencies:
       agent-base: 7.1.3
-      debug: 4.3.7(supports-color@8.1.1)
+      debug: 4.3.7(supports-color@9.2.2)
     transitivePeerDependencies:
       - supports-color
 
@@ -16672,24 +16660,10 @@ snapshots:
       quick-lru: 5.1.1
       resolve-alpn: 1.2.1
 
-  https-proxy-agent@5.0.1:
-    dependencies:
-      agent-base: 6.0.2
-      debug: 4.3.7(supports-color@8.1.1)
-    transitivePeerDependencies:
-      - supports-color
-
   https-proxy-agent@5.0.1(supports-color@9.2.2):
     dependencies:
       agent-base: 6.0.2(supports-color@9.2.2)
       debug: 4.3.7(supports-color@9.2.2)
-    transitivePeerDependencies:
-      - supports-color
-
-  https-proxy-agent@7.0.2:
-    dependencies:
-      agent-base: 7.1.0
-      debug: 4.3.6(supports-color@9.2.2)
     transitivePeerDependencies:
       - supports-color
 
@@ -16703,7 +16677,7 @@ snapshots:
   https-proxy-agent@7.0.6:
     dependencies:
       agent-base: 7.1.3
-      debug: 4.3.7(supports-color@8.1.1)
+      debug: 4.3.7(supports-color@9.2.2)
     transitivePeerDependencies:
       - supports-color
 
@@ -17959,11 +17933,11 @@ snapshots:
   pac-proxy-agent@7.0.1:
     dependencies:
       '@tootallnate/quickjs-emscripten': 0.23.0
-      agent-base: 7.1.0
-      debug: 4.3.7(supports-color@8.1.1)
+      agent-base: 7.1.0(supports-color@9.2.2)
+      debug: 4.3.7(supports-color@9.2.2)
       get-uri: 6.0.1
       http-proxy-agent: 7.0.2
-      https-proxy-agent: 7.0.2
+      https-proxy-agent: 7.0.2(supports-color@9.2.2)
       pac-resolver: 7.0.0
       socks-proxy-agent: 8.0.2
     transitivePeerDependencies:
@@ -18481,10 +18455,10 @@ snapshots:
 
   proxy-agent@6.3.1:
     dependencies:
-      agent-base: 7.1.0
-      debug: 4.3.7(supports-color@8.1.1)
+      agent-base: 7.1.0(supports-color@9.2.2)
+      debug: 4.3.7(supports-color@9.2.2)
       http-proxy-agent: 7.0.2
-      https-proxy-agent: 7.0.2
+      https-proxy-agent: 7.0.2(supports-color@9.2.2)
       lru-cache: 7.18.3
       pac-proxy-agent: 7.0.1
       proxy-from-env: 1.1.0
@@ -19123,8 +19097,8 @@ snapshots:
 
   socks-proxy-agent@8.0.2:
     dependencies:
-      agent-base: 7.1.0
-      debug: 4.3.7(supports-color@8.1.1)
+      agent-base: 7.1.0(supports-color@9.2.2)
+      debug: 4.3.7(supports-color@9.2.2)
       socks: 2.7.1
     transitivePeerDependencies:
       - supports-color
@@ -19939,23 +19913,6 @@ snapshots:
 
   vary@1.1.2: {}
 
-  vite-node@2.1.8(@types/node@18.19.59):
-    dependencies:
-      cac: 6.7.14
-      debug: 4.3.7(supports-color@8.1.1)
-      es-module-lexer: 1.5.4
-      pathe: 1.1.2
-      vite: 5.0.12(@types/node@18.19.59)
-    transitivePeerDependencies:
-      - '@types/node'
-      - less
-      - lightningcss
-      - sass
-      - stylus
-      - sugarss
-      - supports-color
-      - terser
-
   vite-node@2.1.8(@types/node@18.19.59)(supports-color@9.2.2):
     dependencies:
       cac: 6.7.14
@@ -20018,41 +19975,6 @@ snapshots:
       '@vitest/utils': 2.1.3
       mock-socket: 9.3.1
       vitest: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
-
-  vitest@2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8):
-    dependencies:
-      '@vitest/expect': 2.1.8
-      '@vitest/mocker': 2.1.8(msw@2.4.3(typescript@5.6.3))(vite@5.0.12(@types/node@18.19.59))
-      '@vitest/pretty-format': 2.1.8
-      '@vitest/runner': 2.1.8
-      '@vitest/snapshot': 2.1.8
-      '@vitest/spy': 2.1.8
-      '@vitest/utils': 2.1.8
-      chai: 5.1.2
-      debug: 4.3.7(supports-color@8.1.1)
-      expect-type: 1.1.0
-      magic-string: 0.30.14
-      pathe: 1.1.2
-      std-env: 3.8.0
-      tinybench: 2.9.0
-      tinyexec: 0.3.1
-      tinypool: 1.0.1
-      tinyrainbow: 1.2.0
-      vite: 5.0.12(@types/node@18.19.59)
-      vite-node: 2.1.8(@types/node@18.19.59)
-      why-is-node-running: 2.3.0
-    optionalDependencies:
-      '@types/node': 18.19.59
-      '@vitest/ui': 2.1.8(vitest@2.1.8)
-    transitivePeerDependencies:
-      - less
-      - lightningcss
-      - msw
-      - sass
-      - stylus
-      - sugarss
-      - supports-color
-      - terser
 
   vitest@2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2):
     dependencies:
