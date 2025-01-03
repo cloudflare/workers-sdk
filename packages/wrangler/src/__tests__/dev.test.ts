@@ -1891,7 +1891,7 @@ describe.sequential("wrangler dev", () => {
 			await expect(
 				runWrangler("dev index.js")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				"[Error: Browser render is not supported locally. Please use `wrangler dev --remote` instead.]"
+				"[Error: Browser Rendering is not supported locally. Please use `wrangler dev --remote` instead.]"
 			);
 		});
 	});
