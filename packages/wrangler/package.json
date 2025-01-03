@@ -69,6 +69,7 @@
 		"type:tests": "tsc -p ./src/__tests__/tsconfig.json && tsc -p ./e2e/tsconfig.json"
 	},
 	"dependencies": {
+		"@aws-sdk/client-s3": "^3.721.0",
 		"@cloudflare/kv-asset-handler": "workspace:*",
 		"@esbuild-plugins/node-globals-polyfill": "^0.2.3",
 		"@esbuild-plugins/node-modules-polyfill": "^0.2.2",
