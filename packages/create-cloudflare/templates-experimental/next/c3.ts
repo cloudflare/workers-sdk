@@ -38,7 +38,7 @@ export default {
 	//       is not yet fully ready for Next.js 15, once it is we should remove the following
 	frameworkCliPinnedVersion: "14.2.5",
 	platform: "workers",
-	displayName: "Next (using Node.js compat + Workers Assets)",
+	displayName: "Next.js (using Node.js compat + Workers Assets)",
 	path: "templates-experimental/next",
 	copyFiles: {
 		path: "./templates",
