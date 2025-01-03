@@ -66,7 +66,7 @@ const config: TemplateConfig = {
 	configVersion: 1,
 	id: "solid",
 	frameworkCli: "create-solid",
-	displayName: "Solid",
+	displayName: "SolidStart",
 	platform: "pages",
 	copyFiles: {
 		path: "./templates",
