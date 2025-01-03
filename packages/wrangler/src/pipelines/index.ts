@@ -13,7 +13,6 @@ import {
 	getPipeline,
 	getR2Bucket,
 	listPipelines,
-	sha256,
 	updatePipeline,
 } from "./client";
 import type { CommonYargsArgv, CommonYargsOptions } from "../yargs-types";
@@ -29,38 +28,33 @@ import type { Argv } from "yargs";
 let __testSkipDelaysFlag = false;
 
 async function authorizeR2Bucket(
-	name: string,
+	pipelineName: string,
 	accountId: string,
-	bucket: string
+	bucketName: string
 ) {
 	try {
-		await getR2Bucket(accountId, bucket);
+		await getR2Bucket(accountId, bucketName);
 	} catch (err) {
 		if (err instanceof APIError) {
 			if (err.code == 10006) {
-				throw new FatalError(`The R2 bucket [${bucket}] doesn't exist`);
+				throw new FatalError(`The R2 bucket [${bucketName}] doesn't exist`);
 			}
 		}
 		throw err;
 	}
 
-	logger.log(`🌀 Authorizing R2 bucket "${bucket}"`);
+	logger.log(`🌀 Authorizing R2 bucket "${bucketName}"`);
 
 	const serviceToken = await generateR2ServiceToken(
-		`Service token for Pipeline ${name}`,
 		accountId,
-		bucket
+		bucketName,
+		pipelineName
 	);
-	const access_key_id = serviceToken.id;
-	const secret_access_key = sha256(serviceToken.value);
 
 	// wait for token to settle/propagate
 	!__testSkipDelaysFlag && (await sleep(3000));
 
-	return {
-		secret_access_key,
-		access_key_id,
-	};
+	return serviceToken;
 }
 
 function getAccountR2Endpoint(accountId: string) {
@@ -240,8 +234,8 @@ export function pipelines(pipelineYargs: CommonYargsArgv) {
 						accountId,
 						pipelineConfig.destination.path.bucket
 					);
-					destination.credentials.access_key_id = auth.access_key_id;
-					destination.credentials.secret_access_key = auth.secret_access_key;
+					destination.credentials.access_key_id = auth.accessKeyId;
+					destination.credentials.secret_access_key = auth.secretAccessKey;
 				}
 
 				if (!destination.credentials.access_key_id) {
@@ -415,8 +409,8 @@ export function pipelines(pipelineYargs: CommonYargsArgv) {
 							accountId,
 							destination.path.bucket
 						);
-						destination.credentials.access_key_id = auth.access_key_id;
-						destination.credentials.secret_access_key = auth.secret_access_key;
+						destination.credentials.access_key_id = auth.accessKeyId;
+						destination.credentials.secret_access_key = auth.secretAccessKey;
 					}
 					if (!destination.credentials.access_key_id) {
 						throw new FatalError("Requires a r2 access key id");
@@ -463,7 +457,7 @@ export function pipelines(pipelineYargs: CommonYargsArgv) {
 								args.authentication !== undefined
 									? // if auth specified, use it
 										args.authentication
-									: // if auth not specified, use previos value or default(false)
+									: // if auth not specified, use previous value or default(false)
 										source?.authentication,
 						} satisfies HttpSource);
 					}
