@@ -1,3 +1,4 @@
+import * as fs from "fs";
 import { cwd } from "process";
 import { http, HttpResponse } from "msw";
 import { reinitialiseAuthTokens } from "../../user";
@@ -14,7 +15,7 @@ import { writeWranglerConfig } from "../helpers/write-wrangler-config";
 
 describe("migrate", () => {
 	runInTempDir();
-	mockConsoleMethods();
+	const std = mockConsoleMethods();
 	mockSetTimeout();
 
 	const { setIsTTY } = useMockIsTTY();
@@ -31,6 +32,28 @@ describe("migrate", () => {
 			await expect(
 				runWrangler("d1 migrations create test some-message --local DATABASE")
 			).rejects.toThrowError(`Unknown argument: local`);
+		});
+
+		it("numbers a migration even if prior migrations do not have a number prefix", async () => {
+			setIsTTY(false);
+			writeWranglerConfig({
+				d1_databases: [
+					{ binding: "DATABASE", database_name: "db", database_id: "xxxx" },
+				],
+			});
+			fs.mkdirSync("./migrations");
+			fs.writeFileSync("./migrations/init.sql", "");
+			await runWrangler("d1 migrations create db some-message");
+
+			mockConfirm({
+				text: `About to apply 1 migration(s)
+Your database may not be available to serve requests during the migration, continue?`,
+				result: true,
+			});
+			// regression test for 0NaN_some-message.sql
+			expect(std.out).toContain(
+				`✅ Successfully created Migration '0001_some-message.sql'!`
+			);
 		});
 	});
 
