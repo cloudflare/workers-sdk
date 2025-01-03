@@ -2,7 +2,7 @@ import * as fs from "node:fs";
 import { basename, dirname, extname, join, relative, resolve } from "node:path";
 import { findUpSync } from "find-up";
 import { getNodeCompat } from "miniflare";
-import { readConfig } from "../config";
+import { experimental_readRawConfig, readConfig } from "../config";
 import { resolveWranglerConfigPath } from "../config/config-helpers";
 import { getEntry } from "../deployment-bundle/entry";
 import { getVarsForDev } from "../dev/dev-vars";
@@ -12,7 +12,7 @@ import { parseJSONC } from "../parse";
 import { printWranglerBanner } from "../wrangler-banner";
 import { generateRuntimeTypes } from "./runtime";
 import { logRuntimeTypesMessage } from "./runtime/log-runtime-types-message";
-import type { Config } from "../config";
+import type { Config, RawEnvironment } from "../config";
 import type { Entry } from "../deployment-bundle/entry";
 import type { CfScriptFormat } from "../deployment-bundle/worker";
 import type {
@@ -39,6 +39,11 @@ export function typesOptions(yargs: CommonYargsArgv) {
 			type: "string",
 			describe: "The path of the generated runtime types file",
 			demandOption: false,
+		})
+		.option("strict-vars", {
+			type: "boolean",
+			default: true,
+			describe: "Generate literal and union types for variables",
 		});
 }
 
@@ -113,11 +118,9 @@ export async function typesHandler(
 		true
 	) as Record<string, string>;
 
-	const configBindingsWithSecrets: Partial<Config> & {
-		secrets: Record<string, string>;
-	} = {
+	const configBindingsWithSecrets = {
 		kv_namespaces: config.kv_namespaces ?? [],
-		vars: { ...config.vars },
+		vars: getVarsInfo(args),
 		wasm_modules: config.wasm_modules,
 		text_blobs: {
 			...config.text_blobs,
@@ -149,7 +152,8 @@ export async function typesHandler(
 		configBindingsWithSecrets,
 		config,
 		envInterface,
-		outputPath
+		outputPath,
+		args.strictVars
 	);
 }
 
@@ -207,15 +211,29 @@ export function generateImportSpecifier(from: string, to: string) {
  */
 export function constructType(
 	key: string,
-	value: string | number | boolean,
+	value: string | number | boolean | string[],
 	useRawVal = true
 ) {
 	const typeKey = constructTypeKey(key);
-	if (typeof value === "string") {
+
+	const stringValue =
+		typeof value === "string"
+			? value
+			: Array.isArray(value) && value.length === 1
+				? value[0]
+				: null;
+
+	if (stringValue) {
 		if (useRawVal) {
-			return `${typeKey}: ${value};`;
+			return `${typeKey}: ${stringValue};`;
 		}
-		return `${typeKey}: ${JSON.stringify(value)};`;
+		return `${typeKey}: ${JSON.stringify(stringValue)};`;
+	}
+	if (Array.isArray(value)) {
+		if (useRawVal) {
+			return `${typeKey}: ${value.join(" | ")};`;
+		}
+		return `${typeKey}: ${value.map((str) => JSON.stringify(str)).join("|")};`;
 	}
 	if (typeof value === "number" || typeof value === "boolean") {
 		return `${typeKey}: ${value};`;
@@ -225,11 +243,16 @@ export function constructType(
 
 type Secrets = Record<string, string>;
 
+type ConfigToDTS = Partial<Omit<Config, "vars">> & { vars: VarsInfo } & {
+	secrets: Secrets;
+};
+
 async function generateTypes(
-	configToDTS: Partial<Config> & { secrets: Secrets },
+	configToDTS: ConfigToDTS,
 	config: Config,
 	envInterface: string,
-	outputPath: string
+	outputPath: string,
+	strictVars: boolean
 ) {
 	const configContainsEntrypoint =
 		config.main !== undefined || !!config.site?.["entry-point"];
@@ -275,19 +298,37 @@ async function generateTypes(
 		const vars = Object.entries(configToDTS.vars).filter(
 			([key]) => !(key in configToDTS.secrets)
 		);
-		for (const [varName, varValue] of vars) {
-			if (
-				typeof varValue === "string" ||
-				typeof varValue === "number" ||
-				typeof varValue === "boolean"
-			) {
-				envTypeStructure.push(constructType(varName, varValue, false));
-			}
-			if (typeof varValue === "object" && varValue !== null) {
-				envTypeStructure.push(
-					constructType(varName, JSON.stringify(varValue), true)
-				);
-			}
+		for (const [varName, varInfo] of vars) {
+			const varValueTypes = new Set(
+				varInfo
+					.map(({ value }) => value)
+					.map((varValue) => {
+						if (!strictVars) {
+							if (Array.isArray(varValue)) {
+								const typesInArray = [
+									...new Set(varValue.map((item) => typeof item)),
+								].sort();
+								if (typesInArray.length === 1) {
+									return `${typesInArray[0]}[]`;
+								}
+								return `(${typesInArray.join("|")})[]`;
+							}
+							return typeof varValue;
+						}
+						if (
+							typeof varValue === "string" ||
+							typeof varValue === "number" ||
+							typeof varValue === "boolean"
+						) {
+							return `"${varValue}"`;
+						}
+						if (typeof varValue === "object" && varValue !== null) {
+							return `${JSON.stringify(varValue)}`;
+						}
+					})
+					.filter(Boolean)
+			) as Set<string>;
+			envTypeStructure.push(constructType(varName, [...varValueTypes], true));
 		}
 	}
 
@@ -578,3 +619,30 @@ type TSConfig = {
 		types: string[];
 	};
 };
+
+type VarValue = Config["vars"][string];
+
+type VarInfoValue = { value: VarValue; env?: string };
+
+type VarsInfo = Record<string, VarInfoValue[]>;
+
+function getVarsInfo(
+	args: StrictYargsOptionsToInterface<typeof typesOptions>
+): VarsInfo {
+	const varsInfo: VarsInfo = {};
+	const { rawConfig } = experimental_readRawConfig(args);
+
+	function collectVars(vars: RawEnvironment["vars"], envName?: string) {
+		Object.entries(vars ?? {}).forEach(([key, value]) => {
+			varsInfo[key] ??= [];
+			varsInfo[key].push({ value, env: envName });
+		});
+	}
+
+	collectVars(rawConfig.vars);
+	Object.entries(rawConfig.env ?? {}).forEach(([envName, env]) => {
+		collectVars(env.vars, envName);
+	});
+
+	return varsInfo;
+}

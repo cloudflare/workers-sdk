@@ -603,6 +603,35 @@ describe("generateTypes()", () => {
 	`);
 	});
 
+	it("should allow opting out of strict-vars", async () => {
+		fs.writeFileSync(
+			"./wrangler.toml",
+			TOML.stringify({
+				vars: {
+					varStr: "A from wrangler toml",
+					varArrNum: [1, 2, 3],
+					varArrMix: [1, "two", 3, true],
+					varObj: { test: true },
+				},
+			} as TOML.JsonMap),
+			"utf-8"
+		);
+
+		await runWrangler("types --strict-vars=false");
+
+		expect(std.out).toMatchInlineSnapshot(`
+		"Generating project types...
+
+		interface Env {
+			varStr: string;
+			varArrNum: number[];
+			varArrMix: (boolean|number|string)[];
+			varObj: object;
+		}
+		"
+	`);
+	});
+
 	it("should override vars with secrets", async () => {
 		fs.writeFileSync(
 			"./wrangler.toml",
@@ -633,6 +662,70 @@ describe("generateTypes()", () => {
 		}
 		"
 	`);
+	});
+
+	describe("vars present in multiple environments", () => {
+		beforeEach(() => {
+			fs.writeFileSync(
+				"./wrangler.toml",
+				TOML.stringify({
+					vars: {
+						MY_VAR: "a var",
+						MY_VAR_A: "A (dev)",
+						MY_VAR_B: { value: "B (dev)" },
+						MY_VAR_C: ["a", "b", "c"],
+					},
+					env: {
+						production: {
+							vars: {
+								MY_VAR: "a var",
+								MY_VAR_A: "A (prod)",
+								MY_VAR_B: { value: "B (prod)" },
+								MY_VAR_C: [1, 2, 3],
+							},
+						},
+						staging: {
+							vars: {
+								MY_VAR_A: "A (stag)",
+							},
+						},
+					},
+				} as TOML.JsonMap),
+				"utf-8"
+			);
+		});
+
+		it("should produce string and union types for variables (default)", async () => {
+			await runWrangler("types");
+
+			expect(std.out).toMatchInlineSnapshot(`
+			"Generating project types...
+
+			interface Env {
+				MY_VAR: \\"a var\\";
+				MY_VAR_A: \\"A (dev)\\" | \\"A (prod)\\" | \\"A (stag)\\";
+				MY_VAR_C: [\\"a\\",\\"b\\",\\"c\\"] | [1,2,3];
+				MY_VAR_B: {\\"value\\":\\"B (dev)\\"} | {\\"value\\":\\"B (prod)\\"};
+			}
+			"
+		`);
+		});
+
+		it("should produce non-strict types for variables (with --strict-vars=false)", async () => {
+			await runWrangler("types --strict-vars=false");
+
+			expect(std.out).toMatchInlineSnapshot(`
+			"Generating project types...
+
+			interface Env {
+				MY_VAR: string;
+				MY_VAR_A: string;
+				MY_VAR_C: string[] | number[];
+				MY_VAR_B: object;
+			}
+			"
+		`);
+		});
 	});
 
 	describe("customization", () => {
