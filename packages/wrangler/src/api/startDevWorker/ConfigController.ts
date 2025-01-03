@@ -321,9 +321,12 @@ async function resolveConfig(
 		);
 	}
 
-	if (resolved.bindings?.browser && resolved.dev.remote !== true) {
+	if (
+		extractBindingsOfType("browser", resolved.bindings).length &&
+		!resolved.dev.remote
+	) {
 		throw new UserError(
-			"Browser render is not supported locally. Please use `wrangler dev --remote` instead."
+			"Browser Rendering is not supported locally. Please use `wrangler dev --remote` instead."
 		);
 	}
 
