@@ -71,14 +71,14 @@ export const cloudchamber = (
 			(args) => handleFailure(applyCommand)(args)
 		)
 		.command(
-			"build",
+			"build [PATH]",
 			"build a dockerfile",
 			(args) => buildYargs(args),
 			(args) => handleFailure(buildCommand)(args)
 		)
 		.command(
-			"push",
-			"push a tag to a registry (defaults to cloudchamber managed registry)",
+			"push [TAG]",
+			"push a tagged image to a Cloudflare managed registry, which is automatically integrated with your account",
 			(args) => pushYargs(args),
 			(args) => handleFailure(pushCommand)(args)
 		);
