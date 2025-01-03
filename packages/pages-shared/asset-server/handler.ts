@@ -25,10 +25,8 @@ type BodyEncoding = "manual" | "automatic";
 // Before serving a 404, we check the cache to see if we've served this asset recently
 // and if so, serve it from the cache instead of responding with a 404.
 // This gives a bit of a grace period between deployments for any clients browsing the old deployment.
-export const ASSET_PRESERVATION_CACHE_V1 = "assetPreservationCache";
-// V2 stores the content hash instead of the asset.
-// TODO: Remove V1 once we've fully migrated to V2
-export const ASSET_PRESERVATION_CACHE_V2 = "assetPreservationCacheV2";
+// Only the content hash is actually stored in the body.
+export const ASSET_PRESERVATION_CACHE = "assetPreservationCacheV2";
 const CACHE_CONTROL_PRESERVATION = "public, s-maxage=604800"; // 1 week
 
 /** The preservation cache should be periodically
@@ -74,6 +72,25 @@ type FindAssetEntryForPath<AssetEntry> = (
 	path: string
 ) => Promise<null | AssetEntry>;
 
+function generateETagHeader(assetKey: string) {
+	// https://support.cloudflare.com/hc/en-us/articles/218505467-Using-ETag-Headers-with-Cloudflare
+	// We sometimes remove etags unless they are wrapped in quotes
+	const strongETag = `"${assetKey}"`;
+	const weakETag = `W/"${assetKey}"`;
+	return { strongETag, weakETag };
+}
+
+function checkIfNoneMatch(
+	request: Request,
+	strongETag: string,
+	weakETag: string
+) {
+	const ifNoneMatch = request.headers.get("if-none-match");
+
+	// We sometimes downgrade strong etags to a weak ones, so we need to check for both
+	return ifNoneMatch === weakETag || ifNoneMatch === strongETag;
+}
+
 type ServeAsset<AssetEntry> = (
 	assetEntry: AssetEntry,
 	options?: { preserve: boolean }
@@ -82,7 +99,10 @@ type ServeAsset<AssetEntry> = (
 type CacheStatus = "hit" | "miss";
 type CacheResult<A extends string> = `${A}-${CacheStatus}`;
 export type HandlerMetrics = {
-	preservationCacheResult?: CacheResult<"checked"> | "disabled";
+	preservationCacheResult?:
+		| CacheResult<"checked">
+		| "not-modified"
+		| "disabled";
 	earlyHintsResult?: CacheResult<"used" | "notused"> | "disabled";
 };
 
@@ -520,22 +540,16 @@ export async function generateHandler<
 
 		const assetKey = getAssetKey(servingAssetEntry, content);
 
-		// https://support.cloudflare.com/hc/en-us/articles/218505467-Using-ETag-Headers-with-Cloudflare
-		// We sometimes remove etags unless they are wrapped in quotes
-		const etag = `"${assetKey}"`;
-		const weakEtag = `W/${etag}`;
-
-		const ifNoneMatch = request.headers.get("if-none-match");
-
-		// We sometimes downgrade strong etags to a weak ones, so we need to check for both
-		if (ifNoneMatch === weakEtag || ifNoneMatch === etag) {
+		const { strongETag, weakETag } = generateETagHeader(assetKey);
+		const isIfNoneMatch = checkIfNoneMatch(request, strongETag, weakETag);
+		if (isIfNoneMatch) {
 			return new NotModifiedResponse();
 		}
 
 		try {
 			const asset = await fetchAsset(assetKey);
 			const headers: Record<string, string> = {
-				etag,
+				etag: strongETag,
 				"content-type": asset.contentType,
 			};
 			let encodeBody: BodyEncoding = "automatic";
@@ -576,14 +590,14 @@ export async function generateHandler<
 				waitUntil(
 					(async () => {
 						try {
-							const assetPreservationCacheV2 = await caches.open(
-								ASSET_PRESERVATION_CACHE_V2
+							const assetPreservationCache = await caches.open(
+								ASSET_PRESERVATION_CACHE
 							);
 
 							// Check if the asset has changed since last written to cache
 							// or if the cached entry is getting too old and should have
 							// it's expiration reset.
-							const match = await assetPreservationCacheV2.match(request);
+							const match = await assetPreservationCache.match(request);
 							if (
 								!match ||
 								assetKey !== (await match.text()) ||
@@ -599,7 +613,7 @@ export async function generateHandler<
 								);
 								preservedResponse.headers.set("x-robots-tag", "noindex");
 
-								await assetPreservationCacheV2.put(
+								await assetPreservationCache.put(
 									request.url,
 									preservedResponse
 								);
@@ -637,29 +651,12 @@ export async function generateHandler<
 	async function notFound(): Promise<Response> {
 		if (caches) {
 			try {
-				const assetPreservationCacheV2 = await caches.open(
-					ASSET_PRESERVATION_CACHE_V2
+				const assetPreservationCache = await caches.open(
+					ASSET_PRESERVATION_CACHE
 				);
-				let preservedResponse = await assetPreservationCacheV2.match(
+				const preservedResponse = await assetPreservationCache.match(
 					request.url
 				);
-
-				// Continue serving from V1 preservation cache for some time to
-				// prevent 404s during the migration to V2
-				const cutoffDate = new Date("2024-05-17");
-				if (!preservedResponse && Date.now() < cutoffDate.getTime()) {
-					const assetPreservationCacheV1 = await caches.open(
-						ASSET_PRESERVATION_CACHE_V1
-					);
-					preservedResponse = await assetPreservationCacheV1.match(request.url);
-					if (preservedResponse) {
-						// V1 cache contains full response bodies so we return it directly
-						if (setMetrics) {
-							setMetrics({ preservationCacheResult: "checked-hit" });
-						}
-						return preservedResponse;
-					}
-				}
 
 				// V2 cache only contains the asset key, rather than the asset body:
 				if (preservedResponse) {
@@ -673,7 +670,21 @@ export async function generateHandler<
 						return new Response(null, preservedResponse);
 					}
 					if (assetKey) {
+						const { strongETag, weakETag } = generateETagHeader(assetKey);
+						const isIfNoneMatch = checkIfNoneMatch(
+							request,
+							strongETag,
+							weakETag
+						);
+						if (isIfNoneMatch) {
+							if (setMetrics) {
+								setMetrics({ preservationCacheResult: "not-modified" });
+							}
+							return new NotModifiedResponse();
+						}
+
 						const asset = await fetchAsset(assetKey);
+
 						if (asset) {
 							// We know the asset hasn't changed, so use the cached headers.
 							return new Response(asset.body, preservedResponse);

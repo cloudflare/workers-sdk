@@ -1,5 +1,17 @@
 # @cloudflare/workflows-shared
 
+## 0.2.2
+
+### Patch Changes
+
+- [#7575](https://github.com/cloudflare/workers-sdk/pull/7575) [`7216835`](https://github.com/cloudflare/workers-sdk/commit/7216835bf7489804905751c6b52e75a8945e7974) Thanks [@LuisDuarte1](https://github.com/LuisDuarte1)! - Make `Instance.status()` return type the same as production
+
+## 0.2.1
+
+### Patch Changes
+
+- [#7520](https://github.com/cloudflare/workers-sdk/pull/7520) [`805ad2b`](https://github.com/cloudflare/workers-sdk/commit/805ad2b3959210b0d838daf789f580f329e1d7dd) Thanks [@bruxodasilva](https://github.com/bruxodasilva)! - Fixed a bug in local development where fetching a Workflow instance by ID would return a Workflow status, even if that instance did not exist. This only impacted the `get()` method on the Worker bindings.
+
 ## 0.2.0
 
 ### Minor Changes

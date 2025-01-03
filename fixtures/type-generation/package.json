@@ -7,6 +7,7 @@
 		"test:watch": "vitest"
 	},
 	"devDependencies": {
+		"vitest": "catalog:default",
 		"wrangler": "workspace:*"
 	},
 	"volta": {

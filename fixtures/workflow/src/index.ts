@@ -27,7 +27,7 @@ export class Demo extends WorkflowEntrypoint<{}, Params> {
 			};
 		});
 
-		return [result, result2, timestamp, payload];
+		return "i'm a workflow output";
 	}
 }
 

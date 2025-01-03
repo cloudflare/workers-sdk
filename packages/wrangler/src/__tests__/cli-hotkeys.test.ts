@@ -4,17 +4,21 @@ import registerHotKeys from "../cli-hotkeys";
 import { logger } from "../logger";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { useMockIsTTY } from "./helpers/mock-istty";
-import type { KeypressEvent } from "../utils/onKeyPress";
+import type { Key } from "node:readline";
 
-const writeToMockedStdin = (input: string) =>
-	_internalKeyPressCallback({
-		name: input,
-		sequence: input,
-		ctrl: false,
-		meta: false,
-		shift: false,
-	});
-let _internalKeyPressCallback: (input: KeypressEvent) => void;
+const writeToMockedStdin = (input: string | Key) =>
+	_internalKeyPressCallback(
+		typeof input === "string"
+			? {
+					name: input,
+					sequence: input,
+					ctrl: false,
+					meta: false,
+					shift: false,
+				}
+			: input
+	);
+let _internalKeyPressCallback: (input: Key) => void;
 vitest.mock("../utils/onKeyPress", async () => {
 	return {
 		onKeyPress(callback: () => void) {
@@ -79,6 +83,48 @@ describe("Hot Keys", () => {
 			writeToMockedStdin("A");
 			expect(handlerA).toHaveBeenCalled();
 			handlerA.mockClear();
+		});
+
+		it("handles meta keys", async () => {
+			const handlerCtrl = vi.fn();
+			const handlerMeta = vi.fn();
+			const handlerShift = vi.fn();
+			const options = [
+				{ keys: ["ctrl+a"], label: "ctrl option", handler: handlerCtrl },
+				{ keys: ["meta+a"], label: "meta option", handler: handlerMeta },
+				{ keys: ["shift+a"], label: "shift option", handler: handlerShift },
+			];
+
+			registerHotKeys(options);
+
+			writeToMockedStdin("a");
+			expect(handlerCtrl).not.toHaveBeenCalled();
+
+			writeToMockedStdin("ctrl+a");
+			expect(handlerCtrl).toHaveBeenCalled();
+			handlerCtrl.mockClear();
+
+			writeToMockedStdin("meta+a");
+			expect(handlerMeta).toHaveBeenCalled();
+			handlerMeta.mockClear();
+
+			writeToMockedStdin("shift+a");
+			expect(handlerShift).toHaveBeenCalled();
+			handlerShift.mockClear();
+		});
+
+		it("ignores missing key names", async () => {
+			const handlerA = vi.fn();
+			const options = [
+				{ keys: ["a"], label: "first option", handler: handlerA },
+			];
+
+			registerHotKeys(options);
+
+			writeToMockedStdin({
+				shift: false,
+			});
+			expect(handlerA).not.toHaveBeenCalled();
 		});
 
 		it("ignores unbound keys", async () => {

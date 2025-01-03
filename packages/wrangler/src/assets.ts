@@ -443,6 +443,47 @@ export function validateAssetsArgsAndConfig(
 				"Please remove the asset binding from your configuration file, or provide a Worker script in your configuration file (`main`)."
 		);
 	}
+
+	// Smart placement turned on when using assets
+	if (
+		config?.placement?.mode === "smart" &&
+		config?.assets?.experimental_serve_directly === false
+	) {
+		logger.warn(
+			"Turning on Smart Placement in a Worker that is using assets and serve_directly set to false means that your entire Worker could be moved to run closer to your data source, and all requests will go to that Worker before serving assets.\n" +
+				"This could result in poor performance as round trip times could increase when serving assets.\n\n" +
+				"Read more: https://developers.cloudflare.com/workers/static-assets/binding/#smart-placement"
+		);
+	}
+
+	// User Worker ahead of assets, but no assets binding provided
+	if (
+		"legacy" in args
+			? args.assets?.assetConfig?.serve_directly === false &&
+				!args.assets?.binding
+			: config?.assets?.experimental_serve_directly === false &&
+				!config?.assets?.binding
+	) {
+		logger.warn(
+			"experimental_serve_directly=false set without an assets binding\n" +
+				"Setting experimental_serve_directly to false will always invoke your Worker script.\n" +
+				"To fetch your assets from your Worker, please set the [assets.binding] key in your configuration file.\n\n" +
+				"Read more: https://developers.cloudflare.com/workers/static-assets/binding/#binding"
+		);
+	}
+
+	// Using serve_directly=false, but didn't provide a Worker script
+	if (
+		"legacy" in args
+			? args.entrypoint === noOpEntrypoint &&
+				args.assets?.assetConfig?.serve_directly === false
+			: !config?.main && config?.assets?.experimental_serve_directly === false
+	) {
+		throw new UserError(
+			"Cannot set experimental_serve_directly=false without a Worker script.\n" +
+				"Please remove experimental_serve_directly from your configuration file, or provide a Worker script in your configuration file (`main`)."
+		);
+	}
 }
 
 const CF_ASSETS_IGNORE_FILENAME = ".assetsignore";

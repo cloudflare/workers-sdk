@@ -10,6 +10,7 @@ import {
 	convertCfWorkerInitBindingstoBindings,
 	extractBindingsOfType,
 } from "./api/startDevWorker/utils";
+import { getAssetsOptions } from "./assets";
 import { configFileName, formatConfigSnippet } from "./config";
 import { resolveWranglerConfigPath } from "./config/config-helpers";
 import { createCommand } from "./core/create-command";
@@ -868,9 +869,7 @@ export async function getHostAndRoutes(
 				routes?: Extract<Trigger, { type: "route" }>[];
 				assets?: string;
 		  },
-	config: Pick<Config, "route" | "routes" | "assets"> & {
-		dev: Pick<Config["dev"], "host">;
-	}
+	config: Config
 ) {
 	// TODO: if worker_dev = false and no routes, then error (only for dev)
 	// Compute zone info from the `host` and `route` args and config;
@@ -891,7 +890,8 @@ export async function getHostAndRoutes(
 		}
 	});
 	if (routes) {
-		validateRoutes(routes, Boolean(args.assets || config.assets));
+		const assetOptions = getAssetsOptions({ assets: args.assets }, config);
+		validateRoutes(routes, assetOptions);
 	}
 	return { host, routes };
 }
@@ -1042,12 +1042,7 @@ export function getBindings(
 			process.env[
 				`WRANGLER_HYPERDRIVE_LOCAL_CONNECTION_STRING_${hyperdrive.binding}`
 			];
-		// only require a local connection string in the wrangler file or the env if not using dev --remote
-		if (
-			local &&
-			!connectionStringFromEnv &&
-			!hyperdrive.localConnectionString
-		) {
+		if (!connectionStringFromEnv && !hyperdrive.localConnectionString) {
 			throw new UserError(
 				`When developing locally, you should use a local Postgres connection string to emulate Hyperdrive functionality. Please setup Postgres locally and set the value of the 'WRANGLER_HYPERDRIVE_LOCAL_CONNECTION_STRING_${hyperdrive.binding}' variable or "${hyperdrive.binding}"'s "localConnectionString" to the Postgres connection string.`
 			);

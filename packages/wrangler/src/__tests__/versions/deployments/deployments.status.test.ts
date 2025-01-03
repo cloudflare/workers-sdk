@@ -25,7 +25,7 @@ describe("deployments list", () => {
 			);
 
 			await expect(result).rejects.toMatchInlineSnapshot(
-				`[Error: You need to provide a name of your worker. Either pass it as a cli arg with \`--name <name>\` or in your config file as \`name = "<name>"\`]`
+				`[Error: You need to provide a name for your Worker. Either pass it as a cli arg with \`--name <name>\` or in your configuration file as \`name = "<name>"\`]`
 			);
 
 			expect(std.out).toMatchInlineSnapshot(`""`);

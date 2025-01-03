@@ -17,7 +17,6 @@ export function resolveWranglerConfigPath({
 	}
 
 	const leafPath = script !== undefined ? path.dirname(script) : process.cwd();
-
 	return findWranglerConfig(leafPath);
 }
 

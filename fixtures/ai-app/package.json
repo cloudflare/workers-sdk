@@ -13,7 +13,9 @@
 	},
 	"devDependencies": {
 		"@cloudflare/workers-tsconfig": "workspace:^",
+		"typescript": "catalog:default",
 		"undici": "catalog:default",
+		"vitest": "catalog:default",
 		"wrangler": "workspace:*"
 	},
 	"volta": {

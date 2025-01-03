@@ -1,6 +1,6 @@
 {
 	"name": "@cloudflare/workflows-shared",
-	"version": "0.2.0",
+	"version": "0.2.2",
 	"private": true,
 	"description": "Package that is used at Cloudflare to power some internal features of Cloudflare Workflows.",
 	"keywords": [
@@ -41,7 +41,7 @@
 	"devDependencies": {
 		"@cloudflare/eslint-config-worker": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
-		"@cloudflare/workers-types": "^4.20241205.0",
+		"@cloudflare/workers-types": "^4.20241218.0",
 		"@types/mime": "^3.0.4",
 		"esbuild": "0.17.19",
 		"rimraf": "^6.0.1",

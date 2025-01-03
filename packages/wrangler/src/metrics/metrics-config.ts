@@ -24,6 +24,10 @@ export interface MetricsConfigOptions {
 	 */
 	sendMetrics?: boolean;
 	/**
+	 * Captures whether this is a Worker with static assets
+	 */
+	hasAssets?: boolean;
+	/**
 	 * Path to wrangler configuration file, if it exists. Used for configFileType property
 	 */
 	configPath?: string | undefined;

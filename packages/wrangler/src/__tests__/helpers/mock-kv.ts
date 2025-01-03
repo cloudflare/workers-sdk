@@ -1,6 +1,6 @@
 import { http, HttpResponse } from "msw";
 import { createFetchResult, msw } from "./msw";
-import type { NamespaceKeyInfo } from "../../kv/helpers";
+import type { KVNamespaceInfo, NamespaceKeyInfo } from "../../kv/helpers";
 
 export function mockKeyListRequest(
 	expectedNamespaceId: string,
@@ -43,4 +43,41 @@ export function mockKeyListRequest(
 		)
 	);
 	return requests;
+}
+
+export function mockListKVNamespacesRequest(...namespaces: KVNamespaceInfo[]) {
+	msw.use(
+		http.get(
+			"*/accounts/:accountId/storage/kv/namespaces",
+			({ params }) => {
+				expect(params.accountId).toEqual("some-account-id");
+				return HttpResponse.json(createFetchResult(namespaces));
+			},
+			{ once: true }
+		)
+	);
+}
+
+export function mockCreateKVNamespace(
+	options: {
+		resultId?: string;
+		assertTitle?: string;
+	} = {}
+) {
+	msw.use(
+		http.post(
+			"*/accounts/:accountId/storage/kv/namespaces",
+			async ({ request }) => {
+				if (options.assertTitle) {
+					const requestBody = await request.json();
+					expect(requestBody).toEqual({ title: options.assertTitle });
+				}
+
+				return HttpResponse.json(
+					createFetchResult({ id: options.resultId ?? "some-namespace-id" })
+				);
+			},
+			{ once: true }
+		)
+	);
 }

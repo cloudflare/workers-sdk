@@ -41,9 +41,21 @@ export type CommonEventProperties = {
 	 */
 	isCI: boolean;
 	/**
+	 * Whether the Wrangler client is running in Pages CI
+	 */
+	isPagesCI: boolean;
+	/**
+	 * Whether the Wrangler client is running in Workers CI
+	 */
+	isWorkersCI: boolean;
+	/**
 	 * Whether the Wrangler client is running in an interactive instance
 	 */
 	isInteractive: boolean;
+	/**
+	 * Whether this is a Worker with static assets
+	 */
+	hasAssets: boolean;
 	/**
 	 * A list of normalised argument names/flags that were passed in or are set by default.
 	 * Excludes boolean flags set to false.

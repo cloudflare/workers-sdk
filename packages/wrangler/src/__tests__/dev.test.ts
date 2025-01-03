@@ -374,6 +374,7 @@ describe.sequential("wrangler dev", () => {
 				],
 			});
 		});
+
 		it("should error if custom domains with paths are passed in but allow paths on normal routes", async () => {
 			fs.writeFileSync("index.js", `export default {};`);
 			writeWranglerConfig({
@@ -401,61 +402,33 @@ describe.sequential("wrangler dev", () => {
 				Paths are not allowed in Custom Domains]
 			`);
 		});
-		it("should error on routes with paths if assets are present", async () => {
+
+		it("should warn on mounted paths in dev", async () => {
 			writeWranglerConfig({
 				routes: [
-					"simple.co.uk/path",
 					"simple.co.uk/path/*",
-					"simple.co.uk/",
 					"simple.co.uk/*",
-					"simple.co.uk",
-					{ pattern: "route.co.uk/path", zone_id: "asdfadsf" },
-					{ pattern: "route.co.uk/path/*", zone_id: "asdfadsf" },
-					{ pattern: "route.co.uk/*", zone_id: "asdfadsf" },
-					{ pattern: "route.co.uk/", zone_id: "asdfadsf" },
-					{ pattern: "route.co.uk", zone_id: "asdfadsf" },
-					{ pattern: "custom.co.uk/path", custom_domain: true },
-					{ pattern: "custom.co.uk/*", custom_domain: true },
-					{ pattern: "custom.co.uk", custom_domain: true },
+					"*/*",
+					"*/blog/*",
+					{ pattern: "example.com/blog/*", zone_id: "asdfadsf" },
+					{ pattern: "example.com/*", zone_id: "asdfadsf" },
+					{ pattern: "example.com/abc/def/*", zone_id: "asdfadsf" },
 				],
-				assets: {
-					directory: "assets",
-				},
 			});
+
 			fs.mkdirSync("assets");
-			await expect(runWrangler(`dev`)).rejects
-				.toThrowErrorMatchingInlineSnapshot(`
-				[Error: Invalid Routes:
-				simple.co.uk/path:
-				Workers which have static assets cannot be routed on a URL which has a path component. Update the route to replace /path with /*
 
-				simple.co.uk/path/*:
-				Workers which have static assets cannot be routed on a URL which has a path component. Update the route to replace /path/* with /*
+			await runWranglerUntilConfig("dev --assets assets");
 
-				simple.co.uk/:
-				Workers which have static assets must end with a wildcard path. Update the route to end with /*
+			expect(std.warn).toMatchInlineSnapshot(`
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mWarning: The following routes will attempt to serve Assets on a configured path:[0m
 
-				simple.co.uk:
-				Workers which have static assets must end with a wildcard path. Update the route to end with /*
+				    • simple.co.uk/path/* (Will match assets: assets/path/*)
+				    • */blog/* (Will match assets: assets/blog/*)
+				    • example.com/blog/* (Will match assets: assets/blog/*)
+				    • example.com/abc/def/* (Will match assets: assets/abc/def/*)
 
-				route.co.uk/path:
-				Workers which have static assets cannot be routed on a URL which has a path component. Update the route to replace /path with /*
-
-				route.co.uk/path/*:
-				Workers which have static assets cannot be routed on a URL which has a path component. Update the route to replace /path/* with /*
-
-				route.co.uk/:
-				Workers which have static assets must end with a wildcard path. Update the route to end with /*
-
-				route.co.uk:
-				Workers which have static assets must end with a wildcard path. Update the route to end with /*
-
-				custom.co.uk/path:
-				Paths are not allowed in Custom Domains
-
-				custom.co.uk/*:
-				Wildcard operators (*) are not allowed in Custom Domains
-				Paths are not allowed in Custom Domains]
+				"
 			`);
 		});
 	});
@@ -1706,6 +1679,47 @@ describe.sequential("wrangler dev", () => {
 			);
 		});
 
+		it("should warn if experimental_serve_directly=false but no binding is provided", async () => {
+			writeWranglerConfig({
+				main: "index.js",
+				assets: {
+					directory: "assets",
+					experimental_serve_directly: false,
+				},
+			});
+			fs.mkdirSync("assets");
+			fs.writeFileSync("index.js", `export default {};`);
+
+			await runWranglerUntilConfig("dev");
+
+			expect(std.warn).toMatchInlineSnapshot(`
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mexperimental_serve_directly=false set without an assets binding[0m
+
+				  Setting experimental_serve_directly to false will always invoke your Worker script.
+				  To fetch your assets from your Worker, please set the [assets.binding] key in your configuration
+				  file.
+
+				  Read more: [4mhttps://developers.cloudflare.com/workers/static-assets/binding/#binding[0m
+
+				"
+			`);
+		});
+
+		it("should error if experimental_serve_directly is false and no user Worker is provided", async () => {
+			writeWranglerConfig({
+				assets: { directory: "assets", experimental_serve_directly: false },
+			});
+			fs.mkdirSync("assets");
+			await expect(
+				runWrangler("dev")
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`
+				[Error: Cannot set experimental_serve_directly=false without a Worker script.
+				Please remove experimental_serve_directly from your configuration file, or provide a Worker script in your configuration file (\`main\`).]
+			`
+			);
+		});
+
 		it("should error if directory specified by '--assets' command line argument does not exist", async () => {
 			writeWranglerConfig({
 				main: "./index.js",
@@ -1730,27 +1744,6 @@ describe.sequential("wrangler dev", () => {
 				new RegExp(
 					'^The directory specified by the "assets.directory" field in your configuration file does not exist:[Ss]*'
 				)
-			);
-		});
-
-		it("should error if --assets and --remote are used together", async () => {
-			fs.mkdirSync("public");
-			await expect(
-				runWrangler("dev --assets public --remote")
-			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: Cannot use assets in remote mode. Workers with assets are only supported in local mode. Please use \`wrangler dev\`.]`
-			);
-		});
-
-		it("should error if config.assets and --remote are used together", async () => {
-			writeWranglerConfig({
-				assets: { directory: "./public" },
-			});
-			fs.mkdirSync("public");
-			await expect(
-				runWrangler("dev --remote")
-			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: Cannot use assets in remote mode. Workers with assets are only supported in local mode. Please use \`wrangler dev\`.]`
 			);
 		});
 	});

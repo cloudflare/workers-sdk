@@ -44,6 +44,7 @@ export type PipelineUserConfig = {
 		};
 		path: {
 			bucket: string;
+			prefix?: string;
 			filepath?: string;
 			filename?: string;
 		};
@@ -58,7 +59,7 @@ export type PipelineUserConfig = {
 // Pipeline from v4 API
 export type Pipeline = Omit<PipelineUserConfig, "destination"> & {
 	id: string;
-	currentVersion: number;
+	version: number;
 	endpoint: string;
 	destination: Omit<PipelineUserConfig["destination"], "credentials"> & {
 		credentials?: PipelineUserConfig["destination"]["credentials"];

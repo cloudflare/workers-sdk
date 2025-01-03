@@ -4,7 +4,7 @@ import { configFormat } from "../config";
 import isInteractive from "../is-interactive";
 import { logger } from "../logger";
 import { sniffUserAgent } from "../package-manager";
-import { CI } from "./../is-ci";
+import { CI, isPagesCI, isWorkersCI } from "./../is-ci";
 import {
 	getNodeVersion,
 	getOS,
@@ -73,9 +73,13 @@ export function getMetricsDispatcher(options: MetricsConfigOptions) {
 			properties: Omit<
 				Extract<Events, { name: EventName }>["properties"],
 				keyof CommonEventProperties
-			>
+			>,
+			argv?: string[]
 		) {
 			try {
+				if (properties.command?.startsWith("wrangler login")) {
+					properties.command = "wrangler login";
+				}
 				if (
 					properties.command === "wrangler telemetry disable" ||
 					properties.command === "wrangler metrics disable"
@@ -91,7 +95,7 @@ export function getMetricsDispatcher(options: MetricsConfigOptions) {
 					printMetricsBanner();
 				}
 
-				const argsUsed = sanitiseUserInput(properties.args ?? {});
+				const argsUsed = sanitiseUserInput(properties.args ?? {}, argv);
 				const argsCombination = argsUsed.sort().join(", ");
 				const commonEventProperties: CommonEventProperties = {
 					amplitude_session_id,
@@ -104,7 +108,10 @@ export function getMetricsDispatcher(options: MetricsConfigOptions) {
 					isFirstUsage: readMetricsConfig().permission === undefined,
 					configFileType: configFormat(options.configPath),
 					isCI: CI.isCI(),
+					isPagesCI: isPagesCI(),
+					isWorkersCI: isWorkersCI(),
 					isInteractive: isInteractive(),
+					hasAssets: options.hasAssets ?? false,
 					argsUsed,
 					argsCombination,
 				};
@@ -213,11 +220,20 @@ const normalise = (arg: string) => {
 };
 
 const exclude = new Set(["$0", "_"]);
-/** just some pretty naive cleaning so we don't send "experimental-versions", "experimentalVersions", "x-versions" and "xVersions" etc. */
-const sanitiseUserInput = (argsWithValues: Record<string, unknown>) => {
+/**
+ * just some pretty naive cleaning so we don't send duplicates of "experimental-versions", "experimentalVersions", "x-versions" and "xVersions" etc.
+ * optionally, if an argv is provided remove all args that were not specified in argv (which means that default values will be filtered out)
+ */
+const sanitiseUserInput = (
+	argsWithValues: Record<string, unknown>,
+	argv?: string[]
+) => {
 	const result: string[] = [];
 	const args = Object.keys(argsWithValues);
 	for (const arg of args) {
+		if (Array.isArray(argv) && !argv.some((a) => a.includes(arg))) {
+			continue;
+		}
 		if (exclude.has(arg)) {
 			continue;
 		}

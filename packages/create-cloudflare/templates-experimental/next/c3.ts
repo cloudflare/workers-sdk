@@ -18,7 +18,10 @@ const generate = async (ctx: C3Context) => {
 };
 
 const configure = async () => {
-	const packages = ["@opennextjs/cloudflare", "@cloudflare/workers-types"];
+	const packages = [
+		"@opennextjs/cloudflare@0.3.x",
+		"@cloudflare/workers-types",
+	];
 	await installPackages(packages, {
 		dev: true,
 		startText: "Adding the Cloudflare adapter",
@@ -44,8 +47,8 @@ export default {
 	configure,
 	transformPackageJson: async () => ({
 		scripts: {
-			deploy: `cloudflare && wrangler deploy`,
-			preview: `cloudflare && wrangler dev`,
+			deploy: `opennextjs-cloudflare && wrangler deploy`,
+			preview: `opennextjs-cloudflare && wrangler dev`,
 			"cf-typegen": `wrangler types --env-interface CloudflareEnv env.d.ts`,
 		},
 	}),

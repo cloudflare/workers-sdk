@@ -59,15 +59,16 @@ const HEADER_ID = "X-Miniflare-Durable-Object-Id";
 const HEADER_CF_BLOB = "X-Miniflare-Durable-Object-Cf-Blob";
 
 const HANDLER_RESERVED_KEYS = new Set([
-	"tail",
-	"trace",
-	"scheduled",
 	"alarm",
+	"scheduled",
+	"self",
+	"tail",
+	"tailStream",
 	"test",
-	"webSocketMessage",
+	"trace",
 	"webSocketClose",
 	"webSocketError",
-	"self",
+	"webSocketMessage",
 ]);
 
 function createProxyPrototypeClass(handlerSuperKlass, getUnknownPrototypeKey) {

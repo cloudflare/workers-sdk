@@ -1,5 +1,22 @@
 # @cloudflare/pages-shared
 
+## 0.12.0
+
+### Minor Changes
+
+- [#7546](https://github.com/cloudflare/workers-sdk/pull/7546) [`004fd33`](https://github.com/cloudflare/workers-sdk/commit/004fd33d62ab3a77888ffb5538f92135a15d2d3f) Thanks [@GregBrimble](https://github.com/GregBrimble)! - feat: Return a 304 Not Modified response when matching an asset preservation cache request if appropriate
+
+### Patch Changes
+
+- Updated dependencies [[`1488e11`](https://github.com/cloudflare/workers-sdk/commit/1488e118b4a43d032e4f2e69afa1c16c2e54aff6), [`7216835`](https://github.com/cloudflare/workers-sdk/commit/7216835bf7489804905751c6b52e75a8945e7974)]:
+  - miniflare@3.20241218.0
+
+## 0.11.72
+
+### Patch Changes
+
+- [#7544](https://github.com/cloudflare/workers-sdk/pull/7544) [`77bd9a1`](https://github.com/cloudflare/workers-sdk/commit/77bd9a1f8e3975ca8e6d9cb99d2ea3c035ec15a7) Thanks [@GregBrimble](https://github.com/GregBrimble)! - chore: Remove now-unused asset preservation cache (v1)
+
 ## 0.11.71
 
 ### Patch Changes

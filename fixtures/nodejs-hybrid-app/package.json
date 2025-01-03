@@ -9,11 +9,12 @@
 	},
 	"devDependencies": {
 		"@cloudflare/workers-tsconfig": "workspace:*",
-		"@cloudflare/workers-types": "^4.20241205.0",
+		"@cloudflare/workers-types": "^4.20241218.0",
 		"@types/pg": "^8.11.2",
 		"pg": "8.11.3",
 		"pg-cloudflare": "^1.1.1",
 		"undici": "catalog:default",
+		"vitest": "catalog:default",
 		"wrangler": "workspace:*"
 	}
 }

@@ -45,9 +45,12 @@ npx ${url} dev path/to/script.js
  */
 function buildAdditionalArtifactReport(pkg) {
 	const name = pkg.json.name;
+	const type = pkg.json["workers-sdk"].type;
 	const url = getPrereleaseArtifactUrl(name);
-	if (name === "create-cloudflare") {
+	if (type === "cli") {
 		return `\`\`\`sh\nnpx ${url} --no-auto-update\n\`\`\``;
+	} else if (type === "extension") {
+		return `\`\`\`sh\nwget ${url} -O ./${name}.${pkg.json.version}.vsix && code --install-extension ./${name}.${pkg.json.version}.vsix\n\`\`\``;
 	} else {
 		return `\`\`\`sh\nnpm install ${url}\n\`\`\``;
 	}
@@ -68,7 +71,7 @@ function buildReport(pkgs) {
 	const additionalReports = pkgs.map(buildAdditionalArtifactReport);
 
 	return `${wranglerReport}
-	
+
 <details><summary>Additional artifacts:</summary>
 
 ${additionalReports.join("\n\n")}

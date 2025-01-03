@@ -207,7 +207,7 @@ describe("wrangler", () => {
 		`);
 		});
 
-		it("should delete local bulk kv storage", async () => {
+		it("should delete local bulk kv storage (string)", async () => {
 			const keyValues = [
 				{
 					key: "hello",
@@ -253,6 +253,74 @@ describe("wrangler", () => {
 		`);
 
 			await runWrangler(`kv:key list --namespace-id bulk-namespace-id --local`);
+			expect(std.out).toMatchInlineSnapshot(`
+			"Success!
+			[
+			  {
+			    \\"name\\": \\"hello\\"
+			  },
+			  {
+			    \\"name\\": \\"test\\"
+			  }
+			]
+			Success!
+			[]"
+		`);
+		});
+
+		it("should delete local bulk kv storage ({ name })", async () => {
+			const keyValues = [
+				{
+					key: "hello",
+					value: "world",
+				},
+				{
+					key: "test",
+					value: "value",
+				},
+			];
+			writeFileSync("./keys.json", JSON.stringify(keyValues));
+			await runWrangler(
+				`kv bulk put keys.json --namespace-id bulk-namespace-id --local`
+			);
+			await runWrangler(`kv key list --namespace-id bulk-namespace-id --local`);
+			expect(std.out).toMatchInlineSnapshot(`
+			"Success!
+			[
+			  {
+			    \\"name\\": \\"hello\\"
+			  },
+			  {
+			    \\"name\\": \\"test\\"
+			  }
+			]"
+		`);
+			const keys = [
+				{
+					name: "hello",
+				},
+				{
+					name: "test",
+				},
+			];
+			writeFileSync("./keys.json", JSON.stringify(keys));
+			await runWrangler(
+				`kv bulk delete keys.json --namespace-id bulk-namespace-id --local --force`
+			);
+			expect(std.out).toMatchInlineSnapshot(`
+			"Success!
+			[
+			  {
+			    \\"name\\": \\"hello\\"
+			  },
+			  {
+			    \\"name\\": \\"test\\"
+			  }
+			]
+			Success!"
+		`);
+
+			await runWrangler(`kv key list --namespace-id bulk-namespace-id --local`);
 			expect(std.out).toMatchInlineSnapshot(`
 			"Success!
 			[

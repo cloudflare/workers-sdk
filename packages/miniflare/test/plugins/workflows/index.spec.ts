@@ -40,7 +40,10 @@ test("persists Workflow data on file-system between runs", async (t) => {
 	t.teardown(() => mf.dispose());
 
 	let res = await mf.dispatchFetch("http://localhost");
-	t.is(await res.text(), '{"status":"running","output":[]}');
+	t.is(
+		await res.text(),
+		'{"status":"running","__LOCAL_DEV_STEP_OUTPUTS":[],"output":null}'
+	);
 
 	// there's no waitUntil in ava haha
 	const begin = performance.now();
@@ -50,7 +53,10 @@ test("persists Workflow data on file-system between runs", async (t) => {
 		const res = await mf.dispatchFetch("http://localhost");
 		console.log(test);
 		test = await res.text();
-		if (test === '{"status":"complete","output":["yes you are"]}') {
+		if (
+			test ===
+			'{"status":"complete","__LOCAL_DEV_STEP_OUTPUTS":["yes you are"],"output":"I\'m a output string"}'
+		) {
 			success = true;
 			break;
 		}
@@ -68,5 +74,8 @@ test("persists Workflow data on file-system between runs", async (t) => {
 
 	// state should be persisted now
 	res = await mf.dispatchFetch("http://localhost");
-	t.is(await res.text(), '{"status":"complete","output":["yes you are"]}');
+	t.is(
+		await res.text(),
+		'{"status":"complete","__LOCAL_DEV_STEP_OUTPUTS":["yes you are"],"output":"I\'m a output string"}'
+	);
 });
