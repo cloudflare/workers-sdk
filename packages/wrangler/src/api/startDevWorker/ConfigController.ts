@@ -315,6 +315,21 @@ async function resolveConfig(
 		);
 	}
 
+	if (resolved.assets && resolved.dev.remote) {
+		throw new UserError(
+			"Cannot use assets in remote mode. Workers with assets are only supported in local mode. Please use `wrangler dev`."
+		);
+	}
+
+	if (
+		extractBindingsOfType("browser", resolved.bindings).length &&
+		!resolved.dev.remote
+	) {
+		throw new UserError(
+			"Browser Rendering is not supported locally. Please use `wrangler dev --remote` instead."
+		);
+	}
+
 	validateAssetsArgsAndConfig(resolved);
 
 	const services = extractBindingsOfType("service", resolved.bindings);
