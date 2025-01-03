@@ -13,11 +13,13 @@
 		"chalk": "^5.2.0",
 		"dotenv": "^16.0.0",
 		"find-up": "^6.3.0",
+		"miniflare": "workspace:*",
 		"ts-dedent": "^2.2.0"
 	},
 	"devDependencies": {
 		"@cloudflare/eslint-config-worker": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
+		"@types/yargs": "^17.0.22",
 		"vitest": "catalog:default"
 	},
 	"volta": {
