@@ -23,6 +23,8 @@ Wrangler is built and run on the Node.js JavaScript runtime.
 
 ### Fork and clone this repository
 
+#### For External Contributors
+
 Any contributions you make will be via [Pull Requests](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/about-pull-requests) on [GitHub](https://github.com/) developed in a local git repository and pushed to your own fork of the repository.
 
 - Ensure you have [created an account](https://docs.github.com/en/get-started/onboarding/getting-started-with-your-github-account) on GitHub.
@@ -56,6 +58,21 @@ Any contributions you make will be via [Pull Requests](https://docs.github.com/e
   * branch            main       -> FETCH_HEAD
   Already up to date.
   ```
+
+#### For Cloudflare Employees
+
+If you are a Cloudflare employee, you do not need to fork the repository. Instead, you can clone the main repository directly. This allows you to push branches directly to the upstream repository.
+
+Clone the main repository:
+```sh
+git clone https://github.com/cloudflare/workers-sdk.git
+cd workers-sdk
+```
+Create new branches directly in the cloned repository and push them to the main repository:
+```sh
+git checkout -b <new-branch-name>
+git push origin <new-branch-name>
+```
 
 ### Install dependencies
 
