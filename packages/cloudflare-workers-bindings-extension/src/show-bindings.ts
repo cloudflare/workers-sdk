@@ -70,6 +70,11 @@ export class BindingsProvider implements vscode.TreeDataProvider<Node> {
 
 	// To manually refresh the tree
 	refresh(): void {
+		vscode.commands.executeCommand(
+			"setContext",
+			"cloudflare-workers-config",
+			"yes"
+		);
 		this._onDidChangeTreeData.fire();
 	}
 
@@ -104,11 +109,20 @@ export class BindingsProvider implements vscode.TreeDataProvider<Node> {
 		}
 	}
 
+	hideView(): void {
+		vscode.commands.executeCommand(
+			"setContext",
+			"cloudflare-workers-config",
+			"no"
+		);
+	}
+
 	async getChildren(node?: Node): Promise<Node[]> {
 		if (!node) {
 			const wranglerConfig = await getWranglerConfig();
 
 			if (!wranglerConfig) {
+				this.hideView();
 				return [];
 			}
 
@@ -141,7 +155,15 @@ export class BindingsProvider implements vscode.TreeDataProvider<Node> {
 					children.unshift(topLevelEnvNode);
 				}
 
+				if (children.length === 0) {
+					this.hideView();
+				}
+
 				return children;
+			}
+
+			if (topLevelEnvChildren.length === 0) {
+				this.hideView();
 			}
 
 			// Skip the top level env if there are no environments
