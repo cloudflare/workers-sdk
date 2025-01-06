@@ -43,6 +43,11 @@ it("intercepts URLs with query parameters with repeated keys", async () => {
 		.intercept({ path: "/bar?a=1&a=2" })
 		.reply(200, "bar");
 
+	fetchMock
+		.get("https://example.com")
+		.intercept({ path: "/baz", query: { key1: ["a", "b"], key2: "c" } })
+		.reply(200, "baz");
+
 	let response1 = await fetch("https://example.com/foo?key=value");
 	expect(response1.url).toEqual("https://example.com/foo?key=value");
 	expect(await response1.text()).toBe("foo");
@@ -50,6 +55,10 @@ it("intercepts URLs with query parameters with repeated keys", async () => {
 	let response2 = await fetch("https://example.com/bar?a=1&a=2");
 	expect(response2.url).toEqual("https://example.com/bar?a=1&a=2");
 	expect(await response2.text()).toBe("bar");
+
+	let response3 = await fetch("https://example.com/baz?key1=a&key2=c&key1=b");
+	expect(response3.url).toEqual("https://example.com/baz?key1=a&key2=c&key1=b");
+	expect(await response3.text()).toBe("baz");
 });
 
 describe("AbortSignal", () => {
