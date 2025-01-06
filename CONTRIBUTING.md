@@ -61,7 +61,9 @@ Any contributions you make will be via [Pull Requests](https://docs.github.com/e
 
 #### For Cloudflare Employees
 
-If you are a Cloudflare employee, you do not need to fork the repository. Instead, you can clone the main repository directly. This allows you to push branches directly to the upstream repository.
+If you are a Cloudflare employee, you do not need to fork the repository - instead, you can clone the main repository directly. This allows you to push branches directly to the upstream repository.
+
+If you find that you don't have write access, please reach out to your manager or the Wrangler team internally.
 
 Clone the main repository:
 ```sh
