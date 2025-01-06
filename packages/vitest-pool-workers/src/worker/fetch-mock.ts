@@ -93,10 +93,11 @@ globalThis.fetch = async (input, init) => {
 	const bodyText = bodyArray === null ? "" : DECODER.decode(bodyArray);
 	const dispatchOptions: Dispatcher.DispatchOptions = {
 		origin: url.origin,
-		path: url.pathname + url.search,
+		path: url.pathname,
 		method: request.method as Dispatcher.HttpMethod,
 		body: bodyText,
 		headers: requestHeaders,
+		query: Object.fromEntries(url.searchParams),
 	};
 	requests.set(dispatchOptions, { request, body: bodyArray });
 
