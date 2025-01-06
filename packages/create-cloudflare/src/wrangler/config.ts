@@ -31,7 +31,7 @@ async function ensureCompatDateExists(
 	return config;
 }
 /**
- * Update the `wrangler.toml` file for this project by setting the name
+ * Update the `wrangler.(toml|json|jsonc)` file for this project by setting the name
  * to the selected project name and adding the latest compatibility date.
  */
 export const updateWranglerConfig = async (ctx: C3Context) => {
@@ -50,7 +50,6 @@ export const updateWranglerConfig = async (ctx: C3Context) => {
 	} else if (wranglerTomlExists(ctx)) {
 		const wranglerTomlStr = readWranglerToml(ctx);
 		const parsed = TOML.parse(wranglerTomlStr);
-		console.log(wranglerTomlStr);
 		const modified = await ensureCompatDateExists(
 			ensureNameExists(parsed, ctx.project.name),
 		);
