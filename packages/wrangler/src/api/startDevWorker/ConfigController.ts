@@ -315,12 +315,6 @@ async function resolveConfig(
 		);
 	}
 
-	if (resolved.assets && resolved.dev.remote) {
-		throw new UserError(
-			"Cannot use assets in remote mode. Workers with assets are only supported in local mode. Please use `wrangler dev`."
-		);
-	}
-
 	if (
 		extractBindingsOfType("browser", resolved.bindings).length &&
 		!resolved.dev.remote
