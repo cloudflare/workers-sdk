@@ -1,48 +1,64 @@
 import { existsSync } from "fs";
 import { resolve } from "path";
+import TOML from "@iarna/toml";
 import { getWorkerdCompatibilityDate } from "helpers/compatDate";
 import { readFile, writeFile } from "helpers/files";
-import MagicString from "magic-string";
+import { parse as jsoncParse } from "jsonc-parser";
+import type { JsonMap } from "@iarna/toml";
 import type { C3Context } from "types";
 
+function ensureNameExists(
+	config: Record<string, unknown>,
+	projectName: string,
+): Record<string, unknown> {
+	config["name"] = projectName;
+	return config;
+}
+
+async function ensureCompatDateExists(
+	config: Record<string, unknown>,
+): Promise<Record<string, unknown>> {
+	if (typeof config["compatibility_date"] === "string") {
+		// If the compat date is already a valid one, leave it since it may be there
+		// for a specific compat reason
+		const validCompatDateRe = /^\d{4}-\d{2}-\d{2}/m;
+		if (!config["compatibility_date"].match(validCompatDateRe)) {
+			config["compatibility_date"] = await getWorkerdCompatibilityDate();
+		}
+	} else {
+		config["compatibility_date"] = await getWorkerdCompatibilityDate();
+	}
+	return config;
+}
 /**
  * Update the `wrangler.toml` file for this project by setting the name
  * to the selected project name and adding the latest compatibility date.
  */
-export const updateWranglerToml = async (ctx: C3Context) => {
-	if (!wranglerTomlExists(ctx)) {
-		return;
-	}
+export const updateWranglerConfig = async (ctx: C3Context) => {
+	if (wranglerJsonExists(ctx)) {
+		const wranglerJsonStr = readWranglerJson(ctx);
+		const parsed = jsoncParse(wranglerJsonStr);
 
-	const wranglerToml = readWranglerToml(ctx);
-	const newToml = new MagicString(wranglerToml);
-
-	const compatDateRe = /^compatibility_date\s*=.*/m;
-
-	if (wranglerToml.match(compatDateRe)) {
-		// If the compat date is already a valid one, leave it since it may be there
-		// for a specific compat reason
-		const validCompatDateRe = /^compatibility_date\s*=\s*"\d{4}-\d{2}-\d{2}"/m;
-		if (!wranglerToml.match(validCompatDateRe)) {
-			newToml.replace(
-				compatDateRe,
-				`compatibility_date = "${await getWorkerdCompatibilityDate()}"`,
-			);
-		}
-	} else {
-		newToml.prepend(
-			`compatibility_date = "${await getWorkerdCompatibilityDate()}"\n`,
+		const modified = await ensureCompatDateExists(
+			ensureNameExists(parsed, ctx.project.name),
 		);
-	}
 
-	const nameRe = /^name\s*=.*/m;
-	if (wranglerToml.match(nameRe)) {
-		newToml.replace(nameRe, `name = "${ctx.project.name}"`);
-	} else {
-		newToml.prepend(`name = "${ctx.project.name}"\n`);
-	}
+		const comment = `// For more details on how to configure Wrangler, refer to:\n// https://developers.cloudflare.com/workers/wrangler/configuration/\n`;
 
-	writeWranglerToml(ctx, newToml.toString());
+		modified["$schema"] = "node_modules/wrangler/config-schema.json";
+		writeWranglerJson(ctx, comment + JSON.stringify(modified, null, 2));
+	} else if (wranglerTomlExists(ctx)) {
+		const wranglerTomlStr = readWranglerToml(ctx);
+		const parsed = TOML.parse(wranglerTomlStr);
+		console.log(wranglerTomlStr);
+		const modified = await ensureCompatDateExists(
+			ensureNameExists(parsed, ctx.project.name),
+		);
+
+		const comment = `#:schema node_modules/wrangler/config-schema.json\n# For more details on how to configure Wrangler, refer to:\n# https://developers.cloudflare.com/workers/wrangler/configuration/\n`;
+
+		writeWranglerToml(ctx, comment + TOML.stringify(modified as JsonMap));
+	}
 };
 
 const getWranglerTomlPath = (ctx: C3Context) => {
@@ -85,4 +101,13 @@ export const readWranglerJson = (ctx: C3Context) => {
 export const writeWranglerToml = (ctx: C3Context, contents: string) => {
 	const wranglerTomlPath = getWranglerTomlPath(ctx);
 	return writeFile(wranglerTomlPath, contents);
+};
+
+export const writeWranglerJson = (ctx: C3Context, contents: string) => {
+	const wranglerJsonPath = getWranglerJsonPath(ctx);
+	if (existsSync(wranglerJsonPath)) {
+		return writeFile(wranglerJsonPath, contents);
+	}
+	const wranglerJsoncPath = getWranglerJsoncPath(ctx);
+	return writeFile(wranglerJsoncPath, contents);
 };

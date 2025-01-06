@@ -1,0 +1,13 @@
+{
+  "compatibility_date": "<TBD>",
+  "main": "src/index.ts",
+  "name": "<TBD>",
+  "observability": {
+    "enabled": true
+  },
+  "triggers": {
+    "crons": [
+      "* * * * *"
+    ]
+  }
+}

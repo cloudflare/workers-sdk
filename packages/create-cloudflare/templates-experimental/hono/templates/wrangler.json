@@ -1,0 +1,9 @@
+{
+  "compatibility_date": "<TBD>",
+  "main": "src/index.ts",
+  "name": "<TBD>",
+  "assets": {
+    "binding": "ASSETS",
+    "directory": "./public"
+  }
+}

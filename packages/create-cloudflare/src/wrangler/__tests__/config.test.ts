@@ -4,7 +4,7 @@ import { getWorkerdCompatibilityDate } from "helpers/compatDate";
 import { readFile, writeFile } from "helpers/files";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { createTestContext } from "../../__tests__/helpers";
-import { updateWranglerToml } from "../config";
+import { updateWranglerConfig } from "../config";
 
 vi.mock("helpers/files");
 vi.mock("helpers/compatDate");
@@ -12,14 +12,16 @@ vi.mock("fs");
 
 const mockCompatDate = "2024-01-17";
 
-describe("updateWranglerToml", () => {
+describe("update wrangler config", () => {
 	const ctx = createTestContext();
 
 	beforeEach(() => {
 		vi.mocked(getWorkerdCompatibilityDate).mockReturnValue(
 			Promise.resolve(mockCompatDate),
 		);
-		vi.mocked(existsSync).mockImplementation(() => true);
+		vi.mocked(existsSync).mockImplementation((f) =>
+			(f as string).endsWith(".toml"),
+		);
 		mockWorkersTypesDirectory();
 
 		// Mock the read of tsconfig.json
@@ -36,32 +38,44 @@ describe("updateWranglerToml", () => {
 		].join("\n");
 		vi.mocked(readFile).mockReturnValue(toml);
 
-		await updateWranglerToml(ctx);
+		await updateWranglerConfig(ctx);
 
 		const newToml = vi.mocked(writeFile).mock.calls[0][1];
-		expect(newToml).toBe(
-			`name = "${ctx.project.name}"\n` +
-				`main = "src/index.ts"\n` +
-				`compatibility_date = "${mockCompatDate}"`,
-		);
+		expect(newToml).toMatchInlineSnapshot(`
+			"#:schema node_modules/wrangler/config-schema.json
+			# For more details on how to configure Wrangler, refer to:
+			# https://developers.cloudflare.com/workers/wrangler/configuration/
+			name = "test"
+			main = "src/index.ts"
+			compatibility_date = "2024-01-17"
+			"
+		`);
 	});
 
-	test("empty replacement", async () => {
-		const toml = [
-			`name = `,
-			`main = "src/index.ts"`,
-			`compatibility_date = `,
-		].join("\n");
-		vi.mocked(readFile).mockReturnValue(toml);
-
-		await updateWranglerToml(ctx);
-
-		const newToml = vi.mocked(writeFile).mock.calls[0][1];
-		expect(newToml).toBe(
-			`name = "${ctx.project.name}"\n` +
-				`main = "src/index.ts"\n` +
-				`compatibility_date = "${mockCompatDate}"`,
+	test("placeholder replacement (json)", async () => {
+		vi.mocked(existsSync).mockImplementationOnce((f) =>
+			(f as string).endsWith(".json"),
 		);
+		const json = JSON.stringify({
+			name: "<TBD>",
+			main: "src/index.ts",
+			compatibility_date: "<TBD>",
+		});
+		vi.mocked(readFile).mockReturnValueOnce(json);
+
+		await updateWranglerConfig(ctx);
+
+		const newConfig = vi.mocked(writeFile).mock.calls[0][1];
+		expect(newConfig).toMatchInlineSnapshot(`
+			"// For more details on how to configure Wrangler, refer to:
+			// https://developers.cloudflare.com/workers/wrangler/configuration/
+			{
+			  "name": "test",
+			  "main": "src/index.ts",
+			  "compatibility_date": "2024-01-17",
+			  "$schema": "node_modules/wrangler/config-schema.json"
+			}"
+		`);
 	});
 
 	test("string literal replacement", async () => {
@@ -70,28 +84,36 @@ describe("updateWranglerToml", () => {
 		);
 		vi.mocked(readFile).mockReturnValue(toml);
 
-		await updateWranglerToml(ctx);
+		await updateWranglerConfig(ctx);
 
 		const newToml = vi.mocked(writeFile).mock.calls[0][1];
-		expect(newToml).toBe(
-			`compatibility_date = "${mockCompatDate}"\n` +
-				`name = "${ctx.project.name}"\n` +
-				`main = "src/index.ts"`,
-		);
+		expect(newToml).toMatchInlineSnapshot(`
+			"#:schema node_modules/wrangler/config-schema.json
+			# For more details on how to configure Wrangler, refer to:
+			# https://developers.cloudflare.com/workers/wrangler/configuration/
+			name = "test"
+			main = "src/index.ts"
+			compatibility_date = "2024-01-17"
+			"
+		`);
 	});
 
 	test("missing name and compat date", async () => {
 		const toml = `main = "src/index.ts"`;
 		vi.mocked(readFile).mockReturnValue(toml);
 
-		await updateWranglerToml(ctx);
+		await updateWranglerConfig(ctx);
 
 		const newToml = vi.mocked(writeFile).mock.calls[0][1];
-		expect(newToml).toBe(
-			`name = "${ctx.project.name}"\n` +
-				`compatibility_date = "${mockCompatDate}"\n` +
-				`main = "src/index.ts"`,
-		);
+		expect(newToml).toMatchInlineSnapshot(`
+			"#:schema node_modules/wrangler/config-schema.json
+			# For more details on how to configure Wrangler, refer to:
+			# https://developers.cloudflare.com/workers/wrangler/configuration/
+			main = "src/index.ts"
+			name = "test"
+			compatibility_date = "2024-01-17"
+			"
+		`);
 	});
 
 	test("dont replace valid existing compatibility date", async () => {
@@ -101,11 +123,16 @@ describe("updateWranglerToml", () => {
 		].join("\n");
 		vi.mocked(readFile).mockReturnValue(toml);
 
-		await updateWranglerToml(ctx);
+		await updateWranglerConfig(ctx);
 
 		const newToml = vi.mocked(writeFile).mock.calls[0][1];
-		expect(newToml).toBe(
-			`name = "test"\n` + `compatibility_date = "2001-10-12"`,
-		);
+		expect(newToml).toMatchInlineSnapshot(`
+			"#:schema node_modules/wrangler/config-schema.json
+			# For more details on how to configure Wrangler, refer to:
+			# https://developers.cloudflare.com/workers/wrangler/configuration/
+			name = "test"
+			compatibility_date = "2001-10-12"
+			"
+		`);
 	});
 });

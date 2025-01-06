@@ -1,0 +1,12 @@
+{
+  "compatibility_date": "<TBD>",
+  "main": ".svelte-kit/cloudflare/_worker.js",
+  "name": "<TBD>",
+  "assets": {
+    "binding": "ASSETS",
+    "directory": ".svelte-kit/cloudflare"
+  },
+  "observability": {
+    "enabled": true
+  }
+}

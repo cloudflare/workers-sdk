@@ -1,0 +1,10 @@
+{
+  "compatibility_date": "<TBD>",
+  "name": "<TBD>",
+  "assets": {
+    "directory": "./public"
+  },
+  "observability": {
+    "enabled": true
+  }
+}

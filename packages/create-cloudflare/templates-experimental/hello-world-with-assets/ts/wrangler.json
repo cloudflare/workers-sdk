@@ -1,0 +1,15 @@
+{
+  "compatibility_date": "<TBD>",
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
+  "main": "src/index.ts",
+  "name": "<TBD>",
+  "assets": {
+    "binding": "ASSETS",
+    "directory": "./public"
+  },
+  "observability": {
+    "enabled": true
+  }
+}

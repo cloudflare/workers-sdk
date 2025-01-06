@@ -35,7 +35,7 @@ import {
 } from "./templates";
 import { validateProjectDirectory } from "./validators";
 import { installWorkersTypes } from "./workers";
-import { updateWranglerToml } from "./wrangler/config";
+import { updateWranglerConfig } from "./wrangler/config";
 import type { C3Args, C3Context } from "types";
 
 const { npm } = detectPackageManager();
@@ -158,7 +158,7 @@ const configure = async (ctx: C3Context) => {
 
 	// Note: updateWranglerToml _must_ be called before the configure phase since
 	//       pre-existing workers assume its presence in their configure phase
-	await updateWranglerToml(ctx);
+	await updateWranglerConfig(ctx);
 
 	const { template } = ctx;
 	if (template.configure) {

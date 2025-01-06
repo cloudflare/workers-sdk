@@ -1,0 +1,8 @@
+{
+  "compatibility_date": "<TBD>",
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
+  "name": "<TBD>",
+  "pages_build_output_dir": "./dist"
+}

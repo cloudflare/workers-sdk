@@ -1,0 +1,11 @@
+{
+  "compatibility_date": "<TBD>",
+  "main": "./server.ts",
+  "name": "<TBD>",
+  "assets": {
+    "directory": "./build/client"
+  },
+  "observability": {
+    "enabled": true
+  }
+}
