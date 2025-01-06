@@ -66,11 +66,14 @@ If you are a Cloudflare employee, you do not need to fork the repository - inste
 If you find that you don't have write access, please reach out to your manager or the Wrangler team internally.
 
 Clone the main repository:
+
 ```sh
 git clone https://github.com/cloudflare/workers-sdk.git
 cd workers-sdk
 ```
+
 Create new branches directly in the cloned repository and push them to the main repository:
+
 ```sh
 git checkout -b <new-branch-name>
 git push origin <new-branch-name>
