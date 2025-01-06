@@ -1,5 +1,6 @@
 import path from "node:path";
 import readline from "node:readline";
+import { parse as dotenvParse } from "dotenv";
 import { FormData } from "undici";
 import { fetchResult } from "../cfetch";
 import { configFileName, readConfig } from "../config";
@@ -377,7 +378,7 @@ export const secret = (secretYargs: CommonYargsArgv) => {
 export const secretBulkOptions = (yargs: CommonYargsArgv) => {
 	return yargs
 		.positional("json", {
-			describe: `The JSON file of key-value pairs to upload, in form {"key": value, ...}`,
+			describe: `The file of key-value pairs to upload, as JSON in form {"key": value, ...} or .env file in the form KEY=VALUE`,
 			type: "string",
 		})
 		.option("name", {
@@ -424,35 +425,10 @@ export const secretBulkHandler = async (secretBulkArgs: SecretBulkArgs) => {
 		}`
 	);
 
-	let content: Record<string, string>;
-	if (secretBulkArgs.json) {
-		const jsonFilePath = path.resolve(secretBulkArgs.json);
-		try {
-			content = parseJSON<Record<string, string>>(
-				readFileSync(jsonFilePath),
-				jsonFilePath
-			);
-		} catch (e) {
-			throw new FatalError(
-				`The contents of "${secretBulkArgs.json}" is not valid JSON: "${e}"`
-			);
-		}
-		validateJSONFileSecrets(content, secretBulkArgs.json);
-	} else {
-		try {
-			const rl = readline.createInterface({ input: process.stdin });
-			let pipedInput = "";
-			for await (const line of rl) {
-				pipedInput += line;
-			}
-			content = parseJSON<Record<string, string>>(pipedInput);
-		} catch {
-			return logger.error(`🚨 Please provide a JSON file or valid JSON pipe`);
-		}
-	}
+	const content = await parseBulkInputToObject(secretBulkArgs.json);
 
 	if (!content) {
-		return logger.error(`🚨 No content found in JSON file or piped input.`);
+		return logger.error(`🚨 No content found in file, or piped input.`);
 	}
 
 	function getSettings() {
@@ -476,7 +452,6 @@ export const secretBulkHandler = async (secretBulkArgs: SecretBulkArgs) => {
 
 		const data = new FormData();
 		data.set("settings", JSON.stringify({ bindings }));
-
 		return fetchResult(url, {
 			method: "PATCH",
 			body: data,
@@ -535,7 +510,7 @@ export const secretBulkHandler = async (secretBulkArgs: SecretBulkArgs) => {
 			);
 		}
 		logger.log("");
-		logger.log("Finished processing secrets JSON file:");
+		logger.log("Finished processing secrets file:");
 		logger.log(`✨ ${upsertBindings.length} secrets successfully uploaded`);
 	} catch (err) {
 		logger.log("");
@@ -545,7 +520,7 @@ export const secretBulkHandler = async (secretBulkArgs: SecretBulkArgs) => {
 	}
 };
 
-export function validateJSONFileSecrets(
+export function validateFileSecrets(
 	content: unknown,
 	jsonFilePath: string
 ): asserts content is Record<string, string> {
@@ -562,4 +537,48 @@ export function validateJSONFileSecrets(
 			);
 		}
 	}
+}
+
+export async function parseBulkInputToObject(input?: string) {
+	let content: Record<string, string>;
+	if (input) {
+		const jsonFilePath = path.resolve(input);
+		try {
+			const fileContent = readFileSync(jsonFilePath);
+			try {
+				content = parseJSON<Record<string, string>>(fileContent);
+			} catch (e) {
+				content = dotenvParse(fileContent);
+				// dotenvParse does not error unless fileContent is undefined, no keys === error
+				if (Object.keys(content).length === 0) {
+					throw e;
+				}
+			}
+		} catch (e) {
+			throw new FatalError(
+				`The contents of "${input}" is not valid JSON: "${e}"`
+			);
+		}
+		validateFileSecrets(content, input);
+	} else {
+		try {
+			const rl = readline.createInterface({ input: process.stdin });
+			let pipedInput = "";
+			for await (const line of rl) {
+				pipedInput += line;
+			}
+			try {
+				content = parseJSON<Record<string, string>>(pipedInput);
+			} catch (e) {
+				content = dotenvParse(pipedInput);
+				// dotenvParse does not error unless fileContent is undefined, no keys === error
+				if (Object.keys(content).length === 0) {
+					throw e;
+				}
+			}
+		} catch {
+			return;
+		}
+	}
+	return content;
 }
