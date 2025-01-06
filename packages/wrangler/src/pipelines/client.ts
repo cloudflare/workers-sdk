@@ -1,6 +1,7 @@
 import assert from "node:assert";
 import { createHash } from "node:crypto";
 import http from "node:http";
+import { setTimeout as setTimeoutPromise } from "node:timers/promises";
 import { fetchResult } from "../cfetch";
 import { getCloudflareApiEnvironmentFromEnv } from "../environment-variables/misc-variables";
 import { UserError } from "../errors";
@@ -126,22 +127,15 @@ export async function generateR2ServiceToken(
 	pipelineName: string
 ): Promise<S3AccessKey> {
 	// TODO: Refactor into startHttpServerWithTimeout function and update `getOauthToken`
-	let server: http.Server;
-	let loginTimeoutHandle: ReturnType<typeof setTimeout>;
-	const timerPromise = new Promise<S3AccessKey>((_, reject) => {
-		loginTimeoutHandle = setTimeout(() => {
-			server.close();
-			clearTimeout(loginTimeoutHandle);
-			reject(
-				new UserError(
-					"Timed out waiting for authorization code, please try again."
-				)
-			);
-		}, 120000); // wait for 120 seconds for the user to authorize
-	});
+	const controller = new AbortController();
+	const signal = controller.signal;
 
-	const loginPromise = new Promise<S3AccessKey>((resolve, reject) => {
-		server = http.createServer(async (request, response) => {
+	// Create timeout promise to prevent hanging forever
+	const timeoutPromise = setTimeoutPromise(120000, "timeout", { signal });
+
+	// Create server promise to handle the callback and register the cleanup handler on the controller
+	const serverPromise = new Promise<S3AccessKey>((resolve, reject) => {
+		const server = http.createServer(async (request, response) => {
 			assert(request.url, "This request doesn't have a URL"); // This should never happen
 
 			if (request.method !== "GET") {
@@ -179,6 +173,10 @@ export async function generateR2ServiceToken(
 			response.end();
 		});
 
+		// Register cleanup handler
+		signal.addEventListener("abort", () => {
+			server.close();
+		});
 		server.listen(8976, "localhost");
 	});
 
@@ -192,7 +190,15 @@ export async function generateR2ServiceToken(
 	logger.log(`Opening a link in your default browser: ${urlToOpen}`);
 	await openInBrowser(urlToOpen);
 
-	return Promise.race([timerPromise, loginPromise]);
+	const result = await Promise.race([timeoutPromise, serverPromise]);
+	controller.abort();
+	if (result === "timeout") {
+		throw new UserError(
+			"Timed out waiting for authorization code, please try again."
+		);
+	}
+
+	return result as S3AccessKey;
 }
 
 // Get R2 bucket information from v4 API
