@@ -32,6 +32,17 @@ it("falls through to global fetch() if unmatched", async () => {
 	expect(await response.text()).toBe("fallthrough:GET https://example.com/bad");
 });
 
+it("intercepts URLs with query parameters with repeated keys", async () => {
+	fetchMock
+		.get("https://example.com")
+		.intercept({ path: "/foo/bar?a=1&a=2" })
+		.reply(200, "body");
+
+	let response = await fetch("https://example.com/foo/bar?a=1&a=2");
+	expect(response.url).toEqual("https://example.com/foo/bar?a=1&a=2");
+	expect(await response.text()).toBe("body");
+});
+
 describe("AbortSignal", () => {
 	let abortSignalTimeoutMock: MockInstance;
 
