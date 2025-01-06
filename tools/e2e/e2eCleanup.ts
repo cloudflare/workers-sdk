@@ -26,6 +26,22 @@ run().catch((e) => {
 });
 
 async function run() {
+	// KV namespaces don't have a creation timestamp, but deletion will fail if there is a worker bound to it
+	// so delete these first to avoid interrupting running e2e jobs (unless you are very very unlucky)
+	const kvNamespacesToDelete = await listTmpKVNamespaces();
+	for (const kvNamespace of kvNamespacesToDelete) {
+		console.log("Deleting KV namespace: " + kvNamespace.title);
+		await deleteKVNamespace(kvNamespace.id);
+	}
+
+	if (kvNamespacesToDelete.length === 0) {
+		console.log(`No KV namespaces to delete.`);
+	} else {
+		console.log(
+			`Successfully deleted ${kvNamespacesToDelete.length} KV namespaces`
+		);
+	}
+
 	const projectsToDelete = await listTmpE2EProjects();
 
 	for (const project of projectsToDelete) {
@@ -50,20 +66,6 @@ async function run() {
 		console.log(`No workers to delete.`);
 	} else {
 		console.log(`Successfully deleted ${workersToDelete.length} workers`);
-	}
-
-	const kvNamespacesToDelete = await listTmpKVNamespaces();
-	for (const kvNamespace of kvNamespacesToDelete) {
-		console.log("Deleting KV namespace: " + kvNamespace.title);
-		await deleteKVNamespace(kvNamespace.id);
-	}
-
-	if (kvNamespacesToDelete.length === 0) {
-		console.log(`No KV namespaces to delete.`);
-	} else {
-		console.log(
-			`Successfully deleted ${kvNamespacesToDelete.length} KV namespaces`
-		);
 	}
 
 	const d1DatabasesToDelete = await listTmpDatabases();

@@ -26,13 +26,9 @@ export interface KVNamespaceInfo {
 }
 
 export type Database = {
+	created_at: string;
 	uuid: string;
-	previewDatabaseUuid?: string;
 	name: string;
-	binding: string;
-	internal_env?: string;
-	migrationsTableName: string;
-	migrationsFolderPath: string;
 };
 
 class ApiError extends Error {
@@ -210,7 +206,11 @@ export const listTmpDatabases = async () => {
 			break;
 		}
 	}
-	return results.filter((db) => db.name.includes("tmp-e2e"));
+	return results.filter(
+		(db) =>
+			db.name.includes("tmp-e2e") && // Databases are more than an hour old
+			Date.now() - new Date(db.created_at).valueOf() > 1000 * 60 * 60
+	);
 };
 
 export const deleteDatabase = async (id: string) => {
