@@ -1,8 +1,12 @@
 import {
+	deleteDatabase,
+	deleteKVNamespace,
 	deleteProject,
 	deleteWorker,
+	listTmpDatabases,
 	listTmpE2EProjects,
 	listTmpE2EWorkers,
+	listTmpKVNamespaces,
 } from "./common";
 
 if (!process.env.CLOUDFLARE_API_TOKEN) {
@@ -46,5 +50,32 @@ async function run() {
 		console.log(`No workers to delete.`);
 	} else {
 		console.log(`Successfully deleted ${workersToDelete.length} workers`);
+	}
+
+	const kvNamespacesToDelete = await listTmpKVNamespaces();
+	for (const kvNamespace of kvNamespacesToDelete) {
+		console.log("Deleting KV namespace: " + kvNamespace.title);
+		await deleteKVNamespace(kvNamespace.id);
+	}
+
+	if (kvNamespacesToDelete.length === 0) {
+		console.log(`No KV namespaces to delete.`);
+	} else {
+		console.log(
+			`Successfully deleted ${kvNamespacesToDelete.length} KV namespaces`
+		);
+	}
+
+	const d1DatabasesToDelete = await listTmpDatabases();
+	for (const db of d1DatabasesToDelete) {
+		console.log("Deleting D1 database: " + db.name);
+		await deleteDatabase(db.name);
+	}
+	if (d1DatabasesToDelete.length === 0) {
+		console.log(`No D1 databases to delete.`);
+	} else {
+		console.log(
+			`Successfully deleted ${d1DatabasesToDelete.length} D1 databases`
+		);
 	}
 }
