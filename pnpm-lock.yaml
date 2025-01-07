@@ -2254,277 +2254,37 @@ importers:
 
   packages/wrangler-shared:
     dependencies:
-      '@cloudflare/kv-asset-handler':
-        specifier: workspace:*
-        version: link:../kv-asset-handler
-      '@esbuild-plugins/node-globals-polyfill':
-        specifier: ^0.2.3
-        version: 0.2.3(esbuild@0.17.19)
-      '@esbuild-plugins/node-modules-polyfill':
-        specifier: ^0.2.2
-        version: 0.2.2(esbuild@0.17.19)
-      blake3-wasm:
-        specifier: ^2.1.5
-        version: 2.1.5
-      chokidar:
-        specifier: ^4.0.1
-        version: 4.0.1
-      date-fns:
-        specifier: ^4.1.0
-        version: 4.1.0
-      esbuild:
-        specifier: 0.17.19
-        version: 0.17.19
-      itty-time:
-        specifier: ^1.0.6
-        version: 1.0.6
-      miniflare:
-        specifier: workspace:*
-        version: link:../miniflare
-      nanoid:
-        specifier: ^3.3.3
-        version: 3.3.7
-      path-to-regexp:
-        specifier: ^6.3.0
-        version: 6.3.0
-      resolve:
-        specifier: ^1.22.8
-        version: 1.22.8
-      selfsigned:
-        specifier: ^2.0.1
-        version: 2.1.1
-      source-map:
-        specifier: ^0.6.1
-        version: 0.6.1
-      unenv:
-        specifier: npm:unenv-nightly@2.0.0-20241218-183400-5d6aec3
-        version: unenv-nightly@2.0.0-20241218-183400-5d6aec3
-      workerd:
-        specifier: 1.20241218.0
-        version: 1.20241218.0
-      xxhash-wasm:
-        specifier: ^1.0.1
-        version: 1.0.1
-    devDependencies:
-      '@cloudflare/cli':
-        specifier: workspace:*
-        version: link:../cli
-      '@cloudflare/eslint-config-worker':
-        specifier: workspace:*
-        version: link:../eslint-config-worker
-      '@cloudflare/pages-shared':
-        specifier: workspace:^
-        version: link:../pages-shared
-      '@cloudflare/types':
-        specifier: 6.18.4
-        version: 6.18.4(react@18.3.1)
-      '@cloudflare/workers-shared':
-        specifier: workspace:*
-        version: link:../workers-shared
-      '@cloudflare/workers-tsconfig':
-        specifier: workspace:*
-        version: link:../workers-tsconfig
-      '@cloudflare/workers-types':
-        specifier: ^4.20241218.0
-        version: 4.20241218.0
-      '@cspotcode/source-map-support':
-        specifier: 0.8.1
-        version: 0.8.1
       '@iarna/toml':
         specifier: ^3.0.0
         version: 3.0.0
-      '@microsoft/api-extractor':
-        specifier: ^7.47.0
-        version: 7.47.4(@types/node@18.19.59)
-      '@sentry/node':
-        specifier: ^7.86.0
-        version: 7.87.0(supports-color@9.2.2)
-      '@sentry/types':
-        specifier: ^7.86.0
-        version: 7.87.0
-      '@sentry/utils':
-        specifier: ^7.86.0
-        version: 7.87.0
-      '@types/body-parser':
-        specifier: ^1.19.2
-        version: 1.19.2
-      '@types/command-exists':
-        specifier: ^1.2.0
-        version: 1.2.0
-      '@types/express':
-        specifier: ^4.17.13
-        version: 4.17.13
-      '@types/glob-to-regexp':
-        specifier: ^0.4.1
-        version: 0.4.1
-      '@types/is-ci':
-        specifier: ^3.0.0
-        version: 3.0.0
-      '@types/javascript-time-ago':
-        specifier: ^2.0.3
-        version: 2.0.3
-      '@types/mime':
-        specifier: ^3.0.4
-        version: 3.0.4
-      '@types/minimatch':
-        specifier: ^5.1.2
-        version: 5.1.2
-      '@types/prompts':
-        specifier: ^2.0.14
-        version: 2.0.14
-      '@types/resolve':
-        specifier: ^1.20.6
-        version: 1.20.6
-      '@types/shell-quote':
-        specifier: ^1.7.2
-        version: 1.7.2
-      '@types/signal-exit':
-        specifier: ^3.0.1
-        version: 3.0.1
-      '@types/supports-color':
-        specifier: ^8.1.1
-        version: 8.1.1
-      '@types/ws':
-        specifier: ^8.5.7
-        version: 8.5.10
-      '@types/yargs':
-        specifier: ^17.0.22
-        version: 17.0.24
-      '@vitest/ui':
-        specifier: catalog:default
-        version: 2.1.8(vitest@2.1.8)
-      '@webcontainer/env':
-        specifier: ^1.1.0
-        version: 1.1.0
-      body-parser:
-        specifier: ^1.20.0
-        version: 1.20.0(supports-color@9.2.2)
       chalk:
         specifier: ^5.2.0
         version: 5.3.0
-      cli-table3:
-        specifier: ^0.6.3
-        version: 0.6.3
-      cmd-shim:
-        specifier: ^4.1.0
-        version: 4.1.0
-      command-exists:
-        specifier: ^1.2.9
-        version: 1.2.9
-      concurrently:
-        specifier: ^8.2.2
-        version: 8.2.2
-      devtools-protocol:
-        specifier: ^0.0.1182435
-        version: 0.0.1182435
       dotenv:
         specifier: ^16.0.0
         version: 16.3.1
-      execa:
-        specifier: ^6.1.0
-        version: 6.1.0
-      express:
-        specifier: ^4.18.1
-        version: 4.18.1(supports-color@9.2.2)
       find-up:
         specifier: ^6.3.0
         version: 6.3.0
-      get-port:
-        specifier: ^7.0.0
-        version: 7.0.0
-      glob-to-regexp:
-        specifier: ^0.4.1
-        version: 0.4.1
-      http-terminator:
-        specifier: ^3.2.0
-        version: 3.2.0
-      https-proxy-agent:
-        specifier: 7.0.2
-        version: 7.0.2(supports-color@9.2.2)
-      ignore:
-        specifier: ^5.2.0
-        version: 5.3.1
-      is-ci:
-        specifier: ^3.0.1
-        version: 3.0.1
-      javascript-time-ago:
-        specifier: ^2.5.4
-        version: 2.5.7
-      md5-file:
-        specifier: 5.0.0
-        version: 5.0.0
-      mime:
-        specifier: ^3.0.0
-        version: 3.0.0
-      minimatch:
-        specifier: ^5.1.0
-        version: 5.1.6
-      mock-socket:
-        specifier: ^9.3.1
-        version: 9.3.1
-      msw:
-        specifier: 2.4.3
-        version: 2.4.3(typescript@5.6.3)
-      open:
-        specifier: ^8.4.0
-        version: 8.4.0
-      p-queue:
-        specifier: ^7.2.0
-        version: 7.2.0
-      patch-console:
-        specifier: ^1.0.0
-        version: 1.0.0
-      pretty-bytes:
-        specifier: ^6.0.0
-        version: 6.1.1
-      prompts:
-        specifier: ^2.4.2
-        version: 2.4.2
-      semiver:
-        specifier: ^1.1.0
-        version: 1.1.0
-      shell-quote:
-        specifier: ^1.8.1
-        version: 1.8.1
-      signal-exit:
-        specifier: ^3.0.7
-        version: 3.0.7
-      strip-ansi:
-        specifier: ^7.1.0
-        version: 7.1.0
-      supports-color:
-        specifier: ^9.2.2
-        version: 9.2.2
-      timeago.js:
-        specifier: ^4.0.2
-        version: 4.0.2
+      miniflare:
+        specifier: workspace:*
+        version: link:../miniflare
       ts-dedent:
         specifier: ^2.2.0
         version: 2.2.0
-      ts-json-schema-generator:
-        specifier: ^1.5.0
-        version: 1.5.0
-      undici:
-        specifier: catalog:default
-        version: 5.28.4
-      update-check:
-        specifier: ^1.5.4
-        version: 1.5.4
+    devDependencies:
+      '@cloudflare/eslint-config-worker':
+        specifier: workspace:*
+        version: link:../eslint-config-worker
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:*
+        version: link:../workers-tsconfig
+      '@types/yargs':
+        specifier: ^17.0.22
+        version: 17.0.24
       vitest:
         specifier: catalog:default
         version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
-      vitest-websocket-mock:
-        specifier: ^0.4.0
-        version: 0.4.0(vitest@2.1.8)
-      ws:
-        specifier: ^8.18.0
-        version: 8.18.0
-      xdg-app-paths:
-        specifier: ^8.3.0
-        version: 8.3.0
-      yargs:
-        specifier: ^17.7.2
-        version: 17.7.2
 
   tools:
     devDependencies:
