@@ -120,7 +120,7 @@ export async function typesHandler(
 
 	const configBindingsWithSecrets = {
 		kv_namespaces: config.kv_namespaces ?? [],
-		vars: getVarsInfo(args),
+		vars: collectAllVars(args),
 		wasm_modules: config.wasm_modules,
 		text_blobs: {
 			...config.text_blobs,
@@ -152,8 +152,7 @@ export async function typesHandler(
 		configBindingsWithSecrets,
 		config,
 		envInterface,
-		outputPath,
-		args.strictVars
+		outputPath
 	);
 }
 
@@ -207,7 +206,7 @@ export function generateImportSpecifier(from: string, to: string) {
 
 type Secrets = Record<string, string>;
 
-type ConfigToDTS = Partial<Omit<Config, "vars">> & { vars: VarsInfo } & {
+type ConfigToDTS = Partial<Omit<Config, "vars">> & { vars: VarTypes } & {
 	secrets: Secrets;
 };
 
@@ -215,8 +214,7 @@ async function generateTypes(
 	configToDTS: ConfigToDTS,
 	config: Config,
 	envInterface: string,
-	outputPath: string,
-	strictVars: boolean
+	outputPath: string
 ) {
 	const configContainsEntrypoint =
 		config.main !== undefined || !!config.site?.["entry-point"];
@@ -265,41 +263,10 @@ async function generateTypes(
 		const vars = Object.entries(configToDTS.vars).filter(
 			([key]) => !(key in configToDTS.secrets)
 		);
-		for (const [varName, varInfo] of vars) {
-			const varValueTypes = new Set(
-				varInfo
-					.map(({ value: varValue }) => {
-						if (!strictVars) {
-							if (Array.isArray(varValue)) {
-								const typesInArray = [
-									...new Set(varValue.map((item) => typeof item)),
-								].sort();
-								if (typesInArray.length === 1) {
-									return `${typesInArray[0]}[]`;
-								}
-								return `(${typesInArray.join("|")})[]`;
-							}
-							return typeof varValue;
-						}
-						if (typeof varValue === "number" || typeof varValue === "boolean") {
-							return `${varValue}`;
-						}
-						if (typeof varValue === "string" || typeof varValue === "object") {
-							return JSON.stringify(varValue);
-						}
-						return "unknown";
-					})
-					.filter(Boolean)
-			) as Set<string>;
-
-			const typeKey = constructTypeKey(varName);
-			const constructedValues = [...varValueTypes];
-
+		for (const [varName, varValues] of vars) {
 			envTypeStructure.push([
-				typeKey,
-				constructedValues.length === 1
-					? constructedValues[0]
-					: constructedValues.join(" | "),
+				constructTypeKey(varName),
+				varValues.length === 1 ? varValues[0] : varValues.join(" | "),
 			]);
 		}
 	}
@@ -608,29 +575,74 @@ type TSConfig = {
 	};
 };
 
-type VarValue = Config["vars"][string];
+type VarTypes = Record<string, string[]>;
 
-type VarInfoValue = { value: VarValue; env?: string };
-
-type VarsInfo = Record<string, VarInfoValue[]>;
-
-function getVarsInfo(
+/**
+ * Collects all the vars types across all the environments defined in the config file
+ *
+ * @param args all the CLI arguments passed to the `types` command
+ * @returns an object which keys are the variable names and values are arrays containing all the computed types for such variables
+ */
+function collectAllVars(
 	args: StrictYargsOptionsToInterface<typeof typesOptions>
-): VarsInfo {
-	const varsInfo: VarsInfo = {};
-	const { rawConfig } = experimental_readRawConfig(args);
+): Record<string, string[]> {
+	const varsInfo: Record<string, Set<string>> = {};
 
-	function collectVars(vars: RawEnvironment["vars"], envName?: string) {
+	// Collects onto the `varsInfo` object the vars and values for a specific environment
+	function collectEnvironmentVars(vars: RawEnvironment["vars"]) {
 		Object.entries(vars ?? {}).forEach(([key, value]) => {
-			varsInfo[key] ??= [];
-			varsInfo[key].push({ value, env: envName });
+			varsInfo[key] ??= new Set();
+
+			if (!args.strictVars) {
+				// when strict-vars is false we basically only want the plain "typeof" values
+				varsInfo[key].add(
+					Array.isArray(value) ? typeofArray(value) : typeof value
+				);
+				return;
+			}
+
+			if (typeof value === "number" || typeof value === "boolean") {
+				varsInfo[key].add(`${value}`);
+				return;
+			}
+			if (typeof value === "string" || typeof value === "object") {
+				varsInfo[key].add(JSON.stringify(value));
+				return;
+			}
+
+			// let's fallback to a safe `unknown` if we couldn't detect the type
+			varsInfo[key].add("unknown");
 		});
 	}
 
-	collectVars(rawConfig.vars);
-	Object.entries(rawConfig.env ?? {}).forEach(([envName, env]) => {
-		collectVars(env.vars, envName);
+	const { rawConfig } = experimental_readRawConfig(args);
+	collectEnvironmentVars(rawConfig.vars);
+	Object.entries(rawConfig.env ?? {}).forEach(([_envName, env]) => {
+		collectEnvironmentVars(env.vars);
 	});
 
-	return varsInfo;
+	return Object.fromEntries(
+		Object.entries(varsInfo).map(([key, value]) => [key, [...value]])
+	);
+}
+
+/**
+ * Given an array it returns a string representing the types present in such array
+ *
+ * e.g.
+ * 		`[1, 2, 3]` returns `number[]`,
+ * 		`[1, 2, 'three']` returns `(number|string)[]`,
+ * 		`['false', true]` returns `(string|boolean)[]`,
+ *
+ * @param array the target array
+ * @returns the string representing the types of such array
+ */
+function typeofArray(array: unknown[]): string {
+	const typesInArray = [...new Set(array.map((item) => typeof item))].sort();
+
+	if (typesInArray.length === 1) {
+		return `${typesInArray[0]}[]`;
+	}
+
+	return `(${typesInArray.join("|")})[]`;
 }
