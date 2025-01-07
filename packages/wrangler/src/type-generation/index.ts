@@ -635,7 +635,7 @@ function collectAllVars(
  * 		`['false', true]` returns `(string|boolean)[]`,
  *
  * @param array the target array
- * @returns the string representing the types of such array
+ * @returns a string representing the types of such array
  */
 function typeofArray(array: unknown[]): string {
 	const typesInArray = [...new Set(array.map((item) => typeof item))].sort();
