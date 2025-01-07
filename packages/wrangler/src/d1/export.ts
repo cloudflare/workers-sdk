@@ -72,13 +72,9 @@ export function Options(yargs: CommonYargsArgv) {
 
 type HandlerOptions = StrictYargsOptionsToInterface<typeof Options>;
 export const Handler = async (args: HandlerOptions): Promise<void> => {
-	const { local, remote, name, output, schema, data, table } = args;
+	const { remote, name, output, schema, data, table } = args;
 	await printWranglerBanner();
 	const config = readConfig(args);
-
-	if (!local && !remote) {
-		throw new UserError(`You must specify either --local or --remote`);
-	}
 
 	if (!schema && !data) {
 		throw new UserError(`You cannot specify both --no-schema and --no-data`);
@@ -91,10 +87,10 @@ export const Handler = async (args: HandlerOptions): Promise<void> => {
 			: [table]
 		: [];
 
-	if (local) {
-		return await exportLocal(config, name, output, tables, !schema, !data);
-	} else {
+	if (remote) {
 		return await exportRemotely(config, name, output, tables, !schema, !data);
+	} else {
+		return await exportLocal(config, name, output, tables, !schema, !data);
 	}
 };
 
