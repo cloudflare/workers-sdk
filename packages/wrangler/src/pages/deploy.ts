@@ -264,14 +264,18 @@ export const Handler = async (args: PagesDeployArgs) => {
 					isGitDir = false;
 				}
 
-				const productionBranch = await prompt(
-					"Enter the production branch name:",
-					{
-						defaultValue: isGitDir
-							? execSync(`git rev-parse --abbrev-ref HEAD`).toString().trim()
-							: "production",
-					}
-				);
+				let productionBranch: string | undefined;
+				if (isGitDir) {
+					try {
+						productionBranch = execSync(`git rev-parse --abbrev-ref HEAD`)
+							.toString()
+							.trim();
+					} catch (err) {}
+				}
+
+				productionBranch = await prompt("Enter the production branch name:", {
+					defaultValue: productionBranch ?? "production",
+				});
 
 				if (!productionBranch) {
 					throw new FatalError("Must specify a production branch.", 1);
