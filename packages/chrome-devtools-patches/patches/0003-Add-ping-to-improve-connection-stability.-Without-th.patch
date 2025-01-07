@@ -1,4 +1,4 @@
-From 233ae8633d7a84f662ebdea564070fcbee2f42d4 Mon Sep 17 00:00:00 2001
+From bb83ff914007d15f52e4eaf46b6f52e102631163 Mon Sep 17 00:00:00 2001
 From: Workers DevProd <workers-devprod@cloudflare.com>
 Date: Fri, 25 Oct 2024 15:04:17 +0100
 Subject: [PATCH 3/8] Add ping to improve connection stability. Without this,
