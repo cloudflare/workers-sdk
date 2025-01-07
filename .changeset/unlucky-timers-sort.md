@@ -4,8 +4,8 @@
 
 add `--strict-vars` option to `wrangler types`
 
-add a new `--strict-vars` option to `wrangler types` that developers can use to enable/disable
-more strict/literal types for their variables
+add a new `--strict-vars` option to `wrangler types` that developers can (by setting the
+flag to `false`) use to disable the default strict/literal types generation for their variables
 
 opting out of strict variables can be useful when developers change often their `vars` values,
 even more so when multiple environments are involved
