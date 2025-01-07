@@ -2,7 +2,7 @@
 "wrangler": patch
 ---
 
-feat(wrangler): allow overriding the unenv preset.
+allow overriding the unenv preset.
 
 By default wrangler uses the bundled unenv preset.
 
