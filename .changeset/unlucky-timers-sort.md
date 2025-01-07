@@ -2,7 +2,7 @@
 "wrangler": minor
 ---
 
-add `strict-vars` option to `wrangler types`
+add `--strict-vars` option to `wrangler types`
 
 add a new `--strict-vars` option to `wrangler types` that developers can use to enable/disable
 more strict/literal types for their variables
