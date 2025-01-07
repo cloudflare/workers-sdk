@@ -4,10 +4,8 @@
 
 fix: widen multi-env `vars` types in `wrangler types`
 
-Currently types for variable generate string literal, those are appropriate when
-a single environment has been specified in the config file but if multiple environments
-are specified this however wrongly restricts the typing, the changes here fix such
-incorrect behavior.
+Currently, the type generated for `vars` is a string literal consisting of the value of the variable in the top level environment. If multiple environments
+are specified this wrongly restricts the type, since the variable could contain any of the values from each of the environments.
 
 For example, given a `wrangler.toml` containing the following:
 
