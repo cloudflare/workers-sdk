@@ -301,8 +301,7 @@ async function generateTypes(
 		for (const [varName, varInfo] of vars) {
 			const varValueTypes = new Set(
 				varInfo
-					.map(({ value }) => value)
-					.map((varValue) => {
+					.map(({ value: varValue }) => {
 						if (!strictVars) {
 							if (Array.isArray(varValue)) {
 								const typesInArray = [
