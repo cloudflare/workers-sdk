@@ -43,4 +43,4 @@ interface Env {
 ```
 
 (allowing the developer to easily change their toml variables without the
-risk of braking typescript types)
+risk of breaking typescript types)
