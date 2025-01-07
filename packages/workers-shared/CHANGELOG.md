@@ -1,5 +1,11 @@
 # @cloudflare/workers-shared
 
+## 0.11.2
+
+### Patch Changes
+
+- [#7612](https://github.com/cloudflare/workers-sdk/pull/7612) [`2e78812`](https://github.com/cloudflare/workers-sdk/commit/2e78812ade7cd7361b023c90afe06221a52b79eb) Thanks [@Cherry](https://github.com/Cherry)! - fix: resolves an issue where a malformed path such as `https://example.com/%A0` would cause an unhandled error
+
 ## 0.11.1
 
 ### Patch Changes

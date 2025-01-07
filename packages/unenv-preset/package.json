@@ -36,8 +36,7 @@
 	"main": "./dist/index.cjs",
 	"types": "./dist/index.d.ts",
 	"files": [
-		"dist",
-		"runtime"
+		"dist"
 	],
 	"scripts": {
 		"build": "unbuild",
@@ -57,6 +56,9 @@
 		"workerd": {
 			"optional": true
 		}
+	},
+	"publishConfig": {
+		"access": "public"
 	},
 	"workers-sdk": {
 		"prerelease": true
