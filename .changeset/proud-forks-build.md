@@ -13,7 +13,6 @@ For example, given a `wrangler.toml` containing the following:
 [vars]
 MY_VAR = "dev value"
 
-[env.production]
 [env.production.vars]
 MY_VAR = "prod value"
 ```
