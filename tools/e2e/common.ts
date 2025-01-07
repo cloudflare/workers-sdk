@@ -22,7 +22,6 @@ export type Worker = {
 export interface KVNamespaceInfo {
 	id: string;
 	title: string;
-	supports_url_encoding?: boolean;
 }
 
 export type Database = {
@@ -149,7 +148,7 @@ export const deleteWorker = async (id: string) => {
 };
 
 export const listTmpKVNamespaces = async () => {
-	const pageSize = 100;
+	const pageSize = 10;
 	let page = 1;
 	const results: KVNamespaceInfo[] = [];
 	while (results.length % pageSize === 0) {

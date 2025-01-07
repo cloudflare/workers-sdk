@@ -71,7 +71,7 @@ async function run() {
 	const d1DatabasesToDelete = await listTmpDatabases();
 	for (const db of d1DatabasesToDelete) {
 		console.log("Deleting D1 database: " + db.name);
-		await deleteDatabase(db.name);
+		await deleteDatabase(db.uuid);
 	}
 	if (d1DatabasesToDelete.length === 0) {
 		console.log(`No D1 databases to delete.`);
