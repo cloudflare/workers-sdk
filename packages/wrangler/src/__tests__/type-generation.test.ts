@@ -2,7 +2,6 @@ import * as fs from "fs";
 import * as TOML from "@iarna/toml";
 import {
 	constructTSModuleGlob,
-	constructType,
 	constructTypeKey,
 	generateImportSpecifier,
 	isValidIdentifier,
@@ -62,43 +61,6 @@ describe("constructTSModuleGlob() should return a valid TS glob ", () => {
 		["folder/**/*", "folder/*"],
 	])("$1 -> $2", (from, to) => {
 		expect(constructTSModuleGlob(from)).toBe(to);
-	});
-});
-
-describe("constructType", () => {
-	it("should return a valid type", () => {
-		expect(constructType("valid", "string")).toBe("valid: string;");
-		expect(constructType("valid123", "string")).toBe("valid123: string;");
-		expect(constructType("valid_123", "string")).toBe("valid_123: string;");
-		expect(constructType("valid_123_", "string")).toBe("valid_123_: string;");
-		expect(constructType("_valid_123_", "string")).toBe("_valid_123_: string;");
-		expect(constructType("_valid_123_", "string")).toBe("_valid_123_: string;");
-
-		expect(constructType("123invalid", "string")).toBe('"123invalid": string;');
-		expect(constructType("invalid-123", "string")).toBe(
-			'"invalid-123": string;'
-		);
-		expect(constructType("invalid 123", "string")).toBe(
-			'"invalid 123": string;'
-		);
-
-		expect(constructType("valid", 'a"', false)).toBe('valid: "a\\"";');
-		expect(constructType("valid", "a\\", false)).toBe('valid: "a\\\\";');
-		expect(constructType("valid", "a\\b", false)).toBe('valid: "a\\\\b";');
-		expect(constructType("valid", 'a\\b"', false)).toBe('valid: "a\\\\b\\"";');
-
-		expect(constructType("valid", 1)).toBe("valid: 1;");
-		expect(constructType("valid", 12345)).toBe("valid: 12345;");
-		expect(constructType("valid", true)).toBe("valid: true;");
-		expect(constructType("valid", false)).toBe("valid: false;");
-	});
-});
-
-describe("constructType with multiline strings", () => {
-	it("should correctly escape newlines in string values", () => {
-		const multilineString = "This is a\nmulti-line\nstring";
-		const expected = `valid: "This is a\\nmulti-line\\nstring";`;
-		expect(constructType("valid", multilineString, false)).toBe(expected);
 	});
 });
 
@@ -663,6 +625,46 @@ describe("generateTypes()", () => {
 	`);
 	});
 
+	it("various different types of vars", async () => {
+		fs.writeFileSync(
+			"./wrangler.toml",
+			TOML.stringify({
+				vars: {
+					"var-a": '"a\\""',
+					"var-a-1": '"a\\\\"',
+					"var-a-b": '"a\\\\b"',
+					"var-a-b-": '"a\\\\b\\""',
+					1: 1,
+					12345: 12345,
+					true: true,
+					false: false,
+					"multi\nline\nvar": "this\nis\na\nmulti\nline\nvariable!",
+				},
+			} as TOML.JsonMap),
+			"utf-8"
+		);
+		await runWrangler("types");
+
+		expect(std.out).toMatchInlineSnapshot(`
+			"Generating project types...
+
+			interface Env {
+				\\"1\\": 1;
+				\\"12345\\": 12345;
+				\\"var-a\\": \\"/\\"a///\\"/\\"\\";
+				\\"var-a-1\\": \\"/\\"a/////\\"\\";
+				\\"var-a-b\\": \\"/\\"a////b/\\"\\";
+				\\"var-a-b-\\": \\"/\\"a////b///\\"/\\"\\";
+				true: true;
+				false: false;
+				\\"multi
+			line
+			var\\": \\"this/nis/na/nmulti/nline/nvariable!\\";
+			}
+			"
+		`);
+	});
+
 	describe("vars present in multiple environments", () => {
 		beforeEach(() => {
 			fs.writeFileSync(
@@ -861,7 +863,7 @@ describe("generateTypes()", () => {
 			});
 		});
 
-		it("should allow multiple customization to be applied together", async () => {
+		it("should allow multiple customizations to be applied together", async () => {
 			fs.writeFileSync(
 				"./wrangler.toml",
 				TOML.stringify({
