@@ -47,6 +47,10 @@ export const versionsDeployCommand = createCommand({
 		owner: "Workers: Authoring and Testing",
 		status: "stable",
 	},
+	behaviour: {
+		useConfigRedirectIfAvailable: true,
+	},
+
 	args: {
 		name: {
 			describe: "Name of the worker",

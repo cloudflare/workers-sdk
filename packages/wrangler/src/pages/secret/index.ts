@@ -42,7 +42,7 @@ async function pagesProject(
 		);
 	}
 	let config: Config | undefined;
-	const configPath = findWranglerConfig(process.cwd());
+	const { configPath } = findWranglerConfig(process.cwd());
 
 	try {
 		/*

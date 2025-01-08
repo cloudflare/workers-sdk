@@ -12,7 +12,7 @@ import type { Config } from "../config";
  *
  * It is useful during development, to provide these types of variable locally.
  * When running `wrangler dev` we will look for a file called `.dev.vars`, situated
- * next to the Wrangler configuration file (or in the current working directory if there is no
+ * next to the User's Wrangler configuration file (or in the current working directory if there is no
  * Wrangler configuration). If the `--env <env>` option is set, we'll first look for
  * `.dev.vars.<env>`.
  *
@@ -20,11 +20,13 @@ import type { Config } from "../config";
  * bindings provided in the Wrangler configuration file.
  */
 export function getVarsForDev(
-	config: Pick<Config, "configPath" | "vars">,
+	config: Pick<Config, "userConfigPath" | "vars">,
 	env: string | undefined,
 	silent = false
 ): Config["vars"] {
-	const configDir = path.resolve(path.dirname(config.configPath ?? "."));
+	const configDir = path.resolve(
+		config.userConfigPath ? path.dirname(config.userConfigPath) : "."
+	);
 	const devVarsPath = path.resolve(configDir, ".dev.vars");
 	const loaded = loadDotEnv(devVarsPath, env);
 	if (loaded !== undefined) {

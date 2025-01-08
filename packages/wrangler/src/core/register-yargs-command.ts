@@ -104,6 +104,8 @@ function createHandler(def: CommandDefinition) {
 						def.behaviour?.provideConfig ?? true
 							? readConfig(args, {
 									hideWarnings: !(def.behaviour?.printConfigWarnings ?? true),
+									useRedirectIfAvailable:
+										def.behaviour?.useConfigRedirectIfAvailable,
 								})
 							: defaultWranglerConfig,
 					errors: { UserError, FatalError },

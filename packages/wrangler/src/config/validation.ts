@@ -61,6 +61,7 @@ export type NormalizeAndValidateConfigArgs = {
 	remote?: boolean;
 	localProtocol?: string;
 	upstreamProtocol?: string;
+	script?: string;
 };
 
 const ENGLISH = new Intl.ListFormat("en-US");
@@ -80,6 +81,7 @@ export function isPagesConfig(rawConfig: RawConfig): boolean {
 export function normalizeAndValidateConfig(
 	rawConfig: RawConfig,
 	configPath: string | undefined,
+	userConfigPath: string | undefined,
 	args: NormalizeAndValidateConfigArgs
 ): {
 	config: Config;
@@ -266,6 +268,7 @@ export function normalizeAndValidateConfig(
 	// Process the top-level default environment configuration.
 	const config: Config = {
 		configPath,
+		userConfigPath,
 		pages_build_output_dir: normalizeAndValidatePagesBuildOutputDir(
 			configPath,
 			rawConfig.pages_build_output_dir
@@ -328,7 +331,7 @@ function applyPythonConfig(
 	config: Config,
 	args: NormalizeAndValidateConfigArgs
 ) {
-	const mainModule = "script" in args ? args.script : config.main;
+	const mainModule = args.script ?? config.main;
 	if (typeof mainModule === "string" && mainModule.endsWith(".py")) {
 		// Workers with a python entrypoint should have bundling turned off, since all of Wrangler's bundling is JS/TS specific
 		config.no_bundle = true;

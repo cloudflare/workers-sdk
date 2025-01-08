@@ -1,10 +1,10 @@
 import path from "node:path";
-import { normalizeAndValidateConfig } from "../config/validation";
+import { normalizeAndValidateConfig } from "../../config/validation";
 import {
 	generateRawConfigForPages,
 	generateRawEnvConfigForPages,
-} from "./helpers/generate-wrangler-config";
-import type { RawConfig, RawEnvironment } from "../config";
+} from "../helpers/generate-wrangler-config";
+import type { RawConfig, RawEnvironment } from "../../config";
 
 describe("normalizeAndValidateConfig()", () => {
 	describe("Pages configuration", () => {
@@ -29,6 +29,7 @@ describe("normalizeAndValidateConfig()", () => {
 			it("should return config corresponding to the top-level environment, if no named environment is provided", () => {
 				const { config, diagnostics } = normalizeAndValidateConfig(
 					pagesRawConfig,
+					undefined,
 					undefined,
 					{
 						env: undefined,
@@ -130,6 +131,7 @@ describe("normalizeAndValidateConfig()", () => {
 				const { config, diagnostics } = normalizeAndValidateConfig(
 					pagesRawConfig,
 					undefined,
+					undefined,
 					{
 						env: "preview",
 					}
@@ -229,6 +231,7 @@ describe("normalizeAndValidateConfig()", () => {
 			it('should return config corresponding to the "production" named environment, if it exists in the configuration file', () => {
 				const { config, diagnostics } = normalizeAndValidateConfig(
 					pagesRawConfig,
+					undefined,
 					undefined,
 					{
 						env: "production",
@@ -349,6 +352,7 @@ describe("normalizeAndValidateConfig()", () => {
 				const { config, diagnostics } = normalizeAndValidateConfig(
 					pagesRawConfig,
 					undefined,
+					undefined,
 					{
 						env: "unsupported-env-name",
 					}
@@ -456,6 +460,7 @@ describe("normalizeAndValidateConfig()", () => {
 
 				const { config, diagnostics } = normalizeAndValidateConfig(
 					pagesRawConfig,
+					undefined,
 					undefined,
 					{
 						env: "preview",
@@ -565,6 +570,7 @@ describe("normalizeAndValidateConfig()", () => {
 				const { config, diagnostics } = normalizeAndValidateConfig(
 					pagesRawConfig,
 					undefined,
+					undefined,
 					{
 						env: "production",
 					}
@@ -670,6 +676,7 @@ describe("normalizeAndValidateConfig()", () => {
 				 */
 				const { config, diagnostics } = normalizeAndValidateConfig(
 					pagesRawConfig,
+					undefined,
 					undefined,
 					{
 						env: "unsupported-env-name",
@@ -780,6 +787,7 @@ describe("normalizeAndValidateConfig()", () => {
 					],
 				},
 				undefined,
+				undefined,
 				{ env: undefined }
 			);
 
@@ -799,6 +807,7 @@ describe("normalizeAndValidateConfig()", () => {
 						},
 					},
 				},
+				undefined,
 				undefined,
 				{
 					env: "preview",
