@@ -1,4 +1,5 @@
-import * as fs from "fs";
+import * as fs from "node:fs";
+import { dirname } from "node:path";
 import { formatConfigSnippet } from "../../config";
 import type { RawConfig } from "../../config";
 
@@ -7,6 +8,7 @@ export function writeWranglerConfig(
 	config: RawConfig = {},
 	path = "./wrangler.toml"
 ) {
+	fs.mkdirSync(dirname(path), { recursive: true });
 	fs.writeFileSync(
 		path,
 		formatConfigSnippet(

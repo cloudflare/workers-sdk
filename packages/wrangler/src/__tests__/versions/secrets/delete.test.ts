@@ -38,9 +38,7 @@ describe("versions secret delete", () => {
 			// We will not be inherting secret_text as that would bring back SECRET
 			expect(metadata.keep_bindings).toStrictEqual(["secret_key"]);
 		});
-		await runWrangler(
-			"versions secret delete SECRET --name script-name --x-versions"
-		);
+		await runWrangler("versions secret delete SECRET --name script-name");
 
 		expect(std.out).toMatchInlineSnapshot(`
 			"🌀 Deleting the secret SECRET on the Worker script-name
@@ -64,9 +62,7 @@ describe("versions secret delete", () => {
 			expect(metadata.keep_bindings).toStrictEqual(["secret_key"]);
 		});
 
-		await runWrangler(
-			"versions secret delete SECRET --name script-name --x-versions"
-		);
+		await runWrangler("versions secret delete SECRET --name script-name");
 
 		expect(std.out).toMatchInlineSnapshot(`
 			"? Are you sure you want to permanently delete the secret SECRET on the Worker script-name?
@@ -93,7 +89,7 @@ describe("versions secret delete", () => {
 			expect(metadata.keep_bindings).toStrictEqual(["secret_key"]);
 		});
 
-		await runWrangler("versions secret delete SECRET --x-versions");
+		await runWrangler("versions secret delete SECRET");
 
 		expect(std.out).toMatchInlineSnapshot(`
 			"? Are you sure you want to permanently delete the secret SECRET on the Worker script-name?
@@ -113,9 +109,7 @@ describe("versions secret delete", () => {
 		mockGetVersion();
 		mockPostVersion();
 
-		await runWrangler(
-			"versions secret delete SECRET --name script-name --x-versions"
-		);
+		await runWrangler("versions secret delete SECRET --name script-name");
 
 		expect(std.warn).toMatchInlineSnapshot(`""`);
 		expect(std.err).toMatchInlineSnapshot(`""`);

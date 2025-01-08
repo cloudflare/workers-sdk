@@ -127,6 +127,19 @@ export const getBuildPlatformFromEnv = getEnvironmentVariableFactory({
 });
 
 /**
+ * `WRANGLER_UNENV_RESOLVE_PATHS` lists the paths used to resolve unenv.
+ *
+ * Note: multiple comma separated paths can be specified.
+ *
+ * By default wrangler uses the unenv preset version installed from the package.json.
+ *
+ * Setting root paths allow to use a different version of the preset.
+ */
+export const getUnenvResolvePathsFromEnv = getEnvironmentVariableFactory({
+	variableName: "WRANGLER_UNENV_RESOLVE_PATHS",
+});
+
+/**
  * `WRANGLER_REGISTRY_PATH` specifies the file based dev registry folder
  */
 export const getRegistryPath = getEnvironmentVariableFactory({
