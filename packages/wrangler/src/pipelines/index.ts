@@ -196,7 +196,9 @@ export function pipelines(pipelineYargs: CommonYargsArgv) {
 					args.compression === undefined ? "gzip" : args.compression;
 
 				const batch = {
-					max_mb: args["batch-max-mb"],
+					max_bytes: args["batch-max-mb"]
+						? args["batch-max-mb"] * 1000 * 1000 // convert to bytes for the API
+						: undefined,
 					max_duration_s: args["batch-max-seconds"],
 					max_rows: args["batch-max-rows"],
 				};
@@ -386,7 +388,8 @@ export function pipelines(pipelineYargs: CommonYargsArgv) {
 					pipelineConfig.destination.compression.type = args.compression;
 				}
 				if (args["batch-max-mb"]) {
-					pipelineConfig.destination.batch.max_mb = args["batch-max-mb"];
+					pipelineConfig.destination.batch.max_bytes =
+						args["batch-max-mb"] * 1000 * 1000; // convert to bytes for the API
 				}
 				if (args["batch-max-seconds"]) {
 					pipelineConfig.destination.batch.max_duration_s =
