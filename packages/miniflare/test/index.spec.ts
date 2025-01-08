@@ -2610,6 +2610,39 @@ test("Miniflare: getCf() returns a user provided cf object", async (t) => {
 	t.deepEqual(cf, { myFakeField: "test" });
 });
 
+test("Miniflare: dispatchFetch() can override cf", async (t) => {
+	const mf = new Miniflare({
+		script:
+			"export default { fetch(request) { return Response.json(request.cf) } }",
+		modules: true,
+		cf: {
+			myFakeField: "test",
+		},
+	});
+	t.teardown(() => mf.dispose());
+
+	const cf = await mf.dispatchFetch("http://example.com/", {
+		cf: { myFakeField: "test2" },
+	});
+	const cfJson = (await cf.json()) as { myFakeField: string };
+	t.deepEqual(cfJson.myFakeField, "test2");
+});
+
+test("Miniflare: CF-Connecting-IP is injected", async (t) => {
+	const mf = new Miniflare({
+		script:
+			"export default { fetch(request) { return new Response(request.headers.get('CF-Connecting-IP')) } }",
+		modules: true,
+		cf: {
+			myFakeField: "test",
+		},
+	});
+	t.teardown(() => mf.dispose());
+
+	const ip = await mf.dispatchFetch("http://example.com/");
+	t.deepEqual(await ip.text(), "127.0.0.1");
+});
+
 test("Miniflare: can use module fallback service", async (t) => {
 	const modulesRoot = "/";
 	const modules: Record<string, Omit<Worker_Module, "name">> = {
