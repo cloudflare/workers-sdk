@@ -138,10 +138,7 @@ describe("unstable_dev()", () => {
 	});
 });
 
-describe.each([
-	{ cmd: "wrangler dev" },
-	{ cmd: "wrangler dev --no-x-registry" },
-])("dev registry $cmd", ({ cmd }) => {
+describe.each([{ cmd: "wrangler dev" }])("dev registry $cmd", ({ cmd }) => {
 	let workerName: string;
 	let workerName2: string;
 	let workerName3: string;

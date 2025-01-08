@@ -120,7 +120,7 @@ describe("getPlatformProxy()", () => {
 		});
 
 		async function runInNode(code: string) {
-			const w = helper.runLongLived("wrangler dev --x-registry", {
+			const w = helper.runLongLived("wrangler dev", {
 				cwd: worker,
 			});
 
