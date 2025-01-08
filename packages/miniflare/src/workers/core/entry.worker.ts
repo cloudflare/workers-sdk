@@ -99,9 +99,16 @@ function getUserRequest(
 		request.headers.set("Host", url.host);
 	}
 
-	if (clientIp) {
-		const [ip] = clientIp.split(":");
-		request.headers.set("CF-Connecting-IP", ip);
+	if (clientIp && !request.headers.get("CF-Connecting-IP")) {
+		const ipv4Regex = /(?<ip>.*?):\d+/;
+		const ipv6Regex = /\[(?<ip>.*?)\]:\d+/;
+		const ip =
+			clientIp.match(ipv6Regex)?.groups?.ip ??
+			clientIp.match(ipv4Regex)?.groups?.ip;
+
+		if (ip) {
+			request.headers.set("CF-Connecting-IP", ip);
+		}
 	}
 
 	request.headers.delete(CoreHeaders.PROXY_SHARED_SECRET);
@@ -340,7 +347,7 @@ export default <ExportedHandler<Env>>{
 	async fetch(request, env, ctx) {
 		const startTime = Date.now();
 
-		const clientIp = request.cf?.clientIp;
+		const clientIp = request.cf?.clientIp as string;
 
 		// Parse this manually (rather than using the `cfBlobHeader` config property in workerd to parse it into request.cf)
 		// This is because we want to have access to the clientIp, which workerd puts in request.cf if no cfBlobHeader is provided
