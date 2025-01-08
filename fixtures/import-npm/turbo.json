@@ -1,7 +1,9 @@
 {
 	"extends": ["//"],
 	"tasks": {
-		"_clean_install": {},
+		"_clean_install": {
+			"outputs": ["node_modules"]
+		},
 		"check:type": {
 			"dependsOn": ["_clean_install"]
 		},
