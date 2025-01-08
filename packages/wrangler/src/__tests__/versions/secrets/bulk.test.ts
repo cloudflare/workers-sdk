@@ -80,9 +80,7 @@ describe("versions secret bulk", () => {
 		);
 		mockSetupApiCalls();
 		mockPostVersion();
-		await runWrangler(
-			`versions secret bulk .env --name script-name --x-versions`
-		);
+		await runWrangler(`versions secret bulk .env --name script-name`);
 		expect(std.out).toMatchInlineSnapshot(
 			`
 			"🌀 Creating the secrets for the Worker \\"script-name\\"
@@ -149,9 +147,7 @@ describe("versions secret bulk", () => {
 		await writeFile("secrets.json", "not valid json :(", { encoding: "utf8" });
 
 		await expect(
-			runWrangler(
-				`versions secret bulk secrets.json --name script-name`
-			)
+			runWrangler(`versions secret bulk secrets.json --name script-name`)
 		).rejects.toThrowError(
 			`The contents of "secrets.json" is not valid JSON: "ParseError: Unexpected token o"`
 		);
