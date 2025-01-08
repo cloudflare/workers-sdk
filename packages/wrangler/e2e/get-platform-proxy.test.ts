@@ -130,7 +130,7 @@ describe("getPlatformProxy()", () => {
 				"index.mjs": dedent/*javascript*/ `
 						import { getPlatformProxy } from "${WRANGLER_IMPORT}"
 
-						const { env } = await getPlatformProxy({ experimentalRegistry: true });
+						const { env } = await getPlatformProxy();
 
 						const resp = ${code}
 

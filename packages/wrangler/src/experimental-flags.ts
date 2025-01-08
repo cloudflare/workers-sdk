@@ -2,7 +2,6 @@ import { AsyncLocalStorage } from "async_hooks";
 import { logger } from "./logger";
 
 export type ExperimentalFlags = {
-	FILE_BASED_REGISTRY: boolean;
 	MULTIWORKER: boolean;
 	RESOURCES_PROVISION: boolean;
 };

@@ -77,7 +77,6 @@ describe("pages", () => {
 			      --persist-to                                 Specify directory to use for local persistence (defaults to .wrangler/state)  [string]
 			      --log-level                                  Specify logging level  [choices: \\"debug\\", \\"info\\", \\"log\\", \\"warn\\", \\"error\\", \\"none\\"]
 			      --show-interactive-dev-session               Show interactive dev session (defaults to true if the terminal supports interactivity)  [boolean]
-			      --experimental-registry, --x-registry        Use the experimental file based dev registry for multi-worker development  [boolean] [default: true]
 			      --experimental-vectorize-bind-to-prod        Bind to production Vectorize indexes in local development mode  [boolean] [default: false]"
 		`);
 	});
