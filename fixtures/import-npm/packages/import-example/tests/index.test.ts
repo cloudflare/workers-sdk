@@ -1,5 +1,4 @@
 import { resolve } from "path";
-import { fetch } from "undici";
 import { afterAll, beforeAll, describe, it } from "vitest";
 import { runWranglerDev } from "../../../../shared/src/run-wrangler-long-lived";
 
