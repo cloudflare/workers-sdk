@@ -7,7 +7,7 @@ import { isNonInteractiveOrCI } from "../../is-interactive";
 import { logger } from "../../logger";
 import { DEFAULT_MIGRATION_PATH } from "../constants";
 import { executeSql } from "../execute";
-import type { ConfigFields, DevConfig, Environment } from "../../config";
+import type { Config } from "../../config";
 import type { QueryResult } from "../execute";
 import type { Migration } from "../types";
 
@@ -57,7 +57,7 @@ export async function getUnappliedMigrations({
 	migrationsPath: string;
 	local: boolean | undefined;
 	remote: boolean | undefined;
-	config: ConfigFields<DevConfig> & Environment;
+	config: Config;
 	name: string;
 	persistTo: string | undefined;
 	preview: boolean | undefined;
@@ -92,7 +92,7 @@ type ListAppliedMigrationsProps = {
 	migrationsTableName: string;
 	local: boolean | undefined;
 	remote: boolean | undefined;
-	config: ConfigFields<DevConfig> & Environment;
+	config: Config;
 	name: string;
 	persistTo: string | undefined;
 	preview: boolean | undefined;
@@ -170,7 +170,7 @@ export const initMigrationsTable = async ({
 	migrationsTableName: string;
 	local: boolean | undefined;
 	remote: boolean | undefined;
-	config: ConfigFields<DevConfig> & Environment;
+	config: Config;
 	name: string;
 	persistTo: string | undefined;
 	preview: boolean | undefined;

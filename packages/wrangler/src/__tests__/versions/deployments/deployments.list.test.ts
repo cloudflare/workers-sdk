@@ -20,7 +20,7 @@ describe("deployments list", () => {
 
 	describe("without wrangler.toml", () => {
 		test("fails with no args", async () => {
-			const result = runWrangler("deployments list  --experimental-versions");
+			const result = runWrangler("deployments list");
 
 			await expect(result).rejects.toMatchInlineSnapshot(
 				`[Error: You need to provide a name for your Worker. Either pass it as a cli arg with \`--name <name>\` or in your configuration file as \`name = "<name>"\`]`
@@ -32,9 +32,7 @@ describe("deployments list", () => {
 		});
 
 		test("prints deployments to stdout", async () => {
-			const result = runWrangler(
-				"deployments list --name test-name  --experimental-versions"
-			);
+			const result = runWrangler("deployments list --name test-name");
 
 			await expect(result).resolves.toBeUndefined();
 
@@ -101,9 +99,7 @@ describe("deployments list", () => {
 		});
 
 		test("prints deployments to stdout as --json", async () => {
-			const result = runWrangler(
-				"deployments list --name test-name --json  --experimental-versions"
-			);
+			const result = runWrangler("deployments list --name test-name --json");
 
 			await expect(result).resolves.toBeUndefined();
 
@@ -199,7 +195,7 @@ describe("deployments list", () => {
 		beforeEach(() => writeWranglerConfig());
 
 		test("prints deployments to stdout", async () => {
-			const result = runWrangler("deployments list  --experimental-versions");
+			const result = runWrangler("deployments list");
 
 			await expect(result).resolves.toBeUndefined();
 
@@ -266,9 +262,7 @@ describe("deployments list", () => {
 		});
 
 		test("prints deployments to stdout as --json", async () => {
-			const result = runWrangler(
-				"deployments list --json  --experimental-versions"
-			);
+			const result = runWrangler("deployments list --json");
 
 			await expect(result).resolves.toBeUndefined();
 

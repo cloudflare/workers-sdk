@@ -350,14 +350,14 @@ export async function deleteR2Object(
 
 export async function usingLocalBucket<T>(
 	persistTo: string | undefined,
-	configPath: string | undefined,
+	config: Config,
 	bucketName: string,
 	closure: (
 		namespace: ReplaceWorkersTypes<R2Bucket>,
 		mf: Miniflare
 	) => Promise<T>
 ): Promise<T> {
-	const persist = getLocalPersistencePath(persistTo, configPath);
+	const persist = getLocalPersistencePath(persistTo, config);
 	const persistOptions = buildPersistOptions(persist);
 	const mf = new Miniflare({
 		modules: true,

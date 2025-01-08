@@ -1,7 +1,6 @@
 name = "auth-service"
 main = "src/index.ts"
 compatibility_date = "2024-01-01"
-compatibility_flags = ["nodejs_compat"]
 
 # `AUTH_PUBLIC_KEY` would be a secret created with `wrangler secret put`, and
 # stored in `.dev.vars` during development
