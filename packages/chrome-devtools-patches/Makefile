@@ -28,3 +28,8 @@ cleanup:
 
 test:
 	git -C devtools-frontend am $(PATCHES)
+
+dev:
+	cd devtools-frontend && PATH="$(PATH_WITH_DEPOT)" npm run install-deps
+	cd devtools-frontend && PATH="$(PATH_WITH_DEPOT)" gn gen out/Default --args="devtools_skip_typecheck=true"
+	cd devtools-frontend && PATH="$(PATH_WITH_DEPOT)" npm run watch
