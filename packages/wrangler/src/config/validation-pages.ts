@@ -40,6 +40,7 @@ const supportedPagesConfigFields = [
 	// normalizeAndValidateConfig() sets these values
 	"configPath",
 	"userConfigPath",
+	"topLevelName",
 ] as const;
 
 export function validatePagesConfig(

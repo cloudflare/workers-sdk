@@ -1196,7 +1196,11 @@ describe("normalizeAndValidateConfig()", () => {
 
 			// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
 			expect({ ...config, tsconfig: normalizePath(config.tsconfig!) }).toEqual(
-				expect.objectContaining({ ...expectedConfig, main: resolvedMain })
+				expect.objectContaining({
+					...expectedConfig,
+					main: resolvedMain,
+					topLevelName: expectedConfig.name,
+				})
 			);
 			expect(diagnostics.hasErrors()).toBe(false);
 			expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
@@ -4152,6 +4156,7 @@ describe("normalizeAndValidateConfig()", () => {
 					...rawConfig,
 					main: resolvedMain,
 					name: "mock-name-dev",
+					topLevelName: "mock-name",
 				})
 			);
 			expect(diagnostics.hasErrors()).toBe(false);
@@ -4229,7 +4234,11 @@ describe("normalizeAndValidateConfig()", () => {
 			);
 
 			expect(config).toEqual(
-				expect.objectContaining({ ...rawEnv, main: resolvedMain })
+				expect.objectContaining({
+					...rawEnv,
+					main: resolvedMain,
+					topLevelName: "mock-name",
+				})
 			);
 			expect(diagnostics.hasErrors()).toBe(false);
 			expect(diagnostics.hasWarnings()).toBe(false);
@@ -4251,6 +4260,7 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 
 				expect(config.name).toEqual("mock-name");
+				expect(config.topLevelName).toEqual("mock-name");
 				expect(diagnostics.hasErrors()).toBe(false);
 				expect(diagnostics.hasWarnings()).toBe(true);
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
