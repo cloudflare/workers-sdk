@@ -6,7 +6,7 @@ describe("deployments view", () => {
 	mockConsoleMethods();
 
 	test("error when run with no args", async () => {
-		const result = runWrangler("deployments view  --x-versions");
+		const result = runWrangler("deployments view");
 
 		await expect(result).rejects.toMatchInlineSnapshot(
 			`[Error: \`wrangler deployments view\` has been renamed \`wrangler deployments status\`. Please use that command instead.]`
@@ -15,7 +15,7 @@ describe("deployments view", () => {
 	});
 
 	test("error when run with positional arg", async () => {
-		const result = runWrangler("deployments view dummy-id  --x-versions");
+		const result = runWrangler("deployments view dummy-id");
 
 		await expect(result).rejects.toMatchInlineSnapshot(
 			`[Error: \`wrangler deployments view <deployment-id>\` has been renamed \`wrangler versions view [version-id]\`. Please use that command instead.]`

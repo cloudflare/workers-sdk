@@ -56,7 +56,7 @@ describe("versions deploy", { timeout: TIMEOUT }, () => {
 
 	it("should upload 1st Worker version", async () => {
 		const upload = await helper.run(
-			`wrangler versions upload --message "Upload via e2e test" --tag "e2e-upload"  --x-versions`
+			`wrangler versions upload --message "Upload via e2e test" --tag "e2e-upload"`
 		);
 
 		versionId1 = matchVersionId(upload.stdout);
@@ -74,7 +74,7 @@ describe("versions deploy", { timeout: TIMEOUT }, () => {
 	});
 
 	it("should list 1 version", async () => {
-		const list = await helper.run(`wrangler versions list  --x-versions`);
+		const list = await helper.run(`wrangler versions list`);
 
 		expect(normalize(list.stdout)).toMatchInlineSnapshot(`
 			"Version ID:  00000000-0000-0000-0000-000000000000
@@ -97,7 +97,7 @@ describe("versions deploy", { timeout: TIMEOUT }, () => {
 
 	it("should deploy 1st Worker version", async () => {
 		const deploy = await helper.run(
-			`wrangler versions deploy ${versionId1}@100% --message "Deploy via e2e test" --yes  --x-versions`
+			`wrangler versions deploy ${versionId1}@100% --message "Deploy via e2e test" --yes`
 		);
 
 		expect(normalize(deploy.stdout)).toMatchInlineSnapshot(`
@@ -137,7 +137,7 @@ describe("versions deploy", { timeout: TIMEOUT }, () => {
 	});
 
 	it("should list 1 deployment", async () => {
-		const list = await helper.run(`wrangler deployments list  --x-versions`);
+		const list = await helper.run(`wrangler deployments list`);
 
 		expect(normalize(list.stdout)).toMatchInlineSnapshot(`
 			"Created:     TIMESTAMP
@@ -172,7 +172,7 @@ describe("versions deploy", { timeout: TIMEOUT }, () => {
 		});
 
 		const upload = await helper.run(
-			`wrangler versions upload --message "Upload AGAIN via e2e test" --tag "e2e-upload-AGAIN"  --x-versions`
+			`wrangler versions upload --message "Upload AGAIN via e2e test" --tag "e2e-upload-AGAIN"`
 		);
 
 		versionId2 = matchVersionId(upload.stdout);
@@ -188,9 +188,7 @@ describe("versions deploy", { timeout: TIMEOUT }, () => {
 			Changes to triggers (routes, custom domains, cron schedules, etc) must be applied with the command wrangler triggers deploy"
 		`);
 
-		const versionsList = await helper.run(
-			`wrangler versions list  --x-versions`
-		);
+		const versionsList = await helper.run(`wrangler versions list`);
 
 		expect(normalize(versionsList.stdout)).toMatchInlineSnapshot(`
 			"Version ID:  00000000-0000-0000-0000-000000000000
@@ -219,12 +217,10 @@ describe("versions deploy", { timeout: TIMEOUT }, () => {
 
 	it("should deploy 2nd Worker version", async () => {
 		const deploy = await helper.run(
-			`wrangler versions deploy ${versionId2}@100% --message "Deploy AGAIN via e2e test" --yes  --x-versions`
+			`wrangler versions deploy ${versionId2}@100% --message "Deploy AGAIN via e2e test" --yes`
 		);
 
-		const deploymentsList = await helper.run(
-			`wrangler deployments list  --x-versions`
-		);
+		const deploymentsList = await helper.run(`wrangler deployments list`);
 
 		expect(normalize(deploy.stdout)).toMatchInlineSnapshot(`
 			"╭ Deploy Worker Versions by splitting traffic between multiple versions
@@ -296,16 +292,12 @@ describe("versions deploy", { timeout: TIMEOUT }, () => {
 
 	it("should rollback to implicit Worker version (1st version)", async () => {
 		const rollback = await helper.run(
-			`wrangler rollback --message "Rollback via e2e test" --yes  --x-versions`
+			`wrangler rollback --message "Rollback via e2e test" --yes`
 		);
 
-		const versionsList = await helper.run(
-			`wrangler versions list  --x-versions`
-		);
+		const versionsList = await helper.run(`wrangler versions list`);
 
-		const deploymentsList = await helper.run(
-			`wrangler deployments list  --x-versions`
-		);
+		const deploymentsList = await helper.run(`wrangler deployments list`);
 
 		expect(normalize(rollback.stdout)).toMatchInlineSnapshot(`
 			"├ Fetching latest deployment
@@ -410,16 +402,12 @@ describe("versions deploy", { timeout: TIMEOUT }, () => {
 
 	it("should rollback to specific Worker version (0th version)", async () => {
 		const rollback = await helper.run(
-			`wrangler rollback ${versionId0} --message "Rollback to old version" --yes  --x-versions`
+			`wrangler rollback ${versionId0} --message "Rollback to old version" --yes`
 		);
 
-		const versionsList = await helper.run(
-			`wrangler versions list  --x-versions`
-		);
+		const versionsList = await helper.run(`wrangler versions list`);
 
-		const deploymentsList = await helper.run(
-			`wrangler deployments list  --x-versions`
-		);
+		const deploymentsList = await helper.run(`wrangler deployments list`);
 
 		expect(normalize(rollback.stdout)).toMatchInlineSnapshot(`
 			"├ Fetching latest deployment
@@ -551,7 +539,7 @@ describe("versions deploy", { timeout: TIMEOUT }, () => {
 		});
 
 		const upload = await helper.run(
-			`wrangler versions upload --legacy-assets='./public'  --x-versions`
+			`wrangler versions upload --legacy-assets='./public'`
 		);
 
 		expect(normalize(upload.output)).toMatchInlineSnapshot(`
@@ -586,7 +574,7 @@ describe("versions deploy", { timeout: TIMEOUT }, () => {
             `,
 		});
 
-		const upload = await helper.run(`wrangler versions upload  --x-versions`);
+		const upload = await helper.run(`wrangler versions upload`);
 
 		expect(normalize(upload.output)).toMatchInlineSnapshot(`
 			"X [ERROR] Workers Sites does not support uploading versions through \`wrangler versions upload\`. You must use \`wrangler deploy\` instead.
@@ -614,7 +602,7 @@ describe("versions deploy", { timeout: TIMEOUT }, () => {
 		});
 
 		const upload = await helper.run(
-			`wrangler versions upload --message "Upload via e2e test" --tag "e2e-upload-assets"  --x-versions`
+			`wrangler versions upload --message "Upload via e2e test" --tag "e2e-upload-assets"`
 		);
 
 		expect(normalize(upload.stdout)).toMatchInlineSnapshot(`
@@ -638,7 +626,7 @@ describe("versions deploy", { timeout: TIMEOUT }, () => {
 	it("should include version preview url in output file", async () => {
 		const outputFile = path.join(helper.tmpPath, "output.jsonnd");
 		const upload = await helper.run(
-			`wrangler versions upload --message "Upload via e2e test" --tag "e2e-upload" --x-versions`,
+			`wrangler versions upload --message "Upload via e2e test" --tag "e2e-upload"`,
 			{
 				env: {
 					...process.env,
