@@ -67,6 +67,7 @@ export function formatConfigSnippet(
 export type ReadConfigCommandArgs = NormalizeAndValidateConfigArgs & {
 	config?: string;
 	script?: string;
+	configString?: string;
 };
 
 export type ReadConfigOptions = ResolveConfigPathOptions & {
@@ -178,9 +179,15 @@ export const experimental_readRawConfig = (
 	);
 	let rawConfig: RawConfig = {};
 	if (configPath?.endsWith("toml")) {
-		rawConfig = parseTOML(readFileSync(configPath), configPath);
+		rawConfig = parseTOML(
+			args.configString ?? readFileSync(configPath),
+			configPath
+		);
 	} else if (configPath?.endsWith("json") || configPath?.endsWith("jsonc")) {
-		rawConfig = parseJSONC(readFileSync(configPath), configPath);
+		rawConfig = parseJSONC(
+			args.configString ?? readFileSync(configPath),
+			configPath
+		);
 	}
 	return { rawConfig, configPath, userConfigPath };
 };
