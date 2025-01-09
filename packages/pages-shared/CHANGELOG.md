@@ -1,5 +1,20 @@
 # @cloudflare/pages-shared
 
+## 0.13.0
+
+### Minor Changes
+
+- [#7561](https://github.com/cloudflare/workers-sdk/pull/7561) [`8b48ca6`](https://github.com/cloudflare/workers-sdk/commit/8b48ca6f18160d350cdde7f21a2a9fbb6add45d5) Thanks [@GregBrimble](https://github.com/GregBrimble)! - feat: Return a 304 Not Modified response when matching an asset preservation cache request if appropriate
+
+### Patch Changes
+
+- [#7561](https://github.com/cloudflare/workers-sdk/pull/7561) [`8b48ca6`](https://github.com/cloudflare/workers-sdk/commit/8b48ca6f18160d350cdde7f21a2a9fbb6add45d5) Thanks [@GregBrimble](https://github.com/GregBrimble)! - chore: Remove now-unused asset preservation cache (v1)
+
+- [#7561](https://github.com/cloudflare/workers-sdk/pull/7561) [`8b48ca6`](https://github.com/cloudflare/workers-sdk/commit/8b48ca6f18160d350cdde7f21a2a9fbb6add45d5) Thanks [@GregBrimble](https://github.com/GregBrimble)! - fix: Store an empty result when Early Hints parsing returns nothing or errors. Previously, we weren't storing anything which resulted in Early Hints being parsed on every request.
+
+- Updated dependencies [[`2c76887`](https://github.com/cloudflare/workers-sdk/commit/2c7688737346992d046d2f88eba5c9847ede1365), [`78bdec5`](https://github.com/cloudflare/workers-sdk/commit/78bdec59ce880365b0318eb94d4176b53e950f66)]:
+  - miniflare@3.20241230.1
+
 ## 0.12.1
 
 ### Patch Changes
