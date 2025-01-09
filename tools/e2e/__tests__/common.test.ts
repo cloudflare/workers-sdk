@@ -122,7 +122,7 @@ describe("listTmpKVNamespaces()", () => {
 				path: `/client/v4/accounts/${MOCK_CLOUDFLARE_ACCOUNT_ID}/storage/kv/namespaces`,
 				method: "GET",
 				query: {
-					per_page: 10,
+					per_page: 100,
 					page: 1,
 					direction: "asc",
 					order: "title",
@@ -142,6 +142,7 @@ describe("listTmpKVNamespaces()", () => {
 						{ id: "kv-8", title: "kv-8" },
 						{ id: "kv-9", title: "kv-9" },
 						{ id: "kv-10", title: "kv-10" },
+						...Array(90).fill({ id: "kv-10", title: "kv-10" }),
 					],
 				})
 			);
@@ -151,7 +152,7 @@ describe("listTmpKVNamespaces()", () => {
 				path: `/client/v4/accounts/${MOCK_CLOUDFLARE_ACCOUNT_ID}/storage/kv/namespaces`,
 				method: "GET",
 				query: {
-					per_page: 10,
+					per_page: 100,
 					page: 2,
 					direction: "asc",
 					order: "title",
@@ -194,7 +195,7 @@ describe("listTmpDatabases()", () => {
 				path: `/client/v4/accounts/${MOCK_CLOUDFLARE_ACCOUNT_ID}/d1/database`,
 				method: "GET",
 				query: {
-					per_page: 10,
+					per_page: 100,
 					page: 1,
 				},
 			})
@@ -212,6 +213,11 @@ describe("listTmpDatabases()", () => {
 						{ uuid: "8", name: "tmp-e2e-db-4", created_at: oldTimeStr },
 						{ uuid: "9", name: "db-5", created_at: nowStr },
 						{ uuid: "10", name: "db-6", created_at: oldTimeStr },
+						...Array(90).fill({
+							uuid: "10",
+							name: "db-6",
+							created_at: oldTimeStr,
+						}),
 					],
 				})
 			);
@@ -221,7 +227,7 @@ describe("listTmpDatabases()", () => {
 				path: `/client/v4/accounts/${MOCK_CLOUDFLARE_ACCOUNT_ID}/d1/database`,
 				method: "GET",
 				query: {
-					per_page: 10,
+					per_page: 100,
 					page: 2,
 				},
 			})
