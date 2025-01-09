@@ -1,21 +1,41 @@
 import assert from "node:assert";
 
-// TODO: move to `@cloudflare/unenv-preset`
-// See: https://github.com/cloudflare/workers-sdk/issues/7579
-export async function testUnenvPreset() {
-	try {
-		await testCryptoGetRandomValues();
-		await testWorkerdImplementsBuffer();
-		await testWorkerdModules();
-		await testUtilImplements();
-		await testWorkerdPath();
-		await testWorkerdDns();
-	} catch (e) {
-		return new Response(String(e));
-	}
+// List all the test functions.
+// The test can be executing by fetching the `/${testName}` url.
+export const TESTS = {
+	testCryptoGetRandomValues,
+	testImplementsBuffer,
+	testModules,
+	testUtilImplements,
+	testPath,
+	testDns,
+};
 
-	return new Response("OK!");
-}
+export default {
+	async fetch(request: Request): Promise<Response> {
+		const url = new URL(request.url);
+		const testName = url.pathname.slice(1);
+		const test = TESTS[testName];
+		if (!test) {
+			return new Response(
+				`<h1>${testName ? `${testName} not found!` : `Pick a test to run`} </h1>
+        <ul>
+        ${Object.keys(TESTS)
+					.map((name) => `<li><a href="/${name}">${name}</a></li>`)
+					.join("")}
+        </ul>`,
+				{ headers: { "Content-Type": "text/html; charset=utf-8" } }
+			);
+		}
+		try {
+			await test();
+		} catch (e) {
+			return new Response(String(e));
+		}
+
+		return new Response("OK!");
+	},
+};
 
 async function testCryptoGetRandomValues() {
 	const crypto = await import("node:crypto");
@@ -26,7 +46,7 @@ async function testCryptoGetRandomValues() {
 	assert(array.every((v) => v >= 0 && v <= 0xff_ff_ff_ff));
 }
 
-async function testWorkerdImplementsBuffer() {
+async function testImplementsBuffer() {
 	const encoder = new TextEncoder();
 	const buffer = await import("node:buffer");
 	const Buffer = buffer.Buffer;
@@ -53,7 +73,7 @@ async function testWorkerdImplementsBuffer() {
 	assert.strictEqual(typeof buffer.resolveObjectURL, "function");
 }
 
-async function testWorkerdModules() {
+async function testModules() {
 	const module = await import("node:module");
 	// @ts-expect-error exposed by workerd
 	const require = module.createRequire("/");
@@ -89,7 +109,7 @@ async function testUtilImplements() {
 	assert.strictEqual(types.isAnyArrayBuffer(new ArrayBuffer(0)), true);
 }
 
-async function testWorkerdPath() {
+async function testPath() {
 	const pathWin32 = await import("node:path/win32");
 	assert.strictEqual(pathWin32.sep, "\\");
 	assert.strictEqual(pathWin32.delimiter, ";");
@@ -98,7 +118,7 @@ async function testWorkerdPath() {
 	assert.strictEqual(pathPosix.delimiter, ":");
 }
 
-async function testWorkerdDns() {
+async function testDns() {
 	const dns = await import("node:dns");
 	await new Promise((resolve, reject) => {
 		dns.resolveTxt("nodejs.org", (error, results) => {
