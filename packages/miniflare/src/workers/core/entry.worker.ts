@@ -349,6 +349,8 @@ export default <ExportedHandler<Env>>{
 
 		const clientIp = request.cf?.clientIp as string;
 
+		const originalCf = JSON.stringify(request.cf);
+
 		// Parse this manually (rather than using the `cfBlobHeader` config property in workerd to parse it into request.cf)
 		// This is because we want to have access to the clientIp, which workerd puts in request.cf if no cfBlobHeader is provided
 		const clientCfBlobHeader = request.headers.get(CoreHeaders.CF_BLOB);
@@ -363,7 +365,7 @@ export default <ExportedHandler<Env>>{
 				};
 		request = new Request(request, { cf });
 
-		request.headers.set("MF-Raw-workerd-CF", JSON.stringify(request.cf));
+		request.headers.set("MF-Raw-workerd-CF", originalCf);
 
 		// The proxy client will always specify an operation
 		const isProxy = request.headers.get(CoreHeaders.OP) !== null;
