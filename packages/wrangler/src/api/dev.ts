@@ -82,6 +82,7 @@ export interface Unstable_DevOptions {
 		devEnv?: boolean;
 		fileBasedRegistry?: boolean;
 		vectorizeBindToProd?: boolean;
+		multiworker?: boolean;
 		enableIpc?: boolean;
 	};
 }
@@ -218,6 +219,7 @@ export async function unstable_dev(
 		port: options?.port ?? 0,
 		experimentalProvision: undefined,
 		experimentalVectorizeBindToProd: vectorizeBindToProd ?? false,
+		experimentalMultiworker: options?.experimental?.multiworker ?? false,
 		enableIpc: options?.experimental?.enableIpc,
 	};
 

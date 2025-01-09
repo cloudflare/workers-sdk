@@ -1,0 +1,9 @@
+name = "worker-c"
+compatibility_date = "2022-03-31"
+
+main = "src/index.js"
+
+[[services]]
+binding = "workerD"
+service = "../worker-d/wrangler.toml"
+

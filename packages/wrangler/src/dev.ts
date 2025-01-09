@@ -11,7 +11,7 @@ import {
 	extractBindingsOfType,
 } from "./api/startDevWorker/utils";
 import { getAssetsOptions } from "./assets";
-import { configFileName, formatConfigSnippet } from "./config";
+import { configFileName, formatConfigSnippet, readConfig } from "./config";
 import { createCommand } from "./core/create-command";
 import { validateRoutes } from "./deploy/deploy";
 import { validateNodeCompatMode } from "./deployment-bundle/node-compat";
@@ -36,7 +36,7 @@ import type {
 	StartDevWorkerInput,
 	Trigger,
 } from "./api";
-import type { Config, Environment } from "./config";
+import type { Config, Environment, ReadConfigCommandArgs } from "./config";
 import type {
 	EnvironmentNonInheritable,
 	Route,
@@ -59,7 +59,7 @@ export const dev = createCommand({
 	behaviour: {
 		provideConfig: false,
 		overrideExperimentalFlags: (args) => ({
-			MULTIWORKER: Array.isArray(args.config),
+			MULTIWORKER: args.experimentalMultiworker || Array.isArray(args.config),
 			RESOURCES_PROVISION: args.experimentalProvision ?? false,
 		}),
 	},
@@ -322,6 +322,12 @@ export const dev = createCommand({
 			type: "boolean",
 			describe:
 				"Bind to production Vectorize indexes in local development mode",
+			default: false,
+		},
+		"experimental-multiworker": {
+			type: "boolean",
+			describe:
+				"Allow service bindings to be defined as paths to locally defined Wrangler config files rather than Worker names",
 			default: false,
 		},
 	},
@@ -700,8 +706,9 @@ export async function startDev(args: StartDevOptions) {
 			};
 		};
 
-		if (Array.isArray(args.config)) {
-			const runtime = new MultiworkerRuntimeController(args.config.length);
+		const configs = findMultiWorkerConfigs(args);
+		if (configs.length) {
+			const runtime = new MultiworkerRuntimeController(configs.length);
 
 			const primaryDevEnv = new DevEnv({ runtimes: [runtime] });
 
@@ -711,7 +718,7 @@ export async function startDev(args: StartDevOptions) {
 
 			// Set up the primary DevEnv (the one that the ProxyController will connect to)
 			devEnv = [
-				await setupDevEnv(primaryDevEnv, args.config[0], authHook, {
+				await setupDevEnv(primaryDevEnv, configs[0], authHook, {
 					...args,
 					disableDevRegistry: true,
 					multiworkerPrimary: true,
@@ -721,7 +728,7 @@ export async function startDev(args: StartDevOptions) {
 			// Set up all auxiliary DevEnvs
 			devEnv.push(
 				...(await Promise.all(
-					(args.config as string[]).slice(1).map((c) => {
+					configs.slice(1).map((c) => {
 						return setupDevEnv(
 							new DevEnv({
 								runtimes: [runtime],
@@ -1014,6 +1021,19 @@ export function getBindings(
 		"binding"
 	);
 
+	// Convert service "paths" to names
+	for (const serviceBinding of mergedServiceBindings) {
+		if (serviceBinding.service.startsWith(".")) {
+			const base = path.dirname(configParam.configPath ?? "./wrangler.toml");
+			const { name } = readConfig(
+				{ config: path.resolve(base, serviceBinding.service), env },
+				{ hideWarnings: true }
+			);
+			assert(name);
+			serviceBinding.service = name;
+		}
+	}
+
 	// Hyperdrive bindings
 	const hyperdriveBindings = configParam.hyperdrive.map((hyperdrive) => {
 		const connectionStringFromEnv =
@@ -1117,4 +1137,39 @@ export function getAssetChangeMessage(
 	}
 
 	return message;
+}
+
+function findMultiWorkerConfigs(args: ReadConfigCommandArgs) {
+	if (Array.isArray(args.config)) {
+		return args.config as string[];
+	}
+	const { config, ...otherArgs } = args;
+	assert(typeof config === "string");
+	const configs = new Set<string>();
+	loadConfigRecursive(configs, otherArgs, config);
+	return Array.from(configs);
+}
+
+function loadConfigRecursive(
+	configs: Set<string>,
+	args: ReadConfigCommandArgs,
+	configPath: string
+) {
+	if (configs.has(configPath)) {
+		// Already seen this service
+		return;
+	}
+	configs.add(configPath);
+
+	const config = readConfig(
+		{ ...args, config: configPath },
+		{ hideWarnings: true }
+	);
+
+	const base = path.dirname(configPath);
+	for (const service of config.services ?? []) {
+		if (service.service.startsWith(".")) {
+			loadConfigRecursive(configs, args, path.resolve(base, service.service));
+		}
+	}
 }
