@@ -35,7 +35,8 @@ const encoder = new TextEncoder();
 
 function getUserRequest(
 	request: Request<unknown, IncomingRequestCfProperties>,
-	env: Env
+	env: Env,
+	clientIp: string | undefined
 ) {
 	// The ORIGINAL_URL header is added to outbound requests from Miniflare,
 	// triggered either by calling Miniflare.#dispatchFetch(request),
@@ -89,15 +90,6 @@ function getUserRequest(
 	// special handling to allow this if a `Request` instance is passed.
 	// See https://github.com/cloudflare/workerd/issues/1122 for more details.
 	request = new Request(url, request);
-	if (request.cf === undefined) {
-		const cf: IncomingRequestCfProperties = {
-			...env[CoreBindings.JSON_CF_BLOB],
-			// Defaulting to empty string to preserve undefined `Accept-Encoding`
-			// through Wrangler's proxy worker.
-			clientAcceptEncoding: request.headers.get("Accept-Encoding") ?? "",
-		};
-		request = new Request(request, { cf });
-	}
 
 	// `Accept-Encoding` is always set to "br, gzip" in Workers:
 	// https://developers.cloudflare.com/fundamentals/reference/http-request-headers/#accept-encoding
@@ -105,6 +97,18 @@ function getUserRequest(
 
 	if (rewriteHeadersFromOriginalUrl) {
 		request.headers.set("Host", url.host);
+	}
+
+	if (clientIp && !request.headers.get("CF-Connecting-IP")) {
+		const ipv4Regex = /(?<ip>.*?):\d+/;
+		const ipv6Regex = /\[(?<ip>.*?)\]:\d+/;
+		const ip =
+			clientIp.match(ipv6Regex)?.groups?.ip ??
+			clientIp.match(ipv4Regex)?.groups?.ip;
+
+		if (ip) {
+			request.headers.set("CF-Connecting-IP", ip);
+		}
 	}
 
 	request.headers.delete(CoreHeaders.PROXY_SHARED_SECRET);
@@ -343,6 +347,22 @@ export default <ExportedHandler<Env>>{
 	async fetch(request, env, ctx) {
 		const startTime = Date.now();
 
+		const clientIp = request.cf?.clientIp as string;
+
+		// Parse this manually (rather than using the `cfBlobHeader` config property in workerd to parse it into request.cf)
+		// This is because we want to have access to the clientIp, which workerd puts in request.cf if no cfBlobHeader is provided
+		const clientCfBlobHeader = request.headers.get(CoreHeaders.CF_BLOB);
+
+		const cf: IncomingRequestCfProperties = clientCfBlobHeader
+			? JSON.parse(clientCfBlobHeader)
+			: {
+					...env[CoreBindings.JSON_CF_BLOB],
+					// Defaulting to empty string to preserve undefined `Accept-Encoding`
+					// through Wrangler's proxy worker.
+					clientAcceptEncoding: request.headers.get("Accept-Encoding") ?? "",
+				};
+		request = new Request(request, { cf });
+
 		// The proxy client will always specify an operation
 		const isProxy = request.headers.get(CoreHeaders.OP) !== null;
 		if (isProxy) return handleProxy(request, env);
@@ -356,7 +376,7 @@ export default <ExportedHandler<Env>>{
 		const clientAcceptEncoding = request.headers.get("Accept-Encoding");
 
 		try {
-			request = getUserRequest(request, env);
+			request = getUserRequest(request, env, clientIp);
 		} catch (e) {
 			if (e instanceof HttpError) {
 				return e.toResponse();
