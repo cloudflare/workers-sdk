@@ -116,19 +116,19 @@ function addCreateAndUpdateOptions(yargs: Argv<CommonYargsOptions>) {
 		})
 		.option("batch-max-mb", {
 			describe:
-				"The approximate maximum size of a batch before flush in megabytes \nDefault: 10",
+				"The approximate maximum size (in megabytes) for each batch before flushing (range: 1 - 100)",
 			type: "number",
 			demandOption: false,
 		})
 		.option("batch-max-rows", {
 			describe:
-				"The approximate maximum size of a batch before flush in rows \nDefault: 10000",
+				"The approximate maximum number of rows in a batch before flushing (range: 100 - 1000000)",
 			type: "number",
 			demandOption: false,
 		})
 		.option("batch-max-seconds", {
 			describe:
-				"The approximate maximum duration of a batch before flush in seconds \nDefault: 15",
+				"The approximate maximum age (in seconds) of a batch before flushing (range: 1 - 300)",
 			type: "number",
 			demandOption: false,
 		})
@@ -211,7 +211,9 @@ export function pipelines(pipelineYargs: CommonYargsArgv) {
 					args.compression === undefined ? "gzip" : args.compression;
 
 				const batch = {
-					max_mb: args["batch-max-mb"],
+					max_bytes: args["batch-max-mb"]
+						? args["batch-max-mb"] * 1000 * 1000 // convert to bytes for the API
+						: undefined,
 					max_duration_s: args["batch-max-seconds"],
 					max_rows: args["batch-max-rows"],
 				};
@@ -401,7 +403,8 @@ export function pipelines(pipelineYargs: CommonYargsArgv) {
 					pipelineConfig.destination.compression.type = args.compression;
 				}
 				if (args["batch-max-mb"]) {
-					pipelineConfig.destination.batch.max_mb = args["batch-max-mb"];
+					pipelineConfig.destination.batch.max_bytes =
+						args["batch-max-mb"] * 1000 * 1000; // convert to bytes for the API
 				}
 				if (args["batch-max-seconds"]) {
 					pipelineConfig.destination.batch.max_duration_s =

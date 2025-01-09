@@ -33,7 +33,9 @@ describe("'wrangler dev' correctly renders pages", () => {
 		expect((content as Record<string, object>).binding).toEqual({
 			aiGatewayLogId: null,
 			fetcher: {},
+			lastRequestHttpStatusCode: null,
 			lastRequestId: null,
+			lastRequestInternalStatusCode: null,
 			logs: [],
 			options: {},
 		});

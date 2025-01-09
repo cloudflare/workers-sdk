@@ -7,9 +7,10 @@
 		"packages/*"
 	],
 	"scripts": {
-		"check:type": "rm -rf node_modules && npm install && npm run check:type --workspaces",
-		"test:ci": "npm install && npm run test:ci --workspaces",
-		"test:watch": "npm install && npm run test:watch --workspaces",
-		"type:tests": "rm -rf node_modules && npm install && npm run type:tests --workspaces"
+		"_clean_install": "rm -rf node_modules && npm install --no-package-lock --workspaces",
+		"check:type": "npm run check:type --workspaces",
+		"test:ci": "npm run test:ci --workspaces",
+		"test:watch": "npm run test:watch --workspaces",
+		"type:tests": "npm run type:tests --workspaces"
 	}
 }

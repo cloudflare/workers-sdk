@@ -46,7 +46,7 @@ export type PipelineUserConfig = {
 		};
 		batch: {
 			max_duration_s?: number;
-			max_mb?: number;
+			max_bytes?: number;
 			max_rows?: number;
 		};
 		path: {

@@ -26,12 +26,6 @@ import {
 	isBuildFailureFromCause,
 } from "./deployment-bundle/build-failures";
 import {
-	commonDeploymentCMDSetup,
-	deployments,
-	rollbackDeployment,
-	viewDeployment,
-} from "./deployments";
-import {
 	buildHandler,
 	buildOptions,
 	configHandler,
@@ -273,14 +267,6 @@ export function getLegacyScriptName(
 }
 
 export function createCLIParser(argv: string[]) {
-	const experimentalGradualRollouts =
-		// original flag -- using internal product name (Gradual Rollouts) -- kept for temp back-compat
-		!argv.includes("--no-experimental-gradual-rollouts") &&
-		// new flag -- using external product name (Versions)
-		!argv.includes("--no-experimental-versions") &&
-		// new flag -- shorthand
-		!argv.includes("--no-x-versions");
-
 	// Type check result against CommonYargsOptions to make sure we've included
 	// all common options
 	const wrangler: CommonYargsArgv = makeCLI(argv)
@@ -339,13 +325,6 @@ export function createCLIParser(argv: string[]) {
 				);
 			}
 			return true;
-		})
-		.option("experimental-versions", {
-			describe: `Experimental: support Worker Versions`,
-			type: "boolean",
-			default: true,
-			hidden: true,
-			alias: ["x-versions", "experimental-gradual-rollouts"],
 		})
 		.check((args) => {
 			// Grab locally specified env params from `.env` file
@@ -479,170 +458,79 @@ export function createCLIParser(argv: string[]) {
 		deployHandler
 	);
 
-	if (experimentalGradualRollouts) {
-		registry.define([
-			{ command: "wrangler deployments", definition: deploymentsNamespace },
-			{
-				command: "wrangler deployments list",
-				definition: deploymentsListCommand,
-			},
-			{
-				command: "wrangler deployments status",
-				definition: deploymentsStatusCommand,
-			},
-			{
-				command: "wrangler deployments view",
-				definition: deploymentsViewCommand,
-			},
-		]);
-		registry.registerNamespace("deployments");
-	} else {
-		wrangler.command(
-			"deployments",
-			"🚢 List and view the current and past deployments for your Worker",
-			(yargs) =>
-				yargs
-					.option("name", {
-						describe: "The name of your Worker",
-						type: "string",
-					})
-					.command(
-						"list",
-						"Displays the 10 most recent deployments for a Worker",
-						async (listYargs) => listYargs,
-						async (listYargs) => {
-							const { accountId, scriptName, config } =
-								await commonDeploymentCMDSetup(listYargs);
-							await deployments(accountId, scriptName, config);
-						}
-					)
-					.command(
-						"view [deployment-id]",
-						"View a deployment",
-						async (viewYargs) =>
-							viewYargs.positional("deployment-id", {
-								describe: "The ID of the deployment you want to inspect",
-								type: "string",
-								demandOption: false,
-							}),
-						async (viewYargs) => {
-							const { accountId, scriptName, config } =
-								await commonDeploymentCMDSetup(viewYargs);
+	registry.define([
+		{ command: "wrangler deployments", definition: deploymentsNamespace },
+		{
+			command: "wrangler deployments list",
+			definition: deploymentsListCommand,
+		},
+		{
+			command: "wrangler deployments status",
+			definition: deploymentsStatusCommand,
+		},
+		{
+			command: "wrangler deployments view",
+			definition: deploymentsViewCommand,
+		},
+	]);
+	registry.registerNamespace("deployments");
 
-							await viewDeployment(
-								accountId,
-								scriptName,
-								config,
-								viewYargs.deploymentId
-							);
-						}
-					)
-					.command(subHelp)
-		);
-	}
+	registry.define([
+		{ command: "wrangler rollback", definition: versionsRollbackCommand },
+	]);
+	registry.registerNamespace("rollback");
 
-	// rollback
-	const rollbackDescription = "🔙 Rollback a deployment for a Worker";
+	registry.define([
+		{
+			command: "wrangler versions",
+			definition: versionsNamespace,
+		},
+		{
+			command: "wrangler versions view",
+			definition: versionsViewCommand,
+		},
+		{
+			command: "wrangler versions list",
+			definition: versionsListCommand,
+		},
+		{
+			command: "wrangler versions upload",
+			definition: versionsUploadCommand,
+		},
+		{
+			command: "wrangler versions deploy",
+			definition: versionsDeployCommand,
+		},
+		{
+			command: "wrangler versions secret",
+			definition: versionsSecretNamespace,
+		},
+		{
+			command: "wrangler versions secret put",
+			definition: versionsSecretPutCommand,
+		},
+		{
+			command: "wrangler versions secret bulk",
+			definition: versionsSecretBulkCommand,
+		},
+		{
+			command: "wrangler versions secret delete",
+			definition: versionsSecretDeleteCommand,
+		},
+		{
+			command: "wrangler versions secret list",
+			definition: versionsSecretsListCommand,
+		},
+	]);
+	registry.registerNamespace("versions");
 
-	if (experimentalGradualRollouts) {
-		registry.define([
-			{ command: "wrangler rollback", definition: versionsRollbackCommand },
-		]);
-		registry.registerNamespace("rollback");
-	} else {
-		wrangler.command(
-			"rollback [deployment-id]",
-			rollbackDescription,
-			(rollbackYargs) =>
-				rollbackYargs
-					.positional("deployment-id", {
-						describe: "The ID of the deployment to rollback to",
-						type: "string",
-						demandOption: false,
-					})
-					.option("message", {
-						alias: "m",
-						describe:
-							"Skip confirmation and message prompts, uses provided argument as message",
-						type: "string",
-						default: undefined,
-					})
-					.option("name", {
-						describe: "The name of your Worker",
-						type: "string",
-					}),
-			async (rollbackYargs) => {
-				const { accountId, scriptName, config } =
-					await commonDeploymentCMDSetup(rollbackYargs);
-
-				await rollbackDeployment(
-					accountId,
-					scriptName,
-					config,
-					rollbackYargs.deploymentId,
-					rollbackYargs.message
-				);
-			}
-		);
-	}
-
-	// versions
-	if (experimentalGradualRollouts) {
-		registry.define([
-			{
-				command: "wrangler versions",
-				definition: versionsNamespace,
-			},
-			{
-				command: "wrangler versions view",
-				definition: versionsViewCommand,
-			},
-			{
-				command: "wrangler versions list",
-				definition: versionsListCommand,
-			},
-			{
-				command: "wrangler versions upload",
-				definition: versionsUploadCommand,
-			},
-			{
-				command: "wrangler versions deploy",
-				definition: versionsDeployCommand,
-			},
-			{
-				command: "wrangler versions secret",
-				definition: versionsSecretNamespace,
-			},
-			{
-				command: "wrangler versions secret put",
-				definition: versionsSecretPutCommand,
-			},
-			{
-				command: "wrangler versions secret bulk",
-				definition: versionsSecretBulkCommand,
-			},
-			{
-				command: "wrangler versions secret delete",
-				definition: versionsSecretDeleteCommand,
-			},
-			{
-				command: "wrangler versions secret list",
-				definition: versionsSecretsListCommand,
-			},
-		]);
-		registry.registerNamespace("versions");
-	}
-
-	// triggers
-	if (experimentalGradualRollouts) {
-		wrangler.command(
-			"triggers",
-			"🎯 Updates the triggers of your current deployment",
-			(yargs) => {
-				return registerTriggersSubcommands(yargs.command(subHelp));
-			}
-		);
-	}
+	wrangler.command(
+		"triggers",
+		"🎯 Updates the triggers of your current deployment",
+		(yargs) => {
+			return registerTriggersSubcommands(yargs.command(subHelp));
+		}
+	);
 
 	// delete
 	wrangler.command(

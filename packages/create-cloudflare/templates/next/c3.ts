@@ -176,7 +176,7 @@ export default {
 	id: "next",
 	frameworkCli: "create-next-app",
 	platform: "pages",
-	displayName: "Next",
+	displayName: "Next.js",
 	generate,
 	configure,
 	copyFiles: {

@@ -2610,6 +2610,85 @@ test("Miniflare: getCf() returns a user provided cf object", async (t) => {
 	t.deepEqual(cf, { myFakeField: "test" });
 });
 
+test("Miniflare: dispatchFetch() can override cf", async (t) => {
+	const mf = new Miniflare({
+		script:
+			"export default { fetch(request) { return Response.json(request.cf) } }",
+		modules: true,
+		cf: {
+			myFakeField: "test",
+		},
+	});
+	t.teardown(() => mf.dispose());
+
+	const cf = await mf.dispatchFetch("http://example.com/", {
+		cf: { myFakeField: "test2" },
+	});
+	const cfJson = (await cf.json()) as { myFakeField: string };
+	t.deepEqual(cfJson.myFakeField, "test2");
+});
+
+test("Miniflare: CF-Connecting-IP is injected", async (t) => {
+	const mf = new Miniflare({
+		script:
+			"export default { fetch(request) { return new Response(request.headers.get('CF-Connecting-IP')) } }",
+		modules: true,
+		cf: {
+			myFakeField: "test",
+		},
+	});
+	t.teardown(() => mf.dispose());
+
+	const ip = await mf.dispatchFetch("http://example.com/");
+	// Tracked in https://github.com/cloudflare/workerd/issues/3310
+	if (!isWindows) {
+		t.deepEqual(await ip.text(), "127.0.0.1");
+	} else {
+		t.deepEqual(await ip.text(), "");
+	}
+});
+
+test("Miniflare: CF-Connecting-IP is injected (ipv6)", async (t) => {
+	const mf = new Miniflare({
+		script:
+			"export default { fetch(request) { return new Response(request.headers.get('CF-Connecting-IP')) } }",
+		modules: true,
+		cf: {
+			myFakeField: "test",
+		},
+		host: "::1",
+	});
+	t.teardown(() => mf.dispose());
+
+	const ip = await mf.dispatchFetch("http://example.com/");
+
+	// Tracked in https://github.com/cloudflare/workerd/issues/3310
+	if (!isWindows) {
+		t.deepEqual(await ip.text(), "::1");
+	} else {
+		t.deepEqual(await ip.text(), "");
+	}
+});
+
+test("Miniflare: CF-Connecting-IP is preserved when present", async (t) => {
+	const mf = new Miniflare({
+		script:
+			"export default { fetch(request) { return new Response(request.headers.get('CF-Connecting-IP')) } }",
+		modules: true,
+		cf: {
+			myFakeField: "test",
+		},
+	});
+	t.teardown(() => mf.dispose());
+
+	const ip = await mf.dispatchFetch("http://example.com/", {
+		headers: {
+			"CF-Connecting-IP": "128.0.0.1",
+		},
+	});
+	t.deepEqual(await ip.text(), "128.0.0.1");
+});
+
 test("Miniflare: can use module fallback service", async (t) => {
 	const modulesRoot = "/";
 	const modules: Record<string, Omit<Worker_Module, "name">> = {

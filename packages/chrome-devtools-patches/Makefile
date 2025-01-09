@@ -1,7 +1,7 @@
 ROOT = $(realpath .)
 PATH_WITH_DEPOT = $(PATH):$(ROOT)/depot/
 # The upstream devtools commit upon which our patches are based
-HEAD = 279239c4c670edbde12345aca4fadb7f07d503e8
+HEAD = 538f92a49ba5cbc615bcaa063214fca38ab87813
 PATCHES = $(shell ls ${PWD}/patches/*.patch)
 depot:
 	git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git depot
@@ -28,3 +28,8 @@ cleanup:
 
 test:
 	git -C devtools-frontend am $(PATCHES)
+
+dev:
+	cd devtools-frontend && PATH="$(PATH_WITH_DEPOT)" npm run install-deps
+	cd devtools-frontend && PATH="$(PATH_WITH_DEPOT)" gn gen out/Default --args="devtools_skip_typecheck=true"
+	cd devtools-frontend && PATH="$(PATH_WITH_DEPOT)" npm run watch

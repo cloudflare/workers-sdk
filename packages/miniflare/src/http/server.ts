@@ -2,14 +2,8 @@ import fs from "fs/promises";
 import { z } from "zod";
 import { CORE_PLUGIN } from "../plugins";
 import { HttpOptions, Socket_Https } from "../runtime";
-import { Awaitable, CoreHeaders } from "../workers";
+import { Awaitable } from "../workers";
 import { CERT, KEY } from "./cert";
-
-export const ENTRY_SOCKET_HTTP_OPTIONS: HttpOptions = {
-	// Even though we inject a `cf` object in the entry worker, allow it to
-	// be customised via `dispatchFetch`
-	cfBlobHeader: CoreHeaders.CF_BLOB,
-};
 
 export async function getEntrySocketHttpOptions(
 	coreOpts: z.infer<typeof CORE_PLUGIN.sharedOptions>
@@ -34,7 +28,6 @@ export async function getEntrySocketHttpOptions(
 	if (privateKey && certificateChain) {
 		return {
 			https: {
-				options: ENTRY_SOCKET_HTTP_OPTIONS,
 				tlsOptions: {
 					keypair: {
 						privateKey: privateKey,
@@ -44,7 +37,7 @@ export async function getEntrySocketHttpOptions(
 			},
 		};
 	} else {
-		return { http: ENTRY_SOCKET_HTTP_OPTIONS };
+		return { http: {} };
 	}
 }
 

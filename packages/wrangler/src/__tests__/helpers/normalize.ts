@@ -5,7 +5,7 @@ export function normalizeString(input: string): string {
 	return normalizeErrorMarkers(
 		replaceByte(
 			stripTrailingWhitespace(
-				normalizeSlashes(normalizeTempDirs(stripTimings(input)))
+				normalizeSlashes(normalizeCwd(normalizeTempDirs(stripTimings(input))))
 			)
 		)
 	);
@@ -27,6 +27,13 @@ function normalizeErrorMarkers(str: string): string {
  */
 function normalizeSlashes(str: string): string {
 	return str.replace(/\\/g, "/");
+}
+
+/**
+ * Replace any use of the current working directory with `<cwd>` to avoid cross OS issues.
+ */
+function normalizeCwd(str: string): string {
+	return str.replaceAll(process.cwd(), "<cwd>");
 }
 
 /**

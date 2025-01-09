@@ -1,4 +1,4 @@
-From 0f7a1adad6b0bfbafe60fbc4c161fa9a7ef0381f Mon Sep 17 00:00:00 2001
+From 94301beb8effbc0b3a2d11934369d4c6071fe73c Mon Sep 17 00:00:00 2001
 From: Workers DevProd <workers-devprod@cloudflare.com>
 Date: Fri, 25 Oct 2024 15:05:56 +0100
 Subject: [PATCH 5/8] Support forcing the devtools theme via a query parameter,

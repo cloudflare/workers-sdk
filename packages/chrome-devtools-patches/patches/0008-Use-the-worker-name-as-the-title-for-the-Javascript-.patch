@@ -1,4 +1,4 @@
-From 57b100b2455fc3adb794218c4d15c44052a16f52 Mon Sep 17 00:00:00 2001
+From 25c22c6909222b58a576a04c29c2baf517ecf69c Mon Sep 17 00:00:00 2001
 From: Workers DevProd <workers-devprod@cloudflare.com>
 Date: Fri, 25 Oct 2024 16:11:10 +0100
 Subject: [PATCH 8/8] Use the worker name as the title for the Javascript
