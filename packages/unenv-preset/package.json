@@ -40,16 +40,21 @@
 	"scripts": {
 		"build": "unbuild",
 		"check:lint": "eslint",
-		"check:type": "tsc --noEmit"
+		"check:type": "tsc --noEmit",
+		"test:ci": "vitest run",
+		"test:watch": "vitest"
 	},
 	"devDependencies": {
 		"@types/node": "*",
 		"typescript": "catalog:default",
-		"unbuild": "^2.0.0"
+		"unbuild": "^2.0.0",
+		"undici": "catalog:default",
+		"vitest": "catalog:default",
+		"wrangler": "workspace:*"
 	},
 	"peerDependencies": {
 		"unenv": "npm:unenv-nightly@*",
-		"workerd": "^1.20241216.0"
+		"workerd": "^1.20241230.0"
 	},
 	"peerDependenciesMeta": {
 		"workerd": {

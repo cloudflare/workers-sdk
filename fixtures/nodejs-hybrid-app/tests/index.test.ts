@@ -58,10 +58,4 @@ describe("nodejs compat", () => {
 		const response = await fetch(`http://${ip}:${port}/test-require-alias`);
 		await expect(response.text()).resolves.toBe(`"OK!"`);
 	});
-
-	test("unenv preset", async ({ expect }) => {
-		const { ip, port } = wrangler;
-		const response = await fetch(`http://${ip}:${port}/test-unenv-preset`);
-		await expect(response.text()).resolves.toBe("OK!");
-	});
 });
