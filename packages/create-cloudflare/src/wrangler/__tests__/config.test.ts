@@ -102,16 +102,18 @@ describe("update wrangler config", () => {
 
 		const newConfig = vi.mocked(writeFile).mock.calls[0][1];
 		expect(newConfig).toMatchInlineSnapshot(`
-			"// For more details on how to configure Wrangler, refer to:
-			// https://developers.cloudflare.com/workers/wrangler/configuration/
+			"/**
+			 * For more details on how to configure Wrangler, refer to:
+			 * https://developers.cloudflare.com/workers/wrangler/configuration/
+			 */
 			{
+			  "$schema": "node_modules/wrangler/config-schema.json",
 			  "name": "test",
 			  "main": "src/index.ts",
 			  "compatibility_date": "2024-01-17",
-			  "$schema": "node_modules/wrangler/config-schema.json",
 			  "observability": {
 			    "enabled": true
-			  }
+			  },
 			  /**
 			   * Smart Placement
 			   * Docs: https://developers.cloudflare.com/workers/configuration/smart-placement/#smart-placement

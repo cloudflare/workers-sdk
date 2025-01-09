@@ -7,7 +7,7 @@ import type { C3Context } from "types";
 
 /**
  * Look up the latest release of workerd and use its date as the compatibility_date
- * configuration value for wrangler.toml.
+ * configuration value for a wrangler config file.
  *
  * If the look up fails then we fall back to a well known date.
  *

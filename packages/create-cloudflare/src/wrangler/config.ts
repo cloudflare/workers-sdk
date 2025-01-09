@@ -43,18 +43,18 @@ export const updateWranglerConfig = async (ctx: C3Context) => {
 			ensureNameExists(parsed, ctx.project.name),
 		);
 
-		const comment = `// For more details on how to configure Wrangler, refer to:\n// https://developers.cloudflare.com/workers/wrangler/configuration/\n`;
+		const comment = `/**\n * For more details on how to configure Wrangler, refer to:\n * https://developers.cloudflare.com/workers/wrangler/configuration/\n */\n{\n  "$schema": "node_modules/wrangler/config-schema.json",`;
 
-		modified["$schema"] = "node_modules/wrangler/config-schema.json";
 		if (!modified["observability"]) {
 			modified["observability"] = { enabled: true };
 		}
-		const stringified = comment + JSON.stringify(modified, null, 2);
+		const stringified = comment + JSON.stringify(modified, null, 2).slice(1);
 
 		writeWranglerJson(
 			ctx,
-			stringified.slice(0, -1) +
-				`  /**
+			stringified.slice(0, -2) +
+				`,
+  /**
    * Smart Placement
    * Docs: https://developers.cloudflare.com/workers/configuration/smart-placement/#smart-placement
    */
