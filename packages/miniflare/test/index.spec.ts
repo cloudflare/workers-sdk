@@ -2631,7 +2631,7 @@ test("Miniflare: dispatchFetch() can override cf", async (t) => {
 test("Miniflare: CF-Connecting-IP is injected", async (t) => {
 	const mf = new Miniflare({
 		script:
-			"export default { fetch(request) { return new Response(request.headers.get('MF-Raw-workerd-CF')) } }",
+			"export default { fetch(request) { return new Response(request.headers.get('CF-Connecting-IP')) } }",
 		modules: true,
 		cf: {
 			myFakeField: "test",
@@ -2640,13 +2640,18 @@ test("Miniflare: CF-Connecting-IP is injected", async (t) => {
 	t.teardown(() => mf.dispose());
 
 	const ip = await mf.dispatchFetch("http://example.com/");
-	t.deepEqual(await ip.text(), "127.0.0.1");
+	// Tracked in https://github.com/cloudflare/workerd/issues/3310
+	if (!isWindows) {
+		t.deepEqual(await ip.text(), "127.0.0.1");
+	} else {
+		t.deepEqual(await ip.text(), "");
+	}
 });
 
 test("Miniflare: CF-Connecting-IP is injected (ipv6)", async (t) => {
 	const mf = new Miniflare({
 		script:
-			"export default { fetch(request) { return new Response(request.headers.get('MF-Raw-workerd-CF')) } }",
+			"export default { fetch(request) { return new Response(request.headers.get('CF-Connecting-IP')) } }",
 		modules: true,
 		cf: {
 			myFakeField: "test",
@@ -2656,7 +2661,13 @@ test("Miniflare: CF-Connecting-IP is injected (ipv6)", async (t) => {
 	t.teardown(() => mf.dispose());
 
 	const ip = await mf.dispatchFetch("http://example.com/");
-	t.deepEqual(await ip.text(), "::1");
+
+	// Tracked in https://github.com/cloudflare/workerd/issues/3310
+	if (!isWindows) {
+		t.deepEqual(await ip.text(), "::1");
+	} else {
+		t.deepEqual(await ip.text(), "");
+	}
 });
 
 test("Miniflare: CF-Connecting-IP is preserved when present", async (t) => {
