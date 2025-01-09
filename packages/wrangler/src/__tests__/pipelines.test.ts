@@ -46,76 +46,7 @@ describe("pipelines", () => {
 		endpoint: "https://0001.pipelines.cloudflarestorage.com",
 	} satisfies Pipeline;
 
-	function mockCreateR2Token(bucket: string) {
-		const requests = { count: 0 };
-		msw.use(
-			http.get(
-				"*/accounts/:accountId/r2/buckets/:bucket",
-				async ({ params }) => {
-					expect(params.accountId).toEqual("some-account-id");
-					expect(params.bucket).toEqual(bucket);
-					requests.count++;
-					return HttpResponse.json(
-						{
-							success: true,
-							errors: [],
-							messages: [],
-							result: null,
-						},
-						{ status: 200 }
-					);
-				},
-				{ once: true }
-			),
-			http.get(
-				"*/user/tokens/permission_groups",
-				async () => {
-					requests.count++;
-					return HttpResponse.json(
-						{
-							success: true,
-							errors: [],
-							messages: [],
-							result: [
-								{
-									id: "2efd5506f9c8494dacb1fa10a3e7d5b6",
-									name: "Workers R2 Storage Bucket Item Write",
-									description:
-										"Grants write access to Cloudflare R2 Bucket Scoped Storage",
-									scopes: ["com.cloudflare.edge.r2.bucket"],
-								},
-							],
-						},
-						{ status: 200 }
-					);
-				},
-				{ once: true }
-			),
-			http.post(
-				"*/user/tokens",
-				async () => {
-					requests.count++;
-					return HttpResponse.json(
-						{
-							success: true,
-							errors: [],
-							messages: [],
-							result: {
-								id: "service-token-id",
-								name: "my-service-token",
-								value: "my-secret-value",
-							},
-						},
-						{ status: 200 }
-					);
-				},
-				{ once: true }
-			)
-		);
-		return requests;
-	}
-
-	function mockCreeatR2TokenFailure(bucket: string) {
+	function mockCreateR2TokenFailure(bucket: string) {
 		const requests = { count: 0 };
 		msw.use(
 			http.get(
@@ -310,6 +241,7 @@ describe("pipelines", () => {
 		);
 		return requests;
 	}
+
 	beforeAll(() => {
 		__testSkipDelays();
 	});
@@ -380,15 +312,6 @@ describe("pipelines", () => {
 			`);
 		});
 
-		it("should create a pipeline", async () => {
-			const tokenReq = mockCreateR2Token("test-bucket");
-			const requests = mockCreateRequest("my-pipeline");
-			await runWrangler("pipelines create my-pipeline --r2 test-bucket");
-
-			expect(tokenReq.count).toEqual(3);
-			expect(requests.count).toEqual(1);
-		});
-
 		it("should create a pipeline with explicit credentials", async () => {
 			const requests = mockCreateRequest("my-pipeline");
 			await runWrangler(
@@ -398,7 +321,7 @@ describe("pipelines", () => {
 		});
 
 		it("should fail a missing bucket", async () => {
-			const requests = mockCreeatR2TokenFailure("bad-bucket");
+			const requests = mockCreateR2TokenFailure("bad-bucket");
 			await expect(
 				runWrangler("pipelines create bad-pipeline --r2 bad-bucket")
 			).rejects.toThrowError();
@@ -540,7 +463,6 @@ describe("pipelines", () => {
 
 		it("should update a pipeline with new bucket", async () => {
 			const pipeline: Pipeline = samplePipeline;
-			const tokenReq = mockCreateR2Token("new-bucket");
 			mockShowRequest(pipeline.name, pipeline);
 
 			const update = JSON.parse(JSON.stringify(pipeline));
@@ -548,14 +470,14 @@ describe("pipelines", () => {
 			update.destination.credentials = {
 				endpoint: "https://some-account-id.r2.cloudflarestorage.com",
 				access_key_id: "service-token-id",
-				secret_access_key:
-					"be22cbae9c1585c7b61a92fdb75afd10babd535fb9b317f90ac9a9ca896d02d7",
+				secret_access_key: "my-secret-access-key",
 			};
 			const updateReq = mockUpdateRequest(update.name, update);
 
-			await runWrangler("pipelines update my-pipeline --r2 new-bucket");
+			await runWrangler(
+				"pipelines update my-pipeline --r2 new-bucket --access-key-id service-token-id --secret-access-key my-secret-access-key"
+			);
 
-			expect(tokenReq.count).toEqual(3);
 			expect(updateReq.count).toEqual(1);
 		});
 
