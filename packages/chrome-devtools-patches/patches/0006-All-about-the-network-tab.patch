@@ -1,4 +1,4 @@
-From 3b484138dabb583349363df0e2d69ffe3c1dc039 Mon Sep 17 00:00:00 2001
+From c0a3154c9483ac4390d8459cb5869b58afa8d503 Mon Sep 17 00:00:00 2001
 From: Workers DevProd <workers-devprod@cloudflare.com>
 Date: Fri, 25 Oct 2024 16:05:12 +0100
 Subject: [PATCH 6/8] All about the network tab!
@@ -16,7 +16,7 @@ Subject: [PATCH 6/8] All about the network tab!
  4 files changed, 9 insertions(+), 28 deletions(-)
 
 diff --git a/front_end/core/sdk/NetworkManager.ts b/front_end/core/sdk/NetworkManager.ts
-index 8735116e61..953d3fc7b1 100644
+index 4093f80cf8..1eb3199a53 100644
 --- a/front_end/core/sdk/NetworkManager.ts
 +++ b/front_end/core/sdk/NetworkManager.ts
 @@ -34,6 +34,7 @@
@@ -73,7 +73,7 @@ index 1724a33bd4..884c6264d2 100644
  
  import * as Common from '../../core/common/common.js';
 diff --git a/front_end/panels/network/NetworkPanel.ts b/front_end/panels/network/NetworkPanel.ts
-index 71c40a6873..abf30cc4e8 100644
+index 7d44f68bf3..f4b7ec0973 100644
 --- a/front_end/panels/network/NetworkPanel.ts
 +++ b/front_end/panels/network/NetworkPanel.ts
 @@ -75,14 +75,6 @@ const UIStrings = {
@@ -91,7 +91,7 @@ index 71c40a6873..abf30cc4e8 100644
    /**
     *@description Tooltip text that appears when hovering over the largeicon settings gear in show settings pane setting in network panel of the network panel
     */
-@@ -158,10 +150,6 @@ const UIStrings = {
+@@ -180,10 +172,6 @@ const UIStrings = {
     *@description Text in Network Panel that is displayed when frames are being fetched.
     */
    fetchingFrames: 'Fetching frames...',
@@ -102,7 +102,7 @@ index 71c40a6873..abf30cc4e8 100644
  };
  const str_ = i18n.i18n.registerUIStrings('panels/network/NetworkPanel.ts', UIStrings);
  const i18nString = i18n.i18n.getLocalizedString.bind(undefined, str_);
-@@ -422,21 +410,6 @@ export class NetworkPanel extends UI.Panel.Panel implements
+@@ -444,21 +432,6 @@ export class NetworkPanel extends UI.Panel.Panel implements
      this.panelToolbar.appendToolbarItem(new UI.Toolbar.ToolbarSettingCheckbox(
          this.preserveLogSetting, i18nString(UIStrings.doNotClearLogOnPageReload), i18nString(UIStrings.preserveLog)));
  
