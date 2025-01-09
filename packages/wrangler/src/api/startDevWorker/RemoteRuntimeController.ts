@@ -267,6 +267,9 @@ export class RemoteRuntimeController extends RuntimeController {
 						...(accessToken
 							? { Cookie: `CF_Authorization=${accessToken}` }
 							: {}),
+						// Make sure we don't pass on CF-Connecting-IP to the remote edgeworker instance
+						// Without this line, remote previews will fail with `DNS points to prohibited IP`
+						"cf-connecting-ip": "",
 					},
 					liveReload: config.dev.liveReload,
 					proxyLogsToController: true,
