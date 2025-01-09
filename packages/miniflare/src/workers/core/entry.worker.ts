@@ -363,6 +363,8 @@ export default <ExportedHandler<Env>>{
 				};
 		request = new Request(request, { cf });
 
+		request.headers.set("MF-Raw-workerd-CF", JSON.stringify(request.cf));
+
 		// The proxy client will always specify an operation
 		const isProxy = request.headers.get(CoreHeaders.OP) !== null;
 		if (isProxy) return handleProxy(request, env);
