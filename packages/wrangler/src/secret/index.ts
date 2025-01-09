@@ -378,7 +378,7 @@ export const secret = (secretYargs: CommonYargsArgv) => {
 export const secretBulkOptions = (yargs: CommonYargsArgv) => {
 	return yargs
 		.positional("json", {
-			describe: `The file of key-value pairs to upload, as JSON in form {"key": value, ...} or .env file in the form KEY=VALUE`,
+			describe: `The file of key-value pairs to upload, as JSON in form {"key": value, ...} or .dev.vars file in the form KEY=VALUE`,
 			type: "string",
 		})
 		.option("name", {
