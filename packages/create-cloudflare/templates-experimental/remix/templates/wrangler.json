@@ -1,7 +1,7 @@
 {
-  "compatibility_date": "<TBD>",
-  "main": "./server.ts",
   "name": "<TBD>",
+  "main": "./server.ts",
+  "compatibility_date": "<TBD>",
   "assets": {
     "directory": "./build/client"
   },

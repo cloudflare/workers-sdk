@@ -1,7 +1,7 @@
 {
-  "compatibility_date": "<TBD>",
-  "main": "./dist/server/server.mjs",
   "name": "<TBD>",
+  "main": "./dist/server/server.mjs",
+  "compatibility_date": "<TBD>",
   "assets": {
     "binding": "ASSETS",
     "directory": "./dist/browser"

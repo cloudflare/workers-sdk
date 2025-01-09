@@ -1,10 +1,10 @@
 {
+  "name": "<TBD>",
+  "main": "./dist/_worker.js",
   "compatibility_date": "<TBD>",
   "compatibility_flags": [
     "nodejs_compat"
   ],
-  "main": "./dist/_worker.js",
-  "name": "<TBD>",
   "assets": {
     "binding": "ASSET",
     "directory": "./dist"

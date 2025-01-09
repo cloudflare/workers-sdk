@@ -1,15 +1,7 @@
 {
-  "compatibility_date": "<TBD>",
-  "main": "src/index.js",
   "name": "<TBD>",
-  "migrations": [
-    {
-      "new_classes": [
-        "MyDurableObject"
-      ],
-      "tag": "v1"
-    }
-  ],
+  "main": "src/index.js",
+  "compatibility_date": "<TBD>",
   "assets": {
     "binding": "ASSETS",
     "directory": "./public"
@@ -22,6 +14,14 @@
       }
     ]
   },
+	"migrations": [
+    {
+      "new_classes": [
+        "MyDurableObject"
+      ],
+      "tag": "v1"
+    }
+  ],
   "observability": {
     "enabled": true
   }

@@ -1,7 +1,7 @@
 {
-  "compatibility_date": "<TBD>",
-  "main": "src/index.ts",
   "name": "<TBD>",
+  "main": "src/index.ts",
+  "compatibility_date": "<TBD>",
   "migrations": [
     {
       "new_classes": [

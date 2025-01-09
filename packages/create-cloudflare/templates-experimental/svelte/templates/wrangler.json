@@ -1,7 +1,7 @@
 {
-  "compatibility_date": "<TBD>",
-  "main": ".svelte-kit/cloudflare/_worker.js",
   "name": "<TBD>",
+  "main": ".svelte-kit/cloudflare/_worker.js",
+  "compatibility_date": "<TBD>",
   "assets": {
     "binding": "ASSETS",
     "directory": ".svelte-kit/cloudflare"
