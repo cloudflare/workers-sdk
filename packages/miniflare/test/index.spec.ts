@@ -2628,7 +2628,7 @@ test("Miniflare: dispatchFetch() can override cf", async (t) => {
 	t.deepEqual(cfJson.myFakeField, "test2");
 });
 
-test("Miniflare: CF-Connecting-IP is injected", async (t) => {
+unixSerialTest("Miniflare: CF-Connecting-IP is injected", async (t) => {
 	const mf = new Miniflare({
 		script:
 			"export default { fetch(request) { return new Response(request.headers.get('CF-Connecting-IP')) } }",
@@ -2643,7 +2643,7 @@ test("Miniflare: CF-Connecting-IP is injected", async (t) => {
 	t.deepEqual(await ip.text(), "127.0.0.1");
 });
 
-test("Miniflare: CF-Connecting-IP is injected (ipv6)", async (t) => {
+unixSerialTest("Miniflare: CF-Connecting-IP is injected (ipv6)", async (t) => {
 	const mf = new Miniflare({
 		script:
 			"export default { fetch(request) { return new Response(request.headers.get('CF-Connecting-IP')) } }",
