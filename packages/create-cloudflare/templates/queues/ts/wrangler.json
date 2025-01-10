@@ -1,0 +1,21 @@
+{
+  "name": "<TBD>",
+  "main": "src/index.ts",
+  "compatibility_date": "<TBD>",
+  "observability": {
+    "enabled": true
+  },
+  "queues": {
+    "consumers": [
+      {
+        "queue": "my-queue"
+      }
+    ],
+    "producers": [
+      {
+        "binding": "MY_QUEUE",
+        "queue": "my-queue"
+      }
+    ]
+  }
+}

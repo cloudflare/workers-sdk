@@ -1,0 +1,24 @@
+{
+  "name": "<TBD>",
+  "main": "src/index.ts",
+  "compatibility_date": "<TBD>",
+  "migrations": [
+    {
+      "new_classes": [
+        "MyDurableObject"
+      ],
+      "tag": "v1"
+    }
+  ],
+  "durable_objects": {
+    "bindings": [
+      {
+        "class_name": "MyDurableObject",
+        "name": "MY_DURABLE_OBJECT"
+      }
+    ]
+  },
+  "observability": {
+    "enabled": true
+  }
+}

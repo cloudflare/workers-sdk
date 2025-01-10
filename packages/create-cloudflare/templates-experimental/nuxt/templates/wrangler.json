@@ -1,0 +1,12 @@
+{
+  "name": "<TBD>",
+  "main": "./.output/server/index.mjs",
+  "compatibility_date": "<TBD>",
+  "assets": {
+    "binding": "ASSETS",
+    "directory": "./.output/public/"
+  },
+  "observability": {
+    "enabled": true
+  }
+}

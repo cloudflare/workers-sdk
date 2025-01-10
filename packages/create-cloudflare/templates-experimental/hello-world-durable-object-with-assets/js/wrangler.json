@@ -1,0 +1,28 @@
+{
+  "name": "<TBD>",
+  "main": "src/index.js",
+  "compatibility_date": "<TBD>",
+  "assets": {
+    "binding": "ASSETS",
+    "directory": "./public"
+  },
+  "durable_objects": {
+    "bindings": [
+      {
+        "class_name": "MyDurableObject",
+        "name": "MY_DURABLE_OBJECT"
+      }
+    ]
+  },
+	"migrations": [
+    {
+      "new_classes": [
+        "MyDurableObject"
+      ],
+      "tag": "v1"
+    }
+  ],
+  "observability": {
+    "enabled": true
+  }
+}

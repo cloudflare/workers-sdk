@@ -1,0 +1,15 @@
+{
+  "name": "<TBD>",
+  "main": "src/entry.py",
+  "compatibility_date": "<TBD>",
+  "compatibility_flags": [
+    "python_workers"
+  ],
+  "assets": {
+    "binding": "ASSETS",
+    "directory": "./public"
+  },
+  "observability": {
+    "enabled": true
+  }
+}

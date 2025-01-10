@@ -91,7 +91,7 @@ describe("Package Helpers", () => {
 		await installWrangler();
 
 		expect(vi.mocked(runCommand)).toHaveBeenCalledWith(
-			["npm", "install", "--save-dev", "wrangler"],
+			["npm", "install", "--save-dev", "wrangler@latest"],
 			expect.anything(),
 		);
 	});

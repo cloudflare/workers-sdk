@@ -1,0 +1,9 @@
+{
+	"name": "<TBD>",
+	"main": "src/entry.py",
+	"compatibility_date": "<TBD>",
+	"compatibility_flags": ["python_workers"],
+	"observability": {
+		"enabled": true
+	}
+}

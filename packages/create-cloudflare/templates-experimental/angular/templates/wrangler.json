@@ -1,0 +1,12 @@
+{
+  "name": "<TBD>",
+  "main": "./dist/server/server.mjs",
+  "compatibility_date": "<TBD>",
+  "assets": {
+    "binding": "ASSETS",
+    "directory": "./dist/browser"
+  },
+  "observability": {
+    "enabled": true
+  }
+}

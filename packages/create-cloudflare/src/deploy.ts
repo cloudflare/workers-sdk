@@ -84,7 +84,7 @@ const isDeployable = async (ctx: C3Context) => {
 const readWranglerConfig = (ctx: C3Context) => {
 	if (wranglerJsonExists(ctx)) {
 		const wranglerJsonStr = readWranglerJson(ctx);
-		return jsoncParse(wranglerJsonStr);
+		return jsoncParse(wranglerJsonStr, undefined, { allowTrailingComma: true });
 	}
 	const wranglerTomlStr = readWranglerToml(ctx);
 	return TOML.parse(wranglerTomlStr.replace(/\r\n/g, "\n"));
