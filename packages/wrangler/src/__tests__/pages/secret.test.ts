@@ -540,10 +540,10 @@ describe("wrangler pages secret", () => {
 
 			await runWrangler(`pages secret bulk --project some-project-name`);
 			expect(std.out).toMatchInlineSnapshot(`
-			"🌀 Creating the secrets for the Pages project \\"some-project-name\\" (production)
-			Finished processing secrets JSON file:
-			✨ 2 secrets successfully uploaded"
-		`);
+				"🌀 Creating the secrets for the Pages project \\"some-project-name\\" (production)
+				Finished processing secrets file:
+				✨ 2 secrets successfully uploaded"
+			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
@@ -571,10 +571,10 @@ describe("wrangler pages secret", () => {
 			);
 
 			expect(std.out).toMatchInlineSnapshot(`
-			"🌀 Creating the secrets for the Pages project \\"some-project-name\\" (production)
-			Finished processing secrets JSON file:
-			✨ 2 secrets successfully uploaded"
-		`);
+				"🌀 Creating the secrets for the Pages project \\"some-project-name\\" (production)
+				Finished processing secrets file:
+				✨ 2 secrets successfully uploaded"
+			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
@@ -602,7 +602,7 @@ describe("wrangler pages secret", () => {
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"🌀 Creating the secrets for the Pages project \\"some-project-name\\" (production)
-				Finished processing secrets JSON file:
+				Finished processing secrets file:
 				✨ 3 secrets successfully uploaded"
 			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
@@ -636,10 +636,10 @@ describe("wrangler pages secret", () => {
 			);
 
 			expect(std.out).toMatchInlineSnapshot(`
-			"🌀 Creating the secrets for the Pages project \\"some-project-name\\" (preview)
-			Finished processing secrets JSON file:
-			✨ 2 secrets successfully uploaded"
-		`);
+				"🌀 Creating the secrets for the Pages project \\"some-project-name\\" (preview)
+				Finished processing secrets file:
+				✨ 2 secrets successfully uploaded"
+			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
@@ -694,11 +694,11 @@ describe("wrangler pages secret", () => {
 			);
 
 			expect(std.out).toMatchInlineSnapshot(`
-			"🌀 Creating the secrets for the Pages project \\"some-project-name\\" (production)
-			Finished processing secrets JSON file:
-			✨ 0 secrets successfully uploaded
-			"
-		`);
+				"🌀 Creating the secrets for the Pages project \\"some-project-name\\" (production)
+				Finished processing secrets file:
+				✨ 0 secrets successfully uploaded
+				"
+			`);
 			expect(std.err).toMatchInlineSnapshot(`
 			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1m🚨 7 secrets failed to upload[0m
 
