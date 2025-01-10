@@ -727,11 +727,11 @@ describe("vectorize commands", () => {
 describe("vectorize query filter", () => {
 	it("should parse correctly", async () => {
 		let jsonString =
-			'{ "p1": "abc", "p2": { "$ne": true }, "p3": 10, "p4": false, "nested.p5": "abcd" }'; // Successful parse
+			'{ "p1": "abc", "p2": { "$ne": true }, "p3": 10, "p4": false, "nested.p5": "abcd", "p6": { "$in": ["a", 3, 4] }, "p7": {"$gt": 4, "$lte": "aaa"} }'; // Successful parse
 		expect(
 			JSON.stringify(validateQueryFilter(JSON.parse(jsonString)))
 		).toMatchInlineSnapshot(
-			`"{\\"p1\\":\\"abc\\",\\"p2\\":{\\"$ne\\":true},\\"p3\\":10,\\"p4\\":false,\\"nested.p5\\":\\"abcd\\"}"`
+			`"{\\"p1\\":\\"abc\\",\\"p2\\":{\\"$ne\\":true},\\"p3\\":10,\\"p4\\":false,\\"nested.p5\\":\\"abcd\\",\\"p6\\":{\\"$in\\":[\\"a\\",3,4]},\\"p7\\":{\\"$gt\\":4,\\"$lte\\":\\"aaa\\"}}"`
 		);
 
 		jsonString =
