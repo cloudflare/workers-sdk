@@ -11,7 +11,12 @@ import {
 	extractBindingsOfType,
 } from "./api/startDevWorker/utils";
 import { getAssetsOptions } from "./assets";
-import { configFileName, formatConfigSnippet, readConfig } from "./config";
+import {
+	configFileName,
+	findMultiWorkerConfigs,
+	formatConfigSnippet,
+	rewriteServiceBindings,
+} from "./config";
 import { createCommand } from "./core/create-command";
 import { validateRoutes } from "./deploy/deploy";
 import { validateNodeCompatMode } from "./deployment-bundle/node-compat";
@@ -36,7 +41,7 @@ import type {
 	StartDevWorkerInput,
 	Trigger,
 } from "./api";
-import type { Config, Environment, ReadConfigCommandArgs } from "./config";
+import type { Config, Environment } from "./config";
 import type {
 	EnvironmentNonInheritable,
 	Route,
@@ -707,7 +712,7 @@ export async function startDev(args: StartDevOptions) {
 		};
 
 		const configs = findMultiWorkerConfigs(args);
-		if (configs.length) {
+		if (configs.length > 1) {
 			const runtime = new MultiworkerRuntimeController(configs.length);
 
 			const primaryDevEnv = new DevEnv({ runtimes: [runtime] });
@@ -1021,18 +1026,7 @@ export function getBindings(
 		"binding"
 	);
 
-	// Convert service "paths" to names
-	for (const serviceBinding of mergedServiceBindings) {
-		if (serviceBinding.service.startsWith(".")) {
-			const base = path.dirname(configParam.configPath ?? "./wrangler.toml");
-			const { name } = readConfig(
-				{ config: path.resolve(base, serviceBinding.service), env },
-				{ hideWarnings: true }
-			);
-			assert(name);
-			serviceBinding.service = name;
-		}
-	}
+	rewriteServiceBindings(configParam, env, mergedServiceBindings);
 
 	// Hyperdrive bindings
 	const hyperdriveBindings = configParam.hyperdrive.map((hyperdrive) => {
@@ -1137,39 +1131,4 @@ export function getAssetChangeMessage(
 	}
 
 	return message;
-}
-
-function findMultiWorkerConfigs(args: ReadConfigCommandArgs) {
-	if (Array.isArray(args.config)) {
-		return args.config as string[];
-	}
-	const { config, ...otherArgs } = args;
-	assert(typeof config === "string");
-	const configs = new Set<string>();
-	loadConfigRecursive(configs, otherArgs, config);
-	return Array.from(configs);
-}
-
-function loadConfigRecursive(
-	configs: Set<string>,
-	args: ReadConfigCommandArgs,
-	configPath: string
-) {
-	if (configs.has(configPath)) {
-		// Already seen this service
-		return;
-	}
-	configs.add(configPath);
-
-	const config = readConfig(
-		{ ...args, config: configPath },
-		{ hideWarnings: true }
-	);
-
-	const base = path.dirname(configPath);
-	for (const service of config.services ?? []) {
-		if (service.service.startsWith(".")) {
-			loadConfigRecursive(configs, args, path.resolve(base, service.service));
-		}
-	}
 }

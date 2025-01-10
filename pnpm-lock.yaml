@@ -2195,6 +2195,9 @@ importers:
       concurrently:
         specifier: ^8.2.2
         version: 8.2.2
+      dependency-graph:
+        specifier: ^1.0.0
+        version: 1.0.0
       devtools-protocol:
         specifier: ^0.0.1182435
         version: 0.0.1182435
@@ -5896,6 +5899,10 @@ packages:
 
   delegates@1.0.0:
     resolution: {integrity: sha512-bd2L678uiWATM6m5Z1VzNCErI3jiGzt6HGY8OVICs40JQq/HALfbyNJmp0UDakEY4pMMaN0Ly5om/B1VI/+xfQ==}
+
+  dependency-graph@1.0.0:
+    resolution: {integrity: sha512-cW3gggJ28HZ/LExwxP2B++aiKxhJXMSIt9K48FOXQkm+vuG5gyatXnLsONRJdzO/7VfjDIiaOOa/bs4l464Lwg==}
+    engines: {node: '>=4'}
 
   deprecation@2.3.1:
     resolution: {integrity: sha512-xmHIy4F3scKVwMsQ4WnVaS8bHOx0DmVwRywosKhaILI0ywMDWPtBSku2HNxRvF7jtwDRsoEwYQSfbxj8b7RlJQ==}
@@ -14358,6 +14365,8 @@ snapshots:
   delayed-stream@1.0.0: {}
 
   delegates@1.0.0: {}
+
+  dependency-graph@1.0.0: {}
 
   deprecation@2.3.1: {}
 

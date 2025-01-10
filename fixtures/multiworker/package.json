@@ -6,6 +6,7 @@
 	"author": "",
 	"main": "src/index.js",
 	"scripts": {
+		"deploy": "pnpm wrangler deploy -c worker-a/wrangler.toml",
 		"dev": "pnpm wrangler dev -c worker-a/wrangler.toml"
 	},
 	"dependencies": {

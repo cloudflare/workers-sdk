@@ -1,7 +1,7 @@
 import assert from "node:assert";
 import path from "node:path";
 import { getAssetsOptions, validateAssetsArgsAndConfig } from "../assets";
-import { configFileName, readConfig } from "../config";
+import { configFileName, findMultiWorkerConfigs, readConfig } from "../config";
 import { getEntry } from "../deployment-bundle/entry";
 import { UserError } from "../errors";
 import { run } from "../experimental-flags";
@@ -337,7 +337,6 @@ async function deployWorker(args: DeployArgs) {
 		await standardPricingWarning(config);
 	}
 
-	const beforeUpload = Date.now();
 	const name = getScriptName(args, config);
 	assert(
 		name,
@@ -348,6 +347,14 @@ async function deployWorker(args: DeployArgs) {
 		assert(accountId, "Missing account ID");
 		await verifyWorkerMatchesCITag(accountId, name, config.configPath);
 	}
+
+	const configs = findMultiWorkerConfigs(args);
+	for (let i = configs.length - 1; i > 0; i--) {
+		await deployAuxWorker(configs[i], accountId, projectRoot, args);
+	}
+
+	logger.info("Deploying Worker: " + config.name);
+	const beforeUpload = Date.now();
 	const { sourceMapSize, versionId, workerTag, targets } = await deploy({
 		config,
 		accountId,
@@ -389,6 +396,77 @@ async function deployWorker(args: DeployArgs) {
 		type: "deploy",
 		version: 1,
 		worker_name: name ?? null,
+		worker_tag: workerTag,
+		version_id: versionId,
+		targets,
+	});
+
+	metrics.sendMetricsEvent(
+		"deploy worker script",
+		{
+			usesTypeScript: /\.tsx?$/.test(entry.file),
+			durationMs: Date.now() - beforeUpload,
+			sourceMapSize,
+		},
+		{
+			sendMetrics: config.send_metrics,
+		}
+	);
+}
+
+async function deployAuxWorker(
+	configPath: string,
+	accountId: string | undefined,
+	projectRoot: string | undefined,
+	args: DeployArgs
+) {
+	const beforeUpload = Date.now();
+	// Do not support redirect config for aux workers
+	const config = readConfig({ ...args, config: configPath });
+	assert(config.name, "Missing Worker name in config");
+	const entry = await getEntry({}, config, "deploy");
+	logger.info("Deploying auxiliary Worker: " + config.name);
+	const { sourceMapSize, versionId, workerTag, targets } = await deploy({
+		config,
+		accountId,
+		name: config.name,
+		rules: getRules(config),
+		entry,
+		env: args.env,
+		compatibilityDate: args.latest
+			? new Date().toISOString().substring(0, 10)
+			: args.compatibilityDate,
+		compatibilityFlags: args.compatibilityFlags,
+		vars: undefined,
+		defines: undefined,
+		alias: undefined,
+		triggers: args.triggers,
+		jsxFactory: args.jsxFactory,
+		jsxFragment: args.jsxFragment,
+		tsconfig: args.tsconfig,
+		routes: args.routes,
+		assetsOptions: undefined,
+		legacyAssetPaths: undefined,
+		legacyEnv: isLegacyEnv(config),
+		minify: args.minify,
+		nodeCompat: args.nodeCompat,
+		isWorkersSite: Boolean(args.site || config.site),
+		outDir: args.outdir,
+		dryRun: args.dryRun,
+		noBundle: !(args.bundle ?? !config.no_bundle),
+		keepVars: args.keepVars,
+		logpush: args.logpush,
+		uploadSourceMaps: args.uploadSourceMaps,
+		oldAssetTtl: args.oldAssetTtl,
+		projectRoot,
+		dispatchNamespace: args.dispatchNamespace,
+		experimentalAutoCreate: args.experimentalAutoCreate,
+	});
+
+	writeOutput({
+		type: "deploy",
+		version: 1,
+		worker_name: config.name,
 		worker_tag: workerTag,
 		version_id: versionId,
 		targets,

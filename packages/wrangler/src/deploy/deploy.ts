@@ -685,22 +685,25 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			props.oldAssetTtl
 		);
 
-		const bindings = getBindings({
-			...config,
-			kv_namespaces: config.kv_namespaces.concat(
-				legacyAssets.namespace
-					? { binding: "__STATIC_CONTENT", id: legacyAssets.namespace }
-					: []
-			),
-			vars: { ...config.vars, ...props.vars },
-			text_blobs: {
-				...config.text_blobs,
-				...(legacyAssets.manifest &&
-					format === "service-worker" && {
-						__STATIC_CONTENT_MANIFEST: "__STATIC_CONTENT_MANIFEST",
-					}),
+		const bindings = getBindings(
+			{
+				...config,
+				kv_namespaces: config.kv_namespaces.concat(
+					legacyAssets.namespace
+						? { binding: "__STATIC_CONTENT", id: legacyAssets.namespace }
+						: []
+				),
+				vars: { ...config.vars, ...props.vars },
+				text_blobs: {
+					...config.text_blobs,
+					...(legacyAssets.manifest &&
+						format === "service-worker" && {
+							__STATIC_CONTENT_MANIFEST: "__STATIC_CONTENT_MANIFEST",
+						}),
+				},
 			},
-		});
+			{ env: props.env }
+		);
 
 		if (legacyAssets.manifest) {
 			modules.push({
@@ -795,7 +798,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			!config.first_party_worker;
 
 		if (props.dryRun) {
-			printBindings({ ...withoutStaticAssets, vars: maskedVars });
+			printBindings({ ...withoutStaticAssets, vars: maskedVars }, { name });
 		} else {
 			assert(accountId, "Missing accountId");
 
@@ -887,7 +890,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 				}
 				bindingsPrinted = true;
 
-				printBindings({ ...withoutStaticAssets, vars: maskedVars });
+				printBindings({ ...withoutStaticAssets, vars: maskedVars }, { name });
 
 				versionId = parseNonHyphenedUuid(result.deployment_id);
 
@@ -913,7 +916,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 				}
 			} catch (err) {
 				if (!bindingsPrinted) {
-					printBindings({ ...withoutStaticAssets, vars: maskedVars });
+					printBindings({ ...withoutStaticAssets, vars: maskedVars }, { name });
 				}
 				helpIfErrorIsSizeOrScriptStartup(err, dependencies);
 

@@ -1,6 +1,7 @@
 import chalk from "chalk";
 import { isLegacyEnv } from "..";
 import { fetchResult } from "../cfetch";
+import { rewriteServiceBindings } from "../config";
 import { createD1Database } from "../d1/create";
 import { listDatabases } from "../d1/list";
 import { prompt, select } from "../dialogs";
@@ -27,6 +28,7 @@ export function getBindings(
 	config: Config | undefined,
 	options?: {
 		pages?: boolean;
+		env?: string;
 	}
 ): CfWorkerInit["bindings"] {
 	return {
@@ -48,7 +50,8 @@ export function getBindings(
 		d1_databases: config?.d1_databases,
 		vectorize: config?.vectorize,
 		hyperdrive: config?.hyperdrive,
-		services: config?.services,
+		services:
+			config && rewriteServiceBindings(config, options?.env, config?.services),
 		analytics_engine_datasets: config?.analytics_engine_datasets,
 		dispatch_namespaces: options?.pages
 			? undefined
