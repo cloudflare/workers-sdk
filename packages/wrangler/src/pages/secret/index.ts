@@ -224,14 +224,14 @@ export const secret = (secretYargs: CommonYargsArgv, subHelp: SubHelp) => {
 							}),
 						}
 					);
-					logger.log("Finished processing secrets JSON file:");
+					logger.log("Finished processing secrets file:");
 					logger.log(
 						`✨ ${
 							Object.keys(upsertBindings).length
 						} secrets successfully uploaded`
 					);
 				} catch (err) {
-					logger.log("Finished processing secrets JSON file:");
+					logger.log("Finished processing secrets file:");
 					logger.log(`✨ 0 secrets successfully uploaded`);
 					throw new FatalError(
 						`🚨 ${Object.keys(upsertBindings).length} secrets failed to upload`
