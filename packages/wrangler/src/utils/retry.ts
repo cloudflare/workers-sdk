@@ -1,5 +1,3 @@
-import { setTimeout } from "node:timers/promises";
-
 export async function retryOnError<T>(
 	action: () => T | Promise<T>,
 	backoff = 2_000,
@@ -12,7 +10,11 @@ export async function retryOnError<T>(
 			throw err;
 		}
 
-		await setTimeout(backoff);
-		return retryOnError(action, backoff, attempts - 1);
+		return new Promise((accept) => {
+			setTimeout(
+				() => accept(retryOnError(action, backoff, attempts - 1)),
+				backoff
+			);
+		});
 	}
 }
