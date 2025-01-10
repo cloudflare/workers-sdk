@@ -38,7 +38,6 @@ export * from "./api/integrations";
 
 // Export internal APIs required by the Vitest integration as `unstable_`
 export { default as unstable_splitSqlQuery } from "./d1/splitter";
-export { startWorkerRegistryServer as unstable_startWorkerRegistryServer } from "./dev-registry";
 
 // `miniflare-cli/assets` dynamically imports`@cloudflare/pages-shared/environment-polyfills`.
 // `@cloudflare/pages-shared/environment-polyfills/types.ts` defines `global`

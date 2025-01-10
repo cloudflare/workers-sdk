@@ -1,4 +1,4 @@
-From f55dc8200dda3025eb7866f2706a08851aa0d3dd Mon Sep 17 00:00:00 2001
+From 79eef448a1e63c2295d67938f92a83093289ffe6 Mon Sep 17 00:00:00 2001
 From: Workers DevProd <workers-devprod@cloudflare.com>
 Date: Fri, 25 Oct 2024 15:26:38 +0100
 Subject: [PATCH 4/8] Support viewing source files over the network. This
@@ -23,7 +23,7 @@ Subject: [PATCH 4/8] Support viewing source files over the network. This
  6 files changed, 15 insertions(+), 40 deletions(-)
 
 diff --git a/front_end/core/common/ParsedURL.ts b/front_end/core/common/ParsedURL.ts
-index 832d76c19c..968439ade4 100644
+index 100d9ec45f..d75d6e4f2f 100644
 --- a/front_end/core/common/ParsedURL.ts
 +++ b/front_end/core/common/ParsedURL.ts
 @@ -366,7 +366,7 @@ export class ParsedURL {
@@ -88,20 +88,20 @@ index 1a6644df92..1724a33bd4 100644
    persistence: UI.ViewManager.ViewPersistence.PERMANENT,
    async loadView() {
 diff --git a/front_end/entrypoints/main/MainImpl.ts b/front_end/entrypoints/main/MainImpl.ts
-index 978092dea5..fc463ec0c9 100644
+index fbc6a1bd71..e6bc57bbb0 100644
 --- a/front_end/entrypoints/main/MainImpl.ts
 +++ b/front_end/entrypoints/main/MainImpl.ts
-@@ -421,6 +421,8 @@ export class MainImpl {
-       Root.Runtime.ExperimentName.TIMELINE_ANNOTATIONS,
+@@ -414,6 +414,8 @@ export class MainImpl {
        Root.Runtime.ExperimentName.NETWORK_PANEL_FILTER_BAR_REDESIGN,
        Root.Runtime.ExperimentName.FLOATING_ENTRY_POINTS_FOR_AI_ASSISTANCE,
+       Root.Runtime.ExperimentName.TIMELINE_ALTERNATIVE_NAVIGATION,
 +      Root.Runtime.ExperimentName.AUTHORED_DEPLOYED_GROUPING,
 +      Root.Runtime.ExperimentName.JUST_MY_CODE,
        ...(Root.Runtime.Runtime.queryParam('isChromeForTesting') ? ['protocol-monitor'] : []),
      ]);
  
 diff --git a/front_end/panels/sources/NavigatorView.ts b/front_end/panels/sources/NavigatorView.ts
-index 6f4c52f3e7..2f5ada52e6 100644
+index d9da41ab84..73f42a22be 100644
 --- a/front_end/panels/sources/NavigatorView.ts
 +++ b/front_end/panels/sources/NavigatorView.ts
 @@ -795,8 +795,9 @@ export class NavigatorView extends UI.Widget.VBox implements SDK.TargetManager.O
@@ -117,7 +117,7 @@ index 6f4c52f3e7..2f5ada52e6 100644
  
      const parsedURL = new Common.ParsedURL.ParsedURL(projectOrigin);
 diff --git a/front_end/panels/sources/sources-meta.ts b/front_end/panels/sources/sources-meta.ts
-index 42a2e17f07..c41a8d2c7a 100644
+index f4284da33b..76bb296abb 100644
 --- a/front_end/panels/sources/sources-meta.ts
 +++ b/front_end/panels/sources/sources-meta.ts
 @@ -495,32 +495,6 @@ UI.ViewManager.registerViewExtension({

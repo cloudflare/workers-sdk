@@ -1,4 +1,4 @@
-From 01012531546fccc62536fba7d1bfde6c5cc1a6c2 Mon Sep 17 00:00:00 2001
+From 6bca6c563e616596aa75a88f1d52b8f9150ba93c Mon Sep 17 00:00:00 2001
 From: Workers DevProd <workers-devprod@cloudflare.com>
 Date: Fri, 25 Oct 2024 16:07:24 +0100
 Subject: [PATCH 7/8] Limit heap profiling modes available

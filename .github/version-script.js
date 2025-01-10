@@ -16,7 +16,7 @@ const { execSync } = require("child_process");
 try {
 	const packageName = getArgs()[0] ?? "wrangler";
 	const packageJsonPath = `./packages/${packageName}/package.json`;
-	const pkg = JSON.parse(readFileSync(packageJsonPath));
+	const pkg = JSON.parse(readFileSync(packageJsonPath, "utf-8"));
 	const stdout = execSync("git rev-parse --short HEAD", { encoding: "utf8" });
 	pkg.version = "0.0.0-" + stdout.trim();
 	writeFileSync(packageJsonPath, JSON.stringify(pkg, null, "\t") + "\n");

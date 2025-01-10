@@ -44,7 +44,7 @@
 		"@cloudflare/workers-types": "^4.20241230.0",
 		"@types/mime": "^3.0.4",
 		"esbuild": "0.17.19",
-		"rimraf": "^6.0.1",
+		"rimraf": "catalog:default",
 		"typescript": "catalog:default",
 		"vitest": "catalog:default"
 	},

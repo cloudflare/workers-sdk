@@ -1,5 +1,15 @@
 # miniflare
 
+## 3.20241230.1
+
+### Minor Changes
+
+- [#7702](https://github.com/cloudflare/workers-sdk/pull/7702) [`78bdec5`](https://github.com/cloudflare/workers-sdk/commit/78bdec59ce880365b0318eb94d4176b53e950f66) Thanks [@penalosa](https://github.com/penalosa)! - Support the `CF-Connecting-IP` header, which will be available in your Worker to determine the IP address of the client that initiated a request.
+
+### Patch Changes
+
+- [#7701](https://github.com/cloudflare/workers-sdk/pull/7701) [`2c76887`](https://github.com/cloudflare/workers-sdk/commit/2c7688737346992d046d2f88eba5c9847ede1365) Thanks [@lambrospetrou](https://github.com/lambrospetrou)! - Fix D1 exports to properly pad HEX strings for binary values.
+
 ## 3.20241230.0
 
 ### Patch Changes

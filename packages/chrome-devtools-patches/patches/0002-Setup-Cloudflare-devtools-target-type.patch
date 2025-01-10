@@ -1,4 +1,4 @@
-From 6fbdae0bba47eeb10a779fbfbb15bbe6f17fa798 Mon Sep 17 00:00:00 2001
+From 06c925f4b3b765ac35d77ed504b626656a89581c Mon Sep 17 00:00:00 2001
 From: Workers DevProd <workers-devprod@cloudflare.com>
 Date: Fri, 25 Oct 2024 16:06:06 +0100
 Subject: [PATCH 2/8] Setup Cloudflare devtools target type

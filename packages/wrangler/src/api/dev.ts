@@ -125,7 +125,6 @@ export async function unstable_dev(
 		showInteractiveDevSession,
 		testMode,
 		testScheduled,
-		fileBasedRegistry = true,
 		vectorizeBindToProd,
 		// 2. options for alpha/beta products/libs
 		d1Databases,
@@ -218,8 +217,6 @@ export async function unstable_dev(
 		logLevel: options?.logLevel ?? defaultLogLevel,
 		port: options?.port ?? 0,
 		experimentalProvision: undefined,
-		experimentalDevEnv: undefined,
-		experimentalRegistry: fileBasedRegistry,
 		experimentalVectorizeBindToProd: vectorizeBindToProd ?? false,
 		enableIpc: options?.experimental?.enableIpc,
 	};
@@ -227,7 +224,6 @@ export async function unstable_dev(
 	//outside of test mode, rebuilds work fine, but only one instance of wrangler will work at a time
 	const devServer = await run(
 		{
-			FILE_BASED_REGISTRY: fileBasedRegistry,
 			// TODO: can we make this work?
 			MULTIWORKER: false,
 			RESOURCES_PROVISION: false,

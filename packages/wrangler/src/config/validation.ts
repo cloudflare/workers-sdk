@@ -269,6 +269,7 @@ export function normalizeAndValidateConfig(
 	const config: Config = {
 		configPath,
 		userConfigPath,
+		topLevelName: rawConfig.name,
 		pages_build_output_dir: normalizeAndValidatePagesBuildOutputDir(
 			configPath,
 			rawConfig.pages_build_output_dir

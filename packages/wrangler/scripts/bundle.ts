@@ -1,3 +1,4 @@
+import { writeFileSync } from "node:fs";
 import path from "node:path";
 import * as esbuild from "esbuild";
 import { EXTERNAL_DEPENDENCIES } from "./deps";
@@ -35,6 +36,7 @@ async function buildMain(flags: BuildFlags = {}) {
 		outdir,
 		platform: "node",
 		format: "cjs",
+		metafile: true,
 		external: EXTERNAL_DEPENDENCIES,
 		sourcemap: process.env.SOURCEMAPS !== "false",
 		inject: [path.join(__dirname, "../import_meta_url.js")],
@@ -64,7 +66,8 @@ async function buildMain(flags: BuildFlags = {}) {
 		const ctx = await esbuild.context(options);
 		await ctx.watch();
 	} else {
-		await esbuild.build(options);
+		const res = await esbuild.build(options);
+		writeFileSync("metafile.json", JSON.stringify(res.metafile));
 	}
 }
 

@@ -608,6 +608,36 @@ describe("wrangler pages secret", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
+		it("should create secret bulk w/ env file", async () => {
+			writeFileSync(
+				".env",
+				`SECRET_1=secret-1\nSECRET_2=secret-2\nSECRET_3=secret-3`
+			);
+
+			mockProjectRequests([
+				{
+					name: "SECRET_1",
+					text: "secret-1",
+				},
+				{
+					name: "SECRET_2",
+					text: "secret-2",
+				},
+				{
+					name: "SECRET_3",
+					text: "secret-3",
+				},
+			]);
+			await runWrangler("pages secret bulk .env --project some-project-name");
+
+			expect(std.out).toMatchInlineSnapshot(`
+				"🌀 Creating the secrets for the Pages project \\"some-project-name\\" (production)
+				Finished processing secrets JSON file:
+				✨ 3 secrets successfully uploaded"
+			`);
+			expect(std.err).toMatchInlineSnapshot(`""`);
+		});
+
 		it("should create secret bulk: preview", async () => {
 			writeFileSync(
 				"secret.json",

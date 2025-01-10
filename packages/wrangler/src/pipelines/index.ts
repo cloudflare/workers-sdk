@@ -1,11 +1,12 @@
+import { HeadBucketCommand, S3Client } from "@aws-sdk/client-s3";
 import { readConfig } from "../config";
-import { sleep } from "../deploy/deploy";
 import { FatalError, UserError } from "../errors";
 import { printWranglerBanner } from "../index";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { APIError } from "../parse";
 import { requireAuth } from "../user";
+import { retryOnError } from "../utils/retry";
 import {
 	createPipeline,
 	deletePipeline,
@@ -13,7 +14,6 @@ import {
 	getPipeline,
 	getR2Bucket,
 	listPipelines,
-	sha256,
 	updatePipeline,
 } from "./client";
 import type { CommonYargsArgv, CommonYargsOptions } from "../yargs-types";
@@ -29,38 +29,53 @@ import type { Argv } from "yargs";
 let __testSkipDelaysFlag = false;
 
 async function authorizeR2Bucket(
-	name: string,
+	pipelineName: string,
 	accountId: string,
-	bucket: string
+	bucketName: string
 ) {
 	try {
-		await getR2Bucket(accountId, bucket);
+		await getR2Bucket(accountId, bucketName);
 	} catch (err) {
 		if (err instanceof APIError) {
 			if (err.code == 10006) {
-				throw new FatalError(`The R2 bucket [${bucket}] doesn't exist`);
+				throw new FatalError(`The R2 bucket [${bucketName}] doesn't exist`);
 			}
 		}
 		throw err;
 	}
 
-	logger.log(`🌀 Authorizing R2 bucket "${bucket}"`);
+	logger.log(`🌀 Authorizing R2 bucket "${bucketName}"`);
 
 	const serviceToken = await generateR2ServiceToken(
-		`Service token for Pipeline ${name}`,
 		accountId,
-		bucket
+		bucketName,
+		pipelineName
 	);
-	const access_key_id = serviceToken.id;
-	const secret_access_key = sha256(serviceToken.value);
 
-	// wait for token to settle/propagate
-	!__testSkipDelaysFlag && (await sleep(3000));
+	const r2 = new S3Client({
+		region: "auto",
+		credentials: {
+			accessKeyId: serviceToken.accessKeyId,
+			secretAccessKey: serviceToken.secretAccessKey,
+		},
+		endpoint: getAccountR2Endpoint(accountId),
+	});
 
-	return {
-		secret_access_key,
-		access_key_id,
-	};
+	// Wait for token to settle/propagate, retry up to 10 times, with 1s waits in-between errors
+	!__testSkipDelaysFlag &&
+		(await retryOnError(
+			async () => {
+				await r2.send(
+					new HeadBucketCommand({
+						Bucket: bucketName,
+					})
+				);
+			},
+			1000,
+			10
+		));
+
+	return serviceToken;
 }
 
 function getAccountR2Endpoint(accountId: string) {
@@ -101,19 +116,19 @@ function addCreateAndUpdateOptions(yargs: Argv<CommonYargsOptions>) {
 		})
 		.option("batch-max-mb", {
 			describe:
-				"The approximate maximum size of a batch before flush in megabytes \nDefault: 10",
+				"The approximate maximum size (in megabytes) for each batch before flushing (range: 1 - 100)",
 			type: "number",
 			demandOption: false,
 		})
 		.option("batch-max-rows", {
 			describe:
-				"The approximate maximum size of a batch before flush in rows \nDefault: 10000",
+				"The approximate maximum number of rows in a batch before flushing (range: 100 - 1000000)",
 			type: "number",
 			demandOption: false,
 		})
 		.option("batch-max-seconds", {
 			describe:
-				"The approximate maximum duration of a batch before flush in seconds \nDefault: 15",
+				"The approximate maximum age (in seconds) of a batch before flushing (range: 1 - 300)",
 			type: "number",
 			demandOption: false,
 		})
@@ -196,7 +211,9 @@ export function pipelines(pipelineYargs: CommonYargsArgv) {
 					args.compression === undefined ? "gzip" : args.compression;
 
 				const batch = {
-					max_mb: args["batch-max-mb"],
+					max_bytes: args["batch-max-mb"]
+						? args["batch-max-mb"] * 1000 * 1000 // convert to bytes for the API
+						: undefined,
 					max_duration_s: args["batch-max-seconds"],
 					max_rows: args["batch-max-rows"],
 				};
@@ -240,8 +257,8 @@ export function pipelines(pipelineYargs: CommonYargsArgv) {
 						accountId,
 						pipelineConfig.destination.path.bucket
 					);
-					destination.credentials.access_key_id = auth.access_key_id;
-					destination.credentials.secret_access_key = auth.secret_access_key;
+					destination.credentials.access_key_id = auth.accessKeyId;
+					destination.credentials.secret_access_key = auth.secretAccessKey;
 				}
 
 				if (!destination.credentials.access_key_id) {
@@ -386,7 +403,8 @@ export function pipelines(pipelineYargs: CommonYargsArgv) {
 					pipelineConfig.destination.compression.type = args.compression;
 				}
 				if (args["batch-max-mb"]) {
-					pipelineConfig.destination.batch.max_mb = args["batch-max-mb"];
+					pipelineConfig.destination.batch.max_bytes =
+						args["batch-max-mb"] * 1000 * 1000; // convert to bytes for the API
 				}
 				if (args["batch-max-seconds"]) {
 					pipelineConfig.destination.batch.max_duration_s =
@@ -415,8 +433,8 @@ export function pipelines(pipelineYargs: CommonYargsArgv) {
 							accountId,
 							destination.path.bucket
 						);
-						destination.credentials.access_key_id = auth.access_key_id;
-						destination.credentials.secret_access_key = auth.secret_access_key;
+						destination.credentials.access_key_id = auth.accessKeyId;
+						destination.credentials.secret_access_key = auth.secretAccessKey;
 					}
 					if (!destination.credentials.access_key_id) {
 						throw new FatalError("Requires a r2 access key id");
@@ -463,7 +481,7 @@ export function pipelines(pipelineYargs: CommonYargsArgv) {
 								args.authentication !== undefined
 									? // if auth specified, use it
 										args.authentication
-									: // if auth not specified, use previos value or default(false)
+									: // if auth not specified, use previous value or default(false)
 										source?.authentication,
 						} satisfies HttpSource);
 					}

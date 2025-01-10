@@ -59,7 +59,6 @@ export const dev = createCommand({
 	behaviour: {
 		provideConfig: false,
 		overrideExperimentalFlags: (args) => ({
-			FILE_BASED_REGISTRY: args.experimentalRegistry,
 			MULTIWORKER: Array.isArray(args.config),
 			RESOURCES_PROVISION: args.experimentalProvision ?? false,
 		}),
@@ -319,19 +318,6 @@ export const dev = createCommand({
 				"Show interactive dev session (defaults to true if the terminal supports interactivity)",
 			type: "boolean",
 		},
-		"experimental-dev-env": {
-			alias: ["x-dev-env"],
-			type: "boolean",
-			deprecated: true,
-			hidden: true,
-		},
-		"experimental-registry": {
-			alias: ["x-registry"],
-			type: "boolean",
-			describe:
-				"Use the experimental file based dev registry for multi-worker development",
-			default: true,
-		},
 		"experimental-vectorize-bind-to-prod": {
 			type: "boolean",
 			describe:
@@ -343,11 +329,6 @@ export const dev = createCommand({
 		if (args.liveReload && args.remote) {
 			throw new UserError(
 				"--live-reload is only supported in local mode. Please just use one of either --remote or --live-reload."
-			);
-		}
-		if (args.experimentalDevEnv) {
-			logger.warn(
-				"--x-dev-env is now on by default and will be removed in a future version."
 			);
 		}
 

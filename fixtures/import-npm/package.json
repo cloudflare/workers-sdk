@@ -7,7 +7,7 @@
 		"packages/*"
 	],
 	"scripts": {
-		"_clean_install": "rm -rf node_modules && npm install --no-package-lock",
+		"_clean_install": "rm -rf node_modules && npm install --no-package-lock --workspaces",
 		"check:type": "npm run check:type --workspaces",
 		"test:ci": "npm run test:ci --workspaces",
 		"test:watch": "npm run test:watch --workspaces",

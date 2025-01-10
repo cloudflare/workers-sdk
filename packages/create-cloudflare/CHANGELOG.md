@@ -1,5 +1,11 @@
 # create-cloudflare
 
+## 2.36.0
+
+### Minor Changes
+
+- [#7388](https://github.com/cloudflare/workers-sdk/pull/7388) [`78c1649`](https://github.com/cloudflare/workers-sdk/commit/78c1649a1e072d5db101c8939890a98c4533b4c0) Thanks [@andyjessop](https://github.com/andyjessop)! - chore: remove nodejs_compat flag from basic C3 templates
+
 ## 2.35.2
 
 ### Patch Changes

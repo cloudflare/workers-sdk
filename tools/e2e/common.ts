@@ -148,7 +148,7 @@ export const deleteWorker = async (id: string) => {
 };
 
 export const listTmpKVNamespaces = async () => {
-	const pageSize = 10;
+	const pageSize = 100;
 	let page = 1;
 	const results: KVNamespaceInfo[] = [];
 	while (results.length % pageSize === 0) {
@@ -185,7 +185,7 @@ export const deleteKVNamespace = async (id: string) => {
 };
 
 export const listTmpDatabases = async () => {
-	const pageSize = 10;
+	const pageSize = 100;
 	let page = 1;
 	const results: Database[] = [];
 	while (results.length % pageSize === 0) {

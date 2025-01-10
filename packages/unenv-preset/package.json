@@ -1,6 +1,6 @@
 {
 	"name": "@cloudflare/unenv-preset",
-	"version": "0.0.1",
+	"version": "0.1.0",
 	"description": "cloudflare preset for unenv",
 	"keywords": [
 		"cloudflare",
@@ -21,6 +21,7 @@
 	},
 	"license": "MIT OR Apache-2.0",
 	"sideEffects": false,
+	"type": "module",
 	"exports": {
 		".": {
 			"types": "./dist/index.d.ts",
@@ -29,7 +30,6 @@
 		},
 		"./runtime/*": {
 			"types": "./dist/runtime/*.d.ts",
-			"require": "./dist/runtime/*.cjs",
 			"import": "./dist/runtime/*.mjs"
 		}
 	},
@@ -41,16 +41,21 @@
 	"scripts": {
 		"build": "unbuild",
 		"check:lint": "eslint",
-		"check:type": "tsc --noEmit"
+		"check:type": "tsc --noEmit",
+		"test:ci": "vitest run",
+		"test:watch": "vitest"
 	},
 	"devDependencies": {
 		"@types/node": "*",
 		"typescript": "catalog:default",
-		"unbuild": "^2.0.0"
+		"unbuild": "^2.0.0",
+		"undici": "catalog:default",
+		"vitest": "catalog:default",
+		"wrangler": "workspace:*"
 	},
 	"peerDependencies": {
 		"unenv": "npm:unenv-nightly@*",
-		"workerd": "^1.20241216.0"
+		"workerd": "^1.20241230.0"
 	},
 	"peerDependenciesMeta": {
 		"workerd": {

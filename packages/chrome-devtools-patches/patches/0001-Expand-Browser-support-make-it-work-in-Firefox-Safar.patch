@@ -1,4 +1,4 @@
-From f33a1c016aca11dd75e912ba3373be01fc7480da Mon Sep 17 00:00:00 2001
+From 308d29672a61ba0cd0e4751460ae15c0f0930666 Mon Sep 17 00:00:00 2001
 From: Workers DevProd <workers-devprod@cloudflare.com>
 Date: Fri, 25 Oct 2024 14:15:43 +0100
 Subject: [PATCH 1/8] Expand Browser support (make it work in Firefox & Safari)
@@ -23,7 +23,7 @@ If updating the commit of devtools upon which these patches are based, make sure
  4 files changed, 46 insertions(+), 2 deletions(-)
 
 diff --git a/front_end/core/dom_extension/DOMExtension.ts b/front_end/core/dom_extension/DOMExtension.ts
-index 940ce81924..e9542743ff 100644
+index 5060011dba..1ca615e641 100644
 --- a/front_end/core/dom_extension/DOMExtension.ts
 +++ b/front_end/core/dom_extension/DOMExtension.ts
 @@ -132,7 +132,7 @@ Node.prototype.getComponentSelection = function(): Selection|null {
@@ -100,7 +100,7 @@ index 45028f436a..6a154030b6 100644
    static instance(opts: {forceNew: boolean|null} = {forceNew: null}): JsMainImpl {
      const {forceNew} = opts;
 diff --git a/front_end/ui/legacy/components/data_grid/DataGrid.ts b/front_end/ui/legacy/components/data_grid/DataGrid.ts
-index 93a117e746..d9e37e3d7a 100644
+index 24f6b09d0c..8b9ca969ae 100644
 --- a/front_end/ui/legacy/components/data_grid/DataGrid.ts
 +++ b/front_end/ui/legacy/components/data_grid/DataGrid.ts
 @@ -217,6 +217,8 @@ export class DataGridImpl<T> extends Common.ObjectWrapper.ObjectWrapper<EventTyp
@@ -109,9 +109,9 @@ index 93a117e746..d9e37e3d7a 100644
      this.dataTableBody = this.dataTable.createChild('tbody');
 +    // This is required for Firefox, else Firefox will position the <tbody/> *under* the <thead/>
 +    (this.dataTableBody as HTMLElement).style.height = 'calc(100% - 27px)';
-     this.topFillerRow = (this.dataTableBody.createChild('tr', 'data-grid-filler-row revealed') as HTMLElement);
+     this.topFillerRow = this.dataTableBody.createChild('tr', 'data-grid-filler-row revealed');
      UI.ARIAUtils.setHidden(this.topFillerRow, true);
-     this.bottomFillerRow = (this.dataTableBody.createChild('tr', 'data-grid-filler-row revealed') as HTMLElement);
+     this.bottomFillerRow = this.dataTableBody.createChild('tr', 'data-grid-filler-row revealed');
 @@ -505,6 +507,9 @@ export class DataGridImpl<T> extends Common.ObjectWrapper.ObjectWrapper<EventTyp
    protected setVerticalPadding(top: number, bottom: number, isConstructorTime: boolean = false): void {
      const topPx = top + 'px';
