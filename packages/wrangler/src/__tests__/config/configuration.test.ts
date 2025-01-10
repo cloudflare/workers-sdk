@@ -1,17 +1,17 @@
 import * as fs from "fs";
 import path from "node:path";
-import { experimental_readRawConfig, readConfig } from "../config";
-import { normalizeAndValidateConfig } from "../config/validation";
-import { run } from "../experimental-flags";
-import { normalizeString } from "./helpers/normalize";
-import { runInTempDir } from "./helpers/run-in-tmp";
-import { writeWranglerConfig } from "./helpers/write-wrangler-config";
+import { experimental_readRawConfig, readConfig } from "../../config";
+import { normalizeAndValidateConfig } from "../../config/validation";
+import { run } from "../../experimental-flags";
+import { normalizeString } from "../helpers/normalize";
+import { runInTempDir } from "../helpers/run-in-tmp";
+import { writeWranglerConfig } from "../helpers/write-wrangler-config";
 import type {
 	ConfigFields,
 	RawConfig,
 	RawDevConfig,
 	RawEnvironment,
-} from "../config";
+} from "../../config";
 
 describe("readConfig()", () => {
 	runInTempDir();
@@ -49,9 +49,14 @@ describe("readConfig()", () => {
 
 describe("normalizeAndValidateConfig()", () => {
 	it("should use defaults for empty configuration", () => {
-		const { config, diagnostics } = normalizeAndValidateConfig({}, undefined, {
-			env: undefined,
-		});
+		const { config, diagnostics } = normalizeAndValidateConfig(
+			{},
+			undefined,
+			undefined,
+			{
+				env: undefined,
+			}
+		);
 
 		expect(config).toEqual({
 			account_id: undefined,
@@ -157,6 +162,7 @@ describe("normalizeAndValidateConfig()", () => {
 			const { config, diagnostics } = normalizeAndValidateConfig(
 				expectedConfig,
 				undefined,
+				undefined,
 				{ env: undefined }
 			);
 
@@ -181,6 +187,8 @@ describe("normalizeAndValidateConfig()", () => {
 			const { config, diagnostics } = normalizeAndValidateConfig(
 				expectedConfig as unknown as RawConfig,
 				undefined,
+				undefined,
+
 				{ env: undefined }
 			);
 
@@ -210,6 +218,8 @@ describe("normalizeAndValidateConfig()", () => {
 			const { config, diagnostics } = normalizeAndValidateConfig(
 				expectedConfig as unknown as RawConfig,
 				undefined,
+				undefined,
+
 				{ env: undefined }
 			);
 
@@ -231,6 +241,8 @@ describe("normalizeAndValidateConfig()", () => {
 			const { config, diagnostics } = normalizeAndValidateConfig(
 				expectedConfig as unknown as RawConfig,
 				undefined,
+				undefined,
+
 				{ env: undefined }
 			);
 
@@ -251,6 +263,8 @@ describe("normalizeAndValidateConfig()", () => {
 			const { config, diagnostics } = normalizeAndValidateConfig(
 				expectedConfig as unknown as RawConfig,
 				undefined,
+				undefined,
+
 				{ env: undefined }
 			);
 
@@ -272,6 +286,8 @@ describe("normalizeAndValidateConfig()", () => {
 			const { config, diagnostics } = normalizeAndValidateConfig(
 				expectedConfig as unknown as RawConfig,
 				undefined,
+				undefined,
+
 				{ env: undefined }
 			);
 
@@ -294,6 +310,8 @@ describe("normalizeAndValidateConfig()", () => {
 				const { config, diagnostics } = normalizeAndValidateConfig(
 					expectedConfig,
 					undefined,
+					undefined,
+
 					{ env: undefined }
 				);
 
@@ -307,9 +325,14 @@ describe("normalizeAndValidateConfig()", () => {
 					compatibility_date: "2024–10–01", // en-dash
 				};
 
-				const result = normalizeAndValidateConfig(expectedConfig, undefined, {
-					env: undefined,
-				});
+				const result = normalizeAndValidateConfig(
+					expectedConfig,
+					undefined,
+					undefined,
+					{
+						env: undefined,
+					}
+				);
 
 				expect(result.config).toEqual(expect.objectContaining(expectedConfig));
 				expect(result.diagnostics.hasWarnings()).toBe(false);
@@ -327,9 +350,14 @@ describe("normalizeAndValidateConfig()", () => {
 					compatibility_date: "2024—10—01", // em-dash
 				};
 
-				const result = normalizeAndValidateConfig(expectedConfig, undefined, {
-					env: undefined,
-				});
+				const result = normalizeAndValidateConfig(
+					expectedConfig,
+					undefined,
+					undefined,
+					{
+						env: undefined,
+					}
+				);
 
 				expect(result.config).toEqual(expect.objectContaining(expectedConfig));
 				expect(result.diagnostics.hasWarnings()).toBe(false);
@@ -350,6 +378,8 @@ describe("normalizeAndValidateConfig()", () => {
 				const { config, diagnostics } = normalizeAndValidateConfig(
 					expectedConfig,
 					undefined,
+					undefined,
+
 					{ env: undefined }
 				);
 
@@ -368,9 +398,14 @@ describe("normalizeAndValidateConfig()", () => {
 					compatibility_date: "2024—100—01", // invalid date + em-dash
 				};
 
-				const result = normalizeAndValidateConfig(expectedConfig, undefined, {
-					env: undefined,
-				});
+				const result = normalizeAndValidateConfig(
+					expectedConfig,
+					undefined,
+					undefined,
+					{
+						env: undefined,
+					}
+				);
 
 				expect(result.config).toEqual(expect.objectContaining(expectedConfig));
 				expect(result.diagnostics.hasWarnings()).toBe(false);
@@ -399,6 +434,8 @@ describe("normalizeAndValidateConfig()", () => {
 				const { config, diagnostics } = normalizeAndValidateConfig(
 					expectedConfig,
 					undefined,
+					undefined,
+
 					{ env: undefined }
 				);
 
@@ -430,6 +467,8 @@ describe("normalizeAndValidateConfig()", () => {
 				const { config, diagnostics } = normalizeAndValidateConfig(
 					expectedConfig,
 					undefined,
+					undefined,
+
 					{ env: undefined }
 				);
 
@@ -466,6 +505,8 @@ describe("normalizeAndValidateConfig()", () => {
 				const { config, diagnostics } = normalizeAndValidateConfig(
 					expectedConfig as unknown as RawConfig,
 					undefined,
+					undefined,
+
 					{ env: undefined }
 				);
 
@@ -500,6 +541,8 @@ describe("normalizeAndValidateConfig()", () => {
 						},
 					} as unknown as RawConfig,
 					undefined,
+					undefined,
+
 					{ env: undefined }
 				);
 
@@ -533,6 +576,8 @@ describe("normalizeAndValidateConfig()", () => {
 						alias: "some silly string",
 					} as unknown as RawConfig,
 					undefined,
+					undefined,
+
 					{ env: undefined }
 				);
 
@@ -553,6 +598,8 @@ describe("normalizeAndValidateConfig()", () => {
 						},
 					} as unknown as RawConfig,
 					undefined,
+					undefined,
+
 					{ env: undefined }
 				);
 
@@ -573,6 +620,8 @@ describe("normalizeAndValidateConfig()", () => {
 						},
 					} as unknown as RawConfig,
 					undefined,
+					undefined,
+
 					{ env: undefined }
 				);
 
@@ -594,6 +643,8 @@ describe("normalizeAndValidateConfig()", () => {
 						legacy_assets: "path/to/assets",
 					} as unknown as RawConfig,
 					undefined,
+					undefined,
+
 					{ env: undefined }
 				);
 
@@ -622,6 +673,8 @@ describe("normalizeAndValidateConfig()", () => {
 						legacy_assets: 123,
 					} as unknown as RawConfig,
 					undefined,
+					undefined,
+
 					{ env: undefined }
 				);
 				expect(config.legacy_assets).toBeUndefined();
@@ -651,6 +704,8 @@ describe("normalizeAndValidateConfig()", () => {
 				const { config, diagnostics } = normalizeAndValidateConfig(
 					expectedConfig,
 					undefined,
+					undefined,
+
 					{ env: undefined }
 				);
 
@@ -685,6 +740,8 @@ describe("normalizeAndValidateConfig()", () => {
 				const { config, diagnostics } = normalizeAndValidateConfig(
 					expectedConfig as unknown as RawConfig,
 					undefined,
+					undefined,
+
 					{ env: undefined }
 				);
 
@@ -718,6 +775,8 @@ describe("normalizeAndValidateConfig()", () => {
 			const { config, diagnostics } = normalizeAndValidateConfig(
 				expectedConfig,
 				"project/wrangler.toml",
+				"project/wrangler.toml",
+
 				{ env: undefined }
 			);
 
@@ -745,6 +804,7 @@ describe("normalizeAndValidateConfig()", () => {
 
 			const { config, diagnostics } = normalizeAndValidateConfig(
 				expectedConfig,
+				"project/wrangler.toml",
 				"project/wrangler.toml",
 				{ env: undefined }
 			);
@@ -778,6 +838,7 @@ describe("normalizeAndValidateConfig()", () => {
 			const { config, diagnostics } = normalizeAndValidateConfig(
 				expectedConfig as unknown as RawConfig,
 				"project/wrangler.toml",
+				"project/wrangler.toml",
 				{ env: undefined }
 			);
 
@@ -805,6 +866,7 @@ describe("normalizeAndValidateConfig()", () => {
 			const { config, diagnostics } = normalizeAndValidateConfig(
 				expectedConfig,
 				"project/wrangler.toml",
+				"project/wrangler.toml",
 				{ env: undefined }
 			);
 
@@ -830,6 +892,7 @@ describe("normalizeAndValidateConfig()", () => {
 
 			const { config, diagnostics } = normalizeAndValidateConfig(
 				expectedConfig as unknown as RawConfig,
+				"project/wrangler.toml",
 				"project/wrangler.toml",
 				{ env: undefined }
 			);
@@ -858,6 +921,7 @@ describe("normalizeAndValidateConfig()", () => {
 			const { config, diagnostics } = normalizeAndValidateConfig(
 				expectedConfig,
 				"project/wrangler.toml",
+				"project/wrangler.toml",
 				{ env: undefined }
 			);
 
@@ -884,6 +948,7 @@ describe("normalizeAndValidateConfig()", () => {
 			const { config, diagnostics } = normalizeAndValidateConfig(
 				expectedConfig as unknown as RawConfig,
 				"project/wrangler.toml",
+				"project/wrangler.toml",
 				{ env: undefined }
 			);
 
@@ -908,6 +973,7 @@ describe("normalizeAndValidateConfig()", () => {
 			const { config, diagnostics } = normalizeAndValidateConfig(
 				expectedConfig,
 				"project/wrangler.toml",
+				"project/wrangler.toml",
 				{ env: undefined }
 			);
 
@@ -930,6 +996,7 @@ describe("normalizeAndValidateConfig()", () => {
 
 				const { config, diagnostics } = normalizeAndValidateConfig(
 					rawConfig,
+					undefined,
 					undefined,
 					{ env: undefined }
 				);
@@ -967,6 +1034,7 @@ describe("normalizeAndValidateConfig()", () => {
 
 			const { config, diagnostics } = normalizeAndValidateConfig(
 				expectedConfig,
+				"project/wrangler.toml",
 				"project/wrangler.toml",
 				{ env: undefined }
 			);
@@ -1122,12 +1190,17 @@ describe("normalizeAndValidateConfig()", () => {
 			const { config, diagnostics } = normalizeAndValidateConfig(
 				expectedConfig,
 				"wrangler.toml",
+				"wrangler.toml",
 				{ env: undefined }
 			);
 
 			// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
 			expect({ ...config, tsconfig: normalizePath(config.tsconfig!) }).toEqual(
-				expect.objectContaining({ ...expectedConfig, main: resolvedMain })
+				expect.objectContaining({
+					...expectedConfig,
+					main: resolvedMain,
+					topLevelName: expectedConfig.name,
+				})
 			);
 			expect(diagnostics.hasErrors()).toBe(false);
 			expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
@@ -1205,6 +1278,7 @@ describe("normalizeAndValidateConfig()", () => {
 
 			const { config, diagnostics } = normalizeAndValidateConfig(
 				expectedConfig,
+				undefined,
 				undefined,
 				{ env: undefined }
 			);
@@ -1287,6 +1361,7 @@ describe("normalizeAndValidateConfig()", () => {
 				const { config, diagnostics } = normalizeAndValidateConfig(
 					expectedConfig,
 					undefined,
+					undefined,
 					{ env: undefined }
 				);
 
@@ -1307,6 +1382,7 @@ describe("normalizeAndValidateConfig()", () => {
 				const { config, diagnostics } = normalizeAndValidateConfig(
 					expectedConfig,
 					undefined,
+					undefined,
 					{ env: undefined }
 				);
 
@@ -1322,6 +1398,7 @@ describe("normalizeAndValidateConfig()", () => {
 
 				const { config, diagnostics } = normalizeAndValidateConfig(
 					expectedConfig,
+					undefined,
 					undefined,
 					{ env: undefined }
 				);
@@ -1342,6 +1419,7 @@ describe("normalizeAndValidateConfig()", () => {
 				const { config, diagnostics } = normalizeAndValidateConfig(
 					expectedConfig,
 					undefined,
+					undefined,
 					{ env: undefined }
 				);
 
@@ -1359,6 +1437,7 @@ describe("normalizeAndValidateConfig()", () => {
 						name: "example.com",
 						main: "index.js",
 					},
+					undefined,
 					undefined,
 					{ env: undefined, "dispatch-namespace": "test-namespace" }
 				);
@@ -1382,6 +1461,7 @@ describe("normalizeAndValidateConfig()", () => {
 
 				const { config, diagnostics } = normalizeAndValidateConfig(
 					expectedConfig,
+					path.resolve("project/wrangler.toml"),
 					path.resolve("project/wrangler.toml"),
 					{ env: undefined }
 				);
@@ -1423,6 +1503,7 @@ describe("normalizeAndValidateConfig()", () => {
 				const { config, diagnostics } = normalizeAndValidateConfig(
 					expectedConfig,
 					undefined,
+					undefined,
 					{ env: undefined }
 				);
 
@@ -1448,6 +1529,7 @@ describe("normalizeAndValidateConfig()", () => {
 				const { config, diagnostics } = normalizeAndValidateConfig(
 					expectedConfig,
 					"project/wrangler.toml",
+					"project/wrangler.toml",
 					{ env: undefined }
 				);
 
@@ -1472,6 +1554,7 @@ describe("normalizeAndValidateConfig()", () => {
 
 				const { config, diagnostics } = normalizeAndValidateConfig(
 					expectedConfig,
+					"project/wrangler.toml",
 					"project/wrangler.toml",
 					{ env: undefined }
 				);
@@ -1510,6 +1593,7 @@ describe("normalizeAndValidateConfig()", () => {
 				const { config, diagnostics } = normalizeAndValidateConfig(
 					expectedConfig,
 					"project/wrangler.toml",
+					"project/wrangler.toml",
 					{ env: undefined }
 				);
 
@@ -1543,6 +1627,7 @@ describe("normalizeAndValidateConfig()", () => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ durable_objects: [] } as unknown as RawConfig,
 					undefined,
+					undefined,
 					{ env: undefined }
 				);
 
@@ -1556,6 +1641,7 @@ describe("normalizeAndValidateConfig()", () => {
 			it("should error if durable_objects is a string", () => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ durable_objects: "BAD" } as unknown as RawConfig,
+					undefined,
 					undefined,
 					{ env: undefined }
 				);
@@ -1571,6 +1657,7 @@ describe("normalizeAndValidateConfig()", () => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ durable_objects: 999 } as unknown as RawConfig,
 					undefined,
+					undefined,
 					{ env: undefined }
 				);
 
@@ -1584,6 +1671,7 @@ describe("normalizeAndValidateConfig()", () => {
 			it("should error if durable_objects is null", () => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ durable_objects: null } as unknown as RawConfig,
+					undefined,
 					undefined,
 					{ env: undefined }
 				);
@@ -1599,6 +1687,7 @@ describe("normalizeAndValidateConfig()", () => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ durable_objects: {} } as unknown as RawConfig,
 					undefined,
+					undefined,
 					{ env: undefined }
 				);
 
@@ -1612,6 +1701,7 @@ describe("normalizeAndValidateConfig()", () => {
 			it("should error if durable_objects.bindings is an object", () => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ durable_objects: { bindings: {} } } as unknown as RawConfig,
+					undefined,
 					undefined,
 					{ env: undefined }
 				);
@@ -1627,6 +1717,7 @@ describe("normalizeAndValidateConfig()", () => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ durable_objects: { bindings: "BAD" } } as unknown as RawConfig,
 					undefined,
+					undefined,
 					{ env: undefined }
 				);
 
@@ -1641,6 +1732,7 @@ describe("normalizeAndValidateConfig()", () => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ durable_objects: { bindings: 999 } } as unknown as RawConfig,
 					undefined,
+					undefined,
 					{ env: undefined }
 				);
 
@@ -1654,6 +1746,7 @@ describe("normalizeAndValidateConfig()", () => {
 			it("should error if durable_objects.bindings is null", () => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ durable_objects: { bindings: null } } as unknown as RawConfig,
+					undefined,
 					undefined,
 					{ env: undefined }
 				);
@@ -1697,6 +1790,7 @@ describe("normalizeAndValidateConfig()", () => {
 							],
 						},
 					} as unknown as RawConfig,
+					undefined,
 					undefined,
 					{ env: undefined }
 				);
@@ -1763,6 +1857,7 @@ describe("normalizeAndValidateConfig()", () => {
 				const { config, diagnostics } = normalizeAndValidateConfig(
 					expectedConfig,
 					undefined,
+					undefined,
 					{ env: undefined }
 				);
 
@@ -1791,6 +1886,7 @@ describe("normalizeAndValidateConfig()", () => {
 
 				const { config, diagnostics } = normalizeAndValidateConfig(
 					expectedConfig as unknown as RawConfig,
+					undefined,
 					undefined,
 					{ env: undefined }
 				);
@@ -1835,6 +1931,7 @@ describe("normalizeAndValidateConfig()", () => {
 				const { config, diagnostics } = normalizeAndValidateConfig(
 					expectedConfig as unknown as RawConfig,
 					undefined,
+					undefined,
 					{ env: undefined }
 				);
 
@@ -1863,6 +1960,7 @@ describe("normalizeAndValidateConfig()", () => {
 				const { config, diagnostics } = normalizeAndValidateConfig(
 					expectedConfig,
 					undefined,
+					undefined,
 					{ env: undefined }
 				);
 
@@ -1881,6 +1979,7 @@ describe("normalizeAndValidateConfig()", () => {
 
 				const { config, diagnostics } = normalizeAndValidateConfig(
 					expectedConfig as unknown as RawConfig,
+					undefined,
 					undefined,
 					{ env: undefined }
 				);
@@ -1908,6 +2007,7 @@ describe("normalizeAndValidateConfig()", () => {
 
 				const { config, diagnostics } = normalizeAndValidateConfig(
 					expectedConfig as unknown as RawConfig,
+					undefined,
 					undefined,
 					{ env: undefined }
 				);
@@ -1937,6 +2037,7 @@ describe("normalizeAndValidateConfig()", () => {
 				const { config, diagnostics } = normalizeAndValidateConfig(
 					expectedConfig,
 					undefined,
+					undefined,
 					{ env: undefined }
 				);
 
@@ -1957,6 +2058,7 @@ describe("normalizeAndValidateConfig()", () => {
 				const { config, diagnostics } = normalizeAndValidateConfig(
 					expectedConfig as unknown as RawConfig,
 					undefined,
+					undefined,
 					{ env: undefined }
 				);
 
@@ -1974,6 +2076,7 @@ describe("normalizeAndValidateConfig()", () => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ browser: [] } as unknown as RawConfig,
 					undefined,
+					undefined,
 					{ env: undefined }
 				);
 
@@ -1987,6 +2090,7 @@ describe("normalizeAndValidateConfig()", () => {
 			it("should error if browser is a string", () => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ browser: "BAD" } as unknown as RawConfig,
+					undefined,
 					undefined,
 					{ env: undefined }
 				);
@@ -2002,6 +2106,7 @@ describe("normalizeAndValidateConfig()", () => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ browser: 999 } as unknown as RawConfig,
 					undefined,
+					undefined,
 					{ env: undefined }
 				);
 
@@ -2015,6 +2120,7 @@ describe("normalizeAndValidateConfig()", () => {
 			it("should error if browser is null", () => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ browser: null } as unknown as RawConfig,
+					undefined,
 					undefined,
 					{ env: undefined }
 				);
@@ -2032,6 +2138,7 @@ describe("normalizeAndValidateConfig()", () => {
 			it("should error if vectorize is an object", () => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ vectorize: {} } as unknown as RawConfig,
+					undefined,
 					undefined,
 					{ env: undefined }
 				);
@@ -2058,6 +2165,7 @@ describe("normalizeAndValidateConfig()", () => {
 						],
 					} as unknown as RawConfig,
 					undefined,
+					undefined,
 					{ env: undefined }
 				);
 
@@ -2076,6 +2184,7 @@ describe("normalizeAndValidateConfig()", () => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ vectorize: "BAD" } as unknown as RawConfig,
 					undefined,
+					undefined,
 					{ env: undefined }
 				);
 
@@ -2090,6 +2199,7 @@ describe("normalizeAndValidateConfig()", () => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ vectorize: 999 } as unknown as RawConfig,
 					undefined,
+					undefined,
 					{ env: undefined }
 				);
 
@@ -2103,6 +2213,7 @@ describe("normalizeAndValidateConfig()", () => {
 			it("should error if vectorize is null", () => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ vectorize: null } as unknown as RawConfig,
+					undefined,
 					undefined,
 					{ env: undefined }
 				);
@@ -2121,6 +2232,7 @@ describe("normalizeAndValidateConfig()", () => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ ai: [] } as unknown as RawConfig,
 					undefined,
+					undefined,
 					{ env: undefined }
 				);
 
@@ -2134,6 +2246,7 @@ describe("normalizeAndValidateConfig()", () => {
 			it("should error if ai is a string", () => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ ai: "BAD" } as unknown as RawConfig,
+					undefined,
 					undefined,
 					{ env: undefined }
 				);
@@ -2149,6 +2262,7 @@ describe("normalizeAndValidateConfig()", () => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ ai: 999 } as unknown as RawConfig,
 					undefined,
+					undefined,
 					{ env: undefined }
 				);
 
@@ -2162,6 +2276,7 @@ describe("normalizeAndValidateConfig()", () => {
 			it("should error if ai is null", () => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ ai: null } as unknown as RawConfig,
+					undefined,
 					undefined,
 					{ env: undefined }
 				);
@@ -2180,6 +2295,7 @@ describe("normalizeAndValidateConfig()", () => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ version_metadata: [] } as unknown as RawConfig,
 					undefined,
+					undefined,
 					{ env: undefined }
 				);
 
@@ -2193,6 +2309,7 @@ describe("normalizeAndValidateConfig()", () => {
 			it("should error if version_metadata is a string", () => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ version_metadata: "BAD" } as unknown as RawConfig,
+					undefined,
 					undefined,
 					{ env: undefined }
 				);
@@ -2208,6 +2325,7 @@ describe("normalizeAndValidateConfig()", () => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ version_metadata: 999 } as unknown as RawConfig,
 					undefined,
+					undefined,
 					{ env: undefined }
 				);
 
@@ -2221,6 +2339,7 @@ describe("normalizeAndValidateConfig()", () => {
 			it("should error if version_metadata is null", () => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ version_metadata: null } as unknown as RawConfig,
+					undefined,
 					undefined,
 					{ env: undefined }
 				);
@@ -2238,6 +2357,7 @@ describe("normalizeAndValidateConfig()", () => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ cloudchamber: null } as unknown as RawConfig,
 					undefined,
+					undefined,
 					{ env: undefined }
 				);
 
@@ -2251,6 +2371,7 @@ describe("normalizeAndValidateConfig()", () => {
 			it("should error if cloudchamber is an array", () => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ cloudchamber: [] } as unknown as RawConfig,
+					undefined,
 					undefined,
 					{ env: undefined }
 				);
@@ -2266,6 +2387,7 @@ describe("normalizeAndValidateConfig()", () => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ cloudchamber: "test" } as unknown as RawConfig,
 					undefined,
+					undefined,
 					{ env: undefined }
 				);
 
@@ -2279,6 +2401,7 @@ describe("normalizeAndValidateConfig()", () => {
 			it("should error if cloudchamber is a number", () => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ cloudchamber: 22 } as unknown as RawConfig,
+					undefined,
 					undefined,
 					{ env: undefined }
 				);
@@ -2302,6 +2425,7 @@ describe("normalizeAndValidateConfig()", () => {
 						},
 					} as unknown as RawConfig,
 					undefined,
+					undefined,
 					{ env: undefined }
 				);
 
@@ -2322,6 +2446,7 @@ describe("normalizeAndValidateConfig()", () => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ kv_namespaces: {} } as unknown as RawConfig,
 					undefined,
+					undefined,
 					{ env: undefined }
 				);
 
@@ -2335,6 +2460,7 @@ describe("normalizeAndValidateConfig()", () => {
 			it("should error if kv_namespaces is a string", () => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ kv_namespaces: "BAD" } as unknown as RawConfig,
+					undefined,
 					undefined,
 					{ env: undefined }
 				);
@@ -2350,6 +2476,7 @@ describe("normalizeAndValidateConfig()", () => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ kv_namespaces: 999 } as unknown as RawConfig,
 					undefined,
+					undefined,
 					{ env: undefined }
 				);
 
@@ -2363,6 +2490,7 @@ describe("normalizeAndValidateConfig()", () => {
 			it("should error if kv_namespaces is null", () => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ kv_namespaces: null } as unknown as RawConfig,
+					undefined,
 					undefined,
 					{ env: undefined }
 				);
@@ -2390,6 +2518,7 @@ describe("normalizeAndValidateConfig()", () => {
 						],
 					} as unknown as RawConfig,
 					undefined,
+					undefined,
 					{ env: undefined }
 				);
 
@@ -2410,7 +2539,6 @@ describe("normalizeAndValidateConfig()", () => {
 				const { diagnostics } = run(
 					{
 						RESOURCES_PROVISION: true,
-						FILE_BASED_REGISTRY: false,
 						MULTIWORKER: false,
 					},
 					() =>
@@ -2418,6 +2546,7 @@ describe("normalizeAndValidateConfig()", () => {
 							{
 								kv_namespaces: [{ binding: "VALID" }],
 							} as unknown as RawConfig,
+							undefined,
 							undefined,
 							{ env: undefined }
 						)
@@ -2447,6 +2576,7 @@ describe("normalizeAndValidateConfig()", () => {
 					],
 				} as unknown as RawConfig,
 				undefined,
+				undefined,
 				{ env: undefined }
 			);
 
@@ -2466,6 +2596,7 @@ describe("normalizeAndValidateConfig()", () => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ d1_databases: {} } as unknown as RawConfig,
 					undefined,
+					undefined,
 					{ env: undefined }
 				);
 
@@ -2479,6 +2610,7 @@ describe("normalizeAndValidateConfig()", () => {
 			it("should error if d1_databases is a string", () => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ d1_databases: "BAD" } as unknown as RawConfig,
+					undefined,
 					undefined,
 					{ env: undefined }
 				);
@@ -2494,6 +2626,7 @@ describe("normalizeAndValidateConfig()", () => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ d1_databases: 999 } as unknown as RawConfig,
 					undefined,
+					undefined,
 					{ env: undefined }
 				);
 
@@ -2507,6 +2640,7 @@ describe("normalizeAndValidateConfig()", () => {
 			it("should error if d1_databases is null", () => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ d1_databases: null } as unknown as RawConfig,
+					undefined,
 					undefined,
 					{ env: undefined }
 				);
@@ -2534,6 +2668,7 @@ describe("normalizeAndValidateConfig()", () => {
 						],
 					} as unknown as RawConfig,
 					undefined,
+					undefined,
 					{ env: undefined }
 				);
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
@@ -2559,7 +2694,6 @@ describe("normalizeAndValidateConfig()", () => {
 				const { diagnostics } = run(
 					{
 						RESOURCES_PROVISION: true,
-						FILE_BASED_REGISTRY: false,
 						MULTIWORKER: false,
 					},
 					() =>
@@ -2567,6 +2701,7 @@ describe("normalizeAndValidateConfig()", () => {
 							{
 								d1_databases: [{ binding: "VALID" }],
 							} as unknown as RawConfig,
+							undefined,
 							undefined,
 							{ env: undefined }
 						)
@@ -2582,6 +2717,7 @@ describe("normalizeAndValidateConfig()", () => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ hyperdrive: {} } as unknown as RawConfig,
 					undefined,
+					undefined,
 					{ env: undefined }
 				);
 
@@ -2595,6 +2731,7 @@ describe("normalizeAndValidateConfig()", () => {
 			it("should error if hyperdrive is a string", () => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ hyperdrive: "BAD" } as unknown as RawConfig,
+					undefined,
 					undefined,
 					{ env: undefined }
 				);
@@ -2610,6 +2747,7 @@ describe("normalizeAndValidateConfig()", () => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ hyperdrive: 999 } as unknown as RawConfig,
 					undefined,
+					undefined,
 					{ env: undefined }
 				);
 
@@ -2623,6 +2761,7 @@ describe("normalizeAndValidateConfig()", () => {
 			it("should error if hyperdrive is null", () => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ hyperdrive: null } as unknown as RawConfig,
+					undefined,
 					undefined,
 					{ env: undefined }
 				);
@@ -2642,6 +2781,7 @@ describe("normalizeAndValidateConfig()", () => {
 						],
 					} as unknown as RawConfig,
 					undefined,
+					undefined,
 					{ env: undefined }
 				);
 
@@ -2657,6 +2797,7 @@ describe("normalizeAndValidateConfig()", () => {
 							{ binding: 2000, project: 2111 },
 						],
 					} as unknown as RawConfig,
+					undefined,
 					undefined,
 					{ env: undefined }
 				);
@@ -2679,6 +2820,7 @@ describe("normalizeAndValidateConfig()", () => {
 			it("should error if queues is not an object", () => {
 				const { config, diagnostics } = normalizeAndValidateConfig(
 					{ queues: [] } as unknown as RawConfig,
+					undefined,
 					undefined,
 					{ env: undefined }
 				);
@@ -2706,6 +2848,7 @@ describe("normalizeAndValidateConfig()", () => {
 							],
 						},
 					} as unknown as RawConfig,
+					undefined,
 					undefined,
 					{ env: undefined }
 				);
@@ -2753,6 +2896,7 @@ describe("normalizeAndValidateConfig()", () => {
 						},
 					} as unknown as RawConfig,
 					undefined,
+					undefined,
 					{ env: undefined }
 				);
 
@@ -2786,6 +2930,7 @@ describe("normalizeAndValidateConfig()", () => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ r2_buckets: {} } as unknown as RawConfig,
 					undefined,
+					undefined,
 					{ env: undefined }
 				);
 
@@ -2799,6 +2944,7 @@ describe("normalizeAndValidateConfig()", () => {
 			it("should error if r2_buckets is a string", () => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ r2_buckets: "BAD" } as unknown as RawConfig,
+					undefined,
 					undefined,
 					{ env: undefined }
 				);
@@ -2814,6 +2960,7 @@ describe("normalizeAndValidateConfig()", () => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ r2_buckets: 999 } as unknown as RawConfig,
 					undefined,
+					undefined,
 					{ env: undefined }
 				);
 
@@ -2827,6 +2974,7 @@ describe("normalizeAndValidateConfig()", () => {
 			it("should error if r2_buckets is null", () => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ r2_buckets: null } as unknown as RawConfig,
+					undefined,
 					undefined,
 					{ env: undefined }
 				);
@@ -2854,6 +3002,7 @@ describe("normalizeAndValidateConfig()", () => {
 						],
 					} as unknown as RawConfig,
 					undefined,
+					undefined,
 					{ env: undefined }
 				);
 
@@ -2874,7 +3023,6 @@ describe("normalizeAndValidateConfig()", () => {
 				const { diagnostics } = run(
 					{
 						RESOURCES_PROVISION: true,
-						FILE_BASED_REGISTRY: false,
 						MULTIWORKER: false,
 					},
 					() =>
@@ -2882,6 +3030,7 @@ describe("normalizeAndValidateConfig()", () => {
 							{
 								d1_databases: [{ binding: "VALID" }],
 							} as unknown as RawConfig,
+							undefined,
 							undefined,
 							{ env: undefined }
 						)
@@ -2896,6 +3045,7 @@ describe("normalizeAndValidateConfig()", () => {
 			it("should error if services is an object", () => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ services: {} } as unknown as RawConfig,
+					undefined,
 					undefined,
 					{ env: undefined }
 				);
@@ -2916,6 +3066,7 @@ describe("normalizeAndValidateConfig()", () => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ services: "BAD" } as unknown as RawConfig,
 					undefined,
+					undefined,
 					{ env: undefined }
 				);
 
@@ -2935,6 +3086,7 @@ describe("normalizeAndValidateConfig()", () => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ services: 999 } as unknown as RawConfig,
 					undefined,
+					undefined,
 					{ env: undefined }
 				);
 
@@ -2953,6 +3105,7 @@ describe("normalizeAndValidateConfig()", () => {
 			it("should error if services is null", () => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ services: null } as unknown as RawConfig,
+					undefined,
 					undefined,
 					{ env: undefined }
 				);
@@ -3002,6 +3155,7 @@ describe("normalizeAndValidateConfig()", () => {
 						],
 					} as unknown as RawConfig,
 					undefined,
+					undefined,
 					{ env: undefined }
 				);
 
@@ -3038,6 +3192,7 @@ describe("normalizeAndValidateConfig()", () => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ analytics_engine_datasets: {} } as unknown as RawConfig,
 					undefined,
+					undefined,
 					{ env: undefined }
 				);
 
@@ -3051,6 +3206,7 @@ describe("normalizeAndValidateConfig()", () => {
 			it("should error if analytics_engine_datasets is a string", () => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ analytics_engine_datasets: "BAD" } as unknown as RawConfig,
+					undefined,
 					undefined,
 					{ env: undefined }
 				);
@@ -3066,6 +3222,7 @@ describe("normalizeAndValidateConfig()", () => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ analytics_engine_datasets: 999 } as unknown as RawConfig,
 					undefined,
+					undefined,
 					{ env: undefined }
 				);
 
@@ -3079,6 +3236,7 @@ describe("normalizeAndValidateConfig()", () => {
 			it("should error if analytics_engine_datasets is null", () => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ analytics_engine_datasets: null } as unknown as RawConfig,
+					undefined,
 					undefined,
 					{ env: undefined }
 				);
@@ -3104,6 +3262,7 @@ describe("normalizeAndValidateConfig()", () => {
 						],
 					} as unknown as RawConfig,
 					undefined,
+					undefined,
 					{ env: undefined }
 				);
 
@@ -3125,6 +3284,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{
 						dispatch_namespaces: "just a string",
 					} as unknown as RawConfig,
+					undefined,
 					undefined,
 					{ env: undefined }
 				);
@@ -3166,6 +3326,7 @@ describe("normalizeAndValidateConfig()", () => {
 							},
 						],
 					} as unknown as RawConfig,
+					undefined,
 					undefined,
 					{ env: undefined }
 				);
@@ -3265,6 +3426,7 @@ describe("normalizeAndValidateConfig()", () => {
 						],
 					} as unknown as RawConfig,
 					undefined,
+					undefined,
 					{ env: undefined }
 				);
 				expect(diagnostics.hasWarnings()).toBe(false);
@@ -3298,6 +3460,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{
 						mtls_certificates: "just a string",
 					} as unknown as RawConfig,
+					undefined,
 					undefined,
 					{ env: undefined }
 				);
@@ -3341,6 +3504,7 @@ describe("normalizeAndValidateConfig()", () => {
 						],
 					} as unknown as RawConfig,
 					undefined,
+					undefined,
 					{ env: undefined }
 				);
 
@@ -3373,6 +3537,7 @@ describe("normalizeAndValidateConfig()", () => {
 					// @ts-expect-error purposely using an invalid value
 					{ pipelines: {} },
 					undefined,
+					undefined,
 					{ env: undefined }
 				);
 
@@ -3387,6 +3552,7 @@ describe("normalizeAndValidateConfig()", () => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					// @ts-expect-error purposely using an invalid value
 					{ pipelines: "BAD" },
+					undefined,
 					undefined,
 					{ env: undefined }
 				);
@@ -3403,6 +3569,7 @@ describe("normalizeAndValidateConfig()", () => {
 					// @ts-expect-error purposely using an invalid value
 					{ pipelines: 999 },
 					undefined,
+					undefined,
 					{ env: undefined }
 				);
 
@@ -3417,6 +3584,7 @@ describe("normalizeAndValidateConfig()", () => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					// @ts-expect-error purposely using an invalid value
 					{ pipelines: null },
+					undefined,
 					undefined,
 					{ env: undefined }
 				);
@@ -3439,6 +3607,7 @@ describe("normalizeAndValidateConfig()", () => {
 						],
 					} as unknown as RawConfig,
 					undefined,
+					undefined,
 					{ env: undefined }
 				);
 
@@ -3457,6 +3626,7 @@ describe("normalizeAndValidateConfig()", () => {
 							{ binding: 2000, project: 2111 },
 						],
 					} as unknown as RawConfig,
+					undefined,
 					undefined,
 					{ env: undefined }
 				);
@@ -3480,6 +3650,7 @@ describe("normalizeAndValidateConfig()", () => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ unsafe: [] } as unknown as RawConfig,
 					undefined,
+					undefined,
 					{ env: undefined }
 				);
 
@@ -3496,6 +3667,7 @@ describe("normalizeAndValidateConfig()", () => {
 			it("should error if unsafe is a string", () => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ unsafe: "BAD" } as unknown as RawConfig,
+					undefined,
 					undefined,
 					{ env: undefined }
 				);
@@ -3514,6 +3686,7 @@ describe("normalizeAndValidateConfig()", () => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ unsafe: 999 } as unknown as RawConfig,
 					undefined,
+					undefined,
 					{ env: undefined }
 				);
 
@@ -3531,6 +3704,7 @@ describe("normalizeAndValidateConfig()", () => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ unsafe: null } as unknown as RawConfig,
 					undefined,
+					undefined,
 					{ env: undefined }
 				);
 
@@ -3547,6 +3721,7 @@ describe("normalizeAndValidateConfig()", () => {
 			it("should not error if unsafe is an empty object", () => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ unsafe: {} } satisfies RawConfig,
+					undefined,
 					undefined,
 					{ env: undefined }
 				);
@@ -3569,6 +3744,7 @@ describe("normalizeAndValidateConfig()", () => {
 						},
 					} as RawConfig,
 					undefined,
+					undefined,
 					{ env: undefined }
 				);
 
@@ -3587,6 +3763,7 @@ describe("normalizeAndValidateConfig()", () => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ unsafe: { bindings: {} } } as RawConfig,
 					undefined,
+					undefined,
 					{ env: undefined }
 				);
 
@@ -3603,6 +3780,7 @@ describe("normalizeAndValidateConfig()", () => {
 			it("should error if unsafe.bindings is a string", () => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ unsafe: { bindings: "BAD" } } as unknown as RawConfig,
+					undefined,
 					undefined,
 					{ env: undefined }
 				);
@@ -3621,6 +3799,7 @@ describe("normalizeAndValidateConfig()", () => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ unsafe: { bindings: 999 } } as unknown as RawConfig,
 					undefined,
+					undefined,
 					{ env: undefined }
 				);
 
@@ -3637,6 +3816,7 @@ describe("normalizeAndValidateConfig()", () => {
 			it("should error if unsafe.bindings is null", () => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ unsafe: { bindings: null } } as unknown as RawConfig,
+					undefined,
 					undefined,
 					{ env: undefined }
 				);
@@ -3668,6 +3848,7 @@ describe("normalizeAndValidateConfig()", () => {
 						},
 					} as unknown as RawConfig,
 					undefined,
+					undefined,
 					{ env: undefined }
 				);
 
@@ -3695,6 +3876,7 @@ describe("normalizeAndValidateConfig()", () => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ unsafe: { metadata: [] } } as unknown as RawConfig,
 					undefined,
+					undefined,
 					{ env: undefined }
 				);
 
@@ -3711,6 +3893,7 @@ describe("normalizeAndValidateConfig()", () => {
 			it("should error if unsafe.metadata is a string", () => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ unsafe: { metadata: "BAD" } } as unknown as RawConfig,
+					undefined,
 					undefined,
 					{ env: undefined }
 				);
@@ -3729,6 +3912,7 @@ describe("normalizeAndValidateConfig()", () => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ unsafe: { metadata: 999 } } as unknown as RawConfig,
 					undefined,
+					undefined,
 					{ env: undefined }
 				);
 
@@ -3745,6 +3929,7 @@ describe("normalizeAndValidateConfig()", () => {
 			it("should error if unsafe.metadata is null", () => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ unsafe: { metadata: null } } as unknown as RawConfig,
+					undefined,
 					undefined,
 					{ env: undefined }
 				);
@@ -3765,6 +3950,7 @@ describe("normalizeAndValidateConfig()", () => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ unsafe: { bindings: [] } } as unknown as RawConfig,
 					undefined,
+					undefined,
 					{ env: undefined }
 				);
 
@@ -3778,6 +3964,7 @@ describe("normalizeAndValidateConfig()", () => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ placement: { mode: "off", hint: "wnam" } },
 					undefined,
+					undefined,
 					{ env: undefined }
 				);
 
@@ -3790,6 +3977,7 @@ describe("normalizeAndValidateConfig()", () => {
 			it(`should not error if placement hint is set with placement mode "smart"`, () => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ placement: { mode: "smart", hint: "wnam" } },
+					undefined,
 					undefined,
 					{ env: undefined }
 				);
@@ -3813,6 +4001,7 @@ describe("normalizeAndValidateConfig()", () => {
 
 				const { config, diagnostics } = normalizeAndValidateConfig(
 					rawConfig,
+					undefined,
 					undefined,
 					{ env: undefined }
 				);
@@ -3842,6 +4031,7 @@ describe("normalizeAndValidateConfig()", () => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					rawConfig,
 					undefined,
+					undefined,
 					{ env: undefined }
 				);
 
@@ -3861,6 +4051,7 @@ describe("normalizeAndValidateConfig()", () => {
 			};
 			const { diagnostics, config } = normalizeAndValidateConfig(
 				rawConfig,
+				undefined,
 				undefined,
 				{
 					env: "dev",
@@ -3891,9 +4082,14 @@ describe("normalizeAndValidateConfig()", () => {
 
 		it("should error if we specify an environment that does not match the named environments", () => {
 			const rawConfig: RawConfig = { env: { ENV1: {} } };
-			const { diagnostics } = normalizeAndValidateConfig(rawConfig, undefined, {
-				env: "DEV",
-			});
+			const { diagnostics } = normalizeAndValidateConfig(
+				rawConfig,
+				undefined,
+				undefined,
+				{
+					env: "DEV",
+				}
+			);
 			expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 				"Processing wrangler configuration:
 				  - No environment found in configuration with name \\"DEV\\".
@@ -3948,6 +4144,7 @@ describe("normalizeAndValidateConfig()", () => {
 			const { config, diagnostics } = normalizeAndValidateConfig(
 				{ ...rawConfig, env: { dev: {} } },
 				undefined,
+				undefined,
 				{ env: "dev" }
 			);
 
@@ -3956,6 +4153,7 @@ describe("normalizeAndValidateConfig()", () => {
 					...rawConfig,
 					main: resolvedMain,
 					name: "mock-name-dev",
+					topLevelName: "mock-name",
 				})
 			);
 			expect(diagnostics.hasErrors()).toBe(false);
@@ -4028,11 +4226,16 @@ describe("normalizeAndValidateConfig()", () => {
 			const { config, diagnostics } = normalizeAndValidateConfig(
 				rawConfig,
 				undefined,
+				undefined,
 				{ env: "ENV1" }
 			);
 
 			expect(config).toEqual(
-				expect.objectContaining({ ...rawEnv, main: resolvedMain })
+				expect.objectContaining({
+					...rawEnv,
+					main: resolvedMain,
+					topLevelName: "mock-name",
+				})
 			);
 			expect(diagnostics.hasErrors()).toBe(false);
 			expect(diagnostics.hasWarnings()).toBe(false);
@@ -4049,10 +4252,12 @@ describe("normalizeAndValidateConfig()", () => {
 				const { config, diagnostics } = normalizeAndValidateConfig(
 					rawConfig,
 					undefined,
+					undefined,
 					{ env: "DEV" }
 				);
 
 				expect(config.name).toEqual("mock-name");
+				expect(config.topLevelName).toEqual("mock-name");
 				expect(diagnostics.hasErrors()).toBe(false);
 				expect(diagnostics.hasWarnings()).toBe(true);
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
@@ -4073,6 +4278,7 @@ describe("normalizeAndValidateConfig()", () => {
 
 				const { config, diagnostics } = normalizeAndValidateConfig(
 					rawConfig,
+					undefined,
 					undefined,
 					{ env: "DEV" }
 				);
@@ -4107,6 +4313,7 @@ describe("normalizeAndValidateConfig()", () => {
 				const { config, diagnostics } = normalizeAndValidateConfig(
 					rawConfig,
 					undefined,
+					undefined,
 					{ env: "DEV" }
 				);
 
@@ -4139,6 +4346,7 @@ describe("normalizeAndValidateConfig()", () => {
 				const { config, diagnostics } = normalizeAndValidateConfig(
 					rawConfig,
 					undefined,
+					undefined,
 					{ env: "DEV" }
 				);
 
@@ -4170,6 +4378,7 @@ describe("normalizeAndValidateConfig()", () => {
 
 				const { config, diagnostics } = normalizeAndValidateConfig(
 					rawConfig,
+					undefined,
 					undefined,
 					{ env: "DEV" }
 				);
@@ -4224,6 +4433,7 @@ describe("normalizeAndValidateConfig()", () => {
 
 			const { config, diagnostics } = normalizeAndValidateConfig(
 				rawConfig,
+				undefined,
 				undefined,
 				{ env: "ENV1" }
 			);
@@ -4299,6 +4509,7 @@ describe("normalizeAndValidateConfig()", () => {
 			const { config, diagnostics } = normalizeAndValidateConfig(
 				{ env: { ENV1: expectedConfig } },
 				undefined,
+				undefined,
 				{ env: "ENV1" }
 			);
 
@@ -4347,6 +4558,7 @@ describe("normalizeAndValidateConfig()", () => {
 				const { config, diagnostics } = normalizeAndValidateConfig(
 					rawConfig,
 					undefined,
+					undefined,
 					{ env: undefined }
 				);
 
@@ -4362,6 +4574,7 @@ describe("normalizeAndValidateConfig()", () => {
 				};
 				const { config, diagnostics } = normalizeAndValidateConfig(
 					rawConfig,
+					undefined,
 					undefined,
 					{ env: undefined }
 				);
@@ -4394,6 +4607,7 @@ describe("normalizeAndValidateConfig()", () => {
 				};
 				const { config, diagnostics } = normalizeAndValidateConfig(
 					rawConfig,
+					undefined,
 					undefined,
 					{ env: undefined }
 				);
@@ -4429,6 +4643,7 @@ describe("normalizeAndValidateConfig()", () => {
 					const { config, diagnostics } = normalizeAndValidateConfig(
 						rawConfig,
 						undefined,
+						undefined,
 						{ env: "ENV1" }
 					);
 
@@ -4453,6 +4668,7 @@ describe("normalizeAndValidateConfig()", () => {
 					};
 					const { config, diagnostics } = normalizeAndValidateConfig(
 						rawConfig,
+						undefined,
 						undefined,
 						{ env: "ENV1" }
 					);
@@ -4488,6 +4704,7 @@ describe("normalizeAndValidateConfig()", () => {
 					};
 					const { config, diagnostics } = normalizeAndValidateConfig(
 						rawConfig,
+						undefined,
 						undefined,
 						{ env: "ENV1" }
 					);
@@ -4538,6 +4755,7 @@ describe("normalizeAndValidateConfig()", () => {
 					const { config, diagnostics } = normalizeAndValidateConfig(
 						rawConfig,
 						undefined,
+						undefined,
 						{ env: "ENV1" }
 					);
 
@@ -4563,6 +4781,7 @@ describe("normalizeAndValidateConfig()", () => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ env: { ENV1: { durable_objects: [] } } } as unknown as RawConfig,
 					undefined,
+					undefined,
 					{ env: "ENV1" }
 				);
 
@@ -4578,6 +4797,7 @@ describe("normalizeAndValidateConfig()", () => {
 			it("should error if durable_objects is a string", () => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ env: { ENV1: { durable_objects: "BAD" } } } as unknown as RawConfig,
+					undefined,
 					undefined,
 					{ env: "ENV1" }
 				);
@@ -4595,6 +4815,7 @@ describe("normalizeAndValidateConfig()", () => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ env: { ENV1: { durable_objects: 999 } } } as unknown as RawConfig,
 					undefined,
+					undefined,
 					{ env: "ENV1" }
 				);
 
@@ -4611,6 +4832,7 @@ describe("normalizeAndValidateConfig()", () => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ env: { ENV1: { durable_objects: null } } } as unknown as RawConfig,
 					undefined,
+					undefined,
 					{ env: "ENV1" }
 				);
 
@@ -4626,6 +4848,7 @@ describe("normalizeAndValidateConfig()", () => {
 			it("should error if durable_objects.bindings is not defined", () => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ env: { ENV1: { durable_objects: {} } } } as unknown as RawConfig,
+					undefined,
 					undefined,
 					{ env: "ENV1" }
 				);
@@ -4645,6 +4868,7 @@ describe("normalizeAndValidateConfig()", () => {
 						env: { ENV1: { durable_objects: { bindings: {} } } },
 					} as unknown as RawConfig,
 					undefined,
+					undefined,
 					{ env: "ENV1" }
 				);
 
@@ -4662,6 +4886,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{
 						env: { ENV1: { durable_objects: { bindings: "BAD" } } },
 					} as unknown as RawConfig,
+					undefined,
 					undefined,
 					{ env: "ENV1" }
 				);
@@ -4681,6 +4906,7 @@ describe("normalizeAndValidateConfig()", () => {
 						env: { ENV1: { durable_objects: { bindings: 999 } } },
 					} as unknown as RawConfig,
 					undefined,
+					undefined,
 					{ env: "ENV1" }
 				);
 
@@ -4698,6 +4924,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{
 						env: { ENV1: { durable_objects: { bindings: null } } },
 					} as unknown as RawConfig,
+					undefined,
 					undefined,
 					{ env: "ENV1" }
 				);
@@ -4731,6 +4958,7 @@ describe("normalizeAndValidateConfig()", () => {
 							},
 						},
 					} as unknown as RawConfig,
+					undefined,
 					undefined,
 					{ env: "ENV1" }
 				);
@@ -4782,6 +5010,7 @@ describe("normalizeAndValidateConfig()", () => {
 				const { config, diagnostics } = normalizeAndValidateConfig(
 					{ env: { ENV1: expectedConfig } },
 					undefined,
+					undefined,
 					{ env: "ENV1" }
 				);
 
@@ -4810,6 +5039,7 @@ describe("normalizeAndValidateConfig()", () => {
 
 				const { config, diagnostics } = normalizeAndValidateConfig(
 					{ env: { ENV1: expectedConfig as unknown as RawConfig } },
+					undefined,
 					undefined,
 					{ env: "ENV1" }
 				);
@@ -4856,6 +5086,7 @@ describe("normalizeAndValidateConfig()", () => {
 				const { config, diagnostics } = normalizeAndValidateConfig(
 					{ env: { ENV1: expectedConfig as unknown as RawConfig } },
 					undefined,
+					undefined,
 					{ env: "ENV1" }
 				);
 
@@ -4881,6 +5112,7 @@ describe("normalizeAndValidateConfig()", () => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ env: { ENV1: { kv_namespaces: {} } } } as unknown as RawConfig,
 					undefined,
+					undefined,
 					{ env: "ENV1" }
 				);
 
@@ -4896,6 +5128,7 @@ describe("normalizeAndValidateConfig()", () => {
 			it("should error if kv_namespaces is a string", () => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ env: { ENV1: { kv_namespaces: "BAD" } } } as unknown as RawConfig,
+					undefined,
 					undefined,
 					{ env: "ENV1" }
 				);
@@ -4913,6 +5146,7 @@ describe("normalizeAndValidateConfig()", () => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ env: { ENV1: { kv_namespaces: 999 } } } as unknown as RawConfig,
 					undefined,
+					undefined,
 					{ env: "ENV1" }
 				);
 
@@ -4928,6 +5162,7 @@ describe("normalizeAndValidateConfig()", () => {
 			it("should error if kv_namespaces is null", () => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ env: { ENV1: { kv_namespaces: null } } } as unknown as RawConfig,
+					undefined,
 					undefined,
 					{ env: "ENV1" }
 				);
@@ -4960,6 +5195,7 @@ describe("normalizeAndValidateConfig()", () => {
 						},
 					} as unknown as RawConfig,
 					undefined,
+					undefined,
 					{ env: "ENV1" }
 				);
 
@@ -4983,6 +5219,7 @@ describe("normalizeAndValidateConfig()", () => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ env: { ENV1: { r2_buckets: {} } } } as unknown as RawConfig,
 					undefined,
+					undefined,
 					{ env: "ENV1" }
 				);
 
@@ -4998,6 +5235,7 @@ describe("normalizeAndValidateConfig()", () => {
 			it("should error if r2_buckets is a string", () => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ env: { ENV1: { r2_buckets: "BAD" } } } as unknown as RawConfig,
+					undefined,
 					undefined,
 					{ env: "ENV1" }
 				);
@@ -5015,6 +5253,7 @@ describe("normalizeAndValidateConfig()", () => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ env: { ENV1: { r2_buckets: 999 } } } as unknown as RawConfig,
 					undefined,
+					undefined,
 					{ env: "ENV1" }
 				);
 
@@ -5030,6 +5269,7 @@ describe("normalizeAndValidateConfig()", () => {
 			it("should error if r2_buckets is null", () => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ env: { ENV1: { r2_buckets: null } } } as unknown as RawConfig,
+					undefined,
 					undefined,
 					{ env: "ENV1" }
 				);
@@ -5062,6 +5302,7 @@ describe("normalizeAndValidateConfig()", () => {
 						},
 					} as unknown as RawConfig,
 					undefined,
+					undefined,
 					{ env: "ENV1" }
 				);
 
@@ -5087,6 +5328,7 @@ describe("normalizeAndValidateConfig()", () => {
 						env: { ENV1: { analytics_engine_datasets: {} } },
 					} as unknown as RawConfig,
 					undefined,
+					undefined,
 					{ env: "ENV1" }
 				);
 
@@ -5104,6 +5346,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{
 						env: { ENV1: { analytics_engine_datasets: "BAD" } },
 					} as unknown as RawConfig,
+					undefined,
 					undefined,
 					{ env: "ENV1" }
 				);
@@ -5123,6 +5366,7 @@ describe("normalizeAndValidateConfig()", () => {
 						env: { ENV1: { analytics_engine_datasets: 999 } },
 					} as unknown as RawConfig,
 					undefined,
+					undefined,
 					{ env: "ENV1" }
 				);
 
@@ -5140,6 +5384,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{
 						env: { ENV1: { analytics_engine_datasets: null } },
 					} as unknown as RawConfig,
+					undefined,
 					undefined,
 					{ env: "ENV1" }
 				);
@@ -5171,6 +5416,7 @@ describe("normalizeAndValidateConfig()", () => {
 						},
 					} as unknown as RawConfig,
 					undefined,
+					undefined,
 					{ env: "ENV1" }
 				);
 
@@ -5193,6 +5439,7 @@ describe("normalizeAndValidateConfig()", () => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ env: { ENV1: { unsafe: [] } } } as unknown as RawConfig,
 					undefined,
+					undefined,
 					{ env: "ENV1" }
 				);
 
@@ -5213,6 +5460,7 @@ describe("normalizeAndValidateConfig()", () => {
 			it("should error if unsafe is a string", () => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ env: { ENV1: { unsafe: "BAD" } } } as unknown as RawConfig,
+					undefined,
 					undefined,
 					{ env: "ENV1" }
 				);
@@ -5235,6 +5483,7 @@ describe("normalizeAndValidateConfig()", () => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ env: { ENV1: { unsafe: 999 } } } as unknown as RawConfig,
 					undefined,
+					undefined,
 					{ env: "ENV1" }
 				);
 
@@ -5255,6 +5504,7 @@ describe("normalizeAndValidateConfig()", () => {
 			it("should error if unsafe is null", () => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ env: { ENV1: { unsafe: null } } } as unknown as RawConfig,
+					undefined,
 					undefined,
 					{ env: "ENV1" }
 				);
@@ -5277,6 +5527,7 @@ describe("normalizeAndValidateConfig()", () => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ env: { ENV1: { unsafe: {} } } } as RawConfig,
 					undefined,
+					undefined,
 					{ env: "ENV1" }
 				);
 
@@ -5298,6 +5549,7 @@ describe("normalizeAndValidateConfig()", () => {
 						env: { ENV1: { unsafe: { bindings: [] } } },
 					} as RawConfig,
 					undefined,
+					undefined,
 					{ env: "ENV1" }
 				);
 
@@ -5315,6 +5567,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{
 						env: { ENV1: { unsafe: { invalid: true } } },
 					} as RawConfig,
+					undefined,
 					undefined,
 					{ env: "ENV1" }
 				);
@@ -5337,6 +5590,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{
 						env: { ENV1: { unsafe: { bindings: {} } } },
 					} as unknown as RawConfig,
+					undefined,
 					undefined,
 					{ env: "ENV1" }
 				);
@@ -5361,6 +5615,7 @@ describe("normalizeAndValidateConfig()", () => {
 						env: { ENV1: { unsafe: { bindings: "BAD" } } },
 					} as unknown as RawConfig,
 					undefined,
+					undefined,
 					{ env: "ENV1" }
 				);
 
@@ -5384,6 +5639,7 @@ describe("normalizeAndValidateConfig()", () => {
 						env: { ENV1: { unsafe: { bindings: 999 } } },
 					} as unknown as RawConfig,
 					undefined,
+					undefined,
 					{ env: "ENV1" }
 				);
 
@@ -5406,6 +5662,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{
 						env: { ENV1: { unsafe: { bindings: null } } },
 					} as unknown as RawConfig,
+					undefined,
 					undefined,
 					{ env: "ENV1" }
 				);
@@ -5445,6 +5702,7 @@ describe("normalizeAndValidateConfig()", () => {
 						},
 					} as unknown as RawConfig,
 					undefined,
+					undefined,
 					{ env: "ENV1" }
 				);
 
@@ -5478,6 +5736,7 @@ describe("normalizeAndValidateConfig()", () => {
 						env: { ENV1: { unsafe: { metadata: [] } } },
 					} as unknown as RawConfig,
 					undefined,
+					undefined,
 					{ env: "ENV1" }
 				);
 
@@ -5500,6 +5759,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{
 						env: { ENV1: { unsafe: { metadata: "BAD" } } },
 					} as unknown as RawConfig,
+					undefined,
 					undefined,
 					{ env: "ENV1" }
 				);
@@ -5524,6 +5784,7 @@ describe("normalizeAndValidateConfig()", () => {
 						env: { ENV1: { unsafe: { metadata: 999 } } },
 					} as unknown as RawConfig,
 					undefined,
+					undefined,
 					{ env: "ENV1" }
 				);
 
@@ -5546,6 +5807,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{
 						env: { ENV1: { unsafe: { metadata: null } } },
 					} as unknown as RawConfig,
+					undefined,
 					undefined,
 					{ env: "ENV1" }
 				);
@@ -5571,6 +5833,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{
 						tail_consumers: "this sure isn't an array",
 					} as unknown as RawConfig,
+					undefined,
 					undefined,
 					{ env: undefined }
 				);
@@ -5604,6 +5867,7 @@ describe("normalizeAndValidateConfig()", () => {
 						],
 					} as unknown as RawConfig,
 					undefined,
+					undefined,
 					{ env: undefined }
 				);
 
@@ -5629,6 +5893,7 @@ describe("normalizeAndValidateConfig()", () => {
 							head_sampling_rate: true,
 						},
 					} as unknown as RawConfig,
+					undefined,
 					undefined,
 					{ env: undefined }
 				);
@@ -5656,6 +5921,7 @@ describe("normalizeAndValidateConfig()", () => {
 						},
 					} as unknown as RawConfig,
 					undefined,
+					undefined,
 					{ env: undefined }
 				);
 
@@ -5682,6 +5948,7 @@ describe("normalizeAndValidateConfig()", () => {
 						},
 					} as unknown as RawConfig,
 					undefined,
+					undefined,
 					{ env: undefined }
 				);
 
@@ -5705,6 +5972,7 @@ describe("normalizeAndValidateConfig()", () => {
 						},
 					} as unknown as RawConfig,
 					undefined,
+					undefined,
 					{ env: undefined }
 				);
 
@@ -5724,6 +5992,7 @@ describe("normalizeAndValidateConfig()", () => {
 							head_sampling_rate: 2,
 						},
 					} satisfies RawConfig,
+					undefined,
 					undefined,
 					{ env: undefined }
 				);
@@ -5745,6 +6014,7 @@ describe("normalizeAndValidateConfig()", () => {
 							invalid_key_2: "hey there",
 						},
 					} as unknown as RawConfig,
+					undefined,
 					undefined,
 					{ env: undefined }
 				);
@@ -5778,6 +6048,7 @@ describe("normalizeAndValidateConfig()", () => {
 							ENV1: environment,
 						},
 					},
+					undefined,
 					undefined,
 					{ env: "ENV1" }
 				);
@@ -5835,6 +6106,7 @@ describe("normalizeAndValidateConfig()", () => {
 				const { config, diagnostics } = normalizeAndValidateConfig(
 					expectedConfig,
 					undefined,
+					undefined,
 					{ env: "ENV1" }
 				);
 
@@ -5883,6 +6155,7 @@ describe("normalizeAndValidateConfig()", () => {
 				const { config, diagnostics } = normalizeAndValidateConfig(
 					expectedConfig,
 					undefined,
+					undefined,
 					{ env: "ENV1" }
 				);
 
@@ -5928,6 +6201,7 @@ describe("normalizeAndValidateConfig()", () => {
 				const { config, diagnostics } = normalizeAndValidateConfig(
 					expectedConfig,
 					undefined,
+					undefined,
 					{ env: "ENV1" }
 				);
 
@@ -5967,6 +6241,7 @@ describe("normalizeAndValidateConfig()", () => {
 
 				const { config, diagnostics } = normalizeAndValidateConfig(
 					expectedConfig,
+					undefined,
 					undefined,
 					{ env: "ENV1" }
 				);
@@ -6018,17 +6293,27 @@ describe("normalizeAndValidateConfig()", () => {
 					},
 				};
 
-				const result1 = normalizeAndValidateConfig(expectedConfig, undefined, {
-					env: "ENV1",
-				});
+				const result1 = normalizeAndValidateConfig(
+					expectedConfig,
+					undefined,
+					undefined,
+					{
+						env: "ENV1",
+					}
+				);
 
 				expect(result1.config).toEqual(expect.objectContaining(environment1));
 				expect(result1.diagnostics.hasErrors()).toBe(false);
 				expect(result1.diagnostics.hasWarnings()).toBe(false);
 
-				const result2 = normalizeAndValidateConfig(expectedConfig, undefined, {
-					env: "ENV2",
-				});
+				const result2 = normalizeAndValidateConfig(
+					expectedConfig,
+					undefined,
+					undefined,
+					{
+						env: "ENV2",
+					}
+				);
 
 				expect(result2.config).toEqual(expect.objectContaining(environment2));
 				expect(result2.diagnostics.hasErrors()).toBe(false);

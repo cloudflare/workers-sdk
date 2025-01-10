@@ -10420,7 +10420,7 @@ export default{
 			fs.writeFileSync(
 				"index.js",
 				`
-      import path from 'path';
+      import path from 'node:path';
       console.log(path);
       export default {}
       `
@@ -10441,7 +10441,7 @@ export default{
 			}
 		`);
 			expect(fs.readFileSync("dist/index.js", { encoding: "utf-8" })).toContain(
-				`import path from "path";`
+				`import path from "node:path";`
 			);
 		});
 

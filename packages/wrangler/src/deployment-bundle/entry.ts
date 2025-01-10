@@ -60,9 +60,9 @@ export async function getEntry(
 	if (args.script) {
 		paths = resolveEntryWithScript(args.script);
 	} else if (config.main !== undefined) {
-		paths = resolveEntryWithMain(config.main, config.configPath);
+		paths = resolveEntryWithMain(config.main, config);
 	} else if (entryPoint) {
-		paths = resolveEntryWithEntryPoint(entryPoint, config.configPath);
+		paths = resolveEntryWithEntryPoint(entryPoint, config);
 	} else if (
 		args.legacyAssets ||
 		config.legacy_assets ||

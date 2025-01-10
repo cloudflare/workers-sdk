@@ -1,5 +1,166 @@
 # wrangler
 
+## 3.101.0
+
+### Minor Changes
+
+- [#7534](https://github.com/cloudflare/workers-sdk/pull/7534) [`7c8ae1c`](https://github.com/cloudflare/workers-sdk/commit/7c8ae1c7bcfe4c55dc530a1c86520dbb8dd5fb26) Thanks [@cmackenzie1](https://github.com/cmackenzie1)! - feat: Use OAuth flow to generate R2 tokens for Pipelines
+
+- [#7674](https://github.com/cloudflare/workers-sdk/pull/7674) [`45d1d1e`](https://github.com/cloudflare/workers-sdk/commit/45d1d1edd640f1dc9e2709c68256981a5de26680) Thanks [@Ankcorn](https://github.com/Ankcorn)! - Add support for env files to wrangler secret bulk i.e. `.dev.vars`
+
+  Run `wrangler secret bulk .dev.vars` to add the env file
+
+  ```env
+  //.dev.vars
+  KEY=VALUE
+  KEY_2=VALUE
+  ```
+
+  This will upload the secrets KEY and KEY_2 to your worker
+
+- [#7442](https://github.com/cloudflare/workers-sdk/pull/7442) [`e4716cc`](https://github.com/cloudflare/workers-sdk/commit/e4716cc87893a0633bd2d00543b351e83e228970) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - feat: add support for redirecting Wrangler to a generated config when running deploy-related commands
+
+  This new feature is designed for build tools and frameworks to provide a deploy-specific configuration,
+  which Wrangler can use instead of user configuration when running deploy-related commands.
+  It is not expected that developers of Workers will need to use this feature directly.
+
+  ### Affected commands
+
+  The commands that use this feature are:
+
+  - `wrangler deploy`
+  - `wrangler dev`
+  - `wrangler versions upload`
+  - `wrangler versions deploy`
+  - `wrangler pages deploy`
+  - `wrangler pages build`
+  - `wrangler pages build-env`
+
+  ### Config redirect file
+
+  When running these commands, Wrangler will look up the directory tree from the current working directory for a file at the path `.wrangler/deploy/config.json`. This file must contain only a single JSON object of the form:
+
+  ```json
+  { "configPath": "../../path/to/wrangler.json" }
+  ```
+
+  When this file exists Wrangler will follow the `configPath` (relative to the `.wrangler/deploy/config.json` file) to find an alternative Wrangler configuration file to load and use as part of this command.
+
+  When this happens Wrangler will display a warning to the user to indicate that the configuration has been redirected to a different file than the user's configuration file.
+
+  ### Custom build tool example
+
+  A common approach that a build tool might choose to implement.
+
+  - The user writes code that uses Cloudflare Workers resources, configured via a user `wrangler.toml` file.
+
+    ```toml
+    name = "my-worker"
+    main = "src/index.ts"
+    [[kv_namespaces]]
+    binding = "<BINDING_NAME1>"
+    id = "<NAMESPACE_ID1>"
+    ```
+
+    Note that this configuration points `main` at user code entry-point.
+
+  - The user runs a custom build, which might read the `wrangler.toml` to find the entry-point:
+
+    ```bash
+    > my-tool build
+    ```
+
+  - This tool generates a `dist` directory that contains both compiled code and a new deployment configuration file, but also a `.wrangler/deploy/config.json` file that redirects Wrangler to this new deployment configuration file:
+
+    ```plain
+    - dist
+      - index.js
+    	- wrangler.json
+    - .wrangler
+      - deploy
+    	  - config.json
+    ```
+
+    The `dist/wrangler.json` will contain:
+
+    ```json
+    {
+      "name": "my-worker",
+      "main": "./index.js",
+      "kv_namespaces": [
+        { "binding": "<BINDING_NAME1>", "id": "<NAMESPACE_ID1>" }
+      ]
+    }
+    ```
+
+    And the `.wrangler/deploy/config.json` will contain:
+
+    ```json
+    {
+      "configPath": "../../dist/wrangler.json"
+    }
+    ```
+
+- [#7685](https://github.com/cloudflare/workers-sdk/pull/7685) [`9d2740a`](https://github.com/cloudflare/workers-sdk/commit/9d2740aa582c76040baf8aded1ac73d8bb2edeeb) Thanks [@vicb](https://github.com/vicb)! - allow overriding the unenv preset.
+
+  By default wrangler uses the bundled unenv preset.
+
+  Setting `WRANGLER_UNENV_RESOLVE_PATHS` allow to use another version of the preset.
+  Those paths are used when resolving the unenv module identifiers to absolute paths.
+  This can be used to test a development version.
+
+- [#7694](https://github.com/cloudflare/workers-sdk/pull/7694) [`f3c2f69`](https://github.com/cloudflare/workers-sdk/commit/f3c2f69b30fe8549a06b8f7d8853fc9a6100803a) Thanks [@joshthoward](https://github.com/joshthoward)! - Default wrangler d1 export to --local rather than failing
+
+### Patch Changes
+
+- [#7456](https://github.com/cloudflare/workers-sdk/pull/7456) [`ff4e77e`](https://github.com/cloudflare/workers-sdk/commit/ff4e77e5ad7f9e259c5ff443284f3bf07c80cb0e) Thanks [@andyjessop](https://github.com/andyjessop)! - chore: removes --experimental-versions flag, as versions is now GA.
+
+- [#7712](https://github.com/cloudflare/workers-sdk/pull/7712) [`6439347`](https://github.com/cloudflare/workers-sdk/commit/6439347a9221cc2818c560bafef95ec1e8e7a7ec) Thanks [@penalosa](https://github.com/penalosa)! - Remove CF-Connecting-IP for requests to the edge preview
+
+- [#7703](https://github.com/cloudflare/workers-sdk/pull/7703) [`e771fe9`](https://github.com/cloudflare/workers-sdk/commit/e771fe9909bafa7249cb694d5dd1a23af8bd807e) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - include the top level Worker name in the parsed config structure
+
+- [#7576](https://github.com/cloudflare/workers-sdk/pull/7576) [`773bda8`](https://github.com/cloudflare/workers-sdk/commit/773bda8b38d43102c2a66126df92d3bbc7e80861) Thanks [@cmackenzie1](https://github.com/cmackenzie1)! - Remove defaults for `batch-max-*` pipeline parameters and define value ranges
+
+- Updated dependencies [[`2c76887`](https://github.com/cloudflare/workers-sdk/commit/2c7688737346992d046d2f88eba5c9847ede1365), [`78bdec5`](https://github.com/cloudflare/workers-sdk/commit/78bdec59ce880365b0318eb94d4176b53e950f66)]:
+  - miniflare@3.20241230.1
+
+## 3.100.0
+
+### Minor Changes
+
+- [#7604](https://github.com/cloudflare/workers-sdk/pull/7604) [`6c2f173`](https://github.com/cloudflare/workers-sdk/commit/6c2f17341037962bdf675e7008a4d91059465e16) Thanks [@CarmenPopoviciu](https://github.com/CarmenPopoviciu)! - feat: Capture Workers with static assets in the telemetry data
+
+  We want to measure accurately what this number of Workers + Assets projects running in remote mode is, as this number will be a very helpful data point down the road, when more decisions around remote mode will have to be taken.
+
+  These changes add this kind of insight to our telemetry data, by capturing whether the command running is in the context of a Workers + Assets project.
+
+  N.B. With these changes in place we will be capturing the Workers + Assets context for all commands, not just wrangler dev --remote.
+
+### Patch Changes
+
+- [#7581](https://github.com/cloudflare/workers-sdk/pull/7581) [`cac7fa6`](https://github.com/cloudflare/workers-sdk/commit/cac7fa6160ecc70d8f188de1f494a07c0e1e9626) Thanks [@vicb](https://github.com/vicb)! - chore(wrangler): update unenv dependency version
+
+  unenv now uses the workerd implementation on node:dns
+  See the [unjs/unenv#376](https://github.com/unjs/unenv/pull/376)
+
+- [#7625](https://github.com/cloudflare/workers-sdk/pull/7625) [`d8fb032`](https://github.com/cloudflare/workers-sdk/commit/d8fb032ba24ac284147dc481c28ab8dbcf7a9d72) Thanks [@vicb](https://github.com/vicb)! - feat(wrangler): use unenv builtin dependency resolution
+
+  Moving away from `require.resolve()` to handle unenv aliased packages.
+  Using the unenv builtin resolution will allow us to drop the .cjs file from the preset
+  and to override the base path so that we can test the dev version of the preset.
+
+- [#7533](https://github.com/cloudflare/workers-sdk/pull/7533) [`755a27c`](https://github.com/cloudflare/workers-sdk/commit/755a27c7a5d7f35cb5f05ab2e12af6d64ce323fb) Thanks [@danielgek](https://github.com/danielgek)! - Add warning about the browser rendering not available on local
+
+- [#7614](https://github.com/cloudflare/workers-sdk/pull/7614) [`8abb43f`](https://github.com/cloudflare/workers-sdk/commit/8abb43fcdf0c506fa6268a7f07aa31b398b7daf2) Thanks [@vicb](https://github.com/vicb)! - chore(wrangler): update unenv dependency version
+
+  The updated unenv contains a fix for the module resolution,
+  see <https://github.com/unjs/unenv/pull/378>.
+  That bug prevented us from using unenv module resolution,
+  see <https://github.com/cloudflare/workers-sdk/pull/7583>.
+
+- Updated dependencies [[`b4e0af1`](https://github.com/cloudflare/workers-sdk/commit/b4e0af163548ee8cc0aefc9165f67a0f83ea94d4)]:
+  - miniflare@3.20241230.0
+
 ## 3.99.0
 
 ### Minor Changes

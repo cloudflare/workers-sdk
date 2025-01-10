@@ -1,6 +1,4 @@
-import { getFlag } from "../experimental-flags";
 import { FileRegistry } from "./file-registry";
-import { ServerRegistry } from "./server-registry";
 import type { Binding } from "../api";
 import type { Config } from "../config";
 import type {
@@ -11,16 +9,6 @@ import type {
 
 export type { WorkerDefinition, WorkerRegistry, WorkerEntrypointsDefinition };
 
-// Safety of `!`: `parseInt(undefined)` is NaN
-// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-let DEV_REGISTRY_PORT = parseInt(process.env.WRANGLER_WORKER_REGISTRY_PORT!);
-if (Number.isNaN(DEV_REGISTRY_PORT)) {
-	DEV_REGISTRY_PORT = 6284;
-}
-
-export const startWorkerRegistryServer =
-	ServerRegistry.startWorkerRegistryServer;
-
 /**
  * Start the service registry. It's a simple server
  * that exposes endpoints for registering and unregistering
@@ -29,21 +17,14 @@ export const startWorkerRegistryServer =
 export async function startWorkerRegistry(
 	listener?: (registry: WorkerRegistry | undefined) => void
 ) {
-	if (getFlag("FILE_BASED_REGISTRY")) {
-		return FileRegistry.startWorkerRegistry(listener);
-	}
-
-	return ServerRegistry.startWorkerRegistry();
+	return FileRegistry.startWorkerRegistry(listener);
 }
 
 /**
  * Stop the service registry.
  */
 export async function stopWorkerRegistry() {
-	if (getFlag("FILE_BASED_REGISTRY")) {
-		return FileRegistry.stopWorkerRegistry();
-	}
-	return ServerRegistry.stopWorkerRegistry();
+	return FileRegistry.stopWorkerRegistry();
 }
 
 /**
@@ -53,10 +34,7 @@ export async function registerWorker(
 	name: string,
 	definition: WorkerDefinition
 ) {
-	if (getFlag("FILE_BASED_REGISTRY")) {
-		return FileRegistry.registerWorker(name, definition);
-	}
-	return ServerRegistry.registerWorker(name, definition);
+	return FileRegistry.registerWorker(name, definition);
 }
 
 /**
@@ -65,11 +43,7 @@ export async function registerWorker(
 export async function getRegisteredWorkers(): Promise<
 	WorkerRegistry | undefined
 > {
-	if (getFlag("FILE_BASED_REGISTRY")) {
-		return FileRegistry.getRegisteredWorkers();
-	}
-
-	return ServerRegistry.getRegisteredWorkers();
+	return FileRegistry.getRegisteredWorkers();
 }
 
 /**
@@ -120,9 +94,5 @@ export async function getBoundRegisteredWorkers(
 export async function devRegistry(
 	cb: (workers: WorkerRegistry | undefined) => void
 ): Promise<(name?: string) => Promise<void>> {
-	if (getFlag("FILE_BASED_REGISTRY")) {
-		return FileRegistry.devRegistry(cb);
-	}
-
-	return ServerRegistry.devRegistry(cb);
+	return FileRegistry.devRegistry(cb);
 }

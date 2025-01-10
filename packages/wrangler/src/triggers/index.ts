@@ -78,7 +78,6 @@ async function triggersDeployHandler(
 		routes: args.routes,
 		legacyEnv: isLegacyEnv(config),
 		dryRun: args.dryRun,
-		experimentalVersions: args.experimentalVersions,
 		assetsOptions,
 	});
 }

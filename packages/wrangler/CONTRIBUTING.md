@@ -152,11 +152,9 @@ feat: implement the `wrangler versions deploy` command
 
 This command allows users to deploy a multiple versions of their Worker.
 
-Note: while in open-beta, the `--experimental-versions` flag is required.
-
 For interactive use (to be prompted for all options), run:
 
-- `wrangler versions deploy --x-versions`
+- `wrangler versions deploy`
 
 For non-interactive use, run with CLI args (and `--yes` to accept defaults):
 

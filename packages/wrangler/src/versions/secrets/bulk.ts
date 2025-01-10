@@ -1,13 +1,10 @@
-import path from "node:path";
-import readline from "node:readline";
 import { fetchResult } from "../../cfetch";
 import { configFileName } from "../../config";
 import { createCommand } from "../../core/create-command";
 import { UserError } from "../../errors";
 import { getLegacyScriptName } from "../../index";
 import { logger } from "../../logger";
-import { parseJSON, readFileSync } from "../../parse";
-import { validateJSONFileSecrets } from "../../secret";
+import { parseBulkInputToObject } from "../../secret";
 import { requireAuth } from "../../user";
 import { copyWorkerVersionWithNewSecrets } from "./index";
 import type { WorkerVersion } from "./index";
@@ -23,7 +20,7 @@ export const versionsSecretBulkCommand = createCommand({
 	},
 	args: {
 		json: {
-			describe: `The JSON file of key-value pairs to upload, in form {"key": value, ...}`,
+			describe: `The file of key-value pairs to upload, as JSON in form {"key": value, ...} or .dev.vars file in the form KEY=VALUE`,
 			type: "string",
 		},
 		name: {
@@ -57,37 +54,10 @@ export const versionsSecretBulkCommand = createCommand({
 			`🌀 Creating the secrets for the Worker "${scriptName}" ${args.env ? `(${args.env})` : ""}`
 		);
 
-		let content: Record<string, string>;
-		if (args.json) {
-			const jsonFilePath = path.resolve(args.json);
-			try {
-				content = parseJSON<Record<string, string>>(
-					readFileSync(jsonFilePath),
-					jsonFilePath
-				);
-			} catch (e) {
-				return logger.error(
-					"Unable to parse JSON file, please ensure the file passed is valid JSON."
-				);
-			}
-			validateJSONFileSecrets(content, args.json);
-		} else {
-			try {
-				const rl = readline.createInterface({ input: process.stdin });
-				let pipedInput = "";
-				for await (const line of rl) {
-					pipedInput += line;
-				}
-				content = parseJSON<Record<string, string>>(pipedInput);
-			} catch {
-				return logger.error(
-					"Unable to parse JSON from the input, please ensure you're passing valid JSON"
-				);
-			}
-		}
+		const content = await parseBulkInputToObject(args.json);
 
 		if (!content) {
-			return logger.error(`No content found in JSON file or piped input.`);
+			return logger.error(`No content found in file or piped input.`);
 		}
 
 		const secrets = Object.entries(content).map(([key, value]) => ({

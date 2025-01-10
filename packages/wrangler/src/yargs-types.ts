@@ -8,7 +8,6 @@ export interface CommonYargsOptions {
 	v: boolean | undefined;
 	config: string | undefined;
 	env: string | undefined;
-	"experimental-versions": boolean | undefined;
 	"experimental-provision": boolean | undefined;
 }
 

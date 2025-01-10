@@ -1,4 +1,3 @@
-import { cwd } from "process";
 import { http, HttpResponse } from "msw";
 import { reinitialiseAuthTokens } from "../../user";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
@@ -47,9 +46,7 @@ describe("migrate", () => {
 			// If we get to the point where we are checking for migrations then we have not been asked to log in.
 			await expect(
 				runWrangler("d1 migrations apply DATABASE")
-			).rejects.toThrowError(
-				`No migrations present at ${cwd().replaceAll("\\", "/")}/migrations.`
-			);
+			).rejects.toThrowError(`No migrations present at <cwd>/migrations.`);
 		});
 
 		it("should try to read D1 config from wrangler.toml", async () => {
@@ -68,9 +65,7 @@ describe("migrate", () => {
 			// If we get to the point where we are checking for migrations then we have not checked wrangler.toml.
 			await expect(
 				runWrangler("d1 migrations apply DATABASE")
-			).rejects.toThrowError(
-				`No migrations present at ${cwd().replaceAll("\\", "/")}/migrations.`
-			);
+			).rejects.toThrowError(`No migrations present at <cwd>/migrations.`);
 		});
 
 		it("should reject the use of --preview with --local", async () => {
@@ -221,9 +216,7 @@ Your database may not be available to serve requests during the migration, conti
 			// If we get to the point where we are checking for migrations then we have not been asked to log in.
 			await expect(
 				runWrangler("d1 migrations list --local DATABASE")
-			).rejects.toThrowError(
-				`No migrations present at ${cwd().replaceAll("\\", "/")}/migrations.`
-			);
+			).rejects.toThrowError(`No migrations present at <cwd>/migrations.`);
 		});
 
 		it("should use the custom migrations folder when provided", async () => {
@@ -241,10 +234,7 @@ Your database may not be available to serve requests during the migration, conti
 			await expect(
 				runWrangler("d1 migrations list --local DATABASE")
 			).rejects.toThrowError(
-				`No migrations present at ${cwd().replaceAll(
-					"\\",
-					"/"
-				)}/my-migrations-go-here.`
+				`No migrations present at <cwd>/my-migrations-go-here.`
 			);
 		});
 
@@ -276,9 +266,7 @@ Your database may not be available to serve requests during the migration, conti
 			// If we get to the point where we are checking for migrations then we have not checked wrangler.toml.
 			await expect(
 				runWrangler("d1 migrations list DATABASE")
-			).rejects.toThrowError(
-				`No migrations present at ${cwd().replaceAll("\\", "/")}/migrations.`
-			);
+			).rejects.toThrowError(`No migrations present at <cwd>/migrations.`);
 		});
 	});
 });

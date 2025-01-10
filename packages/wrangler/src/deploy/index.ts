@@ -2,7 +2,6 @@ import assert from "node:assert";
 import path from "node:path";
 import { getAssetsOptions, validateAssetsArgsAndConfig } from "../assets";
 import { configFileName, readConfig } from "../config";
-import { resolveWranglerConfigPath } from "../config/config-helpers";
 import { getEntry } from "../deployment-bundle/entry";
 import { UserError } from "../errors";
 import { run } from "../experimental-flags";
@@ -246,7 +245,6 @@ export type DeployArgs = StrictYargsOptionsToInterface<typeof deployOptions>;
 export async function deployHandler(args: DeployArgs) {
 	await run(
 		{
-			FILE_BASED_REGISTRY: false,
 			RESOURCES_PROVISION: args.experimentalProvision ?? false,
 			MULTIWORKER: false,
 		},
@@ -271,15 +269,17 @@ async function deployWorker(args: DeployArgs) {
 		);
 	}
 
-	const configPath = resolveWranglerConfigPath(args);
-	const projectRoot = configPath && path.dirname(configPath);
-	const config = readConfig(args);
+	const config = readConfig(args, { useRedirectIfAvailable: true });
 	if (config.pages_build_output_dir) {
 		throw new UserError(
 			"It looks like you've run a Workers-specific command in a Pages project.\n" +
 				"For Pages, please run `wrangler pages deploy` instead."
 		);
 	}
+	// We use the `userConfigPath` to compute the root of a project,
+	// rather than a redirected (potentially generated) `configPath`.
+	const projectRoot =
+		config.userConfigPath && path.dirname(config.userConfigPath);
 
 	const entry = await getEntry(args, config, "deploy");
 
@@ -346,11 +346,7 @@ async function deployWorker(args: DeployArgs) {
 
 	if (!args.dryRun) {
 		assert(accountId, "Missing account ID");
-		await verifyWorkerMatchesCITag(
-			accountId,
-			name,
-			path.relative(entry.projectRoot, config.configPath ?? "wrangler.toml")
-		);
+		await verifyWorkerMatchesCITag(accountId, name, config.configPath);
 	}
 	const { sourceMapSize, versionId, workerTag, targets } = await deploy({
 		config,
@@ -386,7 +382,6 @@ async function deployWorker(args: DeployArgs) {
 		oldAssetTtl: args.oldAssetTtl,
 		projectRoot,
 		dispatchNamespace: args.dispatchNamespace,
-		experimentalVersions: args.experimentalVersions,
 		experimentalAutoCreate: args.experimentalAutoCreate,
 	});
 

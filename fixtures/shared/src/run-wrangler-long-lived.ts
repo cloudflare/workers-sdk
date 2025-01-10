@@ -25,20 +25,13 @@ export async function runWranglerPagesDev(
 ) {
 	if (publicPath) {
 		return runLongLivedWrangler(
-			[
-				"pages",
-				"dev",
-				publicPath,
-				"--x-registry",
-				"--ip=127.0.0.1",
-				...options,
-			],
+			["pages", "dev", publicPath, "--ip=127.0.0.1", ...options],
 			cwd,
 			env
 		);
 	} else {
 		return runLongLivedWrangler(
-			["pages", "dev", "--x-registry", "--ip=127.0.0.1", ...options],
+			["pages", "dev", "--ip=127.0.0.1", ...options],
 			cwd,
 			env
 		);
@@ -58,11 +51,7 @@ export async function runWranglerDev(
 	options: string[],
 	env?: NodeJS.ProcessEnv
 ) {
-	return runLongLivedWrangler(
-		["dev", "--x-registry", "--ip=127.0.0.1", ...options],
-		cwd,
-		env
-	);
+	return runLongLivedWrangler(["dev", "--ip=127.0.0.1", ...options], cwd, env);
 }
 
 async function runLongLivedWrangler(
@@ -92,11 +81,15 @@ async function runLongLivedWrangler(
 
 	const chunks: Buffer[] = [];
 	wranglerProcess.stdout?.on("data", (chunk) => {
-		console.log(`[${command}]`, chunk.toString());
+		if (process.env.WRANGLER_LOG === "debug") {
+			console.log(`[${command}]`, chunk.toString());
+		}
 		chunks.push(chunk);
 	});
 	wranglerProcess.stderr?.on("data", (chunk) => {
-		console.log(`[${command}]`, chunk.toString());
+		if (process.env.WRANGLER_LOG === "debug") {
+			console.log(`[${command}]`, chunk.toString());
+		}
 		chunks.push(chunk);
 	});
 	const getOutput = () => Buffer.concat(chunks).toString();

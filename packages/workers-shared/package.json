@@ -1,6 +1,6 @@
 {
 	"name": "@cloudflare/workers-shared",
-	"version": "0.11.1",
+	"version": "0.11.2",
 	"description": "Package that is used at Cloudflare to power some internal features of Cloudflare Workers.",
 	"keywords": [
 		"cloudflare",
@@ -54,7 +54,7 @@
 		"@types/mime": "^3.0.4",
 		"concurrently": "^8.2.2",
 		"esbuild": "0.17.19",
-		"rimraf": "^6.0.1",
+		"rimraf": "catalog:default",
 		"toucan-js": "^3.3.1",
 		"typescript": "catalog:default",
 		"vitest": "catalog:default"

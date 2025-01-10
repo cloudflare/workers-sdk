@@ -50,12 +50,6 @@ export type GetPlatformProxyOptions = {
 	 * If `false` is specified no data is persisted on the filesystem.
 	 */
 	persist?: boolean | { path: string };
-	/**
-	 * Use the experimental file-based dev registry for service discovery
-	 *
-	 * Note: this feature is experimental
-	 */
-	experimentalRegistry?: boolean;
 };
 
 /**
@@ -110,7 +104,6 @@ export async function getPlatformProxy<
 
 	const miniflareOptions = await run(
 		{
-			FILE_BASED_REGISTRY: Boolean(options.experimentalRegistry ?? true),
 			MULTIWORKER: false,
 			RESOURCES_PROVISION: false,
 		},

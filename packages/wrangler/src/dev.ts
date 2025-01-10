@@ -12,7 +12,6 @@ import {
 } from "./api/startDevWorker/utils";
 import { getAssetsOptions } from "./assets";
 import { configFileName, formatConfigSnippet } from "./config";
-import { resolveWranglerConfigPath } from "./config/config-helpers";
 import { createCommand } from "./core/create-command";
 import { validateRoutes } from "./deploy/deploy";
 import { validateNodeCompatMode } from "./deployment-bundle/node-compat";
@@ -60,7 +59,6 @@ export const dev = createCommand({
 	behaviour: {
 		provideConfig: false,
 		overrideExperimentalFlags: (args) => ({
-			FILE_BASED_REGISTRY: args.experimentalRegistry,
 			MULTIWORKER: Array.isArray(args.config),
 			RESOURCES_PROVISION: args.experimentalProvision ?? false,
 		}),
@@ -320,19 +318,6 @@ export const dev = createCommand({
 				"Show interactive dev session (defaults to true if the terminal supports interactivity)",
 			type: "boolean",
 		},
-		"experimental-dev-env": {
-			alias: ["x-dev-env"],
-			type: "boolean",
-			deprecated: true,
-			hidden: true,
-		},
-		"experimental-registry": {
-			alias: ["x-registry"],
-			type: "boolean",
-			describe:
-				"Use the experimental file based dev registry for multi-worker development",
-			default: true,
-		},
 		"experimental-vectorize-bind-to-prod": {
 			type: "boolean",
 			describe:
@@ -344,11 +329,6 @@ export const dev = createCommand({
 		if (args.liveReload && args.remote) {
 			throw new UserError(
 				"--live-reload is only supported in local mode. Please just use one of either --remote or --live-reload."
-			);
-		}
-		if (args.experimentalDevEnv) {
-			logger.warn(
-				"--x-dev-env is now on by default and will be removed in a future version."
 			);
 		}
 
@@ -698,8 +678,6 @@ export async function startDev(args: StartDevOptions) {
 			);
 		}
 
-		const configPath = resolveWranglerConfigPath(args);
-
 		const authHook: AsyncHook<CfAccount, [Pick<Config, "account_id">]> = async (
 			config
 		) => {
@@ -722,8 +700,8 @@ export async function startDev(args: StartDevOptions) {
 			};
 		};
 
-		if (Array.isArray(configPath)) {
-			const runtime = new MultiworkerRuntimeController(configPath.length);
+		if (Array.isArray(args.config)) {
+			const runtime = new MultiworkerRuntimeController(args.config.length);
 
 			const primaryDevEnv = new DevEnv({ runtimes: [runtime] });
 
@@ -733,7 +711,7 @@ export async function startDev(args: StartDevOptions) {
 
 			// Set up the primary DevEnv (the one that the ProxyController will connect to)
 			devEnv = [
-				await setupDevEnv(primaryDevEnv, configPath[0], authHook, {
+				await setupDevEnv(primaryDevEnv, args.config[0], authHook, {
 					...args,
 					disableDevRegistry: true,
 					multiworkerPrimary: true,
@@ -743,7 +721,7 @@ export async function startDev(args: StartDevOptions) {
 			// Set up all auxiliary DevEnvs
 			devEnv.push(
 				...(await Promise.all(
-					(configPath as string[]).slice(1).map((c) => {
+					(args.config as string[]).slice(1).map((c) => {
 						return setupDevEnv(
 							new DevEnv({
 								runtimes: [runtime],
@@ -813,7 +791,7 @@ export async function startDev(args: StartDevOptions) {
 				unregisterHotKeys = registerDevHotKeys(devEnv, args);
 			}
 
-			await setupDevEnv(devEnv, configPath, authHook, args);
+			await setupDevEnv(devEnv, args.config, authHook, args);
 		}
 
 		return {

@@ -1,11 +1,20 @@
 {
 	"extends": ["//"],
 	"tasks": {
-		"test": {
-			"dependsOn": ["wrangler#build"]
+		"_clean_install": {
+			"outputs": ["node_modules"]
+		},
+		"check:type": {
+			"dependsOn": ["_clean_install"]
+		},
+		"test:watch": {
+			"dependsOn": ["_clean_install"]
+		},
+		"type:tests": {
+			"dependsOn": ["_clean_install"]
 		},
 		"test:ci": {
-			"dependsOn": ["wrangler#build"]
+			"dependsOn": ["_clean_install", "wrangler#build"]
 		}
 	}
 }

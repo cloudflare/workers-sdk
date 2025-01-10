@@ -19,7 +19,7 @@ import { requireAuth } from "../user";
 import * as options from "./options";
 import splitSqlQuery from "./splitter";
 import { getDatabaseByNameOrBinding, getDatabaseInfoFromConfig } from "./utils";
-import type { Config, ConfigFields, DevConfig, Environment } from "../config";
+import type { Config } from "../config";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
@@ -197,7 +197,7 @@ export async function executeSql({
 }: {
 	local: boolean | undefined;
 	remote: boolean | undefined;
-	config: ConfigFields<DevConfig> & Environment;
+	config: Config;
 	name: string;
 	shouldPrompt: boolean | undefined;
 	persistTo: string | undefined;
@@ -276,7 +276,7 @@ async function executeLocally({
 	}
 
 	const id = localDB.previewDatabaseUuid ?? localDB.uuid;
-	const persistencePath = getLocalPersistencePath(persistTo, config.configPath);
+	const persistencePath = getLocalPersistencePath(persistTo, config);
 	const d1Persist = path.join(persistencePath, "v3", "d1");
 
 	logger.log(

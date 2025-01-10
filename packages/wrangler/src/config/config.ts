@@ -22,7 +22,10 @@ import type { CamelCaseKey } from "yargs";
  * - `@breaking`: the deprecation/optionality is a breaking change from Wrangler v1.
  * - `@todo`: there's more work to be done (with details attached).
  */
-export type Config = ConfigFields<DevConfig> & PagesConfigFields & Environment;
+export type Config = ComputedFields &
+	ConfigFields<DevConfig> &
+	PagesConfigFields &
+	Environment;
 
 export type RawConfig = Partial<ConfigFields<RawDevConfig>> &
 	PagesConfigFields &
@@ -30,9 +33,21 @@ export type RawConfig = Partial<ConfigFields<RawDevConfig>> &
 	DeprecatedConfigFields &
 	EnvironmentMap & { $schema?: string };
 
-export interface ConfigFields<Dev extends RawDevConfig> {
+export interface ComputedFields {
+	/** The path to the Wrangler configuration file (if any, and possibly redirected from the user Wrangler configuration) used to create this configuration. */
 	configPath: string | undefined;
+	/** The path to the user's Wrangler configuration file (if any), which may have been redirected to another file that used to create this configuration. */
+	userConfigPath: string | undefined;
+	/**
+	 * The original top level name for the Worker in the raw configuration.
+	 *
+	 * When a raw configuration has been flattened to a single environment the worker name may have been replaced or transformed.
+	 * It can be useful to know what the top-level name was before the flattening.
+	 */
+	topLevelName: string | undefined;
+}
 
+export interface ConfigFields<Dev extends RawDevConfig> {
 	/**
 	 * A boolean to enable "legacy" style wrangler environments (from Wrangler v1).
 	 * These have been superseded by Services, but there may be projects that won't
@@ -282,6 +297,11 @@ export type OnlyCamelCase<T = Record<string, never>> = {
 };
 
 export const defaultWranglerConfig: Config = {
+	/* COMPUTED_FIELDS */
+	configPath: undefined,
+	userConfigPath: undefined,
+	topLevelName: undefined,
+
 	/*====================================================*/
 	/*      Fields supported by both Workers & Pages      */
 	/*====================================================*/
@@ -326,7 +346,6 @@ export const defaultWranglerConfig: Config = {
 	/*           Fields supported by Workers only         */
 	/*====================================================*/
 	/* TOP-LEVEL ONLY FIELDS */
-	configPath: undefined,
 	legacy_env: true,
 	site: undefined,
 	legacy_assets: undefined,

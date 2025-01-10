@@ -188,6 +188,7 @@ packages/quick-edit/vscode
 packages/quick-edit/web
 
 packages/wrangler/config-schema.json
+packages/wrangler/metafile.json
 packages/chrome-devtools-patches/built-devtools
 packages/chrome-devtools-patches/.cipd
 packages/chrome-devtools-patches/.gclient

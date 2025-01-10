@@ -350,7 +350,7 @@ export const kvKeyPutCommand = createCommand({
 		if (args.local) {
 			await usingLocalNamespace(
 				args.persistTo,
-				config.configPath,
+				config,
 				namespaceId,
 				(namespace) =>
 					namespace.put(key, new Blob([value]).stream(), {
@@ -434,7 +434,7 @@ export const kvKeyListCommand = createCommand({
 		if (args.local) {
 			const listResult = await usingLocalNamespace(
 				args.persistTo,
-				config.configPath,
+				config,
 				namespaceId,
 				(namespace) => namespace.list({ prefix })
 			);
@@ -513,7 +513,7 @@ export const kvKeyGetCommand = createCommand({
 		if (args.local) {
 			const val = await usingLocalNamespace(
 				args.persistTo,
-				config.configPath,
+				config,
 				namespaceId,
 				async (namespace) => {
 					const stream = await namespace.get(key, "stream");
@@ -598,7 +598,7 @@ export const kvKeyDeleteCommand = createCommand({
 		if (args.local) {
 			await usingLocalNamespace(
 				args.persistTo,
-				config.configPath,
+				config,
 				namespaceId,
 				(namespace) => namespace.delete(key)
 			);
@@ -730,7 +730,7 @@ export const kvBulkPutCommand = createCommand({
 		if (args.local) {
 			await usingLocalNamespace(
 				args.persistTo,
-				config.configPath,
+				config,
 				namespaceId,
 				async (namespace) => {
 					for (const value of content) {
@@ -855,7 +855,7 @@ export const kvBulkDeleteCommand = createCommand({
 		if (args.local) {
 			await usingLocalNamespace(
 				args.persistTo,
-				config.configPath,
+				config,
 				namespaceId,
 				async (namespace) => {
 					for (const key of keysToDelete) {

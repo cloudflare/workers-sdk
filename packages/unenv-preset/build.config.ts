@@ -4,16 +4,10 @@ export default defineBuildConfig({
 	declaration: true,
 	rollup: {
 		emitCJS: true,
+		cjsBridge: true,
 	},
 	entries: [
 		"src/index",
 		{ input: "src/runtime/", outDir: "dist/runtime", format: "esm" },
-		{
-			input: "src/runtime/",
-			outDir: "dist/runtime",
-			format: "cjs",
-			ext: "cjs",
-			declaration: false,
-		},
 	],
 });

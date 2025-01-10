@@ -197,8 +197,6 @@ describe("metrics", () => {
 				args: {
 					xJsonConfig: true,
 					j: true,
-					xVersions: true,
-					xGradualRollouts: true,
 					search: ["<REDACTED>"],
 				},
 			};

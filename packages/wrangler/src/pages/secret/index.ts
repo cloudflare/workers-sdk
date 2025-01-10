@@ -1,5 +1,3 @@
-import path from "node:path";
-import readline from "node:readline";
 import chalk from "chalk";
 import { fetchResult } from "../../cfetch";
 import { configFileName, readPagesConfig } from "../../config";
@@ -11,7 +9,7 @@ import { printWranglerBanner } from "../../index";
 import isInteractive from "../../is-interactive";
 import { logger } from "../../logger";
 import * as metrics from "../../metrics";
-import { parseJSON, readFileSync } from "../../parse";
+import { parseBulkInputToObject } from "../../secret";
 import { requireAuth } from "../../user";
 import { readFromStdin, trimTrailingWhitespace } from "../../utils/std";
 import { PAGES_CONFIG_CACHE_FILENAME } from "../constants";
@@ -42,7 +40,7 @@ async function pagesProject(
 		);
 	}
 	let config: Config | undefined;
-	const configPath = findWranglerConfig(process.cwd());
+	const { configPath } = findWranglerConfig(process.cwd());
 
 	try {
 		/*
@@ -172,7 +170,7 @@ export const secret = (secretYargs: CommonYargsArgv, subHelp: SubHelp) => {
 			(yargs) => {
 				return yargs
 					.positional("json", {
-						describe: `The JSON file of key-value pairs to upload, in form {"key": value, ...}`,
+						describe: `The file of key-value pairs to upload, as JSON in form {"key": value, ...} or .dev.vars file in the form KEY=VALUE`,
 						type: "string",
 					})
 					.option("project-name", {
@@ -191,33 +189,10 @@ export const secret = (secretYargs: CommonYargsArgv, subHelp: SubHelp) => {
 				logger.log(
 					`🌀 Creating the secrets for the Pages project "${project.name}" (${env})`
 				);
-
-				let content: Record<string, string>;
-				if (args.json) {
-					const jsonFilePath = path.resolve(args.json);
-					content = parseJSON<Record<string, string>>(
-						readFileSync(jsonFilePath),
-						jsonFilePath
-					);
-				} else {
-					try {
-						const rl = readline.createInterface({ input: process.stdin });
-						let pipedInput = "";
-						for await (const line of rl) {
-							pipedInput += line;
-						}
-						content = parseJSON<Record<string, string>>(pipedInput);
-					} catch {
-						throw new FatalError(
-							`🚨 Please provide a JSON file or valid JSON pipe`
-						);
-					}
-				}
+				const content = await parseBulkInputToObject(args.json);
 
 				if (!content) {
-					throw new FatalError(
-						`🚨 No content found in JSON file or piped input.`
-					);
+					throw new FatalError(`🚨 No content found in file or piped input.`);
 				}
 
 				const upsertBindings = Object.fromEntries(
