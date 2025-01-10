@@ -1,15 +1,17 @@
+import assert from "node:assert";
 import chalk from "chalk";
 import { fetchResult } from "../cfetch";
 import { createD1Database } from "../d1/create";
 import { listDatabases } from "../d1/list";
-import { prompt, select } from "../dialogs";
-import { FatalError, UserError } from "../errors";
+import { confirm, prompt, select } from "../dialogs";
+import { UserError } from "../errors";
 import { createKVNamespace, listKVNamespaces } from "../kv/helpers";
 import { logger } from "../logger";
 import { createR2Bucket, listR2Buckets } from "../r2/helpers";
 import { isLegacyEnv } from "../utils/isLegacyEnv";
 import { printBindings } from "../utils/print-bindings";
 import type { Config } from "../config";
+import type { R2BucketInfo } from "../r2/helpers";
 import type { WorkerMetadataBinding } from "./create-worker-upload-form";
 import type {
 	CfD1Database,
@@ -76,6 +78,8 @@ export type Settings = {
 };
 
 type PendingResourceOperations = {
+	// name may be provided in config without the resource having been provisioned
+	name?: string | undefined;
 	create: (name: string) => Promise<string>;
 	updateId: (id: string) => void;
 };
@@ -113,7 +117,6 @@ export async function provisionBindings(
 					binding: kv.binding,
 					async create(title) {
 						const id = await createKVNamespace(accountId, title);
-						kv.id = id;
 						return id;
 					},
 					updateId(id) {
@@ -124,23 +127,38 @@ export async function provisionBindings(
 		}
 	}
 
+	let preExistingR2: R2BucketInfo[] | undefined;
 	for (const r2 of bindings.r2_buckets ?? []) {
-		if (!r2.bucket_name) {
-			if (inBindingSettings(settings, "r2_bucket", r2.binding)) {
-				r2.bucket_name = INHERIT_SYMBOL;
-			} else {
-				pendingResources.r2_buckets?.push({
-					binding: r2.binding,
-					async create(bucketName) {
-						await createR2Bucket(accountId, bucketName);
-						r2.bucket_name = bucketName;
-						return bucketName;
-					},
-					updateId(bucketName) {
-						r2.bucket_name = bucketName;
-					},
-				});
+		assert(typeof r2.bucket_name !== "symbol");
+		if (inBindingSettings(settings, "r2_bucket", r2.binding, r2.bucket_name)) {
+			// does not inherit if the bucket name has changed
+			r2.bucket_name = INHERIT_SYMBOL;
+		} else {
+			if (r2.bucket_name) {
+				preExistingR2 ??= await listR2Buckets(accountId);
+				if (preExistingR2.find((b) => b.name === r2.bucket_name)) {
+					// don't provision, just add it (maintains current behaviour)
+					continue;
+				}
 			}
+			// provision if no bucket name, or bucket name doesn't correspond to a pre-existing bucket
+			pendingResources.r2_buckets?.push({
+				binding: r2.binding,
+				name: r2.bucket_name,
+				async create(bucketName) {
+					await createR2Bucket(
+						accountId,
+						bucketName,
+						undefined,
+						// respect jurisdiction if it has been specified in the config, but don't prompt
+						r2.jurisdiction
+					);
+					return bucketName;
+				},
+				updateId(bucketName) {
+					r2.bucket_name = bucketName;
+				},
+			});
 		}
 	}
 
@@ -151,9 +169,9 @@ export async function provisionBindings(
 			} else {
 				pendingResources.d1_databases?.push({
 					binding: d1.binding,
+					name: d1.database_name,
 					async create(name) {
 						const db = await createD1Database(accountId, name);
-						d1.database_id = db.uuid;
 						return db.uuid;
 					},
 					updateId(id) {
@@ -198,7 +216,7 @@ export async function provisionBindings(
 			);
 		}
 		if (pendingResources.r2_buckets?.length) {
-			const preExisting = await listR2Buckets(accountId);
+			const preExisting = preExistingR2 ?? (await listR2Buckets(accountId));
 			await runProvisioningFlow(
 				pendingResources.r2_buckets,
 				preExisting.map((bucket) => ({
@@ -219,11 +237,19 @@ export async function provisionBindings(
 function inBindingSettings<Type extends WorkerMetadataBinding["type"]>(
 	settings: Settings | undefined,
 	type: Type,
-	bindingName: string
+	bindingName: string,
+	bucket_name?: string | undefined
 ): Extract<WorkerMetadataBinding, { type: Type }> | undefined {
 	return settings?.bindings.find(
-		(binding): binding is Extract<WorkerMetadataBinding, { type: Type }> =>
-			binding.type === type && binding.name === bindingName
+		(binding): binding is Extract<WorkerMetadataBinding, { type: Type }> => {
+			return (
+				binding.type === type &&
+				binding.name === bindingName &&
+				(binding.type === "r2_bucket" && bucket_name
+					? binding.bucket_name === bucket_name
+					: true)
+			);
+		}
 	);
 }
 
@@ -258,6 +284,7 @@ async function runProvisioningFlow(
 	const SEARCH_OPTION_VALUE = "__WRANGLER_INTERNAL_SEARCH";
 	const MAX_OPTIONS = 4;
 	if (pending.length) {
+		// NB preExisting does not actually contain all resources on the account - we max out at ~100
 		const options = preExisting.slice(0, MAX_OPTIONS - 1);
 		if (options.length < preExisting.length) {
 			options.push({
@@ -268,67 +295,90 @@ async function runProvisioningFlow(
 
 		for (const item of pending) {
 			logger.log("Provisioning", item.binding, `(${friendlyBindingName})...`);
-			let name: string = "";
+			let name = item.name;
 			let selected: string;
 
-			if (options.length === 0 || autoCreate) {
-				selected = NEW_OPTION_VALUE;
-			} else {
-				selected = await select(
-					`Would you like to connect an existing ${friendlyBindingName} or create a new one?`,
-					{
-						choices: options.concat([{ title: "Create new", value: "new" }]),
-						defaultOption: options.length,
-					}
-				);
-			}
-
-			if (selected === NEW_OPTION_VALUE) {
-				const defaultValue = `${scriptName}-${item.binding.toLowerCase().replace("_", "-")}`;
-				name = autoCreate
-					? defaultValue
-					: await prompt(`Enter a name for your new ${friendlyBindingName}`, {
-							defaultValue,
-						});
-				logger.log(`🌀 Creating new ${friendlyBindingName} "${name}"...`);
-				// creates new resource and mutates `bindings` to update id
-				await item.create(name);
-			} else if (selected === SEARCH_OPTION_VALUE) {
-				let searchedResource: NormalisedResourceInfo | undefined;
-				while (searchedResource === undefined) {
-					const input = await prompt(
-						`Enter the ${resourceKeyDescriptor} for an existing ${friendlyBindingName}`
-					);
-					searchedResource = preExisting.find((r) => {
-						if (r.title === input || r.value === input) {
-							name = r.title;
-							item.updateId(r.value);
-							return true;
-						} else {
-							return false;
-						}
-					});
-					if (!searchedResource) {
-						logger.log(
-							`No ${friendlyBindingName} with that ${resourceKeyDescriptor} "${input}" found. Please try again.`
+			if (name) {
+				logger.log("Resource name found in config:", name);
+				const foundResourceId = preExisting.find(
+					(r) => r.title === name
+				)?.value;
+				if (foundResourceId) {
+					const proceed = autoCreate
+						? true
+						: await confirm(
+								`Would you like to connect to the existing ${friendlyBindingName} named "${name}"?`
+							);
+					if (!proceed) {
+						throw new UserError(
+							"Resource provisioning cancelled. If you want to connect a different or new resource, please specifiy a unique name in your config file."
 						);
 					}
+					item.updateId(foundResourceId);
+				} else {
+					logger.log("No pre-existing resource found with that name");
+					const proceed = autoCreate
+						? true
+						: await confirm(
+								`Would you like to create a new ${friendlyBindingName} named "${name}"?`
+							);
+					if (!proceed) {
+						throw new UserError("Resource provisioning cancelled.");
+					}
+					logger.log(`🌀 Creating new ${friendlyBindingName} "${name}"...`);
+					const id = await item.create(name);
+					item.updateId(id);
 				}
 			} else {
-				const selectedResource = preExisting.find((r) => {
-					if (r.value === selected) {
-						name = r.title;
-						item.updateId(selected);
-						return true;
-					} else {
-						return false;
-					}
-				});
-				// we shouldn't get here
-				if (!selectedResource) {
-					throw new FatalError(
-						`${friendlyBindingName} with id ${selected} not found`
+				if (options.length === 0 || autoCreate) {
+					selected = NEW_OPTION_VALUE;
+				} else {
+					selected = await select(
+						`Would you like to connect an existing ${friendlyBindingName} or create a new one?`,
+						{
+							choices: options.concat([{ title: "Create new", value: "new" }]),
+							defaultOption: options.length,
+						}
 					);
+				}
+				if (selected === NEW_OPTION_VALUE) {
+					const defaultValue = `${scriptName}-${item.binding.toLowerCase().replace("_", "-")}`;
+					name = autoCreate
+						? defaultValue
+						: await prompt(`Enter a name for your new ${friendlyBindingName}`, {
+								defaultValue,
+							});
+					logger.log(`🌀 Creating new ${friendlyBindingName} "${name}"...`);
+					const id = await item.create(name);
+					item.updateId(id);
+				} else if (selected === SEARCH_OPTION_VALUE) {
+					// search through pre-existing resources that weren't listed
+					let foundResource: NormalisedResourceInfo | undefined;
+					while (foundResource === undefined) {
+						const input = await prompt(
+							`Enter the ${resourceKeyDescriptor} for an existing ${friendlyBindingName}`
+						);
+						foundResource = preExisting.find(
+							(r) => r.title === input || r.value === input
+						);
+						if (foundResource) {
+							name = foundResource.title;
+							item.updateId(foundResource.value);
+						} else {
+							logger.log(
+								`No ${friendlyBindingName} with that ${resourceKeyDescriptor} "${input}" found. Please try again.`
+							);
+						}
+					}
+				} else {
+					// directly select a listed, pre-existing resource
+					const selectedResource = preExisting.find(
+						(r) => r.value === selected
+					);
+					if (selectedResource) {
+						name = selectedResource.title;
+						item.updateId(selected);
+					}
 				}
 			}
 

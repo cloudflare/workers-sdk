@@ -56,7 +56,7 @@ export const listDatabases = async (
 		);
 		page++;
 		results.push(...json);
-		if (limitCalls) {
+		if (limitCalls && page > 3) {
 			break;
 		}
 		if (json.length < pageSize) {
