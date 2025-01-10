@@ -41,7 +41,7 @@
 	"devDependencies": {
 		"@cloudflare/eslint-config-worker": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
-		"@cloudflare/workers-types": "^4.20241230.0",
+		"@cloudflare/workers-types": "^4.20250109.0",
 		"@types/mime": "^3.0.4",
 		"esbuild": "0.17.19",
 		"rimraf": "catalog:default",

@@ -50,7 +50,7 @@
 		"@cloudflare/eslint-config-worker": "workspace:*",
 		"@cloudflare/vitest-pool-workers": "^0.5.31",
 		"@cloudflare/workers-tsconfig": "workspace:*",
-		"@cloudflare/workers-types": "^4.20241230.0",
+		"@cloudflare/workers-types": "^4.20250109.0",
 		"@types/mime": "^3.0.4",
 		"concurrently": "^8.2.2",
 		"esbuild": "0.17.19",
