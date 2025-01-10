@@ -113,7 +113,7 @@ describe("update wrangler config", () => {
 			  "compatibility_date": "2024-01-17",
 			  "observability": {
 			    "enabled": true
-			  },
+			  }
 			  /**
 			   * Smart Placement
 			   * Docs: https://developers.cloudflare.com/workers/configuration/smart-placement/#smart-placement
