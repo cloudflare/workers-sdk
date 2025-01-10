@@ -15,5 +15,7 @@ When Wrangler sees the path rather than the name it will recursively load that c
 
 ## Give it a go
 
-- build Wrangler: `pnpm turbo build -F wrangler`
-- run this fixture `pnpm turbo dev -F multiworker`
+- build Wrangler (from the root of the workers-sdk repo): `pnpm build -F wrangler`
+- change directory to this fixture: `cd fixtures/multiworker`
+- run the Workers locally `pnpm run dev` or `pnpm wrangler dev -c worker-a/wrangler.toml`
+- deploy the Workers `pnpm run deploy` or `pnpm wrangler deploy -c worker-a/wrangler.toml`
