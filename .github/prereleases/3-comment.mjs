@@ -47,13 +47,25 @@ function buildAdditionalArtifactReport(pkg) {
 	const name = pkg.json.name;
 	const type = pkg.json["workers-sdk"].type;
 	const url = getPrereleaseArtifactUrl(name);
-	if (type === "cli") {
-		return `\`\`\`sh\nnpx ${url} --no-auto-update\n\`\`\``;
-	} else if (type === "extension") {
-		return `\`\`\`sh\nwget ${url} -O ./${name}.${pkg.json.version}.vsix && code --install-extension ./${name}.${pkg.json.version}.vsix\n\`\`\``;
-	} else {
-		return `\`\`\`sh\nnpm install ${url}\n\`\`\``;
+	let command;
+
+	switch (type) {
+		case "cli":
+			command = `npx ${url} --no-auto-update`;
+			break;
+		case "extension":
+			command = `wget ${url} -O ./${name}.${pkg.json.version}.vsix && code --install-extension ./${name}.${pkg.json.version}.vsix`;
+			break;
+		default:
+			command = `npm install ${url}`;
 	}
+
+	return `
+${name}:
+\`\`\`sh
+${command}
+\`\`\`
+`;
 }
 
 /**
