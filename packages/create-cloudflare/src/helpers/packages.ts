@@ -89,12 +89,8 @@ export async function getLatestPackageVersion(packageSpecifier: string) {
 export const installWrangler = async () => {
 	const { npm } = detectPackageManager();
 
-	// Exit early if already installed
-	if (existsSync(path.resolve("node_modules", "wrangler"))) {
-		return;
-	}
-
-	await installPackages([`wrangler`], {
+	// Even if Wrangler is already installed, make sure we install the latest version, as some framework CLIs are pinned to an older version
+	await installPackages([`wrangler@latest`], {
 		dev: true,
 		startText: `Installing wrangler ${dim(
 			"A command line tool for building Cloudflare Workers",
