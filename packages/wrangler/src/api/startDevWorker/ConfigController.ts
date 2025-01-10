@@ -227,6 +227,14 @@ async function resolveConfig(
 	config: Config,
 	input: StartDevWorkerInput
 ): Promise<StartDevWorkerOptions> {
+	if (
+		config.pages_build_output_dir &&
+		input.dev?.multiworkerPrimary === false
+	) {
+		throw new UserError(
+			`You cannot use a Pages project as a service binding target`
+		);
+	}
 	const legacySite = unwrapHook(input.legacy?.site, config);
 
 	const legacyAssets = unwrapHook(input.legacy?.legacyAssets, config);

@@ -193,12 +193,24 @@ export class ProxyController extends Controller<ProxyControllerEventMap> {
 			void Promise.all([
 				proxyWorker.ready,
 				proxyWorker.unsafeGetDirectURL("InspectorProxyWorker"),
-				this.reconnectInspectorProxyWorker(),
 			])
+				.then(([url, inspectorUrl]) => {
+					// Don't connect the inspector proxy worker until we have a valid ready Miniflare instance.
+					// Otherwise, tearing down the ProxyController immediately after setting it up
+					// will result in proxyWorker.ready throwing, but reconnectInspectorProxyWorker hanging for ever,
+					// preventing teardown
+					return this.reconnectInspectorProxyWorker().then(() => [
+						url,
+						inspectorUrl,
+					]);
+				})
 				.then(([url, inspectorUrl]) => {
 					this.emitReadyEvent(proxyWorker, url, inspectorUrl);
 				})
 				.catch((error) => {
+					if (this._torndown) {
+						return;
+					}
 					this.emitErrorEvent(
 						"Failed to start ProxyWorker or InspectorProxyWorker",
 						error

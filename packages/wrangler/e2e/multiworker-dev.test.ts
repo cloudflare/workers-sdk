@@ -435,5 +435,15 @@ describe("multiworker", () => {
 				{ interval: 1000, timeout: 10_000 }
 			);
 		});
+
+		it("should error if multiple pages configs are provided", async () => {
+			const pages = helper.runLongLived(
+				`wrangler pages dev -c wrangler.toml -c wrangler.toml`,
+				{ cwd: a }
+			);
+			await pages.readUntil(
+				/You cannot use a Pages project as a service binding target/
+			);
+		});
 	});
 });

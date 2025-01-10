@@ -872,8 +872,7 @@ export const Handler = async (args: PagesDevArguments) => {
 
 	const devServer = await run(
 		{
-			// TODO: can we make this work?
-			MULTIWORKER: false,
+			MULTIWORKER: Array.isArray(args.config),
 			RESOURCES_PROVISION: false,
 		},
 		() =>
