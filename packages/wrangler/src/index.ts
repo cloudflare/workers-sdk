@@ -301,7 +301,12 @@ export function createCLIParser(argv: string[]) {
 			requiresArg: true,
 		})
 		.check(
-			demandSingleValue("config", (configArgv) => configArgv["_"][0] === "dev")
+			demandSingleValue(
+				"config",
+				(configArgv) =>
+					configArgv["_"][0] === "dev" ||
+					(configArgv["_"][0] === "pages" && configArgv["_"][1] === "dev")
+			)
 		)
 		.option("env", {
 			alias: "e",

@@ -1,15 +1,17 @@
 import { execSync, spawn } from "node:child_process";
+import events from "node:events";
 import { existsSync, lstatSync, readFileSync } from "node:fs";
-import { dirname, join, normalize, resolve } from "node:path";
+import path, { dirname, join, normalize, resolve } from "node:path";
 import { watch } from "chokidar";
 import * as esbuild from "esbuild";
-import { unstable_dev } from "../api";
 import { configFileName, readConfig } from "../config";
 import { isBuildFailure } from "../deployment-bundle/build-failures";
 import { shouldCheckFetch } from "../deployment-bundle/bundle";
 import { esbuildAliasExternalPlugin } from "../deployment-bundle/esbuild-plugins/alias-external";
 import { validateNodeCompatMode } from "../deployment-bundle/node-compat";
+import { startDev } from "../dev";
 import { FatalError } from "../errors";
+import { run } from "../experimental-flags";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { isNavigatorDefined } from "../navigator-user-agent";
@@ -223,12 +225,6 @@ export function Options(yargs: CommonYargsArgv) {
 				deprecated: true,
 				hidden: true,
 			},
-			config: {
-				describe:
-					"Pages does not support custom paths for the Wrangler configuration file",
-				type: "string",
-				hidden: true,
-			},
 			"log-level": {
 				choices: ["debug", "info", "log", "warn", "error", "none"] as const,
 				describe: "Specify logging level",
@@ -262,7 +258,7 @@ export const Handler = async (args: PagesDevArguments) => {
 		);
 	}
 
-	if (args.config) {
+	if (args.config && !Array.isArray(args.config)) {
 		throw new FatalError(
 			"Pages does not support custom paths for the Wrangler configuration file",
 			1
@@ -285,9 +281,21 @@ export const Handler = async (args: PagesDevArguments) => {
 	// for `dev` we always use the top-level config, which means we need
 	// to read the config file with `env` set to `undefined`
 	const config = readConfig(
-		{ ...args, env: undefined },
+		{ ...args, env: undefined, config: undefined },
 		{ useRedirectIfAvailable: true }
 	);
+
+	if (
+		args.config &&
+		Array.isArray(args.config) &&
+		config.configPath &&
+		path.resolve(process.cwd(), args.config[0]) !== config.configPath
+	) {
+		throw new FatalError(
+			"The first `--config` argument must point to your pages config file: " +
+				path.relative(process.cwd(), config.configPath)
+		);
+	}
 	const resolvedDirectory = args.directory ?? config.pages_build_output_dir;
 	const [_pages, _dev, ...remaining] = args._;
 	const command = remaining;
@@ -525,8 +533,8 @@ export const Handler = async (args: PagesDevArguments) => {
 		try {
 			await runBuild();
 
-			watcher.on("all", async (eventName, path) => {
-				logger.debug(`🌀 "${eventName}" event detected at ${path}.`);
+			watcher.on("all", async (eventName, p) => {
+				logger.debug(`🌀 "${eventName}" event detected at ${p}.`);
 
 				// Skip re-building the Worker if "_worker.js" was deleted.
 				// This is necessary for Pages projects + Frameworks, where
@@ -708,8 +716,8 @@ export const Handler = async (args: PagesDevArguments) => {
 			await buildFn();
 
 			// If Functions found routes, continue using Functions
-			watcher.on("all", async (eventName, path) => {
-				logger.debug(`🌀 "${eventName}" event detected at ${path}.`);
+			watcher.on("all", async (eventName, p) => {
+				logger.debug(`🌀 "${eventName}" event detected at ${p}.`);
 
 				debouncedBuildFn();
 			});
@@ -862,61 +870,102 @@ export const Handler = async (args: PagesDevArguments) => {
 		}
 	}
 
-	const { stop, waitUntilExit } = await unstable_dev(scriptEntrypoint, {
-		env: undefined,
-		ip,
-		port,
-		inspectorPort,
-		localProtocol,
-		httpsKeyPath: args.httpsKeyPath,
-		httpsCertPath: args.httpsCertPath,
-		compatibilityDate,
-		compatibilityFlags,
-		nodeCompat: nodejsCompatMode === "legacy",
-		vars,
-		kv: kv_namespaces,
-		durableObjects: do_bindings,
-		r2: r2_buckets,
-		services,
-		ai,
-		rules: usingWorkerDirectory
-			? [
-					{
-						type: "ESModule",
-						globs: ["**/*.js", "**/*.mjs"],
-					},
-				]
-			: undefined,
-		bundle: enableBundling,
-		persistTo: args.persistTo,
-		inspect: undefined,
-		logLevel: args.logLevel,
-		experimental: {
-			processEntrypoint: true,
-			additionalModules: modules,
-			d1Databases: d1_databases,
-			disableExperimentalWarning: true,
-			enablePagesAssetsServiceBinding: {
-				proxyPort,
-				directory,
-			},
-			liveReload: args.liveReload,
-			forceLocal: true,
-			showInteractiveDevSession: args.showInteractiveDevSession,
-			testMode: false,
-			watch: true,
-			enableIpc: true,
+	const devServer = await run(
+		{
+			// TODO: can we make this work?
+			MULTIWORKER: false,
+			RESOURCES_PROVISION: false,
 		},
-	});
-	metrics.sendMetricsEvent("run pages dev");
+		() =>
+			startDev({
+				script: scriptEntrypoint,
+				_: [],
+				$0: "",
+				remote: false,
+				local: true,
+				experimentalLocal: undefined,
+				d1Databases: d1_databases,
+				testScheduled: false,
+				enablePagesAssetsServiceBinding: {
+					proxyPort,
+					directory,
+				},
+				forceLocal: true,
+				liveReload: args.liveReload,
+				showInteractiveDevSession: args.showInteractiveDevSession,
+				processEntrypoint: true,
+				additionalModules: modules,
+				v: undefined,
+				assets: undefined,
+				name: undefined,
+				noBundle: false,
+				format: undefined,
+				latest: false,
+				routes: undefined,
+				host: undefined,
+				localUpstream: undefined,
+				experimentalPublic: undefined,
+				upstreamProtocol: undefined,
+				var: undefined,
+				define: undefined,
+				alias: undefined,
+				jsxFactory: undefined,
+				jsxFragment: undefined,
+				tsconfig: undefined,
+				minify: undefined,
+				experimentalEnableLocalPersistence: undefined,
+				legacyEnv: undefined,
+				public: undefined,
+				env: undefined,
+				ip,
+				port,
+				inspectorPort,
+				localProtocol,
+				httpsKeyPath: args.httpsKeyPath,
+				httpsCertPath: args.httpsCertPath,
+				compatibilityDate,
+				compatibilityFlags,
+				nodeCompat: nodejsCompatMode === "legacy",
+				vars,
+				kv: kv_namespaces,
+				durableObjects: do_bindings,
+				r2: r2_buckets,
+				services,
+				ai,
+				rules: usingWorkerDirectory
+					? [
+							{
+								type: "ESModule",
+								globs: ["**/*.js", "**/*.mjs"],
+							},
+						]
+					: undefined,
+				bundle: enableBundling,
+				persistTo: args.persistTo,
+				logLevel: args.logLevel ?? "log",
+				experimentalProvision: undefined,
+				experimentalVectorizeBindToProd: false,
+				enableIpc: true,
+				config: Array.isArray(args.config) ? args.config : undefined,
+				legacyAssets: undefined,
+				site: undefined,
+				siteInclude: undefined,
+				siteExclude: undefined,
+				inspect: undefined,
+			})
+	);
 
-	CLEANUP_CALLBACKS.push(stop);
+	metrics.sendMetricsEvent("run pages dev");
 
 	process.on("exit", CLEANUP);
 	process.on("SIGINT", CLEANUP);
 	process.on("SIGTERM", CLEANUP);
 
-	await waitUntilExit();
+	await events.once(devServer.devEnv, "teardown");
+	const teardownRegistry = await devServer.teardownRegistryPromise;
+	await teardownRegistry?.(devServer.devEnv.config.latestConfig?.name);
+
+	devServer.unregisterHotKeys?.();
 	CLEANUP();
 	process.exit(0);
 };
