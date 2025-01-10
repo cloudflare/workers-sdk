@@ -203,8 +203,11 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 
 		this.#customBuildWatcher = watch(pathsToWatch, {
 			persistent: true,
-			// TODO: add comments re this ans ready
+			// The initial custom build is always done in getEntry()
 			ignoreInitial: true,
+		});
+		this.#customBuildWatcher.on("ready", () => {
+			void this.#runCustomBuild(config, String(pathsToWatch));
 		});
 
 		this.#customBuildWatcher.on(
