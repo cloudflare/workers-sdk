@@ -24,18 +24,19 @@
 	"type": "module",
 	"exports": {
 		".": {
-			"types": "./dist/src/index.d.ts",
-			"import": "./dist/src/index.mjs"
+			"types": "./dist/index.d.ts",
+			"require": "./dist/index.cjs",
+			"import": "./dist/index.mjs"
 		},
 		"./runtime/*": {
-			"types": "./dist/src/runtime/*.d.ts",
-			"import": "./dist/src/runtime/*.mjs"
+			"types": "./dist/runtime/*.d.ts",
+			"import": "./dist/runtime/*.mjs"
 		}
 	},
-	"main": "./dist/src/index.mjs",
-	"types": "./dist/src/index.d.ts",
+	"main": "./dist/index.cjs",
+	"types": "./dist/index.d.ts",
 	"files": [
-		"dist/src"
+		"dist"
 	],
 	"scripts": {
 		"build": "unbuild",

@@ -1,7 +1,13 @@
 import { defineBuildConfig } from "unbuild";
 
 export default defineBuildConfig({
+	declaration: true,
+	rollup: {
+		emitCJS: true,
+		cjsBridge: true,
+	},
 	entries: [
-		{ input: "src/", outDir: "dist/src", format: "esm", declaration: true },
+		"src/index",
+		{ input: "src/runtime/", outDir: "dist/runtime", format: "esm" },
 	],
 });
