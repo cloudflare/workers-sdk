@@ -46,7 +46,6 @@
 		"jsonc-parser": "^3.2.0",
 		"prettier": "^3.2.5",
 		"prettier-plugin-packagejson": "^2.2.18",
-		"rimraf": "^5.0.1",
 		"tree-kill": "^1.2.2",
 		"turbo": "^2.2.3",
 		"typescript": "catalog:default",
