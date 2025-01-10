@@ -250,6 +250,20 @@ async function handleRawHttp(request: Request, url: URL) {
 		Vary: "Origin",
 	});
 
+	// Pass the raw content type back so that clients can decode the body correctly
+	const contentType = responseHeaders.get("Content-Type");
+	if (contentType) {
+		rawHeaders.set("Content-Type", contentType);
+	}
+	const contentEncoding = responseHeaders.get("Content-Encoding");
+	if (contentEncoding) {
+		rawHeaders.set("Content-Encoding", contentEncoding);
+	}
+	const transferEncoding = responseHeaders.get("Transfer-Encoding");
+	if (transferEncoding) {
+		rawHeaders.set("Transfer-Encoding", transferEncoding);
+	}
+
 	// The client needs the raw headers from the worker
 	// Prefix them with `cf-ew-raw-`, so that response headers from _this_ worker don't interfere
 	const setCookieHeader = responseHeaders.getSetCookie();
