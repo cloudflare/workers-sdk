@@ -1,5 +1,5 @@
 import { join } from "path";
-import { readToml } from "helpers/files";
+import { readJSON, readToml } from "helpers/files";
 import { detectPackageManager } from "helpers/packageManagers";
 import { retry } from "helpers/retry";
 import { sleep } from "helpers/sleep";
@@ -147,10 +147,17 @@ describe
 							expect(wranglerPath).toExist();
 
 							const tomlPath = join(project.path, "wrangler.toml");
-							expect(tomlPath).toExist();
+							const jsonPath = join(project.path, "wrangler.json");
 
-							const config = readToml(tomlPath) as { main: string };
-							expect(join(project.path, config.main)).toExist();
+							try {
+								expect(jsonPath).toExist();
+								const config = readJSON(jsonPath) as { main: string };
+								expect(join(project.path, config.main)).toExist();
+							} catch {
+								expect(tomlPath).toExist();
+								const config = readToml(tomlPath) as { main: string };
+								expect(join(project.path, config.main)).toExist();
+							}
 
 							const { verifyDeploy } = testConfig;
 							if (verifyDeploy) {

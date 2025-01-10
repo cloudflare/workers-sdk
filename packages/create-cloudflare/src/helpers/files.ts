@@ -1,6 +1,7 @@
 import fs, { existsSync, statSync } from "fs";
 import { join } from "path";
 import TOML from "@iarna/toml";
+import { parse } from "jsonc-parser";
 import type { JsonMap } from "@iarna/toml";
 import type { C3Context } from "types";
 
@@ -58,7 +59,7 @@ export const directoryExists = (path: string): boolean => {
 
 export const readJSON = (path: string) => {
 	const contents = readFile(path);
-	return contents ? JSON.parse(contents) : contents;
+	return contents ? parse(contents) : contents;
 };
 
 export const readToml = (path: string) => {

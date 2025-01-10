@@ -55,7 +55,7 @@ export const updateWranglerConfig = async (ctx: C3Context) => {
 		writeWranglerJson(
 			ctx,
 			stringified.slice(0, -2) +
-				`,
+				`
   /**
    * Smart Placement
    * Docs: https://developers.cloudflare.com/workers/configuration/smart-placement/#smart-placement
