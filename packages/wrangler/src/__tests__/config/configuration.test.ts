@@ -2539,7 +2539,6 @@ describe("normalizeAndValidateConfig()", () => {
 				const { diagnostics } = run(
 					{
 						RESOURCES_PROVISION: true,
-						FILE_BASED_REGISTRY: false,
 						MULTIWORKER: false,
 					},
 					() =>
@@ -2695,7 +2694,6 @@ describe("normalizeAndValidateConfig()", () => {
 				const { diagnostics } = run(
 					{
 						RESOURCES_PROVISION: true,
-						FILE_BASED_REGISTRY: false,
 						MULTIWORKER: false,
 					},
 					() =>
@@ -3025,7 +3023,6 @@ describe("normalizeAndValidateConfig()", () => {
 				const { diagnostics } = run(
 					{
 						RESOURCES_PROVISION: true,
-						FILE_BASED_REGISTRY: false,
 						MULTIWORKER: false,
 					},
 					() =>
