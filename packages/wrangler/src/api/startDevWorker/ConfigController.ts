@@ -232,7 +232,7 @@ async function resolveConfig(
 		input.dev?.multiworkerPrimary === false
 	) {
 		throw new UserError(
-			`You cannot use a Pages project as a service binding target`
+			`You cannot use a Pages project as a service binding target.\nIf you are trying to develop Pages and Workers together, please use \`wrangler pages dev\`. Note the first config file specified must be for the Pages project`
 		);
 	}
 	const legacySite = unwrapHook(input.legacy?.site, config);
