@@ -1,14 +1,6 @@
 import assert from "node:assert";
 import path from "node:path";
 import { watch } from "chokidar";
-import {
-	DEFAULT_INSPECTOR_PORT,
-	DEFAULT_LOCAL_PORT,
-	getDevCompatibilityDate,
-	getRules,
-	getScriptName,
-	isLegacyEnv,
-} from "../..";
 import { getAssetsOptions, validateAssetsArgsAndConfig } from "../../assets";
 import { readConfig } from "../../config";
 import { getEntry } from "../../deployment-bundle/entry";
@@ -23,6 +15,14 @@ import { getLocalPersistencePath } from "../../dev/get-local-persistence-path";
 import { UserError } from "../../errors";
 import { logger } from "../../logger";
 import { requireApiToken, requireAuth } from "../../user";
+import {
+	DEFAULT_INSPECTOR_PORT,
+	DEFAULT_LOCAL_PORT,
+} from "../../utils/constants";
+import { getDevCompatibilityDate } from "../../utils/getDevCompatibilityDate";
+import { getRules } from "../../utils/getRules";
+import { getScriptName } from "../../utils/getScriptName";
+import { isLegacyEnv } from "../../utils/isLegacyEnv";
 import { memoizeGetPort } from "../../utils/memoizeGetPort";
 import { printBindings } from "../../utils/print-bindings";
 import { getZoneIdForPreview } from "../../zones";

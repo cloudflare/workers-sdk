@@ -1,8 +1,8 @@
-import { printWranglerBanner } from "..";
 import { fetchGraphqlResult } from "../cfetch";
 import { withConfig } from "../config";
 import { logger } from "../logger";
 import { requireAuth } from "../user";
+import { printWranglerBanner } from "../wrangler-banner";
 import { getDatabaseByNameOrBinding, getDatabaseInfoFromId } from "./utils";
 import type {
 	CommonYargsArgv,

@@ -1,8 +1,10 @@
 import { getAssetsOptions } from "../assets";
 import { readConfig } from "../config";
-import { getScriptName, isLegacyEnv, printWranglerBanner } from "../index";
 import * as metrics from "../metrics";
 import { requireAuth } from "../user";
+import { getScriptName } from "../utils/getScriptName";
+import { isLegacyEnv } from "../utils/isLegacyEnv";
+import { printWranglerBanner } from "../wrangler-banner";
 import triggersDeploy from "./deploy";
 import type {
 	CommonYargsArgv,

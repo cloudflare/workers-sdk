@@ -7,7 +7,8 @@ import { deleteKVNamespace, listKVNamespaces } from "./kv/helpers";
 import { logger } from "./logger";
 import * as metrics from "./metrics";
 import { requireAuth } from "./user";
-import { getScriptName, printWranglerBanner } from "./index";
+import { getScriptName } from "./utils/getScriptName";
+import { printWranglerBanner } from "./wrangler-banner";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,

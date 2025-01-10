@@ -22,7 +22,7 @@ import { getBasePath } from "./paths";
 import { requireAuth } from "./user";
 import { createBatches } from "./utils/create-batches";
 import * as shellquote from "./utils/shell-quote";
-import { printWranglerBanner } from "./index";
+import { printWranglerBanner } from "./wrangler-banner";
 import type { RawConfig } from "./config";
 import type {
 	CustomDomainRoute,

@@ -1,9 +1,9 @@
 import fs from "node:fs";
 import path from "path";
-import { printWranglerBanner } from "../..";
 import { configFileName, withConfig } from "../../config";
 import { UserError } from "../../errors";
 import { logger } from "../../logger";
+import { printWranglerBanner } from "../../wrangler-banner";
 import { DEFAULT_MIGRATION_PATH } from "../constants";
 import { Database } from "../options";
 import { getDatabaseInfoFromConfig } from "../utils";

@@ -1,9 +1,9 @@
-import { printWranglerBanner } from "..";
 import { fetchResult } from "../cfetch";
 import { withConfig } from "../config";
 import { confirm } from "../dialogs";
 import { logger } from "../logger";
 import { requireAuth } from "../user";
+import { printWranglerBanner } from "../wrangler-banner";
 import { Name } from "./options";
 import { getDatabaseByNameOrBinding } from "./utils";
 import type {

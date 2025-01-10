@@ -1,13 +1,13 @@
 import assert from "node:assert";
 import fs from "node:fs";
 import path from "path";
-import { printWranglerBanner } from "../..";
 import { configFileName, withConfig } from "../../config";
 import { confirm } from "../../dialogs";
 import { UserError } from "../../errors";
 import { isNonInteractiveOrCI } from "../../is-interactive";
 import { logger } from "../../logger";
 import { requireAuth } from "../../user";
+import { printWranglerBanner } from "../../wrangler-banner";
 import { createBackup } from "../backups";
 import { DEFAULT_MIGRATION_PATH, DEFAULT_MIGRATION_TABLE } from "../constants";
 import { executeSql } from "../execute";

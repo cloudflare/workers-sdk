@@ -1,10 +1,10 @@
 import TOML from "@iarna/toml";
-import { printWranglerBanner } from "..";
 import { fetchResult } from "../cfetch";
 import { withConfig } from "../config";
 import { UserError } from "../errors";
 import { logger } from "../logger";
 import { requireAuth } from "../user";
+import { printWranglerBanner } from "../wrangler-banner";
 import { LOCATION_CHOICES } from "./constants";
 import type {
 	CommonYargsArgv,

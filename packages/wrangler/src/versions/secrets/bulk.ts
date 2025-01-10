@@ -2,10 +2,10 @@ import { fetchResult } from "../../cfetch";
 import { configFileName } from "../../config";
 import { createCommand } from "../../core/create-command";
 import { UserError } from "../../errors";
-import { getLegacyScriptName } from "../../index";
 import { logger } from "../../logger";
 import { parseBulkInputToObject } from "../../secret";
 import { requireAuth } from "../../user";
+import { getLegacyScriptName } from "../../utils/getLegacyScriptName";
 import { copyWorkerVersionWithNewSecrets } from "./index";
 import type { WorkerVersion } from "./index";
 

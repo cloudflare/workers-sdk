@@ -4,11 +4,11 @@ import { execa } from "execa";
 import { getC3CommandFromEnv } from "../environment-variables/misc-variables";
 import { CommandLineArgsError, UserError } from "../errors";
 import { cloneIntoDirectory, initializeGit } from "../git-client";
-import { printWranglerBanner } from "../index";
 import { initHandler } from "../init";
 import { logger } from "../logger";
 import { getPackageManager } from "../package-manager";
 import * as shellquote from "../utils/shell-quote";
+import { printWranglerBanner } from "../wrangler-banner";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,

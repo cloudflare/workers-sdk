@@ -1,12 +1,12 @@
 import { HeadBucketCommand, S3Client } from "@aws-sdk/client-s3";
 import { readConfig } from "../config";
 import { FatalError, UserError } from "../errors";
-import { printWranglerBanner } from "../index";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { APIError } from "../parse";
 import { requireAuth } from "../user";
 import { retryOnError } from "../utils/retry";
+import { printWranglerBanner } from "../wrangler-banner";
 import {
 	createPipeline,
 	deletePipeline,
