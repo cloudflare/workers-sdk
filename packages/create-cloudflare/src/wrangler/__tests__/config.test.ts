@@ -131,9 +131,7 @@ describe("update wrangler config", () => {
 			   * Environment Variables
 			   * https://developers.cloudflare.com/workers/wrangler/configuration/#environment-variables
 			   */
-			  // "vars": {
-			  //   "MY_VARIABLE": "production_value"
-			  // },
+			  // "vars": { "MY_VARIABLE": "production_value" },
 			  /**
 			   * Note: Use secrets to store sensitive data.
 			   * https://developers.cloudflare.com/workers/configuration/secrets/
@@ -143,19 +141,13 @@ describe("update wrangler config", () => {
 			   * Static Assets
 			   * https://developers.cloudflare.com/workers/static-assets/binding/
 			   */
-			  // "assets": {
-			  //   "directory": "./public/",
-			  //   "binding": "ASSETS"
-			  // },
+			  // "assets": { "directory": "./public/", "binding": "ASSETS" },
 
 			  /**
 			   * Service Bindings (communicate between multiple Workers)
 			   * https://developers.cloudflare.com/workers/wrangler/configuration/#service-bindings
 			   */
-			  // "services": [{
-			  //   "binding": "MY_SERVICE",
-			  //   "service": "my-service"
-			  // }]
+			  // "services": [{ "binding": "MY_SERVICE", "service": "my-service" }]
 			}
 			"
 		`);

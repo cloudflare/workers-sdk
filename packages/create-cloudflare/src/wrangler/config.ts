@@ -37,7 +37,9 @@ async function ensureCompatDateExists(
 export const updateWranglerConfig = async (ctx: C3Context) => {
 	if (wranglerJsonExists(ctx)) {
 		const wranglerJsonStr = readWranglerJson(ctx);
-		const parsed = jsoncParse(wranglerJsonStr);
+		const parsed = jsoncParse(wranglerJsonStr, undefined, {
+			allowTrailingComma: true,
+		});
 
 		const modified = await ensureCompatDateExists(
 			ensureNameExists(parsed, ctx.project.name),
@@ -71,9 +73,7 @@ export const updateWranglerConfig = async (ctx: C3Context) => {
    * Environment Variables
    * https://developers.cloudflare.com/workers/wrangler/configuration/#environment-variables
    */
-  // "vars": {
-  //   "MY_VARIABLE": "production_value"
-  // },
+  // "vars": { "MY_VARIABLE": "production_value" },
   /**
    * Note: Use secrets to store sensitive data.
    * https://developers.cloudflare.com/workers/configuration/secrets/
@@ -83,19 +83,13 @@ export const updateWranglerConfig = async (ctx: C3Context) => {
    * Static Assets
    * https://developers.cloudflare.com/workers/static-assets/binding/
    */
-  // "assets": {
-  //   "directory": "./public/",
-  //   "binding": "ASSETS"
-  // },
+  // "assets": { "directory": "./public/", "binding": "ASSETS" },
 
   /**
    * Service Bindings (communicate between multiple Workers)
    * https://developers.cloudflare.com/workers/wrangler/configuration/#service-bindings
    */
-  // "services": [{
-  //   "binding": "MY_SERVICE",
-  //   "service": "my-service"
-  // }]
+  // "services": [{ "binding": "MY_SERVICE", "service": "my-service" }]
 }
 `,
 		);

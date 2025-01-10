@@ -179,7 +179,7 @@ export function parseJSON<T>(input: string, file?: string): T {
  */
 export function parseJSONC<T>(input: string, file?: string): T {
 	const errors: JsoncParseError[] = [];
-	const data = jsoncParse(input, errors);
+	const data = jsoncParse(input, errors, { allowTrailingComma: true });
 	if (errors.length) {
 		throw new ParseError({
 			text: printParseErrorCode(errors[0].error),
