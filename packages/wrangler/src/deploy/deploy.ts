@@ -28,6 +28,7 @@ import { loadSourceMaps } from "../deployment-bundle/source-maps";
 import { confirm } from "../dialogs";
 import { getMigrationsToUpload } from "../durable";
 import { UserError } from "../errors";
+import { getFlag } from "../experimental-flags";
 import { logger } from "../logger";
 import { getMetricsUsageHeaders } from "../metrics";
 import { isNavigatorDefined } from "../navigator-user-agent";
@@ -799,13 +800,15 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		} else {
 			assert(accountId, "Missing accountId");
 
-			await provisionBindings(
-				bindings,
-				accountId,
-				scriptName,
-				props.experimentalAutoCreate,
-				props.config
-			);
+			getFlag("RESOURCES_PROVISION")
+				? await provisionBindings(
+						bindings,
+						accountId,
+						scriptName,
+						props.experimentalAutoCreate,
+						props.config
+					)
+				: null;
 			await ensureQueuesExistByConfig(config);
 			let bindingsPrinted = false;
 
