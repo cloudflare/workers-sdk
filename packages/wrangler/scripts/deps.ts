@@ -14,7 +14,7 @@ export const EXTERNAL_DEPENDENCIES = [
 	"source-map",
 	"@esbuild-plugins/node-globals-polyfill",
 	"@esbuild-plugins/node-modules-polyfill",
-	"chokidar",
+	// "chokidar",
 	// @cloudflare/workers-types is an optional peer dependency of wrangler, so users can
 	// get the types by installing the package (to what version they prefer) themselves
 	"@cloudflare/workers-types",

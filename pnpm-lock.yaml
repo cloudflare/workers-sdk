@@ -2027,9 +2027,6 @@ importers:
       blake3-wasm:
         specifier: ^2.1.5
         version: 2.1.5
-      chokidar:
-        specifier: ^4.0.1
-        version: 4.0.1
       date-fns:
         specifier: ^4.1.0
         version: 4.1.0
@@ -2158,6 +2155,9 @@ importers:
       chalk:
         specifier: ^5.2.0
         version: 5.3.0
+      chokidar:
+        specifier: ^4.0.1
+        version: 4.0.1
       cli-table3:
         specifier: ^0.6.3
         version: 0.6.3
