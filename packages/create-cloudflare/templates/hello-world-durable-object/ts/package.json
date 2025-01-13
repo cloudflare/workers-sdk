@@ -10,6 +10,6 @@
 	},
 	"devDependencies": {
 		"typescript": "^5.5.2",
-		"wrangler": "^3.60.3"
+		"wrangler": "^3.101.0"
 	}
 }
