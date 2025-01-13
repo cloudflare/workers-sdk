@@ -26,6 +26,11 @@ export const EXTERNAL_DEPENDENCIES = [
 	// and read when we are bundling the worker application
 	"unenv",
 
+	// path-to-regexp must be external because it contains runtime code which needs to be resolved
+	// and read when we are bundling the worker application.
+	// See `templates/pages-template-workers`
+	"path-to-regexp",
+
 	// @cloudflare/kv-asset-handler must be external because it contains runtime code which needs to be resolved
 	// and read when we are bundling the worker application
 	// Pending deletion in v4...
