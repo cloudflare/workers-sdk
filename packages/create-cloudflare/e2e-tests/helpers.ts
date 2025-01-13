@@ -533,7 +533,10 @@ export const test = (opts: { experimental: boolean }) =>
 			const suite = task.suite.name
 				.toLowerCase()
 				.replaceAll(/[^a-z0-9-]/g, "-");
-			const suffix = task.name.toLowerCase().replaceAll(/[^a-z0-9-]/g, "-");
+			const suffix = task.name
+				.toLowerCase()
+				.replaceAll(/[^a-z0-9-]/g, "-")
+				.replaceAll(/^-|-$/g, "");
 			const { getPath, getName, clean } = testProjectDir(suite, suffix);
 			await use({ path: getPath(), name: getName() });
 			clean();

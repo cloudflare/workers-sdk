@@ -10,8 +10,15 @@ export function getFrameworkToTest({ experimental = false }) {
 	}
 
 	const frameworks = getFrameworkMap({ experimental });
-	for (const [framework, { frameworkCli }] of Object.entries(frameworks)) {
-		if (frameworkCli === envCliToTest) {
+	for (const [framework, config] of Object.entries(frameworks)) {
+		if ("platformVariants" in config) {
+			if (
+				config.platformVariants.pages.frameworkCli === envCliToTest ||
+				config.platformVariants.workers.frameworkCli === envCliToTest
+			) {
+				return framework;
+			}
+		} else if (config.frameworkCli === envCliToTest) {
 			return framework;
 		}
 	}
