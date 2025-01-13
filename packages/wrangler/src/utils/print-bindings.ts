@@ -1,5 +1,4 @@
 import chalk from "chalk";
-import { getFlag } from "../experimental-flags";
 import { logger } from "../logger";
 import type { CfWorkerInit } from "../deployment-bundle/worker";
 import type { WorkerRegistry } from "../dev-registry";
@@ -458,10 +457,8 @@ export function printBindings(
 	let title: string;
 	if (context.provisioning) {
 		title = "The following bindings need to be provisioned:";
-	} else if (context.name && getFlag("MULTIWORKER")) {
-		title = `${chalk.blue(context.name)} has access to the following bindings:`;
 	} else {
-		title = "Your worker has access to the following bindings:";
+		title = `Your worker (${chalk.blue(context.name)}) has access to the following bindings:`;
 	}
 
 	const message = [

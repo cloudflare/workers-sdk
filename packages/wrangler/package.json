@@ -122,6 +122,7 @@
 		"cmd-shim": "^4.1.0",
 		"command-exists": "^1.2.9",
 		"concurrently": "^8.2.2",
+		"dependency-graph": "^1.0.0",
 		"devtools-protocol": "^0.0.1182435",
 		"dotenv": "^16.3.1",
 		"execa": "^6.1.0",

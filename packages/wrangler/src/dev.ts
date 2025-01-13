@@ -11,7 +11,12 @@ import {
 	extractBindingsOfType,
 } from "./api/startDevWorker/utils";
 import { getAssetsOptions } from "./assets";
-import { configFileName, formatConfigSnippet } from "./config";
+import {
+	configFileName,
+	findMultiWorkerConfigs,
+	formatConfigSnippet,
+	rewriteServiceBindings,
+} from "./config";
 import { createCommand } from "./core/create-command";
 import { validateRoutes } from "./deploy/deploy";
 import { validateNodeCompatMode } from "./deployment-bundle/node-compat";
@@ -59,7 +64,7 @@ export const dev = createCommand({
 	behaviour: {
 		provideConfig: false,
 		overrideExperimentalFlags: (args) => ({
-			MULTIWORKER: Array.isArray(args.config),
+			MULTIWORKER: args.experimentalMultiworker || Array.isArray(args.config),
 			RESOURCES_PROVISION: args.experimentalProvision ?? false,
 		}),
 	},
@@ -322,6 +327,12 @@ export const dev = createCommand({
 			type: "boolean",
 			describe:
 				"Bind to production Vectorize indexes in local development mode",
+			default: false,
+		},
+		"experimental-multiworker": {
+			type: "boolean",
+			describe:
+				"Allow service bindings to be defined as paths to locally defined Wrangler config files rather than Worker names",
 			default: false,
 		},
 	},
@@ -700,8 +711,9 @@ export async function startDev(args: StartDevOptions) {
 			};
 		};
 
-		if (Array.isArray(args.config)) {
-			const runtime = new MultiworkerRuntimeController(args.config.length);
+		const configs = findMultiWorkerConfigs(args);
+		if (configs.length > 1) {
+			const runtime = new MultiworkerRuntimeController(configs.length);
 
 			const primaryDevEnv = new DevEnv({ runtimes: [runtime] });
 
@@ -711,7 +723,7 @@ export async function startDev(args: StartDevOptions) {
 
 			// Set up the primary DevEnv (the one that the ProxyController will connect to)
 			devEnv = [
-				await setupDevEnv(primaryDevEnv, args.config[0], authHook, {
+				await setupDevEnv(primaryDevEnv, configs[0], authHook, {
 					...args,
 					disableDevRegistry: true,
 					multiworkerPrimary: true,
@@ -721,7 +733,7 @@ export async function startDev(args: StartDevOptions) {
 			// Set up all auxiliary DevEnvs
 			devEnv.push(
 				...(await Promise.all(
-					(args.config as string[]).slice(1).map((c) => {
+					configs.slice(1).map((c) => {
 						return setupDevEnv(
 							new DevEnv({
 								runtimes: [runtime],
@@ -1013,6 +1025,8 @@ export function getBindings(
 		servicesArgs,
 		"binding"
 	);
+
+	rewriteServiceBindings(configParam, env, mergedServiceBindings);
 
 	// Hyperdrive bindings
 	const hyperdriveBindings = configParam.hyperdrive.map((hyperdrive) => {

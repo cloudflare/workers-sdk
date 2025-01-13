@@ -1,0 +1,12 @@
+name = "worker-a"
+compatibility_date = "2022-03-31"
+
+main = "src/index.js"
+
+[[services]]
+binding = "workerB"
+service = "../worker-b/wrangler.toml"
+
+[[services]]
+binding = "workerC"
+service = "../worker-c/wrangler.toml"

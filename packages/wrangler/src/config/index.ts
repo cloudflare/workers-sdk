@@ -1,6 +1,8 @@
+import assert from "node:assert";
 import fs from "node:fs";
 import path from "node:path";
 import TOML from "@iarna/toml";
+import { DepGraph } from "dependency-graph";
 import dotenv from "dotenv";
 import { FatalError, UserError } from "../errors";
 import { logger } from "../logger";
@@ -12,6 +14,7 @@ import { validatePagesConfig } from "./validation-pages";
 import type { CommonYargsOptions } from "../yargs-types";
 import type { Config, OnlyCamelCase, RawConfig } from "./config";
 import type { ResolveConfigPathOptions } from "./config-helpers";
+import type { EnvironmentNonInheritable } from "./environment";
 import type { NormalizeAndValidateConfigArgs } from "./validation";
 
 export type {
@@ -229,4 +232,60 @@ export function loadDotEnv(envPath: string, env?: string): DotEnv | undefined {
 	} else {
 		return tryLoadDotEnv(`${envPath}.${env}`) ?? tryLoadDotEnv(envPath);
 	}
+}
+
+export function findMultiWorkerConfigs(args: ReadConfigCommandArgs) {
+	const { config: configArg, ...otherArgs } = args;
+	if (Array.isArray(configArg)) {
+		return configArg as string[];
+	}
+	const { configPath } = resolveWranglerConfigPath(args, {
+		useRedirectIfAvailable: true,
+	});
+	assert(configPath, "Missing config");
+	const configs = new DepGraph<string>({ circular: false });
+	configs.addNode(configPath);
+	loadConfigRecursive(configs, otherArgs, configPath);
+	return configs.overallOrder().reverse();
+}
+
+function loadConfigRecursive(
+	configs: DepGraph<string>,
+	args: ReadConfigCommandArgs,
+	configPath: string
+) {
+	const config = readConfig(
+		{ ...args, config: configPath },
+		{ hideWarnings: true }
+	);
+
+	const base = path.dirname(configPath);
+	for (const serviceBinding of config.services ?? []) {
+		if (serviceBinding.service.startsWith(".")) {
+			const serviceConfigPath = path.resolve(base, serviceBinding.service);
+			configs.addNode(serviceConfigPath);
+			configs.addDependency(configPath, serviceConfigPath);
+			loadConfigRecursive(configs, args, serviceConfigPath);
+		}
+	}
+}
+
+export function rewriteServiceBindings(
+	baseConfig: Config,
+	env: string | undefined,
+	services: EnvironmentNonInheritable["services"]
+) {
+	const basePath = path.dirname(baseConfig.configPath ?? "./wrangler.toml");
+	// Convert service "paths" to names
+	for (const serviceBinding of services ?? []) {
+		if (serviceBinding.service.startsWith(".")) {
+			const { name } = readConfig(
+				{ config: path.resolve(basePath, serviceBinding.service), env },
+				{ hideWarnings: true }
+			);
+			assert(name);
+			serviceBinding.service = name;
+		}
+	}
+	return services;
 }

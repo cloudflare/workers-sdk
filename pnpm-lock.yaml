@@ -321,6 +321,31 @@ importers:
         specifier: workspace:*
         version: link:../../packages/wrangler
 
+  fixtures/multiworker:
+    dependencies:
+      cookie:
+        specifier: ^0.6.0
+        version: 0.6.0
+      isomorphic-random-example:
+        specifier: workspace:^
+        version: link:../isomorphic-random-example
+    devDependencies:
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:^
+        version: link:../../packages/workers-tsconfig
+      typescript:
+        specifier: catalog:default
+        version: 5.6.3
+      undici:
+        specifier: catalog:default
+        version: 5.28.4
+      vitest:
+        specifier: catalog:default
+        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
+      wrangler:
+        specifier: workspace:*
+        version: link:../../packages/wrangler
+
   fixtures/no-bundle-import:
     devDependencies:
       get-port:
@@ -2170,6 +2195,9 @@ importers:
       concurrently:
         specifier: ^8.2.2
         version: 8.2.2
+      dependency-graph:
+        specifier: ^1.0.0
+        version: 1.0.0
       devtools-protocol:
         specifier: ^0.0.1182435
         version: 0.0.1182435
@@ -5871,6 +5899,10 @@ packages:
 
   delegates@1.0.0:
     resolution: {integrity: sha512-bd2L678uiWATM6m5Z1VzNCErI3jiGzt6HGY8OVICs40JQq/HALfbyNJmp0UDakEY4pMMaN0Ly5om/B1VI/+xfQ==}
+
+  dependency-graph@1.0.0:
+    resolution: {integrity: sha512-cW3gggJ28HZ/LExwxP2B++aiKxhJXMSIt9K48FOXQkm+vuG5gyatXnLsONRJdzO/7VfjDIiaOOa/bs4l464Lwg==}
+    engines: {node: '>=4'}
 
   deprecation@2.3.1:
     resolution: {integrity: sha512-xmHIy4F3scKVwMsQ4WnVaS8bHOx0DmVwRywosKhaILI0ywMDWPtBSku2HNxRvF7jtwDRsoEwYQSfbxj8b7RlJQ==}
@@ -14333,6 +14365,8 @@ snapshots:
   delayed-stream@1.0.0: {}
 
   delegates@1.0.0: {}
+
+  dependency-graph@1.0.0: {}
 
   deprecation@2.3.1: {}
 
