@@ -37,6 +37,11 @@
 				"command": "cloudflare-workers-bindings.addBinding",
 				"title": "Cloudflare Workers: Add binding",
 				"icon": "$(add)"
+			},
+			{
+				"command": "cloudflare-workers-bindings.openDocs",
+				"title": "Cloudflare Workers: Open Documentation",
+				"icon": "$(book)"
 			}
 		],
 		"jsonValidation": [
@@ -56,6 +61,13 @@
 					"command": "cloudflare-workers-bindings.addBinding",
 					"when": "view == cloudflare-workers-bindings",
 					"group": "navigation"
+				}
+			],
+			"view/item/context": [
+				{
+					"command": "cloudflare-workers-bindings.openDocs",
+					"when": "view == cloudflare-workers-bindings && viewItem == binding",
+					"group": "inline"
 				}
 			]
 		},

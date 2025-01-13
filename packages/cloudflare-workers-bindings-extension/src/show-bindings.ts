@@ -39,7 +39,7 @@ type EnvNode = {
 	name: string | null;
 };
 
-type BindingNode = Exclude<
+export type BindingNode = Exclude<
 	{
 		[Name in BindingType]: {
 			type: "binding";
@@ -56,7 +56,7 @@ type ResourceNode = {
 	description?: string;
 };
 
-type Node = EnvNode | BindingNode | ResourceNode;
+export type Node = EnvNode | BindingNode | ResourceNode;
 
 export class BindingsProvider implements vscode.TreeDataProvider<Node> {
 	// Event emitter for refreshing the tree
@@ -83,11 +83,17 @@ export class BindingsProvider implements vscode.TreeDataProvider<Node> {
 
 				return item;
 			}
+			// this is the header
 			case "binding": {
-				return new vscode.TreeItem(
+				const item = new vscode.TreeItem(
 					friendlyBindingNames[node.name],
 					vscode.TreeItemCollapsibleState.Expanded
 				);
+				const enabledBindings = ["kv_namespaces", "r2_buckets", "d1_databases"];
+				if (enabledBindings.includes(node.name)) {
+					item.contextValue = "binding";
+				}
+				return item;
 			}
 			case "resource": {
 				const item = new vscode.TreeItem(
