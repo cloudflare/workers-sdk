@@ -3,11 +3,13 @@ import chalk from "chalk";
 import { fetchResult } from "../cfetch";
 import { createD1Database } from "../d1/create";
 import { listDatabases } from "../d1/list";
+import { getDatabaseInfoFromId } from "../d1/utils";
 import { confirm, prompt, select } from "../dialogs";
 import { UserError } from "../errors";
 import { createKVNamespace, listKVNamespaces } from "../kv/helpers";
 import { logger } from "../logger";
-import { createR2Bucket, listR2Buckets } from "../r2/helpers";
+import { APIError } from "../parse";
+import { createR2Bucket, getR2Bucket, listR2Buckets } from "../r2/helpers";
 import { isLegacyEnv } from "../utils/isLegacyEnv";
 import { printBindings } from "../utils/print-bindings";
 import type { Config } from "../config";
@@ -135,13 +137,17 @@ export async function provisionBindings(
 			r2.bucket_name = INHERIT_SYMBOL;
 		} else {
 			if (r2.bucket_name) {
-				preExistingR2 ??= await listR2Buckets(accountId);
-				if (preExistingR2.find((b) => b.name === r2.bucket_name)) {
-					// don't provision, just add it (maintains current behaviour)
+				try {
+					await getR2Bucket(accountId, r2.bucket_name);
+					// don't provision
 					continue;
+				} catch (e) {
+					// bucket not found - provision
+					if (!(e instanceof APIError && e.code === 10006)) {
+						throw e;
+					}
 				}
 			}
-			// provision if no bucket name, or bucket name doesn't correspond to a pre-existing bucket
 			pendingResources.r2_buckets?.push({
 				binding: r2.binding,
 				name: r2.bucket_name,
@@ -164,21 +170,26 @@ export async function provisionBindings(
 
 	for (const d1 of bindings.d1_databases ?? []) {
 		if (!d1.database_id) {
-			if (inBindingSettings(settings, "d1", d1.binding)) {
-				d1.database_id = INHERIT_SYMBOL;
-			} else {
-				pendingResources.d1_databases?.push({
-					binding: d1.binding,
-					name: d1.database_name,
-					async create(name) {
-						const db = await createD1Database(accountId, name);
-						return db.uuid;
-					},
-					updateId(id) {
-						d1.database_id = id;
-					},
-				});
+			const maybeInherited = inBindingSettings(settings, "d1", d1.binding);
+			if (maybeInherited) {
+				const db = await getDatabaseInfoFromId(accountId, maybeInherited.id);
+				if (db.name === d1.database_name) {
+					d1.database_id = INHERIT_SYMBOL;
+					continue;
+				}
+				// db has *changed* - re-provision?
 			}
+			pendingResources.d1_databases?.push({
+				binding: d1.binding,
+				name: d1.database_name,
+				async create(name) {
+					const db = await createD1Database(accountId, name);
+					return db.uuid;
+				},
+				updateId(id) {
+					d1.database_id = id;
+				},
+			});
 		}
 	}
 

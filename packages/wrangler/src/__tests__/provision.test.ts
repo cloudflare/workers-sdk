@@ -91,7 +91,8 @@ describe("--x-provision", () => {
 			],
 		});
 
-		await expect(runWrangler("deploy --x-provision")).resolves.toBeUndefined();
+		mockGetD1Database("d1-id");
+		await runWrangler("deploy --x-provision");
 		expect(std.out).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
@@ -582,7 +583,7 @@ describe("--x-provision", () => {
 					);
 				})
 			);
-
+			mockGetR2Bucket("prefilled-r2-name", true);
 			// no name prompt
 			mockCreateR2Bucket({
 				assertBucketName: "prefilled-r2-name",
@@ -662,7 +663,7 @@ describe("--x-provision", () => {
 					);
 				})
 			);
-
+			mockGetR2Bucket("existing-bucket-name", false);
 			mockUploadWorkerRequest({
 				expectedBindings: [
 					{
@@ -782,6 +783,40 @@ function mockCreateR2Bucket(
 						options.assertJurisdiction
 					);
 				}
+				return HttpResponse.json(createFetchResult({}));
+			},
+			{ once: true }
+		)
+	);
+}
+
+function mockGetR2Bucket(bucketName: string, missing: boolean = false) {
+	msw.use(
+		http.get(
+			"*/accounts/:accountId/r2/buckets/:bucketName",
+			async ({ params }) => {
+				const { bucketName: bucketParam } = params;
+				expect(bucketParam).toEqual(bucketName);
+				if (missing) {
+					return HttpResponse.json(
+						createFetchResult(null, false, [
+							{ code: 10006, message: "bucket not found" },
+						])
+					);
+				}
+				return HttpResponse.json(createFetchResult({}));
+			},
+			{ once: true }
+		)
+	);
+}
+
+function mockGetD1Database(databaseId: string) {
+	msw.use(
+		http.get(
+			`*/accounts/:accountId/d1/database/:database_id`,
+			({ params }) => {
+				expect(params.database_id).toEqual(databaseId);
 				return HttpResponse.json(createFetchResult({}));
 			},
 			{ once: true }
