@@ -1,4 +1,4 @@
-import { getFrameworkMap } from "../src/templates";
+import { getFrameworkMap } from "../../src/templates";
 
 /**
  * Get the name of the framework to test or undefined if not focussing on a single framework.
