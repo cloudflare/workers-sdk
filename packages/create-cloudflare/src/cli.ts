@@ -132,13 +132,9 @@ export const setupProjectDirectory = (ctx: C3Context) => {
 };
 
 const create = async (ctx: C3Context) => {
-	const { template } = ctx;
-
 	setupProjectDirectory(ctx);
 
-	if (template.generate) {
-		await template.generate(ctx);
-	}
+	await ctx.template.generate?.({ ...ctx });
 
 	await copyTemplateFiles(ctx);
 	await updatePackageName(ctx);
@@ -160,10 +156,7 @@ const configure = async (ctx: C3Context) => {
 	//       pre-existing workers assume its presence in their configure phase
 	await updateWranglerConfig(ctx);
 
-	const { template } = ctx;
-	if (template.configure) {
-		await template.configure({ ...ctx });
-	}
+	await ctx.template.configure?.({ ...ctx });
 
 	addWranglerToGitIgnore(ctx);
 

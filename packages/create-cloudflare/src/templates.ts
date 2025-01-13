@@ -115,12 +115,12 @@ export type TemplateConfig = {
 	/** A function invoked as the first step of project creation.
 	 * Used to invoke framework creation cli in the internal web framework templates.
 	 */
-	generate?: (ctx: C3Context) => Promise<void>;
+	generate?: (ctx: Readonly<C3Context>) => Promise<void>;
 	/** A function invoked after project creation but before deployment.
 	 * Used when a template needs to run additional install steps or wrangler commands before
 	 * finalizing the project.
 	 */
-	configure?: (ctx: C3Context) => Promise<void>;
+	configure?: (ctx: Readonly<C3Context>) => Promise<void>;
 
 	/**
 	 * A transformer that is run on the project's `package.json` during the creation step.
