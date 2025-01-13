@@ -339,11 +339,20 @@ function validateCompatibilityDate(log: Log, compatibilityDate: string) {
 	return compatibilityDate;
 }
 
-function buildJsonBindings(bindings: Record<string, Json>): Worker_Binding[] {
-	return Object.entries(bindings).map(([name, value]) => ({
-		name,
-		json: JSON.stringify(value),
-	}));
+function buildBindings(bindings: Record<string, Json>): Worker_Binding[] {
+	return Object.entries(bindings).map(([name, value]) => {
+		if (typeof value === "string") {
+			return {
+				name,
+				text: value,
+			};
+		} else {
+			return {
+				name,
+				json: JSON.stringify(value),
+			};
+		}
+	});
 }
 
 const WRAPPED_MODULE_PREFIX = "miniflare-internal:wrapped:";
@@ -368,7 +377,7 @@ export const CORE_PLUGIN: Plugin<
 		const bindings: Awaitable<Worker_Binding>[] = [];
 
 		if (options.bindings !== undefined) {
-			bindings.push(...buildJsonBindings(options.bindings));
+			bindings.push(...buildBindings(options.bindings));
 		}
 		if (options.wasmBindings !== undefined) {
 			bindings.push(
@@ -424,7 +433,7 @@ export const CORE_PLUGIN: Plugin<
 					// Build binding
 					const moduleName = workerNameToWrappedModule(scriptName);
 					const innerBindings =
-						bindings === undefined ? [] : buildJsonBindings(bindings);
+						bindings === undefined ? [] : buildBindings(bindings);
 					// `scriptName`'s bindings will be added to `innerBindings` when
 					// assembling the config
 					return {
